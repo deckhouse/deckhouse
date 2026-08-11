@@ -75,3 +75,41 @@ accessibility:
 	// check mapping to v1alpha1
 	assert.NotEmpty(t, m.Accessibility.ToV1Alpha1())
 }
+
+func TestModuleAccessibilityIsEnabled(t *testing.T) {
+	// Regression from #20958: an availability-only edition entry (no enabledInBundles)
+	// must inherit the _default bundle enablement instead of silently disabling the module.
+	availabilityOnly := &ModuleAccessibility{
+		Editions: map[string]ModuleEdition{
+			"_default": {Available: true, EnabledInBundles: []string{"Default", "Managed"}},
+			"cse":      {Available: true}, // no enabledInBundles -> inherit _default
+		},
+	}
+	assert.True(t, availabilityOnly.IsEnabled("cse", "Default"), "availability-only cse entry must inherit _default bundles")
+	assert.True(t, availabilityOnly.IsEnabled("cse", "Managed"))
+	assert.False(t, availabilityOnly.IsEnabled("cse", "Minimal"), "Minimal is not in _default bundles")
+	assert.True(t, availabilityOnly.IsAvailable("cse"))
+
+	// An edition entry that declares its own bundles stays authoritative: it does NOT
+	// merge with _default, so a bundle only present in _default is not enabled for it.
+	authoritative := &ModuleAccessibility{
+		Editions: map[string]ModuleEdition{
+			"_default": {Available: true, EnabledInBundles: []string{"Default"}},
+			"ee":       {Available: true, EnabledInBundles: []string{"Minimal"}},
+		},
+	}
+	assert.True(t, authoritative.IsEnabled("ee", "Minimal"))
+	assert.False(t, authoritative.IsEnabled("ee", "Default"), "ee declares its own bundles and must not inherit _default's Default")
+	// an edition without its own entry falls back to _default
+	assert.True(t, authoritative.IsEnabled("ce", "Default"))
+	assert.False(t, authoritative.IsEnabled("ce", "Minimal"))
+
+	// no _default and no matching edition entry -> not enabled
+	noDefault := &ModuleAccessibility{
+		Editions: map[string]ModuleEdition{
+			"ee": {Available: true, EnabledInBundles: []string{"Default"}},
+		},
+	}
+	assert.False(t, noDefault.IsEnabled("cse", "Default"))
+	assert.True(t, noDefault.IsEnabled("ee", "Default"))
+}

@@ -272,13 +272,15 @@ func (m *Module) IsEnabledByBundle(editionName, bundleName string) bool {
 		return false
 	}
 
-	// an explicit edition entry is authoritative: it fully defines the enabled
-	// bundles for the edition and does not fall back to the default settings
-	if edition, ok := access.Editions[editionName]; ok {
+	// an edition entry is authoritative only when it declares its own bundles;
+	// an availability-only entry (no enabledInBundles) inherits the default
+	// settings, so marking a module available in an edition does not silently
+	// drop the _default bundle enablement
+	if edition, ok := access.Editions[editionName]; ok && len(edition.EnabledInBundles) > 0 {
 		return isEnabledInBundle(edition.EnabledInBundles, bundleName)
 	}
 
-	// no edition entry — fall back to the default settings
+	// no edition entry (or an availability-only one) — fall back to the default settings
 	defaultSettings, ok := access.Editions["_default"]
 	if !ok {
 		return false
