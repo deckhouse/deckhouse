@@ -685,14 +685,11 @@ func adoptingBashibleNodes(req admission.Request, ng, oldNG *v1.NodeGroup) bool 
 // here (approval-waiting nodes delete it); olcedar nodes never get the label.
 func (w *NodeGroupValidator) getBashibleNodes(ctx context.Context, nodeGroupName string) ([]string, error) {
 	webhookLog.Info("listing Nodes", "filter", "bashible-first-run-finished", "nodeGroup", nodeGroupName)
-	names, err := w.nodeNames(ctx, client.MatchingLabels{
+	// Unwrapped: the caller says which group it was listing for.
+	return w.nodeNames(ctx, client.MatchingLabels{
 		"node.deckhouse.io/group":                       nodeGroupName,
 		"node.deckhouse.io/bashible-first-run-finished": "true",
 	})
-	if err != nil {
-		return nil, fmt.Errorf("list bashible nodes of %s: %w", nodeGroupName, err)
-	}
-	return names, nil
 }
 
 // getNodesWithoutContainerdV2Support returns nodes that don't support containerd v2.

@@ -33,9 +33,12 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	bootstrapv1alpha1 "github.com/deckhouse/node-controller/api/bootstrap.deckhouse.io/v1alpha1"
@@ -64,8 +67,35 @@ func (r *Reconciler) Setup(_ context.Context, mgr ctrl.Manager) error {
 
 func (r *Reconciler) SetupWatches(w register.Watcher) {
 	// A Machine gaining its owner reference on the config, or being paused, must
-	// re-run the config cloned for it.
-	w.Watches(&capiv1beta2.Machine{}, handler.EnqueueRequestsFromMapFunc(machineToConfig))
+	// re-run the config cloned for it. Predicated because CAPI rewrites Machine
+	// status constantly and every event here re-renders the whole userdata.
+	w.Watches(&capiv1beta2.Machine{}, handler.EnqueueRequestsFromMapFunc(machineToConfig),
+		builder.WithPredicates(predicate.Funcs{
+			UpdateFunc: func(e event.UpdateEvent) bool {
+				return machineRenderInputsChanged(e.ObjectOld, e.ObjectNew)
+			},
+		}))
+}
+
+// machineRenderInputsChanged reports whether an update touched anything a pass
+// reads off its Machine: which config it boots from, which group it belongs to,
+// whether it is paused, and whether the bootstrap data has been consumed.
+func machineRenderInputsChanged(before, after client.Object) bool {
+	oldMachine, okOld := before.(*capiv1beta2.Machine)
+	newMachine, okNew := after.(*capiv1beta2.Machine)
+	if !okOld || !okNew {
+		return true
+	}
+	if oldMachine.Spec.Bootstrap.ConfigRef != newMachine.Spec.Bootstrap.ConfigRef {
+		return true
+	}
+	if oldMachine.Labels[machineNodeGroupLabel] != newMachine.Labels[machineNodeGroupLabel] {
+		return true
+	}
+	if isPaused(oldMachine) != isPaused(newMachine) {
+		return true
+	}
+	return consumed(oldMachine) != consumed(newMachine)
 }
 
 // machineToConfig enqueues the NodeBootstrapConfig a Machine boots from.

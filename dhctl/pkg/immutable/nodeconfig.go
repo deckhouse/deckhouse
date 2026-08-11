@@ -18,7 +18,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sort"
+	"maps"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -334,23 +335,30 @@ func sysextExtensions(images map[string]any, kubernetesVersion string) ([]extens
 	return extensions, nil
 }
 
-// soleDigest returns the digest of the one image with the given prefix. No
-// "newest" can be told: camelcase strips separators, so "kubernetesCniSysext1610"
-// is ambiguous. Kept in step with node-controller's nodeconfig/sources.go.
-func soleDigest(packages map[string]string, prefix string) (string, error) {
-	found := make([]string, 0, 1)
+// versionedImages returns the images named the prefix followed by a version, as
+// image name to version. Everything after the prefix is the version, so a
+// non-numeric tail is another image whose name merely starts the same way.
+func versionedImages(packages map[string]string, prefix string) map[string]int {
+	found := map[string]int{}
 	for name := range packages {
 		suffix, ok := strings.CutPrefix(name, prefix)
 		if !ok {
 			continue
 		}
-		// Everything after the prefix is the version, so a non-numeric tail is
-		// another image whose name merely starts the same way.
-		if _, err := strconv.Atoi(suffix); err != nil {
+		version, err := strconv.Atoi(suffix)
+		if err != nil {
 			continue
 		}
-		found = append(found, name)
+		found[name] = version
 	}
+	return found
+}
+
+// soleDigest returns the digest of the one image with the given prefix. No
+// "newest" can be told: camelcase strips separators, so "kubernetesCniSysext1610"
+// is ambiguous. Kept in step with node-controller's nodeconfig/sources.go.
+func soleDigest(packages map[string]string, prefix string) (string, error) {
+	found := slices.Sorted(maps.Keys(versionedImages(packages, prefix)))
 
 	switch len(found) {
 	case 0:
@@ -358,7 +366,6 @@ func soleDigest(packages map[string]string, prefix string) (string, error) {
 	case 1:
 		return packages[found[0]], nil
 	default:
-		sort.Strings(found)
 		return "", fmt.Errorf(
 			"the installer image carries %d %q system extensions (%s): their names do not say which one is newer. "+
 				"That is a defect in the installer image, which is built to ship exactly one of each; "+
@@ -373,17 +380,9 @@ func soleDigest(packages map[string]string, prefix string) (string, error) {
 // A string compare would put "kubeletSysext1356" after "kubeletSysext13510".
 func newestPatchDigest(packages map[string]string, prefix string) string {
 	best, bestPatch := "", -1
-	for name, digest := range packages {
-		suffix, ok := strings.CutPrefix(name, prefix)
-		if !ok {
-			continue
-		}
-		patch, err := strconv.Atoi(suffix)
-		if err != nil {
-			continue
-		}
+	for name, patch := range versionedImages(packages, prefix) {
 		if patch > bestPatch {
-			best, bestPatch = digest, patch
+			best, bestPatch = packages[name], patch
 		}
 	}
 	return best

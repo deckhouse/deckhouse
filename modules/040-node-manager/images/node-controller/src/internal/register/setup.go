@@ -33,13 +33,12 @@ import (
 // and wins over the flag, which one typo anywhere silently discards.
 func setupController(ctx context.Context, mgr ctrl.Manager, c client.Client, name string, obj client.Object, r Reconciler, maxConcurrentReconciles int) error {
 	setupLog := ctrl.Log.WithName("setup")
-	requested := max(maxConcurrentReconciles, 1)
-	workers := requested
+	workers := max(maxConcurrentReconciles, 1)
 	if v, ok := r.(NeedsMaxConcurrentReconciles); ok {
 		if capped := v.MaxConcurrentReconciles(); capped >= 1 && capped < workers {
-			workers = capped
 			setupLog.Info("controller caps its own concurrency",
-				"controller", name, "requested", requested, "maxConcurrentReconciles", workers)
+				"controller", name, "requested", workers, "maxConcurrentReconciles", capped)
+			workers = capped
 		}
 	}
 

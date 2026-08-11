@@ -157,9 +157,8 @@ func matchedNodeGroups(ner *deckhousev1alpha1.NodeExtensionRequest, immutableGro
 // for its Ready condition, or empty strings when it resolved. An invalid sysext
 // is reported first; otherwise a lost name/digest contest (resolveNERConflicts).
 func nerStatusReason(ner *deckhousev1alpha1.NodeExtensionRequest, conflicts map[string]nerConflict) (string, string) {
-	// reasonInvalidSysext is the only refusal resolveExtension has.
-	if _, reason := resolveExtension(ner); reason != "" {
-		return reason, "sysext must set both name and digest"
+	if !sysextValid(ner) {
+		return reasonInvalidSysext, "sysext must set both name and digest"
 	}
 	if conflict, lost := conflicts[ner.Name]; lost {
 		return conflict.reason, conflictMessage(conflict)

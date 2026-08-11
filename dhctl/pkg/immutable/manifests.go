@@ -111,21 +111,26 @@ type manifestsInput struct {
 	CandiDir string
 }
 
-// renderControlPlaneBundle renders what the first master's control plane is made
-// of: the static pods, and the files the manifests reference by path instead of
-// carrying inline. Here rather than on the node because only the installer knows
-// its own release: the digests, the templates and the settings all come from here.
-func renderControlPlaneBundle(ctx context.Context, in manifestsInput) ([]renderedFile, []renderedFile, error) {
+// bootstrapExtraFiles are the files the manifests reference by path instead of
+// carrying inline. They depend on nothing the render reads, so the node gets the
+// same list on every bootstrap.
+var bootstrapExtraFiles = []renderedFile{{Name: authenticationConfig, Content: bootstrapAuthenticationConfig}}
+
+// renderControlPlaneBundle renders the static pods the first master's control
+// plane is made of. Here rather than on the node because only the installer
+// knows its own release: the digests, the templates and the settings all come
+// from here.
+func renderControlPlaneBundle(ctx context.Context, in manifestsInput) ([]renderedFile, error) {
 	dir := filepath.Join(in.CandiDir, controlPlaneTemplatesDir)
 	rendered, err := template.RenderTemplatesDir(ctx, dir, in.data(), nil)
 	if err != nil {
-		return nil, nil, fmt.Errorf("render the control-plane manifests from %s: %w", dir, err)
+		return nil, fmt.Errorf("render the control-plane manifests from %s: %w", dir, err)
 	}
 	// A missing directory is not an error to RenderTemplatesDir — it logs and
 	// returns nothing. Here it would mean a node that waits for an apiserver
 	// nobody is going to start, so it has to be one.
 	if len(rendered) == 0 {
-		return nil, nil, fmt.Errorf("no control-plane templates in %s", dir)
+		return nil, fmt.Errorf("no control-plane templates in %s", dir)
 	}
 
 	manifests := make([]renderedFile, 0, len(rendered))
@@ -137,9 +142,7 @@ func renderControlPlaneBundle(ctx context.Context, in manifestsInput) ([]rendere
 	}
 	sortEtcdFirst(manifests)
 
-	extraFiles := []renderedFile{{Name: authenticationConfig, Content: bootstrapAuthenticationConfig}}
-
-	return manifests, extraFiles, nil
+	return manifests, nil
 }
 
 // sortEtcdFirst puts etcd at the head and the rest in name order, so the same
