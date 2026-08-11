@@ -45,16 +45,12 @@ type clusterInputs struct {
 	// APIServerEndpoints are the addresses the node-local proxy balances over.
 	APIServerEndpoints []string
 	// KubernetesVersion is the cluster's minor version, e.g. "1.34". kubelet's
-	// feature gates depend on it: bashible turns the DRA gates on by version, and
-	// a node that is not told the version cannot follow — DRA would then work on
-	// every node in the cluster except the immutable ones.
+	// feature gates depend on it (bashible turns DRA gates on by version), so a
+	// node not told the version cannot follow.
 	KubernetesVersion string
-	// OSImage is the olcedar image, addressed in the cluster's own registry. It
-	// is a record rather than an instruction (the node boots whatever its
-	// InstanceClass points the root disk at, see NodeSpec.OSImage), but it still
-	// has to name the image the installer named: a record that disagrees with
-	// what the node was installed from is a record of nothing, and naming the
-	// public registry tells an air-gapped operator to look somewhere unreachable.
+	// OSImage is the olcedar image, addressed in the cluster's own registry. A
+	// record rather than an instruction (the node boots what its InstanceClass
+	// points at), but it must name the same image and registry the installer did.
 	OSImage string
 	// ClusterDomain and ClusterDNS configure kubelet's DNS.
 	ClusterDomain string
@@ -64,23 +60,19 @@ type clusterInputs struct {
 	// disagrees with the rest of the fleet skews the scheduler for all of it.
 	DefaultMaxPods int
 	// KubernetesCA is the base64-encoded cluster CA. kubelet loads it from disk
-	// on every start, and on an immutable node that file lives on tmpfs — so a
-	// config without the CA leaves the node unable to start kubelet after a
-	// reboot, with no way to get the certificate back.
+	// on every start, and on an immutable node that file lives on tmpfs — a
+	// config without it leaves the node unable to start kubelet after a reboot.
 	KubernetesCA string
 	// SysextDigests maps an extension name to the image digest to pull.
 	SysextDigests map[string]string
 	// RegistryPackagesProxyToken authenticates against the packages proxy.
 	RegistryPackagesProxyToken string
-	// SandboxImage is the pause image containerd starts every pod sandbox from,
-	// resolved against the cluster's own registry. It cannot be a constant: a
-	// cluster installed from a private registry — the normal case in a closed
-	// network — has no route to the upstream one, and a node that cannot pull
-	// the pause image runs no pods at all.
+	// SandboxImage is the pause image, resolved against the cluster's own
+	// registry: a cluster installed from a private registry has no route to the
+	// upstream one, and a node that cannot pull pause runs no pods at all.
 	SandboxImage string
 	// Registry is how a node reaches the cluster's registry on its own. Every
-	// node gets it, not only the control-plane ones: containerd pulls the pause
-	// image before any pod exists and with no imagePullSecret to use, so a worker
+	// node gets it: containerd pulls pause with no imagePullSecret, so a worker
 	// without credentials fails every sandbox it tries to create.
 	Registry *internalv1alpha1.Registry
 	// NodeExtensionRequests are the operator's requests to merge extra system
@@ -88,39 +80,17 @@ type clusterInputs struct {
 	NodeExtensionRequests []deckhousev1alpha1.NodeExtensionRequest
 }
 
-// sourceReader reads cluster state. Both readers are required and mean
-// different things: Reader goes straight to the API server and is what almost
-// everything here uses, because these are decisions followed by a write and the
-// cache is a beat behind; Client is the cached one, used only where this
-// controller watches the kind itself.
-//
-// There is deliberately no fallback from one to the other. A reader that
-// silently became the cached client is how a fix for a stale node address once
-// shipped inert: it read a field the cache strips, passed its test against a
-// hand-built object, and did nothing in production.
+// sourceReader reads cluster state. Reader goes straight to the API server
+// (decisions followed by writes; the cache is a beat behind); Client is cached,
+// used only for kinds this controller watches. Deliberately no fallback.
 type sourceReader struct {
 	Client client.Client
 	Reader client.Reader
 }
 
-// readClusterInputs collects everything a NodeConfig is rendered from.
-//
-// Every read here is fail-closed, deliberately and more widely than it once was:
-// an unreadable registry secret, an absent cluster configuration, a missing key
-// in it, a body that will not parse, no DNS service — each aborts the render
-// rather than falling back on a default. The alternative is not "nothing
-// happens": the render would succeed carrying a plausible-looking value, the
-// spec would differ from what the nodes run, and the group would roll that
-// difference out node by node as if an operator had asked for it. A node
-// reconfigured to no cluster DNS, or to "cluster.local" in a cluster that is
-// not, is worse off than a node left running the config it already has while
-// the cause is fixed.
-//
-// What that costs, stated rather than discovered: while any of these cannot be
-// read, no immutable node is rendered — and RenderBootstrapSpec shares this
-// function, so an immutable worker's bootstrap payload cannot be built either,
-// which holds up new nodes as well as changes to existing ones. Nodes already
-// running keep their config throughout; nothing is taken away from them.
+// readClusterInputs collects everything a NodeConfig is rendered from. Every
+// read is fail-closed: falling back on a default would roll a wrong value out
+// node by node. The cost: while any read fails, no immutable node is rendered.
 func (s *sourceReader) readClusterInputs(ctx context.Context, kubernetesVersion string) (clusterInputs, error) {
 	in := clusterInputs{KubernetesVersion: kubernetesVersion}
 
@@ -226,12 +196,9 @@ func (s *sourceReader) readRegistry(ctx context.Context) (*internalv1alpha1.Regi
 	return registry, imagesRepo, nil
 }
 
-// registryAuth pulls the credentials for one registry out of a docker config.
-// An anonymous registry has none, and that is not an error: the field is
-// optional and a node without it pulls anonymously, exactly as the secret says.
-// A docker config that cannot be parsed is an error, though — treating it as
-// "no credentials" hands the node an anonymous pull that fails against a private
-// registry with nothing saying why.
+// registryAuth pulls one registry's credentials out of a docker config. No
+// credentials is fine (anonymous pull), but an unparsable config is an error —
+// treating it as anonymous fails against a private registry with no cause shown.
 func registryAuth(dockerConfig []byte, address string) (string, error) {
 	if len(dockerConfig) == 0 {
 		return "", nil
@@ -256,14 +223,9 @@ func sandboxImage(images map[string]map[string]string, imagesRepo string) (strin
 	return imagesRepo + "@" + digest, nil
 }
 
-// readNodeExtensionRequests lists the extension requests. They are additive, so
-// an empty list is fine: the node simply gets the base system extensions.
-//
-// This is the one read here served from the cache: the controller watches this
-// kind, so the informer exists and is fed by the same events that trigger the
-// pass. Reading it live would also disagree with the status pass, which reports
-// each request's outcome from the cached list — a request could be rendered as a
-// winner while its own status called it a loser.
+// readNodeExtensionRequests lists the extension requests; an empty list is fine.
+// The one cached read here: the controller watches this kind, and a live read
+// could disagree with the status pass, which reports from the cached list.
 func (s *sourceReader) readNodeExtensionRequests(ctx context.Context) ([]deckhousev1alpha1.NodeExtensionRequest, error) {
 	list := &deckhousev1alpha1.NodeExtensionRequestList{}
 	if err := s.Client.List(ctx, list); err != nil {
@@ -287,24 +249,9 @@ func (s *sourceReader) readClusterCA(ctx context.Context) (string, error) {
 	return base64.StdEncoding.EncodeToString([]byte(ca)), nil
 }
 
-// readAPIServerEndpoints merges the control-plane pod IPs with the kubernetes
-// EndpointSlice, the two sources bashible discovers them from.
-//
-// Unlike bashible's, this list does not follow pod readiness, and deliberately:
-// every address here lands in spec.apiServerEndpoints, so a set that shrinks
-// when an apiserver is restarted changes the desired state of every node of
-// every immutable group — a generation bump each, a rollout slot each, and a
-// candidate interruption each, for a master that is coming back in seconds.
-// Bashible pays nothing for the same churn: its endpoints live in a Secret the
-// node re-reads, not in the node's own desired state. The node-local proxy
-// balances away from an endpoint that does not answer, which is where an
-// apiserver being momentarily down belongs.
-//
-// A master that is really gone still leaves, because the pod object goes with
-// it. One that is on its way out is dropped as soon as it is asked to: a
-// terminating mirror pod keeps its status.podIP to the end, so without this a
-// drained, evicted or deleted master would hold its address in every node's
-// config until something finally removed the object.
+// readAPIServerEndpoints merges control-plane pod IPs with the kubernetes
+// EndpointSlice. Deliberately readiness-blind: these land in every node's spec,
+// and restart churn would re-render the fleet. Terminating pods are dropped.
 func (s *sourceReader) readAPIServerEndpoints(ctx context.Context) ([]string, error) {
 	set := make(map[string]struct{})
 
@@ -349,11 +296,9 @@ func (s *sourceReader) readAPIServerEndpoints(ctx context.Context) ([]string, er
 	return list, nil
 }
 
-// readClusterDNS returns the address of the in-cluster DNS service. Finding
-// none is an error, not an empty answer: renderKubelet leaves clusterDNS out of
-// a config that has no address, so a pass that happened to see no DNS service
-// would publish a DNS-less config to every immutable node — and the group would
-// roll it out as if it were a change someone asked for.
+// readClusterDNS returns the in-cluster DNS service address. Finding none is an
+// error, not an empty answer: a pass that saw no DNS service would publish a
+// DNS-less config to every immutable node and roll it out as a change.
 func (s *sourceReader) readClusterDNS(ctx context.Context) (string, error) {
 	list := &corev1.ServiceList{}
 	if err := s.Reader.List(ctx, list, client.InNamespace(kubeSystemNS)); err != nil {
@@ -408,9 +353,8 @@ func (c clusterConfiguration) clusterDomain() string {
 }
 
 // readClusterConfiguration reads the cluster configuration secret. A failure is
-// reported rather than replaced by defaults: the values decide the node's DNS
-// domain and how many pods it advertises, and quietly rendering the defaults
-// instead reconfigures every node of every immutable group.
+// reported rather than replaced by defaults: quietly rendering defaults would
+// reconfigure every node of every immutable group.
 func (s *sourceReader) readClusterConfiguration(ctx context.Context) (clusterConfiguration, error) {
 	secret := &corev1.Secret{}
 	if err := s.Reader.Get(ctx, types.NamespacedName{Namespace: kubeSystemNS, Name: clusterConfigSecretName}, secret); err != nil {
@@ -427,15 +371,9 @@ func (s *sourceReader) readClusterConfiguration(ctx context.Context) (clusterCon
 	return config, nil
 }
 
-// defaultMaxPodsFor is how many pods a node advertises when its NodeGroup asks
-// for no particular number: as many as its slice of the pod subnet can address,
-// the same brackets bashible uses (candi/bashible/common-steps/all/
-// 064_configure_kubelet.sh.tpl). A flat default made every immutable node of a
-// /22 cluster advertise 120 against the 500 of every bashible node beside it,
-// which is the scheduler skew this number exists to avoid.
-//
-// The result is capped at what an immutable node's schema accepts, so the widest
-// pod subnets get the ceiling rather than a config the API server refuses.
+// defaultMaxPodsFor derives the default pods-per-node from the pod subnet,
+// using bashible's brackets (064_configure_kubelet.sh.tpl) to avoid scheduler
+// skew between node kinds; capped at what the immutable node's schema accepts.
 func defaultMaxPodsFor(prefix intstr.IntOrString) int {
 	bits := prefix.IntValue()
 	if bits == 0 {
@@ -511,12 +449,9 @@ func sysextDigests(all map[string]map[string]string, kubernetesVersion string) (
 	return digests, nil
 }
 
-// soleDigest returns the digest of the one image with the given prefix. It
-// picks no newest because none can be told: the camelcase name strips the
-// separators, so "kubernetesCniSysext1610" is 1.6.10, 1.61.0 and 16.1.0 at
-// once. The release ships exactly one of each, so several is a build defect —
-// reported, not resolved by guessing. Kept in step with soleDigest in
-// dhctl/pkg/immutable/nodeconfig.go, which reads the same digests file.
+// soleDigest returns the digest of the one image with the given prefix. It picks
+// no newest because none can be told: "kubernetesCniSysext1610" is ambiguous.
+// Several is a build defect, reported. Kept in step with dhctl's soleDigest.
 func soleDigest(packages map[string]string, prefix string) (string, error) {
 	found := make([]string, 0, 1)
 	for name := range packages {
@@ -545,9 +480,8 @@ func soleDigest(packages map[string]string, prefix string) (string, error) {
 }
 
 // newestPatchDigest returns the newest image with the given prefix, which pins
-// everything but the patch — so the suffix is one number and compares exactly.
-// A string compare would put "kubeletSysext1356" after "kubeletSysext13510",
-// i.e. patch 6 over patch 10.
+// everything but the patch, so the suffix compares numerically — a string
+// compare would put patch 6 over patch 10.
 func newestPatchDigest(packages map[string]string, prefix string) string {
 	best, bestVer := "", -1
 	for name, digest := range packages {

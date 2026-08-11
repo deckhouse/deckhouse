@@ -46,11 +46,9 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
-// TestBuildImmutableMasterPayloadIsBase64CloudConfig pins the contract with the
-// consumer of the payload: it travels in the "cloudConfig" tfvar, which every
-// provider's terraform base64decodes before writing the cloud-init secret. A
-// plain document there fails terraform at apply time, after the base
-// infrastructure already exists.
+// TestBuildImmutableMasterPayloadIsBase64CloudConfig pins the contract: the
+// payload travels in the "cloudConfig" tfvar, which every provider's terraform
+// base64decodes before writing the cloud-init secret.
 func TestBuildImmutableMasterPayloadIsBase64CloudConfig(t *testing.T) {
 	b, bctx := immutableTestBootstrapper(t)
 
@@ -86,11 +84,9 @@ func TestBuildImmutableMasterPayloadIsBase64CloudConfig(t *testing.T) {
 	require.Equal(t, "ControlPlaneConfig", controlPlaneConfig["kind"])
 }
 
-// TestAdminKubeconfigFromCache covers the rerun. The bootstrap has phases left
-// after the handover, and nothing skips a phase that already completed — so a
-// rerun re-enters this step with the node's bootstrap channel closing or already
-// shut. It has to read the credentials the first attempt saved instead of
-// waiting half an hour on a listener that is gone.
+// TestAdminKubeconfigFromCache covers the rerun: it re-enters this step with the
+// node's channel closing or shut, and must read the credentials the first attempt
+// saved instead of waiting half an hour on a listener that is gone.
 func TestAdminKubeconfigFromCache(t *testing.T) {
 	const collected = "apiVersion: v1\nkind: Config\n"
 
@@ -118,10 +114,9 @@ func TestAdminKubeconfigFromCache(t *testing.T) {
 		require.Equal(t, saved, path)
 	})
 
-	// The record is written before the handover is confirmed, so it does not say
-	// the node's channel is closed — and the operator is told this file is the
-	// only way in, which invites moving it. Refusing here would turn that into a
-	// bootstrap no rerun can finish, with no flag to clear the record.
+	// The record does not prove the channel is closed, and the operator may have
+	// moved the file; refusing here would make the bootstrap unfinishable, with
+	// no flag to clear the record.
 	t.Run("the recorded file has been moved away", func(t *testing.T) {
 		stateCache, err := cache.NewStateCache(t.TempDir())
 		require.NoError(t, err)
@@ -136,10 +131,9 @@ func TestAdminKubeconfigFromCache(t *testing.T) {
 	})
 }
 
-// The record has to be written before ConfirmCollected, which is what makes the
-// node shut its channel for good. saveAdminKubeconfig is the last point where
-// that ordering still holds, so the record is written there — and a rerun that
-// died anywhere after it finds the file rather than a dead channel.
+// The record has to be written before ConfirmCollected shuts the node's channel
+// for good; saveAdminKubeconfig is the last point where that ordering holds, so a
+// rerun that died anywhere after it finds the file rather than a dead channel.
 func TestSaveAdminKubeconfigRecordsThePathBeforeTheChannelCloses(t *testing.T) {
 	b, bctx := immutableTestBootstrapper(t)
 	b.TmpDir = t.TempDir()
@@ -152,11 +146,9 @@ func TestSaveAdminKubeconfigRecordsThePathBeforeTheChannelCloses(t *testing.T) {
 		"the rerun path must be usable from the moment the file exists, not from the confirmation")
 }
 
-// TestSaveAdminKubeconfigNamesTheFileAfterTheCluster guards the other half of
-// the same file. TmpDir is one directory per machine and the write clears the
-// path first, so a shared name would have a second cluster's bootstrap delete
-// the first cluster's only credentials — on a node that answers no SSH and has
-// already closed its channel.
+// TestSaveAdminKubeconfigNamesTheFileAfterTheCluster: TmpDir is one directory per
+// machine and the write clears the path first, so a shared name would have a second
+// cluster's bootstrap delete the first cluster's only credentials.
 func TestSaveAdminKubeconfigNamesTheFileAfterTheCluster(t *testing.T) {
 	b, bctx := immutableTestBootstrapper(t)
 	b.TmpDir = t.TempDir()
@@ -171,11 +163,9 @@ func TestSaveAdminKubeconfigNamesTheFileAfterTheCluster(t *testing.T) {
 	require.True(t, strings.HasSuffix(bctx.adminKubeconfigPath, cache.AdminKubeconfigName))
 }
 
-// The file holds cluster-admin credentials, so how it is created matters as much
-// as where. Writing into whatever is already at the path would inherit a mode
-// somebody else chose and would follow a symlink somebody else planted; both are
-// asserted here, because os.WriteFile passes the name check above and fails both
-// of these.
+// The file holds cluster-admin credentials: writing into whatever is already at the
+// path would inherit a foreign mode and follow a planted symlink. Both are asserted
+// because os.WriteFile passes the name check above and fails both of these.
 func TestSaveAdminKubeconfigWritesAFreshPrivateFile(t *testing.T) {
 	t.Run("a wider mode left by an earlier run is not inherited", func(t *testing.T) {
 		b, bctx := immutableTestBootstrapper(t)
@@ -224,10 +214,9 @@ func immutableTestBootstrapper(t *testing.T) (*ClusterBootstrapper, *bootstrapCo
 	require.NoError(t, err)
 
 	opts := options.New()
-	// The default CandiDir points into a temporary directory the installer image
-	// populates at runtime, which a test machine has no reason to have. Left at
-	// the default, this renders from an empty directory and the test only passes
-	// where a previous dhctl run happened to leave one behind.
+	// The default CandiDir points into a directory only the installer image
+	// populates; left as is, the test would depend on leftovers of a previous
+	// dhctl run.
 	opts.Global.CandiDir = repoCandiDir(t)
 
 	b := &ClusterBootstrapper{Params: &Params{Options: opts}}
@@ -314,8 +303,7 @@ func immutableTestMetaConfig(t *testing.T) *config.MetaConfig {
 
 // immutableHandoffTestServer serves the node's side of the bootstrap channel and
 // returns the port it landed on. Bound to :0 rather than the protocol's fixed
-// port, so a runner that happens to be using that port does not make this test
-// disappear while the suite stays green.
+// port, so a busy port cannot silently skip this test.
 func immutableHandoffTestServer(t *testing.T, material *immutable.HandoffMaterial, handler http.HandlerFunc) int {
 	t.Helper()
 
@@ -338,13 +326,8 @@ func immutableHandoffTestServer(t *testing.T, material *immutable.HandoffMateria
 }
 
 // immutableWaitingBootstrapper is the smallest bootstrapper collectImmutableKubeconfig
-// runs against: no SSH provider, so the channel is the master's address directly.
-//
-// It also restores real retry behaviour for the duration of the test. init_test.go
-// collapses every loop in this binary to a single wait-free attempt, which would
-// make a test of "does this loop stop early" pass without exercising anything.
-// Borrowed and given back rather than set: nothing in this package calls
-// t.Parallel, so these run one at a time.
+// runs against: no SSH provider. It also restores real retry behaviour (init_test.go
+// collapses every loop to one attempt); safe to swap globally — no t.Parallel here.
 func immutableWaitingBootstrapper(t *testing.T) (*ClusterBootstrapper, *bootstrapContext, *immutable.HandoffMaterial) {
 	t.Helper()
 
@@ -363,9 +346,8 @@ func immutableWaitingBootstrapper(t *testing.T) (*ClusterBootstrapper, *bootstra
 }
 
 // A node that reports Failed has stopped working towards a control plane, so the
-// wait ends with the message it gave instead of polling a dead node for the rest
-// of its half-hour budget. The test would take that half hour if BreakIf stopped
-// matching.
+// wait must end with its message instead of polling for the rest of the half-hour
+// budget. The test would take that half hour if BreakIf stopped matching.
 func TestCollectImmutableKubeconfigStopsOnAFailedNode(t *testing.T) {
 	b, bctx, material := immutableWaitingBootstrapper(t)
 
@@ -388,11 +370,9 @@ func TestCollectImmutableKubeconfigStopsOnAFailedNode(t *testing.T) {
 		"a node that reported Failed must end the wait, not start the next attempt")
 }
 
-// channelBroken decides whether a failed attempt arms the reopen, and both
-// answers cost something when wrong: treating a refused dial as a break rebuilds
-// the tunnel every few seconds throughout the half hour a healthy node spends
-// installing itself, while missing a real break spends the rest of that half
-// hour on a port nothing listens on.
+// channelBroken decides whether a failed attempt arms the reopen. Treating a
+// refused dial as a break rebuilds the tunnel constantly; missing a real break
+// spends the rest of the half-hour budget on a port nothing listens on.
 func TestChannelBroken(t *testing.T) {
 	tests := []struct {
 		name   string

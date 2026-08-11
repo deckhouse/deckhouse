@@ -43,15 +43,8 @@ var masterNodeGroupHints = []*regexp.Regexp{
 }
 
 // IsImmutableMaster reports whether the master NodeGroup in the resources
-// section asks for an immutable system.
-//
-// It runs before the resources are templated and fully parsed (bootstrap needs
-// the answer while building the master's cloud-init), so a document that does
-// not parse is skipped rather than rejected — the resources section may hold
-// anything. The one exception is the master NodeGroup itself: dhctl has to read
-// it as plain YAML this early, so a templated one is an error the user must see.
-//
-// Pure; the context is here for the package's uniform exported signature.
+// section asks for an immutable system. It runs before templating, so unparsable
+// docs are skipped — except a templated master NodeGroup, which is an error. Pure.
 func IsImmutableMaster(_ context.Context, resourcesYAML string) (bool, error) {
 	for _, doc := range dhctlyaml.SplitYAML(resourcesYAML) {
 		if strings.TrimSpace(doc) == "" {

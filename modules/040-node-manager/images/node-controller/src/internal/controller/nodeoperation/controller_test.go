@@ -90,10 +90,9 @@ func TestDrainTimeoutOfNeverGoesBackwards(t *testing.T) {
 	}
 }
 
-// The two controllers agree on what "no nodeDrainTimeoutSecond" means, and the
-// agreement is a copied constant — the draining controller's is unexported, so
-// there is nothing to import and nothing to notice if one of them moves. This
-// reads its declaration and compares the two source expressions.
+// The two controllers agree on what "no nodeDrainTimeoutSecond" means via a
+// copied constant (the draining controller's is unexported). This reads its
+// declaration and compares the two source expressions.
 func TestDefaultDrainTimeoutMatchesTheDrainingController(t *testing.T) {
 	ours := declaredDefaultDrainTimeout(t, "constants.go")
 	theirs := declaredDefaultDrainTimeout(t, "../draining/controller.go")

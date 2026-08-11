@@ -65,10 +65,9 @@ func ImmutableSysextDigests(metaConfig *config.MetaConfig) preflight.Check {
 	}
 }
 
-// ImmutableControlPlaneImages fails early when the installer image does not
-// carry a control plane for the cluster's Kubernetes version. The node has no
-// digest map of its own, so an unresolved image reaches it as an empty string
-// and the static pod never starts, with nothing on the node to say why.
+// ImmutableControlPlaneImages fails early when the installer image carries no
+// control plane for the cluster's Kubernetes version: an unresolved image reaches
+// the node as an empty string and the static pod never starts, silently.
 func ImmutableControlPlaneImages(metaConfig *config.MetaConfig) preflight.Check {
 	return preflight.Check{
 		Name:        ImmutableControlPlaneImagesCheckName,
@@ -108,11 +107,8 @@ func ImmutableRegistryMode(metaConfig *config.MetaConfig) preflight.Check {
 }
 
 // ImmutableSignatureMode rejects a cluster that asks kube-apiserver to verify
-// object signatures. That mode makes the apiserver manifest reference
-// extra-files/secret-encryption-config.yaml, and the key pair plus the config
-// behind it are generated and uploaded over SSH by the control-plane-manager
-// bootstrap preparator, which the immutable path never runs. The apiserver
-// would come up in a crash loop over a missing file.
+// object signatures: the keys and encryption config behind that are uploaded over
+// SSH by a preparator the immutable path never runs, and the apiserver would crash-loop.
 func ImmutableSignatureMode(metaConfig *config.MetaConfig, globalOpts *options.GlobalOptions) preflight.Check {
 	return preflight.Check{
 		Name:        ImmutableSignatureModeCheckName,
@@ -145,9 +141,8 @@ func ImmutableSignatureMode(metaConfig *config.MetaConfig, globalOpts *options.G
 }
 
 // ImmutableKubeconfigKept rejects a --kubeconfig-out that dhctl would delete on
-// its way out. The flag's help points at the temporary directory, which is
-// exactly the directory the tmp cleaner empties at shutdown, and on an immutable
-// cluster that file is the only way in.
+// its way out: the tmp cleaner empties the very directory the flag's help points
+// at, and on an immutable cluster that file is the only way in.
 func ImmutableKubeconfigKept(bootstrapOpts *options.BootstrapOptions, globalOpts *options.GlobalOptions) preflight.Check {
 	return preflight.Check{
 		Name:        ImmutableKubeconfigKeptCheckName,
@@ -160,19 +155,16 @@ func ImmutableKubeconfigKept(bootstrapOpts *options.BootstrapOptions, globalOpts
 	}
 }
 
-// ImmutableKubeconfigOutOptions carries the one thing this check cannot read
-// off the bootstrap options: whether dhctl is being driven by dhctl-server.
-// Nothing in options.Options records that — it is a field on the bootstrapper —
-// so it has to be handed in.
+// ImmutableKubeconfigOutOptions carries the one thing the check cannot read off
+// the bootstrap options: whether dhctl is driven by dhctl-server (a bootstrapper
+// field, recorded nowhere in options.Options).
 type ImmutableKubeconfigOutOptions struct {
 	CommanderMode bool
 }
 
-// ImmutableKubeconfigOut rejects a Commander-mode bootstrap that names no path
-// for the admin kubeconfig. dhctl-server writes no default one — TmpDir is
-// shared by every cluster the process ever bootstraps — and the bootstrap
-// response carries no kubeconfig, so the credentials the node hands over once
-// would have nowhere to go, on a cluster that answers no SSH.
+// ImmutableKubeconfigOut rejects a Commander-mode bootstrap that names no path for
+// the admin kubeconfig: dhctl-server writes no default (TmpDir is shared by every
+// cluster) and the bootstrap response carries none, so the one-shot credentials would be lost.
 func ImmutableKubeconfigOut(bootstrapOpts *options.BootstrapOptions, opts ImmutableKubeconfigOutOptions) preflight.Check {
 	return preflight.Check{
 		Name:        ImmutableKubeconfigOutCheckName,

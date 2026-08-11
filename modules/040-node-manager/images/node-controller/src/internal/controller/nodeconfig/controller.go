@@ -14,12 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package nodeconfig renders a NodeConfig object for every node of an
-// an olcedar NodeGroup. Such nodes carry no bashible: the on-node agent
-// watches its own NodeConfig, reconciles the node towards it and reports the
-// outcome back through the object's status. This controller is the writer of
-// that desired state, built from the NodeGroup the node belongs to plus the
-// cluster's own state (API server endpoints, DNS, image digests, proxy token).
+// Package nodeconfig renders a NodeConfig object for every node of an olcedar
+// NodeGroup: the on-node agent reconciles the node towards it. This controller
+// writes that desired state from the NodeGroup plus live cluster state.
 package nodeconfig
 
 import (
@@ -64,15 +61,9 @@ type Reconciler struct {
 	derived *derived_status.Service
 }
 
-// MaxConcurrentReconciles is one, and this controller is only correct at one.
-//
-// The rollout gate decides how many nodes of a group may take a new spec by
-// counting the group's unapplied NodeConfigs and then writing one — a
-// read-then-write over the whole group with nothing shared to serialize on. Two
-// workers reconciling two nodes of one group both read "none updating" and both
-// write, so the group takes the change at once however small maxConcurrent is.
-// With one worker the queue hands one key to one worker and an all-nodes pass
-// walks the group in order, which is what makes the count mean what it says.
+// MaxConcurrentReconciles is one, and this controller is only correct at one:
+// the rollout gate is a read-then-write over the whole group with nothing to
+// serialize on, so two workers would both see "none updating" and both write.
 func (r *Reconciler) MaxConcurrentReconciles() int {
 	return 1
 }
@@ -85,38 +76,9 @@ func (r *Reconciler) Setup(_ context.Context, mgr ctrl.Manager) error {
 	return nil
 }
 
-// ForPredicates drops Node updates that cannot change what this controller
-// renders. Every node in an immutable group refreshes its status on a timer,
-// and each of those updates used to start a full pass for that node: the
-// cluster-wide inputs are read live (see readClusterInputs) and the group's
-// Kubernetes version is derived from scratch, so a thousand-node fleet paid
-// nine uncached round trips per node per heartbeat to render a spec that was
-// identical every time.
-//
-// What the render actually reads off a Node is the whole of what is compared
-// here:
-//
-//   - metadata.name — the node name, its hostname and the object's own name
-//     (renderSpec, renderNetwork, newNodeConfig); it cannot change.
-//   - metadata.uid — the ownerReference that has the API server collect the
-//     NodeConfig with its Node (newNodeConfig); a new UID is a new object, which
-//     arrives as a create.
-//   - metadata.labels — all of them, not just the two this package names: the
-//     group label chooses the NodeGroup (reconcileNode), the control-plane label
-//     decides whether the node publishes its own config (isControlPlaneNode),
-//     and a NodeExtensionRequest can select on any label at all (nerMatchesNode).
-//   - metadata.creationTimestamp — whether the node has joined yet, which is
-//     what decides if registration taints are rendered (renderKubelet).
-//
-// status.addresses is read too, but never from this object: the manager's cache
-// strips it, so it is fetched from the API server when it is needed
-// (reportedNodeIPs) and cannot be compared here in any case.
-//
-// A kubelet heartbeat touches none of that — it writes status conditions and
-// timestamps — so it is dropped. Creates and deletes are not filtered, and this
-// predicate applies only to the Node watch: a NodeGroup, NodeConfig or
-// NodeExtensionRequest event still enqueues the all-nodes pass, which is how a
-// change to the cluster's own state reaches every node.
+// ForPredicates drops Node updates that cannot change the render: it reads only
+// name, uid, all labels (NERs select on any) and creationTimestamp, so kubelet
+// heartbeats are filtered. Applies to the Node watch only; creates/deletes pass.
 func (r *Reconciler) ForPredicates() []predicate.Predicate {
 	return []predicate.Predicate{predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
@@ -143,14 +105,9 @@ func nodeRenderInputsChanged(before, after client.Object) bool {
 	return !maps.Equal(before.GetLabels(), after.GetLabels())
 }
 
-// nodeConfigRolloutInputsChanged reports whether an update to a NodeConfig
-// touched anything a pass reads off it. An event missing either side is passed
-// through, for the same reason nodeRenderInputsChanged does it.
-//
-// Generation stands in for the whole spec: the resource has a status
-// subresource, so only a spec write moves it. Everything else here is what the
-// rollout gate reads (rollout.go: applied) or what decides whether the object is
-// still ours (labels, owner references, deletion).
+// nodeConfigRolloutInputsChanged reports whether a NodeConfig update touched
+// anything a pass reads: Generation stands in for the spec (status subresource),
+// the rest is what the rollout gate reads or what decides ownership.
 func nodeConfigRolloutInputsChanged(before, after client.Object) bool {
 	oldConfig, okOld := before.(*internalv1alpha1.NodeConfig)
 	newConfig, okNew := after.(*internalv1alpha1.NodeConfig)
@@ -199,35 +156,17 @@ func (r *Reconciler) SetupWatches(w register.Watcher) {
 		return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: allRequestName}}}
 	})
 	w.Watches(&v1.NodeGroup{}, allMapper)
-	// A node reporting the spec it was given frees its rollout slot, which is
-	// what lets the next node of the group be updated.
-	//
-	// Predicated, and it has to be: the agent republishes its status on every
-	// pass of its own — units, extensions, the maintenance token, the last
-	// reconcile time — and this mapper enqueues the ALL-nodes key, so without a
-	// filter every heartbeat of every node re-renders the whole fleet. With one
-	// worker (MaxConcurrentReconciles) a fleet large enough to heartbeat faster
-	// than a pass completes never leaves that loop.
+	// A node reporting its applied spec frees its rollout slot. The predicate is
+	// mandatory: the agent republishes status constantly and this mapper enqueues
+	// the ALL-nodes key, so unfiltered heartbeats would re-render the whole fleet.
 	w.Watches(&internalv1alpha1.NodeConfig{}, allMapper, builder.WithPredicates(predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			return nodeConfigRolloutInputsChanged(e.ObjectOld, e.ObjectNew)
 		},
 	}))
-	// A NodeExtensionRequest change alters which extensions a node merges, so it
-	// re-renders every node — the broad mapper is enough until per-request
-	// selection is tracked.
-	//
-	// The CRD is a hard dependency rather than something whose absence is
-	// tolerated anywhere: a watch on a kind the cluster does not have never
-	// syncs, and the manager gives up on it after two minutes and exits, taking
-	// every other controller in this binary — and the NodeGroup webhook — with
-	// it. Tolerating it in the *read* would not help, because the render never
-	// runs. It is safe to depend on because this is an embedded module:
-	// addon-operator applies every enabled module's crds/ before any of them runs
-	// Helm (EnsureCRDs tasks are queued ahead of every ModuleRun on the single
-	// main queue), and an upgrade replaces this pod, whose first converge ensures
-	// the CRDs of every enabled module before the chart that carries this
-	// deployment is applied.
+	// A NER change re-renders every node. The CRD is a hard dependency: a watch
+	// on a missing kind kills the whole manager after two minutes. Safe because
+	// addon-operator applies every enabled module's crds/ before any Helm run.
 	w.Watches(&deckhousev1alpha1.NodeExtensionRequest{}, allMapper)
 }
 
@@ -240,30 +179,24 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	return r.reconcileNode(ctx, req.Name, logger, newPass())
 }
 
-// pass memoises what one reconcile pass reads. An all-nodes pass renders every
-// node from the same cluster state, so without this each node repeats the reads
-// the node before it just made — and every one of them goes straight to the API
-// server, because both are decisions the manager's cache is too old to make.
+// pass memoises what one reconcile pass reads: an all-nodes pass renders every
+// node from the same cluster state, and every read goes straight to the API
+// server because the manager's cache is too old for these decisions.
 type pass struct {
 	// inputs is what reading the cluster-wide render inputs produced, keyed by
 	// Kubernetes version: the ~6 uncached reads readClusterInputs performs are
 	// done once per distinct version rather than once per node.
 	inputs map[string]clusterInputsResult
-	// versions is the Kubernetes version each group runs, keyed by group name.
-	// It is the key the inputs above are memoised under, and producing it is not
-	// free: derived_status lists MachineDeployments and InstanceClasses and
-	// unmarshals the whole instance-type catalogue. Without this the memo below
-	// was paid for once per node anyway.
+	// versions is the Kubernetes version each group runs, keyed by group name —
+	// the memo key for inputs above, and expensive to produce (derived_status
+	// lists MachineDeployments/InstanceClasses and unmarshals the catalogue).
 	versions map[string]versionResult
-	// rollouts is each group's remaining rollout budget, keyed by group name.
-	// One listing of the group's NodeConfigs per pass, rather than one per node
-	// of the group — a NodeGroup edit drifts every node at once, so listing per
-	// node made a group of N cost N listings of N multi-kilobyte objects.
+	// rollouts is each group's remaining rollout budget, keyed by group name:
+	// one NodeConfig listing per group per pass instead of one per node.
 	rollouts map[string]*rolloutBudget
-	// created holds the nodes this pass gave a first config to, per group. They
-	// are updating from that moment and the group's next listing counts them, so
-	// a budget built later in the same pass has to count them too — otherwise the
-	// answer depends on the order the pass happened to walk the nodes in.
+	// created holds the nodes this pass gave a first config to, per group; a
+	// budget built later in the same pass must count them, or the answer depends
+	// on the order the pass walked the nodes in.
 	created map[string]map[string]struct{}
 }
 
@@ -282,11 +215,8 @@ func (p *pass) recordCreated(ngName, nodeName string) {
 }
 
 // clusterInputsResult is one attempt at reading the cluster-wide inputs, kept
-// whether it succeeded or not. The failure is worth keeping as much as the
-// answer: these inputs are cluster-wide by construction, so an absent DNS
-// service or an unreadable cluster configuration fails identically for every
-// node, and re-reading per node turns one missing object into four live reads
-// per node on every pass of a fleet that keeps triggering passes.
+// whether it succeeded or not: these inputs fail identically for every node,
+// so the failure is memoised as much as the answer.
 type clusterInputsResult struct {
 	inputs clusterInputs
 	err    error
@@ -329,13 +259,9 @@ func (r *Reconciler) clusterInputs(ctx context.Context, ng *v1.NodeGroup, p *pas
 	return in, err
 }
 
-// reconcileAllNodes re-renders every node that belongs to an immutable group.
-// One node failing does not stop the others, but the failures are counted rather
-// than logged one by one: the usual reason a node cannot be rendered is that the
-// cluster's own state cannot be read, which is the same reason for every node in
-// the fleet, and a line each buries the cause under its own repetition. The
-// first error is returned, wrapped in how many nodes shared its fate, so the
-// pass is retried with the controller's backoff.
+// reconcileAllNodes re-renders every node of every immutable group. One failure
+// does not stop the others; failures are counted, not logged one by one, and
+// the first error is returned so the pass is retried with backoff.
 func (r *Reconciler) reconcileAllNodes(ctx context.Context, logger logr.Logger) (ctrl.Result, error) {
 	nodes := &corev1.NodeList{}
 	if err := r.Client.List(ctx, nodes); err != nil {
@@ -412,11 +338,9 @@ func (r *Reconciler) reconcileNodeObject(ctx context.Context, node *corev1.Node,
 	}
 
 	desired := newNodeConfig(ng, node, inputs)
-	// The node may be asking to interrupt itself to apply what it was given, and
-	// the answer has to be about the object as it now stands: re-reading it from
-	// the cache here returned the pre-patch revision, and the operation minted
-	// from it named a generation the node had already left behind — a drain the
-	// node could never report done.
+	// The disruption answer must be about the object as it now stands: a cache
+	// re-read here returned the pre-patch revision, minting an operation for a
+	// generation the node had already left behind.
 	current, err := r.apply(ctx, ng, node, desired, logger, p)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -427,27 +351,16 @@ func (r *Reconciler) reconcileNodeObject(ctx context.Context, node *corev1.Node,
 	return ctrl.Result{}, r.reconcileDisruption(ctx, ng, node, current, logger)
 }
 
-// apply creates the object or patches it when the rendered spec drifted, and
-// returns the object as it now stands — nil when the node has none, or when
-// another writer got to it first and this pass is leaving it alone. The status
-// belongs to the node-local agent and is never touched here.
+// apply creates or patches the object and returns it as it now stands — nil
+// when the node has none or another writer got there first. The status belongs
+// to the node-local agent and is never touched here.
 func (r *Reconciler) apply(ctx context.Context, ng *v1.NodeGroup, node *corev1.Node, desired *internalv1alpha1.NodeConfig, logger logr.Logger, p *pass) (*internalv1alpha1.NodeConfig, error) {
 	existing := &internalv1alpha1.NodeConfig{}
 	err := r.Client.Get(ctx, types.NamespacedName{Name: desired.Name}, existing)
 	if apierrors.IsNotFound(err) {
-		// A CloudPermanent node was provisioned from an installer payload, not
-		// from a rendered NodeConfig, and it publishes that payload itself. The
-		// object created here would carry none of the bootstrap-only fields
-		// (see keepBootstrapOnlyFields) and would win over the file the node
-		// holds them in, so it waits for the node to register instead.
-		//
-		// The group's type, not the control-plane role label: a joining master
-		// cannot label itself with the role (NodeRestriction), so between its
-		// registration and the node-template controller applying the label the
-		// role test reads false — and this create would win the race against
-		// the node's own publish, taking the etcd mounts with it. The group
-		// label the test relies on instead is in the payload's kubelet labels,
-		// so it is there from the node's first appearance.
+		// A payload-provisioned node publishes its own NodeConfig; creating one
+		// here would lose the bootstrap-only fields. Test the group type, not the
+		// role label: NodeRestriction delays the label past registration.
 		if isControlPlaneNode(node) || ng.Spec.NodeType == v1.NodeTypeCloudPermanent {
 			logger.V(1).Info("waiting for the payload-provisioned node to publish its own NodeConfig", "node", desired.Name)
 			return nil, nil
@@ -459,10 +372,9 @@ func (r *Reconciler) apply(ctx context.Context, ng *v1.NodeGroup, node *corev1.N
 			return nil, fmt.Errorf("create NodeConfig %s: %w", desired.Name, err)
 		}
 		logger.Info("NodeConfig created", "node", desired.Name)
-		// A node given its first config is updating like any other, and the next
-		// listing of the group will say so. Recording it here keeps this pass's
-		// answer the same as that listing's, instead of depending on whether the
-		// group happened to be read before or after the node was created.
+		// A node given its first config is updating; recording it keeps this
+		// pass's budget consistent with what the next listing would say,
+		// regardless of the order the pass walked the nodes in.
 		p.recordCreated(ng.Name, desired.Name)
 		r.recordClampedSettings(ng)
 		return desired, nil
@@ -477,10 +389,9 @@ func (r *Reconciler) apply(ctx context.Context, ng *v1.NodeGroup, node *corev1.N
 	}
 	keepBootstrapOnlyFields(&desired.Spec, &existing.Spec, reported)
 
-	// Ownership is compared along with the rest because the patch below writes
-	// it: left out, a NodeConfig whose ownerReference is missing or names a
-	// replaced Node is never corrected, and the API server never collects it
-	// with the node it belongs to.
+	// Ownership is compared because the patch writes it: left out, a stale or
+	// missing ownerReference is never corrected and the API server never
+	// collects the object with its node.
 	if apiequality.Semantic.DeepEqual(existing.Spec, desired.Spec) &&
 		apiequality.Semantic.DeepEqual(existing.Labels, desired.Labels) &&
 		apiequality.Semantic.DeepEqual(existing.OwnerReferences, desired.OwnerReferences) {
@@ -500,18 +411,16 @@ func (r *Reconciler) apply(ctx context.Context, ng *v1.NodeGroup, node *corev1.N
 	}
 
 	// Conditional on the revision the decision above was made against: two
-	// passes rendering the same node at once — its own and an all-nodes one —
-	// would otherwise both write, the second one over a slot the first had
-	// already spent.
+	// passes rendering the same node at once would otherwise both write, the
+	// second over a slot the first had already spent.
 	patch := client.MergeFromWithOptions(existing.DeepCopy(), client.MergeFromWithOptimisticLock{})
 	existing.Spec = desired.Spec
 	existing.Labels = desired.Labels
 	existing.OwnerReferences = desired.OwnerReferences
 	if err := r.Client.Patch(ctx, existing, patch); err != nil {
-		// Someone wrote the object between the read this decision was made
-		// against and this patch. The node is left to the next pass — the write
-		// that won is a NodeConfig change, and the watch on those enqueues one —
-		// rather than failing the whole walk over a race that resolves itself.
+		// Someone wrote the object between the read and this patch. The node is
+		// left to the next pass — the winning write is a NodeConfig change and
+		// the watch enqueues one — rather than failing the walk over a race.
 		if apierrors.IsConflict(err) {
 			logger.V(1).Info("NodeConfig changed while it was being rendered; leaving it to the next pass", "node", desired.Name)
 			return nil, nil
@@ -524,11 +433,9 @@ func (r *Reconciler) apply(ctx context.Context, ng *v1.NodeGroup, node *corev1.N
 	return existing, nil
 }
 
-// reportedNodeIPs returns the internal addresses the node itself reports, read
-// from the API server: the manager's cache strips Node.status.addresses to keep
-// its memory down, so a cached Node claims every node in the cluster has no
-// address at all. Nothing is read unless the node's config pins an address,
-// which is the bootstrapped first master and nothing else.
+// reportedNodeIPs returns the node's reported internal addresses, read from the
+// API server (the manager's cache strips Node.status.addresses). Nothing is
+// read unless the config pins an address — only the bootstrapped first master.
 func (r *Reconciler) reportedNodeIPs(ctx context.Context, nodeName, pinned string) ([]string, error) {
 	if pinned == "" {
 		return nil, nil
@@ -547,10 +454,8 @@ func (r *Reconciler) reportedNodeIPs(ctx context.Context, nodeName, pinned strin
 }
 
 // recordClampedSettings tells the operator which NodeGroup settings the render
-// did not carry over as written. They are clamped rather than passed through
-// because the agent's schema refuses the value and a refused config leaves the
-// node with none at all, but silently narrowing what an operator asked for is
-// how a group ends up running something nobody configured.
+// did not carry over as written: the agent's schema refuses the value, and
+// silent narrowing would leave the group running something nobody configured.
 func (r *Reconciler) recordClampedSettings(ng *v1.NodeGroup) {
 	if ng.Spec.Kubelet != nil && ng.Spec.Kubelet.MaxPods != nil && int(*ng.Spec.Kubelet.MaxPods) > maxPodsCeiling {
 		r.Recorder.Event(ng, corev1.EventTypeWarning, "SettingClamped",

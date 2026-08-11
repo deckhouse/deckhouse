@@ -38,10 +38,9 @@ func TestRenderControlPlaneBundleOrdersEtcdFirst(t *testing.T) {
 	require.Equal(t, "authentication-config.yaml", bundle.ExtraFiles[0].Name)
 }
 
-// TestRenderControlPlaneBundleLeavesTheAddressToTheNode covers the one thing the
-// installer cannot know: the payload is built before the machine exists, so the
-// node's address travels as a placeholder and every manifest that needs it keeps
-// it verbatim.
+// TestRenderControlPlaneBundleLeavesTheAddressToTheNode covers the one thing
+// the installer cannot know: the node's address travels as a placeholder and
+// every manifest that needs it keeps it verbatim.
 func TestRenderControlPlaneBundleLeavesTheAddressToTheNode(t *testing.T) {
 	in := testManifestsInput(t)
 	in.NodeIP = nodeAddressPlaceholder

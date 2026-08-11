@@ -21,13 +21,8 @@ import (
 )
 
 // NodeExtensionRequest asks for a system extension (a sysext image, optionally
-// with kernel modules) to be merged onto the nodes it selects.
-//
-// The image is addressed the way the registry-packages-proxy addresses any
-// package: a name, a digest, and an optional repository and path. node-controller
-// passes these straight through to the NodeConfig extension the on-node agent
-// pulls — it resolves no module and no ModuleSource.
-//
+// with kernel modules) to be merged onto the nodes it selects. The image is
+// addressed by name/digest (+ optional repository, path); no module is resolved.
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Cluster,shortName=ner
 // +kubebuilder:subresource:status
@@ -59,15 +54,13 @@ type NodeExtensionRequestSpec struct {
 	KernelModules []KernelModule `json:"kernelModules,omitempty"`
 }
 
-// Sysext locates a system-extension image the same way the
-// registry-packages-proxy locates any package: by name and digest, optionally
-// narrowed to a repository and a path within it. node-controller forwards these
-// verbatim into the NodeConfig extension; it resolves no module or ModuleSource.
+// Sysext locates a system-extension image the way the registry-packages-proxy
+// locates any package: by name and digest, optionally narrowed to a repository
+// and path. Forwarded verbatim into the NodeConfig extension; no module resolved.
 type Sysext struct {
-	// Name is the sysext name: it is matched against the image's
-	// extension-release and installed on the node as "<name>.raw". It is copied
-	// verbatim into the NodeConfig extension name, so it must satisfy that field's
-	// constraints (a DNS-label-like token).
+	// Name is the sysext name: matched against the image's extension-release,
+	// installed on the node as "<name>.raw", and copied verbatim into the
+	// NodeConfig extension name (so it must be a DNS-label-like token).
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=63
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
@@ -90,10 +83,8 @@ type Sysext struct {
 }
 
 // reservedSysextNames are the platform system-extension names a request may not
-// claim: node-controller renders an extension with one of these names itself, so
-// a request reusing one would be dropped where the two sets merge (platform
-// wins). Kept here, next to the Sysext contract, so the admission webhook and the
-// controller backstop enforce one list.
+// claim: platform wins where the two sets merge. Kept next to the Sysext
+// contract so the admission webhook and the controller backstop enforce one list.
 const (
 	reservedSysextNameContainerd = "containerd"
 	reservedSysextNameKubelet    = "kubelet"
@@ -164,12 +155,8 @@ type NodeExtensionRequestStatus struct {
 	MatchedNodeGroups []string `json:"matchedNodeGroups,omitempty"`
 
 	// AppliedNodes is how many of the selected nodes report the sysext installed
-	// and merged; FailedNodes how many report it refused. They come from the
-	// nodes themselves rather than from this controller's own view, and that is
-	// the point: a request can resolve perfectly here and still be rejected by
-	// every node it reaches — an image signed by a key the kernel does not trust
-	// is exactly that — and without these the request keeps reporting Ready while
-	// nothing runs anywhere.
+	// and merged; FailedNodes how many report it refused. Reported by the nodes
+	// themselves: a request can resolve here yet be rejected by every node.
 	// +optional
 	AppliedNodes int32 `json:"appliedNodes,omitempty"`
 	// +optional

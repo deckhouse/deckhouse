@@ -71,10 +71,9 @@ const (
 	testClusterCA               = "-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----\n"
 )
 
-// User story: As a cluster operator, I want the nodes of an immutable NodeGroup
-// to be configured from the NodeGroup I wrote, so that I manage immutable nodes
-// through the same object as every other node group and never write per-node
-// configuration by hand.
+// User story: As a cluster operator, I want immutable nodes configured from the
+// NodeGroup I wrote, so that I manage them through the same object as every
+// other group and never write per-node configuration by hand.
 var _ = Describe("NodeConfig controller", func() {
 	BeforeEach(func(ctx context.Context) {
 		ensureClusterInputs(ctx)
@@ -106,10 +105,9 @@ var _ = Describe("NodeConfig controller", func() {
 
 			g.Expect(nc.Spec.NodeName).To(Equal(nodeName))
 
-			// The OS image is named in the cluster's own registry, the way the
-			// installer names it in the first master's payload. The public one is
-			// unreachable from an air-gapped cluster, and a value that disagrees
-			// with the installer's rewrites that master's spec for nothing.
+			// The OS image is named in the cluster's own registry, as the
+			// installer names it: the public one is unreachable air-gapped, and a
+			// disagreeing value rewrites the first master's spec for nothing.
 			g.Expect(nc.Spec.OSImage).To(Equal(testRegistryAddress + testRegistryPath + "/" + osImageNameAndTag))
 
 			// Kubelet settings come straight from the NodeGroup.
@@ -131,12 +129,9 @@ var _ = Describe("NodeConfig controller", func() {
 			// node unable to start kubelet at all.
 			g.Expect(nc.Spec.Kubelet.CACert).To(Equal(base64.StdEncoding.EncodeToString([]byte(testClusterCA))))
 
-			// A NodeGroup has no disk field, so the selector cannot name the
-			// disk — but rendering none at all is a dead node: the boot path
-			// refuses outright with "neither device nor diskSelector set"
-			// (measured, a worker stuck in the initramfs shell). What it says
-			// instead is the one true statement available: any real disk. The
-			// size bound is what keeps the megabyte cloud-init drive out.
+			// A NodeGroup has no disk field, but rendering no selector is a dead
+			// node ("neither device nor diskSelector set"); the size bound keeps
+			// the megabyte cloud-init drive out.
 			g.Expect(nc.Spec.Storage).To(Equal(internalv1alpha1.Storage{
 				Disk: internalv1alpha1.Disk{DiskSelector: &internalv1alpha1.DiskSelector{Size: systemDiskSelectorSize}},
 			}))
@@ -161,10 +156,9 @@ var _ = Describe("NodeConfig controller", func() {
 
 			g.Expect(nc.Spec.RegistryPackagesProxyAccessTokenB64).NotTo(BeEmpty())
 
-			// This config replaces the bootstrap one wholesale, so what the
-			// node was bootstrapped with has to survive in it: kubelet does
-			// not start without kernel.panic, and the OS renders its hostname
-			// from this spec on every boot.
+			// This config replaces the bootstrap one wholesale: kubelet does not
+			// start without kernel.panic, and the OS renders its hostname from
+			// this spec on every boot.
 			g.Expect(nc.Spec.Kernel.Sysctl).To(HaveKeyWithValue("kernel.panic", internalv1alpha1.SysctlValue("10")))
 			g.Expect(nc.Spec.Kernel.Sysctl).To(HaveKeyWithValue("kernel.panic_on_oops", internalv1alpha1.SysctlValue("1")))
 			g.Expect(nc.Spec.Network.Hostname).To(Equal(nodeName))
@@ -319,10 +313,9 @@ var _ = Describe("NodeConfig controller", func() {
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
-	// One NodeGroup edit drifts every node of the group at once, and they are
-	// rendered one after another inside a single pass. The group is listed once
-	// for that pass, so the only thing keeping the nodes after the first from
-	// passing the same gate is the pass counting what it has already handed out.
+	// One NodeGroup edit drifts every node at once inside a single pass; the
+	// group is listed once, so only the pass counting what it already handed
+	// out keeps the nodes after the first from passing the same gate.
 	It("holds the group to one node when a single pass drifts them all", func(ctx context.Context) {
 		ngName := testenv.UniqueName("workers-onepass")
 		createImmutableNodeGroup(ctx, ngName, func(ng *deckhousev1.NodeGroup) {
@@ -371,10 +364,9 @@ var _ = Describe("NodeConfig controller", func() {
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
-	// User story: As a cluster operator whose immutable nodes have gone quiet, I
-	// want a NodeGroup edit to reach none of them rather than all of them, so
-	// that a fleet whose agents are down does not take a change together and then
-	// interrupt itself together when they come back.
+	// User story: As an operator whose immutable nodes have gone quiet, I want a
+	// NodeGroup edit to reach none of them rather than all, so a fleet with down
+	// agents does not take a change together and interrupt itself together later.
 	It("gives no node a slot while more of the group is silent than it may update", func(ctx context.Context) {
 		ngName := testenv.UniqueName("workers-silent")
 		createImmutableNodeGroup(ctx, ngName, func(ng *deckhousev1.NodeGroup) {
@@ -420,16 +412,9 @@ var _ = Describe("NodeConfig controller", func() {
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
-	// User story: As a cluster operator with a large immutable fleet, I want the
-	// controller to do nothing when a node merely reports it is still alive, so
-	// that a thousand kubelets refreshing their status do not keep one worker
-	// re-reading the whole cluster to render a spec that never changes.
-	//
-	// A heartbeat that reached the reconciler would not be visible in the object
-	// it renders — the render is deterministic — so the difference is made
-	// visible here: a cluster input nothing watches is changed first, and a pass
-	// that ran would pick it up. It must take a change to something the render
-	// reads off the Node to bring that pass along.
+	// User story: As an operator with a large fleet, I want heartbeats to trigger
+	// nothing. Detection trick: change a cluster input nothing watches — a pass
+	// that ran would pick it up, so only a real metadata change may bring one.
 	It("does not re-render a node that only reported it is alive", func(ctx context.Context) {
 		ngName := testenv.UniqueName("workers-heartbeat")
 		createImmutableNodeGroup(ctx, ngName, nil)
@@ -479,11 +464,9 @@ var _ = Describe("NodeConfig controller", func() {
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
-	// The gate decides from a list of the group's NodeConfigs and then writes, so
-	// the list has to be the one the API server holds. Judged against a cache
-	// that has not caught up — which is what the cache is, right after the
-	// previous node of the group was handed its config — every node of the group
-	// sees a group where nothing is updating and takes the change at once.
+	// The gate decides from a list and then writes, so the list must be the API
+	// server's: judged against a cache that has not caught up, every node sees
+	// "nothing updating" and the whole group takes the change at once.
 	It("judges the rollout by the group the API server holds, not by a stale cache", func(ctx context.Context) {
 		ngName := testenv.UniqueName("workers-gate")
 		createImmutableNodeGroup(ctx, ngName, func(ng *deckhousev1.NodeGroup) {
@@ -517,10 +500,9 @@ var _ = Describe("NodeConfig controller", func() {
 		gate.Client = stale
 		gate.sources = &sourceReader{Client: stale, Reader: apiReader}
 
-		// One node of the group is mid-update, and maxConcurrent defaults to one:
-		// the second node has to wait, however applied the cache believes the
-		// group to be. Each check reads the budget afresh, the way a new pass
-		// does — a budget is per pass, not per controller.
+		// One node is mid-update and maxConcurrent defaults to one: the second
+		// node must wait, however applied the cache believes the group to be.
+		// Each check reads the budget afresh — a budget is per pass.
 		Eventually(func(g Gomega) {
 			g.Expect(rolloutSlotFor(ctx, g, gate, ng, second)).To(BeFalse())
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
@@ -533,10 +515,9 @@ var _ = Describe("NodeConfig controller", func() {
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
-	// User story: As a cluster operator, I want a node that has to restart
-	// kubelet to apply its config to be drained first and to see that happening,
-	// so that the workload leaves before the interruption and I can tell what is
-	// being done to the node and why.
+	// User story: As a cluster operator, I want a node that must restart kubelet
+	// to be drained first and to see that happening, so the workload leaves
+	// before the interruption and I can tell what is done to the node and why.
 	It("asks to interrupt a node through a NodeOperation", func(ctx context.Context) {
 		ngName := testenv.UniqueName("workers-disrupt")
 		createImmutableNodeGroup(ctx, ngName, nil)
@@ -626,10 +607,9 @@ var _ = Describe("NodeConfig controller", func() {
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
-	// User story: As a cluster operator, I want one interruption per change to a
-	// node, so that a node is not drained twice — once for a revision it has
-	// already been moved off and can never report done, and once for the one it
-	// is actually running.
+	// User story: As a cluster operator, I want one interruption per change, so a
+	// node is not drained twice — once for a revision it was already moved off
+	// and can never report done, and once for the one it actually runs.
 	It("does not ask to interrupt a node for a revision it has already left", func(ctx context.Context) {
 		// Manual first, so the node can be left asking for an interruption that
 		// nothing has answered — the state the same pass then publishes a new
@@ -666,10 +646,9 @@ var _ = Describe("NodeConfig controller", func() {
 			current = nc.Generation
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
-		// The node has not looked at the new revision yet — its status still
-		// points at the one it was moved off. An interruption for that one drains
-		// the node for a config nobody is going to report done, and holds it
-		// cordoned until the operation times out.
+		// The node's status still points at the revision it was moved off; an
+		// interruption for that one drains the node for a config nobody will
+		// report done and holds it cordoned until the operation times out.
 		Consistently(func(g Gomega) {
 			g.Expect(approvals(ctx, g, nodeName)).To(BeEmpty())
 		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
@@ -684,16 +663,9 @@ var _ = Describe("NodeConfig controller", func() {
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
-	// User story: As a cluster operator, I want a node that changed address to be
-	// registered under the address it actually has, so that a re-IPed node does
-	// not stay pinned for the rest of its life to one nothing routes to.
-	//
-	// The pinned address is only ever written by the installer, so the render
-	// keeps it — but only while the node still reports it. Judging that by the
-	// Node the reconcile started with cannot work: the manager's cache strips
-	// Node.status.addresses, so every node in the cluster looks like a node that
-	// reports no address, and every pin is kept forever. It has to be read from
-	// the API server, which is what this spec runs through.
+	// User story: As a cluster operator, I want a re-IPed node registered under
+	// its actual address, not pinned forever. The judgment must read the API
+	// server: the manager's cache strips Node.status.addresses.
 	It("releases a pinned node address once the node reports another", func(ctx context.Context) {
 		ngName := testenv.UniqueName("master-reip")
 		createImmutableNodeGroup(ctx, ngName, nil)
@@ -736,11 +708,9 @@ var _ = Describe("NodeConfig controller", func() {
 		By("the node coming back on a different address")
 		reportNodeAddress(ctx, nodeName, "10.0.0.77")
 
-		// The address itself brings no pass along: the manager's cache strips
-		// Node.status.addresses, so an address change is not visible as an event
-		// to anything — it is read from the API server when a render happens. The
-		// pass that reads it is the next all-nodes one, which in a live cluster is
-		// the node's own agent republishing its status a few minutes later.
+		// An address change is not visible as an event (the cache strips
+		// Node.status.addresses); it is read on the next all-nodes pass — in a
+		// live cluster, the node's own agent republishing its status.
 		reportApplied(ctx, nodeName)
 
 		// Released, so kubelet picks the address the node actually has instead
@@ -793,10 +763,9 @@ var _ = Describe("NodeConfig controller", func() {
 			g.Expect(nc.Generation).To(Equal(generation))
 		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
 
-		// A master that is really going away is a different matter: an evicted or
-		// deleted mirror pod keeps its address to the end, so an address that
-		// only left when the object finally disappeared is one the nodes would go
-		// on being told to talk to.
+		// A master really going away: an evicted or deleted mirror pod keeps its
+		// address to the end, so waiting for the object to disappear would keep
+		// telling the nodes to talk to it.
 		By("the apiserver pod being asked to go")
 		Expect(k8sClient.Delete(ctx, pod, client.GracePeriodSeconds(0))).To(Succeed())
 		touchNodeGroup(ctx, ngName)
@@ -842,9 +811,8 @@ var _ = Describe("NodeConfig controller", func() {
 	})
 
 	// The node reports a Reboot done by writing the phase itself, which is not
-	// the path that records the time. Without a finish time the operation would
-	// be collected on its creation time instead, and the field an operator reads
-	// to see when a node came back would stay empty.
+	// the path that records the time; without a finish time the operation is
+	// collected on creation time and the operator-facing field stays empty.
 	It("records when an operation the node finished finished", func(ctx context.Context) {
 		ngName := testenv.UniqueName("workers-stamp")
 		createImmutableNodeGroup(ctx, ngName, nil)
@@ -909,9 +877,8 @@ var _ = Describe("NodeConfig controller", func() {
 	})
 
 	// A node waiting for permission has not applied anything, whatever its
-	// status claims. If the rollout took the claim at face value, the change
-	// would walk through the whole group while every node sat waiting — exactly
-	// what maxConcurrent exists to prevent.
+	// status claims; taking the claim at face value would walk the change
+	// through the whole group while every node sat waiting.
 	It("does not count a node waiting for a disruption as updated", func(ctx context.Context) {
 		ngName := testenv.UniqueName("workers-wait")
 		createImmutableNodeGroup(ctx, ngName, func(ng *deckhousev1.NodeGroup) {
@@ -1045,11 +1012,9 @@ var _ = Describe("NodeConfig controller", func() {
 		})
 		nodeName := testenv.UniqueName("master")
 
-		// A joining master registers WITHOUT the control-plane role label:
-		// NodeRestriction forbids kubelet to self-apply it, and the
-		// node-template controller adds it only later. The group label is in
-		// the payload's kubelet labels, so it is present from the start — and
-		// it is what has to hold the controller back here.
+		// A joining master registers WITHOUT the control-plane role label
+		// (NodeRestriction); the group label is in the payload's kubelet labels
+		// from the start, and it is what must hold the controller back here.
 		node := &corev1.Node{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   nodeName,
@@ -1103,10 +1068,9 @@ var _ = Describe("NodeConfig controller", func() {
 			Spec: internalv1alpha1.NodeSpec{
 				NodeName: nodeName,
 				Registry: &internalv1alpha1.Registry{Address: "registry.example.com", Path: "/deckhouse/ce"},
-				// The installer's shape: the disk it chose plus the one etcd
-				// lives on. The mounts are what mark the section as somebody
-				// else's — a selector alone is a field this controller renders
-				// too, and keeping that would make storage write-once.
+				// The installer's shape: its disk plus the one etcd lives on. The
+				// mounts mark the section as somebody else's — a selector alone
+				// is rendered here too, and keeping it would be write-once.
 				Storage: internalv1alpha1.Storage{
 					Disk: internalv1alpha1.Disk{DiskSelector: &internalv1alpha1.DiskSelector{Size: ">=30Gi"}},
 					Mounts: []internalv1alpha1.Mount{{
@@ -1146,10 +1110,9 @@ var _ = Describe("NodeConfig controller", func() {
 			g.Expect(nc.Spec.Registry.Address).To(Equal(testRegistryAddress))
 			g.Expect(nc.Spec.Registry.Auth).To(Equal(testRegistryAuth))
 
-			// And serverTLSBootstrap is left to the cluster, which turns it on.
-			// Keeping the payload's "false" forever left the master with a
-			// self-signed kubelet certificate carrying no IP, so the API server
-			// could not reach kubelet at all: no exec, no logs, no metrics.
+			// serverTLSBootstrap is left to the cluster: keeping the payload's
+			// "false" forever left the master with a self-signed kubelet cert
+			// carrying no IP — no exec, no logs, no metrics.
 			g.Expect(nc.Spec.Kubelet.ServerTLSBootstrap).To(BeNil())
 
 			// The pause image comes from the cluster's own registry; the
@@ -1173,10 +1136,9 @@ func reportHeld(ctx context.Context, name string, heldGeneration int64) {
 			Message:            "applying this config restarts kubelet",
 			ObservedGeneration: heldGeneration,
 		})
-		// Deliberately claim the held generation is applied, with a Ready phase —
-		// an agent that overstates what it is running. The rollout must not take
-		// a node's word for it while that same status says the node is still
-		// waiting to be interrupted (disruptionRequested wins).
+		// Deliberately claim the held generation is applied, Ready phase and all:
+		// the rollout must not take an overstating agent's word while the same
+		// status says the node still waits to be interrupted.
 		meta.SetStatusCondition(&nc.Status.Conditions, metav1.Condition{
 			Type:               configurationAppliedCondition,
 			Status:             metav1.ConditionTrue,
@@ -1327,10 +1289,9 @@ func staleGroupSnapshot(ctx context.Context, ngName string) client.Client {
 	return fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 }
 
-// createAPIServerPod adds a kube-apiserver pod that has never become ready, the
-// shape a master presents while it is restarting. The finalizer makes it stay
-// once it is deleted, the way a real mirror pod lingers in Terminating — with
-// its address still on it.
+// createAPIServerPod adds a never-ready kube-apiserver pod, the shape of a
+// restarting master; the finalizer makes it linger in Terminating after delete,
+// address still on it, the way a real mirror pod does.
 func createAPIServerPod(ctx context.Context, podIP string) *corev1.Pod {
 	GinkgoHelper()
 
@@ -1576,10 +1537,9 @@ func ensureClusterInputs(ctx context.Context) {
 		},
 	})
 
-	// In a real cluster kube-controller-manager publishes this ConfigMap into
-	// every namespace; envtest runs the apiserver alone, so the suite creates
-	// it. Without the CA a node cannot start kubelet after a reboot, which is
-	// why rendering refuses to proceed without it.
+	// kube-controller-manager publishes this ConfigMap in a real cluster;
+	// envtest runs the apiserver alone, so the suite creates it. Rendering
+	// refuses to proceed without the CA.
 	ensureObject(ctx, &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{Namespace: kubeSystemNS, Name: clusterCAConfigMap},
 		Data:       map[string]string{clusterCAKey: testClusterCA},

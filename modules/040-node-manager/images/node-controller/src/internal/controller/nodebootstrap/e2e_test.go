@@ -49,10 +49,9 @@ const (
 	testClusterCA          = "-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----\n"
 )
 
-// User story: As a cluster operator, I want every immutable machine to boot from
-// bootstrap data that already carries its own node name, so that no placeholder
-// has to be substituted on the node and any infrastructure provider can hand the
-// data over unchanged.
+// User story: As a cluster operator, I want every immutable machine to boot
+// from bootstrap data that already carries its own node name, so any
+// infrastructure provider can hand the data over unchanged.
 var _ = Describe("NodeBootstrap controller", func() {
 	BeforeEach(func(ctx context.Context) {
 		ensureClusterInputs(ctx)
@@ -84,8 +83,7 @@ var _ = Describe("NodeBootstrap controller", func() {
 			// The token kubelet presents on first contact is the group's.
 			g.Expect(value).To(ContainSubstring("bootstrapToken:"))
 
-			// Only the desired state travels. The status belongs to the node,
-			// which has said nothing yet — and omitempty does not drop a struct,
+			// Only the desired state travels: omitempty does not drop a struct,
 			// so marshalling the API type verbatim would put a
 			// "status: {lastReconcileTime: null}" on every machine that boots.
 			g.Expect(value).NotTo(ContainSubstring("status:"))
@@ -112,9 +110,8 @@ var _ = Describe("NodeBootstrap controller", func() {
 	})
 
 	// The provider builds the VM from the userdata, so once it reports the
-	// infrastructure provisioned nothing will read the Secret again — and
-	// re-rendering it would keep a full pass over the uncached cluster inputs
-	// running every refresh interval for the life of the Machine.
+	// infrastructure provisioned nothing will read the Secret again and
+	// re-rendering would only burn uncached reads for the life of the Machine.
 	It("stops re-rendering once the infrastructure is provisioned", func(ctx context.Context) {
 		ngName := testenv.UniqueName("imm")
 		createImmutableNodeGroup(ctx, ngName)

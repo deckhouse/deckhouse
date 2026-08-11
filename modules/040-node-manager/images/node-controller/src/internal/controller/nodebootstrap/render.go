@@ -51,14 +51,9 @@ func renderBootstrapData(ctx context.Context, cl client.Client, reader client.Re
 	return wrapCloudConfig(spec, machineName, ng.Name)
 }
 
-// bootstrapDocument is the shape written to /config/nodeconfig.yaml: the same
-// object the cluster holds, minus the status.
-//
-// Spelled out rather than marshalled from the API type, whose Status is a struct
-// — and omitempty does nothing on a struct, so every machine would boot with a
-// `status: {lastReconcileTime: null}` it has no business carrying. dhctl writes
-// the first master's copy from a spec-only type of its own for the same reason
-// (dhctl/pkg/immutable/types.go).
+// bootstrapDocument is the shape written to /config/nodeconfig.yaml: the
+// cluster object minus the status. Spelled out because omitempty does not drop
+// the Status struct; dhctl uses a spec-only type for the same reason.
 type bootstrapDocument struct {
 	APIVersion string                    `json:"apiVersion"`
 	Kind       string                    `json:"kind"`
@@ -104,11 +99,8 @@ func wrapCloudConfig(spec internalv1alpha1.NodeSpec, machineName, ngName string)
 }
 
 // readBootstrapToken returns the newest non-expired bootstrap token of the
-// NodeGroup, the same per-group rotating token bashible nodes are given. The
-// token secrets live in kube-system, one or more per group, labelled with the
-// group name. Kept in step with groupBootstrapToken in dhctl's
-// pkg/operations/bootstrap/steps_immutable_join.go, which picks the token for
-// a joining master the same way.
+// NodeGroup from the labelled kube-system secrets. Kept in step with
+// groupBootstrapToken in dhctl's pkg/operations/bootstrap/steps_immutable_join.go.
 func readBootstrapToken(ctx context.Context, reader client.Reader, ngName string) (string, error) {
 	req, err := labels.NewRequirement(bootstrapTokenNGLabel, selection.Equals, []string{ngName})
 	if err != nil {

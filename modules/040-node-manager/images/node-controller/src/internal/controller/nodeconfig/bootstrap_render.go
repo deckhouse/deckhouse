@@ -30,12 +30,8 @@ import (
 )
 
 // RenderBootstrapSpec renders the NodeConfig spec for a machine that has not
-// registered as a Node yet, for the bootstrap provider. There is no Node object
-// at bootstrap time, so the caller passes the name the node will register
-// under; the spec is otherwise the same one the day-2 controller renders, from
-// the same live cluster state. The bootstrap token kubelet needs on first
-// contact is not filled in here — the day-2 path carries none, so the caller
-// adds it.
+// registered as a Node yet; the caller passes the future node name and adds the
+// bootstrap token itself. Otherwise identical to the day-2 render.
 func RenderBootstrapSpec(ctx context.Context, cl client.Client, reader client.Reader, ng *v1.NodeGroup, machineName string) (internalv1alpha1.NodeSpec, error) {
 	derived := &derived_status.Service{Client: cl, Reader: reader}
 	version, err := resolveKubernetesVersion(ctx, derived, ng)
@@ -49,14 +45,9 @@ func RenderBootstrapSpec(ctx context.Context, cl client.Client, reader client.Re
 		return internalv1alpha1.NodeSpec{}, err
 	}
 
-	// A node that has not joined yet: the zero CreationTimestamp makes the
-	// registration taints render, and the machine name is what kubelet will
-	// register the node under. It carries the labels kubelet is about to register
-	// it with, because a NodeExtensionRequest can select by node label — a
-	// machine built from a bare name matched none of them, so the node booted
-	// without an extension it was selected for and picked it up on its first
-	// day-2 render instead: a spec change, and possibly an interruption, minutes
-	// after joining.
+	// Zero CreationTimestamp makes registration taints render. The registration
+	// labels must be set: a NodeExtensionRequest selects by node label, and a
+	// bare-name node would miss its extensions until the first day-2 render.
 	node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{
 		Name:   machineName,
 		Labels: registrationLabels(ng),
@@ -64,14 +55,9 @@ func RenderBootstrapSpec(ctx context.Context, cl client.Client, reader client.Re
 	return renderSpec(ng, node, in), nil
 }
 
-// resolveKubernetesVersion is the version a group's kubelet must match. It is
-// derived from the cluster configuration rather than read from the group's
-// status, which is only filled once the group has bashible-managed nodes.
-//
-// A failure to derive it is fatal to the render rather than a fall back on the
-// status: the version picks the kubelet system extension, so falling back would
-// hand the group a different kubelet — and an immutable group has no
-// bashible-managed nodes, so its status version is usually empty anyway.
+// resolveKubernetesVersion derives the group's kubelet version from the cluster
+// configuration, not the group's status (empty until bashible nodes exist).
+// A derivation failure is fatal: the version picks the kubelet system extension.
 func resolveKubernetesVersion(ctx context.Context, derived *derived_status.Service, ng *v1.NodeGroup) (string, error) {
 	// The derived status reports the version even when a later cloud check fails,
 	// so the check outcome is ignored here — the error is not.

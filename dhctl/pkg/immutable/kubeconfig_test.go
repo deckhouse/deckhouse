@@ -61,27 +61,17 @@ current-context: kubernetes-admin@kubernetes
 	require.Contains(t, err.Error(), "must never carry")
 }
 
-// testClientKeyPEM is a stand-in for the installer's own key. What matters to
-// withClientKey is the PEM framing, not the bytes inside it.
-//
-// Assembled rather than written out: a literal PEM private-key header in the
-// source trips secret scanners, and they are right to trip on it — a scanner
-// cannot tell a placeholder from the real thing, and a rule that learns to
-// ignore "test" keys stops being a rule.
+// testClientKeyPEM is a stand-in for the installer's own key: withClientKey
+// cares about the PEM framing, not the bytes. Assembled rather than written
+// out, so a literal private-key header does not trip secret scanners.
 func testClientKeyPEM() string {
 	const kind = "EC PRIVATE" + " KEY"
 	return "-----BEGIN " + kind + "-----\ntest\n-----END " + kind + "-----\n"
 }
 
 // CheckKubeconfigOutSurvivesCleanup guards the only way into an immutable
-// cluster, so both answers matter: approving a path the cleaner then deletes
-// loses the credentials, and refusing one it would have spared costs the
-// operator a flag they were entitled to use.
-//
-// The symlink row is the reason the paths are resolved rather than only made
-// absolute: on macOS the temporary directory is reached through /tmp, which is a
-// link to /private/tmp, so a lexical comparison calls a path inside the cleaner's
-// directory "outside" and the file is swept anyway.
+// cluster, so both answers matter: a wrong approval loses the credentials, a
+// wrong refusal costs a valid flag. The symlink row covers /tmp -> /private/tmp.
 func TestCheckKubeconfigOutSurvivesCleanup(t *testing.T) {
 	tmpDir := t.TempDir()
 	outside := t.TempDir()

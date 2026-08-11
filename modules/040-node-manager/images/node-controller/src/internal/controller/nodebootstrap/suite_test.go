@@ -46,11 +46,9 @@ var (
 	suiteCancel context.CancelFunc
 )
 
-// TestNodeBootstrapControllerEnvtest runs the envtest-backed integration suite:
-// the real bootstrap controller runs inside a manager against a real
-// kube-apiserver, so what is asserted is the Secret and status a Machine's
-// NodeBootstrapConfig ends up with. Skipped when envtest assets are missing so
-// the unit tests stay runnable without `make envtest`.
+// TestNodeBootstrapControllerEnvtest runs the envtest-backed integration
+// suite: the real controller against a real kube-apiserver. Skipped when
+// envtest assets are missing so unit tests stay runnable without `make envtest`.
 func TestNodeBootstrapControllerEnvtest(t *testing.T) {
 	if !testenv.AssetsAvailable() {
 		t.Skip("envtest assets not found; run `make envtest` (or set KUBEBUILDER_ASSETS) to run the integration suite")
@@ -67,10 +65,9 @@ var _ = BeforeSuite(func() {
 	scheme = k8sruntime.NewScheme()
 	Expect(clientgoscheme.AddToScheme(scheme)).To(Succeed())
 	Expect(deckhousev1.AddToScheme(scheme)).To(Succeed())
-	// NodeExtensionRequest: the rendered spec merges the operator's extra system
-	// extensions, and listing them fails the whole render when the type is not in
-	// the scheme, or its CRD not installed below — which is what a missing entry
-	// here looks like from the suite.
+	// NodeExtensionRequest: the rendered spec merges the operator's extra
+	// system extensions; listing them fails the whole render when the type is
+	// missing from the scheme or its CRD is not installed below.
 	Expect(deckhousev1alpha1.AddToScheme(scheme)).To(Succeed())
 	Expect(internalv1alpha1.AddToScheme(scheme)).To(Succeed())
 	Expect(bootstrapv1alpha1.AddToScheme(scheme)).To(Succeed())

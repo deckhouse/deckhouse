@@ -32,11 +32,9 @@ func writeKubeconfig(t *testing.T, content string) string {
 	return path
 }
 
-// The identity has to come from the CA as well as the address. Two clusters at
-// the same address is the normal shape here — the line destroy prints for an
-// immutable cluster tells every operator to point their kubeconfig at
-// https://127.0.0.1:6445 through a bastion forward — and the cache this keys
-// holds the infrastructure state destroy tears down.
+// The identity has to come from the CA as well as the address: the bastion-forward
+// line makes every immutable cluster reachable at https://127.0.0.1:6445, and the
+// cache this keys holds the infrastructure state destroy tears down.
 func TestKubeconfigClusterIdentityReadsTheCAFromDisk(t *testing.T) {
 	const template = `apiVersion: v1
 kind: Config
@@ -98,10 +96,9 @@ users:
 	require.Contains(t, err.Error(), "carries no cluster CA")
 }
 
-// A bare "in-cluster" would be shared by every in-cluster run on this machine,
-// which is the same collision one directory further up. And with no API server
-// in the environment there is nothing to name the cluster by at all, so the run
-// stops rather than reaching for a constant.
+// A bare "in-cluster" would be shared by every in-cluster run on this machine.
+// With no API server in the environment there is nothing to name the cluster by,
+// so the run stops rather than reaching for a constant.
 func TestInClusterCacheIdentity(t *testing.T) {
 	t.Setenv("KUBERNETES_SERVICE_HOST", "10.223.0.1")
 	t.Setenv("KUBERNETES_SERVICE_PORT", "443")

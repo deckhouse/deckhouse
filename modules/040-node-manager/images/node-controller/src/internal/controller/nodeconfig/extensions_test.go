@@ -254,11 +254,9 @@ func TestNodeExtensions(t *testing.T) {
 	}
 }
 
-// spec.extensions is an array, so the order the requests are walked in is the
-// order the node is given them in. Taking that from the caller made the rendered
-// spec depend on which reader listed the requests: a listing that came back
-// another way round was a spec diff on every node of every immutable group — a
-// generation bump each and a rollout slot each, for no change at all.
+// TestNodeExtensionsOrderDoesNotFollowTheListing: spec.extensions is an array,
+// so a listing-order dependency was a spec diff — a generation bump and a
+// rollout slot per node — for no change at all.
 func TestNodeExtensionsOrderDoesNotFollowTheListing(t *testing.T) {
 	older := metav1.NewTime(time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC))
 	newer := metav1.NewTime(time.Date(2026, 1, 2, 0, 0, 0, 0, time.UTC))
@@ -357,10 +355,9 @@ func TestResolveNERConflicts(t *testing.T) {
 			want: map[string]nerConflict{},
 		},
 		{
-			// Two requests loading one module with different parameters: the node
-			// can only have one of them. Deciding by the order an API listing came
-			// back in made the parameters a node ran depend on the alphabet, and
-			// left the request that lost saying it had resolved.
+			// One module, different parameters: deciding by listing order made the
+			// running parameters depend on the alphabet and left the loser
+			// claiming it had resolved.
 			name: "kernel module with different parameters: the older request wins",
 			ners: []deckhousev1alpha1.NodeExtensionRequest{
 				nerCreated("apple", newer, deckhousev1alpha1.NodeExtensionRequestSpec{

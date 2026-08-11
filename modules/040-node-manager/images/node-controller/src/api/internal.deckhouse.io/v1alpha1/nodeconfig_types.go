@@ -20,16 +20,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// NodeConfig is the top-level object stored at /config/nodeconfig.yaml and, in
-// the cluster, a CRD (internal.deckhouse.io/v1alpha1). It describes the desired
-// state of a Deckhouse olcedar node. The on-node loader (nodelet) parses the
-// same type from the config file, so this file and the agent's own
-// internal/config/types.go are one contract and must stay identical — as are
-// the spec-only mirror types dhctl writes the first master's payload with
-// (dhctl/pkg/immutable/types.go). The CRD in
-// modules/040-node-manager/crds/nodeconfig.yaml is generated from it — see the
-// "Generate" section of this module's Makefile.
-//
+// NodeConfig is the desired state of a Deckhouse olcedar node, stored at
+// /config/nodeconfig.yaml and as a cluster CRD (crds/nodeconfig.yaml, generated).
+// Keep identical with nodelet's internal/config/types.go and dhctl's spec-only mirrors.
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Cluster,shortName=nc
 // +kubebuilder:subresource:status
@@ -47,39 +40,32 @@ type NodeConfig struct {
 
 // NodeConfigStatus is the observed state reported by the node agent.
 type NodeConfigStatus struct {
-	// ObservedGeneration is the latest spec generation the node has processed —
-	// seen and decided what to do about. It reaches the newest generation as
-	// soon as the node has looked at it, even while that generation is still
-	// held for approval and not yet running (see AppliedGeneration).
+	// ObservedGeneration is the latest spec generation the node has processed:
+	// it reaches the newest generation as soon as the node has looked at it,
+	// even while it is still held for approval (see AppliedGeneration).
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
-	// AppliedGeneration is the spec generation the node is actually running. It
-	// lags ObservedGeneration while a disruptive config is held: the node keeps
-	// running the previous generation until the interruption the new one needs
-	// is approved. The cluster's "this node has converged" test is
-	// AppliedGeneration == metadata.generation, not ObservedGeneration.
+	// AppliedGeneration is the spec generation the node is actually running; it
+	// lags ObservedGeneration while a disruptive config is held for approval.
+	// "This node has converged" means AppliedGeneration == metadata.generation.
 	// +optional
 	AppliedGeneration int64 `json:"appliedGeneration,omitempty"`
 	// Phase summarises the node. Ready: running the published config, healthy.
 	// Pending: healthy but not yet running the published config (held for
-	// approval). Degraded: a subsystem failed, the config was rejected, or the
-	// node rolled back.
+	// approval). Degraded: a subsystem failed, config rejected, or rolled back.
 	// +optional
 	// +kubebuilder:validation:Enum=Ready;Pending;Degraded
 	Phase string `json:"phase,omitempty"`
 	// Conditions are the node-level reconcile outcomes (ConfigurationApplied,
 	// DisruptionRequired) plus the gate subsystems (APIEndpointsReachable,
-	// SysctlApplied). Per-extension and per-unit outcomes live in Extensions and
-	// Units instead, one entry each rather than a single aggregate condition.
+	// SysctlApplied); per-extension and per-unit outcomes live in Extensions and Units.
 	// +optional
 	// +listType=map
 	// +listMapKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 	// Extensions is the outcome of each configured system extension, one entry
-	// per extension, so a reader sees which one failed rather than a single
-	// aggregate ExtensionsReady. It is republished on every pass, empty when the
-	// pass checked nothing — an empty list means exactly that, and never "the
-	// previous outcome still holds".
+	// per extension. Republished on every pass, empty when the pass checked
+	// nothing — never "the previous outcome still holds".
 	// +optional
 	// +listType=map
 	// +listMapKey=name
@@ -91,16 +77,9 @@ type NodeConfigStatus struct {
 	// +listType=map
 	// +listMapKey=name
 	Units []UnitStatus `json:"units,omitempty"`
-	// LastReconcileTime is when the node last finished a reconcile pass. Nothing
-	// else in the status ages: conditions carry a lastTransitionTime that moves
-	// only on a transition, so an agent that died at 02:00 goes on publishing the
-	// last status it wrote, and a reader — or the cluster's rollout gate, which
-	// frees a slot for a node it believes converged — cannot tell it from a
-	// healthy one.
-	//
-	// It is republished at most once every few minutes, not on every pass: a
-	// write per node per minute buys nothing a coarser heartbeat does not. So
-	// judge staleness in tens of minutes, not seconds.
+	// LastReconcileTime is when the node last finished a reconcile pass — the
+	// only thing in the status that ages, so it is what tells a dead agent from
+	// a healthy one. Republished coarsely: judge staleness in tens of minutes.
 	// +optional
 	LastReconcileTime metav1.Time `json:"lastReconcileTime,omitempty"`
 	// MaintenanceToken authenticates a push to the node's maintenance endpoint.
@@ -170,10 +149,7 @@ type NodeSpec struct {
 	NodeName string `json:"nodeName"`
 	// OSImage is the OS image reference the cluster believes this node should
 	// run. Nothing acts on it: the node boots whatever the DVPInstanceClass
-	// points its root disk at, and nodelet only logs this. Optional, so the same
-	// document is accepted both as /config/nodeconfig.yaml and by the API —
-	// required here while the file loader did not require it meant one YAML
-	// passed on the node and was refused by the API server.
+	// points at, nodelet only logs it. Optional so file and API accept one document.
 	// +optional
 	OSImage string `json:"osImage,omitempty"`
 	// Storage selects the target disk for the OS install. The partition layout
@@ -207,35 +183,22 @@ type NodeSpec struct {
 	UpdatePolicy UpdatePolicy `json:"updatePolicy,omitempty"`
 
 	// RegistryPackagesProxyAccessTokenB64 is a base64-encoded token used to
-	// authenticate against the registry packages proxy.
-	//
-	// It is a credential, but deliberately NOT marked x-kubernetes-sensitive-data
-	// the way status.maintenanceToken is. The nodeconfigs/sensitive subresource
-	// is granted per resource, not per field, so a node cannot be allowed to read
-	// this one without also being allowed to read every other node's maintenance
-	// token — and nodelet must read this one: the extensions controller decodes
-	// it to fetch every sysext. Nothing is lost by leaving it visible: the proxy
-	// token is one cluster-wide secret (registry-packages-proxy-token) published
-	// identically to every node, so reading a neighbour's copy hands an attacker
-	// what it already holds.
+	// authenticate against the registry packages proxy. Deliberately not marked
+	// sensitive: nodelet must read it, and the token is identical on every node.
 	// +optional
 	// +kubebuilder:validation:Pattern=`^(([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?)?$`
 	RegistryPackagesProxyAccessTokenB64 string `json:"registryPackagesProxyAccessTokenB64,omitempty"`
 
-	// Registry is the container registry the node talks to directly, without the
-	// cluster's registry-packages-proxy. A node bootstrapping a control-plane has
-	// no proxy to ask — it is the one bringing the cluster up — yet it still has
-	// to pull the control-plane images and its own system extensions, so it needs
-	// the address and the credentials itself. Worker nodes leave this empty and
-	// keep going through the proxy.
+	// Registry is the container registry the node talks to directly, without
+	// the registry-packages-proxy. A node bootstrapping a control plane has no
+	// proxy yet but must pull images and sysexts; workers leave this empty.
 	// +optional
 	Registry *Registry `json:"registry,omitempty"`
 }
 
-// Registry describes direct access to a container registry: where it is, how to
-// reach it and how to authenticate. It feeds both the extension downloader and
-// the containerd hosts.toml, so a control-plane static pod (which has no
-// imagePullSecrets — nothing has created them yet) can pull its image.
+// Registry describes direct access to a container registry: address, scheme
+// and credentials. It feeds the extension downloader and containerd hosts.toml,
+// so a control-plane static pod without imagePullSecrets can pull its image.
 type Registry struct {
 	// Address is the registry host, optionally with a port, e.g.
 	// "registry.deckhouse.io" or "registry.example.com:5000".
@@ -261,37 +224,22 @@ type Registry struct {
 }
 
 // Storage selects the target disk for the OS install. The partition layout is
-// fixed (boot ESP + config + data), so only the whole-disk device is needed —
-// no per-partition configuration. Consumed by the initramfs disk provisioner at
-// install time (see the initramfs repo docs/disk-provisioning-plan.md).
+// fixed (boot ESP + config + data), so only the whole-disk device is needed.
+// Consumed by the initramfs disk provisioner at install time.
 type Storage struct {
 	Disk `json:",inline"`
 	// Mounts are additional filesystems the node makes available, at /mnt/<name>
-	// or wherever bindTo names. They are independent of the OS install above:
-	// nothing here is partitioned, only existing partitions and blank whole disks
-	// are formatted (when empty) and mounted. Reconciled by nodelet on a running
-	// node, so a disk added to a live node is picked up without a reboot.
-	//
-	// This is how a control-plane node is given the disk etcd lives on: the
-	// installer cannot name the device, because it renders the config before the
-	// machine — and therefore the disk — exists, so it renders a selector instead.
+	// or wherever bindTo names. Nothing here is partitioned: only existing
+	// partitions and blank whole disks are formatted (when empty) and mounted.
 	// +optional
 	// +listType=map
 	// +listMapKey=name
 	Mounts []Mount `json:"mounts,omitempty"`
 }
 
-// Mount is one additional filesystem the node makes available, at /mnt/<name>
-// unless bindTo says otherwise.
-//
-// The partition is named by a fixed path (device) or by attributes
-// (partitionSelector) — exactly one of the two. The selector is the resilient
-// form: /dev/sdX names move between boots, a UUID or a partition label does not.
-//
-// There are exactly two cases. Empty means "format it, then mount it", with the
-// label set to name. Already formatted means "mount it" — including when the
-// filesystem is of a different type than requested, which is reported but
-// mounted as it is. Nothing here ever reformats: an existing filesystem is data.
+// Mount is one additional filesystem, at /mnt/<name> unless bindTo says
+// otherwise. Exactly one of device or partitionSelector names the partition; an
+// empty one is formatted (label = name), an existing filesystem mounted as is.
 // +kubebuilder:validation:XValidation:rule="has(self.device) != has(self.partitionSelector)",message="exactly one of device or partitionSelector must be set"
 type Mount struct {
 	// Name identifies the mount, and is both the mount point (/mnt/<name>) and
@@ -310,12 +258,8 @@ type Mount struct {
 	// +optional
 	PartitionSelector *PartitionSelector `json:"partitionSelector,omitempty"`
 	// BindTo mounts the filesystem at this path instead of /mnt/<name>, for a
-	// directory something else already knows by name — /var/lib/etcd is one, being
-	// what the etcd static pod carries as a hostPath.
-	//
-	// The directory must be empty when the mount is made: mounting over files
-	// hides them rather than replacing them, and hidden etcd data is data etcd
-	// decides it does not have.
+	// directory something else knows by name (/var/lib/etcd). The directory must
+	// be empty: mounting over files hides them, and hidden etcd data is lost data.
 	// +optional
 	// +kubebuilder:validation:Pattern=`^/[A-Za-z0-9._/-]+$`
 	BindTo string `json:"bindTo,omitempty"`
@@ -334,12 +278,8 @@ type Mount struct {
 }
 
 // PartitionSelector matches one partition by attributes (all specified fields
-// are AND-ed). String fields are shell-style globs, except uuid and partUUID,
-// which are compared literally (case-insensitively).
-//
-// Matching several devices is an error, not a choice: the node refuses to act
-// and reports the candidates, rather than picking one and possibly putting a
-// filesystem on the wrong disk.
+// are AND-ed); string fields are shell-style globs, except uuid and partUUID
+// (literal, case-insensitive). Matching several devices is an error, never a choice.
 type PartitionSelector struct {
 	// Name matches the kernel device name (glob), e.g. "sdb1" or "nvme0n1p*".
 	// +optional
@@ -364,13 +304,9 @@ type PartitionSelector struct {
 	// "=" allows 1%, since a disk rarely reports an exact round size.
 	// +optional
 	Size string `json:"size,omitempty"`
-	// Blank makes whole disks selectable, and only the ones that carry nothing:
-	// no partition table and no filesystem. It is how a cloud disk is named
-	// before it has ever been touched.
-	//
-	// Without it a selector sees partitions only, however wide it is: a whole disk
-	// is where somebody's layout lives, and putting a filesystem over one destroys
-	// every partition on it at once.
+	// Blank makes whole disks selectable, and only ones that carry nothing: no
+	// partition table, no filesystem — a cloud disk never touched. Without it a
+	// selector sees partitions only; a whole disk is where somebody's layout lives.
 	// +optional
 	Blank bool `json:"blank,omitempty"`
 }
@@ -391,8 +327,7 @@ type Disk struct {
 	DiskSelector *DiskSelector `json:"diskSelector,omitempty"`
 	// Wipe controls whether an already-provisioned disk is wiped and
 	// re-partitioned. Default false: only an unprovisioned (or non-matching)
-	// disk is set up, so an existing correct layout is left intact and a reboot
-	// never destroys data.
+	// disk is set up, so an existing layout stays and a reboot never destroys data.
 	// +optional
 	Wipe bool `json:"wipe,omitempty"`
 }
@@ -429,13 +364,9 @@ type DiskSelector struct {
 	BusPath string `json:"busPath,omitempty"`
 }
 
-// Extension is a signed verity sysext built from a release channel. It is
-// fetched from the registry-packages-proxy by digest. The optional repository
-// (a registry host, e.g. "cr.flant.com") selects the proxy's per-registry
-// client config; when empty the proxy's default config is used. The optional
-// additionalPath (e.g. "deckhouse/sysext/containerd") is forwarded to the
-// proxy as the "path" query parameter to locate the artifact within the
-// repository.
+// Extension is a signed verity sysext built from a release channel, fetched
+// from the registry-packages-proxy by digest. Optional repository selects the
+// proxy's per-registry config; optional additionalPath is its "path" parameter.
 type Extension struct {
 	// Name is the extension name (also the sysext image basename).
 	// +kubebuilder:validation:MinLength=1
@@ -570,9 +501,8 @@ type Kubelet struct {
 	// +kubebuilder:default=120
 	MaxPods int `json:"maxPods,omitempty"`
 	// KubernetesVersion is the cluster's minor version, e.g. "1.34". It decides
-	// which feature gates kubelet is started with — bashible turns the DRA gates
-	// on by version, and a node not told the version cannot follow. Without it a
-	// DRA workload runs everywhere in the cluster except on immutable nodes.
+	// which feature gates kubelet is started with (bashible turns DRA gates on
+	// by version); without it DRA workloads cannot run on immutable nodes.
 	// +optional
 	// +kubebuilder:validation:MaxLength=16
 	// +kubebuilder:validation:Pattern=`^[0-9]+\.[0-9]+$`
@@ -583,12 +513,9 @@ type Kubelet struct {
 	// +kubebuilder:default="50Mi"
 	// +kubebuilder:validation:XValidation:rule="isQuantity(self) && sign(quantity(self)) > 0",message="containerLogMaxSize must be a positive Kubernetes quantity"
 	ContainerLogMaxSize string `json:"containerLogMaxSize,omitempty"`
-	// Maintainers: the maximum below is 1000 because that is what the on-node
-	// loader enforces for this field, and the two are kept in step by hand since
-	// a marker cannot read a constant. This note is separated from the comment
-	// below by a blank line on purpose — controller-gen takes the whole comment
-	// group touching the field as its documentation, so anything written there
-	// ships to users in the CRD.
+	// Maintainers: the maximum below is 1000 because the on-node loader enforces
+	// it; kept in step by hand. Separated from the comment below by a blank line
+	// on purpose — controller-gen ships the touching comment group into the CRD.
 
 	// ContainerLogMaxFiles is the number of rotated log files to retain.
 	// +optional
@@ -620,8 +547,7 @@ type Kubelet struct {
 	NodeLabels map[string]NodeLabelValue `json:"nodeLabels,omitempty"`
 	// ServerTLSBootstrap makes kubelet request a serving certificate from the
 	// cluster instead of signing its own. Default true. The zero master sets it
-	// to false: nothing approves serving CSRs until Deckhouse is installed, and
-	// a kubelet waiting for that certificate never reports the node Ready.
+	// to false: nothing approves serving CSRs until Deckhouse is installed.
 	// +optional
 	ServerTLSBootstrap *bool `json:"serverTLSBootstrap,omitempty"`
 	// NodeIP is the address kubelet registers the node with (--node-ip). Left

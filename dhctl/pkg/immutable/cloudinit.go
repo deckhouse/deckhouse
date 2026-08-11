@@ -33,10 +33,9 @@ const (
 	// path, so the name matters and the directory does not.
 	nodeConfigPath = "/config/nodeconfig.yaml"
 
-	// controlPlaneConfigPath names the payload entry. The node does not receive
-	// this file — the initramfs delivers only the node config — it reads
-	// cloud-init itself and picks the entry out by this name. So the path is a
-	// label, and the name is the contract.
+	// controlPlaneConfigPath names the payload entry. The node reads cloud-init
+	// itself and picks the entry out by this name, so the path is a label and
+	// the name is the contract.
 	controlPlaneConfigPath = "/config/controlplane.yaml"
 )
 
@@ -58,15 +57,9 @@ type MasterPayloadInput struct {
 	GlobalOptions *options.GlobalOptions
 }
 
-// BuildMasterPayload renders the cloud-init the first master boots with. The
+// BuildMasterPayload renders the cloud-init the first master boots with: the
 // node has no sshd and no bashible, so everything dhctl would otherwise upload
-// afterwards has to be in here.
-//
-// The result is base64-encoded because that is what the "cloudConfig" tfvar
-// carries: every provider's terraform base64decodes it before writing the
-// cloud-init secret, and the only other producer of that variable (the cloud
-// config secret read in kubernetes/actions/entity) encodes it too. The document
-// underneath stays plain — it is pinned by a golden file.
+// has to be in here. Base64-encoded, as the "cloudConfig" tfvar contract expects.
 func BuildMasterPayload(ctx context.Context, in MasterPayloadInput) (string, error) {
 	nodeConfig, err := buildNodeConfig(ctx, nodeConfigInput{
 		NodeName:   in.NodeName,
@@ -104,13 +97,9 @@ type JoinPayloadInput struct {
 	APIServerEndpoints []string
 }
 
-// BuildJoinPayload renders the cloud-init an additional master boots with.
-//
-// It is the first master's payload minus the ControlPlaneConfig, plus the CA
-// and the token that let kubelet reach an apiserver somebody else is already
-// running. The node joins as an ordinary member of the master group and
-// control-plane-manager makes a control-plane node out of it afterwards —
-// the same path a classic cluster's second and third masters take.
+// BuildJoinPayload renders the cloud-init an additional master boots with: the
+// first master's payload minus the ControlPlaneConfig, plus the CA and token to
+// reach an existing apiserver. control-plane-manager promotes the node later.
 func BuildJoinPayload(ctx context.Context, in JoinPayloadInput) (string, error) {
 	switch {
 	case in.CACert == "":
@@ -142,14 +131,9 @@ func BuildJoinPayload(ctx context.Context, in JoinPayloadInput) (string, error) 
 	return base64.StdEncoding.EncodeToString([]byte(document)), nil
 }
 
-// buildCloudConfig wraps the payload documents into the single #cloud-config
-// document the VM boots with.
-//
-// The generator on the node accepts plain content only — the "encoding" and
-// "permissions" keys of write_files are ignored — and the provider's terraform
-// concatenates this document with a block of its own, so no top-level key it
-// also emits (hostname, users, ssh_authorized_keys) may appear here: a
-// duplicate key breaks the parsing of the whole user-data.
+// buildCloudConfig wraps the payload documents into one #cloud-config. The node
+// ignores write_files "encoding"/"permissions", and the provider's terraform
+// appends its own block, so no top-level key it also emits may appear here.
 func buildCloudConfig(nodeConfig *nodeConfig, controlPlaneConfig *controlPlaneConfig) (string, error) {
 	nodeConfigYAML, err := yaml.Marshal(nodeConfig)
 	if err != nil {
@@ -160,11 +144,9 @@ func buildCloudConfig(nodeConfig *nodeConfig, controlPlaneConfig *controlPlaneCo
 		{"path": nodeConfigPath, "content": string(nodeConfigYAML)},
 	}
 
-	// Only the node that creates the cluster gets one. A joining master must not:
-	// the document is an order to generate a cluster CA and start an apiserver
-	// against it, and a second CA in one cluster is not something the node could
-	// recover from. It gets its control plane the way every other master does —
-	// from control-plane-manager, after it has joined.
+	// Only the cluster-creating node gets one: the document is an order to
+	// generate a cluster CA, and a joining master must never mint a second CA —
+	// it gets its control plane from control-plane-manager after joining.
 	if controlPlaneConfig != nil {
 		controlPlaneYAML, err := yaml.Marshal(controlPlaneConfig)
 		if err != nil {

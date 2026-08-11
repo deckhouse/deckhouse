@@ -15,10 +15,8 @@ limitations under the License.
 */
 
 // Package v1alpha1 contains the API Schema for the bootstrap.deckhouse.io
-// v1alpha1 group: the CAPI bootstrap provider for immutable NodeGroups.
-// NodeBootstrapConfigTemplate is referenced by a MachineDeployment; the CAPI
-// MachineSet clones a NodeBootstrapConfig per Machine, and node-controller
-// renders that machine's NodeConfig userdata into a Secret it points to.
+// v1alpha1 group, the CAPI bootstrap provider for immutable NodeGroups: a
+// NodeBootstrapConfig per Machine whose userdata Secret node-controller renders.
 // +kubebuilder:object:generate=true
 // +groupName=bootstrap.deckhouse.io
 package v1alpha1

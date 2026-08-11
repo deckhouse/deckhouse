@@ -63,9 +63,8 @@ func TestSpecConversion_PreservesSeccompDefault_FromV1(t *testing.T) {
 }
 
 // A write issued at v1alpha1 round-trips through the hub, so a systemType the
-// conversion drops is stored as Mutable — which flips an immutable group's
-// MachineDeployments back to the bashible bootstrap and re-creates every machine
-// in the group.
+// conversion drops is stored as Mutable — flipping an immutable group's
+// MachineDeployments to bashible bootstrap and re-creating every machine.
 func TestSpecConversion_PreservesSystemType_RoundTrip(t *testing.T) {
 	tests := []struct {
 		name string

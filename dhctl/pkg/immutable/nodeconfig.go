@@ -63,9 +63,9 @@ const (
 	defaultContainerLogMaxFiles   = 4
 	defaultMaxConcurrentDownloads = 3
 
-	// The four brackets bashible computes in 064_configure_kubelet.sh.tpl. A
-	// master on the flat CRD default would advertise 120 where every bashible
-	// node in a /22 cluster advertises 500, and the scheduler believes both.
+	// The four brackets bashible computes in
+	// candi/bashible/common-steps/all/064_configure_kubelet.sh.tpl — a master on
+	// the flat CRD default would advertise 120 where a /22 node advertises 500.
 	maxPodsPodSubnetPrefix24 = 120
 	maxPodsPodSubnetPrefix23 = 250
 	maxPodsPodSubnetPrefix22 = 500
@@ -100,16 +100,14 @@ type nodeConfigInput struct {
 }
 
 // joinInput is what the cluster — not the installer — decides for a joining
-// node. The CA and the token are read from the running cluster rather than
-// rendered here: they exist only after Deckhouse creates them, and a second
-// source for either is a second source of truth.
+// node. The CA and the token are read from the running cluster: a second
+// source for either would be a second source of truth.
 type joinInput struct {
 	CACert         string
 	BootstrapToken string
-	// APIServerEndpoints are the apiservers already serving the cluster. The
-	// first master leaves a placeholder here and expands it from its own address,
-	// which a joining node cannot do: its own apiserver does not exist yet, and
-	// will not until control-plane-manager puts one there.
+	// APIServerEndpoints are the apiservers already serving the cluster. A
+	// joining node cannot use the first master's placeholder trick: its own
+	// apiserver does not exist until control-plane-manager puts one there.
 	APIServerEndpoints []string
 }
 
@@ -163,6 +161,9 @@ func buildNodeConfig(ctx context.Context, in nodeConfigInput) (*nodeConfig, erro
 		Extensions: extensions,
 		Kernel: kernel{
 			Sysctl: map[string]string{
+				// The same four node-controller renders for day-2 nodes; kernel.panic*
+				// comes from candi/bashible/common-steps/all/041_configure_sysctl_tuner.sh.tpl
+				// at its non-fencing value.
 				"net.ipv4.ip_forward": "1",
 				"vm.max_map_count":    "262144",
 				// kubelet refuses to start without these (protect-kernel-defaults).
@@ -191,11 +192,11 @@ func buildNodeConfig(ctx context.Context, in nodeConfigInput) (*nodeConfig, erro
 			NodeLabels: map[string]string{
 				nodeGroupLabel: masterNodeGroupName,
 				nodeTypeLabel:  "CloudPermanent",
-				cgroupLabel:    "cgroup2fs",
+				cgroupLabel:    "cgroup2fs", // olcedar's only layout; bashible probes it in 092_set_cgroup_type.sh.tpl
 			},
-			// Nobody can approve a serving CSR until Deckhouse is installed,
-			// and kubelet blocks on it. bashible turns it off on the first
-			// master for the same reason.
+			// Nobody can approve a serving CSR until Deckhouse is installed, and
+			// kubelet blocks on it. bashible does the same on the first master
+			// (candi/bashible/common-steps/all/064_configure_kubelet.sh.tpl).
 			ServerTLSBootstrap:  &serverTLSBootstrap,
 			ResourceReservation: &resourceReservation{Mode: "Auto"},
 		},
@@ -221,10 +222,9 @@ func buildNodeConfig(ctx context.Context, in nodeConfigInput) (*nodeConfig, erro
 		spec.Kubelet.CACert = in.Join.CACert
 		spec.Kubelet.BootstrapToken = in.Join.BootstrapToken
 		spec.APIServerEndpoints = in.Join.APIServerEndpoints
-		// Deckhouse is running by now, so the serving CSR gets approved and
-		// kubelet does not block on it. Left off, this node would be the only one
-		// in the cluster with a self-signed serving certificate — no kubectl exec
-		// and no kubectl logs against it, for the life of the cluster.
+		// Deckhouse is running by now, so the serving CSR gets approved. Left
+		// off, this node would keep a self-signed serving certificate — no
+		// kubectl exec or logs against it, for the life of the cluster.
 		spec.Kubelet.ServerTLSBootstrap = nil
 	}
 
@@ -255,9 +255,9 @@ func SysextDigests(_ context.Context, metaConfig *config.MetaConfig) (map[string
 	return sysextDigests(metaConfig.Images.ConvertToMap(), version)
 }
 
-// maxPods mirrors the number bashible gives kubelet in
-// 064_configure_kubelet.sh.tpl — the scheduler believes it as the node's
-// capacity, so a master that disagrees with the fleet skews placement.
+// maxPods mirrors the ladder bashible computes in
+// candi/bashible/common-steps/all/064_configure_kubelet.sh.tpl — the scheduler
+// believes it as capacity, so a master off the fleet's number skews placement.
 func maxPods(metaConfig *config.MetaConfig) (int, error) {
 	clusterConfig, err := metaConfig.ClusterConfigMap()
 	if err != nil {
@@ -360,11 +360,9 @@ func sysextDigests(images map[string]any, kubernetesVersion string) (map[string]
 	return digests, nil
 }
 
-// soleDigest returns the digest of the one image with the given prefix. It picks
-// no newest because none can be told: camelcase strips the separators, so
-// "kubernetesCniSysext1610" is 1.6.10, 1.61.0 and 16.1.0 at once. The day-2
-// renderer applies the same rule to the same digests file — kept in step with
-// soleDigest in the node-controller's internal/controller/nodeconfig/sources.go.
+// soleDigest returns the digest of the one image with the given prefix. No
+// "newest" can be told: camelcase strips separators, so "kubernetesCniSysext1610"
+// is ambiguous. Kept in step with node-controller's nodeconfig/sources.go.
 func soleDigest(packages map[string]string, prefix string) (string, error) {
 	found := make([]string, 0, 1)
 	for name := range packages {
@@ -488,35 +486,19 @@ const etcdDataDir = "/var/lib/etcd"
 // root at 0755 and etcd refuses to run on that.
 const etcdDataMode = "0700"
 
-// etcdDiskSize is the smallest disk a cloud installation is ever given for etcd.
-// A size with no operator means "at least this much", so it also covers the
-// providers that hand out 15 or 20 gibibytes, and it rules out the config drives
-// and other small volumes a machine comes with.
+// etcdDiskSize is the smallest disk a cloud installation is ever given for
+// etcd. A size with no operator means "at least this much", so it covers larger
+// disks too while ruling out config drives and other small volumes.
 const etcdDiskSize = "10Gi"
 
-// systemDiskSize tells the initramfs which disk to install onto.
-//
-// The threshold sits between the two disks a master gets — 10Gi for etcd and 50Gi
-// for the system — rather than at either one. Naming the system disk's own size
-// would make the match depend on the provider rounding it the way we expect, and
-// a disk handed out as 50Gi arriving as 49.9 would leave the node with nothing to
-// install onto.
-//
-// Order cannot be used instead: device names do not follow attach order — a
-// system disk attached first can enumerate after the etcd disk. Size is what
-// actually separates them.
+// systemDiskSize tells the initramfs which disk to install onto. The threshold
+// sits between the etcd (10Gi) and system (50Gi) disks: exact sizes depend on
+// provider rounding, and device names do not follow attach order.
 const systemDiskSize = ">=20Gi"
 
-// etcdMounts gives a control-plane node the disk etcd lives on.
-//
-// The disk is described rather than named: dhctl renders this document before
-// the machine exists, so there is no /dev path and no by-id link to point at
-// yet. What is known is what was asked of the provider — one spare disk, blank,
-// at least etcdDiskSize — and that is what the selector says.
-//
-// A machine with no second disk matches nothing, which is a supported way to
-// run: etcd shares the data partition, slower but correct. The node says so in
-// its log rather than failing.
+// etcdMounts gives a control-plane node the disk etcd lives on. The disk is
+// described, not named — no /dev path exists before the machine does. No second
+// disk matches nothing, which is supported: etcd shares the data partition.
 func etcdMounts() []mount {
 	return []mount{{
 		Name: etcdDataMountName,

@@ -92,9 +92,8 @@ func TestResolveControlPlaneImagesMissingVersion(t *testing.T) {
 }
 
 // TestCertSANs reads the same list control-plane-manager publishes under the
-// "cert-sans" key of its config secret. The node issues the apiserver
-// certificate itself, so a name missing here is a name the certificate does not
-// cover until control-plane-manager reissues it.
+// "cert-sans" key of its config secret: a name missing here is one the
+// apiserver certificate does not cover until control-plane-manager reissues it.
 func TestCertSANs(t *testing.T) {
 	tests := []struct {
 		name     string

@@ -30,17 +30,9 @@ import (
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 )
 
-// TestKeepBootstrapOnlyFields covers what happens to the first master on its
-// first day-2 render. Its spec came from a dhctl payload, and only the fields
-// below have no answer anywhere in the cluster, so only they survive the
-// wholesale patch.
-//
-// Registry, serverTLSBootstrap and resourceReservation deliberately do NOT: all
-// three are rendered from the cluster now. Carrying them over made the master keep whatever the
-// bootstrap chose forever — a self-signed kubelet serving certificate with no
-// IP in it (so `kubectl exec` and `kubectl logs` failed against every pod on the
-// master), and, on the create path where there is no existing object to carry
-// anything from, no registry at all.
+// TestKeepBootstrapOnlyFields covers the first master's first day-2 render:
+// only fields with no answer in the cluster survive the wholesale patch.
+// Registry, serverTLSBootstrap and resourceReservation deliberately do NOT.
 func TestKeepBootstrapOnlyFields(t *testing.T) {
 	bootstrapped := internalv1alpha1.NodeSpec{
 		Registry: &internalv1alpha1.Registry{Address: "registry.example.com", Path: "/deckhouse/ce"},
@@ -175,10 +167,9 @@ func TestKeepBootstrapOnlyFields(t *testing.T) {
 				require.Equal(t, tc.expNetwork, desired.Network)
 			}
 
-			// The cluster owns these, so the render wins even when the node was
-			// bootstrapped with something else. resourceReservation is one of
-			// them: the NodeGroup has that field, so an operator changing it has
-			// to reach the nodes (see TestRenderResourceReservation).
+			// The cluster owns these, so the render wins even over the bootstrap
+			// value; resourceReservation is NodeGroup-owned too (see
+			// TestRenderResourceReservation).
 			require.Equal(t, rendered, desired.Registry)
 			require.Nil(t, desired.Kubelet.ServerTLSBootstrap)
 			require.Nil(t, desired.Kubelet.ResourceReservation)
@@ -190,14 +181,9 @@ func TestKeepBootstrapOnlyFields(t *testing.T) {
 	}
 }
 
-// The kernel keys a node must keep running are published, not carried over from
-// whatever the node already has. Carrying them over cannot be undone: after the
-// first patch the object's own spec holds them, so nothing can tell a value the
-// installer chose from one an earlier pass copied, and the value is frozen for
-// the life of the node. Publishing them keeps the set the same on every
-// immutable node and the same as the payload the installer writes for the first
-// master (dhctl/pkg/immutable/nodeconfig.go), so that master's first managed
-// render changes nothing about its kernel.
+// Kernel keys are published, not carried over — a carried-over value is frozen
+// for the life of the node. The set must match the installer's payload
+// (dhctl/pkg/immutable/nodeconfig.go) so the first managed render changes nothing.
 func TestRenderKernelPublishesEveryKeyANodeMustKeep(t *testing.T) {
 	sysctl := renderKernel().Sysctl
 
@@ -218,10 +204,9 @@ func TestRenderKernelPublishesEveryKeyANodeMustKeep(t *testing.T) {
 	require.Equal(t, internalv1alpha1.SysctlValue("10"), desired.Kernel.Sysctl["kernel.panic"])
 }
 
-// Nothing but this carry-over ever writes kubelet.nodeIP, so a node that is
-// re-IPed — a new DHCP lease, a migration, a rebuilt VM — used to stay pinned
-// to the address it first had, registering forever under an address the cluster
-// no longer routes to it.
+// Nothing but this carry-over ever writes kubelet.nodeIP, so a re-IPed node
+// (DHCP lease, migration, rebuilt VM) used to stay pinned forever to an
+// address the cluster no longer routes to it.
 func TestKeepBootstrapOnlyFieldsReleasesAStaleNodeIP(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -293,11 +278,9 @@ func TestRenderNodeLabelsDropsWhatKubeletRefuses(t *testing.T) {
 	}
 }
 
-// The Node watch drops updates that cannot change the rendered spec — a fleet's
-// worth of kubelet heartbeats, which is most of what arrives here. It must not
-// drop the ones that can: everything the render reads off a Node lives in the
-// object's metadata, and a NodeExtensionRequest can select on any label at all,
-// so labels are compared whole rather than by the two names this package knows.
+// The Node watch drops updates that cannot change the rendered spec (kubelet
+// heartbeats) but must not drop ones that can: labels are compared whole,
+// because a NodeExtensionRequest can select on any label at all.
 func TestNodeRenderInputsChanged(t *testing.T) {
 	node := func(mutate func(*corev1.Node)) *corev1.Node {
 		n := &corev1.Node{
@@ -389,12 +372,9 @@ func TestNodeRenderInputsChanged(t *testing.T) {
 	require.True(t, nodeRenderInputsChanged(node(nil), nil))
 }
 
-// kubeReserved is the group's decision, not the node's. It used to be carried
-// over from whatever the node already carried, so an operator turning the
-// reservation off on an immutable group reached no node at all — no change, no
-// event, no log line — and the installer's Auto was frozen onto the first
-// master, where after the first patch nothing could tell it from a value an
-// earlier pass had copied.
+// kubeReserved is the group's decision, not the node's: carrying it over meant
+// an operator turning the reservation off reached no node at all, and the
+// installer's Auto was frozen onto the first master.
 func TestRenderResourceReservation(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -438,12 +418,9 @@ func TestRenderResourceReservation(t *testing.T) {
 	}
 }
 
-// Both writers of a platform extension have to name the same author, or the
-// first master differs from every other node on three entries of an array that
-// is compared whole. The literal is spelled out here rather than taken from the
-// constant, so that changing it on this side alone fails instead of silently
-// re-opening the divergence with dhctl (osImageNameAndTag's neighbour in
-// dhctl/pkg/immutable/nodeconfig.go).
+// Both writers of a platform extension must name the same author, or the first
+// master differs from every other node. The literal is spelled out, not taken
+// from the constant, so a one-sided change fails here instead of diverging.
 func TestRenderExtensionsNamesTheModuleThatAskedForThem(t *testing.T) {
 	extensions := renderExtensions(map[string]string{
 		containerdExtension: "sha256:1",
@@ -457,11 +434,9 @@ func TestRenderExtensionsNamesTheModuleThatAskedForThem(t *testing.T) {
 	}
 }
 
-// The cluster reads the cgroup layout of a node off this label and nowhere else:
-// without it node-manager counts the node as unable to run containerd v2 and
-// raises d8_node_cgroup_v2_unsupported for it. It cannot come from the group's
-// template — the master's template carries only labels kubelet refuses — so the
-// render publishes it, as the installer does for the first master.
+// The cluster reads a node's cgroup layout off this label and nowhere else;
+// without it node-manager raises d8_node_cgroup_v2_unsupported. The render
+// publishes it, as the installer does for the first master.
 func TestRenderNodeLabelsPublishesTheCgroupLayout(t *testing.T) {
 	ng := &v1.NodeGroup{
 		ObjectMeta: metav1.ObjectMeta{Name: "worker"},
@@ -476,10 +451,9 @@ func TestRenderNodeLabelsPublishesTheCgroupLayout(t *testing.T) {
 	require.True(t, kubeletMaySetLabel(cgroupLabel))
 }
 
-// Settings a NodeGroup accepts but the agent's schema does not. Passing them
-// through renders a NodeConfig the API server rejects, and a node whose config
-// is rejected never receives one — so a setting meant to tune the node takes it
-// out of the cluster instead.
+// Settings a NodeGroup accepts but the agent's schema does not: passed through,
+// they render a NodeConfig the API server rejects, and the node never receives
+// one — a tuning setting takes the node out of the cluster instead.
 func TestRenderSurvivesSettingsTheAgentSchemaRejects(t *testing.T) {
 	ng := &v1.NodeGroup{
 		ObjectMeta: metav1.ObjectMeta{Name: "worker"},

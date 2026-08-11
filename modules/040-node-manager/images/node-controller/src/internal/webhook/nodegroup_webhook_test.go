@@ -169,11 +169,9 @@ func TestValidation_NodeTypeImmutability_SameType(t *testing.T) {
 	}
 }
 
-// A value that is already set is frozen: changing it — or dropping it — re-renders
-// the group's bootstrap and re-creates every machine in it. A group that has no
-// value yet is not frozen, because that is how a group records what it is: the
-// master NodeGroup exists before dhctl applies the manifest naming its
-// systemType, and every NodeGroup predating the field is in the same position.
+// A value that is already set is frozen: changing or dropping it re-creates
+// every machine in the group. A group with no value yet is not frozen — the
+// master NodeGroup exists before dhctl applies the manifest naming its systemType.
 func TestValidation_SystemTypeImmutability(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -301,9 +299,8 @@ func groupNode(name, nodeGroup string, bashibleConfigured bool) *corev1.Node {
 }
 
 // midRolloutNode is a bashible node partway through an update: it has deleted
-// its own configuration-checksum annotation and is blocked waiting for approval,
-// which is what bashible's 001_waiting_approval_annotations step does. The label
-// stays, because bashible sets it once and never takes it off.
+// its configuration-checksum annotation and waits for approval (bashible's
+// 001_waiting_approval_annotations step). The label stays — never removed.
 func midRolloutNode(name, nodeGroup string) *corev1.Node {
 	node := groupNode(name, nodeGroup, true)
 	node.Annotations = map[string]string{"update.node.deckhouse.io/waiting-for-approval": ""}
