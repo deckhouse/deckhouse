@@ -68,6 +68,12 @@
         @include breakpoints.max-w(xs) {
             min-width: 430px;
         }
+
+        &:has(> .gs-steps__point:nth-child(2):last-child),
+        &:has(> .gs-steps__point:nth-child(3):last-child) {
+            width: 100%;
+            min-width: 0;
+        }
     }
 
     &__point {
@@ -181,6 +187,16 @@
         @include breakpoints.max-w(xs) {
             width: 430px;
             min-width: 430px;
+        }
+    }
+
+    &__track:has(.gs-steps__point:nth-child(2):last-child) &__sections,
+    &__track:has(.gs-steps__point:nth-child(3):last-child) &__sections {
+        width: 100%;
+        min-width: 0;
+
+        @include breakpoints.max-w(m) {
+            width: 93%;
         }
     }
 
