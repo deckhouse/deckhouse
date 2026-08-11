@@ -19,12 +19,13 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"net"
+	"sort"
+	"strconv"
 	"time"
 
-	"github.com/deckhouse/lib-dhctl/pkg/retry"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
@@ -36,10 +37,11 @@ const (
 	kubeSystemNS           = "kube-system"
 	cloudInstanceManagerNS = "d8-cloud-instance-manager"
 
-	// bootstrapSecretAttempts is how long the join waits for node-manager to
-	// publish the master bootstrap secret, one attempt a second. The same
-	// bound the bashible path uses for the same secret.
-	bootstrapSecretAttempts = 225
+	// The kubernetes Service's EndpointSlice, the cluster's own record of where
+	// its apiservers answer. Named the same way node-controller names them.
+	apiServerEndpointSliceNS   = "default"
+	apiServerEndpointSliceName = "kubernetes"
+	apiServerPortName          = "https"
 
 	// clusterCAConfigMap carries the cluster CA every ServiceAccount is given.
 	// node-controller renders day-2 configs from the same source, so a node
@@ -152,47 +154,66 @@ func groupBootstrapToken(ctx context.Context, kubeCl *client.KubernetesClient, n
 }
 
 // apiServerEndpoints are the apiservers a joining node talks to until it runs
-// one itself. They are read from the secret node-manager publishes beside the
-// group's cloud config, which is the same list every other node is given — and
-// the reason a joining master needs it at all is that it cannot use the first
-// master's placeholder, which expands to the node's own address.
+// one itself. A joining master cannot use the first master's payload value:
+// that one is a placeholder the node expands to its own address.
 //
-// The secret is waited for rather than read once: node-manager publishes it
-// some time after Deckhouse becomes Ready, and the join starts as soon as the
-// first master is. Measured — a bootstrap died on "secrets
+// Derived from the cluster rather than read from node-manager's
+// manual-bootstrap-for-master secret, for two reasons. The secret is published
+// some time after Deckhouse becomes Ready while the join starts as soon as the
+// first master is — measured, a bootstrap died on "secrets
 // \"manual-bootstrap-for-master\" not found" a tenth of a second after the
-// install finished. The bashible path has always waited here for the same
-// reason (GetCloudConfig in pkg/kubernetes/actions/entity/node.go), and the
-// bound matches its: the endpoints list is what the node cannot boot without,
-// so giving up early is worse than waiting.
+// install finished. And these two sources are what node-controller renders
+// spec.apiServerEndpoints from on every pass afterwards
+// (readAPIServerEndpoints in the node-controller's
+// internal/controller/nodeconfig/sources.go), so a node joins with the value
+// its first managed render will compute — no spec diff, no rollout slot spent
+// on the node that just arrived. Keep the two in step.
 func apiServerEndpoints(ctx context.Context, kubeCl *client.KubernetesClient) ([]string, error) {
-	var secret *corev1.Secret
-	err := retry.NewSilentLoop("waiting for the master bootstrap secret", bootstrapSecretAttempts, time.Second).
-		RunContext(ctx, func() error {
-			got, err := kubeCl.CoreV1().
-				Secrets(cloudInstanceManagerNS).
-				Get(ctx, "manual-bootstrap-for-"+global.MasterNodeGroupName, metav1.GetOptions{})
-			if err != nil {
-				return err
-			}
-			secret = got
-			return nil
-		})
+	set := make(map[string]struct{})
+
+	pods, err := kubeCl.CoreV1().Pods(kubeSystemNS).List(ctx, metav1.ListOptions{
+		LabelSelector: "component=kube-apiserver,tier=control-plane",
+	})
 	if err != nil {
-		return nil, fmt.Errorf("read the master bootstrap secret: %w", err)
+		return nil, fmt.Errorf("list kube-apiserver pods: %w", err)
+	}
+	for i := range pods.Items {
+		pod := &pods.Items[i]
+		// A terminating mirror pod keeps its address to the end; a master on
+		// its way out must not be handed to a node that is just arriving.
+		if pod.DeletionTimestamp != nil || pod.Status.PodIP == "" {
+			continue
+		}
+		set[net.JoinHostPort(pod.Status.PodIP, strconv.Itoa(immutable.APIServerPort))] = struct{}{}
 	}
 
-	var endpoints []string
-	if err := yaml.Unmarshal(secret.Data["apiserverEndpoints"], &endpoints); err != nil {
-		return nil, fmt.Errorf("parse apiserverEndpoints: %w", err)
+	slice, err := kubeCl.DiscoveryV1().
+		EndpointSlices(apiServerEndpointSliceNS).
+		Get(ctx, apiServerEndpointSliceName, metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("read the %s/%s EndpointSlice: %w", apiServerEndpointSliceNS, apiServerEndpointSliceName, err)
 	}
-	if len(endpoints) == 0 {
-		return nil, errors.New("the master bootstrap secret carries no apiserver endpoints")
+	var ports []int32
+	for _, port := range slice.Ports {
+		if port.Name != nil && *port.Name == apiServerPortName && port.Port != nil {
+			ports = append(ports, *port.Port)
+		}
+	}
+	for _, endpoint := range slice.Endpoints {
+		for _, addr := range endpoint.Addresses {
+			for _, port := range ports {
+				set[net.JoinHostPort(addr, strconv.Itoa(int(port)))] = struct{}{}
+			}
+		}
 	}
 
-	// The secret carries host:port; the node's config takes URLs.
-	for i, endpoint := range endpoints {
-		endpoints[i] = "https://" + endpoint
+	if len(set) == 0 {
+		return nil, errors.New("the cluster reports no apiserver endpoints")
 	}
+	endpoints := make([]string, 0, len(set))
+	for ep := range set {
+		endpoints = append(endpoints, "https://"+ep)
+	}
+	sort.Strings(endpoints)
 	return endpoints, nil
 }
