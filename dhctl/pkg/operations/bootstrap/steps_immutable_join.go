@@ -35,7 +35,6 @@ import (
 
 const (
 	kubeSystemNS           = "kube-system"
-	cloudInstanceManagerNS = "d8-cloud-instance-manager"
 
 	// The kubernetes Service's EndpointSlice, the cluster's own record of where
 	// its apiservers answer. Named the same way node-controller names them.
@@ -166,8 +165,10 @@ func groupBootstrapToken(ctx context.Context, kubeCl *client.KubernetesClient, n
 // spec.apiServerEndpoints from on every pass afterwards
 // (readAPIServerEndpoints in the node-controller's
 // internal/controller/nodeconfig/sources.go), so a node joins with the value
-// its first managed render will compute — no spec diff, no rollout slot spent
-// on the node that just arrived. Keep the two in step.
+// its first managed render computes rather than with a different one. Keep the
+// two in step. It saves the bump at join, not every bump: once the joining
+// master runs an apiserver of its own, its pod joins the list and every
+// immutable node's spec gains an address.
 func apiServerEndpoints(ctx context.Context, kubeCl *client.KubernetesClient) ([]string, error) {
 	set := make(map[string]struct{})
 

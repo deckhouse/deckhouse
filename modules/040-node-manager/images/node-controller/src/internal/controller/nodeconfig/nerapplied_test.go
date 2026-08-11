@@ -130,11 +130,13 @@ func TestNEROutcomesCountWholesaleRejections(t *testing.T) {
 			{Name: "containerd", State: "Ready"},
 			{Name: "bob-signed", State: "Ready"},
 		})
+	rejected.Generation = 7
 	rejected.Status.Conditions = []metav1.Condition{{
-		Type:    configurationAppliedCondition,
-		Status:  metav1.ConditionFalse,
-		Reason:  "Rejected",
-		Message: "bob: config rejected: its roothash signature is not one this node trusts",
+		Type:               configurationAppliedCondition,
+		Status:             metav1.ConditionFalse,
+		Reason:             "Rejected",
+		ObservedGeneration: 7,
+		Message:            "bob: config rejected: its roothash signature is not one this node trusts",
 	}}
 
 	client := fake.NewClientBuilder().WithScheme(scheme).WithObjects(rejected).Build()
@@ -149,4 +151,45 @@ func TestNEROutcomesCountWholesaleRejections(t *testing.T) {
 	// The extension that did make it is not blamed for the rejection.
 	require.Equal(t, int32(1), outcomes["bob-signed-request"].applied)
 	require.Equal(t, int32(0), outcomes["bob-signed-request"].failed)
+}
+
+// ConfigurationApplied goes False for every reason a node has not applied its
+// config — waiting for an update window among them — and a stale False says
+// nothing about the spec the cluster publishes now. Counting either as a
+// refusal paints "N node(s) refused the sysext" over a healthy rollout, which
+// is the same class of lie this counting exists to remove.
+func TestNEROutcomesIgnoreUnrelatedAndStaleRejections(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, internalv1alpha1.AddToScheme(scheme))
+
+	waiting := nodeConfigWith("worker-0",
+		[]internalv1alpha1.Extension{{Name: "bob", RequestedBy: nerRequestedByPrefix + "bob-request"}},
+		nil)
+	waiting.Generation = 3
+	waiting.Status.Conditions = []metav1.Condition{{
+		Type:               configurationAppliedCondition,
+		Status:             metav1.ConditionFalse,
+		Reason:             "WaitingForWindow",
+		ObservedGeneration: 3,
+		Message:            "the node is waiting for an update window",
+	}}
+
+	stale := nodeConfigWith("worker-1",
+		[]internalv1alpha1.Extension{{Name: "bob", RequestedBy: nerRequestedByPrefix + "bob-request"}},
+		nil)
+	stale.Generation = 9
+	stale.Status.Conditions = []metav1.Condition{{
+		Type:               configurationAppliedCondition,
+		Status:             metav1.ConditionFalse,
+		Reason:             "Rejected",
+		ObservedGeneration: 8, // an earlier spec, already replaced
+		Message:            "bob: config rejected: its roothash signature is not one this node trusts",
+	}}
+
+	client := fake.NewClientBuilder().WithScheme(scheme).WithObjects(waiting, stale).Build()
+
+	outcomes, err := readNEROutcomes(context.Background(), client)
+	require.NoError(t, err)
+	require.Equal(t, int32(0), outcomes["bob-request"].failed)
+	require.Equal(t, int32(0), outcomes["bob-request"].applied)
 }

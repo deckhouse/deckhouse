@@ -24,9 +24,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	apiservervalidation "k8s.io/apiextensions-apiserver/pkg/apiserver/validation"
 	"sigs.k8s.io/yaml"
 )
 
@@ -37,32 +35,15 @@ import (
 // very repository, so a field added here and forgotten there — or renamed on
 // either side — fails a unit test instead of a node.
 //
-// Two checks, because they catch different halves of the drift:
-//
-//   - every field path the payload writes must exist in the CRD schema — the
-//     schema validator alone would not notice an unknown field, it just
-//     ignores it, and "ignored" is exactly how a renamed field would ship;
-//   - the schema validator then checks types, enums, patterns and required
-//     fields on what remains.
+// What it checks: every field path the payload writes exists in the CRD schema.
+// That is the half of the drift that matters — a field renamed on either side,
+// or added here and forgotten there. Types, enums and patterns are left to the
+// API server: validating them here meant pulling k8s.io/apiserver and cel-go
+// into dhctl's dependency graph for good, and this test does not even run in
+// CI (the dhctl test image ships no modules/*/crds — see the skip below), so
+// the cost was permanent and the cover was not.
 func TestGoldenPayloadMatchesNodeConfigCRD(t *testing.T) {
 	nodeConfigDoc := goldenNodeConfigDocument(t)
-
-	// The one known difference between the file dialect and the API dialect:
-	// the zeroth master's own address does not exist while the payload is
-	// built, so the file carries nodeAddressPlaceholder and the node expands
-	// it on load. The CRD's endpoint pattern rightly refuses the placeholder —
-	// no rendered day-2 object ever carries it — so it is substituted with a
-	// syntactically real host before validation. Anything else the file says
-	// differently from the CRD is drift and must fail below.
-	if spec, ok := nodeConfigDoc["spec"].(map[string]interface{}); ok {
-		if endpoints, ok := spec["apiServerEndpoints"].([]interface{}); ok {
-			for i, e := range endpoints {
-				if s, ok := e.(string); ok {
-					endpoints[i] = strings.ReplaceAll(s, nodeAddressPlaceholder, "192.0.2.10")
-				}
-			}
-		}
-	}
 
 	crdPath := filepath.Join("..", "..", "..", "modules", "040-node-manager", "crds", "nodeconfig.yaml")
 	raw, err := os.ReadFile(crdPath)
@@ -84,14 +65,6 @@ func TestGoldenPayloadMatchesNodeConfigCRD(t *testing.T) {
 	require.Empty(t, unknown,
 		"the payload writes fields the NodeConfig CRD does not know; the agent parses the same shape, so either the payload or the CRD is behind")
 
-	internalSchema := &apiextensions.JSONSchemaProps{}
-	require.NoError(t, apiextensionsv1.Convert_v1_JSONSchemaProps_To_apiextensions_JSONSchemaProps(versioned, internalSchema, nil))
-	validator, _, err := apiservervalidation.NewSchemaValidator(internalSchema)
-	require.NoError(t, err)
-	result := validator.Validate(nodeConfigDoc)
-	for _, e := range result.Errors {
-		t.Errorf("golden payload violates the NodeConfig CRD schema: %v", e)
-	}
 }
 
 // goldenNodeConfigDocument digs the NodeConfig document out of the golden
