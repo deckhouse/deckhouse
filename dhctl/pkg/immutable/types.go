@@ -12,36 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package immutable builds the cloud-init payload that boots the first
-// control-plane node of a Deckhouse cluster on the immutable olcedar OS.
-//
-// Such a node runs no sshd, no bash and no bashible: the on-node agent
-// (nodelet) reads its desired state from /config/nodeconfig.yaml and
-// /config/controlplane.yaml, generates the whole cluster PKI itself — the CA
-// included — writes the control-plane manifests rendered here, brings its own
-// apiserver up and creates the first cluster objects.
-//
-// No key of the cluster travels in the payload. cloud-init ends up in a Secret
-// of somebody else's namespace, in the infrastructure state and in the
-// installer's cache, so the node generates the PKI and dhctl collects the admin
-// kubeconfig afterwards from the one-shot handoff endpoint the node opens for
-// it — see handoff.go. The manifests that do travel carry image references,
-// flags and file paths, and nothing that is worth stealing. The handoff
-// server key and token do travel — deliberately: whoever reads the payload
-// can at most impersonate or close that one channel, which the infrastructure
-// owner, who also owns the VM itself, can do anyway; no cluster credential is
-// reachable through it.
-//
-// A few exported helpers here are pure and take a context they never use. The
-// rule is that every exported function takes one first, and the alternative —
-// unexporting them — is not available while pkg/operations/bootstrap and
-// pkg/preflight/checks call them. They are marked at their doc comment.
+// Package immutable builds the cloud-init payloads that boot control-plane
+// nodes on the immutable olcedar OS (no sshd, no bashible). No cluster key travels
+// in a payload: the node generates the PKI; dhctl gets kubeconfig via handoff.go.
 package immutable
 
 // payloadAPIVersion and the kinds below are the contract with the on-node
-// agent. It parses both documents with UnmarshalStrict, so every field name
-// here must match the agent's types byte for byte — see
-// modules/040-node-manager/images/node-controller/src/api/internal.deckhouse.io/v1alpha1.
+// agent. It parses both documents with UnmarshalStrict, so every field name must
+// match the agent's types (node-controller/src/api/internal.deckhouse.io/v1alpha1).
 const (
 	payloadAPIVersion = "internal.deckhouse.io/v1alpha1"
 
@@ -82,11 +60,9 @@ type nodeSpec struct {
 	Registry           *registrySpec    `json:"registry,omitempty"`
 }
 
-// storage is what the node is told about its disks.
-//
-// Neither disk is named by path: this document is rendered before the machine,
-// and therefore the disk, exists. Both are described by what they look like, and
-// whoever needs one matches that against what the machine actually has.
+// storage is what the node is told about its disks. Neither disk is named by
+// path — the document is rendered before the machine exists — so each is
+// described by attributes matched against what the machine actually has.
 type storage struct {
 	// DiskSelector names the disk the OS is installed onto. Read by the
 	// initramfs; the agent parses the same document and would reject an
@@ -172,16 +148,9 @@ type kubelet struct {
 	// until Deckhouse is installed.
 	ServerTLSBootstrap  *bool                `json:"serverTLSBootstrap,omitempty"`
 	ResourceReservation *resourceReservation `json:"resourceReservation,omitempty"`
-	// CACert is the cluster CA, base64-encoded, and BootstrapToken is what
-	// kubelet presents to get its first certificate. Both are empty for the
-	// first master, which generates the CA itself and needs no token to talk to
-	// an apiserver it starts on its own — and both are required for every node
-	// that joins a cluster that already exists.
-	//
-	// A non-empty CACert is also what the node uses to tell the two apart: its
-	// control-plane controller refuses a bootstrap payload that carries one, so
-	// a join payload can never be mistaken for an order to start a second
-	// cluster.
+	// CACert (cluster CA, base64) and BootstrapToken are empty for the first
+	// master and required for joining nodes. A non-empty CACert also marks a
+	// join payload: the node refuses to bootstrap a new cluster with one.
 	CACert         string `json:"caCert,omitempty"`
 	BootstrapToken string `json:"bootstrapToken,omitempty"`
 }
@@ -255,19 +224,14 @@ type clusterParamsSpec struct {
 }
 
 // handoff is the TLS material and the bearer token of the one-shot endpoint the
-// node serves the admin kubeconfig on.
-//
-// The key here belongs to that endpoint alone and is worth nothing once the
-// bootstrap is over: it protects one read of one file, and the endpoint closes
-// after it. No cluster key ever travels in this document.
+// node serves the admin kubeconfig on. The key protects one read of one file
+// and is worthless after bootstrap; no cluster key travels in this document.
 type handoff struct {
 	Token      string `json:"token"`
 	ServerCert string `json:"serverCert"`
 	ServerKey  string `json:"serverKey"`
 	// ClientCSR is the installer's request for a cluster client certificate.
-	// The node signs it with the cluster CA it generates, so what comes back
-	// over the channel is a certificate — public — while the key it belongs to
-	// never leaves the installer. That is what keeps the channel free of
-	// anything worth stealing.
+	// The node signs it with the cluster CA; only the public certificate comes
+	// back, while the private key never leaves the installer.
 	ClientCSR string `json:"clientCSR"`
 }

@@ -35,9 +35,8 @@ import (
 )
 
 // User story: As a cluster operator, I want every interruption of a node to
-// finish in a bounded time and leave the node the way it was found, so that one
-// stuck eviction cannot hold a node out of the scheduler or freeze a group's
-// rollout without saying so.
+// finish in bounded time and leave the node as found, so one stuck eviction
+// cannot hold a node out of the scheduler or silently freeze a rollout.
 var _ = Describe("NodeOperation controller", func() {
 	It("completes a Drain once the workload has left", func(ctx context.Context) {
 		node := createNode(ctx, testenv.UniqueName("drain"), false)
@@ -74,11 +73,9 @@ var _ = Describe("NodeOperation controller", func() {
 		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
 	})
 
-	// A drained marker outlives the operation that asked for it: an operation
-	// that gave up mid-drain clears its annotations, and the drain still running
-	// underneath writes the marker back afterwards. Reading that as "this
-	// operation's workload has left" interrupts the node with its pods still on
-	// it.
+	// A drained marker outlives the operation that asked for it: a drain still
+	// running after its operation gave up writes the marker back. Reading that
+	// as "workload left" interrupts the node with its pods still on it.
 	It("does not take another operation's drained marker for its own", func(ctx context.Context) {
 		node := createNode(ctx, testenv.UniqueName("stale"), false)
 		stale := foreignMarker()
@@ -106,11 +103,9 @@ var _ = Describe("NodeOperation controller", func() {
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
-	// releaseNode runs on every reconcile of a terminal operation until the
-	// record is collected a day later, and the Node watch keeps firing them. If
-	// it cannot tell its own markers from a live sibling's, a finished operation
-	// wipes the request an ongoing eviction is waiting on and uncordons the node
-	// underneath it, over and over.
+	// releaseNode runs on every reconcile of a terminal operation. If it
+	// cannot tell its own markers from a live sibling's, a finished operation
+	// wipes an ongoing eviction's request and uncordons the node under it.
 	It("leaves a live operation's drain alone when a finished one is released", func(ctx context.Context) {
 		node := createNode(ctx, testenv.UniqueName("sibling"), false)
 
@@ -165,10 +160,9 @@ var _ = Describe("NodeOperation controller", func() {
 		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
 	})
 
-	// The two drain annotations are one slot, so two evictions running on the
-	// same node cannot both be written there — but both still need the node out
-	// of the scheduler. An interruption releasing the node on its own way out
-	// must not put pods back onto a node another eviction is still emptying.
+	// The two drain annotations are one slot, so two evictions on one node
+	// cannot both be written there — but both need the node out of the
+	// scheduler; a release must not put pods back onto an emptying node.
 	It("does not uncordon a node another live Drain is holding", func(ctx context.Context) {
 		node := createNode(ctx, testenv.UniqueName("held"), false)
 
@@ -218,11 +212,9 @@ var _ = Describe("NodeOperation controller", func() {
 		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
 	})
 
-	// Two operations can hold the same node at once — a config that changes
-	// twice mints a second ApproveDisruption, and an operator can add one by
-	// hand. If the second records the first one's cordon as the operator's, it
-	// puts that cordon back after the first has lifted it, and every operation
-	// after that does the same.
+	// Two operations can hold the same node at once. If the second records the
+	// first one's cordon as the operator's, it puts that cordon back after the
+	// first has lifted it, and every operation after that does the same.
 	It("does not record a cordon another open operation is holding", func(ctx context.Context) {
 		node := createNode(ctx, testenv.UniqueName("shared"), false)
 
@@ -257,10 +249,9 @@ var _ = Describe("NodeOperation controller", func() {
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
-	// An operation an operator wrote by hand arrives with neither the owner
-	// reference nor the node label. Unlabelled it is invisible to every other
-	// operation on that node, and the next one reads its cordon as the
-	// operator's — the sticky cordon the record exists to prevent.
+	// An operator's hand-written operation arrives with neither owner
+	// reference nor node label; unlabelled it is invisible to siblings, and
+	// the next one reads its cordon as the operator's — the sticky cordon.
 	It("labels a hand-written operation so its siblings can see it", func(ctx context.Context) {
 		node := createNode(ctx, testenv.UniqueName("byhand"), false)
 		op := createUnlabelledOperation(ctx, node.Name)
@@ -272,11 +263,9 @@ var _ = Describe("NodeOperation controller", func() {
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
-	// releaseNode clears both markers for whichever operation on the node
-	// finishes first, so a second operation can have its request wiped while it
-	// waits. Asking once and trusting the answer to arrive leaves it waiting for
-	// an eviction nobody is doing any more, until it times out and takes its
-	// group's rollout with it.
+	// releaseNode clears both markers for whichever operation finishes first,
+	// so a waiting sibling can have its request wiped. Asking once and trusting
+	// the answer leaves it waiting on an eviction nobody is doing any more.
 	It("asks again when its drain request is wiped out from under it", func(ctx context.Context) {
 		node := createNode(ctx, testenv.UniqueName("wiped"), false)
 		op := createOperation(ctx, node.Name, v1alpha1.NodeOperationDrain, nil)
@@ -357,13 +346,9 @@ var _ = Describe("NodeOperation controller", func() {
 		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
 	})
 
-	// The node and this controller both write the phase, and a report overwritten
-	// with Failed makes the group mint a second approval and drain a node that
-	// already applied its config. This holds the end state: a due deadline does
-	// not reopen what the node reported. The stale-cache half of the same race —
-	// the controller patching from a copy written before the node's report —
-	// cannot be staged from here; the optimistic lock in setPhase is what closes
-	// it.
+	// The node and this controller both write the phase; this holds the end
+	// state — a due deadline does not reopen what the node reported. The
+	// stale-cache half of the race is closed by the optimistic lock in setPhase.
 	It("keeps the node's report when the deadline is already due", func(ctx context.Context) {
 		node := createNode(ctx, testenv.UniqueName("report"), false)
 		op := createOperation(ctx, node.Name, v1alpha1.NodeOperationReboot, &v1alpha1.NodeOperationDrainSpec{Skip: true})
@@ -451,11 +436,9 @@ func drainChildrenOf(ctx context.Context, g Gomega, parent *v1alpha1.NodeOperati
 	return children
 }
 
-// markDrained plays the part of the draining controller, in its order and with
-// its one load-bearing habit: it waits to be asked, cordons the node, and
-// reports the workload gone by clearing the request and echoing the value it
-// found into the drained marker — which is what the real controller does when
-// RunNodeDrain returns, and what carries the asking operation's identity back.
+// markDrained plays the draining controller: waits to be asked, cordons, then
+// reports the workload gone by clearing the request and echoing its value into
+// the drained marker — carrying the asking operation's identity back.
 func markDrained(ctx context.Context, name string) {
 	GinkgoHelper()
 
@@ -552,13 +535,9 @@ func drainRequestOn(ctx context.Context, g Gomega, name string) string {
 	return getNode(ctx, g, name).Annotations[nodecommon.DrainingAnnotation]
 }
 
-// handOver walks the operation to the point where the node owns it: the
-// workload leaves, the child eviction finishes, and the parent moves to
-// InProgress.
-//
-// The cordon is recorded before the drain is allowed to place one, so the
-// operation's own snapshot cannot pick up the cordon this helper is about to
-// make.
+// handOver walks the operation to the point where the node owns it: workload
+// gone, child eviction finished, parent InProgress. The cordon is recorded
+// before the drain places one, so the snapshot cannot pick up our own cordon.
 func handOver(ctx context.Context, nodeName, opName string) {
 	GinkgoHelper()
 
@@ -572,11 +551,9 @@ func handOver(ctx context.Context, nodeName, opName string) {
 	}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 }
 
-// expireDeadline backdates the moment the node was handed the operation, which
-// is the clock hardDeadline measures from once StartedAt is set. envtest cannot
-// backdate metadata.creationTimestamp, so hardDeadline's creationTimestamp
-// branch — the bound on an operation that has not asked for anything yet — is
-// covered by its unit tests instead.
+// expireDeadline backdates StartedAt, the clock hardDeadline measures from.
+// envtest cannot backdate metadata.creationTimestamp, so that branch of
+// hardDeadline is covered by its unit tests instead.
 func expireDeadline(ctx context.Context, name string) {
 	GinkgoHelper()
 

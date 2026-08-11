@@ -21,21 +21,13 @@ import (
 )
 
 // NodeOperationNodeLabel names the node a NodeOperation is for, so one node's
-// operations can be listed without reading everyone else's. The controller that
-// creates operations and the one that reconciles them share this single key
-// rather than each spelling out the literal (a typo in either would silently
-// break the lookup contract between them).
+// operations can be listed without reading everyone else's. Shared between the
+// creating and reconciling controllers so the lookup contract cannot drift.
 const NodeOperationNodeLabel = "node-manager.deckhouse.io/node"
 
 // NodeOperation is one interruption of a node's work: a reboot, an eviction of
-// its workload, or the permission a node needs before applying a configuration
-// it cannot apply without a pause.
-//
-// It is a record of intent rather than a switch — created once, carried through
-// its phases, and kept afterwards as the history of what was done to the node.
-// That is what an annotation could not be: it says who asked, for what, and how
-// it ended.
-//
+// its workload, or the permission a node needs before applying a disruptive
+// configuration. A record of intent: who asked, for what, and how it ended.
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Cluster,shortName=nop
 // +kubebuilder:subresource:status
@@ -60,18 +52,9 @@ const (
 	NodeOperationApproveDisruption NodeOperationType = "ApproveDisruption"
 )
 
-// NodeOperationSpec is immutable: an operation describes one intent, and a
-// different intent is a different operation.
-//
-// Nothing generates a CRD from this file: modules/040-node-manager/crds/
-// nodeoperation.yaml is written by hand and is the authority on validation.
-// Kubebuilder markers here would be inert, and inert markers drift — the two had
-// already disagreed about nodeName's length and pattern, configGeneration's
-// minimum and drain.skip's default. What the API server enforces is: type is one
-// of Reboot, Drain or ApproveDisruption; nodeName is a DNS name of 1..253
-// characters; configGeneration is at least 1 and only allowed on
-// ApproveDisruption; drain says nothing on a Drain; and the spec cannot be
-// changed after creation.
+// NodeOperationSpec is immutable: a different intent is a different operation.
+// No CRD is generated from this file — crds/nodeoperation.yaml is written by
+// hand and is the authority on validation; kubebuilder markers here would drift.
 type NodeOperationSpec struct {
 	// Type is the operation to perform.
 	Type NodeOperationType `json:"type"`
@@ -125,10 +108,9 @@ type NodeOperationStatus struct {
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
-	// StartedAt is when the node was handed the operation. The wait for the
+	// StartedAt is when the node was handed the operation; the wait for the
 	// node is measured from here rather than from a condition timestamp, which
-	// only moves when the condition's status changes and would still be the
-	// moment the operation was queued.
+	// would still be the moment the operation was queued.
 	// +optional
 	StartedAt *metav1.Time `json:"startedAt,omitempty"`
 
@@ -139,19 +121,14 @@ type NodeOperationStatus struct {
 	FinishedAt *metav1.Time `json:"finishedAt,omitempty"`
 
 	// NodeWasUnschedulable is whether the node was already out of the scheduler
-	// when the operation reached it. Releasing the node restores this rather
-	// than making it schedulable, so an operation does not quietly undo a cordon
-	// an operator put there by hand.
+	// when the operation reached it; release restores this rather than forcing
+	// schedulable, so an operator's cordon is not quietly undone.
 	// +optional
 	NodeWasUnschedulable *bool `json:"nodeWasUnschedulable,omitempty"`
 
-	// DrainDeadline is when the eviction this operation asked for runs out of
-	// the time it was given. It is pinned when the eviction is requested, from
-	// the group's drain timeout as it stood at that moment, because that is the
-	// bound the draining controller pinned into its own context. Re-deriving it
-	// later would let a change to the group cut short a drain that is still
-	// running, and abandoning a running drain leaves its result on a node no
-	// operation is waiting for.
+	// DrainDeadline is when the requested eviction runs out of time. Pinned at
+	// request time from the group's drain timeout as it stood then — the bound
+	// the draining controller pinned into its own context — never re-derived.
 	// +optional
 	DrainDeadline *metav1.Time `json:"drainDeadline,omitempty"`
 

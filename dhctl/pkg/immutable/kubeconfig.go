@@ -27,45 +27,26 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
-// ErrKubeconfigOutRequired is what stops an immutable bootstrap driven by
-// dhctl-server. The admin kubeconfig the node hands over is the only way into
-// the cluster — the node runs no sshd and the handoff channel closes as soon as
-// the collection is confirmed — and the bootstrap response carries a state and
-// an error, no kubeconfig. --kubeconfig-out, the one way to keep the file, is a
-// CLI flag nothing in the server sets, so the server has nowhere to put the one
-// file that reaches the cluster.
+// ErrKubeconfigOutRequired stops an immutable bootstrap driven by dhctl-server:
+// the admin kubeconfig is the only way into the cluster, the bootstrap response
+// does not carry it, and the server never sets --kubeconfig-out to keep it.
 var ErrKubeconfigOutRequired = errors.New(
 	"Commander cannot bootstrap an immutable master: the admin kubeconfig is collected from the node once and " +
 		"is the only way into such a cluster, and nothing in the bootstrap response carries it back. " +
 		"Bootstrap it from the dhctl CLI instead, with --kubeconfig-out naming where to keep the kubeconfig",
 )
 
-// CheckKubeconfigOutSurvivesCleanup rejects a --kubeconfig-out path that dhctl
-// would delete on its way out.
-//
-// TmpDir is scratch space: the tmp cleaner walks it at shutdown and removes
-// everything whose name does not end in one of a few protected suffixes, the
-// admin kubeconfig's among them. The flag's own help points at that directory,
-// so "--kubeconfig-out /tmp/dhctl/prod.kubeconfig" is the natural thing to type
-// — and it writes the file, prints where it is, and sweeps it at exit. On a
-// cluster whose first master is immutable that file is the only way in.
-//
-// Refused rather than worked around: teaching the cleaner to spare an arbitrary
-// path would change cleanup for every dhctl command, while the operator has a
-// simpler fix — a path outside the scratch directory, or the name the cleaner
-// already spares.
-//
-// Pure; the context is here for the package's uniform exported signature.
+// CheckKubeconfigOutSurvivesCleanup rejects a --kubeconfig-out path the tmp
+// cleaner would sweep at exit (anything under tmpDir not ending in a protected
+// suffix) — on an immutable master that file is the only way in. Pure.
 func CheckKubeconfigOutSurvivesCleanup(_ context.Context, kubeconfigOut, tmpDir string) error {
 	if kubeconfigOut == "" || tmpDir == "" {
 		return nil
 	}
 
-	// Symlinks resolved, not just made absolute: on macOS the temporary directory
-	// is reached through /tmp -> /private/tmp, so a path under the cleaner's
-	// directory compares as outside it and the file is swept anyway. A path that
-	// does not exist yet — the normal case for the file about to be written —
-	// keeps its lexical form, which is why the error is not fatal here.
+	// Symlinks resolved, not just made absolute: on macOS /tmp -> /private/tmp
+	// would make a path under the cleaner's directory compare as outside it.
+	// A path that does not exist yet keeps its lexical form.
 	out := resolvePath(kubeconfigOut)
 	tmp := resolvePath(tmpDir)
 
@@ -85,13 +66,9 @@ func CheckKubeconfigOutSurvivesCleanup(_ context.Context, kubeconfigOut, tmpDir 
 	)
 }
 
-// resolvePath makes a path absolute and follows the symlinks on the part of it
-// that exists, keeping the rest lexically.
-//
-// The path being checked is usually a file that has not been created yet, and
-// may sit under directories that do not exist either — so resolving only the
-// whole path, or only its immediate parent, leaves it unresolved and a
-// symlinked temporary directory then compares as somewhere else entirely.
+// resolvePath makes a path absolute and follows symlinks on the part that
+// exists, keeping the rest lexically: the checked file (and even its parents)
+// usually do not exist yet, so resolving only the whole path would do nothing.
 func resolvePath(path string) string {
 	absolute, err := filepath.Abs(path)
 	if err != nil {
@@ -114,17 +91,8 @@ func resolvePath(path string) string {
 }
 
 // RetargetKubeconfig points the collected admin kubeconfig at the address dhctl
-// reaches the API server on.
-//
-// The node puts its own address in the file, which is the right one for an
-// operator and the wrong one for this process when it reaches the master
-// through a bastion: there the API server is a local forward that exists only
-// while the bootstrap runs. So the retargeted copy is the internal one — the
-// copy handed to the operator keeps the node's address (see
-// saveAdminKubeconfig). Everything else in the file, the cluster CA and the
-// client certificate included, is used as it came.
-//
-// Pure; the context is here for the package's uniform exported signature.
+// reaches the API server on (e.g. a bastion's local forward). The retargeted
+// copy is internal; the operator's copy keeps the node's address. Pure.
 func RetargetKubeconfig(_ context.Context, content []byte, server string) ([]byte, error) {
 	if server == "" {
 		return nil, errors.New("retarget the admin kubeconfig: server URL is empty")
@@ -151,12 +119,8 @@ func RetargetKubeconfig(_ context.Context, content []byte, server string) ([]byt
 }
 
 // CompleteAdminKubeconfig pairs the document the node handed back with the
-// private key it was never given.
-//
-// The node signs a certificate for the installer's key and returns only that
-// certificate — public, and useless to anyone who intercepts it. The key stayed
-// in the state cache the whole time, so this is where the two halves meet and
-// the result becomes credentials.
+// private key it was never given: the node returns only a public certificate,
+// and the key stayed in the state cache, so this is where the halves meet.
 func CompleteAdminKubeconfig(ctx context.Context, cache state.Cache, collected []byte) ([]byte, error) {
 	material, err := LoadHandoffMaterial(ctx, cache)
 	if err != nil {

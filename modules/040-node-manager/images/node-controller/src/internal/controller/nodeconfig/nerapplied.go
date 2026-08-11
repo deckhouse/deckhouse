@@ -38,20 +38,9 @@ type nerOutcome struct {
 	message string
 }
 
-// readNEROutcomes asks the nodes what became of each request.
-//
-// The controller writes spec.extensions and, until now, never read back what
-// happened: a NodeExtensionRequest reported Ready as soon as its sysext
-// resolved, which says the image reference is well formed and nothing more. An
-// extension every node refuses — the case this exists for is a roothash signed
-// by a key the kernel does not trust — looked exactly like one that works.
-//
-// The join key is spec.extensions[].requestedBy, which already carries the
-// request's own name, matched against status.extensions[].name. Both sides are
-// per node, so the counts are of nodes, not of extensions.
-//
-// A node with no status yet counts as neither applied nor failed: it has not
-// answered, and reporting silence as either would be inventing an answer.
+// readNEROutcomes asks the nodes what became of each request, joining
+// spec.extensions[].requestedBy against status.extensions[].name; counts are of
+// nodes. A node with no status yet counts as neither applied nor failed.
 func readNEROutcomes(ctx context.Context, reader client.Reader) (map[string]nerOutcome, error) {
 	configs := &internalv1alpha1.NodeConfigList{}
 	if err := reader.List(ctx, configs); err != nil {
@@ -99,25 +88,9 @@ func readNEROutcomes(ctx context.Context, reader client.Reader) (map[string]nerO
 			outcomes[ner] = outcome
 		}
 
-		// A node that rejected the configuration wholesale keeps running the
-		// last one it accepted, and its next reconcile rebuilds the extension
-		// statuses from that config — the refused extension's Failed entry
-		// lives for one pass and vanishes. The refusal itself is durable: the
-		// ConfigurationApplied condition stays False and names what it refused.
-		// Without reading it back a poisoned request reads as merely "not
-		// applied anywhere", which is what a request still rolling out looks
-		// like too.
-		//
-		// Two conditions guard the count, and both are the difference between
-		// reporting a refusal and inventing one. The generation, because a
-		// False left over from an earlier spec says nothing about this one —
-		// the rollout gate keys on the same pair for the same reason
-		// (rollout.go). And the message naming the extension, because
-		// ConfigurationApplied goes False for every reason a node has not
-		// applied a config: waiting for an update window, a sysctl refused, an
-		// unrelated sysext's unit down. A group with disruption windows would
-		// otherwise light up every one of its requests as "refused by N
-		// node(s)" while it simply waits for the window.
+		// A wholesale rejection leaves only the ConfigurationApplied condition.
+		// Two guards: the generation (a stale False says nothing) and the message
+		// naming the extension (the condition goes False for unrelated reasons).
 		cond := meta.FindStatusCondition(config.Status.Conditions, configurationAppliedCondition)
 		if cond != nil && cond.Status == metav1.ConditionFalse && cond.ObservedGeneration == config.Generation {
 			for name, ner := range owner {

@@ -219,10 +219,9 @@ func (in manifestsInput) data() map[string]any {
 			// error rather than a false.
 			"clusterType": in.Cluster.ClusterType,
 		},
-		// Empty on purpose, and load-bearing: its emptiness is what makes
+		// Empty on purpose, and load-bearing: its emptiness makes
 		// bootstrapAuthenticationConfig a constant. The only key the templates
-		// would read from it is the signature mode, which the
-		// immutable-signature-mode preflight refuses outright.
+		// would read is the signature mode, which a preflight refuses outright.
 		"apiserver": map[string]any{},
 		"settings":  in.Settings,
 	}

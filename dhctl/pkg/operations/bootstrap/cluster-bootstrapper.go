@@ -198,9 +198,8 @@ type bootstrapContext struct {
 	masterNodeName string
 	masterIP       string
 	// adminKubeconfigPath is where the admin kubeconfig was written on an
-	// immutable bootstrap. Kept so the finalizer can say again how to reach the
-	// cluster: the first time it is said, the bootstrap still has ten minutes
-	// and a few thousand lines to go.
+	// immutable bootstrap; kept so the finalizer can repeat how to reach the
+	// cluster after the first mention scrolls away.
 	adminKubeconfigPath string
 	// immutableTunnelStop closes the bastion forward to the master's API.
 	immutableTunnelStop func()
@@ -281,11 +280,8 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 			if err.Error() == "stopped" {
 				return nil
 			}
-			// A failed bootstrap is where the credentials are needed most: the
-			// cluster is half-built and somebody has to look at it, over a
-			// channel that no longer exists and a master that runs no sshd. The
-			// successful path prints this at the end, which a failure never
-			// reaches.
+			// A failed bootstrap needs the credentials most: the master runs no
+			// sshd, and the success-path print at the end is never reached.
 			if bctx.adminKubeconfigPath != "" {
 				b.printHowToReachTheCluster(ctx, bctx.adminKubeconfigPath, bctx)
 			}
@@ -631,12 +627,9 @@ func (b *ClusterBootstrapper) bootstrapBaseInfra(ctx context.Context, bctx *boot
 
 			bctx.masterIP = masterOutputs.MasterIPForSSH
 
-			// An immutable master answers no SSH, so it is deliberately not
-			// registered as an SSH host: doing so would make CheckHosts report
-			// a reachable master and send the later phases down the SSH path
-			// (waiting for sshd, the bashible pipeline, the post-bootstrap
-			// script). The Kubernetes client is built later, in
-			// bootstrapKubernetes, straight against the node's API server.
+			// An immutable master is deliberately not registered as an SSH host:
+			// CheckHosts would send later phases down the SSH path. The Kubernetes
+			// client is built in bootstrapKubernetes against the node's API server.
 			if !bctx.immutableMaster {
 				connectionConfig.Hosts = append(connectionConfig.Hosts, sshconfig.Host{Host: masterOutputs.MasterIPForSSH})
 			}
@@ -852,10 +845,9 @@ func (b *ClusterBootstrapper) bootstrapDeckhouse(ctx context.Context, bctx *boot
 	return nil
 }
 
-// bootstrapAdditionalNodes creates every node beyond the first master. For an
-// immutable master group these are replicas two and three, each booted with a
-// join payload rendered against the now-running cluster — see
-// buildImmutableJoinPayload.
+// bootstrapAdditionalNodes creates every node beyond the first master. Immutable
+// master replicas boot with a join payload rendered against the now-running
+// cluster — see buildImmutableJoinPayload.
 func (b *ClusterBootstrapper) bootstrapAdditionalNodes(ctx context.Context, bctx *bootstrapContext) error {
 	if bctx.metaConfig.ClusterType == config.CloudClusterType {
 		if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(ctx, phases.InstallAdditionalMastersAndStaticNodes, true, bctx.stateCache, nil); err != nil {

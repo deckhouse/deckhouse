@@ -137,22 +137,17 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 		if oldNG.Spec.NodeType != ng.Spec.NodeType {
 			return admission.Denied(".spec.nodeType field is immutable")
 		}
-		// Only a value that is already set is frozen. A group that has none has
-		// to be able to record what it is: the master NodeGroup exists before
-		// dhctl applies the manifest naming its systemType, and every NodeGroup
-		// predating the field is in the same position. Changing a set value —
-		// including dropping it — re-renders the group's bootstrap and re-creates
-		// every machine in it.
+		// Only a value that is already set is frozen: a group with none must be
+		// able to record what it is (the master NodeGroup predates its manifest).
+		// Changing or dropping a set value re-creates every machine in the group.
 		if oldNG.Spec.SystemType != "" && oldNG.Spec.SystemType != ng.Spec.SystemType {
 			return admission.Denied(".spec.systemType field is immutable once set")
 		}
 	}
 
-	// Checked on CREATE as well as on UPDATE. Deleting a NodeGroup leaves its
-	// Nodes in the cluster, still labelled with the group they belonged to, so
-	// recreating the group under the same name with systemType: Immutable
-	// arrives as a CREATE and would otherwise adopt those bashible nodes
-	// unchecked — which is the door the denial message below points at.
+	// Checked on CREATE as well as UPDATE: recreating a deleted group under
+	// the same name with systemType: Immutable arrives as a CREATE and would
+	// otherwise adopt the old, still-labelled bashible nodes unchecked.
 	adopting := ng.Spec.SystemType == v1.SystemTypeImmutable &&
 		(req.Operation == "CREATE" || (oldNG != nil && oldNG.Spec.SystemType == ""))
 	if adopting {
@@ -677,19 +672,9 @@ func (w *NodeGroupValidator) getNodesWithCustomContainerd(ctx context.Context, n
 	return names, nil
 }
 
-// getBashibleNodes returns the group's nodes that bashible has configured.
-//
-// The marker is the label bashible sets once its first run finishes and never
-// removes again. The obvious alternative — the configuration-checksum annotation
-// — is blind in exactly the case this check exists for: a node waiting for
-// approval deletes its own checksum before it blocks (bashible's
-// 001_waiting_approval_annotations step), so under Manual approval, or a
-// RollingUpdate waiting its turn, a whole group of live bashible nodes would
-// read as carrying nothing.
-//
-// An olcedar node never runs bashible and so never gets the label, which is what
-// leaves an immutable cluster free to record systemType on the master NodeGroup
-// its own bootstrap created.
+// getBashibleNodes returns the group's nodes that bashible has configured: the
+// label bashible sets once and never removes. The checksum annotation is blind
+// here (approval-waiting nodes delete it); olcedar nodes never get the label.
 func (w *NodeGroupValidator) getBashibleNodes(ctx context.Context, nodeGroupName string) ([]string, error) {
 	nodeList := &corev1.NodeList{}
 	webhookLog.Info("listing Nodes", "filter", "bashible-first-run-finished", "nodeGroup", nodeGroupName)

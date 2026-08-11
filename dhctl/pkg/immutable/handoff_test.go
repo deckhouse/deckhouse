@@ -131,9 +131,8 @@ func TestFetchKubeconfigHopelessAnswers(t *testing.T) {
 }
 
 // TestHandoffMaterialIsReusedAcrossAttempts guards the retry: the node boots
-// with the first payload, so a second attempt that minted fresh material would
-// present a token the node rejects and verify a certificate signed by a CA the
-// node never served under.
+// with the first payload, so a second attempt with fresh material would present
+// a token the node rejects and verify against a CA the node never served under.
 func TestHandoffMaterialIsReusedAcrossAttempts(t *testing.T) {
 	stateCache := cache.NewTestCache()
 
@@ -146,13 +145,9 @@ func TestHandoffMaterialIsReusedAcrossAttempts(t *testing.T) {
 	require.Equal(t, first, second)
 }
 
-// TestHandoffPayloadSurvivesTheConfirmedHandover is the same guard one step
-// later. The confirmation drops the installer's client key from the cache, and
-// a run that fails after it — installing Deckhouse takes minutes — is rerun by
-// the operator. What the payload renders to then has to be byte for byte what
-// the master booted with: the document travels in the cloudConfig tfvar and ends
-// up in the node's user_data, so one different byte is a node dhctl can no
-// longer authenticate to.
+// TestHandoffPayloadSurvivesTheConfirmedHandover guards the rerun after the
+// confirmation drops the client key: the payload must still render byte for
+// byte what the master booted with, or dhctl can no longer authenticate.
 func TestHandoffPayloadSurvivesTheConfirmedHandover(t *testing.T) {
 	stateCache := cache.NewTestCache()
 

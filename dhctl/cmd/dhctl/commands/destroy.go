@@ -57,10 +57,9 @@ If you understand what you are doing, you can use the flag "--yes-i-am-sane-and-
 
 func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
 	app.DefineSSHFlags(cmd, &opts.SSH, config.NewConnectionConfigParser(opts))
-	// Destroy asked for SSH and nothing else, which made a cluster whose nodes
-	// run no SSH server impossible to delete: created but not removable. The
-	// infrastructure state lives in the cluster, and reaching it needs a
-	// kubeconfig, not a shell on a node.
+	// Without kube flags a cluster whose nodes run no SSH server was impossible
+	// to delete: the infrastructure state lives in the cluster, and reaching it
+	// needs a kubeconfig, not a shell on a node.
 	app.DefineKubeFlags(cmd, &opts.Kube)
 	app.DefineBecomeFlags(cmd, &opts.Become)
 	app.DefineCacheFlags(cmd, &opts.Cache)
@@ -91,21 +90,9 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 
 		defer providerinitializer.CleanupSSHProvider(ctx, sshProviderInitializer)
 
-		// The cache is keyed by whatever identifies this cluster. Getting it wrong
-		// does not fail loudly — it silently addresses somebody else's state, and
-		// destroy reads the terraform state out of that cache and deletes what it
-		// finds there.
-		//
-		// A kubeconfig and an SSH host together are refused rather than ranked.
-		// kube.Config.getModes() (lib-connection pkg/kube/config.go) makes
-		// OverSSH() false the moment KubeConfig is set, so the client that reads
-		// the state talks to the kubeconfig's server and not to anything behind
-		// SSH — but --kubeconfig also reads DHCTL_CLI_KUBE_CONFIG, and kingpin
-		// cannot tell an exported variable from a typed flag. An operator with
-		// that variable set for one cluster who types --ssh-host for another would
-		// get the second cluster's address on the prompt and the first cluster's
-		// infrastructure deleted. Neither source can be trusted over the other, so
-		// this declines to guess.
+		// The cache identity picks whose terraform state destroy deletes; a wrong key
+		// silently addresses somebody else's. A kubeconfig plus an SSH host is refused
+		// rather than ranked: --kubeconfig also reads DHCTL_CLI_KUBE_CONFIG.
 		var sshProvider libcon.SSHProvider
 		sshHostConfigured := sshProviderInitializer != nil && sshProviderInitializer.CheckHosts(ctx)
 		if sshHostConfigured && (opts.Kube.Config != "" || opts.Kube.InCluster) {
@@ -126,13 +113,9 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 
 		cacheIdentity := ""
 		if opts.Kube.Config != "" {
-			// NOT GetCacheIdentityFromKubeconfig: that hashes the path, and on an
-			// immutable cluster the path is always the same one the bootstrap wrote
-			// its admin kubeconfig to. Every cluster on this machine would then
-			// share a cache directory — and destroy reads the terraform state out
-			// of that cache, so it would happily tear down somebody else's
-			// infrastructure without saying a word. Key by what the file says the
-			// cluster IS.
+			// NOT GetCacheIdentityFromKubeconfig: that hashes the path, and every
+			// immutable bootstrap writes to the same path — all clusters on this
+			// machine would then share the cache destroy reads its state from.
 			identity, err := kubeconfigClusterIdentity(opts.Kube.Config, opts.Kube.ConfigContext)
 			if err != nil {
 				return fmt.Errorf("identify the cluster from %s: %w", opts.Kube.Config, err)
@@ -232,14 +215,9 @@ func inClusterCacheIdentity() (string, error) {
 	return "in-cluster-" + net.JoinHostPort(host, port), nil
 }
 
-// kubeconfigClusterIdentity names the cluster a kubeconfig points at, from what
-// is inside it rather than from where it sits: the API server address and the
-// cluster CA. Two clusters cannot share both.
-//
-// The CA has to be there. The address alone identifies nothing here — the line
-// this command prints for an immutable cluster tells every operator to point
-// their kubeconfig at https://127.0.0.1:6445 through a bastion forward, so
-// "same address, different cluster" is the normal shape and not the exotic one.
+// kubeconfigClusterIdentity names the cluster a kubeconfig points at by what is
+// inside it. The CA is required: the printed bastion-forward line retargets every
+// immutable cluster to https://127.0.0.1:6445, so the address alone identifies nothing.
 func kubeconfigClusterIdentity(path, contextName string) (string, error) {
 	cfg, err := clientcmd.LoadFromFile(path)
 	if err != nil {
@@ -283,12 +261,9 @@ func kubeconfigClusterIdentity(path, contextName string) (string, error) {
 		)
 	}
 
-	// The CA alone, deliberately not the server address: this same command prints
-	// a sed line telling the operator to rewrite that address to
-	// https://127.0.0.1:6445 for a bastion forward, so hashing it would give an
-	// interrupted destroy a different cache directory when it is resumed through
-	// the tunnel — an empty cache, and no infrastructure state to finish from. A
-	// cluster CA is unique to its cluster, which is all this has to establish.
+	// The CA alone, deliberately not the server address: a destroy resumed through
+	// the bastion forward carries a rewritten address, so hashing it would hand the
+	// resume an empty cache with no infrastructure state to finish from.
 	h := sha256.New()
 	h.Write(certificateAuthority)
 	return "kubeconfig-" + hex.EncodeToString(h.Sum(nil)), nil

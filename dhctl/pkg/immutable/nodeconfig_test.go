@@ -96,15 +96,9 @@ func testMetaConfig(t *testing.T) *config.MetaConfig {
 	return metaConfig
 }
 
-// maxPods is a function of how many addresses a node's slice of the pod subnet
-// holds, and bashible computes it that way for every other node in the cluster
-// (064_configure_kubelet.sh.tpl). A first master that used a flat default would
-// advertise 120 on a /22 cluster where every bashible node advertises 500, and
-// the scheduler believes both.
-//
-// The ladder is then capped at what the nodeConfig schema accepts, exactly as
-// node-controller caps it, so the first day-2 render of this node writes the
-// number it already booted with rather than a spec diff and a rollout slot.
+// maxPods must match what bashible computes for every other node
+// (candi/bashible/common-steps/all/064_configure_kubelet.sh.tpl) — the scheduler
+// believes it — and is capped at what the nodeConfig schema accepts.
 func TestNodeConfigMaxPodsFollowsThePodSubnet(t *testing.T) {
 	const cappedFrom1000 = "bashible computes 1000 here; the nodeConfig schema caps it at 500"
 
@@ -159,11 +153,9 @@ func TestSysextDigestsPicksNewestPatch(t *testing.T) {
 	require.Equal(t, testKubeletDigest, digests["kubelet"])
 }
 
-// The camelcase function that builds the digest map strips the separators out
-// of the version, so "kubernetesCniSysext1610" is 1.6.10, 1.61.0 and 16.1.0 at
-// once. A numeric compare on it reads 1610 > 170 and installs CNI 1.6.10 over
-// 1.7.0; there is no comparison that gets all three readings right, so two
-// candidates are refused instead of silently resolved.
+// The camelcase function strips version separators, so "kubernetesCniSysext1610"
+// is 1.6.10, 1.61.0 and 16.1.0 at once; no comparison gets all readings right,
+// so two candidates are refused instead of silently resolved.
 func TestSysextDigestsRefusesAmbiguousVersions(t *testing.T) {
 	metaConfig := testMetaConfig(t)
 	metaConfig.Images["registrypackages"]["kubernetesCniSysext1610"] = testCNIDigest
@@ -188,15 +180,9 @@ func TestSysextDigestsIgnoresNonVersionSuffixes(t *testing.T) {
 	require.Equal(t, testContainerdDigest, digests["containerd"])
 }
 
-// Both image references the node pulls before it has a cluster — its own OS and
-// the pause image every pod sandbox starts from — are built from the registry it
-// was given, not from the public one and not from the raw imagesRepo. A private
-// or air-gapped registry is the normal case here, and a first master that cannot
-// pull either has no cluster yet in which to be fixed.
-//
-// The trailing-slash row is the reason the raw value is the wrong input: the
-// InitConfiguration pattern admits it (the path class contains "/"), and
-// ".../ce/@sha256:…" is not a reference containerd can pull.
+// Both pre-cluster image references — the OS and the pause image — are built
+// from the configured registry, not from the raw imagesRepo: the trailing-slash
+// row shows why, as ".../ce/@sha256:…" is not a reference containerd can pull.
 func TestNodeConfigImageReferencesFollowTheConfiguredRegistry(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -251,11 +237,9 @@ func TestNodeConfigImageReferencesFollowTheConfiguredRegistry(t *testing.T) {
 	}
 }
 
-// The mount is what gives a control-plane node its etcd disk, so the three
-// things that make it work are asserted rather than left to the golden file:
-// blank (a cloud disk has no partition table, so nothing else would match it),
-// the path etcd's static pod carries as a hostPath, and the mode etcd checks on
-// every start.
+// The mount gives a control-plane node its etcd disk, so the three things that
+// make it work are asserted directly: blank (a cloud disk has no partition
+// table), the static pod's hostPath, and the mode etcd checks on every start.
 func TestEtcdMountClaimsABlankDiskUnderEtcd(t *testing.T) {
 	mounts := etcdMounts()
 

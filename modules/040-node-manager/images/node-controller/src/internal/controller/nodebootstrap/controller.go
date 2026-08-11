@@ -15,12 +15,8 @@ limitations under the License.
 */
 
 // Package nodebootstrap is the Cluster API bootstrap provider for immutable
-// NodeGroups. For every Machine, the CAPI MachineSet clones a
-// NodeBootstrapConfig from the group's NodeBootstrapConfigTemplate; this
-// controller renders that machine's NodeConfig userdata — with the node name
-// already filled in — into a Secret and advertises it through the config's
-// status, which the CAPI Machine controller waits on before handing the
-// userdata to the infrastructure provider.
+// NodeGroups: it renders each Machine's NodeConfig userdata into a Secret and
+// advertises it through the NodeBootstrapConfig status CAPI waits on.
 package nodebootstrap
 
 import (
@@ -54,10 +50,9 @@ func init() {
 type Reconciler struct {
 	register.Base
 
-	// reader is uncached: the token and cluster inputs the userdata is rendered
-	// from live outside the manager's cache, and the decision whether the secret
-	// already exists must see the live state — a stale cache read caused
-	// duplicate objects on the nodeoperation controller before.
+	// reader is uncached: render inputs live outside the manager's cache, and
+	// the does-the-secret-exist decision must see live state — a stale cache
+	// read caused duplicate objects on the nodeoperation controller before.
 	reader client.Reader
 }
 
@@ -127,10 +122,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	// Both answers below are requeued rather than left to an event: this
-	// controller watches Machines, not NodeGroups, so a group created afterwards
-	// — or switched to Immutable — would otherwise be noticed only if its
-	// Machine happened to change, while the config sat there carrying a
-	// condition that reads final.
+	// controller watches Machines, not NodeGroups, so a group created or
+	// switched to Immutable later would only be noticed if its Machine changed.
 	ng := &v1.NodeGroup{}
 	if err := r.Client.Get(ctx, types.NamespacedName{Name: ngName}, ng); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -156,17 +149,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 	rendered := err == nil
 
-	// Bootstrap data is consumed once, but only once something has consumed it.
 	// The userdata embeds the group's bootstrap token, which expires four hours
-	// after it is issued; a machine whose VM is created late — quota, image
-	// replication, a paused MachineDeployment, a provider error loop — would
-	// otherwise be handed a token kubelet's TLS bootstrap refuses, with nothing
-	// left to re-render it.
-	//
-	// Consumed means the infrastructure provider has built the VM from it, or
-	// the node it carried has joined. Rendering again after that changes a
-	// Secret nobody will read, at the cost of a full pass over the uncached
-	// cluster inputs every refresh interval for the life of the Machine.
+	// after issue, so keep re-rendering until the data is consumed (VM built
+	// from it or node joined) — after that nobody reads the Secret again.
 	if rendered && consumed(machine) {
 		return ctrl.Result{}, r.ensureStatus(ctx, config, secretName)
 	}
@@ -277,15 +262,9 @@ func (r *Reconciler) patchStatus(ctx context.Context, config, updated *bootstrap
 	return nil
 }
 
-// buildSecret wraps the rendered userdata in the Secret capdvp reads as the
-// machine's user-data. It is owned by the config so it is garbage-collected
-// together with it (Machine -> NodeBootstrapConfig -> Secret).
-//
-// Deliberately without BlockOwnerDeletion: with the
-// OwnerReferencesPermissionEnforcement admission plugin on — a supported
-// control-plane-manager option — setting it would require update on the owner's
-// finalizers subresource, and every Create here would be refused instead. The
-// collection chain works without it.
+// buildSecret wraps the rendered userdata in the Secret capdvp reads, owned by
+// the config for GC (Machine -> NodeBootstrapConfig -> Secret). Deliberately no
+// BlockOwnerDeletion: OwnerReferencesPermissionEnforcement would refuse Create.
 func buildSecret(config *bootstrapv1alpha1.NodeBootstrapConfig, name, ngName string, userdata []byte) *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -313,15 +292,9 @@ func isPaused(obj client.Object) bool {
 	return paused
 }
 
-// consumed reports whether the bootstrap data has already been handed over: the
-// infrastructure provider built the machine's VM from it, or the node it carried
-// registered. Either way re-rendering it changes nothing on the machine.
-//
-// The infrastructure arm rests on the Cluster API contract that a provider reads
-// this secret once, when it creates the machine, and copies the userdata in. A
-// provider that instead re-read it on a later rebuild would find the token
-// inside expired — the very failure this refresh exists to prevent, one step
-// further along — and the freeze would have to rest on the NodeRef arm alone.
+// consumed reports whether the bootstrap data has been handed over: the
+// provider built the VM from it, or the node registered. Rests on the CAPI
+// contract that a provider reads the secret once, at machine creation.
 func consumed(machine *capiv1beta2.Machine) bool {
 	if machine.Status.NodeRef.IsDefined() {
 		return true

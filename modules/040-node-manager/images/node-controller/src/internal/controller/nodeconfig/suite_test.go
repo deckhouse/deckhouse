@@ -50,11 +50,9 @@ var (
 // that reconciler reads what the cluster actually holds.
 var apiReader client.Reader
 
-// TestNodeConfigControllerEnvtest runs the envtest-backed integration suite: the
-// real controller runs inside a manager against a real kube-apiserver, so what
-// is asserted is the NodeConfig objects the cluster ends up with for the nodes
-// of an immutable NodeGroup. The suite is skipped when envtest assets are
-// missing so the unit tests stay runnable without `make envtest`.
+// TestNodeConfigControllerEnvtest runs the envtest-backed integration suite:
+// the real controller against a real kube-apiserver, asserting the NodeConfigs
+// the cluster ends up with. Skipped when envtest assets are missing.
 func TestNodeConfigControllerEnvtest(t *testing.T) {
 	if !testenv.AssetsAvailable() {
 		t.Skip("envtest assets not found; run `make envtest` (or set KUBEBUILDER_ASSETS) to run the integration suite")

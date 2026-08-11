@@ -40,11 +40,9 @@ const readyConditionType = "Ready"
 // NodeConfig status shape (phase + typed conditions).
 const phaseDegraded = "Degraded"
 
-// reconcileNERStatuses writes each NodeExtensionRequest's status: the image its
-// sysext resolves to, the immutable NodeGroups it selects, and a Ready condition
-// carrying the reason when it does not resolve. It is best-effort — a status
-// write failing never blocks node rendering — and runs off the same pass that
-// re-renders nodes, so a NER edit refreshes both.
+// reconcileNERStatuses writes each NodeExtensionRequest's status (resolution,
+// matched groups, Ready condition). Best-effort — a status write failing never
+// blocks node rendering — and runs off the same pass that re-renders nodes.
 func (r *Reconciler) reconcileNERStatuses(ctx context.Context, logger logr.Logger) {
 	ners := &deckhousev1alpha1.NodeExtensionRequestList{}
 	if err := r.Client.List(ctx, ners); err != nil {
@@ -78,10 +76,9 @@ func (r *Reconciler) reconcileNERStatuses(ctx context.Context, logger logr.Logge
 	}
 }
 
-// immutableNodeGroupNames lists the names of the immutable NodeGroups a request
-// can select. A listing failure is reported rather than answered with no names:
-// "no groups matched" is a fact about the cluster, and publishing it from a read
-// that did not happen tells every operator their request selects nothing.
+// immutableNodeGroupNames lists the immutable NodeGroups a request can select.
+// A listing failure is an error, not an empty answer: publishing "no groups
+// matched" from a read that did not happen misleads every operator.
 func (r *Reconciler) immutableNodeGroupNames(ctx context.Context) ([]string, error) {
 	ngs := &v1.NodeGroupList{}
 	if err := r.Client.List(ctx, ngs); err != nil {

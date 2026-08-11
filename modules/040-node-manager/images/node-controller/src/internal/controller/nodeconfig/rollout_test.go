@@ -29,23 +29,17 @@ import (
 	"github.com/deckhouse/node-controller/internal/register"
 )
 
-// The gate above is only correct with one worker, and this is where that is
-// declared. It has to be declared through the interface the manager setup looks
-// for, or the declaration is a method nobody calls: renaming it, or dropping it
-// out of the interface, has to fail here rather than silently restore the
-// multi-worker race. (What the setup then does with the number is
-// register.TestEffectiveMaxConcurrentReconciles; register cannot import this
-// package to do both in one place.)
+// TestReconcilerCapsItselfAtOneWorker: the rollout gate is only correct with
+// one worker, declared through the interface the manager setup looks for —
+// dropping out of that interface must fail here, not restore the race silently.
 func TestReconcilerCapsItselfAtOneWorker(t *testing.T) {
 	require.Implements(t, (*register.NeedsMaxConcurrentReconciles)(nil), &Reconciler{})
 	require.Equal(t, 1, (&Reconciler{}).MaxConcurrentReconciles())
 }
 
-// A pass remembers that the cluster's own state could not be read, not only that
-// it could. These inputs are cluster-wide by construction — one absent DNS
-// service, one unreadable secret, fails identically for every node — so a pass
-// that forgot the failure repeated the uncached reads behind it once per node,
-// turning a single missing object into thousands of live reads on a large fleet.
+// A pass memoises read failures too: cluster-wide inputs fail identically for
+// every node, and forgetting the failure turned one missing object into
+// thousands of live reads on a large fleet.
 func TestPassRemembersThatTheClusterCouldNotBeRead(t *testing.T) {
 	cluster := dnsCluster(t) // empty: the first read already fails
 	r := &Reconciler{}
@@ -67,11 +61,9 @@ func TestPassRemembersThatTheClusterCouldNotBeRead(t *testing.T) {
 	require.Equal(t, first, second)
 }
 
-// The budget is read once per group per pass and spent as the pass hands out
-// slots. Counting its own writes is what makes one reading as accurate as one
-// reading per node: without it, every node of the group would be judged against
-// a group where nothing is updating, and the whole group would take the change
-// at once.
+// The budget is read once per group per pass and spent as slots are handed out;
+// without counting its own writes every node would be judged against a group
+// where nothing is updating, and the whole group would change at once.
 func TestRolloutBudget(t *testing.T) {
 	t.Run("one node at a time", func(t *testing.T) {
 		budget := &rolloutBudget{concurrency: 1, updating: map[string]struct{}{}}
@@ -94,11 +86,9 @@ func TestRolloutBudget(t *testing.T) {
 	})
 
 	t.Run("a group with more silent nodes than it allows updates", func(t *testing.T) {
-		// What an agent that is absent, too old to publish the condition, or
-		// broken looks like from here. Grandfathering them unconditionally let
-		// every one of them take every change, and they disrupted together the
-		// moment their agents came back — the gate opening widest exactly when
-		// the group was least healthy.
+		// What absent, too-old or broken agents look like from here.
+		// Grandfathering them unconditionally let all of them take every change
+		// and disrupt together the moment their agents came back.
 		budget := &rolloutBudget{concurrency: 1, updating: map[string]struct{}{
 			"node-a": {}, "node-b": {}, "node-c": {},
 		}}
@@ -148,15 +138,9 @@ func withConfigApplied(nc *internalv1alpha1.NodeConfig, status metav1.ConditionS
 	return nc
 }
 
-// applied() is the rollout's "this node converged" test. It must key on the
-// generation the node is RUNNING (appliedGeneration), not the one it has merely
-// SEEN (observedGeneration): a held node has observed the current generation but
-// is still running the previous one, and counting it as done would walk the
-// change through the whole group while every node waits.
-//
-// It must also key on ConfigurationApplied rather than on the phase. The two
-// answer different questions, and a node that is Degraded for a reason the
-// rollout neither caused nor can fix must not hold the group's slot forever.
+// applied() must key on the generation the node is RUNNING (appliedGeneration),
+// not the one it has SEEN (observedGeneration), and on ConfigurationApplied
+// rather than phase — an unrelated Degraded must not hold the slot forever.
 func TestApplied(t *testing.T) {
 	tests := []struct {
 		name       string

@@ -101,25 +101,18 @@ const (
 	kubeletExtension    = "kubelet"
 	cniExtension        = "kubernetes-cni"
 
-	// platformExtensionRequestedBy records who asked for a platform extension.
-	// It names the module rather than whichever component wrote the object,
-	// because two of them write the same three extensions — the installer into
-	// the first master's payload, this controller into every node afterwards —
-	// and a field that names a different author on one node than on the rest is
-	// a difference nobody can act on. Keep it in step with dhctl's copy
-	// (dhctl/pkg/immutable/nodeconfig.go).
+	// platformExtensionRequestedBy names the module, not the writing component:
+	// dhctl and this controller write the same three extensions, so the field
+	// must not differ between nodes. Keep in step with dhctl/pkg/immutable/nodeconfig.go.
 	platformExtensionRequestedBy = "node-manager"
 
 	// nerRequestedByPrefix qualifies an extension that came from a
-	// NodeExtensionRequest. The field also carries the platform marker above, so
-	// a bare name leaves a reader guessing which of the two kinds they are
-	// looking at — and which object to go read.
+	// NodeExtensionRequest, distinguishing it from the platform marker above.
 	nerRequestedByPrefix = "NodeExtensionRequest/"
 
 	// resourceReservationModeAuto and resourceReservationModeStatic are the
-	// NodeGroup kubeReserved modes this render has to reason about: Auto is the
-	// default on both sides, and Static has no counterpart on an immutable node.
-	// Off needs no constant — it only ever passes through.
+	// NodeGroup kubeReserved modes this render reasons about; Static has no
+	// counterpart on an immutable node, and Off only ever passes through.
 	resourceReservationModeAuto   = "Auto"
 	resourceReservationModeStatic = "Static"
 
@@ -130,10 +123,9 @@ const (
 	// was given.
 	phaseReady = "Ready"
 
-	// extensionStateReady and extensionStateFailed are the per-extension states a
-	// node publishes in NodeConfig.status.extensions[].state. They mirror the
-	// agent's own enum; its third value, Pending, is a node still working and
-	// counts as neither outcome.
+	// extensionStateReady and extensionStateFailed mirror the agent's enum for
+	// NodeConfig.status.extensions[].state; the third value, Pending, means the
+	// node is still working and counts as neither outcome.
 	extensionStateReady  = "Ready"
 	extensionStateFailed = "Failed"
 
@@ -147,11 +139,9 @@ const (
 	kubeletLabelNamespace = "kubelet.kubernetes.io"
 	nodeLabelNamespace    = "node.kubernetes.io"
 
-	// cgroupLabel is how a node tells the cluster which cgroup layout it runs,
-	// and cgroupV2Value is the only answer an olcedar node has. node-manager
-	// reads the label off the Node to decide whether the node can run containerd
-	// v2 (modules/040-node-manager/hooks/cntrd_v2_support.go); the installer
-	// writes the same pair into the first master's payload.
+	// cgroupLabel tells the cluster which cgroup layout the node runs;
+	// cgroupV2Value is the only answer an olcedar node has. Read by
+	// hooks/cntrd_v2_support.go; the installer writes the same pair.
 	cgroupLabel   = "node.deckhouse.io/cgroup"
 	cgroupV2Value = "cgroup2fs"
 
@@ -174,38 +164,19 @@ const (
 	configurationAppliedCondition = "ConfigurationApplied"
 )
 
-// osImageNameAndTag is the olcedar image the node boots from, pinned to a
-// known-good build (a tag, not an @digest). Only the name and the tag are
-// constant: the repository in front of them comes from the cluster's own
-// registry secret — the same source spec.registry is built from — and dhctl
-// composes the first master's copy the same way (dhctl/pkg/immutable/
-// nodeconfig.go). Naming the public registry here instead rewrote that master's
-// spec.osImage on its first day-2 render, replacing the registry the cluster was
-// installed from with one an air-gapped cluster cannot reach.
+// osImageNameAndTag is the olcedar image the node boots from, pinned to a tag.
+// The repository comes from the cluster's registry secret (same as dhctl does);
+// hardcoding a public registry would break air-gapped clusters on day-2 render.
 const osImageNameAndTag = "olcedar:v0.1"
 
-// systemDiskSelectorSize is the diskSelector this controller renders for a
-// node whose provisioner named no disk. It cannot name the disk — a NodeGroup
-// has no disk field — so it says the one true thing it can: any real disk, as
-// opposed to the attach junk (cloud-init drives and config drives are
-// megabytes; no real system disk is).
-//
-// Deliberately far below the installer's own threshold for a master
-// (systemDiskSize in dhctl/pkg/immutable/nodeconfig.go), which sits between two
-// disks it knows the sizes of. Here there is nothing to sit between: a bound
-// tight enough to exclude a second disk would also exclude a small root disk,
-// and a node that cannot install at all is a worse trade than one that needs
-// its disk named. A machine with more than one real disk therefore needs a
-// provisioner that names one — the boot path takes the first match and does not
-// guess between them.
+// systemDiskSelectorSize is the fallback diskSelector when the provisioner
+// named no disk: excludes cloud-init/config drives (megabytes) but nothing
+// else. A machine with several real disks needs a provisioner that names one.
 const systemDiskSelectorSize = ">=2Gi"
 
-// How many pods a node advertises for each slice of the pod subnet, and the
-// prefix assumed when the cluster configuration names none. The brackets are
-// bashible's (candi/bashible/common-steps/all/064_configure_kubelet.sh.tpl), so
-// an immutable node and a bashible node beside it advertise the same capacity.
-// dhctl carries the same ladder for the first master's payload
-// (dhctl/pkg/immutable/nodeconfig.go) — keep the three in step.
+// Pods advertised per pod-subnet slice, brackets copied from bashible
+// (candi/bashible/common-steps/all/064_configure_kubelet.sh.tpl); dhctl
+// carries the same ladder (dhctl/pkg/immutable/nodeconfig.go) — keep in step.
 const (
 	defaultPodSubnetNodeCIDRPrefix = 24
 	maxPodsPerNodeCIDR24           = 120
@@ -214,10 +185,9 @@ const (
 	maxPodsPerNodeCIDR21           = 1000
 )
 
-// Defaults mirroring the NodeConfig CRD field defaults. render applies them so
-// the bootstrap file path — which marshals the spec to a file rather than
-// creating it through the API server, where CRD defaulting runs — produces the
-// same values as a day-2 object.
+// Defaults mirroring the NodeConfig CRD field defaults, applied in render so
+// the bootstrap file path (which bypasses API-server CRD defaulting) produces
+// the same values as a day-2 object.
 const (
 	// maxPodsCeiling is what the agent's schema accepts (Maximum=500), so it
 	// bounds both an operator's number and the one derived from the pod subnet.

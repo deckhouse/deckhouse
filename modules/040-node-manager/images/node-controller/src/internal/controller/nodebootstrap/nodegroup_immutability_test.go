@@ -32,22 +32,9 @@ import (
 
 const systemTypeFieldOwner = client.FieldOwner("systemtype-immutability-test")
 
-// User story: As a cluster operator, I want the API itself to refuse a change of
-// a NodeGroup's systemType once the group has named one, so that nobody can turn
-// an immutable group back into a bashible one — or the other way round — and have
-// CAPI re-create every machine in it.
-//
-// A group that has named nothing yet is deliberately still writable: that is the
-// write an immutable cluster performs on its own master NodeGroup, which the
-// node-manager hook creates before dhctl applies the manifest naming its
-// systemType. Denying it there turns a bootstrap into a ten-minute retry loop.
-// The other half of the rule — do not adopt a group whose nodes bashible already
-// configured — has to look at the group's nodes, so it lives in the
-// node-controller webhook; envtest runs no webhooks, so what fails here is the
-// CRD schema alone.
-//
-// This suite is the one that installs the NodeGroup CRD, which is why the CRD's
-// own rule is exercised from here.
+// User story: the CRD schema refuses changing a NodeGroup's systemType once
+// named (setting it on an unset group stays allowed — bootstrap relies on it);
+// envtest runs no webhooks, so only the CRD rule is exercised here.
 var _ = Describe("NodeGroup systemType immutability", func() {
 	It("accepts a group created with a systemType, and one created without", func(ctx context.Context) {
 		immutable := createImmutableNodeGroup(ctx, testenv.UniqueName("born-imm"))

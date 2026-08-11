@@ -26,12 +26,9 @@ import (
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 )
 
-// nodeExtensions aggregates the NodeExtensionRequests that select this node into
-// the extensions and kernel modules to add to its NodeConfig. It is a pure
-// function of its inputs so the matching can be tested without a cluster. A
-// request is dropped (not surfaced as an error) when its sysext is invalid or it
-// lost the name/digest uniqueness contest to another request (see
-// resolveNERConflicts) — its own status carries the reason.
+// nodeExtensions aggregates the NodeExtensionRequests that select this node
+// into extensions and kernel modules for its NodeConfig. Invalid or conflicting
+// requests are dropped, not errored — their own status carries the reason.
 func nodeExtensions(ners []deckhousev1alpha1.NodeExtensionRequest, node *corev1.Node, ngName string) ([]internalv1alpha1.Extension, []internalv1alpha1.KernelModule) {
 	// Left nil rather than empty: both marshal the same under omitempty, and
 	// callers distinguish "no requests matched" by length either way.
@@ -40,12 +37,9 @@ func nodeExtensions(ners []deckhousev1alpha1.NodeExtensionRequest, node *corev1.
 	conflicts := resolveNERConflicts(ners)
 	seenModules := make(map[string]struct{})
 
-	// Walked in the order the uniqueness contest was decided in, not in the
-	// order the requests were read in. spec.extensions is an array, so the
-	// reading order is the node's array order: taking it from the caller made
-	// the rendered spec depend on which reader listed the requests, and a
-	// listing that came back in another order re-rendered every node of every
-	// immutable group for no change at all.
+	// Walked in the uniqueness-contest order, not the listing order:
+	// spec.extensions is an array, and a listing returned in another order
+	// would re-render every node for no change at all.
 	for _, ner := range orderedNERs(ners) {
 		if !nerMatchesNode(ner, node, ngName) {
 			continue
@@ -89,10 +83,8 @@ const (
 )
 
 // resolveExtension turns a request's Sysext into the NodeConfig extension the
-// on-node agent pulls through the registry-packages-proxy. The sysext fields pass
-// straight through: Repository is the proxy's credential key and AdditionalPath
-// the path within it, both optional. The second return is the failure reason, or
-// empty when the extension resolved.
+// agent pulls through the registry-packages-proxy; fields pass straight through.
+// The second return is the failure reason, empty when the extension resolved.
 func resolveExtension(ner *deckhousev1alpha1.NodeExtensionRequest) (internalv1alpha1.Extension, string) {
 	sysext := ner.Spec.Sysext
 	if sysext.Name == "" || sysext.Digest == "" {
@@ -107,30 +99,18 @@ func resolveExtension(ner *deckhousev1alpha1.NodeExtensionRequest) (internalv1al
 	}, ""
 }
 
-// nerConflict records why a request lost: it either reused a platform name
-// (reasonReservedName), clashed with an older request on its sysext name or
-// digest (reasonConflict — winner names that request, field the clashing one),
-// or asked for a kernel module an older request already loads with different
-// parameters (reasonModuleConflict — field names the module).
+// nerConflict records why a request lost: a reserved platform name, a
+// name/digest clash with an older request (winner names it, field says which),
+// or a kernel module an older request loads with different parameters.
 type nerConflict struct {
 	reason string
 	winner string
 	field  string
 }
 
-// resolveNERConflicts enforces uniqueness across all requests: each sysext name,
-// each digest and each kernel module backs at most one request. The winner of a
-// clash is the oldest request (by creation time, then name); every later request
-// claiming the same name or digest — or the same kernel module with different
-// parameters — loses, as does any request whose name is reserved for a platform
-// extension. The result maps each losing request's name to why it lost; winners
-// are absent. Requests with an invalid sysext (no name or digest) do not take
-// part — resolveExtension reports those.
-//
-// Kernel modules are settled here rather than where they are merged onto the
-// node so that the same contest decides them: picking the first one an API
-// listing happened to return meant the module parameters a node ran depended on
-// the alphabet, and the request that lost was never told.
+// resolveNERConflicts enforces uniqueness of sysext names, digests and kernel
+// modules; the oldest request (creation time, then name) wins each clash. The
+// result maps each losing request's name to why it lost; winners are absent.
 func resolveNERConflicts(ners []deckhousev1alpha1.NodeExtensionRequest) map[string]nerConflict {
 	ordered := orderedNERs(ners)
 
@@ -166,11 +146,9 @@ func resolveNERConflicts(ners []deckhousev1alpha1.NodeExtensionRequest) map[stri
 	return conflicts
 }
 
-// orderedNERs puts the requests in the order every decision about them is made
-// in — oldest first, ties broken by name — and drops the ones with an invalid
-// sysext, which take part in nothing (resolveExtension reports those). It is one
-// order for the uniqueness contest and for the array the node is given, so
-// neither depends on how the requests happened to be listed.
+// orderedNERs orders requests oldest first, ties broken by name, and drops the
+// ones with an invalid sysext. One order for both the uniqueness contest and
+// the node's array, so neither depends on how the requests were listed.
 func orderedNERs(ners []deckhousev1alpha1.NodeExtensionRequest) []*deckhousev1alpha1.NodeExtensionRequest {
 	ordered := make([]*deckhousev1alpha1.NodeExtensionRequest, 0, len(ners))
 	for i := range ners {
@@ -190,9 +168,8 @@ func orderedNERs(ners []deckhousev1alpha1.NodeExtensionRequest) []*deckhousev1al
 }
 
 // moduleConflict reports whether a request asks for a kernel module an earlier
-// one already loads with different parameters. The same module with the same
-// parameters is not a clash: both requests want the same thing, so both are
-// served and the module is loaded once.
+// one already loads with different parameters; the same module with the same
+// parameters is not a clash and is loaded once.
 func moduleConflict(ner *deckhousev1alpha1.NodeExtensionRequest, owners map[string]*deckhousev1alpha1.NodeExtensionRequest) (nerConflict, bool) {
 	for _, module := range ner.Spec.KernelModules {
 		owner, taken := owners[module.Name]

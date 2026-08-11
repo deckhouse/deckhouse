@@ -43,11 +43,9 @@ var (
 	suiteCancel context.CancelFunc
 )
 
-// TestNodeOperationControllerEnvtest runs the envtest-backed integration suite:
-// the real operation controller runs inside a manager against a real
-// kube-apiserver, so what is asserted is the phase an operation ends up in and
-// the state its node is left in. Skipped when envtest assets are missing so the
-// unit tests stay runnable without `make envtest`.
+// TestNodeOperationControllerEnvtest runs the envtest-backed integration
+// suite: the real controller against a real kube-apiserver. Skipped when
+// envtest assets are missing so unit tests stay runnable without `make envtest`.
 func TestNodeOperationControllerEnvtest(t *testing.T) {
 	if !testenv.AssetsAvailable() {
 		t.Skip("envtest assets not found; run `make envtest` (or set KUBEBUILDER_ASSETS) to run the integration suite")

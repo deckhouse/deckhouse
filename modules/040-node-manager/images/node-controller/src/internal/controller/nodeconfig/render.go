@@ -30,37 +30,9 @@ import (
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 )
 
-// renderSpec turns the operator's intent (a NodeGroup) plus the cluster's own
-// state into the desired state of one node. The node-local agent reconciles
-// towards this spec and reports back through the object's status.
-//
-// On the first master it renders over a spec the installer wrote, and that first
-// managed render always differs from it, on exactly three fields that the
-// payload structurally cannot carry:
-//
-//   - kubelet.caCert: the cluster CA does not exist when the payload is built.
-//     That node generates the cluster PKI itself, which is the point of the
-//     design — the installer never holds the key — so the earliest the CA can be
-//     known is after the node has booted and brought the control plane up.
-//   - kubelet.serverTLSBootstrap: the payload turns it off because nothing
-//     approves serving CSRs before Deckhouse exists, and the cluster turns it on
-//     once something does. The difference is the state change, not a mismatch.
-//   - registryPackagesProxyAccessTokenB64: the secret it comes from is created
-//     by Deckhouse, which is not installed yet.
-//
-// So the aim here is not a no-op — it cannot be. It is that every other field
-// agrees, and that each of those three differs for a reason that can be named. A
-// field disagreeing for no reason is not a free difference: it is a value the
-// node then runs, and "the public registry" or "120 pods" or "no ip_forward" is
-// wrong whether or not anyone notices the rollout slot it costs.
-//
-// Known limitation, not a plan: between bootstrap and that first managed render
-// the master has no CA in its NodeConfig. For a node that receives its CA this
-// way that matters — the file lives on tmpfs, so it is rewritten from the config
-// on every boot (see clusterInputs.KubernetesCA). Whether it matters for the
-// master, which generated the PKI itself and keeps it on its own control-plane
-// storage, depends on where nodelet keeps what it generated, which is not
-// answerable from this repository.
+// renderSpec turns a NodeGroup plus cluster state into one node's desired state.
+// On the first master it must differ from the installer payload on exactly three
+// fields (caCert, serverTLSBootstrap, proxy token); every other field must agree.
 func renderSpec(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) internalv1alpha1.NodeSpec {
 	extraExtensions, extraModules := nodeExtensions(in.NodeExtensionRequests, node, ng.Name)
 
@@ -72,24 +44,17 @@ func renderSpec(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) internalv
 		OSImage:            in.OSImage,
 		APIServerEndpoints: in.APIServerEndpoints,
 		Extensions:         mergeExtensions(renderExtensions(in.SysextDigests), extraExtensions),
-		// A NodeGroup has no disk field, so the only true statement this
-		// controller can make about the machine is systemDiskSelector: any real
-		// disk, none of the attach junk. Without a selector the boot path
-		// refuses outright ("neither device nor diskSelector set" — measured, a
-		// worker stuck in the initramfs shell), and the machines this reaches
-		// have exactly one real disk, so the selector is unambiguous. A selector
-		// the installer chose is richer (it separates the master's system disk
-		// from the etcd disk) and survives this value through
-		// keepBootstrapOnlyFields.
+		// A NodeGroup has no disk field; without a selector the boot path refuses
+		// outright ("neither device nor diskSelector set"). A richer installer
+		// selector survives this value through keepBootstrapOnlyFields.
 		Storage:          internalv1alpha1.Storage{Disk: internalv1alpha1.Disk{DiskSelector: &internalv1alpha1.DiskSelector{Size: systemDiskSelectorSize}}},
 		Kernel:           kernel,
 		Network:          renderNetwork(node),
 		Kubelet:          renderKubelet(ng, node, in),
 		ContainerRuntime: renderContainerRuntime(ng, in),
-		// Every node, not only the control-plane ones: containerd pulls the pause
-		// image behind every pod sandbox itself, with no pod and so no
-		// imagePullSecret, and in a closed network that image is in a private
-		// registry.
+		// Every node, not only control-plane: containerd pulls the pause image
+		// itself with no imagePullSecret, and in a closed network that image
+		// lives in a private registry.
 		Registry:                            in.Registry,
 		UpdatePolicy:                        renderUpdatePolicy(ng),
 		RegistryPackagesProxyAccessTokenB64: in.RegistryPackagesProxyToken,
@@ -97,54 +62,17 @@ func renderSpec(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) internalv
 	return spec
 }
 
-// keepBootstrapOnlyFields carries over the parts of the spec that describe the
-// machine rather than the group, which is what this controller renders. They
-// belong to whoever provisioned the node; overwriting them with the rendered
-// value is what a wholesale spec patch would otherwise do.
-//
-//   - kubelet.nodeIP: the address the node registers under, kept only while the
-//     node still reports it (nodeIPStillHolds).
-//   - network: static addressing, DNS, NTP and routes, kept when they name
-//     anything beyond the rendered eth0-on-DHCP (networkIsExplicit). The
-//     hostname stays the cluster's either way.
-//   - storage: which disk to install onto, kept only when it names something
-//     richer than the rendered selector (storageIsExplicit) — the installer's
-//     master payload does: its selector separates the system disk from the etcd
-//     disk, and its mounts are where /var/lib/etcd lives.
-//
-// Beyond the installer, the same NodeConfig can be pushed to a node by hand
-// through nodelet's maintenance endpoint, which is where a machine-specific
-// address or network would come from; a render that dropped them would undo
-// that push on its next pass.
-//
-// Everything else the payload sets is rendered rather than preserved, including
-// two that used to be carried over and must not be: registry (preserving it
-// pinned the first master to whatever the installer was told months earlier) and
-// kubelet.serverTLSBootstrap (the payload turns it off because nothing approves
-// serving CSRs before Deckhouse exists; keeping it off forever left the master
-// with a self-signed serving certificate carrying no IP, so no kubectl exec and
-// no kubectl logs against that node for the life of the cluster). A value that is
-// only ever copied from the object's own previous state can never be corrected,
-// because after the first patch nothing can tell an installer's value from one an
-// earlier pass carried over.
-//
-// It is applied to every node rather than only to control-plane ones: on a node
-// the controller itself provisioned these are empty on both sides, so the rule
-// is the same one either way and needs no test for which kind of node this is.
+// keepBootstrapOnlyFields carries over the machine-specific parts of the spec —
+// kubelet.nodeIP (while still reported), explicit network, explicit storage.
+// Everything else is rendered: a value only ever copied can never be corrected.
 func keepBootstrapOnlyFields(desired, existing *internalv1alpha1.NodeSpec, reportedNodeIPs []string) {
 	if nodeIPStillHolds(existing.Kubelet.NodeIP, reportedNodeIPs) {
 		desired.Kubelet.NodeIP = existing.Kubelet.NodeIP
 	}
 
-	// A statically configured network belongs to whoever provisioned the
-	// machine: the render only ever says "eth0, DHCP", and overwriting a
-	// static address with that leaves the node unreachable after its next
-	// reboot — the OS renders its network from this spec.
-	//
-	// "Somebody else chose it" is decided against what this controller would
-	// render, not against the zero value: a rendered value that also counts as
-	// explicit is one this controller can never correct again, because after
-	// the first patch nothing tells it apart from a provisioner's.
+	// A static network belongs to the provisioner: overwriting it with the
+	// rendered "eth0, DHCP" leaves the node unreachable after a reboot.
+	// "Explicit" is judged against the render, not the zero value.
 	if !sameNetwork(&existing.Network, &desired.Network) {
 		hostname := desired.Network.Hostname
 		desired.Network = existing.Network
@@ -166,18 +94,9 @@ func sameNetwork(existing, desired *internalv1alpha1.Network) bool {
 	return apiequality.Semantic.DeepEqual(a, b)
 }
 
-// nodeIPStillHolds reports whether an address the node was bootstrapped with is
-// still one of its own. Nothing else ever writes kubelet.nodeIP, so carrying it
-// over unconditionally pinned a node to the address it first had — a node that
-// is re-IPed (DHCP lease, migration, a rebuilt VM) would register forever under
-// an address that is no longer routed to it. A node that reports no address at
-// all says nothing either way, and keeps what it was given.
-//
-// The addresses are the ones the node itself reports, read from the API server
-// (see reportedNodeIPs): the manager's cache strips Node.status.addresses, so
-// judging by the cached Node means judging by "this node has no addresses" for
-// every node in the cluster — which keeps every stale pin forever, the exact
-// defect this rule exists to undo.
+// nodeIPStillHolds reports whether a bootstrapped address is still one the node
+// reports: carrying it over unconditionally pinned re-IPed nodes forever. No
+// reported addresses means no answer, and the node keeps what it was given.
 func nodeIPStillHolds(nodeIP string, reported []string) bool {
 	if nodeIP == "" {
 		return false
@@ -188,50 +107,16 @@ func nodeIPStillHolds(nodeIP string, reported []string) bool {
 	return slices.Contains(reported, nodeIP)
 }
 
-// storageIsExplicit reports whether a node's storage carries something this
-// controller does not render, and so belongs to whoever provisioned the machine.
-//
-// Only a device path and mounts count — deliberately not the disk selector,
-// which this controller renders itself. Keeping a selector because it differs
-// from the rendered one makes storage write-once: the threshold could never be
-// corrected on a node that already exists, and this file warns against exactly
-// that a few lines up — a value only ever copied from its own previous state
-// can never be fixed.
-//
-// Nothing is lost by re-rendering it. The installer's master payload carries
-// mounts as well, so the whole section — its richer selector included — is kept
-// by the first test; and on a worker nobody but this controller writes one.
-//
-// Mounts are the case that matters in practice: a control-plane node is given
-// the disk etcd lives on through them, and a render that dropped the list would
-// leave the node with nothing under /var/lib/etcd on its next pass — etcd would
-// come up as a brand new cluster after the next reboot.
+// storageIsExplicit reports whether storage carries something this controller
+// does not render: only device path and mounts count, deliberately not the disk
+// selector — keeping a differing selector would make storage write-once.
 func storageIsExplicit(storage *internalv1alpha1.Storage) bool {
 	return storage.Device != "" || len(storage.Mounts) > 0
 }
 
-// renderKernel publishes what the CLUSTER decides about the kernel. This config
-// replaces the bootstrap one wholesale, and a key that disappears from the
-// desired state is restored to its pre-managed value — so every key a node must
-// keep running has to be published here. That is the whole list, and it is the
-// same four the installer writes into the first master's payload
-// (dhctl/pkg/immutable/nodeconfig.go): publishing fewer would take a working
-// setting away from that master, and every other immutable node would run a
-// kernel configured differently from the one the cluster was brought up on.
-//
-// Publishing them, rather than carrying over whatever the node happens to have,
-// is what keeps them changeable: a value that is only ever copied from the
-// object's previous state can never be corrected, because after the first patch
-// nothing can tell an installer's value from one an earlier pass carried over.
-//
-// The tuning a node needs to survive load — inotify limits, the ARP table, pid
-// and conntrack ceilings, the receive path — is not here: it belongs to the OS
-// image, which is where it now lives (olcedar ships it in
-// /usr/lib/sysctl.d/50-deckhouse.conf). That image has a fixed kernel, so it
-// knows exactly which knobs exist, and systemd applies them at boot, before
-// containerd and kubelet start. Rendering the same values from here meant
-// publishing one set to nodes whose kernels may differ, and a single knob
-// missing on one of them failed its whole configuration pass.
+// renderKernel publishes the cluster-decided sysctl keys — the same four dhctl
+// writes into the first master's payload (dhctl/pkg/immutable/nodeconfig.go).
+// Load tuning lives in the OS image (/usr/lib/sysctl.d/50-deckhouse.conf).
 func renderKernel() internalv1alpha1.Kernel {
 	return internalv1alpha1.Kernel{
 		Sysctl: map[string]internalv1alpha1.SysctlValue{
@@ -239,10 +124,9 @@ func renderKernel() internalv1alpha1.Kernel {
 			// and fencing changes the delay.
 			"kernel.panic":         "10",
 			"kernel.panic_on_oops": "1",
-			// Pod traffic is routed through the node, and a pod's mmap count is
-			// not the host default (Elasticsearch and friends need this one).
-			// Both exist on every kernel the image can run, so publishing them
-			// cannot fail a node's configuration pass.
+			// Pod traffic is routed through the node; mmap count for
+			// Elasticsearch and friends. Both exist on every kernel the image
+			// can run, so publishing them cannot fail a configuration pass.
 			"net.ipv4.ip_forward": "1",
 			"vm.max_map_count":    "262144",
 		},
@@ -279,12 +163,9 @@ func renderExtensions(digests map[string]string) []internalv1alpha1.Extension {
 	return extensions
 }
 
-// renderKubelet maps the kubelet settings a NodeGroup carries onto the node.
-// A setting an olcedar node cannot honour as written is clamped to what its
-// schema accepts rather than passed through — a config the API server refuses
-// leaves the node with no config at all. What was clamped is reported on the
-// NodeGroup as a Warning event (see recordClampedSettings), because a setting
-// quietly narrowed is a group running something nobody configured.
+// renderKubelet maps the NodeGroup's kubelet settings onto the node. Settings
+// an olcedar node cannot honour are clamped (a refused config leaves the node
+// with none) and reported as Warning events (recordClampedSettings).
 func renderKubelet(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) internalv1alpha1.Kubelet {
 	kubelet := internalv1alpha1.Kubelet{
 		ClusterDomain: in.ClusterDomain,
@@ -293,16 +174,13 @@ func renderKubelet(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) intern
 		// node that file is on tmpfs. Without the CA in the config the node
 		// cannot rewrite it after a reboot and kubelet never comes back.
 		CACert: in.KubernetesCA,
-		// Without it the node never gets a providerID, and CAPI cannot match
-		// the Machine it ordered to the Node that registered. Both cloud node
-		// types are CAPI-backed (have a Machine), so both need it — not just
-		// CloudEphemeral.
+		// Without it the node never gets a providerID and CAPI cannot match its
+		// Machine to the Node. Both cloud node types are CAPI-backed, so both
+		// need it — not just CloudEphemeral.
 		ExternalCloudProvider: isCloudNodeType(ng.Spec.NodeType),
-		// Defaults mirror the NodeConfig CRD defaults so the bootstrap path,
-		// which marshals the spec to a file instead of creating it through the
-		// API server (where CRD defaulting runs), gets the same values. maxPods
-		// is the exception: it follows the pod subnet, the way bashible's does
-		// (see defaultMaxPodsFor), so nodes of both kinds advertise one capacity.
+		// Defaults mirror the NodeConfig CRD defaults so the bootstrap file path
+		// (no API-server CRD defaulting) gets the same values. maxPods is the
+		// exception: it follows the pod subnet the way bashible's does.
 		KubernetesVersion:    in.KubernetesVersion,
 		MaxPods:              in.DefaultMaxPods,
 		ContainerLogMaxSize:  defaultContainerLogMaxSize,
@@ -315,11 +193,9 @@ func renderKubelet(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) intern
 
 	if ng.Spec.Kubelet != nil {
 		if ng.Spec.Kubelet.MaxPods != nil {
-			// Clamped, not passed through: a NodeGroup has no maximum and the
-			// documentation suggests 1000 for a /21 pod subnet, while the agent's
-			// schema stops at 500. Over it the API server rejects the whole
-			// config, and the node is left without one — a worse answer to "too
-			// many pods" than the ceiling itself.
+			// Clamped, not passed through: a NodeGroup has no maximum while the
+			// agent's schema stops at 500; over it the API server rejects the
+			// whole config and the node is left without one.
 			kubelet.MaxPods = min(int(*ng.Spec.Kubelet.MaxPods), maxPodsCeiling)
 		}
 		if ng.Spec.Kubelet.ContainerLogMaxSize != "" {
@@ -341,9 +217,8 @@ func renderKubelet(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) intern
 }
 
 // registrationLabels is what renderNodeLabels publishes, as a Node carries it:
-// the labels kubelet will register the node with, which is what a
-// NodeExtensionRequest selecting by node label has to match against before the
-// node exists.
+// the labels kubelet will register with, which a NodeExtensionRequest selecting
+// by node label must match against before the node exists.
 func registrationLabels(ng *v1.NodeGroup) map[string]string {
 	rendered := renderNodeLabels(ng)
 	labels := make(map[string]string, len(rendered))
@@ -354,16 +229,8 @@ func registrationLabels(ng *v1.NodeGroup) map[string]string {
 }
 
 // renderResourceReservation maps the group's kubeReserved policy onto the node.
-//
-// It is rendered rather than carried over from whatever the node already has:
-// the NodeGroup has this field, so an operator turning the reservation off has
-// to reach the nodes, and a value only ever copied from the object's previous
-// state cannot be changed by anyone once it is there.
-//
-// Static is clamped to Auto: a NodeGroup can name exact amounts, an immutable
-// node's schema takes only Auto or Off, and Auto reserves something rather than
-// nothing, which is the nearer of the two to what was asked for. The clamp is
-// reported on the NodeGroup (see recordClampedSettings).
+// Static is clamped to Auto — the node's schema takes only Auto or Off, and Auto
+// is nearer to what was asked for; the clamp is reported (recordClampedSettings).
 func renderResourceReservation(ng *v1.NodeGroup) *internalv1alpha1.ResourceReservation {
 	mode := resourceReservationModeAuto
 	if ng.Spec.Kubelet != nil && ng.Spec.Kubelet.ResourceReservation != nil && ng.Spec.Kubelet.ResourceReservation.Mode != "" {
@@ -383,12 +250,8 @@ func renderNodeLabels(ng *v1.NodeGroup) map[string]internalv1alpha1.NodeLabelVal
 		nodecommon.NodeGroupLabel: internalv1alpha1.NodeLabelValue(ng.Name),
 		nodecommon.NodeTypeLabel:  internalv1alpha1.NodeLabelValue(ng.Spec.NodeType),
 		// An olcedar node is cgroup v2 by construction, and the cluster learns
-		// that from this label alone: node-manager reads it off the Node and
-		// counts anything else as a node that cannot run containerd v2, raising
-		// d8_node_cgroup_v2_unsupported and nodeManager:unsupportedContainerdV1.
-		// The installer sets it on the first master, so leaving it out of the
-		// render both took it away from that node on its first managed render and
-		// meant no rendered node ever had it.
+		// that from this label alone (node-manager raises alerts otherwise).
+		// The installer sets it on the first master; the render must keep it.
 		cgroupLabel: cgroupV2Value,
 	}
 	if ng.Spec.NodeTemplate != nil {
@@ -414,14 +277,8 @@ func reservedNamespaceMatches(namespace, known string) bool {
 }
 
 // kubeletMaySetLabel reports whether kubelet accepts the label on --node-labels.
-//
-// A node may not label itself into the kubernetes.io or k8s.io namespaces
-// beyond a fixed set, and kubelet does not ignore the ones it refuses: it
-// exits, so a single such label in a NodeGroup template leaves the node with no
-// kubelet at all. The master template carries exactly that —
-// node-role.kubernetes.io/control-plane and .../master. Those labels still
-// reach the Node, applied by the cluster through the node template controller,
-// which is the only side allowed to grant a node its role.
+// kubelet exits on a refused label, so one such label leaves the node with no
+// kubelet; filtered labels still reach the Node via the node-template controller.
 func kubeletMaySetLabel(key string) bool {
 	namespace, _, found := strings.Cut(key, "/")
 	if !found {
@@ -470,10 +327,8 @@ func isCloudNodeType(t v1.NodeType) bool {
 }
 
 // renderContainerRuntime carries over the only containerd knob a NodeGroup
-// exposes; the runtime itself is a system extension chosen by the platform. The
-// defaults mirror the NodeConfig CRD defaults so the bootstrap path (which
-// marshals the spec to a file rather than creating it through the API server,
-// where CRD defaulting runs) produces the same values as a day-2 object.
+// exposes; the runtime itself is a platform-chosen system extension. Defaults
+// mirror the CRD defaults so the bootstrap file path gets the same values.
 func renderContainerRuntime(ng *v1.NodeGroup, in clusterInputs) internalv1alpha1.ContainerRuntime {
 	runtime := internalv1alpha1.ContainerRuntime{
 		SandboxImage:           in.SandboxImage,
@@ -498,11 +353,9 @@ func renderUpdatePolicy(ng *v1.NodeGroup) internalv1alpha1.UpdatePolicy {
 	if ng.Spec.Disruptions == nil {
 		return policy
 	}
-	// RollingUpdate is a NodeGroup mode with no counterpart on the node: an
-	// immutable node is replaced rather than updated in place, so the rolling
-	// is the cluster's business and the agent only ever sees Manual or
-	// Automatic. Passing it through renders a NodeConfig the API server
-	// rejects, and a node whose config is rejected never gets one at all.
+	// RollingUpdate has no counterpart on the node — the agent only knows
+	// Manual and Automatic. Passing it through renders a NodeConfig the API
+	// server rejects, leaving the node with none at all.
 	if mode := ng.Spec.Disruptions.ApprovalMode; mode != "" && mode != v1.DisruptionApprovalModeRollingUpdate {
 		policy.Mode = string(mode)
 	}

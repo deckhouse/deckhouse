@@ -53,18 +53,9 @@ const (
 	bootstrapTokenNGLabel = "node-manager.deckhouse.io/node-group"
 )
 
-// buildImmutableJoinPayload renders the cloud-init an additional master boots
-// with.
-//
-// The first master's payload is rendered before anything exists and tells the
-// node to create a cluster. This one is rendered against a cluster that already
-// runs, and tells the node to join it. Three of its inputs can only come from
-// there — the CA that cluster issued, the group's current bootstrap token, and
-// the apiservers already serving — so they are read, not rendered. Everything
-// else comes from the same installer inputs as master 0, which is what keeps
-// the three masters identical in everything except what they join.
-//
-// No ControlPlaneConfig: see immutable.BuildJoinPayload.
+// buildImmutableJoinPayload renders the cloud-init an additional master joins the
+// running cluster with: the CA, the current bootstrap token, and the live apiservers
+// are read from it; all else matches master 0. No ControlPlaneConfig: see immutable.BuildJoinPayload.
 func buildImmutableJoinPayload(
 	ctx context.Context,
 	kubeCl *client.KubernetesClient,
@@ -109,13 +100,9 @@ func clusterCABase64(ctx context.Context, kubeCl *client.KubernetesClient) (stri
 	return base64.StdEncoding.EncodeToString([]byte(ca)), nil
 }
 
-// groupBootstrapToken returns the newest non-expired bootstrap token of the
-// group — the same rotating token a bashible node is given. node-manager keeps
-// one per NodeGroup and replaces it as it ages; taking the newest is what keeps
-// a node from booting with one that expires while it is still installing.
-// Kept in step with readBootstrapToken in the node-controller's
-// internal/controller/nodebootstrap/render.go, which picks the token for a
-// provisioned machine the same way.
+// groupBootstrapToken returns the group's newest non-expired bootstrap token, so a
+// node cannot boot with one that expires mid-install. Kept in step with the
+// node-controller's readBootstrapToken (internal/controller/nodebootstrap/render.go).
 func groupBootstrapToken(ctx context.Context, kubeCl *client.KubernetesClient, ngName string) (string, error) {
 	secrets, err := kubeCl.CoreV1().Secrets(kubeSystemNS).List(ctx, metav1.ListOptions{
 		LabelSelector: bootstrapTokenNGLabel + "=" + ngName,
@@ -152,23 +139,9 @@ func groupBootstrapToken(ctx context.Context, kubeCl *client.KubernetesClient, n
 	return token, nil
 }
 
-// apiServerEndpoints are the apiservers a joining node talks to until it runs
-// one itself. A joining master cannot use the first master's payload value:
-// that one is a placeholder the node expands to its own address.
-//
-// Derived from the cluster rather than read from node-manager's
-// manual-bootstrap-for-master secret, for two reasons. The secret is published
-// some time after Deckhouse becomes Ready while the join starts as soon as the
-// first master is — measured, a bootstrap died on "secrets
-// \"manual-bootstrap-for-master\" not found" a tenth of a second after the
-// install finished. And these two sources are what node-controller renders
-// spec.apiServerEndpoints from on every pass afterwards
-// (readAPIServerEndpoints in the node-controller's
-// internal/controller/nodeconfig/sources.go), so a node joins with the value
-// its first managed render computes rather than with a different one. Keep the
-// two in step. It saves the bump at join, not every bump: once the joining
-// master runs an apiserver of its own, its pod joins the list and every
-// immutable node's spec gains an address.
+// apiServerEndpoints are the apiservers a joining node talks to until it runs one
+// itself. Derived from the cluster, not the manual-bootstrap-for-master secret (it is
+// published too late); keep in step with the node-controller's readAPIServerEndpoints.
 func apiServerEndpoints(ctx context.Context, kubeCl *client.KubernetesClient) ([]string, error) {
 	set := make(map[string]struct{})
 
