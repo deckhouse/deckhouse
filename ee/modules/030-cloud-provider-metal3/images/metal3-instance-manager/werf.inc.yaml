@@ -1,0 +1,45 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /metal3-instance-manager
+    to: /metal3-instance-manager
+    before: setup
+imageSpec:
+  config:
+    entrypoint: ["/metal3-instance-manager"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}ee/modules/030-cloud-provider-metal3/images/{{ $.ImageName }}/src
+  to: /src
+  stageDependencies:
+    install:
+      - go.mod
+      - go.sum
+      - "**/*.go"
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+final: false
+from: {{ index $.Images "builder/golang" }}
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+    add: /src
+    to: /src
+    before: install
+shell:
+  install:
+    - export GOPROXY={{ $.GOPROXY }}
+    - cd /src
+    - go mod download
+    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o /metal3-instance-manager cmd/metal3-instance-manager/main.go
+    - chown 64535:64535 /metal3-instance-manager
+    - chmod 0755 /metal3-instance-manager
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName )) }}

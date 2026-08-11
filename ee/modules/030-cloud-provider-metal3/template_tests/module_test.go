@@ -93,19 +93,28 @@ var _ = Describe("Module :: cloud-provider-metal3 :: helm template ::", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("cloudProviderMetal3.ironic", `
 enabled: true
-version: "34.0"
 deployRamdisk:
   sshKey: ssh-ed25519 AAAAC3Nz
-networking:
+provisioningNetwork:
   interface: eno3
   ipAddress: 172.22.0.20
   ipAddressManager: keepalived
-  dhcp:
-    networkCIDR: 172.22.0.0/24
-    rangeBegin: 172.22.0.200
-    rangeEnd: 172.22.0.210
-    dnsAddress: 10.222.0.10
-    gatewayAddress: 172.22.0.20
+api:
+  port: 6385
+imageServer:
+  port: 6180
+dhcp:
+  networkCIDR: 172.22.0.0/24
+  rangeBegin: 172.22.0.200
+  rangeEnd: 172.22.0.210
+  dnsAddress: 10.222.0.10
+  gatewayAddress: 172.22.0.20
+`)
+			f.ValuesSetFromYaml("cloudProviderMetal3.hostManager", `
+enabled: true
+targetNamespace: d8-cloud-instance-manager
+defaultOnline: true
+defaultAutomatedCleaningMode: disabled
 `)
 			f.HelmRender()
 		})
@@ -115,7 +124,6 @@ networking:
 
 			ironic := f.KubernetesResource("Ironic", "d8-cloud-provider-metal3", "ironic")
 			Expect(ironic.Exists()).To(BeTrue())
-			Expect(ironic.Field("spec.version").String()).To(Equal("34.0"))
 			Expect(ironic.Field("spec.images.ironic").String()).NotTo(BeEmpty())
 			Expect(ironic.Field("spec.deployRamdisk.sshKey").String()).To(Equal("ssh-ed25519 AAAAC3Nz"))
 			Expect(ironic.Field("spec.networking.interface").String()).To(Equal("eno3"))
@@ -151,9 +159,79 @@ networking:
 			irso := f.KubernetesResource("Deployment", "d8-cloud-provider-metal3", "ironic-standalone-operator-controller-manager")
 			Expect(irso.Exists()).To(BeTrue())
 
+			instanceManager := f.KubernetesResource("Deployment", "d8-cloud-provider-metal3", "metal3-instance-manager")
+			Expect(instanceManager.Exists()).To(BeTrue())
+			instanceManagerArgs := instanceManager.Field("spec.template.spec.containers.0.args").String()
+			Expect(instanceManagerArgs).To(ContainSubstring("--target-namespace=d8-cloud-instance-manager"))
+			Expect(instanceManagerArgs).To(ContainSubstring("--default-online=true"))
+			Expect(instanceManagerArgs).To(ContainSubstring("--default-automated-cleaning-mode=disabled"))
+
 			bmoWebhook := f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "baremetal-operator-validating-webhook-configuration")
 			Expect(bmoWebhook.Exists()).To(BeTrue())
 			Expect(bmoWebhook.Field("webhooks.0.clientConfig.service.namespace").String()).To(Equal("d8-cloud-provider-metal3"))
+		})
+	})
+
+	Context("with external DHCP configured", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("cloudProviderMetal3.ironic", `
+enabled: true
+provisioningNetwork:
+  interface: eno3
+  ipAddress: 172.22.0.20
+external:
+  dhcp:
+    pxeBootServer: 172.22.0.20
+    pxeBootFile:
+      bios: undionly.kpxe
+      uefi: snponly.efi
+`)
+			f.HelmRender()
+		})
+
+		It("renders Ironic without managed DHCP settings", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ironic := f.KubernetesResource("Ironic", "d8-cloud-provider-metal3", "ironic")
+			Expect(ironic.Exists()).To(BeTrue())
+			Expect(ironic.Field("spec.networking.interface").String()).To(Equal("eno3"))
+			Expect(ironic.Field("spec.networking.ipAddress").String()).To(Equal("172.22.0.20"))
+			Expect(ironic.Field("spec.networking.dhcp").Exists()).To(BeFalse())
+		})
+	})
+
+	Context("with external deploy ramdisk configured", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("cloudProviderMetal3.ironic", `
+enabled: true
+provisioningNetwork:
+  interface: eno3
+  ipAddress: 172.22.0.20
+dhcp:
+  networkCIDR: 172.22.0.0/24
+  rangeBegin: 172.22.0.200
+  rangeEnd: 172.22.0.210
+deployRamdisk:
+  sshKey: ssh-ed25519 AAAAC3Nz
+ramdiskImage:
+  external:
+    architecture: x86_64
+    kernelURL: http://172.22.0.30/ipa/ironic-python-agent.kernel
+    initramfsURL: http://172.22.0.30/ipa/ironic-python-agent.initramfs
+`)
+			f.HelmRender()
+		})
+
+		It("renders Ironic with custom IPA agent images", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ironic := f.KubernetesResource("Ironic", "d8-cloud-provider-metal3", "ironic")
+			Expect(ironic.Exists()).To(BeTrue())
+			Expect(ironic.Field("spec.deployRamdisk.disableDownloader").Bool()).To(BeTrue())
+			Expect(ironic.Field("spec.deployRamdisk.sshKey").String()).To(Equal("ssh-ed25519 AAAAC3Nz"))
+			Expect(ironic.Field("spec.overrides.agentImages.0.architecture").String()).To(Equal("x86_64"))
+			Expect(ironic.Field("spec.overrides.agentImages.0.kernel").String()).To(Equal("http://172.22.0.30/ipa/ironic-python-agent.kernel"))
+			Expect(ironic.Field("spec.overrides.agentImages.0.initramfs").String()).To(Equal("http://172.22.0.30/ipa/ironic-python-agent.initramfs"))
 		})
 	})
 })
