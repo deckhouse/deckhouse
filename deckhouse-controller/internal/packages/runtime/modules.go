@@ -150,8 +150,9 @@ func (r *Runtime) UpdateModule(repo registry.Remote, module Module, force bool) 
 // The pipeline is UpdateModule's without the Deploy task: the files already sit under
 // app.EmbeddedModulesDir, so ReadyOnFilesystem holds from the start and only Load runs.
 // The version is the running edition's, because an embedded module carries no package
-// version of its own; it therefore cannot change while the process lives, which is why
-// there is no disable-then-reload branch here.
+// version of its own, so it cannot change while the process lives — but EventRemove clears
+// the stored version, so a delete-then-recreate still lands here with the previous instance
+// registered, and Disable goes ahead of Load to tear it down.
 //
 // Settings-only and enabled-only changes behave as in UpdateModule: they stash the new
 // values and Reschedule, so the scheduler re-runs Configure → Startup → Run with them.
@@ -188,7 +189,18 @@ func (r *Runtime) UpdateEmbeddedModule(module Module) {
 	// The image carries the module, so nothing has to place it on disk.
 	r.status.SetConditionTrue(name, status.ConditionReadyOnFilesystem)
 
-	r.queueService.Enqueue(ctx, name, taskload.NewEmbeddedTask(name, r.loadEmbeddedModule, r.status, r.logger))
+	tasks := []queue.Task{
+		taskload.NewEmbeddedTask(name, r.loadEmbeddedModule, r.status, r.logger),
+	}
+
+	// If there's an existing module, disable it first
+	if pkg := r.modules[name]; pkg != nil {
+		tasks = slices.Insert(tasks, 0, taskdisable.NewTask(pkg, app.NamespaceDeckhouse, true, r.nelmService, r.queueService, r.logger))
+	}
+
+	for _, task := range tasks {
+		r.queueService.Enqueue(ctx, name, task)
+	}
 }
 
 // loadModule builds a Module from its package files, stores it in r.modules,
@@ -293,7 +305,41 @@ func (r *Runtime) RemoveModule(name string) {
 		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, app.NamespaceDeckhouse, false, r.nelmService, r.queueService, r.logger))
 	}
 
-	cleanup := queue.WithOnDone(func() {
+	cleanup := queue.WithOnDone(r.cleanupModule(name))
+
+	r.queueService.Enqueue(ctx, name, taskundeploy.NewModuleTask(name, r.moduleDeployer, r.logger), cleanup)
+}
+
+// RemoveEmbeddedModule removes an embedded module and cancels all its running operations.
+// It is RemoveModule without Undeploy: the image carries the files, so nothing was ever placed
+// on disk for the deployer to take back. The cleanup therefore rides on Disable, or runs on its
+// own when the module never loaded and there is nothing to disable.
+func (r *Runtime) RemoveEmbeddedModule(name string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	r.scheduler.RemoveNode(name)
+
+	ctx := r.packages.HandleEvent(lifecycle.EventRemove, name)
+	if ctx == nil {
+		return
+	}
+
+	pkg := r.modules[name]
+	if pkg == nil {
+		r.cleanupModule(name)()
+		return
+	}
+
+	r.queueService.Enqueue(ctx, name,
+		taskdisable.NewTask(pkg, app.NamespaceDeckhouse, false, r.nelmService, r.queueService, r.logger),
+		queue.WithOnDone(r.cleanupModule(name)))
+}
+
+// cleanupModule returns the teardown that drops the Store entry, stops the queue and deletes the
+// status once a removal's last task is done. It takes r.mu, so it never runs under the caller's.
+func (r *Runtime) cleanupModule(name string) func() {
+	return func() {
 		go func() {
 			r.mu.Lock()
 			defer r.mu.Unlock()
@@ -304,7 +350,5 @@ func (r *Runtime) RemoveModule(name string) {
 				delete(r.modules, name)
 			}
 		}()
-	})
-
-	r.queueService.Enqueue(ctx, name, taskundeploy.NewModuleTask(name, r.moduleDeployer, r.logger), cleanup)
+	}
 }

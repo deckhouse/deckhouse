@@ -45,6 +45,7 @@ import (
 	pkgruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -119,6 +120,10 @@ func Build(ctx context.Context, rest *rest.Config, ms metricsstorage.Storage, lo
 	manager, err := pkgruntime.Build(runtime.GetClient(), nil, dc, ms, logger)
 	if err != nil {
 		return nil, fmt.Errorf("create runtime: %w", err)
+	}
+
+	if err := module.RegisterController(synced, runtime, manager, logger); err != nil {
+		return nil, fmt.Errorf("register module controller: %w", err)
 	}
 
 	settingsCh := make(chan addonutils.Values, 1)

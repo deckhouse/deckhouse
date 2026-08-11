@@ -101,7 +101,9 @@ type reconciler struct {
 type packageManager interface {
 	UpdateModulesSettings(name string, settingsVersion int, settings addonutils.Values, maintenance string, enabled *bool)
 	UpdateModule(repo registry.Remote, module packageruntime.Module, force bool)
+	UpdateEmbeddedModule(module packageruntime.Module)
 	RemoveModule(name string)
+	RemoveEmbeddedModule(name string)
 	GetStatus(name string) packagestatus.Status
 	GetModuleStatusQueue() workqueue.TypedRateLimitingInterface[string]
 }
@@ -165,6 +167,12 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, module *v1alpha2.
 		}
 
 		original = module.DeepCopy()
+	}
+
+	// An embedded module ships inside the image, so there is no package, version or repository to
+	// resolve — the annotation is read before any of them, the way the bootstrap and the runtime do.
+	if module.IsEmbedded() {
+		return r.handleEmbedded(ctx, module, original)
 	}
 
 	pkg := new(v1alpha1.ModulePackage)
@@ -231,6 +239,43 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, module *v1alpha2.
 	return nil
 }
 
+// handleEmbedded hands a module the image ships to the package runtime. Its files are already on
+// disk, so the only thing it can drift against is its own settings — and the release path's version
+// bookkeeping is unwound on the way through, for a module the image started shipping after it had
+// already been downloaded.
+func (r *reconciler) handleEmbedded(ctx context.Context, module, original *v1alpha2.Module) error {
+	logger := r.logger.With(slog.String("name", module.Name))
+
+	logger.Debug("handle embedded module")
+
+	if name := ctrlutils.OwnerRefName(module, v1alpha1.ModulePackageVersionKind); name != "" {
+		if err := r.detachVersion(ctx, name); err != nil {
+			logger.Error("failed to detach the module package version", slog.String("mpv", name), log.Err(err))
+			return fmt.Errorf("detach module package version '%s': %w", name, err)
+		}
+	}
+
+	r.manager.UpdateEmbeddedModule(packageruntime.Module{
+		Name:            module.Name,
+		Settings:        module.Spec.Settings.GetMap(),
+		SettingsVersion: module.Spec.SettingsVersion,
+		Maintenance:     module.Spec.Maintenance,
+		Enabled:         module.Spec.Enabled,
+	})
+
+	// A reference left behind would block its owner's deletion for ever, and an embedded module owns
+	// neither a package nor a version. The registry annotation goes with them: nothing is pulled.
+	ctrlutils.DropOwnerReferences(module, v1alpha1.ModulePackageVersionKind, v1alpha1.ModulePackageKind)
+	delete(module.Annotations, v1alpha2.ModuleAnnotationRegistrySpecChanged)
+
+	if err := r.client.Patch(ctx, module, client.MergeFrom(original)); err != nil {
+		logger.Error("failed to patch the module", log.Err(err))
+		return fmt.Errorf("patch module '%s': %w", module.Name, err)
+	}
+
+	return nil
+}
+
 // handleDelete releases the module's package version, unregisters it from the package
 // runtime and releases the finalizer.
 func (r *reconciler) handleDelete(ctx context.Context, module *v1alpha2.Module) error {
@@ -248,7 +293,16 @@ func (r *reconciler) handleDelete(ctx context.Context, module *v1alpha2.Module) 
 		}
 	}
 
-	r.manager.RemoveModule(module.Name)
+	// An embedded module deployed nothing, so its removal enqueues no undeploy. Whether it should be
+	// removed at all is a separate question: the image still ships it, so the next bootstrap places
+	// it again — see decisions/0002-embedded-module-cr-deletion.md.
+	if module.IsEmbedded() {
+		logger.Info("embedded module is removed, it will be placed again on the next start")
+
+		r.manager.RemoveEmbeddedModule(module.Name)
+	} else {
+		r.manager.RemoveModule(module.Name)
+	}
 
 	if !controllerutil.ContainsFinalizer(module, v1alpha2.ModuleFinalizerStatisticRegistered) {
 		return nil
