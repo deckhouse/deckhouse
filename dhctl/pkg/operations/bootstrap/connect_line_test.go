@@ -60,11 +60,15 @@ func TestConnectLineIsPrintedOnTheReusePath(t *testing.T) {
 	if idx < 0 {
 		t.Fatalf("the reuse branch is gone; this guard needs rewriting against whatever replaced it")
 	}
-	// The print has to sit inside that branch, i.e. right after the message.
+	// The print has to sit inside that branch, i.e. between the message and the
+	// first statement after it. A delimiter that stops matching would quietly
+	// widen the search to the rest of the file, so its loss fails the guard.
 	rest := string(src)[idx:]
-	if end := strings.Index(rest, "\n\tserver, err :="); end > 0 {
-		rest = rest[:end]
+	end := strings.Index(rest, "b.openImmutableChannel(")
+	if end < 0 {
+		t.Fatalf("the statement that used to follow the reuse branch is gone; this guard needs a new delimiter")
 	}
+	rest = rest[:end]
 	if !strings.Contains(rest, "printHowToReachTheCluster") {
 		t.Fatal("a rerun reusing collected credentials must still say where they are and how to reach the master")
 	}
@@ -74,9 +78,9 @@ func TestConnectLineIsPrintedOnTheReusePath(t *testing.T) {
 // lines sat in the log while the screen showed nothing. The tags put them back on
 // the screen, so they are worth a guard of their own.
 func TestConnectLinesAreTaggedForTheTerminal(t *testing.T) {
-	src, err := os.ReadFile("steps_immutable.go")
+	src, err := os.ReadFile("connect_line.go")
 	if err != nil {
-		t.Fatalf("read steps_immutable.go: %v", err)
+		t.Fatalf("read connect_line.go: %v", err)
 	}
 	body := string(src)
 

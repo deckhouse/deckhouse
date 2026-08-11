@@ -168,6 +168,26 @@ func (s *sourceReader) readClusterInputs(ctx context.Context, kubernetesVersion 
 	return in, nil
 }
 
+// reportedNodeIPs returns the node's reported internal addresses, read from the
+// API server (the manager's cache strips Node.status.addresses). Nothing is
+// read unless the config pins an address — only the bootstrapped first master.
+func (r *Reconciler) reportedNodeIPs(ctx context.Context, nodeName, pinned string) ([]string, error) {
+	if pinned == "" {
+		return nil, nil
+	}
+	node := &corev1.Node{}
+	if err := r.sources.Reader.Get(ctx, types.NamespacedName{Name: nodeName}, node); err != nil {
+		return nil, fmt.Errorf("read the addresses of node %s: %w", nodeName, err)
+	}
+	var addresses []string
+	for _, address := range node.Status.Addresses {
+		if address.Type == corev1.NodeInternalIP {
+			addresses = append(addresses, address.Address)
+		}
+	}
+	return addresses, nil
+}
+
 // readRegistry describes the cluster's registry: the spec a node needs to reach
 // it, and the repository every image of the release lives in.
 func (s *sourceReader) readRegistry(ctx context.Context) (*internalv1alpha1.Registry, string, error) {

@@ -22,15 +22,11 @@ package nodeconfig
 import (
 	"context"
 	"fmt"
-	"maps"
-	"slices"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -88,64 +84,6 @@ func (r *Reconciler) ForPredicates() []predicate.Predicate {
 	}}
 }
 
-// nodeRenderInputsChanged reports whether an update touched anything the render
-// reads. An event missing either side is passed through: a pass that renders the
-// same spec costs a read, and one that never runs costs a node its config.
-func nodeRenderInputsChanged(before, after client.Object) bool {
-	if before == nil || after == nil {
-		return true
-	}
-	if before.GetUID() != after.GetUID() {
-		return true
-	}
-	createdBefore := before.GetCreationTimestamp()
-	createdAfter := after.GetCreationTimestamp()
-	if !createdBefore.Equal(&createdAfter) {
-		return true
-	}
-	return !maps.Equal(before.GetLabels(), after.GetLabels())
-}
-
-// nodeConfigRolloutInputsChanged reports whether a NodeConfig update touched
-// anything a pass reads: Generation stands in for the spec (status subresource),
-// the rest is what the rollout gate reads or what decides ownership.
-func nodeConfigRolloutInputsChanged(before, after client.Object) bool {
-	oldConfig, okOld := before.(*internalv1alpha1.NodeConfig)
-	newConfig, okNew := after.(*internalv1alpha1.NodeConfig)
-	if !okOld || !okNew {
-		return true
-	}
-	if oldConfig.Generation != newConfig.Generation ||
-		oldConfig.Status.AppliedGeneration != newConfig.Status.AppliedGeneration {
-		return true
-	}
-	if (oldConfig.DeletionTimestamp == nil) != (newConfig.DeletionTimestamp == nil) {
-		return true
-	}
-	if !maps.Equal(oldConfig.Labels, newConfig.Labels) ||
-		!slices.EqualFunc(oldConfig.OwnerReferences, newConfig.OwnerReferences, ownerRefEqual) {
-		return true
-	}
-	return !conditionEqual(oldConfig.Status.Conditions, newConfig.Status.Conditions, configurationAppliedCondition) ||
-		!conditionEqual(oldConfig.Status.Conditions, newConfig.Status.Conditions, disruptionRequiredCondition)
-}
-
-func ownerRefEqual(a, b metav1.OwnerReference) bool {
-	return a.UID == b.UID && a.Name == b.Name && a.Kind == b.Kind
-}
-
-// conditionEqual compares one condition across two status lists by the two
-// fields the rollout gate tests it on.
-func conditionEqual(before, after []metav1.Condition, name string) bool {
-	oldCondition := meta.FindStatusCondition(before, name)
-	newCondition := meta.FindStatusCondition(after, name)
-	if oldCondition == nil || newCondition == nil {
-		return oldCondition == newCondition
-	}
-	return oldCondition.Status == newCondition.Status &&
-		oldCondition.ObservedGeneration == newCondition.ObservedGeneration
-}
-
 func (r *Reconciler) SetupWatches(w register.Watcher) {
 	// A NodeGroup change affects every node of every group, so it is funnelled
 	// into one pass instead of a request per node.
@@ -178,101 +116,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return r.reconcileAllNodes(ctx, logger)
 	}
 	return r.reconcileNode(ctx, req.Name, logger, newPass())
-}
-
-// pass memoises what one reconcile pass reads: an all-nodes pass renders every
-// node from the same cluster state, and every read goes straight to the API
-// server because the manager's cache is too old for these decisions.
-type pass struct {
-	// inputs is what reading the cluster-wide render inputs produced, keyed by
-	// Kubernetes version: the ~6 uncached reads readClusterInputs performs are
-	// done once per distinct version rather than once per node.
-	inputs map[string]clusterInputsResult
-	// derivedVersion is the Kubernetes version derived from cluster state, read
-	// once per pass: derived_status computes it from the cluster configuration
-	// and the control plane alone, so every group gets the same answer.
-	derivedVersion *versionResult
-	// groups holds the NodeGroup of each node rendered, keyed by group name: one
-	// Get per group per pass instead of one per node (a cached Get deep-copies
-	// status.instanceClass with it). nil is a group that does not exist.
-	groups map[string]*v1.NodeGroup
-	// rollouts is each group's remaining rollout budget, keyed by group name:
-	// one NodeConfig listing per group per pass instead of one per node.
-	rollouts map[string]*rolloutBudget
-}
-
-// clusterInputsResult is one attempt at reading the cluster-wide inputs, kept
-// whether it succeeded or not: these inputs fail identically for every node,
-// so the failure is memoised as much as the answer.
-type clusterInputsResult struct {
-	inputs clusterInputs
-	err    error
-}
-
-// versionResult is one attempt at deriving the cluster's Kubernetes version,
-// kept whether it succeeded or not, for the same reason as the inputs above:
-// the answer is a property of the cluster, not of the node being rendered.
-type versionResult struct {
-	version string
-	err     error
-}
-
-func newPass() *pass {
-	return &pass{
-		inputs:   map[string]clusterInputsResult{},
-		groups:   map[string]*v1.NodeGroup{},
-		rollouts: map[string]*rolloutBudget{},
-	}
-}
-
-// kubernetesVersion answers which version the group's nodes run: the cluster's
-// derived answer, computed once per pass, or the group's own status when the
-// derivation has none.
-func (r *Reconciler) kubernetesVersion(ctx context.Context, ng *v1.NodeGroup, p *pass) (string, error) {
-	if p.derivedVersion == nil {
-		version, err := deriveKubernetesVersion(ctx, r.derived, ng)
-		p.derivedVersion = &versionResult{version: version, err: err}
-	}
-	if p.derivedVersion.err != nil {
-		return "", p.derivedVersion.err
-	}
-	if p.derivedVersion.version != "" {
-		return p.derivedVersion.version, nil
-	}
-	return ng.Status.KubernetesVersion, nil
-}
-
-// nodeGroup returns a node's group, read once per group per pass, or nil when
-// the group does not exist.
-func (r *Reconciler) nodeGroup(ctx context.Context, name string, p *pass) (*v1.NodeGroup, error) {
-	if ng, ok := p.groups[name]; ok {
-		return ng, nil
-	}
-	ng := &v1.NodeGroup{}
-	if err := r.Client.Get(ctx, types.NamespacedName{Name: name}, ng); err != nil {
-		if apierrors.IsNotFound(err) {
-			p.groups[name] = nil
-			return nil, nil
-		}
-		return nil, fmt.Errorf("get NodeGroup %s: %w", name, err)
-	}
-	p.groups[name] = ng
-	return ng, nil
-}
-
-// clusterInputs returns the render inputs for the group's Kubernetes version,
-// reading them once per version per pass and serving the rest from the pass.
-func (r *Reconciler) clusterInputs(ctx context.Context, ng *v1.NodeGroup, p *pass) (clusterInputs, error) {
-	version, err := r.kubernetesVersion(ctx, ng, p)
-	if err != nil {
-		return clusterInputs{}, err
-	}
-	if result, ok := p.inputs[version]; ok {
-		return result.inputs, result.err
-	}
-	in, err := r.sources.readClusterInputs(ctx, version)
-	p.inputs[version] = clusterInputsResult{inputs: in, err: err}
-	return in, err
 }
 
 // reconcileAllNodes re-renders every node of every immutable group. One failure
@@ -459,67 +302,6 @@ func upToDate(existing, desired *internalv1alpha1.NodeConfig) bool {
 		return false
 	}
 	return apiequality.Semantic.DeepEqual(existing.OwnerReferences, desired.OwnerReferences)
-}
-
-// reportedNodeIPs returns the node's reported internal addresses, read from the
-// API server (the manager's cache strips Node.status.addresses). Nothing is
-// read unless the config pins an address — only the bootstrapped first master.
-func (r *Reconciler) reportedNodeIPs(ctx context.Context, nodeName, pinned string) ([]string, error) {
-	if pinned == "" {
-		return nil, nil
-	}
-	node := &corev1.Node{}
-	if err := r.sources.Reader.Get(ctx, types.NamespacedName{Name: nodeName}, node); err != nil {
-		return nil, fmt.Errorf("read the addresses of node %s: %w", nodeName, err)
-	}
-	var addresses []string
-	for _, address := range node.Status.Addresses {
-		if address.Type == corev1.NodeInternalIP {
-			addresses = append(addresses, address.Address)
-		}
-	}
-	return addresses, nil
-}
-
-// recordClampedSettings tells the operator which NodeGroup settings the render
-// did not carry over as written: the agent's schema refuses the value, and
-// silent narrowing would leave the group running something nobody configured.
-func (r *Reconciler) recordClampedSettings(ng *v1.NodeGroup) {
-	if maxPodsClamped(ng) {
-		r.Recorder.Event(ng, corev1.EventTypeWarning, settingClampedEvent,
-			fmt.Sprintf("kubelet.maxPods %d exceeds the %d an immutable node accepts; the nodes of this group are configured with %d",
-				*ng.Spec.Kubelet.MaxPods, maxPodsCeiling, maxPodsCeiling))
-	}
-	if ng.Spec.Disruptions != nil && ng.Spec.Disruptions.ApprovalMode == v1.DisruptionApprovalModeRollingUpdate {
-		r.Recorder.Event(ng, corev1.EventTypeWarning, settingClampedEvent,
-			fmt.Sprintf("disruptions.approvalMode %s has no counterpart on an immutable node; the nodes of this group are configured with %s",
-				v1.DisruptionApprovalModeRollingUpdate, v1.DisruptionApprovalModeAutomatic))
-	}
-	if staticReservationClamped(ng) {
-		r.Recorder.Event(ng, corev1.EventTypeWarning, settingClampedEvent,
-			fmt.Sprintf("kubelet.resourceReservation.mode %s cannot be honoured on an immutable node, which reserves by capacity or not at all; the nodes of this group are configured with %s",
-				resourceReservationModeStatic, resourceReservationModeAuto))
-	}
-	if windows := disruptionWindows(ng); len(windows) > 1 {
-		r.Recorder.Event(ng, corev1.EventTypeWarning, settingClampedEvent,
-			fmt.Sprintf("disruptions windows: an immutable node holds a single update window; the nodes of this group are configured with the first of the %d given",
-				len(windows)))
-	}
-}
-
-// maxPodsClamped reports whether the group asks for more pods per node than an
-// immutable node accepts.
-func maxPodsClamped(ng *v1.NodeGroup) bool {
-	if ng.Spec.Kubelet == nil || ng.Spec.Kubelet.MaxPods == nil {
-		return false
-	}
-	return int(*ng.Spec.Kubelet.MaxPods) > maxPodsCeiling
-}
-
-// staticReservationClamped reports whether the group asks for a static resource
-// reservation, which an immutable node cannot honour.
-func staticReservationClamped(ng *v1.NodeGroup) bool {
-	return configuredReservationMode(ng) == resourceReservationModeStatic
 }
 
 // deleteOrphaned removes a NodeConfig this controller no longer owns, for

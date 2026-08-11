@@ -17,6 +17,7 @@ limitations under the License.
 package nodeconfig
 
 import (
+	"fmt"
 	"maps"
 	"slices"
 	"strings"
@@ -24,11 +25,30 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 )
+
+// nodeRenderInputsChanged reports whether an update touched anything the render
+// reads. An event missing either side is passed through: a pass that renders the
+// same spec costs a read, and one that never runs costs a node its config.
+func nodeRenderInputsChanged(before, after client.Object) bool {
+	if before == nil || after == nil {
+		return true
+	}
+	if before.GetUID() != after.GetUID() {
+		return true
+	}
+	createdBefore := before.GetCreationTimestamp()
+	createdAfter := after.GetCreationTimestamp()
+	if !createdBefore.Equal(&createdAfter) {
+		return true
+	}
+	return !maps.Equal(before.GetLabels(), after.GetLabels())
+}
 
 // renderSpec turns a NodeGroup plus cluster state into one node's desired state.
 // On the first master it must differ from the installer payload on exactly three
@@ -231,6 +251,47 @@ func configuredReservationMode(ng *v1.NodeGroup) string {
 		return ""
 	}
 	return ng.Spec.Kubelet.ResourceReservation.Mode
+}
+
+// recordClampedSettings tells the operator which NodeGroup settings the render
+// did not carry over as written: the agent's schema refuses the value, and
+// silent narrowing would leave the group running something nobody configured.
+func (r *Reconciler) recordClampedSettings(ng *v1.NodeGroup) {
+	if maxPodsClamped(ng) {
+		r.Recorder.Event(ng, corev1.EventTypeWarning, settingClampedEvent,
+			fmt.Sprintf("kubelet.maxPods %d exceeds the %d an immutable node accepts; the nodes of this group are configured with %d",
+				*ng.Spec.Kubelet.MaxPods, maxPodsCeiling, maxPodsCeiling))
+	}
+	if ng.Spec.Disruptions != nil && ng.Spec.Disruptions.ApprovalMode == v1.DisruptionApprovalModeRollingUpdate {
+		r.Recorder.Event(ng, corev1.EventTypeWarning, settingClampedEvent,
+			fmt.Sprintf("disruptions.approvalMode %s has no counterpart on an immutable node; the nodes of this group are configured with %s",
+				v1.DisruptionApprovalModeRollingUpdate, v1.DisruptionApprovalModeAutomatic))
+	}
+	if staticReservationClamped(ng) {
+		r.Recorder.Event(ng, corev1.EventTypeWarning, settingClampedEvent,
+			fmt.Sprintf("kubelet.resourceReservation.mode %s cannot be honoured on an immutable node, which reserves by capacity or not at all; the nodes of this group are configured with %s",
+				resourceReservationModeStatic, resourceReservationModeAuto))
+	}
+	if windows := disruptionWindows(ng); len(windows) > 1 {
+		r.Recorder.Event(ng, corev1.EventTypeWarning, settingClampedEvent,
+			fmt.Sprintf("disruptions windows: an immutable node holds a single update window; the nodes of this group are configured with the first of the %d given",
+				len(windows)))
+	}
+}
+
+// maxPodsClamped reports whether the group asks for more pods per node than an
+// immutable node accepts.
+func maxPodsClamped(ng *v1.NodeGroup) bool {
+	if ng.Spec.Kubelet == nil || ng.Spec.Kubelet.MaxPods == nil {
+		return false
+	}
+	return int(*ng.Spec.Kubelet.MaxPods) > maxPodsCeiling
+}
+
+// staticReservationClamped reports whether the group asks for a static resource
+// reservation, which an immutable node cannot honour.
+func staticReservationClamped(ng *v1.NodeGroup) bool {
+	return configuredReservationMode(ng) == resourceReservationModeStatic
 }
 
 // renderNodeLabels returns the labels kubelet registers the node with: the
