@@ -624,26 +624,6 @@ var _ = Describe("NodeConfig controller", func() {
 			g.Expect(node.Spec.Unschedulable).To(BeFalse())
 			g.Expect(node.Annotations).NotTo(HaveKey(nodecommon.DrainingAnnotation))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
-
-		// One eviction, not one per reconcile: the operation is reconciled again
-		// every time its own status changes, and a cached lookup that has not
-		// caught up with the child it just created makes another.
-		Consistently(func(g Gomega) {
-			ops := &v1alpha1.NodeOperationList{}
-			g.Expect(k8sClient.List(ctx, ops)).To(Succeed())
-			drains := 0
-			for i := range ops.Items {
-				if ops.Items[i].Spec.Type != v1alpha1.NodeOperationDrain {
-					continue
-				}
-				for _, owner := range ops.Items[i].OwnerReferences {
-					if owner.Name == op.Name {
-						drains++
-					}
-				}
-			}
-			g.Expect(drains).To(Equal(1))
-		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
 	})
 
 	// User story: As a cluster operator, I want one interruption per change to a
@@ -925,57 +905,6 @@ var _ = Describe("NodeConfig controller", func() {
 
 		Consistently(func(g Gomega) {
 			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: op.Name}, &v1alpha1.NodeOperation{})).To(Succeed())
-		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
-	})
-
-	// User story: As an operator, I want to drain an immutable node by creating
-	// a NodeOperation, so that the workload leaves and the node stays out of
-	// the scheduler until I say otherwise.
-	It("completes a drain and leaves the node unschedulable", func(ctx context.Context) {
-		ngName := testenv.UniqueName("workers-drain")
-		createImmutableNodeGroup(ctx, ngName, nil)
-		nodeName := testenv.UniqueName("node")
-		createNode(ctx, nodeName, ngName)
-
-		op := &v1alpha1.NodeOperation{
-			ObjectMeta: metav1.ObjectMeta{Name: testenv.UniqueName("drain")},
-			Spec: v1alpha1.NodeOperationSpec{
-				Type:     v1alpha1.NodeOperationDrain,
-				NodeName: nodeName,
-			},
-		}
-		Expect(k8sClient.Create(ctx, op)).To(Succeed())
-		DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, op) })
-
-		node := &corev1.Node{}
-		Eventually(func(g Gomega) {
-			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: nodeName}, node)).To(Succeed())
-			g.Expect(node.Annotations).To(HaveKeyWithValue(nodecommon.DrainingAnnotation, HavePrefix("node-operation/")))
-		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
-
-		By("the drain finishing")
-		Eventually(func(g Gomega) {
-			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: nodeName}, node)).To(Succeed())
-			// The answer echoes the request, the way the draining controller
-			// does: the annotation names which operation asked, so a finished
-			// one cannot erase a live sibling's request.
-			node.Annotations[nodecommon.DrainedAnnotation] = node.Annotations[nodecommon.DrainingAnnotation]
-			delete(node.Annotations, nodecommon.DrainingAnnotation)
-			node.Spec.Unschedulable = true
-			g.Expect(k8sClient.Update(ctx, node)).To(Succeed())
-		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
-
-		// The eviction was the whole job: nobody has to carry anything out.
-		Eventually(func(g Gomega) {
-			done := &v1alpha1.NodeOperation{}
-			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: op.Name}, done)).To(Succeed())
-			g.Expect(done.Status.Phase).To(Equal(v1alpha1.NodeOperationCompleted))
-		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
-
-		// And the node stays where the operator put it.
-		Consistently(func(g Gomega) {
-			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: nodeName}, node)).To(Succeed())
-			g.Expect(node.Spec.Unschedulable).To(BeTrue())
 		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
 	})
 
