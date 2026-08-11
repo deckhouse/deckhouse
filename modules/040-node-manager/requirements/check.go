@@ -112,7 +112,7 @@ func init() {
 		}
 
 		if requirementValue == "true" && hasContainerdV1Nodes {
-			return false, errors.New("has nodes running containerd v1.x")
+			return false, errors.New("containerd v1.x is still in use by nodes, NodeGroups or defaultCRI")
 		}
 
 		return true, nil
