@@ -28,6 +28,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/loader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/lifecycle"
+	taskcleanup "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/cleanup"
 	taskdeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/deploy"
 	taskdisable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/disable"
 	taskload "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/load"
@@ -221,7 +222,7 @@ func (r *Runtime) loadModule(ctx context.Context, repo registry.Remote, packageP
 
 	conf.Repository = repo
 
-	module, err := r.registerModule(conf)
+	module, err := r.registerModule(ctx, conf)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return "", err
@@ -248,7 +249,7 @@ func (r *Runtime) loadEmbeddedModule(ctx context.Context, _ registry.Remote, pac
 
 	conf.Definition.Version = r.edition.Version
 
-	module, err := r.registerModule(conf)
+	module, err := r.registerModule(ctx, conf)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return "", err
@@ -260,7 +261,7 @@ func (r *Runtime) loadEmbeddedModule(ctx context.Context, _ registry.Remote, pac
 // registerModule wires the runtime's shared managers into conf, builds the module and
 // publishes it to r.modules and the scheduler. Returns a status error, so both loaders
 // pass it straight to the Load task's condition.
-func (r *Runtime) registerModule(conf *modules.Config) (*modules.Module, error) {
+func (r *Runtime) registerModule(ctx context.Context, conf *modules.Config) (*modules.Module, error) {
 	conf.Patcher = r.objectPatcher
 	conf.ScheduleManager = r.scheduleManager
 	conf.KubeEventsManager = r.kubeEventsManager
@@ -273,6 +274,14 @@ func (r *Runtime) registerModule(conf *modules.Config) (*modules.Module, error) 
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
+	// The package was removed while this Load ran — r.mu is what serialises the two, so this is the
+	// last point either can win. Publishing now would give the scheduler a node for a package nothing
+	// tracks, and Enable would then register its hooks with the shared managers with no removal path
+	// left to disable them.
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 
 	// Optimistically register the module before AddNode so a successful
 	// schedule can resolve it; if AddNode rejects the addition (dependency
@@ -325,15 +334,15 @@ func (r *Runtime) RemoveEmbeddedModule(name string) {
 		return
 	}
 
-	pkg := r.modules[name]
-	if pkg == nil {
-		r.cleanupModule(name)()
-		return
+	if pkg := r.modules[name]; pkg != nil {
+		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, app.NamespaceDeckhouse, false, r.nelmService, r.queueService, r.logger))
 	}
 
-	r.queueService.Enqueue(ctx, name,
-		taskdisable.NewTask(pkg, app.NamespaceDeckhouse, false, r.nelmService, r.queueService, r.logger),
-		queue.WithOnDone(r.cleanupModule(name)))
+	// The teardown rides the last task in the package's queue, never runs inline: it stops that queue
+	// and waits up to 10s for it to drain, so from here — under r.mu, with a Load possibly still
+	// running and about to want r.mu itself — it would deadlock both. RemoveModule anchors it on
+	// Undeploy; an embedded module has nothing to undeploy, so it anchors on a barrier.
+	r.queueService.Enqueue(ctx, name, taskcleanup.NewTask(name, r.logger), queue.WithOnDone(r.cleanupModule(name)))
 }
 
 // cleanupModule returns the teardown that drops the Store entry, stops the queue and deletes the

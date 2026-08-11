@@ -142,6 +142,14 @@ func (r *Runtime) loadApp(ctx context.Context, repo registry.Remote, packagePath
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
+	// The application was removed while this Load ran — r.mu is what serialises the two, so this is
+	// the last point either can win. Publishing now would give the scheduler a node for a package
+	// nothing tracks, and Enable would then register its hooks with the shared managers with no
+	// removal path left to disable them.
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
+
 	// Optimistically register the app before AddNode so a successful schedule
 	// can resolve it; if AddNode rejects the addition (dependency cycle),
 	// roll back the map entry so we never expose a package the scheduler
