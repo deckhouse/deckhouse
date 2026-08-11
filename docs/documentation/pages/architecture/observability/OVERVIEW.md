@@ -21,10 +21,3 @@ The Observability subsystem includes the following modules:
 * [`monitoring-custom`](/modules/monitoring-custom/): Simplifies monitoring configuration for user applications by requiring only a specific label to be set for the target application.
 * [`monitoring-kubernetes`](/modules/monitoring-kubernetes/): Provides transparent and timely monitoring of all cluster nodes and key infrastructure components.
 * [`upmeter`](/modules/upmeter/): Checks platform availability and cluster component health in real time and displays the results on dedicated dashboards.
-
-The following components are currently described in this section:
-
-* [Monitoring architecture in DKP](monitoring.html)
-* [`prometheus`](prometheus.html) module
-* [`observability`](observability.html) module
-* [Logging modules](logging.html)

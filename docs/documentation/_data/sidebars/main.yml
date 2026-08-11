@@ -1699,6 +1699,10 @@ entries:
                 ru: Модуль observability
               url: /architecture/observability/observability.html
             - title:
+                en: Monitoring-kubernetes module
+                ru: Модуль monitoring-kubernetes
+              url: /architecture/observability/monitoring-kubernetes.html
+            - title:
                 en: Upmeter module
                 ru: Модуль upmeter
               url: /architecture/observability/upmeter.html
