@@ -98,6 +98,7 @@ shell:
     - make build_linux
     - mv /src/scripts/* /
     - cp -f /src/cni-plugin/dist/flannel-amd64 /flannel
+{{- if ne $.Env "CSE" }}
 ---
 
 # kubernetes-cni sysext
@@ -174,3 +175,4 @@ shell:
   - export ROOTHASH=$(awk '/^Root hash:/ {print $3}' verity.txt)
   - cat kubernetes-cni.erofs kubernetes-cni.verity > /out/kubernetes-cni.raw
   - printf '%s\n' "$ROOTHASH" > /out/kubernetes-cni.raw.roothash
+{{- end }}

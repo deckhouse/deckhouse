@@ -46,6 +46,7 @@ shell:
 {{- end }}
 
 
+{{- if ne $.Env "CSE" }}
 # kubelet sysext
 
 
@@ -105,4 +106,5 @@ shell:
   - printf '%s\n' "$ROOTHASH" > /out/kubelet.raw.roothash
 ---
 {{- include "vex mitigation" (list $ (printf "%s/%s-sysext-%s" $.ModuleName $.ImageName $image_version)) }}
+{{- end }}
 {{- end }}
