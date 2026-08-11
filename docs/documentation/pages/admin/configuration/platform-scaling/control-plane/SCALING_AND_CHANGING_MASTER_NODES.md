@@ -137,7 +137,19 @@ After completing these steps, the node will no longer be considered a master nod
    d8 system queue list
    ```
 
-1. **On your local machine**, run the Deckhouse installer container for the corresponding edition and version (adjust the container registry address if necessary):
+1. **On your local machine**, log in to the registry (change the container registry address if necessary):
+
+   ```shell
+   docker login registry.deckhouse.io
+   ```
+
+   During the login process, you will need to enter your `Username` and `Password`.
+
+   {% alert level="info" %}
+   When logging in to the `registry.deckhouse.io` registry, the `Username` field must be set to `license-token`, and the `Password` field must contain the Deckhouse Kubernetes Platform license key.
+   {% endalert %}
+
+1. **On your local machine**, run the Deckhouse installer container for the corresponding edition and version (change the container registry address if necessary):
 
    ```bash
    DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
@@ -289,7 +301,19 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
    d8 system queue list
    ```
 
-1. On the **local machine**, run the Deckhouse installer container for the appropriate edition and version (adjust the container registry address if necessary):
+1. **On your local machine**, log in to the registry (change the container registry address if necessary):
+
+   ```shell
+   docker login registry.deckhouse.io
+   ```
+
+   During the login process, you will need to enter your `Username` and `Password`.
+
+   {% alert level="info" %}
+   When logging in to the `registry.deckhouse.io` registry, the `Username` field must be set to `license-token`, and the `Password` field must contain the Deckhouse Kubernetes Platform license key.
+   {% endalert %}
+
+1. On the **local machine**, run the Deckhouse installer container for the appropriate edition and version (change the container registry address if necessary):
 
    ```bash
    DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
@@ -357,6 +381,18 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
    d8 system queue list
    ```
 
+1. **On your local machine**, log in to the registry (change the container registry address if necessary):
+
+   ```shell
+   docker login registry.deckhouse.io
+   ```
+
+   During the login process, you will need to enter your `Username` and `Password`.
+
+   {% alert level="info" %}
+   When logging in to the `registry.deckhouse.io` registry, the `Username` field must be set to `license-token`, and the `Password` field must contain the Deckhouse Kubernetes Platform license key.
+   {% endalert %}
+
 1. On the **local machine**, run the DKP installer container for the corresponding edition and version (change the container registry address if needed):
 
    ```bash
@@ -388,7 +424,7 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
    dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
    ```
 
-   > For **OpenStack** and **VKCloud(OpenStack)**, after confirming the node deletion, it is extremely important to check the disk deletion `<prefix>kubernetes-data-N` in Openstack itself.
+   > For **OpenStack** and **VK Cloud (OpenStack)**, after confirming the node deletion, it is extremely important to check the disk deletion `<prefix>kubernetes-data-N` in Openstack itself.
    >
    > For example, when deleting the `cloud-demo-master-2` node in the Openstack web interface or in the OpenStack CLI, it is necessary to check the absence of the `cloud-demo-kubernetes-data-2` disk.
    >

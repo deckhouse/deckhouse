@@ -57,7 +57,7 @@ jobs:
       # The action checks out refs/pull/<num>/merge itself,
       # so the PR branch is scanned (not the base branch).
       - name: Run Gitleaks diff scan
-        uses: deckhouse/modules-actions/gitleaks@v15
+        uses: deckhouse/modules-actions/gitleaks@v16
         with:
           scan_mode: diff
           gitleaks_version: v8.28.0

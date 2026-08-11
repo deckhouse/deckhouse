@@ -56,6 +56,12 @@
       echo "${DECKHOUSE_REGISTRY_STAGE_PASSWORD}" | docker login "${DECKHOUSE_REGISTRY_STAGE_HOST}" \
         --username "${DECKHOUSE_REGISTRY_STAGE_USER}" --password-stdin
     fi
+  
+  login_write_registry: |
+    if [[ -n "${DECKHOUSE_REGISTRY_HOST:-}" ]]; then
+      echo "${DECKHOUSE_REGISTRY_PASSWORD}" | docker login "${DECKHOUSE_REGISTRY_HOST}" \
+        --username "${DECKHOUSE_REGISTRY_USER}" --password-stdin
+    fi
 
   setup_ssh: |
     eval "$(ssh-agent -s)"

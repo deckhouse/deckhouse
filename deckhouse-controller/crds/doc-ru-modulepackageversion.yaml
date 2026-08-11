@@ -4,7 +4,7 @@ spec:
       schema:
         openAPIV3Schema:
           description: |
-            Представляет версию пакета приложения.
+            Представляет версию пакета модуля.
           properties:
             apiVersion:
               description: |-
@@ -18,20 +18,20 @@ spec:
                 Больше информации [в документации Kubernetes](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds).
             spec:
               description: |
-                Определяет параметры версии пакета приложения.
+                Определяет параметры версии пакета модуля.
               properties:
                 packageName:
                   description: |
-                    Название пакета приложения.
+                    Название пакета модуля.
                 packageRepositoryName:
                   description: |
                     Название репозитория пакетов, содержащего данный пакет.
                 packageVersion:
                   description: |
-                    Версия пакета приложения.
+                    Версия пакета модуля.
             status:
               description: |
-                Статус версии пакета приложения.
+                Статус версии пакета модуля.
               properties:
                 observedGeneration:
                   description: |
@@ -80,6 +80,9 @@ spec:
                         fixes:
                           description: |
                             Список исправлений ошибок в этой версии.
+                    critical:
+                      description: |
+                        Является ли пакет критичным для кластера.
                     description:
                       description: |
                         Локализованные описания пакета.
@@ -119,13 +122,16 @@ spec:
                               available:
                                 description: |
                                   Доступна ли эта редакция для использования.
+                              enabledInBundles:
+                                description: |
+                                  Бандлы, в которых модуль включён по умолчанию в этой редакции.
                     requirements:
                       description: |
                         Системные требования для этого пакета.
                       properties:
                         deckhouse:
                           description: |
-                            Требуемая версия Deckhouse Kubernetes Platform .
+                            Требуемая версия Deckhouse Kubernetes Platform.
                           properties:
                             constraint:
                               description: |
@@ -270,29 +276,21 @@ spec:
                             to:
                               description: |
                                 Конечный диапазон версий для совместимости.
+                    weight:
+                      description: |
+                        Вес пакета, определяющий порядок его запуска.
                 packageSchemas:
                   description: |
                     Схемы OpenAPI для валидации настроек и значений, передаваемых пакету.
                   properties:
                     settingsSchema:
                       description: |
-                        Схема OpenAPI v3, используемая для валидации пользовательских настроек пакета (`Application.spec.settings`).
+                        Схема OpenAPI v3, используемая для валидации пользовательских настроек пакета (`Module.spec.settings`).
                         Содержимое хранится как непрозрачный объект, поскольку представляет собой рекурсивную JSON-схему; её валидация выполняется контроллером при загрузке метаданных пакета.
                     valuesSchema:
                       description: |
                         Схема OpenAPI v3, используемая для валидации итоговых значений (значения по умолчанию, объединённые с пользовательскими настройками), передаваемых в хуки и чарты пакета.
                         Содержимое хранится как непрозрачный объект, поскольку представляет собой рекурсивную JSON-схему; её валидация выполняется контроллером при загрузке метаданных пакета.
-                usedBy:
+                used:
                   description: |
-                    Информация о приложениях, которые используют эту версию пакета.
-                  items:
-                    properties:
-                      name:
-                        description: |
-                          Название экземпляра приложения.
-                      namespace:
-                        description: |
-                          Пространство имён, где установлено приложение.
-                usedByCount:
-                  description: |
-                    Количество приложений, использующих эту версию пакета. Всегда равно длине `usedBy`.
+                    Использует ли модуль эту версию. Одного флага достаточно, поскольку имя объекта содержит имя модуля, поэтому версию может использовать не более одного модуля. Блокирует удаление.
