@@ -212,15 +212,7 @@ func (b *ClusterBootstrapper) collectImmutableCredentials(ctx context.Context, b
 // reads the admin kubeconfig out of it. This is the whole "wait for the node to
 // install itself and bring a control plane up" step.
 func (b *ClusterBootstrapper) collectImmutableKubeconfig(ctx context.Context, bctx *bootstrapContext, handoffPort int) ([]byte, error) {
-	material, err := immutable.LoadHandoffMaterial(ctx, bctx.stateCache)
-	if err != nil {
-		return nil, err
-	}
-	if material == nil {
-		return nil, errors.New("the bootstrap handoff credentials are missing from the state cache: rerun the bootstrap so the BaseInfra phase regenerates the master payload")
-	}
-
-	address, stop, err := b.openImmutableChannel(ctx, bctx, handoffPort, "credentials handoff")
+	input, stop, err := b.openImmutableHandoff(ctx, bctx, handoffPort)
 	if err != nil {
 		return nil, err
 	}
@@ -231,15 +223,6 @@ func (b *ClusterBootstrapper) collectImmutableKubeconfig(ctx context.Context, bc
 			stop()
 		}
 	}()
-
-	input := immutable.FetchKubeconfigInput{
-		Address: address,
-		// The endpoint's certificate is issued for the node's name, not for the
-		// address dhctl dialled: that address did not exist when the payload
-		// was built.
-		ServerName: bctx.masterNodeName,
-		Material:   material,
-	}
 
 	// Narrated rather than silent: the node answers the status endpoint from the
 	// moment it starts working, so an operator sees what it is doing and a node
@@ -275,11 +258,7 @@ func (b *ClusterBootstrapper) collectImmutableKubeconfig(ctx context.Context, bc
 	}
 
 	err = libretry.NewLoop("Waiting for the first master to bring the control plane up", immutableAPIWaitAttempts, immutableAPIWaitInterval).
-		BreakIf(func(err error) bool {
-			return errors.Is(err, immutable.ErrHandoffUnauthorized) ||
-				errors.Is(err, immutable.ErrHandoffAlreadyServed) ||
-				errors.Is(err, errImmutableMasterFailed)
-		}).
+		BreakIf(handoffGaveUp).
 		RunContext(ctx, func() error {
 			if channelGone {
 				reopened, newStop, openErr := b.openImmutableChannel(ctx, bctx, handoffPort, "credentials handoff")
@@ -297,18 +276,9 @@ func (b *ClusterBootstrapper) collectImmutableKubeconfig(ctx context.Context, bc
 				return noteChannelBroken(err)
 			}
 			answered = true
-			if message := statusLine(status); message != lastMessage {
-				lastMessage = message
-				logger.InfoContext(ctx, fmt.Sprintf("The first master reports: %s", message))
-			}
-			// A node that says it failed says so for good: it stops working on the
-			// cluster, so polling it for the rest of the half-hour budget only
-			// hides the message it already gave.
-			if status.Phase == immutable.PhaseFailed {
-				return fmt.Errorf("%w: %s", errImmutableMasterFailed, statusLine(status))
-			}
-			if status.Phase != immutable.PhaseReady && status.Phase != immutable.PhaseCollected {
-				return fmt.Errorf("the first master is not ready to hand the credentials over: %s", statusLine(status))
+			reportImmutableStatus(ctx, status, &lastMessage)
+			if err := handoffReady(status); err != nil {
+				return err
 			}
 
 			collected, err := immutable.FetchKubeconfig(ctx, input)
@@ -323,6 +293,69 @@ func (b *ClusterBootstrapper) collectImmutableKubeconfig(ctx context.Context, bc
 	}
 
 	return kubeconfig, nil
+}
+
+// openImmutableHandoff loads the handoff credentials and opens the channel to
+// the node's one-shot endpoint: what a request to it needs, and the closer of
+// the tunnel behind it — nil without a bastion.
+func (b *ClusterBootstrapper) openImmutableHandoff(ctx context.Context, bctx *bootstrapContext, handoffPort int) (immutable.FetchKubeconfigInput, func(), error) {
+	material, err := immutable.LoadHandoffMaterial(ctx, bctx.stateCache)
+	if err != nil {
+		return immutable.FetchKubeconfigInput{}, nil, err
+	}
+	if material == nil {
+		return immutable.FetchKubeconfigInput{}, nil, errors.New("the bootstrap handoff credentials are missing from the state cache: rerun the bootstrap so the BaseInfra phase regenerates the master payload")
+	}
+
+	address, stop, err := b.openImmutableChannel(ctx, bctx, handoffPort, "credentials handoff")
+	if err != nil {
+		return immutable.FetchKubeconfigInput{}, nil, err
+	}
+
+	return immutable.FetchKubeconfigInput{
+		Address: address,
+		// The endpoint's certificate is issued for the node's name, not for the
+		// address dhctl dialled: that address did not exist when the payload
+		// was built.
+		ServerName: bctx.masterNodeName,
+		Material:   material,
+	}, stop, nil
+}
+
+// handoffGaveUp reports the answers no amount of waiting changes: a payload the
+// master never booted with, a channel that has already served, and a node that
+// stopped working on the cluster.
+func handoffGaveUp(err error) bool {
+	if errors.Is(err, immutable.ErrHandoffUnauthorized) {
+		return true
+	}
+	if errors.Is(err, immutable.ErrHandoffAlreadyServed) {
+		return true
+	}
+	return errors.Is(err, errImmutableMasterFailed)
+}
+
+// reportImmutableStatus logs what the node says, once per distinct message.
+func reportImmutableStatus(ctx context.Context, status *immutable.Status, lastMessage *string) {
+	message := statusLine(status)
+	if message == *lastMessage {
+		return
+	}
+	*lastMessage = message
+	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("The first master reports: %s", message))
+}
+
+// handoffReady answers nil once the node will hand the credentials over. A node
+// that says it failed says so for good: it stops working on the cluster, so
+// polling out the rest of the budget only hides the message it already gave.
+func handoffReady(status *immutable.Status) error {
+	if status.Phase == immutable.PhaseFailed {
+		return fmt.Errorf("%w: %s", errImmutableMasterFailed, statusLine(status))
+	}
+	if status.Phase == immutable.PhaseReady || status.Phase == immutable.PhaseCollected {
+		return nil
+	}
+	return fmt.Errorf("the first master is not ready to hand the credentials over: %s", statusLine(status))
 }
 
 // openImmutableAPIChannel returns the URL dhctl talks to the master's apiserver
@@ -343,8 +376,8 @@ func (b *ClusterBootstrapper) openImmutableAPIChannel(ctx context.Context, bctx 
 // and the closer of the tunnel behind it — nil without a bastion. The forward
 // is a direct-tcpip channel, so no sshd on the master is involved.
 func (b *ClusterBootstrapper) openImmutableChannel(ctx context.Context, bctx *bootstrapContext, remotePort int, purpose string) (string, func(), error) {
-	connectionConfig := b.SSHProviderInitializer.GetConfig()
-	if connectionConfig == nil || connectionConfig.Config == nil || connectionConfig.Config.BastionHost == "" {
+	sshConfig := bastionConfig(b.SSHProviderInitializer.GetConfig())
+	if sshConfig == nil {
 		return net.JoinHostPort(bctx.masterIP, strconv.Itoa(remotePort)), nil, nil
 	}
 
@@ -353,7 +386,7 @@ func (b *ClusterBootstrapper) openImmutableChannel(ctx context.Context, bctx *bo
 		return "", nil, fmt.Errorf("reserve a local port for the %s tunnel: %w", purpose, err)
 	}
 
-	tunnel, stop, err := b.openBastionTunnel(ctx, connectionConfig.Config, bctx.masterIP, remotePort, localPort)
+	tunnel, stop, err := b.openBastionTunnel(ctx, sshConfig, bctx.masterIP, remotePort, localPort)
 	if err != nil {
 		return "", nil, err
 	}
@@ -366,6 +399,18 @@ func (b *ClusterBootstrapper) openImmutableChannel(ctx context.Context, bctx *bo
 	// the handoff endpoint is verified by name rather than by address, so
 	// neither channel needs the local end to be nameable.
 	return net.JoinHostPort("127.0.0.1", strconv.Itoa(localPort)), stop, nil
+}
+
+// bastionConfig returns the SSH config a tunnel to the master is built from, or
+// nil when no bastion is configured and the master is reached directly.
+func bastionConfig(connectionConfig *sshconfig.ConnectionConfig) *sshconfig.Config {
+	if connectionConfig == nil || connectionConfig.Config == nil {
+		return nil
+	}
+	if connectionConfig.Config.BastionHost == "" {
+		return nil
+	}
+	return connectionConfig.Config
 }
 
 // openBastionTunnel forwards a local port to the given port of the master
@@ -679,11 +724,10 @@ func bastionForwardLine(initializer *providerinitializer.SSHProviderInitializer,
 	if initializer == nil {
 		return ""
 	}
-	connectionConfig := initializer.GetConfig()
-	if connectionConfig == nil || connectionConfig.Config == nil || connectionConfig.Config.BastionHost == "" {
+	cfg := bastionConfig(initializer.GetConfig())
+	if cfg == nil {
 		return ""
 	}
-	cfg := connectionConfig.Config
 
 	bastionPort := 0
 	if cfg.BastionPort != nil {
@@ -722,6 +766,8 @@ func channelBroken(err error) bool {
 	// ECONNREFUSED is deliberately absent: it is what a node still installing
 	// itself looks like as well as a closed forward, and treating it as a break
 	// would rebuild the tunnel throughout a healthy bootstrap.
-	return errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) ||
-		errors.Is(err, syscall.ECONNRESET) || errors.Is(err, syscall.EPIPE)
+	if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
+		return true
+	}
+	return errors.Is(err, syscall.ECONNRESET) || errors.Is(err, syscall.EPIPE)
 }

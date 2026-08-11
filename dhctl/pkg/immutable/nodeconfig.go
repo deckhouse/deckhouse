@@ -149,8 +149,6 @@ func buildNodeConfig(ctx context.Context, in nodeConfigInput) (*nodeConfig, erro
 		return nil, err
 	}
 
-	serverTLSBootstrap := false
-
 	spec := nodeSpec{
 		NodeName: in.NodeName,
 		OSImage:  registry.Address + registry.Path + "/" + osImageNameAndTag,
@@ -175,31 +173,7 @@ func buildNodeConfig(ctx context.Context, in nodeConfigInput) (*nodeConfig, erro
 			Hostname:   in.NodeName,
 			Interfaces: []networkInterface{{Name: "eth0", DHCP: true}},
 		},
-		Kubelet: kubelet{
-			// kubelet's feature gates depend on it; without it a DRA workload runs
-			// everywhere in the cluster except on this node.
-			KubernetesVersion:    kubernetesVersion,
-			ClusterDomain:        in.MetaConfig.ClusterDomain,
-			MaxPods:              podsPerNode,
-			ContainerLogMaxSize:  defaultContainerLogMaxSize,
-			ContainerLogMaxFiles: defaultContainerLogMaxFiles,
-			// The node is CAPI-backed, so the cloud-controller-manager has to
-			// assign its providerID before CAPI can match Machine to Node.
-			ExternalCloudProvider: true,
-			// Only labels kubelet may set on itself: NodeRestriction rejects
-			// node-role.kubernetes.io/*, and a rejected registration means the node
-			// never joins. The role label and taint come later, from the node.
-			NodeLabels: map[string]string{
-				nodeGroupLabel: masterNodeGroupName,
-				nodeTypeLabel:  "CloudPermanent",
-				cgroupLabel:    "cgroup2fs", // olcedar's only layout; bashible probes it in 092_set_cgroup_type.sh.tpl
-			},
-			// Nobody can approve a serving CSR until Deckhouse is installed, and
-			// kubelet blocks on it. bashible does the same on the first master
-			// (candi/bashible/common-steps/all/064_configure_kubelet.sh.tpl).
-			ServerTLSBootstrap:  &serverTLSBootstrap,
-			ResourceReservation: &resourceReservation{Mode: "Auto"},
-		},
+		Kubelet: nodeKubelet(in.MetaConfig, kubernetesVersion, podsPerNode),
 		ContainerRuntime: containerRuntime{
 			SandboxImage:           pauseImage,
 			MaxConcurrentDownloads: defaultMaxConcurrentDownloads,
@@ -212,21 +186,7 @@ func buildNodeConfig(ctx context.Context, in nodeConfigInput) (*nodeConfig, erro
 		Registry:           registry,
 	}
 
-	if in.MetaConfig.ClusterDNSAddress != "" {
-		spec.Kubelet.ClusterDNS = []string{in.MetaConfig.ClusterDNSAddress}
-	}
-
-	if in.Join != nil {
-		// Everything a node needs to enter a cluster that already runs, and the
-		// three fields above that only made sense for the one that starts it.
-		spec.Kubelet.CACert = in.Join.CACert
-		spec.Kubelet.BootstrapToken = in.Join.BootstrapToken
-		spec.APIServerEndpoints = in.Join.APIServerEndpoints
-		// Deckhouse is running by now, so the serving CSR gets approved. Left
-		// off, this node would keep a self-signed serving certificate — no
-		// kubectl exec or logs against it, for the life of the cluster.
-		spec.Kubelet.ServerTLSBootstrap = nil
-	}
+	applyJoinToSpec(&spec, in.Join)
 
 	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf(
 		"Built nodeConfig for %s: Kubernetes %s, %d system extensions, join=%t",
@@ -242,6 +202,61 @@ func buildNodeConfig(ctx context.Context, in nodeConfigInput) (*nodeConfig, erro
 		},
 		Spec: spec,
 	}, nil
+}
+
+// nodeKubelet is the kubelet section of a control-plane node's config, in the
+// shape the node that starts the cluster needs it; applyJoinToSpec turns it into
+// what a node joining a running cluster needs.
+func nodeKubelet(metaConfig *config.MetaConfig, kubernetesVersion string, podsPerNode int) kubelet {
+	serverTLSBootstrap := false
+
+	k := kubelet{
+		// kubelet's feature gates depend on it; without it a DRA workload runs
+		// everywhere in the cluster except on this node.
+		KubernetesVersion:    kubernetesVersion,
+		ClusterDomain:        metaConfig.ClusterDomain,
+		MaxPods:              podsPerNode,
+		ContainerLogMaxSize:  defaultContainerLogMaxSize,
+		ContainerLogMaxFiles: defaultContainerLogMaxFiles,
+		// The node is CAPI-backed, so the cloud-controller-manager has to
+		// assign its providerID before CAPI can match Machine to Node.
+		ExternalCloudProvider: true,
+		// Only labels kubelet may set on itself: NodeRestriction rejects
+		// node-role.kubernetes.io/*, and a rejected registration means the node
+		// never joins. The role label and taint come later, from the node.
+		NodeLabels: map[string]string{
+			nodeGroupLabel: masterNodeGroupName,
+			nodeTypeLabel:  "CloudPermanent",
+			cgroupLabel:    "cgroup2fs", // olcedar's only layout; bashible probes it in 092_set_cgroup_type.sh.tpl
+		},
+		// Nobody can approve a serving CSR until Deckhouse is installed, and
+		// kubelet blocks on it. bashible does the same on the first master
+		// (candi/bashible/common-steps/all/064_configure_kubelet.sh.tpl).
+		ServerTLSBootstrap:  &serverTLSBootstrap,
+		ResourceReservation: &resourceReservation{Mode: "Auto"},
+	}
+
+	if metaConfig.ClusterDNSAddress != "" {
+		k.ClusterDNS = []string{metaConfig.ClusterDNSAddress}
+	}
+
+	return k
+}
+
+// applyJoinToSpec adds what a node needs to enter a cluster that already runs,
+// and drops the three fields that only made sense for the one that starts it.
+func applyJoinToSpec(spec *nodeSpec, join *joinInput) {
+	if join == nil {
+		return
+	}
+
+	spec.Kubelet.CACert = join.CACert
+	spec.Kubelet.BootstrapToken = join.BootstrapToken
+	spec.APIServerEndpoints = join.APIServerEndpoints
+	// Deckhouse is running by now, so the serving CSR gets approved. Left off,
+	// this node would keep a self-signed serving certificate — no kubectl exec or
+	// logs against it, for the life of the cluster.
+	spec.Kubelet.ServerTLSBootstrap = nil
 }
 
 // SysextDigests resolves the digests of the three system extensions an immutable

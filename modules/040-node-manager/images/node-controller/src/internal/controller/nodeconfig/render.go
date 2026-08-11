@@ -233,13 +233,22 @@ func registrationLabels(ng *v1.NodeGroup) map[string]string {
 // is nearer to what was asked for; the clamp is reported (recordClampedSettings).
 func renderResourceReservation(ng *v1.NodeGroup) *internalv1alpha1.ResourceReservation {
 	mode := resourceReservationModeAuto
-	if ng.Spec.Kubelet != nil && ng.Spec.Kubelet.ResourceReservation != nil && ng.Spec.Kubelet.ResourceReservation.Mode != "" {
-		mode = ng.Spec.Kubelet.ResourceReservation.Mode
+	if configured := configuredReservationMode(ng); configured != "" {
+		mode = configured
 	}
 	if mode == resourceReservationModeStatic {
 		mode = resourceReservationModeAuto
 	}
 	return &internalv1alpha1.ResourceReservation{Mode: mode}
+}
+
+// configuredReservationMode returns the kubeReserved mode the group asks for,
+// empty when it asks for none.
+func configuredReservationMode(ng *v1.NodeGroup) string {
+	if ng.Spec.Kubelet == nil || ng.Spec.Kubelet.ResourceReservation == nil {
+		return ""
+	}
+	return ng.Spec.Kubelet.ResourceReservation.Mode
 }
 
 // renderNodeLabels returns the labels kubelet registers the node with: the

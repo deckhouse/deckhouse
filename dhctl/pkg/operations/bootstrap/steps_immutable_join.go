@@ -169,9 +169,13 @@ func apiServerEndpoints(ctx context.Context, kubeCl *client.KubernetesClient) ([
 	}
 	var ports []int32
 	for _, port := range slice.Ports {
-		if port.Name != nil && *port.Name == apiServerPortName && port.Port != nil {
-			ports = append(ports, *port.Port)
+		if port.Name == nil || *port.Name != apiServerPortName {
+			continue
 		}
+		if port.Port == nil {
+			continue
+		}
+		ports = append(ports, *port.Port)
 	}
 	for _, endpoint := range slice.Endpoints {
 		for _, addr := range endpoint.Addresses {

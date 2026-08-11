@@ -51,7 +51,10 @@ func CheckKubeconfigOutSurvivesCleanup(_ context.Context, kubeconfigOut, tmpDir 
 	tmp := resolvePath(tmpDir)
 
 	relative, err := filepath.Rel(tmp, out)
-	if err != nil || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+	if err != nil {
+		return nil
+	}
+	if relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
 		return nil
 	}
 	if strings.HasSuffix(out, cache.AdminKubeconfigName) {
