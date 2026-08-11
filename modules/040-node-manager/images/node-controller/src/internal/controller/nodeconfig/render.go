@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
@@ -139,7 +140,12 @@ func keepBootstrapOnlyFields(desired, existing *internalv1alpha1.NodeSpec, repor
 	// machine: the render only ever says "eth0, DHCP", and overwriting a
 	// static address with that leaves the node unreachable after its next
 	// reboot — the OS renders its network from this spec.
-	if networkIsExplicit(&existing.Network) {
+	//
+	// "Somebody else chose it" is decided against what this controller would
+	// render, not against the zero value: a rendered value that also counts as
+	// explicit is one this controller can never correct again, because after
+	// the first patch nothing tells it apart from a provisioner's.
+	if !sameNetwork(&existing.Network, &desired.Network) {
 		hostname := desired.Network.Hostname
 		desired.Network = existing.Network
 		// The hostname is the cluster's: it must match the Node name however
@@ -147,12 +153,17 @@ func keepBootstrapOnlyFields(desired, existing *internalv1alpha1.NodeSpec, repor
 		desired.Network.Hostname = hostname
 	}
 
-	// An empty rendered selector claims nothing; anything the node already
-	// carries is more specific and was chosen with the disk layout in view.
-	if !storageIsExplicit(&existing.Storage) {
-		return
+	if storageIsExplicit(&existing.Storage) {
+		desired.Storage = existing.Storage
 	}
-	desired.Storage = existing.Storage
+}
+
+// sameNetwork reports whether a node already carries exactly what this render
+// would give it. Hostname is left out: it is the cluster's either way.
+func sameNetwork(existing, desired *internalv1alpha1.Network) bool {
+	a, b := *existing, *desired
+	a.Hostname, b.Hostname = "", ""
+	return apiequality.Semantic.DeepEqual(a, b)
 }
 
 // nodeIPStillHolds reports whether an address the node was bootstrapped with is
@@ -177,38 +188,26 @@ func nodeIPStillHolds(nodeIP string, reported []string) bool {
 	return slices.Contains(reported, nodeIP)
 }
 
-// storageIsExplicit reports whether a storage section names something rather
-// than standing for "whatever the first usable one is".
+// storageIsExplicit reports whether a node's storage carries something this
+// controller does not render, and so belongs to whoever provisioned the machine.
 //
-// Mounts count, and they are the case that matters in practice: a control-plane
-// node is given the disk etcd lives on through them, and a render that dropped
-// the list would leave the node with nothing under /var/lib/etcd on its next
-// pass — etcd would come up as a brand new cluster after the next reboot.
+// Only a device path and mounts count — deliberately not the disk selector,
+// which this controller renders itself. Keeping a selector because it differs
+// from the rendered one makes storage write-once: the threshold could never be
+// corrected on a node that already exists, and this file warns against exactly
+// that a few lines up — a value only ever copied from its own previous state
+// can never be fixed.
+//
+// Nothing is lost by re-rendering it. The installer's master payload carries
+// mounts as well, so the whole section — its richer selector included — is kept
+// by the first test; and on a worker nobody but this controller writes one.
+//
+// Mounts are the case that matters in practice: a control-plane node is given
+// the disk etcd lives on through them, and a render that dropped the list would
+// leave the node with nothing under /var/lib/etcd on its next pass — etcd would
+// come up as a brand new cluster after the next reboot.
 func storageIsExplicit(storage *internalv1alpha1.Storage) bool {
-	if storage.Device != "" {
-		return true
-	}
-	if len(storage.Mounts) > 0 {
-		return true
-	}
-	return storage.DiskSelector != nil && *storage.DiskSelector != internalv1alpha1.DiskSelector{}
-}
-
-// networkIsExplicit reports whether a network section names something the
-// render cannot: a static interface, DNS, NTP or routes. The rendered default
-// — eth0 on DHCP plus the hostname — is not explicit, and neither is an empty
-// section.
-func networkIsExplicit(network *internalv1alpha1.Network) bool {
-	if len(network.DNS.Servers) > 0 || len(network.DNS.Search) > 0 ||
-		len(network.NTP.Servers) > 0 || len(network.Routes) > 0 {
-		return true
-	}
-	for _, iface := range network.Interfaces {
-		if !iface.DHCP || len(iface.Addresses) > 0 || iface.Gateway != "" || iface.Name != "eth0" {
-			return true
-		}
-	}
-	return false
+	return storage.Device != "" || len(storage.Mounts) > 0
 }
 
 // renderKernel publishes what the CLUSTER decides about the kernel. This config

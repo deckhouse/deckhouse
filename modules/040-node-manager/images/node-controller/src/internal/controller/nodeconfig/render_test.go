@@ -44,8 +44,17 @@ import (
 func TestKeepBootstrapOnlyFields(t *testing.T) {
 	bootstrapped := internalv1alpha1.NodeSpec{
 		Registry: &internalv1alpha1.Registry{Address: "registry.example.com", Path: "/deckhouse/ce"},
+		// The installer's shape: a selector it chose plus the disk etcd lives
+		// on. The mounts are what mark the section as somebody else's — the
+		// selector alone is a field this controller renders too.
 		Storage: internalv1alpha1.Storage{
 			Disk: internalv1alpha1.Disk{DiskSelector: &internalv1alpha1.DiskSelector{Size: ">=30Gi"}},
+			Mounts: []internalv1alpha1.Mount{{
+				Name:              "kubernetes-data",
+				PartitionSelector: &internalv1alpha1.PartitionSelector{Size: "10Gi", Blank: true},
+				BindTo:            "/var/lib/etcd",
+				Mode:              "0700",
+			}},
 		},
 		Kubelet: internalv1alpha1.Kubelet{
 			ServerTLSBootstrap:  ptr.To(false),
@@ -75,13 +84,12 @@ func TestKeepBootstrapOnlyFields(t *testing.T) {
 			expStorage: internalv1alpha1.Storage{},
 		},
 		{
-			// The shape a node bootstrapped before this controller stopped
-			// fabricating selectors carries on its CONFIG partition. It is not
-			// explicit — it names no attribute — so the rendered empty storage
-			// replaces it and the node heals itself on the next sync.
-			name: "a selector that constrains nothing is not kept",
+			// A selector alone is a field this controller renders itself, so it
+			// is re-rendered rather than kept — otherwise the threshold could
+			// never be corrected on a node that already exists.
+			name: "a selector without mounts is re-rendered",
 			existing: internalv1alpha1.NodeSpec{
-				Storage: internalv1alpha1.Storage{Disk: internalv1alpha1.Disk{DiskSelector: &internalv1alpha1.DiskSelector{}}},
+				Storage: internalv1alpha1.Storage{Disk: internalv1alpha1.Disk{DiskSelector: &internalv1alpha1.DiskSelector{Size: ">=2Gi"}}},
 			},
 			expStorage: internalv1alpha1.Storage{},
 		},
@@ -544,4 +552,44 @@ func TestKubeletMaySetLabelFollowsKubeletsOwnRule(t *testing.T) {
 	for _, key := range refused {
 		require.False(t, kubeletMaySetLabel(key), "kubelet refuses %s", key)
 	}
+}
+
+// The rule that keeps a provisioner's disk must not also keep this
+// controller's own. A rendered value that counts as "somebody chose it" makes
+// storage write-once: the threshold could never be corrected on a node that
+// already exists, and the same file warns against exactly that — a value only
+// ever copied from its own previous state can never be fixed.
+func TestRenderedStorageIsNotMistakenForTheInstallers(t *testing.T) {
+	rendered := internalv1alpha1.Storage{
+		Disk: internalv1alpha1.Disk{DiskSelector: &internalv1alpha1.DiskSelector{Size: systemDiskSelectorSize}},
+	}
+
+	t.Run("what this controller renders is re-rendered, not kept", func(t *testing.T) {
+		existing := internalv1alpha1.NodeSpec{Storage: rendered}
+		desired := internalv1alpha1.NodeSpec{Storage: internalv1alpha1.Storage{
+			Disk: internalv1alpha1.Disk{DiskSelector: &internalv1alpha1.DiskSelector{Size: ">=42Gi"}},
+		}}
+		keepBootstrapOnlyFields(&desired, &existing, nil)
+		require.Equal(t, ">=42Gi", desired.Storage.DiskSelector.Size,
+			"a corrected threshold must reach a node that already exists")
+	})
+
+	t.Run("the installer's master payload is kept whole", func(t *testing.T) {
+		// Its mounts are what mark it as somebody else's, and they carry the
+		// richer selector along: the section is copied as one.
+		installer := internalv1alpha1.Storage{
+			Disk: internalv1alpha1.Disk{DiskSelector: &internalv1alpha1.DiskSelector{Size: ">=20Gi"}},
+			Mounts: []internalv1alpha1.Mount{{
+				Name:              "kubernetes-data",
+				PartitionSelector: &internalv1alpha1.PartitionSelector{Size: "10Gi", Blank: true},
+				BindTo:            "/var/lib/etcd",
+				Mode:              "0700",
+			}},
+		}
+		existing := internalv1alpha1.NodeSpec{Storage: installer}
+		desired := internalv1alpha1.NodeSpec{Storage: rendered}
+		keepBootstrapOnlyFields(&desired, &existing, nil)
+		require.Equal(t, ">=20Gi", desired.Storage.DiskSelector.Size)
+		require.Len(t, desired.Storage.Mounts, 1, "etcd must keep its disk")
+	})
 }
