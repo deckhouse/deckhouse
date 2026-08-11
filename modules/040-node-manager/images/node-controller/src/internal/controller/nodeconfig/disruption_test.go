@@ -93,11 +93,11 @@ func TestFindApprovalIgnoresAnOperationOfAnEarlierNodeConfig(t *testing.T) {
 			},
 		},
 		Spec: v1alpha1.NodeOperationSpec{
-			Type:             v1alpha1.NodeOperationApproveDisruption,
+			Type:             v1alpha1.NodeOperationTypeApproveDisruption,
 			NodeName:         "worker-0",
 			ConfigGeneration: ptr.To(int64(2)),
 		},
-		Status: v1alpha1.NodeOperationStatus{Phase: v1alpha1.NodeOperationCompleted},
+		Status: v1alpha1.NodeOperationStatus{Phase: v1alpha1.NodeOperationPhaseCompleted},
 	}
 	r := &Reconciler{sources: &sourceReader{Reader: fake.NewClientBuilder().WithScheme(scheme).WithObjects(done).Build()}}
 

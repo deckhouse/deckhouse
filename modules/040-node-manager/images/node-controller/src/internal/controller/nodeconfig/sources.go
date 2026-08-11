@@ -375,24 +375,17 @@ func (s *sourceReader) readClusterConfiguration(ctx context.Context) (clusterCon
 	return config, nil
 }
 
-// defaultMaxPodsFor derives the default pods-per-node from the pod subnet,
-// using bashible's brackets (064_configure_kubelet.sh.tpl) to avoid scheduler
-// skew between node kinds; the whole ladder fits under maxPodsCeiling.
+// defaultMaxPodsFor derives the default pods-per-node from the pod subnet, as
+// bashible does (candi/bashible/common-steps/all/064_configure_kubelet.sh.tpl) —
+// no scheduler skew between node kinds; dhctl mirrors it (pkg/immutable/nodeconfig.go).
 func defaultMaxPodsFor(prefix intstr.IntOrString) int {
+	byPrefix := map[int]int{24: 120, 23: 250, 22: 500, 21: 1000}
 	bits := prefix.IntValue()
 	if bits == 0 {
 		bits = defaultPodSubnetNodeCIDRPrefix
 	}
-	switch {
-	case bits >= 24:
-		return maxPodsPerNodeCIDR24
-	case bits == 23:
-		return maxPodsPerNodeCIDR23
-	case bits == 22:
-		return maxPodsPerNodeCIDR22
-	default:
-		return maxPodsPerNodeCIDR21
-	}
+	// A prefix outside the ladder takes the nearest step, as the template does.
+	return byPrefix[min(max(bits, 21), 24)]
 }
 
 // readImagesDigests returns the digest of every image the release ships, keyed

@@ -63,20 +63,6 @@ const (
 	defaultContainerLogMaxFiles   = 4
 	defaultMaxConcurrentDownloads = 3
 
-	// The four brackets bashible computes in
-	// candi/bashible/common-steps/all/064_configure_kubelet.sh.tpl — a master on
-	// the flat CRD default would advertise 120 where a /22 node advertises 500.
-	maxPodsPodSubnetPrefix24 = 120
-	maxPodsPodSubnetPrefix23 = 250
-	maxPodsPodSubnetPrefix22 = 500
-	maxPodsPodSubnetPrefix21 = 1000
-
-	// maxPodsCeiling is what the nodeConfig schema accepts. node-controller clamps
-	// the same ladder to it, so a day-2 render writes the number already there
-	// instead of a spec diff on a freshly bootstrapped node. The whole ladder fits
-	// under it; the clamp is left as the guard for a bracket added above it.
-	maxPodsCeiling = 1000
-
 	// defaultPodSubnetNodeCIDRPrefix is what bashible falls back to when the
 	// cluster configuration names no prefix.
 	defaultPodSubnetNodeCIDRPrefix = 24
@@ -287,17 +273,12 @@ func maxPods(metaConfig *config.MetaConfig) (int, error) {
 		}
 	}
 
-	bracket := maxPodsPodSubnetPrefix21
-	switch {
-	case prefix >= 24:
-		bracket = maxPodsPodSubnetPrefix24
-	case prefix == 23:
-		bracket = maxPodsPodSubnetPrefix23
-	case prefix == 22:
-		bracket = maxPodsPodSubnetPrefix22
-	}
+	// A prefix outside the ladder takes the nearest step, as the template's
+	// ge/le branches do. The top step is also what the nodeConfig schema accepts
+	// as its maximum, so the ladder needs no further clamp.
+	byPrefix := map[int]int{24: 120, 23: 250, 22: 500, 21: 1000}
 
-	return min(bracket, maxPodsCeiling), nil
+	return byPrefix[min(max(prefix, 21), 24)], nil
 }
 
 // kubernetesVersion is the cluster's Kubernetes minor version with "Automatic"
@@ -336,11 +317,10 @@ func sysextExtensions(images map[string]any, kubernetesVersion string) ([]extens
 
 	// The order is the payload's: the node writes them in it, and every rendered
 	// document since the first one has carried them this way.
-	const by = platformExtensionRequestedBy
 	extensions := []extension{
-		{Name: containerdExtension, Digest: containerd, RequestedBy: by},
-		{Name: kubeletExtension, Digest: newestPatchDigest(packages, "kubeletSysext"+minor), RequestedBy: by},
-		{Name: cniExtension, Digest: cni, RequestedBy: by},
+		{Name: containerdExtension, Digest: containerd, RequestedBy: platformExtensionRequestedBy},
+		{Name: kubeletExtension, Digest: newestPatchDigest(packages, "kubeletSysext"+minor), RequestedBy: platformExtensionRequestedBy},
+		{Name: cniExtension, Digest: cni, RequestedBy: platformExtensionRequestedBy},
 	}
 	for _, e := range extensions {
 		if e.Digest == "" {

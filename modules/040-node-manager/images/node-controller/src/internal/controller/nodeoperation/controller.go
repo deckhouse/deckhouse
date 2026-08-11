@@ -134,7 +134,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if terminal(op) {
 		// A Drain that failed gives its marker back like any other operation,
 		// or the draining controller evicts for one that has given up.
-		keptOut := op.Spec.Type == v1alpha1.NodeOperationDrain && op.Status.Phase == v1alpha1.NodeOperationCompleted
+		keptOut := op.Spec.Type == v1alpha1.NodeOperationTypeDrain && op.Status.Phase == v1alpha1.NodeOperationPhaseCompleted
 		if !keptOut {
 			if err := r.releaseNode(ctx, op, logger); err != nil {
 				return ctrl.Result{}, err
@@ -170,7 +170,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// A Drain is the eviction itself: it asks the draining controller to empty
 	// the node and is done once the workload is gone. The node stays
 	// unschedulable until someone says otherwise.
-	if op.Spec.Type == v1alpha1.NodeOperationDrain {
+	if op.Spec.Type == v1alpha1.NodeOperationTypeDrain {
 		return r.reconcileDrain(ctx, op, node, logger)
 	}
 
@@ -189,8 +189,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	// Handing the operation to the node: from here the node carries it out and
 	// reports back through the same object.
-	if op.Status.Phase != v1alpha1.NodeOperationInProgress {
-		return ctrl.Result{RequeueAfter: operationTimeout}, r.setPhase(ctx, op, v1alpha1.NodeOperationInProgress, "NodePrepared",
+	if op.Status.Phase != v1alpha1.NodeOperationPhaseInProgress {
+		return ctrl.Result{RequeueAfter: operationTimeout}, r.setPhase(ctx, op, v1alpha1.NodeOperationPhaseInProgress, "NodePrepared",
 			"The node may carry the operation out", logger)
 	}
 
@@ -215,7 +215,7 @@ func (r *Reconciler) begin(ctx context.Context, op *v1alpha1.NodeOperation, node
 	if err := r.rememberCordon(ctx, op, node); err != nil {
 		return err
 	}
-	return r.setPhase(ctx, op, v1alpha1.NodeOperationPending, "Queued",
+	return r.setPhase(ctx, op, v1alpha1.NodeOperationPhasePending, "Queued",
 		"The operation is queued", logger)
 }
 
@@ -263,7 +263,7 @@ func (r *Reconciler) reconcileDrain(ctx context.Context, op *v1alpha1.NodeOperat
 	if !drained(op, node) {
 		return ctrl.Result{RequeueAfter: waitPollInterval}, nil
 	}
-	return ctrl.Result{}, r.setPhase(ctx, op, v1alpha1.NodeOperationCompleted, "Drained",
+	return ctrl.Result{}, r.setPhase(ctx, op, v1alpha1.NodeOperationPhaseCompleted, "Drained",
 		"The workload has left the node, which stays unschedulable", logger)
 }
 
@@ -329,7 +329,7 @@ func timedOut(op *v1alpha1.NodeOperation, deadline time.Time) (string, string) {
 }
 
 func terminal(op *v1alpha1.NodeOperation) bool {
-	return op.Status.Phase == v1alpha1.NodeOperationCompleted || op.Status.Phase == v1alpha1.NodeOperationFailed
+	return op.Status.Phase == v1alpha1.NodeOperationPhaseCompleted || op.Status.Phase == v1alpha1.NodeOperationPhaseFailed
 }
 
 // collect deletes a finished operation once it is older than the retention, and
@@ -475,7 +475,7 @@ func (r *Reconciler) ensureDrained(ctx context.Context, op *v1alpha1.NodeOperati
 				}},
 			},
 			Spec: v1alpha1.NodeOperationSpec{
-				Type:     v1alpha1.NodeOperationDrain,
+				Type:     v1alpha1.NodeOperationTypeDrain,
 				NodeName: op.Spec.NodeName,
 			},
 		}
@@ -487,9 +487,9 @@ func (r *Reconciler) ensureDrained(ctx context.Context, op *v1alpha1.NodeOperati
 	}
 
 	switch child.Status.Phase {
-	case v1alpha1.NodeOperationCompleted:
+	case v1alpha1.NodeOperationPhaseCompleted:
 		return true, nil
-	case v1alpha1.NodeOperationFailed:
+	case v1alpha1.NodeOperationPhaseFailed:
 		return false, r.fail(ctx, op, "DrainFailed",
 			fmt.Sprintf("the workload could not be evicted, see NodeOperation %s", child.Name), logger)
 	default:
@@ -511,7 +511,7 @@ func (r *Reconciler) drainOf(ctx context.Context, op *v1alpha1.NodeOperation) (*
 	}
 	for i := range children {
 		child := &children[i]
-		if child.Spec.Type == v1alpha1.NodeOperationDrain && ownedBy(child, op) {
+		if child.Spec.Type == v1alpha1.NodeOperationTypeDrain && ownedBy(child, op) {
 			return child, nil
 		}
 	}
@@ -677,7 +677,7 @@ func (r *Reconciler) heldUnschedulableByAnother(ctx context.Context, op *v1alpha
 		if lineageUID(other) == lineage || terminal(other) {
 			continue
 		}
-		if other.Spec.Type == v1alpha1.NodeOperationDrain || drainRequested(other) {
+		if other.Spec.Type == v1alpha1.NodeOperationTypeDrain || drainRequested(other) {
 			return true, nil
 		}
 	}
@@ -700,11 +700,11 @@ func (r *Reconciler) setPhase(ctx context.Context, op *v1alpha1.NodeOperation, p
 	patch := client.MergeFromWithOptions(op.DeepCopy(), client.MergeFromWithOptimisticLock{})
 	op.Status.Phase = phase
 	op.Status.ObservedGeneration = op.Generation
-	if phase == v1alpha1.NodeOperationInProgress && op.Status.StartedAt == nil {
+	if phase == v1alpha1.NodeOperationPhaseInProgress && op.Status.StartedAt == nil {
 		now := metav1.Now()
 		op.Status.StartedAt = &now
 	}
-	if phase == v1alpha1.NodeOperationCompleted || phase == v1alpha1.NodeOperationFailed {
+	if phase == v1alpha1.NodeOperationPhaseCompleted || phase == v1alpha1.NodeOperationPhaseFailed {
 		now := metav1.Now()
 		op.Status.FinishedAt = &now
 	}
@@ -723,7 +723,7 @@ func (r *Reconciler) setPhase(ctx context.Context, op *v1alpha1.NodeOperation, p
 }
 
 func (r *Reconciler) fail(ctx context.Context, op *v1alpha1.NodeOperation, reason, message string, logger logr.Logger) error {
-	return r.setPhase(ctx, op, v1alpha1.NodeOperationFailed, reason, message, logger)
+	return r.setPhase(ctx, op, v1alpha1.NodeOperationPhaseFailed, reason, message, logger)
 }
 
 func skipDrain(op *v1alpha1.NodeOperation) bool {

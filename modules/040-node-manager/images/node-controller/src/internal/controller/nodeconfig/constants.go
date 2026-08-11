@@ -148,6 +148,10 @@ const (
 	// rendered NodeConfig, and parts of that payload cannot be reproduced here.
 	controlPlaneRoleLabel = "node-role.kubernetes.io/control-plane"
 
+	// settingClampedEvent names the Warning event that reports a NodeGroup
+	// setting the render could not carry over as written (recordClampedSettings).
+	settingClampedEvent = "SettingClamped"
+
 	// disruptionRequiredCondition is how the agent says it cannot apply the
 	// config it was given without interrupting the node.
 	disruptionRequiredCondition = "DisruptionRequired"
@@ -168,16 +172,9 @@ const osImageNameAndTag = "olcedar:v0.1"
 // else. A machine with several real disks needs a provisioner that names one.
 const systemDiskSelectorSize = ">=2Gi"
 
-// Pods advertised per pod-subnet slice, brackets copied from bashible
-// (candi/bashible/common-steps/all/064_configure_kubelet.sh.tpl); dhctl
-// carries the same ladder (dhctl/pkg/immutable/nodeconfig.go) — keep in step.
-const (
-	defaultPodSubnetNodeCIDRPrefix = 24
-	maxPodsPerNodeCIDR24           = 120
-	maxPodsPerNodeCIDR23           = 250
-	maxPodsPerNodeCIDR22           = 500
-	maxPodsPerNodeCIDR21           = 1000
-)
+// defaultPodSubnetNodeCIDRPrefix is the slice of the pod subnet a node gets
+// when ClusterConfiguration names none (the default bashible reads too).
+const defaultPodSubnetNodeCIDRPrefix = 24
 
 // Defaults mirroring the NodeConfig CRD field defaults, applied in render so
 // the bootstrap file path (which bypasses API-server CRD defaulting) produces

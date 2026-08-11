@@ -215,7 +215,7 @@ var _ = Describe("NodeConfig controller", func() {
 			// Clamped to the ceiling, which the CRD takes and which is the top of
 			// the bashible ladder: a lower one had immutable nodes advertise half
 			// the pods of the bashible nodes beside them on a /21 cluster.
-			g.Expect(nc.Spec.Kubelet.MaxPods).To(Equal(maxPodsPerNodeCIDR21))
+			g.Expect(nc.Spec.Kubelet.MaxPods).To(Equal(1000))
 			g.Expect(nc.Spec.UpdatePolicy.Mode).To(Equal(string(deckhousev1.DisruptionApprovalModeAutomatic)))
 
 			messages := clampWarnings(ctx, g, ngName)
@@ -237,7 +237,7 @@ var _ = Describe("NodeConfig controller", func() {
 		// 250 pods for a bashible node — so it is 250 here too, not the flat 120
 		// of a NodeConfig with nothing configured.
 		Eventually(func(g Gomega) {
-			g.Expect(getNodeConfig(ctx, g, nodeName).Spec.Kubelet.MaxPods).To(Equal(maxPodsPerNodeCIDR23))
+			g.Expect(getNodeConfig(ctx, g, nodeName).Spec.Kubelet.MaxPods).To(Equal(250))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
@@ -549,7 +549,7 @@ var _ = Describe("NodeConfig controller", func() {
 		Eventually(func(g Gomega) {
 			op = findOperation(ctx, g, nodeName)
 			g.Expect(op).NotTo(BeNil())
-			g.Expect(op.Spec.Type).To(Equal(v1alpha1.NodeOperationApproveDisruption))
+			g.Expect(op.Spec.Type).To(Equal(v1alpha1.NodeOperationTypeApproveDisruption))
 			g.Expect(op.Spec.ConfigGeneration).To(HaveValue(Equal(generation)))
 			g.Expect(op.Spec.Drain.Skip).To(BeFalse())
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
@@ -570,7 +570,7 @@ var _ = Describe("NodeConfig controller", func() {
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
 		Consistently(func(g Gomega) {
-			g.Expect(findOperation(ctx, g, nodeName).Status.Phase).NotTo(Equal(v1alpha1.NodeOperationInProgress))
+			g.Expect(findOperation(ctx, g, nodeName).Status.Phase).NotTo(Equal(v1alpha1.NodeOperationPhaseInProgress))
 		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
 
 		By("the drain finishing")
@@ -587,17 +587,17 @@ var _ = Describe("NodeConfig controller", func() {
 
 		// The eviction finishing is what lets the parent hand the node over.
 		Eventually(func(g Gomega) {
-			g.Expect(findDrainOf(ctx, g, op.Name).Status.Phase).To(Equal(v1alpha1.NodeOperationCompleted))
+			g.Expect(findDrainOf(ctx, g, op.Name).Status.Phase).To(Equal(v1alpha1.NodeOperationPhaseCompleted))
 
 			parent := &v1alpha1.NodeOperation{}
 			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: op.Name}, parent)).To(Succeed())
-			g.Expect(parent.Status.Phase).To(Equal(v1alpha1.NodeOperationInProgress))
+			g.Expect(parent.Status.Phase).To(Equal(v1alpha1.NodeOperationPhaseInProgress))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
 		By("the node reporting the operation done")
 		Eventually(func(g Gomega) {
 			done := findOperation(ctx, g, nodeName)
-			done.Status.Phase = v1alpha1.NodeOperationCompleted
+			done.Status.Phase = v1alpha1.NodeOperationPhaseCompleted
 			g.Expect(k8sClient.Status().Update(ctx, done)).To(Succeed())
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
@@ -790,7 +790,7 @@ var _ = Describe("NodeConfig controller", func() {
 		op := &v1alpha1.NodeOperation{
 			ObjectMeta: metav1.ObjectMeta{Name: testenv.UniqueName("old")},
 			Spec: v1alpha1.NodeOperationSpec{
-				Type:     v1alpha1.NodeOperationDrain,
+				Type:     v1alpha1.NodeOperationTypeDrain,
 				NodeName: nodeName,
 			},
 		}
@@ -801,7 +801,7 @@ var _ = Describe("NodeConfig controller", func() {
 		Eventually(func(g Gomega) {
 			fresh := &v1alpha1.NodeOperation{}
 			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: op.Name}, fresh)).To(Succeed())
-			fresh.Status.Phase = v1alpha1.NodeOperationCompleted
+			fresh.Status.Phase = v1alpha1.NodeOperationPhaseCompleted
 			finished := metav1.NewTime(time.Now().Add(-25 * time.Hour))
 			fresh.Status.FinishedAt = &finished
 			g.Expect(k8sClient.Status().Update(ctx, fresh)).To(Succeed())
@@ -825,7 +825,7 @@ var _ = Describe("NodeConfig controller", func() {
 		op := &v1alpha1.NodeOperation{
 			ObjectMeta: metav1.ObjectMeta{Name: testenv.UniqueName("reported")},
 			Spec: v1alpha1.NodeOperationSpec{
-				Type:     v1alpha1.NodeOperationDrain,
+				Type:     v1alpha1.NodeOperationTypeDrain,
 				NodeName: nodeName,
 			},
 		}
@@ -836,7 +836,7 @@ var _ = Describe("NodeConfig controller", func() {
 		Eventually(func(g Gomega) {
 			fresh := &v1alpha1.NodeOperation{}
 			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: op.Name}, fresh)).To(Succeed())
-			fresh.Status.Phase = v1alpha1.NodeOperationCompleted
+			fresh.Status.Phase = v1alpha1.NodeOperationPhaseCompleted
 			fresh.Status.FinishedAt = nil
 			g.Expect(k8sClient.Status().Update(ctx, fresh)).To(Succeed())
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
@@ -858,7 +858,7 @@ var _ = Describe("NodeConfig controller", func() {
 		op := &v1alpha1.NodeOperation{
 			ObjectMeta: metav1.ObjectMeta{Name: testenv.UniqueName("recent")},
 			Spec: v1alpha1.NodeOperationSpec{
-				Type:     v1alpha1.NodeOperationDrain,
+				Type:     v1alpha1.NodeOperationTypeDrain,
 				NodeName: nodeName,
 			},
 		}
@@ -868,7 +868,7 @@ var _ = Describe("NodeConfig controller", func() {
 		Eventually(func(g Gomega) {
 			fresh := &v1alpha1.NodeOperation{}
 			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: op.Name}, fresh)).To(Succeed())
-			fresh.Status.Phase = v1alpha1.NodeOperationCompleted
+			fresh.Status.Phase = v1alpha1.NodeOperationPhaseCompleted
 			now := metav1.Now()
 			fresh.Status.FinishedAt = &now
 			g.Expect(k8sClient.Status().Update(ctx, fresh)).To(Succeed())
@@ -1219,7 +1219,7 @@ func approvals(ctx context.Context, g Gomega, nodeName string) []v1alpha1.NodeOp
 	g.Expect(k8sClient.List(ctx, ops)).To(Succeed())
 	var found []v1alpha1.NodeOperation
 	for i := range ops.Items {
-		if ops.Items[i].Spec.Type == v1alpha1.NodeOperationApproveDisruption && ops.Items[i].Spec.NodeName == nodeName {
+		if ops.Items[i].Spec.Type == v1alpha1.NodeOperationTypeApproveDisruption && ops.Items[i].Spec.NodeName == nodeName {
 			found = append(found, ops.Items[i])
 		}
 	}
@@ -1237,7 +1237,7 @@ func clampWarnings(ctx context.Context, g Gomega, ngName string) []string {
 	var messages []string
 	for i := range events.Items {
 		event := &events.Items[i]
-		if event.Reason == "SettingClamped" && event.InvolvedObject.Name == ngName {
+		if event.Reason == settingClampedEvent && event.InvolvedObject.Name == ngName {
 			messages = append(messages, event.Message)
 		}
 	}
@@ -1395,7 +1395,7 @@ func findDrainOf(ctx context.Context, g Gomega, parent string) *v1alpha1.NodeOpe
 	ops := &v1alpha1.NodeOperationList{}
 	g.Expect(k8sClient.List(ctx, ops)).To(Succeed())
 	for i := range ops.Items {
-		if ops.Items[i].Spec.Type != v1alpha1.NodeOperationDrain {
+		if ops.Items[i].Spec.Type != v1alpha1.NodeOperationTypeDrain {
 			continue
 		}
 		for _, owner := range ops.Items[i].OwnerReferences {
@@ -1415,7 +1415,7 @@ func findOperation(ctx context.Context, g Gomega, nodeName string) *v1alpha1.Nod
 	for i := range ops.Items {
 		// The child Drain names the same node; the caller is after the
 		// operation that asked for it.
-		if ops.Items[i].Spec.NodeName == nodeName && ops.Items[i].Spec.Type != v1alpha1.NodeOperationDrain {
+		if ops.Items[i].Spec.NodeName == nodeName && ops.Items[i].Spec.Type != v1alpha1.NodeOperationTypeDrain {
 			return &ops.Items[i]
 		}
 	}
