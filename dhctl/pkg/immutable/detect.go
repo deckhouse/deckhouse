@@ -16,73 +16,27 @@ package immutable
 
 import (
 	"context"
-	"fmt"
-	"regexp"
-	"strings"
 
-	dhctlyaml "github.com/deckhouse/lib-dhctl/pkg/yaml"
-	"sigs.k8s.io/yaml"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 )
 
-const (
-	// masterNodeGroupName is the NodeGroup the first control-plane node belongs to.
-	masterNodeGroupName = "master"
+// systemTypeImmutable mirrors the node-manager API. node-controller is a
+// separate Go module, so the constant is repeated here instead of imported.
+const systemTypeImmutable = "Immutable"
 
-	// nodeGroupKind and systemTypeImmutable mirror the node-manager API.
-	// node-controller is a separate Go module, so the two constants are
-	// repeated here instead of imported.
-	nodeGroupKind       = "NodeGroup"
-	systemTypeImmutable = "Immutable"
-)
-
-// masterNodeGroupHints identify a document that failed to parse as the master
-// NodeGroup, so a templated one is reported instead of silently ignored.
-var masterNodeGroupHints = []*regexp.Regexp{
-	regexp.MustCompile(`(?m)^\s*kind:\s*["']?NodeGroup["']?\s*$`),
-	regexp.MustCompile(`(?m)^\s*name:\s*["']?master["']?\s*$`),
-}
-
-// IsImmutableMaster reports whether the master NodeGroup in the resources
-// section asks for an immutable system. It runs before templating, so unparsable
-// docs are skipped — except a templated master NodeGroup, which is an error. Pure.
-func IsImmutableMaster(_ context.Context, resourcesYAML string) (bool, error) {
-	for _, doc := range dhctlyaml.SplitYAML(resourcesYAML) {
-		if strings.TrimSpace(doc) == "" {
-			continue
-		}
-
-		var parsed struct {
-			Kind     string `json:"kind"`
-			Metadata struct {
-				Name string `json:"name"`
-			} `json:"metadata"`
-			Spec struct {
-				SystemType string `json:"systemType"`
-			} `json:"spec"`
-		}
-
-		if err := yaml.Unmarshal([]byte(doc), &parsed); err != nil {
-			if !looksLikeMasterNodeGroup(doc) {
-				continue
-			}
-			return false, fmt.Errorf("parse master NodeGroup from the resources section (templating it is not supported: dhctl reads it before rendering): %w", err)
-		}
-
-		if parsed.Kind != nodeGroupKind || parsed.Metadata.Name != masterNodeGroupName {
-			continue
-		}
-
-		return parsed.Spec.SystemType == systemTypeImmutable, nil
+// IsImmutableMaster reports whether the master NodeGroup asks for an immutable
+// system. The resources section is already parsed into CloudProviderVars by
+// config.Prepare, which rejects a document it cannot read.
+func IsImmutableMaster(_ context.Context, metaConfig *config.MetaConfig) bool {
+	if metaConfig == nil || metaConfig.CloudProviderVars == nil {
+		return false
 	}
 
-	return false, nil
-}
+	master := metaConfig.CloudProviderVars.NodeGroups[global.MasterNodeGroupName]
+	systemType, _, _ := unstructured.NestedString(master, "spec", "systemType")
 
-func looksLikeMasterNodeGroup(doc string) bool {
-	for _, hint := range masterNodeGroupHints {
-		if !hint.MatchString(doc) {
-			return false
-		}
-	}
-	return true
+	return systemType == systemTypeImmutable
 }

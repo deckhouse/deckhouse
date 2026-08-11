@@ -27,6 +27,7 @@ import (
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 )
 
 const (
@@ -83,9 +84,8 @@ const (
 	// APIServerPort is where a control-plane node's own kube-apiserver listens.
 	APIServerPort = 6443
 
-	nodeGroupLabel = "node.deckhouse.io/group"
-	nodeTypeLabel  = "node.deckhouse.io/type"
-	cgroupLabel    = "node.deckhouse.io/cgroup"
+	nodeTypeLabel = "node.deckhouse.io/type"
+	cgroupLabel   = "node.deckhouse.io/cgroup"
 )
 
 // nodeConfigInput is everything buildNodeConfig needs.
@@ -198,7 +198,7 @@ func buildNodeConfig(ctx context.Context, in nodeConfigInput) (*nodeConfig, erro
 		Kind:       nodeConfigKind,
 		Metadata: objectMeta{
 			Name:   in.NodeName,
-			Labels: map[string]string{nodeGroupLabel: masterNodeGroupName},
+			Labels: map[string]string{global.NodeGroupLabel: global.MasterNodeGroupName},
 		},
 		Spec: spec,
 	}, nil
@@ -225,9 +225,9 @@ func nodeKubelet(metaConfig *config.MetaConfig, kubernetesVersion string, podsPe
 		// node-role.kubernetes.io/*, and a rejected registration means the node
 		// never joins. The role label and taint come later, from the node.
 		NodeLabels: map[string]string{
-			nodeGroupLabel: masterNodeGroupName,
-			nodeTypeLabel:  "CloudPermanent",
-			cgroupLabel:    "cgroup2fs", // olcedar's only layout; bashible probes it in 092_set_cgroup_type.sh.tpl
+			global.NodeGroupLabel: global.MasterNodeGroupName,
+			nodeTypeLabel:         "CloudPermanent",
+			cgroupLabel:           "cgroup2fs", // olcedar's only layout; bashible probes it in 092_set_cgroup_type.sh.tpl
 		},
 		// Nobody can approve a serving CSR until Deckhouse is installed, and
 		// kubelet blocks on it. bashible does the same on the first master
