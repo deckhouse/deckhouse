@@ -34,7 +34,7 @@ import (
 )
 
 const (
-	kubeSystemNS           = "kube-system"
+	kubeSystemNS = "kube-system"
 
 	// The kubernetes Service's EndpointSlice, the cluster's own record of where
 	// its apiservers answer. Named the same way node-controller names them.
