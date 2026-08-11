@@ -121,10 +121,7 @@ func Build(ctx context.Context, rest *rest.Config, ms metricsstorage.Storage, lo
 		return nil, fmt.Errorf("create runtime: %w", err)
 	}
 
-	// run the manager in the background
-	manager.Run()
-
-	settingsCh := make(chan addonutils.Values)
+	settingsCh := make(chan addonutils.Values, 1)
 
 	return &Controller{
 		ctrl: runtime,
@@ -247,6 +244,9 @@ func buildCacheByObject() map[client.Object]cache.ByObject {
 func (c *Controller) Start(ctx context.Context) error {
 	c.sync.Add(1)
 	defer c.sync.Done()
+
+	// run the manager in the background
+	c.manager.Run()
 
 	// starts all child controllers
 	go func() {

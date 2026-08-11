@@ -340,10 +340,15 @@ func (c *Controller) createModule(ctx context.Context, name string, place placem
 			return nil, fmt.Errorf("create module '%s': %w", name, err)
 		}
 
-		// something created the module between the list and this call; the next start moves it if it drifted
+		// something created the module between the list and this call, so converge it here: the
+		// bootstrap runs once, and an object left as the racing writer made it stays that way
 		module = new(v1alpha2.Module)
 		if err := c.ctrl.GetAPIReader().Get(ctx, client.ObjectKey{Name: name}, module); err != nil {
 			return nil, fmt.Errorf("get module '%s': %w", name, err)
+		}
+
+		if err := c.patchModule(ctx, module, place, conf); err != nil {
+			return nil, err
 		}
 	}
 
