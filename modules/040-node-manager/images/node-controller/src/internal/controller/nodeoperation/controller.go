@@ -130,9 +130,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	// A finished operation is history: kept for the record, never acted on
 	// again until old enough to collect. The node goes back to the scheduler —
-	// except after a Drain, which was asked for precisely to keep it out.
+	// except after a Drain that got what it asked for, which was to keep it out.
 	if terminal(op) {
-		if op.Spec.Type != v1alpha1.NodeOperationDrain {
+		// A Drain that failed gives its marker back like any other operation,
+		// or the draining controller evicts for one that has given up.
+		keptOut := op.Spec.Type == v1alpha1.NodeOperationDrain && op.Status.Phase == v1alpha1.NodeOperationCompleted
+		if !keptOut {
 			if err := r.releaseNode(ctx, op, logger); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -231,10 +234,24 @@ func (r *Reconciler) expire(ctx context.Context, op *v1alpha1.NodeOperation, dea
 // reconcileDrain carries a Drain operation: ask the draining controller to
 // empty the node, then wait for the answer it writes onto the node.
 func (r *Reconciler) reconcileDrain(ctx context.Context, op *v1alpha1.NodeOperation, node *corev1.Node, logger logr.Logger) (ctrl.Result, error) {
+	// The draining controller watches only nodes labelled with their group, so
+	// a request written here would sit unread until someone labels the node —
+	// and then evict for an operation that timed out long ago.
+	if _, inGroup := node.Labels[nodecommon.NodeGroupLabel]; !inGroup {
+		return ctrl.Result{}, r.fail(ctx, op, "NodeGroupMissing",
+			fmt.Sprintf("node %s has no %s label, so its workload cannot be evicted", node.Name, nodecommon.NodeGroupLabel), logger)
+	}
+
 	// The request is re-issued whenever the node carries no drain of this
 	// operation's: markers removed by anything else would otherwise be
 	// waited on forever. Asking again does not move the pinned deadline.
 	if !drainRequested(op) || idle(op, node) {
+		// The request is a single slot: taking it from whoever holds it makes
+		// both operations keep taking it back. Waiting is bounded by this
+		// operation's own deadline.
+		if requestedByAnother(op, node) {
+			return ctrl.Result{RequeueAfter: waitPollInterval}, nil
+		}
 		if err := r.startDrain(ctx, op, node, logger); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -544,6 +561,14 @@ func idle(op *v1alpha1.NodeOperation, node *corev1.Node) bool {
 	marker := drainMarker(op)
 	return node.Annotations[nodecommon.DrainingAnnotation] != marker &&
 		node.Annotations[nodecommon.DrainedAnnotation] != marker
+}
+
+// requestedByAnother reports that the node's one drain request already belongs
+// to somebody else. Presence decides, not the value: an empty value is the
+// mutable path's own request (see the draining controller).
+func requestedByAnother(op *v1alpha1.NodeOperation, node *corev1.Node) bool {
+	requested, ok := node.Annotations[nodecommon.DrainingAnnotation]
+	return ok && requested != drainMarker(op)
 }
 
 // recordDrainRequested remembers that the eviction has been asked for and, the

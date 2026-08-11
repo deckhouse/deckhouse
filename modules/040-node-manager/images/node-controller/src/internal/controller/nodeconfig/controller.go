@@ -267,7 +267,9 @@ func (r *Reconciler) reconcileAllNodes(ctx context.Context, logger logr.Logger) 
 	// Report each request's resolution back on its own status. This runs on the
 	// same all-nodes pass a NER change triggers, so editing a request refreshes
 	// both the nodes it targets and its status.
-	r.reconcileNERStatuses(ctx, logger)
+	if err := r.reconcileNERStatuses(ctx, logger); err != nil && firstErr == nil {
+		firstErr = err
+	}
 
 	return ctrl.Result{}, firstErr
 }
@@ -337,9 +339,9 @@ func (r *Reconciler) apply(ctx context.Context, ng *v1.NodeGroup, node *corev1.N
 	err := r.Client.Get(ctx, types.NamespacedName{Name: desired.Name}, existing)
 	if apierrors.IsNotFound(err) {
 		// A payload-provisioned node publishes its own NodeConfig; creating one
-		// here would lose the bootstrap-only fields. Test the group type, not the
-		// role label: NodeRestriction delays the label past registration.
-		if isControlPlaneNode(node) || ng.Spec.NodeType == v1.NodeTypeCloudPermanent {
+		// here would lose the bootstrap-only fields. Only a CloudEphemeral payload
+		// is rendered by this controller, so only it can be reproduced.
+		if isControlPlaneNode(node) || ng.Spec.NodeType != v1.NodeTypeCloudEphemeral {
 			logger.V(1).Info("waiting for the payload-provisioned node to publish its own NodeConfig", "node", desired.Name)
 			return nil, nil
 		}

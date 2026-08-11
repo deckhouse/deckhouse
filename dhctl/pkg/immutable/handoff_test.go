@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
@@ -194,9 +195,23 @@ users:
     token: secret
 `
 
-	out, err := RetargetKubeconfig(t.Context(), []byte(collected), "https://192.168.1.10:6443")
+	out, err := RetargetKubeconfig(t.Context(), []byte(collected), "https://192.168.1.10:6443", handoffTestNodeName)
 	require.NoError(t, err)
 	require.Contains(t, string(out), "server: https://192.168.1.10:6443")
 	require.NotContains(t, string(out), "6445")
 	require.Contains(t, string(out), "certificate-authority-data: dGVzdA==")
+
+	// The apiserver's certificate is issued before the VM exists: it covers the
+	// node's name, the node's own addresses and the operator's certSANs. The NAT
+	// address a cloud hands out as the master's public one is in none of them, so
+	// without the pinned name every call after the handoff fails the host check.
+	kubeconfig, err := clientcmd.Load(out)
+	require.NoError(t, err)
+	require.Equal(t, handoffTestNodeName, kubeconfig.Clusters["kubernetes"].TLSServerName,
+		"the dialled address is in no certificate; the node's name is in every one of them")
+
+	// Required rather than optional: an empty name silently puts the check back on
+	// the address, which is the failure this pins.
+	_, err = RetargetKubeconfig(t.Context(), []byte(collected), "https://192.168.1.10:6443", "")
+	require.Error(t, err)
 }

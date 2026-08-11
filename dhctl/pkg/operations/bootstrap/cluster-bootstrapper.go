@@ -428,6 +428,12 @@ func (b *ClusterBootstrapper) bootstrapLoadConfig(ctx context.Context, bctx *boo
 	// touches the infrastructure.
 	immutableMaster := immutable.IsImmutableMaster(ctx, metaConfig)
 	if immutableMaster {
+		// Refused here rather than by a preflight: preflights can be skipped, and
+		// the bootstrap this guards runs every phase to the end before dying on a
+		// master address a non-cloud cluster never reports.
+		if err := immutable.ValidateClusterType(ctx, metaConfig); err != nil {
+			return err
+		}
 		dhlog.FromContext(ctx).InfoContext(ctx, "Master NodeGroup asks for an immutable system: bootstrapping without SSH and bashible")
 	}
 

@@ -82,11 +82,15 @@ func resolvePath(path string) string {
 }
 
 // RetargetKubeconfig points the collected admin kubeconfig at the address dhctl
-// reaches the API server on (e.g. a bastion's local forward). The retargeted
-// copy is internal; the operator's copy keeps the node's address. Pure.
-func RetargetKubeconfig(_ context.Context, content []byte, server string) ([]byte, error) {
+// reaches the API server on (e.g. a bastion's local forward) and at the name its
+// certificate is issued for. The retargeted copy is internal; the operator's copy
+// keeps the node's address. Pure.
+func RetargetKubeconfig(_ context.Context, content []byte, server, serverName string) ([]byte, error) {
 	if server == "" {
 		return nil, errors.New("retarget the admin kubeconfig: server URL is empty")
+	}
+	if serverName == "" {
+		return nil, errors.New("retarget the admin kubeconfig: server name is empty")
 	}
 
 	kubeconfig, err := clientcmd.Load(content)
@@ -99,6 +103,10 @@ func RetargetKubeconfig(_ context.Context, content []byte, server string) ([]byt
 
 	for _, cluster := range kubeconfig.Clusters {
 		cluster.Server = server
+		// The node's apiserver certificate covers its own addresses, 127.0.0.1 and
+		// the operator's certSANs — all of them chosen before the VM existed, so a
+		// NAT address dhctl dials is in none of them. The node name always is.
+		cluster.TLSServerName = serverName
 	}
 
 	out, err := clientcmd.Write(*kubeconfig)
