@@ -560,9 +560,12 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 
 	// check if RegistrySpecChanged annotation is set process it
 	if _, set := release.GetAnnotations()[v1alpha1.ModuleReleaseAnnotationRegistrySpecChanged]; set {
-		// if module is enabled - push runModule task in the main queue
-		r.log.Info("apply new registry settings to module", slog.String("module", release.GetModuleName()))
-		if module := r.moduleManager.GetModule(release.GetModuleName()); module != nil {
+		// the embedded copy renders images from the platform registry, so the source registry must not reach its values
+		if r.installer.IsEmbeddedPresent(release.GetModuleName()) {
+			r.log.Info("module is still embedded, skip new registry settings", slog.String("module", release.GetModuleName()))
+		} else if module := r.moduleManager.GetModule(release.GetModuleName()); module != nil {
+			// if module is enabled - push runModule task in the main queue
+			r.log.Info("apply new registry settings to module", slog.String("module", release.GetModuleName()))
 			module.InjectRegistryValue(utils.BuildRegistryValue(source))
 
 			// run module with new registry value
