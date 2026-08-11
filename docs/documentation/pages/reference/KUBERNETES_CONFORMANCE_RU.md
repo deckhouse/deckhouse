@@ -6,7 +6,7 @@ lang: ru
 search: kubernetes conformance, cncf conformance, sonobuoy, e2e-тесты, junit, тесты на совместимость
 ---
 
-Deckhouse Kubernetes Platform тестируется на соответствие требованиям CNCF Kubernetes conformance. Для каждой указанной ниже минорной версии Kubernetes тесты запускаются с помощью Sonobuoy в режиме `certified-conformance`.
+Deckhouse Kubernetes Platform тестируется на соответствие набору Kubernetes conformance-тестов программы CNCF Certified Kubernetes Conformance Program. Для каждой указанной ниже минорной версии Kubernetes тесты запускаются с помощью Sonobuoy в режиме `certified-conformance`.
 
 ## Результаты тестирования
 
