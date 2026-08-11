@@ -538,8 +538,9 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 		assert.Contains(t, resp.Result.Message, "must be a string")
 	})
 
-	// availableVersions is bounded at both ends; a version above the whole list is not a downgrade,
-	// and the downgrade wording sent operators looking for the wrong problem.
+	// availableVersions is bounded at both ends, so a miss is not necessarily a downgrade: a version
+	// above the whole list lands here too. The message must not call that a downgrade — it prints
+	// the list instead, which shows the operator on which side of the range the value fell.
 	t.Run("a too-new version is not reported as a downgrade", func(t *testing.T) {
 		handler := withObjs(t, newClusterKubernetesConfigMap(defaultAvailable))
 
@@ -550,7 +551,9 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 		resp := callHandler(t, handler, review)
 		require.False(t, resp.Allowed)
 		require.NotNil(t, resp.Result)
-		assert.Contains(t, resp.Result.Message, "newer than any version")
+		assert.Contains(t, resp.Result.Message, "1.99")
+		assert.Contains(t, resp.Result.Message, "availableVersions")
+		assert.NotContains(t, strings.ToLower(resp.Result.Message), "downgrad")
 		assert.NotContains(t, resp.Result.Message, "downgrading more than one minor")
 	})
 

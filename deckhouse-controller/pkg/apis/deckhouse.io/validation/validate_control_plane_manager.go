@@ -33,6 +33,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/040-control-plane-manager/hooks"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -214,27 +215,18 @@ func (v *moduleConfigValidator) validateControlPlaneManagerKubernetesVersion(
 	}
 
 	if !slices.Contains(available, effective) {
-		// availableVersions is bounded on both ends, so a miss is not necessarily a downgrade:
-		// a version newer than everything the release offers lands here too, and telling that
-		// operator about "downgrading more than one minor" sends them looking for the wrong thing.
-		reason := "downgrading more than one minor below the highest version the cluster has ever run is forbidden"
-		if aboveEveryVersion(effective, available) {
-			reason = "that version is newer than any version this Deckhouse release supports"
+		// availableVersions is bounded on both ends, so a miss is not necessarily a downgrade — a
+		// version newer than everything the release offers lands here too. The list is printed in
+		// full for exactly that reason: it shows the operator on which side of the range the value
+		// fell, without this code having to guess and word it.
+		subject := fmt.Sprintf("kubernetesVersion %q", effective)
+		if fromFallback {
+			subject = fmt.Sprintf(
+				"clearing or deleting the ModuleConfig kubernetesVersion override would fall back to "+
+					"ClusterConfiguration.kubernetesVersion %q, which", effective)
 		}
 
-		msg := ""
-		if fromFallback {
-			msg = fmt.Sprintf(
-				"clearing or deleting the ModuleConfig kubernetesVersion override would fall back to "+
-					"ClusterConfiguration.kubernetesVersion %q, which is not in the cluster's availableVersions %v; %s",
-				effective, available, reason,
-			)
-		} else {
-			msg = fmt.Sprintf(
-				"kubernetesVersion %q is not in the cluster's availableVersions %v; %s",
-				effective, available, reason,
-			)
-		}
+		msg := fmt.Sprintf("%s is not in the cluster's availableVersions %v", subject, available)
 		// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
 		log.Info("E2E-KV admission",
 			"decision", "reject",
@@ -269,7 +261,7 @@ func (v *moduleConfigValidator) validateControlPlaneManagerKubernetesVersion(
 func rejectKubernetesVersionBelowMaxUsed(
 	effective string, fromFallback bool, facts kubernetesVersionBaseline,
 ) (*kwhvalidating.ValidatorResult, error) {
-	if !facts.MaxUsedSet || facts.MaxUsed == "" {
+	if facts.MaxUsed == "" {
 		return nil, nil
 	}
 	floor := facts.MaxUsed
@@ -289,7 +281,7 @@ func rejectKubernetesVersionBelowMaxUsed(
 		return nil, nil
 	}
 
-	if !kubernetesVersionBelowFloor(target, maxUsed) {
+	if !hooks.KubernetesVersionBelowFloor(target, maxUsed) {
 		return nil, nil
 	}
 
@@ -327,26 +319,6 @@ func moduleConfigOwnsKubernetesVersion(ctx context.Context, cli client.Client) b
 	// its own webhook rejects it, and ClusterConfiguration must not silently take over meanwhile.
 	version, isString := settingsKubernetesVersion(rawModuleConfigSettings(cfg))
 	return version != "" || !isString
-}
-
-// aboveEveryVersion reports whether target is higher than every entry in available. Unparsable
-// input answers false: the caller only uses this to pick a message, and the generic downgrade
-// wording is the safer guess.
-func aboveEveryVersion(target string, available []string) bool {
-	targetV, err := parseVersion(target)
-	if err != nil {
-		return false
-	}
-	for _, raw := range available {
-		v, err := parseVersion(raw)
-		if err != nil {
-			return false
-		}
-		if !targetV.GreaterThan(v) {
-			return false
-		}
-	}
-	return len(available) > 0
 }
 
 // settingsKubernetesVersion returns the kubernetesVersion setting. ok=false means the key is

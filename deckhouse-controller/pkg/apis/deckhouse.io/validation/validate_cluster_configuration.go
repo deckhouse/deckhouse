@@ -228,28 +228,6 @@ func parseVersion(version string) (*semver.Version, error) {
 	return semver.NewVersion(version)
 }
 
-// kubernetesVersionBelowFloor reports whether target lands more than one minor below floor —
-// the single "how far down may we go" rule, shared by the ClusterConfiguration downgrade check
-// (minorSubCheck, where the floor is the previous/maxUsed version) and the ModuleConfig guard
-// (rejectKubernetesVersionBelowMaxUsed, where the floor is maxUsed).
-//
-// Neutral (bool) rather than a ValidatorResult on purpose: the two webhooks use opposite result
-// conventions — the ClusterConfiguration chain returns a non-nil allowResult for "allowed", while
-// validateCommon treats (nil, nil) as "allowed" — so each caller wraps this in its own.
-//
-// The minor comparison is written as an addition on target so the uint64 minor never underflows
-// on a 1.0-style version.
-func kubernetesVersionBelowFloor(target, floor *semver.Version) bool {
-	switch {
-	case target.Major() > floor.Major():
-		return false
-	case target.Major() == floor.Major() && target.Minor()+1 >= floor.Minor():
-		return false
-	default:
-		return true
-	}
-}
-
 // TODO(kubernetesVersion-deprecation): T+1 remove — drop CC kubernetesVersion validation path; MC webhook remains the only guard.
 // NOTE(kubernetesVersion-deprecation): keep — Secret maxUsed/default baseline keys survive CC field removal.
 //
@@ -258,13 +236,12 @@ func kubernetesVersionBelowFloor(target, floor *semver.Version) bool {
 // control-plane-manager effective_kubernetes_version.go hook), not ClusterConfiguration fields.
 type kubernetesVersionBaseline struct {
 	// MaxUsed is the highest version the cluster has ever converged onto
-	// (maxUsedControlPlaneKubernetesVersion).
-	MaxUsed    string
-	MaxUsedSet bool
+	// (maxUsedControlPlaneKubernetesVersion). Empty means "not recorded anywhere": every writer
+	// below trims the value and stores it only when non-empty, so "" is the single unset marker.
+	MaxUsed string
 	// DeckhouseDefault is the version "Automatic" currently resolves to
-	// (deckhouseDefaultKubernetesVersion).
-	DeckhouseDefault    string
-	DeckhouseDefaultSet bool
+	// (deckhouseDefaultKubernetesVersion). Empty means unset, same convention as MaxUsed.
+	DeckhouseDefault string
 	// AvailableVersions is status.availableVersions, the set update-observer publishes as
 	// Supported[maxUsed-1:]. Only the ConfigMap ever carried it, so it stays empty when that object
 	// is missing — there is no Secret key to fall back to. Carried on the baseline so the
@@ -282,16 +259,13 @@ func kubernetesVersionBaselineFromSecret(secret *v1.Secret) kubernetesVersionBas
 		return kubernetesVersionBaseline{}
 	}
 
-	// A present-but-empty key counts as unset. The *Set flags gate a parseVersion call whose
-	// failure is fatal to the whole webhook, so treating "" as a value would turn a blank key into
-	// a fail-closed ClusterConfiguration — no edit of any field would be accepted.
-	maxUsed := strings.TrimSpace(string(secret.Data["maxUsedControlPlaneKubernetesVersion"]))
-	deckhouseDefault := strings.TrimSpace(string(secret.Data["deckhouseDefaultKubernetesVersion"]))
+	// Trimmed, so a present-but-empty key becomes "" and counts as unset. That matters: the
+	// callers gate a parseVersion call whose failure is fatal to the whole webhook, so treating a
+	// blank key as a value would turn it into a fail-closed ClusterConfiguration — no edit of any
+	// field would be accepted.
 	return kubernetesVersionBaseline{
-		MaxUsed:             maxUsed,
-		MaxUsedSet:          maxUsed != "",
-		DeckhouseDefault:    deckhouseDefault,
-		DeckhouseDefaultSet: deckhouseDefault != "",
+		MaxUsed:          strings.TrimSpace(string(secret.Data["maxUsedControlPlaneKubernetesVersion"])),
+		DeckhouseDefault: strings.TrimSpace(string(secret.Data["deckhouseDefaultKubernetesVersion"])),
 	}
 }
 
@@ -324,7 +298,7 @@ func kubernetesVersionBaselineFor(ctx context.Context, cli client.Client, secret
 	if err := yaml.Unmarshal([]byte(cm.Data[clusterKubernetesSpecDataKey]), spec); err != nil {
 		log.Warn("cannot parse d8-cluster-kubernetes data.spec, keeping the Secret baseline", log.Err(err))
 	} else if maxUsed := strings.TrimSpace(spec.MaxUsedVersion); maxUsed != "" {
-		baseline.MaxUsed, baseline.MaxUsedSet = maxUsed, true
+		baseline.MaxUsed = maxUsed
 	}
 
 	status := new(clusterKubernetesStatus)
@@ -332,7 +306,7 @@ func kubernetesVersionBaselineFor(ctx context.Context, cli client.Client, secret
 		log.Warn("cannot parse d8-cluster-kubernetes data.status, keeping the Secret baseline", log.Err(err))
 	} else {
 		if automaticVersion := strings.TrimSpace(status.AutomaticVersion); automaticVersion != "" {
-			baseline.DeckhouseDefault, baseline.DeckhouseDefaultSet = automaticVersion, true
+			baseline.DeckhouseDefault = automaticVersion
 		}
 		baseline.AvailableVersions = status.AvailableVersions
 	}
@@ -380,7 +354,7 @@ func validateKubernetesVersionDowngrade(oldVersion, newVersion string, baseline 
 	// minorSubCheck validates that downgrade does not exceed 1 minor version.
 	// It allows upgrade without restrictions and only checks downgrade scenarios.
 	var minorSubCheck = func(oldVersionSemver, newVersionSemver *semver.Version) (*kwhvalidating.ValidatorResult, error) {
-		if !kubernetesVersionBelowFloor(newVersionSemver, oldVersionSemver) {
+		if !hooks.KubernetesVersionBelowFloor(newVersionSemver, oldVersionSemver) {
 			return allowResult(nil)
 		}
 
@@ -410,7 +384,7 @@ func validateKubernetesVersionDowngrade(oldVersion, newVersion string, baseline 
 	selectedChecker = minorSubCheck
 
 	var maxUsedVersionSemver *semver.Version
-	if baseline.MaxUsedSet {
+	if baseline.MaxUsed != "" {
 		var err error
 		maxUsedVersionSemver, err = parseVersion(baseline.MaxUsed)
 
@@ -444,7 +418,7 @@ func validateKubernetesVersionDowngrade(oldVersion, newVersion string, baseline 
 		// Corner case: If deckhouseDefaultKubernetesVersion is not available,
 		// we cannot determine what Automatic will resolve to, so we allow the change.
 		// This can happen during initial cluster setup or if the source is incomplete.
-		if !baseline.DeckhouseDefaultSet {
+		if baseline.DeckhouseDefault == "" {
 			return allowResult(nil)
 		}
 

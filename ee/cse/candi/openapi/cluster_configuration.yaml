@@ -13,8 +13,6 @@ apiVersions:
 
       Defines, for example, network and CRI parameters. Some parameters can be changed after the cluster is bootstrapped, during its operation.
 
-      The Kubernetes control plane version is managed via the [`kubernetesVersion`](https://deckhouse.io/modules/control-plane-manager/configuration.html#parameters-kubernetesversion) setting of ModuleConfig `control-plane-manager`, not via this resource.
-
       To change the `ClusterConfiguration` resource in a running cluster, run the following command:
 
       ```shell

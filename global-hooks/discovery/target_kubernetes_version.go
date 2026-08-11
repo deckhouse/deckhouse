@@ -502,12 +502,7 @@ func kubernetesVersionInMaxUsedWindow(target, maxUsed string) (bool, error) {
 		return false, err
 	}
 
-	switch {
-	case targetV.Major() > maxUsedV.Major():
-		return true, nil
-	case targetV.Major() == maxUsedV.Major() && targetV.Minor()+1 >= maxUsedV.Minor():
-		return true, nil
-	default:
-		return false, nil
-	}
+	// The rule itself lives in control-plane-manager/hooks so this guard and admission cannot drift
+	// apart: if they disagree, admission accepts a pin the resolver immediately freezes away from.
+	return !hooks.KubernetesVersionBelowFloor(targetV, maxUsedV), nil
 }

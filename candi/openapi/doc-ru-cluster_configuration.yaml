@@ -12,8 +12,6 @@ apiVersions:
 
       Определяют, например, сетевые параметры, параметры CRI и т. д. Некоторые параметры можно изменять после развертывания кластера, во время его работы.
 
-      Версия control plane Kubernetes управляется настройкой [`kubernetesVersion`](https://deckhouse.ru/modules/control-plane-manager/configuration.html#parameters-kubernetesversion) ModuleConfig `control-plane-manager`, а не этим ресурсом.
-
       Чтобы изменить содержимое ресурса `ClusterConfiguration` в работающем кластере, выполните следующую команду:
 
       ```shell
