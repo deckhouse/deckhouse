@@ -97,7 +97,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(d8_istio_config_analysis_issue{revision=~\"$revision\",namespace=~\"$namespace\",severity=~\"$severity\",type=~\"$type\"}) or on() vector(0)",
+          "expr": "sum(d8_istio_config_analysis_issue{source=\"deckhouse\", revision=~\"$revision\",namespace=~\"$namespace\",severity=~\"$severity\",type=~\"$type\"}) or on() vector(0)",
           "instant": true,
           "legendFormat": "issues",
           "refId": "A"
@@ -164,7 +164,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(d8_istio_config_analysis_issue{revision=~\"$revision\",namespace=~\"$namespace\",severity=\"Error\",type=~\"$type\"}) or on() vector(0)",
+          "expr": "sum(d8_istio_config_analysis_issue{source=\"deckhouse\", revision=~\"$revision\",namespace=~\"$namespace\",severity=\"Error\",type=~\"$type\"}) or on() vector(0)",
           "instant": true,
           "legendFormat": "errors",
           "refId": "A"
@@ -231,7 +231,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(d8_istio_config_analysis_issue{revision=~\"$revision\",namespace=~\"$namespace\",severity=\"Warning\",type=~\"$type\"}) or on() vector(0)",
+          "expr": "sum(d8_istio_config_analysis_issue{source=\"deckhouse\", revision=~\"$revision\",namespace=~\"$namespace\",severity=\"Warning\",type=~\"$type\"}) or on() vector(0)",
           "instant": true,
           "legendFormat": "warnings",
           "refId": "A"
@@ -302,7 +302,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "time() - max(d8_istio_config_analysis_last_run_timestamp_seconds)",
+          "expr": "time() - max(d8_istio_config_analysis_last_run_timestamp_seconds{source=\"deckhouse\"})",
           "instant": true,
           "legendFormat": "age",
           "refId": "A"
@@ -369,7 +369,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(increase(d8_istio_config_analysis_run_errors_total[$__range])) or on() vector(0)",
+          "expr": "sum(increase(d8_istio_config_analysis_run_errors_total{source=\"deckhouse\"}[$__range])) or on() vector(0)",
           "instant": true,
           "legendFormat": "errors",
           "refId": "A"
@@ -477,7 +477,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (type) (d8_istio_config_analysis_issue{revision=~\"$revision\",namespace=~\"$namespace\",severity=~\"$severity\",type=~\"$type\"})",
+          "expr": "sum by (type) (d8_istio_config_analysis_issue{source=\"deckhouse\", revision=~\"$revision\",namespace=~\"$namespace\",severity=~\"$severity\",type=~\"$type\"})",
           "legendFormat": "{{type}}",
           "range": true,
           "refId": "A"
@@ -618,7 +618,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (severity) (d8_istio_config_analysis_issue{revision=~\"$revision\",namespace=~\"$namespace\",severity=~\"$severity\",type=~\"$type\"})",
+          "expr": "sum by (severity) (d8_istio_config_analysis_issue{source=\"deckhouse\", revision=~\"$revision\",namespace=~\"$namespace\",severity=~\"$severity\",type=~\"$type\"})",
           "legendFormat": "{{severity}}",
           "range": true,
           "refId": "A"
@@ -706,7 +706,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum by (type) (d8_istio_config_analysis_issue{revision=~\"$revision\",namespace=~\"$namespace\",severity=~\"$severity\",type=~\"$type\"})",
+          "expr": "sum by (type) (d8_istio_config_analysis_issue{source=\"deckhouse\", revision=~\"$revision\",namespace=~\"$namespace\",severity=~\"$severity\",type=~\"$type\"})",
           "instant": true,
           "legendFormat": "{{type}}",
           "refId": "A"
@@ -781,7 +781,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "topk(20, sum by (namespace) (d8_istio_config_analysis_issue{revision=~\"$revision\",namespace=~\"$namespace\",severity=~\"$severity\",type=~\"$type\"}))",
+          "expr": "topk(20, sum by (namespace) (d8_istio_config_analysis_issue{source=\"deckhouse\", revision=~\"$revision\",namespace=~\"$namespace\",severity=~\"$severity\",type=~\"$type\"}))",
           "instant": true,
           "legendFormat": "{{namespace}}",
           "refId": "A"
@@ -884,7 +884,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum by (namespace) (d8_istio_config_analysis_issue{revision=~\"$revision\",namespace=~\"$namespace\",severity=~\"$severity\",type=~\"$type\"})",
+          "expr": "sum by (namespace) (d8_istio_config_analysis_issue{source=\"deckhouse\", revision=~\"$revision\",namespace=~\"$namespace\",severity=~\"$severity\",type=~\"$type\"})",
           "format": "table",
           "instant": true,
           "refId": "A"
@@ -1077,7 +1077,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "d8_istio_config_analysis_issue{revision=~\"$revision\",namespace=~\"$namespace\",severity=~\"$severity\",type=~\"$type\"} > 0",
+          "expr": "d8_istio_config_analysis_issue{source=\"deckhouse\", revision=~\"$revision\",namespace=~\"$namespace\",severity=~\"$severity\",type=~\"$type\"} > 0",
           "format": "table",
           "instant": true,
           "refId": "A"
@@ -1155,7 +1155,7 @@
           "type": "prometheus",
           "uid": "$ds_prometheus"
         },
-        "definition": "label_values(d8_istio_config_analysis_issue, revision)",
+        "definition": "label_values(d8_istio_config_analysis_issue{source=\"deckhouse\"}, revision)",
         "hide": 0,
         "includeAll": true,
         "label": "Revision",
@@ -1163,7 +1163,7 @@
         "name": "revision",
         "options": [],
         "query": {
-          "query": "label_values(d8_istio_config_analysis_issue, revision)",
+          "query": "label_values(d8_istio_config_analysis_issue{source=\"deckhouse\"}, revision)",
           "refId": "var-revision"
         },
         "refresh": 2,
@@ -1179,7 +1179,7 @@
           "type": "prometheus",
           "uid": "$ds_prometheus"
         },
-        "definition": "label_values(d8_istio_config_analysis_issue{revision=~\"$revision\"}, namespace)",
+        "definition": "label_values(d8_istio_config_analysis_issue{source=\"deckhouse\", revision=~\"$revision\"}, namespace)",
         "hide": 0,
         "includeAll": true,
         "label": "Namespace",
@@ -1187,7 +1187,7 @@
         "name": "namespace",
         "options": [],
         "query": {
-          "query": "label_values(d8_istio_config_analysis_issue{revision=~\"$revision\"}, namespace)",
+          "query": "label_values(d8_istio_config_analysis_issue{source=\"deckhouse\", revision=~\"$revision\"}, namespace)",
           "refId": "var-namespace"
         },
         "refresh": 2,
@@ -1203,7 +1203,7 @@
           "type": "prometheus",
           "uid": "$ds_prometheus"
         },
-        "definition": "label_values(d8_istio_config_analysis_issue{revision=~\"$revision\"}, severity)",
+        "definition": "label_values(d8_istio_config_analysis_issue{source=\"deckhouse\", revision=~\"$revision\"}, severity)",
         "hide": 0,
         "includeAll": true,
         "label": "Severity",
@@ -1211,7 +1211,7 @@
         "name": "severity",
         "options": [],
         "query": {
-          "query": "label_values(d8_istio_config_analysis_issue{revision=~\"$revision\"}, severity)",
+          "query": "label_values(d8_istio_config_analysis_issue{source=\"deckhouse\", revision=~\"$revision\"}, severity)",
           "refId": "var-severity"
         },
         "refresh": 2,
@@ -1227,7 +1227,7 @@
           "type": "prometheus",
           "uid": "$ds_prometheus"
         },
-        "definition": "label_values(d8_istio_config_analysis_issue{revision=~\"$revision\",namespace=~\"$namespace\",severity=~\"$severity\"}, type)",
+        "definition": "label_values(d8_istio_config_analysis_issue{source=\"deckhouse\", revision=~\"$revision\",namespace=~\"$namespace\",severity=~\"$severity\"}, type)",
         "hide": 0,
         "includeAll": true,
         "label": "Type",
@@ -1235,7 +1235,7 @@
         "name": "type",
         "options": [],
         "query": {
-          "query": "label_values(d8_istio_config_analysis_issue{revision=~\"$revision\",namespace=~\"$namespace\",severity=~\"$severity\"}, type)",
+          "query": "label_values(d8_istio_config_analysis_issue{source=\"deckhouse\", revision=~\"$revision\",namespace=~\"$namespace\",severity=~\"$severity\"}, type)",
           "refId": "var-type"
         },
         "refresh": 2,

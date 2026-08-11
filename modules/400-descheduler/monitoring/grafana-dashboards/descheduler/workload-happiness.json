@@ -25,7 +25,7 @@
           "uid": "$ds_prometheus"
         },
         "query": {
-          "query": "label_values(descheduler_pod_evictions_total{job=\"descheduler\"}, profile)",
+          "query": "label_values(descheduler_pod_evictions_total{source=\"deckhouse\", job=\"descheduler\"}, profile)",
           "refId": "var-profile"
         },
         "refresh": 2,
@@ -42,7 +42,7 @@
           "uid": "$ds_prometheus"
         },
         "query": {
-          "query": "label_values(descheduler_pod_evictions_total{job=\"descheduler\"}, strategy)",
+          "query": "label_values(descheduler_pod_evictions_total{source=\"deckhouse\", job=\"descheduler\"}, strategy)",
           "refId": "var-strategy"
         },
         "refresh": 2,
@@ -76,7 +76,7 @@
           "uid": "$ds_prometheus"
         },
         "query": {
-          "query": "label_values(kube_pod_info, node)",
+          "query": "label_values(kube_pod_info{source=\"deckhouse\"}, node)",
           "refId": "var-node"
         },
         "refresh": 2,
@@ -97,7 +97,7 @@
         },
         "enable": false,
         "iconColor": "blue",
-        "expr": "sum(increase(descheduler_loop_duration_seconds_count{job=\"descheduler\"}[$__rate_interval])) > 0",
+        "expr": "sum(increase(descheduler_loop_duration_seconds_count{source=\"deckhouse\", job=\"descheduler\"}[$__rate_interval])) > 0",
         "titleFormat": "descheduler cycle"
       }
     ]
@@ -319,7 +319,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(increase(descheduler_pod_evictions_total{job=\"descheduler\", profile=~\"$profile\", strategy=~\"$strategy\"}[$__range]))",
+          "expr": "sum(increase(descheduler_pod_evictions_total{source=\"deckhouse\", job=\"descheduler\", profile=~\"$profile\", strategy=~\"$strategy\"}[$__range]))",
           "instant": true
         }
       ],
@@ -1084,19 +1084,19 @@
         },
         {
           "refId": "G",
-          "expr": "sum by (node)(increase(descheduler_pod_evictions_total{job=\"descheduler\", node=~\"$node\"}[$__range]))",
+          "expr": "sum by (node)(increase(descheduler_pod_evictions_total{source=\"deckhouse\", job=\"descheduler\", node=~\"$node\"}[$__range]))",
           "format": "table",
           "instant": true
         },
         {
           "refId": "H",
-          "expr": "sum by (node)(increase(descheduler_pod_evictions_total{job=\"descheduler\", node=~\"$node\", result=~\"error|blocked\"}[$__range]))",
+          "expr": "sum by (node)(increase(descheduler_pod_evictions_total{source=\"deckhouse\", job=\"descheduler\", node=~\"$node\", result=~\"error|blocked\"}[$__range]))",
           "format": "table",
           "instant": true
         },
         {
           "refId": "I",
-          "expr": "count by (node) (kube_node_status_condition{job=\"kube-state-metrics\", condition=~\"MemoryPressure|DiskPressure|PIDPressure\", status=\"true\"} == 1)",
+          "expr": "count by (node) (kube_node_status_condition{source=\"deckhouse\", job=\"kube-state-metrics\", condition=~\"MemoryPressure|DiskPressure|PIDPressure\", status=\"true\"} == 1)",
           "format": "table",
           "instant": true
         }
@@ -1213,7 +1213,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (result)(increase(descheduler_pod_evictions_total{job=\"descheduler\", profile=~\"$profile\", strategy=~\"$strategy\"}[$__rate_interval]))",
+          "expr": "sum by (result)(increase(descheduler_pod_evictions_total{source=\"deckhouse\", job=\"descheduler\", profile=~\"$profile\", strategy=~\"$strategy\"}[$__rate_interval]))",
           "legendFormat": "{{result}}"
         }
       ],
@@ -1254,7 +1254,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (strategy)(increase(descheduler_pod_evictions_total{job=\"descheduler\", profile=~\"$profile\", strategy=~\"$strategy\"}[$__rate_interval]))",
+          "expr": "sum by (strategy)(increase(descheduler_pod_evictions_total{source=\"deckhouse\", job=\"descheduler\", profile=~\"$profile\", strategy=~\"$strategy\"}[$__rate_interval]))",
           "legendFormat": "{{strategy}}"
         }
       ],
@@ -1288,7 +1288,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (profile)(increase(descheduler_pod_evictions_total{job=\"descheduler\", profile=~\"$profile\", strategy=~\"$strategy\"}[$__rate_interval]))",
+          "expr": "sum by (profile)(increase(descheduler_pod_evictions_total{source=\"deckhouse\", job=\"descheduler\", profile=~\"$profile\", strategy=~\"$strategy\"}[$__rate_interval]))",
           "legendFormat": "{{profile}}"
         }
       ],
@@ -1322,7 +1322,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (namespace)(increase(descheduler_pod_evictions_total{job=\"descheduler\", namespace=~\"$namespace\", profile=~\"$profile\", strategy=~\"$strategy\"}[$__rate_interval]))",
+          "expr": "sum by (namespace)(increase(descheduler_pod_evictions_total{source=\"deckhouse\", job=\"descheduler\", namespace=~\"$namespace\", profile=~\"$profile\", strategy=~\"$strategy\"}[$__rate_interval]))",
           "legendFormat": "{{namespace}}"
         }
       ],
@@ -1356,7 +1356,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (node)(increase(descheduler_pod_evictions_total{job=\"descheduler\", node=~\"$node\", profile=~\"$profile\", strategy=~\"$strategy\"}[$__rate_interval]))",
+          "expr": "sum by (node)(increase(descheduler_pod_evictions_total{source=\"deckhouse\", job=\"descheduler\", node=~\"$node\", profile=~\"$profile\", strategy=~\"$strategy\"}[$__rate_interval]))",
           "legendFormat": "{{node}}"
         }
       ],
@@ -1390,7 +1390,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (strategy, profile)(increase(descheduler_strategy_duration_seconds_sum{job=\"descheduler\"}[15m])) / sum by (strategy, profile)(increase(descheduler_strategy_duration_seconds_count{job=\"descheduler\"}[15m]))",
+          "expr": "sum by (strategy, profile)(increase(descheduler_strategy_duration_seconds_sum{source=\"deckhouse\", job=\"descheduler\"}[15m])) / sum by (strategy, profile)(increase(descheduler_strategy_duration_seconds_count{source=\"deckhouse\", job=\"descheduler\"}[15m]))",
           "legendFormat": "{{profile}}/{{strategy}}"
         }
       ],
@@ -1482,12 +1482,12 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "round(sum by (result)(increase(descheduler_pod_evictions_total{job=\"descheduler\"}[$__interval])))",
+          "expr": "round(sum by (result)(increase(descheduler_pod_evictions_total{source=\"deckhouse\", job=\"descheduler\"}[$__interval])))",
           "legendFormat": "evictions {{result}}"
         },
         {
           "refId": "B",
-          "expr": "round(sum(increase(klog_pod_oomkill[$__interval])))",
+          "expr": "round(sum(increase(klog_pod_oomkill{source=\"deckhouse\"}[$__interval])))",
           "legendFormat": "oom kills"
         },
         {
@@ -1497,7 +1497,7 @@
         },
         {
           "refId": "D",
-          "expr": "count(max by (node)(kube_node_status_condition{condition=~\"MemoryPressure|DiskPressure|PIDPressure\", status=\"true\"} == 1)) or vector(0)",
+          "expr": "count(max by (node)(kube_node_status_condition{source=\"deckhouse\", condition=~\"MemoryPressure|DiskPressure|PIDPressure\", status=\"true\"} == 1)) or vector(0)",
           "legendFormat": "nodes under pressure"
         }
       ],
