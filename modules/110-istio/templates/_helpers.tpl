@@ -45,6 +45,14 @@
   {{- end -}}
 {{- end -}}
 
+{{- define "istioSupportsPeerCaCrl" -}}
+  {{- $version := $.Values.istio.internal.globalVersion -}}
+  {{- $versionInfo := get .Values.istio.internal.versionMap $version -}}
+  {{- if get $versionInfo "supportsPeerCaCrl" -}}
+    true
+  {{- end -}}
+{{- end -}}
+
 {{- define "istioTracingProvider" -}}
   {{- $otel := $.Values.istio.tracing.collector.opentelemetry | default dict -}}
   {{- $zipkin := $.Values.istio.tracing.collector.zipkin | default dict -}}

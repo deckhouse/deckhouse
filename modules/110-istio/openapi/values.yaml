@@ -16,7 +16,7 @@ properties:
         type: object
         default: {}
         x-examples:
-          - {"1.25": { "fullVersion": "1.25.2", "revision": "1x25", "imageSuffix": "V1x25x2", "isReady": false, "supportsAmbient": false, "supportsOperator": true } } # must be real
+          - {"1.25": { "fullVersion": "1.25.2", "revision": "1x25", "imageSuffix": "V1x25x2", "isReady": false, "supportsAmbient": false, "supportsOperator": true, "supportsPeerCaCrl": false } } # must be real
         additionalProperties:
           type: object
           properties:
@@ -38,6 +38,9 @@ properties:
             supportsOperator:
               type: boolean
               x-examples: [true]
+            supportsPeerCaCrl:
+              type: boolean
+              x-examples: [false]
       kialiSigningKey:
         type: string
         x-examples:
@@ -80,6 +83,9 @@ properties:
               re-resolution may keep the last-good CA (only when the marker matches the current
               secretRef).
             x-examples: ["secretRef:my-pki/my-istio-ca"]
+          crl:
+            type: string
+            x-examples: ["---CRL PEM---"]
       federations:
         type: array
         default: []

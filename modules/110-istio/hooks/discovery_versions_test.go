@@ -67,6 +67,7 @@ pilotVx11x11x11x11: "old-pilot-img"
 			Expect(f.ValuesGet("istio.internal.versionMap.1\\.22.isReady").Bool()).To(BeFalse())
 			Expect(f.ValuesGet("istio.internal.versionMap.1\\.22.supportsAmbient").Bool()).To(BeFalse())
 			Expect(f.ValuesGet("istio.internal.versionMap.1\\.22.supportsOperator").Bool()).To(BeTrue())
+			Expect(f.ValuesGet("istio.internal.versionMap.1\\.22.supportsPeerCaCrl").Bool()).To(BeFalse())
 			// 1.55
 			Expect(f.ValuesGet("istio.internal.versionMap.1\\.55.fullVersion").String()).To(Equal("1.55.6"))
 			Expect(f.ValuesGet("istio.internal.versionMap.1\\.55.revision").String()).To(Equal("v1x55"))
@@ -74,6 +75,7 @@ pilotVx11x11x11x11: "old-pilot-img"
 			Expect(f.ValuesGet("istio.internal.versionMap.1\\.55.isReady").Bool()).To(BeFalse())
 			Expect(f.ValuesGet("istio.internal.versionMap.1\\.55.supportsAmbient").Bool()).To(BeTrue())
 			Expect(f.ValuesGet("istio.internal.versionMap.1\\.55.supportsOperator").Bool()).To(BeFalse())
+			Expect(f.ValuesGet("istio.internal.versionMap.1\\.55.supportsPeerCaCrl").Bool()).To(BeTrue())
 		})
 	})
 
@@ -102,6 +104,7 @@ pilotVx11x11x11x11: "old-pilot-img"
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("istio.internal.versionMap.1\\.27.fullVersion").String()).To(Equal("1.27.9"))
 			Expect(f.ValuesGet("istio.internal.versionMap.1\\.27.supportsOperator").Bool()).To(BeFalse())
+			Expect(f.ValuesGet("istio.internal.versionMap.1\\.27.supportsPeerCaCrl").Bool()).To(BeFalse())
 		})
 	})
 
@@ -119,6 +122,7 @@ pilotVx11x11x11x11: "old-pilot-img"
 			Expect(f.ValuesGet("istio.internal.versionMap.1\\.29.imageSuffix").String()).To(Equal("V1x29x6"))
 			Expect(f.ValuesGet("istio.internal.versionMap.1\\.29.supportsAmbient").Bool()).To(BeTrue())
 			Expect(f.ValuesGet("istio.internal.versionMap.1\\.29.supportsOperator").Bool()).To(BeFalse())
+			Expect(f.ValuesGet("istio.internal.versionMap.1\\.29.supportsPeerCaCrl").Bool()).To(BeTrue())
 		})
 	})
 

@@ -66,6 +66,10 @@ func imageToIstioVersion(img string) (*IstioVersion, error) {
 	ambientMinVersion := semver.MustParse("1.25.0")
 	supportsAmbient := versionSemver.GreaterThanEqual(ambientMinVersion)
 
+	// Peer CA CRL in ztunnel is available starting with version 1.29
+	peerCaCrlMinVersion := semver.MustParse("1.29.0")
+	supportsPeerCaCrl := versionSemver.GreaterThanEqual(peerCaCrlMinVersion)
+
 	// Operator is supported for versions lower than 1.27.9
 	supportOperatorCutoffVersion := semver.MustParse("1.27.9")
 	supportsOperator := versionSemver.LessThan(supportOperatorCutoffVersion)
@@ -73,12 +77,13 @@ func imageToIstioVersion(img string) (*IstioVersion, error) {
 	return &IstioVersion{
 		version: fmt.Sprintf(versionTemplate, major, minor),
 		info: istio_versions.IstioVersionInfo{
-			FullVersion:      fullVersion,
-			Revision:         fmt.Sprintf(revisionTemplate, major, minor),
-			ImageSuffix:      fmt.Sprintf(imageSuffixTemplate, major, minor, patch),
-			IsReady:          false,
-			SupportsAmbient:  supportsAmbient,
-			SupportsOperator: supportsOperator,
+			FullVersion:       fullVersion,
+			Revision:          fmt.Sprintf(revisionTemplate, major, minor),
+			ImageSuffix:       fmt.Sprintf(imageSuffixTemplate, major, minor, patch),
+			IsReady:           false,
+			SupportsAmbient:   supportsAmbient,
+			SupportsOperator:  supportsOperator,
+			SupportsPeerCaCrl: supportsPeerCaCrl,
 		},
 	}, nil
 }

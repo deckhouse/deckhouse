@@ -141,7 +141,7 @@ var _ = Describe("Istio hooks :: discovery istiod health ::", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet(isGlobalVersionIstiodReadyPath).Exists()).To(BeTrue())
 			Expect(f.ValuesGet(isGlobalVersionIstiodReadyPath).Bool()).To(BeFalse())
-			Expect(f.ValuesGet(versionMapPath).String()).To(MatchJSON(`{"1.13":{"fullVersion":"1.13.55","revision":"v1x13","imageSuffix":"","isReady":false,"supportsAmbient":false,"supportsOperator":true},"1.88":{"fullVersion":"1.88.55","revision":"v1x88","imageSuffix":"","isReady":false,"supportsAmbient":true,"supportsOperator":false}}`))
+			Expect(f.ValuesGet(versionMapPath).String()).To(MatchJSON(`{"1.13":{"fullVersion":"1.13.55","revision":"v1x13","imageSuffix":"","isReady":false,"supportsAmbient":false,"supportsOperator":true,"supportsPeerCaCrl":false},"1.88":{"fullVersion":"1.88.55","revision":"v1x88","imageSuffix":"","isReady":false,"supportsAmbient":true,"supportsOperator":false,"supportsPeerCaCrl":false}}`))
 		})
 	})
 
@@ -159,8 +159,8 @@ var _ = Describe("Istio hooks :: discovery istiod health ::", func() {
 			Expect(f.ValuesGet(isGlobalVersionIstiodReadyPath).Exists()).To(BeTrue())
 			Expect(f.ValuesGet(isGlobalVersionIstiodReadyPath).Bool()).To(BeTrue())
 			versionMap := f.ValuesGet(versionMapPath).Map()
-			Expect(versionMap["1.13"]).To(MatchJSON(`{"fullVersion": "1.13.55","revision": "v1x13","imageSuffix": "","isReady": false,"supportsAmbient":false,"supportsOperator":true}`))
-			Expect(versionMap["1.88"]).To(MatchJSON(`{"fullVersion": "1.88.55","revision": "v1x88","imageSuffix": "","isReady": true,"supportsAmbient":true,"supportsOperator":false}`))
+			Expect(versionMap["1.13"]).To(MatchJSON(`{"fullVersion": "1.13.55","revision": "v1x13","imageSuffix": "","isReady": false,"supportsAmbient":false,"supportsOperator":true,"supportsPeerCaCrl":false}`))
+			Expect(versionMap["1.88"]).To(MatchJSON(`{"fullVersion": "1.88.55","revision": "v1x88","imageSuffix": "","isReady": true,"supportsAmbient":true,"supportsOperator":false,"supportsPeerCaCrl":false}`))
 		})
 	})
 
@@ -178,8 +178,8 @@ var _ = Describe("Istio hooks :: discovery istiod health ::", func() {
 			Expect(f.ValuesGet(isGlobalVersionIstiodReadyPath).Exists()).To(BeTrue())
 			Expect(f.ValuesGet(isGlobalVersionIstiodReadyPath).Bool()).To(BeTrue())
 			versionMap := f.ValuesGet(versionMapPath).Map()
-			Expect(versionMap["1.13"]).To(MatchJSON(`{"fullVersion": "1.13.55","revision": "v1x13","imageSuffix": "","isReady": false,"supportsAmbient":false,"supportsOperator":true}`))
-			Expect(versionMap["1.88"]).To(MatchJSON(`{"fullVersion": "1.88.55","revision": "v1x88","imageSuffix": "","isReady": false,"supportsAmbient":true,"supportsOperator":false}`))
+			Expect(versionMap["1.13"]).To(MatchJSON(`{"fullVersion": "1.13.55","revision": "v1x13","imageSuffix": "","isReady": false,"supportsAmbient":false,"supportsOperator":true,"supportsPeerCaCrl":false}`))
+			Expect(versionMap["1.88"]).To(MatchJSON(`{"fullVersion": "1.88.55","revision": "v1x88","imageSuffix": "","isReady": false,"supportsAmbient":true,"supportsOperator":false,"supportsPeerCaCrl":false}`))
 		})
 	})
 
@@ -202,8 +202,8 @@ var _ = Describe("Istio hooks :: discovery istiod health ::", func() {
 			Expect(f.ValuesGet(isGlobalVersionIstiodReadyPath).Exists()).To(BeTrue())
 			Expect(f.ValuesGet(isGlobalVersionIstiodReadyPath).Bool()).To(BeTrue())
 			versionMap := f.ValuesGet(versionMapPath).Map()
-			Expect(versionMap["1.13"]).To(MatchJSON(`{"fullVersion": "1.13.55","revision": "v1x13","imageSuffix": "","isReady": true,"supportsAmbient":false,"supportsOperator":true}`))
-			Expect(versionMap["1.88"]).To(MatchJSON(`{"fullVersion": "1.88.55","revision": "v1x88","imageSuffix": "","isReady": false,"supportsAmbient":true,"supportsOperator":false}`))
+			Expect(versionMap["1.13"]).To(MatchJSON(`{"fullVersion": "1.13.55","revision": "v1x13","imageSuffix": "","isReady": true,"supportsAmbient":false,"supportsOperator":true,"supportsPeerCaCrl":false}`))
+			Expect(versionMap["1.88"]).To(MatchJSON(`{"fullVersion": "1.88.55","revision": "v1x88","imageSuffix": "","isReady": false,"supportsAmbient":true,"supportsOperator":false,"supportsPeerCaCrl":false}`))
 		})
 	})
 

@@ -495,6 +495,21 @@ properties:
         type: string
         description: |
           The root certificate in PEM format if `cert` is an intermediate certificate. Setting `root` to the same certificate as `cert` explicitly anchors mesh trust at that certificate; this is allowed even for a non-self-signed intermediate, but rotating it later changes the mesh root (a mesh-wide trust event).
+      crl:
+        type: string
+        description: |
+          Certificate Revocation List (CRL) in PEM format for a plugged-in CA (`ca.cert` / `ca.key`).
+
+          Istiod distributes the CRL to mesh namespaces as the `istio-ca-crl` ConfigMap.
+          When ambient mode is enabled and the control plane version is 1.29 or newer,
+          ztunnel mounts this ConfigMap and enforces CRL checks on peer certificates.
+
+          Requires a custom (plugged-in) CA. The default self-signed Istio CA does not support CRL distribution.
+        x-examples:
+        - |
+          -----BEGIN X509 CRL-----
+          MIIB...
+          -----END X509 CRL-----
       secretRef:
         type: object
         description: |

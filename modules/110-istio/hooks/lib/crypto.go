@@ -21,6 +21,7 @@ type IstioCA struct {
 	Cert  string `json:"cert"`
 	Chain string `json:"chain"`
 	Root  string `json:"root"`
+	CRL   string `json:"crl"`
 }
 
 type Keypair struct {

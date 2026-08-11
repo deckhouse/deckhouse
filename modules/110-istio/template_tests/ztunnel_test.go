@@ -96,4 +96,100 @@ var _ = Describe("Module :: istio :: helm template :: ztunnel", func() {
 			Expect(f.KubernetesResource("PodMonitor", "d8-monitoring", "ztunnel").Exists()).To(BeFalse())
 		})
 	})
+
+	Context("Ambient mode enabled with CRL and global version 1.29.6", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
+			f.ValuesSet("istio.internal.globalVersion", "1.29.6")
+			f.ValuesSet("istio.ambient.enabled", true)
+			f.ValuesSet("istio.internal.ca.crl", "-----BEGIN X509 CRL-----\nCRL\n-----END X509 CRL-----")
+			f.HelmRender()
+		})
+
+		It("ztunnel should mount CRL and set CRL_PATH", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ztunnelDs := f.KubernetesResource("DaemonSet", "d8-istio", "ztunnel")
+			Expect(ztunnelDs.Exists()).To(BeTrue())
+
+			env := ztunnelDs.Field("spec.template.spec.containers.0.env").String()
+			Expect(env).To(ContainSubstring(`"name":"CRL_PATH"`))
+			Expect(env).To(ContainSubstring(`/var/run/secrets/istio/crl/ca-crl.pem`))
+
+			mounts := ztunnelDs.Field("spec.template.spec.containers.0.volumeMounts").String()
+			Expect(mounts).To(ContainSubstring(`"mountPath":"/var/run/secrets/istio/crl"`))
+			Expect(mounts).To(ContainSubstring(`"name":"crl-volume"`))
+
+			volumes := ztunnelDs.Field("spec.template.spec.volumes").String()
+			Expect(volumes).To(ContainSubstring(`"name":"crl-volume"`))
+			Expect(volumes).To(ContainSubstring(`"name":"istio-ca-crl"`))
+			Expect(volumes).To(ContainSubstring(`"optional":true`))
+		})
+
+		It("cacerts secret should include ca-crl.pem", func() {
+			secretCacerts := f.KubernetesResource("Secret", "d8-istio", "cacerts")
+			Expect(secretCacerts.Exists()).To(BeTrue())
+			Expect(secretCacerts.Field("data.ca-crl\\.pem").Exists()).To(BeTrue())
+		})
+	})
+
+	Context("Ambient mode enabled with CRL and global version 1.25.2 (no peer CA CRL support)", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
+			f.ValuesSet("istio.internal.globalVersion", "1.25.2")
+			f.ValuesSet("istio.ambient.enabled", true)
+			f.ValuesSet("istio.internal.ca.crl", "-----BEGIN X509 CRL-----\nCRL\n-----END X509 CRL-----")
+			f.HelmRender()
+		})
+
+		It("ztunnel should NOT mount CRL", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ztunnelDs := f.KubernetesResource("DaemonSet", "d8-istio", "ztunnel")
+			Expect(ztunnelDs.Exists()).To(BeTrue())
+
+			env := ztunnelDs.Field("spec.template.spec.containers.0.env").String()
+			Expect(env).NotTo(ContainSubstring(`"name":"CRL_PATH"`))
+
+			mounts := ztunnelDs.Field("spec.template.spec.containers.0.volumeMounts").String()
+			Expect(mounts).NotTo(ContainSubstring(`"mountPath":"/var/run/secrets/istio/crl"`))
+
+			volumes := ztunnelDs.Field("spec.template.spec.volumes").String()
+			Expect(volumes).NotTo(ContainSubstring(`"name":"crl-volume"`))
+		})
+
+		It("cacerts secret should still include ca-crl.pem", func() {
+			secretCacerts := f.KubernetesResource("Secret", "d8-istio", "cacerts")
+			Expect(secretCacerts.Exists()).To(BeTrue())
+			Expect(secretCacerts.Field("data.ca-crl\\.pem").Exists()).To(BeTrue())
+		})
+	})
+
+	Context("Ambient mode enabled without CRL and global version 1.29.6", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
+			f.ValuesSet("istio.internal.globalVersion", "1.29.6")
+			f.ValuesSet("istio.ambient.enabled", true)
+			f.HelmRender()
+		})
+
+		It("ztunnel should NOT mount CRL", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ztunnelDs := f.KubernetesResource("DaemonSet", "d8-istio", "ztunnel")
+			Expect(ztunnelDs.Exists()).To(BeTrue())
+
+			env := ztunnelDs.Field("spec.template.spec.containers.0.env").String()
+			Expect(env).NotTo(ContainSubstring(`"name":"CRL_PATH"`))
+
+			volumes := ztunnelDs.Field("spec.template.spec.volumes").String()
+			Expect(volumes).NotTo(ContainSubstring(`"name":"crl-volume"`))
+		})
+	})
 })
