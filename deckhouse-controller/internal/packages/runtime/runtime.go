@@ -51,6 +51,7 @@ import (
 	symlinkdeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/deployer/symlink"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/grants"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/health"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/loader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules/global"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
@@ -207,10 +208,6 @@ func Build(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Conta
 	// Initialize scheduler with enabling/disabling callbacks
 	r.buildScheduler(cli)
 
-	if err := r.loadEmbedded(context.Background()); err != nil {
-		return nil, fmt.Errorf("load embedded: %w", err)
-	}
-
 	// Build NELM service with its own client and runtime cache for resource monitoring
 	if err := r.buildNelmService(); err != nil {
 		return nil, fmt.Errorf("build nelm service: %w", err)
@@ -231,6 +228,38 @@ func Build(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Conta
 	}
 
 	return r, nil
+}
+
+// loadGlobal loads the global module from the embedded directory and registers
+// it in the status service and the package store. Scheduler wiring happens
+// later in buildScheduler/AddNode, not here.
+func (r *Runtime) loadGlobal(ctx context.Context) error {
+	ctx, span := otel.Tracer(runtimeTracer).Start(ctx, "loadGlobal")
+	defer span.End()
+
+	r.logger.Debug("load global package")
+
+	conf, err := loader.LoadGlobalConf(ctx, r.logger)
+	if err != nil {
+		return fmt.Errorf("load global conf: %w", err)
+	}
+
+	conf.Patcher = r.objectPatcher
+	conf.ScheduleManager = r.scheduleManager
+	conf.KubeEventsManager = r.kubeEventsManager
+
+	r.global, err = global.NewModuleByConfig(conf, r.logger)
+	if err != nil {
+		return fmt.Errorf("new global module: %w", err)
+	}
+
+	r.status.NewStatus(r.global.GetName())
+	r.status.SetConditionTrue(r.global.GetName(), status.ConditionRequirementsMet)
+	r.status.SetConditionTrue(r.global.GetName(), status.ConditionReadyOnFilesystem)
+	r.status.SetConditionTrue(r.global.GetName(), status.ConditionLoaded)
+	r.packages.Update(r.global.GetName(), r.global.GetVersion().String(), 0, make(addonutils.Values), "", false)
+
+	return nil
 }
 
 // registerDebugServer starts a Unix socket HTTP server exposing debug endpoints

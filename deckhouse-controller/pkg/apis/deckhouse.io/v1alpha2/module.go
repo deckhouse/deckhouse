@@ -34,6 +34,9 @@ const (
 
 	// ModuleAnnotationDev marks a module restored from a development pull override.
 	ModuleAnnotationDev = "modules.deckhouse.io/dev"
+
+	// ModuleAnnotationEmbedded marks a module that is embedded in the Deckhouse image.
+	ModuleAnnotationEmbedded = "modules.deckhouse.io/embedded"
 )
 
 var (
@@ -197,4 +200,14 @@ type ModuleList struct {
 	metav1.ListMeta `json:"metadata"`
 
 	Items []Module `json:"items"`
+}
+
+// IsDev returns true if the module is in dev mode.
+func (m *Module) IsDev() bool {
+	return m.Annotations[ModuleAnnotationDev] == "true"
+}
+
+// IsEmbedded returns true if the module is embedded in the Deckhouse image.
+func (m *Module) IsEmbedded() bool {
+	return m.Annotations[ModuleAnnotationEmbedded] == "true"
 }

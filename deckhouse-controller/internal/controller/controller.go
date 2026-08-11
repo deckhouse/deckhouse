@@ -260,6 +260,12 @@ func (c *Controller) Start(ctx context.Context) error {
 		return fmt.Errorf("wait for cache sync")
 	}
 
+	// Embedded modules go first: they carry no version, so a later restore step is free to
+	// move one onto a downloaded package without racing the placement.
+	if err := c.restoreModulesV2ByEmbedded(ctx); err != nil {
+		return fmt.Errorf("restore modules by embedded: %w", err)
+	}
+
 	if err := c.restoreModulesV2ByOverrides(ctx); err != nil {
 		return fmt.Errorf("restore modules by overrides: %w", err)
 	}

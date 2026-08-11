@@ -18,12 +18,16 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
 	"slices"
 
+	"golang.org/x/sync/errgroup"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/loader"
 	pkgmodules "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
 	pkgruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
@@ -31,6 +35,12 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/pkg/log"
+)
+
+const (
+	// embeddedLoadWorkers caps how many embedded modules are read from disk
+	// concurrently in restoreModulesV2ByEmbedded.
+	embeddedLoadWorkers = 8
 )
 
 // dummyModules are modules that should be skipped.
@@ -112,9 +122,56 @@ func (c *Controller) restoreModulesV2ByOverrides(ctx context.Context) error {
 			continue
 		}
 
-		if err := c.ensureModuleV2(ctx, mpo.Name, module.Properties.Source, mpo.Spec.ImageTag, true); err != nil {
+		if err := c.ensureModuleV2(ctx, mpo.Name, module.Properties.Source, mpo.Spec.ImageTag, true, false); err != nil {
 			return fmt.Errorf("restore module '%s' by override: %w", mpo.Name, err)
 		}
+	}
+
+	return nil
+}
+
+// restoreModulesV2ByEmbedded loads embedded modules from the embedded modules directory.
+func (c *Controller) restoreModulesV2ByEmbedded(ctx context.Context) error {
+	embeddedDir := app.EmbeddedModulesDir
+
+	c.logger.Debug("load embedded modules", slog.String("path", embeddedDir))
+
+	entries, err := os.ReadDir(embeddedDir)
+	if err != nil {
+		return fmt.Errorf("read dir: %w", err)
+	}
+
+	// Each module is independent: load its config, wire the runtime's shared
+	// managers, build it and store it. Run them concurrently and let the first
+	// failure cancel the rest.
+	g, ctx := errgroup.WithContext(ctx)
+	g.SetLimit(embeddedLoadWorkers)
+
+	for _, entry := range entries {
+		if !entry.IsDir() || slices.Contains(dummyModules, entry.Name()) {
+			continue
+		}
+
+		g.Go(func() error {
+			// Bail out early if another module already failed (errgroup cancels
+			// ctx) or the caller cancelled, before doing any work.
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+
+			c.logger.Debug("load embedded module", slog.String("name", entry.Name()))
+
+			conf, err := loader.LoadEmbeddedConf(ctx, embeddedDir+"/"+entry.Name(), c.logger)
+			if err != nil {
+				return fmt.Errorf("load embedded conf: %w", err)
+			}
+
+			return c.ensureModuleV2(ctx, conf.Definition.Name, "", "", false, true)
+		})
+	}
+
+	if err := g.Wait(); err != nil {
+		return err
 	}
 
 	return nil
@@ -141,7 +198,7 @@ func (c *Controller) restoreModulesV2ByReleases(ctx context.Context) error {
 			continue
 		}
 
-		if err := c.ensureModuleV2(ctx, name, release.GetModuleSource(), release.GetModuleVersion(), false); err != nil {
+		if err := c.ensureModuleV2(ctx, name, release.GetModuleSource(), release.GetModuleVersion(), false, false); err != nil {
 			return fmt.Errorf("restore module '%s' by release: %w", name, err)
 		}
 	}
@@ -207,7 +264,7 @@ func (c *Controller) supersedeRelease(ctx context.Context, release *v1alpha1.Mod
 
 // ensureModuleV2 places the module on repository and version, whether or not it already
 // exists. The restore runs on every start, so it must not trip over what the last one left.
-func (c *Controller) ensureModuleV2(ctx context.Context, name, repository, version string, dev bool) error {
+func (c *Controller) ensureModuleV2(ctx context.Context, name, repository, version string, dev, embedded bool) error {
 	cli := c.ctrl.GetClient()
 
 	module := new(v1alpha2.Module)
@@ -218,17 +275,21 @@ func (c *Controller) ensureModuleV2(ctx context.Context, name, repository, versi
 
 		module = &v1alpha2.Module{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: name,
+				Name:        name,
+				Annotations: make(map[string]string),
 			},
 			Spec: v1alpha2.ModuleSpec{
 				PackageRepositoryName: repository,
 				PackageVersion:        version,
 			},
 		}
+
 		if dev {
-			module.Annotations = map[string]string{
-				v1alpha2.ModuleAnnotationDev: "true",
-			}
+			module.Annotations[v1alpha2.ModuleAnnotationDev] = "true"
+		}
+
+		if embedded {
+			module.Annotations[v1alpha2.ModuleAnnotationEmbedded] = "true"
 		}
 
 		// AlreadyExists means only that the informer cache had not caught up; the module
@@ -272,8 +333,9 @@ func (c *Controller) ensureModuleV2(ctx context.Context, name, repository, versi
 // two versions and a None conversion strategy, so the previous generation cannot be selected by
 // listing v1alpha1 — that returns the same objects the restore just placed. What separates them
 // is the package spec: a module carries a version only if the package system installed it, and
-// nothing manages one that does not now that addon-operator is gone.
-// Runs after both restore steps, so their modules already carry a version by this point.
+// nothing manages one that does not now that addon-operator is gone. An embedded module is the
+// exception — it ships inside the image, so it is managed while carrying no version at all.
+// Runs after every restore step, so their modules already carry a version or the annotation.
 func (c *Controller) deleteUnplacedModules(ctx context.Context) error {
 	cli := c.ctrl.GetClient()
 
@@ -285,7 +347,7 @@ func (c *Controller) deleteUnplacedModules(ctx context.Context) error {
 	for i := range modules.Items {
 		module := &modules.Items[i]
 
-		if module.Spec.PackageVersion != "" {
+		if module.Spec.PackageVersion != "" || module.IsEmbedded() {
 			continue
 		}
 
@@ -313,6 +375,20 @@ func (c *Controller) loadModulesV2(ctx context.Context) error {
 	for _, module := range modules.Items {
 		if !module.DeletionTimestamp.IsZero() {
 			c.logger.Debug("module is deleted, skip loading", slog.String("module", module.Name))
+			continue
+		}
+
+		// an embedded module ships inside the image: there is no repository to resolve and
+		// nothing to download, so the runtime loads it straight off the filesystem
+		if module.IsEmbedded() {
+			c.manager.UpdateEmbedded(pkgruntime.Module{
+				Name:            module.Name,
+				Settings:        module.Spec.Settings.GetMap(),
+				SettingsVersion: module.Spec.SettingsVersion,
+				Maintenance:     module.Spec.Maintenance,
+				Enabled:         module.Spec.Enabled,
+			})
+
 			continue
 		}
 
