@@ -15,8 +15,8 @@
 package immutable
 
 import (
-	"errors"
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"path/filepath"
