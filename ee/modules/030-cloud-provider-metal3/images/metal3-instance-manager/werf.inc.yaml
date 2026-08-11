@@ -14,7 +14,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
 fromImage: common/src-artifact
 git:
-- add: /{{ $.ModulePath }}ee/modules/030-cloud-provider-metal3/images/{{ $.ImageName }}/src
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
   to: /src
   stageDependencies:
     install:
