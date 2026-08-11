@@ -9,40 +9,18 @@ properties:
     additionalProperties: false
     description: |
       Ironic service managed by the module.
-
-      Enable this section when Deckhouse should create and configure the Ironic CR for the Metal3 provisioning network.
     properties:
       enabled:
         type: boolean
         default: false
         description: |
-          Enables rendering of the Ironic custom resource.
-      name:
-        type: string
-        default: ironic
-        description: |
-          Name of the Ironic custom resource.
-      version:
-        type: string
-        description: |
-          Ironic version requested from the Ironic operator.
-      deployRamdisk:
-        type: object
-        additionalProperties: false
-        description: |
-          Deploy ramdisk settings for Ironic Python Agent.
-        properties:
-          sshKey:
-            type: string
-            description: |
-              Public SSH key injected into the deploy ramdisk.
-      networking:
+          Enables rendering of the Ironic custom resource and Metal3 operators.
+      provisioningNetwork:
         type: object
         additionalProperties: false
         required:
         - interface
         - ipAddress
-        - dhcp
         description: |
           Provisioning network settings used by Ironic.
         properties:
@@ -61,50 +39,163 @@ properties:
             - keepalived
             description: |
               Ironic IP address manager.
-          apiPort:
+      api:
+        type: object
+        additionalProperties: false
+        properties:
+          port:
             type: integer
+            minimum: 1
+            default: 6385
             description: |
               Ironic API port.
-          imageServerPort:
+      imageServer:
+        type: object
+        additionalProperties: false
+        properties:
+          port:
             type: integer
+            minimum: 1
+            default: 6180
             description: |
               Ironic image server port.
+      dhcp:
+        type: object
+        additionalProperties: false
+        required:
+        - networkCIDR
+        - rangeBegin
+        - rangeEnd
+        description: |
+          Internal DHCP settings for provisioning hosts. Mutually exclusive with external.dhcp.
+        properties:
+          networkCIDR:
+            type: string
+            pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
+            description: |
+              CIDR of the provisioning network.
+          rangeBegin:
+            type: string
+            pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$'
+            description: |
+              First DHCP address available to provisioning hosts.
+          rangeEnd:
+            type: string
+            pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$'
+            description: |
+              Last DHCP address available to provisioning hosts.
+          dnsAddress:
+            type: string
+            pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$'
+            description: |
+              DNS server address passed to provisioning hosts over DHCP.
+          gatewayAddress:
+            type: string
+            pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$'
+            description: |
+              Default gateway address passed to provisioning hosts over DHCP.
+          serveDNS:
+            type: boolean
+            description: |
+              Configures Ironic to pass itself as the DNS server over DHCP.
+      external:
+        type: object
+        additionalProperties: false
+        properties:
           dhcp:
             type: object
             additionalProperties: false
             required:
-            - networkCIDR
-            - rangeBegin
-            - rangeEnd
+            - pxeBootServer
             description: |
-              DHCP settings for provisioning hosts.
+              External DHCP settings. When set, the module does not render internal Ironic DHCP settings.
             properties:
-              networkCIDR:
-                type: string
-                pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
-                description: |
-                  CIDR of the provisioning network.
-              rangeBegin:
+              pxeBootServer:
                 type: string
                 pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$'
                 description: |
-                  First DHCP address available to provisioning hosts.
-              rangeEnd:
+                  PXE boot server address configured in the external DHCP service.
+              pxeBootFile:
+                type: object
+                additionalProperties: false
+                properties:
+                  bios:
+                    type: string
+                    description: |
+                      Bootloader filename for legacy BIOS PXE clients.
+                  uefi:
+                    type: string
+                    description: |
+                      Bootloader filename for UEFI PXE clients.
+      deployRamdisk:
+        type: object
+        additionalProperties: false
+        description: |
+          Deploy ramdisk settings for Ironic Python Agent.
+        properties:
+          sshKey:
+            type: string
+            description: |
+              Public SSH key injected into the deploy ramdisk.
+      ramdiskImage:
+        type: object
+        additionalProperties: false
+        description: |
+          IPA ramdisk image source settings.
+        properties:
+          external:
+            type: object
+            additionalProperties: false
+            required:
+            - kernelURL
+            - initramfsURL
+            description: |
+              External IPA kernel and initramfs URLs. When set, the module disables Ironic IPA downloader.
+            properties:
+              architecture:
                 type: string
-                pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$'
+                enum:
+                - x86_64
+                - aarch64
                 description: |
-                  Last DHCP address available to provisioning hosts.
-              dnsAddress:
+                  Target CPU architecture for these IPA images.
+              kernelURL:
                 type: string
-                pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$'
                 description: |
-                  DNS server address passed to provisioning hosts over DHCP.
-              gatewayAddress:
+                  URL of the IPA kernel image. Supported schemes by Ironic are file://, http://, https:// and oci://.
+              initramfsURL:
                 type: string
-                pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$'
                 description: |
-                  Default gateway address passed to provisioning hosts over DHCP.
-              serveDNS:
-                type: boolean
-                description: |
-                  Configures Ironic to pass itself as the DNS server over DHCP.
+                  URL of the IPA initramfs image. Supported schemes by Ironic are file://, http://, https:// and oci://.
+  hostManager:
+    type: object
+    default: {}
+    additionalProperties: false
+    properties:
+      enabled:
+        type: boolean
+        default: false
+      targetNamespace:
+        type: string
+        default: d8-cloud-instance-manager
+      defaultOnline:
+        type: boolean
+        default: true
+      defaultAutomatedCleaningMode:
+        type: string
+        default: disabled
+        enum:
+        - metadata
+        - disabled
+  internal:
+    type: object
+    default: {}
+    properties:
+      providerDiscoveryData:
+        type: object
+        default: {}
+        properties:
+          zones:
+            type: array
+            items:
+              type: string

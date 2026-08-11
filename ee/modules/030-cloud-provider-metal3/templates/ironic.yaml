@@ -1,38 +1,58 @@
 {{- $ironic := .Values.cloudProviderMetal3.ironic | default dict -}}
 {{- if $ironic.enabled }}
-{{- $networking := $ironic.networking | required "cloudProviderMetal3.ironic.networking is required when cloudProviderMetal3.ironic.enabled is true" -}}
-{{- $dhcp := $networking.dhcp | required "cloudProviderMetal3.ironic.networking.dhcp is required when cloudProviderMetal3.ironic.enabled is true" -}}
+{{- $provisioningNetwork := $ironic.provisioningNetwork | required "cloudProviderMetal3.ironic.provisioningNetwork is required when cloudProviderMetal3.ironic.enabled is true" -}}
+{{- $dhcp := $ironic.dhcp | default dict -}}
+{{- $external := $ironic.external | default dict -}}
+{{- $externalDHCP := $external.dhcp | default dict -}}
+{{- $api := $ironic.api | default dict -}}
+{{- $imageServer := $ironic.imageServer | default dict -}}
+{{- $deployRamdisk := $ironic.deployRamdisk | default dict -}}
+{{- $ramdiskImage := $ironic.ramdiskImage | default dict -}}
+{{- $externalRamdiskImage := $ramdiskImage.external | default dict -}}
+{{- if and $dhcp $externalDHCP }}
+{{- fail "cloudProviderMetal3.ironic.dhcp and cloudProviderMetal3.ironic.external.dhcp are mutually exclusive" }}
+{{- end }}
 ---
 apiVersion: ironic.metal3.io/v1alpha1
 kind: Ironic
 metadata:
-  name: {{ $ironic.name | default "ironic" | quote }}
+  name: "ironic"
   namespace: d8-cloud-provider-metal3
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 spec:
-  {{- if $ironic.version }}
-  version: {{ $ironic.version | quote }}
-  {{- end }}
   images:
     ironic: {{ include "helm_lib_module_image" (list . "ironic") | quote }}
-  {{- if $ironic.deployRamdisk }}
+  {{- if or $deployRamdisk $externalRamdiskImage }}
   deployRamdisk:
-    {{- if $ironic.deployRamdisk.sshKey }}
-    sshKey: {{ $ironic.deployRamdisk.sshKey | quote }}
+    {{- if $deployRamdisk.sshKey }}
+    sshKey: {{ $deployRamdisk.sshKey | quote }}
+    {{- end }}
+    {{- if $externalRamdiskImage }}
+    disableDownloader: true
     {{- end }}
   {{- end }}
+  {{- if $externalRamdiskImage }}
+  overrides:
+    agentImages:
+    - {{- if $externalRamdiskImage.architecture }}
+      architecture: {{ $externalRamdiskImage.architecture | quote }}
+      {{- end }}
+      kernel: {{ $externalRamdiskImage.kernelURL | quote }}
+      initramfs: {{ $externalRamdiskImage.initramfsURL | quote }}
+  {{- end }}
   networking:
-    interface: {{ $networking.interface | quote }}
-    ipAddress: {{ $networking.ipAddress | quote }}
-    {{- if $networking.ipAddressManager }}
-    ipAddressManager: {{ $networking.ipAddressManager | quote }}
+    interface: {{ $provisioningNetwork.interface | quote }}
+    ipAddress: {{ $provisioningNetwork.ipAddress | quote }}
+    {{- if $provisioningNetwork.ipAddressManager }}
+    ipAddressManager: {{ $provisioningNetwork.ipAddressManager | quote }}
     {{- end }}
-    {{- if $networking.apiPort }}
-    apiPort: {{ $networking.apiPort }}
+    {{- if $api.port }}
+    apiPort: {{ $api.port }}
     {{- end }}
-    {{- if $networking.imageServerPort }}
-    imageServerPort: {{ $networking.imageServerPort }}
+    {{- if $imageServer.port }}
+    imageServerPort: {{ $imageServer.port }}
     {{- end }}
+    {{- if $dhcp }}
     dhcp:
       networkCIDR: {{ $dhcp.networkCIDR | quote }}
       rangeBegin: {{ $dhcp.rangeBegin | quote }}
@@ -46,4 +66,5 @@ spec:
       {{- if hasKey $dhcp "serveDNS" }}
       serveDNS: {{ $dhcp.serveDNS }}
       {{- end }}
+    {{- end }}
 {{- end }}
