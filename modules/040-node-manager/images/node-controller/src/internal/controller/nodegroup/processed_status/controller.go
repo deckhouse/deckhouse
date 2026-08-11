@@ -31,6 +31,14 @@ type Service struct {
 	Client client.Client
 }
 
+// PatchProcessedStatus records the NodeGroup spec the controller has just processed into
+// status.deckhouse. get_crds used to write status.deckhouse.observed BeforeHelm and the
+// processed status AfterHelm, and status.deckhouse.synced tracked whether the two agreed.
+// Node-controller observes and processes the spec in the same reconcile, so both checksums
+// are the current one and synced is True once processed — without this writing observed too,
+// synced (the Synced printer column) would stay False forever after the get_crds migration.
+// The patch is skipped when nothing changed, so a reconcile triggered by an unrelated Node or
+// Machine event does not churn a status write.
 func (s *Service) PatchProcessedStatus(ctx context.Context, ngName string) error {
 	current := &unstructured.Unstructured{}
 	current.SetGroupVersionKind(schema.GroupVersionKind{
@@ -54,23 +62,25 @@ func (s *Service) PatchProcessedStatus(ctx context.Context, ngName string) error
 	}
 	objCheckSum := CalculateChecksum(string(filteredBytes))
 
-	observedCheckSum, found, err := unstructured.NestedString(current.Object, "status", "deckhouse", "observed", "checkSum")
-	if err != nil {
-		return fmt.Errorf("cannot get observed checksum status field: %v", err)
+	observedCheckSum, _, _ := unstructured.NestedString(current.Object, "status", "deckhouse", "observed", "checkSum")
+	processedCheckSum, _, _ := unstructured.NestedString(current.Object, "status", "deckhouse", "processed", "checkSum")
+	synced, _, _ := unstructured.NestedString(current.Object, "status", "deckhouse", "synced")
+	if observedCheckSum == objCheckSum && processedCheckSum == objCheckSum && synced == "True" {
+		return nil
 	}
 
-	if !found || objCheckSum != observedCheckSum {
-		if err := unstructured.SetNestedField(current.Object, "False", "status", "deckhouse", "synced"); err != nil {
-			return fmt.Errorf("cannot set synced status field: %v", err)
-		}
-	} else {
-		if err := unstructured.SetNestedField(current.Object, "True", "status", "deckhouse", "synced"); err != nil {
-			return fmt.Errorf("cannot set synced status field: %v", err)
-		}
+	if err := unstructured.SetNestedField(current.Object, "True", "status", "deckhouse", "synced"); err != nil {
+		return fmt.Errorf("cannot set synced status field: %v", err)
 	}
-
+	timestamp := GetTimestamp()
 	if err := unstructured.SetNestedStringMap(current.Object, map[string]string{
-		"lastTimestamp": GetTimestamp(),
+		"lastTimestamp": timestamp,
+		"checkSum":      objCheckSum,
+	}, "status", "deckhouse", "observed"); err != nil {
+		return fmt.Errorf("cannot set observed status field: %v", err)
+	}
+	if err := unstructured.SetNestedStringMap(current.Object, map[string]string{
+		"lastTimestamp": timestamp,
 		"checkSum":      objCheckSum,
 	}, "status", "deckhouse", "processed"); err != nil {
 		return fmt.Errorf("cannot set processed status field: %v", err)

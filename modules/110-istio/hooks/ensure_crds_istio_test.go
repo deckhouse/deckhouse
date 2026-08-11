@@ -99,4 +99,17 @@ var _ = Describe("Modules :: istio :: hooks :: ensure_crds_istio ::", func() {
 			Expect(f).To(ExecuteSuccessfully())
 		})
 	})
+
+	Context("globalVersion 1.29 installs CRDs from 1.29 directory", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(``)
+			f.ValuesSet("istio.internal.globalVersion", "1.29")
+			f.BindingContexts.Set(f.GenerateOnStartupContext())
+			f.RunHook()
+		})
+
+		It("Hook must not fail", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+	})
 })

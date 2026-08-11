@@ -156,7 +156,7 @@ func (m *MetaConfig) Prepare(ctx context.Context, validatorProvider MetaConfigVa
 	if err != nil {
 		return nil, err
 	}
-	m.ClusterPrefix = cloudSpec.Prefix
+	m.ClusterPrefix = m.effectiveClusterPrefix(cloudSpec.Prefix)
 
 	if err := m.extractProviderClusterFields(); err != nil {
 		return nil, err
@@ -174,14 +174,23 @@ func (m *MetaConfig) Prepare(ctx context.Context, validatorProvider MetaConfigVa
 		return nil, err
 	}
 
+	// Derive replica counts from the cluster NodeGroups in CloudProviderVars,
+	// the only source of them when PCC carries no nodeGroups (mc-flow). Must
+	// run after CloudProviderVars is resolved above: with it still nil the
+	// typed fields stay zeroed and bootstrap creates neither the additional
+	// masters nor any CloudPermanent node. Re-entrant by the guards inside —
+	// check and converge re-run Prepare on a DeepCopy of a prepared config.
+	applyNodeGroupReplicasFromCloudProviderVars(m)
+
 	return validateProviderConfig(ctx, validatorProvider, m)
 }
 
 // extractProviderClusterFields populates the typed Layout, MasterNodeGroupSpec
-// and TerraNodeGroupSpecs from PCC (legacy flow), falling back to
-// CloudProviderVars.NodeGroups when PCC is empty (mc-flow). For providers that
-// require PCC a missing field fails fast instead of running converge with
-// zeroed typed fields.
+// and TerraNodeGroupSpecs from PCC. For providers that require PCC a missing
+// field fails fast instead of running converge with zeroed typed fields. When
+// PCC carries no nodeGroups (mc-flow) the specs come from
+// applyNodeGroupReplicasFromCloudProviderVars, which Prepare calls once
+// CloudProviderVars is known.
 func (m *MetaConfig) extractProviderClusterFields() error {
 	pccRequired := ProviderRequiresClusterConfig(m.ProviderName)
 	pccPresent := len(m.ProviderClusterConfig) > 0
@@ -213,9 +222,6 @@ func (m *MetaConfig) extractProviderClusterFields() error {
 	// "nodeGroups" is not required even for whitelisted providers: a
 	// master-only cluster is legitimate.
 
-	// mc-flow: derive replica counts from cluster NodeGroups, otherwise the
-	// zeroed typed fields misroute converge into "decrease to 0" logic.
-	applyNodeGroupReplicasFromCloudProviderVars(m)
 	return nil
 }
 
@@ -597,6 +603,10 @@ func (m *MetaConfig) MarshalConfig() []byte {
 	// Operation is not part of the terraform input contract — strip it
 	// before the tfvars JSON reaches OpenTofu/Terraform.
 	newM.Operation = ""
+	// Materialize cloud.prefix from the resolved cluster prefix for the Terraform
+	// layouts (which read var.clusterConfiguration.cloud.prefix). This affects the
+	// tfvars only — m.ClusterConfig / the d8-cluster-configuration secret stay clean.
+	newM.ClusterConfig = m.clusterConfigForInfrastructure()
 
 	wrap := cfg{MetaConfig: newM}
 	if cv := m.CloudProviderVars; cv != nil {
@@ -736,7 +746,7 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(ctx context.Context, nodeIP
 	clusterMasterEndpoints := m.clusterMasterEndpointsBashibleContext()
 	configForBashibleBundleTemplate["clusterMasterEndpoints"] = clusterMasterEndpoints
 	configForBashibleBundleTemplate["clusterMasterKubeAPIEndpoints"] = clusterMasterEndpointAddresses(clusterMasterEndpoints, "kubeApiPort")
-	configForBashibleBundleTemplate["clusterMasterRPPAddresses"] = clusterMasterEndpointAddresses(clusterMasterEndpoints, "rppServerPort")
+	configForBashibleBundleTemplate["clusterMasterRPPAddresses"] = clusterMasterHTTPAddresses(clusterMasterEndpoints, "rppServerPort")
 	configForBashibleBundleTemplate["clusterMasterRPPBootstrapAddresses"] = clusterMasterEndpointAddresses(clusterMasterEndpoints, "rppBootstrapServerPort")
 
 	mingetBytes, err := minget.Bytes(ctx)
@@ -753,7 +763,7 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(ctx context.Context, nodeIP
 // level.
 func (m *MetaConfig) NodeGroupConfig(nodeGroupName string, nodeIndex int, cloudConfig string) []byte {
 	result := map[string]any{
-		"clusterConfiguration":         m.ClusterConfig,
+		"clusterConfiguration":         m.clusterConfigForInfrastructure(),
 		"providerClusterConfiguration": m.ProviderClusterConfig,
 		"nodeIndex":                    nodeIndex,
 		"cloudConfig":                  cloudConfig,
@@ -913,6 +923,16 @@ func clusterMasterEndpointAddresses(endpoints []map[string]any, portName string)
 	return addresses
 }
 
+func clusterMasterHTTPAddresses(endpoints []map[string]any, portName string) []string {
+	addresses := clusterMasterEndpointAddresses(endpoints, portName)
+
+	for i := range addresses {
+		addresses[i] = "http://" + addresses[i]
+	}
+
+	return addresses
+}
+
 func (m *MetaConfig) effectiveClusterMasterEndpoints() []ClusterMasterEndpoint {
 	if len(m.ClusterMasterEndpoints) > 0 {
 		return m.ClusterMasterEndpoints
@@ -1004,6 +1024,70 @@ func (m *MetaConfig) LoadImagesDigests() error {
 	m.Images = imagesDigests
 
 	return nil
+}
+
+// effectiveClusterPrefix resolves the cluster prefix used to name cloud
+// infrastructure. The global ModuleConfig setting (spec.settings.prefix) is the
+// new home for this value and takes precedence over the deprecated
+// ClusterConfiguration.cloud.prefix, which is being removed together with the
+// whole cloud section. Falls back to cloudPrefix during the transition.
+func (m *MetaConfig) effectiveClusterPrefix(cloudPrefix string) string {
+	if mc := m.FindModuleConfig("global"); mc != nil {
+		if raw, ok := mc.Spec.Settings["prefix"]; ok {
+			if p, ok := raw.(string); ok && p != "" {
+				return p
+			}
+		}
+	}
+	return cloudPrefix
+}
+
+// clusterConfigForInfrastructure returns the ClusterConfiguration to feed to the
+// infrastructure utility (Terraform/OpenTofu), with cloud.prefix materialized
+// from the resolved cluster prefix. The Terraform layouts read
+// var.clusterConfiguration.cloud.prefix directly and cannot read the global
+// ModuleConfig, so when the prefix is set only via the global ModuleConfig
+// (and omitted from ClusterConfiguration.cloud) dhctl fills it in for them.
+//
+// It never mutates m.ClusterConfig: that object is persisted verbatim into the
+// d8-cluster-configuration secret, so a prefix set only in the global
+// ModuleConfig must not leak back into the ClusterConfiguration there. The
+// original map is returned unchanged when nothing needs to be added.
+func (m *MetaConfig) clusterConfigForInfrastructure() map[string]json.RawMessage {
+	if m.ClusterType != CloudClusterType || m.ClusterPrefix == "" {
+		return m.ClusterConfig
+	}
+	// Start from the existing cloud section, or an empty one when it has already
+	// been dropped from ClusterConfiguration — the prefix must still reach the
+	// Terraform layouts either way, never silently empty.
+	cloud := map[string]json.RawMessage{}
+	if rawCloud, ok := m.ClusterConfig["cloud"]; ok {
+		if err := json.Unmarshal(rawCloud, &cloud); err != nil {
+			return m.ClusterConfig
+		}
+		if existing, ok := cloud["prefix"]; ok {
+			var p string
+			if json.Unmarshal(existing, &p) == nil && p == m.ClusterPrefix {
+				return m.ClusterConfig // already materialized, no copy needed
+			}
+		}
+	}
+	prefixJSON, err := json.Marshal(m.ClusterPrefix)
+	if err != nil {
+		return m.ClusterConfig
+	}
+	cloud["prefix"] = prefixJSON
+	newCloud, err := json.Marshal(cloud)
+	if err != nil {
+		return m.ClusterConfig
+	}
+	// Shallow-copy the top-level map so m.ClusterConfig (→ the secret) is untouched.
+	out := make(map[string]json.RawMessage, len(m.ClusterConfig))
+	for k, v := range m.ClusterConfig {
+		out[k] = v
+	}
+	out["cloud"] = newCloud
+	return out
 }
 
 // FindModuleConfig

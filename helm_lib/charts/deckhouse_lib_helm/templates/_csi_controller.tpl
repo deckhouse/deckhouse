@@ -8,7 +8,12 @@
   {{- $registryBase := $context.Values.global.modulesImages.registry.base }}
   {{- /* Try to get from storage foundation module if enabled */}}
   {{- if $context.Values.global.enabledModules | has "storage-foundation" }}
+    {{- $sfRegistryHost := dig "registry" "base" "" (default dict $context.Values.storageFoundation) }}
+    {{- if $sfRegistryHost }}
+    {{- $registryBase = join "/" (list $sfRegistryHost "modules" "storage-foundation" ) }}
+    {{- else }}
     {{- $registryBase = join "/" (list $registryBase "modules" "storage-foundation" ) }}
+    {{- end }}
     {{- $storageFoundationDigests := index $context.Values.global.modulesImages.digests "storageFoundation" | default dict }}
     {{- $currentMinor := int $kubernetesSemVer.Minor }}
     {{- $kubernetesMajor := int $kubernetesSemVer.Major }}
@@ -128,8 +133,7 @@ memory: 50Mi
 
   {{- $resizerImage := include "helm_lib_csi_image_with_common_fallback" (list $context "csiExternalResizer" $kubernetesSemVer) }}
 
-  {{- $syncerImageName := join "" (list "csiVsphereSyncer" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
-  {{- $syncerImage := include "helm_lib_module_common_image_no_fail" (list $context $syncerImageName) }}
+  {{- $syncerImage := dig "syncerImage" "" $config }}
 
   {{- $snapshotterImage := include "helm_lib_csi_image_with_common_fallback" (list $context "csiExternalSnapshotter" $kubernetesSemVer) }}
 
@@ -173,7 +177,7 @@ spec:
         cpu: 20m
         memory: 50Mi
     {{- end }}
-    {{- if $syncerEnabled }}
+    {{- if and $syncerEnabled $syncerImage }}
     - containerName: "syncer"
       minAllowed:
         {{- include "syncer_resources" $context | nindent 8 }}
@@ -400,7 +404,7 @@ spec:
             {{- include "resizer_resources" $context | nindent 12 }}
   {{- end }}
             {{- end }}
-            {{- if $syncerEnabled }}
+            {{- if and $syncerEnabled $syncerImage }}
       - name: syncer
         {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" (dict "ro" true "seccompProfile" true) | nindent 8 }}
         image: {{ $syncerImage | quote }}
@@ -726,6 +730,22 @@ rules:
 - apiGroups: ["storage.k8s.io"]
   resources: ["volumeattachments"]
   verbs: ["get", "list", "watch"]
+{{- if (include "helm_lib_api_version_exists" (list . "storage-foundation.deckhouse.io/v1alpha1/VolumeRestoreRequest")) }}
+# When storage-foundation is enabled, the stock external-provisioner is replaced with its fork
+# (see helm_lib_csi_image_with_common_fallback), which additionally runs the VolumeRestoreRequest
+# executor: a cluster-wide informer on volumerestorerequests that provisions the target volume and
+# creates the PV/PVC pair for it. The sidecar is deployed by the driver module, so its
+# provisioner SA needs these permissions in every module that uses this define.
+# volumerestorerequests/status is intentionally NOT granted: the status is owned by the
+# storage-foundation controller, which derives it from the target PVC; the sidecar only executes.
+- apiGroups: ["storage-foundation.deckhouse.io"]
+  resources: ["volumerestorerequests"]
+  verbs: ["get", "list", "watch"]
+# Complements the stock persistentvolumeclaims rule above (get/list/watch/update).
+- apiGroups: [""]
+  resources: ["persistentvolumeclaims"]
+  verbs: ["create", "patch"]
+{{- end }}
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1

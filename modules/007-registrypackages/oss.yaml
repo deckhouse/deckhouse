@@ -99,7 +99,7 @@
   logo: /images/logos/cni.svg
   license: Apache License 2.0
   id: kubernetes-cni
-  version: "1.6.2"
+  version: "1.9.1"
 - name: Flannel CNI Plugin
   link: https://github.com/flannel-io/cni-plugin
   description: CNI plugin for Flannel.

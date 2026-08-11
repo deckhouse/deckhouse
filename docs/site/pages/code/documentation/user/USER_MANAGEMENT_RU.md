@@ -1,5 +1,6 @@
 ---
 title: "Управление пользователями, доступом и изменениями"
+description: Как управлять пользователями, правами доступа и аудитом изменений
 permalink: ru/code/documentation/user/user-management.html
 lang: ru
 ---

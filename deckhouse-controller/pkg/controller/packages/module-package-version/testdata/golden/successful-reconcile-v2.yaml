@@ -35,6 +35,7 @@ status:
         en: EN disable message
         ru: RU disable message
     stage: GA
+  used: false
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository

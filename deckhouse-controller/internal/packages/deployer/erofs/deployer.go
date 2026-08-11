@@ -85,12 +85,14 @@ func NewDeployer(registry registryService, workingDir string, logger *log.Logger
 }
 
 // Deploy fetches a package image from the registry and mounts it at the deployed path.
-func (d *Deployer) Deploy(ctx context.Context, repo registry.Remote, packageName, deployedName, version string) error {
+// force discards the locally cached image of version and re-downloads it; callers set
+// it when the image digest changed under an unchanged version.
+func (d *Deployer) Deploy(ctx context.Context, repo registry.Remote, packageName, deployedName, version string, force bool) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
 	packageDir := filepath.Join(d.workingDir, repo.Name, packageName)
-	if err := d.download(ctx, repo, packageDir, packageName, version); err != nil {
+	if err := d.download(ctx, repo, packageDir, packageName, version, force); err != nil {
 		return err
 	}
 
@@ -323,8 +325,9 @@ func removeEmptyDir(path string) error {
 }
 
 // download fetches a package image from the registry and creates an erofs image.
-// If the image already exists and passes verification, download is skipped.
-func (d *Deployer) download(ctx context.Context, repo registry.Remote, packageDir, name, version string) error {
+// If the image already exists and passes verification, download is skipped — unless
+// force is set, which re-downloads unconditionally.
+func (d *Deployer) download(ctx context.Context, repo registry.Remote, packageDir, name, version string, force bool) error {
 	ctx, span := otel.Tracer(tracerName).Start(ctx, "Download")
 	defer span.End()
 
@@ -333,6 +336,7 @@ func (d *Deployer) download(ctx context.Context, repo registry.Remote, packageDi
 	span.SetAttributes(attribute.String("packageDir", packageDir))
 	span.SetAttributes(attribute.String("repository", repo.Name))
 	span.SetAttributes(attribute.String("registry", repo.Repository))
+	span.SetAttributes(attribute.Bool("force", force))
 
 	logger := d.logger.With(
 		slog.String("name", name),
@@ -363,15 +367,19 @@ func (d *Deployer) download(ctx context.Context, repo registry.Remote, packageDi
 	}
 
 	// skip download if image exists and passes integrity check
-	logger.Debug("verify package image")
-	if err = d.verifyImage(ctx, imagePath, rootHash); err == nil {
-		logger.Debug("package image verified")
+	if force {
+		logger.Debug("forced download, skip package image verification")
+	} else {
+		logger.Debug("verify package image")
+		if err = d.verifyImage(ctx, imagePath, rootHash); err == nil {
+			logger.Debug("package image verified")
 
-		return nil
+			return nil
+		}
+
+		// verification failed - fetch fresh image from registry
+		logger.Warn("verify package image failed", log.Err(err))
 	}
-
-	// verification failed - fetch fresh image from registry
-	logger.Warn("verify package image failed", log.Err(err))
 
 	if err = cleanupTempImageFiles(packageDir, version); err != nil {
 		span.SetStatus(codes.Error, err.Error())

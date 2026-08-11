@@ -10,6 +10,7 @@ var generatedPreflightChecks = []string{
 	"cloud-prefix",
 	"deckhouse-user",
 	"dhctl-edition",
+	"host-network-cidr-intersection",
 	"instance-class-provider",
 	"ports-availability",
 	"public-domain-template",

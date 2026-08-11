@@ -33,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
@@ -40,7 +41,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 func prepareDeckhouseDeploymentForUpdate(
@@ -272,7 +272,14 @@ func CreateDeckhouseManifests(
 		// a transient error clearing (e.g. the ModuleConfig CRD appearing) in ~1s
 		// instead of dead-waiting; the total deadline stays 600 attempts × 1s.
 		runTask := func(task actions.ManifestTask) error {
-			return retry.NewSilentLoop(task.Name, 600, 1*time.Second).RunContext(
+			loopParams := retry.NewEmptyParams(
+				retry.WithName("%s", task.Name),
+				retry.WithAttempts(600),
+				retry.WithWait(1*time.Second),
+				retry.WithWhitelist(actions.ErrManifestTaskTransient),
+			)
+
+			return retry.NewSilentLoopWithParams(loopParams).RunContext(
 				ctx,
 				func() error {
 					return task.CreateOrUpdate(ctx)

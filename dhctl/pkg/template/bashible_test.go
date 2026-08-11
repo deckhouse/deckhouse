@@ -92,7 +92,7 @@ func TestRenderBashibleTemplateUsesClusterMasterRPPAddressesForBootstrap(t *test
 
 	content := rendered.Content.String()
 	require.Contains(t, content, `unset PACKAGES_PROXY_BOOTSTRAP_CLUSTER_UUID`)
-	require.Contains(t, content, `export PACKAGES_PROXY_ADDRESSES="127.0.0.1:5444"`)
+	require.Contains(t, content, `export PACKAGES_PROXY_ADDRESSES="http://127.0.0.1:5444"`)
 	require.Contains(t, content, `export PACKAGES_PROXY_TOKEN="passthrough"`)
 	require.Contains(t, content, `bb-minget-install`)
 }

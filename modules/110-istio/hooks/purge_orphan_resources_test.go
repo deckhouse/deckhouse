@@ -341,6 +341,9 @@ internal:
     "1.27":
       revision: "v1x27"
       supportsOperator: false
+    "1.29":
+      revision: "v1x29"
+      supportsOperator: false
 `))
 			f.KubeStateSet(`
 ---
@@ -380,6 +383,14 @@ metadata:
 spec:
   revision: v1x27
 ---
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: v1x29
+  namespace: d8-istio
+spec:
+  revision: v1x29
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -396,6 +407,7 @@ metadata:
 			Expect(f.KubernetesResource("Istio", "d8-istio", "v1x25").Exists()).To(BeFalse())
 
 			Expect(f.KubernetesResource("Istio", "d8-istio", "v1x27").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Istio", "d8-istio", "v1x29").Exists()).To(BeTrue())
 		})
 	})
 })

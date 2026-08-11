@@ -243,6 +243,7 @@ read:
     - deckhouse.io/modulepulloverrides
     - deckhouse.io/modulereleases
     - deckhouse.io/modules
+    - deckhouse.io/modulesettingsdefinitions
     - deckhouse.io/modulesources
     - deckhouse.io/moduleupdatepolicies
     - deckhouse.io/nodegroups
@@ -250,7 +251,6 @@ read:
     - deckhouse.io/operationpolicies
     - deckhouse.io/packagerepositories
     - deckhouse.io/packagerepositoryoperations
-    - deckhouse.io/projects
     - deckhouse.io/projecttemplates
     - deckhouse.io/securitypolicies
     - deckhouse.io/securitypolicyexceptions
@@ -524,7 +524,7 @@ delete,deletecollection,get,list,patch,update,watch:
     - machine.sapcloud.io/yandexmachineclasses
 get,list,patch,update,watch:
     - control-plane.deckhouse.io/controlplanenodes
-list:
+list,watch:
     - dex.coreos.com/offlinesessionses
     - dex.coreos.com/passwords
 patch,update:

@@ -15,29 +15,15 @@
 # limitations under the License.
 */}}
 
-{{- $python_discovery := .Files.Get "deckhouse/candi/bashible/check_python.sh.tpl" }}
-{{- tpl ( $python_discovery ) . | nindent 0 }}
+set -e
 
-check_python
+target='{{ .url }}'
+target="${target#http://}"
 
-cat - <<EOF | $python_binary
-import ssl
-try:
-    from urllib.request import urlopen, Request
-except ImportError as e:
-    from urllib2 import urlopen, Request
+minget_path="$(mktemp /tmp/dhctl-minget.XXXXXX)"
+trap 'rm -f "$minget_path"' EXIT
 
-ssl._create_default_https_context = ssl._create_unverified_context
-request = Request('{{.url}}')
-res = False
-try:
-    response = urlopen(request, timeout=5)
-    res = True if response else False
-except Exception as err:
-    res = False
+printf '%s' '{{ .mingetBase64 }}' | base64 -d > "$minget_path"
+chmod 0700 "$minget_path"
 
-exit(0) if res else exit(1)
-
-EOF
-
-
+"$minget_path" "$target" --fail --timeout 5 >/dev/null

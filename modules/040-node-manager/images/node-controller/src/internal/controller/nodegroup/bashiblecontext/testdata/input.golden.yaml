@@ -1,0 +1,108 @@
+allowedBundles:
+- ubuntu-lts
+- centos
+- debian
+- redos
+- rosa
+- astra
+- altlinux
+- opensuse
+allowedKubeletFeatureGates:
+- RotateKubeletServerCertificate
+apiserverEndpoints:
+- 10.0.0.1:6443
+- 10.0.0.2:6443
+apiserverProxyCerts:
+  crt: PROXY-CERT
+  key: PROXY-KEY
+bootstrapTokens:
+  cloud-worker: abcdef.0123456789abcdef
+cloudProvider:
+  instanceClassAPIVersion: v1alpha1
+  instanceClassKind: D8TestInstanceClass
+  machineClassKind: YandexMachineClass
+  region: ru-central1
+  type: yandex
+  zones:
+  - ru-central1-a
+  - ru-central1-b
+clusterDNSAddress: 10.222.0.10
+clusterDomain: cluster.local
+clusterMasterEndpoints:
+- address: 10.0.0.1
+  kubeApiPort: 6443
+  rppBootstrapServerPort: 4282
+  rppServerPort: 4219
+- address: 10.0.0.2
+  kubeApiPort: 6443
+  rppBootstrapServerPort: 4282
+  rppServerPort: 4219
+clusterUUID: 3d9a3d3f-0000-4000-8000-000000000001
+deckhouse:
+  channel: stable
+  edition: EE
+  version: v1.70.0
+kubernetesCA: |
+  -----BEGIN CERTIFICATE-----
+  TEST-CLUSTER-CA
+  -----END CERTIFICATE-----
+nodeGroups:
+- cloudInstances:
+    classReference:
+      kind: D8TestInstanceClass
+      name: worker
+    maxPerZone: 3
+    minPerZone: 1
+    zones:
+    - ru-central1-a
+  cri:
+    type: Containerd
+  engine: MCM
+  instanceClass:
+    coreFraction: 100
+    cores: 4
+    diskType: network-ssd
+    imageID: img-abc
+    memory: 8192
+    platformID: standard-v3
+  kubernetesVersion: "1.32"
+  manualRolloutID: rollout-1
+  name: cloud-worker
+  nodeDrainTimeoutSecond: 300
+  nodeType: CloudEphemeral
+  serializedLabels: node-role.kubernetes.io/cloud-worker=,node.deckhouse.io/group=cloud-worker,node.deckhouse.io/type=CloudEphemeral
+  serializedTaints: ""
+  updateEpoch: <epoch>
+- cri:
+    type: Containerd
+  engine: None
+  kubernetesVersion: "1.32"
+  manualRolloutID: ""
+  name: static-worker
+  nodeTemplate:
+    labels:
+      role: worker
+    taints:
+    - effect: NoExecute
+      key: dedicated
+      value: worker
+  nodeType: Static
+  serializedLabels: node-role.kubernetes.io/static-worker=,node.deckhouse.io/group=static-worker,node.deckhouse.io/type=Static,role=worker
+  serializedTaints: dedicated=worker:NoExecute
+  static:
+    internalNetworkCIDRs:
+    - 172.18.200.0/24
+  updateEpoch: <epoch>
+nodeStatusUpdateFrequency: 10
+packagesProxy:
+  token: packages-proxy-token
+podSubnetNodeCIDRPrefix: "24"
+proxy:
+  httpProxy: http://proxy.example.com
+  noProxy:
+  - 127.0.0.1
+  - 169.254.169.254
+  - cluster.local
+  - ""
+  - ""
+  - 10.0.0.0/8

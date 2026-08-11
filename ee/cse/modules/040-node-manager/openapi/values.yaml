@@ -159,20 +159,6 @@ properties:
         description: |
           kubernetes.ca content
 
-      kubernetesAPIProxyDiscoveryCert:
-        type: object
-        default: {}
-        x-required-for-helm:
-          - crt
-          - key
-        properties:
-          crt:
-            type: string
-            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
-          key:
-            type: string
-            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
-
       standbyNodeGroups:
         type: array
         description: |
@@ -313,6 +299,12 @@ properties:
               type: string
           instanceClassKind:
             type: string
+          instanceClassAPIVersion:
+            type: string
+            description: |
+              Storage version of the InstanceClass CRD, published by the cloud provider module.
+              node-controller reads the InstanceClass through it and never resolves a version itself:
+              the value decides the instance-class checksum, which names an immutable MachineTemplate.
           machineClassKind:
             type: string
         x-examples:
@@ -499,19 +491,6 @@ properties:
             type: array
             items:
               type: string
-      allowedBundles:
-        type: array
-        default:
-          - "ubuntu-lts"
-          - "centos"
-          - "debian"
-          - "redos"
-          - "rosa"
-          - "astra"
-          - "altlinux"
-          - "opensuse"
-        items:
-          type: string
       allowedKubeletFeatureGates:
         type: array
         description: |

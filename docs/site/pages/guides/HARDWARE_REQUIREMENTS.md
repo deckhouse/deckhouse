@@ -6,7 +6,7 @@ lang: en
 layout: sidebar-guides
 ---
 
-Before deploying a cluster running Deckhouse Kubernetes Platform, you have to plan the configuration of the future cluster and decide on the parameters if its nodes (e. g., RAM, CPU, etc.).
+Before deploying a cluster running Deckhouse Kubernetes Platform, you have to plan the configuration of the future cluster and decide on the parameters of its nodes (e.g., RAM, CPU, etc.).
 
 ## Installation Planning
 
@@ -15,7 +15,7 @@ Before deploying a cluster, you need to plan for the resources that you might ne
 * What is the expected load?
 * Does your cluster require a high load mode?
 * Does your cluster require a high availability mode?
-* Which DKP modules do you intend to use?
+* Which Deckhouse Kubernetes Platform (DKP) modules do you intend to use?
 
 The answers to these questions can help you estimate the number of nodes recommended for your cluster deployment. See [Deployment Scenarios](#deployment-scenarios) to learn more.
 
@@ -42,23 +42,23 @@ This section helps you **estimate the resources** required for the cluster based
     <tr>
       <td>Minimum</td>
       <td style="text-align: center;">1</td>
-      <td style="text-align: center;">at least 1</td>
-      <td style="text-align: center;">–</td>
-      <td style="text-align: center;">–</td>
-      <td style="text-align: center;">–</td>
+      <td style="text-align: center;">At least 1</td>
+      <td style="text-align: center;">—</td>
+      <td style="text-align: center;">—</td>
+      <td style="text-align: center;">—</td>
     </tr>
     <tr>
       <td>Typical</td>
       <td style="text-align: center;">3</td>
-      <td style="text-align: center;">at least 1</td>
+      <td style="text-align: center;">At least 1</td>
       <td style="text-align: center;">2</td>
       <td style="text-align: center;">2</td>
-      <td style="text-align: center;">-</td>
+      <td style="text-align: center;">—</td>
     </tr>
     <tr>
       <td>Increased load</td>
       <td style="text-align: center;">3</td>
-      <td style="text-align: center;">at least 1</td>
+      <td style="text-align: center;">At least 1</td>
       <td style="text-align: center;">2</td>
       <td style="text-align: center;">2</td>
       <td style="text-align: center;">2</td>
@@ -68,13 +68,13 @@ This section helps you **estimate the resources** required for the cluster based
 
 Where:
 
-* **master nodes** — nodes that manage the cluster
-* **worker nodes** — these nodes are used to run user applications
-* **frontend nodes** — nodes that balance incoming traffic; Ingress controllers run on them
-* **system nodes** — these nodes are intended to run Deckhouse modules
-* **monitoring nodes** — these nodes are used to run user applications
+* **master nodes** — nodes that manage the cluster;
+* **frontend nodes** — nodes that balance incoming traffic; Ingress controllers run on them;
+* **monitoring nodes** — used to run Grafana, Prometheus, and other monitoring components;
+* **system nodes** — intended to run DKP modules;
+* **worker nodes** — intended to run user applications.
 
-See [Configuration Features](https://deckhouse.io/products/kubernetes-platform/guides/production.html#things-to-consider-when-configuring) of the "Going to Production" section for details on these node types.
+See [Configuration Features](./production.html#things-to-consider-when-configuring) of the "Going to Production" guide for details on these node types.
 
 Features of the configurations listed in the table above:
 
@@ -84,7 +84,7 @@ Features of the configurations listed in the table above:
 * **Increased load** — Unlike the typical configuration, this configuration includes dedicated monitoring nodes, enabling a high level of observability in the cluster even under high loads.
 
 {% alert level="info" %}
-Starting with version 1.74, the Deckhouse Kubernetes Platform has a module integrity control mechanism that protects modules from being replaced or modified. This mechanism is enabled automatically when the operating system on the nodes where Deckhouse is installed supports the `erofs` kernel module. If this kernel module is not present, Deckhouse will continue to operate without the module integrity control mechanism, but an alert will be displayed indicating that this functionality is not working.
+Starting with version 1.74, Deckhouse Kubernetes Platform has a module integrity control mechanism that protects modules from being replaced or modified. This mechanism is enabled automatically when the operating system on the nodes where DKP is installed supports the `erofs` kernel module. If this kernel module is not present, DKP will continue to operate without the module integrity control mechanism, but an alert will be displayed indicating that this functionality is not working.
 {% endalert %}
 
 ## Deciding on the amount of resources needed for nodes
@@ -137,7 +137,7 @@ Starting with version 1.74, the Deckhouse Kubernetes Platform has a module integ
       <td style="text-align: center;"><a href="#storage">50 / 150*</a></td>
     </tr>
     <tr>
-      <td>System node <i>(if no dedicated monitoring nodes are running in the cluster</i>)</td>
+      <td>System node <i>(if no dedicated monitoring nodes are running in the cluster)</i></td>
       <td style="text-align: center;">4</td>
       <td style="text-align: center;">8</td>
       <td style="text-align: center;"><a href="#storage">60 / 160*</a></td>
@@ -176,30 +176,30 @@ Starting with version 1.74, the Deckhouse Kubernetes Platform has a module integ
       <td style="text-align: center;"><a href="#storage">50 / 150*</a></td>
     </tr>
     <tr>
-      <td>System node <i>(if no dedicated monitoring nodes are running in the cluster</i>)</td>
+      <td>System node <i>(if no dedicated monitoring nodes are running in the cluster)</i></td>
       <td style="text-align: center;">8</td>
       <td style="text-align: center;">16</td>
       <td style="text-align: center;"><a href="#storage">60 / 160*</a></td>
     </tr>
     <tr>
       <td style="width: 45%;">
-        <b>Single master node cluster</b>
+        <b>Single-node cluster</b>
       </td>
       <td>Master node</td>
       <td style="text-align: center;">6</td>
       <td style="text-align: center;">12</td>
-      <td style="text-align: center;">160</td>
+      <td style="text-align: center;">100</td>
     </tr>
   </tbody>
 </table>
 
-{% alert %}
-* <span id="storage"></span>PVC disk space for system components: If the local disk space of the node will be used to store system PVCs (prometheus, upmeter modules, etc.), then it is necessary to additionally allocate >= 100 GB.
-* The parameters of worker nodes are largely dictated by the nature of the workload running on the node(s), the table lists the minimum requirements. For system services (kubelet) and system pods on worker nodes, you need to allocate at least 1 CPU and 2 GB of memory.
+{% alert level="info" %}
+* <span id="storage"></span>PVC disk space for system components: If the local disk space of the node will be used to store system PVCs (`prometheus`, `upmeter` modules, etc.), then it is necessary to additionally allocate >= 100 GB.
+* The parameters of worker nodes are largely dictated by the nature of the workload running on the node(s); the table lists the minimum requirements. For system services (`kubelet`) and system pods on worker nodes, you need to allocate at least 1 CPU and 2 GB of memory.
 * Note that all nodes require high performance disks (400+ IOPS).
 {% endalert %}
 
-### Single master node cluster
+### Single-node cluster
 
 {% alert level="warning" %}
 Such clusters lack fault tolerance. We highly advise you against using this kind of clusters in production environments.
@@ -207,26 +207,41 @@ Such clusters lack fault tolerance. We highly advise you against using this kind
 
 In some cases, a single-node cluster is enough. In this case, the node will take care of all the node roles described above. For example, this may be useful if you just want to familiarize yourself with the technology or run some fairly lightweight workloads.
 
-The [Getting Started guide](/products/kubernetes-platform/gs/bm/step5.html) contains instructions for deploying a single master node cluster. Once you un-taint the node, it will run all cluster components included in the selected module bundle ([bundle: Default](/modules/deckhouse/configuration.html#parameters-bundle) by default). To successfully run a cluster in this mode, you will need at least 16 CPUs, 32 GB of RAM, and 60 GB of disk space on a performance disk (400+ IOPS). Such a configuration would allow some workloads to be run.
+The [Getting Started guide](/products/kubernetes-platform/gs/bm/step5.html) contains instructions for deploying a single-node cluster. Once you un-taint the node, it will run all cluster components included in the selected module bundle ([bundle: Default](/modules/deckhouse/configuration.html#parameters-bundle) by default). To successfully run a cluster in this mode, you will need at least 16 CPUs, 32 GB of RAM, and 100 GB of disk space on a performance disk (400+ IOPS). Such a configuration would allow some workloads to be run.
 
 With this configuration, a load of 2500 RPS on a typical web application (e.g., a static Nginx page) consisting of 30 pods, and incoming traffic of 24 Mbps will result in approximately the following resource consumption figures:
 
-- CPU load will increase to ~60% in total
-- RAM and disk resource consumption figures will remain largely unchanged. In the end, however, it comes down to the number of metrics collected and the nature of the workload being run
+* CPU load will increase to ~60% in total;
+* RAM and disk resource consumption figures will remain largely unchanged. In the end, however, it comes down to the number of metrics collected and the nature of the workload being run.
 
 {% alert level="info" %}
-We recommend load testing your application and adjusting the server capacity accordingly.
+We recommend load testing the application and adjusting the server capacity accordingly.
+{% endalert %}
+
+### Configuration examples
+
+To deploy Deckhouse Kubernetes Platform Enterprise Edition with the [Default](/modules/deckhouse/configuration.html#parameters-bundle) module set, the following node configuration is required:
+
+* **master nodes** — 1 node, 4 CPU, 8 GB RAM;
+* **frontend nodes** — 1 node, 2 CPU, 4 GB RAM;
+* **system nodes** — 1 node, 8 CPU, 16 GB RAM;
+* **worker nodes** — 1 node, 4 CPU, 8 GB RAM.
+
+{% alert level="info" %}
+If needed, you can also run DKP in the same configuration on a single node with 16 CPU and 32 GB RAM for a virtual machine, or 10 CPU and 24 GB RAM for a bare metal server.
 {% endalert %}
 
 ## Node Hardware Requirements
 
 The machines you intend to turn into nodes of your future cluster must meet the following requirements:
 
-* **CPU architecture** — all nodes must be of the `x86_64` CPU architecture
-* **Identical nodes** — all nodes of the same type must have the same hardware configuration. Nodes must be of the same make and model with the same CPU, memory, and storage
-* **Network interfaces** — each node must have at least one network interface for the routed network
+* **CPU architecture** — all nodes must be of the `x86_64` CPU architecture.
+* **Identical nodes** — all nodes of the same type must have the same hardware configuration. Nodes must be of the same make and model with the same CPU, memory, and storage.
+* **Network interfaces** — each node must have at least one network interface for the routed network.
 
 ## Network Requirements
+
+The following network requirements apply to cluster nodes:
 
 * Nodes must be able to access each other over the network. The [network policies](../documentation/v1/network_security_setup.html) must be met.
 * There are no MTU requirements.
@@ -235,10 +250,10 @@ The machines you intend to turn into nodes of your future cluster must meet the 
 
 ## Community
 
-{% alert %}
+{% alert level="info" %}
 Join our [Telegram channel](https://t.me/deckhouse) to stay up to date.
 {% endalert %}
 
 Join the [Deckhouse community](https://deckhouse.io/community/about.html) for updates on important developments and news. There, you will be able to chat with others and learn from their experiences. This way, you can avoid many common mistakes.
 
-The Deckhouse team knows firsthand the dedication it takes to set up and orchestrate a production Kubernetes cluster. We're thrilled if Deckhouse empowers you to bring your vision to life. Share your journey and ignite others to embark on their own Kubernetes endeavors!
+The Deckhouse Kubernetes Platform team knows firsthand the dedication it takes to set up and orchestrate a production Kubernetes cluster. We're thrilled if DKP empowers you to bring your vision to life. Share your journey and ignite others to embark on their own Kubernetes endeavors!

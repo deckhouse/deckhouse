@@ -71,7 +71,7 @@ type Reconciler struct {
 	crdSpecs  map[string]*apiextensionsv1.CustomResourceDefinition
 }
 
-func (r *Reconciler) Setup(mgr ctrl.Manager) error {
+func (r *Reconciler) Setup(_ context.Context, mgr ctrl.Manager) error {
 	r.apiReader = mgr.GetAPIReader()
 
 	crds, err := loadCRDs(crdDir)

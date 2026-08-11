@@ -97,7 +97,7 @@ nodeGroups:
     # is no DHCP in the network that is used as a default gateway.
     configDrive: false
     # Required, the gateway of this network will be used as the default gateway.
-    # Matches the cloud.prefix in the ClusterConfiguration resource.
+    # Matches the prefix parameter in the global ModuleConfig.
     mainNetwork: kube
     additionalNetworks:                         # Optional.
     - office
@@ -188,7 +188,7 @@ nodeGroups:
     # gateway.
     configDrive: false
     # Required, the gateway of the network will be used as the default gateway.
-    # Matches the cloud.prefix in the ClusterConfiguration resource.
+    # Matches the prefix parameter in the global ModuleConfig.
     mainNetwork: kube
     additionalNetworks:                          # Optional.
     - office
@@ -401,6 +401,12 @@ For the {{ site.data.admin.cloud-types.types[page.cloud_type].name }} cloud prov
 the instance class is a custom resource called [OpenStackInstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass),
 which contains the specific configuration of the VMs.
 
+{% alert level="info" %}
+An OpenStack cluster is deployed in a single region ([`provider.region`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-provider-region)).
+Zones from other regions cannot be used.
+For details on configuring zones for CloudPermanent and CloudEphemeral nodes, see [How do I create NodeGroups in availability zones?](/modules/cloud-provider-openstack/faq.html#how-do-i-create-nodegroups-in-availability-zones) section.
+{% endalert %}
+
 {% alert level="warning" %}
 When the module settings are changed, **existing Machine objects in the cluster are NOT recreated**
 (new Machine objects will use the updated parameters).
@@ -467,11 +473,37 @@ It is recommended to limit the list of nodes added to the load balancer pool usi
 
 Without a `node-selector` restriction, cloud-controller-manager may use all suitable cluster nodes as load balancer targets. As a result, adding or removing nodes that are not related to the workload served by the load balancer may trigger an update of the load balancer pool membership. In large or frequently changing clusters, such updates may occur regularly and, in some configurations, may cause brief disruptions to existing connections.
 
-It is recommended to use `loadbalancer.openstack.org/node-selector` to select only the nodes that should be used as targets for the corresponding LoadBalancer.
+The `annotations` field of the corresponding inlet configuration in the [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller) resource supports the following annotations:
 
-#### IngressNginxController example
+- `loadbalancer.openstack.org/node-selector`: Selects the nodes that will be used as LoadBalancer targets.
+- `loadbalancer.openstack.deckhouse.io/load-balancer-id`: Instructs OpenStack CCM to use a pre-created Octavia load balancer.
+- `loadbalancer.openstack.deckhouse.io/load-balancer-address`: Instructs OpenStack CCM to associate a pre-allocated floating IP with the load balancer it creates.
 
-In this example, the Ingress controller pods are scheduled on frontend nodes, while the `loadbalancer.openstack.org/node-selector` annotation limits the load balancer pool to the same nodes:
+DKP automatically adds the specified annotations to the generated Service object of type LoadBalancer.
+
+When using the `loadbalancer.openstack.deckhouse.io/load-balancer-id` annotation, the load balancer must meet the following requirements:
+
+- reside in the cluster subnet
+- be in the `ACTIVE` state
+
+If `loadbalancer.openstack.deckhouse.io/load-balancer-id` is used to reference a pre-created load balancer with a custom name, associate the floating IP with its VIP port before creating the cluster. In this case, do not specify the `loadbalancer.openstack.deckhouse.io/load-balancer-address` annotation.
+
+When using only `loadbalancer.openstack.deckhouse.io/load-balancer-address`, the floating IP must meet the following requirements:
+
+- not be associated with any port
+- reside in the floating network configured for OpenStack CCM
+
+If the specified floating IP is unavailable, OpenStack CCM will not be able to assign an external IP address to the Service object.
+
+Do not add the `loadbalancer.openstack.deckhouse.io/load-balancer-id` or `loadbalancer.openstack.deckhouse.io/load-balancer-address` annotations to application Ingress resources. Specify them only in the IngressNginxController configuration. DKP will add them to the generated Service object, which is processed by `openstack-cloud-controller-manager`.
+
+#### IngressNginxController with a pre-created load balancer
+
+In the example below:
+
+- Ingress controller pods are scheduled on frontend nodes.
+- `loadbalancer.openstack.org/node-selector` limits the load balancer target pool to those frontend nodes.
+- `loadbalancer.openstack.deckhouse.io/load-balancer-id` references a pre-created Octavia load balancer whose VIP port already has a floating IP associated with it.
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -483,6 +515,34 @@ spec:
   inlet: LoadBalancerWithProxyProtocol
   loadBalancerWithProxyProtocol:
     annotations:
+      loadbalancer.openstack.deckhouse.io/load-balancer-id: "df7c6f73-8c68-4a11-a3e2-6268a655ce9b"
+      loadbalancer.openstack.org/node-selector: "node-role.deckhouse.io/frontend="
+      loadbalancer.openstack.org/proxy-protocol: "true"
+      loadbalancer.openstack.org/timeout-member-connect: "2000"
+  nodeSelector:
+    node-role.deckhouse.io/frontend: ""
+  tolerations:
+  - effect: NoExecute
+    key: dedicated.deckhouse.io
+    operator: Equal
+    value: frontend
+```
+
+#### IngressNginxController with a pre-allocated floating IP
+
+In the example below, OpenStack CCM creates a load balancer and associates the specified unassigned floating IP with it:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: main
+spec:
+  ingressClass: nginx
+  inlet: LoadBalancerWithProxyProtocol
+  loadBalancerWithProxyProtocol:
+    annotations:
+      loadbalancer.openstack.deckhouse.io/load-balancer-address: "203.0.113.10"
       loadbalancer.openstack.org/node-selector: "node-role.deckhouse.io/frontend="
       loadbalancer.openstack.org/proxy-protocol: "true"
       loadbalancer.openstack.org/timeout-member-connect: "2000"

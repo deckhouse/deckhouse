@@ -19,7 +19,15 @@ package testenv
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 )
+
+// testdataPath resolves a file in this package's testdata directory. Built from the source
+// file location, not the working directory, so it works from any test package.
+func testdataPath(name string) string {
+	self := callerFile()
+	return filepath.Join(filepath.Dir(self), "testdata", name)
+}
 
 func findDirUp(name string) string {
 	dir, err := os.Getwd()
@@ -51,4 +59,14 @@ func resolveUpPaths[T ~string](dirUp string, subpath []T) []string {
 		ret = append(ret, filepath.Join(base, string(f)))
 	}
 	return ret
+}
+
+// callerFile returns this file's path at build time; split out so the unused return values of
+// runtime.Caller stay in one place.
+func callerFile() string {
+	_, file, _, ok := runtime.Caller(1)
+	if !ok {
+		return ""
+	}
+	return file
 }

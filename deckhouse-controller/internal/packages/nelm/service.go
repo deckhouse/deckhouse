@@ -24,6 +24,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/google/uuid"
@@ -48,6 +49,15 @@ const (
 	// managedByAnnotation marks a release as owned by this service.
 	managedByAnnotation      = "packages.deckhouse.io/managed-by"
 	managedByAnnotationValue = "deckhouse"
+)
+
+const (
+	// envPackageNelmTimeout is the env var (set on the Deckhouse deployment) that
+	// bounds each nelm release operation on the packages path. Its value is a Go
+	// duration, e.g. "30m".
+	envPackageNelmTimeout = "PACKAGE_NELM_TIMEOUT"
+	// defaultPackageNelmTimeout applies when envPackageNelmTimeout is unset or malformed.
+	defaultPackageNelmTimeout = 30 * time.Minute
 )
 
 const (
@@ -106,6 +116,7 @@ func NewService(cache runtimecache.Cache, callback drift.AbsentCallback, status 
 		nelm.WithReleaseAnnotations(map[string]string{
 			managedByAnnotation: managedByAnnotationValue,
 		}),
+		nelm.WithTimeout(resolveTimeout()),
 	)
 
 	return &Service{
@@ -339,6 +350,8 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 		ReleaseLabels: map[string]string{
 			nelm.ReleaseLabelPackageChecksum: checksum,
 			nelm.ReleaseLabelMaintenance:     strconv.FormatBool(state == NoResourceReconciliation),
+			// TODO(ipaqsa): addon-operator legacy to migrate
+			nelm.ReleaseLabelModuleChecksum: checksum,
 		},
 		ResourcesLabels: resourcesLabels,
 	})
@@ -453,6 +466,13 @@ func (s *Service) shouldRunHelmUpgrade(ctx context.Context, namespace, releaseNa
 	// Check if manifests changed by comparing checksums
 	recordedChecksum, err := s.client.GetChecksum(ctx, namespace, releaseName)
 	if err != nil {
+		// A deployed release without the checksum label was created outside this
+		// runtime (e.g. by addon-operator): the recorded checksum is unknown, so
+		// treat it as changed and upgrade to adopt the release and stamp the label.
+		if errors.Is(err, nelm.ErrLabelNotFound) {
+			return true, nil
+		}
+
 		return false, err
 	}
 
@@ -528,4 +548,15 @@ func (s *Service) isHelmChart(path string) (bool, error) {
 	s.logger.Warn("no helm chart found in path", slog.String("path", path))
 
 	return false, nil
+}
+
+// resolveTimeout returns the nelm release-operation timeout: the PACKAGE_NELM_TIMEOUT
+// value (a Go duration such as "30m") when it is set and valid, otherwise
+// defaultPackageNelmTimeout.
+func resolveTimeout() time.Duration {
+	if d, err := time.ParseDuration(os.Getenv(envPackageNelmTimeout)); err == nil {
+		return d
+	}
+
+	return defaultPackageNelmTimeout
 }

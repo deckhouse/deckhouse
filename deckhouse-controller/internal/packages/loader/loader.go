@@ -25,6 +25,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/ettle/strcase"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -286,6 +287,11 @@ func LoadModuleConf(ctx context.Context, moduleDir string, logger *log.Logger) (
 		if err != nil {
 			return nil, fmt.Errorf("load module version: %w", err)
 		}
+	}
+
+	// override version has const v2.0.0
+	if _, err := semver.NewVersion(def.Version); err != nil {
+		def.Version = "v2.0.0"
 	}
 
 	// Load values from values.yaml and openapi schemas

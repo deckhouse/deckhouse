@@ -172,13 +172,7 @@ spec:
         {{- end }}
         resources:
         {{- include "helm_lib_resources_management_pod_resources" (list $.Values.istio.controlPlane.resourcesManagement) | nindent 10 }}
-        securityContext:
-          allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: true
-          runAsNonRoot: true
-          capabilities:
-            drop:
-            - ALL
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         volumeMounts:
         - name: istio-token
           mountPath: /var/run/secrets/tokens

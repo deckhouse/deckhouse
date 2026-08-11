@@ -25,6 +25,7 @@ spec:
           "app" "ztunnel"
           "sidecar.istio.io/inject" "false"
           "istio.io/dataplane-mode" "none"
+          "security.deckhouse.io/security-policy-exception" "ztunnel"
       )) | nindent 6 }}
       annotations:
         sidecar.istio.io/inject: "false"

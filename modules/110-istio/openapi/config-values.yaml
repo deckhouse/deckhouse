@@ -5,8 +5,8 @@ properties:
     type: string
     pattern: '^[0-9]+\.[0-9]+$'
     description: Specific version of Istio control-plane which handles unspecific versions of data plane (namespaces with `istio-injection=enabled` label, not `istio.io/rev=`).
-    examples: ["1.25"]
-    default: "1.25"
+    examples: ["1.27"]
+    default: "1.27"
   additionalVersions:
     type: array
     description: |
@@ -1102,6 +1102,22 @@ properties:
                         - type: number
                         description: |
                           Configuring memory limits.
+  configAnalysis:
+    type: object
+    description: |
+      Periodic Istio configuration analysis (`istioctl analyze`) that exports findings as Prometheus metrics and alerts.
+    x-doc-d8Editions:
+    - ee
+    default: {"enabled": true}
+    properties:
+      enabled:
+        type: boolean
+        default: true
+        description: |
+          Enable the Istio configuration analyzer Deployment for each installed control-plane revision.
+
+          Set to `false` to disable analysis and remove related workloads.
+        x-examples: [false]
   ambient:
     type: object
     description: |

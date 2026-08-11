@@ -1,21 +1,21 @@
 # Pipeline creation rules.
 # Pipeline runs only for: tags, main, merge requests, release-x.xx branches.
 workflow:
+  # Cancel previous pipeline jobs for the same ref when a new commit arrives
+  # (MR pushes, main pushes). Jobs with interruptible: false are kept.
+  auto_cancel:
+    on_new_commit: interruptible
   rules:
-    # 1) Tag creation
     - if: $CI_COMMIT_TAG
-    # 2) Push to main
     - if: $CI_COMMIT_BRANCH == "main"
-    # 3) Merge request
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-    # 4) Push to release-x.xx (e.g. release-1.76)
     - if: $CI_COMMIT_BRANCH =~ /^release-\d+\.\d+$/
-    # 5) Sheduled pipelines
     - if: $CI_PIPELINE_SOURCE == "schedule"
-    # Fallback: block all other pipeline sources by default
     - when: never
 
 # Reusable job-level rules (use via: extends: .rules:...)
+
+# --- single-context -----------------------------------------------------------
 
 .rules:on_tag:
   rules:
@@ -23,7 +23,7 @@ workflow:
 
 .rules:on_main:
   rules:
-    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE != "schedule"
 
 .rules:on_merge_request:
   rules:
@@ -32,3 +32,65 @@ workflow:
 .rules:on_release_branch:
   rules:
     - if: $CI_COMMIT_BRANCH =~ /^release-\d+\.\d+$/
+
+.rules:on_schedule_cve_scans:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $DKP_CVE_SCANS_ENABLE == "true"
+
+.rules:on_schedule_secrets_scan:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $DKP_SECRETS_SCAN_ENABLE == "true"
+
+.rules:on_schedule_docs_pdf:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $DKP_DOCS_PDF_ENABLE == "true"
+
+.rules:on_schedule_e2e_autocleaner:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $DKP_E2E_AUTOCLEANER_ENABLE == "true"
+
+
+# Manual edition builds (MR / main). Release-branch editions are automatic.
+.rules:on_main_manual:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE != "schedule"
+      when: manual
+
+.rules:on_merge_request_manual:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: manual
+
+# --- composites ---------------------------------------------------------------
+
+# PR + main + release-x.xx (validate, unit/lint, tests, doc_web).
+.rules:on_validate:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE != "schedule"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH =~ /^release-\d+\.\d+$/
+
+# PR + main only (security_scan, main_web_build).
+.rules:on_pr_main:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE != "schedule"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+
+# --- path-filtered (MR only) --------------------------------------------------
+
+.rules:on_merge_request_node_controller:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - modules/040-node-manager/images/node-controller/**/*
+
+.rules:on_merge_request_docs:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - "**/*.md"
+        - "docs/**/*"
+        - "**/crds/**/*"
+        - "**/openapi/*config-values.yaml"
+        - "candi/**/openapi/**/*"
+        - "ee/candi/**/openapi/**/*"

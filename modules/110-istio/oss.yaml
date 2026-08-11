@@ -22,6 +22,14 @@
   id: istio-1-27
   version: 1.27.9
 
+- name: Istio
+  link: https://github.com/istio/istio
+  description: An open platform to connect, manage, and secure microservices.
+  logo: /images/logos/istio.svg
+  license: Apache License 2.0
+  id: istio-1-29
+  version: 1.29.6
+
 - name: Kiali
   link: https://github.com/kiali/kiali
   description: Visualisation tool for the istio service mesh topology, and features like circuit breakers or request rates.
@@ -45,3 +53,11 @@
   license: Apache License 2.0
   id: kiali-for-istio-1-27
   version: 2.12.0
+
+- name: Kiali
+  link: https://github.com/kiali/kiali
+  description: Visualisation tool for the istio service mesh topology, and features like circuit breakers or request rates.
+  logo: /images/logos/kiali.png
+  license: Apache License 2.0
+  id: kiali-for-istio-1-29
+  version: 2.21.0

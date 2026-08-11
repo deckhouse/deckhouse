@@ -16,6 +16,7 @@ package runtime
 
 import (
 	"context"
+	"log/slog"
 	"path/filepath"
 	"slices"
 
@@ -68,6 +69,8 @@ func (r *Runtime) UpdateApp(repo registry.Remote, app App) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
+	r.logger.Debug("update app", slog.String("name", app.Name))
+
 	if len(app.Namespace) == 0 {
 		app.Namespace = defaultNamespace
 	}
@@ -84,7 +87,8 @@ func (r *Runtime) UpdateApp(repo registry.Remote, app App) {
 		return
 	}
 
-	ctx := r.packages.Update(name, version, app.SettingsVersion, app.Settings, app.Maintenance)
+	// applications have immutable tags, so a version change is the only invalidation
+	ctx := r.packages.Update(name, version, app.SettingsVersion, app.Settings, app.Maintenance, false)
 	if ctx == nil {
 		r.scheduler.Reschedule(name)
 		return
@@ -164,6 +168,8 @@ func (r *Runtime) loadApp(ctx context.Context, repo registry.Remote, packagePath
 func (r *Runtime) RemoveApp(namespace, instance string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
+	r.logger.Debug("remove app", slog.String("namespace", namespace), slog.String("instance", instance))
 
 	name := apps.BuildName(namespace, instance)
 	r.scheduler.RemoveNode(name)

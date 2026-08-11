@@ -906,6 +906,26 @@ entries:
                 ru: Назначение лейблов пространствам имён
               url: /admin/configuration/label-assignment.html
             - title:
+                en: Application delivery (Argo CD)
+                ru: Доставка приложений (Argo CD)
+              folders:
+                - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /admin/configuration/delivery/argocd/
+                - title:
+                    en: Running Argo CD
+                    ru: Запуск Argo CD
+                  url: /admin/configuration/delivery/argocd/setup/
+                - title:
+                    en: Configuring authentication and authorization
+                    ru: Настройка аутентификации и авторизации
+                  url: /admin/configuration/delivery/argocd/authentication/
+                - title:
+                    en: Configuring role-based access control
+                    ru: Настройка ролевой модели доступа
+                  url: /admin/configuration/delivery/argocd/rbac/
+            - title:
                 en: Marketplace
                 ru: Marketplace
               folders:
@@ -1140,6 +1160,10 @@ entries:
                 ru: Настройка мониторинга приложений
               url: /user/monitoring/app.html
         - title:
+            en: Application delivery (Argo CD)
+            ru: Доставка приложений (Argo CD)
+          url: /user/delivery/argocd/
+        - title:
             en: Marketplace
             ru: Marketplace
           folders:
@@ -1322,6 +1346,10 @@ entries:
                 en: Registry module
                 ru: Модуль registry
               url: /architecture/deckhouse/registry.html
+            - title:
+                en: DKP cluster management
+                ru: Управление кластерами DKP
+              url: /architecture/deckhouse/commander.html
         - title:
             en: Delivery subsystem
             ru: Подсистема Delivery
@@ -1358,6 +1386,10 @@ entries:
                 en: Vertical Pod Autoscaling
                 ru: Вертикальное масштабирование
               url: /architecture/kubernetes-and-scheduling/vpa.html
+            - title:
+                en: Descheduler module
+                ru: Модуль descheduler
+              url: /architecture/kubernetes-and-scheduling/descheduler.html
         - title:
             en: Cluster & Infrastructure subsystem
             ru: Подсистема Cluster & Infrastructure
@@ -1523,6 +1555,10 @@ entries:
                 ru: Обзор
               url: /architecture/network/
             - title:
+                en: Cni-cilium module
+                ru: Модуль cni-cilium
+              url: /architecture/network/cni-cilium.html              
+            - title:
                 en: Ingress-nginx module
                 ru: Модуль ingress-nginx
               url: /architecture/network/ingress-nginx.html
@@ -1662,6 +1698,10 @@ entries:
                 en: Observability module
                 ru: Модуль observability
               url: /architecture/observability/observability.html
+            - title:
+                en: Upmeter module
+                ru: Модуль upmeter
+              url: /architecture/observability/upmeter.html
             - title:
                 en: Logging modules
                 ru: Модули логирования

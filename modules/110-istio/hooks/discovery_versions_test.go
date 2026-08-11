@@ -105,4 +105,21 @@ pilotVx11x11x11x11: "old-pilot-img"
 		})
 	})
 
+	Context("Operator-free version 1.29.6", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global.modulesImages.digests.istio", []byte(`pilotV1x29x6: "pilot-img"`))
+			f.BindingContexts.Set(f.KubeStateSet(``))
+			f.RunHook()
+		})
+
+		It("marks version as ambient-capable and operator-free", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("istio.internal.versionMap.1\\.29.fullVersion").String()).To(Equal("1.29.6"))
+			Expect(f.ValuesGet("istio.internal.versionMap.1\\.29.revision").String()).To(Equal("v1x29"))
+			Expect(f.ValuesGet("istio.internal.versionMap.1\\.29.imageSuffix").String()).To(Equal("V1x29x6"))
+			Expect(f.ValuesGet("istio.internal.versionMap.1\\.29.supportsAmbient").Bool()).To(BeTrue())
+			Expect(f.ValuesGet("istio.internal.versionMap.1\\.29.supportsOperator").Bool()).To(BeFalse())
+		})
+	})
+
 })

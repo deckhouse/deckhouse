@@ -27,13 +27,30 @@ type (
 )
 
 const (
-	MachineCRDFile           ControllerCRDFile = "machine.yaml"
-	MachineDeploymentCRDFile ControllerCRDFile = "machine-deployment.yaml"
+	MachineCRDFile            ControllerCRDFile = "machine.yaml"
+	MachineDeploymentCRDFile  ControllerCRDFile = "machine-deployment.yaml"
+	MachineSetCRDFile         ControllerCRDFile = "machine-sets.yaml"
+	ClusterCRDFile            ControllerCRDFile = "cluster.yaml"
+	MachineHealthCheckCRDFile ControllerCRDFile = "machine-health-check.yaml"
 
 	NodeGroupCRDFile NodeManagerCRDFile = "node_group.yaml"
 	MCMCRDFile       NodeManagerCRDFile = "mcm.yaml"
 	InstanceCRDFile  NodeManagerCRDFile = "instance.yaml"
 )
+
+// RealCacheCRDPaths returns the CRDs every envtest manager needs regardless of what the
+// suite itself exercises: the production cache (common.CacheOptions) scopes these kinds, so
+// building the manager fails without their RESTMappings. Start appends them automatically.
+func RealCacheCRDPaths() []string {
+	return slices.Concat(
+		ControllerCRDPaths(MachineCRDFile, MachineDeploymentCRDFile, ClusterCRDFile, MachineHealthCheckCRDFile),
+		NodeManagerCRDPaths(MCMCRDFile),
+		[]string{
+			testdataPath("deckhousecontrolplane-crd.yaml"),
+			testdataPath("moduleconfig-crd.yaml"),
+		},
+	)
+}
 
 func ControllerCRDPaths(crds ...ControllerCRDFile) []string {
 	return resolveUpPaths("node-controller/crds", crds)
@@ -86,6 +103,13 @@ func WithMachineCRDFile() crdOpt {
 
 func WithMachineDeploymentCRDFile() crdOpt {
 	return WithController(MachineDeploymentCRDFile)
+}
+
+// WithMachineSetCRDFile installs the MachineSet CRD. A suite exercising the CAPI pruner needs it:
+// the pruner asks which templates the NodeGroup's MachineSets still reference, and without the
+// CRD that list fails, so the whole prune is skipped and the test would silently prove nothing.
+func WithMachineSetCRDFile() crdOpt {
+	return WithController(MachineSetCRDFile)
 }
 
 func WithNodeGroupCRDFile() crdOpt {

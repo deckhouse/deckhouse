@@ -54,7 +54,7 @@ type endpointIngress struct {
 // extractEndpointURLs collects application endpoints from a rendered
 // multi-document YAML manifest. An endpoint is built for every host/path pair
 // of networking.k8s.io Ingress resources annotated with
-// packages.deckhouse.io/is-application-endpoint (any value except "false").
+// packages.deckhouse.io/application-endpoint-description (any value except "false").
 // The annotation value becomes the endpoint description ("true" means no
 // description). The scheme is https when the host is covered by spec.tls,
 // http otherwise. The result is deduplicated and sorted; undecodable
@@ -78,7 +78,7 @@ func extractEndpointURLs(renderedManifests string) []status.URL {
 			continue
 		}
 
-		value, set := ing.Metadata.Annotations[v1alpha1.ApplicationAnnotationEndpoint]
+		value, set := ing.Metadata.Annotations[v1alpha1.ApplicationAnnotationEndpointDescription]
 		if !set || value == "false" {
 			continue
 		}

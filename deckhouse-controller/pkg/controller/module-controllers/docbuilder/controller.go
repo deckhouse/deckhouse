@@ -44,19 +44,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/module"
 	docsbuilder "github.com/deckhouse/deckhouse/go_lib/module/docs-builder"
-	"github.com/deckhouse/deckhouse/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-const (
-	controllerName = "module-documentation"
-
-	defaultDocumentationCheckInterval = 10 * time.Second
-)
+const controllerName = "module-documentation"
 
 type reconciler struct {
 	client               client.Client
@@ -305,8 +301,11 @@ func (r *reconciler) createOrUpdateReconcile(ctx context.Context, md *v1alpha1.M
 		return result, fmt.Errorf("patch: %w", err)
 	}
 
+	// Returning an error hands the retry to the workqueue rate limiter, which backs off
+	// exponentially. Every retry re-uploads the documentation and triggers a full site rebuild,
+	// so a fixed interval turns a persistent render failure into an endless rebuild loop.
 	if mdCopy.Status.RenderResult != v1alpha1.ResultRendered {
-		return ctrl.Result{RequeueAfter: defaultDocumentationCheckInterval}, nil
+		return result, fmt.Errorf("render documentation: %s", mdCopy.Status.RenderResult)
 	}
 
 	if !controllerutil.ContainsFinalizer(mdCopy, documentationExistsFinalizer) {

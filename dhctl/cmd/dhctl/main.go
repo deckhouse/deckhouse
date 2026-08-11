@@ -31,6 +31,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/tofu"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry/kptelemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
@@ -333,7 +334,15 @@ func runApplication(ctx context.Context, kpApp *kingpin.Application, opts *optio
 	initer := newActionIniter(opts)
 
 	// inject context.Context to kingpin.ParseContext
-	kpApp.Action(kpcontext.SetContextToAction(ctx))
+	//
+	// Actions run once the flags are parsed, so opts.Kube is populated here: stamp the context
+	// with the auth mode those flags produce. Every retry loop under this command reads it to
+	// tell an apiserver that cannot answer yet from credentials that will never be allowed.
+	kpApp.Action(func(c *kingpin.ParseContext) error {
+		return kpcontext.SetContextToAction(
+			providerinitializer.WithKubeAuthMode(ctx, &opts.Kube),
+		)(c)
+	})
 
 	kpApp.Action(kptelemetry.StartCommand)
 
