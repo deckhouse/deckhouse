@@ -1174,8 +1174,18 @@ var _ = Describe("NodeConfig controller", func() {
 			Spec: internalv1alpha1.NodeSpec{
 				NodeName: nodeName,
 				Registry: &internalv1alpha1.Registry{Address: "registry.example.com", Path: "/deckhouse/ce"},
+				// The installer's shape: the disk it chose plus the one etcd
+				// lives on. The mounts are what mark the section as somebody
+				// else's — a selector alone is a field this controller renders
+				// too, and keeping that would make storage write-once.
 				Storage: internalv1alpha1.Storage{
 					Disk: internalv1alpha1.Disk{DiskSelector: &internalv1alpha1.DiskSelector{Size: ">=30Gi"}},
+					Mounts: []internalv1alpha1.Mount{{
+						Name:              "kubernetes-data",
+						PartitionSelector: &internalv1alpha1.PartitionSelector{Size: "10Gi", Blank: true},
+						BindTo:            "/var/lib/etcd",
+						Mode:              "0700",
+					}},
 				},
 				Kubelet: internalv1alpha1.Kubelet{
 					ServerTLSBootstrap:  ptr.To(false),
@@ -1198,6 +1208,7 @@ var _ = Describe("NodeConfig controller", func() {
 			g.Expect(nc.Spec.Kubelet.ResourceReservation).NotTo(BeNil())
 			g.Expect(nc.Spec.Storage.DiskSelector).NotTo(BeNil())
 			g.Expect(nc.Spec.Storage.DiskSelector.Size).To(Equal(">=30Gi"))
+			g.Expect(nc.Spec.Storage.Mounts).To(HaveLen(1), "etcd must keep the disk it lives on")
 
 			// Registry access, on the other hand, is the cluster's answer now,
 			// not the payload's: this node is a control-plane one, so it gets

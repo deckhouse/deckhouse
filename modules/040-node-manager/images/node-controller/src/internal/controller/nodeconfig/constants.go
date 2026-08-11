@@ -188,9 +188,16 @@ const osImageNameAndTag = "olcedar:v0.1"
 // node whose provisioner named no disk. It cannot name the disk — a NodeGroup
 // has no disk field — so it says the one true thing it can: any real disk, as
 // opposed to the attach junk (cloud-init drives and config drives are
-// megabytes; no real system disk is). The machines this reaches have exactly
-// one real disk, which makes the selector unambiguous; a machine with several
-// needs a provisioner that names one, the boot path refuses to guess.
+// megabytes; no real system disk is).
+//
+// Deliberately far below the installer's own threshold for a master
+// (systemDiskSize in dhctl/pkg/immutable/nodeconfig.go), which sits between two
+// disks it knows the sizes of. Here there is nothing to sit between: a bound
+// tight enough to exclude a second disk would also exclude a small root disk,
+// and a node that cannot install at all is a worse trade than one that needs
+// its disk named. A machine with more than one real disk therefore needs a
+// provisioner that names one — the boot path takes the first match and does not
+// guess between them.
 const systemDiskSelectorSize = ">=2Gi"
 
 // How many pods a node advertises for each slice of the pod subnet, and the

@@ -78,7 +78,7 @@ func readNEROutcomes(ctx context.Context, reader client.Reader) (map[string]nerO
 			continue
 		}
 
-		applied := make(map[string]bool, len(config.Status.Extensions))
+		reported := make(map[string]bool, len(config.Status.Extensions))
 		for _, status := range config.Status.Extensions {
 			ner, ok := owner[status.Name]
 			if !ok {
@@ -88,10 +88,10 @@ func readNEROutcomes(ctx context.Context, reader client.Reader) (map[string]nerO
 			switch status.State {
 			case extensionStateReady:
 				outcome.applied++
-				applied[status.Name] = true
+				reported[status.Name] = true
 			case extensionStateFailed:
 				outcome.failed++
-				applied[status.Name] = true
+				reported[status.Name] = true
 				if outcome.message == "" {
 					outcome.message = status.Message
 				}
@@ -103,14 +103,25 @@ func readNEROutcomes(ctx context.Context, reader client.Reader) (map[string]nerO
 		// last one it accepted, and its next reconcile rebuilds the extension
 		// statuses from that config — the refused extension's Failed entry
 		// lives for one pass and vanishes. The refusal itself is durable: the
-		// ConfigurationApplied condition stays False and names it. So a
-		// spec-owned extension that never reached the status of a refusing
-		// node is counted as failed off the condition, or a poisoned request
-		// reads as merely "not applied anywhere" — indistinguishable from one
-		// still rolling out.
-		if cond := meta.FindStatusCondition(config.Status.Conditions, configurationAppliedCondition); cond != nil && cond.Status == metav1.ConditionFalse {
+		// ConfigurationApplied condition stays False and names what it refused.
+		// Without reading it back a poisoned request reads as merely "not
+		// applied anywhere", which is what a request still rolling out looks
+		// like too.
+		//
+		// Two conditions guard the count, and both are the difference between
+		// reporting a refusal and inventing one. The generation, because a
+		// False left over from an earlier spec says nothing about this one —
+		// the rollout gate keys on the same pair for the same reason
+		// (rollout.go). And the message naming the extension, because
+		// ConfigurationApplied goes False for every reason a node has not
+		// applied a config: waiting for an update window, a sysctl refused, an
+		// unrelated sysext's unit down. A group with disruption windows would
+		// otherwise light up every one of its requests as "refused by N
+		// node(s)" while it simply waits for the window.
+		cond := meta.FindStatusCondition(config.Status.Conditions, configurationAppliedCondition)
+		if cond != nil && cond.Status == metav1.ConditionFalse && cond.ObservedGeneration == config.Generation {
 			for name, ner := range owner {
-				if applied[name] {
+				if reported[name] || !strings.Contains(cond.Message, name) {
 					continue
 				}
 				outcome := outcomes[ner]
