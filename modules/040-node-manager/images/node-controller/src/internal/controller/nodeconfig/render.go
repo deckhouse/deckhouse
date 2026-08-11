@@ -188,8 +188,8 @@ func renderKubelet(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) intern
 	if ng.Spec.Kubelet != nil {
 		if ng.Spec.Kubelet.MaxPods != nil {
 			// Clamped, not passed through: a NodeGroup has no maximum while the
-			// agent's schema stops at 500; over it the API server rejects the
-			// whole config and the node is left without one.
+			// agent's schema stops at maxPodsCeiling; over it the API server
+			// rejects the whole config and the node is left without one.
 			kubelet.MaxPods = min(int(*ng.Spec.Kubelet.MaxPods), maxPodsCeiling)
 		}
 		if ng.Spec.Kubelet.ContainerLogMaxSize != "" {

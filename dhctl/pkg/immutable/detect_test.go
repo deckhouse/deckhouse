@@ -76,3 +76,15 @@ func TestIsImmutableMaster(t *testing.T) {
 		require.False(t, IsImmutableMaster(t.Context(), &config.MetaConfig{}))
 	})
 }
+
+// A static cluster runs no BaseInfra phase, so it never reports the master's
+// address and the handoff has nothing to dial. Refused before anything is
+// created: every phase before it passes, and every rerun dies the same way.
+func TestValidateClusterType(t *testing.T) {
+	require.NoError(t, ValidateClusterType(t.Context(), &config.MetaConfig{ClusterType: config.CloudClusterType}))
+
+	err := ValidateClusterType(t.Context(), &config.MetaConfig{ClusterType: config.StaticClusterType})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "Immutable")
+	require.Contains(t, err.Error(), config.StaticClusterType)
+}

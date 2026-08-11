@@ -27,6 +27,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	libretry "github.com/deckhouse/lib-dhctl/pkg/retry"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable"
@@ -49,6 +51,13 @@ const (
 	// bootstrapTokenNGLabel labels a bootstrap-token secret with the NodeGroup
 	// it belongs to.
 	bootstrapTokenNGLabel = "node-manager.deckhouse.io/node-group"
+
+	// Everything a joining node needs is published by a Deckhouse hook after the
+	// NodeGroup arrives, so the first read of a young cluster finds nothing. The
+	// budget is the classic path's, which waits this long for the group's cloud
+	// config (entity.GetCloudConfig).
+	joinInputsWaitAttempts = 225
+	joinInputsWaitInterval = time.Second
 )
 
 // buildImmutableJoinPayload renders the cloud-init an additional master joins the
@@ -60,17 +69,29 @@ func buildImmutableJoinPayload(
 	metaConfig *config.MetaConfig,
 	nodeName string,
 ) (string, error) {
-	caCert, err := clusterCABase64(ctx, kubeCl)
-	if err != nil {
-		return "", err
-	}
+	var (
+		caCert    string
+		token     string
+		endpoints []string
+	)
 
-	token, err := groupBootstrapToken(ctx, kubeCl, global.MasterNodeGroupName)
-	if err != nil {
-		return "", err
-	}
-
-	endpoints, err := apiServerEndpoints(ctx, kubeCl)
+	// Retried as one: the three reads are the payload's only inputs from the
+	// running cluster, and each of them is published asynchronously.
+	err := libretry.NewLoop(fmt.Sprintf("Waiting for the cluster to publish what %s joins with", nodeName),
+		joinInputsWaitAttempts, joinInputsWaitInterval).
+		RunContext(ctx, func() error {
+			var err error
+			caCert, err = clusterCABase64(ctx, kubeCl)
+			if err != nil {
+				return err
+			}
+			token, err = groupBootstrapToken(ctx, kubeCl, global.MasterNodeGroupName)
+			if err != nil {
+				return err
+			}
+			endpoints, err = apiServerEndpoints(ctx, kubeCl)
+			return err
+		})
 	if err != nil {
 		return "", err
 	}

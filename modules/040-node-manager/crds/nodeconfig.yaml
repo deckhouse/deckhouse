@@ -219,7 +219,7 @@ spec:
                   maxPods:
                     default: 120
                     description: MaxPods is the maximum number of pods per node.
-                    maximum: 500
+                    maximum: 1000
                     minimum: 1
                     type: integer
                   nodeIP:

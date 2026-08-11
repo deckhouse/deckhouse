@@ -19,6 +19,7 @@ package nodeconfig
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -90,7 +91,7 @@ func readNEROutcomes(ctx context.Context, reader client.Reader) (map[string]nerO
 
 		// A wholesale rejection leaves only the ConfigurationApplied condition.
 		// Two guards: the generation (a stale False says nothing) and the message
-		// naming the extension (the condition goes False for unrelated reasons).
+		// naming the extension itself (the condition goes False for other reasons).
 		cond := meta.FindStatusCondition(config.Status.Conditions, configurationAppliedCondition)
 		if cond == nil || cond.Status != metav1.ConditionFalse {
 			continue
@@ -98,8 +99,9 @@ func readNEROutcomes(ctx context.Context, reader client.Reader) (map[string]nerO
 		if cond.ObservedGeneration != config.Generation {
 			continue
 		}
+		named := extensionNamesIn(cond.Message)
 		for name, ner := range owner {
-			if reported[name] || !strings.Contains(cond.Message, name) {
+			if reported[name] || !slices.Contains(named, name) {
 				continue
 			}
 			outcome := outcomes[ner]
@@ -111,4 +113,13 @@ func readNEROutcomes(ctx context.Context, reader client.Reader) (map[string]nerO
 		}
 	}
 	return outcomes, nil
+}
+
+// extensionNamesIn cuts a node's message into the tokens that can be extension
+// names — the CRD allows [a-z0-9-] and nothing else, and the node names the
+// extension in prose. Substring search blamed "bob" for refusing "bob-signed".
+func extensionNamesIn(message string) []string {
+	return strings.FieldsFunc(message, func(r rune) bool {
+		return (r < 'a' || r > 'z') && (r < '0' || r > '9') && r != '-'
+	})
 }

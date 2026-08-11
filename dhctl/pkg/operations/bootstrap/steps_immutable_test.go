@@ -29,6 +29,9 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
 	libretry "github.com/deckhouse/lib-dhctl/pkg/retry"
@@ -38,7 +41,9 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
@@ -125,6 +130,60 @@ func TestAdminKubeconfigFromCache(t *testing.T) {
 		require.Nil(t, content)
 		require.Empty(t, path)
 	})
+}
+
+// Once the handover is confirmed the node closes its channel for good and the
+// installer's client key is dropped, so a kubeconfig that has gone missing since
+// cannot be collected again. Saying so beats spending the half-hour collection
+// budget on a refused port and then failing on the missing key.
+func TestAdminKubeconfigFromCacheStopsWhenTheHandoverIsOver(t *testing.T) {
+	stateCache, err := cache.NewStateCache(t.TempDir())
+	require.NoError(t, err)
+
+	_, err = immutable.HandoffMaterialFor(t.Context(), stateCache, "example-master-0")
+	require.NoError(t, err)
+	require.NoError(t, immutable.ForgetHandoffClientKey(t.Context(), stateCache))
+
+	missing := filepath.Join(t.TempDir(), "example-admin.kubeconfig")
+	require.NoError(t, immutable.SaveCollectedKubeconfig(t.Context(), stateCache, missing))
+
+	_, _, err = adminKubeconfigFromCache(t.Context(), stateCache)
+	require.Error(t, err, "there is no second collection to fall through to")
+	require.Contains(t, err.Error(), "cannot be collected a second time")
+}
+
+// A rerun re-enters this step with the credentials already in hand, which skips
+// the branch that writes them — so a --kubeconfig-out named for the first time
+// on that rerun would be silently ignored.
+func TestSaveAdminKubeconfigOnRerunHonoursKubeconfigOut(t *testing.T) {
+	b, bctx := immutableTestBootstrapper(t)
+	b.TmpDir = t.TempDir()
+
+	content := []byte("apiVersion: v1\nkind: Config\n")
+	collected := filepath.Join(t.TempDir(), "example-admin.kubeconfig")
+	require.NoError(t, os.WriteFile(collected, content, 0o600))
+
+	out := filepath.Join(t.TempDir(), "prod.kubeconfig")
+	b.Options.Bootstrap.KubeconfigOut = out
+
+	require.NoError(t, b.saveAdminKubeconfigOnRerun(t.Context(), content, bctx, collected))
+
+	written, err := os.ReadFile(out)
+	require.NoError(t, err)
+	require.Equal(t, content, written)
+	require.Equal(t, out, bctx.adminKubeconfigPath)
+
+	// The record follows the file, or the next rerun reads the path this one left.
+	recorded, err := immutable.LoadCollectedKubeconfig(t.Context(), bctx.stateCache)
+	require.NoError(t, err)
+	require.Equal(t, out, recorded)
+
+	// Nothing to do when the file is already where the flag names it: the write
+	// clears the path first, and that file is the only copy of the credentials.
+	b.Options.Bootstrap.KubeconfigOut = collected
+	require.NoError(t, os.Remove(collected))
+	require.NoError(t, b.saveAdminKubeconfigOnRerun(t.Context(), content, bctx, collected))
+	require.NoFileExists(t, collected, "the file that is already in place must not be rewritten")
 }
 
 // The record has to be written before ConfirmCollected shuts the node's channel
@@ -364,4 +423,72 @@ func TestCollectImmutableKubeconfigStopsOnAFailedNode(t *testing.T) {
 		"the node's own message is the only thing that says what went wrong")
 	require.Less(t, time.Since(started), immutableAPIWaitInterval,
 		"a node that reported Failed must end the wait, not start the next attempt")
+}
+
+// The bootstrap token of a NodeGroup is minted by an asynchronous node-manager
+// hook, so the first read of a young master group finds none. Without a retry
+// the whole multi-master bootstrap ends there — after the first master is up.
+func TestBuildImmutableJoinPayloadWaitsForTheBootstrapToken(t *testing.T) {
+	const token = "abcdef.0123456789abcdef"
+
+	// init_test.go collapses every loop to one attempt; safe to swap globally —
+	// no t.Parallel here.
+	inTestEnvironment := libretry.InTestEnvironment
+	libretry.InTestEnvironment = false
+	t.Cleanup(func() { libretry.InTestEnvironment = inTestEnvironment })
+
+	kubeCl := client.NewFakeKubernetesClient()
+	createJoinInputsWithoutToken(t, kubeCl)
+
+	// Published after the first attempt has already failed, the way the hook
+	// publishes it. Bounded by the context so a lost retry fails the test in
+	// seconds instead of sitting out the whole budget.
+	go func() {
+		time.Sleep(immutableJoinTokenDelay)
+		secret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "bootstrap-token-abcdef",
+				Namespace: global.ConfigsNS,
+				Labels:    map[string]string{bootstrapTokenNGLabel: global.MasterNodeGroupName},
+			},
+			Type: corev1.SecretTypeBootstrapToken,
+			Data: map[string][]byte{"token-id": []byte("abcdef"), "token-secret": []byte("0123456789abcdef")},
+		}
+		_, _ = kubeCl.CoreV1().Secrets(global.ConfigsNS).Create(context.Background(), secret, metav1.CreateOptions{})
+	}()
+
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+
+	payload, err := buildImmutableJoinPayload(ctx, kubeCl, immutableTestMetaConfig(t), "example-master-1")
+	require.NoError(t, err, "a token that is not published yet is what the wait exists for")
+
+	document, err := base64.StdEncoding.DecodeString(payload)
+	require.NoError(t, err)
+	require.Contains(t, string(document), token, "the payload must carry the token the cluster published")
+}
+
+// immutableJoinTokenDelay makes the token appear while the first attempt is
+// already over: shorter than the loop's interval, so the second attempt finds it.
+const immutableJoinTokenDelay = 100 * time.Millisecond
+
+// createJoinInputsWithoutToken publishes everything a joining master reads from
+// the cluster except the bootstrap token.
+func createJoinInputsWithoutToken(t *testing.T, kubeCl *client.KubernetesClient) {
+	t.Helper()
+
+	_, err := kubeCl.CoreV1().ConfigMaps(global.ConfigsNS).Create(t.Context(), &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{Name: clusterCAConfigMap, Namespace: global.ConfigsNS},
+		Data:       map[string]string{clusterCAKey: "-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----\n"},
+	}, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	port := int32(immutable.APIServerPort)
+	portName := apiServerPortName
+	_, err = kubeCl.DiscoveryV1().EndpointSlices(apiServerEndpointSliceNS).Create(t.Context(), &discoveryv1.EndpointSlice{
+		ObjectMeta: metav1.ObjectMeta{Name: apiServerEndpointSliceName, Namespace: apiServerEndpointSliceNS},
+		Endpoints:  []discoveryv1.Endpoint{{Addresses: []string{"192.168.1.10"}}},
+		Ports:      []discoveryv1.EndpointPort{{Name: &portName, Port: &port}},
+	}, metav1.CreateOptions{})
+	require.NoError(t, err)
 }

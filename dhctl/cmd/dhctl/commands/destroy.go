@@ -25,6 +25,7 @@ import (
 
 	"gopkg.in/alecthomas/kingpin.v2"
 	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-dhctl/pkg/logger"
@@ -231,8 +232,9 @@ func inClusterCacheIdentity() (string, error) {
 }
 
 // kubeconfigClusterIdentity names the cluster a kubeconfig points at by what is
-// inside it. The CA is required: the printed bastion-forward line retargets every
-// immutable cluster to https://127.0.0.1:6445, so the address alone identifies nothing.
+// inside it: its CA and the admin certificate issued against that CA. The address
+// identifies nothing — the printed bastion-forward line retargets every immutable
+// cluster to https://127.0.0.1:6445.
 func kubeconfigClusterIdentity(path, contextName string) (string, error) {
 	cfg, err := clientcmd.LoadFromFile(path)
 	if err != nil {
@@ -261,12 +263,9 @@ func kubeconfigClusterIdentity(path, contextName string) (string, error) {
 	// certificate-authority is a path, so an unread file would leave the address
 	// hashed on its own — the very collision this function exists to prevent,
 	// and a silent one.
-	certificateAuthority := cluster.CertificateAuthorityData
-	if len(certificateAuthority) == 0 && cluster.CertificateAuthority != "" {
-		certificateAuthority, err = os.ReadFile(cluster.CertificateAuthority)
-		if err != nil {
-			return "", fmt.Errorf("read the cluster CA %s: %w", cluster.CertificateAuthority, err)
-		}
+	certificateAuthority, err := certificateBytes(cluster.CertificateAuthorityData, cluster.CertificateAuthority)
+	if err != nil {
+		return "", fmt.Errorf("read the cluster CA: %w", err)
 	}
 	if len(certificateAuthority) == 0 {
 		return "", fmt.Errorf(
@@ -277,8 +276,54 @@ func kubeconfigClusterIdentity(path, contextName string) (string, error) {
 		)
 	}
 
-	// The CA alone, deliberately not the server address: a destroy resumed through
-	// the bastion forward carries a rewritten address, so hashing it would hand the
-	// resume an empty cache with no infrastructure state to finish from.
-	return fmt.Sprintf("kubeconfig-%x", sha256.Sum256(certificateAuthority)), nil
+	// The CA is shared by every cluster restored from one PKI — a DR clone, a
+	// cluster rebuilt from an etcd snapshot — and one cache directory for two of
+	// them is destroy deleting the other one's infrastructure. The admin
+	// certificate is issued once per cluster, so it tells them apart.
+	adminCertificate, err := adminCertificateBytes(cfg, kubeContext.AuthInfo)
+	if err != nil {
+		return "", err
+	}
+
+	// The server address is still left out: a destroy resumed through the bastion
+	// forward carries a rewritten one, so hashing it would hand the resume an empty
+	// cache with no infrastructure state to finish from.
+	identity := sha256.New()
+	identity.Write(certificateAuthority)
+	identity.Write(adminCertificate)
+	return fmt.Sprintf("kubeconfig-%x", identity.Sum(nil)), nil
+}
+
+// adminCertificateBytes returns the client certificate the context's user
+// authenticates with, or nothing when it authenticates some other way — a token
+// or an exec plugin says nothing about which cluster it belongs to.
+func adminCertificateBytes(cfg *clientcmdapi.Config, authInfoName string) ([]byte, error) {
+	authInfo, found := cfg.AuthInfos[authInfoName]
+	if !found {
+		return nil, nil
+	}
+
+	certificate, err := certificateBytes(authInfo.ClientCertificateData, authInfo.ClientCertificate)
+	if err != nil {
+		return nil, fmt.Errorf("read the client certificate of user %q: %w", authInfoName, err)
+	}
+	return certificate, nil
+}
+
+// certificateBytes returns an embedded certificate, or the contents of the file
+// the kubeconfig names instead. ResolveLocalPaths has already resolved that path
+// against the kubeconfig's own directory.
+func certificateBytes(data []byte, path string) ([]byte, error) {
+	if len(data) > 0 {
+		return data, nil
+	}
+	if path == "" {
+		return nil, nil
+	}
+
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("read %s: %w", path, err)
+	}
+	return content, nil
 }

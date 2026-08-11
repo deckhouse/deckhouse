@@ -168,11 +168,12 @@ func TestDefaultMaxPodsFor(t *testing.T) {
 		{name: "a /22 slice per node", prefix: intstr.FromString("22"), expMaxPods: maxPodsPerNodeCIDR22},
 		{name: "a slice narrower than /24", prefix: intstr.FromString("25"), expMaxPods: maxPodsPerNodeCIDR24},
 		{
-			// Bashible allows 1000 here; an immutable node's schema stops at 500,
-			// so it gets the ceiling rather than a config the API server refuses.
-			name:       "a /21 slice per node is capped at what the node accepts",
+			// A bashible node advertises 1000 here. An immutable node beside it
+			// advertising 500 is the scheduler skew this ladder exists to avoid,
+			// so the whole ladder has to fit under the agent's schema.
+			name:       "a /21 slice per node, as wide as bashible goes",
 			prefix:     intstr.FromString("21"),
-			expMaxPods: maxPodsCeiling,
+			expMaxPods: maxPodsPerNodeCIDR21,
 		},
 		{name: "no prefix configured falls back to a /24", expMaxPods: maxPodsPerNodeCIDR24},
 	}

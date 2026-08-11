@@ -107,10 +107,13 @@ func (b *ClusterBootstrapper) connectToImmutableMaster(ctx context.Context, bctx
 		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf(
 			"A previous attempt already collected the credentials; reusing the admin kubeconfig at %s", collectedPath,
 		))
+		if err := b.saveAdminKubeconfigOnRerun(ctx, complete, bctx, collectedPath); err != nil {
+			return err
+		}
 		// Printed here too: the other two calls are the first-collection path and
 		// the end of a successful run, so a stalled rerun would otherwise never
 		// say where the credentials are.
-		b.printHowToReachTheCluster(ctx, collectedPath, bctx)
+		b.printHowToReachTheCluster(ctx, bctx.adminKubeconfigPath, bctx)
 	}
 
 	// The tunnel behind it stays open for the rest of the bootstrap.
@@ -130,7 +133,7 @@ func (b *ClusterBootstrapper) connectToImmutableMaster(ctx context.Context, bctx
 		}
 	}
 
-	content, err := immutable.RetargetKubeconfig(ctx, complete, server)
+	content, err := immutable.RetargetKubeconfig(ctx, complete, server, bctx.masterNodeName)
 	if err != nil {
 		return err
 	}
@@ -177,13 +180,46 @@ func adminKubeconfigFromCache(ctx context.Context, stateCache state.Cache) ([]by
 	}
 
 	content, err := os.ReadFile(path)
-	if err != nil {
-		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf(
-			"read the admin kubeconfig %s a previous attempt left behind: %v; collecting it from the node again", path, err,
-		))
-		return nil, "", nil
+	if err == nil {
+		return content, path, nil
 	}
-	return content, path, nil
+
+	if handoverIsOver(ctx, stateCache) {
+		return nil, "", fmt.Errorf(
+			"read the admin kubeconfig %s a previous attempt collected: %w. "+
+				"The first master has been told the credentials are stored, so it closed its bootstrap channel for good "+
+				"and the installer's client key is gone with it: they cannot be collected a second time. "+
+				"Restore that file, or destroy the cluster and bootstrap it again",
+			path, err,
+		)
+	}
+
+	dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf(
+		"read the admin kubeconfig %s a previous attempt left behind: %v; collecting it from the node again", path, err,
+	))
+	return nil, "", nil
+}
+
+// handoverIsOver reports that an earlier attempt confirmed the handover: that is
+// the one thing that blanks the installer's client key, and without the key a
+// second collection could not be completed even if the node still answered.
+func handoverIsOver(ctx context.Context, stateCache state.Cache) bool {
+	material, err := immutable.LoadHandoffMaterial(ctx, stateCache)
+	if err != nil || material == nil {
+		return false
+	}
+	return material.ClientKeyPEM == ""
+}
+
+// saveAdminKubeconfigOnRerun writes the credentials an earlier attempt collected
+// to a --kubeconfig-out this run names for the first time: the collecting branch
+// is the only other writer, and a rerun skips it.
+func (b *ClusterBootstrapper) saveAdminKubeconfigOnRerun(ctx context.Context, content []byte, bctx *bootstrapContext, collectedPath string) error {
+	out := b.Options.Bootstrap.KubeconfigOut
+	if out == "" || out == collectedPath {
+		return nil
+	}
+	return b.saveAdminKubeconfig(ctx, content, bctx)
 }
 
 // collectImmutableCredentials waits for the node's bootstrap channel, collects

@@ -201,10 +201,10 @@ var _ = Describe("NodeConfig controller", func() {
 	It("says on the NodeGroup which settings it had to clamp", func(ctx context.Context) {
 		ngName := testenv.UniqueName("workers-clamped")
 		createImmutableNodeGroup(ctx, ngName, func(ng *deckhousev1.NodeGroup) {
-			// The documentation suggests 1000 maxPods for a /21 pod subnet, while
-			// the agent's schema stops at 500; RollingUpdate has no counterpart on
-			// a node that is replaced rather than updated in place.
-			ng.Spec.Kubelet = &deckhousev1.KubeletSpec{MaxPods: ptr.To[int32](1000)}
+			// Above anything the pod subnet can ask for, so the API server has to
+			// take the ceiling itself; RollingUpdate has no counterpart on a node
+			// that is replaced rather than updated in place.
+			ng.Spec.Kubelet = &deckhousev1.KubeletSpec{MaxPods: ptr.To[int32](1500)}
 			ng.Spec.Disruptions = &deckhousev1.DisruptionsSpec{ApprovalMode: deckhousev1.DisruptionApprovalModeRollingUpdate}
 		})
 		nodeName := testenv.UniqueName("node")
@@ -212,7 +212,10 @@ var _ = Describe("NodeConfig controller", func() {
 
 		Eventually(func(g Gomega) {
 			nc := getNodeConfig(ctx, g, nodeName)
-			g.Expect(nc.Spec.Kubelet.MaxPods).To(Equal(maxPodsCeiling))
+			// Clamped to the ceiling, which the CRD takes and which is the top of
+			// the bashible ladder: a lower one had immutable nodes advertise half
+			// the pods of the bashible nodes beside them on a /21 cluster.
+			g.Expect(nc.Spec.Kubelet.MaxPods).To(Equal(maxPodsPerNodeCIDR21))
 			g.Expect(nc.Spec.UpdatePolicy.Mode).To(Equal(string(deckhousev1.DisruptionApprovalModeAutomatic)))
 
 			messages := clampWarnings(ctx, g, ngName)
@@ -1029,6 +1032,62 @@ var _ = Describe("NodeConfig controller", func() {
 			nc := &internalv1alpha1.NodeConfig{}
 			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: nodeName}, nc)).NotTo(Succeed())
 		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
+	})
+
+	// User story: As a cluster operator, I want a static node I provisioned by
+	// hand to keep the addresses and disks I gave it, so that the cluster does
+	// not render DHCP over its static network and lose the node at its next boot.
+	It("does not race a static node that publishes the payload it booted with", func(ctx context.Context) {
+		ngName := testenv.UniqueName("static-imm")
+		createImmutableNodeGroup(ctx, ngName, func(ng *deckhousev1.NodeGroup) {
+			ng.Spec.NodeType = deckhousev1.NodeTypeStatic
+			ng.Spec.CloudInstances = nil
+		})
+		nodeName := testenv.UniqueName("static")
+		createNode(ctx, nodeName, ngName)
+
+		By("waiting for the node to publish the config it booted with")
+		Consistently(func(g Gomega) {
+			nc := &internalv1alpha1.NodeConfig{}
+			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: nodeName}, nc)).NotTo(Succeed())
+		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
+
+		// The payload's shape: an address nothing hands out and a disk the
+		// machine was built with. Neither is anything the render can reproduce.
+		bootstrapped := &internalv1alpha1.NodeConfig{
+			ObjectMeta: metav1.ObjectMeta{Name: nodeName},
+			Spec: internalv1alpha1.NodeSpec{
+				NodeName: nodeName,
+				Network: internalv1alpha1.Network{
+					Hostname: nodeName,
+					Interfaces: []internalv1alpha1.NetworkInterface{{
+						Name:      "ens3",
+						Addresses: []string{"192.168.42.11/24"},
+						Gateway:   "192.168.42.1",
+					}},
+				},
+				Storage: internalv1alpha1.Storage{
+					Disk: internalv1alpha1.Disk{Device: "/dev/vdb"},
+				},
+			},
+		}
+		Expect(k8sClient.Create(ctx, bootstrapped)).To(Succeed())
+		DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, bootstrapped) })
+
+		By("letting the controller render over it")
+		Eventually(func(g Gomega) {
+			nc := getNodeConfig(ctx, g, nodeName)
+
+			// The render did happen: the cluster-wide inputs are in.
+			g.Expect(nc.Spec.APIServerEndpoints).To(ConsistOf(apiServerEndpoints))
+			g.Expect(nc.Spec.Extensions).To(HaveLen(3))
+
+			// What only the provisioner knew was not dropped.
+			g.Expect(nc.Spec.Network.Interfaces).To(HaveLen(1))
+			g.Expect(nc.Spec.Network.Interfaces[0].DHCP).To(BeFalse())
+			g.Expect(nc.Spec.Network.Interfaces[0].Addresses).To(ConsistOf("192.168.42.11/24"))
+			g.Expect(nc.Spec.Storage.Device).To(Equal("/dev/vdb"))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
 	// User story: As a cluster operator, I want the first master to keep working
