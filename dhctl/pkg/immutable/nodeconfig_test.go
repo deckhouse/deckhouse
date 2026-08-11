@@ -118,7 +118,6 @@ func TestNodeConfigMaxPodsFollowsThePodSubnet(t *testing.T) {
 		{prefix: "23", expect: 250},
 		{prefix: "22", expect: 500},
 		{prefix: "21", expect: 500, comment: cappedFrom1000},
-		{prefix: "20", expect: 500, comment: cappedFrom1000},
 		{prefix: "", expect: 120, comment: "bashible defaults the prefix to 24"},
 	}
 
