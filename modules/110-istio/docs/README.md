@@ -117,7 +117,7 @@ The cluster components are divided into two categories:
 
 ![Architecture of the cluster with Istio enabled](images/istio-architecture.png)
 
-All data plane services are grouped into a mesh (they share a TrustDomain and authenticate each other using trusted root certificates) with the following features:
+All data plane services are grouped into a mesh with the following features:
 
 - It has a common namespace for generating service ID in the form `<TrustDomain>/ns/<Namespace>/sa/<ServiceAccount>`. Each mesh has a TrustDomain ID (in our case, it is the same as the cluster domain), e.g. `mycluster.local/ns/myns/sa/myapp`.
 - Services within a single mesh can authenticate each other using trusted root certificates.

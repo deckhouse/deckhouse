@@ -108,7 +108,7 @@ Istio позволяет осуществлять сбор трейсов с п�
 
 Дашборды Grafana для workload и количественные данные в Kiali опираются на стандартные метрики `istio_*`, которые Prometheus забирает с `istio-proxy`. Начиная с Istio&nbsp;1.21+, они настраиваются через Telemetry API и связанные провайдеры по умолчанию в `meshConfig`, а не только через прежний блок `telemetry.v2`.
 
-В DKP параметр — [`telemetryAPI.enabled`](configuration.html#parameters-telemetryapi-enabled): `false` оставляет полностью включённым `telemetry.v2`, `true` переводит меш (группу сервисов data plane с общим TrustDomain и взаимной аутентификацией по доверенным корневым сертификатам) на режим Telemetry API (`defaultProviders`, управляемые модулем `Telemetry` CR и формат строки доступа из [`dataPlane.accessLog`](configuration.html#parameters-dataplane-accesslog)). Подробнее с примерами — в разделе [Telemetry API: метрики меша, трассировка и журналы доступа](examples.html#telemetry-api-mesh-observability).
+В DKP параметр — [`telemetryAPI.enabled`](configuration.html#parameters-telemetryapi-enabled): `false` оставляет полностью включённым `telemetry.v2`, `true` переводит меш на режим Telemetry API (`defaultProviders`, управляемые модулем `Telemetry` CR и формат строки доступа из [`dataPlane.accessLog`](configuration.html#parameters-dataplane-accesslog)). Подробнее с примерами — в разделе [Telemetry API: метрики меша, трассировка и журналы доступа](examples.html#telemetry-api-mesh-observability).
 
 ## Архитектура кластера с включённым Istio
 

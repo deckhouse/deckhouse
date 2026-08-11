@@ -848,7 +848,7 @@ annotations:
 
 ## Telemetry API: метрики меша и журналы доступа
 
-[Istio Telemetry API](https://istio.io/latest/docs/tasks/observability/telemetry/) (`telemetry.istio.io`) — рекомендуемый способ настройки сбора данных о работе сервисов (метрики, access log, провайдеры трассировки) в меше (группе сервисов data plane с общим TrustDomain и взаимной аутентификацией по доверенным корневым сертификатам) в связке с `meshConfig`.
+[Istio Telemetry API](https://istio.io/latest/docs/tasks/observability/telemetry/) (`telemetry.istio.io`) — рекомендуемый способ настройки сбора данных о работе сервисов (метрики, access log, провайдеры трассировки) в меше в связке с `meshConfig`.
 
 Модуль поддерживает два режима, задаваемые параметром [`telemetryAPI.enabled`](configuration.html#parameters-telemetryapi-enabled):
 
