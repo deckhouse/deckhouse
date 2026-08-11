@@ -92,11 +92,9 @@ func BootstrapAdditionalMasterNodes(
 				return err
 			}
 
-			// An immutable master runs no sshd, so its address is of no use to
-			// anything that dials one — and recording it here is worse than
-			// useless: this cache is what converge later builds its SSH session
-			// from, and an unreachable host in it stalls that session. The first
-			// master is kept out of the same cache for the same reason.
+			// An immutable master runs no sshd: converge builds its SSH session
+			// from this cache, and an unreachable host stalls it. The first master
+			// is kept out of the same cache for the same reason.
 			if immutableMaster {
 				continue
 			}

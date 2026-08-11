@@ -31,15 +31,9 @@ import (
 
 var updateGolden = flag.Bool("update-golden", false, "rewrite the golden payload files")
 
-// TestBuildCloudConfigGolden pins the exact bytes the master VM boots with. The
-// on-node agent parses both documents strictly, so a silent rename of any field
-// here is a node that refuses to bootstrap.
-//
-// Both documents are built the way the bootstrap builds them; only the three
-// handoff strings are replaced with placeholders afterwards, because they are
-// freshly minted on every run. Everything else in the golden file is what
-// actually boots the node — the rendered control-plane manifests included, which
-// is what makes the absence of any cluster key in them visible here.
+// TestBuildCloudConfigGolden pins the exact bytes the master VM boots with: the
+// on-node agent parses strictly, so a silent field rename refuses to bootstrap.
+// Only the freshly-minted handoff strings are replaced with placeholders.
 func TestBuildCloudConfigGolden(t *testing.T) {
 	metaConfig := testMetaConfig(t)
 	globalOptions := options.NewGlobalOptions()
@@ -81,12 +75,9 @@ func TestBuildCloudConfigGolden(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, string(golden), cloudConfig)
 
-	// The invariant the whole payload is shaped around. cloud-init ends up in a
-	// Secret of somebody else's namespace, in the infrastructure state and in
-	// the installer's cache, so no key of this cluster may ever travel in it:
-	// the node generates its own PKI and never receives one. The only key that
-	// legitimately appears in the real payload is the handoff serving key
-	// redacted above, and it protects one read of one file.
+	// The invariant the whole payload is shaped around: no cluster key may
+	// travel in cloud-init, which ends up in Secrets, state and caches. The only
+	// legitimate key is the redacted handoff serving key (one read of one file).
 	require.NotContains(t, cloudConfig, "PRIVATE KEY",
 		"the master payload must carry no private key of the cluster")
 }

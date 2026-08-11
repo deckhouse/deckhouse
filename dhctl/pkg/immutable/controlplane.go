@@ -48,9 +48,7 @@ func (in MasterPayloadInput) validate() error {
 
 // controlPlaneSettings are the operator's control-plane-manager settings, in the
 // shape the templates read them in. Read through the same extractor the classic
-// bootstrap uses: the templates behind both masters are the same files, and
-// resourcesRequests honoured on one master and ignored on the other is a
-// difference nothing reports.
+// bootstrap uses so both masters honour settings like resourcesRequests alike.
 func controlPlaneSettings(ctx context.Context, in MasterPayloadInput) (map[string]any, error) {
 	extractor := controlplane.NewSettingsExtractor(
 		in.MetaConfig,
@@ -66,13 +64,9 @@ func controlPlaneSettings(ctx context.Context, in MasterPayloadInput) (map[strin
 	return cfg.Settings, nil
 }
 
-// buildControlPlaneConfig assembles what the first master brings its own control
-// plane up from: the settings it still decides for itself, and the manifests it
-// only writes.
-//
-// The only key in the result belongs to the handoff endpoint dhctl collects the
-// admin kubeconfig through. The cluster PKI is generated on the node and never
-// comes near this document.
+// buildControlPlaneConfig assembles what the first master brings its own
+// control plane up from. The only key in the result belongs to the handoff
+// endpoint; the cluster PKI is generated on the node and never enters it.
 func buildControlPlaneConfig(ctx context.Context, in MasterPayloadInput) (*controlPlaneConfig, error) {
 	if err := in.validate(); err != nil {
 		return nil, fmt.Errorf("build control-plane config: %w", err)
@@ -135,10 +129,9 @@ func buildControlPlaneConfig(ctx context.Context, in MasterPayloadInput) (*contr
 	}, nil
 }
 
-// clusterParams reads the cluster-wide inputs. Every one of them ends up in a
-// certificate SAN or a component flag, so an empty one is not passed through:
-// it renders as an empty flag and the component dies on its own command line
-// with a message that says nothing about where it came from.
+// clusterParams reads the cluster-wide inputs. Every one ends up in a
+// certificate SAN or a component flag, so an empty one is rejected here instead
+// of rendering an empty flag the component dies on with an opaque message.
 func clusterParams(metaConfig *config.MetaConfig) (controlPlaneRenderParams, error) {
 	// ClusterConfigMap resolves an "Automatic" kubernetesVersion to the version
 	// this installer defaults to. Rendering "Automatic" into the feature gates
@@ -184,12 +177,9 @@ func clusterParams(metaConfig *config.MetaConfig) (controlPlaneRenderParams, err
 	return params, nil
 }
 
-// ResolveControlPlaneImages picks the digests of the four static-pod images out
-// of the digest map baked into the installer image. The templates turn them into
-// references; a preflight check calls this on its own to fail a cluster whose
-// Kubernetes version this installer ships no control plane for.
-//
-// Pure; the context is here for the package's uniform exported signature.
+// ResolveControlPlaneImages picks the four static-pod image digests out of the
+// map baked into the installer image; a preflight check calls it to fail early
+// on an unsupported Kubernetes version. Pure; the context is for uniformity.
 func ResolveControlPlaneImages(_ context.Context, metaConfig *config.MetaConfig) (controlPlaneImages, error) {
 	version, err := kubernetesVersion(metaConfig)
 	if err != nil {
@@ -229,12 +219,9 @@ func ResolveControlPlaneImages(_ context.Context, metaConfig *config.MetaConfig)
 	return images, nil
 }
 
-// certSANs are the extra names the apiserver certificate must cover. The node
-// issues that certificate itself, so it needs the same list
-// control-plane-manager later publishes under the "cert-sans" key of its config
-// secret — without them anything reaching the cluster through a load balancer
-// or a floating IP fails the hostname check until control-plane-manager
-// reissues the certificate.
+// certSANs are the extra names the apiserver certificate must cover: the same
+// list control-plane-manager publishes under "cert-sans". Without them access
+// via a load balancer or floating IP fails the hostname check until reissue.
 func certSANs(metaConfig *config.MetaConfig) []string {
 	mc := metaConfig.FindModuleConfig("control-plane-manager")
 	if mc == nil {

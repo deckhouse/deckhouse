@@ -24,10 +24,8 @@ import (
 )
 
 // dhctl-server writes no default kubeconfig and its bootstrap response carries
-// none, so a Commander-mode run without --kubeconfig-out would end with a
-// cluster that has no way in: the node runs no sshd and its handoff channel
-// closes as soon as the collection is confirmed. Caught before anything is
-// created rather than after.
+// none, so a Commander-mode run without --kubeconfig-out would end with no way
+// into the cluster. Caught before anything is created rather than after.
 func TestImmutableKubeconfigOut(t *testing.T) {
 	tests := []struct {
 		name          string

@@ -32,14 +32,9 @@ import (
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 )
 
-// reconcileDisruption answers a node that cannot apply its config without
-// restarting kubelet, containerd or the system extensions. The answer is a
-// NodeOperation: the node is drained and interrupted through the same resource
-// an operator would use to reboot it by hand, so what is being done to a node —
-// and who asked for it — is visible in one place instead of an annotation.
-//
-// The operation names the config revision it covers, so it authorises one
-// particular change and not everything that follows.
+// reconcileDisruption answers a node that cannot apply its config without a
+// restart, by creating a NodeOperation — the same resource an operator uses.
+// The operation names the config revision, so it authorises one change only.
 func (r *Reconciler) reconcileDisruption(ctx context.Context, ng *v1.NodeGroup, node *corev1.Node, nc *internalv1alpha1.NodeConfig, logger logr.Logger) error {
 	if !disruptionRequested(nc) {
 		return nil
@@ -50,12 +45,9 @@ func (r *Reconciler) reconcileDisruption(ctx context.Context, ng *v1.NodeGroup, 
 		return err
 	}
 	if existing != nil {
-		// An operation that is still on its way needs nothing: the nodeoperation
-		// controller drains the node and hands it over. One that is already
-		// finished, though, means the node is asking again for a revision the
-		// cluster believes it has been interrupted for — it will be refused for as
-		// long as it keeps asking, so say so rather than leaving the node holding
-		// the group's rollout slot with nothing anywhere explaining why.
+		// An in-flight operation needs nothing. A completed one means the node is
+		// asking again for a revision already carried out — it will be refused
+		// forever, so surface it instead of silently holding the rollout slot.
 		if existing.Status.Phase == v1alpha1.NodeOperationCompleted {
 			logger.V(1).Info("node is asking again for a disruption already carried out",
 				"node", node.Name, "nodeGroup", ng.Name, "configGeneration", nc.Generation, "operation", existing.Name)
@@ -78,12 +70,9 @@ func (r *Reconciler) reconcileDisruption(ctx context.Context, ng *v1.NodeGroup, 
 	return r.createApproval(ctx, ng, node, nc, logger)
 }
 
-// findApproval looks for the operation that already covers this revision, so a
-// node is asked about once rather than on every pass.
-//
-// The read goes straight to the API server: the caller creates an approval when
-// it finds none, and a cached list that has not caught up with the previous one
-// yields a second request for permission for the same revision.
+// findApproval looks for the operation that already covers this revision. The
+// read goes straight to the API server: a cached list that missed the previous
+// approval would mint a second one for the same revision.
 func (r *Reconciler) findApproval(ctx context.Context, nc *internalv1alpha1.NodeConfig) (*v1alpha1.NodeOperation, error) {
 	ops := &v1alpha1.NodeOperationList{}
 	if err := r.sources.Reader.List(ctx, ops, client.MatchingLabels{operationNodeLabel: nc.Name}); err != nil {
@@ -96,13 +85,9 @@ func (r *Reconciler) findApproval(ctx context.Context, nc *internalv1alpha1.Node
 			op.Spec.ConfigGeneration == nil || *op.Spec.ConfigGeneration != nc.Generation {
 			continue
 		}
-		// A failed operation allows a fresh attempt: treating it as still
-		// pending would leave the node asking forever for permission nobody is
-		// going to grant again. A completed one, however, means this very
-		// revision was already approved and carried out — returning it (rather
-		// than skipping to createApproval) stops a second approval, and a second
-		// drain, from being minted while the node is still applying the config
-		// and has not yet cleared its DisruptionRequired condition.
+		// A failed operation allows a fresh attempt. A completed one is returned:
+		// it stops a second approval, and a second drain, while the node is still
+		// applying the config and has not cleared DisruptionRequired.
 		if op.Status.Phase == v1alpha1.NodeOperationFailed {
 			continue
 		}
@@ -165,12 +150,9 @@ func approvalMode(ng *v1.NodeGroup) v1.DisruptionApprovalMode {
 	return ng.Spec.Disruptions.ApprovalMode
 }
 
-// needDrain mirrors the update-approval rule: a group that would lose its only
-// node to the drain is interrupted without one.
-//
-// Exactly one, not "one or fewer": status.nodes is written by another controller
-// and is 0 until it has run, so reading the uncounted group as a group of one
-// interrupted every node of a fifty-node group with its workload still on it.
+// needDrain mirrors the update-approval rule: a group of exactly one is
+// interrupted without a drain. Not "one or fewer" — status.nodes is 0 until its
+// controller runs, and reading that as "one" skipped drains on whole groups.
 func needDrain(ng *v1.NodeGroup) bool {
 	if ng.Status.Nodes == 1 {
 		return false

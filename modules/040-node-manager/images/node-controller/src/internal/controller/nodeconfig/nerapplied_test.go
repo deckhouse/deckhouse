@@ -109,10 +109,8 @@ func TestNEROutcomesIgnorePendingNodes(t *testing.T) {
 	require.Equal(t, int32(0), outcomes["bob-request"].failed)
 }
 
-// A node that rejects the configuration wholesale keeps running the last one
-// it accepted, so the refused extension's Failed entry is gone from its status
-// by the next pass — measured on a live cluster: the NER read Ready while the
-// node sat Degraded over it. The durable trace of the refusal is the
+// TestNEROutcomesCountWholesaleRejections: a wholesale rejection leaves no
+// durable Failed entry in status.extensions; the only lasting trace is the
 // ConfigurationApplied condition, and the count has to come from there.
 func TestNEROutcomesCountWholesaleRejections(t *testing.T) {
 	scheme := runtime.NewScheme()
@@ -153,11 +151,9 @@ func TestNEROutcomesCountWholesaleRejections(t *testing.T) {
 	require.Equal(t, int32(0), outcomes["bob-signed-request"].failed)
 }
 
-// ConfigurationApplied goes False for every reason a node has not applied its
-// config — waiting for an update window among them — and a stale False says
-// nothing about the spec the cluster publishes now. Counting either as a
-// refusal paints "N node(s) refused the sysext" over a healthy rollout, which
-// is the same class of lie this counting exists to remove.
+// TestNEROutcomesIgnoreUnrelatedAndStaleRejections: ConfigurationApplied goes
+// False for unrelated reasons (update windows) and a stale False says nothing;
+// counting either as a refusal paints "refused" over a healthy rollout.
 func TestNEROutcomesIgnoreUnrelatedAndStaleRejections(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, internalv1alpha1.AddToScheme(scheme))

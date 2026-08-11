@@ -28,20 +28,9 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-// TestGoldenPayloadMatchesNodeConfigCRD guards the contract this package
-// duplicates by hand: the payload types here, the agent's parser and the
-// NodeConfig CRD are three copies of one shape, kept in step by comments and by
-// this test. The golden payload is validated against the CRD schema from this
-// very repository, so a field added here and forgotten there — or renamed on
-// either side — fails a unit test instead of a node.
-//
-// What it checks: every field path the payload writes exists in the CRD schema.
-// That is the half of the drift that matters — a field renamed on either side,
-// or added here and forgotten there. Types, enums and patterns are left to the
-// API server: validating them here meant pulling k8s.io/apiserver and cel-go
-// into dhctl's dependency graph for good, and this test does not even run in
-// CI (the dhctl test image ships no modules/*/crds — see the skip below), so
-// the cost was permanent and the cover was not.
+// TestGoldenPayloadMatchesNodeConfigCRD guards the hand-duplicated contract:
+// every field path the golden payload writes must exist in the NodeConfig CRD
+// schema. Types/enums are left to the API server (validating them needs cel-go).
 func TestGoldenPayloadMatchesNodeConfigCRD(t *testing.T) {
 	nodeConfigDoc := goldenNodeConfigDocument(t)
 

@@ -25,10 +25,8 @@ import (
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 )
 
-// A group of one is interrupted without a drain: there is nowhere for its
-// workload to go. status.nodes is written by another controller, though, so it
-// is 0 until that controller has run — and reading "not counted yet" as "a group
-// of one" interrupted every node of a large group with its workload still on it.
+// TestNeedDrain: a group of one is interrupted without a drain (nowhere for the
+// workload to go), but status.nodes == 0 means "not counted yet", not "one".
 func TestNeedDrain(t *testing.T) {
 	tests := []struct {
 		name string

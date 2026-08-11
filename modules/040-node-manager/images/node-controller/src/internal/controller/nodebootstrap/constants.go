@@ -21,16 +21,14 @@ import "time"
 const (
 	controllerName = "node-bootstrap"
 
-	// ownerWaitInterval is how long to wait before looking again for the owner
-	// the MachineSet is about to set, or the node-group label CAPI is about to
-	// copy. Both arrive within seconds; the requeue is only a backstop for the
-	// event that carries them going missing.
+	// ownerWaitInterval is the requeue period while waiting for the owner ref
+	// the MachineSet sets or the node-group label CAPI copies; both arrive
+	// within seconds, the requeue is only a backstop for a missed event.
 	ownerWaitInterval = 10 * time.Second
 
-	// bootstrapRefreshInterval is how often the userdata of a machine that has
-	// not registered a node yet is rendered again. The bootstrap token baked
-	// into it lives four hours and is rotated about hourly, so a machine whose
-	// VM is created late must not keep the copy it was first given.
+	// bootstrapRefreshInterval is how often userdata of a machine without a
+	// node is re-rendered: the embedded bootstrap token lives four hours, so a
+	// machine whose VM is created late must not keep its first copy.
 	bootstrapRefreshInterval = 10 * time.Minute
 
 	// kubeSystemNS holds the per-group bootstrap-token secrets.

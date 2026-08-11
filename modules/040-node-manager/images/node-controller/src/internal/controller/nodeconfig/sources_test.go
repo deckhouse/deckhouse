@@ -67,10 +67,9 @@ func TestNewestPatchDigest(t *testing.T) {
 	}
 }
 
-// The camelcase image name strips the version separators, so for containerd and
-// CNI no "newest" can be told from the name: several candidates are a build
-// defect to report, not an ordering problem to solve. The same rule lives in
-// dhctl's soleDigest, which reads the same digests file for the first master.
+// The camelcase image name strips version separators, so no "newest" can be
+// told: several candidates are a build defect to report, not an ordering
+// problem to solve. The same rule lives in dhctl's soleDigest.
 func TestSoleDigest(t *testing.T) {
 	t.Run("exactly one is returned", func(t *testing.T) {
 		d, err := soleDigest(map[string]string{"containerdSysext224": "sha256:v224"}, "containerdSysext")
@@ -156,9 +155,8 @@ func TestReadClusterConfiguration(t *testing.T) {
 }
 
 // A node's pod ceiling follows its slice of the pod subnet, the way bashible's
-// does. A flat 120 made every immutable node of a /22 cluster advertise 120
-// against the 500 of every bashible node beside it — the scheduler skew this
-// number exists to avoid.
+// does: a flat 120 next to bashible's 500 on a /22 cluster is the scheduler
+// skew this number exists to avoid.
 func TestDefaultMaxPodsFor(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -186,11 +184,9 @@ func TestDefaultMaxPodsFor(t *testing.T) {
 	}
 }
 
-// Several services carry the DNS label and none is named kube-dns: the one the
-// listing happened to end on used to win, so the address published to every node
-// changed on its own between passes. Finding none at all is an error rather than
-// an empty address — renderKubelet leaves clusterDNS out of a config that has
-// none, so the group would be rolled onto a DNS-less config.
+// With several DNS-labelled services and no kube-dns, the winner must not
+// depend on listing order (the address changed between passes). Finding none is
+// an error — an empty address would roll the group onto a DNS-less config.
 func TestReadClusterDNS(t *testing.T) {
 	t.Run("the same service every time", func(t *testing.T) {
 		s := sourceReaderOver(dnsCluster(t,

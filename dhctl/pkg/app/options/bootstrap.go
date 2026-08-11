@@ -33,10 +33,8 @@ type BootstrapOptions struct {
 	PostBootstrapScriptPath    string
 
 	// KubeconfigOut is where the admin kubeconfig of a freshly bootstrapped
-	// cluster is written. Empty means "do not write it", which is the default
-	// everywhere it can be reached another way — on a cluster of immutable
-	// nodes it cannot: those nodes run no SSH server, so there is no path to
-	// the kubeconfig the classic flow leaves on the master.
+	// cluster is written; empty means "do not write it". On a cluster of
+	// immutable nodes it is the only way in — those nodes run no SSH server.
 	KubeconfigOut string
 
 	ForceAbortFromCache             bool

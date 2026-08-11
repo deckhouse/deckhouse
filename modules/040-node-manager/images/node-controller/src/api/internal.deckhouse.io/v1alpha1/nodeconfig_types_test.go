@@ -23,14 +23,9 @@ import (
 	sigsyaml "sigs.k8s.io/yaml"
 )
 
-// What this covers is the API type's own marshalling, not what reaches a node:
-// the on-disk document a machine boots with is built from a spec-only type
-// (nodebootstrap/render.go), which is where "no status at all in the userdata"
-// is asserted. Here the concern is narrower and still worth holding — a status
-// the node has not reported yet has nothing to say, so an object that carries no
-// status must not marshal empty lists into one. Without omitempty they came out
-// as "extensions: null" and "units: null", which is a status claiming two facts
-// nobody established.
+// Covers the API type's own marshalling, not the on-disk userdata (built from
+// a spec-only type in nodebootstrap/render.go). An unreported status must not
+// marshal empty lists: without omitempty they came out as "extensions: null".
 func TestNodeConfigStatusMarshalsNothingItDoesNotHave(t *testing.T) {
 	config := &NodeConfig{Spec: NodeSpec{NodeName: "master-0"}}
 

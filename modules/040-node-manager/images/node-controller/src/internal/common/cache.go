@@ -123,10 +123,9 @@ func CacheOptions() (cache.Options, client.Options) {
 			},
 			&mcmv1alpha1.Machine{}: machineNS,
 			&capiv1beta2.Machine{}: machineNS,
-			// Cloned into the machine namespace by the CAPI MachineSet, one per
-			// Machine, and watched by the node-bootstrap controller — so the
-			// scope is backed by a live watch and cannot go stale. The CRD ships
-			// with this module, so the RESTMapping always resolves.
+			// Cloned into the machine namespace by the CAPI MachineSet and
+			// watched by the node-bootstrap controller, so the scope cannot go
+			// stale. The CRD ships with this module, so RESTMapping resolves.
 			&bootstrapv1alpha1.NodeBootstrapConfig{}: machineNS,
 			// NOTE: ByObject keys are mapped by GVK, so a typed and an unstructured key of
 			// the same kind (e.g. corev1.Secret and an unstructured v1/Secret) COLLIDE: map

@@ -110,11 +110,9 @@ func (b *ClusterBootstrapper) connectToImmutableMaster(ctx context.Context, bctx
 		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf(
 			"A previous attempt already collected the credentials; reusing the admin kubeconfig at %s", collectedPath,
 		))
-		// Printed here too: the other two calls are on the first-collection path
-		// and at the very end of a successful run, so a rerun — the case where
-		// the operator most needs to know where the credentials are and how to
-		// reach a master that has no sshd — would otherwise say nothing at all
-		// until the run finishes, if it ever does.
+		// Printed here too: the other two calls are the first-collection path and
+		// the end of a successful run, so a stalled rerun would otherwise never
+		// say where the credentials are.
 		b.printHowToReachTheCluster(ctx, collectedPath, bctx)
 	}
 
@@ -655,9 +653,7 @@ func (b *ClusterBootstrapper) printHowToReachTheCluster(ctx context.Context, kub
 	logger := dhlog.FromContext(ctx)
 
 	// Tagged for the compact view: an untagged Info record is file-only on a
-	// terminal, and a line the operator has to grep the log for does not do the
-	// job this function exists for. The bashible path tags its SSH line the same
-	// way (steps_ssh.go).
+	// terminal. The bashible path tags its SSH line the same way (steps_ssh.go).
 	logger.InfoContext(ctx, fmt.Sprintf("Admin kubeconfig written to %s — cluster-admin credentials, "+
 		"and on a cluster of immutable nodes the only way in.", kubeconfigPath), dhlog.ShowInCompacted())
 	logger.InfoContext(ctx, fmt.Sprintf("To use the cluster:  export KUBECONFIG=%s && kubectl get nodes", kubeconfigPath),
@@ -678,8 +674,7 @@ func (b *ClusterBootstrapper) printHowToReachTheCluster(ctx context.Context, kub
 
 // bastionForwardLine builds the commands that make the saved kubeconfig usable
 // from outside, or "" when the master is directly reachable. It forwards to
-// 127.0.0.1, which every apiserver certificate covers — so the retargeted
-// kubeconfig needs no --tls-server-name and no other flag.
+// 127.0.0.1, which every apiserver certificate covers — no --tls-server-name needed.
 func bastionForwardLine(initializer *providerinitializer.SSHProviderInitializer, masterIP, kubeconfigPath string) string {
 	if initializer == nil {
 		return ""
@@ -697,13 +692,9 @@ func bastionForwardLine(initializer *providerinitializer.SSHProviderInitializer,
 	return buildBastionForwardLine(cfg.BastionUser, cfg.BastionHost, bastionPort, masterIP, kubeconfigPath)
 }
 
-// buildBastionForwardLine is split out to be testable: the value of these lines
-// is that they can be pasted, and that is worth a test.
-//
-// The server is retargeted with kubectl rather than sed: a regex over the
-// operator's credentials has to match a URL it did not write, leaves a .bak
-// beside a 0600 file, and silently does nothing when it misses. kubectl edits
-// the field by name, is idempotent, and fails loudly.
+// buildBastionForwardLine is split out to be testable: the lines must be pastable.
+// The server is retargeted with kubectl rather than sed: kubectl edits the field
+// by name, is idempotent, and fails loudly where a regex silently misses.
 func buildBastionForwardLine(bastionUser, bastionHost string, bastionPort int, masterIP, kubeconfigPath string) string {
 	bastion := bastionHost
 	if bastionUser != "" {

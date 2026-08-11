@@ -90,11 +90,9 @@ func buildCAPIMachineDeployment(in capiMDInput) *unstructured.Unstructured {
 		}
 	}
 
-	// An immutable node boots from a per-machine NodeBootstrapConfig the CAPI
-	// MachineSet clones from the group's template; the bootstrap controller
-	// renders its userdata with the node name already in it. A bashible node
-	// keeps the group-wide secret helm renders. configRef carries no apiVersion:
-	// CAPI resolves the version from the CRD's contract label.
+	// An immutable node boots from a per-machine NodeBootstrapConfig cloned
+	// from the group's template; a bashible node keeps the group-wide helm
+	// secret. configRef has no apiVersion: CAPI resolves it from the contract label.
 	bootstrap := map[string]interface{}{"dataSecretName": in.bootstrapSecretName}
 	if in.ng.Spec.SystemType == deckhousev1.SystemTypeImmutable {
 		bootstrap = map[string]interface{}{
@@ -558,11 +556,8 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 }
 
 // buildNodeBootstrapConfigTemplate renders the per-group bootstrap template a
-// MachineDeployment points at. It is deliberately thin: the spec.template.spec
-// stays empty because the bootstrap controller renders the userdata from live
-// cluster state when a machine is created, not from anything baked in here. The
-// node-group label is copied onto every clone so the controller can find the
-// group a clone belongs to.
+// MachineDeployment points at. Deliberately thin: the bootstrap controller
+// renders userdata from live state; the node-group label is copied onto clones.
 func buildNodeBootstrapConfigTemplate(ng *deckhousev1.NodeGroup) *unstructured.Unstructured {
 	labels := map[string]interface{}{
 		"heritage":   "deckhouse",

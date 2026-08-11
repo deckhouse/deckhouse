@@ -56,9 +56,8 @@ const (
 	handoffCACommonName = "dhctl-immutable-handoff-ca"
 
 	// clusterAdminCommonName and clusterAdminOrganization are what the node
-	// signs the installer's request as: the same identity kubeadm gives its
-	// admin.conf, so the certificate carries cluster-admin through the usual
-	// group binding rather than anything special to this path.
+	// signs the installer's request as: the same identity as kubeadm's
+	// admin.conf, so cluster-admin comes through the usual group binding.
 	clusterAdminCommonName   = "kubernetes-admin"
 	clusterAdminOrganization = "system:masters"
 
@@ -80,21 +79,9 @@ const (
 // with the first payload, and verify the certificate that payload carried.
 const handoffCacheKey = "immutable-control-plane-handoff"
 
-// collectedKubeconfigCacheKey names the record that the admin kubeconfig is on
-// disk, and where. That claim, not "the handover is confirmed", is what a rerun
-// needs: the credentials are usable from the moment the file exists.
-//
-// It is what makes a rerun possible at all. The bootstrap has phases left after
-// the handover — installing Deckhouse takes minutes — and nothing skips a phase
-// that already completed, so a rerun re-enters the same step. Without this
-// record it would go back to a channel that answers 410 at best and, once the
-// listener is gone, nothing at all — a refused dial being exactly what a node
-// that is still installing itself looks like, so the wait would spend its full
-// budget — while the credentials it is looking for sit unread on disk.
-//
-// Written before ConfirmCollected, never after: that call is what makes the node
-// shut the channel for good, so a process that dies between the two — or a cache
-// write that fails — must not leave a closed channel and no record of the file.
+// collectedKubeconfigCacheKey records that the admin kubeconfig is on disk, and
+// where; a rerun reads it instead of dialing a closed channel. Written before
+// ConfirmCollected: a death in between must not leave no record of the file.
 const collectedKubeconfigCacheKey = "immutable-control-plane-collected-kubeconfig"
 
 var (
@@ -112,21 +99,17 @@ var (
 	)
 )
 
-// HandoffMaterial is dhctl's side of the one-shot channel.
-//
-// The CA that signed ServerCertPEM is generated, used and dropped inside
-// generateHandoffMaterial: its private key is never stored and never leaves the
-// process. Only the issued certificate travels to the node, and only the
-// certificate of the CA is kept, to verify what the node serves with.
+// HandoffMaterial is dhctl's side of the one-shot channel. The CA that signed
+// ServerCertPEM is dropped inside generateHandoffMaterial: only its certificate
+// is kept, to verify what the node serves with; the CA key is never stored.
 type HandoffMaterial struct {
 	Token         string `json:"token"`
 	CACertPEM     string `json:"caCert"`
 	ServerCertPEM string `json:"serverCert"`
 	ServerKeyPEM  string `json:"serverKey"`
 	// ClientCSRPEM is the request the node signs with the cluster CA, and
-	// ClientKeyPEM the key it belongs to. The key never leaves the installer —
-	// which is what keeps the channel free of anything worth stealing: what
-	// travels back is a certificate, and a certificate is public.
+	// ClientKeyPEM the key it belongs to. The key never leaves the installer;
+	// what travels back is a certificate, which is public.
 	ClientCSRPEM string `json:"clientCSR"`
 	ClientKeyPEM string `json:"clientKey"`
 }
@@ -144,10 +127,8 @@ func handoffPayload(m HandoffMaterial) handoff {
 }
 
 // HandoffMaterialFor returns the material of the running bootstrap, minting it
-// on the first call and reusing the cached one afterwards. A second attempt
-// must present the token the node already booted with and verify the
-// certificate that payload carried, so fresh material would lock dhctl out of
-// the node it created.
+// on the first call and reusing the cached one afterwards: fresh material would
+// lock dhctl out of a node that already booted with the first payload.
 func HandoffMaterialFor(ctx context.Context, cache state.Cache, nodeName string) (*HandoffMaterial, error) {
 	cached, err := LoadHandoffMaterial(ctx, cache)
 	if err != nil {
@@ -170,20 +151,9 @@ func HandoffMaterialFor(ctx context.Context, cache state.Cache, nodeName string)
 	return material, nil
 }
 
-// ForgetHandoffClientKey blanks the installer's client key in the cached
-// material and keeps everything else it holds.
-//
-// The key is the one part worth stealing — a private key behind a cluster-admin
-// certificate — and it has done its job by the time the handover is confirmed,
-// so leaving it in a cache that for dhctl-server is a Secret in the management
-// cluster would outlive the bootstrap for nothing.
-//
-// Dropping the whole entry instead is what must not happen: the state cache
-// survives a failed run, so a bootstrap that is rerun after a later phase failed
-// would mint fresh material, and a fresh payload renders a different cloudConfig
-// tfvar than the one already in the master's user_data. Everything
-// handoffPayload() carries therefore stays exactly as the node booted
-// with it.
+// ForgetHandoffClientKey blanks the installer's client key — the one part worth
+// stealing — in the cached material and keeps the rest: dropping the whole entry
+// would make a rerun render a payload other than what the master booted with.
 func ForgetHandoffClientKey(ctx context.Context, cache state.Cache) error {
 	material, err := LoadHandoffMaterial(ctx, cache)
 	if err != nil {
@@ -251,14 +221,9 @@ func LoadHandoffMaterial(ctx context.Context, cache state.Cache) (*HandoffMateri
 	return material, nil
 }
 
-// generateHandoffMaterial mints the token and the TLS material of the handoff
-// endpoint.
-//
-// The certificate is issued for the node's NAME rather than for its address:
-// dhctl builds the payload before the VM exists, so no address is known yet,
-// and an unverified endpoint would let anything on the path hand dhctl a
-// kubeconfig of its own. dhctl dials whatever address the infrastructure
-// reports and tells the TLS handshake to check this name instead.
+// generateHandoffMaterial mints the token and TLS material of the handoff
+// endpoint. The certificate is issued for the node's NAME — no address exists
+// yet — and dhctl tells the TLS handshake to check that name when dialing.
 func generateHandoffMaterial(nodeName string) (*HandoffMaterial, error) {
 	if nodeName == "" {
 		return nil, errors.New("generate the handoff credentials: node name is empty")
@@ -301,9 +266,8 @@ func generateHandoffMaterial(nodeName string) (*HandoffMaterial, error) {
 	}
 
 	// The key the installer will talk to the cluster with. It stays here; only
-	// the request for a certificate travels to the node, and only a certificate
-	// comes back. Nothing in the channel is then worth stealing: whoever reads
-	// it gets a public certificate for a key they do not have.
+	// the CSR travels to the node and only a public certificate comes back, so
+	// nothing in the channel is worth stealing.
 	clientKey, err := pkiutil.NewPrivateKey(constants.EncryptionAlgorithmECDSAP256)
 	if err != nil {
 		return nil, fmt.Errorf("generate the cluster client key: %w", err)
@@ -359,10 +323,8 @@ type Status struct {
 type Phase string
 
 // The phases the node reports. PhaseReady means the kubeconfig can be
-// collected. PhasePreparing is the only one of the four nothing ever compares
-// against — the wait treats anything that is not Ready, Collected or Failed as
-// "still working" — and is declared because it is part of the protocol the node
-// speaks and appears in the status line the operator reads.
+// collected. Nothing compares against PhasePreparing — the wait treats any
+// other value as "still working" — but it is part of the node's protocol.
 const (
 	PhasePreparing Phase = "Preparing"
 	PhaseReady     Phase = "Ready"
@@ -370,10 +332,9 @@ const (
 	PhaseCollected Phase = "Collected"
 )
 
-// FetchStatus asks the node what it is doing. The channel opens when the node
-// starts the work, so this answers long before there is a kubeconfig — which is
-// the point: without it the installer cannot tell a node that is still
-// generating its PKI from one that died on the first image pull.
+// FetchStatus asks the node what it is doing. The channel opens when the work
+// starts, so this answers long before there is a kubeconfig — letting the
+// installer tell a node still generating its PKI from one that died early.
 func FetchStatus(ctx context.Context, in FetchKubeconfigInput) (*Status, error) {
 	body, err := in.call(ctx, http.MethodGet, statusPath)
 	if err != nil {
@@ -401,9 +362,8 @@ func FetchKubeconfig(ctx context.Context, in FetchKubeconfigInput) ([]byte, erro
 }
 
 // ConfirmCollected tells the node the kubeconfig is safely in hand. Only this
-// ends the handover: until it arrives the node keeps the channel open, because
-// a response that reached the socket says nothing about whether the installer
-// kept it.
+// ends the handover: a response that reached the socket says nothing about
+// whether the installer kept it, so the node keeps the channel open until then.
 func ConfirmCollected(ctx context.Context, in FetchKubeconfigInput) error {
 	_, err := in.call(ctx, http.MethodPost, collectedPath)
 	return err

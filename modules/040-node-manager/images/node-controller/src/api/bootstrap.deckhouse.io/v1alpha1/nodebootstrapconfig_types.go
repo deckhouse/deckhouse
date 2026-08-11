@@ -20,16 +20,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// NodeBootstrapConfigSpec is intentionally empty in v1alpha1. The controller
-// renders the bootstrap userdata from live cluster state at Machine creation,
-// so nothing is baked into the object; the field is reserved for future
-// per-machine overrides.
+// NodeBootstrapConfigSpec is intentionally empty in v1alpha1: the controller
+// renders the bootstrap userdata from live cluster state at Machine creation;
+// the field is reserved for future per-machine overrides.
 type NodeBootstrapConfigSpec struct{}
 
-// NodeBootstrapConfigStatus is the receipt the CAPI Machine controller waits on.
-// Under the v1beta2 bootstrap contract it reads dataSecretName and
-// initialization.dataSecretCreated to hand the rendered userdata to the
-// infrastructure provider.
+// NodeBootstrapConfigStatus is the receipt the CAPI Machine controller waits
+// on: under the v1beta2 bootstrap contract it reads dataSecretName and
+// initialization.dataSecretCreated to hand the userdata to the provider.
 type NodeBootstrapConfigStatus struct {
 	// Conditions record why the bootstrap data is or is not available yet.
 	// +optional

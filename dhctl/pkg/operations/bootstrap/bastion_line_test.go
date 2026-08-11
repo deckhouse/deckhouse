@@ -43,14 +43,9 @@ func TestBastionForwardLineShape(t *testing.T) {
 	}
 }
 
-// The connect line is printed from three places, and the one that is easy to
-// lose is the rerun: connectToImmutableMaster short-circuits credential
-// collection when a previous attempt already saved them, so the first-collect
-// print never runs, and the end-of-bootstrap print is only reached if the run
-// finishes. A rerun that then stalls — waiting on a worker, say — would leave
-// the operator with no idea where the kubeconfig is or how to reach a master
-// that runs no sshd. Measured on a live rerun: not one of the three lines
-// appeared in the log.
+// The connect line is printed from three places, and the rerun is the easy one to
+// lose: connectToImmutableMaster short-circuits collection, so a stalled rerun
+// would say nothing at all (observed on a live rerun: none of the three lines).
 func TestConnectLineIsPrintedOnTheReusePath(t *testing.T) {
 	src, err := os.ReadFile("steps_immutable.go")
 	if err != nil {
@@ -72,11 +67,9 @@ func TestConnectLineIsPrintedOnTheReusePath(t *testing.T) {
 	}
 }
 
-// An untagged Info record is file-only on a terminal: the compact view shows
-// process boundaries and little else. Measured on a live bootstrap — all four
-// lines sat in /tmp/dhctl/bootstrap-*.log while the operator's screen showed
-// nothing. The tags are what put them back on the screen, so they are worth a
-// guard of their own.
+// An untagged Info record is file-only on a terminal: on a live bootstrap all four
+// lines sat in the log while the screen showed nothing. The tags put them back on
+// the screen, so they are worth a guard of their own.
 func TestConnectLinesAreTaggedForTheTerminal(t *testing.T) {
 	src, err := os.ReadFile("steps_immutable.go")
 	if err != nil {
