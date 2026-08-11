@@ -138,7 +138,7 @@ func TestSysextDigestsMissing(t *testing.T) {
 	metaConfig := testMetaConfig(t)
 	delete(metaConfig.Images["registrypackages"], "kubeletSysext1349")
 
-	_, err := SysextDigests(t.Context(), metaConfig)
+	err := ValidateSysext(t.Context(), metaConfig)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), `no "kubelet" system extension digest for Kubernetes 1.34`)
 }
@@ -148,9 +148,11 @@ func TestSysextDigestsPicksNewestPatch(t *testing.T) {
 	metaConfig.Images["registrypackages"]["kubeletSysext13410"] = testKubeletDigest
 	metaConfig.Images["registrypackages"]["kubeletSysext1349"] = "sha256:9999999999999999999999999999999999999999999999999999999999999999"
 
-	digests, err := SysextDigests(t.Context(), metaConfig)
+	extensions, err := sysextExtensions(metaConfig.Images.ConvertToMap(), "1.34")
 	require.NoError(t, err)
-	require.Equal(t, testKubeletDigest, digests["kubelet"])
+	require.Contains(t, extensions, extension{
+		Name: kubeletExtension, Digest: testKubeletDigest, RequestedBy: platformExtensionRequestedBy,
+	})
 }
 
 // The camelcase function strips version separators, so "kubernetesCniSysext1610"
@@ -162,7 +164,7 @@ func TestSysextDigestsRefusesAmbiguousVersions(t *testing.T) {
 	metaConfig.Images["registrypackages"]["kubernetesCniSysext170"] = "sha256:9999999999999999999999999999999999999999999999999999999999999999"
 	delete(metaConfig.Images["registrypackages"], "kubernetesCniSysext162")
 
-	_, err := SysextDigests(t.Context(), metaConfig)
+	err := ValidateSysext(t.Context(), metaConfig)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "kubernetesCniSysext1610, kubernetesCniSysext170")
 	require.Contains(t, err.Error(), "which one is newer")
@@ -175,9 +177,11 @@ func TestSysextDigestsIgnoresNonVersionSuffixes(t *testing.T) {
 	metaConfig := testMetaConfig(t)
 	metaConfig.Images["registrypackages"]["containerdSysextArtifact224"] = "sha256:9999999999999999999999999999999999999999999999999999999999999999"
 
-	digests, err := SysextDigests(t.Context(), metaConfig)
+	extensions, err := sysextExtensions(metaConfig.Images.ConvertToMap(), "1.34")
 	require.NoError(t, err)
-	require.Equal(t, testContainerdDigest, digests["containerd"])
+	require.Contains(t, extensions, extension{
+		Name: containerdExtension, Digest: testContainerdDigest, RequestedBy: platformExtensionRequestedBy,
+	})
 }
 
 // Both pre-cluster image references — the OS and the pause image — are built
@@ -244,9 +248,9 @@ func TestEtcdMountClaimsABlankDiskUnderEtcd(t *testing.T) {
 	mounts := etcdMounts()
 
 	require.Len(t, mounts, 1)
-	require.Equal(t, etcdDataDir, mounts[0].BindTo)
-	require.Equal(t, etcdDataMode, mounts[0].Mode)
-	require.Equal(t, etcdDiskSize, mounts[0].PartitionSelector.Size)
+	require.Equal(t, "/var/lib/etcd", mounts[0].BindTo)
+	require.Equal(t, "0700", mounts[0].Mode)
+	require.Equal(t, "10Gi", mounts[0].PartitionSelector.Size)
 	require.True(t, mounts[0].PartitionSelector.Blank)
 	require.LessOrEqual(t, len(mounts[0].Name), 16, "the name becomes an ext4 label")
 }

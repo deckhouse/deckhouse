@@ -34,8 +34,6 @@ import (
 )
 
 const (
-	kubeSystemNS = "kube-system"
-
 	// The kubernetes Service's EndpointSlice, the cluster's own record of where
 	// its apiservers answer. Named the same way node-controller names them.
 	apiServerEndpointSliceNS   = "default"
@@ -89,13 +87,13 @@ func buildImmutableJoinPayload(
 // clusterCABase64 reads the cluster CA the way the on-node agent expects it:
 // base64 of the PEM.
 func clusterCABase64(ctx context.Context, kubeCl *client.KubernetesClient) (string, error) {
-	cm, err := kubeCl.CoreV1().ConfigMaps(kubeSystemNS).Get(ctx, clusterCAConfigMap, metav1.GetOptions{})
+	cm, err := kubeCl.CoreV1().ConfigMaps(global.ConfigsNS).Get(ctx, clusterCAConfigMap, metav1.GetOptions{})
 	if err != nil {
-		return "", fmt.Errorf("read the cluster CA from %s/%s: %w", kubeSystemNS, clusterCAConfigMap, err)
+		return "", fmt.Errorf("read the cluster CA from %s/%s: %w", global.ConfigsNS, clusterCAConfigMap, err)
 	}
 	ca := cm.Data[clusterCAKey]
 	if ca == "" {
-		return "", fmt.Errorf("configmap %s/%s carries no %s", kubeSystemNS, clusterCAConfigMap, clusterCAKey)
+		return "", fmt.Errorf("configmap %s/%s carries no %s", global.ConfigsNS, clusterCAConfigMap, clusterCAKey)
 	}
 	return base64.StdEncoding.EncodeToString([]byte(ca)), nil
 }
@@ -104,7 +102,7 @@ func clusterCABase64(ctx context.Context, kubeCl *client.KubernetesClient) (stri
 // node cannot boot with one that expires mid-install. Kept in step with the
 // node-controller's readBootstrapToken (internal/controller/nodebootstrap/render.go).
 func groupBootstrapToken(ctx context.Context, kubeCl *client.KubernetesClient, ngName string) (string, error) {
-	secrets, err := kubeCl.CoreV1().Secrets(kubeSystemNS).List(ctx, metav1.ListOptions{
+	secrets, err := kubeCl.CoreV1().Secrets(global.ConfigsNS).List(ctx, metav1.ListOptions{
 		LabelSelector: bootstrapTokenNGLabel + "=" + ngName,
 	})
 	if err != nil {
@@ -145,7 +143,7 @@ func groupBootstrapToken(ctx context.Context, kubeCl *client.KubernetesClient, n
 func apiServerEndpoints(ctx context.Context, kubeCl *client.KubernetesClient) ([]string, error) {
 	set := make(map[string]struct{})
 
-	pods, err := kubeCl.CoreV1().Pods(kubeSystemNS).List(ctx, metav1.ListOptions{
+	pods, err := kubeCl.CoreV1().Pods(global.ConfigsNS).List(ctx, metav1.ListOptions{
 		LabelSelector: "component=kube-apiserver,tier=control-plane",
 	})
 	if err != nil {

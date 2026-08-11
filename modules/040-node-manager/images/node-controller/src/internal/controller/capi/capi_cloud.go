@@ -559,19 +559,17 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 // MachineDeployment points at. Deliberately thin: the bootstrap controller
 // renders userdata from live state; the node-group label is copied onto clones.
 func buildNodeBootstrapConfigTemplate(ng *deckhousev1.NodeGroup) *unstructured.Unstructured {
-	labels := map[string]interface{}{
-		"heritage":   "deckhouse",
-		"module":     "node-manager",
-		"node-group": ng.Name,
-	}
-
 	return &unstructured.Unstructured{Object: map[string]interface{}{
 		"apiVersion": "bootstrap.deckhouse.io/v1alpha1",
 		"kind":       "NodeBootstrapConfigTemplate",
 		"metadata": map[string]interface{}{
 			"name":      ng.Name,
 			"namespace": common.MachineNamespace,
-			"labels":    labels,
+			"labels": map[string]interface{}{
+				"heritage":   "deckhouse",
+				"module":     "node-manager",
+				"node-group": ng.Name,
+			},
 		},
 		"spec": map[string]interface{}{
 			"template": map[string]interface{}{

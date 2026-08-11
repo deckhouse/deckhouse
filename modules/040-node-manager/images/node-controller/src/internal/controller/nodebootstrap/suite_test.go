@@ -79,10 +79,10 @@ var _ = BeforeSuite(func() {
 		scheme,
 		testenv.CRDPaths(
 			testenv.WithNodeGroupCRDFile(),
-			testenv.WithNodeConfigCRDFile(),
-			testenv.WithNodeExtensionRequestCRDFile(),
-			testenv.WithNodeBootstrapConfigCRDFile(),
-			testenv.WithNodeBootstrapConfigTemplateCRDFile(),
+			testenv.WithNodeManager(testenv.NodeConfigCRDFile),
+			testenv.WithNodeManager(testenv.NodeExtensionRequestCRDFile),
+			testenv.WithNodeManager(testenv.NodeBootstrapConfigCRDFile),
+			testenv.WithNodeManager(testenv.NodeBootstrapConfigTemplateCRDFile),
 			testenv.WithMachineCRDFile(),
 		)...,
 	)

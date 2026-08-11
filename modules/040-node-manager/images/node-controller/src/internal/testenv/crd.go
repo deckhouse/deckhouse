@@ -130,26 +130,6 @@ func WithInstanceCRDFile() crdOpt {
 	return WithNodeManager(InstanceCRDFile)
 }
 
-func WithNodeConfigCRDFile() crdOpt {
-	return WithNodeManager(NodeConfigCRDFile)
-}
-
-func WithNodeOperationCRDFile() crdOpt {
-	return WithNodeManager(NodeOperationCRDFile)
-}
-
-func WithNodeExtensionRequestCRDFile() crdOpt {
-	return WithNodeManager(NodeExtensionRequestCRDFile)
-}
-
-func WithNodeBootstrapConfigCRDFile() crdOpt {
-	return WithNodeManager(NodeBootstrapConfigCRDFile)
-}
-
-func WithNodeBootstrapConfigTemplateCRDFile() crdOpt {
-	return WithNodeManager(NodeBootstrapConfigTemplateCRDFile)
-}
-
 func CRDPaths(opts ...crdOpt) []string {
 	s := &crdSet{
 		controller:  make(map[ControllerCRDFile]struct{}),

@@ -258,7 +258,7 @@ var _ = Describe("NodeOperation controller", func() {
 
 		Eventually(func(g Gomega) {
 			fresh := getOperation(ctx, g, op.Name)
-			g.Expect(fresh.Labels).To(HaveKeyWithValue(operationNodeLabel, node.Name))
+			g.Expect(fresh.Labels).To(HaveKeyWithValue(v1alpha1.NodeOperationNodeLabel, node.Name))
 			g.Expect(fresh.OwnerReferences).To(ContainElement(HaveField("Kind", "Node")))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
@@ -391,7 +391,7 @@ func createOperation(ctx context.Context, nodeName string, opType v1alpha1.NodeO
 	op := &v1alpha1.NodeOperation{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   testenv.UniqueName("op"),
-			Labels: map[string]string{operationNodeLabel: nodeName},
+			Labels: map[string]string{v1alpha1.NodeOperationNodeLabel: nodeName},
 		},
 		Spec: v1alpha1.NodeOperationSpec{Type: opType, NodeName: nodeName, Drain: drain},
 	}
@@ -418,7 +418,7 @@ func getNode(ctx context.Context, g Gomega, name string) *corev1.Node {
 
 func drainChildrenOf(ctx context.Context, g Gomega, parent *v1alpha1.NodeOperation) []v1alpha1.NodeOperation {
 	list := &v1alpha1.NodeOperationList{}
-	g.Expect(k8sClient.List(ctx, list, client.MatchingLabels{operationNodeLabel: parent.Spec.NodeName})).To(Succeed())
+	g.Expect(k8sClient.List(ctx, list, client.MatchingLabels{v1alpha1.NodeOperationNodeLabel: parent.Spec.NodeName})).To(Succeed())
 
 	var children []v1alpha1.NodeOperation
 	for i := range list.Items {

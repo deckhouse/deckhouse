@@ -173,9 +173,6 @@ func ForgetHandoffClientKey(ctx context.Context, cache state.Cache) error {
 // SaveCollectedKubeconfig records where the admin kubeconfig the node served now
 // lives.
 func SaveCollectedKubeconfig(ctx context.Context, cache state.Cache, adminKubeconfigPath string) error {
-	if adminKubeconfigPath == "" {
-		return errors.New("record the collected admin kubeconfig: the path is empty")
-	}
 	if err := cache.Save(ctx, collectedKubeconfigCacheKey, []byte(adminKubeconfigPath)); err != nil {
 		return fmt.Errorf("record the collected admin kubeconfig in the state cache: %w", err)
 	}
@@ -322,9 +319,8 @@ type FetchKubeconfigInput struct {
 
 // Status is what the node reports about its own bootstrap.
 type Status struct {
-	Phase    Phase  `json:"phase"`
-	Message  string `json:"message,omitempty"`
-	NodeName string `json:"nodeName,omitempty"`
+	Phase   Phase  `json:"phase"`
+	Message string `json:"message,omitempty"`
 }
 
 // Phase is what the node says it is doing. A named type rather than bare
@@ -332,11 +328,10 @@ type Status struct {
 // strings any typo compiles and quietly never matches.
 type Phase string
 
-// The phases the node reports. PhaseReady means the kubeconfig can be
-// collected. Nothing compares against PhasePreparing — the wait treats any
-// other value as "still working" — but it is part of the node's protocol.
+// The phases the node reports that dhctl acts on. PhaseReady means the
+// kubeconfig can be collected; every other value the node sends, "Preparing"
+// among them, is "still working" to the wait.
 const (
-	PhasePreparing Phase = "Preparing"
 	PhaseReady     Phase = "Ready"
 	PhaseFailed    Phase = "Failed"
 	PhaseCollected Phase = "Collected"

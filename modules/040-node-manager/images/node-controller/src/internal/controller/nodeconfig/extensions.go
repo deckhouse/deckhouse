@@ -29,18 +29,17 @@ import (
 // nodeExtensions aggregates the NodeExtensionRequests that select this node
 // into extensions and kernel modules for its NodeConfig. Invalid or conflicting
 // requests are dropped, not errored — their own status carries the reason.
-func nodeExtensions(ners []deckhousev1alpha1.NodeExtensionRequest, node *corev1.Node, ngName string) ([]internalv1alpha1.Extension, []internalv1alpha1.KernelModule) {
+// The requests arrive in the uniqueness-contest order (orderedNERs), with the
+// contest already settled: it is cluster-wide, so it is run once per pass rather
+// than once per node, and spec.extensions must not follow the listing order.
+func nodeExtensions(ordered []*deckhousev1alpha1.NodeExtensionRequest, conflicts map[string]nerConflict, node *corev1.Node, ngName string) ([]internalv1alpha1.Extension, []internalv1alpha1.KernelModule) {
 	// Left nil rather than empty: both marshal the same under omitempty, and
 	// callers distinguish "no requests matched" by length either way.
 	var extensions []internalv1alpha1.Extension
 	var modules []internalv1alpha1.KernelModule
-	conflicts := resolveNERConflicts(ners)
 	seenModules := make(map[string]struct{})
 
-	// Walked in the uniqueness-contest order, not the listing order:
-	// spec.extensions is an array, and a listing returned in another order
-	// would re-render every node for no change at all.
-	for _, ner := range orderedNERs(ners) {
+	for _, ner := range ordered {
 		if !nerMatchesNode(ner, node, ngName) {
 			continue
 		}
@@ -109,11 +108,10 @@ type nerConflict struct {
 }
 
 // resolveNERConflicts enforces uniqueness of sysext names, digests and kernel
-// modules; the oldest request (creation time, then name) wins each clash. The
-// result maps each losing request's name to why it lost; winners are absent.
-func resolveNERConflicts(ners []deckhousev1alpha1.NodeExtensionRequest) map[string]nerConflict {
-	ordered := orderedNERs(ners)
-
+// modules over requests already in orderedNERs order; the oldest request
+// (creation time, then name) wins each clash. The result maps each losing
+// request's name to why it lost; winners are absent.
+func resolveNERConflicts(ordered []*deckhousev1alpha1.NodeExtensionRequest) map[string]nerConflict {
 	nameOwner := make(map[string]string, len(ordered))
 	digestOwner := make(map[string]string, len(ordered))
 	moduleOwner := make(map[string]*deckhousev1alpha1.NodeExtensionRequest, len(ordered))
@@ -198,17 +196,8 @@ func sameModuleParams(owner *deckhousev1alpha1.NodeExtensionRequest, module deck
 // present on the node with the same value.
 func nerMatchesNode(ner *deckhousev1alpha1.NodeExtensionRequest, node *corev1.Node, ngName string) bool {
 	names := ner.Spec.NodeGroupSelector.MatchNames
-	if len(names) > 0 {
-		matched := false
-		for _, name := range names {
-			if name == ngName {
-				matched = true
-				break
-			}
-		}
-		if !matched {
-			return false
-		}
+	if len(names) > 0 && !slices.Contains(names, ngName) {
+		return false
 	}
 
 	for key, value := range ner.Spec.NodeSelector.MatchLabels {
@@ -233,23 +222,6 @@ func mergeExtensions(base, extra []internalv1alpha1.Extension) []internalv1alpha
 		}
 		seen[ext.Name] = struct{}{}
 		base = append(base, ext)
-	}
-	return base
-}
-
-// mergeModules appends the extra kernel modules to the base set, deduplicated by
-// name with the base winning.
-func mergeModules(base, extra []internalv1alpha1.KernelModule) []internalv1alpha1.KernelModule {
-	seen := make(map[string]struct{}, len(base))
-	for _, module := range base {
-		seen[module.Name] = struct{}{}
-	}
-	for _, module := range extra {
-		if _, ok := seen[module.Name]; ok {
-			continue
-		}
-		seen[module.Name] = struct{}{}
-		base = append(base, module)
 	}
 	return base
 }

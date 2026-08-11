@@ -23,6 +23,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -69,15 +70,10 @@ func (r *Reconciler) Setup(_ context.Context, mgr ctrl.Manager) error {
 // SetupWatches follows what an operation waits on: the node it is draining, and
 // the Drain operation it spawned to do the eviction.
 func (r *Reconciler) SetupWatches(w register.Watcher) {
-	// A child finishing is what lets its parent hand the node over.
-	w.Watches(&v1alpha1.NodeOperation{}, handler.EnqueueRequestsFromMapFunc(func(_ context.Context, obj client.Object) []reconcile.Request {
-		for _, owner := range obj.GetOwnerReferences() {
-			if owner.Kind == nodeOperationKind {
-				return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: owner.Name}}}
-			}
-		}
-		return nil
-	}))
+	// A child finishing is what lets its parent hand the node over. The child
+	// eviction is created with a controller reference to its parent, which is
+	// exactly what Owns follows.
+	w.Owns(&v1alpha1.NodeOperation{})
 
 	// Predicated, and it has to be: the mapper lists every operation in the
 	// cluster, and without a filter every kubelet heartbeat of every node
@@ -117,12 +113,8 @@ func nodeDrainStateChanged(before, after client.Object) bool {
 	if oldNode.Spec.Unschedulable != newNode.Spec.Unschedulable {
 		return true
 	}
-	for _, key := range []string{nodecommon.DrainingAnnotation, nodecommon.DrainedAnnotation} {
-		if oldNode.Annotations[key] != newNode.Annotations[key] {
-			return true
-		}
-	}
-	return false
+	return oldNode.Annotations[nodecommon.DrainingAnnotation] != newNode.Annotations[nodecommon.DrainingAnnotation] ||
+		oldNode.Annotations[nodecommon.DrainedAnnotation] != newNode.Annotations[nodecommon.DrainedAnnotation]
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -387,12 +379,12 @@ func (r *Reconciler) rememberCordon(ctx context.Context, op *v1alpha1.NodeOperat
 // recorded; one that has not recorded yet has not cordoned either, so nil. The
 // read goes straight to the API server: a stale cache reads as "nobody here".
 func (r *Reconciler) cordonRecordedByHolder(ctx context.Context, op *v1alpha1.NodeOperation) (*bool, error) {
-	others := &v1alpha1.NodeOperationList{}
-	if err := r.apiReader.List(ctx, others, client.MatchingLabels{operationNodeLabel: op.Spec.NodeName}); err != nil {
+	others, err := r.operationsOfNode(ctx, op.Spec.NodeName)
+	if err != nil {
 		return nil, fmt.Errorf("list the operations of %s: %w", op.Spec.NodeName, err)
 	}
-	for i := range others.Items {
-		other := &others.Items[i]
+	for i := range others {
+		other := &others[i]
 		if other.UID == op.UID || terminal(other) {
 			continue
 		}
@@ -403,18 +395,29 @@ func (r *Reconciler) cordonRecordedByHolder(ctx context.Context, op *v1alpha1.No
 	return nil, nil
 }
 
+// operationsOfNode lists every operation recorded against a node. The read goes
+// straight to the API server: a cached list missing a just-created one is how a
+// node ended up with two operations that each thought they were alone.
+func (r *Reconciler) operationsOfNode(ctx context.Context, nodeName string) ([]v1alpha1.NodeOperation, error) {
+	list := &v1alpha1.NodeOperationList{}
+	if err := r.apiReader.List(ctx, list, client.MatchingLabels{v1alpha1.NodeOperationNodeLabel: nodeName}); err != nil {
+		return nil, err
+	}
+	return list.Items, nil
+}
+
 // adopt gives an operation its node owner reference (node deletion collects
 // it) and node label (how siblings find each other). An operator's arrives
 // with neither, and unlabelled it would leave the node cordoned for good.
 func (r *Reconciler) adopt(ctx context.Context, op *v1alpha1.NodeOperation, node *corev1.Node) error {
-	if len(op.OwnerReferences) > 0 && op.Labels[operationNodeLabel] == op.Spec.NodeName {
+	if len(op.OwnerReferences) > 0 && op.Labels[v1alpha1.NodeOperationNodeLabel] == op.Spec.NodeName {
 		return nil
 	}
 	patch := client.MergeFrom(op.DeepCopy())
 	if op.Labels == nil {
 		op.Labels = map[string]string{}
 	}
-	op.Labels[operationNodeLabel] = op.Spec.NodeName
+	op.Labels[v1alpha1.NodeOperationNodeLabel] = op.Spec.NodeName
 	if len(op.OwnerReferences) == 0 {
 		op.OwnerReferences = []metav1.OwnerReference{{
 			APIVersion: "v1",
@@ -445,7 +448,7 @@ func (r *Reconciler) ensureDrained(ctx context.Context, op *v1alpha1.NodeOperati
 				// controller computed could already belong to an operation
 				// someone else created, and that one is not ours to touch.
 				GenerateName: op.Name + "-drain-",
-				Labels:       map[string]string{operationNodeLabel: op.Spec.NodeName},
+				Labels:       map[string]string{v1alpha1.NodeOperationNodeLabel: op.Spec.NodeName},
 				OwnerReferences: []metav1.OwnerReference{{
 					APIVersion: v1alpha1.GroupVersion.String(),
 					Kind:       nodeOperationKind,
@@ -485,12 +488,12 @@ func (r *Reconciler) ensureDrained(ctx context.Context, op *v1alpha1.NodeOperati
 // name. The read goes straight to the API server: a cached list missing a
 // just-created child is how one operation got two evictions of the same node.
 func (r *Reconciler) drainOf(ctx context.Context, op *v1alpha1.NodeOperation) (*v1alpha1.NodeOperation, error) {
-	children := &v1alpha1.NodeOperationList{}
-	if err := r.apiReader.List(ctx, children, client.MatchingLabels{operationNodeLabel: op.Spec.NodeName}); err != nil {
+	children, err := r.operationsOfNode(ctx, op.Spec.NodeName)
+	if err != nil {
 		return nil, fmt.Errorf("list the drains of %s: %w", op.Name, err)
 	}
-	for i := range children.Items {
-		child := &children.Items[i]
+	for i := range children {
+		child := &children[i]
 		if child.Spec.Type == v1alpha1.NodeOperationDrain && ownedBy(child, op) {
 			return child, nil
 		}
@@ -639,13 +642,13 @@ func (r *Reconciler) releaseNode(ctx context.Context, op *v1alpha1.NodeOperation
 // still needs this node out of the scheduler: a Drain, or an interruption
 // mid-eviction. An operation's own child eviction shares its lineage.
 func (r *Reconciler) heldUnschedulableByAnother(ctx context.Context, op *v1alpha1.NodeOperation) (bool, error) {
-	others := &v1alpha1.NodeOperationList{}
-	if err := r.apiReader.List(ctx, others, client.MatchingLabels{operationNodeLabel: op.Spec.NodeName}); err != nil {
+	others, err := r.operationsOfNode(ctx, op.Spec.NodeName)
+	if err != nil {
 		return false, fmt.Errorf("list the operations of %s: %w", op.Spec.NodeName, err)
 	}
 	lineage := lineageUID(op)
-	for i := range others.Items {
-		other := &others.Items[i]
+	for i := range others {
+		other := &others[i]
 		if lineageUID(other) == lineage || terminal(other) {
 			continue
 		}
@@ -709,10 +712,7 @@ func drained(op *v1alpha1.NodeOperation, node *corev1.Node) bool {
 // ownedBy reports whether the child was created for this exact operation, not
 // for an earlier one of the same name.
 func ownedBy(child, parent *v1alpha1.NodeOperation) bool {
-	for _, owner := range child.OwnerReferences {
-		if owner.UID == parent.UID {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(child.OwnerReferences, func(owner metav1.OwnerReference) bool {
+		return owner.UID == parent.UID
+	})
 }

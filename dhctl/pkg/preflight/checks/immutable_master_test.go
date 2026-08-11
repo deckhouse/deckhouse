@@ -43,7 +43,7 @@ func TestImmutableKubeconfigOut(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			check := ImmutableKubeconfigOut(
 				&options.BootstrapOptions{KubeconfigOut: tt.kubeconfigOut},
-				ImmutableKubeconfigOutOptions{CommanderMode: tt.commanderMode},
+				tt.commanderMode,
 			)
 
 			err := check.Run(t.Context())

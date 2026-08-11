@@ -22,8 +22,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"net"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -75,9 +76,12 @@ type clusterInputs struct {
 	// node gets it: containerd pulls pause with no imagePullSecret, so a worker
 	// without credentials fails every sandbox it tries to create.
 	Registry *internalv1alpha1.Registry
-	// NodeExtensionRequests are the operator's requests to merge extra system
-	// extensions onto the nodes they select.
-	NodeExtensionRequests []deckhousev1alpha1.NodeExtensionRequest
+	// NodeExtensions are the operator's requests to merge extra system extensions
+	// onto the nodes they select, in the order their uniqueness contest ran; the
+	// contest is cluster-wide, so it is settled here, once per pass, rather than
+	// once per node. NodeExtensionConflicts says which requests lost it.
+	NodeExtensions         []*deckhousev1alpha1.NodeExtensionRequest
+	NodeExtensionConflicts map[string]nerConflict
 }
 
 // sourceReader reads cluster state. Reader goes straight to the API server
@@ -158,7 +162,8 @@ func (s *sourceReader) readClusterInputs(ctx context.Context, kubernetesVersion 
 	if err != nil {
 		return in, err
 	}
-	in.NodeExtensionRequests = ners
+	in.NodeExtensions = orderedNERs(ners)
+	in.NodeExtensionConflicts = resolveNERConflicts(in.NodeExtensions)
 
 	return in, nil
 }
@@ -267,7 +272,7 @@ func (s *sourceReader) readAPIServerEndpoints(ctx context.Context) ([]string, er
 		if pod.DeletionTimestamp != nil || pod.Status.PodIP == "" {
 			continue
 		}
-		set[net.JoinHostPort(pod.Status.PodIP, strconv.Itoa(apiserverPort))] = struct{}{}
+		set["https://"+net.JoinHostPort(pod.Status.PodIP, strconv.Itoa(apiserverPort))] = struct{}{}
 	}
 
 	slice := &discoveryv1.EndpointSlice{}
@@ -287,17 +292,12 @@ func (s *sourceReader) readAPIServerEndpoints(ctx context.Context) ([]string, er
 	for _, endpoint := range slice.Endpoints {
 		for _, addr := range endpoint.Addresses {
 			for _, port := range ports {
-				set[net.JoinHostPort(addr, strconv.Itoa(int(port)))] = struct{}{}
+				set["https://"+net.JoinHostPort(addr, strconv.Itoa(int(port)))] = struct{}{}
 			}
 		}
 	}
 
-	list := make([]string, 0, len(set))
-	for ep := range set {
-		list = append(list, "https://"+ep)
-	}
-	sort.Strings(list)
-	return list, nil
+	return slices.Sorted(maps.Keys(set)), nil
 }
 
 // readClusterDNS returns the in-cluster DNS service address. Finding none is an
@@ -429,18 +429,18 @@ func sysextDigests(all map[string]map[string]string, kubernetesVersion string) (
 
 	// The image names carry the version with the separators stripped:
 	// containerdSysext224, kubernetesCniSysext162, kubeletSysext1356.
-	for prefix, name := range map[string]string{
-		"containerdSysext":    containerdExtension,
-		"kubernetesCniSysext": cniExtension,
-	} {
-		d, err := soleDigest(packages, prefix)
-		if err != nil {
-			return nil, err
-		}
-		if d != "" {
-			digests[name] = d
-		}
+	containerd, err := soleDigest(packages, "containerdSysext")
+	if err != nil {
+		return nil, err
 	}
+	digests[containerdExtension] = containerd
+
+	cni, err := soleDigest(packages, "kubernetesCniSysext")
+	if err != nil {
+		return nil, err
+	}
+	digests[cniExtension] = cni
+
 	if d := pickKubeletDigest(packages, kubernetesVersion); d != "" {
 		digests[kubeletExtension] = d
 	}
@@ -453,31 +453,36 @@ func sysextDigests(all map[string]map[string]string, kubernetesVersion string) (
 	return digests, nil
 }
 
-// soleDigest returns the digest of the one image with the given prefix. It picks
-// no newest because none can be told: "kubernetesCniSysext1610" is ambiguous.
-// Several is a build defect, reported. Kept in step with dhctl's soleDigest.
-func soleDigest(packages map[string]string, prefix string) (string, error) {
-	found := make([]string, 0, 1)
+// versionedImages returns the images named the prefix followed by a version, as
+// image name to version. Everything after the prefix is the version, so a
+// non-numeric tail is another image whose name merely starts the same way.
+func versionedImages(packages map[string]string, prefix string) map[string]int {
+	found := map[string]int{}
 	for name := range packages {
 		suffix, ok := strings.CutPrefix(name, prefix)
 		if !ok {
 			continue
 		}
-		// Everything after the prefix is the version, so a non-numeric tail is
-		// another image whose name merely starts the same way.
-		if _, err := strconv.Atoi(suffix); err != nil {
+		version, err := strconv.Atoi(suffix)
+		if err != nil {
 			continue
 		}
-		found = append(found, name)
+		found[name] = version
 	}
+	return found
+}
 
+// soleDigest returns the digest of the one image with the given prefix. It picks
+// no newest because none can be told: "kubernetesCniSysext1610" is ambiguous.
+// Several is a build defect, reported. Kept in step with dhctl's soleDigest.
+func soleDigest(packages map[string]string, prefix string) (string, error) {
+	found := slices.Sorted(maps.Keys(versionedImages(packages, prefix)))
 	switch len(found) {
 	case 0:
 		return "", nil
 	case 1:
 		return packages[found[0]], nil
 	default:
-		sort.Strings(found)
 		return "", fmt.Errorf("the release carries %d %q system extensions (%s): their names do not say which one is newer",
 			len(found), prefix, strings.Join(found, ", "))
 	}
@@ -487,18 +492,10 @@ func soleDigest(packages map[string]string, prefix string) (string, error) {
 // everything but the patch, so the suffix compares numerically — a string
 // compare would put patch 6 over patch 10.
 func newestPatchDigest(packages map[string]string, prefix string) string {
-	best, bestVer := "", -1
-	for name, digest := range packages {
-		suffix, ok := strings.CutPrefix(name, prefix)
-		if !ok {
-			continue
-		}
-		ver, err := strconv.Atoi(suffix)
-		if err != nil {
-			continue
-		}
-		if ver > bestVer {
-			best, bestVer = digest, ver
+	best, bestVersion := "", -1
+	for name, version := range versionedImages(packages, prefix) {
+		if version > bestVersion {
+			best, bestVersion = packages[name], version
 		}
 	}
 	return best

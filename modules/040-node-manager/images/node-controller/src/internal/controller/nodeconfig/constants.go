@@ -16,18 +16,11 @@ limitations under the License.
 
 package nodeconfig
 
-import (
-	v1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
-	nodecommon "github.com/deckhouse/node-controller/internal/common"
-)
-
 const (
 	controllerName = "node-config"
 
 	// allRequestName fans a NodeGroup change out to every node of the group.
 	allRequestName = "__all__"
-
-	nodeGroupNameLabel = nodecommon.NodeGroupLabel
 
 	// managedByLabel marks the NodeConfig objects this controller owns, so a
 	// leftover object of a deleted node can be found and removed.
@@ -149,10 +142,6 @@ const (
 	// node was provisioned from an installer payload rather than from a
 	// rendered NodeConfig, and parts of that payload cannot be reproduced here.
 	controlPlaneRoleLabel = "node-role.kubernetes.io/control-plane"
-
-	// operationNodeLabel names the node an operation was created for; shared with
-	// the reconciler (nodeoperation) so the lookup contract cannot drift.
-	operationNodeLabel = v1alpha1.NodeOperationNodeLabel
 
 	// disruptionRequiredCondition is how the agent says it cannot apply the
 	// config it was given without interrupting the node.
