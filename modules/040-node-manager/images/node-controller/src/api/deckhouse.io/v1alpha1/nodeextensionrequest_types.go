@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"slices"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -82,24 +84,11 @@ type Sysext struct {
 	Path string `json:"path,omitempty"`
 }
 
-// reservedSysextNames are the platform system-extension names a request may not
-// claim: platform wins where the two sets merge. Kept next to the Sysext
-// contract so the admission webhook and the controller backstop enforce one list.
-const (
-	reservedSysextNameContainerd = "containerd"
-	reservedSysextNameKubelet    = "kubelet"
-	reservedSysextNameCNI        = "kubernetes-cni"
-)
-
-// IsReservedSysextName reports whether a sysext name is reserved for a platform
-// extension and so may not be requested.
+// IsReservedSysextName reports whether a sysext name belongs to a platform
+// extension and so may not be requested. Kept next to the Sysext contract so the
+// admission webhook and the controller backstop enforce one list.
 func IsReservedSysextName(name string) bool {
-	switch name {
-	case reservedSysextNameContainerd, reservedSysextNameKubelet, reservedSysextNameCNI:
-		return true
-	default:
-		return false
-	}
+	return slices.Contains([]string{"containerd", "kubelet", "kubernetes-cni"}, name)
 }
 
 // NodeGroupSelector selects NodeGroups by name.

@@ -49,7 +49,7 @@ func (r *Reconciler) reconcileDisruption(ctx context.Context, ng *v1.NodeGroup, 
 		// An in-flight operation needs nothing. A completed one means the node is
 		// asking again for a revision already carried out — it will be refused
 		// forever, so surface it instead of silently holding the rollout slot.
-		if existing.Status.Phase == v1alpha1.NodeOperationCompleted {
+		if existing.Status.Phase == v1alpha1.NodeOperationPhaseCompleted {
 			logger.V(1).Info("node is asking again for a disruption already carried out",
 				"node", node.Name, "nodeGroup", ng.Name, "configGeneration", nc.Generation, "operation", existing.Name)
 			r.Recorder.Event(ng, corev1.EventTypeWarning, "DisruptionAlreadyDone",
@@ -84,7 +84,7 @@ func (r *Reconciler) findApproval(ctx context.Context, nc *internalv1alpha1.Node
 	}
 	for i := range ops.Items {
 		op := &ops.Items[i]
-		if op.Spec.Type != v1alpha1.NodeOperationApproveDisruption || op.Spec.NodeName != nc.Name {
+		if op.Spec.Type != v1alpha1.NodeOperationTypeApproveDisruption || op.Spec.NodeName != nc.Name {
 			continue
 		}
 		if op.Spec.ConfigGeneration == nil || *op.Spec.ConfigGeneration != nc.Generation {
@@ -93,7 +93,7 @@ func (r *Reconciler) findApproval(ctx context.Context, nc *internalv1alpha1.Node
 		// A failed operation allows a fresh attempt. A completed one is returned:
 		// it stops a second approval, and a second drain, while the node is still
 		// applying the config and has not cleared DisruptionRequired.
-		if op.Status.Phase == v1alpha1.NodeOperationFailed {
+		if op.Status.Phase == v1alpha1.NodeOperationPhaseFailed {
 			continue
 		}
 		return op, nil
@@ -124,7 +124,7 @@ func (r *Reconciler) createApproval(ctx context.Context, ng *v1.NodeGroup, node 
 			}},
 		},
 		Spec: v1alpha1.NodeOperationSpec{
-			Type:             v1alpha1.NodeOperationApproveDisruption,
+			Type:             v1alpha1.NodeOperationTypeApproveDisruption,
 			NodeName:         nc.Name,
 			ConfigGeneration: ptr.To(nc.Generation),
 			Drain:            &v1alpha1.NodeOperationDrainSpec{Skip: !needDrain(ng)},

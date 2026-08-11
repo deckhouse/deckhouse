@@ -448,17 +448,17 @@ func (r *Reconciler) reportedNodeIPs(ctx context.Context, nodeName, pinned strin
 // silent narrowing would leave the group running something nobody configured.
 func (r *Reconciler) recordClampedSettings(ng *v1.NodeGroup) {
 	if maxPodsClamped(ng) {
-		r.Recorder.Event(ng, corev1.EventTypeWarning, "SettingClamped",
+		r.Recorder.Event(ng, corev1.EventTypeWarning, settingClampedEvent,
 			fmt.Sprintf("kubelet.maxPods %d exceeds the %d an immutable node accepts; the nodes of this group are configured with %d",
 				*ng.Spec.Kubelet.MaxPods, maxPodsCeiling, maxPodsCeiling))
 	}
 	if ng.Spec.Disruptions != nil && ng.Spec.Disruptions.ApprovalMode == v1.DisruptionApprovalModeRollingUpdate {
-		r.Recorder.Event(ng, corev1.EventTypeWarning, "SettingClamped",
+		r.Recorder.Event(ng, corev1.EventTypeWarning, settingClampedEvent,
 			fmt.Sprintf("disruptions.approvalMode %s has no counterpart on an immutable node; the nodes of this group are configured with %s",
 				v1.DisruptionApprovalModeRollingUpdate, v1.DisruptionApprovalModeAutomatic))
 	}
 	if staticReservationClamped(ng) {
-		r.Recorder.Event(ng, corev1.EventTypeWarning, "SettingClamped",
+		r.Recorder.Event(ng, corev1.EventTypeWarning, settingClampedEvent,
 			fmt.Sprintf("kubelet.resourceReservation.mode %s cannot be honoured on an immutable node, which reserves by capacity or not at all; the nodes of this group are configured with %s",
 				resourceReservationModeStatic, resourceReservationModeAuto))
 	}
@@ -470,7 +470,7 @@ func (r *Reconciler) recordClampedSettings(ng *v1.NodeGroup) {
 			windows = ng.Spec.Disruptions.RollingUpdate.Windows
 		}
 		if len(windows) > 1 {
-			r.Recorder.Event(ng, corev1.EventTypeWarning, "SettingClamped",
+			r.Recorder.Event(ng, corev1.EventTypeWarning, settingClampedEvent,
 				fmt.Sprintf("disruptions windows: an immutable node holds a single update window; the nodes of this group are configured with the first of the %d given",
 					len(windows)))
 		}

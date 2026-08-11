@@ -43,13 +43,13 @@ type NodeOperation struct {
 type NodeOperationType string
 
 const (
-	// NodeOperationReboot reboots the node.
-	NodeOperationReboot NodeOperationType = "Reboot"
-	// NodeOperationDrain evicts the workload and leaves the node unschedulable.
-	NodeOperationDrain NodeOperationType = "Drain"
-	// NodeOperationApproveDisruption allows the node to apply a configuration
+	// NodeOperationTypeReboot reboots the node.
+	NodeOperationTypeReboot NodeOperationType = "Reboot"
+	// NodeOperationTypeDrain evicts the workload and leaves the node unschedulable.
+	NodeOperationTypeDrain NodeOperationType = "Drain"
+	// NodeOperationTypeApproveDisruption allows the node to apply a configuration
 	// whose application interrupts it.
-	NodeOperationApproveDisruption NodeOperationType = "ApproveDisruption"
+	NodeOperationTypeApproveDisruption NodeOperationType = "ApproveDisruption"
 )
 
 // NodeOperationSpec is immutable: a different intent is a different operation.
@@ -86,15 +86,15 @@ type NodeOperationDrainSpec struct {
 type NodeOperationPhase string
 
 const (
-	// NodeOperationPending is queued but not started.
-	NodeOperationPending NodeOperationPhase = "Pending"
-	// NodeOperationInProgress means the node was prepared and is carrying the
+	// NodeOperationPhasePending is queued but not started.
+	NodeOperationPhasePending NodeOperationPhase = "Pending"
+	// NodeOperationPhaseInProgress means the node was prepared and is carrying the
 	// operation out.
-	NodeOperationInProgress NodeOperationPhase = "InProgress"
-	// NodeOperationCompleted means it finished successfully.
-	NodeOperationCompleted NodeOperationPhase = "Completed"
-	// NodeOperationFailed means it did not.
-	NodeOperationFailed NodeOperationPhase = "Failed"
+	NodeOperationPhaseInProgress NodeOperationPhase = "InProgress"
+	// NodeOperationPhaseCompleted means it finished successfully.
+	NodeOperationPhaseCompleted NodeOperationPhase = "Completed"
+	// NodeOperationPhaseFailed means it did not.
+	NodeOperationPhaseFailed NodeOperationPhase = "Failed"
 )
 
 // NodeOperationStatus is written by whoever is moving the operation forward:

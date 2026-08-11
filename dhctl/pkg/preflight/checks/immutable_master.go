@@ -33,12 +33,12 @@ import (
 // systemType: Immutable. Each of them guards an assumption the immutable
 // bootstrap path makes that the classic bashible path does not.
 const (
-	ImmutableInstallerImagesCheckName   preflight.CheckName = "immutable-installer-images"
-	ImmutableRegistryModeCheckName      preflight.CheckName = "immutable-registry-mode"
-	ImmutablePostBootstrapHookCheckName preflight.CheckName = "immutable-post-bootstrap-script"
-	ImmutableSignatureModeCheckName     preflight.CheckName = "immutable-signature-mode"
-	ImmutableKubeconfigOutCheckName     preflight.CheckName = "immutable-kubeconfig-out"
-	ImmutableKubeconfigKeptCheckName    preflight.CheckName = "immutable-kubeconfig-kept"
+	ImmutableInstallerImagesCheckName     preflight.CheckName = "immutable-installer-images"
+	ImmutableRegistryModeCheckName        preflight.CheckName = "immutable-registry-mode"
+	ImmutablePostBootstrapScriptCheckName preflight.CheckName = "immutable-post-bootstrap-script"
+	ImmutableSignatureModeCheckName       preflight.CheckName = "immutable-signature-mode"
+	ImmutableKubeconfigOutCheckName       preflight.CheckName = "immutable-kubeconfig-out"
+	ImmutableKubeconfigKeptCheckName      preflight.CheckName = "immutable-kubeconfig-kept"
 )
 
 // ImmutableInstallerImages fails early when the installer image does not carry
@@ -153,7 +153,7 @@ func ImmutableKubeconfigOut(bootstrapOpts *options.BootstrapOptions, commanderMo
 // runs over SSH on the master, and an immutable node has no sshd.
 func ImmutablePostBootstrapScript(bootstrapOpts *options.BootstrapOptions) preflight.Check {
 	return preflight.Check{
-		Name:        ImmutablePostBootstrapHookCheckName,
+		Name:        ImmutablePostBootstrapScriptCheckName,
 		Description: "no post-bootstrap script is requested",
 		Phase:       preflight.PhasePreInfra,
 		Run: func(_ context.Context) error {
