@@ -247,6 +247,7 @@ shell:
 {{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName $image_version)) }}
 {{- end }}
 
+{{- if ne $.Env "CSE" }}
 # containerd sysext (built for containerd v2 only)
 
 {{- $image_version := $containerd_v2_version | replace "." "-" }}
@@ -264,9 +265,6 @@ import:
   - containerd-shim-runc-v2
   - ctr
   - runc
-{{- if and (eq $.Env "CSE") }}
-  - pidumount
-{{- end }}
   before: install
 git:
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/sysext
@@ -310,3 +308,4 @@ imageSpec:
     clearEntrypoint: true
     removeEnv: ["/.*/"]
 {{- include "vex mitigation" (list $ (printf "%s/%s-sysext-%s" $.ModuleName $.ImageName $image_version)) }}
+{{- end }}
