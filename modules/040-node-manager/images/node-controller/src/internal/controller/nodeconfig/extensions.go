@@ -21,6 +21,7 @@ import (
 	"sort"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
 
 	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
@@ -47,10 +48,9 @@ func nodeExtensions(ordered []*deckhousev1alpha1.NodeExtensionRequest, conflicts
 			continue
 		}
 
-		// The reason is not checked: orderedNERs has already dropped every
-		// request resolveExtension could refuse.
-		ext, _ := resolveExtension(ner)
-		extensions = append(extensions, ext)
+		// Validity is not checked here: orderedNERs has already dropped every
+		// request with an unusable sysext.
+		extensions = append(extensions, resolveExtension(ner))
 
 		for _, module := range ner.Spec.KernelModules {
 			if _, seen := seenModules[module.Name]; seen {
@@ -81,21 +81,24 @@ const (
 	reasonRefusedByNodes = "RefusedByNodes"
 )
 
+// sysextValid reports whether a request names an image the nodes can pull: both
+// name and digest are needed. The one refusal this controller resolves on.
+func sysextValid(ner *deckhousev1alpha1.NodeExtensionRequest) bool {
+	return ner.Spec.Sysext.Name != "" && ner.Spec.Sysext.Digest != ""
+}
+
 // resolveExtension turns a request's Sysext into the NodeConfig extension the
 // agent pulls through the registry-packages-proxy; fields pass straight through.
-// The second return is the failure reason, empty when the extension resolved.
-func resolveExtension(ner *deckhousev1alpha1.NodeExtensionRequest) (internalv1alpha1.Extension, string) {
+// Callers filter on sysextValid first.
+func resolveExtension(ner *deckhousev1alpha1.NodeExtensionRequest) internalv1alpha1.Extension {
 	sysext := ner.Spec.Sysext
-	if sysext.Name == "" || sysext.Digest == "" {
-		return internalv1alpha1.Extension{}, reasonInvalidSysext
-	}
 	return internalv1alpha1.Extension{
 		Name:           sysext.Name,
 		Repository:     sysext.Repository,
 		AdditionalPath: sysext.Path,
 		Digest:         sysext.Digest,
 		RequestedBy:    nerRequestedByPrefix + ner.Name,
-	}, ""
+	}
 }
 
 // nerConflict records why a request lost: a reserved platform name, a
@@ -150,7 +153,7 @@ func resolveNERConflicts(ordered []*deckhousev1alpha1.NodeExtensionRequest) map[
 func orderedNERs(ners []deckhousev1alpha1.NodeExtensionRequest) []*deckhousev1alpha1.NodeExtensionRequest {
 	ordered := make([]*deckhousev1alpha1.NodeExtensionRequest, 0, len(ners))
 	for i := range ners {
-		if ners[i].Spec.Sysext.Name == "" || ners[i].Spec.Sysext.Digest == "" {
+		if !sysextValid(&ners[i]) {
 			continue
 		}
 		ordered = append(ordered, &ners[i])
@@ -200,13 +203,8 @@ func nerMatchesNode(ner *deckhousev1alpha1.NodeExtensionRequest, node *corev1.No
 		return false
 	}
 
-	for key, value := range ner.Spec.NodeSelector.MatchLabels {
-		got, ok := node.Labels[key]
-		if !ok || got != value {
-			return false
-		}
-	}
-	return true
+	selector := labels.SelectorFromValidatedSet(ner.Spec.NodeSelector.MatchLabels)
+	return selector.Matches(labels.Set(node.Labels))
 }
 
 // mergeExtensions appends the extra extensions to the base set, dropping any

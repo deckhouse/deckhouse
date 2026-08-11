@@ -61,14 +61,25 @@ func RenderBootstrapSpec(ctx context.Context, cl client.Client, reader client.Re
 // configuration, not the group's status (empty until bashible nodes exist).
 // A derivation failure is fatal: the version picks the kubelet system extension.
 func resolveKubernetesVersion(ctx context.Context, derived *derived_status.Service, ng *v1.NodeGroup) (string, error) {
+	version, err := deriveKubernetesVersion(ctx, derived, ng)
+	if err != nil {
+		return "", err
+	}
+	if version != "" {
+		return version, nil
+	}
+	return ng.Status.KubernetesVersion, nil
+}
+
+// deriveKubernetesVersion is the cluster's half of the answer above: the version
+// derived_status computes from the cluster configuration and the control plane,
+// empty when it has none. The group only names the failure it is reported with.
+func deriveKubernetesVersion(ctx context.Context, derived *derived_status.Service, ng *v1.NodeGroup) (string, error) {
 	// The derived status reports the version even when a later cloud check fails,
 	// so the check outcome is ignored here — the error is not.
 	computed, _, err := derived.ComputeWithCloudChecks(ctx, ng)
 	if err != nil {
 		return "", fmt.Errorf("derive the Kubernetes version of %s: %w", ng.Name, err)
 	}
-	if computed.KubernetesVersion != "" {
-		return computed.KubernetesVersion, nil
-	}
-	return ng.Status.KubernetesVersion, nil
+	return computed.KubernetesVersion, nil
 }

@@ -177,29 +177,10 @@ func destroyCacheIdentity(
 		)
 	}
 
-	var sshProvider libcon.SSHProvider
-	cacheIdentity := ""
-	if opts.Kube.Config != "" {
-		// NOT GetCacheIdentityFromKubeconfig: that hashes the path, and every
-		// immutable bootstrap writes to the same path — all clusters on this
-		// machine would then share the cache destroy reads its state from.
-		identity, err := kubeconfigClusterIdentity(opts.Kube.Config, opts.Kube.ConfigContext)
-		if err != nil {
-			return "", nil, fmt.Errorf("identify the cluster from %s: %w", opts.Kube.Config, err)
-		}
-		cacheIdentity = identity
-	}
-	if opts.Kube.InCluster {
-		// No conflict with --kubeconfig to handle here: lib-connection's
-		// Config.IsConflict rejects two set modes while the providers are built by
-		// the caller, and that error is returned at once.
-		identity, err := inClusterCacheIdentity()
-		if err != nil {
-			return "", nil, err
-		}
-		cacheIdentity = identity
-	}
-	if sshHostConfigured {
+	// One source names the cluster, and the checks above have already refused the
+	// combinations that would let two of them disagree.
+	switch {
+	case sshHostConfigured:
 		provider, err := sshProviderInitializer.GetSSHProvider(ctx)
 		if err != nil {
 			return "", nil, err
@@ -208,14 +189,31 @@ func destroyCacheIdentity(
 		if err != nil {
 			return "", nil, err
 		}
-		sshProvider = provider
-		cacheIdentity = sshClient.Check().String()
-	}
-	if cacheIdentity == "" {
+		return sshClient.Check().String(), provider, nil
+
+	case opts.Kube.InCluster:
+		// No conflict with --kubeconfig to handle here: lib-connection's
+		// Config.IsConflict rejects two set modes while the providers are built by
+		// the caller, and that error is returned at once.
+		identity, err := inClusterCacheIdentity()
+		if err != nil {
+			return "", nil, err
+		}
+		return identity, nil, nil
+
+	case opts.Kube.Config != "":
+		// NOT GetCacheIdentityFromKubeconfig: that hashes the path, and every
+		// immutable bootstrap writes to the same path — all clusters on this
+		// machine would then share the cache destroy reads its state from.
+		identity, err := kubeconfigClusterIdentity(opts.Kube.Config, opts.Kube.ConfigContext)
+		if err != nil {
+			return "", nil, fmt.Errorf("identify the cluster from %s: %w", opts.Kube.Config, err)
+		}
+		return identity, nil, nil
+
+	default:
 		return "", nil, errors.New("nothing identifies this cluster: pass --ssh-host for a cluster with SSH, or --kubeconfig for one without")
 	}
-
-	return cacheIdentity, sshProvider, nil
 }
 
 // inClusterCacheIdentity names the cluster from the API server this pod talks

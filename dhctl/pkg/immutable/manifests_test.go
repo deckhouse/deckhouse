@@ -29,13 +29,13 @@ import (
 // kubelet starts a static pod the moment its manifest appears, and an apiserver
 // that comes up before its datastore only crash-loops until etcd catches up.
 func TestRenderControlPlaneBundleOrdersEtcdFirst(t *testing.T) {
-	manifests, extraFiles, err := renderControlPlaneBundle(t.Context(), testManifestsInput(t))
+	manifests, err := renderControlPlaneBundle(t.Context(), testManifestsInput(t))
 	require.NoError(t, err)
 
 	require.Equal(t, "etcd.yaml", manifests[0].Name)
 	require.Len(t, manifests, 4)
-	require.Len(t, extraFiles, 1)
-	require.Equal(t, "authentication-config.yaml", extraFiles[0].Name)
+	require.Len(t, bootstrapExtraFiles, 1)
+	require.Equal(t, "authentication-config.yaml", bootstrapExtraFiles[0].Name)
 }
 
 // TestRenderControlPlaneBundleLeavesTheAddressToTheNode covers the one thing
@@ -45,11 +45,11 @@ func TestRenderControlPlaneBundleLeavesTheAddressToTheNode(t *testing.T) {
 	in := testManifestsInput(t)
 	in.NodeIP = nodeAddressPlaceholder
 
-	manifests, extraFiles, err := renderControlPlaneBundle(t.Context(), in)
+	manifests, err := renderControlPlaneBundle(t.Context(), in)
 	require.NoError(t, err)
 
 	withPlaceholder := 0
-	for _, file := range append(manifests, extraFiles...) {
+	for _, file := range append(manifests, bootstrapExtraFiles...) {
 		if strings.Contains(file.Content, nodeAddressPlaceholder) {
 			withPlaceholder++
 		}
@@ -76,7 +76,7 @@ func TestRenderControlPlaneBundleLeavesTheAddressToTheNode(t *testing.T) {
 // A manifest kubelet cannot parse is a static pod that never appears at all,
 // with the reason only in the kubelet log of a node nobody can log in to.
 func TestRenderedManifestsAreValidPods(t *testing.T) {
-	manifests, _, err := renderControlPlaneBundle(t.Context(), testManifestsInput(t))
+	manifests, err := renderControlPlaneBundle(t.Context(), testManifestsInput(t))
 	require.NoError(t, err)
 
 	for _, file := range manifests {
@@ -97,9 +97,9 @@ const extraFilesDir = "/etc/kubernetes/deckhouse/extra-files"
 // there, so the manifest and the extra files have to agree on the name. They
 // come out of two separate renders, and nothing but this connects them.
 func TestTheApiserverFlagNamesAFileTheExtraFilesRender(t *testing.T) {
-	manifests, extraFiles, err := renderControlPlaneBundle(t.Context(), testManifestsInput(t))
+	manifests, err := renderControlPlaneBundle(t.Context(), testManifestsInput(t))
 	require.NoError(t, err)
-	require.NotEmpty(t, extraFiles, "the bootstrap needs the authentication config")
+	require.NotEmpty(t, bootstrapExtraFiles, "the bootstrap needs the authentication config")
 
 	var apiserver string
 	for _, file := range manifests {
@@ -107,7 +107,7 @@ func TestTheApiserverFlagNamesAFileTheExtraFilesRender(t *testing.T) {
 			apiserver = file.Content
 		}
 	}
-	for _, file := range extraFiles {
+	for _, file := range bootstrapExtraFiles {
 		require.Contains(t, apiserver, "--authentication-config="+extraFilesDir+"/"+file.Name)
 	}
 }
@@ -116,7 +116,7 @@ func TestTheApiserverFlagNamesAFileTheExtraFilesRender(t *testing.T) {
 // preparators have run, and nothing runs them on a node bringing a cluster up.
 // A component started with one of them exits before it opens a port.
 func TestRenderOmitsFlagsWhoseFilesDoNotExistYet(t *testing.T) {
-	manifests, _, err := renderControlPlaneBundle(t.Context(), testManifestsInput(t))
+	manifests, err := renderControlPlaneBundle(t.Context(), testManifestsInput(t))
 	require.NoError(t, err)
 
 	rendered := make(map[string]string, len(manifests))
@@ -148,7 +148,7 @@ func TestRenderWithoutAClusterTypeStillRenders(t *testing.T) {
 	in := testManifestsInput(t)
 	in.Cluster.ClusterType = ""
 
-	manifests, _, err := renderControlPlaneBundle(t.Context(), in)
+	manifests, err := renderControlPlaneBundle(t.Context(), in)
 	require.NoError(t, err)
 
 	for _, file := range manifests {

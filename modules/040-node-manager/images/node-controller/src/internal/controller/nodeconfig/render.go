@@ -346,15 +346,9 @@ func renderUpdatePolicy(ng *v1.NodeGroup) internalv1alpha1.UpdatePolicy {
 		policy.Mode = string(mode)
 	}
 
-	var windows []v1.DisruptionWindow
-	if ng.Spec.Disruptions.Automatic != nil {
-		windows = ng.Spec.Disruptions.Automatic.Windows
-	} else if ng.Spec.Disruptions.RollingUpdate != nil {
-		windows = ng.Spec.Disruptions.RollingUpdate.Windows
-	}
 	// NodeConfig carries a single window; the first one wins until the agent
 	// learns to hold a list.
-	if len(windows) > 0 {
+	if windows := disruptionWindows(ng); len(windows) > 0 {
 		policy.Window = internalv1alpha1.UpdateWindow{
 			From: windows[0].From,
 			To:   windows[0].To,
@@ -362,6 +356,21 @@ func renderUpdatePolicy(ng *v1.NodeGroup) internalv1alpha1.UpdatePolicy {
 		}
 	}
 	return policy
+}
+
+// disruptionWindows returns the update windows the group configured: the
+// automatic ones, or the rolling-update ones when it configures no automatic.
+func disruptionWindows(ng *v1.NodeGroup) []v1.DisruptionWindow {
+	if ng.Spec.Disruptions == nil {
+		return nil
+	}
+	if ng.Spec.Disruptions.Automatic != nil {
+		return ng.Spec.Disruptions.Automatic.Windows
+	}
+	if ng.Spec.Disruptions.RollingUpdate != nil {
+		return ng.Spec.Disruptions.RollingUpdate.Windows
+	}
+	return nil
 }
 
 // newNodeConfig builds the object for a node, owned by that node so it is
