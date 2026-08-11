@@ -71,7 +71,7 @@ var _ = BeforeSuite(func() {
 	testEnv, cfg, k8sClient, err = testenv.Start(
 		scheme,
 		testenv.CRDPaths(
-			testenv.WithNodeOperationCRDFile(),
+			testenv.WithNodeManager(testenv.NodeOperationCRDFile),
 			testenv.WithNodeGroupCRDFile(),
 		)...,
 	)

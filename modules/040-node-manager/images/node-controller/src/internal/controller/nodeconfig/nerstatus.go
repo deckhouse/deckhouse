@@ -19,7 +19,7 @@ package nodeconfig
 import (
 	"context"
 	"fmt"
-	"sort"
+	"slices"
 
 	"github.com/go-logr/logr"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -53,7 +53,7 @@ func (r *Reconciler) reconcileNERStatuses(ctx context.Context, logger logr.Logge
 		return
 	}
 
-	conflicts := resolveNERConflicts(ners.Items)
+	conflicts := resolveNERConflicts(orderedNERs(ners.Items))
 	groups, err := r.immutableNodeGroupNames(ctx)
 	if err != nil {
 		logger.Error(err, "cannot report NodeExtensionRequest statuses")
@@ -103,41 +103,32 @@ func (r *Reconciler) updateNERStatus(ctx context.Context, ner *deckhousev1alpha1
 	desired.FailedNodes = outcome.failed
 	desired.FailureMessage = outcome.message
 
+	// The default is the request this controller refused, reason and message
+	// already in hand.
+	desired.Phase = phaseDegraded
+	status := metav1.ConditionFalse
 	reason, message := nerStatusReason(ner, conflicts)
 	switch {
 	case reason == "" && outcome.failed > 0:
 		// It resolved here and the nodes refused it. Reporting Ready on the
 		// strength of the resolution alone is what made a rejected extension
 		// indistinguishable from a working one.
-		desired.Phase = phaseDegraded
-		meta.SetStatusCondition(&desired.Conditions, metav1.Condition{
-			Type:               readyConditionType,
-			Status:             metav1.ConditionFalse,
-			ObservedGeneration: ner.Generation,
-			Reason:             reasonRefusedByNodes,
-			Message: fmt.Sprintf("%d node(s) refused the sysext, %d applied it: %s",
-				outcome.failed, outcome.applied, outcome.message),
-		})
+		reason = reasonRefusedByNodes
+		message = fmt.Sprintf("%d node(s) refused the sysext, %d applied it: %s",
+			outcome.failed, outcome.applied, outcome.message)
 	case reason == "":
 		desired.Phase = phaseReady
-		meta.SetStatusCondition(&desired.Conditions, metav1.Condition{
-			Type:               readyConditionType,
-			Status:             metav1.ConditionTrue,
-			ObservedGeneration: ner.Generation,
-			Reason:             reasonResolved,
-			Message: fmt.Sprintf("the sysext resolved; %d node(s) report it applied",
-				outcome.applied),
-		})
-	default:
-		desired.Phase = phaseDegraded
-		meta.SetStatusCondition(&desired.Conditions, metav1.Condition{
-			Type:               readyConditionType,
-			Status:             metav1.ConditionFalse,
-			ObservedGeneration: ner.Generation,
-			Reason:             reason,
-			Message:            message,
-		})
+		status = metav1.ConditionTrue
+		reason = reasonResolved
+		message = fmt.Sprintf("the sysext resolved; %d node(s) report it applied", outcome.applied)
 	}
+	meta.SetStatusCondition(&desired.Conditions, metav1.Condition{
+		Type:               readyConditionType,
+		Status:             status,
+		ObservedGeneration: ner.Generation,
+		Reason:             reason,
+		Message:            message,
+	})
 
 	if apiequality.Semantic.DeepEqual(&ner.Status, desired) {
 		return nil
@@ -154,22 +145,13 @@ func (r *Reconciler) updateNERStatus(ctx context.Context, ner *deckhousev1alpha1
 // listed names it intersects, or all of them when it names none.
 func matchedNodeGroups(ner *deckhousev1alpha1.NodeExtensionRequest, immutableGroups []string) []string {
 	names := ner.Spec.NodeGroupSelector.MatchNames
-	if len(names) == 0 {
-		matched := append([]string(nil), immutableGroups...)
-		sort.Strings(matched)
-		return matched
-	}
-	wanted := make(map[string]struct{}, len(names))
-	for _, name := range names {
-		wanted[name] = struct{}{}
-	}
 	var matched []string
 	for _, name := range immutableGroups {
-		if _, ok := wanted[name]; ok {
+		if len(names) == 0 || slices.Contains(names, name) {
 			matched = append(matched, name)
 		}
 	}
-	sort.Strings(matched)
+	slices.Sort(matched)
 	return matched
 }
 
@@ -177,23 +159,14 @@ func matchedNodeGroups(ner *deckhousev1alpha1.NodeExtensionRequest, immutableGro
 // for its Ready condition, or empty strings when it resolved. An invalid sysext
 // is reported first; otherwise a lost name/digest contest (resolveNERConflicts).
 func nerStatusReason(ner *deckhousev1alpha1.NodeExtensionRequest, conflicts map[string]nerConflict) (string, string) {
+	// reasonInvalidSysext is the only refusal resolveExtension has.
 	if _, reason := resolveExtension(ner); reason != "" {
-		return reason, nerReasonMessage(reason)
+		return reason, "sysext must set both name and digest"
 	}
 	if conflict, lost := conflicts[ner.Name]; lost {
 		return conflict.reason, conflictMessage(conflict)
 	}
 	return "", ""
-}
-
-// nerReasonMessage explains a resolveExtension reason for the condition message.
-func nerReasonMessage(reason string) string {
-	switch reason {
-	case reasonInvalidSysext:
-		return "sysext must set both name and digest"
-	default:
-		return reason
-	}
 }
 
 // conflictMessage explains a lost uniqueness contest for the condition message.

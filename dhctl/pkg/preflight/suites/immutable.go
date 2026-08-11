@@ -33,14 +33,11 @@ type ImmutableDeps struct {
 // that case, so none of its checks has to test for it again.
 func NewImmutableSuite(deps ImmutableDeps) preflight.Suite {
 	return preflight.NewSuite(
-		checks.ImmutableSysextDigests(deps.MetaConfig),
-		checks.ImmutableControlPlaneImages(deps.MetaConfig),
+		checks.ImmutableInstallerImages(deps.MetaConfig),
 		checks.ImmutableRegistryMode(deps.MetaConfig),
 		checks.ImmutableSignatureMode(deps.MetaConfig, deps.GlobalOpts),
 		checks.ImmutablePostBootstrapScript(deps.BootstrapOpts),
-		checks.ImmutableKubeconfigOut(deps.BootstrapOpts, checks.ImmutableKubeconfigOutOptions{
-			CommanderMode: deps.CommanderMode,
-		}),
+		checks.ImmutableKubeconfigOut(deps.BootstrapOpts, deps.CommanderMode),
 		checks.ImmutableKubeconfigKept(deps.BootstrapOpts, deps.GlobalOpts),
 	)
 }

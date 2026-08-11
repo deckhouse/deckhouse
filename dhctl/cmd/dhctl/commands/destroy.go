@@ -17,12 +17,10 @@ package commands
 import (
 	"context"
 	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"net"
 	"os"
-	"path/filepath"
 	"time"
 
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -240,6 +238,11 @@ func kubeconfigClusterIdentity(path, contextName string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	// LoadFromFile leaves certificate-authority as written, so a relative one is
+	// relative to the kubeconfig's own directory rather than to the cwd.
+	if err := clientcmd.ResolveLocalPaths(cfg); err != nil {
+		return "", err
+	}
 	if contextName == "" {
 		contextName = cfg.CurrentContext
 	}
@@ -255,18 +258,14 @@ func kubeconfigClusterIdentity(path, contextName string) (string, error) {
 		return "", fmt.Errorf("context %q has no server address", contextName)
 	}
 
-	// certificate-authority is a path and is left as one by LoadFromFile, so an
-	// unread file would leave the address hashed on its own — the very
-	// collision this function exists to prevent, and a silent one.
+	// certificate-authority is a path, so an unread file would leave the address
+	// hashed on its own — the very collision this function exists to prevent,
+	// and a silent one.
 	certificateAuthority := cluster.CertificateAuthorityData
 	if len(certificateAuthority) == 0 && cluster.CertificateAuthority != "" {
-		caPath := cluster.CertificateAuthority
-		if !filepath.IsAbs(caPath) {
-			caPath = filepath.Join(filepath.Dir(path), caPath)
-		}
-		certificateAuthority, err = os.ReadFile(caPath)
+		certificateAuthority, err = os.ReadFile(cluster.CertificateAuthority)
 		if err != nil {
-			return "", fmt.Errorf("read the cluster CA %s: %w", caPath, err)
+			return "", fmt.Errorf("read the cluster CA %s: %w", cluster.CertificateAuthority, err)
 		}
 	}
 	if len(certificateAuthority) == 0 {
@@ -281,7 +280,5 @@ func kubeconfigClusterIdentity(path, contextName string) (string, error) {
 	// The CA alone, deliberately not the server address: a destroy resumed through
 	// the bastion forward carries a rewritten address, so hashing it would hand the
 	// resume an empty cache with no infrastructure state to finish from.
-	h := sha256.New()
-	h.Write(certificateAuthority)
-	return "kubeconfig-" + hex.EncodeToString(h.Sum(nil)), nil
+	return fmt.Sprintf("kubeconfig-%x", sha256.Sum256(certificateAuthority)), nil
 }

@@ -25,8 +25,6 @@ import (
 	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
@@ -73,60 +71,42 @@ func denyMessage(resp admission.Response) string {
 	return resp.Result.Message
 }
 
+// Only the reserved-name rule is admission's: a name or digest already claimed
+// by another request is settled cluster-wide by the nodeconfig controller, which
+// reports it on the request that lost.
 func TestNodeExtensionRequestValidator(t *testing.T) {
 	s := nerScheme(t)
-	digestA := "sha256:" + strings.Repeat("a", 64)
-	digestB := "sha256:" + strings.Repeat("b", 64)
-
-	existing := makeNER("existing", "drbd", digestA)
+	digest := "sha256:" + strings.Repeat("a", 64)
 
 	tests := []struct {
 		name        string
-		objects     []client.Object
 		op          admissionv1.Operation
 		req         *deckhousev1alpha1.NodeExtensionRequest
 		wantAllowed bool
 	}{
 		{
-			name:        "unique name and digest is allowed",
-			objects:     []client.Object{existing},
+			name:        "a name of its own is allowed",
 			op:          admissionv1.Create,
-			req:         makeNER("fresh", "ceph", digestB),
+			req:         makeNER("fresh", "ceph", digest),
 			wantAllowed: true,
-		},
-		{
-			name:        "sysext name already used is denied",
-			objects:     []client.Object{existing},
-			op:          admissionv1.Create,
-			req:         makeNER("dupe-name", "drbd", digestB),
-			wantAllowed: false,
-		},
-		{
-			name:        "sysext digest already used is denied",
-			objects:     []client.Object{existing},
-			op:          admissionv1.Create,
-			req:         makeNER("dupe-digest", "ceph", digestA),
-			wantAllowed: false,
 		},
 		{
 			name:        "reserved sysext name is denied",
 			op:          admissionv1.Create,
-			req:         makeNER("shadow", "kubelet", digestB),
+			req:         makeNER("shadow", "kubelet", digest),
 			wantAllowed: false,
 		},
 		{
-			name:        "updating a request against itself is allowed",
-			objects:     []client.Object{existing},
+			name:        "a reserved name is refused on UPDATE too",
 			op:          admissionv1.Update,
-			req:         makeNER("existing", "drbd", digestA),
-			wantAllowed: true,
+			req:         makeNER("existing", "containerd", digest),
+			wantAllowed: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := fake.NewClientBuilder().WithScheme(s).WithObjects(tt.objects...).Build()
-			w := &NodeExtensionRequestValidator{Client: c, decoder: admission.NewDecoder(s)}
+			w := &NodeExtensionRequestValidator{decoder: admission.NewDecoder(s)}
 			resp := w.Handle(context.Background(), makeNERRequest(t, tt.op, tt.req))
 			if resp.Allowed != tt.wantAllowed {
 				t.Fatalf("Allowed = %v, want %v (message: %q)", resp.Allowed, tt.wantAllowed, denyMessage(resp))

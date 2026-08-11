@@ -16,9 +16,7 @@ package immutable
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"net"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -62,25 +60,12 @@ anonymous:
   - path: /healthz
 `
 
-// controlPlaneBundle is everything the node writes into /etc/kubernetes,
-// rendered here rather than there.
-type controlPlaneBundle struct {
-	// Manifests are the four static pods, in the order they must be written:
-	// kubelet starts a pod the moment its manifest appears, and an apiserver
-	// started before its datastore only crash-loops.
-	Manifests []renderedFile
-	// ExtraFiles are the files the manifests reference by path instead of
-	// carrying inline.
-	ExtraFiles []renderedFile
-}
-
 // controlPlaneRenderParams are the settings the manifests are rendered from.
-// Wider than the clusterParamsSpec that travels in the payload: four of these
-// decide component command lines and are consumed here.
+// Wider than the clusterParamsSpec that travels in the payload: the four fields
+// below it decide component command lines and are consumed here.
 type controlPlaneRenderParams struct {
-	ClusterDomain     string
-	ServiceSubnetCIDR string
-	PodSubnetCIDR     string
+	clusterParamsSpec
+	PodSubnetCIDR string
 	// PodSubnetNodeCIDRPrefix is the per-node prefix length, e.g. "24".
 	PodSubnetNodeCIDRPrefix string
 	// KubernetesVersion is the minor version, e.g. "1.34". "Automatic" is
@@ -89,9 +74,7 @@ type controlPlaneRenderParams struct {
 	// ClusterType is Cloud or Static. Without Cloud the controller manager
 	// never gets --cloud-provider=external and never hands node lifecycle to
 	// the cloud-controller-manager.
-	ClusterType         string
-	EncryptionAlgorithm string
-	CertSANs            []string
+	ClusterType string
 }
 
 // controlPlaneImages are the digests of the four static-pod images. The
@@ -129,23 +112,20 @@ type manifestsInput struct {
 }
 
 // renderControlPlaneBundle renders what the first master's control plane is made
-// of. Here rather than on the node because only the installer knows its own
-// release: the digests, the templates and the settings all come from here.
-func renderControlPlaneBundle(ctx context.Context, in manifestsInput) (*controlPlaneBundle, error) {
-	if err := in.validate(); err != nil {
-		return nil, err
-	}
-
+// of: the static pods, and the files the manifests reference by path instead of
+// carrying inline. Here rather than on the node because only the installer knows
+// its own release: the digests, the templates and the settings all come from here.
+func renderControlPlaneBundle(ctx context.Context, in manifestsInput) ([]renderedFile, []renderedFile, error) {
 	dir := filepath.Join(in.CandiDir, controlPlaneTemplatesDir)
 	rendered, err := template.RenderTemplatesDir(ctx, dir, in.data(), nil)
 	if err != nil {
-		return nil, fmt.Errorf("render the control-plane manifests from %s: %w", dir, err)
+		return nil, nil, fmt.Errorf("render the control-plane manifests from %s: %w", dir, err)
 	}
 	// A missing directory is not an error to RenderTemplatesDir — it logs and
 	// returns nothing. Here it would mean a node that waits for an apiserver
 	// nobody is going to start, so it has to be one.
 	if len(rendered) == 0 {
-		return nil, fmt.Errorf("no control-plane templates in %s", dir)
+		return nil, nil, fmt.Errorf("no control-plane templates in %s", dir)
 	}
 
 	manifests := make([]renderedFile, 0, len(rendered))
@@ -157,12 +137,9 @@ func renderControlPlaneBundle(ctx context.Context, in manifestsInput) (*controlP
 	}
 	sortEtcdFirst(manifests)
 
-	return &controlPlaneBundle{
-		Manifests: manifests,
-		ExtraFiles: []renderedFile{
-			{Name: authenticationConfig, Content: bootstrapAuthenticationConfig},
-		},
-	}, nil
+	extraFiles := []renderedFile{{Name: authenticationConfig, Content: bootstrapAuthenticationConfig}}
+
+	return manifests, extraFiles, nil
 }
 
 // sortEtcdFirst puts etcd at the head and the rest in name order, so the same
@@ -225,41 +202,4 @@ func (in manifestsInput) data() map[string]any {
 		"apiserver": map[string]any{},
 		"settings":  in.Settings,
 	}
-}
-
-func (in manifestsInput) validate() error {
-	if in.Registry == nil {
-		return errors.New("registry is nil")
-	}
-
-	required := []struct {
-		field string
-		value string
-	}{
-		{"candiDir", in.CandiDir},
-		{"nodeName", in.NodeName},
-		{"nodeIP", in.NodeIP},
-		{"cluster.kubernetesVersion", in.Cluster.KubernetesVersion},
-		{"cluster.clusterDomain", in.Cluster.ClusterDomain},
-		{"cluster.serviceSubnetCIDR", in.Cluster.ServiceSubnetCIDR},
-		{"cluster.podSubnetCIDR", in.Cluster.PodSubnetCIDR},
-		{"cluster.podSubnetNodeCIDRPrefix", in.Cluster.PodSubnetNodeCIDRPrefix},
-		{"registry.address", in.Registry.Address},
-		{"images.etcd", in.Images.Etcd},
-		{"images.kubeApiserver", in.Images.KubeAPIServer},
-		{"images.kubeControllerManager", in.Images.KubeControllerManager},
-		{"images.kubeScheduler", in.Images.KubeScheduler},
-	}
-	for _, r := range required {
-		if strings.TrimSpace(r.value) == "" {
-			return fmt.Errorf("%s must not be empty", r.field)
-		}
-	}
-
-	// Either a real address or the placeholder. Anything else reaches the node
-	// as an --advertise-address it cannot bind and an etcd URL nobody answers.
-	if in.NodeIP != nodeAddressPlaceholder && net.ParseIP(in.NodeIP) == nil {
-		return fmt.Errorf("nodeIP %q is neither an IP address nor %s", in.NodeIP, nodeAddressPlaceholder)
-	}
-	return nil
 }

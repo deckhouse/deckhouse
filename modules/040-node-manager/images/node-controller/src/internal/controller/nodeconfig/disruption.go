@@ -30,6 +30,7 @@ import (
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	v1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
+	nodecommon "github.com/deckhouse/node-controller/internal/common"
 )
 
 // reconcileDisruption answers a node that cannot apply its config without a
@@ -75,7 +76,7 @@ func (r *Reconciler) reconcileDisruption(ctx context.Context, ng *v1.NodeGroup, 
 // approval would mint a second one for the same revision.
 func (r *Reconciler) findApproval(ctx context.Context, nc *internalv1alpha1.NodeConfig) (*v1alpha1.NodeOperation, error) {
 	ops := &v1alpha1.NodeOperationList{}
-	if err := r.sources.Reader.List(ctx, ops, client.MatchingLabels{operationNodeLabel: nc.Name}); err != nil {
+	if err := r.sources.Reader.List(ctx, ops, client.MatchingLabels{v1alpha1.NodeOperationNodeLabel: nc.Name}); err != nil {
 		return nil, fmt.Errorf("list NodeOperations of %s: %w", nc.Name, err)
 	}
 	for i := range ops.Items {
@@ -105,9 +106,9 @@ func (r *Reconciler) createApproval(ctx context.Context, ng *v1.NodeGroup, node 
 			// was tried is worth keeping.
 			GenerateName: fmt.Sprintf("approve-%s-", nc.Name),
 			Labels: map[string]string{
-				nodeGroupNameLabel: ng.Name,
-				managedByLabel:     managedByValue,
-				operationNodeLabel: nc.Name,
+				nodecommon.NodeGroupLabel:       ng.Name,
+				managedByLabel:                  managedByValue,
+				v1alpha1.NodeOperationNodeLabel: nc.Name,
 			},
 			// Owned by the node: when the node goes, so does the record of what
 			// was done to it, instead of accumulating forever.

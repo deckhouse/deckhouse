@@ -44,6 +44,7 @@ import (
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
+	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 	"github.com/deckhouse/node-controller/internal/register"
 )
@@ -125,22 +126,12 @@ func nodeConfigRolloutInputsChanged(before, after client.Object) bool {
 		!slices.EqualFunc(oldConfig.OwnerReferences, newConfig.OwnerReferences, ownerRefEqual) {
 		return true
 	}
-	for _, condition := range []string{configurationAppliedCondition, disruptionRequiredCondition} {
-		if !conditionEqual(oldConfig.Status.Conditions, newConfig.Status.Conditions, condition) {
-			return true
-		}
-	}
-	return false
+	return !conditionEqual(oldConfig.Status.Conditions, newConfig.Status.Conditions, configurationAppliedCondition) ||
+		!conditionEqual(oldConfig.Status.Conditions, newConfig.Status.Conditions, disruptionRequiredCondition)
 }
 
 func ownerRefEqual(a, b metav1.OwnerReference) bool {
-	if a.UID != b.UID {
-		return false
-	}
-	if a.Name != b.Name {
-		return false
-	}
-	return a.Kind == b.Kind
+	return a.UID == b.UID && a.Name == b.Name && a.Kind == b.Kind
 }
 
 // conditionEqual compares one condition across two status lists by the two
@@ -200,24 +191,6 @@ type pass struct {
 	// rollouts is each group's remaining rollout budget, keyed by group name:
 	// one NodeConfig listing per group per pass instead of one per node.
 	rollouts map[string]*rolloutBudget
-	// created holds the nodes this pass gave a first config to, per group; a
-	// budget built later in the same pass must count them, or the answer depends
-	// on the order the pass walked the nodes in.
-	created map[string]map[string]struct{}
-}
-
-// recordCreated remembers that this pass gave a node of a group its first
-// config.
-func (p *pass) recordCreated(ngName, nodeName string) {
-	nodes, ok := p.created[ngName]
-	if !ok {
-		nodes = map[string]struct{}{}
-		p.created[ngName] = nodes
-	}
-	nodes[nodeName] = struct{}{}
-	if budget, ok := p.rollouts[ngName]; ok {
-		budget.spend(nodeName)
-	}
 }
 
 // clusterInputsResult is one attempt at reading the cluster-wide inputs, kept
@@ -241,7 +214,6 @@ func newPass() *pass {
 		inputs:   map[string]clusterInputsResult{},
 		versions: map[string]versionResult{},
 		rollouts: map[string]*rolloutBudget{},
-		created:  map[string]map[string]struct{}{},
 	}
 }
 
@@ -321,7 +293,7 @@ func (r *Reconciler) reconcileNode(ctx context.Context, nodeName string, logger 
 func (r *Reconciler) reconcileNodeObject(ctx context.Context, node *corev1.Node, logger logr.Logger, p *pass) (ctrl.Result, error) {
 	nodeName := node.Name
 
-	ngName := node.Labels[nodeGroupNameLabel]
+	ngName := node.Labels[nodecommon.NodeGroupLabel]
 	if ngName == "" {
 		return ctrl.Result{}, r.deleteOrphaned(ctx, nodeName, logger)
 	}
@@ -378,10 +350,12 @@ func (r *Reconciler) apply(ctx context.Context, ng *v1.NodeGroup, node *corev1.N
 			return nil, fmt.Errorf("create NodeConfig %s: %w", desired.Name, err)
 		}
 		logger.Info("NodeConfig created", "node", desired.Name)
-		// A node given its first config is updating; recording it keeps this
-		// pass's budget consistent with what the next listing would say,
-		// regardless of the order the pass walked the nodes in.
-		p.recordCreated(ng.Name, desired.Name)
+		// A node given its first config is updating. A budget this pass has
+		// already read predates the object and has to be told; one read later
+		// lists it itself, still at generation 1 with nothing applied.
+		if budget, ok := p.rollouts[ng.Name]; ok {
+			budget.spend(desired.Name)
+		}
 		r.recordClampedSettings(ng)
 		return desired, nil
 	}

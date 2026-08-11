@@ -78,9 +78,9 @@ var _ = BeforeSuite(func() {
 		scheme,
 		testenv.CRDPaths(
 			testenv.WithNodeGroupCRDFile(),
-			testenv.WithNodeConfigCRDFile(),
-			testenv.WithNodeOperationCRDFile(),
-			testenv.WithNodeExtensionRequestCRDFile(),
+			testenv.WithNodeManager(testenv.NodeConfigCRDFile),
+			testenv.WithNodeManager(testenv.NodeOperationCRDFile),
+			testenv.WithNodeManager(testenv.NodeExtensionRequestCRDFile),
 		)...,
 	)
 	Expect(err).NotTo(HaveOccurred())

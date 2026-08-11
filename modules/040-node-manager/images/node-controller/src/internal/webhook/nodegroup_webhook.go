@@ -79,12 +79,9 @@ func SetupWithManager(mgr ctrl.Manager) error {
 		},
 	})
 
-	// Validating webhook enforcing NodeExtensionRequest sysext uniqueness.
+	// Validating webhook refusing a reserved NodeExtensionRequest sysext name.
 	hookServer.Register("/validate-deckhouse-io-v1alpha1-nodeextensionrequest", &webhook.Admission{
-		Handler: &NodeExtensionRequestValidator{
-			Client:  mgr.GetClient(),
-			decoder: decoder,
-		},
+		Handler: &NodeExtensionRequestValidator{decoder: decoder},
 	})
 
 	// Unified conversion webhook (NodeGroup + Instance) with cluster state access.
@@ -687,19 +684,13 @@ func adoptingBashibleNodes(req admission.Request, ng, oldNG *v1.NodeGroup) bool 
 // label bashible sets once and never removes. The checksum annotation is blind
 // here (approval-waiting nodes delete it); olcedar nodes never get the label.
 func (w *NodeGroupValidator) getBashibleNodes(ctx context.Context, nodeGroupName string) ([]string, error) {
-	nodeList := &corev1.NodeList{}
 	webhookLog.Info("listing Nodes", "filter", "bashible-first-run-finished", "nodeGroup", nodeGroupName)
-	err := w.Client.List(ctx, nodeList, client.MatchingLabels{
+	names, err := w.nodeNames(ctx, client.MatchingLabels{
 		"node.deckhouse.io/group":                       nodeGroupName,
 		"node.deckhouse.io/bashible-first-run-finished": "true",
 	})
 	if err != nil {
 		return nil, fmt.Errorf("list bashible nodes of %s: %w", nodeGroupName, err)
-	}
-
-	var names []string
-	for _, node := range nodeList.Items {
-		names = append(names, node.Name)
 	}
 	return names, nil
 }
@@ -707,16 +698,23 @@ func (w *NodeGroupValidator) getBashibleNodes(ctx context.Context, nodeGroupName
 // getNodesWithoutContainerdV2Support returns nodes that don't support containerd v2.
 // Returns error for transient failures (timeout, permission denied, etc.)
 func (w *NodeGroupValidator) getNodesWithoutContainerdV2Support(ctx context.Context, nodeGroupName string) ([]string, error) {
-	nodeList := &corev1.NodeList{}
 	webhookLog.Info("listing Nodes", "filter", "containerd-v2-unsupported", "nodeGroup", nodeGroupName)
-	err := w.Client.List(ctx, nodeList, client.MatchingLabels{
+	names, err := w.nodeNames(ctx, client.MatchingLabels{
 		"node.deckhouse.io/containerd-v2-unsupported": "",
 		"node.deckhouse.io/group":                     nodeGroupName,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list nodes without containerd v2 support: %w", err)
 	}
+	return names, nil
+}
 
+// nodeNames returns the names of the nodes carrying the labels.
+func (w *NodeGroupValidator) nodeNames(ctx context.Context, selector client.MatchingLabels) ([]string, error) {
+	nodeList := &corev1.NodeList{}
+	if err := w.Client.List(ctx, nodeList, selector); err != nil {
+		return nil, err
+	}
 	var names []string
 	for _, node := range nodeList.Items {
 		names = append(names, node.Name)

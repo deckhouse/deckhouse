@@ -19,8 +19,6 @@ package nodeoperation
 import (
 	"math"
 	"time"
-
-	v1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 )
 
 const (
@@ -64,10 +62,6 @@ const (
 	// someone is still investigating, worthless a day later — without a limit
 	// the list only grows (one record per node per change).
 	retention = 24 * time.Hour
-
-	// operationNodeLabel names the node an operation is for; shared with the
-	// creator (nodeconfig) so the lookup contract cannot drift.
-	operationNodeLabel = v1alpha1.NodeOperationNodeLabel
 
 	// drainingSource prefixes the drains this controller asks for; the node
 	// marker adds the operation's identity (see drainMarker) because the two

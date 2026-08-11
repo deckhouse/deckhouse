@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
@@ -30,16 +29,16 @@ import (
 
 var nerWebhookLog = logf.Log.WithName("nodeextensionrequest-webhook")
 
-// NodeExtensionRequestValidator enforces sysext uniqueness the CRD cannot:
-// name and digest free across requests, name not platform-reserved. Kernel-module
-// conflicts are left to the nodeconfig controller's status backstop instead.
+// NodeExtensionRequestValidator refuses a sysext name reserved for a platform
+// extension, which the CRD cannot express. Name, digest and kernel-module
+// clashes between requests are left to the nodeconfig controller: it settles
+// them cluster-wide and writes the reason onto the request that lost.
 type NodeExtensionRequestValidator struct {
-	Client  client.Client
 	decoder admission.Decoder
 }
 
 // Handle validates a NodeExtensionRequest on CREATE and UPDATE.
-func (w *NodeExtensionRequestValidator) Handle(ctx context.Context, req admission.Request) admission.Response {
+func (w *NodeExtensionRequestValidator) Handle(_ context.Context, req admission.Request) admission.Response {
 	nerWebhookLog.Info("validating nodeextensionrequest", "name", req.Name, "operation", req.Operation)
 
 	ner := &deckhousev1alpha1.NodeExtensionRequest{}
@@ -47,32 +46,9 @@ func (w *NodeExtensionRequestValidator) Handle(ctx context.Context, req admissio
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	name := ner.Spec.Sysext.Name
-	digest := ner.Spec.Sysext.Digest
-
-	if deckhousev1alpha1.IsReservedSysextName(name) {
+	if name := ner.Spec.Sysext.Name; deckhousev1alpha1.IsReservedSysextName(name) {
 		return admission.Denied(fmt.Sprintf(
 			"it is forbidden to set .spec.sysext.name to %q: the name is reserved for a platform extension", name))
-	}
-
-	list := &deckhousev1alpha1.NodeExtensionRequestList{}
-	if err := w.Client.List(ctx, list); err != nil {
-		return admission.Errored(http.StatusInternalServerError, fmt.Errorf("list NodeExtensionRequests: %w", err))
-	}
-
-	for i := range list.Items {
-		other := &list.Items[i]
-		if other.Name == ner.Name {
-			continue
-		}
-		if other.Spec.Sysext.Name == name {
-			return admission.Denied(fmt.Sprintf(
-				"it is forbidden to set .spec.sysext.name to %q: it is already used by NodeExtensionRequest %q", name, other.Name))
-		}
-		if other.Spec.Sysext.Digest == digest {
-			return admission.Denied(fmt.Sprintf(
-				"it is forbidden to set .spec.sysext.digest to %q: it is already used by NodeExtensionRequest %q", digest, other.Name))
-		}
 	}
 
 	return admission.Allowed("")
