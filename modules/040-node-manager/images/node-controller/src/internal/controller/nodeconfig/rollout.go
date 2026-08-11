@@ -108,7 +108,10 @@ func applied(nc *internalv1alpha1.NodeConfig) bool {
 	// spec rightly holds the rollout, but phase is Degraded for ANY unhealthy
 	// subsystem, and an unrelated fault must not freeze the group forever.
 	cond := meta.FindStatusCondition(nc.Status.Conditions, configurationAppliedCondition)
-	return cond != nil && cond.Status == metav1.ConditionTrue && cond.ObservedGeneration == nc.Generation
+	if cond == nil || cond.Status != metav1.ConditionTrue {
+		return false
+	}
+	return cond.ObservedGeneration == nc.Generation
 }
 
 func maxConcurrent(ng *v1.NodeGroup) *intstr.IntOrString {

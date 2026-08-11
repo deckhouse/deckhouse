@@ -148,9 +148,7 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 	// Checked on CREATE as well as UPDATE: recreating a deleted group under
 	// the same name with systemType: Immutable arrives as a CREATE and would
 	// otherwise adopt the old, still-labelled bashible nodes unchecked.
-	adopting := ng.Spec.SystemType == v1.SystemTypeImmutable &&
-		(req.Operation == "CREATE" || (oldNG != nil && oldNG.Spec.SystemType == ""))
-	if adopting {
+	if adoptingBashibleNodes(req, ng, oldNG) {
 		bashibleNodes, err := w.getBashibleNodes(ctx, ng.Name)
 		if err != nil {
 			webhookLog.Error(err, "failed to list the group's bashible nodes")
@@ -670,6 +668,19 @@ func (w *NodeGroupValidator) getNodesWithCustomContainerd(ctx context.Context, n
 		names = append(names, node.Name)
 	}
 	return names, nil
+}
+
+// adoptingBashibleNodes reports whether this admission would put nodes that
+// already exist under systemType: Immutable — a group created under that type,
+// or one that had no type recorded until now.
+func adoptingBashibleNodes(req admission.Request, ng, oldNG *v1.NodeGroup) bool {
+	if ng.Spec.SystemType != v1.SystemTypeImmutable {
+		return false
+	}
+	if req.Operation == "CREATE" {
+		return true
+	}
+	return oldNG != nil && oldNG.Spec.SystemType == ""
 }
 
 // getBashibleNodes returns the group's nodes that bashible has configured: the

@@ -265,35 +265,45 @@ func generateHandoffMaterial(nodeName string) (*HandoffMaterial, error) {
 		return nil, fmt.Errorf("encode the handoff serving key: %w", err)
 	}
 
-	// The key the installer will talk to the cluster with. It stays here; only
-	// the CSR travels to the node and only a public certificate comes back, so
-	// nothing in the channel is worth stealing.
-	clientKey, err := pkiutil.NewPrivateKey(constants.EncryptionAlgorithmECDSAP256)
+	clientKeyPEM, csrPEM, err := generateClientKeyAndCSR()
 	if err != nil {
-		return nil, fmt.Errorf("generate the cluster client key: %w", err)
+		return nil, err
 	}
-	clientKeyPEM, err := keyutil.MarshalPrivateKeyToPEM(clientKey)
-	if err != nil {
-		return nil, fmt.Errorf("encode the cluster client key: %w", err)
-	}
-	csrDER, err := x509.CreateCertificateRequest(rand.Reader, &x509.CertificateRequest{
-		Subject: pkix.Name{CommonName: clusterAdminCommonName, Organization: []string{clusterAdminOrganization}},
-	}, clientKey)
-	if err != nil {
-		return nil, fmt.Errorf("build the cluster client certificate request: %w", err)
-	}
-	csrPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE REQUEST", Bytes: csrDER})
 
 	// caKey dies with this call: nothing above stores it, so the only thing
 	// that can ever be issued for this channel is the certificate just made.
 	return &HandoffMaterial{
-		ClientCSRPEM:  string(csrPEM),
-		ClientKeyPEM:  string(clientKeyPEM),
+		ClientCSRPEM:  csrPEM,
+		ClientKeyPEM:  clientKeyPEM,
 		Token:         base64.RawURLEncoding.EncodeToString(token),
 		CACertPEM:     string(pkiutil.EncodeCertificate(caCert)),
 		ServerCertPEM: string(pkiutil.EncodeCertificate(serverCert)),
 		ServerKeyPEM:  string(serverKeyPEM),
 	}, nil
+}
+
+// generateClientKeyAndCSR mints the key the installer will talk to the cluster
+// with, and the request the node signs with the cluster CA. The key stays here;
+// only the CSR travels and only a public certificate comes back.
+func generateClientKeyAndCSR() (string, string, error) {
+	clientKey, err := pkiutil.NewPrivateKey(constants.EncryptionAlgorithmECDSAP256)
+	if err != nil {
+		return "", "", fmt.Errorf("generate the cluster client key: %w", err)
+	}
+	clientKeyPEM, err := keyutil.MarshalPrivateKeyToPEM(clientKey)
+	if err != nil {
+		return "", "", fmt.Errorf("encode the cluster client key: %w", err)
+	}
+
+	csrDER, err := x509.CreateCertificateRequest(rand.Reader, &x509.CertificateRequest{
+		Subject: pkix.Name{CommonName: clusterAdminCommonName, Organization: []string{clusterAdminOrganization}},
+	}, clientKey)
+	if err != nil {
+		return "", "", fmt.Errorf("build the cluster client certificate request: %w", err)
+	}
+	csrPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE REQUEST", Bytes: csrDER})
+
+	return string(clientKeyPEM), string(csrPEM), nil
 }
 
 // FetchKubeconfigInput is everything FetchKubeconfig needs.
@@ -371,7 +381,8 @@ func ConfirmCollected(ctx context.Context, in FetchKubeconfigInput) error {
 
 // call performs one authenticated request against the node's bootstrap channel.
 func (in FetchKubeconfigInput) call(ctx context.Context, method, path string) ([]byte, error) {
-	if in.Address == "" || in.ServerName == "" || in.Material == nil {
+	endpointMissing := in.Address == "" || in.ServerName == ""
+	if endpointMissing || in.Material == nil {
 		return nil, errors.New("reach the node's bootstrap channel: address, server name or handoff material is empty")
 	}
 

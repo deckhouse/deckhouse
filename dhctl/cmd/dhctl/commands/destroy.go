@@ -15,6 +15,7 @@
 package commands
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -90,62 +91,9 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 
 		defer providerinitializer.CleanupSSHProvider(ctx, sshProviderInitializer)
 
-		// The cache identity picks whose terraform state destroy deletes; a wrong key
-		// silently addresses somebody else's. A kubeconfig plus an SSH host is refused
-		// rather than ranked: --kubeconfig also reads DHCTL_CLI_KUBE_CONFIG.
-		var sshProvider libcon.SSHProvider
-		sshHostConfigured := sshProviderInitializer != nil && sshProviderInitializer.CheckHosts(ctx)
-		if sshHostConfigured && (opts.Kube.Config != "" || opts.Kube.InCluster) {
-			// Tested before either source is read, so the operator hears about the
-			// collision rather than about a kubeconfig they never meant to name.
-			source := "--kube-client-from-cluster"
-			if opts.Kube.Config != "" {
-				source = "--kubeconfig " + opts.Kube.Config
-			}
-			return fmt.Errorf(
-				"%s and an SSH host both name a cluster, and they may be different clusters: "+
-					"the Kubernetes source is where the infrastructure state is read from, the SSH host is where it is not. "+
-					"Note that --kubeconfig also reads the DHCTL_CLI_KUBE_CONFIG environment variable. "+
-					"Unset one of them and run destroy again",
-				source,
-			)
-		}
-
-		cacheIdentity := ""
-		if opts.Kube.Config != "" {
-			// NOT GetCacheIdentityFromKubeconfig: that hashes the path, and every
-			// immutable bootstrap writes to the same path — all clusters on this
-			// machine would then share the cache destroy reads its state from.
-			identity, err := kubeconfigClusterIdentity(opts.Kube.Config, opts.Kube.ConfigContext)
-			if err != nil {
-				return fmt.Errorf("identify the cluster from %s: %w", opts.Kube.Config, err)
-			}
-			cacheIdentity = identity
-		}
-		if opts.Kube.InCluster {
-			// No conflict with --kubeconfig to handle here: lib-connection's
-			// Config.IsConflict rejects two set modes while the providers are built
-			// above, and that error is returned at once.
-			identity, err := inClusterCacheIdentity()
-			if err != nil {
-				return err
-			}
-			cacheIdentity = identity
-		}
-		if sshHostConfigured {
-			provider, err := sshProviderInitializer.GetSSHProvider(ctx)
-			if err != nil {
-				return err
-			}
-			sshClient, err := provider.Client(ctx)
-			if err != nil {
-				return err
-			}
-			sshProvider = provider
-			cacheIdentity = sshClient.Check().String()
-		}
-		if cacheIdentity == "" {
-			return errors.New("nothing identifies this cluster: pass --ssh-host for a cluster with SSH, or --kubeconfig for one without")
+		cacheIdentity, sshProvider, err := destroyCacheIdentity(ctx, opts, sshProviderInitializer)
+		if err != nil {
+			return err
 		}
 
 		if err = cache.Init(ctx, cacheIdentity, opts.Cache); err != nil {
@@ -200,6 +148,75 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 
 		return nil
 	})
+}
+
+// destroyCacheIdentity names the cluster whose infrastructure state destroy will
+// delete, and the SSH provider it reaches it through when there is one. A wrong
+// identity silently addresses somebody else's state.
+func destroyCacheIdentity(
+	ctx context.Context,
+	opts *options.Options,
+	sshProviderInitializer *providerinitializer.SSHProviderInitializer,
+) (string, libcon.SSHProvider, error) {
+	// A kubeconfig plus an SSH host is refused rather than ranked: --kubeconfig
+	// also reads DHCTL_CLI_KUBE_CONFIG.
+	sshHostConfigured := sshProviderInitializer != nil && sshProviderInitializer.CheckHosts(ctx)
+	kubeSourceConfigured := opts.Kube.Config != "" || opts.Kube.InCluster
+	if sshHostConfigured && kubeSourceConfigured {
+		// Tested before either source is read, so the operator hears about the
+		// collision rather than about a kubeconfig they never meant to name.
+		source := "--kube-client-from-cluster"
+		if opts.Kube.Config != "" {
+			source = "--kubeconfig " + opts.Kube.Config
+		}
+		return "", nil, fmt.Errorf(
+			"%s and an SSH host both name a cluster, and they may be different clusters: "+
+				"the Kubernetes source is where the infrastructure state is read from, the SSH host is where it is not. "+
+				"Note that --kubeconfig also reads the DHCTL_CLI_KUBE_CONFIG environment variable. "+
+				"Unset one of them and run destroy again",
+			source,
+		)
+	}
+
+	var sshProvider libcon.SSHProvider
+	cacheIdentity := ""
+	if opts.Kube.Config != "" {
+		// NOT GetCacheIdentityFromKubeconfig: that hashes the path, and every
+		// immutable bootstrap writes to the same path — all clusters on this
+		// machine would then share the cache destroy reads its state from.
+		identity, err := kubeconfigClusterIdentity(opts.Kube.Config, opts.Kube.ConfigContext)
+		if err != nil {
+			return "", nil, fmt.Errorf("identify the cluster from %s: %w", opts.Kube.Config, err)
+		}
+		cacheIdentity = identity
+	}
+	if opts.Kube.InCluster {
+		// No conflict with --kubeconfig to handle here: lib-connection's
+		// Config.IsConflict rejects two set modes while the providers are built by
+		// the caller, and that error is returned at once.
+		identity, err := inClusterCacheIdentity()
+		if err != nil {
+			return "", nil, err
+		}
+		cacheIdentity = identity
+	}
+	if sshHostConfigured {
+		provider, err := sshProviderInitializer.GetSSHProvider(ctx)
+		if err != nil {
+			return "", nil, err
+		}
+		sshClient, err := provider.Client(ctx)
+		if err != nil {
+			return "", nil, err
+		}
+		sshProvider = provider
+		cacheIdentity = sshClient.Check().String()
+	}
+	if cacheIdentity == "" {
+		return "", nil, errors.New("nothing identifies this cluster: pass --ssh-host for a cluster with SSH, or --kubeconfig for one without")
+	}
+
+	return cacheIdentity, sshProvider, nil
 }
 
 // inClusterCacheIdentity names the cluster from the API server this pod talks

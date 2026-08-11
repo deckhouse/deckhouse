@@ -23,6 +23,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -74,7 +75,10 @@ func machineToConfig(_ context.Context, obj client.Object) []reconcile.Request {
 		return nil
 	}
 	ref := machine.Spec.Bootstrap.ConfigRef
-	if ref.Kind != nodeBootstrapConfigKind || ref.APIGroup != bootstrapv1alpha1.GroupVersion.Group || ref.Name == "" {
+	if ref.Kind != nodeBootstrapConfigKind || ref.APIGroup != bootstrapv1alpha1.GroupVersion.Group {
+		return nil
+	}
+	if ref.Name == "" {
 		return nil
 	}
 	return []reconcile.Request{{NamespacedName: types.NamespacedName{Namespace: machine.Namespace, Name: ref.Name}}}
@@ -140,10 +144,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			fmt.Sprintf("NodeGroup %s is not immutable, so there is no bootstrap data to render yet", ngName))
 	}
 
+	return r.ensureBootstrapData(ctx, config, ng, machine, logger)
+}
+
+// ensureBootstrapData renders the machine's userdata into its bootstrap secret
+// and advertises the secret through the config's status.
+func (r *Reconciler) ensureBootstrapData(ctx context.Context, config *bootstrapv1alpha1.NodeBootstrapConfig, ng *v1.NodeGroup, machine *capiv1beta2.Machine, logger logr.Logger) (ctrl.Result, error) {
 	secretName := machine.Name + dataSecretSuffix
 
 	existing := &corev1.Secret{}
-	err = r.reader.Get(ctx, types.NamespacedName{Namespace: config.Namespace, Name: secretName}, existing)
+	err := r.reader.Get(ctx, types.NamespacedName{Namespace: config.Namespace, Name: secretName}, existing)
 	if err != nil && !apierrors.IsNotFound(err) {
 		return ctrl.Result{}, fmt.Errorf("get bootstrap secret %s: %w", secretName, err)
 	}
@@ -166,7 +176,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, renderErr
 	}
 
-	secret := buildSecret(config, secretName, ngName, userdata)
+	secret := buildSecret(config, secretName, ng.Name, userdata)
 	switch {
 	case !rendered:
 		if err := r.Client.Create(ctx, secret); err != nil && !apierrors.IsAlreadyExists(err) {
@@ -180,7 +190,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		if existing.Labels == nil {
 			existing.Labels = map[string]string{}
 		}
-		existing.Labels[machineNodeGroupLabel] = ngName
+		existing.Labels[machineNodeGroupLabel] = ng.Name
 		existing.Data = secret.Data
 		if err := r.Client.Update(ctx, existing); err != nil {
 			return ctrl.Result{}, fmt.Errorf("refresh bootstrap secret %s: %w", secretName, err)
