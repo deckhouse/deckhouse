@@ -165,7 +165,7 @@ git:
 {{- include "olcedar sysext sign secrets" . }}
 shell:
   beforeInstall:
-  - pm install erofs-utils coreutils cryptsetup
+  - pm install erofs-utils coreutils cryptsetup systemd@260.4
   - mkdir -p /out
   install:
   - mkdir -p /sysext/usr/lib/extension-release.d /sysext/usr/lib/systemd/system
