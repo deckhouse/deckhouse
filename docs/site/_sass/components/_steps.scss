@@ -37,16 +37,16 @@
             min-width: 500px;
         }
 
-        @include breakpoints.max-w(xxs) {
-            min-width: 360px;
+        @include breakpoints.max-w(xs) {
+            min-width: 430px;
         }
     }
 
     &__point {
         flex-shrink: 0;
-        text-decoration: none;
+        text-decoration: none !important;
 
-        @include breakpoints.min-w(m) {
+        @media screen and (min-width: 727px) {
             position: relative;
         }
 
@@ -98,10 +98,13 @@
             color: variables.$color-alt;
 
             @include breakpoints.max-w(m) {
+                left: 0;
+                transform: none;
                 width: 100%;
                 top: 60px;
                 text-align: left;
                 opacity: 0;
+                pointer-events: none;
             }
 
             @include breakpoints.max-w(s) {
@@ -111,6 +114,7 @@
             &_active {
                 @include breakpoints.max-w(m) {
                     opacity: 1;
+                    pointer-events: auto
                 }
             }
 
@@ -164,8 +168,8 @@
         }
 
         @include breakpoints.max-w(xs) {
-            width: 360px;
-            min-width: 360px;
+            width: 430px;
+            min-width: 430px;
         }
     }
 

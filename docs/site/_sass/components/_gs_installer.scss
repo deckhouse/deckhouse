@@ -12,6 +12,17 @@
   }
 }
 
+.download-btns {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+
+  p {
+    margin: 0;
+  }
+}
+
 .download-btn {
   display: inline-block;
   align-items: center;
@@ -19,7 +30,6 @@
   width: auto;
   height: 28px;
   padding: 0 15px;
-  margin-left: 12px;
   border: 2px solid rgba(0, 102, 255, 0.1);
   border-radius: 10px;
   box-sizing: border-box;

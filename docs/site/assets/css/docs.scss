@@ -1142,8 +1142,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
 }
 
 .docs {
-    //margin-bottom: 50px;
-    margin-bottom: 112px;
+    margin-bottom: 60px;
 }
 
 .docs .hidden {
@@ -1380,7 +1379,11 @@ a.comparison-table__module-proprietaryOkmeter::after {
     margin-left: 30px;
 
     @include breakpoints.max-w(xl) {
-      margin-left: 20px;
+      margin-left: 18px;
+    }
+
+    @include breakpoints.max-w(s) {
+      margin-left: 16px;
     }
 
     ul, ol {
@@ -1795,7 +1798,15 @@ a.comparison-table__module-proprietaryOkmeter::after {
       margin-left: 37px;
 
       @include breakpoints.max-w(xl) {
-        padding-right: 50px;
+        padding-right: 55px;
+      }
+
+      @include breakpoints.max-w(s) {
+        margin-left: 32px;
+      }
+
+      @include breakpoints.max-w(s) {
+        margin-left: 26px;
       }
 
       &::before {
@@ -1811,6 +1822,14 @@ a.comparison-table__module-proprietaryOkmeter::after {
 
         @include breakpoints.max-w(xl) {
           width: 35px;
+        }
+
+        @include breakpoints.max-w(s) {
+           width: 30px;
+        }
+
+        @include breakpoints.max-w(xxs) {
+           width: 26px;
         }
       }
     }
@@ -1886,22 +1905,25 @@ a.comparison-table__module-proprietaryOkmeter::after {
 }
 
 .docs .details .details__summary {
-    margin-left: 0px;
+    position: relative;
+    margin-left: 14px;
 }
 
 .docs .details .details__summary::before {
     content: '';
-    display: inline-block;
+    position: absolute;
+    left: -14px;
+    top: 5px;
     width: 10px;
     height: 10px;
     background: url('../../images/icons/dropdown.svg');
     background-repeat: no-repeat;
     background-size: contain;
     transform: rotate(-90deg);
-    margin-right: 5px;
 }
 
 .docs .details.active .details__summary::before {
+    top: 7px;
     transform: rotate(0deg);
 }
 
@@ -2912,6 +2934,7 @@ select#contact-select {
       color: #9e9e9e;
 
       @include breakpoints.max-w(s) {
+        left: 8px;
         line-height: 16px;
       }
 
