@@ -19,6 +19,8 @@ package nodeconfig
 import (
 	"context"
 	"fmt"
+	"maps"
+	"slices"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,6 +32,56 @@ import (
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	ua "github.com/deckhouse/node-controller/internal/controller/updateapproval/common"
 )
+
+// nodeConfigRolloutInputsChanged reports whether a NodeConfig update touched
+// anything a pass reads: Generation stands in for the spec (status subresource),
+// the rest is what the rollout gate reads or what decides ownership.
+func nodeConfigRolloutInputsChanged(before, after client.Object) bool {
+	oldConfig, okOld := before.(*internalv1alpha1.NodeConfig)
+	newConfig, okNew := after.(*internalv1alpha1.NodeConfig)
+	if !okOld || !okNew {
+		return true
+	}
+	if oldConfig.Generation != newConfig.Generation ||
+		oldConfig.Status.AppliedGeneration != newConfig.Status.AppliedGeneration {
+		return true
+	}
+	if (oldConfig.DeletionTimestamp == nil) != (newConfig.DeletionTimestamp == nil) {
+		return true
+	}
+	if !maps.Equal(oldConfig.Labels, newConfig.Labels) ||
+		!slices.EqualFunc(oldConfig.OwnerReferences, newConfig.OwnerReferences, ownerRefEqual) {
+		return true
+	}
+	// readNEROutcomes counts the extension states off this list, and a node can
+	// change one without touching a condition or the applied generation: the
+	// event has to come from the same object the count is read from.
+	if !slices.EqualFunc(oldConfig.Status.Extensions, newConfig.Status.Extensions, extensionStatusEqual) {
+		return true
+	}
+	return !conditionEqual(oldConfig.Status.Conditions, newConfig.Status.Conditions, configurationAppliedCondition) ||
+		!conditionEqual(oldConfig.Status.Conditions, newConfig.Status.Conditions, disruptionRequiredCondition)
+}
+
+func extensionStatusEqual(a, b internalv1alpha1.ExtensionStatus) bool {
+	return a.Name == b.Name && a.State == b.State && a.Message == b.Message
+}
+
+func ownerRefEqual(a, b metav1.OwnerReference) bool {
+	return a.UID == b.UID && a.Name == b.Name && a.Kind == b.Kind
+}
+
+// conditionEqual compares one condition across two status lists by the two
+// fields the rollout gate tests it on.
+func conditionEqual(before, after []metav1.Condition, name string) bool {
+	oldCondition := meta.FindStatusCondition(before, name)
+	newCondition := meta.FindStatusCondition(after, name)
+	if oldCondition == nil || newCondition == nil {
+		return oldCondition == newCondition
+	}
+	return oldCondition.Status == newCondition.Status &&
+		oldCondition.ObservedGeneration == newCondition.ObservedGeneration
+}
 
 // rolloutBudget is how many more nodes of one group may be handed a new spec —
 // the same guarantee bashible nodes get from update-approval annotations,
