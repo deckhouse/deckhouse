@@ -28,13 +28,18 @@ func TestBastionForwardLineShape(t *testing.T) {
 	t.Logf("line: %s", line)
 	for _, want := range []string{
 		"ssh -f -N -L 6445:192.0.2.10:6443 ubuntu@198.51.100.7",
-		"https://192.0.2.10:6443",
-		"https://127.0.0.1:6445",
-		"/tmp/dhctl/admin.kubeconfig",
+		"kubectl --kubeconfig /tmp/dhctl/admin.kubeconfig config set-cluster kubernetes",
+		"--server=https://127.0.0.1:6445",
 	} {
 		if !strings.Contains(line, want) {
 			t.Fatalf("missing %q in %q", want, line)
 		}
+	}
+	// A regex over the operator's only credentials: it matches a URL nobody
+	// here wrote, drops a .bak beside a 0600 file, and does nothing at all when
+	// it misses. kubectl edits the field by name instead.
+	if strings.Contains(line, "sed") {
+		t.Fatalf("the kubeconfig must not be rewritten with sed: %q", line)
 	}
 }
 

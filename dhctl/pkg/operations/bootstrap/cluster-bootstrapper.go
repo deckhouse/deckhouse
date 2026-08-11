@@ -281,6 +281,14 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 			if err.Error() == "stopped" {
 				return nil
 			}
+			// A failed bootstrap is where the credentials are needed most: the
+			// cluster is half-built and somebody has to look at it, over a
+			// channel that no longer exists and a master that runs no sshd. The
+			// successful path prints this at the end, which a failure never
+			// reaches.
+			if bctx.adminKubeconfigPath != "" {
+				b.printHowToReachTheCluster(ctx, bctx.adminKubeconfigPath, bctx)
+			}
 			return err
 		}
 	}
