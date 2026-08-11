@@ -43,8 +43,8 @@ description: Архитектура модуля cilium-hubble в Deckhouse Kube
 
    Состоит из следующих контейнеров:
 
-   * **frontend** — контейнер, представляющий собой прокси-сервер [NGINX](https://github.com/nginx/nginx), раздающий статические файлы веб-интерфейса hubble-ui и пересылающий запросы к эндпоинту `/api` в контейнер **backend** компонента.
-   * **backend** — контейнер, реализующий API hubble-ui, который отправляет запросы в компонент hubble-relay для получения данных, поступающих с агентов Cilium в реальном времени.
+   * **frontend** — контейнер, представляющий собой прокси-сервер [NGINX](https://github.com/nginx/nginx), раздающий статические файлы веб-интерфейса hubble-ui и пересылающий запросы к эндпоинту `/api` в контейнер **backend** компонента;
+   * **backend** — контейнер, реализующий API hubble-ui, который отправляет запросы в компонент hubble-relay для получения данных, поступающих с агентов Cilium в реальном времени;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к веб-интерфейсу Hubble UI. Является [Open Source-проектом](https://github.com/brancz/kube-rbac-proxy).
 
    Контейнеры frontend и backend собраны на основе [Hubble-UI](https://github.com/cilium/hubble-ui), являющегося Open Source-проектом.
