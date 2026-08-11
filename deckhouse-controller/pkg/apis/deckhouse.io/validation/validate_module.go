@@ -28,10 +28,15 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 )
 
+// deckhouseServiceAccount is the identity the deckhouse controller talks to the
+// API server with. It owns the Module resource in both served versions, so its
+// own writes are exempt from the manual-change restrictions.
+const deckhouseServiceAccount = "system:serviceaccount:d8-system:deckhouse"
+
 func moduleValidationHandler() http.Handler {
 	vf := kwhvalidating.ValidatorFunc(func(_ context.Context, review *model.AdmissionReview, _ metav1.Object) (*kwhvalidating.ValidatorResult, error) {
 		// UserInfo groups: [system:serviceaccounts system:serviceaccounts:d8-system system:authenticated]
-		if review.UserInfo.Username != "system:serviceaccount:d8-system:deckhouse" {
+		if review.UserInfo.Username != deckhouseServiceAccount {
 			return rejectResult("manual Module change is forbidden")
 		}
 
