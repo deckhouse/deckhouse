@@ -15,6 +15,7 @@
 package bootstrap
 
 import (
+	"os"
 	"strings"
 	"testing"
 )
@@ -34,5 +35,34 @@ func TestBastionForwardLineShape(t *testing.T) {
 		if !strings.Contains(line, want) {
 			t.Fatalf("missing %q in %q", want, line)
 		}
+	}
+}
+
+// The connect line is printed from three places, and the one that is easy to
+// lose is the rerun: connectToImmutableMaster short-circuits credential
+// collection when a previous attempt already saved them, so the first-collect
+// print never runs, and the end-of-bootstrap print is only reached if the run
+// finishes. A rerun that then stalls — waiting on a worker, say — would leave
+// the operator with no idea where the kubeconfig is or how to reach a master
+// that runs no sshd. Measured on a live rerun: not one of the three lines
+// appeared in the log.
+func TestConnectLineIsPrintedOnTheReusePath(t *testing.T) {
+	src, err := os.ReadFile("steps_immutable.go")
+	if err != nil {
+		t.Fatalf("read steps_immutable.go: %v", err)
+	}
+
+	const reuseMarker = "reusing the admin kubeconfig at"
+	idx := strings.Index(string(src), reuseMarker)
+	if idx < 0 {
+		t.Fatalf("the reuse branch is gone; this guard needs rewriting against whatever replaced it")
+	}
+	// The print has to sit inside that branch, i.e. right after the message.
+	rest := string(src)[idx:]
+	if end := strings.Index(rest, "\n\tserver, err :="); end > 0 {
+		rest = rest[:end]
+	}
+	if !strings.Contains(rest, "printHowToReachTheCluster") {
+		t.Fatal("a rerun reusing collected credentials must still say where they are and how to reach the master")
 	}
 }
