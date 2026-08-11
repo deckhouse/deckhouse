@@ -599,8 +599,8 @@ PriorityClass is often confused with other resource management mechanisms. Their
 
 | Mechanism | Purpose | Difference from PriorityClass |
 |----------|------------|--------------------------|
-| Resource Quotas | Limits total resource consumption in a namespace | Caps aggregate usage; does not affect pod preemption. |
-| Limit Ranges | Default limits and requests for pods | Sets minimum and maximum values; does not affect preemption. |
+| Resource Quotas | Limits total resource consumption in a namespace | Caps aggregate usage; does not affect pod preemption |
+| Limit Ranges | Default limits and requests for pods | Sets minimum and maximum values; does not affect preemption |
 
 Unlike those mechanisms, PriorityClass affects the preemption order under resource pressure, not consumption caps.
 
@@ -730,8 +730,8 @@ Events:
 
 | Message | Meaning |
 |-----------|----------|
-| `0/2 nodes are available` | The cluster has 2 nodes, but none is suitable for placing the pod. |
-| `1 No preemption victims found for incoming pod` | On the memory-constrained node there are no lower-priority pods that can be preempted. |
+| `0/2 nodes are available` | The cluster has 2 nodes, but none is suitable for placing the pod |
+| `1 No preemption victims found for incoming pod` | On the memory-constrained node there are no lower-priority pods that can be preempted |
 
 Solution: raise the target pod's priority or free resources on the node manually.
 
@@ -936,30 +936,30 @@ Example expected output:
 After you finish the examples, delete the created resources. The commands below match [PriorityClass creation and usage examples](#priorityclass-creation-and-usage-examples), [Preemption mechanism](#preemption-mechanism), [Architectural usage scenarios](#architectural-usage-scenarios), [Protecting Stateful applications](#protecting-stateful-applications), and [Operations and troubleshooting](#operations-and-troubleshooting).
 
 ```shell
-# Resources from "Creating a PriorityClass"
+# Resources from "Creating a PriorityClass".
 d8 k delete priorityclass my-app-critical
 
-# Resources from "Using PriorityClass in a pod"
+# Resources from "Using PriorityClass in a pod".
 d8 k delete pod test-priority-pod
 
-# Resources from "Using PriorityClass in a Deployment"
+# Resources from "Using PriorityClass in a Deployment".
 d8 k delete deployment my-app
 
-# Resources from "Step-by-step preemption demo"
+# Resources from "Step-by-step preemption demo".
 d8 k delete pod low-priority-pod
 d8 k delete pod high-priority-pod
 
-# Resources from "Separating environments by priority"
+# Resources from "Separating environments by priority".
 d8 k delete deployment prod-api
 d8 k delete job manual-test
 d8 k delete cronjob dev-data-processor
 
-# Resources from "Protecting Stateful applications"
+# Resources from "Protecting Stateful applications".
 d8 k delete statefulset mock-stateful
 d8 k delete pdb mock-stateful-pdb
 d8 k delete pod emergency-task
 d8 k delete priorityclass super-critical
 
-# Resources from "Pod count limit on a node"
+# Resources from "Pod count limit on a node".
 d8 k delete deployment pod-filler
 ```
