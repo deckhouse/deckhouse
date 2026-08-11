@@ -166,8 +166,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 		md := suite.getModuleDocumentation("testmodule")
 		res, err := suite.ctr.createOrUpdateReconcile(context.TODO(), md)
-		assert.Equal(suite.T(), res.RequeueAfter, defaultDocumentationCheckInterval)
-		require.NoError(suite.T(), err)
+		assert.Empty(suite.T(), res.RequeueAfter)
+		require.Error(suite.T(), err)
 	})
 
 	suite.Run("render new version", func() {
@@ -257,8 +257,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 		md := suite.getModuleDocumentation("absentmodule")
 		res, err := suite.ctr.createOrUpdateReconcile(context.TODO(), md)
-		assert.Equal(suite.T(), res.RequeueAfter, defaultDocumentationCheckInterval)
-		require.NoError(suite.T(), err)
+		assert.Empty(suite.T(), res.RequeueAfter)
+		require.Error(suite.T(), err)
 	})
 }
 

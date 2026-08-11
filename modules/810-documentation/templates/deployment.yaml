@@ -44,9 +44,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "web_resources" . | nindent 12 }}
-  {{- end }}
           limits:
             cpu: 200m
             memory: 100Mi
@@ -119,9 +117,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "builder_resources" . | nindent 12 }}
-  {{- end }}
           limits:
             cpu: 200m
             memory: 2Gi

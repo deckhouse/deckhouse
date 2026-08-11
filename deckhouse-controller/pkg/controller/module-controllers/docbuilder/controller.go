@@ -52,11 +52,7 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-const (
-	controllerName = "module-documentation"
-
-	defaultDocumentationCheckInterval = 10 * time.Second
-)
+const controllerName = "module-documentation"
 
 type reconciler struct {
 	client               client.Client
@@ -305,8 +301,11 @@ func (r *reconciler) createOrUpdateReconcile(ctx context.Context, md *v1alpha1.M
 		return result, fmt.Errorf("patch: %w", err)
 	}
 
+	// Returning an error hands the retry to the workqueue rate limiter, which backs off
+	// exponentially. Every retry re-uploads the documentation and triggers a full site rebuild,
+	// so a fixed interval turns a persistent render failure into an endless rebuild loop.
 	if mdCopy.Status.RenderResult != v1alpha1.ResultRendered {
-		return ctrl.Result{RequeueAfter: defaultDocumentationCheckInterval}, nil
+		return result, fmt.Errorf("render documentation: %s", mdCopy.Status.RenderResult)
 	}
 
 	if !controllerutil.ContainsFinalizer(mdCopy, documentationExistsFinalizer) {
