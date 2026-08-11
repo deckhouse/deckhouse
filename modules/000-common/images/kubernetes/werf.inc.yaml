@@ -1,5 +1,6 @@
 {{- $required_patches_from_ee_dir_by_versions := dict }}
 {{- $integrity_patches_version := "v0.3.0" }}
+{{- $svace_kubelet_versions := list "1.31" "1.32" "1.33" "1.34" }}
 
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := toString $key }}
@@ -118,6 +119,17 @@ shell:
   {{- $_ := set $buildContext "BuildCommand" `make all WHAT=cmd/kube-apiserver GOLDFLAGS="-s -w -extldflags \"-static\"" KUBE_STATIC_OVERRIDES="kubelet"` -}}
   {{- $_ := set $buildContext "ProjectName" (printf "%s/kubernetes-api-%s" $.ModuleName $version) -}}
   {{- include "image-build.build" $buildContext | indent 6 }}
+
+# kubelet is analysed only for the versions listed below to keep the load on the single
+# svace analyze server reasonable
+  {{- if has $version $svace_kubelet_versions }}
+  - |
+  {{- $kubeletBuildContext := deepCopy $ -}}
+  {{- $_ := set $kubeletBuildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
+  {{- $_ := set $kubeletBuildContext "BuildCommand" `make all WHAT=cmd/kubelet GOLDFLAGS="-s -w -extldflags \"-static\"" KUBE_STATIC_OVERRIDES="kubelet"` -}}
+  {{- $_ := set $kubeletBuildContext "ProjectName" (printf "%s/kubelet-%s" $.ModuleName $version) -}}
+  {{- include "image-build.build" $kubeletBuildContext | indent 6 }}
+  {{- end }}
 {{- end }}
 
   - make all WHAT=cmd/kube-apiserver kube-controller-manager kube-scheduler kube-proxy kubelet kubectl GOLDFLAGS="-s -w -extldflags \"-static\"" KUBE_STATIC_OVERRIDES="kubelet"
