@@ -110,6 +110,12 @@ func (b *ClusterBootstrapper) connectToImmutableMaster(ctx context.Context, bctx
 		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf(
 			"A previous attempt already collected the credentials; reusing the admin kubeconfig at %s", collectedPath,
 		))
+		// Printed here too: the other two calls are on the first-collection path
+		// and at the very end of a successful run, so a rerun — the case where
+		// the operator most needs to know where the credentials are and how to
+		// reach a master that has no sshd — would otherwise say nothing at all
+		// until the run finishes, if it ever does.
+		b.printHowToReachTheCluster(ctx, collectedPath, bctx)
 	}
 
 	server, err := b.openImmutableAPIChannel(ctx, bctx)
