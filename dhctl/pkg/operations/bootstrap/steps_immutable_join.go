@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
@@ -34,6 +35,11 @@ import (
 const (
 	kubeSystemNS           = "kube-system"
 	cloudInstanceManagerNS = "d8-cloud-instance-manager"
+
+	// bootstrapSecretAttempts is how long the join waits for node-manager to
+	// publish the master bootstrap secret, one attempt a second. The same
+	// bound the bashible path uses for the same secret.
+	bootstrapSecretAttempts = 225
 
 	// clusterCAConfigMap carries the cluster CA every ServiceAccount is given.
 	// node-controller renders day-2 configs from the same source, so a node
@@ -150,10 +156,28 @@ func groupBootstrapToken(ctx context.Context, kubeCl *client.KubernetesClient, n
 // group's cloud config, which is the same list every other node is given — and
 // the reason a joining master needs it at all is that it cannot use the first
 // master's placeholder, which expands to the node's own address.
+//
+// The secret is waited for rather than read once: node-manager publishes it
+// some time after Deckhouse becomes Ready, and the join starts as soon as the
+// first master is. Measured — a bootstrap died on "secrets
+// \"manual-bootstrap-for-master\" not found" a tenth of a second after the
+// install finished. The bashible path has always waited here for the same
+// reason (GetCloudConfig in pkg/kubernetes/actions/entity/node.go), and the
+// bound matches its: the endpoints list is what the node cannot boot without,
+// so giving up early is worse than waiting.
 func apiServerEndpoints(ctx context.Context, kubeCl *client.KubernetesClient) ([]string, error) {
-	secret, err := kubeCl.CoreV1().
-		Secrets(cloudInstanceManagerNS).
-		Get(ctx, "manual-bootstrap-for-"+global.MasterNodeGroupName, metav1.GetOptions{})
+	var secret *corev1.Secret
+	err := retry.NewSilentLoop("waiting for the master bootstrap secret", bootstrapSecretAttempts, time.Second).
+		RunContext(ctx, func() error {
+			got, err := kubeCl.CoreV1().
+				Secrets(cloudInstanceManagerNS).
+				Get(ctx, "manual-bootstrap-for-"+global.MasterNodeGroupName, metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+			secret = got
+			return nil
+		})
 	if err != nil {
 		return nil, fmt.Errorf("read the master bootstrap secret: %w", err)
 	}
