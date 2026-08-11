@@ -144,7 +144,7 @@ func (r *Runtime) UpdateModule(repo registry.Remote, module Module, force bool) 
 	}
 }
 
-// UpdateEmbedded handles creation, settings and enabled intent of an embedded module —
+// UpdateEmbeddedModule handles creation, settings and enabled intent of an embedded module —
 // one shipped inside the Deckhouse image rather than pulled from a repository.
 //
 // The pipeline is UpdateModule's without the Deploy task: the files already sit under
@@ -155,7 +155,7 @@ func (r *Runtime) UpdateModule(repo registry.Remote, module Module, force bool) 
 //
 // Settings-only and enabled-only changes behave as in UpdateModule: they stash the new
 // values and Reschedule, so the scheduler re-runs Configure → Startup → Run with them.
-func (r *Runtime) UpdateEmbedded(module Module) {
+func (r *Runtime) UpdateEmbeddedModule(module Module) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 

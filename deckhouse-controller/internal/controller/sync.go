@@ -33,14 +33,16 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
-	// embeddedLoadWorkers caps how many embedded modules are read from disk
-	// concurrently in restoreModulesV2ByEmbedded.
+	// embeddedLoadWorkers caps how many embedded modules are read from disk concurrently.
 	embeddedLoadWorkers = 8
+
+	// embeddedRepositoryName stands for the Deckhouse image itself and resolves to no
+	// PackageRepository — unlike `deckhouse`, which is a name a real repository may take.
+	embeddedRepositoryName = "embedded"
 )
 
 // dummyModules are modules that should be skipped.
@@ -49,112 +51,75 @@ var dummyModules = []string{
 	"007-registrypackages",
 }
 
-// syncModulesSettings mirrors every module config onto the module of the same name, so a
-// module carries its settings before loadModulesV2 hands it to the runtime. It does the
-// same work the module config controller does per event, for the configs that predate it.
-func (c *Controller) syncModulesSettings(ctx context.Context) error {
-	cli := c.ctrl.GetClient()
-
-	configs := new(v1alpha1.ModuleConfigList)
-	if err := cli.List(ctx, configs); err != nil {
-		return fmt.Errorf("list module configs: %w", err)
-	}
-
-	for _, conf := range configs.Items {
-		// a config on its way out is the config controller's business, not the bootstrap's
-		if !conf.DeletionTimestamp.IsZero() {
-			continue
-		}
-
-		module := new(v1alpha2.Module)
-		if err := cli.Get(ctx, client.ObjectKey{Name: conf.Name}, module); err != nil {
-			if !apierrors.IsNotFound(err) {
-				return fmt.Errorf("get module '%s': %w", conf.Name, err)
-			}
-
-			c.logger.Debug("module not found, skip settings sync", slog.String("name", conf.Name))
-
-			continue
-		}
-
-		patch := client.MergeFrom(module.DeepCopy())
-		module.Spec.Settings = conf.Spec.Settings
-		module.Spec.SettingsVersion = conf.Spec.Version
-		module.Spec.Maintenance = conf.Spec.Maintenance
-		module.Spec.Enabled = conf.Spec.Enabled
-
-		if err := cli.Patch(ctx, module, patch); err != nil {
-			c.logger.Error("failed to patch the module", slog.String("name", conf.Name), log.Err(err))
-			return fmt.Errorf("patch module '%s': %w", conf.Name, err)
-		}
-	}
-
-	return nil
+// placement is where a module's package comes from, as the bootstrap derives it.
+type placement struct {
+	repository string
+	version    string
+	dev        bool
+	embedded   bool
 }
 
-// restoreModulesV2ByOverrides places a v1alpha2 module for every ready pull override, so an
-// overridden module keeps the version the override pinned rather than the released one.
-// It runs before restoreModulesV2ByReleases, which then leaves those modules alone.
-func (c *Controller) restoreModulesV2ByOverrides(ctx context.Context) error {
-	cli := c.ctrl.GetClient()
-
-	overrides := new(v1alpha2.ModulePullOverrideList)
-	if err := cli.List(ctx, overrides); err != nil {
-		return fmt.Errorf("list module overrides: %w", err)
-	}
-
-	for _, mpo := range overrides.Items {
-		// ignore deleted mpo or unready mpo
-		if !mpo.DeletionTimestamp.IsZero() || mpo.Status.Message != v1alpha1.ModulePullOverrideMessageReady {
-			continue
-		}
-
-		// the v1alpha1 module is read only for its source, which the override does not carry
-		module := new(v1alpha1.Module)
-		if err := cli.Get(ctx, client.ObjectKey{Name: mpo.Name}, module); err != nil {
-			if !apierrors.IsNotFound(err) {
-				c.logger.Error("failed to get the module", slog.String("name", mpo.Name), log.Err(err))
-				return fmt.Errorf("get module '%s': %w", mpo.Name, err)
-			}
-
-			c.logger.Info("module not exist, skip restoring module pull override", slog.String("name", mpo.Name))
-
-			continue
-		}
-
-		if err := c.ensureModuleV2(ctx, mpo.Name, module.Properties.Source, mpo.Spec.ImageTag, true, false); err != nil {
-			return fmt.Errorf("restore module '%s' by override: %w", mpo.Name, err)
-		}
-	}
-
-	return nil
+// placed reports whether any source claims the module; the zero placement means none does.
+func (p placement) placed() bool {
+	return p != placement{}
 }
 
-// restoreModulesV2ByEmbedded loads embedded modules from the embedded modules directory.
-func (c *Controller) restoreModulesV2ByEmbedded(ctx context.Context) error {
+// resolvePlacements derives every module's package source, in precedence order: the running image,
+// then a ready pull override, then the newest deployed release.
+func (c *Controller) resolvePlacements(ctx context.Context) (map[string]placement, error) {
+	embedded, err := c.embeddedPlacements(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("resolve embedded placements: %w", err)
+	}
+
+	overridden, err := c.overridePlacements(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("resolve override placements: %w", err)
+	}
+
+	released, err := c.releasePlacements(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("resolve release placements: %w", err)
+	}
+
+	// the first source claiming a name keeps it, so a lower-precedence source never overwrites a higher one
+	placements := make(map[string]placement, len(embedded)+len(overridden)+len(released))
+
+	for _, source := range []map[string]placement{embedded, overridden, released} {
+		for name, place := range source {
+			if _, ok := placements[name]; !ok {
+				placements[name] = place
+			}
+		}
+	}
+
+	return placements, nil
+}
+
+// embeddedPlacements returns a placement for every module the running image ships.
+func (c *Controller) embeddedPlacements(ctx context.Context) (map[string]placement, error) {
 	embeddedDir := app.EmbeddedModulesDir
 
 	c.logger.Debug("load embedded modules", slog.String("path", embeddedDir))
 
 	entries, err := os.ReadDir(embeddedDir)
 	if err != nil {
-		return fmt.Errorf("read dir: %w", err)
+		return nil, fmt.Errorf("read dir: %w", err)
 	}
 
-	// Each module is independent: load its config, wire the runtime's shared
-	// managers, build it and store it. Run them concurrently and let the first
-	// failure cancel the rest.
+	// only a definition names its module; each goroutine owns one slot, so the names need no lock
+	names := make([]string, len(entries))
+
 	g, ctx := errgroup.WithContext(ctx)
 	g.SetLimit(embeddedLoadWorkers)
 
-	for _, entry := range entries {
+	for i, entry := range entries {
 		if !entry.IsDir() || slices.Contains(dummyModules, entry.Name()) {
 			continue
 		}
 
 		g.Go(func() error {
-			// Bail out early if another module already failed (errgroup cancels
-			// ctx) or the caller cancelled, before doing any work.
+			// bail out before any work if another module already failed or the caller cancelled
 			if err := ctx.Err(); err != nil {
 				return err
 			}
@@ -166,86 +131,102 @@ func (c *Controller) restoreModulesV2ByEmbedded(ctx context.Context) error {
 				return fmt.Errorf("load embedded conf: %w", err)
 			}
 
-			return c.ensureModuleV2(ctx, conf.Definition.Name, "", "", false, true)
+			names[i] = conf.Definition.Name
+
+			return nil
 		})
 	}
 
 	if err := g.Wait(); err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
-}
+	placements := make(map[string]placement, len(names))
 
-// restoreModulesV2ByReleases places a v1alpha2 module for every deployed release, so a module
-// installed before the restart is tracked again.
-func (c *Controller) restoreModulesV2ByReleases(ctx context.Context) error {
-	deployed, err := c.resolveDeployedReleases(ctx)
-	if err != nil {
-		return fmt.Errorf("resolve deployed releases: %w", err)
-	}
-
-	for name, release := range deployed {
-		// The override, not the release, decides an overridden module's version, and
-		// restoreModulesV2ByOverrides has already placed that module on it.
-		overridden, err := utils.ModulePullOverrideExists(ctx, c.ctrl.GetClient(), name)
-		if err != nil {
-			return fmt.Errorf("get module pull override for the '%s' module: %w", name, err)
-		}
-
-		if overridden {
-			c.logger.Info("module is overridden, skip release restoring", slog.String("name", name))
+	for _, name := range names {
+		if name == "" {
 			continue
 		}
 
-		if err := c.ensureModuleV2(ctx, name, release.GetModuleSource(), release.GetModuleVersion(), false, false); err != nil {
-			return fmt.Errorf("restore module '%s' by release: %w", name, err)
-		}
+		// an embedded module carries the running Deckhouse version — the runtime's edition version verbatim
+		placements[name] = placement{repository: embeddedRepositoryName, version: app.Version, embedded: true}
 	}
 
-	return nil
+	return placements, nil
 }
 
-// resolveDeployedReleases returns the newest deployed release per module, superseding the
-// older duplicates it passes on the way — two releases both marked deployed is the state a
-// restart in the middle of a version bump leaves behind.
-func (c *Controller) resolveDeployedReleases(ctx context.Context) (map[string]v1alpha1.ModuleRelease, error) {
-	selector := client.MatchingLabels{
-		v1alpha1.ModuleReleaseLabelStatus: v1alpha1.ModuleReleaseLabelDeployed,
+// overridePlacements pins every module a ready pull override names to the tag it carries.
+func (c *Controller) overridePlacements(ctx context.Context) (map[string]placement, error) {
+	cli := c.ctrl.GetClient()
+
+	overrides := new(v1alpha2.ModulePullOverrideList)
+	if err := cli.List(ctx, overrides); err != nil {
+		return nil, fmt.Errorf("list module overrides: %w", err)
 	}
 
-	releaseList := new(v1alpha1.ModuleReleaseList)
-	if err := c.ctrl.GetClient().List(ctx, releaseList, selector); err != nil {
+	placements := make(map[string]placement, len(overrides.Items))
+
+	for _, mpo := range overrides.Items {
+		if !mpo.DeletionTimestamp.IsZero() || mpo.Status.Message != v1alpha1.ModulePullOverrideMessageReady {
+			continue
+		}
+
+		// the v1alpha1 module is read only for its source, which the override does not carry
+		module := new(v1alpha1.Module)
+		if err := cli.Get(ctx, client.ObjectKey{Name: mpo.Name}, module); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return nil, fmt.Errorf("get module '%s': %w", mpo.Name, err)
+			}
+
+			c.logger.Info("module not exist, skip restoring module pull override", slog.String("name", mpo.Name))
+
+			continue
+		}
+
+		placements[mpo.Name] = placement{repository: module.Properties.Source, version: mpo.Spec.ImageTag, dev: true}
+	}
+
+	return placements, nil
+}
+
+// releasePlacements returns the newest deployed release per module, superseding the duplicates it
+// passes — two releases both marked deployed is what a restart mid version bump leaves behind.
+func (c *Controller) releasePlacements(ctx context.Context) (map[string]placement, error) {
+	selector := client.MatchingLabels{v1alpha1.ModuleReleaseLabelStatus: v1alpha1.ModuleReleaseLabelDeployed}
+
+	releases := new(v1alpha1.ModuleReleaseList)
+	if err := c.ctrl.GetClient().List(ctx, releases, selector); err != nil {
 		return nil, fmt.Errorf("list module releases: %w", err)
 	}
 
-	// sort releases by version, so the one seen later always supersedes the one held
-	releases := releaseList.Items
-	slices.SortFunc(releases, func(a, b v1alpha1.ModuleRelease) int {
-		return a.GetVersion().Compare(b.GetVersion())
+	// newest first, so every deployed release a module has after its first is superseded by it
+	slices.SortFunc(releases.Items, func(a, b v1alpha1.ModuleRelease) int {
+		return b.GetVersion().Compare(a.GetVersion())
 	})
 
-	deployed := make(map[string]v1alpha1.ModuleRelease)
-	for _, release := range releases {
-		// ignore deleted release and not deployed
+	placements := make(map[string]placement, len(releases.Items))
+
+	for _, release := range releases.Items {
 		if release.Status.Phase != v1alpha1.ModuleReleasePhaseDeployed || !release.DeletionTimestamp.IsZero() {
 			continue
 		}
 
 		name := release.GetModuleName()
 
-		// superseding is hygiene on its own: it runs even for modules left out below
-		if previous, ok := deployed[name]; ok {
-			if err := c.supersedeRelease(ctx, &previous); err != nil {
-				c.logger.Error("failed to supersede the previous deployed module release",
-					slog.String("name", previous.GetName()), log.Err(err))
+		// superseding is hygiene on its own: it runs even for modules a higher-precedence source owns
+		if _, ok := placements[name]; ok {
+			if err := c.supersedeRelease(ctx, &release); err != nil {
+				c.logger.Error("failed to supersede the deployed module release",
+					slog.String("name", release.GetName()), log.Err(err))
 			}
+
+			continue
 		}
 
-		deployed[name] = release
+		placements[name] = placement{repository: release.GetModuleSource(), version: release.GetModuleVersion()}
 	}
 
-	return deployed, nil
+	return placements, nil
 }
 
 // supersedeRelease marks a deployed release that a newer deployed one replaced.
@@ -262,132 +243,192 @@ func (c *Controller) supersedeRelease(ctx context.Context, release *v1alpha1.Mod
 	return nil
 }
 
-// ensureModuleV2 places the module on repository and version, whether or not it already
-// exists. The restore runs on every start, so it must not trip over what the last one left.
-func (c *Controller) ensureModuleV2(ctx context.Context, name, repository, version string, dev, embedded bool) error {
-	cli := c.ctrl.GetClient()
-
-	module := new(v1alpha2.Module)
-	if err := cli.Get(ctx, client.ObjectKey{Name: name}, module); err != nil {
-		if !apierrors.IsNotFound(err) {
-			return fmt.Errorf("get module: %w", err)
-		}
-
-		module = &v1alpha2.Module{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        name,
-				Annotations: make(map[string]string),
-			},
-			Spec: v1alpha2.ModuleSpec{
-				PackageRepositoryName: repository,
-				PackageVersion:        version,
-			},
-		}
-
-		if dev {
-			module.Annotations[v1alpha2.ModuleAnnotationDev] = "true"
-		}
-
-		if embedded {
-			module.Annotations[v1alpha2.ModuleAnnotationEmbedded] = "true"
-		}
-
-		// AlreadyExists means only that the informer cache had not caught up; the module
-		// is placed either way, and the next start moves it if it drifted.
-		if err := cli.Create(ctx, module); err != nil && !apierrors.IsAlreadyExists(err) {
-			c.logger.Error("failed to create the module", slog.String("name", name), log.Err(err))
-			return fmt.Errorf("create module: %w", err)
-		}
-
-		return nil
+// syncModules brings every module in line with its placement and its config, and returns the
+// survivors carrying what was written — see package-flow.md for the placement rules.
+func (c *Controller) syncModules(ctx context.Context, placements map[string]placement) ([]v1alpha2.Module, error) {
+	configs, err := c.resolveModuleConfigs(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("resolve module configs: %w", err)
 	}
 
-	devAnnotationSet := module.Annotations[v1alpha2.ModuleAnnotationDev] == "true"
-	if module.Spec.PackageRepositoryName == repository && module.Spec.PackageVersion == version && (!dev || devAnnotationSet) {
-		return nil
+	// The manager's cached client serves a write from this same pass only once its watch event lands,
+	// so this one snapshot, which every decision below is taken against, comes from the API server.
+	existing := new(v1alpha2.ModuleList)
+	if err := c.ctrl.GetAPIReader().List(ctx, existing); err != nil {
+		return nil, fmt.Errorf("list modules: %w", err)
 	}
 
-	patch := client.MergeFrom(module.DeepCopy())
-	module.Spec.PackageRepositoryName = repository
-	module.Spec.PackageVersion = version
-	if dev {
-		if module.Annotations == nil {
-			module.Annotations = make(map[string]string)
-		}
+	surviving := make([]v1alpha2.Module, 0, len(existing.Items)+len(placements))
+	tracked := make(map[string]struct{}, len(existing.Items))
 
-		module.Annotations[v1alpha2.ModuleAnnotationDev] = "true"
-	}
+	for i := range existing.Items {
+		module := &existing.Items[i]
+		tracked[module.Name] = struct{}{}
 
-	if err := cli.Patch(ctx, module, patch); err != nil {
-		c.logger.Error("failed to patch the module", slog.String("name", name), log.Err(err))
-		return fmt.Errorf("patch module: %w", err)
-	}
+		place := placements[module.Name]
+		if !place.placed() && disposable(module) {
+			c.logger.Info("module is not backed by a package, delete it", slog.String("name", module.Name))
 
-	c.logger.Debug("module moved onto the restored version",
-		slog.String("name", name), slog.String("version", version))
+			// a module already gone is the outcome asked for
+			if err := c.ctrl.GetClient().Delete(ctx, module); err != nil && !apierrors.IsNotFound(err) {
+				return nil, fmt.Errorf("delete module '%s': %w", module.Name, err)
+			}
 
-	return nil
-}
-
-// deleteUnplacedModules drops the modules the restore left behind. Module is one resource with
-// two versions and a None conversion strategy, so the previous generation cannot be selected by
-// listing v1alpha1 — that returns the same objects the restore just placed. What separates them
-// is the package spec: a module carries a version only if the package system installed it, and
-// nothing manages one that does not now that addon-operator is gone. An embedded module is the
-// exception — it ships inside the image, so it is managed while carrying no version at all.
-// Runs after every restore step, so their modules already carry a version or the annotation.
-func (c *Controller) deleteUnplacedModules(ctx context.Context) error {
-	cli := c.ctrl.GetClient()
-
-	modules := new(v1alpha2.ModuleList)
-	if err := cli.List(ctx, modules); err != nil {
-		return fmt.Errorf("list modules: %w", err)
-	}
-
-	for i := range modules.Items {
-		module := &modules.Items[i]
-
-		if module.Spec.PackageVersion != "" || module.IsEmbedded() {
 			continue
 		}
 
-		c.logger.Info("module is not backed by a package, delete it", slog.String("name", module.Name))
+		if err := c.patchModule(ctx, module, place, configs[module.Name]); err != nil {
+			return nil, err
+		}
 
-		// a module already gone is the outcome asked for
-		if err := cli.Delete(ctx, module); err != nil && !apierrors.IsNotFound(err) {
-			return fmt.Errorf("delete module '%s': %w", module.Name, err)
+		surviving = append(surviving, *module)
+	}
+
+	for name, place := range placements {
+		if _, ok := tracked[name]; ok {
+			continue
+		}
+
+		module, err := c.createModule(ctx, name, place, configs[name])
+		if err != nil {
+			return nil, err
+		}
+
+		surviving = append(surviving, *module)
+	}
+
+	return surviving, nil
+}
+
+// resolveModuleConfigs maps every live module config onto the module it configures.
+func (c *Controller) resolveModuleConfigs(ctx context.Context) (map[string]*v1alpha1.ModuleConfig, error) {
+	list := new(v1alpha1.ModuleConfigList)
+	if err := c.ctrl.GetClient().List(ctx, list); err != nil {
+		return nil, fmt.Errorf("list module configs: %w", err)
+	}
+
+	configs := make(map[string]*v1alpha1.ModuleConfig, len(list.Items))
+
+	for i := range list.Items {
+		conf := &list.Items[i]
+
+		// a config on its way out is the config controller's business, not the bootstrap's
+		if !conf.DeletionTimestamp.IsZero() {
+			continue
+		}
+
+		configs[conf.Name] = conf
+	}
+
+	return configs, nil
+}
+
+// disposable reports whether nothing backs an unplaced module: it carries no package version, or it
+// is an embedded module the image stopped shipping and no real repository has taken it over.
+func disposable(module *v1alpha2.Module) bool {
+	return module.Spec.PackageVersion == "" ||
+		(module.IsEmbedded() && module.Spec.PackageRepositoryName == embeddedRepositoryName)
+}
+
+// createModule places a module the cluster does not carry yet.
+func (c *Controller) createModule(ctx context.Context, name string, place placement, conf *v1alpha1.ModuleConfig) (*v1alpha2.Module, error) {
+	module := &v1alpha2.Module{ObjectMeta: metav1.ObjectMeta{Name: name}}
+	applyDesired(module, place, conf)
+
+	if err := c.ctrl.GetClient().Create(ctx, module); err != nil {
+		if !apierrors.IsAlreadyExists(err) {
+			return nil, fmt.Errorf("create module '%s': %w", name, err)
+		}
+
+		// something created the module between the list and this call; the next start moves it if it drifted
+		module = new(v1alpha2.Module)
+		if err := c.ctrl.GetAPIReader().Get(ctx, client.ObjectKey{Name: name}, module); err != nil {
+			return nil, fmt.Errorf("get module '%s': %w", name, err)
 		}
 	}
+
+	return module, nil
+}
+
+// patchModule writes placement, annotations and settings in one patch, and nothing when none drifted.
+func (c *Controller) patchModule(ctx context.Context, module *v1alpha2.Module, place placement, conf *v1alpha1.ModuleConfig) error {
+	patch := client.MergeFrom(module.DeepCopy())
+
+	applyDesired(module, place, conf)
+
+	data, err := patch.Data(module)
+	if err != nil {
+		return fmt.Errorf("build patch for the module '%s': %w", module.Name, err)
+	}
+
+	if string(data) == "{}" {
+		return nil
+	}
+
+	if err := c.ctrl.GetClient().Patch(ctx, module, client.RawPatch(patch.Type(), data)); err != nil {
+		return fmt.Errorf("patch module '%s': %w", module.Name, err)
+	}
+
+	c.logger.Debug("module synced", slog.String("name", module.Name), slog.String("version", place.version))
 
 	return nil
 }
 
-// loadModulesV2 hands every placed module to the package runtime, which starts the
-// deploy-and-load pipeline for the modules the restore just recreated.
-func (c *Controller) loadModulesV2(ctx context.Context) error {
-	cli := c.ctrl.GetClient()
-
-	modules := new(v1alpha2.ModuleList)
-	if err := cli.List(ctx, modules); err != nil {
-		return fmt.Errorf("list modules: %w", err)
+// applyDesired writes the placement, its annotations and the config's settings onto the module.
+func applyDesired(module *v1alpha2.Module, place placement, conf *v1alpha1.ModuleConfig) {
+	// an unplaced module keeps the spec another writer gave it — only disposable decides its fate
+	if place.placed() {
+		module.Spec.PackageRepositoryName = place.repository
+		module.Spec.PackageVersion = place.version
 	}
 
-	for _, module := range modules.Items {
+	// the annotation, not the spec, routes a module to the filesystem, so it is reconciled both ways
+	if place.embedded {
+		setAnnotation(module, v1alpha2.ModuleAnnotationEmbedded)
+	} else {
+		delete(module.Annotations, v1alpha2.ModuleAnnotationEmbedded)
+	}
+
+	// the dev annotation is only ever set, as it always has been
+	if place.dev {
+		setAnnotation(module, v1alpha2.ModuleAnnotationDev)
+	}
+
+	if conf == nil {
+		return
+	}
+
+	module.Spec.Settings = conf.Spec.Settings
+	module.Spec.SettingsVersion = conf.Spec.Version
+	module.Spec.Maintenance = conf.Spec.Maintenance
+	module.Spec.Enabled = conf.Spec.Enabled
+}
+
+// setAnnotation marks the key true, allocating the map when the module carries no annotations.
+func setAnnotation(module *v1alpha2.Module, key string) {
+	if module.Annotations == nil {
+		module.Annotations = make(map[string]string)
+	}
+
+	module.Annotations[key] = "true"
+}
+
+// loadModules hands every placed module to the package runtime, which starts its pipeline.
+func (c *Controller) loadModules(ctx context.Context, modules []v1alpha2.Module) error {
+	// one repository backs many modules, so each is resolved once
+	remotes := make(map[string]registry.Remote)
+
+	for i := range modules {
+		module := &modules[i]
+
 		if !module.DeletionTimestamp.IsZero() {
 			c.logger.Debug("module is deleted, skip loading", slog.String("module", module.Name))
 			continue
 		}
 
-		// an embedded module ships inside the image: there is no repository to resolve and
-		// nothing to download, so the runtime loads it straight off the filesystem
+		// an embedded module is on disk already and its repository resolves to nothing
 		if module.IsEmbedded() {
-			c.manager.UpdateEmbedded(pkgruntime.Module{
-				Name:            module.Name,
-				Settings:        module.Spec.Settings.GetMap(),
-				SettingsVersion: module.Spec.SettingsVersion,
-				Maintenance:     module.Spec.Maintenance,
-				Enabled:         module.Spec.Enabled,
-			})
+			c.manager.UpdateEmbeddedModule(runtimeModule(module))
 
 			continue
 		}
@@ -397,24 +438,34 @@ func (c *Controller) loadModulesV2(ctx context.Context) error {
 			continue
 		}
 
-		repo := new(v1alpha1.PackageRepository)
-		if err := cli.Get(ctx, client.ObjectKey{Name: module.Spec.PackageRepositoryName}, repo); err != nil {
-			return fmt.Errorf("get package repository '%s' of the module '%s': %w",
-				module.Spec.PackageRepositoryName, module.Name, err)
+		remote, ok := remotes[module.Spec.PackageRepositoryName]
+		if !ok {
+			repo := new(v1alpha1.PackageRepository)
+			if err := c.ctrl.GetClient().Get(ctx, client.ObjectKey{Name: module.Spec.PackageRepositoryName}, repo); err != nil {
+				return fmt.Errorf("get package repository '%s' of the module '%s': %w",
+					module.Spec.PackageRepositoryName, module.Name, err)
+			}
+
+			remote = registry.BuildRemote(repo)
+			remotes[module.Spec.PackageRepositoryName] = remote
 		}
 
-		c.manager.UpdateModule(registry.BuildRemote(repo), pkgruntime.Module{
-			Name: module.Name,
-			Definition: pkgmodules.Definition{
-				Name:    module.Name,
-				Version: module.Spec.PackageVersion,
-			},
-			Settings:        module.Spec.Settings.GetMap(),
-			SettingsVersion: module.Spec.SettingsVersion,
-			Maintenance:     module.Spec.Maintenance,
-			Enabled:         module.Spec.Enabled,
-		}, false)
+		pkg := runtimeModule(module)
+		pkg.Definition = pkgmodules.Definition{Name: module.Name, Version: module.Spec.PackageVersion}
+
+		c.manager.UpdateModule(remote, pkg, false)
 	}
 
 	return nil
+}
+
+// runtimeModule is what the runtime needs of a module: its identity, settings and enabled intent.
+func runtimeModule(module *v1alpha2.Module) pkgruntime.Module {
+	return pkgruntime.Module{
+		Name:            module.Name,
+		Settings:        module.Spec.Settings.GetMap(),
+		SettingsVersion: module.Spec.SettingsVersion,
+		Maintenance:     module.Spec.Maintenance,
+		Enabled:         module.Spec.Enabled,
+	}
 }

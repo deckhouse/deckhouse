@@ -260,30 +260,21 @@ func (c *Controller) Start(ctx context.Context) error {
 		return fmt.Errorf("wait for cache sync")
 	}
 
-	// Embedded modules go first: they carry no version, so a later restore step is free to
-	// move one onto a downloaded package without racing the placement.
-	if err := c.restoreModulesV2ByEmbedded(ctx); err != nil {
-		return fmt.Errorf("restore modules by embedded: %w", err)
+	// The bootstrap derives where every module's package comes from before it writes anything, so
+	// the precedence between the image, an override and a release is decided in memory rather than
+	// by the order of the writes.
+	placements, err := c.resolvePlacements(ctx)
+	if err != nil {
+		return fmt.Errorf("resolve module placements: %w", err)
 	}
 
-	if err := c.restoreModulesV2ByOverrides(ctx); err != nil {
-		return fmt.Errorf("restore modules by overrides: %w", err)
+	modules, err := c.syncModules(ctx, placements)
+	if err != nil {
+		return fmt.Errorf("sync modules: %w", err)
 	}
 
-	if err := c.restoreModulesV2ByReleases(ctx); err != nil {
-		return fmt.Errorf("restore modules by releases: %w", err)
-	}
-
-	if err := c.deleteUnplacedModules(ctx); err != nil {
-		return fmt.Errorf("delete unplaced modules: %w", err)
-	}
-
-	if err := c.syncModulesSettings(ctx); err != nil {
-		return fmt.Errorf("sync modules settings: %w", err)
-	}
-
-	if err := c.loadModulesV2(ctx); err != nil {
-		return fmt.Errorf("load modules v2: %w", err)
+	if err := c.loadModules(ctx, modules); err != nil {
+		return fmt.Errorf("load modules: %w", err)
 	}
 
 	c.manager.ResumeScheduler()
