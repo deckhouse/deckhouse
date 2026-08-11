@@ -6,9 +6,9 @@ search: gpu, llm
 description: Архитектура модуля gpu в Deckhouse Kubernetes Platform.
 ---
 
-Модуль [`gpu`](/modules/gpu/) обеспечивает управление GPU (Graphics Processing Unit) в Deckhouse Kubernetes Platform (DKP).
+Модуль [`gpu`](/modules/gpu/) обеспечивает управление GPU (Graphics Processing Units) в Deckhouse Kubernetes Platform (DKP).
 
-Модуль работает в двух взаимоисключающих режимах, выбор задаётся параметром [dra.enabled](/modules/gpu/configuration.html#parameters-dra):
+Модуль работает в двух взаимоисключающих режимах, выбор задаётся параметром [`dra.enabled`](/modules/gpu/configuration.html#parameters-dra):
 
 - режим [DRA (Dynamic Resource Allocation)](https://kubernetes.io/docs/concepts/scheduling-eviction/dynamic-resource-allocation/) — механизм Kubernetes для запроса и совместного использования устройств, который обеспечивает динамическое и декларативное выделение вычислительных ресурсов GPU;
 - режим Device Plugin (по умолчанию) — классическая модель работы с вычислительными ресурсами узла в Kubernetes. В этом режиме модуль публикует ресурсы `nvidia.com/gpu` или `nvidia.com/mig-*`, которые использует kube-scheduler для планирования размещения подов, использующих эти ресурсы.
@@ -59,18 +59,18 @@ description: Архитектура модуля gpu в Deckhouse Kubernetes Pla
    Состоит из следующих контейнеров:
 
    - **gpu-controller** — основной контейнер;
-   - **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищённого доступа к основному контейнеру. Является [Open Source-проектом](https://github.com/brancz/kube-rbac-proxy).
+   - **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищённого доступа к основному контейнеру. Kube-rbac-proxy является [Open Source-проектом](https://github.com/brancz/kube-rbac-proxy).
 
 1. **gpu-node-agent** (DaemonSet) — компонент, состоящий из одного контейнера **gpu-node-agent**, выполняет следующие действия:
 
-   - сканирует`/sys` хоста и базы PCI ID;
+   - сканирует файловую систему `/sys` хоста и базу идентификаторов PCI;
    - сопоставляет устройства с ConfigMap `gpu-supported-vendors`;
-   - создаёт кастомных ресурсов PhysicalGPU для каждой обнаруженной карты;
+   - создаёт кастомные ресурсы PhysicalGPU для каждой обнаруженной карты;
    - устанавливает лейблы `gpu.deckhouse.io/vendor=<VENDOR>` на ресурс Node.
 
    Компонент работает на всех узлах кластера, исключая узлы control plane.
 
-1. **&lt;VENDOR&gt;-adapter** (DaemonSet) — компонент, обеспечивающий работу с оборудованием по подготовке, выделению и освобождению ресурсов GPU. На данный момент поддерживается два поставщика оборудования: NVIDIA, MetaX.
+1. **&lt;VENDOR&gt;-adapter** (DaemonSet) — компонент, обеспечивающий работу с оборудованием по подготовке, выделению и освобождению ресурсов GPU. На данный момент поддерживаются два поставщика оборудования: NVIDIA, MetaX.
 
    Компонент выполняет следующие действия:
 
@@ -120,9 +120,11 @@ description: Архитектура модуля gpu в Deckhouse Kubernetes Pla
 
 ## Режим Device Plugin
 
-В режиме Device Plugin модуль работает только с адаптерами NVIDIA и взаимодействует со следующими ресурсами:
+В режиме Device Plugin модуль состоит из компонентов, работающих только с адаптерами NVIDIA.
 
-- NodeFeature — хранит фактическая информация об аппаратных возможностях конкретного узла;
+Модуль взаимодействует со следующими ресурсами:
+
+- NodeFeature — хранит фактическую информацию об аппаратных возможностях конкретного узла;
 - NodeFeatureRule — хранит набор правил, на основе которого модуль настраивает лейблы, аннотации и тейнты для узла кластера.
 
 ### Архитектура модуля (в режиме Device Plugin)
@@ -143,6 +145,8 @@ description: Архитектура модуля gpu в Deckhouse Kubernetes Pla
 
 1. **gpu-feature-discovery-&lt;NG&gt;** (DaemonSet) — компонент опрашивает GPU-драйвер через NVIDIA Management Library (NVML) и публикует аппаратные возможности GPU в виде файла `/etc/kubernetes/node-feature-discovery/features.d/gfd`. Node-feature-discovery-worker публикует их как ресурсы NodeFeature, из которых node-feature-discovery-master обновляет соответствующие лейблы `nvidia.com/*` для узлов кластера.
 
+   Компонент создаётся Deckhouse-контроллером модуля [`deckhouse`](/modules/deckhouse/) для каждой NodeGroup (NG), в конфигурации которой указан параметр [`.spec.gpu`](/modules/node-manager/cr.html#nodegroup-v1-spec-gpu).
+
    Состоит из следующих контейнеров:
 
    - **gpu-feature-discovery-init** — init-контейнер, подготавливающий конфигурацию для основного контейнера gpu-feature-discovery-ctr;
@@ -151,7 +155,7 @@ description: Архитектура модуля gpu в Deckhouse Kubernetes Pla
 
 1. **nvidia-device-plugin-&lt;NG&gt;** (DaemonSet) — компонент регистрируется в kubelet через [Kubernetes Device Plugin API](https://kubernetes.io/docs/concepts/extend-kubernetes/compute-storage-net/device-plugins/) и публикует GPU-ресурсы для kube-scheduler.
 
-   Для работы с ресурсами kubelet вызывает gRPC-методы ListAndWatch, Allocate и GetPreferredAllocation в nvidia-device-plugin-ctr. После чего компонент обновляет количество доступных ресурсов на узле и отдаёт эту информацию через kubelet.
+   Для работы с ресурсами kubelet вызывает gRPC-методы ListAndWatch, Allocate и GetPreferredAllocation у nvidia-device-plugin-ctr. После этого компонент обновляет количество доступных ресурсов на узле и отдаёт эту информацию через kubelet.
 
    Состоит из следующих контейнеров:
 
@@ -159,7 +163,7 @@ description: Архитектура модуля gpu в Deckhouse Kubernetes Pla
    - **nvidia-device-plugin-ctr** — основной контейнер;
    - **nvidia-device-plugin-sidecar** — сайдкар-контейнер, который отслеживает изменения в конфигурации и перезапускает основной контейнер для применения изменений.
 
-1. **nvidia-mig-manager** (DaemonSet) — компонент управляет процессом изменения профиля [Multi-Instance GPU (MIG)](https://www.nvidia.com/en-us/technologies/multi-instance-gpu/) на узлах с A100/H100.
+1. **nvidia-mig-manager** (DaemonSet) — опциональный компонент управляет процессом изменения профиля [Multi-Instance GPU (MIG)](https://www.nvidia.com/en-us/technologies/multi-instance-gpu/) на узлах с A100/H100.
 
    Компонент выполняет следующие действия:
 
@@ -188,7 +192,7 @@ description: Архитектура модуля gpu в Deckhouse Kubernetes Pla
    - авторизация запросов на получение метрик;
    - работа с ресурсами NodeFeature и NodeFeatureRule;
    - отслеживание и обновление ресурсов Node;
-   - завершение подов, использующих GPU-ресурсы при изменении MIG-профиля.
+   - завершение подов, использующих GPU-ресурсы, при изменении MIG-профиля.
 
 1. **Kubelet** — регистрация через Device Plugin API.
 

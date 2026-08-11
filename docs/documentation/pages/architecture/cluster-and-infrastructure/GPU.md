@@ -120,7 +120,9 @@ The following external components interact with the module:
 
 ## Device Plugin mode
 
-In Device Plugin mode, the module works only with NVIDIA adapters and interacts with the following resources:
+In Device Plugin mode, the module consists of components that work only with NVIDIA adapters.
+
+The module interacts with the following resources:
 
 - NodeFeature: Stores actual information about the hardware capabilities of a specific node.
 - NodeFeatureRule: Stores a set of rules used by the module to configure labels, annotations, and taints for a cluster node.
@@ -141,7 +143,9 @@ The module consists of the following components:
 
 1. **node-feature-discovery-gc** (Deployment): A component that consists of a single **gc** container and deletes obsolete NodeFeature resources when a node is deleted.
 
-1. **gpu-feature-discovery-&lt;NG&gt;** (DaemonSet): A component that queries the GPU driver via the NVIDIA Management Library (NVML) and publishes GPU hardware capabilities as the `/etc/kubernetes/node-feature-discovery/features.d/gfd` file. Node-feature-discovery-worker publishes them as NodeFeature resources, from which node-feature-discovery-master updates the corresponding `nvidia.com/*` labels for cluster nodes.
+1. **gpu-feature-discovery-&lt;NG&gt;** (DaemonSet): A component that queries the GPU driver via the NVIDIA Management Library (NVML) and writes GPU hardware capabilities to the `/etc/kubernetes/node-feature-discovery/features.d/gfd` file. Node-feature-discovery-worker publishes them as NodeFeature resources, from which node-feature-discovery-master updates the corresponding `nvidia.com/*` labels for cluster nodes.
+
+   The component is created by the Deckhouse controller of the [`deckhouse`](/modules/deckhouse/) module for every NodeGroup (NG) whose configuration specifies the [`.spec.gpu`](/modules/node-manager/cr.html#nodegroup-v1-spec-gpu) parameter.
 
    It consists of the following containers:
 
@@ -151,7 +155,7 @@ The module consists of the following components:
 
 1. **nvidia-device-plugin-&lt;NG&gt;** (DaemonSet): A component that registers with kubelet through the [Kubernetes Device Plugin API](https://kubernetes.io/docs/concepts/extend-kubernetes/compute-storage-net/device-plugins/) and publishes GPU resources for kube-scheduler.
 
-   To work with resources, kubelet calls the ListAndWatch, Allocate, and GetPreferredAllocation gRPC methods in nvidia-device-plugin-ctr. After that, the component updates the number of available resources on the node and returns this information through kubelet.
+   To work with resources, kubelet calls the ListAndWatch, Allocate, and GetPreferredAllocation gRPC methods on nvidia-device-plugin-ctr. After that, the component updates the number of available resources on the node and returns this information through kubelet.
 
    It consists of the following containers:
 
@@ -159,7 +163,7 @@ The module consists of the following components:
    - **nvidia-device-plugin-ctr**: Main container.
    - **nvidia-device-plugin-sidecar**: Sidecar container that watches configuration changes and restarts the main container to apply them.
 
-1. **nvidia-mig-manager** (DaemonSet): A component that manages changes to the [Multi-Instance GPU (MIG)](https://www.nvidia.com/en-us/technologies/multi-instance-gpu/) profile on nodes with A100/H100.
+1. **nvidia-mig-manager** (DaemonSet): An optional component that manages changes to the [Multi-Instance GPU (MIG)](https://www.nvidia.com/en-us/technologies/multi-instance-gpu/) profile on nodes with A100/H100.
 
    The component performs the following actions:
 
@@ -175,9 +179,9 @@ The module consists of the following components:
    - **nvidia-mig-manager-init**: Init container that prepares executables and libraries.
    - **nvidia-mig-manager**: Main container.
 
-1. **nvidia-dcgm** (DaemonSet): A component that consists of a single **nvidia-dcgm** container and runs [Data Center GPU Manager (DCGM)](https://github.com/nvidia/dcgm), which collects raw GPU telemetry (health, Error Correction Code (ECC), power, utilization).
+1. **nvidia-dcgm** (DaemonSet): A component that consists of a single **nvidia-dcgm** container and runs [Data Center GPU Manager (DCGM)](https://github.com/nvidia/dcgm). DCGM collects raw GPU telemetry (health, Error Correction Code (ECC), power, utilization).
 
-1. **nvidia-dcgm-exporter** (DaemonSet): A component that consists of a single **border** container, retrieves GPU metrics from the nvidia-dcgm component, and exposes them in Prometheus format.
+1. **nvidia-dcgm-exporter** (DaemonSet): A component that consists of a single **exporter** container, retrieves GPU metrics from the nvidia-dcgm component, and exposes them in Prometheus format.
 
 ### Module interactions (Device Plugin mode)
 
