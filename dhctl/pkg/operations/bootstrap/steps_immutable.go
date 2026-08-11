@@ -666,9 +666,10 @@ func (b *ClusterBootstrapper) printHowToReachTheCluster(ctx context.Context, kub
 	}
 }
 
-// bastionForwardLine builds the command that makes the saved kubeconfig usable
+// bastionForwardLine builds the commands that make the saved kubeconfig usable
 // from outside, or "" when the master is directly reachable. It forwards to
-// 127.0.0.1, which every apiserver certificate covers.
+// 127.0.0.1, which every apiserver certificate covers — so the retargeted
+// kubeconfig needs no --tls-server-name and no other flag.
 func bastionForwardLine(initializer *providerinitializer.SSHProviderInitializer, masterIP, kubeconfigPath string) string {
 	if initializer == nil {
 		return ""
@@ -686,8 +687,13 @@ func bastionForwardLine(initializer *providerinitializer.SSHProviderInitializer,
 	return buildBastionForwardLine(cfg.BastionUser, cfg.BastionHost, bastionPort, masterIP, kubeconfigPath)
 }
 
-// buildBastionForwardLine is split out to be testable: the value of this line
-// is that it can be pasted, and that is worth a test.
+// buildBastionForwardLine is split out to be testable: the value of these lines
+// is that they can be pasted, and that is worth a test.
+//
+// The server is retargeted with kubectl rather than sed: a regex over the
+// operator's credentials has to match a URL it did not write, leaves a .bak
+// beside a 0600 file, and silently does nothing when it misses. kubectl edits
+// the field by name, is idempotent, and fails loudly.
 func buildBastionForwardLine(bastionUser, bastionHost string, bastionPort int, masterIP, kubeconfigPath string) string {
 	bastion := bastionHost
 	if bastionUser != "" {
@@ -701,9 +707,11 @@ func buildBastionForwardLine(bastionUser, bastionHost string, bastionPort int, m
 	// 6445 rather than 6443: the port is opened on the operator's own machine,
 	// which may well be running a cluster of its own.
 	const localPort = 6445
-	return fmt.Sprintf("ssh -f -N%s -L %d:%s:%d %s  &&  sed -i.bak 's|https://%s:%d|https://127.0.0.1:%d|' %s",
+	// The cluster is always named "kubernetes": the node generates this
+	// kubeconfig itself, kubeadm-style, and nothing downstream renames it.
+	return fmt.Sprintf("ssh -f -N%s -L %d:%s:%d %s  &&  kubectl --kubeconfig %s config set-cluster kubernetes --server=https://127.0.0.1:%d",
 		port, localPort, masterIP, immutable.APIServerPort, bastion,
-		masterIP, immutable.APIServerPort, localPort, kubeconfigPath)
+		kubeconfigPath, localPort)
 }
 
 // channelBroken reports whether the local end of the channel went away rather
