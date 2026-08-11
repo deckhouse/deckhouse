@@ -1,4 +1,5 @@
 ## How it built
+foo bar
 
 ### Building common-v1x21x6 images
   - final image based on `common/src-artifact` image
@@ -75,4 +76,3 @@
         - `BAZEL_LINKOPTS=-lm:-pthread` -> `BAZEL_LINKOPTS=-lm:-lpthread` in `envoy.bazelrc` *(???)*
         - use bazel build options `--config=release` and target `//:envoy`. We found this method in ProwCI in repository istio/proxy. ([Original build job from Istio ProwCI](https://prow.istio.io/view/gs/istio-prow/pr-logs/pull/istio_release-builder/1944/build-warning_release-builder_release-1.21/1837269285437706240))
       - binaries envoy *(built from src)*
-
