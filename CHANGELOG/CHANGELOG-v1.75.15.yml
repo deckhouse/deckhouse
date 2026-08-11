@@ -1,0 +1,57 @@
+cilium-hubble:
+  fixes:
+    - summary: >-
+        Upgrade hubble-ui backend dependencies (cilium v1.17.16, Go 1.25.0) and switch build base image
+        to fix known CVEs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21644
+      impact: The cilium-hubble components (hubble-ui, hubble-relay) will restart after the update.
+cni-cilium:
+  fixes:
+    - summary: Bump Go dependencies in the egress-gateway-agent image to fix known CVEs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21613
+      impact: The egress-gateway-agent component will restart after the update.
+    - summary: Bump Go dependencies and backport upstream cilium security patches to fix known CVEs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21644
+      impact: The cni-cilium components (cilium agent, operator) will restart after the update.
+deckhouse:
+  fixes:
+    - summary: An unset `settings.update.mode` now defaults to `AutoPatch` instead of silently running
+        as `Auto`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21928
+    - summary: >-
+        Fix a minor Deckhouse release being auto-applied as a patch when no Deployed release object is
+        present.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21987
+    - summary: Surface layer read errors instead of extracting a truncated image
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22032
+kube-dns:
+  fixes:
+    - summary: Bump Go dependencies in the sts-pods-hosts-appender-webhook and coredns images to fix known
+        CVEs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21630
+      impact: The coredns and kube-dns components will restart after the update.
+metallb:
+  fixes:
+    - summary: Bump Go dependencies in the metallb and l2lb images to fix known CVEs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21589
+      impact: The metallb components (controller, speaker, l2lb) will restart after the update.
+node-local-dns:
+  fixes:
+    - summary: Bump Go dependencies in the safe-updater and stale-dns-connections-cleaner images to fix
+        known CVEs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21630
+      impact: The node-local-dns components will restart after the update.
+    - summary: Bump Go dependencies in the coredns helper image to fix known CVEs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21875
+      impact: The node-local-dns DaemonSet pods will restart after the update.
+service-with-healthchecks:
+  fixes:
+    - summary: Bump Go dependencies in the service-with-healthchecks image to fix known CVEs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21593
+      impact: The service-with-healthchecks components (controller, agent) will restart after the update.
+tools:
+  fixes:
+    - summary: >-
+        Fixed module release validation incorrectly failing for `!optional` dependencies when the required
+        module doesn't exist in the cluster.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21945
