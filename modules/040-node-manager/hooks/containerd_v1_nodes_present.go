@@ -29,14 +29,20 @@ import (
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
+	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
 const (
 	containerdV1NodesPresentValuesKey = "nodeManager:containerdV1NodesPresent"
 	containerdRuntimePrefix           = "containerd://"
+	// containerdV1CRIType is containerd v1.x, containerd v2.x has its own 'ContainerdV2' CRI type.
+	containerdV1CRIType = "Containerd"
+	// defaultCRIValuesPath is filled by the global discovery hook from the d8-cluster-configuration secret.
+	defaultCRIValuesPath = "global.clusterConfiguration.defaultCRI"
 )
 
-// set nodeManager:containerdV1NodesPresent=true if at least one node is running containerd v1.x
+// set nodeManager:containerdV1NodesPresent=true if containerd v1.x is used anywhere in the cluster:
+// at least one node runs it, a NodeGroup requests it explicitly or it is the cluster-wide default CRI
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/node-manager",
 	Kubernetes: []go_hook.KubernetesConfig{
@@ -45,6 +51,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion: "v1",
 			Kind:       "Node",
 			FilterFunc: filterNodeContainerRuntimeVersion,
+		},
+		{
+			Name:       "containerd_v1_node_groups",
+			ApiVersion: "deckhouse.io/v1",
+			Kind:       "NodeGroup",
+			FilterFunc: filterNodeGroupCRIType,
 		},
 	},
 }, handleContainerdV1NodesPresent)
@@ -58,11 +70,19 @@ func filterNodeContainerRuntimeVersion(obj *unstructured.Unstructured) (go_hook.
 	return node.Status.NodeInfo.ContainerRuntimeVersion, nil
 }
 
-func handleContainerdV1NodesPresent(_ context.Context, input *go_hook.HookInput) error {
-	snaps := input.Snapshots.Get("containerd_v1_nodes")
+func filterNodeGroupCRIType(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var nodeGroup ngv1.NodeGroup
+	if err := sdk.FromUnstructured(obj, &nodeGroup); err != nil {
+		return nil, err
+	}
 
+	return nodeGroup.Spec.CRI.Type, nil
+}
+
+func handleContainerdV1NodesPresent(_ context.Context, input *go_hook.HookInput) error {
 	hasContainerdV1Nodes := false
-	for runtimeVersion, err := range sdkobjectpatch.SnapshotIter[string](snaps) {
+
+	for runtimeVersion, err := range sdkobjectpatch.SnapshotIter[string](input.Snapshots.Get("containerd_v1_nodes")) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'containerd_v1_nodes' snapshot: %w", err)
 		}
@@ -70,6 +90,25 @@ func handleContainerdV1NodesPresent(_ context.Context, input *go_hook.HookInput)
 		if isContainerdV1(runtimeVersion) {
 			hasContainerdV1Nodes = true
 			break
+		}
+	}
+
+	if !hasContainerdV1Nodes {
+		for criType, err := range sdkobjectpatch.SnapshotIter[string](input.Snapshots.Get("containerd_v1_node_groups")) {
+			if err != nil {
+				return fmt.Errorf("failed to iterate over 'containerd_v1_node_groups' snapshot: %w", err)
+			}
+
+			if criType == containerdV1CRIType {
+				hasContainerdV1Nodes = true
+				break
+			}
+		}
+	}
+
+	if !hasContainerdV1Nodes {
+		if defaultCRI, ok := input.Values.GetOk(defaultCRIValuesPath); ok && defaultCRI.String() == containerdV1CRIType {
+			hasContainerdV1Nodes = true
 		}
 	}
 
