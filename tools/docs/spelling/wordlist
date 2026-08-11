@@ -95,6 +95,7 @@ autoK
 autoK8sVersion
 autoload
 Autoloading
+AutoPatch
 AutoplaceTarget
 autoscaler
 autoscalers
@@ -891,6 +892,7 @@ longtermStorageClass
 LowNodeUtilization
 LRS
 lsblk
+lt
 LTS
 Lua
 LUN
@@ -1787,6 +1789,7 @@ ZvirtInstanceClass
 автосогласования
 агрегатор
 агрегатора
+агрегаторам
 агрегаторе
 агрегаторов
 агрегаторы
@@ -2381,6 +2384,7 @@ ZvirtInstanceClass
 перенаправление
 перенаправления
 перенаправлениям
+перенаправлениями
 перенастраиваются
 переоткрытии
 переподключиться
@@ -2453,6 +2457,7 @@ ZvirtInstanceClass
 Пререквизиты
 прилинкованным
 применились
+применилось
 применится
 применятся
 примонтировав

@@ -1,0 +1,530 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.19.0
+  name: modulepackageversions.deckhouse.io
+spec:
+  group: deckhouse.io
+  names:
+    kind: ModulePackageVersion
+    listKind: ModulePackageVersionList
+    plural: modulepackageversions
+    shortNames:
+    - mpv
+    singular: modulepackageversion
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.packageName
+      name: Package
+      type: string
+    - jsonPath: .spec.packageRepositoryName
+      name: Repository
+      type: string
+    - jsonPath: .status.conditions[?(@.type=='MetadataLoaded')].status
+      name: MetadataLoaded
+      type: string
+    - jsonPath: .status.used
+      name: Used
+      type: boolean
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    - jsonPath: .status.conditions[?(@.type=='MetadataLoaded')].lastTransitionTime
+      name: TransitionTime
+      priority: 1
+      type: date
+    - jsonPath: .status.conditions[?(@.type=='MetadataLoaded')].message
+      name: Message
+      priority: 1
+      type: string
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: ModulePackageVersion represents a version of a module package.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+
+              More info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources)
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+
+              More info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds)
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: Defines the module package version parameters.
+            properties:
+              packageName:
+                description: Name of the module package.
+                minLength: 1
+                type: string
+                x-doc-examples:
+                - sds-node-configurator
+                x-kubernetes-validations:
+                - message: packageName is immutable
+                  rule: self == oldSelf
+              packageRepositoryName:
+                description: The name of the repository containing the package.
+                minLength: 1
+                type: string
+                x-doc-examples:
+                - deckhouse
+                x-kubernetes-validations:
+                - message: packageRepositoryName is immutable
+                  rule: self == oldSelf
+              packageVersion:
+                description: Version of the module package.
+                minLength: 1
+                type: string
+                x-doc-examples:
+                - v1.0.0
+                x-kubernetes-validations:
+                - message: packageVersion is immutable
+                  rule: self == oldSelf
+            required:
+            - packageName
+            - packageRepositoryName
+            - packageVersion
+            type: object
+          status:
+            description: Status of a ModulePackageVersion.
+            properties:
+              conditions:
+                description: Conditions represent the latest available observations
+                  of the package version's state.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              observedGeneration:
+                description: |-
+                  Generation of the spec this status was computed from; a lower value means the status
+                  has not caught up with the latest spec yet.
+                format: int64
+                minimum: 0
+                type: integer
+              packageMetadata:
+                description: Metadata about the package such as description, requirements,
+                  etc.
+                properties:
+                  category:
+                    description: The category this package belongs to.
+                    type: string
+                  changelog:
+                    description: Information about changes in this version.
+                    properties:
+                      features:
+                        description: List of new features in this version.
+                        items:
+                          type: string
+                        type: array
+                      fixes:
+                        description: List of bug fixes in this version.
+                        items:
+                          type: string
+                        type: array
+                    type: object
+                  critical:
+                    description: Critical indicates whether the package is critical
+                      for the cluster.
+                    type: boolean
+                  description:
+                    description: Localized descriptions of the package.
+                    properties:
+                      en:
+                        description: English description of the package.
+                        type: string
+                      ru:
+                        description: Russian description of the package.
+                        type: string
+                    type: object
+                  disableOptions:
+                    description: Parameters of package disable protection.
+                    properties:
+                      confirmation:
+                        description: Whether confirmation is required to disable the
+                          package.
+                        type: boolean
+                      messages:
+                        description: Localized disable confirmation messages.
+                        properties:
+                          en:
+                            description: English disable confirmation message.
+                            type: string
+                          ru:
+                            description: Russian disable confirmation message.
+                            type: string
+                        type: object
+                    type: object
+                  licensing:
+                    description: Licensing information for different editions.
+                    properties:
+                      editions:
+                        additionalProperties:
+                          description: |-
+                            PackageEditionLicense is a single edition's licensing, shared by applications
+                            and modules: whether the edition is available and which bundles enable the
+                            package by default. Bundle membership is meaningful for modules; applications
+                            have no bundles and typically leave EnabledInBundles empty.
+                          properties:
+                            available:
+                              description: Whether this edition is available for use.
+                              type: boolean
+                            enabledInBundles:
+                              description: Bundles that enable the module by default
+                                in this edition.
+                              items:
+                                type: string
+                              type: array
+                          type: object
+                        description: Licensing information for different package editions.
+                        type: object
+                    type: object
+                  requirements:
+                    description: The system requirements for this package.
+                    properties:
+                      deckhouse:
+                        description: Required Deckhouse Kubernetes Platform version.
+                        properties:
+                          constraint:
+                            description: Semver constraint expression.
+                            type: string
+                        type: object
+                      kubernetes:
+                        description: Required Kubernetes version.
+                        properties:
+                          constraint:
+                            description: Semver constraint expression.
+                            type: string
+                        type: object
+                      modules:
+                        description: Required modules, partitioned into mandatory,
+                          conditional, and anyOf dependencies.
+                        properties:
+                          anyOf:
+                            description: |-
+                              AnyOf groups of alternative dependencies — at least one member of each group
+                              must be installed (and satisfy its constraint, if any) for the package to
+                              start. Groups are checker-only and add no edges to the dependency graph.
+                            items:
+                              description: |-
+                                PackageModuleGroup is a group of alternative module dependencies. At least one
+                                member must be installed (and satisfy its constraint, if any) for the package
+                                to start. The Name is required and surfaces in scheduler diagnostics; the
+                                Description is optional human-facing documentation.
+                              properties:
+                                description:
+                                  description: Human-readable description of the group's
+                                    purpose.
+                                  type: string
+                                modules:
+                                  description: Alternative module dependencies in
+                                    this group.
+                                  items:
+                                    description: |-
+                                      PackageModuleDependency is a single named module dependency with an optional
+                                      semver constraint. An empty constraint means "any version".
+                                    properties:
+                                      constraint:
+                                        description: Semver constraint expression.
+                                        type: string
+                                      name:
+                                        description: Module name.
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                    - name
+                                    type: object
+                                  type: array
+                                name:
+                                  description: Stable identifier used by the scheduler
+                                    in diagnostics.
+                                  minLength: 1
+                                  type: string
+                              required:
+                              - modules
+                              - name
+                              type: object
+                            type: array
+                          conditional:
+                            description: |-
+                              Conditional dependencies — not required to be present, but if installed must
+                              satisfy the constraint for the package to function correctly. Replaces the
+                              legacy "!optional" suffix from the v1 requirements format.
+                            items:
+                              description: |-
+                                PackageModuleDependency is a single named module dependency with an optional
+                                semver constraint. An empty constraint means "any version".
+                              properties:
+                                constraint:
+                                  description: Semver constraint expression.
+                                  type: string
+                                name:
+                                  description: Module name.
+                                  minLength: 1
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                            type: array
+                          mandatory:
+                            description: |-
+                              Mandatory dependencies — must be present (and satisfy the constraint, if any)
+                              for the package to start.
+                            items:
+                              description: |-
+                                PackageModuleDependency is a single named module dependency with an optional
+                                semver constraint. An empty constraint means "any version".
+                              properties:
+                                constraint:
+                                  description: Semver constraint expression.
+                                  type: string
+                                name:
+                                  description: Module name.
+                                  minLength: 1
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                            type: array
+                          noneOf:
+                            description: |-
+                              NoneOf groups of forbidden dependencies — no member of any group may be
+                              installed for the package to start. A member with no constraint is forbidden
+                              at any version; a member with a constraint is forbidden only at versions
+                              matching that constraint. Groups are checker-only and add no edges to the
+                              dependency graph.
+                            items:
+                              description: |-
+                                PackageModuleGroup is a group of alternative module dependencies. At least one
+                                member must be installed (and satisfy its constraint, if any) for the package
+                                to start. The Name is required and surfaces in scheduler diagnostics; the
+                                Description is optional human-facing documentation.
+                              properties:
+                                description:
+                                  description: Human-readable description of the group's
+                                    purpose.
+                                  type: string
+                                modules:
+                                  description: Alternative module dependencies in
+                                    this group.
+                                  items:
+                                    description: |-
+                                      PackageModuleDependency is a single named module dependency with an optional
+                                      semver constraint. An empty constraint means "any version".
+                                    properties:
+                                      constraint:
+                                        description: Semver constraint expression.
+                                        type: string
+                                      name:
+                                        description: Module name.
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                    - name
+                                    type: object
+                                  type: array
+                                name:
+                                  description: Stable identifier used by the scheduler
+                                    in diagnostics.
+                                  minLength: 1
+                                  type: string
+                              required:
+                              - modules
+                              - name
+                              type: object
+                            type: array
+                        type: object
+                    type: object
+                  stage:
+                    description: The development stage of the package (e.g., Experimental,
+                      Preview, General Availability, Deprecated).
+                    type: string
+                    x-doc-examples:
+                    - Experimental
+                    - Preview
+                    - General Availability
+                    - Deprecated
+                  versionCompatibilityRules:
+                    description: Version compatibility rules for upgrades and downgrades.
+                    properties:
+                      downgrade:
+                        description: Compatibility rules for downgrading from this
+                          version.
+                        properties:
+                          allowSkipMajor:
+                            description: How many major versions can be skipped.
+                            format: int32
+                            minimum: 0
+                            type: integer
+                          allowSkipMinor:
+                            description: How many minor versions can be skipped.
+                            format: int32
+                            minimum: 0
+                            type: integer
+                          allowSkipPatches:
+                            description: How many patch versions can be skipped.
+                            format: int32
+                            minimum: 0
+                            type: integer
+                          from:
+                            description: Starting version range for compatibility.
+                            type: string
+                          maxRollback:
+                            description: Maximum number of versions that can be rolled
+                              back.
+                            format: int32
+                            minimum: 0
+                            type: integer
+                          to:
+                            description: Ending version range for compatibility.
+                            type: string
+                        type: object
+                      upgrade:
+                        description: Compatibility rules for upgrading to this version.
+                        properties:
+                          allowSkipMajor:
+                            description: How many major versions can be skipped.
+                            format: int32
+                            minimum: 0
+                            type: integer
+                          allowSkipMinor:
+                            description: How many minor versions can be skipped.
+                            format: int32
+                            minimum: 0
+                            type: integer
+                          allowSkipPatches:
+                            description: How many patch versions can be skipped.
+                            format: int32
+                            minimum: 0
+                            type: integer
+                          from:
+                            description: Starting version range for compatibility.
+                            type: string
+                          maxRollback:
+                            description: Maximum number of versions that can be rolled
+                              back.
+                            format: int32
+                            minimum: 0
+                            type: integer
+                          to:
+                            description: Ending version range for compatibility.
+                            type: string
+                        type: object
+                    type: object
+                  weight:
+                    description: The weight of the package.
+                    format: int32
+                    type: integer
+                type: object
+              packageSchemas:
+                description: Schemas for validating settings and values passed to
+                  the package.
+                properties:
+                  settingsSchema:
+                    description: |-
+                      SettingsSchema is the OpenAPI v3 schema used to validate the user-supplied
+                      settings of the package. Stored as an opaque object because its contents
+                      form a recursive JSON schema that cannot be expressed structurally in a
+                      CRD; the controller validates this subtree in Go when loading package
+                      metadata.
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+                  valuesSchema:
+                    description: |-
+                      ValuesSchema is the OpenAPI v3 schema used to validate the effective
+                      values (defaults merged with settings) passed to the package's hooks and
+                      charts. Stored as an opaque object because its contents form a recursive
+                      JSON schema that cannot be expressed structurally in a CRD; the
+                      controller validates this subtree in Go when loading package metadata.
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+                type: object
+              used:
+                description: |-
+                  Whether a module uses this version. A single flag suffices because the object name
+                  embeds the module name, so at most one module can ever use it. Blocks deletion.
+                  Serialized even when false, so the Used print column reads false rather than blank.
+                type: boolean
+            type: object
+        type: object
+        x-doc-examples:
+        - apiVersion: deckhouse.io/v1alpha1
+          kind: ModulePackageVersion
+          metadata:
+            name: example
+          spec:
+            packageName: sds-node-configurator
+            packageRepositoryName: deckhouse
+            packageVersion: v1.0.0
+    served: true
+    storage: true
+    subresources:
+      status: {}

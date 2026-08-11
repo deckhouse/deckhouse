@@ -1,0 +1,105 @@
+include:
+  - '.gitlab/notify-failure.yml'
+  - '.gitlab/helpers.yml'
+
+# variables for generating docs
+.docs-pdf-daily-variables:
+  variables:
+    WERF_ENVS_FILE: ".github/ci_includes/werf_envs.yml"
+    WERF_ENV: "EE"
+    GITHUB_ACTIONS: 'foo' # check in makefile, gh compatibility
+    WERF_FINAL_IMAGES_ONLY: "false"
+    WERF_DIR: docs/documentation
+    REGISTRY_PATH: "sys/deckhouse-oss"
+    WERF_REPO: "${DECKHOUSE_REGISTRY_HOST}/${REGISTRY_PATH}"
+
+docs-pdf-daily:
+  stage: validate
+  extends:
+    - .docs-pdf-daily-variables
+    - .rules:on_schedule_docs_pdf
+    - .notify
+  interruptible: true
+  cache: []
+  dependencies: []
+  tags:
+    - vm-intteam-cloud-d8-ssdlc-runner
+  variables:
+    VAULT_AUTH_PATH: fox
+    VAULT_AUTH_ROLE: deckhouse
+    GIT_STRATEGY: clone
+    GIT_DEPTH: "1"
+    GIT_SUBMODULE_STRATEGY: none    
+    TEST_TIMEOUT: "15m"
+    DOCKER_BUILDKIT: "1"
+    WERF_LOG_TERMINAL_WIDTH: "200"
+    WERF_LOG_TIME: "true"
+    WERF_GIT_WORK_TREE_POOL_LIMIT: "10"
+    GOPROXY: "https://proxy.golang.org,direct"
+
+  id_tokens:
+    VAULT_ID_TOKEN:
+      aud: gitlab-access-aud
+  secrets:
+    DECKHOUSE_REGISTRY_HOST:
+      vault: 101ceaca-97cd-462f-aed5-070d9b9de175/registry_host/DECKHOUSE_REGISTRY_HOST@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    DECKHOUSE_REGISTRY_USER:
+      vault: 101ceaca-97cd-462f-aed5-070d9b9de175/registry-write/deckhouse-admin/login@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    DECKHOUSE_REGISTRY_PASSWORD:
+      vault: 101ceaca-97cd-462f-aed5-070d9b9de175/registry-write/deckhouse-admin/password@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    DOC_S3_BUCKET_PROD_SHORT:
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/documentation_deploy_secret/DOC_S3_BUCKET_PROD_SHORT@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    DOC_S3_ACCESS_KEY_ID_PROD:
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/documentation_deploy_secret/DOC_S3_ACCESS_KEY_ID_PROD@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    DOC_S3_SECRET_ACCESS_KEY_PROD:
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/documentation_deploy_secret/DOC_S3_SECRET_ACCESS_KEY_PROD@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    DOC_S3_EP:
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/documentation_deploy_secret/DOC_S3_EP@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    DOC_S3_REGION:
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/documentation_deploy_secret/DOC_S3_REGION@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+  before_script:
+    - !reference [.scripts, docker_config_isolation]
+    - !reference [.scripts, login_write_registry]
+    - !reference [.scripts, read_werf_version]
+    - !reference [.scripts, install_werf]
+    # custom settings in makefile
+    - |
+      mkdir -p ${CI_PROJECT_DIR}/bin
+      ln -s ${HOME}/.werf-dk/${WERF_VERSION}-dk/werf ${CI_PROJECT_DIR}/bin/werf
+  script:
+    - |
+      export DOC_VERSION="${CI_COMMIT_TAG:-latest}"
+      make docs-generate-pdf DOC_VERSION="${DOC_VERSION}"
+
+    - |
+      for lang in en ru; do
+        for guide in admin user; do
+          docker run --rm \
+            --user ${UID} \
+            -e AWS_ACCESS_KEY_ID="${DOC_S3_ACCESS_KEY_ID_PROD}" \
+            -e AWS_SECRET_ACCESS_KEY="${DOC_S3_SECRET_ACCESS_KEY_PROD}" \
+            -v "${CI_PROJECT_DIR}/pdf:/src/pdf:ro" \
+            ${CI_REGISTRY}/deckhouse/ssdlc/ci-images/tools/aws-cli:b55b0ea7 \
+            aws s3 cp \
+              "/src/pdf/deckhouse-${guide}-guide_${lang}.pdf" \
+              "s3://${DOC_S3_BUCKET_PROD_SHORT}/deckhouse-web-production/${DOC_VERSION}/docs-dkp/${lang}/pdf/deckhouse-${guide}-guide.pdf" \
+              --endpoint-url "https://${DOC_S3_EP}" \
+              --region "${DOC_S3_REGION}"
+        done
+      done

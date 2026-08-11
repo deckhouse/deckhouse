@@ -616,6 +616,46 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 				Expect(rules).To(ContainSubstring("accessiblenamespaces"))
 			})
 		})
+
+		// A cluster-wide read of `projects` would be answered by RBAC before the
+		// namespace ACL could narrow it, so it exists only where that ACL does not.
+		Context("Project visibility with multitenancy-manager enabled", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global.enabledModules", `["operator-prometheus", "operator-prometheus-crd", "multitenancy-manager"]`)
+				f.ValuesSet("global.deckhouseEdition", "EE")
+			})
+
+			It("user-authz:user should not read projects cluster-wide when the namespace ACL filters them", func() {
+				f.ValuesSet("userAuthz.enableMultiTenancy", true)
+				f.HelmRender()
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				cr := f.KubernetesGlobalResource("ClusterRole", "user-authz:user")
+				Expect(cr.Exists()).To(BeTrue())
+				Expect(cr.Field("rules").String()).NotTo(ContainSubstring(`"projects"`))
+			})
+
+			It("user-authz:user should read projects cluster-wide when nothing filters them", func() {
+				f.ValuesSet("userAuthz.enableMultiTenancy", false)
+				f.HelmRender()
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				cr := f.KubernetesGlobalResource("ClusterRole", "user-authz:user")
+				Expect(cr.Exists()).To(BeTrue())
+				Expect(cr.Field("rules").String()).To(ContainSubstring(`"projects"`))
+			})
+
+			It("user-authz:user should not read projects when multitenancy-manager is absent", func() {
+				f.ValuesSetFromYaml("global.enabledModules", `["operator-prometheus", "operator-prometheus-crd"]`)
+				f.ValuesSet("userAuthz.enableMultiTenancy", false)
+				f.HelmRender()
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				cr := f.KubernetesGlobalResource("ClusterRole", "user-authz:user")
+				Expect(cr.Exists()).To(BeTrue())
+				Expect(cr.Field("rules").String()).NotTo(ContainSubstring(`"projects"`))
+			})
+		})
 	})
 
 	Context("With CAR (incl. limitNamespaces) and not enabledMultiTenancy", func() {

@@ -30,9 +30,10 @@ const (
 
 	ApplicationAnnotationRegistrySpecChanged = "packages.deckhouse.io/registry-spec-changed"
 
-	// ApplicationAnnotationEndpoint marks an Ingress in the application chart
-	// as an application endpoint; its hosts and paths are reflected in status.urls.
-	ApplicationAnnotationEndpoint = "packages.deckhouse.io/application-endpoint"
+	// ApplicationAnnotationEndpointDescription marks an Ingress in the application
+	// chart as an application endpoint and holds its description; the hosts and
+	// paths of that Ingress are reflected in status.urls.
+	ApplicationAnnotationEndpointDescription = "packages.deckhouse.io/application-endpoint-description"
 )
 
 var (
@@ -137,7 +138,7 @@ type ApplicationStatus struct {
 	CurrentVersion *ApplicationStatusVersion `json:"currentVersion,omitempty"`
 
 	// URLs of application endpoints, collected from Ingress resources of the
-	// application chart annotated with `packages.deckhouse.io/is-application-endpoint`.
+	// application chart annotated with `packages.deckhouse.io/application-endpoint-description`.
 	// +optional
 	URLs []ApplicationStatusURL `json:"urls,omitempty"`
 
@@ -189,7 +190,7 @@ type ApplicationStatusURL struct {
 	URL string `json:"url"`
 
 	// Description of the endpoint, taken from the value of the
-	// `packages.deckhouse.io/is-application-endpoint` annotation.
+	// `packages.deckhouse.io/application-endpoint-description` annotation.
 	//
 	// Empty when the annotation value is "true".
 	// +optional

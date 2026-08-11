@@ -106,6 +106,7 @@ git:
   - .helm
   - backends
   - Makefile
+  - images/src
   stageDependencies:
     install: ['Gemfile','Gemfile.lock']
     setup: '**/*'

@@ -59,6 +59,7 @@ spec:
         app: istio-cni-node
         k8s-app: istio-cni-node
         sidecar.istio.io/inject: "false"
+        security.deckhouse.io/security-policy-exception: istio-cni-node
         {{- if (semverCompare ">= 1.25.0" $fullVersion) }}
         istio.io/dataplane-mode: none
         {{- end }}

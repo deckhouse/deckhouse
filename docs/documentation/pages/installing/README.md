@@ -676,10 +676,6 @@ For more details on installing and updating DKP in an air-gapped environment, se
 
 ### Installing from an external (third-party) registry
 
-{% alert level="warning" %}
-Available in the following editions: SE, SE+, EE.
-{% endalert %}
-
 DKP can be installed from an external container registry or via a proxy registry inside an air-gapped environment.
 
 {% alert level="warning" %}
@@ -1082,10 +1078,6 @@ If you need to install DKP with automatic updates disabled:
 If you want to disable automatic updates in an already running DKP installation (including patch updates), remove the [`releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) parameter from the `deckhouse` module configuration.
 
 ### Using a proxy server
-
-{% alert level="warning" %}
-Available in the following editions: BE, SE, SE+, EE.
-{% endalert %}
 
 {% offtopic title="Example steps for configuring a proxy server using Squid..." %}
 

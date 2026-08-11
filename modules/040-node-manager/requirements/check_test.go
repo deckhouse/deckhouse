@@ -73,3 +73,28 @@ func TestUnmetCloudConditionsRequirement(t *testing.T) {
 		require.Error(t, err)
 	})
 }
+
+func TestContainerdV1NodesPresentRequirement(t *testing.T) {
+	requirements.RemoveValue(containerdV1NodesPresentValuesKey)
+
+	t.Run("requirement is not set", func(t *testing.T) {
+		requirements.SaveValue(containerdV1NodesPresentValuesKey, true)
+		ok, err := requirements.CheckRequirement(containerdV1NodesPresentRequirementsKey, "")
+		assert.True(t, ok)
+		require.NoError(t, err)
+	})
+
+	t.Run("no containerd v1 nodes", func(t *testing.T) {
+		requirements.SaveValue(containerdV1NodesPresentValuesKey, false)
+		ok, err := requirements.CheckRequirement(containerdV1NodesPresentRequirementsKey, "true")
+		assert.True(t, ok)
+		require.NoError(t, err)
+	})
+
+	t.Run("has containerd v1 nodes", func(t *testing.T) {
+		requirements.SaveValue(containerdV1NodesPresentValuesKey, true)
+		ok, err := requirements.CheckRequirement(containerdV1NodesPresentRequirementsKey, "true")
+		assert.False(t, ok)
+		require.Error(t, err)
+	})
+}
