@@ -35,9 +35,6 @@ import (
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
-// registerer is the subset of controller-runtime's webhook.Server that this
-// package needs. Register panics on a duplicate path, so every route below
-// must stay unique.
 type registerer interface {
 	Register(path string, handler http.Handler)
 }
@@ -64,10 +61,7 @@ type moduleDependencyExtender interface {
 	CheckEnabling(name string) error
 }
 
-// RegisterAdmissionHandlers registers validation webhook handlers on the webhook
-// server built into the controller-runtime manager. The routes are part of the
-// cluster contract — they must stay in sync with the ValidatingWebhookConfiguration
-// in modules/002-deckhouse/templates/admission/validation.yaml.
+// RegisterAdmissionHandlers registers validation webhook handlers on the webhook server built-in in the controller-runtime manager
 func RegisterAdmissionHandlers(
 	reg registerer,
 	cli client.Client,

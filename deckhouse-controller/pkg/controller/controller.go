@@ -219,14 +219,8 @@ func NewDeckhouseController(
 		opts.Cache.ByObject[&v1alpha2.Module{}] = cache.ByObject{}
 	}
 
-	// The validating webhooks are served by the manager's own webhook server, so
-	// its listener has to be configured before the manager is built. The port and
-	// the certificates directory keep coming from the admission settings, because
-	// that is what the deckhouse Service and the ValidatingWebhookConfiguration
-	// point at. Certificate and key file names are left at the controller-runtime
-	// defaults (tls.crt/tls.key) — the names the admission-webhook-certs secret
-	// ships. Left unset outside the cluster (dhctl bootstrap), where no
-	// certificates are mounted and no webhook must be served.
+	// The manager's webhook server takes over addon-operator's admission server and
+	// reuses its settings. Skipped where no certificates are mounted (dhctl bootstrap).
 	admission := operator.Config().Admission
 	if admission.Enabled {
 		listenPort, err := strconv.Atoi(admission.ListenPort)
@@ -427,8 +421,7 @@ func NewDeckhouseController(
 	}
 
 	if admission.Enabled {
-		// GetWebhookServer, not the server built above: this is the call that adds
-		// it to the manager's runnables, and without it nothing gets served.
+		// GetWebhookServer, not the server above: this call adds it to the runnables.
 		validation.RegisterAdmissionHandlers(
 			runtimeManager.GetWebhookServer(),
 			runtimeManager.GetClient(),

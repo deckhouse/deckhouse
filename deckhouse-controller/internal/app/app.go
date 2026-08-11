@@ -52,13 +52,9 @@ func SetDebugUnixSocket(path string) {
 	adapp.DebugUnixSocket = path
 }
 
-// DisableAdmissionServer keeps addon-operator's own admission server down.
-// deckhouse-controller serves the validating webhooks on the webhook server
-// built into its controller-runtime manager, and both would bind the admission
-// listen port. The operator reads this flag from the global rather than from its
-// *Config, so the call has to come after NewAddonOperator has populated the
-// globals — and the *Config keeps carrying the settings the manager's webhook
-// server is configured from.
+// DisableAdmissionServer keeps addon-operator's own admission server down — the
+// controller-runtime manager serves the validating webhooks on the same port. Call
+// after NewAddonOperator, which repopulates the globals from its *Config.
 func DisableAdmissionServer() {
 	adapp.AdmissionServerEnabled = false
 }
