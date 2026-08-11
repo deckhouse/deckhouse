@@ -119,6 +119,8 @@ func start(logger *log.Logger, cfg *app.Config) func(cmd *cobra.Command, args []
 			addonoperator.WithLogger(logger.Named("addon-operator")),
 		)
 
+		app.DisableAdmissionServer()
+
 		operator.StartAPIServer()
 
 		versionFile := app.VersionFilePath

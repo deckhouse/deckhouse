@@ -35,8 +35,11 @@ import (
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
+// registerer is the subset of controller-runtime's webhook.Server that this
+// package needs. Register panics on a duplicate path, so every route below
+// must stay unique.
 type registerer interface {
-	RegisterHandler(route string, handler http.Handler)
+	Register(path string, handler http.Handler)
 }
 
 type moduleStorage interface {
@@ -61,7 +64,10 @@ type moduleDependencyExtender interface {
 	CheckEnabling(name string) error
 }
 
-// RegisterAdmissionHandlers registers validation webhook handlers for admission server built-in in addon-operator
+// RegisterAdmissionHandlers registers validation webhook handlers on the webhook
+// server built into the controller-runtime manager. The routes are part of the
+// cluster contract — they must stay in sync with the ValidatingWebhookConfiguration
+// in modules/002-deckhouse/templates/admission/validation.yaml.
 func RegisterAdmissionHandlers(
 	reg registerer,
 	cli client.Client,
@@ -75,13 +81,13 @@ func RegisterAdmissionHandlers(
 	exts extenders.IExtendersStack,
 	edition *d8edition.Edition,
 ) {
-	reg.RegisterHandler("/validate/v1/deckhouse-registry-secret", withInvalidReason(RegistrySecretHandler()))
-	reg.RegisterHandler("/validate/v1alpha1/module-configs", withInvalidReason(moduleConfigValidationHandler(cli, storage, metricStorage, mm, validator, settings, exts.GetModuleDependency(), edition)))
-	reg.RegisterHandler("/validate/v1alpha1/modules", withInvalidReason(moduleValidationHandler()))
-	reg.RegisterHandler("/validate/v1/configuration-secret", withInvalidReason(clusterConfigurationHandler(mm, cli, schemaStore)))
-	reg.RegisterHandler("/validate/v1/provider-configuration-secret", withInvalidReason(providerConfigurationHandler(schemaStore)))
-	reg.RegisterHandler("/validate/v1/static-configuration-secret", withInvalidReason(staticConfigurationHandler(schemaStore)))
-	reg.RegisterHandler("/validate/v1alpha1/update-policies", withInvalidReason(updatePolicyHandler(cli)))
-	reg.RegisterHandler("/validate/v1alpha1/deckhouse-releases", withInvalidReason(DeckhouseReleaseValidationHandler(cli, metricStorage, mm, exts)))
-	reg.RegisterHandler("/validate/v1alpha1/applications", withInvalidReason(applicationValidationHandler(cli, pm)))
+	reg.Register("/validate/v1/deckhouse-registry-secret", withInvalidReason(RegistrySecretHandler()))
+	reg.Register("/validate/v1alpha1/module-configs", withInvalidReason(moduleConfigValidationHandler(cli, storage, metricStorage, mm, validator, settings, exts.GetModuleDependency(), edition)))
+	reg.Register("/validate/v1alpha1/modules", withInvalidReason(moduleValidationHandler()))
+	reg.Register("/validate/v1/configuration-secret", withInvalidReason(clusterConfigurationHandler(mm, cli, schemaStore)))
+	reg.Register("/validate/v1/provider-configuration-secret", withInvalidReason(providerConfigurationHandler(schemaStore)))
+	reg.Register("/validate/v1/static-configuration-secret", withInvalidReason(staticConfigurationHandler(schemaStore)))
+	reg.Register("/validate/v1alpha1/update-policies", withInvalidReason(updatePolicyHandler(cli)))
+	reg.Register("/validate/v1alpha1/deckhouse-releases", withInvalidReason(DeckhouseReleaseValidationHandler(cli, metricStorage, mm, exts)))
+	reg.Register("/validate/v1alpha1/applications", withInvalidReason(applicationValidationHandler(cli, pm)))
 }

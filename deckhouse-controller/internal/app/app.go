@@ -51,3 +51,14 @@ func SetKubeClientFieldManager(name string) {
 func SetDebugUnixSocket(path string) {
 	adapp.DebugUnixSocket = path
 }
+
+// DisableAdmissionServer keeps addon-operator's own admission server down.
+// deckhouse-controller serves the validating webhooks on the webhook server
+// built into its controller-runtime manager, and both would bind the admission
+// listen port. The operator reads this flag from the global rather than from its
+// *Config, so the call has to come after NewAddonOperator has populated the
+// globals — and the *Config keeps carrying the settings the manager's webhook
+// server is configured from.
+func DisableAdmissionServer() {
+	adapp.AdmissionServerEnabled = false
+}

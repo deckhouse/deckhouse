@@ -24,6 +24,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -47,6 +48,7 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
@@ -215,6 +217,27 @@ func NewDeckhouseController(
 		opts.Cache.ByObject[&v1alpha1.ModulePackage{}] = cache.ByObject{}
 		opts.Cache.ByObject[&v1alpha1.ModulePackageVersion{}] = cache.ByObject{}
 		opts.Cache.ByObject[&v1alpha2.Module{}] = cache.ByObject{}
+	}
+
+	// The validating webhooks are served by the manager's own webhook server, so
+	// its listener has to be configured before the manager is built. The port and
+	// the certificates directory keep coming from the admission settings, because
+	// that is what the deckhouse Service and the ValidatingWebhookConfiguration
+	// point at. Certificate and key file names are left at the controller-runtime
+	// defaults (tls.crt/tls.key) — the names the admission-webhook-certs secret
+	// ships. Left unset outside the cluster (dhctl bootstrap), where no
+	// certificates are mounted and no webhook must be served.
+	admission := operator.Config().Admission
+	if admission.Enabled {
+		listenPort, err := strconv.Atoi(admission.ListenPort)
+		if err != nil {
+			return nil, fmt.Errorf("parse admission server listen port %q: %w", admission.ListenPort, err)
+		}
+
+		opts.WebhookServer = webhook.NewServer(webhook.Options{
+			Port:    listenPort,
+			CertDir: admission.CertsDir,
+		})
 	}
 
 	runtimeManager, err := controllerruntime.NewManager(operator.KubeClient().RestConfig(), opts)
@@ -403,19 +426,23 @@ func NewDeckhouseController(
 		}
 	}
 
-	validation.RegisterAdmissionHandlers(
-		operator.AdmissionServer,
-		runtimeManager.GetClient(),
-		operator.ModuleManager,
-		pkgRuntime,
-		configtools.NewValidator(operator.ModuleManager, conversionsStore),
-		loader,
-		operator.MetricStorage,
-		config.NewSchemaStore(nil),
-		settingsContainer,
-		exts,
-		edition,
-	)
+	if admission.Enabled {
+		// GetWebhookServer, not the server built above: this is the call that adds
+		// it to the manager's runnables, and without it nothing gets served.
+		validation.RegisterAdmissionHandlers(
+			runtimeManager.GetWebhookServer(),
+			runtimeManager.GetClient(),
+			operator.ModuleManager,
+			pkgRuntime,
+			configtools.NewValidator(operator.ModuleManager, conversionsStore),
+			loader,
+			operator.MetricStorage,
+			config.NewSchemaStore(nil),
+			settingsContainer,
+			exts,
+			edition,
+		)
+	}
 
 	return &DeckhouseController{
 		runtimeManager:     runtimeManager,
