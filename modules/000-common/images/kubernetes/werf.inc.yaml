@@ -111,13 +111,20 @@ shell:
   - go mod vendor
 
 {{- if eq $.SVACE_ENABLED "true" }}
-# we need stat analyse only one kube-api-server
+# we need stat analyse only kube-apiserver and kubelet
   - |
   {{- $buildContext := deepCopy $ -}}
   {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
   {{- $_ := set $buildContext "BuildCommand" `make all WHAT=cmd/kube-apiserver GOLDFLAGS="-s -w -extldflags \"-static\"" KUBE_STATIC_OVERRIDES="kubelet"` -}}
   {{- $_ := set $buildContext "ProjectName" (printf "%s/kubernetes-api-%s" $.ModuleName $version) -}}
   {{- include "image-build.build" $buildContext | indent 6 }}
+
+  - |
+  {{- $kubeletBuildContext := deepCopy $ -}}
+  {{- $_ := set $kubeletBuildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
+  {{- $_ := set $kubeletBuildContext "BuildCommand" `make all WHAT=cmd/kubelet GOLDFLAGS="-s -w -extldflags \"-static\"" KUBE_STATIC_OVERRIDES="kubelet"` -}}
+  {{- $_ := set $kubeletBuildContext "ProjectName" (printf "%s/kubelet-%s" $.ModuleName $version) -}}
+  {{- include "image-build.build" $kubeletBuildContext | indent 6 }}
 {{- end }}
 
   - make all WHAT=cmd/kube-apiserver kube-controller-manager kube-scheduler kube-proxy kubelet kubectl GOLDFLAGS="-s -w -extldflags \"-static\"" KUBE_STATIC_OVERRIDES="kubelet"
