@@ -27,6 +27,11 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
+// collectedKubeconfigCacheKey records that the admin kubeconfig is on disk, and
+// where; a rerun reads it instead of dialing a closed channel. Written before
+// ConfirmCollected: a death in between must not leave no record of the file.
+const collectedKubeconfigCacheKey = "immutable-control-plane-collected-kubeconfig"
+
 // ErrKubeconfigOutRequired stops an immutable bootstrap driven by dhctl-server:
 // the admin kubeconfig is the only way into the cluster, the bootstrap response
 // does not carry it, and the server never sets --kubeconfig-out to keep it.
@@ -115,6 +120,33 @@ func RetargetKubeconfig(_ context.Context, content []byte, server, serverName st
 	}
 
 	return out, nil
+}
+
+// SaveCollectedKubeconfig records where the admin kubeconfig the node served now
+// lives.
+func SaveCollectedKubeconfig(ctx context.Context, cache state.Cache, adminKubeconfigPath string) error {
+	if err := cache.Save(ctx, collectedKubeconfigCacheKey, []byte(adminKubeconfigPath)); err != nil {
+		return fmt.Errorf("record the collected admin kubeconfig in the state cache: %w", err)
+	}
+	return nil
+}
+
+// LoadCollectedKubeconfig returns the path SaveCollectedKubeconfig stored, or ""
+// when no attempt has collected the credentials yet.
+func LoadCollectedKubeconfig(ctx context.Context, cache state.Cache) (string, error) {
+	inCache, err := cache.InCache(ctx, collectedKubeconfigCacheKey)
+	if err != nil {
+		return "", fmt.Errorf("look up %s in the state cache: %w", collectedKubeconfigCacheKey, err)
+	}
+	if !inCache {
+		return "", nil
+	}
+
+	path, err := cache.Load(ctx, collectedKubeconfigCacheKey)
+	if err != nil {
+		return "", fmt.Errorf("load %s from the state cache: %w", collectedKubeconfigCacheKey, err)
+	}
+	return string(path), nil
 }
 
 // CompleteAdminKubeconfig pairs the document the node handed back with the

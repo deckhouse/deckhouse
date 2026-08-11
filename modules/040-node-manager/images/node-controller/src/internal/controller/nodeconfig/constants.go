@@ -101,7 +101,7 @@ const (
 
 	// platformExtensionRequestedBy names the module, not the writing component:
 	// dhctl and this controller write the same three extensions, so the field
-	// must not differ between nodes. Keep in step with dhctl/pkg/immutable/nodeconfig.go.
+	// must not differ between nodes. Keep in step with dhctl/pkg/immutable/digests.go.
 	platformExtensionRequestedBy = "node-manager"
 
 	// nerRequestedByPrefix qualifies an extension that came from a
