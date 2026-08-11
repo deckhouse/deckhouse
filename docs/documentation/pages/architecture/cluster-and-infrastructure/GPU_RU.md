@@ -46,7 +46,7 @@ description: Архитектура модуля gpu в Deckhouse Kubernetes Pla
 
 Модуль состоит из следующих компонентов:
 
-1. **gpu-controller** (Deployment) — контроллер, который реализует обработку запросов на GPU-ресурсы и выполняет admission-вебхуки для DRA-объектов. Контроллер работает на master-узлах.
+1. **gpu-controller** (Deployment) — контроллер, который реализует обработку запросов на GPU-ресурсы и реализует admission-вебхуки для DRA-объектов через механику [Validating/Mutating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/). Контроллер работает на master-узлах.
 
    Контроллер gpu-controller выполняет следующие действия:
 
@@ -104,7 +104,9 @@ description: Архитектура модуля gpu в Deckhouse Kubernetes Pla
    - авторизация запросов на получение метрик;
    - работа с кастомными ресурсами PhysicalGPU и GPUClass;
    - обновление ресурсов Node;
-   - работа с ресурсами DeviceClass и ResourceClaim.
+   - валидация ресурсов Pods, GPUClass, ResourceClaim и DeviceClass;
+   - работа с ресурсами DeviceClass, ResourceClaim и ResourceSlice;
+   - создание и контроль выполнения Job.
 
 1. **Kubelet** — регистрация в kubelet как DRA kubelet plugin.
 
@@ -112,11 +114,13 @@ description: Архитектура модуля gpu в Deckhouse Kubernetes Pla
 
 1. **Kubelet** — вызов gRPC-методов PrepareResourceClaims и UnprepareResourceClaims.
 
+1. **Kube-apiserver** — валидация ресурсов Pod, GPUClass, ResourceClaim и DeviceClass.
+
 1. **Prometheus-main** — сбор метрик с компонентов gpu-dcgm и &lt;VENDOR&gt;-adapter.
 
 ## Режим Device Plugin
 
-В режиме Device Plugin модуль работает со следующими ресурсами:
+В режиме Device Plugin модуль работает только с адаптерами NVIDIA и взаимодействует со следующими ресурсами:
 
 - NodeFeature — хранит фактическая информация об аппаратных возможностях конкретного узла;
 - NodeFeatureRule — хранит набор правил, на основе которого модуль настраивает лейблы, аннотации и тейнты для узла кластера.
@@ -183,7 +187,7 @@ description: Архитектура модуля gpu в Deckhouse Kubernetes Pla
 
    - авторизация запросов на получение метрик;
    - работа с ресурсами NodeFeature и NodeFeatureRule;
-   - обновление ресурсов Node;
+   - отслеживание и обновление ресурсов Node;
    - завершение подов, использующих GPU-ресурсы при изменении MIG-профиля.
 
 1. **Kubelet** — регистрация через Device Plugin API.

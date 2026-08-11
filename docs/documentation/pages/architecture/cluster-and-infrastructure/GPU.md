@@ -46,7 +46,7 @@ The Level 2 C4 architecture of the [`gpu`](/modules/gpu/) module in DRA mode and
 
 The module consists of the following components:
 
-1. **gpu-controller** (Deployment): A controller that processes GPU resource requests and runs admission webhooks for DRA objects. The controller runs on master nodes.
+1. **gpu-controller** (Deployment): A controller that processes GPU resource requests and runs admission webhooks for DRA objects through the [Validating/Mutating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/) mechanism. The controller runs on master nodes.
 
    The gpu-controller performs the following actions:
 
@@ -104,7 +104,9 @@ The module interacts with the following components:
    - Authorizes requests to retrieve metrics.
    - Works with PhysicalGPU and GPUClass custom resources.
    - Updates Node resources.
-   - Works with DeviceClass and ResourceClaim resources.
+   - Validates Pod, GPUClass, ResourceClaim, and DeviceClass resources.
+   - Works with DeviceClass, ResourceClaim, and ResourceSlice resources.
+   - Creates and monitors Jobs.
 
 1. **Kubelet**: Registers the module as a DRA kubelet plugin.
 
@@ -112,11 +114,13 @@ The following external components interact with the module:
 
 1. **Kubelet**: Calls the PrepareResourceClaims and UnprepareResourceClaims gRPC methods.
 
+1. **Kube-apiserver**: Validates Pod, GPUClass, ResourceClaim, and DeviceClass resources.
+
 1. **Prometheus-main**: Collects metrics from the gpu-dcgm and &lt;VENDOR&gt;-adapter components.
 
 ## Device Plugin mode
 
-In Device Plugin mode, the module works with the following resources:
+In Device Plugin mode, the module works only with NVIDIA adapters and interacts with the following resources:
 
 - NodeFeature: Stores actual information about the hardware capabilities of a specific node.
 - NodeFeatureRule: Stores a set of rules used by the module to configure labels, annotations, and taints for a cluster node.
@@ -183,7 +187,7 @@ The module interacts with the following components:
 
    - Authorizes requests to retrieve metrics.
    - Works with NodeFeature and NodeFeatureRule resources.
-   - Updates Node resources.
+   - Watches and updates Node resources.
    - Terminates pods that use GPU resources when the MIG profile changes.
 
 1. **Kubelet**: Registers the module through the Device Plugin API.
