@@ -152,7 +152,7 @@ apiVersions:
         type: string
         x-doc-deprecated: true
         description: |
-          **Deprecated.** Use [`kubernetesVersion`](https://deckhouse.io/modules/control-plane-manager/configuration.html#parameters-kubernetesversion) in the `control-plane-manager` ModuleConfig instead (`d8 k edit mc control-plane-manager`).
+          **Deprecated.** Use [`kubernetesVersion`](/modules/control-plane-manager/configuration.html#parameters-kubernetesversion) in the `control-plane-manager` ModuleConfig instead (`d8 k edit mc control-plane-manager`).
 
           When the ModuleConfig field is set, it takes precedence over this field.
           The field is optional: if omitted here and unset in ModuleConfig, Deckhouse uses the current release default.
