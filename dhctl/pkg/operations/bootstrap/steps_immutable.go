@@ -653,16 +653,26 @@ func freeLocalPort() (int, error) {
 // log lines separate the points, and one print gets lost between them.
 func (b *ClusterBootstrapper) printHowToReachTheCluster(ctx context.Context, kubeconfigPath string, bctx *bootstrapContext) {
 	logger := dhlog.FromContext(ctx)
+
+	// Tagged for the compact view: an untagged Info record is file-only on a
+	// terminal, and a line the operator has to grep the log for does not do the
+	// job this function exists for. The bashible path tags its SSH line the same
+	// way (steps_ssh.go).
 	logger.InfoContext(ctx, fmt.Sprintf("Admin kubeconfig written to %s — cluster-admin credentials, "+
-		"and on a cluster of immutable nodes the only way in.", kubeconfigPath))
-	logger.InfoContext(ctx, fmt.Sprintf("To use the cluster:  export KUBECONFIG=%s && kubectl get nodes", kubeconfigPath))
+		"and on a cluster of immutable nodes the only way in.", kubeconfigPath), dhlog.ShowInCompacted())
+	logger.InfoContext(ctx, fmt.Sprintf("To use the cluster:  export KUBECONFIG=%s && kubectl get nodes", kubeconfigPath),
+		dhlog.ShowInCompacted())
 
 	// With a bastion that address is reachable from the bastion and nowhere else,
 	// so the line above is true only inside the network. Print how to get there
 	// rather than leave the operator to guess the shape of the tunnel.
 	if line := bastionForwardLine(b.SSHProviderInitializer, bctx.masterIP, kubeconfigPath); line != "" {
-		logger.InfoContext(ctx, "The master has no public address; reach it through the bastion first:")
-		logger.InfoContext(ctx, "  "+line)
+		logger.InfoContext(ctx, "The master has no public address; reach it through the bastion first:",
+			dhlog.ShowInCompacted())
+		// ConnectionString rather than ShowInCompacted: the terminal UI pins it as
+		// a milestone and repeats it in the closing summary, which is where an
+		// operator looks for it after a long run.
+		logger.InfoContext(ctx, "  "+line, dhlog.ConnectionString())
 	}
 }
 
