@@ -19,6 +19,11 @@
 // Every sub-tree package (deckhouse, module, packages, security, cli, release,
 // extra) embeds a BasicService and adds only the segments and metadata specific
 // to it.
+//
+// BasicService can read, push and delete. Those three groups are also exposed
+// as the Reader, Pusher and Deleter interfaces (and the ReadWriter and
+// ReadDeleter compositions), so a component can be handed exactly the
+// capability it needs; BasicService implements all of them. See capabilities.go.
 package service
 
 import (

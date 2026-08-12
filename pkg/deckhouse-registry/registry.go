@@ -32,6 +32,12 @@
 // Every node exposes Path and Ref, so the same tree also serves as a path
 // builder when no registry access is needed.
 //
+// Beyond reading, a node can also push and delete — for example
+// reg.Modules().Module("stronghold").Delete(ctx, "v1.0.1") removes a published
+// version, its images and its release tag. The read, push and delete methods
+// are grouped into capability interfaces (see package service) so a caller can
+// be handed just the subset it needs.
+//
 // # Layout
 //
 // This package holds the vocabulary shared across the whole library — Edition,
@@ -47,7 +53,7 @@
 //	bundle        the repositories holding full images, and their digests
 //	release       the release-image reader, and the release channel vocabulary
 //	definition    the module.yaml and package.yaml mappings
-//	service       BasicService, the single-repository node all of them embed
+//	service       BasicService (the node all embed) and its read/push/delete capabilities
 //
 // InstallerSegment below is the only segment this package owns, because the
 // installer is the only node that is not edition-scoped.

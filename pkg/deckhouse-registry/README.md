@@ -115,7 +115,7 @@ This is the very `*module.Catalog` / `*packages.Catalog` that `reg.Modules()` / 
 
 ## Structure
 
-Every node of the tree embeds a `*BasicService` over exactly one OCI repository, and exposes `Path()`, `Ref(tag)`, `GetImage`, `GetDigest`, `GetManifest`, `GetImageConfig`, `Exists`, `ListTags` and `ListRepositories`. Because `Path` and `Ref` need no registry access, the tree doubles as a pure path builder.
+Every node of the tree embeds a `*BasicService` over exactly one OCI repository, exposing its identity (`Path()`, `Ref(tag)`), the reads (`GetImage`, `GetDigest`, `GetManifest`, `GetImageConfig`, `Exists`, `ListTags`, `ListRepositories`) and the mutations — push (`PushImage`, `PushIndex`, `TagImage`, `CopyImage`) and delete (`DeleteTag`, `DeleteByDigest`). Because `Path` and `Ref` need no registry access, the tree doubles as a pure path builder. Read, push and delete are also grouped as interfaces, so a component can be handed just the subset it needs — see [Capabilities](#capabilities).
 
 | Accessor | Type | Repository |
 |---|---|---|
@@ -233,6 +233,44 @@ Keys are lowerCamelCase at both levels — `controlPlaneManager`, `ingressNginx`
 Only the six repositories above are `bundle.Service`; the rest of the tree is a plain `BasicService` with no `Digests` at all, so a release repository or catalog cannot be asked for digests by mistake. Each bundle is constructed with its own path (`bundle.ModulesImagesDigestsPath`, `bundle.CandiImagesDigestsPath`, `bundle.RootPath`), and reading the wrong one misses rather than silently succeeding.
 
 Reading a bundle means pulling and flattening a full image, which for the Deckhouse image is hundreds of megabytes.
+
+## Capabilities
+
+A service can do three things to its repository — read it, push to it, delete from it — and each is a named interface in `service`, so a component can be handed exactly the capability it needs and nothing more.
+
+| Capability | Interface | Methods |
+|---|---|---|
+| Read | `service.Reader` | `GetImage`, `GetDigest`, `GetManifest`, `GetImageConfig`, `CheckImageExists`, `Exists`, `ListTags`, `ListRepositories` |
+| Push | `service.Pusher` | `PushImage`, `PushIndex`, `TagImage`, `CopyImage` |
+| Delete | `service.Deleter` | `DeleteTag`, `DeleteByDigest` |
+
+All three embed `service.Repository` — the identity a capability is "of": `Name`, `Path`, `Ref`, `Entry`. It deliberately omits `Client` and `Logger`, so a narrowed view cannot be widened back into full registry access through the underlying client.
+
+`*BasicService` implements all three, so every node the tree returns satisfies any of them without wrapping. Narrowing happens where you hand the service out — declare the parameter as the capability you allow:
+
+```go
+// This helper can only delete: it can neither read the repository nor push to it.
+func purge(ctx context.Context, d service.Deleter, tag string) error {
+	return d.DeleteTag(ctx, tag)
+}
+
+purge(ctx, reg.Modules().Module("stronghold"), "v1.0.1")  // the node narrows to Deleter
+```
+
+Compose wider sets by embedding: `service.ReadWriter` (read + push) and `service.ReadDeleter` (read + delete) are provided, and a caller can declare its own combination the same way. The tree itself is not restricted — its nodes stay full-featured, and limiting is a choice made at the call boundary.
+
+### Deleting a module or package version
+
+`Delete` builds on those primitives to remove one published version wholesale. It reads the bundle's `images_digests.json`, deletes every image it lists **by digest**, then the matching release image (`modules/<m>/release:<v>`, or `packages/<p>/version:<v>` for a package), and last the bundle tag itself:
+
+```go
+err := reg.Modules().Module("stronghold").Delete(ctx, "v1.0.1")
+err := reg.Packages().Package("elma").Delete(ctx, "v1.0.1")
+```
+
+The order is deliberate. The bundle tag is what the image list is read from, so it is removed last: if a run is interrupted the tag is still there, and re-running re-reads the same list and finishes the job. For that reason `Delete` treats an image or tag that is already gone as success — it is safe to re-run — but stops before touching the tags when an image cannot be deleted for any other reason, leaving the bundle tag as the record to retry from.
+
+Only the given version is removed. The catalog entry (`modules:<m>`) and the channel tags that point at versions are left alone.
 
 ## Errors
 
