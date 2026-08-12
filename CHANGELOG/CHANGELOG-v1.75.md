@@ -405,9 +405,11 @@
     All ingress-nginx controller pods of the 1.12 version will be restarted.
  - **[ingress-nginx]** The real-ip-cidr patches are updated to use correct nginx variables. [#17402](https://github.com/deckhouse/deckhouse/pull/17402)
     All ingress-nginx controllers' pods will be restarted.
+ - **[istio]** Add missing tools to proxyv2 images so the application-aware proxy termination hook works correctly. [#22031](https://github.com/deckhouse/deckhouse/pull/22031)
  - **[istio]** Correction  in Kiali of an insignificant error [#16880](https://github.com/deckhouse/deckhouse/pull/16880)
  - **[istio]** Correction of an useless error in the Istio CNI workflow [#17787](https://github.com/deckhouse/deckhouse/pull/17787)
  - **[istio]** Fix CVE for Istio version 1.21 and 1.25 [#17298](https://github.com/deckhouse/deckhouse/pull/17298)
+ - **[istio]** Fix graceful draining of established HTTP connections when application pods terminate. [#22064](https://github.com/deckhouse/deckhouse/pull/22064)
  - **[istio]** Fixed indent in ztunnel daemonset template [#18256](https://github.com/deckhouse/deckhouse/pull/18256)
  - **[istio]** Fixing the list of requests from istiod to gateway API [#18056](https://github.com/deckhouse/deckhouse/pull/18056)
  - **[istio]** Implement graceful metadata secret renewal for multiclusters. [#20207](https://github.com/deckhouse/deckhouse/pull/20207)
