@@ -30,21 +30,6 @@ func ListenAddress() string {
 	return adapp.ListenAddress
 }
 
-// AdmissionServerEnabled reports whether the validating webhooks must be served.
-func AdmissionServerEnabled() bool {
-	return adapp.AdmissionServerEnabled
-}
-
-// AdmissionServerListenPort is the port the validating webhooks are served on.
-func AdmissionServerListenPort() string {
-	return adapp.AdmissionServerListenPort
-}
-
-// AdmissionServerCertsDir is the directory with the webhook server's tls certificates.
-func AdmissionServerCertsDir() string {
-	return adapp.AdmissionServerCertsDir
-}
-
 // StrictModeEnabled reports whether a missing values.yaml is a fatal error.
 func StrictModeEnabled() bool {
 	return adapp.StrictModeEnabled
