@@ -263,7 +263,7 @@ spec:
               lifecycle:
                 preStop:
                   exec:
-                    command: ["/bin/sh", "-c", "curl -X POST localhost:15000/drain_listeners?inboundonly; while [ $(ss -Htlp state all | grep -vE '(envoy|pilot-agent|TIME-WAIT)' | wc -l | xargs ) -ne 0 ]; do sleep 1; done"]
+                    command: ["/bin/sh", "-c", "curl -X POST 'localhost:15000/drain_listeners?inboundonly&graceful&skip_exit'; while [ $(ss -Htlp state all | grep -vE '(envoy|pilot-agent|TIME-WAIT)' | wc -l | xargs ) -ne 0 ]; do sleep 1; done"]
       neverInjectSelector:
       - matchExpressions:
         - key: job-name
