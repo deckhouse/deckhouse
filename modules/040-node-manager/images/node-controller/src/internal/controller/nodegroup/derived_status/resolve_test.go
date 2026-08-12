@@ -105,9 +105,10 @@ func TestRunCloudChecks_UnpublishedAPIVersionIsAValidationError(t *testing.T) {
 		},
 	}
 
-	check, err := newTestService(t).runCloudChecks(t.Context(), ng, CloudProviderRegistration{InstanceClassKind: "YandexInstanceClass"})
+	check := Validate(ng, Snapshot{
+		Provider: CloudProviderRegistration{InstanceClassKind: "YandexInstanceClass"},
+	})
 
-	require.NoError(t, err)
 	assert.Contains(t, check.Error, "has not published instanceClassAPIVersion")
 	assert.False(t, check.Processed)
 }

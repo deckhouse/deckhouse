@@ -28,8 +28,6 @@ import (
 	sigsyaml "sigs.k8s.io/yaml"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
-	"github.com/deckhouse/node-controller/internal/capacity"
-	nodecommon "github.com/deckhouse/node-controller/internal/common"
 )
 
 const (
@@ -41,77 +39,26 @@ const (
 )
 
 func (s *Service) ResolveNodeGroup(ctx context.Context, ng *v1.NodeGroup, rawSpec map[string]interface{}) (ResolvedNodeGroup, string, error) {
-	result, check, err := s.ComputeWithCloudChecks(ctx, ng)
+	snap, err := s.BuildSnapshot(ctx, ng)
 	if err != nil {
 		return ResolvedNodeGroup{}, "", err
 	}
+	result, err := Derive(ctx, ng, snap)
+	if err != nil {
+		return ResolvedNodeGroup{}, "", err
+	}
+	check := Validate(ng, snap)
 
 	in := ResolveInput{
 		Name:            ng.Name,
 		ManualRolloutID: ng.GetAnnotations()[manualRolloutIDAnnotation],
 		NodeType:        ng.Spec.NodeType,
 		RawSpec:         rawSpec,
+		Static:          snap.StaticConfig,
 		CloudProcessed:  check.Processed,
-	}
-	if ng.Spec.NodeType == v1.NodeTypeStatic {
-		in.Static = s.readStatic(ctx)
 	}
 
 	return ResolveNodeGroup(in, result), check.Error, nil
-}
-
-func (s *Service) runCloudChecks(ctx context.Context, ng *v1.NodeGroup, reg CloudProviderRegistration) (CloudCheckResult, error) {
-	kindInUse := reg.InstanceClassKind
-
-	in := CloudCheckInput{
-		NodeType:  ng.Spec.NodeType,
-		KindInUse: kindInUse,
-	}
-	if ng.Spec.CloudInstances != nil {
-		in.ClassRefKind = ng.Spec.CloudInstances.ClassReference.Kind
-		in.ClassRefName = ng.Spec.CloudInstances.ClassReference.Name
-		in.MinPerZone = ng.Spec.CloudInstances.MinPerZone
-		in.MaxPerZone = ng.Spec.CloudInstances.MaxPerZone
-		in.SpecZones = ng.Spec.CloudInstances.Zones
-	}
-
-	if in.NodeType == v1.NodeTypeCloudEphemeral && kindInUse != "" {
-		// The provider names a kind but no version to read it at. Reporting it as a validation
-		// error is what every consumer already handles: rendering is skipped, and the bashible
-		// context keeps the entry it published last instead of dropping the cloud fields.
-		version := reg.InstanceClassAPIVersion
-		if version == "" {
-			return CloudCheckResult{Error: fmt.Sprintf(
-				"Cloud provider has not published %s yet. The %s cannot be read until it does.",
-				nodecommon.InstanceClassAPIVersionKey, kindInUse)}, nil
-		}
-
-		// A failed List must not reach the checks: an empty name set reads as "instance class
-		// not found", which marks the NodeGroup invalid and stops its MachineDeployments from
-		// being rendered. Surface the error so the reconcile retries instead.
-		names, err := s.readInstanceClassNames(ctx, version, kindInUse)
-		if err != nil {
-			return CloudCheckResult{}, err
-		}
-		in.KnownClassNames = names
-		in.DefaultZones = s.readDefaultZones(ctx, reg)
-		if in.MinPerZone == 0 && in.MaxPerZone > 0 &&
-			in.ClassRefKind == kindInUse && containsString(in.KnownClassNames, in.ClassRefName) {
-			in.CapacityErr = s.capacityError(ctx, version, in.ClassRefKind, in.ClassRefName)
-		}
-	}
-
-	return RunCloudChecks(in), nil
-}
-
-func (s *Service) capacityError(ctx context.Context, version, kind, name string) error {
-	spec, err := s.readInstanceClassSpec(ctx, version, kind, name)
-	if err != nil || spec == nil {
-		return err
-	}
-	catalog := s.readInstanceTypesCatalog(ctx)
-	_, err = capacity.CalculateNodeTemplateCapacity(kind, spec, catalog)
-	return err
 }
 
 func (s *Service) readInstanceClassNames(ctx context.Context, version, kind string) ([]string, error) {
