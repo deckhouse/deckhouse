@@ -1546,6 +1546,10 @@ entries:
                 en: Runtime-audit-engine module
                 ru: Модуль runtime-audit-engine
               url: /architecture/security/runtime-audit-engine.html
+            - title:
+                en: Secrets-store-integration module
+                ru: Модуль secrets-store-integration
+              url: /architecture/security/secrets-store-integration.html
         - title:
             en: Network subsystem
             ru: Подсистема Network
