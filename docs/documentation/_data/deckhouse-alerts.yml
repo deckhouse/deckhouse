@@ -2933,6 +2933,36 @@ alerts:
         Prometheus can't scrape terraform-state-exporter.
       severity: "8"
       markupFormat: markdown
+    - name: D8UserAuthnIDTokenTTLTooLong
+      sourceFile: modules/150-user-authn/monitoring/prometheus-rules/dex-deprecation.yaml
+      moduleUrl: 150-user-authn
+      module: user-authn
+      edition: ce
+      description: |
+        The ModuleConfig `user-authn` sets `idTokenTTL: {{ $labels.id_token_ttl }}`.
+
+        Dex is configured with `expiry.signingKeys: 6h`: every 6 hours it rotates the key used to sign ID tokens and keeps previous keys only while tokens signed with them can still be valid.
+
+        `idTokenTTL` maps to Dex `expiry.idTokens`. If that lifetime is greater than or equal to the signing-key rotation period (`6h`), every rotation must retain an extra previous key until all tokens from that key expire. Over time the set of retained signing keys grows without bound and Dex persists that growing key material.
+
+        That is why `idTokenTTL` must be strictly less than `6h`. Lower it, for example:
+
+        ```yaml
+        apiVersion: deckhouse.io/v1alpha1
+        kind: ModuleConfig
+        metadata:
+          name: user-authn
+        spec:
+          version: 2
+          settings:
+            idTokenTTL: 1h
+        ```
+
+        New ModuleConfig values with `idTokenTTL >= 6h` are rejected by OpenAPI validation; this alert covers clusters that still have a long TTL from before the restriction was added.
+      summary: |
+        user-authn idTokenTTL is {{ $labels.id_token_ttl }}, which is too long.
+      severity: "6"
+      markupFormat: markdown
     - name: D8UserAuthzLegacyRBACv2CustomRoleFound
       sourceFile: modules/140-user-authz/monitoring/prometheus-rules/legacy-rbacv2-custom-roles.yaml
       moduleUrl: 140-user-authz

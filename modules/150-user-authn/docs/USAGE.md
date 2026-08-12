@@ -548,6 +548,8 @@ spec:
 
 Password reset, 2FA reset, and lock/unlock operations are performed via the [UserOperation](cr.html#useroperation) resource. The `initiatorType` field indicates who initiated the operation: an administrator (`admin`), the system (`system`), or the user (`self`).
 
+> **Caution.** Do not change `User.spec.password` after the User is created (`kubectl edit` / direct patch). That field is immutable and does not update Dex credentials. Always reset passwords via UserOperation (or `d8 iam user reset-password`).
+
 #### Administrative operations
 
 Use the `d8 iam user` commands for administrative actions on local users. They create a UserOperation resource with `initiatorType: admin`, wait for the operation to complete, and print the result.
