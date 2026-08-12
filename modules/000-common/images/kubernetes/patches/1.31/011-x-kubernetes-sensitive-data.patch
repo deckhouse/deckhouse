@@ -1,5 +1,5 @@
 diff --git a/pkg/controlplane/apiserver/apiextensions.go b/pkg/controlplane/apiserver/apiextensions.go
-index 1a0b8910c29..77439dc00e1 100644
+index 1a0b8910..77439dc0 100644
 --- a/pkg/controlplane/apiserver/apiextensions.go
 +++ b/pkg/controlplane/apiserver/apiextensions.go
 @@ -20,10 +20,13 @@ import (
@@ -57,7 +57,7 @@ index 1a0b8910c29..77439dc00e1 100644
 +	return nil
 +}
 diff --git a/pkg/generated/openapi/zz_generated.openapi.go b/pkg/generated/openapi/zz_generated.openapi.go
-index eed6070f08a..c84c8521668 100644
+index eed6070f..c84c8521 100644
 --- a/pkg/generated/openapi/zz_generated.openapi.go
 +++ b/pkg/generated/openapi/zz_generated.openapi.go
 @@ -51797,6 +51797,13 @@ func schema_pkg_apis_apiextensions_v1_JSONSchemaProps(ref common.ReferenceCallba
@@ -89,7 +89,7 @@ index eed6070f08a..c84c8521668 100644
  			},
  		},
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/types_jsonschema.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/types_jsonschema.go
-index 61efeae69ca..30b55c8ab95 100644
+index 61efeae6..30b55c8a 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/types_jsonschema.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/types_jsonschema.go
 @@ -149,6 +149,13 @@ type JSONSchemaProps struct {
@@ -107,7 +107,7 @@ index 61efeae69ca..30b55c8ab95 100644
  
  // ValidationRules describes a list of validation rules written in the CEL expression language.
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/generated.pb.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/generated.pb.go
-index 8e081e4b1c5..19684fb79a4 100644
+index 8e081e4b..19684fb7 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/generated.pb.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/generated.pb.go
 @@ -843,205 +843,207 @@ func init() {
@@ -578,7 +578,7 @@ index 8e081e4b1c5..19684fb79a4 100644
  			iNdEx = preIndex
  			skippy, err := skipGenerated(dAtA[iNdEx:])
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/generated.proto b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/generated.proto
-index 1bbd0ce13e1..9058e5333c1 100644
+index 1bbd0ce1..9058e533 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/generated.proto
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/generated.proto
 @@ -578,6 +578,13 @@ message JSONSchemaProps {
@@ -596,7 +596,7 @@ index 1bbd0ce13e1..9058e5333c1 100644
  
  // JSONSchemaPropsOrArray represents a value that can either be a JSONSchemaProps
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/types_jsonschema.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/types_jsonschema.go
-index 197bd1b7a88..cdcaaf84c5c 100644
+index 197bd1b7..cdcaaf84 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/types_jsonschema.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/types_jsonschema.go
 @@ -194,6 +194,13 @@ type JSONSchemaProps struct {
@@ -614,7 +614,7 @@ index 197bd1b7a88..cdcaaf84c5c 100644
  
  // ValidationRules describes a list of validation rules written in the CEL expression language.
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/zz_generated.conversion.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/zz_generated.conversion.go
-index bb1d7e01429..7fa45006e09 100644
+index bb1d7e01..7fa45006 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/zz_generated.conversion.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/zz_generated.conversion.go
 @@ -912,6 +912,7 @@ func autoConvert_v1_JSONSchemaProps_To_apiextensions_JSONSchemaProps(in *JSONSch
@@ -634,7 +634,7 @@ index bb1d7e01429..7fa45006e09 100644
  }
  
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/generated.pb.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/generated.pb.go
-index 32e58324071..8a99b46fe75 100644
+index 32e58324..8a99b46f 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/generated.pb.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/generated.pb.go
 @@ -814,208 +814,210 @@ func init() {
@@ -1111,7 +1111,7 @@ index 32e58324071..8a99b46fe75 100644
  			iNdEx = preIndex
  			skippy, err := skipGenerated(dAtA[iNdEx:])
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/generated.proto b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/generated.proto
-index f9e5600345a..df40cb3775b 100644
+index f9e56003..df40cb37 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/generated.proto
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/generated.proto
 @@ -639,6 +639,13 @@ message JSONSchemaProps {
@@ -1129,7 +1129,7 @@ index f9e5600345a..df40cb3775b 100644
  
  // JSONSchemaPropsOrArray represents a value that can either be a JSONSchemaProps
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/types_jsonschema.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/types_jsonschema.go
-index 3ed584dd9de..b723c134253 100644
+index 3ed584dd..b723c134 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/types_jsonschema.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/types_jsonschema.go
 @@ -194,6 +194,13 @@ type JSONSchemaProps struct {
@@ -1147,7 +1147,7 @@ index 3ed584dd9de..b723c134253 100644
  
  // ValidationRules describes a list of validation rules written in the CEL expression language.
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/zz_generated.conversion.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/zz_generated.conversion.go
-index d59274e8da6..f964ae93fe3 100644
+index d59274e8..f964ae93 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/zz_generated.conversion.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/zz_generated.conversion.go
 @@ -961,6 +961,7 @@ func autoConvert_v1beta1_JSONSchemaProps_To_apiextensions_JSONSchemaProps(in *JS
@@ -1168,7 +1168,7 @@ index d59274e8da6..f964ae93fe3 100644
  
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/validation/sensitive_data_validation_test.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/validation/sensitive_data_validation_test.go
 new file mode 100644
-index 00000000000..52e3e6830f1
+index 00000000..52e3e683
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/validation/sensitive_data_validation_test.go
 @@ -0,0 +1,446 @@
@@ -1619,7 +1619,7 @@ index 00000000000..52e3e6830f1
 +	}
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/validation/validation.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/validation/validation.go
-index fa3a1cbe917..40b263f2ba8 100644
+index fa3a1cbe..40b263f2 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/validation/validation.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/validation/validation.go
 @@ -36,6 +36,7 @@ import (
@@ -1665,18 +1665,18 @@ index fa3a1cbe917..40b263f2ba8 100644
  }
  
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go
-index acf69b66aab..dbf912f65f8 100644
+index ca9d7c5a..f3ca31e5 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go
-@@ -46,6 +46,7 @@ import (
+@@ -47,6 +47,7 @@ import (
  	"k8s.io/apiserver/pkg/registry/rest"
  	genericapiserver "k8s.io/apiserver/pkg/server"
  	serverstorage "k8s.io/apiserver/pkg/server/storage"
 +	storagevalue "k8s.io/apiserver/pkg/storage/value"
  	"k8s.io/apiserver/pkg/util/webhook"
+ 	"k8s.io/klog/v2"
  )
- 
-@@ -85,6 +86,11 @@ type ExtraConfig struct {
+@@ -87,6 +88,11 @@ type ExtraConfig struct {
  	ServiceResolver webhook.ServiceResolver
  	// AuthResolverWrapper is used in CR webhook converters
  	AuthResolverWrapper webhook.AuthenticationInfoResolverWrapper
@@ -1688,7 +1688,7 @@ index acf69b66aab..dbf912f65f8 100644
  }
  
  type Config struct {
-@@ -197,6 +203,7 @@ func (c completedConfig) New(delegationTarget genericapiserver.DelegationTarget)
+@@ -199,6 +205,7 @@ func (c completedConfig) New(delegationTarget genericapiserver.DelegationTarget)
  		time.Duration(c.GenericConfig.MinRequestTimeout)*time.Second,
  		apiGroupInfo.StaticOpenAPISpec,
  		c.GenericConfig.MaxRequestBodyBytes,
@@ -1698,7 +1698,7 @@ index acf69b66aab..dbf912f65f8 100644
  		return nil, err
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/audit_sensitive.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/audit_sensitive.go
 new file mode 100644
-index 00000000000..883660f5e07
+index 00000000..883660f5
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/audit_sensitive.go
 @@ -0,0 +1,225 @@
@@ -1929,7 +1929,7 @@ index 00000000000..883660f5e07
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/audit_sensitive_test.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/audit_sensitive_test.go
 new file mode 100644
-index 00000000000..90094074c07
+index 00000000..90094074
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/audit_sensitive_test.go
 @@ -0,0 +1,432 @@
@@ -2366,7 +2366,7 @@ index 00000000000..90094074c07
 +	}
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
-index e0440f7a185..3e94126dd81 100644
+index 0836f606..9d6d4c3c 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
 @@ -17,6 +17,7 @@ limitations under the License.
@@ -2401,19 +2401,19 @@ index e0440f7a185..3e94126dd81 100644
  	"k8s.io/apiserver/pkg/authorization/authorizer"
  	"k8s.io/apiserver/pkg/endpoints/handlers"
  	"k8s.io/apiserver/pkg/endpoints/handlers/responsewriters"
-@@ -71,6 +75,8 @@ import (
- 	apirequest "k8s.io/apiserver/pkg/endpoints/request"
+@@ -72,6 +76,8 @@ import (
  	"k8s.io/apiserver/pkg/registry/generic"
+ 	"k8s.io/apiserver/pkg/registry/generic/scopefilter"
  	genericfilters "k8s.io/apiserver/pkg/server/filters"
 +	storagevalue "k8s.io/apiserver/pkg/storage/value"
 +	utilfeature "k8s.io/apiserver/pkg/util/feature"
  	"k8s.io/apiserver/pkg/util/webhook"
  	"k8s.io/apiserver/pkg/warning"
  	"k8s.io/client-go/scale"
-@@ -125,6 +131,10 @@ type crdHandler struct {
- 	// The limit on the request size that would be accepted and decoded in a write request
- 	// 0 means no limit.
- 	maxRequestBodyBytes int64
+@@ -134,6 +140,10 @@ type crdHandler struct {
+ 	// construction, by apiserver.go from a loopback REST config; nil (no
+ 	// loopback config) leaves every CRD at vanilla behavior.
+ 	scopeResolvers *scopefilter.Resolvers
 +
 +	// sensitiveRegistrar registers CRD resources with sensitive fields for encryption at rest.
 +	// nil when encryption is not configured or CRDSensitiveData feature gate is disabled.
@@ -2421,7 +2421,7 @@ index e0440f7a185..3e94126dd81 100644
  }
  
  // crdInfo stores enough information to serve the storage for the custom resource
-@@ -155,6 +165,12 @@ type crdInfo struct {
+@@ -164,6 +174,12 @@ type crdInfo struct {
  	// storageVersion is the CRD version used when storing the object in etcd.
  	storageVersion string
  
@@ -2434,7 +2434,7 @@ index e0440f7a185..3e94126dd81 100644
  	waitGroup *utilwaitgroup.SafeWaitGroup
  }
  
-@@ -176,7 +192,9 @@ func NewCustomResourceDefinitionHandler(
+@@ -185,7 +201,9 @@ func NewCustomResourceDefinitionHandler(
  	requestTimeout time.Duration,
  	minRequestTimeout time.Duration,
  	staticOpenAPISpec map[string]*spec.Schema,
@@ -2445,7 +2445,7 @@ index e0440f7a185..3e94126dd81 100644
  	ret := &crdHandler{
  		versionDiscoveryHandler: versionDiscoveryHandler,
  		groupDiscoveryHandler:   groupDiscoveryHandler,
-@@ -192,6 +210,7 @@ func NewCustomResourceDefinitionHandler(
+@@ -201,6 +219,7 @@ func NewCustomResourceDefinitionHandler(
  		minRequestTimeout:       minRequestTimeout,
  		staticOpenAPISpec:       staticOpenAPISpec,
  		maxRequestBodyBytes:     maxRequestBodyBytes,
@@ -2453,7 +2453,7 @@ index e0440f7a185..3e94126dd81 100644
  	}
  	crdInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
  		AddFunc:    ret.createCustomResourceDefinition,
-@@ -310,6 +329,16 @@ func (r *crdHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+@@ -319,6 +338,16 @@ func (r *crdHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
  		return
  	}
  
@@ -2470,7 +2470,7 @@ index e0440f7a185..3e94126dd81 100644
  	deprecated := crdInfo.deprecated[requestInfo.APIVersion]
  	for _, w := range crdInfo.warnings[requestInfo.APIVersion] {
  		warning.AddWarning(req.Context(), "", w)
-@@ -361,14 +390,35 @@ func (r *crdHandler) serveResource(w http.ResponseWriter, req *http.Request, req
+@@ -370,14 +399,35 @@ func (r *crdHandler) serveResource(w http.ResponseWriter, req *http.Request, req
  	requestScope := crdInfo.requestScopes[requestInfo.APIVersion]
  	storage := crdInfo.storages[requestInfo.APIVersion].CustomResource
  
@@ -2506,7 +2506,7 @@ index e0440f7a185..3e94126dd81 100644
  		return handlers.ListResource(storage, storage, requestScope, forceWatch, r.minRequestTimeout)
  	case "create":
  		// we want to track recently created CRDs so that in HA environments we don't have server A allow a create and server B
-@@ -384,10 +434,23 @@ func (r *crdHandler) serveResource(w http.ResponseWriter, req *http.Request, req
+@@ -393,10 +443,23 @@ func (r *crdHandler) serveResource(w http.ResponseWriter, req *http.Request, req
  			responsewriters.ErrorNegotiated(err, Codecs, schema.GroupVersion{Group: requestInfo.APIGroup, Version: requestInfo.APIVersion}, w, req)
  			return nil
  		}
@@ -2530,7 +2530,7 @@ index e0440f7a185..3e94126dd81 100644
  		return handlers.PatchResource(storage, requestScope, r.admission, supportedTypes)
  	case "delete":
  		allowsOptions := true
-@@ -404,6 +467,37 @@ func (r *crdHandler) serveResource(w http.ResponseWriter, req *http.Request, req
+@@ -413,6 +476,37 @@ func (r *crdHandler) serveResource(w http.ResponseWriter, req *http.Request, req
  	}
  }
  
@@ -2568,7 +2568,7 @@ index e0440f7a185..3e94126dd81 100644
  func (r *crdHandler) serveStatus(w http.ResponseWriter, req *http.Request, requestInfo *apirequest.RequestInfo, crdInfo *crdInfo, terminating bool, supportedTypes []string) http.HandlerFunc {
  	requestScope := crdInfo.statusRequestScopes[requestInfo.APIVersion]
  	storage := crdInfo.storages[requestInfo.APIVersion].Status
-@@ -508,6 +602,15 @@ func (r *crdHandler) updateCustomResourceDefinition(oldObj, newObj interface{})
+@@ -517,6 +611,15 @@ func (r *crdHandler) updateCustomResourceDefinition(oldObj, newObj interface{})
  func (r *crdHandler) removeStorage_locked(uid types.UID) {
  	storageMap := r.customStorage.Load().(crdStorageMap)
  	if oldInfo, ok := storageMap[uid]; ok {
@@ -2584,7 +2584,7 @@ index e0440f7a185..3e94126dd81 100644
  		// Copy because we cannot write to storageMap without a race
  		// as it is used without locking elsewhere.
  		storageMap2 := storageMap.clone()
-@@ -545,6 +648,14 @@ func (r *crdHandler) removeDeadStorage() {
+@@ -554,6 +657,14 @@ func (r *crdHandler) removeDeadStorage() {
  	for uid, crdInfo := range storageMap {
  		if _, ok := storageMap2[uid]; !ok {
  			klog.V(4).Infof("Removing dead CRD storage for %s/%s", crdInfo.spec.Group, crdInfo.spec.Names.Kind)
@@ -2599,7 +2599,7 @@ index e0440f7a185..3e94126dd81 100644
  			go r.tearDown(crdInfo)
  		}
  	}
-@@ -581,6 +692,14 @@ func (r *crdHandler) destroy() {
+@@ -595,6 +706,14 @@ func (r *crdHandler) destroy() {
  
  	storageMap := r.customStorage.Load().(crdStorageMap)
  	for _, crdInfo := range storageMap {
@@ -2614,7 +2614,7 @@ index e0440f7a185..3e94126dd81 100644
  		for _, storage := range crdInfo.storages {
  			// DestroyFunc have to be implemented in idempotent way,
  			// so the potential race with r.tearDown() (being called
-@@ -673,6 +792,17 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
+@@ -687,6 +806,17 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
  		structuralSchemas[v.Name] = s
  	}
  
@@ -2632,7 +2632,7 @@ index e0440f7a185..3e94126dd81 100644
  	openAPIModels, err := buildOpenAPIModelsForApply(r.staticOpenAPISpec, crd)
  	if err != nil {
  		utilruntime.HandleError(fmt.Errorf("error building openapi models for %s: %v", crd.Name, err))
-@@ -1021,9 +1151,20 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
+@@ -1076,9 +1206,20 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
  		deprecated:          deprecated,
  		warnings:            warnings,
  		storageVersion:      storageVersion,
@@ -2654,7 +2654,7 @@ index e0440f7a185..3e94126dd81 100644
  	// as it is used without locking elsewhere.
  	storageMap2 := storageMap.clone()
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler_test.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler_test.go
-index 63919e60e77..5b797aa50e2 100644
+index 63919e60..5b797aa5 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler_test.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler_test.go
 @@ -509,7 +509,9 @@ func testHandlerConversion(t *testing.T, enableWatchCache bool) {
@@ -2670,7 +2670,7 @@ index 63919e60e77..5b797aa50e2 100644
  	}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_access.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_access.go
 new file mode 100644
-index 00000000000..617d6e4c9f0
+index 00000000..617d6e4c
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_access.go
 @@ -0,0 +1,129 @@
@@ -2805,7 +2805,7 @@ index 00000000000..617d6e4c9f0
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_access_test.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_access_test.go
 new file mode 100644
-index 00000000000..beadae0d539
+index 00000000..beadae0d
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_access_test.go
 @@ -0,0 +1,105 @@
@@ -2916,7 +2916,7 @@ index 00000000000..beadae0d539
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware.go
 new file mode 100644
-index 00000000000..b0f970d9a49
+index 00000000..b0f970d9
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware.go
 @@ -0,0 +1,180 @@
@@ -3102,7 +3102,7 @@ index 00000000000..b0f970d9a49
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware_test.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware_test.go
 new file mode 100644
-index 00000000000..71b57d26ea0
+index 00000000..71b57d26
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware_test.go
 @@ -0,0 +1,556 @@
@@ -3664,7 +3664,7 @@ index 00000000000..71b57d26ea0
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_unmask.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_unmask.go
 new file mode 100644
-index 00000000000..1394310e406
+index 00000000..1394310e
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_unmask.go
 @@ -0,0 +1,128 @@
@@ -3798,7 +3798,7 @@ index 00000000000..1394310e406
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_unmask_test.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_unmask_test.go
 new file mode 100644
-index 00000000000..89b482d8bd7
+index 00000000..89b482d8
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_unmask_test.go
 @@ -0,0 +1,43 @@
@@ -3846,7 +3846,7 @@ index 00000000000..89b482d8bd7
 +	}
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/convert.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/convert.go
-index 78350c135fc..01c1f3bfd3f 100644
+index 78350c13..01c1f3bf 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/convert.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/convert.go
 @@ -272,6 +272,7 @@ func newExtensions(s *apiextensions.JSONSchemaProps) (*Extensions, error) {
@@ -3858,7 +3858,7 @@ index 78350c135fc..01c1f3bfd3f 100644
  
  	if s.XPreserveUnknownFields != nil {
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/kubeopenapi.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/kubeopenapi.go
-index df78ba77e61..56e0c94ca95 100644
+index df78ba77..56e0c94c 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/kubeopenapi.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/kubeopenapi.go
 @@ -87,6 +87,9 @@ func (x *Extensions) toKubeOpenAPI(ret *spec.Schema) {
@@ -3873,7 +3873,7 @@ index df78ba77e61..56e0c94ca95 100644
  func (x *ValidationExtensions) toKubeOpenAPI(ret *spec.Schema) {
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive/sensitive.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive/sensitive.go
 new file mode 100644
-index 00000000000..46bdc797108
+index 00000000..46bdc797
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive/sensitive.go
 @@ -0,0 +1,320 @@
@@ -4199,7 +4199,7 @@ index 00000000000..46bdc797108
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive/sensitive_test.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive/sensitive_test.go
 new file mode 100644
-index 00000000000..f4deab0ef7a
+index 00000000..f4deab0e
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive/sensitive_test.go
 @@ -0,0 +1,1662 @@
@@ -5866,7 +5866,7 @@ index 00000000000..f4deab0ef7a
 +	}
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/structural.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/structural.go
-index 5688c2ac40b..24eff61025a 100644
+index 5688c2ac..24eff610 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/structural.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/structural.go
 @@ -129,6 +129,12 @@ type Extensions struct {
@@ -5883,7 +5883,7 @@ index 5688c2ac40b..24eff61025a 100644
  
  // +k8s:deepcopy-gen=true
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/validation.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/validation.go
-index a9caddb38d7..7978147fee2 100644
+index a9caddb3..7978147f 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/validation.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/validation.go
 @@ -359,6 +359,9 @@ func validateNestedValueValidation(v *NestedValueValidation, skipAnyOf, skipAllO
@@ -5897,7 +5897,7 @@ index a9caddb38d7..7978147fee2 100644
  		allErrs = append(allErrs, field.Forbidden(fldPath.Child("x-kubernetes-validations"), "must be empty to be structural"))
  	}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/validation/validation.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/validation/validation.go
-index 7304018fb34..2a7071a4083 100644
+index 7304018f..2a7071a4 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/validation/validation.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/validation/validation.go
 @@ -397,6 +397,9 @@ func ConvertJSONSchemaPropsWithPostProcess(in *apiextensions.JSONSchemaProps, ou
@@ -5911,7 +5911,7 @@ index 7304018fb34..2a7071a4083 100644
  		var serializationValidationRules apiextensionsv1.ValidationRules
  		if err := apiextensionsv1.Convert_apiextensions_ValidationRules_To_v1_ValidationRules(&in.XValidations, &serializationValidationRules, nil); err != nil {
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/cmd/server/options/options.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/cmd/server/options/options.go
-index 8ceab525415..b1d685b2f60 100644
+index 8ceab525..b1d685b2 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/cmd/server/options/options.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/cmd/server/options/options.go
 @@ -28,6 +28,7 @@ import (
@@ -5957,7 +5957,7 @@ index 8ceab525415..b1d685b2f60 100644
  	return config, nil
  }
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/features/kube_features.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/features/kube_features.go
-index b41d13e5364..7815c249af5 100644
+index b41d13e5..7815c249 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/features/kube_features.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/features/kube_features.go
 @@ -41,6 +41,11 @@ const (
@@ -5979,7 +5979,7 @@ index b41d13e5364..7815c249af5 100644
 +	CRDSensitiveData:             {Default: true, PreRelease: featuregate.Beta},
  }
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/generated/openapi/zz_generated.openapi.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/generated/openapi/zz_generated.openapi.go
-index bfe07168955..c9f46c1b590 100644
+index bfe07168..c9f46c1b 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/generated/openapi/zz_generated.openapi.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/generated/openapi/zz_generated.openapi.go
 @@ -2313,6 +2313,13 @@ func schema_pkg_apis_apiextensions_v1_JSONSchemaProps(ref common.ReferenceCallba
@@ -6011,7 +6011,7 @@ index bfe07168955..c9f46c1b590 100644
  			},
  		},
 diff --git a/staging/src/k8s.io/apimachinery/pkg/types/patch.go b/staging/src/k8s.io/apimachinery/pkg/types/patch.go
-index fe8ecaaffa6..bf9cd29af15 100644
+index fe8ecaaf..bf9cd29a 100644
 --- a/staging/src/k8s.io/apimachinery/pkg/types/patch.go
 +++ b/staging/src/k8s.io/apimachinery/pkg/types/patch.go
 @@ -26,4 +26,7 @@ const (
@@ -6023,7 +6023,7 @@ index fe8ecaaffa6..bf9cd29af15 100644
 +	ApplyCBORPatchType PatchType = "application/apply-patch+cbor"
  )
 diff --git a/staging/src/k8s.io/apiserver/pkg/audit/context.go b/staging/src/k8s.io/apiserver/pkg/audit/context.go
-index 9648587378e..f4ef2603cc7 100644
+index 96485873..f4ef2603 100644
 --- a/staging/src/k8s.io/apiserver/pkg/audit/context.go
 +++ b/staging/src/k8s.io/apiserver/pkg/audit/context.go
 @@ -20,12 +20,21 @@ import (
@@ -6098,7 +6098,7 @@ index 9648587378e..f4ef2603cc7 100644
  // It is safe to call at most parts of request flow that come after WithAuditAnnotations.
  // The notable exception being that this function must not be called via a
 diff --git a/staging/src/k8s.io/apiserver/pkg/audit/request.go b/staging/src/k8s.io/apiserver/pkg/audit/request.go
-index 9185278f06f..9550a22c289 100644
+index 9185278f..9550a22c 100644
 --- a/staging/src/k8s.io/apiserver/pkg/audit/request.go
 +++ b/staging/src/k8s.io/apiserver/pkg/audit/request.go
 @@ -150,6 +150,10 @@ func LogRequestObject(ctx context.Context, obj runtime.Object, objGV schema.Grou
@@ -6143,7 +6143,7 @@ index 9185278f06f..9550a22c289 100644
  	var err error
  	ae.ResponseObject, err = encodeObject(obj, gv, s)
 diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/patch.go b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/patch.go
-index 14278aed743..9e59c2ae24a 100644
+index 14278aed..9e59c2ae 100644
 --- a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/patch.go
 +++ b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/patch.go
 @@ -125,7 +125,7 @@ func PatchResource(r rest.Patcher, scope *RequestScope, admit admission.Interfac
@@ -6156,7 +6156,7 @@ index 14278aed743..9e59c2ae24a 100644
  
  		baseContentType := runtime.ContentTypeJSON
 diff --git a/staging/src/k8s.io/apiserver/pkg/server/options/encryptionconfig/config.go b/staging/src/k8s.io/apiserver/pkg/server/options/encryptionconfig/config.go
-index 40879f78e06..36690fc4f59 100644
+index 40879f78..36690fc4 100644
 --- a/staging/src/k8s.io/apiserver/pkg/server/options/encryptionconfig/config.go
 +++ b/staging/src/k8s.io/apiserver/pkg/server/options/encryptionconfig/config.go
 @@ -899,12 +899,17 @@ func computeEncryptionConfigHash(data []byte) string {
@@ -6263,7 +6263,7 @@ index 40879f78e06..36690fc4f59 100644
  }
  
 diff --git a/staging/src/k8s.io/apiserver/pkg/server/options/encryptionconfig/config_test.go b/staging/src/k8s.io/apiserver/pkg/server/options/encryptionconfig/config_test.go
-index ec9d9ff9c20..829d38127ec 100644
+index ec9d9ff9..829d3812 100644
 --- a/staging/src/k8s.io/apiserver/pkg/server/options/encryptionconfig/config_test.go
 +++ b/staging/src/k8s.io/apiserver/pkg/server/options/encryptionconfig/config_test.go
 @@ -1426,7 +1426,7 @@ func TestWildcardStructure(t *testing.T) {
@@ -6414,7 +6414,7 @@ index ec9d9ff9c20..829d38127ec 100644
 +	return data, nil
 +}
 diff --git a/staging/src/k8s.io/apiserver/pkg/storage/value/transformer.go b/staging/src/k8s.io/apiserver/pkg/storage/value/transformer.go
-index c5e97ac2daa..2fc830e20dd 100644
+index c5e97ac2..2fc830e2 100644
 --- a/staging/src/k8s.io/apiserver/pkg/storage/value/transformer.go
 +++ b/staging/src/k8s.io/apiserver/pkg/storage/value/transformer.go
 @@ -66,6 +66,14 @@ type ResourceTransformers interface {
