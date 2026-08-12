@@ -281,3 +281,36 @@ func dnsService(name, app, clusterIP string) client.Object {
 		Spec: corev1.ServiceSpec{ClusterIP: clusterIP},
 	}
 }
+
+// The agent image carries no version in its name — it is built from a pinned
+// commit of the agent repository's main — so its digest is looked up by exact
+// key rather than through soleDigest, which needs a numeric tail. A release
+// that did not build it is a build defect: silently dropping the extension
+// would leave every node's agent frozen at whatever the OS image carries.
+func TestSysextDigestsAgent(t *testing.T) {
+	packages := map[string]string{
+		"containerdSysext224":    "sha256:c",
+		"kubernetesCniSysext162": "sha256:n",
+		"kubeletSysext1356":      "sha256:k",
+		"nodeletSysext":          "sha256:a",
+	}
+
+	t.Run("the agent digest is picked up", func(t *testing.T) {
+		got, err := sysextDigests(map[string]map[string]string{registryPackagesDigestsKey: packages}, "1.35")
+		require.NoError(t, err)
+		require.Equal(t, "sha256:a", got[nodeletExtension])
+	})
+
+	t.Run("a release without the agent image is refused", func(t *testing.T) {
+		without := make(map[string]string, len(packages))
+		for name, digest := range packages {
+			if name == "nodeletSysext" {
+				continue
+			}
+			without[name] = digest
+		}
+
+		_, err := sysextDigests(map[string]map[string]string{registryPackagesDigestsKey: without}, "1.35")
+		require.ErrorContains(t, err, nodeletExtension)
+	})
+}

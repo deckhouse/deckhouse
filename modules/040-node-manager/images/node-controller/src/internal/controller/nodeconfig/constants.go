@@ -93,11 +93,16 @@ const (
 	// apiserverPort is where the node-local API proxy forwards to.
 	apiserverPort = 6443
 
-	// containerdExtension, kubeletExtension and cniExtension are the system
-	// extensions every immutable node runs.
+	// containerdExtension, kubeletExtension, cniExtension and nodeletExtension
+	// are the system extensions every immutable node runs.
 	containerdExtension = "containerd"
 	kubeletExtension    = "kubelet"
 	cniExtension        = "kubernetes-cni"
+	nodeletExtension    = "nodelet"
+
+	// nodeletSysextImage is the agent's image in images_digests.json. Unlike the
+	// other three it carries no version, so it is read by exact key.
+	nodeletSysextImage = "nodeletSysext"
 
 	// platformExtensionRequestedBy names the module, not the writing component:
 	// dhctl and this controller write the same three extensions, so the field
