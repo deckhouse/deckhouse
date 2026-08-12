@@ -418,6 +418,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"lsblk2402":                       "imageHash-registrypackages-lsblk2402",
 		"netcat110501":                    "imageHash-registrypackages-netcat110501",
 		"nfsMount282":                     "imageHash-registrypackages-nfsMount282",
+		"nodeletSysext":                   "imageHash-registrypackages-nodeletSysext",
 		"nvmeCli211":                      "imageHash-registrypackages-nvmeCli211",
 		"pause":                           "imageHash-registrypackages-pause",
 		"registryProxy":                   "imageHash-registrypackages-registryProxy",
