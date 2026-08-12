@@ -13,10 +13,10 @@ Main features:
 
 * Automatic creation of VPA objects for Deployments, StatefulSets, DaemonSets, and Jobs in managed namespaces.
 * Flexible namespace selection: manage all namespaces, only namespaces with a specific label, or namespaces matching a label selector.
-* Combined selection mode: use a label selector together with the special label `autovpa.deckhouse.io/enabled` to form a union of matching namespaces.
-* For the default recommendation-only mode, no changes to existing workload manifests are required; VPA objects are created and maintained automatically.
+* Combined namespace selection mode using a label selector together with the special label `autovpa.deckhouse.io/enabled`.
+* Automatic creation of VPA objects in recommendation-only mode without changing the workload manifests.
 * Per-workload and per-namespace VPA tuning via `autovpa.deckhouse.io/*` annotations and labels.
-* Minimal resource footprint: the controller runs as a single replica with low CPU and memory requirements.
+* Minimal resource footprint: the controller runs as a single replica and requires low CPU and memory resources.
 
 For more details about the module configuration and usage examples, refer to the [module documentation](/modules/adaptive-resource-management/).
 
