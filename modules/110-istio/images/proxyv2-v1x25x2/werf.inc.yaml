@@ -60,6 +60,33 @@ import:
   add: /iptables-wrapper
   to: /sbin/iptables-wrapper
   before: setup
+- image: tools/bash-v5.2.37
+  add: /usr/bin
+  to: /bin
+  includePaths:
+  - bash
+  - sh
+  before: setup
+- image: tools/iproute2-v6.12.0
+  add: /sbin/ss
+  to: /usr/sbin/ss
+  before: setup
+- image: tools/coreutils-v9.7
+  add: /usr/bin
+  to: /usr/bin
+  includePaths:
+  - echo
+  - sleep
+  - wc
+  before: setup
+- image: tools/grep-grep-3.11
+  add: /usr/bin/grep
+  to: /usr/bin/grep
+  before: setup
+- image: tools/findutils-v4.10.0
+  add: /usr/bin/xargs
+  to: /usr/bin/xargs
+  before: setup
 - image: registrypackages/d8-curl-artifact-8-9-1
   add: /d8-curl
   to: /usr/bin/curl
