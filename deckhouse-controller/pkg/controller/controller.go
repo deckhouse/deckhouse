@@ -24,6 +24,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -47,6 +48,7 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
@@ -215,6 +217,19 @@ func NewDeckhouseController(
 		opts.Cache.ByObject[&v1alpha1.ModulePackage{}] = cache.ByObject{}
 		opts.Cache.ByObject[&v1alpha1.ModulePackageVersion{}] = cache.ByObject{}
 		opts.Cache.ByObject[&v1alpha2.Module{}] = cache.ByObject{}
+	}
+
+	admission, serveWebhooks := app.TakeOverAdmissionServer()
+	if serveWebhooks {
+		listenPort, err := strconv.Atoi(admission.ListenPort)
+		if err != nil {
+			return nil, fmt.Errorf("parse admission server listen port: %w", err)
+		}
+
+		opts.WebhookServer = webhook.NewServer(webhook.Options{
+			Port:    listenPort,
+			CertDir: admission.CertsDir,
+		})
 	}
 
 	runtimeManager, err := controllerruntime.NewManager(operator.KubeClient().RestConfig(), opts)
@@ -403,19 +418,22 @@ func NewDeckhouseController(
 		}
 	}
 
-	validation.RegisterAdmissionHandlers(
-		operator.AdmissionServer,
-		runtimeManager.GetClient(),
-		operator.ModuleManager,
-		pkgRuntime,
-		configtools.NewValidator(operator.ModuleManager, conversionsStore),
-		loader,
-		operator.MetricStorage,
-		config.NewSchemaStore(nil),
-		settingsContainer,
-		exts,
-		edition,
-	)
+	if serveWebhooks {
+		// GetWebhookServer, not the server above: this call adds it to the runnables.
+		validation.RegisterAdmissionHandlers(
+			runtimeManager.GetWebhookServer(),
+			runtimeManager.GetClient(),
+			operator.ModuleManager,
+			pkgRuntime,
+			configtools.NewValidator(operator.ModuleManager, conversionsStore),
+			loader,
+			operator.MetricStorage,
+			config.NewSchemaStore(nil),
+			settingsContainer,
+			exts,
+			edition,
+		)
+	}
 
 	return &DeckhouseController{
 		runtimeManager:     runtimeManager,
