@@ -87,6 +87,10 @@ spec:
                   to the environment.
                 minLength: 1
                 type: string
+                # A subject name is written into the rendered manifest as a value. A line break in it
+                # would end that value and turn the rest into manifest structure, so anything below
+                # printable ASCII is refused here in addition to being quoted at substitution.
+                pattern: '^[^\x00-\x1f\x7f]+$'
         networkPolicy:
           description: |
             NotRestricted — Allow all traffic by default.
@@ -124,6 +128,11 @@ spec:
             If specified, the project will be monitored by the Deckhouse log shipper and send logs to the specified cluster log destination.
             The names of the custom resource must be specified in the `clusterLogDestinationName` field.
           type: string
+          # The value names a ClusterLogDestination, so it is a Kubernetes object name and nothing
+          # else. Empty stays allowed: the template skips the whole block for it, which is how
+          # logging is turned off, and refusing it here would break such a project on its next
+          # reconcile rather than on its next edit.
+          pattern: '^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)?$'
         securityScanningEnabled:
           description: |
             Allows you to run periodic vulnerability scans. It is based on the Trivy project.
@@ -180,8 +189,10 @@ spec:
     spec:
       accessLevel: Admin
       subjects:
-      - kind: {{ $administrator.subject }}
-        name: {{ $administrator.name }}
+      # Quoted, because everything below is a value and must stay one: an unquoted substitution
+      # ends at the first line break, and whatever follows is read as manifest structure.
+      - kind: {{ $administrator.subject | quote }}
+        name: {{ $administrator.name | quote }}
     {{- end }}
 
     ---
@@ -195,13 +206,13 @@ spec:
       hard:
         {{ with .parameters.resourceQuota }}
           {{ with .requests }}
-            {{ with .cpu }}requests.cpu: {{ . }}{{ end }}
-            {{ with .memory }}requests.memory: {{ . }}{{ end }}
-            {{ with .storage }}requests.storage: {{ . }}{{ end }}
+            {{ with .cpu }}requests.cpu: {{ . | quote }}{{ end }}
+            {{ with .memory }}requests.memory: {{ . | quote }}{{ end }}
+            {{ with .storage }}requests.storage: {{ . | quote }}{{ end }}
           {{ end }}
           {{ with .limits }}
-            {{ with .cpu }}limits.cpu: {{ . }}{{ end }}
-            {{ with .memory }}limits.memory: {{ . }}{{ end }}
+            {{ with .cpu }}limits.cpu: {{ . | quote }}{{ end }}
+            {{ with .memory }}limits.memory: {{ . | quote }}{{ end }}
           {{ end }}
         {{ end }}
 
@@ -277,7 +288,7 @@ spec:
       name: default
     spec:
       clusterDestinationRefs:
-        - {{ . }}
+        - {{ . | quote }}
     {{- end }}
 
     ---
