@@ -19,27 +19,36 @@ package cloud_status
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 )
 
-func (s *Service) getZonesCount(ctx context.Context, ng *v1.NodeGroup) int32 {
+// getZonesCount returns how many zones the NodeGroup spreads over. An absent provider Secret means
+// no cloud and yields zero; an unreadable one is returned as an error, because zero zones makes
+// Min and Max zero, and a Min of zero reports the NodeGroup Ready with no nodes at all.
+func (s *Service) getZonesCount(ctx context.Context, ng *v1.NodeGroup) (int32, error) {
 	if ng.Spec.CloudInstances != nil && len(ng.Spec.CloudInstances.Zones) > 0 {
-		return int32(len(ng.Spec.CloudInstances.Zones))
+		return int32(len(ng.Spec.CloudInstances.Zones)), nil
 	}
 
 	secret := &corev1.Secret{}
-	if err := s.Client.Get(ctx, types.NamespacedName{Namespace: "kube-system", Name: common.CloudProviderSecretName}, secret); err != nil {
-		return 0
+	err := s.Client.Get(ctx, types.NamespacedName{Namespace: "kube-system", Name: common.CloudProviderSecretName}, secret)
+	if apierrors.IsNotFound(err) {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, fmt.Errorf("read cloud provider secret: %w", err)
 	}
 
 	var zones []string
-	if err := json.Unmarshal(secret.Data["zones"], &zones); err != nil || len(zones) == 0 {
-		return 0
+	if err := json.Unmarshal(secret.Data["zones"], &zones); err != nil {
+		return 0, nil
 	}
-	return int32(len(zones))
+	return int32(len(zones)), nil
 }

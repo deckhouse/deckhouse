@@ -126,7 +126,11 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 	}
 
 	cloudService := cloudstatus.Service{Client: r.Client}
-	cloudResult := cloudService.Compute(ctx, ng)
+	cloudResult, err := cloudService.Compute(ctx, ng)
+	if err != nil {
+		logger.Error(err, "failed to compute cloud status", "nodeGroup", ng.Name)
+		return ctrl.Result{}, err
+	}
 	logger.V(1).Info("status computed",
 		"nodeGroup", ng.Name,
 		"nodes", nodeResult.NodesCount,
