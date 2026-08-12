@@ -102,6 +102,15 @@ func TestNodeExtensionRequestValidator(t *testing.T) {
 			req:         makeNER("existing", "containerd", digest),
 			wantAllowed: false,
 		},
+		{
+			// The agent is a platform extension like the other three. Left
+			// unreserved, an older request of the same name would win the
+			// cluster-wide contest and displace the platform's own.
+			name:        "the agent's own name is denied",
+			op:          admissionv1.Create,
+			req:         makeNER("agent", "nodelet", digest),
+			wantAllowed: false,
+		},
 	}
 
 	for _, tt := range tests {
