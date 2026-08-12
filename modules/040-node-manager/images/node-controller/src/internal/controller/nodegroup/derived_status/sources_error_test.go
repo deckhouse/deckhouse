@@ -91,6 +91,41 @@ func TestComputeWithCloudChecks_UnreadableSecretAbortsInsteadOfPublishing(t *tes
 	require.Error(t, err)
 }
 
+func TestReadClusterConfiguration_ForbiddenIsAnError(t *testing.T) {
+	s := newDeniedSecretService(t, clusterConfigSecretName)
+
+	_, _, err := s.readClusterConfiguration(t.Context())
+
+	require.ErrorContains(t, err, "read cluster configuration secret")
+}
+
+func TestReadClusterConfiguration_NotFoundIsEmpty(t *testing.T) {
+	s := newTestService(t)
+
+	version, cri, err := s.readClusterConfiguration(t.Context())
+
+	require.NoError(t, err)
+	require.Nil(t, version)
+	require.Empty(t, cri)
+}
+
+func TestReadClusterUUID_ForbiddenIsAnError(t *testing.T) {
+	s := newDeniedSecretService(t, clusterUUIDConfigMapName)
+
+	_, err := s.readClusterUUID(t.Context())
+
+	require.ErrorContains(t, err, "read cluster uuid configmap")
+}
+
+func TestReadClusterUUID_NotFoundIsEmpty(t *testing.T) {
+	s := newTestService(t)
+
+	uuid, err := s.readClusterUUID(t.Context())
+
+	require.NoError(t, err)
+	require.Empty(t, uuid)
+}
+
 // A cloud provider Secret that is merely absent is a static cluster, not a failure.
 func TestComputeWithCloudChecks_AbsentSecretIsNotAnError(t *testing.T) {
 	s := newTestService(t)

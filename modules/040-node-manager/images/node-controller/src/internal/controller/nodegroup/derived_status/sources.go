@@ -88,12 +88,19 @@ func decodeSecretData(data map[string][]byte) map[string]interface{} {
 	return res
 }
 
-func (s *Service) readClusterUUID(ctx context.Context) string {
+// readClusterUUID returns the cluster UUID, which seeds the update-epoch drift. An absent
+// ConfigMap is a cluster that has not been stamped yet; an unreadable one is a failure, because a
+// silently empty UUID moves every NodeGroup's epoch into the same window.
+func (s *Service) readClusterUUID(ctx context.Context) (string, error) {
 	cm := &corev1.ConfigMap{}
-	if err := s.Client.Get(ctx, types.NamespacedName{Namespace: clusterUUIDConfigMapNS, Name: clusterUUIDConfigMapName}, cm); err != nil {
-		return ""
+	err := s.Client.Get(ctx, types.NamespacedName{Namespace: clusterUUIDConfigMapNS, Name: clusterUUIDConfigMapName}, cm)
+	if apierrors.IsNotFound(err) {
+		return "", nil
 	}
-	return cm.Data["cluster-uuid"]
+	if err != nil {
+		return "", fmt.Errorf("read cluster uuid configmap: %w", err)
+	}
+	return cm.Data["cluster-uuid"], nil
 }
 
 type clusterConfiguration struct {
@@ -101,12 +108,20 @@ type clusterConfiguration struct {
 	DefaultCRI        string `json:"defaultCRI"`
 }
 
-func (s *Service) readClusterConfiguration(ctx context.Context) (*semver.Version, string) {
+// readClusterConfiguration returns the target Kubernetes version and the cluster-wide default CRI.
+// An absent Secret yields empty values; an unreadable one is a failure, because empty values drop
+// the version clamp and the CRI default without a trace. A malformed payload keeps yielding empty
+// values: that is the shape of the data, not the availability of the source.
+func (s *Service) readClusterConfiguration(ctx context.Context) (*semver.Version, string, error) {
 	// Served from the kube-system Secret informer (watch-fresh); a live GET here used to
 	// cost hundreds of ms on every derived-status pass during a NodeGroup burst.
 	secret := &corev1.Secret{}
-	if err := s.Client.Get(ctx, types.NamespacedName{Namespace: clusterConfigSecretNamespace, Name: clusterConfigSecretName}, secret); err != nil {
-		return nil, ""
+	err := s.Client.Get(ctx, types.NamespacedName{Namespace: clusterConfigSecretNamespace, Name: clusterConfigSecretName}, secret)
+	if apierrors.IsNotFound(err) {
+		return nil, "", nil
+	}
+	if err != nil {
+		return nil, "", fmt.Errorf("read cluster configuration secret: %w", err)
 	}
 	data := make(map[string]string, len(secret.Data))
 	for k, v := range secret.Data {
@@ -115,7 +130,7 @@ func (s *Service) readClusterConfiguration(ctx context.Context) (*semver.Version
 
 	raw, ok := []byte(data["cluster-configuration.yaml"]), data["cluster-configuration.yaml"] != ""
 	if !ok {
-		return nil, ""
+		return nil, "", nil
 	}
 	if decoded, err := base64.StdEncoding.DecodeString(string(raw)); err == nil {
 		raw = decoded
@@ -123,7 +138,7 @@ func (s *Service) readClusterConfiguration(ctx context.Context) (*semver.Version
 
 	cfg := &clusterConfiguration{}
 	if err := sigsyaml.Unmarshal(raw, cfg); err != nil {
-		return nil, ""
+		return nil, "", nil
 	}
 
 	var target *semver.Version
@@ -143,7 +158,7 @@ func (s *Service) readClusterConfiguration(ctx context.Context) (*semver.Version
 			target = ver
 		}
 	}
-	return target, cfg.DefaultCRI
+	return target, cfg.DefaultCRI, nil
 }
 
 // readControlPlaneMinVersion returns the lowest version among the running kube-apiservers,
@@ -157,13 +172,13 @@ func (s *Service) readClusterConfiguration(ctx context.Context) (*semver.Version
 // in turn refuses to advance the control plane past the node kubelets, so the two would
 // wedge each other and no Kubernetes minor upgrade could ever complete. The apiserver
 // legitimately leads kubelet by one minor, which is exactly what this clamp allows.
-func (s *Service) readControlPlaneMinVersion(ctx context.Context) *semver.Version {
+func (s *Service) readControlPlaneMinVersion(ctx context.Context) (*semver.Version, error) {
 	pods := &corev1.PodList{}
 	if err := s.Client.List(ctx, pods,
 		client.InNamespace(apiserverPodNamespace),
 		client.MatchingLabels{"component": "kube-apiserver", "tier": "control-plane"},
 	); err != nil {
-		return nil
+		return nil, fmt.Errorf("list kube-apiserver pods: %w", err)
 	}
 
 	var minVer *semver.Version
@@ -180,7 +195,7 @@ func (s *Service) readControlPlaneMinVersion(ctx context.Context) *semver.Versio
 			minVer = ver
 		}
 	}
-	return minVer
+	return minVer, nil
 }
 
 func (s *Service) readDefaultZones(ctx context.Context, cloudProvider map[string]interface{}) []string {

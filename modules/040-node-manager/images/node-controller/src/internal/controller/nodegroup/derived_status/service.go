@@ -90,11 +90,20 @@ func (s *Service) compute(ctx context.Context, ng *v1.NodeGroup, cloudProvider m
 		SerializedTaints: serializeTaints(ng),
 	}
 
-	clusterUUID := s.readClusterUUID(ctx)
+	clusterUUID, err := s.readClusterUUID(ctx)
+	if err != nil {
+		return result, err
+	}
 	result.UpdateEpoch = calculateUpdateEpoch(epochTimestampAccessor(), clusterUUID, ng.Name)
 
-	targetVersion, defaultCRI := s.readClusterConfiguration(ctx)
-	controlPlaneMinVersion := s.readControlPlaneMinVersion(ctx)
+	targetVersion, defaultCRI, err := s.readClusterConfiguration(ctx)
+	if err != nil {
+		return result, err
+	}
+	controlPlaneMinVersion, err := s.readControlPlaneMinVersion(ctx)
+	if err != nil {
+		return result, err
+	}
 	effectiveKubeVer := effectiveKubernetesVersion(targetVersion, controlPlaneMinVersion)
 	result.KubernetesVersion = semverMajMin(effectiveKubeVer)
 
