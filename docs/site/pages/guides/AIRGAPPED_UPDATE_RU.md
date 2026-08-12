@@ -345,8 +345,8 @@ Sep 16 12:56:27.087 INFO  ║║ [1 / 1] Pulling registry.deckhouse.ru/deckhouse
 
 ## Особенности при работе с сертифицированной редакцией платформы
 
-Обновление по механизму «каналов обновлений» на текущий момент для CSE редакции не реализовано.
-
 Адрес хранилища образов: `registry-cse.deckhouse.ru/deckhouse/cse`.
 
-Процесс обновления описан на странице [Обновления DKP Certified Security Edition](https://deckhouse.ru/products/kubernetes-platform/certified-security-edition/updates/).
+Начиная с версии 1.73 в редакции CSE поддерживается канал обновлений LTS. После загрузки образов в локальный registry обновление выполняется согласно `spec.settings.update` в ModuleConfig `deckhouse`.
+
+При обновлении с версии ниже 1.73 канал обновлений не используется, следуйте [Руководству по обновлению DKP CSE](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.73-cse/update.html).
