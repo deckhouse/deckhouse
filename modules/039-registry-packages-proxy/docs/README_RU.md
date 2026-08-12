@@ -136,16 +136,16 @@ curl -fsS -H "Authorization: Bearer ${TOKEN}" "https://registry-packages-proxy.e
 
 | ClusterRole | Назначение |
 |-------------|------------|
-| `d8:registry-packages-proxy:cli-download` | Доступ к `/v1/images/*`: бинарник `deckhouse-cli` и его плагины |
+| `d8:registry-packages-proxy:cli-download` | Доступ к `/v1/images/*`: исполняемый файл `deckhouse-cli` и его плагины |
 | `d8:registry-packages-proxy:packages-download` | Зарезервирована для будущих защищённых маршрутов `/v1/packages/*` (иконки отдаются анонимно, доступ только изнутри кластера) |
 
 Ни одна из ролей не привязана никому по умолчанию.
 
 ## Выдача доступа к загрузке Deckhouse CLI
 
-Deckhouse CLI нужны два права: скачивать бинарники и находить прокси.
+Deckhouse CLI нужны два права: скачивать исполняемые файлы и находить прокси.
 
-1. Скачивать бинарники. Это ClusterRole `d8:registry-packages-proxy:cli-download`. Она покрывает и `d8 cli` (самообновление), и `d8 plugins`:
+1. Скачивать исполняемые файлы. Это ClusterRole `d8:registry-packages-proxy:cli-download`. Она покрывает и `d8 cli` (самообновление), и `d8 plugins`:
 
    ```shell
    kubectl create clusterrolebinding d8-cli-download \
