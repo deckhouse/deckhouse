@@ -37,6 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
+	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
 	"github.com/deckhouse/deckhouse/modules/040-control-plane-manager/hooks"
@@ -185,9 +186,21 @@ func checkCntrdV2Support(ctx context.Context, cli client.Client) (*kwhvalidating
 	return allowResult(nil)
 }
 
-func validateDefaultCRI(defaultCRI string, cli client.Client) (*kwhvalidating.ValidatorResult, error) {
+func defaultCRIForEdition(isCSEEdition bool) string {
+	if isCSEEdition {
+		return "ContainerdV2"
+	}
+
+	return "Containerd"
+}
+
+func validateDefaultCRI(defaultCRI string, cli client.Client, isCSEEdition bool) (*kwhvalidating.ValidatorResult, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
+
+	if defaultCRI == "" {
+		defaultCRI = defaultCRIForEdition(isCSEEdition)
+	}
 
 	switch defaultCRI {
 	case "Containerd":
@@ -436,7 +449,9 @@ func validateClusterConfiguration(ctx context.Context, clusterConfiguration []by
 	return result, nil
 }
 
-func clusterConfigurationHandler(mm moduleManager, cli client.Client, _ *config.SchemaStore) http.Handler {
+func clusterConfigurationHandler(mm moduleManager, cli client.Client, _ *config.SchemaStore, edition *d8edition.Edition) http.Handler {
+	isCSEEdition := edition != nil && edition.Name == "cse"
+
 	validator := kwhvalidating.ValidatorFunc(func(ctx context.Context, ar *model.AdmissionReview, obj metav1.Object) (*kwhvalidating.ValidatorResult, error) {
 		if ar.Operation == model.OperationDelete {
 			return rejectResult("It is forbidden to delete secret d8-cluster-configuration")
@@ -472,7 +487,7 @@ func clusterConfigurationHandler(mm moduleManager, cli client.Client, _ *config.
 		})
 
 		criValidator := kwhvalidating.ValidatorFunc(func(_ context.Context, _ *model.AdmissionReview, _ metav1.Object) (*kwhvalidating.ValidatorResult, error) {
-			return validateDefaultCRI(clusterConf.DefaultCRI, cli)
+			return validateDefaultCRI(clusterConf.DefaultCRI, cli, isCSEEdition)
 		})
 
 		validators := []kwhvalidating.Validator{clusterConfigurationValidator, k8sVersionValidator, criValidator}
@@ -501,11 +516,11 @@ func clusterConfigurationHandler(mm moduleManager, cli client.Client, _ *config.
 						criChangeValidator := kwhvalidating.ValidatorFunc(func(_ context.Context, _ *model.AdmissionReview, _ metav1.Object) (*kwhvalidating.ValidatorResult, error) {
 							oldCRI := oldClusterConf.DefaultCRI
 							if oldCRI == "" {
-								oldCRI = "Containerd"
+								oldCRI = defaultCRIForEdition(isCSEEdition)
 							}
 							newCRI := clusterConf.DefaultCRI
 							if newCRI == "" {
-								newCRI = "Containerd"
+								newCRI = defaultCRIForEdition(isCSEEdition)
 							}
 							return validateCRIChange(oldCRI, newCRI, cli)
 						})

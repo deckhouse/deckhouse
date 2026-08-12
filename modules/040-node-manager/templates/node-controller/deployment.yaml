@@ -124,6 +124,8 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
+        - name: DECKHOUSE_EDITION
+          value: {{ .Values.global.deckhouseEdition | quote }}
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 4290
