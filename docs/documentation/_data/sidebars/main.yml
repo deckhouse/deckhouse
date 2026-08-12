@@ -1707,6 +1707,10 @@ entries:
                 ru: Модуль observability
               url: /architecture/observability/observability.html
             - title:
+                en: Monitoring-ping module
+                ru: Модуль monitoring-ping
+              url: /architecture/observability/monitoring-ping.html
+            - title:
                 en: Upmeter module
                 ru: Модуль upmeter
               url: /architecture/observability/upmeter.html
