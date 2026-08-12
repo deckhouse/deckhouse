@@ -273,14 +273,14 @@ func kubernetesVersionBaselineFor(ctx context.Context, cli client.Client, secret
 
 	// Logged: a quiet fallback to a stale source looks like nothing needing correction.
 	spec := new(clusterKubernetesSpec)
-	if err := yaml.Unmarshal([]byte(cm.Data[clusterKubernetesSpecDataKey]), spec); err != nil {
+	if err := yaml.Unmarshal([]byte(cm.Data["spec"]), spec); err != nil {
 		log.Warn("cannot parse d8-cluster-kubernetes data.spec, keeping the Secret baseline", log.Err(err))
 	} else if maxUsed := strings.TrimSpace(spec.MaxUsedVersion); maxUsed != "" {
 		baseline.MaxUsed = maxUsed
 	}
 
 	status := new(clusterKubernetesStatus)
-	if err := yaml.Unmarshal([]byte(cm.Data[clusterKubernetesStatusDataKey]), status); err != nil {
+	if err := yaml.Unmarshal([]byte(cm.Data["status"]), status); err != nil {
 		log.Warn("cannot parse d8-cluster-kubernetes data.status, keeping the Secret baseline", log.Err(err))
 	} else {
 		if automaticVersion := strings.TrimSpace(status.AutomaticVersion); automaticVersion != "" {

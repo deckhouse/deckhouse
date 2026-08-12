@@ -40,11 +40,6 @@ memory: 10Mi
 {{- $_ := set $tpl_context "images" (dict "controlPlaneManager" $images) }}
 {{- $_ := set $tpl_context "registry" $registry }}
 {{- $_ := set $tpl_context "clusterConfiguration" .Values.global.clusterConfiguration }}
-{{- /*
-  This is why candi/control-plane/*.tpl may go on reading .clusterConfiguration.kubernetesVersion:
-  there it is a render-context key holding the throttled effective version. Do not let a ModuleConfig
-  pin reach them directly, or the one-minor-at-a-time throttling (image tags included) is bypassed.
-*/ -}}
 {{- $_ := set $tpl_context.clusterConfiguration "kubernetesVersion" .Values.controlPlaneManager.internal.effectiveKubernetesVersion }}
 {{- $_ := set $tpl_context "controlPlaneTemplatesDir" "control-plane-templates" -}}
 {{- $_ := set $tpl_context "nodesCount" .Values.controlPlaneManager.internal.nodesCount }}
@@ -345,21 +340,8 @@ spec:
           value: {{ $allowedKubernetesVersions | sortAlpha | join  "," | quote }}
         - name: AUTOMATIC_KUBERNETES_VERSION
           value: {{ $automaticVersion | quote }}
-        {{- /*
-          The whole input update-observer uses to author data.spec of d8-cluster-kubernetes. Routed
-          through values so the resolution happens once, in the hooks. The cost is rolling restarts
-          when the target moves without the effective version moving, when updateMode flips, or when
-          maxUsed rises — acceptable, since unchanged static pod manifests do not restart apiserver.
-
-          Do not right-trim the closing marker: that swallows the newline before the list item below
-          and makes the manifest unparsable.
-        */}}
         - name: DESIRED_KUBERNETES_VERSION
           value: {{ $.Values.global.discovery.targetKubernetesVersion | quote }}
-        {{- /*
-          if/else and not `ternary`, which demands a typed bool: a values set without the key yields
-          an untyped nil and would take the whole chart down.
-        */}}
         - name: KUBERNETES_UPDATE_MODE
           value: {{ if $.Values.global.discovery.kubernetesVersionIsDefault }}"Automatic"{{ else }}"Manual"{{ end }}
         - name: MAX_USED_KUBERNETES_VERSION

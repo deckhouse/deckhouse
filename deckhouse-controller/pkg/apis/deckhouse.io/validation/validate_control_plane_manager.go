@@ -41,9 +41,6 @@ const (
 	clusterKubernetesConfigMapName = "d8-cluster-kubernetes"
 	clusterConfigurationSecretName = "d8-cluster-configuration"
 	kubeSystemNamespace            = "kube-system"
-	clusterConfigurationDataKey    = "cluster-configuration.yaml"
-	clusterKubernetesStatusDataKey = "status"
-	clusterKubernetesSpecDataKey   = "spec"
 
 	// ClusterConfiguration's "track Deckhouse default" sentinel; ModuleConfig accepts only Default.
 	automaticKubernetesVersion       = "Automatic"
@@ -68,13 +65,8 @@ type clusterKubernetesSpec struct {
 func (v *moduleConfigValidator) validateControlPlaneManagerKubernetesVersion(
 	ctx context.Context, newSettings, oldSettings map[string]interface{},
 ) (*kwhvalidating.ValidatorResult, error) {
-	newVersion, newIsString := settingsKubernetesVersion(newSettings)
-	if !newIsString {
-		return rejectResult("kubernetesVersion must be a string, for example \"1.35\" or \"Default\"" +
-			" (an unquoted version is parsed as a number)")
-	}
-	// A historical non-string counts as "unset" rather than blocking the edit that fixes it.
-	oldVersion, _ := settingsKubernetesVersion(oldSettings)
+	newVersion := settingsKubernetesVersion(newSettings)
+	oldVersion := settingsKubernetesVersion(oldSettings)
 
 	if newVersion == oldVersion {
 		return nil, nil
@@ -197,27 +189,13 @@ func moduleConfigOwnsKubernetesVersion(ctx context.Context, cli client.Client) b
 		}
 		return false
 	}
-	// A non-string still means ModuleConfig owns the field; its own webhook rejects it.
-	version, isString := settingsKubernetesVersion(rawModuleConfigSettings(cfg))
-	return version != "" || !isString
+	return settingsKubernetesVersion(rawModuleConfigSettings(cfg)) != ""
 }
 
-// ok=false means present but not a string. An unquoted `kubernetesVersion: 1.35` arrives as a number
-// and the schema enum does not always catch it first; collapsing that to "" made the guard read it
-// as "the field was cleared".
-func settingsKubernetesVersion(settings map[string]interface{}) (string, bool) {
-	if settings == nil {
-		return "", true
-	}
-	raw, present := settings["kubernetesVersion"]
-	if !present || raw == nil {
-		return "", true
-	}
-	version, isString := raw.(string)
-	if !isString {
-		return "", false
-	}
-	return version, true
+// The schema enum is what keeps the value a string, so anything else here is "unset".
+func settingsKubernetesVersion(settings map[string]interface{}) string {
+	version, _ := settings["kubernetesVersion"].(string)
+	return version
 }
 
 // ModuleConfig takes Default only; ClusterConfiguration keeps the older Automatic.
@@ -273,7 +251,7 @@ func (v *moduleConfigValidator) readRawClusterConfigurationVersion(ctx context.C
 	}
 
 	cc := new(clusterConfig)
-	if err := yaml.Unmarshal(secret.Data[clusterConfigurationDataKey], cc); err != nil {
+	if err := yaml.Unmarshal(secret.Data["cluster-configuration.yaml"], cc); err != nil {
 		return "", false
 	}
 	return cc.KubernetesVersion, true

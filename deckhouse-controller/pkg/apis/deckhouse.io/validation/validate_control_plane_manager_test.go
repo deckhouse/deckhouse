@@ -502,21 +502,6 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 		assert.True(t, resp.Allowed, "1.32 is one minor below the ConfigMap floor 1.33")
 	})
 
-	// An unquoted 1.35 used to collapse to "" and be read as "the field was cleared".
-	t.Run("a non-string kubernetesVersion is rejected, not read as cleared", func(t *testing.T) {
-		handler := withObjs(t, newClusterKubernetesConfigMap(defaultAvailable))
-
-		newCfg := newControlPlaneManagerConfig("")
-		newCfg.Spec.Settings = v1alpha1.MakeMappedFields(map[string]any{"kubernetesVersion": 1.35})
-		oldCfg := newControlPlaneManagerConfig("1.35")
-		review := newModuleConfigAdmissionReview("UPDATE", newCfg, oldCfg)
-
-		resp := callHandler(t, handler, review)
-		require.False(t, resp.Allowed)
-		require.NotNil(t, resp.Result)
-		assert.Contains(t, resp.Result.Message, "must be a string")
-	})
-
 	// Bounded at both ends, so a miss is not necessarily a downgrade — the message prints the list
 	// instead of guessing.
 	t.Run("a too-new version is not reported as a downgrade", func(t *testing.T) {

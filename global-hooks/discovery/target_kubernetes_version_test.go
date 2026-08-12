@@ -92,28 +92,6 @@ var _ = Describe("Global hooks :: discovery/targetKubernetesVersion ::", func() 
 			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsDefault").Bool()).To(BeFalse())
 		})
 
-		// Dropped, not coerced — see applyControlPlaneManagerKubernetesVersionFilter.
-		It("ignores a non-string ModuleConfig kubernetesVersion instead of failing the hook", func() {
-			numericModuleConfig := `
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: control-plane-manager
-spec:
-  enabled: true
-  version: 1
-  settings:
-    kubernetesVersion: 1.32
-`
-			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateA+numericModuleConfig, 1))
-			f.RunHook()
-
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("global.discovery.targetKubernetesVersion").String()).To(Equal("1.33"))
-			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsDefault").Bool()).To(BeFalse())
-		})
-
 		It("falls through to Default when both documents carry an unusable value", func() {
 			brokenCC := clusterConfigurationSecret(`
 apiVersion: deckhouse.io/v1

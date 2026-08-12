@@ -110,26 +110,15 @@ type configMapSpec struct {
 	MaxUsedVersion string `json:"maxUsedKubernetesVersion"`
 }
 
-type moduleConfigKubernetesVersion struct {
-	Version   string
-	Malformed bool
-}
-
 // Never errors: that would discard the snapshot and take down the only publisher of
-// targetKubernetesVersion. A non-string is reported as Malformed, not coerced — coercion drops a
-// trailing zero, turning 1.40 into the nonexistent "1.4".
+// targetKubernetesVersion.
 func applyControlPlaneManagerKubernetesVersionFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	raw, found, err := unstructured.NestedFieldNoCopy(obj.UnstructuredContent(), "spec", "settings", "kubernetesVersion")
-	if err != nil || !found || raw == nil {
-		return moduleConfigKubernetesVersion{}, nil
+	version, _, err := unstructured.NestedString(obj.UnstructuredContent(), "spec", "settings", "kubernetesVersion")
+	if err != nil {
+		return "", nil
 	}
 
-	version, isString := raw.(string)
-	if !isString {
-		return moduleConfigKubernetesVersion{Malformed: true}, nil
-	}
-
-	return moduleConfigKubernetesVersion{Version: strings.TrimSpace(version)}, nil
+	return strings.TrimSpace(version), nil
 }
 
 func applyClusterKubernetesConfigMapFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -176,18 +165,11 @@ func readSnapshot[T any](input *go_hook.HookInput, name string) T {
 func targetKubernetesVersion(_ context.Context, input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire(defaultVersionDriftMetricGroup)
 
-	mcSnap := readSnapshot[moduleConfigKubernetesVersion](input, controlPlaneManagerModuleConfigSnapshot)
+	mcSnapVersion := readSnapshot[string](input, controlPlaneManagerModuleConfigSnapshot)
 	cmSnap := readSnapshot[clusterKubernetesSnapshot](input, clusterKubernetesConfigMapSnapshot)
 	ccSnap := readSnapshot[ClusterConfigurationYaml](input, targetVersionClusterConfigSnapshot)
 
-	if mcSnap.Malformed {
-		input.Logger.Warn(
-			"ignoring ModuleConfig control-plane-manager kubernetesVersion: the value is not a string " +
-				"(an unquoted version is parsed as a number); falling back to ClusterConfiguration or the Deckhouse default",
-		)
-	}
-
-	mcVersion := usableDeclaredVersion(input, mcSnap.Version, "ModuleConfig control-plane-manager", isModuleConfigPinned)
+	mcVersion := usableDeclaredVersion(input, mcSnapVersion, "ModuleConfig control-plane-manager", isModuleConfigPinned)
 	ccRawVersion := usableDeclaredVersion(input, strings.TrimSpace(ccSnap.KubernetesVersion), "ClusterConfiguration", isClusterConfigurationPinned)
 	secretMaxUsed := ccSnap.MaxUsed
 
