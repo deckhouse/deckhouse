@@ -438,7 +438,7 @@ func sysextDigests(all map[string]map[string]string, kubernetesVersion string) (
 		return nil, fmt.Errorf("no %q digests in %s", registryPackagesDigestsKey, imagesDigestsKey)
 	}
 
-	digests := make(map[string]string, 3)
+	digests := make(map[string]string, 4)
 
 	// The image names carry the version with the separators stripped:
 	// containerdSysext224, kubernetesCniSysext162, kubeletSysext1356.
@@ -453,6 +453,14 @@ func sysextDigests(all map[string]map[string]string, kubernetesVersion string) (
 		return nil, err
 	}
 	digests[cniExtension] = cni
+
+	// Read by exact key: the agent image has no version in its name, so the
+	// numeric tail soleDigest looks for is absent by construction.
+	nodelet := packages[nodeletSysextImage]
+	if nodelet == "" {
+		return nil, fmt.Errorf("no %s system extension digest in %s", nodeletExtension, imagesDigestsKey)
+	}
+	digests[nodeletExtension] = nodelet
 
 	if d := pickKubeletDigest(packages, kubernetesVersion); d != "" {
 		digests[kubeletExtension] = d
