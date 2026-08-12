@@ -536,20 +536,31 @@ func convertJSONRawMessageToStruct(in map[string]json.RawMessage, out any) error
 }
 
 func overrideProviderClusterConfigValues(p *v1.DvpProviderClusterConfiguration, m *v1.DvpModuleConfiguration) {
-	if m.Provider != nil {
+	if m.Provider != nil && m.Provider.Parameters != nil {
 		if p.Provider == nil {
 			p.Provider = &v1.DvpProvider{}
 		}
-		if m.Provider.KubeconfigDataBase64 != nil {
-			p.Provider.KubeconfigDataBase64 = m.Provider.KubeconfigDataBase64
-		}
-		if m.Provider.Namespace != nil {
-			p.Provider.Namespace = m.Provider.Namespace
+		if m.Provider.Parameters.Namespace != nil {
+			p.Provider.Namespace = m.Provider.Parameters.Namespace
 		}
 	}
 
-	if m.Zones != nil {
-		p.Zones = m.Zones
+	if m.Nodes != nil && m.Nodes.Parameters != nil {
+		if p.Provider == nil {
+			p.Provider = &v1.DvpProvider{}
+		}
+		if m.Nodes.Parameters.NetworkPolicy != nil {
+			p.Provider.NetworkPolicy = m.Nodes.Parameters.NetworkPolicy
+		}
+		if m.Nodes.Parameters.IngressPorts != nil {
+			p.Provider.IngressPorts = m.Nodes.Parameters.IngressPorts
+		}
+		if m.Nodes.Parameters.AdditionalVMLabels != nil {
+			p.AdditionalVMLabels = m.Nodes.Parameters.AdditionalVMLabels
+		}
+		if m.Nodes.Parameters.Zones != nil {
+			p.Zones = m.Nodes.Parameters.Zones
+		}
 	}
 }
 

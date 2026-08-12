@@ -32,7 +32,7 @@ sshPublicKey: {{ $sshPublicKey | b64enc | quote }}
 {{- end }}
 
 {{- $dvpValues := dict }}
-{{- with $providerClusterConfiguration.additionalVMLabels }}
+{{- with $context.Values.cloudProviderDvp.nodes.parameters.additionalVMLabels }}
 {{- $_ := set $dvpValues "additionalVMLabels" . }}
 {{- end }}
 dvp: {{ $dvpValues | toJson | b64enc | quote }}

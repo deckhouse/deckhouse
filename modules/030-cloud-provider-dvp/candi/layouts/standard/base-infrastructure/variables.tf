@@ -56,7 +56,7 @@ module "migration" {
 
 locals {
   project_namespace  = try(module.migration.settings.spec.settings.provider.parameters.namespace, "")
-  network_policy_raw = try(module.migration.settings.spec.settings.provider.parameters.networkPolicy, "Isolated")
+  network_policy_raw = try(module.migration.settings.spec.settings.nodes.parameters.networkPolicy, "Isolated")
   network_policy_mode = (
     local.network_policy_raw == null || trimspace(tostring(local.network_policy_raw)) == ""
   ) ? "Isolated" : tostring(local.network_policy_raw)

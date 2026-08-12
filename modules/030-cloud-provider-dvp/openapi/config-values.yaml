@@ -45,6 +45,28 @@ properties:
         additionalProperties: false
         description: Parameters of the nodes subsystem.
         properties:
+          additionalVMLabels:
+            additionalProperties:
+              type: string
+            description: |-
+              Additional labels that will be added to all virtual machine pods in the created cluster: both master and worker nodes.
+
+              This parameter can be used to allow existing or custom NetworkPolicy resources in the parent cluster to select VM pods by these labels. For example, you can add a label to VM pods and allow access to them only from a bastion pod or another trusted source.
+            type: object
+          ingressPorts:
+            default:
+            - 22
+            description: |-
+              List of virtual machine TCP ports for which ingress traffic will be allowed from any source: external IP addresses and any pods in the parent cluster.
+
+              Can be used to expose services that need to accept inbound TCP traffic from any source.
+
+              To disable this unrestricted ingress access, specify an empty array. In this case, access to VMs can be configured separately using custom NetworkPolicy resources that select VM pods by labels from the `additionalVMLabels` parameter.
+            items:
+              maximum: 65535
+              minimum: 1
+              type: integer
+            type: array
           ipAddresses:
             additionalProperties:
               items:
@@ -79,6 +101,17 @@ properties:
               [Read more about possible provider layouts](/modules/cloud-provider-dvp/layouts.html).
             enum:
             - Standard
+            type: string
+          networkPolicy:
+            default: Isolated
+            description: |-
+              Control rules for network traffic to and from workloads running in the Project resource.
+
+              * `Isolated`: Applies a restrictive NetworkPolicy that allows only network traffic required for platform system components to function. All other traffic is denied.
+              * `None`: The cluster does not request any network policies. Existing project-level restrictions still apply.
+            enum:
+            - Isolated
+            - None
             type: string
           region:
             description: |-
@@ -128,16 +161,6 @@ properties:
               Namespace in which DKP cluster resources will be created.
 
               > If not explicitly specified, the default namespace for kubeconfig will be used.
-            type: string
-          networkPolicy:
-            description: |-
-              Control rules for network traffic to and from workloads running in the Project resource.
-
-              * `Isolated`: Applies a restrictive NetworkPolicy that allows only network traffic required for platform system components to function. All other traffic is denied.
-              * `None`: The cluster does not request any network policies. Existing project-level restrictions still apply.
-            enum:
-            - Isolated
-            - None
             type: string
         required:
         - namespace

@@ -37,13 +37,9 @@ type DvpProvider struct {
 }
 
 type DvpModuleConfiguration struct {
-	Provider *DvpProvider `json:"provider,omitempty" yaml:"provider,omitempty"`
-	Zones    *[]string    `json:"zones,omitempty" yaml:"zones,omitempty"`
-
-	// v2 fields: provider.parameters, nodes.parameters, storage.parameters
-	ProviderV2 *DvpProviderV2 `json:"providerV2,omitempty" yaml:"providerV2,omitempty"`
-	Nodes      *DvpNodesV2    `json:"nodes,omitempty" yaml:"nodes,omitempty"`
-	Storage    *DvpStorageV2  `json:"storage,omitempty" yaml:"storage,omitempty"`
+	Provider *DvpProviderV2 `json:"provider,omitempty" yaml:"provider,omitempty"`
+	Nodes    *DvpNodesV2    `json:"nodes,omitempty" yaml:"nodes,omitempty"`
+	Storage  *DvpStorageV2  `json:"storage,omitempty" yaml:"storage,omitempty"`
 }
 
 // DvpProviderV2 represents the v2 schema provider section (from ModuleConfig).
@@ -52,8 +48,7 @@ type DvpProviderV2 struct {
 }
 
 type DvpProviderParameters struct {
-	Namespace     *string `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	NetworkPolicy *string `json:"networkPolicy,omitempty" yaml:"networkPolicy,omitempty"`
+	Namespace *string `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 }
 
 // DvpNodesV2 represents the v2 schema nodes section (from ModuleConfig).
@@ -63,11 +58,14 @@ type DvpNodesV2 struct {
 }
 
 type DvpNodesParameters struct {
-	Layout       *string             `json:"layout,omitempty" yaml:"layout,omitempty"`
-	SSHPublicKey *string             `json:"sshPublicKey,omitempty" yaml:"sshPublicKey,omitempty"`
-	Region       *string             `json:"region,omitempty" yaml:"region,omitempty"`
-	Zones        *[]string           `json:"zones,omitempty" yaml:"zones,omitempty"`
-	IPAddresses  map[string][]string `json:"ipAddresses,omitempty"`
+	Layout             *string             `json:"layout,omitempty" yaml:"layout,omitempty"`
+	SSHPublicKey       *string             `json:"sshPublicKey,omitempty" yaml:"sshPublicKey,omitempty"`
+	Region             *string             `json:"region,omitempty" yaml:"region,omitempty"`
+	Zones              *[]string           `json:"zones,omitempty" yaml:"zones,omitempty"`
+	IPAddresses        map[string][]string `json:"ipAddresses,omitempty"`
+	NetworkPolicy      *string             `json:"networkPolicy,omitempty" yaml:"networkPolicy,omitempty"`
+	IngressPorts       []int               `json:"ingressPorts,omitempty" yaml:"ingressPorts,omitempty"`
+	AdditionalVMLabels map[string]string   `json:"additionalVMLabels,omitempty" yaml:"additionalVMLabels,omitempty"`
 }
 
 // DvpStorageV2 represents the v2 schema storage section (from ModuleConfig).
