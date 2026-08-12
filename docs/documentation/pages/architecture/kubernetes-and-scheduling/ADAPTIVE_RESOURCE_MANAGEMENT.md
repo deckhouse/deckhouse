@@ -7,7 +7,7 @@ description: Architecture of the adaptive-resource-management module in Deckhous
 
 The [`adaptive-resource-management`](/modules/adaptive-resource-management/) module  lets you automate the selection of resource requests and limits for workloads by leveraging the Vertical Pod Autoscaler (VPA) recommendations.
 
-The module deploys the AutoVPA controller, based on [Goldilocks](https://github.com/FairwindsOps/goldilocks) with additional Deckhouse-specific enhancements, which automatically creates and maintains VPA objects for workloads in selected namespaces and provides resource recommendations. AutoVPA replaces one-off, per-application guesswork with evidence-based sizing across the whole fleet: it prevents over-provisioning that drives up cloud spend, gives workloads reliable performance guardrails by basing requests and limits on observed usage rather than estimates, and scales the same recommendation workflow to as many workloads and namespaces as you manage — without touching a single manifest.
+The module deploys the **AutoVPA** controller based on [Goldilocks](https://github.com/FairwindsOps/goldilocks) tailored for Deckhouse Kubernetes Platform (DKP). The controller automatically creates and maintains VPA objects for workloads in selected namespaces and provides recommendations on resource configuration.
 
 Main features:
 
