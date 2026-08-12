@@ -89,13 +89,6 @@ rules:
   - delete
   - deletecollection
 - apiGroups:
-  - machine.sapcloud.io
-  resources:
-  - machinedeployments/scale
-  verbs:
-  - patch
-  - update
-- apiGroups:
   - cluster.x-k8s.io
   resources:
   - clusters
@@ -118,7 +111,6 @@ rules:
   - machinepools
   - machinehealthchecks
   - clusters
-  - machinedeployments/scale
   verbs:
   - create
   - update
