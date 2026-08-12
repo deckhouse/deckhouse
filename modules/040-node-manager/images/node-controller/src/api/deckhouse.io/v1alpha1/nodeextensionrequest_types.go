@@ -88,7 +88,7 @@ type Sysext struct {
 // extension and so may not be requested. Kept next to the Sysext contract so the
 // admission webhook and the controller backstop enforce one list.
 func IsReservedSysextName(name string) bool {
-	return slices.Contains([]string{"containerd", "kubelet", "kubernetes-cni"}, name)
+	return slices.Contains([]string{"containerd", "kubelet", "kubernetes-cni", "nodelet"}, name)
 }
 
 // NodeGroupSelector selects NodeGroups by name.
