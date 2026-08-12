@@ -27,7 +27,7 @@ Descheduler uses parameters with the `labelSelector` syntax from Kubernetes to f
 
 ## Metrics provider
 
-If the cluster has a registered `metrics.k8s.io` API group (for example, when [metrics-server](https://github.com/kubernetes-sigs/metrics-server) is installed), the module automatically detects it and enables the **KubernetesMetrics** metrics provider in the `descheduler` policy. This allows to use the **actual** resource consumption data from the Metrics API instead of relying solely on pod requests and limits when the `LowNodeUtilization` [strategy](#strategies) is set.
+If the cluster has a registered `metrics.k8s.io` API group (for example, when [metrics-server](https://github.com/kubernetes-sigs/metrics-server) is installed), the module automatically detects it and enables the **KubernetesMetrics** metrics provider in the `descheduler` policy. This allows to use the **actual** resource consumption data from the Metrics API instead of relying solely on pod requests and limits when the `LowNodeUtilization` [strategy](#strategies) is set. Accordingly, the values in [thresholds](cr.html#descheduler-v1alpha2-spec-strategies-lownodeutilization-thresholds) and [targetThresholds](cr.html#descheduler-v1alpha2-spec-strategies-lownodeutilization-targetthresholds) are then interpreted as a percentage of actual consumption, not of pod requests. The `HighNodeUtilization` strategy is not affected: it always uses pod requests and limits.
 
 No user action is required: the module discovers the `metrics.k8s.io` API group by watching APIService resources and configures the policy accordingly. If metrics-server is installed **after** the module is already running, the `descheduler` Pod will be automatically restarted with the updated policy.
 
@@ -56,9 +56,9 @@ In GKE, you cannot configure the default scheduler, but you can use the `optimiz
 {% endalert %}
 
 {% alert level="warning" %}
-By default, node resource usage takes into account [extended resources](https://kubernetes.io/docs/tasks/configure-pod-container/extended-resource/) and is calculated based on pod requests and limits ([requests and limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#requests-and-limits)), not actual consumption. This approach ensures consistency with the kube-scheduler, which uses a similar principle when scheduling pods on nodes.
+Node resource usage takes into account [extended resources](https://kubernetes.io/docs/tasks/configure-pod-container/extended-resource/) and is calculated based on pod requests and limits ([requests and limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#requests-and-limits)), not actual consumption. This approach ensures consistency with the kube-scheduler, which uses a similar principle when scheduling pods on nodes.
 
-If the `metrics.k8s.io` API is available in the cluster (see [Metrics provider](#metrics-provider)), utilization strategies can additionally consume **actual** resource usage data from the Metrics API. In this case, the displayed metrics (`kubectl top`) will be closer to the values used by the descheduler.
+This strategy always uses pod requests and limits, regardless of whether the `metrics.k8s.io` API is available in the cluster (see [Metrics provider](#metrics-provider)).
 {% endalert %}
 
 ### LowNodeUtilization
@@ -78,9 +78,9 @@ Nodes with resource usage in the range between `thresholds` and `targetThreshold
 The strategy is enabled by the parameter [spec.strategies.lowNodeUtilization.enabled](cr.html#descheduler-v1alpha2-spec-strategies-lownodeutilization-enabled).
 
 {% alert level="warning" %}
-By default, node resource usage takes into account [extended resources](https://kubernetes.io/docs/tasks/configure-pod-container/extended-resource/) and is calculated based on pod requests and limits ([requests and limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#requests-and-limits)), not actual consumption. This approach ensures consistency with the kube-scheduler, which uses a similar principle when scheduling pods on nodes.
+If the `metrics.k8s.io` API is **not** available in the cluster, node resource usage takes into account [extended resources](https://kubernetes.io/docs/tasks/configure-pod-container/extended-resource/) and is calculated based on pod requests and limits ([requests and limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#requests-and-limits)), not actual consumption. This approach ensures consistency with the kube-scheduler, which uses a similar principle when scheduling pods on nodes.
 
-If the `metrics.k8s.io` API is available in the cluster (see [Metrics provider](#metrics-provider)), utilization strategies can additionally consume **actual** resource usage data from the Metrics API. In this case, the displayed metrics (`kubectl top`) will be closer to the values used by the descheduler.
+If the `metrics.k8s.io` API **is** available (see [Metrics provider](#metrics-provider)), the strategy uses the **actual** resource consumption from the Metrics API *instead of* requests and limits. In this case the values used by the descheduler are close to what `kubectl top` shows, but they no longer match the kube-scheduler's view: a node whose requests are exhausted may still be considered under utilized, and its pods will not be evicted.
 {% endalert %}
 
 ### RemoveDuplicates

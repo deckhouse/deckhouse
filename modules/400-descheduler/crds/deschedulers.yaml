@@ -504,6 +504,8 @@ spec:
                         **Over utilized node** — A node whose resource usage exceeds at least one of the threshold values specified in the [targetThresholds](#descheduler-v1alpha2-spec-strategies-lownodeutilization-targetthresholds) section.
 
                         Node resource usage takes into account [extended resources](https://kubernetes.io/docs/tasks/configure-pod-container/extended-resource/) and is based on pod requests and limits, not actual consumption.
+
+                        If the `metrics.k8s.io` API group is registered in the cluster, the module automatically switches this strategy to the **actual** resource consumption from the Metrics API.
                       properties:
                         enabled:
                           type: boolean
