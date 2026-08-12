@@ -16,16 +16,9 @@
 
 import base64
 import logging
-import sys
 import re
 import yaml
 from typing import Optional, List
-# NOTE(E2E-KV): the temporary stand logs below deliberately use logging.warning, not
-# logging.info. Neither this hook nor the deckhouse library calls logging.basicConfig, so the
-# root logger keeps its default level of WARNING and every info() call is dropped before it
-# reaches the pod log. The first stand run lost the whole Python resolution path to exactly
-# that: the hooks ran and answered correctly, and not one diagnostic line was observable.
-# These lines are removed before the final PR anyway, so raising the level costs nothing.
 from deckhouse import hook
 from dotmap import DotMap
 
@@ -132,15 +125,6 @@ kubernetes:
 
 
 def main(ctx: hook.Context):
-    # TODO(E2E-KV): temporary stand probe — remove before final PR (`rg E2E-KV`).
-    # Unconditional and first: it answers "does anything this hook writes reach the pod log at
-    # all?" before any conditional line is relied upon. The first stand run could not tell a
-    # silent resolver from a silenced logger, because every diagnostic was conditional and at
-    # info level. Both channels are exercised, so a missing line localises the blockage: no
-    # PROBE at all means hook output is not forwarded to the pod log, and the E2E-KV lines
-    # below are worthless for that run whatever their level.
-    logging.warning("E2E-KV python-k8s-fg PROBE via logging.warning")
-    print("E2E-KV python-k8s-fg PROBE via stderr", file=sys.stderr, flush=True)
     try:
         binding_context = DotMap(ctx.binding_context)
         error = validate(binding_context)
@@ -158,12 +142,6 @@ def main(ctx: hook.Context):
         # `mc control-plane-manager` — including the edit that would work around it. Keeping the
         # text explicit at least makes the cause obvious in kubectl output.
         ctx.output.validations.deny(f"internal error in the kubernetesVersion feature gates webhook: {e}")
-
-
-
-
-
-
 
 
 def get_module_config_settings(ctx: DotMap) -> dict:
@@ -197,8 +175,6 @@ def normalize_version(version: str) -> str:
     return f"{version_parts[0]}.{version_parts[1]}"
 
 
-
-
 def resolve_effective_version(
     mc_kubernetes_version: Optional[str],
     ctx: DotMap,
@@ -211,8 +187,6 @@ def resolve_effective_version(
     if mc_kubernetes_version and not is_module_config_track_default(mc_kubernetes_version):
         mc_pin = usable_declared_version(mc_kubernetes_version, "ModuleConfig control-plane-manager")
         if mc_pin:
-            # TODO(E2E-KV): temporary stand Warning logs — remove before final PR (`rg E2E-KV`).
-            logging.warning("E2E-KV python-k8s-fg source=mc-pin version=%s", mc_pin)
             return mc_pin
 
     if secret_data is None:
@@ -231,8 +205,6 @@ def resolve_effective_version(
 
     if is_module_config_track_default(mc_kubernetes_version):
         version = deckhouse_default()
-        # TODO(E2E-KV): temporary stand Warning logs — remove before final PR (`rg E2E-KV`).
-        logging.warning("E2E-KV python-k8s-fg source=mc-track-default version=%s mc=%s", version, mc_kubernetes_version)
         return version
 
     if secret_data:
@@ -240,14 +212,9 @@ def resolve_effective_version(
         if is_cluster_configuration_pinned(cc_version):
             cc_pin = usable_declared_version(cc_version, "ClusterConfiguration")
             if cc_pin:
-                # TODO(E2E-KV): temporary stand Warning logs — remove before final PR (`rg E2E-KV`).
-                logging.warning("E2E-KV python-k8s-fg source=cc-pin version=%s", cc_pin)
                 return cc_pin
 
-    version = deckhouse_default()
-    # TODO(E2E-KV): temporary stand Warning logs — remove before final PR (`rg E2E-KV`).
-    logging.warning("E2E-KV python-k8s-fg source=deckhouse-default version=%s", version)
-    return version
+    return deckhouse_default()
 
 
 def build_deprecated_feature_gates_error(target_version: str, enabled_feature_gates: List[str]) -> Optional[str]:

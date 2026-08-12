@@ -234,14 +234,6 @@ func targetKubernetesVersion(_ context.Context, input *go_hook.HookInput) error 
 
 	target, isDefault := resolveTargetKubernetesVersion(mcVersion, ccRawVersion, hooks.DefaultKubernetesVersion)
 
-	// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
-	input.Logger.Info("E2E-KV resolve",
-		slog.String("mc", mcVersion),
-		slog.String("cc", ccRawVersion),
-		slog.String("target", target),
-		slog.Bool("isDefault", isDefault),
-	)
-
 	// Soft-guard: only track-default mode (MC Default, or deprecated Automatic alias, or
 	// unset→Default). Manual pins are admission-filtered and skip this block.
 	// When Default is below the maxUsed−1 window, FREEZE the digit (previous desired, else current)
@@ -334,23 +326,15 @@ func targetKubernetesVersion(_ context.Context, input *go_hook.HookInput) error 
 			)
 		}
 
-		// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
-		input.Logger.Info("E2E-KV soft-guard",
-			slog.String("secretMaxUsed", secretMaxUsed),
-			slog.String("cmSpecMaxUsed", cmSnap.MaxUsed),
-			slog.String("maxUsedChosen", maxUsed),
-			slog.String("defaultTarget", target),
-			slog.String("publishedTarget", publishedTarget),
-			slog.Bool("froze", froze),
-			slog.String("freezeFromDesired", cmSnap.DesiredVersion),
-			slog.String("freezeFromCurrent", cmSnap.CurrentVersion),
-		)
-	} else {
-		// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
-		input.Logger.Info("E2E-KV soft-guard",
-			slog.String("skipped", "manual-pin"),
-			slog.String("publishedTarget", publishedTarget),
-		)
+		// The published version silently stops following the Deckhouse default; the drift metric
+		// alone does not say at what.
+		if froze {
+			input.Logger.Info("holding the Kubernetes version below the Deckhouse default",
+				slog.String("deckhouseDefault", target),
+				slog.String("published", publishedTarget),
+				slog.String("maxUsed", maxUsed),
+			)
+		}
 	}
 
 	input.Values.Set("global.discovery.targetKubernetesVersion", publishedTarget)

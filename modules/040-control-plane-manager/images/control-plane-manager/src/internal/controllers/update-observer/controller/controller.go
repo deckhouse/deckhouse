@@ -303,15 +303,6 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{RequeueAfter: requeueInterval}, nil
 	}
 
-	// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
-	logger.Info("E2E-KV observer",
-		"spec_desired", clusterCfg.DesiredVersion,
-		"spec_mode", string(clusterCfg.UpdateMode),
-		"spec_max_used", clusterCfg.MaxUsedVersion,
-		"status_current", clusterState.CurrentVersion,
-		"reconcile_trigger", string(reconcileTrigger),
-	)
-
 	if err = r.touchConfigMap(ctx, configMap); err != nil {
 		logger.Error("Failed to write configMap", "namespace", common.KubeSystemNamespace, "name", common.ConfigMapName, log.Err(err))
 		return reconcile.Result{RequeueAfter: requeueInterval}, nil
