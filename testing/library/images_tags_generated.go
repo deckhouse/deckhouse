@@ -351,6 +351,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"nvidiaMigManager134":      "imageHash-nodeManager-nvidiaMigManager134",
 		"nvidiaMigManager135":      "imageHash-nodeManager-nvidiaMigManager135",
 		"nvidiaMigManager136":      "imageHash-nodeManager-nvidiaMigManager136",
+		"olcedar":                  "imageHash-nodeManager-olcedar",
 	},
 	"openvpn": map[string]interface{}{
 		"easyrsaMigrator":     "imageHash-openvpn-easyrsaMigrator",
