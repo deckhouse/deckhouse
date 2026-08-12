@@ -193,10 +193,10 @@ github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0 h1:xZvbKuexrSQGEw6CB4n3UC7XbOb9QNLbm8UhcGZ2R1I=
 github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0/go.mod h1:Rz++SzCLkFW03WGgftnn91TimGU2shiKb5S/YuxcBuE=
-github.com/deckhouse/lib-dhctl v0.21.0 h1:6pO9qOj3mdQpX+zD07ZRlorKCtjvn5VEyigmT4k5SBw=
-github.com/deckhouse/lib-dhctl v0.21.0/go.mod h1:hICPf+k3u8V73ndNRNVWUdye/mzo6adLZkXM6vfcmVc=
-github.com/deckhouse/module-sdk v0.12.1 h1:kcfvgIKwXUtcDXdK5e7D69lvdyaHctp8ectYKi+BYKw=
-github.com/deckhouse/module-sdk v0.12.1/go.mod h1:v3pnOUIY8hCv7qQ5YaffiAYKj5oH8WBonG614KvRPXw=
+github.com/deckhouse/lib-dhctl v0.22.0 h1:TzrizsVjK5IjTUetZ/3lb+21pusV/ldNz8CszFDCrgk=
+github.com/deckhouse/lib-dhctl v0.22.0/go.mod h1:hICPf+k3u8V73ndNRNVWUdye/mzo6adLZkXM6vfcmVc=
+github.com/deckhouse/module-sdk v0.12.2 h1:UXJXjpg6qkPQn0gA294j/2HOJvWuOJKj4c9y8CdfOoY=
+github.com/deckhouse/module-sdk v0.12.2/go.mod h1:v3pnOUIY8hCv7qQ5YaffiAYKj5oH8WBonG614KvRPXw=
 github.com/denis-tingajkin/go-header v0.4.2 h1:jEeSF4sdv8/3cT/WY8AgDHUoItNSoEZ7qg9dX7pc218=
 github.com/denis-tingajkin/go-header v0.4.2/go.mod h1:eLRHAVXzE5atsKAnNRDB90WHCFFnBUn4RN0nRcs1LJA=
 github.com/dgrijalva/jwt-go v3.2.0+incompatible/go.mod h1:E3ru+11k8xSBh+hMPgOLZmtrrCbhqsmaPHjLKYnJCaQ=
