@@ -12,16 +12,46 @@ yandex.cpi.flant.com/listener-subnet-id: SubnetID
 
 The annotation links the LoadBalancer with the appropriate Subnet.
 
-## How do I limit a LoadBalancer Target Group to nodes of a single NodeGroup?
+## Using a separate target group for a NodeGroup
 
-By default, Yandex Cloud Controller Manager adds all suitable cluster nodes to a LoadBalancer Target Group. To point the load balancer only to nodes of a specific group, use the `yandex.cpi.flant.com/target-group-name-prefix` annotation.
+By default, Yandex Cloud Controller Manager adds all suitable cluster nodes to the target group. To include only the nodes of a specific NodeGroup in the target group, use the `yandex.cpi.flant.com/target-group-name-prefix` annotation. The annotation is also described in the [Service annotations](examples.html#service-annotations) section.
 
-- On the [Service](examples.html#service-annotations), the annotation **selects** a Target Group by name and does **not** create it.
-- To **create and populate** the Target Group, set the annotation with the same value in [`NodeGroup.spec.nodeTemplate.annotations`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetemplate-annotations).
-- The annotation values on the Service and the NodeGroup must match.
-- The Target Group name is formed as `<annotation value><Yandex Cloud cluster name><NetworkID>`.
+1. In the NodeGroup whose nodes should be included in a separate target group, specify the `yandex.cpi.flant.com/target-group-name-prefix` annotation in the [`spec.nodeTemplate.annotations`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetemplate-annotations) parameter of the NodeGroup resource. For example:
 
-Example:
+   ```yaml
+   spec:
+     nodeTemplate:
+       annotations:
+         yandex.cpi.flant.com/target-group-name-prefix: frontend
+   ```
+
+   Based on this annotation, Yandex Cloud Controller Manager creates a target group and adds the nodes of this NodeGroup to it.
+
+1. In the [Service](examples.html#service-annotations) object of the LoadBalancer type, specify the same annotation with the same value. For example:
+
+   ```yaml
+   metadata:
+     annotations:
+       yandex.cpi.flant.com/target-group-name-prefix: frontend
+   ```
+
+   The annotation on the Service does not create a target group. It specifies which existing target group the LoadBalancer should use.
+
+1. Make sure that the values of `yandex.cpi.flant.com/target-group-name-prefix` in the NodeGroup and Service match. In the example above, both resources use the `frontend` value.
+
+1. The target group will be created with a name generated according to the following pattern:
+
+   ```shell
+   <ANNOTATION_VALUE><YANDEX_CLOUD_CLUSTER_NAME><NETWORK_ID>
+   ```
+
+   For example, if the annotation value is `frontend-`, the cluster name is `my-cluster-`, and the network ID is `enp123456789`, the target group name will be:
+
+   ```shell
+   frontend-my-cluster-enp123456789
+   ```
+
+Configuration example:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -47,7 +77,7 @@ spec:
 ```
 
 {% alert level="warning" %}
-In Yandex Cloud, a node cannot belong to more than one Target Group at the same time. Nodes with a custom prefix must not remain in another Target Group (including the default one) — otherwise creating or updating the LoadBalancer will fail.
+In Yandex Cloud, a node cannot belong to multiple target groups at the same time. Nodes for which a separate target group prefix is specified must not simultaneously belong to another target group, including the default target group. Otherwise, creating or updating the LoadBalancer will fail.
 {% endalert %}
 
 ## Reserving a public IP address

@@ -45,44 +45,11 @@ The following annotations are supported by Yandex Cloud Controller Manager:
 1. `yandex.cpi.flant.com/listener-subnet-id` — sets the SubnetID for the Listeners of the LB created for this Service. Overrides the corresponding default value.
 1. `yandex.cpi.flant.com/listener-address-ipv4` — sets a predefined IPv4 address for the Listeners (supported for both internal and external LBs).
 1. `yandex.cpi.flant.com/loadbalancer-external` — enables creation of an external LB for this Service (use it when you need to explicitly create an external load balancer). Overrides the default behavior.
-1. `yandex.cpi.flant.com/target-group-name-prefix` — specifies the Target Group name prefix that the LoadBalancer will use. The annotation on the Service does **not** create a Target Group; it selects an existing one by name. To create and populate the Target Group, set the annotation with the **same value** in [`NodeGroup.spec.nodeTemplate.annotations`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetemplate-annotations). Only nodes from the corresponding NodeGroups are included in the Target Group. The Target Group name is formed as `<annotation value><Yandex Cloud cluster name><NetworkID>`.
+1. `yandex.cpi.flant.com/target-group-name-prefix` — specifies the Target Group name prefix that the LoadBalancer will use. The annotation on the Service does **not** create a Target Group; it selects an existing one by name. To create and populate the Target Group, set the annotation with the **same value** in [`NodeGroup.spec.nodeTemplate.annotations`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetemplate-annotations). Only nodes from the corresponding NodeGroups are included in the Target Group. The Target Group name is formed as `<ANNOTATION_VALUE><YANDEX_CLOUD_CLUSTER_NAME><NETWORK_ID>`. For details, see [Using a separate target group for a NodeGroup](faq.html#using-a-separate-target-group-for-a-nodegroup) section.
 
 If separate Target Groups are created for the control plane or master nodes, add the label `node.kubernetes.io/exclude-from-external-load-balancers: ""` to the master nodes. This prevents the controller from automatically adding master nodes to new Target Groups for load balancers.
 
 If you create your own load balancer for master nodes and want YCC to also be able to place its load balancers on master nodes, pre-create a Target Group with a name matching the pattern `${CLUSTER-NAME}${VPC.ID}`.
-
-#### Limiting a Target Group to a single NodeGroup
-
-By default, all suitable cluster nodes are added to a LoadBalancer Target Group. To point the load balancer only to nodes of a specific group (for example, frontend), set the same prefix on the Service and in the NodeGroup.
-
-Example for the `frontend` group and a load balancer Service:
-
-```yaml
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: frontend
-spec:
-  nodeType: CloudEphemeral
-  nodeTemplate:
-    annotations:
-      yandex.cpi.flant.com/target-group-name-prefix: frontend
-  # ...
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: nginx-frontend
-  annotations:
-    yandex.cpi.flant.com/target-group-name-prefix: frontend
-spec:
-  type: LoadBalancer
-  # ...
-```
-
-{% alert level="warning" %}
-In Yandex Cloud, a node cannot belong to more than one Target Group at the same time. Nodes with a custom prefix must not remain in another Target Group (including the default one) — otherwise creating or updating the LoadBalancer will fail.
-{% endalert %}
 
 ### Target Group health checks
 
