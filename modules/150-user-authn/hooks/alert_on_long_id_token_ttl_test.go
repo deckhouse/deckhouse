@@ -142,6 +142,28 @@ spec:
 		})
 	})
 
+	Context("ModuleConfig with empty idTokenTTL string", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: user-authn
+spec:
+  enabled: true
+  version: 2
+  settings:
+    idTokenTTL: ""
+`))
+			f.RunHook()
+		})
+
+		It("Expires metric, sets nothing", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.MetricsCollector.CollectedMetrics()).To(ConsistOf(expireOp))
+		})
+	})
+
 	Context("ModuleConfig with unparsable idTokenTTL", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(`

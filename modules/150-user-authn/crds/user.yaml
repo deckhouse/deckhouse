@@ -59,7 +59,7 @@ spec:
                   x-doc-examples: ['JDJ5JDEwJGRNWGVGUVBkdUdYYVMyWDFPcGdZdk9HSy81LkdsNm5sdU9mUkhnNWlQdDhuSlh6SzhpeS5H']
                   x-kubernetes-validations:
                     - rule: self == oldSelf
-                      message: password is immutable; use the UserOperation resource to reset the password
+                      message: password is immutable; use the UserOperation resource or d8 iam user reset-password to reset the password
                 userID:
                   type: string
                   description: 'Unique issuer user ID. It equals to .metadata.name by default.'
@@ -192,7 +192,7 @@ spec:
                   x-doc-examples: ['JDJ5JDEwJGRNWGVGUVBkdUdYYVMyWDFPcGdZdk9HSy81LkdsNm5sdU9mUkhnNWlQdDhuSlh6SzhpeS5H']
                   x-kubernetes-validations:
                     - rule: self == oldSelf
-                      message: password is immutable; use the UserOperation resource to reset the password
+                      message: password is immutable; use the UserOperation resource or d8 iam user reset-password to reset the password
                 userID:
                   type: string
                   x-doc-deprecated: true
