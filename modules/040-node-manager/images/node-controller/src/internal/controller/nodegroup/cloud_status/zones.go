@@ -29,9 +29,12 @@ import (
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 )
 
-// getZonesCount returns how many zones the NodeGroup spreads over. An absent provider Secret means
-// no cloud and yields zero; an unreadable one is returned as an error, because zero zones makes
-// Min and Max zero, and a Min of zero reports the NodeGroup Ready with no nodes at all.
+// getZonesCount returns how many zones the NodeGroup spreads over.
+//
+// An unreadable Secret is returned as an error: zero zones makes Min and Max zero, and a Min of
+// zero reports the NodeGroup Ready no matter how many nodes are actually up. A Secret that is
+// absent, or that carries no zones key, still yields zero — those describe a cluster with no cloud
+// zones rather than a source we failed to reach.
 func (s *Service) getZonesCount(ctx context.Context, ng *v1.NodeGroup) (int32, error) {
 	if ng.Spec.CloudInstances != nil && len(ng.Spec.CloudInstances.Zones) > 0 {
 		return int32(len(ng.Spec.CloudInstances.Zones)), nil

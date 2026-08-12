@@ -143,12 +143,15 @@ func (s *Service) BuildSnapshot(ctx context.Context, ng *v1.NodeGroup) (Snapshot
 
 	spec, err := s.readInstanceClassSpec(ctx, provider.InstanceClassAPIVersion, kind, name)
 	if err != nil {
-		// A deleted InstanceClass is not a failure: Validate already reports it as a NodeGroup
-		// validation error, and instanceClass stays unset rather than guessed.
 		if !apierrors.IsNotFound(err) {
 			return Snapshot{}, fmt.Errorf("read instance class of %s: %w", ng.Name, err)
 		}
-		logger.V(1).Info("instance class not found, skipping capacity/instanceClass", "nodeGroup", ng.Name, "kind", kind, "name", name)
+		// The class was in the List a few lines up and is gone now — deleted mid-pass. Checks #1
+		// and #2 both see the stale name and would pass, so without this the NodeGroup is declared
+		// processed and publishes instanceClass: null, dropping the real class from the element.
+		// Recording it as a capacity failure is how the previous shape refused: check #3 reads it.
+		snap.CapacityErr = err
+		logger.V(1).Info("instance class disappeared mid-pass, refusing to publish it", "nodeGroup", ng.Name, "kind", kind, "name", name)
 		return snap, nil
 	}
 	if spec == nil {

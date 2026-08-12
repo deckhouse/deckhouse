@@ -19,6 +19,8 @@ package derived_status
 import (
 	"encoding/json"
 	"strings"
+
+	nodecommon "github.com/deckhouse/node-controller/internal/common"
 )
 
 // CloudProviderRegistration is the registration Secret a cloud provider module publishes
@@ -48,12 +50,15 @@ type CloudProviderRegistration struct {
 // strings for scalars (type: {{ b64enc "aws" }}) and JSON for structures (zones, the provider
 // tree), so every field tries JSON first and falls back to the raw bytes.
 func DecodeRegistration(data map[string][]byte) CloudProviderRegistration {
+	// The two InstanceClass keys come from nodecommon so this decoder stays inside the chain
+	// internal/common/registration_test.go pins against the shipped registration.yaml templates;
+	// spelling them out here would let a renamed key compile into a silent empty string.
 	reg := CloudProviderRegistration{
 		Type:                    decodeString(data["type"]),
 		MachineClassKind:        decodeString(data["machineClassKind"]),
 		CAPIClusterKind:         decodeString(data["capiClusterKind"]),
-		InstanceClassKind:       decodeString(data["instanceClassKind"]),
-		InstanceClassAPIVersion: decodeString(data["instanceClassAPIVersion"]),
+		InstanceClassKind:       decodeString(data[nodecommon.InstanceClassKindKey]),
+		InstanceClassAPIVersion: decodeString(data[nodecommon.InstanceClassAPIVersionKey]),
 		Zones:                   decodeStringSlice(data["zones"]),
 	}
 

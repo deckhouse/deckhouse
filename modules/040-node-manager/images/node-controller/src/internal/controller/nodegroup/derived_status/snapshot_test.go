@@ -17,9 +17,16 @@ limitations under the License.
 package derived_status
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 )
@@ -80,6 +87,60 @@ func TestBuildSnapshot_NoCloudProviderIsNotAnError(t *testing.T) {
 	require.NoError(t, err)
 	require.Empty(t, snap.Provider.InstanceClassKind)
 	require.Nil(t, snap.InstanceClass)
+}
+
+// An InstanceClass can be deleted between the List that check #2 uses and the Get that reads its
+// spec, inside a single pass. Both checks then see the stale name and pass, so unless the snapshot
+// records the failure the NodeGroup is declared processed and publishes instanceClass: null —
+// dropping a real class from the element and shifting the checksum on its nodes.
+func TestBuildSnapshot_ClassDeletedMidPassIsRecorded(t *testing.T) {
+	const kind = "AWSInstanceClass"
+
+	scheme := newTestScheme(t)
+	gvk := schema.GroupVersionKind{Group: instanceClassGroup, Version: "v1", Kind: kind}
+	scheme.AddKnownTypeWithName(gvk, &unstructured.Unstructured{})
+	scheme.AddKnownTypeWithName(gvk.GroupVersion().WithKind(kind+"List"), &unstructured.UnstructuredList{})
+
+	existing := &unstructured.Unstructured{}
+	existing.SetGroupVersionKind(gvk)
+	existing.SetName("worker")
+
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(existing, testSecret(cloudProviderSecretNamespace, cloudProviderSecretName, map[string][]byte{
+			"type":                    []byte(`aws`),
+			"instanceClassKind":       []byte(kind),
+			"instanceClassAPIVersion": []byte(`v1`),
+		})).
+		WithInterceptorFuncs(interceptor.Funcs{
+			// The List still returns it; the Get no longer does.
+			Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+				if u, ok := obj.(*unstructured.Unstructured); ok && u.GroupVersionKind().Kind == kind {
+					return apierrors.NewNotFound(schema.GroupResource{Resource: "awsinstanceclasses"}, key.Name)
+				}
+				return cl.Get(ctx, key, obj, opts...)
+			},
+		}).
+		Build()
+	s := &Service{Client: c}
+
+	ng := &v1.NodeGroup{}
+	ng.Name = "worker"
+	ng.Spec.NodeType = v1.NodeTypeCloudEphemeral
+	ng.Spec.CloudInstances = &v1.CloudInstancesSpec{
+		ClassReference: v1.ClassReference{Kind: kind, Name: "worker"},
+		MinPerZone:     0,
+		MaxPerZone:     3,
+	}
+
+	snap, err := s.BuildSnapshot(t.Context(), ng)
+	require.NoError(t, err)
+	require.Nil(t, snap.InstanceClass)
+	require.Error(t, snap.CapacityErr, "a class that vanished mid-pass must be recorded")
+
+	check := Validate(ng, snap)
+	require.False(t, check.Processed, "an unreadable class must not be published as processed")
+	require.NotEmpty(t, check.Error)
 }
 
 // An unreadable source must abort the pass: an empty provider reads as "no cloud", which drops

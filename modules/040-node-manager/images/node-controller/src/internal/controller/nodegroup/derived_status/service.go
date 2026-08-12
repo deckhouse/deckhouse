@@ -34,9 +34,14 @@ func versionString(v *semver.Version) string {
 	return v.String()
 }
 
-// Service reads everything through the manager cache. All of its sources live in kube-system,
-// which internal/common/cache.go caches whole precisely so this path never issues a live GET —
-// a live GET here used to cost hundreds of ms on every pass during a NodeGroup burst.
+// Service reads everything through the manager cache, never through an APIReader: a live GET here
+// used to cost hundreds of ms on every pass during a NodeGroup burst.
+//
+// Its sources sit in three different cache scopes (internal/common/cache.go): the kube-system
+// Secrets and the cluster-uuid ConfigMap are scoped by ByObject, the kube-apiserver Pods by label,
+// and the InstanceClass and InstanceTypesCatalog reads are only cached because unstructured caching
+// is on globally — they have no ByObject scope at all. A new source outside those three lands on an
+// unscoped informer or a live GET, so check the cache config before adding one.
 type Service struct {
 	Client client.Client
 }
