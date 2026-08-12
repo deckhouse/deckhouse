@@ -36,9 +36,7 @@ description: Архитектура модуля adaptive-resource-management в
 
 ## Компоненты модуля
 
-Модуль `adaptive-resource-management` состоит из одного компонента **autovpa-controller**, включающего следующий контейнер:
-
-* **autovpa** — основной контейнер.
+Модуль `adaptive-resource-management` состоит из одного компонента **autovpa-controller**, включающего основной контейнер **autovpa**.
 
 ## Взаимодействия модуля
 
