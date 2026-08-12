@@ -44,9 +44,6 @@ var _ = Describe("Global hooks :: discovery/targetKubernetesVersion ::", func() 
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
 
-	// The Automatic→Default mirror into global.clusterConfiguration.kubernetesVersion belongs to
-	// the ClusterConfiguration hook and is asserted in cluster_configuration_test.go: this suite
-	// drives only the version hook, so that key is never populated here.
 	Context("targetKubernetesVersion priority MC / CC / Default", func() {
 		It("pinned ModuleConfig wins over pinned ClusterConfiguration", func() {
 			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateA+moduleConfigYAML("1.35"), 1))
@@ -84,10 +81,8 @@ var _ = Describe("Global hooks :: discovery/targetKubernetesVersion ::", func() 
 			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsDefault").Bool()).To(BeTrue())
 		})
 
-		// The ModuleConfig enum no longer accepts the Automatic alias, so such an object can only
-		// come from before that enum was closed. It must not be handed onward as a pin: the
-		// control-plane-manager hook would call semver.NewVersion("Automatic") on every run and
-		// stop the module from converging until someone edits the object by hand.
+		// Handing it onward as a pin would make the control-plane-manager hook call
+		// semver.NewVersion("Automatic") on every run.
 		It("ignores a ModuleConfig value that is neither Default nor a version", func() {
 			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateA+moduleConfigYAML("Automatic"), 1))
 			f.RunHook()
@@ -97,9 +92,7 @@ var _ = Describe("Global hooks :: discovery/targetKubernetesVersion ::", func() 
 			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsDefault").Bool()).To(BeFalse())
 		})
 
-		// spec.settings is x-kubernetes-preserve-unknown-fields, so an unquoted version arrives as
-		// a number. The value is dropped rather than coerced back into a string — see the
-		// trailing-zero trap in applyControlPlaneManagerKubernetesVersionFilter.
+		// Dropped, not coerced — see applyControlPlaneManagerKubernetesVersionFilter.
 		It("ignores a non-string ModuleConfig kubernetesVersion instead of failing the hook", func() {
 			numericModuleConfig := `
 ---
@@ -140,12 +133,8 @@ clusterDomain: "test.local"
 			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsDefault").Bool()).To(BeTrue())
 		})
 
-		// The reason this hook is separate from cluster_configuration.go. That hook returns an
-		// error on a ClusterConfiguration missing podSubnetCIDR / serviceSubnetCIDR / clusterDomain,
-		// or on a pod-CIDR prefix that fails the node-mask check. While both concerns shared one
-		// hook, such a document stopped targetKubernetesVersion from being published at all, and
-		// control-plane-manager then failed with "kubernetesVersion required" — a CIDR typo took
-		// down the Kubernetes version. The version must survive a broken sibling document.
+		// Why this hook is separate: cluster_configuration.go errors on a malformed CIDR field, and
+		// while they shared a hook such a typo took the Kubernetes version down with it.
 		It("still publishes the version when ClusterConfiguration is incomplete", func() {
 			incomplete := clusterConfigurationSecret(`
 apiVersion: deckhouse.io/v1
@@ -172,8 +161,7 @@ kubernetesVersion: "1.33"
 		})
 	})
 
-	// update-observer owns every key of this ConfigMap and receives the values published here as
-	// container environment. Two writers on one object is exactly the arrangement this replaced.
+	// update-observer owns every key and receives these values as container environment.
 	Context("ConfigMap d8-cluster-kubernetes is not written by this hook", func() {
 		It("does not create the ConfigMap when it is missing", func() {
 			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateA+moduleConfigYAML("1.35"), 1))
@@ -274,9 +262,7 @@ data:
 			Expect(driftMetricFrozenLabel()).To(Equal("true"))
 		})
 
-		// The ConfigMap floor outranks the Secret: the Secret key stops being written in this
-		// release, so a cluster that has since moved on would otherwise be judged against a stale
-		// baseline and freeze at a version it no longer runs.
+		// The Secret key stops being written in this release, so it can only be the staler source.
 		It("prefers the ConfigMap floor over the Secret one", func() {
 			secretWithStaleMaxUsed := `
 apiVersion: v1
@@ -314,17 +300,8 @@ data:
 			Expect(found).To(BeFalse())
 		})
 
-		// Regression: the freeze must not trust spec.desiredVersion over status.currentVersion.
-		//
-		// desiredVersion is this hook's own previous output routed back through Values → DaemonSet
-		// env → update-observer, so a target that once slipped past the guard is written there and,
-		// if read first, confirms itself forever. Observed on a stand: a window with a temporarily
-		// lowered maxUsed let Default through, the observer recorded it, and the next pass froze at
-		// that very value while currentVersion still named the correct, higher one.
-		//
-		// The fixture reproduces exactly that state: maxUsed 1.38, desiredVersion already poisoned
-		// down to Default, currentVersion still 1.38. Reading desiredVersion first publishes
-		// Default and the cluster keeps going down; reading currentVersion first holds 1.38.
+		// Regression: desiredVersion is this hook's own previous output routed back through the
+		// ConfigMap, so reading it first lets a bad target confirm itself forever.
 		It("freezes at currentVersion when desiredVersion was already dragged below it", func() {
 			poisoned := `
 ---

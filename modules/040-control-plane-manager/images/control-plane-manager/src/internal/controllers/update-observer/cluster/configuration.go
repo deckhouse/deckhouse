@@ -23,18 +23,11 @@ const (
 	UpdateModeManual    UpdateMode = "Manual"
 )
 
-// Configuration is the operator-declared desired state for the cluster's Kubernetes version:
-// spec.desiredVersion/spec.updateMode of the ConfigMap this controller owns. It is *resolved* by
-// the global discovery hook (ModuleConfig control-plane-manager kubernetesVersion, falling back to
-// the deprecated ClusterConfiguration field) and reaches this controller as container environment.
-// This controller is the only *writer* of the block; it treats the value purely as external input
-// and never computes it itself.
+// Resolved by the global discovery hook and delivered as container environment; this controller
+// writes data.spec but never computes its values.
 type Configuration struct {
 	DesiredVersion string
 	UpdateMode     UpdateMode
-	// MaxUsedVersion is the highest Kubernetes minor the cluster has ever converged onto, mirrored
-	// into spec.maxUsedKubernetesVersion (controller.Spec carries the exact definition). Unlike the
-	// other two it is a fact about the past rather than a declaration, and it is monotonic: readers
-	// use it as the floor a downgrade may not cross.
+	// The floor a downgrade may not cross; controller.Spec carries the exact definition.
 	MaxUsedVersion string
 }

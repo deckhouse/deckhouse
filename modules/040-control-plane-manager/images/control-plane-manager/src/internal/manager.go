@@ -142,10 +142,9 @@ func NewManager(ctx context.Context, pprof bool) (*Manager, error) {
 						constants.KubeSystemNamespace: {},
 					},
 				},
-				// Client reads of ConfigMaps bypass the cache entirely (DisableFor above), so this
-				// informer exists for exactly one consumer: the update-observer watch on
-				// d8-cluster-kubernetes. Scope it to that object — without the selector every
-				// control-plane node would watch and hold every kube-system ConfigMap.
+				// Reads bypass the cache (DisableFor above), so this informer exists only for the
+				// update-observer watch. Without the selector every control-plane node would hold every
+				// kube-system ConfigMap.
 				&corev1.ConfigMap{}: {
 					Namespaces: map[string]cache.Config{
 						constants.KubeSystemNamespace: {

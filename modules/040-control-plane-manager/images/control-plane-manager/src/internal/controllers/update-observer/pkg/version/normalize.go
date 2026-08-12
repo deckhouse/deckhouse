@@ -24,9 +24,8 @@ import (
 )
 
 func Normalize(version string) (string, error) {
-	// Trim first: desiredVersion now arrives from a hand-editable ConfigMap field instead of a
-	// base64-encoded Secret, so a stray newline is easy to introduce. The global hook trims the
-	// same values on its side; without this the two components disagree on the same byte.
+	// Trimmed because these values arrive from a hand-editable ConfigMap, and the hooks trim the same
+	// ones on their side.
 	version = strings.TrimSpace(version)
 	if version == "" {
 		return "", nil

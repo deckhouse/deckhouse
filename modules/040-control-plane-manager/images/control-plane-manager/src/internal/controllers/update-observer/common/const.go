@@ -22,9 +22,8 @@ const (
 	KubeSystemNamespace = "kube-system"
 	HeritageLabelKey    = "heritage"
 	DeckhouseLabel      = "deckhouse"
-	// NameLabelKey carries the object's own name. It is what the ValidatingWebhookConfiguration
-	// forbidding deletion of this ConfigMap selects on, mirroring the label dhctl puts on the
-	// d8-cluster-configuration Secret for the same reason.
+	// The object's own name, selected on by the webhook forbidding its deletion — same as the label
+	// dhctl puts on the d8-cluster-configuration Secret.
 	NameLabelKey           = "name"
 	K8sVersionLabelKey     = "k8s-version"
 	MaxK8sVersionLabelKey  = "max-k8s-version"

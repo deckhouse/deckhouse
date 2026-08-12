@@ -70,9 +70,8 @@ var logger = log.NewLogger().Named("update-observer")
 type reconciler struct {
 	client client.Client
 
-	// bootstrap carries the first enqueue for a cluster where the ConfigMap does not exist yet.
-	// Buffered so bootstrapConfigMap never blocks: one pending wake-up is all that is ever useful,
-	// and the workqueue coalesces duplicates anyway.
+	// Carries the first enqueue when the ConfigMap does not exist yet; buffered so the sender never
+	// blocks.
 	bootstrap chan event.GenericEvent
 }
 
@@ -82,10 +81,8 @@ func RegisterController(mgr manager.Manager) error {
 		bootstrap: make(chan event.GenericEvent, 1),
 	}
 
-	// The watch alone does not cover a cluster where the ConfigMap does not exist at the moment
-	// this Pod starts: an informer replays Create events for objects that are there, and delivers
-	// nothing at all for one that is not. Without this first enqueue the controller would sit idle
-	// until some unrelated NodeGroup event happened to wake it.
+	// An informer delivers nothing for an object that does not exist, so without this a missing
+	// ConfigMap leaves the controller idle.
 	if err := mgr.Add(manager.RunnableFunc(r.bootstrapConfigMap)); err != nil {
 		return fmt.Errorf("add the ConfigMap bootstrap runnable: %w", err)
 	}
@@ -125,25 +122,14 @@ func RegisterController(mgr manager.Manager) error {
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(getNodeGroupPredicate()),
 		).
-		// bootstrapConfigMap feeds this instead of calling Reconcile itself, so its wake-up goes
-		// through the same workqueue as every other trigger and MaxConcurrentReconciles keeps
-		// meaning what it says.
+		// Fed by bootstrapConfigMap, so its wake-up goes through the same workqueue as everything else.
 		WatchesRawSource(source.Channel(r.bootstrap, &handler.EnqueueRequestForObject{})).
 		Complete(r)
 }
 
-// bootstrapConfigMap makes sure the cluster ConfigMap exists, and does nothing beyond that.
-//
-// It answers the one case the watch cannot: an informer replays Create events for objects that
-// already exist when it starts, but delivers nothing for an object that does not exist at all. If
-// the ConfigMap is present this returns on the first check and the watch takes over; if it is
-// absent this asks for a reconcile until it is there.
-//
-// It *asks* rather than calls. Reconcile belongs to the workqueue: MaxConcurrentReconciles is 1, so
-// the controller relies on never running two passes at once, and a direct call from this goroutine
-// would break that — two passes could both find the object missing, both synthesize it and both
-// Create, leaving the loser to log a failed write on every Pod start. Going through the channel
-// source also lets the queue coalesce this wake-up with whatever else is pending.
+// Returns on the first check when the ConfigMap is there, and otherwise asks for a reconcile until
+// it is. It *asks* rather than calls because MaxConcurrentReconciles is 1: a direct call could run
+// alongside a queued pass and both would Create the object.
 func (r *reconciler) bootstrapConfigMap(ctx context.Context) error {
 	err := wait.PollUntilContextCancel(ctx, requeueInterval, true, func(ctx context.Context) (bool, error) {
 		getErr := r.client.Get(ctx, client.ObjectKey{
@@ -162,8 +148,7 @@ func (r *reconciler) bootstrapConfigMap(ctx context.Context) error {
 
 		logger.Info("Cluster ConfigMap does not exist, requesting a reconcile to create it",
 			"namespace", common.KubeSystemNamespace, "name", common.ConfigMapName)
-		// Non-blocking: a wake-up already waiting in the buffer does the same job, and the next tick
-		// re-checks existence rather than trusting that this one was delivered or succeeded.
+		// Non-blocking: the next tick re-checks existence rather than trusting this send.
 		select {
 		case r.bootstrap <- event.GenericEvent{Object: &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{
 			Name:      common.ConfigMapName,
@@ -175,8 +160,6 @@ func (r *reconciler) bootstrapConfigMap(ctx context.Context) error {
 		return false, nil
 	})
 
-	// A cancelled context is a shutdown, not a failure — returning it would make the manager log
-	// this runnable as having errored on every graceful stop.
 	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 		return nil
 	}
@@ -184,11 +167,8 @@ func (r *reconciler) bootstrapConfigMap(ctx context.Context) error {
 	return err
 }
 
-// getConfigMapSpecPredicate reacts to the ConfigMap this controller owns, but only when its
-// data["spec"] block actually changed. This controller now writes that block itself, so the
-// filter's job is no longer to separate an external writer's changes from its own — it is to keep
-// the write from feeding back: fillConfigMap stamps lastReconciliationTime on every pass, so any
-// broader comparison would spin forever.
+// Reacts only when data["spec"] changed: this controller writes that block itself, so the filter's
+// job is to keep its own write from feeding back.
 func getConfigMapSpecPredicate() predicate.Predicate {
 	parseSpec := func(cm *corev1.ConfigMap) Spec {
 		var spec Spec
@@ -197,9 +177,7 @@ func getConfigMapSpecPredicate() predicate.Predicate {
 	}
 
 	isTarget := func(cm *corev1.ConfigMap) bool {
-		// Namespace is checked too so correctness does not depend on the cache scoping in
-		// manager.go: a widened informer must not turn a same-named ConfigMap elsewhere into a
-		// trigger for the singleton this controller owns.
+		// Namespace too, so correctness does not depend on the cache scoping in manager.go.
 		return cm.Name == common.ConfigMapName && cm.Namespace == common.KubeSystemNamespace
 	}
 
@@ -218,24 +196,17 @@ func getConfigMapSpecPredicate() predicate.Predicate {
 			if !ok1 || !ok2 || !isTarget(newCM) {
 				return false
 			}
-			// Comparing data.spec alone is what keeps this controller from re-triggering itself:
-			// fillConfigMap stamps lastReconciliationTime on every pass, so any broader comparison
-			// would spin forever.
-			//
-			// The status escape hatch is separate: once the cluster is UpToDate, Reconcile returns
-			// without a requeue, so data.spec is the only remaining wake-up. If status is then
-			// wiped externally, nothing would ever restore it. Reacting to a *missing* status (not
-			// to its contents) re-arms recovery without reintroducing the self-trigger loop.
+			// fillConfigMap stamps lastReconciliationTime on every pass, so anything broader than
+			// data.spec would spin forever. Reacting to a *missing* status is the escape hatch: once
+			// UpToDate, Reconcile stops requeueing and a wiped status would never be restored.
 			if newCM.Data["spec"] != "" && newCM.Data["status"] == "" {
 				return true
 			}
 			return parseSpec(oldCM) != parseSpec(newCM)
 		},
 
-		// Deletion has to wake the controller up: this object is the only durable record of
-		// maxUsedKubernetesVersion, and a `kubectl delete cm` that went through (the admission
-		// webhook that forbids it can be unavailable) must be followed by a recreate rather than
-		// silence until the next unrelated event.
+		// The only durable record of maxUsedKubernetesVersion: a delete that got past the webhook must
+		// be followed by a recreate.
 		DeleteFunc: func(e event.DeleteEvent) bool {
 			cm, ok := e.Object.(*corev1.ConfigMap)
 			if !ok {
@@ -319,10 +290,8 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 func determineReconcileTrigger(configMap *corev1.ConfigMap, clusterCfg *cluster.Configuration) ReconcileTrigger {
 	previousVersion, exists := configMap.GetLabels()[common.K8sVersionLabelKey]
 
-	// A missing k8s-version label is the real first-run signal: dhctl seeds the ConfigMap at
-	// bootstrap with labels and data.spec only, so this controller's first pass over it has no
-	// version label yet. ResourceVersion cannot serve as that signal — the seeded object arrives
-	// with a non-empty one.
+	// A missing k8s-version label is the first-run signal: dhctl seeds labels and data.spec only, and
+	// ResourceVersion is already non-empty on that object.
 	if !exists {
 		return ReconcileTriggerInit
 	}

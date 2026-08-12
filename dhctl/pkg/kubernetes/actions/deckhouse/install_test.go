@@ -553,13 +553,8 @@ func TestDeckhouseInstallCreatesClusterUUIDConfigMap(t *testing.T) {
 	require.Equal(t, clusterUUID, cm.Data["cluster-uuid"])
 }
 
-// update-observer owns kube-system/d8-cluster-kubernetes, but it only starts once the
-// control-plane-manager DaemonSet is running — long after the deckhouse Deployment. node-controller
-// reads spec.desiredVersion from that ConfigMap on its very first reconcile, so bootstrap has to
-// seed it alongside the d8-cluster-configuration Secret.
-//
-// The create-only half matters just as much: an installer that also updated the object would wipe
-// the status, labels and accumulated maxUsedKubernetesVersion the observer wrote.
+// update-observer starts long after node-controller first reads spec.desiredVersion, hence the seed.
+// Create-only matters as much: an update would wipe what the observer wrote.
 func TestDeckhouseInstallCreatesClusterKubernetesConfigMap(t *testing.T) {
 	ctx := t.Context()
 	require.NoError(t, os.Setenv("DHCTL_TEST", "yes"))
@@ -632,8 +627,7 @@ func TestDeckhouseInstallCreatesClusterKubernetesConfigMap(t *testing.T) {
 		require.Contains(t, cm.Data["status"], `currentVersion: "1.36"`)
 	})
 
-	// A managed installation has no ClusterConfiguration, control-plane-manager is disabled, and
-	// nothing would ever own or read this object.
+	// A managed installation has no ClusterConfiguration and no owner for this object.
 	t.Run("is skipped without a ClusterConfiguration", func(t *testing.T) {
 		fakeClient := client.NewFakeKubernetesClient()
 

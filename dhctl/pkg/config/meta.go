@@ -102,10 +102,8 @@ const (
 	defaultClusterMasterRPPServerPort          = 5444
 	defaultClusterMasterRPPBootstrapServerPort = 4282
 
-	// automaticKubernetesVersion is the ClusterConfiguration sentinel for "track Deckhouse
-	// default". Not accepted in ModuleConfig, where Default is the only sentinel.
-	automaticKubernetesVersion = "Automatic"
-	// defaultKubernetesVersionSentinel is the ModuleConfig sentinel for "track Deckhouse default".
+	// ClusterConfiguration's "track Deckhouse default" sentinel; ModuleConfig accepts only Default.
+	automaticKubernetesVersion       = "Automatic"
 	defaultKubernetesVersionSentinel = "Default"
 )
 
@@ -647,9 +645,8 @@ func (m *MetaConfig) StaticClusterConfigYAML() ([]byte, error) {
 	return yaml.Marshal(m.StaticClusterConfig)
 }
 
-// resolveKubernetesVersion turns a raw kubernetesVersion into the concrete version to install.
-// Both sentinels are handled: kubernetesVersionRaw already collapses them to "", but this function
-// is also called on values that never went through it.
+// Both sentinels are handled: this is also called on values that never went through
+// kubernetesVersionRaw.
 func resolveKubernetesVersion(v string) string {
 	if v == "" || isModuleConfigTrackDefault(v) || v == automaticKubernetesVersion {
 		return DefaultKubernetesVersion
@@ -657,58 +654,30 @@ func resolveKubernetesVersion(v string) string {
 	return v
 }
 
-// The two documents no longer share one predicate, because they no longer accept the same words.
-// ModuleConfig takes Default only; ClusterConfiguration keeps Automatic, which predates Default
-// there and cannot be removed without breaking existing documents.
-
-// isModuleConfigTrackDefault reports the ModuleConfig sentinel for "track the Deckhouse default".
+// ModuleConfig takes Default only; ClusterConfiguration keeps the older Automatic.
 func isModuleConfigTrackDefault(version string) bool {
 	return version == defaultKubernetesVersionSentinel
 }
 
-// isClusterConfigurationPinned reports a concrete minor pin in ClusterConfiguration. Default is
-// rejected here too: the schema does not accept it there, and a value that is obviously not a
-// version must never be handed onward as one.
-//
-// TODO(kubernetesVersion-deprecation): T+1 remove — dies together with the ClusterConfiguration field.
+// TODO(kubernetesVersion-deprecation): T+1 remove — dies with the ClusterConfiguration field.
 func isClusterConfigurationPinned(version string) bool {
 	return version != "" &&
 		version != automaticKubernetesVersion &&
 		version != defaultKubernetesVersionSentinel
 }
 
-// kubernetesVersionRaw returns the unresolved kubernetesVersion with the same preference as
-// global-hooks resolveTargetKubernetesVersion: a present ModuleConfig setting → pinned
-// ClusterConfiguration → empty (resolveKubernetesVersion turns empty into Default).
+// Same preference as global-hooks resolveTargetKubernetesVersion: a present ModuleConfig setting →
+// pinned ClusterConfiguration → empty. Presence of the ModuleConfig field decides, so Default there
+// returns empty and bootstrap starts on the Deckhouse default.
 //
-// The ModuleConfig setting wins whenever it is present, Default/Automatic included: there it means
-// "let Deckhouse choose", so it returns empty here and bootstrap starts on Default — which is
-// exactly what the running Deckhouse will target afterwards. A leftover ClusterConfiguration pin
-// is deliberately ignored in that case.
-//
-// An install config that pins the version only in ModuleConfig must still set
-// ModuleConfig.spec.enabled and ModuleConfig.spec.version — dhctl rejects ModuleConfigs
-// without them (see load.go ModuleConfig validation).
-//
-// NOTE(kubernetesVersion-deprecation): keep — dhctl already warns about the deprecated field via
-// deprecation.go, which reads "x-doc-deprecated" from the schema. Do not add a second warning here.
-//
-// TODO(kubernetesVersion-deprecation): T+1 remove — drop CC fallback branch
-// (isClusterConfigurationPinned / ccVersion). After T+1 only MC → Default.
+// TODO(kubernetesVersion-deprecation): T+1 remove — drop the ClusterConfiguration branch.
 func (m *MetaConfig) kubernetesVersionRaw() string {
 	mcVersion := ""
 	if mc := m.FindModuleConfig("control-plane-manager"); mc != nil {
-		// Read straight off spec.settings, without running the settings-version conversions: this
-		// runs at bootstrap, where the conversion chain is not wired up. Safe only while no
-		// conversion moves or renames this key — control-plane-manager has none today, and the
-		// setting is new in this release, so there is no older shape it could be stored in. A
-		// future conversion that touches kubernetesVersion has to be reflected here, otherwise
-		// dhctl and the on-cluster admission webhook (which validates the *converted* settings)
-		// would silently disagree about what the operator declared.
-		//
-		// A non-string value (an unquoted `kubernetesVersion: 1.35`) is dropped rather than
-		// coerced, for the reason spelled out in global-hooks/discovery/target_kubernetes_version.go:
-		// a minor ending in zero loses it, so 1.40 would come back as "1.4".
+		// Read straight off spec.settings: at bootstrap the settings-version conversion chain is not
+		// wired up. A future conversion touching this key must be reflected here, or dhctl and
+		// admission (which sees converted settings) would disagree. A non-string is dropped, not
+		// coerced: 1.40 would come back as "1.4".
 		if v, ok := mc.Spec.Settings["kubernetesVersion"].(string); ok {
 			mcVersion = v
 		}

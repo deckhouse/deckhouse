@@ -126,25 +126,13 @@ func init() {
 	}
 }
 
-// The Kubernetes bindings below are triggers only — the hook reads the resolved answer from
-// global.discovery.kubernetesVersionIsDefault, not from the snapshots (nothing here reads
-// input.Snapshots at all, hence the nil FilterFunc results). They exist because Values are not an
-// event source: without them the K8sVersionsWithDeprecations requirement, which gates
-// DeckhouseRelease installation, would keep a stale answer until the next hourly tick after an
-// operator switches the version between Default and a pin.
+// The Kubernetes bindings below are triggers only — the resolved answer comes from values, which are
+// not an event source. Without them the K8sVersionsWithDeprecations requirement, which gates
+// DeckhouseRelease installation, would keep a stale answer until the next hourly tick.
 //
-// Both documents are watched, and that is not redundancy. ModuleConfig owns the version now, and
-// patching it does not touch the Secret — so the Secret binding alone stopped firing on the very
-// change it was added to catch. But while the deprecated ClusterConfiguration field is still
-// honoured (it decides whenever ModuleConfig says nothing), editing *it* also flips the resolved
-// answer, and the ModuleConfig binding cannot see that. Neither object changes often, so two
-// bindings cost no extra helm-release scans in practice.
+// TODO(kubernetesVersion-deprecation): T+1 remove — drop the clusterConfiguration binding.
 //
-// TODO(kubernetesVersion-deprecation): T+1 remove — drop the clusterConfiguration binding together
-// with the ClusterConfiguration field; the ModuleConfig one is the permanent trigger.
-//
-// OnStartup must not be combined with Kubernetes bindings (addon-operator panics); Synchronization
-// of these bindings already fires the hook at startup.
+// OnStartup must not be combined with Kubernetes bindings (addon-operator panics).
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: moduleQueue + "/helm-releases-scan",
 	Schedule: []go_hook.ScheduleConfig{
@@ -172,13 +160,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, dependency.WithExternalDependencies(handleHelmReleases))
 
-// filterClusterConfigurationVersionTriggerOnly narrows the Secret snapshot to the deprecated
-// kubernetesVersion field, for the same reason filterModuleConfigTriggerOnly narrows its object:
-// the whole Secret changes for reasons that have nothing to do with the version (defaultCRI, the
-// CIDRs, Deckhouse's own bookkeeping keys), and each change would cost a full helm-release scan.
-//
-// Never returns an error: a FilterFunc error discards the snapshot and takes the hook down, and this
-// binding only needs to deliver a wake-up. An unreadable document becomes "".
+// Narrowed to one field: the whole Secret changes for unrelated reasons, each costing a full
+// helm-release scan.
 //
 // TODO(kubernetesVersion-deprecation): T+1 remove — dies with the binding above.
 func filterClusterConfigurationVersionTriggerOnly(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -197,15 +180,8 @@ func filterClusterConfigurationVersionTriggerOnly(obj *unstructured.Unstructured
 	return cfg.KubernetesVersion, nil
 }
 
-// filterModuleConfigTriggerOnly narrows the snapshot to the one field this binding exists for.
-// Nothing reads the result — handleHelmReleases takes the resolved answer from Values — but the
-// snapshot still has to be narrow: returning the whole object would re-run a helm-release scan on
-// every unrelated ModuleConfig edit.
-//
-// Never returns an error. spec.settings is x-kubernetes-preserve-unknown-fields, so an unquoted
-// `kubernetesVersion: 1.35` arrives as a number; a FilterFunc error on that would take down a hook
-// that only needed a wake-up signal. The value itself is irrelevant here, so anything unreadable
-// simply becomes "".
+// Narrowed to one field: returning the whole object would re-run a helm-release scan on every
+// unrelated ModuleConfig edit.
 func filterModuleConfigTriggerOnly(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	raw, found, err := unstructured.NestedFieldNoCopy(obj.UnstructuredContent(), "spec", "settings", "kubernetesVersion")
 	if err != nil || !found {

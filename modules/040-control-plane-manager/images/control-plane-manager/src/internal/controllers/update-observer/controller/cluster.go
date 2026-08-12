@@ -51,26 +51,14 @@ func (r *reconciler) getClusterState(ctx context.Context, cfg *cluster.Configura
 		return nil, fmt.Errorf("failed to parse versions from env: %w", err)
 	}
 
-	// availableVersions is derived from the maxUsed this pass computed (cfg.MaxUsedVersion), not from
-	// the max-k8s-version label or from the value still stored in the ConfigMap. Both of those
-	// describe the previous pass, so the published list would lag a reconcile behind the floor the
-	// ModuleConfig admission webhook enforces from the same quantity — and the two must not
-	// contradict each other.
+	// availableVersions follows the maxUsed computed this pass: the label and the stored value both
+	// describe the previous one, so the list would lag behind the floor admission enforces.
 	return cluster.GetState(cfg, nodesState, controlPlaneState, versionSettings, sourceVersion, downgradeInProgress), nil
 }
 
-// desiredConfiguration returns the data.spec block to write: the declared configuration from the
-// container environment, with maxUsedKubernetesVersion raised to the value already recorded in the
-// ConfigMap when that one is higher.
-//
-// The max() is what makes the value monotonic in practice rather than only in intent. The
-// environment is a snapshot of what values held when this Pod's template was rendered, so during a
-// DaemonSet rollout an older Pod can still be the one reconciling, and on an HA cluster leadership
-// can move to it mid-roll. Writing the environment verbatim would let such a Pod walk the recorded
-// maximum backwards and hand a downgrade one extra minor of room.
-//
-// Reads of ConfigMaps in this binary bypass the cache (internal/manager.go), so the stored value
-// compared here is the live one.
+// The max() is what makes maxUsed monotonic in practice: the environment is a snapshot from when this
+// Pod's template was rendered, so mid-rollout an older Pod can be the one reconciling. ConfigMap
+// reads bypass the cache (internal/manager.go), so the stored value is live.
 func desiredConfiguration(configMap *corev1.ConfigMap) (*cluster.Configuration, error) {
 	cfg, err := cluster.LoadConfigurationFromEnv()
 	if err != nil {
@@ -82,10 +70,8 @@ func desiredConfiguration(configMap *corev1.ConfigMap) (*cluster.Configuration, 
 	return cfg, nil
 }
 
-// storedMaxUsedVersion returns spec.maxUsedKubernetesVersion as currently written, or "" when the
-// block is absent or unreadable. Unreadable is not an error: this controller is about to overwrite
-// data.spec anyway, and refusing to reconcile over a hand-mangled block would block the very write
-// that repairs it. Losing the stored value costs at most the floor the environment already carries.
+// Unreadable is not an error: refusing to reconcile over a hand-mangled block would block the write
+// that repairs it.
 func storedMaxUsedVersion(configMap *corev1.ConfigMap) string {
 	var spec Spec
 	if err := yaml.Unmarshal([]byte(configMap.Data["spec"]), &spec); err != nil {

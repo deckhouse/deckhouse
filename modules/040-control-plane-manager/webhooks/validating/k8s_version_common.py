@@ -38,17 +38,14 @@ from typing import Optional
 import yaml
 from dotmap import DotMap
 
-# Snapshot names, shared because the two webhooks bind the same objects and their handlers read the
-# snapshots by name.
+# Shared: the two webhooks bind the same objects and read the snapshots by name.
 CLUSTER_CONFIG_SNAPSHOT_NAME = "d8-cluster-configuration"
 CLUSTER_KUBERNETES_SNAPSHOT_NAME = "d8-cluster-kubernetes"
 
 # A declared version these webhooks are willing to hand onward as a version.
 VERSION_RE = re.compile(r'^v?\d+\.\d+(\.\d+)?$')
 
-# Sentinels meaning "let Deckhouse pick the version". The two documents do not accept the same
-# word: ModuleConfig takes Default only, while ClusterConfiguration keeps Automatic, which predates
-# Default there and cannot be removed without breaking existing documents.
+# ModuleConfig takes Default only; ClusterConfiguration keeps the older Automatic.
 AUTOMATIC_VERSION = "Automatic"
 DEFAULT_VERSION = "Default"
 
@@ -69,10 +66,7 @@ def is_cluster_configuration_pinned(version) -> bool:
 def usable_declared_version(version, source: str) -> Optional[str]:
     """Drop a declared kubernetesVersion that is neither a sentinel nor a version, and say so.
 
-    Mirrors usableDeclaredVersion in global-hooks/discovery/target_kubernetes_version.go. Both
-    enums make such a value unwritable, so this is defence in depth for objects that predate the
-    current schema — most concretely a ModuleConfig carrying the Automatic alias, which was legal
-    there before the alias was dropped from that enum.
+    Mirrors usableDeclaredVersion in global-hooks/discovery/target_kubernetes_version.go.
 
     Load-bearing in a way it is not in the Go hook: an unusable value used to travel all the way
     into is_feature_gate_deprecated_up_to_version, whose exception is swallowed per feature gate
@@ -128,10 +122,7 @@ def get_deckhouse_default_version_from_secret(secret_data) -> Optional[str]:
 def get_deckhouse_default_version_from_configmap(ctx: DotMap) -> Optional[str]:
     """Read status.automaticVersion from kube-system/d8-cluster-kubernetes.
 
-    update-observer owns that ConfigMap and writes automaticVersion from the version_map entry
-    marked default in the running build, so it always describes the Deckhouse that is actually
-    installed. Missing or unparsable means "not published yet" and the caller falls back to the
-    Secret key.
+    Always describes the installed build. Missing means "not published yet".
     """
     snapshot = ctx.snapshots.get(CLUSTER_KUBERNETES_SNAPSHOT_NAME, [])
     if not snapshot or len(snapshot) == 0:

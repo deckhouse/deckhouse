@@ -165,14 +165,9 @@ webhooks:
         namespace: d8-system
         port: 4223
         path: /validate/v1/configuration-secret
-  # kube-system/d8-cluster-kubernetes is the only durable record of maxUsedKubernetesVersion —
-  # the floor that stops a cluster from being downgraded below what it has ever run.
-  # update-observer recreates a deleted ConfigMap, but from its own container environment, so the
-  # history would be gone. DELETE only: hand edits of data.spec are rewritten on the next reconcile.
-  #
-  # objectSelector, not a name match: without it failurePolicy: Fail would apply to every ConfigMap
-  # in kube-system and an unavailable webhook would take the cluster with it. The label is stamped
-  # by dhctl at bootstrap and re-asserted by update-observer on every write.
+  # The only durable record of maxUsedKubernetesVersion; update-observer would recreate a deleted one
+  # without the history. The objectSelector matters: failurePolicy: Fail would otherwise apply to
+  # every ConfigMap in kube-system.
   - name: cluster-kubernetes-configmap.deckhouse-webhook.deckhouse.io
     rules:
       - apiGroups:

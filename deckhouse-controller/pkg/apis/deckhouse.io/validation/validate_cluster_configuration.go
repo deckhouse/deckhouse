@@ -231,22 +231,15 @@ func parseVersion(version string) (*semver.Version, error) {
 // TODO(kubernetesVersion-deprecation): T+1 remove — drop CC kubernetesVersion validation path; MC webhook remains the only guard.
 // NOTE(kubernetesVersion-deprecation): keep — Secret maxUsed/default baseline keys survive CC field removal.
 //
-// kubernetesVersionBaseline carries the cluster-level version facts the downgrade check resolves
-// "Automatic" against. Both values are Deckhouse's own bookkeeping (written by the
-// control-plane-manager effective_kubernetes_version.go hook), not ClusterConfiguration fields.
+// The cluster-level facts the downgrade check resolves "Automatic" against — Deckhouse's own
+// bookkeeping, not ClusterConfiguration fields.
 type kubernetesVersionBaseline struct {
-	// MaxUsed is the highest version the cluster has ever converged onto
-	// (maxUsedControlPlaneKubernetesVersion). Empty means "not recorded anywhere": every writer
-	// below trims the value and stores it only when non-empty, so "" is the single unset marker.
+	// The highest version the cluster has ever converged onto; "" is the single unset marker.
 	MaxUsed string
-	// DeckhouseDefault is the version "Automatic" currently resolves to
-	// (deckhouseDefaultKubernetesVersion). Empty means unset, same convention as MaxUsed.
+	// What "Automatic" currently resolves to.
 	DeckhouseDefault string
-	// AvailableVersions is status.availableVersions, the set update-observer publishes as
-	// Supported[maxUsed-1:]. Only the ConfigMap ever carried it, so it stays empty when that object
-	// is missing — there is no Secret key to fall back to. Carried on the baseline so the
-	// ModuleConfig webhook resolves the floor and the membership list from one snapshot of one
-	// object instead of reading it twice.
+	// Only the ConfigMap carries it, so it stays empty when that object is missing. Kept here so the
+	// ModuleConfig webhook takes the floor and the membership list from one snapshot.
 	AvailableVersions []string
 }
 
@@ -259,24 +252,19 @@ func kubernetesVersionBaselineFromSecret(secret *v1.Secret) kubernetesVersionBas
 		return kubernetesVersionBaseline{}
 	}
 
-	// Trimmed, so a present-but-empty key becomes "" and counts as unset. That matters: the
-	// callers gate a parseVersion call whose failure is fatal to the whole webhook, so treating a
-	// blank key as a value would turn it into a fail-closed ClusterConfiguration — no edit of any
-	// field would be accepted.
+	// Trimmed, so a present-but-empty key counts as unset: it gates a parseVersion call whose failure
+	// would take the whole webhook fail-closed.
 	return kubernetesVersionBaseline{
 		MaxUsed:          strings.TrimSpace(string(secret.Data["maxUsedControlPlaneKubernetesVersion"])),
 		DeckhouseDefault: strings.TrimSpace(string(secret.Data["deckhouseDefaultKubernetesVersion"])),
 	}
 }
 
-// kubernetesVersionBaselineFor resolves both facts from the d8-cluster-kubernetes ConfigMap, which
-// update-observer owns, and falls back to the d8-cluster-configuration Secret per field.
+// Resolves the facts from the d8-cluster-kubernetes ConfigMap, falling back to the
+// d8-cluster-configuration Secret per field. The Secret's default key was only ever raised, so after
+// a Deckhouse downgrade the ConfigMap is the honest one.
 //
-// The two facts come from different blocks because they are different kinds of thing:
-// spec.maxUsedKubernetesVersion is a monotonic record of what the cluster has run, while
-// status.automaticVersion is what the running Deckhouse build resolves "Default" to right now.
-// Note that the Secret key it replaces was only ever raised, so after a Deckhouse downgrade the
-// two disagree — and the ConfigMap is the one telling the truth about the current build.
+// TODO(kubernetesVersion-deprecation): T+1 remove — drop the Secret fallback.
 func kubernetesVersionBaselineFor(ctx context.Context, cli client.Client, secret *v1.Secret) kubernetesVersionBaseline {
 	baseline := kubernetesVersionBaselineFromSecret(secret)
 
@@ -291,9 +279,7 @@ func kubernetesVersionBaselineFor(ctx context.Context, cli client.Client, secret
 		return baseline
 	}
 
-	// A block this webhook cannot read leaves the Secret-derived value in place, which is the right
-	// degradation — but it is logged, because a guard that quietly falls back to a stale source
-	// looks exactly like a guard that found nothing to correct.
+	// Logged: a quiet fallback to a stale source looks like nothing needing correction.
 	spec := new(clusterKubernetesSpec)
 	if err := yaml.Unmarshal([]byte(cm.Data[clusterKubernetesSpecDataKey]), spec); err != nil {
 		log.Warn("cannot parse d8-cluster-kubernetes data.spec, keeping the Secret baseline", log.Err(err))
@@ -332,10 +318,8 @@ func validateKubernetesVersionDowngrade(oldVersion, newVersion string, baseline 
 	// oldVersion can be either "Automatic" or semver (e.g., "1.23.4")
 	// newVersion can be either "Automatic" or semver (e.g., "1.23.5")
 	//
-	// kubernetesVersion is optional in ClusterConfiguration since it moved to the
-	// control-plane-manager ModuleConfig, so either side can now be absent. An absent field means
-	// exactly what "Automatic" means — Deckhouse picks the version — so normalize instead of
-	// handing "" to the semver parser.
+	// Optional since the field moved to ModuleConfig, and an absent value means what "Automatic"
+	// means — normalized rather than handed to the semver parser as "".
 	if oldVersion == "" {
 		oldVersion = automaticKubernetesVersion
 	}
@@ -550,9 +534,7 @@ func clusterConfigurationHandler(mm moduleManager, cli client.Client, _ *config.
 		}
 
 		k8sVersionValidator := kwhvalidating.ValidatorFunc(func(ctx context.Context, _ *model.AdmissionReview, _ metav1.Object) (*kwhvalidating.ValidatorResult, error) {
-			// Not a pin: in *this* document the sentinel is "Automatic", and an absent field means
-			// the same thing — Deckhouse picks the version. ModuleConfig spells that "Default"
-			// and never accepts "Automatic"; the two dictionaries are not interchangeable.
+			// In this document the sentinel is "Automatic", and an absent field means the same.
 			if !isClusterConfigurationPinned(clusterConf.KubernetesVersion) {
 				return allowResult(nil)
 			}

@@ -43,9 +43,8 @@ import (
 
 const (
 	deckhouseClusterKubernetesConfigMap = "d8-cluster-kubernetes"
-	// TODO(kubernetesVersion-deprecation): T+1 rewrite — split this into two constants.
-	// updateMode stays "Automatic"; the kubernetesVersion sentinel becomes "Default".
-	// Today both dictionaries share the same string, so one constant works by accident.
+	// TODO(kubernetesVersion-deprecation): T+1 rewrite — split in two. updateMode stays "Automatic"
+	// while the kubernetesVersion sentinel is "Default"; one constant works only by accident.
 	k8sAutomaticUpdateMode              = "Automatic"
 	reqCheckerServiceName               = "requirements-checker"
 	MigratedModulesRequirementFieldName = "migratedModules"
@@ -232,16 +231,9 @@ type clusterKubernetesSpec struct {
 	UpdateMode string `json:"updateMode"`
 }
 
-// initClusterKubernetesVersion reads updateMode from ConfigMap kube-system/d8-cluster-kubernetes.
-//
-// update-observer is the only writer of that object; it takes the mode from the
-// KUBERNETES_UPDATE_MODE environment variable of its own container, which the DaemonSet renders out
-// of global.discovery.kubernetesVersionIsDefault. Reading the ConfigMap rather than that value is
-// not a detour: Values belong to the addon-operator process and are not visible here.
-//
-// A missing ConfigMap or empty updateMode is treated as non-Automatic (fail-open), matching the
-// historical Secret-NotFound behaviour for managed clusters. Controllers that own the ConfigMap
-// requeue on empty spec instead; this checker must not block Deckhouse updates on cold start.
+// The ConfigMap rather than values, which belong to the addon-operator process and are not visible
+// here. A missing ConfigMap or empty updateMode is non-Automatic (fail-open): this checker must not
+// block Deckhouse updates on cold start.
 func (c *kubernetesVersionCheck) initClusterKubernetesVersion(ctx context.Context) error {
 	key := client.ObjectKey{Namespace: app.NamespaceKubeSystem, Name: deckhouseClusterKubernetesConfigMap}
 	cm := new(corev1.ConfigMap)
@@ -259,11 +251,8 @@ func (c *kubernetesVersionCheck) initClusterKubernetesVersion(ctx context.Contex
 
 	spec := new(clusterKubernetesSpec)
 	if err := yaml.Unmarshal([]byte(specRaw), spec); err != nil {
-		// Degrade to "update mode unknown" instead of failing. This error propagates out of
-		// NewDeckhouseReleaseRequirementsChecker into both the DeckhouseRelease reconciler and its
-		// admission webhook, so returning it would let one hand-broken key in a user-editable
-		// ConfigMap stop all release processing cluster-wide — the opposite of what the comment
-		// above promises. An unknown mode only means the autoK8sVersion requirement is skipped.
+		// Degrade rather than fail: this error reaches both the DeckhouseRelease reconciler and its
+		// webhook, so one hand-broken key would stop all release processing cluster-wide.
 		log.Warn("cannot parse the cluster kubernetes ConfigMap spec, treating the update mode as unknown",
 			slog.String("configMap", deckhouseClusterKubernetesConfigMap), log.Err(err))
 		return nil

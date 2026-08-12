@@ -1305,9 +1305,8 @@ apiserver:
 		})
 	})
 
-	// These three variables are the entire input update-observer uses to author data.spec of
-	// kube-system/d8-cluster-kubernetes. Nothing else in this suite renders the DaemonSet env
-	// block, so a template mistake here reaches a cluster unnoticed.
+	// Nothing else in this suite renders the DaemonSet env block, so a template mistake here reaches a
+	// cluster unnoticed.
 	Context("update-observer environment", func() {
 		envValue := func(name string) (string, bool) {
 			ds := f.KubernetesResource("DaemonSet", "kube-system", "d8-control-plane-manager")
@@ -1363,9 +1362,8 @@ apiserver:
 			})
 		})
 
-		// The global values schema defaults kubernetesVersionIsDefault to false, but a values set
-		// that predates the key yields an untyped nil. `ternary` rejects that and takes the whole
-		// chart down, which is why the template tests truthiness instead.
+		// A values set predating the key yields an untyped nil, which `ternary` rejects and the whole
+		// chart goes down with it.
 		Context("when kubernetesVersionIsDefault is absent from values", func() {
 			BeforeEach(func() {
 				f.ValuesSet("global.discovery.targetKubernetesVersion", "1.34")

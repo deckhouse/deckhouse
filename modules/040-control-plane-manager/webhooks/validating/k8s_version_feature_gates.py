@@ -133,14 +133,9 @@ def main(ctx: hook.Context):
         else:
             ctx.output.validations.allow()
     except Exception as e:
-        # Stays fail-closed, and deliberately not validations.error(): in deckhouse==0.4.11 (the
-        # version this image pins) error() builds {"allowed": False, <message>: "..."} — it uses the
-        # message as the dict *key*, so the response carries no "message" field at all. It rejects
-        # just like deny() but leaves the operator with no explanation.
-        #
-        # This binding now also covers ModuleConfig, so a bug in this webhook blocks edits to
-        # `mc control-plane-manager` — including the edit that would work around it. Keeping the
-        # text explicit at least makes the cause obvious in kubectl output.
+        # deny(), not validations.error(): in deckhouse==0.4.11 error() uses the message as the dict
+        # *key*, so the response carries no "message" at all. This binding covers ModuleConfig, so a
+        # bug here blocks the very edit that would work around it.
         ctx.output.validations.deny(f"internal error in the kubernetesVersion feature gates webhook: {e}")
 
 
@@ -180,10 +175,8 @@ def resolve_effective_version(
     ctx: DotMap,
     secret_data=None,
 ) -> Optional[str]:
-    # Mirrors global-hooks/discovery/target_kubernetes_version.go resolveTargetKubernetesVersion:
-    # a present ModuleConfig setting decides on its own, Default/Automatic included (it then means the
-    # Deckhouse default, and ClusterConfiguration is not consulted at all). Only an absent setting
-    # falls back to ClusterConfiguration, where "Automatic" is not a pin either.
+    # Mirrors resolveTargetKubernetesVersion: a present ModuleConfig setting decides on its own,
+    # Default included; only an absent one falls back to ClusterConfiguration.
     if mc_kubernetes_version and not is_module_config_track_default(mc_kubernetes_version):
         mc_pin = usable_declared_version(mc_kubernetes_version, "ModuleConfig control-plane-manager")
         if mc_pin:
@@ -192,8 +185,6 @@ def resolve_effective_version(
     if secret_data is None:
         secret_data = get_cluster_configuration_secret_data(ctx)
 
-    # The Deckhouse default now comes from status.automaticVersion of the cluster ConfigMap, with
-    # the Secret key kept only until update-observer has written that object at least once.
     # TODO(kubernetesVersion-deprecation): T+1 remove — drop the Secret fallback.
     def deckhouse_default() -> Optional[str]:
         version = get_deckhouse_default_version_from_configmap(ctx)

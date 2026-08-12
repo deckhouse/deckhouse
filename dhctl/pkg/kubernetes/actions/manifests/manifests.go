@@ -664,22 +664,11 @@ const (
 	ClusterKubernetesCmNamespace = "kube-system"
 )
 
-// ClusterKubernetesConfigMap seeds kube-system/d8-cluster-kubernetes at bootstrap.
-//
-// The object is owned by update-observer, which only starts once the control-plane-manager
-// DaemonSet is running — several steps after the deckhouse Deployment. node-controller reads
-// spec.desiredVersion from it on its very first reconcile, and the release requirements check
-// reads spec.updateMode, so it has to exist from the moment Deckhouse starts. Seeding it next to
-// the d8-cluster-configuration Secret is what closes that window.
-//
-// maxUsedKubernetesVersion starts equal to the version being installed: on a fresh cluster the
-// highest minor ever converged onto and the one being installed are the same thing.
-//
-// The name label is what the ValidatingWebhookConfiguration forbidding deletion selects on —
-// same reason the d8-cluster-configuration Secret carries one.
+// update-observer owns this object but only starts once the control-plane-manager DaemonSet is up,
+// while node-controller and the release requirements check read it immediately — hence the seed. The
+// name label is what the delete-protection webhook selects on.
 func ClusterKubernetesConfigMap(kubernetesVersion string, trackDefault bool) *apiv1.ConfigMap {
-	// The ConfigMap protocol value: Automatic means "follow the Deckhouse default". It is
-	// unrelated to the deprecated ModuleConfig enum alias of the same spelling.
+	// A ConfigMap protocol value, unrelated to the ModuleConfig enum of the same spelling.
 	updateMode := "Manual"
 	if trackDefault {
 		updateMode = "Automatic"

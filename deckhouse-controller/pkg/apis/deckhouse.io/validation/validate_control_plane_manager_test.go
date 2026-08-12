@@ -39,8 +39,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/moduledependency"
 )
 
-// newControlPlaneManagerConfig builds a control-plane-manager ModuleConfig with the
-// given kubernetesVersion setting (omitted from settings entirely when empty).
+// An empty version omits the setting entirely.
 func newControlPlaneManagerConfig(kubernetesVersion string) *v1alpha1.ModuleConfig {
 	cfg := newModuleConfigFull(controlPlaneManagerModuleName, boolPtr(true), "", "")
 	cfg.Spec.Version = 1
@@ -52,7 +51,6 @@ func newControlPlaneManagerConfig(kubernetesVersion string) *v1alpha1.ModuleConf
 	return cfg
 }
 
-// newControlPlaneManagerConfigDisabled is like newControlPlaneManagerConfig but with
 // enabled=false so DELETE skips the confirmation guard and reaches the version check.
 func newControlPlaneManagerConfigDisabled(kubernetesVersion string) *v1alpha1.ModuleConfig {
 	cfg := newControlPlaneManagerConfig(kubernetesVersion)
@@ -70,8 +68,7 @@ func newClusterConfigurationSecret(kubernetesVersion string) *corev1.Secret {
 	}
 }
 
-// newClusterConfigurationSecretWithMaxUsed also carries the version bookkeeping
-// control-plane-manager keeps alongside the ClusterConfiguration document.
+// Also carries the version bookkeeping kept alongside the ClusterConfiguration document.
 func newClusterConfigurationSecretWithMaxUsed(kubernetesVersion, maxUsed string) *corev1.Secret {
 	secret := newClusterConfigurationSecret(kubernetesVersion)
 	secret.Data["maxUsedControlPlaneKubernetesVersion"] = []byte(maxUsed)
@@ -97,8 +94,7 @@ func newClusterKubernetesConfigMap(available []string) *corev1.ConfigMap {
 func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *testing.T) {
 	const moduleName = controlPlaneManagerModuleName
 
-	// spec.version=1 with settings is exercised in these tests, which requires a
-	// non-nil conversions store (the default nil-nil validator panics on Get).
+	// spec.version=1 with settings needs a non-nil conversions store; the default panics on Get.
 	validator := configtools.NewValidator(nil, conversion.NewConversionsStore())
 
 	buildHandler := func(t *testing.T) (storage *fakeModuleStorage, manager *fakeModuleManager) {
@@ -240,8 +236,7 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 	})
 
 	t.Run("switching a pin to Default is allowed and ignores a stale CC pin", func(t *testing.T) {
-		// Default hands the choice back to Deckhouse; the resolver no longer consults CC when
-		// the setting is present, and the track-default path cannot drop below maxUsed-1 anyway.
+		// Default hands the choice back to Deckhouse, and that path cannot drop below maxUsed-1.
 		handler := withObjs(t,
 			newClusterKubernetesConfigMap([]string{"1.34", "1.35", "1.36"}),
 			newClusterConfigurationSecret("1.32"),
@@ -256,8 +251,8 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 	})
 
 	t.Run("dropping the setting from Default is checked against the CC fallback", func(t *testing.T) {
-		// Removing the field does change ownership back to ClusterConfiguration, so a stale pin
-		// there must not silently become the target.
+		// Ownership goes back to ClusterConfiguration, so a stale pin there must not become the
+		// target.
 		handler := withObjs(t,
 			newClusterKubernetesConfigMap([]string{"1.34", "1.35", "1.36"}),
 			newClusterConfigurationSecret("1.32"),
@@ -282,8 +277,7 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 
 		newCfg := newControlPlaneManagerConfig("")
 		oldCfg := newControlPlaneManagerConfig("1.35")
-		// Unsupported version makes ExtractLatestSettings fail; the clear-guard must still
-		// see the raw kubernetesVersion pin via GetMap fallback.
+		// ExtractLatestSettings fails, so the clear-guard must see the pin via the GetMap fallback.
 		oldCfg.Spec.Version = 99
 		review := newModuleConfigAdmissionReview("UPDATE", newCfg, oldCfg)
 
@@ -373,11 +367,9 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 		assert.Contains(t, resp.Result.Message, "1.32")
 	})
 
-	// resolveModuleSource returns a non-nil *allow* result when Module/control-plane-manager is
-	// absent (fresh install, or the window while the loader recreates it). While the guard ran
-	// after that call, deleting the Module CR was enough to push any pin through admission.
-	// expectEnabling: CREATE runs validateCreate (and its dependency check) before validateCommon,
-	// so the mock has to answer CheckEnabling on that path.
+	// resolveModuleSource allows when the Module is absent, so deleting the Module CR used to push
+	// any pin through.
+	// expectEnabling: CREATE runs the dependency check before validateCommon.
 	withoutModuleCR := func(t *testing.T, expectEnabling bool, objs ...client.Object) http.Handler {
 		t.Helper()
 		storage, manager := buildHandler(t)
@@ -402,10 +394,7 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 		assert.Contains(t, resp.Result.Message, "1.32")
 	})
 
-	// CREATE is the main migration path — an unmigrated cluster has no ModuleConfig at all, so the
-	// first apply is a CREATE — yet every other case here is UPDATE/DELETE. A missing Module CR is
-	// already fail-closed on CREATE (validateCreate → validateModuleEnabling rejects it), so this
-	// covers the normal case: the CR exists and the guard must still reject an out-of-window pin.
+	// CREATE is the main migration path, yet every other case here is UPDATE/DELETE.
 	t.Run("CREATE: pin below maxUsed-1 is rejected", func(t *testing.T) {
 		storage, manager := buildHandler(t)
 		dependencyExtender := moduledependency.NewIExtenderMock(t)
@@ -424,8 +413,7 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 		assert.Contains(t, resp.Result.Message, "1.32")
 	})
 
-	// The missing-Module allow path itself must survive: a legitimate config for a module that is
-	// not installed yet is still allowed, guard or no guard.
+	// A config for a module that is not installed yet stays allowed.
 	t.Run("no Module CR: an in-window pin is still allowed", func(t *testing.T) {
 		handler := withoutModuleCR(t, false, newClusterKubernetesConfigMap(defaultAvailable),
 			newClusterConfigurationSecretWithMaxUsed("1.36", "1.36"))
@@ -438,9 +426,7 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 		assert.True(t, resp.Allowed)
 	})
 
-	// The floor is spec.maxUsedKubernetesVersion and nothing else. It is the only quantity that
-	// means "the highest minor this cluster ever ran"; the sources that used to stand in for it
-	// were a point in time (status.currentVersion) and a declaration (spec.desiredVersion).
+	// The floor is spec.maxUsedKubernetesVersion and nothing else.
 	t.Run("floor comes from spec.maxUsedKubernetesVersion", func(t *testing.T) {
 		cm := newClusterKubernetesConfigMap(nil)
 		cm.Data["spec"] = "desiredVersion: \"1.33\"\nupdateMode: Manual\nmaxUsedKubernetesVersion: \"1.36\"\n"
@@ -469,9 +455,8 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 		assert.True(t, resp.Allowed)
 	})
 
-	// The defect the single source fixes: after a legitimate 1.36 → 1.35 downgrade the control
-	// plane runs 1.35, so a floor taken from status.currentVersion would say 1.35 and wave a
-	// second step down to 1.34 through. maxUsed stays at 1.36 and rejects it.
+	// After a legitimate 1.36 → 1.35 downgrade a floor from currentVersion would wave a second step
+	// through; maxUsed stays at 1.36.
 	t.Run("a second downgrade is rejected after the first one landed", func(t *testing.T) {
 		cm := newClusterKubernetesConfigMap(nil)
 		cm.Data["spec"] = "desiredVersion: \"1.35\"\nupdateMode: Manual\nmaxUsedKubernetesVersion: \"1.36\"\n"
@@ -488,8 +473,6 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 		assert.Contains(t, resp.Result.Message, "1.36")
 	})
 
-	// The migration window: a Deckhouse upgrade lands before the DaemonSet rollout that first
-	// writes the ConfigMap key, and the floor must not be disarmed in the meantime.
 	// TODO(kubernetesVersion-deprecation): T+1 remove — drop with the Secret fallback.
 	t.Run("floor falls back to the Secret while the ConfigMap key is still absent", func(t *testing.T) {
 		cm := newClusterKubernetesConfigMap(nil)
@@ -506,8 +489,7 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 		assert.Contains(t, resp.Result.Message, "1.32")
 	})
 
-	// Once the ConfigMap carries the value it wins outright: the Secret key is no longer written,
-	// so it can only ever be the staler of the two.
+	// The Secret key is no longer written, so it can only be the staler of the two.
 	t.Run("ConfigMap maxUsed wins over the Secret", func(t *testing.T) {
 		cm := newClusterKubernetesConfigMap(nil)
 		cm.Data["spec"] = "maxUsedKubernetesVersion: \"1.33\"\n"
@@ -521,9 +503,7 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 		assert.True(t, resp.Allowed, "1.32 is one minor below the ConfigMap floor 1.33")
 	})
 
-	// spec.settings is x-kubernetes-preserve-unknown-fields, so an unquoted 1.35 reaches the guard
-	// as a number. It used to collapse to "" and be read as "the field was cleared", sending the
-	// guard off to validate the ClusterConfiguration fallback instead of the operator's input.
+	// An unquoted 1.35 used to collapse to "" and be read as "the field was cleared".
 	t.Run("a non-string kubernetesVersion is rejected, not read as cleared", func(t *testing.T) {
 		handler := withObjs(t, newClusterKubernetesConfigMap(defaultAvailable))
 
@@ -538,9 +518,8 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 		assert.Contains(t, resp.Result.Message, "must be a string")
 	})
 
-	// availableVersions is bounded at both ends, so a miss is not necessarily a downgrade: a version
-	// above the whole list lands here too. The message must not call that a downgrade — it prints
-	// the list instead, which shows the operator on which side of the range the value fell.
+	// Bounded at both ends, so a miss is not necessarily a downgrade — the message prints the list
+	// instead of guessing.
 	t.Run("a too-new version is not reported as a downgrade", func(t *testing.T) {
 		handler := withObjs(t, newClusterKubernetesConfigMap(defaultAvailable))
 

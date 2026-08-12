@@ -213,9 +213,8 @@ func ekvFilterSecret(unstructured *unstructured.Unstructured) (go_hook.FilterRes
 
 	versions := kubernetesVersionsInSecret{}
 
-	// Trim before parsing. These are Secret values a human can edit, and a trailing newline used
-	// to fail right here — inside a FilterFunc, which takes the whole hook down rather than one
-	// check, while admission (parseVersion) trimmed the same byte and carried on.
+	// Trimmed: a hand-typed trailing newline used to fail inside this FilterFunc, taking down the
+	// whole hook.
 	rawMaxUsed, ok := secret.Data[maxUsedK8sVersionSecretKey]
 	if ok {
 		maxUsed, err := semver.NewVersion(strings.TrimSpace(string(rawMaxUsed)))
@@ -237,17 +236,9 @@ func ekvFilterSecret(unstructured *unstructured.Unstructured) (go_hook.FilterRes
 	return versions, nil
 }
 
-// ekvFilterClusterKubernetesConfigMap returns spec.maxUsedKubernetesVersion and nothing else.
-//
-// The narrowness is load-bearing, not tidiness: update-observer stamps lastReconciliationTime on
-// the same ConfigMap on every reconcile and requeues once a minute until the cluster is UpToDate.
-// A filter that returned the object, its annotations or even the whole spec would therefore
-// re-run this hook — and reconverge the module — every minute for the whole duration of an
-// upgrade. Only a value that actually changes may enter the snapshot.
-//
-// Parse failures are swallowed on purpose: a FilterFunc error takes the entire hook down, and a
-// hand-mangled data.spec must not stop the effective version from being computed. An unreadable
-// value degrades to "no maxUsed from the ConfigMap", which the Secret and values sources cover.
+// Returns spec.maxUsedKubernetesVersion and nothing else. The narrowness is load-bearing:
+// update-observer stamps lastReconciliationTime on every reconcile, so a wider filter would re-run
+// this hook every minute for the whole duration of an upgrade.
 func ekvFilterClusterKubernetesConfigMap(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var configMap corev1.ConfigMap
 	if err := sdk.FromUnstructured(unstructured, &configMap); err != nil {
@@ -264,7 +255,7 @@ func ekvFilterClusterKubernetesConfigMap(unstructured *unstructured.Unstructured
 	return strings.TrimSpace(spec.MaxUsedVersion), nil
 }
 
-// ekvMaxVersion returns the highest non-nil version, or nil when every argument is nil.
+// Highest non-nil version, or nil when every argument is nil.
 func ekvMaxVersion(versions ...*semver.Version) *semver.Version {
 	var maxVersion *semver.Version
 	for _, v := range versions {
@@ -278,7 +269,7 @@ func ekvMaxVersion(versions ...*semver.Version) *semver.Version {
 	return maxVersion
 }
 
-// ekvParseVersion parses an "X.Y" (or "X.Y.Z") string, returning nil for anything unusable.
+// nil for anything unusable.
 func ekvParseVersion(raw string) *semver.Version {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
@@ -325,39 +316,22 @@ func handleEffectiveK8sVersion(ctx context.Context, input *go_hook.HookInput, dc
 	}
 
 	// Step 1 of 2: the floor — the highest minor this cluster is known to have converged onto.
-	// Derived from effectiveKubernetesVersion below, which leads the running control plane by one
-	// minor while a rollout is in flight, so during an upgrade the floor already names the minor
-	// being moved to. That is deliberate — the alternative is a floor that forgets an upgrade the
-	// moment it is announced — but it means the value is not literally "what the apiservers serve".
 	//
-	// The three sources are not different quantities being aggregated; they are the same
-	// monotonic quantity at three different freshnesses, so "highest" and "first that has a
-	// value" coincide and taking the maximum is also the correct fallback order:
+	// The three sources are the same monotonic quantity at three freshnesses, so the maximum and
+	// "first that has a value" coincide: values is this hook's previous run (lost on Pod restart),
+	// the ConfigMap is the durable record, the Secret is the pre-move one.
 	//
-	//   values  — what this hook published on its previous run. Covers the window in which the
-	//             control-plane-manager DaemonSet has not rolled out yet and the ConfigMap
-	//             therefore has not caught up. Lost when the deckhouse Pod restarts.
-	//   CM      — the durable record, written by update-observer from the container environment.
-	//   Secret  — the pre-move durable record.
-	//             TODO(kubernetesVersion-deprecation): T+1 remove — without it, a Deckhouse
-	//             upgrade would find both other sources empty and collapse the floor onto the
-	//             current effective version, erasing the history of a cluster that legitimately
-	//             sits below its historical maximum. The Secret binding stays either way for
-	//             deckhouseDefaultKubernetesVersion, so this source is free.
+	// TODO(kubernetesVersion-deprecation): T+1 remove the Secret source — until then it is what
+	// stops a Deckhouse upgrade from collapsing the floor onto the current version.
 	floor := ekvMaxVersion(
 		ekvParseVersion(input.Values.Get(maxUsedK8sVersionValuesKey).String()),
 		ekvParseVersion(ekvProcessConfigMapSnapshot(input)),
 		versionsInSecret.MaxUsed,
 	)
 	if floor == nil {
-		// No history anywhere: the running control plane is the maximum by definition. This must
-		// be an explicit substitution rather than a nil left for the switch below — semver's
-		// Equal(nil) returns false instead of panicking, so a nil floor would silently disable
-		// the downgrade step without any signal.
-		//
-		// Seeding from configVersion (as this hook used to) is the one thing that must never
-		// happen: configVersion is declared, not observed, so "1.32 cluster, declare 1.36" would
-		// record 1.36 as historically used and lock every version below 1.35 out forever.
+		// No history: the control plane is the maximum by definition. Explicit, because semver's
+		// Equal(nil) returns false rather than panicking and a nil floor would silently disable the
+		// downgrade step. Never configVersion, as this hook used to: that is declared, not observed.
 		floor = maxControlPlaneVersion
 		input.Logger.Warn("no maxUsedKubernetesVersion recorded yet, using the current control plane version as the floor",
 			"maxControlPlaneVersion", maxControlPlaneVersion.String())
@@ -376,9 +350,7 @@ func handleEffectiveK8sVersion(ctx context.Context, input *go_hook.HookInput, dc
 		}
 
 	case configVersion.LessThan(maxNodeVersion):
-		// Stepping the control plane down a minor is allowed only while it still stands exactly on
-		// the highest version the cluster ever ran: below that the downgrade is already under way
-		// and a second step would overshoot.
+		// Stepping down is allowed only while the control plane stands exactly on the floor.
 		if maxNodeVersion.LessThan(maxControlPlaneVersion) && maxControlPlaneVersion.Equal(floor) {
 			unbumped := fmt.Sprintf("%d.%d.%d", maxControlPlaneVersion.Major(), maxControlPlaneVersion.Minor()-1, maxControlPlaneVersion.Patch())
 			effectiveKubernetesVersion = semver.MustParse(unbumped)
@@ -396,18 +368,14 @@ func handleEffectiveK8sVersion(ctx context.Context, input *go_hook.HookInput, dc
 	input.Values.Set("controlPlaneManager.internal.effectiveKubernetesVersion", resultStr)
 	input.MetricsCollector.Set("d8_kubernetes_version", 1, map[string]string{"k8s_version": resultStr})
 
-	// Step 2 of 2: publish the new floor. It has to be computed after the switch — effective is
-	// what the switch produces — which is exactly why the floor above is a separate value: the
-	// throttling condition cannot depend on a number derived from its own result.
-	//
-	// max() with the previous floor is what makes the quantity monotonic, and effective (not
-	// configVersion) is what keeps it a record of what ran rather than of what was asked for.
+	// Step 2 of 2: computed after the switch, which is why the floor above is a separate value — the
+	// throttling condition cannot depend on its own result. effective rather than configVersion keeps
+	// this a record of what ran.
 	newMaxUsed := ekvMaxVersion(floor, effectiveKubernetesVersion)
 	maxUsedStr := fmt.Sprintf("%d.%d", newMaxUsed.Major(), newMaxUsed.Minor())
 	input.Values.Set(maxUsedK8sVersionValuesKey, maxUsedStr)
 
-	// The throttling is invisible otherwise: the operator declared one version, the cluster moves
-	// onto another.
+	// Otherwise the throttling is invisible: one version declared, another converged onto.
 	input.Logger.Info("resolved the effective Kubernetes version",
 		"target", configVersionRaw,
 		"effective", resultStr,
@@ -428,10 +396,8 @@ func handleEffectiveK8sVersion(ctx context.Context, input *go_hook.HookInput, dc
 		data[key] = value
 	}
 
-	// maxUsedControlPlaneKubernetesVersion is no longer written here: update-observer owns the
-	// durable copy in spec.maxUsedKubernetesVersion of the d8-cluster-kubernetes ConfigMap. The
-	// Secret key is still *read* above as a migration seed.
-	// TODO(kubernetesVersion-deprecation): T+1 remove — drop the key and its reader.
+	// TODO(kubernetesVersion-deprecation): T+1 remove — drop the key and its reader. Not written
+	// here any more, only read above as a migration seed.
 
 	currentDeckhouseDefault, err := semver.NewVersion(DefaultKubernetesVersion)
 	if err != nil {
@@ -525,9 +491,7 @@ func ekvProcessNodeSnapshot(_ context.Context, input *go_hook.HookInput) (*semve
 	return nodeVersions[0], nodeVersions[len(nodeVersions)-1], nil
 }
 
-// ekvProcessConfigMapSnapshot returns spec.maxUsedKubernetesVersion from the cluster ConfigMap,
-// or "" when the ConfigMap is absent or the key is unset. Never an error: this is one of three
-// interchangeable sources of the same monotonic value, so a missing one is not a failure.
+// Never an error: one of three interchangeable sources, so a missing one is not a failure.
 func ekvProcessConfigMapSnapshot(input *go_hook.HookInput) string {
 	maxUsedVersions, err := sdkobjectpatch.UnmarshalToStruct[string](input.Snapshots, clusterKubernetesConfigMapSnapshot)
 	if err != nil {

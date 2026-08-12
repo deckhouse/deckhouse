@@ -76,8 +76,7 @@ func (suite *ControllerTestSuite) TestConfigMapIsValid() {
 		suite.T().Setenv("ALLOWED_KUBERNETES_VERSIONS", "1.32,1.33,1.34,1.35,1.36")
 		suite.T().Setenv("AUTOMATIC_KUBERNETES_VERSION", "1.34")
 
-		// The ConfigMap is absent from this case's fixture on purpose: the controller has to
-		// create it from nothing but the environment, which is the bootstrap path.
+		// No ConfigMap in this fixture on purpose: the bootstrap path, created from the environment.
 		suite.Run("When cluster is up to date", func() {
 			suite.setVersionEnv("1.35", "Automatic", "1.35")
 			suite.setupController(suite.fetchTestFileData("init-up-to-date.yaml"))
@@ -125,9 +124,7 @@ func (suite *ControllerTestSuite) TestConfigMapIsValid() {
 	})
 }
 
-// setVersionEnv provides the declared configuration the controller writes into data.spec. It comes
-// from the container environment in production (daemonset.yaml renders it out of values), so a
-// test that omits it is testing a Pod that could not have started.
+// A test that omits this is testing a Pod that could not have started.
 func (suite *ControllerTestSuite) setVersionEnv(desiredVersion, updateMode, maxUsedVersion string) {
 	suite.T().Setenv("DESIRED_KUBERNETES_VERSION", desiredVersion)
 	suite.T().Setenv("KUBERNETES_UPDATE_MODE", updateMode)
@@ -230,8 +227,7 @@ func assembleInitObject(t *testing.T, strObj string) client.Object {
 	return res
 }
 
-// newTestReconciler builds a reconciler over the objects of a testdata case, optionally with the
-// case's own ConfigMap dropped so the bootstrap path can be exercised.
+// withConfigMap=false drops the case's own ConfigMap, exercising the bootstrap path.
 func newTestReconciler(t *testing.T, filename string, withConfigMap bool) (*reconciler, client.Client) {
 	t.Helper()
 
@@ -263,9 +259,7 @@ func readClusterConfigMap(t *testing.T, ctx context.Context, c client.Client) *c
 	return cm
 }
 
-// A Pod that cannot read its own configuration must leave the ConfigMap alone. Writing a guessed
-// value would be indistinguishable from a declared one to node-controller, the release
-// requirements check and both admission webhooks.
+// A guessed value would be indistinguishable from a declared one to every reader.
 func TestReconcileWritesNothingOnBrokenEnvironment(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		t.Setenv("ALLOWED_KUBERNETES_VERSIONS", "1.32,1.33,1.34,1.35,1.36")
@@ -287,8 +281,7 @@ func TestReconcileWritesNothingOnBrokenEnvironment(t *testing.T) {
 	})
 }
 
-// This controller writes data.spec and also watches it, so its own write produces one more event.
-// That pass must reach the same answer and stop — a loop here would rewrite the object forever.
+// The controller writes data.spec and watches it, so its own write produces one more event.
 func TestReconcileSelfTriggerConverges(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		t.Setenv("ALLOWED_KUBERNETES_VERSIONS", "1.32,1.33,1.34,1.35,1.36")
@@ -314,9 +307,7 @@ func TestReconcileSelfTriggerConverges(t *testing.T) {
 	})
 }
 
-// availableVersions is derived from the maxUsed of this pass, not from the max-k8s-version label,
-// which only moves once the cluster reaches UpToDate. Deriving it from the label would publish a
-// list one reconcile behind the floor the ModuleConfig webhook enforces from the same quantity.
+// The max-k8s-version label only moves once the cluster reaches UpToDate.
 func TestAvailableVersionsFollowTheComputedMaxUsed(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		t.Setenv("ALLOWED_KUBERNETES_VERSIONS", "1.32,1.33,1.34,1.35,1.36")

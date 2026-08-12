@@ -15,7 +15,7 @@ type ComponentFeatures struct {
 }
 
 type FeatureGateInfo struct {
-	Exists bool
+	Exists       bool
 	IsDeprecated bool
 	IsForbidden  bool
 }
@@ -50,11 +50,11 @@ func (cf *ComponentFeatures) ValidateFeature(feature string) error {
 
 func (cf *ComponentFeatures) GetFeatureGateInfo(component, featureName string) FeatureGateInfo {
 	info := FeatureGateInfo{}
-	
+
 	if cf.IsDeprecated(featureName) {
 		info.IsDeprecated = true
 	}
-	
+
 	if cf.IsForbidden(featureName) {
 		info.IsForbidden = true
 	}
@@ -72,14 +72,14 @@ func (cf *ComponentFeatures) GetFeatureGateInfo(component, featureName string) F
 	default:
 		return info
 	}
-	
+
 	for _, name := range featureList {
 		if name == featureName {
 			info.Exists = true
 			return info
 		}
 	}
-	
+
 	return info
 }
 

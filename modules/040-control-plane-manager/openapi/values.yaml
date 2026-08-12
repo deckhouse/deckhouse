@@ -44,10 +44,8 @@ properties:
         x-examples: ["1.32"]
       maxUsedKubernetesVersion:
         type: string
-        # Deliberately a pattern and not an enum like effectiveKubernetesVersion above. This value
-        # is monotonic and records the past, so after a Deckhouse downgrade it can legitimately
-        # exceed the versions this release supports. An enum would then fail schema validation and
-        # block the whole module from rendering over a value that is merely historical.
+        # A pattern, not an enum: after a Deckhouse downgrade this value can legitimately exceed what
+        # the release supports, and an enum would block the whole module from rendering.
         pattern: '^[0-9]+\.[0-9]+$'
         x-examples: ["1.32"]
       etcdServers:

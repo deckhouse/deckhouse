@@ -754,13 +754,9 @@ func getClusterConfigTasks(kubeCl *client.KubernetesClient, cfg *config.Deckhous
 			},
 		})
 
-		// Seeded next to the Secret and under the same condition: a non-empty ClusterConfig is
-		// exactly what distinguishes an installation that runs control-plane-manager from a
-		// managed one, where this ConfigMap has no meaning and no owner.
-		//
-		// Create-only, deliberately: update-observer owns the object from the moment it starts,
-		// and an UpdateFunc here would overwrite what it wrote — status, labels and the
-		// accumulated maxUsedKubernetesVersion — with the state of the world at install time.
+		// A non-empty ClusterConfig is what distinguishes an installation running
+		// control-plane-manager from a managed one. Create-only, or an update would overwrite what
+		// update-observer wrote with the state of the world at install time.
 		tasks = append(tasks, actions.ManifestTask{
 			Name: `ConfigMap "d8-cluster-kubernetes"`,
 			Manifest: func() any {
