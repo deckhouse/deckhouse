@@ -1389,11 +1389,11 @@ entries:
             - title:
                 en: Adaptive-resource-management module
                 ru: Модуль adaptive-resource-management
-              url: /architecture/kubernetes-and-scheduling/adaptive-resource-management.html              
+              url: /architecture/kubernetes-and-scheduling/adaptive-resource-management.html
             - title:
                 en: Descheduler module
                 ru: Модуль descheduler
-              url: /architecture/kubernetes-and-scheduling/descheduler.html              
+              url: /architecture/kubernetes-and-scheduling/descheduler.html
         - title:
             en: Cluster & Infrastructure subsystem
             ru: Подсистема Cluster & Infrastructure
@@ -1561,7 +1561,7 @@ entries:
             - title:
                 en: Cni-cilium module
                 ru: Модуль cni-cilium
-              url: /architecture/network/cni-cilium.html              
+              url: /architecture/network/cni-cilium.html
             - title:
                 en: Ingress-nginx module
                 ru: Модуль ingress-nginx
