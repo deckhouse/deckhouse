@@ -1,7 +1,7 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "merged-vex-18535f5e647828b3f78dcc88421cf908ef23554ac1c0c524726e13abc99b3c35",
-  "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
+  "@id": "merged-vex-fb6ff86b77fd5c157ab057c9a9cb51c02ed16a95da49472f904e4470da6cb1ea",
+  "author": "Deckhouse <contact@deckhouse.io>",
   "version": 1,
   "statements": [
     {
@@ -15,8 +15,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Компонент использует библиотеку Helm для подготовки и доставки Kubernetes API манифестов, описывающих компоненты control-plane Istio. Для эксплуатации уязвимости требуется предоставить скомпрометированный шаблон манифеста, который библиотека обработает. Однако в данном компоненте все шаблоны вкомпилированы в образ на этапе сборки, и их модификация невозможна из-за ограничений на запись в файловую систему контейнера во время работы в кластере. Таким образом, уязвимость в библиотеке Helm не может быть использована в этом контексте.",
-      "timestamp": "2025-10-10T15:32:08.129204108Z"
+      "impact_statement": "The component uses Helm only to render and deliver built-in Istio control-plane Kubernetes manifests. Charts/templates are compiled into the image at build time and cannot be replaced at runtime due to a read-only container filesystem, so Helm chart/archive/schema parsing CVEs are not exploitable here.",
+      "timestamp": "2026-07-24T12:00:00.000000000Z"
     },
     {
       "vulnerability": {
@@ -29,8 +29,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Компонент использует библиотеку Helm для подготовки и доставки Kubernetes API манифестов, описывающих компоненты control-plane Istio. Для эксплуатации уязвимости требуется предоставить скомпрометированный шаблон манифеста, который библиотека обработает. Однако в данном компоненте все шаблоны вкомпилированы в образ на этапе сборки, и их модификация невозможна из-за ограничений на запись в файловую систему контейнера во время работы в кластере. Таким образом, уязвимость в библиотеке Helm не может быть использована в этом контексте.",
-      "timestamp": "2025-10-10T15:33:13.264855875Z"
+      "impact_statement": "The component uses Helm only to render and deliver built-in Istio control-plane Kubernetes manifests. Charts/templates are compiled into the image at build time and cannot be replaced at runtime due to a read-only container filesystem, so Helm chart/archive/schema parsing CVEs are not exploitable here.",
+      "timestamp": "2026-07-24T12:00:00.000000000Z"
     },
     {
       "vulnerability": {
@@ -43,8 +43,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Компонент использует библиотеку Helm для подготовки и доставки Kubernetes API манифестов, описывающих компоненты control-plane Istio. Для эксплуатации уязвимости требуется предоставить скомпрометированный шаблон манифеста, который библиотека обработает. Однако в данном компоненте все шаблоны вкомпилированы в образ на этапе сборки, и их модификация невозможна из-за ограничений на запись в файловую систему контейнера во время работы в кластере. Таким образом, уязвимость в библиотеке Helm не может быть использована в этом контексте.",
-      "timestamp": "2025-10-10T15:29:44.644944464Z"
+      "impact_statement": "The component uses Helm only to render and deliver built-in Istio control-plane Kubernetes manifests. Charts/templates are compiled into the image at build time and cannot be replaced at runtime due to a read-only container filesystem, so Helm chart/archive/schema parsing CVEs are not exploitable here.",
+      "timestamp": "2026-07-24T12:00:00.000000000Z"
     },
     {
       "vulnerability": {
@@ -57,8 +57,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Компонент использует библиотеку Helm для подготовки и доставки Kubernetes API манифестов, описывающих компоненты control-plane Istio. Для эксплуатации уязвимости требуется предоставить скомпрометированный шаблон манифеста, который библиотека обработает. Однако в данном компоненте все шаблоны вкомпилированы в образ на этапе сборки, и их модификация невозможна из-за ограничений на запись в файловую систему контейнера во время работы в кластере. Таким образом, уязвимость в библиотеке Helm не может быть использована в этом контексте.",
-      "timestamp": "2025-10-10T15:34:40.216094508Z"
+      "impact_statement": "The component uses Helm only to render and deliver built-in Istio control-plane Kubernetes manifests. Charts/templates are compiled into the image at build time and cannot be replaced at runtime due to a read-only container filesystem, so Helm chart/archive/schema parsing CVEs are not exploitable here.",
+      "timestamp": "2026-07-24T12:00:00.000000000Z"
     },
     {
       "vulnerability": {
@@ -71,8 +71,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Компонент использует библиотеку Helm для подготовки и доставки Kubernetes API манифестов, описывающих компоненты control-plane Istio. Для эксплуатации уязвимости требуется предоставить скомпрометированный шаблон манифеста, который библиотека обработает. Однако в данном компоненте все шаблоны вкомпилированы в образ на этапе сборки, и их модификация невозможна из-за ограничений на запись в файловую систему контейнера во время работы в кластере. Таким образом, уязвимость в библиотеке Helm не может быть использована в этом контексте.",
-      "timestamp": "2025-10-10T15:35:45.218482198Z"
+      "impact_statement": "The component uses Helm only to render and deliver built-in Istio control-plane Kubernetes manifests. Charts/templates are compiled into the image at build time and cannot be replaced at runtime due to a read-only container filesystem, so Helm chart/archive/schema parsing CVEs are not exploitable here.",
+      "timestamp": "2026-07-24T12:00:00.000000000Z"
     },
     {
       "vulnerability": {
@@ -85,8 +85,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Helm pull с распаковкой chart (флаг --untar) из произвольного URL или имени из репозитория (CVE-2026-35206, GHSA-hr2v-4r36-88hr, CWE-22) в программном продукте helm версии 3.14.2 не используется в рамках эксплуатации Istio Operator. Манифесты и chart-артефакты подготавливаются на этапе сборки образа и не подменяются из недоверенных источников во время работы в кластере, что исключает возможность эксплуатации данной уязвимости.",
-      "timestamp": "2026-03-30T10:15:22.100000000Z"
+      "impact_statement": "The component uses Helm only to render and deliver built-in Istio control-plane Kubernetes manifests. Charts/templates are compiled into the image at build time and cannot be replaced at runtime due to a read-only container filesystem, so Helm chart/archive/schema parsing CVEs are not exploitable here.",
+      "timestamp": "2026-07-24T12:00:00.000000000Z"
     },
     {
       "vulnerability": {
@@ -99,8 +99,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость относится к веб-интерфейсу сервера Prometheus 3.x (stored XSS, CVE-2026-40179, GHSA-vffh-x6r8-xx99, CWE-79). Бинарник Istio Operator не запускает сервер Prometheus и не открывает указанный UI; зависимость github.com/prometheus/prometheus v0.48.1 подтягивается как библиотека и не включает исполняемый путь уязвимого кода из advisory. Эксплуатация в контексте данного компонента недоступна.",
-      "timestamp": "2026-03-30T10:15:44.200000000Z"
+      "impact_statement": "Stored XSS in the Prometheus 3.x web UI (CVE-2026-40179). This binary does not run the Prometheus server or expose that UI; github.com/prometheus/prometheus is a library dependency only.",
+      "timestamp": "2026-07-24T12:00:00.000000000Z"
     },
     {
       "vulnerability": {
@@ -113,8 +113,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость относится к раскрытию client_secret конфигурации Azure AD remote write через HTTP API /-/config сервера Prometheus 3.x (CVE-2026-42151, GHSA-wg65-39gg-5wfj, CWE-312). Бинарник Istio Operator не запускает сервер Prometheus и не предоставляет указанный endpoint; зависимость github.com/prometheus/prometheus v0.48.1 используется как библиотека без исполняемого пути уязвимого кода из advisory. Эксплуатация в контексте данного компонента недоступна.",
-      "timestamp": "2026-05-19T08:20:01.000000000Z"
+      "impact_statement": "Azure OAuth client_secret disclosure via Prometheus /-/config API (CVE-2026-42151). This binary does not run the Prometheus server or expose that endpoint; the dependency is library-only.",
+      "timestamp": "2026-07-24T12:00:00.000000000Z"
     },
     {
       "vulnerability": {
@@ -127,9 +127,37 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость относится к endpoint удалённого чтения /api/v1/read сервера Prometheus: некорректная валидация длины snappy-пayload может привести к исчерпанию памяти и отказу в обслуживании (CVE-2026-42154, GHSA-8rm2-7qqf-34qm, CWE-400). Бинарник Istio Operator не запускает сервер Prometheus и не обрабатывает запросы к /api/v1/read; зависимость github.com/prometheus/prometheus v0.48.1 подтягивается как библиотека. Эксплуатация в контексте данного компонента недоступна.",
-      "timestamp": "2026-05-19T08:20:22.000000000Z"
+      "impact_statement": "DoS via snappy payload on Prometheus remote-read /api/v1/read (CVE-2026-42154). This binary does not run the Prometheus server or handle that endpoint; the dependency is library-only.",
+      "timestamp": "2026-07-24T12:00:00.000000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-44903"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus@v0.48.1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Stored XSS in the legacy Prometheus UI (CVE-2026-44903). This binary does not run the Prometheus server or expose that UI; the dependency is library-only.",
+      "timestamp": "2026-07-24T12:00:00.000000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.53.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "GO-2026-5932 concerns golang.org/x/crypto/openpgp, which is unmaintained and unsafe by design. This component does not import or execute the openpgp package; golang.org/x/crypto is pulled in transitively for other subpackages. Exploitation of openpgp via this binary is not available.",
+      "timestamp": "2026-07-24T12:00:00.000000000Z"
     }
   ],
-  "timestamp": "2026-05-19T08:20:25Z"
+  "timestamp": "2026-07-24T12:00:00Z"
 }
