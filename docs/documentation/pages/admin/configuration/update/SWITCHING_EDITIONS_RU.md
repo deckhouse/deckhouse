@@ -674,6 +674,10 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
    - Сохраните изменения. Узлы кластера начнут последовательно обновляться.
    - Дождитесь окончания обновления. Отслеживать ход обновления можно с помощью команды `d8 k get no`. Обновление считается завершенным, когда в выводе команды у каждого узла кластера в колонке `VERSION` появится обновленная версия.
 
+1. Начиная с DKP CSE 1.77, поддерживается только containerd v2 — containerd v1 в редакции отсутствует. Убедитесь, что в кластере не используется containerd v1: параметр `defaultCRI` в ClusterConfiguration не равен `Containerd` и ни в одной группе узлов не задан `spec.cri.type: Containerd`. Иначе переключение будет заблокировано.
+
+   При необходимости [мигрируйте узлы на containerd v2](../platform-scaling/node/migrating.html) до переключения редакции.
+
 {{
    take_care_of_the_internal_modules
    | regex_replace: "(?m)^[ \t]*<!/?REMOVE_FOR_CE>\n?", ""
