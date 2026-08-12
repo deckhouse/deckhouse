@@ -1,0 +1,25 @@
+# Mirrors olcedar images/nodelet-sysext/sysext/nodelet.service on branch
+# nodelet-sysext-wip. Both copies must stay identical: whichever one the sysext
+# overlay puts on top of /usr is the one that runs.
+[Unit]
+Description=Deckhouse nodelet
+After=network.target
+Wants=network.target
+# Partitions are mounted by initramfs (carried over switch-root). Fail loudly
+# if any is missing, so a broken boot is visible instead of silently running
+# without /config or /var.
+AssertPathIsMountPoint=/boot
+AssertPathIsMountPoint=/config
+AssertPathIsMountPoint=/var
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/nodelet
+# Output inherits the system default (journal, see system.conf.d/00-console-log.conf).
+# journald forwards it to the serial console per MaxLevelConsole=info in
+# journald.conf, so nodelet's info logs are visible during boot.
+Restart=always
+RestartSec=1
+
+[Install]
+WantedBy=node.target
