@@ -12,6 +12,10 @@ In Deckhouse Kubernetes Platform (DKP), cloud nodes can be of the following type
 
 Below are instructions for adding and configuring each type.
 
+{% alert level="info" %}
+To replace an OS image, change its reference in `<PROVIDER>InstanceClass` or `<PROVIDER>ClusterConfiguration`. The name in the configuration must change — updating an image in place with the same name does not reorder nodes. For details, see [How to replace an OS image in a cloud cluster](/products/kubernetes-platform/documentation/v1/faq.html#how-to-replace-an-os-image-in-a-cloud-cluster).
+{% endalert %}
+
 ## Adding CloudEphemeral nodes in a cloud cluster
 
 CloudEphemeral nodes are automatically created and managed within the cluster using the Machine Controller Manager (MCM) or Cluster API (depending on configuration) — both components are part of the [`node-manager`](/modules/node-manager/) module in DKP.
