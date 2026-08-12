@@ -41,6 +41,4 @@ The `adaptive-resource-management` module consists of a single **autovpa-control
 
 ## Module interactions
 
-The module interacts with the **kube-apiserver** component:
-
-* Creates VPA objects for workloads.
+The module interacts with the **kube-apiserver** component for creating VPA objects for workloads.
