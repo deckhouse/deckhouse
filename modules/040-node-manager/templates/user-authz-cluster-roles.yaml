@@ -22,9 +22,10 @@ rules:
 # - node-manager deckhouse.io resources (instances, nodegroups, nodegroupconfigurations, nodeusers, sshcredentials, staticinstances)
 # Read access:
 # - Node Feature Discovery resources
-# - Machine Controller Manager resources
-# - Cluster API resources
 # - node-manager infrastructure resources
+# No access:
+# - Machine Controller Manager (machine.sapcloud.io) and Cluster API (cluster.x-k8s.io)
+#   resources: controller-owned, not meant for direct user interaction
 # Write access:
 # - cluster-autoscaler and fencing-agent configuration resources
 # Node write access:
@@ -66,57 +67,6 @@ rules:
   - get
   - list
   - watch
-- apiGroups:
-  - machine.sapcloud.io
-  resources:
-  - openstackmachineclasses
-  - awsmachineclasses
-  - azuremachineclasses
-  - vspheremachineclasses
-  - gcpmachineclasses
-  - alicloudmachineclasses
-  - yandexmachineclasses
-  - packetmachineclasses
-  - machines
-  - machinesets
-  - machinedeployments
-  verbs:
-  - get
-  - list
-  - watch
-  - update
-  - patch
-  - delete
-  - deletecollection
-- apiGroups:
-  - cluster.x-k8s.io
-  resources:
-  - clusters
-  - machinedeployments
-  - machinedrainrules
-  - machinehealthchecks
-  - machinepools
-  - machines
-  - machinesets
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - cluster.x-k8s.io
-  resources:
-  - machines
-  - machinesets
-  - machinedeployments
-  - machinepools
-  - machinehealthchecks
-  - clusters
-  verbs:
-  - create
-  - update
-  - patch
-  - delete
-  - deletecollection
 - apiGroups:
   - infrastructure.cluster.x-k8s.io
   resources:
