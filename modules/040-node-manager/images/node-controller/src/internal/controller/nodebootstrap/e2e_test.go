@@ -46,6 +46,7 @@ const (
 	testRegistryPath       = "/deckhouse/ce"
 	testCNIDigest          = "sha256:2222222222222222222222222222222222222222222222222222222222222222"
 	testKubeletDigest      = "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+	testNodeletDigest      = "sha256:6666666666666666666666666666666666666666666666666666666666666666"
 	testClusterCA          = "-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----\n"
 )
 
@@ -460,8 +461,8 @@ func ensureClusterInputs(ctx context.Context) {
 	ensureNamespace(ctx, kubeSystemNS)
 	ensureNamespace(ctx, cloudInstanceManagerNS)
 
-	digests := fmt.Sprintf(`{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q},"common":{"pause":%q}}`,
-		testContainerdDigest, testCNIDigest, testKubeletDigest, testPauseDigest)
+	digests := fmt.Sprintf(`{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q,"nodeletSysext":%q},"common":{"pause":%q}}`,
+		testContainerdDigest, testCNIDigest, testKubeletDigest, testNodeletDigest, testPauseDigest)
 	ensureObject(ctx, &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{Namespace: cloudInstanceManagerNS, Name: "bashible-apiserver-files"},
 		Data:       map[string]string{"images_digests.json": digests},

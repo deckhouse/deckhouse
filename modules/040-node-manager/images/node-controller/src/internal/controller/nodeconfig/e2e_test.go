@@ -68,6 +68,7 @@ const (
 	testRegistryAuth            = "dXNlcjpwYXNzd29yZA=="
 	testCNIDigest               = "sha256:2222222222222222222222222222222222222222222222222222222222222222"
 	testKubeletDigest           = "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+	testNodeletDigest           = "sha256:6666666666666666666666666666666666666666666666666666666666666666"
 	testClusterCA               = "-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----\n"
 	// The extension one spec asks for through a NodeExtensionRequest, and the
 	// digest it is rebuilt under.
@@ -153,9 +154,10 @@ var _ = Describe("NodeConfig controller", func() {
 			// The node talks to the API servers the cluster actually has.
 			g.Expect(nc.Spec.APIServerEndpoints).To(ConsistOf(apiServerEndpoints))
 
-			// Every immutable node runs these three system extensions, pinned
-			// by the digests of this release.
-			g.Expect(nc.Spec.Extensions).To(HaveLen(3))
+			// Every immutable node runs these four system extensions, pinned
+			// by the digests of this release. The agent is one of them: it is
+			// delivered the same way as the rest, so it updates without a reboot.
+			g.Expect(nc.Spec.Extensions).To(HaveLen(4))
 			byName := map[string]string{}
 			for _, ext := range nc.Spec.Extensions {
 				byName[ext.Name] = ext.Digest
@@ -163,6 +165,7 @@ var _ = Describe("NodeConfig controller", func() {
 			g.Expect(byName).To(HaveKeyWithValue(containerdExtension, testContainerdDigest))
 			g.Expect(byName).To(HaveKeyWithValue(cniExtension, testCNIDigest))
 			g.Expect(byName).To(HaveKeyWithValue(kubeletExtension, testKubeletDigest))
+			g.Expect(byName).To(HaveKeyWithValue(nodeletExtension, testNodeletDigest))
 
 			// The update window is the one the operator configured.
 			g.Expect(nc.Spec.UpdatePolicy.Window.From).To(Equal("03:00"))
@@ -219,7 +222,7 @@ var _ = Describe("NodeConfig controller", func() {
 		createNode(ctx, nodeName, ngName)
 
 		Eventually(func(g Gomega) {
-			g.Expect(getNodeConfig(ctx, g, nodeName).Spec.Extensions).To(HaveLen(3))
+			g.Expect(getNodeConfig(ctx, g, nodeName).Spec.Extensions).To(HaveLen(4))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
 		By("asking for an extension on the group")
@@ -1140,7 +1143,7 @@ var _ = Describe("NodeConfig controller", func() {
 
 			// The render did happen: the cluster-wide inputs are in.
 			g.Expect(nc.Spec.APIServerEndpoints).To(ConsistOf(apiServerEndpoints))
-			g.Expect(nc.Spec.Extensions).To(HaveLen(3))
+			g.Expect(nc.Spec.Extensions).To(HaveLen(4))
 
 			// What only the provisioner knew was not dropped.
 			g.Expect(nc.Spec.Network.Interfaces).To(HaveLen(1))
@@ -1214,7 +1217,7 @@ var _ = Describe("NodeConfig controller", func() {
 
 			// The render did happen: the cluster-wide inputs are in.
 			g.Expect(nc.Spec.APIServerEndpoints).To(ConsistOf(apiServerEndpoints))
-			g.Expect(nc.Spec.Extensions).To(HaveLen(3))
+			g.Expect(nc.Spec.Extensions).To(HaveLen(4))
 
 			// What only the installer knew was not dropped.
 			g.Expect(nc.Spec.Kubelet.ResourceReservation).NotTo(BeNil())
@@ -1344,10 +1347,10 @@ func heartbeat(ctx context.Context, nodeName string) {
 func setContainerdDigest(ctx context.Context, digest string) {
 	GinkgoHelper()
 
-	original := fmt.Sprintf(`{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q},"common":{"pause":%q}}`,
-		testContainerdDigest, testCNIDigest, testKubeletDigest, testPauseDigest)
-	updated := fmt.Sprintf(`{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q},"common":{"pause":%q}}`,
-		digest, testCNIDigest, testKubeletDigest, testPauseDigest)
+	original := fmt.Sprintf(`{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q,"nodeletSysext":%q},"common":{"pause":%q}}`,
+		testContainerdDigest, testCNIDigest, testKubeletDigest, testNodeletDigest, testPauseDigest)
+	updated := fmt.Sprintf(`{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q,"nodeletSysext":%q},"common":{"pause":%q}}`,
+		digest, testCNIDigest, testKubeletDigest, testNodeletDigest, testPauseDigest)
 
 	writeDigests := func(ctx context.Context, data string) {
 		cm := &corev1.ConfigMap{}
@@ -1629,8 +1632,8 @@ func ensureClusterInputs(ctx context.Context) {
 	Expect(k8sClient.Get(ctx, types.NamespacedName{Namespace: kubeSystemNS, Name: "kube-dns"}, fresh)).To(Succeed())
 	clusterDNSAddress = fresh.Spec.ClusterIP
 
-	digests := fmt.Sprintf(`{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q},"common":{"pause":%q}}`,
-		testContainerdDigest, testCNIDigest, testKubeletDigest, testPauseDigest)
+	digests := fmt.Sprintf(`{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q,"nodeletSysext":%q},"common":{"pause":%q}}`,
+		testContainerdDigest, testCNIDigest, testKubeletDigest, testNodeletDigest, testPauseDigest)
 	ensureObject(ctx, &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{Namespace: cloudInstanceManagerNS, Name: imagesDigestsConfigMapName},
 		Data:       map[string]string{imagesDigestsKey: digests},
