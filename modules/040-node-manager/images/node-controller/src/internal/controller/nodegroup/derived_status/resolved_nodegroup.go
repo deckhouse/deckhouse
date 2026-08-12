@@ -17,11 +17,8 @@ limitations under the License.
 package derived_status
 
 import (
-	"encoding/json"
-
-	"k8s.io/apimachinery/pkg/runtime"
-
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/capacity"
 )
 
 var specPassthroughKeys = []string{
@@ -75,8 +72,10 @@ type ResolvedNodeGroup struct {
 	// including instanceClass, which is published even when it resolved to nil.
 	CloudProcessed bool
 	Zones          []string
-	InstanceClass  interface{}
-	NodeCapacity   interface{}
+	// InstanceClass is the provider's InstanceClass spec. The container is typed, the contents are
+	// not: the schema belongs to a cloud-provider module and unknown keys must survive verbatim.
+	InstanceClass map[string]any
+	NodeCapacity  *capacity.InstanceType
 }
 
 func ResolveNodeGroup(in ResolveInput, r Result) ResolvedNodeGroup {
@@ -100,8 +99,8 @@ func ResolveNodeGroup(in ResolveInput, r Result) ResolvedNodeGroup {
 
 	if in.CloudProcessed {
 		resolved.Zones = r.Zones
-		resolved.InstanceClass = rawExtensionToValue(r.InstanceClass)
-		resolved.NodeCapacity = rawExtensionToValue(r.NodeCapacity)
+		resolved.InstanceClass = r.InstanceClass
+		resolved.NodeCapacity = r.NodeCapacity
 	}
 
 	return resolved
@@ -127,10 +126,20 @@ func (r ResolvedNodeGroup) ToMap() map[string]interface{} {
 	}
 
 	if r.CloudProcessed {
-		if r.NodeCapacity != nil {
-			out["nodeCapacity"] = r.NodeCapacity
+		// Published as the map its JSON form decodes to, not as the struct: the element also feeds
+		// text/template, where a struct and a map render differently, and that rendering names an
+		// immutable machine template.
+		if capacityValue := normalizeJSONMap(r.NodeCapacity); capacityValue != nil {
+			out["nodeCapacity"] = capacityValue
 		}
-		out["instanceClass"] = r.InstanceClass
+		// An unresolved InstanceClass is published as a plain null, not as a typed nil map: the
+		// key must be present either way, and a typed nil is a different value to every consumer
+		// that inspects the element rather than serializing it.
+		if r.InstanceClass != nil {
+			out["instanceClass"] = r.InstanceClass
+		} else {
+			out["instanceClass"] = nil
+		}
 		cloudInstances := copyMap(r.Spec["cloudInstances"])
 		cloudInstances["zones"] = r.Zones
 		out["cloudInstances"] = cloudInstances
@@ -189,15 +198,4 @@ func copyMap(v interface{}) map[string]interface{} {
 		dst[k] = val
 	}
 	return dst
-}
-
-func rawExtensionToValue(ext *runtime.RawExtension) interface{} {
-	if ext == nil || len(ext.Raw) == 0 {
-		return nil
-	}
-	var out interface{}
-	if err := json.Unmarshal(ext.Raw, &out); err != nil {
-		return nil
-	}
-	return out
 }

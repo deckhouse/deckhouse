@@ -20,7 +20,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"k8s.io/apimachinery/pkg/runtime"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 )
@@ -102,8 +101,8 @@ func TestResolvedNodeGroup_CloudProcessed(t *testing.T) {
 		Engine:        "CAPI",
 		CRIType:       "Containerd",
 		Zones:         []string{"a", "b"},
-		NodeCapacity:  &runtime.RawExtension{Raw: []byte(`{"cpu":"4","memory":"8Gi"}`)},
-		InstanceClass: &runtime.RawExtension{Raw: []byte(`{"flavorName":"m1.large"}`)},
+		NodeCapacity:  rawCapacity(`{"cpu":"4","memory":"8Gi"}`),
+		InstanceClass: rawExtension(`{"flavorName":"m1.large"}`),
 	})
 
 	ci, ok := nodeGroupValues["cloudInstances"].(map[string]interface{})
@@ -111,8 +110,10 @@ func TestResolvedNodeGroup_CloudProcessed(t *testing.T) {
 		assert.Equal(t, []string{"a", "b"}, ci["zones"], "resolved zones overlaid")
 		assert.Equal(t, float64(3), ci["maxPerZone"], "spec cloudInstances fields preserved")
 	}
-	assert.Equal(t, map[string]interface{}{"cpu": "4", "memory": "8Gi"}, nodeGroupValues["nodeCapacity"],
-		"nodeCapacity embedded as nested structure")
+	// All four keys, because the capacity is published as the JSON form of capacity.InstanceType
+	// and none of its tags carry omitempty — which is what a real cluster has always seen.
+	assert.Equal(t, map[string]interface{}{"cpu": "4", "memory": "8Gi", "name": "", "rootDisk": "0"},
+		nodeGroupValues["nodeCapacity"], "nodeCapacity embedded as nested structure")
 	assert.Equal(t, map[string]interface{}{"flavorName": "m1.large"}, nodeGroupValues["instanceClass"])
 }
 
@@ -124,7 +125,7 @@ func TestResolvedNodeGroup_CloudNotProcessed(t *testing.T) {
 	}, Result{
 		CRIType:       "Containerd",
 		Zones:         []string{"a"},
-		InstanceClass: &runtime.RawExtension{Raw: []byte(`{"flavorName":"m1.large"}`)},
+		InstanceClass: rawExtension(`{"flavorName":"m1.large"}`),
 	})
 
 	assert.NotContains(t, nodeGroupValues, "instanceClass")

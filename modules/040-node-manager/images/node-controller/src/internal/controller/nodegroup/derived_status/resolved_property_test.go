@@ -17,14 +17,15 @@ limitations under the License.
 package derived_status
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"k8s.io/apimachinery/pkg/runtime"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/capacity"
 )
 
 // The corpus covers the shapes a NodeGroup really takes; this covers the ones it could take.
@@ -62,8 +63,8 @@ func randomResolveInput(rng *rand.Rand) (ResolveInput, Result) {
 		KubernetesVersion: randomString(rng, "1.3"),
 		CRIType:           randomString(rng, "cri"),
 		Zones:             randomZones(rng),
-		NodeCapacity:      randomRawExtension(rng),
-		InstanceClass:     randomRawExtension(rng),
+		NodeCapacity:      randomNodeCapacity(rng),
+		InstanceClass:     randomInstanceClass(rng),
 		SerializedLabels:  randomString(rng, "labels"),
 		SerializedTaints:  randomString(rng, "taints"),
 		UpdateEpoch:       randomString(rng, "epoch"),
@@ -183,7 +184,10 @@ func randomZones(rng *rand.Rand) []string {
 	}
 }
 
-func randomRawExtension(rng *rand.Rand) *runtime.RawExtension {
+// randomInstanceClass covers the shapes an InstanceClass spec arrives in, including the ones that
+// do not decode into a map at all — the field holds only objects, so those must land as nil rather
+// than as a half-decoded value.
+func randomInstanceClass(rng *rand.Rand) map[string]any {
 	raws := []string{
 		"",
 		"null",
@@ -199,5 +203,26 @@ func randomRawExtension(rng *rand.Rand) *runtime.RawExtension {
 	if rng.Intn(6) == 0 {
 		return nil
 	}
-	return &runtime.RawExtension{Raw: []byte(raws[rng.Intn(len(raws))])}
+	var out map[string]any
+	if err := json.Unmarshal([]byte(raws[rng.Intn(len(raws))]), &out); err != nil {
+		return nil
+	}
+	return out
+}
+
+func randomNodeCapacity(rng *rand.Rand) *capacity.InstanceType {
+	raws := []string{
+		`{"cpu":"3900m","memory":"7969960Ki"}`,
+		`{"cpu":"4","memory":"8Gi"}`,
+		"{}",
+	}
+
+	if rng.Intn(6) == 0 {
+		return nil
+	}
+	out := &capacity.InstanceType{}
+	if err := json.Unmarshal([]byte(raws[rng.Intn(len(raws))]), out); err != nil {
+		return nil
+	}
+	return out
 }

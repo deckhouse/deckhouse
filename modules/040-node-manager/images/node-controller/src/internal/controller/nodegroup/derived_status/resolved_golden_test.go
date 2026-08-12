@@ -22,7 +22,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"k8s.io/apimachinery/pkg/runtime"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 )
@@ -105,7 +104,7 @@ func TestResolvedNodeGroup_Golden_CloudEphemeralProcessed(t *testing.T) {
 		KubernetesVersion: "1.32",
 		CRIType:           "Containerd",
 		Zones:             []string{"a", "b", "c"},
-		InstanceClass:     &runtime.RawExtension{Raw: []byte("null")},
+		InstanceClass:     nil,
 		SerializedLabels:  "node-role.kubernetes.io/proper1=,node.deckhouse.io/group=proper1,node.deckhouse.io/type=CloudEphemeral",
 		SerializedTaints:  "",
 		UpdateEpoch:       "222",
@@ -154,7 +153,7 @@ func TestResolvedNodeGroup_Golden_EmptyZones(t *testing.T) {
 		KubernetesVersion: "1.32",
 		CRIType:           "Containerd",
 		Zones:             []string{},
-		InstanceClass:     &runtime.RawExtension{Raw: []byte("null")},
+		InstanceClass:     nil,
 		SerializedLabels:  "node-role.kubernetes.io/proper1=,node.deckhouse.io/group=proper1,node.deckhouse.io/type=CloudEphemeral",
 		UpdateEpoch:       "222",
 	})

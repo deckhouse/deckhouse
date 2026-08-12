@@ -415,7 +415,7 @@ func (r *MachineDeploymentReconciler) readPodSubnet(ctx context.Context) (string
 
 // instanceClassSpot reports the provider spot flag; only aws acts on it.
 func instanceClassSpot(resolved derived_status.ResolvedNodeGroup) bool {
-	instanceClass, _ := resolved.InstanceClass.(map[string]interface{})
+	instanceClass := resolved.InstanceClass
 	spot, _ := instanceClass["spot"].(bool)
 	return spot
 }

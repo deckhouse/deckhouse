@@ -17,6 +17,7 @@ limitations under the License.
 package derived_status
 
 import (
+	"encoding/json"
 	"flag"
 	"os"
 	"path/filepath"
@@ -24,10 +25,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"k8s.io/apimachinery/pkg/runtime"
 	sigsyaml "sigs.k8s.io/yaml"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/capacity"
 )
 
 var updateGoldens = flag.Bool("update-goldens", false, "rewrite the resolved-NodeGroup goldens under testdata/resolved")
@@ -42,8 +43,24 @@ type corpusFixture struct {
 	result Result
 }
 
-func rawExtension(json string) *runtime.RawExtension {
-	return &runtime.RawExtension{Raw: []byte(json)}
+// rawExtension parses an InstanceClass spec fixture. The fixtures stay JSON strings because that
+// is how the spec reaches this package — decoded from an unstructured object — and because the
+// number types the decoding produces are what the checksum sees.
+func rawExtension(raw string) map[string]any {
+	var out map[string]any
+	if err := json.Unmarshal([]byte(raw), &out); err != nil {
+		return nil
+	}
+	return out
+}
+
+// rawCapacity parses a node-capacity fixture into the value CalculateNodeTemplateCapacity returns.
+func rawCapacity(raw string) *capacity.InstanceType {
+	out := &capacity.InstanceType{}
+	if err := json.Unmarshal([]byte(raw), out); err != nil {
+		return nil
+	}
+	return out
 }
 
 // resolvedMap is the published form of a NodeGroup, which is what most of these tests
@@ -184,7 +201,7 @@ func nodeGroupCorpus() []corpusFixture {
 				KubernetesVersion: "1.32",
 				CRIType:           criTypeContainerd,
 				Zones:             []string{"ru-central1-a", "ru-central1-b"},
-				NodeCapacity:      rawExtension(`{"cpu":"4","memory":"8Gi"}`),
+				NodeCapacity:      rawCapacity(`{"cpu":"4","memory":"8Gi"}`),
 				InstanceClass:     rawExtension(`{"platformID":"standard-v3","cores":4,"memory":8589934592,"coreFraction":100,"diskType":"network-ssd"}`),
 				SerializedLabels:  "node-role.kubernetes.io/worker=,node.deckhouse.io/group=worker,node.deckhouse.io/type=CloudEphemeral,role=worker",
 				UpdateEpoch:       "1004",
@@ -274,7 +291,7 @@ func nodeGroupCorpus() []corpusFixture {
 				Engine:           engineMCM,
 				CRIType:          criTypeContainerd,
 				Zones:            []string{"eu-west-1a", "eu-west-1b"},
-				NodeCapacity:     rawExtension(`{"cpu":"2","memory":"4Gi"}`),
+				NodeCapacity:     rawCapacity(`{"cpu":"2","memory":"4Gi"}`),
 				InstanceClass:    rawExtension(`{"instanceType":"m5.large"}`),
 				SerializedLabels: "node.deckhouse.io/group=worker-unprocessed",
 				UpdateEpoch:      "1008",
@@ -383,7 +400,7 @@ func nodeGroupCorpus() []corpusFixture {
 				KubernetesVersion: "1.33",
 				CRIType:           criTypeContainerd,
 				Zones:             []string{"a"},
-				NodeCapacity:      rawExtension(`{"cpu":"3900m","memory":"7969960Ki"}`),
+				NodeCapacity:      rawCapacity(`{"cpu":"3900m","memory":"7969960Ki"}`),
 				InstanceClass:     rawExtension(`{"cores":4,"memory":8589934592,"coreFraction":0.5,"gpus":0,"spot":false,"additionalTags":{},"subnets":[]}`),
 				SerializedLabels:  "node.deckhouse.io/group=numbers",
 				UpdateEpoch:       "1012",

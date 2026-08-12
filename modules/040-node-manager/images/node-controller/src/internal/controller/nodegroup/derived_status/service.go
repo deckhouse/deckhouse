@@ -23,7 +23,6 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -51,8 +50,8 @@ type Result struct {
 	KubernetesVersion string
 	CRIType           string
 	Zones             []string
-	NodeCapacity      *runtime.RawExtension
-	InstanceClass     *runtime.RawExtension
+	NodeCapacity      *capacity.InstanceType
+	InstanceClass     map[string]any
 	SerializedLabels  string
 	SerializedTaints  string
 	UpdateEpoch       string
@@ -171,10 +170,8 @@ func (s *Service) computeCloudFields(ctx context.Context, ng *v1.NodeGroup, reg 
 		nodeCapacity, err := capacity.CalculateNodeTemplateCapacity(kind, instanceClassSpec, catalog)
 		if err != nil {
 			logger.Error(err, "failed to calculate node capacity", "nodeGroup", ng.Name, "kind", kind)
-		} else if nodeCapacity != nil {
-			if raw, err := json.Marshal(nodeCapacity); err == nil {
-				result.NodeCapacity = &runtime.RawExtension{Raw: raw}
-			}
+		} else {
+			result.NodeCapacity = nodeCapacity
 		}
 	}
 
@@ -183,8 +180,22 @@ func (s *Service) computeCloudFields(ctx context.Context, ng *v1.NodeGroup, reg 
 		logger.Error(err, "failed to apply cloud specific defaults", "nodeGroup", ng.Name)
 		return nil
 	}
-	if raw, err := json.Marshal(resolvedSpec); err == nil {
-		result.InstanceClass = &runtime.RawExtension{Raw: raw}
-	}
+	// Round-tripped through JSON on purpose: the spec arrives from an unstructured object with
+	// int64 numbers, and the published element has always carried them as float64. toYaml renders
+	// the two differently (4 vs 4e+00), and that rendering feeds the checksum that names an
+	// immutable machine template.
+	result.InstanceClass = normalizeJSONMap(resolvedSpec)
 	return nil
+}
+
+func normalizeJSONMap(v any) map[string]any {
+	raw, err := json.Marshal(v)
+	if err != nil {
+		return nil
+	}
+	var out map[string]any
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return nil
+	}
+	return out
 }

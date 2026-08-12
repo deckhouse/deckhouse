@@ -69,13 +69,9 @@ func buildCAPIMachineDeployment(in capiMDInput) *unstructured.Unstructured {
 	if s := serializeNodeGroupTaints(in.ng); s != "" {
 		annotations["capacity.cluster-autoscaler.kubernetes.io/taints"] = s
 	}
-	if nodeCapacity, _ := in.resolved.NodeCapacity.(map[string]interface{}); nodeCapacity != nil {
-		if cpu := nestedString(nodeCapacity, "cpu"); cpu != "" {
-			annotations["capacity.cluster-autoscaler.kubernetes.io/cpu"] = cpu
-		}
-		if memory := nestedString(nodeCapacity, "memory"); memory != "" {
-			annotations["capacity.cluster-autoscaler.kubernetes.io/memory"] = memory
-		}
+	if nodeCapacity := in.resolved.NodeCapacity; nodeCapacity != nil {
+		annotations["capacity.cluster-autoscaler.kubernetes.io/cpu"] = nodeCapacity.CPU.String()
+		annotations["capacity.cluster-autoscaler.kubernetes.io/memory"] = nodeCapacity.Memory.String()
 	}
 
 	// Separate instances on purpose: the provider spec patch is deep-merged into spec below,
@@ -349,7 +345,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 		checksum           string
 	)
 	if contract != nil {
-		instanceClassSpec, _ = resolved.InstanceClass.(map[string]interface{})
+		instanceClassSpec = resolved.InstanceClass
 		if instanceClassSpec == nil {
 			logger.Info("skipping CAPI: InstanceClass is not resolved yet", "nodeGroup", ng.Name)
 			return nil

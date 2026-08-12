@@ -33,6 +33,8 @@ name: numbers
 nodeCapacity:
   cpu: 3900m
   memory: 7969960Ki
+  name: ""
+  rootDisk: "0"
 nodeDrainTimeoutSecond: 45.5
 nodeType: CloudEphemeral
 serializedLabels: node.deckhouse.io/group=numbers

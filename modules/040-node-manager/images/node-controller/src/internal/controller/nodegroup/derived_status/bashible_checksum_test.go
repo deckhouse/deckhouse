@@ -24,7 +24,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
@@ -73,7 +72,7 @@ func buildCloudResolvedMap(t *testing.T, kubernetesVersion string, minPerZone, m
 		KubernetesVersion: kubernetesVersion,
 		CRIType:           "Containerd",
 		Zones:             zones,
-		InstanceClass:     &runtime.RawExtension{Raw: []byte("null")},
+		InstanceClass:     nil,
 		SerializedLabels:  "node-role.kubernetes.io/worker=,node.deckhouse.io/group=worker,node.deckhouse.io/type=CloudEphemeral",
 		SerializedTaints:  "",
 		UpdateEpoch:       "1",
@@ -119,7 +118,7 @@ func TestBashibleChecksum_GoldenParity(t *testing.T) {
 		KubernetesVersion: "1.32",
 		CRIType:           "Containerd",
 		Zones:             []string{"a", "b", "c"},
-		InstanceClass:     &runtime.RawExtension{Raw: []byte("null")},
+		InstanceClass:     nil,
 		SerializedLabels:  "node-role.kubernetes.io/proper1=,node.deckhouse.io/group=proper1,node.deckhouse.io/type=CloudEphemeral",
 		SerializedTaints:  "",
 		UpdateEpoch:       "222",

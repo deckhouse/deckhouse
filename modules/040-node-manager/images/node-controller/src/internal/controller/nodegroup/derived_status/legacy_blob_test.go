@@ -18,10 +18,10 @@ package derived_status
 
 import (
 	"encoding/json"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"k8s.io/apimachinery/pkg/runtime"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 )
@@ -118,12 +118,20 @@ func legacyCopyMap(v interface{}) map[string]interface{} {
 	return dst
 }
 
-func legacyRawExtensionToValue(ext *runtime.RawExtension) interface{} {
-	if ext == nil || len(ext.Raw) == 0 {
+// legacyRawExtensionToValue is the frozen conversion the legacy builder applied to the two cloud
+// fields. Those fields are typed now, so the adapter takes the value directly and round-trips it
+// through JSON — which is exactly what the RawExtension version did, byte for byte. The frozen
+// algorithm above is untouched; only the plumbing at its edge follows the field types.
+func legacyRawExtensionToValue(value interface{}) interface{} {
+	if value == nil || reflect.ValueOf(value).IsZero() {
+		return nil
+	}
+	raw, err := json.Marshal(value)
+	if err != nil {
 		return nil
 	}
 	var out interface{}
-	if err := json.Unmarshal(ext.Raw, &out); err != nil {
+	if err := json.Unmarshal(raw, &out); err != nil {
 		return nil
 	}
 	return out
