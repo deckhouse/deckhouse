@@ -4,8 +4,7 @@ final: false
 from: {{ index $.Images "builder/distroless" }}
 shell:
   beforeInstall:
-  - pm install dnsmasq python@3.12 libc -d /out
-  - pm -V v1.3.3 install python-wheel -d /out
+  - pm -V v1.3.3 install dnsmasq python@3.12 libc python-wheel -d /out
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ index $.Images "base/distroless-fin" }}
