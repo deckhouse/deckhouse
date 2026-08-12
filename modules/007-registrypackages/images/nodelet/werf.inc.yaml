@@ -9,11 +9,12 @@
 # it discovers there (systemd-dissect --list, see extensions/sysext.go), so an
 # image without one is merged and never takes effect.
 {{- if ne $.Env "CSE" }}
-  {{- /* The agent has no releases yet, so main is pinned by commit: werf keys a
+  {{- /* The agent has no releases yet, so it is pinned by commit: werf keys a
          shell-cloned source on the rendered instructions alone, and a moving
          branch would be built once and cached forever. Bump this line to pick
-         up agent changes. */ -}}
-  {{- $nodeletCommit := "c7310d7a140f8356b5ece3ab8b3209dd28e5f20c" }}
+         up agent changes. Currently nodelet-self-update, which the extension
+         needs: an agent without it restarts its own unit mid-pass. */ -}}
+  {{- $nodeletCommit := "238e81432d6cd3b71cbc01606abe56bd48ad6256" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
