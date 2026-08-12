@@ -244,10 +244,12 @@ func TestKubernetesVersionEnumValidation(t *testing.T) {
 			checked := 0
 			for _, mcPath := range edition.moduleConfigs {
 				var mc moduleConfigValuesSchema
-				// Not a "not shipped here" checkout — the enum guard losing its subject.
-				require.True(t, readYAML(t, mcPath, &mc),
-					"%s exists but %s does not: the kubernetesVersion enum guard has nothing to compare against",
-					edition.clusterConfiguration, mcPath)
+				// An edition's ClusterConfiguration can ship without every ModuleConfig schema it
+				// lists: the CE image carries candi/ but no ee/ at all. require.Positive below is what
+				// keeps that from silently checking nothing.
+				if !readYAML(t, mcPath, &mc) {
+					continue
+				}
 
 				mcEnum := mc.Properties.KubernetesVersion.Enum
 				require.Contains(t, mcEnum, "Default", "%s must offer Default", mcPath)
@@ -258,7 +260,9 @@ func TestKubernetesVersionEnumValidation(t *testing.T) {
 					"pinned kubernetesVersion values in %s differ from %s", mcPath, edition.clusterConfiguration)
 				checked++
 			}
-			require.Positive(t, checked, "edition %q lists no ModuleConfig schema to check", edition.name)
+			require.Positive(t, checked,
+				"edition %q: none of its ModuleConfig schemas are present, so the enum guard checked nothing",
+				edition.name)
 
 			var vm k8sVersionMap
 			if readYAML(t, edition.versionMap, &vm) {
