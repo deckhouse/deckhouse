@@ -51,6 +51,7 @@ import (
 	symlinkdeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/deployer/symlink"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/grants"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/health"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/loader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules/global"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
@@ -143,7 +144,7 @@ type moduleManagerI interface {
 
 // Build creates and initializes a Runtime with all subsystems wired together.
 // Blocks until the NELM cache completes its initial sync.
-func Build(cli kclient.Client, edition *edition.Edition, moduleManager moduleManagerI, dc dependency.Container, metricStorage metricsstorage.Storage, logger *log.Logger) (*Runtime, error) {
+func Build(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Container, metricStorage metricsstorage.Storage, logger *log.Logger) (*Runtime, error) {
 	r := new(Runtime)
 
 	r.apps = make(map[string]*apps.Application)
@@ -158,7 +159,13 @@ func Build(cli kclient.Client, edition *edition.Edition, moduleManager moduleMan
 	r.scheduleManager = cron.NewManager(r.logger)
 	r.queueService = queue.NewService(logger)
 	r.status = status.NewService()
-	r.edition = edition
+
+	edit, err := edition.Parse(app.Version)
+	if err != nil {
+		return nil, fmt.Errorf("new edition: %w", err)
+	}
+
+	r.edition = edit
 
 	r.registry = registry.NewService(dc, logger)
 	downloadedDir := app.DownloadedModulesDir()
@@ -201,10 +208,6 @@ func Build(cli kclient.Client, edition *edition.Edition, moduleManager moduleMan
 	// Initialize scheduler with enabling/disabling callbacks
 	r.buildScheduler(cli)
 
-	if err := r.loadEmbedded(context.Background()); err != nil {
-		return nil, fmt.Errorf("load embedded: %w", err)
-	}
-
 	// Build NELM service with its own client and runtime cache for resource monitoring
 	if err := r.buildNelmService(); err != nil {
 		return nil, fmt.Errorf("build nelm service: %w", err)
@@ -225,6 +228,38 @@ func Build(cli kclient.Client, edition *edition.Edition, moduleManager moduleMan
 	}
 
 	return r, nil
+}
+
+// loadGlobal loads the global module from the embedded directory and registers
+// it in the status service and the package store. Scheduler wiring happens
+// later in buildScheduler/AddNode, not here.
+func (r *Runtime) loadGlobal(ctx context.Context) error {
+	ctx, span := otel.Tracer(runtimeTracer).Start(ctx, "loadGlobal")
+	defer span.End()
+
+	r.logger.Debug("load global package")
+
+	conf, err := loader.LoadGlobalConf(ctx, r.logger)
+	if err != nil {
+		return fmt.Errorf("load global conf: %w", err)
+	}
+
+	conf.Patcher = r.objectPatcher
+	conf.ScheduleManager = r.scheduleManager
+	conf.KubeEventsManager = r.kubeEventsManager
+
+	r.global, err = global.NewModuleByConfig(conf, r.logger)
+	if err != nil {
+		return fmt.Errorf("new global module: %w", err)
+	}
+
+	r.status.NewStatus(r.global.GetName())
+	r.status.SetConditionTrue(r.global.GetName(), status.ConditionRequirementsMet)
+	r.status.SetConditionTrue(r.global.GetName(), status.ConditionReadyOnFilesystem)
+	r.status.SetConditionTrue(r.global.GetName(), status.ConditionLoaded)
+	r.packages.Update(r.global.GetName(), r.global.GetVersion().String(), 0, make(addonutils.Values), "", false)
+
+	return nil
 }
 
 // registerDebugServer starts a Unix socket HTTP server exposing debug endpoints
