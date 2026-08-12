@@ -45,6 +45,17 @@ func IsNotFound(err error) bool {
 	return errors.Is(err, ErrImageNotFound)
 }
 
+// IgnoreNotFound returns nil when err reports a missing image or tag (see
+// IsNotFound), and returns err unchanged otherwise. It lets a delete or cleanup
+// treat something already gone as success.
+func IgnoreNotFound(err error) error {
+	if IsNotFound(err) {
+		return nil
+	}
+
+	return err
+}
+
 // isNotFound recognizes a registry answer meaning "there is nothing here":
 // either the sentinel already, or the transport-level codes a registry uses for
 // a missing repository or manifest. Operations that the underlying client does

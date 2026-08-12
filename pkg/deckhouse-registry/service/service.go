@@ -190,6 +190,39 @@ func (s *BasicService) Exists(ctx context.Context, tag string) (bool, error) {
 	return false, err
 }
 
+// DeleteTag removes a tag from this repository. Returns ErrImageNotFound when
+// the tag does not exist, so callers can treat deleting something already gone
+// as a no-op.
+func (s *BasicService) DeleteTag(ctx context.Context, tag string) error {
+	entry := s.Entry(tag)
+
+	entry.Debug("Deleting tag")
+
+	if err := s.client.DeleteTag(ctx, tag); err != nil {
+		return fmt.Errorf("delete tag %s: %w", s.Ref(tag), err)
+	}
+
+	entry.Debug("Tag deleted successfully")
+
+	return nil
+}
+
+// DeleteByDigest removes a manifest by its digest from this repository. Returns
+// ErrImageNotFound when no manifest with that digest exists.
+func (s *BasicService) DeleteByDigest(ctx context.Context, digest v1.Hash) error {
+	entry := s.Entry(digest.String())
+
+	entry.Debug("Deleting manifest by digest")
+
+	if err := s.client.DeleteByDigest(ctx, digest); err != nil {
+		return fmt.Errorf("delete digest %s: %w", s.Ref(digest.String()), err)
+	}
+
+	entry.Debug("Manifest deleted successfully")
+
+	return nil
+}
+
 // ListTags returns the tags of this repository.
 func (s *BasicService) ListTags(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) {
 	entry := s.logger.With(slog.String("service", s.name))

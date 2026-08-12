@@ -27,7 +27,10 @@ package packages
 
 import (
 	"context"
+	"errors"
 	"fmt"
+
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 
 	"github.com/deckhouse/deckhouse/pkg/deckhouse-registry/bundle"
 	"github.com/deckhouse/deckhouse/pkg/deckhouse-registry/definition"
@@ -187,4 +190,54 @@ func (s *Service) Versions() *VersionService {
 // (<root>/<edition>/packages/<package>/extra).
 func (s *Service) Extra() *extra.Catalog {
 	return s.extra
+}
+
+// Delete removes one published version of the package from the registry.
+//
+// It first pulls the bundle at tag to read its images_digests.json — the map of
+// every image the package ships to its digest — and deletes those images by
+// digest. Only then does it delete the version tag and, last, the bundle tag.
+//
+// The order is deliberate: the bundle tag is what the image list is read from,
+// so removing it last keeps the package recoverable if a run is interrupted — a
+// retry re-reads the same list and finishes the job. For that reason Delete
+// treats an image or tag that is already gone as success (so it is safe to
+// re-run) but stops before the tags when an image cannot be deleted for any
+// other reason, leaving the bundle tag as the record to retry from.
+func (s *Service) Delete(ctx context.Context, tag string) error {
+	b, err := s.Fetch(ctx, tag)
+	if err != nil {
+		return fmt.Errorf("read package bundle %s: %w", s.Ref(tag), err)
+	}
+
+	// Delete every referenced image before the tags that index them. A package
+	// bundle carries a flat name-to-digest map, so Digests().Images is it.
+	var errs []error
+
+	for image, digest := range b.Digests().Images {
+		hash, err := v1.NewHash(digest)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("image %q has an invalid digest %q: %w", image, digest, err))
+
+			continue
+		}
+
+		if err := service.IgnoreNotFound(s.DeleteByDigest(ctx, hash)); err != nil {
+			errs = append(errs, fmt.Errorf("delete image %q: %w", image, err))
+		}
+	}
+
+	if len(errs) > 0 {
+		return fmt.Errorf("delete images of %s: %w", s.Ref(tag), errors.Join(errs...))
+	}
+
+	if err := service.IgnoreNotFound(s.Versions().DeleteTag(ctx, tag)); err != nil {
+		return fmt.Errorf("delete package version %s: %w", s.Versions().Ref(tag), err)
+	}
+
+	if err := service.IgnoreNotFound(s.DeleteTag(ctx, tag)); err != nil {
+		return fmt.Errorf("delete package bundle %s: %w", s.Ref(tag), err)
+	}
+
+	return nil
 }
