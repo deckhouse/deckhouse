@@ -53,8 +53,8 @@ require (
 	github.com/deckhouse/deckhouse/go_lib/dependency/vsphere v0.0.0-00010101000000-000000000000 // indirect
 	github.com/deckhouse/deckhouse/pkg/log v0.2.1 // indirect
 	github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0 // indirect
-	github.com/deckhouse/lib-dhctl v0.21.0 // indirect
-	github.com/deckhouse/module-sdk v0.12.1 // indirect
+	github.com/deckhouse/lib-dhctl v0.22.0 // indirect
+	github.com/deckhouse/module-sdk v0.12.2 // indirect
 	github.com/denis-tingajkin/go-header v0.4.2 // indirect
 	github.com/docker/cli v29.4.0+incompatible // indirect
 	github.com/docker/distribution v2.8.3+incompatible // indirect
