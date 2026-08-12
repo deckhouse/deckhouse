@@ -52,7 +52,7 @@ description: Архитектура модуля monitoring-kubernetes в Deckho
 
    Состоит из следующих контейнеров:
 
-   * **node-exporter** — основной контейнер. Является [Open Source-проектом](https://github.com/kubernetes/kube-state-metrics);
+   * **node-exporter** — основной контейнер. Является [Open Source-проектом](https://github.com/prometheus/node_exporter);
    * **kubelet-eviction-thresholds-exporter** — сайдкар-контейнер, который снимает показатели доступности файловых дескрипторов, сокетов, свободного места и inode на каждом узле, сравнивает их в процентном соотношении с [Eviction thresholds (порогами вытеснения)](https://kubernetes.io/docs/concepts/scheduling-eviction/node-pressure-eviction/#eviction-thresholds), установленными в конфигурации [kubelet](../kubernetes-and-scheduling/kubelet.html), и экспортирует полученные значения в виде метрик. Является разработкой компании «Флант»;
    * **kube-rbac-proxy** — сайдкар-контейнер, обеспечивающий авторизованный доступа к метрикам экспортера. Подробно описан выше.
 

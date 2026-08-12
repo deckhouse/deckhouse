@@ -51,7 +51,7 @@ The module consists of the following components:
 
    It consists of the following containers:
 
-   * **node-exporter**: Main container. It is an [open-source project](https://github.com/kubernetes/kube-state-metrics);
+   * **node-exporter**: Main container. It is an [open-source project](https://github.com/prometheus/node_exporter);
    * **kubelet-eviction-thresholds-exporter**: Sidecar container that collects metrics on the availability of file descriptors, sockets, free space and inodes on each node, compares them as a percentage with [Eviction thresholds](https://kubernetes.io/docs/concepts/scheduling-eviction/node-pressure-eviction/#eviction-thresholds), stated in the [kubelet](../kubernetes-and-scheduling/kubelet.html) configuration file, and exports the resulting values as metrics. This exporter is developed by Flant.
    * **kube-rbac-proxy**: Sidecar container providing authorized access to the exporter metrics (described above).
 
