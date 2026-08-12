@@ -106,7 +106,7 @@ description: Архитектура модуля gpu в Deckhouse Kubernetes Pla
    - обновление ресурсов Node;
    - валидация ресурсов Pods, GPUClass, ResourceClaim и DeviceClass;
    - работа с ресурсами DeviceClass, ResourceClaim и ResourceSlice;
-   - создание и контроль выполнения Job.
+   - создание и контроль выполнения Job `vfio-switch-<NODE_NAME>-<PCI>`.
 
 1. **Kubelet** — регистрация в kubelet как DRA kubelet plugin.
 

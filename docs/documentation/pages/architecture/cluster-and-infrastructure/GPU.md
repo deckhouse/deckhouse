@@ -106,7 +106,7 @@ The module interacts with the following components:
    - Updates Node resources.
    - Validates Pod, GPUClass, ResourceClaim, and DeviceClass resources.
    - Works with DeviceClass, ResourceClaim, and ResourceSlice resources.
-   - Creates and monitors Jobs.
+   - Creates and monitors `vfio-switch-<NODE_NAME>-<PCI>` Jobs.
 
 1. **Kubelet**: Registers the module as a DRA kubelet plugin.
 
