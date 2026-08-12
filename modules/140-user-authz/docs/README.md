@@ -537,9 +537,6 @@ proxy:
     - nodes
 read:
     - control-plane.deckhouse.io/controlplaneoperations
-    - infrastructure.cluster.x-k8s.io/deckhousecontrolplanes
-    - infrastructure.cluster.x-k8s.io/staticclusters
-    - infrastructure.cluster.x-k8s.io/staticmachines
     - nfd.k8s-sigs.io/nodefeaturegroups
     - nfd.k8s-sigs.io/nodefeaturerules
     - nfd.k8s-sigs.io/nodefeatures
@@ -552,7 +549,6 @@ read-write:
     - deckhouse.io/sshcredentials
     - deckhouse.io/useroperations
     - deckhouse.io/users
-    - infrastructure.cluster.x-k8s.io/staticmachinetemplates
     - nodes/configz
     - nodes/healthz
     - nodes/log
