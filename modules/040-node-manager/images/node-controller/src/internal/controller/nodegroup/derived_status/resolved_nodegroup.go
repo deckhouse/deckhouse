@@ -129,8 +129,8 @@ func (r ResolvedNodeGroup) ToMap() map[string]interface{} {
 		// Published as the map its JSON form decodes to, not as the struct: the element also feeds
 		// text/template, where a struct and a map render differently, and that rendering names an
 		// immutable machine template.
-		if capacityValue := normalizeJSONMap(r.NodeCapacity); capacityValue != nil {
-			out["nodeCapacity"] = capacityValue
+		if r.NodeCapacity != nil {
+			out["nodeCapacity"] = normalizeJSONMap(r.NodeCapacity)
 		}
 		// An unresolved InstanceClass is published as a plain null, not as a typed nil map: the
 		// key must be present either way, and a typed nil is a different value to every consumer

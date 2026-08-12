@@ -48,6 +48,7 @@ func Validate(ng *v1.NodeGroup, snap Snapshot) CloudCheckResult {
 		KindInUse:       snap.Provider.InstanceClassKind,
 		KnownClassNames: snap.KnownClassNames,
 		DefaultZones:    snap.DefaultZones,
+		CapacityErr:     snap.CapacityErr,
 	}
 	if ng.Spec.CloudInstances != nil {
 		in.ClassRefKind = ng.Spec.CloudInstances.ClassReference.Kind
@@ -55,12 +56,6 @@ func Validate(ng *v1.NodeGroup, snap Snapshot) CloudCheckResult {
 		in.MinPerZone = ng.Spec.CloudInstances.MinPerZone
 		in.MaxPerZone = ng.Spec.CloudInstances.MaxPerZone
 		in.SpecZones = ng.Spec.CloudInstances.Zones
-	}
-
-	// The capacity error only matters once the class reference itself checks out; checks #1 and #2
-	// return before #3 otherwise, so this mirrors the order the checks already impose.
-	if in.ClassRefKind == in.KindInUse && containsString(in.KnownClassNames, in.ClassRefName) {
-		in.CapacityErr = snap.CapacityErr
 	}
 
 	return RunCloudChecks(in)

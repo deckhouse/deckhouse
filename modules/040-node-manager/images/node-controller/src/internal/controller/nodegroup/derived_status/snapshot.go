@@ -38,8 +38,8 @@ type Snapshot struct {
 	DefaultCRI    string
 	APIServerMin  *semver.Version
 
-	// DefaultZones, InstanceClass, KnownClassNames and Capacity are only read for a
-	// CloudEphemeral NodeGroup whose provider named an InstanceClass kind.
+	// DefaultZones is read for every CloudEphemeral NodeGroup; InstanceClass, KnownClassNames and
+	// Capacity only once the provider named an InstanceClass kind and the NodeGroup references it.
 	DefaultZones    []string
 	InstanceClass   map[string]any
 	KnownClassNames []string
@@ -88,16 +88,29 @@ func (s *Service) BuildSnapshot(ctx context.Context, ng *v1.NodeGroup) (Snapshot
 	}
 
 	if ng.Spec.NodeType == v1.NodeTypeStatic {
-		snap.StaticConfig = s.readStatic(ctx)
+		snap.StaticConfig, err = s.readStatic(ctx)
+		if err != nil {
+			return Snapshot{}, err
+		}
 	}
 
 	if ng.Spec.NodeType != v1.NodeTypeCloudEphemeral {
 		return snap, nil
 	}
 
-	snap.DefaultZones = s.readDefaultZones(ctx, provider)
+	snap.DefaultZones, err = s.readDefaultZones(ctx, provider)
+	if err != nil {
+		return Snapshot{}, err
+	}
 
 	if provider.InstanceClassKind == "" {
+		return snap, nil
+	}
+
+	// Everything below describes one specific InstanceClass, so a NodeGroup that names none is
+	// done here — before the cluster-wide List of instance classes below.
+	classRef := ng.Spec.CloudInstances
+	if classRef == nil || classRef.ClassReference.Kind == "" || classRef.ClassReference.Name == "" {
 		return snap, nil
 	}
 
@@ -118,12 +131,13 @@ func (s *Service) BuildSnapshot(ctx context.Context, ng *v1.NodeGroup) (Snapshot
 	}
 	snap.KnownClassNames = names
 
-	if ng.Spec.CloudInstances == nil {
-		return snap, nil
-	}
-	kind := ng.Spec.CloudInstances.ClassReference.Kind
-	name := ng.Spec.CloudInstances.ClassReference.Name
-	if kind == "" || name == "" {
+	kind := classRef.ClassReference.Kind
+	name := classRef.ClassReference.Name
+
+	// Checks #1 and #2 reject a NodeGroup whose class reference names the wrong kind or a class
+	// that does not exist, and a rejected NodeGroup publishes no cloud overlay at all — so reading
+	// the class and computing its capacity below would be work thrown away.
+	if kind != provider.InstanceClassKind || !containsString(names, name) {
 		return snap, nil
 	}
 
@@ -140,12 +154,15 @@ func (s *Service) BuildSnapshot(ctx context.Context, ng *v1.NodeGroup) (Snapshot
 	if spec == nil {
 		return snap, nil
 	}
-	snap.InstanceClass, _ = spec.(map[string]any)
+	snap.InstanceClass = spec
 
 	// nodeCapacity is only needed for scale-from-zero (min==0 && max>0), which is also the only
 	// case check #3 asks about — so the calculation happens once and both halves read the result.
-	if ng.Spec.CloudInstances.MinPerZone == 0 && ng.Spec.CloudInstances.MaxPerZone > 0 {
-		catalog := s.readInstanceTypesCatalog(ctx)
+	if classRef.MinPerZone == 0 && classRef.MaxPerZone > 0 {
+		catalog, err := s.readInstanceTypesCatalog(ctx)
+		if err != nil {
+			return Snapshot{}, err
+		}
 		snap.Capacity, snap.CapacityErr = capacity.CalculateNodeTemplateCapacity(kind, spec, catalog)
 	}
 

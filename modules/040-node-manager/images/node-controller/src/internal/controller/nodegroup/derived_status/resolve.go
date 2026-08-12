@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -74,14 +75,21 @@ func (s *Service) readInstanceClassNames(ctx context.Context, version, kind stri
 	return names, nil
 }
 
-func (s *Service) readStatic(ctx context.Context) map[string]interface{} {
+// readStatic returns the static cluster configuration. An absent Secret is a cluster that has none
+// and yields nothing; an unreadable one is returned, because a silent nil drops the static block
+// from the published element and shifts the configuration checksum on every static node.
+func (s *Service) readStatic(ctx context.Context) (map[string]interface{}, error) {
 	secret := &corev1.Secret{}
-	if err := s.Client.Get(ctx, types.NamespacedName{Namespace: staticConfigSecretNamespace, Name: staticConfigSecretName}, secret); err != nil {
-		return nil
+	err := s.Client.Get(ctx, types.NamespacedName{Namespace: staticConfigSecretNamespace, Name: staticConfigSecretName}, secret)
+	if apierrors.IsNotFound(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("read static cluster configuration secret: %w", err)
 	}
 	raw, ok := secret.Data[staticConfigKey]
 	if !ok {
-		return nil
+		return nil, nil
 	}
 	if decoded, err := base64.StdEncoding.DecodeString(string(raw)); err == nil {
 		raw = decoded
@@ -91,11 +99,11 @@ func (s *Service) readStatic(ctx context.Context) map[string]interface{} {
 		InternalNetworkCIDRs []interface{} `json:"internalNetworkCIDRs"`
 	}
 	if err := sigsyaml.Unmarshal(raw, &cfg); err != nil {
-		return nil
+		return nil, nil
 	}
 	cidrs := cfg.InternalNetworkCIDRs
 	if cidrs == nil {
 		cidrs = []interface{}{}
 	}
-	return map[string]interface{}{"internalNetworkCIDRs": cidrs}
+	return map[string]interface{}{"internalNetworkCIDRs": cidrs}, nil
 }

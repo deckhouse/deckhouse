@@ -185,7 +185,10 @@ func (s *Service) readControlPlaneMinVersion(ctx context.Context) (*semver.Versi
 	return minVer, nil
 }
 
-func (s *Service) readDefaultZones(ctx context.Context, reg CloudProviderRegistration) []string {
+// readDefaultZones returns the zones a NodeGroup spreads over when its spec names none. A failed
+// List is returned rather than swallowed: fewer zones is a different published element, and the
+// element is hashed into every node's configuration checksum.
+func (s *Service) readDefaultZones(ctx context.Context, reg CloudProviderRegistration) ([]string, error) {
 	seen := make(map[string]struct{})
 	zones := make([]string, 0)
 	add := func(z string) {
@@ -201,10 +204,11 @@ func (s *Service) readDefaultZones(ctx context.Context, reg CloudProviderRegistr
 
 	mdList := &unstructured.UnstructuredList{}
 	mdList.SetGroupVersionKind(ngcommon.MCMMachineDeploymentGVK.GroupVersion().WithKind("MachineDeploymentList"))
-	if err := s.Client.List(ctx, mdList, client.InNamespace(ngcommon.MachineNamespace)); err == nil {
-		for i := range mdList.Items {
-			add(mdList.Items[i].GetAnnotations()["zone"])
-		}
+	if err := s.Client.List(ctx, mdList, client.InNamespace(ngcommon.MachineNamespace)); err != nil {
+		return nil, fmt.Errorf("list machine deployments: %w", err)
+	}
+	for i := range mdList.Items {
+		add(mdList.Items[i].GetAnnotations()["zone"])
 	}
 
 	for _, z := range reg.Zones {
@@ -215,36 +219,48 @@ func (s *Service) readDefaultZones(ctx context.Context, reg CloudProviderRegistr
 	// would differ on every pass and rewrite the context Secret (and rebuild every bashible
 	// step) for no reason. get_crds does the same via set.Slice().
 	sort.Strings(zones)
-	return zones
+	return zones, nil
 }
 
-func (s *Service) readInstanceClassSpec(ctx context.Context, version, kind, name string) (interface{}, error) {
+// readInstanceClassSpec returns the provider's InstanceClass spec. Typed as a map rather than an
+// interface: an unstructured spec is always an object or absent, and the two type assertions the
+// interface forced on callers only hid that.
+func (s *Service) readInstanceClassSpec(ctx context.Context, version, kind, name string) (map[string]any, error) {
 	obj := &unstructured.Unstructured{}
 	obj.SetGroupVersionKind(schema.GroupVersionKind{Group: instanceClassGroup, Version: version, Kind: kind})
 	if err := s.Client.Get(ctx, types.NamespacedName{Name: name}, obj); err != nil {
 		return nil, fmt.Errorf("get %s %q at %s: %w", kind, name, version, err)
 	}
-	return obj.Object["spec"], nil
+	spec, _ := obj.Object["spec"].(map[string]any)
+	return spec, nil
 }
 
-func (s *Service) readInstanceTypesCatalog(ctx context.Context) *capacity.InstanceTypesCatalog {
+// readInstanceTypesCatalog returns the built-in instance types. An absent catalog is a legitimate
+// cluster state and yields an empty one; an unreadable catalog is returned, because an empty
+// catalog makes the capacity calculation fail, and check #3 then declares the NodeGroup invalid —
+// turning a transient API failure into a verdict about the NodeGroup.
+func (s *Service) readInstanceTypesCatalog(ctx context.Context) (*capacity.InstanceTypesCatalog, error) {
 	obj := &unstructured.Unstructured{}
 	obj.SetGroupVersionKind(schema.GroupVersionKind{Group: instanceClassGroup, Version: instanceTypesCatalogVersion, Kind: "InstanceTypesCatalog"})
-	if err := s.Client.Get(ctx, types.NamespacedName{Name: instanceTypesCatalogName}, obj); err != nil {
-		return capacity.NewInstanceTypesCatalog(nil)
+	err := s.Client.Get(ctx, types.NamespacedName{Name: instanceTypesCatalogName}, obj)
+	if apierrors.IsNotFound(err) {
+		return capacity.NewInstanceTypesCatalog(nil), nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("read instance types catalog: %w", err)
 	}
 
 	raw, ok := obj.Object["instanceTypes"]
 	if !ok {
-		return capacity.NewInstanceTypesCatalog(nil)
+		return capacity.NewInstanceTypesCatalog(nil), nil
 	}
 	data, err := json.Marshal(raw)
 	if err != nil {
-		return capacity.NewInstanceTypesCatalog(nil)
+		return capacity.NewInstanceTypesCatalog(nil), nil
 	}
 	var catalogTypes []capacity.InstanceType
 	if err := json.Unmarshal(data, &catalogTypes); err != nil {
-		return capacity.NewInstanceTypesCatalog(nil)
+		return capacity.NewInstanceTypesCatalog(nil), nil
 	}
-	return capacity.NewInstanceTypesCatalog(catalogTypes)
+	return capacity.NewInstanceTypesCatalog(catalogTypes), nil
 }

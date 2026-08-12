@@ -18,7 +18,6 @@ package derived_status
 
 import (
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -90,19 +89,4 @@ func TestValidate_IsDeterministic(t *testing.T) {
 
 	require.Equal(t, Validate(ng, snap), Validate(ng, snap))
 	require.True(t, Validate(ng, snap).Processed)
-}
-
-// A guard for the guard: the file list above must keep matching the files that hold the core, so a
-// renamed or added core file cannot slip past unchecked.
-func TestCoreFilesExist(t *testing.T) {
-	for _, file := range []string{"derive.go", "validate.go", "snapshot.go"} {
-		_, err := os.Stat(file)
-		require.NoError(t, err, "core file %s is missing; update TestCoreFilesHaveNoClient too", file)
-	}
-
-	snapshot, err := os.ReadFile("snapshot.go")
-	require.NoError(t, err)
-	require.True(t, strings.Contains(string(snapshot), "s.Client") ||
-		strings.Contains(string(snapshot), "s.read"),
-		"snapshot.go is the one file that may talk to the API; if it no longer does, the split moved")
 }

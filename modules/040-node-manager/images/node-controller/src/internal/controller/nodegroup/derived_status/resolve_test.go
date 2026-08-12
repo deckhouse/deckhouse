@@ -117,14 +117,17 @@ func TestReadStatic_ParsesInternalNetworkCIDRs(t *testing.T) {
 	s := newTestService(t, testSecret(staticConfigSecretNamespace, staticConfigSecretName, map[string][]byte{
 		staticConfigKey: []byte("apiVersion: deckhouse.io/v1\nkind: StaticClusterConfiguration\ninternalNetworkCIDRs:\n- 172.18.200.0/24\n"),
 	}))
-	got := s.readStatic(context.Background())
+	got, err := s.readStatic(context.Background())
+	require.NoError(t, err)
 	assert.Equal(t, map[string]interface{}{
 		"internalNetworkCIDRs": []interface{}{"172.18.200.0/24"},
 	}, got)
 }
 
 func TestReadStatic_AbsentReturnsNil(t *testing.T) {
-	assert.Nil(t, newTestService(t).readStatic(context.Background()))
+	got, err := newTestService(t).readStatic(context.Background())
+	require.NoError(t, err)
+	assert.Nil(t, got)
 }
 
 func TestReadDefaultZonesIncludesExistingMCMMachineDeploymentZones(t *testing.T) {
@@ -135,7 +138,8 @@ func TestReadDefaultZonesIncludesExistingMCMMachineDeploymentZones(t *testing.T)
 	md.SetAnnotations(map[string]string{"zone": "zone-a"})
 
 	s := newTestService(t, md)
-	got := s.readDefaultZones(context.Background(), CloudProviderRegistration{Zones: []string{"zone-b", "zone-a"}})
+	got, err := s.readDefaultZones(context.Background(), CloudProviderRegistration{Zones: []string{"zone-b", "zone-a"}})
+	require.NoError(t, err)
 
 	assert.Equal(t, []string{"zone-a", "zone-b"}, got)
 }
