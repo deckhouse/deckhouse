@@ -22,6 +22,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -138,4 +140,51 @@ func TestComputeWithCloudChecks_AbsentSecretIsNotAnError(t *testing.T) {
 	require.NoError(t, err)
 	require.False(t, check.Processed)
 	require.Empty(t, check.Error)
+}
+
+// A cluster can legitimately lack a whole kind: one without MCM has no MachineDeployment CRD, and a
+// provider that ships no instance-type catalog has no InstanceTypesCatalog CRD. Both must read as
+// "nothing there" — treating an uninstalled CRD as unavailable aborts the reconcile, and for a
+// scale-from-zero NodeGroup that stops its MachineDeployment from ever being rendered.
+//
+// The behavioural guard for this is the CAPI envtest suite (it installs neither CRD and did fail
+// exactly this way); here we pin the classification itself, which is where the mistake was made.
+func TestIsAbsent(t *testing.T) {
+	tests := []struct {
+		name      string
+		err       error
+		expAbsent bool
+	}{
+		{
+			name:      "object missing",
+			err:       apierrors.NewNotFound(schema.GroupResource{Resource: "secrets"}, "x"),
+			expAbsent: true,
+		},
+		{
+			name:      "CRD never installed",
+			err:       &meta.NoKindMatchError{GroupKind: schema.GroupKind{Group: "machine.sapcloud.io", Kind: "MachineDeployment"}},
+			expAbsent: true,
+		},
+		{
+			name:      "kind absent from the scheme",
+			err:       runtime.NewNotRegisteredErrForKind("test", schema.GroupVersionKind{Kind: "InstanceTypesCatalog"}),
+			expAbsent: true,
+		},
+		{
+			name:      "forbidden is unavailable, not absent",
+			err:       apierrors.NewForbidden(schema.GroupResource{Resource: "secrets"}, "x", context.Canceled),
+			expAbsent: false,
+		},
+		{
+			name:      "timeout is unavailable, not absent",
+			err:       apierrors.NewTimeoutError("too slow", 1),
+			expAbsent: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.expAbsent, isAbsent(tc.err))
+		})
+	}
 }

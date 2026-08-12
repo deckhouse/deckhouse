@@ -27,7 +27,9 @@ import (
 	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -59,10 +61,19 @@ const (
 	apiserverVersionAnnKey = "control-plane-manager.deckhouse.io/kubernetes-version"
 )
 
+// isAbsent reports that a source genuinely is not there, as opposed to being unreachable. For
+// CRD-backed objects absence has two shapes: the object is missing, or its CRD was never installed
+// — a cluster with no MCM has no MachineDeployment kind at all, and a provider that ships no
+// instance-type catalog has no InstanceTypesCatalog kind. Both mean "nothing to read", while any
+// other failure must reach the caller so the reconcile retries instead of publishing less.
+func isAbsent(err error) bool {
+	return apierrors.IsNotFound(err) || meta.IsNoMatchError(err) || runtime.IsNotRegisteredError(err)
+}
+
 // readCloudProviderData returns the provider registration. An absent Secret means the cluster has
-// no cloud provider and yields an empty map; any other read failure is returned, because an empty
-// map reads as "no cloud" and would publish a NodeGroup without instanceClass — a checksum shift
-// that re-runs bashible on every node.
+// no cloud provider and yields an empty registration; any other read failure is returned, because
+// an empty one reads as "no cloud" and would publish a NodeGroup without instanceClass — a
+// checksum shift that re-runs bashible on every node.
 func (s *Service) readCloudProviderData(ctx context.Context) (CloudProviderRegistration, error) {
 	secret := &corev1.Secret{}
 	err := s.Client.Get(ctx, types.NamespacedName{Namespace: cloudProviderSecretNamespace, Name: cloudProviderSecretName}, secret)
@@ -204,7 +215,7 @@ func (s *Service) readDefaultZones(ctx context.Context, reg CloudProviderRegistr
 
 	mdList := &unstructured.UnstructuredList{}
 	mdList.SetGroupVersionKind(ngcommon.MCMMachineDeploymentGVK.GroupVersion().WithKind("MachineDeploymentList"))
-	if err := s.Client.List(ctx, mdList, client.InNamespace(ngcommon.MachineNamespace)); err != nil {
+	if err := s.Client.List(ctx, mdList, client.InNamespace(ngcommon.MachineNamespace)); err != nil && !isAbsent(err) {
 		return nil, fmt.Errorf("list machine deployments: %w", err)
 	}
 	for i := range mdList.Items {
@@ -243,7 +254,7 @@ func (s *Service) readInstanceTypesCatalog(ctx context.Context) (*capacity.Insta
 	obj := &unstructured.Unstructured{}
 	obj.SetGroupVersionKind(schema.GroupVersionKind{Group: instanceClassGroup, Version: instanceTypesCatalogVersion, Kind: "InstanceTypesCatalog"})
 	err := s.Client.Get(ctx, types.NamespacedName{Name: instanceTypesCatalogName}, obj)
-	if apierrors.IsNotFound(err) {
+	if isAbsent(err) {
 		return capacity.NewInstanceTypesCatalog(nil), nil
 	}
 	if err != nil {
