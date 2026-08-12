@@ -7,6 +7,14 @@ import json
 import os, sys
 import socket
 import ipcalc
+
+try:
+    import pysqlite3
+    sys.modules['sqlite3'] = pysqlite3
+except ImportError as e:
+    print(e)
+    sys.exit(1)
+
 from pyroute2 import IPRoute
 
 class dnsmasqConfig:

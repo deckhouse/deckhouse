@@ -418,6 +418,7 @@ update-base-images-versions:
 	$(MAKE) render-workflow
 
 BASE_LIMIT_KEYS := REGISTRY_PATH \
+                base/distroless \
                 builder/distroless \
                 builder/golang-1.25 \
                 builder/golang-1.26 \
@@ -441,6 +442,9 @@ update-container-factory: ## Download container-factory digests and update candi
 	  echo "# version=$$ver"; \
 	  for key in $(BASE_LIMIT_KEYS); do \
 	    line=$$(grep -F "$${key}:" .alt_base_images.full.yml | head -n1); \
+	    case "$$key" in \
+	      base/distroless) line=$$(printf '%s\n' "$$line" | sed 's#^base/distroless:#base/distroless-fin:#');; \
+	    esac; \
 	    echo "$$line"; \
 	  done; \
 	} > alt_base_images.yml; \
