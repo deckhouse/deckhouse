@@ -18,9 +18,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/deckhouse/deckhouse/pkg/registry/client"
+	"github.com/deckhouse/deckhouse/pkg/registry/fake"
 
 	"github.com/deckhouse/deckhouse/pkg/deckhouse-registry/service"
 )
@@ -75,4 +77,60 @@ func TestValidateName(t *testing.T) {
 
 	assert.ErrorIs(t, service.ValidateName(""), service.ErrEmptyName)
 	assert.ErrorIs(t, service.ValidateName("Nope"), service.ErrInvalidName)
+}
+
+// TestWriteAndDelete exercises the push and delete wrappers end to end against a
+// fake registry: push resolves, a promotion tag shares the digest, and both a
+// tag delete and a delete-by-digest take effect.
+func TestWriteAndDelete(t *testing.T) {
+	reg := fake.NewRegistry("registry.example.com")
+	svc := service.NewBasicService("test", fake.NewClient(reg).WithSegment("root"), log.NewNop())
+
+	img := fake.NewImageBuilder().WithFile("f", "v1").MustBuild()
+
+	// Push, then read it back.
+	require.NoError(t, svc.PushImage(t.Context(), "v1", img))
+
+	ok, err := svc.Exists(t.Context(), "v1")
+	require.NoError(t, err)
+	assert.True(t, ok)
+
+	// Promote to a second tag; both resolve to the same manifest.
+	require.NoError(t, svc.TagImage(t.Context(), "v1", "latest"))
+
+	d1, err := svc.GetDigest(t.Context(), "v1")
+	require.NoError(t, err)
+	d2, err := svc.GetDigest(t.Context(), "latest")
+	require.NoError(t, err)
+	assert.Equal(t, d1.String(), d2.String())
+
+	// Delete one tag; the other remains.
+	require.NoError(t, svc.DeleteTag(t.Context(), "latest"))
+
+	ok, err = svc.Exists(t.Context(), "latest")
+	require.NoError(t, err)
+	assert.False(t, ok)
+
+	// Delete by digest removes the manifest and the v1 tag pointing at it.
+	require.NoError(t, svc.DeleteByDigest(t.Context(), *d1))
+
+	ok, err = svc.Exists(t.Context(), "v1")
+	require.NoError(t, err)
+	assert.False(t, ok)
+}
+
+// TestCopyImage covers copying an image from one repository into another.
+func TestCopyImage(t *testing.T) {
+	reg := fake.NewRegistry("registry.example.com")
+	cli := fake.NewClient(reg)
+
+	src := service.NewBasicService("src", cli.WithSegment("source"), log.NewNop())
+	require.NoError(t, src.PushImage(t.Context(), "v1", fake.NewImageBuilder().WithFile("f", "v1").MustBuild()))
+
+	require.NoError(t, src.CopyImage(t.Context(), "v1", cli.WithSegment("dest"), "v1"))
+
+	dst := service.NewBasicService("dst", cli.WithSegment("dest"), log.NewNop())
+	ok, err := dst.Exists(t.Context(), "v1")
+	require.NoError(t, err)
+	assert.True(t, ok)
 }

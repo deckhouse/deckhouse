@@ -190,6 +190,77 @@ func (s *BasicService) Exists(ctx context.Context, tag string) (bool, error) {
 	return false, err
 }
 
+// PushImage publishes img at tag in this repository.
+func (s *BasicService) PushImage(ctx context.Context, tag string, img v1.Image, opts ...registry.ImagePushOption) error {
+	entry := s.Entry(tag)
+
+	entry.Debug("Pushing image")
+
+	if err := s.client.PushImage(ctx, tag, img, opts...); err != nil {
+		return fmt.Errorf("push image %s: %w", s.Ref(tag), err)
+	}
+
+	entry.Debug("Image pushed successfully")
+
+	return nil
+}
+
+// PushIndex publishes a multi-arch image index at tag in this repository.
+func (s *BasicService) PushIndex(ctx context.Context, tag string, idx v1.ImageIndex, opts ...registry.ImagePushOption) error {
+	entry := s.Entry(tag)
+
+	entry.Debug("Pushing image index")
+
+	if err := s.client.PushIndex(ctx, tag, idx, opts...); err != nil {
+		return fmt.Errorf("push index %s: %w", s.Ref(tag), err)
+	}
+
+	entry.Debug("Image index pushed successfully")
+
+	return nil
+}
+
+// TagImage points destTag at the manifest sourceTag already resolves to. It is
+// a manifest-only promotion — no layers are re-uploaded.
+func (s *BasicService) TagImage(ctx context.Context, sourceTag, destTag string) error {
+	entry := s.logger.With(
+		slog.String("service", s.name),
+		slog.String("source_tag", sourceTag),
+		slog.String("dest_tag", destTag),
+	)
+
+	entry.Debug("Tagging image")
+
+	if err := s.client.TagImage(ctx, sourceTag, destTag); err != nil {
+		return fmt.Errorf("tag %s as %s: %w", s.Ref(sourceTag), s.Ref(destTag), err)
+	}
+
+	entry.Debug("Image tagged successfully")
+
+	return nil
+}
+
+// CopyImage copies srcTag from this repository into dest at destTag, without
+// pulling layers through the local machine when the registry supports it.
+func (s *BasicService) CopyImage(ctx context.Context, srcTag string, dest registry.Client, destTag string) error {
+	entry := s.logger.With(
+		slog.String("service", s.name),
+		slog.String("src_tag", srcTag),
+		slog.String("dest", dest.GetRegistry()),
+		slog.String("dest_tag", destTag),
+	)
+
+	entry.Debug("Copying image")
+
+	if err := s.client.CopyImage(ctx, srcTag, dest, destTag); err != nil {
+		return fmt.Errorf("copy %s to %s: %w", s.Ref(srcTag), dest.GetRegistry()+":"+destTag, err)
+	}
+
+	entry.Debug("Image copied successfully")
+
+	return nil
+}
+
 // DeleteTag removes a tag from this repository. Returns ErrImageNotFound when
 // the tag does not exist, so callers can treat deleting something already gone
 // as a no-op.
