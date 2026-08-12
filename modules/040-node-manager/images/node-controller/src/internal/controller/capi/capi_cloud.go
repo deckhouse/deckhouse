@@ -316,7 +316,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 	}
 	cloudType, _ := cloudProvider["type"].(string)
 
-	ds := &derived_status.Service{Client: r.Client, Reader: r.APIReader}
+	ds := &derived_status.Service{Client: r.Client}
 	resolved, validationErr, err := ds.ResolveNodeGroup(ctx, ng, rawSpec)
 	if err != nil {
 		return fmt.Errorf("resolve NodeGroup %s: %w", ng.Name, err)

@@ -38,16 +38,11 @@ func versionString(v *semver.Version) string {
 	return v.String()
 }
 
+// Service reads everything through the manager cache. All of its sources live in kube-system,
+// which internal/common/cache.go caches whole precisely so this path never issues a live GET —
+// a live GET here used to cost hundreds of ms on every pass during a NodeGroup burst.
 type Service struct {
 	Client client.Client
-	Reader client.Reader
-}
-
-func (s *Service) reader() client.Reader {
-	if s.Reader != nil {
-		return s.Reader
-	}
-	return s.Client
 }
 
 // Result holds the get_crds-derived fields destined for NodeGroup.status.

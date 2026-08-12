@@ -140,7 +140,7 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 		"instances", cloudResult.Instances,
 	)
 
-	ds := derivedstatus.Service{Client: r.Client, Reader: r.apiReader}
+	ds := derivedstatus.Service{Client: r.Client}
 	derivedResult, validationResult, err := ds.ComputeWithCloudChecks(ctx, ng)
 	if err != nil {
 		logger.Error(err, "failed to compute derived nodegroup status", "nodeGroup", ng.Name)
