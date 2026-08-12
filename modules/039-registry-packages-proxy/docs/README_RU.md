@@ -85,17 +85,20 @@ Content-Disposition: attachment; filename="<ИМЯ-ПАКЕТА>.svg"
 
 Эти эндпоинты доступны через публичный Ingress (`registry-packages-proxy.<publicDomain>`) и требуют действительный токен Kubernetes (или клиентский сертификат, принимаемый `kube-rbac-proxy`) и право RBAC `get` на subresource `deployments/cli-binary` с именем `registry-packages-proxy` в namespace `d8-cloud-instance-manager`.
 
-Выдайте доступ через ClusterRole `d8:registry-packages-proxy:cli-download` (привяжите к пользователям или ServiceAccount через ClusterRoleBinding или RoleBinding).
+Выдайте доступ через ClusterRole `d8:registry-packages-proxy:cli-download` (см. [Выдача доступа к загрузке Deckhouse CLI](#выдача-доступа-к-загрузке-deckhouse-cli)). Та же роль покрывает и плагины: они публикуются под `deckhouse-cli/plugins/<ПЛАГИН>` и идут по тому же маршруту `/v1/images/`.
 
 | Метод | Путь                            | Описание |
 |-------|---------------------------------|----------|
 | `GET` | `/v1/images/<ОБРАЗ>/tags`       | JSON со списком тегов |
-| `GET`, `HEAD` | `/v1/images/<ОБРАЗ>/tags/<ТЕГ>` | OCI-образ в формате `application/x-gzip` (слои сведены) |
+| `GET`, `HEAD` | `/v1/images/<ОБРАЗ>/images/<ВЕРСИЯ>` | OCI-образ в формате `application/x-gzip` (слои сведены) |
+| `GET` | `/v1/images/<ОБРАЗ>/manifests/<ССЫЛКА>` | Манифест образа |
 
 Допустимые значения для `<ОБРАЗ>`:
 
 - `deckhouse-cli`
 - `deckhouse-cli/plugins/<ПЛАГИН>` (один сегмент пути для `<ПЛАГИН>`)
+
+Эндпоинт загрузки образа принимает необязательный параметр запроса `platform=<os>-<arch>` и выбирает подходящий дочерний манифест из мультиплатформенного индекса. Без параметра прокси отдаёт `linux/amd64`.
 
 Пример:
 
@@ -133,8 +136,46 @@ curl -fsS -H "Authorization: Bearer ${TOKEN}" "https://registry-packages-proxy.e
 
 | ClusterRole | Назначение |
 |-------------|------------|
-| `d8:registry-packages-proxy:cli-download` | Доступ к `/v1/images/*` |
+| `d8:registry-packages-proxy:cli-download` | Доступ к `/v1/images/*`: бинарник `deckhouse-cli` и его плагины |
 | `d8:registry-packages-proxy:packages-download` | Зарезервирована для будущих защищённых маршрутов `/v1/packages/*` (иконки отдаются анонимно, доступ только изнутри кластера) |
+
+Ни одна из ролей не привязана никому по умолчанию.
+
+## Выдача доступа к загрузке Deckhouse CLI
+
+Deckhouse CLI нужны два права: скачивать бинарники и находить прокси.
+
+1. Скачивать бинарники. Это ClusterRole `d8:registry-packages-proxy:cli-download`. Она покрывает и `d8 cli` (самообновление), и `d8 plugins`:
+
+   ```shell
+   kubectl create clusterrolebinding d8-cli-download \
+     --clusterrole=d8:registry-packages-proxy:cli-download \
+     --group=<ГРУППА>          # либо --user=<EMAIL> / --serviceaccount=<NAMESPACE>:<ИМЯ>
+   ```
+
+1. Находить прокси. CLI читает Ingress `registry-packages-proxy`, чтобы узнать публичный адрес. Выдайте `get` на этот один Ingress:
+
+   ```shell
+   kubectl -n d8-cloud-instance-manager create role d8-cli-ingress \
+     --verb=get --resource=ingresses --resource-name=registry-packages-proxy
+   kubectl -n d8-cloud-instance-manager create rolebinding d8-cli-ingress \
+     --role=d8-cli-ingress --group=<ГРУППА>
+   ```
+
+   Без него пользователи указывают адрес вручную: `d8 cli check --rpp-endpoint https://registry-packages-proxy.<publicDomain>`.
+
+RBAC не даст выдать роль, которой нет у вас самих. Возьмите учётную запись, у которой она есть, например `/etc/kubernetes/super-admin.conf`.
+
+Проверьте результат, не входя под пользователем. Оба права ограничены через `resourceNames`, поэтому указывайте имя ресурса в запросе. Без имени вы задаёте другой вопрос и получаете честный `no`:
+
+```shell
+kubectl auth can-i get deployments/registry-packages-proxy \
+  -n d8-cloud-instance-manager --subresource=cli-binary --as=<EMAIL-ИЛИ-SA>
+kubectl auth can-i get ingresses/registry-packages-proxy \
+  -n d8-cloud-instance-manager --as=<EMAIL-ИЛИ-SA>
+```
+
+`kube-rbac-proxy` кеширует решения авторизации: отказ на 30 секунд, разрешение на 5 минут. Поэтому `403`, пойманный до создания привязки, пройдёт через полминуты, а отозванное право продолжит работать до 5 минут.
 
 ## Ограничения
 

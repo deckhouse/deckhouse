@@ -85,17 +85,20 @@ Content-Disposition: attachment; filename="<PACKAGE-NAME>.svg"
 
 These endpoints are reachable through the public Ingress (`registry-packages-proxy.<publicDomain>`) and require a valid Kubernetes token (or client certificate accepted by `kube-rbac-proxy`) and RBAC permission to `get` the `deployments/cli-binary` subresource `registry-packages-proxy` in namespace `d8-cloud-instance-manager`.
 
-Grant access with the ClusterRole `d8:registry-packages-proxy:cli-download` (bind it to users or ServiceAccounts via ClusterRoleBinding or RoleBinding).
+Grant access with the ClusterRole `d8:registry-packages-proxy:cli-download` (see [Granting access to CLI downloads](#granting-access-to-cli-downloads)). The same role covers plugins: they are published under `deckhouse-cli/plugins/<PLUGIN>` and go through the same `/v1/images/` route.
 
 | Method | Path                          | Description |
 |--------|-------------------------------|-------------|
 | `GET` | `/v1/images/<IMAGE>/tags`     | JSON list of tags |
-| `GET`, `HEAD` | `/v1/images/<IMAGE>/tags/<TAG>` | OCI image as `application/x-gzip` (flattened layers) |
+| `GET`, `HEAD` | `/v1/images/<IMAGE>/images/<VERSION>` | OCI image as `application/x-gzip` (flattened layers) |
+| `GET` | `/v1/images/<IMAGE>/manifests/<REF>` | Raw image manifest |
 
 Allowed `<IMAGE>` values:
 
 - `deckhouse-cli`
 - `deckhouse-cli/plugins/<PLUGIN>` (single path segment for `<PLUGIN>`)
+
+The image endpoint accepts an optional `platform=<os>-<arch>` query parameter and picks the matching child manifest from a multi-platform index. Without it the proxy returns `linux/amd64`.
 
 Example:
 
@@ -134,8 +137,46 @@ The module ensures high availability through:
 
 | ClusterRole | Purpose |
 |-------------|---------|
-| `d8:registry-packages-proxy:cli-download` | Access to `/v1/images/*` |
+| `d8:registry-packages-proxy:cli-download` | Access to `/v1/images/*`: the `deckhouse-cli` binary and its plugins |
 | `d8:registry-packages-proxy:packages-download` | Reserved for future authenticated `/v1/packages/*` routes (icons are served anonymously, in-cluster only) |
+
+Neither role is bound to anyone out of the box.
+
+## Granting access to CLI downloads
+
+Deckhouse CLI needs two permissions: one to download binaries, one to find the proxy.
+
+1. Download binaries. This is the ClusterRole `d8:registry-packages-proxy:cli-download`. It covers both `d8 cli` (self-update) and `d8 plugins`:
+
+   ```shell
+   kubectl create clusterrolebinding d8-cli-download \
+     --clusterrole=d8:registry-packages-proxy:cli-download \
+     --group=<GROUP>          # or --user=<EMAIL> / --serviceaccount=<NAMESPACE>:<NAME>
+   ```
+
+1. Find the proxy. The CLI reads the `registry-packages-proxy` Ingress to learn the public endpoint. Grant `get` on that single Ingress:
+
+   ```shell
+   kubectl -n d8-cloud-instance-manager create role d8-cli-ingress \
+     --verb=get --resource=ingresses --resource-name=registry-packages-proxy
+   kubectl -n d8-cloud-instance-manager create rolebinding d8-cli-ingress \
+     --role=d8-cli-ingress --group=<GROUP>
+   ```
+
+   Without it, users pass the endpoint by hand: `d8 cli check --rpp-endpoint https://registry-packages-proxy.<publicDomain>`.
+
+RBAC does not let you grant a role you do not hold yourself. Use an account that has it, for example `/etc/kubernetes/super-admin.conf`.
+
+Check the result without logging in as the user. Both permissions are limited by `resourceNames`, so name the resource in the request. Without the name you ask a different question and get an honest `no`:
+
+```shell
+kubectl auth can-i get deployments/registry-packages-proxy \
+  -n d8-cloud-instance-manager --subresource=cli-binary --as=<EMAIL-OR-SA>
+kubectl auth can-i get ingresses/registry-packages-proxy \
+  -n d8-cloud-instance-manager --as=<EMAIL-OR-SA>
+```
+
+`kube-rbac-proxy` caches authorization decisions: a denial for 30 seconds, an approval for 5 minutes. So a `403` caught before the binding existed clears in half a minute, and a revoked permission keeps working for up to 5 minutes.
 
 ## Limitations
 
