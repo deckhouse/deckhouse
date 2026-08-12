@@ -76,11 +76,11 @@ func (s *Service) ComputeWithCloudChecks(ctx context.Context, ng *v1.NodeGroup) 
 	return result, check, nil
 }
 
-func (s *Service) compute(ctx context.Context, ng *v1.NodeGroup, cloudProvider map[string]interface{}) (Result, error) {
+func (s *Service) compute(ctx context.Context, ng *v1.NodeGroup, reg CloudProviderRegistration) (Result, error) {
 	logger := log.FromContext(ctx)
 
 	result := Result{
-		Engine:           ComputeEngine(ng, cloudProvider),
+		Engine:           ComputeEngine(ng, reg),
 		SerializedLabels: serializeLabels(ng),
 		SerializedTaints: serializeTaints(ng),
 	}
@@ -109,7 +109,7 @@ func (s *Service) compute(ctx context.Context, ng *v1.NodeGroup, cloudProvider m
 	result.CRIType = criType
 
 	if ng.Spec.NodeType == v1.NodeTypeCloudEphemeral {
-		if err := s.computeCloudFields(ctx, ng, cloudProvider, &result); err != nil {
+		if err := s.computeCloudFields(ctx, ng, reg, &result); err != nil {
 			return result, err
 		}
 	}
@@ -127,10 +127,10 @@ func (s *Service) compute(ctx context.Context, ng *v1.NodeGroup, cloudProvider m
 	return result, nil
 }
 
-func (s *Service) computeCloudFields(ctx context.Context, ng *v1.NodeGroup, cloudProvider map[string]interface{}, result *Result) error {
+func (s *Service) computeCloudFields(ctx context.Context, ng *v1.NodeGroup, reg CloudProviderRegistration, result *Result) error {
 	logger := log.FromContext(ctx)
 
-	defaultZones := s.readDefaultZones(ctx, cloudProvider)
+	defaultZones := s.readDefaultZones(ctx, reg)
 	result.Zones = resolveZones(ng, defaultZones)
 
 	if ng.Spec.CloudInstances == nil {
@@ -145,7 +145,7 @@ func (s *Service) computeCloudFields(ctx context.Context, ng *v1.NodeGroup, clou
 	// Without a published version there is no version to read the InstanceClass at, and guessing
 	// one is what this whole mechanism exists to prevent. Describing the NodeGroup survives it —
 	// rendering does not, and runCloudChecks reports it as a validation error.
-	version := instanceClassAPIVersion(cloudProvider)
+	version := reg.InstanceClassAPIVersion
 	if version == "" {
 		logger.V(1).Info("cloud provider published no instanceClassAPIVersion, skipping capacity/instanceClass", "nodeGroup", ng.Name, "kind", kind, "name", name)
 		return nil
@@ -178,7 +178,7 @@ func (s *Service) computeCloudFields(ctx context.Context, ng *v1.NodeGroup, clou
 		}
 	}
 
-	resolvedSpec, err := applyCloudSpecificDefaults(cloudProvider, instanceClassSpec)
+	resolvedSpec, err := applyCloudSpecificDefaults(reg, instanceClassSpec)
 	if err != nil {
 		logger.Error(err, "failed to apply cloud specific defaults", "nodeGroup", ng.Name)
 		return nil

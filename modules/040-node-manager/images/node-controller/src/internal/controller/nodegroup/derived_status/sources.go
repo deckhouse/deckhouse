@@ -63,29 +63,16 @@ const (
 // no cloud provider and yields an empty map; any other read failure is returned, because an empty
 // map reads as "no cloud" and would publish a NodeGroup without instanceClass — a checksum shift
 // that re-runs bashible on every node.
-func (s *Service) readCloudProviderData(ctx context.Context) (map[string]interface{}, error) {
+func (s *Service) readCloudProviderData(ctx context.Context) (CloudProviderRegistration, error) {
 	secret := &corev1.Secret{}
 	err := s.Client.Get(ctx, types.NamespacedName{Namespace: cloudProviderSecretNamespace, Name: cloudProviderSecretName}, secret)
 	if apierrors.IsNotFound(err) {
-		return map[string]interface{}{}, nil
+		return CloudProviderRegistration{}, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("read cloud provider secret: %w", err)
+		return CloudProviderRegistration{}, fmt.Errorf("read cloud provider secret: %w", err)
 	}
-	return decodeSecretData(secret.Data), nil
-}
-
-func decodeSecretData(data map[string][]byte) map[string]interface{} {
-	res := make(map[string]interface{}, len(data))
-	for k, v := range data {
-		var val interface{}
-		if err := json.Unmarshal(v, &val); err != nil {
-			res[k] = string(v)
-			continue
-		}
-		res[k] = val
-	}
-	return res
+	return DecodeRegistration(secret.Data), nil
 }
 
 // readClusterUUID returns the cluster UUID, which seeds the update-epoch drift. An absent
@@ -198,7 +185,7 @@ func (s *Service) readControlPlaneMinVersion(ctx context.Context) (*semver.Versi
 	return minVer, nil
 }
 
-func (s *Service) readDefaultZones(ctx context.Context, cloudProvider map[string]interface{}) []string {
+func (s *Service) readDefaultZones(ctx context.Context, reg CloudProviderRegistration) []string {
 	seen := make(map[string]struct{})
 	zones := make([]string, 0)
 	add := func(z string) {
@@ -220,19 +207,8 @@ func (s *Service) readDefaultZones(ctx context.Context, cloudProvider map[string
 		}
 	}
 
-	switch v := cloudProvider["zones"].(type) {
-	case []string:
-		for _, z := range v {
-			add(z)
-		}
-	case []interface{}:
-		for _, zi := range v {
-			if z, ok := zi.(string); ok {
-				add(z)
-			}
-		}
-	case string:
-		add(v)
+	for _, z := range reg.Zones {
+		add(z)
 	}
 	// Sorted because the result is published verbatim in the bashible context: the
 	// MachineDeployment List comes back in cache map-iteration order, so an unsorted slice
@@ -240,14 +216,6 @@ func (s *Service) readDefaultZones(ctx context.Context, cloudProvider map[string
 	// step) for no reason. get_crds does the same via set.Slice().
 	sort.Strings(zones)
 	return zones
-}
-
-// instanceClassAPIVersion returns the version InstanceClass objects are read at. An empty result
-// means the provider has not published it yet; see common.InstanceClassAPIVersionKey for why the
-// version is data.
-func instanceClassAPIVersion(cloudProvider map[string]interface{}) string {
-	version, _ := cloudProvider[nodecommon.InstanceClassAPIVersionKey].(string)
-	return version
 }
 
 func (s *Service) readInstanceClassSpec(ctx context.Context, version, kind, name string) (interface{}, error) {

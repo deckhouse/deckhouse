@@ -56,27 +56,27 @@ func testSecret(ns, name string, data map[string][]byte) *corev1.Secret {
 	}
 }
 
-func TestInstanceClassAPIVersion(t *testing.T) {
+func TestDecodeRegistration_APIVersionIsNeverGuessed(t *testing.T) {
 	tests := []struct {
-		name          string
-		cloudProvider map[string]interface{}
-		expVersion    string
+		name       string
+		data       map[string][]byte
+		expVersion string
 	}{
 		{
-			name:          "published version is used verbatim",
-			cloudProvider: map[string]interface{}{nodecommon.InstanceClassAPIVersionKey: "v1"},
-			expVersion:    "v1",
+			name:       "published version is used verbatim",
+			data:       map[string][]byte{nodecommon.InstanceClassAPIVersionKey: []byte("v1")},
+			expVersion: "v1",
 		},
 		{
-			name:          "a provider serving only v1alpha1 is honoured",
-			cloudProvider: map[string]interface{}{nodecommon.InstanceClassAPIVersionKey: "v1alpha1"},
-			expVersion:    "v1alpha1",
+			name:       "a provider serving only v1alpha1 is honoured",
+			data:       map[string][]byte{nodecommon.InstanceClassAPIVersionKey: []byte("v1alpha1")},
+			expVersion: "v1alpha1",
 		},
 		{
 			// No guessing: a version picked here would feed the instance-class checksum, and a
 			// wrong guess renames the MachineTemplate and recreates every node in the NodeGroup.
-			name:          "provider registered without the key yields no version",
-			cloudProvider: map[string]interface{}{"instanceClassKind": "YandexInstanceClass"},
+			name: "provider registered without the key yields no version",
+			data: map[string][]byte{"instanceClassKind": []byte("YandexInstanceClass")},
 		},
 		{
 			name: "no provider secret at all yields no version",
@@ -85,7 +85,7 @@ func TestInstanceClassAPIVersion(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.expVersion, instanceClassAPIVersion(tc.cloudProvider))
+			assert.Equal(t, tc.expVersion, DecodeRegistration(tc.data).InstanceClassAPIVersion)
 		})
 	}
 }
@@ -105,9 +105,7 @@ func TestRunCloudChecks_UnpublishedAPIVersionIsAValidationError(t *testing.T) {
 		},
 	}
 
-	check, err := newTestService(t).runCloudChecks(t.Context(), ng, map[string]interface{}{
-		"instanceClassKind": "YandexInstanceClass",
-	})
+	check, err := newTestService(t).runCloudChecks(t.Context(), ng, CloudProviderRegistration{InstanceClassKind: "YandexInstanceClass"})
 
 	require.NoError(t, err)
 	assert.Contains(t, check.Error, "has not published instanceClassAPIVersion")
@@ -136,9 +134,7 @@ func TestReadDefaultZonesIncludesExistingMCMMachineDeploymentZones(t *testing.T)
 	md.SetAnnotations(map[string]string{"zone": "zone-a"})
 
 	s := newTestService(t, md)
-	got := s.readDefaultZones(context.Background(), map[string]interface{}{
-		"zones": []interface{}{"zone-b", "zone-a"},
-	})
+	got := s.readDefaultZones(context.Background(), CloudProviderRegistration{Zones: []string{"zone-b", "zone-a"}})
 
 	assert.Equal(t, []string{"zone-a", "zone-b"}, got)
 }

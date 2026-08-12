@@ -359,6 +359,21 @@ func (r *MachineDeploymentReconciler) readCloudProviderTree(ctx context.Context)
 	return decodeCloudProviderSecret(secret.Data), nil
 }
 
+// readCloudProviderRegistration reads the same Secret as readCloudProviderTree, but typed. The
+// tree stays for the template render context, which needs the provider's own subtree verbatim.
+func (r *MachineDeploymentReconciler) readCloudProviderRegistration(ctx context.Context) (derived_status.CloudProviderRegistration, error) {
+	secret := &corev1.Secret{}
+	if err := r.Client.Get(ctx, types.NamespacedName{
+		Name: cloudProviderSecretName, Namespace: cloudProviderSecretNamespace,
+	}, secret); err != nil {
+		if client.IgnoreNotFound(err) == nil {
+			return derived_status.CloudProviderRegistration{}, nil
+		}
+		return derived_status.CloudProviderRegistration{}, fmt.Errorf("get cloud-provider secret: %w", err)
+	}
+	return derived_status.DecodeRegistration(secret.Data), nil
+}
+
 func decodeCloudProviderSecret(data map[string][]byte) map[string]interface{} {
 	res := make(map[string]interface{}, len(data))
 	for k, v := range data {

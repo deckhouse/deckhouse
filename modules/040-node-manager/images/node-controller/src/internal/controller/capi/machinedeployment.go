@@ -197,7 +197,7 @@ func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		// status.engine: with the derived value the MachineDeployment is rendered in the
 		// first reconcile right after the NodeGroup is created. status.engine, once set,
 		// stays the pin (ComputeEngine prefers it).
-		cloudProvider, err := r.readCloudProviderTree(ctx)
+		registration, err := r.readCloudProviderRegistration(ctx)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -205,11 +205,11 @@ func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		// the checksum that names the template. Guessing one would rename an immutable template
 		// and roll every machine in the NodeGroup, so wait instead: the provider secret is
 		// watched, and publishing the version re-enqueues this NodeGroup.
-		if version, _ := cloudProvider[common.InstanceClassAPIVersionKey].(string); version == "" {
+		if registration.InstanceClassAPIVersion == "" {
 			logger.V(1).Info("skipping: instanceClassAPIVersion is not published yet")
 			return ctrl.Result{RequeueAfter: resyncInterval}, nil
 		}
-		switch derived_status.ComputeEngine(ng, cloudProvider) {
+		switch derived_status.ComputeEngine(ng, registration) {
 		case engineCAPI:
 			if err := r.reconcileCloudMDsRendered(ctx, ng, rawSpec); err != nil {
 				return ctrl.Result{}, err

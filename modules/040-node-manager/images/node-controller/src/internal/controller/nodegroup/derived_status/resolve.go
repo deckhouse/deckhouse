@@ -60,8 +60,8 @@ func (s *Service) ResolveNodeGroup(ctx context.Context, ng *v1.NodeGroup, rawSpe
 	return ResolveNodeGroup(in, result), check.Error, nil
 }
 
-func (s *Service) runCloudChecks(ctx context.Context, ng *v1.NodeGroup, cloudProvider map[string]interface{}) (CloudCheckResult, error) {
-	kindInUse, _ := cloudProvider[nodecommon.InstanceClassKindKey].(string)
+func (s *Service) runCloudChecks(ctx context.Context, ng *v1.NodeGroup, reg CloudProviderRegistration) (CloudCheckResult, error) {
+	kindInUse := reg.InstanceClassKind
 
 	in := CloudCheckInput{
 		NodeType:  ng.Spec.NodeType,
@@ -79,7 +79,7 @@ func (s *Service) runCloudChecks(ctx context.Context, ng *v1.NodeGroup, cloudPro
 		// The provider names a kind but no version to read it at. Reporting it as a validation
 		// error is what every consumer already handles: rendering is skipped, and the bashible
 		// context keeps the entry it published last instead of dropping the cloud fields.
-		version := instanceClassAPIVersion(cloudProvider)
+		version := reg.InstanceClassAPIVersion
 		if version == "" {
 			return CloudCheckResult{Error: fmt.Sprintf(
 				"Cloud provider has not published %s yet. The %s cannot be read until it does.",
@@ -94,7 +94,7 @@ func (s *Service) runCloudChecks(ctx context.Context, ng *v1.NodeGroup, cloudPro
 			return CloudCheckResult{}, err
 		}
 		in.KnownClassNames = names
-		in.DefaultZones = s.readDefaultZones(ctx, cloudProvider)
+		in.DefaultZones = s.readDefaultZones(ctx, reg)
 		if in.MinPerZone == 0 && in.MaxPerZone > 0 &&
 			in.ClassRefKind == kindInUse && containsString(in.KnownClassNames, in.ClassRefName) {
 			in.CapacityErr = s.capacityError(ctx, version, in.ClassRefKind, in.ClassRefName)
