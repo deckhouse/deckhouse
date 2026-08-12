@@ -73,7 +73,7 @@ imageSpec:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
-fromImage: builder/golang
+fromImage: builder/golang-alpine
 mount:
 {{ include "mount points for golang builds" . }}
 import:
@@ -85,6 +85,9 @@ secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
 shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make bash
   setup:
     - export GOPROXY=$(cat /run/secrets/GOPROXY)
     - cd /src/plugins
