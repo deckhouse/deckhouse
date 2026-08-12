@@ -26,6 +26,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -58,12 +59,20 @@ const (
 	apiserverVersionAnnKey = "control-plane-manager.deckhouse.io/kubernetes-version"
 )
 
-func (s *Service) readCloudProviderData(ctx context.Context) map[string]interface{} {
+// readCloudProviderData returns the provider registration. An absent Secret means the cluster has
+// no cloud provider and yields an empty map; any other read failure is returned, because an empty
+// map reads as "no cloud" and would publish a NodeGroup without instanceClass — a checksum shift
+// that re-runs bashible on every node.
+func (s *Service) readCloudProviderData(ctx context.Context) (map[string]interface{}, error) {
 	secret := &corev1.Secret{}
-	if err := s.Client.Get(ctx, types.NamespacedName{Namespace: cloudProviderSecretNamespace, Name: cloudProviderSecretName}, secret); err != nil {
-		return map[string]interface{}{}
+	err := s.Client.Get(ctx, types.NamespacedName{Namespace: cloudProviderSecretNamespace, Name: cloudProviderSecretName}, secret)
+	if apierrors.IsNotFound(err) {
+		return map[string]interface{}{}, nil
 	}
-	return decodeSecretData(secret.Data)
+	if err != nil {
+		return nil, fmt.Errorf("read cloud provider secret: %w", err)
+	}
+	return decodeSecretData(secret.Data), nil
 }
 
 func decodeSecretData(data map[string][]byte) map[string]interface{} {

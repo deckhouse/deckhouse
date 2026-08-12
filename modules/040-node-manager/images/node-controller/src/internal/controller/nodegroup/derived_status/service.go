@@ -66,7 +66,10 @@ type Result struct {
 // ComputeWithCloudChecks derives get_crds fields and validation diagnostics from
 // the same provider snapshot, matching the old hook's single-pass behavior.
 func (s *Service) ComputeWithCloudChecks(ctx context.Context, ng *v1.NodeGroup) (Result, CloudCheckResult, error) {
-	cloudProvider := s.readCloudProviderData(ctx)
+	cloudProvider, err := s.readCloudProviderData(ctx)
+	if err != nil {
+		return Result{}, CloudCheckResult{}, err
+	}
 	result, err := s.compute(ctx, ng, cloudProvider)
 	if err != nil {
 		return result, CloudCheckResult{}, err
