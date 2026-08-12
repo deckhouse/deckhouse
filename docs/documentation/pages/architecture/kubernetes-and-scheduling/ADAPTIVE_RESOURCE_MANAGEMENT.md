@@ -18,7 +18,7 @@ Main features:
 * Per-workload and per-namespace VPA tuning via `autovpa.deckhouse.io/*` annotations and labels.
 * Minimal resource footprint: the controller runs as a single replica with low CPU and memory requirements.
 
-For more details about module configuration and usage examples, refer to the [module documentation](/modules/adaptive-resource-management/).
+For more details about the module configuration and usage examples, refer to the [module documentation](/modules/adaptive-resource-management/).
 
 ## Module architecture
 
