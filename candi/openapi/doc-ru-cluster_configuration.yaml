@@ -85,7 +85,6 @@ apiVersions:
           - ядро Linux версии 5.8 и новее, за исключением диапазонов 6.12.0–6.12.28 или 6.14.0–6.14.6 (эти версии подвержены уязвимости CVE-2025-37999 в EROFS);
           - systemd версии `244` и новее;
           - поддержка модуля ядра `erofs`.
-      # TODO(kubernetesVersion-deprecation): T+1 remove — RU description of deprecated CC field; remove with the field
       kubernetesVersion:
         description: |
           **Устарело.** Используйте [`kubernetesVersion`](/modules/control-plane-manager/configuration.html#parameters-kubernetesversion) в ModuleConfig `control-plane-manager` (`d8 k edit mc control-plane-manager`).

@@ -41,10 +41,9 @@ memory: 10Mi
 {{- $_ := set $tpl_context "registry" $registry }}
 {{- $_ := set $tpl_context "clusterConfiguration" .Values.global.clusterConfiguration }}
 {{- /*
-  NOTE(kubernetesVersion-deprecation): keep — this is why candi/control-plane/*.tpl may go on reading
-  .clusterConfiguration.kubernetesVersion after the field leaves ClusterConfiguration: there it is a
-  render-context key holding the throttled effective version. Do not let a ModuleConfig pin reach
-  them directly, or the one-minor-at-a-time throttling (image tags included) is bypassed.
+  This is why candi/control-plane/*.tpl may go on reading .clusterConfiguration.kubernetesVersion:
+  there it is a render-context key holding the throttled effective version. Do not let a ModuleConfig
+  pin reach them directly, or the one-minor-at-a-time throttling (image tags included) is bypassed.
 */ -}}
 {{- $_ := set $tpl_context.clusterConfiguration "kubernetesVersion" .Values.controlPlaneManager.internal.effectiveKubernetesVersion }}
 {{- $_ := set $tpl_context "controlPlaneTemplatesDir" "control-plane-templates" -}}

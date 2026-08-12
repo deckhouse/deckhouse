@@ -212,9 +212,6 @@ func readYAML(t *testing.T, relPath string, out interface{}) bool {
 
 // Pin versions must match across CC and MC for each edition, and every pin must exist in that
 // edition's version_map.
-//
-// TODO(kubernetesVersion-deprecation): T+1 rewrite — after CC field removal use the ModuleConfig enum
-// as reference vs edition version_map; do not delete this test.
 func TestKubernetesVersionEnumValidation(t *testing.T) {
 	// ModuleConfig takes Default only; ClusterConfiguration keeps the older Automatic.
 	sentinelsCC := map[string]struct{}{"Automatic": {}}

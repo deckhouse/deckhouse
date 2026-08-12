@@ -387,10 +387,6 @@ properties:
       - "ECDSA-P256"
     x-examples:
       - "ECDSA-P256"
-  # NOTE(kubernetesVersion-deprecation): keep — Automatic is deliberately absent from this enum.
-  # It stays legal in ClusterConfiguration, where it predates this field, but this setting is new
-  # in this release: dropping the alias before anyone can depend on it costs nothing, while
-  # removing it later would be a breaking change.
   kubernetesVersion:
     type: string
     description: |

@@ -130,8 +130,6 @@ func init() {
 // not an event source. Without them the K8sVersionsWithDeprecations requirement, which gates
 // DeckhouseRelease installation, would keep a stale answer until the next hourly tick.
 //
-// TODO(kubernetesVersion-deprecation): T+1 remove — drop the clusterConfiguration binding.
-//
 // OnStartup must not be combined with Kubernetes bindings (addon-operator panics).
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: moduleQueue + "/helm-releases-scan",
@@ -162,8 +160,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 // Narrowed to one field: the whole Secret changes for unrelated reasons, each costing a full
 // helm-release scan.
-//
-// TODO(kubernetesVersion-deprecation): T+1 remove — dies with the binding above.
 func filterClusterConfigurationVersionTriggerOnly(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	secret := &v1.Secret{}
 	if err := sdk.FromUnstructured(obj, secret); err != nil {

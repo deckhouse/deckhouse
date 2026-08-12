@@ -185,7 +185,6 @@ def resolve_effective_version(
     if secret_data is None:
         secret_data = get_cluster_configuration_secret_data(ctx)
 
-    # TODO(kubernetesVersion-deprecation): T+1 remove — drop the Secret fallback.
     def deckhouse_default() -> Optional[str]:
         version = get_deckhouse_default_version_from_configmap(ctx)
         if version:

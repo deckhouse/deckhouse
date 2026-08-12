@@ -188,8 +188,6 @@
              ```
 
              Delete the `encryptionAlgorithm` field and save.
-    # TODO(kubernetesVersion-deprecation): T+1 remove — delete with hooks/alert_migrate_kubernetes_version.go
-    # and the docs/documentation/_data/deckhouse-alerts.yml entry once ModuleConfig is the only source.
     - alert: D8UnsetKubernetesVersionInModuleConfig
       for: 5m
       expr: |
@@ -237,10 +235,6 @@
              ```
 
           Once ModuleConfig has the setting, this alert clears.
-    # NOTE(kubernetesVersion-deprecation): keep — permanent soft-guard freeze signal; not about the CC field.
-    #
-    # TODO(kubernetesVersion-deprecation): T+1 rewrite — drop any leftover CC-fallback wording here and in
-    # docs/documentation/_data/deckhouse-alerts.yml after the field is removed.
     - alert: D8ControlPlaneDefaultVersionDrift
       for: 5m
       expr: |

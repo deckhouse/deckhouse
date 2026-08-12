@@ -659,7 +659,6 @@ func isModuleConfigTrackDefault(version string) bool {
 	return version == defaultKubernetesVersionSentinel
 }
 
-// TODO(kubernetesVersion-deprecation): T+1 remove — dies with the ClusterConfiguration field.
 func isClusterConfigurationPinned(version string) bool {
 	return version != "" &&
 		version != automaticKubernetesVersion &&
@@ -669,8 +668,6 @@ func isClusterConfigurationPinned(version string) bool {
 // Same preference as global-hooks resolveTargetKubernetesVersion: a present ModuleConfig setting →
 // pinned ClusterConfiguration → empty. Presence of the ModuleConfig field decides, so Default there
 // returns empty and bootstrap starts on the Deckhouse default.
-//
-// TODO(kubernetesVersion-deprecation): T+1 remove — drop the ClusterConfiguration branch.
 func (m *MetaConfig) kubernetesVersionRaw() string {
 	mcVersion := ""
 	if mc := m.FindModuleConfig("control-plane-manager"); mc != nil {

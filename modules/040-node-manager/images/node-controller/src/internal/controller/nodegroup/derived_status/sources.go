@@ -94,9 +94,6 @@ type clusterKubernetesSpec struct {
 }
 
 // readClusterConfiguration returns defaultCRI from the ClusterConfiguration Secret.
-//
-// NOTE(kubernetesVersion-deprecation): keep — defaultCRI still lives on ClusterConfiguration;
-// kubernetesVersion is read only from d8-cluster-kubernetes (see readTargetKubernetesVersion).
 func (s *Service) readClusterConfiguration(ctx context.Context) string {
 	// Served from the kube-system Secret informer (watch-fresh); a live GET here used to
 	// cost hundreds of ms on every derived-status pass during a NodeGroup burst.

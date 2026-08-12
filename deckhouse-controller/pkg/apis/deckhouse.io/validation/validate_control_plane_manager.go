@@ -65,8 +65,6 @@ type clusterKubernetesSpec struct {
 // Guards kubernetesVersion against status.availableVersions of d8-cluster-kubernetes, plus module
 // compatibility and the maxUsed floor. "Default" and an unchanged value are exempt from membership.
 // Fail-open on anything unreadable: this webhook runs with failurePolicy: Fail.
-//
-// TODO(kubernetesVersion-deprecation): T+1 remove — drop the ClusterConfiguration fallback branch.
 func (v *moduleConfigValidator) validateControlPlaneManagerKubernetesVersion(
 	ctx context.Context, newSettings, oldSettings map[string]interface{},
 ) (*kwhvalidating.ValidatorResult, error) {
@@ -191,8 +189,6 @@ func rejectKubernetesVersionBelowMaxUsed(
 
 // Presence, not value. On a read error it reports false, i.e. keeps validating
 // ClusterConfiguration — the safe direction.
-//
-// TODO(kubernetesVersion-deprecation): T+1 remove — dies with the ClusterConfiguration field.
 func moduleConfigOwnsKubernetesVersion(ctx context.Context, cli client.Client) bool {
 	cfg := new(v1alpha1.ModuleConfig)
 	if err := cli.Get(ctx, client.ObjectKey{Name: controlPlaneManagerModuleName}, cfg); err != nil {
@@ -250,8 +246,6 @@ func rawModuleConfigSettings(cfg *v1alpha1.ModuleConfig) map[string]interface{} 
 // The floor is spec.maxUsedKubernetesVersion and nothing else: the chain this replaced also tried
 // status.currentVersion, which drops the moment a legitimate downgrade lands and let a second one
 // through. Shared with the ClusterConfiguration webhook so the two cannot disagree.
-//
-// TODO(kubernetesVersion-deprecation): T+1 remove — drop the Secret fallback inside it.
 func (v *moduleConfigValidator) readKubernetesVersionFacts(ctx context.Context) kubernetesVersionBaseline {
 	secret, _ := v.readClusterConfigurationSecret(ctx)
 	return kubernetesVersionBaselineFor(ctx, v.client, secret)

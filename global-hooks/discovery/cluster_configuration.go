@@ -37,10 +37,6 @@ import (
 // maxUsedK8sVersionSecretKey is Deckhouse's own bookkeeping in the d8-cluster-configuration Secret,
 // not a ClusterConfiguration field. It lives next to its only reader, the FilterFunc below; the
 // value it carries is consumed by the soft guard in target_kubernetes_version.go.
-//
-// TODO(kubernetesVersion-deprecation): T+1 remove — nothing writes this key any more
-// (update-observer owns spec.maxUsedKubernetesVersion of the cluster ConfigMap); it is read only as
-// a migration seed.
 const maxUsedK8sVersionSecretKey = "maxUsedControlPlaneKubernetesVersion"
 
 type ClusterConfigurationYaml struct {
@@ -50,8 +46,6 @@ type ClusterConfigurationYaml struct {
 	// KubernetesVersion is the raw ClusterConfiguration.kubernetesVersion, read with a plain
 	// unmarshal so target_kubernetes_version.go does not need config.ParseConfigFromData: schema
 	// validation of the whole document is this hook's job, not the version hook's.
-	//
-	// TODO(kubernetesVersion-deprecation): T+1 remove — dies with the ClusterConfiguration field.
 	KubernetesVersion string
 }
 
@@ -133,10 +127,6 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 			// Keep substituting Automatic → Default into global.clusterConfiguration for backward
 			// compatibility during the ClusterConfiguration.kubernetesVersion deprecation window.
 			// Declared target lives in global.discovery.targetKubernetesVersion instead.
-			//
-			// TODO(kubernetesVersion-deprecation): T+1 remove — drop Automatic→Default substitution into
-			// global.clusterConfiguration.kubernetesVersion with the CC field; keep discovery.target*.
-			// After T+1 the MC enum also drops Automatic; only Default remains as track-default.
 			if kubernetesVersionFromMetaConfig == automaticKubernetesVersion {
 				// ClusterConfig values are json.RawMessage, so the version has to go back in encoded.
 				defaultKubernetesVersionJSON, _ := json.Marshal(hooks.DefaultKubernetesVersion)

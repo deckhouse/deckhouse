@@ -228,9 +228,6 @@ func parseVersion(version string) (*semver.Version, error) {
 	return semver.NewVersion(version)
 }
 
-// TODO(kubernetesVersion-deprecation): T+1 remove — drop CC kubernetesVersion validation path; MC webhook remains the only guard.
-// NOTE(kubernetesVersion-deprecation): keep — Secret maxUsed/default baseline keys survive CC field removal.
-//
 // The cluster-level facts the downgrade check resolves "Automatic" against — Deckhouse's own
 // bookkeeping, not ClusterConfiguration fields.
 type kubernetesVersionBaseline struct {
@@ -244,9 +241,6 @@ type kubernetesVersionBaseline struct {
 }
 
 // kubernetesVersionBaselineFromSecret reads the baseline out of the d8-cluster-configuration Secret.
-//
-// TODO(kubernetesVersion-deprecation): T+1 remove — the Secret keys are a migration fallback for
-// kubernetesVersionBaselineFor below; nothing writes them any more.
 func kubernetesVersionBaselineFromSecret(secret *v1.Secret) kubernetesVersionBaseline {
 	if secret == nil {
 		return kubernetesVersionBaseline{}
@@ -263,8 +257,6 @@ func kubernetesVersionBaselineFromSecret(secret *v1.Secret) kubernetesVersionBas
 // Resolves the facts from the d8-cluster-kubernetes ConfigMap, falling back to the
 // d8-cluster-configuration Secret per field. The Secret's default key was only ever raised, so after
 // a Deckhouse downgrade the ConfigMap is the honest one.
-//
-// TODO(kubernetesVersion-deprecation): T+1 remove — drop the Secret fallback.
 func kubernetesVersionBaselineFor(ctx context.Context, cli client.Client, secret *v1.Secret) kubernetesVersionBaseline {
 	baseline := kubernetesVersionBaselineFromSecret(secret)
 

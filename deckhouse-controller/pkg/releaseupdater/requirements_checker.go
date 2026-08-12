@@ -43,8 +43,6 @@ import (
 
 const (
 	deckhouseClusterKubernetesConfigMap = "d8-cluster-kubernetes"
-	// TODO(kubernetesVersion-deprecation): T+1 rewrite — split in two. updateMode stays "Automatic"
-	// while the kubernetesVersion sentinel is "Default"; one constant works only by accident.
 	k8sAutomaticUpdateMode              = "Automatic"
 	reqCheckerServiceName               = "requirements-checker"
 	MigratedModulesRequirementFieldName = "migratedModules"

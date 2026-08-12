@@ -25,16 +25,10 @@ import (
 )
 
 /*
-TODO(kubernetesVersion-deprecation): T+1 remove — delete this hook with the
-D8UnsetKubernetesVersionInModuleConfig alert (mc-migration.yaml + deckhouse-alerts.yml)
-once ModuleConfig carries kubernetesVersion across the fleet.
-
 Description:
 	Alerts when ModuleConfig control-plane-manager has no kubernetesVersion setting.
 */
 
-// TODO(kubernetesVersion-deprecation): T+1 measure — adoption counter on unset ModuleConfig
-// kubernetesVersion; read fleet-wide before deciding on any release-side enforcement.
 const (
 	unsetKubernetesVersionMetricGroup = "D8UnsetKubernetesVersionInModuleConfig"
 	unsetKubernetesVersionMetricName  = "d8_unset_kubernetes_version_in_module_config"

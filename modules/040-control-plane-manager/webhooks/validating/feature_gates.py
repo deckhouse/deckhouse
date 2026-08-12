@@ -115,7 +115,6 @@ def get_k8s_version(ctx: DotMap) -> Optional[str]:
 
     # The Deckhouse default now comes from status.automaticVersion of the cluster ConfigMap, with
     # the Secret key kept only until update-observer has written that object at least once.
-    # TODO(kubernetesVersion-deprecation): T+1 remove — drop the Secret fallback.
     def deckhouse_default() -> Optional[str]:
         version = get_deckhouse_default_version_from_configmap(ctx)
         if version:

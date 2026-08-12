@@ -93,7 +93,6 @@ const (
 	defaultVersionDriftMetricName  = "d8_control_plane_default_version_drift"
 
 	// ClusterConfiguration's "track Deckhouse default" sentinel; ModuleConfig accepts only Default.
-	// TODO(kubernetesVersion-deprecation): T+1 remove — dies with the ClusterConfiguration field.
 	automaticKubernetesVersion       = "Automatic"
 	defaultKubernetesVersionSentinel = "Default"
 )
@@ -199,7 +198,6 @@ func targetKubernetesVersion(_ context.Context, input *go_hook.HookInput) error 
 	publishedTarget := target
 	if isDefault {
 		// The ConfigMap key is the same baseline admission uses, so the two cannot disagree.
-		// TODO(kubernetesVersion-deprecation): T+1 remove — drop the Secret source.
 		maxUsed := cmp.Or(
 			usableMaxUsedVersion(input, "cluster ConfigMap spec.maxUsedKubernetesVersion", cmSnap.MaxUsed),
 			usableMaxUsedVersion(input, "ClusterConfiguration Secret maxUsedControlPlaneKubernetesVersion", secretMaxUsed),
@@ -264,8 +262,6 @@ func targetKubernetesVersion(_ context.Context, input *go_hook.HookInput) error 
 
 // Presence of the ModuleConfig field — not its value — decides which document owns the version, so
 // Default there still wins over a ClusterConfiguration pin.
-//
-// TODO(kubernetesVersion-deprecation): T+1 remove — drop the ClusterConfiguration branch.
 func resolveTargetKubernetesVersion(mcVersion, ccVersion, defaultVersion string) (string, bool) {
 	switch {
 	case isModuleConfigTrackDefault(mcVersion):
@@ -288,7 +284,6 @@ func isModuleConfigPinned(version string) bool {
 	return version != "" && !isModuleConfigTrackDefault(version)
 }
 
-// TODO(kubernetesVersion-deprecation): T+1 remove — dies with the ClusterConfiguration field.
 func isClusterConfigurationPinned(version string) bool {
 	return version != "" &&
 		version != automaticKubernetesVersion &&

@@ -320,9 +320,6 @@ func handleEffectiveK8sVersion(ctx context.Context, input *go_hook.HookInput, dc
 	// The three sources are the same monotonic quantity at three freshnesses, so the maximum and
 	// "first that has a value" coincide: values is this hook's previous run (lost on Pod restart),
 	// the ConfigMap is the durable record, the Secret is the pre-move one.
-	//
-	// TODO(kubernetesVersion-deprecation): T+1 remove the Secret source — until then it is what
-	// stops a Deckhouse upgrade from collapsing the floor onto the current version.
 	floor := ekvMaxVersion(
 		ekvParseVersion(input.Values.Get(maxUsedK8sVersionValuesKey).String()),
 		ekvParseVersion(ekvProcessConfigMapSnapshot(input)),
@@ -395,9 +392,6 @@ func handleEffectiveK8sVersion(ctx context.Context, input *go_hook.HookInput, dc
 		data := patch["data"].(map[string]interface{})
 		data[key] = value
 	}
-
-	// TODO(kubernetesVersion-deprecation): T+1 remove — drop the key and its reader. Not written
-	// here any more, only read above as a migration seed.
 
 	currentDeckhouseDefault, err := semver.NewVersion(DefaultKubernetesVersion)
 	if err != nil {

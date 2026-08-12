@@ -137,7 +137,6 @@ apiVersions:
         - "ContainerdV2"
         - "NotManaged"
         default: "Containerd"
-      # TODO(kubernetesVersion-deprecation): T+1 remove — drop CC kubernetesVersion after migrate-to-MC and Secret strip
       kubernetesVersion:
         type: string
         x-doc-deprecated: true

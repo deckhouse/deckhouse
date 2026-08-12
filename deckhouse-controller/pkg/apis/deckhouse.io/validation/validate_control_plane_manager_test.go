@@ -473,7 +473,6 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 		assert.Contains(t, resp.Result.Message, "1.36")
 	})
 
-	// TODO(kubernetesVersion-deprecation): T+1 remove — drop with the Secret fallback.
 	t.Run("floor falls back to the Secret while the ConfigMap key is still absent", func(t *testing.T) {
 		cm := newClusterKubernetesConfigMap(nil)
 		cm.Data["spec"] = "desiredVersion: \"1.33\"\nupdateMode: Manual\n"

@@ -100,11 +100,7 @@ def get_cluster_configuration_secret_data(ctx: DotMap):
 
 
 def get_deckhouse_default_version_from_secret(secret_data) -> Optional[str]:
-    """Read deckhouseDefaultKubernetesVersion from the d8-cluster-configuration Secret.
-
-    TODO(kubernetesVersion-deprecation): T+1 remove — migration fallback for
-    get_deckhouse_default_version_from_configmap below; nothing writes this key any more.
-    """
+    """Read deckhouseDefaultKubernetesVersion from the d8-cluster-configuration Secret."""
     encoded_version = secret_data.get('deckhouseDefaultKubernetesVersion')
     if not encoded_version:
         return None
@@ -152,12 +148,6 @@ def get_deckhouse_default_version_from_configmap(ctx: DotMap) -> Optional[str]:
     return None
 
 
-# TODO(kubernetesVersion-deprecation): T+1 remove — drop the CC fallback helper once
-# kubernetesVersion leaves ClusterConfiguration. After T+1 only MC → Default.
-#
-# NOTE(kubernetesVersion-deprecation): keep — do NOT drop the d8-cluster-configuration Secret
-# snapshot; it still carries deckhouseDefaultKubernetesVersion for resolving the sentinel. Only the
-# secret-triggered validating rule becomes pointless.
 def get_k8s_version_from_cluster_config(secret_data) -> Optional[str]:
     encoded_config = secret_data.get('cluster-configuration.yaml')
     if not encoded_config:
