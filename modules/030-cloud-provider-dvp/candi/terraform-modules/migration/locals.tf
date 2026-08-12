@@ -50,15 +50,15 @@ locals {
       settings = {
         provider = {
           parameters = {
-            namespace = try(local._pcc.provider.namespace, "")
+            namespace     = try(local._pcc.provider.namespace, "")
+            networkPolicy = try(local._pcc.provider.networkPolicy, "Isolated")
           }
         }
         nodes = {
           parameters = {
-            sshPublicKey  = try(local._pcc.sshPublicKey, "")
-            region        = try(local._pcc.region, "")
-            zones         = try(local._pcc.zones, [])
-            networkPolicy = try(local._pcc.provider.networkPolicy, "Isolated")
+            sshPublicKey       = try(local._pcc.sshPublicKey, "")
+            region             = try(local._pcc.region, "")
+            zones              = try(local._pcc.zones, [])
           }
         }
       }

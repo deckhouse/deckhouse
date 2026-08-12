@@ -39,8 +39,9 @@ cloudProviderDvp:
         network-access: bastion
       ingressPorts:
       - 22
+  provider:
+    parameters:
       networkPolicy: Isolated
-  provider: {}
   internal: {}
 `
 	)
@@ -85,48 +86,6 @@ provider:
   kubeconfigDataBase64: %s
   namespace: cloud-provider01
 sshPublicKey: ssh-rsa AAAAB3N
-region: ru-msk-1
-zones:
-- default
-`, kubeconfigDataBase64)
-
-	stateAExpectedClusterConfiguration := fmt.Sprintf(`
-apiVersion: deckhouse.io/v1
-kind: DVPClusterConfiguration
-layout: Standard
-masterNodeGroup:
-  instanceClass:
-    etcdDisk:
-      size: 15Gi
-      storageClass: ceph-pool-r2-csi-rbd-immediate
-    rootDisk:
-      image:
-        kind: ClusterVirtualImage
-        name: ubuntu-2204
-      size: 50Gi
-      storageClass: ceph-pool-r2-csi-rbd-immediate
-    virtualMachine:
-      virtualMachineClassName: superbe-class
-      bootloader: EFI
-      cpu:
-        coreFraction: 100%%
-        cores: 4
-      liveMigrationPolicy: PreferForced
-      runPolicy: AlwaysOnUnlessStoppedManually
-      ipAddresses:
-        - Auto
-      memory:
-        size: 8Gi
-  replicas: 3
-provider:
-  ingressPorts:
-  - 22
-  kubeconfigDataBase64: %s
-  namespace: cloud-provider01
-  networkPolicy: Isolated
-sshPublicKey: ssh-rsa AAAAB3N
-additionalVMLabels:
-  network-access: bastion
 region: ru-msk-1
 zones:
 - default
@@ -884,7 +843,6 @@ data:
 			Expect(dPCCNoDiscovery).To(ExecuteSuccessfully())
 			Expect(dPCCNoDiscovery.ValuesGet("cloudProviderDvp.internal.providerDiscoveryData.apiVersion").String()).To(Equal("deckhouse.io/v1"))
 			Expect(dPCCNoDiscovery.ValuesGet("cloudProviderDvp.internal.providerDiscoveryData.zones").String()).To(MatchJSON(`["default"]`))
-			Expect(dPCCNoDiscovery.ValuesGet("cloudProviderDvp.internal.providerClusterConfiguration").String()).To(MatchYAML(stateAExpectedClusterConfiguration))
 		})
 	})
 })

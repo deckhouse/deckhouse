@@ -21,7 +21,6 @@ positive:
         zones:
           - zone-a
           - zone-b
-        networkPolicy: Isolated
         ingressPorts:
           - 22
           - 6443
@@ -30,6 +29,7 @@ positive:
     provider:
       parameters:
         namespace: my-ns
+        networkPolicy: Isolated
   values:
   - internal: {}
     storage:
@@ -59,10 +59,10 @@ negative:
       parameters:
         layout: Standard
         sshPublicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQ test@host"
-        networkPolicy: Restricted
     provider:
       parameters:
         namespace: default
+        networkPolicy: Restricted
   - storage:
       parameters: {}
     nodes:

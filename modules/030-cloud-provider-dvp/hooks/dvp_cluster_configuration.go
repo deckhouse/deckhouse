@@ -411,13 +411,19 @@ func mapPCCtoRootValues(input *go_hook.HookInput, pcc *v1.DvpProviderClusterConf
 		return nil
 	}
 
-	// provider has no disabled flag, overwriting is safe
-	if pcc.Provider != nil && pcc.Provider.Namespace != nil {
-		input.Values.Set("cloudProviderDvp.provider", map[string]any{
-			"parameters": map[string]any{
-				"namespace": *pcc.Provider.Namespace,
-			},
-		})
+	if pcc.Provider != nil {
+		providerParams := map[string]any{}
+		if pcc.Provider.Namespace != nil {
+			providerParams["namespace"] = *pcc.Provider.Namespace
+		}
+		if pcc.Provider.NetworkPolicy != nil {
+			providerParams["networkPolicy"] = *pcc.Provider.NetworkPolicy
+		}
+		if len(providerParams) > 0 {
+			input.Values.Set("cloudProviderDvp.provider", map[string]any{
+				"parameters": providerParams,
+			})
+		}
 	}
 
 	// nodes.disabled intentionally not touched
@@ -543,21 +549,12 @@ func overrideProviderClusterConfigValues(p *v1.DvpProviderClusterConfiguration, 
 		if m.Provider.Parameters.Namespace != nil {
 			p.Provider.Namespace = m.Provider.Parameters.Namespace
 		}
+		if m.Provider.Parameters.NetworkPolicy != nil {
+			p.Provider.NetworkPolicy = m.Provider.Parameters.NetworkPolicy
+		}
 	}
 
 	if m.Nodes != nil && m.Nodes.Parameters != nil {
-		if p.Provider == nil {
-			p.Provider = &v1.DvpProvider{}
-		}
-		if m.Nodes.Parameters.NetworkPolicy != nil {
-			p.Provider.NetworkPolicy = m.Nodes.Parameters.NetworkPolicy
-		}
-		if m.Nodes.Parameters.IngressPorts != nil {
-			p.Provider.IngressPorts = m.Nodes.Parameters.IngressPorts
-		}
-		if m.Nodes.Parameters.AdditionalVMLabels != nil {
-			p.AdditionalVMLabels = m.Nodes.Parameters.AdditionalVMLabels
-		}
 		if m.Nodes.Parameters.Zones != nil {
 			p.Zones = m.Nodes.Parameters.Zones
 		}

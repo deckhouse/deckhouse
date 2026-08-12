@@ -17,23 +17,21 @@ limitations under the License.
 package v1
 
 type DvpProviderClusterConfiguration struct {
-	APIVersion         *string           `json:"apiVersion,omitempty" yaml:"apiVersion,omitempty"`
-	Kind               *string           `json:"kind,omitempty" yaml:"kind,omitempty"`
-	Provider           *DvpProvider      `json:"provider,omitempty" yaml:"provider,omitempty"`
-	Layout             *string           `json:"layout,omitempty" yaml:"layout,omitempty"`
-	MasterNodeGroup    any               `json:"masterNodeGroup,omitempty" yaml:"masterNodeGroup,omitempty"`
-	NodeGroups         []any             `json:"nodeGroups,omitempty" yaml:"nodeGroups,omitempty"`
-	SSHPublicKey       *string           `json:"sshPublicKey,omitempty" yaml:"sshPublicKey,omitempty"`
-	AdditionalVMLabels map[string]string `json:"additionalVMLabels,omitempty" yaml:"additionalVMLabels,omitempty"`
-	Region             *string           `json:"region,omitempty" yaml:"region,omitempty"`
-	Zones              *[]string         `json:"zones,omitempty" yaml:"zones,omitempty"`
+	APIVersion      *string      `json:"apiVersion,omitempty" yaml:"apiVersion,omitempty"`
+	Kind            *string      `json:"kind,omitempty" yaml:"kind,omitempty"`
+	Provider        *DvpProvider `json:"provider,omitempty" yaml:"provider,omitempty"`
+	Layout          *string      `json:"layout,omitempty" yaml:"layout,omitempty"`
+	MasterNodeGroup any          `json:"masterNodeGroup,omitempty" yaml:"masterNodeGroup,omitempty"`
+	NodeGroups      []any        `json:"nodeGroups,omitempty" yaml:"nodeGroups,omitempty"`
+	SSHPublicKey    *string      `json:"sshPublicKey,omitempty" yaml:"sshPublicKey,omitempty"`
+	Region          *string      `json:"region,omitempty" yaml:"region,omitempty"`
+	Zones           *[]string    `json:"zones,omitempty" yaml:"zones,omitempty"`
 }
 
 type DvpProvider struct {
 	KubeconfigDataBase64 *string `json:"kubeconfigDataBase64,omitempty" yaml:"kubeconfigDataBase64,omitempty"`
 	Namespace            *string `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	NetworkPolicy        *string `json:"networkPolicy,omitempty" yaml:"networkPolicy,omitempty"`
-	IngressPorts         []int   `json:"ingressPorts,omitempty" yaml:"ingressPorts,omitempty"`
 }
 
 type DvpModuleConfiguration struct {
@@ -48,7 +46,8 @@ type DvpProviderV2 struct {
 }
 
 type DvpProviderParameters struct {
-	Namespace *string `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Namespace     *string `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	NetworkPolicy *string `json:"networkPolicy,omitempty" yaml:"networkPolicy,omitempty"`
 }
 
 // DvpNodesV2 represents the v2 schema nodes section (from ModuleConfig).
@@ -63,7 +62,6 @@ type DvpNodesParameters struct {
 	Region             *string             `json:"region,omitempty" yaml:"region,omitempty"`
 	Zones              *[]string           `json:"zones,omitempty" yaml:"zones,omitempty"`
 	IPAddresses        map[string][]string `json:"ipAddresses,omitempty"`
-	NetworkPolicy      *string             `json:"networkPolicy,omitempty" yaml:"networkPolicy,omitempty"`
 	IngressPorts       []int               `json:"ingressPorts,omitempty" yaml:"ingressPorts,omitempty"`
 	AdditionalVMLabels map[string]string   `json:"additionalVMLabels,omitempty" yaml:"additionalVMLabels,omitempty"`
 }
