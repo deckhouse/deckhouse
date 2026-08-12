@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
@@ -37,7 +38,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/util/retry"
 	"k8s.io/client-go/util/workqueue"
-	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
 	kclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/module-sdk/pkg/settingscheck"
@@ -75,11 +75,17 @@ import (
 )
 
 const (
+	// bootstrappedGlobalValue is the global value indicating completed cluster bootstrap.
 	bootstrappedGlobalValue = "clusterIsBootstrapped"
-	kubernetesVersionValue  = "kubernetesVersion"
-	deckhouseVersionValue   = "deckhouseVersion"
+	// kubernetesVersionValue is the global value containing the Kubernetes version.
+	kubernetesVersionValue = "kubernetesVersion"
+	// deckhouseVersionValue is the global value containing the Deckhouse version.
+	deckhouseVersionValue = "deckhouseVersion"
 
+	// runtimeTracer identifies tracing spans emitted by the package runtime.
 	runtimeTracer = "package-runtime"
+	// nelmMonitorRequestTimeout bounds discovery and metadata requests made by the NELM monitor client.
+	nelmMonitorRequestTimeout = 30 * time.Second
 )
 
 // Runtime orchestrates the full lifecycle of application packages: discovery,
@@ -142,7 +148,6 @@ type moduleManagerI interface {
 }
 
 // Build creates and initializes a Runtime with all subsystems wired together.
-// Blocks until the NELM cache completes its initial sync.
 func Build(cli kclient.Client, edition *edition.Edition, moduleManager moduleManagerI, dc dependency.Container, metricStorage metricsstorage.Storage, logger *log.Logger) (*Runtime, error) {
 	r := new(Runtime)
 
@@ -389,11 +394,7 @@ func (r *Runtime) buildKubeEventsManager() error {
 // NELM manages Helm releases and monitors their resources for drift detection.
 // This requires:
 //  1. A dedicated Kubernetes client with rate limits tuned for monitoring
-//  2. A controller-runtime cache for efficient resource queries
-//
-// The cache must be started and synced before the NELM service can function:
-//   - cache.Start() runs the cache informers in the background
-//   - cache.WaitForCacheSync() blocks until initial resource listing completes
+//  2. A metadata client for bounded, point-in-time resource queries
 //
 // Resource monitoring detects:
 //   - Missing resources (deleted outside of Helm)
@@ -405,32 +406,14 @@ func (r *Runtime) buildNelmService() error {
 	client.WithContextName(app.KubeContext())
 	client.WithConfigPath(app.KubeConfig())
 	client.WithRateLimiterSettings(app.HelmMonitorKubeClientQPS(), app.HelmMonitorKubeClientBurst())
+	client.WithTimeout(nelmMonitorRequestTimeout)
 	client.WithMetricPrefix("packages_nelm_monitor_")
 
 	if err := client.Init(); err != nil {
 		return fmt.Errorf("initialize nelm service client: %w", err)
 	}
 
-	// Create controller-runtime cache for efficient resource queries during monitoring
-	cache, err := runtimecache.New(client.RestConfig(), runtimecache.Options{})
-	if err != nil {
-		return fmt.Errorf("create runtime cache: %w", err)
-	}
-
-	// Start cache informers in background
-	go func() {
-		if err = cache.Start(context.Background()); err != nil {
-			r.logger.Error("failed to start cache", "error", err)
-		}
-	}()
-
-	// Wait for cache to complete initial sync before proceeding
-	// This ensures monitors have current resource state from the start
-	if !cache.WaitForCacheSync(context.Background()) {
-		return fmt.Errorf("cache sync failed")
-	}
-
-	r.nelmService = nelm.NewService(cache, r.scheduler.Reschedule, r.status, r.logger)
+	r.nelmService = nelm.NewService(client, r.scheduler.Reschedule, r.status, r.logger)
 
 	return nil
 }
