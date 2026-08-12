@@ -510,18 +510,6 @@ write:
 {{site.data.i18n.common.role[page.lang] | capitalize }} `ClusterAdmin` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`):
 
 ```text
-delete,deletecollection,get,list,patch,update,watch:
-    - machine.sapcloud.io/alicloudmachineclasses
-    - machine.sapcloud.io/awsmachineclasses
-    - machine.sapcloud.io/azuremachineclasses
-    - machine.sapcloud.io/gcpmachineclasses
-    - machine.sapcloud.io/machinedeployments
-    - machine.sapcloud.io/machines
-    - machine.sapcloud.io/machinesets
-    - machine.sapcloud.io/openstackmachineclasses
-    - machine.sapcloud.io/packetmachineclasses
-    - machine.sapcloud.io/vspheremachineclasses
-    - machine.sapcloud.io/yandexmachineclasses
 get,list,patch,update,watch:
     - control-plane.deckhouse.io/controlplanenodes
 list,watch:
@@ -545,11 +533,9 @@ patch,update:
     - infrastructure.cluster.x-k8s.io/zvirtclusters
     - infrastructure.cluster.x-k8s.io/zvirtmachines
     - infrastructure.cluster.x-k8s.io/zvirtmachinetemplates
-    - machine.sapcloud.io/machinedeployments/scale
 proxy:
     - nodes
 read:
-    - cluster.x-k8s.io/machinedrainrules
     - control-plane.deckhouse.io/controlplaneoperations
     - infrastructure.cluster.x-k8s.io/deckhousecontrolplanes
     - infrastructure.cluster.x-k8s.io/staticclusters
@@ -558,12 +544,6 @@ read:
     - nfd.k8s-sigs.io/nodefeaturerules
     - nfd.k8s-sigs.io/nodefeatures
 read-write:
-    - cluster.x-k8s.io/clusters
-    - cluster.x-k8s.io/machinedeployments
-    - cluster.x-k8s.io/machinehealthchecks
-    - cluster.x-k8s.io/machinepools
-    - cluster.x-k8s.io/machines
-    - cluster.x-k8s.io/machinesets
     - deckhouse.io/clusterauthorizationrules
     - deckhouse.io/dexproviderchecks
     - deckhouse.io/dexproviders
@@ -583,7 +563,6 @@ read-write:
 write:
     - cilium.io/ciliumclusterwidenetworkpolicies
     - cilium.io/ciliumnetworkpolicies
-    - cluster.x-k8s.io/machinedeployments/scale
     - config.gatekeeper.sh/configs
     - connection.gatekeeper.sh/connections
     - constraints.gatekeeper.sh/*
