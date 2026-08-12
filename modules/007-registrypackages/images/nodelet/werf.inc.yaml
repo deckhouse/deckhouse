@@ -1,0 +1,103 @@
+# nodelet, the Olcedar node agent, delivered as a signed system extension so it
+# can be updated without rebuilding the OS image and rebooting the node.
+#
+# The OS image carries its own copy of this extension as a seed under
+# /usr/share/nodelet, built in the olcedar repository; this image is the update
+# the cluster delivers on top of it.
+#
+# The unit ships inside the image on purpose: the agent restarts only the units
+# it discovers there (systemd-dissect --list, see extensions/sysext.go), so an
+# image without one is merged and never takes effect.
+{{- if ne $.Env "CSE" }}
+  {{- /* The agent has no releases yet, so main is pinned by commit: werf keys a
+         shell-cloned source on the rendered instructions alone, and a moving
+         branch would be built once and cached forever. Bump this line to pick
+         up agent changes. */ -}}
+  {{- $nodeletCommit := "c7310d7a140f8356b5ece3ab8b3209dd28e5f20c" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+secrets:
+- id: DECKHOUSE_PRIVATE_REPO
+  value: {{ $.DECKHOUSE_PRIVATE_REPO }}
+shell:
+  install:
+  - git clone git@$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO):deckhouse/container-base/nodelet.git /src
+  - git -C /src checkout {{ $nodeletCommit }}
+  - rm -rf /src/.git
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+final: false
+from: {{ index $.Images "builder/golang" }}
+mount:
+{{ include "mount points for golang builds" . }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+secrets:
+- id: GOPROXY
+  value: {{ $.GOPROXY }}
+shell:
+  install:
+  - cd /src && GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-w -s" -o /nodelet ./cmd/nodelet
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-artifact
+final: false
+from: {{ index $.Images "builder/distroless" }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /nodelet
+  to: /sysext/usr/bin/nodelet
+  before: install
+# The signing tools come in as imports, so this list has to be open before the
+# define appends its entries to it.
+{{- include "olcedar sysext sign imports" $ }}
+git:
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/sysext
+  to: /scripts
+  includePaths:
+  - extension-release.nodelet
+  - nodelet.service
+  stageDependencies:
+    install:
+    - extension-release.nodelet
+    - nodelet.service
+{{- include "olcedar sysext sign secrets" . }}
+shell:
+  beforeInstall:
+  - pm install erofs-utils coreutils cryptsetup
+  - mkdir -p /out
+  install:
+  - mkdir -p /sysext/usr/lib/extension-release.d /sysext/usr/lib/systemd/system
+  - cp -f /scripts/nodelet.service /sysext/usr/lib/systemd/system/nodelet.service
+  - cp -f /scripts/extension-release.nodelet /sysext/usr/lib/extension-release.d/
+  - mkfs.erofs -L _sysext -U 00000000-0000-0000-0000-000000000000 -z lzma,9 /out/nodelet.raw sysext/
+  # Sidecar files, named the way systemd derives them — see olcedar-sysext.tmpl.
+  - veritysetup format /out/nodelet.raw /out/nodelet.verity --root-hash-file=roothash.txt
+  - tr -d ' \n' < roothash.txt > /out/nodelet.roothash
+  - veritysetup verify /out/nodelet.raw /out/nodelet.verity "$(cat /out/nodelet.roothash)"
+{{- include "olcedar sysext sign" "nodelet" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext
+from: {{ index $.Images "builder/scratch" }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-artifact
+  add: /out
+  to: /
+  includePaths:
+  - '**/*'
+  before: setup
+imageSpec:
+  config:
+    labels: { "distro": "olcedar", "sysext_level": "1.0", "version": "all" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s-sysext" $.ModuleName $.ImageName)) }}
+{{- end }}
