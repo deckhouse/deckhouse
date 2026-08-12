@@ -35,9 +35,6 @@ import (
 )
 
 const (
-	packageVersionSegment = "version"
-	packageReleaseSegment = "release"
-
 	packagesServiceName       = "packages"
 	packageServiceName        = "package"
 	packageVersionServiceName = "package_version"

@@ -17,12 +17,11 @@ package registry
 import (
 	"errors"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	dhregistry "github.com/deckhouse/deckhouse/pkg/deckhouse-registry"
 	"github.com/deckhouse/deckhouse/pkg/deckhouse-registry/module"
 	"github.com/deckhouse/deckhouse/pkg/deckhouse-registry/service"
 	"github.com/deckhouse/deckhouse/pkg/log"
-
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 )
 
 // Errors the commands report to the user. The registry itself answers

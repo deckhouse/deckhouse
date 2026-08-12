@@ -32,15 +32,14 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	dhregistry "github.com/deckhouse/deckhouse/pkg/deckhouse-registry"
 	"github.com/deckhouse/deckhouse/pkg/deckhouse-registry/deckhouse"
 	"github.com/deckhouse/deckhouse/pkg/deckhouse-registry/definition"
 	"github.com/deckhouse/deckhouse/pkg/deckhouse-registry/module"
 	"github.com/deckhouse/deckhouse/pkg/deckhouse-registry/service"
-
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -301,7 +300,7 @@ func registerModuleCommand(parent *cobra.Command, logger *log.Logger) {
 // validateEnumFlag returns an error when the named flag is set to a value
 // outside the allowed set. Empty values are treated as "unset" and skip the
 // check, matching kingpin's behavior for optional Enum flags.
-func validateEnumFlag(_ *cobra.Command, name, value string, allowed ...string) error {
+func validateEnumFlag(_ *cobra.Command, name, value string, allowed ...string) error { //nolint:unparam // general helper; only the channel flag uses it today
 	if value == "" {
 		return nil
 	}
