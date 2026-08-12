@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 
 	admissionv1 "k8s.io/api/admission/v1"
@@ -34,6 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/common"
 )
 
 func newScheme() *runtime.Scheme {
@@ -104,6 +106,22 @@ func providerConfigSecret(zones []string) *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: "d8-provider-cluster-configuration", Namespace: "kube-system"},
 		Data:       map[string][]byte{"cloud-provider-discovery-data.json": zonesJSON},
+	}
+}
+
+func registrationSecret(name, kind, apiVersion string) *corev1.Secret {
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: common.CloudProviderSecretNamespace,
+			Labels: map[string]string{
+				common.CloudProviderRegistrationLabel: "",
+			},
+		},
+		Data: map[string][]byte{
+			common.InstanceClassKindKey:       []byte(kind),
+			common.InstanceClassAPIVersionKey: []byte(apiVersion),
+		},
 	}
 }
 
@@ -187,7 +205,17 @@ func TestValidation_MinPerZoneGreaterThanMaxPerZone(t *testing.T) {
 
 func TestValidation_MinPerZoneLessOrEqualMaxPerZone(t *testing.T) {
 	s := newScheme()
-	c := fake.NewClientBuilder().WithScheme(s).Build()
+
+	registration := registrationSecret(
+		"d8-cloud-provider-aws",
+		"AWSInstanceClass",
+		"v1",
+	)
+	c := fake.NewClientBuilder().
+		WithScheme(s).
+		WithObjects(registration).
+		Build()
+
 	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
 
 	ng := baseNodeGroup("ephemeral", v1.NodeTypeCloudEphemeral)
@@ -267,7 +295,17 @@ func TestValidation_RollingUpdateOnlyForCloudEphemeral(t *testing.T) {
 
 func TestValidation_RollingUpdateAllowedForCloudEphemeral(t *testing.T) {
 	s := newScheme()
-	c := fake.NewClientBuilder().WithScheme(s).Build()
+
+	registration := registrationSecret(
+		"d8-cloud-provider-aws",
+		"AWSInstanceClass",
+		"v1",
+	)
+	c := fake.NewClientBuilder().
+		WithScheme(s).
+		WithObjects(registration).
+		Build()
+
 	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
 
 	ng := baseNodeGroup("ephemeral", v1.NodeTypeCloudEphemeral)
@@ -389,7 +427,17 @@ func TestValidation_CloudNameLengthOK(t *testing.T) {
 	s := newScheme()
 
 	sec := clusterConfigSecret("Cloud", "short", "", 0)
-	c := fake.NewClientBuilder().WithScheme(s).WithObjects(sec).Build()
+
+	registration := registrationSecret(
+		"d8-cloud-provider-aws",
+		"AWSInstanceClass",
+		"v1",
+	)
+	c := fake.NewClientBuilder().
+		WithScheme(s).
+		WithObjects(sec, registration).
+		Build()
+
 	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
 
 	ng := baseNodeGroup("worker", v1.NodeTypeCloudEphemeral)
@@ -446,7 +494,17 @@ func TestValidation_ValidZones(t *testing.T) {
 
 	clusterSec := clusterConfigSecret("Cloud", "test", "", 0)
 	provSec := providerConfigSecret([]string{"eu-west-1a", "eu-west-1b", "eu-west-1c"})
-	c := fake.NewClientBuilder().WithScheme(s).WithObjects(clusterSec, provSec).Build()
+
+	registration := registrationSecret(
+		"d8-cloud-provider-aws",
+		"AWSInstanceClass",
+		"v1",
+	)
+	c := fake.NewClientBuilder().
+		WithScheme(s).
+		WithObjects(clusterSec, provSec, registration).
+		Build()
+
 	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
 
 	ng := baseNodeGroup("ephemeral", v1.NodeTypeCloudEphemeral)
@@ -467,7 +525,17 @@ func TestValidation_ZonesValidation_NoProviderConfig(t *testing.T) {
 
 	// No provider config secret - zones validation is skipped (no zones to check against)
 	clusterSec := clusterConfigSecret("Cloud", "test", "", 0)
-	c := fake.NewClientBuilder().WithScheme(s).WithObjects(clusterSec).Build()
+
+	registration := registrationSecret(
+		"d8-cloud-provider-aws",
+		"AWSInstanceClass",
+		"v1",
+	)
+	c := fake.NewClientBuilder().
+		WithScheme(s).
+		WithObjects(clusterSec, registration).
+		Build()
+
 	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
 
 	ng := baseNodeGroup("ephemeral", v1.NodeTypeCloudEphemeral)
@@ -488,7 +556,17 @@ func TestValidation_ZonesValidation_SkippedWhenNoZonesSpecified(t *testing.T) {
 
 	clusterSec := clusterConfigSecret("Cloud", "test", "", 0)
 	provSec := providerConfigSecret([]string{"eu-west-1a"})
-	c := fake.NewClientBuilder().WithScheme(s).WithObjects(clusterSec, provSec).Build()
+
+	registration := registrationSecret(
+		"d8-cloud-provider-aws",
+		"AWSInstanceClass",
+		"v1",
+	)
+	c := fake.NewClientBuilder().
+		WithScheme(s).
+		WithObjects(clusterSec, provSec, registration).
+		Build()
+
 	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
 
 	ng := baseNodeGroup("ephemeral", v1.NodeTypeCloudEphemeral)
@@ -802,7 +880,18 @@ func TestValidation_ProviderConfigNotFound_AnyCluster(t *testing.T) {
 	s := newScheme()
 	// No provider config - zones validation is skipped when no provider config exists
 	clusterSec := clusterConfigSecret("Cloud", "test", "", 0)
-	c := fake.NewClientBuilder().WithScheme(s).WithObjects(clusterSec).Build()
+
+	registration := registrationSecret(
+		"d8-cloud-provider-aws",
+		"AWSInstanceClass",
+		"v1",
+	)
+
+	c := fake.NewClientBuilder().
+		WithScheme(s).
+		WithObjects(clusterSec, registration).
+		Build()
+
 	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
 
 	ng := baseNodeGroup("ephemeral", v1.NodeTypeCloudEphemeral)
@@ -919,5 +1008,132 @@ func TestLoadProviderClusterConfig_InvalidJSON(t *testing.T) {
 	_, err := w.loadProviderClusterConfig(context.Background())
 	if err == nil {
 		t.Fatal("expected error for invalid JSON")
+	}
+}
+
+func TestValidation_RegisteredInstanceClassKindAllowed(t *testing.T) {
+	s := newScheme()
+
+	registration := registrationSecret(
+		"d8-cloud-provider-dvp",
+		"DVPInstanceClass",
+		"v1",
+	)
+
+	c := fake.NewClientBuilder().
+		WithScheme(s).
+		WithObjects(registration).
+		Build()
+
+	w := &NodeGroupValidator{
+		Client:  c,
+		decoder: admission.NewDecoder(s),
+	}
+
+	ng := baseNodeGroup("worker", v1.NodeTypeCloudEphemeral)
+	ng.Spec.CloudInstances = &v1.CloudInstancesSpec{
+		MinPerZone: 1,
+		MaxPerZone: 2,
+		ClassReference: v1.ClassReference{
+			Kind: "DVPInstanceClass",
+			Name: "worker",
+		},
+	}
+
+	resp := w.Handle(
+		context.Background(),
+		makeAdmissionRequest(t, admissionv1.Create, ng, nil),
+	)
+
+	if !resp.Allowed {
+		t.Fatalf(
+			"expected registered InstanceClass kind to be allowed, got: %s",
+			resp.Result.Message,
+		)
+	}
+}
+
+func TestValidation_UnregisteredInstanceClassKindDenied(t *testing.T) {
+	s := newScheme()
+
+	registration := registrationSecret(
+		"d8-cloud-provider-dvp",
+		"DVPInstanceClass",
+		"v1",
+	)
+
+	c := fake.NewClientBuilder().
+		WithScheme(s).
+		WithObjects(registration).
+		Build()
+
+	w := &NodeGroupValidator{
+		Client:  c,
+		decoder: admission.NewDecoder(s),
+	}
+
+	ng := baseNodeGroup("worker", v1.NodeTypeCloudEphemeral)
+	ng.Spec.CloudInstances = &v1.CloudInstancesSpec{
+		MinPerZone: 1,
+		MaxPerZone: 2,
+		ClassReference: v1.ClassReference{
+			Kind: "TestInstanceClass",
+			Name: "worker",
+		},
+	}
+
+	resp := w.Handle(
+		context.Background(),
+		makeAdmissionRequest(t, admissionv1.Create, ng, nil),
+	)
+
+	if resp.Allowed {
+		t.Fatal("expected unregistered InstanceClass kind to be denied")
+	}
+
+	if resp.Result == nil ||
+		!strings.Contains(resp.Result.Message, "DVPInstanceClass") {
+		t.Fatalf(
+			"expected response to contain registered kind, got: %v",
+			resp.Result,
+		)
+	}
+}
+
+func TestValidation_UnchangedInstanceClassKindAllowedOnUpdate(t *testing.T) {
+	s := newScheme()
+
+	c := fake.NewClientBuilder().
+		WithScheme(s).
+		Build()
+
+	w := &NodeGroupValidator{
+		Client:  c,
+		decoder: admission.NewDecoder(s),
+	}
+
+	oldNG := baseNodeGroup("worker", v1.NodeTypeCloudEphemeral)
+	oldNG.Spec.CloudInstances = &v1.CloudInstancesSpec{
+		MinPerZone: 1,
+		MaxPerZone: 2,
+		ClassReference: v1.ClassReference{
+			Kind: "MissingInstanceClass",
+			Name: "worker",
+		},
+	}
+
+	newNG := oldNG.DeepCopy()
+	newNG.Spec.CloudInstances.MaxPerZone = 3
+
+	resp := w.Handle(
+		context.Background(),
+		makeAdmissionRequest(t, admissionv1.Update, newNG, oldNG),
+	)
+
+	if !resp.Allowed {
+		t.Fatalf(
+			"expected update with unchanged kind to be allowed, got: %s",
+			resp.Result.Message,
+		)
 	}
 }
