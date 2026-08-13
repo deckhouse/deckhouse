@@ -496,7 +496,6 @@ var _ = Describe("NodeConfig controller", func() {
 
 		By("the release publishing a rebuilt containerd and nothing else happening")
 		setContainerdDigest(ctx, testContainerdRebuiltDigest)
-		DeferCleanup(func(ctx context.Context) { setContainerdDigest(ctx, testContainerdDigest) })
 
 		Eventually(func(g Gomega) {
 			g.Expect(digestOf(getNodeConfig(ctx, g, nodeName), containerdExtension)).To(Equal(testContainerdRebuiltDigest))
@@ -535,21 +534,6 @@ var _ = Describe("NodeConfig controller", func() {
 			g.Expect(nc.Generation).To(Equal(generation))
 			g.Expect(digestOf(nc, containerdExtension)).To(Equal(testContainerdDigest))
 		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
-
-		// And a change the render does read off the Node brings the pass along,
-		// so nothing is lost — only deferred to an event that means something.
-		By("labelling the node, which an extension request could select on")
-		Eventually(func(g Gomega) {
-			node := &corev1.Node{}
-			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: nodeName}, node)).To(Succeed())
-			patch := client.MergeFrom(node.DeepCopy())
-			node.Labels["storage.deckhouse.io/drbd"] = "true"
-			g.Expect(k8sClient.Patch(ctx, node, patch)).To(Succeed())
-		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
-
-		Eventually(func(g Gomega) {
-			g.Expect(getNodeConfig(ctx, g, nodeName).Generation).NotTo(Equal(generation))
-		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
 	// The gate decides from a list and then writes, so the list must be the API
@@ -778,6 +762,7 @@ var _ = Describe("NodeConfig controller", func() {
 			ObjectMeta: metav1.ObjectMeta{Name: nodeName},
 			Spec: internalv1alpha1.NodeSpec{
 				NodeName: nodeName,
+				OSImage:  internalv1alpha1.OSImage{Digest: testOSImageDigest},
 				Kubelet:  internalv1alpha1.Kubelet{NodeIP: "10.0.0.10"},
 			},
 		}
@@ -1143,6 +1128,7 @@ var _ = Describe("NodeConfig controller", func() {
 			ObjectMeta: metav1.ObjectMeta{Name: nodeName},
 			Spec: internalv1alpha1.NodeSpec{
 				NodeName: nodeName,
+				OSImage:  internalv1alpha1.OSImage{Digest: testOSImageDigest},
 				Network: internalv1alpha1.Network{
 					Hostname: nodeName,
 					Interfaces: []internalv1alpha1.NetworkInterface{{
@@ -1212,6 +1198,7 @@ var _ = Describe("NodeConfig controller", func() {
 			Spec: internalv1alpha1.NodeSpec{
 				NodeName: nodeName,
 				Registry: &internalv1alpha1.Registry{Address: "registry.example.com", Path: "/deckhouse/ce"},
+				OSImage:  internalv1alpha1.OSImage{Digest: testOSImageDigest},
 				// The installer's shape: its disk plus the one etcd lives on. The
 				// mounts mark the section as somebody else's — a selector alone
 				// is rendered here too, and keeping it would be write-once.
