@@ -251,7 +251,6 @@ read:
     - deckhouse.io/operationpolicies
     - deckhouse.io/packagerepositories
     - deckhouse.io/packagerepositoryoperations
-    - deckhouse.io/projects
     - deckhouse.io/projecttemplates
     - deckhouse.io/securitypolicies
     - deckhouse.io/securitypolicyexceptions

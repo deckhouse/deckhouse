@@ -76,6 +76,19 @@ func (c *ResourceScopeCache) IsNamespaced(group, resource string) bool {
 	return namespaced
 }
 
+// HasResource reports whether the discovery snapshot serves the resource at
+// all. An empty or stale-in-the-negative cache answers false: a caller uses
+// this to make a claim the plain RBAC answer would not support, and a claim
+// about a resource we have never seen is worse than no claim.
+func (c *ResourceScopeCache) HasResource(group, resource string) bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	_, ok := c.scopeMap[group+"/"+resource]
+
+	return ok
+}
+
 // HasNamespacedResourceMatching reports whether the discovery snapshot
 // contains at least one namespaced resource matched by the RBAC apiGroups and
 // resources fields. Both top-level resources and subresources participate so
