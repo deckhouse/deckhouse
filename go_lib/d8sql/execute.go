@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"slices"
 	"sync"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -75,6 +76,13 @@ type plan struct {
 	failCode    string
 	failMessage string
 
+	// insert (StmtInsert): the object built from the SET clause and the namespace
+	// it is created in (empty for cluster-scoped resources). Both are computed at
+	// prepare time, so a missing name or namespace fails the batch before
+	// anything runs.
+	insertObj *unstructured.Unstructured
+	insertNS  string
+
 	// if (StmtIf): the compiled branches in source order plus the optional ELSE
 	// body. Every branch is compiled during prepare, so a broken statement in a
 	// branch that is never taken still fails the batch before anything runs.
@@ -104,6 +112,8 @@ func (e *Engine) prepare(st *sql.Statement) (*plan, error) {
 		return e.prepareSingle(st)
 	case sql.StmtUpdate, sql.StmtDelete:
 		return e.prepareSingle(st)
+	case sql.StmtInsert:
+		return e.prepareInsert(st)
 	case sql.StmtAssert:
 		return e.prepareAssert(st)
 	case sql.StmtIf:
@@ -226,6 +236,104 @@ func (e *Engine) prepareAssert(st *sql.Statement) (*plan, error) {
 		expect:      st.Assert.Expect,
 		failCode:    st.Assert.Code,
 		failMessage: st.Assert.Message,
+	}, nil
+}
+
+// prepareInsert builds the object described by the SET clause and works out the
+// namespace to create it in. Every assignment is a literal, so the whole object
+// is known up front: nothing here touches the cluster, and a malformed INSERT
+// (missing metadata.name, missing namespace, namespace on a cluster-scoped
+// resource) fails the batch before any statement runs.
+func (e *Engine) prepareInsert(st *sql.Statement) (*plan, error) {
+	if _, ok := e.virtual[st.Table.Resource]; ok {
+		return nil, errf("virtual table %q is read-only", st.Table.Resource)
+	}
+	res, err := e.resolve(st.Table.Resource)
+	if err != nil {
+		return nil, err
+	}
+
+	name, _, err := assignedString(st.Assignments, "metadata", "name")
+	if err != nil {
+		return nil, err
+	}
+	if name == "" {
+		return nil, errf("INSERT INTO %s requires metadata.name in the SET clause", st.Table.Resource)
+	}
+	ns, hasNS, err := assignedString(st.Assignments, "metadata", "namespace")
+	if err != nil {
+		return nil, err
+	}
+	switch {
+	case !res.namespaced && hasNS:
+		return nil, errf("%s is cluster-scoped; metadata.namespace is not allowed", st.Table.Resource)
+	case !res.namespaced:
+		ns = ""
+	case !hasNS:
+		ns = e.defaultNS
+		if ns == NamespaceAll {
+			return nil, errf("INSERT INTO %s requires a namespace: set metadata.namespace "+
+				"or configure a default one with WithDefaultNamespace", st.Table.Resource)
+		}
+	}
+
+	obj := map[string]any{}
+	for _, a := range st.Assignments {
+		setNestedJSON(obj, a.Field.Path, litValue(a.Value))
+	}
+	// The resolved GVR is authoritative for the object's identity, so these are
+	// stamped last and override any assignment to them.
+	obj["apiVersion"] = res.gvk.GroupVersion().String()
+	obj["kind"] = res.gvk.Kind
+	if ns != "" {
+		setNestedJSON(obj, []string{"metadata", "namespace"}, ns)
+	}
+
+	return &plan{
+		kind:      sql.StmtInsert,
+		st:        st,
+		res:       res,
+		insertObj: &unstructured.Unstructured{Object: obj},
+		insertNS:  ns,
+	}, nil
+}
+
+// assignedString returns the string literal assigned to path by the SET clause.
+// A non-string or empty value is an error: the fields it guards (metadata.name,
+// metadata.namespace) must be usable as API identifiers. When the path is
+// assigned more than once the last assignment wins, matching how the object
+// itself is built.
+func assignedString(as []sql.Assignment, path ...string) (string, bool, error) {
+	var (
+		val   string
+		found bool
+	)
+	for _, a := range as {
+		if !slices.Equal(a.Field.Path, path) {
+			continue
+		}
+		if a.Value.Kind != sql.LitString || a.Value.Str == "" {
+			return "", true, errf("%s must be a non-empty string literal", dotPath(path))
+		}
+		val, found = a.Value.Str, true
+	}
+	return val, found, nil
+}
+
+// runInsert creates the prepared object. An AlreadyExists error is returned to
+// the caller (wrapped, so apierrors.IsAlreadyExists still recognizes it) rather
+// than being swallowed; conditional creation is expressed with
+// IF NOT EXISTS (SELECT ...) THEN INSERT ... END IF.
+func (e *Engine) runInsert(ctx context.Context, p *plan) (Result, error) {
+	obj := p.insertObj.DeepCopy()
+	created, err := e.ri(p.res, p.insertNS).Create(ctx, obj, metav1.CreateOptions{})
+	if err != nil {
+		return Result{}, errf("insert %s/%s: %w", p.insertNS, obj.GetName(), err)
+	}
+	return Result{
+		Kind:     sql.StmtInsert,
+		Affected: 1,
+		Objects:  []*unstructured.Unstructured{created},
 	}, nil
 }
 
@@ -354,6 +462,8 @@ func (e *Engine) run(ctx context.Context, p *plan) (Result, error) {
 			return e.runJoin(ctx, p)
 		}
 		return e.runSelect(ctx, p)
+	case sql.StmtInsert:
+		return e.runInsert(ctx, p)
 	case sql.StmtUpdate:
 		return e.runUpdate(ctx, p)
 	case sql.StmtDelete:

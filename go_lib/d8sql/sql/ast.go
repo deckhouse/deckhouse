@@ -9,6 +9,7 @@ const (
 	StmtDelete
 	StmtAssert
 	StmtIf
+	StmtInsert
 )
 
 // ExpectKind is the result expectation of an ASSERT statement.
@@ -29,7 +30,7 @@ type Statement struct {
 	Star    bool        // SELECT *
 	Columns []ColumnRef // projection list (empty when Star)
 
-	Assignments []Assignment // UPDATE ... SET
+	Assignments []Assignment // UPDATE ... SET / INSERT INTO ... SET
 
 	Where Expr // optional filter (nil => match all)
 

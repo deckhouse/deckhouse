@@ -82,6 +82,8 @@ func (p *Parser) parseStatement() (*Statement, error) {
 	switch p.cur.Kind {
 	case SELECT:
 		return p.parseSelect()
+	case INSERT:
+		return p.parseInsert()
 	case UPDATE:
 		return p.parseUpdate()
 	case DELETE:
@@ -91,7 +93,7 @@ func (p *Parser) parseStatement() (*Statement, error) {
 	case IF:
 		return p.parseIf()
 	default:
-		return nil, p.errf("expected SELECT, UPDATE, DELETE, ASSERT or IF, got %s", p.cur.Kind)
+		return nil, p.errf("expected SELECT, INSERT, UPDATE, DELETE, ASSERT or IF, got %s", p.cur.Kind)
 	}
 }
 
@@ -291,6 +293,35 @@ func (p *Parser) parseSelect() (*Statement, error) {
 	return st, nil
 }
 
+// parseInsert parses:
+//
+//	INSERT INTO <resource> SET <field> = <literal> [, ...]
+//
+// The SET spelling mirrors UPDATE (rather than SQL's column list + VALUES)
+// because a Kubernetes object is a nested document addressed by dotted paths.
+// There is no WHERE: the statement always creates exactly one object.
+func (p *Parser) parseInsert() (*Statement, error) {
+	st := &Statement{Kind: StmtInsert}
+	p.advance() // INSERT
+	if _, err := p.expect(INTO); err != nil {
+		return nil, err
+	}
+	tr, err := p.parseTableRef()
+	if err != nil {
+		return nil, err
+	}
+	st.Table = tr
+	if _, err := p.expect(SET); err != nil {
+		return nil, err
+	}
+	as, err := p.parseAssignments()
+	if err != nil {
+		return nil, err
+	}
+	st.Assignments = as
+	return st, nil
+}
+
 func (p *Parser) parseUpdate() (*Statement, error) {
 	st := &Statement{Kind: StmtUpdate}
 	p.advance() // UPDATE
@@ -302,6 +333,26 @@ func (p *Parser) parseUpdate() (*Statement, error) {
 	if _, err := p.expect(SET); err != nil {
 		return nil, err
 	}
+	as, err := p.parseAssignments()
+	if err != nil {
+		return nil, err
+	}
+	st.Assignments = as
+	if p.cur.Kind == WHERE {
+		p.advance()
+		w, err := p.parseExpr()
+		if err != nil {
+			return nil, err
+		}
+		st.Where = w
+	}
+	return st, nil
+}
+
+// parseAssignments parses the comma-separated body of a SET clause. At least one
+// assignment is required.
+func (p *Parser) parseAssignments() ([]Assignment, error) {
+	var as []Assignment
 	for {
 		f, err := p.parseField()
 		if err != nil {
@@ -315,21 +366,12 @@ func (p *Parser) parseUpdate() (*Statement, error) {
 		if err != nil {
 			return nil, err
 		}
-		st.Assignments = append(st.Assignments, Assignment{Field: f, Value: lit})
+		as = append(as, Assignment{Field: f, Value: lit})
 		if p.cur.Kind != COMMA {
-			break
+			return as, nil
 		}
 		p.advance()
 	}
-	if p.cur.Kind == WHERE {
-		p.advance()
-		w, err := p.parseExpr()
-		if err != nil {
-			return nil, err
-		}
-		st.Where = w
-	}
-	return st, nil
 }
 
 func (p *Parser) parseDelete() (*Statement, error) {

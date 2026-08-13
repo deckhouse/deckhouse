@@ -130,6 +130,9 @@ func loadConfig(explicit string) (*rest.Config, error) {
 
 func printResult(w *os.File, res d8sql.Result, format string) error {
 	switch res.Kind {
+	case sql.StmtInsert:
+		fmt.Fprintf(w, "INSERT %d\n", res.Affected)
+		return nil
 	case sql.StmtUpdate:
 		fmt.Fprintf(w, "UPDATE %d\n", res.Affected)
 		return nil

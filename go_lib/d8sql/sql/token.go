@@ -40,6 +40,8 @@ const (
 	ELSE
 	END
 	EXISTS
+	INSERT
+	INTO
 
 	// punctuation
 	STAR      // *
@@ -100,6 +102,8 @@ var kindNames = [...]string{
 	ELSE:      "ELSE",
 	END:       "END",
 	EXISTS:    "EXISTS",
+	INSERT:    "INSERT",
+	INTO:      "INTO",
 	STAR:      "*",
 	COMMA:     ",",
 	DOT:       ".",
@@ -152,9 +156,11 @@ var keywordLookup = map[string]Kind{
 	"ELSE":   ELSE,
 	"END":    END,
 	"EXISTS": EXISTS,
+	"INSERT": INSERT,
+	"INTO":   INTO,
 }
 
 // isKeyword reports whether k is a reserved word. The lexer recognizes keywords
 // everywhere, so the parser uses this to accept one where an identifier is
 // expected — e.g. a field path segment literally named "end".
-func (k Kind) isKeyword() bool { return k >= SELECT && k <= EXISTS }
+func (k Kind) isKeyword() bool { return k >= SELECT && k <= INTO }

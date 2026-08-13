@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/deckhouse/d8sql/sql"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -871,4 +872,142 @@ func TestMultipleStatements(t *testing.T) {
 	if len(results) != 2 {
 		t.Fatalf("results: %d", len(results))
 	}
+}
+
+const insertCM = `INSERT INTO configmaps SET
+	metadata.name = 'foobar',
+	metadata.namespace = 'default',
+	data.greeting = 'hello'`
+
+func TestInsert(t *testing.T) {
+	e, c := newEngine()
+	res, err := e.ExecuteOne(context.Background(), insertCM)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Kind != sql.StmtInsert || res.Affected != 1 || len(res.Objects) != 1 {
+		t.Fatalf("result: %+v", res)
+	}
+	got, err := c.Resource(cmGVR).Namespace("default").Get(context.Background(), "foobar", metav1.GetOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.GetAPIVersion() != "v1" || got.GetKind() != "ConfigMap" {
+		t.Errorf("apiVersion/kind: %q / %q", got.GetAPIVersion(), got.GetKind())
+	}
+	if got.GetNamespace() != "default" || got.GetName() != "foobar" {
+		t.Errorf("namespace/name: %q / %q", got.GetNamespace(), got.GetName())
+	}
+	if v, _, _ := unstructured.NestedString(got.Object, "data", "greeting"); v != "hello" {
+		t.Errorf("data.greeting: %q", v)
+	}
+}
+
+func TestInsertDefaultNamespace(t *testing.T) {
+	e, c := newEngineWith([]Option{WithDefaultNamespace("d8-system")})
+	if _, err := e.ExecuteOne(context.Background(),
+		"INSERT INTO configmaps SET metadata.name = 'foobar', data.greeting = 'hello'"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.Resource(cmGVR).Namespace("d8-system").Get(
+		context.Background(), "foobar", metav1.GetOptions{}); err != nil {
+		t.Fatalf("object should have landed in the default namespace: %v", err)
+	}
+}
+
+func TestInsertRejected(t *testing.T) {
+	cases := []struct {
+		name  string
+		opts  []Option
+		query string
+	}{
+		{
+			name:  "no namespace anywhere",
+			query: "INSERT INTO configmaps SET metadata.name = 'foobar'",
+		},
+		{
+			name:  "namespace on a cluster-scoped resource",
+			query: "INSERT INTO nodes SET metadata.name = 'n1', metadata.namespace = 'default'",
+		},
+		{
+			name:  "missing metadata.name",
+			query: "INSERT INTO configmaps SET metadata.namespace = 'default', data.greeting = 'hello'",
+		},
+		{
+			name:  "non-string metadata.name",
+			query: "INSERT INTO configmaps SET metadata.name = 42, metadata.namespace = 'default'",
+		},
+		{
+			name:  "virtual table",
+			opts:  []Option{platformTable()},
+			query: "INSERT INTO v_d8_platform SET deckhouseEdition = 'CE'",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			e, c := newEngineWith(tc.opts)
+			if _, err := e.ExecuteOne(context.Background(), tc.query); err == nil {
+				t.Fatalf("expected a rejection for %q", tc.query)
+			}
+			for _, a := range c.Actions() {
+				if a.GetVerb() == "create" {
+					t.Errorf("nothing must be created, got: %v", c.Actions())
+				}
+			}
+		})
+	}
+}
+
+func TestInsertAlreadyExistsPropagates(t *testing.T) {
+	e, _ := newEngine(configmap("default", "foobar"))
+	_, err := e.ExecuteOne(context.Background(), insertCM)
+	if err == nil {
+		t.Fatal("expected an AlreadyExists error")
+	}
+	if !apierrors.IsAlreadyExists(err) {
+		t.Fatalf("expected an AlreadyExists error, got %T: %v", err, err)
+	}
+}
+
+func TestInsertIfNotExists(t *testing.T) {
+	const query = `
+		IF NOT EXISTS (SELECT * FROM configmaps WHERE metadata.namespace = 'default' AND metadata.name = 'foobar') THEN
+			INSERT INTO configmaps SET metadata.name = 'foobar', metadata.namespace = 'default', data.greeting = 'hello';
+		END IF`
+
+	t.Run("creates when missing", func(t *testing.T) {
+		e, c := newEngine()
+		res, err := e.ExecuteOne(context.Background(), query)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(res.Nested) != 1 || res.Nested[0].Affected != 1 {
+			t.Fatalf("nested results: %+v", res.Nested)
+		}
+		got, err := c.Resource(cmGVR).Namespace("default").Get(context.Background(), "foobar", metav1.GetOptions{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if v, _, _ := unstructured.NestedString(got.Object, "data", "greeting"); v != "hello" {
+			t.Errorf("data.greeting: %q", v)
+		}
+	})
+
+	t.Run("no-op when present", func(t *testing.T) {
+		e, c := newEngine(configmap("default", "foobar")) // data.foo = "old"
+		res, err := e.ExecuteOne(context.Background(), query)
+		if err != nil {
+			t.Fatalf("the INSERT must be skipped, not attempted: %v", err)
+		}
+		if len(res.Nested) != 0 {
+			t.Errorf("nothing should have run: %+v", res.Nested)
+		}
+		got, err := c.Resource(cmGVR).Namespace("default").Get(context.Background(), "foobar", metav1.GetOptions{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if v, _, _ := unstructured.NestedString(got.Object, "data", "foo"); v != "old" {
+			t.Errorf("the existing object must be left alone, data.foo = %q", v)
+		}
+	})
 }

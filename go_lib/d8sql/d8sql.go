@@ -1,6 +1,6 @@
 // Package d8sql executes SQL-like statements against Kubernetes resources.
 //
-// It parses SELECT/UPDATE/DELETE/ASSERT/IF statements with its own allocation-conscious
+// It parses SELECT/INSERT/UPDATE/DELETE/ASSERT/IF statements with its own allocation-conscious
 // lexer and parser (see the sql subpackage) and runs them through a dynamic
 // client. Resource references may be plural, singular, group-qualified or
 // fully versioned CRD names; resolution is cached per Engine instance.
@@ -74,9 +74,12 @@ type Engine struct {
 	cache sync.Map // string (resource arg) -> resolved
 }
 
-// resolved is the cached outcome of mapping a resource argument to a GVR.
+// resolved is the cached outcome of mapping a resource argument to a GVR. The
+// GVK is kept alongside it because INSERT has to stamp apiVersion/kind on the
+// object it builds.
 type resolved struct {
 	gvr        schema.GroupVersionResource
+	gvk        schema.GroupVersionKind
 	namespaced bool
 }
 
@@ -186,10 +189,11 @@ type Result struct {
 	Rows    [][]any
 
 	// Objects holds the matched/affected objects. For SELECT * it is the full
-	// result set; for UPDATE it holds the updated objects.
+	// result set; for UPDATE it holds the updated objects; for INSERT it holds
+	// the single created object as returned by the API server.
 	Objects []*unstructured.Unstructured
 
-	// Affected counts mutated objects for UPDATE/DELETE.
+	// Affected counts mutated objects for INSERT/UPDATE/DELETE.
 	Affected int
 
 	// Nested holds one Result per statement executed inside the taken branch of
@@ -302,7 +306,7 @@ func (e *Engine) resolve(arg string) (resolved, error) {
 	if err != nil {
 		return resolved{}, errf("cannot map %q: %v", arg, err)
 	}
-	res := resolved{gvr: gvr, namespaced: mapping.Scope.Name() == meta.RESTScopeNameNamespace}
+	res := resolved{gvr: gvr, gvk: gvk, namespaced: mapping.Scope.Name() == meta.RESTScopeNameNamespace}
 	e.cache.Store(arg, res)
 	return res, nil
 }

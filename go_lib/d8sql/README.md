@@ -117,7 +117,7 @@ A resource name containing dots can also be single-quoted: `FROM 'envoyproxies.g
 
 ## Supported SQL
 
-PostgreSQL-flavored syntax. `metadata.namespace` in `WHERE` is always treated as the namespace selector and pushed down server-side — both as an equality (`= 'x'`) and as a set (`IN ('a','b')`, one scoped `List` per namespace). Likewise, `metadata.labels.'<key>'` is always treated as a label and pushed down as a `labelSelector` (equality, `IN`/`NOT IN`, and `IS [NOT] NULL`). When a query does **not** constrain `metadata.namespace`, it spans **all namespaces** by default (use `-n` / `WithDefaultNamespace` to scope). Both `=` and `==` are accepted for equality. Comments (`-- ...` and `/* ... */`) are supported. Transactions are **not** supported. Statements: `SELECT`, `UPDATE`, `DELETE`, `ASSERT` (read-only validation) and `IF ... THEN ... END IF` (conditional execution) — both described below.
+PostgreSQL-flavored syntax. `metadata.namespace` in `WHERE` is always treated as the namespace selector and pushed down server-side — both as an equality (`= 'x'`) and as a set (`IN ('a','b')`, one scoped `List` per namespace). Likewise, `metadata.labels.'<key>'` is always treated as a label and pushed down as a `labelSelector` (equality, `IN`/`NOT IN`, and `IS [NOT] NULL`). When a query does **not** constrain `metadata.namespace`, it spans **all namespaces** by default (use `-n` / `WithDefaultNamespace` to scope). Both `=` and `==` are accepted for equality. Comments (`-- ...` and `/* ... */`) are supported. Transactions are **not** supported. Statements: `SELECT`, `INSERT` (create an object), `UPDATE`, `DELETE`, `ASSERT` (read-only validation) and `IF ... THEN ... END IF` (conditional execution) — all described below.
 
 > Note: because the default is all-namespaces, a mutating statement without a namespace constraint affects the whole cluster (e.g. `DELETE FROM pods` deletes pods in every namespace). Constrain with `WHERE metadata.namespace = '...'` or `-n` to limit scope.
 
@@ -126,6 +126,7 @@ PostgreSQL-flavored syntax. `metadata.namespace` in `WHERE` is always treated as
 `UPDATE` and `DELETE` use optimistic concurrency so a racing change can never be silently lost:
 
 - **`UPDATE`** is sent as a **JSON merge patch containing only the `SET` fields**, guarded by the object's `resourceVersion`. Concurrent edits to *other* fields are preserved (they are not part of the patch). If the object changed since it was read, the API server returns a conflict; d8sql then re-reads it, **re-checks the `WHERE` predicate**, and retries — so it never patches an object that no longer matches. `SET <field> = NULL` removes the field. (Transactions across multiple objects are still **not** supported.)
+- **`INSERT`** is a plain `Create`: the API server's name uniqueness is the guard, so a racing creator makes the statement fail with `AlreadyExists` instead of overwriting an existing object.
 - **`DELETE`** is issued with `resourceVersion` + `UID` preconditions, so it never removes an object that was modified, or deleted and recreated under the same name, since it was read. Conflicts are retried with the same re-check of `WHERE`.
 
 ### SELECT (get / list)
@@ -174,6 +175,70 @@ SELECT pod.metadata.namespace, pod.metadata.name, pod.spec.nodeName
   FROM pod JOIN node ON pod.spec.nodeName == node.metadata.name
   WHERE node.metadata.labels.'node.deckhouse.io/group' = 'worker';
 ```
+
+### INSERT (create)
+
+`INSERT` creates exactly one object. The object is described with the same
+`SET <field> = <literal>` clause as `UPDATE`, and dotted paths build the nested
+document:
+
+```sql
+-- Create the configmap `default/foobar`
+INSERT INTO configmaps SET
+  metadata.name = 'foobar',
+  metadata.namespace = 'default',
+  data.greeting = 'hello';
+
+-- Labels and nested fields work exactly as in UPDATE
+INSERT INTO configmaps SET
+  metadata.name = 'settings',
+  metadata.namespace = 'd8-system',
+  metadata.labels.'heritage' = 'deckhouse',
+  data.'log-level' = 'info';
+```
+
+**Why `SET` and not `(cols) VALUES (...)`.** In PostgreSQL an `INSERT` is
+written as `INSERT INTO t (a, b) VALUES (1, 2)`; the `SET` spelling used here is
+a deliberate deviation. A Kubernetes object is a nested document, not a flat row,
+and the rest of this dialect already addresses it through dotted field paths
+(`data.greeting`, `metadata.labels.'app'`). Reusing the `UPDATE ... SET` shape
+keeps one way of writing a field path instead of two, and avoids a positional
+column list that would be unreadable for deep paths. The column-list/`VALUES`
+form is **not** accepted.
+
+Rules:
+
+- **`metadata.name` is required.** There is no `generateName` support; a missing
+  or non-string name is a prepare-time error.
+- **Namespace.** For a namespaced resource the namespace is taken from
+  `metadata.namespace` in the `SET` clause; if absent, the engine's default
+  namespace (`-n` / `WithDefaultNamespace`) is used. If neither is set, the
+  statement is rejected — it is never silently created in `default`. For a
+  cluster-scoped resource, assigning `metadata.namespace` is an error.
+- **`apiVersion`/`kind`** are stamped from the resolved resource, so they never
+  have to be written out (and assignments to them are overridden).
+- **Virtual tables are read-only**, so `INSERT INTO <virtual table>` is rejected
+  at prepare time, like `UPDATE`/`DELETE`.
+- **`AlreadyExists` is an error**, not a silent success. The result is
+  `Affected: 1` and `Objects` holding the created object as returned by the API
+  server.
+
+Idempotent creation (the "create if missing" migration idiom) is expressed with
+`IF`, which keeps the check and the creation in one statement:
+
+```sql
+IF NOT EXISTS (SELECT * FROM configmaps
+               WHERE metadata.namespace = 'default' AND metadata.name = 'foobar') THEN
+  INSERT INTO configmaps SET
+    metadata.name = 'foobar',
+    metadata.namespace = 'default',
+    data.greeting = 'hello';
+END IF;
+```
+
+Note this is a check-then-create, not an atomic upsert: a racing creator can
+still win between the `SELECT` and the `INSERT`, in which case the `INSERT`
+fails with `AlreadyExists` rather than overwriting anything.
 
 ### UPDATE
 

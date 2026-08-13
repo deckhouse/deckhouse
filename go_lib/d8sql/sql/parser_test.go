@@ -115,6 +115,49 @@ func TestParseJoin(t *testing.T) {
 	}
 }
 
+func TestParseInsert(t *testing.T) {
+	st, err := Parse("INSERT INTO configmaps SET metadata.name = 'foobar', data.greeting = 'hello', data.count = 1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.Kind != StmtInsert {
+		t.Fatalf("kind: %v", st.Kind)
+	}
+	if st.Table.Resource != "configmaps" {
+		t.Errorf("table: %q", st.Table.Resource)
+	}
+	if st.Where != nil {
+		t.Errorf("INSERT must not carry a WHERE: %T", st.Where)
+	}
+	if len(st.Assignments) != 3 {
+		t.Fatalf("assignments: %d", len(st.Assignments))
+	}
+	if !want(st.Assignments[0].Field.Path, "metadata", "name") || st.Assignments[0].Value.Str != "foobar" {
+		t.Errorf("assignment 0: %+v", st.Assignments[0])
+	}
+	if !want(st.Assignments[1].Field.Path, "data", "greeting") || st.Assignments[1].Value.Str != "hello" {
+		t.Errorf("assignment 1: %+v", st.Assignments[1])
+	}
+	if st.Assignments[2].Value.Kind != LitInt || st.Assignments[2].Value.Int != 1 {
+		t.Errorf("assignment 2: %+v", st.Assignments[2].Value)
+	}
+}
+
+func TestParseInsertErrors(t *testing.T) {
+	cases := []string{
+		"INSERT configmaps SET metadata.name = 'x'",                                // missing INTO
+		"INSERT INTO configmaps metadata.name = 'x'",                               // missing SET
+		"INSERT INTO configmaps SET",                                               // empty assignment list
+		"INSERT INTO configmaps SET metadata.name",                                 // assignment without a value
+		"INSERT INTO configmaps SET metadata.name = 'x' WHERE metadata.name = 'x'", // WHERE is not allowed
+	}
+	for _, c := range cases {
+		if _, err := Parse(c); err == nil {
+			t.Errorf("expected error for %q", c)
+		}
+	}
+}
+
 func TestParseUpdate(t *testing.T) {
 	st, err := Parse("UPDATE configmap SET data.foo = 'bar' WHERE metadata.namespace = 'default' AND metadata.name = 'foobar'")
 	if err != nil {
@@ -200,11 +243,11 @@ func TestParseAssertNotEmpty(t *testing.T) {
 
 func TestParseAssertErrors(t *testing.T) {
 	cases := []string{
-		"ASSERT (SELECT * FROM pods)",              // missing EMPTY / NOT EMPTY
-		"ASSERT EMPTY SELECT * FROM pods",          // missing parentheses
-		"ASSERT EMPTY (DELETE FROM pods)",          // inner must be SELECT
-		"ASSERT EMPTY (SELECT * FROM pods) FAIL",   // FAIL requires a code string
-		"ASSERT NOT (SELECT * FROM pods)",          // NOT must be followed by EMPTY
+		"ASSERT (SELECT * FROM pods)",            // missing EMPTY / NOT EMPTY
+		"ASSERT EMPTY SELECT * FROM pods",        // missing parentheses
+		"ASSERT EMPTY (DELETE FROM pods)",        // inner must be SELECT
+		"ASSERT EMPTY (SELECT * FROM pods) FAIL", // FAIL requires a code string
+		"ASSERT NOT (SELECT * FROM pods)",        // NOT must be followed by EMPTY
 	}
 	for _, c := range cases {
 		if _, err := Parse(c); err == nil {
