@@ -75,6 +75,7 @@ const (
 
 	defaultCheckInterval   = 15 * time.Second
 	disabledByIgnorePolicy = `Update disabled by 'Ignore' update policy`
+	noUpdatePolicyMessage  = "Update policy not set. Create a suitable ModuleUpdatePolicy object"
 
 	// time to wait before next check that no modules are applying
 	restartCheckDuration = 15 * time.Second
@@ -1049,12 +1050,23 @@ func (r *reconciler) getUpdatePolicy(ctx context.Context, name string) (*v1alpha
 	}, nil
 }
 
+// isUpdatePolicyMessage reports whether a status message was left by the update
+// policy resolution, and is therefore this reconciler's to clear once a policy
+// resolves.
+func isUpdatePolicyMessage(message string) bool {
+	if message == "" || message == noUpdatePolicyMessage || message == disabledByIgnorePolicy {
+		return true
+	}
+
+	return strings.HasPrefix(message, "Update policy ") && strings.HasSuffix(message, " not found")
+}
+
 func (r *reconciler) updatePolicy(ctx context.Context, release *v1alpha1.ModuleRelease) (*v1alpha2.ModuleUpdatePolicy, *ctrl.Result, error) {
 	policy, err := utils.GetUpdatePolicyByModule(ctx, r.client, r.embeddedPolicy, release.GetModuleName())
 	if err != nil {
 		r.log.Error("failed to get update policy", slog.String("release", release.GetName()), log.Err(err))
 
-		if err := r.updateReleaseStatusMessage(ctx, release, "Update policy not set. Create a suitable ModuleUpdatePolicy object"); err != nil {
+		if err := r.updateReleaseStatusMessage(ctx, release, noUpdatePolicyMessage); err != nil {
 			r.log.Error("failed to update release status", slog.String("release", release.GetName()), log.Err(err))
 
 			return nil, nil, err
@@ -1063,16 +1075,23 @@ func (r *reconciler) updatePolicy(ctx context.Context, release *v1alpha1.ModuleR
 		return nil, &ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
-	marshalledPatch, _ := json.Marshal(map[string]any{
+	patchData := map[string]any{
 		"metadata": map[string]any{
 			"labels": map[string]any{
 				v1alpha1.ModuleReleaseLabelUpdatePolicy: policy.GetName(),
 			},
 		},
-		"status": map[string]string{
-			"message": "",
-		},
-	})
+	}
+
+	// Clear only the messages this function itself sets: a policy was found, so
+	// a complaint about the policy is stale. Wiping unconditionally would also
+	// erase the reason left by a later check (release gates, deploy windows) on
+	// every reconcile, so the message would flicker on and off.
+	if isUpdatePolicyMessage(release.GetMessage()) {
+		patchData["status"] = map[string]string{"message": ""}
+	}
+
+	marshalledPatch, _ := json.Marshal(patchData)
 
 	patch := client.RawPatch(types.MergePatchType, marshalledPatch)
 	if err = r.client.Patch(ctx, release, patch); err != nil {

@@ -1171,6 +1171,29 @@ func (s stubModulesManager) PushRunModuleTask(_ string, _ bool) error {
 	return nil
 }
 
+func TestIsUpdatePolicyMessage(t *testing.T) {
+	// Only messages the policy resolution itself leaves may be cleared once a
+	// policy resolves; clearing anything else makes the reason set by a later
+	// check flicker on and off on every reconcile.
+	for _, message := range []string{
+		"",
+		noUpdatePolicyMessage,
+		disabledByIgnorePolicy,
+		"Update policy deckhouse not found",
+	} {
+		assert.True(t, isUpdatePolicyMessage(message), "should be cleared: %q", message)
+	}
+
+	for _, message := range []string{
+		"validations failed: 001_require_magic_cm.sql: d8sql: validation failed [MAGIC_CM]: I want the magic cm",
+		"migrations failed: 001_create.up.sql: d8sql: list configmaps: forbidden",
+		"Release is postponed until 2026-08-14T03:00:00Z",
+		"Initial module config validation failed:\nsomething",
+	} {
+		assert.False(t, isUpdatePolicyMessage(message), "should be kept: %q", message)
+	}
+}
+
 func TestValidateModule(t *testing.T) {
 	check := func(name string, failed bool, values addonutils.Values) {
 		t.Helper()
