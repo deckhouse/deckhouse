@@ -49,10 +49,10 @@ type clusterInputs struct {
 	// feature gates depend on it (bashible turns DRA gates on by version), so a
 	// node not told the version cannot follow.
 	KubernetesVersion string
-	// OSImage is the olcedar image, addressed in the cluster's own registry. A
-	// record rather than an instruction (the node boots what its InstanceClass
-	// points at), but it must name the same image and registry the installer did.
-	OSImage string
+	// OSImage is the olcedar image of this release, pinned by digest. The node
+	// compares it with the digest it recorded at install and updates its root
+	// when they differ, so a tag here would make every update undecidable.
+	OSImage internalv1alpha1.OSImage
 	// ClusterDomain and ClusterDNS configure kubelet's DNS.
 	ClusterDomain string
 	ClusterDNS    string
@@ -150,7 +150,12 @@ func (s *sourceReader) readClusterInputs(ctx context.Context, kubernetesVersion 
 		return in, err
 	}
 	in.Registry = registry
-	in.OSImage = registry.Address + registry.Path + "/" + osImageNameAndTag
+
+	osImage, err := osImageDigest(images)
+	if err != nil {
+		return in, err
+	}
+	in.OSImage = internalv1alpha1.OSImage{Digest: osImage}
 
 	sandbox, err := sandboxImage(images, imagesRepo)
 	if err != nil {
@@ -472,6 +477,18 @@ func sysextDigests(all map[string]map[string]string, kubernetesVersion string) (
 		}
 	}
 	return digests, nil
+}
+
+// osImageDigest picks the olcedar image of this release. Absent means the
+// release did not build it, and rendering stops: a node told no OS image can
+// neither be installed nor updated, and guessing one would point it at whatever
+// the previous release shipped.
+func osImageDigest(all map[string]map[string]string) (string, error) {
+	digest := all[nodeManagerDigestsKey][osImageName]
+	if digest == "" {
+		return "", fmt.Errorf("no %q OS image digest in %s", osImageName, imagesDigestsKey)
+	}
+	return digest, nil
 }
 
 // versionedImages returns the images named the prefix followed by a version, as

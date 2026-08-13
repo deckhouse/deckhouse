@@ -69,6 +69,7 @@ const (
 	testCNIDigest               = "sha256:2222222222222222222222222222222222222222222222222222222222222222"
 	testKubeletDigest           = "sha256:3333333333333333333333333333333333333333333333333333333333333333"
 	testNodeletDigest           = "sha256:6666666666666666666666666666666666666666666666666666666666666666"
+	testOSImageDigest           = "sha256:7777777777777777777777777777777777777777777777777777777777777777"
 	testClusterCA               = "-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----\n"
 	// The extension one spec asks for through a NodeExtensionRequest, and the
 	// digest it is rebuilt under.
@@ -120,10 +121,10 @@ var _ = Describe("NodeConfig controller", func() {
 
 			g.Expect(nc.Spec.NodeName).To(Equal(nodeName))
 
-			// The OS image is named in the cluster's own registry, as the
-			// installer names it: the public one is unreachable air-gapped, and a
-			// disagreeing value rewrites the first master's spec for nothing.
-			g.Expect(nc.Spec.OSImage).To(Equal(testRegistryAddress + testRegistryPath + "/" + osImageNameAndTag))
+			// The OS image travels as a bare digest: the node compares it with the
+			// one it recorded at install to decide a rootfs update, and a tag —
+			// which moves under the node — makes that comparison meaningless.
+			g.Expect(nc.Spec.OSImage.Digest).To(Equal(testOSImageDigest))
 
 			// Kubelet settings come straight from the NodeGroup.
 			g.Expect(nc.Spec.Kubelet.MaxPods).To(Equal(150))
@@ -1368,10 +1369,10 @@ func heartbeat(ctx context.Context, nodeName string) {
 func setContainerdDigest(ctx context.Context, digest string) {
 	GinkgoHelper()
 
-	original := fmt.Sprintf(`{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q,"nodeletSysext":%q},"common":{"pause":%q}}`,
-		testContainerdDigest, testCNIDigest, testKubeletDigest, testNodeletDigest, testPauseDigest)
-	updated := fmt.Sprintf(`{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q,"nodeletSysext":%q},"common":{"pause":%q}}`,
-		digest, testCNIDigest, testKubeletDigest, testNodeletDigest, testPauseDigest)
+	original := fmt.Sprintf(`{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q,"nodeletSysext":%q},"nodeManager":{"olcedar":%q},"common":{"pause":%q}}`,
+		testContainerdDigest, testCNIDigest, testKubeletDigest, testNodeletDigest, testOSImageDigest, testPauseDigest)
+	updated := fmt.Sprintf(`{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q,"nodeletSysext":%q},"nodeManager":{"olcedar":%q},"common":{"pause":%q}}`,
+		digest, testCNIDigest, testKubeletDigest, testNodeletDigest, testOSImageDigest, testPauseDigest)
 
 	writeDigests := func(ctx context.Context, data string) {
 		cm := &corev1.ConfigMap{}
@@ -1653,8 +1654,8 @@ func ensureClusterInputs(ctx context.Context) {
 	Expect(k8sClient.Get(ctx, types.NamespacedName{Namespace: kubeSystemNS, Name: "kube-dns"}, fresh)).To(Succeed())
 	clusterDNSAddress = fresh.Spec.ClusterIP
 
-	digests := fmt.Sprintf(`{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q,"nodeletSysext":%q},"common":{"pause":%q}}`,
-		testContainerdDigest, testCNIDigest, testKubeletDigest, testNodeletDigest, testPauseDigest)
+	digests := fmt.Sprintf(`{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q,"nodeletSysext":%q},"nodeManager":{"olcedar":%q},"common":{"pause":%q}}`,
+		testContainerdDigest, testCNIDigest, testKubeletDigest, testNodeletDigest, testOSImageDigest, testPauseDigest)
 	ensureObject(ctx, &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{Namespace: cloudInstanceManagerNS, Name: imagesDigestsConfigMapName},
 		Data:       map[string]string{imagesDigestsKey: digests},
