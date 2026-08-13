@@ -871,6 +871,9 @@ html {
         flex-direction: column;
         gap: 1.75rem;
 
+        @include breakpoints.max-w(xs) {
+          padding-right: 30px;
+        }
 
         ul {
             display: flex;

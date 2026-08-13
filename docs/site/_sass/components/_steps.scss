@@ -11,8 +11,8 @@
         width: 100%;
         overflow-x: auto;
         box-sizing: border-box;
-        padding: 8px 50px 90px;
-        margin-bottom: 40px;
+        padding: 53px 50px 90px;
+        margin: 0 auto 40px;
         scrollbar-width: none;
     }
 
@@ -26,7 +26,7 @@
 
         @include breakpoints.max-w(m) {
             overflow-x: auto;
-            padding: 8px 10px;
+            padding: 45px 8px 10px;
             scrollbar-width: none;
         }
     }
@@ -174,7 +174,7 @@
 
         @include breakpoints.max-w(m) {
             left: 10px;
-            top: 21px;
+            top: 59px;
             width: 600px;
             min-width: 600px;
         }

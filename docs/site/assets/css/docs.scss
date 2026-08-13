@@ -1180,6 +1180,10 @@ a.comparison-table__module-proprietaryOkmeter::after {
     @include breakpoints.max-w(xs) {
       font-size: 12px;
       letter-spacing: 0px;
+
+      small {
+        font-size: 11px;
+      }
     }
 }
 
@@ -1246,6 +1250,10 @@ a.comparison-table__module-proprietaryOkmeter::after {
   position: absolute;
   left: -15px;
   top: 8px;
+
+  @include breakpoints.max-w(s) {
+    top: 6px;
+  }
 
   @include breakpoints.max-w(xs) {
     width: 5px;
@@ -1842,7 +1850,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
 .docs pre {
     font-family: 'Source Code Pro', monospace;
     border-radius: 4px;
-    padding: 10px;
+    padding: 12px 10px;
     overflow-x: auto;
     margin: 5px 0 25px 0;
     display: block;
@@ -1920,6 +1928,10 @@ a.comparison-table__module-proprietaryOkmeter::after {
     background-repeat: no-repeat;
     background-size: contain;
     transform: rotate(-90deg);
+
+    @include breakpoints.max-w(xs) {
+      top: 4px;
+    }
 }
 
 .docs .details.active .details__summary::before {

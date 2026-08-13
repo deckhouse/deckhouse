@@ -2,6 +2,10 @@
 @use 'components/common/_mixins.scss';
 @use 'components/common/_breakpoints.scss';
 
+body.modal-opened {
+    overflow: hidden;
+}
+
 .modal-window {
     position: fixed;
     display: flex;
