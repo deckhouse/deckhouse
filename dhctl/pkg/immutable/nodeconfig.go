@@ -28,10 +28,11 @@ import (
 )
 
 const (
-	// osImageNameAndTag is the olcedar image the node boots from, pinned by tag
-	// the way node-controller pins it for day-2 nodes. Only the name and tag are
-	// constant; the repository comes from the configured registry.
-	osImageNameAndTag = "olcedar:v0.1"
+	// osImageName is the olcedar image in images_digests.json. It is delivered by
+	// digest, not by tag: the node records the digest at install and decides a
+	// rootfs update by comparing it, which a moving tag makes impossible.
+	nodeManagerDigestsKey = "nodeManager"
+	osImageName           = "olcedar"
 
 	// Defaults mirroring the nodeConfig CRD field defaults. They are applied
 	// here because the bootstrap payload is marshalled to a file instead of
@@ -112,9 +113,14 @@ func buildNodeConfig(ctx context.Context, in nodeConfigInput) (*nodeConfig, erro
 		return nil, err
 	}
 
+	osImageRef, err := osImageDigest(images)
+	if err != nil {
+		return nil, err
+	}
+
 	spec := nodeSpec{
 		NodeName: in.NodeName,
-		OSImage:  registry.Address + registry.Path + "/" + osImageNameAndTag,
+		OSImage:  osImageRef,
 		Storage: storage{
 			DiskSelector: &diskSelector{Size: systemDiskSize},
 			Mounts:       etcdMounts(),

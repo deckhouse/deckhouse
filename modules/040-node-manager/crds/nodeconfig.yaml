@@ -370,13 +370,34 @@ spec:
                 type: string
               osImage:
                 description: |-
-                  OSImage is the OS image reference the cluster believes this node should
-                  run. Nothing acts on it: the node boots whatever the DVPInstanceClass
-                  points its root disk at, and nodelet only logs this. Optional, so the same
-                  document is accepted both as /config/nodeconfig.yaml and by the API —
-                  required here while the file loader did not require it meant one YAML
-                  passed on the node and was refused by the API server.
-                type: string
+                  OSImage is the image the cluster believes this node should run. Required:
+                  a rootfs update is decided by comparing it with the digest the node
+                  recorded at install, and a config naming no image is one no update can
+                  start from. The shape mirrors the agent and the initramfs, which parse
+                  the same document.
+                properties:
+                  additionalPath:
+                    description: |-
+                      AdditionalPath is where the artifact lives inside the registry, forwarded
+                      to the registry-packages-proxy as its "path" parameter. Empty is right
+                      for Deckhouse: every image of a release, the OS included, sits in the
+                      repository spec.registry.path already names.
+                    type: string
+                  digest:
+                    description: |-
+                      Digest pins the exact image, as for an extension. The node records it at
+                      install and compares it on every pass, so a tag would say nothing.
+                    pattern: ^sha256:[a-f0-9]{64}$
+                    type: string
+                  repository:
+                    description: |-
+                      Repository is the registry host the image is fetched from, handed to the
+                      registry-packages-proxy as its "repository" parameter. Empty leaves the
+                      parameter out, so the proxy uses its own default registry.
+                    type: string
+                required:
+                - digest
+                type: object
               registry:
                 description: |-
                   Registry is the container registry the node talks to directly, without the

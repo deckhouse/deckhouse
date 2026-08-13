@@ -51,7 +51,8 @@ write_files:
         - dhcp: true
           name: eth0
       nodeName: example-master-0
-      osImage: dev-registry.deckhouse.io/sys/deckhouse-oss/olcedar:v0.1
+      osImage:
+        digest: sha256:7777777777777777777777777777777777777777777777777777777777777777
       registry:
         address: dev-registry.deckhouse.io
         auth: dXNlcjpwYXNzd29yZA==

@@ -31,6 +31,7 @@ const (
 	testCNIDigest        = "sha256:2222222222222222222222222222222222222222222222222222222222222222"
 	testKubeletDigest    = "sha256:3333333333333333333333333333333333333333333333333333333333333333"
 	testPauseDigest      = "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+	testOSImageDigest    = "sha256:7777777777777777777777777777777777777777777777777777777777777777"
 
 	testEtcdDigest              = "sha256:5555555555555555555555555555555555555555555555555555555555555555"
 	testAPIServerDigest         = "sha256:6666666666666666666666666666666666666666666666666666666666666666"
@@ -70,6 +71,9 @@ func testMetaConfig(t *testing.T) *config.MetaConfig {
 				"kubernetesCniSysext162": testCNIDigest,
 				"kubeletSysext1349":      testKubeletDigest,
 				"kubeletSysext1336":      "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+			},
+			"nodeManager": {
+				"olcedar": testOSImageDigest,
 			},
 			"common": {
 				"pause": testPauseDigest,
@@ -183,16 +187,16 @@ func TestSysextDigestsIgnoresNonVersionSuffixes(t *testing.T) {
 	})
 }
 
-// Both pre-cluster image references — the OS and the pause image — are built
-// from the configured registry, not from the raw imagesRepo: the trailing-slash
-// row shows why, as ".../ce/@sha256:…" is not a reference containerd can pull.
+// The sandbox image reference is built from the configured registry, not from
+// the raw imagesRepo: the trailing-slash row shows why, as ".../ce/@sha256:…"
+// is not a reference containerd can pull. The OS image needs no such assembly —
+// it travels as a bare digest.
 func TestNodeConfigImageReferencesFollowTheConfiguredRegistry(t *testing.T) {
 	tests := []struct {
 		name        string
 		imagesRepo  string
 		wantAddress string
 		wantPath    string
-		wantOSImage string
 		wantSandbox string
 	}{
 		{
@@ -200,7 +204,6 @@ func TestNodeConfigImageReferencesFollowTheConfiguredRegistry(t *testing.T) {
 			imagesRepo:  "registry.internal.example.com:5000/mirror/deckhouse",
 			wantAddress: "registry.internal.example.com:5000",
 			wantPath:    "/mirror/deckhouse",
-			wantOSImage: "registry.internal.example.com:5000/mirror/deckhouse/" + osImageNameAndTag,
 			wantSandbox: "registry.internal.example.com:5000/mirror/deckhouse@" + testPauseDigest,
 		},
 		{
@@ -208,7 +211,6 @@ func TestNodeConfigImageReferencesFollowTheConfiguredRegistry(t *testing.T) {
 			imagesRepo:  "registry.example.com/deckhouse/ce/",
 			wantAddress: "registry.example.com",
 			wantPath:    "/deckhouse/ce",
-			wantOSImage: "registry.example.com/deckhouse/ce/" + osImageNameAndTag,
 			wantSandbox: "registry.example.com/deckhouse/ce@" + testPauseDigest,
 		},
 		{
@@ -216,7 +218,6 @@ func TestNodeConfigImageReferencesFollowTheConfiguredRegistry(t *testing.T) {
 			imagesRepo:  "registry.example.com",
 			wantAddress: "registry.example.com",
 			wantPath:    "",
-			wantOSImage: "registry.example.com/" + osImageNameAndTag,
 			wantSandbox: "registry.example.com@" + testPauseDigest,
 		},
 	}
@@ -234,7 +235,6 @@ func TestNodeConfigImageReferencesFollowTheConfiguredRegistry(t *testing.T) {
 
 			require.Equal(t, tt.wantAddress, nodeConfig.Spec.Registry.Address)
 			require.Equal(t, tt.wantPath, nodeConfig.Spec.Registry.Path)
-			require.Equal(t, tt.wantOSImage, nodeConfig.Spec.OSImage)
 			require.Equal(t, tt.wantSandbox, nodeConfig.Spec.ContainerRuntime.SandboxImage)
 		})
 	}

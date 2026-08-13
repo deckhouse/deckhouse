@@ -167,10 +167,14 @@ const (
 	configurationAppliedCondition = "ConfigurationApplied"
 )
 
-// osImageNameAndTag is the olcedar image the node boots from, pinned to a tag.
-// The repository comes from the cluster's registry secret (same as dhctl does);
-// hardcoding a public registry would break air-gapped clusters on day-2 render.
-const osImageNameAndTag = "olcedar:v0.1"
+// nodeManagerDigestsKey and osImageName locate the olcedar image of this release
+// in images_digests.json. It is pinned by digest, not by tag: the node decides a
+// rootfs update by comparing this with what it recorded at install, and a tag
+// that moves under the node makes that comparison meaningless.
+const (
+	nodeManagerDigestsKey = "nodeManager"
+	osImageName           = "olcedar"
+)
 
 // systemDiskSelectorSize is the fallback diskSelector when the provisioner
 // named no disk: excludes cloud-init/config drives (megabytes) but nothing
