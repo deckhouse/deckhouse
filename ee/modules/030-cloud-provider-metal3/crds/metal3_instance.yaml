@@ -29,6 +29,18 @@ spec:
     - name: BMH
       type: string
       jsonPath: .status.bareMetalHost.name
+    - name: State
+      type: string
+      jsonPath: .status.bareMetalHost.state
+    - name: Consumer
+      type: string
+      jsonPath: .status.bareMetalHost.consumer
+    - name: Online
+      type: boolean
+      jsonPath: .status.bareMetalHost.online
+    - name: Error
+      type: string
+      jsonPath: .status.bareMetalHost.error
     - name: Age
       type: date
       jsonPath: .metadata.creationTimestamp
@@ -101,6 +113,14 @@ spec:
                   name:
                     type: string
                   namespace:
+                    type: string
+                  state:
+                    type: string
+                  consumer:
+                    type: string
+                  online:
+                    type: boolean
+                  error:
                     type: string
               credentialsSecret:
                 type: object
