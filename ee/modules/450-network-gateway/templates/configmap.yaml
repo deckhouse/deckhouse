@@ -8,3 +8,7 @@ metadata:
 data:
   config.json: |
     {{- .Values.networkGateway | toJson | nindent 4 }}
+  dnsmasq.conf: |
+    expand-hosts
+    localise-queries
+    conf-dir=/etc/dnsmasq.conf.d,.rpmnew,.rpmsave,.rpmorig
