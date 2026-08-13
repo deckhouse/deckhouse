@@ -24,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	dvpval "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	admissionv1 "k8s.io/api/admission/v1"
@@ -43,6 +44,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	cpvaladmission "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/admission"
+	dvpicv1alpha1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/api/instanceclass/v1alpha1"
 	dvpmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/meta"
 )
 
@@ -112,14 +114,14 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	builder := cpvaladmission.NewStateBuilder(mgr.GetClient(), cpvaladmission.StateBuilderConfig{
-		ModuleName:        dvpmeta.ModuleName,
-		NamespaceName:     dvpmeta.Namespace,
-		InstanceClassKind: dvpmeta.InstanceClassKind,
+	factory := dvpval.NewAdmissionStateBuilderFactory(mgr.GetClient(), cpvaladmission.StateBuilderConfig{
+		ModuleName:       dvpmeta.ModuleName,
+		NamespaceName:    dvpmeta.Namespace,
+		InstanceClassGVK: dvpicv1alpha1.GroupVersionKind,
 	})
-	Expect(NewCredentialSecretValidator(builder, &corev1.Secret{}).Register(mgr)).To(Succeed())
-	Expect(NewNodeGroupValidator(builder, newWebhookTestObject(nodeGroupGVK())).Register(mgr)).To(Succeed())
-	Expect(NewDVPInstanceClassValidator(builder, newWebhookTestObject(instanceClassGVK())).Register(mgr)).To(Succeed())
+	Expect(NewCredentialSecretValidator(factory, &corev1.Secret{}).Register(mgr)).To(Succeed())
+	Expect(NewNodeGroupValidator(factory, newWebhookTestObject(nodeGroupGVK())).Register(mgr)).To(Succeed())
+	Expect(NewDVPInstanceClassValidator(factory, newWebhookTestObject(instanceClassGVK())).Register(mgr)).To(Succeed())
 
 	go func() {
 		defer GinkgoRecover()
@@ -162,7 +164,7 @@ func nodeGroupGVK() schema.GroupVersionKind {
 }
 
 func instanceClassGVK() schema.GroupVersionKind {
-	return schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: dvpmeta.InstanceClassKind}
+	return schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: dvpicv1alpha1.GroupVersionKind.Kind}
 }
 
 func firstFoundEnvTestBinaryDir() string {

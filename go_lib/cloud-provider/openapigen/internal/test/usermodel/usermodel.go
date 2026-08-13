@@ -34,7 +34,7 @@ type User struct {
 	// +kubebuilder:default=deadbeefcafe
 	// +kubebuilder:title=User ID
 	// +kubebuilder:example=1234567890
-	// +kubebuilder:validation:Pattern=^[0-9]+$
+	// +kubebuilder:validation:XValidation:rule="self.matches('^[0-9]+$')",message="must contain digits only"
 	// +kubebuilder:validation:Format=int64
 	// +required
 	ID id `json:"id,omitempty"`
@@ -60,12 +60,11 @@ type User struct {
 // +kubebuilder:title=Geo definition
 type Geo struct {
 	// The geo object identificator
-	// +kubebuilder:validation:Pattern=.*
 	// +required
 	ID id `json:"id,omitempty"`
 	// The geoposition latitude
-	// +kubebuilder:validation:MinLength=6
-	// +kubebuilder:validation:MaxLength=6
+	// +kubebuilder:validation:Minimum=6
+	// +kubebuilder:validation:Maximum=90
 	// +required
 	Lat int `json:"lat,omitempty"`
 	// The geoposition longitude

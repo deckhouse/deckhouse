@@ -28,7 +28,7 @@ description: Архитектура модуля deckhouse в Deckhouse Kubernet
 - управление платформой:
   - [DeckhouseRelease](../../reference/api/cr.html#deckhouserelease) — объект, определяющий релиз (версию) DKP и политику обновления платформы;
 
-- управление пакетами ([Marketplace](../marketplace)):
+- управление пакетами ([Marketplace](../marketplace/)):
   - [Application](../../reference/api/cr.html#application) — описание и желаемое состояние прикладного пакета (группы компонентов или приложения);
   - [ApplicationPackage](../../reference/api/cr.html#applicationpackage) — метаданные, источники и настройки пакета;
   - [ApplicationPackageVersion](../../reference/api/cr.html#applicationpackageversion) — описание конкретной версией пакета и ее параметров;

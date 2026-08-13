@@ -23,7 +23,7 @@ workflow:
 
 .rules:on_main:
   rules:
-    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE != "schedule"
 
 .rules:on_merge_request:
   rules:
@@ -37,10 +37,23 @@ workflow:
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule" && $DKP_CVE_SCANS_ENABLE == "true"
 
+.rules:on_schedule_secrets_scan:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $DKP_SECRETS_SCAN_ENABLE == "true"
+
+.rules:on_schedule_docs_pdf:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $DKP_DOCS_PDF_ENABLE == "true"
+
+.rules:on_schedule_e2e_autocleaner:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $DKP_E2E_AUTOCLEANER_ENABLE == "true"
+
+
 # Manual edition builds (MR / main). Release-branch editions are automatic.
 .rules:on_main_manual:
   rules:
-    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE != "schedule"
       when: manual
 
 .rules:on_merge_request_manual:
@@ -53,14 +66,14 @@ workflow:
 # PR + main + release-x.xx (validate, unit/lint, tests, doc_web).
 .rules:on_validate:
   rules:
-    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE != "schedule"
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH =~ /^release-\d+\.\d+$/
 
 # PR + main only (security_scan, main_web_build).
 .rules:on_pr_main:
   rules:
-    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE != "schedule"
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
 
 # --- path-filtered (MR only) --------------------------------------------------

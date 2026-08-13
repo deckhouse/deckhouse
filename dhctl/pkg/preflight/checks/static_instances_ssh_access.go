@@ -18,12 +18,10 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"math/rand"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -243,21 +241,16 @@ func checkSSHAccess(ctx context.Context, sshProviderInitializer *providerinitial
 		}
 	}
 
-	tmpDir := filepath.Join(os.Getenv("TMPDIR"), "preflight")
-
-	err = os.MkdirAll(tmpDir, 0o755)
-	if err != nil {
-		return fmt.Errorf("failed to create tmp directory: %w", err)
-	}
-
-	privateKeyPrefixPathWithoutSuffix := filepath.Join(tmpDir, "id_rsa_preflight.key")
-
-	n := rand.New(rand.NewSource(time.Now().UnixNano())).Int()
-	privateKeyPath := fmt.Sprintf("%s.%d", privateKeyPrefixPathWithoutSuffix, n)
-
 	if cred.PrivateSSHKey != "" {
-		err = os.WriteFile(privateKeyPath, []byte(cred.PrivateSSHKey), 0o600)
+		// The dhctl pod sets no TMPDIR and mounts / read-only; only /tmp is writable.
+		tmpDir, err := os.MkdirTemp("", "preflight")
 		if err != nil {
+			return fmt.Errorf("failed to create tmp directory: %w", err)
+		}
+		defer os.RemoveAll(tmpDir)
+
+		privateKeyPath := filepath.Join(tmpDir, "id_rsa_preflight.key")
+		if err := os.WriteFile(privateKeyPath, []byte(cred.PrivateSSHKey), 0o600); err != nil {
 			return fmt.Errorf("Failed to write private key: %w", err)
 		}
 

@@ -68,6 +68,12 @@ const istioValues = `
     internal:
       globalVersion: "1.21.6"
       versionMap:
+        "1.29.6":
+          revision: "v1x29x6"
+          fullVersion: "1.29.6"
+          imageSuffix: "V1x29x6"
+          supportsAmbient: true
+          supportsOperator: false
         "1.27.9":
           revision: "v1x27x9"
           fullVersion: "1.27.9"
@@ -398,6 +404,49 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 		})
 	})
 
+	Context("Telemetry mesh defaults for operator-free control plane 1.29", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.versionMap", `
+"1.29":
+  revision: "v1x29"
+  fullVersion: "1.29.6"
+  imageSuffix: "V1x29x6"
+  supportsAmbient: true
+  supportsOperator: false
+`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.29"]`)
+			f.ValuesSet("istio.internal.globalVersion", "1.29")
+		})
+
+		It("enables mesh metrics via defaultProviders and Telemetry d8-main by default", func() {
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			meshConfig := f.KubernetesResource("ConfigMap", "d8-istio", "istio-v1x29").Field("data.mesh").String()
+			Expect(meshConfig).To(ContainSubstring("defaultProviders"))
+			Expect(meshConfig).To(ContainSubstring("prometheus"))
+
+			telemetry := f.KubernetesResource("Telemetry", "d8-istio", "d8-main")
+			Expect(telemetry.Field("spec.metrics.0.providers.0.name").String()).To(Equal("prometheus"))
+		})
+
+		It("keeps Telemetry API mode configuration when enabled", func() {
+			f.ValuesSet("istio.telemetryAPI.enabled", true)
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			meshConfig := f.KubernetesResource("ConfigMap", "d8-istio", "istio-v1x29").Field("data.mesh").String()
+			Expect(meshConfig).To(ContainSubstring("defaultProviders"))
+			Expect(meshConfig).To(ContainSubstring("prometheus"))
+
+			telemetry := f.KubernetesResource("Telemetry", "d8-istio", "d8-main")
+			Expect(telemetry.Field("spec.metrics.0.providers.0.name").String()).To(Equal("prometheus"))
+		})
+	})
+
 	Context("Istio config analyzer for control plane 1.25", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
@@ -529,7 +578,17 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			Expect(iopV21.Field("spec.values.pilot.image").String()).To(Equal(`registry.example.com@imageHash-istio-pilotV1x21x6`))
 
 			Expect(mwh.Field("webhooks.0.clientConfig.service.name").String()).To(Equal(`istiod-v1x21x6`))
-			Expect(mwh.Field("webhooks.0.clientConfig.caBundle").String()).To(Equal(`bXljZXJ0`)) // b64("mycert")
+			// caBundle must be the root cert (b64("myroot")), not the signing cert: istiod advertises
+			// root-cert.pem as its webhook trust anchor, so the module must render the same to stay
+			// consistent for plugged intermediate CAs (where cert != root).
+			Expect(mwh.Field("webhooks.0.clientConfig.caBundle").String()).To(Equal(`bXlyb290`)) // b64("myroot")
+
+			// Validating webhooks are never patched by istiod (their config names do not match
+			// VALIDATION_WEBHOOK_CONFIG_NAME), so the rendered caBundle is the sole source of truth
+			// and must also be the root cert, not the signing cert.
+			vwhRev := f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "d8-istio-validator-v1x21x6")
+			Expect(vwhRev.Exists()).To(BeTrue())
+			Expect(vwhRev.Field("webhooks.0.clientConfig.caBundle").String()).To(Equal(`bXlyb290`)) // b64("myroot")
 			Expect(serviceGlobal.Field("spec.selector").String()).To(MatchJSON(`{"app":"istiod","istio.io/rev":"v1x21x6"}`))
 
 			Expect(secretCacerts.Field("data").String()).To(MatchJSON(`
@@ -540,6 +599,8 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 					"root-cert.pem":"bXlyb290"
 				}
 `))
+			// No istio.internal.ca.source set in these values, so the provenance annotation must be absent.
+			Expect(secretCacerts.Field(`metadata.annotations.istio\.deckhouse\.io/ca-source`).Exists()).To(BeFalse())
 
 			Expect(iopV21.Field("spec.meshConfig.caCertificates").Exists()).To(BeFalse())
 			Expect(iopV21.Field("spec.values.meshNetworks").Exists()).To(BeFalse())
@@ -562,6 +623,66 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			Expect(f.KubernetesResource("PodMonitor", "d8-monitoring", "istio-ingressgateway").Exists()).To(BeFalse())
 
 			Expect(f.KubernetesResource("Secret", "d8-istio", "d8-remote-clusters-public-metadata").Exists()).To(BeFalse())
+		})
+	})
+
+	Context("CA provenance source is set (ca.secretRef)", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25.2","1.21.6"]`)
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.25.2","1.21.6"]`)
+			f.ValuesSet("istio.internal.ca.source", "secretRef:my-pki/my-istio-ca")
+			f.HelmRender()
+		})
+
+		It("stamps the provenance annotation on the cacerts Secret", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			secretCacerts := f.KubernetesResource("Secret", "d8-istio", "cacerts")
+			Expect(secretCacerts.Exists()).To(BeTrue())
+			// The annotation lets the generate_ca hook recognize this Secret as its own secretRef
+			// material after a restart wipes the volatile istio.internal.ca.* values.
+			Expect(secretCacerts.Field(`metadata.annotations.istio\.deckhouse\.io/ca-source`).String()).
+				To(Equal("secretRef:my-pki/my-istio-ca"))
+		})
+	})
+
+	Context("istiod CA-bundle checksum ignores the provenance source but tracks material", func() {
+		// The checksum drives istiod pod rollouts. It must hash only the mounted CA material
+		// (cert/key/chain/root), NOT istio.internal.ca.source — otherwise a provenance-only change
+		// (e.g. on upgrade, or repointing secretRef to a Secret with identical material) would roll
+		// istiod needlessly.
+		caChecksum := func(source string) string {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25.2","1.21.6"]`)
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.25.2","1.21.6"]`)
+			if source != "" {
+				f.ValuesSet("istio.internal.ca.source", source)
+			}
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			return f.KubernetesResource("Istio", "d8-istio", "v1x25x2").
+				Field("spec.values.pilot.podAnnotations.istio-mtls-ca-bundle-checksum").String()
+		}
+
+		It("is stable when only istio.internal.ca.source changes", func() {
+			noSource := caChecksum("")
+			Expect(noSource).NotTo(BeEmpty())
+			Expect(caChecksum("selfSigned")).To(Equal(noSource))
+			Expect(caChecksum("secretRef:my-pki/my-istio-ca")).To(Equal(noSource))
+		})
+
+		It("changes when the mounted CA material changes", func() {
+			baseline := caChecksum("selfSigned")
+			f.ValuesSet("istio.internal.ca.cert", "a-different-cert")
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			changed := f.KubernetesResource("Istio", "d8-istio", "v1x25x2").
+				Field("spec.values.pilot.podAnnotations.istio-mtls-ca-bundle-checksum").String()
+			Expect(changed).NotTo(Equal(baseline))
 		})
 	})
 
@@ -604,7 +725,7 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
-			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.21.6","1.25.2","1.27.9"]`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.21.6","1.25.2","1.27.9","1.29.6"]`)
 			f.ValuesSet("istio.jwksResolverAdditionalRootCA", jwksResolverAdditionalRootCA)
 			f.HelmRender()
 		})
@@ -617,23 +738,30 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			jwksExtraRootCAV21 := f.KubernetesResource("ConfigMap", "d8-istio", "pilot-jwks-extra-cacerts-v1x21x6")
 			jwksExtraRootCAV25 := f.KubernetesResource("ConfigMap", "d8-istio", "pilot-jwks-extra-cacerts-v1x25x2")
 			jwksExtraRootCAV27 := f.KubernetesResource("ConfigMap", "d8-istio", "pilot-jwks-extra-cacerts-v1x27x9")
+			jwksExtraRootCAV29 := f.KubernetesResource("ConfigMap", "d8-istio", "pilot-jwks-extra-cacerts-v1x29x6")
 
 			Expect(iopV21.Exists()).To(BeTrue())
 			Expect(istioV25.Exists()).To(BeTrue())
 			Expect(jwksExtraRootCAV21.Exists()).To(BeTrue())
 			Expect(jwksExtraRootCAV25.Exists()).To(BeTrue())
 			Expect(jwksExtraRootCAV27.Exists()).To(BeTrue())
+			Expect(jwksExtraRootCAV29.Exists()).To(BeTrue())
 
 			deplV27 := f.KubernetesResource("Deployment", "d8-istio", "istiod-v1x27x9")
+			deplV29 := f.KubernetesResource("Deployment", "d8-istio", "istiod-v1x29x6")
 
 			Expect(iopV21.Field("spec.values.pilot.jwksResolverExtraRootCA").String()).To(Equal(jwksResolverAdditionalRootCA))
 			Expect(istioV25.Field("spec.values.pilot.jwksResolverExtraRootCA").String()).To(Equal(jwksResolverAdditionalRootCA))
 			Expect(jwksExtraRootCAV21.Field("data.extra\\.pem").String()).To(Equal(jwksResolverAdditionalRootCA))
 			Expect(jwksExtraRootCAV25.Field("data.extra\\.pem").String()).To(Equal(jwksResolverAdditionalRootCA))
 			Expect(jwksExtraRootCAV27.Field("data.extra\\.pem").String()).To(Equal(jwksResolverAdditionalRootCA))
+			Expect(jwksExtraRootCAV29.Field("data.extra\\.pem").String()).To(Equal(jwksResolverAdditionalRootCA))
 			Expect(deplV27.Exists()).To(BeTrue())
 			Expect(deplV27.Field("spec.template.spec.containers.0.volumeMounts").String()).To(ContainSubstring(`"mountPath":"/cacerts"`))
 			Expect(deplV27.Field("spec.template.spec.volumes").String()).To(ContainSubstring("pilot-jwks-extra-cacerts-v1x27x9"))
+			Expect(deplV29.Exists()).To(BeTrue())
+			Expect(deplV29.Field("spec.template.spec.containers.0.volumeMounts").String()).To(ContainSubstring(`"mountPath":"/cacerts"`))
+			Expect(deplV29.Field("spec.template.spec.volumes").String()).To(ContainSubstring("pilot-jwks-extra-cacerts-v1x29x6"))
 		})
 	})
 
@@ -1553,6 +1681,7 @@ MY_VAR: "myvalue"
 			Expect(ingressSvc.Exists()).To(BeTrue())
 
 			Expect(ingressDs.Field("metadata.labels").String()).To(MatchJSON(`{"app":"ingress-gateway-controller","heritage":"deckhouse","instance":"hostport-test","istio":"ingressgateway","istio.deckhouse.io/ingress-gateway-class":"hp","istio.io/dataplane-mode":"none","module":"istio"}`))
+			Expect(ingressDs.Field("spec.template.metadata.labels").String()).To(MatchJSON(`{"app":"ingress-gateway-controller","heritage":"deckhouse","instance":"hostport-test","istio":"ingressgateway","istio.deckhouse.io/ingress-gateway-class":"hp","istio.io/dataplane-mode":"none","module":"istio","security.deckhouse.io/security-policy-exception":"ingress-gateway-controller","sidecar.istio.io/inject":"false"}`))
 			istioProxyContainer := ingressDs.Field("spec.template.spec.containers").Array()
 			Expect(len(istioProxyContainer)).To(Equal(1))
 			Expect((istioProxyContainer[0].Get("ports"))).To(MatchJSON(`[
@@ -1790,6 +1919,78 @@ MY_VAR: "myvalue"
 			Expect(cniConfig.Field("data.AMBIENT_ENABLEMENT_SELECTOR").String()).To(ContainSubstring("istio.io/dataplane-mode: ambient"))
 			Expect(cniConfig.Field("data.ISTIO_OWNED_CNI_CONFIG").String()).To(Equal("false"))
 			Expect(cniConfig.Field("data.NATIVE_NFTABLES").String()).To(Equal("false"))
+			Expect(cniConfig.Field("data.ENABLE_AMBIENT_DETECTION_RETRY").Exists()).To(BeFalse())
+		})
+	})
+
+	Context("custom control plane for operator-free version 1.29", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.versionMap", `
+"1.29":
+  revision: "v1x29"
+  fullVersion: "1.29.6"
+  imageSuffix: "V1x29x6"
+  supportsAmbient: true
+  supportsOperator: false
+`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.29"]`)
+			f.ValuesSet("istio.internal.globalVersion", "1.29")
+			f.HelmRender()
+		})
+
+		It("renders custom istiod resources and skips operator CRs", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			Expect(f.KubernetesResource("Deployment", "d8-istio", "istiod-v1x29").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Service", "d8-istio", "istiod-v1x29").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("ConfigMap", "d8-istio", "istio-v1x29").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("ConfigMap", "d8-istio", "istio-sidecar-injector-v1x29").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("PodDisruptionBudget", "d8-istio", "istiod-v1x29").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("IstioOperator", "d8-istio", "v1x29").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Istio", "d8-istio", "v1x29").Exists()).To(BeFalse())
+
+			svc := f.KubernetesResource("Service", "d8-istio", "istiod-v1x29")
+			Expect(svc.Field("spec.ports").String()).To(ContainSubstring("grpc-xds"))
+			Expect(svc.Field("spec.ports").String()).To(ContainSubstring("https-webhook"))
+
+			ds := f.KubernetesResource("Deployment", "d8-istio", "istiod-v1x29")
+			Expect(ds.Field("spec.template.spec.tolerations").String()).To(ContainSubstring("cni.istio.io/not-ready"))
+			Expect(ds.Field("spec.template.spec.tolerations").String()).To(ContainSubstring("node-role.kubernetes.io/master"))
+			Expect(ds.Field("spec.template.metadata.labels.app\\.kubernetes\\.io/name").String()).To(Equal("istiod"))
+			Expect(ds.Field("spec.template.metadata.labels.app\\.kubernetes\\.io/instance").String()).To(Equal("v1x29-istiod"))
+			Expect(ds.Field("spec.template.metadata.labels.app\\.kubernetes\\.io/version").String()).To(Equal("1.29.6"))
+			Expect(ds.Field("spec.template.metadata.labels.app\\.kubernetes\\.io/part-of").String()).To(Equal("istio"))
+			Expect(ds.Field("spec.template.metadata.labels.app\\.kubernetes\\.io/managed-by").String()).To(Equal("Helm"))
+
+			injectorValues := f.KubernetesResource("ConfigMap", "d8-istio", "istio-sidecar-injector-v1x29").Field("data.values").String()
+			Expect(injectorValues).To(ContainSubstring(`"resources": {}`))
+
+			cniConfig := f.KubernetesResource("ConfigMap", "d8-istio", "cni-config")
+			Expect(cniConfig.Field("data.AMBIENT_ENABLEMENT_SELECTOR").String()).To(ContainSubstring("istio.io/dataplane-mode: ambient"))
+			Expect(cniConfig.Field("data.ISTIO_OWNED_CNI_CONFIG").String()).To(Equal("false"))
+			Expect(cniConfig.Field("data.NATIVE_NFTABLES").String()).To(Equal("false"))
+			// Upstream CNI default not implemented yet for 1.29 — stubbed off explicitly.
+			Expect(cniConfig.Field("data.ENABLE_AMBIENT_DETECTION_RETRY").String()).To(Equal("false"))
+		})
+
+		It("renders istio config analyzer for control plane 1.29", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			deployment := f.KubernetesResource("Deployment", "d8-istio", "istio-config-analyzer-v1x29")
+			Expect(deployment.Exists()).To(BeTrue())
+			Expect(deployment.Field("spec.template.spec.containers.0.name").String()).To(Equal("istio-config-analyzer"))
+			Expect(deployment.Field("spec.template.spec.containers.0.args").String()).To(ContainSubstring("--revision=v1x29"))
+			Expect(deployment.Field("spec.template.spec.containers.0.image").String()).To(ContainSubstring("configAnalyzerV1x29x6"))
+
+			podMonitor := f.KubernetesResource("PodMonitor", "d8-monitoring", "istio-config-analyzer-v1x29")
+			Expect(podMonitor.Exists()).To(BeTrue())
+
+			clusterRole := f.KubernetesGlobalResource("ClusterRole", "d8:istio:config-analyzer:v1x29")
+			Expect(clusterRole.Exists()).To(BeTrue())
+			Expect(clusterRole.Field("rules").String()).To(ContainSubstring("backendtlspolicies"))
 		})
 	})
 

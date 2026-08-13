@@ -17,6 +17,14 @@
 
 # This hook checks the MultiTenancy flag for the user-authz module.
 #
+# The effective value of enableMultiTenancy is read from the Module CR
+# (deckhouse.io/v1alpha2) status.lastAppliedConfiguration, which contains
+# the user configuration merged with config-schema defaults. This is
+# necessary because in some editions (e.g. CSE) enableMultiTenancy defaults
+# to true, and when the user has not explicitly set it in the ModuleConfig,
+# the field is absent from spec.settings — but the effective value is still
+# true.
+#
 # - If the flag is enabled — we just exit.
 #
 # - If the flag is disabled — we check the ClusterAuthorizationRule (CAR) resource being created or updated
@@ -36,13 +44,13 @@ from deckhouse import hook
 from dotmap import DotMap
 
 SEPARATOR = "; "
-MODULE_CONFIG_SNAPSHOT_NAME = "d8-user-authz-moduleconfig" 
+MODULE_SNAPSHOT_NAME = "d8-user-authz-module"
 CLUSTER_AUTH_RULES_SNAPSHOT_NAME = "d8-user-authz-cars"
 CONFIG = f"""
 configVersion: v1
 kubernetesValidating:
 - name: d8-user-authz-car-multitenancy-related-options.deckhouse.io
-  includeSnapshotsFrom: ["{MODULE_CONFIG_SNAPSHOT_NAME}"]
+  includeSnapshotsFrom: ["{MODULE_SNAPSHOT_NAME}"]
   rules:
   - apiGroups:   ["deckhouse.io"]
     apiVersions: ["*"]
@@ -59,15 +67,19 @@ kubernetesValidating:
     apiVersions: ["*"]
     resources: ["moduleconfigs"]
     operations: ["CREATE", "UPDATE"]
-    scope: "Cluster"
+    scope:       "Cluster"
 
 kubernetes:
-- name: {MODULE_CONFIG_SNAPSHOT_NAME}
-  apiVersion: deckhouse.io/v1alpha1
-  kind: ModuleConfig
+- name: {MODULE_SNAPSHOT_NAME}
+  apiVersion: deckhouse.io/v1alpha2
+  kind: Module
   executeHookOnEvent: []
   executeHookOnSynchronization: true
-  keepFullObjectsInMemory: true
+  keepFullObjectsInMemory: false
+  jqFilter: |
+    {{
+      "enableMultiTenancy": .status.lastAppliedConfiguration.enableMultiTenancy
+    }}
   nameSelector:
     matchNames:
     - user-authz
@@ -98,8 +110,8 @@ def validate(ctx: DotMap) -> tuple[list[str], list[str]]:
 
     if kind == "clusterauthorizationrule":
         # don't check ClusterAuthorizationRule if user-authz MultiTenancy option is enabled
-        moduleconfig_snapshot = ctx.snapshots[MODULE_CONFIG_SNAPSHOT_NAME]
-        if len(moduleconfig_snapshot) != 0 and moduleconfig_snapshot[0].object.spec.settings.enableMultiTenancy is True:
+        module_snapshot = ctx.snapshots[MODULE_SNAPSHOT_NAME]
+        if len(module_snapshot) != 0 and module_snapshot[0].filterResult.enableMultiTenancy is True:
             return [], []
 
         return validate_car_multitenancy_related_fields(req.object)
@@ -135,7 +147,7 @@ def validate_car_multitenancy_related_fields(obj: DotMap) -> tuple[list[str], li
         if field in obj.spec:
             errors.append(
                 f"You must enable userAuthz.enableMultiTenancy to use the {description} "
-                f"in ClusterAuthorizationRule '{resource_name}' (EE Only)"
+                f"in ClusterAuthorizationRule '{resource_name}'"
             )
 
     return errors, []

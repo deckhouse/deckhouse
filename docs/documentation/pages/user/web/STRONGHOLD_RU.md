@@ -27,7 +27,7 @@ lang: ru
 
 ## Работа с механизмами секретов
 
-Инструкции по настройке распространённых типов механизмов — в [документации Deckhouse Stronghold](/stronghold/documentation/): [механизм секретов KV](/stronghold/documentation/user/secrets-engines/kv/overview.html) и [механизм секретов PKI](/stronghold/documentation/user/secrets-engines/pki.html).
+Инструкции по настройке распространённых типов механизмов — в [документации Deckhouse Stronghold](/products/stronghold/documentation/): [механизм секретов KV](/products/stronghold/documentation/user/secrets-engines/kv/overview.html) и [механизм секретов PKI](/products/stronghold/documentation/user/secrets-engines/pki.html).
 
 {% alert level="info" %}
 Работа с этими механизмами также подробно разобрана в курсе [«Инструменты безопасности в Deckhouse Kubernetes Platform»](https://deckhouse.ru/courses/security-tools-in-dkp/) в [Deckhouse Академии](https://deckhouse.ru/academy/).

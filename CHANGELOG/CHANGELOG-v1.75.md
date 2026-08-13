@@ -18,10 +18,18 @@
  - Istio version 1.19.7 has been removed because it is considered outdated. In this regard, errors may occur when updating the Deckhouse version. It is recommended to upgrade Istio from version 1.19.7 to version 1.21.6 before upgrading Deckhouse release.
  - Mode `Auto` is deprecated and will be removed in a future API version. Use explicit modes like `Recreate`, `Initial`, or `InPlaceOrRecreate` instead.
  - Previously, a transient cluster DNS failure could cause the user-authz-webhook liveness probe to fail and restart the pod, which combined with the fail-closed authorization webhook (failurePolicy: Deny) could deny all API requests, including cluster-admins, until DNS recovered.
+ - The cilium-hubble components (hubble-ui, hubble-relay) will restart after the update.
+ - The cni-cilium components (cilium agent, operator) will restart after the update.
+ - The coredns and kube-dns components will restart after the update.
  - The default VPA mode for Loki components is changed from Auto to InPlaceOrRecreate.
     Loki pods will now prefer in-place resource updates when supported by the cluster,
     falling back to pod recreation only when required.
+ - The egress-gateway-agent component will restart after the update.
+ - The metallb components (controller, speaker, l2lb) will restart after the update.
  - The minimum supported version of Kubernetes is now 1.31. All control plane components will restart.
+ - The node-local-dns DaemonSet pods will restart after the update.
+ - The node-local-dns components will restart after the update.
+ - The service-with-healthchecks components (controller, agent) will restart after the update.
  - These changes prevent unnecessary or destructive plan updates that could occur when data sources depend on changing labels and annotations. The behavior of other cloud providers is not affected.
     If you encounter unexpected converge plans or cluster bootstrap issues when using OpenTofu-based providers (such as dvp, dynamics, zvirt, or yandex), please report them to Deckhouse Technical Support.
  - This update triggers a rolling update of the flannel pods.
@@ -171,6 +179,8 @@
     In HA cluster mode hubble-ui and hubble-relay will be restarted
  - **[cilium-hubble]** Fixed CVE-2026-29181 in hubble-ui-backend  by bumping OpenTelemetry Go to v1.41.0 [#20262](https://github.com/deckhouse/deckhouse/pull/20262)
  - **[cilium-hubble]** Fixed CVE-2026-41520 in hubble-ui-backend [#20361](https://github.com/deckhouse/deckhouse/pull/20361)
+ - **[cilium-hubble]** Upgrade hubble-ui backend dependencies (cilium v1.17.16, Go 1.25.0) and switch build base image to fix known CVEs. [#21644](https://github.com/deckhouse/deckhouse/pull/21644)
+    The cilium-hubble components (hubble-ui, hubble-relay) will restart after the update.
  - **[cloud-provider-aws]** add information about AWS security group rules limits [#18852](https://github.com/deckhouse/deckhouse/pull/18852)
  - **[cloud-provider-aws]** fix CVE in cloud-provider-aws [#18057](https://github.com/deckhouse/deckhouse/pull/18057)
  - **[cloud-provider-aws]** fix cve [#16843](https://github.com/deckhouse/deckhouse/pull/16843)
@@ -230,12 +240,17 @@
  - **[cloud-provider-zvirt]** fix CSI token refresh patch apply [#18449](https://github.com/deckhouse/deckhouse/pull/18449)
  - **[cloud-provider-zvirt]** fix CVEs in cloud-provider-zvirt [#18257](https://github.com/deckhouse/deckhouse/pull/18257)
  - **[cloud-provider-zvirt]** fix cve [#17093](https://github.com/deckhouse/deckhouse/pull/17093)
+ - **[cni-cilium]** Bump Go dependencies and backport upstream cilium security patches to fix known CVEs. [#21644](https://github.com/deckhouse/deckhouse/pull/21644)
+    The cni-cilium components (cilium agent, operator) will restart after the update.
+ - **[cni-cilium]** Bump Go dependencies in the egress-gateway-agent image to fix known CVEs. [#21613](https://github.com/deckhouse/deckhouse/pull/21613)
+    The egress-gateway-agent component will restart after the update.
  - **[cni-cilium]** Fix hook discovery_cni_exclusive.go [#17719](https://github.com/deckhouse/deckhouse/pull/17719)
     If the SDN module is used in the cluster, the Cilium agent pods will be restarted.
  - **[cni-cilium]** Fix issue in generating CiliumEgressGatewayPolicy CR. [#17949](https://github.com/deckhouse/deckhouse/pull/17949)
     All current connections powered by EgressGateways will be terminated.
  - **[cni-cilium]** Fixed CVE-2026-33186, CVE-2026-27142, and CVE-2026-27139 by updating grpc dependency and Go version, and resolved build compatibility issues. [#18645](https://github.com/deckhouse/deckhouse/pull/18645)
- - **[cni-cilium]** Fixed CVE-2026-41520 for cilium-bugtool util [#20067](https://github.com/deckhouse/deckhouse/pull/20067)
+ - **[cni-cilium]** Fixed CVE-2026-41520 for cilium-bugtool util [#20244](https://github.com/deckhouse/deckhouse/pull/20244)
+ - **[cni-cilium]** Fixed CVE-2026-41520 for the cilium-bugtool util. [#20067](https://github.com/deckhouse/deckhouse/pull/20067)
  - **[cni-cilium]** Fixed egress-gateway-agent controller logic for deleted resources and disable dev logging. [#17378](https://github.com/deckhouse/deckhouse/pull/17378)
  - **[cni-cilium]** The MTU configuration has been updated. [#16751](https://github.com/deckhouse/deckhouse/pull/16751)
     The MTU will be updated on all interfaces of all pods.
@@ -285,9 +300,11 @@
  - **[deckhouse]** Added exception to system-ns.deckhouse.io policy. [#17754](https://github.com/deckhouse/deckhouse/pull/17754)
  - **[deckhouse]** Added validation for deckhouse-registry Secret fields to reject spaces and newlines. [#16101](https://github.com/deckhouse/deckhouse/pull/16101)
  - **[deckhouse]** Allow updating scanInterval on the deckhouse ModuleSource. [#19417](https://github.com/deckhouse/deckhouse/pull/19417)
+ - **[deckhouse]** An unset `settings.update.mode` now defaults to `AutoPatch` instead of silently running as `Auto`. [#21928](https://github.com/deckhouse/deckhouse/pull/21928)
  - **[deckhouse]** Bump nelm version with deadlock fix. [#18586](https://github.com/deckhouse/deckhouse/pull/18586)
  - **[deckhouse]** Ensure heritage label on d8-system namespace via hook. [#19196](https://github.com/deckhouse/deckhouse/pull/19196)
  - **[deckhouse]** Fix CVEs. [#21542](https://github.com/deckhouse/deckhouse/pull/21542)
+ - **[deckhouse]** Fix a minor Deckhouse release being auto-applied as a patch when no Deployed release object is present. [#21987](https://github.com/deckhouse/deckhouse/pull/21987)
  - **[deckhouse]** Fix exp modules auto enabling. [#19699](https://github.com/deckhouse/deckhouse/pull/19699)
  - **[deckhouse]** Fix module docs rendering. [#17245](https://github.com/deckhouse/deckhouse/pull/17245)
  - **[deckhouse]** Fix module enabling. [#17009](https://github.com/deckhouse/deckhouse/pull/17009)
@@ -388,9 +405,11 @@
     All ingress-nginx controller pods of the 1.12 version will be restarted.
  - **[ingress-nginx]** The real-ip-cidr patches are updated to use correct nginx variables. [#17402](https://github.com/deckhouse/deckhouse/pull/17402)
     All ingress-nginx controllers' pods will be restarted.
+ - **[istio]** Add missing tools to proxyv2 images so the application-aware proxy termination hook works correctly. [#22031](https://github.com/deckhouse/deckhouse/pull/22031)
  - **[istio]** Correction  in Kiali of an insignificant error [#16880](https://github.com/deckhouse/deckhouse/pull/16880)
  - **[istio]** Correction of an useless error in the Istio CNI workflow [#17787](https://github.com/deckhouse/deckhouse/pull/17787)
  - **[istio]** Fix CVE for Istio version 1.21 and 1.25 [#17298](https://github.com/deckhouse/deckhouse/pull/17298)
+ - **[istio]** Fix graceful draining of established HTTP connections when application pods terminate. [#22064](https://github.com/deckhouse/deckhouse/pull/22064)
  - **[istio]** Fixed indent in ztunnel daemonset template [#18256](https://github.com/deckhouse/deckhouse/pull/18256)
  - **[istio]** Fixing the list of requests from istiod to gateway API [#18056](https://github.com/deckhouse/deckhouse/pull/18056)
  - **[istio]** Implement graceful metadata secret renewal for multiclusters. [#20207](https://github.com/deckhouse/deckhouse/pull/20207)
@@ -411,6 +430,8 @@
  - **[istio]** fixing the CVE in Kiali [#17045](https://github.com/deckhouse/deckhouse/pull/17045)
  - **[keepalived]** Excluded vulnerable pip-25.3 from keepalived final image to fix CVE-2026-1703 [#19145](https://github.com/deckhouse/deckhouse/pull/19145)
  - **[keepalived]** Updated manual switch instructions in FAQ to use debug container. [#17982](https://github.com/deckhouse/deckhouse/pull/17982)
+ - **[kube-dns]** Bump Go dependencies in the sts-pods-hosts-appender-webhook and coredns images to fix known CVEs. [#21630](https://github.com/deckhouse/deckhouse/pull/21630)
+    The coredns and kube-dns components will restart after the update.
  - **[kube-proxy]** Fixed CVE-2026-33186 and CVE-2026-24051 in kube-proxy dependencies. [#19104](https://github.com/deckhouse/deckhouse/pull/19104)
     This update triggers a rolling update of the kube-proxy pods.
  - **[log-shipper]** Fixed source-specific log label enrichment and simplified transform processing. [#16989](https://github.com/deckhouse/deckhouse/pull/16989)
@@ -418,6 +439,8 @@
  - **[loki]** Fixed CVE-2025-47914, CVE-2025-58181 [#17555](https://github.com/deckhouse/deckhouse/pull/17555)
  - **[loki]** disable send analytics report to stats.grafana.org [#17109](https://github.com/deckhouse/deckhouse/pull/17109)
     config module loki ↓
+ - **[metallb]** Bump Go dependencies in the metallb and l2lb images to fix known CVEs. [#21589](https://github.com/deckhouse/deckhouse/pull/21589)
+    The metallb components (controller, speaker, l2lb) will restart after the update.
  - **[monitoring-deckhouse]** Fix module-release alerts (`ModuleReleaseIsWaitingManualApproval`, `ModuleReleaseIsOutdated`, `ModuleReleaseIsBlockedByRequirements`, `ModuleIsInMaintenanceMode`, `D8ModuleOutdatedByMajorVersion`) that never fired on 1.75.x clusters due to a `moduleName`→`module` label mismatch introduced when addon-operator was bumped to v1.19.7 in v1.75.1. [#20112](https://github.com/deckhouse/deckhouse/pull/20112)
  - **[monitoring-kubernetes]** Added unsupported ValidatingAdmissionPolicy API versions on Kubernetes 1.34. [#17007](https://github.com/deckhouse/deckhouse/pull/17007)
  - **[monitoring-kubernetes]** Fixed CVE-2025-47914, CVE-2025-58181 [#17571](https://github.com/deckhouse/deckhouse/pull/17571)
@@ -431,6 +454,10 @@
  - **[network-policy-engine]** Fixed a bug that led to CrashLoopBackOff kube-router's pods. [#17737](https://github.com/deckhouse/deckhouse/pull/17737)
  - **[network-policy-engine]** Reverted module stage from Deprecated back to General Availability to stop false deprecation alerts. [#20306](https://github.com/deckhouse/deckhouse/pull/20306)
  - **[node-local-dns]** Adapt node-local-dns for air-gapped environments. [#18758](https://github.com/deckhouse/deckhouse/pull/18758)
+ - **[node-local-dns]** Bump Go dependencies in the coredns helper image to fix known CVEs. [#21875](https://github.com/deckhouse/deckhouse/pull/21875)
+    The node-local-dns DaemonSet pods will restart after the update.
+ - **[node-local-dns]** Bump Go dependencies in the safe-updater and stale-dns-connections-cleaner images to fix known CVEs. [#21630](https://github.com/deckhouse/deckhouse/pull/21630)
+    The node-local-dns components will restart after the update.
  - **[node-local-dns]** Fix name of registry secret in safe-updater deployment [#19887](https://github.com/deckhouse/deckhouse/pull/19887)
  - **[node-local-dns]** Return stale-dns-connections-cleaner [#18739](https://github.com/deckhouse/deckhouse/pull/18739)
     An additional service daemonset will be added.
@@ -482,6 +509,8 @@
  - **[registrypackages]** Update integrity patch for containerd (cse only). [#17000](https://github.com/deckhouse/deckhouse/pull/17000)
  - **[registrypackages]** Upgraded containerd to 1.7.30 and 2.1.6. [#17510](https://github.com/deckhouse/deckhouse/pull/17510)
     Containerd will restart.
+ - **[service-with-healthchecks]** Bump Go dependencies in the service-with-healthchecks image to fix known CVEs. [#21593](https://github.com/deckhouse/deckhouse/pull/21593)
+    The service-with-healthchecks components (controller, agent) will restart after the update.
  - **[service-with-healthchecks]** Fixed CVEs [#16950](https://github.com/deckhouse/deckhouse/pull/16950)
  - **[terraform-manager]** Fix opentofu patches build after pull request 19080. [#19453](https://github.com/deckhouse/deckhouse/pull/19453)
  - **[terraform-manager]** Fixed terraform CVE. [#17862](https://github.com/deckhouse/deckhouse/pull/17862)
@@ -602,6 +631,7 @@
     All instances will be restarted.
  - **[istio]** Changed GO target version to 1.25. [#17981](https://github.com/deckhouse/deckhouse/pull/17981)
  - **[istio]** Changing the multi-network Istio documentation [#18591](https://github.com/deckhouse/deckhouse/pull/18591)
+ - **[istio]** Fixed CVEs in revisions v1.21 and v1.25. [#22002](https://github.com/deckhouse/deckhouse/pull/22002)
  - **[istio]** Fixed code in api-proxy and metadata-exporter images with linter recommendations. [#17763](https://github.com/deckhouse/deckhouse/pull/17763)
  - **[istio]** Vex mitigation implementation [#20562](https://github.com/deckhouse/deckhouse/pull/20562)
  - **[istio]** Warning about the inability to use user 1337 for user applications [#18601](https://github.com/deckhouse/deckhouse/pull/18601)

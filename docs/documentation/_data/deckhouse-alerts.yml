@@ -1670,6 +1670,47 @@ alerts:
         Istio configuration analysis detected a warning-level issue.
       severity: "4"
       markupFormat: markdown
+    - name: D8IstioCustomCAMaterialInvalid
+      sourceFile: modules/110-istio/monitoring/prometheus-rules/ca.tpl
+      moduleUrl: 110-istio
+      module: istio
+      edition: ce
+      description: |
+        The Istio module is publishing CA material (`{{$labels.source}}`) that failed validation to istiod.
+
+        The module never hard-blocks on module-owned or last-good material (doing so would rotate the mesh root and break mTLS cluster-wide), so it keeps serving this material with only a warning. However, istiod may reject it, which can prevent it from issuing or renewing workload certificates.
+
+        Depending on the `source`:
+
+        - `cacerts` — the `d8-istio/cacerts` Secret (or the CA reused from it) is not a valid CA. Inspect the Secret and restore valid `ca-cert.pem`/`ca-key.pem` (and `root-cert.pem`/`cert-chain.pem` if used).
+        - `secretRef:<namespace>/<name>` — the last-good CA that was previously resolved from this `ca.secretRef` has become invalid (for example, its chain expired). Fix the referenced Secret so the next re-resolution (every 5 minutes) succeeds.
+
+        Refer to the [custom CA documentation](https://deckhouse.io/modules/istio/examples.html).
+      summary: |
+        The Istio custom CA material is invalid but is being served to istiod.
+      severity: "4"
+      markupFormat: markdown
+    - name: D8IstioCustomCASecretRefUnresolved
+      sourceFile: modules/110-istio/monitoring/prometheus-rules/ca.tpl
+      moduleUrl: 110-istio
+      module: istio
+      edition: ce
+      description: |
+        The Istio module could not re-resolve the configured `ca.secretRef` (`{{$labels.source}}`) and is keeping the last successfully-resolved CA.
+
+        The mesh is not regressed — istiod keeps running on the exact CA material it already had — but any change made to the source Secret is not being picked up. Common causes:
+
+        - the referenced Secret was deleted or renamed;
+        - the referenced Secret was made malformed (not valid PEM, not a CA certificate, or a mismatched key pair);
+        - a transient Kubernetes API problem.
+
+        The module re-resolves the Secret every 5 minutes; this alert clears automatically once resolution succeeds. Inspect the referenced Secret and restore valid CA material.
+
+        Refer to the [custom CA documentation](https://deckhouse.io/modules/istio/examples.html).
+      summary: |
+        The Istio custom CA ca.secretRef cannot be resolved.
+      severity: "5"
+      markupFormat: markdown
     - name: D8IstioDataPlaneVersionMismatch
       sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/dataplane.yaml
       moduleUrl: 110-istio
@@ -2355,6 +2396,15 @@ alerts:
         Node {{ $labels.node }} in NodeGroup {{ $labels.node_group }} does not support containerd v2.
         Starting from Kubernetes 1.37, containerd v1.y [will no longer be supported](https://kubernetes.io/docs/setup/production-environment/container-runtimes/#systemd-cgroup-driver).
         Please check the requirements for containerd v2 and schedule your migration plan.
+
+        The exact reason is listed in the `node.deckhouse.io/containerd-v2-err` annotation on the node.
+
+        If the reason is `erofs` and the node runs Ubuntu in AWS, the module is shipped in a separate
+        `linux-modules-extra` package. DKP installs it automatically, but for some kernels, mostly
+        outdated ones, the package is no longer published in the APT repository. In that case, the installation
+        is skipped and a warning is written to the node logs. The problem has been confirmed for the
+        `5.15.0-1028-aws`, `6.8.0-1024-aws`, and `6.8.0-1029-aws` kernels. Switch the node group to a newer AMI
+        or kernel version that includes `erofs`.
       summary: |
         Node {{ $labels.node }} is using deprecated containerd v1 – migration to v2 required.
       severity: "8"
@@ -3162,6 +3212,36 @@ alerts:
       summary: |
         Prometheus can't scrape terraform-state-exporter.
       severity: "8"
+      markupFormat: markdown
+    - name: D8UserAuthnIDTokenTTLTooLong
+      sourceFile: modules/150-user-authn/monitoring/prometheus-rules/dex-deprecation.yaml
+      moduleUrl: 150-user-authn
+      module: user-authn
+      edition: ce
+      description: |
+        The ModuleConfig `user-authn` sets `idTokenTTL: {{ $labels.id_token_ttl }}`.
+
+        Dex is configured with `expiry.signingKeys: 6h`: every 6 hours it rotates the key used to sign ID tokens and keeps previous keys only while tokens signed with them can still be valid.
+
+        `idTokenTTL` maps to Dex `expiry.idTokens`. If that lifetime is greater than or equal to the signing-key rotation period (`6h`), every rotation must retain an extra previous key until all tokens from that key expire. Over time the set of retained signing keys grows without bound and Dex persists that growing key material.
+
+        That is why `idTokenTTL` must be strictly less than `6h`. Lower it, for example:
+
+        ```yaml
+        apiVersion: deckhouse.io/v1alpha1
+        kind: ModuleConfig
+        metadata:
+          name: user-authn
+        spec:
+          version: 2
+          settings:
+            idTokenTTL: 1h
+        ```
+
+        New ModuleConfig values with `idTokenTTL >= 6h` are rejected by OpenAPI validation; this alert covers clusters that still have a long TTL from before the restriction was added.
+      summary: |
+        user-authn idTokenTTL is {{ $labels.id_token_ttl }}, which is too long.
+      severity: "6"
       markupFormat: markdown
     - name: D8UserAuthzLegacyRBACv2CustomRoleFound
       sourceFile: modules/140-user-authz/monitoring/prometheus-rules/legacy-rbacv2-custom-roles.yaml

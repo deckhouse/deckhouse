@@ -54,15 +54,15 @@ var _ = Describe("CredentialSecret webhook", func() {
 		}, `d8-credentials.data.authScheme: Invalid value: "apiToken": authScheme "apiToken" is not allowed`),
 		Entry("missing authScheme", func(secret *corev1.Secret) {
 			delete(secret.Data, cpapi.CredentialSecretAuthSchemeKey)
-		}, `d8-credentials.data.authScheme: Invalid value: "null": authScheme is required`),
+		}, `d8-credentials.data.authScheme: Invalid value: null: authScheme is required`),
 		Entry("missing kubeconfig secret", func(secret *corev1.Secret) {
 			secret.Data[cpapi.CredentialSecretAuthSchemeKey] = []byte(cpapi.AuthSchemeKubeconfig)
 			delete(secret.Data, cpapi.CredentialSecretSecretKey)
-		}, `d8-credentials.data.secret: Invalid value: "null": secret is required for authScheme "kubeconfig"`),
+		}, `d8-credentials.data.secret: Invalid value: null: secret is required for authScheme "kubeconfig"`),
 		Entry("invalid kubeconfig secret", func(secret *corev1.Secret) {
 			secret.Data[cpapi.CredentialSecretAuthSchemeKey] = []byte(cpapi.AuthSchemeKubeconfig)
 			secret.Data[cpapi.CredentialSecretSecretKey] = []byte("not-base64!!!")
-		}, `d8-credentials.data.secret: Invalid value: "not-base64!!!": secret must contain base64-encoded kubeconfig`),
+		}, `d8-credentials.data.secret: Invalid value: "masked": invalid kubeconfig: decode kubeconfig: illegal base64 data at input byte 3`),
 	)
 
 	It("does not require credentials on delete at runtime", func() {

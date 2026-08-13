@@ -1416,6 +1416,11 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/modules/110-istio/monitoring/grafana-dashboards/istio/config-health.json
+  to: /deckhouse/modules/110-istio/monitoring/grafana-dashboards/istio/config-health.json
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /ee/modules/380-metallb/templates/controller
   to: /deckhouse/modules/380-metallb/templates/controller
   excludePaths:

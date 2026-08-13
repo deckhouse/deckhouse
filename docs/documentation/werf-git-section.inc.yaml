@@ -23,7 +23,23 @@
   group: jekyll
   stageDependencies:
     setup: ['**/*']
-  includePaths: ['*config-values.yaml','doc-ru-config-values.yaml','conversions/v*.yml','conversions/v*.yaml']
+  includePaths:
+  - 'doc-ru-config-values.yaml'
+  - 'conversions/v*.yml'
+  - 'conversions/v*.yaml'
+{{- if eq $.Env "CSE"}}
+  - 'doc-ru-config-values.yaml'
+- add: /ee/cse/global-hooks/openapi
+  to: /src/global
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths:
+  - 'config-values.yaml'
+{{- else }}
+  - '*config-values.yaml'
+{{- end }}
 - add: /candi/openapi
   to: /src/global
   owner: jekyll
