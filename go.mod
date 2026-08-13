@@ -109,7 +109,7 @@ require (
 	github.com/090809/oteljsonl v0.0.2 // indirect
 	github.com/Azure/go-ntlmssp v0.1.0 // indirect
 	github.com/VividCortex/ewma v1.2.0 // indirect
-	github.com/antlr4-go/antlr/v4 v4.13.1 // indirect
+	github.com/antlr4-go/antlr/v4 v4.13.0 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/containerd/console v1.0.5 // indirect
@@ -145,6 +145,7 @@ require (
 	github.com/samber/lo v1.51.0 // indirect
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1 // indirect
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
+	github.com/stoewer/go-strcase v1.3.0 // indirect
 	github.com/vbauerster/mpb/v8 v8.12.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/yannh/kubeconform v0.6.7 // indirect
@@ -242,7 +243,7 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/google/btree v1.1.3 // indirect
-	github.com/google/cel-go v0.28.1
+	github.com/google/cel-go v0.26.0
 	github.com/google/certificate-transparency-go v1.3.2 // indirect
 	github.com/google/gnostic-models v0.7.1 // indirect
 	github.com/gookit/color v1.6.0 // indirect
@@ -313,7 +314,6 @@ require (
 	github.com/spf13/cast v1.7.0 // indirect
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10 // indirect
-	github.com/stoewer/go-strcase v1.3.0 // indirect
 	github.com/tetratelabs/wazero v1.8.1 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
@@ -403,4 +403,4 @@ replace github.com/deckhouse/deckhouse/go_lib/controlplane => ./go_lib/controlpl
 // tidy inspects imports under all build tags, so ignore the tree entirely.
 ignore ./ee/modules/110-istio/images
 
-replace github.com/deckhouse/d8sql => ../../deckhouse/d8sql
+replace github.com/deckhouse/d8sql => ./go_lib/d8sql

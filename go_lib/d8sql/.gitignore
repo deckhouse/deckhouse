@@ -1,0 +1,8 @@
+# Compiled binary (built to repo root)
+/d8sql
+.cursor
+
+# Go build/test artifacts
+*.exe
+*.test
+*.out
