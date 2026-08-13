@@ -104,7 +104,7 @@ var _ = Describe("Module :: istio :: helm template :: ztunnel", func() {
 			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
 			f.ValuesSet("istio.internal.globalVersion", "1.29.6")
 			f.ValuesSet("istio.ambient.enabled", true)
-			f.ValuesSet("istio.internal.ca.crl", "-----BEGIN X509 CRL-----\nCRL\n-----END X509 CRL-----")
+			f.ValuesSet("istio.internal.crl", "-----BEGIN X509 CRL-----\nCRL\n-----END X509 CRL-----")
 			f.HelmRender()
 		})
 
@@ -142,7 +142,7 @@ var _ = Describe("Module :: istio :: helm template :: ztunnel", func() {
 			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
 			f.ValuesSet("istio.internal.globalVersion", "1.25.2")
 			f.ValuesSet("istio.ambient.enabled", true)
-			f.ValuesSet("istio.internal.ca.crl", "-----BEGIN X509 CRL-----\nCRL\n-----END X509 CRL-----")
+			f.ValuesSet("istio.internal.crl", "-----BEGIN X509 CRL-----\nCRL\n-----END X509 CRL-----")
 			f.HelmRender()
 		})
 

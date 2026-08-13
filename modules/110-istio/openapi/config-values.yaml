@@ -495,21 +495,6 @@ properties:
         type: string
         description: |
           The root certificate in PEM format if `cert` is an intermediate certificate. Setting `root` to the same certificate as `cert` explicitly anchors mesh trust at that certificate; this is allowed even for a non-self-signed intermediate, but rotating it later changes the mesh root (a mesh-wide trust event).
-      crl:
-        type: string
-        description: |
-          Certificate Revocation List (CRL) in PEM format for a plugged-in CA (`ca.cert` / `ca.key`).
-
-          Istiod distributes the CRL to mesh namespaces as the `istio-ca-crl` ConfigMap.
-          When ambient mode is enabled and the control plane version is 1.29 or newer,
-          ztunnel mounts this ConfigMap and enforces CRL checks on peer certificates.
-
-          Requires a custom (plugged-in) CA. The default self-signed Istio CA does not support CRL distribution.
-        x-examples:
-        - |
-          -----BEGIN X509 CRL-----
-          MIIB...
-          -----END X509 CRL-----
       secretRef:
         type: object
         description: |
@@ -536,6 +521,31 @@ properties:
             description: Namespace of the Secret. If not specified, the Secret is looked up in the module namespace.
             default: d8-istio
             pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+  crl:
+    type: string
+    description: |
+      Optional Certificate Revocation List (CRL) override in PEM format.
+
+      When unset, the module always publishes an empty dummy CRL signed by the
+      current mesh CA into Secret `cacerts` (`ca-crl.pem`). That keeps ztunnel
+      CRL wiring ready from day one so an incident revoke is a hot reload, not a
+      DaemonSet rollout.
+
+      When set, the value is published as-is (one or more PEM CRL blocks, for
+      example a root-signed CRL and intermediate-signed CRLs concatenated).
+      Generating the PEM (which serials, which issuer) is the operator's
+      responsibility.
+
+      Istiod distributes `ca-crl.pem` to mesh namespaces as the `istio-ca-crl`
+      ConfigMap. With ambient mode and control plane 1.29+, ztunnel mounts it and
+      enforces CRL checks on peer certificate chains.
+
+      Requires CA material in `cacerts` (module-generated or plugged-in via `ca`).
+    x-examples:
+    - |
+      -----BEGIN X509 CRL-----
+      MIIB...
+      -----END X509 CRL-----
   jwksResolverAdditionalRootCA:
     type: string
     description: |

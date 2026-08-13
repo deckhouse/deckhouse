@@ -83,9 +83,9 @@ properties:
               re-resolution may keep the last-good CA (only when the marker matches the current
               secretRef).
             x-examples: ["secretRef:my-pki/my-istio-ca"]
-          crl:
-            type: string
-            x-examples: ["---CRL PEM---"]
+      crl:
+        type: string
+        x-examples: ["---CRL PEM---"]
       federations:
         type: array
         default: []
