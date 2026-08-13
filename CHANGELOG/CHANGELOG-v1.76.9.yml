@@ -1,77 +1,30 @@
-cloud-provider-aws:
-  fixes:
-    - summary: >-
-        Do not fail the node bootstrap or update when `linux-modules-extra` is unavailable for the running
-        kernel.
-      pull_request: https://github.com/deckhouse/deckhouse/pull/21953
 deckhouse:
   fixes:
-    - summary: Locate CRDs by repository contents.
-      pull_request: https://github.com/deckhouse/deckhouse/pull/21819
-    - summary: stop false drift detection reinstalling packages with helm hooks
-      pull_request: https://github.com/deckhouse/deckhouse/pull/21840
-    - summary: An unset `settings.update.mode` now defaults to `AutoPatch` instead of silently running
-        as `Auto`.
-      pull_request: https://github.com/deckhouse/deckhouse/pull/21927
-    - summary: >-
-        Fix a minor Deckhouse release being auto-applied as a patch when no Deployed release object is
-        present.
-      pull_request: https://github.com/deckhouse/deckhouse/pull/21985
-    - summary: limit the impact of a failed documentation build
-      pull_request: https://github.com/deckhouse/deckhouse/pull/22017
-    - summary: Surface layer read errors instead of extracting a truncated image
-      pull_request: https://github.com/deckhouse/deckhouse/pull/22029
-deckhouse-controller:
-  fixes:
-    - summary: Module releases rendered with nelm no longer raise false absent-resource alerts.
-      pull_request: https://github.com/deckhouse/deckhouse/pull/21831
-    - summary: >-
-        nelm now takes over fields left by the old Helm 3 engine, so stale fields get removed on module
-        upgrade.
-      pull_request: https://github.com/deckhouse/deckhouse/pull/21831
+    - summary: Do not inject source registry into a still-embedded module
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22054
 docs:
-  features:
-    - summary: Add upmeter module architecture section.
-      pull_request: https://github.com/deckhouse/deckhouse/pull/21801
-    - summary: Add descheduler module architecture section.
-      pull_request: https://github.com/deckhouse/deckhouse/pull/21905
-    - summary: Add cni-cilium module architecture section.
-      pull_request: https://github.com/deckhouse/deckhouse/pull/21973
   fixes:
-    - summary: Clarify that DKP does not support version downgrades
-      pull_request: https://github.com/deckhouse/deckhouse/pull/21807
-    - summary: Add nil-safety guards for OpenAPI extraction to prevent panics.
-      pull_request: https://github.com/deckhouse/deckhouse/pull/21812
-    - summary: Fixed incorrect description of allowedHostPaths in SecurityPolicy documentation.
-      pull_request: https://github.com/deckhouse/deckhouse/pull/21642
-    - summary: Fix broken documentation links
-      pull_request: https://github.com/deckhouse/deckhouse/pull/21884
-    - summary: Clarified AutoPatch update mode and external module update settings.
-      pull_request: https://github.com/deckhouse/deckhouse/pull/21975
-documentation:
-  fixes:
-    - summary: >-
-        Fix a memory leak in the documentation builder so memory is released between builds; add CPU/memory
-        limits and an opt-in profiling endpoint.
-      pull_request: https://github.com/deckhouse/deckhouse/pull/21935
+    - summary: Fixed ModuleUpdatePolicy example in release channel FAQ.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22058
 istio:
   fixes:
-    - summary: Add missing tools to proxyv2 images so the application-aware proxy termination hook works
-        correctly.
-      pull_request: https://github.com/deckhouse/deckhouse/pull/22026
-node-local-dns:
+    - summary: Fix graceful draining of established HTTP connections when application pods terminate.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22065
+    - summary: Create the ConfigMaps required for additional JWKS root CA certificates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22124
+keepalived:
   fixes:
-    - summary: Bump Go dependencies in the coredns helper image to fix known CVEs.
-      pull_request: https://github.com/deckhouse/deckhouse/pull/21873
-      impact: The node-local-dns DaemonSet pods will restart after the update.
-tools:
+    - summary: Fixed Python linking in the keepalived module image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22066
+network-gateway:
   fixes:
-    - summary: >-
-        Fixed module release validation incorrectly failing for `!optional` dependencies when the required
-        module doesn't exist in the cluster.
-      pull_request: https://github.com/deckhouse/deckhouse/pull/21944
-user-authn:
+    - summary: Fixed Python linking in the network-gateway module image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22066
+registry:
   fixes:
-    - summary: ClusterAdmin can watch the Dex storage CRDs (passwords, offlinesessionses), not only list
-        them.
-      pull_request: https://github.com/deckhouse/deckhouse/pull/21794
+    - summary: Fix DKP bootstrap retry by keeping the `registry-init` secret.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22082
+registrypackages:
+  fixes:
+    - summary: Rebuild kubernetes-cni with updated Go dependencies to fix CVEs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21960
