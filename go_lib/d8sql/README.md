@@ -101,7 +101,10 @@ Options:
 - `d8sql.WithVirtualTable(name, rows)` — register a read-only in-memory table queryable by `name` in `FROM` (see [Virtual tables](#virtual-tables)). May be called several times, once per table.
 - `d8sql.WithListConcurrency(n)` — max concurrent `List` calls when a query fans out into several lists, i.e. `metadata.namespace IN (...)` and the join field-selector probe (default 8; `<= 1` lists sequentially). Writes are never concurrent regardless of this setting.
 
-A runnable example lives in [`example/`](./example).
+A runnable example lives in [`example/`](./example): `go run ./example` runs the
+read-only queries, and `go run ./example -write` additionally runs an
+`INSERT` → `UPDATE` → `DELETE` batch that creates a ConfigMap and removes it
+again. Writing is opt-in so the example cannot change a cluster by accident.
 
 ## Resource name formats
 
