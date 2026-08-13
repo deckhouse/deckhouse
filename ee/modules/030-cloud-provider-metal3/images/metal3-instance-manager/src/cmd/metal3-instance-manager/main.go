@@ -35,13 +35,16 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 const (
 	finalizerName = "metal3instance.internal.deckhouse.io"
 
-	labelInstance = "metal3.deckhouse.io/instance"
-	labelPool     = "pool"
+	labelInstance          = "metal3.deckhouse.io/instance"
+	labelInstanceNamespace = "metal3.deckhouse.io/instance-namespace"
+	labelPool              = "pool"
 )
 
 var (
@@ -99,6 +102,8 @@ func main() {
 
 	instance := &unstructured.Unstructured{}
 	instance.SetGroupVersionKind(metal3InstanceGVK)
+	bmh := &unstructured.Unstructured{}
+	bmh.SetGroupVersionKind(bareMetalHostGVK)
 
 	r := &reconciler{
 		Client:                       mgr.GetClient(),
@@ -107,7 +112,10 @@ func main() {
 		defaultAutomatedCleaningMode: defaultAutomatedCleaningMode,
 	}
 
-	if err := ctrl.NewControllerManagedBy(mgr).For(instance).Complete(r); err != nil {
+	if err := ctrl.NewControllerManagedBy(mgr).
+		For(instance).
+		Watches(bmh, handler.EnqueueRequestsFromMapFunc(r.bareMetalHostToInstance)).
+		Complete(r); err != nil {
 		fmt.Fprintf(os.Stderr, "create controller: %v\n", err)
 		os.Exit(1)
 	}
@@ -140,18 +148,19 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	spec, err := r.readSpec(instance)
 	if err != nil {
-		return ctrl.Result{}, r.setStatus(ctx, instance, "", "", err.Error())
+		return ctrl.Result{}, r.setStatus(ctx, instance, nil, "", err.Error())
 	}
 
 	if err := r.ensureCredentialSecret(ctx, instance, spec); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	if err := r.ensureBareMetalHost(ctx, instance, spec); err != nil {
+	bmh, err := r.ensureBareMetalHost(ctx, instance, spec)
+	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	return ctrl.Result{}, r.setStatus(ctx, instance, instance.GetName(), r.generatedSecretName(instance), "")
+	return ctrl.Result{}, r.setStatus(ctx, instance, bmh, r.generatedSecretName(instance), "")
 }
 
 func (r *reconciler) reconcileDelete(ctx context.Context, instance *unstructured.Unstructured) (ctrl.Result, error) {
@@ -269,7 +278,7 @@ func (r *reconciler) ensureCredentialSecret(ctx context.Context, instance *unstr
 	return r.Update(ctx, target)
 }
 
-func (r *reconciler) ensureBareMetalHost(ctx context.Context, instance *unstructured.Unstructured, spec instanceSpec) error {
+func (r *reconciler) ensureBareMetalHost(ctx context.Context, instance *unstructured.Unstructured, spec instanceSpec) (*unstructured.Unstructured, error) {
 	desired := map[string]interface{}{
 		"online":                spec.Online,
 		"automatedCleaningMode": spec.AutomatedCleaningMode,
@@ -286,7 +295,8 @@ func (r *reconciler) ensureBareMetalHost(ctx context.Context, instance *unstruct
 	}
 
 	labels := map[string]string{
-		labelInstance: instance.GetName(),
+		labelInstance:          instance.GetName(),
+		labelInstanceNamespace: instance.GetNamespace(),
 	}
 	if spec.Pool != "" {
 		labels[labelPool] = spec.Pool
@@ -297,15 +307,15 @@ func (r *reconciler) ensureBareMetalHost(ctx context.Context, instance *unstruct
 	key := types.NamespacedName{Namespace: r.targetNamespace, Name: instance.GetName()}
 	if err := r.Get(ctx, key, bmh); err != nil {
 		if !apierrors.IsNotFound(err) {
-			return err
+			return nil, err
 		}
 		bmh.SetNamespace(key.Namespace)
 		bmh.SetName(key.Name)
 		bmh.SetLabels(labels)
 		if err := unstructured.SetNestedMap(bmh.Object, desired, "spec"); err != nil {
-			return err
+			return nil, err
 		}
-		return r.Create(ctx, bmh)
+		return bmh, r.Create(ctx, bmh)
 	}
 
 	existingLabels := bmh.GetLabels()
@@ -317,20 +327,17 @@ func (r *reconciler) ensureBareMetalHost(ctx context.Context, instance *unstruct
 	}
 	bmh.SetLabels(existingLabels)
 	if err := unstructured.SetNestedMap(bmh.Object, desired, "spec"); err != nil {
-		return err
+		return nil, err
 	}
-	return r.Update(ctx, bmh)
+	return bmh, r.Update(ctx, bmh)
 }
 
-func (r *reconciler) setStatus(ctx context.Context, instance *unstructured.Unstructured, bmhName, secretName, message string) error {
+func (r *reconciler) setStatus(ctx context.Context, instance *unstructured.Unstructured, bmh *unstructured.Unstructured, secretName, message string) error {
 	status := map[string]interface{}{
 		"observedGeneration": instance.GetGeneration(),
 	}
-	if bmhName != "" {
-		status["bareMetalHost"] = map[string]interface{}{
-			"name":      bmhName,
-			"namespace": r.targetNamespace,
-		}
+	if bmh != nil {
+		status["bareMetalHost"] = r.bareMetalHostStatus(bmh)
 	}
 	if secretName != "" {
 		status["credentialsSecret"] = map[string]interface{}{
@@ -343,6 +350,58 @@ func (r *reconciler) setStatus(ctx context.Context, instance *unstructured.Unstr
 	}
 	instance.Object["status"] = status
 	return r.Status().Update(ctx, instance)
+}
+
+func (r *reconciler) bareMetalHostToInstance(_ context.Context, obj client.Object) []reconcile.Request {
+	labels := obj.GetLabels()
+	if labels == nil {
+		return nil
+	}
+
+	name := labels[labelInstance]
+	namespace := labels[labelInstanceNamespace]
+	if name == "" || namespace == "" {
+		return nil
+	}
+
+	return []reconcile.Request{{
+		NamespacedName: types.NamespacedName{
+			Namespace: namespace,
+			Name:      name,
+		},
+	}}
+}
+
+func (r *reconciler) bareMetalHostStatus(bmh *unstructured.Unstructured) map[string]interface{} {
+	status := map[string]interface{}{
+		"name":      bmh.GetName(),
+		"namespace": bmh.GetNamespace(),
+	}
+
+	if state, ok, _ := unstructured.NestedString(bmh.Object, "status", "provisioning", "state"); ok {
+		status["state"] = state
+	}
+	if online, ok, _ := unstructured.NestedBool(bmh.Object, "spec", "online"); ok {
+		status["online"] = online
+	}
+	if consumer := bareMetalHostConsumer(bmh); consumer != "" {
+		status["consumer"] = consumer
+	}
+	if message, ok, _ := unstructured.NestedString(bmh.Object, "status", "errorMessage"); ok {
+		status["error"] = message
+	}
+
+	return status
+}
+
+func bareMetalHostConsumer(bmh *unstructured.Unstructured) string {
+	if name, ok, _ := unstructured.NestedString(bmh.Object, "status", "consumerRef", "name"); ok {
+		return name
+	}
+	if name, ok, _ := unstructured.NestedString(bmh.Object, "spec", "consumerRef", "name"); ok {
+		return name
+	}
+	return ""
 }
 
 func (r *reconciler) generatedSecretName(instance *unstructured.Unstructured) string {
