@@ -110,6 +110,8 @@ These settings do not apply if the cluster control plane is managed by a cloud p
 
 Upgrading **minor versions** of control plane components (e.g. from `1.32.*` to `1.33.*`) can be managed using the [`kubernetesVersion`](configuration.html#parameters-kubernetesversion) parameter of the `control-plane-manager` ModuleConfig. It specifies tracking the Deckhouse default (if set to `Default`) or the desired minor version of the control plane. The default control plane version (to use with `kubernetesVersion: Default`) as well as a list of supported Kubernetes versions can be found in [the documentation](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html).
 
+The cluster Kubernetes version is resolved in one order: `kubernetesVersion` in the `control-plane-manager` ModuleConfig, then the deprecated [`ClusterConfiguration.kubernetesVersion`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion), then the version the current Deckhouse release defaults to. The ModuleConfig setting wins whenever it is set, `Default` included; while it is unset, the deprecated field still decides, and Deckhouse raises the `D8UnsetKubernetesVersionInModuleConfig` alert asking you to migrate.
+
 Example of pinning a Kubernetes version:
 
 ```yaml

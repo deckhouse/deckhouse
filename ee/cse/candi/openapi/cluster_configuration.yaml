@@ -143,9 +143,9 @@ apiVersions:
         description: |
           **Deprecated.** Use [`kubernetesVersion`](/modules/control-plane-manager/configuration.html#parameters-kubernetesversion) in the `control-plane-manager` ModuleConfig instead (`d8 k edit mc control-plane-manager`).
 
-          When the ModuleConfig field is set, it takes precedence over this field.
-          The field is optional: if omitted here and unset in ModuleConfig, Deckhouse uses the current release default.
-          While `kubernetesVersion` is unset in ModuleConfig — whether or not it is pinned here — Deckhouse raises the `D8UnsetKubernetesVersionInModuleConfig` alert.
+          The cluster Kubernetes version is resolved in one order: `kubernetesVersion` in the `control-plane-manager` ModuleConfig, then this field, then the version the current Deckhouse release defaults to. The ModuleConfig setting wins whenever it is set, `Default` included.
+
+          This field is optional. While it pins a version and the ModuleConfig setting is unset, this field is what decides the cluster version, and Deckhouse raises the `D8UnsetKubernetesVersionInModuleConfig` alert asking you to migrate.
 
           Do not change this field in a running cluster to upgrade or downgrade Kubernetes — change ModuleConfig instead.
 
