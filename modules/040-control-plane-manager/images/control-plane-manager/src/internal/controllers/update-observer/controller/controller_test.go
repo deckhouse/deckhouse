@@ -76,7 +76,8 @@ func (suite *ControllerTestSuite) TestConfigMapIsValid() {
 		suite.T().Setenv("ALLOWED_KUBERNETES_VERSIONS", "1.32,1.33,1.34,1.35,1.36")
 		suite.T().Setenv("AUTOMATIC_KUBERNETES_VERSION", "1.34")
 
-		// No ConfigMap in this fixture on purpose: the bootstrap path, created from the environment.
+		// The ConfigMap in this fixture is the dhctl seed: data.spec and the identifying labels only,
+		// which is what makes this pass the "init" trigger.
 		suite.Run("When cluster is up to date", func() {
 			suite.setVersionEnv("1.35", "Automatic", "1.35")
 			suite.setupController(suite.fetchTestFileData("init-up-to-date.yaml"))
@@ -227,8 +228,7 @@ func assembleInitObject(t *testing.T, strObj string) client.Object {
 	return res
 }
 
-// withConfigMap=false drops the case's own ConfigMap, exercising the bootstrap path.
-func newTestReconciler(t *testing.T, filename string, withConfigMap bool) (*reconciler, client.Client) {
+func newTestReconciler(t *testing.T, filename string) (*reconciler, client.Client) {
 	t.Helper()
 
 	data, err := os.ReadFile(filepath.Join("./testdata/cases", filename))
@@ -237,11 +237,7 @@ func newTestReconciler(t *testing.T, filename string, withConfigMap bool) (*reco
 	manifests := helmreleaseutil.SplitManifests(string(data))
 	objects := make([]client.Object, 0, len(manifests))
 	for _, manifest := range manifests {
-		obj := assembleInitObject(t, manifest)
-		if _, isConfigMap := obj.(*corev1.ConfigMap); isConfigMap && !withConfigMap {
-			continue
-		}
-		objects = append(objects, obj)
+		objects = append(objects, assembleInitObject(t, manifest))
 	}
 
 	k8sClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
@@ -268,7 +264,7 @@ func TestReconcileWritesNothingOnBrokenEnvironment(t *testing.T) {
 		t.Setenv("KUBERNETES_UPDATE_MODE", "Automatic")
 		t.Setenv("MAX_USED_KUBERNETES_VERSION", "1.35")
 
-		rec, k8sClient := newTestReconciler(t, "pods-failed.yaml", true)
+		rec, k8sClient := newTestReconciler(t, "pods-failed.yaml")
 		before := readClusterConfigMap(t, context.Background(), k8sClient)
 
 		result, err := rec.Reconcile(context.Background(), reconcile.Request{})
@@ -291,7 +287,7 @@ func TestReconcileSelfTriggerConverges(t *testing.T) {
 		t.Setenv("MAX_USED_KUBERNETES_VERSION", "1.35")
 
 		ctx := context.Background()
-		rec, k8sClient := newTestReconciler(t, "init-up-to-date.yaml", false)
+		rec, k8sClient := newTestReconciler(t, "init-up-to-date.yaml")
 
 		_, err := rec.Reconcile(ctx, reconcile.Request{})
 		require.NoError(t, err)
@@ -318,7 +314,7 @@ func TestAvailableVersionsFollowTheComputedMaxUsed(t *testing.T) {
 
 		ctx := context.Background()
 		// The fixture's label still says 1.32 — the cluster has not finished the hop yet.
-		rec, k8sClient := newTestReconciler(t, "upgrade-three-hops.yaml", true)
+		rec, k8sClient := newTestReconciler(t, "upgrade-three-hops.yaml")
 
 		_, err := rec.Reconcile(ctx, reconcile.Request{})
 		require.NoError(t, err)

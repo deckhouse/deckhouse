@@ -25,7 +25,6 @@ import (
 
 	"go.yaml.in/yaml/v2"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"control-plane-manager/internal/controllers/update-observer/cluster"
@@ -71,35 +70,21 @@ type Nodes struct {
 	UpToDateCount int `yaml:"upToDateCount"`
 }
 
+// The object always exists: dhctl creates it at bootstrap, and every release since update-observer
+// landed has kept it. NotFound is therefore a real error and requeues, rather than a bootstrap path
+// worth synthesizing an object for.
 func (r *reconciler) getConfigMap(ctx context.Context) (*corev1.ConfigMap, error) {
 	cm := &corev1.ConfigMap{}
-	err := r.client.Get(ctx, client.ObjectKey{
+	if err := r.client.Get(ctx, client.ObjectKey{
 		Name:      common.ConfigMapName,
 		Namespace: common.KubeSystemNamespace,
-	}, cm)
-
-	if client.IgnoreNotFound(err) != nil {
+	}, cm); err != nil {
 		return nil, err
-	}
-
-	// NotFound is a bootstrap path: this controller authors every key, so it synthesizes the object
-	// and touchConfigMap creates it (keyed off the empty ResourceVersion).
-	if err != nil {
-		cm = &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        common.ConfigMapName,
-				Namespace:   common.KubeSystemNamespace,
-				Annotations: map[string]string{},
-				Labels:      identifyingLabels(),
-			},
-		}
 	}
 
 	return cm, nil
 }
 
-// The name label is load-bearing: the webhook forbidding deletion selects on it, and heritage sits on
-// hundreds of objects so widening that selector would catch every ConfigMap in kube-system.
 func identifyingLabels() map[string]string {
 	return map[string]string{
 		common.HeritageLabelKey: common.DeckhouseLabel,
@@ -222,16 +207,7 @@ func renderConfigMapData(clusterState *cluster.State) ConfigMapData {
 	}
 }
 
-// An empty ResourceVersion means getConfigMap synthesized the object, so this is a create.
 func (r *reconciler) touchConfigMap(ctx context.Context, configMap *corev1.ConfigMap) error {
-	if configMap.ResourceVersion == "" {
-		if err := r.client.Create(ctx, configMap); err != nil {
-			return fmt.Errorf("failed to create configMap: %w", err)
-		}
-
-		return nil
-	}
-
 	if err := r.client.Update(ctx, configMap); err != nil {
 		return fmt.Errorf("failed to update configMap: %w", err)
 	}

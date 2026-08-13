@@ -142,3 +142,18 @@ status:
       state:
         running:
           startedAt: "2026-01-28T06:34:19Z"
+---
+# The dhctl seed: data.spec and the identifying labels, no status and no k8s-version label yet.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    heritage: deckhouse
+    name: d8-cluster-kubernetes
+  name: d8-cluster-kubernetes
+  namespace: kube-system
+data:
+  spec: |
+    desiredVersion: "1.35"
+    updateMode: Automatic
+    maxUsedKubernetesVersion: "1.35"

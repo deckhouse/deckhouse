@@ -18,17 +18,11 @@ package controller
 
 import (
 	"context"
-	"errors"
-	"fmt"
-	"log/slog"
 	"time"
 
 	"go.yaml.in/yaml/v2"
 	"golang.org/x/time/rate"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -40,7 +34,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 
@@ -69,22 +62,11 @@ var logger = log.NewLogger().Named("update-observer")
 
 type reconciler struct {
 	client client.Client
-
-	// Carries the first enqueue when the ConfigMap does not exist yet; buffered so the sender never
-	// blocks.
-	bootstrap chan event.GenericEvent
 }
 
 func RegisterController(mgr manager.Manager) error {
 	r := &reconciler{
-		client:    mgr.GetClient(),
-		bootstrap: make(chan event.GenericEvent, 1),
-	}
-
-	// An informer delivers nothing for an object that does not exist, so without this a missing
-	// ConfigMap leaves the controller idle.
-	if err := mgr.Add(manager.RunnableFunc(r.bootstrapConfigMap)); err != nil {
-		return fmt.Errorf("add the ConfigMap bootstrap runnable: %w", err)
+		client: mgr.GetClient(),
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).
@@ -122,49 +104,7 @@ func RegisterController(mgr manager.Manager) error {
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(getNodeGroupPredicate()),
 		).
-		// Fed by bootstrapConfigMap, so its wake-up goes through the same workqueue as everything else.
-		WatchesRawSource(source.Channel(r.bootstrap, &handler.EnqueueRequestForObject{})).
 		Complete(r)
-}
-
-// Returns on the first check when the ConfigMap is there, and otherwise asks for a reconcile until
-// it is. It *asks* rather than calls because MaxConcurrentReconciles is 1: a direct call could run
-// alongside a queued pass and both would Create the object.
-func (r *reconciler) bootstrapConfigMap(ctx context.Context) error {
-	err := wait.PollUntilContextCancel(ctx, requeueInterval, true, func(ctx context.Context) (bool, error) {
-		getErr := r.client.Get(ctx, client.ObjectKey{
-			Name:      common.ConfigMapName,
-			Namespace: common.KubeSystemNamespace,
-		}, &corev1.ConfigMap{})
-		if getErr == nil {
-			return true, nil
-		}
-
-		if !apierrors.IsNotFound(getErr) {
-			logger.Warn("Cannot check whether the cluster ConfigMap exists, retrying",
-				slog.String("namespace", common.KubeSystemNamespace), slog.String("name", common.ConfigMapName), log.Err(getErr))
-			return false, nil
-		}
-
-		logger.Info("Cluster ConfigMap does not exist, requesting a reconcile to create it",
-			"namespace", common.KubeSystemNamespace, "name", common.ConfigMapName)
-		// Non-blocking: the next tick re-checks existence rather than trusting this send.
-		select {
-		case r.bootstrap <- event.GenericEvent{Object: &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{
-			Name:      common.ConfigMapName,
-			Namespace: common.KubeSystemNamespace,
-		}}}:
-		default:
-		}
-
-		return false, nil
-	})
-
-	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-		return nil
-	}
-
-	return err
 }
 
 // Reacts only when data["spec"] changed: this controller writes that block itself, so the filter's
@@ -205,14 +145,8 @@ func getConfigMapSpecPredicate() predicate.Predicate {
 			return parseSpec(oldCM) != parseSpec(newCM)
 		},
 
-		// The only durable record of maxUsedKubernetesVersion: a delete that got past the webhook must
-		// be followed by a recreate.
 		DeleteFunc: func(e event.DeleteEvent) bool {
-			cm, ok := e.Object.(*corev1.ConfigMap)
-			if !ok {
-				return false
-			}
-			return isTarget(cm)
+			return false
 		},
 
 		GenericFunc: func(e event.GenericEvent) bool {
@@ -290,8 +224,8 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 func determineReconcileTrigger(configMap *corev1.ConfigMap, clusterCfg *cluster.Configuration) ReconcileTrigger {
 	previousVersion, exists := configMap.GetLabels()[common.K8sVersionLabelKey]
 
-	// A missing k8s-version label is the first-run signal: dhctl seeds labels and data.spec only, and
-	// ResourceVersion is already non-empty on that object.
+	// A missing k8s-version label is the first-run signal: dhctl seeds the identifying labels and
+	// data.spec, and leaves this one for the first reconcile to write.
 	if !exists {
 		return ReconcileTriggerInit
 	}
