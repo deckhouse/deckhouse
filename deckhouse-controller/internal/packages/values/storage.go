@@ -52,7 +52,8 @@ type Storage struct {
 
 	// settings are user-defined values from package settings
 	// These are stored separately before merging with static and openapi values
-	settings addonutils.Values
+	settings        addonutils.Values
+	settingsVersion int // schema version used to produce settings
 
 	// grantDefaults are runtime-resolved defaults for fields tagged with
 	// x-deckhouse-grantable-resource. They are injected by the grantDefaultsTransformer
@@ -171,8 +172,9 @@ func (s *Storage) ApplySettingsDefaults(settings addonutils.Values) addonutils.V
 }
 
 // ValidateSettings validates values against the config OpenAPI schema.
-// Does not modify the stored values - use ApplySettings to persist.
-func (s *Storage) ValidateSettings(settings addonutils.Values) error {
+// Stored settings are exposed to CEL as oldSelf only when their schema version matches.
+// This method does not modify stored values; use ApplySettings to persist them.
+func (s *Storage) ValidateSettings(settingsVersion int, settings addonutils.Values) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -180,16 +182,16 @@ func (s *Storage) ValidateSettings(settings addonutils.Values) error {
 		settings = addonutils.Values{}
 	}
 
-	if err := s.validateSettings(settings); err != nil {
+	if err := s.validateSettings(settingsVersion, settings); err != nil {
 		return fmt.Errorf("validate config values: %w", err)
 	}
 
 	return nil
 }
 
-// ApplySettings validates and saves user-defined config values.
+// ApplySettings validates and saves versioned user-defined config values.
 // After saving, recalculates the result values with all layers merged.
-func (s *Storage) ApplySettings(settings addonutils.Values) error {
+func (s *Storage) ApplySettings(settingsVersion int, settings addonutils.Values) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -197,11 +199,12 @@ func (s *Storage) ApplySettings(settings addonutils.Values) error {
 		settings = addonutils.Values{}
 	}
 
-	if err := s.validateSettings(settings); err != nil {
+	if err := s.validateSettings(settingsVersion, settings); err != nil {
 		return fmt.Errorf("validate config values: %w", err)
 	}
 
 	s.settings = settings
+	s.settingsVersion = settingsVersion
 
 	return s.calculateResultValues()
 }
@@ -328,7 +331,8 @@ func (s *Storage) validateValues(values addonutils.Values) error {
 // Previously stored user settings are passed as the old state so that
 // x-deckhouse-validations transition rules (rules referencing oldSelf) can
 // implement immutability and other update-time invariants on ModuleConfig.
-func (s *Storage) validateSettings(values addonutils.Values) error {
+// Settings from a different schema version are not comparable and are omitted.
+func (s *Storage) validateSettings(settingsVersion int, values addonutils.Values) error {
 	validatableValues := addonutils.Values{s.name: values}
 
 	if s.schemaStorage.GetSchema(schema.TypeSettings) == nil && len(values) > 0 {
@@ -336,7 +340,7 @@ func (s *Storage) validateSettings(values addonutils.Values) error {
 	}
 
 	var oldValidatable addonutils.Values
-	if s.settings != nil {
+	if s.settings != nil && s.settingsVersion == settingsVersion {
 		oldValidatable = addonutils.Values{s.name: s.settings}
 	}
 

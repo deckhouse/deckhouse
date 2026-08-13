@@ -234,12 +234,12 @@ func (m *Module) ValidateSettings(_ context.Context, settingsVersion int, settin
 	// Convert to latest schema version before validation
 	if m.converter != nil && settingsVersion > 0 {
 		var err error
-		_, settings, err = m.converter.ConvertToLatest(settingsVersion, settings)
+		settingsVersion, settings, err = m.converter.ConvertToLatest(settingsVersion, settings)
 		if err != nil {
 			return settingscheck.Result{}, fmt.Errorf("convert settings: %w", err)
 		}
 	}
-	if err := m.values.ValidateSettings(settings); err != nil {
+	if err := m.values.ValidateSettings(settingsVersion, settings); err != nil {
 		return settingscheck.Result{}, err
 	}
 
@@ -262,12 +262,12 @@ func (m *Module) ApplySettings(settingsVersion int, settings addonutils.Values) 
 	// Convert to latest schema version before applying
 	if m.converter != nil && settingsVersion > 0 {
 		var err error
-		_, settings, err = m.converter.ConvertToLatest(settingsVersion, settings)
+		settingsVersion, settings, err = m.converter.ConvertToLatest(settingsVersion, settings)
 		if err != nil {
 			return fmt.Errorf("convert settings: %w", err)
 		}
 	}
-	return m.values.ApplySettings(settings)
+	return m.values.ApplySettings(settingsVersion, settings)
 }
 
 // GetSettings returns the effective settings: user config merged with

@@ -340,7 +340,7 @@ func (a *Application) GetSettingsChecksum() string {
 
 // ValidateSettings validates settings against openAPI and call setting check if exists
 func (a *Application) ValidateSettings(ctx context.Context, _ int, settings addonutils.Values) (settingscheck.Result, error) {
-	if err := a.values.ValidateSettings(settings); err != nil {
+	if err := a.values.ValidateSettings(0, settings); err != nil {
 		return settingscheck.Result{}, err
 	}
 
@@ -380,7 +380,7 @@ func (a *Application) ApplySettings(_ int, settings addonutils.Values) error {
 		return err
 	}
 
-	return a.values.ApplySettings(settings)
+	return a.values.ApplySettings(0, settings)
 }
 
 // resolveGrantDefaults resolves the per-project default for every
