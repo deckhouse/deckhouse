@@ -22,6 +22,8 @@ import (
 	"math/rand"
 	"testing"
 
+	"k8s.io/apimachinery/pkg/util/intstr"
+
 	"github.com/stretchr/testify/require"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
@@ -35,17 +37,59 @@ const (
 	propertyIterations = 2000
 )
 
-func TestResolvedNodeGroup_LegacyParityProperty(t *testing.T) {
+// The published element has invariants that hold for every NodeGroup, whatever its spec: which
+// keys are always there, which appear only with the cloud overlay, and which must never leak in.
+// A key published empty is different data from an absent key — bashible-apiserver hashes the
+// parsed element, so either mistake re-runs bashible on every node of the group.
+func TestResolvedNodeGroup_ShapeInvariantsProperty(t *testing.T) {
 	rng := rand.New(rand.NewSource(propertySeed))
+
+	alwaysPresent := []string{
+		"name", "nodeType", "engine", "manualRolloutID",
+		"kubernetesVersion", "serializedLabels", "serializedTaints", "updateEpoch", "cri",
+	}
 
 	for i := range propertyIterations {
 		in, result := randomResolveInput(rng)
+		out := resolvedMap(in, result)
 
-		require.Equalf(t,
-			legacyBuildNodeGroupBlob(in, result),
-			resolvedMap(in, result),
-			"iteration %d\ninput: %#v\nresult: %#v", i, in, result,
-		)
+		for _, key := range alwaysPresent {
+			require.Containsf(t, out, key, "iteration %d: %q must always be published", i, key)
+		}
+
+		// cri.type is the resolved value, never the spec's own.
+		cri, ok := out["cri"].(map[string]interface{})
+		require.Truef(t, ok, "iteration %d: cri must be an object", i)
+		require.Equalf(t, result.CRIType, cri["type"], "iteration %d: cri.type must be the resolved one", i)
+
+		// The cloud overlay is gated as a whole, and instanceClass is present-with-null rather
+		// than absent once the gate opens.
+		if in.CloudProcessed {
+			require.Containsf(t, out, "instanceClass", "iteration %d: overlay must publish instanceClass", i)
+			require.Containsf(t, out, "cloudInstances", "iteration %d: overlay must publish cloudInstances", i)
+			ci, ok := out["cloudInstances"].(map[string]interface{})
+			require.Truef(t, ok, "iteration %d: cloudInstances must be an object", i)
+			require.Equalf(t, result.Zones, ci["zones"], "iteration %d: resolved zones overlaid verbatim", i)
+		} else {
+			require.NotContainsf(t, out, "instanceClass", "iteration %d: no overlay without the gate", i)
+			require.NotContainsf(t, out, "nodeCapacity", "iteration %d: no overlay without the gate", i)
+		}
+
+		// static belongs to Static NodeGroups only.
+		if in.NodeType != v1.NodeTypeStatic {
+			require.NotContainsf(t, out, "static", "iteration %d: static must not leak into %s", i, in.NodeType)
+		}
+
+		// Nothing outside the allowlist ever reaches the node.
+		for key := range out {
+			require.NotEqualf(t, "update", key, "iteration %d: spec.update is not published", i)
+			require.NotEqualf(t, "approval", key, "iteration %d: spec.approval is not published", i)
+		}
+
+		// The element must not carry a value the resolver never set.
+		require.Equalf(t, in.Name, out["name"], "iteration %d", i)
+		require.Equalf(t, string(in.NodeType), out["nodeType"], "iteration %d", i)
+		require.Equalf(t, result.UpdateEpoch, out["updateEpoch"], "iteration %d", i)
 	}
 }
 
@@ -54,7 +98,7 @@ func randomResolveInput(rng *rand.Rand) (ResolveInput, Result) {
 		Name:            randomString(rng, "ng"),
 		ManualRolloutID: randomString(rng, "rollout"),
 		NodeType:        randomNodeType(rng),
-		RawSpec:         randomRawSpec(rng),
+		Spec:            randomSpec(rng),
 		Static:          randomStatic(rng),
 		CloudProcessed:  rng.Intn(2) == 0,
 	}
@@ -92,74 +136,66 @@ func randomNodeType(rng *rand.Rand) v1.NodeType {
 	return types[rng.Intn(len(types))]
 }
 
-// randomRawSpec puts a random subset of the allowlisted keys — plus keys that must never be
-// copied — into a spec, with values of every shape the unstructured NodeGroup can carry.
-func randomRawSpec(rng *rand.Rand) map[string]interface{} {
-	if rng.Intn(10) == 0 {
-		return nil
+// randomSpec builds a spec out of the typed fields, turning on a random subset of the allowlisted
+// subtrees plus the ones that must never be published. It covers the shapes a NodeGroup can take
+// rather than the shapes a map can take: the API server rejects everything else, so a generator
+// that produced them would be testing states no cluster can reach.
+func randomSpec(rng *rand.Rand) v1.NodeGroupSpec {
+	spec := v1.NodeGroupSpec{NodeType: randomNodeType(rng)}
+
+	// Never published, whatever it holds.
+	if rng.Intn(2) == 0 {
+		spec.Update = &v1.UpdateSpec{MaxConcurrent: ptrIntOrString(rng.Intn(10))}
 	}
 
-	spec := map[string]interface{}{"nodeType": "Static"}
-	if rng.Intn(2) == 0 {
-		spec["update"] = map[string]interface{}{"maxConcurrent": int64(rng.Intn(10))}
+	if rng.Intn(3) != 0 {
+		spec.CRI = &v1.CRISpec{Type: v1.CRIType(randomString(rng, "cri"))}
 	}
-	if rng.Intn(2) == 0 {
-		spec["approval"] = "not-in-the-allowlist"
-	}
-
-	for _, key := range specPassthroughKeys {
-		if rng.Intn(3) == 0 {
-			continue
+	if rng.Intn(3) != 0 {
+		spec.Kubelet = &v1.KubeletSpec{
+			ContainerLogMaxFiles: ptrInt32(int32(rng.Intn(20))),
+			ContainerLogMaxSize:  randomString(rng, "size"),
+			MaxPods:              ptrInt32(int32(rng.Intn(300))),
 		}
-		spec[key] = randomValue(rng, 0)
+	}
+	if rng.Intn(3) != 0 {
+		spec.NodeTemplate = &v1.NodeTemplate{
+			Labels:      map[string]string{"role": randomString(rng, "role")},
+			Annotations: map[string]string{"ann": randomString(rng, "ann")},
+		}
+	}
+	if rng.Intn(3) != 0 {
+		spec.CloudInstances = &v1.CloudInstancesSpec{
+			ClassReference: v1.ClassReference{Kind: randomString(rng, "Kind"), Name: randomString(rng, "name")},
+			MinPerZone:     int32(rng.Intn(5)),
+			MaxPerZone:     int32(rng.Intn(20)),
+			Zones:          randomZones(rng),
+		}
+	}
+	if rng.Intn(3) != 0 {
+		spec.StaticInstances = &v1.StaticInstancesSpec{Count: ptrInt32(int32(rng.Intn(10)))}
+	}
+	if rng.Intn(3) != 0 {
+		spec.Fencing = &v1.FencingSpec{Mode: "Watchdog"}
+	}
+	if rng.Intn(3) != 0 {
+		spec.Disruptions = &v1.DisruptionsSpec{ApprovalMode: v1.DisruptionApprovalMode(randomString(rng, "mode"))}
+	}
+	if rng.Intn(3) != 0 {
+		spec.GPU = &v1.GPUSpec{Sharing: randomString(rng, "sharing")}
+	}
+	if rng.Intn(3) != 0 {
+		spec.NodeDrainTimeoutSecond = ptrInt(rng.Intn(600))
 	}
 	return spec
 }
 
-func randomValue(rng *rand.Rand, depth int) interface{} {
-	kinds := 12
-	if depth >= 2 {
-		kinds = 10
-	}
+func ptrInt(v int) *int       { return &v }
+func ptrInt32(v int32) *int32 { return &v }
 
-	switch rng.Intn(kinds) {
-	case 0:
-		return nil
-	case 1:
-		return ""
-	case 2:
-		return map[string]interface{}{}
-	case 3:
-		return []interface{}{}
-	case 4:
-		return int64(rng.Intn(1000) - 500)
-	case 5:
-		return float64(rng.Intn(1000)) / 4
-	case 6:
-		// Larger than 2^53: the JSON round-trip of a float64 would lose it.
-		return int64(9007199254740993)
-	case 7:
-		return rng.Intn(2) == 0
-	case 8:
-		// Quantities and percentages stay strings all the way to the node.
-		return []string{"50Gi", "500m", "15%", "8589934592"}[rng.Intn(4)]
-	case 9:
-		return "type"
-	case 10:
-		size := rng.Intn(3) + 1
-		out := make(map[string]interface{}, size)
-		for i := range size {
-			out[fmt.Sprintf("key-%d", i)] = randomValue(rng, depth+1)
-		}
-		return out
-	default:
-		size := rng.Intn(3) + 1
-		out := make([]interface{}, 0, size)
-		for range size {
-			out = append(out, randomValue(rng, depth+1))
-		}
-		return out
-	}
+func ptrIntOrString(v int) *intstr.IntOrString {
+	out := intstr.FromInt(v)
+	return &out
 }
 
 func randomStatic(rng *rand.Rand) map[string]interface{} {

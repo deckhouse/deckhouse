@@ -25,6 +25,8 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	sigsyaml "sigs.k8s.io/yaml"
+
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/machineclass"
 )
@@ -155,7 +157,7 @@ func TestResolvedNodeGroup_MatchesLiveClusterElements(t *testing.T) {
 			in := ResolveInput{
 				Name:           live.name,
 				NodeType:       live.nodeType,
-				RawSpec:        rawSpec,
+				Spec:           specFrom(rawSpec),
 				CloudProcessed: live.instanceClass != "",
 			}
 			result := Result{
@@ -186,14 +188,22 @@ func TestResolvedNodeGroup_MatchesLiveClusterElements(t *testing.T) {
 			require.Equal(t, live.engine, got["engine"])
 			require.Equal(t, "", got["manualRolloutID"])
 
-			// Passthrough subtrees reach the node verbatim.
+			// Passthrough subtrees reach the node verbatim. Compared as YAML, which is the form
+			// the node actually receives and the form bashible-apiserver hashes — the Go type
+			// behind a number is invisible there, and asserting on it would pin the fixture's
+			// own decoding rather than the published bytes.
 			for _, key := range []string{"kubelet", "disruptions", "nodeTemplate", "staticInstances"} {
 				expected, present := rawSpec[key]
 				if !present || isEmptySpecValue(expected) {
 					require.NotContains(t, got, key)
 					continue
 				}
-				require.Equal(t, expected, got[key], "passthrough %q must reach the node verbatim", key)
+				expectedYAML, err := sigsyaml.Marshal(expected)
+				require.NoError(t, err)
+				gotYAML, err := sigsyaml.Marshal(got[key])
+				require.NoError(t, err)
+				require.Equal(t, string(expectedYAML), string(gotYAML),
+					"passthrough %q must reach the node verbatim", key)
 			}
 		})
 	}
@@ -222,7 +232,7 @@ func TestResolvedNodeGroup_ReproducesLiveInstanceClassChecksum(t *testing.T) {
 	in := ResolveInput{
 		Name:           "worker",
 		NodeType:       v1.NodeTypeCloudEphemeral,
-		RawSpec:        rawSpec,
+		Spec:           specFrom(rawSpec),
 		CloudProcessed: true,
 	}
 	result := Result{

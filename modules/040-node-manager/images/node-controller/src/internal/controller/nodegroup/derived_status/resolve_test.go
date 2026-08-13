@@ -155,9 +155,8 @@ func TestResolveNodeGroup_StaticWiresNameRolloutAndStatic(t *testing.T) {
 		},
 		Spec: v1.NodeGroupSpec{NodeType: v1.NodeTypeStatic},
 	}
-	rawSpec := map[string]interface{}{"nodeType": "Static"}
 
-	resolved, errStr, err := s.ResolveNodeGroup(context.Background(), ng, rawSpec)
+	resolved, errStr, err := s.ResolveNodeGroup(context.Background(), ng)
 	require.NoError(t, err)
 	assert.Empty(t, errStr)
 	assert.Equal(t, "static1", resolved.Name)
@@ -183,14 +182,8 @@ func TestResolveNodeGroup_CloudKindMismatchErrors(t *testing.T) {
 			},
 		},
 	}
-	rawSpec := map[string]interface{}{
-		"nodeType": "CloudEphemeral",
-		"cloudInstances": map[string]interface{}{
-			"classReference": map[string]interface{}{"kind": "AWSInstanceClass", "name": "worker"},
-		},
-	}
 
-	resolved, errStr, err := s.ResolveNodeGroup(context.Background(), ng, rawSpec)
+	resolved, errStr, err := s.ResolveNodeGroup(context.Background(), ng)
 	require.NoError(t, err)
 	assert.Contains(t, errStr, "Invalid classReference.kind 'AWSInstanceClass'. Expected 'YandexInstanceClass'.")
 	assert.NotContains(t, resolved.ToMap(), "instanceClass", "failed check must drop cloud overlays")

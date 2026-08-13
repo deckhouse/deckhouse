@@ -17,6 +17,9 @@ limitations under the License.
 package derived_status
 
 import (
+	"bytes"
+	"encoding/json"
+
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/capacity"
 )
@@ -39,7 +42,7 @@ type ResolveInput struct {
 	Name            string
 	ManualRolloutID string
 	NodeType        v1.NodeType
-	RawSpec         map[string]interface{}
+	Spec            v1.NodeGroupSpec
 	Static          map[string]interface{}
 	CloudProcessed  bool
 }
@@ -59,10 +62,10 @@ type ResolvedNodeGroup struct {
 	SerializedTaints  string
 	UpdateEpoch       string
 
-	// Spec is the allowlisted (specPassthroughKeys) passthrough of the NodeGroup spec, kept
-	// as the raw unstructured values. These subtrees are read by the node bundles and by the
-	// provider templates, never by node-controller, so typing them here would only add a
-	// conversion that can lose data.
+	// Spec is the allowlisted (specPassthroughKeys) passthrough of the NodeGroup spec. It stays a
+	// map because these subtrees travel verbatim to the node bundles and the provider templates
+	// and node-controller never reads them — describing them again here would be a second copy of
+	// a schema that already exists, one that silently drops whatever the first one gains.
 	Spec map[string]interface{}
 
 	// Static is the static cluster configuration, carried by Static NodeGroups only.
@@ -89,7 +92,7 @@ func ResolveNodeGroup(in ResolveInput, r Result) ResolvedNodeGroup {
 		SerializedLabels:  r.SerializedLabels,
 		SerializedTaints:  r.SerializedTaints,
 		UpdateEpoch:       r.UpdateEpoch,
-		Spec:              specPassthrough(in.RawSpec),
+		Spec:              specPassthrough(in.Spec),
 		CloudProcessed:    in.CloudProcessed,
 	}
 
@@ -158,19 +161,66 @@ func (r ResolvedNodeGroup) ToMap() map[string]interface{} {
 	return out
 }
 
-func specPassthrough(rawSpec map[string]interface{}) map[string]interface{} {
-	spec := make(map[string]interface{}, len(specPassthroughKeys))
+// specPassthrough returns the allowlisted subtrees of the spec. It goes through the spec's own
+// JSON form rather than reading the typed fields one by one: the subtrees travel verbatim, and
+// re-describing them here would be a second copy of a schema that already exists.
+//
+// The decode keeps integers as int64, which is what the API server's unstructured decode produces.
+// A plain Unmarshal into interface{} widens them to float64; the two render the same today, but
+// float64 loses precision above 2^53 and the result is hashed into every node's checksum.
+func specPassthrough(spec v1.NodeGroupSpec) map[string]interface{} {
+	raw, err := json.Marshal(spec)
+	if err != nil {
+		return map[string]interface{}{}
+	}
+
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	decoder.UseNumber()
+	var all map[string]interface{}
+	if err := decoder.Decode(&all); err != nil {
+		return map[string]interface{}{}
+	}
+
+	out := make(map[string]interface{}, len(specPassthroughKeys))
 	for _, key := range specPassthroughKeys {
-		val, ok := rawSpec[key]
+		val, ok := all[key]
 		if !ok {
 			continue
 		}
+		val = narrowNumbers(val)
 		if isEmptySpecValue(val) {
 			continue
 		}
-		spec[key] = val
+		out[key] = val
 	}
-	return spec
+	return out
+}
+
+// narrowNumbers turns json.Number into the concrete types unstructured data carries: int64 for
+// integers, float64 for the rest.
+func narrowNumbers(v interface{}) interface{} {
+	switch val := v.(type) {
+	case json.Number:
+		if i, err := val.Int64(); err == nil {
+			return i
+		}
+		if f, err := val.Float64(); err == nil {
+			return f
+		}
+		return val.String()
+	case map[string]interface{}:
+		for k, inner := range val {
+			val[k] = narrowNumbers(inner)
+		}
+		return val
+	case []interface{}:
+		for i, inner := range val {
+			val[i] = narrowNumbers(inner)
+		}
+		return val
+	default:
+		return v
+	}
 }
 
 func isEmptySpecValue(v interface{}) bool {

@@ -28,11 +28,11 @@ func TestResolvedNodeGroup_SpecPassthrough(t *testing.T) {
 	nodeGroupValues := resolvedMap(ResolveInput{
 		Name:     "worker",
 		NodeType: v1.NodeTypeStatic,
-		RawSpec: map[string]interface{}{
+		Spec: specFrom(map[string]interface{}{
 			"nodeType": "Static",
 			"gpu":      map[string]interface{}{"sharing": "TimeSlicing"},
 			"update":   map[string]interface{}{"maxConcurrent": 5},
-		},
+		}),
 	}, Result{
 		Engine:            "None",
 		KubernetesVersion: "1.29",
@@ -57,10 +57,10 @@ func TestResolvedNodeGroup_CRITypeOverride(t *testing.T) {
 	nodeGroupValues := resolvedMap(ResolveInput{
 		Name:     "worker",
 		NodeType: v1.NodeTypeCloudEphemeral,
-		RawSpec: map[string]interface{}{
+		Spec: specFrom(map[string]interface{}{
 			"nodeType": "CloudEphemeral",
 			"cri":      map[string]interface{}{"type": "Docker", "docker": map[string]interface{}{"manage": true}},
-		},
+		}),
 	}, Result{CRIType: "NotManaged"})
 
 	cri, ok := nodeGroupValues["cri"].(map[string]interface{})
@@ -75,15 +75,15 @@ func TestResolvedNodeGroup_StaticEmbedded(t *testing.T) {
 
 	staticNG := resolvedMap(ResolveInput{
 		Name: "s", NodeType: v1.NodeTypeStatic,
-		RawSpec: map[string]interface{}{"nodeType": "Static"},
-		Static:  static,
+		Spec:   specFrom(map[string]interface{}{"nodeType": "Static"}),
+		Static: static,
 	}, Result{CRIType: "Containerd"})
 	assert.Equal(t, static, staticNG["static"], "static value embedded for Static NG")
 
 	cloudNG := resolvedMap(ResolveInput{
 		Name: "c", NodeType: v1.NodeTypeCloudEphemeral,
-		RawSpec: map[string]interface{}{"nodeType": "CloudEphemeral"},
-		Static:  static,
+		Spec:   specFrom(map[string]interface{}{"nodeType": "CloudEphemeral"}),
+		Static: static,
 	}, Result{CRIType: "Containerd"})
 	assert.NotContains(t, cloudNG, "static", "static must not leak into non-Static NG")
 }
@@ -92,10 +92,10 @@ func TestResolvedNodeGroup_CloudProcessed(t *testing.T) {
 	nodeGroupValues := resolvedMap(ResolveInput{
 		Name:     "cloud",
 		NodeType: v1.NodeTypeCloudEphemeral,
-		RawSpec: map[string]interface{}{
+		Spec: specFrom(map[string]interface{}{
 			"nodeType":       "CloudEphemeral",
 			"cloudInstances": map[string]interface{}{"minPerZone": float64(0), "maxPerZone": float64(3)},
-		},
+		}),
 		CloudProcessed: true,
 	}, Result{
 		Engine:        "CAPI",
@@ -108,7 +108,7 @@ func TestResolvedNodeGroup_CloudProcessed(t *testing.T) {
 	ci, ok := nodeGroupValues["cloudInstances"].(map[string]interface{})
 	if assert.True(t, ok) {
 		assert.Equal(t, []string{"a", "b"}, ci["zones"], "resolved zones overlaid")
-		assert.Equal(t, float64(3), ci["maxPerZone"], "spec cloudInstances fields preserved")
+		assert.Equal(t, int64(3), ci["maxPerZone"], "spec cloudInstances fields preserved")
 	}
 	// All four keys, because the capacity is published as the JSON form of capacity.InstanceType
 	// and none of its tags carry omitempty — which is what a real cluster has always seen.
@@ -121,7 +121,7 @@ func TestResolvedNodeGroup_CloudNotProcessed(t *testing.T) {
 	nodeGroupValues := resolvedMap(ResolveInput{
 		Name:     "cloud",
 		NodeType: v1.NodeTypeCloudEphemeral,
-		RawSpec:  map[string]interface{}{"nodeType": "CloudEphemeral"},
+		Spec:     specFrom(map[string]interface{}{"nodeType": "CloudEphemeral"}),
 	}, Result{
 		CRIType:       "Containerd",
 		Zones:         []string{"a"},
@@ -137,7 +137,7 @@ func TestResolvedNodeGroup_FencingPassthrough(t *testing.T) {
 	nodeGroupValues := resolvedMap(ResolveInput{
 		Name:     "worker",
 		NodeType: v1.NodeTypeStatic,
-		RawSpec: map[string]interface{}{
+		Spec: specFrom(map[string]interface{}{
 			"nodeType": "Static",
 			"staticInstances": map[string]interface{}{
 				"labelSelector": map[string]interface{}{
@@ -145,7 +145,7 @@ func TestResolvedNodeGroup_FencingPassthrough(t *testing.T) {
 				},
 			},
 			"fencing": map[string]interface{}{"mode": "Watchdog"},
-		},
+		}),
 	}, Result{
 		Engine:            "None",
 		KubernetesVersion: "1.32",
@@ -166,7 +166,7 @@ func TestResolvedNodeGroup_SerializedTaints(t *testing.T) {
 	nodeGroupValues := resolvedMap(ResolveInput{
 		Name:     "test",
 		NodeType: v1.NodeTypeCloudEphemeral,
-		RawSpec:  map[string]interface{}{"nodeType": "CloudEphemeral"},
+		Spec:     specFrom(map[string]interface{}{"nodeType": "CloudEphemeral"}),
 	}, Result{
 		CRIType:          "Containerd",
 		SerializedTaints: "b=v:NoExecute,a,d:NoExecute,c=v1:",
@@ -181,7 +181,7 @@ func TestResolvedNodeGroup_DoesNotMutateRawSpec(t *testing.T) {
 	rawSpec := map[string]interface{}{"nodeType": "Static", "cri": rawCRI}
 
 	resolvedMap(ResolveInput{
-		Name: "w", NodeType: v1.NodeTypeStatic, RawSpec: rawSpec,
+		Name: "w", NodeType: v1.NodeTypeStatic, Spec: specFrom(rawSpec),
 	}, Result{CRIType: "Containerd"})
 
 	assert.Equal(t, "Docker", rawCRI["type"], "source spec cri must not be mutated by the overlay")

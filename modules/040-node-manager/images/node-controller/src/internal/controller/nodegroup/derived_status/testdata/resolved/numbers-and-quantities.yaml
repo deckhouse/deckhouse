@@ -1,9 +1,12 @@
 cloudInstances:
+  classReference:
+    kind: ""
+    name: ""
   maxPerZone: 20
   minPerZone: 0
   standby: 15%
   standbyHolder:
-    overprovisioningRate: 0.5
+    overprovisioningRate: 2
   zones:
   - a
 cri:
@@ -35,7 +38,7 @@ nodeCapacity:
   memory: 7969960Ki
   name: ""
   rootDisk: "0"
-nodeDrainTimeoutSecond: 45.5
+nodeDrainTimeoutSecond: 45
 nodeType: CloudEphemeral
 serializedLabels: node.deckhouse.io/group=numbers
 serializedTaints: ""

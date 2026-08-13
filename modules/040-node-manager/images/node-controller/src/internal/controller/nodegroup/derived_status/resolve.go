@@ -39,7 +39,11 @@ const (
 	staticConfigKey             = "static-cluster-configuration.yaml"
 )
 
-func (s *Service) ResolveNodeGroup(ctx context.Context, ng *v1.NodeGroup, rawSpec map[string]interface{}) (ResolvedNodeGroup, string, error) {
+// ResolveNodeGroup returns the NodeGroup with everything this package resolves on top of its spec,
+// plus the validation error the checks produced. The two travel separately on purpose: the error
+// is a statement about the NodeGroup, not about this pass, so a caller retries on the returned
+// error but not on a non-empty validation string.
+func (s *Service) ResolveNodeGroup(ctx context.Context, ng *v1.NodeGroup) (ResolvedNodeGroup, string, error) {
 	snap, err := s.BuildSnapshot(ctx, ng)
 	if err != nil {
 		return ResolvedNodeGroup{}, "", err
@@ -54,7 +58,7 @@ func (s *Service) ResolveNodeGroup(ctx context.Context, ng *v1.NodeGroup, rawSpe
 		Name:            ng.Name,
 		ManualRolloutID: ng.GetAnnotations()[manualRolloutIDAnnotation],
 		NodeType:        ng.Spec.NodeType,
-		RawSpec:         rawSpec,
+		Spec:            ng.Spec,
 		Static:          snap.StaticConfig,
 		CloudProcessed:  check.Processed,
 	}

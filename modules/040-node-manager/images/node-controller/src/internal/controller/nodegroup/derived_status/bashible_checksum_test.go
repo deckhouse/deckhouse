@@ -57,7 +57,7 @@ func buildCloudResolvedMap(t *testing.T, kubernetesVersion string, minPerZone, m
 	return resolvedMap(ResolveInput{
 		Name:     "worker",
 		NodeType: v1.NodeTypeCloudEphemeral,
-		RawSpec: map[string]interface{}{
+		Spec: specFrom(map[string]interface{}{
 			"nodeType": "CloudEphemeral",
 			"cloudInstances": map[string]interface{}{
 				"classReference": map[string]interface{}{"kind": "D8TestInstanceClass", "name": "worker"},
@@ -65,7 +65,7 @@ func buildCloudResolvedMap(t *testing.T, kubernetesVersion string, minPerZone, m
 				"maxPerZone":     maxPerZone,
 			},
 			"kubelet": kubeletDefaults(),
-		},
+		}),
 		CloudProcessed: true,
 	}, Result{
 		Engine:            "None",
@@ -105,13 +105,13 @@ func TestBashibleChecksum_GoldenParity(t *testing.T) {
 	nodeGroupValues := resolvedMap(ResolveInput{
 		Name:     "proper1",
 		NodeType: v1.NodeTypeCloudEphemeral,
-		RawSpec: map[string]interface{}{
+		Spec: specFrom(map[string]interface{}{
 			"nodeType": "CloudEphemeral",
 			"cloudInstances": map[string]interface{}{
 				"classReference": map[string]interface{}{"kind": "D8TestInstanceClass", "name": "proper1"},
 			},
 			"kubelet": kubeletDefaults(),
-		},
+		}),
 		CloudProcessed: true,
 	}, Result{
 		Engine:            "None",
