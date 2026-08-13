@@ -26,12 +26,18 @@ import (
 
 /*
 Description:
-	Alerts when ModuleConfig control-plane-manager has no kubernetesVersion setting.
+	Alerts when the cluster Kubernetes version is still owned by the deprecated
+	ClusterConfiguration.kubernetesVersion instead of ModuleConfig control-plane-manager.
 */
 
 const (
 	unsetKubernetesVersionMetricGroup = "D8UnsetKubernetesVersionInModuleConfig"
 	unsetKubernetesVersionMetricName  = "d8_unset_kubernetes_version_in_module_config"
+
+	// ClusterConfiguration's "track Deckhouse default" sentinel; ModuleConfig accepts only Default.
+	// Not to be confused with DefaultKubernetesVersion, which holds the version this build defaults to.
+	automaticKubernetesVersion       = "Automatic"
+	defaultKubernetesVersionSentinel = "Default"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -43,9 +49,9 @@ func checkKubernetesVersionMigration(_ context.Context, input *go_hook.HookInput
 	input.MetricsCollector.Expire(unsetKubernetesVersionMetricGroup)
 
 	mcVersion := input.Values.Get("controlPlaneManager.kubernetesVersion").String()
-	migrated := isKubernetesVersionMigrated(mcVersion)
+	ccVersion := input.Values.Get("global.clusterConfiguration.kubernetesVersion").String()
 
-	if !migrated {
+	if kubernetesVersionNeedsMigration(mcVersion, ccVersion) {
 		input.MetricsCollector.Set(
 			unsetKubernetesVersionMetricName, 1,
 			map[string]string{},
@@ -56,9 +62,21 @@ func checkKubernetesVersionMigration(_ context.Context, input *go_hook.HookInput
 	return nil
 }
 
-// isKubernetesVersionMigrated reports whether ModuleConfig control-plane-manager has
-// kubernetesVersion set. Presence is enough, Default included — the alert targets only clusters
-// that still rely on the unset→CC-fallback path, not clusters that chose to track the default.
-func isKubernetesVersionMigrated(mcVersion string) bool {
-	return mcVersion != ""
+// kubernetesVersionNeedsMigration reports whether the deprecated ClusterConfiguration field still
+// decides the cluster version.
+//
+// Any ModuleConfig setting clears the alert, Default included: presence of that field, not its
+// value, is what takes ownership away from ClusterConfiguration.
+//
+// A ClusterConfiguration that pins nothing — absent, Automatic, Default — is not something to
+// migrate: the resolved version is the release default either way, exactly as it would be with
+// ModuleConfig Default. Alerting there would fire on every fresh cluster with nothing to fix.
+func kubernetesVersionNeedsMigration(mcVersion, ccVersion string) bool {
+	if mcVersion != "" {
+		return false
+	}
+
+	return ccVersion != "" &&
+		ccVersion != automaticKubernetesVersion &&
+		ccVersion != defaultKubernetesVersionSentinel
 }

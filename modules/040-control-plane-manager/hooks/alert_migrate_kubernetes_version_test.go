@@ -38,22 +38,25 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: alert_migrate_kub
 	}
 
 	DescribeTable("D8UnsetKubernetesVersionInModuleConfig metric",
-		func(mcVersion string, expectSet bool) {
-			f.ValuesSet("controlPlaneManager.kubernetesVersion", "")
-			if mcVersion != "" {
-				f.ValuesSet("controlPlaneManager.kubernetesVersion", mcVersion)
-			}
+		func(mcVersion, ccVersion string, expectSet bool) {
+			f.ValuesSet("controlPlaneManager.kubernetesVersion", mcVersion)
+			f.ValuesSet("global.clusterConfiguration.kubernetesVersion", ccVersion)
 			f.RunHook()
 
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(metricIsSet()).To(Equal(expectSet))
 		},
-		// Conscious fleet spam: unset ModuleConfig kubernetesVersion always fires.
-		Entry("MC unset — fires", "", true),
+		// The one case worth migrating: ClusterConfiguration still decides the version.
+		Entry("MC unset, CC pins a version — fires", "", "1.34", true),
 
-		// Any explicit setting clears the alert, including Default / Automatic (R6).
-		Entry("MC pins a version — does not fire", "1.35", false),
-		Entry("MC is Automatic — does not fire", "Automatic", false),
-		Entry("MC is Default — does not fire", "Default", false),
+		// Nothing to migrate: the resolved version is the release default either way, exactly as
+		// it would be with ModuleConfig Default.
+		Entry("MC unset, CC unset — does not fire", "", "", false),
+		Entry("MC unset, CC is Automatic — does not fire", "", "Automatic", false),
+		Entry("MC unset, CC is Default — does not fire", "", "Default", false),
+
+		// Any explicit setting takes ownership away from ClusterConfiguration, Default included.
+		Entry("MC pins a version — does not fire", "1.35", "1.34", false),
+		Entry("MC is Default — does not fire", "Default", "1.34", false),
 	)
 })
