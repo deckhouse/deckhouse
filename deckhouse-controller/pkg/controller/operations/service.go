@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package packagerepositoryoperation
+package operations
 
 import (
 	"context"
@@ -64,8 +64,8 @@ func isRepoNotFoundError(err error) bool {
 type packageType string
 
 const (
-	packageTypeApplication packageType = "Application"
-	packageTypeModule      packageType = "Module"
+	PackageTypeApplication packageType = v1alpha1.PackageTypeApplication
+	PackageTypeModule      packageType = v1alpha1.PackageTypeModule
 )
 
 // parsePackageType converts a raw string to packageType.
@@ -73,10 +73,10 @@ const (
 // returning an error if the value is not recognized. f.e: type: "Garbage", type: ""
 func parsePackageType(raw string) (packageType, error) {
 	switch packageType(raw) {
-	case packageTypeApplication:
-		return packageTypeApplication, nil
-	case packageTypeModule:
-		return packageTypeModule, nil
+	case PackageTypeApplication:
+		return PackageTypeApplication, nil
+	case PackageTypeModule:
+		return PackageTypeModule, nil
 	default:
 		return "", fmt.Errorf("%w: unknown value %q", errPackageTypeInvalid, raw)
 	}
@@ -455,7 +455,7 @@ func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageNa
 		var ensureErr error
 		var isNew bool
 		switch pkgType {
-		case packageTypeModule:
+		case PackageTypeModule:
 			isNew, ensureErr = s.ensureModulePackageVersion(ctx, packageName, version, nil)
 		default:
 			isNew, ensureErr = s.ensureApplicationPackageVersion(ctx, packageName, version)
@@ -566,7 +566,7 @@ func (s *OperationService) handleMissingVersionPath(ctx context.Context, package
 	}
 
 	return &PackageProcessResult{
-		PackageType:   packageTypeModule,
+		PackageType:   PackageTypeModule,
 		Done:          foundTags,
 		Failed:        failedVersions,
 		FoundVersions: len(foundTags),
@@ -604,7 +604,7 @@ func (s *OperationService) detectPackageType(ctx context.Context, packageName, l
 		versionConfig = nil
 	}
 	if versionConfig != nil && versionConfig.Config.Labels != nil {
-		if rawPackageType, hasLabel := versionConfig.Config.Labels[packageTypeLabel]; hasLabel {
+		if rawPackageType, hasLabel := versionConfig.Config.Labels[v1alpha1.PackagesRepositoryOperationLabelPackageType]; hasLabel {
 			return parsePackageType(rawPackageType)
 		}
 	}
