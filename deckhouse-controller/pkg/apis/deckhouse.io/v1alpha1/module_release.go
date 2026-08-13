@@ -38,6 +38,9 @@ const (
 	ModuleReleasePhaseSkipped     = "Skipped"
 	ModuleReleasePhaseTerminating = "Terminating"
 
+	ModuleReleaseMigrationSucceeded = "Succeeded"
+	ModuleReleaseMigrationFailed    = "Failed"
+
 	ModuleReleaseApprovalAnnotation            = "modules.deckhouse.io/approved"
 	ModuleReleaseAnnotationIsUpdating          = "modules.deckhouse.io/isUpdating"
 	ModuleReleaseAnnotationNotified            = "modules.deckhouse.io/notified"
@@ -335,6 +338,28 @@ type ModuleReleaseStatus struct {
 	Size uint32 `json:"size,omitempty"`
 	// Module loading duration.
 	PullDuration metav1.Duration `json:"pullDuration,omitempty"`
+	// Migrations applied by the release, including the ones inherited from the previously deployed release.
+	// +optional
+	Migrations []ModuleReleaseMigration `json:"migrations,omitempty"`
+}
+
+// ModuleReleaseMigration is the outcome of a single `release/migrations` file run.
+type ModuleReleaseMigration struct {
+	// Migration file name, for example `001_add_index.up.sql`.
+	Name string `json:"name"`
+	// Numeric prefix of the migration file name.
+	Version int `json:"version"`
+	// Direction the migration was run in.
+	// +kubebuilder:validation:Enum=Up;Down
+	Direction string `json:"direction"`
+	// Result of the migration run.
+	// +kubebuilder:validation:Enum=Succeeded;Failed
+	Status string `json:"status"`
+	// Error message of the failed migration.
+	// +optional
+	Message string `json:"message,omitempty"`
+	// Time of the migration run.
+	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
 }
 
 // +kubebuilder:object:root=true

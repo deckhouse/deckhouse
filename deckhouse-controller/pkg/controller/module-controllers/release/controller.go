@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/deckhouse/d8sql"
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"go.opentelemetry.io/otel"
@@ -55,6 +56,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
+	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
@@ -85,6 +87,7 @@ func RegisterController(
 	installer Installer,
 	dc dependency.Container,
 	exts extenders.IExtendersStack,
+	edition *d8edition.Edition,
 	embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer,
 	ms metricsstorage.Storage,
 	logger *log.Logger,
@@ -93,6 +96,7 @@ func RegisterController(
 		init:                 new(sync.WaitGroup),
 		client:               runtimeManager.GetClient(),
 		log:                  logger,
+		edition:              edition,
 		moduleManager:        mm,
 		metricStorage:        ms,
 		downloadedModulesDir: app.DownloadedModulesDir(),
@@ -164,6 +168,13 @@ type reconciler struct {
 	downloadedModulesDir string
 	symlinksDir          string
 	restartCheckTicker   *time.Ticker
+
+	// release gates: the engine running the module's release/*.sql, built on
+	// first use and reused afterwards (see gates.go)
+	edition       *d8edition.Edition
+	sqlEngine     *d8sql.Engine
+	sqlEngineOnce sync.Once
+	sqlEngineErr  error
 
 	activeApplyCount    atomic.Int32
 	releaseWasProcessed atomic.Bool // at least one release was processed
@@ -1424,6 +1435,14 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 		}
 
 		return fmt.Errorf("the '%s:v%s' module validation: %w", release.GetModuleName(), release.GetVersion().String(), err)
+	}
+
+	// The module is on disk but not installed yet: run its SQL gates
+	// (release/validations, then release/migrations) so a release rejected by a
+	// validation, or one whose migration failed, never gets installed and never
+	// becomes Deployed. Handles its own status updates.
+	if err = r.runReleaseGates(ctx, release, modulePath, logger); err != nil {
+		return fmt.Errorf("release gates: %w", err)
 	}
 
 	// While an embedded copy of the module is still shipped on the filesystem it

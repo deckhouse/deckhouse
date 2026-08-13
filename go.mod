@@ -9,6 +9,7 @@ require (
 	github.com/clarketm/json v1.15.7
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
+	github.com/deckhouse/d8sql v0.0.0-00010101000000-000000000000
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/flant/addon-operator v1.24.9
 	github.com/flant/kube-client v1.9.1
@@ -108,7 +109,7 @@ require (
 	github.com/090809/oteljsonl v0.0.2 // indirect
 	github.com/Azure/go-ntlmssp v0.1.0 // indirect
 	github.com/VividCortex/ewma v1.2.0 // indirect
-	github.com/antlr4-go/antlr/v4 v4.13.0 // indirect
+	github.com/antlr4-go/antlr/v4 v4.13.1 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/containerd/console v1.0.5 // indirect
@@ -241,7 +242,7 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/google/btree v1.1.3 // indirect
-	github.com/google/cel-go v0.26.0
+	github.com/google/cel-go v0.28.1
 	github.com/google/certificate-transparency-go v1.3.2 // indirect
 	github.com/google/gnostic-models v0.7.1 // indirect
 	github.com/gookit/color v1.6.0 // indirect
@@ -401,3 +402,5 @@ replace github.com/deckhouse/deckhouse/go_lib/controlplane => ./go_lib/controlpl
 // (see werf.inc.yaml) and are hidden from build/lint by build tags. go mod
 // tidy inspects imports under all build tags, so ignore the tree entirely.
 ignore ./ee/modules/110-istio/images
+
+replace github.com/deckhouse/d8sql => ../../deckhouse/d8sql

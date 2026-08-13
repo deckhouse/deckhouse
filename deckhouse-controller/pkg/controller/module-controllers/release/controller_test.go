@@ -27,6 +27,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/deckhouse/d8sql"
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
@@ -56,6 +57,7 @@ import (
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releasegates"
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -920,6 +922,14 @@ func withInstaller(inst Installer) reconcilerOption {
 	}
 }
 
+// withSQLEngine injects the engine used by the release gates, so a gate reading
+// only the v_d8_platform virtual table runs without a cluster.
+func withSQLEngine(engine *d8sql.Engine) reconcilerOption {
+	return func(r *reconciler) {
+		r.sqlEngine = engine
+	}
+}
+
 func (suite *ReleaseControllerTestSuite) setupReleaseController(yamlDoc string, options ...reconcilerOption) {
 	manifests := releaseutil.SplitManifests(yamlDoc)
 
@@ -1289,6 +1299,53 @@ status:
   phase: Pending
 `
 )
+
+// A release whose release/validations reject the cluster must never be
+// installed: it stays Pending with the failure in its status, so the next
+// reconcile retries the gate.
+func (suite *ReleaseControllerTestSuite) TestReleaseGates() {
+	suite.T().Setenv("TEST_EXTENDER_DECKHOUSE_VERSION", "v1.0.0")
+	suite.T().Setenv("TEST_EXTENDER_KUBERNETES_VERSION", "1.28.0")
+
+	suite.Run("failing validation keeps the release pending", func() {
+		installed := false
+		suite.setupReleaseController(suite.fetchTestFileData("sql-validations-failed.yaml"),
+			withInstaller(&installermock.Installer{
+				// every deploy attempt downloads the module anew, the previous
+				// temp dir is removed by deployModule
+				DownloadFunc: func(context.Context, *v1alpha1.ModuleSource, string, string) (string, error) {
+					modulePath := suite.T().TempDir()
+					if err := os.MkdirAll(releasegates.ValidationsDir(modulePath), 0o755); err != nil {
+						return "", err
+					}
+
+					return modulePath, os.WriteFile(
+						filepath.Join(releasegates.ValidationsDir(modulePath), "10_edition.sql"),
+						[]byte("ASSERT NOT EMPTY (SELECT deckhouseEdition FROM v_d8_platform WHERE deckhouseEdition = 'ee') FAIL 'EDITION' 'the module requires EE';"),
+						0o600)
+				},
+				InstallFunc: func(context.Context, string, string, string) error {
+					installed = true
+
+					return nil
+				},
+			}),
+			withSQLEngine(d8sql.New(nil, nil, releasegates.Platform{DeckhouseEdition: "ce"}.Option())))
+
+		var err error
+		repeatTest(func() {
+			mr := suite.getModuleRelease(suite.testMRName)
+			_, err = suite.ctr.handleRelease(suite.Context(), mr)
+		})
+		require.ErrorContains(suite.T(), err, "release gates")
+
+		mr := suite.getModuleRelease(suite.testMRName)
+		assert.Equal(suite.T(), v1alpha1.ModuleReleasePhasePending, mr.Status.Phase)
+		assert.Contains(suite.T(), mr.Status.Message, "validations failed")
+		assert.Contains(suite.T(), mr.Status.Message, "the module requires EE")
+		assert.False(suite.T(), installed, "a release rejected by its validations must not be installed")
+	})
+}
 
 func (suite *ReleaseControllerTestSuite) TestRestartLoop() {
 	ctx := suite.Context()
