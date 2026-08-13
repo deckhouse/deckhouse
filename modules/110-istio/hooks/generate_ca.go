@@ -96,7 +96,6 @@ const (
 	cacertsKeyKey   = "ca-key.pem"
 	cacertsChainKey = "cert-chain.pem"
 	cacertsRootKey  = "root-cert.pem"
-	cacertsCrlKey   = "ca-crl.pem"
 )
 
 // caSourceAnnotation mirrors `istio.internal.ca.source` onto the rendered
@@ -186,7 +185,6 @@ func applyIstioCAFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 			Key:   string(secret.Data[cacertsKeyKey]),
 			Chain: string(secret.Data[cacertsChainKey]),
 			Root:  string(secret.Data[cacertsRootKey]),
-			CRL:   string(secret.Data[cacertsCrlKey]),
 		},
 		Source: secret.Annotations[caSourceAnnotation],
 	}, nil
