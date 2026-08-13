@@ -4,7 +4,7 @@
 {{- $containerd_versions := list $containerd_v1_version $containerd_v2_version }}
 {{- $runc_versions := list $runc_version }}
 {{- $containerd2runc := dict $containerd_v1_version $runc_version $containerd_v2_version $runc_version }}
-{{- $containerd_integrity_patches_version := .IntegrityPatchesVersion | default "bump-to-2-2-7" }} # may be redefine in CSE
+{{- $containerd_integrity_patches_version := .IntegrityPatchesVersion | default "0" }} # may be redefine in CSE
 
 # calculate additional build options for containerd
 # skip for v1 and not CSE. Now we calculate namespaces for integrity check
@@ -158,7 +158,7 @@ shell:
   install:
 {{- if and (eq $.Env "CSE") $is_v2 }}
   - echo "Attention! Use integrity patches!"
-  - git clone --depth 1 --branch v{{ $containerd_version }}-{{ $containerd_integrity_patches_version }} git@$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO):deckhouse/kubernetes/platform/containerd-integrity-patches.git /src/integrity-patches
+  - git clone --depth 1 --branch bump-to-2-2-7 git@$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO):deckhouse/kubernetes/platform/containerd-integrity-patches.git /src/integrity-patches
   - alias cp='cp'
   - cp /src/integrity-patches/patches/*.patch /patches
   - rm -rf /src/integrity-patches
