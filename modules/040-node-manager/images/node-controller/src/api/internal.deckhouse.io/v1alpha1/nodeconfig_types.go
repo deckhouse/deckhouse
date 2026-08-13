@@ -82,6 +82,12 @@ type NodeConfigStatus struct {
 	// a healthy one. Republished coarsely: judge staleness in tens of minutes.
 	// +optional
 	LastReconcileTime metav1.Time `json:"lastReconcileTime,omitempty"`
+	// OSImage is how far the node has got with spec.osImage. Mirrors
+	// config.OSImageStatus in the nodelet repository (internal/config/types.go):
+	// a field missing here is pruned on write, and the node's whole status apply
+	// fails with "field not declared in schema" — the update then reports nothing.
+	// +optional
+	OSImage *OSImageStatus `json:"osImage,omitempty"`
 	// MaintenanceToken authenticates a push to the node's maintenance endpoint.
 	// nodelet generates it once at startup and republishes it here on every pass
 	// while the API is reachable. When the node later loses the API and opens its
@@ -99,6 +105,32 @@ type NodeConfigStatus struct {
 	// regenerating crds/nodeconfig.yaml.
 	// +optional
 	MaintenanceToken string `json:"maintenanceToken,omitempty"`
+}
+
+// OSImageStatus is the node's side of a rootfs update: what it runs, what it is
+// trying, and what it has already refused.
+type OSImageStatus struct {
+	// Digest is the image the node is running, as recorded on its config
+	// partition. Empty on a node installed before that record existed.
+	// +optional
+	Digest string `json:"digest,omitempty"`
+	// Slot is the A/B slot that image lives in ("a" or "b").
+	// +optional
+	Slot string `json:"slot,omitempty"`
+	// TrialDigest is the image staged for the next boot, or on trial in this one.
+	// Set only while an update is in flight, which is exactly when Digest still
+	// names the old image.
+	// +optional
+	TrialDigest string `json:"trialDigest,omitempty"`
+	// AttemptsLeft is how many boots the trial image has left to prove itself
+	// before the initramfs rolls back.
+	// +optional
+	AttemptsLeft int `json:"attemptsLeft,omitempty"`
+	// FailedDigest is an image this node booted and rolled back from. It is never
+	// tried again: a digest names immutable content, so a fixed image is a
+	// different digest.
+	// +optional
+	FailedDigest string `json:"failedDigest,omitempty"`
 }
 
 // ExtensionStatus is the reconcile outcome of one system extension.
