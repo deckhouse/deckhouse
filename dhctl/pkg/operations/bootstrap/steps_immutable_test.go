@@ -332,8 +332,10 @@ func immutableTestMetaConfig(t *testing.T) *config.MetaConfig {
 				"containerdSysext224":    digest,
 				"kubernetesCniSysext162": digest,
 				"kubeletSysext1349":      digest,
+				"nodeletSysext":          digest,
 			},
-			"common": {"pause": digest},
+			"nodeManager": {"olcedar": digest},
+			"common":      {"pause": digest},
 			"controlPlaneManager": {
 				"etcd":                     digest,
 				"kubeApiserver134":         digest,
