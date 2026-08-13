@@ -17,15 +17,6 @@ apiserverProxyCerts:
   key: PROXY-KEY
 bootstrapTokens:
   cloud-worker: abcdef.0123456789abcdef
-cloudProvider:
-  instanceClassAPIVersion: v1alpha1
-  instanceClassKind: D8TestInstanceClass
-  machineClassKind: YandexMachineClass
-  region: ru-central1
-  type: yandex
-  zones:
-  - ru-central1-a
-  - ru-central1-b
 cloudProviders:
 - instanceClassAPIVersion: v1alpha1
   instanceClassKind: D8TestInstanceClass

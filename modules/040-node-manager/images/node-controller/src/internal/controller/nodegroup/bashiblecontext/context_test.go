@@ -20,13 +20,14 @@ import (
 	"context"
 	"testing"
 
-	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/yaml"
+
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 )
 
 var mandatoryInputKeys = []string{
@@ -46,7 +47,7 @@ func TestBuild_MandatoryFieldsAlwaysPresent(t *testing.T) {
 	}
 
 	// Optional blocks gated off when their source is absent.
-	assert.NotContains(t, input, "cloudProvider")
+	assert.NotContains(t, input, "cloudProviders")
 	assert.NotContains(t, input, "proxy")
 	assert.NotContains(t, input, "apiserverProxyCerts")
 	assert.NotContains(t, input, "kubernetesCA")
@@ -82,7 +83,7 @@ func TestBuild_OptionalBlocksPopulated(t *testing.T) {
 	input, err := s.Build(context.Background(), globals, nodeGroups, testRegistry(t, s))
 	require.NoError(t, err)
 
-	assert.Equal(t, map[string]interface{}{"type": "yandex"}, input["cloudProvider"])
+	assert.Equal(t, []map[string]interface{}{{"type": "yandex"}}, input["cloudProviders"])
 	assert.Equal(t, map[string]interface{}{"httpProxy": "http://p"}, input["proxy"])
 	assert.Equal(t, map[string]interface{}{"crt": "C", "key": "K"}, input["apiserverProxyCerts"])
 	assert.Equal(t, float64(10), input["nodeStatusUpdateFrequency"])
