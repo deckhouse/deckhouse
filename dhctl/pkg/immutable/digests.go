@@ -58,10 +58,16 @@ func sysextExtensions(images map[string]any, kubernetesVersion string) ([]extens
 
 	// The order is the payload's: the node writes them in it, and every rendered
 	// document since the first one has carried them this way.
+	//
+	// The set must be the one node-controller renders (nodeconfig/sources.go).
+	// A node prunes every installed extension its document does not list, and
+	// pruning nodelet stops the agent's own unit — after which nothing restarts
+	// it and the node keeps running without its API proxy.
 	extensions := []extension{
 		{Name: containerdExtension, Digest: containerd, RequestedBy: platformExtensionRequestedBy},
 		{Name: kubeletExtension, Digest: newestPatchDigest(packages, "kubeletSysext"+minor), RequestedBy: platformExtensionRequestedBy},
 		{Name: cniExtension, Digest: cni, RequestedBy: platformExtensionRequestedBy},
+		{Name: nodeletExtension, Digest: packages[nodeletSysextImage], RequestedBy: platformExtensionRequestedBy},
 	}
 	for _, e := range extensions {
 		if e.Digest == "" {

@@ -32,6 +32,7 @@ const (
 	testKubeletDigest    = "sha256:3333333333333333333333333333333333333333333333333333333333333333"
 	testPauseDigest      = "sha256:4444444444444444444444444444444444444444444444444444444444444444"
 	testOSImageDigest    = "sha256:7777777777777777777777777777777777777777777777777777777777777777"
+	testNodeletDigest    = "sha256:9999999999999999999999999999999999999999999999999999999999999999"
 
 	testEtcdDigest              = "sha256:5555555555555555555555555555555555555555555555555555555555555555"
 	testAPIServerDigest         = "sha256:6666666666666666666666666666666666666666666666666666666666666666"
@@ -71,6 +72,7 @@ func testMetaConfig(t *testing.T) *config.MetaConfig {
 				"kubernetesCniSysext162": testCNIDigest,
 				"kubeletSysext1349":      testKubeletDigest,
 				"kubeletSysext1336":      "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+				"nodeletSysext":          testNodeletDigest,
 			},
 			"nodeManager": {
 				"olcedar": testOSImageDigest,
@@ -171,6 +173,27 @@ func TestSysextDigestsRefusesAmbiguousVersions(t *testing.T) {
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "kubernetesCniSysext1610, kubernetesCniSysext170")
 	require.Contains(t, err.Error(), "which one is newer")
+}
+
+// The document dhctl writes must list every extension node-controller renders.
+// A node prunes the installed extensions its document does not list, and pruning
+// nodelet runs "systemctl stop nodelet.service" — the agent stops itself, and an
+// explicitly stopped unit is not restarted, so the node loses its API proxy for
+// good. Measured on zykov-ab-19be2a59 (13.08.2026): "stop nodelet.service before
+// pruning extension nodelet: signal: killed".
+func TestNodeConfigListsEveryExtensionNodeControllerRenders(t *testing.T) {
+	nodeConfig, err := buildNodeConfig(t.Context(), nodeConfigInput{
+		NodeName:   "example-master-0",
+		MetaConfig: testMetaConfig(t),
+	})
+	require.NoError(t, err)
+
+	var names []string
+	for _, e := range nodeConfig.Spec.Extensions {
+		names = append(names, e.Name)
+	}
+	require.ElementsMatch(t,
+		[]string{containerdExtension, kubeletExtension, cniExtension, nodeletExtension}, names)
 }
 
 // The one containerd and the one CNI extension the installer ships are found by
