@@ -24,10 +24,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 )
 
-// systemTypeImmutable mirrors the node-manager API. node-controller is a
-// separate Go module, so the constant is repeated here instead of imported.
-const systemTypeImmutable = "Immutable"
-
 // IsImmutableMaster reports whether the master NodeGroup asks for an immutable
 // system. The resources section is already parsed into CloudProviderVars by
 // config.Prepare, which rejects a document it cannot read.

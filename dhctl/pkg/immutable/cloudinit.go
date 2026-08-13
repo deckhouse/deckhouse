@@ -27,18 +27,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
-const (
-	// nodeConfigPath is where the on-node loader reads the node config from. It
-	// selects the entry by the "nodeconfig.yml"/"nodeconfig.yaml" suffix of the
-	// path, so the name matters and the directory does not.
-	nodeConfigPath = "/config/nodeconfig.yaml"
-
-	// controlPlaneConfigPath names the payload entry. The node reads cloud-init
-	// itself and picks the entry out by this name, so the path is a label and
-	// the name is the contract.
-	controlPlaneConfigPath = "/config/controlplane.yaml"
-)
-
 // MasterPayloadInput is everything BuildMasterPayload needs.
 type MasterPayloadInput struct {
 	// NodeName is the name the first master registers under. It is also the name

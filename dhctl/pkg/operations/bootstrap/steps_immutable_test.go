@@ -413,7 +413,7 @@ func TestCollectImmutableKubeconfigStopsOnAFailedNode(t *testing.T) {
 	// Bounded so that a loop which stops treating Failed as terminal fails this
 	// assertion instead of running until the test binary is killed, which takes
 	// every other test in the package down with it as a panic.
-	ctx, cancel := context.WithTimeout(t.Context(), 2*immutableAPIWaitInterval)
+	ctx, cancel := context.WithTimeout(t.Context(), 2*waitAPIServerUp.interval)
 	defer cancel()
 
 	started := time.Now()
@@ -421,7 +421,7 @@ func TestCollectImmutableKubeconfigStopsOnAFailedNode(t *testing.T) {
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "pull the kubelet system extension: 404",
 		"the node's own message is the only thing that says what went wrong")
-	require.Less(t, time.Since(started), immutableAPIWaitInterval,
+	require.Less(t, time.Since(started), waitAPIServerUp.interval,
 		"a node that reported Failed must end the wait, not start the next attempt")
 }
 

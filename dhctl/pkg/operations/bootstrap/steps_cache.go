@@ -29,9 +29,14 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
-const (
-	BastionHostCacheKey = "bastion-host"
-)
+// cacheMessage is what an operator sees when the state cache cannot be created:
+// the cluster may already be up, so the cache is never dropped for them.
+const cacheMessage = `Create cache %s:
+	Error: %v
+
+	The Kubernetes cluster was probably bootstrapped successfully.
+	If you want to continue, please delete the cache folder manually.
+`
 
 func SaveBastionHostToCache(ctx context.Context, stateCache state.Cache, host string) error {
 	if err := stateCache.Save(ctx, BastionHostCacheKey, []byte(host)); err != nil {

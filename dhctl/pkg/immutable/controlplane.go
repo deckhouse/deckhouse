@@ -29,10 +29,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/module/controlplane"
 )
 
-// controlPlaneDigestsKey is the images_digests.json module the control-plane
-// component images are built in.
-const controlPlaneDigestsKey = "controlPlaneManager"
-
 // validate covers what buildNodeConfig, which runs first, does not: it already
 // rejects an empty node name and a nil meta config.
 func (in MasterPayloadInput) validate() error {

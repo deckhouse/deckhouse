@@ -62,26 +62,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
-const (
-	bootstrapAbortInvalidCacheMessage = `Create cache %s:
-	Error: %v
-	The Kubernetes cluster was probably bootstrapped successfully.
-	Use the "dhctl destroy" command to delete the cluster.
-`
-	bootstrapPhaseBaseInfraNonCloudMessage = `It is impossible to create base infrastructure for a non-cloud Kubernetes cluster.
-You have to create it manually.
-`
-	bootstrapAbortCheckMessage = `You will be asked for approval multiple times.
-If you are confident in your actions, you can use the flag "--yes-i-am-sane-and-i-understand-what-i-am-doing" to skip approvals.
-`
-	cacheMessage = `Create cache %s:
-	Error: %v
-
-	The Kubernetes cluster was probably bootstrapped successfully.
-	If you want to continue, please delete the cache folder manually.
-`
-)
-
 // Params carries everything ClusterBootstrapper needs that is not derived from
 // the cluster configuration files themselves. The Options field replaces the
 // previous package-level dhctl/pkg/app globals; callers must populate it with a
@@ -209,16 +189,8 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	ctx, span := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap")
 	defer span.End()
 
-	if b.Options.Bootstrap.PostBootstrapScriptPath != "" {
-		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Found post-bootstrap script: %s", b.Options.Bootstrap.PostBootstrapScriptPath))
-		if err := ValidateScriptFile(ctx, b.Options.Bootstrap.PostBootstrapScriptPath); err != nil {
-			return err
-		}
-	}
-
-	if b.Options.Bootstrap.ResourcesPath != "" {
-		dhlog.FromContext(ctx).WarnContext(ctx, "--resources flag is deprecated. Please use the --config flag multiple times for logical resource separation")
-		b.Options.Global.ConfigPaths = append(b.Options.Global.ConfigPaths, b.Options.Bootstrap.ResourcesPath)
+	if err := b.validateOptions(ctx); err != nil {
+		return err
 	}
 
 	// Registry shoud run before LoadConfigFromFile
@@ -233,35 +205,45 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	}
 	defer registryStop()
 
-	bctx := &bootstrapContext{
-		masterAddressesForSSH: make(map[string]string),
-	}
+	bctx := &bootstrapContext{masterAddressesForSSH: make(map[string]string)}
+	defer b.finish(ctx, bctx)
 
 	if err := b.bootstrapLoadConfig(ctx, bctx); err != nil {
 		return err
 	}
 
-	if m := bctx.metaConfig; m != nil {
-		// Cloud context on the bootstrap operation span (one span in both CLI and
-		// gRPC paths), set once the config is loaded.
-		span.SetAttributes(telemetry.CloudSpanAttributes(m.ClusterType, m.OriginalProviderName, m.Layout, m.ClusterPrefix, m.UUID)...)
-	}
+	// Cloud context on the bootstrap operation span (one span in both CLI and
+	// gRPC paths), set once the config is loaded.
+	m := bctx.metaConfig
+	span.SetAttributes(telemetry.CloudSpanAttributes(m.ClusterType, m.OriginalProviderName, m.Layout, m.ClusterPrefix, m.UUID)...)
 
-	defer func() {
+	return b.runPhases(ctx, bctx)
+}
+
+// finish releases what the operation opened and finalizes the phased pipeline.
+// The progress view goes first: what the closers below it log would land behind
+// a live progress view otherwise.
+func (b *ClusterBootstrapper) finish(ctx context.Context, bctx *bootstrapContext) {
+	// The cache is set once the pipeline is initialized; without it there is no
+	// state to finalize into.
+	if bctx.stateCache != nil {
 		if err := b.PhasedExecutionContext.Finalize(ctx, bctx.stateCache); err != nil {
 			dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("failed to finalize phased execution context: %v", err))
 		}
-		if bctx.finishProgress != nil {
-			bctx.finishProgress()
-		}
-		if bctx.immutableTunnelStop != nil {
-			bctx.immutableTunnelStop()
-		}
-		if bctx.cleanup != nil {
-			bctx.cleanup()
-		}
-	}()
+	}
 
+	if bctx.finishProgress != nil {
+		bctx.finishProgress()
+	}
+	if bctx.immutableTunnelStop != nil {
+		bctx.immutableTunnelStop()
+	}
+	if bctx.cleanup != nil {
+		bctx.cleanup()
+	}
+}
+
+func (b *ClusterBootstrapper) runPhases(ctx context.Context, bctx *bootstrapContext) error {
 	phasesToRun := []func(context.Context, *bootstrapContext) error{
 		b.bootstrapPreflight,
 		b.bootstrapBaseInfra,
@@ -282,8 +264,8 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 			}
 			// A failed bootstrap needs the credentials most: the master runs no
 			// sshd, and the success-path print at the end is never reached.
-			if bctx.adminKubeconfigPath != "" {
-				b.printHowToReachTheCluster(ctx, bctx.adminKubeconfigPath, bctx)
+			if path := bctx.adminKubeconfigPath; path != "" {
+				b.printHowToReachTheCluster(ctx, path, bctx)
 			}
 			return err
 		}
@@ -291,11 +273,53 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 	return nil
 }
+
+// validateOptions checks what the operator passed before anything reads the
+// cluster configuration.
+func (b *ClusterBootstrapper) validateOptions(ctx context.Context) error {
+	if path := b.Options.Bootstrap.PostBootstrapScriptPath; path != "" {
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Found post-bootstrap script: %s", path))
+		if err := ValidateScriptFile(ctx, path); err != nil {
+			return err
+		}
+	}
+
+	if b.Options.Bootstrap.ResourcesPath != "" {
+		dhlog.FromContext(ctx).WarnContext(ctx, "--resources flag is deprecated. Please use the --config flag multiple times for logical resource separation")
+		b.Options.Global.ConfigPaths = append(b.Options.Global.ConfigPaths, b.Options.Bootstrap.ResourcesPath)
+	}
+
+	return nil
+}
+
 func (b *ClusterBootstrapper) bootstrapLoadConfig(ctx context.Context, bctx *bootstrapContext) error {
 	ctx, configSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.LoadConfig")
 	defer configSpan.End()
 
-	// first, parse and check cluster config
+	if err := b.loadMetaConfig(ctx, bctx); err != nil {
+		return err
+	}
+
+	b.initProgress(ctx, bctx)
+
+	if err := b.prepareClusterConfig(ctx, bctx); err != nil {
+		return err
+	}
+
+	b.initInfrastructure()
+
+	if err := b.initStateCache(ctx, bctx); err != nil {
+		return err
+	}
+
+	if err := b.prepareInstallConfig(ctx, bctx); err != nil {
+		return err
+	}
+
+	return b.detectImmutableMaster(ctx, bctx)
+}
+
+func (b *ClusterBootstrapper) loadMetaConfig(ctx context.Context, bctx *bootstrapContext) error {
 	metaConfig, err := config.LoadConfigFromFile(
 		ctx,
 		b.Options.Global.ConfigPaths,
@@ -310,45 +334,65 @@ func (b *ClusterBootstrapper) bootstrapLoadConfig(ctx context.Context, bctx *boo
 
 	dhlog.FromContext(ctx).DebugContext(ctx, "MetaConfig was loaded")
 
+	bctx.metaConfig = metaConfig
+	bctx.masterNodeName = fmt.Sprintf("%s-master-0", metaConfig.ClusterPrefix)
+
+	return nil
+}
+
+// initProgress replaces the phased execution context with one that reports to
+// the interactive progress view. Nothing to do when the operator is not at a
+// terminal, or asked for the plain progress output.
+func (b *ClusterBootstrapper) initProgress(ctx context.Context, bctx *bootstrapContext) {
 	interactive := input.IsTerminal() && !b.Options.Global.ShowProgress
 	printBanner(ctx)
 
-	if interactive {
-		progressCh, finishProgress := phases.InitProgress(ctx, dhlog.FromContext(ctx), "Bootstrap cluster")
-		bctx.finishProgress = finishProgress
-
-		onUpdateFunc := func(progress phases.Progress) error {
-			// Non-blocking: the pipeline's deferred Finalize can emit after the consumer has
-			// stopped and the channel is no longer drained; never block or panic on it.
-			select {
-			case progressCh <- progress:
-			default:
-			}
-			return nil
-		}
-
-		b.PhasedExecutionContext = phases.NewDefaultPhasedExecutionContext(phases.OperationBootstrap, b.OnPhaseFunc, onUpdateFunc)
+	if !interactive {
+		return
 	}
 
-	if err := config.ApplyCNIBootstrap(ctx, metaConfig, &b.Options.Global); err != nil {
+	progressCh, finishProgress := phases.InitProgress(ctx, dhlog.FromContext(ctx), "Bootstrap cluster")
+	bctx.finishProgress = finishProgress
+
+	onUpdateFunc := func(progress phases.Progress) error {
+		// Non-blocking: the pipeline's deferred Finalize can emit after the consumer has
+		// stopped and the channel is no longer drained; never block or panic on it.
+		select {
+		case progressCh <- progress:
+		default:
+		}
+		return nil
+	}
+
+	b.PhasedExecutionContext = phases.NewDefaultPhasedExecutionContext(phases.OperationBootstrap, b.OnPhaseFunc, onUpdateFunc)
+}
+
+func (b *ClusterBootstrapper) prepareClusterConfig(ctx context.Context, bctx *bootstrapContext) error {
+	if err := config.ApplyCNIBootstrap(ctx, bctx.metaConfig, &b.Options.Global); err != nil {
 		return fmt.Errorf("apply cni bootstrap: %w", err)
 	}
 
-	b.PhasedExecutionContext.SetClusterConfig(phases.ClusterConfig{ClusterType: metaConfig.ClusterType})
+	b.PhasedExecutionContext.SetClusterConfig(phases.ClusterConfig{ClusterType: bctx.metaConfig.ClusterType})
 
 	// Check if static cluster without ssh-host
-	if metaConfig.IsStatic() && !b.SSHProviderInitializer.CheckHosts(ctx) {
-		if input.IsTerminal() {
-			confirmation := input.NewConfirmation().
-				WithMessage("Do you really want to bootstrap the cluster on the current host?")
-			if !confirmation.Ask() {
-				return fmt.Errorf("Bootstrap canceled by user")
-			}
-		} else {
-			return fmt.Errorf("Static cluster bootstrap requires --ssh-host option when not running in terminal. Please use --ssh-host option or pass --connection-config with SSHHost resource to bootstrap the cluster")
-		}
+	if !bctx.metaConfig.IsStatic() || b.SSHProviderInitializer.CheckHosts(ctx) {
+		return nil
 	}
 
+	if !input.IsTerminal() {
+		return fmt.Errorf("Static cluster bootstrap requires --ssh-host option when not running in terminal. Please use --ssh-host option or pass --connection-config with SSHHost resource to bootstrap the cluster")
+	}
+
+	confirmation := input.NewConfirmation().
+		WithMessage("Do you really want to bootstrap the cluster on the current host?")
+	if !confirmation.Ask() {
+		return fmt.Errorf("Bootstrap canceled by user")
+	}
+
+	return nil
+}
+
+func (b *ClusterBootstrapper) initInfrastructure() {
 	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 		TmpDir:           b.TmpDir,
 		GlobalOptions:    &b.Options.Global,
@@ -359,10 +403,13 @@ func (b *ClusterBootstrapper) bootstrapLoadConfig(ctx context.Context, bctx *boo
 	b.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter).
 		WithUseTfCache(b.Options.Cache.UseTfCache).
 		WithDebug(b.Options.Global.IsDebug)
+}
 
-	// next init cache
-	cachePath := metaConfig.CachePath()
-	if err = cache.InitWithOptions(ctx, cachePath, cache.CacheOptions{InitialState: b.InitialState, ResetInitialState: b.ResetInitialState, Cache: b.Options.Cache}); err != nil {
+// initStateCache opens the state cache, starts the phased pipeline on it and
+// takes from it what the whole operation is keyed by: the cluster UUID.
+func (b *ClusterBootstrapper) initStateCache(ctx context.Context, bctx *bootstrapContext) error {
+	cachePath := bctx.metaConfig.CachePath()
+	if err := cache.InitWithOptions(ctx, cachePath, cache.CacheOptions{InitialState: b.InitialState, ResetInitialState: b.ResetInitialState, Cache: b.Options.Cache}); err != nil {
 		// TODO: it's better to ask for confirmation here
 		return fmt.Errorf(cacheMessage, cachePath, err)
 	}
@@ -381,37 +428,21 @@ func (b *ClusterBootstrapper) bootstrapLoadConfig(ctx context.Context, bctx *boo
 	// TODO(dhctl-for-commander): pass stateCache externally using params as in Destroyer, this variable will be unneeded then
 	b.lastState = nil
 
-	// interactive := input.IsTerminal() && !b.Options.Global.ShowProgress
-	// printBanner(ctx)
-
-	// if interactive {
-	// 	progressCh, finishProgress := phases.InitProgress(ctx, dhlog.FromContext(ctx), "Bootstrap cluster")
-	// 	bctx.finishProgress = finishProgress
-
-	// 	onUpdateFunc := func(progress phases.Progress) error {
-	// 		// Non-blocking: the pipeline's deferred Finalize can emit after the consumer has
-	// 		// stopped and the channel is no longer drained; never block or panic on it.
-	// 		select {
-	// 		case progressCh <- progress:
-	// 		default:
-	// 		}
-	// 		return nil
-	// 	}
-
-	// 	b.PhasedExecutionContext = phases.NewDefaultPhasedExecutionContext(phases.OperationBootstrap, b.OnPhaseFunc, onUpdateFunc)
-	// }
-
-	configHash := state.ConfigHash(ctx, b.Options.Global.ConfigPaths)
-
 	clusterUUID, err := generateClusterUUID(ctx, stateCache)
 	if err != nil {
 		return err
 	}
-	metaConfig.UUID = clusterUUID
+	bctx.metaConfig.UUID = clusterUUID
+	bctx.metaConfig.ResourceManagementTimeout = b.Options.Cache.ResourceManagementTimeout
 
-	metaConfig.ResourceManagementTimeout = b.Options.Cache.ResourceManagementTimeout
+	bctx.stateCache = stateCache
+	bctx.configHash = state.ConfigHash(ctx, b.Options.Global.ConfigPaths)
 
-	deckhouseInstallConfig, err := config.PrepareDeckhouseInstallConfig(ctx, metaConfig, &b.Options.Global)
+	return nil
+}
+
+func (b *ClusterBootstrapper) prepareInstallConfig(ctx context.Context, bctx *bootstrapContext) error {
+	deckhouseInstallConfig, err := config.PrepareDeckhouseInstallConfig(ctx, bctx.metaConfig, &b.Options.Global)
 	if err != nil {
 		return err
 	}
@@ -422,28 +453,28 @@ func (b *ClusterBootstrapper) bootstrapLoadConfig(ctx context.Context, bctx *boo
 	deckhouseInstallConfig.KubeadmBootstrap = true
 	deckhouseInstallConfig.MasterNodeSelector = true
 
-	bootstrapState := NewBootstrapState(stateCache)
+	bctx.deckhouseInstallConfig = deckhouseInstallConfig
+	bctx.bootstrapState = NewBootstrapState(bctx.stateCache)
 
-	// Decides how the very first node is created, so it is read before anything
-	// touches the infrastructure.
-	immutableMaster := immutable.IsImmutableMaster(ctx, metaConfig)
-	if immutableMaster {
-		// Refused here rather than by a preflight: preflights can be skipped, and
-		// the bootstrap this guards runs every phase to the end before dying on a
-		// master address a non-cloud cluster never reports.
-		if err := immutable.ValidateClusterType(ctx, metaConfig); err != nil {
-			return err
-		}
-		dhlog.FromContext(ctx).InfoContext(ctx, "Master NodeGroup asks for an immutable system: bootstrapping without SSH and bashible")
+	return nil
+}
+
+// detectImmutableMaster decides how the very first node is created, so it runs
+// before anything touches the infrastructure.
+func (b *ClusterBootstrapper) detectImmutableMaster(ctx context.Context, bctx *bootstrapContext) error {
+	if !immutable.IsImmutableMaster(ctx, bctx.metaConfig) {
+		return nil
 	}
 
-	bctx.metaConfig = metaConfig
-	bctx.stateCache = stateCache
-	bctx.configHash = configHash
-	bctx.deckhouseInstallConfig = deckhouseInstallConfig
-	bctx.bootstrapState = bootstrapState
-	bctx.immutableMaster = immutableMaster
-	bctx.masterNodeName = fmt.Sprintf("%s-master-0", metaConfig.ClusterPrefix)
+	// Refused here rather than by a preflight: preflights can be skipped, and
+	// the bootstrap this guards runs every phase to the end before dying on a
+	// master address a non-cloud cluster never reports.
+	if err := immutable.ValidateClusterType(ctx, bctx.metaConfig); err != nil {
+		return err
+	}
+
+	dhlog.FromContext(ctx).InfoContext(ctx, "Master NodeGroup asks for an immutable system: bootstrapping without SSH and bashible")
+	bctx.immutableMaster = true
 
 	return nil
 }
@@ -879,16 +910,26 @@ func (b *ClusterBootstrapper) bootstrapAdditionalNodes(ctx context.Context, bctx
 			).Run(ctx, action)
 		}
 
+		// An immutable master boots from a payload rendered per node, and it is
+		// tracked by no SSH address: converge builds its session from that cache
+		// and an unreachable host stalls it.
+		addressTracker := bctx.masterAddressesForSSH
+		var buildPayload masterPayloadBuilder
+		if bctx.immutableMaster {
+			addressTracker = nil
+			buildPayload = buildImmutableJoinPayload
+		}
+
 		err = localBootstraper(func() error {
 			return bootstrapAdditionalNodesForCloudCluster(
 				ctx,
 				&client.KubernetesClient{KubeClient: kubeCl},
 				bctx.metaConfig,
-				bctx.masterAddressesForSSH,
+				addressTracker,
 				b.InfrastructureContext,
 				&b.Options.Global,
 				b.PhasedExecutionContext,
-				bctx.immutableMaster,
+				buildPayload,
 			)
 		})
 		if err != nil {
@@ -982,8 +1023,8 @@ func (b *ClusterBootstrapper) bootstrapFinalize(ctx context.Context, bctx *boots
 		return err
 	}
 
-	if bctx.adminKubeconfigPath != "" {
-		b.printHowToReachTheCluster(ctx, bctx.adminKubeconfigPath, bctx)
+	if path := bctx.adminKubeconfigPath; path != "" {
+		b.printHowToReachTheCluster(ctx, path, bctx)
 	}
 
 	if !b.DisableBootstrapClearCache {
@@ -991,13 +1032,7 @@ func (b *ClusterBootstrapper) bootstrapFinalize(ctx context.Context, bctx *boots
 			ctx, span := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.ClearCache")
 			defer span.End()
 
-			cache.Global().CleanWithExceptions(
-				ctx,
-				state.MasterHostsCacheKey,
-				ManifestCreatedInClusterCacheKey,
-				BastionHostCacheKey,
-				PostBootstrapResultCacheKey,
-			)
+			cache.Global().CleanWithExceptions(ctx, cacheKeysToKeep...)
 			dhlog.FromContext(ctx).WarnContext(ctx, `Next run of "dhctl bootstrap" will create a new Kubernetes cluster.`)
 
 			return nil
@@ -1086,12 +1121,12 @@ func bootstrapAdditionalNodesForCloudCluster(
 	infrastructureContext *infrastructure.Context,
 	globalOptions *options.GlobalOptions,
 	pec phases.DefaultPhasedExecutionContext,
-	immutableMaster bool,
+	buildMasterPayload masterPayloadBuilder,
 ) error {
 	ctx, span := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.AdditionalNodesForCloudCluster")
 	defer span.End()
 
-	if err := BootstrapAdditionalMasterNodes(ctx, kubeCl, metaConfig, masterAddressesForSSH, infrastructureContext, cache.Global(), globalOptions, immutableMaster); err != nil {
+	if err := BootstrapAdditionalMasterNodes(ctx, kubeCl, metaConfig, masterAddressesForSSH, infrastructureContext, cache.Global(), globalOptions, buildMasterPayload); err != nil {
 		return err
 	}
 

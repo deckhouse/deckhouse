@@ -25,29 +25,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 )
 
-const (
-	// containerdExtension, cniExtension and kubeletExtension are the system
-	// extensions every immutable node runs.
-	containerdExtension = "containerd"
-	cniExtension        = "kubernetes-cni"
-	kubeletExtension    = "kubelet"
-
-	// platformExtensionRequestedBy names the module that wants the extension, not
-	// the process that wrote the file — which is why it stays "node-manager" when
-	// node-controller re-renders this node.
-	platformExtensionRequestedBy = "node-manager"
-
-	// registryPackagesDigestsKey is the images_digests.json module the sysext
-	// images are built in.
-	registryPackagesDigestsKey = "registrypackages"
-
-	// commonDigestsKey and pauseImageName locate the sandbox image. The
-	// registry.k8s.io default of the nodeConfig CRD is unreachable from a node
-	// that only talks to the Deckhouse registry.
-	commonDigestsKey = "common"
-	pauseImageName   = "pause"
-)
-
 // ValidateSysext reports whether the installer image carries the system
 // extensions an immutable node runs; a preflight check calls it to fail early.
 // Pure; the context is here for the package's uniform exported signature.

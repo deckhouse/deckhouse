@@ -49,11 +49,6 @@ const (
 	handoffTokenBytes = 32
 )
 
-// handoffCacheKey names the handoff material in the dhctl state cache. A second
-// bootstrap attempt has to present the same token to a node that already booted
-// with the first payload, and verify the certificate that payload carried.
-const handoffCacheKey = "immutable-control-plane-handoff"
-
 // HandoffMaterial is dhctl's side of the one-shot channel. The CA that signed
 // ServerCertPEM is dropped inside generateHandoffMaterial: only its certificate
 // is kept, to verify what the node serves with; the CA key is never stored.

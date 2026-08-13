@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -27,23 +26,6 @@ import (
 	libretry "github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable"
-)
-
-const (
-	// 30 minutes, because nothing has happened on the VM yet: it still has to
-	// install its OS, reboot, pull three system extensions, start kubelet,
-	// generate the PKI and pull four control-plane images before it can answer.
-	immutableAPIWaitAttempts = 360
-	immutableAPIWaitInterval = 5 * time.Second
-
-	// Everything after the apiserver answers. Registering the Node is the node's
-	// next step, so a couple of minutes is generous.
-	immutableWaitAttempts = 120
-	immutableWaitInterval = time.Second
-
-	// The client's own wait for /version — a restarting static pod or a rebuilt
-	// forward, not the install, which is over by then. Five minutes.
-	immutableReadyWaitAttempts = 60
 )
 
 // buildImmutableMasterPayload renders the cloud-init the first master boots
@@ -149,7 +131,7 @@ func (b *ClusterBootstrapper) connectToImmutableMaster(ctx context.Context, bctx
 // node also creates the bootstrap RBAC, the control-plane label and taint and
 // the d8-pki Secret on its own; dhctl creates none of them.
 func waitForImmutableMasterNode(ctx context.Context, kubeCl libcon.KubeClient, nodeName string) error {
-	return libretry.NewLoop("Waiting for the first master node to register", immutableWaitAttempts, immutableWaitInterval).
+	return libretry.NewLoop("Waiting for the first master node to register", waitNodeRegistered.attempts, waitNodeRegistered.interval).
 		RunContext(ctx, func() error {
 			_, err := kubeCl.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
 			if err != nil {

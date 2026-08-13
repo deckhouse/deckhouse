@@ -17,16 +17,6 @@
 // in a payload: the node generates the PKI; dhctl gets kubeconfig via handoff.go.
 package immutable
 
-// payloadAPIVersion and the kinds below are the contract with the on-node
-// agent. It parses both documents with UnmarshalStrict, so every field name must
-// match the agent's types (node-controller/src/api/internal.deckhouse.io/v1alpha1).
-const (
-	payloadAPIVersion = "internal.deckhouse.io/v1alpha1"
-
-	nodeConfigKind         = "NodeConfig"
-	controlPlaneConfigKind = "ControlPlaneConfig"
-)
-
 // objectMeta is the metadata dhctl emits for the payload documents. Only the
 // fields the agent reads are rendered: a full metav1.objectMeta would add a
 // "creationTimestamp: null" line for nothing.

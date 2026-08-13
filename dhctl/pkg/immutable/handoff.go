@@ -28,16 +28,6 @@ import (
 )
 
 const (
-	// HandoffPort is the port the node's one-shot handoff endpoint listens on.
-	HandoffPort = 50001
-
-	// statusPath, handoffPath and collectedPath are the node's bootstrap
-	// channel: what it is doing, the credentials, and the confirmation that
-	// ends the handover.
-	statusPath    = "/bootstrap/status"
-	handoffPath   = "/bootstrap/kubeconfig"
-	collectedPath = "/bootstrap/collected"
-
 	// handoffRequestTimeout bounds a single collection attempt. The body is a
 	// few kilobytes; anything slower is a node that is not ready.
 	handoffRequestTimeout = 30 * time.Second

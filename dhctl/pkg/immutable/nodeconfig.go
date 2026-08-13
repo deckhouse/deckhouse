@@ -27,11 +27,19 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 )
 
+// What dhctl fills the NodeConfig with when the cluster configuration names
+// nothing. The names the node is addressed by live in constants.go.
 const (
 	// osImageNameAndTag is the olcedar image the node boots from, pinned by tag
 	// the way node-controller pins it for day-2 nodes. Only the name and tag are
 	// constant; the repository comes from the configured registry.
 	osImageNameAndTag = "olcedar:v0.1"
+
+	// systemDiskSize tells the initramfs which disk to install onto. The
+	// threshold sits between the etcd (10Gi) and system (50Gi) disks: exact
+	// sizes depend on provider rounding, and device names do not follow attach
+	// order.
+	systemDiskSize = ">=20Gi"
 
 	// Defaults mirroring the nodeConfig CRD field defaults. They are applied
 	// here because the bootstrap payload is marshalled to a file instead of
@@ -43,12 +51,6 @@ const (
 	// defaultPodSubnetNodeCIDRPrefix is what bashible falls back to when the
 	// cluster configuration names no prefix.
 	defaultPodSubnetNodeCIDRPrefix = 24
-
-	// APIServerPort is where a control-plane node's own kube-apiserver listens.
-	APIServerPort = 6443
-
-	nodeTypeLabel = "node.deckhouse.io/type"
-	cgroupLabel   = "node.deckhouse.io/cgroup"
 )
 
 // nodeConfigInput is everything buildNodeConfig needs.
@@ -283,11 +285,6 @@ func nodeRegistry(metaConfig *config.MetaConfig) (*registrySpec, error) {
 		Auth:    settings.RemoteData.AuthBase64(),
 	}, nil
 }
-
-// systemDiskSize tells the initramfs which disk to install onto. The threshold
-// sits between the etcd (10Gi) and system (50Gi) disks: exact sizes depend on
-// provider rounding, and device names do not follow attach order.
-const systemDiskSize = ">=20Gi"
 
 // etcdMounts gives a control-plane node the disk etcd lives on. The disk is
 // described, not named — no /dev path exists before the machine does. No second
