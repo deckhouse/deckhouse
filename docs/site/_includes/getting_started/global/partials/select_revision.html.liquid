@@ -12,7 +12,7 @@
 {%- assign layout = site.data.getting_started.dkp_data.installTypes[page.platform_code].layout %}
 {%-  assign revisions = site.data.getting_started.dkp_data.global.revisions %}
 
-{% unless page.ee_only == true or page.platform_code == "bm-private" -%}
+{% unless page.ee_only == true -%}
 {% if page.lang == 'ru' %}
 #### Выберите редакцию Deckhouse Kubernetes Platform
 {% else %}

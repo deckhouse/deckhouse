@@ -846,9 +846,9 @@ annotations:
 
 <span id="telemetry-api-mesh-observability"></span>
 
-## Telemetry API: метрики mesh и журналы доступа
+## Telemetry API: метрики меша и журналы доступа
 
-[Istio Telemetry API](https://istio.io/latest/docs/tasks/observability/telemetry/) (`telemetry.istio.io`) —  рекомендуемый способ настройки сбора данных о работе сервисов (метрики, access log, провайдеры трассировки) в связке с `meshConfig`.
+[Istio Telemetry API](https://istio.io/latest/docs/tasks/observability/telemetry/) (`telemetry.istio.io`) — рекомендуемый способ настройки сбора данных о работе сервисов (метрики, access log, провайдеры трассировки) в меше в связке с `meshConfig`.
 
 Модуль поддерживает два режима, задаваемые параметром [`telemetryAPI.enabled`](configuration.html#parameters-telemetryapi-enabled):
 
@@ -878,7 +878,7 @@ spec:
 
 ### Проверка метрик и логов
 
-После генерации трафика между сервисами mesh используйте команду:
+После генерации трафика между сервисами меша используйте команду:
 
 ```shell
 # Текст метрик Prometheus через admin API сайдкара (в istio-proxy есть pilot-agent, curl нет).
@@ -903,7 +903,7 @@ istio_response_bytes_bucket{...} 12
 
 ### Prometheus и Grafana
 
-При включённом модуле [`operator-prometheus`](/modules/operator-prometheus/) для метрик сайдкаров создаётся [`PodMonitor`](/modules/prometheus/). Набор неймспейсов под мониторинг вычисляется автоматически по членству в mesh (инъекция Istio); чтобы исключить неймспейс из сборщика метрик, на объект Namespace можно выставить лейбл `istio.deckhouse.io/discard-metrics: "true"`.
+При включённом модуле [`operator-prometheus`](/modules/operator-prometheus/) для метрик сайдкаров создаётся [`PodMonitor`](/modules/prometheus/). Набор неймспейсов под мониторинг вычисляется автоматически по членству в меше (инъекция Istio); чтобы исключить неймспейс из сборщика метрик, на объект Namespace можно выставить лейбл `istio.deckhouse.io/discard-metrics: "true"`.
 
 Если в Grafana пустые панели «workload», а control plane в порядке, необходимо определить причину отсутствия workload-метрик. Для этого проверьте:
 
@@ -970,7 +970,7 @@ spec:
 
 {% alert level="info" %}Экспорт OpenTelemetry в модуле соответствует [распределённой трассировке с OpenTelemetry](https://istio.io/v1.25/docs/tasks/observability/distributed-tracing/opentelemetry/) на Istio 1.25+. На Istio 1.21 используйте Zipkin/Jaeger через [`tracing.collector.zipkin`](configuration.html#parameters-tracing-collector) или обновите ревизию control plane.{% endalert %}
 
-Разверните Collector, доступный из mesh, включите Telemetry API и укажите [`tracing.collector.opentelemetry`](configuration.html#parameters-tracing-collector-opentelemetry). Модуль добавит провайдер `deckhouse-tracing` и `spec.tracing` в `d8-main` — не дописывайте OTLP вручную в `meshConfig` CR `Istio` / `IstioOperator`.
+Разверните Collector, доступный из меша, включите Telemetry API и укажите [`tracing.collector.opentelemetry`](configuration.html#parameters-tracing-collector-opentelemetry). Модуль добавит провайдер `deckhouse-tracing` и `spec.tracing` в `d8-main` — не дописывайте OTLP вручную в `meshConfig` CR `Istio` / `IstioOperator`.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -1115,7 +1115,7 @@ d8 k -n <debug-namespace> run istioctl-debug \
 export ISTIOCTL_VERSION=1.21
 ```
 
-Доступные значения: `1.21`, `1.25` и `1.27`. Также можно запустить конкретный бинарный файл напрямую: `istioctl-1.21`, `istioctl-1.25` или `istioctl-1.27`.
+Доступные значения: `1.21`, `1.25`, `1.27` и `1.29`. Также можно запустить конкретный бинарный файл напрямую: `istioctl-1.21`, `istioctl-1.25`, `istioctl-1.27` или `istioctl-1.29`.
 
 Пример:
 
@@ -1267,3 +1267,140 @@ metadata:
 ```
 
 {% alert level="warning" %}Все четыре параметра должны быть указаны вместе — `sidecar.istio.io/proxyCPU`, `sidecar.istio.io/proxyCPULimit`, `sidecar.istio.io/proxyMemory` и `sidecar.istio.io/proxyMemoryLimit`. Частичная конфигурация не поддерживается.{% endalert %}
+
+## Предоставление собственного CA через ссылку на секрет
+
+Вместо того чтобы указывать сертификат и ключ CA непосредственно в конфигурации модуля (через `ca.cert` и `ca.key`), можно сослаться на существующий секрет с помощью параметра [`ca.secretRef`](configuration.html#parameters-ca-secretref). Это позволяет выпустить CA любым удобным способом, например с помощью cert-manager (self-signed issuer, Vault issuer и т. д.).
+
+Секрет, на который указывает ссылка, может быть в одном из следующих форматов (определяется автоматически):
+
+- секрет cert-manager типа `kubernetes.io/tls` с ключами `tls.crt`, `tls.key` и `ca.crt`;
+- нативный секрет Istio `cacerts` с ключами `ca-cert.pem`, `ca-key.pem`, `cert-chain.pem` и `root-cert.pem`.
+
+Подписывающий сертификат должен быть CA-сертификатом (`isCA: true` / `basicConstraints = CA:TRUE`), ключ которого ему соответствует.
+
+### Пример: самоподписанный CA, выпущенный cert-manager
+
+```yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: istio-ca
+  namespace: my-pki
+spec:
+  secretName: istio-ca
+  commonName: istiod-ca
+  isCA: true
+  usages:
+    - digital signature
+    - key encipherment
+    - cert sign
+  issuerRef:
+    kind: Issuer
+    name: selfsigned-issuer
+```
+
+### Пример: промежуточный CA (выпущен через Vault Issuer cert-manager)
+
+Если у вас уже развёрнут HashiCorp Vault PKI, можно поручить cert-manager выпустить CA для Istio как промежуточный, подписанный вашим корневым/промежуточным CA из Vault. Полученный секрет имеет точно такую же структуру и определяется автоматически тем же способом — единственное требование `isCA: true`.
+
+```yaml
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: vault-issuer
+  namespace: my-pki
+spec:
+  vault:
+    # Путь роли промежуточного PKI, которой разрешено выпускать CA-сертификаты.
+    path: pki_int/sign/istio-ca
+    server: https://vault.example.com:8200
+    # Vault должен возвращать цепочку CA, чтобы ca.crt содержал корень.
+    caBundle: <Vault CA bundle в base64>
+    auth:
+      kubernetes:
+        role: istio-ca-issuer
+        mountPath: /v1/auth/kubernetes
+        serviceAccountRef:
+          name: cert-manager
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: istio-ca
+  namespace: my-pki
+spec:
+  secretName: istio-ca
+  commonName: istiod-ca
+  # Обязательно: выпускаемый сертификат сам должен быть CA, чтобы istiod мог подписывать сертификаты рабочих нагрузок.
+  isCA: true
+  duration: 87600h    # 10 лет, скорректируйте под свою политику ротации
+  usages:
+    - digital signature
+    - key encipherment
+    - cert sign
+    - crl sign
+  issuerRef:
+    kind: Issuer
+    name: vault-issuer
+```
+
+{% alert level="warning" %}
+Роль Vault PKI должна разрешать выпуск CA-сертификатов (`isCA`), а issuer должен возвращать цепочку CA, чтобы `ca.crt` содержал корень Vault. Иначе модуль не сможет определить корень, а проверка leaf-сертификата завершится ошибкой и заблокирует развёртывание.
+{% endalert %}
+
+Затем сошлитесь на полученный секрет в конфигурации модуля (одинаково для обоих примеров выше):
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: istio
+spec:
+  version: 3
+  enabled: true
+  settings:
+    ca:
+      secretRef:
+        name: istio-ca
+        namespace: my-pki
+```
+
+{% alert level="info" %}
+Если `namespace` не указан, секрет ищется в неймспейсе `d8-istio`.
+{% endalert %}
+
+{% alert level="warning" %}
+Если секрет, на который указывает ссылка, отсутствует или имеет некорректный формат при первом разрешении данного `secretRef`, модуль не продолжит работу до устранения проблемы. Молчаливого отката к самоподписанному CA — или к любому CA, использовавшемуся до настройки этого `secretRef`, — не произойдёт, чтобы не оказаться неожиданно на постороннем CA.
+
+Если тот же `secretRef` ранее был успешно разрешён, а затем стал недоступен или некорректен (например, оказался временно удалён во время ротации или у его цепочки истёк срок действия), модуль продолжит использовать последний успешно разрешённый CA, а не остановит работу с ошибкой. Модуль никогда не переключается на другой CA по собственной инициативе — он лишь повторно использует ровно тот материал, с которым уже работает istiod, — поэтому уже работающий меш не деградирует, пока устраняется проблема с источником. Перенаправление `secretRef` на другой секрет считается первым разрешением: если новый секрет разрешить не удаётся, модуль останавливается с ошибкой, а не продолжает использовать предыдущий CA.
+{% endalert %}
+
+{% alert level="info" %}
+Секрет, на который указывает ссылка, перечитывается каждые 5 минут, поэтому изменения в исходном секрете могут распространяться с задержкой.
+
+При ротации промежуточного CA не изменяйте корневой сертификат. Модуль публикует `root-cert.pem` (доверенный корневой сертификат `ca.crt`) в качестве `caBundle` для вебхуков и использует его как корень доверия для рабочих нагрузок, тогда как подписывающий (промежуточный) сертификат может меняться. Ротация промежуточного сертификата при неизменном корневом сертификате проходит бесшовно. Смена корневого сертификата затрагивает доверие всего меша, поэтому во время перехода старый и новый корневые сертификаты должны одновременно присутствовать в наборе доверенных корневых сертификатов.
+{% endalert %}
+
+### Возврат к самоподписанному CA
+
+Удаление `ca.secretRef` (или inline-поля `ca.cert`) из конфигурации модуля само по себе не переключает меш обратно на автоматически сгенерированный самоподписанный CA. Модуль намеренно сохраняет последний опубликованный CA — хранящийся в секрете d8-istio/cacerts — чтобы уже работающий меш не был неявно ротирован: ротация корневого сертификата разрывает mTLS во всём кластере, пока каждая рабочая нагрузка не начнёт доверять новому корню.
+
+Чтобы намеренно вернуться к самоподписанному CA:
+
+1. Удалите конфигурацию `ca.secretRef` (или `ca.cert`) из ModuleConfig `istio`.
+2. Удалите принадлежащий модулю секрет `d8-istio/cacerts`:
+
+   ```shell
+   d8 k -n d8-istio delete secret cacerts
+   ```
+
+3. Перезапустите под Deckhouse, чтобы модуль сбросил последний опубликованный CA, который он держит в памяти:
+
+   ```shell
+   d8 k -n d8-system rollout restart deployment deckhouse
+   ```
+
+{% alert level="warning" %}
+Это изменение доверия в масштабе всего кластера, и оно приводит к перезагрузке подов: istiod перепубликует новый корень в качестве `caBundle` для вебхуков, а рабочие нагрузки должны начать ему доверять. Выполняйте во время окна обслуживания.
+{% endalert %}

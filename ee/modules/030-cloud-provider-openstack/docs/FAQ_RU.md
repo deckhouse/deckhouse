@@ -121,6 +121,50 @@ spec:
 Необходимо прописать параметр `additionalSecurityGroups` для всех `OpenStackInstanceClass` в кластере, которым нужны дополнительные
 групп безопасности. Подробнее — [параметры модуля `cloud-provider-openstack`](/cloud-provider-openstack/configuration.html).
 
+## Как создать NodeGroup в зонах доступности?
+
+Кластер OpenStack разворачивается в одном регионе, который задается параметром [`provider.region`](cluster_configuration.html#openstackclusterconfiguration-provider-region) ресурса [OpenStackClusterConfiguration](cluster_configuration.html#openstackclusterconfiguration). Создавать узлы можно только в зонах доступности этого региона. Использование зон из других регионов не поддерживается.
+
+Чтобы получить список зон доступности региона, выполните команду:
+
+```shell
+openstack --os-region-name <REGION> availability zone list --compute
+```
+
+Группы узлов типа CloudPermanent задаются в секции [`nodeGroups`](cluster_configuration.html#openstackclusterconfiguration-nodegroups) ресурса OpenStackClusterConfiguration. Для ограничения зон доступности используйте параметр [`nodeGroups[].zones`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-nodegroups-zones).
+
+Узлы типа CloudEphemeral создаются отдельным ресурсом [NodeGroup](/modules/node-manager/cr.html#nodegroup) с `nodeType: CloudEphemeral`. Зоны доступности для них задаются в параметре [`spec.cloudInstances.zones`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-zones). Если в OpenStackClusterConfiguration указан параметр [`zones`](cluster_configuration.html#openstackclusterconfiguration-zones), необходимые зоны также должны быть добавлены в него.
+
+{% alert level="info" %}
+Если при создании NodeGroup admission вебхук возвращает ошибку `unknown zone`, убедитесь, что указанная зона относится к региону `provider.region` и, при использовании параметра `zones`, включена в список зон OpenStackClusterConfiguration.
+{% endalert %}
+
+Узлы из другого региона можно добавить в кластер только вручную как Static-узлы. Модуль `cloud-provider-openstack` не создает такие узлы.
+
+{% alert level="warning" %}
+После изменения OpenStackClusterConfiguration выполните команду `dhctl converge`. Подробнее — в разделе [«Добавление и управление облачными узлами»](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/cloud-node.html#добавление-cloudpermanent-узлов-в-облачном-кластере).
+{% endalert %}
+
+Пример NodeGroup для узлов типа CloudEphemeral:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: workers
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    classReference:
+      kind: OpenStackInstanceClass
+      name: workers
+    minPerZone: 1
+    maxPerZone: 1
+    zones:
+    - eu-3a
+    - eu-3b
+```
+
 ## Как поднять гибридный кластер?
 
 Гибридный кластер представляет собой кластер, в котором могут быть как узлы bare metal, так и узлы OpenStack. Для создания такого кластера необходимо наличие L2-сети между всеми узлами кластера.

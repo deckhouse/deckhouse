@@ -16,7 +16,6 @@ package runtime
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"slices"
 
@@ -145,6 +144,53 @@ func (r *Runtime) UpdateModule(repo registry.Remote, module Module, force bool) 
 	}
 }
 
+// UpdateEmbeddedModule handles creation, settings and enabled intent of an embedded module —
+// one shipped inside the Deckhouse image rather than pulled from a repository.
+//
+// The pipeline is UpdateModule's without the Deploy task: the files already sit under
+// app.EmbeddedModulesDir, so ReadyOnFilesystem holds from the start and only Load runs.
+// The version is the running edition's, because an embedded module carries no package
+// version of its own; it therefore cannot change while the process lives, which is why
+// there is no disable-then-reload branch here.
+//
+// Settings-only and enabled-only changes behave as in UpdateModule: they stash the new
+// values and Reschedule, so the scheduler re-runs Configure → Startup → Run with them.
+func (r *Runtime) UpdateEmbeddedModule(module Module) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	r.logger.Debug("update embedded module", slog.String("name", module.Name))
+
+	if len(module.Settings) == 0 {
+		module.Settings = make(addonutils.Values)
+	}
+
+	name := module.Name
+	version := r.edition.Version
+	enabledChanged := r.global.SetConfigEnabled(name, module.Enabled)
+
+	if !r.packages.NeedUpdate(name, version, module.Settings.Checksum(), module.SettingsVersion, module.Maintenance) {
+		if enabledChanged {
+			r.scheduler.Reschedule(name)
+		}
+
+		return
+	}
+
+	ctx := r.packages.Update(name, version, module.SettingsVersion, module.Settings, module.Maintenance, false)
+	if ctx == nil {
+		r.scheduler.Reschedule(name)
+		return
+	}
+
+	r.status.NewStatus(name)
+
+	// The image carries the module, so nothing has to place it on disk.
+	r.status.SetConditionTrue(name, status.ConditionReadyOnFilesystem)
+
+	r.queueService.Enqueue(ctx, name, taskload.NewEmbeddedTask(name, r.loadEmbeddedModule, r.status, r.logger))
+}
+
 // loadModule builds a Module from its package files, stores it in r.modules,
 // and registers it with the scheduler via AddNode. Called by the Load task
 // after the package image is mounted on the filesystem.
@@ -162,6 +208,47 @@ func (r *Runtime) loadModule(ctx context.Context, repo registry.Remote, packageP
 	}
 
 	conf.Repository = repo
+
+	module, err := r.registerModule(conf)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return "", err
+	}
+
+	return module.GetVersion().String(), nil
+}
+
+// loadEmbeddedModule builds a Module from an embedded package directory and registers it,
+// as loadModule does for a downloaded one. The definition's version is overwritten with
+// the running edition's, and the repository the Load task passes is empty — an embedded
+// module has none, so no registry values are injected.
+func (r *Runtime) loadEmbeddedModule(ctx context.Context, _ registry.Remote, packagePath string) (string, error) {
+	ctx, span := otel.Tracer(runtimeTracer).Start(ctx, "loadEmbeddedModule")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("path", packagePath))
+
+	conf, err := loader.LoadEmbeddedConf(ctx, packagePath, r.logger)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return "", status.NewError("LoadFailed", err)
+	}
+
+	conf.Definition.Version = r.edition.Version
+
+	module, err := r.registerModule(conf)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return "", err
+	}
+
+	return module.GetVersion().String(), nil
+}
+
+// registerModule wires the runtime's shared managers into conf, builds the module and
+// publishes it to r.modules and the scheduler. Returns a status error, so both loaders
+// pass it straight to the Load task's condition.
+func (r *Runtime) registerModule(conf *modules.Config) (*modules.Module, error) {
 	conf.Patcher = r.objectPatcher
 	conf.ScheduleManager = r.scheduleManager
 	conf.KubeEventsManager = r.kubeEventsManager
@@ -169,8 +256,7 @@ func (r *Runtime) loadModule(ctx context.Context, repo registry.Remote, packageP
 
 	module, err := modules.NewModuleByConfig(conf.Definition.Name, conf, r.logger)
 	if err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return "", status.NewError("LoadFailed", err)
+		return nil, status.NewError("LoadFailed", err)
 	}
 
 	r.mu.Lock()
@@ -183,11 +269,10 @@ func (r *Runtime) loadModule(ctx context.Context, repo registry.Remote, packageP
 	r.modules[module.GetName()] = module
 	if err = r.scheduler.AddNode(module); err != nil {
 		delete(r.modules, module.GetName())
-		span.SetStatus(codes.Error, err.Error())
-		return "", status.NewError("DependencyCycle", err)
+		return nil, status.NewError("DependencyCycle", err)
 	}
 
-	return module.GetVersion().String(), nil
+	return module, nil
 }
 
 // RemoveModule removes a module and cancels all its running operations.
@@ -222,23 +307,4 @@ func (r *Runtime) RemoveModule(name string) {
 	})
 
 	r.queueService.Enqueue(ctx, name, taskundeploy.NewModuleTask(name, r.moduleDeployer, r.logger), cleanup)
-}
-
-// GetModuleDigest returns the digest the module tag currently resolves to. Callers compare
-// it against the last known one and pass the answer back as UpdateModule's force flag.
-func (r *Runtime) GetModuleDigest(ctx context.Context, remote registry.Remote, name, tag string) (string, error) {
-	ctx, span := otel.Tracer(runtimeTracer).Start(ctx, "GetModuleDigest")
-	defer span.End()
-
-	span.SetAttributes(attribute.String("name", name))
-	span.SetAttributes(attribute.String("tag", tag))
-	span.SetAttributes(attribute.String("repository", remote.Name))
-
-	digest, err := r.registry.GetImageDigest(ctx, remote, name, tag)
-	if err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return "", fmt.Errorf("get %s module digest: %w", name, err)
-	}
-
-	return digest, nil
 }

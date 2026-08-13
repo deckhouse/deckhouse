@@ -71,8 +71,17 @@ document.addEventListener("DOMContentLoaded", function () {
       // Default Source - Site
       const source_id = 'UC_GAZF8L';
 
+      const modalAttr = this.wrapper.dataset.modalWindow;
+
       // Default Assigned by - Anna Saprykina
-      const assigned_by_id = 7;
+      const default_assigned_by_id = 7;
+
+      // Assigned by for particular forms
+      const assigned_by_id_by_form = {
+        'request_access': 937,
+      };
+
+      const assigned_by_id = assigned_by_id_by_form[modalAttr] || default_assigned_by_id;
 
       const bitrixFields = {
         fields: {
@@ -82,7 +91,6 @@ document.addEventListener("DOMContentLoaded", function () {
         }
       }
 
-      const modalAttr = this.wrapper.dataset.modalWindow;
       const isEn = FormData.language === 'en' || document.documentElement.lang === 'en';
 
       if (isEn) {

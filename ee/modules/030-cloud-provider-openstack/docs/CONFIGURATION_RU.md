@@ -16,6 +16,11 @@ title: "Cloud provider — OpenStack: настройки"
 
 Количество и параметры процесса заказа машин в облаке настраиваются в custom resource [`NodeGroup`](/node-manager/cr.html#nodegroup) модуля `node-manager`, в котором также указывается название используемого для этой группы узлов инстанс-класса (параметр `cloudInstances.classReference` NodeGroup).  Инстанс-класс для cloud-провайдера OpenStack — это custom resource [`OpenStackInstanceClass`](cr.html#openstackinstanceclass), в котором указываются конкретные параметры самих машин.
 
+{% alert level="info" %}
+Кластер в OpenStack разворачивается в одном регионе (`provider.region` в [OpenStackClusterConfiguration](cluster_configuration.html#openstackclusterconfiguration)).
+Зоны других регионов использовать нельзя. Подробнее — [в разделе «Как создать NodeGroup в зонах доступности?»](faq.html#как-создать-nodegroup-в-зонах-доступности).
+{% endalert %}
+
 Настройки модуля устанавливаются автоматически на основании выбранной схемы размещения. В большинстве случаев нет необходимости в ручной конфигурации модуля.
 
 Если вам необходимо настроить модуль, потому что, например, у вас bare-metal-кластер, для которого нужно включить возможность добавлять дополнительные инстансы из OpenStack, смотрите раздел [Как настроить Hybrid-кластер в OpenStack](faq.html#как-поднять-гибридный-кластер).

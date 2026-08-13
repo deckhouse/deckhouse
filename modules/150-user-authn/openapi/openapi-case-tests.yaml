@@ -21,6 +21,8 @@ positive:
         numbers: false
         capitalized: true
         repeatedChars: false
+  - idTokenTTL: 5h59m
+  - idTokenTTL: 1h
 negative:
   values:
   - kubeconfigGenerator:
@@ -42,3 +44,5 @@ negative:
       complexityLevel: Fair
       custom:
         minLength: 10
+  - idTokenTTL: 6h
+  - idTokenTTL: 24h

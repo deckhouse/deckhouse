@@ -692,10 +692,6 @@ dhctl bootstrap-phase abort
 
 ### Установка из стороннего хранилища образов контейнеров
 
-{% alert level="warning" %}
-Доступно в следующих редакциях: SE, SE+, EE, CSE Lite, CSE Pro.
-{% endalert %}
-
 DKP можно установить из стороннего хранилища образов или через проксирующий сервер внутри закрытого контура.
 
 {% alert level="warning" %}
@@ -1095,10 +1091,6 @@ echo "$MYRESULTSTRING"
 Если вы хотите отключить автоматические обновления для уже установленного DKP (включая обновления patch-релизов), удалите [параметр `releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) из конфигурации модуля `deckhouse`.
 
 ### Использование прокси-сервера
-
-{% alert level="warning" %}
-Доступно в следующих редакциях: BE, SE, SE+, EE, CSE Lite, CSE Pro.
-{% endalert %}
 
 {% offtopic title="Пример шагов по настройке прокси-сервера на базе Squid..." %}
 

@@ -24,6 +24,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -48,6 +49,7 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
@@ -223,6 +225,19 @@ func NewDeckhouseController(
 		opts.Cache.ByObject[&v1alpha2.Module{}] = cache.ByObject{}
 	}
 
+	admission, serveWebhooks := app.TakeOverAdmissionServer()
+	if serveWebhooks {
+		listenPort, err := strconv.Atoi(admission.ListenPort)
+		if err != nil {
+			return nil, fmt.Errorf("parse admission server listen port: %w", err)
+		}
+
+		opts.WebhookServer = webhook.NewServer(webhook.Options{
+			Port:    listenPort,
+			CertDir: admission.CertsDir,
+		})
+	}
+
 	runtimeManager, err := controllerruntime.NewManager(operator.KubeClient().RestConfig(), opts)
 	if err != nil {
 		return nil, fmt.Errorf("create controller runtime manager: %w", err)
@@ -310,7 +325,7 @@ func NewDeckhouseController(
 	dc := dependency.NewDependencyContainer()
 	settingsContainer := helpers.NewDeckhouseSettingsContainer(nil, operator.MetricStorage)
 
-	pkgRuntime, err := packageruntime.Build(runtimeManager.GetClient(), edition, operator.ModuleManager, dc, operator.MetricStorage, logger)
+	pkgRuntime, err := packageruntime.Build(runtimeManager.GetClient(), operator.ModuleManager, dc, operator.MetricStorage, logger)
 	if err != nil {
 		return nil, fmt.Errorf("create package operator: %w", err)
 	}
@@ -409,19 +424,22 @@ func NewDeckhouseController(
 		}
 	}
 
-	validation.RegisterAdmissionHandlers(
-		operator.AdmissionServer,
-		runtimeManager.GetClient(),
-		operator.ModuleManager,
-		pkgRuntime,
-		configtools.NewValidator(operator.ModuleManager, conversionsStore),
-		loader,
-		operator.MetricStorage,
-		config.NewSchemaStore(nil),
-		settingsContainer,
-		exts,
-		edition,
-	)
+	if serveWebhooks {
+		// GetWebhookServer, not the server above: this call adds it to the runnables.
+		validation.RegisterAdmissionHandlers(
+			runtimeManager.GetWebhookServer(),
+			runtimeManager.GetClient(),
+			operator.ModuleManager,
+			pkgRuntime,
+			configtools.NewValidator(operator.ModuleManager, conversionsStore),
+			loader,
+			operator.MetricStorage,
+			config.NewSchemaStore(nil),
+			settingsContainer,
+			exts,
+			edition,
+		)
+	}
 
 	return &DeckhouseController{
 		runtimeManager:     runtimeManager,

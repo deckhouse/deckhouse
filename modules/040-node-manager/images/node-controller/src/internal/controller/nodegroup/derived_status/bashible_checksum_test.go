@@ -24,7 +24,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
@@ -58,7 +57,7 @@ func buildCloudResolvedMap(t *testing.T, kubernetesVersion string, minPerZone, m
 	return resolvedMap(ResolveInput{
 		Name:     "worker",
 		NodeType: v1.NodeTypeCloudEphemeral,
-		RawSpec: map[string]interface{}{
+		Spec: specFrom(map[string]interface{}{
 			"nodeType": "CloudEphemeral",
 			"cloudInstances": map[string]interface{}{
 				"classReference": map[string]interface{}{"kind": "D8TestInstanceClass", "name": "worker"},
@@ -66,14 +65,14 @@ func buildCloudResolvedMap(t *testing.T, kubernetesVersion string, minPerZone, m
 				"maxPerZone":     maxPerZone,
 			},
 			"kubelet": kubeletDefaults(),
-		},
+		}),
 		CloudProcessed: true,
 	}, Result{
 		Engine:            "None",
 		KubernetesVersion: kubernetesVersion,
 		CRIType:           "Containerd",
 		Zones:             zones,
-		InstanceClass:     &runtime.RawExtension{Raw: []byte("null")},
+		InstanceClass:     nil,
 		SerializedLabels:  "node-role.kubernetes.io/worker=,node.deckhouse.io/group=worker,node.deckhouse.io/type=CloudEphemeral",
 		SerializedTaints:  "",
 		UpdateEpoch:       "1",
@@ -106,20 +105,20 @@ func TestBashibleChecksum_GoldenParity(t *testing.T) {
 	nodeGroupValues := resolvedMap(ResolveInput{
 		Name:     "proper1",
 		NodeType: v1.NodeTypeCloudEphemeral,
-		RawSpec: map[string]interface{}{
+		Spec: specFrom(map[string]interface{}{
 			"nodeType": "CloudEphemeral",
 			"cloudInstances": map[string]interface{}{
 				"classReference": map[string]interface{}{"kind": "D8TestInstanceClass", "name": "proper1"},
 			},
 			"kubelet": kubeletDefaults(),
-		},
+		}),
 		CloudProcessed: true,
 	}, Result{
 		Engine:            "None",
 		KubernetesVersion: "1.32",
 		CRIType:           "Containerd",
 		Zones:             []string{"a", "b", "c"},
-		InstanceClass:     &runtime.RawExtension{Raw: []byte("null")},
+		InstanceClass:     nil,
 		SerializedLabels:  "node-role.kubernetes.io/proper1=,node.deckhouse.io/group=proper1,node.deckhouse.io/type=CloudEphemeral",
 		SerializedTaints:  "",
 		UpdateEpoch:       "222",

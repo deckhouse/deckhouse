@@ -310,6 +310,43 @@ func TestEmptyLogDestinationStaysAllowed(t *testing.T) {
 	}
 }
 
+// Quoting the administrator name keeps a digit-only value (for example "008") a YAML
+// string. Without quote, the YAML parser turns it into a number and Kubernetes rejects
+// AuthorizationRule.metadata.name / subjects[].name as the wrong type.
+func TestDigitOnlyAdministratorNameStaysAString(t *testing.T) {
+	t.Parallel()
+
+	client := injectionTestClient(t)
+	const digitOnlyName = "008"
+
+	for _, templateName := range []string{"default", "secure", "secure-with-dedicated-nodes"} {
+		t.Run(templateName, func(t *testing.T) {
+			t.Parallel()
+
+			project := new(v1alpha2.Project)
+			project.Name = "test"
+			project.Spec.Parameters = map[string]any{
+				"resourceQuota":  map[string]any{"requests": map[string]any{"cpu": "1"}},
+				"administrators": []any{map[string]any{"subject": "User", "name": digitOnlyName}},
+			}
+
+			manifests, err := client.renderTemplate(project, shippedTemplate(t, templateName))
+			require.NoError(t, err)
+
+			rule := findObject(t, manifests, "AuthorizationRule")
+			assert.Equal(t, digitOnlyName, rule.GetName(), "metadata.name must stay a string after YAML round-trip")
+
+			subjects, found, err := unstructured.NestedSlice(rule.Object, "spec", "subjects")
+			require.NoError(t, err)
+			require.True(t, found)
+			require.Len(t, subjects, 1)
+			subject, ok := subjects[0].(map[string]any)
+			require.True(t, ok)
+			assert.Equal(t, digitOnlyName, subject["name"])
+		})
+	}
+}
+
 // Quoting the quota substitutions turned the rendered values into strings. That is the canonical
 // form of a Quantity, but the golden fixtures render a copy of the template rather than the shipped
 // one, so nothing else would notice if it stopped parsing.

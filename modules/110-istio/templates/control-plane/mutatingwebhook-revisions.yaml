@@ -6,7 +6,7 @@
   {{- $revision := get $versionInfo "revision" }}
 - name: {{ $prefix }}sidecar-injector.istio.io
   clientConfig:
-    caBundle: {{ $context.Values.istio.internal.ca.cert | b64enc }}
+    caBundle: {{ $context.Values.istio.internal.ca.root | b64enc }}
     service:
       name: istiod-{{ $revision }}
       namespace: d8-istio

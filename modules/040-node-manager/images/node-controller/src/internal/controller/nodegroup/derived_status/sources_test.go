@@ -38,28 +38,36 @@ func kubernetesSourceConfigMap(desiredVersion string) *corev1.ConfigMap {
 
 func resolvedTarget(t *testing.T, objects ...client.Object) string {
 	t.Helper()
-	target := newTestServiceRaw(t, objects...).readTargetKubernetesVersion(context.Background())
+	target, err := newTestServiceRaw(t, objects...).readTargetKubernetesVersion(context.Background())
+	require.NoError(t, err)
 	require.NotNil(t, target)
 	return semverMajMin(target)
 }
 
-// Every unusable input degrades to nil rather than erroring, exactly like the
-// ClusterConfiguration.kubernetesVersion read this replaced: the caller then falls back to the
-// running kube-apiserver version. Erroring instead would abort the NodeGroup loop in
-// bashiblecontext and leave every NodeGroup without a context Secret at once.
+func degradedTarget(t *testing.T, objects ...client.Object) {
+	t.Helper()
+	target, err := newTestServiceRaw(t, objects...).readTargetKubernetesVersion(context.Background())
+	require.NoError(t, err)
+	assert.Nil(t, target)
+}
+
+// An absent or unusable value degrades to nil rather than erroring, and the caller then falls back to
+// the running kube-apiserver version. Only an unreadable ConfigMap is an error, which is the boundary
+// every other source in this file draws: absence and shape degrade, unavailability propagates (see
+// sources_error_test.go).
 func TestReadTargetKubernetesVersion(t *testing.T) {
 	t.Run("ConfigMap desiredVersion is the only source", func(t *testing.T) {
 		assert.Equal(t, "1.35", resolvedTarget(t, kubernetesSourceConfigMap("1.35")))
 	})
 
 	t.Run("missing ConfigMap degrades", func(t *testing.T) {
-		assert.Nil(t, newTestServiceRaw(t).readTargetKubernetesVersion(context.Background()))
+		degradedTarget(t)
 	})
 
 	t.Run("empty desiredVersion degrades", func(t *testing.T) {
 		cm := kubernetesSourceConfigMap("")
 		cm.Data["spec"] = "desiredVersion: \"\"\nupdateMode: Automatic\n"
-		assert.Nil(t, newTestServiceRaw(t, cm).readTargetKubernetesVersion(context.Background()))
+		degradedTarget(t, cm)
 	})
 
 	t.Run("missing spec key degrades", func(t *testing.T) {
@@ -67,18 +75,17 @@ func TestReadTargetKubernetesVersion(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{Namespace: clusterConfigSecretNamespace, Name: clusterKubernetesConfigMapName},
 			Data:       map[string]string{},
 		}
-		assert.Nil(t, newTestServiceRaw(t, cm).readTargetKubernetesVersion(context.Background()))
+		degradedTarget(t, cm)
 	})
 
 	t.Run("invalid desiredVersion degrades", func(t *testing.T) {
-		assert.Nil(t, newTestServiceRaw(t, kubernetesSourceConfigMap("not-a-version")).
-			readTargetKubernetesVersion(context.Background()))
+		degradedTarget(t, kubernetesSourceConfigMap("not-a-version"))
 	})
 
 	t.Run("unparsable ConfigMap spec degrades", func(t *testing.T) {
 		cm := kubernetesSourceConfigMap("1.35")
 		cm.Data["spec"] = "desiredVersion: [broken\n"
-		assert.Nil(t, newTestServiceRaw(t, cm).readTargetKubernetesVersion(context.Background()))
+		degradedTarget(t, cm)
 	})
 }
 
@@ -93,7 +100,7 @@ func apiserverPod(name, version string) *corev1.Pod {
 	}
 }
 
-// Compute must keep producing a bashible context when the ConfigMap is absent — managed clusters
+// Derivation must keep producing a bashible context when the ConfigMap is absent — managed clusters
 // have no such object at all.
 func TestComputeDegradesWithoutClusterKubernetesConfigMap(t *testing.T) {
 	nodeGroup := &v1.NodeGroup{
@@ -101,30 +108,27 @@ func TestComputeDegradesWithoutClusterKubernetesConfigMap(t *testing.T) {
 		Spec:       v1.NodeGroupSpec{NodeType: v1.NodeTypeStatic},
 	}
 
-	t.Run("falls back to the kube-apiserver version", func(t *testing.T) {
-		service := newTestServiceRaw(t, apiserverPod("kube-apiserver-master-0", "1.34.5"))
-
-		result, err := service.compute(context.Background(), nodeGroup, map[string]interface{}{})
+	derive := func(t *testing.T, objects ...client.Object) Result {
+		t.Helper()
+		result, _, err := newTestServiceRaw(t, objects...).ComputeWithCloudChecks(context.Background(), nodeGroup)
 		require.NoError(t, err)
+		return result
+	}
+
+	t.Run("falls back to the kube-apiserver version", func(t *testing.T) {
+		result := derive(t, apiserverPod("kube-apiserver-master-0", "1.34.5"))
 		assert.Equal(t, "1.34", result.KubernetesVersion)
 		assert.Equal(t, "Containerd", result.CRIType)
 	})
 
 	t.Run("no ConfigMap and no apiservers leaves the version empty", func(t *testing.T) {
-		service := newTestServiceRaw(t)
-
-		result, err := service.compute(context.Background(), nodeGroup, map[string]interface{}{})
-		require.NoError(t, err)
-		assert.Empty(t, result.KubernetesVersion)
+		assert.Empty(t, derive(t).KubernetesVersion)
 	})
 
 	t.Run("a broken spec falls back too", func(t *testing.T) {
 		cm := kubernetesSourceConfigMap("1.35")
 		cm.Data["spec"] = "desiredVersion: \"\"\n"
-		service := newTestServiceRaw(t, cm, apiserverPod("kube-apiserver-master-0", "1.34.5"))
-
-		result, err := service.compute(context.Background(), nodeGroup, map[string]interface{}{})
-		require.NoError(t, err)
+		result := derive(t, cm, apiserverPod("kube-apiserver-master-0", "1.34.5"))
 		assert.Equal(t, "1.34", result.KubernetesVersion)
 	})
 }

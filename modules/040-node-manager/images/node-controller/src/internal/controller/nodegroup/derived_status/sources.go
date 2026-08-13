@@ -25,7 +25,10 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -58,33 +61,44 @@ const (
 	apiserverVersionAnnKey = "control-plane-manager.deckhouse.io/kubernetes-version"
 )
 
-func (s *Service) readCloudProviderData(ctx context.Context) map[string]interface{} {
+// isAbsent reports that a source genuinely is not there, as opposed to being unreachable. For
+// CRD-backed objects absence has two shapes: the object is missing, or its CRD was never installed
+// — a cluster with no MCM has no MachineDeployment kind at all, and a provider that ships no
+// instance-type catalog has no InstanceTypesCatalog kind. Both mean "nothing to read", while any
+// other failure must reach the caller so the reconcile retries instead of publishing less.
+func isAbsent(err error) bool {
+	return apierrors.IsNotFound(err) || meta.IsNoMatchError(err) || runtime.IsNotRegisteredError(err)
+}
+
+// readCloudProviderData returns the provider registration. An absent Secret means the cluster has
+// no cloud provider and yields an empty registration; any other read failure is returned, because
+// an empty one reads as "no cloud" and would publish a NodeGroup without instanceClass — a
+// checksum shift that re-runs bashible on every node.
+func (s *Service) readCloudProviderData(ctx context.Context) (CloudProviderRegistration, error) {
 	secret := &corev1.Secret{}
-	if err := s.Client.Get(ctx, types.NamespacedName{Namespace: cloudProviderSecretNamespace, Name: cloudProviderSecretName}, secret); err != nil {
-		return map[string]interface{}{}
+	err := s.Client.Get(ctx, types.NamespacedName{Namespace: cloudProviderSecretNamespace, Name: cloudProviderSecretName}, secret)
+	if apierrors.IsNotFound(err) {
+		return CloudProviderRegistration{}, nil
 	}
-	return decodeSecretData(secret.Data)
+	if err != nil {
+		return CloudProviderRegistration{}, fmt.Errorf("read cloud provider secret: %w", err)
+	}
+	return DecodeRegistration(secret.Data), nil
 }
 
-func decodeSecretData(data map[string][]byte) map[string]interface{} {
-	res := make(map[string]interface{}, len(data))
-	for k, v := range data {
-		var val interface{}
-		if err := json.Unmarshal(v, &val); err != nil {
-			res[k] = string(v)
-			continue
-		}
-		res[k] = val
-	}
-	return res
-}
-
-func (s *Service) readClusterUUID(ctx context.Context) string {
+// readClusterUUID returns the cluster UUID, which seeds the update-epoch drift. An absent
+// ConfigMap is a cluster that has not been stamped yet; an unreadable one is a failure, because a
+// silently empty UUID moves every NodeGroup's epoch into the same window.
+func (s *Service) readClusterUUID(ctx context.Context) (string, error) {
 	cm := &corev1.ConfigMap{}
-	if err := s.Client.Get(ctx, types.NamespacedName{Namespace: clusterUUIDConfigMapNS, Name: clusterUUIDConfigMapName}, cm); err != nil {
-		return ""
+	err := s.Client.Get(ctx, types.NamespacedName{Namespace: clusterUUIDConfigMapNS, Name: clusterUUIDConfigMapName}, cm)
+	if apierrors.IsNotFound(err) {
+		return "", nil
 	}
-	return cm.Data["cluster-uuid"]
+	if err != nil {
+		return "", fmt.Errorf("read cluster uuid configmap: %w", err)
+	}
+	return cm.Data["cluster-uuid"], nil
 }
 
 type clusterConfiguration struct {
@@ -95,46 +109,67 @@ type clusterKubernetesSpec struct {
 	DesiredVersion string `json:"desiredVersion"`
 }
 
-// The target version no longer comes out of this Secret: ClusterConfiguration.kubernetesVersion is
-// deprecated and knows nothing about the ModuleConfig setting, so re-deriving it here would
-// disagree with the control plane. It is read from the cluster ConfigMap instead, which carries the
-// single resolved answer; defaultCRI still comes from the Secret.
-func (s *Service) readClusterConfiguration(ctx context.Context) (*semver.Version, string) {
-	return s.readTargetKubernetesVersion(ctx), s.readDefaultCRI(ctx)
+// readClusterConfiguration returns the target Kubernetes version and the cluster-wide default CRI.
+//
+// The version no longer comes out of the ClusterConfiguration Secret:
+// ClusterConfiguration.kubernetesVersion is deprecated and knows nothing about the ModuleConfig
+// setting, so re-deriving it here would disagree with the control plane. It comes from the cluster
+// ConfigMap, which carries the single resolved answer. defaultCRI still comes from the Secret.
+func (s *Service) readClusterConfiguration(ctx context.Context) (*semver.Version, string, error) {
+	target, err := s.readTargetKubernetesVersion(ctx)
+	if err != nil {
+		return nil, "", err
+	}
+	defaultCRI, err := s.readDefaultCRI(ctx)
+	if err != nil {
+		return nil, "", err
+	}
+	return target, defaultCRI, nil
 }
 
-// Degrades to nil exactly like the ClusterConfiguration read it replaces: an absent or unusable
-// value leaves the version unset, and Compute falls back to the running kube-apiserver. Managed
-// clusters have no such ConfigMap at all, and an error here would block the bashible context for
-// every NodeGroup at once.
-func (s *Service) readTargetKubernetesVersion(ctx context.Context) *semver.Version {
+// An absent ConfigMap yields no version: a managed cluster has none at all, and control-plane-manager
+// owns it everywhere else. An unreadable one is a failure, because an empty version drops the clamp
+// against the running control plane without a trace. A malformed spec keeps yielding no version: that
+// is the shape of the data, not the availability of the source.
+func (s *Service) readTargetKubernetesVersion(ctx context.Context) (*semver.Version, error) {
 	// Served from the kube-system ConfigMap informer, like the Secret below.
 	configMap := &corev1.ConfigMap{}
-	if err := s.Client.Get(ctx, types.NamespacedName{
+	err := s.Client.Get(ctx, types.NamespacedName{
 		Namespace: clusterKubernetesConfigMapNS,
 		Name:      clusterKubernetesConfigMapName,
-	}, configMap); err != nil {
-		return nil
+	}, configMap)
+	if apierrors.IsNotFound(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("read cluster kubernetes configmap: %w", err)
 	}
 
 	var spec clusterKubernetesSpec
 	if err := sigsyaml.Unmarshal([]byte(configMap.Data["spec"]), &spec); err != nil {
-		return nil
+		return nil, nil
 	}
 
 	version, err := semver.NewVersion(spec.DesiredVersion)
 	if err != nil {
-		return nil
+		return nil, nil
 	}
-	return version
+	return version, nil
 }
 
-func (s *Service) readDefaultCRI(ctx context.Context) string {
+// An absent Secret yields an empty CRI; an unreadable one is a failure, because an empty value drops
+// the CRI default without a trace. A malformed payload keeps yielding empty: that is the shape of the
+// data, not the availability of the source.
+func (s *Service) readDefaultCRI(ctx context.Context) (string, error) {
 	// Served from the kube-system Secret informer (watch-fresh); a live GET here used to
 	// cost hundreds of ms on every derived-status pass during a NodeGroup burst.
 	secret := &corev1.Secret{}
-	if err := s.Client.Get(ctx, types.NamespacedName{Namespace: clusterConfigSecretNamespace, Name: clusterConfigSecretName}, secret); err != nil {
-		return ""
+	err := s.Client.Get(ctx, types.NamespacedName{Namespace: clusterConfigSecretNamespace, Name: clusterConfigSecretName}, secret)
+	if apierrors.IsNotFound(err) {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("read cluster configuration secret: %w", err)
 	}
 	data := make(map[string]string, len(secret.Data))
 	for k, v := range secret.Data {
@@ -143,7 +178,7 @@ func (s *Service) readDefaultCRI(ctx context.Context) string {
 
 	raw, ok := []byte(data["cluster-configuration.yaml"]), data["cluster-configuration.yaml"] != ""
 	if !ok {
-		return ""
+		return "", nil
 	}
 	if decoded, err := base64.StdEncoding.DecodeString(string(raw)); err == nil {
 		raw = decoded
@@ -151,9 +186,9 @@ func (s *Service) readDefaultCRI(ctx context.Context) string {
 
 	cfg := &clusterConfiguration{}
 	if err := sigsyaml.Unmarshal(raw, cfg); err != nil {
-		return ""
+		return "", nil
 	}
-	return cfg.DefaultCRI
+	return cfg.DefaultCRI, nil
 }
 
 // readControlPlaneMinVersion returns the lowest version among the running kube-apiservers,
@@ -167,13 +202,13 @@ func (s *Service) readDefaultCRI(ctx context.Context) string {
 // in turn refuses to advance the control plane past the node kubelets, so the two would
 // wedge each other and no Kubernetes minor upgrade could ever complete. The apiserver
 // legitimately leads kubelet by one minor, which is exactly what this clamp allows.
-func (s *Service) readControlPlaneMinVersion(ctx context.Context) *semver.Version {
+func (s *Service) readControlPlaneMinVersion(ctx context.Context) (*semver.Version, error) {
 	pods := &corev1.PodList{}
 	if err := s.Client.List(ctx, pods,
 		client.InNamespace(apiserverPodNamespace),
 		client.MatchingLabels{"component": "kube-apiserver", "tier": "control-plane"},
 	); err != nil {
-		return nil
+		return nil, fmt.Errorf("list kube-apiserver pods: %w", err)
 	}
 
 	var minVer *semver.Version
@@ -190,10 +225,13 @@ func (s *Service) readControlPlaneMinVersion(ctx context.Context) *semver.Versio
 			minVer = ver
 		}
 	}
-	return minVer
+	return minVer, nil
 }
 
-func (s *Service) readDefaultZones(ctx context.Context, cloudProvider map[string]interface{}) []string {
+// readDefaultZones returns the zones a NodeGroup spreads over when its spec names none. A failed
+// List is returned rather than swallowed: fewer zones is a different published element, and the
+// element is hashed into every node's configuration checksum.
+func (s *Service) readDefaultZones(ctx context.Context, reg CloudProviderRegistration) ([]string, error) {
 	seen := make(map[string]struct{})
 	zones := make([]string, 0)
 	add := func(z string) {
@@ -209,69 +247,63 @@ func (s *Service) readDefaultZones(ctx context.Context, cloudProvider map[string
 
 	mdList := &unstructured.UnstructuredList{}
 	mdList.SetGroupVersionKind(ngcommon.MCMMachineDeploymentGVK.GroupVersion().WithKind("MachineDeploymentList"))
-	if err := s.Client.List(ctx, mdList, client.InNamespace(ngcommon.MachineNamespace)); err == nil {
-		for i := range mdList.Items {
-			add(mdList.Items[i].GetAnnotations()["zone"])
-		}
+	if err := s.Client.List(ctx, mdList, client.InNamespace(ngcommon.MachineNamespace)); err != nil && !isAbsent(err) {
+		return nil, fmt.Errorf("list machine deployments: %w", err)
+	}
+	for i := range mdList.Items {
+		add(mdList.Items[i].GetAnnotations()["zone"])
 	}
 
-	switch v := cloudProvider["zones"].(type) {
-	case []string:
-		for _, z := range v {
-			add(z)
-		}
-	case []interface{}:
-		for _, zi := range v {
-			if z, ok := zi.(string); ok {
-				add(z)
-			}
-		}
-	case string:
-		add(v)
+	for _, z := range reg.Zones {
+		add(z)
 	}
 	// Sorted because the result is published verbatim in the bashible context: the
 	// MachineDeployment List comes back in cache map-iteration order, so an unsorted slice
 	// would differ on every pass and rewrite the context Secret (and rebuild every bashible
 	// step) for no reason. get_crds does the same via set.Slice().
 	sort.Strings(zones)
-	return zones
+	return zones, nil
 }
 
-// instanceClassAPIVersion returns the version InstanceClass objects are read at. An empty result
-// means the provider has not published it yet; see common.InstanceClassAPIVersionKey for why the
-// version is data.
-func instanceClassAPIVersion(cloudProvider map[string]interface{}) string {
-	version, _ := cloudProvider[nodecommon.InstanceClassAPIVersionKey].(string)
-	return version
-}
-
-func (s *Service) readInstanceClassSpec(ctx context.Context, version, kind, name string) (interface{}, error) {
+// readInstanceClassSpec returns the provider's InstanceClass spec. Typed as a map rather than an
+// interface: an unstructured spec is always an object or absent, and the two type assertions the
+// interface forced on callers only hid that.
+func (s *Service) readInstanceClassSpec(ctx context.Context, version, kind, name string) (map[string]any, error) {
 	obj := &unstructured.Unstructured{}
 	obj.SetGroupVersionKind(schema.GroupVersionKind{Group: instanceClassGroup, Version: version, Kind: kind})
 	if err := s.Client.Get(ctx, types.NamespacedName{Name: name}, obj); err != nil {
 		return nil, fmt.Errorf("get %s %q at %s: %w", kind, name, version, err)
 	}
-	return obj.Object["spec"], nil
+	spec, _ := obj.Object["spec"].(map[string]any)
+	return spec, nil
 }
 
-func (s *Service) readInstanceTypesCatalog(ctx context.Context) *capacity.InstanceTypesCatalog {
+// readInstanceTypesCatalog returns the built-in instance types. An absent catalog is a legitimate
+// cluster state and yields an empty one; an unreadable catalog is returned, because an empty
+// catalog makes the capacity calculation fail, and check #3 then declares the NodeGroup invalid —
+// turning a transient API failure into a verdict about the NodeGroup.
+func (s *Service) readInstanceTypesCatalog(ctx context.Context) (*capacity.InstanceTypesCatalog, error) {
 	obj := &unstructured.Unstructured{}
 	obj.SetGroupVersionKind(schema.GroupVersionKind{Group: instanceClassGroup, Version: instanceTypesCatalogVersion, Kind: "InstanceTypesCatalog"})
-	if err := s.Client.Get(ctx, types.NamespacedName{Name: instanceTypesCatalogName}, obj); err != nil {
-		return capacity.NewInstanceTypesCatalog(nil)
+	err := s.Client.Get(ctx, types.NamespacedName{Name: instanceTypesCatalogName}, obj)
+	if isAbsent(err) {
+		return capacity.NewInstanceTypesCatalog(nil), nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("read instance types catalog: %w", err)
 	}
 
 	raw, ok := obj.Object["instanceTypes"]
 	if !ok {
-		return capacity.NewInstanceTypesCatalog(nil)
+		return capacity.NewInstanceTypesCatalog(nil), nil
 	}
 	data, err := json.Marshal(raw)
 	if err != nil {
-		return capacity.NewInstanceTypesCatalog(nil)
+		return capacity.NewInstanceTypesCatalog(nil), nil
 	}
 	var catalogTypes []capacity.InstanceType
 	if err := json.Unmarshal(data, &catalogTypes); err != nil {
-		return capacity.NewInstanceTypesCatalog(nil)
+		return capacity.NewInstanceTypesCatalog(nil), nil
 	}
-	return capacity.NewInstanceTypesCatalog(catalogTypes)
+	return capacity.NewInstanceTypesCatalog(catalogTypes), nil
 }

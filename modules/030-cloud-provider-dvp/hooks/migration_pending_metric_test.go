@@ -25,6 +25,13 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
+// Metric name and group are passed to the shared RegisterHook as literals in
+// migration_pending_metric.go; they are not exported, so keep the test copies in sync.
+const (
+	migrationPendingMetricName  = "d8_cloud_provider_dvp_migration_pending"
+	migrationPendingMetricGroup = "D8CloudProviderDVPMigration"
+)
+
 var _ = Describe("Modules :: cloud-provider-dvp :: hooks :: migration_pending_metric ::", func() {
 	const (
 		migrationMarkerCM = `

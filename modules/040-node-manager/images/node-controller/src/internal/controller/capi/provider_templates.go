@@ -39,17 +39,32 @@ const (
 // Secret d8-cloud-provider-<type>-<engine>, served watch-fresh from the kube-system
 // Secret informer.
 func (r *MachineDeploymentReconciler) readProviderTemplate(ctx context.Context, cloudType, engine, key string) ([]byte, error) {
+	data, found, err := r.readProviderTemplateIfPresent(ctx, cloudType, engine, key)
+	if err != nil {
+		return nil, err
+	}
+	if !found {
+		return nil, fmt.Errorf("template %q not found in secret %s/d8-cloud-provider-%s-%s",
+			key, providerTemplateSecretNamespace, cloudType, engine)
+	}
+	return data, nil
+}
+
+// readProviderTemplateIfPresent is readProviderTemplate for a file whose absence is a legitimate
+// answer: the v2 contract file is how a provider announces it has migrated, so "not there" selects
+// the legacy engine rather than failing the reconcile.
+func (r *MachineDeploymentReconciler) readProviderTemplateIfPresent(ctx context.Context, cloudType, engine, key string) ([]byte, bool, error) {
 	if cloudType == "" {
-		return nil, fmt.Errorf("cloud type not set")
+		return nil, false, fmt.Errorf("cloud type not set")
 	}
 	name := fmt.Sprintf("d8-cloud-provider-%s-%s", cloudType, engine)
 	secret := &corev1.Secret{}
 	if err := r.Client.Get(ctx, types.NamespacedName{Namespace: providerTemplateSecretNamespace, Name: name}, secret); err != nil {
-		return nil, fmt.Errorf("get provider template secret %s: %w", name, err)
+		return nil, false, fmt.Errorf("get provider template secret %s: %w", name, err)
 	}
 	data, ok := secret.Data[key]
 	if !ok {
-		return nil, fmt.Errorf("template %q not found in secret %s/%s", key, providerTemplateSecretNamespace, name)
+		return nil, false, nil
 	}
-	return data, nil
+	return data, true, nil
 }

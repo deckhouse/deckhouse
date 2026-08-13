@@ -1,0 +1,29 @@
+{%- assign gs_step = include.step | default: '' -%}
+{%- case gs_step -%}
+{%- when 'install' -%}
+<script type="text/javascript" src='{% javascript_asset_tag getting-started %}[_assets/js/getting-started.js]{% endjavascript_asset_tag %}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag getting-started-dvp-constants %}[_assets/js/dvp/getting-started-dvp-constants.js]{% endjavascript_asset_tag %}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag getting-started-dvp-caps-key %}[_assets/js/dvp/getting-started-dvp-caps-key.js]{% endjavascript_asset_tag %}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag getting-started-dvp %}[_assets/js/dvp/getting-started-dvp.js]{% endjavascript_asset_tag %}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag getting-started-dvp-config-highlight %}[_assets/js/dvp/getting-started-dvp-config-highlight.js]{% endjavascript_asset_tag %}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag getting-started-dvp-install %}[_assets/js/dvp/getting-started-dvp-install.js]{% endjavascript_asset_tag %}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag bcrypt %}[_assets/js/bcrypt.js]{% endjavascript_asset_tag %}'></script>
+{%- when 'finish' -%}
+<script type="text/javascript" src='{% javascript_asset_tag getting-started %}[_assets/js/getting-started.js]{% endjavascript_asset_tag %}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag getting-started-dvp-constants %}[_assets/js/dvp/getting-started-dvp-constants.js]{% endjavascript_asset_tag %}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag getting-started-dvp %}[_assets/js/dvp/getting-started-dvp.js]{% endjavascript_asset_tag %}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag bcrypt %}[_assets/js/bcrypt.js]{% endjavascript_asset_tag %}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag getting-started-dvp-finish %}[_assets/js/dvp/getting-started-dvp-finish.js]{% endjavascript_asset_tag %}'></script>
+{%- when 'setup' -%}
+<script type="text/javascript" src='{% javascript_asset_tag getting-started-dvp-constants %}[_assets/js/dvp/getting-started-dvp-constants.js]{% endjavascript_asset_tag %}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag getting-started-dvp-setup %}[_assets/js/dvp/getting-started-dvp-setup.js]{% endjavascript_asset_tag %}'></script>
+{%- when 'prepare' -%}
+<script type="text/javascript" src='{% javascript_asset_tag getting-started-dvp-constants %}[_assets/js/dvp/getting-started-dvp-constants.js]{% endjavascript_asset_tag %}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag getting-started-dvp-caps-key %}[_assets/js/dvp/getting-started-dvp-caps-key.js]{% endjavascript_asset_tag %}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag getting-started-dvp %}[_assets/js/dvp/getting-started-dvp.js]{% endjavascript_asset_tag %}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag getting-started-dvp-prepare %}[_assets/js/dvp/getting-started-dvp-prepare.js]{% endjavascript_asset_tag %}'></script>
+{%- when 'access' -%}
+<script type="text/javascript" src='{% javascript_asset_tag getting-started-dvp-constants %}[_assets/js/dvp/getting-started-dvp-constants.js]{% endjavascript_asset_tag %}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag getting-started-dvp %}[_assets/js/dvp/getting-started-dvp.js]{% endjavascript_asset_tag %}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag getting-started-dvp-access %}[_assets/js/dvp/getting-started-dvp-access.js]{% endjavascript_asset_tag %}'></script>
+{%- endcase -%}

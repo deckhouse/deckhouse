@@ -29,17 +29,14 @@ import (
 
 	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
-
-	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 )
 
 const (
-	containerdV2SupportLabel         = "node.deckhouse.io/containerd-v2-unsupported"
-	cgroupLabel                      = "node.deckhouse.io/cgroup"
-	cgroupV2Value                    = "cgroup2fs"
-	cntrdV2GroupName                 = "nodes_cntrd_v2"
-	unsupportedContainerdV1ValuesKey = "nodeManager:unsupportedContainerdV1"
-	nodeGroupLabel                   = "node.deckhouse.io/group"
+	containerdV2SupportLabel = "node.deckhouse.io/containerd-v2-unsupported"
+	cgroupLabel              = "node.deckhouse.io/cgroup"
+	cgroupV2Value            = "cgroup2fs"
+	cntrdV2GroupName         = "nodes_cntrd_v2"
+	nodeGroupLabel           = "node.deckhouse.io/group"
 )
 
 var (
@@ -108,7 +105,6 @@ func handlecntrdV2SupportMetrics(_ context.Context, input *go_hook.HookInput) er
 		metrics.WithGroup(cntrdV2GroupName),
 	}
 
-	hasUnsupportedContainerdV1 := false
 	for nodeInfo, err := range sdkobjectpatch.SnapshotIter[cgroupV2SupportNode](snaps) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'nodes_cntrdv2_unsupported snapshot': %w", err)
@@ -121,7 +117,6 @@ func handlecntrdV2SupportMetrics(_ context.Context, input *go_hook.HookInput) er
 		}
 
 		if nodeInfo.HasUnsupportedLabel {
-			hasUnsupportedContainerdV1 = true
 			input.MetricsCollector.Set(cntrdV2UnsupportedMetricName, 1.0, labels, options...)
 		}
 
@@ -129,8 +124,6 @@ func handlecntrdV2SupportMetrics(_ context.Context, input *go_hook.HookInput) er
 			input.MetricsCollector.Set(nodesCgroupV2UnsupportedMetricName, 1.0, labels, options...)
 		}
 	}
-
-	requirements.SaveValue(unsupportedContainerdV1ValuesKey, hasUnsupportedContainerdV1)
 
 	return nil
 }

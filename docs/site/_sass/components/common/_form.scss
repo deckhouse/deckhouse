@@ -267,3 +267,8 @@
     display: block;
   }
 }
+
+.gs-next-step--blocked {
+  opacity: 0.55;
+  cursor: not-allowed !important;
+}

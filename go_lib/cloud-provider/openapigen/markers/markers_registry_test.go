@@ -118,3 +118,60 @@ var _ = Describe("deckhouseDisableAdditionalPropertiesType", func() {
 		Expect(*schema.AdditionalProperties.Has).To(BeTrue())
 	})
 })
+
+var _ = Describe("deckhouseXDocExamplesType", func() {
+	It("MergeFrom collects the value of every occurrence in order", func() {
+		merged, err := deckhouseXDocExamplesType{}.MergeFrom([]any{
+			deckhouseXDocExamplesType{Value: "first"},
+			deckhouseXDocExamplesType{Value: 2},
+			deckhouseXDocExamplesType{Value: map[string]any{"key": "value"}},
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		schema := &openapi3.Schema{}
+		Expect(merged.ApplyToSchema(schema)).To(Succeed())
+		Expect(schema.Extensions[XDocExamplesExtensionKey]).To(Equal([]any{
+			"first",
+			2,
+			map[string]any{"key": "value"},
+		}))
+	})
+
+	It("MergeFrom returns error for empty occurrences", func() {
+		_, err := deckhouseXDocExamplesType{}.MergeFrom(nil)
+		Expect(err).To(HaveOccurred())
+	})
+
+	It("MergeFrom returns error for foreign type", func() {
+		_, err := deckhouseXDocExamplesType{}.MergeFrom([]any{deckhouseXDocDefaultType{Value: "x"}})
+		Expect(err).To(HaveOccurred())
+	})
+
+	It("ApplyToSchema wraps a single unmerged occurrence instead of writing null", func() {
+		schema := &openapi3.Schema{}
+		Expect(deckhouseXDocExamplesType{Value: "only"}.ApplyToSchema(schema)).To(Succeed())
+		Expect(schema.Extensions[XDocExamplesExtensionKey]).To(Equal([]any{"only"}))
+	})
+
+	It("ApplyToSchema writes nothing when there is no value at all", func() {
+		schema := &openapi3.Schema{}
+		Expect(deckhouseXDocExamplesType{}.ApplyToSchema(schema)).To(Succeed())
+		Expect(schema.Extensions).NotTo(HaveKey(XDocExamplesExtensionKey))
+	})
+})
+
+var _ = Describe("deckhouseXDocDefaultType", func() {
+	It("initializes a nil extension map", func() {
+		schema := &openapi3.Schema{}
+		Expect(deckhouseXDocDefaultType{Value: 42}.ApplyToSchema(schema)).To(Succeed())
+		Expect(schema.Extensions[XDocDefaultExtensionKey]).To(Equal(42))
+	})
+
+	It("keeps extensions written by earlier markers", func() {
+		schema := &openapi3.Schema{}
+		Expect(deckhouseXDocSkipType{Value: true}.ApplyToSchema(schema)).To(Succeed())
+		Expect(deckhouseXDocDefaultType{Value: "d"}.ApplyToSchema(schema)).To(Succeed())
+		Expect(schema.Extensions[XDocSkipExtensionKey]).To(Equal(true))
+		Expect(schema.Extensions[XDocDefaultExtensionKey]).To(Equal("d"))
+	})
+})

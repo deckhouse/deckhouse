@@ -158,7 +158,7 @@ func TestAuthorizeRequestWithIndependentRBAC(t *testing.T) {
 			},
 			ResultStatus: WebhookRequestStatus{
 				Denied: true,
-				Reason: "user has no access to the namespace",
+				Reason: noNamespaceAccessReason,
 			},
 		},
 		{
@@ -177,7 +177,7 @@ func TestAuthorizeRequestWithIndependentRBAC(t *testing.T) {
 			},
 			ResultStatus: WebhookRequestStatus{
 				Denied: true,
-				Reason: "user has no access to the namespace",
+				Reason: noNamespaceAccessReason,
 			},
 		},
 		{
@@ -188,7 +188,7 @@ func TestAuthorizeRequestWithIndependentRBAC(t *testing.T) {
 			},
 			ResultStatus: WebhookRequestStatus{
 				Denied: true,
-				Reason: "user has no access to the namespace",
+				Reason: noNamespaceAccessReason,
 			},
 		},
 		{
@@ -199,7 +199,7 @@ func TestAuthorizeRequestWithIndependentRBAC(t *testing.T) {
 			},
 			ResultStatus: WebhookRequestStatus{
 				Denied: true,
-				Reason: "user has no access to the namespace",
+				Reason: noNamespaceAccessReason,
 			},
 		},
 		{
@@ -237,7 +237,7 @@ func TestAuthorizeRequestWithIndependentRBAC(t *testing.T) {
 			},
 			ResultStatus: WebhookRequestStatus{
 				Denied: true,
-				Reason: "user has no access to the namespace",
+				Reason: noNamespaceAccessReason,
 			},
 		},
 	}
