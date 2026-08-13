@@ -157,6 +157,11 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 		return err
 	}
 
+	// The converge phase list is gated on the cluster type, and the gates read Cloud positively:
+	// without this the migration would report a phase list with BaseInfra missing while
+	// updateClusterState keeps announcing it.
+	c.PhasedExecutionContext.SetClusterConfig(phases.ClusterConfig{ClusterType: metaConfig.ClusterType})
+
 	provider, err := convergeCtx.ProviderGetter()(ctx, metaConfig)
 	if err != nil {
 		return err

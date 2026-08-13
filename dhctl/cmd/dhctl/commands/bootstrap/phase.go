@@ -162,7 +162,7 @@ func DefineBootstrapAbortCommand(cmd *kingpin.CmdClause, opts *options.Options) 
 			bootstraper.OnProgressFunc = onUpdateFunc
 		}
 
-		if err = bootstraper.Abort(ctx, opts.Bootstrap.ForceAbortFromCache); err != nil {
+		if err = bootstraper.Abort(ctx); err != nil {
 			msg := fmt.Sprintf("Failed to abort cluster: %v", err)
 			cache.GetGlobalTmpCleaner().DisableCleanup(msg)
 			return err

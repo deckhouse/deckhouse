@@ -169,7 +169,6 @@ func TestInstallDeckhouse(t *testing.T) {
 	getInstallParams := func() InstallDeckhouseParams {
 		return InstallDeckhouseParams{
 			BeforeDeckhouseTask: func() error { return nil },
-			State:               NewBootstrapState(cache.NewTestCache()),
 			DeckhouseTimeout:    15 * time.Minute,
 		}
 	}

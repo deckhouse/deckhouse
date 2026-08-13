@@ -97,13 +97,10 @@ func consumeProgress(ctx context.Context, l *slog.Logger, progressCh chan Progre
 		}
 
 		if inc == 0 || lastCompleted == "" {
-			// calculate increment
-			phasesCount := len(msg.Phases)
-			for _, p := range msg.Phases {
-				phasesCount += len(p.SubPhases)
-			}
-			if phasesCount > 0 {
-				inc = 100 / phasesCount
+			// calculate increment: the bar steps once per node of the whole walk, phases and
+			// sub-phases alike, so unlike the fractions in progress.go it counts them all.
+			if nodes := traversalLen(msg.Phases); nodes > 0 {
+				inc = 100 / nodes
 			}
 
 			text := phaseToString(msg, false)
@@ -144,13 +141,16 @@ func consumeProgress(ctx context.Context, l *slog.Logger, progressCh chan Progre
 func phaseToString(p Progress, completed bool) string {
 	// Butify bootstrap: phases with subphases
 	phasesMap := make(map[OperationPhase]string)
+	phasesMap[PreparationPhase] = "Prepare the installation"
 	phasesMap[PreInfraPreflightsPhase] = "Common preflight checks"
 	phasesMap[PostInfraPreflightsPhase] = "Static and post-infra preflight checks"
 	phasesMap[BaseInfraPhase] = "Base Infrastructure"
+	phasesMap[FirstMasterPhase] = "First master node"
 	phasesMap[InstallKubernetesPhase] = "Install Kubernetes on the first master node"
 	phasesMap[InstallDeckhousePhase] = "Install Deckhouse"
 	phasesMap[CreateResourcesPhase] = "Create resources"
 	phasesMap[InstallAdditionalMastersAndStaticNodes] = "Install additional master nodes and CloudPermanent nodes"
+	phasesMap[WaitForControlPlaneManagerReadinessPhase] = "Wait for control plane manager become ready"
 	phasesMap[ExecPostBootstrapPhase] = "Execute post-bootstrap script"
 	phasesMap[DeleteResourcesPhase] = "Delete resources"
 	phasesMap[AllNodesPhase] = "Process all nodes"
@@ -168,13 +168,16 @@ func phaseToString(p Progress, completed bool) string {
 	phasesMap[CommanderUUIDWasChecked] = "Commander UUID was checked"
 
 	subphasesMap := make(map[OperationSubPhase]string)
+	subphasesMap[PreparationSubPhaseImagesDownload] = "Download images"
+	subphasesMap[PreparationSubPhaseConfigValidation] = "Validate configuration"
+	subphasesMap[PreparationSubPhaseCachePreparation] = "Prepare cache"
+	subphasesMap[PreparationSubPhaseStatePreparation] = "Prepare state"
 	subphasesMap[InstallDeckhouseSubPhaseConnect] = "Connect to master host"
 	subphasesMap[InstallDeckhouseSubPhaseInstall] = "Install..."
 	subphasesMap[InstallDeckhouseSubPhaseWait] = "Wait for the first master readiness"
-	subphasesMap[OperationSubPhase(CheckInfra)] = "Check Infrastructure"
-	subphasesMap[OperationSubPhase(CheckConfiguration)] = "Check configuration"
+	subphasesMap[CheckInfra] = "Check Infrastructure"
+	subphasesMap[CheckConfiguration] = "Check configuration"
 	subphasesMap[BaseInfraSubPhaseBaseInfra] = "Base Infrastructure"
-	subphasesMap[BaseInfraSubPhaseFirstMaster] = "First master node"
 	subphasesMap[InstallKubernetesSubPhaseBundlePreparation] = "Prepare bashible bundle"
 	subphasesMap[InstallKubernetesSubPhaseRegistryPackagesProxy] = "Prepare registry packages proxy"
 	subphasesMap[InstallKubernetesSubPhaseNodePreparation] = "Prepare node"
@@ -182,7 +185,6 @@ func phaseToString(p Progress, completed bool) string {
 	subphasesMap[InstallKubernetesSubPhaseExecuteBashibleBundle] = "Execute bashible bundle"
 	subphasesMap[InstallAdditionalMastersAndStaticNodesSubPhaseAdditionalMasters] = "Install additional master nodes"
 	subphasesMap[InstallAdditionalMastersAndStaticNodeSubPhaseStaticNodes] = "Install additional static nodes"
-	subphasesMap[InstallAdditionalMastersAndStaticNodesSubPhaseWait] = "Wait for control plane manager become ready"
 
 	msg := ""
 	if completed {

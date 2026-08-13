@@ -347,7 +347,7 @@ func (c *Checker) switchPhase(ctx context.Context, s phases.OperationPhase) func
 
 	return func() {
 		if c.ExternalPhasedContext != nil {
-			c.ExternalPhasedContext.CompleteSubPhase(ctx, phases.OperationSubPhase(s))
+			c.ExternalPhasedContext.CompleteSubPhase(ctx, s)
 		}
 	}
 }

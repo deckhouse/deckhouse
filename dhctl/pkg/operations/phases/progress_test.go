@@ -16,7 +16,9 @@ package phases_test
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"slices"
@@ -26,6 +28,8 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 )
@@ -111,6 +115,9 @@ func TestProgressTracker(t *testing.T) {
 
 		return nil
 	})
+	// Cloud is what makes the tracker's list the full one: the cloud-only nodes are gated on a
+	// positive test, so an unset cluster type keeps BaseInfra and the additional-nodes phase out.
+	progressTracker.SetClusterConfig(phases.ClusterConfig{ClusterType: "Cloud"})
 
 	require.NoError(t, progressTracker.Progress("", "", "", opts))
 	require.NoError(t, progressTracker.Progress(phases.BaseInfraPhase, "", "", opts))
@@ -276,6 +283,8 @@ func TestProgressTracker_Complete(t *testing.T) {
 
 		return nil
 	})
+	// BaseInfra is a cloud-only node, so the tracker only declares it once the type is known.
+	progressTracker.SetClusterConfig(phases.ClusterConfig{ClusterType: "Cloud"})
 
 	require.NoError(t, progressTracker.Progress("", "", "", opts))
 	require.NoError(t, progressTracker.Progress(phases.BaseInfraPhase, "", "", opts))
@@ -409,6 +418,44 @@ func TestProgressTracker_Skip(t *testing.T) {
 	}
 }
 
+// TestProgressTracker_Progress_UndeclaredPhase pins the diagnostic for the case that used to pass
+// in silence: a phase announcing itself without being declared for the operation moves nothing,
+// and said nothing about it. Later tasks drop sub-phases whose producer is gone and rely on this
+// warning to show up when a caller is left behind.
+//
+// Not parallel: it swaps the default logger, which is process-global.
+func TestProgressTracker_Progress_UndeclaredPhase(t *testing.T) {
+	var buf bytes.Buffer
+
+	prev := slog.Default()
+
+	slog.SetDefault(dhlog.NewBufferLogger(&buf))
+	t.Cleanup(func() { slog.SetDefault(prev) })
+
+	var result []phases.Progress
+
+	progressTracker := phases.NewProgressTracker(phases.OperationBootstrap, func(progress phases.Progress) error {
+		result = append(result, progress)
+
+		return nil
+	})
+	// BaseInfra has to be a declared phase here: it is the one that must move the progress, so
+	// that the two undeclared names below can be shown not to.
+	progressTracker.SetClusterConfig(phases.ClusterConfig{ClusterType: "Cloud"})
+
+	require.NoError(t, progressTracker.Progress(phases.BaseInfraPhase, "", "", opts))
+	require.NoError(t, progressTracker.Progress("NoSuchPhase", "", "", opts))
+	require.NoError(t, progressTracker.Progress("", "", "NoSuchSubPhase", opts))
+
+	require.Len(t, result, 3)
+	assert.Equal(t, result[0].Progress, result[1].Progress)
+	assert.Equal(t, result[0].Progress, result[2].Progress)
+	assert.EqualValues(t, phases.BaseInfraPhase, result[2].CompletedPhase)
+
+	assert.Contains(t, buf.String(), "NoSuchPhase")
+	assert.Contains(t, buf.String(), "NoSuchSubPhase")
+}
+
 func TestProgressTracker_WriteProgress(t *testing.T) {
 	t.Parallel()
 
@@ -421,6 +468,8 @@ func TestProgressTracker_WriteProgress(t *testing.T) {
 		phases.OperationBootstrap,
 		phases.WriteProgress(progressFilePath),
 	)
+	// The expectation is built from the ungated BootstrapPhases, which is the Cloud list.
+	progressTracker.SetClusterConfig(phases.ClusterConfig{ClusterType: "Cloud"})
 
 	require.NoError(t, progressTracker.Progress("", "", "", opts))
 	require.NoError(t, progressTracker.Progress(nth(list, len(list)-1).Phase, "", "", opts))
@@ -492,11 +541,22 @@ func TestProgressTracker_Progress_CurrentPhase(t *testing.T) {
 	assert.Equal(t, string(phases.CreateResourcesPhase), string(p.CurrentPhase))
 	assert.Equal(t, string(phases.ExecPostBootstrapPhase), string(p.NextPhase))
 
-	// InstallAdditionalMastersAndStaticNodes must be marked as skipped
-	installAdditionalPhase := nth(p.Phases, phaseIndex(t, p.Phases, phases.InstallAdditionalMastersAndStaticNodes))
+	// The phase jumped over must be marked as skipped. On a static cluster that is the
+	// control-plane-manager wait: installing additional nodes is cloud-only work, and its node is
+	// gated out here entirely - it cannot be skipped because it was never declared.
+	names := make([]phases.OperationPhase, 0, len(p.Phases))
+	for _, phase := range p.Phases {
+		names = append(names, phase.Phase)
+	}
 
-	require.NotNil(t, installAdditionalPhase.Action)
-	assert.Equal(t, phases.ProgressActionSkip, *installAdditionalPhase.Action)
+	assert.NotContains(t, names, phases.InstallAdditionalMastersAndStaticNodes,
+		"installing additional masters and CloudPermanent nodes is cloud-only and must not be announced on a static cluster",
+	)
+
+	waitPhase := nth(p.Phases, phaseIndex(t, p.Phases, phases.WaitForControlPlaneManagerReadinessPhase))
+
+	require.NotNil(t, waitPhase.Action)
+	assert.Equal(t, phases.ProgressActionSkip, *waitPhase.Action)
 }
 
 // declaredPhases returns the phase list the tracker reports for the given cluster config.
@@ -595,8 +655,10 @@ func readJSONLinesFromFile(t *testing.T, filename string) []phases.Progress {
 }
 
 var cmpOpts = cmp.Options{
-	// PhaseWithSubPhases keeps its gating (and, later, its node callbacks) in unexported func fields;
-	// cmp panics on any unexported field reached from this package, so ignore them all rather than by name.
+	// cmp panics on any unexported field reached from this package. PhaseWithSubPhases has none:
+	// it is only the projection of the phase tree onto the wire, and the gating (and, later, the
+	// node callbacks) live on the unexported tree node instead. This keeps that a guard, not a
+	// live exclusion, and it stays wildcard-free on purpose.
 	cmpopts.IgnoreUnexported(phases.PhaseWithSubPhases{}),
 
 	cmp.Comparer(func(x, y *phases.ProgressAction) bool {

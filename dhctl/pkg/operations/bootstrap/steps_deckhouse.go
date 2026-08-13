@@ -39,7 +39,6 @@ type InstallDeckhouseResult struct {
 
 type InstallDeckhouseParams struct {
 	BeforeDeckhouseTask func() error
-	State               *State
 	DeckhouseTimeout    time.Duration
 }
 
@@ -77,10 +76,6 @@ func InstallDeckhouse(
 		}
 
 		res.ManifestResult = resManifests
-
-		if err := params.State.SaveManifestsCreated(ctx); err != nil {
-			return fmt.Errorf("set the manifests-in-cluster flag in the cache: %w", err)
-		}
 
 		err = deckhouse.WaitForReadiness(ctx, kubeCl, params.DeckhouseTimeout)
 		if err != nil {

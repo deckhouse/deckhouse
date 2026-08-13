@@ -16,102 +16,34 @@ package bootstrap
 
 import (
 	"context"
-	"fmt"
 
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
+// BaseInfrastructure is the standalone `bootstrap-phase base-infra` command: the bootstrap walk
+// restricted to the BaseInfra node. Preparation runs ahead of it, as it does in a full bootstrap -
+// it loads the config the gates are resolved against and opens the state cache the node writes the
+// infrastructure state into.
+//
+// Running the node instead of a copy of it is what keeps the two paths from drifting: the config is
+// now loaded exactly as a full bootstrap loads it, x-rules included, and a cluster type that has no
+// base infrastructure is refused by the gate rather than by a check of its own.
 func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
-	// Registry shoud run before LoadConfigFromFile
-	registryStop, err := registry.InitFromConfig(
-		ctx,
-		dhlog.FromContext(ctx),
-		b.Options.Global.ConfigPaths,
-		b.Options.Registry.ImgBundlePath,
-	)
-	if err != nil {
-		return err
-	}
-	defer registryStop()
+	bctx := &bootstrapContext{}
 
-	metaConfig, err := config.LoadConfigFromFile(
-		ctx,
-		b.Options.Global.ConfigPaths,
-		infrastructureprovider.MetaConfigValidatorProvider(),
-		&b.Options.Global,
-		config.ValidateOptionOperation(infrastructureprovider.DhctlOperationBootstrap),
-	)
-	if err != nil {
-		return err
-	}
+	defer func() {
+		if err := b.PhasedExecutionContext.Finalize(ctx, bctx.cacheOrGlobal()); err != nil {
+			dhlog.FromContext(ctx).WarnContext(ctx, "failed to finalize phased execution context", "error", err)
+		}
+		if bctx.cleanup != nil {
+			bctx.cleanup()
+		}
+		if bctx.registryStop != nil {
+			bctx.registryStop()
+		}
+	}()
 
-	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
-		TmpDir:           b.TmpDir,
-		GlobalOptions:    &b.Options.Global,
-		AdditionalParams: cloud.ProviderAdditionalParams{},
-		IsDebug:          b.IsDebug,
-	})
-
-	b.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter).
-		WithUseTfCache(b.Options.Cache.UseTfCache).
-		WithDebug(b.Options.Global.IsDebug)
-
-	if metaConfig.ClusterType != config.CloudClusterType {
-		return fmt.Errorf("%s", bootstrapPhaseBaseInfraNonCloudMessage)
-	}
-
-	cachePath := metaConfig.CachePath()
-	if err = cache.InitWithOptions(ctx, cachePath, cache.CacheOptions{InitialState: b.InitialState, ResetInitialState: b.ResetInitialState, Cache: b.Options.Cache}); err != nil {
-		// TODO: it's better to ask for confirmation here
-		return fmt.Errorf(cacheMessage, cachePath, err)
-	}
-
-	stateCache := cache.Global()
-
-	if b.Options.Cache.DropCache {
-		stateCache.Clean(ctx)
-		stateCache.Delete(ctx, state.TombstoneKey)
-	}
-
-	clusterUUID, err := generateClusterUUID(ctx, stateCache)
-	if err != nil {
-		return err
-	}
-	metaConfig.UUID = clusterUUID
-
-	cleanup, err := b.getCleanupFunc(ctx, metaConfig)
-	if err != nil {
-		return err
-	}
-
-	defer cleanup()
-
-	body := func(_ chan phases.Progress) error {
-		return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Cloud infrastructure", func(ctx context.Context) error {
-			baseRunner, err := b.Params.InfrastructureContext.GetBootstrapBaseInfraRunner(ctx, metaConfig, stateCache)
-			if err != nil {
-				return err
-			}
-
-			_, err = infrastructure.ApplyPipeline(ctx, baseRunner, "Kubernetes cluster", &b.Options.Global, infrastructure.GetBaseInfraResult)
-			return err
-		})
-	}
-
-	interactive := input.IsTerminal() && !b.Options.Global.ShowProgress
-	if interactive {
-		return runProgress(ctx, dhlog.FromContext(ctx), "Base infrastructure", body)
-	}
-
-	return body(nil)
+	return b.runPhases(ctx, bctx, b.bootstrapPhaseFuncs(), phases.BaseInfraPhase)
 }

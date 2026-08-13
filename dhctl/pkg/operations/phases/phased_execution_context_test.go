@@ -96,6 +96,54 @@ func TestPhasedExecutionContext_NestedRunKeepsEnclosingPhase(t *testing.T) {
 	assert.Equal(t, 1.0, lastProgress.Progress)
 }
 
+// TestPhasedExecutionContext_NestedPipelineCompletesOnce replays bootstrap-abort, the one path
+// that initialises the pipeline twice on a single phase context: the abort command does it for
+// itself, then hands the same context to the destroyer, whose pipeline does it again. Only the
+// outermost completion ends the operation, so exactly one event with an empty NextPhase may
+// reach onPhaseFunc - an inner one would tell Commander the operation finished mid-way.
+func TestPhasedExecutionContext_NestedPipelineCompletesOnce(t *testing.T) {
+	t.Parallel()
+
+	var phaseEvents []phases.OnPhaseFuncData[phases.DefaultContextType]
+
+	pec := phases.NewDefaultPhasedExecutionContext(
+		phases.OperationDestroy,
+		func(data phases.OnPhaseFuncData[phases.DefaultContextType]) error {
+			phaseEvents = append(phaseEvents, data)
+
+			return nil
+		},
+		nil,
+	)
+	pec.SetClusterConfig(phases.ClusterConfig{ClusterType: "Static"})
+
+	stateCache := cache.NewTestCache()
+
+	// The abort command, then the destroyer it shares the context with.
+	require.NoError(t, pec.InitPipeline(t.Context(), stateCache))
+	require.NoError(t, pec.InitPipeline(t.Context(), stateCache))
+
+	_, err := pec.StartPhase(t.Context(), phases.DeleteResourcesPhase, false, stateCache)
+	require.NoError(t, err)
+	require.NoError(t, pec.CompletePhase(t.Context(), stateCache, nil))
+
+	require.NoError(t, pec.CompletePipeline(t.Context(), stateCache))
+	require.NoError(t, pec.CompletePipeline(t.Context(), stateCache))
+
+	completions := 0
+
+	for _, event := range phaseEvents {
+		if event.NextPhase == "" {
+			completions++
+		}
+	}
+
+	assert.Equal(t, 1, completions, "only the outermost CompletePipeline ends the operation")
+
+	require.NotEmpty(t, phaseEvents)
+	assert.Equal(t, phases.DeleteResourcesPhase, phaseEvents[len(phaseEvents)-1].CompletedPhase)
+}
+
 // TestPhasedExecutionContext_OpenPhaseIsNotEnclosing replays commander converge, which starts
 // Check and never completes it. A phase left open is not an enclosing phase: the phases that
 // follow it are siblings, and the last one of them must be the one the pipeline reports.

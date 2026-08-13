@@ -22,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
 
@@ -108,4 +109,25 @@ func TestSplitResources_ExplicitNamespaceNotDuplicated(t *testing.T) {
 		}
 	}
 	require.Equal(t, 1, nsCount)
+}
+
+// TestBootstrapPhaseFuncsMatchTree is the declared-equals-executed invariant, checked instead of
+// agreed: the walker resolves the tree and looks every node up by name, so a node declared with
+// nothing behind it is a phase Commander is told about that never runs, and a function with no
+// node is work that never happens. The tree here is the ungated one - gates decide which nodes
+// run in a given cluster, not which ones have to be implemented.
+func TestBootstrapPhaseFuncsMatchTree(t *testing.T) {
+	t.Parallel()
+
+	declared := make([]phases.OperationPhase, 0)
+	for _, phase := range phases.BootstrapPhases() {
+		declared = append(declared, phase.Phase)
+	}
+
+	implemented := make([]phases.OperationPhase, 0)
+	for phase := range (&ClusterBootstrapper{}).bootstrapPhaseFuncs() {
+		implemented = append(implemented, phase)
+	}
+
+	require.ElementsMatch(t, declared, implemented)
 }

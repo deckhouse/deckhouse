@@ -59,10 +59,11 @@ Deprecated. Please use the --config flag repeatedly for logical separation of re
 	}
 }
 
-// DefineAbortFlags registers --force-abort-from-cache.
+// DefineAbortFlags registers --force-abort-from-cache. The flag is a no-op: abort always works
+// from the cache now. It stays registered because dhctl-e2e passes it on every abort invocation,
+// and an unknown flag is a parse error, not a warning.
 func DefineAbortFlags(cmd *kingpin.CmdClause, o *options.BootstrapOptions) {
-	const help = `Skip the 'use dhctl destroy command' error. This forces bootstrap abortion from cache.
-Experimental. This feature may be deleted in the future.`
+	const help = `DEPRECATED. Has no effect: abort always works from the cache.`
 	cmd.Flag("force-abort-from-cache", help).
 		Envar(configEnvName("FORCE_ABORT_FROM_CACHE")).
 		Default("false").
