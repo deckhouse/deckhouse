@@ -60,46 +60,57 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: alert_migrate_kub
 		return false
 	}
 
-	// Only values both schemas accept: the ClusterConfiguration enum has Automatic and no Default,
-	// the ModuleConfig one has Default and no Automatic. The sentinel matrix is covered by the unit
-	// table below, which is not bound by either schema.
+	// trackingDefault is global.discovery.kubernetesVersionIsDefault, published by the global discovery
+	// hook: true when ModuleConfig says Default, or when nothing pins the version anywhere. The
+	// combinations below are the ones that hook can actually produce — pairing a ModuleConfig pin with
+	// trackingDefault=true would encode a state no cluster reaches.
 	DescribeTable("D8UnsetKubernetesVersionInModuleConfig metric",
-		func(mcVersion, ccVersion string, expectSet bool) {
+		func(mcVersion string, trackingDefault, expectSet bool) {
 			f.ValuesDelete("controlPlaneManager.kubernetesVersion")
 			if mcVersion != "" {
 				f.ValuesSet("controlPlaneManager.kubernetesVersion", mcVersion)
 			}
-			f.ValuesSetFromYaml("global.clusterConfiguration", []byte(clusterConfigurationValues(ccVersion)))
+			f.ValuesSet("global.discovery.kubernetesVersionIsDefault", trackingDefault)
 			f.RunHook()
 
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(metricIsSet()).To(Equal(expectSet))
 		},
-		// The one case worth migrating: ClusterConfiguration still decides the version.
-		Entry("MC unset, CC pins a version — fires", "", "1.34", true),
+		// The one case worth migrating: ModuleConfig is silent and the version is pinned anyway, which
+		// leaves ClusterConfiguration as the only document that can be pinning it.
+		Entry("MC unset, version pinned outside ModuleConfig — fires", "", false, true),
 
 		// Nothing to migrate: the resolved version is the release default either way, exactly as
 		// it would be with ModuleConfig Default.
-		Entry("MC unset, CC unset — does not fire", "", "", false),
-		Entry("MC unset, CC is Automatic — does not fire", "", "Automatic", false),
+		Entry("MC unset, cluster tracks the release default — does not fire", "", true, false),
 
 		// Any explicit setting takes ownership away from ClusterConfiguration, Default included.
-		Entry("MC pins a version — does not fire", "1.35", "1.34", false),
-		Entry("MC is Default — does not fire", "Default", "1.34", false),
+		Entry("MC pins a version — does not fire", "1.35", false, false),
+		Entry("MC is Default — does not fire", "Default", true, false),
 	)
 
+	// Regression. The hook used to read global.clusterConfiguration.kubernetesVersion, where the
+	// discovery hook has already replaced Automatic with the concrete release default. A cluster with
+	// ClusterConfiguration.kubernetesVersion: Automatic therefore looked pinned and kept the alert lit
+	// — the exact case the alert must stay silent on. The previous test missed it by writing a literal
+	// "Automatic" into that value, which no cluster ever presents to this hook.
+	It("stays silent when the ClusterConfiguration value is the substituted release default", func() {
+		f.ValuesDelete("controlPlaneManager.kubernetesVersion")
+		f.ValuesSet("global.discovery.kubernetesVersionIsDefault", true)
+		f.ValuesSetFromYaml("global.clusterConfiguration", []byte(clusterConfigurationValues("1.34")))
+		f.RunHook()
+
+		Expect(f).To(ExecuteSuccessfully())
+		Expect(metricIsSet()).To(BeFalse())
+	})
+
 	DescribeTable("kubernetesVersionNeedsMigration",
-		func(mcVersion, ccVersion string, expected bool) {
-			Expect(kubernetesVersionNeedsMigration(mcVersion, ccVersion)).To(Equal(expected))
+		func(mcVersion string, trackingDefault, expected bool) {
+			Expect(kubernetesVersionNeedsMigration(mcVersion, trackingDefault)).To(Equal(expected))
 		},
-		Entry("MC unset, CC pins a version", "", "1.34", true),
-		Entry("MC unset, CC unset", "", "", false),
-		Entry("MC unset, CC is Automatic", "", "Automatic", false),
-		// Not accepted by the ClusterConfiguration schema, so it can only arrive on an object that
-		// predates the closed enum. It still means "track the Deckhouse default", not a pin.
-		Entry("MC unset, CC is Default", "", "Default", false),
-		Entry("MC pins a version", "1.35", "1.34", false),
-		Entry("MC is Default", "Default", "1.34", false),
-		Entry("MC is Default, CC unset", "Default", "", false),
+		Entry("MC unset, version pinned outside ModuleConfig", "", false, true),
+		Entry("MC unset, cluster tracks the release default", "", true, false),
+		Entry("MC pins a version", "1.35", false, false),
+		Entry("MC is Default", "Default", true, false),
 	)
 })

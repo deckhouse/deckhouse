@@ -33,11 +33,6 @@ Description:
 const (
 	unsetKubernetesVersionMetricGroup = "D8UnsetKubernetesVersionInModuleConfig"
 	unsetKubernetesVersionMetricName  = "d8_unset_kubernetes_version_in_module_config"
-
-	// ClusterConfiguration's "track Deckhouse default" sentinel; ModuleConfig accepts only Default.
-	// Not to be confused with DefaultKubernetesVersion, which holds the version this build defaults to.
-	automaticKubernetesVersion       = "Automatic"
-	defaultKubernetesVersionSentinel = "Default"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -49,9 +44,9 @@ func checkKubernetesVersionMigration(_ context.Context, input *go_hook.HookInput
 	input.MetricsCollector.Expire(unsetKubernetesVersionMetricGroup)
 
 	mcVersion := input.Values.Get("controlPlaneManager.kubernetesVersion").String()
-	ccVersion := input.Values.Get("global.clusterConfiguration.kubernetesVersion").String()
+	trackingDefault := input.Values.Get("global.discovery.kubernetesVersionIsDefault").Bool()
 
-	if kubernetesVersionNeedsMigration(mcVersion, ccVersion) {
+	if kubernetesVersionNeedsMigration(mcVersion, trackingDefault) {
 		input.MetricsCollector.Set(
 			unsetKubernetesVersionMetricName, 1,
 			map[string]string{},
@@ -71,12 +66,13 @@ func checkKubernetesVersionMigration(_ context.Context, input *go_hook.HookInput
 // A ClusterConfiguration that pins nothing — absent, Automatic, Default — is not something to
 // migrate: the resolved version is the release default either way, exactly as it would be with
 // ModuleConfig Default. Alerting there would fire on every fresh cluster with nothing to fix.
-func kubernetesVersionNeedsMigration(mcVersion, ccVersion string) bool {
-	if mcVersion != "" {
-		return false
-	}
-
-	return ccVersion != "" &&
-		ccVersion != automaticKubernetesVersion &&
-		ccVersion != defaultKubernetesVersionSentinel
+//
+// Hence trackingDefault, from global.discovery.kubernetesVersionIsDefault, rather than the
+// ClusterConfiguration value itself: global.clusterConfiguration.kubernetesVersion cannot answer
+// this question, because the hook publishing it substitutes Automatic for the concrete release
+// default before writing it (global-hooks/discovery/cluster_configuration.go), which makes an
+// Automatic cluster indistinguishable from a pinned one. The flag is derived from a separate
+// snapshot of the raw Secret and is true exactly when nothing pins the version anywhere.
+func kubernetesVersionNeedsMigration(mcVersion string, trackingDefault bool) bool {
+	return mcVersion == "" && !trackingDefault
 }
