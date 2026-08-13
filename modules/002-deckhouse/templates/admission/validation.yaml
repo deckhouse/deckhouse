@@ -165,38 +165,6 @@ webhooks:
         namespace: d8-system
         port: 4223
         path: /validate/v1/configuration-secret
-  # The only durable record of maxUsedKubernetesVersion; update-observer would recreate a deleted one
-  # without the history. The objectSelector matters: failurePolicy: Fail would otherwise apply to
-  # every ConfigMap in kube-system.
-  - name: cluster-kubernetes-configmap.deckhouse-webhook.deckhouse.io
-    rules:
-      - apiGroups:
-          - ""
-        apiVersions:
-          - "*"
-        resources:
-          - "configmaps"
-        scope: "Namespaced"
-        operations:
-          - DELETE
-    namespaceSelector:
-      matchLabels:
-        kubernetes.io/metadata.name: kube-system
-    objectSelector:
-      matchLabels:
-        name: d8-cluster-kubernetes
-    admissionReviewVersions:
-      - v1
-    matchPolicy: Equivalent
-    failurePolicy: Fail
-    sideEffects: None
-    clientConfig:
-      caBundle: {{ .Values.deckhouse.internal.admissionWebhookCert.ca | b64enc }}
-      service:
-        name: deckhouse
-        namespace: d8-system
-        port: 4223
-        path: /validate/v1/cluster-kubernetes-configmap
   - name: provider-configuration.deckhouse-webhook.deckhouse.io
     rules:
       - apiGroups:

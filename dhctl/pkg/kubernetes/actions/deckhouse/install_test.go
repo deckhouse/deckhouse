@@ -587,8 +587,8 @@ func TestDeckhouseInstallCreatesClusterKubernetesConfigMap(t *testing.T) {
 		require.Contains(t, cm.Data["spec"], `desiredVersion: "1.35"`)
 		require.Contains(t, cm.Data["spec"], "updateMode: Automatic")
 		require.Contains(t, cm.Data["spec"], `maxUsedKubernetesVersion: "1.35"`)
-		// The delete-protection webhook selects the object by this label.
-		require.Equal(t, "d8-cluster-kubernetes", cm.Labels["name"])
+		// What the label-objects ValidatingAdmissionPolicy keys off to forbid deletion.
+		require.Equal(t, "deckhouse", cm.Labels["heritage"])
 	})
 
 	t.Run("an explicit pin becomes Manual", func(t *testing.T) {

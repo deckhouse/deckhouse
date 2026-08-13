@@ -18,14 +18,12 @@ package validation
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -697,54 +695,5 @@ func TestModuleConfigOwnsKubernetesVersion(t *testing.T) {
 		cfg := newControlPlaneManagerConfig("1.35")
 		cfg.SetName("node-manager")
 		assert.False(t, moduleConfigOwnsKubernetesVersion(context.Background(), newClient(cfg)))
-	})
-}
-
-// The ConfigMap holds the only durable copy of maxUsedKubernetesVersion after this release.
-// update-observer would recreate a deleted one, but from its container environment — the history,
-// and with it the downgrade floor, would be gone.
-func TestClusterKubernetesConfigMapHandler(t *testing.T) {
-	handler := clusterKubernetesConfigMapHandler()
-
-	newReview := func(operation string) *admissionv1.AdmissionReview {
-		configMap := &corev1.ConfigMap{
-			TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "ConfigMap"},
-			ObjectMeta: metav1.ObjectMeta{Name: "d8-cluster-kubernetes", Namespace: "kube-system"},
-			Data:       map[string]string{"spec": "maxUsedKubernetesVersion: \"1.36\"\n"},
-		}
-		raw, err := json.Marshal(configMap)
-		require.NoError(t, err)
-
-		request := &admissionv1.AdmissionRequest{
-			UID:       "test",
-			Operation: admissionv1.Operation(operation),
-			Resource:  metav1.GroupVersionResource{Version: "v1", Resource: "configmaps"},
-			Name:      "d8-cluster-kubernetes",
-			Namespace: "kube-system",
-		}
-		if operation == "DELETE" {
-			request.OldObject = runtime.RawExtension{Raw: raw}
-		} else {
-			request.Object = runtime.RawExtension{Raw: raw}
-		}
-
-		return &admissionv1.AdmissionReview{
-			TypeMeta: metav1.TypeMeta{APIVersion: "admission.k8s.io/v1", Kind: "AdmissionReview"},
-			Request:  request,
-		}
-	}
-
-	t.Run("DELETE is rejected", func(t *testing.T) {
-		resp := callHandler(t, handler, newReview("DELETE"))
-		require.False(t, resp.Allowed)
-		require.NotNil(t, resp.Result)
-		assert.Contains(t, resp.Result.Message, "d8-cluster-kubernetes")
-	})
-
-	// Hand edits are not the webhook's business: update-observer rewrites data.spec on its next
-	// reconcile, and blocking updates here would also block the observer's own writes.
-	t.Run("UPDATE is allowed", func(t *testing.T) {
-		resp := callHandler(t, handler, newReview("UPDATE"))
-		assert.True(t, resp.Allowed)
 	})
 }

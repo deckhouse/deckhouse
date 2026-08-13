@@ -85,6 +85,9 @@ func (r *reconciler) getConfigMap(ctx context.Context) (*corev1.ConfigMap, error
 	return cm, nil
 }
 
+// heritage is load-bearing: the label-objects ValidatingAdmissionPolicy keys off it, and that is what
+// stops anyone but the platform's own service accounts from deleting this object. Re-asserted on
+// every pass, so an object that lost the label does not stay unprotected.
 func identifyingLabels() map[string]string {
 	return map[string]string{
 		common.HeritageLabelKey: common.DeckhouseLabel,
@@ -122,8 +125,6 @@ func fillConfigMap(configMap *corev1.ConfigMap, clusterState *cluster.State, rec
 	if labels == nil {
 		labels = map[string]string{}
 	}
-	// Re-asserted on every pass, or an object that lost the label stays outside the webhook's
-	// selector forever.
 	for key, value := range identifyingLabels() {
 		labels[key] = value
 	}

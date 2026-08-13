@@ -665,8 +665,9 @@ const (
 )
 
 // update-observer owns this object but only starts once the control-plane-manager DaemonSet is up,
-// while node-controller and the release requirements check read it immediately — hence the seed. The
-// name label is what the delete-protection webhook selects on.
+// while node-controller and the release requirements check read it immediately — hence the seed.
+// The heritage label is load-bearing: the label-objects ValidatingAdmissionPolicy keys off it, and
+// that is what stops anyone but the platform's own service accounts from deleting this object.
 func ClusterKubernetesConfigMap(kubernetesVersion string, trackDefault bool) *apiv1.ConfigMap {
 	// A ConfigMap protocol value, unrelated to the ModuleConfig enum of the same spelling.
 	updateMode := "Manual"

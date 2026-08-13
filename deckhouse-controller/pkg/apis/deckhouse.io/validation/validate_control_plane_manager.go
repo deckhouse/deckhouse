@@ -20,15 +20,11 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"net/http"
 	"slices"
 
-	kwhhttp "github.com/slok/kubewebhook/v2/pkg/http"
-	"github.com/slok/kubewebhook/v2/pkg/model"
 	kwhvalidating "github.com/slok/kubewebhook/v2/pkg/webhook/validating"
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
@@ -257,27 +253,3 @@ func (v *moduleConfigValidator) readRawClusterConfigurationVersion(ctx context.C
 	return cc.KubernetesVersion, true
 }
 
-// Forbids deleting kube-system/d8-cluster-kubernetes: it is the only durable record of
-// maxUsedKubernetesVersion, and update-observer would recreate it without the history. DELETE only —
-// hand edits of data.spec are rewritten on the next reconcile.
-func clusterKubernetesConfigMapHandler() http.Handler {
-	validator := kwhvalidating.ValidatorFunc(func(_ context.Context, ar *model.AdmissionReview, _ metav1.Object) (*kwhvalidating.ValidatorResult, error) {
-		// Re-checked despite the rule's selectors: it runs with failurePolicy: Fail over kube-system
-		// configmaps, so a selector that stopped matching would make them all undeletable.
-		if ar.Operation == model.OperationDelete &&
-			ar.Name == clusterKubernetesConfigMapName && ar.Namespace == kubeSystemNamespace {
-			return rejectResult("It is forbidden to delete configmap d8-cluster-kubernetes")
-		}
-
-		return allowResult(nil)
-	})
-
-	wh, _ := kwhvalidating.NewWebhook(kwhvalidating.WebhookConfig{
-		ID:        "cluster-kubernetes-configmap-validator",
-		Validator: validator,
-		Logger:    nil,
-		Obj:       &v1.ConfigMap{},
-	})
-
-	return kwhhttp.MustHandlerFor(kwhhttp.HandlerConfig{Webhook: wh, Logger: nil})
-}
