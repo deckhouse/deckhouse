@@ -48,8 +48,9 @@ const (
 )
 
 var (
-	fdGVR = schema.GroupVersionResource{Group: "infrastructure.cluster.x-k8s.io", Version: "v1beta1", Resource: "vspherefailuredomains"}
-	dzGVR = schema.GroupVersionResource{Group: "infrastructure.cluster.x-k8s.io", Version: "v1beta1", Resource: "vspheredeploymentzones"}
+	fdGVR      = schema.GroupVersionResource{Group: "infrastructure.cluster.x-k8s.io", Version: "v1beta1", Resource: "vspherefailuredomains"}
+	dzGVR      = schema.GroupVersionResource{Group: "infrastructure.cluster.x-k8s.io", Version: "v1beta1", Resource: "vspheredeploymentzones"}
+	clusterGVR = schema.GroupVersionResource{Group: "cluster.x-k8s.io", Version: "v1beta2", Resource: "clusters"}
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -93,6 +94,18 @@ func ensureFailureDomains(ctx context.Context, input *go_hook.HookInput, dc depe
 		return fmt.Errorf("get k8s client: %w", err)
 	}
 	dyn := k8sClient.Dynamic()
+
+	// Skip during cluster teardown: dhctl issues delete on the CAPI Cluster while capi/capv
+	// controllers are still running, and re-creating FD/DZ here would keep the finalizer
+	// chain alive and block "Wait for Clusters deletion" indefinitely.
+	deleting, err := clusterIsDeleting(ctx, dyn)
+	if err != nil {
+		return fmt.Errorf("check CAPI Cluster deletion state: %w", err)
+	}
+	if deleting {
+		input.Logger.Info("skip FD/DZ ensure: CAPI Cluster is being deleted")
+		return nil
+	}
 
 	missing, err := zonesMissingResources(ctx, dyn, *pcc.Zones)
 	if err != nil {
@@ -138,6 +151,19 @@ func ensureFailureDomains(ctx context.Context, input *go_hook.HookInput, dc depe
 	}
 
 	return nil
+}
+
+func clusterIsDeleting(ctx context.Context, dyn dynamic.Interface) (bool, error) {
+	list, err := dyn.Resource(clusterGVR).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return false, fmt.Errorf("list CAPI Clusters: %w", err)
+	}
+	for _, obj := range list.Items {
+		if obj.GetDeletionTimestamp() != nil {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func zonesMissingResources(ctx context.Context, dyn dynamic.Interface, zones []string) ([]string, error) {
