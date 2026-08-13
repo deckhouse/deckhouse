@@ -16,9 +16,8 @@ limitations under the License.
 
 package resources
 
-// What the hooks subscribe to, and what each object is boiled down to before it
-// reaches them. Filters run inside the informer, where an error aborts snapshot
-// creation and the hook never runs at all — so they only reshape, never validate.
+// Filters run inside the informer, where an error aborts snapshot creation and
+// the hook never runs at all. So they only reshape, never validate.
 
 import (
 	"encoding/json"
@@ -43,7 +42,6 @@ const (
 	snapshotNodes    = "NodesResources"
 )
 
-// controlPlaneNodesBinding watches master Nodes.
 func controlPlaneNodesBinding() go_hook.KubernetesConfig {
 	return go_hook.KubernetesConfig{
 		Name:       snapshotNodes,
@@ -106,9 +104,8 @@ func applyNodesResourcesFilter(obj *unstructured.Unstructured) (go_hook.FilterRe
 		CapacityMilliCPU:    node.Status.Capacity.Cpu().MilliValue(),
 		CapacityMemory:      node.Status.Capacity.Memory().Value(),
 	}
-	// Test fixtures and very early node objects may not report Capacity yet —
-	// fall back to Allocatable. The downstream logic treats `Capacity == Allocatable`
-	// as `kubelet has not subtracted its reservation yet` and applies the floor.
+	// A very early node object may not report Capacity yet. Downstream,
+	// Capacity == Allocatable reads as "the kubelet reservation is not in yet".
 	if n.CapacityMilliCPU == 0 {
 		n.CapacityMilliCPU = n.AllocatableMilliCPU
 	}
@@ -168,7 +165,7 @@ func quantityString(v any) string {
 	case json.Number:
 		return t.String()
 	case float64:
-		// cpu may be a bare number. %.0f would turn 0.5 into "0m" and 1.5 into "2000m".
+		// cpu may be a bare number, and %.0f would turn 0.5 into "0m".
 		return strconv.FormatFloat(t, 'f', -1, 64)
 	default:
 		return ""

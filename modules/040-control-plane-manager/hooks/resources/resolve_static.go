@@ -22,18 +22,13 @@ import (
 	"fmt"
 )
 
-// staticResolver terminates the chain with the legacy percent split: the weakest
-// master's effective resources, minus the reservation the rest of the node needs
-// anyway, carved down to controlPlanePercent.
-//
-// A master too small to give that up leaves no budget. Rather than invent a
-// number, the link fails: the caller then leaves the measurement alone, and with
-// no ConfigMap entry the templates apply their own fallback.
+// Terminates the chain. A master too small to spare the percent split leaves no
+// budget, and the link fails rather than invent a number.
 type staticResolver struct {
 	nodes []Node
 }
 
-func (r *staticResolver) resolve(_ context.Context, _ resolveContext, kind resourceKind) (resolvedRequests, error) {
+func (r *staticResolver) resolve(_ context.Context, _ resolveDeps, kind resourceKind) (resolvedRequests, error) {
 	budget, err := r.splitBudget(kind)
 	if err != nil {
 		return resolvedRequests{}, err
@@ -45,24 +40,24 @@ func (r *staticResolver) resolve(_ context.Context, _ resolveContext, kind resou
 }
 
 func (r *staticResolver) splitBudget(kind resourceKind) (int64, error) {
-	effectiveMilliCPU, effectiveBytes, ok := minMasterNodeBudget(r.nodes)
+	usableMilliCPU, usableBytes, ok := weakestMasterBudget(r.nodes)
 	if !ok {
 		return 0, degraded(degradedReasonBadNodes, errors.New("no master nodes to derive a budget from"))
 	}
 
-	var effective, reserved int64
+	var usable, reserved int64
 	switch kind {
 	case resourceCPU:
-		effective, reserved = effectiveMilliCPU, configEveryNodeMilliCPU
+		usable, reserved = usableMilliCPU, everyNodeReservationMilliCPU
 	case resourceMemory:
-		effective, reserved = effectiveBytes, configEveryNodeMemory
+		usable, reserved = usableBytes, everyNodeReservationMemory
 	}
 
-	budget := (effective - reserved) * controlPlanePercent / 100
+	budget := percentOf(usable-reserved, controlPlanePercent)
 	if budget <= 0 {
 		return 0, degraded(degradedReasonNodesTooSmall, fmt.Errorf(
-			"%s: master nodes leave nothing after the every-node reservation (effective=%d, reserved=%d)",
-			kind, effective, reserved))
+			"%s: master nodes leave nothing after the every-node reservation (usable=%d, reserved=%d)",
+			kind, usable, reserved))
 	}
 	return budget, nil
 }

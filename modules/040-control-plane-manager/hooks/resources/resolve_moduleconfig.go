@@ -25,10 +25,8 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-// moduleConfigResolver answers from an explicit user setting in a ModuleConfig.
-// Two links of the chain are instances of it: the module's own config, and the
-// deprecated location in the global config. They differ only in which snapshot
-// they read and which source they report.
+// Two links are instances of this: the module's own config and the deprecated
+// location in the global one.
 type moduleConfigResolver struct {
 	snapshotName string
 	source       requestsSource
@@ -36,24 +34,21 @@ type moduleConfigResolver struct {
 	fallback     requestsResolver
 }
 
-func (r *moduleConfigResolver) resolve(ctx context.Context, rctx resolveContext, kind resourceKind) (resolvedRequests, error) {
-	configured, err := readModuleConfigRequests(rctx.input, r.snapshotName)
+func (r *moduleConfigResolver) resolve(ctx context.Context, deps resolveDeps, kind resourceKind) (resolvedRequests, error) {
+	configured, err := readModuleConfigRequests(deps.input, r.snapshotName)
 	if err != nil {
 		return resolvedRequests{}, degraded(degradedReasonBadOverride, err)
 	}
 
-	budget, isSet, err := configured.quantity(kind)
+	budget, isSet, err := configured.budget(kind)
 	if err != nil {
 		return resolvedRequests{}, degraded(degradedReasonBadOverride, fmt.Errorf("%s: %w", r.snapshotName, err))
 	}
 	if !isSet {
-		return r.fallback.resolve(ctx, rctx, kind)
+		return r.fallback.resolve(ctx, deps, kind)
 	}
 
-	// AppliedOverride is the marker the dynamic link reads to notice that an
-	// override it used to be shadowed by has been removed. Normalized to
-	// millicpu/bytes, because as raw strings "2" and "2000m" would look like a
-	// change on every run.
+	// The marker the dynamic link reads to notice a removed override.
 	measurement := r.state.getOrCreateMeasurement(kind)
 	measurement.AppliedOverride = ptr.To(budget)
 
@@ -80,10 +75,9 @@ func readModuleConfigRequests(input *go_hook.HookInput, snapshotName string) (mo
 	return configured, nil
 }
 
-// quantity returns the configured value for kind, normalized to millicpu or
-// bytes. isSet=false means the user configured nothing for this kind — the only
-// condition under which the link may hand the kind over to the automatics.
-func (r moduleConfigResourcesRequests) quantity(kind resourceKind) (int64, bool, error) {
+// Unset is the only case in which this link hands the kind to the automatics,
+// hence a bool rather than a zero.
+func (r moduleConfigResourcesRequests) budget(kind resourceKind) (int64, bool, error) {
 	raw := r.CPU
 	if kind == resourceMemory {
 		raw = r.Memory
@@ -101,9 +95,6 @@ func (r moduleConfigResourcesRequests) quantity(kind resourceKind) (int64, bool,
 	if kind == resourceCPU {
 		value = quantity.MilliValue()
 	}
-	// Reported as a misconfiguration rather than silently read as "not set": zero
-	// is not a budget to split, but it is still something the user typed, and the
-	// automatics must not quietly take the kind over because of it.
 	if value <= 0 {
 		return 0, false, fmt.Errorf("%s resourcesRequests %q must be positive", kind, raw)
 	}

@@ -16,10 +16,8 @@ limitations under the License.
 
 package resources
 
-// autotuneState is what the two hooks share: hook_autotune.go writes it into a
-// ConfigMap, hook_sync.go reads that ConfigMap back and projects it into values.
-// A ConfigMap rather than values directly, because the requests must survive a
-// Deckhouse restart without a metrics API round-trip.
+// Shared by the two hooks through a ConfigMap rather than values, so that the
+// requests survive a restart without a metrics API round-trip.
 
 import (
 	"encoding/json"
@@ -37,7 +35,7 @@ const (
 	autotuneStateKey    = "state"
 
 	// 20h and not 24h so that the 03:00 cron run is never skipped because the
-	// previous run happened a few minutes early or the scheduler drifted.
+	// previous one ran a few minutes early. Also the unit the cooldowns count in.
 	metricsRunInterval = 20 * time.Hour
 )
 
@@ -47,17 +45,12 @@ type autotuneComponentState struct {
 	LastChange      string `json:"lastChange,omitempty"`
 }
 
-// PendingRaiseSum is the last raise total that failed the headroom gate (no
-// since/deficit in CM — deficit is emitted as a metric only).
 type autotuneMeasurementState struct {
 	Components      map[string]autotuneComponentState `json:"components,omitempty"`
 	PendingRaiseSum int64                             `json:"pendingRaiseSum,omitempty"`
-
-	// RFC3339, UTC. The hook is woken by events as well as by cron; this is what
-	// keeps raise/lower inside the daily window.
-	LastMetricsRun string `json:"lastMetricsRun,omitempty"`
-	// Normalized to millicpu or bytes — as a raw string "2" and "2000m" would look
-	// like a change every run. nil means the measurement is under autotune.
+	LastMetricsRun  string                            `json:"lastMetricsRun,omitempty"`
+	// Normalized to millicpu or bytes, or "2" and "2000m" would look like a change
+	// on every run. nil means "under autotune".
 	AppliedOverride *int64 `json:"appliedOverride,omitempty"`
 }
 
@@ -81,12 +74,6 @@ func (s autotuneState) getOrCreateMeasurement(kind resourceKind) *autotuneMeasur
 	return m
 }
 
-// commit writes a resolution into the state the ConfigMap is rendered from and
-// returns the components whose value actually changed.
-//
-// Through setAppliedIfChanged rather than a plain overwrite: LastChange must move
-// only on a real change, or every run would reset the raise/lower cooldowns to
-// "just now" and the anti-flap window would never elapse.
 func (s autotuneState) commit(kind resourceKind, requests requestsByComponent, changedAt string) []string {
 	measurement := s.getOrCreateMeasurement(kind)
 
@@ -94,10 +81,6 @@ func (s autotuneState) commit(kind resourceKind, requests requestsByComponent, c
 	for _, comp := range controlPlaneComponents {
 		request := requests[comp]
 		if request <= 0 {
-			// The resolver chain guarantees a positive value for every component; a zero
-			// would reach the static-pod manifests as a literal request of 0. Skipping
-			// leaves that component on the template fallback, and the sync hook reports
-			// the incomplete map through autotuneIncompleteMetricName.
 			continue
 		}
 		if setAppliedIfChanged(measurement, comp, kind, request, changedAt) {
@@ -107,8 +90,6 @@ func (s autotuneState) commit(kind resourceKind, requests requestsByComponent, c
 	return changed
 }
 
-// refreshPendingRaiseDeficit rechecks a raise an earlier run had to hold back:
-// headroom is recomputed on every run, so the blocked total may fit by now.
 func (s autotuneState) refreshPendingRaiseDeficit(kind resourceKind, headroom int64) int64 {
 	m := s[kind]
 	if m == nil || m.PendingRaiseSum <= 0 {
@@ -121,8 +102,16 @@ func (s autotuneState) refreshPendingRaiseDeficit(kind resourceKind, headroom in
 	return m.PendingRaiseSum - headroom
 }
 
-// LastChange is touched only on an actual change: rewriting it every run would
-// keep it permanently "just now" and block the next raise/lower on cooldown.
+func (m *autotuneMeasurementState) handOverToFallback() {
+	if m == nil {
+		return
+	}
+	m.AppliedOverride = nil
+	m.PendingRaiseSum = 0
+}
+
+// LastChange moves only on an actual change: rewriting it every run would keep it
+// permanently "just now" and no cooldown would ever elapse.
 func setAppliedIfChanged(m *autotuneMeasurementState, comp string, kind resourceKind, val int64, ts string) bool {
 	cs := m.Components[comp]
 	switch kind {
@@ -150,7 +139,11 @@ func setApplied(cs *autotuneComponentState, kind resourceKind, val int64) {
 	}
 }
 
-func appliedValue(cs autotuneComponentState, kind resourceKind) int64 {
+func appliedRequest(m *autotuneMeasurementState, comp string, kind resourceKind) int64 {
+	if m == nil {
+		return 0
+	}
+	cs := m.Components[comp]
 	switch kind {
 	case resourceCPU:
 		if cs.AppliedMilliCPU != nil {
@@ -165,12 +158,9 @@ func appliedValue(cs autotuneComponentState, kind resourceKind) int64 {
 }
 
 func countApplied(m *autotuneMeasurementState, kind resourceKind) int {
-	if m == nil || m.Components == nil {
-		return 0
-	}
 	n := 0
 	for _, comp := range controlPlaneComponents {
-		if appliedValue(m.Components[comp], kind) > 0 {
+		if appliedRequest(m, comp, kind) > 0 {
 			n++
 		}
 	}
@@ -181,8 +171,6 @@ func measurementIsComplete(m *autotuneMeasurementState, kind resourceKind) bool 
 	return countApplied(m, kind) == len(controlPlaneComponents)
 }
 
-// metricsRunDue keeps event- and sync-driven runs from touching raise/lower
-// outside the daily window.
 func metricsRunDue(m *autotuneMeasurementState, now time.Time) bool {
 	if m == nil || m.LastMetricsRun == "" {
 		return true
@@ -191,36 +179,30 @@ func metricsRunDue(m *autotuneMeasurementState, now time.Time) bool {
 	return err != nil || now.Sub(t) >= metricsRunInterval
 }
 
-// readStateOrEmpty never fails: recomputing the whole ConfigMap from scratch
-// beats leaving the control-plane on the template fallback, so an unreadable
-// state is reported and then treated as no state at all.
+// Never fails: recomputing from scratch beats the template default.
 func readStateOrEmpty(input *go_hook.HookInput) autotuneState {
-	snapshots := input.Snapshots.Get(snapshotAutotune)
-	if len(snapshots) == 0 {
-		return make(autotuneState)
-	}
-
-	var raw autotuneStateRaw
-	if err := snapshots[0].UnmarshalTo(&raw); err != nil {
-		return emptyStateAfter(input, fmt.Errorf("unmarshal AutotuneState snapshot: %w", err))
-	}
-
-	state, err := parseAutotuneState(raw.State)
+	state, err := readState(input)
 	if err != nil {
-		return emptyStateAfter(input, err)
+		input.Logger.Warn("autotune: unreadable state, recomputing from scratch", "error", err)
+		setAutotuneDegraded(input, autotuneDegradedMetricGroup, degradedReasonBadState)
+		return make(autotuneState)
 	}
 	return state
 }
 
-func emptyStateAfter(input *go_hook.HookInput, err error) autotuneState {
-	input.Logger.Warn("autotune: unreadable state, recomputing from scratch", "error", err)
-	setAutotuneDegraded(input, autotuneDegradedMetricGroup, degradedReasonBadState)
-	return make(autotuneState)
+func readState(input *go_hook.HookInput) (autotuneState, error) {
+	snapshots := input.Snapshots.Get(snapshotAutotune)
+	if len(snapshots) == 0 {
+		return make(autotuneState), nil
+	}
+
+	var raw autotuneStateRaw
+	if err := snapshots[0].UnmarshalTo(&raw); err != nil {
+		return nil, fmt.Errorf("unmarshal AutotuneState snapshot: %w", err)
+	}
+	return parseAutotuneState(raw.State)
 }
 
-// parseAutotuneState never returns a nil map on success: an absent ConfigMap key
-// and a literal JSON null both mean "no state yet", which callers must be able to
-// write into.
 func parseAutotuneState(raw string) (autotuneState, error) {
 	if raw == "" {
 		return make(autotuneState), nil

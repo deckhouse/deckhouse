@@ -14,20 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package resources keeps the control-plane resource requests of the four
-// static-pod components in step with the masters they run on.
-//
-// Two hooks: hook_autotune.go resolves the requests and owns the state
-// ConfigMap, hook_sync.go projects that ConfigMap into values for the templates.
-// resolve*.go holds the resolution chain the first one runs.
+// Package resources keeps the resource requests of the four control-plane static
+// pods in step with the masters they run on. hook_autotune.go resolves them and
+// owns the state ConfigMap; hook_sync.go projects that ConfigMap into values.
 package resources
 
-// Namespace of the control-plane static pods, and of this package's own state
-// ConfigMap.
 const kubeSystemNS = "kube-system"
 
-// resourceKind identifies a control-plane measurement (cpu or memory).
-// String values match ConfigMap JSON, metrics labels, and PodMetric names.
+// Values match the ConfigMap JSON, the metrics labels and the PodMetric names.
 type resourceKind string
 
 const (
@@ -35,7 +29,6 @@ const (
 	resourceMemory resourceKind = "memory"
 )
 
-// Control-plane component keys used in internal values / ConfigMap / templates.
 const (
 	componentKubeApiserver         = "kubeApiserver"
 	componentEtcd                  = "etcd"
@@ -43,10 +36,8 @@ const (
 	componentKubeScheduler         = "kubeScheduler"
 )
 
-// Internal values path for per-component resource requests.
-const pathComponents = "controlPlaneManager.internal.resourcesRequests.components"
+const componentsValuesPath = "controlPlaneManager.internal.resourcesRequests.components"
 
-// controlPlaneComponents lists components in a stable order.
 var controlPlaneComponents = []string{
 	componentKubeApiserver,
 	componentEtcd,
@@ -54,19 +45,18 @@ var controlPlaneComponents = []string{
 	componentKubeScheduler,
 }
 
-// componentMeta maps an internal component key to its static-pod container name
-// (matches PodMetric selectors) and its fixed %-share of a combined budget
-// (ModuleConfig override or legacy discovery): 45/35/10/10.
-var componentMeta = map[string]struct {
+type componentInfo struct {
 	container string
 	percent   int64
-}{
+}
+
+var componentMeta = map[string]componentInfo{
 	componentKubeApiserver:         {"kube-apiserver", 45},
 	componentEtcd:                  {"etcd", 35},
 	componentKubeControllerManager: {"kube-controller-manager", 10},
 	componentKubeScheduler:         {"kube-scheduler", 10},
 }
 
-func fallbackSplit(total, percent int64) int64 {
+func percentOf(total, percent int64) int64 {
 	return total * percent / 100
 }

@@ -37,7 +37,6 @@ const (
 	autotuneIncompleteMetricGroup = "D8ControlPlaneResourcesAutotuneStateIncomplete"
 )
 
-// Reasons for autotuneDegradedMetricName.
 const (
 	degradedReasonBadNodes      = "bad_nodes"
 	degradedReasonBadState      = "bad_state"

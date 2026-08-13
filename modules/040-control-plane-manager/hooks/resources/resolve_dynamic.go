@@ -18,114 +18,94 @@ package resources
 
 import (
 	"context"
+	"fmt"
+	"math"
 	"time"
 )
 
 const (
-	// Asymmetric deadband for raise/lower. Go constants, not config-values.
-	// Change is significant only when delta > raiseThreshold or
-	// delta < -lowerThreshold (delta = (measured - baseline) / baseline).
-	raiseThreshold = 0.20 // +20%
-	lowerThreshold = 0.30 // −30%
+	// delta = (measured − baseline) / baseline. Raising is cheap and urgent,
+	// lowering is neither, hence the asymmetry.
+	raiseThreshold = 0.20
+	lowerThreshold = 0.30
 
-	// Anti-flap cooldowns.
-	raiseCooldown = 24 * time.Hour
-	lowerCooldown = 72 * time.Hour
+	// Counted in runs, not in days: only the daily cron reaches the deciding path,
+	// so 24h would let scheduling drift defer a change by another whole run.
+	raiseCooldown = metricsRunInterval
+	lowerCooldown = 3 * metricsRunInterval
+
+	neverChanged = time.Duration(math.MaxInt64)
 )
 
-// dynamicResolver answers from measured usage (custom.metrics.k8s.io): per
-// component, under the asymmetric deadband and the raise/lower cooldowns, and
-// only if the raises collectively fit the headroom left on the weakest master.
-//
-// It is deliberately stateful. It reads autotuneState for the baseline and the
-// cooldown timestamps, and it writes back the two fields that are its own
-// bookkeeping rather than an answer: LastMetricsRun, which keeps event-driven
-// runs out of the daily window, and PendingRaiseSum, a raise the headroom gate
-// blocked. It never writes applied values — those come back in the result, for
-// the caller to commit.
 type dynamicResolver struct {
 	state    autotuneState
 	nodes    []Node
 	fallback requestsResolver
 
-	// Headroom costs a pod list per master, so it is loaded on first use rather
-	// than up front: with prometheus disabled, or outside the daily window, this
-	// link never needs it. resolve is called once per kind and both kinds share
-	// one pod list. No sync.Once — the hook resolves kinds sequentially.
 	headroom       map[resourceKind]int64
 	headroomKnown  bool
 	headroomLoaded bool
 }
 
-func (r *dynamicResolver) resolve(ctx context.Context, rctx resolveContext, kind resourceKind) (resolvedRequests, error) {
-	// Read-only until this link actually owns the answer: creating the measurement
-	// up front would leave an empty entry in the state — and so in the ConfigMap —
-	// for a kind that ends up resolved by another link, or not resolved at all.
+func (r *dynamicResolver) resolve(ctx context.Context, deps resolveDeps, kind resourceKind) (resolvedRequests, error) {
+	// Not getOrCreateMeasurement: the entry would leak into the ConfigMap for a
+	// kind another link answers.
 	measurement := r.state[kind]
 
-	// An override was in force on the previous run and is gone now: rebase on the
-	// static split right away, instead of leaving the hand-set value to linger
-	// inside the deadband until some later run drifts off it.
 	overrideRemoved := measurement != nil && measurement.AppliedOverride != nil
-
-	if overrideRemoved || !prometheusMetricsAvailable(rctx.input) {
-		if measurement != nil {
-			measurement.AppliedOverride = nil
-			// PendingRaiseSum is this link's own bookkeeping and means nothing while
-			// the answer comes from somewhere else.
-			measurement.PendingRaiseSum = 0
-		}
-		return r.fallback.resolve(ctx, rctx, kind)
+	if overrideRemoved || !prometheusMetricsAvailable(deps.input) {
+		measurement.handOverToFallback()
+		return r.fallback.resolve(ctx, deps, kind)
 	}
 
-	now := rctx.dc.GetClock().Now().UTC()
+	now := deps.dc.GetClock().Now().UTC()
 	if !metricsRunDue(measurement, now) {
-		return r.hold(ctx, rctx, kind)
+		return r.hold(ctx, deps, kind)
 	}
 
-	r.loadHeadroom(ctx, rctx)
+	r.loadHeadroom(ctx, deps)
 	if !r.headroomKnown {
-		// Without headroom a raise cannot be gated, and committing one blindly is
-		// how a master ends up unschedulable.
-		return r.hold(ctx, rctx, kind)
+		return r.hold(ctx, deps, kind)
 	}
 
-	baseline, err := r.hold(ctx, rctx, kind)
+	baseline, err := r.appliedOrFallback(ctx, deps, kind)
 	if err != nil {
 		return resolvedRequests{}, err
 	}
 
-	usage, noFetchErrors := readComponentUsage(ctx, rctx, kind)
+	usage, someFetchFailed := readComponentUsage(ctx, deps, kind)
 
-	// From here on this link owns the run, so its own bookkeeping gets written.
-	// LastMetricsRun is stamped on the fact of the fetch, not on committing
-	// anything: otherwise a cluster whose series never appear would go to the
-	// metrics API on every event. Safe to create the measurement now — baseline
-	// resolved, so the fallback below cannot fail either.
+	// Stamped on the fetch, not the commit, or a cluster whose series never appear
+	// would call the metrics API on every event.
 	measurement = r.state.getOrCreateMeasurement(kind)
 	measurement.LastMetricsRun = now.Format(time.RFC3339)
 
 	if len(usage) == 0 {
-		if !noFetchErrors && countApplied(measurement, kind) == 0 {
-			// Cold start: nothing measured, and nothing ever applied, so there is no
-			// baseline of our own to hold on to. Let the static split bootstrap it.
-			return r.fallback.resolve(ctx, rctx, kind)
+		if someFetchFailed && countApplied(measurement, kind) == 0 {
+			return r.fallback.resolve(ctx, deps, kind)
 		}
-		rctx.input.Logger.Warn("autotune: no usage datapoints from the metrics API, holding current requests", "resource", kind)
-		baseline.deficit = r.state.refreshPendingRaiseDeficit(kind, r.headroom[kind])
+		deps.input.Logger.Warn("autotune: no usage datapoints from the metrics API, holding current requests", "resource", kind)
+		baseline.deficit = r.pendingDeficit(ctx, deps, kind)
 		return baseline, nil
 	}
 
-	return r.decideRequests(measurement, kind, usage, baseline.byComponent, now), nil
+	cooldownAge := readCooldownAges(deps, kind, measurement, now)
+	return r.proposeRequests(measurement, kind, usage, baseline.byComponent, cooldownAge), nil
 }
 
-// hold is the answer when this link has nothing fresh to act on: the values
-// already applied, with any component that has none filled in from the next
-// link. Filling in is what keeps a zero out of the result — a component can be
-// missing from the state either because it was just added, or because an earlier
-// run resolved the kind somewhere else entirely.
-func (r *dynamicResolver) hold(ctx context.Context, rctx resolveContext, kind resourceKind) (resolvedRequests, error) {
-	fallback, err := r.fallback.resolve(ctx, rctx, kind)
+// Re-reports the shortfall because the hook expires the metric group on every
+// run: staying quiet about a still-blocked raise would read as "it fits now".
+func (r *dynamicResolver) hold(ctx context.Context, deps resolveDeps, kind resourceKind) (resolvedRequests, error) {
+	held, err := r.appliedOrFallback(ctx, deps, kind)
+	if err != nil {
+		return resolvedRequests{}, err
+	}
+	held.deficit = r.pendingDeficit(ctx, deps, kind)
+	return held, nil
+}
+
+func (r *dynamicResolver) appliedOrFallback(ctx context.Context, deps resolveDeps, kind resourceKind) (resolvedRequests, error) {
+	fallback, err := r.fallback.resolve(ctx, deps, kind)
 	if err != nil {
 		return resolvedRequests{}, err
 	}
@@ -143,30 +123,36 @@ func (r *dynamicResolver) hold(ctx context.Context, rctx resolveContext, kind re
 	return resolvedRequests{byComponent: held, source: sourceDynamic}, nil
 }
 
-// loadHeadroom computes the free capacity on the weakest master, once per hook
-// run.
-//
-// A failure is not fatal: the deadband and the cooldowns keep holding the
-// current requests, only raise/lower stops for the day. So it degrades instead
-// of returning an error — and reports that itself, because a graceful
-// degradation is invisible to the caller by definition.
-func (r *dynamicResolver) loadHeadroom(ctx context.Context, rctx resolveContext) {
+func (r *dynamicResolver) pendingDeficit(ctx context.Context, deps resolveDeps, kind resourceKind) int64 {
+	measurement := r.state[kind]
+	if measurement == nil || measurement.PendingRaiseSum <= 0 {
+		return 0
+	}
+
+	r.loadHeadroom(ctx, deps)
+	if !r.headroomKnown {
+		return 0
+	}
+	return r.state.refreshPendingRaiseDeficit(kind, r.headroom[kind])
+}
+
+func (r *dynamicResolver) loadHeadroom(ctx context.Context, deps resolveDeps) {
 	if r.headroomLoaded {
 		return
 	}
 	r.headroomLoaded = true
 
-	otherByNode, err := fetchOtherRequestsByMasterNodes(ctx, rctx.dc, r.nodes)
+	otherRequests, err := readOtherPodRequests(ctx, deps.dc, r.nodes)
 	if err != nil {
-		rctx.input.Logger.Error("autotune: cannot list non-control-plane pod requests on masters, skipping the metrics path", "error", err)
-		setAutotuneDegraded(rctx.input, autotuneDegradedMetricGroup, degradedReasonListPods)
+		deps.input.Logger.Error("autotune: cannot list non-control-plane pod requests on masters, skipping the metrics path", "error", err)
+		setAutotuneDegraded(deps.input, autotuneDegradedMetricGroup, degradedReasonListPods)
 		return
 	}
 
-	headroomMilliCPU, headroomBytes, ok := minMasterFitBudget(r.nodes, otherByNode)
+	headroomMilliCPU, headroomBytes, ok := weakestMasterHeadroom(r.nodes, otherRequests)
 	if !ok {
-		rctx.input.Logger.Error("autotune: no master nodes to compute headroom from")
-		setAutotuneDegraded(rctx.input, autotuneDegradedMetricGroup, degradedReasonBadNodes)
+		deps.input.Logger.Error("autotune: no master nodes to compute headroom from")
+		setAutotuneDegraded(deps.input, autotuneDegradedMetricGroup, degradedReasonBadNodes)
 		return
 	}
 
@@ -177,15 +163,12 @@ func (r *dynamicResolver) loadHeadroom(ctx context.Context, rctx resolveContext)
 	r.headroomKnown = true
 }
 
-// decideRequests moves every component with a fresh measurement under the
-// deadband and cooldown rules, leaves the rest on their baseline, then gates the
-// raises against headroom.
-func (r *dynamicResolver) decideRequests(
+func (r *dynamicResolver) proposeRequests(
 	measurement *autotuneMeasurementState,
 	kind resourceKind,
 	usage usageByComponent,
 	baseline requestsByComponent,
-	now time.Time,
+	cooldownAge map[string]time.Duration,
 ) resolvedRequests {
 	proposed := make(requestsByComponent, len(controlPlaneComponents))
 	raising := make(map[string]bool)
@@ -198,8 +181,7 @@ func (r *dynamicResolver) decideRequests(
 			continue
 		}
 
-		lastChange := parseLastChange(measurement.Components[comp].LastChange)
-		switch decide(measured, baseline[comp], lastChange, now) {
+		switch decide(measured, baseline[comp], cooldownAge[comp]) {
 		case decideRaise:
 			proposed[comp] = measured
 			raising[comp] = true
@@ -211,8 +193,6 @@ func (r *dynamicResolver) decideRequests(
 
 	result := resolvedRequests{byComponent: proposed, source: sourceDynamic}
 	if len(raising) == 0 {
-		// Nothing raising this run, but a raise blocked earlier may fit now that
-		// headroom has been recomputed, so recheck rather than assume it is stuck.
 		result.deficit = r.state.refreshPendingRaiseDeficit(kind, r.headroom[kind])
 		return result
 	}
@@ -221,10 +201,6 @@ func (r *dynamicResolver) decideRequests(
 	return result
 }
 
-// gateRaises enforces that the proposed requests as a whole still fit the
-// headroom. If they do, any earlier shortfall clears. If they do not, every
-// raising component goes back to its baseline and the shortfall is returned, so
-// that the raise gets reported instead of half-applied.
 func (r *dynamicResolver) gateRaises(
 	measurement *autotuneMeasurementState,
 	kind resourceKind,
@@ -258,48 +234,52 @@ const (
 	decideLower decideAction = "lower"
 )
 
-// decide is the deadband-and-cooldown rule for one component: raising is cheap
-// and urgent, lowering is neither, hence the asymmetry in both the thresholds
-// and the cooldowns.
-func decide(measured, baseline int64, lastChange, now time.Time) decideAction {
+func decide(measured, baseline int64, cooldownAge time.Duration) decideAction {
 	if baseline <= 0 {
 		if measured > 0 {
 			return decideRaise
 		}
 		return decideSkip
 	}
+
 	delta := float64(measured-baseline) / float64(baseline)
 	switch {
-	case delta > raiseThreshold:
-		if now.Sub(lastChange) >= raiseCooldown || lastChange.IsZero() {
-			return decideRaise
-		}
-	case delta < -lowerThreshold:
-		if now.Sub(lastChange) >= lowerCooldown || lastChange.IsZero() {
-			return decideLower
-		}
+	case delta > raiseThreshold && cooldownAge >= raiseCooldown:
+		return decideRaise
+	case delta < -lowerThreshold && cooldownAge >= lowerCooldown:
+		return decideLower
 	}
 	return decideSkip
 }
 
-// parseLastChange treats "never recorded" and "unparsable" the same way: no
-// cooldown left to honor.
-func parseLastChange(raw string) time.Time {
-	if raw == "" {
-		return time.Time{}
+func readCooldownAges(deps resolveDeps, kind resourceKind, measurement *autotuneMeasurementState, now time.Time) map[string]time.Duration {
+	ages := make(map[string]time.Duration, len(controlPlaneComponents))
+	for _, comp := range controlPlaneComponents {
+		age, err := sinceLastChange(measurement.Components[comp].LastChange, now)
+		if err != nil {
+			deps.input.Logger.Warn("autotune: untrustworthy lastChange, keeping the component on cooldown",
+				"resource", kind, "component", comp, "error", err)
+			setAutotuneDegraded(deps.input, autotuneDegradedMetricGroup, degradedReasonBadState)
+		}
+		ages[comp] = age
 	}
-	parsed, err := time.Parse(time.RFC3339, raw)
-	if err != nil {
-		return time.Time{}
-	}
-	return parsed
+	return ages
 }
 
-// appliedRequest is appliedValue over a measurement that may never have been
-// written at all.
-func appliedRequest(measurement *autotuneMeasurementState, comp string, kind resourceKind) int64 {
-	if measurement == nil {
-		return 0
+// Fails closed: an unparsable timestamp, or one ahead of now because a clock
+// jumped, gives an age of zero and keeps the component on cooldown. The opposite
+// would quietly turn anti-flap off.
+func sinceLastChange(raw string, now time.Time) (time.Duration, error) {
+	if raw == "" {
+		return neverChanged, nil
 	}
-	return appliedValue(measurement.Components[comp], kind)
+
+	changed, err := time.Parse(time.RFC3339, raw)
+	if err != nil {
+		return 0, fmt.Errorf("parse lastChange %q: %w", raw, err)
+	}
+	if changed.After(now) {
+		return 0, fmt.Errorf("lastChange %q is ahead of now %q", raw, now.Format(time.RFC3339))
+	}
+	return now.Sub(changed), nil
 }

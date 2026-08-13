@@ -127,7 +127,7 @@ kubeApiserver:
 kubeApiserver:
   milliCPU: 700
 `))
-			getAutotuneStateCM = func(context.Context, dependency.Container) (autotuneState, error) {
+			readStateCM = func(context.Context, dependency.Container) (autotuneState, error) {
 				return nil, fmt.Errorf("connection refused")
 			}
 			f.KubeStateSet(``)
@@ -136,7 +136,7 @@ kubeApiserver:
 		})
 
 		AfterEach(func() {
-			getAutotuneStateCM = getAutotuneStateFromAPI
+			readStateCM = readStateCMFromAPI
 		})
 
 		It("keeps the last known values and reports degradation", func() {

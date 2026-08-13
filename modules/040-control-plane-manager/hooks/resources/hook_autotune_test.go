@@ -70,6 +70,17 @@ func autotuneCMState(f *HookExecutionConfig) autotuneState {
 	return st
 }
 
+// deficitMetric is the capacity shortfall the run reported for kind, or -1 when
+// it reported none.
+func deficitMetric(f *HookExecutionConfig, kind resourceKind) float64 {
+	for _, m := range f.MetricsCollector.CollectedMetrics() {
+		if m.Name == autotuneMetricName && m.Labels["resource"] == string(kind) {
+			return *m.Value
+		}
+	}
+	return -1
+}
+
 func hasDegradedReason(f *HookExecutionConfig, reason string) bool {
 	for _, m := range f.MetricsCollector.CollectedMetrics() {
 		if m.Name == autotuneDegradedMetricName && m.Labels["reason"] == reason {
@@ -125,23 +136,38 @@ spec:
 }
 
 var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_autotune :: decide", func() {
-	now := time.Date(2026, 7, 23, 12, 0, 0, 0, time.UTC)
-
 	DescribeTable("asymmetric deadband + cooldown",
-		func(rec, applied int64, lastChangeAgo time.Duration, zeroLast bool, want decideAction) {
-			var last time.Time
-			if !zeroLast {
-				last = now.Add(-lastChangeAgo)
-			}
-			Expect(decide(rec, applied, last, now)).To(Equal(want))
+		func(measured, baseline int64, cooldownAge time.Duration, want decideAction) {
+			Expect(decide(measured, baseline, cooldownAge)).To(Equal(want))
 		},
-		Entry("first commit (no applied)", int64(500), int64(0), time.Duration(0), true, decideRaise),
-		Entry("inside deadband", int64(110), int64(100), 48*time.Hour, false, decideSkip),
-		Entry("raise above threshold after cooldown", int64(130), int64(100), 25*time.Hour, false, decideRaise),
-		Entry("raise blocked by cooldown", int64(130), int64(100), 2*time.Hour, false, decideSkip),
-		Entry("lower below threshold after cooldown", int64(60), int64(100), 73*time.Hour, false, decideLower),
-		Entry("lower blocked by cooldown", int64(60), int64(100), 24*time.Hour, false, decideSkip),
-		Entry("lower inside deadband (−20%)", int64(80), int64(100), 73*time.Hour, false, decideSkip),
+		Entry("first commit (no applied)", int64(500), int64(0), neverChanged, decideRaise),
+		Entry("inside deadband", int64(110), int64(100), 48*time.Hour, decideSkip),
+		Entry("raise above threshold after cooldown", int64(130), int64(100), 25*time.Hour, decideRaise),
+		// One run's worth of drift must not defer the raise by another whole run.
+		Entry("raise after a cron run that came early", int64(130), int64(100), 21*time.Hour, decideRaise),
+		Entry("raise blocked by cooldown", int64(130), int64(100), 2*time.Hour, decideSkip),
+		Entry("lower below threshold after cooldown", int64(60), int64(100), 73*time.Hour, decideLower),
+		Entry("lower blocked by cooldown", int64(60), int64(100), 24*time.Hour, decideSkip),
+		Entry("lower inside deadband (−20%)", int64(80), int64(100), 73*time.Hour, decideSkip),
+		Entry("raise held by an untrustworthy timestamp", int64(130), int64(100), time.Duration(0), decideSkip),
+		Entry("lower held by an untrustworthy timestamp", int64(60), int64(100), time.Duration(0), decideSkip),
+	)
+
+	DescribeTable("sinceLastChange",
+		func(raw string, want time.Duration, wantErr bool) {
+			now := time.Date(2026, 7, 23, 12, 0, 0, 0, time.UTC)
+			age, err := sinceLastChange(raw, now)
+			Expect(age).To(Equal(want))
+			if wantErr {
+				Expect(err).To(HaveOccurred())
+				return
+			}
+			Expect(err).NotTo(HaveOccurred())
+		},
+		Entry("never recorded", "", neverChanged, false),
+		Entry("recorded", "2026-07-22T12:00:00Z", 24*time.Hour, false),
+		Entry("unparsable fails closed", "not-a-timestamp", time.Duration(0), true),
+		Entry("ahead of now fails closed", "2026-07-24T12:00:00Z", time.Duration(0), true),
 	)
 })
 
@@ -207,11 +233,13 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 
 		It("writes raised milliCPU into ConfigMap", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			ops := f.KubernetesResource("ConfigMap", "kube-system", autotuneStateCMName)
-			Expect(ops.Exists()).To(BeTrue())
-			var st autotuneState
-			Expect(json.Unmarshal([]byte(ops.Field("data.state").String()), &st)).To(Succeed())
+			st := autotuneCMState(f)
+			// Only kubeApiserver moved: measured 0.25 cpu against a 100m baseline is
+			// past the deadband, the other three were measured at 0.10 cpu and stay.
 			Expect(*st[resourceCPU].Components[componentKubeApiserver].AppliedMilliCPU).To(Equal(int64(250)))
+			Expect(*st[resourceCPU].Components[componentEtcd].AppliedMilliCPU).To(Equal(int64(100)))
+			Expect(*st[resourceCPU].Components[componentKubeControllerManager].AppliedMilliCPU).To(Equal(int64(100)))
+			Expect(*st[resourceCPU].Components[componentKubeScheduler].AppliedMilliCPU).To(Equal(int64(100)))
 		})
 	})
 
@@ -247,23 +275,19 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 			f.RunHook()
 		})
 
+		// The fixture is fully deterministic, so the numbers are pinned exactly: a 1
+		// cpu master keeps 900m after the kubelet floor and hosts nothing else, so
+		// headroom is 900m; four components measured at 500m each propose 2000m.
 		It("keeps applied values, stores pendingRaiseSum, emits deficit metric", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			ops := f.KubernetesResource("ConfigMap", "kube-system", autotuneStateCMName)
-			var st autotuneState
-			Expect(json.Unmarshal([]byte(ops.Field("data.state").String()), &st)).To(Succeed())
-			Expect(*st[resourceCPU].Components[componentKubeApiserver].AppliedMilliCPU).To(Equal(int64(50)))
-			Expect(st[resourceCPU].PendingRaiseSum).To(BeNumerically(">", 0))
-			Expect(st[resourceCPU].Components[componentKubeApiserver]).ToNot(BeNil())
-			found := false
-			for _, m := range f.MetricsCollector.CollectedMetrics() {
-				if m.Name == autotuneMetricName {
-					found = true
-					Expect(m.Labels).To(HaveKeyWithValue("resource", "cpu"))
-					Expect(*m.Value).To(BeNumerically(">", 0))
-				}
+			st := autotuneCMState(f)
+			for _, comp := range controlPlaneComponents {
+				Expect(*st[resourceCPU].Components[comp].AppliedMilliCPU).To(Equal(int64(50)))
 			}
-			Expect(found).To(BeTrue())
+			Expect(st[resourceCPU].PendingRaiseSum).To(Equal(int64(2000)))
+			Expect(deficitMetric(f, resourceCPU)).To(Equal(float64(1100)))
+			// Memory was measured exactly at its baseline, so nothing was held back.
+			Expect(deficitMetric(f, resourceMemory)).To(Equal(float64(-1)))
 		})
 	})
 
@@ -279,8 +303,8 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 			ops := f.KubernetesResource("ConfigMap", "kube-system", autotuneStateCMName)
 			var st autotuneState
 			Expect(json.Unmarshal([]byte(ops.Field("data.state").String()), &st)).To(Succeed())
-			Expect(*st[resourceCPU].Components[componentKubeApiserver].AppliedMilliCPU).To(Equal(fallbackSplit(2000, 45)))
-			Expect(*st[resourceCPU].Components[componentEtcd].AppliedMilliCPU).To(Equal(fallbackSplit(2000, 35)))
+			Expect(*st[resourceCPU].Components[componentKubeApiserver].AppliedMilliCPU).To(Equal(percentOf(2000, 45)))
+			Expect(*st[resourceCPU].Components[componentEtcd].AppliedMilliCPU).To(Equal(percentOf(2000, 35)))
 		})
 	})
 
@@ -305,13 +329,13 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 
 		It("overwrites applied* with discovery %-split and clears pendingRaiseSum", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			// 8-CPU master is capped by hardLimitMilliCPU before the 40%/35% carve-out.
-			expectCPU := int64(hardLimitMilliCPU-configEveryNodeMilliCPU) * controlPlanePercent / 100
+			// 8-CPU master is capped by maxBudgetMilliCPU before the 40%/35% carve-out.
+			expectCPU := int64(maxBudgetMilliCPU-everyNodeReservationMilliCPU) * controlPlanePercent / 100
 			ops := f.KubernetesResource("ConfigMap", "kube-system", autotuneStateCMName)
 			var st autotuneState
 			Expect(json.Unmarshal([]byte(ops.Field("data.state").String()), &st)).To(Succeed())
-			Expect(*st[resourceCPU].Components[componentKubeApiserver].AppliedMilliCPU).To(Equal(fallbackSplit(expectCPU, 45)))
-			Expect(*st[resourceCPU].Components[componentEtcd].AppliedMilliCPU).To(Equal(fallbackSplit(expectCPU, 35)))
+			Expect(*st[resourceCPU].Components[componentKubeApiserver].AppliedMilliCPU).To(Equal(percentOf(expectCPU, 45)))
+			Expect(*st[resourceCPU].Components[componentEtcd].AppliedMilliCPU).To(Equal(percentOf(expectCPU, 35)))
 			Expect(st[resourceCPU].PendingRaiseSum).To(Equal(int64(0)))
 		})
 	})
@@ -339,18 +363,18 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 
 		It(fmt.Sprintf("writes CM components as %d/%d/%d/%d split of discovery budget", 45, 35, 10, 10), func() {
 			Expect(f).To(ExecuteSuccessfully())
-			expectCPU := int64((4000-kubeletResourceReservationCPUFloor-configEveryNodeMilliCPU)*controlPlanePercent) / 100
-			expectMem := int64((8*1024*1024*1024-kubeletResourceReservationMemoryFloor-configEveryNodeMemory)*controlPlanePercent) / 100
+			expectCPU := int64((4000-minKubeletReservationMilliCPU-everyNodeReservationMilliCPU)*controlPlanePercent) / 100
+			expectMem := int64((8*1024*1024*1024-minKubeletReservationMemory-everyNodeReservationMemory)*controlPlanePercent) / 100
 
 			ops := f.KubernetesResource("ConfigMap", "kube-system", autotuneStateCMName)
 			Expect(ops.Exists()).To(BeTrue())
 			var st autotuneState
 			Expect(json.Unmarshal([]byte(ops.Field("data.state").String()), &st)).To(Succeed())
-			Expect(*st[resourceCPU].Components[componentKubeApiserver].AppliedMilliCPU).To(Equal(fallbackSplit(expectCPU, 45)))
-			Expect(*st[resourceCPU].Components[componentEtcd].AppliedMilliCPU).To(Equal(fallbackSplit(expectCPU, 35)))
-			Expect(*st[resourceCPU].Components[componentKubeControllerManager].AppliedMilliCPU).To(Equal(fallbackSplit(expectCPU, 10)))
-			Expect(*st[resourceCPU].Components[componentKubeScheduler].AppliedMilliCPU).To(Equal(fallbackSplit(expectCPU, 10)))
-			Expect(*st[resourceMemory].Components[componentKubeApiserver].AppliedBytes).To(Equal(fallbackSplit(expectMem, 45)))
+			Expect(*st[resourceCPU].Components[componentKubeApiserver].AppliedMilliCPU).To(Equal(percentOf(expectCPU, 45)))
+			Expect(*st[resourceCPU].Components[componentEtcd].AppliedMilliCPU).To(Equal(percentOf(expectCPU, 35)))
+			Expect(*st[resourceCPU].Components[componentKubeControllerManager].AppliedMilliCPU).To(Equal(percentOf(expectCPU, 10)))
+			Expect(*st[resourceCPU].Components[componentKubeScheduler].AppliedMilliCPU).To(Equal(percentOf(expectCPU, 10)))
+			Expect(*st[resourceMemory].Components[componentKubeApiserver].AppliedBytes).To(Equal(percentOf(expectMem, 45)))
 		})
 	})
 
@@ -371,8 +395,8 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 			Expect(*st[resourceCPU].Components[componentEtcd].AppliedMilliCPU).To(Equal(int64(350)))
 			Expect(*st[resourceCPU].Components[componentKubeControllerManager].AppliedMilliCPU).To(Equal(int64(100)))
 			Expect(*st[resourceCPU].Components[componentKubeScheduler].AppliedMilliCPU).To(Equal(int64(100)))
-			Expect(*st[resourceMemory].Components[componentKubeApiserver].AppliedBytes).To(Equal(fallbackSplit(1024*1024*1024, 45)))
-			Expect(*st[resourceMemory].Components[componentEtcd].AppliedBytes).To(Equal(fallbackSplit(1024*1024*1024, 35)))
+			Expect(*st[resourceMemory].Components[componentKubeApiserver].AppliedBytes).To(Equal(percentOf(1024*1024*1024, 45)))
+			Expect(*st[resourceMemory].Components[componentEtcd].AppliedBytes).To(Equal(percentOf(1024*1024*1024, 35)))
 		})
 	})
 
@@ -458,6 +482,59 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 		})
 	})
 
+	Context("Schedule: one component reports an implausible value", func() {
+		BeforeEach(func() {
+			now := dependency.TestDC.GetClock().Now().UTC()
+			st := completeAutotuneState(100, 100000000, now.Add(-100*time.Hour))
+			usage[componentKubeApiserver] = map[resourceKind]float64{resourceCPU: 1e300, resourceMemory: 100000000}
+			for _, c := range []string{componentEtcd, componentKubeControllerManager, componentKubeScheduler} {
+				usage[c] = map[resourceKind]float64{resourceCPU: 0.25, resourceMemory: 100000000}
+			}
+			f.KubeStateSet(masterNodeYAML() + autotuneStateYAML(st) + cpmResourcesRequestsMC("", ""))
+			f.BindingContexts.Set(f.GenerateScheduleContext("0 3 * * *"))
+			f.RunHook()
+		})
+
+		// The datapoint is dropped rather than capped, so the component holds the
+		// request it already has while the other three move on their own readings.
+		It("ignores that component and tunes the rest", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			st := autotuneCMState(f)
+			Expect(*st[resourceCPU].Components[componentKubeApiserver].AppliedMilliCPU).To(Equal(int64(100)))
+			Expect(*st[resourceCPU].Components[componentEtcd].AppliedMilliCPU).To(Equal(int64(250)))
+			Expect(*st[resourceCPU].Components[componentKubeControllerManager].AppliedMilliCPU).To(Equal(int64(250)))
+			Expect(*st[resourceCPU].Components[componentKubeScheduler].AppliedMilliCPU).To(Equal(int64(250)))
+		})
+	})
+
+	Context("Schedule: a blocked raise, outside the daily window", func() {
+		BeforeEach(func() {
+			now := dependency.TestDC.GetClock().Now().UTC()
+			tiny := generateMasterNodesConfig([]masterNode{{
+				cpu: "1", memory: "2Gi", capCPU: "1", capMem: "2Gi",
+			}})
+			st := completeAutotuneState(50, 50000000, now.Add(-100*time.Hour))
+			st[resourceCPU].LastMetricsRun = now.Add(-1 * time.Hour).Format(time.RFC3339)
+			st[resourceMemory].LastMetricsRun = now.Add(-1 * time.Hour).Format(time.RFC3339)
+			st[resourceCPU].PendingRaiseSum = 2000
+			f.KubeStateSet(tiny + autotuneStateYAML(st) + cpmResourcesRequestsMC("", ""))
+			f.BindingContexts.Set(f.GenerateScheduleContext("0 3 * * *"))
+			f.RunHook()
+		})
+
+		// The hook expires the metric group on every run, so a run that holds still
+		// has to re-report a shortfall recorded earlier — otherwise the alert reads
+		// as resolved until the next daily window.
+		It("re-reports the deficit without going to the metrics API", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(usageCalls).To(Equal(0))
+			Expect(deficitMetric(f, resourceCPU)).To(Equal(float64(1100)))
+			st := autotuneCMState(f)
+			Expect(st[resourceCPU].PendingRaiseSum).To(Equal(int64(2000)))
+			Expect(*st[resourceCPU].Components[componentKubeApiserver].AppliedMilliCPU).To(Equal(int64(50)))
+		})
+	})
+
 	Context("Schedule: a run that changes nothing", func() {
 		var lastChange string
 
@@ -472,10 +549,10 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 			for _, comp := range controlPlaneComponents {
 				pct := componentMeta[comp].percent
 				st[resourceCPU].Components[comp] = autotuneComponentState{
-					AppliedMilliCPU: ptr.To(fallbackSplit(1000, pct)), LastChange: lastChange,
+					AppliedMilliCPU: ptr.To(percentOf(1000, pct)), LastChange: lastChange,
 				}
 				st[resourceMemory].Components[comp] = autotuneComponentState{
-					AppliedBytes: ptr.To(fallbackSplit(1024*1024*1024, pct)), LastChange: lastChange,
+					AppliedBytes: ptr.To(percentOf(1024*1024*1024, pct)), LastChange: lastChange,
 				}
 			}
 			st[resourceCPU].AppliedOverride = ptr.To(int64(1000))
@@ -506,7 +583,7 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 			for _, comp := range controlPlaneComponents {
 				pct := componentMeta[comp].percent
 				st[resourceCPU].Components[comp] = autotuneComponentState{
-					AppliedMilliCPU: ptr.To(fallbackSplit(2000, pct)),
+					AppliedMilliCPU: ptr.To(percentOf(2000, pct)),
 					LastChange:      now.Add(-200 * time.Hour).Format(time.RFC3339),
 				}
 			}
@@ -518,12 +595,12 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 
 		It("rebases on the discovery budget immediately and clears AppliedOverride", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			// 8-CPU master is capped by hardLimitMilliCPU before the carve-out.
-			expectCPU := int64(hardLimitMilliCPU-configEveryNodeMilliCPU) * controlPlanePercent / 100
+			// 8-CPU master is capped by maxBudgetMilliCPU before the carve-out.
+			expectCPU := int64(maxBudgetMilliCPU-everyNodeReservationMilliCPU) * controlPlanePercent / 100
 			st := autotuneCMState(f)
 			Expect(st[resourceCPU].AppliedOverride).To(BeNil())
 			Expect(*st[resourceCPU].Components[componentKubeApiserver].AppliedMilliCPU).
-				To(Equal(fallbackSplit(expectCPU, 45)))
+				To(Equal(percentOf(expectCPU, 45)))
 		})
 	})
 

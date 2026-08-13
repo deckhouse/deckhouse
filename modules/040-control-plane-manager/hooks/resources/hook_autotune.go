@@ -34,8 +34,6 @@ const (
 	autotuneQueue        = "/modules/control-plane-manager/autotune"
 )
 
-// Schedule → resolve per-component requests → ConfigMap.
-// hook_sync.go projects that ConfigMap into values.
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: autotuneQueue,
 	Schedule: []go_hook.ScheduleConfig{
@@ -43,22 +41,16 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 	Kubernetes: []go_hook.KubernetesConfig{
 		controlPlaneNodesBinding(),
-		// Events on both: otherwise the two documented ways to set the same budget
-		// would behave differently — global would wait for the cron, the module MC
-		// would apply at once.
+		// Events on both, or the two documented ways to set one budget would differ.
 		resourcesRequestsMCBinding(snapshotCPMMC, "control-plane-manager", applyCPMResourcesRequestsFilter),
 		resourcesRequestsMCBinding(snapshotGlobalMC, "global", applyGlobalResourcesRequestsFilter),
-		// events=false is mandatory: this hook writes that very ConfigMap.
+		// Without events=false this hook would re-trigger itself: it writes that CM.
 		autotuneStateBinding(true, false),
 	},
 }, dependency.WithExternalDependencies(runAutotune))
 
-// runAutotune resolves per-component requests through the resolver chain (see
-// resolve.go) and persists them to the CM.
-//
-// The only error it may return is a failure to marshal its own state: any other
-// error would make addon-operator drop the whole PatchCollector, and the
-// control-plane would fall back onto the 512m/512Mi template default.
+// Fails only on marshalling its own state: any other error makes addon-operator
+// drop the whole PatchCollector, and the control plane with it.
 func runAutotune(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	input.MetricsCollector.Expire(autotuneDegradedMetricGroup)
 	input.MetricsCollector.Expire(autotuneMetricGroup)
@@ -70,25 +62,20 @@ func runAutotune(ctx context.Context, input *go_hook.HookInput, dc dependency.Co
 		setAutotuneDegraded(input, autotuneDegradedMetricGroup, degradedReasonBadNodes)
 		return nil
 	}
-	// Managed control plane — the one legal case in which the ConfigMap does not
-	// exist; the sync hook treats NotFound as normal for exactly this reason.
+	// A managed control plane: the one legal case of the ConfigMap not existing.
 	if len(nodes) == 0 {
 		return nil
 	}
 
 	state := readStateOrEmpty(input)
 	resolver := newRequestsResolverChain(nodes, state)
-	rctx := resolveContext{input: input, dc: dc}
+	deps := resolveDeps{input: input, dc: dc}
 	changedAt := dc.GetClock().Now().UTC().Format(time.RFC3339)
 
-	// cpu and memory walk the same chain independently, which is what lets a
-	// config that sets only one of them leave the other to the automatics.
 	for _, kind := range []resourceKind{resourceCPU, resourceMemory} {
-		resolved, err := resolver.resolve(ctx, rctx, kind)
+		resolved, err := resolver.resolve(ctx, deps, kind)
 		if err != nil {
-			// The measurement is left exactly as it was: with no ConfigMap entry the
-			// templates apply their own fallback, which beats an invented number. See
-			// the contract on requestsResolver.
+			// Nothing committed for this kind — see the contract on requestsResolver.
 			input.Logger.Error("autotune: cannot resolve requests", "resource", kind, "error", err)
 			setAutotuneDegraded(input, autotuneDegradedMetricGroup, degradedReasonOf(err))
 			continue
@@ -104,11 +91,8 @@ func runAutotune(ctx context.Context, input *go_hook.HookInput, dc dependency.Co
 	return persistAutotuneState(input, state)
 }
 
-// reportResolution surfaces what a resolution carries besides the values
-// themselves: which link answered, and whether a measured raise was held back.
 func reportResolution(input *go_hook.HookInput, kind resourceKind, resolved resolvedRequests) {
 	if resolved.source == sourceGlobalConfig {
-		// Configured in the deprecated location, global ModuleConfig.
 		input.MetricsCollector.Set(
 			obsoleteGlobalResourcesRequestsMetricName,
 			1,
