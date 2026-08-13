@@ -33,6 +33,7 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
+
 	"github.com/deckhouse/d8sql"
 	"github.com/deckhouse/d8sql/sql"
 )

@@ -18,11 +18,12 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/deckhouse/d8sql"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+
+	"github.com/deckhouse/d8sql"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
