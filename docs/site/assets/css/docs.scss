@@ -1252,7 +1252,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
   top: 8px;
 
   @include breakpoints.max-w(s) {
-    top: 6px;
+    top: 7px;
   }
 
   @include breakpoints.max-w(xs) {
@@ -1937,6 +1937,10 @@ a.comparison-table__module-proprietaryOkmeter::after {
 .docs .details.active .details__summary::before {
     top: 7px;
     transform: rotate(0deg);
+
+    @include breakpoints.max-w(s) {
+      top: 6px;
+    }
 }
 
 .docs .details > .details__content {
@@ -2482,6 +2486,25 @@ ul .resources__prop_name.deprecated {
     & .form--inline {
       display: flex;
       align-items: flex-end;
+
+      @include breakpoints.max-w(l) {
+        flex-wrap: wrap;
+      }
+
+      .button_alt {
+        flex-shrink: 0;
+        padding: .5em 1.5em;
+
+        @include breakpoints.max-w(s) {
+          padding: .467em 1em;
+        }
+      }
+
+      .textfield {
+        @include breakpoints.max-w(l) {
+          min-width: 0;
+        }
+      }
     }
 
     & .form__row {
@@ -2489,8 +2512,19 @@ ul .resources__prop_name.deprecated {
       width: 383px;
       margin-right: 20px;
 
+      @include breakpoints.max-w(l) {
+        flex: 1 1 0;
+        width: auto;
+        min-width: 0;
+        max-width: 383px;
+      }
+
       @include breakpoints.max-w(s) {
         margin-right: 10px;
+      }
+
+      @include breakpoints.max-w(xs) {
+        margin-right: 8px;
       }
     }
   }
@@ -2509,7 +2543,15 @@ ul .resources__prop_name.deprecated {
     align-items: center;
     color: #dc3545;
     height: 43px;
-    margin-left: 30px;
+
+    @include breakpoints.min-w(l) {
+      margin-left: 20px;
+    }
+
+    @include breakpoints.max-w(l) {
+      flex: 0 0 100%;
+      margin-top: 8px;
+    }
   }
 
   &-request {
