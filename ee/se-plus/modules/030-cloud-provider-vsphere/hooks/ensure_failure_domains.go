@@ -326,16 +326,21 @@ func buildFailureDomain(name, region, regionTagCategory, zone, zoneTagCategory, 
 		"computeCluster": computeCluster,
 		"datastore":      datastore,
 	}
+	// autoConfigure is a *bool in CAPV and reconcileInfraFailureDomain dereferences it
+	// unconditionally (vspheredeploymentzone_controller_domain.go). Leaving it unset makes
+	// CAPV panic on every reconcile. false = trust the tags admin has already attached.
 	spec := map[string]interface{}{
 		"region": map[string]interface{}{
-			"name":        region,
-			"type":        "Datacenter",
-			"tagCategory": regionTagCategory,
+			"name":          region,
+			"type":          "Datacenter",
+			"tagCategory":   regionTagCategory,
+			"autoConfigure": false,
 		},
 		"zone": map[string]interface{}{
-			"name":        zone,
-			"type":        "ComputeCluster",
-			"tagCategory": zoneTagCategory,
+			"name":          zone,
+			"type":          "ComputeCluster",
+			"tagCategory":   zoneTagCategory,
+			"autoConfigure": false,
 		},
 		"topology": topology,
 	}
