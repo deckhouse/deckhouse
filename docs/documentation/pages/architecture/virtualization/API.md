@@ -72,7 +72,7 @@ Virtualization API consists of the following components:
      Virtualization-controller uses `kubevirt.io` API group custom resources as a backend.
 
    - Validation of `virtualization.deckhouse.io` API group resources using the [Validating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/) mechanism.
-   - Launching `dvcr-importer` and `dvcr-uploader` pods to import and upload VM disk and image data to the DVCR registry.
+   - Launching `dvcr-importer`, `dvcr-uploader` and `pvc-importer` pods to import and upload VM disk and image data to the DVCR registry.
      [DVCR (or Deckhouse Virtualization Container Registry)](dvcr.html) is a specialized container registry for storing and caching VM images.
    - Performing operations on VMs by making requests to some subresources of the `subresources.virtualization.deckhouse.io` API group, for example `virtualmachines/freeze` and `virtualmachines/unfreeze`.
 
