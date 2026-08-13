@@ -103,6 +103,7 @@
 
     &_big {
         font-size: variables.$font-size-h2;
+
         img {
           height: variables.$font-size-h2*1.5;
         }
@@ -179,7 +180,7 @@
             width: 40px;
             height: 40px;
         }
-        
+
         & span.name {
             margin: 5px 0px 0px 0px;
 

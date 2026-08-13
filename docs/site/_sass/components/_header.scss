@@ -30,7 +30,6 @@ html {
         padding-bottom: .75rem;
         align-items: center;
         justify-content: space-between;
-        font-size: 12px;
 
         @include breakpoints.min-w(xl) {
             padding-top: 1rem;
@@ -57,7 +56,6 @@ html {
     &__left-box {
         display: flex;
         gap: 1.5rem;
-        align-items: center;
 
         @include breakpoints.min-w(xxl) {
             gap: 2.5rem;
@@ -71,25 +69,16 @@ html {
                 flex-wrap: nowrap;
                 align-items: center;
                 gap: .75rem 1rem;
-                line-height: 20px;
             }
 
             @include breakpoints.min-w(xl) {
                 gap: .75rem;
+                line-height: 20px;
             }
 
             @include breakpoints.min-w(xxxl) {
                 gap: .75rem 1.25rem;
-            }
-        }
-
-        .menu-item {
-            &:not(.menu-item-has-children):hover > a {
-                @include mixins.color(mixins.$primary-700);
-            }
-
-            &--primary {
-                background-color: mixins.$primary-700;
+                padding-bottom: 1px;
             }
         }
 
@@ -98,13 +87,16 @@ html {
                 width: 100%;
             }
 
-            &.active {
+            &.active,
+            &.active-mobile {
                 position: relative;
+            }
 
+            &.active {
                 &::before {
                     content: '';
                     position: absolute;
-                    padding: .375rem .75rem;
+                    padding: .411rem .75rem;
                     top: -.375rem;
                     left: -.75rem;
                     width: 100%;
@@ -115,7 +107,6 @@ html {
             }
 
             &.active-mobile {
-                position: relative;
                 width: 100%;
                 cursor: pointer;
 
@@ -152,7 +143,6 @@ html {
                     > a:first-child {
                         display: flex;
                         gap: 15px;
-                        line-height: 20px;
                         margin-bottom: 16px;
                         padding-right: 16px;
 
@@ -192,10 +182,11 @@ html {
             > a {
                 position: relative;
                 display: flex;
-                align-items: center;
-                height: 20px;
-                font-size: 12px;
-                line-height: 20px;
+                font-size: 11.9px;
+
+                @include breakpoints.min-w(l) {
+                    line-height: 20px;
+                }
 
                 @include breakpoints.min-w(xxl) {
                     font-size: 15px;
@@ -203,6 +194,7 @@ html {
 
                 @include breakpoints.min-w(xxxl) {
                     font-size: 16px;
+                    line-height: 20px;
                 }
 
                 &:hover {
@@ -248,10 +240,6 @@ html {
                         white-space: wrap;
 
                         @include breakpoints.min-w(xl) {
-                            font-size: 1em;
-                        }
-
-                        @include breakpoints.min-w(xxl) {
                             font-size: 1rem;
                         }
 
@@ -307,18 +295,13 @@ html {
             > a {
                 pointer-events: none;
 
-                @include breakpoints.min-w(l) {
-                    padding-right: 14px;
-                }
-
                 &::after {
                     content: '';
                     position: absolute;
-                    top: 50%;
-                    right: 0;
+                    top: 33%;
+                    right: 1px;
                     width: 10px;
-                    height: 6px;
-                    margin-top: -3px;
+                    height: 8px;
                     background: $header-arrow bottom / contain no-repeat;
                     transition: transform .15s;
 
@@ -361,7 +344,6 @@ html {
                     align-items: flex-start;
                     padding: 20px 0 0 16px;
                     overflow: visible;
-                    font-size: 12px;
                     font-weight: 400;
                     line-height: 18px;
                     color: variables.$ntrl-800;
@@ -397,6 +379,83 @@ html {
                     }
                 }
             }
+
+            &--top {
+                > a {
+                    @include breakpoints.min-w(l) {
+                        padding-right: 12px;
+                        letter-spacing: 0.05px;
+                        line-height: 18px;
+                    }
+
+                    @include breakpoints.min-w(xl) {
+                        padding-right: 14px;
+                        letter-spacing: 0.02px;
+                    }
+
+                    @include breakpoints.min-w(xxl) {
+                        padding-right: 19px;
+                        letter-spacing: 0;
+                    }
+
+                    &::after {
+                        @include breakpoints.min-w(l) {
+                            right: 0;
+                            width: 8px;
+                            height: 8px;
+                        }
+
+                        @include breakpoints.min-w(xl) {
+                            right: 1px;
+                            top: 39%;
+                            height: 6px;
+                        }
+
+                        @include breakpoints.min-w(xxl) {
+                            width: 10px;
+                        }
+                    }
+                }
+            }
+
+            &--product {
+                > a {
+                    @include breakpoints.min-w(l) {
+                        padding-right: 17px;
+                        line-height: 21px;
+                    }
+
+                    @include breakpoints.min-w(xxl) {
+                        padding-right: 17px;
+                    }
+
+                    @include breakpoints.min-w(xxxl) {
+                        line-height: 19px;
+                    }
+
+                    &::after {
+                        @include breakpoints.min-w(l) {
+                            top: 30%;
+                            width: 9px;
+                            height: 7px;
+                        }
+
+                        @include breakpoints.min-w(xl) {
+                            top: 27%;
+                        }
+
+                        @include breakpoints.min-w(xxl) {
+                            top: 34%;
+                            height: 6px;
+                        }
+
+                        @include breakpoints.min-w(xxxl) {
+                            top: 31%;
+                            right: 0px;
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -411,14 +470,6 @@ html {
 
         @include breakpoints.min-w(xl) {
             gap: 1rem;
-        }
-
-        .header__nav {
-            gap: 18px;
-
-            @include breakpoints.min-w(xl) {
-                gap: 24px;
-            }
         }
 
         .button,
@@ -483,12 +534,9 @@ html {
 
     .lang-switcher {
         position: relative;
-        display: flex;
         padding: .125rem;
         width: .9rem;
         gap: .6rem;
-        align-items: center;
-        font-weight: 400;
         line-height: 1.5;
         text-transform: uppercase;
         text-decoration: none;
@@ -504,7 +552,6 @@ html {
 
         @include breakpoints.min-w(xxl) {
             width: 1.25rem;
-            font-size: .875rem;
         }
 
         &:hover span {
@@ -578,30 +625,31 @@ html {
         }
     }
 
-    .socials {
-        display: none;
-
-        @include breakpoints.min-w(l) {
-            display: flex;
-            margin-left: 8px;
-            gap: 18px;
-            align-items: center;
-
-            @include breakpoints.min-w(xl) {
-                gap: 24px;
-            }
-
-            a {
-                width: 24px;
-            }
-        }
-    }
-
     &__product-menu {
-        padding: 1.25rem 0;
+        padding: 1.206rem 0;
         background-color: #F6FAFE;
         box-shadow: inset rgba(34, 42, 94, .11) 0 4px 14px -10px;
-        line-height: 20px;
+
+        @include breakpoints.min-w(m) {
+            padding: 1.264rem 0;
+        }
+
+        @include breakpoints.min-w(l) {
+            padding: 1.29rem 0;
+        }
+
+        @media (min-width: 1228px) {
+            padding: 1.143rem 0;
+        }
+
+        @include breakpoints.min-w(xxl) {
+            padding: 1.157rem 0;
+        }
+
+        @include breakpoints.min-w(xxxl) {
+            padding: 1.25rem 0;
+            line-height: 20px;
+        }
 
         .container {
             position: relative;
@@ -611,7 +659,7 @@ html {
             justify-content: space-between;
 
             @include breakpoints.min-w(l) {
-                gap: 1.25rem 2rem;
+                gap: 1.25rem 2.13rem;
                 justify-content: flex-start;
             }
 
@@ -629,6 +677,22 @@ html {
                 gap: 1.25rem 2rem;
             }
 
+            .header__nav.nav {
+                flex-wrap: wrap;
+
+                @include breakpoints.min-w(l) {
+                    gap: .75rem 1.25rem;
+                }
+
+                @include breakpoints.min-w(xl) {
+                    gap: .82rem 1rem;
+                }
+
+                @include breakpoints.min-w(xxxl) {
+                    gap: .75rem 1.5rem;
+                }
+            }
+
             .nav__trigger {
                 position: relative;
                 align-items: center;
@@ -637,14 +701,13 @@ html {
                 gap: 4px;
                 width: fit-content;
                 color: mixins.$ntrl-300;
-                font-size: 12px;
-                line-height: 20px;
+                font-size: 12.5px;
 
                 &::after {
                     content: "";
                     position: absolute;
                     right: -17px;
-                    top: 50%;
+                    top: 53%;
                     margin-top: -3px;
                     background: $header-arrow;
                     background-repeat: no-repeat;
@@ -652,6 +715,10 @@ html {
                     height: 6px;
                     transition: transform .3s;
                     width: 10px;
+
+                    @include breakpoints.min-w(s) {
+                        top: 57%;
+                    }
                 }
 
                 @include breakpoints.min-w(l) {
@@ -672,7 +739,22 @@ html {
             font-weight: 400;
             color: mixins.$ntrl-800;
             font-size: 16px;
-            line-height: 20px;
+
+            @include breakpoints.max-w(l) {
+                line-height: 18px;
+            }
+
+            @include breakpoints.min-w(l) {
+                padding-bottom: 1px;
+            }
+
+            @media screen and (min-width: 1024px) and (max-width: 1228px) {
+                line-height: 19px;
+            }
+
+            @include breakpoints.min-w(xl) {
+                padding-bottom: 0;
+            }
 
             @include breakpoints.min-w(xxl) {
                 font-size: 1.125rem;
@@ -699,8 +781,6 @@ html {
                 flex-wrap: nowrap;
                 align-items: center;
             }
-
-            line-height: 20px;
 
             &.nav {
                 &.active {
@@ -773,8 +853,6 @@ html {
                 color: variables.$ntrl-800;
 
                 a {
-                    font-size: 13px;
-
                     &::before {
                         top: 9px;
                         width: 7px;
