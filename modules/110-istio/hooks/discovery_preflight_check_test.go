@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"encoding/json"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -136,9 +138,15 @@ clusterDomain: cluster.local
 
 			compatibilityMap, exists := requirements.GetValue(istioToK8sCompatibilityMapKey)
 			Expect(exists).To(BeTrue())
-			Expect(compatibilityMap).To(BeEquivalentTo(map[string][]string{
-				"1.27": {"1.32", "1.33", "1.34", "1.35", "1.36"},
-			}))
+
+			// Compared against the values rather than a literal: what this context is about is that the
+			// map still reaches the requirement even though the hook returns early right after saving
+			// it. A hard-coded copy would only restate initValues, and go stale on the next Istio
+			// revision bump — which is exactly how it broke.
+			var fromValues map[string][]string
+			Expect(json.Unmarshal([]byte(f.ValuesGet("istio.internal.istioToK8sCompatibilityMap").String()), &fromValues)).To(Succeed())
+			Expect(fromValues).NotTo(BeEmpty())
+			Expect(compatibilityMap).To(BeEquivalentTo(fromValues))
 		})
 	})
 })
