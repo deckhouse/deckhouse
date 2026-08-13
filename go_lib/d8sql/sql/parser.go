@@ -7,9 +7,8 @@ import (
 
 // Parser is a recursive-descent parser with a single token of lookahead.
 type Parser struct {
-	lex    *Lexer
-	cur    Token
-	peeked *Token
+	lex *Lexer
+	cur Token
 }
 
 // NewParser returns a parser over src.
@@ -63,20 +62,7 @@ func ParseMany(src string) ([]*Statement, error) {
 }
 
 func (p *Parser) advance() {
-	if p.peeked != nil {
-		p.cur = *p.peeked
-		p.peeked = nil
-		return
-	}
 	p.cur = p.lex.Next()
-}
-
-func (p *Parser) peek() Token {
-	if p.peeked == nil {
-		t := p.lex.Next()
-		p.peeked = &t
-	}
-	return *p.peeked
 }
 
 func (p *Parser) expect(k Kind) (Token, error) {
@@ -409,14 +395,15 @@ func (p *Parser) parseTableRef() (TableRef, error) {
 		return tr, p.errf("expected resource name, got %s", p.cur.Kind)
 	}
 	// optional alias: AS ident, or bare ident that is not a clause keyword
-	if p.cur.Kind == AS {
+	switch p.cur.Kind {
+	case AS:
 		p.advance()
 		alias, err := p.expect(IDENT)
 		if err != nil {
 			return tr, err
 		}
 		tr.Alias = alias.Val
-	} else if p.cur.Kind == IDENT {
+	case IDENT:
 		tr.Alias = p.cur.Val
 		p.advance()
 	}
@@ -666,7 +653,7 @@ func (p *Parser) parseLiteral() (*Lit, error) {
 	}
 }
 
-// unquote collapses doubled single quotes ('') into one. When there are no
+// unquote collapses doubled single quotes into one. When there are no
 // escapes (the common case) the input is returned unchanged with no allocation.
 func unquote(s string) string {
 	idx := -1

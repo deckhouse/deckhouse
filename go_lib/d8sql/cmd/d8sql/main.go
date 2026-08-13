@@ -21,12 +21,13 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/deckhouse/d8sql"
-	"github.com/deckhouse/d8sql/sql"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	sigsyaml "sigs.k8s.io/yaml"
+
+	"github.com/deckhouse/d8sql"
+	"github.com/deckhouse/d8sql/sql"
 )
 
 func main() {
@@ -205,7 +206,9 @@ func printObjectsYAML(w *os.File, objs []*unstructured.Unstructured) error {
 		if err != nil {
 			return err
 		}
-		w.Write(b)
+		if _, err := w.Write(b); err != nil {
+			return err
+		}
 	}
 	return nil
 }

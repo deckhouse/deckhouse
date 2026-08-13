@@ -6,7 +6,6 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/deckhouse/d8sql/sql"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -16,6 +15,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/pager"
 	"k8s.io/client-go/util/retry"
+
+	"github.com/deckhouse/d8sql/sql"
 )
 
 // plan is a fully prepared statement: resources are resolved, the WHERE clause
@@ -35,7 +36,7 @@ type plan struct {
 	// List per namespace, avoiding a full-cluster scan.
 	namespaces []string
 
-	hasName bool   // metadata.name pushdown available (GET instead of LIST)
+	hasName bool // metadata.name pushdown available (GET instead of LIST)
 	getName string
 
 	// labelSel is a server-side label selector derived from metadata.labels.*
@@ -324,16 +325,16 @@ func (e *Engine) prepareJoin(st *sql.Statement) (*plan, error) {
 	// so e.g. "all pods on nodes with label X" works regardless of namespace.
 	// A WHERE clause can still narrow results (including by metadata.namespace).
 	p := &plan{
-		kind:          sql.StmtSelect,
-		st:            st,
-		isJoin:        true,
-		res:           leftRes,
-		rightRes:      rightRes,
-		pred:          pred,
-		leftKey:       leftKey,
-		rightKey:      rightKey,
-		getters:       getters,
-		headers:       headers,
+		kind:     sql.StmtSelect,
+		st:       st,
+		isJoin:   true,
+		res:      leftRes,
+		rightRes: rightRes,
+		pred:     pred,
+		leftKey:  leftKey,
+		rightKey: rightKey,
+		getters:  getters,
+		headers:  headers,
 		// Unqualified label conditions default to the left side (mirroring
 		// compileField), so only the left side accepts them; pushing them to the
 		// right could wrongly drop join rows.
@@ -727,7 +728,7 @@ func deletePreconditions(obj *unstructured.Unstructured) metav1.DeleteOptions {
 // can only reduce work, never change results.
 func (e *Engine) runJoin(ctx context.Context, p *plan) (Result, error) {
 	// Hash (build) the side that is label-filtered; probe the other side.
-	buildRight := !(p.leftLabelSel != "" && p.rightLabelSel == "")
+	buildRight := p.leftLabelSel == "" || p.rightLabelSel != ""
 
 	// Joins always span all namespaces (ns empty); WHERE narrows results.
 	build := joinSide{res: p.res, ns: NamespaceAll, labelSel: p.leftLabelSel, key: p.leftKey, keyPath: p.leftKeyPath, isRight: false}
@@ -1101,7 +1102,7 @@ func addLabelReq(reqs *[]labels.Requirement, key string, op selection.Operator, 
 // labelKey returns the label key when f is metadata.labels.'<key>' on the
 // accepted table.
 func labelKey(f *sql.Field, alias string, acceptUnqualified bool) (string, bool) {
-	if f.Table != alias && !(acceptUnqualified && f.Table == "") {
+	if f.Table != alias && (!acceptUnqualified || f.Table != "") {
 		return "", false
 	}
 	if len(f.Path) != 3 || f.Path[0] != "metadata" || f.Path[1] != "labels" {

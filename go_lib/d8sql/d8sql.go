@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/deckhouse/d8sql/sql"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -20,6 +19,8 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/restmapper"
+
+	"github.com/deckhouse/d8sql/sql"
 )
 
 // NamespaceAll is the namespace value meaning "all namespaces" (the empty

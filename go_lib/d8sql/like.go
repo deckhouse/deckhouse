@@ -50,18 +50,19 @@ func likeMatch(pat, s string, ci bool) bool {
 	var sx, px int
 	starIdx, matchIdx := -1, 0
 	for sx < len(s) {
-		if px < len(pat) && (pat[px] == '_' || eqByte(pat[px], s[sx], ci)) {
+		switch {
+		case px < len(pat) && (pat[px] == '_' || eqByte(pat[px], s[sx], ci)):
 			sx++
 			px++
-		} else if px < len(pat) && pat[px] == '%' {
+		case px < len(pat) && pat[px] == '%':
 			starIdx = px
 			matchIdx = sx
 			px++
-		} else if starIdx != -1 {
+		case starIdx != -1:
 			px = starIdx + 1
 			matchIdx++
 			sx = matchIdx
-		} else {
+		default:
 			return false
 		}
 	}

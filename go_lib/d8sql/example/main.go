@@ -14,8 +14,9 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/deckhouse/d8sql"
 	"k8s.io/client-go/tools/clientcmd"
+
+	"github.com/deckhouse/d8sql"
 )
 
 func main() {

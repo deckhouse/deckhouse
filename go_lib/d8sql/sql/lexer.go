@@ -166,7 +166,7 @@ func (l *Lexer) lexNumber() Token {
 }
 
 // lexString scans a single-quoted string. The returned Val excludes the quotes.
-// SQL escaping of a quote is '' (doubled). When no escapes are present the value
+// SQL escapes a quote by doubling it. When no escapes are present the value
 // aliases the source directly (zero-copy); otherwise it is unquoted lazily by
 // the parser via Unquote.
 func (l *Lexer) lexString() Token {

@@ -130,10 +130,7 @@ func (c *compiler) compileIn(n *sql.In) (predicate, error) {
 	return func(rw *row) bool {
 		v, ok := g(rw)
 		if !ok {
-			if neg {
-				return true
-			}
-			return false
+			return neg
 		}
 		found := false
 		for _, cand := range vals {
