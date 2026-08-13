@@ -140,6 +140,13 @@ spec:
                       properties:
                         rootCA:
                           type: string
+                        crl:
+                          type: string
+                          description: |
+                            Optional PEM Certificate Revocation List(s) issued by this
+                            cluster's mesh CA. Peers concatenate these into local
+                            `cacerts`/`ca-crl.pem` so federated issuers are covered
+                            for mTLS verification when CRL enforcement is enabled.
                         authnKeyPub:
                           type: string
                         clusterUUID:

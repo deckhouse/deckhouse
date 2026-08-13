@@ -20,6 +20,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
+	"strings"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -70,7 +71,46 @@ var _ = Describe("Istio hooks :: generate_crl ::", func() {
 
 		It("Should prefer ModuleConfig settings.crl", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("istio.internal.crl").String()).To(Equal("my-operator-crl"))
+			Expect(strings.TrimSpace(f.ValuesGet("istio.internal.crl").String())).To(Equal("my-operator-crl"))
+		})
+	})
+
+	Context("internal CA present; federation peer CRL is set", func() {
+		var ca certificate.Authority
+
+		BeforeEach(func() {
+			ca = mustTestCA()
+			f.ValuesSet("istio.internal.ca.cert", ca.Cert)
+			f.ValuesSet("istio.internal.ca.key", ca.Key)
+			f.ValuesSetFromYaml("istio.internal.federations", []byte(`
+- name: peer
+  clusterUUID: uuid-peer
+  trustDomain: peer.local
+  rootCA: ---PEER-ROOT---
+  crl: |
+    -----BEGIN X509 CRL-----
+    PEERCRL
+    -----END X509 CRL-----
+`))
+			f.BindingContexts.Set(f.KubeStateSet(``))
+			f.RunHook()
+		})
+
+		It("Should append peer CRL after local dummy", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			crlPEM := f.ValuesGet("istio.internal.crl").String()
+			Expect(crlPEM).To(ContainSubstring("BEGIN X509 CRL"))
+			Expect(crlPEM).To(ContainSubstring("PEERCRL"))
+			// First block is local dummy signed by our CA.
+			block, rest := pem.Decode([]byte(crlPEM))
+			Expect(block).NotTo(BeNil())
+			localCRL, err := x509.ParseRevocationList(block.Bytes)
+			Expect(err).NotTo(HaveOccurred())
+			certBlock, _ := pem.Decode([]byte(ca.Cert))
+			cert, err := x509.ParseCertificate(certBlock.Bytes)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(localCRL.CheckSignatureFrom(cert)).To(Succeed())
+			Expect(string(rest)).To(ContainSubstring("PEERCRL"))
 		})
 	})
 
@@ -127,7 +167,43 @@ data:
 
 		It("Should keep the existing cacerts CRL to avoid churn", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("istio.internal.crl").String()).To(Equal(existingCRL))
+			Expect(strings.TrimSpace(f.ValuesGet("istio.internal.crl").String())).To(Equal(strings.TrimSpace(existingCRL)))
+		})
+	})
+
+	Context("internal CA present; secret has local+peer CRL mix", func() {
+		var ca, peerCA certificate.Authority
+		var localCRL, peerCRL string
+
+		BeforeEach(func() {
+			ca = mustTestCA()
+			peerCA = mustTestCA()
+			cert, signer, err := parseCACertAndKey(ca.Cert, ca.Key)
+			Expect(err).NotTo(HaveOccurred())
+			localCRL, err = createEmptyCRL(cert, signer)
+			Expect(err).NotTo(HaveOccurred())
+			peerCert, peerSigner, err := parseCACertAndKey(peerCA.Cert, peerCA.Key)
+			Expect(err).NotTo(HaveOccurred())
+			peerCRL, err = createEmptyCRL(peerCert, peerSigner)
+			Expect(err).NotTo(HaveOccurred())
+
+			f.ValuesSet("istio.internal.ca.cert", ca.Cert)
+			f.ValuesSet("istio.internal.ca.key", ca.Key)
+			f.BindingContexts.Set(f.KubeStateSet(`
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cacerts
+  namespace: d8-istio
+data:
+  ca-crl.pem: ` + base64.StdEncoding.EncodeToString([]byte(localCRL+peerCRL)) + `
+`))
+			f.RunHook()
+		})
+
+		It("Should keep only locally signed blocks from secret when no peers in values", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(strings.TrimSpace(f.ValuesGet("istio.internal.crl").String())).To(Equal(strings.TrimSpace(localCRL)))
 		})
 	})
 

@@ -35,6 +35,7 @@ import (
 
 type IstioFederationMergeCrdInfo struct {
 	ClusterUUID              string                            `json:"clusterUUID"`
+	CRL                      string                            `json:"crl,omitempty"`
 	EnableInsecureConnection bool                              `json:"insecureSkipVerify"`
 	IngressGateways          *[]eeCrd.FederationIngressGateway `json:"ingressGateways"`
 	Name                     string                            `json:"name"`
@@ -128,6 +129,7 @@ func applyFederationMergeFilter(obj *unstructured.Unstructured) (go_hook.FilterR
 		p      *eeCrd.AlliancePublicMetadata
 		uuid   string
 		rootCA string
+		crl    string
 	)
 
 	if federation.Status.MetadataCache.Private != nil {
@@ -142,10 +144,12 @@ func applyFederationMergeFilter(obj *unstructured.Unstructured) (go_hook.FilterR
 		p = federation.Status.MetadataCache.Public
 		uuid = federation.Status.MetadataCache.Public.ClusterUUID
 		rootCA = federation.Status.MetadataCache.Public.RootCA
+		crl = federation.Status.MetadataCache.Public.CRL
 	}
 
 	return IstioFederationMergeCrdInfo{
 		ClusterUUID:              uuid,
+		CRL:                      crl,
 		EnableInsecureConnection: federation.Spec.Metadata.EnableInsecureConnection,
 		IngressGateways:          igs,
 		Name:                     federation.GetName(),

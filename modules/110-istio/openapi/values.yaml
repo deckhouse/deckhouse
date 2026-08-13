@@ -139,6 +139,8 @@ properties:
                   type: string
                 rootCA:
                   type: string
+                crl:
+                  type: string
       remoteAuthnKeypair:
         type: object
         default: {}

@@ -54,6 +54,7 @@ rules:
     resourceNames:
       - d8-remote-clusters-public-metadata
       - d8-remote-authn-keypair
+      - cacerts
     verbs:
       - get
       - list

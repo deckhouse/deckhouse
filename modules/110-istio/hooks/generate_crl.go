@@ -32,6 +32,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	"github.com/tidwall/gjson"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -45,7 +46,8 @@ const (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	// After generate_ca (Order 10): auto-dummy CRL is signed by internal.ca.
+	// After generate_ca (10) and alliance_metadata_merge (10): local CRL is signed
+	// by internal.ca; peer CRLs come from federation/multicluster values.
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 11},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
@@ -73,47 +75,88 @@ func applyCacertsCRLFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 
 // publishCRL sets istio.internal.crl for rendering ca-crl.pem.
 //
-// Branching:
-//  1. Non-empty settings.crl — operator override (incident revoke / custom PEM).
-//  2. Else keep existing cacerts ca-crl.pem when it still verifies under the
-//     current internal CA (stable across reconciles; avoids churn and accidental
-//     wipe of a previously published revoke list when settings.crl is removed).
-//  3. Else mint an empty dummy CRL signed by internal.ca so ztunnel gets
-//     CRL_PATH/mount from day one and later revokes are hot-reloads only.
+// Local part:
+//  1. Non-empty settings.crl — operator override.
+//  2. Else keep cacerts ca-crl.pem blocks that still verify under internal.ca.
+//  3. Else mint an empty dummy CRL signed by internal.ca.
+//
+// Then append peer CRLs from istio.internal.federations[].crl (federation
+// metadata exchange PoC) so federated issuers are covered for mTLS verify when
+// CRL enforcement is on. Multicluster is intentionally not merged here.
 func publishCRL(_ context.Context, input *go_hook.HookInput) error {
+	local, err := resolveLocalCRL(input)
+	if err != nil {
+		return err
+	}
+	if local == "" {
+		input.Values.Remove(internalCRLPath)
+		return nil
+	}
+
+	input.Values.Set(internalCRLPath, concatCRLPEMs(local, collectPeerCRLs(input)))
+	return nil
+}
+
+func resolveLocalCRL(input *go_hook.HookInput) (string, error) {
 	if input.Values.Exists(crlConfigPath) {
 		crl := input.Values.Get(crlConfigPath).String()
 		if strings.TrimSpace(crl) != "" {
-			input.Values.Set(internalCRLPath, crl)
-			return nil
+			return crl, nil
 		}
 	}
 
 	certPEM := input.Values.Get(internalCACertPath).String()
 	keyPEM := input.Values.Get(internalCAKeyPath).String()
 	if strings.TrimSpace(certPEM) == "" || strings.TrimSpace(keyPEM) == "" {
-		input.Values.Remove(internalCRLPath)
-		return nil
+		return "", nil
 	}
 
 	cert, signer, err := parseCACertAndKey(certPEM, keyPEM)
 	if err != nil {
-		return fmt.Errorf("cannot use istio.internal.ca to publish CRL: %w", err)
+		return "", fmt.Errorf("cannot use istio.internal.ca to publish CRL: %w", err)
 	}
 
 	if existing := existingCacertsCRL(input); existing != "" {
-		if crlStillValidForCA(existing, cert) {
-			input.Values.Set(internalCRLPath, existing)
-			return nil
+		if local := filterCRLBlocksSignedBy(existing, cert); local != "" {
+			return local, nil
 		}
 	}
 
 	dummy, err := createEmptyCRL(cert, signer)
 	if err != nil {
-		return fmt.Errorf("cannot generate empty dummy CRL: %w", err)
+		return "", fmt.Errorf("cannot generate empty dummy CRL: %w", err)
 	}
-	input.Values.Set(internalCRLPath, dummy)
-	return nil
+	return dummy, nil
+}
+
+func collectPeerCRLs(input *go_hook.HookInput) string {
+	var b strings.Builder
+	appendPeerCRLArray(&b, input.Values.Get("istio.internal.federations").Array())
+	return b.String()
+}
+
+func appendPeerCRLArray(b *strings.Builder, peers []gjson.Result) {
+	for _, peer := range peers {
+		crl := peer.Get("crl").String()
+		if strings.TrimSpace(crl) == "" {
+			continue
+		}
+		b.WriteString(strings.TrimSpace(crl))
+		b.WriteByte('\n')
+	}
+}
+
+func concatCRLPEMs(parts ...string) string {
+	var b strings.Builder
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		b.WriteString(p)
+		b.WriteByte('\n')
+	}
+	return b.String()
 }
 
 func existingCacertsCRL(input *go_hook.HookInput) string {
@@ -128,22 +171,24 @@ func existingCacertsCRL(input *go_hook.HookInput) string {
 	return fromSecret
 }
 
-func crlStillValidForCA(crlPEM string, issuer *x509.Certificate) bool {
-	found := false
+// filterCRLBlocksSignedBy keeps only X509 CRL PEM blocks verifiable by issuer.
+// Used to strip previously concatenated peer CRLs from cacerts before rebuild.
+func filterCRLBlocksSignedBy(crlPEM string, issuer *x509.Certificate) string {
+	var b strings.Builder
 	for _, block := range decodePEMBlocks([]byte(crlPEM)) {
 		if block.Type != "X509 CRL" {
 			continue
 		}
 		crl, err := x509.ParseRevocationList(block.Bytes)
 		if err != nil {
-			return false
+			continue
 		}
 		if err := crl.CheckSignatureFrom(issuer); err != nil {
-			return false
+			continue
 		}
-		found = true
+		b.Write(pem.EncodeToMemory(block))
 	}
-	return found
+	return b.String()
 }
 
 func createEmptyCRL(caCert *x509.Certificate, signer crypto.Signer) (string, error) {
