@@ -147,11 +147,10 @@ type NodeSpec struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 	NodeName string `json:"nodeName"`
-	// OSImage is the OS image reference the cluster believes this node should
-	// run. Nothing acts on it: the node boots whatever the DVPInstanceClass
-	// points at, nodelet only logs it. Optional so file and API accept one document.
-	// +optional
-	OSImage string `json:"osImage,omitempty"`
+	// OSImage is the image the cluster believes this node should run. Required: a
+	// rootfs update is decided by comparing it with what the node recorded at
+	// install, and a config that names no image is one no update can start from.
+	OSImage OSImage `json:"osImage"`
 	// Storage selects the target disk for the OS install. The partition layout
 	// is fixed (boot/config/data), so only the whole-disk device is needed.
 	// +optional
@@ -221,6 +220,28 @@ type Registry struct {
 	// "auth" field of a docker config.
 	// +optional
 	Auth string `json:"auth,omitempty"`
+}
+
+// OSImage names the image the node must run. Mirrors the agent's contract —
+// internal/config/types.go in the nodelet repository — and the initramfs one,
+// images/init/src/0.1/nodeconfig.go: both parse this document, and a shape they
+// disagree with fails the parse and drops the node into an emergency shell.
+type OSImage struct {
+	// Digest pins the exact image, as for an extension. The node records it at
+	// install and compares it on every pass, so a tag would say nothing.
+	// +kubebuilder:validation:Pattern=`^sha256:[a-f0-9]{64}$`
+	Digest string `json:"digest"`
+	// Repository is the registry host the image is fetched from, handed to the
+	// registry-packages-proxy as its "repository" parameter. Empty leaves the
+	// parameter out, so the proxy uses its own default registry.
+	// +optional
+	Repository string `json:"repository,omitempty"`
+	// AdditionalPath is where the artifact lives inside the registry, forwarded to
+	// the proxy as its "path" parameter. Empty is right for Deckhouse: every image
+	// of a release, the OS included, sits in the repository spec.registry.path
+	// already names.
+	// +optional
+	AdditionalPath string `json:"additionalPath,omitempty"`
 }
 
 // Storage selects the target disk for the OS install. The partition layout is

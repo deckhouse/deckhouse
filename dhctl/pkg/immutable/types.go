@@ -33,12 +33,22 @@ type nodeConfig struct {
 	Spec       nodeSpec   `json:"spec"`
 }
 
+// osImage names the image the node must run. Mirrors the agent contract —
+// internal/config/types.go in the nodelet repository — and the initramfs one,
+// images/init/src/0.1/nodeconfig.go: both parse this document, and a shape they
+// disagree with fails the parse and drops the node into an emergency shell.
+type osImage struct {
+	Digest         string `json:"digest"`
+	Repository     string `json:"repository,omitempty"`
+	AdditionalPath string `json:"additionalPath,omitempty"`
+}
+
 // nodeSpec carries only the fields dhctl emits. The contract lives in the
 // agent's own type, which has more; anything absent here keeps its default on
 // the node.
 type nodeSpec struct {
 	NodeName           string           `json:"nodeName"`
-	OSImage            string           `json:"osImage"`
+	OSImage            osImage          `json:"osImage"`
 	Storage            storage          `json:"storage,omitempty"`
 	Extensions         []extension      `json:"extensions,omitempty"`
 	Kernel             kernel           `json:"kernel,omitempty"`

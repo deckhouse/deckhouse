@@ -162,3 +162,18 @@ func digestGroup(images map[string]any, key string) (map[string]string, error) {
 	}
 	return group, nil
 }
+
+// osImageDigest picks the olcedar image of this release. Absent means the
+// installer image did not ship it, and bootstrap stops here rather than at the
+// node: a config naming no OS image is one the node cannot install from.
+func osImageDigest(images map[string]any) (osImage, error) {
+	group, err := digestGroup(images, nodeManagerDigestsKey)
+	if err != nil {
+		return osImage{}, err
+	}
+	digest := group[osImageName]
+	if digest == "" {
+		return osImage{}, fmt.Errorf("the installer image carries no %q OS image digest", osImageName)
+	}
+	return osImage{Digest: digest}, nil
+}
