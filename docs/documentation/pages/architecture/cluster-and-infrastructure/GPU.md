@@ -1,5 +1,5 @@
 ---
-title: GPU module
+title: Gpu module
 permalink: en/architecture/cluster-and-infrastructure/infrastructure/gpu.html
 search: gpu, llm
 description: Architecture of the gpu module in Deckhouse Kubernetes Platform.
@@ -75,10 +75,10 @@ The module consists of the following components:
    The component performs the following actions:
 
    - Registers in [kubelet](../../kubernetes-and-scheduling/kubelet.html) as a DRA kubelet plugin.
-   - Prepares and releases allocated resources for pods through the PrepareResourceClaims and UnprepareResourceClaims operations.
+   - Prepares and releases allocated resources for pods through the `PrepareResourceClaims` and `UnprepareResourceClaims` operations.
    - Publishes the list of available devices through ResourceSlice resources.
    - Retrieves hardware capabilities.
-   - Performs hardware partitioning and passthrough.
+   - Partitions GPU resources and makes them available to pods.
    - Enriches the status in PhysicalGPU resources.
 
    It consists of the following containers:
@@ -89,13 +89,13 @@ The module consists of the following components:
 
    The component runs on all cluster nodes that have the `gpu.deckhouse.io/vendor=<VENDOR>` label.
 
-1. **gpu-dcgm** (DaemonSet): A component that consists of a single **dcgm** container and runs [Data Center GPU Manager (DCGM)](https://github.com/nvidia/dcgm), which collects raw GPU telemetry (health, Error Correction Code (ECC), power, utilization). It works only with NVIDIA cards.
+1. **gpu-dcgm** (DaemonSet): A component that consists of a single **dcgm** container and runs [Data Center GPU Manager (DCGM)](https://github.com/nvidia/dcgm). DCGM collects GPU health and utilization data (Error Correction Code (ECC), power). It works only with NVIDIA cards.
 
 1. **gpu-dcgm-exporter** (DaemonSet): A component that consists of a single **dcgm-exporter** container, retrieves GPU metrics from the gpu-dcgm component, and exposes them in Prometheus format.
 
-1. **vfio-switch-&lt;NODE_NAME&gt;-&lt;PCI&gt;** (Job): A component that consists of a single **switch** container and switches the driver in use between nvidia and vfio-pci. The component is created by nvidia-adapter to control the switching process.
+1. **vfio-switch-&lt;NODE_NAME&gt;-&lt;PCI&gt;** (Job): A component that consists of a single **switch** container. It switches the driver in use between `nvidia` and `vfio-pci`. The component is created by nvidia-adapter to control the switching process.
 
-### Module interactions (DRA mode)
+### Module interactions
 
 The module interacts with the following components:
 
@@ -112,7 +112,7 @@ The module interacts with the following components:
 
 The following external components interact with the module:
 
-1. **Kubelet**: Calls the PrepareResourceClaims and UnprepareResourceClaims gRPC methods.
+1. **Kubelet**: Calls the `PrepareResourceClaims` and `UnprepareResourceClaims` gRPC methods.
 
 1. **Kube-apiserver**: Validates Pod, GPUClass, ResourceClaim, and DeviceClass resources.
 
@@ -127,19 +127,19 @@ The module interacts with the following resources:
 - NodeFeature: Stores actual information about the hardware capabilities of a specific node.
 - NodeFeatureRule: Stores a set of rules used by the module to configure labels, annotations, and taints for a cluster node.
 
-### Module architecture (Device Plugin mode)
+### Module architecture
 
 The Level 2 C4 architecture of the [`gpu`](/modules/gpu/) module in Device Plugin mode and its interactions with other DKP components are shown in the following diagram:
 
 ![Architecture of the gpu module in Device Plugin mode](../../../images/architecture/cluster-and-infrastructure/c4-l2-gpu-device-plugin.svg)
 
-### Module components (Device Plugin mode)
+### Module components
 
 The module consists of the following components:
 
-1. **node-feature-discovery-master** (Deployment): A component that consists of a single **master** container, collects node hardware capabilities from NodeFeature resources, and publishes them as `feature.node.kubernetes.io/*` and `nvidia.com/*` labels on the corresponding nodes. The master obtains the rules for assigning labels, taints, and annotations from NodeFeatureRule resources.
+1. **node-feature-discovery-master** (Deployment): A component that consists of a single **master** container, which collects information about node hardware capabilities from NodeFeature resources, and publishes them as `feature.node.kubernetes.io/*` and `nvidia.com/*` labels on the corresponding nodes. The master obtains the rules for assigning labels, taints, and annotations from NodeFeatureRule resources.
 
-1. **node-feature-discovery-worker** (DaemonSet): A component that consists of a single **worker** container, runs on each GPU node, discovers PCI/USB devices on the node, and publishes them as NodeFeature resources. The component also publishes information received from the gpu-feature-discovery-&lt;NG&gt; component as NodeFeature resources.
+1. **node-feature-discovery-worker** (DaemonSet): A component that consists of a single **worker** container, which runs on each GPU node, discovers connected PCI and USB devices on the node, and publishes them as NodeFeature resources. The component also publishes information received from the gpu-feature-discovery-&lt;NG&gt; component as NodeFeature resources.
 
 1. **node-feature-discovery-gc** (Deployment): A component that consists of a single **gc** container, which deletes obsolete NodeFeature resources when a node is deleted.
 

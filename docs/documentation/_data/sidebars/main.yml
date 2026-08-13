@@ -1491,8 +1491,8 @@ entries:
                     ru: Модуль chrony
                   url: /architecture/cluster-and-infrastructure/infrastructure/chrony.html
                 - title:
-                    en: GPU module
-                    ru: Модуль GPU
+                    en: Gpu module
+                    ru: Модуль gpu
                   url: /architecture/cluster-and-infrastructure/infrastructure/gpu.html
                 - title:
                     en: Terraform-manager module
