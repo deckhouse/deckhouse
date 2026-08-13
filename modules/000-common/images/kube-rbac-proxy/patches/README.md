@@ -23,4 +23,5 @@ Check if the --secure-listen-address flag is set.
 
 ### 007-go-mod
 
-Fix CVEs
+Fix CVEs:
+- GHSA-hrxh-6v49-42gf (`google.golang.org/grpc` -> `v1.82.1`)
