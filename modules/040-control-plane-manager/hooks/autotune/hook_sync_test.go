@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package resources
+package autotune
 
 import (
 	"context"
@@ -31,7 +31,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_autotune_sync", func() {
+var _ = Describe("Modules :: control-plane-manager :: hooks :: autotune :: sync", func() {
 	f := HookExecutionConfigInit(
 		`{"controlPlaneManager":{"internal":{"resourcesRequests":{}}},"global":{"enabledModules":["prometheus","prometheus-metrics-adapter"]}}`,
 		`{}`,

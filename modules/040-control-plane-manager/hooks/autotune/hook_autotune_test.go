@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package resources
+package autotune
 
 import (
 	"context"
@@ -135,7 +135,7 @@ spec:
 %s`, settings)
 }
 
-var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_autotune :: decide", func() {
+var _ = Describe("Modules :: control-plane-manager :: hooks :: autotune :: decide", func() {
 	DescribeTable("asymmetric deadband + cooldown",
 		func(measured, baseline int64, cooldownAge time.Duration, want decideAction) {
 			Expect(decide(measured, baseline, cooldownAge)).To(Equal(want))
@@ -171,7 +171,7 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 	)
 })
 
-var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_autotune", func() {
+var _ = Describe("Modules :: control-plane-manager :: hooks :: autotune", func() {
 	f := HookExecutionConfigInit(
 		`{"controlPlaneManager":{"internal":{"resourcesRequests":{}}},"global":{"enabledModules":["prometheus","prometheus-metrics-adapter"]}}`,
 		`{}`,

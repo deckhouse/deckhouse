@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package resources
+package autotune
 
 // The metrics API layer, which the hook-level tests replace with a stub: unit
 // conversion and the sanity filters are where an off-by-1000 hides, and nothing
@@ -50,7 +50,7 @@ func metricsAPIReturning(status int, body string) rest.Interface {
 	}
 }
 
-var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_autotune :: metrics API", func() {
+var _ = Describe("Modules :: control-plane-manager :: hooks :: autotune :: metrics API", func() {
 	DescribeTable("clampUsage",
 		func(raw float64, kind resourceKind, want int64) {
 			Expect(clampUsage(raw, kind)).To(Equal(want))

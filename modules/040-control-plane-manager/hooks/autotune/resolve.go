@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package resources
+package autotune
 
 // Resolution chain, highest priority first. Every link is asked per resourceKind
 // and delegates the kinds it has no answer for, which is what makes a config

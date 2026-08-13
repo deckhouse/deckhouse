@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package resources
+package autotune
 
 // Filters run inside the informer, where an error aborts snapshot creation and
 // the hook never runs at all. So they only reshape, never validate.

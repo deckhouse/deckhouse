@@ -14,10 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package resources keeps the resource requests of the four control-plane static
+// Package autotune keeps the resource requests of the four control-plane static
 // pods in step with the masters they run on. hook_autotune.go resolves them and
 // owns the state ConfigMap; hook_sync.go projects that ConfigMap into values.
-package resources
+package autotune
 
 const kubeSystemNS = "kube-system"
 

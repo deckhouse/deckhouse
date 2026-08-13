@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package resources
+package autotune
 
 // Shared by the two hooks through a ConfigMap rather than values, so that the
 // requests survive a restart without a metrics API round-trip.
