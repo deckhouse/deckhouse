@@ -14,7 +14,7 @@
          branch would be built once and cached forever. Bump this line to pick
          up agent changes. Currently nodelet-self-update, which the extension
          needs: an agent without it restarts its own unit mid-pass. */ -}}
-  {{- $nodeletCommit := "238e81432d6cd3b71cbc01606abe56bd48ad6256" }}
+  {{- $nodeletCommit := "bbbf3053dd444c529dcd5164d556b068c20bea3c" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
