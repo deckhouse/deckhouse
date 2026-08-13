@@ -137,7 +137,7 @@ func (b *ClusterBootstrapper) collectImmutableKubeconfig(ctx context.Context, bc
 	// Nothing here rebuilds the channel: the tunnel keeps its listener through a
 	// broken connection and gossh's keepalive reconnects the client underneath it,
 	// so a failed request is retried, not repaired.
-	err = libretry.NewLoop("Waiting for the first master to bring the control plane up", immutableAPIWaitAttempts, immutableAPIWaitInterval).
+	err = libretry.NewLoop("Waiting for the first master to bring the control plane up", waitAPIServerUp.attempts, waitAPIServerUp.interval).
 		BreakIf(handoffGaveUp).
 		RunContext(ctx, func() error {
 			status, err := immutable.FetchStatus(ctx, input)

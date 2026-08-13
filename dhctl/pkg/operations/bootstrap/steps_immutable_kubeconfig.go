@@ -156,13 +156,13 @@ func newKubeconfigKubeProvider(ctx context.Context, b *ClusterBootstrapper, kube
 	// kubeconfig, so what these cover is a restarting static pod or a rebuilt
 	// forward — a couple of minutes, not the half hour the collection had.
 	initParams := libretry.NewEmptyParams(
-		libretry.WithWait(immutableWaitInterval),
-		libretry.WithAttempts(immutableWaitAttempts),
+		libretry.WithWait(waitNodeRegistered.interval),
+		libretry.WithAttempts(waitNodeRegistered.attempts),
 		libretry.WithLogger(dhlog.FromContext(ctx)),
 	)
 	readyParams := libretry.NewEmptyParams(
-		libretry.WithWait(immutableAPIWaitInterval),
-		libretry.WithAttempts(immutableReadyWaitAttempts),
+		libretry.WithWait(waitAPIServerReady.interval),
+		libretry.WithAttempts(waitAPIServerReady.attempts),
 		libretry.WithLogger(dhlog.FromContext(ctx)),
 	)
 

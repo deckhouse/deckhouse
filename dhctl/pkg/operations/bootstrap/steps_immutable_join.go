@@ -36,31 +36,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 )
 
-const (
-	// The kubernetes Service's EndpointSlice, the cluster's own record of where
-	// its apiservers answer. Named the same way node-controller names them.
-	apiServerEndpointSliceNS   = "default"
-	apiServerEndpointSliceName = "kubernetes"
-	apiServerPortName          = "https"
-
-	// clusterCAConfigMap carries the cluster CA every ServiceAccount is given.
-	// node-controller renders day-2 configs from the same source, so a node
-	// bootstrapped here and the same node reconciled later see one CA.
-	clusterCAConfigMap = "kube-root-ca.crt"
-	clusterCAKey       = "ca.crt"
-
-	// bootstrapTokenNGLabel labels a bootstrap-token secret with the NodeGroup
-	// it belongs to.
-	bootstrapTokenNGLabel = "node-manager.deckhouse.io/node-group"
-
-	// Everything a joining node needs is published by a Deckhouse hook after the
-	// NodeGroup arrives, so the first read of a young cluster finds nothing. The
-	// budget is the classic path's, which waits this long for the group's cloud
-	// config (entity.GetCloudConfig).
-	joinInputsWaitAttempts = 225
-	joinInputsWaitInterval = time.Second
-)
-
 // buildImmutableJoinPayload renders the cloud-init an additional master joins the
 // running cluster with: the CA, the current bootstrap token, and the live apiservers
 // are read from it; all else matches master 0. No ControlPlaneConfig: see immutable.BuildJoinPayload.
@@ -79,7 +54,7 @@ func buildImmutableJoinPayload(
 	// Retried as one: the three reads are the payload's only inputs from the
 	// running cluster, and each of them is published asynchronously.
 	err := libretry.NewLoop(fmt.Sprintf("Waiting for the cluster to publish what %s joins with", nodeName),
-		joinInputsWaitAttempts, joinInputsWaitInterval).
+		waitJoinInputs.attempts, waitJoinInputs.interval).
 		RunContext(ctx, func() error {
 			var err error
 			caCert, err = clusterCABase64(ctx, kubeCl)

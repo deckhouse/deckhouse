@@ -36,6 +36,17 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 )
 
+const (
+	bootstrapAbortCheckMessage = `You will be asked for approval multiple times.
+If you are confident in your actions, you can use the flag "--yes-i-am-sane-and-i-understand-what-i-am-doing" to skip approvals.
+`
+	bootstrapAbortInvalidCacheMessage = `Create cache %s:
+	Error: %v
+	The Kubernetes cluster was probably bootstrapped successfully.
+	Use the "dhctl destroy" command to delete the cluster.
+`
+)
+
 func (b *ClusterBootstrapper) Abort(ctx context.Context, forceAbortFromCache bool) error {
 	if !b.Options.Global.SanityCheck {
 		dhlog.FromContext(ctx).WarnContext(ctx, bootstrapAbortCheckMessage)

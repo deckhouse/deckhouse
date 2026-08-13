@@ -27,11 +27,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
-// collectedKubeconfigCacheKey records that the admin kubeconfig is on disk, and
-// where; a rerun reads it instead of dialing a closed channel. Written before
-// ConfirmCollected: a death in between must not leave no record of the file.
-const collectedKubeconfigCacheKey = "immutable-control-plane-collected-kubeconfig"
-
 // ErrKubeconfigOutRequired stops an immutable bootstrap driven by dhctl-server:
 // the admin kubeconfig is the only way into the cluster, the bootstrap response
 // does not carry it, and the server never sets --kubeconfig-out to keep it.
