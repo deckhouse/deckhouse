@@ -14,7 +14,7 @@ The annotation links the LoadBalancer with the appropriate Subnet.
 
 ## Using a separate target group for a NodeGroup
 
-By default, Yandex Cloud Controller Manager adds all suitable cluster nodes to the target group. To include only the nodes of a specific NodeGroup in the target group, use the `yandex.cpi.flant.com/target-group-name-prefix` annotation. The annotation is also described in the [Service annotations](examples.html#service-annotations) section.
+By default, Yandex Cloud Controller Manager adds all suitable cluster nodes to the default target group. To assign nodes to a separate target group, use the `yandex.cpi.flant.com/target-group-name-prefix` annotation. The annotation is also described in the [Service annotations](/modules/cloud-provider-yandex/examples.html#service-annotations) section.
 
 1. In the NodeGroup whose nodes should be included in a separate target group, specify the `yandex.cpi.flant.com/target-group-name-prefix` annotation in the [`spec.nodeTemplate.annotations`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetemplate-annotations) parameter of the NodeGroup resource. For example:
 
@@ -22,22 +22,22 @@ By default, Yandex Cloud Controller Manager adds all suitable cluster nodes to t
    spec:
      nodeTemplate:
        annotations:
-         yandex.cpi.flant.com/target-group-name-prefix: frontend
+         yandex.cpi.flant.com/target-group-name-prefix: frontend-
    ```
 
-   Based on this annotation, Yandex Cloud Controller Manager creates a target group and adds the nodes of this NodeGroup to it.
+   The annotation is propagated to the Node objects. Yandex Cloud Controller Manager adds all suitable nodes carrying the same annotation value to the target group, regardless of their NodeGroup.
 
-1. In the [Service](examples.html#service-annotations) object of the LoadBalancer type, specify the same annotation with the same value. For example:
+1. In the [Service](/modules/cloud-provider-yandex/examples.html#service-annotations) object of the LoadBalancer type, specify the same annotation with the same value. For example:
 
    ```yaml
    metadata:
      annotations:
-       yandex.cpi.flant.com/target-group-name-prefix: frontend
+       yandex.cpi.flant.com/target-group-name-prefix: frontend-
    ```
 
-   The annotation on the Service does not create a target group. It specifies which existing target group the LoadBalancer should use.
+   The annotation on the Service identifies the target group used by the LoadBalancer but does not select nodes.
 
-1. Make sure that the values of `yandex.cpi.flant.com/target-group-name-prefix` in the NodeGroup and Service match. In the example above, both resources use the `frontend` value.
+1. Make sure that the values of `yandex.cpi.flant.com/target-group-name-prefix` in the NodeGroup and Service match. In the example above, both resources use the `frontend-` value.
 
 1. The target group will be created with a name generated according to the following pattern:
 
@@ -62,7 +62,7 @@ spec:
   nodeType: CloudEphemeral
   nodeTemplate:
     annotations:
-      yandex.cpi.flant.com/target-group-name-prefix: frontend
+      yandex.cpi.flant.com/target-group-name-prefix: frontend-
   # ...
 ---
 apiVersion: v1
@@ -70,15 +70,23 @@ kind: Service
 metadata:
   name: nginx-frontend
   annotations:
-    yandex.cpi.flant.com/target-group-name-prefix: frontend
+    yandex.cpi.flant.com/target-group-name-prefix: frontend-
 spec:
   type: LoadBalancer
   # ...
 ```
 
 {% alert level="warning" %}
-In Yandex Cloud, a node cannot belong to multiple target groups at the same time. Nodes for which a separate target group prefix is specified must not simultaneously belong to another target group, including the default target group. Otherwise, creating or updating the LoadBalancer will fail.
+Yandex Cloud does not allow a single target, identified by the (`SubnetID, IP`) pair, to belong to multiple target groups at the same time.
+
+When the target group is changed, Yandex Cloud Controller Manager first removes the target from the current group and then adds it to the new one. This transition may cause a brief interruption in traffic handling.
 {% endalert %}
+
+Nodes with a dedicated target group prefix are excluded from the default target group. As a result, load balancers that use the default target group stop routing traffic to those nodes.
+
+This automatic transition is performed only between target groups managed by Yandex Cloud Controller Manager. If a target already belongs to another target group that is not managed by Yandex Cloud Controller Manager, remove it from that group before using the annotation.
+
+After the prefix is changed or removed, the previous target group may remain empty. If it is no longer used by any load balancers, delete it manually.
 
 ## Reserving a public IP address
 
