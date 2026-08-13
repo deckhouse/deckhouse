@@ -1137,3 +1137,130 @@ func TestValidation_UnchangedInstanceClassKindAllowedOnUpdate(t *testing.T) {
 		)
 	}
 }
+
+func TestValidation_MultipleRegisteredInstanceClassKinds(t *testing.T) {
+	s := newScheme()
+
+	dvpRegistration := registrationSecret(
+		"d8-cloud-provider-dvp",
+		"DVPInstanceClass",
+		"v1",
+	)
+	awsRegistration := registrationSecret(
+		"d8-cloud-provider-aws",
+		"AWSInstanceClass",
+		"v1",
+	)
+
+	c := fake.NewClientBuilder().
+		WithScheme(s).
+		WithObjects(dvpRegistration, awsRegistration).
+		Build()
+
+	w := &NodeGroupValidator{
+		Client:  c,
+		decoder: admission.NewDecoder(s),
+	}
+
+	tests := []struct {
+		name    string
+		kind    string
+		allowed bool
+	}{
+		{
+			name:    "DVP kind is registered",
+			kind:    "DVPInstanceClass",
+			allowed: true,
+		},
+		{
+			name:    "AWS kind is registered",
+			kind:    "AWSInstanceClass",
+			allowed: true,
+		},
+		{
+			name:    "kind is not registered",
+			kind:    "TestInstanceClass",
+			allowed: false,
+		},
+	}
+
+	for i, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ng := baseNodeGroup(
+				fmt.Sprintf("worker-%d", i),
+				v1.NodeTypeCloudEphemeral,
+			)
+			ng.Spec.CloudInstances = &v1.CloudInstancesSpec{
+				MinPerZone: 1,
+				MaxPerZone: 2,
+				ClassReference: v1.ClassReference{
+					Kind: tt.kind,
+					Name: "worker",
+				},
+			}
+
+			resp := w.Handle(
+				context.Background(),
+				makeAdmissionRequest(
+					t,
+					admissionv1.Create,
+					ng,
+					nil,
+				),
+			)
+
+			if resp.Allowed != tt.allowed {
+				message := ""
+				if resp.Result != nil {
+					message = resp.Result.Message
+				}
+
+				t.Fatalf(
+					"expected allowed=%v for kind %q, got allowed=%v: %s",
+					tt.allowed,
+					tt.kind,
+					resp.Allowed,
+					message,
+				)
+			}
+
+			if tt.allowed {
+				return
+			}
+
+			if resp.Result == nil {
+				t.Fatal("expected denial response to contain a result")
+			}
+
+			if !strings.Contains(
+				resp.Result.Message,
+				"AWSInstanceClass",
+			) {
+				t.Fatalf(
+					"expected error to contain AWSInstanceClass, got: %s",
+					resp.Result.Message,
+				)
+			}
+
+			if !strings.Contains(
+				resp.Result.Message,
+				"DVPInstanceClass",
+			) {
+				t.Fatalf(
+					"expected error to contain DVPInstanceClass, got: %s",
+					resp.Result.Message,
+				)
+			}
+
+			if !strings.Contains(
+				resp.Result.Message,
+				"TestInstanceClass",
+			) {
+				t.Fatalf(
+					"expected error to contain rejected kind, got: %s",
+					resp.Result.Message,
+				)
+			}
+		})
+	}
+}
