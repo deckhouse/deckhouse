@@ -355,6 +355,11 @@ type ModuleReleaseMigration struct {
 	// Result of the migration run.
 	// +kubebuilder:validation:Enum=Succeeded;Failed
 	Status string `json:"status"`
+	// Number of objects the migration changed. Zero means the migration matched
+	// nothing: a successful no-op, not a failure, but usually a sign that the
+	// migration did not do what its author expected.
+	// +optional
+	Affected int `json:"affected"`
 	// Error message of the failed migration.
 	// +optional
 	Message string `json:"message,omitempty"`

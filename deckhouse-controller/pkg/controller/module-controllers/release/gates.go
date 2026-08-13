@@ -64,7 +64,7 @@ func (r *reconciler) runReleaseValidations(ctx context.Context, release *v1alpha
 	}
 
 	for _, file := range files {
-		if err = releasegates.Run(ctx, engine, file); err != nil {
+		if _, err = releasegates.Run(ctx, engine, file); err != nil {
 			logger.Warn("release validation failed", slog.String("file", filepath.Base(file)), log.Err(err))
 
 			return r.failReleaseGate(ctx, release, "validations failed: "+err.Error(),
@@ -122,11 +122,13 @@ func (r *reconciler) runReleaseMigrations(ctx context.Context, release *v1alpha1
 			LastTransitionTime: metav1.NewTime(r.dependencyContainer.GetClock().Now().UTC()),
 		}
 
-		runErr := releasegates.Run(ctx, engine, migration.Path)
+		changed, runErr := releasegates.Run(ctx, engine, migration.Path)
 		if runErr != nil {
 			entry.Status = v1alpha1.ModuleReleaseMigrationFailed
 			entry.Message = runErr.Error()
 		}
+
+		entry.Affected = changed
 
 		journal = append(journal, entry)
 
@@ -141,7 +143,7 @@ func (r *reconciler) runReleaseMigrations(ctx context.Context, release *v1alpha1
 				"ReleaseMigrationsCheck", "ModuleRelease could not be applied, release migrations failed", runErr)
 		}
 
-		logger.Info("release migration applied", slog.String("migration", migration.Name))
+		logger.Info("release migration applied", slog.String("migration", migration.Name), slog.Int("affected", changed))
 	}
 
 	return r.updateReleaseMigrations(ctx, release, journal)

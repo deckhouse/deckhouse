@@ -91,14 +91,15 @@ func DefineModuleCheckReleaseCommand(rootCmd *cobra.Command) {
 			}
 
 			for _, file := range files {
-				if err = releasegates.Run(cmd.Context(), engine, file); err != nil {
+				changed, err := releasegates.Run(cmd.Context(), engine, file)
+				if err != nil {
 					// the error already names the file it came from
 					cmd.Printf("FAIL %v\n", err)
 
 					return fmt.Errorf("release gates failed")
 				}
 
-				cmd.Printf("OK   %s\n", filepath.Base(file))
+				cmd.Printf("OK   %s (objects changed: %d)\n", filepath.Base(file), changed)
 			}
 
 			return nil

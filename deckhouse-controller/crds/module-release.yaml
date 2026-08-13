@@ -143,6 +143,12 @@ spec:
                           - Succeeded
                           - Failed
                         description: Result of the migration run.
+                      affected:
+                        type: integer
+                        description: |
+                          Number of objects the migration changed. Zero means the migration matched nothing:
+                          a successful no-op, not a failure, but usually a sign that the migration did not do
+                          what its author expected.
                       message:
                         type: string
                         description: Error message of the failed migration.

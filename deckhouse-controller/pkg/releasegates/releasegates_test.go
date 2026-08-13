@@ -158,7 +158,7 @@ func TestRunAgainstPlatformTable(t *testing.T) {
 	// no cluster is touched: the gate only reads the virtual table
 	engine := d8sql.New(nil, nil, Platform{DeckhouseEdition: "ce", KubernetesVersion: "1.30.2"}.Option())
 
-	err := Run(t.Context(), engine, filepath.Join(dir, "edition.sql"))
+	_, err := Run(t.Context(), engine, filepath.Join(dir, "edition.sql"))
 	require.Error(t, err)
 
 	var validationErr *d8sql.ValidationError
@@ -166,10 +166,16 @@ func TestRunAgainstPlatformTable(t *testing.T) {
 	assert.Equal(t, "EDITION", validationErr.Code)
 	assert.Contains(t, err.Error(), "edition.sql")
 
-	require.NoError(t, Run(t.Context(), engine, filepath.Join(dir, "empty.sql")))
+	changed, err := Run(t.Context(), engine, filepath.Join(dir, "empty.sql"))
+	require.NoError(t, err)
+	assert.Zero(t, changed)
 
 	engine = d8sql.New(nil, nil, Platform{DeckhouseEdition: "ee"}.Option())
-	require.NoError(t, Run(t.Context(), engine, filepath.Join(dir, "edition.sql")))
+
+	// a passing ASSERT reads the cluster and changes nothing
+	changed, err = Run(t.Context(), engine, filepath.Join(dir, "edition.sql"))
+	require.NoError(t, err)
+	assert.Zero(t, changed)
 }
 
 func names(migrations []Migration) []string {

@@ -34,6 +34,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/deckhouse/d8sql"
+	"github.com/deckhouse/d8sql/sql"
 )
 
 const (
@@ -238,22 +239,45 @@ func MaxVersion(migrations []Migration) int {
 	return maxVersion
 }
 
-// Run executes every statement of a single SQL file. The whole file is
-// prepared before anything runs, so a syntax error never leaves a half-applied
-// batch behind.
-func Run(ctx context.Context, engine *d8sql.Engine, path string) error {
+// Run executes every statement of a single SQL file and reports how many objects
+// it changed. The whole file is prepared before anything runs, so a syntax error
+// never leaves a half-applied batch behind.
+//
+// The count matters for migrations: a statement that matches nothing is a
+// successful no-op, so without it a migration that quietly did nothing looks
+// exactly like one that worked.
+func Run(ctx context.Context, engine *d8sql.Engine, path string) (int, error) {
 	content, err := os.ReadFile(path)
 	if err != nil {
-		return fmt.Errorf("read %q: %w", filepath.Base(path), err)
+		return 0, fmt.Errorf("read %q: %w", filepath.Base(path), err)
 	}
 
 	if strings.TrimSpace(string(content)) == "" {
-		return nil
+		return 0, nil
 	}
 
-	if _, err = engine.Execute(ctx, string(content)); err != nil {
-		return fmt.Errorf("%s: %w", filepath.Base(path), err)
+	results, err := engine.Execute(ctx, string(content))
+	if err != nil {
+		return 0, fmt.Errorf("%s: %w", filepath.Base(path), err)
 	}
 
-	return nil
+	return affected(results), nil
+}
+
+// affected sums the objects changed by a batch, descending into the statements
+// an IF branch executed. Only mutating statements count: ASSERT reports the
+// number of objects it matched in the same field, and those were read, not
+// changed.
+func affected(results []d8sql.Result) int {
+	total := 0
+	for _, result := range results {
+		switch result.Kind {
+		case sql.StmtUpdate, sql.StmtDelete:
+			total += result.Affected
+		}
+
+		total += affected(result.Nested)
+	}
+
+	return total
 }
