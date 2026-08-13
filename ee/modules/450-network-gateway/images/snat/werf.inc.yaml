@@ -20,4 +20,4 @@ import:
 shell:
   install:
   # prevent mounting to /usr/bin due to /sbin is a symlink to /usr/bin in a container
-  - /usr/binunlink /sbin
+  - /usr/bin/unlink /sbin
