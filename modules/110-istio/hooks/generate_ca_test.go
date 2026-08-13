@@ -2117,5 +2117,4 @@ data:
 			Expect(hasGaugeSet(m, "d8_istio_ca_material_invalid", "cacerts")).To(BeTrue())
 		})
 	})
-
 })
