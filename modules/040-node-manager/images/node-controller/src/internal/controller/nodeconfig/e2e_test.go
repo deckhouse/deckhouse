@@ -478,9 +478,34 @@ var _ = Describe("NodeConfig controller", func() {
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
+	// User story: As an operator, I want a release that ships a rebuilt system
+	// extension to reach the fleet on its own. The digests ConfigMap used to be
+	// read but not watched, so the new digest sat unnoticed until some unrelated
+	// object moved — in a running cluster that is "whenever", since no resync
+	// period is set.
+	It("re-renders on a new release digest with nothing else moving", func(ctx context.Context) {
+		ngName := testenv.UniqueName("workers-digest")
+		createImmutableNodeGroup(ctx, ngName, nil)
+		nodeName := testenv.UniqueName("node")
+		createNode(ctx, nodeName, ngName)
+
+		Eventually(func(g Gomega) {
+			g.Expect(digestOf(getNodeConfig(ctx, g, nodeName), containerdExtension)).To(Equal(testContainerdDigest))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		By("the release publishing a rebuilt containerd and nothing else happening")
+		setContainerdDigest(ctx, testContainerdRebuiltDigest)
+		DeferCleanup(func(ctx context.Context) { setContainerdDigest(ctx, testContainerdDigest) })
+
+		Eventually(func(g Gomega) {
+			g.Expect(digestOf(getNodeConfig(ctx, g, nodeName), containerdExtension)).To(Equal(testContainerdRebuiltDigest))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	})
+
 	// User story: As an operator with a large fleet, I want heartbeats to trigger
-	// nothing. Detection trick: change a cluster input nothing watches — a pass
-	// that ran would pick it up, so only a real metadata change may bring one.
+	// nothing. The old detection trick — moving an input nothing watches — is
+	// gone with the watch above, so this asserts the contract itself: a heartbeat
+	// leaves the rendered config, and its generation, untouched.
 	It("does not re-render a node that only reported it is alive", func(ctx context.Context) {
 		ngName := testenv.UniqueName("workers-heartbeat")
 		createImmutableNodeGroup(ctx, ngName, nil)
@@ -501,9 +526,6 @@ var _ = Describe("NodeConfig controller", func() {
 			g.Expect(getNodeConfig(ctx, g, nodeName).Generation).To(Equal(generation))
 		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
 
-		By("the release publishing a new containerd, which nothing watches")
-		setContainerdDigest(ctx, testContainerdRebuiltDigest)
-
 		By("the node reporting it is still alive")
 		heartbeat(ctx, nodeName)
 
@@ -513,9 +535,8 @@ var _ = Describe("NodeConfig controller", func() {
 			g.Expect(digestOf(nc, containerdExtension)).To(Equal(testContainerdDigest))
 		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
 
-		// And a change to something the render does read off the Node brings the
-		// pass along, so nothing is lost — only deferred to an event that means
-		// something.
+		// And a change the render does read off the Node brings the pass along,
+		// so nothing is lost — only deferred to an event that means something.
 		By("labelling the node, which an extension request could select on")
 		Eventually(func(g Gomega) {
 			node := &corev1.Node{}
@@ -526,7 +547,7 @@ var _ = Describe("NodeConfig controller", func() {
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
 		Eventually(func(g Gomega) {
-			g.Expect(digestOf(getNodeConfig(ctx, g, nodeName), containerdExtension)).To(Equal(testContainerdRebuiltDigest))
+			g.Expect(getNodeConfig(ctx, g, nodeName).Generation).NotTo(Equal(generation))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
