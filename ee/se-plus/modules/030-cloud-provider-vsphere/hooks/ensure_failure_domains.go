@@ -107,7 +107,9 @@ func ensureFailureDomains(ctx context.Context, input *go_hook.HookInput, dc depe
 		return fmt.Errorf("resolve compute clusters for zones %v: %w", missing, err)
 	}
 
-	networks := networksFromConfig(&pcc)
+	// FailureDomain.topology.networks is intentionally left unset: CAPV resolves it as an
+	// absolute inventoryPath, and VSphereMachineTemplate already carries the relative
+	// network name on each device, which is what actually gets attached to the VM.
 	folder := absFolderPath(dd.Datacenter, dd.VMFolderPath, pcc.VMFolderPath)
 	region := strPtrOrEmpty(pcc.Region)
 	regionTagCategory := strPtrOrEmpty(pcc.RegionTagCategory)
@@ -127,7 +129,7 @@ func ensureFailureDomains(ctx context.Context, input *go_hook.HookInput, dc depe
 		}
 		resourcePool := absResourcePoolPath(clusterPath, dd.ResourcePoolPath)
 
-		fd := buildFailureDomain(fdNamePrefix+zone, region, regionTagCategory, zone, zoneTagCategory, dd.Datacenter, clusterPath, datastore, networks)
+		fd := buildFailureDomain(fdNamePrefix+zone, region, regionTagCategory, zone, zoneTagCategory, dd.Datacenter, clusterPath, datastore)
 		dz := buildDeploymentZone(zone, server, fdNamePrefix+zone, folder, resourcePool)
 		input.PatchCollector.Create(fd)
 		input.PatchCollector.Create(dz)
@@ -244,16 +246,6 @@ func resolveZoneComputeClusters(ctx context.Context, pcc *v1.VsphereProviderClus
 	return result, nil
 }
 
-func networksFromConfig(pcc *v1.VsphereProviderClusterConfiguration) []string {
-	if pcc.InternalNetworkNames != nil && len(*pcc.InternalNetworkNames) > 0 {
-		return append([]string(nil), (*pcc.InternalNetworkNames)...)
-	}
-	if pcc.ExternalNetworkNames != nil && len(*pcc.ExternalNetworkNames) > 0 {
-		return append([]string(nil), (*pcc.ExternalNetworkNames)...)
-	}
-	return nil
-}
-
 // absFolderPath returns the folder in the "/<datacenter>/vm/<relative>" form CAPV expects.
 // providerClusterConfiguration.vmFolderPath wins when set; otherwise fall back to
 // providerDiscoveryData.vmFolderPath. Both values are relative to /<datacenter>/vm/.
@@ -302,18 +294,11 @@ func strPtrOrEmpty(p *string) string {
 	return *p
 }
 
-func buildFailureDomain(name, region, regionTagCategory, zone, zoneTagCategory, datacenter, computeCluster, datastore string, networks []string) *unstructured.Unstructured {
+func buildFailureDomain(name, region, regionTagCategory, zone, zoneTagCategory, datacenter, computeCluster, datastore string) *unstructured.Unstructured {
 	topology := map[string]interface{}{
 		"datacenter":     datacenter,
 		"computeCluster": computeCluster,
 		"datastore":      datastore,
-	}
-	if len(networks) > 0 {
-		nw := make([]interface{}, 0, len(networks))
-		for _, n := range networks {
-			nw = append(nw, n)
-		}
-		topology["networks"] = nw
 	}
 	spec := map[string]interface{}{
 		"region": map[string]interface{}{
