@@ -107,6 +107,15 @@ func (r *Reconciler) SetupWatches(w register.Watcher) {
 	// enabled module's crds/ before any Helm run.
 	w.Watches(&deckhousev1alpha1.NodeExtensionRequest{}, allMapper,
 		builder.WithPredicates(predicate.GenerationChangedPredicate{}))
+	// The system extension digests of the release. Without this watch a new
+	// release re-renders nothing until some unrelated input moves: the digests
+	// are read on every pass, but nothing enqueues one, and no resync period is
+	// set. Scoped to the single ConfigMap, which is also its cache scope.
+	w.Watches(&corev1.ConfigMap{}, allMapper, builder.WithPredicates(predicate.NewPredicateFuncs(
+		func(obj client.Object) bool {
+			return obj.GetNamespace() == cloudInstanceManagerNS && obj.GetName() == imagesDigestsConfigMapName
+		},
+	)))
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {

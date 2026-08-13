@@ -108,6 +108,12 @@ func CacheOptions() (cache.Options, client.Options) {
 					"d8-system": {
 						FieldSelector: fields.SelectorFromSet(fields.Set{"metadata.name": "d8-deckhouse-version-info"}),
 					},
+					// The release's image digests. The nodeconfig controller watches this
+					// one to re-render when a release changes a system extension; the
+					// scope has to carry it, or that watch has no informer to come from.
+					"d8-cloud-instance-manager": {
+						FieldSelector: fields.SelectorFromSet(fields.Set{"metadata.name": "bashible-apiserver-files"}),
+					},
 				},
 			},
 			// The one EndpointSlice behind the kubernetes service: it carries the master
