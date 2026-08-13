@@ -19,9 +19,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/deckhouse/d8sql"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/deckhouse/d8sql"
+	"github.com/deckhouse/d8sql/sql"
 )
 
 func TestParseMigration(t *testing.T) {
@@ -176,6 +178,29 @@ func TestRunAgainstPlatformTable(t *testing.T) {
 	changed, err = Run(t.Context(), engine, filepath.Join(dir, "edition.sql"))
 	require.NoError(t, err)
 	assert.Zero(t, changed)
+}
+
+func TestAffected(t *testing.T) {
+	// ASSERT reports matched objects in the same field, and a SELECT reports
+	// none at all: only the mutating kinds may be summed, or a read-only gate
+	// would look like it changed the cluster.
+	results := []d8sql.Result{
+		{Kind: sql.StmtInsert, Affected: 1},
+		{Kind: sql.StmtUpdate, Affected: 2},
+		{Kind: sql.StmtDelete, Affected: 3},
+		{Kind: sql.StmtAssert, Affected: 7},
+		{Kind: sql.StmtSelect},
+	}
+	assert.Equal(t, 6, affected(results))
+
+	// statements executed by an IF branch count as well
+	nested := []d8sql.Result{{Kind: sql.StmtIf, Nested: []d8sql.Result{
+		{Kind: sql.StmtInsert, Affected: 1},
+		{Kind: sql.StmtAssert, Affected: 5},
+	}}}
+	assert.Equal(t, 1, affected(nested))
+
+	assert.Zero(t, affected(nil))
 }
 
 func names(migrations []Migration) []string {

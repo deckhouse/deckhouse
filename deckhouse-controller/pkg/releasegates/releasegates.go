@@ -273,7 +273,7 @@ func affected(results []d8sql.Result) int {
 	total := 0
 	for _, result := range results {
 		switch result.Kind {
-		case sql.StmtUpdate, sql.StmtDelete:
+		case sql.StmtInsert, sql.StmtUpdate, sql.StmtDelete:
 			total += result.Affected
 		}
 
