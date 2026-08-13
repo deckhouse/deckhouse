@@ -122,7 +122,7 @@ type Runtime struct {
 
 	status      *status.Service     // Tracks per-package condition chain
 	scheduler   *schedule.Scheduler // Evaluates enable/disable based on version constraints
-	debugServer *debug.Server       // Debug API served over a Unix socket and HTTP
+	debugServer *debug.Server       // Debug API: full over the Unix socket, opt-in subset over HTTP
 
 	crdService        *crd.Service                        // Installs CRDs from package paths
 	objectPatcher     *objectpatch.ObjectPatcher          // Applies resource patches from hooks
@@ -285,7 +285,12 @@ func (r *Runtime) loadGlobal(ctx context.Context) error {
 
 // registerDebugServer exposes debug endpoints for package state introspection
 // (/packages/dump, /packages/global/dump, /packages/queues/dump, /packages/render/{name})
-// over both a Unix socket and a loopback TCP address, then starts serving them.
+// over a Unix socket and a loopback TCP address, then starts serving them.
+//
+// Only endpoints marked debug.AddHTTP reach the TCP listener. Everything that
+// serializes package values, rendered manifests or hook snapshots stays
+// debug.SocketOnly: those carry registry credentials and Secret contents, and
+// the pod's loopback is shared with sidecars and `kubectl port-forward`.
 //
 // Every route is registered before Start because the router does not tolerate
 // registration while requests are being served.
@@ -294,13 +299,14 @@ func (r *Runtime) registerDebugServer(cfg debug.Config) error {
 
 	var errs []error
 
-	registerGet := func(url string, handler http.HandlerFunc) {
-		if err := r.debugServer.Register(http.MethodGet, url, handler); err != nil {
+	registerGet := func(url string, exposure debug.Exposure, handler http.HandlerFunc) {
+		if err := r.debugServer.Register(http.MethodGet, url, handler, exposure); err != nil {
 			errs = append(errs, err)
 		}
 	}
 
-	registerGet("/packages/dump", func(w http.ResponseWriter, req *http.Request) {
+	// Values include registry credentials and generated passwords.
+	registerGet("/packages/dump", debug.SocketOnly, func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/yaml")
 		w.WriteHeader(http.StatusOK)
 
@@ -311,14 +317,15 @@ func (r *Runtime) registerDebugServer(cfg debug.Config) error {
 		}
 	})
 
-	registerGet("/packages/global/dump", func(w http.ResponseWriter, _ *http.Request) {
+	// Global values carry cluster-wide secrets.
+	registerGet("/packages/global/dump", debug.SocketOnly, func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/yaml")
 		w.WriteHeader(http.StatusOK)
 
 		w.Write(r.DumpGlobal()) //nolint:errcheck
 	})
 
-	registerGet("/packages/queues/dump", func(w http.ResponseWriter, req *http.Request) {
+	registerGet("/packages/queues/dump", debug.AddHTTP, func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/yaml")
 		w.WriteHeader(http.StatusOK)
 
@@ -326,7 +333,7 @@ func (r *Runtime) registerDebugServer(cfg debug.Config) error {
 		w.Write(r.queueService.Dump(queues...)) //nolint:errcheck
 	})
 
-	registerGet("/packages/scheduler/dump", func(w http.ResponseWriter, req *http.Request) {
+	registerGet("/packages/scheduler/dump", debug.AddHTTP, func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/yaml")
 		w.WriteHeader(http.StatusOK)
 
@@ -337,7 +344,8 @@ func (r *Runtime) registerDebugServer(cfg debug.Config) error {
 		}
 	})
 
-	registerGet("/packages/render/{name}", func(w http.ResponseWriter, req *http.Request) {
+	// Rendered manifests contain Secret objects in cleartext.
+	registerGet("/packages/render/{name}", debug.SocketOnly, func(w http.ResponseWriter, req *http.Request) {
 		packageName := chi.URLParam(req, "name")
 		if packageName == "" {
 			http.Error(w, "package name is required", http.StatusBadRequest)
@@ -359,7 +367,8 @@ func (r *Runtime) registerDebugServer(cfg debug.Config) error {
 		w.Write([]byte(rendered)) //nolint:errcheck
 	})
 
-	registerGet("/packages/snapshots/{name}", func(w http.ResponseWriter, req *http.Request) {
+	// Hook snapshots hold the raw objects the bindings matched, Secrets included.
+	registerGet("/packages/snapshots/{name}", debug.SocketOnly, func(w http.ResponseWriter, req *http.Request) {
 		packageName := chi.URLParam(req, "name")
 		if packageName == "" {
 			http.Error(w, "package name is required", http.StatusBadRequest)
@@ -389,19 +398,19 @@ func (r *Runtime) registerDebugServer(cfg debug.Config) error {
 		w.Write(data) //nolint:errcheck
 	})
 
-	registerGet("/requirements", func(w http.ResponseWriter, _ *http.Request) {
+	registerGet("/requirements", debug.AddHTTP, func(w http.ResponseWriter, _ *http.Request) {
 		data, _ := yaml.Marshal(d8requirements.DumpValues()) //nolint:errcheck
 		w.Header().Set("Content-Type", "application/yaml")
 		w.WriteHeader(http.StatusOK)
 		w.Write(data) //nolint:errcheck
 	})
 
-	registerGet("/healthz", func(w http.ResponseWriter, _ *http.Request) {
+	registerGet("/healthz", debug.AddHTTP, func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("ok")) //nolint:errcheck
 	})
 
-	registerGet("/readyz", func(w http.ResponseWriter, _ *http.Request) {
+	registerGet("/readyz", debug.AddHTTP, func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("ok")) //nolint:errcheck
 	})

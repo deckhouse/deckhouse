@@ -13,9 +13,9 @@
 // limitations under the License.
 
 // Package debug provides an HTTP server and client for runtime introspection.
-// The server serves a Unix socket and a TCP address simultaneously; both
-// listeners share one router, so every registered endpoint is reachable through
-// either transport.
+// The server serves a Unix socket and a TCP address simultaneously, each with
+// its own router: every endpoint is reachable through the socket, and only the
+// endpoints registered with AddHTTP are also reachable over TCP.
 package debug
 
 import (
@@ -70,25 +70,46 @@ var supportedMethods = map[string]struct{}{
 	http.MethodOptions: {},
 }
 
+// Exposure decides whether a route is served over TCP on top of the socket.
+//
+// The two transports are not equally private. The socket lives in the
+// container's own filesystem with mode 0600, so only this process's user
+// reaches it. The TCP listener lives in the pod's network namespace, which is
+// shared by every sidecar and ephemeral debug container and is reachable from
+// outside through `kubectl port-forward` — loopback is not a trust boundary
+// here. Endpoints carrying package values, rendered manifests or hook
+// snapshots must stay SocketOnly.
+type Exposure bool
+
+const (
+	// SocketOnly serves the route on the Unix socket only.
+	SocketOnly Exposure = false
+	// AddHTTP serves the route on the TCP listener as well as the socket.
+	AddHTTP Exposure = true
+)
+
 // Config declares the debug server's listeners; at least one must be set.
 type Config struct {
 	// SocketPath is the Unix socket to bind; empty disables the socket listener.
 	SocketPath string
-	// Address is the TCP host to bind; empty binds every interface when Port is set.
+	// Address is the TCP host to bind; empty binds every interface when Port is
+	// set, which publishes the HTTP routes cluster-wide — keep it on loopback.
 	Address string
 	// Port is the TCP port to bind; empty disables the TCP listener.
 	Port string
 }
 
 // Server serves debug endpoints over a Unix socket and a TCP address at the
-// same time. Both listeners share one chi router, so a route registered once is
-// reachable through either transport.
+// same time. Each listener has its own chi router: the socket router carries
+// every registered route, the HTTP router only those registered with AddHTTP.
 //
 // Register every endpoint before calling Start: chi builds its routing tree on
 // registration and does not tolerate writes while requests are being routed.
 type Server struct {
-	cfg    Config
-	router chi.Router
+	cfg Config
+
+	socketRouter chi.Router
+	httpRouter   chi.Router
 
 	mu      sync.Mutex
 	started bool
@@ -103,26 +124,39 @@ type Server struct {
 // NewServer creates a debug server with panic recovery, pprof and route discovery.
 // No listener is bound until Start is called.
 func NewServer(cfg Config, logger *log.Logger) *Server {
-	router := chi.NewRouter()
-	router.Use(middleware.Recoverer) // Recover from panics in handlers
-
-	router.Mount("/debug", middleware.Profiler())
-
 	s := &Server{
-		cfg:    cfg,
-		router: router,
-		logger: logger.Named("debug-server"),
+		cfg:          cfg,
+		socketRouter: newRouter(),
+		httpRouter:   newRouter(),
+		logger:       logger.Named("debug-server"),
 	}
 
-	s.registerDiscovery()
+	// pprof is served on both transports: profiles carry stack traces rather than
+	// package values, and port-forwarding the TCP listener is the only practical
+	// way to point `go tool pprof` at a running controller.
+	s.socketRouter.Mount("/debug", middleware.Profiler())
+	s.httpRouter.Mount("/debug", middleware.Profiler())
+
+	// Each router lists only its own routes, so discovery over TCP never
+	// advertises the socket-only endpoints.
+	s.socketRouter.Get("/discovery", discoveryHandler(s.socketRouter))
+	s.httpRouter.Get("/discovery", discoveryHandler(s.httpRouter))
 
 	return s
 }
 
-// registerDiscovery exposes a plain-text listing of every registered route.
+// newRouter creates a chi router that recovers from panics in handlers.
+func newRouter() chi.Router {
+	router := chi.NewRouter()
+	router.Use(middleware.Recoverer)
+
+	return router
+}
+
+// discoveryHandler lists every route of the given router as plain text.
 // The pprof subtree is collapsed into a single line instead of enumerated.
-func (s *Server) registerDiscovery() {
-	s.router.Get("/discovery", func(writer http.ResponseWriter, _ *http.Request) {
+func discoveryHandler(router chi.Router) http.HandlerFunc {
+	return func(writer http.ResponseWriter, _ *http.Request) {
 		buf := bytes.NewBuffer(nil)
 
 		walkFn := func(method string, route string, _ http.Handler, _ ...func(http.Handler) http.Handler) error {
@@ -135,7 +169,7 @@ func (s *Server) registerDiscovery() {
 			return nil
 		}
 
-		if err := chi.Walk(s.router, walkFn); err != nil {
+		if err := chi.Walk(router, walkFn); err != nil {
 			http.Error(writer, fmt.Sprintf("walk routes: %v", err), http.StatusInternalServerError)
 			return
 		}
@@ -145,7 +179,7 @@ func (s *Server) registerDiscovery() {
 		writer.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		writer.WriteHeader(http.StatusOK)
 		_, _ = writer.Write(buf.Bytes())
-	})
+	}
 }
 
 // Start binds every configured listener and serves the router on each of them.
@@ -160,13 +194,13 @@ func (s *Server) Start() error {
 		return ErrAlreadyStarted
 	}
 
-	listeners, err := s.listen()
+	bound, err := s.listen()
 	if err != nil {
 		return err
 	}
 
-	for _, listener := range listeners {
-		s.serve(listener)
+	for _, b := range bound {
+		s.serve(b)
 	}
 
 	s.started = true
@@ -176,13 +210,19 @@ func (s *Server) Start() error {
 	return nil
 }
 
+// boundListener pairs a bound listener with the router that transport serves.
+type boundListener struct {
+	listener net.Listener
+	router   chi.Router
+}
+
 // listen binds every configured listener, closing the ones already bound on failure.
-func (s *Server) listen() ([]net.Listener, error) {
-	listeners := make([]net.Listener, 0, 2)
+func (s *Server) listen() ([]boundListener, error) {
+	bound := make([]boundListener, 0, 2)
 
 	closeAll := func() {
-		for _, listener := range listeners {
-			_ = listener.Close()
+		for _, b := range bound {
+			_ = b.listener.Close()
 		}
 	}
 
@@ -192,7 +232,7 @@ func (s *Server) listen() ([]net.Listener, error) {
 			return nil, fmt.Errorf("listen on socket: %w", err)
 		}
 
-		listeners = append(listeners, listener)
+		bound = append(bound, boundListener{listener: listener, router: s.socketRouter})
 	}
 
 	if s.cfg.Port != "" {
@@ -205,14 +245,14 @@ func (s *Server) listen() ([]net.Listener, error) {
 			return nil, fmt.Errorf("listen on '%s': %w", address, err)
 		}
 
-		listeners = append(listeners, listener)
+		bound = append(bound, boundListener{listener: listener, router: s.httpRouter})
 	}
 
-	if len(listeners) == 0 {
+	if len(bound) == 0 {
 		return nil, ErrNoListeners
 	}
 
-	return listeners, nil
+	return bound, nil
 }
 
 // listenSocket binds a Unix socket, replacing a stale file left by a previous run.
@@ -245,13 +285,13 @@ func listenSocket(socketPath string) (net.Listener, error) {
 	return listener, nil
 }
 
-// serve runs the router on the listener and tracks the server for shutdown.
+// serve runs the listener's router on it and tracks the server for shutdown.
 // Callers must hold s.mu.
-func (s *Server) serve(listener net.Listener) {
-	address := listener.Addr().String()
+func (s *Server) serve(bound boundListener) {
+	address := bound.listener.Addr().String()
 
 	srv := &http.Server{
-		Handler:           s.router,
+		Handler:           bound.router,
 		ReadHeaderTimeout: readHeaderTimeout,
 		IdleTimeout:       idleTimeout,
 		// No WriteTimeout on purpose: pprof streams for as long as the caller asks
@@ -263,7 +303,7 @@ func (s *Server) serve(listener net.Listener) {
 
 	// A debug listener dying must never take the process with it.
 	s.wg.Go(func() {
-		if err := srv.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := srv.Serve(bound.listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			s.logger.Error("debug server stopped with error", slog.String("address", address), log.Err(err))
 		}
 	})
@@ -302,14 +342,17 @@ func (s *Server) Addrs() []string {
 	return append([]string(nil), s.addrs...)
 }
 
-// Register adds a debug endpoint for the given HTTP method and path.
+// Register adds a debug endpoint for the given HTTP method and path. The route
+// always lands on the socket; exposure decides whether it is served over TCP as
+// well. A route left SocketOnly is absent from the HTTP router entirely, so it
+// answers 404 there and never shows up in the HTTP /discovery listing.
 //
 // It must be called before Start: chi builds its routing tree on registration
 // and racing that against a live listener corrupts routing. Registering after
 // Start, or with a method chi cannot route, returns an error and adds nothing.
 //
-// Example: server.Register(http.MethodGet, "/status", statusHandler)
-func (s *Server) Register(method string, url string, handler http.HandlerFunc) error {
+// Example: server.Register(http.MethodGet, "/status", statusHandler, debug.AddHTTP)
+func (s *Server) Register(method string, url string, handler http.HandlerFunc, exposure Exposure) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -321,7 +364,11 @@ func (s *Server) Register(method string, url string, handler http.HandlerFunc) e
 		return fmt.Errorf("register '%s %s': %w", method, url, ErrUnsupportedMethod)
 	}
 
-	s.router.MethodFunc(method, url, handler)
+	s.socketRouter.MethodFunc(method, url, handler)
+
+	if exposure == AddHTTP {
+		s.httpRouter.MethodFunc(method, url, handler)
+	}
 
 	return nil
 }
