@@ -6,7 +6,7 @@ import:
   add: /relocate
   to: /
   before: setup
-- from: {{ index $.Images "base/python" }}
+- from: {{ index $.Images "base/python-3.12" }}
   add: /
   to: /
   includePaths:
