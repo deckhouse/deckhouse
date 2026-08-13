@@ -110,7 +110,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.serviceAccountName
-        {{- if and (include "istioSupportsPeerCaCrl" .) .Values.istio.internal.ca.crl }}
+        {{- if and (include "istioSupportsPeerCaCrl" .) .Values.istio.internal.crl }}
         - name: CRL_PATH
           value: "/var/run/secrets/istio/crl/ca-crl.pem"
         {{- end }}
@@ -123,7 +123,7 @@ spec:
           name: cni-ztunnel-sock-dir
         - mountPath: /tmp
           name: tmp
-        {{- if and (include "istioSupportsPeerCaCrl" .) .Values.istio.internal.ca.crl }}
+        {{- if and (include "istioSupportsPeerCaCrl" .) .Values.istio.internal.crl }}
         - mountPath: /var/run/secrets/istio/crl
           name: crl-volume
           readOnly: true
@@ -148,7 +148,7 @@ spec:
       # pprof needs a writable /tmp, and we don't have that thanks to `readOnlyRootFilesystem: true`, so mount one
       - name: tmp
         emptyDir: {}
-      {{- if and (include "istioSupportsPeerCaCrl" .) .Values.istio.internal.ca.crl }}
+      {{- if and (include "istioSupportsPeerCaCrl" .) .Values.istio.internal.crl }}
       - name: crl-volume
         configMap:
           name: istio-ca-crl
