@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package hooks
+package resources
 
 import (
 	"context"
@@ -103,11 +103,6 @@ func removeComponents(input *go_hook.HookInput) {
 }
 
 func projectAutotuneStateToValues(input *go_hook.HookInput, state autotuneState) error {
-	if state == nil {
-		removeComponents(input)
-		return nil
-	}
-
 	components := map[string]any{}
 	for _, comp := range controlPlaneComponents {
 		entry := map[string]any{}
