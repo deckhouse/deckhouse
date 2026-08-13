@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package derived_status
+package cloudprovider
 
 import (
 	"testing"
@@ -29,7 +29,7 @@ func TestDecodeRegistration_BothEncodings(t *testing.T) {
 	tests := []struct {
 		name   string
 		data   map[string][]byte
-		expReg CloudProviderRegistration
+		expReg Registration
 	}{
 		{
 			name: "bare strings as helm writes them",
@@ -40,7 +40,7 @@ func TestDecodeRegistration_BothEncodings(t *testing.T) {
 				"machineClassKind":        []byte(`AWSMachineClass`),
 				"zones":                   []byte(`["a","b"]`),
 			},
-			expReg: CloudProviderRegistration{
+			expReg: Registration{
 				Type:                    "aws",
 				InstanceClassKind:       "AWSInstanceClass",
 				InstanceClassAPIVersion: "v1",
@@ -54,27 +54,27 @@ func TestDecodeRegistration_BothEncodings(t *testing.T) {
 				"type":            []byte(`"dvp"`),
 				"capiClusterKind": []byte(`"DVPCluster"`),
 			},
-			expReg: CloudProviderRegistration{
-				Type:            "dvp",
-				CAPIClusterKind: "DVPCluster",
+			expReg: Registration{
+				Type: "dvp",
+				CAPI: CAPIConfig{ClusterKind: "DVPCluster"},
 			},
 		},
 		{
 			name:   "empty secret",
 			data:   map[string][]byte{},
-			expReg: CloudProviderRegistration{},
+			expReg: Registration{},
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got := DecodeRegistration(tc.data)
+			got := Decode(tc.data)
 
 			require.Equal(t, tc.expReg.Type, got.Type)
 			require.Equal(t, tc.expReg.InstanceClassKind, got.InstanceClassKind)
 			require.Equal(t, tc.expReg.InstanceClassAPIVersion, got.InstanceClassAPIVersion)
 			require.Equal(t, tc.expReg.MachineClassKind, got.MachineClassKind)
-			require.Equal(t, tc.expReg.CAPIClusterKind, got.CAPIClusterKind)
+			require.Equal(t, tc.expReg.CAPI.ClusterKind, got.CAPI.ClusterKind)
 			require.Equal(t, tc.expReg.Zones, got.Zones)
 		})
 	}
@@ -86,7 +86,7 @@ func TestDecodeRegistration_CloudVariablesKeyedByType(t *testing.T) {
 		"vsphere": []byte(`{"instances":{"mainNetwork":"vlan-1"}}`),
 	}
 
-	got := DecodeRegistration(data)
+	got := Decode(data)
 
 	require.Equal(t, "vsphere", got.Type)
 	instances, ok := got.CloudVariables["instances"].(map[string]any)

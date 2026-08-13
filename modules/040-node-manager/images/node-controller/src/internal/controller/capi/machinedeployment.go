@@ -43,6 +43,7 @@ import (
 
 	capiv1beta2 "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	"github.com/deckhouse/node-controller/internal/clusterprefix"
 	"github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
@@ -104,14 +105,14 @@ func (r *MachineDeploymentReconciler) SetupWatches(w register.Watcher) {
 	// A change to the cloud-provider secret (provider defaults, instanceClassKind, zones)
 	// can change every rendered MachineClass/MachineDeployment, so re-enqueue all NodeGroups.
 	w.Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(r.enqueueAllNodeGroups),
-		builder.WithPredicates(predicate.NewPredicateFuncs(isCloudProviderSecret)))
+		builder.WithPredicates(cloudprovider.RegistrationPredicate()))
 	// The InstanceClass is what the MachineClass and the machine template are rendered from,
 	// and its checksum names the template — an edit here is exactly what must re-render. Without
 	// this watch the change waits for the resync, so the cloud keeps handing out the previous
 	// instance type for up to resyncInterval. The source is deferred, not built from a
 	// setup-time list: the kind and version come from the provider registration Secret, which
 	// may appear only after this pod started.
-	w.WatchesRawSource(common.LazyInstanceClassSource(r.Cache,
+	w.WatchesRawSource(cloudprovider.LazyInstanceClassSource(r.Cache,
 		handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
 			return common.InstanceClassToNodeGroups(ctx, r.Client, obj)
 		}),
@@ -137,10 +138,6 @@ func mdToNodeGroup(_ context.Context, obj client.Object) []reconcile.Request {
 	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: ng}}}
 }
 
-func isCloudProviderSecret(obj client.Object) bool {
-	return obj.GetNamespace() == cloudProviderSecretNamespace && obj.GetName() == cloudProviderSecretName
-}
-
 func (r *MachineDeploymentReconciler) enqueueAllNodeGroups(ctx context.Context, _ client.Object) []reconcile.Request {
 	ngList := &deckhousev1.NodeGroupList{}
 	if err := r.Client.List(ctx, ngList); err != nil {
@@ -164,8 +161,17 @@ func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{}, fmt.Errorf("get NodeGroup: %w", err)
 	}
 
+	// One provider read per reconcile: four call sites below used to fetch the registration Secret
+	// each. Loaded before the deletion branch, because the cleanup needs the provider too — the
+	// infrastructure templates are named by its kind, and without it they outlive the NodeGroup.
+	registry, err := cloudprovider.Load(ctx, r.Client)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	registration, _ := registry.ForNodeGroup(ng)
+
 	if !ng.DeletionTimestamp.IsZero() {
-		done, err := r.cleanupMachineDeployments(ctx, ng.Name)
+		done, err := r.cleanupMachineDeployments(ctx, ng.Name, registration)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -191,10 +197,7 @@ func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		// status.engine: with the derived value the MachineDeployment is rendered in the
 		// first reconcile right after the NodeGroup is created. status.engine, once set,
 		// stays the pin (ComputeEngine prefers it).
-		registration, err := r.readCloudProviderRegistration(ctx)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
+		//
 		// Both engines render from the InstanceClass, and the version it is read through decides
 		// the checksum that names the template. Guessing one would rename an immutable template
 		// and roll every machine in the NodeGroup, so wait instead: the provider secret is
@@ -205,11 +208,11 @@ func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		}
 		switch derived_status.ComputeEngine(ng, registration) {
 		case engineCAPI:
-			if err := r.reconcileCloudMDsRendered(ctx, ng); err != nil {
+			if err := r.reconcileCloudMDsRendered(ctx, ng, registry, registration); err != nil {
 				return ctrl.Result{}, err
 			}
 		case engineMCM:
-			if err := r.reconcileCloudMCMs(ctx, ng); err != nil {
+			if err := r.reconcileCloudMCMs(ctx, ng, registry, registration); err != nil {
 				return ctrl.Result{}, err
 			}
 		default:
@@ -257,7 +260,7 @@ func (r *MachineDeploymentReconciler) removeFinalizer(ctx context.Context, ng *d
 // node drain runs asynchronously under capi/caps-controller-manager finalizers. An MCM one does:
 // its MachineClass holds the cloud credentials the deletion itself needs, so the class outlives
 // the deployment and the NodeGroup stays finalized until both are gone (see pruneStaleMCMs).
-func (r *MachineDeploymentReconciler) cleanupMachineDeployments(ctx context.Context, ngName string) (bool, error) {
+func (r *MachineDeploymentReconciler) cleanupMachineDeployments(ctx context.Context, ngName string, registration cloudprovider.Registration) (bool, error) {
 	logger := log.FromContext(ctx)
 
 	capiMDs := &unstructured.UnstructuredList{}
@@ -281,16 +284,11 @@ func (r *MachineDeploymentReconciler) cleanupMachineDeployments(ctx context.Cont
 		logger.V(1).Info("deleted MachineDeployment for removed NodeGroup", "name", md.GetName(), "ng", ngName)
 	}
 
-	if err := r.deleteInfraMachineTemplates(ctx, ngName); err != nil {
+	if err := r.deleteInfraMachineTemplates(ctx, ngName, registration.CAPI); err != nil {
 		return false, err
 	}
 
-	cloudProvider, err := r.readCloudProviderTree(ctx)
-	if err != nil {
-		return false, err
-	}
-	machineClassKind, _ := cloudProvider["machineClassKind"].(string)
-	staleMCMs, err := r.pruneStaleMCMs(ctx, r.APIReader, ngName, machineClassKind, nil, nil)
+	staleMCMs, err := r.pruneStaleMCMs(ctx, r.APIReader, ngName, registration.MachineClassKind, nil, nil)
 	if err != nil {
 		return false, err
 	}
@@ -380,36 +378,6 @@ func buildStaticMD(ng *deckhousev1.NodeGroup) *unstructured.Unstructured {
 			},
 		},
 	}}
-}
-
-type cloudProviderConfig struct {
-	capiClusterName                string
-	capiMachineTemplateKind        string
-	capiMachineTemplateAPIVersion  string
-	capiMachineDeploymentSpecPatch string
-}
-
-func (r *MachineDeploymentReconciler) readCloudProviderConfig(ctx context.Context) (*cloudProviderConfig, error) {
-	secret := &corev1.Secret{}
-	if err := r.Client.Get(ctx, types.NamespacedName{
-		Name: cloudProviderSecretName, Namespace: cloudProviderSecretNamespace,
-	}, secret); err != nil {
-		if client.IgnoreNotFound(err) == nil {
-			return &cloudProviderConfig{}, nil
-		}
-		return nil, fmt.Errorf("get cloud-provider secret: %w", err)
-	}
-
-	cfg := &cloudProviderConfig{
-		capiClusterName:                string(secret.Data["capiClusterName"]),
-		capiMachineTemplateKind:        string(secret.Data["capiMachineTemplateKind"]),
-		capiMachineTemplateAPIVersion:  string(secret.Data["capiMachineTemplateAPIVersion"]),
-		capiMachineDeploymentSpecPatch: string(secret.Data["capiMachineDeploymentSpecPatch"]),
-	}
-	if cfg.capiMachineTemplateAPIVersion == "" {
-		cfg.capiMachineTemplateAPIVersion = "infrastructure.cluster.x-k8s.io/v1alpha1"
-	}
-	return cfg, nil
 }
 
 func (r *MachineDeploymentReconciler) readClusterUUID(ctx context.Context) (string, error) {

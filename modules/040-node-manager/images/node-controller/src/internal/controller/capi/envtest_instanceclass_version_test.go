@@ -25,6 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	"github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/testenv"
 )
@@ -68,12 +69,12 @@ var _ = Describe("InstanceClass API version pinning", func() {
 		GinkgoHelper()
 		secret := &corev1.Secret{}
 		Expect(k8sClient.Get(suiteCtx, types.NamespacedName{
-			Namespace: cloudProviderSecretNamespace, Name: cloudProviderSecretName,
+			Namespace: cloudprovider.SecretNamespace, Name: cloudprovider.LegacySecretName,
 		}, secret)).To(Succeed())
 		if version == "" {
-			delete(secret.Data, common.InstanceClassAPIVersionKey)
+			delete(secret.Data, cloudprovider.InstanceClassAPIVersionKey)
 		} else {
-			secret.Data[common.InstanceClassAPIVersionKey] = []byte(version)
+			secret.Data[cloudprovider.InstanceClassAPIVersionKey] = []byte(version)
 		}
 		Expect(k8sClient.Update(suiteCtx, secret)).To(Succeed())
 	}

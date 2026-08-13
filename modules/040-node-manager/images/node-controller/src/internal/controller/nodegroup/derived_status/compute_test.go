@@ -28,6 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 )
 
 func boolPtr(b bool) *bool { return &b }
@@ -42,40 +43,40 @@ func mustSemver(t *testing.T, s string) *semver.Version {
 func TestDefaultCloudEphemeralEngine(t *testing.T) {
 	cases := []struct {
 		name   string
-		reg    CloudProviderRegistration
+		reg    cloudprovider.Registration
 		useMCM bool
 		want   string
 	}{
 		{
 			name: "neither MCM nor CAPI",
-			reg:  CloudProviderRegistration{},
+			reg:  cloudprovider.Registration{},
 			want: engineNone,
 		},
 		{
 			name: "MCM only",
-			reg:  CloudProviderRegistration{MachineClassKind: "AWSInstanceClass"},
+			reg:  cloudprovider.Registration{MachineClassKind: "AWSInstanceClass"},
 			want: engineMCM,
 		},
 		{
 			name: "CAPI only",
-			reg:  CloudProviderRegistration{CAPIClusterKind: "DVPCluster"},
+			reg:  cloudprovider.Registration{CAPI: cloudprovider.CAPIConfig{ClusterKind: "DVPCluster"}},
 			want: engineCAPI,
 		},
 		{
 			name:   "both, useMCM=false defaults to CAPI",
-			reg:    CloudProviderRegistration{MachineClassKind: "AWSInstanceClass", CAPIClusterKind: "DVPCluster"},
+			reg:    cloudprovider.Registration{MachineClassKind: "AWSInstanceClass", CAPI: cloudprovider.CAPIConfig{ClusterKind: "DVPCluster"}},
 			useMCM: false,
 			want:   engineCAPI,
 		},
 		{
 			name:   "both, useMCM=true forces MCM",
-			reg:    CloudProviderRegistration{MachineClassKind: "AWSInstanceClass", CAPIClusterKind: "DVPCluster"},
+			reg:    cloudprovider.Registration{MachineClassKind: "AWSInstanceClass", CAPI: cloudprovider.CAPIConfig{ClusterKind: "DVPCluster"}},
 			useMCM: true,
 			want:   engineMCM,
 		},
 		{
 			name: "empty-string kinds are treated as absent",
-			reg:  CloudProviderRegistration{},
+			reg:  cloudprovider.Registration{},
 			want: engineNone,
 		},
 	}
@@ -87,13 +88,13 @@ func TestDefaultCloudEphemeralEngine(t *testing.T) {
 }
 
 func TestComputeEngine(t *testing.T) {
-	mcmProvider := CloudProviderRegistration{MachineClassKind: "AWSInstanceClass"}
-	capiProvider := CloudProviderRegistration{CAPIClusterKind: "DVPCluster"}
+	mcmProvider := cloudprovider.Registration{MachineClassKind: "AWSInstanceClass"}
+	capiProvider := cloudprovider.Registration{CAPI: cloudprovider.CAPIConfig{ClusterKind: "DVPCluster"}}
 
 	cases := []struct {
 		name string
 		ng   *v1.NodeGroup
-		reg  CloudProviderRegistration
+		reg  cloudprovider.Registration
 		want string
 	}{
 		{
@@ -117,7 +118,7 @@ func TestComputeEngine(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{useMCMAnnotation: "true"}},
 				Spec:       v1.NodeGroupSpec{NodeType: v1.NodeTypeCloudEphemeral},
 			},
-			reg:  CloudProviderRegistration{MachineClassKind: "AWSInstanceClass", CAPIClusterKind: "DVPCluster"},
+			reg:  cloudprovider.Registration{MachineClassKind: "AWSInstanceClass", CAPI: cloudprovider.CAPIConfig{ClusterKind: "DVPCluster"}},
 			want: engineMCM,
 		},
 		{

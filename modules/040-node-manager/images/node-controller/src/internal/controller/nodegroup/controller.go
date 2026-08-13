@@ -37,6 +37,7 @@ import (
 	capiv1beta2 "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	mcmv1alpha1 "github.com/deckhouse/node-controller/api/machine.sapcloud.io/v1alpha1"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	cloudstatus "github.com/deckhouse/node-controller/internal/controller/nodegroup/cloud_status"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
@@ -86,15 +87,13 @@ func (r *Status) SetupWatches(w register.Watcher) {
 	w.Watches(&capiv1beta2.Machine{}, handler.EnqueueRequestsFromMapFunc(ngcommon.MachineToNodeGroup))
 	w.Watches(ngcommon.NewUnstructured(ngcommon.CAPIMachineDeploymentGVK), handler.EnqueueRequestsFromMapFunc(ngcommon.MachineDeploymentToNodeGroup))
 	w.Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(r.secretToAllNodeGroups), builder.WithPredicates(nodecommon.ChecksumSecretPredicate()))
-	w.Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(r.secretToAllNodeGroups), builder.WithPredicates(predicate.NewPredicateFuncs(func(obj client.Object) bool {
-		return obj.GetNamespace() == "kube-system" && obj.GetName() == ngcommon.CloudProviderSecretName
-	})))
+	w.Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(r.secretToAllNodeGroups), builder.WithPredicates(cloudprovider.RegistrationPredicate()))
 	// status.error and the capacity checks are computed from the InstanceClass, so a class
 	// that appears, changes or is deleted must refresh the status of the NodeGroups pointing
 	// at it instead of leaving a stale error until the resync. The source is deferred: the kind
 	// and version come from the provider registration Secret, which may appear only after this
 	// pod started.
-	w.WatchesRawSource(nodecommon.LazyInstanceClassSource(r.cache, handler.EnqueueRequestsFromMapFunc(
+	w.WatchesRawSource(cloudprovider.LazyInstanceClassSource(r.cache, handler.EnqueueRequestsFromMapFunc(
 		func(ctx context.Context, obj client.Object) []reconcile.Request {
 			return nodecommon.InstanceClassToNodeGroups(ctx, r.Client, obj)
 		})))
@@ -117,6 +116,14 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 		return ctrl.Result{}, err
 	}
 
+	// One provider read per reconcile, shared by both services below: each used to fetch the
+	// registration Secret of its own.
+	registry, err := cloudprovider.Load(ctx, r.Client)
+	if err != nil {
+		logger.Error(err, "failed to load cloud provider registrations", "nodeGroup", ng.Name)
+		return ctrl.Result{}, err
+	}
+
 	logger.V(1).Info("computing node status", "nodeGroup", ng.Name, "nodeType", ng.Spec.NodeType)
 	nodeService := nodestatus.Service{Client: r.Client}
 	nodeResult, err := nodeService.Compute(ctx, ng.Name)
@@ -126,7 +133,7 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 	}
 
 	cloudService := cloudstatus.Service{Client: r.Client}
-	cloudResult, err := cloudService.Compute(ctx, ng)
+	cloudResult, err := cloudService.Compute(ctx, ng, registry)
 	if err != nil {
 		logger.Error(err, "failed to compute cloud status", "nodeGroup", ng.Name)
 		return ctrl.Result{}, err
@@ -141,7 +148,7 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 	)
 
 	ds := derivedstatus.Service{Client: r.Client}
-	derivedResult, validationResult, err := ds.ComputeWithCloudChecks(ctx, ng)
+	derivedResult, validationResult, err := ds.ComputeWithCloudChecks(ctx, ng, registry)
 	if err != nil {
 		logger.Error(err, "failed to compute derived nodegroup status", "nodeGroup", ng.Name)
 		return ctrl.Result{}, err

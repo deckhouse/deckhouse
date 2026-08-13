@@ -23,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -53,6 +54,21 @@ func secret(ns, name string, data map[string][]byte) *corev1.Secret {
 		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: name},
 		Data:       data,
 	}
+}
+
+// providerSecret builds a registration the way a provider module publishes one: labelled, because
+// the label is how it is found at all.
+func providerSecret(name string, data map[string][]byte) *corev1.Secret {
+	s := secret(cloudprovider.SecretNamespace, name, data)
+	s.Labels = map[string]string{cloudprovider.RegistrationLabel: ""}
+	return s
+}
+
+func testRegistry(t *testing.T, s *Service) cloudprovider.Registry {
+	t.Helper()
+	registry, err := cloudprovider.Load(context.Background(), s.Client)
+	require.NoError(t, err)
+	return registry
 }
 
 func configMap(ns, name string, data map[string]string) *corev1.ConfigMap {
@@ -214,17 +230,6 @@ func TestReadEndpoints_EmptyReturnsError(t *testing.T) {
 	assert.Empty(t, got.clusterMasterEndpoints)
 }
 
-func TestReadCloudProvider(t *testing.T) {
-	s := newService(t, secret(kubeSystemNS, cloudProviderSecretName, map[string][]byte{
-		"type":             []byte(`"yandex"`),
-		"machineClassKind": []byte(`"YandexMachineClass"`),
-	}))
-	got := s.readCloudProvider(context.Background())
-	assert.Equal(t, "yandex", got["type"])
-	assert.Equal(t, "YandexMachineClass", got["machineClassKind"])
-}
-
-func TestReadCloudProvider_AbsentReturnsNil(t *testing.T) {
-	s := newService(t)
-	assert.Nil(t, s.readCloudProvider(context.Background()))
-}
+// The provider tree is no longer read here — it arrives with the registry the reconciler loads
+// once for the whole context. What this package still owns is putting it into input.yaml, which
+// TestBuild_OptionalBlocksPopulated and TestBuild_PublishesEveryProvider assert.

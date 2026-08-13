@@ -28,6 +28,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 )
 
@@ -47,11 +48,18 @@ func (r *Reconciler) Assemble(ctx context.Context) error {
 		return fmt.Errorf("list nodegroups: %w", err)
 	}
 
+	// Loaded once for the whole context, not once per NodeGroup: resolving inside the loop meant
+	// one registration read per NodeGroup on every write of the Secret.
+	registry, err := cloudprovider.Load(ctx, r.Client)
+	if err != nil {
+		return err
+	}
+
 	nodeGroups := make([]map[string]interface{}, 0, len(ngList.Items))
 	for i := range ngList.Items {
 		ng := &ngList.Items[i]
 
-		resolved, errStr, err := r.DerivedStatus.ResolveNodeGroup(ctx, ng)
+		resolved, errStr, err := r.DerivedStatus.ResolveNodeGroup(ctx, ng, registry)
 		if err != nil {
 			return fmt.Errorf("resolve NodeGroup %s: %w", ng.Name, err)
 		}
@@ -73,7 +81,7 @@ func (r *Reconciler) Assemble(ctx context.Context) error {
 
 	setNodeGroupInfo(nodeGroups)
 
-	return r.Context.WriteSecret(ctx, nodeGroups)
+	return r.Context.WriteSecret(ctx, nodeGroups, registry)
 }
 
 // readPriorNodeGroups returns the entries of the currently published context, keyed by NodeGroup

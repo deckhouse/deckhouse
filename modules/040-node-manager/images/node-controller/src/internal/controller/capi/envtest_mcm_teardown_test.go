@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	"github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/testenv"
 )
@@ -48,6 +49,16 @@ var _ = Describe("MCM MachineDeployment and MachineClass teardown", func() {
 		r.Client = k8sClient
 		r.APIReader = k8sClient
 		return r
+	}
+
+	// The cleanup path takes the registration as an argument now: Reconcile resolves it once,
+	// before the deletion branch, precisely so a NodeGroup being deleted still knows which
+	// infrastructure templates are its own.
+	suiteRegistration := func() cloudprovider.Registration {
+		registry, err := cloudprovider.Load(suiteCtx, k8sClient)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(registry.All()).NotTo(BeEmpty(), "the suite publishes one registration")
+		return registry.All()[0]
 	}
 
 	createMachineClass := func(name string, labels map[string]string) *unstructured.Unstructured {
@@ -103,7 +114,7 @@ var _ = Describe("MCM MachineDeployment and MachineClass teardown", func() {
 
 		r := newReconciler()
 
-		done, err := r.cleanupMachineDeployments(suiteCtx, ngName)
+		done, err := r.cleanupMachineDeployments(suiteCtx, ngName, suiteRegistration())
 		Expect(err).NotTo(HaveOccurred())
 		Expect(done).To(BeFalse(), "the NodeGroup must stay finalized while the MachineDeployment terminates")
 
@@ -121,7 +132,7 @@ var _ = Describe("MCM MachineDeployment and MachineClass teardown", func() {
 
 		finishTermination(md)
 
-		done, err = r.cleanupMachineDeployments(suiteCtx, ngName)
+		done, err = r.cleanupMachineDeployments(suiteCtx, ngName, suiteRegistration())
 		Expect(err).NotTo(HaveOccurred())
 		Expect(done).To(BeTrue(), "cleanup is finished once no MachineDeployment is left")
 	})

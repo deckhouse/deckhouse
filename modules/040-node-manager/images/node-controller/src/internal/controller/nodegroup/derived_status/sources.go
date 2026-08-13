@@ -36,13 +36,11 @@ import (
 	sigsyaml "sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/node-controller/internal/capacity"
-	nodecommon "github.com/deckhouse/node-controller/internal/common"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 )
 
 const (
-	cloudProviderSecretName       = ngcommon.CloudProviderSecretName
-	cloudProviderSecretNamespace  = nodecommon.CloudProviderSecretNamespace
 	clusterConfigSecretName       = "d8-cluster-configuration"
 	clusterConfigSecretNamespace  = "kube-system"
 	automaticKubernetesVersion    = "Automatic"
@@ -68,22 +66,6 @@ const (
 // other failure must reach the caller so the reconcile retries instead of publishing less.
 func isAbsent(err error) bool {
 	return apierrors.IsNotFound(err) || meta.IsNoMatchError(err) || runtime.IsNotRegisteredError(err)
-}
-
-// readCloudProviderData returns the provider registration. An absent Secret means the cluster has
-// no cloud provider and yields an empty registration; any other read failure is returned, because
-// an empty one reads as "no cloud" and would publish a NodeGroup without instanceClass — a
-// checksum shift that re-runs bashible on every node.
-func (s *Service) readCloudProviderData(ctx context.Context) (CloudProviderRegistration, error) {
-	secret := &corev1.Secret{}
-	err := s.Client.Get(ctx, types.NamespacedName{Namespace: cloudProviderSecretNamespace, Name: cloudProviderSecretName}, secret)
-	if apierrors.IsNotFound(err) {
-		return CloudProviderRegistration{}, nil
-	}
-	if err != nil {
-		return CloudProviderRegistration{}, fmt.Errorf("read cloud provider secret: %w", err)
-	}
-	return DecodeRegistration(secret.Data), nil
 }
 
 // readClusterUUID returns the cluster UUID, which seeds the update-epoch drift. An absent
@@ -199,7 +181,7 @@ func (s *Service) readControlPlaneMinVersion(ctx context.Context) (*semver.Versi
 // readDefaultZones returns the zones a NodeGroup spreads over when its spec names none. A failed
 // List is returned rather than swallowed: fewer zones is a different published element, and the
 // element is hashed into every node's configuration checksum.
-func (s *Service) readDefaultZones(ctx context.Context, reg CloudProviderRegistration) ([]string, error) {
+func (s *Service) readDefaultZones(ctx context.Context, reg cloudprovider.Registration) ([]string, error) {
 	seen := make(map[string]struct{})
 	zones := make([]string, 0)
 	add := func(z string) {

@@ -25,6 +25,7 @@ import (
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/capacity"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 )
 
 func versionString(v *semver.Version) string {
@@ -61,8 +62,8 @@ type Result struct {
 
 // ComputeWithCloudChecks derives get_crds fields and validation diagnostics from
 // the same provider snapshot, matching the old hook's single-pass behavior.
-func (s *Service) ComputeWithCloudChecks(ctx context.Context, ng *v1.NodeGroup) (Result, CloudCheckResult, error) {
-	snap, err := s.BuildSnapshot(ctx, ng)
+func (s *Service) ComputeWithCloudChecks(ctx context.Context, ng *v1.NodeGroup, registry cloudprovider.Registry) (Result, CloudCheckResult, error) {
+	snap, err := s.BuildSnapshot(ctx, ng, registry)
 	if err != nil {
 		return Result{}, CloudCheckResult{}, err
 	}

@@ -29,6 +29,7 @@ import (
 	sigsyaml "sigs.k8s.io/yaml"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 )
 
 const (
@@ -43,8 +44,8 @@ const (
 // plus the validation error the checks produced. The two travel separately on purpose: the error
 // is a statement about the NodeGroup, not about this pass, so a caller retries on the returned
 // error but not on a non-empty validation string.
-func (s *Service) ResolveNodeGroup(ctx context.Context, ng *v1.NodeGroup) (ResolvedNodeGroup, string, error) {
-	snap, err := s.BuildSnapshot(ctx, ng)
+func (s *Service) ResolveNodeGroup(ctx context.Context, ng *v1.NodeGroup, registry cloudprovider.Registry) (ResolvedNodeGroup, string, error) {
+	snap, err := s.BuildSnapshot(ctx, ng, registry)
 	if err != nil {
 		return ResolvedNodeGroup{}, "", err
 	}
@@ -55,12 +56,13 @@ func (s *Service) ResolveNodeGroup(ctx context.Context, ng *v1.NodeGroup) (Resol
 	check := Validate(ng, snap)
 
 	in := ResolveInput{
-		Name:            ng.Name,
-		ManualRolloutID: ng.GetAnnotations()[manualRolloutIDAnnotation],
-		NodeType:        ng.Spec.NodeType,
-		Spec:            ng.Spec,
-		Static:          snap.StaticConfig,
-		CloudProcessed:  check.Processed,
+		Name:              ng.Name,
+		ManualRolloutID:   ng.GetAnnotations()[manualRolloutIDAnnotation],
+		NodeType:          ng.Spec.NodeType,
+		Spec:              ng.Spec,
+		Static:            snap.StaticConfig,
+		CloudProcessed:    check.Processed,
+		CloudProviderType: snap.Provider.Type,
 	}
 
 	return ResolveNodeGroup(in, result), check.Error, nil

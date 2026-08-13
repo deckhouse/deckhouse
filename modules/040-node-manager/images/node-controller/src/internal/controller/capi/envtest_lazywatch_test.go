@@ -31,7 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/deckhouse/node-controller/internal/common"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	"github.com/deckhouse/node-controller/internal/testenv"
 )
 
@@ -44,19 +44,20 @@ var _ = Describe("InstanceClass registration enumeration and lazy watches", func
 
 	newRegistrationSecret := func(name, kind, version string) *corev1.Secret {
 		secret := &corev1.Secret{}
-		secret.Namespace = cloudProviderSecretNamespace
+		secret.Namespace = cloudprovider.SecretNamespace
 		secret.Name = name
-		secret.Labels = map[string]string{common.CloudProviderRegistrationLabel: ""}
+		secret.Labels = map[string]string{cloudprovider.RegistrationLabel: ""}
 		secret.Data = map[string][]byte{
-			common.InstanceClassKindKey:       []byte(kind),
-			common.InstanceClassAPIVersionKey: []byte(version),
+			cloudprovider.InstanceClassKindKey:       []byte(kind),
+			cloudprovider.InstanceClassAPIVersionKey: []byte(version),
 		}
 		return secret
 	}
 
 	It("enumerates the suite's registration through the label", func() {
-		gvks, err := common.RegisteredInstanceClassGVKs(suiteCtx, k8sClient)
+		registry, err := cloudprovider.Load(suiteCtx, k8sClient)
 		Expect(err).NotTo(HaveOccurred())
+		gvks := registry.InstanceClassGVKs()
 		Expect(gvks).To(Equal([]schema.GroupVersionKind{dvpAlpha}))
 	})
 
@@ -65,8 +66,9 @@ var _ = Describe("InstanceClass registration enumeration and lazy watches", func
 		Expect(k8sClient.Create(suiteCtx, double)).To(Succeed())
 		DeferCleanup(func() { _ = k8sClient.Delete(suiteCtx, double) })
 
-		gvks, err := common.RegisteredInstanceClassGVKs(suiteCtx, k8sClient)
+		registry, err := cloudprovider.Load(suiteCtx, k8sClient)
 		Expect(err).NotTo(HaveOccurred())
+		gvks := registry.InstanceClassGVKs()
 		Expect(gvks).To(Equal([]schema.GroupVersionKind{dvpAlpha}))
 	})
 
@@ -75,8 +77,9 @@ var _ = Describe("InstanceClass registration enumeration and lazy watches", func
 		Expect(k8sClient.Create(suiteCtx, unversioned)).To(Succeed())
 		DeferCleanup(func() { _ = k8sClient.Delete(suiteCtx, unversioned) })
 
-		gvks, err := common.RegisteredInstanceClassGVKs(suiteCtx, k8sClient)
+		registry, err := cloudprovider.Load(suiteCtx, k8sClient)
 		Expect(err).NotTo(HaveOccurred())
+		gvks := registry.InstanceClassGVKs()
 		Expect(gvks).To(Equal([]schema.GroupVersionKind{dvpAlpha}),
 			"a kind without a version must contribute nothing — guessing a version is what this mechanism prevents")
 	})
@@ -100,7 +103,7 @@ var _ = Describe("InstanceClass registration enumeration and lazy watches", func
 				Name: obj.GetObjectKind().GroupVersionKind().Version + "-" + obj.GetName(),
 			}}}
 		})
-		Expect(common.LazyInstanceClassSource(sourceCache, versionedName).Start(ctx, queue)).To(Succeed())
+		Expect(cloudprovider.LazyInstanceClassSource(sourceCache, versionedName).Start(ctx, queue)).To(Succeed())
 
 		drainUntil := func(want string) {
 			GinkgoHelper()

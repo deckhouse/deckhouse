@@ -39,12 +39,13 @@ var specPassthroughKeys = []string{
 }
 
 type ResolveInput struct {
-	Name            string
-	ManualRolloutID string
-	NodeType        v1.NodeType
-	Spec            v1.NodeGroupSpec
-	Static          map[string]interface{}
-	CloudProcessed  bool
+	Name              string
+	ManualRolloutID   string
+	NodeType          v1.NodeType
+	Spec              v1.NodeGroupSpec
+	Static            map[string]interface{}
+	CloudProcessed    bool
+	CloudProviderType string
 }
 
 // ResolvedNodeGroup is the NodeGroup with everything node-controller resolves on top of its
@@ -71,6 +72,12 @@ type ResolvedNodeGroup struct {
 	// Static is the static cluster configuration, carried by Static NodeGroups only.
 	Static map[string]interface{}
 
+	// CloudProviderType names the provider this NodeGroup resolved to, empty for a group outside
+	// any cloud. It is deliberately outside the CloudProcessed gate below: bashible picks the
+	// provider's step directory by it, and CloudPermanent never passes the cloud checks — gating it
+	// would strip the provider steps from the master NodeGroup.
+	CloudProviderType string
+
 	// CloudProcessed reports that the cloud checks passed. It gates the whole cloud overlay,
 	// including instanceClass, which is published even when it resolved to nil.
 	CloudProcessed bool
@@ -93,6 +100,7 @@ func ResolveNodeGroup(in ResolveInput, r Result) ResolvedNodeGroup {
 		SerializedTaints:  r.SerializedTaints,
 		UpdateEpoch:       r.UpdateEpoch,
 		Spec:              specPassthrough(in.Spec),
+		CloudProviderType: in.CloudProviderType,
 		CloudProcessed:    in.CloudProcessed,
 	}
 
@@ -126,6 +134,12 @@ func (r ResolvedNodeGroup) ToMap() map[string]interface{} {
 
 	if len(r.Static) > 0 {
 		out["static"] = r.Static
+	}
+
+	// Emitted only when the group has a provider: an always-present key would add "" to the
+	// element of every Static NodeGroup and shift its configuration checksum for nothing.
+	if r.CloudProviderType != "" {
+		out["cloudProviderType"] = r.CloudProviderType
 	}
 
 	if r.CloudProcessed {

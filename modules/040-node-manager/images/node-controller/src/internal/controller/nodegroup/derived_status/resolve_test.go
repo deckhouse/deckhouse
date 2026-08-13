@@ -30,7 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
-	nodecommon "github.com/deckhouse/node-controller/internal/common"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 )
 
@@ -56,6 +56,21 @@ func testSecret(ns, name string, data map[string][]byte) *corev1.Secret {
 	}
 }
 
+// providerSecret builds a registration the way a provider module publishes one: labelled, because
+// the label is how it is found at all.
+func providerSecret(data map[string][]byte) *corev1.Secret {
+	secret := testSecret(cloudprovider.SecretNamespace, cloudprovider.LegacySecretName, data)
+	secret.Labels = map[string]string{cloudprovider.RegistrationLabel: ""}
+	return secret
+}
+
+func testRegistry(t *testing.T, s *Service) cloudprovider.Registry {
+	t.Helper()
+	registry, err := cloudprovider.Load(context.Background(), s.Client)
+	require.NoError(t, err)
+	return registry
+}
+
 func TestDecodeRegistration_APIVersionIsNeverGuessed(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -64,12 +79,12 @@ func TestDecodeRegistration_APIVersionIsNeverGuessed(t *testing.T) {
 	}{
 		{
 			name:       "published version is used verbatim",
-			data:       map[string][]byte{nodecommon.InstanceClassAPIVersionKey: []byte("v1")},
+			data:       map[string][]byte{cloudprovider.InstanceClassAPIVersionKey: []byte("v1")},
 			expVersion: "v1",
 		},
 		{
 			name:       "a provider serving only v1alpha1 is honoured",
-			data:       map[string][]byte{nodecommon.InstanceClassAPIVersionKey: []byte("v1alpha1")},
+			data:       map[string][]byte{cloudprovider.InstanceClassAPIVersionKey: []byte("v1alpha1")},
 			expVersion: "v1alpha1",
 		},
 		{
@@ -85,7 +100,7 @@ func TestDecodeRegistration_APIVersionIsNeverGuessed(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.expVersion, DecodeRegistration(tc.data).InstanceClassAPIVersion)
+			assert.Equal(t, tc.expVersion, cloudprovider.Decode(tc.data).InstanceClassAPIVersion)
 		})
 	}
 }
@@ -106,7 +121,7 @@ func TestRunCloudChecks_UnpublishedAPIVersionIsAValidationError(t *testing.T) {
 	}
 
 	check := Validate(ng, Snapshot{
-		Provider: CloudProviderRegistration{InstanceClassKind: "YandexInstanceClass"},
+		Provider: cloudprovider.Registration{InstanceClassKind: "YandexInstanceClass"},
 	})
 
 	assert.Contains(t, check.Error, "has not published instanceClassAPIVersion")
@@ -138,7 +153,7 @@ func TestReadDefaultZonesIncludesExistingMCMMachineDeploymentZones(t *testing.T)
 	md.SetAnnotations(map[string]string{"zone": "zone-a"})
 
 	s := newTestService(t, md)
-	got, err := s.readDefaultZones(context.Background(), CloudProviderRegistration{Zones: []string{"zone-b", "zone-a"}})
+	got, err := s.readDefaultZones(context.Background(), cloudprovider.Registration{Zones: []string{"zone-b", "zone-a"}})
 	require.NoError(t, err)
 
 	assert.Equal(t, []string{"zone-a", "zone-b"}, got)
@@ -156,7 +171,7 @@ func TestResolveNodeGroup_StaticWiresNameRolloutAndStatic(t *testing.T) {
 		Spec: v1.NodeGroupSpec{NodeType: v1.NodeTypeStatic},
 	}
 
-	resolved, errStr, err := s.ResolveNodeGroup(context.Background(), ng)
+	resolved, errStr, err := s.ResolveNodeGroup(context.Background(), ng, testRegistry(t, s))
 	require.NoError(t, err)
 	assert.Empty(t, errStr)
 	assert.Equal(t, "static1", resolved.Name)
@@ -169,7 +184,8 @@ func TestResolveNodeGroup_StaticWiresNameRolloutAndStatic(t *testing.T) {
 }
 
 func TestResolveNodeGroup_CloudKindMismatchErrors(t *testing.T) {
-	s := newTestService(t, testSecret(cloudProviderSecretNamespace, cloudProviderSecretName, map[string][]byte{
+	s := newTestService(t, providerSecret(map[string][]byte{
+		"type":                    []byte(`yandex`),
 		"instanceClassKind":       []byte(`"YandexInstanceClass"`),
 		"instanceClassAPIVersion": []byte("v1alpha1"),
 	}))
@@ -183,7 +199,7 @@ func TestResolveNodeGroup_CloudKindMismatchErrors(t *testing.T) {
 		},
 	}
 
-	resolved, errStr, err := s.ResolveNodeGroup(context.Background(), ng)
+	resolved, errStr, err := s.ResolveNodeGroup(context.Background(), ng, testRegistry(t, s))
 	require.NoError(t, err)
 	assert.Contains(t, errStr, "Invalid classReference.kind 'AWSInstanceClass'. Expected 'YandexInstanceClass'.")
 	assert.NotContains(t, resolved.ToMap(), "instanceClass", "failed check must drop cloud overlays")

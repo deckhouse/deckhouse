@@ -36,6 +36,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 )
@@ -131,7 +132,7 @@ func newGoldenReconciler(t *testing.T) *Reconciler {
 		secret(kubeSystemNS, "d8-static-cluster-configuration", map[string][]byte{
 			"static-cluster-configuration.yaml": []byte("internalNetworkCIDRs:\n- 172.18.200.0/24\n"),
 		}),
-		secret(kubeSystemNS, cloudProviderSecretName, map[string][]byte{
+		providerSecret(cloudprovider.LegacySecretName, map[string][]byte{
 			"type":                    []byte(`"yandex"`),
 			"instanceClassKind":       []byte(`"` + instanceClassKind + `"`),
 			"instanceClassAPIVersion": []byte("v1alpha1"),

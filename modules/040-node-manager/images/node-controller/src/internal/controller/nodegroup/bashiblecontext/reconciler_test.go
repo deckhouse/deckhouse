@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 )
 
@@ -118,7 +119,8 @@ func TestAssemble_PreservesPriorOnValidationFailure(t *testing.T) {
 				},
 			},
 		},
-		secret(kubeSystemNS, cloudProviderSecretName, map[string][]byte{
+		providerSecret(cloudprovider.LegacySecretName, map[string][]byte{
+			"type":                    []byte(`"yandex"`),
 			"instanceClassKind":       []byte(`"YandexInstanceClass"`),
 			"instanceClassAPIVersion": []byte("v1alpha1"),
 		}),
@@ -147,7 +149,8 @@ func TestAssemble_OmitsFailingNodeGroupWithoutPrior(t *testing.T) {
 				},
 			},
 		},
-		secret(kubeSystemNS, cloudProviderSecretName, map[string][]byte{
+		providerSecret(cloudprovider.LegacySecretName, map[string][]byte{
+			"type":                    []byte(`"yandex"`),
 			"instanceClassKind":       []byte(`"YandexInstanceClass"`),
 			"instanceClassAPIVersion": []byte("v1alpha1"),
 		}),

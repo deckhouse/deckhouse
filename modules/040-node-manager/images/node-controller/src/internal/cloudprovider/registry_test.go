@@ -1,0 +1,254 @@
+/*
+Copyright 2026 Flant JSC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package cloudprovider
+
+import (
+	"context"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
+
+	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+)
+
+func testScheme(t *testing.T) *runtime.Scheme {
+	t.Helper()
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+	return scheme
+}
+
+func registrationSecret(name string, data map[string][]byte) *corev1.Secret {
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: SecretNamespace,
+			Name:      name,
+			Labels:    map[string]string{RegistrationLabel: ""},
+		},
+		Data: data,
+	}
+}
+
+func clusterConfigurationSecret(provider string) *corev1.Secret {
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Namespace: SecretNamespace, Name: clusterConfigSecretName},
+		Data: map[string][]byte{
+			clusterConfigSecretKey: []byte("cloud:\n  provider: " + provider + "\n  prefix: test\n"),
+		},
+	}
+}
+
+func loadFrom(t *testing.T, objs ...client.Object) Registry {
+	t.Helper()
+	c := fake.NewClientBuilder().WithScheme(testScheme(t)).WithObjects(objs...).Build()
+	registry, err := Load(context.Background(), c)
+	require.NoError(t, err)
+	return registry
+}
+
+func cloudEphemeral(name, kind string) *v1.NodeGroup {
+	return &v1.NodeGroup{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Spec: v1.NodeGroupSpec{
+			NodeType: v1.NodeTypeCloudEphemeral,
+			CloudInstances: &v1.CloudInstancesSpec{
+				ClassReference: v1.ClassReference{Kind: kind, Name: name},
+			},
+		},
+	}
+}
+
+func nodeGroupOfType(name string, nodeType v1.NodeType) *v1.NodeGroup {
+	return &v1.NodeGroup{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Spec:       v1.NodeGroupSpec{NodeType: nodeType},
+	}
+}
+
+// Every provider module renders its registration twice — under the legacy fixed name and under a
+// per-provider one. Both carry the label, so a registry that did not deduplicate would report one
+// provider as two and make every "exactly one provider" check fail on a perfectly normal cluster.
+func TestLoad_DeduplicatesTheLegacyAndPerProviderCopies(t *testing.T) {
+	data := map[string][]byte{
+		"type":                    []byte("yandex"),
+		"instanceClassKind":       []byte("YandexInstanceClass"),
+		"instanceClassAPIVersion": []byte("v1"),
+	}
+
+	registry := loadFrom(t,
+		registrationSecret(LegacySecretName, data),
+		registrationSecret(LegacySecretName+"-yandex", data),
+	)
+
+	require.Len(t, registry.All(), 1)
+	assert.Equal(t, "yandex", registry.All()[0].Type)
+}
+
+// Selection is by label, not by name: the per-provider Secret of a second provider is the whole
+// point of this package, and a Secret that carries no registration label is not one.
+func TestLoad_SelectsByLabelAndSeesEveryProvider(t *testing.T) {
+	unlabelled := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Namespace: SecretNamespace, Name: "some-other-secret"},
+		Data:       map[string][]byte{"type": []byte("notaprovider")},
+	}
+
+	registry := loadFrom(t,
+		registrationSecret(LegacySecretName+"-aws", map[string][]byte{"type": []byte("aws")}),
+		registrationSecret(LegacySecretName+"-yandex", map[string][]byte{"type": []byte("yandex")}),
+		unlabelled,
+	)
+
+	require.Len(t, registry.All(), 2)
+	assert.Equal(t, "aws", registry.All()[0].Type)
+	assert.Equal(t, "yandex", registry.All()[1].Type)
+}
+
+// An unreadable registration must not read as "no cloud provider": an empty registration publishes
+// NodeGroups without instanceClass, which shifts the configuration checksum of every node. This is
+// why Load returns the error rather than an empty registry — the callers abort the reconcile.
+func TestLoad_ForbiddenListIsAnError(t *testing.T) {
+	c := fake.NewClientBuilder().
+		WithScheme(testScheme(t)).
+		WithInterceptorFuncs(interceptor.Funcs{
+			List: func(context.Context, client.WithWatch, client.ObjectList, ...client.ListOption) error {
+				return apierrors.NewForbidden(schema.GroupResource{Resource: "secrets"}, "", context.Canceled)
+			},
+		}).
+		Build()
+
+	_, err := Load(context.Background(), c)
+
+	require.ErrorContains(t, err, "list cloud provider registration secrets")
+}
+
+// A cluster with no cloud provider at all is a legitimate state, not a failure.
+func TestLoad_NoRegistrationsIsEmptyNotAnError(t *testing.T) {
+	registry := loadFrom(t)
+
+	assert.True(t, registry.Empty())
+	assert.Empty(t, registry.All())
+}
+
+func TestForNodeGroup(t *testing.T) {
+	aws := registrationSecret(LegacySecretName+"-aws", map[string][]byte{
+		"type":              []byte("aws"),
+		"instanceClassKind": []byte("AWSInstanceClass"),
+	})
+	yandex := registrationSecret(LegacySecretName+"-yandex", map[string][]byte{
+		"type":              []byte("yandex"),
+		"instanceClassKind": []byte("YandexInstanceClass"),
+	})
+	registry := loadFrom(t, aws, yandex, clusterConfigurationSecret("Yandex"))
+
+	tests := []struct {
+		name     string
+		ng       *v1.NodeGroup
+		expType  string
+		expFound bool
+	}{
+		{
+			name:     "CloudEphemeral resolves through the InstanceClass kind it references",
+			ng:       cloudEphemeral("worker-aws", "AWSInstanceClass"),
+			expType:  "aws",
+			expFound: true,
+		},
+		{
+			name:     "a second provider in the same cluster resolves to itself",
+			ng:       cloudEphemeral("worker-yandex", "YandexInstanceClass"),
+			expType:  "yandex",
+			expFound: true,
+		},
+		{
+			// The registration is what decides which kinds exist; an unknown one is a verdict about
+			// the NodeGroup, which derived_status.Validate reports.
+			name: "CloudEphemeral referencing a kind nobody registered resolves to nothing",
+			ng:   cloudEphemeral("worker", "VsphereInstanceClass"),
+		},
+		{
+			// CloudPermanent nodes are created by the installer and reference no InstanceClass, so
+			// the cluster configuration is the only thing left to name their provider.
+			name:     "CloudPermanent falls back to the cluster provider",
+			ng:       nodeGroupOfType("master", v1.NodeTypeCloudPermanent),
+			expType:  "yandex",
+			expFound: true,
+		},
+		{
+			// Handing these a provider is what used to apply cloud bashible steps to nodes that
+			// are not in any cloud.
+			name: "Static has no provider",
+			ng:   nodeGroupOfType("static", v1.NodeTypeStatic),
+		},
+		{
+			name: "CloudStatic has no provider",
+			ng:   nodeGroupOfType("cloudstatic", v1.NodeTypeCloudStatic),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, ok := registry.ForNodeGroup(tc.ng)
+
+			assert.Equal(t, tc.expFound, ok)
+			assert.Equal(t, tc.expType, got.Type)
+		})
+	}
+}
+
+// ClusterConfiguration spells providers OpenStack and vSphere; registrations spell them lower case.
+func TestForNodeGroup_ClusterProviderMatchesCaseInsensitively(t *testing.T) {
+	registry := loadFrom(t,
+		registrationSecret(LegacySecretName, map[string][]byte{"type": []byte("openstack")}),
+		clusterConfigurationSecret("OpenStack"),
+	)
+
+	got, ok := registry.ForNodeGroup(nodeGroupOfType("master", v1.NodeTypeCloudPermanent))
+
+	require.True(t, ok)
+	assert.Equal(t, "openstack", got.Type)
+}
+
+// A registration that names a kind but no version contributes no GVK: guessing a version renames
+// the immutable MachineTemplate the instance-class checksum points at.
+func TestInstanceClassGVKs_SkipsRegistrationsWithoutAVersion(t *testing.T) {
+	registry := loadFrom(t,
+		registrationSecret(LegacySecretName+"-aws", map[string][]byte{
+			"type":                    []byte("aws"),
+			"instanceClassKind":       []byte("AWSInstanceClass"),
+			"instanceClassAPIVersion": []byte("v1"),
+		}),
+		registrationSecret(LegacySecretName+"-yandex", map[string][]byte{
+			"type":              []byte("yandex"),
+			"instanceClassKind": []byte("YandexInstanceClass"),
+		}),
+	)
+
+	gvks := registry.InstanceClassGVKs()
+
+	require.Len(t, gvks, 1)
+	assert.Equal(t, schema.GroupVersionKind{
+		Group: v1.GroupVersion.Group, Version: "v1", Kind: "AWSInstanceClass",
+	}, gvks[0])
+}

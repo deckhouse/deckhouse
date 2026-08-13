@@ -31,6 +31,7 @@ import (
 
 	capiv1beta2 "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	"github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/machinetemplate"
 	"github.com/deckhouse/node-controller/internal/testenv"
@@ -264,7 +265,7 @@ rolloutFields:
 		setProviderConfig := func(config map[string]any) {
 			secret := &corev1.Secret{}
 			Expect(k8sClient.Get(suiteCtx, types.NamespacedName{
-				Namespace: cloudProviderSecretNamespace, Name: cloudProviderSecretName,
+				Namespace: cloudprovider.SecretNamespace, Name: cloudprovider.LegacySecretName,
 			}, secret)).To(Succeed())
 			raw, err := json.Marshal(config)
 			Expect(err).NotTo(HaveOccurred())
@@ -275,7 +276,7 @@ rolloutFields:
 		clearProviderConfig := func() {
 			secret := &corev1.Secret{}
 			Expect(k8sClient.Get(suiteCtx, types.NamespacedName{
-				Namespace: cloudProviderSecretNamespace, Name: cloudProviderSecretName,
+				Namespace: cloudprovider.SecretNamespace, Name: cloudprovider.LegacySecretName,
 			}, secret)).To(Succeed())
 			delete(secret.Data, "dvp")
 			Expect(k8sClient.Update(suiteCtx, secret)).To(Succeed())

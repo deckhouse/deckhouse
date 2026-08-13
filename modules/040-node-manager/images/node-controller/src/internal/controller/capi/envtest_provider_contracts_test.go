@@ -34,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	"github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/machinetemplate"
 	"github.com/deckhouse/node-controller/internal/testenv"
@@ -234,7 +235,7 @@ var _ = Describe("shipped provider contracts", Ordered, func() {
 
 		discovery := &corev1.Secret{}
 		Expect(k8sClient.Get(suiteCtx, types.NamespacedName{
-			Namespace: cloudProviderSecretNamespace, Name: cloudProviderSecretName,
+			Namespace: cloudprovider.SecretNamespace, Name: cloudprovider.LegacySecretName,
 		}, discovery)).To(Succeed())
 		discovery.Data["type"] = jsonBytes(p.name)
 		discovery.Data["instanceClassKind"] = []byte(p.instanceClassKind)
@@ -283,7 +284,7 @@ var _ = Describe("shipped provider contracts", Ordered, func() {
 	restoreSuiteProvider := func(p providerContract) {
 		discovery := &corev1.Secret{}
 		Expect(k8sClient.Get(suiteCtx, types.NamespacedName{
-			Namespace: cloudProviderSecretNamespace, Name: cloudProviderSecretName,
+			Namespace: cloudprovider.SecretNamespace, Name: cloudprovider.LegacySecretName,
 		}, discovery)).To(Succeed())
 		discovery.Data["type"] = jsonBytes("dvp")
 		discovery.Data["instanceClassKind"] = []byte("DVPInstanceClass")

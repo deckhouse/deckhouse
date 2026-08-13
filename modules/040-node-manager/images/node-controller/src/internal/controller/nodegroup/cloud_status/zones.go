@@ -17,41 +17,24 @@ limitations under the License.
 package cloud_status
 
 import (
-	"context"
-	"encoding/json"
-	"fmt"
-
-	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
-
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
-	"github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 )
 
-// getZonesCount returns how many zones the NodeGroup spreads over.
+// zonesCount returns how many zones the NodeGroup spreads over: its own zones if it names any,
+// otherwise the ones its provider published.
 //
-// An unreadable Secret is returned as an error: zero zones makes Min and Max zero, and a Min of
-// zero reports the NodeGroup Ready no matter how many nodes are actually up. A Secret that is
-// absent, or that carries no zones key, still yields zero — those describe a cluster with no cloud
-// zones rather than a source we failed to reach.
-func (s *Service) getZonesCount(ctx context.Context, ng *v1.NodeGroup) (int32, error) {
+// Zero is a legitimate answer for a NodeGroup outside any cloud. It is not a legitimate answer for
+// an unreadable registration, which is why the registry is loaded by the caller and any read
+// failure has already aborted the reconcile: zero zones makes Min and Max zero, and a Min of zero
+// reports the NodeGroup Ready no matter how many nodes are actually up.
+func zonesCount(ng *v1.NodeGroup, registry cloudprovider.Registry) int32 {
 	if ng.Spec.CloudInstances != nil && len(ng.Spec.CloudInstances.Zones) > 0 {
-		return int32(len(ng.Spec.CloudInstances.Zones)), nil
+		return int32(len(ng.Spec.CloudInstances.Zones))
 	}
-
-	secret := &corev1.Secret{}
-	err := s.Client.Get(ctx, types.NamespacedName{Namespace: "kube-system", Name: common.CloudProviderSecretName}, secret)
-	if apierrors.IsNotFound(err) {
-		return 0, nil
+	provider, ok := registry.ForNodeGroup(ng)
+	if !ok {
+		return 0
 	}
-	if err != nil {
-		return 0, fmt.Errorf("read cloud provider secret: %w", err)
-	}
-
-	var zones []string
-	if err := json.Unmarshal(secret.Data["zones"], &zones); err != nil {
-		return 0, nil
-	}
-	return int32(len(zones)), nil
+	return int32(len(provider.Zones))
 }

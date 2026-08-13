@@ -18,9 +18,10 @@ package derived_status
 
 import (
 	"fmt"
+	"strings"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
-	nodecommon "github.com/deckhouse/node-controller/internal/common"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 )
 
 // Validate runs the four cloud checks over the snapshot. It performs no I/O.
@@ -30,8 +31,26 @@ import (
 // as one — the status controller publishes it, the bashible context falls back to its last good
 // entry, and the MachineDeployment reconciler skips rendering.
 func Validate(ng *v1.NodeGroup, snap Snapshot) CloudCheckResult {
-	if ng.Spec.NodeType != v1.NodeTypeCloudEphemeral || snap.Provider.InstanceClassKind == "" {
+	if ng.Spec.NodeType != v1.NodeTypeCloudEphemeral {
 		return CloudCheckResult{Processed: false}
+	}
+
+	// The NodeGroup resolved to no provider while the cluster has registrations: its
+	// classReference names a kind nobody registered. That is check #1 in the world where the kind
+	// selects the provider — the check itself can no longer run, because there is no provider to
+	// compare against. With no registrations at all this stays silent: the provider module may
+	// still be starting, and its Secret is watched.
+	if snap.Provider.InstanceClassKind == "" {
+		if len(snap.RegisteredClassKinds) == 0 {
+			return CloudCheckResult{Processed: false}
+		}
+		refKind := ""
+		if ng.Spec.CloudInstances != nil {
+			refKind = ng.Spec.CloudInstances.ClassReference.Kind
+		}
+		return CloudCheckResult{Error: fmt.Sprintf(
+			"Invalid classReference.kind '%s'. Expected '%s'. Please update the NodeGroup to use the correct instance class kind.",
+			refKind, strings.Join(snap.RegisteredClassKinds, "', '"))}
 	}
 
 	// The provider names a kind but no version to read it at. Reporting it as a validation
@@ -40,7 +59,7 @@ func Validate(ng *v1.NodeGroup, snap Snapshot) CloudCheckResult {
 	if snap.Provider.InstanceClassAPIVersion == "" {
 		return CloudCheckResult{Error: fmt.Sprintf(
 			"Cloud provider has not published %s yet. The %s cannot be read until it does.",
-			nodecommon.InstanceClassAPIVersionKey, snap.Provider.InstanceClassKind)}
+			cloudprovider.InstanceClassAPIVersionKey, snap.Provider.InstanceClassKind)}
 	}
 
 	in := CloudCheckInput{

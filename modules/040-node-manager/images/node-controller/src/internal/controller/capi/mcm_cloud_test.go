@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 )
 
@@ -55,7 +56,7 @@ func TestDecodeCloudProviderSecret(t *testing.T) {
 		"aws":              []byte(`{"keyName":"kn","instances":{"ami":"ami-1"}}`),
 		"plainString":      []byte(`not-json`),
 	}
-	tree := decodeCloudProviderSecret(data)
+	tree := cloudprovider.Decode(data).Data
 	assert.Equal(t, "aws", tree["type"])
 	assert.Equal(t, "eu-west-1", tree["region"])
 	assert.Equal(t, "AWSMachineClass", tree["machineClassKind"])
@@ -69,5 +70,5 @@ func TestDecodeCloudProviderSecret(t *testing.T) {
 func TestReconcileCloudMCMs_NoCloudInstances(t *testing.T) {
 	r := &MachineDeploymentReconciler{}
 	ng := &deckhousev1.NodeGroup{}
-	assert.NoError(t, r.reconcileCloudMCMs(context.Background(), ng))
+	assert.NoError(t, r.reconcileCloudMCMs(context.Background(), ng, cloudprovider.Registry{}, cloudprovider.Registration{}))
 }

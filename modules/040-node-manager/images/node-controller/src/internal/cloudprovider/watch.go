@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package common
+package cloudprovider
 
 import (
 	"context"
@@ -23,6 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	toolscache "k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -33,6 +34,45 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
+
+// IsRegistration reports whether an object is a cloud provider registration Secret. Matching on
+// the label rather than on the legacy fixed name is what lets a second provider's Secret trigger
+// a reconcile at all.
+func IsRegistration(obj client.Object) bool {
+	if obj.GetNamespace() != SecretNamespace {
+		return false
+	}
+	_, ok := obj.GetLabels()[RegistrationLabel]
+	return ok
+}
+
+// RegistrationPredicate filters a watch down to the registration Secrets.
+func RegistrationPredicate() predicate.Predicate {
+	return predicate.NewPredicateFuncs(IsRegistration)
+}
+
+// RegistrationRequests returns one request per registration Secret, for controllers keyed by the
+// Secret itself rather than by NodeGroup. A failed List yields no requests: the caller is an event
+// mapper, which has nowhere to return an error to, and the controller's resync covers the miss.
+func RegistrationRequests(ctx context.Context, r client.Reader) []reconcile.Request {
+	secrets := &corev1.SecretList{}
+	if err := r.List(ctx, secrets,
+		client.InNamespace(SecretNamespace),
+		client.HasLabels{RegistrationLabel},
+	); err != nil {
+		log.FromContext(ctx).Error(err, "list cloud provider registration secrets for enqueue")
+		return nil
+	}
+
+	reqs := make([]reconcile.Request, 0, len(secrets.Items))
+	for i := range secrets.Items {
+		reqs = append(reqs, reconcile.Request{NamespacedName: types.NamespacedName{
+			Name:      secrets.Items[i].Name,
+			Namespace: secrets.Items[i].Namespace,
+		}})
+	}
+	return reqs
+}
 
 // LazyInstanceClassSource watches every InstanceClass kind the cloud providers register — the
 // ones registered right now and the ones registered at any later point in the pod's life.
@@ -80,8 +120,7 @@ func LazyInstanceClassSource(informers cache.Cache, eventHandler handler.EventHa
 				if !ok {
 					return false
 				}
-				_, registered := secret.Labels[CloudProviderRegistrationLabel]
-				return registered
+				return IsRegistration(secret)
 			},
 			Handler: toolscache.ResourceEventHandlerFuncs{
 				AddFunc:    func(any) { notify() },
@@ -102,12 +141,12 @@ func LazyInstanceClassSource(informers cache.Cache, eventHandler handler.EventHa
 				case <-poke:
 				}
 
-				gvks, err := RegisteredInstanceClassGVKs(ctx, informers)
+				registrations, err := loadRegistrations(ctx, informers)
 				if err != nil {
 					logger.V(1).Info("list instance class registrations", "error", err.Error())
 					continue
 				}
-				for _, gvk := range gvks {
+				for _, gvk := range (Registry{registrations: registrations}).InstanceClassGVKs() {
 					if started[gvk] {
 						continue
 					}

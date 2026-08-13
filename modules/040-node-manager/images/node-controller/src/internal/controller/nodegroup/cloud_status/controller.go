@@ -23,6 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 )
 
@@ -40,19 +41,16 @@ type Result struct {
 	LatestError string
 }
 
-func (s *Service) Compute(ctx context.Context, ng *v1.NodeGroup) (Result, error) {
+func (s *Service) Compute(ctx context.Context, ng *v1.NodeGroup, registry cloudprovider.Registry) (Result, error) {
 	result := Result{}
 	if ng.Spec.NodeType != v1.NodeTypeCloudEphemeral {
 		return result, nil
 	}
 
-	zonesCount, err := s.getZonesCount(ctx, ng)
-	if err != nil {
-		return result, err
-	}
+	zones := zonesCount(ng, registry)
 	if ng.Spec.CloudInstances != nil {
-		result.Min = ng.Spec.CloudInstances.MinPerZone * zonesCount
-		result.Max = ng.Spec.CloudInstances.MaxPerZone * zonesCount
+		result.Min = ng.Spec.CloudInstances.MinPerZone * zones
+		result.Max = ng.Spec.CloudInstances.MaxPerZone * zones
 	}
 
 	mdInfo := s.getMachineDeploymentInfo(ctx, ng.Name)

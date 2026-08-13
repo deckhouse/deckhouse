@@ -26,13 +26,14 @@ import (
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/capacity"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 )
 
 // Snapshot is everything this package reads. It is built once per pass, so the derive and the
 // validate halves cannot disagree about the world, and so no source is read twice — the two halves
 // used to read the zones, the InstanceClass and the type catalog once each.
 type Snapshot struct {
-	Provider      CloudProviderRegistration
+	Provider      cloudprovider.Registration
 	ClusterUUID   string
 	TargetVersion *semver.Version
 	DefaultCRI    string
@@ -51,21 +52,27 @@ type Snapshot struct {
 
 	// StaticConfig is carried by Static NodeGroups only.
 	StaticConfig map[string]interface{}
+
+	// RegisteredClassKinds is every InstanceClass kind the cluster accepts. It tells the two ways
+	// Provider can be empty apart: no provider registered yet (transient, the registration Secret
+	// is watched) versus a NodeGroup referencing a kind nobody registered (a verdict about the
+	// NodeGroup, which Validate reports).
+	RegisteredClassKinds []string
 }
 
 // BuildSnapshot is the only place in this package that talks to the API. Everything downstream is
 // a pure function over the result.
 //
+// The provider registry arrives already loaded: resolving it is one read per reconcile, shared by
+// every NodeGroup of the pass, and picking this NodeGroup's provider out of it is pure.
+//
 // An absent source yields an empty field; an unreadable one is returned as an error, because an
 // empty value here is indistinguishable from "no cloud provider" and would publish a NodeGroup
 // without instanceClass — a checksum shift on every node.
-func (s *Service) BuildSnapshot(ctx context.Context, ng *v1.NodeGroup) (Snapshot, error) {
+func (s *Service) BuildSnapshot(ctx context.Context, ng *v1.NodeGroup, registry cloudprovider.Registry) (Snapshot, error) {
 	logger := log.FromContext(ctx)
 
-	provider, err := s.readCloudProviderData(ctx)
-	if err != nil {
-		return Snapshot{}, err
-	}
+	provider, _ := registry.ForNodeGroup(ng)
 	clusterUUID, err := s.readClusterUUID(ctx)
 	if err != nil {
 		return Snapshot{}, err
@@ -80,11 +87,12 @@ func (s *Service) BuildSnapshot(ctx context.Context, ng *v1.NodeGroup) (Snapshot
 	}
 
 	snap := Snapshot{
-		Provider:      provider,
-		ClusterUUID:   clusterUUID,
-		TargetVersion: targetVersion,
-		DefaultCRI:    defaultCRI,
-		APIServerMin:  apiServerMin,
+		Provider:             provider,
+		ClusterUUID:          clusterUUID,
+		TargetVersion:        targetVersion,
+		DefaultCRI:           defaultCRI,
+		APIServerMin:         apiServerMin,
+		RegisteredClassKinds: registry.InstanceClassKinds(),
 	}
 
 	if ng.Spec.NodeType == v1.NodeTypeStatic {

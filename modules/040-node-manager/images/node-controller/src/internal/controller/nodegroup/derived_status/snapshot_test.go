@@ -29,6 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 )
 
 // The snapshot is the package's whole input. Building it in one place is what makes the derive and
@@ -42,7 +43,7 @@ func TestBuildSnapshot_StaticNodeGroupReadsStaticConfigOnly(t *testing.T) {
 	ng.Name = "master"
 	ng.Spec.NodeType = v1.NodeTypeStatic
 
-	snap, err := s.BuildSnapshot(t.Context(), ng)
+	snap, err := s.BuildSnapshot(t.Context(), ng, testRegistry(t, s))
 
 	require.NoError(t, err)
 	require.NotNil(t, snap.StaticConfig)
@@ -55,7 +56,7 @@ func TestBuildSnapshot_StaticNodeGroupReadsStaticConfigOnly(t *testing.T) {
 // guess goes through the provider's conversion webhook, changes the spec, and renames the immutable
 // machine template the checksum points at.
 func TestBuildSnapshot_CloudEphemeralWithoutPublishedVersionSkipsInstanceClass(t *testing.T) {
-	s := newTestService(t, testSecret(cloudProviderSecretNamespace, cloudProviderSecretName, map[string][]byte{
+	s := newTestService(t, providerSecret(map[string][]byte{
 		"type":              []byte(`aws`),
 		"instanceClassKind": []byte(`AWSInstanceClass`),
 	}))
@@ -66,7 +67,7 @@ func TestBuildSnapshot_CloudEphemeralWithoutPublishedVersionSkipsInstanceClass(t
 		ClassReference: v1.ClassReference{Kind: "AWSInstanceClass", Name: "worker"},
 	}
 
-	snap, err := s.BuildSnapshot(t.Context(), ng)
+	snap, err := s.BuildSnapshot(t.Context(), ng, testRegistry(t, s))
 
 	require.NoError(t, err)
 	require.Empty(t, snap.Provider.InstanceClassAPIVersion)
@@ -82,7 +83,7 @@ func TestBuildSnapshot_NoCloudProviderIsNotAnError(t *testing.T) {
 	ng.Name = "worker"
 	ng.Spec.NodeType = v1.NodeTypeCloudEphemeral
 
-	snap, err := s.BuildSnapshot(t.Context(), ng)
+	snap, err := s.BuildSnapshot(t.Context(), ng, testRegistry(t, s))
 
 	require.NoError(t, err)
 	require.Empty(t, snap.Provider.InstanceClassKind)
@@ -107,7 +108,7 @@ func TestBuildSnapshot_ClassDeletedMidPassIsRecorded(t *testing.T) {
 
 	c := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(existing, testSecret(cloudProviderSecretNamespace, cloudProviderSecretName, map[string][]byte{
+		WithObjects(existing, providerSecret(map[string][]byte{
 			"type":                    []byte(`aws`),
 			"instanceClassKind":       []byte(kind),
 			"instanceClassAPIVersion": []byte(`v1`),
@@ -133,7 +134,7 @@ func TestBuildSnapshot_ClassDeletedMidPassIsRecorded(t *testing.T) {
 		MaxPerZone:     3,
 	}
 
-	snap, err := s.BuildSnapshot(t.Context(), ng)
+	snap, err := s.BuildSnapshot(t.Context(), ng, testRegistry(t, s))
 	require.NoError(t, err)
 	require.Nil(t, snap.InstanceClass)
 	require.Error(t, snap.CapacityErr, "a class that vanished mid-pass must be recorded")
@@ -144,14 +145,16 @@ func TestBuildSnapshot_ClassDeletedMidPassIsRecorded(t *testing.T) {
 }
 
 // An unreadable source must abort the pass: an empty provider reads as "no cloud", which drops
-// instanceClass from the published element and re-runs bashible on every node.
-func TestBuildSnapshot_UnreadableProviderAborts(t *testing.T) {
-	s := newDeniedSecretService(t, cloudProviderSecretName)
+// instanceClass from the published element and re-runs bashible on every node. The provider half
+// of that guard now sits at the load boundary — see cloudprovider.TestLoad_ForbiddenListIsAnError;
+// here the cluster UUID stands for the sources this package still reads itself.
+func TestBuildSnapshot_UnreadableSourceAborts(t *testing.T) {
+	s := newDeniedSecretService(t, clusterUUIDConfigMapName)
 	ng := &v1.NodeGroup{}
 	ng.Name = "worker"
 	ng.Spec.NodeType = v1.NodeTypeCloudEphemeral
 
-	_, err := s.BuildSnapshot(t.Context(), ng)
+	_, err := s.BuildSnapshot(t.Context(), ng, cloudprovider.Registry{})
 
-	require.ErrorContains(t, err, "read cloud provider secret")
+	require.ErrorContains(t, err, "read cluster uuid configmap")
 }

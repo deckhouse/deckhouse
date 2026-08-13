@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 )
 
 // engine values, kept in sync with hooks/internal/v1.NodeGroupEngine*.
@@ -56,7 +57,7 @@ var epochTimestampAccessor = func() int64 {
 // annotation. Exposed so the MachineDeployment controller can act on a freshly created
 // NodeGroup in its first reconcile instead of waiting for the status controller to publish
 // status.engine.
-func ComputeEngine(ng *v1.NodeGroup, reg CloudProviderRegistration) string {
+func ComputeEngine(ng *v1.NodeGroup, reg cloudprovider.Registration) string {
 	if ng.Status.Engine != "" {
 		return ng.Status.Engine
 	}
@@ -77,9 +78,9 @@ func ComputeEngine(ng *v1.NodeGroup, reg CloudProviderRegistration) string {
 	}
 }
 
-func defaultCloudEphemeralEngine(reg CloudProviderRegistration, useMCM bool) string {
+func defaultCloudEphemeralEngine(reg cloudprovider.Registration, useMCM bool) string {
 	hasMCM := reg.MachineClassKind != ""
-	hasCAPI := reg.CAPIClusterKind != ""
+	hasCAPI := reg.CAPI.ClusterKind != ""
 
 	switch {
 	case hasMCM && hasCAPI:
@@ -197,7 +198,7 @@ func resolveZones(ng *v1.NodeGroup, defaultZones []string) []string {
 	return defaultZones
 }
 
-func applyCloudSpecificDefaults(reg CloudProviderRegistration, instanceClassSpec interface{}) (interface{}, error) {
+func applyCloudSpecificDefaults(reg cloudprovider.Registration, instanceClassSpec interface{}) (interface{}, error) {
 	specMap, ok := instanceClassSpec.(map[string]interface{})
 	if !ok {
 		return instanceClassSpec, nil

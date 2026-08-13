@@ -30,6 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	"github.com/deckhouse/node-controller/internal/register"
 )
 
@@ -303,8 +304,14 @@ func TestReconcile_CloudValidationErrorPublished(t *testing.T) {
 		},
 	}
 	cloudProvider := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Name: "d8-node-manager-cloud-provider", Namespace: "kube-system"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cloudprovider.LegacySecretName,
+			Namespace: cloudprovider.SecretNamespace,
+			// Registrations are found by this label, never by name.
+			Labels: map[string]string{cloudprovider.RegistrationLabel: ""},
+		},
 		Data: map[string][]byte{
+			"type":                    []byte("aws"),
 			"instanceClassKind":       []byte("AWSInstanceClass"),
 			"instanceClassAPIVersion": []byte("v1alpha1"),
 		},

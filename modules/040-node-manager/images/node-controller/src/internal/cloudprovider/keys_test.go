@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package common
+package cloudprovider
 
 import (
 	"os"
@@ -28,7 +28,7 @@ import (
 )
 
 // repoRoot is relative to this package's directory, which is where `go test` runs:
-// <root>/modules/040-node-manager/images/node-controller/src/internal/common.
+// <root>/modules/040-node-manager/images/node-controller/src/internal/cloudprovider.
 const repoRoot = "../../../../../../.."
 
 // instanceClassCRDPaths are the two places a provider module keeps its InstanceClass CRD,
@@ -83,8 +83,8 @@ func TestEveryCloudProviderPublishesInstanceClassAPIVersion(t *testing.T) {
 
 			// node-controller finds registrations by this label, not by the Secret name; both
 			// rendered Secrets (the legacy fixed-name one and the per-provider one) must carry it.
-			require.GreaterOrEqual(t, strings.Count(content, CloudProviderRegistrationLabel), 2,
-				"%s must label both registration Secrets with %s", path, CloudProviderRegistrationLabel)
+			require.GreaterOrEqual(t, strings.Count(content, RegistrationLabel), 2,
+				"%s must label both registration Secrets with %s", path, RegistrationLabel)
 		})
 	}
 }

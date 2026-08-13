@@ -35,6 +35,7 @@ import (
 	sigsyaml "sigs.k8s.io/yaml"
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	"github.com/deckhouse/node-controller/internal/register"
 )
 
@@ -55,22 +56,32 @@ func (r *ClusterReconciler) SetupWatches(w register.Watcher) {
 		if _, ok := obj.(*deckhousev1.NodeGroup); ok {
 			return true
 		}
-		return obj.GetNamespace() == cloudProviderSecretNamespace && obj.GetName() == cloudProviderSecretName
+		return cloudprovider.IsRegistration(obj)
 	}))
 	// Re-enqueue only on spec/generation changes — NodeGroup status updates must not trigger
 	// a no-op re-ensure, otherwise the createIfNotExists path logs on every status bump.
+	//
+	// The requests fan out over every registration rather than naming one fixed Secret: this
+	// controller is keyed by the registration itself, so one key per provider is one Cluster per
+	// provider. A cluster with none enqueues nothing here and reaches ensureStaticCluster through
+	// the Secret events that still pass the filter above.
 	w.Watches(&deckhousev1.NodeGroup{}, handler.EnqueueRequestsFromMapFunc(
-		func(_ context.Context, _ client.Object) []reconcile.Request {
-			return []reconcile.Request{{NamespacedName: types.NamespacedName{
-				Name:      cloudProviderSecretName,
-				Namespace: cloudProviderSecretNamespace,
-			}}}
+		func(ctx context.Context, _ client.Object) []reconcile.Request {
+			reqs := cloudprovider.RegistrationRequests(ctx, r.Client)
+			if len(reqs) == 0 {
+				// Nothing to key a cloud Cluster on, but ensureStaticCluster still has to run.
+				return []reconcile.Request{{NamespacedName: types.NamespacedName{
+					Name:      cloudprovider.LegacySecretName,
+					Namespace: cloudprovider.SecretNamespace,
+				}}}
+			}
+			return reqs
 		},
 	), builder.WithPredicates(predicate.GenerationChangedPredicate{}))
 }
 
 func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	if req.Name != cloudProviderSecretName || req.Namespace != cloudProviderSecretNamespace {
+	if req.Namespace != cloudprovider.SecretNamespace {
 		return ctrl.Result{}, nil
 	}
 
@@ -79,7 +90,7 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, err
 	}
 
-	if err := r.ensureCloudCluster(ctx, clusterConfig); err != nil {
+	if err := r.ensureCloudCluster(ctx, req.Name, clusterConfig); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -90,31 +101,34 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	return ctrl.Result{}, nil
 }
 
-func (r *ClusterReconciler) ensureCloudCluster(ctx context.Context, clusterConfig *clusterConfiguration) error {
+// ensureCloudCluster creates the CAPI Cluster of one registration — the one this reconcile was
+// keyed by. Several providers therefore yield several Clusters, one reconcile each, instead of the
+// single fixed-name Cluster this used to build.
+func (r *ClusterReconciler) ensureCloudCluster(ctx context.Context, registrationName string, clusterConfig *clusterConfiguration) error {
 	logger := log.FromContext(ctx)
 
 	secret := &corev1.Secret{}
 	if err := r.APIReader.Get(ctx, types.NamespacedName{
-		Name: cloudProviderSecretName, Namespace: cloudProviderSecretNamespace,
+		Name: registrationName, Namespace: cloudprovider.SecretNamespace,
 	}, secret); err != nil {
 		if client.IgnoreNotFound(err) == nil {
 			return nil
 		}
 		return fmt.Errorf("get cloud-provider secret: %w", err)
 	}
+	if !cloudprovider.IsRegistration(secret) {
+		return nil
+	}
 
-	clusterName := string(secret.Data["capiClusterName"])
-	clusterKind := string(secret.Data["capiClusterKind"])
-	infraAPIVersion := string(secret.Data["capiClusterAPIVersion"])
+	registration := cloudprovider.Decode(secret.Data)
+	clusterName := registration.CAPI.ClusterName
+	clusterKind := registration.CAPI.ClusterKind
 
 	if clusterName == "" || clusterKind == "" {
 		return nil
 	}
-	if infraAPIVersion == "" {
-		infraAPIVersion = "infrastructure.cluster.x-k8s.io/v1alpha1"
-	}
 
-	infraAPIGroup := infraAPIVersion
+	infraAPIGroup := registration.CAPI.ClusterAPIVersion
 	if idx := strings.LastIndex(infraAPIGroup, "/"); idx >= 0 {
 		infraAPIGroup = infraAPIGroup[:idx]
 	}

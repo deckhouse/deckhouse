@@ -25,6 +25,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/yaml"
+
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 )
 
 const (
@@ -44,7 +46,7 @@ type Globals struct {
 	Proxy                   map[string]interface{}
 }
 
-func (s *Service) Build(ctx context.Context, globals Globals, nodeGroups []map[string]interface{}) (map[string]interface{}, error) {
+func (s *Service) Build(ctx context.Context, globals Globals, nodeGroups []map[string]interface{}, registry cloudprovider.Registry) (map[string]interface{}, error) {
 	cpArgs := s.readControlPlaneArguments(ctx)
 	certs := s.readAPIServerProxyCerts(ctx)
 	eps, err := s.readEndpoints(ctx)
@@ -72,8 +74,13 @@ func (s *Service) Build(ctx context.Context, globals Globals, nodeGroups []map[s
 		"nodeGroups":     nodeGroups,
 	}
 
-	if cp := s.readCloudProvider(ctx); cp != nil {
-		input["cloudProvider"] = cp
+	providers := registry.All()
+	if len(providers) > 0 {
+		trees := make([]map[string]interface{}, 0, len(providers))
+		for _, p := range providers {
+			trees = append(trees, p.Data)
+		}
+		input["cloudProviders"] = trees
 	}
 	if globals.Proxy != nil {
 		input["proxy"] = globals.Proxy
@@ -101,7 +108,7 @@ func Marshal(input map[string]interface{}) ([]byte, error) {
 	return yaml.Marshal(input)
 }
 
-func (s *Service) WriteSecret(ctx context.Context, nodeGroups []map[string]interface{}) error {
+func (s *Service) WriteSecret(ctx context.Context, nodeGroups []map[string]interface{}, registry cloudprovider.Registry) error {
 	logger := log.FromContext(ctx)
 
 	globals := s.ReadGlobals(ctx)
@@ -112,7 +119,7 @@ func (s *Service) WriteSecret(ctx context.Context, nodeGroups []map[string]inter
 	if globals.ClusterDNSAddress == "" {
 		return fmt.Errorf("cluster DNS address not discovered yet: refusing to publish bashible context without it")
 	}
-	input, err := s.Build(ctx, globals, nodeGroups)
+	input, err := s.Build(ctx, globals, nodeGroups, registry)
 	if err != nil {
 		return err
 	}

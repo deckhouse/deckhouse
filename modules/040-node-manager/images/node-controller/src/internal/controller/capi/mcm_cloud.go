@@ -19,7 +19,6 @@ package capi
 import (
 	"context"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
@@ -33,12 +32,13 @@ import (
 	sigsyaml "sigs.k8s.io/yaml"
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	"github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/machineclass"
 )
 
-func (r *MachineDeploymentReconciler) reconcileCloudMCMs(ctx context.Context, ng *deckhousev1.NodeGroup) error {
+func (r *MachineDeploymentReconciler) reconcileCloudMCMs(ctx context.Context, ng *deckhousev1.NodeGroup, registry cloudprovider.Registry, registration cloudprovider.Registration) error {
 	logger := log.FromContext(ctx)
 
 	if ng.Spec.CloudInstances == nil {
@@ -46,20 +46,17 @@ func (r *MachineDeploymentReconciler) reconcileCloudMCMs(ctx context.Context, ng
 		return nil
 	}
 
-	cloudProvider, err := r.readCloudProviderTree(ctx)
-	if err != nil {
-		return err
-	}
-	machineClassKind, _ := cloudProvider["machineClassKind"].(string)
+	machineClassKind := registration.MachineClassKind
 	if machineClassKind == "" {
 		logger.Info("skipping MCM: machineClassKind not set (not an MCM cloud)", "nodeGroup", ng.Name)
 		return nil
 	}
-	cloudType, _ := cloudProvider["type"].(string)
+	cloudProvider := registration.Data
+	cloudType := registration.Type
 	region, _ := cloudProvider["region"].(string)
 
 	ds := &derived_status.Service{Client: r.Client}
-	resolved, validationErr, err := ds.ResolveNodeGroup(ctx, ng)
+	resolved, validationErr, err := ds.ResolveNodeGroup(ctx, ng, registry)
 	if err != nil {
 		return fmt.Errorf("resolve NodeGroup %s: %w", ng.Name, err)
 	}
@@ -344,47 +341,6 @@ func (r *MachineDeploymentReconciler) mcmDesiredReplicas(ctx context.Context, md
 		current = 0
 	}
 	return int64(calculateReplicas(int32(current), minReplicas, maxReplicas)), nil
-}
-
-func (r *MachineDeploymentReconciler) readCloudProviderTree(ctx context.Context) (map[string]interface{}, error) {
-	secret := &corev1.Secret{}
-	if err := r.Client.Get(ctx, types.NamespacedName{
-		Name: cloudProviderSecretName, Namespace: cloudProviderSecretNamespace,
-	}, secret); err != nil {
-		if client.IgnoreNotFound(err) == nil {
-			return map[string]interface{}{}, nil
-		}
-		return nil, fmt.Errorf("get cloud-provider secret: %w", err)
-	}
-	return decodeCloudProviderSecret(secret.Data), nil
-}
-
-// readCloudProviderRegistration reads the same Secret as readCloudProviderTree, but typed. The
-// tree stays for the template render context, which needs the provider's own subtree verbatim.
-func (r *MachineDeploymentReconciler) readCloudProviderRegistration(ctx context.Context) (derived_status.CloudProviderRegistration, error) {
-	secret := &corev1.Secret{}
-	if err := r.Client.Get(ctx, types.NamespacedName{
-		Name: cloudProviderSecretName, Namespace: cloudProviderSecretNamespace,
-	}, secret); err != nil {
-		if client.IgnoreNotFound(err) == nil {
-			return derived_status.CloudProviderRegistration{}, nil
-		}
-		return derived_status.CloudProviderRegistration{}, fmt.Errorf("get cloud-provider secret: %w", err)
-	}
-	return derived_status.DecodeRegistration(secret.Data), nil
-}
-
-func decodeCloudProviderSecret(data map[string][]byte) map[string]interface{} {
-	res := make(map[string]interface{}, len(data))
-	for k, v := range data {
-		var val interface{}
-		if err := json.Unmarshal(v, &val); err != nil {
-			res[k] = string(v)
-			continue
-		}
-		res[k] = val
-	}
-	return res
 }
 
 func (r *MachineDeploymentReconciler) readPodSubnet(ctx context.Context) (string, error) {
