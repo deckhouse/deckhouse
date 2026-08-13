@@ -73,6 +73,11 @@ const (
 	containerdExtension = "containerd"
 	cniExtension        = "kubernetes-cni"
 	kubeletExtension    = "kubelet"
+	nodeletExtension    = "nodelet"
+
+	// nodeletSysextImage is unversioned, so it is read by its exact key rather
+	// than through soleDigest, which looks for a numeric suffix.
+	nodeletSysextImage = "nodeletSysext"
 
 	// platformExtensionRequestedBy names the module that wants the extension, not
 	// the process that wrote the file — which is why it stays "node-manager" when

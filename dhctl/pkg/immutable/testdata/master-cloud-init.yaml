@@ -23,6 +23,9 @@ write_files:
       - digest: sha256:2222222222222222222222222222222222222222222222222222222222222222
         name: kubernetes-cni
         requestedBy: node-manager
+      - digest: sha256:9999999999999999999999999999999999999999999999999999999999999999
+        name: nodelet
+        requestedBy: node-manager
       kernel:
         sysctl:
           kernel.panic: "10"
