@@ -585,7 +585,7 @@ alerts:
       description: |-
         The cluster tracks the Deckhouse default Kubernetes version (`kubernetesVersion: Default` in ModuleConfig `control-plane-manager`, or unset ModuleConfig with no ClusterConfiguration pin). That default is now more than 1 minor below the highest version this cluster has ever run (`maxUsed`).
 
-        **Rollback blocked:** Deckhouse freezes the published target (keeps the previous desired version, or the current control-plane version) and does not roll Default down toward the lower default. Control plane and kubelet stay on the frozen target until the Deckhouse default catches up within the `maxUsed−1` window.
+        **Rollback blocked:** Deckhouse freezes the published target (holds it at the current control-plane version, or at the last desired version when the current one is not published yet) and does not roll Default down toward the lower default. Control plane and kubelet stay on the frozen target until the Deckhouse default catches up within the `maxUsed−1` window.
 
         Check the `frozen` label on the metric: `frozen="true"` means the digit is held as described above. `frozen="false"` means the window is violated but nothing was left to hold the digit at (for example the `d8-cluster-kubernetes` ConfigMap was deleted), so the published target **has** moved down to the Deckhouse default — pin the intended version explicitly.
 

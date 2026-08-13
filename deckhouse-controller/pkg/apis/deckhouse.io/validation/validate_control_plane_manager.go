@@ -252,4 +252,3 @@ func (v *moduleConfigValidator) readRawClusterConfigurationVersion(ctx context.C
 	}
 	return cc.KubernetesVersion, true
 }
-

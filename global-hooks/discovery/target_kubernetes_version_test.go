@@ -336,36 +336,9 @@ data:
 			Expect(driftMetricFrozenLabel()).To(Equal("true"))
 		})
 
-		// Both freeze-memory slots (data.spec.desiredVersion and data.status.currentVersion) live
-		// inside the ConfigMap, so deleting it wipes them together — while maxUsed survives in the
-		// Secret. The guard therefore still knows the window is violated; without a third memory
-		// source it would nevertheless publish the lower Default and quietly downgrade the digit,
-		// all while raising the drift metric as if the freeze had worked.
-		It("keeps the frozen digit from the previous run when the ConfigMap is deleted", func() {
-			secretWithMaxUsed := `
-apiVersion: v1
-kind: Secret
-metadata:
-  name: d8-cluster-configuration
-  namespace: kube-system
-data:
-  "cluster-configuration.yaml": ` + base64.StdEncoding.EncodeToString([]byte(stateCClusterConfiguration)) + `
-  maxUsedControlPlaneKubernetesVersion: ` + base64.StdEncoding.EncodeToString([]byte("1.38")) + `
-`
-			// Previous run published 1.38 and left it in Values; the ConfigMap is now gone.
-			f.ValuesSet("global.discovery.targetKubernetesVersion", "1.38")
-
-			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(secretWithMaxUsed+moduleConfigYAML("Default"), 1))
-			f.RunHook()
-
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("global.discovery.targetKubernetesVersion").String()).To(Equal("1.38"))
-			Expect(driftMetricFrozenLabel()).To(Equal("true"))
-		})
-
-		// Nothing to hold the digit at: no ConfigMap and no previously published value. The version
-		// does move down to Default here — that is unavoidable — but the metric must say so instead
-		// of looking identical to a successful freeze.
+		// Nothing to hold the digit at: both freeze sources live inside the ConfigMap, and there is
+		// no ConfigMap. The version does move down to Default here — that is unavoidable — but the
+		// metric must say so instead of looking identical to a successful freeze.
 		It("reports frozen=false when the window is violated and there is no memory left", func() {
 			secretWithMaxUsed := `
 apiVersion: v1
@@ -377,8 +350,6 @@ data:
   "cluster-configuration.yaml": ` + base64.StdEncoding.EncodeToString([]byte(stateCClusterConfiguration)) + `
   maxUsedControlPlaneKubernetesVersion: ` + base64.StdEncoding.EncodeToString([]byte("1.38")) + `
 `
-			f.ValuesSet("global.discovery.targetKubernetesVersion", "")
-
 			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(secretWithMaxUsed+moduleConfigYAML("Default"), 1))
 			f.RunHook()
 

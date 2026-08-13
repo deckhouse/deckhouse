@@ -197,14 +197,12 @@ func targetKubernetesVersion(_ context.Context, input *go_hook.HookInput) error 
 				)
 			}
 			if err == nil && !inWindow {
-				// Order is load-bearing: desiredVersion is this hook's own previous output routed back
-				// through the ConfigMap, so trusting it first lets a bad target become self-confirming.
-				// currentVersion comes from the running Pods and cannot be poisoned that way.
-				frozen := cmp.Or(
-					cmSnap.CurrentVersion,
-					cmSnap.DesiredVersion,
-					input.Values.Get("global.discovery.targetKubernetesVersion").String(),
-				)
+				// Both sources are used, and the order between them is what matters. currentVersion is
+				// a fact about the running Pods and cannot be poisoned. desiredVersion is this hook's
+				// own previous output routed back through the ConfigMap, so reading it first would let
+				// a bad target confirm itself; second, it covers the window where update-observer has
+				// not written status yet and currentVersion is still empty.
+				frozen := cmp.Or(cmSnap.CurrentVersion, cmSnap.DesiredVersion)
 				if frozen != "" {
 					publishedTarget = frozen
 					froze = true
