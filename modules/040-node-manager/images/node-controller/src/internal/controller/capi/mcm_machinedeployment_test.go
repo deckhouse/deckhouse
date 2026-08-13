@@ -22,7 +22,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/api/resource"
 
+	"github.com/deckhouse/node-controller/internal/capacity"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 )
 
@@ -116,7 +118,7 @@ func TestBuildMCMMachineDeployment_Defaults(t *testing.T) {
 
 func TestBuildMCMMachineDeployment_ScaleFromZero(t *testing.T) {
 	resolved := resolvedFromSpecJSON(t, `{}`)
-	resolved.NodeCapacity = map[string]interface{}{"cpu": "4", "memory": "8Gi"}
+	resolved.NodeCapacity = &capacity.InstanceType{CPU: resource.MustParse("4"), Memory: resource.MustParse("8Gi")}
 	md := buildMCMMachineDeployment(mcmMachineDeploymentInput{
 		resolved: resolved,
 		ngName:   "worker",

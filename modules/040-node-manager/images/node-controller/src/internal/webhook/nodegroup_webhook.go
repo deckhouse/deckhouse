@@ -319,7 +319,7 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 
 	if req.Operation == "UPDATE" {
 		if ng.Spec.Kubelet != nil && ng.Spec.Kubelet.MemorySwap != nil {
-			if ng.Spec.Kubelet.MemorySwap.Behavior == "LimitedSwap" {
+			if ng.Spec.Kubelet.MemorySwap.SwapBehavior == "LimitedSwap" {
 				unsupportedNodes, err := w.getNodesWithoutContainerdV2Support(ctx, ng.Name)
 				if err != nil {
 					webhookLog.Error(err, "failed to get nodes without cgroup v2 support")
