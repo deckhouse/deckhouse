@@ -39,6 +39,7 @@ import (
 	"k8s.io/client-go/util/retry"
 	"k8s.io/client-go/util/workqueue"
 	kclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/module-sdk/pkg/settingscheck"
 
@@ -71,6 +72,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	d8requirements "github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
@@ -85,8 +87,17 @@ const (
 
 	// runtimeTracer identifies tracing spans emitted by the package runtime.
 	runtimeTracer = "package-runtime"
+
+	// debugSocketPath is the Unix socket the package runtime debug API listens on.
+	debugSocketPath = "/tmp/deckhouse-debug.socket"
+	// debugAddress and debugPort are the loopback TCP endpoint serving the same API.
+	// 9652 is taken by the shell-operator debug server.
+	debugAddress = "127.0.0.1"
+	debugPort    = "9653"
 	// nelmMonitorRequestTimeout bounds discovery and metadata requests made by the NELM monitor client.
 	nelmMonitorRequestTimeout = 30 * time.Second
+	// debugShutdownTimeout bounds how long shutdown waits for in-flight debug requests.
+	debugShutdownTimeout = 5 * time.Second
 )
 
 // Runtime orchestrates the full lifecycle of application packages: discovery,
@@ -111,7 +122,7 @@ type Runtime struct {
 
 	status      *status.Service     // Tracks per-package condition chain
 	scheduler   *schedule.Scheduler // Evaluates enable/disable based on version constraints
-	debugServer *debug.Server       // Unix socket debug API
+	debugServer *debug.Server       // Debug API served over a Unix socket and HTTP
 
 	crdService        *crd.Service                        // Installs CRDs from package paths
 	objectPatcher     *objectpatch.ObjectPatcher          // Applies resource patches from hooks
@@ -229,7 +240,11 @@ func Build(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Conta
 		return nil, fmt.Errorf("build health service: %w", err)
 	}
 
-	if err := r.registerDebugServer("/tmp/deckhouse-debug.socket"); err != nil {
+	if err := r.registerDebugServer(debug.Config{
+		SocketPath: debugSocketPath,
+		Address:    debugAddress,
+		Port:       debugPort,
+	}); err != nil {
 		return nil, fmt.Errorf("register debug server: %w", err)
 	}
 
@@ -268,15 +283,24 @@ func (r *Runtime) loadGlobal(ctx context.Context) error {
 	return nil
 }
 
-// registerDebugServer starts a Unix socket HTTP server exposing debug endpoints
-// for package state introspection (/packages/dump, /packages/global/dump, /packages/queues/dump, /packages/render/{name}).
-func (r *Runtime) registerDebugServer(socketPath string) error {
-	r.debugServer = debug.NewServer(r.logger)
-	if err := r.debugServer.Start(socketPath); err != nil {
-		return fmt.Errorf("start debug server: %w", err)
+// registerDebugServer exposes debug endpoints for package state introspection
+// (/packages/dump, /packages/global/dump, /packages/queues/dump, /packages/render/{name})
+// over both a Unix socket and a loopback TCP address, then starts serving them.
+//
+// Every route is registered before Start because the router does not tolerate
+// registration while requests are being served.
+func (r *Runtime) registerDebugServer(cfg debug.Config) error {
+	r.debugServer = debug.NewServer(cfg, r.logger)
+
+	var errs []error
+
+	registerGet := func(url string, handler http.HandlerFunc) {
+		if err := r.debugServer.Register(http.MethodGet, url, handler); err != nil {
+			errs = append(errs, err)
+		}
 	}
 
-	r.debugServer.Register(http.MethodGet, "/packages/dump", func(w http.ResponseWriter, req *http.Request) {
+	registerGet("/packages/dump", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/yaml")
 		w.WriteHeader(http.StatusOK)
 
@@ -287,14 +311,14 @@ func (r *Runtime) registerDebugServer(socketPath string) error {
 		}
 	})
 
-	r.debugServer.Register(http.MethodGet, "/packages/global/dump", func(w http.ResponseWriter, _ *http.Request) {
+	registerGet("/packages/global/dump", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/yaml")
 		w.WriteHeader(http.StatusOK)
 
 		w.Write(r.DumpGlobal()) //nolint:errcheck
 	})
 
-	r.debugServer.Register(http.MethodGet, "/packages/queues/dump", func(w http.ResponseWriter, req *http.Request) {
+	registerGet("/packages/queues/dump", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/yaml")
 		w.WriteHeader(http.StatusOK)
 
@@ -302,7 +326,7 @@ func (r *Runtime) registerDebugServer(socketPath string) error {
 		w.Write(r.queueService.Dump(queues...)) //nolint:errcheck
 	})
 
-	r.debugServer.Register(http.MethodGet, "/packages/scheduler/dump", func(w http.ResponseWriter, req *http.Request) {
+	registerGet("/packages/scheduler/dump", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/yaml")
 		w.WriteHeader(http.StatusOK)
 
@@ -313,7 +337,7 @@ func (r *Runtime) registerDebugServer(socketPath string) error {
 		}
 	})
 
-	r.debugServer.Register(http.MethodGet, "/packages/render/{name}", func(w http.ResponseWriter, req *http.Request) {
+	registerGet("/packages/render/{name}", func(w http.ResponseWriter, req *http.Request) {
 		packageName := chi.URLParam(req, "name")
 		if packageName == "" {
 			http.Error(w, "package name is required", http.StatusBadRequest)
@@ -335,7 +359,7 @@ func (r *Runtime) registerDebugServer(socketPath string) error {
 		w.Write([]byte(rendered)) //nolint:errcheck
 	})
 
-	r.debugServer.Register(http.MethodGet, "/packages/snapshots/{name}", func(w http.ResponseWriter, req *http.Request) {
+	registerGet("/packages/snapshots/{name}", func(w http.ResponseWriter, req *http.Request) {
 		packageName := chi.URLParam(req, "name")
 		if packageName == "" {
 			http.Error(w, "package name is required", http.StatusBadRequest)
@@ -364,6 +388,31 @@ func (r *Runtime) registerDebugServer(socketPath string) error {
 		w.WriteHeader(http.StatusOK)
 		w.Write(data) //nolint:errcheck
 	})
+
+	registerGet("/requirements", func(w http.ResponseWriter, _ *http.Request) {
+		data, _ := yaml.Marshal(d8requirements.DumpValues()) //nolint:errcheck
+		w.Header().Set("Content-Type", "application/yaml")
+		w.WriteHeader(http.StatusOK)
+		w.Write(data) //nolint:errcheck
+	})
+
+	registerGet("/healthz", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("ok")) //nolint:errcheck
+	})
+
+	registerGet("/readyz", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("ok")) //nolint:errcheck
+	})
+
+	if err := errors.Join(errs...); err != nil {
+		return fmt.Errorf("register debug endpoints: %w", err)
+	}
+
+	if err := r.debugServer.Start(); err != nil {
+		return fmt.Errorf("start debug server: %w", err)
+	}
 
 	return nil
 }
@@ -820,6 +869,14 @@ func (r *Runtime) Stop() {
 
 	// Stop reflecting status to CRs (unblocks the status consumer loop)
 	r.status.Shutdown()
+
+	// Close the debug listeners last so state stays introspectable during shutdown
+	ctx, cancel := context.WithTimeout(context.Background(), debugShutdownTimeout)
+	defer cancel()
+
+	if err := r.debugServer.Stop(ctx); err != nil {
+		r.logger.Warn("stop debug server failed", log.Err(err))
+	}
 }
 
 // PreservePackage identifies one installed Package instance to preserve during Cleanup.
