@@ -90,14 +90,7 @@ func (s *Service) compute(ctx context.Context, ng *v1.NodeGroup, cloudProvider m
 	clusterUUID := s.readClusterUUID(ctx)
 	result.UpdateEpoch = calculateUpdateEpoch(epochTimestampAccessor(), clusterUUID, ng.Name)
 
-	targetVersion, err := s.readTargetKubernetesVersion(ctx)
-	if err != nil {
-		// Aborts the NodeGroup loop in bashiblecontext, so no NodeGroup gets a context Secret.
-		logger.Error(err, "cannot read target kubernetesVersion from ConfigMap; requeue",
-			"configMap", "kube-system/d8-cluster-kubernetes")
-		return result, err
-	}
-	defaultCRI := s.readClusterConfiguration(ctx)
+	targetVersion, defaultCRI := s.readClusterConfiguration(ctx)
 	controlPlaneMinVersion := s.readControlPlaneMinVersion(ctx)
 	effectiveKubeVer := effectiveKubernetesVersion(targetVersion, controlPlaneMinVersion)
 	result.KubernetesVersion = semverMajMin(effectiveKubeVer)

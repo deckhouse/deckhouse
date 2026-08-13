@@ -62,7 +62,7 @@ func (r *Reconciler) SetupWatches(w register.Watcher) {
 }
 
 func (r *Reconciler) secretToAllNodeGroups(ctx context.Context, _ client.Object) []reconcile.Request {
-	return nodecommon.AllNodeGroups(ctx, r.Client)
+	return nodecommon.SecretToAllNodeGroups(ctx, r.Client)
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {

@@ -42,9 +42,9 @@ func newReconciler(t *testing.T, objs ...runtime.Object) (*Status, *record.FakeR
 	if err := v1.AddToScheme(scheme); err != nil {
 		t.Fatalf("add v1 scheme: %v", err)
 	}
-	// derived_status reads the target Kubernetes version from d8-cluster-kubernetes only;
-	// without it every reconcile errors and requeues. Tests that assert a specific version
-	// pass their own ConfigMap; everyone else gets a default.
+	// derived_status reads the target Kubernetes version from d8-cluster-kubernetes only; without
+	// it the version degrades to the running kube-apiserver, which these fixtures do not have.
+	// Tests that assert a specific version pass their own ConfigMap; everyone else gets a default.
 	if !hasClusterKubernetesConfigMap(objs) {
 		objs = append([]runtime.Object{clusterKubernetesConfigMap("1.32")}, objs...)
 	}

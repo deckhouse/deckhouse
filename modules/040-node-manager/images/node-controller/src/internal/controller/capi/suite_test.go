@@ -165,8 +165,7 @@ var _ = BeforeSuite(func() {
 
 	By("publishing the cluster-kubernetes configmap")
 	// capi_cloud.go builds a derived_status.Service, which now resolves the target Kubernetes
-	// version from this ConfigMap instead of ClusterConfiguration.kubernetesVersion and returns an
-	// error when it is missing. Without the fixture every spec in this suite times out.
+	// version from this ConfigMap instead of ClusterConfiguration.kubernetesVersion.
 	clusterKubernetesCM := &corev1.ConfigMap{}
 	clusterKubernetesCM.Namespace = "kube-system"
 	clusterKubernetesCM.Name = "d8-cluster-kubernetes"

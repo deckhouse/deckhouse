@@ -25,8 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	sigsyaml "sigs.k8s.io/yaml"
-
-	nodecommon "github.com/deckhouse/node-controller/internal/common"
 )
 
 const (
@@ -37,9 +35,7 @@ const (
 	clusterConfigKey        = "cluster-configuration.yaml"
 
 	// clusterUUIDConfigMap holds the cluster UUID (global.discovery.clusterUUID).
-	// Aliased from internal/common, which owns the read: CacheOptions scopes the kube-system
-	// ConfigMap informer to d8-cluster-kubernetes, so this object is fetched live.
-	clusterUUIDConfigMapName = nodecommon.ClusterUUIDConfigMapName
+	clusterUUIDConfigMapName = "d8-cluster-uuid"
 	clusterUUIDKey           = "cluster-uuid"
 
 	dnsAppLabel = "k8s-app"
@@ -76,10 +72,12 @@ func (s *Service) readDeckhouseInfo(ctx context.Context) (string, string, string
 	return info.Channel, info.Version, info.Edition
 }
 
-// readClusterUUID goes through the uncached reader: the kube-system ConfigMap informer is scoped to
-// d8-cluster-kubernetes, so a cached Get for this object would answer NotFound.
 func (s *Service) readClusterUUID(ctx context.Context) string {
-	return nodecommon.ClusterUUID(ctx, s.reader())
+	cm := &corev1.ConfigMap{}
+	if err := s.Client.Get(ctx, types.NamespacedName{Namespace: kubeSystemNS, Name: clusterUUIDConfigMapName}, cm); err != nil {
+		return ""
+	}
+	return cm.Data[clusterUUIDKey]
 }
 
 type bashibleClusterConfiguration struct {

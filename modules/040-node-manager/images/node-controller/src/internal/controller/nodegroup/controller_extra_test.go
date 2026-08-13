@@ -85,7 +85,7 @@ func TestReconcile_CloudEphemeral_StatusAndFailures(t *testing.T) {
 
 	scheme := cloudScheme(t)
 	cl := fake.NewClientBuilder().WithScheme(scheme).
-		WithObjects(ng, mcmMD("cloud-md", "cloud", 3, "provider quota exceeded"), clusterKubernetesConfigMap("1.32")).
+		WithObjects(ng, mcmMD("cloud-md", "cloud", 3, "provider quota exceeded")).
 		WithStatusSubresource(&v1.NodeGroup{}).
 		Build()
 	r := &Status{Base: register.Base{Client: cl, Recorder: record.NewFakeRecorder(10)}}
@@ -134,7 +134,7 @@ func TestReconcile_LongErrorTruncatedAndEventEmitted(t *testing.T) {
 	ng := cloudEphemeralNG("worker", []string{"a"}, 1, 3)
 	scheme := cloudScheme(t)
 	cl := fake.NewClientBuilder().WithScheme(scheme).
-		WithObjects(ng, mcmMD("worker-md", "worker", 1, longErr), clusterKubernetesConfigMap("1.32")).
+		WithObjects(ng, mcmMD("worker-md", "worker", 1, longErr)).
 		WithStatusSubresource(&v1.NodeGroup{}).
 		Build()
 	r := &Status{Base: register.Base{Client: cl, Recorder: record.NewFakeRecorder(10)}}
@@ -157,7 +157,7 @@ func TestReconcile_LongErrorTruncatedAndEventEmitted(t *testing.T) {
 	}
 }
 
-func TestAllNodeGroups(t *testing.T) {
+func TestSecretToAllNodeGroups(t *testing.T) {
 	setEnv(t)
 	r, _ := newReconciler(t,
 		&v1.NodeGroup{ObjectMeta: metav1.ObjectMeta{Name: "a"}},

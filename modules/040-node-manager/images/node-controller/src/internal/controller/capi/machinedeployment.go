@@ -418,15 +418,14 @@ func (r *MachineDeploymentReconciler) readCloudProviderConfig(ctx context.Contex
 	return cfg, nil
 }
 
-// readClusterUUID goes through the uncached APIReader: the kube-system ConfigMap informer is scoped
-// to d8-cluster-kubernetes, so a cached Get for this object would answer NotFound.
 func (r *MachineDeploymentReconciler) readClusterUUID(ctx context.Context) (string, error) {
-	uuid := common.ClusterUUID(ctx, r.APIReader)
-	if uuid == "" {
-		return "", fmt.Errorf("get cluster-uuid configmap %s/%s: empty or unreadable",
-			common.ClusterUUIDConfigMapNamespace, common.ClusterUUIDConfigMapName)
+	cm := &corev1.ConfigMap{}
+	if err := r.Client.Get(ctx, types.NamespacedName{
+		Name: clusterUUIDConfigMapName, Namespace: clusterUUIDConfigMapNS,
+	}, cm); err != nil {
+		return "", fmt.Errorf("get cluster-uuid configmap: %w", err)
 	}
-	return uuid, nil
+	return cm.Data["cluster-uuid"], nil
 }
 
 // readInstancePrefix resolves the cluster prefix via the shared resolver: the

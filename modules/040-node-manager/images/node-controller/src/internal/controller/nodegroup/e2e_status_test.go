@@ -131,10 +131,10 @@ func createControlPlaneNode(name, kubeletVersion string) *corev1.Node {
 	return node
 }
 
-// defaultDesiredKubernetesVersion seeds every spec via BeforeEach. Status.Reconcile reads
-// d8-cluster-kubernetes before it patches anything and returns an error when the ConfigMap is
-// missing, so without the fixture no spec ever gets a ConditionSummary and every Eventually
-// times out. Specs that assert on the version override it by calling the helper again.
+// defaultDesiredKubernetesVersion seeds every spec via BeforeEach: the target version now comes
+// from d8-cluster-kubernetes, and without the fixture it degrades to the running kube-apiserver
+// version, which most specs do not create. Specs that assert on the version override it by calling
+// the helper again.
 const defaultDesiredKubernetesVersion = "1.33"
 
 // createClusterKubernetesConfigMap upserts the ConfigMap so a spec-specific desiredVersion wins

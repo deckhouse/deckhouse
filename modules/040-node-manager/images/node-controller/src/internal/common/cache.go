@@ -101,21 +101,13 @@ func CacheOptions() (cache.Options, client.Options) {
 			},
 			&corev1.ConfigMap{}: {
 				Namespaces: map[string]cache.Config{
-					// Scoped to the one ConfigMap in kube-system this binary needs a *watch* on:
-					// d8-cluster-kubernetes, the source of the target Kubernetes version. It is not
-					// the only kube-system ConfigMap read here — d8-cluster-uuid is too — but a name
-					// FieldSelector can pin exactly one object and field selectors have no OR, so the
-					// other reader has to be uncached. It can afford to be: the UUID is immutable, so
-					// common.ClusterUUID reads it once per process and memoises it, whereas the
-					// version changes and must be watched.
-					//
-					// Deliberately not unfiltered. kube-system is a namespace users write to, so an
-					// unscoped informer would watch and hold arbitrary third-party ConfigMaps of
-					// unbounded size — unlike the kube-system Secrets above, whose set is bounded by
-					// the platform.
-					"kube-system": {
-						FieldSelector: fields.SelectorFromSet(fields.Set{"metadata.name": ClusterKubernetesConfigMapName}),
-					},
+					// Unfiltered on purpose, the same trade as the kube-system Secrets above: this
+					// binary reads two ConfigMaps here — d8-cluster-uuid and d8-cluster-kubernetes,
+					// the source of the target Kubernetes version — and a name FieldSelector can pin
+					// exactly one object, field selectors having no OR. The set is bounded by the
+					// platform and every object in it is small, so caching all of them is cheaper
+					// than turning either read into a live GET on the derived-status hot path.
+					"kube-system": {},
 					"d8-system": {
 						FieldSelector: fields.SelectorFromSet(fields.Set{"metadata.name": "d8-deckhouse-version-info"}),
 					},

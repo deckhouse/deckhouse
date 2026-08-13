@@ -35,9 +35,8 @@ const (
 	cloudProviderSecretNamespace = common.CloudProviderSecretNamespace
 	clusterConfigSecretName      = "d8-cluster-configuration"
 	clusterConfigSecretNamespace = "kube-system"
-	// Aliased from internal/common, which owns the read of this object.
-	clusterUUIDConfigMapName = common.ClusterUUIDConfigMapName
-	clusterUUIDConfigMapNS   = common.ClusterUUIDConfigMapNamespace
+	clusterUUIDConfigMapName     = "d8-cluster-uuid"
+	clusterUUIDConfigMapNS       = "kube-system"
 )
 
 type BaseWithReader struct {

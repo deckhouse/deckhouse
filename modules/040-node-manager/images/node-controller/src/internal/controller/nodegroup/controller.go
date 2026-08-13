@@ -29,12 +29,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	sigsyaml "sigs.k8s.io/yaml"
 
 	capiv1beta2 "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
@@ -50,13 +48,9 @@ import (
 	"github.com/deckhouse/node-controller/internal/register"
 )
 
-const (
-	// statusResyncInterval bounds staleness after a transient missed event; the For-predicate
-	// suppresses the manager resync.
-	statusResyncInterval           = 10 * time.Minute
-	clusterKubernetesConfigMapName = "d8-cluster-kubernetes"
-	clusterKubernetesConfigMapNS   = "kube-system"
-)
+// statusResyncInterval bounds staleness of status inputs the controller does not watch
+// (cluster configuration, InstanceClasses); the For-predicate suppresses the manager resync.
+const statusResyncInterval = 10 * time.Minute
 
 func init() {
 	register.RegisterController("nodegroup-status", &v1.NodeGroup{}, &Status{})
@@ -95,8 +89,6 @@ func (r *Status) SetupWatches(w register.Watcher) {
 	w.Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(r.secretToAllNodeGroups), builder.WithPredicates(predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		return obj.GetNamespace() == "kube-system" && obj.GetName() == ngcommon.CloudProviderSecretName
 	})))
-	w.Watches(&corev1.ConfigMap{}, handler.EnqueueRequestsFromMapFunc(r.configMapToAllNodeGroups),
-		builder.WithPredicates(clusterKubernetesDesiredVersionPredicate()))
 	// status.error and the capacity checks are computed from the InstanceClass, so a class
 	// that appears, changes or is deleted must refresh the status of the NodeGroups pointing
 	// at it instead of leaving a stale error until the resync. The source is deferred: the kind
@@ -109,55 +101,7 @@ func (r *Status) SetupWatches(w register.Watcher) {
 }
 
 func (r *Status) secretToAllNodeGroups(ctx context.Context, _ client.Object) []reconcile.Request {
-	return nodecommon.AllNodeGroups(ctx, r.Client)
-}
-
-func (r *Status) configMapToAllNodeGroups(ctx context.Context, _ client.Object) []reconcile.Request {
-	return nodecommon.AllNodeGroups(ctx, r.Client)
-}
-
-// clusterKubernetesDesiredVersionPredicate matches d8-cluster-kubernetes and, on updates, only
-// lets through changes to spec.desiredVersion — the single field this controller reads from it.
-//
-// Matching the object alone is not enough: update-observer rewrites this ConfigMap on every one of
-// its reconciles (it stamps an annotation unconditionally, at least once a minute while the cluster
-// is not up to date), and every event here fans out to *all* NodeGroups. control-plane-manager
-// applies the same narrowing to its own watch of this object.
-func clusterKubernetesDesiredVersionPredicate() predicate.Predicate {
-	isTarget := func(obj client.Object) bool {
-		return obj != nil &&
-			obj.GetNamespace() == clusterKubernetesConfigMapNS &&
-			obj.GetName() == clusterKubernetesConfigMapName
-	}
-
-	desiredVersion := func(obj client.Object) string {
-		cm, ok := obj.(*corev1.ConfigMap)
-		if !ok {
-			return ""
-		}
-		spec := new(clusterKubernetesSpecForPredicate)
-		if err := sigsyaml.Unmarshal([]byte(cm.Data["spec"]), spec); err != nil {
-			// Unparsable spec: let it through so Reconcile logs the real problem.
-			return ""
-		}
-		return spec.DesiredVersion
-	}
-
-	return predicate.Funcs{
-		CreateFunc:  func(e event.CreateEvent) bool { return isTarget(e.Object) },
-		DeleteFunc:  func(e event.DeleteEvent) bool { return isTarget(e.Object) },
-		GenericFunc: func(e event.GenericEvent) bool { return isTarget(e.Object) },
-		UpdateFunc: func(e event.UpdateEvent) bool {
-			if !isTarget(e.ObjectNew) {
-				return false
-			}
-			return desiredVersion(e.ObjectOld) != desiredVersion(e.ObjectNew)
-		},
-	}
-}
-
-type clusterKubernetesSpecForPredicate struct {
-	DesiredVersion string `json:"desiredVersion"`
+	return nodecommon.SecretToAllNodeGroups(ctx, r.Client)
 }
 
 func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
