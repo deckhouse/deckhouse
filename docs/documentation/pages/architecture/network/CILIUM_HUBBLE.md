@@ -26,7 +26,7 @@ The Level 2 C4 architecture of the [`cilium-hubble`](/modules/cilium-hubble/) mo
 
 The module consists of the following components:
 
-1. **Hubble-relay**: Component that aggregates events from all cluster nodes into a single view. Hubble-relay establishes a permanent connection to each Cilium Agent on the nodes and, through the gRPC stream, receives events, deduplicates them, and provides a single gRPC endpoint for the Hubble CLI and Hubble UI (web interface). Important: hubble-relay does not store history, it broadcasts an event stream in real time.
+1. **Hubble-relay**: Component that aggregates events from all cluster nodes into a single view. Hubble-relay establishes a permanent connection to each Cilium Agent on the nodes and, through the gRPC stream, receives events, deduplicates them, and provides a single gRPC endpoint for the Hubble CLI and Hubble UI (web interface). While doing this, hubble-relay does not store history, it broadcasts an event stream in real time.
 
    It consists of a single container:
 
