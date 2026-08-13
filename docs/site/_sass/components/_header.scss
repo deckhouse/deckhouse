@@ -630,12 +630,20 @@ html {
         background-color: #F6FAFE;
         box-shadow: inset rgba(34, 42, 94, .11) 0 4px 14px -10px;
 
+        @include breakpoints.min-w(s) {
+            padding: 1.063rem 0;
+        }
+
         @include breakpoints.min-w(m) {
-            padding: 1.264rem 0;
+            padding: 1.05rem 0;
         }
 
         @include breakpoints.min-w(l) {
-            padding: 1.29rem 0;
+            padding: 1.286rem 0;
+        }
+
+        @include breakpoints.min-w(xl) {
+            padding: 1.252rem 0;
         }
 
         @media (min-width: 1228px) {
@@ -659,8 +667,12 @@ html {
             justify-content: space-between;
 
             @include breakpoints.min-w(l) {
-                gap: 1.25rem 2.13rem;
+                gap: 1.25rem 2.1rem;
                 justify-content: flex-start;
+            }
+
+            @media (min-width: 1228px) {
+                gap: 1.25rem 2.13rem;
             }
 
             @include breakpoints.max-w(l) {
@@ -703,6 +715,10 @@ html {
                 color: mixins.$ntrl-300;
                 font-size: 12.5px;
 
+                @include breakpoints.min-w(s) {
+                    padding-top: .286rem;
+                }
+
                 &::after {
                     content: "";
                     position: absolute;
@@ -717,7 +733,7 @@ html {
                     width: 10px;
 
                     @include breakpoints.min-w(s) {
-                        top: 57%;
+                        top: 58%;
                     }
                 }
 
@@ -740,19 +756,12 @@ html {
             color: mixins.$ntrl-800;
             font-size: 16px;
 
-            @include breakpoints.max-w(l) {
-                line-height: 18px;
-            }
-
-            @include breakpoints.min-w(l) {
-                padding-bottom: 1px;
-            }
-
             @media screen and (min-width: 1024px) and (max-width: 1228px) {
+                padding-bottom: 1px;
                 line-height: 19px;
             }
 
-            @include breakpoints.min-w(xl) {
+            @media (min-width: 1228px) {
                 padding-bottom: 0;
             }
 
