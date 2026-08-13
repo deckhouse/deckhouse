@@ -185,10 +185,11 @@ func TestGetConfigMapSpecPredicate(t *testing.T) {
 		assert.False(t, pred.Update(event.UpdateEvent{ObjectOld: older, ObjectNew: newer}))
 	})
 
-	// This object is the only durable record of maxUsedKubernetesVersion. A delete that got past
-	// the admission webhook has to be followed by a recreate, not by silence.
-	t.Run("reacts to deletion so the ConfigMap is recreated", func(t *testing.T) {
-		assert.True(t, pred.Delete(event.DeleteEvent{Object: withData(specA)}))
+	// dhctl creates this object and the label-objects admission policy keeps it, so the controller
+	// no longer carries a recreate path — and a reconcile that cannot read it only logs and requeues.
+	// Deletion is therefore not something to react to.
+	t.Run("ignores deletion", func(t *testing.T) {
+		assert.False(t, pred.Delete(event.DeleteEvent{Object: withData(specA)}))
 	})
 
 	t.Run("ignores deletion of a same-named ConfigMap in another namespace", func(t *testing.T) {
