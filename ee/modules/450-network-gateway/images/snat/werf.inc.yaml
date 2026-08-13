@@ -17,3 +17,7 @@ import:
   to: /
   before: setup
 {{- include "image mount points" $ }}
+shell:
+  install:
+  # prevent mounting to /usr/bin due to /sbin is a symlink to /usr/bin in a container
+  - unlink /sbin
