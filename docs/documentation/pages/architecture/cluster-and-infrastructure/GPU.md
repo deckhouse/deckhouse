@@ -5,15 +5,15 @@ search: gpu, llm
 description: Architecture of the gpu module in Deckhouse Kubernetes Platform.
 ---
 
-The [`gpu`](/modules/gpu/) module manages GPUs (Graphics Processing Units) in Deckhouse Kubernetes Platform (DKP).
+The [`gpu`](/modules/gpu/) module manages Graphics Processing Units (GPU) in Deckhouse Kubernetes Platform (DKP).
 
 The module operates in two mutually exclusive modes.
-The mode is defined by the [dra.enabled](/modules/gpu/configuration.html#parameters-dra) parameter:
+The mode is defined by the [`dra.enabled`](/modules/gpu/configuration.html#parameters-dra) parameter:
 
-- [DRA (Dynamic Resource Allocation)](https://kubernetes.io/docs/concepts/scheduling-eviction/dynamic-resource-allocation/) mode: The module uses a Kubernetes mechanism for requesting and sharing devices that provides dynamic and declarative allocation of GPU compute resources.
-- Device Plugin mode (default): The module uses the classic Kubernetes model for working with node compute resources and publishes `nvidia.com/gpu` or `nvidia.com/mig-*` resources, which kube-scheduler uses to schedule pods that consume these resources.
+- [Dynamic Resource Allocation (DRA)](https://kubernetes.io/docs/concepts/scheduling-eviction/dynamic-resource-allocation/): The module uses a Kubernetes mechanism for requesting and sharing devices that provides dynamic and declarative allocation of GPU compute resources.
+- [Device Plugin mode](https://kubernetes.io/docs/concepts/extend-kubernetes/compute-storage-net/device-plugins/) (default): The module uses the classic Kubernetes model for working with node compute resources and publishes `nvidia.com/gpu` or `nvidia.com/mig-*` resources, which kube-scheduler uses to schedule pods that consume these resources.
 
-For more details, refer to the [corresponding documentation section](/modules/gpu/configuration.html).
+For more details, refer to the [corresponding documentation section](/modules/gpu/).
 
 The module architecture depends on the operating mode.
 
@@ -29,7 +29,7 @@ The module works with the following resources:
 - ResourceClaim: A DRA resource that contains a request to allocate a resource for a pod and describes the required characteristics and usage parameters.
 - ResourceSlice: A DRA resource that represents an allocated share or part of a resource assigned within a ResourceClaim.
 
-### Module architecture (DRA mode)
+### Module architecture
 
 {% alert level="info" %}
 The following simplifications are made in the diagram:
@@ -42,7 +42,7 @@ The Level 2 C4 architecture of the [`gpu`](/modules/gpu/) module in DRA mode and
 
 ![Architecture of the gpu module in DRA mode](../../../images/architecture/cluster-and-infrastructure/c4-l2-gpu-dra.svg)
 
-### Module components (DRA mode)
+### Module components
 
 The module consists of the following components:
 
@@ -65,7 +65,7 @@ The module consists of the following components:
 
    - Scans the host `/sys` filesystem and the PCI ID database.
    - Matches devices against the `gpu-supported-vendors` ConfigMap.
-   - Creates PhysicalGPU custom resources for each discovered card.
+   - Creates PhysicalGPU custom resources for each discovered GPU.
    - Sets the `gpu.deckhouse.io/vendor=<VENDOR>` labels on the Node resource.
 
    The component runs on all cluster nodes except the control plane.
@@ -141,9 +141,9 @@ The module consists of the following components:
 
 1. **node-feature-discovery-worker** (DaemonSet): A component that consists of a single **worker** container, runs on each GPU node, discovers PCI/USB devices on the node, and publishes them as NodeFeature resources. The component also publishes information received from the gpu-feature-discovery-&lt;NG&gt; component as NodeFeature resources.
 
-1. **node-feature-discovery-gc** (Deployment): A component that consists of a single **gc** container and deletes obsolete NodeFeature resources when a node is deleted.
+1. **node-feature-discovery-gc** (Deployment): A component that consists of a single **gc** container, which deletes obsolete NodeFeature resources when a node is deleted.
 
-1. **gpu-feature-discovery-&lt;NG&gt;** (DaemonSet): A component that queries the GPU driver via the NVIDIA Management Library (NVML) and writes GPU hardware capabilities to the `/etc/kubernetes/node-feature-discovery/features.d/gfd` file. Node-feature-discovery-worker publishes them as NodeFeature resources, from which node-feature-discovery-master updates the corresponding `nvidia.com/*` labels for cluster nodes.
+1. **gpu-feature-discovery-&lt;NG&gt;** (DaemonSet): A component that queries the GPU driver via the NVIDIA Management Library (NVML) and writes information about GPU hardware capabilities to the `/etc/kubernetes/node-feature-discovery/features.d/gfd` file. Node-feature-discovery-worker publishes this information as NodeFeature resources, from which node-feature-discovery-master updates the corresponding `nvidia.com/*` labels for cluster nodes.
 
    The component is created by the Deckhouse controller of the [`deckhouse`](/modules/deckhouse/) module for every NodeGroup (NG) whose configuration specifies the [`.spec.gpu`](/modules/node-manager/cr.html#nodegroup-v1-spec-gpu) parameter.
 
@@ -155,7 +155,7 @@ The module consists of the following components:
 
 1. **nvidia-device-plugin-&lt;NG&gt;** (DaemonSet): A component that registers with kubelet through the [Kubernetes Device Plugin API](https://kubernetes.io/docs/concepts/extend-kubernetes/compute-storage-net/device-plugins/) and publishes GPU resources for kube-scheduler.
 
-   To work with resources, kubelet calls the ListAndWatch, Allocate, and GetPreferredAllocation gRPC methods on nvidia-device-plugin-ctr. After that, the component updates the number of available resources on the node and returns this information through kubelet.
+   To work with resources, kubelet calls the `ListAndWatch`, `Allocate`, and `GetPreferredAllocation` gRPC methods on nvidia-device-plugin-ctr. After that, the component updates the number of available resources on the node and returns this information through kubelet.
 
    It consists of the following containers:
 
@@ -163,7 +163,7 @@ The module consists of the following components:
    - **nvidia-device-plugin-ctr**: Main container.
    - **nvidia-device-plugin-sidecar**: Sidecar container that watches configuration changes and restarts the main container to apply them.
 
-1. **nvidia-mig-manager** (DaemonSet): An optional component that manages changes to the [Multi-Instance GPU (MIG)](https://www.nvidia.com/en-us/technologies/multi-instance-gpu/) profile on nodes with A100/H100.
+1. **nvidia-mig-manager** (DaemonSet): An optional component that manages changes to the [Multi-Instance GPU (MIG)](https://www.nvidia.com/en-us/technologies/multi-instance-gpu/) profile on nodes with GPUs A100 and H100.
 
    The component performs the following actions:
 
@@ -179,11 +179,11 @@ The module consists of the following components:
    - **nvidia-mig-manager-init**: Init container that prepares executables and libraries.
    - **nvidia-mig-manager**: Main container.
 
-1. **nvidia-dcgm** (DaemonSet): A component that consists of a single **nvidia-dcgm** container and runs [Data Center GPU Manager (DCGM)](https://github.com/nvidia/dcgm). DCGM collects raw GPU telemetry (health, Error Correction Code (ECC), power, utilization).
+1. **nvidia-dcgm** (DaemonSet): A component that consists of a single **nvidia-dcgm** container, which runs [Data Center GPU Manager (DCGM)](https://github.com/nvidia/dcgm). DCGM collects GPU health and utilization data (Error Correction Code (ECC), power).
 
-1. **nvidia-dcgm-exporter** (DaemonSet): A component that consists of a single **exporter** container, retrieves GPU metrics from the nvidia-dcgm component, and exposes them in Prometheus format.
+1. **nvidia-dcgm-exporter** (DaemonSet): A component that consists of a single **exporter** container, which retrieves GPU metrics from the nvidia-dcgm component, and exposes them in Prometheus format.
 
-### Module interactions (Device Plugin mode)
+### Module interactions
 
 The module interacts with the following components:
 
@@ -198,6 +198,6 @@ The module interacts with the following components:
 
 The following external components interact with the module:
 
-1. **Kubelet**: Calls the ListAndWatch, Allocate, and GetPreferredAllocation gRPC methods.
+1. **Kubelet**: Calls the `ListAndWatch`, `Allocate`, and `GetPreferredAllocation` gRPC methods.
 
 1. **Prometheus-main**: Collects metrics from nvidia-dcgm.
