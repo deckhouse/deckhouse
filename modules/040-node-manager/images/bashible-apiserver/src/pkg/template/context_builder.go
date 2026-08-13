@@ -111,23 +111,6 @@ func (cb *ContextBuilder) SetInputData(data inputData) {
 	cb.clusterInputData = data
 }
 
-func (cb *ContextBuilder) getCloudProvider() string {
-	if cb.clusterInputData.CloudProvider == nil {
-		// absent cloud provider means static nodes
-		return ""
-	}
-
-	cloudProvider, ok := cb.clusterInputData.CloudProvider.(map[string]interface{})
-	if !ok {
-		return ""
-	}
-	providerType, ok := cloudProvider["type"].(string)
-	if !ok {
-		return ""
-	}
-	return providerType
-}
-
 func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[string]error) {
 	bb := BashibleContextData{
 		bashibleContexts: make(map[string]interface{}),
@@ -178,7 +161,9 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 		}
 		bundleContextName := fmt.Sprintf("bundle-%s", ng.Name())
 		bashibleContextName := fmt.Sprintf("bashible-%s", ng.Name())
-		bundleNgContext := cb.newBundleNGContext(ng, cb.clusterInputData.Freq, cb.clusterInputData.CloudProvider, commonContext)
+		cloudProvider := cb.clusterInputData.getCloudProvider(ng.CloudProviderType())
+
+		bundleNgContext := cb.newBundleNGContext(ng, cb.clusterInputData.Freq, cloudProvider, commonContext)
 		bb.bashibleContexts[bundleContextName] = bundleNgContext
 
 		bashibleContext, err := cb.newBashibleContext(checksumCollector, ng, cb.versionMap, &bundleNgContext)
@@ -223,7 +208,7 @@ func (cb *ContextBuilder) newBashibleContext(checksumCollector hash.Hash, ng nod
 		Registry:                   cb.registryData,
 		Proxy:                      cb.clusterInputData.Proxy,
 		Deckhouse:                  cb.clusterInputData.Deckhouse,
-		CloudProviderType:          cb.getCloudProvider(),
+		CloudProviderType:          bundleNgContext.CloudProvider.Type(),
 		PackagesProxy:              cb.clusterInputData.PackagesProxy,
 		AllowedKubeletFeatureGates: cb.clusterInputData.AllowedKubeletFeatureGates,
 	}
@@ -259,14 +244,7 @@ func (cb *ContextBuilder) generateBashibleChecksum(checksumCollector hash.Hash, 
 		res[k] = v
 	}
 
-	var providerType string
-	cloudProvider, ok := bundleNgContext.CloudProvider.(map[string]interface{})
-	if ok {
-		providerType, ok = cloudProvider["type"].(string)
-		if !ok {
-			return fmt.Errorf("cloudProvider.type is not a string")
-		}
-	}
+	providerType := bundleNgContext.CloudProvider.Type()
 
 	// render steps
 	steps, err := cb.stepsStorage.Render("all", providerType, res)
@@ -317,7 +295,7 @@ func (cb *ContextBuilder) generateBashibleChecksum(checksumCollector hash.Hash, 
 	return nil
 }
 
-func (cb *ContextBuilder) newBundleNGContext(ng nodeGroup, freq interface{}, cloudProvider interface{}, contextCommon *tplContextCommon) bundleNGContext {
+func (cb *ContextBuilder) newBundleNGContext(ng nodeGroup, freq interface{}, cloudProvider cloudProvider, contextCommon *tplContextCommon) bundleNGContext {
 	return bundleNGContext{
 		tplContextCommon:          contextCommon,
 		KubernetesVersion:         ng.KubernetesVersion(),
@@ -406,6 +384,15 @@ func (ng nodeGroup) CRIType() string {
 	return ""
 }
 
+// CloudProviderType is resolved by node-controller; empty means the group is outside any cloud.
+func (ng nodeGroup) CloudProviderType() string {
+	if typ, ok := ng["cloudProviderType"].(string); ok {
+		return typ
+	}
+
+	return ""
+}
+
 type bashibleContext struct {
 	ConfigurationChecksum              string                  `json:"configurationChecksum" yaml:"configurationChecksum"`
 	KubernetesVersion                  string                  `json:"kubernetesVersion" yaml:"kubernetesVersion"`
@@ -484,10 +471,10 @@ type tplContextCommon struct {
 type bundleNGContext struct {
 	*tplContextCommon
 
-	KubernetesVersion string      `json:"kubernetesVersion" yaml:"kubernetesVersion"`
-	CRI               string      `json:"cri" yaml:"cri"`
-	NodeGroup         nodeGroup   `json:"nodeGroup" yaml:"nodeGroup"`
-	CloudProvider     interface{} `json:"cloudProvider,omitempty" yaml:"cloudProvider,omitempty"`
+	KubernetesVersion string        `json:"kubernetesVersion" yaml:"kubernetesVersion"`
+	CRI               string        `json:"cri" yaml:"cri"`
+	NodeGroup         nodeGroup     `json:"nodeGroup" yaml:"nodeGroup"`
+	CloudProvider     cloudProvider `json:"cloudProvider,omitempty" yaml:"cloudProvider,omitempty"`
 
 	NodeStatusUpdateFrequency interface{} `json:"nodeStatusUpdateFrequency,omitempty" yaml:"nodeStatusUpdateFrequency,omitempty"`
 
@@ -519,22 +506,58 @@ type deckhouse struct {
 	Edition string `json:"edition" yaml:"edition"`
 }
 
+// cloudProvider is the registration a cloud-provider module publishes.
+type cloudProvider map[string]interface{}
+
+// Type names the directory the provider's bashible steps are loaded from.
+func (cp cloudProvider) Type() string {
+	// absent cloud provider means static nodes
+	if len(cp) == 0 {
+		return ""
+	}
+
+	pType, ok := cp["type"].(string)
+	if !ok {
+		return ""
+	}
+
+	return pType
+}
+
 type inputData struct {
-	Deckhouse                  deckhouse               `json:"deckhouse" yaml:"deckhouse"`
-	PodSubnetNodeCIDRPrefix    string                  `json:"podSubnetNodeCIDRPrefix" yaml:"podSubnetNodeCIDRPrefix"`
-	ClusterDomain              string                  `json:"clusterDomain" yaml:"clusterDomain"`
-	ClusterDNSAddress          string                  `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
-	ClusterUUID                string                  `json:"clusterUUID,omitempty" yaml:"clusterUUID,omitempty"`
-	ClusterMasterEndpoints     []clusterMasterEndpoint `json:"clusterMasterEndpoints,omitempty" yaml:"clusterMasterEndpoints,omitempty"`
-	CloudProvider              interface{}             `json:"cloudProvider,omitempty" yaml:"cloudProvider,omitempty"`
-	Proxy                      map[string]interface{}  `json:"proxy,omitempty" yaml:"proxy,omitempty"`
-	BootstrapTokens            map[string]string       `json:"bootstrapTokens,omitempty" yaml:"bootstrapTokens,omitempty"`
-	PackagesProxy              map[string]interface{}  `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
-	APIServerEndpoints         []string                `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
-	APIServerProxyCerts        map[string]interface{}  `json:"apiserverProxyCerts" yaml:"apiserverProxyCerts"`
-	KubernetesCA               string                  `json:"kubernetesCA" yaml:"kubernetesCA"`
-	AllowedBundles             []string                `json:"allowedBundles" yaml:"allowedBundles"`
-	NodeGroups                 []nodeGroup             `json:"nodeGroups" yaml:"nodeGroups"`
-	Freq                       interface{}             `json:"NodeStatusUpdateFrequency,omitempty" yaml:"NodeStatusUpdateFrequency,omitempty"`
-	AllowedKubeletFeatureGates []string                `json:"allowedKubeletFeatureGates,omitempty" yaml:"allowedKubeletFeatureGates,omitempty"`
+	Deckhouse               deckhouse               `json:"deckhouse" yaml:"deckhouse"`
+	PodSubnetNodeCIDRPrefix string                  `json:"podSubnetNodeCIDRPrefix" yaml:"podSubnetNodeCIDRPrefix"`
+	ClusterDomain           string                  `json:"clusterDomain" yaml:"clusterDomain"`
+	ClusterDNSAddress       string                  `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
+	ClusterUUID             string                  `json:"clusterUUID,omitempty" yaml:"clusterUUID,omitempty"`
+	ClusterMasterEndpoints  []clusterMasterEndpoint `json:"clusterMasterEndpoints,omitempty" yaml:"clusterMasterEndpoints,omitempty"`
+	// Deprecated: answers for NodeGroups that name no provider, remove in the next release.
+	CloudProvider              cloudProvider          `json:"cloudProvider,omitempty" yaml:"cloudProvider,omitempty"`
+	CloudProviders             []cloudProvider        `json:"cloudProviders,omitempty" yaml:"cloudProviders,omitempty"`
+	Proxy                      map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
+	BootstrapTokens            map[string]string      `json:"bootstrapTokens,omitempty" yaml:"bootstrapTokens,omitempty"`
+	PackagesProxy              map[string]interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
+	APIServerEndpoints         []string               `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
+	APIServerProxyCerts        map[string]interface{} `json:"apiserverProxyCerts" yaml:"apiserverProxyCerts"`
+	KubernetesCA               string                 `json:"kubernetesCA" yaml:"kubernetesCA"`
+	AllowedBundles             []string               `json:"allowedBundles" yaml:"allowedBundles"`
+	NodeGroups                 []nodeGroup            `json:"nodeGroups" yaml:"nodeGroups"`
+	Freq                       interface{}            `json:"NodeStatusUpdateFrequency,omitempty" yaml:"NodeStatusUpdateFrequency,omitempty"`
+	AllowedKubeletFeatureGates []string               `json:"allowedKubeletFeatureGates,omitempty" yaml:"allowedKubeletFeatureGates,omitempty"`
+}
+
+// getCloudProvider returns the provider a NodeGroup named. The fallback keeps a node-controller
+// that publishes neither cloudProviders nor a per-NodeGroup type working.
+func (input inputData) getCloudProvider(pType string) cloudProvider {
+	if len(input.CloudProviders) == 0 || pType == "" {
+		return input.CloudProvider
+	}
+
+	for i, provider := range input.CloudProviders {
+		if provider.Type() == pType {
+			return input.CloudProviders[i]
+		}
+	}
+
+	return input.CloudProvider
 }

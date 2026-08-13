@@ -17,8 +17,13 @@ limitations under the License.
 package template
 
 import (
+	"context"
 	"crypto/sha256"
 	"fmt"
+	"os"
+	"path/filepath"
+	"reflect"
+	"sort"
 	"testing"
 
 	"sigs.k8s.io/yaml"
@@ -244,4 +249,201 @@ updateEpoch: "1680009541"
 			t.Fatalf("expected checksum to change when seccompDefault changes")
 		}
 	})
+}
+
+func TestGetCloudProvider(t *testing.T) {
+	aws := cloudProvider{"type": "aws", "region": "eu-central-1"}
+	yandex := cloudProvider{"type": "yandex"}
+
+	t.Run("a writer that publishes no list still answers with the deprecated field", func(t *testing.T) {
+		input := inputData{CloudProvider: aws}
+
+		if got := input.getCloudProvider("aws"); !reflect.DeepEqual(got, aws) {
+			t.Fatalf("getCloudProvider(aws) = %v, want the deprecated registration %v", got, aws)
+		}
+		if got := input.getCloudProvider(""); !reflect.DeepEqual(got, aws) {
+			t.Fatalf("getCloudProvider(\"\") = %v, want the deprecated registration %v", got, aws)
+		}
+	})
+
+	t.Run("a NodeGroup picks the registration of its own type", func(t *testing.T) {
+		input := inputData{CloudProviders: []cloudProvider{aws, yandex}}
+
+		if got := input.getCloudProvider("aws"); !reflect.DeepEqual(got, aws) {
+			t.Fatalf("getCloudProvider(aws) = %v, want %v", got, aws)
+		}
+		if got := input.getCloudProvider("yandex"); !reflect.DeepEqual(got, yandex) {
+			t.Fatalf("getCloudProvider(yandex) = %v, want %v", got, yandex)
+		}
+	})
+
+	t.Run("a NodeGroup that names no provider gets none once the deprecated field is gone", func(t *testing.T) {
+		input := inputData{CloudProviders: []cloudProvider{aws}}
+
+		if got := input.getCloudProvider(""); got != nil {
+			t.Fatalf("getCloudProvider(\"\") = %v, want nil", got)
+		}
+	})
+
+	t.Run("a NodeGroup that names no provider still gets the deprecated one while it is published", func(t *testing.T) {
+		input := inputData{CloudProvider: aws, CloudProviders: []cloudProvider{aws}}
+
+		if got := input.getCloudProvider(""); !reflect.DeepEqual(got, aws) {
+			t.Fatalf("getCloudProvider(\"\") = %v, want the deprecated registration %v", got, aws)
+		}
+	})
+
+	t.Run("a type nobody registered falls back instead of guessing", func(t *testing.T) {
+		input := inputData{CloudProvider: aws, CloudProviders: []cloudProvider{aws}}
+
+		if got := input.getCloudProvider("gcp"); !reflect.DeepEqual(got, aws) {
+			t.Fatalf("getCloudProvider(gcp) = %v, want the deprecated registration %v", got, aws)
+		}
+	})
+}
+
+func TestCloudProviderIsPerNodeGroupInBuiltContexts(t *testing.T) {
+	aws := cloudProvider{"type": "aws", "region": "eu-central-1"}
+	yandex := cloudProvider{"type": "yandex"}
+
+	root := t.TempDir()
+	writeStepTemplate(t, root, "bashible/common-steps/all/000_common.sh.tpl", "echo common")
+	writeStepTemplate(t, root, "cloud-providers/aws/bashible/common-steps/all/010_aws.sh.tpl", "echo aws")
+	writeStepTemplate(t, root, "cloud-providers/yandex/bashible/common-steps/all/010_yandex.sh.tpl", "echo yandex")
+
+	t.Run("every group renders the steps of the provider it names", func(t *testing.T) {
+		built, steps := buildContexts(t, root, inputData{
+			CloudProviders: []cloudProvider{aws, yandex},
+			NodeGroups: []nodeGroup{
+				{"name": "worker-aws", "nodeType": "CloudEphemeral", "cloudProviderType": "aws"},
+				{"name": "worker-yandex", "nodeType": "CloudEphemeral", "cloudProviderType": "yandex"},
+				{"name": "static-ng", "nodeType": "Static"},
+			},
+		})
+
+		if got := bashibleContextOf(t, built, "worker-aws").CloudProviderType; got != "aws" {
+			t.Fatalf("worker-aws cloudProviderType = %q, want %q", got, "aws")
+		}
+		if got := bashibleContextOf(t, built, "worker-yandex").CloudProviderType; got != "yandex" {
+			t.Fatalf("worker-yandex cloudProviderType = %q, want %q", got, "yandex")
+		}
+		if got := bashibleContextOf(t, built, "static-ng").CloudProviderType; got != "" {
+			t.Fatalf("static-ng cloudProviderType = %q, want it empty", got)
+		}
+
+		if got, want := keysOf(steps["worker-aws"]), []string{"000_common.sh", "010_aws.sh"}; !reflect.DeepEqual(got, want) {
+			t.Fatalf("worker-aws steps = %v, want %v", got, want)
+		}
+		if got, want := keysOf(steps["worker-yandex"]), []string{"000_common.sh", "010_yandex.sh"}; !reflect.DeepEqual(got, want) {
+			t.Fatalf("worker-yandex steps = %v, want %v", got, want)
+		}
+		if got, want := keysOf(steps["static-ng"]), []string{"000_common.sh"}; !reflect.DeepEqual(got, want) {
+			t.Fatalf("static-ng steps = %v, want %v", got, want)
+		}
+	})
+
+	t.Run("the registration reaches the bundle context of its own group only", func(t *testing.T) {
+		built, _ := buildContexts(t, root, inputData{
+			CloudProviders: []cloudProvider{aws},
+			NodeGroups: []nodeGroup{
+				{"name": "worker-aws", "nodeType": "CloudEphemeral", "cloudProviderType": "aws"},
+				{"name": "static-ng", "nodeType": "Static"},
+			},
+		})
+
+		if got := bundleContextOf(t, built, "worker-aws").CloudProvider; !reflect.DeepEqual(got, aws) {
+			t.Fatalf("worker-aws bundle cloudProvider = %v, want %v", got, aws)
+		}
+		if got := bundleContextOf(t, built, "static-ng").CloudProvider; got != nil {
+			t.Fatalf("static-ng bundle cloudProvider = %v, want nil", got)
+		}
+	})
+
+	t.Run("a writer from before this contract keeps every group on the cluster provider", func(t *testing.T) {
+		built, steps := buildContexts(t, root, inputData{
+			CloudProvider: aws,
+			NodeGroups: []nodeGroup{
+				{"name": "worker-aws", "nodeType": "CloudEphemeral"},
+				{"name": "static-ng", "nodeType": "Static"},
+			},
+		})
+
+		for _, ng := range []string{"worker-aws", "static-ng"} {
+			if got := bashibleContextOf(t, built, ng).CloudProviderType; got != "aws" {
+				t.Fatalf("%s cloudProviderType = %q, want %q", ng, got, "aws")
+			}
+			if got, want := keysOf(steps[ng]), []string{"000_common.sh", "010_aws.sh"}; !reflect.DeepEqual(got, want) {
+				t.Fatalf("%s steps = %v, want %v", ng, got, want)
+			}
+		}
+	})
+}
+
+// buildContexts builds over rootDir and collects the steps rendered per NodeGroup.
+func buildContexts(t *testing.T, rootDir string, input inputData) (BashibleContextData, map[string]map[string]string) {
+	t.Helper()
+
+	steps := make(map[string]map[string]string)
+
+	cb := NewContextBuilder(context.Background(), NewStepsStorage(context.Background(), rootDir, nil))
+	cb.emitStepsOutput = func(ng string, rendered map[string]string) {
+		if steps[ng] == nil {
+			steps[ng] = make(map[string]string)
+		}
+		for name, content := range rendered {
+			steps[ng][name] = content
+		}
+	}
+	cb.SetInputData(input)
+
+	data, _, errs := cb.Build()
+	if len(errs) > 0 {
+		t.Fatalf("build errors: %v", errs)
+	}
+
+	return data, steps
+}
+
+func bashibleContextOf(t *testing.T, data BashibleContextData, ng string) bashibleContext {
+	t.Helper()
+
+	bc, ok := data.bashibleContexts[fmt.Sprintf("bashible-%s", ng)].(bashibleContext)
+	if !ok {
+		t.Fatalf("no bashible context for NodeGroup %q", ng)
+	}
+
+	return bc
+}
+
+func bundleContextOf(t *testing.T, data BashibleContextData, ng string) bundleNGContext {
+	t.Helper()
+
+	bc, ok := data.bashibleContexts[fmt.Sprintf("bundle-%s", ng)].(bundleNGContext)
+	if !ok {
+		t.Fatalf("no bundle context for NodeGroup %q", ng)
+	}
+
+	return bc
+}
+
+func writeStepTemplate(t *testing.T, rootDir, path, content string) {
+	t.Helper()
+
+	full := filepath.Join(rootDir, path)
+	if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+		t.Fatalf("mkdir for %s: %v", path, err)
+	}
+	if err := os.WriteFile(full, []byte(content), 0o600); err != nil {
+		t.Fatalf("write %s: %v", path, err)
+	}
+}
+
+func keysOf(m map[string]string) []string {
+	names := make([]string, 0, len(m))
+	for name := range m {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	return names
 }
