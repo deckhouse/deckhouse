@@ -526,14 +526,14 @@ properties:
     description: |
       Optional Certificate Revocation List (CRL) override in PEM format.
 
-      When unset, the module always publishes an empty dummy CRL signed by the
-      current mesh CA into Secret `cacerts` (`ca-crl.pem`). That keeps ztunnel
-      CRL wiring ready from day one so an incident revoke is a hot reload, not a
-      DaemonSet rollout.
+      When unset, the module does not publish `ca-crl.pem` (CRL checks stay off).
+      That keeps federation / multicluster mTLS healthy until CRL is enabled
+      explicitly and peer CRLs are exchanged via metadata-exporter.
 
       When set, the value is published as-is (one or more PEM CRL blocks, for
-      example a root-signed CRL and intermediate-signed CRLs concatenated).
-      Generating the PEM (which serials, which issuer) is the operator's
+      example a root-signed CRL and intermediate-signed CRLs concatenated), and
+      peer CRLs from federation/multicluster metadata are appended. Generating
+      the local PEM (which serials, which issuer) is the operator's
       responsibility.
 
       Istiod distributes `ca-crl.pem` to mesh namespaces as the `istio-ca-crl`

@@ -251,12 +251,13 @@ properties:
     description: |
       Опциональный список отзыва сертификатов (CRL) в формате PEM.
 
-      Если не задан, модуль всегда публикует пустой dummy CRL, подписанный текущим
-      CA меша, в Secret `cacerts` (`ca-crl.pem`). Так ztunnel сразу имеет mount /
-      `CRL_PATH`, и отзыв в инциденте — hot reload, а не rollout DaemonSet.
+      Если не задан, модуль не публикует `ca-crl.pem` (CRL-проверки выключены).
+      Так federation / multicluster mTLS остаётся здоровым, пока CRL не включают
+      явно и peer CRL не обмениваются через metadata-exporter.
 
-      Если задан — публикуется as-is (один или несколько PEM-блоков CRL).
-      Выпуск PEM (какие serial, кто issuer) — ответственность оператора.
+      Если задан — публикуется as-is (один или несколько PEM-блоков CRL), к нему
+      дописываются peer CRL из federation/multicluster metadata. Выпуск локального
+      PEM (какие serial, кто issuer) — ответственность оператора.
 
       Istiod распространяет `ca-crl.pem` по namespace mesh как ConfigMap
       `istio-ca-crl`. При ambient и control plane ≥ 1.29 ztunnel монтирует его и
