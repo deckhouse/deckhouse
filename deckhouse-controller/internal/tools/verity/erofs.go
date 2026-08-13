@@ -27,7 +27,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 
-	"github.com/deckhouse/deckhouse/pkg/app"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 )
 
 const (
