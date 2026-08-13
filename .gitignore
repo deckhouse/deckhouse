@@ -22,6 +22,7 @@
 .idea/
 .vscode
 .cursor
+.claude
 __debug_bin*
 venv/
 out/
