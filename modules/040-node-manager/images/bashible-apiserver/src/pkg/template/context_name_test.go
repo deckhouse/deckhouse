@@ -20,26 +20,78 @@ import (
 	"testing"
 )
 
-func TestGetNodegroupContextKey(t *testing.T) {
+// contexts are keyed by NodeGroup name; the {os}. prefix is stripped by TransformName beforehand
+func TestContextKeys(t *testing.T) {
 	tests := []struct {
-		name    string
-		arg     string
-		want    string
-		wantErr bool
+		name         string
+		arg          string
+		wantBundle   string
+		wantBashible string
 	}{
-		{"valid", "ubuntu-lts.master-flomaster", "bundle-ubuntu-lts-master-flomaster", false},
-		{"invalid", "ubuntu-lts-master-flomaster", "", true},
+		{"nodegroup name", "master-flomaster", "bundle-master-flomaster", "bashible-master-flomaster"},
+		{"nodegroup with a dot", "ubuntu-lts.master", "bundle-ubuntu-lts.master", "bashible-ubuntu-lts.master"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := GetNodegroupContextKey(tt.arg)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("GetNodegroupContextKey() error = %v, wantErr %v", err, tt.wantErr)
-				return
+			if err != nil {
+				t.Fatalf("GetNodegroupContextKey() error = %v", err)
 			}
-			if got != tt.want {
-				t.Errorf("GetNodegroupContextKey() = %v, want %v", got, tt.want)
+			if got != tt.wantBundle {
+				t.Errorf("GetNodegroupContextKey() = %v, want %v", got, tt.wantBundle)
+			}
+
+			got, err = GetBashibleContextKey(tt.arg)
+			if err != nil {
+				t.Fatalf("GetBashibleContextKey() error = %v", err)
+			}
+			if got != tt.wantBashible {
+				t.Errorf("GetBashibleContextKey() = %v, want %v", got, tt.wantBashible)
+			}
+
+			got, err = GetBootstrapContextKey(tt.arg)
+			if err != nil {
+				t.Fatalf("GetBootstrapContextKey() error = %v", err)
+			}
+			if got != tt.wantBashible {
+				t.Errorf("GetBootstrapContextKey() = %v, want %v", got, tt.wantBashible)
 			}
 		})
+	}
+}
+
+func TestTransformName(t *testing.T) {
+	tests := []struct {
+		name string
+		arg  string
+		want string
+	}{
+		{"bundle-prefixed name loses the bundle", "ubuntu-lts.master-flomaster", "master-flomaster"},
+		{"plain nodegroup name is kept", "master-flomaster", "master-flomaster"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := TransformName(tt.arg)
+			if err != nil {
+				t.Fatalf("TransformName() error = %v", err)
+			}
+			if got != tt.want {
+				t.Errorf("TransformName() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestParseName(t *testing.T) {
+	os, target, err := ParseName("ubuntu-lts.master-flomaster")
+	if err != nil {
+		t.Fatalf("ParseName() error = %v", err)
+	}
+	if os != "ubuntu-lts" || target != "master-flomaster" {
+		t.Errorf("ParseName() = %v, %v, want ubuntu-lts, master-flomaster", os, target)
+	}
+
+	if _, _, err := ParseName("ubuntu-lts-master-flomaster"); err == nil {
+		t.Errorf("ParseName() without a dot: error = nil, want an error")
 	}
 }
