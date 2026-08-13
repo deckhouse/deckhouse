@@ -20,7 +20,7 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`pod-reloader`](/modules/pod-reloader/) module and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
 
-![Pod-reloader module architecture](../../../images/architecture/kubernetes-and-scheduling/c4-l2-pod-reloader.png)
+![Pod-reloader module architecture](../../images/architecture/kubernetes-and-scheduling/c4-l2-pod-reloader.png)
 
 ## Module components
 
