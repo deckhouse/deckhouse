@@ -117,6 +117,7 @@
 810-documentation/                                               @z9r5
 
 /candi/                                  @borg-z @090809
+/candi/alt_base_images.yml               @AntonFomichev-Flant
 /candi/control-plane/                    @sprait
 /ee/candi/                               @borg-z @090809
 /ee/**/candi/                            @borg-z @090809
