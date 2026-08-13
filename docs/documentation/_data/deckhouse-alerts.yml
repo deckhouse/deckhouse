@@ -591,7 +591,9 @@ alerts:
 
         **To resolve this alert:**
 
-        - To keep the current (higher) version, pin it explicitly:
+        - Do nothing and wait, if you are happy staying on the version the cluster runs now. This is a valid resolution only while `frozen="true"`: the cluster is not degraded, the version is held, and the alert clears by itself once the Deckhouse default rises back into the `maxUsed−1` window. How long that takes depends on why the default dropped — after a Deckhouse rollback, until you upgrade Deckhouse again; when the release default is simply older than the version this cluster runs, until a Deckhouse release ships a high enough default, which may be several releases away.
+
+        - To keep the current (higher) version and stop the alert now, pin it explicitly:
 
           ```bash
           d8 k patch mc control-plane-manager --type merge -p '{"spec":{"settings":{"kubernetesVersion":"<current version>"}}}'
