@@ -4297,6 +4297,21 @@ alerts:
         NodeGroup {{ $labels.node_group }} has unavailable instances.
       severity: "8"
       markupFormat: markdown
+    - name: NodeGroupUsesDeprecatedInCoreGPU
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-group-deprecate.yaml
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        NodeGroup {{ $labels.name }} has `spec.gpu` configured while the `gpu` module is disabled,
+        so its GPU nodes are served by the built-in GPU support.
+        Built-in GPU support is deprecated and will be removed.
+
+        The `gpu` module must be enabled.
+      summary: |
+        NodeGroup {{ $labels.name }} uses the deprecated built-in GPU support.
+      severity: "9"
+      markupFormat: markdown
     - name: NodeRequiresDisruptionApprovalForUpdate
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-update.yaml
       moduleUrl: 040-node-manager

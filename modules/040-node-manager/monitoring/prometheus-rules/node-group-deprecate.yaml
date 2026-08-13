@@ -18,3 +18,24 @@
 
         To resolve this issue, delete the field from NodeGroup {{ $labels.name }}.
         This is safe, as the setting has already been migrated automatically.
+- name: d8.node-group-gpu-in-core
+  rules:
+  - alert: NodeGroupUsesDeprecatedInCoreGPU
+    expr: |
+      max by (name) (d8_node_group_gpu_in_core_deprecated) > 0
+    for: 15m
+    labels:
+      tier: cluster
+      severity_level: "9"
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_create_group_if_not_exists__cluster_has_node_groups_deprecation_alerts: "NodeGroupsDeprecationAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__cluster_has_node_groups_deprecation_alerts: "NodeGroupsDeprecationAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: NodeGroup {{ $labels.name }} uses the deprecated built-in GPU support.
+      description: |
+        NodeGroup {{ $labels.name }} has `spec.gpu` configured while the `gpu` module is disabled,
+        so its GPU nodes are served by the built-in GPU support.
+        Built-in GPU support is deprecated and will be removed.
+
+        The `gpu` module must be enabled.
