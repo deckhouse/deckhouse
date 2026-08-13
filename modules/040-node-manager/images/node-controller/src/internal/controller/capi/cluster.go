@@ -63,25 +63,23 @@ func (r *ClusterReconciler) SetupWatches(w register.Watcher) {
 	//
 	// The requests fan out over every registration rather than naming one fixed Secret: this
 	// controller is keyed by the registration itself, so one key per provider is one Cluster per
-	// provider. A cluster with none enqueues nothing here and reaches ensureStaticCluster through
-	// the Secret events that still pass the filter above.
-	w.Watches(&deckhousev1.NodeGroup{}, handler.EnqueueRequestsFromMapFunc(
-		func(ctx context.Context, _ client.Object) []reconcile.Request {
-			reqs := cloudprovider.RegistrationRequests(ctx, r.Client)
-			if len(reqs) == 0 {
-				// Nothing to key a cloud Cluster on, but ensureStaticCluster still has to run.
-				return []reconcile.Request{{NamespacedName: types.NamespacedName{
-					Name:      cloudprovider.LegacySecretName,
-					Namespace: cloudprovider.SecretNamespace,
-				}}}
-			}
-			return reqs
-		},
-	), builder.WithPredicates(predicate.GenerationChangedPredicate{}))
+	// provider. A cluster with no registration enqueues nothing here.
+	w.Watches(
+		&deckhousev1.NodeGroup{},
+		handler.EnqueueRequestsFromMapFunc(
+			func(ctx context.Context, _ client.Object) []reconcile.Request {
+				return cloudprovider.RegistrationRequests(ctx, r.Client)
+			},
+		),
+		builder.WithPredicates(predicate.GenerationChangedPredicate{}),
+	)
 }
 
 func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	if req.Namespace != cloudprovider.SecretNamespace {
+	// Registrations are the only Secrets this controller is keyed by, and they are all named with
+	// the shared prefix — anything else in the queue is not one and has no Cluster to ensure.
+	if req.Namespace != cloudprovider.SecretNamespace ||
+		!strings.HasPrefix(req.Name, cloudprovider.SecretNamePrefix) {
 		return ctrl.Result{}, nil
 	}
 

@@ -79,7 +79,7 @@ func loadRegistrations(ctx context.Context, r client.Reader) ([]Registration, er
 	secrets := &corev1.SecretList{}
 	if err := r.List(ctx, secrets,
 		client.InNamespace(SecretNamespace),
-		client.HasLabels{RegistrationLabel},
+		client.HasLabels{SecretLabel},
 	); err != nil {
 		return nil, fmt.Errorf("list cloud provider registration secrets: %w", err)
 	}

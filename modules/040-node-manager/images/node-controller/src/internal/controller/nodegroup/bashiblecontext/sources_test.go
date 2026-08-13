@@ -60,7 +60,7 @@ func secret(ns, name string, data map[string][]byte) *corev1.Secret {
 // the label is how it is found at all.
 func providerSecret(name string, data map[string][]byte) *corev1.Secret {
 	s := secret(cloudprovider.SecretNamespace, name, data)
-	s.Labels = map[string]string{cloudprovider.RegistrationLabel: ""}
+	s.Labels = map[string]string{cloudprovider.SecretLabel: ""}
 	return s
 }
 

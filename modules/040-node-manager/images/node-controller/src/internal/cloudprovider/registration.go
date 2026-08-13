@@ -28,13 +28,15 @@ const (
 	// SecretNamespace is where every provider module publishes its registration.
 	SecretNamespace = "kube-system"
 
-	// RegistrationLabel marks every registration Secret. Selecting by it rather than by name is
-	// what makes several providers in one cluster visible at all.
-	RegistrationLabel = "cloud-provider.deckhouse.io/registration"
+	// SecretLabel marks every registration Secret. Selecting by it rather than by one fixed
+	// name is what makes several providers in one cluster visible at all.
+	SecretLabel = "cloud-provider.deckhouse.io/registration"
 
-	// LegacySecretName is the fixed name every provider still publishes a second copy under. No
-	// production code selects by it — it survives for fixtures and for the migration window.
-	LegacySecretName = "d8-node-manager-cloud-provider"
+	// SecretNamePrefix is what every registration Secret is named with: the bare prefix is the copy
+	// under the fixed name, prefix + "-<provider>" is the per-provider one, and every provider
+	// module publishes both. The prefix — not either full name — is therefore what identifies a
+	// registration, alongside the label.
+	SecretNamePrefix = "d8-node-manager-cloud-provider"
 
 	InstanceClassKindKey = "instanceClassKind"
 

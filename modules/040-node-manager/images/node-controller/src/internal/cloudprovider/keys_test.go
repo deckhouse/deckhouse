@@ -83,8 +83,8 @@ func TestEveryCloudProviderPublishesInstanceClassAPIVersion(t *testing.T) {
 
 			// node-controller finds registrations by this label, not by the Secret name; both
 			// rendered Secrets (the legacy fixed-name one and the per-provider one) must carry it.
-			require.GreaterOrEqual(t, strings.Count(content, RegistrationLabel), 2,
-				"%s must label both registration Secrets with %s", path, RegistrationLabel)
+			require.GreaterOrEqual(t, strings.Count(content, SecretLabel), 2,
+				"%s must label both registration Secrets with %s", path, SecretLabel)
 		})
 	}
 }

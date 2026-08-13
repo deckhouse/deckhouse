@@ -63,7 +63,7 @@ func TestBuild_MandatoryFieldsAlwaysPresent(t *testing.T) {
 
 func TestBuild_OptionalBlocksPopulated(t *testing.T) {
 	s := newService(t,
-		providerSecret(cloudprovider.LegacySecretName, map[string][]byte{"type": []byte(`"yandex"`)}),
+		providerSecret(cloudprovider.SecretNamePrefix, map[string][]byte{"type": []byte(`"yandex"`)}),
 		secret(kubeSystemNS, apiProxyCertSecretName, map[string][]byte{"crt": []byte("C"), "key": []byte("K")}),
 		secret(kubeSystemNS, controlPlaneArgsSecretName, map[string][]byte{
 			"arguments.json":    []byte(`{"nodeMonitorGracePeriod":40}`),

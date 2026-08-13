@@ -19,6 +19,7 @@ package cloudprovider
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -35,14 +36,21 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-// IsRegistration reports whether an object is a cloud provider registration Secret. Matching on
-// the label rather than on the legacy fixed name is what lets a second provider's Secret trigger
-// a reconcile at all.
+// IsRegistration reports whether an object is a cloud provider registration Secret: it lives in
+// the registration namespace, is named with the shared prefix and carries the label. Matching on
+// the prefix rather than on one full name is what lets a second provider's Secret trigger a
+// reconcile at all — every provider publishes both prefix and prefix + "-<provider>".
+//
+// This is the single definition of a registration: Load and the watches all resolve through it, so
+// a Secret can never be a provider to one and invisible to the other.
 func IsRegistration(obj client.Object) bool {
 	if obj.GetNamespace() != SecretNamespace {
 		return false
 	}
-	_, ok := obj.GetLabels()[RegistrationLabel]
+	if !strings.HasPrefix(obj.GetName(), SecretNamePrefix) {
+		return false
+	}
+	_, ok := obj.GetLabels()[SecretLabel]
 	return ok
 }
 
@@ -58,7 +66,7 @@ func RegistrationRequests(ctx context.Context, r client.Reader) []reconcile.Requ
 	secrets := &corev1.SecretList{}
 	if err := r.List(ctx, secrets,
 		client.InNamespace(SecretNamespace),
-		client.HasLabels{RegistrationLabel},
+		client.HasLabels{SecretLabel},
 	); err != nil {
 		log.FromContext(ctx).Error(err, "list cloud provider registration secrets for enqueue")
 		return nil

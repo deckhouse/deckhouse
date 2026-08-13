@@ -35,7 +35,7 @@ type RenderContext struct {
 	// InstanceClass is the <Provider>InstanceClass spec verbatim. Numbers arrive as JSON numbers
 	// (float64), so a template that needs an integer writes `| int`.
 	InstanceClass map[string]any
-	// Provider is this provider's subtree of the d8-node-manager-cloud-provider secret.
+	// Provider is this provider's subtree of its registration Secret.
 	Provider map[string]any
 	// Zone is the zone this generation is rendered for.
 	Zone string

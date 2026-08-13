@@ -305,10 +305,10 @@ func TestReconcile_CloudValidationErrorPublished(t *testing.T) {
 	}
 	cloudProvider := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cloudprovider.LegacySecretName,
+			Name:      cloudprovider.SecretNamePrefix,
 			Namespace: cloudprovider.SecretNamespace,
 			// Registrations are found by this label, never by name.
-			Labels: map[string]string{cloudprovider.RegistrationLabel: ""},
+			Labels: map[string]string{cloudprovider.SecretLabel: ""},
 		},
 		Data: map[string][]byte{
 			"type":                    []byte("aws"),

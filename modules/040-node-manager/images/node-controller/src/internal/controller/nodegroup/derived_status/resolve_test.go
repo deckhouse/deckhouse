@@ -59,8 +59,8 @@ func testSecret(ns, name string, data map[string][]byte) *corev1.Secret {
 // providerSecret builds a registration the way a provider module publishes one: labelled, because
 // the label is how it is found at all.
 func providerSecret(data map[string][]byte) *corev1.Secret {
-	secret := testSecret(cloudprovider.SecretNamespace, cloudprovider.LegacySecretName, data)
-	secret.Labels = map[string]string{cloudprovider.RegistrationLabel: ""}
+	secret := testSecret(cloudprovider.SecretNamespace, cloudprovider.SecretNamePrefix, data)
+	secret.Labels = map[string]string{cloudprovider.SecretLabel: ""}
 	return secret
 }
 

@@ -46,7 +46,7 @@ func registrationSecret(name string, data map[string][]byte) *corev1.Secret {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: SecretNamespace,
 			Name:      name,
-			Labels:    map[string]string{RegistrationLabel: ""},
+			Labels:    map[string]string{SecretLabel: ""},
 		},
 		Data: data,
 	}
@@ -99,8 +99,8 @@ func TestLoad_DeduplicatesTheLegacyAndPerProviderCopies(t *testing.T) {
 	}
 
 	registry := loadFrom(t,
-		registrationSecret(LegacySecretName, data),
-		registrationSecret(LegacySecretName+"-yandex", data),
+		registrationSecret(SecretNamePrefix, data),
+		registrationSecret(SecretNamePrefix+"-yandex", data),
 	)
 
 	require.Len(t, registry.All(), 1)
@@ -116,8 +116,8 @@ func TestLoad_SelectsByLabelAndSeesEveryProvider(t *testing.T) {
 	}
 
 	registry := loadFrom(t,
-		registrationSecret(LegacySecretName+"-aws", map[string][]byte{"type": []byte("aws")}),
-		registrationSecret(LegacySecretName+"-yandex", map[string][]byte{"type": []byte("yandex")}),
+		registrationSecret(SecretNamePrefix+"-aws", map[string][]byte{"type": []byte("aws")}),
+		registrationSecret(SecretNamePrefix+"-yandex", map[string][]byte{"type": []byte("yandex")}),
 		unlabelled,
 	)
 
@@ -153,11 +153,11 @@ func TestLoad_NoRegistrationsIsEmptyNotAnError(t *testing.T) {
 }
 
 func TestForNodeGroup(t *testing.T) {
-	aws := registrationSecret(LegacySecretName+"-aws", map[string][]byte{
+	aws := registrationSecret(SecretNamePrefix+"-aws", map[string][]byte{
 		"type":              []byte("aws"),
 		"instanceClassKind": []byte("AWSInstanceClass"),
 	})
-	yandex := registrationSecret(LegacySecretName+"-yandex", map[string][]byte{
+	yandex := registrationSecret(SecretNamePrefix+"-yandex", map[string][]byte{
 		"type":              []byte("yandex"),
 		"instanceClassKind": []byte("YandexInstanceClass"),
 	})
@@ -220,7 +220,7 @@ func TestForNodeGroup(t *testing.T) {
 // ClusterConfiguration spells providers OpenStack and vSphere; registrations spell them lower case.
 func TestForNodeGroup_ClusterProviderMatchesCaseInsensitively(t *testing.T) {
 	registry := loadFrom(t,
-		registrationSecret(LegacySecretName, map[string][]byte{"type": []byte("openstack")}),
+		registrationSecret(SecretNamePrefix, map[string][]byte{"type": []byte("openstack")}),
 		clusterConfigurationSecret("OpenStack"),
 	)
 
@@ -234,12 +234,12 @@ func TestForNodeGroup_ClusterProviderMatchesCaseInsensitively(t *testing.T) {
 // the immutable MachineTemplate the instance-class checksum points at.
 func TestInstanceClassGVKs_SkipsRegistrationsWithoutAVersion(t *testing.T) {
 	registry := loadFrom(t,
-		registrationSecret(LegacySecretName+"-aws", map[string][]byte{
+		registrationSecret(SecretNamePrefix+"-aws", map[string][]byte{
 			"type":                    []byte("aws"),
 			"instanceClassKind":       []byte("AWSInstanceClass"),
 			"instanceClassAPIVersion": []byte("v1"),
 		}),
-		registrationSecret(LegacySecretName+"-yandex", map[string][]byte{
+		registrationSecret(SecretNamePrefix+"-yandex", map[string][]byte{
 			"type":              []byte("yandex"),
 			"instanceClassKind": []byte("YandexInstanceClass"),
 		}),

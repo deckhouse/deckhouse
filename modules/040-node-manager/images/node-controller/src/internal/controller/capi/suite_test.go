@@ -115,10 +115,10 @@ var _ = BeforeSuite(func() {
 	By("publishing the cloud-provider discovery secret (CAPI engine, DVP-like)")
 	cloudProvider := &corev1.Secret{}
 	cloudProvider.Namespace = cloudprovider.SecretNamespace
-	cloudProvider.Name = cloudprovider.LegacySecretName
+	cloudProvider.Name = cloudprovider.SecretNamePrefix
 	// The label is how RegisteredInstanceClassGVKs finds registrations; without it the suite's
 	// controllers would build no InstanceClass watches at all.
-	cloudProvider.Labels = map[string]string{cloudprovider.RegistrationLabel: ""}
+	cloudProvider.Labels = map[string]string{cloudprovider.SecretLabel: ""}
 	cloudProvider.Data = map[string][]byte{
 		"type": []byte(`"dvp"`),
 		// Raw, unquoted, exactly as the registration template's b64enc writes it.
