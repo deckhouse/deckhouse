@@ -88,11 +88,3 @@ The `ObjectPatcher` returned by `ApplicationHookInput` enforces that:
 - Calls targeting other namespaces or cluster-wide resources are rejected at runtime.
 
 This is an architectural enforcement, not just a convention. Hooks that need to read (not write) cluster-wide resources can still use `d8 k` or the Kubernetes API client directly, but writes outside the namespace are blocked.
-
-## Object naming
-
-Names passed to `ObjectPatcher` are prefixed with `d8a-<instance>-` by the runtime, the same prefix package templates spell by hand. A hook that creates `config` in instance `myapp` ends up with the object `d8a-myapp-config`, and a hook can address an object rendered by its own templates by its short name. Spelling the full name is equivalent — the prefix is not applied twice.
-
-The prefix is reserved: the `d8a-prefix.deckhouse.io` admission policy denies creating, updating and deleting objects named `d8a-*` for everyone except platform components, so application objects cannot be tampered with or collide with user objects in the same namespace.
-
-Kubernetes subscriptions work with real cluster names. `NameSelector` is not prefixed, and snapshots return `metadata.name` as it is in the cluster, so a subscription to an object the hook itself creates must spell the full `d8a-<instance>-` name.

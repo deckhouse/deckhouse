@@ -170,8 +170,6 @@ d8 package verify
 
 Reports errors and warnings based on `.pkglint.yaml` and built-in rules.
 
-One of the built-in rules is mandatory object naming: every object a template renders must be named `d8a-{{ .Application.Instance.Name }}-<suffix>`. The `d8a-` prefix is reserved for application objects and protects them from being modified by cluster users. Objects that hooks create get the same prefix from the runtime, see [Hooks](hooks.html).
-
 ## CI/CD setup
 
 ### Environment variables
