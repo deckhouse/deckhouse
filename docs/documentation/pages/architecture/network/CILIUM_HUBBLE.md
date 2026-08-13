@@ -22,6 +22,13 @@ The Level 2 C4 architecture of the [`cilium-hubble`](/modules/cilium-hubble/) mo
 
 ![Cilium-hubble module architecture](../../images/architecture/network/c4-l2-cilium-hubble.png)
 
+{% alert level="info" %}
+The numbers in the diagram indicate the sequence of steps that a user request goes through before reaching the hubble-ui component:
+
+- In steps 1, 2, and 3, the request passes through the Ingress NGINX Controller, where mandatory user authentication is performed using the [`user-authn`](/modules/user-authn) module;
+- In steps 4 and 5, the user is authorized based on Kubernetes RBAC to provide secure access.
+{% endalert %}
+
 ## Module components
 
 The module consists of the following components:
