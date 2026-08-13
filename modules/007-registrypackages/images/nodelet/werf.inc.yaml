@@ -15,7 +15,7 @@
          up agent changes. Currently main, which carries both the self-restart and the
          rootfs A/B controller: an older agent restarts its own unit mid-pass,
          and one without os-image cannot update the root at all. */ -}}
-  {{- $nodeletCommit := "42f770a2fe94ff24e69faf2a372ea54cd319c761" }}
+  {{- $nodeletCommit := "1e6daeb720d8aceedb68722b8ff86fc5aace924d" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
