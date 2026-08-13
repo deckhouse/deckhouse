@@ -58,6 +58,7 @@ var _ runtime.Object = (*ModuleConfig)(nil)
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster,shortName=mc
+// +kubebuilder:deprecatedversion:warning="ModuleConfig is deprecated. Use Module instead."
 // +kubebuilder:printcolumn:name="Enabled",type="boolean",JSONPath=".spec.enabled",description="Module enabled state"
 // +kubebuilder:printcolumn:name="UpdatePolicy",type="string",JSONPath=".spec.updatePolicy",description="The update policy of the module.",priority=1
 // +kubebuilder:printcolumn:name="Source",type="string",JSONPath=".spec.source",description="The source of the module.",priority=1
