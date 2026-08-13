@@ -194,6 +194,24 @@
 
     {
       "vulnerability": {
+        "@id": "https://nvd.nist.gov/vuln/detail/CVE-2026-48702",
+        "description": "Rekor: Denial of Service due to unbounded gzip decompression in Alpine intoto/rekord entry types",
+        "name": "CVE-2026-48702",
+        "aliases": [ "GHSA-47q9-m4ww-924m", "GO-2026-5778" ]
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/sigstore/rekor@v1.3.6"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Rekor is a software supply chain transparency log server. Prior to 1.5.2, its intoto/rekord entry types decompress attacker-supplied gzip payloads without a size limit, allowing a decompression-bomb DoS against a running Rekor server. Deckhouse Kubernetes Platform is not affected as admissionPolicyEngine trivyProvider does not run a Rekor server or expose Rekor's entry-parsing endpoints - it only pulls in sigstore/rekor as a transitive dependency.",
+      "timestamp": "2026-08-13T00:00:00Z"
+    },
+
+    {
+      "vulnerability": {
         "@id": "https://nvd.nist.gov/vuln/detail/CVE-2026-24117",
         "description": "Server-Side Request Forgery (SSRF) via provided public key URL",
         "name": "CVE-2026-24117",

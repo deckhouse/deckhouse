@@ -56,43 +56,29 @@ Passed the trivy-operator's HTTP(S)_PROXY and NO_PROXY environment variables to 
 
 ### 013-fix-cve.patch
 
-Updated some operator dependencies.
-
-### 014-fix-cve2.patch
-
-Fixes CVEs:
+Updated operator dependencies. Fixes CVEs:
 
 - CVE-2025-52881
 - CVE-2024-25621
-
-### 015-fix-cve3.patch
-
-Fixes CVEs:
-
 - CVE-2026-4660
 - CVE-2026-39883
 - CVE-2026-34986
-
-### 016-fix-cve4.patch
-
-Fixec CVEs:
-
 - CVE-2026-33762
 - CVE-2026-34165
 - CVE-2026-35206
 - GHSA-xmrv-pmrh-hhx2
 - GHSA-3xc5-wrhm-f963
-
-# 017-fix-cve5.patch
-
-Fixes CVE:
-
 - GHSA-pmwq-pjrm-6p5r
-
-
-# 018-fix-cve.patch
-
-Fixes CVE:
-
 - CVE-2026-46680
 - CVE-2026-45571
+- CVE-2026-39828 (`golang.org/x/crypto` -> `v0.53.0`)
+- CVE-2026-25680, CVE-2026-25681, CVE-2026-33814, CVE-2026-39821, CVE-2026-46600 (`golang.org/x/net` -> `v0.56.0`)
+- CVE-2026-39824 (`golang.org/x/sys` -> `v0.46.0`)
+- CVE-2026-56852 (`golang.org/x/text` -> `v0.39.0`)
+- GHSA-hrxh-6v49-42gf (`google.golang.org/grpc` -> `v1.82.1`)
+- CVE-2026-50151, CVE-2026-50162, CVE-2026-50163 (`oras.land/oras-go/v2` -> `v2.6.2`)
+- CVE-2026-53488 (`github.com/containerd/containerd` -> `v1.7.33`)
+- CVE-2026-71556 (`github.com/go-git/go-git/v5` -> `v5.19.2`)
+- CVE-2026-2303 (`go.mongodb.org/mongo-driver` -> `v1.17.7`)
+
+(previously split across 013/014/015/016/017/018; consolidated into one patch)
