@@ -12,9 +12,10 @@
   {{- /* The agent has no releases yet, so it is pinned by commit: werf keys a
          shell-cloned source on the rendered instructions alone, and a moving
          branch would be built once and cached forever. Bump this line to pick
-         up agent changes. Currently nodelet-self-update, which the extension
-         needs: an agent without it restarts its own unit mid-pass. */ -}}
-  {{- $nodeletCommit := "238e81432d6cd3b71cbc01606abe56bd48ad6256" }}
+         up agent changes. Currently main, which carries both the self-restart and the
+         rootfs A/B controller: an older agent restarts its own unit mid-pass,
+         and one without os-image cannot update the root at all. */ -}}
+  {{- $nodeletCommit := "42f770a2fe94ff24e69faf2a372ea54cd319c761" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
