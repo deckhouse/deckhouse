@@ -52,6 +52,8 @@ func DefineModuleCheckReleaseCommand(rootCmd *cobra.Command) {
 		Use:   "check-release MODULE_DIR",
 		Short: "Run the release gates (release/validations, release/migrations) of a module directory against the cluster.",
 		Args:  cobra.ExactArgs(1),
+		// a failing gate is the command doing its job, not a usage error
+		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, err := clientConfig(kubeconfig)
 			if err != nil {
@@ -90,7 +92,8 @@ func DefineModuleCheckReleaseCommand(rootCmd *cobra.Command) {
 
 			for _, file := range files {
 				if err = releasegates.Run(cmd.Context(), engine, file); err != nil {
-					cmd.Printf("FAIL %s: %v\n", filepath.Base(file), err)
+					// the error already names the file it came from
+					cmd.Printf("FAIL %v\n", err)
 
 					return fmt.Errorf("release gates failed")
 				}
