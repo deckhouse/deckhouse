@@ -672,6 +672,7 @@ spec:
                 type: object
             required:
             - nodeName
+            - osImage
             type: object
           status:
             description: Status is reported by the on-node agent after each reconcile
@@ -830,6 +831,40 @@ spec:
                   held for approval and not yet running (see AppliedGeneration).
                 format: int64
                 type: integer
+              osImage:
+                description: |-
+                  OSImage is how far the node has got with spec.osImage. Mirrors
+                  config.OSImageStatus in the nodelet repository (internal/config/types.go):
+                  a field missing here is pruned on write, and the node's whole status apply
+                  fails with "field not declared in schema" — the update then reports nothing.
+                properties:
+                  attemptsLeft:
+                    description: |-
+                      AttemptsLeft is how many boots the trial image has left to prove itself
+                      before the initramfs rolls back.
+                    type: integer
+                  digest:
+                    description: |-
+                      Digest is the image the node is running, as recorded on its config
+                      partition. Empty on a node installed before that record existed.
+                    type: string
+                  failedDigest:
+                    description: |-
+                      FailedDigest is an image this node booted and rolled back from. It is never
+                      tried again: a digest names immutable content, so a fixed image is a
+                      different digest.
+                    type: string
+                  slot:
+                    description: Slot is the A/B slot that image lives in ("a" or
+                      "b").
+                    type: string
+                  trialDigest:
+                    description: |-
+                      TrialDigest is the image staged for the next boot, or on trial in this one.
+                      Set only while an update is in flight, which is exactly when Digest still
+                      names the old image.
+                    type: string
+                type: object
               phase:
                 description: |-
                   Phase summarises the node. Ready: running the published config, healthy.

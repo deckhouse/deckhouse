@@ -502,6 +502,42 @@ var _ = Describe("NodeConfig controller", func() {
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
+	// User story: As an operator watching a rootfs update, I want to see how far
+	// the node has got. The agent publishes that in status.osImage; a field the
+	// CRD does not declare is not merely pruned — the node's whole status apply
+	// is refused with "field not declared in schema", so it then reports nothing
+	// at all. Measured on zykov-ab-57a656c4 (13.08.2026).
+	It("keeps the rootfs update progress the node publishes", func(ctx context.Context) {
+		ngName := testenv.UniqueName("workers-osimage-status")
+		createImmutableNodeGroup(ctx, ngName, nil)
+		nodeName := testenv.UniqueName("node")
+		createNode(ctx, nodeName, ngName)
+
+		Eventually(func(g Gomega) {
+			nc := getNodeConfig(ctx, g, nodeName)
+			nc.Status.OSImage = &internalv1alpha1.OSImageStatus{
+				Digest:       testOSImageDigest,
+				Slot:         "a",
+				TrialDigest:  testContainerdRebuiltDigest,
+				AttemptsLeft: 3,
+				FailedDigest: testPauseDigest,
+			}
+			g.Expect(k8sClient.Status().Update(ctx, nc)).To(Succeed())
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		Eventually(func(g Gomega) {
+			nc := getNodeConfig(ctx, g, nodeName)
+			g.Expect(nc.Status.OSImage).NotTo(BeNil())
+			g.Expect(*nc.Status.OSImage).To(Equal(internalv1alpha1.OSImageStatus{
+				Digest:       testOSImageDigest,
+				Slot:         "a",
+				TrialDigest:  testContainerdRebuiltDigest,
+				AttemptsLeft: 3,
+				FailedDigest: testPauseDigest,
+			}))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	})
+
 	// User story: As an operator with a large fleet, I want heartbeats to trigger
 	// nothing. The old detection trick — moving an input nothing watches — is
 	// gone with the watch above, so this asserts the contract itself: a heartbeat
