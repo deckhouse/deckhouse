@@ -61,6 +61,7 @@ type phasedExecutionContext[OperationPhaseDataT any] struct {
 	completedPhase            OperationPhase
 	completedPhaseData        OperationPhaseDataT
 	currentPhase              OperationPhase
+	runDepth                  int
 	stopOperationCondition    bool
 	pipelineCompletionCounter int
 
@@ -188,6 +189,31 @@ func (pec *phasedExecutionContext[OperationPhaseDataT]) CompletePhase(ctx contex
 	pec.completedPhase = pec.currentPhase
 	pec.completedPhaseData = completedPhaseData
 	return pec.setLastState(ctx, stateCache)
+}
+
+// enterRunScope opens a PhaseAction.Run scope and returns the function that closes it.
+//
+// A phase started inside another Run is nested (static destroy runs UpdateStaticDestroyerIPs
+// inside AllNodes) and must not become the current phase of the enclosing one: otherwise the
+// enclosing CompletePhase and CompletePipeline both record the inner phase as completed, the
+// final Complete cannot find it where it expects and reports zero progress for a successful run.
+//
+// Restoring the phase in CompletePhase instead would be wrong: a phase can be left open on
+// purpose. Commander converge starts Check and never completes it, so from the context alone
+// every later phase looks nested. Only Run pairs a start with its completion.
+func (pec *phasedExecutionContext[OperationPhaseDataT]) enterRunScope() func() {
+	pec.runDepth++
+
+	if pec.runDepth == 1 {
+		return func() { pec.runDepth-- }
+	}
+
+	enclosingPhase := pec.currentPhase
+
+	return func() {
+		pec.runDepth--
+		pec.currentPhase = enclosingPhase
+	}
 }
 
 // CompleteSubPhase completes specified sub phase.

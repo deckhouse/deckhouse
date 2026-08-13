@@ -99,15 +99,6 @@ func NewConverger(params *Params) *Converger {
 }
 
 func (c *Converger) ConvergeMigration(ctx context.Context) error {
-	{
-		// TODO(dhctl-for-commander): pass stateCache externally using params as in the Destroyer, this block will be unneeded then
-		state, err := phases.ExtractDhctlState(ctx, cache.Global())
-		if err != nil {
-			return fmt.Errorf("unable to extract dhctl state: %w", err)
-		}
-		c.lastState = state
-	}
-
 	if !c.CommanderMode {
 		if c.CacheID == "" {
 			return fmt.Errorf("Incorrect cache identity. You need to pass --ssh-host, --kube-client-from-cluster, or --kubeconfig")
@@ -117,6 +108,17 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("unable to initialize cache %s: %w", c.CacheID, err)
 		}
+	}
+
+	{
+		// Must stay below the cache init: on the CLI path cache.Global() is a DummyCache
+		// until then, and extracting from it yields an empty last state on every run.
+		// TODO(dhctl-for-commander): pass stateCache externally using params as in the Destroyer, this block will be unneeded then
+		state, err := phases.ExtractDhctlState(ctx, cache.Global())
+		if err != nil {
+			return fmt.Errorf("unable to extract dhctl state: %w", err)
+		}
+		c.lastState = state
 	}
 
 	stateCache := cache.Global()
@@ -200,15 +202,6 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 }
 
 func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
-	{
-		// TODO(dhctl-for-commander): pass stateCache externally using params as in the Destroyer, this block will be unneeded then
-		state, err := phases.ExtractDhctlState(ctx, cache.Global())
-		if err != nil {
-			return nil, fmt.Errorf("unable to extract dhctl state: %w", err)
-		}
-		c.lastState = state
-	}
-
 	if !c.CommanderMode {
 		if c.CacheID == "" {
 			return nil, fmt.Errorf("Incorrect cache identity. You need to pass --ssh-host, --kube-client-from-cluster, or --kubeconfig")
@@ -218,6 +211,17 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 		if err != nil {
 			return nil, fmt.Errorf("unable to initialize cache %s: %w", c.CacheID, err)
 		}
+	}
+
+	{
+		// Must stay below the cache init: on the CLI path cache.Global() is a DummyCache
+		// until then, and extracting from it yields an empty last state on every run.
+		// TODO(dhctl-for-commander): pass stateCache externally using params as in the Destroyer, this block will be unneeded then
+		state, err := phases.ExtractDhctlState(ctx, cache.Global())
+		if err != nil {
+			return nil, fmt.Errorf("unable to extract dhctl state: %w", err)
+		}
+		c.lastState = state
 	}
 
 	interactive := input.IsTerminal() && !c.Options.Global.ShowProgress
@@ -427,10 +431,13 @@ func (c *Converger) AutoConverge(ctx context.Context, listenAddress string, chec
 	convergeCtx := convergectx.NewContext(context.WithoutCancel(ctx), convergectx.Params{
 		KubeProvider:           c.KubeProvider,
 		SSHProviderInitializer: c.SSHProviderInitializer,
-		Cache:                  cache.Global(),
-		ChangeParams:           c.Params.ChangesSettings,
-		ProviderGetter:         c.ProviderGetter,
-		Opts:                   &c.Options.Global,
+		// converge-periodical never initializes a state cache identity, so cache.Global()
+		// here is the uninitialized DummyCache. Pass it explicitly so the no-op is a
+		// decision instead of an accident of initialization order.
+		Cache:          cache.Dummy(),
+		ChangeParams:   c.Params.ChangesSettings,
+		ProviderGetter: c.ProviderGetter,
+		Opts:           &c.Options.Global,
 	})
 
 	metaConfig, err := convergeCtx.MetaConfig()

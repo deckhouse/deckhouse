@@ -22,9 +22,6 @@ import (
 
 // BootstrapOptions covers everything specific to the bootstrap flow.
 type BootstrapOptions struct {
-	InternalNodeIP string
-	DevicePath     string
-
 	ResourcesPath    string
 	ResourcesTimeout time.Duration
 	DeckhouseTimeout time.Duration
@@ -50,8 +47,6 @@ func NewBootstrapOptions() BootstrapOptions {
 
 func (o *BootstrapOptions) ToSpanAttributes() []otattribute.KeyValue {
 	return []otattribute.KeyValue{
-		otattribute.String("bootstrap.internalNodeIP", o.InternalNodeIP),
-		otattribute.String("bootstrap.devicePath", o.DevicePath),
 		otattribute.String("bootstrap.resourcesPath", o.ResourcesPath),
 		otattribute.String("bootstrap.resourcesTimeout", o.ResourcesTimeout.String()),
 		otattribute.String("bootstrap.deckhouseTimeout", o.DeckhouseTimeout.String()),

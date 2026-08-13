@@ -251,10 +251,6 @@ func (d *ClusterDestroyer) DestroyCluster(ctx context.Context, autoApprove bool)
 }
 
 func (d *ClusterDestroyer) destroy(ctx context.Context, autoApprove bool) error {
-	if err := d.d8Destroyer.CheckCommanderUUID(ctx); err != nil {
-		return err
-	}
-
 	// populate cluster state in cache
 	metaConfig, err := d.configPreparator.PopulateMetaConfig(ctx, d.globalOptions)
 	if err != nil {
@@ -266,7 +262,14 @@ func (d *ClusterDestroyer) destroy(ctx context.Context, autoApprove bool) error 
 		return err
 	}
 
+	// Before the first announced phase: CheckCommanderUUID announces one, and the phase list
+	// it reports travels in every gRPC frame. Built with an empty cluster type, that list is
+	// missing all static-only phases.
 	d.pipeline.SetClusterConfig(phases.ClusterConfig{ClusterType: metaConfig.ClusterType})
+
+	if err := d.d8Destroyer.CheckCommanderUUID(ctx); err != nil {
+		return err
+	}
 
 	err = destroyer.Prepare(ctx)
 	if err != nil {

@@ -68,6 +68,10 @@ func (p *BashiblePipelineParams) Validate() error {
 		return p.errIsNil("MetaConfig")
 	}
 
+	if govalue.IsNil(p.PhasedExecutionContext) {
+		return p.errIsNil("PhasedExecutionContext")
+	}
+
 	return nil
 }
 

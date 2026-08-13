@@ -178,6 +178,7 @@ func phaseToString(p Progress, completed bool) string {
 	subphasesMap[InstallKubernetesSubPhaseBundlePreparation] = "Prepare bashible bundle"
 	subphasesMap[InstallKubernetesSubPhaseRegistryPackagesProxy] = "Prepare registry packages proxy"
 	subphasesMap[InstallKubernetesSubPhaseNodePreparation] = "Prepare node"
+	subphasesMap[InstallKubernetesSubPhaseModulesPreparation] = "Prepare modules"
 	subphasesMap[InstallKubernetesSubPhaseExecuteBashibleBundle] = "Execute bashible bundle"
 	subphasesMap[InstallAdditionalMastersAndStaticNodesSubPhaseAdditionalMasters] = "Install additional master nodes"
 	subphasesMap[InstallAdditionalMastersAndStaticNodeSubPhaseStaticNodes] = "Install additional static nodes"
@@ -186,21 +187,33 @@ func phaseToString(p Progress, completed bool) string {
 	msg := ""
 	if completed {
 		if p.CompletedSubPhase != "" {
-			msg = fmt.Sprintf("%s: %s", phasesMap[p.CurrentPhase], subphasesMap[p.CompletedSubPhase])
+			msg = fmt.Sprintf("%s: %s", title(phasesMap, p.CurrentPhase), title(subphasesMap, p.CompletedSubPhase))
 		} else {
-			msg = phasesMap[p.CompletedPhase]
+			msg = title(phasesMap, p.CompletedPhase)
 		}
 	} else {
 		if p.CurrentSubPhase != "" {
-			msg = fmt.Sprintf("%s: %s", phasesMap[p.CurrentPhase], subphasesMap[p.CurrentSubPhase])
+			msg = fmt.Sprintf("%s: %s", title(phasesMap, p.CurrentPhase), title(subphasesMap, p.CurrentSubPhase))
 		} else {
 			if p.CurrentPhase != "" {
-				msg = phasesMap[p.CurrentPhase]
+				msg = title(phasesMap, p.CurrentPhase)
 			} else {
-				msg = phasesMap[p.CompletedPhase]
+				msg = title(phasesMap, p.CompletedPhase)
 			}
 		}
 	}
 
 	return fmt.Sprintf("%-60s", msg)
+}
+
+// title looks up the human-readable name of a phase or a sub-phase, falling back
+// to the raw name. Without the fallback an unnamed phase renders as blank padding
+// and, since the bar advances only when the rendered title changes
+// (consumeProgress compares it with the previous one), also freezes the bar.
+func title[K ~string](titles map[K]string, key K) string {
+	if t, ok := titles[key]; ok {
+		return t
+	}
+
+	return string(key)
 }

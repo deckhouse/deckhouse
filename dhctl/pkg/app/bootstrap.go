@@ -20,18 +20,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )
 
-// DefineBashibleBundleFlags registers --internal-node-ip and --device-path.
-func DefineBashibleBundleFlags(cmd *kingpin.CmdClause, o *options.BootstrapOptions) {
-	cmd.Flag("internal-node-ip", "Address of a node from internal network.").
-		Required().
-		Envar(configEnvName("INTERNAL_NODE_IP")).
-		StringVar(&o.InternalNodeIP)
-	cmd.Flag("device-path", "Path of kubernetes-data device.").
-		Required().
-		Envar(configEnvName("DEVICE_PATH")).
-		StringVar(&o.DevicePath)
-}
-
 // DefineDeckhouseFlags registers --deckhouse-timeout.
 func DefineDeckhouseFlags(cmd *kingpin.CmdClause, o *options.BootstrapOptions) {
 	cmd.Flag("deckhouse-timeout", "Timeout to install deckhouse. Experimental. This feature may be deleted in the future.").

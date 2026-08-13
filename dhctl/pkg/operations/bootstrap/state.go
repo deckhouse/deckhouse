@@ -49,10 +49,6 @@ func (s *State) IsManifestsCreated(ctx context.Context) (bool, error) {
 	return s.cache.InCache(ctx, ManifestCreatedInClusterCacheKey)
 }
 
-func (s *State) PostBootstrapScriptResult(ctx context.Context) ([]byte, error) {
-	return s.cache.Load(ctx, PostBootstrapResultCacheKey)
-}
-
 func (s *State) Clean(ctx context.Context) {
 	s.cache.Clean(ctx)
 }

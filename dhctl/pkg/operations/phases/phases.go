@@ -76,8 +76,10 @@ const (
 	DeleteResourcesPhase                   OperationPhase = "DeleteResources"
 	ExecPostBootstrapPhase                 OperationPhase = "ExecPostBootstrap"
 	// converge only
-	ConvergeCheckPhase          OperationPhase = "Check"
-	AllNodesPhase               OperationPhase = "AllNodes"
+	ConvergeCheckPhase OperationPhase = "Check"
+	AllNodesPhase      OperationPhase = "AllNodes"
+	// ScaleToMultiMasterPhase is a converge state value, not an announced phase: it is
+	// stored in and read from ConvergeState and never reported to the progress tracker.
 	ScaleToMultiMasterPhase     OperationPhase = "ScaleToMultiMaster"
 	ScaleToSingleMasterPhase    OperationPhase = "ScaleToSingleMaster"
 	DeckhouseConfigurationPhase OperationPhase = "DeckhouseConfiguration"
@@ -174,6 +176,7 @@ func BootstrapPhases() []PhaseWithSubPhases {
 				InstallKubernetesSubPhaseBundlePreparation,
 				InstallKubernetesSubPhaseRegistryPackagesProxy,
 				InstallKubernetesSubPhaseNodePreparation,
+				InstallKubernetesSubPhaseModulesPreparation,
 				InstallKubernetesSubPhaseExecuteBashibleBundle,
 			},
 		},
@@ -211,7 +214,6 @@ func ConvergePhases() []PhaseWithSubPhases {
 		{Phase: BaseInfraPhase, includeIf: ifNotStatic},
 		{Phase: InstallDeckhousePhase},
 		{Phase: AllNodesPhase},
-		{Phase: ScaleToMultiMasterPhase},
 		{Phase: DeckhouseConfigurationPhase},
 	}
 }
@@ -223,9 +225,27 @@ func CheckPhases() []PhaseWithSubPhases {
 	}
 }
 
+// DestroyPhases declares the phases in announcement order, which for destroy is not the
+// order of execution and cannot be made so. Three known deviations block the conversion of
+// destroy to a declarative tree; each is a defect of destroy, not a property of the model:
+//
+//   - UpdateStaticDestroyerIPs executes inside AllNodes (static/destroyer.go:141 -> :310 -> :527)
+//     but is declared before it. Declared after, it would be AllNodes that the tracker marks
+//     skipped. As declared, UpdateStaticDestroyerIPs itself goes on the wire with Action=Skip
+//     even though it ran.
+//   - The same node is announced once per processed host, from two consecutive loops
+//     (static/destroyer.go:236-253 and :256-278), so the Phase/SubPhase path is not unique
+//     within a run. The tree does not express repeats.
+//   - CommanderUUIDWasChecked is deliberately left undeclared: it is announced only in
+//     commander mode and only on the first attempt, so declaring it without a gate would make
+//     every CLI destroy report a phase that cannot have run (index -1 in FindLastCompletedPhase).
 func DestroyPhases() []PhaseWithSubPhases {
 	return []PhaseWithSubPhases{
+		{Phase: CreateStaticDestroyerNodeUserPhase, includeIf: ifStatic},
+		{Phase: WaitStaticDestroyerNodeUserPhase, includeIf: ifStatic},
 		{Phase: DeleteResourcesPhase},
+		{Phase: SetDeckhouseResourcesDeletedPhase},
+		{Phase: UpdateStaticDestroyerIPs, includeIf: ifStatic},
 		{Phase: AllNodesPhase},
 		{Phase: BaseInfraPhase, includeIf: ifNotStatic},
 	}
@@ -284,4 +304,8 @@ func operationPhases(operation Operation, opts phasesOpts) []PhaseWithSubPhases 
 
 func ifNotStatic(opts phasesOpts) bool {
 	return opts.clusterConfig.ClusterType != "Static"
+}
+
+func ifStatic(opts phasesOpts) bool {
+	return opts.clusterConfig.ClusterType == "Static"
 }

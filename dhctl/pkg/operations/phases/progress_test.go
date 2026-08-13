@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -34,29 +35,68 @@ var (
 	skipOpts = phases.ProgressOpts{Action: phases.ProgressActionSkip}
 )
 
+// nth returns the n-th element of s, or the zero value when s is shorter.
+func nth[T any](s []T, n int) T {
+	if n >= 0 && n < len(s) {
+		return s[n]
+	}
+
+	var zero T
+
+	return zero
+}
+
+// phaseIndex returns the position of the named phase, failing the test when the phase is not declared.
+func phaseIndex(t *testing.T, list []phases.PhaseWithSubPhases, name phases.OperationPhase) int {
+	t.Helper()
+
+	i := slices.IndexFunc(list, func(p phases.PhaseWithSubPhases) bool { return p.Phase == name })
+	require.GreaterOrEqualf(t, i, 0, "phase %q is not declared", name)
+
+	return i
+}
+
+// progressAfter is the progress reported once the phase at position i is completed.
+func progressAfter(list []phases.PhaseWithSubPhases, i int) float64 {
+	return float64(i+1) / float64(len(list))
+}
+
+// subPhaseStep is the progress added by completing a single sub-phase of the phase at position i.
+func subPhaseStep(list []phases.PhaseWithSubPhases, i int) float64 {
+	return (1 / float64(len(list))) / float64(len(nth(list, i).SubPhases))
+}
+
 func TestProgressTracker_FindLastCompletedPhase(t *testing.T) {
 	t.Parallel()
 
+	list := phases.BootstrapPhases()
+	require.GreaterOrEqual(t, len(list), 2)
+
+	first := nth(list, 0).Phase
+	second := nth(list, 1).Phase
+	beforeLast := nth(list, len(list)-2).Phase
+	last := nth(list, len(list)-1).Phase
+
 	progressTracker := phases.NewProgressTracker(phases.OperationBootstrap, nil)
 
-	phase, ok := progressTracker.FindLastCompletedPhase(phases.BootstrapPhases()[0].Phase, phases.BootstrapPhases()[1].Phase)
-	assert.EqualValues(t, phases.BootstrapPhases()[0].Phase, phase)
+	phase, ok := progressTracker.FindLastCompletedPhase(first, second)
+	assert.EqualValues(t, first, phase)
 	assert.False(t, ok)
 
-	phase, ok = progressTracker.FindLastCompletedPhase("", phases.BootstrapPhases()[0].Phase)
+	phase, ok = progressTracker.FindLastCompletedPhase("", first)
 	assert.EqualValues(t, "", phase)
 	assert.True(t, ok)
 
-	phase, ok = progressTracker.FindLastCompletedPhase("", phases.BootstrapPhases()[1].Phase)
-	assert.EqualValues(t, phases.BootstrapPhases()[0].Phase, phase)
+	phase, ok = progressTracker.FindLastCompletedPhase("", second)
+	assert.EqualValues(t, first, phase)
 	assert.True(t, ok)
 
-	phase, ok = progressTracker.FindLastCompletedPhase(phases.BootstrapPhases()[len(phases.BootstrapPhases())-2].Phase, "")
-	assert.EqualValues(t, phases.BootstrapPhases()[len(phases.BootstrapPhases())-2].Phase, phase)
+	phase, ok = progressTracker.FindLastCompletedPhase(beforeLast, "")
+	assert.EqualValues(t, beforeLast, phase)
 	assert.False(t, ok)
 
-	phase, ok = progressTracker.FindLastCompletedPhase("", phases.BootstrapPhases()[len(phases.BootstrapPhases())-1].Phase)
-	assert.EqualValues(t, phases.BootstrapPhases()[len(phases.BootstrapPhases())-2].Phase, phase)
+	phase, ok = progressTracker.FindLastCompletedPhase("", last)
+	assert.EqualValues(t, beforeLast, phase)
 	assert.True(t, ok)
 }
 
@@ -65,7 +105,7 @@ func TestProgressTracker(t *testing.T) {
 
 	var result []phases.Progress
 
-	bootstrapPhases := phases.BootstrapPhases()
+	list := phases.BootstrapPhases()
 	progressTracker := phases.NewProgressTracker(phases.OperationBootstrap, func(progress phases.Progress) error {
 		result = append(result, progress)
 
@@ -87,102 +127,132 @@ func TestProgressTracker(t *testing.T) {
 	// do nothing because progress is already 1
 	require.NoError(t, progressTracker.Complete(phases.FinalizationPhase))
 
+	var (
+		idxBaseInfra        = phaseIndex(t, list, phases.BaseInfraPhase)
+		idxInstallK8s       = phaseIndex(t, list, phases.InstallKubernetesPhase)
+		idxInstallDeckhouse = phaseIndex(t, list, phases.InstallDeckhousePhase)
+		idxAdditionalNodes  = phaseIndex(t, list, phases.InstallAdditionalMastersAndStaticNodes)
+		idxCreateResources  = phaseIndex(t, list, phases.CreateResourcesPhase)
+		idxPostBootstrap    = phaseIndex(t, list, phases.ExecPostBootstrapPhase)
+		idxFinalization     = phaseIndex(t, list, phases.FinalizationPhase)
+	)
+
+	deckhouseSubPhases := nth(list, idxInstallDeckhouse).SubPhases
+	nodesSubPhases := nth(list, idxAdditionalNodes).SubPhases
+
+	step := subPhaseStep(list, idxInstallDeckhouse)
+	afterConnect := progressAfter(list, idxInstallK8s) + step
+	afterInstall := afterConnect + step
+	afterWait := afterInstall + step
+
 	expected := []phases.Progress{
 		{
-			Operation:      phases.OperationBootstrap,
-			Phases:         bootstrapPhases,
-			Progress:       0,
-			CompletedPhase: "",
-			CurrentPhase:   bootstrapPhases[0].Phase,
-			NextPhase:      bootstrapPhases[1].Phase,
-		},
-		{
-			Operation:      phases.OperationBootstrap,
-			Phases:         bootstrapPhases,
-			Progress:       0.2222222222222222,
-			CompletedPhase: bootstrapPhases[1].Phase,
-			CurrentPhase:   bootstrapPhases[2].Phase,
-			NextPhase:      bootstrapPhases[3].Phase,
+			Operation:       phases.OperationBootstrap,
+			Phases:          list,
+			Progress:        0,
+			CompletedPhase:  "",
+			CurrentPhase:    nth(list, 0).Phase,
+			NextPhase:       nth(list, 1).Phase,
+			CurrentSubPhase: nth(nth(list, 0).SubPhases, 0),
 		},
 		{
 			Operation:       phases.OperationBootstrap,
-			Phases:          bootstrapPhases,
-			Progress:        0.4444444444444444,
-			CompletedPhase:  bootstrapPhases[3].Phase,
-			CurrentPhase:    bootstrapPhases[4].Phase,
-			NextPhase:       bootstrapPhases[5].Phase,
-			CurrentSubPhase: bootstrapPhases[4].SubPhases[0],
-			NextSubPhase:    bootstrapPhases[4].SubPhases[1],
-		},
-		{
-			Operation:         phases.OperationBootstrap,
-			Phases:            bootstrapPhases,
-			Progress:          0.48148148148148145,
-			CompletedPhase:    bootstrapPhases[3].Phase,
-			CurrentPhase:      bootstrapPhases[4].Phase,
-			NextPhase:         bootstrapPhases[5].Phase,
-			CompletedSubPhase: bootstrapPhases[4].SubPhases[0],
-			CurrentSubPhase:   bootstrapPhases[4].SubPhases[1],
-			NextSubPhase:      bootstrapPhases[4].SubPhases[2],
-		},
-		{
-			Operation:         phases.OperationBootstrap,
-			Phases:            bootstrapPhases,
-			Progress:          0.5185185185185185,
-			CompletedPhase:    bootstrapPhases[3].Phase,
-			CurrentPhase:      bootstrapPhases[4].Phase,
-			NextPhase:         bootstrapPhases[5].Phase,
-			CompletedSubPhase: bootstrapPhases[4].SubPhases[1],
-			CurrentSubPhase:   bootstrapPhases[4].SubPhases[2],
-			NextSubPhase:      "",
-		},
-		{
-			Operation:         phases.OperationBootstrap,
-			Phases:            bootstrapPhases,
-			Progress:          0.5555555555555556,
-			CompletedPhase:    bootstrapPhases[3].Phase,
-			CurrentPhase:      bootstrapPhases[4].Phase,
-			NextPhase:         bootstrapPhases[5].Phase,
-			CompletedSubPhase: bootstrapPhases[4].SubPhases[2],
+			Phases:          list,
+			Progress:        progressAfter(list, idxBaseInfra),
+			CompletedPhase:  phases.BaseInfraPhase,
+			CurrentPhase:    nth(list, idxBaseInfra+1).Phase,
+			NextPhase:       nth(list, idxBaseInfra+2).Phase,
+			CurrentSubPhase: nth(nth(list, idxBaseInfra+1).SubPhases, 0),
+			NextSubPhase:    nth(nth(list, idxBaseInfra+1).SubPhases, 1),
 		},
 		{
 			Operation:       phases.OperationBootstrap,
-			Phases:          bootstrapPhases,
-			Progress:        0.5555555555555556,
-			CompletedPhase:  bootstrapPhases[4].Phase,
-			CurrentPhase:    bootstrapPhases[5].Phase,
-			NextPhase:       bootstrapPhases[6].Phase,
-			CurrentSubPhase: bootstrapPhases[5].SubPhases[0],
-			NextSubPhase:    bootstrapPhases[5].SubPhases[1],
+			Phases:          list,
+			Progress:        progressAfter(list, idxInstallK8s),
+			CompletedPhase:  phases.InstallKubernetesPhase,
+			CurrentPhase:    nth(list, idxInstallK8s+1).Phase,
+			NextPhase:       nth(list, idxInstallK8s+2).Phase,
+			CurrentSubPhase: nth(deckhouseSubPhases, 0),
+			NextSubPhase:    nth(deckhouseSubPhases, 1),
+		},
+		{
+			Operation:         phases.OperationBootstrap,
+			Phases:            list,
+			Progress:          afterConnect,
+			CompletedPhase:    phases.InstallKubernetesPhase,
+			CurrentPhase:      nth(list, idxInstallDeckhouse).Phase,
+			NextPhase:         nth(list, idxInstallDeckhouse+1).Phase,
+			CompletedSubPhase: nth(deckhouseSubPhases, 0),
+			CurrentSubPhase:   nth(deckhouseSubPhases, 1),
+			NextSubPhase:      nth(deckhouseSubPhases, 2),
+		},
+		{
+			Operation:         phases.OperationBootstrap,
+			Phases:            list,
+			Progress:          afterInstall,
+			CompletedPhase:    phases.InstallKubernetesPhase,
+			CurrentPhase:      nth(list, idxInstallDeckhouse).Phase,
+			NextPhase:         nth(list, idxInstallDeckhouse+1).Phase,
+			CompletedSubPhase: nth(deckhouseSubPhases, 1),
+			CurrentSubPhase:   nth(deckhouseSubPhases, 2),
+			NextSubPhase:      nth(deckhouseSubPhases, 3),
+		},
+		{
+			Operation:         phases.OperationBootstrap,
+			Phases:            list,
+			Progress:          afterWait,
+			CompletedPhase:    phases.InstallKubernetesPhase,
+			CurrentPhase:      nth(list, idxInstallDeckhouse).Phase,
+			NextPhase:         nth(list, idxInstallDeckhouse+1).Phase,
+			CompletedSubPhase: nth(deckhouseSubPhases, 2),
+			CurrentSubPhase:   nth(deckhouseSubPhases, 3),
+			NextSubPhase:      nth(deckhouseSubPhases, 4),
+		},
+		{
+			Operation:       phases.OperationBootstrap,
+			Phases:          list,
+			Progress:        max(progressAfter(list, idxInstallDeckhouse), afterWait),
+			CompletedPhase:  phases.InstallDeckhousePhase,
+			CurrentPhase:    nth(list, idxInstallDeckhouse+1).Phase,
+			NextPhase:       nth(list, idxInstallDeckhouse+2).Phase,
+			CurrentSubPhase: nth(nodesSubPhases, 0),
+			NextSubPhase:    nth(nodesSubPhases, 1),
+		},
+		{
+			Operation:       phases.OperationBootstrap,
+			Phases:          list,
+			Progress:        progressAfter(list, idxAdditionalNodes),
+			CompletedPhase:  phases.InstallAdditionalMastersAndStaticNodes,
+			CurrentPhase:    nth(list, idxAdditionalNodes+1).Phase,
+			NextPhase:       nth(list, idxAdditionalNodes+2).Phase,
+			CurrentSubPhase: nth(nth(list, idxAdditionalNodes+1).SubPhases, 0),
+			NextSubPhase:    nth(nth(list, idxAdditionalNodes+1).SubPhases, 1),
+		},
+		{
+			Operation:       phases.OperationBootstrap,
+			Phases:          list,
+			Progress:        progressAfter(list, idxCreateResources),
+			CompletedPhase:  phases.CreateResourcesPhase,
+			CurrentPhase:    nth(list, idxCreateResources+1).Phase,
+			NextPhase:       nth(list, idxCreateResources+2).Phase,
+			CurrentSubPhase: nth(nth(list, idxCreateResources+1).SubPhases, 0),
+			NextSubPhase:    nth(nth(list, idxCreateResources+1).SubPhases, 1),
+		},
+		{
+			Operation:       phases.OperationBootstrap,
+			Phases:          list,
+			Progress:        progressAfter(list, idxPostBootstrap),
+			CompletedPhase:  phases.ExecPostBootstrapPhase,
+			CurrentPhase:    nth(list, idxPostBootstrap+1).Phase,
+			NextPhase:       nth(list, idxPostBootstrap+2).Phase,
+			CurrentSubPhase: nth(nth(list, idxPostBootstrap+1).SubPhases, 0),
+			NextSubPhase:    nth(nth(list, idxPostBootstrap+1).SubPhases, 1),
 		},
 		{
 			Operation:      phases.OperationBootstrap,
-			Phases:         bootstrapPhases,
-			Progress:       0.6666666666666666,
-			CompletedPhase: bootstrapPhases[5].Phase,
-			CurrentPhase:   bootstrapPhases[6].Phase,
-			NextPhase:      bootstrapPhases[7].Phase,
-		},
-		{
-			Operation:      phases.OperationBootstrap,
-			Phases:         bootstrapPhases,
-			Progress:       0.7777777777777778,
-			CompletedPhase: bootstrapPhases[6].Phase,
-			CurrentPhase:   bootstrapPhases[7].Phase,
-			NextPhase:      bootstrapPhases[8].Phase,
-		},
-		{
-			Operation:      phases.OperationBootstrap,
-			Phases:         bootstrapPhases,
-			Progress:       0.8888888888888888,
-			CompletedPhase: bootstrapPhases[7].Phase,
-			CurrentPhase:   bootstrapPhases[8].Phase,
-		},
-		{
-			Operation:      phases.OperationBootstrap,
-			Phases:         bootstrapPhases,
-			Progress:       1,
-			CompletedPhase: bootstrapPhases[8].Phase,
+			Phases:         list,
+			Progress:       progressAfter(list, idxFinalization),
+			CompletedPhase: phases.FinalizationPhase,
 			CurrentPhase:   "",
 			NextPhase:      "",
 		},
@@ -198,7 +268,8 @@ func TestProgressTracker_Complete(t *testing.T) {
 
 	var result []phases.Progress
 
-	bootstrapPhases := phases.BootstrapPhases()
+	list := phases.BootstrapPhases()
+	idxBaseInfra := phaseIndex(t, list, phases.BaseInfraPhase)
 
 	progressTracker := phases.NewProgressTracker(phases.OperationBootstrap, func(progress phases.Progress) error {
 		result = append(result, progress)
@@ -210,37 +281,37 @@ func TestProgressTracker_Complete(t *testing.T) {
 	require.NoError(t, progressTracker.Progress(phases.BaseInfraPhase, "", "", opts))
 	require.NoError(t, progressTracker.Complete(phases.BaseInfraPhase))
 
+	// everything after BaseInfra is skipped
 	lastPhases := phases.BootstrapPhases()
-	for i := range lastPhases {
-		// only PreInfraPreflights and BaseInfra are completed; everything after is skipped
-		if i <= 1 {
-			continue
-		}
+	for i := idxBaseInfra + 1; i < len(lastPhases); i++ {
 		lastPhases[i].Action = new(phases.ProgressActionSkip)
 	}
 
 	expected := []phases.Progress{
 		{
-			Operation:      phases.OperationBootstrap,
-			Phases:         bootstrapPhases,
-			Progress:       0,
-			CompletedPhase: "",
-			CurrentPhase:   bootstrapPhases[0].Phase,
-			NextPhase:      bootstrapPhases[1].Phase,
+			Operation:       phases.OperationBootstrap,
+			Phases:          list,
+			Progress:        0,
+			CompletedPhase:  "",
+			CurrentPhase:    nth(list, 0).Phase,
+			NextPhase:       nth(list, 1).Phase,
+			CurrentSubPhase: nth(nth(list, 0).SubPhases, 0),
 		},
 		{
-			Operation:      phases.OperationBootstrap,
-			Phases:         bootstrapPhases,
-			Progress:       float64(2) / float64(len(bootstrapPhases)),
-			CompletedPhase: bootstrapPhases[1].Phase,
-			CurrentPhase:   bootstrapPhases[2].Phase,
-			NextPhase:      bootstrapPhases[3].Phase,
+			Operation:       phases.OperationBootstrap,
+			Phases:          list,
+			Progress:        progressAfter(list, idxBaseInfra),
+			CompletedPhase:  phases.BaseInfraPhase,
+			CurrentPhase:    nth(list, idxBaseInfra+1).Phase,
+			NextPhase:       nth(list, idxBaseInfra+2).Phase,
+			CurrentSubPhase: nth(nth(list, idxBaseInfra+1).SubPhases, 0),
+			NextSubPhase:    nth(nth(list, idxBaseInfra+1).SubPhases, 1),
 		},
 		{
 			Operation:      phases.OperationBootstrap,
 			Phases:         lastPhases,
 			Progress:       1,
-			CompletedPhase: lastPhases[len(lastPhases)-1].Phase,
+			CompletedPhase: nth(lastPhases, len(lastPhases)-1).Phase,
 			CurrentPhase:   "",
 			NextPhase:      "",
 		},
@@ -270,11 +341,11 @@ func TestProgressTracker_Complete_ZeroProgress(t *testing.T) {
 func TestProgressTracker_NilCallback(t *testing.T) {
 	t.Parallel()
 
-	bootstrapPhases := phases.BootstrapPhases()
+	list := phases.BootstrapPhases()
 	progressTracker := phases.NewProgressTracker(phases.OperationBootstrap, nil)
 
 	require.NoError(t, progressTracker.Progress("", "", "", opts))
-	require.NoError(t, progressTracker.Progress(bootstrapPhases[len(bootstrapPhases)-1].Phase, "", "", opts))
+	require.NoError(t, progressTracker.Progress(nth(list, len(list)-1).Phase, "", "", opts))
 }
 
 func TestProgressTracker_Skip(t *testing.T) {
@@ -287,43 +358,49 @@ func TestProgressTracker_Skip(t *testing.T) {
 
 		return nil
 	})
+	progressTracker.SetClusterConfig(phases.ClusterConfig{ClusterType: "Cloud"})
 
 	require.NoError(t, progressTracker.Progress("", "", "", opts))
 	require.NoError(t, progressTracker.Progress(phases.AllNodesPhase, "", "", skipOpts))
 	require.NoError(t, progressTracker.Progress(phases.BaseInfraPhase, "", "", opts))
 
+	// Cloud destroy: the three static-only phases are gated out.
+	destroyPhases := []phases.PhaseWithSubPhases{
+		{Phase: phases.DeleteResourcesPhase},
+		{Phase: phases.SetDeckhouseResourcesDeletedPhase},
+		{Phase: phases.AllNodesPhase},
+		{Phase: phases.BaseInfraPhase},
+	}
+	skippedDestroyPhases := []phases.PhaseWithSubPhases{
+		{Phase: phases.DeleteResourcesPhase, Action: &skipOpts.Action},
+		{Phase: phases.SetDeckhouseResourcesDeletedPhase, Action: &skipOpts.Action},
+		{Phase: phases.AllNodesPhase, Action: &skipOpts.Action},
+		{Phase: phases.BaseInfraPhase},
+	}
+
+	idxAllNodes := phaseIndex(t, destroyPhases, phases.AllNodesPhase)
+	idxBaseInfra := phaseIndex(t, destroyPhases, phases.BaseInfraPhase)
+
 	expected := []phases.Progress{
 		{
 			Operation:    phases.OperationDestroy,
 			Progress:     0,
-			CurrentPhase: phases.DeleteResourcesPhase,
-			NextPhase:    phases.AllNodesPhase,
-			Phases: []phases.PhaseWithSubPhases{
-				{Phase: phases.DeleteResourcesPhase},
-				{Phase: phases.AllNodesPhase},
-				{Phase: phases.BaseInfraPhase},
-			},
+			CurrentPhase: nth(destroyPhases, 0).Phase,
+			NextPhase:    nth(destroyPhases, 1).Phase,
+			Phases:       destroyPhases,
 		},
 		{
 			Operation:      phases.OperationDestroy,
-			Progress:       0.6666666666666666,
+			Progress:       progressAfter(destroyPhases, idxAllNodes),
 			CompletedPhase: phases.AllNodesPhase,
 			CurrentPhase:   phases.BaseInfraPhase,
-			Phases: []phases.PhaseWithSubPhases{
-				{Phase: phases.DeleteResourcesPhase, Action: &skipOpts.Action},
-				{Phase: phases.AllNodesPhase, Action: &skipOpts.Action},
-				{Phase: phases.BaseInfraPhase},
-			},
+			Phases:         skippedDestroyPhases,
 		},
 		{
 			Operation:      phases.OperationDestroy,
-			Progress:       1,
+			Progress:       progressAfter(destroyPhases, idxBaseInfra),
 			CompletedPhase: phases.BaseInfraPhase,
-			Phases: []phases.PhaseWithSubPhases{
-				{Phase: phases.DeleteResourcesPhase, Action: &skipOpts.Action},
-				{Phase: phases.AllNodesPhase, Action: &skipOpts.Action},
-				{Phase: phases.BaseInfraPhase},
-			},
+			Phases:         skippedDestroyPhases,
 		},
 	}
 
@@ -339,30 +416,31 @@ func TestProgressTracker_WriteProgress(t *testing.T) {
 	progressFile := "progress.jsonl"
 	progressFilePath := filepath.Join(tmpDir, progressFile)
 
-	bootstrapPhases := phases.BootstrapPhases()
+	list := phases.BootstrapPhases()
 	progressTracker := phases.NewProgressTracker(
 		phases.OperationBootstrap,
 		phases.WriteProgress(progressFilePath),
 	)
 
 	require.NoError(t, progressTracker.Progress("", "", "", opts))
-	require.NoError(t, progressTracker.Progress(bootstrapPhases[len(bootstrapPhases)-1].Phase, "", "", opts))
+	require.NoError(t, progressTracker.Progress(nth(list, len(list)-1).Phase, "", "", opts))
 
 	result := readJSONLinesFromFile(t, progressFilePath)
 	expected := []phases.Progress{
 		{
-			Operation:      phases.OperationBootstrap,
-			Phases:         bootstrapPhases,
-			Progress:       0,
-			CompletedPhase: "",
-			CurrentPhase:   bootstrapPhases[0].Phase,
-			NextPhase:      bootstrapPhases[1].Phase,
+			Operation:       phases.OperationBootstrap,
+			Phases:          list,
+			Progress:        0,
+			CompletedPhase:  "",
+			CurrentPhase:    nth(list, 0).Phase,
+			NextPhase:       nth(list, 1).Phase,
+			CurrentSubPhase: nth(nth(list, 0).SubPhases, 0),
 		},
 		{
 			Operation:      phases.OperationBootstrap,
-			Phases:         bootstrapPhases,
-			Progress:       1,
-			CompletedPhase: bootstrapPhases[len(bootstrapPhases)-1].Phase,
+			Phases:         list,
+			Progress:       progressAfter(list, len(list)-1),
+			CompletedPhase: nth(list, len(list)-1).Phase,
 			CurrentPhase:   "",
 			NextPhase:      "",
 		},
@@ -415,17 +493,80 @@ func TestProgressTracker_Progress_CurrentPhase(t *testing.T) {
 	assert.Equal(t, string(phases.ExecPostBootstrapPhase), string(p.NextPhase))
 
 	// InstallAdditionalMastersAndStaticNodes must be marked as skipped
-	var installAdditionalPhase *phases.PhaseWithSubPhases
-	for i := range p.Phases {
-		if p.Phases[i].Phase == phases.InstallAdditionalMastersAndStaticNodes {
-			installAdditionalPhase = &p.Phases[i]
-			break
-		}
+	installAdditionalPhase := nth(p.Phases, phaseIndex(t, p.Phases, phases.InstallAdditionalMastersAndStaticNodes))
+
+	require.NotNil(t, installAdditionalPhase.Action)
+	assert.Equal(t, phases.ProgressActionSkip, *installAdditionalPhase.Action)
+}
+
+// declaredPhases returns the phase list the tracker reports for the given cluster config.
+// The gated list is not exported, so it is read back from a progress event, the same way it
+// reaches Commander.
+func declaredPhases(t *testing.T, operation phases.Operation, cfg phases.ClusterConfig) []phases.OperationPhase {
+	t.Helper()
+
+	var reported []phases.PhaseWithSubPhases
+
+	progressTracker := phases.NewProgressTracker(operation, func(progress phases.Progress) error {
+		reported = progress.Phases
+
+		return nil
+	})
+	progressTracker.SetClusterConfig(cfg)
+	require.NoError(t, progressTracker.Progress("", "", "", opts))
+
+	names := make([]phases.OperationPhase, 0, len(reported))
+	for _, p := range reported {
+		names = append(names, p.Phase)
 	}
 
-	require.NotNil(t, installAdditionalPhase)
-	assert.NotNil(t, installAdditionalPhase.Action)
-	assert.Equal(t, phases.ProgressActionSkip, *installAdditionalPhase.Action)
+	return names
+}
+
+func TestDestroyPhases_DeclaredPerClusterType(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		clusterType string
+		expected    []phases.OperationPhase
+	}{
+		{
+			clusterType: "Static",
+			// Announcement order, not execution order: both node-user phases are announced from
+			// Prepare, ahead of DeleteResources, and UpdateStaticDestroyerIPs runs inside AllNodes.
+			expected: []phases.OperationPhase{
+				phases.CreateStaticDestroyerNodeUserPhase,
+				phases.WaitStaticDestroyerNodeUserPhase,
+				phases.DeleteResourcesPhase,
+				phases.SetDeckhouseResourcesDeletedPhase,
+				phases.UpdateStaticDestroyerIPs,
+				phases.AllNodesPhase,
+			},
+		},
+		{
+			clusterType: "Cloud",
+			expected: []phases.OperationPhase{
+				phases.DeleteResourcesPhase,
+				// Finalize is called for both cluster types, so this phase is never gated.
+				phases.SetDeckhouseResourcesDeletedPhase,
+				phases.AllNodesPhase,
+				phases.BaseInfraPhase,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.clusterType, func(t *testing.T) {
+			t.Parallel()
+
+			declared := declaredPhases(t, phases.OperationDestroy, phases.ClusterConfig{ClusterType: tt.clusterType})
+
+			assert.Equal(t, tt.expected, declared)
+			assert.NotContains(t, declared, phases.CommanderUUIDWasChecked,
+				"CommanderUUIDWasChecked is announced only in commander mode and only on the first attempt",
+			)
+		})
+	}
 }
 
 func readJSONLinesFromFile(t *testing.T, filename string) []phases.Progress {
@@ -454,7 +595,9 @@ func readJSONLinesFromFile(t *testing.T, filename string) []phases.Progress {
 }
 
 var cmpOpts = cmp.Options{
-	cmpopts.IgnoreFields(phases.PhaseWithSubPhases{}, "includeIf"),
+	// PhaseWithSubPhases keeps its gating (and, later, its node callbacks) in unexported func fields;
+	// cmp panics on any unexported field reached from this package, so ignore them all rather than by name.
+	cmpopts.IgnoreUnexported(phases.PhaseWithSubPhases{}),
 
 	cmp.Comparer(func(x, y *phases.ProgressAction) bool {
 		if x == nil && (y != nil && *y == "") {

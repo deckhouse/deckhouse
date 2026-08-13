@@ -78,7 +78,18 @@ func NewDefaultPhaseActionProviderWithStateCache(context DefaultPhasedExecutionC
 	}
 }
 
+// runScoper is implemented by phase contexts that keep a phase run inside another one from
+// replacing it. Run is the only scope that knows a phase is nested, because it is the only
+// place that pairs StartPhase with its CompletePhase.
+type runScoper interface {
+	enterRunScope() func()
+}
+
 func (a *PhaseActionWithStateCache[OperationPhaseDataT]) Run(ctx context.Context, phase OperationPhase, isCritical bool, action ActionFunc[OperationPhaseDataT]) error {
+	if scoper, ok := a.phaseContext.(runScoper); ok {
+		defer scoper.enterRunScope()()
+	}
+
 	if shouldStop, err := a.phaseContext.StartPhase(ctx, phase, isCritical, a.stateCache); err != nil {
 		return err
 	} else if shouldStop {
