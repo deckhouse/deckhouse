@@ -237,7 +237,7 @@
       },
       "products": [
         {
-          "@id": "pkg:golang/github.com/sigstore/sigstore@v1.8.3"
+          "@id": "pkg:golang/github.com/sigstore/sigstore@v1.8.15"
         }
       ],
       "status": "not_affected",
