@@ -183,6 +183,15 @@ func TestMarshalRoundtrip_xDeckhouseExtensions(t *testing.T) {
 				XUIAdvanced: true,
 				XUIOrder:    int64Ptr(2),
 			},
+			"secretName": {
+				Type: "string",
+				XUIKind: &UIKindSelector{
+					APIVersion:       "v1",
+					Kind:             "Secret",
+					MatchLabels:      []UIKindLabelMatch{{Name: "app.kubernetes.io/instance"}, {Name: "app", Value: "echo"}},
+					MatchAnnotations: []UIKindAnnotationMatch{{Name: "note", Regex: "^prod-"}},
+				},
+			},
 		},
 		XValidations: []ValidationRule{
 			{Rule: "self.storageClass != ''", Message: "storageClass must be set"},
@@ -225,6 +234,57 @@ func TestMarshalRoundtrip_xDeckhouseExtensions(t *testing.T) {
 	}
 	if len(restored.XValidations) != 1 || restored.XValidations[0].Rule != "self.storageClass != ''" {
 		t.Errorf("x-deckhouse-validations: got %+v", restored.XValidations)
+	}
+
+	sec, ok := restored.Properties["secretName"]
+	if !ok || sec.XUIKind == nil {
+		t.Fatal("x-deckhouse-ui-kind lost")
+	}
+	if sec.XUIKind.APIVersion != "v1" || sec.XUIKind.Kind != "Secret" {
+		t.Errorf("x-deckhouse-ui-kind apiVersion/kind: got %+v", sec.XUIKind)
+	}
+	if len(sec.XUIKind.MatchLabels) != 2 {
+		t.Fatalf("x-deckhouse-ui-kind matchLabels: got %+v", sec.XUIKind.MatchLabels)
+	}
+	if sec.XUIKind.MatchLabels[0].Name != "app.kubernetes.io/instance" || sec.XUIKind.MatchLabels[0].Value != "" {
+		t.Errorf("x-deckhouse-ui-kind presence match lost: got %+v", sec.XUIKind.MatchLabels[0])
+	}
+	if sec.XUIKind.MatchLabels[1].Value != "echo" {
+		t.Errorf("x-deckhouse-ui-kind value match lost: got %+v", sec.XUIKind.MatchLabels[1])
+	}
+	if len(sec.XUIKind.MatchAnnotations) != 1 || sec.XUIKind.MatchAnnotations[0].Regex != "^prod-" {
+		t.Errorf("x-deckhouse-ui-kind matchAnnotations regex lost: got %+v", sec.XUIKind.MatchAnnotations)
+	}
+}
+
+// TestUIKind_invalidTypeRejected verifies a non-object x-deckhouse-ui-kind fails to unmarshal.
+func TestUIKind_invalidTypeRejected(t *testing.T) {
+	var restored OpenAPIV3Schema
+	err := json.Unmarshal([]byte(`{"type":"string","x-deckhouse-ui-kind":"Secret"}`), &restored)
+	if err == nil {
+		t.Fatal("expected error unmarshaling string into x-deckhouse-ui-kind, got nil")
+	}
+}
+
+// TestUIKindSelector_deepCopy verifies DeepCopy produces independent match slices.
+func TestUIKindSelector_deepCopy(t *testing.T) {
+	original := &OpenAPIV3Schema{
+		Type: "string",
+		XUIKind: &UIKindSelector{
+			APIVersion:  "v1",
+			Kind:        "Secret",
+			MatchLabels: []UIKindLabelMatch{{Name: "app", Value: "echo"}},
+		},
+	}
+
+	copied := original.DeepCopy()
+	if copied.XUIKind == original.XUIKind {
+		t.Fatal("DeepCopy shares the x-deckhouse-ui-kind pointer with original")
+	}
+
+	copied.XUIKind.MatchLabels[0].Value = "mutated"
+	if original.XUIKind.MatchLabels[0].Value != "echo" {
+		t.Errorf("DeepCopy shares the matchLabels slice with original")
 	}
 }
 
