@@ -15,7 +15,7 @@
          up agent changes. Currently the tip of selfupdate-on-main, which adds the
          trial-and-demote self-update on top of the self-restart and the rootfs
          A/B controller. Trial artifact, not for merge. */ -}}
-  {{- $nodeletCommit := "c8eef5606bb5d3d9ebb8b477e4c1cf8167d76f39" }}
+  {{- $nodeletCommit := "20642623cec83f71dac035b5c76b6647bc1008f5" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
