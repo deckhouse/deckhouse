@@ -718,18 +718,48 @@ func TestPrepareOnDeepCopyIsIdempotent(t *testing.T) {
 	require.Equal(t, m.TerraNodeGroupSpecs, again.TerraNodeGroupSpecs)
 }
 
-// NodeGroupManifest is applied as a JSON merge patch over the NodeGroup the
-// user's resources already put in the cluster, so it must not carry a
-// cloudInstances of its own — an empty one would overwrite the real section,
-// and converge reads the replica count back from exactly there.
-func TestNodeGroupManifestLeavesCloudInstancesAlone(t *testing.T) {
-	m, err := cloudMetaConfig(mcFlowResources).Prepare(t.Context(), DummyValidatorProvider())
-	require.NoError(t, err)
+// The manifest is a JSON merge patch applied over the NodeGroup the user's
+// resources already put in the cluster, so it must carry dhctl's Manual default
+// only where the user expressed no choice.
+func TestNodeGroupManifestDefersToUserApprovalMode(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		disruptions map[string]interface{}
+		wantPatched bool
+	}{
+		{name: "no disruptions at all", disruptions: nil, wantPatched: true},
+		{name: "explicit approvalMode", disruptions: map[string]interface{}{"approvalMode": "Automatic"}, wantPatched: false},
+		{name: "disruptions without approvalMode", disruptions: map[string]interface{}{
+			"automatic": map[string]interface{}{"drainBeforeApproval": true},
+		}, wantPatched: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ngSpec := map[string]interface{}{
+				"nodeType": "CloudPermanent",
+				"cloudInstances": map[string]interface{}{
+					"minPerZone":     float64(2),
+					"classReference": map[string]interface{}{"kind": "DVPInstanceClass", "name": "worker-dvp"},
+				},
+			}
+			if tc.disruptions != nil {
+				ngSpec["disruptions"] = tc.disruptions
+			}
 
-	for _, terraNg := range m.TerraNodeGroupSpecs {
-		spec, ok := nestedMap(m.NodeGroupManifest(terraNg), "spec")
-		require.True(t, ok)
-		require.NotContains(t, spec, "cloudInstances", "node group %q", terraNg.Name)
+			m := cloudMetaConfig("")
+			m.CloudProviderVars = &CloudProviderVars{NodeGroups: map[string]map[string]interface{}{
+				"worker": {"spec": ngSpec},
+			}}
+
+			spec, ok := nestedMap(m.NodeGroupManifest(TerraNodeGroupSpec{Name: "worker", Replicas: 2}), "spec")
+			require.True(t, ok)
+			require.NotContains(t, spec, "cloudInstances", "the patch must never carry the replica count")
+
+			disruptions, patched := nestedMap(spec, "disruptions")
+			require.Equal(t, tc.wantPatched, patched)
+			if tc.wantPatched {
+				require.Equal(t, "Manual", disruptions["approvalMode"])
+			}
+		})
 	}
 }
 

@@ -592,28 +592,42 @@ func (m *MetaConfig) ExtractMasterNodeGroupStaticSettings(ctx context.Context) m
 	return static
 }
 
-// NodeGroupManifest prepares NodeGroup custom resource for static nodes, which were ordered by infrastructure utility
+// NodeGroupManifest prepares NodeGroup custom resource for static nodes, which were ordered by infrastructure utility.
+// Applied as a merge patch over the user's NodeGroup, so it carries neither
+// cloudInstances nor an approvalMode the user already chose.
 func (m *MetaConfig) NodeGroupManifest(terraNodeGroup TerraNodeGroupSpec) map[string]any {
 	if terraNodeGroup.NodeTemplate == nil {
 		terraNodeGroup.NodeTemplate = make(map[string]any)
 	}
-	// spec.cloudInstances is deliberately absent: in the mc-flow the NodeGroup
-	// from the user's resources is applied before this runs, and a JSON merge
-	// patch leaves keys it does not carry alone.
+
+	spec := map[string]any{
+		"nodeType":     "CloudPermanent",
+		"nodeTemplate": terraNodeGroup.NodeTemplate,
+	}
+	if !m.nodeGroupSetsApprovalMode(terraNodeGroup.Name) {
+		spec["disruptions"] = map[string]any{"approvalMode": "Manual"}
+	}
+
 	return map[string]any{
 		"apiVersion": "deckhouse.io/v1",
 		"kind":       "NodeGroup",
 		"metadata": map[string]any{
 			"name": terraNodeGroup.Name,
 		},
-		"spec": map[string]any{
-			"nodeType": "CloudPermanent",
-			"disruptions": map[string]any{
-				"approvalMode": "Manual",
-			},
-			"nodeTemplate": terraNodeGroup.NodeTemplate,
-		},
+		"spec": spec,
 	}
+}
+
+func (m *MetaConfig) nodeGroupSetsApprovalMode(nodeGroupName string) bool {
+	if m.CloudProviderVars == nil {
+		return false
+	}
+	disruptions, ok := nestedMap(m.CloudProviderVars.NodeGroups[nodeGroupName], "spec", "disruptions")
+	if !ok {
+		return false
+	}
+	mode, _ := disruptions["approvalMode"].(string)
+	return mode != ""
 }
 
 func (m *MetaConfig) MarshalFullConfig() []byte {
