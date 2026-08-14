@@ -2877,6 +2877,53 @@ alerts:
         Obsolete global control-plane resource requests need to be migrated.
       severity: "6"
       markupFormat: markdown
+    - name: D8ObsoleteKubernetesVersionFieldInClusterConfiguration
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/mc-migration.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ce
+      description: |-
+        `ClusterConfiguration` still carries the obsolete `kubernetesVersion` field. The place to manage the cluster Kubernetes version is `settings.kubernetesVersion` in ModuleConfig `control-plane-manager`.
+
+        **To resolve this alert:**
+
+        1. If ModuleConfig `control-plane-manager` does not exist, create it:
+
+           ```bash
+           d8 s module enable control-plane-manager
+           ```
+
+        2. Read what the obsolete field currently holds:
+
+           ```bash
+           d8 k -n kube-system get secret d8-cluster-configuration -o jsonpath='{.data.cluster-configuration\.yaml}' | base64 -d | grep '^kubernetesVersion:'
+           ```
+
+        3. If ModuleConfig has no `kubernetesVersion` yet, set that same value there, so the cluster keeps the version it runs today (replace `1.34` with what you saw; if you saw `Automatic`, use `Default`):
+
+           ```bash
+           d8 k patch moduleconfig control-plane-manager --type merge -p '{"spec":{"version":3,"settings":{"kubernetesVersion":"1.34"}}}'
+           ```
+
+           Set `Default` instead if you want Deckhouse to choose the version. Note that this starts an upgrade whenever the release default is higher than the pinned version:
+
+           ```bash
+           d8 k patch moduleconfig control-plane-manager --type merge -p '{"spec":{"version":3,"settings":{"kubernetesVersion":"Default"}}}'
+           ```
+
+        4. Remove `kubernetesVersion` from ClusterConfiguration:
+
+           ```bash
+           d8 system edit cluster-configuration
+           ```
+
+           Delete the `kubernetesVersion` field and save.
+
+        Once the `kubernetesVersion` field is removed from `ClusterConfiguration`, this alert is resolved.
+      summary: |
+        The obsolete kubernetesVersion field is still present in ClusterConfiguration.
+      severity: "6"
+      markupFormat: markdown
     - name: D8ObsoletePublishAPIinUserAuthn
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/mc-migration.yaml
       moduleUrl: 040-control-plane-manager
@@ -3243,55 +3290,6 @@ alerts:
       summary: |
         Prometheus can't scrape terraform-state-exporter.
       severity: "8"
-      markupFormat: markdown
-    - name: D8UnsetKubernetesVersionInModuleConfig
-      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/mc-migration.yaml
-      moduleUrl: 040-control-plane-manager
-      module: control-plane-manager
-      edition: ce
-      description: |-
-        `ClusterConfiguration.kubernetesVersion` pins a version while `settings.kubernetesVersion` is unset in ModuleConfig `control-plane-manager`, so the deprecated field is what decides the cluster version.
-
-        The resolution order is: `settings.kubernetesVersion` in ModuleConfig `control-plane-manager`, then the deprecated `ClusterConfiguration.kubernetesVersion`, then the version the current Deckhouse release defaults to. Setting the ModuleConfig value takes ownership away from `ClusterConfiguration`.
-
-        **To resolve this alert:**
-
-        1. If ModuleConfig `control-plane-manager` does not exist, create it:
-
-           ```bash
-           d8 s module enable control-plane-manager
-           ```
-
-        2. Read the version `ClusterConfiguration` currently pins:
-
-           ```bash
-           d8 k -n kube-system get secret d8-cluster-configuration -o jsonpath='{.data.cluster-configuration\.yaml}' | base64 -d | grep '^kubernetesVersion:'
-           ```
-
-        3. Set that same value in ModuleConfig, so the cluster keeps the version it runs today (replace `1.34` with what you saw):
-
-           ```bash
-           d8 k patch moduleconfig control-plane-manager --type merge -p '{"spec":{"version":3,"settings":{"kubernetesVersion":"1.34"}}}'
-           ```
-
-           Set `Default` instead if you want Deckhouse to choose the version. Note that this starts an upgrade whenever the release default is higher than the pinned version:
-
-           ```bash
-           d8 k patch moduleconfig control-plane-manager --type merge -p '{"spec":{"version":3,"settings":{"kubernetesVersion":"Default"}}}'
-           ```
-
-        4. Remove `kubernetesVersion` from ClusterConfiguration:
-
-           ```bash
-           d8 system edit cluster-configuration
-           ```
-
-           Delete the `kubernetesVersion` field and save.
-
-        Once ModuleConfig has the setting, this alert clears.
-      summary: |
-        The cluster Kubernetes version is still pinned in the deprecated ClusterConfiguration.
-      severity: "6"
       markupFormat: markdown
     - name: D8UserAuthnIDTokenTTLTooLong
       sourceFile: modules/150-user-authn/monitoring/prometheus-rules/dex-deprecation.yaml

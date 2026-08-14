@@ -52,7 +52,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: alert_migrate_kub
 
 	metricIsSet := func() bool {
 		for _, m := range f.MetricsCollector.CollectedMetrics() {
-			if m.Name == unsetKubernetesVersionMetricName {
+			if m.Name == obsoleteKubernetesVersionFieldMetricName {
 				Expect(*m.Value).To(Equal(1.0))
 				return true
 			}
@@ -60,57 +60,35 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: alert_migrate_kub
 		return false
 	}
 
-	// trackingDefault is global.discovery.kubernetesVersionIsDefault, published by the global discovery
-	// hook: true when ModuleConfig says Default, or when nothing pins the version anywhere. The
-	// combinations below are the ones that hook can actually produce — pairing a ModuleConfig pin with
-	// trackingDefault=true would encode a state no cluster reaches.
-	DescribeTable("D8UnsetKubernetesVersionInModuleConfig metric",
-		func(mcVersion string, trackingDefault, expectSet bool) {
+	DescribeTable("D8ObsoleteKubernetesVersionFieldInClusterConfiguration metric",
+		func(ccVersion, mcVersion string, expectSet bool) {
 			f.ValuesDelete("controlPlaneManager.kubernetesVersion")
 			if mcVersion != "" {
 				f.ValuesSet("controlPlaneManager.kubernetesVersion", mcVersion)
 			}
-			f.ValuesSet("global.discovery.kubernetesVersionIsDefault", trackingDefault)
+			f.ValuesSetFromYaml("global.clusterConfiguration", []byte(clusterConfigurationValues(ccVersion)))
 			f.RunHook()
 
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(metricIsSet()).To(Equal(expectSet))
 		},
-		// The one case worth migrating: ModuleConfig is silent and the version is pinned anyway, which
-		// leaves ClusterConfiguration as the only document that can be pinning it.
-		Entry("MC unset, version pinned outside ModuleConfig — fires", "", false, true),
 
-		// Nothing to migrate: the resolved version is the release default either way, exactly as
-		// it would be with ModuleConfig Default.
-		Entry("MC unset, cluster tracks the release default — does not fire", "", true, false),
+		Entry("CC pins a version, MC unset — fires", "1.34", "", true),
+		Entry("CC field absent, MC unset — does not fire", "", "", false),
+		Entry("CC field absent, MC pins a version — does not fire", "", "1.35", false),
+		Entry("CC field absent, MC is Default — does not fire", "", "Default", false),
 
-		// Any explicit setting takes ownership away from ClusterConfiguration, Default included.
-		Entry("MC pins a version — does not fire", "1.35", false, false),
-		Entry("MC is Default — does not fire", "Default", true, false),
+		Entry("CC and MC both pin a version — fires", "1.34", "1.35", true),
+		Entry("CC pins a version, MC is Default — fires", "1.34", "Default", true),
 	)
 
-	// Regression. The hook used to read global.clusterConfiguration.kubernetesVersion, where the
-	// discovery hook has already replaced Automatic with the concrete release default. A cluster with
-	// ClusterConfiguration.kubernetesVersion: Automatic therefore looked pinned and kept the alert lit
-	// — the exact case the alert must stay silent on. The previous test missed it by writing a literal
-	// "Automatic" into that value, which no cluster ever presents to this hook.
-	It("stays silent when the ClusterConfiguration value is the substituted release default", func() {
+	It("ignores the kubernetesVersionIsDefault discovery flag", func() {
 		f.ValuesDelete("controlPlaneManager.kubernetesVersion")
 		f.ValuesSet("global.discovery.kubernetesVersionIsDefault", true)
 		f.ValuesSetFromYaml("global.clusterConfiguration", []byte(clusterConfigurationValues("1.34")))
 		f.RunHook()
 
 		Expect(f).To(ExecuteSuccessfully())
-		Expect(metricIsSet()).To(BeFalse())
+		Expect(metricIsSet()).To(BeTrue())
 	})
-
-	DescribeTable("kubernetesVersionNeedsMigration",
-		func(mcVersion string, trackingDefault, expected bool) {
-			Expect(kubernetesVersionNeedsMigration(mcVersion, trackingDefault)).To(Equal(expected))
-		},
-		Entry("MC unset, version pinned outside ModuleConfig", "", false, true),
-		Entry("MC unset, cluster tracks the release default", "", true, false),
-		Entry("MC pins a version", "1.35", false, false),
-		Entry("MC is Default", "Default", true, false),
-	)
 })

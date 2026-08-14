@@ -277,7 +277,7 @@ def validate_cluster_configuration_change(ctx: DotMap) -> Optional[str]:
     # resolve_effective_version returns the MC pin outright, and for Default/Automatic it reads the
     # deckhouseDefaultKubernetesVersion key — never ClusterConfiguration.kubernetesVersion. Denying
     # here blocked exactly the documented migration step (dropping the deprecated field from
-    # ClusterConfiguration) that the D8UnsetKubernetesVersionInModuleConfig alert asks operators to
+    # ClusterConfiguration) that the D8ObsoleteKubernetesVersionFieldInClusterConfiguration alert asks operators to
     # perform. The ModuleConfig branch guards against this class of error explicitly; this one did not.
     if mc_version:
         return None

@@ -155,7 +155,7 @@ apiVersions:
 
           The cluster Kubernetes version is resolved in one order: `kubernetesVersion` in the `control-plane-manager` ModuleConfig, then this field, then the version the current Deckhouse release defaults to. The ModuleConfig setting wins whenever it is set, `Default` included.
 
-          This field is optional. While it pins a version and the ModuleConfig setting is unset, this field is what decides the cluster version, and Deckhouse raises the `D8UnsetKubernetesVersionInModuleConfig` alert asking you to migrate.
+          This field is optional. While it pins a version and the ModuleConfig setting is unset, this field is what decides the cluster version. Deckhouse raises the `D8ObsoleteKubernetesVersionFieldInClusterConfiguration` alert while the field is present at all — including when the ModuleConfig setting already decides the version — and clears it once the field is removed.
 
           Do not change this field in a running cluster to upgrade or downgrade Kubernetes — change ModuleConfig instead.
 

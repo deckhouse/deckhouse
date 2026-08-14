@@ -268,7 +268,7 @@ class TestK8sVersionFeatureGatesValidationWebhook(unittest.TestCase):
     def test_removing_cc_version_is_allowed_when_module_config_pins_the_version(self):
         """The documented migration step must not be blocked.
 
-        Operators are told (by D8UnsetKubernetesVersionInModuleConfig) to move the pin into
+        Operators are told (by D8ObsoleteKubernetesVersionFieldInClusterConfiguration) to move the pin into
         ModuleConfig and drop the deprecated ClusterConfiguration field. Once ModuleConfig pins a
         version, resolve_effective_version never consults ClusterConfiguration.kubernetesVersion, so
         this edit cannot change the effective version and must not be denied — not even when a
