@@ -24,7 +24,9 @@ The module provides the following capabilities:
 - Delivers Base64-encoded binary secrets (for example, JKS keystores or Kerberos keytab files)
   with automatic decoding.
 
-The operating mode (`Manual` or `DiscoverLocalStronghold`) is specified in the module parameter [`settings.connectionConfiguration`](/modules/secrets-store-integration/configuration.html#parameters-connectionconfiguration) of the [ModuleConfig](../../reference/api/cr.html#moduleconfig) custom resource.
+The operating mode (`Manual` or `DiscoverLocalStronghold`) is specified by the
+[`settings.connectionConfiguration`](/modules/secrets-store-integration/configuration.html#parameters-connectionconfiguration)
+module parameter of the [ModuleConfig](../../reference/api/cr.html#moduleconfig) custom resource.
 
 The module works with the following custom resources:
 
@@ -35,6 +37,8 @@ The module works with the following custom resources:
   and diagnostic information.
 - [SecretsStoreImport](/modules/secrets-store-integration/alpha/cr.html#secretsstoreimport):
   Stores the mapping of secrets between a Vault-compatible store and files in containers.
+
+For more details about the module, refer to the [corresponding documentation section](/modules/secrets-store-integration/).
 
 ## Module architecture
 
@@ -59,7 +63,7 @@ The `secrets-store-integration` module consists of the following components:
    and implements the [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) standard
    to deliver secrets to a pod as mounted files.
 
-   The component performs the following actions:
+   Csi-secrets-store performs the following actions:
 
    - Registers the ephemeral CSI driver `secrets-store.csi.deckhouse.io` in [kubelet](../kubernetes-and-scheduling/kubelet.html).
    - Interacts with vault-csi-provider to retrieve data from the secrets store.
@@ -81,12 +85,15 @@ The `secrets-store-integration` module consists of the following components:
    - **csi-node-driver-registrar**: Sidecar container that registers the CSI Node Plugin in kubelet.
      Calls the `GetPluginInfo` and `NodeGetInfo` RPCs in the secrets-store container to get plugin and node information.
    - **secrets-store**: Main container.
-   - **csi-livenessprobe**: Sidecar container that checks the CSI Unix socket and exports the CSI driver health endpoint.
+   - **csi-livenessprobe**: Sidecar container that monitors the CSI driver Unix socket
+     and exposes the `/healthz` HTTP endpoint monitored by kubelet.
+     If the `livenessProbe` check fails, kubelet restarts the csi-secrets-store pod.
    - **kube-rbac-proxy**: Sidecar container with an authorization proxy based on Kubernetes RBAC that provides secure access to secrets-store container metrics.
 
-1. **Vault-csi-provider** (DaemonSet): Consists of a single **vault-csi-provider** container.
-   Vault-csi-provider authorizes the connection to the secrets store, retrieves data from the secrets store,
-   and provides the data to csi-secrets-store. The component runs on all cluster nodes to interact with csi-secrets-store over a Unix socket.
+1. **Vault-csi-provider** (DaemonSet): Runs on all cluster nodes
+   and consists of a single **vault-csi-provider** container.
+   Vault-csi-provider authenticates with the secrets store, retrieves data from it,
+   and passes the data to csi-secrets-store.
 
 1. **Ssi-controller** (Deployment): Consists of a single **ssi-controller** container.
    The controller watches SecretsStoreImport custom resources and creates SecretProviderClass custom resources based on them.
@@ -101,13 +108,13 @@ The `secrets-store-integration` module consists of the following components:
      from the `secrets-store-integration/env-injector` service image
      into a temporary directory shared by all containers in the pod.
    - If the pod manifest has the `secrets-store.deckhouse.io/env-from-path` annotation
-     or the container specification defines the use of secrets from the secrets store,
+     or a container uses secrets from the secrets store,
      then for each such container, including init containers,
      the component replaces the original startup command with a command that starts the injector binary.
 
      The injector receives the original startup command as an argument.
      If the container in the pod manifest has no startup command,
-     the startup command is retrieved from the image in the container registry.
+     the component retrieves the startup command from the image in the container registry.
 
    The component includes the following containers:
 
@@ -117,22 +124,21 @@ The `secrets-store-integration` module consists of the following components:
 
 The following components are not part of the module, but the module affects them:
 
-- **User-app**: Represents a typical user application
-  that needs secrets delivered as environment variables.
+- **User-app**: Represents a typical user application that needs secrets delivered as environment variables.
 
-  The component includes the following containers:
+   The component includes the following containers:
 
-  - **copy-env-injector**: Init container added by the webhook component. It copies the injector binary from the `secrets-store-integration/env-injector` service image.
+  - **copy-env-injector**: Init container added by the webhook component. It copies the injector binary from the     `secrets-store-integration/env-injector` service image.
   - **&lt;CONTAINER_NAME&gt;**: One or more containers
     (including init containers) of the original user application
     whose startup command was changed by the webhook component to start the injector binary.
 
-    The injector authorizes and retrieves data from the secrets store,
-    places secrets as environment variables,
-    and starts the original user container command.
-    If the `secrets-store.deckhouse.io/restart-on-secret-change` annotation
-    is set to `watch-for-lease` or `watch-for-data`,
-    the injector rotates secrets when they change in the store.
+   The injector authenticates with the secrets store, retrieves data,
+   passes secrets to the application as environment variables,
+   and starts the original container command.
+   If the `secrets-store.deckhouse.io/restart-on-secret-change` annotation
+   is set to `watch-for-lease` or `watch-for-data`,
+   the injector rotates secrets when they change in the store.
 
 ## Module interactions
 
@@ -151,7 +157,7 @@ The `secrets-store-integration` module interacts with the following components:
 
 The following external components interact with the module:
 
-1. **Kube-apiserver**: Sends a mutating webhook request for a Pod resource on creation.
+1. **Kube-apiserver**: Invokes the mutating webhook when a Pod resource is created.
 
 1. **Kubelet**:
 
@@ -159,4 +165,4 @@ The following external components interact with the module:
    - Checks the CSI driver `livenessProbe`.
    - Calls the `NodePublishVolume` and `NodeUnpublishVolume` RPCs in the Node Plugin.
 
-1. **Prometheus-main**: Collects metrics from the secrets-store and vault-secrets-webhook containers.
+1. **Prometheus-main**: Collects metrics from the secrets-store and vault-secrets-webhook components.
