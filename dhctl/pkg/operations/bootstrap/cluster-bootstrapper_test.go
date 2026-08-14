@@ -49,7 +49,7 @@ func TestSplitResources_CredentialSecretGoesToBefore(t *testing.T) {
 	})
 	regularResource := newResource(t, "deckhouse.io/v1alpha1", "ModuleConfig", "user-authn", "", nil)
 
-	before, after := splitResourcesOnPreAndPostDeckhouseInstall(context.TODO(), template.Resources{credSecret, regularResource})
+	before, _, after := splitResourcesOnPreAndPostDeckhouseInstall(context.TODO(), template.Resources{credSecret, regularResource})
 
 	// before queue must contain the credential Secret AND a namespace stub for d8-cloud-provider-dvp.
 	require.Len(t, before, 2)
@@ -67,7 +67,7 @@ func TestSplitResources_NonCredentialSecretGoesToAfter(t *testing.T) {
 		"type": "Opaque",
 	})
 
-	before, after := splitResourcesOnPreAndPostDeckhouseInstall(context.TODO(), template.Resources{plainSecret})
+	before, _, after := splitResourcesOnPreAndPostDeckhouseInstall(context.TODO(), template.Resources{plainSecret})
 
 	require.Empty(t, before)
 	require.Len(t, after, 1)
@@ -80,7 +80,7 @@ func TestSplitResources_BeforeAnnotationStillRespected(t *testing.T) {
 		"dhctl.deckhouse.io/bootstrap-resource-place": "before-deckhouse",
 	})
 
-	before, after := splitResourcesOnPreAndPostDeckhouseInstall(context.TODO(), template.Resources{annotated})
+	before, _, after := splitResourcesOnPreAndPostDeckhouseInstall(context.TODO(), template.Resources{annotated})
 
 	require.Empty(t, after)
 	// Namespace stub for kube-system is added even though kube-system always exists; harmless.
@@ -98,7 +98,7 @@ func TestSplitResources_ExplicitNamespaceNotDuplicated(t *testing.T) {
 		"dhctl.deckhouse.io/bootstrap-resource-place": "before-deckhouse",
 	})
 
-	before, _ := splitResourcesOnPreAndPostDeckhouseInstall(context.TODO(), template.Resources{credSecret, explicitNS})
+	before, _, _ := splitResourcesOnPreAndPostDeckhouseInstall(context.TODO(), template.Resources{credSecret, explicitNS})
 
 	// Only one Namespace entry — the user-provided one, no auto-stub.
 	nsCount := 0
@@ -108,4 +108,30 @@ func TestSplitResources_ExplicitNamespaceNotDuplicated(t *testing.T) {
 		}
 	}
 	require.Equal(t, 1, nsCount)
+}
+
+// dhctl builds the CloudPermanent nodes from these objects, so they go to the
+// cluster before the build; everything else waits for the final phase.
+func TestSplitResources_ProviderNodeResourcesGoToProviderQueue(t *testing.T) {
+	masterNg := newResource(t, "deckhouse.io/v1", "NodeGroup", "master", "", map[string]any{
+		"spec": map[string]any{"nodeType": "CloudPermanent"},
+	})
+	ephemeralNg := newResource(t, "deckhouse.io/v1", "NodeGroup", "ubuntu", "", map[string]any{
+		"spec": map[string]any{"nodeType": "CloudEphemeral"},
+	})
+	instanceClass := newResource(t, "deckhouse.io/v1alpha1", "DVPInstanceClass", "master-dvp", "", nil)
+	moduleConfig := newResource(t, "deckhouse.io/v1alpha1", "ModuleConfig", "user-authn", "", nil)
+
+	before, provider, after := splitResourcesOnPreAndPostDeckhouseInstall(
+		context.TODO(), template.Resources{masterNg, ephemeralNg, instanceClass, moduleConfig})
+
+	require.Empty(t, before)
+
+	require.Len(t, provider, 2)
+	require.Equal(t, "master", provider[0].Object.GetName())
+	require.Equal(t, "master-dvp", provider[1].Object.GetName())
+
+	require.Len(t, after, 2)
+	require.Equal(t, "ubuntu", after[0].Object.GetName(), "CloudEphemeral node groups must not provision before the cluster is built")
+	require.Equal(t, "user-authn", after[1].Object.GetName())
 }

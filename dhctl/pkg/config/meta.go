@@ -28,7 +28,6 @@ import (
 	"strings"
 
 	"github.com/iancoleman/strcase"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
@@ -598,73 +597,23 @@ func (m *MetaConfig) NodeGroupManifest(terraNodeGroup TerraNodeGroupSpec) map[st
 	if terraNodeGroup.NodeTemplate == nil {
 		terraNodeGroup.NodeTemplate = make(map[string]any)
 	}
-	spec := map[string]any{
-		"nodeType": "CloudPermanent",
-		"disruptions": map[string]any{
-			"approvalMode": "Manual",
-		},
-		"nodeTemplate": terraNodeGroup.NodeTemplate,
-	}
-	addCloudInstances(spec, m.cloudInstances(terraNodeGroup.Name))
-
+	// spec.cloudInstances is deliberately absent: in the mc-flow the NodeGroup
+	// from the user's resources is applied before this runs, and a JSON merge
+	// patch leaves keys it does not carry alone.
 	return map[string]any{
 		"apiVersion": "deckhouse.io/v1",
 		"kind":       "NodeGroup",
 		"metadata": map[string]any{
 			"name": terraNodeGroup.Name,
 		},
-		"spec": spec,
-	}
-}
-
-// MasterNodeGroupManifest prepares the control-plane NodeGroup custom resource.
-// Deckhouse's node-manager creates the same object if it is missing, but only
-// as bare metadata — see modules/040-node-manager/hooks/create_master_node_group.go.
-// dhctl writes it too so the mc-flow's cloudInstances is there from the start.
-func (m *MetaConfig) MasterNodeGroupManifest() map[string]any {
-	spec := map[string]any{
-		"nodeType": "CloudPermanent",
-		"disruptions": map[string]any{
-			"approvalMode": "Manual",
+		"spec": map[string]any{
+			"nodeType": "CloudPermanent",
+			"disruptions": map[string]any{
+				"approvalMode": "Manual",
+			},
+			"nodeTemplate": terraNodeGroup.NodeTemplate,
 		},
 	}
-	addCloudInstances(spec, m.cloudInstances(masterNodeGroupName))
-
-	return map[string]any{
-		"apiVersion": "deckhouse.io/v1",
-		"kind":       "NodeGroup",
-		"metadata": map[string]any{
-			"name": masterNodeGroupName,
-		},
-		"spec": spec,
-	}
-}
-
-func addCloudInstances(spec map[string]any, cloudInstances map[string]any) {
-	if len(cloudInstances) > 0 {
-		spec["cloudInstances"] = cloudInstances
-	}
-}
-
-// cloudInstances returns a deep copy of spec.cloudInstances of the named
-// CloudPermanent NodeGroup. It is the replica count and the instance class of
-// that group, and in the mc-flow the cluster object is the only place they are
-// kept — see applyNodeGroupReplicasFromCloudProviderVars, which reads them back
-// on every converge. Nil in the legacy ProviderClusterConfiguration flow, whose
-// NodeGroups never reach CloudProviderVars.
-func (m *MetaConfig) cloudInstances(nodeGroupName string) map[string]any {
-	if m.CloudProviderVars == nil {
-		return nil
-	}
-	ng, ok := m.CloudProviderVars.NodeGroups[nodeGroupName]
-	if !ok {
-		return nil
-	}
-	cloudInstances, found, err := unstructured.NestedMap(ng, "spec", "cloudInstances")
-	if err != nil || !found {
-		return nil
-	}
-	return cloudInstances
 }
 
 func (m *MetaConfig) MarshalFullConfig() []byte {

@@ -718,69 +718,18 @@ func TestPrepareOnDeepCopyIsIdempotent(t *testing.T) {
 	require.Equal(t, m.TerraNodeGroupSpecs, again.TerraNodeGroupSpecs)
 }
 
-// clusterNodeGroupsFromManifests mirrors what a converge run reads back: the
-// NodeGroup objects dhctl itself wrote to the cluster during bootstrap, keyed
-// by name the way fetchCloudPermanentNodeGroupsFromCluster keys them.
-func clusterNodeGroupsFromManifests(m *MetaConfig) map[string]map[string]interface{} {
-	ngs := map[string]map[string]interface{}{
-		masterNodeGroupName: m.MasterNodeGroupManifest(),
-	}
-	for _, terraNg := range m.TerraNodeGroupSpecs {
-		ngs[terraNg.Name] = m.NodeGroupManifest(terraNg)
-	}
-	return ngs
-}
-
-func TestNodeGroupManifestKeepsCloudInstances(t *testing.T) {
+// NodeGroupManifest is applied as a JSON merge patch over the NodeGroup the
+// user's resources already put in the cluster, so it must not carry a
+// cloudInstances of its own — an empty one would overwrite the real section,
+// and converge reads the replica count back from exactly there.
+func TestNodeGroupManifestLeavesCloudInstancesAlone(t *testing.T) {
 	m, err := cloudMetaConfig(mcFlowResources).Prepare(t.Context(), DummyValidatorProvider())
 	require.NoError(t, err)
 
 	for _, terraNg := range m.TerraNodeGroupSpecs {
-		manifest := m.NodeGroupManifest(terraNg)
-
-		cloudInstances, ok := nestedMap(manifest, "spec", "cloudInstances")
-		require.Truef(t, ok, "node group %q written to the cluster without spec.cloudInstances", terraNg.Name)
-		require.Equal(t, float64(terraNg.Replicas), cloudInstances["minPerZone"])
-
-		classRef, ok := nestedMap(cloudInstances, "classReference")
-		require.Truef(t, ok, "node group %q written without spec.cloudInstances.classReference", terraNg.Name)
-		require.Equal(t, "DVPInstanceClass", classRef["kind"])
-	}
-}
-
-func TestMasterNodeGroupManifestKeepsCloudInstances(t *testing.T) {
-	m, err := cloudMetaConfig(mcFlowResources).Prepare(t.Context(), DummyValidatorProvider())
-	require.NoError(t, err)
-
-	manifest := m.MasterNodeGroupManifest()
-	require.Equal(t, masterNodeGroupName, manifest["metadata"].(map[string]any)["name"])
-
-	cloudInstances, ok := nestedMap(manifest, "spec", "cloudInstances")
-	require.True(t, ok, "master node group written to the cluster without spec.cloudInstances")
-	require.Equal(t, float64(3), cloudInstances["minPerZone"])
-}
-
-// The mc-flow has no ProviderClusterConfiguration, so converge recovers the
-// replica counts from the NodeGroups in the cluster. Those NodeGroups are the
-// ones dhctl wrote during bootstrap, which makes this a closed loop: whatever
-// the write drops, the next converge cannot see. Dropping cloudInstances makes
-// every replica count read back as zero, and zero means "scale to zero".
-func TestClusterNodeGroupsRoundTripPreservesReplicas(t *testing.T) {
-	fromFile, err := cloudMetaConfig(mcFlowResources).Prepare(t.Context(), DummyValidatorProvider())
-	require.NoError(t, err)
-
-	fromCluster := cloudMetaConfig("")
-	fromCluster.CloudProviderVars = &CloudProviderVars{NodeGroups: clusterNodeGroupsFromManifests(fromFile)}
-
-	fromCluster, err = fromCluster.Prepare(t.Context(), DummyValidatorProvider())
-	require.NoError(t, err)
-
-	require.Equal(t, fromFile.MasterNodeGroupSpec.Replicas, fromCluster.MasterNodeGroupSpec.Replicas)
-
-	require.Len(t, fromCluster.TerraNodeGroupSpecs, len(fromFile.TerraNodeGroupSpecs))
-	for i, want := range fromFile.TerraNodeGroupSpecs {
-		require.Equal(t, want.Name, fromCluster.TerraNodeGroupSpecs[i].Name)
-		require.Equal(t, want.Replicas, fromCluster.TerraNodeGroupSpecs[i].Replicas)
+		spec, ok := nestedMap(m.NodeGroupManifest(terraNg), "spec")
+		require.True(t, ok)
+		require.NotContains(t, spec, "cloudInstances", "node group %q", terraNg.Name)
 	}
 }
 
