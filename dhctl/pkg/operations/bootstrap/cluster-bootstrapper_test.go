@@ -217,6 +217,29 @@ func TestApplyMasterNodeGroupDefaults_KeepsWhatTheUserChose(t *testing.T) {
 	require.Empty(t, taints, "an explicitly empty taint list is the user's choice")
 }
 
+// A non-string label value (an unquoted YAML scalar decodes as bool/float64,
+// not string) must not make the merge drop every other label.
+func TestApplyMasterNodeGroupDefaults_PreservesNonStringLabelValues(t *testing.T) {
+	masterNg := newResource(t, "deckhouse.io/v1", "NodeGroup", "master", "", map[string]any{
+		"spec": map[string]any{
+			"nodeType": "CloudPermanent",
+			"nodeTemplate": map[string]any{
+				"labels": map[string]any{"team": "infra", "enabled": true},
+			},
+		},
+	})
+
+	applyMasterNodeGroupDefaults(template.Resources{masterNg})
+
+	labels, found, err := unstructured.NestedMap(masterNg.Object.Object, "spec", "nodeTemplate", "labels")
+	require.NoError(t, err)
+	require.True(t, found)
+	require.Equal(t, true, labels["enabled"])
+	require.Equal(t, "infra", labels["team"])
+	require.Equal(t, "", labels["node-role.kubernetes.io/control-plane"])
+	require.Equal(t, "", labels["node-role.kubernetes.io/master"])
+}
+
 // Only the master group gets these; every other NodeGroup is left alone.
 func TestApplyMasterNodeGroupDefaults_IgnoresOtherNodeGroups(t *testing.T) {
 	workerNg := newResource(t, "deckhouse.io/v1", "NodeGroup", "worker", "", map[string]any{

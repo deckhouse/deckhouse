@@ -1073,9 +1073,8 @@ func isProviderNodeResource(resource *template.Resource) bool {
 }
 
 // applyMasterNodeGroupDefaults fills in the control-plane defaults that
-// node-manager's create_master_node_group hook supplies with CreateIfNotExists —
-// it never corrects an object dhctl wrote first. Absent keys only: what the user
-// set stays.
+// node-manager's CreateIfNotExists hook never corrects once dhctl has already
+// written the object. Absent keys only: what the user set stays.
 func applyMasterNodeGroupDefaults(resources template.Resources) {
 	for _, resource := range resources {
 		if resource.GVK.Kind != "NodeGroup" || resource.GVK.Group != "deckhouse.io" {
@@ -1089,16 +1088,19 @@ func applyMasterNodeGroupDefaults(resources template.Resources) {
 			_ = unstructured.SetNestedField(resource.Object.Object, "Manual", "spec", "disruptions", "approvalMode")
 		}
 
-		labels, _, _ := unstructured.NestedStringMap(resource.Object.Object, "spec", "nodeTemplate", "labels")
-		if labels == nil {
-			labels = map[string]string{}
-		}
-		for _, key := range []string{"node-role.kubernetes.io/control-plane", "node-role.kubernetes.io/master"} {
-			if _, ok := labels[key]; !ok {
-				labels[key] = ""
+		// NestedMap preserves non-string label values instead of NestedStringMap's
+		// all-or-nothing error, so a stray non-string label doesn't get wiped below.
+		if labels, _, err := unstructured.NestedMap(resource.Object.Object, "spec", "nodeTemplate", "labels"); err == nil {
+			if labels == nil {
+				labels = map[string]interface{}{}
 			}
+			for _, key := range []string{"node-role.kubernetes.io/control-plane", "node-role.kubernetes.io/master"} {
+				if _, ok := labels[key]; !ok {
+					labels[key] = ""
+				}
+			}
+			_ = unstructured.SetNestedMap(resource.Object.Object, labels, "spec", "nodeTemplate", "labels")
 		}
-		_ = unstructured.SetNestedStringMap(resource.Object.Object, labels, "spec", "nodeTemplate", "labels")
 
 		if _, found, _ := unstructured.NestedFieldNoCopy(resource.Object.Object, "spec", "nodeTemplate", "taints"); !found {
 			_ = unstructured.SetNestedSlice(resource.Object.Object, []any{map[string]any{
