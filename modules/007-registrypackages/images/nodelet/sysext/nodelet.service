@@ -11,9 +11,20 @@ Wants=network.target
 AssertPathIsMountPoint=/boot
 AssertPathIsMountPoint=/config
 AssertPathIsMountPoint=/var
+# A crashing successor must stop flapping and leave a visibly failed unit
+# instead of restarting for ever. Ten minutes rather than the default ten
+# seconds: under QEMU without KVM wall-clock runs 10-20x slower.
+StartLimitIntervalSec=600
+StartLimitBurst=5
 
 [Service]
 Type=simple
+# The overlay lives in tmpfs and is gone after a reboot, so without this the
+# unit would start the agent baked into the image rather than the one the
+# cluster asked for. ExecStart resolves after ExecStartPre, so /usr/bin/nodelet
+# is already the extension's binary. Leading "-": a failed merge must still
+# leave a bootable node running the image's copy.
+ExecStartPre=-/usr/sbin/systemd-sysext --image-policy=root=signed merge
 ExecStart=/usr/bin/nodelet
 # Output inherits the system default (journal, see system.conf.d/00-console-log.conf).
 # journald forwards it to the serial console per MaxLevelConsole=info in
