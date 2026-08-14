@@ -36,6 +36,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
@@ -974,6 +975,10 @@ func bootstrapAdditionalNodesForCloudCluster(
 	ctx, span := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.AdditionalNodesForCloudCluster")
 	defer span.End()
 
+	if err := ensureMasterNodeGroup(ctx, kubeCl, metaConfig); err != nil {
+		return err
+	}
+
 	if err := BootstrapAdditionalMasterNodes(ctx, kubeCl, metaConfig, masterAddressesForSSH, infrastructureContext, cache.Global(), globalOptions); err != nil {
 		return err
 	}
@@ -1007,6 +1012,27 @@ func bootstrapAdditionalNodesForCloudCluster(
 		pec.CompleteSubPhase(ctx, phases.InstallAdditionalMastersAndStaticNodeSubPhaseStaticNodes)
 
 		return nil
+	})
+}
+
+// ensureMasterNodeGroup writes the control-plane NodeGroup in the mc-flow, where
+// its spec.cloudInstances is the only record of the master replica count and of
+// the instance class, and converge reads it back from the cluster on every run.
+// Deckhouse's node-manager creates the same object without that section and gets
+// there first, so leaving it to the create-resources phase — the last one — means
+// an interrupted bootstrap leaves a master NodeGroup that converge then reads as
+// "zero replicas". No-op in the legacy ProviderClusterConfiguration flow, whose
+// NodeGroups carry no cloudInstances by design.
+func ensureMasterNodeGroup(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) error {
+	if metaConfig.CloudProviderVars == nil {
+		return nil
+	}
+	if _, ok := metaConfig.CloudProviderVars.NodeGroups[global.MasterNodeGroupName]; !ok {
+		return nil
+	}
+
+	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Create master NodeGroup", func(ctx context.Context) error {
+		return entity.CreateNodeGroup(ctx, kubeCl, global.MasterNodeGroupName, metaConfig.MasterNodeGroupManifest())
 	})
 }
 

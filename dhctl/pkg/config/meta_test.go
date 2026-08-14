@@ -717,3 +717,88 @@ func TestPrepareOnDeepCopyIsIdempotent(t *testing.T) {
 	require.Equal(t, m.MasterNodeGroupSpec.Replicas, again.MasterNodeGroupSpec.Replicas)
 	require.Equal(t, m.TerraNodeGroupSpecs, again.TerraNodeGroupSpecs)
 }
+
+// clusterNodeGroupsFromManifests mirrors what a converge run reads back: the
+// NodeGroup objects dhctl itself wrote to the cluster during bootstrap, keyed
+// by name the way fetchCloudPermanentNodeGroupsFromCluster keys them.
+func clusterNodeGroupsFromManifests(m *MetaConfig) map[string]map[string]interface{} {
+	ngs := map[string]map[string]interface{}{
+		masterNodeGroupName: m.MasterNodeGroupManifest(),
+	}
+	for _, terraNg := range m.TerraNodeGroupSpecs {
+		ngs[terraNg.Name] = m.NodeGroupManifest(terraNg)
+	}
+	return ngs
+}
+
+func TestNodeGroupManifestKeepsCloudInstances(t *testing.T) {
+	m, err := cloudMetaConfig(mcFlowResources).Prepare(t.Context(), DummyValidatorProvider())
+	require.NoError(t, err)
+
+	for _, terraNg := range m.TerraNodeGroupSpecs {
+		manifest := m.NodeGroupManifest(terraNg)
+
+		cloudInstances, ok := nestedMap(manifest, "spec", "cloudInstances")
+		require.Truef(t, ok, "node group %q written to the cluster without spec.cloudInstances", terraNg.Name)
+		require.Equal(t, float64(terraNg.Replicas), cloudInstances["minPerZone"])
+
+		classRef, ok := nestedMap(cloudInstances, "classReference")
+		require.Truef(t, ok, "node group %q written without spec.cloudInstances.classReference", terraNg.Name)
+		require.Equal(t, "DVPInstanceClass", classRef["kind"])
+	}
+}
+
+func TestMasterNodeGroupManifestKeepsCloudInstances(t *testing.T) {
+	m, err := cloudMetaConfig(mcFlowResources).Prepare(t.Context(), DummyValidatorProvider())
+	require.NoError(t, err)
+
+	manifest := m.MasterNodeGroupManifest()
+	require.Equal(t, masterNodeGroupName, manifest["metadata"].(map[string]any)["name"])
+
+	cloudInstances, ok := nestedMap(manifest, "spec", "cloudInstances")
+	require.True(t, ok, "master node group written to the cluster without spec.cloudInstances")
+	require.Equal(t, float64(3), cloudInstances["minPerZone"])
+}
+
+// The mc-flow has no ProviderClusterConfiguration, so converge recovers the
+// replica counts from the NodeGroups in the cluster. Those NodeGroups are the
+// ones dhctl wrote during bootstrap, which makes this a closed loop: whatever
+// the write drops, the next converge cannot see. Dropping cloudInstances makes
+// every replica count read back as zero, and zero means "scale to zero".
+func TestClusterNodeGroupsRoundTripPreservesReplicas(t *testing.T) {
+	fromFile, err := cloudMetaConfig(mcFlowResources).Prepare(t.Context(), DummyValidatorProvider())
+	require.NoError(t, err)
+
+	fromCluster := cloudMetaConfig("")
+	fromCluster.CloudProviderVars = &CloudProviderVars{NodeGroups: clusterNodeGroupsFromManifests(fromFile)}
+
+	fromCluster, err = fromCluster.Prepare(t.Context(), DummyValidatorProvider())
+	require.NoError(t, err)
+
+	require.Equal(t, fromFile.MasterNodeGroupSpec.Replicas, fromCluster.MasterNodeGroupSpec.Replicas)
+
+	require.Len(t, fromCluster.TerraNodeGroupSpecs, len(fromFile.TerraNodeGroupSpecs))
+	for i, want := range fromFile.TerraNodeGroupSpecs {
+		require.Equal(t, want.Name, fromCluster.TerraNodeGroupSpecs[i].Name)
+		require.Equal(t, want.Replicas, fromCluster.TerraNodeGroupSpecs[i].Replicas)
+	}
+}
+
+// A CloudPermanent NodeGroup in the cluster with no cloudInstances carries no
+// replica count at all. Silently reading it as zero is what deletes nodes, so
+// the mc-flow refuses to converge on it instead.
+func TestPrepareRejectsClusterNodeGroupWithoutCloudInstances(t *testing.T) {
+	m := cloudMetaConfig("")
+	m.CloudProviderVars = &CloudProviderVars{NodeGroups: map[string]map[string]interface{}{
+		masterNodeGroupName: {
+			"apiVersion": "deckhouse.io/v1",
+			"kind":       "NodeGroup",
+			"metadata":   map[string]interface{}{"name": masterNodeGroupName},
+			"spec":       map[string]interface{}{"nodeType": "CloudPermanent"},
+		},
+	}}
+
+	_, err := m.Prepare(t.Context(), DummyValidatorProvider())
+	require.ErrorContains(t, err, "cloudInstances")
+	require.ErrorContains(t, err, masterNodeGroupName)
+}
