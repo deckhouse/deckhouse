@@ -50,6 +50,7 @@
     {{.Content}}
 
 {{- $lang := site.Language.Lang }}
+{{- $buildEdition := or (getenv "HUGO_D8_EDITION") "EE" }}
 {{- $editionsSortedList := sort hugo.Data.helpers.editions "weight" }}
 {{- $modulesChannelsData := hugo.Data.modules.channels }}
 {{- $channelsInfo := hugo.Data.channels.info }}
@@ -147,6 +148,9 @@
         {{- $moduleEditionsString := "" }}
 
         {{- if .embedded }}
+          {{- if eq $buildEdition "CSE" }}
+            {{- $tags = append $tags (slice "certified") }}
+          {{- end }}
           {{- /* make edition list for an embedded module */}}
           {{- $embeddedModuleMetadata := index (where $embeddedModulesList "module" .module ) 0 }}
 
