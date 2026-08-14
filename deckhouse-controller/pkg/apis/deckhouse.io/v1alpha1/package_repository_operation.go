@@ -47,8 +47,6 @@ const (
 
 	// PackageTypeLabel is a label on Docker images that indicates the package type
 	PackagesRepositoryOperationLabelPackageType = "io.deckhouse.package.type"
-	PackageTypeApplication                      = "Application"
-	PackageTypeModule                           = "Module"
 
 	PackagesRepositoryOperationLabelOperationTrigger = "packages.deckhouse.io/operation-trigger"
 	PackagesRepositoryTriggerManual                  = "manual"

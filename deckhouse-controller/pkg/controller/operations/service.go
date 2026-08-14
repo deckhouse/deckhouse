@@ -45,9 +45,9 @@ type OperationService struct {
 	logger *log.Logger
 }
 
-// errPackageTypeInvalid is returned by detectPackageType when a package has manifest files
+// ErrPackageTypeInvalid is returned by detectPackageType when a package has manifest files
 // (labels or package.yaml) but the type value is empty or not recognized.
-var errPackageTypeInvalid = errors.New("package type could not be determined")
+var ErrPackageTypeInvalid = errors.New("package type could not be determined")
 
 // errTooOldImage is returned when a version image has no type labels and no package.yaml -
 // it cannot be processed.
@@ -60,25 +60,25 @@ func isRepoNotFoundError(err error) bool {
 	return strings.Contains(err.Error(), string(transport.NameUnknownErrorCode))
 }
 
-// packageType represents the type of a package as detected from Docker labels or package.yaml.
-type packageType string
+// PackageType represents the type of a package as detected from Docker labels or package.yaml.
+type PackageType string
 
 const (
-	PackageTypeApplication packageType = v1alpha1.PackageTypeApplication
-	PackageTypeModule      packageType = v1alpha1.PackageTypeModule
+	PackageTypeApplication PackageType = "Application"
+	PackageTypeModule      PackageType = "Module"
 )
 
-// parsePackageType converts a raw string to packageType.
+// ParsePackageType converts a raw string to v1alpha1.PackageType.
 //
 // returning an error if the value is not recognized. f.e: type: "Garbage", type: ""
-func parsePackageType(raw string) (packageType, error) {
-	switch packageType(raw) {
+func ParsePackageType(raw string) (PackageType, error) {
+	switch PackageType(raw) {
 	case PackageTypeApplication:
 		return PackageTypeApplication, nil
 	case PackageTypeModule:
 		return PackageTypeModule, nil
 	default:
-		return "", fmt.Errorf("%w: unknown value %q", errPackageTypeInvalid, raw)
+		return "", fmt.Errorf("%w: unknown value %q", ErrPackageTypeInvalid, raw)
 	}
 }
 
@@ -439,7 +439,7 @@ func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageNa
 				}},
 			}, nil
 		}
-		if errors.Is(detectErr, errPackageTypeInvalid) {
+		if errors.Is(detectErr, ErrPackageTypeInvalid) {
 			return &PackageProcessResult{
 				Failed: []failedVersion{{Name: latestTag, Error: detectErr.Error()}},
 			}, nil
@@ -590,7 +590,7 @@ func (s *OperationService) handleMissingVersionPath(ctx context.Context, package
 //   - ("", errPackageTypeInvalid) - type could not be determined or is unknown
 //   - ("", errTooOldImage) - no labels and no package.yaml
 //   - ("", err) - hard error (network, tar corruption, etc.)
-func (s *OperationService) detectPackageType(ctx context.Context, packageName, latestTag string) (packageType, error) {
+func (s *OperationService) detectPackageType(ctx context.Context, packageName, latestTag string) (PackageType, error) {
 	pkg := s.svc.Package(packageName)
 
 	// Step 1: Read label from version image ConfigFile (<package>/version:<tag>)
@@ -605,7 +605,7 @@ func (s *OperationService) detectPackageType(ctx context.Context, packageName, l
 	}
 	if versionConfig != nil && versionConfig.Config.Labels != nil {
 		if rawPackageType, hasLabel := versionConfig.Config.Labels[v1alpha1.PackagesRepositoryOperationLabelPackageType]; hasLabel {
-			return parsePackageType(rawPackageType)
+			return ParsePackageType(rawPackageType)
 		}
 	}
 
@@ -623,14 +623,14 @@ func (s *OperationService) detectPackageType(ctx context.Context, packageName, l
 				slog.String("package", packageName),
 				slog.String("type", pkgDef.Type),
 			)
-			return parsePackageType(pkgDef.Type)
+			return ParsePackageType(pkgDef.Type)
 		}
 		// package.yaml exists but type field is empty
 		s.logger.Warn(
 			"package type not determined from labels or package.yaml",
 			slog.String("package", packageName),
 		)
-		return "", fmt.Errorf("%w: %s", errPackageTypeInvalid, packageName)
+		return "", fmt.Errorf("%w: %s", ErrPackageTypeInvalid, packageName)
 	}
 
 	// No labels and no package.yaml
@@ -642,7 +642,7 @@ func (s *OperationService) detectPackageType(ctx context.Context, packageName, l
 }
 
 type PackageProcessResult struct {
-	PackageType   packageType
+	PackageType   PackageType
 	Done          []*semver.Version
 	Failed        []failedVersion
 	FoundVersions int
