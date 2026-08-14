@@ -34,9 +34,10 @@ type TerraformVersions struct {
 	OpenTofu  string
 }
 
+// Mirrors candi/terraform_versions.yml.
 var DefaultTerraformVersions = TerraformVersions{
 	Terraform: "0.14.8",
-	OpenTofu:  "1.12.0",
+	OpenTofu:  "1.12.5",
 }
 
 type State struct {
