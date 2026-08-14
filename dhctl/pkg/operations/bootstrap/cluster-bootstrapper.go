@@ -765,22 +765,6 @@ func (b *ClusterBootstrapper) bootstrapAdditionalNodes(ctx context.Context, bctx
 			return err
 		}
 
-		// The CloudPermanent NodeGroups and their instance classes describe the nodes
-		// the steps below are about to build, and in the mc-flow the cluster objects
-		// are the only record converge later reads them back from. Applied here, right
-		// after Deckhouse installed their CRDs, rather than with the rest of the user's
-		// resources once the nodes already exist.
-		if err := createResources(
-			ctx,
-			&client.KubernetesClient{KubeClient: kubeCl},
-			bctx.resourcesToCreateProvider,
-			nil,
-			true,
-			b.Options.Bootstrap.ResourcesTimeout,
-		); err != nil {
-			return err
-		}
-
 		localBootstraper := func(action func() error) error {
 			if b.CommanderMode {
 				return action()
@@ -795,6 +779,19 @@ func (b *ClusterBootstrapper) bootstrapAdditionalNodes(ctx context.Context, bctx
 		}
 
 		err = localBootstraper(func() error {
+			// The CloudPermanent NodeGroups and their instance classes describe the
+			// nodes the call below is about to build, so they reach the cluster first.
+			if err := createResources(
+				ctx,
+				&client.KubernetesClient{KubeClient: kubeCl},
+				bctx.resourcesToCreateProvider,
+				nil,
+				true,
+				b.Options.Bootstrap.ResourcesTimeout,
+			); err != nil {
+				return err
+			}
+
 			return bootstrapAdditionalNodesForCloudCluster(
 				ctx,
 				&client.KubernetesClient{KubeClient: kubeCl},
