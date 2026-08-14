@@ -26,7 +26,7 @@ description: Архитектура модуля managed-postgres в Deckhouse K
 
 Архитектура модуля [`managed-postgres`](/modules/managed-postgres/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DKP изображена на следующей диаграмме:
 
-![Архитектура модуля managed-postgres](../../../images/architecture/managed-services/c4-l2-managed-postgres.ru.png)
+![Архитектура модуля managed-postgres](../../images/architecture/managed-services/c4-l2-managed-postgres.ru.png)
 
 ## Компоненты модуля
 
@@ -63,28 +63,28 @@ description: Архитектура модуля managed-postgres в Deckhouse K
    Ниже описаны компоненты для режима репликации [ConsistencyAndAvailability](/modules/managed-postgres/stable/user_guide.html#consistencyandavailability-3-%D0%B8%D0%BD%D1%81%D1%82%D0%B0%D0%BD%D1%81%D0%B0-primary--%D0%BE%D0%B4%D0%BD%D0%B0-%D1%81%D0%B8%D0%BD%D1%85%D1%80%D0%BE%D0%BD%D0%BD%D0%B0%D1%8F--%D0%BE%D0%B4%D0%BD%D0%B0-%D0%B0%D1%81%D0%B8%D0%BD%D1%85%D1%80%D0%BE%D0%BD%D0%BD%D0%B0%D1%8F-%D1%80%D0%B5%D0%BF%D0%BB%D0%B8%D0%BA%D0%B0). Два других режима репликации по составу компонентов являются частным случаем режима ConsistencyAndAvailability.
    {% endalert %}
 
-1. **d8ms-pg-\<instance name>\-1-initdb** (Job) — задание, создаваемое компонентом d8-cnpg-operator, которое запускает SQL-запросы для завершения инициализации primary инстанса PostgreSQL.
+1. **d8ms-pg-\<INSTANCE_NAME>\-1-initdb** (Job) — задание, создаваемое компонентом d8-cnpg-operator, которое запускает SQL-запросы для завершения инициализации primary инстанса PostgreSQL.
 
    Состоит из следующих контейнеров:
 
    * **bootstrap-controller** — init-контейнер, выполняющий установку исполняемого файла `manager` компонента D8-cnpg-operator;
    * **initdb** — основной контейнер, в котором запускается исполняемый файл `manager`, выполняющий описанные выше SQL-запросы.
 
-1. **d8ms-pg-\<instance name>\-2-join** (Job) — задание, создаваемое компонентом d8-cnpg-operator, которое запускает скрипт `pg_basebackup` для получения директории `data` c primary инстанса для первой реплики. Задание использует кастомный ресурс Cluster для настройки реплики.
+1. **d8ms-pg-\<INSTANCE_NAME>\-2-join** (Job) — задание, создаваемое компонентом d8-cnpg-operator, которое запускает скрипт `pg_basebackup` для получения директории `data` c primary инстанса для первой реплики. Задание использует кастомный ресурс Cluster для настройки реплики.
 
    Состоит из следующих контейнеров:
 
    * **bootstrap-controller** — init-контейнер, выполняющий установку исполняемого файла `manager` компонента D8-cnpg-operator;
    * **join** — основной контейнер, в котором запускается исполняемый файл `manager`, выполняющий описанный выше скрипт.
 
-1. **d8ms-pg-\<instance name>\-3-join** (Job) — задание, создаваемое компонентом d8-cnpg-operator, которое запускает скрипт `pg_basebackup` для получения директории `data` c primary инстанса для второй реплики. Задание использует кастомный ресурс Cluster для настройки реплики.
+1. **d8ms-pg-\<INSTANCE_NAME>\-3-join** (Job) — задание, создаваемое компонентом d8-cnpg-operator, которое запускает скрипт `pg_basebackup` для получения директории `data` c primary инстанса для второй реплики. Задание использует кастомный ресурс Cluster для настройки реплики.
 
    Состоит из следующих контейнеров:
 
    * **bootstrap-controller** — init-контейнер, выполняющий установку исполняемого файла `manager` компонента D8-cnpg-operator;
    * **join** — основной контейнер, в котором запускается исполняемый файл `manager`, выполняющий описанный выше скрипт.
 
-1. **d8ms-pg-\<instance name>\-1** — primary инстанс PostgreSQL. Создается компонентом d8-cnpg-operator.
+1. **d8ms-pg-\<INSTANCE_NAME>\-1** — primary инстанс PostgreSQL. Создается компонентом d8-cnpg-operator.
 
    Состоит из следующих контейнеров:
 
@@ -97,14 +97,14 @@ description: Архитектура модуля managed-postgres в Deckhouse K
      * взаимодействие с оператором и публикация состояния экземпляра;
      * отслеживание изменений кастомных ресурсов Cluster, Database, Publication, Subscription.
 
-1. **d8ms-pg-\<instance name>\-2** — первая реплика PostgreSQL. Создается компонентом d8-cnpg-operator.
+1. **d8ms-pg-\<INSTANCE_NAME>\-2** — первая реплика PostgreSQL. Создается компонентом d8-cnpg-operator.
 
    Состоит из следующих контейнеров:
 
    * **bootstrap-controller** — init-контейнер, выполняющий установку исполняемого файла `manager` компонента D8-cnpg-operator;
    * **postgres** — основной контейнер, в котором запускается исполняемый файл `manager`, выполняющий операции, описанные для primary инстанса PostgreSQL.
 
-1. **d8ms-pg-\<instance name>\-3** — вторая реплика PostgreSQL. Создается компонентом d8-cnpg-operator.
+1. **d8ms-pg-\<INSTANCE_NAME>\-3** — вторая реплика PostgreSQL. Создается компонентом d8-cnpg-operator.
 
    Состоит из следующих контейнеров:
 
@@ -131,4 +131,4 @@ description: Архитектура модуля managed-postgres в Deckhouse K
 
 1. **opAgent** — собирает метрики инстансов кластера PostgreSQL (подключаясь к инстансам PostgreSQL напрямую) и отправляет их в prometheus-main.
 
-1. **Пользовательские приложения** — отправляют запросы к инстансам кластера PostgreSQL. Запросы на запись отправляются в primary инстанс через сервис Kubernetes **d8ms-pg-\<instance name>\-rw**. Primary инстанс реплицирует транзакции в реплики.  Запросы на чтение балансируются на инстансы PostgreSQL через сервисы Kubernetes **d8ms-pg-\<instance name>\-r** или **d8ms-pg-\<instance name>\-ro**.
+1. **Пользовательские приложения** — отправляют запросы к инстансам кластера PostgreSQL. Запросы на запись отправляются в primary инстанс через сервис Kubernetes **d8ms-pg-\<INSTANCE_NAME>\-rw**. Primary инстанс реплицирует транзакции в реплики.  Запросы на чтение балансируются на инстансы PostgreSQL через сервисы Kubernetes **d8ms-pg-\<INSTANCE_NAME>\-r** или **d8ms-pg-\<INSTANCE_NAME>\-ro**.
