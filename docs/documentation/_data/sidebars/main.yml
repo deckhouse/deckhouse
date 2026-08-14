@@ -1615,6 +1615,10 @@ entries:
                 ru: Модуль sds-node-configurator
               url: /architecture/storage/sds-node-configurator.html
             - title:
+                en: Storage-volume-data-manager module
+                ru: Модуль storage-volume-data-manager
+              url: /architecture/storage/storage-volume-data-manager.html
+            - title:
                 en: Storage system modules
                 ru: Модули систем хранения
               folders:
