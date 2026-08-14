@@ -66,28 +66,28 @@ The module consists of the following components:
    The components for [ConsistencyAndAvailability](/modules/managed-postgres/stable/user_guide.html#replication-modes-and-operational-trade-offs) replication mode are described below. The components for other two replication modes are the part of components for [ConsistencyAndAvailability](/modules/managed-postgres/stable/user_guide.html#replication-modes-and-operational-trade-offs) mode.
    {% endalert %}
 
-1. **d8ms-pg-\<instance name>\-1-initdb** (Job): A job created by the d8-cnpg-operator component that runs SQL queries to complete initialization of the primary PostgreSQL instance.
+1. **d8ms-pg-\<INSTANCE_NAME>\-1-initdb** (Job): A job created by the d8-cnpg-operator component that runs SQL queries to complete initialization of the primary PostgreSQL instance.
 
    It consists of the following containers:
 
    * **bootstrap-controller**: Init container that installs `manager` executable file of d8-cnpg-operator component.
    * **initdb**: Main container that runs `manager` executable file, which executes the SQL queries described above.
 
-1. **d8ms-pg-\<instance name>\-2-join** (Job): A job created by the d8-cnpg-operator component that runs `pg_basebackup` script to get `data` directory from primary instance for first replica. This job uses a Cluster custom resource to configure the replica.
+1. **d8ms-pg-\<INSTANCE_NAME>\-2-join** (Job): A job created by the d8-cnpg-operator component that runs `pg_basebackup` script to get `data` directory from primary instance for first replica. This job uses a Cluster custom resource to configure the replica.
 
    It consists of the following containers:
 
    * **bootstrap-controller**:  Init container that installs `manager` executable file of d8-cnpg-operator component.
    * **join**: Main container that runs `manager` executable file, which executes the script described above.
 
-1. **d8ms-pg-\<instance name>\-3-join** (Job): A job created by the d8-cnpg-operator component that runs `pg_basebackup` script to get `data` directory from primary instance for second replica. This job uses a Cluster custom resource to configure the replica.
+1. **d8ms-pg-\<INSTANCE_NAME>\-3-join** (Job): A job created by the d8-cnpg-operator component that runs `pg_basebackup` script to get `data` directory from primary instance for second replica. This job uses a Cluster custom resource to configure the replica.
 
    It consists of the following containers:
 
    * **bootstrap-controller**:  Init container that installs `manager` executable file of d8-cnpg-operator component.
    * **join**: Main container that runs `manager` executable file, which executes the script described above.
 
-1. **d8ms-pg-\<instance name>\-1**: PostgreSQL primary instance. It is created by the d8-cnpg-operator component.
+1. **d8ms-pg-\<INSTANCE_NAME>\-1**: PostgreSQL primary instance. It is created by the d8-cnpg-operator component.
 
    It consists of the following containers:
 
@@ -100,14 +100,14 @@ The module consists of the following components:
      * It interacts with the operator and publish instance status;
      * It watches Cluster, Database, Publication and Subscription custom resources.
 
-1. **d8ms-pg-\<instance name>\-2**: PostgreSQL first replica. It is created by the d8-cnpg-operator component.
+1. **d8ms-pg-\<INSTANCE_NAME>\-2**: PostgreSQL first replica. It is created by the d8-cnpg-operator component.
 
    It consists of the following containers:
 
    * **bootstrap-controller**: Init container that installs `manager` executable file of d8-cnpg-operator component.
    * **postgres**: Main container that runs `manager` executable file, which performs operations described for PostgreSQL primary instance.
 
-1. **d8ms-pg-\<instance name>\-3**: PostgreSQL second replica. It is created by the d8-cnpg-operator component.
+1. **d8ms-pg-\<INSTANCE_NAME>\-3**: PostgreSQL second replica. It is created by the d8-cnpg-operator component.
 
    It consists of the following containers:
 
@@ -134,4 +134,4 @@ The following external components interact with the module:
 
 1. **opAgent**: Collects PostgreSQL cluster instances metrics (connecting directly to PostgreSQL cluster instances) and sends them to prometheus-main.
 
-1. **User applications**: Sends requests to PostgreSQL cluster instances. Write requests are sent to the primary instance via the **d8ms-pg-\<instance name>\-rw** service. The primary instance replicates transactions to replicas.  Read requests are balanced to PostgreSQL instances via **d8ms-pg-\<instance name>\-r** or **d8ms-pg-\<instance name>\-ro** services.
+1. **User applications**: Sends requests to PostgreSQL cluster instances. Write requests are sent to the primary instance via the **d8ms-pg-\<INSTANCE_NAME>\-rw** service. The primary instance replicates transactions to replicas.  Read requests are balanced to PostgreSQL instances via **d8ms-pg-\<INSTANCE_NAME>\-r** or **d8ms-pg-\<INSTANCE_NAME>\-ro** services.
