@@ -286,7 +286,9 @@ func requireNodeGroupReplicas(ng map[string]interface{}, name string) error {
 	if !ok {
 		return fmt.Errorf(
 			"NodeGroup %q is CloudPermanent but has no spec.cloudInstances.minPerZone: "+
-				"dhctl cannot tell how many nodes it must keep", name)
+				"dhctl cannot tell how many nodes it must keep. Set spec.cloudInstances.classReference "+
+				"and spec.cloudInstances.minPerZone on it, or re-apply the NodeGroup from your "+
+				"configuration; dhctl destroy does not need them and still works", name)
 	}
 	if replicas < 0 {
 		return fmt.Errorf(

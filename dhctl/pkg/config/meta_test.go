@@ -875,3 +875,15 @@ func TestPrepareGuardIsOffForDestroy(t *testing.T) {
 	_, err := m.Prepare(t.Context(), DummyValidatorProvider())
 	require.NoError(t, err)
 }
+
+// The guard blocks converge and check, so its message has to carry the way out.
+func TestPrepareGuardErrorNamesTheRemedy(t *testing.T) {
+	m := cloudMetaConfig("")
+	m.CloudProviderVars = &CloudProviderVars{NodeGroups: map[string]map[string]interface{}{
+		masterNodeGroupName: clusterNodeGroup(map[string]interface{}{"nodeType": "CloudPermanent"}),
+	}}
+
+	_, err := m.Prepare(t.Context(), DummyValidatorProvider())
+	require.ErrorContains(t, err, "spec.cloudInstances.classReference")
+	require.ErrorContains(t, err, "dhctl destroy")
+}
