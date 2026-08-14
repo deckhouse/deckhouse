@@ -1561,7 +1561,7 @@ spec:
 
                         > **Note.** Docker support is deprecated.
 
-                        > **Note.** The `Containerd` value (containerd v1) is not available in the CSE edition, which ships containerd v2 only.
+                        > **Note.** The CSE edition supports containerd v2 only.
                       enum:
                         - Docker
                         - Containerd

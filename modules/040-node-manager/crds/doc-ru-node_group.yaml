@@ -739,7 +739,7 @@ spec:
 
                         > **Внимание.** Поддержка Docker считается устаревшей.
 
-                        > **Внимание.** Значение `Containerd` (containerd v1) недоступно в редакции CSE — там поставляется только containerd v2.
+                        > **Внимание.** В редакции CSE доступен только containerd v2.
                     containerd:
                       description: |
                         Параметры работы containerd.
