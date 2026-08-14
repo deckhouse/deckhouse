@@ -509,31 +509,27 @@ func (s *Service) GetConversionWebhooks(ctx context.Context, namespace string, p
 
 // Cleanup uninstalls releases owned by this service (carrying the managed-by
 // annotation) whose name is not in keep. keep keys are "<namespace>/<release-name>".
-func (s *Service) Cleanup(ctx context.Context, keep map[string]struct{}, ignoreNamespaces ...string) {
+// One release failing to uninstall does not stop the others; every failure is returned.
+func (s *Service) Cleanup(ctx context.Context, keep map[string]struct{}) error {
 	releases, err := s.client.ListReleases(ctx, nelm.ListOptions{
 		Selector: map[string]string{managedByAnnotation: managedByAnnotationValue},
 	})
 	if err != nil {
-		s.logger.Warn("failed to list releases", log.Err(err))
-		return
+		return fmt.Errorf("list releases: %w", err)
 	}
 
+	var errs error
 	for _, r := range releases {
 		if _, alive := keep[r.Namespace+"/"+r.Name]; alive {
 			continue
 		}
 
-		if slices.Contains(ignoreNamespaces, r.Namespace) {
-			continue
-		}
-
 		if err = s.client.Delete(ctx, r.Namespace, r.Name); err != nil {
-			s.logger.Warn("failed to delete orphan release",
-				slog.String("namespace", r.Namespace),
-				slog.String("release", r.Name),
-				log.Err(err))
+			errs = errors.Join(errs, fmt.Errorf("delete orphan release '%s/%s': %w", r.Namespace, r.Name, err))
 		}
 	}
+
+	return errs
 }
 
 // shouldRunHelmUpgrade determines if a Helm upgrade is needed.

@@ -462,8 +462,8 @@ func (c *Controller) loadModules(ctx context.Context, modules []v1alpha2.Module)
 }
 
 // cleanupPackages hands the runtime every package the cluster still claims, so it drops the rest.
-// The modules are the ones this bootstrap settled on, and the applications are read here, so both
-// lists describe the same moment.
+// A terminating instance is claimed too, unlike in loadModules: reclaiming it belongs to its own
+// teardown, and over-keeping is the safe direction for a pass that deletes.
 func (c *Controller) cleanupPackages(ctx context.Context, modules []v1alpha2.Module) error {
 	// this list decides what is deleted, so a lagging watch would read as an application gone
 	applications := new(v1alpha1.ApplicationList)

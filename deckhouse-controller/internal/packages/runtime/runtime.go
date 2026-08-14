@@ -795,7 +795,9 @@ func (r *Runtime) CleanupV2(ctx context.Context, preserveApps []PreserveApplicat
 	}
 
 	// every release is kept by name now, so the Deckhouse namespace is no longer exempt
-	r.nelmService.Cleanup(ctx, keepReleases(preserveApps, preserveModules))
+	if err := r.nelmService.Cleanup(ctx, keepReleases(preserveApps, preserveModules)); err != nil {
+		errs = errors.Join(errs, fmt.Errorf("cleanup releases: %w", err))
+	}
 
 	return errs
 }
