@@ -63,6 +63,23 @@ document.addEventListener('DOMContentLoaded', () => {
     'deprecated': 'Deprecated'
   };
 
+  // Локализованные названия тегов. Ключ — значение тега в нижнем регистре.
+  // Если перевода нет, используется автоформатирование через capitalizeWords.
+  const tagTitles = {
+    ru: {
+      'certified': 'Сертифицированный'
+    },
+    en: {
+      'certified': 'Certified'
+    }
+  };
+
+  function getTagTitle(tag) {
+    const normalized = (tag || '').trim();
+    const localizedTitles = tagTitles[lang] || {};
+    return localizedTitles[normalized.toLowerCase()] || capitalizeWords(normalized);
+  }
+
   function isSectionSelectAllCheckbox(checkbox) {
     return checkbox?.dataset?.selectAll === 'true';
   }
@@ -229,7 +246,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const label = document.createElement('label');
     label.htmlFor = tag;
-    label.textContent = capitalizeWords(tag);
+    label.textContent = getTagTitle(tag);
 
 
     filterCheckboxesTags.appendChild(input);
@@ -408,7 +425,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (isStagesFilter) {
           valuesText = Array.from(entry.values).map(code => stageTitles[code] || code).join(', ');
         } else if (isTagsFilter) {
-          valuesText = Array.from(entry.values).map(value => capitalizeWords(value)).join(', ');
+          valuesText = Array.from(entry.values).map(value => getTagTitle(value)).join(', ');
         }
 
         const checkboxText = `${filterName}: ${valuesText}`;
