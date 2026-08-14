@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: user-authn-controller
+  name: controller
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "user-authn-controller")) | nindent 2 }}
 automountServiceAccountToken: false
@@ -10,7 +10,7 @@ automountServiceAccountToken: false
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: d8:user-authn:user-authn-controller
+  name: d8:user-authn:controller
   {{- include "helm_lib_module_labels" (list . (dict "app" "user-authn-controller")) | nindent 2 }}
 rules:
 - apiGroups:
@@ -168,21 +168,21 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: d8:user-authn:user-authn-controller
+  name: d8:user-authn:controller
   {{- include "helm_lib_module_labels" (list . (dict "app" "user-authn-controller")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: d8:user-authn:user-authn-controller
+  name: d8:user-authn:controller
 subjects:
 - kind: ServiceAccount
-  name: user-authn-controller
+  name: controller
   namespace: d8-{{ .Chart.Name }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: user-authn-controller
+  name: controller
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "user-authn-controller")) | nindent 2 }}
 rules:
@@ -196,14 +196,14 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: user-authn-controller
+  name: controller
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "user-authn-controller")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: user-authn-controller
+  name: controller
 subjects:
 - kind: ServiceAccount
-  name: user-authn-controller
+  name: controller
   namespace: d8-{{ .Chart.Name }}
