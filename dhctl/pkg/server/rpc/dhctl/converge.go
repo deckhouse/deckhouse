@@ -336,10 +336,16 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 	converger := converge.NewConverger(convergeParams)
 
 	result, convergeErr := converger.Converge(ctx)
+
+	var trimErr error
+	if result != nil {
+		result.CheckResult, trimErr = trimCheckResult(result.CheckResult)
+	}
+
 	resultData, marshalResultErr := json.Marshal(result)
 	state, stateErr := extractLastState(ctx)
 
-	err = errors.Join(convergeErr, stateErr, marshalResultErr)
+	err = errors.Join(convergeErr, trimErr, stateErr, marshalResultErr)
 
 	if err != nil {
 		span.SetStatus(otcodes.Error, err.Error())

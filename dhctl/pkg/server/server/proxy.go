@@ -203,6 +203,10 @@ func createDHCTLServerConn(ctx context.Context, address string) (*grpc.ClientCon
 	conn, err := grpc.NewClient(
 		"unix://"+address,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithDefaultCallOptions(
+			grpc.MaxCallRecvMsgSize(MaxMessageSize),
+			grpc.MaxCallSendMsgSize(MaxMessageSize),
+		),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("creating client connection: %w", err)

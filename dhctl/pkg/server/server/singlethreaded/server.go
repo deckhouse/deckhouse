@@ -91,6 +91,8 @@ func Serve(ctx context.Context, params settings.ServerSingleshotParams) error {
 			recovery.StreamServerInterceptor(recovery.WithRecoveryHandlerContext(interceptors.PanicRecoveryHandler())),
 			interceptors.StreamParallelTasksLimiter(sem, server.SinglethreadedMethodsPrefix),
 		),
+		grpc.MaxRecvMsgSize(server.MaxMessageSize),
+		grpc.MaxSendMsgSize(server.MaxMessageSize),
 	)
 
 	// https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-grpc-liveness-probe
