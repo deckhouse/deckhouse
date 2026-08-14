@@ -77,3 +77,16 @@ import:
   - usr/lib/lib*.s*
   excludePaths:
   - usr/lib/python3*/site-packages/pip-25.3*
+- image: libs/sqlite
+  add: /usr/lib
+  to: /usr/lib
+  before: install
+  includePaths:
+  - libsqlite3.so*
+- image: tools/openssl
+  add: /usr/lib
+  to: /usr/lib
+  before: install
+  includePaths:
+  - libssl.so*
+  - libcrypto.so*
