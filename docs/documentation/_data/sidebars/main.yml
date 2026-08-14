@@ -1719,6 +1719,22 @@ entries:
                 ru: Модули логирования
               url: /architecture/observability/logging.html
         - title:
+            en: Managed Services subsystem
+            ru: Подсистема Managed Services
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /architecture/managed-services/
+            - title:
+                en: Managed-memcached module
+                ru: Модуль managed-memcached
+              url: /architecture/managed-services/managed-memcached.html
+            - title:
+                en: Managed-postgres module
+                ru: Модуль managed-postgres
+              url: /architecture/managed-services/managed-postgres.html              
+        - title:
             en: Virtualization subsystem
             ru: Подсистема Virtualization
           folders:
