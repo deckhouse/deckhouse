@@ -163,7 +163,6 @@ func (r *Reconciler) rolloutBudget(ctx context.Context, ng *v1.NodeGroup, p *pas
 // desired spec has no live Node and is about to be deleted.
 func membersOfUpdating(configs []internalv1alpha1.NodeConfig,
 	desired map[string]internalv1alpha1.NodeSpec) map[string]struct{} {
-
 	updating := make(map[string]struct{})
 	for i := range configs {
 		nc := &configs[i]
