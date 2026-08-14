@@ -53,10 +53,15 @@
 {{- if gt (len $shares) 0 }}{{- $_ := set $resources "shares" $shares }}{{- end }}
 {{- if gt (len $limits) 0 }}{{- $_ := set $resources "limits" $limits }}{{- end }}
 {{- if gt (len $requests) 0 }}{{- $_ := set $resources "requests" $requests }}{{- end }}
-{{- /* CAPV runtime requires URN-format tag IDs (urn:vmomi:InventoryServiceTag:<uuid>:GLOBAL).
-       Sourced from providerDiscoveryData.tagURNs, which cloud-data-discoverer populates.
-       Empty until discovery ships tag URNs — VM creation must not depend on tags. */ -}}
-{{- $tags := dig "providerDiscoveryData" "tagURNs" (list) $vsphere }}
+{{- /* MCM used to attach display-name tags (deckhouse-cluster-name / deckhouse-node-role)
+       to each VM for grouping in vCenter UI. CAPV rejects display names and demands
+       URN-format tag IDs (urn:vmomi:InventoryServiceTag:<uuid>:GLOBAL), which requires
+       resolving/creating those tags in vCenter per (NodeGroup, zone). This is not wired
+       yet — cloud-data-discoverer does not publish tag URNs and node-controller has no
+       hook for per-NG tag ensure. Until the discoverer/hook lands, VMs are created
+       without tags; downstream tooling that filters on those tags will not find CAPI
+       nodes. See #21595 follow-up. */ -}}
+{{- $tags := dig "tagURNs" (list) $vsphere }}
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: VSphereMachineTemplate
@@ -76,13 +81,25 @@ spec:
       server: {{ $vsphere.server | quote }}
       folder: {{ $vsphere.vmFolderPath | quote }}
       datastore: {{ $ic.datastore | default $icd.datastore | quote }}
-      {{- if or $ic.resourcePool $icd.resourcePoolPath }}
-      resourcePool: {{ or $ic.resourcePool $icd.resourcePoolPath | quote }}
+      {{- /* Prefer an absolute resourcePool inventory path built from the zone's
+             ClusterComputeResource (published by ensure_failure_domains hook) joined with
+             providerDiscoveryData.resourcePoolPath. CAPV's finder resolves a bare name
+             relative to the datacenter and errors out ambiguously when several compute
+             clusters carry a resource pool of the same name. Fall back to the raw value
+             only if the hook has not populated the map yet (fresh install). */ -}}
+      {{- $rp := $ic.resourcePool | default $icd.resourcePoolPath }}
+      {{- if $rp }}
+      {{- $zoneCluster := dig "zoneComputeClusterPaths" .zoneName "" $vsphere }}
+      {{- if $zoneCluster }}
+      resourcePool: {{ printf "%s/Resources/%s" $zoneCluster $rp | quote }}
+      {{- else }}
+      resourcePool: {{ $rp | quote }}
+      {{- end }}
       {{- end }}
       numCPUs: {{ int $ic.numCPUs }}
       memoryMiB: {{ $memoryMiB }}
       diskGiB: {{ $ic.rootDiskSize | default 20 }}
-      cloneMode: linkedClone
+      cloneMode: fullClone
       network:
         devices:
         {{- range $networks }}

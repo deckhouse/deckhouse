@@ -11,7 +11,9 @@ import (
 	"fmt"
 	"net/url"
 	"path"
+	"sort"
 	"strings"
+	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -20,6 +22,7 @@ import (
 	"github.com/vmware/govmomi/vapi/rest"
 	"github.com/vmware/govmomi/vapi/tags"
 	"github.com/vmware/govmomi/vim25/mo"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -29,6 +32,8 @@ import (
 	cloudDataV1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
+
+const vsphereResolveTimeout = 30 * time.Second
 
 // CAPV VSphereFailureDomain and VSphereDeploymentZone are created once per zone with
 // an immutable spec — the validating webhook rejects any subsequent patch/update. This
@@ -41,10 +46,12 @@ import (
 // discoverer image untouched at the cost of a vSphere round-trip per reconcile.
 
 const (
-	fdAPIVersion = "infrastructure.cluster.x-k8s.io/v1beta1"
-	fdKind       = "VSphereFailureDomain"
-	dzKind       = "VSphereDeploymentZone"
-	fdNamePrefix = "vsphere-"
+	fdAPIVersion    = "infrastructure.cluster.x-k8s.io/v1beta1"
+	fdKind          = "VSphereFailureDomain"
+	dzKind          = "VSphereDeploymentZone"
+	fdNamePrefix    = "vsphere-"
+	capiClusterNS   = "d8-cloud-instance-manager"
+	capiClusterName = "vsphere"
 )
 
 var (
@@ -107,17 +114,28 @@ func ensureFailureDomains(ctx context.Context, input *go_hook.HookInput, dc depe
 		return nil
 	}
 
-	missing, err := zonesMissingResources(ctx, dyn, *pcc.Zones)
+	// Resolve compute-cluster inventory paths for every zone (not only missing ones):
+	// the map is published to values so VSphereMachineTemplate can render an absolute
+	// resourcePool. vCenter round-trip is bounded by a hard timeout, and failure is
+	// best-effort — a transient vCenter outage should not fail the whole module.
+	resolveCtx, cancel := context.WithTimeout(ctx, vsphereResolveTimeout)
+	defer cancel()
+	zones := append([]string(nil), (*pcc.Zones)...)
+	sort.Strings(zones)
+	zoneClusters, err := resolveZoneComputeClusters(resolveCtx, &pcc, dd.Datacenter, zones)
+	if err != nil {
+		input.Logger.Warn("vCenter unreachable, deferring FD/DZ ensure until next tick",
+			"error", err.Error())
+		return nil
+	}
+	input.Values.Set("cloudProviderVsphere.internal.providerDiscoveryData.zoneComputeClusterPaths", zoneClusters)
+
+	missing, err := zonesMissingResources(ctx, dyn, zones)
 	if err != nil {
 		return fmt.Errorf("check existing FD/DZ: %w", err)
 	}
 	if len(missing) == 0 {
 		return nil
-	}
-
-	zoneClusters, err := resolveZoneComputeClusters(ctx, &pcc, dd.Datacenter, missing)
-	if err != nil {
-		return fmt.Errorf("resolve compute clusters for zones %v: %w", missing, err)
 	}
 
 	// FailureDomain.topology.networks is intentionally left unset: CAPV resolves it as an
@@ -144,8 +162,10 @@ func ensureFailureDomains(ctx context.Context, input *go_hook.HookInput, dc depe
 
 		fd := buildFailureDomain(fdNamePrefix+zone, region, regionTagCategory, zone, zoneTagCategory, dd.Datacenter, clusterPath, datastore)
 		dz := buildDeploymentZone(zone, server, fdNamePrefix+zone, folder, resourcePool)
-		input.PatchCollector.Create(fd)
-		input.PatchCollector.Create(dz)
+		// CreateIfNotExists tolerates one side of the pair existing: a partial reconcile
+		// (e.g. DZ created but FD failed to render) must not fail the hook forever.
+		input.PatchCollector.CreateIfNotExists(fd)
+		input.PatchCollector.CreateIfNotExists(dz)
 		input.Logger.Info("created VSphereFailureDomain and VSphereDeploymentZone",
 			"zone", zone, "computeCluster", clusterPath, "datastore", datastore)
 	}
@@ -153,17 +173,19 @@ func ensureFailureDomains(ctx context.Context, input *go_hook.HookInput, dc depe
 	return nil
 }
 
+// clusterIsDeleting targets exactly the CAPI Cluster this module owns
+// (d8-cloud-instance-manager/vsphere). A cluster-wide List would treat any unrelated
+// or leaked Cluster in Deleting state as a signal to stop reconciling FD/DZ, which
+// wedges the module forever.
 func clusterIsDeleting(ctx context.Context, dyn dynamic.Interface) (bool, error) {
-	list, err := dyn.Resource(clusterGVR).List(ctx, metav1.ListOptions{})
+	obj, err := dyn.Resource(clusterGVR).Namespace(capiClusterNS).Get(ctx, capiClusterName, metav1.GetOptions{})
 	if err != nil {
-		return false, fmt.Errorf("list CAPI Clusters: %w", err)
-	}
-	for _, obj := range list.Items {
-		if obj.GetDeletionTimestamp() != nil {
-			return true, nil
+		if apierrors.IsNotFound(err) {
+			return false, nil
 		}
+		return false, fmt.Errorf("get CAPI Cluster %s/%s: %w", capiClusterNS, capiClusterName, err)
 	}
-	return false, nil
+	return obj.GetDeletionTimestamp() != nil, nil
 }
 
 func zonesMissingResources(ctx context.Context, dyn dynamic.Interface, zones []string) ([]string, error) {
@@ -249,11 +271,15 @@ func resolveZoneComputeClusters(ctx context.Context, pcc *v1.VsphereProviderClus
 	if err != nil {
 		return nil, fmt.Errorf("get attached tags on clusters: %w", err)
 	}
+	// Collect all candidate cluster paths per zone, then choose deterministically. The
+	// FailureDomain spec is immutable via CAPV's webhook, so a non-deterministic first
+	// choice would lock the zone to a random cluster on initial reconcile with no way
+	// to fix it later. Reject ambiguity explicitly instead of silently rolling the dice.
 	wanted := make(map[string]struct{}, len(zones))
 	for _, z := range zones {
 		wanted[z] = struct{}{}
 	}
-	result := make(map[string]string, len(zones))
+	candidates := make(map[string][]string, len(zones))
 	for _, ct := range attached {
 		clusterPath, ok := pathByRef[ct.ObjectID.Reference().String()]
 		if !ok {
@@ -266,10 +292,32 @@ func resolveZoneComputeClusters(ctx context.Context, pcc *v1.VsphereProviderClus
 			if _, want := wanted[t.Name]; !want {
 				continue
 			}
-			result[t.Name] = clusterPath
+			candidates[t.Name] = append(candidates[t.Name], clusterPath)
 		}
 	}
+	result := make(map[string]string, len(zones))
+	for zone, paths := range candidates {
+		sort.Strings(paths)
+		paths = dedupSortedStrings(paths)
+		if len(paths) > 1 {
+			return nil, fmt.Errorf("zone tag %q is attached to multiple ClusterComputeResources: %v — cannot pick unambiguously", zone, paths)
+		}
+		result[zone] = paths[0]
+	}
 	return result, nil
+}
+
+func dedupSortedStrings(in []string) []string {
+	if len(in) < 2 {
+		return in
+	}
+	out := in[:1]
+	for _, s := range in[1:] {
+		if s != out[len(out)-1] {
+			out = append(out, s)
+		}
+	}
+	return out
 }
 
 // absFolderPath returns the folder in the "/<datacenter>/vm/<relative>" form CAPV expects.
@@ -298,19 +346,31 @@ func absResourcePoolPath(clusterPath, relativeRP string) string {
 	return path.Join(clusterPath, "Resources", relativeRP)
 }
 
+// datastoreForZone picks a datastore deterministically: sort every datastore that carries
+// the zone tag by InventoryPath (fall back to Name), then take the first. Deterministic
+// order matters because FailureDomain.topology.datastore is immutable via the CAPV webhook.
 func datastoreForZone(zone string, datastores []cloudDataV1.VsphereDatastore) string {
+	var matches []string
 	for _, ds := range datastores {
 		for _, z := range ds.Zones {
 			if z != zone {
 				continue
 			}
-			if ds.InventoryPath != "" {
-				return ds.InventoryPath
+			ref := ds.InventoryPath
+			if ref == "" {
+				ref = ds.Name
 			}
-			return ds.Name
+			if ref != "" {
+				matches = append(matches, ref)
+			}
+			break
 		}
 	}
-	return ""
+	if len(matches) == 0 {
+		return ""
+	}
+	sort.Strings(matches)
+	return matches[0]
 }
 
 func strPtrOrEmpty(p *string) string {
