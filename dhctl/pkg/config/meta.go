@@ -286,6 +286,11 @@ func requireNodeGroupReplicas(ng map[string]interface{}, name string) error {
 			"NodeGroup %q is CloudPermanent but has no spec.cloudInstances.minPerZone: "+
 				"dhctl cannot tell how many nodes it must keep", name)
 	}
+	if replicas < 0 {
+		return fmt.Errorf(
+			"NodeGroup %q has spec.cloudInstances.minPerZone: %d: it cannot be negative",
+			name, replicas)
+	}
 	if name == masterNodeGroupName && replicas < 1 {
 		return fmt.Errorf(
 			"NodeGroup %q has spec.cloudInstances.minPerZone: %d: the control plane cannot be scaled to zero",

@@ -807,6 +807,19 @@ func TestPrepareRejectsUnusableReplicaCount(t *testing.T) {
 			},
 			wantErr: "minPerZone",
 		},
+		{
+			name: "worker with negative minPerZone",
+			nodeGroups: map[string]map[string]interface{}{
+				"master": clusterNodeGroup(cloudPermanentSpec(float64(1))),
+				"worker": clusterNodeGroup(cloudPermanentSpec(float64(-1))),
+			},
+			wantErr: "negative",
+		},
+		{
+			name:       "master with negative minPerZone",
+			nodeGroups: map[string]map[string]interface{}{"master": clusterNodeGroup(cloudPermanentSpec(float64(-1)))},
+			wantErr:    "negative",
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			m := cloudMetaConfig("")
