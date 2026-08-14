@@ -23,6 +23,15 @@ properties:
           ca:
             type: string
             x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+      capiClusterTagID:
+        type: string
+        x-examples: ["urn:vmomi:InventoryServiceTag:11111111-2222-3333-4444-555555555555:GLOBAL"]
+      capiNodeRoleTagIDs:
+        type: object
+        additionalProperties:
+          type: string
+        x-examples:
+          - {"worker-zone-a": "urn:vmomi:InventoryServiceTag:aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee:GLOBAL"}
       compatibilityFlag:
         type: string
         x-examples:

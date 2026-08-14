@@ -53,10 +53,19 @@
 {{- if gt (len $shares) 0 }}{{- $_ := set $resources "shares" $shares }}{{- end }}
 {{- if gt (len $limits) 0 }}{{- $_ := set $resources "limits" $limits }}{{- end }}
 {{- if gt (len $requests) 0 }}{{- $_ := set $resources "requests" $requests }}{{- end }}
-{{- /* CAPV runtime requires URN-format tag IDs (urn:vmomi:InventoryServiceTag:<uuid>:GLOBAL).
-       Sourced from providerDiscoveryData.tagURNs, which cloud-data-discoverer populates.
-       Empty until discovery ships tag URNs — VM creation must not depend on tags. */ -}}
-{{- $tags := dig "providerDiscoveryData" "tagURNs" (list) $vsphere }}
+{{- /* CAPV requires URN-format tag IDs. ensure_capi_vm_tags creates the same
+       deckhouse-cluster-name / deckhouse-node-role tags MCM used and stores URNs
+       on the registration secret (vsphere.clusterTagID / vsphere.nodeRoleTagIDs). */ -}}
+{{- $tags := list }}
+{{- if $vsphere.clusterTagID }}
+  {{- $tags = append $tags $vsphere.clusterTagID }}
+{{- end }}
+{{- $nodeRoleKey := printf "%s-%s" .nodeGroup.name .zoneName }}
+{{- if and $vsphere.nodeRoleTagIDs (index $vsphere.nodeRoleTagIDs $nodeRoleKey) }}
+  {{- $tags = append $tags (index $vsphere.nodeRoleTagIDs $nodeRoleKey) }}
+{{- end }}
+{{- /* fullClone honors diskGiB / rootDiskSize. linkedClone cannot resize disks. */ -}}
+{{- $cloneMode := "fullClone" }}
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: VSphereMachineTemplate
@@ -82,7 +91,7 @@ spec:
       numCPUs: {{ int $ic.numCPUs }}
       memoryMiB: {{ $memoryMiB }}
       diskGiB: {{ $ic.rootDiskSize | default 20 }}
-      cloneMode: linkedClone
+      cloneMode: {{ $cloneMode }}
       network:
         devices:
         {{- range $networks }}
