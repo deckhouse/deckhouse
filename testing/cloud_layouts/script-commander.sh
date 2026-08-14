@@ -1029,6 +1029,7 @@ function wait_alerts_resolve() {
   "D8NodeLocalDNSKubeforwardRequestLatencyP95High" # Doesn't work with closed clusters
   "D8CloudProviderDVPMigrationPending" # Ignore migration DVP
   "D8IstioConfigAnalysisWarning" # This is normal for e2e tests
+  "D8ObsoleteKubernetesVersionFieldInClusterConfiguration" # migration from ClusterConfiguration to ModuleConfig
   )
 
   # Alerts
