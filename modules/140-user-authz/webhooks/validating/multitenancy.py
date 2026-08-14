@@ -27,8 +27,15 @@
 # The discoverMultitenancyState hook (see hooks/discover_multitenancy_state.go)
 # bridges this gap: it runs on every module reconcile, reads the already
 # defaults-merged input.Values.Get("userAuthz.enableMultiTenancy"), and keeps
-# it mirrored into the "d8-user-authz-multitenancy-state" ConfigMap. This hook
-# reads that ConfigMap instead of ModuleConfig or the Module CR.
+# it mirrored into the "d8-user-authz-multitenancy-state" ConfigMap in this
+# module's own d8-user-authz namespace. This hook reads that ConfigMap
+# instead of ModuleConfig or the Module CR.
+#
+# NB: d8-user-authz itself only exists when enableMultiTenancy is true (see
+# templates/namespace.yaml), so the ConfigMap is simply absent when it's
+# false — which is exactly the value we want to assume in that case anyway.
+# is_multitenancy_enabled() below treats "no snapshot" the same as
+# "enableMultiTenancy: false", so this falls out for free.
 #
 # (Do not go back to reading status.lastAppliedConfiguration from a Module CR
 # here — deckhouse.io/v1alpha2 Module is not a real, served API version for

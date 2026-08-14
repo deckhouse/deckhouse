@@ -29,15 +29,31 @@ package hooks
 // This hook runs on every module reconcile (OnBeforeHelm, so it fires
 // whenever Values are recalculated — e.g. on a ModuleConfig update) and
 // keeps the ConfigMap in sync with the real, defaults-merged value.
-
+//
+// The ConfigMap lives in this module's own d8-user-authz namespace, so its
+// lifecycle stays tied to the module (cleaned up automatically along with
+// everything else in that namespace when the module is disabled — a
+// ConfigMap parked in some shared namespace like d8-system would just be
+// orphaned there instead).
+//
+// The catch: d8-user-authz is itself only created by this chart when
+// enableMultiTenancy is true (see templates/namespace.yaml) — so it's
+// absent exactly when MultiTenancy is off, which is also the state we'd
+// otherwise report by default. The Kubernetes binding below watches that
+// namespace: if it's missing, there's nothing to publish (absence of the
+// ConfigMap already reads as "disabled" to the webhook); once the chart
+// creates it, the binding's own Kubernetes event re-runs this hook
+// immediately, without waiting for the next unrelated module reconcile.
 import (
 	"context"
 	"strconv"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/modules/140-user-authz/hooks/internal"
 )
@@ -45,14 +61,35 @@ import (
 const (
 	MultitenancyStateConfigMapName = "d8-user-authz-multitenancy-state"
 	MultitenancyStateDataKey       = "enableMultiTenancy"
+	multitenancyNamespaceSnapshot  = "multitenancyNamespace"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:        "/modules/user-authz/discover-multitenancy-state",
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
+	Kubernetes: []go_hook.KubernetesConfig{
+		{
+			Name:       multitenancyNamespaceSnapshot,
+			ApiVersion: "v1",
+			Kind:       "Namespace",
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{internal.Namespace},
+			},
+			FilterFunc: func(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+				return obj.GetName(), nil
+			},
+		},
+	},
 }, discoverMultitenancyState)
 
 func discoverMultitenancyState(_ context.Context, input *go_hook.HookInput) error {
+	if len(input.Snapshots.Get(multitenancyNamespaceSnapshot)) == 0 {
+		// The module's own namespace doesn't exist yet — nothing to publish. The
+		// webhook treats a missing ConfigMap the same as enableMultiTenancy=false,
+		// which is correct: this namespace only exists when it's true.
+		return nil
+	}
+
 	enabled := input.Values.Get("userAuthz.enableMultiTenancy").Bool()
 
 	input.PatchCollector.CreateOrUpdate(&v1.ConfigMap{
