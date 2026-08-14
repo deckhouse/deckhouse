@@ -1199,9 +1199,11 @@ func createResources(
 					retry.WithWhitelist(actions.ErrManifestTaskTransient),
 				)
 
-				return retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
+				if err := retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
 					return task.Do(kubeCl)
-				})
+				}); err != nil {
+					return err
+				}
 			}
 
 			return nil
