@@ -22,6 +22,7 @@ package nodeconfig
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -136,6 +137,12 @@ func (r *Reconciler) reconcileAllNodes(ctx context.Context, logger logr.Logger) 
 		return ctrl.Result{}, fmt.Errorf("list nodes: %w", err)
 	}
 
+	// Unhealthy nodes first, the way bashible hands its approvals out: with one
+	// slot free, repairing what is broken beats touching what works.
+	sort.SliceStable(nodes.Items, func(i, j int) bool {
+		return !nodeIsReady(&nodes.Items[i]) && nodeIsReady(&nodes.Items[j])
+	})
+
 	var firstErr error
 	failed := 0
 	p := newPass()
@@ -162,6 +169,18 @@ func (r *Reconciler) reconcileAllNodes(ctx context.Context, logger logr.Logger) 
 	}
 
 	return ctrl.Result{}, firstErr
+}
+
+// nodeIsReady reports the kubelet's own verdict, which is what "broken" means
+// here — not whether the configuration converged.
+func nodeIsReady(node *corev1.Node) bool {
+	for i := range node.Status.Conditions {
+		c := &node.Status.Conditions[i]
+		if c.Type == corev1.NodeReady {
+			return c.Status == corev1.ConditionTrue
+		}
+	}
+	return false
 }
 
 // reconcileNode brings one node's NodeConfig in line with its NodeGroup. A node
