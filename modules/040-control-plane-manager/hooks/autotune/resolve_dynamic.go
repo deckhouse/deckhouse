@@ -48,18 +48,25 @@ type dynamicResolver struct {
 }
 
 func (r *dynamicResolver) resolve(ctx context.Context, deps resolveDeps, kind resourceKind) (resolvedRequests, error) {
+	deps.input.Logger.Debug("autotune: entering chain link", "resource", kind, "link", sourceDynamic)
+
 	// Not getOrCreateMeasurement: the entry would leak into the ConfigMap for a
 	// kind another link answers.
 	measurement := r.state[kind]
 
 	overrideRemoved := measurement != nil && measurement.AppliedOverride != nil
-	if overrideRemoved || !prometheusMetricsAvailable(deps.input) {
+	metricsAvailable := prometheusMetricsAvailable(deps.input)
+	if overrideRemoved || !metricsAvailable {
+		deps.input.Logger.Info("autotune: metrics path unusable, handing the resource down the chain",
+			"resource", kind, "overrideRemoved", overrideRemoved, "prometheusMetricsAvailable", metricsAvailable)
 		measurement.handOverToFallback()
 		return r.fallback.resolve(ctx, deps, kind)
 	}
 
 	now := deps.dc.GetClock().Now().UTC()
-	if !metricsRunDue(measurement, now) {
+	if !measurement.dueForMetricsRun(now) {
+		deps.input.Logger.Info("autotune: metrics read recently enough, holding current requests",
+			"resource", kind, "lastMetricsRun", measurement.LastMetricsRun, "interval", metricsRunInterval)
 		return r.hold(ctx, deps, kind)
 	}
 
@@ -81,7 +88,7 @@ func (r *dynamicResolver) resolve(ctx context.Context, deps resolveDeps, kind re
 	measurement.LastMetricsRun = now.Format(time.RFC3339)
 
 	if len(usage) == 0 {
-		if someFetchFailed && countApplied(measurement, kind) == 0 {
+		if someFetchFailed && measurement.countApplied(kind) == 0 {
 			return r.fallback.resolve(ctx, deps, kind)
 		}
 		deps.input.Logger.Warn("autotune: no usage datapoints from the metrics API, holding current requests", "resource", kind)
@@ -113,7 +120,7 @@ func (r *dynamicResolver) appliedOrFallback(ctx context.Context, deps resolveDep
 	measurement := r.state[kind]
 	held := make(requestsByComponent, len(controlPlaneComponents))
 	for _, comp := range controlPlaneComponents {
-		if applied := appliedRequest(measurement, comp, kind); applied > 0 {
+		if applied := measurement.appliedRequest(comp, kind); applied > 0 {
 			held[comp] = applied
 			continue
 		}

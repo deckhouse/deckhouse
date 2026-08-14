@@ -35,6 +35,8 @@ type moduleConfigResolver struct {
 }
 
 func (r *moduleConfigResolver) resolve(ctx context.Context, deps resolveDeps, kind resourceKind) (resolvedRequests, error) {
+	deps.input.Logger.Debug("autotune: entering chain link", "resource", kind, "link", r.source)
+
 	configured, err := readModuleConfigRequests(deps.input, r.snapshotName)
 	if err != nil {
 		return resolvedRequests{}, degraded(degradedReasonBadOverride, err)

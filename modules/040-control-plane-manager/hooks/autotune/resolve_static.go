@@ -28,7 +28,9 @@ type staticResolver struct {
 	nodes []Node
 }
 
-func (r *staticResolver) resolve(_ context.Context, _ resolveDeps, kind resourceKind) (resolvedRequests, error) {
+func (r *staticResolver) resolve(_ context.Context, deps resolveDeps, kind resourceKind) (resolvedRequests, error) {
+	deps.input.Logger.Debug("autotune: entering chain link", "resource", kind, "link", sourceStaticSplit)
+
 	budget, err := r.splitBudget(kind)
 	if err != nil {
 		return resolvedRequests{}, err

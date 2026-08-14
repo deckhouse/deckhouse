@@ -83,7 +83,7 @@ func (s autotuneState) commit(kind resourceKind, requests requestsByComponent, c
 		if request <= 0 {
 			continue
 		}
-		if setAppliedIfChanged(measurement, comp, kind, request, changedAt) {
+		if measurement.setAppliedIfChanged(comp, kind, request, changedAt) {
 			changed = append(changed, comp)
 		}
 	}
@@ -110,9 +110,15 @@ func (m *autotuneMeasurementState) handOverToFallback() {
 	m.PendingRaiseSum = 0
 }
 
-// LastChange moves only on an actual change: rewriting it every run would keep it
-// permanently "just now" and no cooldown would ever elapse.
-func setAppliedIfChanged(m *autotuneMeasurementState, comp string, kind resourceKind, val int64, ts string) bool {
+func (m *autotuneMeasurementState) dueForMetricsRun(now time.Time) bool {
+	if m == nil || m.LastMetricsRun == "" {
+		return true
+	}
+	last, err := time.Parse(time.RFC3339, m.LastMetricsRun)
+	return err != nil || now.Sub(last) >= metricsRunInterval
+}
+
+func (m *autotuneMeasurementState) setAppliedIfChanged(comp string, kind resourceKind, val int64, ts string) bool {
 	cs := m.Components[comp]
 	switch kind {
 	case resourceCPU:
@@ -124,22 +130,13 @@ func setAppliedIfChanged(m *autotuneMeasurementState, comp string, kind resource
 			return false
 		}
 	}
-	setApplied(&cs, kind, val)
+	cs.setApplied(kind, val)
 	cs.LastChange = ts
 	m.Components[comp] = cs
 	return true
 }
 
-func setApplied(cs *autotuneComponentState, kind resourceKind, val int64) {
-	switch kind {
-	case resourceCPU:
-		cs.AppliedMilliCPU = ptr.To(val)
-	case resourceMemory:
-		cs.AppliedBytes = ptr.To(val)
-	}
-}
-
-func appliedRequest(m *autotuneMeasurementState, comp string, kind resourceKind) int64 {
+func (m *autotuneMeasurementState) appliedRequest(comp string, kind resourceKind) int64 {
 	if m == nil {
 		return 0
 	}
@@ -157,26 +154,27 @@ func appliedRequest(m *autotuneMeasurementState, comp string, kind resourceKind)
 	return 0
 }
 
-func countApplied(m *autotuneMeasurementState, kind resourceKind) int {
+func (m *autotuneMeasurementState) countApplied(kind resourceKind) int {
 	n := 0
 	for _, comp := range controlPlaneComponents {
-		if appliedRequest(m, comp, kind) > 0 {
+		if m.appliedRequest(comp, kind) > 0 {
 			n++
 		}
 	}
 	return n
 }
 
-func measurementIsComplete(m *autotuneMeasurementState, kind resourceKind) bool {
-	return countApplied(m, kind) == len(controlPlaneComponents)
+func (m *autotuneMeasurementState) isComplete(kind resourceKind) bool {
+	return m.countApplied(kind) == len(controlPlaneComponents)
 }
 
-func metricsRunDue(m *autotuneMeasurementState, now time.Time) bool {
-	if m == nil || m.LastMetricsRun == "" {
-		return true
+func (cs *autotuneComponentState) setApplied(kind resourceKind, val int64) {
+	switch kind {
+	case resourceCPU:
+		cs.AppliedMilliCPU = ptr.To(val)
+	case resourceMemory:
+		cs.AppliedBytes = ptr.To(val)
 	}
-	t, err := time.Parse(time.RFC3339, m.LastMetricsRun)
-	return err != nil || now.Sub(t) >= metricsRunInterval
 }
 
 // Never fails: recomputing from scratch beats the template default.
@@ -218,8 +216,8 @@ func parseAutotuneState(raw string) (autotuneState, error) {
 	return state, nil
 }
 
-func persistAutotuneState(input *go_hook.HookInput, state autotuneState) error {
-	raw, err := json.Marshal(state)
+func (s autotuneState) persist(input *go_hook.HookInput) error {
+	raw, err := json.Marshal(s)
 	if err != nil {
 		return fmt.Errorf("marshal autotune state: %w", err)
 	}

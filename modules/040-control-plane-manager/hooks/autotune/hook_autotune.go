@@ -81,14 +81,17 @@ func runAutotune(ctx context.Context, input *go_hook.HookInput, dc dependency.Co
 			continue
 		}
 
-		if changed := state.commit(kind, resolved.byComponent, changedAt); len(changed) > 0 {
-			input.Logger.Info("autotune: committed requests",
-				"resource", kind, "components", changed, "source", resolved.source)
+		changed := state.commit(kind, resolved.byComponent, changedAt)
+		input.Logger.Info("autotune: resolved requests",
+			"resource", kind, "source", resolved.source, "requests", resolved.byComponent)
+		if len(changed) > 0 {
+			input.Logger.Info("autotune: committed new requests, the affected static pods will restart",
+				"resource", kind, "components", changed)
 		}
 		reportResolution(input, kind, resolved)
 	}
 
-	return persistAutotuneState(input, state)
+	return state.persist(input)
 }
 
 func reportResolution(input *go_hook.HookInput, kind resourceKind, resolved resolvedRequests) {

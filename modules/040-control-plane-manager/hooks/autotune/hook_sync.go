@@ -103,10 +103,10 @@ func applyStateToValues(input *go_hook.HookInput, state autotuneState) error {
 	components := map[string]any{}
 	for _, comp := range controlPlaneComponents {
 		entry := map[string]any{}
-		if milliCPU := appliedRequest(state[resourceCPU], comp, resourceCPU); milliCPU > 0 {
+		if milliCPU := state[resourceCPU].appliedRequest(comp, resourceCPU); milliCPU > 0 {
 			entry["milliCPU"] = milliCPU
 		}
-		if bytes := appliedRequest(state[resourceMemory], comp, resourceMemory); bytes > 0 {
+		if bytes := state[resourceMemory].appliedRequest(comp, resourceMemory); bytes > 0 {
 			entry["memoryBytes"] = strconv.FormatInt(bytes, 10)
 		}
 		if len(entry) > 0 {
@@ -121,7 +121,7 @@ func applyStateToValues(input *go_hook.HookInput, state autotuneState) error {
 
 	// Refusing a partial map would put all four components on the template default.
 	for _, kind := range []resourceKind{resourceCPU, resourceMemory} {
-		if measurementIsComplete(state[kind], kind) {
+		if state[kind].isComplete(kind) {
 			continue
 		}
 		input.Logger.Warn("autotune sync: incomplete components map, applying what is available", "resource", kind)
