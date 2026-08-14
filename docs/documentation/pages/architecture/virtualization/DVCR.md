@@ -5,15 +5,19 @@ search: deckhouse virtualization container registry, dvcr
 description: Architecture of the DVCR component of virtualization module in Deckhouse Kubernetes Platform.
 ---
 
-The Deckhouse Virtualization Container Registry (DVCR) component of the [`virtualization`](/modules/virtualization/) module is a specialized container registry for storing and caching virtual machine (VM) images.
+The Deckhouse Virtualization Container Registry (DVCR) component of the [`virtualization`](/modules/virtualization/) module is a specialized container registry for storing and caching virtual machine (VM) images. Virtualization-controller of the [Virtualization-API](api.html) component of the [`virtualization`](/modules/virtualization/) module allows you to import images stored in DVCR into PVC volumes used as VM disks managed by KubeVirt. For more details on importing and uploading VM images and disks, refer to the [relevant documentation section](import.html).
+
+{% alert level="info" %}
+[KubeVirt](https://github.com/kubevirt/kubevirt) is an open-source project that allows you to launch, deploy, and manage VMs using Kubernetes as an orchestration platform. It enables cooperation between traditional VMs and container workloads in the same Kubernetes cluster, providing a single control plane.
+{% endalert %}
 
 ## DVCR architecture
 
 {% alert level="info" %}
 The following simplifications are made in the diagram:
 
-- The diagram shows containers in different pods interacting directly with each other. In reality, they communicate via the corresponding Kubernetes Services (internal load balancers). Service names are omitted if they are obvious from the diagram context. Otherwise, the Service name is shown above the arrow.
-- Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
+* The diagram shows containers in different pods interacting directly with each other. In reality, they communicate via the corresponding Kubernetes Services (internal load balancers). Service names are omitted if they are obvious from the diagram context. Otherwise, the Service name is shown above the arrow.
+* Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
 The Level 2 C4 architecture of the DVCR component of [`virtualization`](/modules/virtualization/) module and its interactions with other components of DKP are shown in the following diagrams:
@@ -32,26 +36,12 @@ DVCR consists of the following components:
    - **dvcr-garbage-collection**: Sidecar container that periodically deletes images which do not have the appropriate resources in the cluster.
    - **kube-rbac-proxy**: Sidecar container with an authorization proxy based on Kubernetes RBAC that provides secure access to the metrics of the dvcr container. It is an [open-source project](https://github.com/brancz/kube-rbac-proxy).
 
-1. **Dvcr-importer**: *Temporary* pod that consists of a single container, run by the virtualization controller to implement various scenarios for importing VM images and disks, such as:
-
-   - Import of a VM disk or image from external sources (HTTP source available via URL or container registry) to the DVCR registry.
-   - Import of a VM image from external sources (HTTP source available via URL or container registry) into the PVC volume.
-   - Import of a VM image from VirtualImage, ClusterVirtualImage, VirtualDisk or VirtualDiskSnapshot resources to DVCR registry.
-
-1. **Dvcr-uploader**: *Temporary* pod that consists of a single container, run by the virtualization controller to implement following scenarios for user to upload VM images and disks, such as:
-
-   - Upload to DVCR.
-   - Upload into PVC volume.
-
 ## DVCR interactions
 
 DVCR interacts with the following components:
 
 1. **Kube-apiserver**: Sends `get`/`list`/`watch`-requests for VirtualImages, ClusterVirtualImages, and VirtualDisks to clean up unused images and for coordination.
-1. **External disks or VM images sources**: Reads VM disks or images when implementing some scenarios of import to DVCR storage.
 
 The following external components interact with the DVCR component:
 
-1. **Virtualization-controller**: Starts the dvcr-importer and dvcr-uploader pods to run scripts for VM disks and images import and download.
-1. **Ingress-controller**: Forwards user requests to upload a VM disk or image to the DVCR storage via the dvcr-uploader service HTTP endpoint.
-
+1. **Prometheus-main**: Collects metrics of the dvcr component.
