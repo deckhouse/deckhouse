@@ -608,9 +608,11 @@ func (exp *Exporter) ExtractRootCaCert() (string, error) {
 	return pubKey, nil
 }
 
-// ExtractLocalCACrl returns ca-crl.pem blocks signed by this cluster's signing CA
-// (ca-cert.pem). Peer CRLs previously concatenated into cacerts are stripped so
-// federation metadata does not re-export foreign CRLs (N² growth).
+// ExtractLocalCACrl returns ca-crl.pem blocks signed by this cluster's CAs
+// (ca-cert.pem and, when distinct, root-cert.pem). Peer CRLs previously
+// concatenated into cacerts are stripped so federation metadata does not
+// re-export foreign CRLs (N² growth). Root-signed CRLs must be exported too:
+// with CRL_CHECK_ALL, peers need a CRL for every issuer in the remote chain.
 func (exp *Exporter) ExtractLocalCACrl() (string, error) {
 	items := exp.cacertsSecretInformer.GetStore().List()
 	if len(items) == 0 {
@@ -627,21 +629,18 @@ func (exp *Exporter) ExtractLocalCACrl() (string, error) {
 		return "", nil
 	}
 
-	certPEM := string(secret.Data["ca-cert.pem"])
-	if strings.TrimSpace(certPEM) == "" {
+	signers := localCRLSigners(secret.Data)
+	if len(signers) == 0 {
 		// No local signer to filter against — omit rather than re-export peers.
 		return "", nil
 	}
 
-	certBlock, _ := pem.Decode([]byte(certPEM))
-	if certBlock == nil {
-		return "", fmt.Errorf("cacerts ca-cert.pem is not valid PEM")
-	}
-	cert, err := x509.ParseCertificate(certBlock.Bytes)
-	if err != nil {
-		return "", fmt.Errorf("parse cacerts ca-cert.pem: %w", err)
-	}
+	return filterLocalCRLPEM(crlPEM, signers), nil
+}
 
+// filterLocalCRLPEM keeps X509 CRL PEM blocks whose signature verifies against
+// any of the local signers (intermediate and/or root).
+func filterLocalCRLPEM(crlPEM string, signers []*x509.Certificate) string {
 	var out strings.Builder
 	rest := []byte(crlPEM)
 	for {
@@ -657,12 +656,40 @@ func (exp *Exporter) ExtractLocalCACrl() (string, error) {
 		if err != nil {
 			continue
 		}
-		if err := crl.CheckSignatureFrom(cert); err != nil {
+		for _, cert := range signers {
+			if err := crl.CheckSignatureFrom(cert); err == nil {
+				out.Write(pem.EncodeToMemory(block))
+				break
+			}
+		}
+	}
+	return out.String()
+}
+
+func localCRLSigners(data map[string][]byte) []*x509.Certificate {
+	var signers []*x509.Certificate
+	seen := map[string]struct{}{}
+	for _, key := range []string{"ca-cert.pem", "root-cert.pem"} {
+		pemBytes := data[key]
+		if strings.TrimSpace(string(pemBytes)) == "" {
 			continue
 		}
-		out.Write(pem.EncodeToMemory(block))
+		block, _ := pem.Decode(pemBytes)
+		if block == nil {
+			continue
+		}
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			continue
+		}
+		fp := string(cert.Raw)
+		if _, ok := seen[fp]; ok {
+			continue
+		}
+		seen[fp] = struct{}{}
+		signers = append(signers, cert)
 	}
-	return out.String(), nil
+	return signers
 }
 
 // CheckAuthn check JWT token authentication
