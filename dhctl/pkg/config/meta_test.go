@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
+	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )
@@ -855,6 +856,18 @@ func TestPrepareGuardIsOffForLegacyProviderConfig(t *testing.T) {
 		"masterNodeGroup": json.RawMessage(`{"replicas":1}`),
 		"nodeGroups":      json.RawMessage(`[{"name":"legacy","replicas":2}]`),
 	}
+	m.CloudProviderVars = &CloudProviderVars{NodeGroups: map[string]map[string]interface{}{
+		"master": clusterNodeGroup(map[string]interface{}{"nodeType": "CloudPermanent"}),
+	}}
+
+	_, err := m.Prepare(t.Context(), DummyValidatorProvider())
+	require.NoError(t, err)
+}
+
+// A cluster whose NodeGroups lost their replica count must still be destroyable.
+func TestPrepareGuardIsOffForDestroy(t *testing.T) {
+	m := cloudMetaConfig("")
+	m.Operation = proto.OperationDestroy
 	m.CloudProviderVars = &CloudProviderVars{NodeGroups: map[string]map[string]interface{}{
 		"master": clusterNodeGroup(map[string]interface{}{"nodeType": "CloudPermanent"}),
 	}}

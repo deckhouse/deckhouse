@@ -33,6 +33,7 @@ import (
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/initconfig"
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/moduleconfig"
+	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
@@ -235,9 +236,10 @@ func applyNodeGroupReplicasFromCloudProviderVars(m *MetaConfig) error {
 	if m.CloudProviderVars == nil {
 		return nil
 	}
-	// Only the mc-flow derives replicas from NodeGroups; the legacy flow reads
-	// them from its ProviderClusterConfiguration.
-	enforceReplicas := !m.HasLegacyProviderConfig()
+	// Only the mc-flow derives replicas from NodeGroups, and only an operation
+	// that acts on the count needs them: destroy removes the nodes anyway, and
+	// must stay possible on a cluster whose count is unreadable.
+	enforceReplicas := !m.HasLegacyProviderConfig() && m.Operation != proto.OperationDestroy
 
 	if masterNg, hasMaster := m.CloudProviderVars.NodeGroups[masterNodeGroupName]; hasMaster && m.MasterNodeGroupSpec.Replicas == 0 {
 		if enforceReplicas {
