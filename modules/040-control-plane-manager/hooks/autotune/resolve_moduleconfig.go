@@ -29,13 +29,13 @@ import (
 // location in the global one.
 type moduleConfigResolver struct {
 	snapshotName string
-	source       requestsSource
+	name         resolverName
 	state        autotuneState
 	fallback     requestsResolver
 }
 
 func (r *moduleConfigResolver) resolve(ctx context.Context, deps resolveDeps, kind resourceKind) (resolvedRequests, error) {
-	deps.input.Logger.Debug("autotune: entering chain link", "resource", kind, "link", r.source)
+	deps.input.Logger.Info("autotune: entering resolver", "resource", kind, "resolver", r.name)
 
 	configured, err := readModuleConfigRequests(deps.input, r.snapshotName)
 	if err != nil {
@@ -56,7 +56,7 @@ func (r *moduleConfigResolver) resolve(ctx context.Context, deps resolveDeps, ki
 
 	return resolvedRequests{
 		byComponent: splitAcrossComponents(budget),
-		source:      r.source,
+		resolver:    r.name,
 	}, nil
 }
 

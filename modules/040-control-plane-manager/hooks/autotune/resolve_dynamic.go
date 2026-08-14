@@ -48,7 +48,7 @@ type dynamicResolver struct {
 }
 
 func (r *dynamicResolver) resolve(ctx context.Context, deps resolveDeps, kind resourceKind) (resolvedRequests, error) {
-	deps.input.Logger.Debug("autotune: entering chain link", "resource", kind, "link", sourceDynamic)
+	deps.input.Logger.Info("autotune: entering resolver", "resource", kind, "resolver", resolverDynamic)
 
 	// Not getOrCreateMeasurement: the entry would leak into the ConfigMap for a
 	// kind another link answers.
@@ -127,7 +127,7 @@ func (r *dynamicResolver) appliedOrFallback(ctx context.Context, deps resolveDep
 		held[comp] = fallback.byComponent[comp]
 	}
 
-	return resolvedRequests{byComponent: held, source: sourceDynamic}, nil
+	return resolvedRequests{byComponent: held, resolver: resolverDynamic}, nil
 }
 
 func (r *dynamicResolver) pendingDeficit(ctx context.Context, deps resolveDeps, kind resourceKind) int64 {
@@ -198,7 +198,7 @@ func (r *dynamicResolver) proposeRequests(
 		}
 	}
 
-	result := resolvedRequests{byComponent: proposed, source: sourceDynamic}
+	result := resolvedRequests{byComponent: proposed, resolver: resolverDynamic}
 	if len(raising) == 0 {
 		result.deficit = r.state.refreshPendingRaiseDeficit(kind, r.headroom[kind])
 		return result

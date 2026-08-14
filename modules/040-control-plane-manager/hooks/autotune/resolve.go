@@ -37,20 +37,20 @@ type requestsByComponent map[string]int64
 
 type usageByComponent map[string]int64
 
-type requestsSource string
+type resolverName string
 
 const (
-	sourceCPMConfig    requestsSource = "cpmConfig"
-	sourceGlobalConfig requestsSource = "globalConfig"
-	sourceDynamic      requestsSource = "dynamic"
-	sourceStaticSplit  requestsSource = "staticSplit"
+	resolverCPMConfig    resolverName = "cpmConfig"
+	resolverGlobalConfig resolverName = "globalConfig"
+	resolverDynamic      resolverName = "dynamic"
+	resolverStaticSplit  resolverName = "staticSplit"
 )
 
 type resolvedRequests struct {
 	// Every component, always positive: a zero would reach the static-pod manifests
 	// as a literal request of 0.
 	byComponent requestsByComponent
-	source      requestsSource
+	resolver    resolverName
 	deficit     int64
 }
 
@@ -78,14 +78,14 @@ func newRequestsResolverChain(nodes []Node, state autotuneState) requestsResolve
 
 	globalConfig := &moduleConfigResolver{
 		snapshotName: snapshotGlobalMC,
-		source:       sourceGlobalConfig,
+		name:         resolverGlobalConfig,
 		state:        state,
 		fallback:     dynamic,
 	}
 
 	return &moduleConfigResolver{
 		snapshotName: snapshotCPMMC,
-		source:       sourceCPMConfig,
+		name:         resolverCPMConfig,
 		state:        state,
 		fallback:     globalConfig,
 	}

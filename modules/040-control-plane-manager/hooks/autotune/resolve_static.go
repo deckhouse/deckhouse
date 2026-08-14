@@ -29,7 +29,7 @@ type staticResolver struct {
 }
 
 func (r *staticResolver) resolve(_ context.Context, deps resolveDeps, kind resourceKind) (resolvedRequests, error) {
-	deps.input.Logger.Debug("autotune: entering chain link", "resource", kind, "link", sourceStaticSplit)
+	deps.input.Logger.Info("autotune: entering resolver", "resource", kind, "resolver", resolverStaticSplit)
 
 	budget, err := r.splitBudget(kind)
 	if err != nil {
@@ -37,7 +37,7 @@ func (r *staticResolver) resolve(_ context.Context, deps resolveDeps, kind resou
 	}
 	return resolvedRequests{
 		byComponent: splitAcrossComponents(budget),
-		source:      sourceStaticSplit,
+		resolver:    resolverStaticSplit,
 	}, nil
 }
 

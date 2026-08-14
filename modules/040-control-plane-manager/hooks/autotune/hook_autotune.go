@@ -84,7 +84,7 @@ func runAutotune(ctx context.Context, input *go_hook.HookInput, dc dependency.Co
 
 		changed := state.commit(kind, resolved.byComponent, changedAt)
 		input.Logger.Info("autotune: resolved requests",
-			"resource", kind, "source", resolved.source, "requests", resolved.byComponent)
+			"resource", kind, "resolver", resolved.resolver, "requests", resolved.byComponent)
 		if len(changed) > 0 {
 			input.Logger.Info("autotune: committed new requests, the affected static pods will restart",
 				"resource", kind, "components", changed)
@@ -96,7 +96,7 @@ func runAutotune(ctx context.Context, input *go_hook.HookInput, dc dependency.Co
 }
 
 func reportResolution(input *go_hook.HookInput, kind resourceKind, resolved resolvedRequests) {
-	if resolved.source == sourceGlobalConfig {
+	if resolved.resolver == resolverGlobalConfig {
 		input.MetricsCollector.Set(
 			obsoleteGlobalResourcesRequestsMetricName,
 			1,
