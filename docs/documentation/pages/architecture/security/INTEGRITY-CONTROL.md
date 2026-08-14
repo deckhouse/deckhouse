@@ -13,26 +13,13 @@ Deckhouse Kubernetes Platform (DKP) provides the following mechanisms:
 - Integrity control of running containers: runtime audit.
 - Integrity protection of DKP modules: modules are installed as immutable images.
 
-{% alert level="warning" %}
-Integrity control of images at the container runtime (CRI) level — cryptographic image signature verification and protection of unpacked layers from modification — is implemented only in the DKP CSE Lite and CSE Pro editions. In other editions, this mechanism is not available; refer to ["Integrity control of images at the CRI level"](#integrity-control-of-images-at-the-cri-level).
-{% endalert %}
-
-## Integrity control of images at the CRI level
-
-Cryptographic image signature verification when an image is pulled and a container is started, as well as immutability control of the unpacked image layers using DM-Verity, are implemented at the containerd level and are available **only in the DKP CSE Lite and CSE Pro editions**. Platform image signatures are verified using the set of public certificates built into containerd; the private signing key belongs to the platform vendor, so a custom key cannot be added for verification. For details on this mechanism, refer to the DKP CSE documentation.
-
-In other DKP editions (CE, BE, SE, SE+, EE), there is no image signature verification at the CRI level:
-
-- When containerd v2 is used, the EROFS snapshotter is applied: each OCI image layer is converted into a separate file in the EROFS format and mounted read-only. This reduces the risk of tampering with images already unpacked on a node, but does not eliminate it completely and does not replace image authenticity verification. For details on switching to containerd v2, refer to ["Migrating container runtime to containerd v2"](../../admin/configuration/platform-scaling/node/migrating.html).
-- The SHA-256 hash verification performed by containerd when pulling an image protects against data corruption in transit, but does not confirm the image authenticity: it does not make it possible to determine who built the image.
-
-To control the integrity and authenticity of user application images in these editions, use signature verification during Kubernetes API request validation (refer to the section below).
-
 ## Integrity control of user workloads at startup
 
 {% alert level="warning" %}
-This feature is available in the following DKP editions: SE+, EE, CSE Lite, CSE Pro.
+This feature is available in the following DKP editions: SE+, EE.
 {% endalert %}
+
+Image signature verification at the CRI level is not implemented in DKP.
 
 The integrity and authenticity of user application images are verified during Kubernetes API request validation, that is, before a Pod is created, rather than at the CRI level. The mechanism is implemented by the [`admission-policy-engine`](admission-policy-engine.html) module and relies on signatures created with [Cosign](https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/).
 
@@ -47,6 +34,13 @@ The sequence of integrity checks at startup:
 Additionally, you can restrict the list of container image registries that Pods are allowed to be started from using the `policies.allowedRepos` parameter of the [OperationPolicy](/modules/admission-policy-engine/cr.html#operationpolicy) resource.
 
 For more details on the configuration, refer to ["Image signature verification"](../../admin/configuration/security/policies.html#image-signature-verification).
+
+At the node level, DKP also protects the integrity of unpacked image layers:
+
+- When using containerd v2, the EROFS snapshot is used — each layer of the OCI image is mounted read-only. This reduces the risk of tampering with images already unpacked on a node, but does not eliminate it completely and does not replace image authenticity verification. For details on switching to containerd v2, refer to ["Migrating container runtime to containerd v2"](../../admin/configuration/platform-scaling/node/migrating.html).
+- The SHA-256 hash verification performed by containerd when pulling an image protects against data corruption in transit, but does not confirm the image authenticity: it does not make it possible to determine who built the image.
+
+These measures complement signature verification, but do not replace it. To verify the authenticity of images, be sure to use the API validation described above.
 
 ## Integrity control of running containers
 
