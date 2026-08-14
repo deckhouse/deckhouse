@@ -80,6 +80,24 @@ document.addEventListener('DOMContentLoaded', () => {
     return localizedTitles[normalized.toLowerCase()] || capitalizeWords(normalized);
   }
 
+  // Localized tooltip texts for tags. The key is the tag value in lowercase.
+  // If there is no text, the tooltip is not displayed.
+  const tagTooltips = {
+    ru: {
+      'certified': 'Модуль прошёл сертификацию на соответствие требованиям ФСТЭК.',
+      'ssdlc': 'Разработка модуля ведется в соответствии с процессами по разработке безопасного программного обеспечения согласно ГОСТ РФ.'
+    },
+    en: {
+      'ssdlc': 'Module development is carried out in accordance with the processes for developing secure software.'
+    }
+  };
+
+  function getTagTooltip(tag) {
+    const normalized = (tag || '').trim();
+    const localizedTooltips = tagTooltips[lang] || {};
+    return localizedTooltips[normalized.toLowerCase()] || '';
+  }
+
   function isSectionSelectAllCheckbox(checkbox) {
     return checkbox?.dataset?.selectAll === 'true';
   }
@@ -248,9 +266,13 @@ document.addEventListener('DOMContentLoaded', () => {
     label.htmlFor = tag;
     label.textContent = getTagTitle(tag);
 
-
     filterCheckboxesTags.appendChild(input);
     filterCheckboxesTags.appendChild(label);
+
+    const tooltip = getTagTooltip(tag);
+    if (tooltip) {
+      initTooltip(label, getTagTitle(tag), tooltip);
+    }
   }
 
   function createFilters() {
@@ -614,8 +636,10 @@ document.addEventListener('DOMContentLoaded', () => {
     return container;
   }
 
-  function initTooltip(selector, titleText, descriptionText) {
-    const elements = document.querySelectorAll(selector);
+  function initTooltip(target, titleText, descriptionText) {
+    const elements = typeof target === 'string'
+      ? document.querySelectorAll(target)
+      : [].concat(target);
     if (elements.length === 0) return;
 
     elements.forEach(element => {
