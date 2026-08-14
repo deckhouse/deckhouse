@@ -493,6 +493,57 @@ var _ = Describe("NodeConfig controller", func() {
 		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
 	})
 
+	// User story: as an operator whose whole group broke on a bad release, I want
+	// the fix to reach it. Measured twice on zykov-ab-57a656c4: two workers on
+	// generation 1 while the master was on 5, and only raising maxConcurrent moved
+	// them.
+	It("delivers a new spec to a group where no node has converged", func(ctx context.Context) {
+		ngName := testenv.UniqueName("workers-wedged")
+		createImmutableNodeGroup(ctx, ngName, nil)
+
+		first := testenv.UniqueName("node")
+		second := testenv.UniqueName("node")
+		createNode(ctx, first, ngName)
+		createNode(ctx, second, ngName)
+
+		// Both nodes report the published spec as not applied — a bad release, a
+		// registry outage, anything that lands on the whole group at once.
+		for _, name := range []string{first, second} {
+			Eventually(func(g Gomega) {
+				nc := getNodeConfig(ctx, g, name)
+				meta.SetStatusCondition(&nc.Status.Conditions, metav1.Condition{
+					Type: configurationAppliedCondition, Status: metav1.ConditionFalse,
+					Reason: "RollbackFailed", Message: "the previous configuration could not be restored",
+				})
+				nc.Status.AppliedGeneration = 0
+				g.Expect(k8sClient.Status().Update(ctx, nc)).To(Succeed())
+			}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+		}
+
+		By("the release publishing the cure")
+		setContainerdDigest(ctx, testContainerdRebuiltDigest)
+
+		curedNodes := func(g Gomega) int {
+			cured := 0
+			for _, name := range []string{first, second} {
+				if digestOf(getNodeConfig(ctx, g, name), containerdExtension) == testContainerdRebuiltDigest {
+					cured++
+				}
+			}
+			return cured
+		}
+
+		Eventually(func(g Gomega) {
+			g.Expect(curedNodes(g)).To(Equal(1),
+				"exactly one node of a wedged group must get the cure: none means the group is locked, both means the gate is gone")
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+		// The cure is still a change under test: the node that took it holds the
+		// slot until it proves it, so the second node waits its turn.
+		Consistently(func(g Gomega) {
+			g.Expect(curedNodes(g)).To(Equal(1))
+		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
+	})
+
 	// User story: As an operator, I want a release that ships a rebuilt system
 	// extension to reach the fleet on its own. The digests ConfigMap used to be
 	// read but not watched, so the new digest sat unnoticed until some unrelated
