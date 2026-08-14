@@ -461,6 +461,44 @@ func (c *Controller) loadModules(ctx context.Context, modules []v1alpha2.Module)
 	return nil
 }
 
+// cleanupPackages hands the runtime every package the cluster still claims, so it drops the rest.
+// The modules are the ones this bootstrap settled on, and the applications are read here, so both
+// lists describe the same moment.
+func (c *Controller) cleanupPackages(ctx context.Context, modules []v1alpha2.Module) error {
+	// this list decides what is deleted, so a lagging watch would read as an application gone
+	applications := new(v1alpha1.ApplicationList)
+	if err := c.ctrl.GetAPIReader().List(ctx, applications); err != nil {
+		return fmt.Errorf("list applications: %w", err)
+	}
+
+	preserveApps := make([]pkgruntime.PreserveApplication, 0, len(applications.Items))
+	for i := range applications.Items {
+		application := &applications.Items[i]
+
+		preserveApps = append(preserveApps, pkgruntime.PreserveApplication{
+			Namespace:   application.Namespace,
+			Name:        application.Name,
+			PackageName: application.Spec.PackageName,
+			Repository:  application.Spec.PackageRepositoryName,
+			Version:     application.Spec.PackageVersion,
+		})
+	}
+
+	preserveModules := make([]pkgruntime.PreserveModule, 0, len(modules))
+	for i := range modules {
+		module := &modules[i]
+
+		preserveModules = append(preserveModules, pkgruntime.PreserveModule{
+			Name:       module.Name,
+			Repository: module.Spec.PackageRepositoryName,
+			Version:    module.Spec.PackageVersion,
+			Embedded:   module.IsEmbedded(),
+		})
+	}
+
+	return c.manager.CleanupV2(ctx, preserveApps, preserveModules)
+}
+
 // runtimeModule is what the runtime needs of a module: its identity, settings and enabled intent.
 func runtimeModule(module *v1alpha2.Module) pkgruntime.Module {
 	return pkgruntime.Module{

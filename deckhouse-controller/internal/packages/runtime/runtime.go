@@ -16,6 +16,7 @@ package runtime
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"path/filepath"
@@ -746,41 +747,106 @@ func (r *Runtime) Stop() {
 	}
 }
 
-// PreservePackage identifies one installed Package instance to preserve during Cleanup.
-type PreservePackage struct {
+// PreserveApplication identifies one installed application instance to preserve during CleanupV2.
+type PreserveApplication struct {
+	Namespace string
+	Name      string
+
 	PackageName string
 	Repository  string
 	Version     string
-
-	ReleaseName      string
-	ReleaseNamespace string
 }
 
-// Cleanup removes downloaded application packages on disk and orphan nelm
-// releases in the cluster that are not in preserves. Runs once during preflight.
-func (r *Runtime) Cleanup(ctx context.Context, preserves []PreservePackage) {
+// PreserveModule identifies one installed module to preserve during CleanupV2. A module releases
+// under its own name in the Deckhouse namespace, and an embedded one owns such a release while
+// its package ships in the image, outside the deployer root.
+type PreserveModule struct {
+	Name       string
+	Repository string
+	Version    string
+
+	Embedded bool
+}
+
+// CleanupV2 removes package directories on disk — downloaded and mounted alike — and orphan nelm
+// releases in the cluster that no preserved application or module claims. Applications and modules
+// are passed apart because each deployer is scoped to its own root and a preserved package cannot
+// say which root it belongs to.
+//
+// Both lists are the whole desired state, so this runs once during bootstrap: after that state is
+// settled and before any package is deployed.
+func (r *Runtime) CleanupV2(ctx context.Context, preserveApps []PreserveApplication, preserveModules []PreserveModule) error {
+	// the image always ships modules, so an empty list is a state never read rather than one to act
+	// on — acting on it would drop every module on disk and uninstall every module release
+	if len(preserveModules) == 0 {
+		return errors.New("no module to preserve")
+	}
+
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	fsPreserve := make([]deployer.PreservePackage, 0, len(preserves))
-	keepReleases := make(map[string]struct{}, len(preserves))
+	var errs error
+	if err := r.appDeployer.Cleanup(ctx, appPreservePackages(preserveApps)); err != nil {
+		errs = errors.Join(errs, fmt.Errorf("cleanup application packages: %w", err))
+	}
+
+	if err := r.moduleDeployer.Cleanup(ctx, modulePreservePackages(preserveModules)); err != nil {
+		errs = errors.Join(errs, fmt.Errorf("cleanup module packages: %w", err))
+	}
+
+	// every release is kept by name now, so the Deckhouse namespace is no longer exempt
+	r.nelmService.Cleanup(ctx, keepReleases(preserveApps, preserveModules))
+
+	return errs
+}
+
+// appPreservePackages maps applications onto the packages the application deployer keys on.
+func appPreservePackages(preserves []PreserveApplication) []deployer.PreservePackage {
+	packages := make([]deployer.PreservePackage, 0, len(preserves))
 	for _, preserve := range preserves {
-		fsPreserve = append(fsPreserve, deployer.PreservePackage{
+		packages = append(packages, deployer.PreservePackage{
 			Name:       preserve.PackageName,
 			Repository: preserve.Repository,
 			Version:    preserve.Version,
 		})
-
-		keepReleases[preserve.ReleaseNamespace+"/"+preserve.ReleaseName] = struct{}{}
 	}
 
-	if err := r.appDeployer.Cleanup(ctx, fsPreserve); err != nil {
-		r.logger.Warn("cleanup apps failed", log.Err(err))
-		return
+	return packages
+}
+
+// modulePreservePackages does the same for modules, skipping the embedded ones: their packages sit
+// outside the deployer root, so the module deployer can drop nothing of theirs.
+func modulePreservePackages(preserves []PreserveModule) []deployer.PreservePackage {
+	packages := make([]deployer.PreservePackage, 0, len(preserves))
+	for _, preserve := range preserves {
+		if preserve.Embedded {
+			continue
+		}
+
+		packages = append(packages, deployer.PreservePackage{
+			Name:       preserve.Name,
+			Repository: preserve.Repository,
+			Version:    preserve.Version,
+		})
 	}
 
-	// do not cleanup modules namespace
-	r.nelmService.Cleanup(ctx, keepReleases, app.NamespaceDeckhouse)
+	return packages
+}
+
+// keepReleases returns the releases to keep, keyed "<namespace>/<release>". An embedded module is
+// kept here, unlike on disk: it owns a release as any other module does.
+func keepReleases(preserveApps []PreserveApplication, preserveModules []PreserveModule) map[string]struct{} {
+	keep := make(map[string]struct{}, len(preserveApps)+len(preserveModules))
+
+	for _, preserve := range preserveApps {
+		keep[preserve.Namespace+"/"+apps.BuildName(preserve.Namespace, preserve.Name)] = struct{}{}
+	}
+
+	for _, preserve := range preserveModules {
+		keep[app.NamespaceDeckhouse+"/"+preserve.Name] = struct{}{}
+	}
+
+	return keep
 }
 
 // GetStatus returns package status.
