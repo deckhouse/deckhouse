@@ -12,10 +12,12 @@
   {{- /* The agent has no releases yet, so it is pinned by commit: werf keys a
          shell-cloned source on the rendered instructions alone, and a moving
          branch would be built once and cached forever. Bump this line to pick
-         up agent changes. Currently main, which carries both the self-restart and the
-         rootfs A/B controller: an older agent restarts its own unit mid-pass,
-         and one without os-image cannot update the root at all. */ -}}
-  {{- $nodeletCommit := "42f770a2fe94ff24e69faf2a372ea54cd319c761" }}
+         up agent changes. Currently the tip of selfupdate-on-main, which carries
+         the trial-and-demote self-update on top of the self-restart and the
+         rootfs A/B controller — an older agent restarts its own unit mid-pass,
+         and one without os-image cannot update the root at all.
+         Repin to a main commit once container-base/nodelet!10 lands. */ -}}
+  {{- $nodeletCommit := "20642623cec83f71dac035b5c76b6647bc1008f5" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
