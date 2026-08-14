@@ -37,7 +37,7 @@ module KubernetesConformance
       readme_path = File.join(conformance_dir, filename)
       return '' unless File.file?(readme_path)
 
-      demote_markdown_headings(File.read(readme_path))
+      demote_markdown_headings(File.read(readme_path, encoding: 'UTF-8'))
     end
 
     def demote_markdown_headings(markdown)
