@@ -394,7 +394,7 @@ Where:
 ### Pre-installation checks
 
 {% alert level="info" %}
-Starting with version 1.74, DKP has a built-in module integrity control mechanism that protects modules from being replaced or modified. This mechanism is enabled automatically when the operating system on the cluster nodes supports the `erofs` kernel module. If such a support is missing, the module integrity control will be disabled and a respective monitoring alert will appear.
+Starting with version 1.74, DKP modules are installed as images in the EROFS format that are mounted read-only, which protects them from being modified after installation. This mechanism is enabled automatically if the `erofs` filesystem is registered in the kernel on the node running the DKP controller (a master node by default). DKP loads this kernel module only on nodes with containerd v2, so if master nodes use containerd v1, the operating system has to load `erofs` on its own. Otherwise, DKP will install modules the regular way, without protecting their integrity and without a dedicated alert. For details, refer to ["Integrity protection of DKP modules"](../architecture/security/integrity-control.html#integrity-protection-of-dkp-modules).
 {% endalert %}
 
 {% offtopic title="Diagram of checks performed by the installer before installation..." %}
