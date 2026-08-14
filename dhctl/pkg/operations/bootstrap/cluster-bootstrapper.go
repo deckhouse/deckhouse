@@ -37,6 +37,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
@@ -642,6 +643,8 @@ func (b *ClusterBootstrapper) bootstrapPostInfraPreflights(ctx context.Context, 
 
 		before, provider, after := splitResourcesOnPreAndPostDeckhouseInstall(ctx, parsedResources, bctx.metaConfig.ClusterType == config.CloudClusterType)
 
+		applyMasterNodeGroupDefaults(provider)
+
 		bctx.resourcesToCreateBefore = before
 		bctx.resourcesToCreateProvider = provider
 		bctx.resourcesToCreateAfter = after
@@ -1067,6 +1070,43 @@ func isProviderNodeResource(resource *template.Resource) bool {
 		return true
 	}
 	return resource.GVK.Kind == "NodeGroup" && config.IsCloudPermanentNodeGroup(resource.Object.Object)
+}
+
+// applyMasterNodeGroupDefaults fills in the control-plane defaults that
+// node-manager's create_master_node_group hook supplies with CreateIfNotExists —
+// it never corrects an object dhctl wrote first. Absent keys only: what the user
+// set stays.
+func applyMasterNodeGroupDefaults(resources template.Resources) {
+	for _, resource := range resources {
+		if resource.GVK.Kind != "NodeGroup" || resource.GVK.Group != "deckhouse.io" {
+			continue
+		}
+		if resource.Object.GetName() != global.MasterNodeGroupName {
+			continue
+		}
+
+		if _, found, _ := unstructured.NestedString(resource.Object.Object, "spec", "disruptions", "approvalMode"); !found {
+			_ = unstructured.SetNestedField(resource.Object.Object, "Manual", "spec", "disruptions", "approvalMode")
+		}
+
+		labels, _, _ := unstructured.NestedStringMap(resource.Object.Object, "spec", "nodeTemplate", "labels")
+		if labels == nil {
+			labels = map[string]string{}
+		}
+		for _, key := range []string{"node-role.kubernetes.io/control-plane", "node-role.kubernetes.io/master"} {
+			if _, ok := labels[key]; !ok {
+				labels[key] = ""
+			}
+		}
+		_ = unstructured.SetNestedStringMap(resource.Object.Object, labels, "spec", "nodeTemplate", "labels")
+
+		if _, found, _ := unstructured.NestedFieldNoCopy(resource.Object.Object, "spec", "nodeTemplate", "taints"); !found {
+			_ = unstructured.SetNestedSlice(resource.Object.Object, []any{map[string]any{
+				"key":    "node-role.kubernetes.io/control-plane",
+				"effect": "NoSchedule",
+			}}, "spec", "nodeTemplate", "taints")
+		}
+	}
 }
 
 // isCloudProviderCredentialSecret returns true for Secret resources carrying

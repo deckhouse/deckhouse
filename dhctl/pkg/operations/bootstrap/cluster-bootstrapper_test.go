@@ -153,3 +153,81 @@ func TestSplitResources_StaticClusterKeepsProviderResourcesInAfter(t *testing.T)
 	require.Equal(t, "worker-dvp", after[0].Object.GetName())
 	require.Equal(t, "ubuntu", after[1].Object.GetName())
 }
+
+// node-manager's create_master_node_group hook supplies these defaults with
+// CreateIfNotExists, so it never corrects an object dhctl wrote first.
+func TestApplyMasterNodeGroupDefaults_FillsWhatTheUserOmitted(t *testing.T) {
+	masterNg := newResource(t, "deckhouse.io/v1", "NodeGroup", "master", "", map[string]any{
+		"spec": map[string]any{
+			"nodeType": "CloudPermanent",
+			"nodeTemplate": map[string]any{
+				"labels": map[string]any{"team": "infra"},
+			},
+		},
+	})
+
+	applyMasterNodeGroupDefaults(template.Resources{masterNg})
+
+	approvalMode, found, err := unstructured.NestedString(masterNg.Object.Object, "spec", "disruptions", "approvalMode")
+	require.NoError(t, err)
+	require.True(t, found)
+	require.Equal(t, "Manual", approvalMode)
+
+	labels, found, err := unstructured.NestedStringMap(masterNg.Object.Object, "spec", "nodeTemplate", "labels")
+	require.NoError(t, err)
+	require.True(t, found)
+	require.Equal(t, map[string]string{
+		"team":                                  "infra",
+		"node-role.kubernetes.io/control-plane": "",
+		"node-role.kubernetes.io/master":        "",
+	}, labels)
+
+	taints, found, err := unstructured.NestedSlice(masterNg.Object.Object, "spec", "nodeTemplate", "taints")
+	require.NoError(t, err)
+	require.True(t, found)
+	require.Equal(t, []any{map[string]any{
+		"key":    "node-role.kubernetes.io/control-plane",
+		"effect": "NoSchedule",
+	}}, taints)
+}
+
+func TestApplyMasterNodeGroupDefaults_KeepsWhatTheUserChose(t *testing.T) {
+	masterNg := newResource(t, "deckhouse.io/v1", "NodeGroup", "master", "", map[string]any{
+		"spec": map[string]any{
+			"nodeType":    "CloudPermanent",
+			"disruptions": map[string]any{"approvalMode": "Automatic"},
+			"nodeTemplate": map[string]any{
+				"labels": map[string]any{"node-role.kubernetes.io/master": "custom"},
+				"taints": []any{},
+			},
+		},
+	})
+
+	applyMasterNodeGroupDefaults(template.Resources{masterNg})
+
+	approvalMode, _, _ := unstructured.NestedString(masterNg.Object.Object, "spec", "disruptions", "approvalMode")
+	require.Equal(t, "Automatic", approvalMode)
+
+	labels, _, _ := unstructured.NestedStringMap(masterNg.Object.Object, "spec", "nodeTemplate", "labels")
+	require.Equal(t, "custom", labels["node-role.kubernetes.io/master"])
+	require.Equal(t, "", labels["node-role.kubernetes.io/control-plane"])
+
+	taints, found, _ := unstructured.NestedSlice(masterNg.Object.Object, "spec", "nodeTemplate", "taints")
+	require.True(t, found)
+	require.Empty(t, taints, "an explicitly empty taint list is the user's choice")
+}
+
+// Only the master group gets these; every other NodeGroup is left alone.
+func TestApplyMasterNodeGroupDefaults_IgnoresOtherNodeGroups(t *testing.T) {
+	workerNg := newResource(t, "deckhouse.io/v1", "NodeGroup", "worker", "", map[string]any{
+		"spec": map[string]any{"nodeType": "CloudPermanent"},
+	})
+	instanceClass := newResource(t, "deckhouse.io/v1alpha1", "DVPInstanceClass", "master", "", nil)
+
+	applyMasterNodeGroupDefaults(template.Resources{workerNg, instanceClass})
+
+	_, found, _ := unstructured.NestedMap(workerNg.Object.Object, "spec", "disruptions")
+	require.False(t, found)
+	_, found, _ = unstructured.NestedMap(instanceClass.Object.Object, "spec")
+	require.False(t, found, "an InstanceClass named master must not be mistaken for the NodeGroup")
+}
