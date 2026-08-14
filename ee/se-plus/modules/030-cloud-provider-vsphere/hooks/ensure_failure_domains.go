@@ -20,7 +20,6 @@ import (
 	"github.com/vmware/govmomi/vapi/rest"
 	"github.com/vmware/govmomi/vapi/tags"
 	"github.com/vmware/govmomi/vim25/mo"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -143,39 +142,28 @@ func ensureFailureDomains(ctx context.Context, input *go_hook.HookInput, dc depe
 		}
 		resourcePool := absResourcePoolPath(clusterPath, dd.ResourcePoolPath)
 
-		fdName := fdNamePrefix + zone
-		if _, err := dyn.Resource(fdGVR).Get(ctx, fdName, metav1.GetOptions{}); err != nil {
-			if !apierrors.IsNotFound(err) {
-				return fmt.Errorf("get VSphereFailureDomain %s: %w", fdName, err)
-			}
-			fd := buildFailureDomain(fdName, region, regionTagCategory, zone, zoneTagCategory, dd.Datacenter, clusterPath, datastore)
-			input.PatchCollector.Create(fd)
-			input.Logger.Info("created VSphereFailureDomain", "zone", zone, "computeCluster", clusterPath, "datastore", datastore)
-		}
-		if _, err := dyn.Resource(dzGVR).Get(ctx, zone, metav1.GetOptions{}); err != nil {
-			if !apierrors.IsNotFound(err) {
-				return fmt.Errorf("get VSphereDeploymentZone %s: %w", zone, err)
-			}
-			dz := buildDeploymentZone(zone, server, fdName, folder, resourcePool)
-			input.PatchCollector.Create(dz)
-			input.Logger.Info("created VSphereDeploymentZone", "zone", zone, "failureDomain", fdName)
-		}
+		fd := buildFailureDomain(fdNamePrefix+zone, region, regionTagCategory, zone, zoneTagCategory, dd.Datacenter, clusterPath, datastore)
+		dz := buildDeploymentZone(zone, server, fdNamePrefix+zone, folder, resourcePool)
+		input.PatchCollector.Create(fd)
+		input.PatchCollector.Create(dz)
+		input.Logger.Info("created VSphereFailureDomain and VSphereDeploymentZone",
+			"zone", zone, "computeCluster", clusterPath, "datastore", datastore)
 	}
 
 	return nil
 }
 
 func clusterIsDeleting(ctx context.Context, dyn dynamic.Interface) (bool, error) {
-	// Scope to the Deckhouse-managed infrastructure Cluster only — any other
-	// deleting Cluster must not freeze FailureDomain / DeploymentZone ensure.
-	obj, err := dyn.Resource(clusterGVR).Namespace("d8-cloud-instance-manager").Get(ctx, "vsphere", metav1.GetOptions{})
+	list, err := dyn.Resource(clusterGVR).List(ctx, metav1.ListOptions{})
 	if err != nil {
-		if apierrors.IsNotFound(err) {
-			return false, nil
-		}
-		return false, fmt.Errorf("get CAPI Cluster vsphere: %w", err)
+		return false, fmt.Errorf("list CAPI Clusters: %w", err)
 	}
-	return obj.GetDeletionTimestamp() != nil, nil
+	for _, obj := range list.Items {
+		if obj.GetDeletionTimestamp() != nil {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func zonesMissingResources(ctx context.Context, dyn dynamic.Interface, zones []string) ([]string, error) {

@@ -51,13 +51,6 @@ capiMachineDeploymentSpecPatch: {{ tpl ($context.Files.Get "capi/machine-deploym
   {{- $_ := set $vsphereValues.instanceClassDefaults "template" $masterNodeGroup.instanceClass.template }}
   {{- $_ := set $vsphereValues.instanceClassDefaults "datastore" $masterNodeGroup.instanceClass.datastore }}
 {{- end }}
-{{- /* CAPV tag URNs from ensure_capi_vm_tags (MCM used tag names; CAPV needs IDs). */ -}}
-{{- if $context.Values.cloudProviderVsphere.internal.capiClusterTagID }}
-  {{- $_ := set $vsphereValues "clusterTagID" $context.Values.cloudProviderVsphere.internal.capiClusterTagID }}
-{{- end }}
-{{- if $context.Values.cloudProviderVsphere.internal.capiNodeRoleTagIDs }}
-  {{- $_ := set $vsphereValues "nodeRoleTagIDs" $context.Values.cloudProviderVsphere.internal.capiNodeRoleTagIDs }}
-{{- end }}
 vsphere: {{ $vsphereValues | toJson | b64enc | quote }}
 {{- end }}
 ---

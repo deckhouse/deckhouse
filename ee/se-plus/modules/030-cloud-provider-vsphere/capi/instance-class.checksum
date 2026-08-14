@@ -1,51 +1,29 @@
 {{- $options := dict -}}
 {{- $ic := .nodeGroup.instanceClass -}}
-{{- $vsphere := .Values.nodeManager.internal.cloudProvider.vsphere | default dict -}}
-{{- $icd := $vsphere.instanceClassDefaults | default dict -}}
-{{- $runtime := $ic.runtimeOptions | default dict -}}
 {{- $_ := set $options "numCPUs" (int $ic.numCPUs) -}}
 {{- $_ := set $options "memoryMiB" (add $ic.memory (mod $ic.memory 4)) -}}
 {{- $_ := set $options "rootDiskSize" (int ($ic.rootDiskSize | default 20)) -}}
-{{- $_ := set $options "cloneMode" "fullClone" -}}
-{{- $_ := set $options "template" ($ic.template | default $icd.template) -}}
-{{- $_ := set $options "datastore" ($ic.datastore | default $icd.datastore) -}}
+{{- if $ic.template }}
+  {{- $_ := set $options "template" $ic.template -}}
+{{- end }}
+{{- if $ic.datastore }}
+  {{- $_ := set $options "datastore" $ic.datastore -}}
+{{- end }}
 {{- if $ic.mainNetwork }}
   {{- $_ := set $options "mainNetwork" $ic.mainNetwork -}}
 {{- end }}
 {{- if $ic.additionalNetworks }}
   {{- $_ := set $options "additionalNetworks" $ic.additionalNetworks -}}
 {{- end }}
-{{- if or $ic.resourcePool $icd.resourcePoolPath }}
-  {{- $_ := set $options "resourcePool" (or $ic.resourcePool $icd.resourcePoolPath) -}}
+{{- if $ic.resourcePool }}
+  {{- $_ := set $options "resourcePool" $ic.resourcePool -}}
 {{- end }}
-{{- $disableTimesync := true -}}
-{{- if hasKey $ic "disableTimesync" -}}
-  {{- $disableTimesync = $ic.disableTimesync -}}
-{{- else if hasKey $icd "disableTimesync" -}}
-  {{- $disableTimesync = $icd.disableTimesync -}}
-{{- end -}}
-{{- $_ := set $options "disableTimesync" $disableTimesync -}}
-{{- $nestedHV := true -}}
-{{- if hasKey $runtime "nestedHardwareVirtualization" -}}
-  {{- $nestedHV = $runtime.nestedHardwareVirtualization -}}
-{{- end -}}
-{{- $_ := set $options "nestedHardwareVirtualization" $nestedHV -}}
-{{- $_ := set $options "memoryReservation" (int ($runtime.memoryReservation | default 80)) -}}
-{{- if hasKey $runtime "cpuShares" -}}
-  {{- $_ := set $options "cpuShares" (int $runtime.cpuShares) -}}
-{{- end -}}
-{{- if hasKey $runtime "memoryShares" -}}
-  {{- $_ := set $options "memoryShares" (int $runtime.memoryShares) -}}
-{{- end -}}
-{{- if hasKey $runtime "cpuLimit" -}}
-  {{- $_ := set $options "cpuLimit" (int $runtime.cpuLimit) -}}
-{{- end -}}
-{{- if hasKey $runtime "memoryLimit" -}}
-  {{- $_ := set $options "memoryLimit" (int $runtime.memoryLimit) -}}
-{{- end -}}
-{{- if hasKey $runtime "cpuReservation" -}}
-  {{- $_ := set $options "cpuReservation" (int $runtime.cpuReservation) -}}
-{{- end -}}
+{{- if hasKey $ic "disableTimesync" }}
+  {{- $_ := set $options "disableTimesync" $ic.disableTimesync -}}
+{{- end }}
+{{- if $ic.runtimeOptions }}
+  {{- $_ := set $options "runtimeOptions" $ic.runtimeOptions -}}
+{{- end }}
 {{- if index .nodeGroup "manualRolloutID" -}}
   {{- $_ := set $options "manualRolloutID" (index .nodeGroup "manualRolloutID") -}}
 {{- end -}}
