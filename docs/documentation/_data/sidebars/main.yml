@@ -1618,10 +1618,10 @@ entries:
                 en: Local-path-provisioner module
                 ru: Модуль local-path-provisioner
               url: /architecture/storage/local-path-provisioner.html
-            - title:
-                en: Snapshot-controller module
-                ru: Модуль snapshot-controller
-              url: /architecture/storage/snapshot-controller.html
+            # - title:
+            #     en: Snapshot-controller module
+            #     ru: Модуль snapshot-controller
+            #   url: /architecture/storage/snapshot-controller.html
             - title:
                 en: Sds-local-volume module
                 ru: Модуль sds-local-volume
@@ -1630,6 +1630,10 @@ entries:
                 en: Sds-node-configurator module
                 ru: Модуль sds-node-configurator
               url: /architecture/storage/sds-node-configurator.html
+            - title:
+                en: Storage-foundation module
+                ru: Модуль storage-foundation
+              url: /architecture/storage/storage-foundation.html
             - title:
                 en: Storage system modules
                 ru: Модули систем хранения
