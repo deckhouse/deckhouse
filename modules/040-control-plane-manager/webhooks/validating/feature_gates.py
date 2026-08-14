@@ -70,7 +70,7 @@ kubernetes:
   executeHookOnSynchronization: true
   keepFullObjectsInMemory: true
 
-# status.automaticVersion of this ConfigMap is what "Default" resolves to for the running Deckhouse
+# spec.automaticVersion of this ConfigMap is what "Default" resolves to for the running Deckhouse
 # build. It replaces deckhouseDefaultKubernetesVersion in the Secret above, which was only ever
 # raised and therefore kept answering with a default that no longer exists after a Deckhouse
 # downgrade. The Secret key stays as a fallback for the window before update-observer first writes
@@ -113,7 +113,7 @@ def get_k8s_version(ctx: DotMap) -> Optional[str]:
 
     secret_data = get_cluster_configuration_secret_data(ctx)
 
-    # The Deckhouse default now comes from status.automaticVersion of the cluster ConfigMap, with
+    # The Deckhouse default now comes from spec.automaticVersion of the cluster ConfigMap, with
     # the Secret key kept only until update-observer has written that object at least once.
     def deckhouse_default() -> Optional[str]:
         version = get_deckhouse_default_version_from_configmap(ctx)

@@ -107,7 +107,6 @@ type clusterKubernetesSnapshot struct {
 type configMapSpec struct {
 	DesiredVersion string `json:"desiredVersion"`
 	UpdateMode     string `json:"updateMode"`
-	MaxUsedVersion string `json:"maxUsedKubernetesVersion"`
 }
 
 // Never errors: that would discard the snapshot and take down the only publisher of
@@ -131,15 +130,16 @@ func applyClusterKubernetesConfigMapFilter(obj *unstructured.Unstructured) (go_h
 
 	var status struct {
 		CurrentVersion string `json:"currentVersion"`
+		MaxUsedVersion string `json:"maxUsedKubernetesVersion"`
 	}
 	if err := yaml.Unmarshal([]byte(cm.Data["status"]), &status); err == nil {
 		snap.CurrentVersion = status.CurrentVersion
+		snap.MaxUsed = strings.TrimSpace(status.MaxUsedVersion)
 	}
 
 	var spec configMapSpec
 	if err := yaml.Unmarshal([]byte(cm.Data["spec"]), &spec); err == nil {
 		snap.DesiredVersion = spec.DesiredVersion
-		snap.MaxUsed = strings.TrimSpace(spec.MaxUsedVersion)
 	}
 
 	return snap, nil
@@ -181,7 +181,7 @@ func targetKubernetesVersion(_ context.Context, input *go_hook.HookInput) error 
 	if isDefault {
 		// The ConfigMap key is the same baseline admission uses, so the two cannot disagree.
 		maxUsed := cmp.Or(
-			usableMaxUsedVersion(input, "cluster ConfigMap spec.maxUsedKubernetesVersion", cmSnap.MaxUsed),
+			usableMaxUsedVersion(input, "cluster ConfigMap status.maxUsedKubernetesVersion", cmSnap.MaxUsed),
 			usableMaxUsedVersion(input, "ClusterConfiguration Secret maxUsedControlPlaneKubernetesVersion", secretMaxUsed),
 		)
 		froze := false

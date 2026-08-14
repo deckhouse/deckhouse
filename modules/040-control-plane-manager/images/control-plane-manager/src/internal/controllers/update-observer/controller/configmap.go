@@ -40,22 +40,23 @@ type ConfigMapData struct {
 type Spec struct {
 	DesiredVersion string `yaml:"desiredVersion"`
 	UpdateMode     string `yaml:"updateMode"`
+	// What "Default" resolves to for the running build.
+	AutomaticVersion string `yaml:"automaticVersion,omitempty"`
+}
+
+type Status struct {
+	CurrentVersion    string   `yaml:"currentVersion"`
+	SupportedVersions []string `yaml:"supportedVersions"`
+	AvailableVersions []string `yaml:"availableVersions"`
 	// The highest minor this cluster has ever converged onto: monotonic, and derived from the
 	// throttled effective version, never from DesiredVersion — an operator may declare a version
 	// several minors ahead and the floor must not follow. "Converged onto", not "ran": effective
 	// leads the apiservers by one minor during a rollout.
-	MaxUsedVersion string `yaml:"maxUsedKubernetesVersion,omitempty"`
-}
-
-type Status struct {
-	CurrentVersion    string             `yaml:"currentVersion"`
-	SupportedVersions []string           `yaml:"supportedVersions"`
-	AvailableVersions []string           `yaml:"availableVersions"`
-	AutomaticVersion  string             `yaml:"automaticVersion"`
-	Phase             string             `yaml:"phase"`
-	Progress          string             `yaml:"progress,omitempty"`
-	ControlPlane      []ControlPlaneNode `yaml:"controlPlane"`
-	Nodes             Nodes              `yaml:"nodes"`
+	MaxUsedVersion string             `yaml:"maxUsedKubernetesVersion,omitempty"`
+	Phase          string             `yaml:"phase"`
+	Progress       string             `yaml:"progress,omitempty"`
+	ControlPlane   []ControlPlaneNode `yaml:"controlPlane"`
+	Nodes          Nodes              `yaml:"nodes"`
 }
 
 type ControlPlaneNode struct {
@@ -188,15 +189,15 @@ func renderConfigMapData(clusterState *cluster.State) ConfigMapData {
 
 	return ConfigMapData{
 		Spec: &Spec{
-			DesiredVersion: clusterState.Spec.DesiredVersion,
-			UpdateMode:     string(clusterState.Spec.UpdateMode),
-			MaxUsedVersion: clusterState.Spec.MaxUsedVersion,
+			DesiredVersion:   clusterState.Spec.DesiredVersion,
+			UpdateMode:       string(clusterState.Spec.UpdateMode),
+			AutomaticVersion: clusterState.AutomaticVersion,
 		},
 		Status: &Status{
 			CurrentVersion:    clusterState.CurrentVersion,
 			SupportedVersions: clusterState.SupportedVersions,
 			AvailableVersions: clusterState.AvailableVersions,
-			AutomaticVersion:  clusterState.AutomaticVersion,
+			MaxUsedVersion:    clusterState.Spec.MaxUsedVersion,
 			Phase:             string(clusterState.Status.Phase),
 			Progress:          renderProgress(clusterState.Progress),
 			ControlPlane:      renderControlPlanes(clusterState.ControlPlaneState.MasterNodes),

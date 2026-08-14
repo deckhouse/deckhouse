@@ -63,7 +63,8 @@ lang: ru
 - **Списки версий**:
   - `supportedVersions` — минорные версии Kubernetes, поддерживаемые в текущем релизе DKP;
   - `availableVersions` — версии, доступные для выбора при обновлении или понижении в *данном* кластере. Набор ограничен максимальной когда-либо установленной минорной версией и правилом одного минорного шага при откате;
-  - `automaticVersion` — минорная версия, которая будет использована при режиме обновления `Automatic`.
+- **`maxUsedKubernetesVersion`** — максимальная минорная версия, на которую кластер когда-либо сходился. Значение только растёт и ограничивает глубину отката;
+- **`automaticVersion`** — минорная версия, которая будет использована при режиме обновления `Automatic`. Описывает установленную сборку DKP, а не состояние кластера.
 
 В фазе `ControlPlaneUpdating` поле `status.progress` отражает общий прогресс обновления с учётом промежуточных минорных версий. При многошаговом обновлении (например, 1.33 → 1.35) процент растёт по мере завершения каждого шага, а не только когда все компоненты control plane достигнут финальной целевой версии.
 
@@ -89,6 +90,7 @@ data:
   spec: |
     desiredVersion: "1.32"
     updateMode: Manual
+    automaticVersion: "1.33"
   status: |
     currentVersion: "1.32"
     supportedVersions:
@@ -102,7 +104,6 @@ data:
     - "1.32"
     - "1.33"
     - "1.34"
-    automaticVersion: "1.33"
     phase: UpToDate
     controlPlane:
     - name: master-1
@@ -153,6 +154,7 @@ data:
   spec: |
     desiredVersion: "1.32"
     updateMode: Manual
+    automaticVersion: "1.33"
   status: |
     currentVersion: "1.33"
     supportedVersions:
@@ -165,7 +167,6 @@ data:
     - "1.32"
     - "1.33"
     - "1.34"
-    automaticVersion: "1.33"
     phase: ControlPlaneUpdating
     progress: 0%
     controlPlane:
@@ -217,6 +218,7 @@ data:
   spec: |
     desiredVersion: "1.32"
     updateMode: Manual
+    automaticVersion: "1.33"
   status: |
     currentVersion: "1.33"
     supportedVersions:
@@ -229,7 +231,6 @@ data:
     - "1.32"
     - "1.33"
     - "1.34"
-    automaticVersion: "1.33"
     phase: ControlPlaneUpdating
     progress: 60%
     controlPlane:
@@ -285,6 +286,7 @@ data:
   spec: |
     desiredVersion: "1.35"
     updateMode: Manual
+    automaticVersion: "1.33"
   status: |
     currentVersion: "1.34"
     supportedVersions:
@@ -297,7 +299,6 @@ data:
     - "1.33"
     - "1.34"
     - "1.35"
-    automaticVersion: "1.33"
     phase: ControlPlaneUpdating
     progress: 60%
     controlPlane:
@@ -347,6 +348,7 @@ data:
   spec: |
     desiredVersion: "1.33"
     updateMode: Manual
+    automaticVersion: "1.33"
   status: |
     currentVersion: "1.33"
     supportedVersions:
@@ -359,7 +361,6 @@ data:
     - "1.32"
     - "1.33"
     - "1.34"
-    automaticVersion: "1.33"
     phase: UpToDate
     controlPlane:
     - name: master-0
@@ -404,6 +405,7 @@ data:
   spec: |
     desiredVersion: "1.32"
     updateMode: Manual
+    automaticVersion: "1.33"
   status: |
     currentVersion: "1.32"
     supportedVersions:
@@ -417,7 +419,6 @@ data:
     - "1.32"
     - "1.33"
     - "1.34"
-    automaticVersion: "1.33"
     phase: ControlPlaneUpdating
     progress: 73%
     controlPlane:

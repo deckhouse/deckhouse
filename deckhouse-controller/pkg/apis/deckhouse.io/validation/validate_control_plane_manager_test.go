@@ -424,10 +424,11 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 		assert.True(t, resp.Allowed)
 	})
 
-	// The floor is spec.maxUsedKubernetesVersion and nothing else.
-	t.Run("floor comes from spec.maxUsedKubernetesVersion", func(t *testing.T) {
+	// The floor is status.maxUsedKubernetesVersion and nothing else.
+	t.Run("floor comes from status.maxUsedKubernetesVersion", func(t *testing.T) {
 		cm := newClusterKubernetesConfigMap(nil)
-		cm.Data["spec"] = "desiredVersion: \"1.33\"\nupdateMode: Manual\nmaxUsedKubernetesVersion: \"1.36\"\n"
+		cm.Data["spec"] = "desiredVersion: \"1.33\"\nupdateMode: Manual\n"
+		cm.Data["status"] += "maxUsedKubernetesVersion: \"1.36\"\n"
 		handler := withObjs(t, cm)
 
 		newCfg := newControlPlaneManagerConfig("1.32")
@@ -442,7 +443,7 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 
 	t.Run("the floor still allows exactly one minor down", func(t *testing.T) {
 		cm := newClusterKubernetesConfigMap(nil)
-		cm.Data["spec"] = "maxUsedKubernetesVersion: \"1.36\"\n"
+		cm.Data["status"] += "maxUsedKubernetesVersion: \"1.36\"\n"
 		handler := withObjs(t, cm)
 
 		newCfg := newControlPlaneManagerConfig("1.35")
@@ -457,8 +458,8 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 	// through; maxUsed stays at 1.36.
 	t.Run("a second downgrade is rejected after the first one landed", func(t *testing.T) {
 		cm := newClusterKubernetesConfigMap(nil)
-		cm.Data["spec"] = "desiredVersion: \"1.35\"\nupdateMode: Manual\nmaxUsedKubernetesVersion: \"1.36\"\n"
-		cm.Data["status"] = "currentVersion: \"1.35\"\n"
+		cm.Data["spec"] = "desiredVersion: \"1.35\"\nupdateMode: Manual\n"
+		cm.Data["status"] += "currentVersion: \"1.35\"\nmaxUsedKubernetesVersion: \"1.36\"\n"
 		handler := withObjs(t, cm)
 
 		newCfg := newControlPlaneManagerConfig("1.34")
@@ -489,7 +490,7 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 	// The Secret key is no longer written, so it can only be the staler of the two.
 	t.Run("ConfigMap maxUsed wins over the Secret", func(t *testing.T) {
 		cm := newClusterKubernetesConfigMap(nil)
-		cm.Data["spec"] = "maxUsedKubernetesVersion: \"1.33\"\n"
+		cm.Data["status"] += "maxUsedKubernetesVersion: \"1.33\"\n"
 		handler := withObjs(t, cm, newClusterConfigurationSecretWithMaxUsed("1.36", "1.36"))
 
 		newCfg := newControlPlaneManagerConfig("1.32")

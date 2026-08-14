@@ -46,7 +46,7 @@ Description:
 		- all Nodes (filtering .status.nodeInfo.kubeletVersion)
 		- Secret: d8-cluster-configuration from NS: kube-system - deckhouseDefaultKubernetesVersion,
 		  plus maxUsedControlPlaneKubernetesVersion as a migration seed
-		- ConfigMap: d8-cluster-kubernetes from NS: kube-system - only spec.maxUsedKubernetesVersion
+		- ConfigMap: d8-cluster-kubernetes from NS: kube-system - only status.maxUsedKubernetesVersion
 	and get desired k8s version from `global.discovery.targetKubernetesVersion`
 
 	Then process following logic:
@@ -236,7 +236,7 @@ func ekvFilterSecret(unstructured *unstructured.Unstructured) (go_hook.FilterRes
 	return versions, nil
 }
 
-// Returns spec.maxUsedKubernetesVersion and nothing else. The narrowness is load-bearing:
+// Returns status.maxUsedKubernetesVersion and nothing else. The narrowness is load-bearing:
 // update-observer stamps lastReconciliationTime on every reconcile, so a wider filter would re-run
 // this hook every minute for the whole duration of an upgrade.
 func ekvFilterClusterKubernetesConfigMap(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -245,14 +245,14 @@ func ekvFilterClusterKubernetesConfigMap(unstructured *unstructured.Unstructured
 		return nil, err
 	}
 
-	var spec struct {
+	var status struct {
 		MaxUsedVersion string `json:"maxUsedKubernetesVersion"`
 	}
-	if err := yaml.Unmarshal([]byte(configMap.Data["spec"]), &spec); err != nil {
+	if err := yaml.Unmarshal([]byte(configMap.Data["status"]), &status); err != nil {
 		return "", nil
 	}
 
-	return strings.TrimSpace(spec.MaxUsedVersion), nil
+	return strings.TrimSpace(status.MaxUsedVersion), nil
 }
 
 // Highest non-nil version, or nil when every argument is nil.

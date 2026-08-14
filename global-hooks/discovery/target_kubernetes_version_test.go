@@ -167,8 +167,8 @@ data:
   spec: |
     desiredVersion: "1.34"
     updateMode: Manual
-    maxUsedKubernetesVersion: "1.34"
   status: |
+    maxUsedKubernetesVersion: "1.34"
     currentVersion: "1.34"
     phase: UpToDate
 `
@@ -222,8 +222,8 @@ data:
   spec: |
     desiredVersion: "1.38"
     updateMode: Automatic
-    maxUsedKubernetesVersion: "1.38"
   status: |
+    maxUsedKubernetesVersion: "1.38"
     currentVersion: "1.38"
     phase: UpToDate
 `
@@ -267,6 +267,7 @@ data:
   spec: |
     desiredVersion: "1.36"
     updateMode: Automatic
+  status: |
     maxUsedKubernetesVersion: "1.36"
 `
 			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(secretWithStaleMaxUsed+moduleConfigYAML("Default")+existing, 1))
@@ -295,8 +296,8 @@ data:
   spec: |
     desiredVersion: "` + hooks.DefaultKubernetesVersion + `"
     updateMode: Automatic
-    maxUsedKubernetesVersion: "1.38"
   status: |
+    maxUsedKubernetesVersion: "1.38"
     currentVersion: "1.38"
     phase: ControlPlaneUpdating
 `
@@ -309,9 +310,9 @@ data:
 			Expect(driftMetricFrozenLabel()).To(Equal("true"))
 		})
 
-		// desiredVersion still serves as the second source: a ConfigMap seeded by dhctl at bootstrap
-		// carries spec only, so status.currentVersion is not there yet.
-		It("falls back to desiredVersion when the ConfigMap has no status yet", func() {
+		// desiredVersion still serves as the second source: the ConfigMap dhctl seeds at bootstrap
+		// carries the floor but no observed currentVersion yet.
+		It("falls back to desiredVersion when the ConfigMap has no currentVersion yet", func() {
 			specOnly := `
 ---
 apiVersion: v1
@@ -326,6 +327,7 @@ data:
   spec: |
     desiredVersion: "1.38"
     updateMode: Automatic
+  status: |
     maxUsedKubernetesVersion: "1.38"
 `
 			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateC+moduleConfigYAML("Default")+specOnly, 1))
@@ -439,8 +441,8 @@ data:
 			Expect(value).To(Equal(1.0))
 		})
 
-		It("falls back to the Secret when the ConfigMap spec carries no maxUsed", func() {
-			// The ConfigMap exists and its spec is readable, but predates the
+		It("falls back to the Secret when the ConfigMap status carries no maxUsed", func() {
+			// The ConfigMap exists and its status is readable, but predates the
 			// maxUsedKubernetesVersion key — the state of every cluster between a Deckhouse
 			// upgrade and the DaemonSet rollout that first writes it. The Secret (1.38) has to
 			// carry the floor through that window, or the freeze would not happen at all.
@@ -515,8 +517,8 @@ data:
   spec: |
     desiredVersion: "1.38"
     updateMode: Automatic
-    maxUsedKubernetesVersion: "latest"
   status: |
+    maxUsedKubernetesVersion: "latest"
     currentVersion: "1.38"
     phase: UpToDate
 `

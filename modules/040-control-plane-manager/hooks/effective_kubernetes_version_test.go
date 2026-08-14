@@ -133,6 +133,7 @@ data:
   spec: |
     desiredVersion: "<<PLACEHOLDER_DESIRED>>"
     updateMode: Manual
+  status: |
     maxUsedKubernetesVersion: "<<PLACEHOLDER_MAX_USED>>"
 `
 

@@ -78,7 +78,7 @@ func TestDesiredConfiguration(t *testing.T) {
 		setVersionEnv(t, "1.33", "Manual", "1.34")
 
 		cfg, err := desiredConfiguration(makeCM(map[string]string{
-			"spec": "desiredVersion: \"1.33\"\nupdateMode: Manual\nmaxUsedKubernetesVersion: \"1.36\"\n",
+			"status": "maxUsedKubernetesVersion: \"1.36\"\n",
 		}))
 		require.NoError(t, err)
 		assert.Equal(t, "1.36", cfg.MaxUsedVersion)
@@ -88,7 +88,7 @@ func TestDesiredConfiguration(t *testing.T) {
 		setVersionEnv(t, "1.36", "Manual", "1.36")
 
 		cfg, err := desiredConfiguration(makeCM(map[string]string{
-			"spec": "desiredVersion: \"1.35\"\nupdateMode: Manual\nmaxUsedKubernetesVersion: \"1.35\"\n",
+			"status": "maxUsedKubernetesVersion: \"1.35\"\n",
 		}))
 		require.NoError(t, err)
 		assert.Equal(t, "1.36", cfg.MaxUsedVersion)
@@ -97,7 +97,7 @@ func TestDesiredConfiguration(t *testing.T) {
 	t.Run("an unreadable stored spec does not block the reconcile that repairs it", func(t *testing.T) {
 		setVersionEnv(t, "1.35", "Manual", "1.35")
 
-		cfg, err := desiredConfiguration(makeCM(map[string]string{"spec": "desiredVersion: [broken\n"}))
+		cfg, err := desiredConfiguration(makeCM(map[string]string{"status": "maxUsedKubernetesVersion: [broken\n"}))
 		require.NoError(t, err)
 		assert.Equal(t, "1.35", cfg.MaxUsedVersion)
 	})
@@ -139,7 +139,7 @@ func TestFillConfigMapRewritesSpec(t *testing.T) {
 
 	assert.Contains(t, got.Data["spec"], "desiredVersion: \"1.35\"")
 	assert.Contains(t, got.Data["spec"], "updateMode: Manual")
-	assert.Contains(t, got.Data["spec"], "maxUsedKubernetesVersion: \"1.36\"")
+	assert.Contains(t, got.Data["status"], "maxUsedKubernetesVersion: \"1.36\"")
 	assert.Equal(t, "d8-cluster-kubernetes", got.Labels["name"])
 	assert.Equal(t, "deckhouse", got.Labels["heritage"])
 }

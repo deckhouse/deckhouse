@@ -73,12 +73,12 @@ func desiredConfiguration(configMap *corev1.ConfigMap) (*cluster.Configuration, 
 // Unreadable is not an error: refusing to reconcile over a hand-mangled block would block the write
 // that repairs it.
 func storedMaxUsedVersion(configMap *corev1.ConfigMap) string {
-	var spec Spec
-	if err := yaml.Unmarshal([]byte(configMap.Data["spec"]), &spec); err != nil {
+	var status Status
+	if err := yaml.Unmarshal([]byte(configMap.Data["status"]), &status); err != nil {
 		return ""
 	}
 
-	return strings.TrimSpace(spec.MaxUsedVersion)
+	return strings.TrimSpace(status.MaxUsedVersion)
 }
 
 func (r *reconciler) getNodesState(ctx context.Context, desiredVersion, sourceVersion string) (*cluster.NodesState, error) {

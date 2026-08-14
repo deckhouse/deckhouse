@@ -3,7 +3,7 @@ data:
   spec: |
     desiredVersion: "1.33"
     updateMode: Automatic
-    maxUsedKubernetesVersion: "1.34"
+    automaticVersion: "1.34"
   status: |
     currentVersion: "1.34"
     supportedVersions:
@@ -17,7 +17,7 @@ data:
     - "1.34"
     - "1.35"
     - "1.36"
-    automaticVersion: "1.34"
+    maxUsedKubernetesVersion: "1.34"
     phase: ControlPlaneUpdating
     progress: 0%
     controlPlane:

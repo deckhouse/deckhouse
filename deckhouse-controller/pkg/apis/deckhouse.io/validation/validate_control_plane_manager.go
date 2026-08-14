@@ -46,13 +46,13 @@ const (
 // The tags are `json` because sigs.k8s.io/yaml goes through encoding/json.
 type clusterKubernetesStatus struct {
 	AvailableVersions []string `json:"availableVersions"`
-	// What "Default" resolves to for the running build.
-	AutomaticVersion string `json:"automaticVersion"`
+	// The highest minor the cluster has ever converged onto; see update-observer's controller.Status.
+	MaxUsedVersion string `json:"maxUsedKubernetesVersion"`
 }
 
 type clusterKubernetesSpec struct {
-	// The highest minor the cluster has ever converged onto; see update-observer's controller.Spec.
-	MaxUsedVersion string `json:"maxUsedKubernetesVersion"`
+	// What "Default" resolves to for the running build.
+	AutomaticVersion string `json:"automaticVersion"`
 }
 
 // Guards kubernetesVersion against status.availableVersions of d8-cluster-kubernetes, plus module
@@ -217,7 +217,7 @@ func rawModuleConfigSettings(cfg *v1alpha1.ModuleConfig) map[string]interface{} 
 	return m
 }
 
-// The floor is spec.maxUsedKubernetesVersion and nothing else: the chain this replaced also tried
+// The floor is status.maxUsedKubernetesVersion and nothing else: the chain this replaced also tried
 // status.currentVersion, which drops the moment a legitimate downgrade lands and let a second one
 // through. Shared with the ClusterConfiguration webhook so the two cannot disagree.
 func (v *moduleConfigValidator) readKubernetesVersionFacts(ctx context.Context) kubernetesVersionBaseline {

@@ -116,7 +116,7 @@ def get_deckhouse_default_version_from_secret(secret_data) -> Optional[str]:
 
 
 def get_deckhouse_default_version_from_configmap(ctx: DotMap) -> Optional[str]:
-    """Read status.automaticVersion from kube-system/d8-cluster-kubernetes.
+    """Read spec.automaticVersion from kube-system/d8-cluster-kubernetes.
 
     Always describes the installed build. Missing means "not published yet".
     """
@@ -128,20 +128,20 @@ def get_deckhouse_default_version_from_configmap(ctx: DotMap) -> Optional[str]:
     if not config_map or not hasattr(config_map, 'object'):
         return None
 
-    raw_status = config_map.object.get('data', {}).get('status')
-    if not raw_status:
+    raw_spec = config_map.object.get('data', {}).get('spec')
+    if not raw_spec:
         return None
 
     try:
-        status = yaml.safe_load(raw_status)
+        spec = yaml.safe_load(raw_spec)
     except Exception as e:
-        logging.error(f"Failed to parse d8-cluster-kubernetes data.status: {e}")
+        logging.error(f"Failed to parse d8-cluster-kubernetes data.spec: {e}")
         return None
 
-    if not isinstance(status, dict):
+    if not isinstance(spec, dict):
         return None
 
-    automatic_version = status.get('automaticVersion')
+    automatic_version = spec.get('automaticVersion')
     if isinstance(automatic_version, str) and automatic_version.strip():
         return automatic_version.strip()
 

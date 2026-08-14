@@ -675,10 +675,10 @@ func ClusterKubernetesConfigMap(kubernetesVersion string, trackDefault bool) *ap
 		updateMode = "Automatic"
 	}
 
-	spec := fmt.Sprintf(
-		"desiredVersion: %q\nupdateMode: %s\nmaxUsedKubernetesVersion: %q\n",
-		kubernetesVersion, updateMode, kubernetesVersion,
-	)
+	spec := fmt.Sprintf("desiredVersion: %q\nupdateMode: %s\n", kubernetesVersion, updateMode)
+	// Only the floor: the rest of the status is observed, and its absence is what tells the hooks and
+	// the observer that nothing has reconciled yet.
+	status := fmt.Sprintf("maxUsedKubernetesVersion: %q\n", kubernetesVersion)
 
 	return &apiv1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -689,7 +689,7 @@ func ClusterKubernetesConfigMap(kubernetesVersion string, trackDefault bool) *ap
 				"name":     ClusterKubernetesCm,
 			},
 		},
-		Data: map[string]string{"spec": spec},
+		Data: map[string]string{"spec": spec, "status": status},
 	}
 }
 

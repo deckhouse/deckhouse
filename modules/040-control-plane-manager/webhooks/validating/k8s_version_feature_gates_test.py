@@ -400,7 +400,7 @@ def _prepare_mc_validation_binding_context(
         ctx.snapshots[CLUSTER_KUBERNETES_SNAPSHOT_NAME] = [DotMap({
             "object": {
                 "data": {
-                    "status": yaml.dump({"automaticVersion": cm_automatic_version}),
+                    "spec": yaml.dump({"automaticVersion": cm_automatic_version}),
                 }
             }
         })]
@@ -503,7 +503,7 @@ class TestK8sVersionFeatureGatesModuleConfigTrigger(unittest.TestCase):
         )
         tests.assert_validation_deny(self, out, error_msg)
 
-    # status.automaticVersion of the cluster ConfigMap is the source now; the Secret key it
+    # spec.automaticVersion of the cluster ConfigMap is the source now; the Secret key it
     # replaces was only ever raised and so kept answering with a default the running build no
     # longer has. 'New123' is deprecated in 1.32 but not in 1.31, so this denies only if the
     # ConfigMap value won over the Secret one.

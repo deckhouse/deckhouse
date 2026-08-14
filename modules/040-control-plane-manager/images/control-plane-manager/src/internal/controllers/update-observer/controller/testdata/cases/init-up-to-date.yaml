@@ -156,4 +156,5 @@ data:
   spec: |
     desiredVersion: "1.35"
     updateMode: Automatic
+  status: |
     maxUsedKubernetesVersion: "1.35"

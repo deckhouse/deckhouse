@@ -169,13 +169,13 @@ def _prepare_validation_binding_context(
     else:
         ctx.snapshots[CLUSTER_CONFIG_SNAPSHOT_NAME] = []
 
-    # status.automaticVersion of the cluster ConfigMap: what "Default" resolves to for the running
+    # spec.automaticVersion of the cluster ConfigMap: what "Default" resolves to for the running
     # build. Absent snapshot means update-observer has not written the object yet.
     if cm_automatic_version is not None:
         ctx.snapshots[CLUSTER_KUBERNETES_SNAPSHOT_NAME] = [DotMap({
             "object": {
                 "data": {
-                    "status": yaml.dump({"automaticVersion": cm_automatic_version}),
+                    "spec": yaml.dump({"automaticVersion": cm_automatic_version}),
                 }
             }
         })]
@@ -296,7 +296,7 @@ class TestFeatureGatesValidationWebhook(unittest.TestCase):
 
     def test_mc_default_prefers_the_configmap_default_over_the_secret(self):
         # The Secret key is written monotonically, so after a Deckhouse downgrade it keeps naming a
-        # default this build no longer has. status.automaticVersion always describes the running
+        # default this build no longer has. spec.automaticVersion always describes the running
         # build, so it has to win. 'SomeProblematicFeature' is forbidden in 1.33 but merely unknown
         # in 1.32, which makes the two sources tell apart.
         ctx = _prepare_validation_binding_context(

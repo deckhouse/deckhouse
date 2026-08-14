@@ -586,7 +586,7 @@ func TestDeckhouseInstallCreatesClusterKubernetesConfigMap(t *testing.T) {
 		require.NoError(t, err, "d8-cluster-kubernetes ConfigMap must be created during bootstrap")
 		require.Contains(t, cm.Data["spec"], `desiredVersion: "1.35"`)
 		require.Contains(t, cm.Data["spec"], "updateMode: Automatic")
-		require.Contains(t, cm.Data["spec"], `maxUsedKubernetesVersion: "1.35"`)
+		require.Contains(t, cm.Data["status"], `maxUsedKubernetesVersion: "1.35"`)
 		// What the label-objects ValidatingAdmissionPolicy keys off to forbid deletion.
 		require.Equal(t, "deckhouse", cm.Labels["heritage"])
 	})
@@ -611,8 +611,8 @@ func TestDeckhouseInstallCreatesClusterKubernetesConfigMap(t *testing.T) {
 		observed := &apiv1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{Name: "d8-cluster-kubernetes", Namespace: "kube-system"},
 			Data: map[string]string{
-				"spec":   "desiredVersion: \"1.36\"\nupdateMode: Manual\nmaxUsedKubernetesVersion: \"1.36\"\n",
-				"status": "currentVersion: \"1.36\"\n",
+				"spec":   "desiredVersion: \"1.36\"\nupdateMode: Manual\n",
+				"status": "currentVersion: \"1.36\"\nmaxUsedKubernetesVersion: \"1.36\"\n",
 			},
 		}
 		_, err := fakeClient.CoreV1().ConfigMaps("kube-system").Create(ctx, observed, metav1.CreateOptions{})

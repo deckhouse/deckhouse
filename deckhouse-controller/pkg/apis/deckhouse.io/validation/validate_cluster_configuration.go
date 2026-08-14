@@ -275,16 +275,16 @@ func kubernetesVersionBaselineFor(ctx context.Context, cli client.Client, secret
 	spec := new(clusterKubernetesSpec)
 	if err := yaml.Unmarshal([]byte(cm.Data["spec"]), spec); err != nil {
 		log.Warn("cannot parse d8-cluster-kubernetes data.spec, keeping the Secret baseline", log.Err(err))
-	} else if maxUsed := strings.TrimSpace(spec.MaxUsedVersion); maxUsed != "" {
-		baseline.MaxUsed = maxUsed
+	} else if automaticVersion := strings.TrimSpace(spec.AutomaticVersion); automaticVersion != "" {
+		baseline.DeckhouseDefault = automaticVersion
 	}
 
 	status := new(clusterKubernetesStatus)
 	if err := yaml.Unmarshal([]byte(cm.Data["status"]), status); err != nil {
 		log.Warn("cannot parse d8-cluster-kubernetes data.status, keeping the Secret baseline", log.Err(err))
 	} else {
-		if automaticVersion := strings.TrimSpace(status.AutomaticVersion); automaticVersion != "" {
-			baseline.DeckhouseDefault = automaticVersion
+		if maxUsed := strings.TrimSpace(status.MaxUsedVersion); maxUsed != "" {
+			baseline.MaxUsed = maxUsed
 		}
 		baseline.AvailableVersions = status.AvailableVersions
 	}
