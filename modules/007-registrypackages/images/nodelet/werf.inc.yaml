@@ -17,7 +17,7 @@
          rootfs A/B controller — an older agent restarts its own unit mid-pass,
          and one without os-image cannot update the root at all.
          Repin to a main commit once container-base/nodelet!10 lands. */ -}}
-  {{- $nodeletCommit := "20642623cec83f71dac035b5c76b6647bc1008f5" }}
+  {{- $nodeletCommit := "700985a268122cd4d9d1175d9dcf32dcf267ad62" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
