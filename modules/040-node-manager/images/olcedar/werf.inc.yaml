@@ -1,4 +1,6 @@
-{{- $version := "v0.1.3"  }}
+{{- /* Trial build from the protected agent-restart-limit branch: initramfs that
+       identifies the system disk, plus the agent restart limit. Not for merge. */ -}}
+{{- $version := "e18e8becdc4c9a85e4badc34f635092555995f4796d328aa99e1c077-1786707571684"  }}
 {{- if ne $.Env "CSE" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
