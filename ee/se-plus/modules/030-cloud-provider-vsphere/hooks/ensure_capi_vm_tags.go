@@ -49,7 +49,8 @@ func ensureCAPIVMTags(ctx context.Context, input *go_hook.HookInput, dc dependen
 	}
 	var pcc v1.VsphereProviderClusterConfiguration
 	if err := json.Unmarshal([]byte(pccJSON), &pcc); err != nil {
-		return fmt.Errorf("unmarshal providerClusterConfiguration: %w", err)
+		input.Logger.Warn("skip CAPI VM tag ensure: bad providerClusterConfiguration", "error", err)
+		return nil
 	}
 	if pcc.Provider == nil || pcc.Provider.Server == nil || pcc.Provider.Username == nil || pcc.Provider.Password == nil {
 		return nil
@@ -63,29 +64,35 @@ func ensureCAPIVMTags(ctx context.Context, input *go_hook.HookInput, dc dependen
 
 	k8sClient, err := dc.GetK8sClient()
 	if err != nil {
-		return fmt.Errorf("get k8s client: %w", err)
+		input.Logger.Warn("skip CAPI VM tag ensure: cannot get k8s client", "error", err)
+		return nil
 	}
 	roleKeys, err := listCloudEphemeralNodeRoleKeys(ctx, k8sClient.Dynamic())
 	if err != nil {
-		return fmt.Errorf("list NodeGroups for node-role tags: %w", err)
+		// Bootstrap often runs before NodeGroup CRD / node-manager is ready.
+		input.Logger.Warn("CAPI VM tag ensure: list NodeGroups failed, continuing with cluster tag only", "error", err)
+		roleKeys = nil
 	}
 
 	tagger, err := newVsphereTagger(ctx, &pcc)
 	if err != nil {
-		return fmt.Errorf("open vsphere tag session: %w", err)
+		input.Logger.Warn("skip CAPI VM tag ensure: vsphere session failed", "error", err)
+		return nil
 	}
 	defer tagger.Close(ctx)
 
 	clusterTagID, err := tagger.EnsureTag(ctx, clusterNameTagCategory, clusterUUID)
 	if err != nil {
-		return fmt.Errorf("ensure cluster-name tag %q: %w", clusterUUID, err)
+		input.Logger.Warn("skip CAPI VM tag ensure: cluster-name tag failed", "tag", clusterUUID, "error", err)
+		return nil
 	}
 
 	nodeRoleTagIDs := make(map[string]string, len(roleKeys))
 	for _, key := range roleKeys {
 		id, err := tagger.EnsureTag(ctx, nodeRoleTagCategory, key)
 		if err != nil {
-			return fmt.Errorf("ensure node-role tag %q: %w", key, err)
+			input.Logger.Warn("CAPI VM tag ensure: node-role tag failed, skipping this key", "tag", key, "error", err)
+			continue
 		}
 		nodeRoleTagIDs[key] = id
 	}
