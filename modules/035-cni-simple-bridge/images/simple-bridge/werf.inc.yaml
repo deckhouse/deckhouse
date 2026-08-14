@@ -13,14 +13,7 @@ import:
   - lib/ld-musl-x86_64*
   - usr/bin/python3*
   - usr/lib/python3*
-  - usr/lib/libc.so
-  - usr/lib/libz.so*
-  - usr/lib/libbz2.so*
-  - usr/lib/libffi.so*
-  - usr/lib/libgdbm*.so*
-  - usr/lib/liblzma.so*
-  - usr/lib/libreadline.so*
-  - usr/lib/libncursesw.so*
+  - usr/lib/lib*.s*
   excludePaths:
   - usr/lib/python3*/site-packages/pip-25.3*
   before: install
