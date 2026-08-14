@@ -117,6 +117,18 @@ func TestRolloutBudget(t *testing.T) {
 	})
 }
 
+// The held node's log line names who it is waiting for, so the order has to be
+// the group's and not the map's — an operator comparing two lines must not see
+// the same group reshuffled.
+func TestBudgetHoldersAreSorted(t *testing.T) {
+	budget := &rolloutBudget{concurrency: 1, updating: map[string]struct{}{
+		"node-c": {}, "node-a": {}, "node-b": {},
+	}}
+
+	require.Equal(t, []string{"node-a", "node-b", "node-c"}, budget.holders())
+	require.Empty(t, (&rolloutBudget{updating: map[string]struct{}{}}).holders())
+}
+
 // testOldOSImageDigest is a spec nobody publishes any more: what a node left
 // behind by a bad release is still carrying.
 const testOldOSImageDigest = "sha256:1111111111111111111111111111111111111111111111111111111111111111"

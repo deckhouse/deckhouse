@@ -292,7 +292,9 @@ func (r *Reconciler) apply(ctx context.Context, ng *v1.NodeGroup, node *corev1.N
 		return nil, err
 	}
 	if !budget.hasSlot(desired.Name) {
-		logger.Info("holding the NodeConfig back until the group has a free rollout slot", "node", desired.Name, "nodeGroup", ng.Name)
+		logger.Info("holding the NodeConfig back until the group has a free rollout slot",
+			"node", desired.Name, "nodeGroup", ng.Name,
+			"waitingFor", budget.holders(), "concurrency", budget.concurrency)
 		return existing, nil
 	}
 
