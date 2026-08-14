@@ -33,7 +33,7 @@ import (
 // registered as a Node yet; the caller passes the future node name and adds the
 // bootstrap token itself. Otherwise identical to the day-2 render.
 func RenderBootstrapSpec(ctx context.Context, cl client.Client, reader client.Reader, ng *v1.NodeGroup, machineName string) (internalv1alpha1.NodeSpec, error) {
-	derived := &derived_status.Service{Client: cl, Reader: reader}
+	derived := &derived_status.Service{Client: cl}
 	version, err := resolveKubernetesVersion(ctx, derived, ng)
 	if err != nil {
 		return internalv1alpha1.NodeSpec{}, err
