@@ -92,32 +92,6 @@ pem: |
 		})
 	})
 
-	Context("legacy settings.crl string is set", func() {
-		BeforeEach(func() {
-			f.ValuesSet("istio.crl", "legacy-string-crl")
-			f.RunHook()
-		})
-
-		It("Should still publish the string PEM", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(strings.TrimSpace(f.ValuesGet("istio.internal.crl").String())).To(Equal("legacy-string-crl"))
-		})
-	})
-
-	Context("settings.crl.data alias is set", func() {
-		BeforeEach(func() {
-			f.ValuesSetFromYaml("istio.crl", []byte(`
-data: alias-data-crl
-`))
-			f.RunHook()
-		})
-
-		It("Should accept data as pem alias", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(strings.TrimSpace(f.ValuesGet("istio.internal.crl").String())).To(Equal("alias-data-crl"))
-		})
-	})
-
 	Context("internal CA present; no settings.crl", func() {
 		BeforeEach(func() {
 			ca := mustTestCA()

@@ -154,8 +154,8 @@ spec:
         - name: PILOT_ENABLE_AMBIENT
           value: "true"
         {{- end }}
-        {{- /* enableFullCrlChainCheck=false → leaf-only CRL verify in Envoy */ -}}
-        {{- if and (kindIs "map" $.Values.istio.crl) (eq ($.Values.istio.crl.enableFullCrlChainCheck | default true) false) }}
+        {{- /* enableFullCrlChainCheck=false → leaf-only CRL verify (pilot 1.29+ patch) */ -}}
+        {{- if and (semverCompare ">=1.29.0" $fullVersion) (kindIs "map" $.Values.istio.crl) (eq ($.Values.istio.crl.enableFullCrlChainCheck | default true) false) }}
         - name: D8_CRL_ONLY_VERIFY_LEAF
           value: "true"
         {{- end }}

@@ -61,16 +61,10 @@ func resolveLocalCRL(input *go_hook.HookInput) string {
 		return ""
 	}
 	v := input.Values.Get(crlConfigPath)
-	if v.IsObject() {
-		pem := strings.TrimSpace(v.Get("pem").String())
-		if pem == "" {
-			// Alias accepted for convenience; OpenAPI documents `pem`.
-			pem = strings.TrimSpace(v.Get("data").String())
-		}
-		return pem
+	if !v.IsObject() {
+		return ""
 	}
-	// Legacy string shape (pre-object ModuleConfig).
-	return strings.TrimSpace(v.String())
+	return strings.TrimSpace(v.Get("pem").String())
 }
 
 func collectPeerCRLs(input *go_hook.HookInput) string {
