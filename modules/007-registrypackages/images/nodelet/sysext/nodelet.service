@@ -1,6 +1,7 @@
-# Mirrors olcedar images/nodelet-sysext/sysext/nodelet.service on branch
-# nodelet-sysext-wip. Both copies must stay identical: whichever one the sysext
-# overlay puts on top of /usr is the one that runs.
+# Copy of the real original: olcedar's
+# images/rootfs/config/etc/systemd/system/nodelet.service, baked into /etc by
+# the image build. /etc always wins over this extension's copy in /usr/lib,
+# so a unit change here cannot reach a running node via the extension alone.
 [Unit]
 Description=Deckhouse nodelet
 After=network.target
