@@ -17,7 +17,7 @@ description: Архитектура модуля secrets-store-integration в De
 - подмена команды запуска (entrypoint) для приложений, которые нельзя модифицировать для прямого чтения секретов из хранилища;
 - доставка бинарных секретов в формате Base64 (например, JKS-хранилища, keytab-файлы для Kerberos) с автоматическим раскодированием.
 
-Режим работы (`Manual` или `DiscoverLocalStronghold`) задаётся параметррм модуля [`settings.connectionConfiguration`](/modules/secrets-store-integration/configuration.html#parameters-connectionconfiguration) кастомного ресурса [ModuleConfig](../../reference/api/cr.html#moduleconfig).
+Режим работы (`Manual` или `DiscoverLocalStronghold`) задаётся параметром модуля [`settings.connectionConfiguration`](/modules/secrets-store-integration/configuration.html#parameters-connectionconfiguration) кастомного ресурса [ModuleConfig](../../reference/api/cr.html#moduleconfig).
 
 Модуль работает со следующими кастомными ресурсами:
 
