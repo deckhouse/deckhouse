@@ -87,7 +87,10 @@ func (r *Status) SetupWatches(w register.Watcher) {
 	w.Watches(&capiv1beta2.Machine{}, handler.EnqueueRequestsFromMapFunc(ngcommon.MachineToNodeGroup))
 	w.Watches(ngcommon.NewUnstructured(ngcommon.CAPIMachineDeploymentGVK), handler.EnqueueRequestsFromMapFunc(ngcommon.MachineDeploymentToNodeGroup))
 	w.Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(r.secretToAllNodeGroups), builder.WithPredicates(nodecommon.ChecksumSecretPredicate()))
-	w.Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(r.secretToAllNodeGroups), builder.WithPredicates(cloudprovider.RegistrationPredicate()))
+	// Not every NodeGroup on every registration event: the handler narrows a payload change down
+	// to the groups of that provider, because one pass through this Reconcile lists every Machine
+	// and MachineDeployment in the cluster.
+	w.Watches(&corev1.Secret{}, cloudprovider.NodeGroupHandler(r.Client), builder.WithPredicates(cloudprovider.RegistrationPredicate()))
 	// status.error and the capacity checks are computed from the InstanceClass, so a class
 	// that appears, changes or is deleted must refresh the status of the NodeGroups pointing
 	// at it instead of leaving a stale error until the resync. The source is deferred: the kind

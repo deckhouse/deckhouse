@@ -17,8 +17,10 @@ limitations under the License.
 package cloudprovider
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"maps"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -29,11 +31,14 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 )
 
 // IsRegistration reports whether an object is a cloud provider registration Secret: it lives in
@@ -78,6 +83,95 @@ func RegistrationRequests(ctx context.Context, r client.Reader) []reconcile.Requ
 			Name:      secrets.Items[i].Name,
 			Namespace: secrets.Items[i].Namespace,
 		}})
+	}
+	return reqs
+}
+
+// NodeGroupHandler enqueues the NodeGroups that run on the registration the event carries, for the
+// controllers keyed by NodeGroup. Pair it with RegistrationPredicate.
+//
+// The registration is decoded from the event object rather than looked up, so a delete answers the
+// same question as a create — which NodeGroups belong to this provider — at a point where the
+// Secret is already gone from the cluster. The answer comes from the resolution rules a reconcile
+// uses (Registry.ForNodeGroup): a NodeGroup naming its InstanceClass kind, or a CloudPermanent
+// group on a cluster configured with its provider.
+//
+// An update first compares the Secret data raw: an update that changed none of it changes nothing a
+// NodeGroup renders and enqueues nothing. A real edit resolves both sides, because a re-kinded or
+// re-typed registration moves NodeGroups between providers and the group that just left is in no
+// set the new object can produce.
+//
+// The narrowing is what keeps a registration event affordable: one status reconcile lists every
+// Machine and MachineDeployment in the cluster, so enqueueing NodeGroups of other providers costs
+// cluster-size work per group for nothing.
+func NodeGroupHandler(r client.Reader) handler.EventHandler {
+	enqueue := func(ctx context.Context, q workqueue.TypedRateLimitingInterface[reconcile.Request], carried ...Registration) {
+		for _, req := range nodeGroupRequests(ctx, r, carried...) {
+			q.Add(req)
+		}
+	}
+
+	return handler.Funcs{
+		CreateFunc: func(ctx context.Context, e event.CreateEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+			secret, ok := e.Object.(*corev1.Secret)
+			if !ok {
+				return
+			}
+			enqueue(ctx, q, Decode(secret.Data))
+		},
+		DeleteFunc: func(ctx context.Context, e event.DeleteEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+			secret, ok := e.Object.(*corev1.Secret)
+			if !ok {
+				return
+			}
+			enqueue(ctx, q, Decode(secret.Data))
+		},
+		GenericFunc: func(ctx context.Context, e event.GenericEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+			secret, ok := e.Object.(*corev1.Secret)
+			if !ok {
+				return
+			}
+			enqueue(ctx, q, Decode(secret.Data))
+		},
+		UpdateFunc: func(ctx context.Context, e event.UpdateEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+			before, okBefore := e.ObjectOld.(*corev1.Secret)
+			after, okAfter := e.ObjectNew.(*corev1.Secret)
+			if !okBefore || !okAfter {
+				return
+			}
+			if maps.EqualFunc(before.Data, after.Data, bytes.Equal) {
+				return
+			}
+			enqueue(ctx, q, Decode(before.Data), Decode(after.Data))
+		},
+	}
+}
+
+// nodeGroupRequests returns one request per NodeGroup the carried registrations run.
+func nodeGroupRequests(ctx context.Context, r client.Reader, carried ...Registration) []reconcile.Request {
+	logger := log.FromContext(ctx)
+
+	clusterProvider, err := readClusterProvider(ctx, r)
+	if err != nil {
+		logger.Error(err, "read the cluster provider for a cloud provider registration event")
+		return nil
+	}
+
+	ngList := &v1.NodeGroupList{}
+	if err := r.List(ctx, ngList); err != nil {
+		logger.Error(err, "list NodeGroups for a cloud provider registration event")
+		return nil
+	}
+
+	// The registrations the event carries, resolved by the rules a reconcile uses.
+	changed := NewRegistry(carried, clusterProvider)
+
+	reqs := make([]reconcile.Request, 0, len(ngList.Items))
+	for i := range ngList.Items {
+		ng := &ngList.Items[i]
+		if _, ok := changed.ForNodeGroup(ng); ok {
+			reqs = append(reqs, reconcile.Request{NamespacedName: types.NamespacedName{Name: ng.Name}})
+		}
 	}
 	return reqs
 }

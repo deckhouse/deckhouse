@@ -84,7 +84,7 @@ func loadRegistrations(ctx context.Context, r client.Reader) ([]Registration, er
 		return nil, fmt.Errorf("list cloud provider registration secrets: %w", err)
 	}
 
-	out := make([]Registration, 0, len(secrets.Items))
+	ret := make([]Registration, 0, len(secrets.Items))
 	seen := make(map[string]bool, len(secrets.Items))
 	for i := range secrets.Items {
 		decoded := Decode(secrets.Items[i].Data)
@@ -98,10 +98,10 @@ func loadRegistrations(ctx context.Context, r client.Reader) ([]Registration, er
 			}
 			seen[decoded.Type] = true
 		}
-		out = append(out, decoded)
+		ret = append(ret, decoded)
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i].Type < out[j].Type })
-	return out, nil
+	sort.Slice(ret, func(i, j int) bool { return ret[i].Type < ret[j].Type })
+	return ret, nil
 }
 
 // All returns every registration, ordered by provider type.

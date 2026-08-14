@@ -102,9 +102,11 @@ func (r *MachineDeploymentReconciler) SetupWatches(w register.Watcher) {
 		builder.WithPredicates(mdEventFilter))
 	w.Watches(&capiv1beta2.MachineDeployment{}, handler.EnqueueRequestsFromMapFunc(mdToNodeGroup),
 		builder.WithPredicates(mdEventFilter))
-	// A change to the cloud-provider secret (provider defaults, instanceClassKind, zones)
-	// can change every rendered MachineClass/MachineDeployment, so re-enqueue all NodeGroups.
-	w.Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(r.enqueueAllNodeGroups),
+	// A change to a registration Secret (provider defaults, instanceClassKind, zones) changes what
+	// the NodeGroups of that provider render, so they are re-enqueued — and only they, unless the
+	// change is one that moves NodeGroups between providers. Rendering a MachineDeployment is not
+	// cheap, and a cluster has one registration per provider plus its legacy copy.
+	w.Watches(&corev1.Secret{}, cloudprovider.NodeGroupHandler(r.Client),
 		builder.WithPredicates(cloudprovider.RegistrationPredicate()))
 	// The InstanceClass is what the MachineClass and the machine template are rendered from,
 	// and its checksum names the template — an edit here is exactly what must re-render. Without
@@ -136,18 +138,6 @@ func mdToNodeGroup(_ context.Context, obj client.Object) []reconcile.Request {
 		return nil
 	}
 	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: ng}}}
-}
-
-func (r *MachineDeploymentReconciler) enqueueAllNodeGroups(ctx context.Context, _ client.Object) []reconcile.Request {
-	ngList := &deckhousev1.NodeGroupList{}
-	if err := r.Client.List(ctx, ngList); err != nil {
-		return nil
-	}
-	reqs := make([]reconcile.Request, 0, len(ngList.Items))
-	for i := range ngList.Items {
-		reqs = append(reqs, reconcile.Request{NamespacedName: types.NamespacedName{Name: ngList.Items[i].Name}})
-	}
-	return reqs
 }
 
 func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {

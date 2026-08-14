@@ -38,6 +38,7 @@ func testScheme(t *testing.T) *runtime.Scheme {
 	t.Helper()
 	scheme := runtime.NewScheme()
 	require.NoError(t, corev1.AddToScheme(scheme))
+	require.NoError(t, v1.AddToScheme(scheme))
 	return scheme
 }
 
