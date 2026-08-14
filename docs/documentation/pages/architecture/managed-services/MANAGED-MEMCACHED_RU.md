@@ -29,7 +29,7 @@ description: Архитектура модуля managed-memcached в Deckhouse 
 
 Архитектура модуля [`managed-memcached`](/modules/managed-memcached/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DKP изображена на следующей диаграмме:
 
-![Архитектура модуля managed-memcached](../../../images/architecture/managed-services/c4-l2-managed-memcached.ru.png)
+![Архитектура модуля managed-memcached](../../images/architecture/managed-services/c4-l2-managed-memcached.ru.png)
 
 ## Компоненты модуля
 
@@ -41,7 +41,7 @@ description: Архитектура модуля managed-memcached в Deckhouse 
 
    * валидация кастомных ресурсов Memcached и MemcachedClass, мутация кастомных ресурсов Memcached с помощью механизма [Validating/Mutating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/).
 
-1. **d8ms-mc-\<instance name>** (StatefulSet) — один или несколько инстансов Memcached в зависимости от [типа развёртывания](/modules/managed-memcached/stable/user_guide.html#standalone-vs-group). Создаются компонентом managed-memcached-operator.
+1. **d8ms-mc-\<INSTANCE_NAME>** (StatefulSet) — один или несколько инстансов Memcached в зависимости от [типа развёртывания](/modules/managed-memcached/stable/user_guide.html#standalone-vs-group). Создаются компонентом managed-memcached-operator.
 
    Состоит из одного контейнера:
 

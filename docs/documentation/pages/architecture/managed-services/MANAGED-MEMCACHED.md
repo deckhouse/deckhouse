@@ -41,7 +41,7 @@ The module consists of the following components:
 
    * It performs Memcached and MemcachedClass custom resources validation, as well as Memcached custom resources mutation using the [Validating/Mutating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/) mechanism.
 
-1. **d8ms-mc-\<instance name>** (StatefulSet): One or more Memcached instances, depending on [the deployment type](/modules/managed-memcached/stable/user_guide.html#standalone-vs-group). They are created by the managed-memcached-operator component.
+1. **d8ms-mc-\<INSTANCE_NAME>** (StatefulSet): One or more Memcached instances, depending on [the deployment type](/modules/managed-memcached/stable/user_guide.html#standalone-vs-group). They are created by the managed-memcached-operator component.
 
    It consists of a single container:
 
