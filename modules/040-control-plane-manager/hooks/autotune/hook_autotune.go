@@ -64,6 +64,7 @@ func runAutotune(ctx context.Context, input *go_hook.HookInput, dc dependency.Co
 	}
 	// A managed control plane: the one legal case of the ConfigMap not existing.
 	if len(nodes) == 0 {
+		input.Logger.Info("autotune: no control-plane nodes in the snapshot, nothing to tune")
 		return nil
 	}
 
