@@ -35,6 +35,10 @@ metadata:
   name: {{ $clusterName | quote }}
 spec:
   server: {{ $vsphere.server | quote }}
+  {{- /* Match CCM/CSI: allow self-signed / lab vCenters. CAPV field is deprecated upstream but still honored in v1beta1. */ -}}
+  {{- if hasKey $vsphere "insecure" }}
+  insecure: {{ $vsphere.insecure }}
+  {{- end }}
   {{- if and (hasKey $controlPlaneEndpoint "host") (hasKey $controlPlaneEndpoint "port") }}
   controlPlaneEndpoint:
     host: {{ $controlPlaneEndpoint.host | quote }}
