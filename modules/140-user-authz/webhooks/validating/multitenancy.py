@@ -17,13 +17,24 @@
 
 # This hook checks the MultiTenancy flag for the user-authz module.
 #
-# The effective value of enableMultiTenancy is read from the Module CR
-# (deckhouse.io/v1alpha2) status.lastAppliedConfiguration, which contains
-# the user configuration merged with config-schema defaults. This is
-# necessary because in some editions (e.g. CSE) enableMultiTenancy defaults
-# to true, and when the user has not explicitly set it in the ModuleConfig,
-# the field is absent from spec.settings — but the effective value is still
-# true.
+# The effective value of enableMultiTenancy (the ModuleConfig user setting
+# merged with config-schema defaults) is not something an admission webhook
+# can see directly — webhooks only see real Kubernetes objects, not module
+# Values. This is necessary because in some editions (e.g. CSE)
+# enableMultiTenancy defaults to true, and when the user has not set it
+# explicitly, the field is simply absent from ModuleConfig.spec.settings.
+#
+# The discoverMultitenancyState hook (see hooks/discover_multitenancy_state.go)
+# bridges this gap: it runs on every module reconcile, reads the already
+# defaults-merged input.Values.Get("userAuthz.enableMultiTenancy"), and keeps
+# it mirrored into the "d8-user-authz-multitenancy-state" ConfigMap. This hook
+# reads that ConfigMap instead of ModuleConfig or the Module CR.
+#
+# (Do not go back to reading status.lastAppliedConfiguration from a Module CR
+# here — deckhouse.io/v1alpha2 Module is not a real, served API version for
+# built-in modules like this one; it belongs to the unrelated, in-progress
+# packages/Application controller. Doing so silently makes this check always
+# treat MultiTenancy as disabled.)
 #
 # - If the flag is enabled — we just exit.
 #
@@ -38,19 +49,22 @@
 # - Additionally, if the user attempts to disable the `enableMultiTenancy` flag in the user-authz ModuleConfig,
 #   the hook validates all existing ClusterAuthorizationRule resources for the presence of the same fields.
 #   If any CAR uses those fields — disabling MultiTenancy is denied.
+#   If the request doesn't touch enableMultiTenancy at all (the field is absent from the submitted
+#   spec.settings, e.g. an unrelated ModuleConfig edit), we fall back to the ConfigMap-mirrored
+#   effective value instead of treating it as "disabled".
 
 
 from deckhouse import hook
 from dotmap import DotMap
 
 SEPARATOR = "; "
-MODULE_SNAPSHOT_NAME = "d8-user-authz-module"
+MULTITENANCY_STATE_SNAPSHOT_NAME = "d8-user-authz-multitenancy-state"
 CLUSTER_AUTH_RULES_SNAPSHOT_NAME = "d8-user-authz-cars"
 CONFIG = f"""
 configVersion: v1
 kubernetesValidating:
 - name: d8-user-authz-car-multitenancy-related-options.deckhouse.io
-  includeSnapshotsFrom: ["{MODULE_SNAPSHOT_NAME}"]
+  includeSnapshotsFrom: ["{MULTITENANCY_STATE_SNAPSHOT_NAME}"]
   rules:
   - apiGroups:   ["deckhouse.io"]
     apiVersions: ["*"]
@@ -58,7 +72,7 @@ kubernetesValidating:
     resources:   ["clusterauthorizationrules"]
     scope:       "Cluster"
 - name: d8-user-authz-module-multitenancy-related-options.deckhouse.io
-  includeSnapshotsFrom: ["{CLUSTER_AUTH_RULES_SNAPSHOT_NAME}"]
+  includeSnapshotsFrom: ["{CLUSTER_AUTH_RULES_SNAPSHOT_NAME}", "{MULTITENANCY_STATE_SNAPSHOT_NAME}"]
   matchConditions:
   - name: "only-user-authz-module"
     expression: 'request.name == "user-authz"'
@@ -70,19 +84,23 @@ kubernetesValidating:
     scope:       "Cluster"
 
 kubernetes:
-- name: {MODULE_SNAPSHOT_NAME}
-  apiVersion: deckhouse.io/v1alpha2
-  kind: Module
+- name: {MULTITENANCY_STATE_SNAPSHOT_NAME}
+  apiVersion: v1
+  kind: ConfigMap
   executeHookOnEvent: []
   executeHookOnSynchronization: true
   keepFullObjectsInMemory: false
   jqFilter: |
     {{
-      "enableMultiTenancy": .status.lastAppliedConfiguration.enableMultiTenancy
+      "enableMultiTenancy": (.data.enableMultiTenancy == "true")
     }}
+  namespace:
+    nameSelector:
+      matchNames:
+      - d8-user-authz
   nameSelector:
     matchNames:
-    - user-authz
+    - d8-user-authz-multitenancy-state
 - name: {CLUSTER_AUTH_RULES_SNAPSHOT_NAME}
   apiVersion: deckhouse.io/v1alpha1
   kind: ClusterAuthorizationRule
@@ -104,20 +122,32 @@ def main(ctx: hook.Context):
         ctx.output.validations.error(str(e))
 
 
+def is_multitenancy_enabled(ctx: DotMap) -> bool:
+    snapshot = ctx.snapshots[MULTITENANCY_STATE_SNAPSHOT_NAME]
+    return len(snapshot) != 0 and snapshot[0].filterResult.enableMultiTenancy is True
+
+
 def validate(ctx: DotMap) -> tuple[list[str], list[str]]:
     req = ctx.review.request
     kind = req.kind.kind.lower()
 
     if kind == "clusterauthorizationrule":
         # don't check ClusterAuthorizationRule if user-authz MultiTenancy option is enabled
-        module_snapshot = ctx.snapshots[MODULE_SNAPSHOT_NAME]
-        if len(module_snapshot) != 0 and module_snapshot[0].filterResult.enableMultiTenancy is True:
+        if is_multitenancy_enabled(ctx):
             return [], []
 
         return validate_car_multitenancy_related_fields(req.object)
     elif kind == "moduleconfig":
-        # don't check ClusterAuthorizationRule if user-authz MultiTenancy option is enabled
-        if req.object.spec.settings.enableMultiTenancy is True:
+        settings = req.object.spec.settings
+        field_present = "enableMultiTenancy" in settings
+
+        # don't check existing CARs if the request explicitly enables MultiTenancy...
+        if field_present and settings.enableMultiTenancy is True:
+            return [], []
+        # ...or if the request doesn't touch enableMultiTenancy at all (it's absent from
+        # spec.settings, e.g. an unrelated ModuleConfig edit) and it's still effectively
+        # enabled — explicitly, or via the edition's config-schema default.
+        if not field_present and is_multitenancy_enabled(ctx):
             return [], []
 
         errors, warnings = [], []
