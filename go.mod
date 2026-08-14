@@ -59,6 +59,7 @@ require (
 	github.com/deckhouse/deckhouse/go_lib/configtools/conversion v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/dependency/vsphere v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/registry v0.0.0-00010101000000-000000000000
+	github.com/deckhouse/deckhouse/pkg/deckhouse-registry v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/pkg/log v0.2.1
 	github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0
 	github.com/deckhouse/deckhouse/pkg/registry v0.0.0-20260525111533-9e5ba68242f7
@@ -396,6 +397,8 @@ replace github.com/docker/docker => github.com/docker/docker v28.3.3+incompatibl
 replace github.com/docker/cli => github.com/docker/cli v28.3.3+incompatible
 
 replace github.com/deckhouse/deckhouse/go_lib/controlplane => ./go_lib/controlplane
+
+replace github.com/deckhouse/deckhouse/pkg/deckhouse-registry => ./pkg/deckhouse-registry
 
 // Image sources under this tree are built inside third-party source trees
 // (see werf.inc.yaml) and are hidden from build/lint by build tags. go mod

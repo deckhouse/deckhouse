@@ -1,0 +1,289 @@
+# deckhouse-registry
+
+`github.com/deckhouse/deckhouse/pkg/deckhouse-registry` (package `dhregistry`) models the artifact registry structure of the Deckhouse ecosystem as a typed tree, so callers never build registry paths by hand.
+
+It is a separate Go module layered on top of [`pkg/registry`](../registry): that module owns the transport (auth, TLS, pagination, `remote.*` calls), this one owns the layout.
+
+## Packages
+
+The root package holds the vocabulary shared across the library — `Edition`, the sentinel errors — and assembles the tree. Below it, one package per sub-tree, each declaring the path segments it owns.
+
+```
+dhregistry          Registry, Edition, errors — the library's vocabulary
+├── service         BasicService: one repository, the node every sub-tree embeds
+├── bundle          repositories holding full images; adds Digests
+├── release         release-image reader, and the Channel vocabulary
+├── definition      module.yaml and package.yaml mappings
+├── digests         images_digests.json decoder, used by bundle
+├── extra           the /extra/<name> catalog, shared by module and packages
+├── deckhouse       <root>/<edition>, /release-channel, /install, /install-standalone
+├── module          <root>/<edition>/modules[/<module>[/release|/extra/<extra>]]
+├── packages        <root>/<edition>/packages[/<package>[/version|/extra/<extra>]]
+├── security        <root>/<edition>/security/<name>
+├── deckhouse-cli   <root>/<edition>/deckhouse-cli[/version|/plugins/<plugin>[/version]]  (package cli)
+└── internal/
+    └── cache       memoizes the services built for dynamic segments
+```
+
+The dependency graph is a DAG: `digests` and `definition` are the leaves, `bundle` sits on `digests` and `service`, `release` and `extra` on `service`, the five sub-tree packages on top of those, and only the root imports all of them.
+
+Directory names match the registry segment each package owns, so `deckhouse-cli/` holds `package cli` — the segment is not a valid Go identifier. Import it as `cli "…/deckhouse-registry/deckhouse-cli"`.
+
+Configuring a registry and handling its results needs just the root import: `Edition`, `Channel`, the decoded-metadata types, the sentinel errors and `ValidateName` all live or are re-exported there. Import a sub-package when you need to name one of its types (`*module.Service`, `*release.Service`) in your own signatures.
+
+## Install
+
+```shell
+go get github.com/deckhouse/deckhouse/pkg/deckhouse-registry
+```
+
+## Usage
+
+```go
+import (
+	"github.com/deckhouse/deckhouse/pkg/registry/client"
+
+	dhregistry "github.com/deckhouse/deckhouse/pkg/deckhouse-registry"
+)
+
+// The client points at the registry root — the path above the edition.
+root := client.New("registry.deckhouse.io",
+	client.WithAuth(auth),
+).WithSegment("deckhouse")
+
+reg := dhregistry.New(root,
+	dhregistry.WithEdition(dhregistry.FEEdition),
+	dhregistry.WithLogger(logger),
+)
+
+// Fetch a release image once, then read as many fields as you need from the
+// snapshot — no re-download per field.
+rel, err := reg.Modules().Module("stronghold").Releases().Fetch(ctx, "alpha")
+version, err := rel.Version()      // resolve the channel to a version
+def, err := rel.Definition()       // decoded module.yaml, from the same pull
+
+// Enumerate the module catalog.
+modules, err := reg.Modules().List(ctx)
+
+// Pull an auxiliary image of a module.
+img, err := reg.Modules().Module("neuvector").Extra().Image("scanner").GetImage(ctx, "3")
+```
+
+When the edition is not known up front, let it be detected from the path:
+
+```go
+reg := dhregistry.NewForPath(root)          // reads the edition off the last path segment
+root, edition := dhregistry.SplitEdition(s) // or split a configured path yourself
+```
+
+`NewForPath` cannot un-scope a client, so when it detects an edition the client is taken to be edition-scoped already. Use `New` with an explicitly root-scoped client when the edition-independent installer is needed.
+
+## A catalog without the root
+
+The root `Registry` assumes the Deckhouse layout: given an edition root, it scopes `modules`, `packages`, `security`, … beneath it. But a catalog can also stand on its own, at an arbitrary path with no edition root above it — a `ModuleSource` or a `PackageRepository` points `spec.registry.repo` straight at the catalog, wherever its author chose to publish it (`registry.example.io/external-modules`, `…/modules-source`, anything).
+
+For that, build the catalog directly with `NewCatalog`. It wraps whatever repository the client addresses and scopes nothing — the client's path *is* the catalog, its tags are the names it publishes:
+
+```go
+import (
+	"github.com/deckhouse/deckhouse/pkg/registry/client"
+
+	"github.com/deckhouse/deckhouse/pkg/deckhouse-registry/module"
+	"github.com/deckhouse/deckhouse/pkg/deckhouse-registry/service"
+)
+
+// A ModuleSource whose spec.registry.repo is registry.example.io/external-modules.
+cli := client.New("registry.example.io", client.WithAuth(auth)).WithSegment("external-modules")
+catalog := module.NewCatalog(service.NewBasicService(module.CatalogServiceName, cli, logger))
+
+names, err := catalog.List(ctx)                                            // module names, no /modules appended
+rel, err := catalog.Module("stronghold").Releases().Fetch(ctx, "alpha")
+def, err := rel.Definition()
+```
+
+Packages are the same shape — `packages.NewCatalog` over a `PackageRepository` repo:
+
+```go
+cli := client.New("registry.example.io").WithSegment("acme", "charts")
+catalog := packages.NewCatalog(service.NewBasicService(packages.CatalogServiceName, cli, logger))
+
+rel, err := catalog.Package("elma").Versions().Fetch(ctx, "v1.0.1")
+pkg, err := rel.Definition()
+```
+
+This is the very `*module.Catalog` / `*packages.Catalog` that `reg.Modules()` / `reg.Packages()` return; only the path it is rooted at differs. The segment is always supplied by whoever builds the catalog: the `Registry` scopes `<edition>/modules` onto its edition root, while a standalone catalog sits exactly where the client points. So a catalog at any depth works with no trimming and no `/modules` assumption — the constructor never invents a segment.
+
+## Structure
+
+Every node of the tree embeds a `*BasicService` over exactly one OCI repository, exposing its identity (`Path()`, `Ref(tag)`), the reads (`GetImage`, `GetDigest`, `GetManifest`, `GetImageConfig`, `Exists`, `ListTags`, `ListRepositories`) and the mutations — push (`PushImage`, `PushIndex`, `TagImage`, `CopyImage`) and delete (`DeleteTag`, `DeleteByDigest`). Because `Path` and `Ref` need no registry access, the tree doubles as a pure path builder. Read, push and delete are also grouped as interfaces, so a component can be handed just the subset it needs — see [Capabilities](#capabilities).
+
+| Accessor | Type | Repository |
+|---|---|---|
+| `Deckhouse()` | `*deckhouse.Service` | `<root>/<edition>` |
+| `Deckhouse().Releases()` | `*release.Service` | `<root>/<edition>/release-channel` |
+| `Deckhouse().Install()` | `*service.BasicService` | `<root>/<edition>/install` |
+| `Deckhouse().InstallStandalone()` | `*service.BasicService` | `<root>/<edition>/install-standalone` |
+| `Security()` | `*security.Catalog` | `<root>/<edition>/security` |
+| `Security().Image(name)` | `*service.BasicService` | `<root>/<edition>/security/<name>` |
+| `Modules()` | `*module.Catalog` | `<root>/<edition>/modules` |
+| `Modules().Module(m)` | `*module.Service` | `<root>/<edition>/modules/<m>` |
+| `Modules().Module(m).Releases()` | `*release.Service` | `<root>/<edition>/modules/<m>/release` |
+| `Modules().Module(m).Extra()` | `*extra.Catalog` | `<root>/<edition>/modules/<m>/extra` |
+| `Modules().Module(m).Extra().Image(e)` | `*service.BasicService` | `<root>/<edition>/modules/<m>/extra/<e>` |
+| `Packages()` | `*packages.Catalog` | `<root>/<edition>/packages` |
+| `Packages().Package(p)` | `*packages.Service` | `<root>/<edition>/packages/<p>` |
+| `Packages().Package(p).Versions()` | `*release.Service` | `<root>/<edition>/packages/<p>/version` |
+| `Packages().Package(p).Extra()` | `*extra.Catalog` | `<root>/<edition>/packages/<p>/extra` |
+| `Packages().Package(p).Extra().Image(e)` | `*service.BasicService` | `<root>/<edition>/packages/<p>/extra/<e>` |
+| `CLI()` | `*cli.Service` | `<root>/<edition>/deckhouse-cli` |
+| `CLI().Versions()` | `*release.Service` | `<root>/<edition>/deckhouse-cli/version` |
+| `CLI().Plugins()` | `*cli.PluginCatalog` | `<root>/<edition>/deckhouse-cli/plugins` |
+| `CLI().Plugins().Plugin(p)` | `*cli.Plugin` | `<root>/<edition>/deckhouse-cli/plugins/<p>` |
+| `CLI().Plugins().Plugin(p).Versions()` | `*release.Service` | `<root>/<edition>/deckhouse-cli/plugins/<p>/version` |
+| `Installer()` | `*service.BasicService` | `<root>/installer` |
+
+The installer is the only edition-independent node; everything else hangs off the edition sub-path. Under `NoEdition` the edition sub-path disappears and `Root()` equals `EditionRoot()`, which is how dev roots such as `dev-registry.deckhouse.io/sys/deckhouse-oss` are addressed.
+
+### Catalogs
+
+`module.Catalog`, `packages.Catalog`, `cli.PluginCatalog` and `extra.Catalog` are *catalogs*: repositories whose tags are names rather than versions. Listing a catalog enumerates what it publishes, and each tag points at a scratch image.
+
+```go
+reg.Modules().List(ctx)               // ["stronghold", "neuvector", ...]
+reg.Modules().Ref("stronghold")       // registry.deckhouse.io/deckhouse/fe/modules:stronghold
+```
+
+### Releases
+
+A release image is a scratch image carrying only metadata. Every sub-tree publishes them, and their tags are either channel names (`alpha`, `beta`, `early-access`, `stable`, `rock-solid`, `lts`) or concrete versions — so one service answers both "what is on stable" and "what does v1.73.0 declare".
+
+`Fetch` pulls the release image once and returns a snapshot; every field is then served from memory, so reading the version, the manifest and the changelog costs one pull, not three. What the snapshot decodes differs by kind, so each sub-tree returns its own:
+
+| Service | Repository | Fetch returns | version.json | Manifest |
+|---|---|---|---|---|
+| `deckhouse.ReleaseService` | `<edition>/release-channel` | `*deckhouse.Release` | rollout fields populated | none |
+| `module.ReleaseService` | `modules/<m>/release` | `*module.Release` | version + suspend only | `module.yaml` |
+| `packages.VersionService` | `packages/<p>/version` | `*packages.Release` | version + suspend only | `package.yaml` |
+
+```go
+// Deckhouse release — version.json drives how the upgrade is staged.
+dh, err := reg.Deckhouse().Releases().Fetch(ctx, "stable")
+meta, err := dh.Metadata()
+meta.Version              // "v1.73.0"
+meta.Suspend              // must not be rolled out
+meta.Requirements         // {"k8s": ">= 1.27", ...}
+meta.Disruptions          // {"1.73": ["ingressNginx"]}
+meta.Canary["stable"]     // rollout waves and interval
+
+// Module release — one Fetch, then version and manifest from the snapshot.
+mod, err := reg.Modules().Module("stronghold").Releases().Fetch(ctx, "alpha")
+version, err := mod.Version()   // resolve a channel to a version
+def, err := mod.Definition()    // decoded module.yaml
+def.Weight; def.Requirements.Deckhouse   // ">= 1.70"
+
+// Package release — the v2 counterpart.
+pv, err := reg.Packages().Package("elma").Versions().Fetch(ctx, "v1.0.1")
+pkg, err := pv.Definition()
+pkg.IsModule(); pkg.IsApplication()      // one schema, two package types
+pkg.Requirements.Deckhouse.Constraint    // ">= 1.70"
+```
+
+The two manifests are not two spellings of one schema, which is why `definition` keeps them apart. Requirements differ most: `module.yaml` states them as bare version ranges and a flat module map, `package.yaml` wraps each in a constraint object and splits module dependencies into mandatory/conditional/anyOf/noneOf buckets. Both are mapped as written.
+
+`definition` decodes and nothing more — validating requirement buckets, resolving semver constraints and projecting onto cluster resources stay with the consumer.
+
+Common to all three snapshots: `Metadata` (decoded version.json), `Version` (resolve a channel to a version), `Changelog`, and `File(name)` for a raw file the library does not decode. `Channels` lists a repository's channel tags and stays on the service — it needs no image. A missing manifest or changelog gives `ErrFileNotFound` — older module releases legitimately ship none, and the manifest has to be read from the module image instead.
+
+Every decoded result keeps the undecoded original on `Raw`, for consumers applying their own schema.
+
+### Bundles and image digests
+
+A *bundle* is a full image — one shipping the artifact itself, as opposed to a release image or a scratch catalog entry. Six repositories hold them, and `bundle.Service` is the type they share: `Fetch` pulls the image once and returns a `bundle.Bundle`, whose `Digests()` is the decoded `images_digests.json` — every image the bundle contains mapped to its digest.
+
+Neither the location nor the shape is uniform. Both were verified against the live registry at v1.76.6:
+
+| Accessor | Repository | File inside | Shape |
+|---|---|---|---|
+| `Deckhouse()` | `<edition>` | `deckhouse/modules/images_digests.json` | nested |
+| `Deckhouse().Install()` | `<edition>/install` | `deckhouse/candi/images_digests.json` | nested |
+| `Deckhouse().InstallStandalone()` | `<edition>/install-standalone` | `deckhouse/candi/…` | nested |
+| `Installer()` | `<root>/installer` | `deckhouse/candi/…` | nested |
+| `Modules().Module(m)` | `modules/<m>` | `images_digests.json` | flat |
+| `Packages().Package(p)` | `packages/<p>` | `images_digests.json` | flat |
+
+The shape follows what the bundle contains, not what kind of bundle it is: an image carrying the images of many modules keys them by module, one carrying only its own does not. `Digests().IsNested()` says which:
+
+```go
+// The Deckhouse image bundles every module of its edition, so it nests.
+b, err := reg.Deckhouse().Fetch(ctx, "v1.73.0")
+d := b.Digests()
+d.IsNested()                                // true
+d.Modules()                                 // ["ingressNginx", "userAuthn", ...]
+d.Lookup("ingressNginx", "controller")      // digest, ok
+
+// A module or package bundles only its own images, so it is flat.
+b, err = reg.Modules().Module("stronghold").Fetch(ctx, "v1.0.1")
+d = b.Digests()
+d.Images                                    // {"controller": "sha256:...", ...}
+d.Lookup("", "controller")
+```
+
+Keys are lowerCamelCase at both levels — `controlPlaneManager`, `ingressNginx` — not the kebab-case a module is known by elsewhere, so `Lookup("control-plane-manager", …)` misses. Values are full `sha256:` digests.
+
+Only the six repositories above are `bundle.Service`; the rest of the tree is a plain `BasicService` with no `Digests` at all, so a release repository or catalog cannot be asked for digests by mistake. Each bundle is constructed with its own path (`bundle.ModulesImagesDigestsPath`, `bundle.CandiImagesDigestsPath`, `bundle.RootPath`), and reading the wrong one misses rather than silently succeeding.
+
+Reading a bundle means pulling and flattening a full image, which for the Deckhouse image is hundreds of megabytes.
+
+## Capabilities
+
+A service can do three things to its repository — read it, push to it, delete from it — and each is a named interface in `service`, so a component can be handed exactly the capability it needs and nothing more.
+
+| Capability | Interface | Methods |
+|---|---|---|
+| Read | `service.Reader` | `GetImage`, `GetDigest`, `GetManifest`, `GetImageConfig`, `CheckImageExists`, `Exists`, `ListTags`, `ListRepositories` |
+| Push | `service.Pusher` | `PushImage`, `PushIndex`, `TagImage`, `CopyImage` |
+| Delete | `service.Deleter` | `DeleteTag`, `DeleteByDigest` |
+
+All three embed `service.Repository` — the identity a capability is "of": `Name`, `Path`, `Ref`, `Entry`. It deliberately omits `Client` and `Logger`, so a narrowed view cannot be widened back into full registry access through the underlying client.
+
+`*BasicService` implements all three, so every node the tree returns satisfies any of them without wrapping. Narrowing happens where you hand the service out — declare the parameter as the capability you allow:
+
+```go
+// This helper can only delete: it can neither read the repository nor push to it.
+func purge(ctx context.Context, d service.Deleter, tag string) error {
+	return d.DeleteTag(ctx, tag)
+}
+
+purge(ctx, reg.Modules().Module("stronghold"), "v1.0.1")  // the node narrows to Deleter
+```
+
+Compose wider sets by embedding: `service.ReadWriter` (read + push) and `service.ReadDeleter` (read + delete) are provided, and a caller can declare its own combination the same way. The tree itself is not restricted — its nodes stay full-featured, and limiting is a choice made at the call boundary.
+
+### Deleting a module or package version
+
+`Delete` builds on those primitives to remove one published version wholesale. It reads the bundle's `images_digests.json`, deletes every image it lists **by digest**, then the matching release image (`modules/<m>/release:<v>`, or `packages/<p>/version:<v>` for a package), and last the bundle tag itself:
+
+```go
+err := reg.Modules().Module("stronghold").Delete(ctx, "v1.0.1")
+err := reg.Packages().Package("elma").Delete(ctx, "v1.0.1")
+```
+
+The order is deliberate. The bundle tag is what the image list is read from, so it is removed last: if a run is interrupted the tag is still there, and re-running re-reads the same list and finishes the job. For that reason `Delete` treats an image or tag that is already gone as success — it is safe to re-run — but stops before touching the tags when an image cannot be deleted for any other reason, leaving the bundle tag as the record to retry from.
+
+Only the given version is removed. The catalog entry (`modules:<m>`) and the channel tags that point at versions are left alone.
+
+## Errors
+
+`ErrImageNotFound` is re-exported from `pkg/registry`; use `dhregistry.IsNotFound(err)` or `errors.Is`. `Exists` folds a missing image into `(false, nil)` and reports anything else as an error.
+
+The rest are re-exported at the root too: `ErrNoVersionMetadata` (release image without version.json), `ErrFileNotFound` (release image without a requested metadata file) and `ErrNoDigests` (bundle without images_digests.json).
+
+The accessors for dynamic segments (module, package, plugin, extra, security image) do not validate their argument. An empty or malformed name collapses out of the path and silently addresses the parent repository — `Module("")` resolves to the module catalog, not to an error. Callers taking names from user input or a CR should check them first:
+
+```go
+if err := dhregistry.ValidateName(name); err != nil { /* reject before use */ }
+```
+
+## Concurrency
+
+`Registry` and every service in the tree are safe for concurrent use. Repeated lookups of the same dynamic name return the same service instance.

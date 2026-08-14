@@ -17,29 +17,24 @@ limitations under the License.
 package service
 
 import (
-	"archive/tar"
-	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"log/slog"
 	"reflect"
-
-	"github.com/goccy/go-yaml"
 
 	registryClient "github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry/client"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	dhregistry "github.com/deckhouse/deckhouse/pkg/deckhouse-registry"
+	"github.com/deckhouse/deckhouse/pkg/deckhouse-registry/definition"
+	"github.com/deckhouse/deckhouse/pkg/deckhouse-registry/module"
+	"github.com/deckhouse/deckhouse/pkg/deckhouse-registry/packages"
+	"github.com/deckhouse/deckhouse/pkg/deckhouse-registry/service"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/deckhouse/deckhouse/pkg/registry"
 	"github.com/deckhouse/deckhouse/pkg/registry/client"
 )
 
 const (
-	packageVersionSegment = "version"
-	packageReleaseSegment = "release"
-
 	packagesServiceName       = "packages"
 	packageServiceName        = "package"
 	packageVersionServiceName = "package_version"
@@ -158,11 +153,11 @@ func (m *ServiceManager[T]) createAuthOptions(registryURL, dockerCFG, login, pas
 	return opts, nil
 }
 
+// PackagesService is the package catalog a PackageRepository points at.
 type PackagesService struct {
-	client registry.Client
+	*service.BasicService
 
-	*BasicService
-
+	client   registry.Client
 	services map[string]*PackageService
 
 	logger *log.Logger
@@ -170,12 +165,10 @@ type PackagesService struct {
 
 func NewPackagesService(client registry.Client, logger *log.Logger) *PackagesService {
 	return &PackagesService{
-		client: client,
-
-		BasicService: NewBasicService(packagesServiceName, client, logger),
+		BasicService: service.NewBasicService(packagesServiceName, client, logger),
+		client:       client,
 		services:     make(map[string]*PackageService),
-
-		logger: logger,
+		logger:       logger,
 	}
 }
 
@@ -185,34 +178,38 @@ func (s *PackagesService) Package(packageName string) *PackageService {
 	}
 
 	if _, exists := s.services[packageName]; !exists {
-		packageClient := s.client.WithSegment(packageName)
-		s.services[packageName] = NewPackageService(packageClient, s.logger)
+		s.services[packageName] = NewPackageService(s.client.WithSegment(packageName), s.logger)
 	}
 
 	return s.services[packageName]
 }
 
-// PackageService provides high-level operations for Deckhouse platform management
+// PackageService addresses one package in the repository.
+//
+// A PackageRepository serves both shapes at once: v1alpha2 packages publish
+// their releases under version/, legacy v1alpha1 modules under release/. Those
+// are two different sub-trees of the registry library over the same repository,
+// which is why this type carries both.
 type PackageService struct {
+	*service.BasicService
+
 	client registry.Client
 
-	*BasicService
 	packageVersion *PackageVersionService
 	packageRelease *PackageReleaseService
 
 	logger *log.Logger
 }
 
-// NewPackageService creates a new deckhouse service
 func NewPackageService(client registry.Client, logger *log.Logger) *PackageService {
+	basic := service.NewBasicService(packageServiceName, client, logger)
+
 	return &PackageService{
-		client: client,
-
-		BasicService:   NewBasicService(packageServiceName, client, logger),
-		packageVersion: NewPackageVersionService(NewBasicService(packageVersionServiceName, client.WithSegment(packageVersionSegment), logger)),
-		packageRelease: NewPackageReleaseService(NewBasicService(packageReleaseServiceName, client.WithSegment(packageReleaseSegment), logger)),
-
-		logger: logger,
+		BasicService:   basic,
+		client:         client,
+		packageVersion: &PackageVersionService{VersionService: packages.New(basic).Versions()},
+		packageRelease: &PackageReleaseService{ReleaseService: module.New(basic).Releases()},
+		logger:         logger,
 	}
 }
 
@@ -231,26 +228,20 @@ func (s *PackageService) GetRoot() string {
 	return s.client.GetRegistry()
 }
 
+// PackageVersionService is <package>/version, the v1alpha2 release repository.
 type PackageVersionService struct {
-	*BasicService
+	*packages.VersionService
 }
 
-func NewPackageVersionService(basicService *BasicService) *PackageVersionService {
-	return &PackageVersionService{
-		BasicService: basicService,
-	}
-}
-
-// PackageReleaseService provides access to the <package>/release path for legacy v1alpha1 modules.
+// PackageReleaseService is <package>/release, the legacy v1alpha1 release
+// repository. Legacy modules keep the same layout as a module release, so it is
+// the module sub-tree that describes it.
 type PackageReleaseService struct {
-	*BasicService
+	*module.ReleaseService
 }
 
-func NewPackageReleaseService(basicService *BasicService) *PackageReleaseService {
-	return &PackageReleaseService{
-		BasicService: basicService,
-	}
-}
+// packageDefinitionFileAlt is the alternative spelling some builds emit.
+const packageDefinitionFileAlt = "package.yml"
 
 // PackageDefinition represents the minimal parsed content of package.yaml.
 // It's needed for fallback type detection if the package type label is not set in both version and release images for some reason.
@@ -261,172 +252,35 @@ type PackageDefinition struct {
 // ReadPackageDefinition reads package.yaml from the version image and parses its type field.
 // It's needed if for some reason we haven't set the package type label in both version and release images.
 //
-// Returns nil if package.yaml is not found or the image does not exist.
+// Returns nil if package.yaml is not found or the image does not exist, and an
+// empty definition when the file is present but cannot be parsed — the caller
+// tells those apart to distinguish "too old to carry a type" from "carries an
+// unusable one".
 func (s *PackageVersionService) ReadPackageDefinition(ctx context.Context, tag string) (*PackageDefinition, error) {
-	img, err := s.GetImage(ctx, tag)
+	rel, err := s.Fetch(ctx, tag)
 	if err != nil {
-		if errors.Is(err, client.ErrImageNotFound) {
+		if errors.Is(err, dhregistry.ErrImageNotFound) {
 			return nil, nil
 		}
+
 		return nil, fmt.Errorf("get version image: %w", err)
 	}
 
-	rc := img.Extract()
-	defer rc.Close()
-
-	tr := tar.NewReader(rc)
-	for {
-		hdr, err := tr.Next()
-		if err == io.EOF {
-			return nil, nil
-		}
-		if err != nil {
-			return nil, fmt.Errorf("read version image tar: %w", err)
-		}
-		if hdr.Name == "package.yaml" || hdr.Name == "package.yml" {
-			var def PackageDefinition
-			if err := yaml.NewDecoder(tr).Decode(&def); err != nil {
-				s.logger.Warn("failed to parse package.yaml", slog.String("tag", tag), log.Err(err))
-				return &PackageDefinition{}, nil
-			}
-			return &def, nil
-		}
+	raw, ok := rel.File(definition.PackageFile)
+	if !ok {
+		raw, ok = rel.File(packageDefinitionFileAlt)
 	}
-}
 
-// HasModuleDefinition checks whether the version image contains a module.yaml (or module.yml) file.
-// This is used as a fallback to identify legacy modules when neither type labels nor package.yaml are present.
-//
-// Returns (false, nil) if the image does not exist.
-func (s *PackageVersionService) HasModuleDefinition(ctx context.Context, tag string) (bool, error) {
-	img, err := s.GetImage(ctx, tag)
+	if !ok {
+		return nil, nil
+	}
+
+	def, err := definition.ParsePackage(raw)
 	if err != nil {
-		if errors.Is(err, client.ErrImageNotFound) {
-			return false, nil
-		}
-		return false, fmt.Errorf("get version image: %w", err)
+		s.Entry(tag).Warn("failed to parse package.yaml", log.Err(err))
+
+		return &PackageDefinition{}, nil
 	}
 
-	rc := img.Extract()
-	defer rc.Close()
-
-	tr := tar.NewReader(rc)
-	for {
-		hdr, err := tr.Next()
-		if err == io.EOF {
-			return false, nil
-		}
-		if err != nil {
-			return false, fmt.Errorf("read version image tar: %w", err)
-		}
-		if hdr.Name == "module.yaml" || hdr.Name == "module.yml" {
-			return true, nil
-		}
-	}
-}
-
-type PackageVersionMetadata struct {
-	Version string
-
-	Changelog map[string]interface{}
-}
-
-func (s *PackageVersionService) GetMetadata(ctx context.Context, tag string) (*PackageVersionMetadata, error) {
-	logger := s.logger.With(slog.String("service", s.name), slog.String("tag", tag))
-
-	logger.Debug("Getting metadata")
-
-	img, err := s.client.GetImage(ctx, tag)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get image: %w", err)
-	}
-
-	meta, err := s.extractPackageVersionMetadata(img.Extract())
-	if err != nil {
-		return nil, fmt.Errorf("failed to extract metadata: %w", err)
-	}
-
-	return meta, nil
-}
-
-type packageVersionStruct struct {
-	Version string `json:"version"`
-}
-
-func (s *PackageVersionService) extractPackageVersionMetadata(rc io.ReadCloser) (*PackageVersionMetadata, error) {
-	var meta = new(PackageVersionMetadata)
-
-	defer rc.Close()
-
-	drr := &packageVersionReader{
-		versionReader: bytes.NewBuffer(nil),
-	}
-
-	err := drr.untarMetadata(rc)
-	if err != nil {
-		return nil, err
-	}
-
-	var version packageVersionStruct
-	if drr.versionReader.Len() > 0 {
-		err = json.NewDecoder(drr.versionReader).Decode(&version)
-		if err != nil {
-			return nil, fmt.Errorf("metadata decode: %w", err)
-		}
-
-		meta.Version = version.Version
-	}
-
-	if drr.changelogReader.Len() > 0 {
-		var changelog map[string]any
-
-		err = yaml.NewDecoder(drr.changelogReader).Decode(&changelog)
-		if err != nil {
-			// if changelog build failed - warn about it but don't fail the release
-			s.logger.Warn("Unmarshal CHANGELOG yaml failed", log.Err(err))
-
-			changelog = make(map[string]any)
-		}
-
-		meta.Changelog = changelog
-	}
-
-	return meta, nil
-}
-
-type packageVersionReader struct {
-	versionReader   *bytes.Buffer
-	changelogReader *bytes.Buffer
-}
-
-func (rr *packageVersionReader) untarMetadata(rc io.Reader) error {
-	tr := tar.NewReader(rc)
-
-	for {
-		hdr, err := tr.Next()
-		if err == io.EOF {
-			// end of archive
-			return nil
-		}
-
-		if err != nil {
-			return err
-		}
-
-		switch hdr.Name {
-		case "version.json":
-			_, err = io.Copy(rr.versionReader, tr)
-			if err != nil {
-				return err
-			}
-		case "changelog.yaml", "changelog.yml":
-			_, err = io.Copy(rr.changelogReader, tr)
-			if err != nil {
-				return err
-			}
-
-		default:
-			continue
-		}
-	}
+	return &PackageDefinition{Type: def.Type}, nil
 }

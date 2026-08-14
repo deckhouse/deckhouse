@@ -20,11 +20,9 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
-	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	transport "github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -33,6 +31,7 @@ import (
 	registryService "github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry/service"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	dhregistry "github.com/deckhouse/deckhouse/pkg/deckhouse-registry"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	regClient "github.com/deckhouse/deckhouse/pkg/registry/client"
 )
@@ -53,11 +52,12 @@ var errPackageTypeInvalid = errors.New("package type could not be determined")
 // it cannot be processed.
 var errTooOldImage = errors.New("version image has no type labels and no package.yaml")
 
-// isRepoNotFoundError checks if the error chain contains a registry NAME_UNKNOWN error,
-// which means the repository path does not exist in the registry.
-// This is consistent with the pattern used in deckhouse-controller/pkg/registry/module.go.
+// isRepoNotFoundError reports whether the registry answered "there is nothing
+// here" — a missing <package>/version path, which marks a legacy v1alpha1
+// module. The registry library normalizes the transport-level codes into a
+// single sentinel, so this no longer inspects error strings.
 func isRepoNotFoundError(err error) bool {
-	return strings.Contains(err.Error(), string(transport.NameUnknownErrorCode))
+	return dhregistry.IsNotFound(err)
 }
 
 // packageType represents the type of a package as detected from Docker labels or package.yaml.
