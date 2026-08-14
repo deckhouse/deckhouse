@@ -3640,9 +3640,9 @@ alerts:
       module: deckhouse
       edition: ce
       description: |
-        The deprecated ModuleConfig `{{ $labels.module }}` is used. ModuleConfig is deprecated, use the Module resource instead.
+        The deprecated ModuleConfig `{{ $labels.name }}` is used. ModuleConfig is deprecated, use the Module resource instead.
       summary: |
-        Deprecated ModuleConfig {{ $labels.module }} is used.
+        Deprecated ModuleConfig {{ $labels.name }} is used.
       severity: "9"
       markupFormat: markdown
     - name: HelmReleasesHasResourcesWithDeprecatedVersions
