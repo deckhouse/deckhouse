@@ -17,7 +17,9 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"time"
 
@@ -28,6 +30,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metrics "sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -141,4 +144,27 @@ func newManagerOptions(scheme *runtime.Scheme) manager.Options {
 	}
 
 	return opts
+}
+
+const cacheSyncCheckTimeout = 2 * time.Second
+
+func addHealthChecks(mgr manager.Manager) error {
+	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
+		return fmt.Errorf("add healthz check: %w", err)
+	}
+	if err := mgr.AddReadyzCheck("cache-sync", cacheSyncCheck(mgr.GetCache())); err != nil {
+		return fmt.Errorf("add readyz check: %w", err)
+	}
+	return nil
+}
+
+func cacheSyncCheck(c cache.Cache) healthz.Checker {
+	return func(req *http.Request) error {
+		ctx, cancel := context.WithTimeout(req.Context(), cacheSyncCheckTimeout)
+		defer cancel()
+		if !c.WaitForCacheSync(ctx) {
+			return fmt.Errorf("informer cache is not synced")
+		}
+		return nil
+	}
 }
