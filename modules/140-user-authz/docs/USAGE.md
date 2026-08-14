@@ -8,7 +8,7 @@ title: "The user-authz module: usage"
 The example uses the [primary role-based](./#primary-role-based-model).
 {% endalert %}
 
-To grant access to a cluster administrator, use the role `d8:system:manager` in `ClusterRoleBinding`.
+To grant access to a cluster administrator, use the role `d8:system:manager` in ClusterRoleBinding.
 
 Example of assigning rights to a cluster administrator (User `jane`):
 
@@ -46,7 +46,7 @@ The user will be able to:
 The example uses the [primary role-based](./#primary-role-based-model).
 {% endalert %}
 
-To grant a network administrator access to manage the network subsystem of the cluster, use the role `d8:subsystem:networking:manager` in `ClusterRoleBinding`.
+To grant a network administrator access to manage the network subsystem of the cluster, use the role `d8:subsystem:networking:manager` in ClusterRoleBinding.
 
 Example of assigning rights to a network administrator (User `jane`):
 
@@ -67,6 +67,7 @@ roleRef:
 
 {% offtopic title="The rights that the user will get" %}
 The rights that the user will get will be limited to the following list of DKP module namespaces from the `networking` subsystem (the actual list depends on the list of modules included in the cluster):
+
 - `d8-cni-cilium`
 - `d8-cni-flannel`
 - `d8-cni-simple-bridge`
@@ -159,7 +160,7 @@ The user will be able to:
 The example uses the [primary role-based](./#primary-role-based-model).
 {% endalert %}
 
-To assign rights to a user manage application resources within a namespace, but without the ability to configure DKP modules, use the role `d8:namespace:admin` in `RoleBinding` in the corresponding namespace.
+To assign rights to a user manage application resources within a namespace, but without the ability to configure DKP modules, use the role `d8:namespace:admin` in RoleBinding in the corresponding namespace.
 
 Example of assigning rights to an application developer (User `app-developer`) in namespace `myapp`:
 
@@ -221,7 +222,7 @@ In the `myapp` namespace, the user will be able to:
   - `kubectl port-forward`
   - `kubectl proxy`
 
-The user will **not** get the operations reserved for the `superadmin` level (see [admin level restrictions](./#admin-level-restrictions-and-superadmin-rights)): minting ServiceAccount tokens, making requests on behalf of ServiceAccounts, modifying platform system resources in this namespace, and connecting to system pods.
+The user will **not** get the operations reserved for the `superadmin` level (see the section [Admin level restrictions and superadmin rights](./#admin-level-restrictions-and-superadmin-rights)): minting ServiceAccount tokens, making requests on behalf of ServiceAccounts, modifying platform system resources in this namespace, and connecting to system pods.
 {% endofftopic %}
 
 ## An example of assigning rights across all namespaces of a project
@@ -230,7 +231,7 @@ The user will **not** get the operations reserved for the `superadmin` level (se
 The example uses the [primary role-based model](./#primary-role-based-model) and the [multitenancy-manager](../multitenancy-manager/) module.
 {% endalert %}
 
-If the namespaces are grouped into a [project](../multitenancy-manager/), a role can be granted for the whole project at once — it will automatically apply in all of its namespaces, including those created later. To do that, use a [ProjectRoleBinding](../multitenancy-manager/cr.html#projectrolebinding) in the main namespace of the project instead of a `RoleBinding`:
+If the namespaces are grouped into a [project](/modules/multitenancy-manager/), a role can be granted for the whole project at once — it will automatically apply in all of its namespaces, including those created later. To do that, use a [ProjectRoleBinding](/modules/multitenancy-manager/cr.html#projectrolebinding) in the main namespace of the project instead of RoleBinding:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha3
@@ -399,11 +400,11 @@ Configuration options:
 If several `ClusterAuthorizationRule` resources match the same subject, the allowed namespaces are **unioned**; the effective `accessLevel` is the **most powerful** among all matching rules. For details, refer to the [FAQ](faq.html#what-if-there-are-two-clusterauthorizationrules-matching-to-a-single-user).
 
 {% alert level="warning" %}
-Namespace restrictions from `ClusterAuthorizationRule` are enforced by the authorization webhook chain. If the webhook is unavailable, these restrictions **do not apply** until the webhook is reachable again. For more information, see the [module description](./#legacy-role-based-model).
+Namespace restrictions from ClusterAuthorizationRule are enforced by the authorization webhook chain. If the webhook is unavailable, these restrictions **do not apply** until the webhook is reachable again. For more information, see the [module description](./#legacy-role-based-model).
 {% endalert %}
 
 {% offtopic title="Primary role-based model" %}
-`d8:namespace:*` roles must be bound with `RoleBinding` in a **specific** namespace — use one `RoleBinding` per namespace (or automate the process). `d8:system:*` / `d8:subsystem:*` roles do not cover namespaces for user workloads; they only apply to system namespaces (`d8-*`, `kube-*`) within the subsystem.
+`d8:namespace:*` roles must be bound with RoleBinding in a **specific** namespace — use one RoleBinding per namespace (or automate the process). `d8:system:*` / `d8:subsystem:*` roles do not cover namespaces for user workloads; they only apply to system namespaces (`d8-*`, `kube-*`) within the subsystem.
 {% endofftopic %}
 
 ## Creating a user

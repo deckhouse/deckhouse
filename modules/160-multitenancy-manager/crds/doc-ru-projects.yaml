@@ -81,12 +81,14 @@ spec:
               properties:
                 description:
                   description: |
-                    Произвольное описание назначения проекта. Укажите пустую строку, если описание не требуется.
+                    Произвольное описание назначения проекта.
+                    
+                    Укажите пустую строку, если описание не требуется.
                 projectTemplateName:
                   description: |
                     Имя ресурса [ProjectTemplate](cr.html#projecttemplate), который определяет, какие ресурсы будут созданы в проекте.
 
-                    Необязательное. Если не указано, контроллер обеспечивает только создание пространства имён проекта и применение стандартных полей (`administrators`, `quota`).
+                    Необязательное. Если не указано, контроллер обеспечивает только создание неймспейса проекта и применение стандартных полей (`administrators`, `quota`).
                 administrators:
                   description: |
                     Пользователи и группы, получающие административный доступ к проекту.
@@ -109,17 +111,17 @@ spec:
                   description: |
                     Значения, передаваемые в [шаблон ресурсов](cr.html#projecttemplate-v1alpha1-spec-resourcestemplate) при создании проекта.
 
-                    Перед созданием, значения согласовываются со [схемой](cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) входных параметров шаблона ресурсов.
+                    Перед созданием значения согласовываются со [схемой](cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) входных параметров шаблона ресурсов.
             status:
               properties:
                 namespaces:
-                  description: Пространства имён, принадлежащие проекту.
+                  description: Неймспейсы, принадлежащие проекту.
                   items:
                     properties:
                       name:
-                        description: Имя пространства имён.
+                        description: Имя неймспейса.
                       kind:
-                        description: Тип пространства имён (Main или Additional).
+                        description: Тип неймспейса (Main или Additional).
                 usage:
                   description: Текущее использование квоты проекта.
                 observedGeneration:
@@ -127,7 +129,7 @@ spec:
                 templateGeneration:
                   description: Последний generation шаблона.
                 resources:
-                  description: Список срендеренных и пропущенных ресурсов.
+                  description: Список отрендеренных и пропущенных ресурсов.
                 conditions:
                   type: array
                   items:
