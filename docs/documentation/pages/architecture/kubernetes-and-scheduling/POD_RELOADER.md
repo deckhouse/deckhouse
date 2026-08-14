@@ -5,7 +5,7 @@ search: pod-reloader
 description: Architecture of the pod-reloader module in Deckhouse Kubernetes Platform.
 ---
 
-The module utilizes [Reloader](https://github.com/stakater/Reloader). It provides the ability for automatic rollout on ConfigMap or Secret changes. The module uses annotations for operating. The module is running on **system** nodes.
+The [`pod-reloader`](/modules/pod-reloader/) module is based on [Reloader](https://github.com/stakater/Reloader). It provides the ability for automatic rollout on ConfigMap or Secret changes. Annotations are used for configuration. The module is running on **system** nodes.
 
 For more details about module configuration and usage examples, refer to the [module documentation](/modules/pod-reloader/).
 
@@ -24,17 +24,17 @@ The Level 2 C4 architecture of the [`pod-reloader`](/modules/pod-reloader/) modu
 
 ## Module components
 
-The `pod-reloader` module module consists of a single **pod-reloader** component that includes the following containers:
+The `pod-reloader` module consists of a single `pod-reloader` component that includes the following containers:
 
 * **manager**: Main container.
 * **kube-rbac-proxy**: Sidecar container with a Kubernetes RBAC-based authorization proxy that provides secure access to pod-reloader metrics. It is an [open-source project](https://github.com/brancz/kube-rbac-proxy).
 
 ## Module interactions
 
-The module interacts with the **kube-apiserver** component:
+The module interacts with the `kube-apiserver` component:
 
 * Watches ConfigMap and Secret resources.
 * Triggers reload or rollout of pods.
 * Authorizes requests for metrics.
 
-The **prometheus-main** component interacts with the module by collecting module metrics.
+The `prometheus-main` component interacts with the module by collecting module metrics.
