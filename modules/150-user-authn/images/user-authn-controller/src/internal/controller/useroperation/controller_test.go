@@ -538,14 +538,15 @@ func opRequest(name string) reconcile.Request {
 }
 
 func passwordObj(username string, extra map[string]any) *unstructured.Unstructured {
+	email := username + "@yourcompany.com"
 	obj := map[string]any{
 		"apiVersion": controller.PasswordGVK.GroupVersion().String(),
 		"kind":       controller.PasswordGVK.Kind,
 		"metadata": map[string]any{
-			"name":      passwordObjectName,
+			"name":      naming.ToFnvLikeDex(email),
 			"namespace": naming.DexNamespace,
 		},
-		"email":    username + "@yourcompany.com",
+		"email":    email,
 		"username": username,
 		"userID":   username,
 		"hash":     "old",
