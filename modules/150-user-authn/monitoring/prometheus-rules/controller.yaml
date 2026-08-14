@@ -1,0 +1,96 @@
+- name: d8.user-authn.controller.availability
+  rules:
+  - alert: D8UserAuthnControllerUnavailable
+    expr: |
+      (
+        kube_deployment_spec_replicas{
+          namespace="d8-user-authn",
+          deployment="user-authn-controller"
+        }
+        -
+        kube_deployment_status_replicas_available{
+          namespace="d8-user-authn",
+          deployment="user-authn-controller"
+        }
+      ) > 0
+    for: 5m
+    labels:
+      severity_level: "6"
+      tier: cluster
+      d8_module: user-authn
+      d8_component: user-authn-controller
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_user_authn_controller_unavailable: "D8UserAuthnControllerUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_user_authn_controller_unavailable: "D8UserAuthnControllerUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: user-authn-controller has unavailable replicas.
+      description: |-
+        Deckhouse has detected unavailable replicas in the `user-authn-controller` deployment in the `d8-user-authn` namespace.
+
+        While this alert is active, static Users may not get Dex Password objects, UserAccount projections stall, expired Users are not deleted, and DexProviderCheck / UserOperation stay pending.
+
+        Check deployment and pod states:
+
+        ```bash
+        d8 k -n d8-user-authn get deploy user-authn-controller
+        d8 k -n d8-user-authn get pods -l app=user-authn-controller
+        d8 k -n d8-user-authn logs deploy/user-authn-controller --all-pods=true
+        ```
+
+  - alert: D8UserAuthnControllerTargetDown
+    expr: sum(up{job="user-authn-controller", namespace="d8-user-authn"}) == 0
+    for: 5m
+    labels:
+      severity_level: "6"
+      tier: cluster
+      d8_module: user-authn
+      d8_component: user-authn-controller
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_user_authn_controller_unavailable: "D8UserAuthnControllerUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_user_authn_controller_unavailable: "D8UserAuthnControllerUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: Prometheus is unable to scrape user-authn-controller.
+      description: |-
+        Prometheus cannot scrape metrics from `user-authn-controller` in namespace `d8-user-authn`.
+
+        The controller is down, not Ready (informer cache has not synced), or the PodMonitor is missing. Static user login, UserAccount, expire, and provider checks will not run.
+
+        Check:
+
+        ```bash
+        d8 k -n d8-user-authn get pods -l app=user-authn-controller
+        d8 k -n d8-user-authn describe pods -l app=user-authn-controller
+        ```
+
+- name: d8.user-authn.controller.reconcile
+  rules:
+  - alert: D8UserAuthnControllerReconcileErrorsHigh
+    expr: |
+      sum by (controller) (
+        rate(controller_runtime_reconcile_errors_total{
+          namespace="d8-user-authn",
+          job="user-authn-controller"
+        }[5m])
+      ) > 0.1
+    for: 10m
+    labels:
+      severity_level: "8"
+      tier: cluster
+      d8_module: user-authn
+      d8_component: user-authn-controller
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
+      plk_create_group_if_not_exists__d8_user_authn_controller_unavailable: "D8UserAuthnControllerUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_user_authn_controller_unavailable: "D8UserAuthnControllerUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: user-authn-controller reconcile errors are high for {{ $labels.controller }}.
+      description: |-
+        Controller `{{ $labels.controller }}` has a reconcile error rate above 0.1 errors per second for more than 10 minutes.
+
+        Check logs:
+
+        ```bash
+        d8 k -n d8-user-authn logs deploy/user-authn-controller --all-pods=true
+        ```

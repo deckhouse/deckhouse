@@ -1,0 +1,132 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: useraccounts.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: user-authn
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: useraccounts
+    singular: useraccount
+    kind: UserAccount
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Controller-projected view of Dex `Password` and `OfflineSessions` objects for the Deckhouse console.
+
+            Do not create or edit UserAccount resources. The user-authn controller owns them.
+            The source of truth for login credentials and session state remains Dex.
+          properties:
+            spec:
+              type: object
+              description: |
+                Empty. UserAccount is controller-owned and has no user-editable specification.
+
+                Do not create this resource; the controller projects it from Dex.
+            status:
+              type: object
+              description: |
+                Observed account state projected from Dex. This is a console view only
+                and does not store credentials or connector secrets.
+              properties:
+                email:
+                  type: string
+                  description: |
+                    Account email as reported by Dex.
+                username:
+                  type: string
+                  description: |
+                    Account username as reported by Dex.
+                userID:
+                  type: string
+                  description: |
+                    Unique user identifier from Dex.
+                kind:
+                  type: string
+                  enum:
+                    - Local
+                    - External
+                  description: |
+                    Account kind. Possible values:
+
+                    * `Local`: Dex Password (static user).
+                    * `External`: federated identity from a connector.
+                connectorID:
+                  type: string
+                  description: |
+                    Dex connector identifier. `local` for local accounts; otherwise the DexProvider name.
+                providerType:
+                  type: string
+                  description: |
+                    External identity provider type. Typical values for external accounts: `LDAP`, `Crowd`.
+                    Empty for local accounts.
+                incorrectLoginAttempts:
+                  type: integer
+                  format: int64
+                  minimum: 0
+                  description: |
+                    Number of consecutive incorrect login attempts recorded in Dex Password (local)
+                    or OfflineSessions (external).
+                locked:
+                  type: boolean
+                  description: |
+                    Whether the account is currently locked.
+                lockedUntil:
+                  type: string
+                  format: date-time
+                  description: |
+                    Time until which the account remains locked, in RFC3339 format.
+                    After this time the lock is lifted automatically unless locked by an administrator.
+                lockedByAdministrator:
+                  type: boolean
+                  description: |
+                    Whether the account was locked by an administrator (as opposed to an automatic lockout).
+                userRef:
+                  type: string
+                  description: |
+                    Name of the related User resource. Set for local accounts.
+                expireAt:
+                  type: string
+                  format: date-time
+                  description: |
+                    Account expiration time, in RFC3339 format.
+                groups:
+                  type: array
+                  description: |
+                    Groups associated with the account.
+                  items:
+                    type: string
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - jsonPath: .status.email
+          name: Email
+          type: string
+        - jsonPath: .status.kind
+          name: Kind
+          type: string
+        - jsonPath: .status.connectorID
+          name: Connector
+          type: string
+        - jsonPath: .status.incorrectLoginAttempts
+          name: Attempts
+          type: integer
+        - jsonPath: .status.locked
+          name: Locked
+          type: boolean
+        - jsonPath: .status.lockedUntil
+          name: LockedUntil
+          type: string
+          format: date-time
+        - jsonPath: .metadata.creationTimestamp
+          name: Age
+          type: date

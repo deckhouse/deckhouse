@@ -3172,6 +3172,64 @@ alerts:
         Prometheus can't scrape terraform-state-exporter.
       severity: "8"
       markupFormat: markdown
+    - name: D8UserAuthnControllerReconcileErrorsHigh
+      sourceFile: modules/150-user-authn/monitoring/prometheus-rules/controller.yaml
+      moduleUrl: 150-user-authn
+      module: user-authn
+      edition: ce
+      description: |-
+        Controller `{{ $labels.controller }}` has a reconcile error rate above 0.1 errors per second for more than 10 minutes.
+
+        Check logs:
+
+        ```bash
+        d8 k -n d8-user-authn logs deploy/user-authn-controller --all-pods=true
+        ```
+      summary: |
+        user-authn-controller reconcile errors are high for {{ $labels.controller }}.
+      severity: "8"
+      markupFormat: markdown
+    - name: D8UserAuthnControllerTargetDown
+      sourceFile: modules/150-user-authn/monitoring/prometheus-rules/controller.yaml
+      moduleUrl: 150-user-authn
+      module: user-authn
+      edition: ce
+      description: |-
+        Prometheus cannot scrape metrics from `user-authn-controller` in namespace `d8-user-authn`.
+
+        The controller is down, not Ready (informer cache has not synced), or the PodMonitor is missing. Static user login, UserAccount, expire, and provider checks will not run.
+
+        Check:
+
+        ```bash
+        d8 k -n d8-user-authn get pods -l app=user-authn-controller
+        d8 k -n d8-user-authn describe pods -l app=user-authn-controller
+        ```
+      summary: |
+        Prometheus is unable to scrape user-authn-controller.
+      severity: "6"
+      markupFormat: markdown
+    - name: D8UserAuthnControllerUnavailable
+      sourceFile: modules/150-user-authn/monitoring/prometheus-rules/controller.yaml
+      moduleUrl: 150-user-authn
+      module: user-authn
+      edition: ce
+      description: |-
+        Deckhouse has detected unavailable replicas in the `user-authn-controller` deployment in the `d8-user-authn` namespace.
+
+        While this alert is active, static Users may not get Dex Password objects, UserAccount projections stall, expired Users are not deleted, and DexProviderCheck / UserOperation stay pending.
+
+        Check deployment and pod states:
+
+        ```bash
+        d8 k -n d8-user-authn get deploy user-authn-controller
+        d8 k -n d8-user-authn get pods -l app=user-authn-controller
+        d8 k -n d8-user-authn logs deploy/user-authn-controller --all-pods=true
+        ```
+      summary: |
+        user-authn-controller has unavailable replicas.
+      severity: "6"
+      markupFormat: markdown
     - name: D8UserAuthnIDTokenTTLTooLong
       sourceFile: modules/150-user-authn/monitoring/prometheus-rules/dex-deprecation.yaml
       moduleUrl: 150-user-authn

@@ -1,0 +1,103 @@
+{{- define "user_authn_controller_resources" }}
+cpu: 20m
+memory: 50Mi
+{{- end }}
+
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: user-authn-controller
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "user-authn-controller")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: user-authn-controller
+  updatePolicy:
+    updateMode: "InPlaceOrRecreate"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "user-authn-controller"
+      minAllowed:
+        {{- include "user_authn_controller_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 100m
+        memory: 150Mi
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-authn-controller
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "user-authn-controller")) | nindent 2 }}
+spec:
+  {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: user-authn-controller
+  template:
+    metadata:
+      labels:
+        app: user-authn-controller
+    spec:
+      {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "user-authn-controller")) | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      automountServiceAccountToken: true
+      imagePullSecrets:
+      - name: deckhouse-registry
+      terminationGracePeriodSeconds: 60
+      serviceAccountName: user-authn-controller
+      containers:
+      - name: user-authn-controller
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "userAuthnController") }}
+        imagePullPolicy: 'IfNotPresent'
+        env:
+        - name: HA_MODE
+{{- if (include "helm_lib_ha_enabled" .) }}
+          value: "true"
+{{- else }}
+          value: "false"
+{{- end }}
+        ports:
+        - containerPort: 9090
+          name: healthz
+          protocol: TCP
+        - containerPort: 9091
+          name: metrics
+          protocol: TCP
+        startupProbe:
+          httpGet:
+            path: /healthz
+            port: 9090
+          periodSeconds: 2
+          timeoutSeconds: 2
+          failureThreshold: 30
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9090
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 9090
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "user_authn_controller_resources" . | nindent 12 }}
+{{- end }}

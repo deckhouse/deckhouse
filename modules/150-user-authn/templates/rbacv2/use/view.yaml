@@ -14,6 +14,7 @@ rules:
   resources:
   - dexauthenticators
   - dexclients
+  - useraccounts
   verbs:
   - get
   - list
