@@ -46,35 +46,22 @@ func discoveryIsK8sVersionAutomatic(_ context.Context, input *go_hook.HookInput,
 	}
 	requirements.SaveValue(istioToK8sCompatibilityMapKey, k8sCompatibleVersions)
 
-	// No ClusterConfiguration means Deckhouse does not own the Kubernetes version — a managed
-	// cluster, where control-plane-manager is disabled and the provider decides the version. The
-	// requirement gated by this key compares the *coming Deckhouse release's default* Kubernetes
-	// version with the installed Istio versions, which is meaningless there and would block
-	// Deckhouse updates over a version the cluster will never run.
+	// No ClusterConfiguration — a managed cluster: the provider owns the Kubernetes version. The gate
+	// this key feeds compares the *coming* Deckhouse default with the installed Istio versions, which
+	// is meaningless there and would block updates over a version the cluster will never run.
 	//
-	// This reproduces what the ClusterConfiguration Secret answered before the version moved: with
-	// the Secret absent the hook fell through to the actual cluster version, which never equals the
-	// literal "Automatic", so the requirement was always skipped. global.clusterConfiguration is
-	// published from exactly that Secret (global-hooks/discovery/cluster_configuration.go) and stays
-	// absent while the Secret is, so its presence is the same signal by a different route.
-	//
-	// The one case where the old code answered differently is one its schema made unreachable:
-	// kubernetesVersion was required in ClusterConfiguration, so "Secret present, nothing pinned
-	// anywhere" could not occur. It can now, and "Deckhouse picks the version" is precisely what
-	// this key is meant to report, so the bool below is the right answer for it.
+	// Same answer as before by another route: global.clusterConfiguration is published from the very
+	// Secret this hook used to read (global-hooks/discovery/cluster_configuration.go), and with that
+	// Secret absent the old code fell through to the real cluster version, never "Automatic".
 	if !input.Values.Get("global.clusterConfiguration").Exists() {
 		requirements.SaveValue(isK8sVersionAutomaticKey, false)
 		return nil
 	}
 
-	// Fail rather than assume "pinned". requirements/check.go treats false as "gate not applicable"
-	// and returns true, so a false published here silently skips the Istio↔Kubernetes compatibility
-	// check on Deckhouse upgrades. The previous implementation read the ClusterConfiguration Secret
-	// directly and errored when it could not determine the version; reading a bool whose schema
-	// default is false lost that fail-closed behaviour.
-	//
-	// targetKubernetesVersion is the tell: it has no schema default, so an empty value means the
-	// global discovery hook has not published yet (or failed) and the bool cannot be trusted.
+	// Fail rather than assume "pinned": requirements/check.go treats false as "gate not applicable",
+	// so a wrong false silently skips the Istio↔Kubernetes compatibility check on upgrades.
+	// kubernetesVersionIsDefault defaults to false in the schema, so it cannot tell "pinned" from
+	// "not published yet" — targetKubernetesVersion has no default, and its emptiness can.
 	if input.Values.Get("global.discovery.targetKubernetesVersion").String() == "" {
 		return fmt.Errorf("cannot determine whether the Kubernetes version is pinned: " +
 			"global.discovery.targetKubernetesVersion is empty")

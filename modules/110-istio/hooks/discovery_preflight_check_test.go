@@ -36,9 +36,8 @@ istio:
 `
 	f := HookExecutionConfigInit(initValues, "")
 
-	// Present in every context below except the managed-cluster one: this key is published from the
-	// d8-cluster-configuration Secret, so its presence is what tells the hook that Deckhouse owns the
-	// Kubernetes version at all.
+	// Published from the d8-cluster-configuration Secret: its presence is what tells the hook that
+	// Deckhouse owns the Kubernetes version. Set everywhere below except the managed-cluster context.
 	setClusterConfiguration := func() {
 		f.ValuesSetFromYaml("global.clusterConfiguration", []byte(`
 apiVersion: deckhouse.io/v1
@@ -93,10 +92,9 @@ clusterDomain: cluster.local
 		})
 	})
 
-	// The gate this hook feeds is skipped whenever the published value is false
-	// (requirements/check.go returns true early), so "could not determine" must not be reported as
-	// false. The flag has a schema default of false, which is indistinguishable from a real pin —
-	// targetKubernetesVersion has no default, so its emptiness is what marks "not resolved yet".
+	// A published false skips the gate (requirements/check.go returns true early), so "could not
+	// determine" must not become false. kubernetesVersionIsDefault defaults to false in the schema and
+	// so looks like a real pin; targetKubernetesVersion has no default and marks "not resolved yet".
 	Context("global discovery has not published a target version", func() {
 		BeforeEach(func() {
 			setClusterConfiguration()
@@ -111,18 +109,15 @@ clusterDomain: cluster.local
 		})
 	})
 
-	// Managed cluster: no ClusterConfiguration, so control-plane-manager is disabled and the provider
-	// owns the Kubernetes version. The gate fed by this key compares the coming Deckhouse release's
-	// default version against installed Istio versions, which would block Deckhouse updates over a
-	// version this cluster never runs. Reproduces the pre-move behaviour: with the
-	// d8-cluster-configuration Secret absent the hook fell through to the actual cluster version,
-	// which never equalled the literal "Automatic".
+	// Managed cluster: no ClusterConfiguration, the provider owns the Kubernetes version. The gate
+	// would block Deckhouse updates over a version this cluster never runs, so it must stay skipped —
+	// as it was before the move, when the absent Secret left a real version that is never "Automatic".
 	Context("managed cluster without ClusterConfiguration", func() {
 		f := HookExecutionConfigInit(initValues, "")
 
 		BeforeEach(func() {
-			// Deliberately set: in a managed cluster nothing is pinned anywhere, so the global hook
-			// publishes the Deckhouse default with isDefault=true. The gate must still be skipped.
+			// isDefault=true on purpose: nothing is pinned in a managed cluster either, and the gate
+			// must be skipped regardless.
 			f.ValuesSet("global.discovery.targetKubernetesVersion", "1.36")
 			f.ValuesSet("global.discovery.kubernetesVersionIsDefault", true)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -139,10 +134,9 @@ clusterDomain: cluster.local
 			compatibilityMap, exists := requirements.GetValue(istioToK8sCompatibilityMapKey)
 			Expect(exists).To(BeTrue())
 
-			// Compared against the values rather than a literal: what this context is about is that the
-			// map still reaches the requirement even though the hook returns early right after saving
-			// it. A hard-coded copy would only restate initValues, and go stale on the next Istio
-			// revision bump — which is exactly how it broke.
+			// Compared against the values, not a literal: the point is that the map still reaches the
+			// requirement despite the early return, and a hard-coded copy would go stale on the next
+			// Istio revision bump — which is how this broke before.
 			var fromValues map[string][]string
 			Expect(json.Unmarshal([]byte(f.ValuesGet("istio.internal.istioToK8sCompatibilityMap").String()), &fromValues)).To(Succeed())
 			Expect(fromValues).NotTo(BeEmpty())

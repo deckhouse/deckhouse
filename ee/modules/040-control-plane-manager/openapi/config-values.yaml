@@ -413,8 +413,6 @@ properties:
 
       If `Default` is specified, Deckhouse selects the version considered stable for the current release. If that version is more than 1 minor version below the maximum version that has ever been used in the cluster, the version is not changed automatically.
 
-      Only `Default` or an explicit version is accepted here. The `Automatic` spelling remains valid in the deprecated `ClusterConfiguration.kubernetesVersion`, but not in this parameter.
-
       Downgrading more than 1 minor version below the highest version the cluster has ever run is forbidden.
     enum:
       - "1.32"
