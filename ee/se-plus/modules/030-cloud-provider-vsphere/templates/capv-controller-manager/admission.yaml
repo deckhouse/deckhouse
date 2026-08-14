@@ -9,7 +9,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "capv-controller-manager")) | nindent 2 }}
 webhooks:
 - admissionReviewVersions:
-  - v1beta1
+  - v1
   clientConfig:
     caBundle: {{ .Values.cloudProviderVsphere.internal.capvControllerManagerWebhookCert.ca | b64enc }}
     service:
@@ -31,7 +31,7 @@ webhooks:
     - vsphereclustertemplates
   sideEffects: None
 - admissionReviewVersions:
-  - v1beta1
+  - v1
   clientConfig:
     caBundle: {{ .Values.cloudProviderVsphere.internal.capvControllerManagerWebhookCert.ca | b64enc }}
     service:
@@ -53,7 +53,7 @@ webhooks:
     - vspherefailuredomains
   sideEffects: None
 - admissionReviewVersions:
-  - v1beta1
+  - v1
   clientConfig:
     caBundle: {{ .Values.cloudProviderVsphere.internal.capvControllerManagerWebhookCert.ca | b64enc }}
     service:
@@ -75,7 +75,7 @@ webhooks:
     - vspheremachines
   sideEffects: None
 - admissionReviewVersions:
-  - v1beta1
+  - v1
   clientConfig:
     caBundle: {{ .Values.cloudProviderVsphere.internal.capvControllerManagerWebhookCert.ca | b64enc }}
     service:
@@ -97,7 +97,7 @@ webhooks:
     - vspheremachinetemplates
   sideEffects: None
 - admissionReviewVersions:
-  - v1beta1
+  - v1
   clientConfig:
     caBundle: {{ .Values.cloudProviderVsphere.internal.capvControllerManagerWebhookCert.ca | b64enc }}
     service:
