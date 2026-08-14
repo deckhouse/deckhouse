@@ -28,9 +28,9 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/loader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/lifecycle"
-	taskcleanup "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/cleanup"
 	taskdeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/deploy"
 	taskdisable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/disable"
+	taskdummy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/dummy"
 	taskload "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/load"
 	taskundeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/undeploy"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
@@ -279,7 +279,7 @@ func (r *Runtime) registerModule(ctx context.Context, conf *modules.Config) (*mo
 	// last point either can win. Publishing now would give the scheduler a node for a package nothing
 	// tracks, and Enable would then register its hooks with the shared managers with no removal path
 	// left to disable them.
-	if err := ctx.Err(); err != nil {
+	if err = ctx.Err(); err != nil {
 		return nil, err
 	}
 
@@ -341,8 +341,8 @@ func (r *Runtime) RemoveEmbeddedModule(name string) {
 	// The teardown rides the last task in the package's queue, never runs inline: it stops that queue
 	// and waits up to 10s for it to drain, so from here — under r.mu, with a Load possibly still
 	// running and about to want r.mu itself — it would deadlock both. RemoveModule anchors it on
-	// Undeploy; an embedded module has nothing to undeploy, so it anchors on a barrier.
-	r.queueService.Enqueue(ctx, name, taskcleanup.NewTask(name, r.logger), queue.WithOnDone(r.cleanupModule(name)))
+	// Undeploy; an embedded module has nothing to undeploy, so it anchors on a dummy task.
+	r.queueService.Enqueue(ctx, name, taskdummy.NewTask(name, r.logger), queue.WithOnDone(r.cleanupModule(name)))
 }
 
 // cleanupModule returns the teardown that drops the Store entry, stops the queue and deletes the

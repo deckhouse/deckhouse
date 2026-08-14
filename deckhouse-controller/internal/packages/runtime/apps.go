@@ -146,7 +146,7 @@ func (r *Runtime) loadApp(ctx context.Context, repo registry.Remote, packagePath
 	// the last point either can win. Publishing now would give the scheduler a node for a package
 	// nothing tracks, and Enable would then register its hooks with the shared managers with no
 	// removal path left to disable them.
-	if err := ctx.Err(); err != nil {
+	if err = ctx.Err(); err != nil {
 		return "", err
 	}
 

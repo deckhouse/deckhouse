@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cleanup
+package dummy
 
 import (
 	"context"
@@ -22,10 +22,10 @@ import (
 )
 
 const (
-	taskTracer = "package-cleanup"
+	taskTracer = "package-dummy"
 )
 
-// NewTask creates a Cleanup task: the terminal barrier of a removal with nothing to undeploy.
+// NewTask creates a Dummy task: the terminal barrier of a removal with nothing to undeploy.
 // The removal's teardown rides this task's OnDone, so it runs only once everything already queued
 // for the package has finished — see Execute for why the teardown cannot be the task itself.
 func NewTask(name string, logger *log.Logger) queue.Task {
@@ -40,7 +40,7 @@ type task struct {
 }
 
 func (t *task) String() string {
-	return "Cleanup"
+	return "Dummy"
 }
 
 // Execute does nothing and cannot fail, so it can neither retry nor block the queue it ends.

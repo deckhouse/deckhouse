@@ -293,9 +293,9 @@ func (r *reconciler) handleDelete(ctx context.Context, module *v1alpha2.Module) 
 		}
 	}
 
-	// An embedded module deployed nothing, so its removal enqueues no undeploy. Whether it should be
-	// removed at all is a separate question: the image still ships it, so the next bootstrap places
-	// it again — see decisions/0002-embedded-module-cr-deletion.md.
+	// An embedded module deployed nothing, so its removal enqueues no undeploy. The removal only
+	// holds until the next start: the image still ships the module, so the bootstrap recreates the
+	// resource and loads it again.
 	if module.IsEmbedded() {
 		logger.Info("embedded module is removed, it will be placed again on the next start")
 
