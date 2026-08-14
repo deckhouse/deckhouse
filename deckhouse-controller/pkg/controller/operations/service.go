@@ -310,23 +310,27 @@ func filterLatestTags(tags []*semver.Version) []*semver.Version {
 		major := tag.Major()
 		minor := tag.Minor()
 
+		// Initialize the map if it doesn't exist
 		if latestTagsMap[major] == nil {
 			latestTagsMap[major] = map[uint64]*semver.Version{}
 		}
 
+		// If the minor version is not in the map, add it
 		present, ok := latestTagsMap[major][minor]
 		if !ok || present == nil {
 			latestTagsMap[major][minor] = tag
+			newLength++
 			continue
 		}
 		if present.GreaterThan(tag) {
 			continue
 		}
 
+		// If the tag is greater than the present tag, update the map
 		latestTagsMap[major][minor] = tag
-		newLength++
 	}
 
+	// Remap the map to a slice of semver.Version
 	result := make([]*semver.Version, 0, newLength)
 	for _, major := range latestTagsMap {
 		for _, minor := range major {
