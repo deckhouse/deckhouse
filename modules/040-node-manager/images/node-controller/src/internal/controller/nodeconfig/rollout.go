@@ -106,6 +106,12 @@ func (b *rolloutBudget) hasSlot(nodeName string) bool {
 	return len(b.updating) < b.concurrency
 }
 
+// holders names the nodes occupying the slots, sorted, for the one log line an
+// operator reads when a rollout is not moving.
+func (b *rolloutBudget) holders() []string {
+	return slices.Sorted(maps.Keys(b.updating))
+}
+
 // spend records that a node was handed a new spec, so the nodes rendered after
 // it in the same pass are judged against a group where it is updating.
 func (b *rolloutBudget) spend(nodeName string) {
