@@ -58,6 +58,7 @@ const (
 	D8ModuleConfigObsoleteVersion  = "d8_module_config_obsolete_version"
 	D8ModuleAtConflict             = "d8_module_at_conflict"
 	D8ModuleConfigAllowedToDisable = "d8_moduleconfig_allowed_to_disable"
+	DeprecatedModuleConfigIsUsed   = "d8_deprecated_moduleconfig_is_used"
 
 	// ============================================================================
 	// Module Source Controller Metrics
@@ -314,6 +315,15 @@ func RegisterModuleControllerMetrics(metricStorage metricsstorage.Storage) error
 	)
 	if err != nil {
 		return fmt.Errorf("failed to register %s: %w", D8ModuleConfigObsoleteVersion, err)
+	}
+
+	_, err = metricStorage.RegisterGauge(
+		DeprecatedModuleConfigIsUsed,
+		configLabels,
+		options.WithHelp("Gauge indicating deprecated moduleconfigs are used (1.0 = used, 0.0 = not used)"),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to register %s: %w", DeprecatedModuleConfigIsUsed, err)
 	}
 
 	_, err = metricStorage.RegisterGauge(
