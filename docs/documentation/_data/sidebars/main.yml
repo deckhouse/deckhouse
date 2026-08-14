@@ -1387,6 +1387,10 @@ entries:
                 ru: Вертикальное масштабирование
               url: /architecture/kubernetes-and-scheduling/vpa.html
             - title:
+                en: Adaptive-resource-management module
+                ru: Модуль adaptive-resource-management
+              url: /architecture/kubernetes-and-scheduling/adaptive-resource-management.html
+            - title:
                 en: Descheduler module
                 ru: Модуль descheduler
               url: /architecture/kubernetes-and-scheduling/descheduler.html
@@ -1491,6 +1495,10 @@ entries:
                     ru: Модуль chrony
                   url: /architecture/cluster-and-infrastructure/infrastructure/chrony.html
                 - title:
+                    en: Gpu module
+                    ru: Модуль gpu
+                  url: /architecture/cluster-and-infrastructure/infrastructure/gpu.html
+                - title:
                     en: Terraform-manager module
                     ru: Модуль terraform-manager
                   url: /architecture/cluster-and-infrastructure/infrastructure/terraform-manager.html
@@ -1543,6 +1551,10 @@ entries:
                 ru: Модуль cert-manager
               url: /architecture/security/cert-manager.html
             - title:
+                en: Operator-trivy module
+                ru: Модуль operator-trivy
+              url: /architecture/security/operator-trivy.html
+            - title:
                 en: Runtime-audit-engine module
                 ru: Модуль runtime-audit-engine
               url: /architecture/security/runtime-audit-engine.html
@@ -1557,7 +1569,7 @@ entries:
             - title:
                 en: Cni-cilium module
                 ru: Модуль cni-cilium
-              url: /architecture/network/cni-cilium.html              
+              url: /architecture/network/cni-cilium.html
             - title:
                 en: Ingress-nginx module
                 ru: Модуль ingress-nginx
@@ -1758,6 +1770,10 @@ entries:
             en: Supported K8s & OS versions
             ru: Поддерживаемые версии K8s и ОС
           url: /reference/supported_versions.html
+        - title:
+            en: Kubernetes conformance test results
+            ru: Результаты Kubernetes conformance-тестов
+          url: /reference/kubernetes-conformance.html
         - title:
             en: Revision comparison
             ru: Сравнение редакций

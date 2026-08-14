@@ -1264,3 +1264,87 @@ func TestValidation_MultipleRegisteredInstanceClassKinds(t *testing.T) {
 		})
 	}
 }
+
+// limitedSwapRequest builds the admission payload the way the API server sends it: the memorySwap
+// subtree is written with the CRD's own spelling, not marshalled from the Go type. Marshalling the
+// struct would name the field whatever the tag says and pass no matter what — which is how a Go
+// type that called it "behavior" survived while the CRD called it "swapBehavior", leaving the
+// guard below dead.
+func limitedSwapRequest(t *testing.T) admission.Request {
+	t.Helper()
+
+	ng := baseNodeGroup("worker", v1.NodeTypeStatic)
+	raw, err := json.Marshal(ng)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var obj map[string]interface{}
+	if err := json.Unmarshal(raw, &obj); err != nil {
+		t.Fatal(err)
+	}
+	spec, ok := obj["spec"].(map[string]interface{})
+	if !ok {
+		t.Fatal("NodeGroup has no spec")
+	}
+	spec["kubelet"] = map[string]interface{}{
+		"memorySwap": map[string]interface{}{
+			"swapBehavior": "LimitedSwap",
+			"limitedSwap":  map[string]interface{}{"size": "2G"},
+		},
+	}
+
+	patched, err := json.Marshal(obj)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return admission.Request{
+		AdmissionRequest: admissionv1.AdmissionRequest{
+			Operation: "UPDATE",
+			Name:      ng.Name,
+			Object:    runtime.RawExtension{Raw: patched},
+			OldObject: runtime.RawExtension{Raw: raw},
+		},
+	}
+}
+
+// LimitedSwap needs cgroup v2, so it must be refused while the group still holds a node without it.
+func TestValidation_LimitedSwapDeniedOnNodesWithoutCgroupV2(t *testing.T) {
+	s := newScheme()
+	node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{
+		Name: "node-1",
+		Labels: map[string]string{
+			"node.deckhouse.io/containerd-v2-unsupported": "",
+			"node.deckhouse.io/group":                     "worker",
+		},
+	}}
+	c := fake.NewClientBuilder().WithScheme(s).WithObjects(node).Build()
+	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+
+	resp := w.Handle(context.Background(), limitedSwapRequest(t))
+
+	if resp.Allowed {
+		t.Fatal("expected denied: LimitedSwap needs cgroup v2 on every node of the group")
+	}
+	if resp.Result == nil || !strings.Contains(resp.Result.Message, "cgroup v2") {
+		t.Fatalf("expected a cgroup v2 message, got: %v", resp.Result)
+	}
+}
+
+// The same NodeGroup is allowed once every node supports cgroup v2 — the positive control that
+// makes the test above able to fail for the right reason.
+func TestValidation_LimitedSwapAllowedOnSupportedNodes(t *testing.T) {
+	s := newScheme()
+	node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{
+		Name:   "node-1",
+		Labels: map[string]string{"node.deckhouse.io/group": "worker"},
+	}}
+	c := fake.NewClientBuilder().WithScheme(s).WithObjects(node).Build()
+	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+
+	resp := w.Handle(context.Background(), limitedSwapRequest(t))
+
+	if !resp.Allowed {
+		t.Fatalf("expected allowed, got denied: %s", resp.Result.Message)
+	}
+}

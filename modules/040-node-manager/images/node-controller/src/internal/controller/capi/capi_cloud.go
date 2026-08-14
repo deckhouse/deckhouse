@@ -69,13 +69,9 @@ func buildCAPIMachineDeployment(in capiMDInput) *unstructured.Unstructured {
 	if s := serializeNodeGroupTaints(in.ng); s != "" {
 		annotations["capacity.cluster-autoscaler.kubernetes.io/taints"] = s
 	}
-	if nodeCapacity, _ := in.resolved.NodeCapacity.(map[string]interface{}); nodeCapacity != nil {
-		if cpu := nestedString(nodeCapacity, "cpu"); cpu != "" {
-			annotations["capacity.cluster-autoscaler.kubernetes.io/cpu"] = cpu
-		}
-		if memory := nestedString(nodeCapacity, "memory"); memory != "" {
-			annotations["capacity.cluster-autoscaler.kubernetes.io/memory"] = memory
-		}
+	if nodeCapacity := in.resolved.NodeCapacity; nodeCapacity != nil {
+		annotations["capacity.cluster-autoscaler.kubernetes.io/cpu"] = nodeCapacity.CPU.String()
+		annotations["capacity.cluster-autoscaler.kubernetes.io/memory"] = nodeCapacity.Memory.String()
 	}
 
 	// Separate instances on purpose: the provider spec patch is deep-merged into spec below,
@@ -293,7 +289,7 @@ func secretDataEqual(a, b map[string][]byte) bool {
 	return true
 }
 
-func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Context, ng *deckhousev1.NodeGroup, rawSpec map[string]interface{}) error {
+func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Context, ng *deckhousev1.NodeGroup) error {
 	logger := log.FromContext(ctx)
 
 	if ng.Spec.CloudInstances == nil {
@@ -316,8 +312,8 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 	}
 	cloudType, _ := cloudProvider["type"].(string)
 
-	ds := &derived_status.Service{Client: r.Client, Reader: r.APIReader}
-	resolved, validationErr, err := ds.ResolveNodeGroup(ctx, ng, rawSpec)
+	ds := &derived_status.Service{Client: r.Client}
+	resolved, validationErr, err := ds.ResolveNodeGroup(ctx, ng)
 	if err != nil {
 		return fmt.Errorf("resolve NodeGroup %s: %w", ng.Name, err)
 	}
@@ -349,7 +345,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 		checksum           string
 	)
 	if contract != nil {
-		instanceClassSpec, _ = resolved.InstanceClass.(map[string]interface{})
+		instanceClassSpec = resolved.InstanceClass
 		if instanceClassSpec == nil {
 			logger.Info("skipping CAPI: InstanceClass is not resolved yet", "nodeGroup", ng.Name)
 			return nil

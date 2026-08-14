@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/capacity"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 )
 
@@ -198,7 +199,7 @@ func TestBuildCAPIMachineDeploymentScaleFromZeroCapacity(t *testing.T) {
 	ng := &deckhousev1.NodeGroup{}
 	ng.Name = "worker"
 	resolved := derived_status.ResolvedNodeGroup{
-		NodeCapacity: map[string]interface{}{"cpu": "4", "memory": "8Gi"},
+		NodeCapacity: &capacity.InstanceType{CPU: resource.MustParse("4"), Memory: resource.MustParse("8Gi")},
 	}
 
 	md := buildCAPIMachineDeployment(capiMDInput{ng: ng, resolved: resolved})

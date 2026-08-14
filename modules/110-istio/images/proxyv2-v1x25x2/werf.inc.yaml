@@ -60,6 +60,33 @@ import:
   add: /iptables-wrapper
   to: /sbin/iptables-wrapper
   before: setup
+- from: {{ index $.Images "tools/bash" }}
+  add: /usr/bin
+  to: /bin
+  includePaths:
+  - bash
+  - sh
+  before: setup
+- from: {{ index $.Images "tools/iproute2" }}
+  add: /sbin/ss
+  to: /usr/sbin/ss
+  before: setup
+- from: {{ index $.Images "tools/coreutils" }}
+  add: /usr/bin
+  to: /usr/bin
+  includePaths:
+  - echo
+  - sleep
+  - wc
+  before: setup
+- from: {{ index $.Images "tools/grep" }}
+  add: /usr/bin/grep
+  to: /usr/bin/grep
+  before: setup
+- from: {{ index $.Images "tools/findutils" }}
+  add: /usr/bin/xargs
+  to: /usr/bin/xargs
+  before: setup
 - image: registrypackages/d8-curl-artifact-8-9-1
   add: /d8-curl
   to: /usr/bin/curl
@@ -67,7 +94,6 @@ import:
 {{- include "image mount points" . }}
 imageSpec:
   config:
-    user: "1337:1337"
     env: 
       ISTIO_META_ISTIO_PROXY_SHA: "istio-proxy:78bd2d9b284978e170a49cd13decd5f952544489"
       ISTIO_META_ISTIO_VERSION: {{ $istioVersion }}

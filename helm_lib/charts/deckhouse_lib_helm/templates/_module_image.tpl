@@ -4,65 +4,53 @@
   {{- $context := index . 0 }} {{- /* Template context with .Values, .Chart, etc */ -}}
   {{- $containerName := index . 1 | trimAll "\"" }} {{- /* Container name */ -}}
 
-  {{- if and (lt (len .) 3) $context.Module $context.Module.Package }}
-    {{- /* New approach: the current module's own image from its package digests. */}}
+  {{- /* New approach: use module package values */}} 
+  {{- if and $context.Module $context.Module.Package }}
+    {{- $registryBase := $context.Module.Package.Registry.repository }}
+    {{- if not $registryBase }}
+      {{- fail "Registry base is not set" }}
+    {{- end }}
+
+    {{- $packageName := $context.Module.Package.Name }}
+    {{- if not $packageName }}
+      {{- fail "Package name is not set" }}
+    {{- end }}
+
     {{- $imageDigest := index $context.Module.Package.Digests $containerName }}
     {{- if not $imageDigest }}
       {{- fail (printf "Image %s has no digest" $containerName) }}
     {{- end }}
 
-    {{- $registryBase := $context.Module.Package.Registry.repository }}
-    {{- if $registryBase }}
-      {{- /* Module carries its own registry (external module): <repo>/<package>@<digest> */}}
-      {{- $packageName := $context.Module.Package.Name }}
-      {{- if not $packageName }}
-        {{- fail "Package name is not set" }}
-      {{- end }}
-      {{- printf "%s/%s@%s" $registryBase $packageName $imageDigest }}
-    {{- else }}
-      {{- /* Embedded module: no own registry, image lives in the platform registry addressed by digest */}}
-      {{- $registryBase = $context.Values.global.modulesImages.registry.base }}
-      {{- if not $registryBase }}
-        {{- fail "Registry base is not set" }}
-      {{- end }}
-      {{- printf "%s@%s" $registryBase $imageDigest }}
-    {{- end }}
+    {{- printf "%s/%s@%s" $registryBase $packageName $imageDigest }}
 
+  {{- /* Legacy fallback: use global modulesImages values */}}
   {{- else }}
-    {{- /* Global map: legacy (by chart name) or an explicit source module (e.g. "common"). */}}
-    {{- $moduleName := $context.Chart.Name }}
+    {{- $rawModuleName := $context.Chart.Name }}
     {{- if ge (len .) 3 }}
-      {{- $moduleName = (index . 2) }}
+      {{- $rawModuleName = (index . 2) }} {{- /* Optional module name */ -}}
     {{- end }}
-    {{- include "helm_lib_module_image_from_global" (list $context $containerName $moduleName) }}
-  {{- end }}
-{{- end }}
+    {{- $moduleName := (include "helm_lib_module_camelcase_name" $rawModuleName) }}
 
-{{- /* Resolve an image from the global modulesImages digest map by module name. */}}
-{{- /* Usage: {{ include "helm_lib_module_image_from_global" (list $context "<container-name>" "<raw-module-name>") }} */ -}}
-{{- define "helm_lib_module_image_from_global" }}
-  {{- $context := index . 0 }}
-  {{- $containerName := index . 1 | trimAll "\"" }}
-  {{- $rawModuleName := index . 2 }}
-  {{- $moduleName := (include "helm_lib_module_camelcase_name" $rawModuleName) }}
+    {{- $imageDigest := index $context.Values.global.modulesImages.digests $moduleName $containerName }}
+    {{- if not $imageDigest }}
+      {{- $error := (printf "Image %s.%s has no digest" $moduleName $containerName ) }}
+      {{- fail $error }}
+    {{- end }}
 
-  {{- $imageDigest := index $context.Values.global.modulesImages.digests $moduleName $containerName }}
-  {{- if not $imageDigest }}
-    {{- fail (printf "Image %s.%s has no digest" $moduleName $containerName) }}
-  {{- end }}
-
-  {{- $registryBase := $context.Values.global.modulesImages.registry.base }}
-  {{- /* handle external modules registry */}}
-  {{- if index $context.Values $moduleName }}
-    {{- if index $context.Values $moduleName "registry" }}
-      {{- if index $context.Values $moduleName "registry" "base" }}
-        {{- $host := trimAll "/" (index $context.Values $moduleName "registry" "base") }}
-        {{- $path := trimAll "/" (include "helm_lib_module_kebabcase_name" $rawModuleName) }}
-        {{- $registryBase = join "/" (list $host $path) }}
+    {{- $registryBase := $context.Values.global.modulesImages.registry.base }}
+  {{- /*  handle external modules registry */}}
+    {{- if index $context.Values $moduleName }}
+      {{- if index $context.Values $moduleName "registry" }}
+        {{- if index $context.Values $moduleName "registry" "base" }}
+          {{- $host := trimAll "/" (index $context.Values $moduleName "registry" "base") }}
+          {{- $path := trimAll "/" (include "helm_lib_module_kebabcase_name" $rawModuleName) }}
+          {{- $registryBase = join "/" (list $host $path) }}
+        {{- end }}
       {{- end }}
     {{- end }}
+  {{- /* end of external module handling block */}}
+    {{- printf "%s@%s" $registryBase $imageDigest }}
   {{- end }}
-  {{- printf "%s@%s" $registryBase $imageDigest }}
 {{- end }}
 
 {{- /* Usage: {{ include "helm_lib_module_image_no_fail" (list . "<container-name>") }} */ -}}

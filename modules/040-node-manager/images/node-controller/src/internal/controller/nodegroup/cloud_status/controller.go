@@ -40,13 +40,16 @@ type Result struct {
 	LatestError string
 }
 
-func (s *Service) Compute(ctx context.Context, ng *v1.NodeGroup) Result {
+func (s *Service) Compute(ctx context.Context, ng *v1.NodeGroup) (Result, error) {
 	result := Result{}
 	if ng.Spec.NodeType != v1.NodeTypeCloudEphemeral {
-		return result
+		return result, nil
 	}
 
-	zonesCount := s.getZonesCount(ctx, ng)
+	zonesCount, err := s.getZonesCount(ctx, ng)
+	if err != nil {
+		return result, err
+	}
 	if ng.Spec.CloudInstances != nil {
 		result.Min = ng.Spec.CloudInstances.MinPerZone * zonesCount
 		result.Max = ng.Spec.CloudInstances.MaxPerZone * zonesCount
@@ -68,5 +71,5 @@ func (s *Service) Compute(ctx context.Context, ng *v1.NodeGroup) Result {
 		result.LatestError = result.Failures[len(result.Failures)-1].Message
 	}
 
-	return result
+	return result, nil
 }
