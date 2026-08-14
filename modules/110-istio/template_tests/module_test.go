@@ -268,6 +268,15 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			Expect(istioV25.Field("metadata.name").String()).To(Equal(`v1x25x2`))
 			Expect(istioV25.Field("spec.values.meshConfig.rootNamespace").String()).To(Equal(`d8-istio`))
 			Expect(istioV25.Field("spec.values.global.proxy.image").String()).To(Equal(`registry.example.com@imageHash-istio-proxyv2V1x25x2`))
+			Expect(istioV25.Field("spec.values.pilot.affinity").String()).To(MatchYAML(`
+podAntiAffinity:
+  requiredDuringSchedulingIgnoredDuringExecution:
+  - labelSelector:
+      matchLabels:
+        app: istiod
+        istio.io/rev: v1x25x2
+    topologyKey: kubernetes.io/hostname
+`))
 
 			Expect(iopV21.Field("spec.revision").String()).To(Equal(`v1x21x6`))
 			Expect(iopV21.Field("spec.meshConfig.rootNamespace").String()).To(Equal(`d8-istio`))
