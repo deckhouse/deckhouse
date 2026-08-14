@@ -236,15 +236,16 @@ func applyNodeGroupReplicasFromCloudProviderVars(m *MetaConfig) error {
 		return nil
 	}
 	// Only the mc-flow derives replicas from NodeGroups; the legacy flow reads
-	// them from its ProviderClusterConfiguration and its NodeGroups legitimately
-	// carry no cloudInstances at all.
-	mcFlow := len(m.ProviderClusterConfig) == 0
+	// them from its ProviderClusterConfiguration.
+	enforceReplicas := !m.HasLegacyProviderConfig()
 
-	if _, hasMaster := m.CloudProviderVars.NodeGroups[masterNodeGroupName]; hasMaster && m.MasterNodeGroupSpec.Replicas == 0 {
-		if err := requireCloudInstances(m.CloudProviderVars.NodeGroups, masterNodeGroupName, mcFlow); err != nil {
-			return err
+	if masterNg, hasMaster := m.CloudProviderVars.NodeGroups[masterNodeGroupName]; hasMaster && m.MasterNodeGroupSpec.Replicas == 0 {
+		if enforceReplicas {
+			if err := requireNodeGroupReplicas(masterNg, masterNodeGroupName); err != nil {
+				return err
+			}
 		}
-		if r := nodeGroupReplicas(m.CloudProviderVars.NodeGroups, masterNodeGroupName); r > 0 {
+		if r, ok := nodeGroupMinPerZone(masterNg); ok && r > 0 {
 			m.MasterNodeGroupSpec.Replicas = r
 		}
 	}
@@ -252,19 +253,17 @@ func applyNodeGroupReplicasFromCloudProviderVars(m *MetaConfig) error {
 		// Iterate over sorted names so the order of TerraNodeGroupSpecs
 		// is reproducible. Map iteration is randomised by the Go runtime;
 		// downstream state-hash comparisons see spurious drift otherwise.
-		//
-		// All non-master CloudPermanent NodeGroups (already filtered by
-		// IsCloudPermanentNodeGroup before reaching here) are emitted as
-		// TerraNodeGroupSpecs so converge keeps managing them.
 		for _, name := range sortedKeys(m.CloudProviderVars.NodeGroups) {
 			if name == masterNodeGroupName {
 				continue
 			}
-			if err := requireCloudInstances(m.CloudProviderVars.NodeGroups, name, mcFlow); err != nil {
-				return err
-			}
 			ng := m.CloudProviderVars.NodeGroups[name]
-			r := nodeGroupReplicas(m.CloudProviderVars.NodeGroups, name)
+			if enforceReplicas {
+				if err := requireNodeGroupReplicas(ng, name); err != nil {
+					return err
+				}
+			}
+			r, _ := nodeGroupMinPerZone(ng)
 			nodeTemplate, _ := nestedMap(ng, "spec", "nodeTemplate")
 			m.TerraNodeGroupSpecs = append(m.TerraNodeGroupSpecs, TerraNodeGroupSpec{
 				Name:         name,
@@ -277,40 +276,41 @@ func applyNodeGroupReplicasFromCloudProviderVars(m *MetaConfig) error {
 	return nil
 }
 
-// requireCloudInstances rejects a CloudPermanent NodeGroup that carries no
-// cloudInstances section. In the mc-flow that section is the only record of the
-// group's replica count, and a missing count reads back as zero, which converge
-// acts on by deleting every node of the group — the control plane included.
-func requireCloudInstances(ngs map[string]map[string]interface{}, name string, mcFlow bool) error {
-	if !mcFlow {
-		return nil
+// requireNodeGroupReplicas rejects a CloudPermanent NodeGroup no keepable node
+// count can be read from. Converge acts on a zero by deleting every node of the
+// group, so an unreadable count must stop it rather than be read as zero.
+func requireNodeGroupReplicas(ng map[string]interface{}, name string) error {
+	replicas, ok := nodeGroupMinPerZone(ng)
+	if !ok {
+		return fmt.Errorf(
+			"NodeGroup %q is CloudPermanent but has no spec.cloudInstances.minPerZone: "+
+				"dhctl cannot tell how many nodes it must keep", name)
 	}
-	if _, ok := nestedMap(ngs[name], "spec", "cloudInstances"); ok {
-		return nil
+	if name == masterNodeGroupName && replicas < 1 {
+		return fmt.Errorf(
+			"NodeGroup %q has spec.cloudInstances.minPerZone: %d: the control plane cannot be scaled to zero",
+			name, replicas)
 	}
-	return fmt.Errorf(
-		"NodeGroup %q is CloudPermanent but has no spec.cloudInstances: dhctl cannot tell how many nodes it must keep. "+
-			"Restore spec.cloudInstances.classReference and spec.cloudInstances.minPerZone on it before converging",
-		name)
+	return nil
 }
 
-// nodeGroupReplicas derives the replica count for a CloudPermanent NodeGroup
-// from spec.cloudInstances.minPerZone, which CloudPermanent NGs always set
-// (they are the only kind that reaches here — see IsCloudPermanentNodeGroup).
-// Returning zero is interpreted by MasterNodeGroupController as "scale to
-// zero", so the caller must explicitly guard the master NG against that
-// outcome.
-func nodeGroupReplicas(ngs map[string]map[string]interface{}, name string) int {
-	ng, ok := ngs[name]
+// nodeGroupMinPerZone reports the node count of a CloudPermanent NodeGroup and
+// whether it is set at all; an explicit zero and an absent value mean different
+// things to the caller.
+func nodeGroupMinPerZone(ng map[string]interface{}) (int, bool) {
+	cloudInstances, ok := nestedMap(ng, "spec", "cloudInstances")
 	if !ok {
-		return 0
+		return 0, false
 	}
-	if ci, ok := nestedMap(ng, "spec", "cloudInstances"); ok {
-		if r := toPositiveInt(ci["minPerZone"]); r > 0 {
-			return r
-		}
+	switch n := cloudInstances["minPerZone"].(type) {
+	case float64:
+		return int(n), true
+	case int64:
+		return int(n), true
+	case int:
+		return n, true
 	}
-	return 0
+	return 0, false
 }
 
 func sortedKeys(m map[string]map[string]interface{}) []string {
@@ -320,24 +320,6 @@ func sortedKeys(m map[string]map[string]interface{}) []string {
 	}
 	sort.Strings(keys)
 	return keys
-}
-
-func toPositiveInt(v interface{}) int {
-	switch n := v.(type) {
-	case float64:
-		if n > 0 {
-			return int(n)
-		}
-	case int64:
-		if n > 0 {
-			return int(n)
-		}
-	case int:
-		if n > 0 {
-			return n
-		}
-	}
-	return 0
 }
 
 func nestedMap(obj map[string]interface{}, path ...string) (map[string]interface{}, bool) {

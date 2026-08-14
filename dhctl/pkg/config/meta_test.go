@@ -763,21 +763,89 @@ func TestNodeGroupManifestDefersToUserApprovalMode(t *testing.T) {
 	}
 }
 
-// A CloudPermanent NodeGroup in the cluster with no cloudInstances carries no
-// replica count at all. Silently reading it as zero is what deletes nodes, so
-// the mc-flow refuses to converge on it instead.
-func TestPrepareRejectsClusterNodeGroupWithoutCloudInstances(t *testing.T) {
+func clusterNodeGroup(spec map[string]interface{}) map[string]interface{} {
+	return map[string]interface{}{
+		"apiVersion": "deckhouse.io/v1",
+		"kind":       "NodeGroup",
+		"spec":       spec,
+	}
+}
+
+func cloudPermanentSpec(minPerZone any) map[string]interface{} {
+	cloudInstances := map[string]interface{}{
+		"classReference": map[string]interface{}{"kind": "DVPInstanceClass", "name": "any"},
+	}
+	if minPerZone != nil {
+		cloudInstances["minPerZone"] = minPerZone
+	}
+	return map[string]interface{}{"nodeType": "CloudPermanent", "cloudInstances": cloudInstances}
+}
+
+// Zero replicas is what converge acts on by deleting the group's nodes, so the
+// mc-flow refuses anything it cannot read a keepable count from.
+func TestPrepareRejectsUnusableReplicaCount(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		nodeGroups map[string]map[string]interface{}
+		wantErr    string
+	}{
+		{
+			name:       "master without cloudInstances",
+			nodeGroups: map[string]map[string]interface{}{"master": clusterNodeGroup(map[string]interface{}{"nodeType": "CloudPermanent"})},
+			wantErr:    "minPerZone",
+		},
+		{
+			name:       "master scaled to zero",
+			nodeGroups: map[string]map[string]interface{}{"master": clusterNodeGroup(cloudPermanentSpec(float64(0)))},
+			wantErr:    "control plane",
+		},
+		{
+			name: "worker without cloudInstances",
+			nodeGroups: map[string]map[string]interface{}{
+				"master": clusterNodeGroup(cloudPermanentSpec(float64(1))),
+				"worker": clusterNodeGroup(map[string]interface{}{"nodeType": "CloudPermanent"}),
+			},
+			wantErr: "minPerZone",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			m := cloudMetaConfig("")
+			m.CloudProviderVars = &CloudProviderVars{NodeGroups: tc.nodeGroups}
+
+			_, err := m.Prepare(t.Context(), DummyValidatorProvider())
+			require.ErrorContains(t, err, tc.wantErr)
+		})
+	}
+}
+
+// A non-master group scaled to zero is a deliberate choice, not a broken object.
+func TestPrepareAllowsZeroReplicasOnNonMaster(t *testing.T) {
 	m := cloudMetaConfig("")
 	m.CloudProviderVars = &CloudProviderVars{NodeGroups: map[string]map[string]interface{}{
-		masterNodeGroupName: {
-			"apiVersion": "deckhouse.io/v1",
-			"kind":       "NodeGroup",
-			"metadata":   map[string]interface{}{"name": masterNodeGroupName},
-			"spec":       map[string]interface{}{"nodeType": "CloudPermanent"},
-		},
+		"master": clusterNodeGroup(cloudPermanentSpec(float64(1))),
+		"worker": clusterNodeGroup(cloudPermanentSpec(float64(0))),
+	}}
+
+	m, err := m.Prepare(t.Context(), DummyValidatorProvider())
+	require.NoError(t, err)
+	require.Equal(t, 1, m.MasterNodeGroupSpec.Replicas)
+	require.Len(t, m.TerraNodeGroupSpecs, 1)
+	require.Equal(t, 0, m.TerraNodeGroupSpecs[0].Replicas)
+}
+
+// The legacy flow reads replicas from its ProviderClusterConfiguration, and its
+// NodeGroups carry no cloudInstances by design.
+func TestPrepareGuardIsOffForLegacyProviderConfig(t *testing.T) {
+	m := cloudMetaConfig("")
+	m.ProviderClusterConfig = map[string]json.RawMessage{
+		"layout":          json.RawMessage(`"Standard"`),
+		"masterNodeGroup": json.RawMessage(`{"replicas":1}`),
+		"nodeGroups":      json.RawMessage(`[{"name":"legacy","replicas":2}]`),
+	}
+	m.CloudProviderVars = &CloudProviderVars{NodeGroups: map[string]map[string]interface{}{
+		"master": clusterNodeGroup(map[string]interface{}{"nodeType": "CloudPermanent"}),
 	}}
 
 	_, err := m.Prepare(t.Context(), DummyValidatorProvider())
-	require.ErrorContains(t, err, "cloudInstances")
-	require.ErrorContains(t, err, masterNodeGroupName)
+	require.NoError(t, err)
 }
