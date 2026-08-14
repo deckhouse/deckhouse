@@ -3,6 +3,11 @@
 {{- $_ := set $options "numCPUs" (int $ic.numCPUs) -}}
 {{- $_ := set $options "memoryMiB" (add $ic.memory (mod $ic.memory 4)) -}}
 {{- $_ := set $options "rootDiskSize" (int ($ic.rootDiskSize | default 20)) -}}
+{{- /* Include cloneMode so that switching linkedClone <-> fullClone rotates the
+       VSphereMachineTemplate. The template itself hard-codes the value today but
+       tracking it here means any future switch flips the checksum and triggers
+       a rollout, instead of the immutable spec silently drifting. */ -}}
+{{- $_ := set $options "cloneMode" "fullClone" -}}
 {{- if $ic.template }}
   {{- $_ := set $options "template" $ic.template -}}
 {{- end }}
