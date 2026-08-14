@@ -1370,6 +1370,10 @@ entries:
                 en: Descheduler module
                 ru: Модуль descheduler
               url: /architecture/kubernetes-and-scheduling/descheduler.html
+            - title:
+                en: Pod-reloader module
+                ru: Модуль pod-reloader
+              url: /architecture/kubernetes-and-scheduling/pod-reloader.html              
         - title:
             en: Cluster & Infrastructure subsystem
             ru: Подсистема Cluster & Infrastructure
