@@ -224,10 +224,10 @@ index 9b601cb24..38ee7e309 100644
  
  func (h RegistryHost) isProxy(refhost string) bool {
 diff --git a/core/remotes/docker/resolver.go b/core/remotes/docker/resolver.go
-index 74a5bd08c..647a36b6c 100644
+index 470a3ea6e..8775f4c05 100644
 --- a/core/remotes/docker/resolver.go
 +++ b/core/remotes/docker/resolver.go
-@@ -526,7 +526,15 @@ func (r *dockerBase) request(host RegistryHost, method string, ps ...string) *re
+@@ -534,7 +534,15 @@ func (r *dockerBase) request(host RegistryHost, method string, ps ...string) *re
  		header.Set("User-Agent", "containerd/"+version.Version)
  	}
  
