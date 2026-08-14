@@ -249,21 +249,41 @@ properties:
             description: Неймспейс секрета. Если не указано, секрет ищется в неймспейсе модуля.
   crl:
     description: |
-      Опциональный список отзыва сертификатов (CRL) в формате PEM.
+      Опциональные настройки списка отзыва сертификатов (CRL).
 
-      Если не задан, модуль не публикует `ca-crl.pem` (CRL-проверки выключены).
-      Так federation / multicluster mTLS остаётся здоровым, пока CRL не включают
-      явно и peer CRL не обмениваются через metadata-exporter.
+      Если не задан (или пустой `pem`), модуль не публикует `ca-crl.pem`
+      (CRL-проверки выключены). Так federation / multicluster mTLS остаётся
+      здоровым, пока CRL не включают явно и peer CRL не обмениваются через
+      metadata-exporter.
 
-      Если задан — публикуется as-is (один или несколько PEM-блоков CRL), к нему
-      дописываются peer CRL из federation/multicluster metadata. Выпуск локального
-      PEM (какие serial, кто issuer) — ответственность оператора.
+      Если `pem` задан — публикуется as-is (один или несколько PEM-блоков CRL),
+      к нему дописываются peer CRL из federation/multicluster metadata. Выпуск
+      локального PEM (какие serial, кто issuer) — ответственность оператора.
 
       Istiod распространяет `ca-crl.pem` по namespace mesh как ConfigMap
       `istio-ca-crl`. При ambient и control plane ≥ 1.29 ztunnel монтирует его и
       проверяет цепочки пиров по CRL.
 
       Нужен CA в `cacerts` (сгенерированный модулем или подключённый через `ca`).
+    properties:
+      pem:
+        description: |
+          Один или несколько блоков X.509 CRL в формате PEM.
+      enableFullCrlChainCheck:
+        description: |
+          При `true` (по умолчанию) Envoy проверяет CRL по всей цепочке сертификата
+          пира (семантика `CRL_CHECK_ALL`). При `false` требуется CRL только для
+          leaf (`only_verify_leaf_cert_crl`).
+
+          Ставьте `false`, если для промежуточных issuer может не быть CRL, но
+          revoke leaf всё равно нужно enforced.
+      enableStrictCrlCheck:
+        description: |
+          Зарезервировано под будущий режим Envoy. После реализации `true` будет
+          означать fail-closed при отсутствии CRL для issuer в цепочке; `false` —
+          soft-missing (отсутствие CRL для issuer не deny).
+
+          Сейчас флаг принимается в ModuleConfig, но ещё не прокинут в data plane.
   jwksResolverAdditionalRootCA:
     description: |
       Дополнительный корневой сертификат в формате PEM. Используется компонентом istiod при получении JWKS URI по HTTPS.

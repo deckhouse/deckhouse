@@ -1,0 +1,75 @@
+diff --git a/pilot/pkg/networking/core/cluster_tls.go b/pilot/pkg/networking/core/cluster_tls.go
+index bdf962f87d..c2bb34545a 100644
+--- a/pilot/pkg/networking/core/cluster_tls.go
++++ b/pilot/pkg/networking/core/cluster_tls.go
+@@ -16,6 +16,7 @@ package core
+ 
+ import (
+ 	"fmt"
++	"os"
+ 	"strings"
+ 
+ 	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
+@@ -141,9 +142,12 @@ func (cb *ClusterBuilder) buildUpstreamClusterTLSContext(opts *buildClusterOpts,
+ 		tlsContext.CommonTlsContext.TlsCertificateSdsSecretConfigs = append(tlsContext.CommonTlsContext.TlsCertificateSdsSecretConfigs,
+ 			sec_model.ConstructSdsSecretConfig(sec_model.SDSDefaultResourceName))
+ 
++		defaultValidationContext := &tlsv3.CertificateValidationContext{MatchSubjectAltNames: util.StringToExactMatch(tls.SubjectAltNames)}
++		// Deckhouse: D8_CRL_ONLY_VERIFY_LEAF=true → Envoy only_verify_leaf_cert_crl.
++		defaultValidationContext.OnlyVerifyLeafCertCrl = os.Getenv("D8_CRL_ONLY_VERIFY_LEAF") == "true"
+ 		tlsContext.CommonTlsContext.ValidationContextType = &tlsv3.CommonTlsContext_CombinedValidationContext{
+ 			CombinedValidationContext: &tlsv3.CommonTlsContext_CombinedCertificateValidationContext{
+-				DefaultValidationContext:         &tlsv3.CertificateValidationContext{MatchSubjectAltNames: util.StringToExactMatch(tls.SubjectAltNames)},
++				DefaultValidationContext:         defaultValidationContext,
+ 				ValidationContextSdsSecretConfig: sec_model.ConstructSdsSecretConfig(sec_model.SDSRootResourceName),
+ 			},
+ 		}
+@@ -233,6 +237,8 @@ func constructUpstreamTLS(opts *buildClusterOpts, tls *networking.ClientTLSSetti
+ 					},
+ 				}
+ 			}
++			// Deckhouse: D8_CRL_ONLY_VERIFY_LEAF=true → Envoy only_verify_leaf_cert_crl.
++			defaultValidationContext.OnlyVerifyLeafCertCrl = os.Getenv("D8_CRL_ONLY_VERIFY_LEAF") == "true"
+ 			tlsContext.CommonTlsContext.ValidationContextType = &tlsv3.CommonTlsContext_CombinedValidationContext{
+ 				CombinedValidationContext: &tlsv3.CommonTlsContext_CombinedCertificateValidationContext{
+ 					DefaultValidationContext:         defaultValidationContext,
+diff --git a/pilot/pkg/security/model/authentication.go b/pilot/pkg/security/model/authentication.go
+index ba6643e3e1..9f58f02385 100644
+--- a/pilot/pkg/security/model/authentication.go
++++ b/pilot/pkg/security/model/authentication.go
+@@ -16,6 +16,7 @@ package model
+ 
+ import (
+ 	gotls "crypto/tls"
++	"os"
+ 	"strings"
+ 
+ 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
+@@ -192,6 +193,9 @@ func ApplyToCommonTLSContext(tlsContext *tls.CommonTlsContext, proxy *model.Prox
+ 				},
+ 			}
+ 		}
++		// Deckhouse: D8_CRL_ONLY_VERIFY_LEAF=true → Envoy only_verify_leaf_cert_crl.
++		// Merged with agent SDS CRL via CombinedValidationContext (bool OR).
++		defaultValidationContext.OnlyVerifyLeafCertCrl = os.Getenv("D8_CRL_ONLY_VERIFY_LEAF") == "true"
+ 		caRes := security.SdsCertificateConfig{
+ 			CaCertificatePath: caCert,
+ 		}
+@@ -234,6 +238,8 @@ func ApplyCustomSDSToClientCommonTLSContext(tlsContext *tls.CommonTlsContext,
+ 	defaultValidationContext := &tls.CertificateValidationContext{
+ 		MatchSubjectAltNames: util.StringToExactMatch(tlsOpts.SubjectAltNames),
+ 	}
++	// Deckhouse: see ApplyToCommonTLSContext.
++	defaultValidationContext.OnlyVerifyLeafCertCrl = os.Getenv("D8_CRL_ONLY_VERIFY_LEAF") == "true"
+ 	tlsContext.ValidationContextType = &tls.CommonTlsContext_CombinedValidationContext{
+ 		CombinedValidationContext: &tls.CommonTlsContext_CombinedCertificateValidationContext{
+ 			DefaultValidationContext: defaultValidationContext,
+@@ -276,6 +282,8 @@ func ApplyCredentialSDSToServerCommonTLSContext(tlsContext *tls.CommonTlsContext
+ 			VerifyCertificateSpki: tlsOpts.VerifyCertificateSpki,
+ 			VerifyCertificateHash: tlsOpts.VerifyCertificateHash,
+ 		}
++		// Deckhouse: see ApplyToCommonTLSContext.
++		defaultValidationContext.OnlyVerifyLeafCertCrl = os.Getenv("D8_CRL_ONLY_VERIFY_LEAF") == "true"
+ 		tlsContext.ValidationContextType = &tls.CommonTlsContext_CombinedValidationContext{
+ 			CombinedValidationContext: &tls.CommonTlsContext_CombinedCertificateValidationContext{
+ 				DefaultValidationContext:         defaultValidationContext,

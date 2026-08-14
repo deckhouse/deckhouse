@@ -47,23 +47,30 @@ var _ = Describe("Istio hooks :: generate_crl ::", func() {
 		})
 	})
 
-	Context("settings.crl is set", func() {
+	Context("settings.crl.pem is set", func() {
 		BeforeEach(func() {
-			f.ValuesSet("istio.crl", "my-operator-crl")
+			f.ValuesSetFromYaml("istio.crl", []byte(`
+pem: my-operator-crl
+`))
 			f.ValuesSet("istio.internal.ca.cert", "ignored-for-override")
 			f.ValuesSet("istio.internal.ca.key", "ignored-for-override")
 			f.RunHook()
 		})
 
-		It("Should prefer ModuleConfig settings.crl", func() {
+		It("Should prefer ModuleConfig settings.crl.pem", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(strings.TrimSpace(f.ValuesGet("istio.internal.crl").String())).To(Equal("my-operator-crl"))
 		})
 	})
 
-	Context("settings.crl set; federation peer CRL is set", func() {
+	Context("settings.crl.pem set; federation peer CRL is set", func() {
 		BeforeEach(func() {
-			f.ValuesSet("istio.crl", "-----BEGIN X509 CRL-----\nLOCAL\n-----END X509 CRL-----")
+			f.ValuesSetFromYaml("istio.crl", []byte(`
+pem: |
+  -----BEGIN X509 CRL-----
+  LOCAL
+  -----END X509 CRL-----
+`))
 			f.ValuesSetFromYaml("istio.internal.federations", []byte(`
 - name: peer
   clusterUUID: uuid-peer
@@ -77,11 +84,37 @@ var _ = Describe("Istio hooks :: generate_crl ::", func() {
 			f.RunHook()
 		})
 
-		It("Should append peer CRL after local settings.crl", func() {
+		It("Should append peer CRL after local settings.crl.pem", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			crlPEM := f.ValuesGet("istio.internal.crl").String()
 			Expect(crlPEM).To(ContainSubstring("LOCAL"))
 			Expect(crlPEM).To(ContainSubstring("PEERCRL"))
+		})
+	})
+
+	Context("legacy settings.crl string is set", func() {
+		BeforeEach(func() {
+			f.ValuesSet("istio.crl", "legacy-string-crl")
+			f.RunHook()
+		})
+
+		It("Should still publish the string PEM", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(strings.TrimSpace(f.ValuesGet("istio.internal.crl").String())).To(Equal("legacy-string-crl"))
+		})
+	})
+
+	Context("settings.crl.data alias is set", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("istio.crl", []byte(`
+data: alias-data-crl
+`))
+			f.RunHook()
+		})
+
+		It("Should accept data as pem alias", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(strings.TrimSpace(f.ValuesGet("istio.internal.crl").String())).To(Equal("alias-data-crl"))
 		})
 	})
 

@@ -38,7 +38,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 // publishCRL sets istio.internal.crl for rendering ca-crl.pem.
 //
-// Local part: only non-empty settings.crl (manual delivery). No auto-dummy —
+// Local part: only non-empty settings.crl.pem (manual delivery). No auto-dummy —
 // absent settings.crl means no ca-crl.pem, so federation stays healthy until
 // an operator explicitly enables CRL.
 //
@@ -60,7 +60,17 @@ func resolveLocalCRL(input *go_hook.HookInput) string {
 	if !input.Values.Exists(crlConfigPath) {
 		return ""
 	}
-	return strings.TrimSpace(input.Values.Get(crlConfigPath).String())
+	v := input.Values.Get(crlConfigPath)
+	if v.IsObject() {
+		pem := strings.TrimSpace(v.Get("pem").String())
+		if pem == "" {
+			// Alias accepted for convenience; OpenAPI documents `pem`.
+			pem = strings.TrimSpace(v.Get("data").String())
+		}
+		return pem
+	}
+	// Legacy string shape (pre-object ModuleConfig).
+	return strings.TrimSpace(v.String())
 }
 
 func collectPeerCRLs(input *go_hook.HookInput) string {

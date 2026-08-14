@@ -154,6 +154,11 @@ spec:
         - name: PILOT_ENABLE_AMBIENT
           value: "true"
         {{- end }}
+        {{- /* enableFullCrlChainCheck=false → leaf-only CRL verify in Envoy */ -}}
+        {{- if and (kindIs "map" $.Values.istio.crl) (eq ($.Values.istio.crl.enableFullCrlChainCheck | default true) false) }}
+        - name: D8_CRL_ONLY_VERIFY_LEAF
+          value: "true"
+        {{- end }}
         - name: ENABLE_NATIVE_SIDECARS
           value: "false"
         - name: GOMEMLIMIT
