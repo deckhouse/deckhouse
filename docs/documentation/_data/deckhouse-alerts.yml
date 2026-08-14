@@ -3634,6 +3634,17 @@ alerts:
         Deckhouse update has failed.
       severity: "4"
       markupFormat: markdown
+    - name: DeprecatedModuleConfigIsUsed
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
+      edition: ce
+      description: |
+        The deprecated ModuleConfig `{{ $labels.module }}` is used. ModuleConfig is deprecated, use the Module resource instead.
+      summary: |
+        Deprecated ModuleConfig {{ $labels.module }} is used.
+      severity: "9"
+      markupFormat: markdown
     - name: HelmReleasesHasResourcesWithDeprecatedVersions
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/helm/deprecated-versions.yaml
       moduleUrl: 040-control-plane-manager
