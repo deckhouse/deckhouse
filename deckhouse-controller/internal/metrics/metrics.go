@@ -319,7 +319,7 @@ func RegisterModuleControllerMetrics(metricStorage metricsstorage.Storage) error
 
 	_, err = metricStorage.RegisterGauge(
 		DeprecatedModuleConfigIsUsed,
-		configLabels,
+		[]string{LabelName},
 		options.WithHelp("Gauge indicating deprecated moduleconfigs are used (1.0 = used, 0.0 = not used)"),
 	)
 	if err != nil {
