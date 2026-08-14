@@ -640,7 +640,7 @@ func (b *ClusterBootstrapper) bootstrapPostInfraPreflights(ctx context.Context, 
 			return err
 		}
 
-		before, provider, after := splitResourcesOnPreAndPostDeckhouseInstall(ctx, parsedResources)
+		before, provider, after := splitResourcesOnPreAndPostDeckhouseInstall(ctx, parsedResources, bctx.metaConfig.ClusterType == config.CloudClusterType)
 
 		bctx.resourcesToCreateBefore = before
 		bctx.resourcesToCreateProvider = provider
@@ -1029,7 +1029,7 @@ func bootstrapAdditionalNodesForCloudCluster(
 	})
 }
 
-func splitResourcesOnPreAndPostDeckhouseInstall(ctx context.Context, resourcesToCreate template.Resources) (template.Resources, template.Resources, template.Resources) {
+func splitResourcesOnPreAndPostDeckhouseInstall(ctx context.Context, resourcesToCreate template.Resources, isCloudCluster bool) (template.Resources, template.Resources, template.Resources) {
 	before := make(template.Resources, 0, len(resourcesToCreate))
 	provider := make(template.Resources, 0, len(resourcesToCreate))
 	after := make(template.Resources, 0, len(resourcesToCreate))
@@ -1039,18 +1039,18 @@ func splitResourcesOnPreAndPostDeckhouseInstall(ctx context.Context, resourcesTo
 		hasBeforeAnnotation := annotations != nil && annotations["dhctl.deckhouse.io/bootstrap-resource-place"] == "before-deckhouse"
 
 		if hasBeforeAnnotation || isCloudProviderCredentialSecret(resource) {
-			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Add resource %s - %s to after queue", resource.String(), resource.Object.GetName()))
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Add resource %s - %s to before queue", resource.String(), resource.Object.GetName()))
 			before = append(before, resource)
 			continue
 		}
 
-		if isProviderNodeResource(resource) {
+		if isCloudCluster && isProviderNodeResource(resource) {
 			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Add resource %s - %s to provider queue", resource.String(), resource.Object.GetName()))
 			provider = append(provider, resource)
 			continue
 		}
 
-		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Add resource %s - %s to before queue", resource.String(), resource.Object.GetName()))
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Add resource %s - %s to after queue", resource.String(), resource.Object.GetName()))
 		after = append(after, resource)
 	}
 
@@ -1059,10 +1059,9 @@ func splitResourcesOnPreAndPostDeckhouseInstall(ctx context.Context, resourcesTo
 	return before, provider, after
 }
 
-// isProviderNodeResource reports the objects dhctl provisions cloud nodes from:
-// the CloudPermanent NodeGroups and the instance classes they reference. They
-// describe what is about to be built, so they have to reach the cluster before
-// the build, not with the rest of the user's resources once it is over.
+// isProviderNodeResource reports the objects dhctl builds cloud nodes from. They
+// describe what is about to be built, so they reach the cluster before the build
+// rather than with the rest of the user's resources once it is over.
 func isProviderNodeResource(resource *template.Resource) bool {
 	if resource.GVK.Group != "deckhouse.io" {
 		return false
