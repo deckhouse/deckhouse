@@ -90,9 +90,9 @@ func conditionEqual(before, after []metav1.Condition, name string) bool {
 // broken on a spec nobody publishes any more is not mid-rollout.
 type rolloutBudget struct {
 	concurrency int
-	// updating holds the nodes of the group that are mid-update: those that had
-	// not applied their config when the group was read, plus the ones this pass
-	// has handed a new spec to since.
+	// updating holds the nodes of the group that are mid-update: those carrying
+	// the published spec unproven when the group was read, plus the ones this
+	// pass has handed a new spec to since.
 	updating map[string]struct{}
 }
 
