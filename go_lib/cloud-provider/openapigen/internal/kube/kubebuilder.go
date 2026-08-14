@@ -17,9 +17,13 @@ limitations under the License.
 package kube
 
 import (
+	"errors"
 	"fmt"
+	"log"
 	"reflect"
+	"strings"
 
+	"golang.org/x/tools/go/packages"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"sigs.k8s.io/controller-tools/pkg/crd"
 	crdmarkers "sigs.k8s.io/controller-tools/pkg/crd/markers"
@@ -88,8 +92,101 @@ func GetCRDFromRoots(roots []any, maxDescLen *int) (*apiextensionsv1.CustomResou
 		parser.NeedCRDFor(gk, maxDescLen)
 	}
 
+	if err := checkPackageErrors(parsedPackages(parser, allPkgs)); err != nil {
+		return nil, err
+	}
+
 	crdVal := parser.CustomResourceDefinitions[groupKinds[0]]
 	return &crdVal, nil
+}
+
+const (
+	// droppedMarkerError marks the one class of controller-tools failure openapigen tolerates
+	// instead of failing generation: a validation marker on a field whose type is a named type.
+	// The field schema is a bare $ref with an empty type at that point, so controller-tools
+	// refuses the marker and reports `found type ""`.
+	//
+	// The constraint IS LOST — nothing re-applies it, so the generated CRD and config-values
+	// schema simply do not carry it. This is a controller-tools v0.19.0 limitation, fixed in
+	// v0.20.1; openapigen is pinned to v0.19.0 to keep its k8s.io/* on the 1.34 line used by the
+	// repository. Until that pin is lifted:
+	//   - express such a constraint with a `+kubebuilder:validation:XValidation` CEL rule, which
+	//     survives the $ref, or with a `deckhouse:validation:*` marker from the markers package;
+	//   - or inline the field type instead of using a named type.
+	// Every dropped marker is logged by checkPackageErrors, so a lost constraint is at least
+	// visible in the generation output.
+	droppedMarkerError = `found type ""`
+)
+
+// checkPackageErrors turns controller-tools marker failures into generation failures.
+//
+// Without this, a marker controller-tools refuses is dropped silently and the constraint
+// simply disappears from the generated CRD or config-values schema: a real loss of
+// in-cluster validation that looks like a successful generation.
+//
+// The one tolerated exception is droppedMarkerError: it cannot be fixed by the caller on
+// controller-tools v0.19.0, so generation continues and the loss is logged instead.
+func checkPackageErrors(pkgs []*loader.Package) error {
+	var reported []error
+	for _, pkg := range pkgs {
+		for _, pkgErr := range pkg.Errors {
+			// Marker and schema failures are recorded as UnknownError (loader.PositionedError).
+			// Parse and type-check errors are a different matter: controller-tools type-checks
+			// the target package in isolation, so imports from other Go modules routinely come
+			// out as "undefined: <pkg>" without affecting the generated schema.
+			if pkgErr.Kind != packages.UnknownError {
+				continue
+			}
+
+			if strings.Contains(pkgErr.Error(), droppedMarkerError) {
+				log.Printf(
+					"WARNING: controller-tools v0.19.0 dropped a validation marker on a named-type field, "+
+						"the constraint is NOT present in the generated schema: %s. "+
+						"Use +kubebuilder:validation:XValidation (CEL), a deckhouse:validation:* marker, "+
+						"or inline the field type. Fixed in controller-tools v0.20.1",
+					pkgErr,
+				)
+				continue
+			}
+
+			reported = append(reported, pkgErr)
+		}
+	}
+
+	if len(reported) == 0 {
+		return nil
+	}
+
+	return fmt.Errorf("controller-tools rejected markers, constraints would be lost silently: %w", errors.Join(reported...))
+}
+
+// parsedPackages returns the root packages plus every package the parser pulled in
+// while resolving types. Marker errors are recorded on the package that declares the
+// offending field, which is routinely a package the roots merely import: checking the
+// roots alone lets constraints on shared types disappear without a word.
+func parsedPackages(parser *crd.Parser, roots []*loader.Package) []*loader.Package {
+	seen := make(map[*loader.Package]struct{}, len(roots)+len(parser.Types))
+	all := make([]*loader.Package, 0, len(roots)+len(parser.Types))
+
+	add := func(pkg *loader.Package) {
+		if pkg == nil {
+			return
+		}
+		if _, ok := seen[pkg]; ok {
+			return
+		}
+		seen[pkg] = struct{}{}
+		all = append(all, pkg)
+	}
+
+	for _, pkg := range roots {
+		add(pkg)
+	}
+	for ident := range parser.Types {
+		add(ident.Package)
+	}
+
+	return all
 }
 
 func GetJSONSchemaPropsFromDefaultMarkers(root any) (*apiextensionsv1.JSONSchemaProps, error) {
@@ -132,6 +229,11 @@ func getJSONSchemaProps(root any, reg *markers.Registry) (*apiextensionsv1.JSONS
 	ident := crd.TypeIdent{Package: rtPkg[0], Name: rt.Name()}
 
 	parser.NeedFlattenedSchemaFor(ident)
+
+	if err := checkPackageErrors(parsedPackages(parser, rtPkg)); err != nil {
+		return nil, err
+	}
+
 	flat := parser.FlattenedSchemata[ident]
 
 	return &flat, nil

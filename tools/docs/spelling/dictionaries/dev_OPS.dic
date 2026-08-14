@@ -1,4 +1,4 @@
-2820
+2844
 1GB
 2GB
 5XX
@@ -164,6 +164,7 @@ Burstable
 BusyBox
 BypassFwMark
 CAA
+cacerts
 caef
 CAInjector
 camelCase
@@ -731,6 +732,7 @@ InitContainer
 initContainers
 InitContainers
 initiatorType
+inline
 Inline
 inode
 inodes
@@ -779,8 +781,10 @@ ISP
 isSudoer
 IssueBasic
 issuerName
+IST
 istio
 istio-api-proxy
+istioctl
 istiod
 IstioFederation
 IstioMulticluster
@@ -1123,6 +1127,7 @@ OpenStackClusterConfiguration
 OpenStackEE
 OpenStackInstanceClass
 OpenStackInstanceClasses
+OpenTelemetry
 opentofu
 Opentofu
 OpenTofu
@@ -1140,6 +1145,7 @@ ORM
 os
 OSes
 OSI
+OTLP
 Outlier
 outlierDetection
 overprovisioned
@@ -1318,6 +1324,7 @@ ReplicatedStorageClass
 ReplicatedStoragePool
 ReplicationController
 repo
+Repointing
 repos
 reprovisioning
 repurposed
@@ -1420,6 +1427,7 @@ SIGTERM
 SimpleWithInternalNetwork
 Sitemap
 SizingPolicy
+SkyWalking
 SLA
 smokeMini
 snaphost
@@ -1707,6 +1715,10 @@ VXLAN
 VzZS
 WaitingForDisruptiveApproval
 WAL
+waypoint
+Waypoint
+WaypointInstance
+waypoints
 WebAuthn
 webgraphviz
 webhook
@@ -1811,6 +1823,7 @@ ZvirtInstanceClass
 Алертинг
 алертинга
 алертов
+алертом
 алерту
 алерты
 Алерты
@@ -1866,6 +1879,7 @@ ZvirtInstanceClass
 БД
 бекенды
 беспроблемный
+бесшовно
 биллинга
 биндинг
 биндинга
@@ -2199,6 +2213,9 @@ ZvirtInstanceClass
 мержит
 Метадата
 метаинформацию
+меш
+меша
+меше
 мигрирована
 микросегментация
 микросервисов
@@ -2366,6 +2383,7 @@ ZvirtInstanceClass
 перегенерации
 перегенерация
 перегенерировать
+перегенерируйте
 Перегенерируйте
 передеплоятся
 перезагрузится
@@ -2393,6 +2411,7 @@ ZvirtInstanceClass
 перенастраиваются
 переоткрытии
 переподключиться
+перепубликует
 переразвернуть
 Переразвертывание
 переразвёртывание
@@ -2577,10 +2596,12 @@ ZvirtInstanceClass
 сайдкар
 Сайдкар
 сайдкара
+сайдкарами
 сайдкаров
 сайдкаром
 сайдкары
 самоподписанном
+самоподписанному
 самоподписанные
 самоподписанный
 самоподписанных
@@ -2652,6 +2673,8 @@ ZvirtInstanceClass
 сопоставление
 сопоставления
 Сохраняеем
+спанов
+спаны
 спецзаголовки
 спринты
 стейта
@@ -2705,6 +2728,7 @@ ZvirtInstanceClass
 тредами
 трейсов
 трейсы
+тренд
 трендов
 тренды
 триал

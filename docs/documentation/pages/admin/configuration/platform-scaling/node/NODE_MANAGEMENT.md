@@ -67,7 +67,7 @@ When nodes are created and joined to the cluster, DKP automatically performs a s
 - Disabling automatic package updates.
 - Setting up logging and system parameters.
 - Installing necessary packages and utilities.
-- Configuring the `nginx` component to balance traffic between `kubelet` and API servers.
+- Configuring the `kubernetes-api-proxy` component to balance traffic between `kubelet` and API servers.
 - Installing and configuring the container runtime (`containerd`) and `kubelet`.
 - Registering the node with the Kubernetes cluster.
 

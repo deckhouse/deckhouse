@@ -30,8 +30,8 @@ import (
 func TestCredentialSecretValidatorWithFakeClientValidateCreate(t *testing.T) {
 	t.Parallel()
 
-	builder := newWebhookAdmissionStateBuilder(t, validDVPClusterObjects()...)
-	validator := NewCredentialSecretValidator(builder, &corev1.Secret{})
+	factory := newWebhookAdmissionStateBuilderFactory(t, validDVPClusterObjects()...)
+	validator := NewCredentialSecretValidator(factory, &corev1.Secret{})
 
 	_, err := validator.ValidateCreate(context.Background(), dvpCredentialSecret(validWebhookKubeconfigB64()))
 	if err != nil {
@@ -42,8 +42,8 @@ func TestCredentialSecretValidatorWithFakeClientValidateCreate(t *testing.T) {
 func TestCredentialSecretValidatorWithFakeClientAllowsValidCluster(t *testing.T) {
 	t.Parallel()
 
-	builder := newWebhookAdmissionStateBuilder(t, validDVPClusterObjects()...)
-	validator := NewCredentialSecretValidator(builder, &corev1.Secret{})
+	factory := newWebhookAdmissionStateBuilderFactory(t, validDVPClusterObjects()...)
+	validator := NewCredentialSecretValidator(factory, &corev1.Secret{})
 
 	secret := dvpCredentialSecret(validWebhookKubeconfigB64())
 	_, err := validator.ValidateUpdate(context.Background(), nil, secret)
@@ -55,8 +55,8 @@ func TestCredentialSecretValidatorWithFakeClientAllowsValidCluster(t *testing.T)
 func TestCredentialSecretValidatorWithFakeClientRejectsCredentialTypeChange(t *testing.T) {
 	t.Parallel()
 
-	builder := newWebhookAdmissionStateBuilder(t, validDVPClusterObjects()...)
-	validator := NewCredentialSecretValidator(builder, &corev1.Secret{})
+	factory := newWebhookAdmissionStateBuilderFactory(t, validDVPClusterObjects()...)
+	validator := NewCredentialSecretValidator(factory, &corev1.Secret{})
 
 	oldSecret := dvpCredentialSecret(validWebhookKubeconfigB64())
 	newSecret := oldSecret.DeepCopy()
@@ -71,8 +71,8 @@ func TestCredentialSecretValidatorWithFakeClientRejectsCredentialTypeChange(t *t
 func TestCredentialSecretValidatorWithFakeClientRejectsInvalidAuthScheme(t *testing.T) {
 	t.Parallel()
 
-	builder := newWebhookAdmissionStateBuilder(t, validDVPClusterObjects()...)
-	validator := NewCredentialSecretValidator(builder, &corev1.Secret{})
+	factory := newWebhookAdmissionStateBuilderFactory(t, validDVPClusterObjects()...)
+	validator := NewCredentialSecretValidator(factory, &corev1.Secret{})
 
 	secret := dvpCredentialSecret("updated-token")
 	secret.StringData[cpapi.CredentialSecretAuthSchemeKey] = string(cpapi.AuthSchemeAPIToken)
@@ -86,8 +86,8 @@ func TestCredentialSecretValidatorWithFakeClientRejectsInvalidAuthScheme(t *test
 func TestCredentialSecretValidatorWithFakeClientValidateDelete(t *testing.T) {
 	t.Parallel()
 
-	builder := newWebhookAdmissionStateBuilder(t, validDVPClusterObjects()...)
-	validator := NewCredentialSecretValidator(builder, &corev1.Secret{})
+	factory := newWebhookAdmissionStateBuilderFactory(t, validDVPClusterObjects()...)
+	validator := NewCredentialSecretValidator(factory, &corev1.Secret{})
 
 	_, err := validator.ValidateDelete(context.Background(), dvpCredentialSecret("token"))
 	if err != nil {
@@ -105,8 +105,8 @@ func TestCredentialSecretValidatorWithFakeClientSkipsMigration(t *testing.T) {
 			Namespace: dvpmeta.Namespace,
 		},
 	})
-	builder := newWebhookAdmissionStateBuilder(t, objects...)
-	validator := NewCredentialSecretValidator(builder, &corev1.Secret{})
+	factory := newWebhookAdmissionStateBuilderFactory(t, objects...)
+	validator := NewCredentialSecretValidator(factory, &corev1.Secret{})
 
 	secret := dvpCredentialSecret("invalid")
 	secret.StringData[cpapi.CredentialSecretAuthSchemeKey] = string(cpapi.AuthSchemeAPIToken)
@@ -117,11 +117,13 @@ func TestCredentialSecretValidatorWithFakeClientSkipsMigration(t *testing.T) {
 	}
 }
 
-func TestCredentialSecretValidatorWithFakeClientRejectsCreateWithWrongType(t *testing.T) {
+func TestCredentialSecretValidatorWithFakeClientSkipsCreateWithWrongType(t *testing.T) {
 	t.Parallel()
 
-	builder := newWebhookAdmissionStateBuilder(t, validDVPClusterObjects()...)
-	validator := NewCredentialSecretValidator(builder, &corev1.Secret{})
+	// A Secret of another type is not managed by the module, so the webhook lets it through
+	// instead of validating it as credentials.
+	factory := newWebhookAdmissionStateBuilderFactory(t, validDVPClusterObjects()...)
+	validator := NewCredentialSecretValidator(factory, &corev1.Secret{})
 
 	secret := dvpCredentialSecret(validWebhookKubeconfigB64())
 	secret.Type = corev1.SecretTypeTLS
