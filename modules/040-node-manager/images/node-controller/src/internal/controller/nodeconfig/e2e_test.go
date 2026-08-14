@@ -544,6 +544,57 @@ var _ = Describe("NodeConfig controller", func() {
 		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
 	})
 
+	// bashible gives the approval to unhealthy nodes first: fixing what is broken
+	// beats touching what works. Ported here for the same reason. The healthy node
+	// is created first, so without the ordering it takes the only slot, never
+	// reports back, and the broken one waits for a change that never arrives.
+	It("gives the free slot to the unhealthy node first", func(ctx context.Context) {
+		ngName := testenv.UniqueName("workers-priority")
+		createImmutableNodeGroup(ctx, ngName, nil)
+
+		healthy := testenv.UniqueName("node")
+		broken := testenv.UniqueName("node")
+		createNode(ctx, healthy, ngName)
+		createNode(ctx, broken, ngName)
+		heartbeat(ctx, healthy)
+
+		Eventually(func(g Gomega) {
+			node := &corev1.Node{}
+			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: broken}, node)).To(Succeed())
+			patch := client.MergeFrom(node.DeepCopy())
+			node.Status.Conditions = []corev1.NodeCondition{{
+				Type:              corev1.NodeReady,
+				Status:            corev1.ConditionFalse,
+				Reason:            "KubeletNotReady",
+				Message:           "kubelet stopped posting node status",
+				LastHeartbeatTime: metav1.Now(),
+			}}
+			g.Expect(k8sClient.Status().Patch(ctx, node, patch)).To(Succeed())
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		// Both configured and settled first: a node that has just joined is given
+		// its config without passing the gate at all, so publishing the change
+		// before that has happened would test nothing.
+		Eventually(func(g Gomega) {
+			g.Expect(digestOf(getNodeConfig(ctx, g, healthy), containerdExtension)).To(Equal(testContainerdDigest))
+			g.Expect(digestOf(getNodeConfig(ctx, g, broken), containerdExtension)).To(Equal(testContainerdDigest))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		By("the release publishing a change")
+		setContainerdDigest(ctx, testContainerdRebuiltDigest)
+
+		Eventually(func(g Gomega) {
+			g.Expect(digestOf(getNodeConfig(ctx, g, broken), containerdExtension)).
+				To(Equal(testContainerdRebuiltDigest), "the unhealthy node must be served first")
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+		// The broken node never reports back, so it holds the only slot: the
+		// healthy one is left alone, which is the other half of serving the
+		// broken one first.
+		Consistently(func(g Gomega) {
+			g.Expect(digestOf(getNodeConfig(ctx, g, healthy), containerdExtension)).To(Equal(testContainerdDigest))
+		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
+	})
+
 	// User story: As an operator, I want a release that ships a rebuilt system
 	// extension to reach the fleet on its own. The digests ConfigMap used to be
 	// read but not watched, so the new digest sat unnoticed until some unrelated
