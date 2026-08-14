@@ -422,7 +422,7 @@ spec:
 
 ### Template parametrization
 
-Any "leaf" value of a structured field can be turned into a parameter: instead of a concrete value, specify `{fromParam: <parameter name>}` and declare the parameter in `parametersSchema`. Each project then sets its own value in `.spec.parameters`; if the value is not set, the `default` from the schema is used.
+Any field of the template that holds a value rather than a nested structure can be turned into a parameter: instead of a concrete value, specify `{fromParam: <parameter name>}` and declare the parameter in `parametersSchema`. The value does not have to be a scalar: a map (`nodeSelector`, `labels`), a list (`tolerations`) or an object (`allowedUIDs`) works just as well. Each project then sets its own value in `.spec.parameters`; if the value is not set, the `default` from the schema is used.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
