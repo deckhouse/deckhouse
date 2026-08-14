@@ -968,8 +968,6 @@ spec:
 
 #### Пример — mesh-wide OTLP через ModuleConfig
 
-{% alert level="info" %}Экспорт OpenTelemetry в модуле соответствует [распределённой трассировке с OpenTelemetry](https://istio.io/v1.25/docs/tasks/observability/distributed-tracing/opentelemetry/) на Istio 1.25+. На Istio 1.21 используйте Zipkin/Jaeger через [`tracing.collector.zipkin`](configuration.html#parameters-tracing-collector) или обновите ревизию control plane.{% endalert %}
-
 Разверните Collector, доступный из меша, включите Telemetry API и укажите [`tracing.collector.opentelemetry`](configuration.html#parameters-tracing-collector-opentelemetry). Модуль добавит провайдер `deckhouse-tracing` и `spec.tracing` в `d8-main` — не дописывайте OTLP вручную в `meshConfig` CR `Istio` / `IstioOperator`.
 
 ```yaml
@@ -1112,10 +1110,10 @@ d8 k -n <debug-namespace> run istioctl-debug \
 Выберите минорную версию Istio, которая используется нужным control plane:
 
 ```shell
-export ISTIOCTL_VERSION=1.21
+export ISTIOCTL_VERSION=1.29
 ```
 
-Доступные значения: `1.21`, `1.25`, `1.27` и `1.29`. Также можно запустить конкретный бинарный файл напрямую: `istioctl-1.21`, `istioctl-1.25`, `istioctl-1.27` или `istioctl-1.29`.
+Доступные значения: `1.25`, `1.27` и `1.29`. Также можно запустить конкретный бинарный файл напрямую: `istioctl-1.25`, `istioctl-1.27` или `istioctl-1.29`.
 
 Пример:
 
@@ -1148,28 +1146,30 @@ UID `1337` зарезервирован Istio для сайдкар-контей
 
 * DKP позволяет установить несколько версий control plane одновременно:
   * Одна глобальная, обслуживает неймспейсы или поды без явного указания версии (лейбл у неймспейсов `istio-injection: enabled`). Настраивается параметром [`globalVersion`](configuration.html#parameters-globalversion).
-  * Остальные — дополнительные, обслуживают неймспейсы или поды с явным указанием версии (лейбл у неймспейса или пода `istio.io/rev: v1x21`). Настраиваются параметром [`additionalVersions`](configuration.html#parameters-additionalversions).
+  * Остальные — дополнительные, обслуживают неймспейсы или поды с явным указанием версии (лейбл у неймспейса или пода `istio.io/rev: v1x27`). Настраиваются параметром [`additionalVersions`](configuration.html#parameters-additionalversions).
 * Istio заявляет обратную совместимость между data plane и control plane в диапазоне двух минорных версий:
 ![Istio data-plane and control-plane compatibility](images/istio-extended-support.png)
-* Алгоритм обновления (для примера, с версии `1.21` на версию `1.25`):
-  * Добавить желаемую версию в параметр модуля [additionalVersions](configuration.html#parameters-additionalversions) (`additionalVersions: ["1.25"]`).
-* Дождаться появления соответствующего пода `istiod-v1x25-xxx-yyy` в неймспейсе `d8-istio`.
-* Для каждого прикладного неймспейса, где включен Istio:
-  * поменять лейбл `istio-injection: enabled` на `istio.io/rev: v1x25`;
+* Алгоритм обновления (для примера, с версии `1.25` на версию `1.27`):
+  * Добавить целевую версию в параметр модуля [additionalVersions](configuration.html#parameters-additionalversions) (`additionalVersions: ["1.27"]`).
+* Дождаться появления соответствующего пода `istiod-v1x27-xxx-yyy` в неймспейсе `d8-istio`.
+* Для каждого прикладного неймспейса, где включён Istio:
+  * поменять лейбл `istio-injection: enabled` на `istio.io/rev: v1x27`;
   * по очереди пересоздать поды в неймспейсе, параллельно контролируя работоспособность приложения.
-* Поменять настройку `globalVersion` на `1.25` и удалить `additionalVersions`.
+* Поменять настройку `globalVersion` на `1.27` и удалить `additionalVersions`.
 * Убедиться, что старый под `istiod` удалился.
 * Поменять лейблы прикладных неймспейсов на `istio-injection: enabled`.
 
-Чтобы найти все поды под управлением старой ревизии Istio (в примере — версия 21), выполните команду:
+Чтобы найти все поды под управлением старой ревизии Istio (в примере — версия 1.25), выполните команду:
 
 ```shell
-d8 k get pods -A -o json | jq --arg revision "v1x21" \
+d8 k get pods -A -o json | jq --arg revision "v1x25" \
   '.items[] | select(.metadata.annotations."sidecar.istio.io/status" // "{}" | fromjson |
    .revision == $revision) | .metadata.namespace + "/" + .metadata.name'
 ```
 
-{% alert level="warning" %}Обновление до версии Istio 1.25 возможно только с версии 1.21.{% endalert %}
+{% alert level="warning" %}
+Istio 1.21 больше не поддерживается. До обновления DKP на релиз, в котором удалена Istio 1.21, перенесите глобальную и все дополнительные ревизии на поддерживаемую версию, используя предыдущий релиз DKP, который поддерживает обе версии. Обновление DKP блокируется, пока в конфигурации остаётся Istio 1.21.
+{% endalert %}
 
 <span id="auto-upgrading-istio-data-plane"></span>
 

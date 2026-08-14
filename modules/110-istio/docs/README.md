@@ -13,8 +13,11 @@ The table below shows Istio versions and their support status in Deckhouse Kuber
 |:-------------:|:-----------------------------------------------------------------------------------------------------------------------------:|:------------------------------:|
 |     1.29      |                                                1.29, 1.30, 1.31, 1.32, 1.33, 1.34, 1.35, 1.36                                                | Supported |
 |     1.27      |                                                1.29, 1.30, 1.31, 1.32, 1.33, 1.34, 1.35, 1.36                                                | Supported |
-|     1.25      |                                                1.29, 1.30, 1.31, 1.32, 1.33, 1.34, 1.35, 1.36                                          | Supported |
-|     1.21      |                                                1.26, 1.27, 1.28, 1.29, 1.30, 1.31, 1.32, 1.33, 1.34, 1.35, 1.36                        | Deprecated and will be deleted |
+|     1.25      |                                                1.29, 1.30, 1.31, 1.32, 1.33, 1.34, 1.35, 1.36                                                | Deprecated and scheduled for removal |
+
+{% alert level="warning" %}
+Istio 1.21 is no longer supported. Before upgrading to this DKP release, migrate every global and additional Istio 1.21 revision to a supported version using a previous DKP release that supports both versions. The DKP upgrade is blocked while Istio 1.21 remains configured.
+{% endalert %}
 
 ## Problems Istio helps to solve
 
@@ -104,7 +107,7 @@ Kiali is a tool for visualizing your application's service tree. It allows you t
 
 ### Mesh metrics and access logs (Telemetry API)
 
-Metrics for Grafana workloads graphs and quantitative in Kiali on Prometheus scraping metrics `istio_*` series from `istio-proxy`. Starting with Istio&nbsp;1.21+, Istio exposes those using Telemetry API mesh defaults instead of legacy `telemetry.v2` filters alone.
+Metrics for Grafana workloads graphs and quantitative in Kiali on Prometheus scraping metrics `istio_*` series from `istio-proxy`. For the supported Istio versions, Istio exposes those using Telemetry API mesh defaults instead of legacy `telemetry.v2` filters alone.
 
 DKP configures [`telemetryAPI.enabled`](configuration.html#parameters-telemetryapi-enabled): when `false` you keep the legacy stack; when `true` you switch to `meshConfig.defaultProviders`, bundled `Telemetry` resources, and the [`dataPlane.accessLog`](configuration.html#parameters-dataplane-accesslog) template wired into access logs. Step-by-step examples, readiness checks, optional extra `Telemetry` policies, and tracing (`spec.tracing`) are in [Telemetry API for mesh metrics, tracing, and access logs](examples.html#telemetry-api-mesh-observability).
 
@@ -188,7 +191,7 @@ The sidecar-injector is a recommended way to add sidecars. Istio can inject side
 
 - A label attached to a namespace allows the sidecar-injector to identify a group of pods to inject sidecar containers into:
   - `istio-injection=enabled` — use the global version of Istio (`spec.settings.globalVersion` in `ModuleConfig`);
-  - `istio.io/rev=v1x21` — use the specific Istio version for a given namespace;
+  - `istio.io/rev=v1x29` — use the specific Istio version for a given namespace;
   - `istio.io/rev=default` — use the global version of Istio (`spec.settings.globalVersion` in `ModuleConfig`).
 - The `sidecar.istio.io/inject` (`"true"` or `"false"`) pod annotation lets you redefine the `sidecarInjectorPolicy` policy locally. These annotations work only in namespaces to which the above labels are attached.
 
@@ -397,7 +400,7 @@ In case of issues when working with a multi-cluster, it is necessary to check in
    <!-- markdownlint-disable MD031 -->
    ```console
    NAME          SECRET                                     STATUS     ISTIOD
-   cluster-b     d8-istio/istio-remote-secret-cluster-b     synced     istiod-v1x21-5c57d85b54-k8pl7
+   cluster-b     d8-istio/istio-remote-secret-cluster-b     synced     istiod-v1x29-5c57d85b54-k8pl7
    ```
    {: .nowrap-default }
    <!-- markdownlint-enable MD031 -->
