@@ -118,15 +118,15 @@ func (r *ClusterReconciler) ensureCloudCluster(ctx context.Context, registration
 		return nil
 	}
 
-	registration := cloudprovider.Decode(secret.Data)
-	clusterName := registration.CAPI.ClusterName
-	clusterKind := registration.CAPI.ClusterKind
+	provider := cloudprovider.Decode(secret.Data)
+	clusterName := provider.CAPI.ClusterName
+	clusterKind := provider.CAPI.ClusterKind
 
 	if clusterName == "" || clusterKind == "" {
 		return nil
 	}
 
-	infraAPIGroup := registration.CAPI.ClusterAPIVersion
+	infraAPIGroup := provider.CAPI.ClusterAPIVersion
 	if idx := strings.LastIndex(infraAPIGroup, "/"); idx >= 0 {
 		infraAPIGroup = infraAPIGroup[:idx]
 	}

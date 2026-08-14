@@ -290,7 +290,7 @@ func secretDataEqual(a, b map[string][]byte) bool {
 	return true
 }
 
-func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Context, ng *deckhousev1.NodeGroup, registry cloudprovider.Registry, registration cloudprovider.Registration) error {
+func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Context, ng *deckhousev1.NodeGroup, providers cloudprovider.Providers, provider cloudprovider.Provider) error {
 	logger := log.FromContext(ctx)
 
 	if ng.Spec.CloudInstances == nil {
@@ -298,17 +298,17 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 		return nil
 	}
 
-	cloudConfig := registration.CAPI
-	if cloudConfig.ClusterName == "" {
+	capiConfig := provider.CAPI
+	if capiConfig.ClusterName == "" {
 		logger.V(1).Info("skipping CAPI: capiClusterName is empty")
 		return nil
 	}
 
-	cloudProvider := registration.Data
-	cloudType := registration.Type
+	cloudProvider := provider.Data
+	cloudType := provider.Type
 
 	ds := &derived_status.Service{Client: r.Client}
-	resolved, validationErr, err := ds.ResolveNodeGroup(ctx, ng, registry)
+	resolved, validationErr, err := ds.ResolveNodeGroup(ctx, ng, providers)
 	if err != nil {
 		return fmt.Errorf("resolve NodeGroup %s: %w", ng.Name, err)
 	}
@@ -400,12 +400,12 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 		drainTimeout = *ng.Spec.NodeDrainTimeoutSecond
 	}
 
-	infraGV, err := schema.ParseGroupVersion(cloudConfig.MachineTemplateAPIVersion)
+	infraGV, err := schema.ParseGroupVersion(capiConfig.MachineTemplateAPIVersion)
 	if err != nil {
-		return fmt.Errorf("parse capiMachineTemplateAPIVersion %q: %w", cloudConfig.MachineTemplateAPIVersion, err)
+		return fmt.Errorf("parse capiMachineTemplateAPIVersion %q: %w", capiConfig.MachineTemplateAPIVersion, err)
 	}
 	infraAPIGroup := infraGV.Group
-	infraGVK := infraGV.WithKind(cloudConfig.MachineTemplateKind)
+	infraGVK := infraGV.WithKind(capiConfig.MachineTemplateKind)
 
 	desiredMDNames := make(map[string]struct{}, len(zones))
 	desiredTemplateNames := make(map[string]struct{}, len(zones))
@@ -475,9 +475,9 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 			mdName:              mdName,
 			templateName:        templateName,
 			bootstrapSecretName: bootstrapSecretName,
-			clusterName:         cloudConfig.ClusterName,
+			clusterName:         capiConfig.ClusterName,
 			infraAPIGroup:       infraAPIGroup,
-			infraKind:           cloudConfig.MachineTemplateKind,
+			infraKind:           capiConfig.MachineTemplateKind,
 			desired:             desired,
 			minReplicas:         minReplicas,
 			maxReplicas:         maxReplicas,
@@ -498,10 +498,10 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 		// template without touching its registration secret in the same release.
 		if err := applyMachineDeploymentSpecPatch(
 			mdSpec,
-			cloudConfig.MachineDeploymentSpecPatch,
+			capiConfig.MachineDeploymentSpecPatch,
 			map[string]string{
 				"bootstrapSecretName": bootstrapSecretName,
-				"clusterName":         cloudConfig.ClusterName,
+				"clusterName":         capiConfig.ClusterName,
 				"mdName":              mdName,
 				"nodeGroupName":       ng.Name,
 				"templateName":        templateName,
@@ -517,7 +517,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 		logger.Info("applied CAPI MachineTemplate + MachineDeployment", "name", mdName, "zone", zone)
 	}
 
-	if err := r.pruneStaleCAPI(ctx, ng.Name, cloudConfig, desiredMDNames, desiredTemplateNames); err != nil {
+	if err := r.pruneStaleCAPI(ctx, ng.Name, capiConfig, desiredMDNames, desiredTemplateNames); err != nil {
 		return err
 	}
 

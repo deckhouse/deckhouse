@@ -90,22 +90,22 @@ func RegistrationRequests(ctx context.Context, r client.Reader) []reconcile.Requ
 // NodeGroupHandler enqueues the NodeGroups that run on the registration the event carries, for the
 // controllers keyed by NodeGroup. Pair it with RegistrationPredicate.
 //
-// The registration is decoded from the event object rather than looked up, so a delete answers the
+// The provider is decoded from the event object rather than looked up, so a delete answers the
 // same question as a create — which NodeGroups belong to this provider — at a point where the
 // Secret is already gone from the cluster. The answer comes from the resolution rules a reconcile
-// uses (Registry.ForNodeGroup): a NodeGroup naming its InstanceClass kind, or a CloudPermanent
+// uses (Providers.ForNodeGroup): a NodeGroup naming its InstanceClass kind, or a CloudPermanent
 // group on a cluster configured with its provider.
 //
 // An update first compares the Secret data raw: an update that changed none of it changes nothing a
 // NodeGroup renders and enqueues nothing. A real edit resolves both sides, because a re-kinded or
-// re-typed registration moves NodeGroups between providers and the group that just left is in no
+// re-typed provider moves NodeGroups between them and the group that just left is in no
 // set the new object can produce.
 //
 // The narrowing is what keeps a registration event affordable: one status reconcile lists every
 // Machine and MachineDeployment in the cluster, so enqueueing NodeGroups of other providers costs
 // cluster-size work per group for nothing.
 func NodeGroupHandler(r client.Reader) handler.EventHandler {
-	enqueue := func(ctx context.Context, q workqueue.TypedRateLimitingInterface[reconcile.Request], carried ...Registration) {
+	enqueue := func(ctx context.Context, q workqueue.TypedRateLimitingInterface[reconcile.Request], carried ...Provider) {
 		for _, req := range nodeGroupRequests(ctx, r, carried...) {
 			q.Add(req)
 		}
@@ -147,8 +147,8 @@ func NodeGroupHandler(r client.Reader) handler.EventHandler {
 	}
 }
 
-// nodeGroupRequests returns one request per NodeGroup the carried registrations run.
-func nodeGroupRequests(ctx context.Context, r client.Reader, carried ...Registration) []reconcile.Request {
+// nodeGroupRequests returns one request per NodeGroup the carried providers run.
+func nodeGroupRequests(ctx context.Context, r client.Reader, carried ...Provider) []reconcile.Request {
 	logger := log.FromContext(ctx)
 
 	clusterProvider, err := readClusterProvider(ctx, r)
@@ -163,8 +163,8 @@ func nodeGroupRequests(ctx context.Context, r client.Reader, carried ...Registra
 		return nil
 	}
 
-	// The registrations the event carries, resolved by the rules a reconcile uses.
-	changed := NewRegistry(carried, clusterProvider)
+	// The providers the event carries, resolved by the rules a reconcile uses.
+	changed := NewProviders(carried, clusterProvider)
 
 	reqs := make([]reconcile.Request, 0, len(ngList.Items))
 	for i := range ngList.Items {
@@ -243,12 +243,12 @@ func LazyInstanceClassSource(informers cache.Cache, eventHandler handler.EventHa
 				case <-poke:
 				}
 
-				registrations, err := loadRegistrations(ctx, informers)
+				providers, err := loadProviders(ctx, informers)
 				if err != nil {
-					logger.V(1).Info("list instance class registrations", "error", err.Error())
+					logger.V(1).Info("list instance class providers", "error", err.Error())
 					continue
 				}
-				for _, gvk := range (Registry{registrations: registrations}).InstanceClassGVKs() {
+				for _, gvk := range (Providers{providers: providers}).InstanceClassGVKs() {
 					if started[gvk] {
 						continue
 					}

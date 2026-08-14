@@ -39,7 +39,7 @@ import (
 // real apiserver and a provider CRD — both of which this suite already carries. The lazy source
 // is driven directly against its own cache and queue; the handler encodes the GVK version into
 // the request name so events arriving through different informers stay distinguishable.
-var _ = Describe("InstanceClass registration enumeration and lazy watches", func() {
+var _ = Describe("InstanceClass provider enumeration and lazy watches", func() {
 	dvpAlpha := schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "DVPInstanceClass"}
 
 	newRegistrationSecret := func(name, kind, version string) *corev1.Secret {
@@ -54,10 +54,10 @@ var _ = Describe("InstanceClass registration enumeration and lazy watches", func
 		return secret
 	}
 
-	It("enumerates the suite's registration through the label", func() {
-		registry, err := cloudprovider.Load(suiteCtx, k8sClient)
+	It("enumerates the suite's provider through the label", func() {
+		providers, err := cloudprovider.Load(suiteCtx, k8sClient)
 		Expect(err).NotTo(HaveOccurred())
-		gvks := registry.InstanceClassGVKs()
+		gvks := providers.InstanceClassGVKs()
 		Expect(gvks).To(Equal([]schema.GroupVersionKind{dvpAlpha}))
 	})
 
@@ -66,20 +66,20 @@ var _ = Describe("InstanceClass registration enumeration and lazy watches", func
 		Expect(k8sClient.Create(suiteCtx, double)).To(Succeed())
 		DeferCleanup(func() { _ = k8sClient.Delete(suiteCtx, double) })
 
-		registry, err := cloudprovider.Load(suiteCtx, k8sClient)
+		providers, err := cloudprovider.Load(suiteCtx, k8sClient)
 		Expect(err).NotTo(HaveOccurred())
-		gvks := registry.InstanceClassGVKs()
+		gvks := providers.InstanceClassGVKs()
 		Expect(gvks).To(Equal([]schema.GroupVersionKind{dvpAlpha}))
 	})
 
-	It("ignores a registration that does not publish the version", func() {
+	It("ignores a provider that does not publish the version", func() {
 		unversioned := newRegistrationSecret("d8-node-manager-cloud-provider-aws", "AWSInstanceClass", "")
 		Expect(k8sClient.Create(suiteCtx, unversioned)).To(Succeed())
 		DeferCleanup(func() { _ = k8sClient.Delete(suiteCtx, unversioned) })
 
-		registry, err := cloudprovider.Load(suiteCtx, k8sClient)
+		providers, err := cloudprovider.Load(suiteCtx, k8sClient)
 		Expect(err).NotTo(HaveOccurred())
-		gvks := registry.InstanceClassGVKs()
+		gvks := providers.InstanceClassGVKs()
 		Expect(gvks).To(Equal([]schema.GroupVersionKind{dvpAlpha}),
 			"a kind without a version must contribute nothing — guessing a version is what this mechanism prevents")
 	})
@@ -117,7 +117,7 @@ var _ = Describe("InstanceClass registration enumeration and lazy watches", func
 			}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Equal(want))
 		}
 
-		By("the suite's registration is picked up from the store replay, no event needed")
+		By("the suite's provider is picked up from the store replay, no event needed")
 		ic := &unstructured.Unstructured{}
 		ic.SetAPIVersion("deckhouse.io/v1alpha1")
 		ic.SetKind("DVPInstanceClass")
@@ -145,7 +145,7 @@ var _ = Describe("InstanceClass registration enumeration and lazy watches", func
 				seen[req.Name] = true
 			}
 			g.Expect(seen).To(HaveKey("v1-"+ic.GetName()),
-				"the late registration must have started a watch at its version, with nothing restarted")
+				"the late provider must have started a watch at its version, with nothing restarted")
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 })

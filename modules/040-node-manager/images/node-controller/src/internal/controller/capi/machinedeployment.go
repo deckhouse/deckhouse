@@ -154,14 +154,14 @@ func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	// One provider read per reconcile: four call sites below used to fetch the registration Secret
 	// each. Loaded before the deletion branch, because the cleanup needs the provider too — the
 	// infrastructure templates are named by its kind, and without it they outlive the NodeGroup.
-	registry, err := cloudprovider.Load(ctx, r.Client)
+	providers, err := cloudprovider.Load(ctx, r.Client)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	registration, _ := registry.ForNodeGroup(ng)
+	provider, _ := providers.ForNodeGroup(ng)
 
 	if !ng.DeletionTimestamp.IsZero() {
-		done, err := r.cleanupMachineDeployments(ctx, ng.Name, registration)
+		done, err := r.cleanupMachineDeployments(ctx, ng.Name, provider)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -192,17 +192,17 @@ func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		// the checksum that names the template. Guessing one would rename an immutable template
 		// and roll every machine in the NodeGroup, so wait instead: the provider secret is
 		// watched, and publishing the version re-enqueues this NodeGroup.
-		if registration.InstanceClassAPIVersion == "" {
+		if provider.InstanceClassAPIVersion == "" {
 			logger.V(1).Info("skipping: instanceClassAPIVersion is not published yet")
 			return ctrl.Result{RequeueAfter: resyncInterval}, nil
 		}
-		switch derived_status.ComputeEngine(ng, registration) {
+		switch derived_status.ComputeEngine(ng, provider) {
 		case engineCAPI:
-			if err := r.reconcileCloudMDsRendered(ctx, ng, registry, registration); err != nil {
+			if err := r.reconcileCloudMDsRendered(ctx, ng, providers, provider); err != nil {
 				return ctrl.Result{}, err
 			}
 		case engineMCM:
-			if err := r.reconcileCloudMCMs(ctx, ng, registry, registration); err != nil {
+			if err := r.reconcileCloudMCMs(ctx, ng, providers, provider); err != nil {
 				return ctrl.Result{}, err
 			}
 		default:
@@ -250,7 +250,7 @@ func (r *MachineDeploymentReconciler) removeFinalizer(ctx context.Context, ng *d
 // node drain runs asynchronously under capi/caps-controller-manager finalizers. An MCM one does:
 // its MachineClass holds the cloud credentials the deletion itself needs, so the class outlives
 // the deployment and the NodeGroup stays finalized until both are gone (see pruneStaleMCMs).
-func (r *MachineDeploymentReconciler) cleanupMachineDeployments(ctx context.Context, ngName string, registration cloudprovider.Registration) (bool, error) {
+func (r *MachineDeploymentReconciler) cleanupMachineDeployments(ctx context.Context, ngName string, provider cloudprovider.Provider) (bool, error) {
 	logger := log.FromContext(ctx)
 
 	capiMDs := &unstructured.UnstructuredList{}
@@ -274,11 +274,11 @@ func (r *MachineDeploymentReconciler) cleanupMachineDeployments(ctx context.Cont
 		logger.V(1).Info("deleted MachineDeployment for removed NodeGroup", "name", md.GetName(), "ng", ngName)
 	}
 
-	if err := r.deleteInfraMachineTemplates(ctx, ngName, registration.CAPI); err != nil {
+	if err := r.deleteInfraMachineTemplates(ctx, ngName, provider.CAPI); err != nil {
 		return false, err
 	}
 
-	staleMCMs, err := r.pruneStaleMCMs(ctx, r.APIReader, ngName, registration.MachineClassKind, nil, nil)
+	staleMCMs, err := r.pruneStaleMCMs(ctx, r.APIReader, ngName, provider.MachineClassKind, nil, nil)
 	if err != nil {
 		return false, err
 	}

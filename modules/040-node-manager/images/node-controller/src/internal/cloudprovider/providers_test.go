@@ -62,12 +62,12 @@ func clusterConfigurationSecret(provider string) *corev1.Secret {
 	}
 }
 
-func loadFrom(t *testing.T, objs ...client.Object) Registry {
+func loadFrom(t *testing.T, objs ...client.Object) Providers {
 	t.Helper()
 	c := fake.NewClientBuilder().WithScheme(testScheme(t)).WithObjects(objs...).Build()
-	registry, err := Load(context.Background(), c)
+	providers, err := Load(context.Background(), c)
 	require.NoError(t, err)
-	return registry
+	return providers
 }
 
 func cloudEphemeral(name, kind string) *v1.NodeGroup {
@@ -90,7 +90,7 @@ func nodeGroupOfType(name string, nodeType v1.NodeType) *v1.NodeGroup {
 }
 
 // Every provider module renders its registration twice — under the legacy fixed name and under a
-// per-provider one. Both carry the label, so a registry that did not deduplicate would report one
+// per-provider one. Both carry the label, so a providers that did not deduplicate would report one
 // provider as two and make every "exactly one provider" check fail on a perfectly normal cluster.
 func TestLoad_DeduplicatesTheLegacyAndPerProviderCopies(t *testing.T) {
 	data := map[string][]byte{
@@ -99,13 +99,13 @@ func TestLoad_DeduplicatesTheLegacyAndPerProviderCopies(t *testing.T) {
 		"instanceClassAPIVersion": []byte("v1"),
 	}
 
-	registry := loadFrom(t,
+	providers := loadFrom(t,
 		registrationSecret(SecretNamePrefix, data),
 		registrationSecret(SecretNamePrefix+"-yandex", data),
 	)
 
-	require.Len(t, registry.All(), 1)
-	assert.Equal(t, "yandex", registry.All()[0].Type)
+	require.Len(t, providers.All(), 1)
+	assert.Equal(t, "yandex", providers.All()[0].Type)
 }
 
 // Selection is by label, not by name: the per-provider Secret of a second provider is the whole
@@ -116,20 +116,20 @@ func TestLoad_SelectsByLabelAndSeesEveryProvider(t *testing.T) {
 		Data:       map[string][]byte{"type": []byte("notaprovider")},
 	}
 
-	registry := loadFrom(t,
+	providers := loadFrom(t,
 		registrationSecret(SecretNamePrefix+"-aws", map[string][]byte{"type": []byte("aws")}),
 		registrationSecret(SecretNamePrefix+"-yandex", map[string][]byte{"type": []byte("yandex")}),
 		unlabelled,
 	)
 
-	require.Len(t, registry.All(), 2)
-	assert.Equal(t, "aws", registry.All()[0].Type)
-	assert.Equal(t, "yandex", registry.All()[1].Type)
+	require.Len(t, providers.All(), 2)
+	assert.Equal(t, "aws", providers.All()[0].Type)
+	assert.Equal(t, "yandex", providers.All()[1].Type)
 }
 
-// An unreadable registration must not read as "no cloud provider": an empty registration publishes
+// An unreadable provider must not read as "no cloud provider": an empty one publishes
 // NodeGroups without instanceClass, which shifts the configuration checksum of every node. This is
-// why Load returns the error rather than an empty registry — the callers abort the reconcile.
+// why Load returns the error rather than an empty providers — the callers abort the reconcile.
 func TestLoad_ForbiddenListIsAnError(t *testing.T) {
 	c := fake.NewClientBuilder().
 		WithScheme(testScheme(t)).
@@ -146,11 +146,11 @@ func TestLoad_ForbiddenListIsAnError(t *testing.T) {
 }
 
 // A cluster with no cloud provider at all is a legitimate state, not a failure.
-func TestLoad_NoRegistrationsIsEmptyNotAnError(t *testing.T) {
-	registry := loadFrom(t)
+func TestLoad_NoProvidersIsEmptyNotAnError(t *testing.T) {
+	providers := loadFrom(t)
 
-	assert.True(t, registry.Empty())
-	assert.Empty(t, registry.All())
+	assert.True(t, providers.Empty())
+	assert.Empty(t, providers.All())
 }
 
 func TestForNodeGroup(t *testing.T) {
@@ -162,7 +162,7 @@ func TestForNodeGroup(t *testing.T) {
 		"type":              []byte("yandex"),
 		"instanceClassKind": []byte("YandexInstanceClass"),
 	})
-	registry := loadFrom(t, aws, yandex, clusterConfigurationSecret("Yandex"))
+	providers := loadFrom(t, aws, yandex, clusterConfigurationSecret("Yandex"))
 
 	tests := []struct {
 		name     string
@@ -183,7 +183,7 @@ func TestForNodeGroup(t *testing.T) {
 			expFound: true,
 		},
 		{
-			// The registration is what decides which kinds exist; an unknown one is a verdict about
+			// The provider is what decides which kinds exist; an unknown kind is a verdict about
 			// the NodeGroup, which derived_status.Validate reports.
 			name: "CloudEphemeral referencing a kind nobody registered resolves to nothing",
 			ng:   cloudEphemeral("worker", "VsphereInstanceClass"),
@@ -210,7 +210,7 @@ func TestForNodeGroup(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, ok := registry.ForNodeGroup(tc.ng)
+			got, ok := providers.ForNodeGroup(tc.ng)
 
 			assert.Equal(t, tc.expFound, ok)
 			assert.Equal(t, tc.expType, got.Type)
@@ -218,23 +218,23 @@ func TestForNodeGroup(t *testing.T) {
 	}
 }
 
-// ClusterConfiguration spells providers OpenStack and vSphere; registrations spell them lower case.
+// ClusterConfiguration spells providers OpenStack and vSphere; their Secrets spell them lower case.
 func TestForNodeGroup_ClusterProviderMatchesCaseInsensitively(t *testing.T) {
-	registry := loadFrom(t,
+	providers := loadFrom(t,
 		registrationSecret(SecretNamePrefix, map[string][]byte{"type": []byte("openstack")}),
 		clusterConfigurationSecret("OpenStack"),
 	)
 
-	got, ok := registry.ForNodeGroup(nodeGroupOfType("master", v1.NodeTypeCloudPermanent))
+	got, ok := providers.ForNodeGroup(nodeGroupOfType("master", v1.NodeTypeCloudPermanent))
 
 	require.True(t, ok)
 	assert.Equal(t, "openstack", got.Type)
 }
 
-// A registration that names a kind but no version contributes no GVK: guessing a version renames
+// A provider that names a kind but no version contributes no GVK: guessing a version renames
 // the immutable MachineTemplate the instance-class checksum points at.
-func TestInstanceClassGVKs_SkipsRegistrationsWithoutAVersion(t *testing.T) {
-	registry := loadFrom(t,
+func TestInstanceClassGVKs_SkipsProvidersWithoutAVersion(t *testing.T) {
+	providers := loadFrom(t,
 		registrationSecret(SecretNamePrefix+"-aws", map[string][]byte{
 			"type":                    []byte("aws"),
 			"instanceClassKind":       []byte("AWSInstanceClass"),
@@ -246,7 +246,7 @@ func TestInstanceClassGVKs_SkipsRegistrationsWithoutAVersion(t *testing.T) {
 		}),
 	)
 
-	gvks := registry.InstanceClassGVKs()
+	gvks := providers.InstanceClassGVKs()
 
 	require.Len(t, gvks, 1)
 	assert.Equal(t, schema.GroupVersionKind{

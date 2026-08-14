@@ -38,7 +38,7 @@ import (
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/machineclass"
 )
 
-func (r *MachineDeploymentReconciler) reconcileCloudMCMs(ctx context.Context, ng *deckhousev1.NodeGroup, registry cloudprovider.Registry, registration cloudprovider.Registration) error {
+func (r *MachineDeploymentReconciler) reconcileCloudMCMs(ctx context.Context, ng *deckhousev1.NodeGroup, providers cloudprovider.Providers, provider cloudprovider.Provider) error {
 	logger := log.FromContext(ctx)
 
 	if ng.Spec.CloudInstances == nil {
@@ -46,17 +46,17 @@ func (r *MachineDeploymentReconciler) reconcileCloudMCMs(ctx context.Context, ng
 		return nil
 	}
 
-	machineClassKind := registration.MachineClassKind
+	machineClassKind := provider.MachineClassKind
 	if machineClassKind == "" {
 		logger.Info("skipping MCM: machineClassKind not set (not an MCM cloud)", "nodeGroup", ng.Name)
 		return nil
 	}
-	cloudProvider := registration.Data
-	cloudType := registration.Type
+	cloudProvider := provider.Data
+	cloudType := provider.Type
 	region, _ := cloudProvider["region"].(string)
 
 	ds := &derived_status.Service{Client: r.Client}
-	resolved, validationErr, err := ds.ResolveNodeGroup(ctx, ng, registry)
+	resolved, validationErr, err := ds.ResolveNodeGroup(ctx, ng, providers)
 	if err != nil {
 		return fmt.Errorf("resolve NodeGroup %s: %w", ng.Name, err)
 	}

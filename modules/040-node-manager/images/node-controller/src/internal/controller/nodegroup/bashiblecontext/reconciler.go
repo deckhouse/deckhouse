@@ -50,7 +50,7 @@ func (r *Reconciler) Assemble(ctx context.Context) error {
 
 	// Loaded once for the whole context, not once per NodeGroup: resolving inside the loop meant
 	// one registration read per NodeGroup on every write of the Secret.
-	registry, err := cloudprovider.Load(ctx, r.Client)
+	providers, err := cloudprovider.Load(ctx, r.Client)
 	if err != nil {
 		return err
 	}
@@ -59,7 +59,7 @@ func (r *Reconciler) Assemble(ctx context.Context) error {
 	for i := range ngList.Items {
 		ng := &ngList.Items[i]
 
-		resolved, errStr, err := r.DerivedStatus.ResolveNodeGroup(ctx, ng, registry)
+		resolved, errStr, err := r.DerivedStatus.ResolveNodeGroup(ctx, ng, providers)
 		if err != nil {
 			return fmt.Errorf("resolve NodeGroup %s: %w", ng.Name, err)
 		}
@@ -81,7 +81,7 @@ func (r *Reconciler) Assemble(ctx context.Context) error {
 
 	setNodeGroupInfo(nodeGroups)
 
-	return r.Context.WriteSecret(ctx, nodeGroups, registry)
+	return r.Context.WriteSecret(ctx, nodeGroups, providers)
 }
 
 // readPriorNodeGroups returns the entries of the currently published context, keyed by NodeGroup

@@ -119,7 +119,7 @@ func TestCompute_NonCloudEphemeralReturnsEmpty(t *testing.T) {
 		Spec:       v1.NodeGroupSpec{NodeType: v1.NodeTypeStatic},
 	}
 	s := &Service{Client: newClient(t)}
-	res, err := s.Compute(context.Background(), ng, cloudprovider.Registry{})
+	res, err := s.Compute(context.Background(), ng, cloudprovider.Providers{})
 	if err != nil {
 		t.Fatalf("Compute() error: %v", err)
 	}
@@ -137,7 +137,7 @@ func TestCompute_MinMaxFromZonesAndReplicas(t *testing.T) {
 		mcmMachine("m2", "worker"),
 	)}
 
-	res, err := s.Compute(context.Background(), ng, cloudprovider.Registry{})
+	res, err := s.Compute(context.Background(), ng, cloudprovider.Providers{})
 	if err != nil {
 		t.Fatalf("Compute() error: %v", err)
 	}
@@ -162,7 +162,7 @@ func TestCompute_DesiredBumpedToMin(t *testing.T) {
 		mcmMachineDeployment("worker-md", "worker", 1),
 	)}
 
-	res, err := s.Compute(context.Background(), ng, cloudprovider.Registry{})
+	res, err := s.Compute(context.Background(), ng, cloudprovider.Providers{})
 	if err != nil {
 		t.Fatalf("Compute() error: %v", err)
 	}
@@ -185,7 +185,7 @@ func TestCompute_CombinesMCMAndCAPIReplicasAndMachines(t *testing.T) {
 		capiMachine("cm2", "worker"),
 	)}
 
-	res, err := s.Compute(context.Background(), ng, cloudprovider.Registry{})
+	res, err := s.Compute(context.Background(), ng, cloudprovider.Providers{})
 	if err != nil {
 		t.Fatalf("Compute() error: %v", err)
 	}
@@ -225,7 +225,7 @@ func TestCompute_FrozenAndFailuresSortedLatestError(t *testing.T) {
 	}, "status", "failedMachines")
 
 	s := &Service{Client: newClient(t, md)}
-	res, err := s.Compute(context.Background(), ng, cloudprovider.Registry{})
+	res, err := s.Compute(context.Background(), ng, cloudprovider.Providers{})
 	if err != nil {
 		t.Fatalf("Compute() error: %v", err)
 	}
@@ -256,55 +256,55 @@ func cloudEphemeralWithClass(kind string) *v1.NodeGroup {
 }
 
 func TestZonesCount(t *testing.T) {
-	yandex := cloudprovider.Registration{
+	yandex := cloudprovider.Provider{
 		Type:              "yandex",
 		InstanceClassKind: "YandexInstanceClass",
 		Zones:             []string{"z1", "z2"},
 	}
-	zoneless := cloudprovider.Registration{
+	zoneless := cloudprovider.Provider{
 		Type:              "vsphere",
 		InstanceClassKind: "VsphereInstanceClass",
 	}
 
 	tests := []struct {
-		name     string
-		ng       *v1.NodeGroup
-		registry cloudprovider.Registry
-		want     int32
+		name      string
+		ng        *v1.NodeGroup
+		providers cloudprovider.Providers
+		want      int32
 	}{
 		{
 			name: "zones from spec win over the provider",
 			ng:   cloudEphemeralNG("worker", []string{"a", "b", "c"}, 0, 1),
-			registry: cloudprovider.NewRegistry(
-				[]cloudprovider.Registration{yandex}, "yandex"),
+			providers: cloudprovider.NewProviders(
+				[]cloudprovider.Provider{yandex}, "yandex"),
 			want: 3,
 		},
 		{
-			name:     "no spec zones, fall back to the provider the NodeGroup resolved to",
-			ng:       cloudEphemeralWithClass("YandexInstanceClass"),
-			registry: cloudprovider.NewRegistry([]cloudprovider.Registration{yandex}, "yandex"),
-			want:     2,
+			name:      "no spec zones, fall back to the provider the NodeGroup resolved to",
+			ng:        cloudEphemeralWithClass("YandexInstanceClass"),
+			providers: cloudprovider.NewProviders([]cloudprovider.Provider{yandex}, "yandex"),
+			want:      2,
 		},
 		{
 			// Two providers registered: taking the zones of the wrong one would size the NodeGroup
 			// by another cloud's topology.
 			name: "the other provider's zones are not used",
 			ng:   cloudEphemeralWithClass("VsphereInstanceClass"),
-			registry: cloudprovider.NewRegistry(
-				[]cloudprovider.Registration{yandex, zoneless}, "yandex"),
+			providers: cloudprovider.NewProviders(
+				[]cloudprovider.Provider{yandex, zoneless}, "yandex"),
 			want: 0,
 		},
 		{
-			name:     "no registrations at all",
-			ng:       cloudEphemeralWithClass("YandexInstanceClass"),
-			registry: cloudprovider.Registry{},
-			want:     0,
+			name:      "no registrations at all",
+			ng:        cloudEphemeralWithClass("YandexInstanceClass"),
+			providers: cloudprovider.Providers{},
+			want:      0,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := zonesCount(tt.ng, tt.registry); got != tt.want {
+			if got := zonesCount(tt.ng, tt.providers); got != tt.want {
 				t.Fatalf("zonesCount() = %d, want %d", got, tt.want)
 			}
 		})

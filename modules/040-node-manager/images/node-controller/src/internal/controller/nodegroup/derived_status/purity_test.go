@@ -58,7 +58,7 @@ func TestDerive_IsDeterministic(t *testing.T) {
 	ng.Name = "worker"
 	ng.Spec.NodeType = v1.NodeTypeCloudEphemeral
 	snap := Snapshot{
-		Provider:    cloudprovider.Registration{Type: "aws", MachineClassKind: "AWSMachineClass"},
+		Provider:    cloudprovider.Provider{Type: "aws", MachineClassKind: "AWSMachineClass"},
 		ClusterUUID: "uuid-1",
 	}
 
@@ -81,7 +81,7 @@ func TestValidate_IsDeterministic(t *testing.T) {
 		ClassReference: v1.ClassReference{Kind: "AWSInstanceClass", Name: "worker"},
 	}
 	snap := Snapshot{
-		Provider: cloudprovider.Registration{
+		Provider: cloudprovider.Provider{
 			InstanceClassKind:       "AWSInstanceClass",
 			InstanceClassAPIVersion: "v1",
 		},

@@ -29,10 +29,10 @@ import (
 // every provider except vsphere, which fills mainNetwork from
 // cloudProvider.vsphere.instances.mainNetwork when absent. JSON-marshal both
 // sides so number types (int vs float64) compare as they hit the checksum.
-func assertInstanceClassGolden(t *testing.T, reg cloudprovider.Registration, spec interface{}, goldenJSON string) {
+func assertInstanceClassGolden(t *testing.T, provider cloudprovider.Provider, spec interface{}, goldenJSON string) {
 	t.Helper()
 
-	got, err := applyCloudSpecificDefaults(reg, spec)
+	got, err := applyCloudSpecificDefaults(provider, spec)
 	require.NoError(t, err)
 
 	gotJSON, err := json.Marshal(got)
@@ -54,7 +54,7 @@ func jsonSpec(t *testing.T, raw string) interface{} {
 }
 
 func TestApplyCloudSpecificDefaults_YandexPassthrough(t *testing.T) {
-	cloudProvider := cloudprovider.Registration{
+	cloudProvider := cloudprovider.Provider{
 		Type: "yandex",
 		CloudVariables: map[string]interface{}{
 			"region": "ru-central1",
@@ -79,7 +79,7 @@ func TestApplyCloudSpecificDefaults_YandexPassthrough(t *testing.T) {
 }
 
 func TestApplyCloudSpecificDefaults_AWSPassthrough(t *testing.T) {
-	cloudProvider := cloudprovider.Registration{
+	cloudProvider := cloudprovider.Provider{
 		Type: "aws",
 		CloudVariables: map[string]interface{}{
 			"region": "eu-central-1",
@@ -102,14 +102,14 @@ func TestApplyCloudSpecificDefaults_AWSPassthrough(t *testing.T) {
 
 func TestApplyCloudSpecificDefaults_UnknownProviderPassthrough(t *testing.T) {
 	// provider key absent from cloudProvider map -> spec returned unchanged.
-	cloudProvider := cloudprovider.Registration{Type: "openstack"}
+	cloudProvider := cloudprovider.Provider{Type: "openstack"}
 	spec := jsonSpec(t, `{"flavorName": "m1.large", "rootDiskSize": 30}`)
 
 	assertInstanceClassGolden(t, cloudProvider, spec, `{"flavorName": "m1.large", "rootDiskSize": 30}`)
 }
 
 func TestApplyCloudSpecificDefaults_VsphereFillsMainNetwork(t *testing.T) {
-	cloudProvider := cloudprovider.Registration{
+	cloudProvider := cloudprovider.Provider{
 		Type: "vsphere",
 		CloudVariables: map[string]interface{}{
 			"instances": map[string]interface{}{
@@ -135,7 +135,7 @@ func TestApplyCloudSpecificDefaults_VsphereFillsMainNetwork(t *testing.T) {
 }
 
 func TestApplyCloudSpecificDefaults_VsphereKeepsExplicitMainNetwork(t *testing.T) {
-	cloudProvider := cloudprovider.Registration{
+	cloudProvider := cloudprovider.Provider{
 		Type: "vsphere",
 		CloudVariables: map[string]interface{}{
 			"instances": map[string]interface{}{
@@ -158,7 +158,7 @@ func TestApplyCloudSpecificDefaults_VsphereKeepsExplicitMainNetwork(t *testing.T
 func TestApplyCloudSpecificDefaults_VsphereNoDefaultAvailable(t *testing.T) {
 	// vsphere provider present but cloudProvider.vsphere.instances.mainNetwork
 	// absent -> spec stays untouched (no mainNetwork key injected).
-	cloudProvider := cloudprovider.Registration{
+	cloudProvider := cloudprovider.Provider{
 		Type:           "vsphere",
 		CloudVariables: map[string]interface{}{},
 	}
@@ -169,14 +169,14 @@ func TestApplyCloudSpecificDefaults_VsphereNoDefaultAvailable(t *testing.T) {
 
 func TestApplyCloudSpecificDefaults_NonMapSpecUntouched(t *testing.T) {
 	// Defensive: a non-map spec (e.g. null) is returned as-is.
-	got, err := applyCloudSpecificDefaults(cloudprovider.Registration{Type: "yandex"}, nil)
+	got, err := applyCloudSpecificDefaults(cloudprovider.Provider{Type: "yandex"}, nil)
 	require.NoError(t, err)
 	assert.Nil(t, got)
 }
 
 func TestApplyCloudSpecificDefaults_DoesNotMutateInputForNonVsphere(t *testing.T) {
 	spec := map[string]interface{}{"cores": float64(4)}
-	_, err := applyCloudSpecificDefaults(cloudprovider.Registration{Type: "yandex"}, spec)
+	_, err := applyCloudSpecificDefaults(cloudprovider.Provider{Type: "yandex"}, spec)
 	require.NoError(t, err)
 	assert.Equal(t, map[string]interface{}{"cores": float64(4)}, spec,
 		"non-vsphere spec must be returned untouched")

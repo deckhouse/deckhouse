@@ -38,11 +38,11 @@ const (
 	clusterConfigSecretKey  = "cluster-configuration.yaml"
 )
 
-// Registry is the set of registrations the cluster publishes, taken once. Every lookup on it is a
+// Providers is the set of providers the cluster publishes, taken once. Every lookup on it is a
 // pure function, so a reconcile loads it once and passes it down instead of re-reading per
 // NodeGroup — the bashible context writer used to read the provider Secret once per NodeGroup.
-type Registry struct {
-	registrations []Registration
+type Providers struct {
+	providers []Provider
 
 	// clusterProvider is ClusterConfiguration.cloud.provider, lower-cased. CloudPermanent
 	// NodeGroups resolve through it: they name no InstanceClass, so there is nothing else to match
@@ -50,45 +50,45 @@ type Registry struct {
 	clusterProvider string
 }
 
-// NewRegistry builds a Registry from registrations already in hand, for callers that resolved
+// NewProviders builds a Providers from providers already in hand, for callers that resolved
 // them some other way and for tests that have no cluster to read.
-func NewRegistry(registrations []Registration, clusterProvider string) Registry {
-	return Registry{
-		registrations:   registrations,
+func NewProviders(providers []Provider, clusterProvider string) Providers {
+	return Providers{
+		providers:       providers,
 		clusterProvider: strings.ToLower(clusterProvider),
 	}
 }
 
-// Load reads every registration in the cluster. It is the only I/O in this package.
+// Load reads every provider registered in the cluster. It is the only I/O in this package.
 //
 // An empty result means the cluster has no cloud provider, which is a legitimate state; a failed
-// read is returned, because an empty registration is indistinguishable from "no cloud" downstream
+// read is returned, because an empty provider is indistinguishable from "no cloud" downstream
 // and would publish NodeGroups without instanceClass — a checksum shift on every node.
-func Load(ctx context.Context, r client.Reader) (Registry, error) {
-	registrations, err := loadRegistrations(ctx, r)
+func Load(ctx context.Context, r client.Reader) (Providers, error) {
+	providers, err := loadProviders(ctx, r)
 	if err != nil {
-		return Registry{}, err
+		return Providers{}, err
 	}
 
-	provider, err := readClusterProvider(ctx, r)
+	clusterProvider, err := readClusterProvider(ctx, r)
 	if err != nil {
-		return Registry{}, err
+		return Providers{}, err
 	}
 
-	return Registry{
-		registrations:   registrations,
-		clusterProvider: provider,
+	return Providers{
+		providers:       providers,
+		clusterProvider: clusterProvider,
 	}, nil
 }
 
-// All returns every registration, ordered by provider type.
-func (reg Registry) All() []Registration {
-	return reg.registrations
+// All returns every provider, ordered by type.
+func (ps Providers) All() []Provider {
+	return ps.providers
 }
 
 // Empty reports a cluster with no cloud provider registered.
-func (reg Registry) Empty() bool {
-	return len(reg.registrations) == 0
+func (ps Providers) Empty() bool {
+	return len(ps.providers) == 0
 }
 
 // ForNodeGroup returns the provider a NodeGroup runs on. It performs no I/O.
@@ -98,34 +98,34 @@ func (reg Registry) Empty() bool {
 // the provider the cluster was configured with. Static and CloudStatic have no provider at all:
 // their nodes exist outside any cloud, and handing them one is what used to apply cloud bashible
 // steps to bare-metal nodes.
-func (reg Registry) ForNodeGroup(ng *v1.NodeGroup) (Registration, bool) {
+func (ps Providers) ForNodeGroup(ng *v1.NodeGroup) (Provider, bool) {
 	switch ng.Spec.NodeType {
 	case v1.NodeTypeCloudEphemeral, v1.NodeTypeCloudPermanent:
 	default:
-		return Registration{}, false
+		return Provider{}, false
 	}
 
 	if ng.Spec.CloudInstances != nil {
-		if found, ok := reg.byInstanceClassKind(ng.Spec.CloudInstances.ClassReference.Kind); ok {
+		if found, ok := ps.byInstanceClassKind(ng.Spec.CloudInstances.ClassReference.Kind); ok {
 			return found, true
 		}
 	}
 
 	if ng.Spec.NodeType == v1.NodeTypeCloudPermanent {
-		return reg.byName(reg.clusterProvider)
+		return ps.byName(ps.clusterProvider)
 	}
 
-	return Registration{}, false
+	return Provider{}, false
 }
 
 // InstanceClassKinds returns every kind of InstanceClass the cluster accepts, ordered by provider
 // type. A NodeGroup referencing a kind outside this set names no provider at all.
-func (reg Registry) InstanceClassKinds() []string {
-	kinds := make([]string, 0, len(reg.registrations))
+func (ps Providers) InstanceClassKinds() []string {
+	kinds := make([]string, 0, len(ps.providers))
 
-	for i := range reg.registrations {
-		if reg.registrations[i].InstanceClassKind != "" {
-			kinds = append(kinds, reg.registrations[i].InstanceClassKind)
+	for i := range ps.providers {
+		if ps.providers[i].InstanceClassKind != "" {
+			kinds = append(kinds, ps.providers[i].InstanceClassKind)
 		}
 	}
 
@@ -135,27 +135,27 @@ func (reg Registry) InstanceClassKinds() []string {
 // InstanceClassGVKs returns the GVK every provider registered its InstanceClass under: the
 // instanceClassKind it names at the instanceClassAPIVersion it declares.
 //
-// A registration without the version contributes nothing — guessing a version is what this whole
+// A provider without the version contributes nothing — guessing a version is what this whole
 // mechanism exists to prevent (see InstanceClassAPIVersionKey). The CRD may lag the Secret:
 // callers hand the GVK to a watch that waits for it (source.Kind retries an unserved kind
 // itself), they must not assume it is served.
-func (reg Registry) InstanceClassGVKs() []schema.GroupVersionKind {
-	gvks := make([]schema.GroupVersionKind, 0, len(reg.registrations))
-	seen := make(map[schema.GroupVersionKind]bool, len(reg.registrations))
+func (ps Providers) InstanceClassGVKs() []schema.GroupVersionKind {
+	gvks := make([]schema.GroupVersionKind, 0, len(ps.providers))
+	seen := make(map[schema.GroupVersionKind]bool, len(ps.providers))
 
-	for i := range reg.registrations {
-		r := reg.registrations[i]
-		if r.InstanceClassKind == "" || r.InstanceClassAPIVersion == "" {
+	for i := range ps.providers {
+		p := ps.providers[i]
+		if p.InstanceClassKind == "" || p.InstanceClassAPIVersion == "" {
 			continue
 		}
 
 		gvk := schema.GroupVersionKind{
 			Group:   v1.GroupVersion.Group,
-			Version: r.InstanceClassAPIVersion,
-			Kind:    r.InstanceClassKind,
+			Version: p.InstanceClassAPIVersion,
+			Kind:    p.InstanceClassKind,
 		}
 
-		// A registration that publishes no type is not deduped on load, so the legacy and the
+		// A provider that publishes no type is not deduped on load, so the legacy and the
 		// per-provider copy can both be here and would start the same watch twice.
 		if seen[gvk] {
 			continue
@@ -174,39 +174,38 @@ func (reg Registry) InstanceClassGVKs() []schema.GroupVersionKind {
 	return gvks
 }
 
-// byName returns the registration of a provider, matching case-insensitively:
-// ClusterConfiguration spells providers OpenStack and vSphere, registrations spell them openstack
-// and vsphere.
-func (reg Registry) byName(name string) (Registration, bool) {
+// byName returns a provider by its name, matching case-insensitively: ClusterConfiguration spells
+// providers OpenStack and vSphere, their registration Secrets spell them openstack and vsphere.
+func (ps Providers) byName(name string) (Provider, bool) {
 	name = strings.ToLower(name)
 
-	for i := range reg.registrations {
-		if reg.registrations[i].Type == name {
-			return reg.registrations[i], true
+	for i := range ps.providers {
+		if ps.providers[i].Type == name {
+			return ps.providers[i], true
 		}
 	}
 
-	return Registration{}, false
+	return Provider{}, false
 }
 
 // byInstanceClassKind returns the provider that registered a kind of InstanceClass.
-func (reg Registry) byInstanceClassKind(kind string) (Registration, bool) {
+func (ps Providers) byInstanceClassKind(kind string) (Provider, bool) {
 	if kind == "" {
-		return Registration{}, false
+		return Provider{}, false
 	}
 
-	for i := range reg.registrations {
-		if reg.registrations[i].InstanceClassKind == kind {
-			return reg.registrations[i], true
+	for i := range ps.providers {
+		if ps.providers[i].InstanceClassKind == kind {
+			return ps.providers[i], true
 		}
 	}
 
-	return Registration{}, false
+	return Provider{}, false
 }
 
-// loadRegistrations is the Secret half of Load, separate so the lazy InstanceClass watch can
+// loadProviders is the Secret half of Load, separate so the lazy InstanceClass watch can
 // refresh the registered kinds without also depending on the cluster configuration being readable.
-func loadRegistrations(ctx context.Context, r client.Reader) ([]Registration, error) {
+func loadProviders(ctx context.Context, r client.Reader) ([]Provider, error) {
 	secrets := &corev1.SecretList{}
 
 	if err := r.List(ctx, secrets,
@@ -216,14 +215,14 @@ func loadRegistrations(ctx context.Context, r client.Reader) ([]Registration, er
 		return nil, fmt.Errorf("list cloud provider registration secrets: %w", err)
 	}
 
-	ret := make([]Registration, 0, len(secrets.Items))
+	ret := make([]Provider, 0, len(secrets.Items))
 	seen := make(map[string]bool, len(secrets.Items))
 
 	for i := range secrets.Items {
 		decoded := Decode(secrets.Items[i].Data)
-		// Providers publish the same registration twice, under the legacy fixed name and under
-		// the per-provider one. The type is what identifies a provider, so it is the dedup key —
-		// but a registration that publishes none is kept rather than dropped: it still carries an
+		// Every provider module publishes the same registration twice, under the legacy fixed name
+		// and under the per-provider one. The type identifies a provider, so it is the dedup key —
+		// but one that publishes no type is kept rather than dropped: it still carries an
 		// InstanceClass kind the watches need, and dropping it would silently stop watching.
 		if decoded.Type != "" {
 			if seen[decoded.Type] {

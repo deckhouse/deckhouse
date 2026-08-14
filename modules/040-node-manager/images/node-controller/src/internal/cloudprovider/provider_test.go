@@ -25,11 +25,11 @@ import (
 // registration.yaml writes some values as bare strings (type: {{ b64enc "aws" }}) and others as
 // JSON (zones: {{ toJson | b64enc }}). The decoder must accept both forms for every field, which is
 // why the map decoder it replaces tried JSON first and fell back to the raw string.
-func TestDecodeRegistration_BothEncodings(t *testing.T) {
+func TestDecodeProvider_BothEncodings(t *testing.T) {
 	tests := []struct {
-		name   string
-		data   map[string][]byte
-		expReg Registration
+		name        string
+		data        map[string][]byte
+		expProvider Provider
 	}{
 		{
 			name: "bare strings as helm writes them",
@@ -40,7 +40,7 @@ func TestDecodeRegistration_BothEncodings(t *testing.T) {
 				"machineClassKind":        []byte(`AWSMachineClass`),
 				"zones":                   []byte(`["a","b"]`),
 			},
-			expReg: Registration{
+			expProvider: Provider{
 				Type:                    "aws",
 				InstanceClassKind:       "AWSInstanceClass",
 				InstanceClassAPIVersion: "v1",
@@ -54,15 +54,15 @@ func TestDecodeRegistration_BothEncodings(t *testing.T) {
 				"type":            []byte(`"dvp"`),
 				"capiClusterKind": []byte(`"DVPCluster"`),
 			},
-			expReg: Registration{
+			expProvider: Provider{
 				Type: "dvp",
 				CAPI: CAPIConfig{ClusterKind: "DVPCluster"},
 			},
 		},
 		{
-			name:   "empty secret",
-			data:   map[string][]byte{},
-			expReg: Registration{},
+			name:        "empty secret",
+			data:        map[string][]byte{},
+			expProvider: Provider{},
 		},
 	}
 
@@ -70,17 +70,17 @@ func TestDecodeRegistration_BothEncodings(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			got := Decode(tc.data)
 
-			require.Equal(t, tc.expReg.Type, got.Type)
-			require.Equal(t, tc.expReg.InstanceClassKind, got.InstanceClassKind)
-			require.Equal(t, tc.expReg.InstanceClassAPIVersion, got.InstanceClassAPIVersion)
-			require.Equal(t, tc.expReg.MachineClassKind, got.MachineClassKind)
-			require.Equal(t, tc.expReg.CAPI.ClusterKind, got.CAPI.ClusterKind)
-			require.Equal(t, tc.expReg.Zones, got.Zones)
+			require.Equal(t, tc.expProvider.Type, got.Type)
+			require.Equal(t, tc.expProvider.InstanceClassKind, got.InstanceClassKind)
+			require.Equal(t, tc.expProvider.InstanceClassAPIVersion, got.InstanceClassAPIVersion)
+			require.Equal(t, tc.expProvider.MachineClassKind, got.MachineClassKind)
+			require.Equal(t, tc.expProvider.CAPI.ClusterKind, got.CAPI.ClusterKind)
+			require.Equal(t, tc.expProvider.Zones, got.Zones)
 		})
 	}
 }
 
-func TestDecodeRegistration_CloudVariablesKeyedByType(t *testing.T) {
+func TestDecodeProvider_CloudVariablesKeyedByType(t *testing.T) {
 	data := map[string][]byte{
 		"type":    []byte(`vsphere`),
 		"vsphere": []byte(`{"instances":{"mainNetwork":"vlan-1"}}`),

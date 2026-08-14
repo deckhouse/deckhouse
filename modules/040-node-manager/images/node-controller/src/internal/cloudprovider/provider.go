@@ -66,14 +66,14 @@ const (
 	defaultInfraAPIVersion = "infrastructure.cluster.x-k8s.io/v1alpha1"
 )
 
-// Registration is the registration Secret a cloud provider module publishes
+// Provider is the registration Secret a cloud provider module publishes
 // (modules/030-cloud-provider-*/templates/registration.yaml). Its keys are fixed by that template,
 // so they are typed here; only CloudVariables and Data stay open, because their shape is the
 // provider's own.
 //
 // Every key any controller needs is decoded once, so that resolving a provider is a single read
 // no matter how many of its fields the caller goes on to use.
-type Registration struct {
+type Provider struct {
 	// Type is the provider name in lower case: aws, yandex, vsphere, dvp...
 	Type string
 
@@ -109,14 +109,14 @@ type CAPIConfig struct {
 	MachineDeploymentSpecPatch string
 }
 
-// Empty reports a zero registration, which is what a cluster with no cloud provider yields.
-func (r Registration) Empty() bool { return r.Type == "" }
+// Empty reports a zero provider, which is what a cluster with no cloud provider yields.
+func (p Provider) Empty() bool { return p.Type == "" }
 
 // Decode reads the Secret data. Values arrive in two encodings: helm writes plain strings for
 // scalars (type: {{ b64enc "aws" }}) and JSON for structures (zones, the provider tree), so every
 // field tries JSON first and falls back to the raw bytes.
-func Decode(data map[string][]byte) Registration {
-	reg := Registration{
+func Decode(data map[string][]byte) Provider {
+	p := Provider{
 		Type:                    decodeString(data["type"]),
 		MachineClassKind:        decodeString(data["machineClassKind"]),
 		InstanceClassKind:       decodeString(data[InstanceClassKindKey]),
@@ -135,17 +135,17 @@ func Decode(data map[string][]byte) Registration {
 
 	// The default lives here rather than at each use site: the two consumers used to spell it out
 	// separately, and a third one would have had to remember to.
-	if reg.CAPI.ClusterAPIVersion == "" {
-		reg.CAPI.ClusterAPIVersion = defaultInfraAPIVersion
+	if p.CAPI.ClusterAPIVersion == "" {
+		p.CAPI.ClusterAPIVersion = defaultInfraAPIVersion
 	}
-	if reg.CAPI.MachineTemplateAPIVersion == "" {
-		reg.CAPI.MachineTemplateAPIVersion = defaultInfraAPIVersion
+	if p.CAPI.MachineTemplateAPIVersion == "" {
+		p.CAPI.MachineTemplateAPIVersion = defaultInfraAPIVersion
 	}
 
-	if tree, ok := reg.Data[strings.ToLower(reg.Type)].(map[string]any); ok {
-		reg.CloudVariables = tree
+	if tree, ok := p.Data[strings.ToLower(p.Type)].(map[string]any); ok {
+		p.CloudVariables = tree
 	}
-	return reg
+	return p
 }
 
 func decodeTree(data map[string][]byte) map[string]any {

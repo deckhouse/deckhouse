@@ -42,60 +42,60 @@ func mustSemver(t *testing.T, s string) *semver.Version {
 
 func TestDefaultCloudEphemeralEngine(t *testing.T) {
 	cases := []struct {
-		name   string
-		reg    cloudprovider.Registration
-		useMCM bool
-		want   string
+		name     string
+		provider cloudprovider.Provider
+		useMCM   bool
+		want     string
 	}{
 		{
-			name: "neither MCM nor CAPI",
-			reg:  cloudprovider.Registration{},
-			want: engineNone,
+			name:     "neither MCM nor CAPI",
+			provider: cloudprovider.Provider{},
+			want:     engineNone,
 		},
 		{
-			name: "MCM only",
-			reg:  cloudprovider.Registration{MachineClassKind: "AWSInstanceClass"},
-			want: engineMCM,
+			name:     "MCM only",
+			provider: cloudprovider.Provider{MachineClassKind: "AWSInstanceClass"},
+			want:     engineMCM,
 		},
 		{
-			name: "CAPI only",
-			reg:  cloudprovider.Registration{CAPI: cloudprovider.CAPIConfig{ClusterKind: "DVPCluster"}},
-			want: engineCAPI,
+			name:     "CAPI only",
+			provider: cloudprovider.Provider{CAPI: cloudprovider.CAPIConfig{ClusterKind: "DVPCluster"}},
+			want:     engineCAPI,
 		},
 		{
-			name:   "both, useMCM=false defaults to CAPI",
-			reg:    cloudprovider.Registration{MachineClassKind: "AWSInstanceClass", CAPI: cloudprovider.CAPIConfig{ClusterKind: "DVPCluster"}},
-			useMCM: false,
-			want:   engineCAPI,
+			name:     "both, useMCM=false defaults to CAPI",
+			provider: cloudprovider.Provider{MachineClassKind: "AWSInstanceClass", CAPI: cloudprovider.CAPIConfig{ClusterKind: "DVPCluster"}},
+			useMCM:   false,
+			want:     engineCAPI,
 		},
 		{
-			name:   "both, useMCM=true forces MCM",
-			reg:    cloudprovider.Registration{MachineClassKind: "AWSInstanceClass", CAPI: cloudprovider.CAPIConfig{ClusterKind: "DVPCluster"}},
-			useMCM: true,
-			want:   engineMCM,
+			name:     "both, useMCM=true forces MCM",
+			provider: cloudprovider.Provider{MachineClassKind: "AWSInstanceClass", CAPI: cloudprovider.CAPIConfig{ClusterKind: "DVPCluster"}},
+			useMCM:   true,
+			want:     engineMCM,
 		},
 		{
-			name: "empty-string kinds are treated as absent",
-			reg:  cloudprovider.Registration{},
-			want: engineNone,
+			name:     "empty-string kinds are treated as absent",
+			provider: cloudprovider.Provider{},
+			want:     engineNone,
 		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.want, defaultCloudEphemeralEngine(tc.reg, tc.useMCM))
+			assert.Equal(t, tc.want, defaultCloudEphemeralEngine(tc.provider, tc.useMCM))
 		})
 	}
 }
 
 func TestComputeEngine(t *testing.T) {
-	mcmProvider := cloudprovider.Registration{MachineClassKind: "AWSInstanceClass"}
-	capiProvider := cloudprovider.Registration{CAPI: cloudprovider.CAPIConfig{ClusterKind: "DVPCluster"}}
+	mcmProvider := cloudprovider.Provider{MachineClassKind: "AWSInstanceClass"}
+	capiProvider := cloudprovider.Provider{CAPI: cloudprovider.CAPIConfig{ClusterKind: "DVPCluster"}}
 
 	cases := []struct {
-		name string
-		ng   *v1.NodeGroup
-		reg  cloudprovider.Registration
-		want string
+		name     string
+		ng       *v1.NodeGroup
+		provider cloudprovider.Provider
+		want     string
 	}{
 		{
 			name: "status.engine short-circuits regardless of provider",
@@ -103,14 +103,14 @@ func TestComputeEngine(t *testing.T) {
 				Status: v1.NodeGroupStatus{Engine: engineMCM},
 				Spec:   v1.NodeGroupSpec{NodeType: v1.NodeTypeCloudEphemeral},
 			},
-			reg:  capiProvider,
-			want: engineMCM,
+			provider: capiProvider,
+			want:     engineMCM,
 		},
 		{
-			name: "cloud ephemeral resolves from provider (MCM)",
-			ng:   &v1.NodeGroup{Spec: v1.NodeGroupSpec{NodeType: v1.NodeTypeCloudEphemeral}},
-			reg:  mcmProvider,
-			want: engineMCM,
+			name:     "cloud ephemeral resolves from provider (MCM)",
+			ng:       &v1.NodeGroup{Spec: v1.NodeGroupSpec{NodeType: v1.NodeTypeCloudEphemeral}},
+			provider: mcmProvider,
+			want:     engineMCM,
 		},
 		{
 			name: "cloud ephemeral with use-mcm annotation forces MCM over CAPI",
@@ -118,8 +118,8 @@ func TestComputeEngine(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{useMCMAnnotation: "true"}},
 				Spec:       v1.NodeGroupSpec{NodeType: v1.NodeTypeCloudEphemeral},
 			},
-			reg:  cloudprovider.Registration{MachineClassKind: "AWSInstanceClass", CAPI: cloudprovider.CAPIConfig{ClusterKind: "DVPCluster"}},
-			want: engineMCM,
+			provider: cloudprovider.Provider{MachineClassKind: "AWSInstanceClass", CAPI: cloudprovider.CAPIConfig{ClusterKind: "DVPCluster"}},
+			want:     engineMCM,
 		},
 		{
 			name: "static with staticInstances is CAPI",
@@ -142,7 +142,7 @@ func TestComputeEngine(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.want, ComputeEngine(tc.ng, tc.reg))
+			assert.Equal(t, tc.want, ComputeEngine(tc.ng, tc.provider))
 		})
 	}
 }

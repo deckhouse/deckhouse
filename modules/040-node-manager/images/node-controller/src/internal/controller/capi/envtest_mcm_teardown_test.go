@@ -54,11 +54,11 @@ var _ = Describe("MCM MachineDeployment and MachineClass teardown", func() {
 	// The cleanup path takes the registration as an argument now: Reconcile resolves it once,
 	// before the deletion branch, precisely so a NodeGroup being deleted still knows which
 	// infrastructure templates are its own.
-	suiteRegistration := func() cloudprovider.Registration {
-		registry, err := cloudprovider.Load(suiteCtx, k8sClient)
+	suiteRegistration := func() cloudprovider.Provider {
+		providers, err := cloudprovider.Load(suiteCtx, k8sClient)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(registry.All()).NotTo(BeEmpty(), "the suite publishes one registration")
-		return registry.All()[0]
+		Expect(providers.All()).NotTo(BeEmpty(), "the suite publishes one provider")
+		return providers.All()[0]
 	}
 
 	createMachineClass := func(name string, labels map[string]string) *unstructured.Unstructured {

@@ -121,7 +121,7 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 
 	// One provider read per reconcile, shared by both services below: each used to fetch the
 	// registration Secret of its own.
-	registry, err := cloudprovider.Load(ctx, r.Client)
+	providers, err := cloudprovider.Load(ctx, r.Client)
 	if err != nil {
 		logger.Error(err, "failed to load cloud provider registrations", "nodeGroup", ng.Name)
 		return ctrl.Result{}, err
@@ -136,7 +136,7 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 	}
 
 	cloudService := cloudstatus.Service{Client: r.Client}
-	cloudResult, err := cloudService.Compute(ctx, ng, registry)
+	cloudResult, err := cloudService.Compute(ctx, ng, providers)
 	if err != nil {
 		logger.Error(err, "failed to compute cloud status", "nodeGroup", ng.Name)
 		return ctrl.Result{}, err
@@ -151,7 +151,7 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 	)
 
 	ds := derivedstatus.Service{Client: r.Client}
-	derivedResult, validationResult, err := ds.ComputeWithCloudChecks(ctx, ng, registry)
+	derivedResult, validationResult, err := ds.ComputeWithCloudChecks(ctx, ng, providers)
 	if err != nil {
 		logger.Error(err, "failed to compute derived nodegroup status", "nodeGroup", ng.Name)
 		return ctrl.Result{}, err

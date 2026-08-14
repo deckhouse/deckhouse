@@ -154,7 +154,7 @@ func TestNodeGroupHandler(t *testing.T) {
 		assert.Equal(t, []string{"master", "worker-yandex"}, drain(t, queue))
 	})
 
-	// The registration is decoded from the event object, which on a delete is the only place it
+	// The provider is decoded from the event object, which on a delete is the only place it
 	// still exists.
 	t.Run("create and delete resolve from the event object", func(t *testing.T) {
 		h, queue := newHandler(t)
@@ -168,7 +168,7 @@ func TestNodeGroupHandler(t *testing.T) {
 
 	// The kind is what routes a NodeGroup to a provider: the group that matched the old kind has to
 	// be told it no longer resolves, and it is in no set the new object can produce.
-	t.Run("a re-kinded registration reaches the groups of both sides", func(t *testing.T) {
+	t.Run("a re-kinded provider reaches the groups of both sides", func(t *testing.T) {
 		h, queue := newHandler(t)
 		rekinded := aws.DeepCopy()
 		rekinded.Data["instanceClassKind"] = []byte("VsphereInstanceClass")

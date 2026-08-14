@@ -57,13 +57,13 @@ var epochTimestampAccessor = func() int64 {
 // annotation. Exposed so the MachineDeployment controller can act on a freshly created
 // NodeGroup in its first reconcile instead of waiting for the status controller to publish
 // status.engine.
-func ComputeEngine(ng *v1.NodeGroup, reg cloudprovider.Registration) string {
+func ComputeEngine(ng *v1.NodeGroup, provider cloudprovider.Provider) string {
 	if ng.Status.Engine != "" {
 		return ng.Status.Engine
 	}
 
 	useMCM := ng.GetAnnotations()[useMCMAnnotation] != ""
-	defaultEngine := defaultCloudEphemeralEngine(reg, useMCM)
+	defaultEngine := defaultCloudEphemeralEngine(provider, useMCM)
 
 	switch ng.Spec.NodeType {
 	case v1.NodeTypeCloudEphemeral:
@@ -78,9 +78,9 @@ func ComputeEngine(ng *v1.NodeGroup, reg cloudprovider.Registration) string {
 	}
 }
 
-func defaultCloudEphemeralEngine(reg cloudprovider.Registration, useMCM bool) string {
-	hasMCM := reg.MachineClassKind != ""
-	hasCAPI := reg.CAPI.ClusterKind != ""
+func defaultCloudEphemeralEngine(provider cloudprovider.Provider, useMCM bool) string {
+	hasMCM := provider.MachineClassKind != ""
+	hasCAPI := provider.CAPI.ClusterKind != ""
 
 	switch {
 	case hasMCM && hasCAPI:
@@ -198,18 +198,18 @@ func resolveZones(ng *v1.NodeGroup, defaultZones []string) []string {
 	return defaultZones
 }
 
-func applyCloudSpecificDefaults(reg cloudprovider.Registration, instanceClassSpec interface{}) (interface{}, error) {
+func applyCloudSpecificDefaults(provider cloudprovider.Provider, instanceClassSpec interface{}) (interface{}, error) {
 	specMap, ok := instanceClassSpec.(map[string]interface{})
 	if !ok {
 		return instanceClassSpec, nil
 	}
-	if reg.CloudVariables == nil {
+	if provider.CloudVariables == nil {
 		return specMap, nil
 	}
 
-	providerName := strings.ToLower(reg.Type)
+	providerName := strings.ToLower(provider.Type)
 	for _, fillFn := range fillCloudSpecificDefaults[providerName] {
-		if err := fillFn(reg.CloudVariables, specMap); err != nil {
+		if err := fillFn(provider.CloudVariables, specMap); err != nil {
 			return nil, fmt.Errorf("fill %s defaults: %w", providerName, err)
 		}
 	}

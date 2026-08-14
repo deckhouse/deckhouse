@@ -85,7 +85,7 @@ func (r *MachineDeploymentReconciler) applyCAPIMachineTemplate(
 func (r *MachineDeploymentReconciler) pruneStaleCAPI(
 	ctx context.Context,
 	ngName string,
-	cloudConfig cloudprovider.CAPIConfig,
+	capiConfig cloudprovider.CAPIConfig,
 	desiredMDs, desiredTemplates map[string]struct{},
 ) error {
 	logger := log.FromContext(ctx)
@@ -114,13 +114,13 @@ func (r *MachineDeploymentReconciler) pruneStaleCAPI(
 		logger.Info("pruned stale CAPI MachineDeployment", "name", md.GetName(), "ng", ngName)
 	}
 
-	gv, err := schema.ParseGroupVersion(cloudConfig.MachineTemplateAPIVersion)
+	gv, err := schema.ParseGroupVersion(capiConfig.MachineTemplateAPIVersion)
 	if err != nil {
-		return fmt.Errorf("parse capiMachineTemplateAPIVersion %q: %w", cloudConfig.MachineTemplateAPIVersion, err)
+		return fmt.Errorf("parse capiMachineTemplateAPIVersion %q: %w", capiConfig.MachineTemplateAPIVersion, err)
 	}
 	tmplList := &unstructured.UnstructuredList{}
 	tmplList.SetGroupVersionKind(schema.GroupVersionKind{
-		Group: gv.Group, Version: gv.Version, Kind: cloudConfig.MachineTemplateKind + "List",
+		Group: gv.Group, Version: gv.Version, Kind: capiConfig.MachineTemplateKind + "List",
 	})
 	// Read live, like templatesInUse below: the kind comes from the provider Secret and is not
 	// in cache.Options.ByObject, so a cached list would lazily start a cluster-wide informer for
@@ -185,20 +185,20 @@ func (r *MachineDeploymentReconciler) pruneStaleCAPI(
 // Deleting them right away (rather than waiting for the Machines, as MCM MachineClasses must)
 // matches what helm did: an infrastructure template is read when a Machine is created, never
 // during its deletion.
-func (r *MachineDeploymentReconciler) deleteInfraMachineTemplates(ctx context.Context, ngName string, cloudConfig cloudprovider.CAPIConfig) error {
+func (r *MachineDeploymentReconciler) deleteInfraMachineTemplates(ctx context.Context, ngName string, capiConfig cloudprovider.CAPIConfig) error {
 	logger := log.FromContext(ctx)
 
-	if cloudConfig.MachineTemplateKind == "" || cloudConfig.MachineTemplateAPIVersion == "" {
+	if capiConfig.MachineTemplateKind == "" || capiConfig.MachineTemplateAPIVersion == "" {
 		return nil
 	}
-	gv, err := schema.ParseGroupVersion(cloudConfig.MachineTemplateAPIVersion)
+	gv, err := schema.ParseGroupVersion(capiConfig.MachineTemplateAPIVersion)
 	if err != nil {
-		return fmt.Errorf("parse capiMachineTemplateAPIVersion %q: %w", cloudConfig.MachineTemplateAPIVersion, err)
+		return fmt.Errorf("parse capiMachineTemplateAPIVersion %q: %w", capiConfig.MachineTemplateAPIVersion, err)
 	}
 
 	list := &unstructured.UnstructuredList{}
 	list.SetGroupVersionKind(schema.GroupVersionKind{
-		Group: gv.Group, Version: gv.Version, Kind: cloudConfig.MachineTemplateKind + "List",
+		Group: gv.Group, Version: gv.Version, Kind: capiConfig.MachineTemplateKind + "List",
 	})
 	// Live read for the same reason as in pruneStaleCAPI: the kind comes from the provider Secret
 	// and is not in cache.Options.ByObject.
@@ -209,7 +209,7 @@ func (r *MachineDeploymentReconciler) deleteInfraMachineTemplates(ctx context.Co
 		if meta.IsNoMatchError(err) {
 			return nil
 		}
-		return fmt.Errorf("list %s for NodeGroup %s: %w", cloudConfig.MachineTemplateKind, ngName, err)
+		return fmt.Errorf("list %s for NodeGroup %s: %w", capiConfig.MachineTemplateKind, ngName, err)
 	}
 
 	for i := range list.Items {

@@ -46,7 +46,7 @@ type Globals struct {
 	Proxy                   map[string]interface{}
 }
 
-func (s *Service) Build(ctx context.Context, globals Globals, nodeGroups []map[string]interface{}, registry cloudprovider.Registry) (map[string]interface{}, error) {
+func (s *Service) Build(ctx context.Context, globals Globals, nodeGroups []map[string]interface{}, providers cloudprovider.Providers) (map[string]interface{}, error) {
 	cpArgs := s.readControlPlaneArguments(ctx)
 	certs := s.readAPIServerProxyCerts(ctx)
 	eps, err := s.readEndpoints(ctx)
@@ -74,10 +74,10 @@ func (s *Service) Build(ctx context.Context, globals Globals, nodeGroups []map[s
 		"nodeGroups":     nodeGroups,
 	}
 
-	providers := registry.All()
-	if len(providers) > 0 {
-		trees := make([]map[string]interface{}, 0, len(providers))
-		for _, p := range providers {
+	all := providers.All()
+	if len(all) > 0 {
+		trees := make([]map[string]interface{}, 0, len(all))
+		for _, p := range all {
 			trees = append(trees, p.Data)
 		}
 		input["cloudProviders"] = trees
@@ -108,7 +108,7 @@ func Marshal(input map[string]interface{}) ([]byte, error) {
 	return yaml.Marshal(input)
 }
 
-func (s *Service) WriteSecret(ctx context.Context, nodeGroups []map[string]interface{}, registry cloudprovider.Registry) error {
+func (s *Service) WriteSecret(ctx context.Context, nodeGroups []map[string]interface{}, providers cloudprovider.Providers) error {
 	logger := log.FromContext(ctx)
 
 	globals := s.ReadGlobals(ctx)
@@ -119,7 +119,7 @@ func (s *Service) WriteSecret(ctx context.Context, nodeGroups []map[string]inter
 	if globals.ClusterDNSAddress == "" {
 		return fmt.Errorf("cluster DNS address not discovered yet: refusing to publish bashible context without it")
 	}
-	input, err := s.Build(ctx, globals, nodeGroups, registry)
+	input, err := s.Build(ctx, globals, nodeGroups, providers)
 	if err != nil {
 		return err
 	}

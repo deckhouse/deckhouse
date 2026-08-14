@@ -44,8 +44,8 @@ const (
 // plus the validation error the checks produced. The two travel separately on purpose: the error
 // is a statement about the NodeGroup, not about this pass, so a caller retries on the returned
 // error but not on a non-empty validation string.
-func (s *Service) ResolveNodeGroup(ctx context.Context, ng *v1.NodeGroup, registry cloudprovider.Registry) (ResolvedNodeGroup, string, error) {
-	snap, err := s.BuildSnapshot(ctx, ng, registry)
+func (s *Service) ResolveNodeGroup(ctx context.Context, ng *v1.NodeGroup, providers cloudprovider.Providers) (ResolvedNodeGroup, string, error) {
+	snap, err := s.BuildSnapshot(ctx, ng, providers)
 	if err != nil {
 		return ResolvedNodeGroup{}, "", err
 	}

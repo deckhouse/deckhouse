@@ -154,7 +154,7 @@ func TestBuildSnapshot_UnreadableSourceAborts(t *testing.T) {
 	ng.Name = "worker"
 	ng.Spec.NodeType = v1.NodeTypeCloudEphemeral
 
-	_, err := s.BuildSnapshot(t.Context(), ng, cloudprovider.Registry{})
+	_, err := s.BuildSnapshot(t.Context(), ng, cloudprovider.Providers{})
 
 	require.ErrorContains(t, err, "read cluster uuid configmap")
 }

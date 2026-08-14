@@ -181,7 +181,7 @@ func (s *Service) readControlPlaneMinVersion(ctx context.Context) (*semver.Versi
 // readDefaultZones returns the zones a NodeGroup spreads over when its spec names none. A failed
 // List is returned rather than swallowed: fewer zones is a different published element, and the
 // element is hashed into every node's configuration checksum.
-func (s *Service) readDefaultZones(ctx context.Context, reg cloudprovider.Registration) ([]string, error) {
+func (s *Service) readDefaultZones(ctx context.Context, provider cloudprovider.Provider) ([]string, error) {
 	seen := make(map[string]struct{})
 	zones := make([]string, 0)
 	add := func(z string) {
@@ -204,7 +204,7 @@ func (s *Service) readDefaultZones(ctx context.Context, reg cloudprovider.Regist
 		add(mdList.Items[i].GetAnnotations()["zone"])
 	}
 
-	for _, z := range reg.Zones {
+	for _, z := range provider.Zones {
 		add(z)
 	}
 	// Sorted because the result is published verbatim in the bashible context: the

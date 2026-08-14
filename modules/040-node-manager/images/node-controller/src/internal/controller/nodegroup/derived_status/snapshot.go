@@ -33,7 +33,7 @@ import (
 // validate halves cannot disagree about the world, and so no source is read twice — the two halves
 // used to read the zones, the InstanceClass and the type catalog once each.
 type Snapshot struct {
-	Provider      cloudprovider.Registration
+	Provider      cloudprovider.Provider
 	ClusterUUID   string
 	TargetVersion *semver.Version
 	DefaultCRI    string
@@ -69,10 +69,10 @@ type Snapshot struct {
 // An absent source yields an empty field; an unreadable one is returned as an error, because an
 // empty value here is indistinguishable from "no cloud provider" and would publish a NodeGroup
 // without instanceClass — a checksum shift on every node.
-func (s *Service) BuildSnapshot(ctx context.Context, ng *v1.NodeGroup, registry cloudprovider.Registry) (Snapshot, error) {
+func (s *Service) BuildSnapshot(ctx context.Context, ng *v1.NodeGroup, providers cloudprovider.Providers) (Snapshot, error) {
 	logger := log.FromContext(ctx)
 
-	provider, _ := registry.ForNodeGroup(ng)
+	provider, _ := providers.ForNodeGroup(ng)
 	clusterUUID, err := s.readClusterUUID(ctx)
 	if err != nil {
 		return Snapshot{}, err
@@ -92,7 +92,7 @@ func (s *Service) BuildSnapshot(ctx context.Context, ng *v1.NodeGroup, registry 
 		TargetVersion:        targetVersion,
 		DefaultCRI:           defaultCRI,
 		APIServerMin:         apiServerMin,
-		RegisteredClassKinds: registry.InstanceClassKinds(),
+		RegisteredClassKinds: providers.InstanceClassKinds(),
 	}
 
 	if ng.Spec.NodeType == v1.NodeTypeStatic {
