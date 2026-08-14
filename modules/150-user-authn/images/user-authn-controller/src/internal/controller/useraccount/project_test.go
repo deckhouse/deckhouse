@@ -112,9 +112,9 @@ func TestProjectLocalExpiredLockedUntil(t *testing.T) {
 		{
 			name:        "expired with admin annotation",
 			annotations: map[string]string{lockedByAdministratorAnnot: ""},
-			wantLocked:  true,
-			wantAdmin:   true,
-			wantLabel:   "true",
+			wantLocked:  false,
+			wantAdmin:   false,
+			wantLabel:   "false",
 		},
 	}
 

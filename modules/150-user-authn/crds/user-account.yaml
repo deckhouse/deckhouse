@@ -85,11 +85,16 @@ spec:
                   format: date-time
                   description: |
                     Time until which the account remains locked, in RFC3339 format.
-                    After this time the lock is lifted automatically unless locked by an administrator.
+                    After this time the lock is lifted automatically, including an
+                    administrator lock set for a limited duration (for example, one hour
+                    via UserOperation). A permanent administrator lock is stored as a
+                    far-future timestamp.
                 lockedByAdministrator:
                   type: boolean
                   description: |
-                    Whether the account was locked by an administrator (as opposed to an automatic lockout).
+                    Whether the current lock was set by an administrator (as opposed to
+                    an automatic password-policy lockout). This does not make the lock
+                    permanent; `lockedUntil` still defines when it expires.
                 userRef:
                   type: string
                   description: |

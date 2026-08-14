@@ -37,8 +37,8 @@ type desiredAccount struct {
 }
 
 func projectLocal(pw passwordView, user *userView, now time.Time) desiredAccount {
-	lockedByAdmin := hasAdminLock(pw.Annotations)
-	locked := lockedByAdmin || timeLockActive(pw.LockedUntil, now)
+	locked := timeLockActive(pw.LockedUntil, now)
+	lockedByAdmin := locked && hasAdminLock(pw.Annotations)
 
 	groups := slices.Clone(pw.Groups)
 	userRef := ""
@@ -86,8 +86,8 @@ func projectLocal(pw passwordView, user *userView, now time.Time) desiredAccount
 }
 
 func projectExternal(sess sessionView, providerType string, now time.Time) desiredAccount {
-	lockedByAdmin := hasAdminLock(sess.Annotations)
-	locked := lockedByAdmin || timeLockActive(sess.LockedUntil, now)
+	locked := timeLockActive(sess.LockedUntil, now)
+	lockedByAdmin := locked && hasAdminLock(sess.Annotations)
 
 	return desiredAccount{
 		Name: naming.ExternalName(sess.ConnID, sess.UserID),

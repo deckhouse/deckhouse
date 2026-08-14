@@ -89,7 +89,7 @@ func TestReconcile_LocalPasswordProjectsAttemptsLockEmail(t *testing.T) {
 	assertNoSecretKeys(t, raw)
 }
 
-func TestReconcile_ExpiredLockedUntilUnlockedUnlessAdmin(t *testing.T) {
+func TestReconcile_ExpiredLockedUntilUnlocked(t *testing.T) {
 	t.Parallel()
 
 	now := time.Date(2026, 8, 13, 12, 0, 0, 0, time.UTC)
@@ -104,7 +104,7 @@ func TestReconcile_ExpiredLockedUntilUnlockedUnlessAdmin(t *testing.T) {
 		{
 			name:       "expired lock with admin annotation",
 			annots:     map[string]any{lockedByAdministratorAnnot: ""},
-			wantLocked: true,
+			wantLocked: false,
 		},
 	}
 
