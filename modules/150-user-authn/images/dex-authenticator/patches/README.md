@@ -25,10 +25,17 @@ Prevents oauth2-proxy from failing with exit 1 if Redis has not started in time.
 
 ### 005-fix-cves.patch
 
-Fixes 
-- CVE-2025-30204 
-- CVE-2025-22868 
+Fixes
+- CVE-2025-30204
+- CVE-2025-22868
 - CVE-2024-28180
 - CVE-2025-47914
 - CVE-2025-58181
 - CVE-2026-34986
+- CVE-2026-39828 (`golang.org/x/crypto` -> `v0.53.0`)
+- CVE-2026-25680, CVE-2026-25681, CVE-2026-33814, CVE-2026-39821, CVE-2026-46600 (`golang.org/x/net` -> `v0.56.0`)
+- CVE-2026-39824 (`golang.org/x/sys` -> `v0.46.0`)
+- CVE-2026-56852 (`golang.org/x/text` -> `v0.39.0`)
+- GHSA-hrxh-6v49-42gf (`google.golang.org/grpc` -> `v1.82.1`)
+
+(previously split across 005/006; consolidated into one patch)

@@ -1,0 +1,26 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-report-updater-operator-trivy",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "@id": "https://nvd.nist.gov/vuln/detail/CVE-2026-54448",
+        "description": "Trivy: Helm chart tar bomb causes OOM via unbounded io.ReadAll in parser",
+        "name": "CVE-2026-54448",
+        "aliases": [ "GHSA-q3fv-x8vg-qqm4", "GO-2026-5983" ]
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/aquasecurity/trivy@v0.55.2"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Trivy's custom Helm-chart (.tgz) tar unpacker reads entries via io.ReadAll with no size limit prior to 0.71.0, allowing a decompression-bomb DoS. Deckhouse Kubernetes Platform is not affected as operator-trivy report-updater only imports github.com/aquasecurity/trivy/pkg/fanal/types for shared type definitions - it never invokes Trivy's artifact/Helm-chart scanning or tar-unpacking code, so the vulnerable code path is not reachable from this binary.",
+      "timestamp": "2026-08-13T00:00:00Z"
+    }
+  ],
+  "timestamp": "2026-08-13T00:00:00Z"
+}

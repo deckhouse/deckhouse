@@ -1,17 +1,15 @@
 module report-updater
 
-go 1.23.0
-
-toolchain go1.24.4
+go 1.25.0
 
 require (
 	github.com/aquasecurity/trivy v0.55.2
 	github.com/aquasecurity/trivy-db v0.0.0-20240910133327-7e0f4d2ed4c1
 	github.com/google/go-containerregistry v0.20.2
-	github.com/opencontainers/image-spec v1.1.0
+	github.com/opencontainers/image-spec v1.1.1
 	k8s.io/api v0.30.3
 	k8s.io/apimachinery v0.30.3
-	oras.land/oras-go/v2 v2.3.1
+	oras.land/oras-go/v2 v2.6.2
 )
 
 require (
@@ -25,9 +23,9 @@ require (
 	github.com/package-url/packageurl-go v0.1.3 // indirect
 	github.com/samber/lo v1.47.0 // indirect
 	github.com/stretchr/testify v1.10.0 // indirect
-	golang.org/x/net v0.38.0 // indirect
-	golang.org/x/sync v0.12.0 // indirect
-	golang.org/x/text v0.23.0 // indirect
+	golang.org/x/net v0.56.0 // indirect
+	golang.org/x/sync v0.22.0 // indirect
+	golang.org/x/text v0.39.0 // indirect
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
