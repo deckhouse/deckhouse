@@ -6,17 +6,17 @@ description: "Authorization and role-based access control to the resources of th
 The module generates role-based access model objects based on the standard Kubernetes RBAC mechanism. The module creates a set of cluster roles (ClusterRole) suitable for most user and group access management tasks.
 
 {% alert level="warning" %}
-The module implements two role-based models: the [primary](#primary-role-based-model) one (recommended) and the [legacy](#legacy-role-based-model) one, built around the ClusterAuthorizationRule and AuthorizationRule resources (its support will be discontinued in future releases).
+The module implements two role-based models: the [granular](#granular-role-based-model) one (recommended) and the [basic](#basic-role-based-model) one, built around the ClusterAuthorizationRule and AuthorizationRule resources (its support will be discontinued in future releases).
 
-The models are not resource-compatible — automatic conversion is impossible — but they [can be used at the same time](faq.html#can-the-legacy-and-the-primary-role-based-models-be-used-at-the-same-time): the permissions of both models are summed up.
+The models are not resource-compatible — automatic conversion is impossible — but they [can be used at the same time](faq.html#can-the-basic-and-the-granular-role-based-models-be-used-at-the-same-time): the permissions of both models are summed up.
 {% endalert %}
 
 <div style="height: 0;" id="the-new-role-based-model"></div>
 <div style="height: 0;" id="experimental-role-based-model"></div>
 
-## Primary role-based model
+## Granular role-based model
 
-Unlike the [legacy DKP role-based model](#legacy-role-based-model), the primary role-based one does not use ClusterAuthorizationRule and AuthorizationRule resources. Access rights are configured in the standard Kubernetes RBAC way: by creating RoleBinding or ClusterRoleBinding resources and specifying one of the roles prepared by the `user-authz` module in them. To grant access to all namespaces of a project at once, use the [ProjectRoleBinding](/modules/multitenancy-manager/cr.html#projectrolebinding) and [ClusterProjectRoleBinding](/modules/multitenancy-manager/cr.html#clusterprojectrolebinding) resources of the `multitenancy-manager` module.
+Unlike the [basic DKP role-based model](#basic-role-based-model), the granular role-based one does not use ClusterAuthorizationRule and AuthorizationRule resources. Access rights are configured in the standard Kubernetes RBAC way: by creating RoleBinding or ClusterRoleBinding resources and specifying one of the roles prepared by the `user-authz` module in them. To grant access to all namespaces of a project at once, use the [ProjectRoleBinding](/modules/multitenancy-manager/cr.html#projectrolebinding) and [ClusterProjectRoleBinding](/modules/multitenancy-manager/cr.html#clusterprojectrolebinding) resources of the `multitenancy-manager` module.
 
 {% alert level="info" %}
 Access does not have to be granted by hand-writing YAML manifests: the [Deckhouse Kubernetes Platform web interface](/products/kubernetes-platform/documentation/latest/user/web/ui.html) provides an access grant wizard. It walks you through the steps (who gets access → where → at which level), picks the right binding kind itself (RoleBinding, ClusterRoleBinding, ProjectRoleBinding, or ClusterProjectRoleBinding), and lets you assemble a custom role from ready-made building blocks without writing YAML.
@@ -267,7 +267,7 @@ This is the only allowed modification of built-in roles: changing their rules, a
 
 ### Deprecated role names
 
-The previous role names of the primary model (`d8:manage:<subsystem>:<level>`, `d8:manage:all:<level>`, and `d8:use:role:<level>`) are deprecated and will be removed in the next release. For backward compatibility they are temporarily kept as alias roles: existing bindings keep working and grant the same permissions as the new roles.
+The previous role names of the granular model (`d8:manage:<subsystem>:<level>`, `d8:manage:all:<level>`, and `d8:use:role:<level>`) are deprecated and will be removed in the next release. For backward compatibility they are temporarily kept as alias roles: existing bindings keep working and grant the same permissions as the new roles.
 
 Name mapping:
 
@@ -293,7 +293,7 @@ d8 k get clusterrolebindings,rolebindings -A -o json \
 <div style="height: 0;" id="the-obsolete-role-based-model"></div>
 <div style="height: 0;" id="current-role-based-model"></div>
 
-## Legacy role-based model
+## Basic role-based model
 
 Features:
 - Manages user and group access control using Kubernetes RBAC;
@@ -324,7 +324,7 @@ Each next role inherits permissions from the previous roles. A role block shows 
 
 The list below includes:
 
-- standard permissions from the legacy role-based model (k8s permissions);
+- standard permissions from the basic role-based model (k8s permissions);
 - permissions created by Deckhouse’s built-in modules.
 
 It does not include permissions for [modules from source](/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#module-source).

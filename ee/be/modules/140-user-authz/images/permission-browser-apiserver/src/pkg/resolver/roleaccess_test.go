@@ -295,7 +295,7 @@ func TestRoleReport_WildcardIsExpandedAndMarked(t *testing.T) {
 	rowOf(t, asWritten.Roles[0], "apps", "*")
 }
 
-// The legacy level is not a role: it is the base ClusterRole plus every module
+// The basic-model level is not a role: it is the base ClusterRole plus every module
 // role annotated for this level or a lower one, which is what the fan-out hook
 // binds. Getting the direction of that inclusion wrong would understate Admin.
 func TestRoleReport_LegacyLevelIsCumulative(t *testing.T) {
@@ -325,14 +325,14 @@ func TestRoleReport_LegacyLevelIsCumulative(t *testing.T) {
 	}
 
 	status, err := setupRoleAccessResolver(t, objs).Report(context.Background(), RoleAccessRequest{
-		Model:              RoleModelLegacy,
+		Model:              RoleModelBasic,
 		AccessLevels:       []string{"User", "Admin"},
 		ExpandWildcards:    true,
 		IncludeComposition: true,
 	})
 	require.NoError(t, err)
 	require.Len(t, status.Roles, 2)
-	assert.Equal(t, RoleModelLegacy, status.Snapshot.Model)
+	assert.Equal(t, RoleModelBasic, status.Snapshot.Model)
 
 	user := roleOf(t, status, "User")
 	rowOf(t, user, "cert-manager.io", "certificates")
@@ -753,7 +753,7 @@ func TestRoleReport_InventoryAttributesAGroupWithOneClaimant(t *testing.T) {
 	assert.Empty(t, inventoryOf(t, status, "deckhouse.io", "others").Module, "two modules extend the group, so it belongs to neither")
 }
 
-// The legacy model says the same thing in its own words, and on a cluster that
+// The basic model says the same thing in its own words, and on a cluster that
 // never adopted capabilities it is the only source there is.
 func TestRoleReport_InventoryTakesTheModuleFromTheLegacyRoles(t *testing.T) {
 	t.Parallel()
@@ -771,7 +771,7 @@ func TestRoleReport_InventoryTakesTheModuleFromTheLegacyRoles(t *testing.T) {
 	resolver.scopeCache = scopeCacheWith(map[string]bool{"cert-manager.io/certificates": true})
 	resolver.moduleIndex = moduleIndexOfCRDs(t, "certificates.cert-manager.io")
 
-	status, err := resolver.Report(context.Background(), RoleAccessRequest{Model: RoleModelLegacy, IncludeInventory: true})
+	status, err := resolver.Report(context.Background(), RoleAccessRequest{Model: RoleModelBasic, IncludeInventory: true})
 	require.NoError(t, err)
 
 	assert.Equal(t, "cert-manager", inventoryOf(t, status, "cert-manager.io", "certificates").Module)

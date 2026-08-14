@@ -30,7 +30,7 @@ const (
 	maxRequestedRoleScopes = 32
 )
 
-// knownRoleScopes are the scopes a primary-model role can carry.
+// knownRoleScopes are the scopes a granular-model role can carry.
 var knownRoleScopes = []string{"namespace", "project", "subsystem", "system"}
 
 // RoleAccessReporter builds the catalogue of what roles grant. It is
@@ -114,9 +114,9 @@ func (s *RoleAccessStorage) Create(ctx context.Context, obj runtime.Object, crea
 // caller gets a 400 naming the field instead of an empty report.
 func validateRoleAccessSpec(spec *v1alpha1.RoleAccessReportSpec) error {
 	switch spec.Model {
-	case "", resolver.RoleModelPrimary, resolver.RoleModelLegacy:
+	case "", resolver.RoleModelGranular, resolver.RoleModelBasic:
 	default:
-		return apierrors.NewBadRequest(fmt.Sprintf("spec.model must be %q or %q", resolver.RoleModelPrimary, resolver.RoleModelLegacy))
+		return apierrors.NewBadRequest(fmt.Sprintf("spec.model must be %q or %q", resolver.RoleModelGranular, resolver.RoleModelBasic))
 	}
 
 	if len(spec.Roles.Names) > maxRequestedRoleNames {
@@ -134,14 +134,14 @@ func validateRoleAccessSpec(spec *v1alpha1.RoleAccessReportSpec) error {
 
 	// A selection that belongs to the other model is a mistake worth naming:
 	// silently ignoring it would answer a question the caller did not ask.
-	if spec.Model == resolver.RoleModelLegacy && len(spec.Roles.Scopes) > 0 {
-		return apierrors.NewBadRequest("spec.roles.scopes applies to the primary model only")
+	if spec.Model == resolver.RoleModelBasic && len(spec.Roles.Scopes) > 0 {
+		return apierrors.NewBadRequest("spec.roles.scopes applies to the granular model only")
 	}
-	if spec.Model != resolver.RoleModelLegacy && len(spec.Roles.AccessLevels) > 0 {
-		return apierrors.NewBadRequest("spec.roles.accessLevels applies to the legacy model only")
+	if spec.Model != resolver.RoleModelBasic && len(spec.Roles.AccessLevels) > 0 {
+		return apierrors.NewBadRequest("spec.roles.accessLevels applies to the basic model only")
 	}
-	if spec.Model == resolver.RoleModelLegacy && spec.Roles.ExcludeCustom {
-		return apierrors.NewBadRequest("spec.roles.excludeCustom applies to the primary model only")
+	if spec.Model == resolver.RoleModelBasic && spec.Roles.ExcludeCustom {
+		return apierrors.NewBadRequest("spec.roles.excludeCustom applies to the granular model only")
 	}
 
 	return nil

@@ -622,9 +622,9 @@ type RoleAccessReport struct {
 
 // RoleAccessReportSpec is the specification for a role access report.
 type RoleAccessReportSpec struct {
-	// Model selects the role model to report on: "primary" for the scope-based
-	// roles, "legacy" for the access levels of ClusterAuthorizationRule.
-	// Defaults to primary.
+	// Model selects the role model to report on: "granular" for the scope-based
+	// roles, "basic" for the access levels of ClusterAuthorizationRule.
+	// Defaults to granular.
 	// +optional
 	Model string `json:"model,omitempty" protobuf:"bytes,1,opt,name=model"`
 
@@ -657,7 +657,7 @@ type RoleAccessReportSpec struct {
 type RoleSelection struct {
 	// Names lists roles by name.
 	//
-	// The legacy model has no role names -- it is the fixed list of access
+	// The basic model has no role names -- it is the fixed list of access
 	// levels -- so there a name is read as a level and joins AccessLevels
 	// instead of narrowing it. Naming "Editor" in either field reports the
 	// Editor level.
@@ -666,19 +666,19 @@ type RoleSelection struct {
 	Names []string `json:"names,omitempty" protobuf:"bytes,1,rep,name=names"`
 
 	// Scopes lists the scopes to report on: namespace, project, subsystem,
-	// system. Primary model only.
+	// system. Granular model only.
 	// +optional
 	// +listType=atomic
 	Scopes []string `json:"scopes,omitempty" protobuf:"bytes,2,rep,name=scopes"`
 
-	// AccessLevels lists the access levels to report on. Legacy model only.
+	// AccessLevels lists the access levels to report on. Basic model only.
 	// +optional
 	// +listType=atomic
 	AccessLevels []string `json:"accessLevels,omitempty" protobuf:"bytes,3,rep,name=accessLevels"`
 
 	// ExcludeCustom leaves out the roles created in this cluster, reporting
 	// only the model the platform ships. A role named in Names is reported
-	// either way. Primary model only. Defaults to false.
+	// either way. Granular model only. Defaults to false.
 	// +optional
 	ExcludeCustom bool `json:"excludeCustom,omitempty" protobuf:"varint,4,opt,name=excludeCustom"`
 }
@@ -783,7 +783,7 @@ type ReportSnapshot struct {
 
 // RoleAccess is what one role grants.
 type RoleAccess struct {
-	// Name is the ClusterRole name, or the access level in the legacy model.
+	// Name is the ClusterRole name, or the access level in the basic model.
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 
 	// Role carries the display metadata of the role.
@@ -805,7 +805,7 @@ type RoleAccess struct {
 	Namespaced bool `json:"namespaced,omitempty" protobuf:"varint,4,opt,name=namespaced"`
 
 	// Composition lists the capabilities the role aggregates, and for the
-	// legacy model the roles an access level binds. Filled when
+	// basic model the roles an access level binds. Filled when
 	// spec.includeComposition is set.
 	// +optional
 	// +listType=atomic
@@ -832,7 +832,7 @@ type RoleAccess struct {
 }
 
 // RoleComponent is one part a role is assembled from: a capability in the
-// primary model, a bound ClusterRole in the legacy one.
+// granular model, a bound ClusterRole in the basic one.
 type RoleComponent struct {
 	// Name is the ClusterRole name of the component.
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`

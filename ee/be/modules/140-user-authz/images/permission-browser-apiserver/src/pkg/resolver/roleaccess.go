@@ -25,11 +25,11 @@ import (
 
 // The two role models a report can cover.
 const (
-	// RoleModelPrimary is the scope-based model: d8:namespace:*, d8:project:*,
+	// RoleModelGranular is the scope-based (granular) model: d8:namespace:*, d8:project:*,
 	// d8:subsystem:<subsystem>:*, d8:system:*.
-	RoleModelPrimary = "primary"
-	// RoleModelLegacy is the access levels of ClusterAuthorizationRule.
-	RoleModelLegacy = "legacy"
+	RoleModelGranular = "granular"
+	// RoleModelBasic is the access levels of ClusterAuthorizationRule.
+	RoleModelBasic = "basic"
 )
 
 // Where a role says what it is.
@@ -47,17 +47,17 @@ const (
 	annotationAccessLevel = "user-authz.deckhouse.io/access-level"
 )
 
-// legacyAccessLevels are the levels of ClusterAuthorizationRule, in the order
+// basicAccessLevels are the levels of ClusterAuthorizationRule, in the order
 // they include one another. A ClusterRole annotated for one level is bound to
 // every level after it -- the fan-out hook walks this same order through a
 // fallthrough -- so the order here is not cosmetic: it is what makes the legacy
 // report say that Admin also carries everything Editor carries.
-var legacyAccessLevels = []string{"User", "PrivilegedUser", "Editor", "Admin", "ClusterEditor", "ClusterAdmin", "SuperAdmin"}
+var basicAccessLevels = []string{"User", "PrivilegedUser", "Editor", "Admin", "ClusterEditor", "ClusterAdmin", "SuperAdmin"}
 
-// legacyBaseRole is the ClusterRole a ClusterAuthorizationRule binds for a
+// basicLevelRole is the ClusterRole a ClusterAuthorizationRule binds for a
 // level, alongside the annotated ones. The template derives it with kebabcase,
 // which for these seven names is a plain lowercase-with-dashes.
-var legacyBaseRole = map[string]string{
+var basicLevelRole = map[string]string{
 	"User":           "user-authz:user",
 	"PrivilegedUser": "user-authz:privileged-user",
 	"Editor":         "user-authz:editor",
@@ -117,18 +117,18 @@ func NewRoleAccessResolver(
 
 // RoleAccessRequest is the resolved input of a role report.
 type RoleAccessRequest struct {
-	// Model is primary or legacy.
+	// Model is granular or basic.
 	Model string
 	// Names restricts the report to the named roles.
 	//
-	// In the legacy model there are no role names to ask for -- the model is
+	// In the basic model there are no role names to ask for -- the model is
 	// the fixed list of access levels -- so a name is read as a level and joins
 	// AccessLevels. Both fields then mean the same thing, and naming "Editor"
 	// in either of them reports the Editor level.
 	Names []string
-	// Scopes restricts the primary model to these scopes.
+	// Scopes restricts the granular model to these scopes.
 	Scopes []string
-	// AccessLevels restricts the legacy model to these levels.
+	// AccessLevels restricts the basic model to these levels.
 	AccessLevels []string
 	// ExcludeCustom leaves out the roles created in this cluster.
 	ExcludeCustom bool
@@ -155,15 +155,15 @@ func (r *RoleAccessResolver) Report(ctx context.Context, req RoleAccessRequest) 
 	)
 
 	switch req.Model {
-	case RoleModelLegacy:
-		reported, err = r.legacyRoles(ctx, index, req)
+	case RoleModelBasic:
+		reported, err = r.basicRoles(ctx, index, req)
 		if err != nil {
 			return v1alpha1.RoleAccessReportStatus{}, err
 		}
 	default:
 		var skippedCustom int
 
-		reported, skippedCustom, err = r.primaryRoles(ctx, index, req)
+		reported, skippedCustom, err = r.granularRoles(ctx, index, req)
 		if err != nil {
 			return v1alpha1.RoleAccessReportStatus{}, err
 		}
@@ -368,11 +368,11 @@ func claim(owners map[string]string, key, module string) {
 }
 
 func modelOf(model string) string {
-	if model == RoleModelLegacy {
-		return RoleModelLegacy
+	if model == RoleModelBasic {
+		return RoleModelBasic
 	}
 
-	return RoleModelPrimary
+	return RoleModelGranular
 }
 
 // discoveryResourceCount is how many resources a wildcard row was expanded
@@ -422,14 +422,14 @@ func newRoleIndex(roles []*rbacv1.ClusterRole) *roleIndex {
 	return index
 }
 
-// primaryRoles reports the scope-based model: every ClusterRole the model calls
+// granularRoles reports the scope-based model: every ClusterRole the model calls
 // a role, assembled from the capabilities it aggregates.
 //
 // req.ExcludeCustom leaves out the roles created in this cluster -- a catalogue
 // mixing them with the model reads as if the platform shipped them. A role named
 // explicitly is reported either way, and the count of the skipped ones is
 // returned so that the omission stays visible in the document.
-func (r *RoleAccessResolver) primaryRoles(ctx context.Context, index *roleIndex, req RoleAccessRequest) ([]v1alpha1.RoleAccess, int, error) {
+func (r *RoleAccessResolver) granularRoles(ctx context.Context, index *roleIndex, req RoleAccessRequest) ([]v1alpha1.RoleAccess, int, error) {
 	wantName := setOf(req.Names)
 	wantScope := setOf(req.Scopes)
 
@@ -649,7 +649,7 @@ func (r *RoleAccessResolver) collectComponents(
 	}
 }
 
-// legacyRoles reports the access levels of ClusterAuthorizationRule.
+// basicRoles reports the access levels of ClusterAuthorizationRule.
 //
 // A level is not a role: the fan-out binds the level's own ClusterRole plus
 // every ClusterRole annotated for that level or a lower one. The report says
@@ -657,14 +657,14 @@ func (r *RoleAccessResolver) collectComponents(
 //
 // The model has no role names of its own, so req.Names is read as levels and
 // joins req.AccessLevels rather than narrowing it -- see RoleAccessRequest.Names.
-func (r *RoleAccessResolver) legacyRoles(ctx context.Context, index *roleIndex, req RoleAccessRequest) ([]v1alpha1.RoleAccess, error) {
+func (r *RoleAccessResolver) basicRoles(ctx context.Context, index *roleIndex, req RoleAccessRequest) ([]v1alpha1.RoleAccess, error) {
 	wanted := setOf(req.AccessLevels)
 	for _, name := range req.Names {
 		wanted[name] = struct{}{}
 	}
 
-	reported := make([]v1alpha1.RoleAccess, 0, len(legacyAccessLevels))
-	for position, level := range legacyAccessLevels {
+	reported := make([]v1alpha1.RoleAccess, 0, len(basicAccessLevels))
+	for position, level := range basicAccessLevels {
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
@@ -740,14 +740,14 @@ func legacyComponents(index *roleIndex, level string, position int) []roleCompon
 		})
 	}
 
-	add(index.byName[legacyBaseRole[level]])
+	add(index.byName[basicLevelRole[level]])
 
 	for _, role := range index.all {
 		annotated := role.Annotations[annotationAccessLevel]
 		if annotated == "" {
 			continue
 		}
-		at := slices.Index(legacyAccessLevels, annotated)
+		at := slices.Index(basicAccessLevels, annotated)
 		if at < 0 || at > position {
 			continue
 		}

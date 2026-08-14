@@ -3773,7 +3773,7 @@ func schema_pkg_apis_authorization_v1alpha1_RoleAccess(ref common.ReferenceCallb
 				Properties: map[string]spec.Schema{
 					"name": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Name is the ClusterRole name, or the access level in the legacy model.",
+							Description: "Name is the ClusterRole name, or the access level in the basic model.",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
@@ -3820,7 +3820,7 @@ func schema_pkg_apis_authorization_v1alpha1_RoleAccess(ref common.ReferenceCallb
 							},
 						},
 						SchemaProps: spec.SchemaProps{
-							Description: "Composition lists the capabilities the role aggregates, and for the legacy model the roles an access level binds. Filled when spec.includeComposition is set.",
+							Description: "Composition lists the capabilities the role aggregates, and for the basic model the roles an access level binds. Filled when spec.includeComposition is set.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -3965,7 +3965,7 @@ func schema_pkg_apis_authorization_v1alpha1_RoleAccessReportSpec(ref common.Refe
 				Properties: map[string]spec.Schema{
 					"model": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Model selects the role model to report on: \"primary\" for the scope-based roles, \"legacy\" for the access levels of ClusterAuthorizationRule. Defaults to primary.",
+							Description: "Model selects the role model to report on: \"primary\" for the scope-based roles, \"legacy\" for the access levels of ClusterAuthorizationRule. Defaults to granular.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -4167,7 +4167,7 @@ func schema_pkg_apis_authorization_v1alpha1_RoleComponent(ref common.ReferenceCa
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "RoleComponent is one part a role is assembled from: a capability in the primary model, a bound ClusterRole in the legacy one.",
+				Description: "RoleComponent is one part a role is assembled from: a capability in the granular model, a bound ClusterRole in the basic one.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"name": {
@@ -4308,7 +4308,7 @@ func schema_pkg_apis_authorization_v1alpha1_RoleSelection(ref common.ReferenceCa
 							},
 						},
 						SchemaProps: spec.SchemaProps{
-							Description: "Scopes lists the scopes to report on: namespace, project, subsystem, system. Primary model only.",
+							Description: "Scopes lists the scopes to report on: namespace, project, subsystem, system. Granular model only.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -4328,7 +4328,7 @@ func schema_pkg_apis_authorization_v1alpha1_RoleSelection(ref common.ReferenceCa
 							},
 						},
 						SchemaProps: spec.SchemaProps{
-							Description: "AccessLevels lists the access levels to report on. Legacy model only.",
+							Description: "AccessLevels lists the access levels to report on. Basic model only.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -4343,7 +4343,7 @@ func schema_pkg_apis_authorization_v1alpha1_RoleSelection(ref common.ReferenceCa
 					},
 					"excludeCustom": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ExcludeCustom leaves out the roles created in this cluster, reporting only the model the platform ships. A role named in Names is reported either way. Primary model only. Defaults to false.",
+							Description: "ExcludeCustom leaves out the roles created in this cluster, reporting only the model the platform ships. A role named in Names is reported either way. Granular model only. Defaults to false.",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},

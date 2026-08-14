@@ -89,7 +89,7 @@ SUPERADMIN_ROLES = {
 }
 
 # ClusterRoles that make their holder a cluster administrator rather than a scoped superadmin:
-# Kubernetes' own `cluster-admin`, and `user-authz:super-admin` from the legacy role model, which a
+# Kubernetes' own `cluster-admin`, and `user-authz:super-admin` from the basic role model, which a
 # ClusterAuthorizationRule with `accessLevel: SuperAdmin` binds its subjects to. Both already grant
 # `*` on `*`, so protecting anything from them is decorative — they can drop this webhook outright —
 # and they need break-glass access for the same reason system:masters does. Matching on the role name

@@ -65,7 +65,7 @@ func TestRoleAccessStorage_PassesTheSelectionThrough(t *testing.T) {
 	yes := true
 
 	reporter, _, err := createRoleReport(t, v1alpha1.RoleAccessReportSpec{
-		Model: resolver.RoleModelPrimary,
+		Model: resolver.RoleModelGranular,
 		Roles: v1alpha1.RoleSelection{
 			ExcludeCustom: true,
 			Names:         []string{"d8:namespace:admin"},
@@ -76,7 +76,7 @@ func TestRoleAccessStorage_PassesTheSelectionThrough(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	assert.Equal(t, resolver.RoleModelPrimary, reporter.got.Model)
+	assert.Equal(t, resolver.RoleModelGranular, reporter.got.Model)
 	assert.Equal(t, []string{"d8:namespace:admin"}, reporter.got.Names)
 	assert.Equal(t, []string{"namespace"}, reporter.got.Scopes)
 	assert.True(t, reporter.got.ExcludeCustom)
@@ -105,22 +105,22 @@ func TestRoleAccessStorage_RefusesAnUnanswerableRequest(t *testing.T) {
 			says: "unknown scope",
 		},
 		{
-			name: "scopes asked of the legacy model",
-			spec: v1alpha1.RoleAccessReportSpec{Model: resolver.RoleModelLegacy, Roles: v1alpha1.RoleSelection{Scopes: []string{"namespace"}}},
-			says: "primary model only",
+			name: "scopes asked of the basic model",
+			spec: v1alpha1.RoleAccessReportSpec{Model: resolver.RoleModelBasic, Roles: v1alpha1.RoleSelection{Scopes: []string{"namespace"}}},
+			says: "granular model only",
 		},
 		{
-			name: "access levels asked of the primary model",
+			name: "access levels asked of the granular model",
 			spec: v1alpha1.RoleAccessReportSpec{Roles: v1alpha1.RoleSelection{AccessLevels: []string{"Admin"}}},
-			says: "legacy model only",
+			says: "basic model only",
 		},
 		{
-			name: "custom roles excluded from the legacy model, which has none",
+			name: "custom roles excluded from the basic model, which has none",
 			spec: v1alpha1.RoleAccessReportSpec{
-				Model: resolver.RoleModelLegacy,
+				Model: resolver.RoleModelBasic,
 				Roles: v1alpha1.RoleSelection{ExcludeCustom: true},
 			},
-			says: "primary model only",
+			says: "granular model only",
 		},
 	}
 
