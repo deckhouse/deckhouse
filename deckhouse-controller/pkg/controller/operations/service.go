@@ -45,13 +45,15 @@ type OperationService struct {
 	logger *log.Logger
 }
 
-// ErrPackageTypeInvalid is returned by detectPackageType when a package has manifest files
-// (labels or package.yaml) but the type value is empty or not recognized.
-var ErrPackageTypeInvalid = errors.New("package type could not be determined")
+var (
+	// ErrPackageTypeInvalid is returned by detectPackageType when a package has manifest files
+	// (labels or package.yaml) but the type value is empty or not recognized.
+	ErrPackageTypeInvalid = errors.New("package type could not be determined")
 
-// errTooOldImage is returned when a version image has no type labels and no package.yaml -
-// it cannot be processed.
-var errTooOldImage = errors.New("version image has no type labels and no package.yaml")
+	// ErrTooOldImage is returned when a version image has no type labels and no package.yaml -
+	// it cannot be processed.
+	ErrTooOldImage = errors.New("version image has no type labels and no package.yaml")
+)
 
 // isRepoNotFoundError checks if the error chain contains a registry NAME_UNKNOWN error,
 // which means the repository path does not exist in the registry.
@@ -64,6 +66,9 @@ func isRepoNotFoundError(err error) bool {
 type PackageType string
 
 const (
+	// PackageTypeLabel is a label on Docker images that indicates the package type
+	PackagesRepositoryOperationLabelPackageType = "io.deckhouse.package.type"
+
 	PackageTypeApplication PackageType = "Application"
 	PackageTypeModule      PackageType = "Module"
 )
@@ -82,7 +87,7 @@ func ParsePackageType(raw string) (PackageType, error) {
 	}
 }
 
-func NewOperationService(ctx context.Context, client client.Client, repoName string, psm registryService.ServiceManagerInterface[registryService.PackagesService], logger *log.Logger) (*OperationService, error) {
+func NewService(ctx context.Context, client client.Client, repoName string, psm registryService.ServiceManagerInterface[registryService.PackagesService], logger *log.Logger) (*OperationService, error) {
 	repo := &v1alpha1.PackageRepository{}
 	err := client.Get(ctx, types.NamespacedName{Name: repoName}, repo)
 	if err != nil {
@@ -432,7 +437,7 @@ func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageNa
 	pkgType, detectErr := s.detectPackageType(ctx, packageName, latestTag)
 	if detectErr != nil {
 		// No type labels and no package.yaml on /version path - skip
-		if errors.Is(detectErr, errTooOldImage) {
+		if errors.Is(detectErr, ErrTooOldImage) {
 			return &PackageProcessResult{
 				Failed: []failedVersion{{
 					Error: detectErr.Error(),
@@ -604,7 +609,7 @@ func (s *OperationService) detectPackageType(ctx context.Context, packageName, l
 		versionConfig = nil
 	}
 	if versionConfig != nil && versionConfig.Config.Labels != nil {
-		if rawPackageType, hasLabel := versionConfig.Config.Labels[v1alpha1.PackagesRepositoryOperationLabelPackageType]; hasLabel {
+		if rawPackageType, hasLabel := versionConfig.Config.Labels[PackagesRepositoryOperationLabelPackageType]; hasLabel {
 			return ParsePackageType(rawPackageType)
 		}
 	}
@@ -638,7 +643,7 @@ func (s *OperationService) detectPackageType(ctx context.Context, packageName, l
 		"version image has no type labels and no package.yaml",
 		slog.String("package", packageName),
 	)
-	return "", fmt.Errorf("%w: %s", errTooOldImage, packageName)
+	return "", fmt.Errorf("%w: %s", ErrTooOldImage, packageName)
 }
 
 type PackageProcessResult struct {

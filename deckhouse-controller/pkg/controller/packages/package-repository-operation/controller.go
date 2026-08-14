@@ -251,7 +251,7 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, op *v1alpha1.Packa
 
 	logger.Debug("handle discover state")
 
-	svc, err := operations.NewOperationService(ctx, r.client, op.Spec.PackageRepositoryName, r.psm, r.logger)
+	svc, err := operations.NewService(ctx, r.client, op.Spec.PackageRepositoryName, r.psm, r.logger)
 	if err != nil {
 		return r.failOperation(ctx, op, err)
 	}
@@ -302,7 +302,7 @@ func (r *reconciler) handleProcessingState(ctx context.Context, op *v1alpha1.Pac
 
 	logger.Debug("handle processing state")
 
-	svc, err := operations.NewOperationService(ctx, r.client, op.Spec.PackageRepositoryName, r.psm, r.logger)
+	svc, err := operations.NewService(ctx, r.client, op.Spec.PackageRepositoryName, r.psm, r.logger)
 	if err != nil {
 		return r.failOperation(ctx, op, err)
 	}
