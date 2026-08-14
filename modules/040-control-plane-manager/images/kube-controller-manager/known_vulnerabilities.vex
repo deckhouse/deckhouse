@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "merged-vex-4967f958f1248545eec7a13485884e349b6110e4acb5fe1825953bd6a8abef98",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 7,
+  "version": 8,
   "statements": [
     {
       "vulnerability": {
@@ -129,8 +129,22 @@
       "justification": "vulnerable_code_not_present",
       "impact_statement": "CVE-2026-41579 описывает symlink-атаку через вредоносный /dev в образе контейнера, эксплуатируемую функциями setupPtmx/setupDevSymlinks в пакете github.com/opencontainers/runc/libcontainer (файл libcontainer/rootfs_linux.go) — это логика создания rootfs контейнера, вызываемая только реализацией OCI runtime при запуске контейнера. Проверка графа зависимостей cmd/kube-controller-manager (Kubernetes v1.32, GOOS=linux, go list -deps) показывает, что компонент использует только вспомогательные подпакеты runc (libcontainer/cgroups, libcontainer/devices, libcontainer/configs, libcontainer/utils, libcontainer/intelrdt — транзитивно через pkg/kubelet/cm и pkg/kubelet/eviction), но не сам пакет libcontainer, где расположены уязвимые функции. kube-controller-manager не создаёт контейнеры и не является OCI runtime, поэтому уязвимый код физически не компилируется в его бинарник.",
       "timestamp": "2026-07-20T08:41:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость GO-2026-5932 затрагивает пакет golang.org/x/crypto/openpgp, который не поддерживается и является небезопасным по своей архитектуре. Данный компонент не импортирует и не выполняет код пакета openpgp; пакет golang.org/x/crypto подтягивается транзитивно без исполняемого пути openpgp.",
+      "timestamp": "2026-08-13T12:40:49.824120Z"
     }
   ],
   "timestamp": "2025-11-07T13:55:00Z",
-  "last_updated": "2026-08-12T12:00:00Z"
+  "last_updated": "2026-08-13T12:40:49Z"
 }
