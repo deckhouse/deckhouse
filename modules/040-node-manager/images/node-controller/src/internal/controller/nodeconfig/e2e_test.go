@@ -39,6 +39,7 @@ import (
 	v1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
+	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 	"github.com/deckhouse/node-controller/internal/testenv"
 )
 
@@ -432,9 +433,12 @@ var _ = Describe("NodeConfig controller", func() {
 	})
 
 	// User story: As an operator whose immutable nodes have gone quiet, I want a
-	// NodeGroup edit to reach none of them rather than all, so a fleet with down
-	// agents does not take a change together and interrupt itself together later.
-	It("gives no node a slot while more of the group is silent than it may update", func(ctx context.Context) {
+	// NodeGroup edit to reach them one at a time rather than all together, so a
+	// fleet with down agents does not take a change together and interrupt itself
+	// together later. Silence on a spec nobody publishes any more does not hold a
+	// slot — the group would never get the edit that fixes it — but the node that
+	// takes the edit does, so the gate never opens wider than one node.
+	It("hands a silent group its change one node at a time", func(ctx context.Context) {
 		ngName := testenv.UniqueName("workers-silent")
 		createImmutableNodeGroup(ctx, ngName, func(ng *deckhousev1.NodeGroup) {
 			ng.Spec.Kubelet = &deckhousev1.KubeletSpec{MaxPods: ptr.To[int32](110)}
@@ -463,20 +467,30 @@ var _ = Describe("NodeConfig controller", func() {
 		ng.Spec.Kubelet.MaxPods = ptr.To[int32](200)
 		Expect(k8sClient.Patch(ctx, ng, patch)).To(Succeed())
 
-		// Three nodes mid-update and one update allowed: the change waits for the
-		// group to come back rather than being handed to all three at once.
-		Consistently(func(g Gomega) {
-			g.Expect(updatedNodes(ctx, g, nodes...)).To(Equal(0))
-		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
-
-		By("the agents reporting the config they were given")
-		for _, name := range nodes {
-			reportApplied(ctx, name)
-		}
-
+		// One update allowed: the node that takes it holds the only slot, however
+		// silent the other two are.
 		Eventually(func(g Gomega) {
 			g.Expect(updatedNodes(ctx, g, nodes...)).To(Equal(1))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+		Consistently(func(g Gomega) {
+			g.Expect(updatedNodes(ctx, g, nodes...)).To(Equal(1))
+		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
+
+		By("the node that took it reporting the config it was given")
+		for _, name := range nodes {
+			if getNodeConfig(ctx, Default, name).Spec.Kubelet.MaxPods == 200 {
+				reportApplied(ctx, name)
+			}
+		}
+
+		// The next node takes it and holds the slot in its turn: the change walks
+		// the group, one proof at a time, instead of arriving everywhere at once.
+		Eventually(func(g Gomega) {
+			g.Expect(updatedNodes(ctx, g, nodes...)).To(Equal(2))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+		Consistently(func(g Gomega) {
+			g.Expect(updatedNodes(ctx, g, nodes...)).To(Equal(2))
+		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
 	})
 
 	// User story: As an operator, I want a release that ships a rebuilt system
@@ -596,30 +610,47 @@ var _ = Describe("NodeConfig controller", func() {
 		// updating.
 		stale := staleGroupSnapshot(ctx, ngName)
 
-		By("handing the first node a new spec")
-		nc := getNodeConfig(ctx, Default, first)
-		patch := client.MergeFrom(nc.DeepCopy())
-		nc.Spec.Kubelet.MaxPods = 199
-		Expect(k8sClient.Patch(ctx, nc, patch)).To(Succeed())
-
+		By("raising maxPods, which the controller hands to one of the two")
 		ng := &deckhousev1.NodeGroup{}
+		Expect(k8sClient.Get(ctx, types.NamespacedName{Name: ngName}, ng)).To(Succeed())
+		patch := client.MergeFrom(ng.DeepCopy())
+		ng.Spec.Kubelet.MaxPods = ptr.To[int32](200)
+		Expect(k8sClient.Patch(ctx, ng, patch)).To(Succeed())
+
+		var moved, waiting string
+		Eventually(func(g Gomega) {
+			moved, waiting = "", ""
+			for _, name := range []string{first, second} {
+				if getNodeConfig(ctx, g, name).Spec.Kubelet.MaxPods == 200 {
+					moved = name
+					continue
+				}
+				waiting = name
+			}
+			g.Expect(moved).NotTo(BeEmpty())
+			g.Expect(waiting).NotTo(BeEmpty())
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		// The gate renders against the group as it now stands, so the node that
+		// took the change reads as carrying the published spec unproven.
 		Expect(k8sClient.Get(ctx, types.NamespacedName{Name: ngName}, ng)).To(Succeed())
 		gate := &Reconciler{}
 		gate.Client = stale
 		gate.sources = &sourceReader{Client: stale, Reader: apiReader}
+		gate.derived = &derived_status.Service{Client: k8sClient}
 
-		// One node is mid-update and maxConcurrent defaults to one: the second
-		// node must wait, however applied the cache believes the group to be.
+		// One node is mid-update and maxConcurrent defaults to one: the other node
+		// must wait, however applied the cache believes the group to be.
 		// Each check reads the budget afresh — a budget is per pass.
 		Eventually(func(g Gomega) {
-			g.Expect(rolloutSlotFor(ctx, g, gate, ng, second)).To(BeFalse())
+			g.Expect(rolloutSlotFor(ctx, g, gate, ng, waiting)).To(BeFalse())
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
-		By("the first node reporting the spec it was given")
-		reportApplied(ctx, first)
+		By("the node that took it reporting the spec it was given")
+		reportApplied(ctx, moved)
 
 		Eventually(func(g Gomega) {
-			g.Expect(rolloutSlotFor(ctx, g, gate, ng, second)).To(BeTrue())
+			g.Expect(rolloutSlotFor(ctx, g, gate, ng, waiting)).To(BeTrue())
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 

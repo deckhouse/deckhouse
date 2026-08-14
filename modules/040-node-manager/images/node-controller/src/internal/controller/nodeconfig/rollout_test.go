@@ -117,6 +117,88 @@ func TestRolloutBudget(t *testing.T) {
 	})
 }
 
+// testOldOSImageDigest is a spec nobody publishes any more: what a node left
+// behind by a bad release is still carrying.
+const testOldOSImageDigest = "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+
+func notApplied(name string, spec internalv1alpha1.NodeSpec) internalv1alpha1.NodeConfig {
+	nc := internalv1alpha1.NodeConfig{
+		ObjectMeta: metav1.ObjectMeta{Name: name, Generation: 2},
+		Spec:       spec,
+	}
+	nc.Status.AppliedGeneration = 1
+	return nc
+}
+
+func appliedConfig(name string, spec internalv1alpha1.NodeSpec) internalv1alpha1.NodeConfig {
+	nc := internalv1alpha1.NodeConfig{
+		ObjectMeta: metav1.ObjectMeta{Name: name, Generation: 2},
+		Spec:       spec,
+	}
+	nc.Status.AppliedGeneration = 2
+	meta.SetStatusCondition(&nc.Status.Conditions, metav1.Condition{
+		Type: configurationAppliedCondition, Status: metav1.ConditionTrue,
+		Reason: "ReconcileSucceeded", Message: "applied", ObservedGeneration: nc.Generation,
+	})
+	return nc
+}
+
+// The gate must hold "no more than N nodes carry an unproven current spec", not
+// "no more than N nodes are unhealthy" — the latter it cannot control, and
+// trying to hold it locks the cure out of a group that is already broken.
+func TestBudgetIgnoresNodesStuckOnAnOlderSpec(t *testing.T) {
+	desired := internalv1alpha1.NodeSpec{NodeName: "n1", OSImage: internalv1alpha1.OSImage{Digest: testOSImageDigest}}
+	stale := internalv1alpha1.NodeSpec{NodeName: "n1", OSImage: internalv1alpha1.OSImage{Digest: testOldOSImageDigest}}
+
+	configs := []internalv1alpha1.NodeConfig{
+		notApplied("n1", stale),   // broken on a spec nobody publishes any more
+		notApplied("n2", desired), // genuinely mid-rollout
+		appliedConfig("n3", desired),
+	}
+
+	updating := membersOfUpdating(configs, map[string]internalv1alpha1.NodeSpec{
+		"n1": desired, "n2": desired, "n3": desired,
+	})
+
+	if _, ok := updating["n1"]; ok {
+		t.Fatal("a node stuck on an older spec occupies a rollout slot it does not use")
+	}
+	if _, ok := updating["n2"]; !ok {
+		t.Fatal("a node carrying the current spec without proving it must hold its slot")
+	}
+	if _, ok := updating["n3"]; ok {
+		t.Fatal("a converged node holds a slot")
+	}
+}
+
+// A NodeConfig whose Node is gone is about to be deleted; it must not hold the
+// group hostage in the meantime.
+func TestBudgetIgnoresOrphans(t *testing.T) {
+	desired := internalv1alpha1.NodeSpec{NodeName: "gone", OSImage: internalv1alpha1.OSImage{Digest: testOSImageDigest}}
+	configs := []internalv1alpha1.NodeConfig{notApplied("gone", desired)}
+
+	if updating := membersOfUpdating(configs, map[string]internalv1alpha1.NodeSpec{}); len(updating) != 0 {
+		t.Fatalf("membersOfUpdating() = %v, want empty: an orphan holds no slot", updating)
+	}
+}
+
+// The bootstrap-only fields the render cannot reproduce must not read as drift:
+// a node keeping the address it booted with is not stuck on an older spec.
+func TestBudgetIgnoresBootstrapOnlyFields(t *testing.T) {
+	desired := internalv1alpha1.NodeSpec{NodeName: "n1", OSImage: internalv1alpha1.OSImage{Digest: testOSImageDigest}}
+	bootstrapped := desired
+	bootstrapped.Kubelet.NodeIP = "10.0.0.5"
+
+	updating := membersOfUpdating(
+		[]internalv1alpha1.NodeConfig{notApplied("n1", bootstrapped)},
+		map[string]internalv1alpha1.NodeSpec{"n1": desired},
+	)
+
+	if _, ok := updating["n1"]; !ok {
+		t.Fatal("a node carrying the current spec plus its bootstrapped address must hold its slot")
+	}
+}
+
 func nodeConfigAt(generation, observed, applied int64, phase string) *internalv1alpha1.NodeConfig {
 	nc := &internalv1alpha1.NodeConfig{}
 	nc.Generation = generation

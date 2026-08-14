@@ -22,6 +22,8 @@ import (
 	"maps"
 	"slices"
 
+	corev1 "k8s.io/api/core/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -83,9 +85,9 @@ func conditionEqual(before, after []metav1.Condition, name string) bool {
 		oldCondition.ObservedGeneration == newCondition.ObservedGeneration
 }
 
-// rolloutBudget is how many more nodes of one group may be handed a new spec —
-// the same guarantee bashible nodes get from update-approval annotations,
-// except this controller simply withholds the change.
+// rolloutBudget is how many more nodes of one group may be handed a new spec.
+// Like bashible's update-approval, it counts grants and not health: a node
+// broken on a spec nobody publishes any more is not mid-rollout.
 type rolloutBudget struct {
 	concurrency int
 	// updating holds the nodes of the group that are mid-update: those that had
@@ -123,17 +125,59 @@ func (r *Reconciler) rolloutBudget(ctx context.Context, ng *v1.NodeGroup, p *pas
 		return nil, fmt.Errorf("list NodeConfigs of %s: %w", ng.Name, err)
 	}
 
+	nodes := &corev1.NodeList{}
+	if err := r.sources.Reader.List(ctx, nodes, client.MatchingLabels{nodecommon.NodeGroupLabel: ng.Name}); err != nil {
+		return nil, fmt.Errorf("list Nodes of %s: %w", ng.Name, err)
+	}
+	// The same render apply() gives the node, so a node that already carries what
+	// the cluster publishes is not mistaken for one left behind. Read once for
+	// the group: renderSpec is pure and the inputs are memoised in the pass.
+	in, err := r.clusterInputs(ctx, ng, p)
+	if err != nil {
+		return nil, err
+	}
+	desired := make(map[string]internalv1alpha1.NodeSpec, len(nodes.Items))
+	for i := range nodes.Items {
+		desired[nodes.Items[i].Name] = renderSpec(ng, &nodes.Items[i], in)
+	}
+
 	budget := &rolloutBudget{
 		concurrency: ua.CalculateConcurrency(maxConcurrent(ng), len(configs.Items)),
-		updating:    make(map[string]struct{}),
-	}
-	for i := range configs.Items {
-		if !applied(&configs.Items[i]) {
-			budget.updating[configs.Items[i].Name] = struct{}{}
-		}
+		updating:    membersOfUpdating(configs.Items, desired),
 	}
 	p.rollouts[ng.Name] = budget
 	return budget, nil
+}
+
+// membersOfUpdating names the nodes that occupy a rollout slot: those carrying
+// the spec the cluster publishes now, and not yet proven.
+//
+// A node stuck on an older spec is not mid-rollout, it is broken, and counting
+// it locks the cure out of a group that is already broken. A NodeConfig with no
+// desired spec has no live Node and is about to be deleted.
+func membersOfUpdating(configs []internalv1alpha1.NodeConfig,
+	desired map[string]internalv1alpha1.NodeSpec) map[string]struct{} {
+
+	updating := make(map[string]struct{})
+	for i := range configs {
+		nc := &configs[i]
+		want, ok := desired[nc.Name]
+		if !ok {
+			continue
+		}
+		if applied(nc) {
+			continue
+		}
+		// The carry-over apply() performs, with no reported address: a node
+		// keeping what it booted with is not drift, and reading it as drift
+		// would free a slot the node is genuinely holding.
+		keepBootstrapOnlyFields(&want, &nc.Spec, nil)
+		if !apiequality.Semantic.DeepEqual(nc.Spec, want) {
+			continue
+		}
+		updating[nc.Name] = struct{}{}
+	}
+	return updating
 }
 
 // applied reports whether the node has finished reconciling the spec it was
