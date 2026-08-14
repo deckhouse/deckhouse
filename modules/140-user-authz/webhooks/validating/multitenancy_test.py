@@ -149,11 +149,11 @@ class TestMultiTenancyValidationForCarsAndModuleConfig(unittest.TestCase):
 
     def test_module_config_allowed_when_field_absent_from_request_but_effectively_enabled(self):
         """
-        enableMultiTenancy is absent from the submitted spec.settings (e.g. an unrelated
-        ModuleConfig edit, or a CSE-edition cluster where it was never set explicitly), but
-        the discoverMultitenancyState ConfigMap still reflects it as effectively enabled
-        (explicitly, or via the edition's config-schema default) — existing CARs must not
-        be re-validated.
+        enableMultiTenancy is absent from the submitted spec.settings, and was already
+        absent before this request too (e.g. an unrelated ModuleConfig edit, or a
+        CSE-edition cluster where it was never set explicitly) — the effective value isn't
+        changing, so the state ConfigMap's mirrored value (explicit, or via the edition's
+        config-schema default) is trusted and existing CARs must not be re-validated.
         """
         for scenario, ctx_json in [
             ['enableMultiTenancy absent from request, effectively enabled (schema default)',
@@ -190,6 +190,52 @@ class TestMultiTenancyValidationForCarsAndModuleConfig(unittest.TestCase):
                     "You must enable userAuthz.enableMultiTenancy to use the namespaceSelector option in ClusterAuthorizationRule 'user3'",
                     "You must enable userAuthz.enableMultiTenancy to use the limitNamespaces option in ClusterAuthorizationRule 'user3'",
                 ]))
+
+    def test_module_config_denied_when_explicit_field_is_removed_even_if_previously_enabled(self):
+        """
+        enableMultiTenancy WAS explicitly present in spec.settings before this request
+        (e.g. "true"), and this request removes it. Unlike a request that never touched the
+        field, removing an existing explicit value is itself a potential disable (e.g. on
+        editions where the schema default is false) — the state ConfigMap still reflects
+        the pre-request value, so it must not be trusted here; existing CARs have to be
+        re-validated regardless of what the ConfigMap currently says.
+        """
+        for scenario, ctx_json in [
+            ['enableMultiTenancy was true, request removes the field, state ConfigMap still says true',
+             factories.prepare_module_config_binding_context(
+                module_enable_multitenancy_field=None,
+                previous_enable_multitenancy_field=True,
+                cars=factories.build_three_mixed_multitenancy_related_and_not_related_cars(),
+                current_multitenancy_state=True)
+            ],
+        ]:
+            with self.subTest(scenario):
+                tests.assert_validation_deny(self, self.run_hook(ctx_json), "; ".join([
+                    "You must enable userAuthz.enableMultiTenancy to use the allowAccessToSystemNamespaces flag in ClusterAuthorizationRule 'user1'",
+                    "You must enable userAuthz.enableMultiTenancy to use the namespaceSelector option in ClusterAuthorizationRule 'user1'",
+                    "You must enable userAuthz.enableMultiTenancy to use the limitNamespaces option in ClusterAuthorizationRule 'user1'",
+                    "You must enable userAuthz.enableMultiTenancy to use the allowAccessToSystemNamespaces flag in ClusterAuthorizationRule 'user3'",
+                    "You must enable userAuthz.enableMultiTenancy to use the namespaceSelector option in ClusterAuthorizationRule 'user3'",
+                    "You must enable userAuthz.enableMultiTenancy to use the limitNamespaces option in ClusterAuthorizationRule 'user3'",
+                ]))
+
+    def test_module_config_allowed_when_field_absent_before_and_after_regardless_of_unrelated_edit(self):
+        """
+        Sanity check that an unrelated edit (field absent from both oldObject and object)
+        still takes the ConfigMap-fallback shortcut — this is the case the fix must not
+        regress while closing the "field removed" gap above.
+        """
+        for scenario, ctx_json in [
+            ['enableMultiTenancy absent before and after, effectively enabled',
+             factories.prepare_module_config_binding_context(
+                module_enable_multitenancy_field=None,
+                previous_enable_multitenancy_field=None,
+                cars=factories.build_three_mixed_multitenancy_related_and_not_related_cars(),
+                current_multitenancy_state=True)
+            ],
+        ]:
+            with self.subTest(scenario):
+                tests.assert_validation_allowed(self, self.run_hook(ctx_json), None)
 
 
 if __name__ == '__main__':

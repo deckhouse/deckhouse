@@ -24,18 +24,18 @@
 # enableMultiTenancy defaults to true, and when the user has not set it
 # explicitly, the field is simply absent from ModuleConfig.spec.settings.
 #
-# The discoverMultitenancyState hook (see hooks/discover_multitenancy_state.go)
-# bridges this gap: it runs on every module reconcile, reads the already
-# defaults-merged input.Values.Get("userAuthz.enableMultiTenancy"), and keeps
-# it mirrored into the "d8-user-authz-multitenancy-state" ConfigMap in this
-# module's own d8-user-authz namespace. This hook reads that ConfigMap
-# instead of ModuleConfig or the Module CR.
+# templates/namespace.yaml bridges this gap: it's already gated on
+# `.Values.userAuthz.enableMultiTenancy` — the same defaults-merged value —
+# and it renders a small "d8-user-authz-multitenancy-state" ConfigMap in that
+# same block, alongside the d8-user-authz namespace itself. This hook reads
+# that ConfigMap instead of ModuleConfig or the Module CR.
 #
-# NB: d8-user-authz itself only exists when enableMultiTenancy is true (see
-# templates/namespace.yaml), so the ConfigMap is simply absent when it's
-# false — which is exactly the value we want to assume in that case anyway.
-# is_multitenancy_enabled() below treats "no snapshot" the same as
-# "enableMultiTenancy: false", so this falls out for free.
+# NB: d8-user-authz (and everything rendered in that block, including the
+# ConfigMap) only exists when enableMultiTenancy is true, so the ConfigMap is
+# simply absent when it's false — which is exactly the value we want to
+# assume in that case anyway. is_multitenancy_enabled() below treats "no
+# snapshot" the same as "enableMultiTenancy: false", so this falls out for
+# free, with no separate hook or bootstrap-ordering window to worry about.
 #
 # (Do not go back to reading status.lastAppliedConfiguration from a Module CR
 # here — deckhouse.io/v1alpha2 Module is not a real, served API version for
@@ -151,10 +151,20 @@ def validate(ctx: DotMap) -> tuple[list[str], list[str]]:
         # don't check existing CARs if the request explicitly enables MultiTenancy...
         if field_present and settings.enableMultiTenancy is True:
             return [], []
-        # ...or if the request doesn't touch enableMultiTenancy at all (it's absent from
-        # spec.settings, e.g. an unrelated ModuleConfig edit) and it's still effectively
-        # enabled — explicitly, or via the edition's config-schema default.
-        if not field_present and is_multitenancy_enabled(ctx):
+
+        # ...or if the field was already absent before this request too (compare against
+        # oldObject) — i.e. this is genuinely an unrelated ModuleConfig edit that doesn't
+        # touch enableMultiTenancy, so the effective value isn't changing and it's safe to
+        # trust the ConfigMap's currently-mirrored value (explicit, or via the edition's
+        # config-schema default).
+        #
+        # If the field WAS present before and is being removed by this request, that
+        # removal is itself a potential disable (e.g. on editions where the schema default
+        # is false) — it must fall through to validating the CARs below, not take this
+        # shortcut based on the pre-request ConfigMap state.
+        old_settings = req.oldObject.spec.settings
+        was_present = "enableMultiTenancy" in old_settings
+        if not field_present and not was_present and is_multitenancy_enabled(ctx):
             return [], []
 
         errors, warnings = [], []
