@@ -74,19 +74,6 @@ import:
   - lib/ld-musl-x86_64*
   - usr/bin/python3*
   - usr/lib/python3*
-  - usr/lib/lib*.s*
+  - usr/lib/lib*.so*
   excludePaths:
   - usr/lib/python3*/site-packages/pip-25.3*
-- image: libs/sqlite
-  add: /usr/lib
-  to: /usr/lib
-  before: install
-  includePaths:
-  - libsqlite3.so*
-- image: tools/openssl
-  add: /usr/lib
-  to: /usr/lib
-  before: install
-  includePaths:
-  - libssl.so*
-  - libcrypto.so*

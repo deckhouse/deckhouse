@@ -63,4 +63,4 @@ import:
   - lib/ld-musl-x86_64*
   - usr/bin/python3*
   - usr/lib/python3*
-  - usr/lib/lib*.s*
+  - usr/lib/lib*.so*
