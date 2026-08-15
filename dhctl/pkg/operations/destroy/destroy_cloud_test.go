@@ -102,6 +102,8 @@ func TestCloudDestroy(t *testing.T) {
 			destroyClusterShouldReturnsError bool
 			kubeProviderShouldCleaned        bool
 			lockShouldCreated                bool
+			// destroy() aborts before CheckCommanderUUID, so it logs nothing about it
+			commanderCheckNotReached bool
 
 			before func(t *testing.T, tst *testCloudDestroyTest)
 			assert func(t *testing.T, tst *testCloudDestroyTest)
@@ -266,6 +268,7 @@ func TestCloudDestroy(t *testing.T) {
 				destroyClusterShouldReturnsError: true,
 				kubeProviderShouldCleaned:        false,
 				lockShouldCreated:                false,
+				commanderCheckNotReached:         true,
 
 				before: noBeforeFunc,
 				assert: func(t *testing.T, tst *testCloudDestroyTest) {
@@ -367,7 +370,7 @@ func TestCloudDestroy(t *testing.T) {
 				assertResources(t, tst.kubeCl, resources, tt.resourcesShouldDeleted)
 
 				tst.assertDestroyLocked(t, tt.lockShouldCreated)
-				tst.assertSkipCheckCommanderUUID(t, true)
+				tst.assertSkipCheckCommanderUUID(t, !tt.commanderCheckNotReached)
 				tst.assertKubeProviderCleaned(t, tt.kubeProviderShouldCleaned, true)
 
 				tt.assert(t, tst)

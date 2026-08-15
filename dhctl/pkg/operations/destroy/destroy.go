@@ -262,9 +262,9 @@ func (d *ClusterDestroyer) destroy(ctx context.Context, autoApprove bool) error 
 		return err
 	}
 
-	// Before the first announced phase: CheckCommanderUUID announces one, and the phase list
-	// it reports travels in every gRPC frame. Built with an empty cluster type, that list is
-	// missing all static-only phases.
+	// Before the first announced phase: CheckCommanderUUID announces one, and that frame carries
+	// the phase list. Built with an empty cluster type, the list is missing all static-only
+	// phases (later frames are fine — SetClusterConfig rebuilds the list).
 	d.pipeline.SetClusterConfig(phases.ClusterConfig{
 		ClusterType:             metaConfig.ClusterType,
 		HasClusterConfiguration: metaConfig.HasClusterConfiguration(),
