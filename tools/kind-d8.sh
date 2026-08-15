@@ -40,8 +40,12 @@ KIND_IMAGE=kindest/node:v1.31.6@sha256:28b7cbb993dfe093c76641a0c95807637213c9109
 D8_RELEASE_CHANNEL_TAG=stable
 D8_RELEASE_CHANNEL_NAME=Stable
 D8_REGISTRY_ADDRESS=registry.deckhouse.io
-D8_REGISTRY_PATH=${D8_REGISTRY_ADDRESS}/deckhouse/ce
+D8_REGISTRY_PATH=
 D8_LICENSE_KEY=
+D8_DEV_BRANCH=
+D8_CHANNEL_EXPLICIT=false
+D8_RESOURCES_TIMEOUT=30m
+DRY_RUN=false
 
 KIND_INSTALL_DIRECTORY=$CONFIG_DIR
 KIND_PATH=kind
@@ -54,9 +58,28 @@ KUBECTL_VERSION=v1.34.9
 
 REQUIRE_MEMORY_MIN_BYTES=4000000000 # 4GB
 
+# In --dry-run mode, prints the command that would be executed instead of running it.
+run_cmd() {
+  if [[ "$DRY_RUN" == "true" ]]; then
+    printf '+ %s\n' "$*"
+    return 0
+  fi
+  "$@"
+}
+
+# In --dry-run mode, prints a generated config file's content, delimited so it's easy to spot and copy.
+print_dry_run_file() {
+  if [[ "$DRY_RUN" == "true" ]]; then
+    echo "----- BEGIN $1 -----"
+    cat "$1"
+    echo "----- END $1 -----"
+    echo
+  fi
+}
+
 usage() {
   printf "
- Usage: %s [--channel <CHANNEL NAME>] [--key <DECKHOUSE EE LICENSE KEY>] [--os <linux|mac>]
+ Usage: %s [--channel <CHANNEL NAME>] [--key <DECKHOUSE EE LICENSE KEY>] [--registry-address <REGISTRY ADDRESS>] [--registry-path <REGISTRY PATH>] [--dev-branch <TAG>] [--resources-timeout <DURATION>] [--dry-run] [--os <linux|mac>]
 
     --channel <CHANNEL NAME>
             Deckhouse Kubernetes Platform release channel name.
@@ -66,6 +89,33 @@ usage() {
     --key <DECKHOUSE EE LICENSE KEY>
             Deckhouse Kubernetes Platform Enterprise Edition license key.
             If no license key specified, Deckhouse Kubernetes Platform Community Edition will be installed.
+
+    --registry-address <REGISTRY ADDRESS>
+            Container registry address to install Deckhouse Kubernetes Platform from.
+            Default: registry.deckhouse.io.
+
+    --registry-path <REGISTRY PATH>
+            Path to the Deckhouse Kubernetes Platform images in the container registry.
+            Can be given either as a full path including the registry address (e.g. my-registry.example/foo/bar)
+            or as a short path starting with / (e.g. /foo/bar), which is then prefixed with --registry-address.
+            If not specified, it is derived from --registry-address (and edition, based on whether --key is set).
+
+    --dev-branch <TAG>
+            Sets the devBranch field of the Deckhouse InitConfiguration, to deploy a specific build tag of the
+            Deckhouse controller image (e.g. a git branch name or a custom CI build tag) instead of the tag
+            resolved from --channel.
+            If --channel is not also explicitly specified, the installer image is pulled using this same tag
+            (for registries that publish builds tagged by branch/PR rather than by release channel).
+
+    --resources-timeout <DURATION>
+            Timeout for the dhctl create-resources phase to wait for resources to become ready,
+            in Go duration format (e.g. 30m, 45m, 1h).
+            Default: 30m.
+
+    --dry-run
+            Print the commands that would be executed (docker, kind, kubectl, curl, install) instead of
+            running them. Local config files (kind.cfg, config.yml, resources.yml) are still generated
+            normally, so their content can be inspected. No cluster is created or modified.
 
     --os <linux|mac>
             Override the OS detection.
@@ -90,6 +140,7 @@ parse_args() {
         if [[ "$2" =~ ^(Alpha|Beta|EarlyAccess|Stable|RockSolid)$ ]]; then
           D8_RELEASE_CHANNEL_NAME="$2"
           D8_RELEASE_CHANNEL_TAG=$(echo ${D8_RELEASE_CHANNEL_NAME} | sed 's/EarlyAccess/early-access/; s/RockSolid/rock-solid/' | tr '[:upper:]' '[:lower:]')
+          D8_CHANNEL_EXPLICIT=true
         else
           echo "Incorrect release channel. Use Alpha, Beta, EarlyAccess, Stable or RockSolid."
           usage
@@ -108,10 +159,64 @@ parse_args() {
         ;;
       *)
         D8_LICENSE_KEY="$2"
-        D8_REGISTRY_PATH=${D8_REGISTRY_ADDRESS}/deckhouse/ee
         shift
         ;;
       esac
+      ;;
+    --registry-address)
+      case "$2" in
+      "")
+        echo "Registry address is empty. Please specify the registry address."
+        usage
+        exit 1
+        ;;
+      *)
+        D8_REGISTRY_ADDRESS="$2"
+        shift
+        ;;
+      esac
+      ;;
+    --registry-path)
+      case "$2" in
+      "")
+        echo "Registry path is empty. Please specify the registry path."
+        usage
+        exit 1
+        ;;
+      *)
+        D8_REGISTRY_PATH="$2"
+        shift
+        ;;
+      esac
+      ;;
+    --dev-branch)
+      case "$2" in
+      "")
+        echo "Dev branch/tag is empty. Please specify the value for devBranch."
+        usage
+        exit 1
+        ;;
+      *)
+        D8_DEV_BRANCH="$2"
+        shift
+        ;;
+      esac
+      ;;
+    --resources-timeout)
+      case "$2" in
+      "")
+        echo "Resources timeout is empty. Please specify a Go duration (e.g. 30m, 1h)."
+        usage
+        exit 1
+        ;;
+      *)
+        D8_RESOURCES_TIMEOUT="$2"
+        shift
+        ;;
+      esac
+      ;;
+    --dry-run)
+      DRY_RUN=true
       ;;
     --os)
       case "$2" in
@@ -138,6 +243,28 @@ parse_args() {
     esac
     shift $(($# > 0 ? 1 : 0))
   done
+}
+
+registry_path_default() {
+  if [[ -z "$D8_REGISTRY_PATH" ]]; then
+    if [[ -n "$D8_LICENSE_KEY" ]]; then
+      D8_REGISTRY_PATH=${D8_REGISTRY_ADDRESS}/deckhouse/ee
+    else
+      D8_REGISTRY_PATH=${D8_REGISTRY_ADDRESS}/deckhouse/ce
+    fi
+  elif [[ "$D8_REGISTRY_PATH" == /* ]]; then
+    # Short form: just the path part, e.g. "/sys/deckhouse-oss" -> "<registry-address>/sys/deckhouse-oss".
+    D8_REGISTRY_PATH="${D8_REGISTRY_ADDRESS}${D8_REGISTRY_PATH}"
+  fi
+
+  # If a dev branch/tag is requested and the release channel wasn't explicitly
+  # set, assume the installer image is published under the same tag (this is
+  # the case for registries that only tag builds by branch/PR, not by release
+  # channel). Passing --channel explicitly keeps using an official installer
+  # image alongside a custom devBranch.
+  if [[ -n "$D8_DEV_BRANCH" && "$D8_CHANNEL_EXPLICIT" == "false" ]]; then
+    D8_RELEASE_CHANNEL_TAG="$D8_DEV_BRANCH"
+  fi
 }
 
 os_detect() {
@@ -221,8 +348,10 @@ memory_check() {
   if [[ ("$MEMORY_TOTAL_BYTES" -eq "0") || (-z "$MEMORY_TOTAL_BYTES") ]]; then
     echo "Can't get the total memory value."
     echo "Note, that Deckhouse Kubernetes Platform requires at least 4 gigabytes of memory."
-    echo "Press enter to continue..."
-    read
+    if [[ "$DRY_RUN" != "true" ]]; then
+      echo "Press enter to continue..."
+      read
+    fi
   fi
 }
 
@@ -235,6 +364,16 @@ kubectl_check() {
     KUBECTL_PATH=${KUBECTL_INSTALL_DIRECTORY}/kubectl
   else
     echo "kubectl is not installed."
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+      echo "+ (would prompt to install kubectl into ${KUBECTL_INSTALL_DIRECTORY})"
+      run_cmd mkdir -p $KUBECTL_INSTALL_DIRECTORY
+      run_cmd curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/${OS_NAME/mac/darwin}/${MACHINE_ARCH/x86_64/amd64}/kubectl"
+      run_cmd install -m 0755 kubectl "${KUBECTL_INSTALL_DIRECTORY}"/kubectl
+      KUBECTL_PATH=${KUBECTL_INSTALL_DIRECTORY}/kubectl
+      return
+    fi
+
     while [[ "$should_install_kubectl" != "y" ]]; do
       read -rp "Install kubectl? y/[n]: " should_install_kubectl
 
@@ -291,6 +430,16 @@ kind_check() {
     KIND_PATH=${KIND_INSTALL_DIRECTORY}/kind
   else
     echo "kind is not installed or is not $KIND_VERSION version."
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+      echo "+ (would prompt to install kind into ${KIND_INSTALL_DIRECTORY})"
+      run_cmd mkdir -p ${KIND_INSTALL_DIRECTORY}
+      run_cmd curl -Lo ./kind "https://kind.sigs.k8s.io/dl/${KIND_VERSION}/kind-${OS_NAME/mac/darwin}-${MACHINE_ARCH/x86_64/amd64}"
+      run_cmd install -m 0755 kind "${KIND_INSTALL_DIRECTORY}"/kind
+      KIND_PATH=${KIND_INSTALL_DIRECTORY}/kind
+      return
+    fi
+
     while [[ "$should_install_kind" != "y" ]]; do
       read -rp "Install kind? y/[n]: " should_install_kind
 
@@ -343,6 +492,18 @@ You can find the installation instruction here: https://kind.sigs.k8s.io/docs/us
 preinstall_checks() {
   local answer=
   local cluster_exist=true
+
+  if [[ "$DRY_RUN" == "true" ]]; then
+    echo "+ (would prompt for kind cluster name, default: ${KIND_CLUSTER_NAME})"
+    if command -v ${KIND_PATH} >/dev/null 2>&1; then
+      if ${KIND_PATH} get clusters 2>/dev/null | grep -q "^${KIND_CLUSTER_NAME}$"; then
+        run_cmd ${KIND_PATH} delete cluster --name "${KIND_CLUSTER_NAME}"
+      fi
+    else
+      echo "+ (kind is not available yet to check for an existing cluster named '${KIND_CLUSTER_NAME}')"
+    fi
+    return
+  fi
 
   read -rp "Specify kind cluster name [$KIND_CLUSTER_NAME] (the cluster name must match the regular expression \`^[a-z0-9.-]+$\`, underscore are not supported): " answer
   if [[ -n "$answer" ]]; then
@@ -401,9 +562,23 @@ nodes:
     listenAddress: "127.0.0.1"
     protocol: TCP
 EOF
+  print_dry_run_file "${CONFIG_DIR}/kind.cfg"
 
   echo "Creating Deckhouse Kubernetes Platform installation config file (${CONFIG_DIR}/config.yml)..."
   cat <<EOF >${CONFIG_DIR}/config.yml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: global
+spec:
+  version: 2
+  settings:
+    defaultClusterStorageClass: sc-lpp-default
+    modules:
+      publicDomainTemplate: "%s.127.0.0.1.sslip.io"
+      https:
+        mode: Disabled
+---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -412,21 +587,31 @@ spec:
   version: 1
   enabled: true
   settings:
+    allowExperimentalModules: true
     bundle: Minimal
     releaseChannel: EarlyAccess
     logLevel: Info
+    update:
+      mode: Manual
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  name: global
+  name: control-plane-manager
 spec:
   version: 2
+  enabled: true
   settings:
-    modules:
-      publicDomainTemplate: "%s.127.0.0.1.sslip.io"
-      https:
-        mode: Disabled
+    apiserver:
+      auditPolicyEnabled: false
+      basicAuditPolicyEnabled: false
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: kube-dns
+spec:
+  enabled: true
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -439,33 +624,56 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  name: operator-prometheus-crd
-spec:
-  enabled: true
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: prometheus-crd
-spec:
-  enabled: true
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: prometheus
+  name: user-authn
 spec:
   version: 2
   enabled: true
   settings:
-    longtermRetentionDays: 0
+    controlPlaneConfigurator:
+      dexCAMode: DoNotNeed
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  name: ingress-nginx
+  labels:
+    heritage: deckhouse-commander
+  name: control-plane-manager
+spec:
+  version: 3
+  enabled: true
+  settings:
+    apiserver:
+      publishAPI:
+        ingress:
+          addKubeconfigGeneratorEntry: true
+          enabled: true
+          https:
+            global:
+              kubeconfigGeneratorMasterCA: ""
+            mode: Global
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: user-authz
+spec:
+  version: 1
+  enabled: true
+  settings:
+    enableMultiTenancy: false
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  labels:
+    heritage: deckhouse-commander
+  name: prometheus
 spec:
   enabled: true
+  settings:
+    longtermRetentionDays: 0
+    retentionDays: 7
+  version: 2
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -480,19 +688,67 @@ metadata:
   name: monitoring-kubernetes
 spec:
   enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  labels:
+    heritage: deckhouse-commander
+  name: upmeter
+spec:
+  enabled: false
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: registry-packages-proxy
+spec:
+  enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: local-path-provisioner
+spec:
+  enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: LocalPathProvisioner
+metadata:
+  name: sc-lpp-default
+spec:
+  path: /opt/local-path-provisioner/default
+  reclaimPolicy: Delete
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: ingress-nginx
+spec:
+  enabled: true
 EOF
 
-  if [[ -n "$D8_LICENSE_KEY" ]]; then
-    generate_ee_access_string "$D8_LICENSE_KEY"
-    cat <<EOF >>${CONFIG_DIR}/config.yml
+  cat <<EOF >>${CONFIG_DIR}/config.yml
 ---
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
   imagesRepo: $D8_REGISTRY_PATH
+EOF
+
+  if [[ -n "$D8_LICENSE_KEY" ]]; then
+    generate_ee_access_string "$D8_LICENSE_KEY"
+    cat <<EOF >>${CONFIG_DIR}/config.yml
   registryDockerCfg: $D8_EE_ACCESS_STRING
 EOF
   fi
+
+  if [[ -n "$D8_DEV_BRANCH" ]]; then
+    cat <<EOF >>${CONFIG_DIR}/config.yml
+  devBranch: $D8_DEV_BRANCH
+EOF
+  fi
+  print_dry_run_file "${CONFIG_DIR}/config.yml"
 
   echo "Creating Deckhouse Kubernetes Platform resource file (${CONFIG_DIR}/resources.yml)..."
   cat <<EOF >${CONFIG_DIR}/resources.yml
@@ -507,6 +763,7 @@ spec:
     httpPort: 80
     httpsPort: 443
 EOF
+  print_dry_run_file "${CONFIG_DIR}/resources.yml"
 }
 
 cluster_deletion_info() {
@@ -521,7 +778,7 @@ To delete created cluster use the following command:
 
 cluster_create() {
 
-  ${KIND_PATH} create cluster --name "${KIND_CLUSTER_NAME}" --image "${KIND_IMAGE}" --config "${CONFIG_DIR}/kind.cfg"
+  run_cmd ${KIND_PATH} create cluster --name "${KIND_CLUSTER_NAME}" --image "${KIND_IMAGE}" --config "${CONFIG_DIR}/kind.cfg"
 
   if [ "$?" -ne "0" ]; then
     printf "
@@ -535,17 +792,25 @@ E.g., you can find programs that use these ports using the following command:
     exit 1
   fi
 
-  ${KIND_PATH} get kubeconfig --internal --name "${KIND_CLUSTER_NAME}" >${CONFIG_DIR}/kubeconfig
+  if [[ "$DRY_RUN" == "true" ]]; then
+    printf '+ %s\n' "${KIND_PATH} get kubeconfig --internal --name ${KIND_CLUSTER_NAME} > ${CONFIG_DIR}/kubeconfig"
+  else
+    ${KIND_PATH} get kubeconfig --internal --name "${KIND_CLUSTER_NAME}" >${CONFIG_DIR}/kubeconfig
+  fi
 
 }
 
 deckhouse_install() {
-  echo "Running Deckhouse Kubernetes Platform installation (the $D8_RELEASE_CHANNEL_NAME release channel)..."
+  if [[ -n "$D8_DEV_BRANCH" ]]; then
+    echo "Running Deckhouse Kubernetes Platform installation (devBranch: $D8_DEV_BRANCH, installer tag: $D8_RELEASE_CHANNEL_TAG)..."
+  else
+    echo "Running Deckhouse Kubernetes Platform installation (the $D8_RELEASE_CHANNEL_NAME release channel)..."
+  fi
 
-  docker run --pull=always --rm --network kind -v "${CONFIG_DIR}/config.yml:/config.yml" -v "${CONFIG_DIR}/resources.yml:/resources.yml" \
+  run_cmd docker run --pull=always --rm --network kind -v "${CONFIG_DIR}/config.yml:/config.yml" -v "${CONFIG_DIR}/resources.yml:/resources.yml" \
     -v "${CONFIG_DIR}/kubeconfig:/kubeconfig" ${D8_REGISTRY_PATH}/install:$D8_RELEASE_CHANNEL_TAG \
-    bash -c "dhctl bootstrap-phase install-deckhouse --kubeconfig=/kubeconfig --kubeconfig-context=kind-${KIND_CLUSTER_NAME} --config=/config.yml && \
-             dhctl bootstrap-phase create-resources --kubeconfig=/kubeconfig --kubeconfig-context=kind-${KIND_CLUSTER_NAME} --resources=/resources.yml"
+    bash -c "dhctl bootstrap-phase install-deckhouse --kubeconfig=/kubeconfig --kubeconfig-context=kind-${KIND_CLUSTER_NAME} --config=/config.yml --config=/resources.yml && \
+             dhctl bootstrap-phase create-resources --kubeconfig=/kubeconfig --kubeconfig-context=kind-${KIND_CLUSTER_NAME} --resources-timeout=${D8_RESOURCES_TIMEOUT}"
 
   if [ "$?" -ne "0" ]; then
     echo "Error installing Deckhouse Kubernetes Platform!"
@@ -556,11 +821,16 @@ deckhouse_install() {
 
 macos_force_qemu() {
   if [ "$OS_NAME" = "mac" ]
-  then ${KUBECTL_PATH} --context kind-"${KIND_CLUSTER_NAME}" patch daemonset node-exporter -n d8-monitoring --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/1/env/-", "value": {"name": "EXPERIMENTAL_DOCKER_DESKTOP_FORCE_QEMU", "value": "1"}}]' 2>/dev/null
+  then run_cmd ${KUBECTL_PATH} --context kind-"${KIND_CLUSTER_NAME}" patch daemonset node-exporter -n d8-monitoring --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/1/env/-", "value": {"name": "EXPERIMENTAL_DOCKER_DESKTOP_FORCE_QEMU", "value": "1"}}]' 2>/dev/null
   fi
 }
 
 ingress_check() {
+  if [[ "$DRY_RUN" == "true" ]]; then
+    echo "+ (would poll: ${KUBECTL_PATH} --context kind-${KIND_CLUSTER_NAME} -n d8-ingress-nginx get ads/controller-nginx -o jsonpath={\$.status.numberReady}, until ready or timeout)"
+    return
+  fi
+
   local retries_max=100
   local retries_count=0
 
@@ -617,6 +887,10 @@ generate_ee_access_string() {
 }
 
 install_show_credentials() {
+  if [[ "$DRY_RUN" == "true" ]]; then
+    echo "+ ${KUBECTL_PATH} --context kind-${KIND_CLUSTER_NAME} -n d8-system exec deploy/deckhouse -c deckhouse -- sh -c \"deckhouse-controller module values prometheus -o json | jq -r '.internal.auth.password'\""
+    return
+  fi
 
   local prometheus_password
   prometheus_password=$(${KUBECTL_PATH} --context "kind-${KIND_CLUSTER_NAME}" -n d8-system exec deploy/deckhouse -c deckhouse -- sh -c "deckhouse-controller module values prometheus -o json | jq -r '.internal.auth.password'")
@@ -662,6 +936,7 @@ Good luck!
 main() {
 
   parse_args "$@"
+  registry_path_default
 
   os_detect
   prerequisites_check
