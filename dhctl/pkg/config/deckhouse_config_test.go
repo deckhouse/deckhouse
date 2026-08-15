@@ -198,12 +198,14 @@ spec:
 		})
 	})
 	t.Run("ModuleConfig Deckhouse", func(t *testing.T) {
-		t.Run("Without CRI (module disable) -> error", func(t *testing.T) {
+		// The template emits the ClusterConfiguration only with enableCRI, and a
+		// config with none declares no defaultCRI for dhctl to refuse.
+		t.Run("Without ClusterConfiguration -> parsed, not refused", func(t *testing.T) {
 			tplCtx := map[string]any{
 				"enableCRI": false,
 				"manifests": []string{moduleConfigDeckhouse},
 			}
-			_ = generateMetaConfig(t, tpl, tplCtx, true)
+			_ = generateMetaConfig(t, tpl, tplCtx, false)
 		})
 		t.Run("With CRI (module enable) -> from moduleConfig", func(t *testing.T) {
 			assert(t,
