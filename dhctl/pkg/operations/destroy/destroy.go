@@ -265,7 +265,10 @@ func (d *ClusterDestroyer) destroy(ctx context.Context, autoApprove bool) error 
 	// Before the first announced phase: CheckCommanderUUID announces one, and the phase list
 	// it reports travels in every gRPC frame. Built with an empty cluster type, that list is
 	// missing all static-only phases.
-	d.pipeline.SetClusterConfig(phases.ClusterConfig{ClusterType: metaConfig.ClusterType})
+	d.pipeline.SetClusterConfig(phases.ClusterConfig{
+		ClusterType:             metaConfig.ClusterType,
+		HasClusterConfiguration: metaConfig.HasClusterConfiguration(),
+	})
 
 	if err := d.d8Destroyer.CheckCommanderUUID(ctx); err != nil {
 		return err

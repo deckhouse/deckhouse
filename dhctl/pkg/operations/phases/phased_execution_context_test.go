@@ -50,7 +50,7 @@ func TestPhasedExecutionContext_NestedRunKeepsEnclosingPhase(t *testing.T) {
 		},
 	)
 	// Static gates BaseInfra out, so AllNodes is the tail of the list.
-	pec.SetClusterConfig(phases.ClusterConfig{ClusterType: "Static"})
+	pec.SetClusterConfig(phases.ClusterConfig{ClusterType: "Static", HasClusterConfiguration: true})
 
 	pipeline := phases.NewDefaultPipelineWithStateCache(pec, cache.NewTestCache(), phases.WithPipelineName("static destroy"))
 
@@ -115,7 +115,7 @@ func TestPhasedExecutionContext_NestedPipelineCompletesOnce(t *testing.T) {
 		},
 		nil,
 	)
-	pec.SetClusterConfig(phases.ClusterConfig{ClusterType: "Static"})
+	pec.SetClusterConfig(phases.ClusterConfig{ClusterType: "Static", HasClusterConfiguration: true})
 
 	stateCache := cache.NewTestCache()
 
@@ -161,7 +161,7 @@ func TestPhasedExecutionContext_OpenPhaseIsNotEnclosing(t *testing.T) {
 		},
 		nil,
 	)
-	pec.SetClusterConfig(phases.ClusterConfig{ClusterType: "Cloud"})
+	pec.SetClusterConfig(phases.ClusterConfig{ClusterType: "Cloud", HasClusterConfiguration: true})
 
 	stateCache := cache.NewTestCache()
 	require.NoError(t, pec.InitPipeline(t.Context(), stateCache))

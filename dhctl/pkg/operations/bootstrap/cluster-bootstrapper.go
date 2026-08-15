@@ -157,6 +157,13 @@ func (b *ClusterBootstrapper) getCleanupFunc(ctx context.Context, metaConfig *co
 		return func() {}, nil
 	}
 
+	// A cluster whose control plane dhctl did not build never unpacks a cloud provider, so there is
+	// nothing here to release. Asking for one anyway fails in GetFullUUID (config/meta.go): such a
+	// cluster carries no UUID until InstallDeckhouse reads one out of the cluster itself.
+	if !metaConfig.HasClusterConfiguration() {
+		return func() {}, nil
+	}
+
 	provider, err := b.InfrastructureContext.CloudProviderGetter()(ctx, metaConfig)
 	if err != nil {
 		return nil, err
@@ -173,7 +180,10 @@ func (b *ClusterBootstrapper) getCleanupFunc(ctx context.Context, metaConfig *co
 type bootstrapContext struct {
 	// only is the single node this run is restricted to, wholeTree for a full bootstrap. Set by
 	// runPhases before the Preparation node runs, which is where it is read.
-	only                    phases.OperationPhase
+	only phases.OperationPhase
+	// skipPhases are the --skip-phase targets, resolved and checked against the gates by the
+	// Preparation node, and read by the walk that follows it.
+	skipPhases              []phases.OperationPhase
 	masterAddressesForSSH   map[string]string
 	metaConfig              *config.MetaConfig
 	stateCache              state.Cache
@@ -307,11 +317,16 @@ func (b *ClusterBootstrapper) bootstrapPhaseFuncs() map[phases.OperationPhase]bo
 		// Preparation is critical because it is the one node that cannot be skipped: everything
 		// after it reads what it produces, so there is no state in which stopping before it and
 		// continuing from the next node is meaningful.
-		phases.PreparationPhase:                       {critical: true, run: b.bootstrapPreparation},
-		phases.PreInfraPreflightsPhase:                {critical: true, run: b.bootstrapPreflight},
-		phases.BaseInfraPhase:                         {run: b.bootstrapBaseInfra},
-		phases.FirstMasterPhase:                       {run: b.bootstrapFirstMaster},
-		phases.PostInfraPreflightsPhase:               {validate: b.validatePostInfraPreflightsInputs, run: b.bootstrapPostInfraPreflights},
+		phases.PreparationPhase:         {critical: true, run: b.bootstrapPreparation},
+		phases.PreInfraPreflightsPhase:  {critical: true, run: b.bootstrapPreflight},
+		phases.BaseInfraPhase:           {run: b.bootstrapBaseInfra},
+		phases.FirstMasterPhase:         {run: b.bootstrapFirstMaster},
+		phases.PostInfraPreflightsPhase: {validate: b.validatePostInfraPreflightsInputs, run: b.bootstrapPostInfraPreflights},
+		// Neither is critical: a critical announcement is a stop point Commander may resume from, and
+		// both nodes are local, idempotent work that costs nothing to repeat - stopping there buys
+		// the operator nothing the node before them does not already offer.
+		phases.ParseResourcesPhase:                    {run: b.bootstrapParseResources},
+		phases.WaitForSSHOnMasterPhase:                {run: b.bootstrapWaitForSSHOnMaster},
 		phases.InstallKubernetesPhase:                 {validate: b.validateKubernetesInputs, run: b.bootstrapKubernetes},
 		phases.InstallDeckhousePhase:                  {validate: b.validateDeckhouseInputs, run: b.bootstrapDeckhouse},
 		phases.InstallAdditionalMastersAndStaticNodes: {critical: true, validate: b.validateKubeProviderInput, run: b.bootstrapAdditionalNodes},
@@ -329,38 +344,73 @@ func (b *ClusterBootstrapper) bootstrapPhaseFuncs() map[phases.OperationPhase]bo
 // name restricts the walk to that single node, which is what the standalone phase commands are.
 const wholeTree phases.OperationPhase = ""
 
-// refuseIfExcluded refuses a phase that was asked for by name - by a standalone phase command or
-// by --skip-phase - but that the gates keep out of this particular run. Silence is the alternative
-// worth avoiding: a command that announces nothing, does nothing and exits zero reports success
-// for work it never did.
+// refuseIfExcluded refuses a phase a standalone phase command asked to run by name, but that the
+// gates keep out of this particular run. Silence is the alternative worth avoiding: a command
+// that announces nothing, does nothing and exits zero reports success for work it never did.
 //
 // Called from Preparation the moment the cluster type is known, and not only from the walk that
 // follows it: everything the rest of Preparation does - the confirmation a static bootstrap asks
 // for, the state cache, the cluster UUID - would otherwise happen on a run already destined to be
 // refused, and would answer with the wrong message on top of that.
-func refuseIfExcluded(only phases.OperationPhase, clusterType string) error {
-	if only == wholeTree {
+func refuseIfExcluded(only phases.OperationPhase, cfg phases.ClusterConfig) error {
+	if only == wholeTree || !excludedFromBootstrap(only, cfg) {
 		return nil
 	}
 
-	tree := phases.PhasesFor(phases.OperationBootstrap, phases.ClusterConfig{ClusterType: clusterType})
-	if slices.ContainsFunc(tree, func(n phases.PhaseWithSubPhases) bool { return n.Phase == only }) {
-		return nil
-	}
-
-	return fmt.Errorf("phase %q was requested explicitly, but it is excluded from the bootstrap of a %q cluster", only, clusterType)
+	return fmt.Errorf("phase %q was requested explicitly, but it is excluded from the bootstrap of %s", only, clusterKind(cfg))
 }
 
-// runPhases walks the bootstrap tree: every node the gates keep is announced, run, and left
-// completed by the announcement of the next one; the pipeline is completed once, after the last.
-// Passing anything but wholeTree restricts the walk to that one node - Preparation still runs,
-// because nothing downstream of it, the gates included, works without what it loads.
+// clusterKind names the cluster the two refusals above and below were resolved against. A cluster
+// dhctl did not create carries no ClusterConfiguration and therefore no type at all, and printing
+// the empty string as one asks the user which "" cluster they meant.
+func clusterKind(cfg phases.ClusterConfig) string {
+	if cfg.ClusterType == "" {
+		return "this cluster"
+	}
+
+	return fmt.Sprintf("a %q cluster", cfg.ClusterType)
+}
+
+// refuseIfSkipExcluded refuses a --skip-phase name the gates already keep out of this run. It
+// says the opposite of the refusal above and has to: the user asked for the phase not to run, so
+// telling them they requested it explicitly points them at the standalone phase commands they
+// never invoked, and naming the flag is what makes the message actionable.
 //
-// Preparation is walked apart from the rest, and not by preference: the gates read the cluster
-// type, and the cluster type is what Preparation produces. So the tree is not resolvable until
-// its first node has run, and that first node is therefore ungated by construction. Everything
-// the announcement itself needs - the phase context in its final, possibly interactive, form -
-// is settled by Bootstrap before this is called.
+// Called from Preparation as well as from the walk, for the reason given above.
+func refuseIfSkipExcluded(skip []phases.OperationPhase, cfg phases.ClusterConfig) error {
+	for _, phase := range skip {
+		if excludedFromBootstrap(phase, cfg) {
+			return fmt.Errorf("--skip-phase %q names a phase that is not part of the bootstrap of %s", phase, clusterKind(cfg))
+		}
+	}
+
+	return nil
+}
+
+func excludedFromBootstrap(phase phases.OperationPhase, cfg phases.ClusterConfig) bool {
+	tree := phases.PhasesFor(phases.OperationBootstrap, cfg)
+
+	return !slices.ContainsFunc(tree, func(n phases.PhaseWithSubPhases) bool { return n.Phase == phase })
+}
+
+// phaseClusterConfig is the one place the bootstrap package builds the gate inputs, so that the
+// tree the walk resolves for itself cannot disagree with the one the progress tracker announces.
+func phaseClusterConfig(metaConfig *config.MetaConfig) phases.ClusterConfig {
+	return phases.ClusterConfig{
+		ClusterType:             metaConfig.ClusterType,
+		HasClusterConfiguration: metaConfig.HasClusterConfiguration(),
+	}
+}
+
+// setControlPlaneInstallFlags follows the second gate axis, because both flags pin the Deckhouse
+// Deployment to the control plane dhctl builds: a node-role.kubernetes.io/control-plane nodeSelector
+// and the apiserver at the pod's own status.hostIP:6443 (manifests.ParameterizeDeckhouseDeployment).
+// A cluster dhctl did not create carries neither that node label nor an apiserver on that address.
+func setControlPlaneInstallFlags(installConfig *config.DeckhouseInstaller, metaConfig *config.MetaConfig) {
+	installConfig.KubeadmBootstrap = metaConfig.HasClusterConfiguration()
+	installConfig.MasterNodeSelector = metaConfig.HasClusterConfiguration()
+}
+
 // runPreparation runs the first node outside the walk below. It produces the cluster type every
 // gate reads, so it cannot be selected by a tree that does not exist until it has run.
 func (b *ClusterBootstrapper) runPreparation(ctx context.Context, bctx *bootstrapContext, funcs map[phases.OperationPhase]bootstrapPhase, only phases.OperationPhase) (bool, error) {
@@ -384,7 +434,29 @@ func (b *ClusterBootstrapper) runPreparation(ctx context.Context, bctx *bootstra
 	return false, preparation.run(ctx, bctx)
 }
 
+// runPhases walks the bootstrap tree: every node the gates keep is announced, run, and left
+// completed by the announcement of the next one; the pipeline is completed once, after the last.
+// Passing anything but wholeTree restricts the walk to that one node - Preparation still runs,
+// because nothing downstream of it, the gates included, works without what it loads. The nodes
+// named by --skip-phase are left out of the walk entirely, the way converge skips its own phases:
+// a node that is never announced is reported skipped by the progress tracker on its own.
+//
+// Preparation is walked apart from the rest, and not by preference: the gates read the cluster
+// type, and the cluster type is what Preparation produces. So the tree is not resolvable until
+// its first node has run, and that first node is therefore ungated by construction. Everything
+// the announcement itself needs - the phase context in its final, possibly interactive, form -
+// is settled by Bootstrap before this is called.
 func (b *ClusterBootstrapper) runPhases(ctx context.Context, bctx *bootstrapContext, funcs map[phases.OperationPhase]bootstrapPhase, only phases.OperationPhase) error {
+	// Resolved before anything is announced, and not taken from the flag parser: the gRPC server
+	// fills Options itself and never runs the PreAction that checks them, so for that path this
+	// is the only check the values get.
+	skip, err := phases.ResolveSkipPhases(phases.BootstrapPhases(), b.Options.Bootstrap.SkipPhases)
+	if err != nil {
+		return err
+	}
+
+	bctx.skipPhases = skip
+
 	stop, err := b.runPreparation(ctx, bctx, funcs, only)
 	if err != nil {
 		return err
@@ -393,19 +465,39 @@ func (b *ClusterBootstrapper) runPhases(ctx context.Context, bctx *bootstrapCont
 		return nil
 	}
 
-	tree := phases.PhasesFor(phases.OperationBootstrap, phases.ClusterConfig{ClusterType: bctx.metaConfig.ClusterType})
+	clusterConfig := phaseClusterConfig(bctx.metaConfig)
+
+	tree := phases.PhasesFor(phases.OperationBootstrap, clusterConfig)
 	if len(tree) == 0 || tree[0].Phase != phases.PreparationPhase {
 		return fmt.Errorf("Internal error: the bootstrap tree must start with phase %q", phases.PreparationPhase)
 	}
 
-	if err := refuseIfExcluded(only, bctx.metaConfig.ClusterType); err != nil {
+	if err := refuseIfExcluded(only, clusterConfig); err != nil {
 		return err
+	}
+
+	if err := refuseIfSkipExcluded(bctx.skipPhases, clusterConfig); err != nil {
+		return err
+	}
+
+	// requireSplitResources refuses this same pair of inputs, but only at the first consumer - on a
+	// cloud cluster after BaseInfra and FirstMaster have provisioned. Both are known here, before
+	// any node past Preparation has run, so the contradiction is answered before anything exists.
+	if bctx.metaConfig.ResourcesYAML != "" && slices.Contains(bctx.skipPhases, phases.ParseResourcesPhase) {
+		return fmt.Errorf(
+			"--skip-phase %q leaves the configured resources with nothing to queue them: drop the flag or the resource document",
+			phases.ParseResourcesPhase,
+		)
 	}
 
 	// Preparation is already announced and open, so every remaining node closes its predecessor
 	// with SwitchPhase and none of them starts the pipeline again.
 	for _, declared := range tree[1:] {
 		if only != wholeTree && declared.Phase != only {
+			continue
+		}
+
+		if slices.Contains(bctx.skipPhases, declared.Phase) {
 			continue
 		}
 
@@ -503,10 +595,12 @@ func (b *ClusterBootstrapper) validatePostInfraPreflightsInputs(_ context.Contex
 	return nil
 }
 
-// validateKubernetesInputs checks what bashible is pointed at. The node IP is cloud-only: on a
-// static cluster it comes from the cluster configuration read by PostInfraPreflights. The other
-// input of the node, the kubernetes data device path, is not checked - an empty path is a normal
-// outcome the bundle passes on to bashible, which then autodetects an unused disk.
+// validateKubernetesInputs checks what bashible is pointed at. The node IP is cloud-only, and
+// genuinely absent everywhere else: no cluster configuration carries one, so on a static cluster the
+// bundle is rendered without it and bashible discovers the node's own IP on the node itself
+// (RunBashiblePipeline refuses an empty discovered IP). The other input of the node, the kubernetes
+// data device path, is not checked - an empty path is a normal outcome the bundle passes on to
+// bashible, which then autodetects an unused disk.
 func (b *ClusterBootstrapper) validateKubernetesInputs(_ context.Context, bctx *bootstrapContext) error {
 	if !isCloudCluster(bctx) {
 		return nil
@@ -562,7 +656,7 @@ func requireSplitResources(bctx *bootstrapContext) error {
 	}
 
 	if len(bctx.resourcesToCreateBefore)+len(bctx.resourcesToCreateAfter) == 0 {
-		return fmt.Errorf("resources are configured but none are queued for creation: phase %q produces the queues", phases.PostInfraPreflightsPhase)
+		return fmt.Errorf("resources are configured but none are queued for creation: phase %q produces the queues", phases.ParseResourcesPhase)
 	}
 
 	return nil
@@ -624,9 +718,15 @@ func (b *ClusterBootstrapper) bootstrapPreparation(ctx context.Context, bctx *bo
 
 	b.PhasedExecutionContext.CompleteSubPhase(ctx, phases.PreparationSubPhaseConfigValidation)
 
-	b.PhasedExecutionContext.SetClusterConfig(phases.ClusterConfig{ClusterType: metaConfig.ClusterType})
+	clusterConfig := phaseClusterConfig(metaConfig)
 
-	if err := refuseIfExcluded(bctx.only, metaConfig.ClusterType); err != nil {
+	b.PhasedExecutionContext.SetClusterConfig(clusterConfig)
+
+	if err := refuseIfExcluded(bctx.only, clusterConfig); err != nil {
+		return err
+	}
+
+	if err := refuseIfSkipExcluded(bctx.skipPhases, clusterConfig); err != nil {
 		return err
 	}
 
@@ -655,7 +755,7 @@ func (b *ClusterBootstrapper) bootstrapPreparation(ctx context.Context, bctx *bo
 		WithDebug(b.Options.Global.IsDebug)
 
 	// next init cache
-	cachePath := metaConfig.CachePath()
+	cachePath := cacheIdentity(ctx, metaConfig, connectionHosts(b.SSHProviderInitializer), b.Options.Kube, b.Options.Cache.Dir)
 	if err = cache.InitWithOptions(ctx, cachePath, cache.CacheOptions{InitialState: b.InitialState, ResetInitialState: b.ResetInitialState, Cache: b.Options.Cache}); err != nil {
 		// TODO: it's better to ask for confirmation here
 		return fmt.Errorf(cacheMessage, cachePath, err)
@@ -679,11 +779,10 @@ func (b *ClusterBootstrapper) bootstrapPreparation(ctx context.Context, bctx *bo
 
 	configHash := state.ConfigHash(ctx, b.Options.Global.ConfigPaths)
 
-	clusterUUID, err := generateClusterUUID(ctx, stateCache)
+	metaConfig.UUID, err = generateClusterUUID(ctx, stateCache, metaConfig)
 	if err != nil {
 		return err
 	}
-	metaConfig.UUID = clusterUUID
 
 	// The cleanup releases the cloud provider this node has just built, so it belongs here rather
 	// than in the preflight node it used to live in: a run restricted to a single phase leaves the
@@ -704,9 +803,7 @@ func (b *ClusterBootstrapper) bootstrapPreparation(ctx context.Context, bctx *bo
 
 	b.applyCommanderModeConfig(deckhouseInstallConfig)
 
-	// During full bootstrap we use the "kubeadm and deckhouse on master nodes" hack
-	deckhouseInstallConfig.KubeadmBootstrap = true
-	deckhouseInstallConfig.MasterNodeSelector = true
+	setControlPlaneInstallFlags(deckhouseInstallConfig, metaConfig)
 
 	bootstrapState := NewBootstrapState(stateCache)
 
@@ -725,41 +822,42 @@ func (b *ClusterBootstrapper) bootstrapPreflight(ctx context.Context, bctx *boot
 	ctx, preflightSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.PreInfraPreflights")
 	defer preflightSpan.End()
 
-	globalPreflightSuite := suites.NewGlobalSuite(suites.GlobalDeps{
+	checkSuites, err := b.preflightSuites(ctx, bctx)
+	if err != nil {
+		return err
+	}
+
+	// The single assignment of the runner: PostInfraPreflights runs it again for its own phase
+	// (validatePostInfraPreflightsInputs), so a selection branch that builds one and forgets to
+	// park it here nil-derefs a node later.
+	preflightRunner := preflight.New(checkSuites...)
+	preflightRunner.UseCache(bctx.bootstrapState)
+	preflightRunner.SetCacheSalt(bctx.configHash)
+	preflightRunner.DisableChecks(b.Options.Preflight.DisabledChecks()...)
+	bctx.preflightRunner = preflightRunner
+
+	return preflightRunner.Run(ctx, preflight.PhasePreInfra)
+}
+
+// preflightSuites picks the checks by what dhctl is about to build, which is why the second axis is
+// asked first: a cluster with no ClusterConfiguration has a control plane dhctl did not create, so
+// there is no infrastructure to check the parameters of and no node of ours to reach over SSH, and
+// the global suite is all that applies. The static suite is not a safe default there - it is built
+// over the node interface helper.GetNodeInterface hands back when no SSH provider can be made,
+// which is the installer container itself, and its checks would create users and probe sudo in it.
+func (b *ClusterBootstrapper) preflightSuites(ctx context.Context, bctx *bootstrapContext) ([]preflight.Suite, error) {
+	globalSuite := suites.NewGlobalSuite(suites.GlobalDeps{
 		MetaConfig:    bctx.metaConfig,
 		InstallConfig: bctx.deckhouseInstallConfig,
 		BuildInfo:     b.Options.BuildInfo,
 	})
 
-	if bctx.metaConfig.ClusterType == config.CloudClusterType {
-		sshProvider, err := b.SSHProviderInitializer.GetSSHProvider(ctx)
-		if err != nil {
-			if !errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
-				return err
-			}
-		}
+	if !bctx.metaConfig.HasClusterConfiguration() {
+		return []preflight.Suite{globalSuite}, nil
+	}
 
-		cloudPreflightSuite := suites.NewCloudSuite(suites.CloudDeps{
-			InstallConfig:          bctx.deckhouseInstallConfig,
-			MetaConfig:             bctx.metaConfig,
-			SSHProviderInitializer: b.SSHProviderInitializer,
-		})
-		postCloudPreflightSuite := suites.NewPostCloudSuite(suites.PostCloudDeps{
-			MetaConfig:  bctx.metaConfig,
-			SSHProvider: sshProvider,
-			LegacyMode:  b.SSHProviderInitializer.IsLegacyMode(),
-		})
-
-		preflightRunner := preflight.New(globalPreflightSuite, cloudPreflightSuite, postCloudPreflightSuite)
-		preflightRunner.UseCache(bctx.bootstrapState)
-		preflightRunner.SetCacheSalt(bctx.configHash)
-		preflightRunner.DisableChecks(b.Options.Preflight.DisabledChecks()...)
-		bctx.preflightRunner = preflightRunner
-		if err := preflightRunner.Run(ctx, preflight.PhasePreInfra); err != nil {
-			return err
-		}
-	} else {
-		staticPreflightSuite, err := suites.NewStaticSuite(suites.StaticDeps{
+	if bctx.metaConfig.ClusterType != config.CloudClusterType {
+		staticSuite, err := suites.NewStaticSuite(suites.StaticDeps{
 			SSHProviderInitializer: b.SSHProviderInitializer,
 			MetaConfig:             bctx.metaConfig,
 			InstallConfig:          bctx.deckhouseInstallConfig,
@@ -767,20 +865,29 @@ func (b *ClusterBootstrapper) bootstrapPreflight(ctx context.Context, bctx *boot
 			GlobalOpts:             &b.Options.Global,
 		}, ctx)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
-		preflightRunner := preflight.New(globalPreflightSuite, staticPreflightSuite)
-		preflightRunner.UseCache(bctx.bootstrapState)
-		preflightRunner.SetCacheSalt(bctx.configHash)
-		preflightRunner.DisableChecks(b.Options.Preflight.DisabledChecks()...)
-		bctx.preflightRunner = preflightRunner
-
-		if err := preflightRunner.Run(ctx, preflight.PhasePreInfra); err != nil {
-			return err
-		}
+		return []preflight.Suite{globalSuite, staticSuite}, nil
 	}
-	return nil
+
+	sshProvider, err := b.SSHProviderInitializer.GetSSHProvider(ctx)
+	if err != nil && !errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
+		return nil, err
+	}
+
+	cloudSuite := suites.NewCloudSuite(suites.CloudDeps{
+		InstallConfig:          bctx.deckhouseInstallConfig,
+		MetaConfig:             bctx.metaConfig,
+		SSHProviderInitializer: b.SSHProviderInitializer,
+	})
+	postCloudSuite := suites.NewPostCloudSuite(suites.PostCloudDeps{
+		MetaConfig:  bctx.metaConfig,
+		SSHProvider: sshProvider,
+		LegacyMode:  b.SSHProviderInitializer.IsLegacyMode(),
+	})
+
+	return []preflight.Suite{globalSuite, cloudSuite, postCloudSuite}, nil
 }
 
 func (b *ClusterBootstrapper) bootstrapBaseInfra(ctx context.Context, bctx *bootstrapContext) error {
@@ -902,67 +1009,101 @@ func (b *ClusterBootstrapper) bootstrapFirstMaster(ctx context.Context, bctx *bo
 	return nil
 }
 
+// bootstrapPostInfraPreflights runs the post-infrastructure checks and, on a static cluster,
+// records the connection they were run over. The preflight run is unconditional: it used to sit
+// identically in both arms of a cluster-type branch, and the runner it consumes already carries the
+// suites that differ between cloud and static (bootstrapPreflight).
 func (b *ClusterBootstrapper) bootstrapPostInfraPreflights(ctx context.Context, bctx *bootstrapContext) error {
+	if err := bctx.preflightRunner.Run(ctx, preflight.PhasePostInfra); err != nil {
+		return err
+	}
+
 	if bctx.metaConfig.ClusterType == config.CloudClusterType {
-		if err := bctx.preflightRunner.Run(ctx, preflight.PhasePostInfra); err != nil {
-			return err
-		}
-	} else {
-		if err := bctx.preflightRunner.Run(ctx, preflight.PhasePostInfra); err != nil {
-			return err
-		}
+		return nil
+	}
 
-		var static struct {
-			NodeIP string `json:"nodeIP"`
-		}
-		if err := json.Unmarshal(bctx.metaConfig.ClusterConfig["static"], &static); err != nil {
-			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Static config is missing: %s", err.Error()))
-		}
-		bctx.nodeIP = static.NodeIP
+	return saveStaticConnectionToCache(ctx, bctx.stateCache, b.SSHProviderInitializer.GetConfig())
+}
 
-		// Guarded by the length of the very slice indexed below, and not by CheckHosts: CheckHosts
-		// is also true when the hosts were found in the state cache and never landed in the
-		// connection config (providerinitializer lateHosts), which indexes out of an empty slice.
-		// There is nothing to record in that case anyway - the cache is where these lines write to.
-		if connectionConfig := b.SSHProviderInitializer.GetConfig(); connectionConfig != nil && len(connectionConfig.Hosts) > 0 {
-			if connectionConfig.Config.BastionHost != "" {
-				if err := SaveBastionHostToCache(ctx, bctx.stateCache, connectionConfig.Config.BastionHost); err != nil {
-					dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Cannot save bastion host to cache %v", err))
-				}
-			}
+// bootstrapParseResources renders the resource document and splits it into what is created before
+// Deckhouse and what is created after. It is a node of its own rather than the tail of the
+// preflight node it was split out of because it is the sole producer of both queues
+// (requireSplitResources): folded into a node that can be left out of a run, it would take the
+// user's resources with it, and createResources reports an empty queue as success.
+func (b *ClusterBootstrapper) bootstrapParseResources(ctx context.Context, bctx *bootstrapContext) error {
+	if bctx.metaConfig.ResourcesYAML == "" {
+		return nil
+	}
 
-			state.SaveMasterHostsToCache(ctx, bctx.stateCache, map[string]string{
-				"first-master": connectionConfig.Hosts[0].Host,
-			})
+	parsedResources, err := template.ParseResourcesContent(ctx, bctx.metaConfig.ResourcesYAML, bctx.resourcesTemplateData)
+	if err != nil {
+		return err
+	}
+
+	bctx.resourcesToCreateBefore, bctx.resourcesToCreateAfter = splitResourcesOnPreAndPostDeckhouseInstall(ctx, parsedResources)
+
+	return nil
+}
+
+// bootstrapWaitForSSHOnMaster waits until the master answers SSH, which is what InstallKubernetes
+// then runs the bashible bundle over. A bootstrap with no connection hosts skips it: a static
+// cluster bootstrapped on the machine dhctl runs on has no master to wait for.
+func (b *ClusterBootstrapper) bootstrapWaitForSSHOnMaster(ctx context.Context, _ *bootstrapContext) error {
+	if !b.SSHProviderInitializer.CheckHosts(ctx) {
+		return nil
+	}
+
+	sshProvider, err := b.SSHProviderInitializer.GetSSHProvider(ctx)
+	if err != nil {
+		return err
+	}
+
+	sshClient, err := sshProvider.Client(ctx)
+	if err != nil {
+		return err
+	}
+
+	if err := WaitForSSHConnectionOnMaster(ctx, sshClient); err != nil {
+		return fmt.Errorf("failed to wait for SSH connection on master: %w", err)
+	}
+
+	return nil
+}
+
+// saveStaticConnectionToCache records the connection a static bootstrap was given, which is the only
+// record of it there is: nothing on a static cluster discovers master hosts the way the cloud flow
+// does, so abort has nowhere else to learn which hosts this bootstrap touched. Every host goes in,
+// not just the first one - the ones left out keep a half-installed control plane running and never
+// get cleaned up. A failed write is returned rather than logged for the same reason.
+//
+// Guarded by the length of the host slice and not by CheckHosts: CheckHosts is also true when the
+// hosts were found in the state cache and never landed in the connection config
+// (providerinitializer lateHosts). There is nothing to record in that case anyway - the cache is
+// where this writes to.
+func saveStaticConnectionToCache(ctx context.Context, stateCache state.Cache, connectionConfig *sshconfig.ConnectionConfig) error {
+	if connectionConfig == nil || len(connectionConfig.Hosts) == 0 {
+		return nil
+	}
+
+	if connectionConfig.Config.BastionHost != "" {
+		if err := SaveBastionHostToCache(ctx, stateCache, connectionConfig.Config.BastionHost); err != nil {
+			return fmt.Errorf("save bastion host to cache: %w", err)
 		}
 	}
 
-	if bctx.metaConfig.ResourcesYAML != "" {
-		parsedResources, err := template.ParseResourcesContent(ctx, bctx.metaConfig.ResourcesYAML, bctx.resourcesTemplateData)
-		if err != nil {
-			return err
+	hosts := make(map[string]string, len(connectionConfig.Hosts))
+
+	for i, host := range connectionConfig.Hosts {
+		name := fmt.Sprintf("master-%d", i)
+		if i == 0 {
+			name = "first-master"
 		}
 
-		before, after := splitResourcesOnPreAndPostDeckhouseInstall(ctx, parsedResources)
-
-		bctx.resourcesToCreateBefore = before
-		bctx.resourcesToCreateAfter = after
+		hosts[name] = host.Host
 	}
 
-	if b.SSHProviderInitializer.CheckHosts(ctx) {
-		sshProvider, err := b.SSHProviderInitializer.GetSSHProvider(ctx)
-		if err != nil {
-			return err
-		}
-
-		sshClient, err := sshProvider.Client(ctx)
-		if err != nil {
-			return err
-		}
-
-		if err := WaitForSSHConnectionOnMaster(ctx, sshClient); err != nil {
-			return fmt.Errorf("failed to wait for SSH connection on master: %w", err)
-		}
+	if err := state.SaveMasterHosts(ctx, stateCache, hosts); err != nil {
+		return fmt.Errorf("save master hosts to cache: %w", err)
 	}
 
 	return nil
@@ -1054,14 +1195,30 @@ func (b *ClusterBootstrapper) bootstrapDeckhouse(ctx context.Context, bctx *boot
 	}
 	bctx.installDeckhouseResult = installDeckhouseResult
 
+	// Preparation mints no UUID for a cluster dhctl did not create, so the cache holds none, and
+	// commander.ParseMetaConfig reads exactly this key on every later operation. InstallDeckhouse
+	// has just settled the real one against kube-system/d8-cluster-uuid, which is the earliest
+	// point a value here is the cluster's own rather than whatever the run arrived carrying.
+	if !bctx.metaConfig.HasClusterConfiguration() {
+		if err := bctx.stateCache.Save(ctx, "uuid", []byte(bctx.deckhouseInstallConfig.UUID)); err != nil {
+			return fmt.Errorf("save cluster uuid to the state cache: %w", err)
+		}
+	}
+
 	b.PhasedExecutionContext.CompleteSubPhase(ctx, phases.InstallDeckhouseSubPhaseInstall)
 
-	err = WaitForFirstMasterNodeBecomeReady(ctx, &client.KubernetesClient{KubeClient: kubeCl})
-	if err != nil {
+	// Paired with the gate on the sub-phase: announcing a wait that cannot happen is what the
+	// second axis is for, and completing a sub-phase the tree does not declare warns instead.
+	if !bctx.metaConfig.HasClusterConfiguration() {
+		return nil
+	}
+
+	if err := WaitForFirstMasterNodeBecomeReady(ctx, &client.KubernetesClient{KubeClient: kubeCl}); err != nil {
 		return err
 	}
 
 	b.PhasedExecutionContext.CompleteSubPhase(ctx, phases.InstallDeckhouseSubPhaseWait)
+
 	return nil
 }
 
@@ -1222,7 +1379,14 @@ func printBanner(ctx context.Context) {
 	dhlog.PrintBanner(ctx)
 }
 
-func generateClusterUUID(ctx context.Context, stateCache state.Cache) (string, error) {
+// generateClusterUUID returns the UUID dhctl owns for this bootstrap, minting one on the first run
+// and reusing the cached one on every next. A cluster whose control plane dhctl did not create
+// gets none - see resolveClusterUUID, which owns that rule.
+func generateClusterUUID(ctx context.Context, stateCache state.Cache, m *config.MetaConfig) (string, error) {
+	if !m.HasClusterConfiguration() {
+		return "", nil
+	}
+
 	var clusterUUID string
 
 	return clusterUUID, dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Cluster UUID", func(ctx context.Context) error {

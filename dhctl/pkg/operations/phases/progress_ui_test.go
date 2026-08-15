@@ -15,6 +15,8 @@
 package phases
 
 import (
+	"context"
+	"log/slog"
 	"slices"
 	"strings"
 	"testing"
@@ -56,6 +58,94 @@ func TestPhaseToString_DeclaredPhasesHaveTitles(t *testing.T) {
 		}
 	}
 }
+
+func TestConsumeProgress_BarIsFullWhenTheDeclaredTailDidNotRun(t *testing.T) {
+	t.Parallel()
+
+	var events []Progress
+	tracker := NewProgressTracker(OperationConverge, func(progress Progress) error {
+		events = append(events, progress)
+
+		return nil
+	})
+	tracker.SetClusterConfig(ClusterConfig{ClusterType: "Static", HasClusterConfiguration: true})
+
+	// CLI converge never announces DeckhouseConfiguration - converger.go puts it into skipPhases
+	// for every non-commander run - so the run ends on AllNodes and Complete names AllNodes too.
+	require.NoError(t, tracker.Progress("", ConvergeCheckPhase, "", ProgressOpts{}))
+	require.NoError(t, tracker.Progress(ConvergeCheckPhase, InstallDeckhousePhase, "", ProgressOpts{}))
+	require.NoError(t, tracker.Progress(InstallDeckhousePhase, AllNodesPhase, "", ProgressOpts{}))
+	require.NoError(t, tracker.Progress(AllNodesPhase, "", "", ProgressOpts{}))
+	require.NoError(t, tracker.Complete(AllNodesPhase))
+
+	recorder := replay(t, events)
+
+	assert.Equal(t, 1.0, recorder.bar())
+	// The last phase that ran is named twice, by its own transition and by Complete. Only the
+	// first of those is a phase transition; the second exists to carry the bar to the end.
+	assert.Equal(t, []string{"Check converge", "Install Deckhouse", "Process all nodes"}, recorder.titles)
+}
+
+// replay drives consumeProgress with the recorded events and returns what it logged.
+func replay(t *testing.T, events []Progress) *progressRecorder {
+	t.Helper()
+
+	recorder := &progressRecorder{}
+	progressCh := make(chan Progress)
+	stop := make(chan struct{})
+	done := make(chan struct{})
+
+	go func() {
+		defer close(done)
+
+		consumeProgress(t.Context(), slog.New(recorder), progressCh, stop)
+	}()
+
+	for _, event := range events {
+		progressCh <- event
+	}
+
+	close(stop)
+	<-done
+
+	require.NotEmpty(t, recorder.values, "the bar was never advanced")
+
+	return recorder
+}
+
+// progressRecorder collects the bar fractions, which dhlog.Progress puts on the record under the
+// progress_value attribute, and the phase titles logged beside them.
+type progressRecorder struct {
+	values []float64
+	titles []string
+}
+
+func (r *progressRecorder) bar() float64 { return r.values[len(r.values)-1] }
+
+func (r *progressRecorder) Enabled(context.Context, slog.Level) bool { return true }
+
+func (r *progressRecorder) Handle(_ context.Context, record slog.Record) error {
+	isBar := false
+
+	record.Attrs(func(attr slog.Attr) bool {
+		if attr.Key == "progress_value" {
+			r.values = append(r.values, attr.Value.Float64())
+			isBar = true
+		}
+
+		return true
+	})
+
+	if !isBar && record.Message != "progress:end" {
+		r.titles = append(r.titles, record.Message)
+	}
+
+	return nil
+}
+
+func (r *progressRecorder) WithAttrs([]slog.Attr) slog.Handler { return r }
+
+func (r *progressRecorder) WithGroup(string) slog.Handler { return r }
 
 func TestPhaseToString_UnknownNameFallsBackToRawName(t *testing.T) {
 	t.Parallel()

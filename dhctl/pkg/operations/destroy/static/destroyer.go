@@ -23,6 +23,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -175,13 +176,26 @@ func (d *Destroyer) destroyCluster(ctx context.Context, autoApprove bool) error 
 	logger.DebugContext(ctx, "Discovering additional master nodes")
 	hostToExclude := ""
 
-	ips := make([]entity.NodeIP, 0)
-	// for abort we do not have nodesWithCredentials
-	if d.nodesWithCredentials != nil && !isSingleMaster(d.nodesWithCredentials.IPs) {
+	// Prepare, and with it the whole node user machinery, runs on the destroy path only, so no
+	// credentials here means this run is an abort.
+	abortFromCache := d.nodesWithCredentials == nil
+
+	var ips []entity.NodeIP
+
+	switch {
+	case abortFromCache:
+		ips, err = d.abortTargets(ctx, masterHosts)
+		if err != nil {
+			return err
+		}
+	case !isSingleMaster(d.nodesWithCredentials.IPs):
 		ips = d.nodesWithCredentials.IPs
 	}
 
-	if len(ips) > 0 {
+	// Abort reads addresses the user reached the hosts by, so the exclusion below by masterHosts
+	// already covers the connected host. Asking the node for its internal IP would instead fail the
+	// whole abort on every bootstrap that stopped before bashible wrote that file.
+	if !abortFromCache && len(ips) > 0 {
 		err := dhlog.RunProcess(ctx, logger, "Get internal node IP for passed control-plane host", func(ctx context.Context) error {
 			file := sshClient.File()
 
@@ -227,7 +241,8 @@ func (d *Destroyer) destroyCluster(ctx context.Context, autoApprove bool) error 
 		settings := userPassedSSHSetting.Copy()
 		// if bastion passed - use user bastion, because master passed by user and another masters in one network
 		// else connect over passed host, because additional masters will have private network address
-		if settings.BastionHost == "" {
+		// abort keeps the user settings: its hosts are the addresses bootstrap was given
+		if !abortFromCache && settings.BastionHost == "" {
 			settings.BastionHost = userPassedSSHSetting.AvailableHosts()[0].Host
 			settings.BastionPort = userPassedSSHSetting.Port
 			settings.BastionUser = userPassedSSHSetting.User
@@ -239,7 +254,8 @@ func (d *Destroyer) destroyCluster(ctx context.Context, autoApprove bool) error 
 				continue
 			}
 			settings.SetAvailableHosts([]session.Host{host})
-			sshClient, err = d.switchToNodeUser(ctx, d.params.SSHClientProvider, settings)
+
+			sshClient, err = d.switchToNodeUser(ctx, settings)
 			if err != nil {
 				return err
 			}
@@ -257,7 +273,11 @@ func (d *Destroyer) destroyCluster(ctx context.Context, autoApprove bool) error 
 		// if we have additional masters hosts (multimaster) we should switch to node user
 		// because it was created
 		// else we will process with setting passed by user because we did not switch above
-		if len(additionalMastersHosts) > 0 {
+		//
+		// abort switches even with no additional masters: without --ssh-host it connects over every
+		// cached host at once, so all of them are excluded above and only this switch keeps the
+		// cleanup from running repeatedly on the single host the session picked
+		if len(additionalMastersHosts) > 0 || abortFromCache {
 			// for last master (it master was user connected in destroy/abort)
 			// revert to passed settings and switch to node user for reconnect to last host
 			// node user was created for all master hosts and we can switch save to it
@@ -265,7 +285,7 @@ func (d *Destroyer) destroyCluster(ctx context.Context, autoApprove bool) error 
 			settings := userPassedSSHSetting.Copy()
 			settings.SetAvailableHosts([]session.Host{host})
 
-			sshClient, err = d.switchToNodeUser(ctx, d.params.SSHClientProvider, settings)
+			sshClient, err = d.switchToNodeUser(ctx, settings)
 			if err != nil {
 				return err
 			}
@@ -278,6 +298,60 @@ func (d *Destroyer) destroyCluster(ctx context.Context, autoApprove bool) error 
 	}
 
 	return nil
+}
+
+// abortTargets is the list of control-plane hosts an abort has to clean. The state cache holds the
+// only record of them - abort has no Kube API to ask and no node user to reach the other masters
+// with - so an absent record is refused instead of quietly collapsing the cleanup onto the one host
+// the user happened to connect to.
+func (d *Destroyer) abortTargets(ctx context.Context, connectedHosts []session.Host) ([]entity.NodeIP, error) {
+	cached, err := d.params.State.MasterHosts(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("read master hosts from the state cache: %w", err)
+	}
+
+	if len(cached) == 0 {
+		if len(connectedHosts) == 0 {
+			return nil, fmt.Errorf("state cache holds no master hosts and no host was given, so abort has nothing to clean up")
+		}
+
+		// The key is written in PostInfraPreflights, so every bootstrap that stopped before it -
+		// the most common thing an abort undoes - leaves the cache empty. Refusing here would
+		// refuse that case; cleaning up exactly the hosts the run was given is what abort did
+		// before the cache became its source, and it widens nothing.
+		d.logger().WarnContext(ctx, "State cache holds no master hosts: the bootstrap stopped before recording them. Abort cleans up only the hosts it was given: "+hostsToString(connectedHosts))
+
+		return nil, nil
+	}
+
+	for _, host := range connectedHosts {
+		if !slices.ContainsFunc(cached, func(c session.Host) bool { return c.Host == host.Host }) {
+			return nil, fmt.Errorf(
+				"state cache lists master hosts %s and not %q, so it belongs to another cluster; abort refuses to clean up hosts it did not bootstrap",
+				hostsToString(cached), host.Host,
+			)
+		}
+	}
+
+	d.logger().InfoContext(ctx, fmt.Sprintf("Abort cleans up %d control-plane hosts: %s", len(cached), hostsToString(cached)))
+
+	// The address goes into InternalIP because that is the field the caller both matches the
+	// connected hosts against and connects the remaining ones by; ExternalIP is only ever matched.
+	ips := make([]entity.NodeIP, 0, len(cached))
+	for _, host := range cached {
+		ips = append(ips, entity.NodeIP{InternalIP: host.Host, NodeName: host.Name})
+	}
+
+	return ips, nil
+}
+
+func hostsToString(hosts []session.Host) string {
+	addresses := make([]string, 0, len(hosts))
+	for _, host := range hosts {
+		addresses = append(addresses, host.Host)
+	}
+
+	return strings.Join(addresses, ", ")
 }
 
 func (d *Destroyer) processStaticHost(ctx context.Context, sshClient libcon.SSHClient, host session.Host, stdOutErrHandler func(l string), cmd string) error {
@@ -310,9 +384,30 @@ func (d *Destroyer) processStaticHost(ctx context.Context, sshClient libcon.SSHC
 	return d.addHostAsProcessed(ctx, host)
 }
 
-func (d *Destroyer) switchToNodeUser(ctx context.Context, sshProvider libcon.SSHProvider, settings *session.Session) (libcon.SSHClient, error) {
+// switchToPassedUser reconnects to a single host with the credentials the user passed. Abort has no
+// node user to switch to: that user is created through the Kube API, which abort never touches. The
+// hosts it reaches are the ones bootstrap was given, so they answer the same credentials.
+func (d *Destroyer) switchToPassedUser(ctx context.Context, settings *session.Session) (libcon.SSHClient, error) {
+	currentClient, err := d.params.SSHClientProvider.Client(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	newClient, err := d.params.SSHClientProvider.SwitchClient(ctx, settings, currentClient.PrivateKeys())
+	if err != nil {
+		return nil, err
+	}
+
+	if err := newClient.Start(ctx); err != nil {
+		return nil, fmt.Errorf("failed to start SSH client for host %s: %w", settings.Host(), err)
+	}
+
+	return newClient, nil
+}
+
+func (d *Destroyer) switchToNodeUser(ctx context.Context, settings *session.Session) (libcon.SSHClient, error) {
 	if d.nodesWithCredentials == nil {
-		return nil, fmt.Errorf("Internal error. No nodes with credentials in destroyer. Probably Prepare was not called, or destroy was attempted during an abort")
+		return d.switchToPassedUser(ctx, settings)
 	}
 
 	if d.params.TmpDir == "" {
@@ -372,7 +467,7 @@ func (d *Destroyer) switchToNodeUser(ctx context.Context, sshProvider libcon.SSH
 
 	privateKeys := []session.AgentPrivateKey{convergerPrivateKey}
 
-	oldSSHClient, err := sshProvider.Client(ctx)
+	oldSSHClient, err := d.params.SSHClientProvider.Client(ctx)
 	if err != nil {
 		return nil, err
 	}

@@ -117,7 +117,7 @@ func TestPhaseInputs_MissingInputNamesItsProducer(t *testing.T) {
 				bctx.resourcesToCreateBefore = nil
 				bctx.resourcesToCreateAfter = nil
 			},
-			producer: `"PostInfraPreflights"`,
+			producer: `"ParseResources"`,
 		},
 		{
 			input:    "deckhouse installation result",

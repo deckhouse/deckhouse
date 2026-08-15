@@ -392,6 +392,30 @@ spec:
 			require.Equal(t, "-----BEGIN CERTIFICATE-----", registry.CA)
 		})
 	})
+
+	// A managed cluster (EKS) carries no ClusterConfiguration, so there is no defaultCRI to
+	// read. The config is built here instead of parsed from a document: the schema store the
+	// parse path needs is not available in this package's tests.
+	t.Run("Without ClusterConfiguration", func(t *testing.T) {
+		deckhouseMC := &ModuleConfig{Spec: ModuleConfigSpec{
+			Version: 1,
+			Settings: SettingsValues{"registry": map[string]any{
+				"mode": "Unmanaged",
+				"unmanaged": map[string]any{
+					"imagesRepo": "r.example.com/test",
+					"scheme":     "HTTPS",
+				},
+			}},
+		}}
+		deckhouseMC.SetName("deckhouse")
+
+		cfg := &MetaConfig{ModuleConfigs: []*ModuleConfig{deckhouseMC}}
+		cfg, err := cfg.Prepare(t.Context(), DummyValidatorProvider())
+		require.NoError(t, err)
+		require.False(t, cfg.HasClusterConfiguration())
+		require.Equal(t, registry_const.ModeUnmanaged, cfg.Registry.Settings.Mode)
+		require.Equal(t, "r.example.com/test", cfg.Registry.Settings.RemoteData.ImagesRepo)
+	})
 }
 
 func TestEnrichProxyData(t *testing.T) {

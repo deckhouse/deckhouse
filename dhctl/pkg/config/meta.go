@@ -476,6 +476,7 @@ func (m *MetaConfig) prepareRegistry() error {
 	).Config(
 		defaultCRI,
 		m.IsStatic(),
+		m.HasClusterConfiguration(),
 	)
 
 	if err == nil {
@@ -516,6 +517,15 @@ func (m *MetaConfig) FindTerraNodeGroup(ctx context.Context, nodeGroupName strin
 
 func (m *MetaConfig) IsStatic() bool {
 	return m.ClusterType == "Static"
+}
+
+// HasClusterConfiguration reports whether the config carries a ClusterConfiguration at all.
+// A cluster whose control plane dhctl did not create (a managed one, EKS) has none: dhctl is
+// used on it only to install Deckhouse and create resources, and every fact ClusterConfiguration
+// carries - the cluster type included - is unknown. IsStatic is therefore false on such a
+// cluster because the type is unknown, not because the cluster is a cloud one.
+func (m *MetaConfig) HasClusterConfiguration() bool {
+	return m != nil && len(m.ClusterConfig) > 0
 }
 
 // findProviderModuleConfig returns the cloud-provider-<name> ModuleConfig

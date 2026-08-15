@@ -22,6 +22,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
@@ -29,6 +33,7 @@ import (
 	registry_config "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 )
@@ -53,6 +58,10 @@ func InstallDeckhouse(
 	return res, dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Install Deckhouse", func(ctx context.Context) error {
 		ctx, span := telemetry.StartSpan(ctx, "InstallDeckhouse")
 		defer span.End()
+
+		if err := resolveClusterUUID(ctx, kubeCl, config); err != nil {
+			return err
+		}
 
 		err := CheckPreventBreakAnotherBootstrappedCluster(ctx, kubeCl, config)
 		if err != nil {
@@ -89,6 +98,65 @@ func InstallDeckhouse(
 
 		return nil
 	})
+}
+
+// resolveClusterUUID decides which UUID this installation writes to kube-system/d8-cluster-uuid,
+// and it is here rather than in either caller because both reach the cluster for the first time
+// through this function - the standalone install-deckhouse phase and the InstallDeckhouse node of
+// a full bootstrap.
+//
+// dhctl may keep a UUID of its own only for a cluster it created, which is what a
+// ClusterConfiguration means here. For such a cluster dhctl's value wins: taking the cluster's
+// instead would disarm CheckPreventBreakAnotherBootstrappedCluster below. Every other cluster is
+// the sole authority on its own identity, so its stamp wins, and an unstamped one is given a fresh
+// UUID rather than whatever the run arrived carrying - install.go writes into the cluster whatever
+// survives here, and a value from a state cache belongs to whoever wrote it there.
+func resolveClusterUUID(ctx context.Context, kubeCl *client.KubernetesClient, cfg *config.DeckhouseInstaller) error {
+	if cfg.UUID != "" && len(cfg.ClusterConfig) > 0 {
+		return nil
+	}
+
+	// This is the first API call of both callers, made against an API server that may still be
+	// starting, and it is retried exactly as long as the read of the same object in
+	// CheckPreventBreakAnotherBootstrappedCluster right after it. Absent is an answer rather than a
+	// failure, so an unstamped cluster reaches the generate branch on the first attempt; every
+	// other error must exhaust the loop instead, because falling through to a fresh UUID would
+	// stamp a second identity into a cluster that already has one.
+	loopParams := retry.NewEmptyParams(
+		retry.WithName("Read cluster UUID"),
+		retry.WithAttempts(45),
+		retry.WithWait(1*time.Second),
+		retry.WithWhitelist(ErrClusterUUIDCheckTransient),
+	)
+
+	var uuidInCluster string
+
+	err := retry.NewSilentLoopWithParams(loopParams).RunContext(ctx, func() error {
+		cm, err := kubeCl.CoreV1().ConfigMaps(manifests.ClusterUUIDCmNamespace).Get(ctx, manifests.ClusterUUIDCm, metav1.GetOptions{})
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+
+		if err != nil {
+			return fmt.Errorf("%w: %w", ErrClusterUUIDCheckTransient, err)
+		}
+
+		uuidInCluster = cm.Data[manifests.ClusterUUIDCmKey]
+
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("read cluster UUID config map: %w", err)
+	}
+
+	if uuidInCluster != "" {
+		cfg.UUID = uuidInCluster
+		return nil
+	}
+
+	cfg.UUID = uuid.New().String()
+
+	return nil
 }
 
 func applyPostBootstrapModuleConfigs(

@@ -34,6 +34,8 @@ type BootstrapOptions struct {
 
 	KubeadmBootstrap   bool
 	MasterNodeSelector bool
+
+	SkipPhases []string
 }
 
 // NewBootstrapOptions returns BootstrapOptions with the previous package-level defaults.
@@ -54,5 +56,6 @@ func (o *BootstrapOptions) ToSpanAttributes() []otattribute.KeyValue {
 		otattribute.String("bootstrap.postBootstrapScriptPath", o.PostBootstrapScriptPath),
 		otattribute.Bool("bootstrap.forceAbortFromCache", o.ForceAbortFromCache),
 		otattribute.Bool("bootstrap.dontUsePublicControlPlaneImages", o.DontUsePublicControlPlaneImages),
+		otattribute.StringSlice("bootstrap.skipPhases", o.SkipPhases),
 	}
 }

@@ -16,6 +16,7 @@ package bootstrap
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -117,10 +118,20 @@ func recordingPhaseFuncs(pec *recordingPEC, failOn phases.OperationPhase, failEr
 
 func declaredPhases(clusterType string) []phases.OperationPhase {
 	declared := make([]phases.OperationPhase, 0)
-	for _, n := range phases.PhasesFor(phases.OperationBootstrap, phases.ClusterConfig{ClusterType: clusterType}) {
+	for _, n := range phases.PhasesFor(phases.OperationBootstrap, phaseClusterConfig(bootstrappedMetaConfig(clusterType))) {
 		declared = append(declared, n.Phase)
 	}
 	return declared
+}
+
+// bootstrappedMetaConfig is a config for a cluster dhctl bootstraps itself: it carries a
+// ClusterConfiguration, which is what the second axis of the gates reads. Left out, the fixture
+// would quietly exercise the walk of a managed cluster instead.
+func bootstrappedMetaConfig(clusterType string) *config.MetaConfig {
+	return &config.MetaConfig{
+		ClusterType:   clusterType,
+		ClusterConfig: map[string]json.RawMessage{"clusterType": json.RawMessage(`"` + clusterType + `"`)},
+	}
 }
 
 // runPhasesFixture builds the state Preparation would have left behind: the walk refuses to run
@@ -128,9 +139,9 @@ func declaredPhases(clusterType string) []phases.OperationPhase {
 // that keeps what is written to it.
 func runPhasesFixture(clusterType string, stopAt int) (*ClusterBootstrapper, *bootstrapContext, *recordingPEC) {
 	pec := &recordingPEC{stopAt: stopAt}
-	return &ClusterBootstrapper{PhasedExecutionContext: pec},
+	return &ClusterBootstrapper{Params: &Params{Options: &options.Options{}}, PhasedExecutionContext: pec},
 		&bootstrapContext{
-			metaConfig: &config.MetaConfig{ClusterType: clusterType},
+			metaConfig: bootstrappedMetaConfig(clusterType),
 			stateCache: utilcache.NewTestCache(),
 		},
 		pec
@@ -251,6 +262,32 @@ func TestRunPhases_CloudOnlyNodesAreGatedOut(t *testing.T) {
 	})
 }
 
+// TestRunPhases_ManagedClusterRunsNothingThatNeedsAMasterOfOurs is the walk a full `dhctl
+// bootstrap` performs on a cluster whose control plane dhctl did not create. It is pinned whole,
+// not by absences, because the nodes gated out here are the ones that would have reported success
+// rather than failed: the SSH wait answers nil with no connection hosts while opening a connection
+// to whatever the shared state cache holds if there are any, and the control-plane-manager checker
+// counts zero master-labelled nodes as zero ready out of zero.
+func TestRunPhases_ManagedClusterRunsNothingThatNeedsAMasterOfOurs(t *testing.T) {
+	t.Parallel()
+
+	pec := &recordingPEC{stopAt: -1}
+	b := &ClusterBootstrapper{Params: &Params{Options: &options.Options{}}, PhasedExecutionContext: pec}
+	bctx := &bootstrapContext{metaConfig: &config.MetaConfig{}, stateCache: utilcache.NewTestCache()}
+
+	require.NoError(t, b.runPhases(context.Background(), bctx, recordingPhaseFuncs(pec, "", nil), wholeTree))
+
+	require.Equal(t, []phases.OperationPhase{
+		phases.PreparationPhase,
+		phases.PreInfraPreflightsPhase,
+		phases.ParseResourcesPhase,
+		phases.InstallDeckhousePhase,
+		phases.CreateResourcesPhase,
+		phases.ExecPostBootstrapPhase,
+		phases.FinalizationPhase,
+	}, pec.phasesOf("run"))
+}
+
 // TestRunPhases_FirstMasterIsAnnouncedBetweenBaseInfraAndPostInfraPreflights pins the split of
 // BaseInfra. Creating master-0 used to be a sub-phase, and CompleteSubPhase leaves CurrentPhase
 // alone, so the work announced itself as BaseInfra: it was neither a stop point Commander could
@@ -272,6 +309,70 @@ func TestRunPhases_FirstMasterIsAnnouncedBetweenBaseInfraAndPostInfraPreflights(
 		phases.FirstMasterPhase,
 		phases.PostInfraPreflightsPhase,
 	}, announced[at:at+3])
+}
+
+// TestRunPhases_ResourcesAndSSHWaitOutliveThePreflightNode is why splitting PostInfraPreflights was
+// worth doing. The resource queues and the SSH wait used to live inside the preflight node, so a
+// run that left that node out lost both - and losing the queues is silent, because createResources
+// reports an empty queue as success. They are nodes of their own now: excluding the preflight node
+// takes neither with it. The exclusion is spelled --skip-phase here because that is the only way to
+// drop a node from a run today; a gate on the node would reach the walk the same way.
+func TestRunPhases_ResourcesAndSSHWaitOutliveThePreflightNode(t *testing.T) {
+	t.Parallel()
+
+	b, bctx, pec := runPhasesFixture("Static", -1)
+	b.SSHProviderInitializer = hostlessInitializer()
+	b.Options.Bootstrap.SkipPhases = []string{string(phases.PostInfraPreflightsPhase)}
+	bctx.metaConfig.ResourcesYAML = "apiVersion: deckhouse.io/v1alpha1\nkind: ModuleConfig\nmetadata:\n  name: user-authn\n"
+
+	funcs := recordingPhaseFuncs(pec, "", nil)
+	// The one body kept real: what the split has to preserve is the queues it produces, and a
+	// recorder produces nothing. The SSH wait has no output to check, so recording that it ran is
+	// the whole of it - and with no connection hosts the real body would answer nil either way.
+	funcs[phases.ParseResourcesPhase] = bootstrapPhase{run: func(ctx context.Context, bctx *bootstrapContext) error {
+		pec.events = append(pec.events, phaseEvent{kind: "run", phase: phases.ParseResourcesPhase})
+		return b.bootstrapParseResources(ctx, bctx)
+	}}
+
+	require.NoError(t, b.runPhases(context.Background(), bctx, funcs, wholeTree))
+
+	require.NotContains(t, pec.phasesOf("run"), phases.PostInfraPreflightsPhase)
+	require.Contains(t, pec.phasesOf("run"), phases.WaitForSSHOnMasterPhase)
+	require.Len(t, bctx.resourcesToCreateAfter, 1)
+	require.NoError(t, requireSplitResources(bctx))
+}
+
+// TestRunPhases_SkippingTheResourceProducerIsRefusedBeforeAnyInfra is the other half of that
+// split. The queues have a producer that can be named now, and asking for the resources while
+// skipping the only phase that queues them is a contradiction the walk answers up front: leaving
+// it to the first consumer would abort a cloud bootstrap only after BaseInfra and FirstMaster had
+// provisioned.
+func TestRunPhases_SkippingTheResourceProducerIsRefusedBeforeAnyInfra(t *testing.T) {
+	t.Parallel()
+
+	b, bctx, pec := runPhasesFixture("Cloud", -1)
+	bctx.metaConfig.ResourcesYAML = "---"
+	b.Options.Bootstrap.SkipPhases = []string{string(phases.ParseResourcesPhase)}
+
+	err := b.runPhases(context.Background(), bctx, recordingPhaseFuncs(pec, "", nil), wholeTree)
+
+	require.ErrorContains(t, err, string(phases.ParseResourcesPhase))
+	require.NotContains(t, pec.phasesOf("run"), phases.BaseInfraPhase)
+	require.Empty(t, pec.phasesOf("complete"))
+}
+
+// TestRunPhases_SkippingTheResourceProducerWithoutResourcesIsAllowed is the other side of that
+// refusal: with no resource document the producer has nothing to produce, so skipping it is a
+// legal combination and must not be refused.
+func TestRunPhases_SkippingTheResourceProducerWithoutResourcesIsAllowed(t *testing.T) {
+	t.Parallel()
+
+	b, bctx, pec := runPhasesFixture("Cloud", -1)
+	b.Options.Bootstrap.SkipPhases = []string{string(phases.ParseResourcesPhase)}
+
+	require.NoError(t, b.runPhases(context.Background(), bctx, recordingPhaseFuncs(pec, "", nil), wholeTree))
+	require.NotContains(t, pec.phasesOf("run"), phases.ParseResourcesPhase)
+	require.Contains(t, pec.phasesOf("run"), phases.BaseInfraPhase)
 }
 
 // TestRunPhases_RestrictedToOneNode covers the standalone phase commands, base-infra being the
@@ -317,18 +418,75 @@ func TestRunPhases_RestrictionIsReadableFromInsidePreparation(t *testing.T) {
 	t.Parallel()
 
 	pec := &recordingPEC{stopAt: -1}
-	b := &ClusterBootstrapper{PhasedExecutionContext: pec}
+	b := &ClusterBootstrapper{Params: &Params{Options: &options.Options{}}, PhasedExecutionContext: pec}
 
 	err := b.runPhases(context.Background(), &bootstrapContext{}, map[phases.OperationPhase]bootstrapPhase{
 		// Stands in for the point bootstrapPreparation reaches once the config is loaded: the
 		// cluster type is known, and nothing past this line has run yet.
 		phases.PreparationPhase: {run: func(_ context.Context, bctx *bootstrapContext) error {
-			return refuseIfExcluded(bctx.only, "Static")
+			return refuseIfExcluded(bctx.only, phaseClusterConfig(bootstrappedMetaConfig("Static")))
 		}},
 	}, phases.BaseInfraPhase)
 
 	require.ErrorContains(t, err, string(phases.BaseInfraPhase))
 	require.ErrorContains(t, err, "Static")
+	require.Empty(t, pec.phasesOf("complete"))
+}
+
+// TestRunPhases_SkipsNamedPhases pins --skip-phase against the walk: the named node is neither
+// announced nor run, everything else happens as before and the pipeline still completes.
+func TestRunPhases_SkipsNamedPhases(t *testing.T) {
+	t.Parallel()
+
+	b, bctx, pec := runPhasesFixture("Cloud", -1)
+	b.Options.Bootstrap.SkipPhases = []string{string(phases.CreateResourcesPhase)}
+
+	require.NoError(t, b.runPhases(context.Background(), bctx, recordingPhaseFuncs(pec, "", nil), wholeTree))
+
+	expected := slices.DeleteFunc(declaredPhases("Cloud"), func(p phases.OperationPhase) bool {
+		return p == phases.CreateResourcesPhase
+	})
+	require.Equal(t, expected, pec.phasesOf("start", "switch"))
+	require.Equal(t, expected, pec.phasesOf("run"))
+	require.Len(t, pec.phasesOf("complete"), 1)
+}
+
+// TestRunPhases_SkippingThePreflightProducerIsRefusedBeforeAnyInfra pins where that refusal has
+// to land. PreInfraPreflights builds the preflight runner PostInfraPreflights consumes
+// (validatePostInfraPreflightsInputs), so a walk that took the skip would die at the consumer -
+// on a cloud cluster only after BaseInfra and FirstMaster have provisioned billable resources.
+// The name is resolved before the walk announces anything at all, so nothing runs.
+func TestRunPhases_SkippingThePreflightProducerIsRefusedBeforeAnyInfra(t *testing.T) {
+	t.Parallel()
+
+	b, bctx, pec := runPhasesFixture("Cloud", -1)
+	b.Options.Bootstrap.SkipPhases = []string{string(phases.PreInfraPreflightsPhase)}
+
+	err := b.runPhases(context.Background(), bctx, recordingPhaseFuncs(pec, "", nil), wholeTree)
+
+	require.ErrorContains(t, err, string(phases.PreInfraPreflightsPhase))
+	require.ErrorContains(t, err, "--preflight-skip-all-checks")
+	require.Empty(t, pec.phasesOf("run"))
+	require.Empty(t, pec.phasesOf("complete"))
+}
+
+// TestRunPhases_SkippingAGatedOutPhaseIsRefused covers what flag parsing cannot: a path that
+// exists in the tree is legal on the command line, and only the walk knows whether the gates keep
+// it in this particular run. The refusal names the flag and does not claim the phase was asked to
+// run - the user asked for the opposite, and the run-it wording sends them to the standalone phase
+// commands they never invoked.
+func TestRunPhases_SkippingAGatedOutPhaseIsRefused(t *testing.T) {
+	t.Parallel()
+
+	b, bctx, pec := runPhasesFixture("Static", -1)
+	b.Options.Bootstrap.SkipPhases = []string{string(phases.BaseInfraPhase)}
+
+	err := b.runPhases(context.Background(), bctx, recordingPhaseFuncs(pec, "", nil), wholeTree)
+
+	require.ErrorContains(t, err, string(phases.BaseInfraPhase))
+	require.ErrorContains(t, err, "Static")
+	require.ErrorContains(t, err, "--skip-phase")
+	require.NotContains(t, err.Error(), "requested explicitly")
 	require.Empty(t, pec.phasesOf("complete"))
 }
 
@@ -364,6 +522,7 @@ func TestRunPhases_AnnouncesPreparationBeforeTheStateCacheExists(t *testing.T) {
 	halt := errors.New("preparation stopped the walk")
 
 	b := &ClusterBootstrapper{
+		Params:                 &Params{Options: &options.Options{}},
 		PhasedExecutionContext: phases.NewDefaultPhasedExecutionContext(phases.OperationBootstrap, nil, nil),
 	}
 

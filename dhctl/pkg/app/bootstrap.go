@@ -15,10 +15,31 @@
 package app
 
 import (
+	"fmt"
+	"strings"
+
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 )
+
+// DefineSkipPhases registers --skip-phase and checks the paths it is given against the bootstrap
+// tree. Only the path itself is checked here: the cluster type is loaded by the Preparation phase,
+// which runs in the command action, so whether a phase is part of this particular run cannot be
+// known yet and is checked by the walk instead.
+func DefineSkipPhases(cmd *kingpin.CmdClause, o *options.BootstrapOptions) {
+	desc := fmt.Sprintf("Skip a bootstrap phase by name (repeatable). Skippable phases: %s", strings.Join(phases.SkippablePhases(phases.BootstrapPhases()), ", "))
+	cmd.Flag("skip-phase", desc).
+		Envar(configEnvName("SKIP_PHASES")).
+		PlaceHolder("phase").
+		StringsVar(&o.SkipPhases)
+
+	cmd.PreAction(func(_ *kingpin.ParseContext) error {
+		_, err := phases.ResolveSkipPhases(phases.BootstrapPhases(), o.SkipPhases)
+		return err
+	})
+}
 
 // DefineDeckhouseFlags registers --deckhouse-timeout.
 func DefineDeckhouseFlags(cmd *kingpin.CmdClause, o *options.BootstrapOptions) {

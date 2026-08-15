@@ -16,6 +16,9 @@ package phases
 
 import (
 	"errors"
+	"fmt"
+	"slices"
+	"strings"
 )
 
 type (
@@ -73,8 +76,15 @@ const (
 // ClusterConfig holds cluster parameters that affect phase list and progress.
 // Pass via SetClusterConfig as soon as meta config is parsed, before any phase is reported.
 // Extensible for future fields (e.g. cloud provider, features).
+//
+// It has to stay comparable: ProgressTracker.SetClusterConfig tests it with ==.
 type ClusterConfig struct {
 	ClusterType string
+	// HasClusterConfiguration is the second axis of the gates, independent of the cluster type:
+	// a cluster whose control plane dhctl did not create carries no ClusterConfiguration, and
+	// then the type is unknown rather than static. Fill it from MetaConfig.HasClusterConfiguration
+	// at every call site - left at its zero value it silently drops the nodes gated on it.
+	HasClusterConfiguration bool
 }
 
 // Define common operations phases for such operations as bootstrap, converge and destroy.
@@ -92,14 +102,16 @@ const (
 	FirstMasterPhase                       OperationPhase = "FirstMaster"
 	PreInfraPreflightsPhase                OperationPhase = "PreInfraPreflights"
 	PostInfraPreflightsPhase               OperationPhase = "PostInfraPreflights"
+	ParseResourcesPhase                    OperationPhase = "ParseResources"
+	WaitForSSHOnMasterPhase                OperationPhase = "WaitForSSHOnMaster"
 	InstallKubernetesPhase                 OperationPhase = "InstallKubernetes"
 	InstallDeckhousePhase                  OperationPhase = "InstallDeckhouse"
 	CreateResourcesPhase                   OperationPhase = "CreateResources"
 	InstallAdditionalMastersAndStaticNodes OperationPhase = "InstallAdditionalMastersAndStaticNodes"
 	// WaitForControlPlaneManagerReadinessPhase waits for control-plane-manager on every master.
-	// It is a phase of its own, and not the tail of the one above, because it runs on every
-	// cluster while installing additional nodes is cloud-only: as a child it would be gated out
-	// together with its parent on static clusters.
+	// It is a phase of its own, and not the tail of the one above, because it runs on every cluster
+	// dhctl builds a control plane for while installing additional nodes is cloud-only: as a child
+	// it would be gated out together with its parent on static clusters.
 	WaitForControlPlaneManagerReadinessPhase OperationPhase = "WaitForControlPlaneManagerReadiness"
 	DeleteResourcesPhase                     OperationPhase = "DeleteResources"
 	ExecPostBootstrapPhase                   OperationPhase = "ExecPostBootstrap"
@@ -199,9 +211,17 @@ func bootstrapNodes() []node {
 			},
 		},
 		{Name: FirstMasterPhase, includeIf: ifCloud},
-		{Name: PostInfraPreflightsPhase},
+		// Preflight on the master dhctl just created, before kubeadm runs on it.
+		{Name: PostInfraPreflightsPhase, includeIf: ifHasClusterConfiguration},
+		// Split out of the node above so that gating it keeps the resource queues InstallDeckhouse
+		// and CreateResources create from, which apply to every cluster.
+		{Name: ParseResourcesPhase},
+		// InstallKubernetes is the only consumer of the wait, and ungated it would open SSH to
+		// whatever master host the shared state cache happens to hold - another cluster's.
+		{Name: WaitForSSHOnMasterPhase, includeIf: ifHasClusterConfiguration},
 		{
-			Name: InstallKubernetesPhase,
+			Name:      InstallKubernetesPhase,
+			includeIf: ifHasClusterConfiguration,
 			Children: []node{
 				{Name: InstallKubernetesSubPhaseBundlePreparation},
 				{Name: InstallKubernetesSubPhaseRegistryPackagesProxy},
@@ -215,7 +235,9 @@ func bootstrapNodes() []node {
 			Children: []node{
 				{Name: InstallDeckhouseSubPhaseConnect},
 				{Name: InstallDeckhouseSubPhaseInstall},
-				{Name: InstallDeckhouseSubPhaseWait},
+				// Ungated, the wait settles on whichever node the API server lists first, and on a
+				// cluster whose nodes have not registered it fails after Deckhouse is installed.
+				{Name: InstallDeckhouseSubPhaseWait, includeIf: ifHasClusterConfiguration},
 			},
 		},
 		{
@@ -226,13 +248,87 @@ func bootstrapNodes() []node {
 				{Name: InstallAdditionalMastersAndStaticNodeSubPhaseStaticNodes},
 			},
 		},
-		// Ungated on purpose: control-plane-manager is waited for on every cluster, which is why
-		// the wait cannot live inside the cloud-only node above.
-		{Name: WaitForControlPlaneManagerReadinessPhase},
+		// Gated because the checker reports "0 of 0 ready" as success; top-level rather than a child
+		// of the cloud-only node above for the reason in its const doc.
+		{Name: WaitForControlPlaneManagerReadinessPhase, includeIf: ifHasClusterConfiguration},
 		{Name: CreateResourcesPhase},
 		{Name: ExecPostBootstrapPhase},
 		{Name: FinalizationPhase},
 	}
+}
+
+// unskippableReason tells why --skip-phase refuses phase, or "" when the phase may be skipped.
+// The reasons are the strings below (bootstrap.validatePostInfraPreflightsInputs is what refuses
+// the second one downstream): skipping either aborts the walk, on a cloud cluster only after
+// BaseInfra and FirstMaster have provisioned.
+func unskippableReason(phase OperationPhase) string {
+	switch phase {
+	case PreparationPhase:
+		return "it loads the cluster configuration and initializes the state cache every other phase reads"
+	case PreInfraPreflightsPhase:
+		return "it builds the preflight runner that PostInfraPreflights then runs, disable the checks themselves with --preflight-skip-check or --preflight-skip-all-checks"
+	default:
+		return ""
+	}
+}
+
+// SkippablePhases names the top-level phases of declared that may be skipped, in declaration
+// order; see unskippableReason for the ones left out.
+func SkippablePhases(declared []PhaseWithSubPhases) []string {
+	names := make([]string, 0, len(declared))
+
+	for _, p := range declared {
+		if unskippableReason(p.Phase) != "" {
+			continue
+		}
+
+		names = append(names, string(p.Phase))
+	}
+
+	return names
+}
+
+// ResolveSkipPhases resolves the phase[/subphase] paths of --skip-phase against declared, which
+// is the UNGATED tree on purpose: the cluster type is unknown while flags are parsed, and gating
+// on an empty type would reject --skip-phase BaseInfra on a perfectly legal static config.
+// Whether a resolved phase is part of one particular run is decided by the walk, once the type
+// is known (bootstrap.refuseIfSkipExcluded).
+func ResolveSkipPhases(declared []PhaseWithSubPhases, paths []string) ([]OperationPhase, error) {
+	resolved := make([]OperationPhase, 0, len(paths))
+
+	for _, path := range paths {
+		phase, err := resolveSkipPhase(declared, path)
+		if err != nil {
+			return nil, err
+		}
+
+		resolved = append(resolved, phase)
+	}
+
+	return resolved, nil
+}
+
+func resolveSkipPhase(declared []PhaseWithSubPhases, path string) (OperationPhase, error) {
+	name, _, addressesSubPhase := strings.Cut(path, "/")
+	phase := OperationPhase(name)
+
+	if !slices.ContainsFunc(declared, func(p PhaseWithSubPhases) bool { return p.Phase == phase }) {
+		return "", fmt.Errorf("unknown phase %q, known phases: %s", path, strings.Join(SkippablePhases(declared), ", "))
+	}
+
+	// Checked before the sub-phase rule below so that a path into an un-skippable phase answers
+	// with the reason at once, instead of advising the parent name that is itself refused next.
+	if reason := unskippableReason(phase); reason != "" {
+		return "", fmt.Errorf("phase %q cannot be skipped, %s", name, reason)
+	}
+
+	// A sub-phase is not a unit of execution: the work lives in the body of its parent, and only
+	// top-level nodes carry a function at all, so skipping one would exit zero having done it.
+	if addressesSubPhase {
+		return "", fmt.Errorf("phase %q addresses a sub-phase, you can only skip a top-level phase, name %q instead", path, name)
+	}
+
+	return phase, nil
 }
 
 func ConvergePhases() []PhaseWithSubPhases { return project(convergeNodes()) }
@@ -417,4 +513,12 @@ func ifCloud(opts phasesOpts) bool {
 
 func ifStatic(opts phasesOpts) bool {
 	return opts.clusterConfig.ClusterType == "Static"
+}
+
+// ifHasClusterConfiguration includes the node only on a cluster whose control plane dhctl creates
+// itself. Like ifCloud it is a positive test, and for a stronger reason: the flag is false both on
+// a managed cluster and on a caller that never filled it in, so only an explicit true may declare
+// the nodes that build a control plane.
+func ifHasClusterConfiguration(opts phasesOpts) bool {
+	return opts.clusterConfig.HasClusterConfiguration
 }

@@ -96,7 +96,7 @@ func TestStaticAbort(t *testing.T) {
 			createAssertError(tst.destroyShouldReturnError, "should cleaned", "should not cleaned")(t, err)
 
 			require.Equal(t, 1, ts.sshProvider.cleanCommandCalled, "should clean command ran once")
-			ts.assertStateCacheIsEmpty(t)
+			require.Equal(t, []string{dhctlstate.MasterHostsCacheKey}, ts.stateCacheKeys(t), "only the hosts bootstrap recorded should be left")
 
 			assertOverDefaultBastion(t, tst.overBastion, ts.sshProvider.bastion, "clean script")
 		})
@@ -144,6 +144,10 @@ func testCreateAbortStaticProviderTest(t *testing.T, params testAbortStaticTestP
 	sshProvider := testCreateAbortSSHProvider(params, logger)
 
 	stateCache := cache.NewTestCache()
+
+	// The hosts bootstrap recorded are what abort cleans up; without them it refuses to run at all.
+	err = dhctlstate.SaveMasterHosts(t.Context(), stateCache, map[string]string{"first-master": params.host.Host})
+	require.NoError(t, err, "master hosts should be saved")
 
 	pec := phases.NewDefaultPhasedExecutionContext(phases.OperationBootstrap, nil, nil)
 	require.NoError(t, pec.InitPipeline(t.Context(), stateCache))

@@ -30,8 +30,9 @@ type ProgressTracker struct {
 	progress Progress
 	mx       sync.Mutex
 
-	onProgressFunc func(Progress) error
-	clusterConfig  ClusterConfig
+	onProgressFunc   func(Progress) error
+	clusterConfig    ClusterConfig
+	clusterConfigSet bool
 }
 
 type Progress struct {
@@ -92,16 +93,23 @@ func NewProgressTracker(operation Operation, onProgressFunc func(Progress) error
 
 // SetClusterConfig sets the cluster config and syncs the phase list immediately.
 // Call as soon as meta config is parsed, before any phase is reported.
+//
+// A repeat of the config already in force is ignored, because rebuilding the list would throw
+// away the Action marks accumulated on it - converge sets the same config twice, once per entry
+// point. The first call is never a repeat, whatever it carries: a config with no
+// ClusterConfiguration equals the zero value the tracker is built with, and short-circuiting it
+// would leave the announced list gated on a cluster type nobody has resolved yet.
 func (p *ProgressTracker) SetClusterConfig(cfg ClusterConfig) {
 	p.mx.Lock()
 	defer p.mx.Unlock()
 
-	if p.clusterConfig == cfg {
+	if p.clusterConfigSet && p.clusterConfig == cfg {
 		return
 	}
 
 	phases := operationPhases(p.progress.Operation, phasesOpts{clusterConfig: cfg})
 	p.clusterConfig = cfg
+	p.clusterConfigSet = true
 	p.progress.Phases = phases
 }
 
@@ -193,8 +201,10 @@ func (p *ProgressTracker) Complete(lastCompletedPhase OperationPhase) error {
 
 	// If the last phase was not skipped - progress 1
 	if !isLastCompletedPhaseSkipped {
+		ran := lastPhaseThatRan(p.progress.Phases, len(p.progress.Phases)-1)
+
 		p.progress.Progress = 1.0
-		p.progress.CompletedPhase = nOrEmpty(p.progress.Phases, len(p.progress.Phases)-1).Phase
+		p.progress.CompletedPhase = nOrEmpty(p.progress.Phases, ran).Phase
 		p.progress.CurrentPhase = ""
 		p.progress.NextPhase = ""
 		clonedProgress := p.progress.Clone()
@@ -205,14 +215,7 @@ func (p *ProgressTracker) Complete(lastCompletedPhase OperationPhase) error {
 	}
 
 	// If the last phase was skipped - find the last non-skipped phase
-	lastNonSkippedPhaseIndex := -1
-	for i := lastCompletedPhaseIndex; i >= 0; i-- {
-		if p.progress.Phases[i].Action != nil && *p.progress.Phases[i].Action != ProgressActionSkip {
-			lastNonSkippedPhaseIndex = i
-			break
-		}
-	}
-
+	lastNonSkippedPhaseIndex := lastPhaseThatRan(p.progress.Phases, lastCompletedPhaseIndex)
 	if lastNonSkippedPhaseIndex >= 0 {
 		// Found non-skipped phase - calculate progress based on it
 		p.progress.Progress = levelShare(rootShare, lastNonSkippedPhaseIndex+1, len(p.progress.Phases))
@@ -386,6 +389,22 @@ func levelShare(parentShare float64, n, siblings int) float64 {
 	}
 
 	return parentShare * float64(n) / float64(siblings)
+}
+
+// lastPhaseThatRan returns the position of the last phase at or before from that was not skipped,
+// or -1 when none of them ran.
+//
+// A phase can be left out of a walk by --skip-phase, by an early stop and by a resume that jumps
+// over it, and all three mark it with ProgressActionSkip. Whichever it was, the operation cannot
+// report it as the phase it completed: the tail of the declared list is not the tail of the run.
+func lastPhaseThatRan(phases []PhaseWithSubPhases, from int) int {
+	for i := from; i >= 0; i-- {
+		if phases[i].Action != nil && *phases[i].Action != ProgressActionSkip {
+			return i
+		}
+	}
+
+	return -1
 }
 
 // indexOfPhase returns the position of the named phase among the top-level nodes, or -1 when the

@@ -550,4 +550,5 @@ func TestDeckhouseInstallCreatesClusterUUIDConfigMap(t *testing.T) {
 	cm, err := fakeClient.CoreV1().ConfigMaps("kube-system").Get(ctx, "d8-cluster-uuid", metav1.GetOptions{})
 	require.NoError(t, err, "d8-cluster-uuid ConfigMap must be created when UUID is set")
 	require.Equal(t, clusterUUID, cm.Data["cluster-uuid"])
+	require.Equal(t, "deckhouse", cm.Labels["heritage"], "the deckhouse global hook creates this ConfigMap labelled, dhctl must not create a different object")
 }

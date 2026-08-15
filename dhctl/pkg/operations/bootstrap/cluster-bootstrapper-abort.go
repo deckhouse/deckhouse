@@ -70,6 +70,14 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context) error {
 		return err
 	}
 
+	// Refused here rather than by the loader, which serves bootstrap on a cluster whose control
+	// plane dhctl did not create too. Without this the run would reach the cluster type only in
+	// GetAbortDestroyer, after CachePath has already collapsed to the prefix-less directory every
+	// such cluster shares and the pipeline has written its state into it.
+	if !metaConfig.HasClusterConfiguration() {
+		return fmt.Errorf("dhctl bootstrap-phase abort requires ClusterConfiguration: it destroys the infrastructure dhctl created from it, and finds the state of that infrastructure in a cache named after the cluster prefix and provider it carries")
+	}
+
 	b.PhasedExecutionContext = phases.NewDefaultPhasedExecutionContext(
 		phases.OperationDestroy, b.Params.OnPhaseFunc, b.Params.OnProgressFunc,
 	)
@@ -85,7 +93,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context) error {
 		WithUseTfCache(b.Options.Cache.UseTfCache).
 		WithDebug(b.Options.Global.IsDebug)
 
-	cachePath := metaConfig.CachePath()
+	cachePath := cacheIdentity(ctx, metaConfig, connectionHosts(b.SSHProviderInitializer), b.Options.Kube, b.Options.Cache.Dir)
 	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("State config for prefix %s:  %s", metaConfig.ClusterPrefix, cachePath))
 	if err = cache.InitWithOptions(ctx, cachePath, cache.CacheOptions{InitialState: b.InitialState, ResetInitialState: b.ResetInitialState, Cache: b.Options.Cache}); err != nil {
 		return fmt.Errorf(bootstrapAbortInvalidCacheMessage, cachePath, err)
@@ -113,6 +121,10 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context) error {
 				return nil
 			},
 			func() error {
+				if metaConfig.IsStatic() {
+					return fmt.Errorf("No UUID found in the cache. Perhaps the cluster was already bootstrapped, or this abort was given different addresses than the bootstrap: a static cluster names its state cache after its --ssh-host list (or the SSHHost resources of --connection-config), so the abort has to repeat them.")
+				}
+
 				return fmt.Errorf("No UUID found in the cache. Perhaps the cluster was already bootstrapped.")
 			},
 		)
@@ -135,7 +147,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context) error {
 	// error is OK here in case of abort from cache w/o ssh hosts
 	sshProvider, _ := b.SSHProviderInitializer.GetSSHProvider(ctx)
 
-	b.PhasedExecutionContext.SetClusterConfig(phases.ClusterConfig{ClusterType: metaConfig.ClusterType})
+	b.PhasedExecutionContext.SetClusterConfig(phaseClusterConfig(metaConfig))
 
 	destroyer, err := destroy.GetAbortDestroyer(ctx, &destroy.GetAbortDestroyerParams{
 		MetaConfig:             metaConfig,

@@ -32,6 +32,7 @@ import (
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
 var (
@@ -117,7 +118,7 @@ func TestProgressTracker(t *testing.T) {
 	})
 	// Cloud is what makes the tracker's list the full one: the cloud-only nodes are gated on a
 	// positive test, so an unset cluster type keeps BaseInfra and the additional-nodes phase out.
-	progressTracker.SetClusterConfig(phases.ClusterConfig{ClusterType: "Cloud"})
+	progressTracker.SetClusterConfig(phases.ClusterConfig{ClusterType: "Cloud", HasClusterConfiguration: true})
 
 	require.NoError(t, progressTracker.Progress("", "", "", opts))
 	require.NoError(t, progressTracker.Progress(phases.BaseInfraPhase, "", "", opts))
@@ -284,7 +285,7 @@ func TestProgressTracker_Complete(t *testing.T) {
 		return nil
 	})
 	// BaseInfra is a cloud-only node, so the tracker only declares it once the type is known.
-	progressTracker.SetClusterConfig(phases.ClusterConfig{ClusterType: "Cloud"})
+	progressTracker.SetClusterConfig(phases.ClusterConfig{ClusterType: "Cloud", HasClusterConfiguration: true})
 
 	require.NoError(t, progressTracker.Progress("", "", "", opts))
 	require.NoError(t, progressTracker.Progress(phases.BaseInfraPhase, "", "", opts))
@@ -317,10 +318,12 @@ func TestProgressTracker_Complete(t *testing.T) {
 			NextSubPhase:    nth(nth(list, idxBaseInfra+1).SubPhases, 1),
 		},
 		{
-			Operation:      phases.OperationBootstrap,
-			Phases:         lastPhases,
-			Progress:       1,
-			CompletedPhase: nth(lastPhases, len(lastPhases)-1).Phase,
+			Operation: phases.OperationBootstrap,
+			Phases:    lastPhases,
+			Progress:  1,
+			// Not the tail of the declared list: everything past BaseInfra is marked skipped, and a
+			// phase that never ran cannot be reported as the one the operation completed.
+			CompletedPhase: phases.BaseInfraPhase,
 			CurrentPhase:   "",
 			NextPhase:      "",
 		},
@@ -367,7 +370,7 @@ func TestProgressTracker_Skip(t *testing.T) {
 
 		return nil
 	})
-	progressTracker.SetClusterConfig(phases.ClusterConfig{ClusterType: "Cloud"})
+	progressTracker.SetClusterConfig(phases.ClusterConfig{ClusterType: "Cloud", HasClusterConfiguration: true})
 
 	require.NoError(t, progressTracker.Progress("", "", "", opts))
 	require.NoError(t, progressTracker.Progress(phases.AllNodesPhase, "", "", skipOpts))
@@ -441,7 +444,7 @@ func TestProgressTracker_Progress_UndeclaredPhase(t *testing.T) {
 	})
 	// BaseInfra has to be a declared phase here: it is the one that must move the progress, so
 	// that the two undeclared names below can be shown not to.
-	progressTracker.SetClusterConfig(phases.ClusterConfig{ClusterType: "Cloud"})
+	progressTracker.SetClusterConfig(phases.ClusterConfig{ClusterType: "Cloud", HasClusterConfiguration: true})
 
 	require.NoError(t, progressTracker.Progress(phases.BaseInfraPhase, "", "", opts))
 	require.NoError(t, progressTracker.Progress("NoSuchPhase", "", "", opts))
@@ -469,7 +472,7 @@ func TestProgressTracker_WriteProgress(t *testing.T) {
 		phases.WriteProgress(progressFilePath),
 	)
 	// The expectation is built from the ungated BootstrapPhases, which is the Cloud list.
-	progressTracker.SetClusterConfig(phases.ClusterConfig{ClusterType: "Cloud"})
+	progressTracker.SetClusterConfig(phases.ClusterConfig{ClusterType: "Cloud", HasClusterConfiguration: true})
 
 	require.NoError(t, progressTracker.Progress("", "", "", opts))
 	require.NoError(t, progressTracker.Progress(nth(list, len(list)-1).Phase, "", "", opts))
@@ -508,7 +511,7 @@ func TestProgressTracker_Progress_ExcludesPhase(t *testing.T) {
 		result = append(result, progress)
 		return nil
 	})
-	progressTracker.SetClusterConfig(phases.ClusterConfig{ClusterType: "Static"})
+	progressTracker.SetClusterConfig(phases.ClusterConfig{ClusterType: "Static", HasClusterConfiguration: true})
 
 	require.NoError(t, progressTracker.Progress("", "", "", opts))
 	require.Len(t, result, 1)
@@ -531,7 +534,7 @@ func TestProgressTracker_Progress_CurrentPhase(t *testing.T) {
 		result = append(result, progress)
 		return nil
 	})
-	progressTracker.SetClusterConfig(phases.ClusterConfig{ClusterType: "Static"})
+	progressTracker.SetClusterConfig(phases.ClusterConfig{ClusterType: "Static", HasClusterConfiguration: true})
 
 	require.NoError(t, progressTracker.Progress(phases.InstallDeckhousePhase, phases.CreateResourcesPhase, "", opts))
 	require.Len(t, result, 1)
@@ -557,6 +560,128 @@ func TestProgressTracker_Progress_CurrentPhase(t *testing.T) {
 
 	require.NotNil(t, waitPhase.Action)
 	assert.Equal(t, phases.ProgressActionSkip, *waitPhase.Action)
+}
+
+// walkSkipping replays what --skip-phase does to the progress tracker. The bootstrap traverser
+// announces every declared node but the named ones, and a skipped node is never mentioned to the
+// phase context at all - that is the whole of the feature as far as this package is concerned, so
+// it is the whole of what these tests drive.
+func walkSkipping(t *testing.T, skipped ...phases.OperationPhase) []phases.Progress {
+	t.Helper()
+
+	var result []phases.Progress
+
+	pec := phases.NewDefaultPhasedExecutionContext(phases.OperationBootstrap, nil, func(progress phases.Progress) error {
+		result = append(result, progress)
+
+		return nil
+	})
+	// BootstrapPhases below is the ungated list, and the ungated list is the cloud one.
+	pec.SetClusterConfig(phases.ClusterConfig{ClusterType: "Cloud", HasClusterConfiguration: true})
+
+	stateCache := cache.NewTestCache()
+	require.NoError(t, pec.InitPipeline(t.Context(), stateCache))
+
+	announced := false
+
+	for _, declared := range phases.BootstrapPhases() {
+		if slices.Contains(skipped, declared.Phase) {
+			continue
+		}
+
+		var err error
+		if announced {
+			_, err = pec.SwitchPhase(t.Context(), declared.Phase, false, stateCache, nil)
+		} else {
+			_, err = pec.StartPhase(t.Context(), declared.Phase, false, stateCache)
+			announced = true
+		}
+		require.NoError(t, err)
+	}
+
+	require.NoError(t, pec.CompletePhaseAndPipeline(t.Context(), stateCache, nil))
+	require.NoError(t, pec.Finalize(t.Context(), stateCache))
+
+	return result
+}
+
+// TestProgress_UserSkippedPhaseStaysDeclaredAndMarkedSkipped pins the representation a phase left
+// out by --skip-phase gets on the wire, which is the one the walk gets for free: the node stays in
+// the announced list - where a node the gates exclude is absent from it altogether - and carries
+// ProgressActionSkip, deliberately the same string an early stop and a resume already use. A new
+// action would render on an older Commander as "waiting".
+func TestProgress_UserSkippedPhaseStaysDeclaredAndMarkedSkipped(t *testing.T) {
+	t.Parallel()
+
+	result := walkSkipping(t, phases.CreateResourcesPhase)
+	final := nth(result, len(result)-1)
+
+	assert.Equal(t, 1.0, final.Progress)
+	phaseIndex(t, final.Phases, phases.CreateResourcesPhase)
+
+	for _, phase := range final.Phases {
+		require.NotNilf(t, phase.Action, "phase %q was announced without an action", phase.Phase)
+
+		expected := phases.ProgressActionDefault
+		if phase.Phase == phases.CreateResourcesPhase {
+			expected = phases.ProgressActionSkip
+		}
+
+		assert.Equalf(t, expected, *phase.Action, "phase %q", phase.Phase)
+	}
+}
+
+// TestProgress_CompletedPhaseIsTheLastPhaseThatRan covers the tail of the list, which is where
+// skipping by not announcing loses its way. Complete named the last declared phase whatever had
+// become of it, so a run with the tail skipped finished by reporting a phase that never ran as the
+// one it had completed.
+func TestProgress_CompletedPhaseIsTheLastPhaseThatRan(t *testing.T) {
+	t.Parallel()
+
+	result := walkSkipping(t, phases.ExecPostBootstrapPhase, phases.FinalizationPhase)
+	final := nth(result, len(result)-1)
+
+	assert.EqualValues(t, phases.CreateResourcesPhase, final.CompletedPhase)
+	assert.Equal(t, 1.0, final.Progress)
+
+	for _, name := range []phases.OperationPhase{phases.ExecPostBootstrapPhase, phases.FinalizationPhase} {
+		phase := nth(final.Phases, phaseIndex(t, final.Phases, name))
+		require.NotNilf(t, phase.Action, "phase %q was announced without an action", name)
+		assert.Equalf(t, phases.ProgressActionSkip, *phase.Action, "phase %q", name)
+	}
+}
+
+// TestProgressTracker_NoClusterConfigurationIsAnAnswerAndNotAnAbsence covers the one config that
+// equals the zero value the tracker is built with: a cluster whose control plane dhctl did not
+// create carries no ClusterConfiguration, so both fields stay empty. The list it announces must
+// drop the phases that build a control plane and keep the ones dhctl still runs on such a
+// cluster - and the call must resolve the list rather than recognise its own zero value and
+// return, leaving whatever progress had already written on the wire.
+func TestProgressTracker_NoClusterConfigurationIsAnAnswerAndNotAnAbsence(t *testing.T) {
+	t.Parallel()
+
+	declared := declaredPhases(t, phases.OperationBootstrap, phases.ClusterConfig{})
+
+	assert.NotContains(t, declared, phases.InstallKubernetesPhase)
+	assert.NotContains(t, declared, phases.PostInfraPreflightsPhase)
+	assert.Contains(t, declared, phases.InstallDeckhousePhase)
+	assert.Contains(t, declared, phases.CreateResourcesPhase)
+
+	var reported phases.Progress
+
+	tracker := phases.NewProgressTracker(phases.OperationBootstrap, func(progress phases.Progress) error {
+		reported = progress
+
+		return nil
+	})
+
+	require.NoError(t, tracker.Progress(phases.PreparationPhase, "", "", opts))
+	require.NotNil(t, nth(reported.Phases, 0).Action, "the fixture: bootstrap announces Preparation before the config it loads is known")
+
+	tracker.SetClusterConfig(phases.ClusterConfig{})
+	require.NoError(t, tracker.Progress("", "", "", opts))
+
+	assert.Nil(t, nth(reported.Phases, 0).Action, "the list was not resolved again, so the gates never ran")
 }
 
 // declaredPhases returns the phase list the tracker reports for the given cluster config.
@@ -619,7 +744,7 @@ func TestDestroyPhases_DeclaredPerClusterType(t *testing.T) {
 		t.Run(tt.clusterType, func(t *testing.T) {
 			t.Parallel()
 
-			declared := declaredPhases(t, phases.OperationDestroy, phases.ClusterConfig{ClusterType: tt.clusterType})
+			declared := declaredPhases(t, phases.OperationDestroy, phases.ClusterConfig{ClusterType: tt.clusterType, HasClusterConfiguration: true})
 
 			assert.Equal(t, tt.expected, declared)
 			assert.NotContains(t, declared, phases.CommanderUUIDWasChecked,

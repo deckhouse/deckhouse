@@ -112,7 +112,11 @@ func consumeProgress(ctx context.Context, l *slog.Logger, progressCh chan Progre
 		if msg.CompletedPhase != "" {
 			completed := phaseToString(msg, true)
 
-			if completed == lastCompleted {
+			// A repeated title still moves the bar when the record carries more progress: the
+			// final Complete event names the last phase that RAN, which is the phase already
+			// announced whenever the declared tail was skipped.
+			repeated := completed == lastCompleted
+			if repeated && int(math.Round(msg.Progress*100)) <= current {
 				continue
 			}
 
@@ -129,8 +133,13 @@ func consumeProgress(ctx context.Context, l *slog.Logger, progressCh chan Progre
 			current += increment
 			lastCompleted = completed
 
-			// The successful phase transition is THE only thing tagged for the compact view.
-			l.InfoContext(ctx, strings.TrimSpace(completed), dhlog.ShowInCompacted(), dhlog.BadgeSuccess())
+			// The successful phase transition is THE only thing tagged for the compact view. A
+			// repeated title reaches here only to carry the bar the rest of the way, and the
+			// phase it names was announced on the pass that first completed it.
+			if !repeated {
+				l.InfoContext(ctx, strings.TrimSpace(completed), dhlog.ShowInCompacted(), dhlog.BadgeSuccess())
+			}
+
 			dhlog.Progress(ctx, l, float64(current)/100, phaseToString(msg, false))
 		}
 	}
@@ -144,6 +153,8 @@ func phaseToString(p Progress, completed bool) string {
 	phasesMap[PreparationPhase] = "Prepare the installation"
 	phasesMap[PreInfraPreflightsPhase] = "Common preflight checks"
 	phasesMap[PostInfraPreflightsPhase] = "Static and post-infra preflight checks"
+	phasesMap[ParseResourcesPhase] = "Prepare resources to create"
+	phasesMap[WaitForSSHOnMasterPhase] = "Wait for SSH on master to become ready"
 	phasesMap[BaseInfraPhase] = "Base Infrastructure"
 	phasesMap[FirstMasterPhase] = "First master node"
 	phasesMap[InstallKubernetesPhase] = "Install Kubernetes on the first master node"

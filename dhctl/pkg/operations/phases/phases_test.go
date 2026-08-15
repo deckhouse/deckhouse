@@ -33,17 +33,32 @@ func TestProjection(t *testing.T) {
 	tests := []struct {
 		operation   Operation
 		clusterType string
-		expected    string
+		// noClusterConfiguration is negative so that the zero value keeps every case that predates
+		// the second axis on the answer it was captured with: a config that carries a
+		// ClusterConfiguration, which is every case but the managed-cluster one below.
+		noClusterConfiguration bool
+		expected               string
 	}{
 		{
 			operation:   OperationBootstrap,
 			clusterType: "Cloud",
-			expected:    `[{"phase":"Preparation","subPhases":["ImagesDownload","ConfigValidation","CachePreparation","StatePreparation"]},{"phase":"PreInfraPreflights"},{"phase":"BaseInfra","subPhases":["BaseInfra"]},{"phase":"FirstMaster"},{"phase":"PostInfraPreflights"},{"phase":"InstallKubernetes","subPhases":["BashibleBundlePrepartion","RegistryPackagesProxy","NodePreparation","ModulesPreparation","ExecuteBashibleBundle"]},{"phase":"InstallDeckhouse","subPhases":["ConnectToMaster","InstallDeckhouse","WaitForFirstMasterReady"]},{"phase":"InstallAdditionalMastersAndStaticNodes","subPhases":["AdditionalMasters","StaticNodes"]},{"phase":"WaitForControlPlaneManagerReadiness"},{"phase":"CreateResources"},{"phase":"ExecPostBootstrap"},{"phase":"Finalization"}]`,
+			expected:    `[{"phase":"Preparation","subPhases":["ImagesDownload","ConfigValidation","CachePreparation","StatePreparation"]},{"phase":"PreInfraPreflights"},{"phase":"BaseInfra","subPhases":["BaseInfra"]},{"phase":"FirstMaster"},{"phase":"PostInfraPreflights"},{"phase":"ParseResources"},{"phase":"WaitForSSHOnMaster"},{"phase":"InstallKubernetes","subPhases":["BashibleBundlePrepartion","RegistryPackagesProxy","NodePreparation","ModulesPreparation","ExecuteBashibleBundle"]},{"phase":"InstallDeckhouse","subPhases":["ConnectToMaster","InstallDeckhouse","WaitForFirstMasterReady"]},{"phase":"InstallAdditionalMastersAndStaticNodes","subPhases":["AdditionalMasters","StaticNodes"]},{"phase":"WaitForControlPlaneManagerReadiness"},{"phase":"CreateResources"},{"phase":"ExecPostBootstrap"},{"phase":"Finalization"}]`,
 		},
 		{
 			operation:   OperationBootstrap,
 			clusterType: "Static",
-			expected:    `[{"phase":"Preparation","subPhases":["ImagesDownload","ConfigValidation","CachePreparation","StatePreparation"]},{"phase":"PreInfraPreflights"},{"phase":"PostInfraPreflights"},{"phase":"InstallKubernetes","subPhases":["BashibleBundlePrepartion","RegistryPackagesProxy","NodePreparation","ModulesPreparation","ExecuteBashibleBundle"]},{"phase":"InstallDeckhouse","subPhases":["ConnectToMaster","InstallDeckhouse","WaitForFirstMasterReady"]},{"phase":"WaitForControlPlaneManagerReadiness"},{"phase":"CreateResources"},{"phase":"ExecPostBootstrap"},{"phase":"Finalization"}]`,
+			expected:    `[{"phase":"Preparation","subPhases":["ImagesDownload","ConfigValidation","CachePreparation","StatePreparation"]},{"phase":"PreInfraPreflights"},{"phase":"PostInfraPreflights"},{"phase":"ParseResources"},{"phase":"WaitForSSHOnMaster"},{"phase":"InstallKubernetes","subPhases":["BashibleBundlePrepartion","RegistryPackagesProxy","NodePreparation","ModulesPreparation","ExecuteBashibleBundle"]},{"phase":"InstallDeckhouse","subPhases":["ConnectToMaster","InstallDeckhouse","WaitForFirstMasterReady"]},{"phase":"WaitForControlPlaneManagerReadiness"},{"phase":"CreateResources"},{"phase":"ExecPostBootstrap"},{"phase":"Finalization"}]`,
+		},
+		// The second axis, with no cluster type to go with it: a config that carries no
+		// ClusterConfiguration leaves the type unknown, so the cloud-only nodes drop out for that
+		// reason and the control-plane ones for this one. What is left is the walk dhctl runs on a
+		// cluster somebody else built - install Deckhouse, create resources. Everything that waits
+		// on a master is gone with them, down to the sub-phase: there is no master of ours to wait
+		// for, and a wait that always passes is a worse answer than no wait at all.
+		{
+			operation:              OperationBootstrap,
+			noClusterConfiguration: true,
+			expected:               `[{"phase":"Preparation","subPhases":["ImagesDownload","ConfigValidation","CachePreparation","StatePreparation"]},{"phase":"PreInfraPreflights"},{"phase":"ParseResources"},{"phase":"InstallDeckhouse","subPhases":["ConnectToMaster","InstallDeckhouse"]},{"phase":"CreateResources"},{"phase":"ExecPostBootstrap"},{"phase":"Finalization"}]`,
 		},
 		{
 			operation:   OperationConverge,
@@ -98,10 +113,18 @@ func TestProjection(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(string(tt.operation)+"/"+tt.clusterType, func(t *testing.T) {
+		name := string(tt.operation) + "/" + tt.clusterType
+		if tt.noClusterConfiguration {
+			name += "NoClusterConfiguration"
+		}
+
+		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			opts := phasesOpts{clusterConfig: ClusterConfig{ClusterType: tt.clusterType}}
+			opts := phasesOpts{clusterConfig: ClusterConfig{
+				ClusterType:             tt.clusterType,
+				HasClusterConfiguration: !tt.noClusterConfiguration,
+			}}
 
 			actual, err := json.Marshal(operationPhases(tt.operation, opts))
 			require.NoError(t, err)
@@ -199,4 +222,43 @@ func TestGateRecursesIntoChildren(t *testing.T) {
 	static := project(gate(tree, phasesOpts{clusterConfig: ClusterConfig{ClusterType: "Static"}}))
 	require.Len(t, static, 1)
 	assert.Len(t, static[0].SubPhases, 2)
+}
+
+// TestResolveSkipPhases pins what --skip-phase accepts. It resolves against the UNGATED bootstrap
+// tree, so a cloud-only phase named on a static config parses here and is refused later, by the
+// walk that knows the cluster type.
+func TestResolveSkipPhases(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		path        string
+		resolved    OperationPhase
+		errContains string
+	}{
+		{name: "bare name", path: "InstallDeckhouse", resolved: InstallDeckhousePhase},
+		{name: "cloud-only name resolves without a cluster type", path: "BaseInfra", resolved: BaseInfraPhase},
+		{name: "sub-phase path", path: "BaseInfra/BaseInfra", errContains: `you can only skip a top-level phase, name "BaseInfra" instead`},
+		{name: "unknown name", path: "Nonsense", errContains: `unknown phase "Nonsense", known phases: BaseInfra, FirstMaster`},
+		{name: "existing but forbidden", path: "Preparation", errContains: "initializes the state cache"},
+		{name: "producer of the preflight runner", path: "PreInfraPreflights", errContains: "--preflight-skip-all-checks"},
+		// Answering with the sub-phase rule here would advise a parent name that the very next
+		// attempt refuses, so the un-skippable reason has to win.
+		{name: "sub-phase of a forbidden phase", path: "Preparation/CachePreparation", errContains: "initializes the state cache"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			resolved, err := ResolveSkipPhases(BootstrapPhases(), []string{tt.path})
+			if tt.errContains != "" {
+				require.ErrorContains(t, err, tt.errContains)
+				return
+			}
+
+			require.NoError(t, err)
+			assert.Equal(t, []OperationPhase{tt.resolved}, resolved)
+		})
+	}
 }
