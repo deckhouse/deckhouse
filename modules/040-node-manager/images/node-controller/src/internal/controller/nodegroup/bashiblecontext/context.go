@@ -87,9 +87,8 @@ func (s *Service) Build(ctx context.Context, globals Globals, nodeGroups []map[s
 		}
 		input["cloudProviders"] = trees
 
-		// Deprecated, kept for one release: a bashible-apiserver of the previous version reads only
-		// this key and serves bundles alongside the new one during a rollout. Remove it together
-		// with the field in bashible-apiserver's inputData.
+		// Deprecated, kept for one release: the previous bashible-apiserver reads only this key.
+		// Remove together with the field in its inputData.
 		if len(all) == 1 {
 			input["cloudProvider"] = all[0].Data
 		}

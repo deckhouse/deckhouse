@@ -59,6 +59,13 @@ func IsRegistration(obj client.Object) bool {
 	return ok
 }
 
+// IsRegistrationKey reports whether a reconcile key names a registration Secret. No label check:
+// a key carries none, and the watch behind it already filtered on IsRegistration.
+func IsRegistrationKey(key types.NamespacedName) bool {
+	return key.Namespace == SecretNamespace &&
+		strings.HasPrefix(key.Name, SecretNamePrefix)
+}
+
 // RegistrationPredicate filters a watch down to the registration Secrets.
 func RegistrationPredicate() predicate.Predicate {
 	return predicate.NewPredicateFuncs(IsRegistration)

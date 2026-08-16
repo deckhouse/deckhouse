@@ -48,22 +48,33 @@ type ClusterReconciler struct {
 }
 
 func (r *ClusterReconciler) SetupWatches(w register.Watcher) {
-	// WithEventFilter is controller-wide, so it also covers the NodeGroup watch below.
-	// NodeGroup events must always pass — on a static cluster the cloud-provider Secret may not
-	// exist, and NodeGroup is the only trigger for ensureStaticCluster. The Secret (primary For)
-	// is filtered down to the cloud-provider one.
+	// Controller-wide: Secrets are narrowed to the registrations, NodeGroups all pass — on a static
+	// cluster they are the only trigger there is.
 	w.WithEventFilter(predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		if _, ok := obj.(*deckhousev1.NodeGroup); ok {
 			return true
 		}
 		return cloudprovider.IsRegistration(obj)
 	}))
-	// Re-enqueue only on spec/generation changes — NodeGroup status updates must not trigger
-	// a no-op re-ensure, otherwise the createIfNotExists path logs on every status bump.
-	//
-	// The requests fan out over every registration rather than naming one fixed Secret: this
-	// controller is keyed by the registration itself, so one key per provider is one Cluster per
-	// provider. A cluster with no registration enqueues nothing here.
+	// Two watches on one kind: the two Clusters are keyed by different objects. Generation-only,
+	// so status bumps do not re-ensure.
+
+	// The static Cluster is keyed by the NodeGroup asking for it — the only key a provider-less
+	// cluster has.
+	w.Watches(
+		&deckhousev1.NodeGroup{},
+		handler.EnqueueRequestsFromMapFunc(
+			func(_ context.Context, obj client.Object) []reconcile.Request {
+				ng, ok := obj.(*deckhousev1.NodeGroup)
+				if ok && ng.Spec.StaticInstances != nil {
+					return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: obj.GetName()}}}
+				}
+				return nil
+			}),
+		builder.WithPredicates(predicate.GenerationChangedPredicate{}),
+	)
+
+	// The cloud Clusters are keyed by their registrations, one per provider.
 	w.Watches(
 		&deckhousev1.NodeGroup{},
 		handler.EnqueueRequestsFromMapFunc(
@@ -76,32 +87,20 @@ func (r *ClusterReconciler) SetupWatches(w register.Watcher) {
 }
 
 func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	// Registrations are the only Secrets this controller is keyed by, and they are all named with
-	// the shared prefix — anything else in the queue is not one and has no Cluster to ensure.
-	if req.Namespace != cloudprovider.SecretNamespace ||
-		!strings.HasPrefix(req.Name, cloudprovider.SecretNamePrefix) {
-		return ctrl.Result{}, nil
-	}
-
 	clusterConfig, err := r.readClusterConfiguration(ctx)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	if err := r.ensureCloudCluster(ctx, req.Name, clusterConfig); err != nil {
-		return ctrl.Result{}, err
+	// One key, one Cluster.
+	if cloudprovider.IsRegistrationKey(req.NamespacedName) {
+		return ctrl.Result{}, r.ensureCloudCluster(ctx, req.Name, clusterConfig)
 	}
 
-	if err := r.ensureStaticCluster(ctx, clusterConfig); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	return ctrl.Result{}, nil
+	return ctrl.Result{}, r.ensureStaticCluster(ctx, clusterConfig)
 }
 
-// ensureCloudCluster creates the CAPI Cluster of one registration — the one this reconcile was
-// keyed by. Several providers therefore yield several Clusters, one reconcile each, instead of the
-// single fixed-name Cluster this used to build.
+// ensureCloudCluster creates the CAPI Cluster of the registration this reconcile was keyed by.
 func (r *ClusterReconciler) ensureCloudCluster(ctx context.Context, registrationName string, clusterConfig *clusterConfiguration) error {
 	logger := log.FromContext(ctx)
 

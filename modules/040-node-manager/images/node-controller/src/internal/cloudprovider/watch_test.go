@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -82,6 +83,18 @@ func TestIsRegistration(t *testing.T) {
 			assert.Equal(t, tc.want, IsRegistration(tc.obj))
 		})
 	}
+}
+
+// A controller whose queue mixes registration keys with keys of other kinds routes on this, so a
+// key that is not a registration must not pass — it names no provider to act on.
+func TestIsRegistrationKey(t *testing.T) {
+	assert.True(t, IsRegistrationKey(types.NamespacedName{
+		Namespace: SecretNamespace, Name: SecretNamePrefix + "-yandex",
+	}))
+	assert.False(t, IsRegistrationKey(types.NamespacedName{Name: "worker"}), "a NodeGroup key")
+	assert.False(t, IsRegistrationKey(types.NamespacedName{
+		Namespace: "default", Name: SecretNamePrefix,
+	}), "the right name in the wrong namespace")
 }
 
 // NodeGroupHandler is what keeps a registration event affordable: one status reconcile lists every
