@@ -20,7 +20,6 @@
   stageDependencies:
     setup: ['**/*']
   includePaths:
-  - 'doc-ru-config-values.yaml'
   - 'conversions/v*.yml'
   - 'conversions/v*.yaml'
 {{- if eq $.Env "CSE"}}
@@ -38,7 +37,20 @@
   to: /src/global
   stageDependencies:
     setup: ['**/*']
-  includePaths: ['*cluster_configuration.yaml', '*init_configuration.yaml', '*static_cluster_configuration.yaml']
+  includePaths:
+  - '*init_configuration.yaml'
+  - '*static_cluster_configuration.yaml'
+{{- if eq $.Env "CSE"}}
+  - 'doc-ru-cluster_configuration.yaml'
+- add: /ee/cse/candi/openapi
+  to: /src/global
+  stageDependencies:
+    setup: ['**/*']
+  includePaths:
+  - 'cluster_configuration.yaml'
+{{- else }}
+  - '*cluster_configuration.yaml'
+{{- end }}
 - add: /deckhouse-controller/crds
   to: /src/global/crds
   stageDependencies:
