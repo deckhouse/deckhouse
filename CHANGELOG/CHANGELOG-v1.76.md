@@ -374,8 +374,10 @@
  - **[istio]** Added CARGO_PROXY to ztunnel image build [#20595](https://github.com/deckhouse/deckhouse/pull/20595)
  - **[istio]** CNI-node readonly root filesystem enable fix [#19920](https://github.com/deckhouse/deckhouse/pull/19920)
     When using containerdV2, the performance of istio-cni breaks when mounting internal paths.
+ - **[istio]** Create the ConfigMaps required for additional JWKS root CA certificates. [#22124](https://github.com/deckhouse/deckhouse/pull/22124)
  - **[istio]** Deduplicated federation ServiceEntry and DestinationRule resources by hostname across multiple IstioFederation CRs. [#18375](https://github.com/deckhouse/deckhouse/pull/18375)
     ServiceEntry and DestinationRule resources for federated public services will be recreated with new names. This causes a brief traffic interruption for cross-cluster federated service routing during the first reconciliation after the update.
+ - **[istio]** Fix graceful draining of established HTTP connections when application pods terminate. [#22065](https://github.com/deckhouse/deckhouse/pull/22065)
  - **[istio]** Fixed indent in ztunnel daemonset template [#18256](https://github.com/deckhouse/deckhouse/pull/18256)
  - **[istio]** Reduce CPU and RAM for regenerate multicluster JWT token and sort ingressGateway [#18554](https://github.com/deckhouse/deckhouse/pull/18554)
  - **[istio]** added iptables wrapper in cni-v1x21x6 [#18925](https://github.com/deckhouse/deckhouse/pull/18925)
@@ -393,6 +395,7 @@
  - **[istio]** fixed discovery_operator_versions_to_install.go hook to migrate from 1.21 to 1.25 [#19648](https://github.com/deckhouse/deckhouse/pull/19648)
  - **[istio]** ingressGateway advertise FQDN does not create a ServiceEntry due to an error [#19528](https://github.com/deckhouse/deckhouse/pull/19528)
  - **[keepalived]** Excluded vulnerable pip-25.3 from keepalived final image to fix CVE-2026-1703 [#19111](https://github.com/deckhouse/deckhouse/pull/19111)
+ - **[keepalived]** Fixed Python linking in the keepalived module image. [#22066](https://github.com/deckhouse/deckhouse/pull/22066)
  - **[kube-dns]** Bump Go dependencies in the sts-pods-hosts-appender-webhook and coredns images to fix known CVEs. [#21627](https://github.com/deckhouse/deckhouse/pull/21627)
     The coredns and kube-dns components will restart after the update.
  - **[kube-proxy]** Fixed CVE-2026-33186 and CVE-2026-24051 in kube-proxy dependencies. [#19002](https://github.com/deckhouse/deckhouse/pull/19002)
@@ -409,6 +412,7 @@
     The metallb components (controller, speaker, l2lb) will restart after the update.
  - **[monitoring-kubernetes]** Resolved port conflict with the runtime-audit-engine module and removed excessive pod privileges [#18868](https://github.com/deckhouse/deckhouse/pull/18868)
  - **[multitenancy-manager]** allow DNS queries for default ProjectTemplate [#18572](https://github.com/deckhouse/deckhouse/pull/18572)
+ - **[network-gateway]** Fixed Python linking in the network-gateway module image. [#22066](https://github.com/deckhouse/deckhouse/pull/22066)
  - **[network-gateway]** Updated dnsmasq to v2.92-alt2 to address multiple security vulnerabilities (CVE-2026-*) [#19933](https://github.com/deckhouse/deckhouse/pull/19933)
  - **[network-gateway]** Updated python image source and mitigated pip CVE-2026-1703 [#19114](https://github.com/deckhouse/deckhouse/pull/19114)
  - **[network-policy-engine]** Fixed CVE-2026-34040, CVE-2026-33997, and CVE-2026-33186 in network-policy-engine dependencies. [#19005](https://github.com/deckhouse/deckhouse/pull/19005)
@@ -460,6 +464,7 @@
  - **[registry]** Updated auth image Go dependencies to fix Go CVEs. [#18234](https://github.com/deckhouse/deckhouse/pull/18234)
     Registry pods will be restarted.
  - **[registrypackages]** Added vex with CVE-2026-33186. [#18680](https://github.com/deckhouse/deckhouse/pull/18680)
+ - **[registrypackages]** Rebuild kubernetes-cni with updated Go dependencies to fix CVEs. [#21960](https://github.com/deckhouse/deckhouse/pull/21960)
  - **[registrypackages]** Replace symlinks with actual files in kubernetes artifacts for werf 2.57.1 compatibility [#18662](https://github.com/deckhouse/deckhouse/pull/18662)
  - **[service-with-healthchecks]** Bump Go dependencies in the service-with-healthchecks image to fix known CVEs. [#21592](https://github.com/deckhouse/deckhouse/pull/21592)
     The service-with-healthchecks components (controller, agent) will restart after the update.
@@ -490,6 +495,7 @@
     Kubernetes control-plane components will restart, kubelet will restart
  - **[candi]** Bump patch versions of Kubernetes images. [#18175](https://github.com/deckhouse/deckhouse/pull/18175)
     Kubernetes control-plane components will restart, kubelet will restart
+ - **[candi]** Golang CVE fixes [#22044](https://github.com/deckhouse/deckhouse/pull/22044)
  - **[candi]** Make flag encryption-provider-config-automatic-reload auto enabled when secretEncryptionKey is true [#19287](https://github.com/deckhouse/deckhouse/pull/19287)
     Apiserver will restart if secretEncryptionKey is true
  - **[candi]** add container-selinux package for selinux policies on rhel based distributions. [#17714](https://github.com/deckhouse/deckhouse/pull/17714)
@@ -543,6 +549,7 @@
  - **[istio]** Changing the multi-network Istio documentation [#18591](https://github.com/deckhouse/deckhouse/pull/18591)
  - **[istio]** Correction of the Istio Federatio documentation on single and multi network [#18507](https://github.com/deckhouse/deckhouse/pull/18507)
  - **[istio]** Fix of the vex addition [#20551](https://github.com/deckhouse/deckhouse/pull/20551)
+ - **[istio]** Fixed CVEs in revisions v1.21 and v1.25. [#21991](https://github.com/deckhouse/deckhouse/pull/21991)
  - **[istio]** Git clone for images common-v1x21x6, common-v1x25x2, operator-v1x25x2 and proxyv2-v1x21x6 moved to git section of werf.inc.yaml [#18293](https://github.com/deckhouse/deckhouse/pull/18293)
  - **[istio]** Warning about the inability to use user 1337 for user applications [#18592](https://github.com/deckhouse/deckhouse/pull/18592)
  - **[istio]** changed group names in prometheus-rules of controlplane alerts [#18910](https://github.com/deckhouse/deckhouse/pull/18910)

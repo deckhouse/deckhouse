@@ -83,24 +83,31 @@ Content-Disposition: attachment; filename="<ИМЯ-ПАКЕТА>.svg"
 
 ### Загрузка Deckhouse CLI (`/v1/images/`) — публичный
 
-Эти эндпоинты доступны через публичный Ingress (`registry-packages-proxy.<publicDomain>`) и требуют действительный токен Kubernetes (или клиентский сертификат, принимаемый `kube-rbac-proxy`) и право RBAC `get` на subresource `deployments/cli-binary` с именем `registry-packages-proxy` в namespace `d8-cloud-instance-manager`.
+Эти эндпоинты доступны через публичный Ingress (`registry-packages-proxy.<PUBLIC_DOMAIN>`) и требуют действительный токен Kubernetes или клиентский сертификат, принимаемый `kube-rbac-proxy`. У учётной записи должно быть разрешение RBAC `get` для субресурса `deployments/cli-binary` с именем `registry-packages-proxy` в неймспейсе `d8-cloud-instance-manager`.
 
-Выдайте доступ через ClusterRole `d8:registry-packages-proxy:cli-download` (привяжите к пользователям или ServiceAccount через ClusterRoleBinding или RoleBinding).
+Чтобы предоставить необходимое разрешение, используйте ClusterRole `d8:registry-packages-proxy:cli-download`. Подробнее о настройке доступа — в подразделе [«Выдача доступа к загрузке Deckhouse CLI»](#выдача-доступа-к-загрузке-deckhouse-cli).
+
+Это же разрешение используется для загрузки плагинов Deckhouse CLI. Плагины доступны по пути `deckhouse-cli/plugins/<PLUGIN>` через те же эндпоинты `/v1/images/`.
 
 | Метод | Путь                            | Описание |
 |-------|---------------------------------|----------|
-| `GET` | `/v1/images/<ОБРАЗ>/tags`       | JSON со списком тегов |
-| `GET`, `HEAD` | `/v1/images/<ОБРАЗ>/tags/<ТЕГ>` | OCI-образ в формате `application/x-gzip` (слои сведены) |
+| `GET` | `/v1/images/<IMAGE>/tags`       | Возвращает JSON со списком тегов |
+| `GET`, `HEAD` | `/v1/images/<IMAGE>/images/<VERSION>` | Возвращает OCI-образ в формате `application/x-gzip` (со сведёнными слоями) |
+| `GET` | `/v1/images/<IMAGE>/manifests/<REFERENCE>` | Возвращает манифест образа |
 
-Допустимые значения для `<ОБРАЗ>`:
+Допустимые значения `<IMAGE>`:
 
-- `deckhouse-cli`
-- `deckhouse-cli/plugins/<ПЛАГИН>` (один сегмент пути для `<ПЛАГИН>`)
+- `deckhouse-cli`;
+- `deckhouse-cli/plugins/<PLUGIN>`, где `<PLUGIN>` — один сегмент пути.
 
-Пример:
+Эндпоинт `/v1/images/<IMAGE>/images/<VERSION>` принимает необязательный параметр запроса `platform=<OS>-<ARCH>` и выбирает соответствующий дочерний манифест из мультиплатформенного индекса. Если параметр не указан, используется платформа `linux/amd64`.
+
+Пример запроса списка тегов Deckhouse CLI:
 
 ```shell
-curl -fsS -H "Authorization: Bearer ${TOKEN}" "https://registry-packages-proxy.example.com/v1/images/deckhouse-cli/tags"
+curl -fsS \
+  -H "Authorization: Bearer ${TOKEN}" \
+  "https://registry-packages-proxy.example.com/v1/images/deckhouse-cli/tags"
 ```
 
 ### Внутренний эндпоинт `/package`
@@ -133,8 +140,80 @@ curl -fsS -H "Authorization: Bearer ${TOKEN}" "https://registry-packages-proxy.e
 
 | ClusterRole | Назначение |
 |-------------|------------|
-| `d8:registry-packages-proxy:cli-download` | Доступ к `/v1/images/*` |
+| `d8:registry-packages-proxy:cli-download` | Доступ к `/v1/images/*`: исполняемый файл `deckhouse-cli` и его плагины |
 | `d8:registry-packages-proxy:packages-download` | Зарезервирована для будущих защищённых маршрутов `/v1/packages/*` (иконки отдаются анонимно, доступ только изнутри кластера) |
+
+Ни одна из ролей не привязана никому по умолчанию.
+
+## Выдача доступа к загрузке Deckhouse CLI
+
+Для работы [Deckhouse CLI](/products/kubernetes-platform/documentation/v1/cli/d8/) необходимо предоставить пользователю права на загрузку исполняемых файлов и получение публичного адреса прокси.
+
+{% alert level="warning" %}
+Для создания ClusterRoleBinding или RoleBinding учётная запись должна иметь право назначать соответствующую роль. При необходимости используйте учётную запись с соответствующими правами, например, `/etc/kubernetes/super-admin.conf`.
+{% endalert %}
+
+1. Предоставьте доступ к загрузке исполняемых файлов.
+   Для этого используйте ClusterRole `d8:registry-packages-proxy:cli-download`.
+   Эта роль предоставляет права, необходимые для самообновления Deckhouse CLI (`d8 cli`) и загрузки плагинов (`d8 plugins`).
+
+   Создайте ClusterRoleBinding:
+
+   ```shell
+   d8 k create clusterrolebinding d8-cli-download \
+     --clusterrole=d8:registry-packages-proxy:cli-download \
+     --group=<GROUP>
+   ```
+
+   Вместо `--group=<GROUP>` можно предоставить права конкретному пользователю (`--user=<EMAIL>`) или сервисному аккаунту (`--serviceaccount=<NAMESPACE>:<NAME>`).
+
+1. Предоставьте доступ к получению публичного адреса прокси.
+   Deckhouse CLI получает публичный адрес прокси из Ingress `registry-packages-proxy`.
+
+   - Создайте Role `d8-cli-ingress`, которая предоставляет разрешение `get` для этого Ingress:
+
+     ```shell
+     d8 k -n d8-cloud-instance-manager create role d8-cli-ingress \
+       --verb=get \
+       --resource=ingresses \
+       --resource-name=registry-packages-proxy
+     ```
+
+   - Создайте RoleBinding для назначения созданной роли нужной группе:
+
+     ```shell
+     d8 k -n d8-cloud-instance-manager create rolebinding d8-cli-ingress \
+       --role=d8-cli-ingress \
+       --group=<GROUP>
+     ```
+
+   Без предоставленного доступа адрес прокси необходимо указывать вручную:
+
+   ```shell
+   d8 cli check --rpp-endpoint https://registry-packages-proxy.<PUBLIC_DOMAIN>
+   ```
+
+1. Проверьте предоставленные права без входа под соответствующим пользователем.
+   Права ограничены через `resourceNames`, поэтому указывайте имя соответствующего ресурса при проверке.
+
+   - Проверьте наличие прав на загрузку исполняемых файлов:
+
+     ```shell
+     d8 k auth can-i get deployments/registry-packages-proxy \
+       -n d8-cloud-instance-manager \
+       --subresource=cli-binary \
+       --as=<EMAIL_OR_SERVICE_ACCOUNT>
+     ```
+
+   - Проверьте наличие прав на получение Ingress `registry-packages-proxy`:
+
+     ```shell
+     d8 k auth can-i get ingresses/registry-packages-proxy \
+       -n d8-cloud-instance-manager \
+       --as=<EMAIL_OR_SERVICE_ACCOUNT>
+     ```
+
+   `Kube-rbac-proxy` кеширует результаты авторизации: отказ — на 30 секунд, разрешение — на 5 минут. Учитывайте это при проверке: после предоставления права ответ `403` может возвращаться ещё до 30 секунд, а после отзыва права доступ может сохраняться до 5 минут.
 
 ## Ограничения
 

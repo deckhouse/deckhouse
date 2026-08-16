@@ -325,6 +325,10 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 
 			Expect(f.KubernetesResource("ConfigMap", "d8-user-authz", "user-authz-webhook").Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("ConfigMap", "d8-user-authz", "user-authz-webhook").Field("data.config\\.json").String()).To(MatchJSON(testCRDsWithCRDsKeyJSON))
+
+			// Mirrors enableMultiTenancy for the multitenancy.py validating webhook — rendered
+			// in the same block (and thus the same apply) as the namespace above.
+			Expect(f.KubernetesResource("ConfigMap", "d8-user-authz", "d8-user-authz-multitenancy-state").Field("data.enableMultiTenancy").String()).To(Equal("true"))
 		})
 
 		It("Should configure user-authz-webhook to use local kube-apiserver endpoint", func() {

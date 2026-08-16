@@ -15,8 +15,10 @@
 package check
 
 import (
+	"encoding/json"
 	"testing"
 
+	"github.com/mitchellh/copystructure"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/yaml"
@@ -37,6 +39,88 @@ func TestStatistics_Format(t *testing.T) {
 
 	assert.EqualValues(t, expectedStatistics, statistics)
 	assert.Equal(t, statisticsYAMLPrintable, string(formattedStatistics))
+}
+
+func TestStatistics_Trim(t *testing.T) {
+	resourceChanges := []any{
+		map[string]any{
+			"type": "yandex_compute_instance",
+			"name": "master",
+			"change": map[string]any{
+				"actions": []any{"update"},
+				"before":  map[string]any{"name": "master"},
+				"after":   map[string]any{"name": "master"},
+			},
+		},
+	}
+	originalPlan := plan.Plan{
+		"format_version":   "0.1",
+		"configuration":    map[string]any{"root_module": map[string]any{}},
+		"resource_changes": resourceChanges,
+		"prior_state": map[string]any{
+			"values": map[string]any{
+				"root_module": map[string]any{
+					"resources": []any{
+						map[string]any{
+							"name": "master",
+							"type": "yandex_compute_instance",
+							"values": map[string]any{
+								"tags":      map[string]any{"Name": "master-0"},
+								"boot_disk": []any{"large blob"},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	statistics := Statistics{
+		Cluster:            ClusterCheckResult{Status: "ok"},
+		InfrastructurePlan: []plan.Plan{originalPlan},
+	}
+
+	copied, err := copystructure.Copy(originalPlan)
+	require.NoError(t, err)
+
+	trimmed, err := statistics.Trim()
+	require.NoError(t, err)
+
+	require.Len(t, trimmed.InfrastructurePlan, 1)
+
+	actualPlan, err := json.Marshal(trimmed.InfrastructurePlan[0])
+	require.NoError(t, err)
+	expectedPlan, err := json.Marshal(plan.Plan{
+		"resource_changes": []any{
+			map[string]any{
+				"type": "yandex_compute_instance",
+				"name": "master",
+				"change": map[string]any{
+					"actions": []any{"update"},
+					"before":  map[string]any{"name": "master"},
+					"after":   map[string]any{"name": "master"},
+				},
+			},
+		},
+		"prior_state": map[string]any{
+			"values": map[string]any{
+				"root_module": map[string]any{
+					"resources": []any{
+						map[string]any{
+							"name":   "master",
+							"type":   "yandex_compute_instance",
+							"values": map[string]any{"tags": map[string]any{"Name": "master-0"}},
+						},
+					},
+				},
+			},
+		},
+	})
+	require.NoError(t, err)
+	assert.JSONEq(t, string(expectedPlan), string(actualPlan))
+
+	// Trim must not mutate the receiver: callers may still need the
+	// untrimmed statistics after calling it.
+	assert.Equal(t, copied.(plan.Plan), statistics.InfrastructurePlan[0])
 }
 
 const (

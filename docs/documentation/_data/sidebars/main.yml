@@ -1394,6 +1394,10 @@ entries:
                 en: Descheduler module
                 ru: Модуль descheduler
               url: /architecture/kubernetes-and-scheduling/descheduler.html
+            - title:
+                en: Pod-reloader module
+                ru: Модуль pod-reloader
+              url: /architecture/kubernetes-and-scheduling/pod-reloader.html              
         - title:
             en: Cluster & Infrastructure subsystem
             ru: Подсистема Cluster & Infrastructure
@@ -1495,6 +1499,10 @@ entries:
                     ru: Модуль chrony
                   url: /architecture/cluster-and-infrastructure/infrastructure/chrony.html
                 - title:
+                    en: Gpu module
+                    ru: Модуль gpu
+                  url: /architecture/cluster-and-infrastructure/infrastructure/gpu.html
+                - title:
                     en: Terraform-manager module
                     ru: Модуль terraform-manager
                   url: /architecture/cluster-and-infrastructure/infrastructure/terraform-manager.html
@@ -1566,6 +1574,10 @@ entries:
                 en: Cni-cilium module
                 ru: Модуль cni-cilium
               url: /architecture/network/cni-cilium.html
+            - title:
+                en: Cilium-hubble module
+                ru: Модуль cilium-hubble
+              url: /architecture/network/cilium-hubble.html              
             - title:
                 en: Ingress-nginx module
                 ru: Модуль ingress-nginx
@@ -1715,6 +1727,22 @@ entries:
                 ru: Модули логирования
               url: /architecture/observability/logging.html
         - title:
+            en: Managed Services subsystem
+            ru: Подсистема Managed Services
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /architecture/managed-services/
+            - title:
+                en: Managed-memcached module
+                ru: Модуль managed-memcached
+              url: /architecture/managed-services/managed-memcached.html
+            - title:
+                en: Managed-postgres module
+                ru: Модуль managed-postgres
+              url: /architecture/managed-services/managed-postgres.html              
+        - title:
             en: Virtualization subsystem
             ru: Подсистема Virtualization
           folders:
@@ -1766,6 +1794,10 @@ entries:
             en: Supported K8s & OS versions
             ru: Поддерживаемые версии K8s и ОС
           url: /reference/supported_versions.html
+        - title:
+            en: Kubernetes conformance test results
+            ru: Результаты Kubernetes conformance-тестов
+          url: /reference/kubernetes-conformance.html
         - title:
             en: Revision comparison
             ru: Сравнение редакций

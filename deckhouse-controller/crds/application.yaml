@@ -11,8 +11,6 @@ spec:
     kind: Application
     listKind: ApplicationList
     plural: applications
-    shortNames:
-    - app
     singular: application
   scope: Namespaced
   versions:
