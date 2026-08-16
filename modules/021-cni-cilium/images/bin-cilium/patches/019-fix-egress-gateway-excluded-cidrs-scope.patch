@@ -1,0 +1,495 @@
+diff --git a/pkg/egressgateway/manager.go b/pkg/egressgateway/manager.go
+index 971d84e..ecd43fe 100644
+--- a/pkg/egressgateway/manager.go
++++ b/pkg/egressgateway/manager.go
+@@ -118,7 +118,7 @@ type Manager struct {
+ 
+ 	// policyConfigsBySourceIP stores slices of policy configs indexed by
+ 	// the policies' source/endpoint IPs
+-	policyConfigsBySourceIP map[string][]*PolicyConfig
++	policyConfigsBySourceIP map[netip.Addr][]*PolicyConfig
+ 
+ 	// epDataStore stores endpointId to endpoint metadata mapping
+ 	epDataStore map[endpointID]*endpointMetadata
+@@ -211,7 +211,7 @@ func NewEgressGatewayManager(p Params) (out struct {
+ func newEgressGatewayManager(p Params) (*Manager, error) {
+ 	manager := &Manager{
+ 		policyConfigs:                 make(map[policyID]*PolicyConfig),
+-		policyConfigsBySourceIP:       make(map[string][]*PolicyConfig),
++		policyConfigsBySourceIP:       make(map[netip.Addr][]*PolicyConfig),
+ 		epDataStore:                   make(map[endpointID]*endpointMetadata),
+ 		identityAllocator:             p.IdentityAllocator,
+ 		reconciliationTriggerInterval: p.Config.EgressGatewayReconciliationTriggerInterval,
+@@ -549,61 +549,98 @@ func (manager *Manager) updatePoliciesMatchedEndpointIDs() {
+ }
+ 
+ func (manager *Manager) updatePoliciesBySourceIP() {
+-	manager.policyConfigsBySourceIP = make(map[string][]*PolicyConfig)
++	manager.policyConfigsBySourceIP = make(map[netip.Addr][]*PolicyConfig)
+ 
+ 	for _, policy := range manager.policyConfigs {
+ 		for _, ep := range policy.matchedEndpoints {
+ 			for _, epIP := range ep.ips {
+-				ip := epIP.String()
+-				manager.policyConfigsBySourceIP[ip] = append(manager.policyConfigsBySourceIP[ip], policy)
++				manager.policyConfigsBySourceIP[epIP] = append(manager.policyConfigsBySourceIP[epIP], policy)
+ 			}
+ 		}
+ 	}
+ }
+ 
+-// policyMatches returns true if there exists at least one policy matching the
+-// given parameters.
++// resolvedEgressRule is a fully resolved entry of the egress policy map: for a
++// given source IP, traffic towards dstCIDR is SNATed to egressIP and redirected
++// to gatewayIP.
++type resolvedEgressRule struct {
++	dstCIDR   netip.Prefix
++	egressIP  netip.Addr
++	gatewayIP netip.Addr
++}
++
++// resolveEgressRules returns the egress policy map entries for the given source
++// IP, after settling the conflicts between all the policies selecting it.
+ //
+-// This method takes:
+-//   - a source IP: this is an optimization that allows to iterate only through
+-//     policies that reference an endpoint with the given source IP
+-//   - a callback function f: this function is invoked for each policy and for
+-//     each combination of the policy's endpoints and destination/excludedCIDRs.
++// The map is keyed by (source IP, destination CIDR) only, so every policy
++// selecting an endpoint shares a single LPM trie for it. Programming each
++// policy on its own therefore lets the excludedCIDRs of one policy win the
++// lookup against the destinationCIDRs of another one, which would silently
++// widen an exclusion to policies that never declared it. To keep exclusions
++// scoped to their own policy, all the destination and excluded CIDRs of all the
++// matching policies are resolved together here:
+ //
+-// The callback f takes as arguments:
+-// - the given endpoint
+-// - the destination CIDR
+-// - a boolean value indicating if the CIDR belongs to the excluded ones
+-// - the gatewayConfig of the  policy
++//   - a policy claims a prefix when one of its destinationCIDRs covers it and
++//     none of its excludedCIDRs does;
++//   - the claim backed by the most specific destinationCIDR wins, ties are
++//     broken by policy name so that the outcome does not depend on the
++//     iteration order of the policy maps;
++//   - a prefix nobody claims is programmed as an excluded entry, so that less
++//     specific entries cannot catch it.
+ //
+-// This method returns true whenever the f callback matches one of the endpoint
+-// and CIDR tuples (i.e. whenever one callback invocation returns true)
+-func (manager *Manager) policyMatches(sourceIP netip.Addr, f func(netip.Addr, netip.Prefix, bool, *gatewayConfig) bool) bool {
+-	for _, policy := range manager.policyConfigsBySourceIP[sourceIP.String()] {
+-		for _, ep := range policy.matchedEndpoints {
+-			for _, endpointIP := range ep.ips {
+-				if endpointIP != sourceIP {
+-					continue
+-				}
+-
+-				isExcludedCIDR := false
+-				for _, dstCIDR := range policy.dstCIDRs {
+-					if f(endpointIP, dstCIDR, isExcludedCIDR, &policy.gatewayConfig) {
+-						return true
+-					}
+-				}
+-
+-				isExcludedCIDR = true
+-				for _, excludedCIDR := range policy.excludedCIDRs {
+-					if f(endpointIP, excludedCIDR, isExcludedCIDR, &policy.gatewayConfig) {
+-						return true
+-					}
+-				}
++// Resolving every prefix of every matching policy is enough to cover all the
++// addresses: for any address the longest resolved prefix containing it is
++// covered by exactly the same destination and excluded CIDRs as the address
++// itself, so the LPM lookup yields the same decision.
++func (manager *Manager) resolveEgressRules(sourceIP netip.Addr) []resolvedEgressRule {
++	policies := manager.policyConfigsBySourceIP[sourceIP]
++	if len(policies) == 0 {
++		return nil
++	}
++
++	prefixes := map[netip.Prefix]struct{}{}
++	for _, policy := range policies {
++		for _, dstCIDR := range policy.dstCIDRs {
++			prefixes[dstCIDR.Masked()] = struct{}{}
++		}
++		for _, excludedCIDR := range policy.excludedCIDRs {
++			prefixes[excludedCIDR.Masked()] = struct{}{}
++		}
++	}
++
++	rules := make([]resolvedEgressRule, 0, len(prefixes))
++
++	for prefix := range prefixes {
++		var winner *PolicyConfig
++		winnerBits := -1
++
++		for _, policy := range policies {
++			bits, ok := policy.claims(prefix)
++			if !ok {
++				continue
++			}
++
++			if bits > winnerBits ||
++				(bits == winnerBits && policy.id.String() < winner.id.String()) {
++				winner, winnerBits = policy, bits
+ 			}
+ 		}
++
++		rule := resolvedEgressRule{
++			dstCIDR:   prefix,
++			egressIP:  EgressIPNotFoundIPv4,
++			gatewayIP: ExcludedCIDRIPv4,
++		}
++
++		if winner != nil {
++			rule.egressIP = winner.gatewayConfig.egressIP
++			rule.gatewayIP = winner.gatewayConfig.gatewayIP
++		}
++
++		rules = append(rules, rule)
+ 	}
+ 
+-	return false
++	return rules
+ }
+ 
+ func (manager *Manager) regenerateGatewayConfigs() {
+@@ -646,36 +683,29 @@ func (manager *Manager) addMissingEgressRules() {
+ 			egressPolicies[*key] = *val
+ 		})
+ 
+-	addEgressRule := func(endpointIP netip.Addr, dstCIDR netip.Prefix, excludedCIDR bool, gwc *gatewayConfig) {
+-		policyKey := egressmap.NewEgressPolicyKey4(endpointIP, dstCIDR)
+-		policyVal, policyPresent := egressPolicies[policyKey]
++	for sourceIP := range manager.policyConfigsBySourceIP {
++		for _, rule := range manager.resolveEgressRules(sourceIP) {
++			policyKey := egressmap.NewEgressPolicyKey4(sourceIP, rule.dstCIDR)
++			policyVal, policyPresent := egressPolicies[policyKey]
+ 
+-		gatewayIP := gwc.gatewayIP
+-		if excludedCIDR {
+-			gatewayIP = ExcludedCIDRIPv4
+-		}
+-
+-		if policyPresent && policyVal.Match(gwc.egressIP, gatewayIP) {
+-			return
+-		}
++			if policyPresent && policyVal.Match(rule.egressIP, rule.gatewayIP) {
++				continue
++			}
+ 
+-		logger := log.WithFields(logrus.Fields{
+-			logfields.SourceIP:        endpointIP,
+-			logfields.DestinationCIDR: dstCIDR.String(),
+-			logfields.EgressIP:        gwc.egressIP,
+-			logfields.GatewayIP:       gatewayIP,
+-		})
++			logger := log.WithFields(logrus.Fields{
++				logfields.SourceIP:        sourceIP,
++				logfields.DestinationCIDR: rule.dstCIDR.String(),
++				logfields.EgressIP:        rule.egressIP,
++				logfields.GatewayIP:       rule.gatewayIP,
++			})
+ 
+-		if err := manager.policyMap.Update(endpointIP, dstCIDR, gwc.egressIP, gatewayIP); err != nil {
+-			logger.WithError(err).Error("Error applying egress gateway policy")
+-		} else {
+-			logger.Debug("Egress gateway policy applied")
++			if err := manager.policyMap.Update(sourceIP, rule.dstCIDR, rule.egressIP, rule.gatewayIP); err != nil {
++				logger.WithError(err).Error("Error applying egress gateway policy")
++			} else {
++				logger.Debug("Egress gateway policy applied")
++			}
+ 		}
+ 	}
+-
+-	for _, policyConfig := range manager.policyConfigs {
+-		policyConfig.forEachEndpointAndCIDR(addEgressRule)
+-	}
+ }
+ 
+ // removeUnusedEgressRules is responsible for removing any entry in the egress policy BPF map which
+@@ -687,28 +717,33 @@ func (manager *Manager) removeUnusedEgressRules() {
+ 			egressPolicies[*key] = *val
+ 		})
+ 
++	// A single source IP usually owns several entries, so keep its resolved
++	// rules around instead of settling the policy conflicts for every entry.
++	resolved := map[netip.Addr][]resolvedEgressRule{}
++
+ 	for policyKey, policyVal := range egressPolicies {
+-		matchPolicy := func(endpointIP netip.Addr, dstCIDR netip.Prefix, excludedCIDR bool, gwc *gatewayConfig) bool {
+-			gatewayIP := gwc.gatewayIP
+-			if excludedCIDR {
+-				gatewayIP = ExcludedCIDRIPv4
+-			}
++		sourceIP := policyKey.GetSourceIP()
+ 
+-			return policyKey.Match(endpointIP, dstCIDR) && policyVal.Match(gwc.egressIP, gatewayIP)
++		rules, ok := resolved[sourceIP]
++		if !ok {
++			rules = manager.resolveEgressRules(sourceIP)
++			resolved[sourceIP] = rules
+ 		}
+ 
+-		if manager.policyMatches(policyKey.GetSourceIP(), matchPolicy) {
++		if slices.ContainsFunc(rules, func(rule resolvedEgressRule) bool {
++			return policyKey.Match(sourceIP, rule.dstCIDR) && policyVal.Match(rule.egressIP, rule.gatewayIP)
++		}) {
+ 			continue
+ 		}
+ 
+ 		logger := log.WithFields(logrus.Fields{
+-			logfields.SourceIP:        policyKey.GetSourceIP(),
++			logfields.SourceIP:        sourceIP,
+ 			logfields.DestinationCIDR: policyKey.GetDestCIDR().String(),
+ 			logfields.EgressIP:        policyVal.GetEgressAddr(),
+ 			logfields.GatewayIP:       policyVal.GetGatewayAddr(),
+ 		})
+ 
+-		if err := manager.policyMap.Delete(policyKey.GetSourceIP(), policyKey.GetDestCIDR()); err != nil {
++		if err := manager.policyMap.Delete(sourceIP, policyKey.GetDestCIDR()); err != nil {
+ 			logger.WithError(err).Error("Error removing egress gateway policy")
+ 		} else {
+ 			logger.Debug("Egress gateway policy removed")
+diff --git a/pkg/egressgateway/policy.go b/pkg/egressgateway/policy.go
+index 2041d4f..cc3262c 100644
+--- a/pkg/egressgateway/policy.go
++++ b/pkg/egressgateway/policy.go
+@@ -195,26 +195,38 @@ func (gwc *gatewayConfig) deriveFromPolicyGatewayConfig(gc *policyGatewayConfig)
+ 	return nil
+ }
+ 
+-// forEachEndpointAndCIDR iterates through each combination of endpoints and
+-// destination/excluded CIDRs of the receiver policy, and for each of them it
+-// calls the f callback function passing the given endpoint and CIDR, together
+-// with a boolean value indicating if the CIDR belongs to the excluded ones and
+-// the gatewayConfig of the receiver policy
+-func (config *PolicyConfig) forEachEndpointAndCIDR(f func(netip.Addr, netip.Prefix, bool, *gatewayConfig)) {
+-
+-	for _, endpoint := range config.matchedEndpoints {
+-		for _, endpointIP := range endpoint.ips {
+-			isExcludedCIDR := false
+-			for _, dstCIDR := range config.dstCIDRs {
+-				f(endpointIP, dstCIDR, isExcludedCIDR, &config.gatewayConfig)
+-			}
++// prefixCovers returns true if every address of the inner prefix is also part
++// of the outer one.
++func prefixCovers(outer, inner netip.Prefix) bool {
++	return outer.Bits() <= inner.Bits() && outer.Contains(inner.Addr())
++}
+ 
+-			isExcludedCIDR = true
+-			for _, excludedCIDR := range config.excludedCIDRs {
+-				f(endpointIP, excludedCIDR, isExcludedCIDR, &config.gatewayConfig)
+-			}
++// claims reports whether the receiver policy applies to the whole given prefix,
++// and if so how many bits the most specific destination CIDR covering it has.
++//
++// An excluded CIDR only revokes the claim when it covers the prefix entirely.
++// An excluded CIDR narrower than the prefix leaves the claim intact, because
++// such a CIDR is resolved on its own as a more specific prefix.
++func (config *PolicyConfig) claims(prefix netip.Prefix) (int, bool) {
++	for _, excludedCIDR := range config.excludedCIDRs {
++		if prefixCovers(excludedCIDR, prefix) {
++			return 0, false
++		}
++	}
++
++	bits, found := 0, false
++
++	for _, dstCIDR := range config.dstCIDRs {
++		if !prefixCovers(dstCIDR, prefix) {
++			continue
++		}
++
++		if !found || dstCIDR.Bits() > bits {
++			bits, found = dstCIDR.Bits(), true
+ 		}
+ 	}
++
++	return bits, found
+ }
+ 
+ // ParseCEGP takes a CiliumEgressGatewayPolicy CR and converts to PolicyConfig,
+diff --git a/pkg/egressgateway/policy_conflict_test.go b/pkg/egressgateway/policy_conflict_test.go
+new file mode 100644
+index 0000000..12d11d9
+--- /dev/null
++++ b/pkg/egressgateway/policy_conflict_test.go
+@@ -0,0 +1,171 @@
++// SPDX-License-Identifier: Apache-2.0
++// Copyright Authors of Cilium
++
++package egressgateway
++
++import (
++	"net/netip"
++	"testing"
++
++	"github.com/stretchr/testify/require"
++	"k8s.io/apimachinery/pkg/types"
++)
++
++// excludedGatewayIP is the gateway IP of an entry the datapath answers by
++// skipping the egress gateway altogether.
++const excludedGatewayIP = "0.0.0.1"
++
++func conflictTestPolicy(name, gatewayIP, egressIP string, dstCIDRs, excludedCIDRs []string) *PolicyConfig {
++	config := &PolicyConfig{
++		id: types.NamespacedName{Name: name},
++		gatewayConfig: gatewayConfig{
++			gatewayIP: netip.MustParseAddr(gatewayIP),
++			egressIP:  netip.MustParseAddr(egressIP),
++		},
++	}
++
++	for _, cidr := range dstCIDRs {
++		config.dstCIDRs = append(config.dstCIDRs, netip.MustParsePrefix(cidr))
++	}
++
++	for _, cidr := range excludedCIDRs {
++		config.excludedCIDRs = append(config.excludedCIDRs, netip.MustParsePrefix(cidr))
++	}
++
++	return config
++}
++
++// conflictTestGateway mimics the LPM lookup the datapath performs on the egress
++// policy map and returns the gateway IP the packet would be sent to.
++func conflictTestGateway(rules []resolvedEgressRule, dst string) string {
++	addr := netip.MustParseAddr(dst)
++
++	gatewayIP, bits := "no-entry", -1
++	for _, rule := range rules {
++		if rule.dstCIDR.Contains(addr) && rule.dstCIDR.Bits() > bits {
++			gatewayIP, bits = rule.gatewayIP.String(), rule.dstCIDR.Bits()
++		}
++	}
++
++	return gatewayIP
++}
++
++// TestResolveEgressRulesScopesExclusionsToTheirPolicy checks that the
++// excludedCIDRs of a policy do not suppress the destinationCIDRs of another
++// policy selecting the same endpoint.
++func TestResolveEgressRulesScopesExclusionsToTheirPolicy(t *testing.T) {
++	podIP := netip.MustParseAddr("10.111.0.5")
++
++	policyA := conflictTestPolicy("policy-a", "1.1.1.1", "1.1.1.100", []string{"0.0.0.0/0"}, []string{"10.10.0.0/16"})
++	policyB := conflictTestPolicy("policy-b", "2.2.2.2", "2.2.2.200", []string{"10.0.0.0/8"}, nil)
++
++	manager := &Manager{policyConfigsBySourceIP: map[netip.Addr][]*PolicyConfig{
++		podIP: {policyA, policyB},
++	}}
++
++	rules := manager.resolveEgressRules(podIP)
++
++	require.Equal(t, "2.2.2.2", conflictTestGateway(rules, "10.10.1.1"), "excluded by policy-a, still routed by policy-b")
++	require.Equal(t, "2.2.2.2", conflictTestGateway(rules, "10.20.1.1"), "policy-b has the most specific destination")
++	require.Equal(t, "1.1.1.1", conflictTestGateway(rules, "8.8.8.8"), "only policy-a matches")
++
++	// One entry per distinct destination or excluded prefix.
++	require.Len(t, rules, 3)
++}
++
++// TestResolveEgressRulesSinglePolicy checks that a policy that does not overlap
++// with any other one is programmed exactly as before.
++func TestResolveEgressRulesSinglePolicy(t *testing.T) {
++	podIP := netip.MustParseAddr("10.111.0.5")
++
++	policyA := conflictTestPolicy("policy-a", "1.1.1.1", "1.1.1.100", []string{"0.0.0.0/0"}, []string{"10.10.0.0/16"})
++
++	manager := &Manager{policyConfigsBySourceIP: map[netip.Addr][]*PolicyConfig{
++		podIP: {policyA},
++	}}
++
++	rules := manager.resolveEgressRules(podIP)
++
++	require.Equal(t, excludedGatewayIP, conflictTestGateway(rules, "10.10.1.1"))
++	require.Equal(t, "1.1.1.1", conflictTestGateway(rules, "8.8.8.8"))
++	require.Len(t, rules, 2)
++}
++
++// TestResolveEgressRulesNestedCIDRs checks the resolution when a policy routes
++// a subnet that another policy excludes from a wider one.
++func TestResolveEgressRulesNestedCIDRs(t *testing.T) {
++	podIP := netip.MustParseAddr("10.111.0.5")
++
++	policyA := conflictTestPolicy("policy-a", "1.1.1.1", "1.1.1.100", []string{"10.0.0.0/8"}, []string{"10.10.0.0/16"})
++	policyB := conflictTestPolicy("policy-b", "2.2.2.2", "2.2.2.200", []string{"10.10.5.0/24"}, nil)
++
++	manager := &Manager{policyConfigsBySourceIP: map[netip.Addr][]*PolicyConfig{
++		podIP: {policyA, policyB},
++	}}
++
++	rules := manager.resolveEgressRules(podIP)
++
++	require.Equal(t, "2.2.2.2", conflictTestGateway(rules, "10.10.5.5"), "policy-b routes a subnet policy-a excludes")
++	require.Equal(t, excludedGatewayIP, conflictTestGateway(rules, "10.10.1.1"), "excluded and claimed by nobody")
++	require.Equal(t, "1.1.1.1", conflictTestGateway(rules, "10.20.0.1"), "plain policy-a destination")
++	require.Equal(t, "no-entry", conflictTestGateway(rules, "8.8.8.8"), "outside every destination")
++}
++
++// TestResolveEgressRulesIsDeterministic checks that two policies competing for
++// the very same destination always resolve to the same gateway, regardless of
++// the order they are stored in.
++func TestResolveEgressRulesIsDeterministic(t *testing.T) {
++	podIP := netip.MustParseAddr("10.111.0.5")
++
++	policyA := conflictTestPolicy("policy-a", "1.1.1.1", "1.1.1.100", []string{"0.0.0.0/0"}, nil)
++	policyB := conflictTestPolicy("policy-b", "2.2.2.2", "2.2.2.200", []string{"0.0.0.0/0"}, nil)
++
++	for _, policies := range [][]*PolicyConfig{{policyA, policyB}, {policyB, policyA}} {
++		manager := &Manager{policyConfigsBySourceIP: map[netip.Addr][]*PolicyConfig{
++			podIP: policies,
++		}}
++
++		require.Equal(t, "1.1.1.1", conflictTestGateway(manager.resolveEgressRules(podIP), "8.8.8.8"))
++	}
++}
++
++// TestResolveEgressRulesPerEndpoint checks that exclusions stay confined to the
++// endpoints selected by the policy declaring them.
++func TestResolveEgressRulesPerEndpoint(t *testing.T) {
++	podA := netip.MustParseAddr("10.111.0.5")
++	podB := netip.MustParseAddr("10.111.0.6")
++
++	policyA := conflictTestPolicy("policy-a", "1.1.1.1", "1.1.1.100", []string{"0.0.0.0/0"}, []string{"10.10.0.0/16"})
++	policyB := conflictTestPolicy("policy-b", "2.2.2.2", "2.2.2.200", []string{"0.0.0.0/0"}, nil)
++
++	manager := &Manager{policyConfigsBySourceIP: map[netip.Addr][]*PolicyConfig{
++		podA: {policyA},
++		podB: {policyB},
++	}}
++
++	require.Equal(t, excludedGatewayIP, conflictTestGateway(manager.resolveEgressRules(podA), "10.10.1.1"))
++	require.Equal(t, "2.2.2.2", conflictTestGateway(manager.resolveEgressRules(podB), "10.10.1.1"))
++}
++
++// TestResolveEgressRulesEgressIP checks that an entry carries the egress IP of
++// the policy that won it.
++func TestResolveEgressRulesEgressIP(t *testing.T) {
++	podIP := netip.MustParseAddr("10.111.0.5")
++
++	policyA := conflictTestPolicy("policy-a", "1.1.1.1", "1.1.1.100", []string{"0.0.0.0/0"}, []string{"10.10.0.0/16"})
++	policyB := conflictTestPolicy("policy-b", "2.2.2.2", "2.2.2.200", []string{"10.0.0.0/8"}, nil)
++
++	manager := &Manager{policyConfigsBySourceIP: map[netip.Addr][]*PolicyConfig{
++		podIP: {policyA, policyB},
++	}}
++
++	rulesByPrefix := map[string]resolvedEgressRule{}
++	for _, rule := range manager.resolveEgressRules(podIP) {
++		rulesByPrefix[rule.dstCIDR.String()] = rule
++	}
++
++	require.Equal(t, "1.1.1.100", rulesByPrefix["0.0.0.0/0"].egressIP.String())
++	require.Equal(t, "2.2.2.200", rulesByPrefix["10.0.0.0/8"].egressIP.String())
++	require.Equal(t, "2.2.2.2", rulesByPrefix["10.10.0.0/16"].gatewayIP.String())
++	require.Equal(t, "2.2.2.200", rulesByPrefix["10.10.0.0/16"].egressIP.String())
++}

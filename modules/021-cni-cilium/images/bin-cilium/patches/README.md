@@ -96,3 +96,19 @@ An ICMP echo reply feature has been added to reply on LoadBalancer's service IP
 ## 018-fix-svacer.patch
 
 Fixed svacer DEREF_OF_NULL error in pkg/policy/api/icmp.go 
+
+## 019-fix-egress-gateway-excluded-cidrs-scope.patch
+
+Keep `excludedCIDRs` of a `CiliumEgressGatewayPolicy` scoped to the policy that declares them.
+
+The egress policy BPF map is keyed by `(source IP, destination CIDR)` only, so all the policies
+selecting the same Pod share a single LPM trie for it. Upstream writes every excluded CIDR as a
+standalone entry carrying the `EGRESS_GATEWAY_EXCLUDED_CIDR` marker, so an exclusion declared by one
+policy wins the lookup against the `destinationCIDRs` of another policy whenever it is the more
+specific prefix, and identical prefixes overwrite each other in a random order.
+
+Instead of programming each policy on its own, the agent now resolves the destination and excluded
+CIDRs of all the policies selecting an endpoint into a single set of entries: the policy with the
+most specific matching `destinationCIDR` that does not exclude the prefix wins, ties are broken by
+policy name, and a prefix nobody claims keeps the excluded marker. The number of entries does not
+grow, and a policy that does not overlap with any other one is programmed exactly as before.
