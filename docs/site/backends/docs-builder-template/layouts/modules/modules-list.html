@@ -147,10 +147,24 @@
         {{- $moduleEditionsData := slice }}
         {{- $moduleEditionsString := "" }}
 
-        {{- if .embedded }}
-          {{- if eq $buildEdition "CSE" }}
+        {{- if eq $buildEdition "CSE" }}
+          {{- if .embedded }}
             {{- $tags = append $tags (slice "certified") }}
           {{- end }}
+        {{- else }}
+          {{- /* Remove the certified tag for non-CSE builds for external modules */}}
+          {{- if not .embedded }}
+            {{- $filtered := slice }}
+            {{- range $tags }}
+              {{- if ne (printf "%s" .) "certified" }}
+                {{- $filtered = $filtered | append . }}
+              {{- end }}
+            {{- end }}
+            {{- $tags = $filtered }}
+          {{- end }}
+        {{- end }}
+
+        {{- if .embedded }}
           {{- /* make edition list for an embedded module */}}
           {{- $embeddedModuleMetadata := index (where $embeddedModulesList "module" .module ) 0 }}
 

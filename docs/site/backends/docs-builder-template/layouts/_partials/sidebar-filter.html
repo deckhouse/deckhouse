@@ -1,3 +1,5 @@
+{{- $buildEdition := or (getenv "HUGO_D8_EDITION") "EE" }}
+
 <script type="text/javascript" src='/assets/js/filter.js?v={{ .Site.Lastmod | time.Format ":date_long" | hash.FNV32a }}'></script>
 
 <div class="filter">
@@ -14,6 +16,19 @@
         </div>
     </div>
     <div class="filter__block">
+        {{- if eq $buildEdition "CSE" }}
+        <div class="filter__container filter__container--certification">
+            <h3 class="filter__container--title closing-title">{{ T "certification_filter" | humanize }}</h3>
+            <div class="filter__checkboxes filter__checkboxes--certification">
+                <!-- <input type="checkbox" id="certificationSelectAll" data-select-all="true">
+                <label class="filter__checkboxes--all" for="certificationSelectAll">{{ T "certification_filter_all_selected" | humanize }}</label> //-->
+                <input type="checkbox" id="certified" value="certified">
+                <label for="certified">Входит в объект оценки</label>
+                <input type="checkbox" id="notCertified" value="notCertified">
+                <label for="notCertified">Не входит в объект оценки</label>
+            </div>
+        </div>
+        {{- else }}
         <div class="filter__container filter__container--editions">
             <h3 class="filter__container--title closing-title">{{ T "editions_filter" | humanize }}</h3>
             <div class="filter__checkboxes filter__checkboxes--editions">
@@ -35,6 +50,7 @@
                 <label for="editionCSEPro">CSE Pro</label>
             </div>
         </div>
+        {{- end }}
         <div class="filter__container filter__container--stages">
             <h3 class="filter__container--title closing-title">{{ T "stage_filter" | humanize }}</h3>
             <div class="filter__checkboxes filter__checkboxes--stages">
