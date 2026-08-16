@@ -31,9 +31,6 @@ const (
 )
 
 var _ = Describe("Module :: admissionPolicyEngine :: helm template :: operation policies", func() {
-	BeforeEach(func() {
-		Skip("legacy helm-render specs are isolated after constraint test runner migration")
-	})
 
 	f := SetupHelmConfig(`
 global:

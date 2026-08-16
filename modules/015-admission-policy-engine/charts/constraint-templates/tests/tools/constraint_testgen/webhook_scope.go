@@ -160,7 +160,11 @@ func lintWebhookContent(file, content string) []webhookFinding {
 	for i, line := range lines {
 		lineNum := i + 1
 		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmed, "#") {
+		if strings.HasPrefix(trimmed, "#") || strings.HasPrefix(trimmed, "{{/*") {
+			// Skip YAML comments and Helm template comments ({{/* ... */}}) —
+			// otherwise prose that documents *why* an anti-pattern was avoided
+			// (e.g. a comment mentioning "DELETE") trips the same finding it's
+			// explaining the absence of.
 			continue
 		}
 

@@ -89,7 +89,18 @@ spec:
               # resources defined at all. In this case, LimitRange admission
               # may inject resources at Pod creation time, so we skip the
               # violation to avoid false positives on controllers.
+              #
+              # `not container.resources` looks right but is never true against
+              # a real apiserver: corev1.Container.Resources is a plain struct
+              # (no `omitempty`-able pointer), so every real Pod/controller
+              # review carries `resources: {}` rather than an absent field —
+              # only handwritten test fixtures that skip the field outright
+              # produce a truly-undefined `container.resources`. Check the
+              # actual limits/requests contents instead so "absent" matches
+              # what the apiserver really sends.
               controller_resources_absent(container) if {
                 is_controller
-                not container.resources
+                resources := object.get(container, "resources", {})
+                count(object.get(resources, "limits", {})) == 0
+                count(object.get(resources, "requests", {})) == 0
               }
