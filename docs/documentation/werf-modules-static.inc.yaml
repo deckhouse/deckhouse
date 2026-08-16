@@ -27,20 +27,30 @@ shell:
         # Creating list of ALL the modules...
         cat _data/modules/internal.json | jq -MsS '.[0] * .[1]' - _data/modules/modules-addition.json > _data/modules/all.json
 
-        {{ if eq .Edition "CSE" }}
-        echo '[CSE] Converts from HuGo...'
-        find /src/modules -type f -iname '*.md' -exec sed -i -E 's/\{\{<[ ]*alert (level="[a-z]+")?\ ?>}}/{% alert \2 %}/g' {} +
-        find /src/modules -type f -iname '*.md' -exec sed -i -E 's/\{\{<[ ]*\/alert[ ]*>}}/{% endalert %}/g' {} +
-        find /src/modules -type f -name '*.ru.md' -exec bash -c 'mv "$0" "${0%.ru.md}_RU.md"' {} \;
-        {{ end }}
-
         echo "[] Getting modules metadata from module.yaml files..."
         export METADATA_SOURCE_DIR=/src/modules-metadata
         export METADATA_TARGET_FILE=${PWD}/_data/modules/metadata.json
         bash _tools/modules_generate_metadata.sh
 
         echo 'Merging files of modules for different editions...'
-        for dir in {be,se,ee,se-plus,fe}; do if [ -d /src/$dir/modules ];then cp -rf /src/$dir/modules /src >& /dev/null; fi; done
+        for dir in {be,se,ee,se-plus,fe,cse}; do if [ -d /src/$dir/modules ];then cp -rf /src/$dir/modules /src >& /dev/null; fi; done
+
+        {{ if eq .Edition "CSE" }}
+        echo '[CSE] Filtering /src/modules by editions.yaml -> CSE.availableModules ...'
+        AVAILABLE_JSON=$(yq -o=json '.editions[] | select(.name == "CSE") | .availableModules // []' /srv/jekyll-data/documentation/_data/editions-repo-data.yaml)
+        for module_dir in /src/modules/*/; do
+          [ -d "$module_dir" ] || continue
+          module_name=$(basename "$module_dir" | sed -E 's/^[0-9]+-//')
+          if ! printf '%s' "$AVAILABLE_JSON" | jq -e --arg m "$module_name" 'index($m)' >/dev/null; then
+            rm -rf "$module_dir"
+          fi
+        done
+
+        echo '[CSE] Converting Hugo shortcodes to Jekyll on /src/modules ...'
+        find /src/modules -type f -iname '*.md' -exec sed -i -E 's/\{\{<[ ]*alert (level="[a-z]+")?\ ?>}}/{% alert \2 %}/g' {} +
+        find /src/modules -type f -iname '*.md' -exec sed -i -E 's/\{\{<[ ]*\/alert[ ]*>}}/{% endalert %}/g' {} +
+        find /src/modules -type f -name '*.ru.md' -exec bash -c 'mv "$0" "${0%.ru.md}_RU.md"' {} \;
+        {{ end }}
 
         echo '[] Preparing modules structure...'
         export MODULES_SRC_DIR=/src/modules

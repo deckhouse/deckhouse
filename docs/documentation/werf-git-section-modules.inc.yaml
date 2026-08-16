@@ -19,7 +19,7 @@
   - '040-node-manager/crds/nfd-api-*.yaml'
   - '110-istio/crds/istio'
   includePaths: ['*/docs/','*/openapi/*.yaml','*/crds/', '*/oss.yaml']
-{{- if or (eq .Edition "BE") (eq .Edition "SE-plus") (eq .Edition "SE") (eq .Edition "EE") (eq .Edition "FE") (eq .Mode "development") }}
+{{- if or (eq .Edition "BE") (eq .Edition "SE-plus") (eq .Edition "SE") (eq .Edition "EE") (eq .Edition "FE") (eq .Edition "CSE") (eq .Mode "development") }}
 - add: /ee/be/modules
   to: /src/be/modules
   stageDependencies:
@@ -27,7 +27,7 @@
   includePaths: ['*/docs/','*/openapi/*.yaml','*/crds/', '*/oss.yaml']
   excludePaths: ['*/openapi/values.yaml', '*/openapi/*-tests.yaml', '*/docs/internal/']
 {{- end }}
-{{- if or (eq .Edition "SE") (eq .Edition "SE-plus") (eq .Edition "EE") (eq .Edition "FE") (eq .Mode "development") }}
+{{- if or (eq .Edition "SE") (eq .Edition "SE-plus") (eq .Edition "EE") (eq .Edition "FE") (eq .Edition "CSE") (eq .Mode "development") }}
 - add: /ee/se/modules
   to: /src/se/modules
   stageDependencies:
@@ -41,7 +41,7 @@
   includePaths: ['*/docs/','*/openapi/*.yaml','*/crds/', '*/oss.yaml']
   excludePaths: ['*/openapi/values.yaml', '*/openapi/*-tests.yaml', '*/docs/internal/']
 {{- end }}
-{{- if or (eq .Edition "EE") (eq .Edition "FE") (eq .Mode "development") }}
+{{- if or (eq .Edition "EE") (eq .Edition "FE") (eq .Edition "CSE") (eq .Mode "development") }}
 - add: /ee/modules
   to: /src/ee/modules
   stageDependencies:
@@ -116,6 +116,14 @@
     setup: ['**/*']
   includePaths: ['*/docs/','*/openapi/','*/crds/', '*/oss.yaml']
   excludePaths: ['*/openapi/values.yaml', '*/openapi/*-tests.yaml''*/docs/internal/']
+{{- end }}
+{{- if or (eq .Edition "CSE") (eq .Mode "development") }}
+- add: /ee/cse/modules
+  to: /src/cse/modules
+  stageDependencies:
+    setup: ['**/*']
+  includePaths: ['*/docs/','*/openapi/*.yaml','*/crds/', '*/oss.yaml']
+  excludePaths: ['*/openapi/values.yaml', '*/openapi/*-tests.yaml', '*/docs/internal/']
 {{- end }}
 # CRDs
 - add: /modules/030-cloud-provider-aws/candi/openapi
