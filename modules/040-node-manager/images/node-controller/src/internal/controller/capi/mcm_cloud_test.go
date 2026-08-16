@@ -56,7 +56,7 @@ func TestDecodeCloudProviderSecret(t *testing.T) {
 		"aws":              []byte(`{"keyName":"kn","instances":{"ami":"ami-1"}}`),
 		"plainString":      []byte(`not-json`),
 	}
-	tree := cloudprovider.Decode(data).Data
+	tree := cloudprovider.FromSecretData(data).Data
 	assert.Equal(t, "aws", tree["type"])
 	assert.Equal(t, "eu-west-1", tree["region"])
 	assert.Equal(t, "AWSMachineClass", tree["machineClassKind"])

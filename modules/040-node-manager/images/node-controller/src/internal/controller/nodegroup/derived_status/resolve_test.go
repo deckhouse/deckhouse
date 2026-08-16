@@ -100,7 +100,7 @@ func TestDecodeRegistration_APIVersionIsNeverGuessed(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.expVersion, cloudprovider.Decode(tc.data).InstanceClassAPIVersion)
+			assert.Equal(t, tc.expVersion, cloudprovider.FromSecretData(tc.data).InstanceClassAPIVersion)
 		})
 	}
 }

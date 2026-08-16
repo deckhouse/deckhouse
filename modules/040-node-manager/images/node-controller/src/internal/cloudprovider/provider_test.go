@@ -25,7 +25,7 @@ import (
 // registration.yaml writes some values as bare strings (type: {{ b64enc "aws" }}) and others as
 // JSON (zones: {{ toJson | b64enc }}). The decoder must accept both forms for every field, which is
 // why the map decoder it replaces tried JSON first and fell back to the raw string.
-func TestDecodeProvider_BothEncodings(t *testing.T) {
+func TestFromSecretData_BothEncodings(t *testing.T) {
 	tests := []struct {
 		name        string
 		data        map[string][]byte
@@ -68,7 +68,7 @@ func TestDecodeProvider_BothEncodings(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got := Decode(tc.data)
+			got := FromSecretData(tc.data)
 
 			require.Equal(t, tc.expProvider.Type, got.Type)
 			require.Equal(t, tc.expProvider.InstanceClassKind, got.InstanceClassKind)
@@ -80,13 +80,13 @@ func TestDecodeProvider_BothEncodings(t *testing.T) {
 	}
 }
 
-func TestDecodeProvider_CloudVariablesKeyedByType(t *testing.T) {
+func TestFromSecretData_CloudVariablesKeyedByType(t *testing.T) {
 	data := map[string][]byte{
 		"type":    []byte(`vsphere`),
 		"vsphere": []byte(`{"instances":{"mainNetwork":"vlan-1"}}`),
 	}
 
-	got := Decode(data)
+	got := FromSecretData(data)
 
 	require.Equal(t, "vsphere", got.Type)
 	instances, ok := got.CloudVariables["instances"].(map[string]any)

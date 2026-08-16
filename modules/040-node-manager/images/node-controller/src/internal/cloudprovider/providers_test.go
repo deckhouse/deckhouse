@@ -153,6 +153,80 @@ func TestLoad_NoProvidersIsEmptyNotAnError(t *testing.T) {
 	assert.Empty(t, providers.All())
 }
 
+// A cloud cluster whose provider cannot be read would publish its CloudPermanent NodeGroups without
+// one, stripping the provider steps from the master's bundle — so it is an error, not an empty name.
+func TestLoad_UnreadableClusterProviderIsAnError(t *testing.T) {
+	clusterConfig := func(data map[string][]byte) *corev1.Secret {
+		return &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Namespace: SecretNamespace, Name: clusterConfigSecretName},
+			Data:       data,
+		}
+	}
+
+	tests := []struct {
+		name    string
+		secret  *corev1.Secret
+		wantErr string
+	}{
+		{
+			name:    "the configuration key is missing",
+			secret:  clusterConfig(map[string][]byte{"other.yaml": []byte("{}")}),
+			wantErr: `has no "cluster-configuration.yaml" key`,
+		},
+		{
+			name: "the document does not parse",
+			secret: clusterConfig(map[string][]byte{
+				clusterConfigSecretKey: []byte("cloud:\n\tprovider: [Yandex\n"),
+			}),
+			wantErr: `unmarshal "cluster-configuration.yaml"`,
+		},
+		{
+			// The schema requires cloud.provider whenever clusterType is Cloud.
+			name: "a cloud cluster names no provider",
+			secret: clusterConfig(map[string][]byte{
+				clusterConfigSecretKey: []byte("clusterType: Cloud\ncloud:\n  prefix: test\n"),
+			}),
+			wantErr: "names no cloud.provider",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			c := fake.NewClientBuilder().WithScheme(testScheme(t)).WithObjects(tc.secret).Build()
+
+			_, err := Load(context.Background(), c)
+
+			require.ErrorContains(t, err, tc.wantErr)
+		})
+	}
+}
+
+// The cluster names a provider that published nothing: CloudPermanent resolves through that name
+// and nothing else, so the master would render without provider steps and no one would say why.
+func TestLoad_ClusterProviderWithoutRegistrationIsAnError(t *testing.T) {
+	c := fake.NewClientBuilder().WithScheme(testScheme(t)).WithObjects(
+		registrationSecret(SecretNamePrefix+"-aws", map[string][]byte{"type": []byte("aws")}),
+		clusterConfigurationSecret("Yandex"),
+	).Build()
+
+	_, err := Load(context.Background(), c)
+
+	require.ErrorContains(t, err, `"yandex" of the cluster configuration published no registration`)
+}
+
+// A static cluster names no provider, and that is not a failure.
+func TestLoad_StaticClusterHasNoProvider(t *testing.T) {
+	providers := loadFrom(t, &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Namespace: SecretNamespace, Name: clusterConfigSecretName},
+		Data: map[string][]byte{
+			clusterConfigSecretKey: []byte("clusterType: Static\npodSubnetCIDR: 10.111.0.0/16\n"),
+		},
+	})
+
+	_, ok := providers.ForNodeGroup(nodeGroupOfType("master", v1.NodeTypeCloudPermanent))
+	assert.False(t, ok)
+}
+
 func TestForNodeGroup(t *testing.T) {
 	aws := registrationSecret(SecretNamePrefix+"-aws", map[string][]byte{
 		"type":              []byte("aws"),

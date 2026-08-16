@@ -41,13 +41,8 @@ import (
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 )
 
-// IsRegistration reports whether an object is a cloud provider registration Secret: it lives in
-// the registration namespace, is named with the shared prefix and carries the label. Matching on
-// the prefix rather than on one full name is what lets a second provider's Secret trigger a
-// reconcile at all — every provider publishes both prefix and prefix + "-<provider>".
-//
-// This is the single definition of a registration: Load and the watches all resolve through it, so
-// a Secret can never be a provider to one and invisible to the other.
+// IsRegistration reports whether an object is a registration Secret: right namespace, name prefix
+// and label. It is the single definition of one — Load and every watch resolve through it.
 func IsRegistration(obj client.Object) bool {
 	if obj.GetNamespace() != SecretNamespace {
 		return false
@@ -62,8 +57,10 @@ func IsRegistration(obj client.Object) bool {
 // IsRegistrationKey reports whether a reconcile key names a registration Secret. No label check:
 // a key carries none, and the watch behind it already filtered on IsRegistration.
 func IsRegistrationKey(key types.NamespacedName) bool {
-	return key.Namespace == SecretNamespace &&
-		strings.HasPrefix(key.Name, SecretNamePrefix)
+	if key.Namespace != SecretNamespace {
+		return false
+	}
+	return strings.HasPrefix(key.Name, SecretNamePrefix)
 }
 
 // RegistrationPredicate filters a watch down to the registration Secrets.
@@ -72,8 +69,8 @@ func RegistrationPredicate() predicate.Predicate {
 }
 
 // RegistrationRequests returns one request per registration Secret, for controllers keyed by the
-// Secret itself rather than by NodeGroup. A failed List yields no requests: the caller is an event
-// mapper, which has nowhere to return an error to, and the controller's resync covers the miss.
+// Secret itself. A failed List yields none: an event mapper cannot return an error, and the
+// controller resync covers the miss.
 func RegistrationRequests(ctx context.Context, r client.Reader) []reconcile.Request {
 	secrets := &corev1.SecretList{}
 	if err := r.List(ctx, secrets,
@@ -84,33 +81,26 @@ func RegistrationRequests(ctx context.Context, r client.Reader) []reconcile.Requ
 		return nil
 	}
 
-	reqs := make([]reconcile.Request, 0, len(secrets.Items))
+	ret := make([]reconcile.Request, 0, len(secrets.Items))
 	for i := range secrets.Items {
-		reqs = append(reqs, reconcile.Request{NamespacedName: types.NamespacedName{
+		ret = append(ret, reconcile.Request{NamespacedName: types.NamespacedName{
 			Name:      secrets.Items[i].Name,
 			Namespace: secrets.Items[i].Namespace,
 		}})
 	}
-	return reqs
+
+	return ret
 }
 
-// NodeGroupHandler enqueues the NodeGroups that run on the registration the event carries, for the
-// controllers keyed by NodeGroup. Pair it with RegistrationPredicate.
+// NodeGroupHandler enqueues the NodeGroups that run on the registration the event carries. Pair it
+// with RegistrationPredicate.
 //
-// The provider is decoded from the event object rather than looked up, so a delete answers the
-// same question as a create — which NodeGroups belong to this provider — at a point where the
-// Secret is already gone from the cluster. The answer comes from the resolution rules a reconcile
-// uses (Providers.ForNodeGroup): a NodeGroup naming its InstanceClass kind, or a CloudPermanent
-// group on a cluster configured with its provider.
+// The provider is decoded from the event object rather than looked up, so a delete answers the same
+// question as a create at a point where the Secret is already gone.
 //
-// An update first compares the Secret data raw: an update that changed none of it changes nothing a
-// NodeGroup renders and enqueues nothing. A real edit resolves both sides, because a re-kinded or
-// re-typed provider moves NodeGroups between them and the group that just left is in no
-// set the new object can produce.
-//
-// The narrowing is what keeps a registration event affordable: one status reconcile lists every
-// Machine and MachineDeployment in the cluster, so enqueueing NodeGroups of other providers costs
-// cluster-size work per group for nothing.
+// An update compares the raw data first: one that changed none of it enqueues nothing. A real edit
+// resolves both sides, because a re-kinded provider moves NodeGroups between providers and the
+// group that just left is in no set the new object can produce.
 func NodeGroupHandler(r client.Reader) handler.EventHandler {
 	enqueue := func(ctx context.Context, q workqueue.TypedRateLimitingInterface[reconcile.Request], carried ...Provider) {
 		for _, req := range nodeGroupRequests(ctx, r, carried...) {
@@ -118,27 +108,25 @@ func NodeGroupHandler(r client.Reader) handler.EventHandler {
 		}
 	}
 
+	// Create, delete and generic all ask the same question of the same object.
+	enqueueObject := func(ctx context.Context, obj client.Object, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+		secret, ok := obj.(*corev1.Secret)
+		if !ok {
+			return
+		}
+
+		enqueue(ctx, q, FromSecretData(secret.Data))
+	}
+
 	return handler.Funcs{
 		CreateFunc: func(ctx context.Context, e event.CreateEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
-			secret, ok := e.Object.(*corev1.Secret)
-			if !ok {
-				return
-			}
-			enqueue(ctx, q, Decode(secret.Data))
+			enqueueObject(ctx, e.Object, q)
 		},
 		DeleteFunc: func(ctx context.Context, e event.DeleteEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
-			secret, ok := e.Object.(*corev1.Secret)
-			if !ok {
-				return
-			}
-			enqueue(ctx, q, Decode(secret.Data))
+			enqueueObject(ctx, e.Object, q)
 		},
 		GenericFunc: func(ctx context.Context, e event.GenericEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
-			secret, ok := e.Object.(*corev1.Secret)
-			if !ok {
-				return
-			}
-			enqueue(ctx, q, Decode(secret.Data))
+			enqueueObject(ctx, e.Object, q)
 		},
 		UpdateFunc: func(ctx context.Context, e event.UpdateEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 			before, okBefore := e.ObjectOld.(*corev1.Secret)
@@ -149,7 +137,7 @@ func NodeGroupHandler(r client.Reader) handler.EventHandler {
 			if maps.EqualFunc(before.Data, after.Data, bytes.Equal) {
 				return
 			}
-			enqueue(ctx, q, Decode(before.Data), Decode(after.Data))
+			enqueue(ctx, q, FromSecretData(before.Data), FromSecretData(after.Data))
 		},
 	}
 }
@@ -173,38 +161,27 @@ func nodeGroupRequests(ctx context.Context, r client.Reader, carried ...Provider
 	// The providers the event carries, resolved by the rules a reconcile uses.
 	changed := NewProviders(carried, clusterProvider)
 
-	reqs := make([]reconcile.Request, 0, len(ngList.Items))
+	ret := make([]reconcile.Request, 0, len(ngList.Items))
 	for i := range ngList.Items {
 		ng := &ngList.Items[i]
 		if _, ok := changed.ForNodeGroup(ng); ok {
-			reqs = append(reqs, reconcile.Request{NamespacedName: types.NamespacedName{Name: ng.Name}})
+			ret = append(ret, reconcile.Request{NamespacedName: types.NamespacedName{Name: ng.Name}})
 		}
 	}
-	return reqs
+
+	return ret
 }
 
-// LazyInstanceClassSource watches every InstanceClass kind the cloud providers register — the
-// ones registered right now and the ones registered at any later point in the pod's life.
+// LazyInstanceClassSource watches every InstanceClass kind the providers register, including the
+// ones registered after this controller started — which a builder watch cannot do, since its watch
+// list closes at start and the kind is data in the registration Secret.
 //
-// A plain builder watch cannot do this: the watch list of a controller is closed once it starts,
-// and the InstanceClass kind and API version are data in the provider registration Secret, which
-// on a cluster that enables its cloud provider late appears only after the controller started.
-// This source therefore subscribes to the registration Secrets (their informer exists either
-// way) and, per registered GVK, starts the very source.Kind the builder would have started —
-// same handler, same predicates, just at the moment the registration actually exists.
+// Starting a watch is fire-and-forget: source.Kind spawns a goroutine that polls for the informer
+// until the CRD exists, so a registration preceding its CRD needs no retry here.
 //
-// Starting one is fire-and-forget by design: source.Kind returns as soon as it has spawned its
-// own goroutine, which then polls for the informer until the CRD exists. A registration that
-// precedes its CRD therefore needs no retry here — hence the log wording below, which claims
-// only that the watch was registered, not that it is already delivering events.
-//
-// Watches are only ever added, never removed: a registration that changes its version leaves the
-// old handler on the old informer. Its events stay harmless (the workqueue deduplicates), and
-// once the old version stops being served its reflector only retries under backoff — a couple of
-// log lines per minute, no crash, with the new version's watch delivering throughout. The cost is
-// that one orphaned informer until the next pod restart, which every Deckhouse release performs
-// anyway. Unsubscribing would mean hand-rolling the event translation source.Kind gives us for
-// free, because it discards the handler registration RemoveEventHandler would need.
+// Watches are only added, never removed. A re-versioned registration leaves an orphaned informer
+// retrying under backoff until the next pod restart; unsubscribing would mean hand-rolling the
+// event translation source.Kind gives for free.
 func LazyInstanceClassSource(informers cache.Cache, eventHandler handler.EventHandler, predicates ...predicate.Predicate) source.Source {
 	return source.Func(func(ctx context.Context, queue workqueue.TypedRateLimitingInterface[reconcile.Request]) error {
 		secretInformer, err := informers.GetInformer(ctx, &corev1.Secret{})
@@ -212,10 +189,8 @@ func LazyInstanceClassSource(informers cache.Cache, eventHandler handler.EventHa
 			return fmt.Errorf("get the secret informer: %w", err)
 		}
 
-		// Buffered so the informer callback never blocks; pokes arriving while one is pending
-		// collapse into it — the goroutine re-reads every registration anyway. Adding the
-		// handler replays the store, so registrations that predate this controller arrive the
-		// same way as future ones.
+		// Buffered so the informer callback never blocks; pokes collapse, the goroutine re-reads
+		// everything anyway. Adding the handler replays the store.
 		poke := make(chan struct{}, 1)
 		notify := func() {
 			select {
@@ -255,7 +230,7 @@ func LazyInstanceClassSource(informers cache.Cache, eventHandler handler.EventHa
 					logger.V(1).Info("list instance class providers", "error", err.Error())
 					continue
 				}
-				for _, gvk := range (Providers{providers: providers}).InstanceClassGVKs() {
+				for _, gvk := range NewProviders(providers, "").InstanceClassGVKs() {
 					if started[gvk] {
 						continue
 					}

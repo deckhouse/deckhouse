@@ -117,7 +117,7 @@ func (r *ClusterReconciler) ensureCloudCluster(ctx context.Context, registration
 		return nil
 	}
 
-	provider := cloudprovider.Decode(secret.Data)
+	provider := cloudprovider.FromSecretData(secret.Data)
 	clusterName := provider.CAPI.ClusterName
 	clusterKind := provider.CAPI.ClusterKind
 

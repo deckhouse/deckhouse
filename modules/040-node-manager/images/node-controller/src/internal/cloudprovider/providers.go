@@ -33,37 +33,20 @@ import (
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 )
 
-const (
-	clusterConfigSecretName = "d8-cluster-configuration"
-	clusterConfigSecretKey  = "cluster-configuration.yaml"
-)
-
-// Providers is the set of providers the cluster publishes, taken once. Every lookup on it is a
-// pure function, so a reconcile loads it once and passes it down instead of re-reading per
-// NodeGroup — the bashible context writer used to read the provider Secret once per NodeGroup.
+// Providers is the set of providers the cluster publishes, taken once. Every lookup on it is pure,
+// so a reconcile loads it once and passes it down instead of re-reading per NodeGroup.
 type Providers struct {
 	providers []Provider
 
-	// clusterProvider is ClusterConfiguration.cloud.provider, lower-cased. CloudPermanent
-	// NodeGroups resolve through it: they name no InstanceClass, so there is nothing else to match
-	// on.
+	// ClusterConfiguration.cloud.provider, lower-cased: CloudPermanent NodeGroups name no
+	// InstanceClass, so there is nothing else to match them on.
 	clusterProvider string
 }
 
-// NewProviders builds a Providers from providers already in hand, for callers that resolved
-// them some other way and for tests that have no cluster to read.
-func NewProviders(providers []Provider, clusterProvider string) Providers {
-	return Providers{
-		providers:       providers,
-		clusterProvider: strings.ToLower(clusterProvider),
-	}
-}
-
-// Load reads every provider registered in the cluster. It is the only I/O in this package.
+// Load reads every provider registered in the cluster.
 //
-// An empty result means the cluster has no cloud provider, which is a legitimate state; a failed
-// read is returned, because an empty provider is indistinguishable from "no cloud" downstream
-// and would publish NodeGroups without instanceClass — a checksum shift on every node.
+// An empty result is a legitimate state; a failed read is returned rather than swallowed, because
+// downstream it is indistinguishable from "no cloud" and shifts the checksum of every node.
 func Load(ctx context.Context, r client.Reader) (Providers, error) {
 	providers, err := loadProviders(ctx, r)
 	if err != nil {
@@ -75,10 +58,37 @@ func Load(ctx context.Context, r client.Reader) (Providers, error) {
 		return Providers{}, err
 	}
 
+	ret := NewProviders(
+		providers,
+		clusterProvider,
+	)
+
+	if err := ret.Validate(); err != nil {
+		return Providers{}, err
+	}
+	return ret, nil
+}
+
+// NewProviders builds a Providers from providers already in hand.
+func NewProviders(providers []Provider, clusterProvider string) Providers {
 	return Providers{
 		providers:       providers,
-		clusterProvider: clusterProvider,
-	}, nil
+		clusterProvider: strings.ToLower(clusterProvider),
+	}
+}
+
+// Validate reports a cluster whose configured provider published no registration: CloudPermanent
+// resolves through that name alone, so the master would render without provider steps.
+func (ps Providers) Validate() error {
+	if ps.clusterProvider == "" {
+		return nil
+	}
+
+	if _, ok := ps.byName(ps.clusterProvider); !ok {
+		return fmt.Errorf("cloud provider %q of the cluster configuration published no registration secret", ps.clusterProvider)
+	}
+
+	return nil
 }
 
 // All returns every provider, ordered by type.
@@ -93,11 +103,8 @@ func (ps Providers) Empty() bool {
 
 // ForNodeGroup returns the provider a NodeGroup runs on. It performs no I/O.
 //
-// CloudEphemeral names its provider through the InstanceClass kind it references. CloudPermanent
-// names none — its nodes are created by the installer, not by this cluster — so it falls back to
-// the provider the cluster was configured with. Static and CloudStatic have no provider at all:
-// their nodes exist outside any cloud, and handing them one is what used to apply cloud bashible
-// steps to bare-metal nodes.
+// CloudEphemeral resolves through the InstanceClass kind it references, CloudPermanent through the
+// provider of the cluster. Static and CloudStatic have none: their nodes are outside every cloud.
 func (ps Providers) ForNodeGroup(ng *v1.NodeGroup) (Provider, bool) {
 	switch ng.Spec.NodeType {
 	case v1.NodeTypeCloudEphemeral, v1.NodeTypeCloudPermanent:
@@ -119,28 +126,25 @@ func (ps Providers) ForNodeGroup(ng *v1.NodeGroup) (Provider, bool) {
 }
 
 // InstanceClassKinds returns every kind of InstanceClass the cluster accepts, ordered by provider
-// type. A NodeGroup referencing a kind outside this set names no provider at all.
+// type.
 func (ps Providers) InstanceClassKinds() []string {
-	kinds := make([]string, 0, len(ps.providers))
+	ret := make([]string, 0, len(ps.providers))
 
 	for i := range ps.providers {
 		if ps.providers[i].InstanceClassKind != "" {
-			kinds = append(kinds, ps.providers[i].InstanceClassKind)
+			ret = append(ret, ps.providers[i].InstanceClassKind)
 		}
 	}
 
-	return kinds
+	return ret
 }
 
-// InstanceClassGVKs returns the GVK every provider registered its InstanceClass under: the
-// instanceClassKind it names at the instanceClassAPIVersion it declares.
+// InstanceClassGVKs returns the GVK every provider registered its InstanceClass under.
 //
-// A provider without the version contributes nothing — guessing a version is what this whole
-// mechanism exists to prevent (see InstanceClassAPIVersionKey). The CRD may lag the Secret:
-// callers hand the GVK to a watch that waits for it (source.Kind retries an unserved kind
-// itself), they must not assume it is served.
+// A provider without the version contributes nothing (see InstanceClassAPIVersionKey). The CRD may
+// lag the Secret, so callers must not assume the GVK is already served.
 func (ps Providers) InstanceClassGVKs() []schema.GroupVersionKind {
-	gvks := make([]schema.GroupVersionKind, 0, len(ps.providers))
+	ret := make([]schema.GroupVersionKind, 0, len(ps.providers))
 	seen := make(map[schema.GroupVersionKind]bool, len(ps.providers))
 
 	for i := range ps.providers {
@@ -162,20 +166,19 @@ func (ps Providers) InstanceClassGVKs() []schema.GroupVersionKind {
 		}
 
 		seen[gvk] = true
-		gvks = append(gvks, gvk)
+		ret = append(ret, gvk)
 	}
 
-	sort.Slice(gvks, func(i, j int) bool {
-		if gvks[i].Version != gvks[j].Version {
-			return gvks[i].Version < gvks[j].Version
+	sort.Slice(ret, func(i, j int) bool {
+		if ret[i].Version != ret[j].Version {
+			return ret[i].Version < ret[j].Version
 		}
-		return gvks[i].Kind < gvks[j].Kind
+		return ret[i].Kind < ret[j].Kind
 	})
-	return gvks
+	return ret
 }
 
-// byName returns a provider by its name, matching case-insensitively: ClusterConfiguration spells
-// providers OpenStack and vSphere, their registration Secrets spell them openstack and vsphere.
+// byName matches case-insensitively: ClusterConfiguration spells OpenStack, the Secret openstack.
 func (ps Providers) byName(name string) (Provider, bool) {
 	name = strings.ToLower(name)
 
@@ -203,8 +206,8 @@ func (ps Providers) byInstanceClassKind(kind string) (Provider, bool) {
 	return Provider{}, false
 }
 
-// loadProviders is the Secret half of Load, separate so the lazy InstanceClass watch can
-// refresh the registered kinds without also depending on the cluster configuration being readable.
+// loadProviders is the Secret half of Load, separate so the lazy InstanceClass watch does not
+// depend on the cluster configuration being readable.
 func loadProviders(ctx context.Context, r client.Reader) ([]Provider, error) {
 	secrets := &corev1.SecretList{}
 
@@ -219,32 +222,25 @@ func loadProviders(ctx context.Context, r client.Reader) ([]Provider, error) {
 	seen := make(map[string]bool, len(secrets.Items))
 
 	for i := range secrets.Items {
-		decoded := Decode(secrets.Items[i].Data)
-		// Every provider module publishes the same registration twice, under the legacy fixed name
-		// and under the per-provider one. The type identifies a provider, so it is the dedup key —
-		// but one that publishes no type is kept rather than dropped: it still carries an
-		// InstanceClass kind the watches need, and dropping it would silently stop watching.
-		if decoded.Type != "" {
-			if seen[decoded.Type] {
+		registry := FromSecretData(secrets.Items[i].Data)
+		// The two copies of one registration dedup by type. One that publishes no type is kept: it
+		// still carries an InstanceClass kind the watches need.
+		if registry.Type != "" {
+			if seen[registry.Type] {
 				continue
 			}
-			seen[decoded.Type] = true
+			seen[registry.Type] = true
 		}
 
-		ret = append(ret, decoded)
+		ret = append(ret, registry)
 	}
 
 	sort.Slice(ret, func(i, j int) bool { return ret[i].Type < ret[j].Type })
 	return ret, nil
 }
 
-// readClusterProvider returns ClusterConfiguration.cloud.provider. An absent or unparseable
-// configuration yields an empty name: a cluster may legitimately have no cloud section, and the
-// only thing that resolves through this value is the CloudPermanent fallback, which then finds
-// nothing and reports itself as such.
-//
-// The secret is parsed here rather than through internal/clusterprefix: that package reads it for
-// cloud.prefix and fails closed, because an empty prefix there deletes real MachineDeployments.
+// readClusterProvider returns ClusterConfiguration.cloud.provider
+// from d8-cluster-configuration secret
 func readClusterProvider(ctx context.Context, r client.Reader) (string, error) {
 	secret := &corev1.Secret{}
 	err := r.Get(
@@ -260,27 +256,32 @@ func readClusterProvider(ctx context.Context, r client.Reader) (string, error) {
 	}
 
 	if err != nil {
-		return "", fmt.Errorf("read cluster configuration secret: %w", err)
+		return "", fmt.Errorf("get secret %q: %w", clusterConfigSecretName, err)
 	}
 
 	raw, ok := secret.Data[clusterConfigSecretKey]
 	if !ok {
-		return "", nil
+		return "", fmt.Errorf("secret %q has no %q key", clusterConfigSecretName, clusterConfigSecretKey)
 	}
 
-	// Stored base64-encoded in some installations; plain YAML is never valid base64, so falling
-	// back to the raw bytes never corrupts an already-decoded document.
+	// Base64-encoded in some installations; plain YAML is never valid base64, so the fallback is safe.
 	if decoded, err := base64.StdEncoding.DecodeString(string(raw)); err == nil {
 		raw = decoded
 	}
 
 	var cfg struct {
-		Cloud struct {
+		ClusterType string `json:"clusterType"`
+		Cloud       struct {
 			Provider string `json:"provider"`
 		} `json:"cloud"`
 	}
 	if err := sigsyaml.Unmarshal(raw, &cfg); err != nil {
-		return "", nil
+		return "", fmt.Errorf("unmarshal %q: %w", clusterConfigSecretKey, err)
+	}
+
+	if cfg.ClusterType == cloudClusterType &&
+		cfg.Cloud.Provider == "" {
+		return "", fmt.Errorf("%q is %q but names no cloud.provider", clusterConfigSecretKey, cloudClusterType)
 	}
 
 	return strings.ToLower(cfg.Cloud.Provider), nil
