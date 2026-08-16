@@ -22,6 +22,11 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
+const (
+	PostBootstrapResultCacheKey      = "post-bootstrap-result"
+	ManifestCreatedInClusterCacheKey = "tf-state-and-manifests-in-cluster"
+)
+
 type State struct {
 	cache state.Cache
 }

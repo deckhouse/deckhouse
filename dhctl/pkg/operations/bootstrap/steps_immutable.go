@@ -26,7 +26,50 @@ import (
 	libretry "github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable"
+	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight/checks"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight/suites"
 )
+
+// detectImmutableMaster decides how the very first node is created, so it runs
+// before anything touches the infrastructure.
+func (b *ClusterBootstrapper) detectImmutableMaster(ctx context.Context, bctx *bootstrapContext) error {
+	if !immutable.IsImmutableMaster(ctx, bctx.metaConfig) {
+		return nil
+	}
+
+	// Refused here rather than by a preflight: preflights can be skipped, and
+	// the bootstrap this guards runs every phase to the end before dying on a
+	// master address a non-cloud cluster never reports.
+	if err := immutable.ValidateClusterType(ctx, bctx.metaConfig); err != nil {
+		return err
+	}
+
+	dhlog.FromContext(ctx).InfoContext(ctx, "Master NodeGroup asks for an immutable system: bootstrapping without SSH and bashible")
+	bctx.immutableMaster = true
+
+	return nil
+}
+
+// applyImmutablePreflights adds the checks that only apply to an immutable
+// master and drops the ones that reach the master over SSH, which it does not
+// answer.
+func (b *ClusterBootstrapper) applyImmutablePreflights(runner *preflight.Preflight, bctx *bootstrapContext) {
+	if !bctx.immutableMaster {
+		return
+	}
+
+	runner.AddSuite(suites.NewImmutableSuite(suites.ImmutableDeps{
+		MetaConfig:    bctx.metaConfig,
+		BootstrapOpts: &b.Options.Bootstrap,
+		GlobalOpts:    &b.Options.Global,
+		CommanderMode: b.CommanderMode,
+	}))
+
+	// The cloud API check tunnels through the master host; there is no sshd
+	// there to tunnel with.
+	runner.DisableCheck(checks.CloudAPICheckName.String())
+}
 
 // buildImmutableMasterPayload renders the cloud-init the first master boots
 // with. A progress line of its own: it decides what the machine will be, and it

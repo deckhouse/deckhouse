@@ -14,28 +14,7 @@
 
 package bootstrap
 
-import (
-	"time"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
-)
-
-// What the bootstrap leaves in the state cache.
-const (
-	PostBootstrapResultCacheKey      = "post-bootstrap-result"
-	ManifestCreatedInClusterCacheKey = "tf-state-and-manifests-in-cluster"
-	BastionHostCacheKey              = "bastion-host"
-)
-
-// cacheKeysToKeep survive the cache cleanup of a finished bootstrap: they are
-// what converge and destroy read afterwards. Everything else is bootstrap's own
-// bookkeeping and a next run starts a new cluster with it.
-var cacheKeysToKeep = []string{
-	state.MasterHostsCacheKey,
-	ManifestCreatedInClusterCacheKey,
-	BastionHostCacheKey,
-	PostBootstrapResultCacheKey,
-}
+import "time"
 
 // What a joining node reads out of the running cluster. Each of these names an
 // object node-controller also addresses; see the mirrors named below.

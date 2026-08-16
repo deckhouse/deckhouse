@@ -31,10 +31,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
-const bootstrapPhaseBaseInfraNonCloudMessage = `It is impossible to create base infrastructure for a non-cloud Kubernetes cluster.
-You have to create it manually.
-`
-
 func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
 	// Registry shoud run before LoadConfigFromFile
 	registryStop, err := registry.InitFromConfig(
