@@ -14,6 +14,7 @@ topnav:
       url: /
     - title: Модули
       url: /modules/
+      moduleType: embedded
     - title: Лицензионное соглашение
       url: /license-agreement.html
       editions: [BE, SE, SE-plus, EE, FE]

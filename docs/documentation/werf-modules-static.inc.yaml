@@ -107,20 +107,8 @@ shell:
         yq eval-all 'select(fi==0).defaults += select(fi==1).defaults | select(fi==0)' /srv/jekyll-data/documentation/_config.yml /tmp/_config_section_defaults.yml > /srv/jekyll-data/documentation/_config_merged.yml
         mv -f /srv/jekyll-data/documentation/_config_merged.yml /srv/jekyll-data/documentation/_config.yml
 
-        # Use CSE sidebar for CSE edition
-        {{ if eq .Edition "CSE" }}
-        sed -i 's/sidebar: main/sidebar: cse-modules-core/' /srv/jekyll-data/documentation/_config.yml
-        {{ end }}
-
-        #cat <<'EOD' > /srv/jekyll-data/documentation/_data/topnav.yml
-        # .Files.Get (printf "%smodules/810-documentation/images/web/site/_data/topnav.yml" .ModulePath) | nindent 8
-        #EOD
         rm -f /srv/jekyll-data/documentation/_includes/icons
         cp -rf /srv/jekyll-data/site/* /srv/jekyll-data/documentation/
-        {{ if eq .Edition "CSE" }}
-        mv -f /srv/jekyll-data/documentation_override/_data/topnav-cse.yml /srv/jekyll-data/documentation/_data/topnav.yml
-        mv -f /srv/jekyll-data/documentation_override/_data/sidebars/cse-embedded-modules.yml /srv/jekyll-data/documentation/_data/sidebars/embedded-modules.yml
-        {{ end }}
         cp -rf /srv/jekyll-data/documentation_override/* /srv/jekyll-data/documentation
 {{ end }}
         # Creating additional config...
@@ -186,11 +174,9 @@ git:
 - add: /{{ $.ModulePath }}modules/{{ .ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/documentation
   to: /srv/jekyll-data/documentation_override
   excludePaths:
-{{ if eq .Edition "CSE" }}
-    - _data/topnav.yml
-{{ else }}
+{{ if ne .Edition "CSE" }}
+    - images/cse
     - pages/cse
-    - _data/topnav-cse.yml
 {{ end }}
 {{ if eq .Edition "CE" }}
     - pages/LICENSE_AGREEMENT_RU.md

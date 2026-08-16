@@ -69,8 +69,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const certificationTitles = {
     ru: {
-      'certified': 'Входит в объект оценки',
-      'notCertified': 'Не входит в объект оценки'
+      'certified': 'Сертифицирован',
+      'notCertified': 'Не сертифицирован'
     },
     en: {
       'certified': 'Included in the evaluation scope',

@@ -22,6 +22,7 @@
     ],
     "tags": [
       "network",
+      "certified",
       "ssdlc"
     ]
   },
@@ -109,6 +110,7 @@
     ],
     "tags": [
       "helper",
+      "certified",
       "ssdlc"
     ]
   },
@@ -126,6 +128,7 @@
       "managing",
       "observability",
       "web ui",
+      "certified",
       "ssdlc"
     ]
   },
@@ -140,6 +143,7 @@
     ],
     "tags": [
       "storage",
+      "certified",
       "ssdlc"
     ]
   },
@@ -178,6 +182,7 @@
     },
     "tags": [
       "storage",
+      "certified",
       "ssdlc"
     ]
   },
@@ -197,6 +202,7 @@
     },
     "tags": [
       "storage",
+      "certified",
       "ssdlc"
     ]
   },
@@ -211,6 +217,7 @@
     ],
     "tags": [
       "storage",
+      "certified",
       "ssdlc"
     ]
   },
@@ -231,6 +238,7 @@
     ],
     "tags": [
       "storage",
+      "certified",
       "ssdlc"
     ]
   },
@@ -242,6 +250,7 @@
     ],
     "tags": [
       "storage",
+      "certified",
       "ssdlc"
     ]
   },
@@ -281,6 +290,7 @@
     ],
     "tags": [
       "observability",
+      "certified",
       "ssdlc"
     ]
   },
@@ -296,6 +306,7 @@
     ],
     "tags": [
       "network",
+      "certified",
       "ssdlc"
     ]
   },
@@ -315,6 +326,7 @@
     },
     "tags": [
       "ml/ai",
+      "certified",
       "ssdlc"
     ]
   },
@@ -333,6 +345,7 @@
     "tags": [
       "observability",
       "logging",
+      "certified",
       "ssdlc"
     ]
   },
@@ -446,6 +459,7 @@
     ],
     "tags": [
       "observability",
+      "certified",
       "ssdlc"
     ]
   },
@@ -491,6 +505,7 @@
     ],
     "tags": [
       "observability",
+      "certified",
       "ssdlc"
     ]
   },
@@ -507,6 +522,7 @@
     "tags": [
       "observability",
       "logging",
+      "certified",
       "ssdlc"
     ]
   },
@@ -525,7 +541,8 @@
       }
     },
     "tags": [
-      "security"
+      "security",
+      "certified"
     ]
   },
   "observability": {
@@ -539,6 +556,7 @@
     ],
     "tags": [
       "observability",
+      "certified",
       "ssdlc"
     ]
   },
@@ -578,6 +596,7 @@
     },
     "tags": [
       "delivery",
+      "certified",
       "ssdlc"
     ]
   },
@@ -607,6 +626,7 @@
     "path": "/modules/operator-prometheus/",
     "tags": [
       "observability",
+      "certified",
       "ssdlc"
     ]
   },
@@ -627,6 +647,7 @@
     ],
     "tags": [
       "registry",
+      "certified",
       "ssdlc"
     ]
   },
@@ -644,7 +665,8 @@
     "path": "/modules/prompp/",
     "tags": [
       "observability",
-      "helper"
+      "helper",
+      "certified"
     ]
   },
   "pod-reloader": {
@@ -657,6 +679,7 @@
     ],
     "tags": [
       "core",
+      "certified",
       "ssdlc"
     ]
   },
@@ -674,6 +697,7 @@
     "path": "/modules/prometheus/",
     "tags": [
       "observability",
+      "certified",
       "ssdlc"
     ]
   },
@@ -689,6 +713,7 @@
     ],
     "tags": [
       "observability",
+      "certified",
       "ssdlc"
     ]
   },
@@ -713,6 +738,7 @@
     ],
     "tags": [
       "security",
+      "certified",
       "ssdlc"
     ]
   },
@@ -722,6 +748,7 @@
     ],
     "tags": [
       "security",
+      "certified",
       "ssdlc"
     ]
   },
@@ -731,6 +758,7 @@
     ],
     "tags": [
       "network",
+      "certified",
       "ssdlc"
     ]
   },
@@ -763,6 +791,7 @@
     },
     "tags": [
       "storage",
+      "certified",
       "ssdlc"
     ]
   },
@@ -777,6 +806,7 @@
     ],
     "tags": [
       "storage",
+      "certified",
       "ssdlc"
     ]
   },
@@ -823,6 +853,7 @@
     ],
     "tags": [
       "security",
+      "certified",
       "ssdlc"
     ]
   },
@@ -838,6 +869,7 @@
     ],
     "tags": [
       "storage",
+      "certified",
       "ssdlc"
     ]
   },
@@ -847,6 +879,7 @@
     ],
     "tags": [
       "network",
+      "certified",
       "ssdlc"
     ]
   },
@@ -869,6 +902,7 @@
     ],
     "tags": [
       "storage",
+      "certified",
       "ssdlc"
     ]
   },
@@ -921,6 +955,7 @@
     "path": "/modules/upmeter/",
     "tags": [
       "observability",
+      "certified",
       "ssdlc"
     ]
   },
@@ -936,6 +971,7 @@
     ],
     "tags": [
       "virtualization",
+      "certified",
       "ssdlc"
     ]
   }

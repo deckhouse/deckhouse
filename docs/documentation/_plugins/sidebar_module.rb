@@ -15,10 +15,7 @@ Jekyll::Hooks.register :site, :pre_render do |site|
       moduleKebabCase = page.url.sub(%r{(.*)?/modules/([^/]+)/.*$},'\2')
       # puts "Processing page: #{page.name} with URL: #{page.url}. Module #{moduleKebabCase}. Sidebar URL: #{sidebarUrl}, weight: #{weight} (#{File.basename(sidebarUrl)})"
       # Initialize the sidebar entry for the module if it does not exist
-      if site.config['d8Revision'].downcase == 'cse'
-        page.data['sidebar'] = 'embedded-modules'
-        next
-      elsif site.data['sidebars']['embedded-modules'][moduleKebabCase].nil?
+      if site.data['sidebars']['embedded-modules'][moduleKebabCase].nil?
         site.data['sidebars']['embedded-modules'][moduleKebabCase] = {
            'title' => {
              lang => "#{site.data['i18n']['common']['module'][lang].capitalize} #{moduleKebabCase}"
@@ -87,7 +84,6 @@ module Jekyll
       @config[:sidebar] = context.registers[:site].data['sidebars'][context.registers[:page]['sidebar']]
 
       return if @config[:sidebar].nil?
-      return if context.registers[:site].config['d8Revision'].downcase == 'cse'
 
       @config[:sidebar][moduleName]['folders'].sort_by! { |entry| entry['weight'] }.each do |entry|
         result.push(sidebar_entry(entry, parameters))
@@ -130,6 +126,11 @@ module Jekyll
           end
       end
 
+      # The hack for the in-cluster documentation for CSE.
+      if @context.registers[:site].config['d8Revision'].downcase == 'cse'
+          not_avail_in_this_edition = false
+      end
+
       # TODO Delete this (sidebar_group_page is not used in the module sidebar)
       # sidebar_group_page = @context.registers[:page]['sidebar_group_page']
 
@@ -138,9 +139,9 @@ module Jekyll
       end
 
       if entry.has_key?('external_url')
-        result.push("1<li class='#{ parameters['item_entry_class']}'><a href='#{ entry['external_url'] }' target='_blank'>#{sidebarItemTitle} ↗</a></li>")
+        result.push("<li class='#{ parameters['item_entry_class']}'><a href='#{ entry['external_url'] }' target='_blank'>#{sidebarItemTitle} ↗</a></li>")
       elsif !external_url.nil? && external_url.size > 0
-        result.push("2<li class='#{ parameters['item_entry_class']}'><a href='#{ external_url }' target='_blank'>#{sidebarItemTitle} ↗</a></li>")
+        result.push("<li class='#{ parameters['item_entry_class']}'><a href='#{ external_url }' target='_blank'>#{sidebarItemTitle} ↗</a></li>")
       elsif page_url == entry_url_without_module_path
         #or sidebar_group_page == entry['url']
         result.push("<li class='#{ parameters['item_entry_class']} active'><a href='#{ entry_url_without_module_path }'>#{sidebarItemTitle}</a></li>")
