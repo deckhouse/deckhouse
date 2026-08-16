@@ -73,10 +73,18 @@ spec:
                   namespace := object_namespace
                   spe := resolve_spe_from_labels(labels, namespace)
                   spe_allowed := allowed_values_or_empty(spe, ["spec", "securityContext", "sysctls", "allowedValues"])
+                  # Both fields are optional at the CR/values level (allowedSysctls and
+                  # forbiddenSysctls are independently set). input.parameters.allowedSysctls
+                  # (or .forbiddenSysctls) is *undefined*, not an empty array, when the key is
+                  # absent from parameters — and an undefined argument makes the whole
+                  # check_allowlist_denylist call undefined, silently skipping this violation
+                  # rule entirely. Default explicitly so a missing key can't disable the check.
+                  allowed := object.get(input.parameters, "allowedSysctls", [])
+                  forbidden := object.get(input.parameters, "forbiddenSysctls", [])
                   result := check_allowlist_denylist(
                     sysctl,
-                    input.parameters.allowedSysctls,
-                    input.parameters.forbiddenSysctls,
+                    allowed,
+                    forbidden,
                     spe_allowed,
                     {}
                   )

@@ -25,16 +25,20 @@ spec:
                 type: string
   targets:
     - target: admission.k8s.gatekeeper.sh
-      rego: |
-        package d8.operation_policies
+      code:
+        - engine: Rego
+          source:
+            version: "v1"
+            rego: |
+              package d8.operation_policies
 
-        violation[{"msg": msg}] {
-          not input.review.operation == "DELETE"
-          ingressClass := input.review.object.spec.ingressClassName
-          not contains(input.parameters.ingressClassNames, ingressClass)
-          msg := sprintf("Ingress <%v> has invalid ingress class: %v, allowed: %v", [input.review.object.metadata.name, ingressClass, input.parameters.ingressClassNames])
-        }
+              violation contains {"msg": msg} if {
+                not input.review.operation == "DELETE"
+                ingressClass := input.review.object.spec.ingressClassName
+                not list_contains(input.parameters.ingressClassNames, ingressClass)
+                msg := sprintf("Ingress <%v> has invalid ingress class: %v, allowed: %v", [input.review.object.metadata.name, ingressClass, input.parameters.ingressClassNames])
+              }
 
-        contains(list, elem) {
-          list[_] = elem
-        }
+              list_contains(list, elem) if {
+                list[_] == elem
+              }

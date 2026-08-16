@@ -234,6 +234,31 @@ spec:
                 containers:
                 - image: nginx
                   name: nginx
+    - name: controller-allowed-deployment-with-empty-resources-object
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.template.spec.containers[].resources
+        scenario: absent
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionDeployment
+        merge:
+          metadata:
+            name: controller-with-empty-resources-object
+          spec:
+            template:
+              spec:
+                containers:
+                - image: nginx
+                  name: nginx
+                  # A real apiserver always sends `resources: {}` for a
+                  # container where the user set nothing — corev1.Container.Resources
+                  # is a plain (non-pointer) struct, so the field is never actually
+                  # absent from a live AdmissionReview the way it is from a
+                  # hand-written test object above. This case pins that shape down.
+                  resources: {}
     - name: controller-disallowed-deployment-partial-resources
       violations: 'yes'
       assertionMessage: ''

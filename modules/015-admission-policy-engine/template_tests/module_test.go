@@ -108,10 +108,6 @@ func restoreTemplateLibRegoTests(moved [][2]string) error {
 }
 
 var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
-	BeforeEach(func() {
-		Skip("legacy helm-render specs are isolated after constraint test runner migration")
-	})
-
 	f := SetupHelmConfig(`{"admissionPolicyEngine": {"podSecurityStandards": {}, "internal": {"ratify": {"imageReferences": [{"reference": "ghcr.io/*", "publicKeys": ["someKey2"]}], "webhook": {"key": "YjY0ZW5jX3N0cmluZwo=", "crt": "YjY0ZW5jX3N0cmluZwo=" , "ca": "YjY0ZW5jX3N0cmluZwo="}}, "podSecurityStandards": {"enforcementActions": ["deny"]}, "operationPolicies": [
 	{
 		"metadata": {
@@ -340,7 +336,7 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 		})
 
 		It("Renders ValidatingWebhookConfiguration with main webhook, deny-exec-heritage webhook and security-policy-exception webhook", func() {
-			mainRules := `[{"apiGroups":[""],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["pods"]},{"apiGroups":["rbac.authorization.k8s.io"],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["roles","rolebindings"]},{"apiGroups":["constraints.gatekeeper.sh"],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["*"],"scope":"*"},{"apiGroups":[""],"apiVersions":["*"],"resources":["pods/exec","pods/attach"],"operations":["CONNECT"]},{"apiGroups":[""],"apiVersions":["*"],"resources":["pods/ephemeralcontainers"],"operations":["UPDATE"]}]`
+			mainRules := `[{"apiGroups":[""],"apiVersions":["*"],"operations":["CREATE","UPDATE"],"resources":["pods"]},{"apiGroups":["rbac.authorization.k8s.io"],"apiVersions":["*"],"operations":["CREATE","UPDATE"],"resources":["roles","rolebindings"]},{"apiGroups":["constraints.gatekeeper.sh"],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["*"],"scope":"*"},{"apiGroups":[""],"apiVersions":["*"],"resources":["pods/exec","pods/attach"],"operations":["CONNECT"]},{"apiGroups":[""],"apiVersions":["*"],"resources":["pods/ephemeralcontainers"],"operations":["UPDATE"]}]`
 			denyExecHeritageRules := `[{"apiGroups":[""],"apiVersions":["*"],"operations":["CONNECT"],"resources":["pods/exec","pods/attach"]}]`
 			securityPolicyExceptionRules := mainRules
 			checkVWC(f, 3, mainRules, denyExecHeritageRules, securityPolicyExceptionRules)

@@ -37,37 +37,41 @@ spec:
                     type: integer
   targets:
     - target: admission.k8s.gatekeeper.sh
-      rego: |
-        package d8.operation_policies
+      code:
+        - engine: Rego
+          source:
+            version: "v1"
+            rego: |
+              package d8.operation_policies
 
-        object_name = input.review.object.metadata.name
-        object_kind = input.review.kind.kind
+              object_name := input.review.object.metadata.name
+              object_kind := input.review.kind.kind
 
-        violation[{"msg": msg}] {
-            not input.review.operation == "DELETE"
-            spec := input.review.object.spec
-            not input_replica_limit(spec)
-            msg := sprintf("The provided number of replicas is not allowed for %v: %v. Allowed ranges: %v", [object_kind, object_name, input.parameters])
-        }
+              violation contains {"msg": msg} if {
+                  not input.review.operation == "DELETE"
+                  spec := input.review.object.spec
+                  not input_replica_limit(spec)
+                  msg := sprintf("The provided number of replicas is not allowed for %v: %v. Allowed ranges: %v", [object_kind, object_name, input.parameters])
+              }
 
-        input_replica_limit(spec) {
-            provided := input.review.object.spec.replicas
-            count(input.parameters.ranges) > 0
-            range := input.parameters.ranges[_]
-            value_within_range(range, provided)
-        }
+              input_replica_limit(spec) if {
+                  provided := input.review.object.spec.replicas
+                  count(input.parameters.ranges) > 0
+                  range := input.parameters.ranges[_]
+                  value_within_range(range, provided)
+              }
 
-        value_within_range(range, value) {
-            range.minReplicas <= value
-            range.maxReplicas >= value
-        }
+              value_within_range(range, value) if {
+                  range.minReplicas <= value
+                  range.maxReplicas >= value
+              }
 
-        value_within_range(range, value) {
-            not range.minReplicas
-            range.maxReplicas >= value
-        }
+              value_within_range(range, value) if {
+                  not range.minReplicas
+                  range.maxReplicas >= value
+              }
 
-        value_within_range(range, value) {
-            range.minReplicas <= value
-            not range.maxReplicas
-        }
+              value_within_range(range, value) if {
+                  range.minReplicas <= value
+                  not range.maxReplicas
+              }
