@@ -33,6 +33,10 @@ const (
 	secretName      = "bashible-apiserver-context"
 	secretNamespace = "d8-cloud-instance-manager"
 	secretInputKey  = "input.yaml"
+
+	// contextVersion tells bashible-apiserver how to read the document. No version means the old
+	// one: a single cloud provider for every NodeGroup.
+	contextVersion = 1
 )
 
 type Globals struct {
@@ -55,6 +59,7 @@ func (s *Service) Build(ctx context.Context, globals Globals, nodeGroups []map[s
 	}
 
 	input := map[string]interface{}{
+		"version": contextVersion,
 		"deckhouse": map[string]interface{}{
 			"channel": defaultString(globals.DeckhouseChannel, "unknown"),
 			"version": globals.DeckhouseVersion,
@@ -81,6 +86,13 @@ func (s *Service) Build(ctx context.Context, globals Globals, nodeGroups []map[s
 			trees = append(trees, p.Data)
 		}
 		input["cloudProviders"] = trees
+
+		// Deprecated, kept for one release: a bashible-apiserver of the previous version reads only
+		// this key and serves bundles alongside the new one during a rollout. Remove it together
+		// with the field in bashible-apiserver's inputData.
+		if len(all) == 1 {
+			input["cloudProvider"] = all[0].Data
+		}
 	}
 	if globals.Proxy != nil {
 		input["proxy"] = globals.Proxy

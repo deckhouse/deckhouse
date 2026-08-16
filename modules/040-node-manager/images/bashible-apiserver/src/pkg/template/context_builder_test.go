@@ -255,7 +255,7 @@ func TestGetCloudProvider(t *testing.T) {
 	aws := cloudProvider{"type": "aws", "region": "eu-central-1"}
 	yandex := cloudProvider{"type": "yandex"}
 
-	t.Run("a writer that publishes no list still answers with the deprecated field", func(t *testing.T) {
+	t.Run("an unversioned document answers with the deprecated field", func(t *testing.T) {
 		input := inputData{CloudProvider: aws}
 
 		if got := input.getCloudProvider("aws"); !reflect.DeepEqual(got, aws) {
@@ -266,8 +266,24 @@ func TestGetCloudProvider(t *testing.T) {
 		}
 	})
 
+	// The version switches the reader, not the presence of the list: a cluster with no cloud
+	// provider publishes an empty one.
+	t.Run("a versioned document with no provider resolves to nothing", func(t *testing.T) {
+		input := inputData{Version: 1, CloudProvider: aws}
+
+		if got := input.getCloudProvider(""); got != nil {
+			t.Fatalf("getCloudProvider(\"\") = %v, want nil", got)
+		}
+		if got := input.getCloudProvider("aws"); got != nil {
+			t.Fatalf("getCloudProvider(aws) = %v, want nil", got)
+		}
+	})
+
 	t.Run("a NodeGroup picks the registration of its own type", func(t *testing.T) {
-		input := inputData{CloudProviders: []cloudProvider{aws, yandex}}
+		input := inputData{
+			Version:        1,
+			CloudProviders: []cloudProvider{aws, yandex},
+		}
 
 		if got := input.getCloudProvider("aws"); !reflect.DeepEqual(got, aws) {
 			t.Fatalf("getCloudProvider(aws) = %v, want %v", got, aws)
@@ -277,27 +293,29 @@ func TestGetCloudProvider(t *testing.T) {
 		}
 	})
 
-	t.Run("a NodeGroup that names no provider gets none once the deprecated field is gone", func(t *testing.T) {
-		input := inputData{CloudProviders: []cloudProvider{aws}}
+	// Static and CloudStatic name no provider; the deprecated field must not answer for them.
+	t.Run("a NodeGroup that names no provider gets none even while the deprecated field is published", func(t *testing.T) {
+		input := inputData{
+			Version:        1,
+			CloudProvider:  aws,
+			CloudProviders: []cloudProvider{aws},
+		}
 
 		if got := input.getCloudProvider(""); got != nil {
 			t.Fatalf("getCloudProvider(\"\") = %v, want nil", got)
 		}
 	})
 
-	t.Run("a NodeGroup that names no provider still gets the deprecated one while it is published", func(t *testing.T) {
-		input := inputData{CloudProvider: aws, CloudProviders: []cloudProvider{aws}}
-
-		if got := input.getCloudProvider(""); !reflect.DeepEqual(got, aws) {
-			t.Fatalf("getCloudProvider(\"\") = %v, want the deprecated registration %v", got, aws)
+	// A type outside the list comes from a stale entry: another provider must not answer for it.
+	t.Run("a type the list does not carry resolves to nothing", func(t *testing.T) {
+		input := inputData{
+			Version:        1,
+			CloudProvider:  aws,
+			CloudProviders: []cloudProvider{aws},
 		}
-	})
 
-	t.Run("a type nobody registered falls back instead of guessing", func(t *testing.T) {
-		input := inputData{CloudProvider: aws, CloudProviders: []cloudProvider{aws}}
-
-		if got := input.getCloudProvider("gcp"); !reflect.DeepEqual(got, aws) {
-			t.Fatalf("getCloudProvider(gcp) = %v, want the deprecated registration %v", got, aws)
+		if got := input.getCloudProvider("gcp"); got != nil {
+			t.Fatalf("getCloudProvider(gcp) = %v, want nil", got)
 		}
 	})
 }
@@ -313,6 +331,7 @@ func TestCloudProviderIsPerNodeGroupInBuiltContexts(t *testing.T) {
 
 	t.Run("every group renders the steps of the provider it names", func(t *testing.T) {
 		built, steps := buildContexts(t, root, inputData{
+			Version:        1,
 			CloudProviders: []cloudProvider{aws, yandex},
 			NodeGroups: []nodeGroup{
 				{"name": "worker-aws", "nodeType": "CloudEphemeral", "cloudProviderType": "aws"},
@@ -344,6 +363,7 @@ func TestCloudProviderIsPerNodeGroupInBuiltContexts(t *testing.T) {
 
 	t.Run("the registration reaches the bundle context of its own group only", func(t *testing.T) {
 		built, _ := buildContexts(t, root, inputData{
+			Version:        1,
 			CloudProviders: []cloudProvider{aws},
 			NodeGroups: []nodeGroup{
 				{"name": "worker-aws", "nodeType": "CloudEphemeral", "cloudProviderType": "aws"},

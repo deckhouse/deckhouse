@@ -67,7 +67,7 @@ func (r *Reconciler) Assemble(ctx context.Context) error {
 		if errStr != "" {
 			logger.Info("NodeGroup failed validation", "nodeGroup", ng.Name, "error", errStr)
 			if p, ok := prior[ng.Name]; ok {
-				nodeGroups = append(nodeGroups, p)
+				nodeGroups = append(nodeGroups, withProviderType(p, providers, ng))
 			}
 			continue
 		}
@@ -82,6 +82,17 @@ func (r *Reconciler) Assemble(ctx context.Context) error {
 	setNodeGroupInfo(nodeGroups)
 
 	return r.Context.WriteSecret(ctx, nodeGroups, providers)
+}
+
+// withProviderType refreshes the provider of an entry carried over from the last published context:
+// an entry written before the key existed names none, and would render without cloud steps.
+func withProviderType(entry map[string]interface{}, providers cloudprovider.Providers, ng *v1.NodeGroup) map[string]interface{} {
+	if provider, ok := providers.ForNodeGroup(ng); ok {
+		entry["cloudProviderType"] = provider.Type
+	} else {
+		delete(entry, "cloudProviderType")
+	}
+	return entry
 }
 
 // readPriorNodeGroups returns the entries of the currently published context, keyed by NodeGroup

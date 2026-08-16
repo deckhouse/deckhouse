@@ -525,6 +525,7 @@ func (cp cloudProvider) Type() string {
 }
 
 type inputData struct {
+	Version                 int                     `json:"version,omitempty" yaml:"version,omitempty"`
 	Deckhouse               deckhouse               `json:"deckhouse" yaml:"deckhouse"`
 	PodSubnetNodeCIDRPrefix string                  `json:"podSubnetNodeCIDRPrefix" yaml:"podSubnetNodeCIDRPrefix"`
 	ClusterDomain           string                  `json:"clusterDomain" yaml:"clusterDomain"`
@@ -546,11 +547,16 @@ type inputData struct {
 	AllowedKubeletFeatureGates []string               `json:"allowedKubeletFeatureGates,omitempty" yaml:"allowedKubeletFeatureGates,omitempty"`
 }
 
-// getCloudProvider returns the provider a NodeGroup named. The fallback keeps a node-controller
-// that publishes neither cloudProviders nor a per-NodeGroup type working.
+// getCloudProvider returns the provider a NodeGroup named
 func (input inputData) getCloudProvider(pType string) cloudProvider {
-	if len(input.CloudProviders) == 0 || pType == "" {
+	// old
+	if input.Version < 1 {
 		return input.CloudProvider
+	}
+
+	// new
+	if pType == "" {
+		return nil
 	}
 
 	for i, provider := range input.CloudProviders {
@@ -559,5 +565,5 @@ func (input inputData) getCloudProvider(pType string) cloudProvider {
 		}
 	}
 
-	return input.CloudProvider
+	return nil
 }
