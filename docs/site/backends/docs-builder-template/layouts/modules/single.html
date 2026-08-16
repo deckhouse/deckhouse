@@ -86,7 +86,7 @@
 
       <div class="post-content">
 
-        {{- if and $currentModuleName (or (eq .File.ContentBaseName "README") (eq .File.ContentBaseName "CONFIGURATION")) }}
+        {{- if and $currentModuleName (ne $buildEdition "CSE" ) (or (eq .File.ContentBaseName "README") (eq .File.ContentBaseName "CONFIGURATION")) }}
          {{- partial "module-editions" (dict "moduleName" $currentModuleName "lang" .Language.Lang ) }}
         {{- end }}
 

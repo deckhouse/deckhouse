@@ -209,6 +209,14 @@
           {{- $moduleEditionsString = delimit $_editions "," }}
         {{- end }}
 
+        {{- /* CSE build: hide modules that are not available in either cse-lite or cse-pro */}}
+        {{- if eq $buildEdition "CSE" }}
+          {{- $moduleEditionsList := split $moduleEditionsString "," }}
+          {{- if and (not (in $moduleEditionsList "cse-lite")) (not (in $moduleEditionsList "cse-pro")) }}
+            {{- continue }}
+          {{- end }}
+        {{- end }}
+
         <a class="button-tile" data-editions="{{ $moduleEditionsString }}" href="{{ .url }}">
 
         {{- if and $moduleStage (in (slice "Preview" "Experimental" "General Availability" "Deprecated" ) $moduleStage) }}
