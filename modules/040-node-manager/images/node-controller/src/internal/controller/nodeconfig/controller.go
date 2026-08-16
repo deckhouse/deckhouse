@@ -39,7 +39,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
-	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
@@ -75,7 +74,7 @@ func (r *Reconciler) Setup(_ context.Context, mgr ctrl.Manager) error {
 }
 
 // ForPredicates drops Node updates that cannot change the render: it reads only
-// name, uid, all labels (NERs select on any) and creationTimestamp, so kubelet
+// name, uid, all labels and creationTimestamp, so kubelet
 // heartbeats are filtered. Applies to the Node watch only; creates/deletes pass.
 func (r *Reconciler) ForPredicates() []predicate.Predicate {
 	return []predicate.Predicate{predicate.Funcs{
@@ -100,14 +99,6 @@ func (r *Reconciler) SetupWatches(w register.Watcher) {
 			return nodeConfigRolloutInputsChanged(e.ObjectOld, e.ObjectNew)
 		},
 	}))
-	// A NER change re-renders every node, and only a spec change can: the render
-	// reads spec, name and creationTimestamp. The predicate is what breaks the
-	// loop of this controller's own status writes re-entering its queue.
-	// The CRD is a hard dependency: a watch on a missing kind kills the whole
-	// manager after two minutes. Safe because addon-operator applies every
-	// enabled module's crds/ before any Helm run.
-	w.Watches(&deckhousev1alpha1.NodeExtensionRequest{}, allMapper,
-		builder.WithPredicates(predicate.GenerationChangedPredicate{}))
 	// The system extension digests of the release. Without this watch a new
 	// release re-renders nothing until some unrelated input moves: the digests
 	// are read on every pass, but nothing enqueues one, and no resync period is
@@ -159,13 +150,6 @@ func (r *Reconciler) reconcileAllNodes(ctx context.Context, logger logr.Logger) 
 	}
 	if firstErr != nil {
 		firstErr = fmt.Errorf("render the NodeConfig of %d of %d nodes: %w", failed, len(nodes.Items), firstErr)
-	}
-
-	// Report each request's resolution back on its own status. This runs on the
-	// same all-nodes pass a NER change triggers, so editing a request refreshes
-	// both the nodes it targets and its status.
-	if err := r.reconcileNERStatuses(ctx, logger); err != nil && firstErr == nil {
-		firstErr = err
 	}
 
 	return ctrl.Result{}, firstErr

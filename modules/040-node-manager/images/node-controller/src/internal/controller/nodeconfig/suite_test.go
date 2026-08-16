@@ -80,7 +80,6 @@ var _ = BeforeSuite(func() {
 			testenv.WithNodeGroupCRDFile(),
 			testenv.WithNodeManager(testenv.NodeConfigCRDFile),
 			testenv.WithNodeManager(testenv.NodeOperationCRDFile),
-			testenv.WithNodeManager(testenv.NodeExtensionRequestCRDFile),
 		)...,
 	)
 	Expect(err).NotTo(HaveOccurred())

@@ -46,9 +46,8 @@ func RenderBootstrapSpec(ctx context.Context, cl client.Client, reader client.Re
 	}
 
 	// Zero CreationTimestamp makes registration taints render. The labels kubelet
-	// will register with must be set too: a NodeExtensionRequest selects by node
-	// label, and a bare-name node would miss its extensions until the first
-	// day-2 render.
+	// will register with must be set too: the render reads them, and a bare-name
+	// node would differ from its first day-2 render.
 	labels := map[string]string{}
 	for key, value := range renderNodeLabels(ng) {
 		labels[key] = string(value)

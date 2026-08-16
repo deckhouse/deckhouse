@@ -280,7 +280,7 @@ func TestRenderNodeLabelsDropsWhatKubeletRefuses(t *testing.T) {
 
 // The Node watch drops updates that cannot change the rendered spec (kubelet
 // heartbeats) but must not drop ones that can: labels are compared whole,
-// because a NodeExtensionRequest can select on any label at all.
+// because the render carries them onto the node's kubelet.
 func TestNodeRenderInputsChanged(t *testing.T) {
 	node := func(mutate func(*corev1.Node)) *corev1.Node {
 		n := &corev1.Node{

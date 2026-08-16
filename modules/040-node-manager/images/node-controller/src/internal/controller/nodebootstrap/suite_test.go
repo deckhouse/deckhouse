@@ -65,9 +65,6 @@ var _ = BeforeSuite(func() {
 	scheme = k8sruntime.NewScheme()
 	Expect(clientgoscheme.AddToScheme(scheme)).To(Succeed())
 	Expect(deckhousev1.AddToScheme(scheme)).To(Succeed())
-	// NodeExtensionRequest: the rendered spec merges the operator's extra
-	// system extensions; listing them fails the whole render when the type is
-	// missing from the scheme or its CRD is not installed below.
 	Expect(deckhousev1alpha1.AddToScheme(scheme)).To(Succeed())
 	Expect(internalv1alpha1.AddToScheme(scheme)).To(Succeed())
 	Expect(bootstrapv1alpha1.AddToScheme(scheme)).To(Succeed())
@@ -80,7 +77,6 @@ var _ = BeforeSuite(func() {
 		testenv.CRDPaths(
 			testenv.WithNodeGroupCRDFile(),
 			testenv.WithNodeManager(testenv.NodeConfigCRDFile),
-			testenv.WithNodeManager(testenv.NodeExtensionRequestCRDFile),
 			testenv.WithNodeManager(testenv.NodeBootstrapConfigCRDFile),
 			testenv.WithNodeManager(testenv.NodeBootstrapConfigTemplateCRDFile),
 			testenv.WithMachineCRDFile(),

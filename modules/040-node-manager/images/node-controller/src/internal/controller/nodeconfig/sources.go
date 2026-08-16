@@ -35,7 +35,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	sigsyaml "sigs.k8s.io/yaml"
 
-	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 )
 
@@ -76,12 +75,6 @@ type clusterInputs struct {
 	// node gets it: containerd pulls pause with no imagePullSecret, so a worker
 	// without credentials fails every sandbox it tries to create.
 	Registry *internalv1alpha1.Registry
-	// NodeExtensions are the operator's requests to merge extra system extensions
-	// onto the nodes they select, in the order their uniqueness contest ran; the
-	// contest is cluster-wide, so it is settled here, once per pass, rather than
-	// once per node. NodeExtensionConflicts says which requests lost it.
-	NodeExtensions         []*deckhousev1alpha1.NodeExtensionRequest
-	NodeExtensionConflicts map[string]nerConflict
 }
 
 // sourceReader reads cluster state. Reader goes straight to the API server
@@ -162,13 +155,6 @@ func (s *sourceReader) readClusterInputs(ctx context.Context, kubernetesVersion 
 		return in, err
 	}
 	in.SandboxImage = sandbox
-
-	ners, err := s.readNodeExtensionRequests(ctx)
-	if err != nil {
-		return in, err
-	}
-	in.NodeExtensions = orderedNERs(ners)
-	in.NodeExtensionConflicts = resolveNERConflicts(in.NodeExtensions)
 
 	return in, nil
 }
@@ -251,17 +237,6 @@ func sandboxImage(images map[string]map[string]string, imagesRepo string) (strin
 		return "", fmt.Errorf("no %s/%s digest in %s", pauseDigestGroup, pauseDigestName, imagesDigestsKey)
 	}
 	return imagesRepo + "@" + digest, nil
-}
-
-// readNodeExtensionRequests lists the extension requests; an empty list is fine.
-// The one cached read here: the controller watches this kind, and a live read
-// could disagree with the status pass, which reports from the cached list.
-func (s *sourceReader) readNodeExtensionRequests(ctx context.Context) ([]deckhousev1alpha1.NodeExtensionRequest, error) {
-	list := &deckhousev1alpha1.NodeExtensionRequestList{}
-	if err := s.Client.List(ctx, list); err != nil {
-		return nil, fmt.Errorf("list node extension requests: %w", err)
-	}
-	return list.Items, nil
 }
 
 // readClusterCA returns the cluster CA, base64-encoded the way the NodeConfig

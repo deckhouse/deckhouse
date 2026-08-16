@@ -39,7 +39,6 @@ const (
 
 	NodeConfigCRDFile                  NodeManagerCRDFile = "nodeconfig.yaml"
 	NodeOperationCRDFile               NodeManagerCRDFile = "nodeoperation.yaml"
-	NodeExtensionRequestCRDFile        NodeManagerCRDFile = "nodeextensionrequest.yaml"
 	NodeBootstrapConfigCRDFile         NodeManagerCRDFile = "nodebootstrapconfig.yaml"
 	NodeBootstrapConfigTemplateCRDFile NodeManagerCRDFile = "nodebootstrapconfigtemplate.yaml"
 )

@@ -72,21 +72,7 @@ const (
 	testNodeletDigest           = "sha256:6666666666666666666666666666666666666666666666666666666666666666"
 	testOSImageDigest           = "sha256:7777777777777777777777777777777777777777777777777777777777777777"
 	testClusterCA               = "-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----\n"
-	// The extension one spec asks for through a NodeExtensionRequest, and the
-	// digest it is rebuilt under.
-	testRequestedSysextName          = "custom-ext"
-	testRequestedSysextDigest        = "sha256:6666666666666666666666666666666666666666666666666666666666666666"
-	testRequestedSysextRebuiltDigest = "sha256:7777777777777777777777777777777777777777777777777777777777777777"
 )
-
-// extensionDigests indexes a rendered config's extensions by name.
-func extensionDigests(nc *internalv1alpha1.NodeConfig) map[string]string {
-	byName := map[string]string{}
-	for _, ext := range nc.Spec.Extensions {
-		byName[ext.Name] = ext.Digest
-	}
-	return byName
-}
 
 // User story: As a cluster operator, I want immutable nodes configured from the
 // NodeGroup I wrote, so that I manage them through the same object as every
@@ -211,52 +197,6 @@ var _ = Describe("NodeConfig controller", func() {
 
 		Eventually(func(g Gomega) {
 			g.Expect(getNodeConfig(ctx, g, nodeName).Spec.Kubelet.MaxPods).To(Equal(200))
-		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
-	})
-
-	// User story: As a cluster operator, I want the extension I asked for to reach
-	// my nodes when I write the request and again when I change it, so that a
-	// rebuilt image is one edit away.
-	It("re-renders the nodes of a group when a NodeExtensionRequest changes", func(ctx context.Context) {
-		ngName := testenv.UniqueName("workers-imm")
-		createImmutableNodeGroup(ctx, ngName, nil)
-		nodeName := testenv.UniqueName("node")
-		createNode(ctx, nodeName, ngName)
-
-		Eventually(func(g Gomega) {
-			g.Expect(getNodeConfig(ctx, g, nodeName).Spec.Extensions).To(HaveLen(4))
-		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
-
-		By("asking for an extension on the group")
-		ner := &v1alpha1.NodeExtensionRequest{
-			ObjectMeta: metav1.ObjectMeta{Name: testenv.UniqueName("ext")},
-			Spec: v1alpha1.NodeExtensionRequestSpec{
-				Sysext:            v1alpha1.Sysext{Name: testRequestedSysextName, Digest: testRequestedSysextDigest},
-				NodeGroupSelector: v1alpha1.NodeGroupSelector{MatchNames: []string{ngName}},
-			},
-		}
-		Expect(k8sClient.Create(ctx, ner)).To(Succeed())
-		DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, ner) })
-
-		Eventually(func(g Gomega) {
-			g.Expect(extensionDigests(getNodeConfig(ctx, g, nodeName))).
-				To(HaveKeyWithValue(testRequestedSysextName, testRequestedSysextDigest))
-
-			// The same pass reports the resolution back on the request.
-			fresh := &v1alpha1.NodeExtensionRequest{}
-			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: ner.Name}, fresh)).To(Succeed())
-			g.Expect(fresh.Status.MatchedNodeGroups).To(ConsistOf(ngName))
-			g.Expect(meta.IsStatusConditionTrue(fresh.Status.Conditions, readyConditionType)).To(BeTrue())
-		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
-
-		By("pointing the request at a rebuilt image")
-		patch := client.MergeFrom(ner.DeepCopy())
-		ner.Spec.Sysext.Digest = testRequestedSysextRebuiltDigest
-		Expect(k8sClient.Patch(ctx, ner, patch)).To(Succeed())
-
-		Eventually(func(g Gomega) {
-			g.Expect(extensionDigests(getNodeConfig(ctx, g, nodeName))).
-				To(HaveKeyWithValue(testRequestedSysextName, testRequestedSysextRebuiltDigest))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 

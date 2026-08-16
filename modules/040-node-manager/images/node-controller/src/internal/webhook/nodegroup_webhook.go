@@ -79,11 +79,6 @@ func SetupWithManager(mgr ctrl.Manager) error {
 		},
 	})
 
-	// Validating webhook refusing a reserved NodeExtensionRequest sysext name.
-	hookServer.Register("/validate-deckhouse-io-v1alpha1-nodeextensionrequest", &webhook.Admission{
-		Handler: &NodeExtensionRequestValidator{decoder: decoder},
-	})
-
 	// Unified conversion webhook (NodeGroup + Instance) with cluster state access.
 	hookServer.Register("/convert", &ConversionHandler{
 		Client: mgr.GetClient(),

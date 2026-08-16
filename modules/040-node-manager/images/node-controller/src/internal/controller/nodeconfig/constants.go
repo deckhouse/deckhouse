@@ -109,10 +109,6 @@ const (
 	// must not differ between nodes. Keep in step with dhctl/pkg/immutable/digests.go.
 	platformExtensionRequestedBy = "node-manager"
 
-	// nerRequestedByPrefix qualifies an extension that came from a
-	// NodeExtensionRequest, distinguishing it from the platform marker above.
-	nerRequestedByPrefix = "NodeExtensionRequest/"
-
 	// resourceReservationModeAuto and resourceReservationModeStatic are the
 	// NodeGroup kubeReserved modes this render reasons about; Static has no
 	// counterpart on an immutable node, and Off only ever passes through.
@@ -125,12 +121,6 @@ const (
 	// phaseReady is what the node reports once it has reconciled the spec it
 	// was given.
 	phaseReady = "Ready"
-
-	// extensionStateReady and extensionStateFailed mirror the agent's enum for
-	// NodeConfig.status.extensions[].state; the third value, Pending, means the
-	// node is still working and counts as neither outcome.
-	extensionStateReady  = "Ready"
-	extensionStateFailed = "Failed"
 
 	// kubernetesLabelNamespace and k8sLabelNamespace are the label namespaces a
 	// node may not put itself into, beyond kubeletAllowedLabels below.
