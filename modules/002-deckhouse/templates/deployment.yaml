@@ -107,7 +107,7 @@ spec:
         {{- .Values.deckhouse.tolerations | toYaml | nindent 8 }}
         - key: node.deckhouse.io/bashible-uninitialized
           operator: "Exists"
-          effect: "NoSchedule"        
+          effect: "NoSchedule"
         - key: node.deckhouse.io/uninitialized
           operator: "Exists"
           effect: "NoSchedule"
@@ -197,7 +197,7 @@ spec:
             - name: DECKHOUSE_ENABLE_PACKAGE_SYSTEM
               value: "true"
             - name: DECKHOUSE_ENABLE_MODULE_PACKAGES
-              value: "false"
+              value: "true"
             - name: USE_NELM
               value: "true"
             # Adopt fields owned by the legacy "deckhouse-controller" field manager
