@@ -207,7 +207,7 @@ html {
             @include breakpoints.min-w(l) {
                 display: flex;
                 margin: 0;
-                padding: 1.125rem;
+                padding: 1.1rem 1.25rem;
                 min-width: 100%;
                 gap: .6rem;
                 flex-direction: column;
@@ -217,7 +217,8 @@ html {
 
                 &-container {
                     position: absolute;
-                    left: -2em;
+                    left: 0;
+                    top: 14px;
                     opacity: 0;
                     visibility: hidden;
                 }
@@ -266,8 +267,12 @@ html {
                 }
             }
 
-            @include breakpoints.min-w(xl) {
+            @include breakpoints.min-w(xxl) {
                 gap: .75rem;
+            }
+
+            @include breakpoints.min-w(xl) {
+                gap: 1rem;
             }
 
             a {
@@ -283,14 +288,14 @@ html {
 
         a {
             @include mixins.color(mixins.$ntrl-800);
-
-            @include breakpoints.min-w(l) {
-                white-space: nowrap;
-            }
         }
 
         .menu-item-has-children {
             position: relative;
+
+            &:hover > a::after {
+                transform: translateY(3px);
+            }
 
             > a {
                 pointer-events: none;
@@ -418,7 +423,7 @@ html {
                 }
             }
 
-            &--product {
+            &--bottom {
                 > a {
                     @include breakpoints.min-w(l) {
                         padding-right: 17px;
@@ -435,25 +440,31 @@ html {
 
                     &::after {
                         @include breakpoints.min-w(l) {
-                            top: 30%;
+                            top: 35%;
                             width: 9px;
                             height: 7px;
                         }
 
                         @include breakpoints.min-w(xl) {
-                            top: 27%;
+                            top: 30%;
                         }
 
                         @include breakpoints.min-w(xxl) {
-                            top: 34%;
+                            top: 40%;
                             height: 6px;
                         }
 
                         @include breakpoints.min-w(xxxl) {
-                            top: 31%;
                             right: 0px;
                         }
                     }
+                }
+
+                .sub-menu {
+                    box-sizing: border-box;
+                    max-width: 250px;
+                    min-width: 250px;
+                    font-size: 15px;
                 }
             }
         }
@@ -723,7 +734,7 @@ html {
                     content: "";
                     position: absolute;
                     right: -17px;
-                    top: 53%;
+                    top: 50%;
                     margin-top: -3px;
                     background: $header-arrow;
                     background-repeat: no-repeat;
@@ -733,7 +744,7 @@ html {
                     width: 10px;
 
                     @include breakpoints.min-w(s) {
-                        top: 58%;
+                        top: 60%;
                     }
                 }
 
@@ -788,7 +799,6 @@ html {
         ul {
             @include breakpoints.min-w(l) {
                 flex-wrap: nowrap;
-                align-items: center;
             }
 
             &.nav {
