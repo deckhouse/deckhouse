@@ -236,13 +236,13 @@ func applyNodeGroupReplicasFromCloudProviderVars(m *MetaConfig) error {
 	if m.CloudProviderVars == nil {
 		return nil
 	}
-	// Only the mc-flow derives replicas from NodeGroups, and only an operation
-	// that acts on the count needs them: destroy removes the nodes anyway, and
-	// must stay possible on a cluster whose count is unreadable.
-	enforceReplicas := !m.HasLegacyProviderConfig() && m.Operation != proto.OperationDestroy
+	// Only a flow that reads the count from the NodeGroups needs it known, and only
+	// an operation that acts on it: legacy takes it from ProviderClusterConfiguration,
+	// destroy removes the nodes regardless and must stay possible.
+	mustKnowNodeCount := !m.HasLegacyProviderConfig() && m.Operation != proto.OperationDestroy
 
 	if masterNg, hasMaster := m.CloudProviderVars.NodeGroups[masterNodeGroupName]; hasMaster && m.MasterNodeGroupSpec.Replicas == 0 {
-		if enforceReplicas {
+		if mustKnowNodeCount {
 			if err := requireNodeGroupReplicas(masterNg, masterNodeGroupName); err != nil {
 				return err
 			}
@@ -260,7 +260,7 @@ func applyNodeGroupReplicasFromCloudProviderVars(m *MetaConfig) error {
 				continue
 			}
 			ng := m.CloudProviderVars.NodeGroups[name]
-			if enforceReplicas {
+			if mustKnowNodeCount {
 				if err := requireNodeGroupReplicas(ng, name); err != nil {
 					return err
 				}
