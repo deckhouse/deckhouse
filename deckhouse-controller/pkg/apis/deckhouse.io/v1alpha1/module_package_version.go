@@ -174,6 +174,11 @@ type ModulePackageVersionStatusMetadata struct {
 	// +optional
 	Critical bool `json:"critical,omitempty"`
 
+	// Indicates the group where only one module can be active at a time.
+	// +crd-enricher:deckhouse:documentation:examples=cni
+	// +optional
+	ExclusiveGroup string `json:"exclusiveGroup,omitempty" yaml:"exclusiveGroup,omitempty"`
+
 	// The system requirements for this package.
 	// +optional
 	Requirements *PackageRequirements `json:"requirements,omitempty"`
