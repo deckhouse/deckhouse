@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"strings"
@@ -35,6 +36,13 @@ type inputDexAuthenticatorAllowAccess struct {
 	allowed    bool
 	warns      bool
 }
+
+type inputDexAuthenticatorClientSecret struct {
+	existing string
+	rotated  bool
+}
+
+const sharedKubernetesClientSecret = "sharedKubernetesSecret"
 
 var _ = Describe("User Authn hooks :: get dex authenticator crds ::", func() {
 	f := HookExecutionConfigInit(`{"userAuthn":{"internal": {}}}`, "")
@@ -377,6 +385,57 @@ spec:
 		),
 		Entry("denies access to the Kubernetes API without warning when the annotation is absent",
 			inputDexAuthenticatorAllowAccess{},
+		),
+	)
+
+	DescribeTable("The client secret of an existing DexAuthenticator",
+		func(in inputDexAuthenticatorClientSecret) {
+			const cookieSecret = "testNexttestNexttestNext"
+
+			f.ValuesSet("userAuthn.internal.kubernetesDexClientAppSecret", sharedKubernetesClientSecret)
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dex-authenticator-test
+  namespace: test
+  labels:
+    app: dex-authenticator
+    name: credentials
+data:
+  client-secret: ` + base64.StdEncoding.EncodeToString([]byte(in.existing)) + `
+  cookie-secret: ` + base64.StdEncoding.EncodeToString([]byte(cookieSecret)) + `
+---
+apiVersion: deckhouse.io/v2alpha1
+kind: DexAuthenticator
+metadata:
+  name: test
+  namespace: test
+  annotations:
+    dexauthenticator.deckhouse.io/allow-access-to-kubernetes: "true"
+spec:
+  applications:
+  - domain: test
+    ingressClassName: "nginx"
+`))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+
+			appDexSecret := f.ValuesGet("userAuthn.internal.dexAuthenticatorCRDs.0.credentials.appDexSecret").String()
+			if in.rotated {
+				Expect(appDexSecret).NotTo(Equal(sharedKubernetesClientSecret))
+				Expect(appDexSecret).To(HaveLen(20))
+			} else {
+				Expect(appDexSecret).To(Equal(in.existing))
+			}
+		},
+		Entry("is regenerated when it equals the shared kubernetes client secret",
+			inputDexAuthenticatorClientSecret{existing: sharedKubernetesClientSecret, rotated: true},
+		),
+		Entry("is preserved when it is unrelated to the shared kubernetes client secret",
+			inputDexAuthenticatorClientSecret{existing: "perAuthenticatorSecret"},
 		),
 	)
 })

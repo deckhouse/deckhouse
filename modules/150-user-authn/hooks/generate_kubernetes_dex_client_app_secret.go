@@ -29,6 +29,11 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/pwgen"
 )
 
+// kubernetesDexClientAppSecretPath holds the secret of the privileged kubernetes OAuth2Client.
+// It is shared by every consumer of the kubernetes client and must never be handed out to
+// per-application clients.
+const kubernetesDexClientAppSecretPath = "userAuthn.internal.kubernetesDexClientAppSecret"
+
 type KubernetesSecret []byte
 
 func applyKubernetesSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -61,7 +66,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, kubernetesDexClientAppSecret)
 
 func kubernetesDexClientAppSecret(_ context.Context, input *go_hook.HookInput) error {
-	secretPath := "userAuthn.internal.kubernetesDexClientAppSecret"
+	secretPath := kubernetesDexClientAppSecretPath
 	if input.Values.Exists(secretPath) && input.Values.Get(secretPath).String() != "" {
 		return nil
 	}
