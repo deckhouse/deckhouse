@@ -48,7 +48,6 @@ import (
 	pkgruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/validation"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/docbuilder"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/objectkeeper"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application"
@@ -193,16 +192,16 @@ func Build(ctx context.Context, rest *rest.Config, ms metricsstorage.Storage, lo
 
 	settingsCh := make(chan addonutils.Values, 1)
 
-	if serveWebhooks {
-		// GetWebhookServer, not the server above: this call adds it to the runnables.
-		validation.RegisterAdmissionHandlers(
-			runtime.GetWebhookServer(),
-			runtime.GetClient(),
-			manager,
-			ms,
-			settingsContainer,
-		)
-	}
+	// if serveWebhooks {
+	// 	// GetWebhookServer, not the server above: this call adds it to the runnables.
+	// 	validation.RegisterAdmissionHandlers(
+	// 		runtime.GetWebhookServer(),
+	// 		runtime.GetClient(),
+	// 		manager,
+	// 		ms,
+	// 		settingsContainer,
+	// 	)
+	// }
 
 	return &Controller{
 		ctrl: runtime,
