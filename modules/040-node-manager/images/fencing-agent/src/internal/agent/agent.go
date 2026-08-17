@@ -150,7 +150,6 @@ func (a *Agent) Run(ctx context.Context) error {
 		ShouldFeed: feedGate,
 	}, a.logger)
 
-
 	defer watchdogManager.Close()
 
 	joiner := join.New(members, cluster, a.joinParams(), a.logger)

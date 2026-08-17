@@ -32,7 +32,6 @@ import (
 	"fencing-agent/internal/domain"
 )
 
-
 type SelfStore interface {
 	Observe(signals domain.NodeSignals)
 	Deleted()
