@@ -123,6 +123,7 @@ func TestNodeGroupHandler(t *testing.T) {
 			// so it belongs to no provider and still depends on the set.
 			cloudEphemeral("worker-unknown", "VsphereInstanceClass"),
 			nodeGroupOfType("master", v1.NodeTypeCloudPermanent),
+			nodeGroupOfType("cloudstatic", v1.NodeTypeCloudStatic),
 			nodeGroupOfType("static", v1.NodeTypeStatic),
 		).Build()
 		queue := workqueue.NewTypedRateLimitingQueue(
@@ -155,16 +156,16 @@ func TestNodeGroupHandler(t *testing.T) {
 		assert.Equal(t, []string{"worker-aws"}, drain(t, queue))
 	})
 
-	// CloudPermanent names no InstanceClass, so it hangs off the cluster provider — an event on
-	// that registration has to reach it, and an event on the other one must not.
-	t.Run("the cluster provider takes the CloudPermanent group with it", func(t *testing.T) {
+	// CloudPermanent and CloudStatic name no InstanceClass, so they hang off the cluster provider —
+	// an event on that registration has to reach them, and an event on the other one must not.
+	t.Run("the cluster provider takes its InstanceClass-less groups with it", func(t *testing.T) {
 		h, queue := newHandler(t)
 		rotated := yandex.DeepCopy()
 		rotated.Data["zones"] = []byte(`["ru-central1-a"]`)
 
 		h.Update(context.Background(), event.UpdateEvent{ObjectOld: yandex, ObjectNew: rotated}, queue)
 
-		assert.Equal(t, []string{"master", "worker-yandex"}, drain(t, queue))
+		assert.Equal(t, []string{"cloudstatic", "master", "worker-yandex"}, drain(t, queue))
 	})
 
 	// The provider is decoded from the event object, which on a delete is the only place it
@@ -204,8 +205,7 @@ func TestNodeGroupHandler(t *testing.T) {
 		assert.Empty(t, drain(t, queue))
 	})
 
-	// Static and CloudStatic run in no cloud at all, and a group of another provider is not moved
-	// by this one.
+	// Static runs in no cloud at all, and a group of another provider is not moved by this one.
 	t.Run("a registration nobody runs on enqueues nothing", func(t *testing.T) {
 		h, queue := newHandler(t)
 		orphan := registrationSecret(SecretNamePrefix+"-gcp", map[string][]byte{

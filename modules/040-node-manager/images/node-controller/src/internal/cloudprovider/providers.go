@@ -38,8 +38,8 @@ import (
 type Providers struct {
 	providers []Provider
 
-	// ClusterConfiguration.cloud.provider, lower-cased: CloudPermanent NodeGroups name no
-	// InstanceClass, so there is nothing else to match them on.
+	// ClusterConfiguration.cloud.provider, lower-cased: CloudPermanent and CloudStatic NodeGroups
+	// name no InstanceClass, so there is nothing else to match them on.
 	clusterProvider string
 }
 
@@ -103,11 +103,13 @@ func (ps Providers) Empty() bool {
 
 // ForNodeGroup returns the provider a NodeGroup runs on. It performs no I/O.
 //
-// CloudEphemeral resolves through the InstanceClass kind it references, CloudPermanent through the
-// provider of the cluster. Static and CloudStatic have none: their nodes are outside every cloud.
+// CloudEphemeral resolves through the InstanceClass kind it references. CloudPermanent and
+// CloudStatic reference none, so both fall back to the provider of the cluster: their nodes run in
+// that cloud, Deckhouse just does not order them. Static has no provider — its nodes are outside
+// every cloud.
 func (ps Providers) ForNodeGroup(ng *v1.NodeGroup) (Provider, bool) {
 	switch ng.Spec.NodeType {
-	case v1.NodeTypeCloudEphemeral, v1.NodeTypeCloudPermanent:
+	case v1.NodeTypeCloudEphemeral, v1.NodeTypeCloudPermanent, v1.NodeTypeCloudStatic:
 	default:
 		return Provider{}, false
 	}
@@ -118,7 +120,7 @@ func (ps Providers) ForNodeGroup(ng *v1.NodeGroup) (Provider, bool) {
 		}
 	}
 
-	if ng.Spec.NodeType == v1.NodeTypeCloudPermanent {
+	if ng.Spec.NodeType != v1.NodeTypeCloudEphemeral {
 		return ps.byName(ps.clusterProvider)
 	}
 

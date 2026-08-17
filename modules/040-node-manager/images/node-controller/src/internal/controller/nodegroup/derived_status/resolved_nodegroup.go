@@ -74,8 +74,9 @@ type ResolvedNodeGroup struct {
 
 	// CloudProviderType names the provider this NodeGroup resolved to, empty for a group outside
 	// any cloud. It is deliberately outside the CloudProcessed gate below: bashible picks the
-	// provider's step directory by it, and CloudPermanent never passes the cloud checks — gating it
-	// would strip the provider steps from the master NodeGroup.
+	// provider's step directory by it, and neither CloudPermanent nor CloudStatic passes the cloud
+	// checks — gating it would strip the provider steps from the master and from the nodes brought
+	// into the cloud by hand.
 	CloudProviderType string
 
 	// CloudProcessed reports that the cloud checks passed. It gates the whole cloud overlay,

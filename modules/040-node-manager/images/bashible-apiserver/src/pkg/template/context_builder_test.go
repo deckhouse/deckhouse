@@ -293,7 +293,7 @@ func TestGetCloudProvider(t *testing.T) {
 		}
 	})
 
-	// Static and CloudStatic name no provider; the deprecated field must not answer for them.
+	// Static names no provider; the deprecated field must not answer for it.
 	t.Run("a NodeGroup that names no provider gets none even while the deprecated field is published", func(t *testing.T) {
 		input := inputData{
 			Version:        1,

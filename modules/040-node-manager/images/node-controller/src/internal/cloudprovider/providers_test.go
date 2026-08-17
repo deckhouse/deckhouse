@@ -271,14 +271,18 @@ func TestForNodeGroup(t *testing.T) {
 			expFound: true,
 		},
 		{
-			// Handing these a provider is what used to apply cloud bashible steps to nodes that
+			// Handing this one a provider is what used to apply cloud bashible steps to nodes that
 			// are not in any cloud.
 			name: "Static has no provider",
 			ng:   nodeGroupOfType("static", v1.NodeTypeStatic),
 		},
 		{
-			name: "CloudStatic has no provider",
-			ng:   nodeGroupOfType("cloudstatic", v1.NodeTypeCloudStatic),
+			// CloudStatic nodes do run in the cluster's cloud, Deckhouse just does not order them:
+			// they still need the provider steps and the cloud variables.
+			name:     "CloudStatic falls back to the cluster provider",
+			ng:       nodeGroupOfType("cloudstatic", v1.NodeTypeCloudStatic),
+			expType:  "yandex",
+			expFound: true,
 		},
 	}
 
