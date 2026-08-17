@@ -207,6 +207,21 @@ func (m *ModulePackageVersion) IsLegacy() bool {
 	return m.hasTrueLabel(ModulePackageVersionLabelLegacy)
 }
 
+// GetExclusiveGroup returns the exclusive group of this package version.
+func (m *ModulePackageVersion) GetExclusiveGroup() string {
+	return m.Status.PackageMetadata.ExclusiveGroup
+}
+
+// IsModuleExperimental reports whether this package version is marked as experimental.
+func (m *ModulePackageVersion) IsModuleExperimental() bool {
+	return m.Status.PackageMetadata.Stage == "Experimental"
+}
+
+// IsModuleDeprecated reports whether this package version is marked as deprecated.
+func (m *ModulePackageVersion) IsModuleDeprecated() bool {
+	return m.Status.PackageMetadata.Stage == "Deprecated"
+}
+
 // hasTrueLabel reports whether the named label holds a truthy value. An unparsable value
 // counts as false, so a hand-edited label cannot flip behaviour by accident.
 func (m *ModulePackageVersion) hasTrueLabel(label string) bool {
