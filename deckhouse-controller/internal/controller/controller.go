@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
@@ -39,12 +40,21 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	ctrlmanager "sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	pkgruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/docbuilder"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/objectkeeper"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application"
+	applicationpackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application-package-version"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module"
+	modulepackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module-package-version"
+	packagerepository "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository"
+	packagerepositoryoperation "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository-operation"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -56,6 +66,9 @@ const (
 
 	// gracefulShutdownTimeout bounds the controller-runtime manager shutdown.
 	gracefulShutdownTimeout = 10 * time.Second
+
+	// controllerName is the name of the controller.
+	controllerName = "deckhouse-controller"
 )
 
 // Controller drives modules through the package runtime alone, without addon-operator.
@@ -94,7 +107,22 @@ func Build(ctx context.Context, rest *rest.Config, ms metricsstorage.Storage, lo
 		return otelhttp.NewTransport(t)
 	})
 
-	runtime, err := ctrl.NewManager(rest, buildControllerOpts(ctx, scheme))
+	var webhookServer webhook.Server
+
+	admission, serveWebhooks := app.TakeOverAdmissionServer()
+	if serveWebhooks {
+		listenPort, err := strconv.Atoi(admission.ListenPort)
+		if err != nil {
+			return nil, fmt.Errorf("parse admission server listen port: %w", err)
+		}
+
+		webhookServer = webhook.NewServer(webhook.Options{
+			Port:    listenPort,
+			CertDir: admission.CertsDir,
+		})
+	}
+
+	runtime, err := ctrl.NewManager(rest, buildControllerOpts(ctx, scheme, webhookServer))
 	if err != nil {
 		return nil, fmt.Errorf("create controller runtime manager: %w", err)
 	}
@@ -121,6 +149,46 @@ func Build(ctx context.Context, rest *rest.Config, ms metricsstorage.Storage, lo
 		return nil, fmt.Errorf("create runtime: %w", err)
 	}
 
+	err = applicationpackageversion.RegisterController(runtime, dc, logger)
+	if err != nil {
+		return nil, fmt.Errorf("register application package version controller: %w", err)
+	}
+
+	err = modulepackageversion.RegisterController(synced, runtime, dc, logger)
+	if err != nil {
+		return nil, fmt.Errorf("register module package version controller: %w", err)
+	}
+
+	err = module.RegisterController(synced, runtime, manager, logger)
+	if err != nil {
+		return nil, fmt.Errorf("register module controller: %w", err)
+	}
+
+	err = application.RegisterController(runtime, manager, nil, logger)
+	if err != nil {
+		return nil, fmt.Errorf("register application controller: %w", err)
+	}
+
+	err = packagerepository.RegisterController(runtime, dc, logger)
+	if err != nil {
+		return nil, fmt.Errorf("register package repository controller: %w", err)
+	}
+
+	err = packagerepositoryoperation.RegisterController(runtime, dc, logger)
+	if err != nil {
+		return nil, fmt.Errorf("register package repository operation controller: %w", err)
+	}
+
+	err = docbuilder.RegisterController(runtime, dc, logger.Named("module-documentation-controller"))
+	if err != nil {
+		return nil, fmt.Errorf("register module documentation controller: %w", err)
+	}
+
+	err = objectkeeper.RegisterController(runtime, dc, logger.Named("objectkeeper-controller"))
+	if err != nil {
+		return nil, fmt.Errorf("register objectkeeper controller: %w", err)
+	}
+
 	settingsCh := make(chan addonutils.Values, 1)
 
 	return &Controller{
@@ -136,7 +204,7 @@ func Build(ctx context.Context, rest *rest.Config, ms metricsstorage.Storage, lo
 
 		dc: dc,
 
-		logger: logger,
+		logger: logger.Named(controllerName),
 	}, nil
 }
 
@@ -163,7 +231,7 @@ func buildSchema() (*runtime.Scheme, error) {
 
 // buildControllerOpts narrows each cached kind to the namespaces and labels a controller reads,
 // so the manager does not hold every object of that kind in the cluster.
-func buildControllerOpts(ctx context.Context, scheme *runtime.Scheme) ctrl.Options {
+func buildControllerOpts(ctx context.Context, scheme *runtime.Scheme, webhookServer webhook.Server) ctrl.Options {
 	return ctrl.Options{
 		Scheme: scheme,
 		BaseContext: func() context.Context {
@@ -174,6 +242,7 @@ func buildControllerOpts(ctx context.Context, scheme *runtime.Scheme) ctrl.Optio
 			BindAddress: "0",
 		},
 		GracefulShutdownTimeout: new(gracefulShutdownTimeout),
+		WebhookServer:           webhookServer,
 		Cache: cache.Options{
 			ByObject: buildCacheByObject(),
 		},
@@ -283,6 +352,11 @@ func (c *Controller) Start(ctx context.Context) error {
 	go c.runSyncSettingsLoop(ctx)
 
 	return nil
+}
+
+// Stop stops the controller and package runtime.
+func (c *Controller) Stop() {
+	c.manager.Stop()
 }
 
 // runSyncSettingsLoop updates the embedded policy and Deckhouse settings until ctx is canceled.
