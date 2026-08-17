@@ -171,13 +171,16 @@ subjects:
 
 ---
 # Namespaced write access to the VSphereClusterIdentity Secret CAPV manages.
-# Read stays cluster-wide (needed to watch every Secret referenced by VSphereClusters
-# across the mgmt cluster), but delete/patch/update are only granted in the namespace
-# where the CAPI Cluster / VSphereCluster lives.
+# Read stays cluster-wide (see rules above — CAPV needs to watch every Secret
+# referenced by VSphereClusters across the mgmt cluster). delete/patch/update
+# are granted only in d8-cloud-instance-manager because that is where the
+# CAPI Cluster / VSphereCluster / identity Secret live.
+# The Role/RoleBinding sit outside the module namespace on purpose, so they are
+# excluded from the placement lint in .dmtlint.yaml (rbac.exclude-rules.placement).
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: capv-controller-manager:identity-secret
+  name: capv-controller-manager:capi-user-credentials
   namespace: d8-cloud-instance-manager
   {{- include "helm_lib_module_labels" (list . (dict "app" "capv-controller-manager")) | nindent 2 }}
 rules:
@@ -193,13 +196,13 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: capv-controller-manager:identity-secret
+  name: capv-controller-manager:capi-user-credentials
   namespace: d8-cloud-instance-manager
   {{- include "helm_lib_module_labels" (list . (dict "app" "capv-controller-manager")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: capv-controller-manager:identity-secret
+  name: capv-controller-manager:capi-user-credentials
 subjects:
 - kind: ServiceAccount
   name: capv-controller-manager
