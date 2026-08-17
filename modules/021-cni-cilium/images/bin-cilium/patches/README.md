@@ -112,3 +112,16 @@ with `ctx` and a 3-minute timeout.
 same deadlock (`cilium#39970`, commit `47ace2de6`) by removing
 `IPCache.UpdatePolicyMaps()` altogether, so the patch is both unnecessary and will fail
 to apply.
+
+## 020-policy-nil-safe-selector-policy-detach.patch
+
+Fixes an agent crash (`SIGSEGV` in `selectorPolicy.detach`) that shows up once endpoint
+regeneration runs at full speed under heavy identity churn. `policyCache.delete()`
+dereferences `cip.getPolicy()` unconditionally, but a cache entry created by
+`lookupOrCreate()` has a nil policy until `updateSelectorPolicy()` finishes resolving it,
+and that resolution does not hold the cache lock — so an endpoint whose identity changes
+mid-regeneration can have its old identity removed while its policy is still being
+resolved. The patch adds the nil check, matching `pkg/policy/distillery.go` in 1.18.
+
+**Remove this patch when upgrading to Cilium 1.18 or newer**, where the same nil check is
+already present (it was never backported to 1.17.x, up to and including v1.17.18).
