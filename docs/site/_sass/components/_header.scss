@@ -727,7 +727,7 @@ html {
                     content: "";
                     position: absolute;
                     right: -17px;
-                    top: 50%;
+                    top: 55%;
                     margin-top: -3px;
                     background: $header-arrow;
                     background-repeat: no-repeat;
@@ -736,8 +736,8 @@ html {
                     transition: transform .3s;
                     width: 10px;
 
-                    @include breakpoints.min-w(xs) {
-                        top: 55%;
+                    @include breakpoints.min-w(m) {
+                        top: 50%;
                     }
                 }
 
