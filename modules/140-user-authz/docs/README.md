@@ -244,12 +244,10 @@ read:
     - deckhouse.io/modulereleases
     - deckhouse.io/modules
     - deckhouse.io/modulesettingsdefinitions
-    - deckhouse.io/modulesources
     - deckhouse.io/moduleupdatepolicies
     - deckhouse.io/nodegroups
     - deckhouse.io/openstackinstanceclasses
     - deckhouse.io/operationpolicies
-    - deckhouse.io/packagerepositories
     - deckhouse.io/packagerepositoryoperations
     - deckhouse.io/projecttemplates
     - deckhouse.io/securitypolicies
@@ -425,21 +423,9 @@ delete,deletecollection:
     - extensions/replicasets
 read-write:
     - deckhouse.io/authorizationrules
-    - deckhouse.io/moduleconfigs
 write:
     - autoscaling.k8s.io/verticalpodautoscalercheckpoints
-    - deckhouse.io/applicationpackages
-    - deckhouse.io/applicationpackageversions
     - deckhouse.io/applications
-    - deckhouse.io/deckhousereleases
-    - deckhouse.io/moduledocumentations
-    - deckhouse.io/modulepulloverrides
-    - deckhouse.io/modulereleases
-    - deckhouse.io/modules
-    - deckhouse.io/modulesources
-    - deckhouse.io/moduleupdatepolicies
-    - deckhouse.io/packagerepositories
-    - deckhouse.io/packagerepositoryoperations
     - deckhouse.io/securitypolicyexceptions
     - extensions.istio.io/wasmplugins
     - rbac.authorization.k8s.io/rolebindings
@@ -472,7 +458,6 @@ read:
     - sailoperator.io/istios
     - sailoperator.io/ztunnels
 read-write:
-    - deckhouse.io/moduleconfigs
     - deckhouse.io/nodegroupconfigurations
     - deckhouse.io/staticinstances
     - multitenancy.deckhouse.io/clusterresourcegrantpolicies
@@ -481,22 +466,11 @@ write:
     - apps/daemonsets
     - autoscaling.k8s.io/verticalpodautoscalercheckpoints
     - cert-manager.io/clusterissuers
-    - deckhouse.io/applicationpackages
-    - deckhouse.io/applicationpackageversions
     - deckhouse.io/applications
-    - deckhouse.io/deckhousereleases
     - deckhouse.io/hubblemonitoringconfigs
     - deckhouse.io/instances
     - deckhouse.io/keepalivedinstances
-    - deckhouse.io/moduledocumentations
-    - deckhouse.io/modulepulloverrides
-    - deckhouse.io/modulereleases
-    - deckhouse.io/modules
-    - deckhouse.io/modulesources
-    - deckhouse.io/moduleupdatepolicies
     - deckhouse.io/nodegroups
-    - deckhouse.io/packagerepositories
-    - deckhouse.io/packagerepositoryoperations
     - deckhouse.io/securitypolicyexceptions
     - extensions.istio.io/wasmplugins
     - extensions/daemonsets
@@ -545,7 +519,10 @@ read-write:
     - deckhouse.io/dexproviderchecks
     - deckhouse.io/dexproviders
     - deckhouse.io/groups
+    - deckhouse.io/moduleconfigs
+    - deckhouse.io/modulesources
     - deckhouse.io/nodeusers
+    - deckhouse.io/packagerepositories
     - deckhouse.io/sshcredentials
     - deckhouse.io/useroperations
     - deckhouse.io/users
@@ -562,9 +539,12 @@ write:
     - config.gatekeeper.sh/configs
     - connection.gatekeeper.sh/connections
     - constraints.gatekeeper.sh/*
+    - deckhouse.io/applicationpackages
+    - deckhouse.io/applicationpackageversions
     - deckhouse.io/awsinstanceclasses
     - deckhouse.io/azureinstanceclasses
     - deckhouse.io/containerdintegritypolicies
+    - deckhouse.io/deckhousereleases
     - deckhouse.io/deschedulers
     - deckhouse.io/dvpinstanceclasses
     - deckhouse.io/dynamixinstanceclasses
@@ -574,8 +554,14 @@ write:
     - deckhouse.io/istiofederations
     - deckhouse.io/istiomulticlusters
     - deckhouse.io/localpathprovisioners
+    - deckhouse.io/moduledocumentations
+    - deckhouse.io/modulepulloverrides
+    - deckhouse.io/modulereleases
+    - deckhouse.io/modules
+    - deckhouse.io/moduleupdatepolicies
     - deckhouse.io/openstackinstanceclasses
     - deckhouse.io/operationpolicies
+    - deckhouse.io/packagerepositoryoperations
     - deckhouse.io/projects
     - deckhouse.io/projecttemplates
     - deckhouse.io/securitypolicies
