@@ -99,7 +99,39 @@ To stop the workflow, cancel the running process and then run:
 make down
 ```
 
-### Verifying an external module build (module author workflow)
+### Running the documentation site (option 2: just run containers)
+
+Just runs documentation containers.
+
+#### Starting the documentation site
+
+To start the documentation site, open a terminal and follow these steps:
+
+1. Run the following command in the repository root:
+
+   ```shell
+   make docs
+   ```
+
+1. Open the documentation site in your browser at <http://localhost/products/kubernetes-platform/documentation/v1/>.
+
+If you cloned the Deckhouse repository and made uncommitted changes, trying to run the documentation site will result in an error from werf stating that the changes must be committed first.
+
+To bypass that restriction and run the documentation site with uncommitted changes, run the following command:
+
+```shell
+make docs-dev
+```
+
+#### Stopping the documentation site
+
+To stop the documentation site, cancel the running process and run the following command in the terminal:
+
+```shell
+make docs-down
+```
+
+## Verifying an external module build (module author workflow)
 
 Use this mode from within an external module repository to check that its
 `docs/` directory renders successfully with the Deckhouse Hugo template. The
@@ -148,38 +180,6 @@ jobs:
           chmod +x /tmp/check-external-module.sh
       - name: Verify module docs build
         run: /tmp/check-external-module.sh --module-path "$(pwd)"
-```
-
-### Running the documentation site (option 2: just run containers)
-
-Just runs documentation containers.
-
-#### Starting the documentation site
-
-To start the documentation site, open a terminal and follow these steps:
-
-1. Run the following command in the repository root:
-
-   ```shell
-   make docs
-   ```
-
-1. Open the documentation site in your browser at <http://localhost/products/kubernetes-platform/documentation/v1/>.
-
-If you cloned the Deckhouse repository and made uncommitted changes, trying to run the documentation site will result in an error from werf stating that the changes must be committed first.
-
-To bypass that restriction and run the documentation site with uncommitted changes, run the following command:
-
-```shell
-make docs-dev
-```
-
-#### Stopping the documentation site
-
-To stop the documentation site, cancel the running process and run the following command in the terminal:
-
-```shell
-make docs-down
 ```
 
 ## Debugging (WIP)
