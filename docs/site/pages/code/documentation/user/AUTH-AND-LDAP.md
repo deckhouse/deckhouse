@@ -165,6 +165,77 @@ During synchronization, usernames, email addresses, and account lock status are 
 
 - `sync_name` — if `true`, the username will be updated based on LDAP data.
 
+#### Blocking users based on LDAP data
+
+If a user is removed from LDAP, the next scheduled synchronization blocks their account. If the user is restored in LDAP, the next synchronization unblocks the account automatically.
+
+Blocking always happens and requires no additional settings: LDAP remains the source of truth for the account status. A blocked user will be denied access even if they sign in through an OIDC provider where the account is still active.
+
+If your directory does not delete users but blocks them using an attribute, exclude blocked users from LDAP results using the `user_filter` parameter. Specify a single filter matching your directory:
+
+```yaml
+user_filter: '(!(pwdAccountLockedTime=*))'                        # OpenLDAP ppolicy
+user_filter: '(!(nsAccountLock=TRUE))'                            # 389-DS
+user_filter: '(!(userAccountControl:1.2.840.113556.1.4.803:=2))'  # Active Directory
+user_filter: '(!(employeeType=blocked))'                          # custom attribute
+```
+
+### Linking OIDC accounts to LDAP
+
+If users sign in through an OIDC provider (for example, Keycloak) while permissions are granted based on LDAP groups, enable automatic linking of the OIDC account to the LDAP account. This configuration is set in the `spec.appConfig.omniauth.` section:
+
+```yaml
+auto_link_ldap_user: true
+```
+
+#### How the LDAP account is found
+
+On the first sign-in through OIDC, Deckhouse Code queries all configured LDAP servers one by one. For each server, the search is performed in the following order, until the first match:
+
+1. By the attribute specified in the LDAP server `uid` parameter (for example, `cn`), using the `uid` value provided by the OIDC provider.
+1. By the mail attributes (`mail`, `email`, `userPrincipalName`), using the `uid` value provided by the OIDC provider.
+1. By the same mail attributes, using the email value provided by the OIDC provider.
+1. By DN, if the `uid` provided by the OIDC provider is a DN.
+
+If the user is found, an LDAP identity with the discovered DN is added to their account. If the user is not found, the account is created without an LDAP link.
+
+For linking to work predictably, the `uid` or email values must match in the OIDC provider and in LDAP.
+
+#### First and subsequent sign-ins
+
+The first successful sign-in links the account to LDAP. On subsequent sign-ins:
+
+- LDAP is not queried — the previously established link is used;
+- access and administrative privileges are re-evaluated based on the groups provided by the OIDC provider (the `allowed_groups` and `admin_groups` parameters). If the user is removed from an allowed group, the account is blocked;
+- group and project memberships, as well as roles in them, do not change on an OIDC sign-in — they are updated by the scheduled background LDAP synchronization.
+
+As a result, right after the first sign-in a user can log in but has no group or project memberships yet: they appear after the next synchronization. To avoid waiting for it, run the synchronization manually (see [Manual synchronization run](#manual-synchronization-run)).
+
+{% alert level="info" %}
+Group and membership synchronization on sign-in runs only when a user signs in through an LDAP provider (a provider whose name starts with `ldap`). An OIDC sign-in does not trigger it, even if the account is already linked to LDAP.
+{% endalert %}
+
+#### LDAP as the source of truth
+
+To let users found in LDAP sign in immediately and send everyone else for administrator approval, set the following parameters in the `spec.appConfig.` section:
+
+```yaml
+omniauth:
+  auto_link_ldap_user: true
+  # The user is not found in LDAP — the account is created blocked,
+  # pending administrator approval.
+  block_auto_created_users: true
+ldap:
+  main:
+    # The user is found in LDAP — sign-in is allowed immediately.
+    block_auto_created_users: false
+```
+
+#### Linking specifics
+
+- If a user is blocked by renaming their `cn` in the directory, on the first sign-in they may still be found by email and linked to the LDAP account. To block users, remove them from the directory or use the `user_filter` parameter (see [Blocking users based on LDAP data](#blocking-users-based-on-ldap-data)).
+- If a user was not linked to LDAP and was blocked by the `Ldap::BlockNonLdapUsersWorker` job, automatic unblocking will not work. Such a user must be unblocked manually and linked to an LDAP account.
+
 ### Troubleshooting synchronization issues
 
 #### Incorrect synchronization process
