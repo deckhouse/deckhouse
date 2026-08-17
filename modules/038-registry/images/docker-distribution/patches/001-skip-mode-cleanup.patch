@@ -1,0 +1,174 @@
+diff --git a/configuration/configuration.go b/configuration/configuration.go
+index 9b8970a..15ce17c 100644
+--- a/configuration/configuration.go
++++ b/configuration/configuration.go
+@@ -625,6 +625,21 @@ type Proxy struct {
+ 
+ 	// NoCache explicitly disables the cache for this proxy.
+ 	NoCache bool `yaml:"nocache,omitempty"`
++
++	// SkipModeCleanup keeps the store when the registry starts in a different mode than the one
++	// that last wrote it.
++	//
++	// By default a transition between cache and non-cache modes deletes everything under /docker,
++	// so that data written as a proxy cache is never served as if it were local. That assumes one
++	// registry process owns the directory. Where two processes share it — one proxying and one
++	// accepting pushes, which is how Deckhouse serves and fills a single store — the non-proxying
++	// one sees the other's scheduler state as a mode change on every start and empties the store
++	// out from under a running cluster. Measured on a three-master cluster: twelve gigabytes and
++	// 3236 files gone two seconds after the push instance came up, twice, and once at the exact
++	// moment the upstream was dropped for an air-gap, leaving nothing to pull anywhere.
++	//
++	// Left false by default, so a registry that does own its directory behaves exactly as before.
++	SkipModeCleanup bool `yaml:"skipmodecleanup,omitempty"`
+ }
+ 
+ // Parse parses an input configuration yaml document into a Configuration struct
+diff --git a/registry/handlers/app.go b/registry/handlers/app.go
+index a439797..7d1a9bd 100644
+--- a/registry/handlers/app.go
++++ b/registry/handlers/app.go
+@@ -325,6 +325,9 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
+ 		}
+ 		app.isCache = true
+ 		dcontext.GetLogger(app).Info("Registry configured as a proxy cache to ", config.Proxy.RemoteURL)
++	} else if config.Proxy.SkipModeCleanup {
++		dcontext.GetLogger(app).Info(
++			"Registry configured without a proxy cache; the store is kept because skipmodecleanup is set")
+ 	} else {
+ 		// Cleanup old Proxy сache data
+ 		if err := proxy.CleanupCacheStorage(ctx, app.driver); err != nil {
+diff --git a/registry/proxy/cleanup_test.go b/registry/proxy/cleanup_test.go
+new file mode 100644
+index 0000000..e31d0cd
+--- /dev/null
++++ b/registry/proxy/cleanup_test.go
+@@ -0,0 +1,103 @@
++package proxy
++
++import (
++	"context"
++	"testing"
++
++	"github.com/docker/distribution/configuration"
++	"github.com/docker/distribution/registry/storage"
++	"github.com/docker/distribution/registry/storage/driver/inmemory"
++)
++
++// TestSkipModeCleanupIsWhatKeepsASharedStore covers the case two processes over one directory create.
++//
++// The cleanup exists so that data written as a proxy cache is never served as if it were local, and it
++// decides "the mode changed" from whether the scheduler state file is present. That is sound when one
++// registry owns the directory. Deckhouse runs two over the same store — one proxying for reads, one
++// accepting the pushes that fill it — so the non-proxying process finds the other's scheduler state on
++// every start and deletes /docker. Measured on a three-master cluster: 3236 files gone two seconds
++// after the push instance came up, and once at the very moment the upstream was dropped for an
++// air-gap, which left the cluster with no images and nowhere to pull them from.
++func TestSkipModeCleanupIsWhatKeepsASharedStore(t *testing.T) {
++	ctx := context.Background()
++
++	for _, testcase := range []struct {
++		name  string
++		state bool // whether the scheduler state file exists, which is what "mode" is read from
++		kept  bool
++	}{
++		{name: "a non-cache start with cache state cleans up by default", state: true, kept: false},
++		{name: "a non-cache start with no cache state keeps the store", state: false, kept: true},
++	} {
++		t.Run(testcase.name, func(t *testing.T) {
++			driver := inmemory.New()
++			if err := driver.PutContent(ctx, "/docker/registry/v2/blobs/x", []byte("blob")); err != nil {
++				t.Fatal(err)
++			}
++			if testcase.state {
++				if err := driver.PutContent(ctx, schedulerStateFilePath, []byte("{}")); err != nil {
++					t.Fatal(err)
++				}
++			}
++
++			if err := CleanupCacheStorage(ctx, driver); err != nil {
++				t.Fatalf("cleanup: %v", err)
++			}
++
++			_, err := driver.GetContent(ctx, "/docker/registry/v2/blobs/x")
++			kept := err == nil
++			if kept != testcase.kept {
++				t.Fatalf("store kept = %v, want %v", kept, testcase.kept)
++			}
++		})
++	}
++
++	// And the flag itself, asserted where it is actually read: building a pull-through cache over a
++	// store that carries no scheduler state would clean it up, and must not when the flag is set.
++	t.Run("a proxy start with skipmodecleanup keeps a store it did not write", func(t *testing.T) {
++		driver := inmemory.New()
++		if err := driver.PutContent(ctx, "/docker/registry/v2/blobs/x", []byte("blob")); err != nil {
++			t.Fatal(err)
++		}
++
++		local, err := storage.NewRegistry(ctx, driver)
++		if err != nil {
++			t.Fatal(err)
++		}
++
++		if _, err := NewRegistryPullThroughCache(ctx, local, driver, configuration.Proxy{
++			RemoteURL:       "https://example.com",
++			SkipModeCleanup: true,
++		}); err != nil {
++			t.Fatalf("building the cache: %v", err)
++		}
++
++		if _, err := driver.GetContent(ctx, "/docker/registry/v2/blobs/x"); err != nil {
++			t.Fatalf("the store had to survive, and did not: %v", err)
++		}
++	})
++
++	// The same construction without the flag is what deletes it, which is the behaviour being opted
++	// out of rather than removed.
++	t.Run("without the flag the same start empties the store", func(t *testing.T) {
++		driver := inmemory.New()
++		if err := driver.PutContent(ctx, "/docker/registry/v2/blobs/x", []byte("blob")); err != nil {
++			t.Fatal(err)
++		}
++
++		local, err := storage.NewRegistry(ctx, driver)
++		if err != nil {
++			t.Fatal(err)
++		}
++
++		if _, err := NewRegistryPullThroughCache(ctx, local, driver, configuration.Proxy{
++			RemoteURL: "https://example.com",
++		}); err != nil {
++			t.Fatalf("building the cache: %v", err)
++		}
++
++		if _, err := driver.GetContent(ctx, "/docker/registry/v2/blobs/x"); err == nil {
++			t.Fatal("the default is still to clean up, and this store was kept")
++		}
++	})
++}
+diff --git a/registry/proxy/proxyregistry.go b/registry/proxy/proxyregistry.go
+index 4a765e3..fb19109 100644
+--- a/registry/proxy/proxyregistry.go
++++ b/registry/proxy/proxyregistry.go
+@@ -60,12 +60,16 @@ func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Name
+ 	}
+ 
+ 	if config.NoCache {
+-		if err := cleanupStorage(ctx, driver); err != nil {
+-			return nil, fmt.Errorf("failed to clean up storage: %w", err)
++		if !config.SkipModeCleanup {
++			if err := cleanupStorage(ctx, driver); err != nil {
++				return nil, fmt.Errorf("failed to clean up storage: %w", err)
++			}
+ 		}
+ 	} else {
+-		if err := cleanupNonCacheStorage(ctx, driver); err != nil {
+-			return nil, fmt.Errorf("failed to clean up non-cache storage: %w", err)
++		if !config.SkipModeCleanup {
++			if err := cleanupNonCacheStorage(ctx, driver); err != nil {
++				return nil, fmt.Errorf("failed to clean up non-cache storage: %w", err)
++			}
+ 		}
+ 
+ 		s = scheduler.New(ctx, ttl, driver, schedulerStateFilePath)

@@ -356,7 +356,11 @@ func TestOnceAirGapCountsWhatIsHeld(t *testing.T) {
 
 	var config map[string]any
 	require.NoError(t, yaml.Unmarshal(raw, &config))
-	assert.NotContains(t, config, "proxy")
+	// The section survives, carrying `skipmodecleanup` — without it the registry wipes the store on a
+	// start in another mode, which is exactly what an air-gapped cluster cannot afford. The address is
+	// what has to be gone.
+	proxy, _ := config["proxy"].(map[string]any)
+	assert.NotContains(t, proxy, "remoteurl")
 }
 
 // TestOnceFollowerDoesNotTouchTheUpstream is what keeps every replica from spending

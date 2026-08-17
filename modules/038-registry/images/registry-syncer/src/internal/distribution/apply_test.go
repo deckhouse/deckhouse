@@ -92,8 +92,11 @@ func TestApplyConfiguresBothInstances(t *testing.T) {
 		"the serving instance caches misses from the upstream")
 
 	writing := readConfig(applier.WriteConfigPath)
-	assert.NotContains(t, writing, "proxy",
+	writingProxy, _ := writing["proxy"].(map[string]any)
+	assert.NotContains(t, writingProxy, "remoteurl",
 		"a proxying registry refuses every write, which is why the push has an instance of its own")
+	assert.Equal(t, true, writingProxy["skipmodecleanup"],
+		"this is the instance that used to delete the store every time it started")
 
 	// Both keep the same authentication and the same blob directory: they are one registry seen from
 	// two sides, and a difference there would let a push land somewhere the cluster does not read.
@@ -230,8 +233,11 @@ func TestApplyGoingAirGap(t *testing.T) {
 	var config map[string]any
 	require.NoError(t, yaml.Unmarshal(raw, &config))
 
-	_, pullThrough := config["proxy"]
-	assert.False(t, pullThrough, "the cache can still reach out to an upstream")
+	// The section itself stays — it carries `skipmodecleanup`, without which the registry deletes the
+	// whole store when it starts in a mode other than the one that last wrote it. What must be gone is
+	// the address, which is what makes it a pull-through cache.
+	proxy, _ := config["proxy"].(map[string]any)
+	assert.NotContains(t, proxy, "remoteurl", "the cache can still reach out to an upstream")
 	assert.NotContains(t, string(raw), "registry.deckhouse.io")
 
 	// The token fetch stays, and has to: without it the token service would have to be

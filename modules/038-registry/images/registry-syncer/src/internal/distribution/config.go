@@ -260,6 +260,22 @@ func Render(spec *registryv1alpha1.RegistryStorageSpec, opts Options) ([]byte, e
 		}
 	}
 
+	// Whatever the mode, this store is never wiped because the mode changed.
+	//
+	// The registry deletes everything under /docker when it starts in a mode other than the one that
+	// last wrote the directory, deciding which mode that was by whether the proxy scheduler's state
+	// file is present. Sound for a registry that owns its directory, and wrong here twice over: two
+	// processes share this store — one proxying for reads, one accepting the writes that fill it — and
+	// the expiry scheduler is patched out at build time, so the state file comes and goes for reasons
+	// that have nothing to do with the data.
+	//
+	// Measured on `ly-mmc`: 3236 files and twelve gigabytes deleted two seconds after the write
+	// instance started, twice in one afternoon, and once at the exact moment the upstream was dropped
+	// for an air-gap — which left a three-master cluster with no images and nothing to pull them from.
+	// The blobs a proxy wrote are the same blobs a local registry serves; what must not survive a mode
+	// change is the scheduler's own state, and that is deleted either way.
+	setSkipModeCleanup(config)
+
 	if opts.WriteEndpoint {
 		// The publication endpoint is reachable from outside the cluster, so the
 		// registry requires a client certificate from the authority the ingress
@@ -282,6 +298,21 @@ func Render(spec *registryv1alpha1.RegistryStorageSpec, opts Options) ([]byte, e
 		return nil, fmt.Errorf("marshalling the configuration: %w", err)
 	}
 	return rendered, nil
+}
+
+// setSkipModeCleanup tells the registry to keep the store across a mode change.
+//
+// Written into the `proxy` section because that is where the registry reads it from, and it is read
+// even where no proxying is configured — which is the case that mattered: the write instance never
+// proxies, and it was the one deleting the store. An absent section is created holding nothing else,
+// so the instance stays non-proxying exactly as before.
+func setSkipModeCleanup(config map[string]any) {
+	proxy, ok := config["proxy"].(map[string]any)
+	if !ok {
+		proxy = map[string]any{}
+		config["proxy"] = proxy
+	}
+	proxy["skipmodecleanup"] = true
 }
 
 func renderProxy(upstream *registryv1alpha1.Upstream) map[string]any {

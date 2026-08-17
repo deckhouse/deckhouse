@@ -94,13 +94,20 @@ func TestRenderPassThroughCache(t *testing.T) {
 	assert.Equal(t, "shared-secret", http["secret"])
 }
 
-// TestRenderAirGap covers the authoritative cache: no proxy section at all, so the
+// TestRenderAirGap covers the authoritative cache: nothing in the configuration can fetch, so the
 // registry serves only what it holds.
+//
+// Asserted on `remoteurl` rather than on the section's absence, because the section is now always
+// present — it carries `skipmodecleanup`, which is what stops the registry deleting the store when it
+// starts in a mode other than the one that last wrote it. Proxying is what `remoteurl` turns on.
 func TestRenderAirGap(t *testing.T) {
 	config := renderToMap(t, &registryv1alpha1.RegistryStorageSpec{})
 
-	assert.NotContains(t, config, "proxy",
+	proxy, _ := config["proxy"].(map[string]any)
+	assert.NotContains(t, proxy, "remoteurl",
 		"without an upstream the cache must not be able to fetch anything")
+	assert.Equal(t, true, proxy["skipmodecleanup"],
+		"a store must not be wiped for having been written in another mode")
 
 	// Authentication is still on. An air-gapped cache serving reads to anyone would
 	// be an open registry inside the cluster.
@@ -318,8 +325,13 @@ func TestTheWriteEndpointNeverProxies(t *testing.T) {
 
 	// And that instance never proxies, which is what makes it writable.
 	writing := renderWriteEndpoint(t, &registryv1alpha1.RegistryStorageSpec{Upstream: upstream, Publish: true})
-	assert.NotContains(t, writing, "proxy",
+	writingProxy, _ := writing["proxy"].(map[string]any)
+	assert.NotContains(t, writingProxy, "remoteurl",
 		"a registry that proxies cannot be pushed to, and this is the instance a push arrives at")
+	// And the one that used to delete the store on every start, which is why the flag matters most
+	// here: it never proxies, so it always looked like a mode change.
+	assert.Equal(t, true, writingProxy["skipmodecleanup"],
+		"the write instance shares the store with the serving one and must not wipe it")
 }
 
 // TestRenderPublicationRequiresAClientCertificate covers the write path. It is the

@@ -9,6 +9,11 @@ git:
     stageDependencies:
       install:
         - '**/*'
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+    to: /patches
+    stageDependencies:
+      install:
+        - '**/*'
 secrets:
   - id: SOURCE_REPO
     value: "{{ $.SOURCE_REPO }}"
@@ -19,6 +24,7 @@ shell:
     - git config --global advice.detachedHead false
     - git clone --depth 1 --single-branch --branch {{ $version }} $(cat /run/secrets/SOURCE_REPO)/deckhouse/3p-distribution.git /src/distribution
     - /src/scripts/no-proxy-expiry.sh /src/distribution
+    - cd /src/distribution && git apply /patches/*.patch --verbose
     - rm -rf /src/distribution/.git
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
