@@ -114,24 +114,24 @@ spec:
         - --cert-path=/etc/certs
         - --api-server-url=https://kubernetes.default
         {{- if eq $type "Crowd" }}
-        - --crowd-application-login={{ $config.clientID }}
-        - --crowd-application-password={{ $config.clientSecret }}
-        - --crowd-base-url={{ $config.baseURL }}
+        - {{ printf "--crowd-application-login=%s" $config.clientID | quote }}
+        - {{ printf "--crowd-application-password=%s" $config.clientSecret | quote }}
+        - {{ printf "--crowd-base-url=%s" $config.baseURL | quote }}
         {{- if $config.groups }}
           {{- range $group := $config.groups }}
-        - --crowd-allowed-group={{ $group }}
+        - {{ printf "--crowd-allowed-group=%s" $group | quote }}
           {{- end }}
         {{- end }}
         {{- end }}
         {{- if eq $type "OIDC" }}
-        - --oidc-base-url={{ $config.issuer }}
-        - --oidc-client-id={{ $config.clientID }}
-        - --oidc-client-secret={{ $config.clientSecret }}
+        - {{ printf "--oidc-base-url=%s" $config.issuer | quote }}
+        - {{ printf "--oidc-client-id=%s" $config.clientID | quote }}
+        - {{ printf "--oidc-client-secret=%s" $config.clientSecret | quote }}
         - --oidc-get-user-info={{ $config.getUserInfo | default false }}
         - --oidc-basic-auth-unsupported={{ $config.basicAuthUnsupported | default false }}
         {{- if $config.scopes }}
           {{- range $scope := $config.scopes }}
-        - --oidc-scope={{ $scope }}
+        - {{ printf "--oidc-scope=%s" $scope | quote }}
           {{- end }}
         {{- else }}
         - --oidc-scope=openid
@@ -150,7 +150,7 @@ spec:
         - --ldap-basic-auth-unsupported={{ $config.basicAuthUnsupported | default false }}
         {{- if $config.scopes }}
           {{- range $scope := $config.scopes }}
-        - --ldap-scope={{ $scope }}
+        - {{ printf "--ldap-scope=%s" $scope | quote }}
           {{- end }}
         {{- else }}
         - --ldap-scope=openid
