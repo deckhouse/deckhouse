@@ -1,0 +1,152 @@
+version: v2
+
+# InstanceClass fields whose change requires recreating the machines, carried over one to one
+# from the v1 instance-class.checksum. cloneMode is *not* here on purpose: it is a constant of
+# the template (fullClone) and cannot be flipped from a per-NodeGroup InstanceClass — a future
+# switch will need its own migration path anyway.
+rolloutFields:
+  - numCPUs
+  - memory
+  - rootDiskSize
+  - template
+  - datastore
+  - mainNetwork
+  - additionalNetworks
+  - resourcePool
+  - disableTimesync
+  - runtimeOptions
+
+# failureDomain sits on the generic MachineDeployment node-controller builds — the provider
+# template renders the machine template only. Replaces v1 machine-deployment-spec-patch.yaml,
+# whose sole job was ${zone} string substitution.
+machineDeployment:
+  additionalFields:
+    failureDomain: "{{ .zone }}"
+
+# Rendered under machinetemplate.Render: missingkey=error, sprig sandbox, no access to Helm
+# .Values. Numbers arrive as JSON floats — use `| int` where an integer is required.
+template: |
+  {{- $ic := .instanceClass }}
+  {{- $icd := get .provider "instanceClassDefaults" | default dict }}
+  {{- $memoryMiB := add ($ic.memory | int) (mod ($ic.memory | int) 4) }}
+  {{- $runtime := $ic.runtimeOptions | default dict }}
+
+  {{- /* Network devices: mainNetwork first, then any additionalNetworks. */ -}}
+  {{- $networks := list }}
+  {{- if hasKey $ic "mainNetwork" }}
+    {{- $networks = append $networks $ic.mainNetwork }}
+  {{- end }}
+  {{- if hasKey $ic "additionalNetworks" }}
+    {{- range $n := $ic.additionalNetworks }}
+      {{- $networks = append $networks $n }}
+    {{- end }}
+  {{- end }}
+
+  {{- /* customVMXKeys: disableTimesync (default true) → tools.syncTime=FALSE;
+         runtimeOptions.nestedHardwareVirtualization (default true) → vhv.enable=TRUE. */ -}}
+  {{- $customVMXKeys := dict }}
+  {{- $disableTimesync := true }}
+  {{- if hasKey $ic "disableTimesync" }}
+    {{- $disableTimesync = $ic.disableTimesync }}
+  {{- else if hasKey $icd "disableTimesync" }}
+    {{- $disableTimesync = $icd.disableTimesync }}
+  {{- end }}
+  {{- if $disableTimesync }}
+    {{- $_ := set $customVMXKeys "tools.syncTime" "FALSE" }}
+  {{- end }}
+  {{- $nestedHV := true }}
+  {{- if hasKey $runtime "nestedHardwareVirtualization" }}
+    {{- $nestedHV = $runtime.nestedHardwareVirtualization }}
+  {{- end }}
+  {{- if $nestedHV }}
+    {{- $_ := set $customVMXKeys "vhv.enable" "TRUE" }}
+  {{- end }}
+
+  {{- /* runtimeOptions → CAPV resources.{shares,limits,requests}. Memory reservation defaults
+         to 80% of memoryMiB (matches v1). CPU shares/limits are integers, memory strings. */ -}}
+  {{- $resources := dict }}
+  {{- $shares := dict }}
+  {{- $limits := dict }}
+  {{- $requests := dict }}
+  {{- if hasKey $runtime "cpuShares" }}
+    {{- $_ := set $shares "cpu" ($runtime.cpuShares | int) }}
+  {{- end }}
+  {{- if hasKey $runtime "memoryShares" }}
+    {{- $_ := set $shares "memory" ($runtime.memoryShares | int) }}
+  {{- end }}
+  {{- if hasKey $runtime "cpuLimit" }}
+    {{- $_ := set $limits "cpu" (printf "%dM" ($runtime.cpuLimit | int)) }}
+  {{- end }}
+  {{- if hasKey $runtime "memoryLimit" }}
+    {{- $_ := set $limits "memory" (printf "%dMi" ($runtime.memoryLimit | int)) }}
+  {{- end }}
+  {{- if hasKey $runtime "cpuReservation" }}
+    {{- $_ := set $requests "cpu" (printf "%dM" ($runtime.cpuReservation | int)) }}
+  {{- end }}
+  {{- $memoryReservationPct := 80 }}
+  {{- if hasKey $runtime "memoryReservation" }}
+    {{- $memoryReservationPct = $runtime.memoryReservation | int }}
+  {{- end }}
+  {{- $memoryReservationMiB := mul (div $memoryMiB 100) $memoryReservationPct }}
+  {{- $_ := set $requests "memory" (printf "%dMi" $memoryReservationMiB) }}
+  {{- if gt (len $shares) 0 }}{{- $_ := set $resources "shares" $shares }}{{- end }}
+  {{- if gt (len $limits) 0 }}{{- $_ := set $resources "limits" $limits }}{{- end }}
+  {{- if gt (len $requests) 0 }}{{- $_ := set $resources "requests" $requests }}{{- end }}
+
+  {{- /* MCM used to attach display-name tags (deckhouse-cluster-name / deckhouse-node-role) for
+         vCenter UI grouping. CAPV rejects display names and demands URN-format tag IDs
+         (urn:vmomi:InventoryServiceTag:<uuid>:GLOBAL); resolving/creating those per (NodeGroup,
+         zone) is not wired yet — cloud-data-discoverer does not publish tag URNs. Until it does,
+         VMs are created without tags. See PR #21595 follow-up. */ -}}
+  {{- $tags := dig "tagURNs" (list) .provider }}
+
+  apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+  kind: VSphereMachineTemplate
+  spec:
+    template:
+      spec:
+        template: {{ $ic.template | default $icd.template | quote }}
+        server: {{ .provider.server | quote }}
+        folder: {{ .provider.vmFolderPath | quote }}
+        datastore: {{ $ic.datastore | default $icd.datastore | quote }}
+        {{- /* Prefer an absolute resourcePool inventory path built from the zone's
+               ClusterComputeResource (published by ensure_failure_domains hook) joined with
+               providerDiscoveryData.resourcePoolPath. CAPV's finder resolves a bare name relative
+               to the datacenter and errors out ambiguously when several compute clusters carry a
+               resource pool of the same name. Fall back to the raw value only if the hook has
+               not populated the map yet (fresh install). */ -}}
+        {{- $rp := $ic.resourcePool | default $icd.resourcePoolPath }}
+        {{- if $rp }}
+        {{- $zoneCluster := dig "zoneComputeClusterPaths" .zone "" .provider }}
+        {{- if $zoneCluster }}
+        resourcePool: {{ printf "%s/Resources/%s" $zoneCluster $rp | quote }}
+        {{- else }}
+        resourcePool: {{ $rp | quote }}
+        {{- end }}
+        {{- end }}
+        numCPUs: {{ $ic.numCPUs | int }}
+        memoryMiB: {{ $memoryMiB }}
+        diskGiB: {{ $ic.rootDiskSize | default 20 | int }}
+        cloneMode: fullClone
+        network:
+          devices:
+          {{- range $networks }}
+          - networkName: {{ . | quote }}
+            dhcp4: true
+          {{- end }}
+        {{- if gt (len $customVMXKeys) 0 }}
+        customVMXKeys:
+          {{- range $k, $v := $customVMXKeys }}
+          {{ $k | quote }}: {{ $v | quote }}
+          {{- end }}
+        {{- end }}
+        {{- if gt (len $resources) 0 }}
+        resources:
+          {{- toYaml $resources | nindent 10 }}
+        {{- end }}
+        {{- if gt (len $tags) 0 }}
+        tagIDs:
+        {{- range $tags }}
+          - {{ . | quote }}
+        {{- end }}
+        {{- end }}
