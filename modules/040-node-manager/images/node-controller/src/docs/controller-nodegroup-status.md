@@ -14,14 +14,20 @@ to produce node counts, conditions, cloud status, and machine failures.
 
 | Resource | Trigger | MapFunc |
 |----------|---------|---------|
-| `NodeGroup` | Any change (primary) | — |
+| `NodeGroup` | Generation or annotation change (primary) | — |
 | `Node` | Label/status change | `node.deckhouse.io/group` → NodeGroup name |
 | `Machine` (MCM) | Any change | OwnerRef → MachineDeployment → NodeGroup name |
 | `MachineDeployment` (MCM) | Any change | Label → NodeGroup name |
 | `Machine` (CAPI) | Any change | Same mapping |
 | `MachineDeployment` (CAPI) | Any change | Same mapping |
 | `Secret` (configuration-checksums) | Change | Enqueue all NodeGroups |
-| `Secret` (d8-cloud-provider-discovery-data) | Change | Enqueue all NodeGroups |
+| `Secret` (provider registration) | Change | Enqueue only the NodeGroups of that provider |
+| `InstanceClass` (every registered kind) | Any change | Enqueue the NodeGroups referencing it |
+
+The NodeGroup filter drops the controller's own status writes — without it every patch woke the
+controller again. The registration Secrets are the ones labelled
+`cloud-provider.deckhouse.io/registration` in `kube-system`; the InstanceClass watch is started
+lazily, because the kind and version come from those Secrets and may appear after this pod did.
 
 ## Reconciliation Logic
 
@@ -29,6 +35,9 @@ to produce node counts, conditions, cloud status, and machine failures.
 NodeGroup changed (or secondary resource triggers re-enqueue)
   │
   ├─ NodeGroup not found? → done
+  │
+  ├─ cloudprovider.Load — one read of the registrations per reconcile, shared by every step
+  │   below; a read failure aborts the reconcile instead of passing "no cloud" down
   │
   ├─ Compute node status (nodestatus.Service):
   │   ├─ List nodes with label node.deckhouse.io/group=<ng.Name>
@@ -40,7 +49,11 @@ NodeGroup changed (or secondary resource triggers re-enqueue)
   │   ├─ Get Machines and their status
   │   ├─ Calculate: desired, min, max, instances, failures
   │   ├─ Detect frozen MachineDeployments
-  │   └─ Read zones from provider discovery secret
+  │   └─ Zone count: the NodeGroup's own zones, else the ones its provider published
+  │
+  ├─ Compute derived status (derived_status.ComputeWithCloudChecks):
+  │   ├─ Engine, effective Kubernetes version, CRI, instance class
+  │   └─ Validation error (e.g. Invalid classReference.kind)
   │
   ├─ Calculate conditions (conditionscalc):
   │   ├─ Ready, Updating, WaitingForDisruptiveApproval, Error, Scaling
@@ -64,14 +77,18 @@ NodeGroup changed (or secondary resource triggers re-enqueue)
 | `status.desired` | From MachineDeployment replicas (CloudEphemeral only) |
 | `status.min` / `status.max` | From MachineDeployment (CloudEphemeral only) |
 | `status.instances` | Running machine instances (CloudEphemeral only) |
+| `status.kubernetesVersion` | Effective version, clamped to the kube-apiserver version |
+| `status.error` | Validation error plus the latest machine failure |
 | `status.conditions` | Calculated conditions array |
 | `status.conditionSummary` | Human-readable summary |
 | `status.lastMachineFailures` | Recent machine creation failures |
+| `status.deckhouse.observed` / `processed` / `synced` | Second patch through `processed_status` |
 
 ## Sub-packages
 
 | Package | Purpose |
 |---------|---------|
+| `derived_status/` | Engine, version, CRI, zones, instance class, validation — shared with `capi` and `bashiblecontext` |
 | `cloud_status/` | MachineDeployment/Machine aggregation, zones, failures |
 | `node_status/` | Node counting and readiness computation |
 | `conditions/` | Condition summary + event creation |
@@ -83,6 +100,7 @@ NodeGroup changed (or secondary resource triggers re-enqueue)
 ## Files
 
 - `controller.go` — main reconciler, watches setup, orchestration
+- `derived_status/` — derived values and validation shared with the `capi` controllers
 - `cloud_status/` — 6 files for cloud provider status
 - `node_status/` — node counting
 - `conditions/` — condition service
