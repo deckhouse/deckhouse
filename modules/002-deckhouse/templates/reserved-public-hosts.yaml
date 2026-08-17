@@ -1,0 +1,199 @@
+{{- /*
+  Deckhouse publishes its own web interfaces under names rendered from
+  global.modules.publicDomainTemplate. Those hostnames belong to the platform, but an Ingress is a
+  namespaced object with no cluster-wide uniqueness check: anybody who may write an Ingress in their
+  own namespace could name one of them as a host and have the ingress controller merge that rule
+  into the routing of the shared host. The names below are the service subdomains DKP documents for
+  its web interfaces (docs/site/pages/guides/PRIVATE_ENVIRONMENT.md), including those of modules
+  shipped outside this repository, and they are kept in a ConfigMap so that both policies read the
+  same list and a cluster admin can see what is reserved.
+*/}}
+{{- $reservedNames := list
+  "api"
+  "code"
+  "commander"
+  "console"
+  "dashboard"
+  "dex"
+  "documentation"
+  "grafana"
+  "hubble"
+  "istio"
+  "istio-api-proxy"
+  "istio-metadata"
+  "kubeconfig"
+  "openvpn-admin"
+  "prometheus"
+  "registry"
+  "status"
+  "tools"
+  "upmeter"
+}}
+{{- if and .Values.global.modules.publicDomainTemplate (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicy")) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicyBinding")) }}
+{{- $paramsName := "d8-reserved-public-hosts" }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $paramsName }}
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse")) | nindent 2 }}
+data:
+  hosts: |
+{{- range $name := $reservedNames }}
+    {{ include "helm_lib_module_public_domain" (list $ $name) | trim | lower }}
+{{- end }}
+
+{{- /*
+  Matching is exact and case-insensitive. A wildcard host is deliberately out of scope: neither the
+  ingress controller nor the Gateway API lets one take priority over an exact hostname, and the
+  admission-policy-engine module already blocks wildcard Ingresses on its own.
+*/}}
+{{- $policyName := "reserved-public-hosts-ingress.deckhouse.io" }}
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse")) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  paramKind:
+    apiVersion: v1
+    kind: ConfigMap
+  matchConstraints:
+    resourceRules:
+      - apiGroups:   ["networking.k8s.io"]
+        apiVersions: ["*"]
+        operations:  ["CREATE", "UPDATE"]
+        resources:   ["ingresses"]
+  matchConditions:
+    - name: 'exclude-groups'
+      expression: '!(["system:nodes", "system:serviceaccounts:kube-system", "system:serviceaccounts:d8-system"].exists(e, (e in request.userInfo.groups)))'
+    - name: 'exclude-users'
+      expression: '!(["system:sudouser", "system:apiserver", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler", "dhctl", "observability"].exists(e, (e == request.userInfo.username)))'
+    - name: 'exclude-system-serviceaccounts'
+      expression: '!(request.userInfo.username.startsWith("system:serviceaccount:d8-") || request.userInfo.username.startsWith("system:serviceaccount:kube-"))'
+  variables:
+    - name: claimedHosts
+      expression: |
+        has(object.spec) && has(object.spec.rules)
+          ? object.spec.rules.filter(r, has(r.host) && r.host != '').map(r, r.host.lowerAscii())
+          : []
+    - name: reservedHosts
+      # A missing ConfigMap never reaches this expression, the binding is skipped instead
+      # (parameterNotFoundAction: Allow); the guard is for a ConfigMap that lost its only key.
+      expression: |
+        params != null && has(params.data) && 'hosts' in params.data
+          ? params.data['hosts'].split('\n').filter(h, h != '')
+          : []
+    - name: conflicts
+      expression: 'variables.claimedHosts.filter(h, h in variables.reservedHosts)'
+  validations:
+    - expression: 'variables.conflicts.size() == 0'
+      reason: Forbidden
+      message: 'This hostname is reserved for Deckhouse platform services and cannot be claimed outside a system namespace'
+      messageExpression: "'Hostname ' + variables.conflicts.join(', ') + ' is reserved for Deckhouse platform services and cannot be claimed outside a system namespace'"
+  auditAnnotations:
+    - key: 'source-user'
+      valueExpression: "'User: ' + string(request.userInfo.username) + ' tries to claim a reserved Deckhouse hostname'"
+---
+{{- /*
+  The binding leaves out the namespaces the platform owns, so its own objects are never matched, and
+  the namespaces a cluster admin has opted out. The opt-out is a namespace label because Namespace is
+  cluster-scoped: a tenant confined to its own namespaces cannot set it.
+*/}}
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse")) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+  validationActions: [Deny, Audit]
+  paramRef:
+    name: {{ $paramsName }}
+    namespace: d8-system
+    parameterNotFoundAction: Allow
+  matchResources:
+    namespaceSelector:
+      matchExpressions:
+        - key: heritage
+          operator: NotIn
+          values: ["deckhouse"]
+        - key: security.deckhouse.io/reserved-hosts-bypass
+          operator: NotIn
+          values: ["true"]
+
+{{- if (include "helm_lib_kind_exists" (list . "HTTPRoute")) }}
+{{- /* The same reservation on the Gateway API primitive, which holds its hostnames in another field. */}}
+{{- $policyName = "reserved-public-hosts-httproute.deckhouse.io" }}
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse")) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  paramKind:
+    apiVersion: v1
+    kind: ConfigMap
+  matchConstraints:
+    resourceRules:
+      - apiGroups:   ["gateway.networking.k8s.io"]
+        apiVersions: ["*"]
+        operations:  ["CREATE", "UPDATE"]
+        resources:   ["httproutes"]
+  matchConditions:
+    - name: 'exclude-groups'
+      expression: '!(["system:nodes", "system:serviceaccounts:kube-system", "system:serviceaccounts:d8-system"].exists(e, (e in request.userInfo.groups)))'
+    - name: 'exclude-users'
+      expression: '!(["system:sudouser", "system:apiserver", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler", "dhctl", "observability"].exists(e, (e == request.userInfo.username)))'
+    - name: 'exclude-system-serviceaccounts'
+      expression: '!(request.userInfo.username.startsWith("system:serviceaccount:d8-") || request.userInfo.username.startsWith("system:serviceaccount:kube-"))'
+  variables:
+    - name: claimedHosts
+      expression: |
+        has(object.spec) && has(object.spec.hostnames)
+          ? object.spec.hostnames.map(h, string(h).lowerAscii())
+          : []
+    - name: reservedHosts
+      expression: |
+        params != null && has(params.data) && 'hosts' in params.data
+          ? params.data['hosts'].split('\n').filter(h, h != '')
+          : []
+    - name: conflicts
+      expression: 'variables.claimedHosts.filter(h, h in variables.reservedHosts)'
+  validations:
+    - expression: 'variables.conflicts.size() == 0'
+      reason: Forbidden
+      message: 'This hostname is reserved for Deckhouse platform services and cannot be claimed outside a system namespace'
+      messageExpression: "'Hostname ' + variables.conflicts.join(', ') + ' is reserved for Deckhouse platform services and cannot be claimed outside a system namespace'"
+  auditAnnotations:
+    - key: 'source-user'
+      valueExpression: "'User: ' + string(request.userInfo.username) + ' tries to claim a reserved Deckhouse hostname'"
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse")) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+  validationActions: [Deny, Audit]
+  paramRef:
+    name: {{ $paramsName }}
+    namespace: d8-system
+    parameterNotFoundAction: Allow
+  matchResources:
+    namespaceSelector:
+      matchExpressions:
+        - key: heritage
+          operator: NotIn
+          values: ["deckhouse"]
+        - key: security.deckhouse.io/reserved-hosts-bypass
+          operator: NotIn
+          values: ["true"]
+{{- end }}
+{{- end }}
