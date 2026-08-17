@@ -55,11 +55,4 @@ redirectURIs:
   {{- if $context.Values.userAuthn.internal.publishAPI.enabled }}
 - https://{{ include "helm_lib_module_public_domain" (list $context "kubeconfig") }}/callback/
   {{- end }}
-  {{- if $context.Values.userAuthn.internal.dexAuthenticatorCRDs }}
-    {{- range $crd := $context.Values.userAuthn.internal.dexAuthenticatorCRDs }}
-      {{- if $crd.allowAccessToKubernetes }}
-- https://{{ $crd.spec.applicationDomain }}/dex-authenticator/callback
-      {{- end }}
-    {{- end }}
-  {{- end }}
 {{- end }}
