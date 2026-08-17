@@ -66,8 +66,8 @@ func TestValidateAcceptsValidProfile(t *testing.T) {
 	}
 }
 
-// The wire format stays the string the CRD validates; metav1.Duration is what
-// decodes it, so this pins the contract the CRD pattern and the agent share.
+// metav1.Duration decodes the same strings the CRD pattern validates; this pins
+// the contract they share.
 func TestSpecDecodesDurationsFromWireStrings(t *testing.T) {
 	const doc = `
 spec:
@@ -96,8 +96,8 @@ spec:
 	}
 }
 
-// A malformed duration can no longer reach Validate: it is rejected while the
-// object is decoded, which is where the agent must fail on it.
+// A malformed duration never reaches Validate: decoding rejects it first, which
+// is where the agent must fail.
 func TestSpecRejectsMalformedDuration(t *testing.T) {
 	const doc = `
 spec:
@@ -184,8 +184,7 @@ func TestValidateRejectsNilProfile(t *testing.T) {
 	}
 }
 
-// TestValidateAccumulatesAllViolations pins the accumulate-then-errors.Join
-// behavior: an operator fixes a broken profile in one pass, not one field per
+// An operator must be able to fix a broken profile in one pass, not one field per
 // CrashLoop restart.
 func TestValidateAccumulatesAllViolations(t *testing.T) {
 	p := validProfile()
@@ -206,8 +205,8 @@ func TestValidateAccumulatesAllViolations(t *testing.T) {
 	}
 }
 
-// TestShippedPresetsAreValid guards the built-in profiles in module templates
-// against values the agent would reject at startup (e.g. a zero duration).
+// Guards the built-in profiles in the module templates against values the agent
+// would reject at startup, such as a zero duration.
 func TestShippedPresetsAreValid(t *testing.T) {
 	const presets = "../../../../../../templates/fencing-agent/sla-profiles.yaml"
 

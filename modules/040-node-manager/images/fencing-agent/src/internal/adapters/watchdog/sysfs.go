@@ -24,17 +24,16 @@ import (
 )
 
 const (
-	// miscMajor and legacyWatchdogMinor identify /dev/watchdog: the kernel creates
-	// this misc device for the first registered watchdog only, which is watchdog0.
+	// miscMajor and legacyWatchdogMinor identify /dev/watchdog, the misc device the
+	// kernel creates for the first registered watchdog only, i.e. watchdog0.
 	miscMajor           = 10
 	legacyWatchdogMinor = 130
 )
 
-// nowayoutIn reads the nowayout attribute of the watchdog identified by its
-// device number. Any failure is an error and never a false: the agent must not
-// arm a watchdog whose nowayout setting it could not verify, because with
-// nowayout enabled Magic Close is silently ignored and maintenance would panic
-// the Node.
+// nowayoutIn reads the nowayout attribute of the watchdog with this device
+// number. Any failure is an error, never a false: with nowayout on the kernel
+// ignores Magic Close and maintenance would panic the Node, so an unverified
+// setting must stop the agent.
 func nowayoutIn(root string, major, minor uint32) (bool, error) {
 	dir, err := sysfsDirIn(root, major, minor)
 	if err != nil {
@@ -60,8 +59,8 @@ func nowayoutIn(root string, major, minor uint32) (bool, error) {
 
 // sysfsDirIn maps a watchdog device number onto its /sys/class/watchdog entry.
 func sysfsDirIn(root string, major, minor uint32) (string, error) {
-	// The legacy alias carries the misc device number instead of the cdev number
-	// of the watchdog itself, so it cannot be matched against sysfs.
+	// The legacy alias carries the misc device number, not the watchdog's own cdev
+	// number, so it cannot be matched against sysfs.
 	if major == miscMajor && minor == legacyWatchdogMinor {
 		dir := filepath.Join(root, "watchdog0")
 		if _, err := os.Stat(dir); err != nil {

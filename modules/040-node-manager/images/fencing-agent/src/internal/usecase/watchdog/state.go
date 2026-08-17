@@ -30,8 +30,8 @@ import (
 type Snapshot struct {
 	// Observed is false until the own-Node cache has delivered the Node once.
 	Observed bool
-	// UIDMismatch means the Node was recreated under the same name: the agent
-	// identity and the profile it started with no longer describe this machine.
+	// UIDMismatch means the Node was recreated under the same name, so the identity
+	// and profile the agent started with are stale.
 	UIDMismatch bool
 	// Maintenance is true while any maintenance annotation is present.
 	Maintenance        bool
@@ -41,13 +41,13 @@ type Snapshot struct {
 	RemovalReason  string
 }
 
-// SelfState keeps the last observed state of the agent's own Node. It is written
-// by the Node informer and read by the feed loop, so every access is guarded.
+// SelfState keeps the last observed state of the agent's own Node, written by the
+// informer and read by the feed loop.
 //
-// Two properties matter for safety: the state only ever changes on an actual
-// event (a frozen cache therefore keeps maintenance in effect instead of
-// silently clearing it), and a planned removal is sticky, because re-arming the
-// watchdog on a Node that is being deleted would panic it mid-removal.
+// Two rules matter for safety. The state changes only on a real event, so a frozen
+// cache keeps maintenance in effect instead of clearing it. And a planned removal
+// is sticky, because re-arming a Node that is being deleted would panic it
+// mid-removal.
 type SelfState struct {
 	expectedUID string
 	logger      *log.Logger
@@ -82,8 +82,8 @@ func (s *SelfState) Observe(signals domain.NodeSignals) {
 	s.logTransitions(previous)
 }
 
-// Deleted is the terminal signal: the Node object is gone, so this machine is
-// being removed from the cluster and must not be fenced any more.
+// Deleted is terminal: the Node object is gone, so this machine is leaving the
+// cluster and must not be fenced.
 func (s *SelfState) Deleted() {
 	s.mu.Lock()
 	defer s.mu.Unlock()

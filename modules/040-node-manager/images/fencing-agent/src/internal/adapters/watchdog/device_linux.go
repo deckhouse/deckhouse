@@ -31,11 +31,11 @@ import (
 )
 
 const (
-	// magicCloseChar sets the kernel expect_close flag, the only way to stop the
-	// timer from user space.
+	// magicCloseChar sets the kernel expect_close flag, the only way user space
+	// can stop the timer.
 	magicCloseChar = 'V'
-	// keepAliveChar is the write-based ping; the byte itself is irrelevant to the
-	// kernel as long as it is not the magic character.
+	// keepAliveChar is the write-based ping. Any byte works as long as it is not
+	// the magic character.
 	keepAliveChar = '1'
 )
 
@@ -43,14 +43,14 @@ const (
 type support struct {
 	Identity string
 	Options  uint32
-	// SetTimeout is WDIOF_SETTIMEOUT: without it the timeout of the SLA profile
-	// cannot reach the device at all.
+	// SetTimeout is WDIOF_SETTIMEOUT. Without it the SLA profile timeout cannot
+	// reach the device.
 	SetTimeout bool
-	// KeepAlive is WDIOF_KEEPALIVEPING: only the ioctl needs it, a write ping
+	// KeepAlive is WDIOF_KEEPALIVEPING. Only the ioctl needs it; a write ping
 	// always works.
 	KeepAlive bool
-	// MagicClose is WDIOF_MAGICCLOSE: without it the device cannot be disarmed,
-	// so maintenance must keep feeding instead of stopping.
+	// MagicClose is WDIOF_MAGICCLOSE. Without it the device cannot be disarmed,
+	// so maintenance keeps feeding instead of stopping.
 	MagicClose bool
 }
 
@@ -61,8 +61,8 @@ type device struct {
 	// support is written once by Open, before the device is shared.
 	support support
 
-	// mu serialises the file descriptor: the feed loop and the deferred disarm on
-	// shutdown can reach it from different goroutines.
+	// mu serialises the descriptor: the feed loop and the shutdown disarm reach it
+	// from different goroutines.
 	mu   sync.Mutex
 	file *os.File
 
@@ -81,8 +81,8 @@ func Open(path string, logger *log.Logger) (Device, error) {
 
 	caps, err := d.readSupport()
 	if err != nil {
-		// The open above already armed the device: a diagnostic failure must not
-		// cost the Node a panic, so disarm before reporting it.
+		// The open already armed the device, so disarm before reporting: a failed
+		// capability read must not cost the Node a panic.
 		if closeErr := d.MagicClose(); closeErr != nil {
 			logger.Error("disarm watchdog after a failed capability read", "error", closeErr)
 		}
@@ -156,8 +156,7 @@ func (d *device) KeepAlive() error {
 			return fmt.Errorf("keepalive (WDIOC_KEEPALIVE): %w", err)
 		}
 
-		// A driver that advertises the flag but rejects the ioctl is odd enough to
-		// report, but the write path below still keeps the Node alive.
+		// Odd enough to report, but the write below still keeps the Node alive.
 		d.fallbackOnce.Do(func() {
 			d.logger.Warn("WDIOC_KEEPALIVE rejected despite WDIOF_KEEPALIVEPING, falling back to write", "error", err)
 		})
@@ -178,8 +177,8 @@ func (d *device) SetTimeout(timeout time.Duration) (time.Duration, error) {
 		return 0, ErrNotArmed
 	}
 
-	// The ioctl takes whole seconds. Rounding up keeps the timeout no shorter
-	// than the profile asks for: a shorter one would fence earlier than the SLA.
+	// The ioctl takes whole seconds. Round up, or the Node would fence earlier
+	// than the SLA promises.
 	seconds := int(timeout / time.Second)
 	if timeout%time.Second != 0 {
 		seconds++
@@ -189,8 +188,7 @@ func (d *device) SetTimeout(timeout time.Duration) (time.Duration, error) {
 		return 0, fmt.Errorf("set timeout to %ds (WDIOC_SETTIMEOUT): %w", seconds, translate(err))
 	}
 
-	// Read back instead of trusting the request: a driver may clamp or round the
-	// value to its own granularity.
+	// Read back instead of trusting the request: a driver may clamp or round it.
 	return d.getTimeout()
 }
 
@@ -242,8 +240,8 @@ func (d *device) MagicClose() error {
 	file := d.file
 	d.file = nil
 
-	// The magic character must land before the close, otherwise the kernel keeps
-	// the timer running and the Node panics anyway.
+	// The magic character must land before the close, or the kernel keeps counting
+	// and the Node panics anyway.
 	_, writeErr := file.Write([]byte{magicCloseChar})
 	closeErr := file.Close()
 
@@ -278,8 +276,8 @@ func (d *device) ReleaseWithoutDisarm() error {
 	return nil
 }
 
-// translate maps "the driver does not implement this ioctl" onto
-// errors.ErrUnsupported so callers can tell a missing capability from a failure.
+// translate maps "the driver has no such ioctl" onto errors.ErrUnsupported, so
+// callers can tell a missing capability from a real failure.
 func translate(err error) error {
 	if errors.Is(err, unix.ENOTTY) || errors.Is(err, unix.EOPNOTSUPP) {
 		return fmt.Errorf("%w: %w", errors.ErrUnsupported, err)

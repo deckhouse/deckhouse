@@ -33,7 +33,7 @@ import (
 	"fencing-agent/internal/domain"
 )
 
-// resyncPeriod relists periodically as a guard against missed watch events.
+// resyncPeriod relists to catch missed watch events.
 const resyncPeriod = 10 * time.Minute
 
 // PeerStore receives the expected membership of the NodeGroup.
@@ -42,10 +42,10 @@ type PeerStore interface {
 	Delete(name string)
 }
 
-// NodeWatcher feeds Node add/update/delete events of one NodeGroup into a
-// PeerStore through a label-filtered shared informer. When the API becomes
-// unreachable the cache freezes on the last known state, which keeps the
-// membership view local, as the fencing fast path requires.
+// NodeWatcher feeds Node events of one NodeGroup into a PeerStore through a
+// label-filtered shared informer. When the API goes away the cache freezes on the
+// last known state, which keeps the membership view local, as the fencing fast
+// path needs.
 type NodeWatcher struct {
 	factory  informers.SharedInformerFactory
 	informer cache.SharedIndexInformer
@@ -114,10 +114,9 @@ func (w *NodeWatcher) Run(ctx context.Context) {
 	w.factory.Shutdown()
 }
 
-// WaitForSync blocks until the initial cache fill completes. A false return
-// means ctx ended (shutdown); while ctx is alive and the API is unreachable it
-// keeps blocking instead of returning false, which is transient
-// unavailability, not a configuration error.
+// WaitForSync blocks until the initial cache fill completes. A false return means
+// ctx ended. An unreachable API keeps it blocking instead: that is transient, not
+// a misconfiguration.
 func (w *NodeWatcher) WaitForSync(ctx context.Context) bool {
 	return cache.WaitForCacheSync(ctx.Done(), w.informer.HasSynced)
 }

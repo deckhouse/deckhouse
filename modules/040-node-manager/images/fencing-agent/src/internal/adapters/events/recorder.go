@@ -14,9 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package events publishes Kubernetes Events about the agent on its own Node,
-// so that arming, disarming and refusals are visible in kubectl describe node
-// and not only in the pod log.
+// Package events publishes Kubernetes Events on the agent's own Node, so arming,
+// disarming and refusals show up in kubectl describe node, not only in the log.
 package events
 
 import (
@@ -46,7 +45,7 @@ func New(client kubernetes.Interface, identity domain.NodeIdentity, logger *log.
 	broadcaster := record.NewBroadcaster()
 
 	broadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: client.CoreV1().Events("")})
-	// Delivery problems are otherwise invisible: client-go reports them through klog.
+	// client-go reports delivery problems through klog, where nobody sees them.
 	broadcaster.StartLogging(func(format string, args ...any) {
 		logger.Debug("event broadcaster", "message", fmt.Sprintf(format, args...))
 	})

@@ -62,8 +62,8 @@ func TestSelfStateReportsMaintenance(t *testing.T) {
 	}
 }
 
-// A removal is never revoked: re-arming the watchdog on a Node that is being
-// deleted would panic it in the middle of the removal.
+// A removal is never revoked: re-arming a Node that is being deleted would panic
+// it mid-removal.
 func TestSelfStateKeepsPlannedRemovalSticky(t *testing.T) {
 	state := newState()
 
@@ -94,8 +94,8 @@ func TestSelfStateTreatsDeletionAsTerminal(t *testing.T) {
 	}
 }
 
-// A Node recreated under the same name invalidates the identity and the profile
-// the agent started with, and only a restart can refresh them.
+// A Node recreated under the same name makes the identity and profile stale, and
+// only a restart refreshes them.
 func TestSelfStateDetectsAndKeepsUIDMismatch(t *testing.T) {
 	state := newState()
 

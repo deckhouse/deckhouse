@@ -25,7 +25,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 
-	v1alpha1 "fencing-agent/api/node-manager.deckhouse.io/v1alpha1"
 	"fencing-agent/internal/adapters/events"
 	"fencing-agent/internal/adapters/kubeclient"
 	"fencing-agent/internal/adapters/memberlist"
@@ -36,6 +35,8 @@ import (
 	"fencing-agent/internal/usecase/join"
 	"fencing-agent/internal/usecase/membership"
 	"fencing-agent/internal/usecase/watchdog"
+
+	v1alpha1 "fencing-agent/api/node-manager.deckhouse.io/v1alpha1"
 )
 
 type Agent struct {
@@ -118,9 +119,8 @@ func (a *Agent) Run(ctx context.Context) error {
 	recorder := events.New(a.deps.K8sClient, a.identity, a.logger)
 	defer recorder.Shutdown()
 
-	// Expected membership: every Node labeled into the NodeGroup, served from
-	// the informer cache. The join seed list and the quorum size come from the
-	// same view, so they can never diverge.
+	// Every Node labeled into the NodeGroup, from the informer cache. The seed list
+	// and the quorum size read the same view, so they cannot diverge.
 	members := membership.New(a.logger)
 
 	watcher, err := kubeclient.NewNodeWatcher(a.deps.K8sClient, a.cfg.NodeGroup, members, a.logger)
@@ -128,8 +128,8 @@ func (a *Agent) Run(ctx context.Context) error {
 		return fmt.Errorf("create node watcher: %w", err)
 	}
 
-	// The own Node is watched by its own informer: the watchdog must keep seeing
-	// maintenance annotations even if the Node loses the NodeGroup label.
+	// The own Node gets its own informer: the watchdog must keep seeing maintenance
+	// annotations even if the Node loses the NodeGroup label.
 	selfState := watchdog.NewSelfState(a.identity.UID, a.logger)
 
 	selfWatcher, err := kubeclient.NewSelfWatcher(a.deps.K8sClient, a.identity.Name, selfState, a.logger)
@@ -174,10 +174,9 @@ func (a *Agent) Run(ctx context.Context) error {
 	})
 
 	g.Go(func() error {
-		// WaitForCacheSync blocks while the API is unreachable: the pod simply
-		// stays NotReady until it recovers. It returns false only on shutdown,
-		// never as a verdict on the cluster state (the profile, in contrast,
-		// fails closed).
+		// WaitForCacheSync blocks while the API is unreachable, leaving the pod
+		// NotReady until it recovers. It returns false only on shutdown, never as a
+		// verdict on the cluster.
 		a.logger.Info("waiting for node cache sync")
 
 		if !watcher.WaitForSync(gctx) {
@@ -200,8 +199,8 @@ func (a *Agent) Run(ctx context.Context) error {
 			return nil
 		}
 
-		// The watchdog is armed only here: an armed device promises that this agent
-		// can see its NodeGroup, and a watchdog the agent cannot rely on stops it.
+		// Arming happens only here: an armed device promises this agent can see its
+		// NodeGroup.
 		a.logger.Info("gossip network joined, starting the watchdog")
 
 		return watchdogManager.Run(gctx)

@@ -28,11 +28,10 @@ const sysfsClassWatchdog = "/sys/class/watchdog"
 
 // Nowayout reports whether the kernel refuses to stop this watchdog.
 //
-// There is no ioctl for it: WDIOF_MAGICCLOSE in WDIOC_GETSUPPORT is a driver
-// capability, while nowayout is a build or module setting that makes the kernel
-// ignore Magic Close (watchdog_stop then returns EBUSY). It is read through sysfs
-// and deliberately without opening the device, so refusing to run on a nowayout
-// kernel never leaves an armed watchdog behind.
+// There is no ioctl for it. WDIOF_MAGICCLOSE is a driver capability, while
+// nowayout is a build or module setting that makes the kernel ignore Magic Close
+// (watchdog_stop returns EBUSY). Reading it through sysfs avoids opening the
+// device, so a refusal never leaves an armed watchdog behind.
 func Nowayout(devicePath string) (bool, error) {
 	var stat unix.Stat_t
 	if err := unix.Stat(devicePath, &stat); err != nil {

@@ -233,8 +233,8 @@ type harness struct {
 	}
 }
 
-// newHarness wires a manager whose own Node is observed, healthy and without any
-// maintenance annotation, i.e. the state in which fencing must be active.
+// newHarness wires a manager whose own Node is observed, healthy and
+// unannotated: the state in which fencing must be active.
 func newHarness(t *testing.T) *harness {
 	t.Helper()
 
@@ -346,8 +346,8 @@ func TestManagerRefusesADriverWithoutSetTimeoutSupport(t *testing.T) {
 
 func TestManagerRefusesATimeoutTooCloseToTheFeedInterval(t *testing.T) {
 	h := newHarness(t)
-	// A driver that clamps 10s down to one feed interval: a single late tick would
-	// then reset the Node.
+	// A driver that clamps 10s down to one feed interval: one late tick would then
+	// reset the Node.
 	h.device.effective = testFeedInterval
 
 	err := h.manager.tick()
@@ -436,7 +436,7 @@ func TestManagerNeverReArmsWhileTheNodeIsBeingRemoved(t *testing.T) {
 }
 
 // Without WDIOF_MAGICCLOSE the kernel ignores the disarm, so stopping the feed
-// would panic the Node in the middle of a planned operation.
+// would panic the Node mid-operation.
 func TestManagerKeepsFeedingWhenTheDeviceCannotBeDisarmed(t *testing.T) {
 	h := newHarness(t)
 	h.device.supportsMagic = false
@@ -465,9 +465,8 @@ func TestManagerKeepsFeedingWhenTheDeviceCannotBeDisarmed(t *testing.T) {
 	}
 }
 
-// A failed disarm is the dangerous case: the kernel keeps counting while the
-// descriptor is gone, so the Node would reset in the middle of the planned
-// operation unless the agent reopens the device and keeps feeding.
+// The dangerous case: the kernel keeps counting while the descriptor is gone, so
+// the Node resets mid-operation unless the agent reopens and keeps feeding.
 func TestManagerKeepsFeedingWhenTheDisarmFails(t *testing.T) {
 	h := newHarness(t)
 
@@ -603,8 +602,8 @@ func TestManagerWaitsForTheOwnNodeCacheBeforeArming(t *testing.T) {
 	}
 }
 
-// The quorum gate of the ADR: feeding stops, the device stays armed and the Node
-// is expected to be reset when the timeout expires.
+// The ADR's quorum gate: feeding stops, the device stays armed, and the Node
+// resets when the timeout expires.
 func TestManagerStopsFeedingWithoutDisarmingWhenTheGateCloses(t *testing.T) {
 	h := newHarness(t)
 

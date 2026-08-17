@@ -24,11 +24,9 @@ import (
 // ErrNotArmed is returned by every method called after MagicClose.
 var ErrNotArmed = errors.New("watchdog device is not armed")
 
-// Device is the minimal watchdog API the fencing agent needs. See the package
-// documentation for the kernel semantics behind each method.
-//
-// The capability predicates are answered from a single WDIOC_GETSUPPORT read
-// performed at Open, so they never fail and never change while armed.
+// Device is the part of the watchdog API the agent needs. The capability checks
+// come from one WDIOC_GETSUPPORT read at Open, so they never fail and never
+// change while the device is armed.
 type Device interface {
 	// Identity is the driver name, "Software Watchdog" for softdog.
 	Identity() string
@@ -38,19 +36,17 @@ type Device interface {
 	MagicCloseSupported() bool
 	// KeepAlive resets the timer.
 	KeepAlive() error
-	// SetTimeout requests a new timeout, rounded up to whole seconds because the
-	// ioctl takes an int, and returns the value the driver accepted.
+	// SetTimeout rounds up to whole seconds (the ioctl takes an int) and returns
+	// the value the driver accepted.
 	SetTimeout(timeout time.Duration) (time.Duration, error)
-	// GetTimeout returns the timeout currently in effect.
 	GetTimeout() (time.Duration, error)
-	// GetTimeLeft is diagnostics only and returns errors.ErrUnsupported on
-	// drivers without a get_timeleft op, softdog among them.
+	// GetTimeLeft is diagnostics only. Drivers without a get_timeleft op, softdog
+	// included, return errors.ErrUnsupported.
 	GetTimeLeft() (time.Duration, error)
 	// MagicClose disarms the watchdog and closes the device; it is idempotent.
 	MagicClose() error
-	// ReleaseWithoutDisarm closes the device and leaves the timer running, which
-	// is what the kernel does for any process that dies while holding it. It
-	// exists to recover a stale descriptor (a reloaded module, an I/O error)
-	// without opening a window in which the Node is not fenced.
+	// ReleaseWithoutDisarm closes the device and leaves the kernel timer running,
+	// the same as when a holder dies. It recovers a stale descriptor without
+	// leaving the Node unfenced for a moment.
 	ReleaseWithoutDisarm() error
 }

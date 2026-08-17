@@ -119,9 +119,9 @@ func (w *SelfWatcher) Run(ctx context.Context) {
 	w.factory.Shutdown()
 }
 
-// WaitForSync blocks until the initial cache fill completes; a false return
-// means ctx ended. Arming the watchdog before this point would hide maintenance
-// annotations, so the caller must wait for it.
+// WaitForSync blocks until the initial cache fill completes; a false return means
+// ctx ended. The caller must wait: arming before this would hide maintenance
+// annotations.
 func (w *SelfWatcher) WaitForSync(ctx context.Context) bool {
 	return cache.WaitForCacheSync(ctx.Done(), w.informer.HasSynced)
 }

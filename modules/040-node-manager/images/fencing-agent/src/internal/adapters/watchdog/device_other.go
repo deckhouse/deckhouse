@@ -26,9 +26,9 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-// The watchdog API is Linux-only. These stubs keep the module building and
-// testable on developer machines; the agent itself only runs in a Linux
-// container, where the build tags select the real implementation.
+// The watchdog API is Linux-only. These stubs keep the build and the tests
+// working on a developer machine; in the container the build tags pick the real
+// implementation.
 
 func Open(_ string, _ *log.Logger) (Device, error) {
 	return nil, fmt.Errorf("watchdog device on %s: %w", runtime.GOOS, errors.ErrUnsupported)

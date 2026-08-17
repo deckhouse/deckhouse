@@ -14,16 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package membership maintains the expected membership of the NodeGroup from
-// the Kubernetes API view and derives the quorum size from it.
+// Package membership tracks which Nodes should be in the NodeGroup and derives
+// the quorum size from that count.
 //
-// Expected membership is about which Nodes SHOULD be in the group, never about
-// liveness: every Node carrying the group label counts, with no readiness or
-// deletion filters. Filtering by observed health would shrink the quorum
-// together with a failing cluster and let both halves of a partition believe
-// they still hold it. When the API is unreachable the informer freezes on the
-// last known state, so the quorum view stays fully local, as the fast path
-// requires.
+// Every Node with the group label counts: no readiness or deletion filter.
+// Filtering by health would shrink the quorum along with a failing cluster and
+// let both halves of a partition think they still hold it. An unreachable API
+// freezes the informer on the last known state, so the view stays local, as the
+// fast path needs.
 package membership
 
 import (
@@ -52,8 +50,8 @@ func New(logger *log.Logger) *Membership {
 	}
 }
 
-// Upsert records a Node of the group. Changes are logged only after MarkSynced
-// so the initial cache fill does not flood the log.
+// Upsert records a Node of the group. Logging starts after MarkSynced, so the
+// initial cache fill does not flood it.
 func (m *Membership) Upsert(peer domain.Peer) {
 	m.mu.Lock()
 	previous, existed := m.peers[peer.Name]
@@ -86,8 +84,8 @@ func (m *Membership) Delete(name string) {
 	}
 }
 
-// MarkSynced is called once the informer cache completed its initial fill; it
-// logs the starting view and unmutes per-change logging.
+// MarkSynced runs once the informer finished its initial fill: it logs the
+// starting view and unmutes per-change logging.
 func (m *Membership) MarkSynced() {
 	m.mu.Lock()
 	m.synced = true
@@ -97,8 +95,8 @@ func (m *Membership) MarkSynced() {
 	m.logger.Info("expected membership synced", "expected", expected, "quorum", quorum)
 }
 
-// Snapshot returns the expected peers sorted by name, their count and the
-// quorum size derived from it.
+// Snapshot returns the expected peers sorted by name, their count and the quorum
+// size.
 func (m *Membership) Snapshot() ([]domain.Peer, int, int) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -113,8 +111,8 @@ func (m *Membership) Snapshot() ([]domain.Peer, int, int) {
 	return peers, len(peers), domain.QuorumSize(len(peers))
 }
 
-// ListNodeGroup serves the join usecase from the informer cache instead of
-// direct API LISTs; the arguments exist only to satisfy its NodeLister contract.
+// ListNodeGroup serves the join usecase from the informer cache instead of a
+// direct API LIST. The arguments only satisfy the NodeLister interface.
 func (m *Membership) ListNodeGroup(_ context.Context, _ string) ([]domain.Peer, error) {
 	peers, _, _ := m.Snapshot()
 

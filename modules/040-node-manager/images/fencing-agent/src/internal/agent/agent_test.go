@@ -82,8 +82,8 @@ func TestMemberlistConfigCarriesIdentityAndTuning(t *testing.T) {
 	}
 }
 
-// The join loop takes three different timings from three different profile
-// sections; a swap compiles and would only show up as a wrong retry pace.
+// Three timings from three profile sections: a swap compiles and would only show
+// up as a wrong retry pace.
 func TestJoinParamsTakeTimingsFromTheirOwnProfileSections(t *testing.T) {
 	params := testAgent().joinParams()
 
@@ -105,8 +105,8 @@ func TestJoinParamsTakeTimingsFromTheirOwnProfileSections(t *testing.T) {
 	}
 }
 
-// The watchdog takes two timings from its own profile section; a swap compiles
-// and would only show up as a wrong feed pace or a wrong kernel timeout.
+// Two timings from one profile section: a swap compiles and would only show up as
+// a wrong feed pace or kernel timeout.
 func TestWatchdogParamsTakeTimingsFromTheProfileWatchdogSection(t *testing.T) {
 	params := testAgent().watchdogParams()
 
@@ -119,8 +119,8 @@ func TestWatchdogParamsTakeTimingsFromTheProfileWatchdogSection(t *testing.T) {
 	}
 }
 
-// This stage has no quorum view and no fallback path, so the gate must stay open:
-// a closed gate would stop the feed and reset a Node for no reason at all.
+// No quorum view and no fallback path yet, so the gate must stay open: a closed
+// gate would stop the feed and reset a Node for nothing.
 func TestFeedGateStaysOpenUntilTheQuorumViewExists(t *testing.T) {
 	feed, reason := feedGate()
 

@@ -14,9 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package watchdog owns the watchdog policy of the agent: when the device is
-// armed, how often it is fed, and when it is deliberately disarmed. The device
-// itself is injected, so the policy is testable without a kernel.
+// Package watchdog owns the agent's watchdog policy: when the device is armed,
+// how often it is fed, and when it is disarmed on purpose. The device is
+// injected, so the policy is testable without a kernel.
 package watchdog
 
 import (
@@ -76,19 +76,19 @@ const (
 )
 
 const (
-	// maxFeedFailures is how many consecutive keepalive failures turn the pod
-	// NotReady. The device is reopened after every failure, so this counts real
-	// trouble rather than a single hiccup.
+	// maxFeedFailures is how many keepalive failures in a row turn the pod
+	// NotReady. The device is reopened after each one, so this counts real trouble,
+	// not a hiccup.
 	maxFeedFailures = 3
 
-	// livenessGrace is the floor for the staleness window of the feed loop, so
-	// fast profiles do not fail /healthz on ordinary scheduler jitter.
+	// livenessGrace floors the staleness window, so fast profiles do not fail
+	// /healthz on ordinary scheduler jitter.
 	livenessGrace = 5 * time.Second
 )
 
-// errFatal marks the failures the agent must not survive: the watchdog cannot be
-// trusted to honour the SLA or to be disarmed, and a silently unfenced Node is
-// worse than a CrashLoopBackOff.
+// errFatal marks failures the agent must not survive: a watchdog that cannot be
+// trusted to honour the SLA or to be disarmed. A silently unfenced Node is worse
+// than a CrashLoopBackOff.
 var errFatal = errors.New("watchdog cannot be relied on")
 
 type Params struct {
@@ -104,10 +104,9 @@ type Deps struct {
 	Nowayout func() (bool, error)
 	State    StateSource
 	Events   EventRecorder
-	// ShouldFeed is the quorum and fallback gate of the ADR. It is constant true
-	// in this stage: the local quorum view and the fallback path do not exist yet,
-	// so the watchdog only fences a Node whose agent died, hung or lost the
-	// device. The seam keeps that decision out of the feed loop.
+	// ShouldFeed is the quorum and fallback gate of the ADR. It is always true for
+	// now: no local quorum view and no fallback path yet, so the watchdog only
+	// fences a Node whose agent died, hung or lost the device.
 	ShouldFeed func() (bool, string)
 }
 
@@ -116,16 +115,16 @@ type Manager struct {
 	deps   Deps
 	logger *log.Logger
 
-	// mu is held for a whole tick: the only other writer is Close on shutdown,
-	// and readiness and liveness are answered from atomics instead.
+	// mu is held for a whole tick. The only other writer is Close on shutdown;
+	// readiness and liveness come from atomics instead.
 	mu       sync.Mutex
 	device   Device
 	state    string
 	detail   string
 	failures int
-	// cannotDisarm is set when the kernel would not honour Magic Close, either
-	// because the driver does not advertise it or because a disarm already failed.
-	// It is sticky: from then on planned operations keep feeding instead.
+	// cannotDisarm is set when the kernel will not honour Magic Close: the driver
+	// does not advertise it, or a disarm already failed. It is sticky, and from
+	// then on planned operations keep feeding.
 	cannotDisarm bool
 
 	started  atomic.Bool
@@ -162,8 +161,8 @@ func (m *Manager) Run(ctx context.Context) error {
 	ticker := time.NewTicker(m.params.FeedInterval)
 	defer ticker.Stop()
 
-	// The first tick runs at once: the join has just finished and waiting a whole
-	// interval would leave the Node unprotected for no reason.
+	// First tick right away: waiting a whole interval after the join would leave
+	// the Node unprotected for no reason.
 	if err := m.tick(); err != nil {
 		return err
 	}
@@ -182,11 +181,10 @@ func (m *Manager) Run(ctx context.Context) error {
 	}
 }
 
-// Close disarms the watchdog on a graceful shutdown. A DaemonSet rollout stops
-// every agent of the NodeGroup at once and the nodes run with kernel.panic=0, so
-// a missed disarm would leave the whole group panicked. A crash (SIGKILL, OOM)
-// deliberately does not disarm: there the kernel keeps counting and fences the
-// Node, which is the entire point of the watchdog.
+// Close disarms on a graceful shutdown. A DaemonSet rollout stops every agent of
+// the NodeGroup at once and the nodes run with kernel.panic=0, so a missed disarm
+// would panic the whole group. A crash does not disarm on purpose: the kernel
+// keeps counting and fences the Node, which is the point.
 func (m *Manager) Close() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -205,17 +203,17 @@ func (m *Manager) Close() {
 	m.ready.Store(false)
 }
 
-// Ready reports that the watchdog policy is being carried out: armed and fed, or
-// deliberately disarmed for a planned operation. It answers "is this agent
-// healthy", not "is fencing armed", so maintenance does not flap pod readiness.
+// Ready reports that the policy is being carried out: armed and fed, or disarmed
+// on purpose for a planned operation. It answers "is this agent healthy", not
+// "is fencing armed", so maintenance does not flap pod readiness.
 func (m *Manager) Ready() bool {
 	return m.started.Load() && m.ready.Load()
 }
 
-// Alive reports that the feed loop is still ticking. This is diagnostics: the
-// liveness probe reacts in tens of seconds while the watchdog timeout is
-// seconds, so a hung loop resets the Node long before the kubelet notices.
-// Before the loop starts, while the agent is still joining gossip, it is true.
+// Alive reports that the feed loop is still ticking. Diagnostics only: the probe
+// reacts in tens of seconds while the timeout is seconds, so a hung loop resets
+// the Node long before the kubelet notices. True while the agent is still joining
+// gossip.
 func (m *Manager) Alive() bool {
 	if !m.started.Load() {
 		return true
@@ -235,7 +233,7 @@ func (m *Manager) validate() error {
 	}
 
 	// WDIOC_SETTIMEOUT takes whole seconds, so a sub-second timeout cannot be
-	// expressed at all, and the kernel rejects anything below its min_timeout.
+	// expressed, and the kernel rejects anything below its min_timeout.
 	if m.params.Timeout < time.Second {
 		return fmt.Errorf("%w: timeout %s is below the one second the kernel API allows", errFatal, m.params.Timeout)
 	}
@@ -248,10 +246,10 @@ func (m *Manager) validate() error {
 	return nil
 }
 
-// checkNowayout runs before the device is opened for the first time. With
-// nowayout enabled the kernel ignores Magic Close, so maintenance could not
-// disarm the watchdog and a planned operation would panic the Node. Checking it
-// first also guarantees that this refusal never leaves an armed device behind.
+// checkNowayout runs before the device is ever opened. With nowayout on the kernel
+// ignores Magic Close, so maintenance could not disarm and a planned operation
+// would panic the Node. Checking first also means the refusal never leaves an
+// armed device behind.
 func (m *Manager) checkNowayout() error {
 	blocked, err := m.deps.Nowayout()
 	if err != nil {
@@ -279,9 +277,8 @@ func (m *Manager) tick() error {
 
 	switch {
 	case snapshot.UIDMismatch:
-		// The Node was recreated under the same name: identity and profile were
-		// read at startup and no longer describe this machine, and only a restart
-		// can refresh them.
+		// Recreated under the same name: the identity and profile read at startup no
+		// longer describe this machine, and only a restart refreshes them.
 		m.deps.Events.Warning(reasonIdentityChanged, "Node was recreated with a different uid, restarting the agent")
 
 		return fmt.Errorf("%w: own node was recreated with a different uid", errFatal)
@@ -319,7 +316,7 @@ func (m *Manager) applyState(state, detail string) error {
 	}
 
 	if m.device == nil {
-		// A deliberate state is not a fault.
+		// An intended state is not a fault.
 		m.ready.Store(true)
 
 		if changed {
@@ -350,8 +347,8 @@ func (m *Manager) applyState(state, detail string) error {
 	m.failures = 0
 
 	if err != nil {
-		// The kernel kept the timer running and the descriptor is gone: reopening and
-		// feeding is the only way to keep a planned operation from resetting the Node.
+		// The timer runs on and the descriptor is gone: only reopening and feeding
+		// keeps a planned operation from resetting the Node.
 		m.cannotDisarm = true
 
 		m.logger.Error("disarm watchdog, feeding continues through the planned operation",
@@ -372,9 +369,9 @@ func (m *Manager) applyState(state, detail string) error {
 	return nil
 }
 
-// keepFeedingThrough feeds a device that cannot be disarmed. The kernel keeps
-// counting whatever the agent does, so stopping the feed would reset the Node in
-// the middle of a planned operation. The caller holds mu.
+// keepFeedingThrough feeds a device that cannot be disarmed. The kernel counts on
+// regardless, so stopping the feed would reset the Node mid-operation. The caller
+// holds mu.
 func (m *Manager) keepFeedingThrough(state, detail string, changed bool) error {
 	if changed {
 		m.logger.Warn("watchdog cannot be disarmed, feeding continues through the planned operation",
@@ -386,9 +383,9 @@ func (m *Manager) keepFeedingThrough(state, detail string, changed bool) error {
 	return m.feed()
 }
 
-// starve stops the keepalive without disarming: the Node is expected to reset
-// when the timeout expires. This is the quorum-loss path of the ADR and cannot
-// trigger while ShouldFeed is constant true. The caller holds mu.
+// starve stops the keepalive without disarming, so the Node resets when the
+// timeout expires. This is the ADR's quorum-loss path, unreachable while
+// ShouldFeed is always true. The caller holds mu.
 func (m *Manager) starve(reason string) {
 	m.ready.Store(false)
 
@@ -399,8 +396,8 @@ func (m *Manager) starve(reason string) {
 	m.state, m.detail = stateGateClosed, reason
 
 	if m.device == nil {
-		// Reachable after a maintenance disarm: without an armed device the missing
-		// keepalive resets nothing, so do not promise a reset that will not happen.
+		// Reachable after a maintenance disarm: with no armed device the missing
+		// keepalive resets nothing, so do not promise a reset.
 		m.logger.Error("feeding stopped while the watchdog is not armed: this node cannot be fenced locally", "reason", reason)
 		m.deps.Events.Warning(reasonStarvation, fmt.Sprintf("Watchdog is not armed and feeding stopped: %s", reason))
 
@@ -439,9 +436,8 @@ func (m *Manager) feed() error {
 	if err := m.device.KeepAlive(); err != nil {
 		m.recordFailure(fmt.Errorf("keepalive: %w", err))
 
-		// A stale descriptor never recovers by itself (a reloaded module, an I/O
-		// error). Release it without disarming, so the kernel keeps counting while
-		// the next tick reopens the device.
+		// A stale descriptor never recovers by itself. Release it without disarming,
+		// so the kernel keeps counting while the next tick reopens the device.
 		if releaseErr := m.device.ReleaseWithoutDisarm(); releaseErr != nil {
 			m.logger.Error("release watchdog device after a failed keepalive", "error", releaseErr)
 		}
@@ -501,9 +497,8 @@ func (m *Manager) arm() error {
 		m.logger.Debug("watchdog time left", "time_left", left.String())
 	}
 
-	// Neither the failure counter nor readiness is touched here: a reopen after a
-	// failed keepalive must not reset the streak, otherwise a device that accepts
-	// open but rejects every ping would look healthy forever.
+	// The failure counter and readiness stay untouched: a reopen must not reset the
+	// streak, or a device that opens but rejects every ping looks healthy forever.
 	m.device = device
 
 	m.logger.Info("watchdog armed",

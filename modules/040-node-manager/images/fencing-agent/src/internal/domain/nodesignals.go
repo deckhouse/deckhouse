@@ -16,9 +16,9 @@ limitations under the License.
 
 package domain
 
-// Maintenance annotations. Any of them disables fencing for the Node: the same
-// three keys already exclude a Node in the node-manager fencing hook, and agent
-// and controller must never disagree on what maintenance means.
+// Maintenance annotations. Any of them disables fencing for the Node. The
+// node-manager fencing hook excludes a Node on the same three keys, and the two
+// must not disagree on what maintenance means.
 const (
 	// FencingDisableAnnotation is set by an operator for manual maintenance.
 	FencingDisableAnnotation = "node-manager.deckhouse.io/fencing-disable"
@@ -38,8 +38,8 @@ const (
 	RemovalReasonDeleted    = "NodeDeleted"
 )
 
-// MaintenanceAnnotations returns the annotations that disable fencing, in a
-// stable order so logs and Events stay comparable.
+// MaintenanceAnnotations returns the fencing-disabling annotations in a stable
+// order, so logs and Events stay comparable.
 func MaintenanceAnnotations() []string {
 	return []string{
 		FencingDisableAnnotation,
@@ -48,8 +48,8 @@ func MaintenanceAnnotations() []string {
 	}
 }
 
-// NodeSignals is the watchdog-relevant view of the agent's own Node. It carries
-// no Kubernetes types so the policy layer never has to know about them.
+// NodeSignals is the watchdog-relevant view of the agent's own Node. No
+// Kubernetes types, so the policy layer stays free of them.
 type NodeSignals struct {
 	// UID detects a Node recreated under the same name.
 	UID string
@@ -57,7 +57,7 @@ type NodeSignals struct {
 	Maintenance bool
 	// MaintenanceReasons holds the annotations actually present.
 	MaintenanceReasons []string
-	// PlannedRemoval is true once the Node is known to be on its way out.
+	// PlannedRemoval is true once the Node is on its way out.
 	PlannedRemoval bool
 	RemovalReason  string
 }

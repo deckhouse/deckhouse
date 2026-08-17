@@ -22,8 +22,8 @@ import (
 	"testing"
 )
 
-// The device number of a hypothetical /dev/watchdog1: a cdev number, unlike the
-// misc number of the legacy /dev/watchdog alias.
+// A cdev number, as /dev/watchdog1 would have, unlike the misc number of the
+// legacy /dev/watchdog alias.
 const (
 	testMajor = 251
 	testMinor = 1
@@ -53,8 +53,7 @@ func fakeSysfsEntry(t *testing.T, root, name, deviceNumber, nowayoutValue string
 func TestNowayoutReadsTheEntryMatchingTheDeviceNumber(t *testing.T) {
 	root := t.TempDir()
 
-	// The index in the name means nothing: only the device number identifies the
-	// entry, and a decoy with another number must not be read.
+	// Only the device number identifies the entry, so the decoy must not be read.
 	fakeSysfsEntry(t, root, "watchdog7", "251:1", "0")
 	fakeSysfsEntry(t, root, "watchdog3", "251:0", "1")
 
@@ -107,8 +106,8 @@ func TestNowayoutFailsWhenTheLegacyEntryIsMissing(t *testing.T) {
 	}
 }
 
-// Every failure below must be an error, never a false: the agent refuses to arm a
-// watchdog whose nowayout setting it could not verify.
+// Every failure must be an error, never a false: the agent will not arm a
+// watchdog whose nowayout setting it could not read.
 func TestNowayoutFailsWhenItCannotBeVerified(t *testing.T) {
 	t.Run("unexpected value", func(t *testing.T) {
 		root := t.TempDir()

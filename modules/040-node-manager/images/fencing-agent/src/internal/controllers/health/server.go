@@ -34,9 +34,9 @@ type Server struct {
 	alive  func() bool
 }
 
-// NewServer gates readiness on ready and liveness on alive; both must be non-nil.
-// Liveness answers whether the agent's own loops still run, readiness whether the
-// agent is doing its job (joined to gossip and carrying out the watchdog policy).
+// NewServer needs both callbacks. Liveness asks whether the agent's loops still
+// run; readiness whether it is doing its job: joined to gossip and running the
+// watchdog policy.
 func NewServer(addr string, logger *log.Logger, ready, alive func() bool) *Server {
 	return &Server{addr: addr, logger: logger, ready: ready, alive: alive}
 }
