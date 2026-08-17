@@ -377,6 +377,8 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 			ForceAdoption:           true,
 		},
 		Timeout: c.opts.Timeout,
+		// Package releases are serialized by the runtime task pipeline, so the cluster-wide release lock is redundant.
+		LegacyNoReleaseLock: true,
 	}); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("install nelm release '%s': %w", releaseName, err)
@@ -499,6 +501,8 @@ func (c *Client) Delete(ctx context.Context, namespace, releaseName string) (err
 		ReleaseHistoryLimit:  int(c.opts.HistoryMax),
 		ReleaseStorageDriver: c.driver,
 		Timeout:              c.opts.Timeout,
+		// Package releases are serialized by the runtime task pipeline, so the cluster-wide release lock is redundant.
+		LegacyNoReleaseLock: true,
 	}); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("uninstall nelm release '%s': %w", releaseName, err)
