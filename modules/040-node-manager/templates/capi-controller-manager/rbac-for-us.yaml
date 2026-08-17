@@ -279,6 +279,7 @@ rules:
     - zvirtclusters
     - zvirtmachines
     - zvirtmachinetemplates
+    - vsphereclusteridentities
     - vsphereclusters
     - vsphereclustertemplates
     - vspheredeploymentzones
