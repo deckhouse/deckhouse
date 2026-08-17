@@ -446,10 +446,6 @@ html {
                         }
 
                         @include breakpoints.min-w(xl) {
-                            top: 30%;
-                        }
-
-                        @include breakpoints.min-w(xxl) {
                             top: 40%;
                             height: 6px;
                         }
@@ -643,11 +639,11 @@ html {
         box-shadow: inset rgba(34, 42, 94, .11) 0 4px 14px -10px;
 
         @include breakpoints.min-w(s) {
-            padding: 1.063rem 0;
+            padding: 1.125rem 0;
         }
 
         @include breakpoints.min-w(m) {
-            padding: 1.05rem 0;
+            padding: 1.228rem 0;
         }
 
         @include breakpoints.min-w(l) {
@@ -727,10 +723,6 @@ html {
                 color: mixins.$ntrl-300;
                 font-size: 12.5px;
 
-                @include breakpoints.min-w(s) {
-                    padding-top: .286rem;
-                }
-
                 &::after {
                     content: "";
                     position: absolute;
@@ -744,11 +736,7 @@ html {
                     transition: transform .3s;
                     width: 10px;
 
-                    @include breakpoints.min-w(s) {
-                        top: 58%;
-                    }
-
-                    @include breakpoints.min-w(m) {
+                    @include breakpoints.min-w(xs) {
                         top: 55%;
                     }
                 }
@@ -772,7 +760,7 @@ html {
             color: mixins.$ntrl-800;
             font-size: 16px;
 
-            @media screen and (min-width: 1024px) and (max-width: 1228px) {
+            @include breakpoints.min-w(m) {
                 padding-bottom: 1px;
                 line-height: 19px;
             }
