@@ -2502,12 +2502,12 @@ index f832bb4a4e8..da3214bb97d 100644
  			a = &forbidCreateAdmission{delegate: a}
  		}
 +		if len(sensitiveSchemaSlice) > 0 {
-+			return handlers.CreateResource(&unmaskingCreater{Creater: storage, schemas: sensitiveSchemaSlice, groupKind: sensitiveGroupKind}, requestScope, a)
++			return handlers.CreateResource(&unmaskingCreater{Creater: storage, schemas: sensitiveSchemaSlice, groupKind: sensitiveGroupKind, needsMasking: needsMasking}, requestScope, a)
 +		}
  		return handlers.CreateResource(storage, requestScope, a)
  	case "update":
 +		if len(sensitiveSchemaSlice) > 0 {
-+			return handlers.UpdateResource(&unmaskingUpdater{Updater: storage, schemas: sensitiveSchemaSlice, groupKind: sensitiveGroupKind}, requestScope, r.admission)
++			return handlers.UpdateResource(&unmaskingUpdater{Updater: storage, schemas: sensitiveSchemaSlice, groupKind: sensitiveGroupKind, needsMasking: needsMasking}, requestScope, r.admission)
 +		}
  		return handlers.UpdateResource(storage, requestScope, r.admission)
  	case "patch":
@@ -2517,7 +2517,7 @@ index f832bb4a4e8..da3214bb97d 100644
  		}
 +		if len(sensitiveSchemaSlice) > 0 {
 +			inner := handlers.PatchResource(
-+				&unmaskingPatcher{Patcher: storage, schemas: sensitiveSchemaSlice, groupKind: sensitiveGroupKind},
++				&unmaskingPatcher{Patcher: storage, schemas: sensitiveSchemaSlice, groupKind: sensitiveGroupKind, needsMasking: needsMasking},
 +				requestScope, a, supportedTypes,
 +			)
 +			return sensitiveSSABodyUnmasker(inner, storage, sensitiveSchemaSlice, sensitiveGroupKind, requestScope.MaxRequestBodyBytes)
@@ -3666,10 +3666,10 @@ index 00000000000..66fc51f6d7a
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_unmask.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_unmask.go
 new file mode 100644
-index 00000000000..1394310e406
+index 00000000000..e56b32bf0bd
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_unmask.go
-@@ -0,0 +1,128 @@
+@@ -0,0 +1,157 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -3703,11 +3703,13 @@ index 00000000000..1394310e406
 +	"k8s.io/klog/v2"
 +)
 +
-+// unmaskingCreater rejects MaskedValue in sensitive fields during create.
++// unmaskingCreater rejects MaskedValue in sensitive fields during create and
++// masks sensitive fields in the response when the caller lacks the resource/sensitive permission.
 +type unmaskingCreater struct {
 +	rest.Creater
-+	schemas   []*structuralschema.Structural
-+	groupKind runtimeschema.GroupKind
++	schemas      []*structuralschema.Structural
++	groupKind    runtimeschema.GroupKind
++	needsMasking bool
 +}
 +
 +func (s *unmaskingCreater) Create(ctx context.Context, obj runtime.Object, createValidation rest.ValidateObjectFunc, options *metav1.CreateOptions) (runtime.Object, error) {
@@ -3716,30 +3718,57 @@ index 00000000000..1394310e406
 +			return nil, newSensitiveUnmaskInvalidError(s.groupKind, u.GetName(), err)
 +		}
 +	}
-+	return s.Creater.Create(ctx, obj, createValidation, options)
++	out, err := s.Creater.Create(ctx, obj, createValidation, options)
++	if err != nil {
++		return nil, err
++	}
++	return maskResponse(out, s.needsMasking, s.schemas), nil
 +}
 +
 +// unmaskingUpdater replaces MaskedValue in sensitive fields with old values
-+// before update validation and persistence.
++// before update validation and persistence, and masks sensitive fields in the
++// response when the caller lacks the resource/sensitive permission.
 +type unmaskingUpdater struct {
 +	rest.Updater
-+	schemas   []*structuralschema.Structural
-+	groupKind runtimeschema.GroupKind
++	schemas      []*structuralschema.Structural
++	groupKind    runtimeschema.GroupKind
++	needsMasking bool
 +}
 +
 +func (s *unmaskingUpdater) Update(ctx context.Context, name string, objInfo rest.UpdatedObjectInfo, createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc, forceAllowCreate bool, options *metav1.UpdateOptions) (runtime.Object, bool, error) {
-+	return s.Updater.Update(ctx, name, newUnmaskingObjectInfo(objInfo, s.schemas, s.groupKind), createValidation, updateValidation, forceAllowCreate, options)
++	obj, created, err := s.Updater.Update(ctx, name, newUnmaskingObjectInfo(objInfo, s.schemas, s.groupKind), createValidation, updateValidation, forceAllowCreate, options)
++	if err != nil {
++		return obj, created, err
++	}
++	return maskResponse(obj, s.needsMasking, s.schemas), created, nil
 +}
 +
 +// unmaskingPatcher preserves rest.Patcher's Get method while wrapping Update.
 +type unmaskingPatcher struct {
 +	rest.Patcher
-+	schemas   []*structuralschema.Structural
-+	groupKind runtimeschema.GroupKind
++	schemas      []*structuralschema.Structural
++	groupKind    runtimeschema.GroupKind
++	needsMasking bool
 +}
 +
 +func (s *unmaskingPatcher) Update(ctx context.Context, name string, objInfo rest.UpdatedObjectInfo, createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc, forceAllowCreate bool, options *metav1.UpdateOptions) (runtime.Object, bool, error) {
-+	return s.Patcher.Update(ctx, name, newUnmaskingObjectInfo(objInfo, s.schemas, s.groupKind), createValidation, updateValidation, forceAllowCreate, options)
++	obj, created, err := s.Patcher.Update(ctx, name, newUnmaskingObjectInfo(objInfo, s.schemas, s.groupKind), createValidation, updateValidation, forceAllowCreate, options)
++	if err != nil {
++		return obj, created, err
++	}
++	return maskResponse(obj, s.needsMasking, s.schemas), created, nil
++}
++
++// maskResponse masks sensitive fields in an object returned by a write verb (create/update/patch) when the caller lacks the resource/sensitive permission, mirroring the read path.
++func maskResponse(obj runtime.Object, needsMasking bool, schemas []*structuralschema.Structural) runtime.Object {
++	if !needsMasking || obj == nil {
++		return obj
++	}
++	obj = obj.DeepCopyObject()
++	if u, ok := obj.(*unstructured.Unstructured); ok {
++		maskWithAllSchemas(u.Object, schemas)
++	}
++	return obj
 +}
 +
 +type unmaskingObjectInfo struct {
