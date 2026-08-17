@@ -183,3 +183,64 @@ func readModuleDigests(content io.ReadCloser) ([]string, error) {
 
 	return digests, nil
 }
+
+// ModuleCatalogue enumerates the tags of the modules repository itself — one per module the source
+// offers, whether or not the cluster keeps it.
+//
+// This is how the platform learns what it can install: `GET /v2/<repository>/modules/tags/list`
+// returns the module names as tags, and `ModuleSource` reads exactly that. A pull-through cache never
+// holds it, because a tag listing is not a request that leaves anything behind — so an air-gapped
+// cluster whose store was filled by proxying answers `NAME_UNKNOWN` for the whole catalogue.
+//
+// Measured on `ly-mmc` after a clean transition, every replica full and every node pulling:
+//
+//	modulesource/deckhouse: list: GET .../v2/system/deckhouse/modules/tags/list?n=1000:
+//	NAME_UNKNOWN: repository name not known to registry
+//
+// The store held `system/deckhouse/modules/<module>` for every image it had copied and nothing at the
+// `modules` prefix, so the cluster could pull everything it already ran and enumerate nothing. Copying
+// the catalogue costs almost nothing — 83 tags on that source, each an OCI manifest with a config and
+// no layers at all — and it belongs in the declared set rather than beside it, so that a store missing
+// the catalogue is not judged complete and the upstream is not dropped out from under it.
+//
+// This is a tag listing of ONE repository and not `_catalog`, which the fill deliberately avoids
+// (see the note where the fill's Discover is built): enumerating a registry's repositories is a
+// privilege of its own that a pull-scoped license is refused for, while `tags/list` is part of pulling
+// that repository. Verified against the live source with nothing but the license token — scope
+// `repository:sys/deckhouse-oss/modules:pull`, HTTP 200, 83 tags.
+//
+// A source that refuses to list is still NOT an error here. Some registries withhold even that, and
+// failing would stop such a cluster from ever completing a fill — a worse outcome than an air-gap
+// without a catalogue. The caller is told instead, so the reason can be logged where somebody will
+// read it.
+func ModuleCatalogue(
+	ctx context.Context, source Registry, unavailable func(error),
+) ([]name.Reference, error) {
+	registry, err := parseRegistry(source)
+	if err != nil {
+		return nil, err
+	}
+	repository := registry.Repo(source.Repository, modulesRepository)
+
+	// Options first, then the context: the variadic list is the source's own, and appending
+	// WithContext to it must not write into its backing array — `ListWithContext` is deprecated in
+	// favour of exactly this.
+	options := append(append([]remote.Option{}, source.Options...), remote.WithContext(ctx))
+
+	tags, err := remote.List(repository, options...)
+	if err != nil {
+		if unavailable != nil {
+			unavailable(fmt.Errorf("listing %s: %w", repository, err))
+		}
+		return nil, nil
+	}
+
+	references := make([]name.Reference, 0, len(tags))
+	for _, tag := range tags {
+		if tag == "" {
+			continue
+		}
+		references = append(references, repository.Tag(tag))
+	}
+	return references, nil
+}

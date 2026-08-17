@@ -93,6 +93,11 @@ type Release struct {
 	// version of that bug which matters most here would be silent: a store judged complete on the
 	// platform's images alone, cut off from its upstream, and missing every image its modules run.
 	Modules []ModuleRef
+
+	// CatalogueUnavailable is told when the source refuses to list the modules repository, which is a
+	// degradation and not a failure — see ModuleCatalogue. Optional: nil means the reason is dropped,
+	// which is why the loop sets it to a log line.
+	CatalogueUnavailable func(error)
 }
 
 func (r Release) Discover(
@@ -163,6 +168,17 @@ func (r Release) Discover(
 		return nil, err
 	}
 	for _, reference := range moduleReferences {
+		add(reference)
+	}
+
+	// And the catalogue of modules the source offers, which is what the platform reads to know what
+	// it CAN install — as opposed to what this cluster already runs. Without it an air-gapped cluster
+	// pulls everything it has and can enumerate nothing; see ModuleCatalogue for the measurement.
+	catalogue, err := ModuleCatalogue(ctx, source, r.CatalogueUnavailable)
+	if err != nil {
+		return nil, err
+	}
+	for _, reference := range catalogue {
 		add(reference)
 	}
 

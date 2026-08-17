@@ -674,7 +674,13 @@ func (l *Loop) applyReplicate(
 	copier := &fill.Copier{
 		Source:      source,
 		Destination: destination,
-		Discover:    fill.Release{Versions: versions, Modules: modules},
+		Discover: fill.Release{
+			Versions: versions, Modules: modules,
+			CatalogueUnavailable: func(err error) {
+				l.Log.Warn("the module catalogue cannot be listed, so an air-gapped cluster will not be "+
+					"able to enumerate modules", "error", err.Error())
+			},
+		},
 		// So that an image the store holds without its layers is copied rather than skipped: the
 		// registry answers "present" for those, and a follower would otherwise never repair itself.
 		StoreDir: l.dataDir(),
@@ -944,7 +950,13 @@ func (l *Loop) copier(
 		// somebody else's registry is a privilege of its own, which credentials scoped to
 		// pulling — all a license grants — are refused for; and "everything the upstream
 		// holds" is not a set a cache can be complete with respect to anyway.
-		Discover: fill.Release{Versions: versions, Modules: modules},
+		Discover: fill.Release{
+			Versions: versions, Modules: modules,
+			CatalogueUnavailable: func(err error) {
+				l.Log.Warn("the module catalogue cannot be listed, so an air-gapped cluster will not be "+
+					"able to enumerate modules", "error", err.Error())
+			},
+		},
 		// The same repair the replication path needs: a store filled by proxying holds manifests
 		// without layers, and the registry reports those as present.
 		StoreDir: l.dataDir(),

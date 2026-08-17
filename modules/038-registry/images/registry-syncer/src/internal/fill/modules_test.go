@@ -17,6 +17,11 @@ limitations under the License.
 package fill
 
 import (
+	"context"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -110,4 +115,62 @@ func TestNoModulesIsNotAnEmptySet(t *testing.T) {
 	references, err := ModuleReferences(t.Context(), source, nil, nil)
 	require.NoError(t, err)
 	require.Empty(t, references)
+}
+
+// TestTheModuleCatalogueIsPartOfTheSet is what lets an air-gapped cluster still know which modules
+// exist.
+//
+// The platform reads `GET /v2/<repository>/modules/tags/list` to enumerate what it can install, and a
+// pull-through cache never holds that: a tag listing leaves nothing behind. Measured on `ly-mmc` after
+// a clean transition — every replica full, every node pulling, and the whole catalogue answering
+// `NAME_UNKNOWN` — so the catalogue belongs in the declared set, where a store missing it is not
+// judged complete.
+func TestTheModuleCatalogueIsPartOfTheSet(t *testing.T) {
+	source := startRegistry(t)
+	source.Repository = "deckhouse/ee"
+
+	// Two modules offered by the source, only one of which this cluster keeps.
+	pushImage(t, source, "deckhouse/ee/modules:prometheus")
+	pushImage(t, source, "deckhouse/ee/modules:upmeter")
+
+	references, err := ModuleCatalogue(context.Background(), source, nil)
+	require.NoError(t, err)
+
+	var tags []string
+	for _, reference := range references {
+		tags = append(tags, reference.Identifier())
+	}
+	assert.ElementsMatch(t, []string{"prometheus", "upmeter"}, tags,
+		"every module the source offers has to be in the set, not only the ones the cluster runs")
+}
+
+// TestASourceThatWillNotListIsADegradationAndNotAFailure keeps a fill possible on a registry that
+// withholds tag listing.
+//
+// Failing would be the worse answer: such a cluster could never complete a fill at all, so it could
+// never drop its upstream, while the only thing it actually loses is the ability to enumerate modules
+// once air-gapped. The reason is handed to the caller so it reaches a log rather than being swallowed.
+func TestASourceThatWillNotListIsADegradationAndNotAFailure(t *testing.T) {
+	refusing := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/tags/list") {
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(refusing.Close)
+
+	parsed, err := url.Parse(refusing.URL)
+	require.NoError(t, err)
+
+	var told error
+	references, err := ModuleCatalogue(
+		context.Background(),
+		Registry{Address: parsed.Host, Insecure: true, Repository: "deckhouse/ee"},
+		func(reason error) { told = reason },
+	)
+	require.NoError(t, err, "a source that will not list must not stop the fill")
+	assert.Empty(t, references)
+	require.Error(t, told, "the reason has to reach the caller, or nobody ever learns why")
+	assert.Contains(t, told.Error(), "modules")
 }
