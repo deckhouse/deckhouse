@@ -104,3 +104,31 @@ func TestJoinParamsTakeTimingsFromTheirOwnProfileSections(t *testing.T) {
 		t.Errorf("identity is not wired: %+v", params)
 	}
 }
+
+// The watchdog takes two timings from its own profile section; a swap compiles
+// and would only show up as a wrong feed pace or a wrong kernel timeout.
+func TestWatchdogParamsTakeTimingsFromTheProfileWatchdogSection(t *testing.T) {
+	params := testAgent().watchdogParams()
+
+	if params.FeedInterval != 6*time.Second {
+		t.Errorf("FeedInterval is %s, want watchdog.feedInterval (6s)", params.FeedInterval)
+	}
+
+	if params.Timeout != 60*time.Second {
+		t.Errorf("Timeout is %s, want watchdog.timeout (60s)", params.Timeout)
+	}
+}
+
+// This stage has no quorum view and no fallback path, so the gate must stay open:
+// a closed gate would stop the feed and reset a Node for no reason at all.
+func TestFeedGateStaysOpenUntilTheQuorumViewExists(t *testing.T) {
+	feed, reason := feedGate()
+
+	if !feed {
+		t.Error("the feed gate must be open while the quorum view does not exist")
+	}
+
+	if reason == "" {
+		t.Error("the gate must explain itself in the log")
+	}
+}
