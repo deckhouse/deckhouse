@@ -223,7 +223,7 @@ func (hec *Config) HelmRender(options ...Option) {
 	yamlValuesBytes := hec.values.GetAsYaml()
 
 	// disable LintMode, otherwise 'fail' function will not render any value
-	renderer := helm.Renderer{LintMode: false}
+	renderer := helm.Renderer{LintMode: false, APIVersions: opts.apiVersions}
 	files, err := renderer.RenderChartFromDir(hec.modulePath, string(yamlValuesBytes))
 
 	hec.RenderError = err
@@ -310,6 +310,7 @@ func orderManifests(manifests string) string {
 type configOptions struct {
 	renderedOutput map[string]string
 	filterPath     []string
+	apiVersions    []string
 }
 
 type Option func(options *configOptions)
@@ -326,5 +327,14 @@ func WithFilteredRenderOutput(m map[string]string, filters []string) Option {
 	return func(options *configOptions) {
 		options.renderedOutput = m
 		options.filterPath = filters
+	}
+}
+
+// WithAPIVersions presents the given group/version/Kind strings to the chart as available in the
+// cluster. Templates guarded by helm_lib_kind_exists render nothing without it, because Helm's
+// default capabilities list group/version pairs only.
+func WithAPIVersions(versions ...string) Option {
+	return func(options *configOptions) {
+		options.apiVersions = append(options.apiVersions, versions...)
 	}
 }
