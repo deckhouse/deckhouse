@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/go-logr/zapr"
 	"go.uber.org/zap"
@@ -45,6 +46,8 @@ const (
 	labelInstance          = "metal3.deckhouse.io/instance"
 	labelInstanceNamespace = "metal3.deckhouse.io/instance-namespace"
 	labelPool              = "pool"
+
+	deleteRequeueAfter = 15 * time.Second
 )
 
 var (
@@ -166,10 +169,21 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 func (r *reconciler) reconcileDelete(ctx context.Context, instance *unstructured.Unstructured) (ctrl.Result, error) {
 	bmh := &unstructured.Unstructured{}
 	bmh.SetGroupVersionKind(bareMetalHostGVK)
-	bmh.SetNamespace(r.targetNamespace)
-	bmh.SetName(instance.GetName())
-	if err := r.Delete(ctx, bmh); client.IgnoreNotFound(err) != nil {
-		return ctrl.Result{}, err
+	key := types.NamespacedName{Namespace: r.targetNamespace, Name: instance.GetName()}
+	if err := r.Get(ctx, key, bmh); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return ctrl.Result{}, err
+		}
+	} else {
+		if bmh.GetDeletionTimestamp().IsZero() {
+			if err := r.Delete(ctx, bmh); err != nil && !apierrors.IsNotFound(err) {
+				return ctrl.Result{}, err
+			}
+		}
+		if err := r.setStatus(ctx, instance, bmh, r.generatedSecretName(instance), "waiting for BareMetalHost deletion"); err != nil && !apierrors.IsNotFound(err) {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{RequeueAfter: deleteRequeueAfter}, nil
 	}
 
 	secret := &corev1.Secret{
