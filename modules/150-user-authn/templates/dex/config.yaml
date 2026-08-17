@@ -201,7 +201,7 @@
         bindDN: {{ $provider.ldap.bindDN | quote }}
         {{- end }}
         {{- if $provider.ldap.bindPW  }}
-        bindPW: '{{ $provider.ldap.bindPW }}'
+        bindPW: {{ $provider.ldap.bindPW | quote }}
         {{- end }}
         {{- if $provider.ldap.startTLS }}
         startTLS: true
@@ -251,9 +251,9 @@
         userNameKey: {{ $provider.oidc.userNameKey | default "name" | quote }}
         {{- if $provider.oidc.claimMapping }}
         claimMapping:
-          email: {{ $provider.oidc.claimMapping.email }}
-          groups: {{ $provider.oidc.claimMapping.groups }}
-          preferred_username: {{ $provider.oidc.claimMapping.preferred_username }}
+          email: {{ $provider.oidc.claimMapping.email | quote }}
+          groups: {{ $provider.oidc.claimMapping.groups | quote }}
+          preferred_username: {{ $provider.oidc.claimMapping.preferred_username | quote }}
         {{- end }}
         {{- if $provider.oidc.claimMappingOverride }}
         overrideClaimMapping: true
