@@ -76,6 +76,7 @@ type Module struct {
 	definition Definition            // Module definition
 	digests    map[string]string     // Package digests
 	repository registry.Remote       // Module repository
+	embedded   bool                  // Package ships inside the Deckhouse image
 	converter  *conversion.Converter // Schema version converter for settings
 
 	hooks         *hooks.Storage      // Hook storage with indices
@@ -104,6 +105,7 @@ type Config struct {
 
 	Digests    map[string]string // Package images digests(images_digests.json)
 	Repository registry.Remote   // Package repository options
+	Embedded   bool              // Package ships inside the Deckhouse image
 
 	ConfigSchema []byte // OpenAPI config schema (YAML)
 	ValuesSchema []byte // OpenAPI values schema (YAML)
@@ -136,6 +138,7 @@ func NewModuleByConfig(name string, cfg *Config, logger *log.Logger) (*Module, e
 	m.definition = cfg.Definition
 	m.digests = cfg.Digests
 	m.repository = cfg.Repository
+	m.embedded = cfg.Embedded
 	m.settingsCheck = cfg.SettingsCheck
 	m.converter = cfg.Conversions
 	m.patcher = cfg.Patcher
@@ -212,6 +215,7 @@ func (m *Module) getRuntimeValues() RuntimeValues {
 			"Digests":  m.digests,
 			"Registry": m.repository,
 			"Version":  m.definition.Version,
+			"Embedded": m.embedded,
 		},
 	}
 }
