@@ -59,7 +59,7 @@ template: |
         {{- if get .instanceClass.virtualMachine "bootloader" }}
         bootloader: {{ .instanceClass.virtualMachine.bootloader | quote }}
         {{- end }}
-        {{- with .provider.additionalVMLabels }}
+        {{- with get .provider "additionalVMLabels" }}
         additionalVMLabels:
           {{- range $k, $v := . }}
           {{ $k }}: {{ $v | quote }}
