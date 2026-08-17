@@ -88,7 +88,11 @@ func providerFixtures() []providerFixture {
 
 			registrationPath: "../../../../../../030-cloud-provider-dvp/templates/registration.yaml",
 			contractPath:     "../../../../../../030-cloud-provider-dvp/capi/template.yaml",
-			providerConfig:   map[string]any{},
+			providerConfig: map[string]any{
+				"additionalVMLabels": map[string]any{
+					"network-access": "bastion",
+				},
+			},
 			instanceClass: map[string]any{
 				"virtualMachine": map[string]any{
 					"virtualMachineClassName": "generic-vm-class",
