@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-f80cd91b36d545749726987cea9ab19348fca2ab9f04d7af8b0d3021bd9ca032",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 11,
+  "version": 12,
   "statements": [
     {
       "vulnerability": {
@@ -143,8 +143,22 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Эта неэксплуатируемая уязвимость проявляется только в работе Docker-демона (dockerd), который не запускается containerd; взаимодействия с firewalld не происходит.",
       "timestamp": "2026-07-15T09:19:53.053456Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "GO-2026-5932 относится к пакету golang.org/x/crypto/openpgp, который является unmaintained и не имеет исправленной версии. В образе присутствует только модуль golang.org/x/crypto, используемый для других криптографических примитивов, тогда как сам пакет openpgp не импортируется. containerd не выполняет операций с OpenPGP-подписями, поэтому уязвимый код не входит ни в один путь исполнения образа и уязвимость недостижима.",
+      "timestamp": "2026-08-13T12:02:12.011081Z"
     }
   ],
   "timestamp": "2026-03-04T09:36:23Z",
-  "last_updated": "2026-08-12T12:00:00Z"
+  "last_updated": "2026-08-13T12:02:12Z"
 }

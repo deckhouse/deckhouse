@@ -1536,6 +1536,8 @@ spec:
                         If not specified, the `defaultCRI` parameter value of ClusterConfiguration is used.
 
                         > **Note.** Docker support is deprecated.
+
+                        > **Note.** The CSE edition supports containerd v2 only.
                       enum:
                         - Docker
                         - Containerd

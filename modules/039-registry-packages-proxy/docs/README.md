@@ -83,24 +83,30 @@ Content-Disposition: attachment; filename="<PACKAGE-NAME>.svg"
 
 ### Deckhouse CLI downloads (`/v1/images/`) — public
 
-These endpoints are reachable through the public Ingress (`registry-packages-proxy.<publicDomain>`) and require a valid Kubernetes token (or client certificate accepted by `kube-rbac-proxy`) and RBAC permission to `get` the `deployments/cli-binary` subresource `registry-packages-proxy` in namespace `d8-cloud-instance-manager`.
+These endpoints are reachable through the public Ingress (`registry-packages-proxy.<PUBLIC_DOMAIN>`) and require a valid Kubernetes token or a client certificate accepted by `kube-rbac-proxy`. The account must have a RBAC permission to `get` the `deployments/cli-binary` subresource `registry-packages-proxy` in the namespace `d8-cloud-instance-manager`.
 
-Grant access with the ClusterRole `d8:registry-packages-proxy:cli-download` (bind it to users or ServiceAccounts via ClusterRoleBinding or RoleBinding).
+To grant the required permission, use the ClusterRole `d8:registry-packages-proxy:cli-download`. For details, refer to ["Granting access to Deckhouse CLI downloads"](#granting-access-to-deckhouse-cli-downloads).
+
+The same permission is used to download the Deckhouse CLI plugins. The plugins are available at `deckhouse-cli/plugins/<PLUGIN>` through the same `/v1/images/` endpoints.
 
 | Method | Path                          | Description |
 |--------|-------------------------------|-------------|
-| `GET` | `/v1/images/<IMAGE>/tags`     | JSON list of tags |
-| `GET`, `HEAD` | `/v1/images/<IMAGE>/tags/<TAG>` | OCI image as `application/x-gzip` (flattened layers) |
+| `GET` | `/v1/images/<IMAGE>/tags`     | Returns a list of tags in JSON format |
+| `GET`, `HEAD` | `/v1/images/<IMAGE>/images/<VERSION>` | Returns an OCI image in the `application/x-gzip` format (with flattened layers) |
+| `GET` | `/v1/images/<IMAGE>/manifests/<REFERENCE>` | Returns an image manifest |
 
 Allowed `<IMAGE>` values:
 
 - `deckhouse-cli`
-- `deckhouse-cli/plugins/<PLUGIN>` (single path segment for `<PLUGIN>`)
+- `deckhouse-cli/plugins/<PLUGIN>`, where `<PLUGIN>` is a single path segment
 
-Example:
+The `/v1/images/<IMAGE>/images/<VERSION>` endpoint accepts an optional `platform=<OS>-<ARCH>` query parameter and picks the matching child manifest from a multi-platform index. If the parameter isn't set, the `linux/amd64` platform is used.
+
+The following is an example of a query for a list of Deckhouse CLI tags:
 
 ```shell
-curl -fsS -H "Authorization: Bearer ${TOKEN}" \
+curl -fsS \
+  -H "Authorization: Bearer ${TOKEN}" \
   "https://registry-packages-proxy.example.com/v1/images/deckhouse-cli/tags"
 ```
 
@@ -134,8 +140,80 @@ The module ensures high availability through:
 
 | ClusterRole | Purpose |
 |-------------|---------|
-| `d8:registry-packages-proxy:cli-download` | Access to `/v1/images/*` |
+| `d8:registry-packages-proxy:cli-download` | Access to `/v1/images/*`: the `deckhouse-cli` binary and its plugins |
 | `d8:registry-packages-proxy:packages-download` | Reserved for future authenticated `/v1/packages/*` routes (icons are served anonymously, in-cluster only) |
+
+Neither role is bound to anyone out of the box.
+
+## Granting access to Deckhouse CLI downloads
+
+For [Deckhouse CLI](/products/kubernetes-platform/documentation/v1/cli/d8/) to work, a user requires permissions to download binaries and obtain the proxy public address.
+
+{% alert level="warning" %}
+To be able to create ClusterRoleBinding or RoleBinding, the account must have permissions to assign a respective role. Use the account with the corresponding permissions if necessary, such as `/etc/kubernetes/super-admin.conf`.
+{% endalert %}
+
+1. Grant access to download binaries.
+   To do that, use the ClusterRole `d8:registry-packages-proxy:cli-download`.
+   This role grants permissions required to self-update Deckhouse CLI (`d8 cli`) and download plugins (`d8 plugins`):
+
+   Create a ClusterRoleBinding:
+
+   ```shell
+   d8 k create clusterrolebinding d8-cli-download \
+     --clusterrole=d8:registry-packages-proxy:cli-download \
+     --group=<GROUP>
+   ```
+
+   Instead of `--group=<GROUP>`, you can grant permissions to a specific user (`--user=<EMAIL>`) or service account (`--serviceaccount=<NAMESPACE>:<NAME>`).
+
+1. Grant access to obtain public address of the proxy.
+   Deckhouse CLI obtains public address from the `registry-packages-proxy` Ingress.
+
+   - Create the `d8-cli-ingress` Role, which grants the `get` permission for that Ingress:
+
+     ```shell
+     d8 k -n d8-cloud-instance-manager create role d8-cli-ingress \
+       --verb=get \
+       --resource=ingresses \
+       --resource-name=registry-packages-proxy
+     ```
+
+   - Create a RoleBinding for assigning the created role to a target group:
+
+     ```shell
+     d8 k -n d8-cloud-instance-manager create rolebinding d8-cli-ingress \
+       --role=d8-cli-ingress \
+       --group=<GROUP>
+     ```
+
+   Without granted access, the proxy address needs to be specified manually:
+
+   ```shell
+   d8 cli check --rpp-endpoint https://registry-packages-proxy.<PUBLIC_DOMAIN>
+   ```
+
+1. Check the granted permissions without logging in as the user.
+   The permissions are limited by `resourceNames`, therefore make sure to specify the resource name.
+
+   - Ensure the access to download binaries has been granted:
+
+     ```shell
+     d8 k auth can-i get deployments/registry-packages-proxy \
+       -n d8-cloud-instance-manager \
+       --subresource=cli-binary \
+       --as=<EMAIL_OR_SERVICE_ACCOUNT>
+     ```
+
+   - Ensure the access to obtain Ingress `registry-packages-proxy` has been granted:
+
+     ```shell
+     d8 k auth can-i get ingresses/registry-packages-proxy \
+       -n d8-cloud-instance-manager \
+       --as=<EMAIL_OR_SERVICE_ACCOUNT>
+     ```
+
+   `Kube-rbac-proxy` caches authorization decisions: a denial for 30 seconds, an approval for 5 minutes. Consider that while checking the granted permissions: once the permission has been granted, a `403` response clears in half a minute, and after a permission has been revoked, the access is still granted for up to 5 minutes.
 
 ## Limitations
 

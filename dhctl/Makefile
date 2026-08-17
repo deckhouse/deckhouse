@@ -40,9 +40,9 @@ DHCTL_TESTS_OPENSSH_IMAGE=lscr.io/linuxserver/openssh-server:10.0_p1-r9-ls209
 OS_NAME := $(shell uname)
 PLATFORM_NAME := $(shell uname -m)
 ifndef OS
-	ifeq ($(UNAME), Linux)
+	ifeq ($(OS_NAME), Linux)
 		OS = linux
-	else ifeq ($(UNAME), Darwin)
+	else ifeq ($(OS_NAME), Darwin)
 		OS = darwin
 	endif
 endif

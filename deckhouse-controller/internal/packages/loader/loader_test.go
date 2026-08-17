@@ -395,6 +395,48 @@ accessibility:
 	s.Equal([]string{"Minimal"}, licensing.Editions["ee"].EnabledInBundles)
 }
 
+// TestLoadModuleConfExclusiveGroup tests that exclusiveGroup declared in package.yaml
+// reaches the module definition.
+func (s *LoaderTestSuite) TestLoadModuleConfExclusiveGroup() {
+	packageDir := s.T().TempDir()
+
+	require.NoError(s.T(), os.WriteFile(filepath.Join(packageDir, "package.yaml"), []byte(`apiVersion: v1
+type: Module
+name: exclusive-module
+version: v1.0.0
+exclusiveGroup: cni
+`), 0o600))
+
+	cfg, err := loader.LoadModuleConf(context.Background(), packageDir, s.logger)
+
+	require.NoError(s.T(), err)
+	require.NotNil(s.T(), cfg)
+
+	s.Equal("cni", cfg.Definition.ExclusiveGroup)
+}
+
+// TestLoadModuleConfLegacyExclusiveGroup tests that exclusiveGroup declared in a legacy
+// module.yaml survives the fallback conversion into the package definition.
+func (s *LoaderTestSuite) TestLoadModuleConfLegacyExclusiveGroup() {
+	tmpDir := s.T().TempDir()
+	versionDir := filepath.Join(tmpDir, "v1.2.3")
+	packageDir := filepath.Join(tmpDir, "legacy-exclusive-module")
+
+	require.NoError(s.T(), os.Mkdir(versionDir, 0o755))
+	require.NoError(s.T(), os.WriteFile(filepath.Join(versionDir, "module.yaml"), []byte(`name: legacy-exclusive-module
+weight: 900
+exclusiveGroup: cni
+`), 0o600))
+	require.NoError(s.T(), os.Symlink(versionDir, packageDir))
+
+	cfg, err := loader.LoadModuleConf(context.Background(), packageDir, s.logger)
+
+	require.NoError(s.T(), err)
+	require.NotNil(s.T(), cfg)
+
+	s.Equal("cni", cfg.Definition.ExclusiveGroup)
+}
+
 // TestLoadModuleConfWithDigests tests loading a module with image digests.
 func (s *LoaderTestSuite) TestLoadModuleConfWithDigests() {
 	packageDir := filepath.Join(s.testdataDir, "modules", "with-digests")

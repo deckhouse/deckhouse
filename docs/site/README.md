@@ -131,6 +131,57 @@ To stop the documentation site, cancel the running process and run the following
 make docs-down
 ```
 
+## Verifying an external module build (module author workflow)
+
+Use this mode from within an external module repository to check that its
+`docs/` directory renders successfully with the Deckhouse Hugo template. The
+check runs Hugo in Docker — no local Deckhouse clone or Hugo install is
+required.
+
+Requirements on the machine running the check:
+
+- `bash`, `docker`, `yq` on `PATH`;
+- `git` (only when the script has to fetch the Deckhouse repo itself);
+- network access to `github.com` and `ghcr.io`.
+
+Run from the module repository root:
+
+```bash
+curl -sSfL https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/docs/check-external-module.sh \
+  | bash -s -- --module-path .
+```
+
+Or download and invoke explicitly:
+
+```bash
+curl -sSfL https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/docs/check-external-module.sh \
+  -o /tmp/check-external-module.sh
+bash /tmp/check-external-module.sh --module-path "$(pwd)" --channel alpha
+```
+
+Useful flags: `--channel`, `--version`, `--output <dir>`, `--keep`,
+`--deckhouse-repo <path>` (reuse a local checkout), `--deckhouse-ref <ref>`.
+Run `check-external-module.sh --help` for the full list.
+
+GitHub Actions example:
+
+```yaml
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install yq
+        run: sudo snap install yq
+      - name: Fetch Deckhouse docs checker
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/docs/check-external-module.sh \
+            -o /tmp/check-external-module.sh
+          chmod +x /tmp/check-external-module.sh
+      - name: Verify module docs build
+        run: /tmp/check-external-module.sh --module-path "$(pwd)"
+```
+
 ## Debugging (WIP)
 
 The [Delve](https://github.com/go-delve/delve) debugger is used for debugging the documentation site's backend.

@@ -15,6 +15,8 @@
 package ctrlutils
 
 import (
+	"slices"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -67,4 +69,20 @@ func ReplaceOwnerReferences(obj client.Object, refs ...metav1.OwnerReference) {
 	}
 
 	obj.SetOwnerReferences(append(kept, refs...))
+}
+
+// DropOwnerReferences removes obj's owner references of the given kinds. It is
+// ReplaceOwnerReferences with nothing to put back, for an object that no longer has an owner of
+// that kind at all — a reference left behind blocks its owner's deletion for ever.
+func DropOwnerReferences(obj client.Object, kinds ...string) {
+	existing := obj.GetOwnerReferences()
+
+	kept := make([]metav1.OwnerReference, 0, len(existing))
+	for _, ref := range existing {
+		if !slices.Contains(kinds, ref.Kind) {
+			kept = append(kept, ref)
+		}
+	}
+
+	obj.SetOwnerReferences(kept)
 }

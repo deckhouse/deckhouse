@@ -823,6 +823,7 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(userAuthzClusterRoleUser.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterEditor.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterAdmin.Exists()).To(BeTrue())
+			Expect(userAuthzClusterRoleClusterAdmin.Field("rules.#.apiGroups").String()).To(Equal(`[["deckhouse.io"],["nfd.k8s-sigs.io"]]`))
 
 			Expect(mcmDeploy.Exists()).To(BeTrue())
 			Expect(mcmServiceAccount.Exists()).To(BeTrue())
@@ -936,6 +937,7 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(userAuthzClusterRoleUser.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterEditor.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterAdmin.Exists()).To(BeTrue())
+			Expect(userAuthzClusterRoleClusterAdmin.Field("rules.#.apiGroups").String()).To(Equal(`[["deckhouse.io"],["nfd.k8s-sigs.io"]]`))
 
 			Expect(mcmDeploy.Exists()).To(BeTrue())
 			Expect(mcmServiceAccount.Exists()).To(BeTrue())
@@ -1031,6 +1033,7 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(userAuthzClusterRoleUser.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterEditor.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterAdmin.Exists()).To(BeTrue())
+			Expect(userAuthzClusterRoleClusterAdmin.Field("rules.#.apiGroups").String()).To(Equal(`[["deckhouse.io"],["nfd.k8s-sigs.io"]]`))
 
 			Expect(mcmDeploy.Exists()).To(BeTrue())
 			Expect(mcmServiceAccount.Exists()).To(BeTrue())
@@ -1249,6 +1252,7 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(userAuthzClusterRoleUser.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterEditor.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterAdmin.Exists()).To(BeTrue())
+			Expect(userAuthzClusterRoleClusterAdmin.Field("rules.#.apiGroups").String()).To(Equal(`[["deckhouse.io"],["nfd.k8s-sigs.io"]]`))
 
 			Expect(mcmDeploy.Exists()).To(BeTrue())
 			Expect(mcmServiceAccount.Exists()).To(BeTrue())
@@ -1351,6 +1355,7 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(userAuthzClusterRoleUser.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterEditor.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterAdmin.Exists()).To(BeTrue())
+			Expect(userAuthzClusterRoleClusterAdmin.Field("rules.#.apiGroups").String()).To(Equal(`[["deckhouse.io"],["nfd.k8s-sigs.io"]]`))
 
 			Expect(mcmDeploy.Exists()).To(BeTrue())
 			Expect(mcmServiceAccount.Exists()).To(BeTrue())
@@ -1444,6 +1449,7 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(userAuthzClusterRoleUser.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterEditor.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterAdmin.Exists()).To(BeTrue())
+			Expect(userAuthzClusterRoleClusterAdmin.Field("rules.#.apiGroups").String()).To(Equal(`[["deckhouse.io"],["nfd.k8s-sigs.io"]]`))
 
 			Expect(mcmDeploy.Exists()).To(BeFalse())
 			Expect(mcmServiceAccount.Exists()).To(BeFalse())
@@ -1542,6 +1548,7 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(userAuthzClusterRoleUser.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterEditor.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterAdmin.Exists()).To(BeTrue())
+			Expect(userAuthzClusterRoleClusterAdmin.Field("rules.#.apiGroups").String()).To(Equal(`[["deckhouse.io"],["nfd.k8s-sigs.io"]]`))
 
 			Expect(mcmDeploy.Exists()).To(BeFalse())
 			Expect(mcmServiceAccount.Exists()).To(BeFalse())

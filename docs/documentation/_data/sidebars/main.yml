@@ -1394,6 +1394,10 @@ entries:
                 en: Descheduler module
                 ru: Модуль descheduler
               url: /architecture/kubernetes-and-scheduling/descheduler.html
+            - title:
+                en: Pod-reloader module
+                ru: Модуль pod-reloader
+              url: /architecture/kubernetes-and-scheduling/pod-reloader.html              
         - title:
             en: Cluster & Infrastructure subsystem
             ru: Подсистема Cluster & Infrastructure
@@ -1571,6 +1575,10 @@ entries:
                 ru: Модуль cni-cilium
               url: /architecture/network/cni-cilium.html
             - title:
+                en: Cilium-hubble module
+                ru: Модуль cilium-hubble
+              url: /architecture/network/cilium-hubble.html              
+            - title:
                 en: Ingress-nginx module
                 ru: Модуль ingress-nginx
               url: /architecture/network/ingress-nginx.html
@@ -1718,6 +1726,22 @@ entries:
                 en: Logging modules
                 ru: Модули логирования
               url: /architecture/observability/logging.html
+        - title:
+            en: Managed Services subsystem
+            ru: Подсистема Managed Services
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /architecture/managed-services/
+            - title:
+                en: Managed-memcached module
+                ru: Модуль managed-memcached
+              url: /architecture/managed-services/managed-memcached.html
+            - title:
+                en: Managed-postgres module
+                ru: Модуль managed-postgres
+              url: /architecture/managed-services/managed-postgres.html              
         - title:
             en: Virtualization subsystem
             ru: Подсистема Virtualization

@@ -24,7 +24,6 @@ import (
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/go-openapi/spec"
 	"github.com/go-openapi/swag/conv"
-	"google.golang.org/protobuf/types/known/structpb"
 
 	sdkutils "github.com/deckhouse/module-sdk/pkg/utils"
 
@@ -358,13 +357,13 @@ func (s *Storage) InjectRegistryValue(registry registry.Remote) {
 		s.staticValues = addonutils.Values{}
 	}
 
-	s.staticValues["registry"] = &structpb.Struct{
-		Fields: map[string]*structpb.Value{
-			"base":      {Kind: &structpb.Value_StringValue{StringValue: registry.Repository}},
-			"dockercfg": {Kind: &structpb.Value_StringValue{StringValue: registry.DockerConfig}},
-			"scheme":    {Kind: &structpb.Value_StringValue{StringValue: registry.Scheme}},
-			"ca":        {Kind: &structpb.Value_StringValue{StringValue: registry.CA}},
-		},
+	// plain JSON types only: values are walked natively by CEL (structpb) and OpenAPI
+	// validation, both fail on anything but maps, slices and scalars
+	s.staticValues["registry"] = map[string]any{
+		"base":      registry.Repository,
+		"dockercfg": registry.DockerConfig,
+		"scheme":    registry.Scheme,
+		"ca":        registry.CA,
 	}
 
 	_ = s.calculateResultValues()

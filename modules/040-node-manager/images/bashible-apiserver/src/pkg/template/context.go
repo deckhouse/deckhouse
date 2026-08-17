@@ -142,6 +142,7 @@ func NewContext(ctx context.Context, stepsStorage *StepsStorage, kubeClient clie
 	contextSecretFactory := newBashibleInformerFactory(kubeClient, resyncTimeout, "d8-cloud-instance-manager", "app=bashible-apiserver")
 	nodeUserCRDFactory := newNodeUserInformerFactory(kubeClient, resyncTimeout)
 	moduleSourcesFactory := newModuleSourcesInformerFactory(kubeClient, resyncTimeout, "app!=deckhouse,heritage!=deckhouse,module!=deckhouse")
+	cloudProviderStepsFactory := newBashibleInformerFactory(kubeClient, resyncTimeout, cloudProviderStepsSecretNamespace, cloudProviderStepsLabelSelector)
 
 	contextSecretUpdates := c.subscribe(ctx, contextSecretFactory, contextSecretName)
 
@@ -150,6 +151,7 @@ func NewContext(ctx context.Context, stepsStorage *StepsStorage, kubeClient clie
 
 	c.subscribeOnNodeUserCRD(ctx, nodeUserCRDFactory)
 	c.subscribeOnModuleSource(ctx, moduleSourcesFactory)
+	c.stepsStorage.subscribeOnCloudProviderSteps(ctx, cloudProviderStepsFactory)
 
 	go c.onSecretsUpdate(ctx, contextSecretUpdates, registryDataCh)
 
@@ -341,6 +343,9 @@ func (c *BashibleContext) onSecretsUpdate(ctx context.Context, contextSecretC ch
 
 		case <-c.OnModuleSourceChanged():
 			c.update("ModuleSourceConfiguration")
+
+		case <-c.stepsStorage.OnCloudProviderStepsChanged():
+			c.update("cloud provider Bashible steps")
 
 		case <-ctx.Done():
 			return
