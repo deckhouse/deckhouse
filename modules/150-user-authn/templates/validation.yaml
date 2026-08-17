@@ -27,6 +27,59 @@ metadata:
 spec:
   policyName: {{ $policyName }}
   validationActions: [Deny]
+{{- $allowAccessPolicyName := "dex-allow-access-to-kubernetes.deckhouse.io" }}
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $allowAccessPolicyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups:   ["deckhouse.io"]
+        apiVersions: ["*"]
+        operations:  ["CREATE", "UPDATE"]
+        resources:   ["dexclients", "dexauthenticators"]
+  variables:
+    # The annotation is named after the kind it belongs to, so the key depends on the matched resource.
+    - name: annotation
+      expression: 'request.resource.resource == "dexclients"
+        ? "dexclient.deckhouse.io/allow-access-to-kubernetes"
+        : "dexauthenticator.deckhouse.io/allow-access-to-kubernetes"'
+    - name: annotations
+      expression: 'object.metadata.?annotations.orValue({})'
+    - name: oldAnnotations
+      expression: 'oldObject == null ? {} : oldObject.metadata.?annotations.orValue({})'
+    # The truthy set is a superset of what strconv.ParseBool accepts in the hooks, so no value that
+    # the hooks would honour can slip through unchecked.
+    - name: grantsAccess
+      expression: 'variables.annotation in variables.annotations
+        && variables.annotations[variables.annotation].lowerAscii() in ["1", "t", "true"]'
+    - name: grantedBefore
+      expression: 'variables.annotation in variables.oldAnnotations
+        && variables.oldAnnotations[variables.annotation].lowerAscii() in ["1", "t", "true"]'
+  validations:
+    # Only a newly granted access is gated, so objects that already carry the annotation stay editable
+    # by their owners. Authority is proven by the right to update the user-authn ModuleConfig, which
+    # only cluster-wide administrators of this module hold.
+    - expression: 'request.userInfo.username == "system:serviceaccount:d8-system:deckhouse"
+        || !variables.grantsAccess
+        || variables.grantedBefore
+        || authorizer.group("deckhouse.io").resource("moduleconfigs").name("user-authn").check("update").allowed()'
+      reason: Forbidden
+      messageExpression: '"the " + variables.annotation + " annotation grants access to the Kubernetes API
+        and must be applied by a cluster administrator who is allowed to manage the user-authn module"'
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $allowAccessPolicyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
+spec:
+  policyName: {{ $allowAccessPolicyName }}
+  validationActions: [Deny]
 {{- if .Values.userAuthn.passwordPolicy }}
 {{- $passwordPolicyName := "user-password-immutable.deckhouse.io" }}
 ---
