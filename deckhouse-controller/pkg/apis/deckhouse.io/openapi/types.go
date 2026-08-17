@@ -16,6 +16,7 @@ package openapi
 
 import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // SchemaURL represents a schema url.
@@ -105,11 +106,11 @@ type OpenAPIV3Schema struct {
 	// +optional
 	XUIValidationMessage string `json:"x-deckhouse-ui-validation-message,omitempty"`
 
-	// x-deckhouse-ui-kind binds a string settings field to a live selection of
+	// x-deckhouse-ui-resource-name binds a string settings field to a live selection of
 	// cluster resources of the given kind: the web console renders a dropdown of
 	// matching resource names from the application's namespace.
 	// +optional
-	XUIKind *UIKindSelector `json:"x-deckhouse-ui-kind,omitempty"`
+	XUIResourceName *UIResourceNameSelector `json:"x-deckhouse-ui-resource-name,omitempty"`
 }
 
 // OpenAPIV3SchemaOrArray represents a value that can either be an OpenAPIV3Schema
@@ -167,38 +168,12 @@ type ValidationRule struct {
 	FieldPath string `json:"fieldPath,omitempty"`
 }
 
-// UIKindSelector selects objects of a cluster resource kind (apiVersion + kind): an object matches
-// only if every matchLabels and matchAnnotations condition holds (AND).
-type UIKindSelector struct {
+// UIResourceNameSelector selects objects of a cluster resource kind (apiVersion + kind); the
+// optional labelSelector narrows the selection to objects whose labels match it.
+type UIResourceNameSelector struct {
 	APIVersion string `json:"apiVersion"`
 	Kind       string `json:"kind"`
 
 	// +optional
-	// +listType=atomic
-	MatchLabels []UIKindLabelMatch `json:"matchLabels,omitempty"`
-
-	// +optional
-	// +listType=atomic
-	MatchAnnotations []UIKindAnnotationMatch `json:"matchAnnotations,omitempty"`
-}
-
-// UIKindLabelMatch matches a label by Name: with Value the label must equal it exactly, without Value
-// the label only has to be present.
-type UIKindLabelMatch struct {
-	Name string `json:"name"`
-
-	// +optional
-	Value string `json:"value,omitempty"`
-}
-
-// UIKindAnnotationMatch matches an annotation by Name: Value (exact) and Regex (an ECMAScript regular
-// expression) are mutually exclusive, and with neither the annotation only has to be present.
-type UIKindAnnotationMatch struct {
-	Name string `json:"name"`
-
-	// +optional
-	Value string `json:"value,omitempty"`
-
-	// +optional
-	Regex string `json:"regex,omitempty"`
+	LabelSelector *metav1.LabelSelector `json:"labelSelector,omitempty"`
 }

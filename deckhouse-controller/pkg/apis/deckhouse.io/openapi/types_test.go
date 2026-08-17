@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func jsonPtr(raw string) *apiextensionsv1.JSON {
@@ -185,11 +186,12 @@ func TestMarshalRoundtrip_xDeckhouseExtensions(t *testing.T) {
 			},
 			"secretName": {
 				Type: "string",
-				XUIKind: &UIKindSelector{
-					APIVersion:       "v1",
-					Kind:             "Secret",
-					MatchLabels:      []UIKindLabelMatch{{Name: "app.kubernetes.io/instance"}, {Name: "app", Value: "echo"}},
-					MatchAnnotations: []UIKindAnnotationMatch{{Name: "note", Regex: "^prod-"}},
+				XUIResourceName: &UIResourceNameSelector{
+					APIVersion: "v1",
+					Kind:       "Secret",
+					LabelSelector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{"app": "echo"},
+					},
 				},
 			},
 		},
@@ -237,54 +239,45 @@ func TestMarshalRoundtrip_xDeckhouseExtensions(t *testing.T) {
 	}
 
 	sec, ok := restored.Properties["secretName"]
-	if !ok || sec.XUIKind == nil {
-		t.Fatal("x-deckhouse-ui-kind lost")
+	if !ok || sec.XUIResourceName == nil {
+		t.Fatal("x-deckhouse-ui-resource-name lost")
 	}
-	if sec.XUIKind.APIVersion != "v1" || sec.XUIKind.Kind != "Secret" {
-		t.Errorf("x-deckhouse-ui-kind apiVersion/kind: got %+v", sec.XUIKind)
+	if sec.XUIResourceName.APIVersion != "v1" || sec.XUIResourceName.Kind != "Secret" {
+		t.Errorf("x-deckhouse-ui-resource-name apiVersion/kind: got %+v", sec.XUIResourceName)
 	}
-	if len(sec.XUIKind.MatchLabels) != 2 {
-		t.Fatalf("x-deckhouse-ui-kind matchLabels: got %+v", sec.XUIKind.MatchLabels)
-	}
-	if sec.XUIKind.MatchLabels[0].Name != "app.kubernetes.io/instance" || sec.XUIKind.MatchLabels[0].Value != "" {
-		t.Errorf("x-deckhouse-ui-kind presence match lost: got %+v", sec.XUIKind.MatchLabels[0])
-	}
-	if sec.XUIKind.MatchLabels[1].Value != "echo" {
-		t.Errorf("x-deckhouse-ui-kind value match lost: got %+v", sec.XUIKind.MatchLabels[1])
-	}
-	if len(sec.XUIKind.MatchAnnotations) != 1 || sec.XUIKind.MatchAnnotations[0].Regex != "^prod-" {
-		t.Errorf("x-deckhouse-ui-kind matchAnnotations regex lost: got %+v", sec.XUIKind.MatchAnnotations)
+	if sec.XUIResourceName.LabelSelector == nil || sec.XUIResourceName.LabelSelector.MatchLabels["app"] != "echo" {
+		t.Errorf("x-deckhouse-ui-resource-name labelSelector lost: got %+v", sec.XUIResourceName.LabelSelector)
 	}
 }
 
-// TestUIKind_invalidTypeRejected verifies a non-object x-deckhouse-ui-kind fails to unmarshal.
-func TestUIKind_invalidTypeRejected(t *testing.T) {
+// TestUIResourceName_invalidTypeRejected verifies a non-object x-deckhouse-ui-resource-name fails to unmarshal.
+func TestUIResourceName_invalidTypeRejected(t *testing.T) {
 	var restored OpenAPIV3Schema
-	err := json.Unmarshal([]byte(`{"type":"string","x-deckhouse-ui-kind":"Secret"}`), &restored)
+	err := json.Unmarshal([]byte(`{"type":"string","x-deckhouse-ui-resource-name":"Secret"}`), &restored)
 	if err == nil {
-		t.Fatal("expected error unmarshaling string into x-deckhouse-ui-kind, got nil")
+		t.Fatal("expected error unmarshaling string into x-deckhouse-ui-resource-name, got nil")
 	}
 }
 
-// TestUIKindSelector_deepCopy verifies DeepCopy produces independent match slices.
-func TestUIKindSelector_deepCopy(t *testing.T) {
+// TestUIResourceNameSelector_deepCopy verifies DeepCopy produces an independent labelSelector.
+func TestUIResourceNameSelector_deepCopy(t *testing.T) {
 	original := &OpenAPIV3Schema{
 		Type: "string",
-		XUIKind: &UIKindSelector{
-			APIVersion:  "v1",
-			Kind:        "Secret",
-			MatchLabels: []UIKindLabelMatch{{Name: "app", Value: "echo"}},
+		XUIResourceName: &UIResourceNameSelector{
+			APIVersion:    "v1",
+			Kind:          "Secret",
+			LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "echo"}},
 		},
 	}
 
 	copied := original.DeepCopy()
-	if copied.XUIKind == original.XUIKind {
-		t.Fatal("DeepCopy shares the x-deckhouse-ui-kind pointer with original")
+	if copied.XUIResourceName == original.XUIResourceName {
+		t.Fatal("DeepCopy shares the x-deckhouse-ui-resource-name pointer with original")
 	}
 
-	copied.XUIKind.MatchLabels[0].Value = "mutated"
-	if original.XUIKind.MatchLabels[0].Value != "echo" {
-		t.Errorf("DeepCopy shares the matchLabels slice with original")
+	copied.XUIResourceName.LabelSelector.MatchLabels["app"] = "mutated"
+	if original.XUIResourceName.LabelSelector.MatchLabels["app"] != "echo" {
+		t.Errorf("DeepCopy shares the labelSelector map with original")
 	}
 }
 
