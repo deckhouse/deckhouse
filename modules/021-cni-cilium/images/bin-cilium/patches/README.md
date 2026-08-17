@@ -95,4 +95,20 @@ An ICMP echo reply feature has been added to reply on LoadBalancer's service IP
 
 ## 018-fix-svacer.patch
 
-Fixed svacer DEREF_OF_NULL error in pkg/policy/api/icmp.go 
+Fixed svacer DEREF_OF_NULL error in pkg/policy/api/icmp.go
+
+## 019-ipcache-no-deadlock-on-label-injection.patch
+
+Backport for Cilium 1.17.x fixing an agent-wide deadlock in ipcache label injection:
+`doInjectLabels()` holds `ipc.mutex` while `UpdatePolicyMaps()` waits for all endpoints,
+yet endpoint regeneration acquires the same mutex (`GetDNSRules` → `LookupByIdentity`),
+so under identity churn regeneration stops node-wide, CNI requests pile up, the
+`endpoint-create` limiter returns `429 putEndpointIdTooManyRequests` and liveness stays
+green. The patch moves the delete-path `UpdatePolicyMaps()` call out of the critical
+section, as the add path above it already does, and bounds the previously unbounded wait
+with `ctx` and a 3-minute timeout.
+
+**Remove this patch when upgrading to Cilium 1.18 or newer**, where upstream fixed the
+same deadlock (`cilium#39970`, commit `47ace2de6`) by removing
+`IPCache.UpdatePolicyMaps()` altogether, so the patch is both unnecessary and will fail
+to apply.
