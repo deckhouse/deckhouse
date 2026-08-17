@@ -164,9 +164,6 @@ type NodesParameters struct {
 	// Additional labels that will be added to all virtual machine pods in the created cluster: both master and worker nodes.
 	//
 	// This parameter can be used to allow existing or custom NetworkPolicy resources in the parent cluster to select VM pods by these labels. For example, you can add a label to VM pods and allow access to them only from a bastion pod or another trusted source.
-	// +deckhouse:ru:description:value="Дополнительные лейблы, которые будут добавлены ко всем подам виртуальных машин создаваемого кластера: master- и worker-узлам."
-	// +deckhouse:ru:description:value=
-	// +deckhouse:ru:description:value="Параметр можно использовать, чтобы существующие или пользовательские NetworkPolicy в родительском кластере выбирали поды ВМ по этим лейблам. Например, можно добавить лейбл к подам ВМ и разрешить доступ к ним только от bastion-пода или другого доверенного источника."
 	// +optional
 	AdditionalVMLabels map[string]string `json:"additionalVMLabels,omitempty"`
 	// List of virtual machine TCP ports for which ingress traffic will be allowed from any source: external IP addresses and any pods in the parent cluster.
@@ -174,11 +171,6 @@ type NodesParameters struct {
 	// Can be used to expose services that need to accept inbound TCP traffic from any source.
 	//
 	// To disable this unrestricted ingress access, specify an empty array. In this case, access to VMs can be configured separately using custom NetworkPolicy resources that select VM pods by labels from the `additionalVMLabels` parameter.
-	// +deckhouse:ru:description:value="Список TCP-портов виртуальных машин, для которых будет разрешён входящий трафик из любых источников: с внешних IP-адресов и от любых подов родительского кластера."
-	// +deckhouse:ru:description:value=
-	// +deckhouse:ru:description:value="Может использоваться для открытия доступа к сервисам, которым требуется принимать входящий TCP-трафик из любых источников."
-	// +deckhouse:ru:description:value=
-	// +deckhouse:ru:description:value="Чтобы запретить такой неограниченный входящий доступ, укажите пустой массив. В этом случае доступ к ВМ можно настроить отдельно с помощью пользовательских NetworkPolicy, выбирающих поды ВМ по лейблам из параметра `additionalVMLabels`."
 	// +kubebuilder:default={22}
 	// +optional
 	IngressPorts []IngressPort `json:"ingressPorts,omitempty"`
