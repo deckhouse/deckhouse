@@ -16,14 +16,30 @@ package bootstrap
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
+
+func TestNodesComeFromResources(t *testing.T) {
+	mcFlow := &config.MetaConfig{ClusterType: config.CloudClusterType}
+	require.True(t, nodesComeFromResources(mcFlow))
+
+	legacy := &config.MetaConfig{
+		ClusterType:           config.CloudClusterType,
+		ProviderClusterConfig: map[string]json.RawMessage{"layout": json.RawMessage(`"Standard"`)},
+	}
+	require.False(t, nodesComeFromResources(legacy), "a legacy cloud cluster builds its nodes from ProviderClusterConfiguration")
+
+	static := &config.MetaConfig{ClusterType: config.StaticClusterType}
+	require.False(t, nodesComeFromResources(static), "a static cluster builds no cloud nodes")
+}
 
 func newResource(t *testing.T, apiVersion, kind, name, namespace string, fields map[string]any) *template.Resource {
 	t.Helper()

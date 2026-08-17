@@ -641,7 +641,7 @@ func (b *ClusterBootstrapper) bootstrapPostInfraPreflights(ctx context.Context, 
 			return err
 		}
 
-		before, provider, after := splitResourcesOnPreAndPostDeckhouseInstall(ctx, parsedResources, bctx.metaConfig.ClusterType == config.CloudClusterType)
+		before, provider, after := splitResourcesOnPreAndPostDeckhouseInstall(ctx, parsedResources, nodesComeFromResources(bctx.metaConfig))
 
 		applyMasterNodeGroupDefaults(provider)
 
@@ -1029,7 +1029,14 @@ func bootstrapAdditionalNodesForCloudCluster(
 	})
 }
 
-func splitResourcesOnPreAndPostDeckhouseInstall(ctx context.Context, resourcesToCreate template.Resources, isCloudCluster bool) (template.Resources, template.Resources, template.Resources) {
+// nodesComeFromResources reports whether dhctl builds this cluster's cloud nodes
+// from the user's resources. Only the ModuleConfig flow does: a static cluster
+// builds no cloud nodes, a legacy one builds them from ProviderClusterConfiguration.
+func nodesComeFromResources(metaConfig *config.MetaConfig) bool {
+	return metaConfig.ClusterType == config.CloudClusterType && !metaConfig.HasLegacyProviderConfig()
+}
+
+func splitResourcesOnPreAndPostDeckhouseInstall(ctx context.Context, resourcesToCreate template.Resources, nodesFromResources bool) (template.Resources, template.Resources, template.Resources) {
 	before := make(template.Resources, 0, len(resourcesToCreate))
 	provider := make(template.Resources, 0, len(resourcesToCreate))
 	after := make(template.Resources, 0, len(resourcesToCreate))
@@ -1044,7 +1051,7 @@ func splitResourcesOnPreAndPostDeckhouseInstall(ctx context.Context, resourcesTo
 			continue
 		}
 
-		if isCloudCluster && isProviderNodeResource(resource) {
+		if nodesFromResources && isProviderNodeResource(resource) {
 			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Add resource %s - %s to provider queue", resource.String(), resource.Object.GetName()))
 			provider = append(provider, resource)
 			continue
