@@ -346,6 +346,7 @@ func setFromPackageDefinition(mpv *v1alpha1.ModulePackageVersion, pd *dto.Module
 		},
 		Weight:         int32(pd.Weight),
 		Critical:       pd.Critical,
+		ExclusiveGroup: pd.ExclusiveGroup,
 		DisableOptions: disableOptionsToCR(pd.DisableOptions),
 		Licensing:      licensingToCR(pd.Licensing),
 		Requirements:   requirementsToCR(pd.Requirements),
@@ -376,6 +377,7 @@ func setFromModuleDefinition(mpv *v1alpha1.ModulePackageVersion, def *moduletype
 
 	mpv.Status.PackageMetadata.Weight = int32(def.Weight)
 	mpv.Status.PackageMetadata.Critical = def.Critical
+	mpv.Status.PackageMetadata.ExclusiveGroup = def.ExclusiveGroup
 }
 
 // disableOptionsToCR projects parsed disable protection onto the CR shape, returning nil
