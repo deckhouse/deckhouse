@@ -64,9 +64,9 @@ func RegisterController(
 ) error {
 	r := &reconciler{
 		client: runtimeManager.GetClient(),
-		dc:     dc,
 		psm:    registryService.NewPackageServiceManager(logger.Named("packages_manager")),
-		logger: logger,
+		dc:     dc,
+		logger: logger.Named(controllerName),
 	}
 
 	return ctrl.NewControllerManagedBy(runtimeManager).
