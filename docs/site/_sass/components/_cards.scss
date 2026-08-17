@@ -127,7 +127,7 @@
                 flex-basis: calc(50% - 16px);
             }
 
-            @include breakpoints.max-w(s) {
+            @include breakpoints.max-w(m) {
                 flex-basis: 100%;
             }
 
