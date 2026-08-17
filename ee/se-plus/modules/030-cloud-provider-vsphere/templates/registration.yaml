@@ -17,9 +17,6 @@ capiClusterAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1beta1" | quo
 capiClusterName: {{ b64enc "vsphere" | quote }}
 capiMachineTemplateKind: {{ b64enc "VSphereMachineTemplate" | quote }}
 capiMachineTemplateAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1beta1" | quote }}
-# capiMachineDeploymentSpecPatch is gone with the v2 contract: failureDomain is now declared in
-# capi/template.yaml under machineDeployment.additionalFields, and node-controller writes it into
-# the MachineDeployment it builds.
 {{- $vsphereValues := dict }}
 {{- $mainNetwork := "" }}
 {{- if and $providerDiscoveryData $providerDiscoveryData.instances }}
