@@ -35,6 +35,10 @@ type Renderer struct {
 	Name      string
 	Namespace string
 	LintMode  bool
+	// APIVersions extends the capabilities the chart is rendered with. Helm's defaults carry
+	// group/version strings only, so a template guarded by helm_lib_kind_exists renders nothing
+	// unless the group/version/Kind it looks for is named here.
+	APIVersions []string
 }
 
 func (r Renderer) RenderChartFromDir(dir string, values string) (map[string]string, error) {
@@ -66,20 +70,19 @@ func (r Renderer) RenderChart(c *chart.Chart, values string) (map[string]string,
 		IsUpgrade: true,
 	}
 
-	caps := chartutil.DefaultCapabilities
-	vers := []string(caps.APIVersions)
-
-	var found bool
-	for _, ver := range vers {
-		found = ver == "autoscaling.k8s.io/v1/VerticalPodAutoscaler"
+	// A copy: chartutil.DefaultCapabilities is a package-level pointer, and every renderer here
+	// would otherwise be extending the same list for the rest of the process.
+	caps := *chartutil.DefaultCapabilities
+	vers := append(chartutil.VersionSet{}, caps.APIVersions...)
+	vers = append(vers, "autoscaling.k8s.io/v1/VerticalPodAutoscaler")
+	for _, ver := range r.APIVersions {
+		if !vers.Has(ver) {
+			vers = append(vers, ver)
+		}
 	}
-	if !found {
-		vers = append(vers, "autoscaling.k8s.io/v1/VerticalPodAutoscaler")
-	}
-
 	caps.APIVersions = vers
 
-	valuesToRender, err := chartutil.ToRenderValues(c, vals, releaseOptions, nil)
+	valuesToRender, err := chartutil.ToRenderValues(c, vals, releaseOptions, &caps)
 	if err != nil {
 		return nil, fmt.Errorf("helm chart prepare render values: %w", err)
 	}
