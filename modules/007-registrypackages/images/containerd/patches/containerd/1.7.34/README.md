@@ -1,7 +1,7 @@
 # Patches
 
 ## 000-gomod.patch
-currently empty
+Update dependencies.
 
 ## 002-hosts-rewrite.patch
 Adds ability to rewrite path (repository) part for mirror defined in containerd [host](https://github.com/containerd/containerd/blob/v1.7.24/docs/hosts.md) configuration.
