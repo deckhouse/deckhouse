@@ -279,17 +279,22 @@ func (s *OperationService) listTagsFromVersion(ctx context.Context, packageName 
 		}
 	}
 
-	// double check for registries that do not support filtering
-	// to warn user about it
-	if len(newTags) != len(rawTags) {
-		s.logger.Info("looks like your registry does not support tag listing with filtering by last version",
-			slog.String("package", packageName),
-			slog.String("lastVersion", lastVersion),
-			slog.Int("allTagsCount", len(rawTags)),
-			slog.Int("newTagsCount", len(newTags)))
+	return newTags, nil
+}
+
+// WarnUnavailablePartialScan reports an incremental scan against a registry that cannot list tags
+// partially: it answers with every tag and the filtering falls back to the controller.
+func (s *OperationService) WarnUnavailablePartialScan(operation *v1alpha1.PackageRepositoryOperation) {
+	if operation.Spec.Update != nil && operation.Spec.Update.FullScan {
+		return
 	}
 
-	return newTags, nil
+	if s.repo.Status.PartialScanAvailable {
+		return
+	}
+
+	s.logger.Warn("your container registry can't handle partial tag listing, filtering tags on the controller",
+		slog.String("repository", s.repo.Name))
 }
 
 func (s *OperationService) getLastProcessedVersion(ctx context.Context, packageName string) string {

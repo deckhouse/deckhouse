@@ -257,6 +257,7 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, op *v1alpha1.Packa
 	if err != nil {
 		return r.failOperation(ctx, op, err)
 	}
+	svc.WarnUnavailablePartialScan(op)
 
 	discovered, err := svc.DiscoverPackage(ctx)
 	if err != nil {

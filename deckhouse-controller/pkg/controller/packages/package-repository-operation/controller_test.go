@@ -15,6 +15,7 @@
 package packagerepositoryoperation
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net/http"
@@ -207,6 +208,12 @@ func withPackageServiceManager(psm registryService.ServiceManagerInterface[regis
 	}
 }
 
+func withLogger(logger *log.Logger) reconcilerOption {
+	return func(r *reconciler) {
+		r.logger = logger
+	}
+}
+
 func (suite *ControllerTestSuite) setupController(filename string, options ...reconcilerOption) {
 	suite.Seed(filename)
 
@@ -245,6 +252,27 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		})
 
 		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("partial scan unavailable", func() {
+		// The repository reports no partial listing, so an incremental scan must say so.
+		var logs bytes.Buffer
+
+		psm := createFakePSM(newInternalClient(fakeRegistry.NewRegistry(registryHost)))
+
+		suite.setupController("partial-scan-unavailable.yaml",
+			withPackageServiceManager(psm), withLogger(log.NewLogger(log.WithOutput(&logs))))
+		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
+
+		err := repeat(func() error {
+			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+				NamespacedName: k8stypes.NamespacedName{Name: operation.Name},
+			})
+			return err
+		})
+
+		require.NoError(suite.T(), err)
+		require.Contains(suite.T(), logs.String(), "can't handle partial tag listing")
 	})
 
 	suite.Run("registry client creation failed", func() {
