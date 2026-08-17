@@ -180,7 +180,11 @@ func createChecksumSecret(ngName, checksum string) *corev1.Secret {
 // source the controller counts as an instance of ngName.
 func createMCMMachine(name, ngName string) *mcmv1alpha1.Machine {
 	m := &mcmv1alpha1.Machine{
-		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: common.MachineNamespace},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: common.MachineNamespace,
+			Labels:    map[string]string{nodecommon.NodeGroupLabel: ngName},
+		},
 		Spec: mcmv1alpha1.MachineSpec{
 			NodeTemplateSpec: mcmv1alpha1.NodeTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{nodecommon.NodeGroupLabel: ngName}},
