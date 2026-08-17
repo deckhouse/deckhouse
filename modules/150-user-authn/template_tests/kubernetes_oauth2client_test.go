@@ -80,9 +80,12 @@ var _ = Describe("Module :: user-authn :: helm template :: kubernetes oauth2clie
 `)
 			hec.HelmRender()
 		})
-		It("Should deploy kubernetes OAuth2Client", func() {
+		It("Should deploy kubernetes OAuth2Client without redirect URIs", func() {
 			Expect(hec.RenderError).ShouldNot(HaveOccurred())
-			Expect(hec.KubernetesResource("OAuth2Client", "d8-user-authn", "nn2wezlsnzsxizltzpzjzzeeeirsk").Exists()).To(BeTrue())
+
+			oauth2Client := hec.KubernetesResource("OAuth2Client", "d8-user-authn", "nn2wezlsnzsxizltzpzjzzeeeirsk")
+			Expect(oauth2Client.Exists()).To(BeTrue())
+			Expect(oauth2Client.Field("redirectURIs").Array()).To(BeEmpty())
 		})
 	})
 
@@ -249,8 +252,10 @@ var _ = Describe("Module :: user-authn :: helm template :: kubernetes oauth2clie
 				"https://kubeconfig.example.com/callback/0",
 				"https://kubeconfig.example.com/callback/1",
 				"https://kubeconfig.example.com/callback/",
-				"https://with-access.example.com/dex-authenticator/callback",
 			))
+			// Authenticators redirect to their own OAuth2Client, so no tenant-controlled
+			// domain may reach the redirect URIs of the privileged kubernetes client.
+			Expect(uris).NotTo(ContainElement(ContainSubstring("/dex-authenticator/callback")))
 		})
 
 		It("Should render a separate OAuth2Client for each slug-based clientID and for publishAPI", func() {
