@@ -272,7 +272,7 @@ spec:
                   description: |
                     Time when the operation was completed, in RFC 3339 format (e.g. `2025-01-15T10:30:00Z`).
                     Empty until the operation finishes processing.
-            subresources: *subresources
-            additionalPrinterColumns: *additionalPrinterColumns
+      subresources: *subresources
+      additionalPrinterColumns: *additionalPrinterColumns
 
 
