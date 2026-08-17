@@ -165,4 +165,4 @@ The following external components interact with the module:
    - Checks the CSI driver `livenessProbe`.
    - Calls the `NodePublishVolume` and `NodeUnpublishVolume` RPCs in the Node Plugin.
 
-1. **Prometheus-main**: Collects metrics from the secrets-store and vault-secrets-webhook components.
+1. **Prometheus-main**: Collects metrics from the csi-secrets-store and webhook components.

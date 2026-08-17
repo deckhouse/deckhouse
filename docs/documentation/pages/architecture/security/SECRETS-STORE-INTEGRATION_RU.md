@@ -116,4 +116,4 @@ description: Архитектура модуля secrets-store-integration в De
    - проверяет `livenessProbe` CSI-драйвера;
    - вызывает RPC `NodePublishVolume` и `NodeUnpublishVolume` в Node Plugin.
 
-1. **Prometheus-main** — собирает метрики компонентов secrets-store и vault-secrets-webhook.
+1. **Prometheus-main** — собирает метрики компонентов csi-secrets-store и webhook.
