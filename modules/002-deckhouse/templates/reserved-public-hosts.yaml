@@ -1,12 +1,21 @@
 {{- /*
+  ADDING A PUBLIC DOMAIN TO ANY MODULE MEANS ADDING ITS NAME TO THE LIST BELOW. A name that is
+  missing here is not reserved, and nothing at runtime will say so.
+
   Deckhouse publishes its own web interfaces under names rendered from
   global.modules.publicDomainTemplate. Those hostnames belong to the platform, but an Ingress is a
   namespaced object with no cluster-wide uniqueness check: anybody who may write an Ingress in their
   own namespace could name one of them as a host and have the ingress controller merge that rule
-  into the routing of the shared host. The names below are the service subdomains DKP documents for
-  its web interfaces (docs/site/pages/guides/PRIVATE_ENVIRONMENT.md), including those of modules
-  shipped outside this repository, and they are kept in a ConfigMap so that both policies read the
-  same list and a cluster admin can see what is reserved.
+  into the routing of the shared host. The list is kept in a ConfigMap so that both policies read
+  the same names and a cluster admin can see what is reserved.
+
+  The list is a literal because no single source knows all of it. Roughly half of these names belong
+  to modules shipped outside this repository (console, dashboard, code, commander, status, upmeter),
+  which is also where the most valuable targets are, so deriving it from this repository alone would
+  shrink the coverage rather than maintain it. For the half that is in this repository, the
+  "covers every public domain the repository itself publishes" test in template_tests reads the
+  helm_lib_module_public_domain and PublicDomainSAN call sites and fails when one of them is not
+  named here, so an in-repo module cannot add a public domain without this list following.
 */}}
 {{- $reservedNames := list
   "api"
@@ -25,6 +34,7 @@
   "openvpn-admin"
   "prometheus"
   "registry"
+  "registry-packages-proxy"
   "status"
   "tools"
   "upmeter"

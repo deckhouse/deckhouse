@@ -17,6 +17,10 @@ limitations under the License.
 package template_tests
 
 import (
+	"io/fs"
+	"os"
+	"path/filepath"
+	"regexp"
 	"strings"
 
 	. "github.com/onsi/ginkgo"
@@ -24,6 +28,78 @@ import (
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
 )
+
+// The two ways a module in this repository asks for a hostname under publicDomainTemplate: the Helm
+// helper in a template, and the certificate SAN helper in a hook. Both take the name portion as a
+// literal, which is what makes the reserved list checkable against them.
+var publicDomainCallSites = []*regexp.Regexp{
+	regexp.MustCompile(`helm_lib_module_public_domain"\s+\(list\s+\S+\s+"([a-z0-9-]+)"`),
+	regexp.MustCompile(`PublicDomainSAN\("([a-z0-9-]+)"\)`),
+}
+
+func repositoryRoot() string {
+	dir, err := os.Getwd()
+	Expect(err).ShouldNot(HaveOccurred())
+
+	for {
+		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
+			return dir
+		}
+		parent := filepath.Dir(dir)
+		Expect(parent).ToNot(Equal(dir), "the repository root should be an ancestor of %s", dir)
+		dir = parent
+	}
+}
+
+// publishedPublicDomains maps every name portion the repository renders under
+// publicDomainTemplate to a file that asks for it, so a failure can name the culprit.
+func publishedPublicDomains() map[string]string {
+	root := repositoryRoot()
+	found := map[string]string{}
+
+	for _, tree := range []string{"modules", "ee"} {
+		tree = filepath.Join(root, tree)
+		if _, err := os.Stat(tree); os.IsNotExist(err) {
+			continue
+		}
+
+		err := filepath.WalkDir(tree, func(path string, entry fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			// The library chart, whose own definition of the helper would otherwise be read as a
+			// call site. A symlink in a checkout, a real copy in the build image.
+			if entry.IsDir() && entry.Name() == "helm_lib" {
+				return fs.SkipDir
+			}
+			if !entry.Type().IsRegular() {
+				return nil
+			}
+			switch filepath.Ext(path) {
+			case ".yaml", ".yml", ".tpl", ".go":
+			default:
+				return nil
+			}
+
+			content, err := os.ReadFile(path)
+			if err != nil {
+				return err
+			}
+			for _, callSite := range publicDomainCallSites {
+				for _, match := range callSite.FindAllSubmatch(content, -1) {
+					name := string(match[1])
+					if _, seen := found[name]; !seen {
+						found[name], _ = filepath.Rel(root, path)
+					}
+				}
+			}
+			return nil
+		})
+		Expect(err).ShouldNot(HaveOccurred())
+	}
+
+	return found
+}
 
 const (
 	reservedHostsConfigMapName   = "d8-reserved-public-hosts"
@@ -75,6 +151,23 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 			// kept any uppercase would silently never match.
 			for _, host := range hosts {
 				Expect(host).To(Equal(strings.ToLower(host)))
+			}
+		})
+
+		It("covers every public domain the repository itself publishes", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			cm := f.KubernetesResource("ConfigMap", "d8-system", reservedHostsConfigMapName)
+			hosts := strings.Fields(cm.Field("data.hosts").String())
+
+			published := publishedPublicDomains()
+			Expect(published).ToNot(BeEmpty(), "the call site patterns should still match this repository")
+
+			for name, source := range published {
+				Expect(hosts).To(ContainElement(name+".example.com"),
+					"%s publishes the public domain %q, but it is not reserved. Add %q to $reservedNames "+
+						"in modules/002-deckhouse/templates/reserved-public-hosts.yaml, otherwise any "+
+						"namespace can claim that hostname.", source, name, name)
 			}
 		})
 
