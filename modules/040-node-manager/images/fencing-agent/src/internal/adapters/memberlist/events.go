@@ -54,7 +54,7 @@ func (d *eventDelegate) NotifyJoin(node *hcml.Node) {
 }
 
 func (d *eventDelegate) NotifyLeave(node *hcml.Node) {
-	d.enqueue("left", node)
+	d.enqueue("left_or_failed", node)
 }
 
 func (d *eventDelegate) NotifyUpdate(node *hcml.Node) {
