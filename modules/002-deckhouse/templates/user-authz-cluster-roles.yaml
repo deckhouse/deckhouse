@@ -1,4 +1,11 @@
 ---
+# Access level: User.
+# Includes User permissions.
+# Read access: 
+# deckhousereleases, moduledocumentations, modulepulloverrides, 
+# modulereleases, modules, modulesettingsdefinitions, 
+# moduleupdatepolicies, packagerepositoryoperations, 
+# applicationpackageversions, applicationpackages, applications.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -16,9 +23,7 @@ rules:
   - modulereleases
   - modules
   - modulesettingsdefinitions
-  - modulesources
   - moduleupdatepolicies
-  - packagerepositories
   - packagerepositoryoperations
   - applicationpackageversions
   - applicationpackages
@@ -28,12 +33,47 @@ rules:
   - list
   - watch
 ---
+# Access level: Admin.
+# Includes User, PrivilegedUser, and Editor permissions.
+# Full access: 
+# - applications
+# Read access: 
+# - deckhousereleases, moduledocumentations, modulepulloverrides, 
+#   modulereleases, modules, modulesettingsdefinitions, modulesources, 
+#   moduleupdatepolicies, packagerepositories, packagerepositoryoperations, 
+#   applicationpackageversions, applicationpackages, applications.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   annotations:
     user-authz.deckhouse.io/access-level: Admin
   name: d8:user-authz:deckhouse:admin
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - applications
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+---
+# Access level: ClusterAdmin.
+# Includes User, PrivilegedUser, Editor, Admin, and ClusterEditor permissions.
+# Full access:
+# - deckhousereleases, moduleconfigs, moduledocumentations, 
+#   modulepulloverrides, modulereleases, modules, modulesources, 
+#   moduleupdatepolicies, packagerepositories, packagerepositoryoperations, 
+#   applicationpackageversions, applicationpackages, applications
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  annotations:
+    user-authz.deckhouse.io/access-level: ClusterAdmin
+  name: d8:user-authz:deckhouse:cluster-admin
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
 - apiGroups:
@@ -54,15 +94,10 @@ rules:
   - applications
   verbs:
   - create
-  - delete
-  - deletecollection
-  - patch
-  - update
-- apiGroups:
-  - deckhouse.io
-  resources:
-  - moduleconfigs
-  verbs:
   - get
   - list
   - watch
+  - update
+  - patch
+  - delete
+  - deletecollection
