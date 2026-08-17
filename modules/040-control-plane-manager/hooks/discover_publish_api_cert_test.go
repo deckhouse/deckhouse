@@ -73,6 +73,16 @@ metadata:
 data:
   ca.crt: a3ViZXJuZXRlcy10bHM=
 `
+	certManagerCertSecretRotated := `
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kubernetes-tls
+  namespace: kube-system
+data:
+  ca.crt: a3ViZXJuZXRlcy10bHMtcm90YXRlZA==
+`
 	customCertSecret := `
 ---
 apiVersion: v1
@@ -232,6 +242,23 @@ data:
 			Expect(f.KubernetesResource("Secret", "kube-system", "kubernetes-tls").Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("Secret", "kube-system", "kubernetes-tls-selfsigned").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Secret", "kube-system", "kubernetes-tls-customcertificate").Exists()).To(BeFalse())
+		})
+	})
+
+	Context("Global mode with CertManager, kubernetes-tls changes after BeforeHelm", func() {
+		BeforeEach(func() {
+			f.ValuesSet("controlPlaneManager.apiserver.publishAPI.ingress.https.mode", "Global")
+			f.ValuesSet("global.modules.https.mode", "CertManager")
+			f.KubeStateSet(certManagerCertSecret)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+			f.BindingContexts.Set(f.KubeStateSet(certManagerCertSecretRotated))
+			f.RunHook()
+		})
+
+		It("Should publish the new CA on the secret event", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("controlPlaneManager.internal.authn.publishedAPIKubeconfigGeneratorMasterCA").String()).To(Equal("kubernetes-tls-rotated"))
 		})
 	})
 

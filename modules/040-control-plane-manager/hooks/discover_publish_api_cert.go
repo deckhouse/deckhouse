@@ -68,11 +68,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector: &types.NameSelector{
 				MatchNames: possiblePublishAPISecretNames,
 			},
-			// Run only in BeforeHelm: publish_api_from_cm (Order 5) writes the real
-			// publishAPI mode there. On other runs the mode may still be the schema
-			// default, and getCert would delete the active mode's secret.
+			// Skip the Synchronization run: at that point the real publishAPI mode
+			// may not be in values yet, and getCert would treat the active mode's
+			// secret as leftover. Event runs happen after the first BeforeHelm and
+			// keep the published CA fresh when the active secret changes.
 			ExecuteHookOnSynchronization: ptr.To(false),
-			ExecuteHookOnEvents:          ptr.To(false),
 			FilterFunc:                   applyPublishAPICertFilter,
 		},
 	},
