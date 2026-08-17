@@ -27,12 +27,9 @@ https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 {{- if semverCompare "<=1.31" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "AnonymousAuthConfigurableEndpoints=true" -}}
 {{- end }}
-{{- $apiserverFeatureGates := $baseFeatureGates -}}
+{{- $apiserverFeatureGates := append $baseFeatureGates "CRDSensitiveData=true" -}}
 {{- $controllerManagerFeatureGates := $baseFeatureGates -}}
 {{- $schedulerFeatureGates := $baseFeatureGates -}}
-{{- if .apiserver.secretEncryptionKey }}
-  {{- $apiserverFeatureGates = append $apiserverFeatureGates "CRDSensitiveData=true" -}}
-{{- end }}
 {{- if hasKey . "allowedFeatureGates" -}}
   {{- range .allowedFeatureGates.apiserver -}}
     {{- $apiserverFeatureGates = append $apiserverFeatureGates (printf "%s=true" .) -}}
