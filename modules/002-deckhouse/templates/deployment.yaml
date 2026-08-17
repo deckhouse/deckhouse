@@ -197,7 +197,7 @@ spec:
             - name: DECKHOUSE_ENABLE_PACKAGE_SYSTEM
               value: "true"
             - name: DECKHOUSE_ENABLE_MODULE_PACKAGES
-              value: "true"
+              value: "false"
             - name: USE_NELM
               value: "true"
             # Adopt fields owned by the legacy "deckhouse-controller" field manager

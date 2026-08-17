@@ -76,7 +76,7 @@ func (r *reaperMutex) Release() {
 	r.Unlock()
 }
 
-func start(logger *log.Logger, cfg *app.Config) func(cmd *cobra.Command, args []string) error {
+func start(logger *log.Logger, _ *app.Config) func(cmd *cobra.Command, args []string) error {
 	return func(_ *cobra.Command, _ []string) error {
 		if os.Getenv(app.EnvSkipEntrypoint) != "true" {
 			if err := entrypoint(logger); err != nil {
