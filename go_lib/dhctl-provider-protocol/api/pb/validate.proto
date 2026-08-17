@@ -1,0 +1,60 @@
+// Copyright 2026 Flant JSC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package dhctl.provider.validate.v1;
+
+// Full import path plus the package name: protoc-gen-go needs the import path to
+// generate references between files, and a relative value like "api/gen" makes the
+// generated code unimportable.
+option go_package = "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/gen";
+
+message ValidateRequest {
+  // JSON-encoded validate input: providerName, clusterPrefix, layout, operation,
+  // providerClusterConfiguration and vars (nodeGroups, instanceClasses,
+  // credential secrets, module settings).
+  //
+  // The payload stays JSON rather than becoming protobuf messages because every
+  // field that carries substance is an arbitrary Kubernetes object — a
+  // google.protobuf.Struct would be exactly as untyped while costing a conversion
+  // layer on both sides. The Go definition is validate.Input in the validate package;
+  // README.md documents the wire shape.
+  bytes input_json = 1;
+}
+
+// ValidateResponse carries the outcome. Blocking problems go to errors,
+// non-blocking ones to warnings; an empty response means the configuration is
+// valid.
+//
+// A failure of the plugin itself (bad request, internal error, panic) is NOT
+// reported here — it is a gRPC status: InvalidArgument for a request the action
+// rejects, Unimplemented for an action the plugin does not serve, Internal for
+// everything else.
+message ValidateResponse {
+  repeated Violation errors   = 1;
+  repeated Violation warnings = 2;
+}
+
+// Violation is a single problem found by a plugin.
+message Violation {
+  // Resource field path, e.g. "Secret/d8-credentials.data.secret".
+  string path = 1;
+  // Stable machine-readable identifier, e.g. "credential_secret_required".
+  string code    = 2;
+  string message = 3;
+  // Rendered rejected value. A plugin handling a sensitive field sends a
+  // placeholder such as "masked" instead of the value itself.
+  string value = 4;
+}
