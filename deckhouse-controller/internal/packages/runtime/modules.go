@@ -16,6 +16,7 @@ package runtime
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"slices"
 
@@ -360,4 +361,28 @@ func (r *Runtime) cleanupModule(name string) func() {
 			}
 		}()
 	}
+}
+
+// FilterByExclusiveGroup returns an error if there is an enabled module with the same exclusive group.
+func (r *Runtime) FilterByExclusiveGroup(group string) error {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	var found bool
+	for name := range r.modules {
+		if r.modules[name].GetExclusiveGroup() != group {
+			continue
+		}
+
+		if r.scheduler.IsEnabled(name) {
+			found = true
+			break
+		}
+	}
+
+	if found {
+		return errors.New("module cannot be enabled because another module with same exclusiveGroup enabled")
+	}
+
+	return nil
 }
