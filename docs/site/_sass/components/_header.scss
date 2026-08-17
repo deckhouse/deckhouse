@@ -452,7 +452,7 @@ html {
 
                         @include breakpoints.min-w(xxxl) {
                             top: 45%;
-                            right: 0px;
+                            right: 0;
                         }
                     }
                 }
@@ -761,7 +761,6 @@ html {
             font-size: 16px;
 
             @include breakpoints.min-w(m) {
-                padding-bottom: 1px;
                 line-height: 19px;
             }
 
