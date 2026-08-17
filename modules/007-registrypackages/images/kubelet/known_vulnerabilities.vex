@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-83ad327013f034fdd863cf73303584cf735337893acf934c4c3d37ba8b0609f3",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 5,
+  "version": 7,
   "statements": [
     {
       "vulnerability": {
@@ -143,6 +143,34 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2026-39883 невозможно эксплуатировать в рамках Deckhouse, поскольку она не оказывает влияния на системы под управлением Linux. Данная проблема безопасности связана с выполнением команды kenv, которая является специфичной для операционных систем на базе BSD и Solaris и отсутвует в Linux.",
       "timestamp": "2026-04-10T08:23:04.885732Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-41579"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/opencontainers/runc"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "CVE-2026-41579 — symlink-атака через вредоносный /dev в образе контейнера; уязвимы функции setupPtmx/setupDevSymlinks в пакете github.com/opencontainers/runc/libcontainer (libcontainer/rootfs_linux.go), то есть логика создания rootfs, выполняемая только OCI runtime при запуске контейнера. Компоненты Kubernetes контейнеры не запускают: это делают containerd и отдельный бинарник runc (в Deckhouse — runc 1.3.6, уязвимость исправлена). По графу зависимостей (go list -deps, GOOS=linux) из runc импортируются только вспомогательные подпакеты — libcontainer/cgroups*, devices, configs, utils, intelrdt, — но не сам пакет libcontainer, поэтому уязвимый код в бинарники не компилируется.",
+      "timestamp": "2026-08-17T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость GO-2026-5932 затрагивает пакет golang.org/x/crypto/openpgp, который не поддерживается и является небезопасным по своей архитектуре. Данный компонент не импортирует и не выполняет код пакета openpgp; пакет golang.org/x/crypto подтягивается транзитивно без исполняемого пути openpgp.",
+      "timestamp": "2026-08-17T13:30:00Z"
     }
   ],
   "timestamp": "2025-11-07T13:55:00Z",
