@@ -41,9 +41,9 @@ import (
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 )
 
-// IsRegistration reports whether an object is a registration Secret: right namespace, name prefix
+// IsRegistrationSecret reports whether an object is a registration Secret: right namespace, name prefix
 // and label. It is the single definition of one — Load and every watch resolve through it.
-func IsRegistration(obj client.Object) bool {
+func IsRegistrationSecret(obj client.Object) bool {
 	if obj.GetNamespace() != SecretNamespace {
 		return false
 	}
@@ -54,24 +54,24 @@ func IsRegistration(obj client.Object) bool {
 	return ok
 }
 
-// IsRegistrationKey reports whether a reconcile key names a registration Secret. No label check:
+// IsRegistrationSecretKey reports whether a reconcile key names a registration Secret. No label check:
 // a key carries none, and the watch behind it already filtered on IsRegistration.
-func IsRegistrationKey(key types.NamespacedName) bool {
+func IsRegistrationSecretKey(key types.NamespacedName) bool {
 	if key.Namespace != SecretNamespace {
 		return false
 	}
 	return strings.HasPrefix(key.Name, SecretNamePrefix)
 }
 
-// RegistrationPredicate filters a watch down to the registration Secrets.
-func RegistrationPredicate() predicate.Predicate {
-	return predicate.NewPredicateFuncs(IsRegistration)
+// RegistrationSecretPredicate filters a watch down to the registration Secrets.
+func RegistrationSecretPredicate() predicate.Predicate {
+	return predicate.NewPredicateFuncs(IsRegistrationSecret)
 }
 
-// RegistrationRequests returns one request per registration Secret, for controllers keyed by the
+// RegistrationSecretsRequests returns one request per registration Secret, for controllers keyed by the
 // Secret itself. A failed List yields none: an event mapper cannot return an error, and the
 // controller resync covers the miss.
-func RegistrationRequests(ctx context.Context, r client.Reader) []reconcile.Request {
+func RegistrationSecretsRequests(ctx context.Context, r client.Reader) []reconcile.Request {
 	secrets := &corev1.SecretList{}
 	if err := r.List(ctx, secrets,
 		client.InNamespace(SecretNamespace),
@@ -204,7 +204,7 @@ func LazyInstanceClassSource(informers cache.Cache, eventHandler handler.EventHa
 				if !ok {
 					return false
 				}
-				return IsRegistration(secret)
+				return IsRegistrationSecret(secret)
 			},
 			Handler: toolscache.ResourceEventHandlerFuncs{
 				AddFunc:    func(any) { notify() },

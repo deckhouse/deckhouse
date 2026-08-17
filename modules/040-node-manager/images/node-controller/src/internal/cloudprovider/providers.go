@@ -222,17 +222,17 @@ func loadProviders(ctx context.Context, r client.Reader) ([]Provider, error) {
 	seen := make(map[string]bool, len(secrets.Items))
 
 	for i := range secrets.Items {
-		registry := FromSecretData(secrets.Items[i].Data)
+		provider := FromSecretData(secrets.Items[i].Data)
 		// The two copies of one registration dedup by type. One that publishes no type is kept: it
 		// still carries an InstanceClass kind the watches need.
-		if registry.Type != "" {
-			if seen[registry.Type] {
+		if provider.Type != "" {
+			if seen[provider.Type] {
 				continue
 			}
-			seen[registry.Type] = true
+			seen[provider.Type] = true
 		}
 
-		ret = append(ret, registry)
+		ret = append(ret, provider)
 	}
 
 	sort.Slice(ret, func(i, j int) bool { return ret[i].Type < ret[j].Type })

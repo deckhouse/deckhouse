@@ -107,7 +107,7 @@ func (r *MachineDeploymentReconciler) SetupWatches(w register.Watcher) {
 	// change is one that moves NodeGroups between providers. Rendering a MachineDeployment is not
 	// cheap, and a cluster has one registration per provider plus its legacy copy.
 	w.Watches(&corev1.Secret{}, cloudprovider.NodeGroupHandler(r.Client),
-		builder.WithPredicates(cloudprovider.RegistrationPredicate()))
+		builder.WithPredicates(cloudprovider.RegistrationSecretPredicate()))
 	// The InstanceClass is what the MachineClass and the machine template are rendered from,
 	// and its checksum names the template — an edit here is exactly what must re-render. Without
 	// this watch the change waits for the resync, so the cloud keeps handing out the previous

@@ -38,7 +38,7 @@ import (
 // IsRegistration is the one definition of a registration: the watch predicates, the lazy
 // InstanceClass source, RegistrationRequests and Load all resolve through it, so every condition it
 // checks decides both what is watched and what is loaded.
-func TestIsRegistration(t *testing.T) {
+func TestIsRegistrationSecret(t *testing.T) {
 	secret := func(namespace, name string, labels map[string]string) *corev1.Secret {
 		return &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace, Name: name, Labels: labels,
@@ -80,19 +80,19 @@ func TestIsRegistration(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.want, IsRegistration(tc.obj))
+			assert.Equal(t, tc.want, IsRegistrationSecret(tc.obj))
 		})
 	}
 }
 
 // A controller whose queue mixes registration keys with keys of other kinds routes on this, so a
 // key that is not a registration must not pass — it names no provider to act on.
-func TestIsRegistrationKey(t *testing.T) {
-	assert.True(t, IsRegistrationKey(types.NamespacedName{
+func TestIsRegistrationSecretKey(t *testing.T) {
+	assert.True(t, IsRegistrationSecretKey(types.NamespacedName{
 		Namespace: SecretNamespace, Name: SecretNamePrefix + "-yandex",
 	}))
-	assert.False(t, IsRegistrationKey(types.NamespacedName{Name: "worker"}), "a NodeGroup key")
-	assert.False(t, IsRegistrationKey(types.NamespacedName{
+	assert.False(t, IsRegistrationSecretKey(types.NamespacedName{Name: "worker"}), "a NodeGroup key")
+	assert.False(t, IsRegistrationSecretKey(types.NamespacedName{
 		Namespace: "default", Name: SecretNamePrefix,
 	}), "the right name in the wrong namespace")
 }

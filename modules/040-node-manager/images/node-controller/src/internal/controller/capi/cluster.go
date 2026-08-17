@@ -54,7 +54,7 @@ func (r *ClusterReconciler) SetupWatches(w register.Watcher) {
 		if _, ok := obj.(*deckhousev1.NodeGroup); ok {
 			return true
 		}
-		return cloudprovider.IsRegistration(obj)
+		return cloudprovider.IsRegistrationSecret(obj)
 	}))
 	// Two watches on one kind: the two Clusters are keyed by different objects. Generation-only,
 	// so status bumps do not re-ensure.
@@ -79,7 +79,7 @@ func (r *ClusterReconciler) SetupWatches(w register.Watcher) {
 		&deckhousev1.NodeGroup{},
 		handler.EnqueueRequestsFromMapFunc(
 			func(ctx context.Context, _ client.Object) []reconcile.Request {
-				return cloudprovider.RegistrationRequests(ctx, r.Client)
+				return cloudprovider.RegistrationSecretsRequests(ctx, r.Client)
 			},
 		),
 		builder.WithPredicates(predicate.GenerationChangedPredicate{}),
@@ -93,7 +93,7 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	// One key, one Cluster.
-	if cloudprovider.IsRegistrationKey(req.NamespacedName) {
+	if cloudprovider.IsRegistrationSecretKey(req.NamespacedName) {
 		return ctrl.Result{}, r.ensureCloudCluster(ctx, req.Name, clusterConfig)
 	}
 
@@ -113,7 +113,7 @@ func (r *ClusterReconciler) ensureCloudCluster(ctx context.Context, registration
 		}
 		return fmt.Errorf("get cloud-provider secret: %w", err)
 	}
-	if !cloudprovider.IsRegistration(secret) {
+	if !cloudprovider.IsRegistrationSecret(secret) {
 		return nil
 	}
 
