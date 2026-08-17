@@ -768,7 +768,11 @@ func (b *ClusterBootstrapper) bootstrapAdditionalNodes(ctx context.Context, bctx
 			return err
 		}
 
-		localBootstraper := func(action func() error) error {
+		if err := b.createProviderResources(ctx, bctx, &client.KubernetesClient{KubeClient: kubeCl}); err != nil {
+			return err
+		}
+
+		inClusterLock := func(action func() error) error {
 			if b.CommanderMode {
 				return action()
 			}
@@ -781,20 +785,7 @@ func (b *ClusterBootstrapper) bootstrapAdditionalNodes(ctx context.Context, bctx
 			).Run(ctx, action)
 		}
 
-		err = localBootstraper(func() error {
-			// The CloudPermanent NodeGroups and their instance classes describe the
-			// nodes the call below is about to build, so they reach the cluster first.
-			if err := createResources(
-				ctx,
-				&client.KubernetesClient{KubeClient: kubeCl},
-				bctx.resourcesToCreateProvider,
-				nil,
-				true,
-				b.Options.Bootstrap.ResourcesTimeout,
-			); err != nil {
-				return err
-			}
-
+		err = inClusterLock(func() error {
 			return bootstrapAdditionalNodesForCloudCluster(
 				ctx,
 				&client.KubernetesClient{KubeClient: kubeCl},
@@ -823,6 +814,20 @@ func (b *ClusterBootstrapper) bootstrapAdditionalNodes(ctx context.Context, bctx
 	b.PhasedExecutionContext.CompleteSubPhase(ctx, phases.InstallAdditionalMastersAndStaticNodesSubPhaseWait)
 
 	return nil
+}
+
+// createProviderResources puts the CloudPermanent NodeGroups and the instance
+// classes they reference in the cluster before dhctl builds any node from them.
+// Converge later reads the node count back from those same objects.
+func (b *ClusterBootstrapper) createProviderResources(ctx context.Context, bctx *bootstrapContext, kubeCl *client.KubernetesClient) error {
+	return createResources(
+		ctx,
+		kubeCl,
+		bctx.resourcesToCreateProvider,
+		nil,
+		true,
+		b.Options.Bootstrap.ResourcesTimeout,
+	)
 }
 
 func (b *ClusterBootstrapper) bootstrapCreateResources(ctx context.Context, bctx *bootstrapContext) error {
