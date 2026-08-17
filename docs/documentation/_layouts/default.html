@@ -33,7 +33,7 @@
 {%- if page.sidebar == 'embedded-modules' or site.mode == 'module' %}
 <script type="text/javascript">
   // Fix second level topnav menu
-  {%- if site.d8Revision == 'CSE' %}
+  {%- if site.mode == 'module' %}
   const moduleType = $('meta[name="page:module:type"]').attr('content');
   let pageByModuleType = false;
   if (moduleType) {
