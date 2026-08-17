@@ -217,6 +217,24 @@ data:
 		})
 	})
 
+	Context("Global mode with CertManager and all secrets in cluster", func() {
+		BeforeEach(func() {
+			f.ValuesSet("controlPlaneManager.apiserver.publishAPI.ingress.https.mode", "Global")
+			f.ValuesSet("global.modules.https.mode", "CertManager")
+			f.KubeStateSet(selfSignedCertSecret + certManagerCertSecret + customCertSecret)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("Should keep kubernetes-tls and delete not matching secrets", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("controlPlaneManager.internal.authn.publishedAPIKubeconfigGeneratorMasterCA").String()).To(Equal("kubernetes-tls"))
+			Expect(f.KubernetesResource("Secret", "kube-system", "kubernetes-tls").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Secret", "kube-system", "kubernetes-tls-selfsigned").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Secret", "kube-system", "kubernetes-tls-customcertificate").Exists()).To(BeFalse())
+		})
+	})
+
 	Context("Global mode with kubeconfigGeneratorMasterCA set and all secrets in cluster", func() {
 		BeforeEach(func() {
 			f.ValuesSet("controlPlaneManager.apiserver.publishAPI.ingress.https.mode", "Global")
