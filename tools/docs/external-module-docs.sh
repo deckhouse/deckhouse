@@ -230,6 +230,22 @@ else
     --source /src \
     --destination /out \
     --environment production
+
+  missing_pages=()
+  for lang in en ru; do
+    page="${OUTPUT_DIR}/${lang}/modules/${MODULE_NAME}/${CHANNEL}/readme.html"
+    if [[ ! -s "${page}" ]]; then
+      missing_pages+=("${page}")
+    fi
+  done
+
+  if (( ${#missing_pages[@]} > 0 )); then
+    echo "Hugo build did not produce the expected rendered pages:" >&2
+    for page in "${missing_pages[@]}"; do
+      echo "  ${page}" >&2
+    done
+    exit 1
+  fi
 fi
 
 echo "External module documentation is available in ${OUTPUT_DIR}"

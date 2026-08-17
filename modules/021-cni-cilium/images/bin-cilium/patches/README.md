@@ -95,4 +95,33 @@ An ICMP echo reply feature has been added to reply on LoadBalancer's service IP
 
 ## 018-fix-svacer.patch
 
-Fixed svacer DEREF_OF_NULL error in pkg/policy/api/icmp.go 
+Fixed svacer DEREF_OF_NULL error in pkg/policy/api/icmp.go
+
+## 019-ipcache-no-deadlock-on-label-injection.patch
+
+Backport for Cilium 1.17.x fixing an agent-wide deadlock in ipcache label injection:
+`doInjectLabels()` holds `ipc.mutex` while `UpdatePolicyMaps()` waits for all endpoints,
+yet endpoint regeneration acquires the same mutex (`GetDNSRules` → `LookupByIdentity`),
+so under identity churn regeneration stops node-wide, CNI requests pile up, the
+`endpoint-create` limiter returns `429 putEndpointIdTooManyRequests` and liveness stays
+green. The patch moves the delete-path `UpdatePolicyMaps()` call out of the critical
+section, as the add path above it already does, and bounds the previously unbounded wait
+with `ctx` and a 3-minute timeout.
+
+**Remove this patch when upgrading to Cilium 1.18 or newer**, where upstream fixed the
+same deadlock (`cilium#39970`, commit `47ace2de6`) by removing
+`IPCache.UpdatePolicyMaps()` altogether, so the patch is both unnecessary and will fail
+to apply.
+
+## 020-policy-nil-safe-selector-policy-detach.patch
+
+Fixes an agent crash (`SIGSEGV` in `selectorPolicy.detach`) that shows up once endpoint
+regeneration runs at full speed under heavy identity churn. `policyCache.delete()`
+dereferences `cip.getPolicy()` unconditionally, but a cache entry created by
+`lookupOrCreate()` has a nil policy until `updateSelectorPolicy()` finishes resolving it,
+and that resolution does not hold the cache lock — so an endpoint whose identity changes
+mid-regeneration can have its old identity removed while its policy is still being
+resolved. The patch adds the nil check, matching `pkg/policy/distillery.go` in 1.18.
+
+**Remove this patch when upgrading to Cilium 1.18 or newer**, where the same nil check is
+already present (it was never backported to 1.17.x, up to and including v1.17.18).

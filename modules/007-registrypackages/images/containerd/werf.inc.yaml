@@ -1,7 +1,10 @@
 {{- $containerd_v1_version := "1.7.34" }}
 {{- $containerd_v2_version := "2.2.7" }}
 {{- $runc_version := "1.3.6" }}
-{{- $containerd_versions := list $containerd_v1_version $containerd_v2_version }}
+{{- $containerd_versions := list $containerd_v2_version }}
+{{- if ne $.Env "CSE" }}
+  {{- $containerd_versions = list $containerd_v1_version $containerd_v2_version }}
+{{- end }}
 {{- $runc_versions := list $runc_version }}
 {{- $containerd2runc := dict $containerd_v1_version $runc_version $containerd_v2_version $runc_version }}
 {{- $containerd_integrity_patches_version := .IntegrityPatchesVersion | default "0" }} # may be redefine in CSE
@@ -280,7 +283,7 @@ git:
 {{- include "olcedar sysext sign secrets" . }}
 shell:
   beforeInstall:
-  - pm install erofs-utils coreutils cryptsetup
+  - pm install erofs-utils coreutils cryptsetup systemd@260.4
   - mkdir -p /out
   install:
   - mkdir -p /sysext/usr/lib/extension-release.d /sysext/usr/lib/systemd/system

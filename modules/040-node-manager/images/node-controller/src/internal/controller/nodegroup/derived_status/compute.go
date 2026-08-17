@@ -28,6 +28,7 @@ import (
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/cloudprovider"
+	nodecommon "github.com/deckhouse/node-controller/internal/common"
 )
 
 // engine values, kept in sync with hooks/internal/v1.NodeGroupEngine*.
@@ -41,11 +42,18 @@ const useMCMAnnotation = "node.deckhouse.io/use-mcm"
 
 // CRI resolution constants, mirrors get_crds.go.
 const (
-	criTypeDocker           = "Docker"
-	criTypeContainerd       = "Containerd"
-	criTypeNotManaged       = "NotManaged"
-	nodeGroupDefaultCRIType = criTypeContainerd
+	criTypeDocker       = "Docker"
+	criTypeContainerd   = "Containerd"
+	criTypeContainerdV2 = "ContainerdV2"
+	criTypeNotManaged   = "NotManaged"
 )
+
+func nodeGroupDefaultCRIType() string {
+	if nodecommon.IsCSEEdition() {
+		return criTypeContainerdV2
+	}
+	return criTypeContainerd
+}
 
 // epochTimestampAccessor mirrors get_crds.go; overridable in tests.
 var epochTimestampAccessor = func() int64 {
@@ -161,7 +169,7 @@ func semverMajMin(ver *semver.Version) string {
 // resolveCRIType mirrors the CRI resolution block in get_crds.
 func resolveCRIType(ng *v1.NodeGroup, effectiveKubeVer *semver.Version, defaultCRI string) (string, error) {
 	v1_19_0, _ := semver.NewVersion("1.19.0")
-	defaultCRIType := nodeGroupDefaultCRIType
+	defaultCRIType := nodeGroupDefaultCRIType()
 	if effectiveKubeVer != nil && effectiveKubeVer.LessThan(v1_19_0) {
 		defaultCRIType = criTypeDocker
 	}

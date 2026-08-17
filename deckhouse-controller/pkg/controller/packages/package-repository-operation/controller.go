@@ -32,6 +32,7 @@ import (
 
 	registryService "github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry/service"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/operations"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -40,9 +41,6 @@ const (
 	controllerName = "d8-package-repository-operation-controller"
 
 	maxConcurrentReconciles = 1
-
-	// packageTypeLabel is a label on Docker images that indicates the package type
-	packageTypeLabel = "io.deckhouse.package.type"
 
 	// cleanupOldOperationsCount is the number of operations to keep for the same repository, older operations will be deleted
 	cleanupOldOperationsCount = 10
@@ -253,7 +251,7 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, op *v1alpha1.Packa
 
 	logger.Debug("handle discover state")
 
-	svc, err := NewOperationService(ctx, r.client, op.Spec.PackageRepositoryName, r.psm, r.logger)
+	svc, err := operations.NewService(ctx, r.client, op.Spec.PackageRepositoryName, r.psm, r.logger)
 	if err != nil {
 		return r.failOperation(ctx, op, err)
 	}
@@ -304,7 +302,7 @@ func (r *reconciler) handleProcessingState(ctx context.Context, op *v1alpha1.Pac
 
 	logger.Debug("handle processing state")
 
-	svc, err := NewOperationService(ctx, r.client, op.Spec.PackageRepositoryName, r.psm, r.logger)
+	svc, err := operations.NewService(ctx, r.client, op.Spec.PackageRepositoryName, r.psm, r.logger)
 	if err != nil {
 		return r.failOperation(ctx, op, err)
 	}

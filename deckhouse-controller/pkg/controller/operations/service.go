@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package packagerepositoryoperation
+package operations
 
 import (
 	"context"
@@ -45,13 +45,15 @@ type OperationService struct {
 	logger *log.Logger
 }
 
-// errPackageTypeInvalid is returned by detectPackageType when a package has manifest files
-// (labels or package.yaml) but the type value is empty or not recognized.
-var errPackageTypeInvalid = errors.New("package type could not be determined")
+var (
+	// ErrPackageTypeInvalid is returned by detectPackageType when a package has manifest files
+	// (labels or package.yaml) but the type value is empty or not recognized.
+	ErrPackageTypeInvalid = errors.New("package type could not be determined")
 
-// errTooOldImage is returned when a version image has no type labels and no package.yaml -
-// it cannot be processed.
-var errTooOldImage = errors.New("version image has no type labels and no package.yaml")
+	// ErrTooOldImage is returned when a version image has no type labels and no package.yaml -
+	// it cannot be processed.
+	ErrTooOldImage = errors.New("version image has no type labels and no package.yaml")
+)
 
 // isRepoNotFoundError checks if the error chain contains a registry NAME_UNKNOWN error,
 // which means the repository path does not exist in the registry.
@@ -60,29 +62,32 @@ func isRepoNotFoundError(err error) bool {
 	return strings.Contains(err.Error(), string(transport.NameUnknownErrorCode))
 }
 
-// packageType represents the type of a package as detected from Docker labels or package.yaml.
-type packageType string
+// PackageType represents the type of a package as detected from Docker labels or package.yaml.
+type PackageType string
 
 const (
-	packageTypeApplication packageType = "Application"
-	packageTypeModule      packageType = "Module"
+	// PackageTypeLabel is a label on Docker images that indicates the package type
+	PackagesRepositoryOperationLabelPackageType = "io.deckhouse.package.type"
+
+	PackageTypeApplication PackageType = "Application"
+	PackageTypeModule      PackageType = "Module"
 )
 
-// parsePackageType converts a raw string to packageType.
+// ParsePackageType converts a raw string to v1alpha1.PackageType.
 //
 // returning an error if the value is not recognized. f.e: type: "Garbage", type: ""
-func parsePackageType(raw string) (packageType, error) {
-	switch packageType(raw) {
-	case packageTypeApplication:
-		return packageTypeApplication, nil
-	case packageTypeModule:
-		return packageTypeModule, nil
+func ParsePackageType(raw string) (PackageType, error) {
+	switch PackageType(raw) {
+	case PackageTypeApplication:
+		return PackageTypeApplication, nil
+	case PackageTypeModule:
+		return PackageTypeModule, nil
 	default:
-		return "", fmt.Errorf("%w: unknown value %q", errPackageTypeInvalid, raw)
+		return "", fmt.Errorf("%w: unknown value %q", ErrPackageTypeInvalid, raw)
 	}
 }
 
-func NewOperationService(ctx context.Context, client client.Client, repoName string, psm registryService.ServiceManagerInterface[registryService.PackagesService], logger *log.Logger) (*OperationService, error) {
+func NewService(ctx context.Context, client client.Client, repoName string, psm registryService.ServiceManagerInterface[registryService.PackagesService], logger *log.Logger) (*OperationService, error) {
 	repo := &v1alpha1.PackageRepository{}
 	err := client.Get(ctx, types.NamespacedName{Name: repoName}, repo)
 	if err != nil {
@@ -236,7 +241,7 @@ func (s *OperationService) performIncrementalScan(ctx context.Context, packageNa
 		return nil, fmt.Errorf("list tags from version: %w", err)
 	}
 
-	return tags, nil
+	return filterLatestTags(tags), nil
 }
 
 func extractOnlySemverTags(rawTags []string) []*semver.Version {
@@ -290,6 +295,50 @@ func (s *OperationService) listTagsFromVersion(ctx context.Context, packageName 
 	}
 
 	return newTags, nil
+}
+
+// filterLatestTags filters out the latest version for every major.minor version
+func filterLatestTags(tags []*semver.Version) []*semver.Version {
+	// map of major.minor.semver
+	latestTagsMap := map[uint64]map[uint64]*semver.Version{}
+	newLength := 0
+	for _, tag := range tags {
+		if tag == nil {
+			continue
+		}
+
+		major := tag.Major()
+		minor := tag.Minor()
+
+		// Initialize the map if it doesn't exist
+		if latestTagsMap[major] == nil {
+			latestTagsMap[major] = map[uint64]*semver.Version{}
+		}
+
+		// If the minor version is not in the map, add it
+		present, ok := latestTagsMap[major][minor]
+		if !ok || present == nil {
+			latestTagsMap[major][minor] = tag
+			newLength++
+			continue
+		}
+		if present.GreaterThan(tag) {
+			continue
+		}
+
+		// If the tag is greater than the present tag, update the map
+		latestTagsMap[major][minor] = tag
+	}
+
+	// Remap the map to a slice of semver.Version
+	result := make([]*semver.Version, 0, newLength)
+	for _, major := range latestTagsMap {
+		for _, minor := range major {
+			result = append(result, minor)
+		}
+	}
+
+	return result
 }
 
 func (s *OperationService) getLastProcessedVersion(ctx context.Context, packageName string) string {
@@ -392,14 +441,14 @@ func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageNa
 	pkgType, detectErr := s.detectPackageType(ctx, packageName, latestTag)
 	if detectErr != nil {
 		// No type labels and no package.yaml on /version path - skip
-		if errors.Is(detectErr, errTooOldImage) {
+		if errors.Is(detectErr, ErrTooOldImage) {
 			return &PackageProcessResult{
 				Failed: []failedVersion{{
 					Error: detectErr.Error(),
 				}},
 			}, nil
 		}
-		if errors.Is(detectErr, errPackageTypeInvalid) {
+		if errors.Is(detectErr, ErrPackageTypeInvalid) {
 			return &PackageProcessResult{
 				Failed: []failedVersion{{Name: latestTag, Error: detectErr.Error()}},
 			}, nil
@@ -415,7 +464,7 @@ func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageNa
 		var ensureErr error
 		var isNew bool
 		switch pkgType {
-		case packageTypeModule:
+		case PackageTypeModule:
 			isNew, ensureErr = s.ensureModulePackageVersion(ctx, packageName, version, nil)
 		default:
 			isNew, ensureErr = s.ensureApplicationPackageVersion(ctx, packageName, version)
@@ -526,7 +575,7 @@ func (s *OperationService) handleMissingVersionPath(ctx context.Context, package
 	}
 
 	return &PackageProcessResult{
-		PackageType:   packageTypeModule,
+		PackageType:   PackageTypeModule,
 		Done:          foundTags,
 		Failed:        failedVersions,
 		FoundVersions: len(foundTags),
@@ -550,7 +599,7 @@ func (s *OperationService) handleMissingVersionPath(ctx context.Context, package
 //   - ("", errPackageTypeInvalid) - type could not be determined or is unknown
 //   - ("", errTooOldImage) - no labels and no package.yaml
 //   - ("", err) - hard error (network, tar corruption, etc.)
-func (s *OperationService) detectPackageType(ctx context.Context, packageName, latestTag string) (packageType, error) {
+func (s *OperationService) detectPackageType(ctx context.Context, packageName, latestTag string) (PackageType, error) {
 	pkg := s.svc.Package(packageName)
 
 	// Step 1: Read label from version image ConfigFile (<package>/version:<tag>)
@@ -564,8 +613,8 @@ func (s *OperationService) detectPackageType(ctx context.Context, packageName, l
 		versionConfig = nil
 	}
 	if versionConfig != nil && versionConfig.Config.Labels != nil {
-		if rawPackageType, hasLabel := versionConfig.Config.Labels[packageTypeLabel]; hasLabel {
-			return parsePackageType(rawPackageType)
+		if rawPackageType, hasLabel := versionConfig.Config.Labels[PackagesRepositoryOperationLabelPackageType]; hasLabel {
+			return ParsePackageType(rawPackageType)
 		}
 	}
 
@@ -583,14 +632,14 @@ func (s *OperationService) detectPackageType(ctx context.Context, packageName, l
 				slog.String("package", packageName),
 				slog.String("type", pkgDef.Type),
 			)
-			return parsePackageType(pkgDef.Type)
+			return ParsePackageType(pkgDef.Type)
 		}
 		// package.yaml exists but type field is empty
 		s.logger.Warn(
 			"package type not determined from labels or package.yaml",
 			slog.String("package", packageName),
 		)
-		return "", fmt.Errorf("%w: %s", errPackageTypeInvalid, packageName)
+		return "", fmt.Errorf("%w: %s", ErrPackageTypeInvalid, packageName)
 	}
 
 	// No labels and no package.yaml
@@ -598,11 +647,11 @@ func (s *OperationService) detectPackageType(ctx context.Context, packageName, l
 		"version image has no type labels and no package.yaml",
 		slog.String("package", packageName),
 	)
-	return "", fmt.Errorf("%w: %s", errTooOldImage, packageName)
+	return "", fmt.Errorf("%w: %s", ErrTooOldImage, packageName)
 }
 
 type PackageProcessResult struct {
-	PackageType   packageType
+	PackageType   PackageType
 	Done          []*semver.Version
 	Failed        []failedVersion
 	FoundVersions int
