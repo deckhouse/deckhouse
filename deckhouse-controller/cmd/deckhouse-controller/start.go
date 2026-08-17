@@ -89,6 +89,10 @@ func start(logger *log.Logger, _ *app.Config) func(cmd *cobra.Command, args []st
 
 		ctx := context.Background()
 		client := klient.New(klient.WithLogger(logger.Named("deckhouse")))
+		if err := client.Init(); err != nil {
+			return fmt.Errorf("init kubernetes client: %w", err)
+		}
+
 		ms := metricsstorage.NewMetricStorage(
 			metricsstorage.WithLogger(logger.Named("metric-storage")),
 		)
