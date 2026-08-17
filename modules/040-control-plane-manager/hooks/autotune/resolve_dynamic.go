@@ -65,8 +65,12 @@ func (r *dynamicResolver) resolve(ctx context.Context, deps resolveDeps, kind re
 
 	now := deps.dc.GetClock().Now().UTC()
 	if !measurement.dueForMetricsRun(now) {
-		deps.input.Logger.Info("autotune: metrics read recently enough, holding current requests",
-			"resource", kind, "lastMetricsRun", measurement.LastMetricsRun, "interval", metricsRunInterval)
+		deps.input.Logger.Info(
+			"autotune: metrics read recently enough, holding current requests",
+			"resource", kind,
+			"lastMetricsRun", measurement.LastMetricsRun,
+			"interval", metricsRunInterval.String(),
+		)
 		return r.hold(ctx, deps, kind)
 	}
 
