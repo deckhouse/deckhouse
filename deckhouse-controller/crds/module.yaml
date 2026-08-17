@@ -224,7 +224,7 @@ spec:
             type: object
         type: object
     served: true
-    storage: true
+    storage: false
     subresources:
       status: {}
   - additionalPrinterColumns:
@@ -235,23 +235,23 @@ spec:
       name: Repository
       priority: 1
       type: string
-    - jsonPath: .status.summary.state
-      name: State
+    - description: Module phase.
+      jsonPath: .status.phase
+      name: Phase
       type: string
-    - jsonPath: .status.conditions[?(@.type=='Installed')].status
-      name: Installed
+    - description: Module`s enabled status.
+      jsonPath: .status.conditions[?(@.type=='EnabledByModuleManager')].status
+      name: Enabled
+      type: string
+    - description: Module`s enabled information.
+      jsonPath: .status.conditions[?(@.type=='EnabledByModuleManager')].message
+      name: Disabled Message
       priority: 1
       type: string
-    - jsonPath: .status.conditions[?(@.type=='Ready')].status
+    - description: Module`s ready status.
+      jsonPath: .status.conditions[?(@.type=='IsReady')].status
       name: Ready
-      priority: 1
       type: string
-    - jsonPath: .status.summary.message
-      name: Message
-      type: string
-    - jsonPath: .metadata.creationTimestamp
-      name: Age
-      type: date
     name: v1alpha2
     schema:
       openAPIV3Schema:
@@ -294,6 +294,8 @@ spec:
               releaseChannel:
                 description: Release channel for the module package.
                 type: string
+                x-doc-examples:
+                - alpha.
               settings:
                 description: Configuration settings for the module.
                 type: object
@@ -302,6 +304,11 @@ spec:
                 description: Version of the settings schema. Distinct from packageVersion,
                   which selects the module package.
                 type: number
+              updatePolicy:
+                description: Update policy for the module package.
+                type: string
+                x-doc-examples:
+                - test-alpha.
             required:
             - packageVersion
             type: object
@@ -379,12 +386,44 @@ spec:
                     description: Semantic version of the installed module.
                     type: string
                 type: object
+              hooksState:
+                description: Hooks status report.
+                type: string
               lastAppliedConfiguration:
                 description: |-
                   LastAppliedConfiguration is the effective settings (user configuration merged
                   with config-schema defaults) that drove the most recent successful apply.
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
+              phase:
+                description: Module phase.
+                enum:
+                - Unavailable
+                - Available
+                - Downloading
+                - DownloadingError
+                - Reconciling
+                - Installing
+                - HooksDisabled
+                - WaitSyncTasks
+                - Downloaded
+                - Conflict
+                - Ready
+                - Error
+                type: string
+                x-doc-examples:
+                - Unavailable
+                - Available
+                - Downloading
+                - DownloadingError
+                - Reconciling
+                - Installing
+                - HooksDisabled
+                - WaitSyncTasks
+                - Downloaded
+                - Conflict
+                - Ready
+                - Error
               summary:
                 description: |-
                   Summary aggregates the high-level user-facing state, message and
@@ -425,6 +464,6 @@ spec:
         - spec
         type: object
     served: true
-    storage: false
+    storage: true
     subresources:
       status: {}
