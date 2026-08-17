@@ -372,7 +372,7 @@ maxOpenFiles: 1000000
   {{- end }}
 {{- end }}
 maxPods: {{ $max_pods }}
-nodeStatusReportFrequency: {{ .nodeStatusReportFrequency | default "1m" }}
+nodeStatusReportFrequency: 1m
 nodeStatusUpdateFrequency: {{ .nodeStatusUpdateFrequency | default "10" }}s
 podsPerCore: 0
 podPidsLimit: -1
