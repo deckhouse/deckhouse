@@ -2366,7 +2366,7 @@ index 00000000000..90094074c07
 +	}
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
-index f832bb4a4e8..da3214bb97d 100644
+index d1dc5a091a3..15e61c38d91 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
 @@ -37,6 +37,7 @@ import (
@@ -2525,7 +2525,7 @@ index f832bb4a4e8..da3214bb97d 100644
  		return handlers.PatchResource(storage, requestScope, a, supportedTypes)
  	case "delete":
  		allowsOptions := true
-@@ -424,6 +485,37 @@ func (r *crdHandler) serveResource(w http.ResponseWriter, req *http.Request, req
+@@ -424,16 +485,64 @@ func (r *crdHandler) serveResource(w http.ResponseWriter, req *http.Request, req
  	}
  }
  
@@ -2563,7 +2563,34 @@ index f832bb4a4e8..da3214bb97d 100644
  func (r *crdHandler) serveStatus(w http.ResponseWriter, req *http.Request, requestInfo *apirequest.RequestInfo, crdInfo *crdInfo, terminating bool, supportedTypes []string) http.HandlerFunc {
  	requestScope := crdInfo.statusRequestScopes[requestInfo.APIVersion]
  	storage := crdInfo.storages[requestInfo.APIVersion].Status
-@@ -528,6 +620,15 @@ func (r *crdHandler) updateCustomResourceDefinition(oldObj, newObj interface{})
+ 
++	needsMasking := r.checkNeedsMasking(req.Context(), requestInfo, crdInfo)
++	var sensitiveSchemaSlice []*structuralschema.Structural
++	if needsMasking {
++		for _, s := range crdInfo.sensitiveSchemas {
++			sensitiveSchemaSlice = append(sensitiveSchemaSlice, s)
++		}
++	}
++
+ 	switch requestInfo.Verb {
+ 	case "get":
++		if needsMasking {
++			return handlers.GetResource(&maskingGetter{Getter: storage, schemas: sensitiveSchemaSlice}, requestScope)
++		}
+ 		return handlers.GetResource(storage, requestScope)
+ 	case "update":
++		if needsMasking {
++			return handlers.UpdateResource(&maskingUpdater{Updater: storage, schemas: sensitiveSchemaSlice}, requestScope, r.admission)
++		}
+ 		return handlers.UpdateResource(storage, requestScope, r.admission)
+ 	case "patch":
++		if needsMasking {
++			return handlers.PatchResource(&maskingPatcher{Patcher: storage, schemas: sensitiveSchemaSlice}, requestScope, r.admission, supportedTypes)
++		}
+ 		return handlers.PatchResource(storage, requestScope, r.admission, supportedTypes)
+ 	default:
+ 		responsewriters.ErrorNegotiated(
+@@ -528,6 +637,15 @@ func (r *crdHandler) updateCustomResourceDefinition(oldObj, newObj interface{})
  func (r *crdHandler) removeStorage_locked(uid types.UID) {
  	storageMap := r.customStorage.Load().(crdStorageMap)
  	if oldInfo, ok := storageMap[uid]; ok {
@@ -2579,7 +2606,7 @@ index f832bb4a4e8..da3214bb97d 100644
  		// Copy because we cannot write to storageMap without a race
  		// as it is used without locking elsewhere.
  		storageMap2 := storageMap.clone()
-@@ -565,6 +666,14 @@ func (r *crdHandler) removeDeadStorage() {
+@@ -565,6 +683,14 @@ func (r *crdHandler) removeDeadStorage() {
  	for uid, crdInfo := range storageMap {
  		if _, ok := storageMap2[uid]; !ok {
  			klog.V(4).Infof("Removing dead CRD storage for %s/%s", crdInfo.spec.Group, crdInfo.spec.Names.Kind)
@@ -2594,7 +2621,7 @@ index f832bb4a4e8..da3214bb97d 100644
  			go r.tearDown(crdInfo)
  		}
  	}
-@@ -606,6 +715,14 @@ func (r *crdHandler) destroy() {
+@@ -606,6 +732,14 @@ func (r *crdHandler) destroy() {
  
  	storageMap := r.customStorage.Load().(crdStorageMap)
  	for _, crdInfo := range storageMap {
@@ -2609,7 +2636,7 @@ index f832bb4a4e8..da3214bb97d 100644
  		for _, storage := range crdInfo.storages {
  			// DestroyFunc have to be implemented in idempotent way,
  			// so the potential race with r.tearDown() (being called
-@@ -698,6 +815,17 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
+@@ -698,6 +832,17 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
  		structuralSchemas[v.Name] = s
  	}
  
@@ -2627,7 +2654,7 @@ index f832bb4a4e8..da3214bb97d 100644
  	openAPIModels, err := buildOpenAPIModelsForApply(r.staticOpenAPISpec, crd)
  	if err != nil {
  		utilruntime.HandleError(fmt.Errorf("error building openapi models for %s: %v", crd.Name, err))
-@@ -1092,9 +1220,20 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
+@@ -1109,9 +1254,20 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
  		deprecated:          deprecated,
  		warnings:            warnings,
  		storageVersion:      storageVersion,
@@ -2665,10 +2692,10 @@ index 12b6f7c896a..8fbe1c80db9 100644
  	}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_access.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_access.go
 new file mode 100644
-index 00000000000..617d6e4c9f0
+index 00000000000..cb7830b717d
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_access.go
-@@ -0,0 +1,129 @@
+@@ -0,0 +1,163 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -2797,6 +2824,40 @@ index 00000000000..617d6e4c9f0
 +		event.Object = plainObj
 +		return event, true
 +	}), nil
++}
++
++type maskingUpdater struct {
++	rest.Updater
++	schemas []*structuralschema.Structural
++}
++
++func (s *maskingUpdater) Update(ctx context.Context, name string, objInfo rest.UpdatedObjectInfo, createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc, forceAllowCreate bool, options *metav1.UpdateOptions) (runtime.Object, bool, error) {
++	obj, created, err := s.Updater.Update(ctx, name, objInfo, createValidation, updateValidation, forceAllowCreate, options)
++	if err != nil {
++		return obj, created, err
++	}
++	obj = obj.DeepCopyObject()
++	if u, ok := obj.(*unstructured.Unstructured); ok {
++		maskWithAllSchemas(u.Object, s.schemas)
++	}
++	return obj, created, nil
++}
++
++type maskingPatcher struct {
++	rest.Patcher
++	schemas []*structuralschema.Structural
++}
++
++func (s *maskingPatcher) Update(ctx context.Context, name string, objInfo rest.UpdatedObjectInfo, createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc, forceAllowCreate bool, options *metav1.UpdateOptions) (runtime.Object, bool, error) {
++	obj, created, err := s.Patcher.Update(ctx, name, objInfo, createValidation, updateValidation, forceAllowCreate, options)
++	if err != nil {
++		return obj, created, err
++	}
++	obj = obj.DeepCopyObject()
++	if u, ok := obj.(*unstructured.Unstructured); ok {
++		maskWithAllSchemas(u.Object, s.schemas)
++	}
++	return obj, created, nil
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_access_test.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_access_test.go
 new file mode 100644
