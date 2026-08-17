@@ -1,0 +1,58 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: Application
+metadata:
+  name: test-app
+  namespace: foobar
+  finalizers:
+    - application.deckhouse.io/statistic-registered
+  ownerReferences:
+    - apiVersion: deckhouse.io/v1alpha1
+      kind: ApplicationPackageVersion
+      name: deckhouse-test-v0.9.0
+      uid: removed-version-uid
+      controller: false
+      blockOwnerDeletion: true
+    - apiVersion: deckhouse.io/v1alpha1
+      kind: ApplicationPackage
+      name: removed-test
+      uid: removed-package-uid
+      controller: false
+      blockOwnerDeletion: true
+    - apiVersion: v1
+      kind: ConfigMap
+      name: unrelated
+      uid: configmap-uid
+spec:
+  packageName: test
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ApplicationPackage
+metadata:
+  name: test
+  uid: package-uid
+status:
+  availableRepositories:
+    - deckhouse
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ApplicationPackageVersion
+metadata:
+  name: deckhouse-test-v1.0.1
+  uid: version-uid
+spec:
+  packageName: test
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepository
+metadata:
+  name: deckhouse
+spec:
+  registry:
+    scheme: https
+    repo: registry.example.com/test
+    dockerCfg: test-docker-cfg
+    ca: test-ca

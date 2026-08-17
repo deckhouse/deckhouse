@@ -1,0 +1,39 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: Application
+metadata:
+  name: test-app
+  namespace: foobar
+spec:
+  packageName: test
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ApplicationPackage
+metadata:
+  name: test
+  uid: package-uid
+status:
+  availableRepositories:
+    - deckhouse
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ApplicationPackageVersion
+metadata:
+  name: deckhouse-test-v1.0.1
+  uid: version-uid
+spec:
+  packageName: test
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepository
+metadata:
+  name: deckhouse
+spec:
+  registry:
+    scheme: https
+    repo: registry.example.com/test
+    dockerCfg: test-docker-cfg
+    ca: test-ca

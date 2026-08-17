@@ -1,0 +1,83 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: Application
+metadata:
+  name: test-app
+  namespace: foobar
+  finalizers:
+    - application.deckhouse.io/statistic-registered
+  ownerReferences:
+    - apiVersion: deckhouse.io/v1alpha1
+      kind: ApplicationPackageVersion
+      name: deckhouse-old-test-v1.0.1
+      uid: old-version-uid
+      controller: false
+      blockOwnerDeletion: true
+    - apiVersion: deckhouse.io/v1alpha1
+      kind: ApplicationPackage
+      name: old-test
+      uid: old-package-uid
+      controller: false
+      blockOwnerDeletion: true
+spec:
+  packageName: test
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ApplicationPackage
+metadata:
+  name: old-test
+  uid: old-package-uid
+status:
+  availableRepositories:
+    - deckhouse
+  usedBy:
+    - namespace: foobar
+      name: test-app
+      version: v1.0.1
+  usedByCount: 1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ApplicationPackage
+metadata:
+  name: test
+  uid: package-uid
+status:
+  availableRepositories:
+    - deckhouse
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ApplicationPackageVersion
+metadata:
+  name: deckhouse-old-test-v1.0.1
+  uid: old-version-uid
+spec:
+  packageName: old-test
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.1
+status:
+  usedBy:
+    - namespace: foobar
+      name: test-app
+  usedByCount: 1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ApplicationPackageVersion
+metadata:
+  name: deckhouse-test-v1.0.1
+  uid: version-uid
+spec:
+  packageName: test
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepository
+metadata:
+  name: deckhouse
+spec:
+  registry:
+    scheme: https
+    repo: registry.example.com/test
+    dockerCfg: test-docker-cfg
+    ca: test-ca
