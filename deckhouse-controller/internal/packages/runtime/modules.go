@@ -363,8 +363,8 @@ func (r *Runtime) cleanupModule(name string) func() {
 	}
 }
 
-// FilterByExclusiveGroup returns an error if there is an enabled module with the same exclusive group.
-func (r *Runtime) FilterByExclusiveGroup(group string) error {
+// ValidateModuleExclusiveGroup returns an error if there is an enabled module with the same exclusive group.
+func (r *Runtime) ValidateModuleExclusiveGroup(group string) error {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
