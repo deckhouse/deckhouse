@@ -161,6 +161,13 @@ func getDexAuthenticator(_ context.Context, input *go_hook.HookInput) error {
 		credentialsByID[dexSecret.ID] = dexSecret.Credentials
 	}
 
+	// Authenticators created before the templates stopped copying the kubernetes OAuth2Client
+	// secret into the application namespace carry that shared secret in their credentials
+	// Secret, and the "credentials" snapshot above reads it straight back into appDexSecret.
+	// Keep it to detect and rotate those, otherwise the shared secret would never leave the
+	// application namespace.
+	sharedClientSecret := input.Values.Get(kubernetesDexClientAppSecretPath).String()
+
 	dexAuthenticators := make([]DexAuthenticator, 0, len(authenticators))
 	// Build computed names map: key "<name>@<namespace>" => {name, truncated, hash}
 	namesMap := make(map[string]interface{})
@@ -181,6 +188,11 @@ func getDexAuthenticator(_ context.Context, input *go_hook.HookInput) error {
 		// Migrate all cookie secret from 20 bytes length to 24 bytes
 		if len(existedCredentials.CookieSecret) < 24 {
 			existedCredentials.CookieSecret = pwgen.AlphaNum(24)
+		}
+
+		// Migrate authenticators that reuse the shared kubernetes client secret to their own one
+		if sharedClientSecret != "" && existedCredentials.AppDexSecret == sharedClientSecret {
+			existedCredentials.AppDexSecret = pwgen.AlphaNum(20)
 		}
 
 		if raw := dexAuthenticator.AllowAccessToKubernetesAnnotation; raw != nil {
