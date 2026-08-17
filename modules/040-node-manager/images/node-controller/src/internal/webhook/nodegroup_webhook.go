@@ -54,6 +54,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	nodecommon "github.com/deckhouse/node-controller/internal/common"
 )
 
 var webhookLog = logf.Log.WithName("nodegroup-webhook")
@@ -173,6 +174,10 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 
 	if ng.Spec.CRI != nil && ng.Spec.CRI.Type == v1.CRITypeDocker {
 		return admission.Denied("it is forbidden to set cri type to Docker")
+	}
+
+	if nodecommon.IsCSEEdition() && ng.Spec.CRI != nil && ng.Spec.CRI.Type == v1.CRITypeContainerd {
+		return admission.Denied("CRI Containerd (containerd v1) is not supported in the CSE edition, use ContainerdV2")
 	}
 
 	if ng.Spec.CRI != nil {
@@ -437,7 +442,11 @@ func getCRIType(ng *v1.NodeGroup, defaultCRI string) string {
 	if defaultCRI != "" {
 		return defaultCRI
 	}
-	return "Containerd"
+	// CSE builds no containerd v1 package, so its implicit default cannot be v1.
+	if nodecommon.IsCSEEdition() {
+		return string(v1.CRITypeContainerdV2)
+	}
+	return string(v1.CRITypeContainerd)
 }
 
 // ClusterConfig holds relevant fields from d8-cluster-configuration Secret

@@ -738,6 +738,8 @@ spec:
                         Если не указан, используется значение параметра `defaultCRI` ClusterConfiguration.
 
                         > **Внимание.** Поддержка Docker считается устаревшей.
+
+                        > **Внимание.** В редакции CSE доступен только containerd v2.
                     containerd:
                       description: |
                         Параметры работы containerd.
