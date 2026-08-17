@@ -154,8 +154,8 @@
         }
       ],
       "status": "not_affected",
-      "justification": "vulnerable_code_not_present",
-      "impact_statement": "CVE-2026-41579 — symlink-атака через вредоносный /dev в образе контейнера; уязвимы функции setupPtmx/setupDevSymlinks в пакете github.com/opencontainers/runc/libcontainer (libcontainer/rootfs_linux.go), то есть логика создания rootfs, выполняемая только OCI runtime при запуске контейнера. Компоненты Kubernetes контейнеры не запускают: это делают containerd и отдельный бинарник runc (в Deckhouse — runc 1.3.6, уязвимость исправлена). По графу зависимостей (go list -deps, GOOS=linux) из runc импортируются только вспомогательные подпакеты — libcontainer/cgroups*, devices, configs, utils, intelrdt, — но не сам пакет libcontainer, поэтому уязвимый код в бинарники не компилируется.",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость не применима к компонентам, которые не выполняют запуск контейнеров и не используют runc в качестве исполняемого инструмента или библиотеки контейнерного рантайма; таким образом, она не эксплуатируема в данном контексте.",
       "timestamp": "2026-08-17T12:00:00Z"
     },
     {
