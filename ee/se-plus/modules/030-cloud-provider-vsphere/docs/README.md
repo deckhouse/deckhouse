@@ -6,8 +6,13 @@ description: "Managing cloud resources in Deckhouse Kubernetes Platform based on
 The `cloud-provider-vsphere` module is responsible for interacting with the [VMware vSphere-based](https://www.vmware.com/products/vsphere.html) cloud resources. It allows the [node manager](/node-manager/) module to use vSphere resources for provisioning nodes for the specified [node group](/node-manager/cr.html#nodegroup) (a group of nodes that are acted upon as if they were a single entity).
 
 The `cloud-provider-vsphere` module:
-- Manages vSphere resources using the `cloud-controller-manager` (CCM) module:
-  * The CCM module creates network routes for the `PodNetwork` network on the vSphere side.
-  * The CCM module updates the metadata of the vSphere VirtualMachines and Kubernetes Nodes and deletes nodes that are no longer in vSphere.
-- Provisions disks on datastore in vSphere via the First-Class Disk mechanism using the `CSI storage` component.
-- Registers with the [node-manager](/node-manager/) module so that [VsphereInstanceClasses](cr.html#vsphereinstanceclass) can be used when creating the [NodeGroup](/node-manager/cr.html#nodegroup).
+
+- Manages vSphere resources using the `cloud-controller-manager` module:
+  - Creates network routes for the PodNetwork network on the vSphere side.
+  - Keeps metadata of vSphere VirtualMachines and Kubernetes Nodes up to date. Removes Kubernetes nodes that no longer exist in vSphere.
+- Provisions disks on vSphere datastores using the First-Class Disk mechanism via the `CSI storage` component.
+- Registers with the [`node-manager`](/node-manager/) module so that [VsphereInstanceClass resources](cr.html#vsphereinstanceclass) can be used when configuring a [NodeGroup](/node-manager/cr.html#nodegroup).
+
+{% alert level="warning" %}
+This module is transitioning CloudEphemeral node management from Machine Controller Manager (MCM) to Cluster API (CAPI). Existing NodeGroups continue to use MCM, while newly created NodeGroups use CAPI by default. For the migration procedure for existing groups, see [How to migrate node groups to Cluster API (CAPI)](/products/kubernetes-platform/documentation/v1/faq.html#how-to-migrate-node-groups-to-cluster-api-capi).
+{% endalert %}
