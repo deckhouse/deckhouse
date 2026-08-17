@@ -18,7 +18,6 @@ package registry
 
 import (
 	"fmt"
-	"slices"
 
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
@@ -47,40 +46,16 @@ func (c *bashibleConfigSecret) validate() error {
 	return cfg.Validate()
 }
 
+// toRegistryData turns the module's configuration into the node-side context.
+//
+// Delegated to Config.ToContext rather than copied field by field: this used to be a
+// second, hand-written translation of the same structure, and a field added on one side
+// silently never reached a node. The only thing that belongs here is the one fact
+// ToContext cannot know — that this context came from the registry module at all.
 func (c bashibleConfigSecret) toRegistryData() *RegistryData {
-	ret := &RegistryData{
-		RegistryModuleEnable: true,
-		Mode:                 c.Mode,
-		Version:              c.Version,
-		ImagesBase:           c.ImagesBase,
-		ProxyEndpoints:       slices.Clone(c.ProxyEndpoints),
-		Hosts:                make(map[string]bashible.ContextHosts, len(c.Hosts)),
-	}
+	ctx := bashible.Config(c).ToContext()
+	ctx.RegistryModuleEnable = true
 
-	for key, hosts := range c.Hosts {
-		rh := bashible.ContextHosts{
-			Mirrors: make([]bashible.ContextMirrorHost, 0, len(hosts.Mirrors)),
-		}
-
-		for _, m := range hosts.Mirrors {
-			mh := bashible.ContextMirrorHost{
-				Host:   m.Host,
-				Scheme: m.Scheme,
-				CA:     m.CA,
-				Auth: bashible.ContextAuth{
-					Username: m.Auth.Username,
-					Password: m.Auth.Password,
-					Auth:     m.Auth.Auth,
-				},
-			}
-			for _, rw := range m.Rewrites {
-				mh.Rewrites = append(mh.Rewrites, bashible.ContextRewrite(rw))
-			}
-
-			rh.Mirrors = append(rh.Mirrors, mh)
-		}
-
-		ret.Hosts[key] = rh
-	}
-	return ret
+	ret := RegistryData(ctx)
+	return &ret
 }

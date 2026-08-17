@@ -18,6 +18,7 @@ shell:
     - chmod +x /src/scripts/*
     - git config --global advice.detachedHead false
     - git clone --depth 1 --single-branch --branch {{ $version }} $(cat /run/secrets/SOURCE_REPO)/deckhouse/3p-distribution.git /src/distribution
+    - /src/scripts/no-proxy-expiry.sh /src/distribution
     - rm -rf /src/distribution/.git
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"

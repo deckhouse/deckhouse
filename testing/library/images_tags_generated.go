@@ -358,7 +358,10 @@ var DefaultImagesDigests = map[string]interface{}{
 		"dockerDistribution":  "imageHash-registry-dockerDistribution",
 		"mirrorer":            "imageHash-registry-mirrorer",
 		"nodeservicesManager": "imageHash-registry-nodeservicesManager",
+		"registryAgent":       "imageHash-registry-registryAgent",
+		"registryController":  "imageHash-registry-registryController",
 		"registryProxy":       "imageHash-registry-registryProxy",
+		"registrySyncer":      "imageHash-registry-registrySyncer",
 		"syncer":              "imageHash-registry-syncer",
 	},
 	"registryPackagesProxy": map[string]interface{}{
@@ -414,6 +417,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"nfsMount282":                     "imageHash-registrypackages-nfsMount282",
 		"nvmeCli211":                      "imageHash-registrypackages-nvmeCli211",
 		"pause":                           "imageHash-registrypackages-pause",
+		"registryAgent":                   "imageHash-registrypackages-registryAgent",
 		"registryProxy":                   "imageHash-registrypackages-registryProxy",
 		"rppGet":                          "imageHash-registrypackages-rppGet",
 		"socat1734":                       "imageHash-registrypackages-socat1734",

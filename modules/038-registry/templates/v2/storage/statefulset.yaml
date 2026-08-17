@@ -1,0 +1,399 @@
+{{- define "registry_storage_distribution_resources" }}
+cpu: 50m
+memory: 150Mi
+{{- end }}
+
+{{- define "registry_storage_kube_rbac_proxy_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
+{{- define "registry_storage_auth_resources" }}
+cpu: 10m
+memory: 30Mi
+{{- end }}
+
+{{- define "registry_storage_syncer_resources" }}
+cpu: 25m
+memory: 50Mi
+{{- end }}
+
+{{- /*
+The storage of the controller-based implementation.
+
+Rendered only under the implementation discriminator, so on a cluster still running
+the legacy implementation none of this exists.
+
+Two containers on purpose. The registry reads its configuration once at startup, so
+a credential or certificate change means the process has to come back — and the
+syncer brings it back by signalling it, which needs a shared process namespace. The
+pod object is never touched in the process, which is exactly what keeps such a
+change working while the Deckhouse operator is down.
+*/ -}}
+{{- if eq (include "registry_v2_caches" .) "true" }}
+{{- $storePath := ((.Values.registry.internal.v2).registryConfig).storage | default dict }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: registry
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "registry-storage")) | nindent 2 }}
+spec:
+  # A headless service: the agents reach the storage through the node addresses the
+  # controller puts into their layout, and replication addresses a specific replica.
+  # The stable name is what every image reference in the cluster is built from.
+  clusterIP: None
+  selector:
+    app: registry-storage
+  ports:
+  - name: registry
+    port: 5001
+    targetPort: 5001
+    protocol: TCP
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: registry-storage
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "registry-storage")) | nindent 2 }}
+spec:
+  maxUnavailable: {{ include "helm_lib_is_ha_to_value" (list $ 1 0) }}
+  selector:
+    matchLabels:
+      app: registry-storage
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: registry-storage
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "registry-storage")) | nindent 2 }}
+spec:
+  serviceName: registry
+  # One replica per master node. The cache is part of the control plane: putting it
+  # on every node would multiply the disk cost by the size of the cluster.
+  #
+  # Counted from clusterMasterCount, which counts exactly the nodes this StatefulSet is
+  # scheduled onto — the ones labelled `node-role.kubernetes.io/control-plane`, the same
+  # selector as the nodeSelector below. The obvious-looking alternative,
+  # `d8SpecificNodeCountByRole.master`, is keyed by `node-role.deckhouse.io/<role>` labels,
+  # which master nodes do not carry under that name: the key is absent, the default applies,
+  # and a three-master cluster silently runs one replica. It did — with no redundancy and no
+  # replication happening at all, while the StatefulSet reported 1/1 ready and every check
+  # that compares ready against desired passed.
+  replicas: {{ $.Values.global.discovery.clusterMasterCount | default 1 }}
+  podManagementPolicy: Parallel
+  # Replaced by the controller, one replica at a time, and never the leader first.
+  #
+  # A StatefulSet's own RollingUpdate goes by ordinal, highest first. Which ordinal holds the fill
+  # lease is not a property of the ordinal, so the built-in order has an even chance of taking the
+  # leader down first and handing the role over during an update that was about to restart the new
+  # holder as well. What the design asks for instead is followers first and the leader last, which
+  # no update strategy can express — the lease is not something a StatefulSet knows about.
+  #
+  # OnDelete makes the StatefulSet stop replacing pods on its own: it keeps the new revision ready
+  # and waits. The registry-storage-update controller then deletes one pod at a time, checking that
+  # the node already holds the new images and that every other replica is serving before it does.
+  updateStrategy:
+    type: OnDelete
+  selector:
+    matchLabels:
+      app: registry-storage
+  template:
+    metadata:
+      labels:
+        app: registry-storage
+    spec:
+      {{- include "helm_lib_priority_class" (tuple $ "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple $ "master") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple $ "any-node" "with-uninitialized") | nindent 6 }}
+      # Root, explicitly, and the same choice the previous implementation made for the same
+      # component.
+      #
+      # Two things here need it. The registry reads its certificate material from a Secret
+      # mount, whose files are owned by root with mode 0400 — a Secret volume has no other
+      # owner to offer. And it writes the store to a hostPath on the node, which belongs to
+      # root there. Left unset, the user comes from the base image, which is distroless and
+      # runs as 64535: the registry then panics on "permission denied" opening its own token
+      # bundle, and the pod crash-loops on a message about a file that is plainly present.
+      #
+      # Stated rather than inherited on purpose. An unset security context does not mean root;
+      # it means whatever the base image happens to say, decided somewhere this file does not
+      # mention.
+      securityContext:
+        runAsUser: 0
+        runAsGroup: 0
+        runAsNonRoot: false
+        seccompProfile:
+          type: RuntimeDefault
+      automountServiceAccountToken: true
+      serviceAccountName: registry-storage
+      terminationGracePeriodSeconds: 30
+      # One replica per node, since each one owns the store on its host.
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app: registry-storage
+            topologyKey: kubernetes.io/hostname
+      # The registry binds the node address, and the node agent binds the loopback
+      # one — the same port on different interfaces. That split only works in the
+      # host network namespace, where the node address actually exists. It is also
+      # what lets the storage serve before the cluster network is up, which matters
+      # because the network's own images come from here.
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      # The syncer signals the registry process to make it re-read its
+      # configuration.
+      shareProcessNamespace: true
+      imagePullSecrets:
+      - name: deckhouse-registry
+      containers:
+      - name: distribution
+        image: {{ include "helm_lib_module_image" (list $ "dockerDistribution") }}
+        imagePullPolicy: IfNotPresent
+        args: ["serve", "/config/config.yaml"]
+        ports:
+        - name: registry
+          containerPort: 5001
+        volumeMounts:
+        - name: config
+          mountPath: /config
+        - name: pki
+          mountPath: /pki
+        - name: data
+          mountPath: /data
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $ | nindent 12 }}
+            {{- include "registry_storage_distribution_resources" $ | nindent 12 }}
+      # The write endpoint: a second registry over the SAME data directory, which is what `d8 mirror
+      # push` and any operator pushing their own modules write to.
+      #
+      # Two instances rather than one, because one cannot be both: docker distribution refuses every
+      # write while it is configured as a pull-through cache (measured — `POST /v2/.../blobs/uploads/`
+      # answered UNSUPPORTED). Publishing through the serving instance therefore meant turning the cache
+      # off, which confined publication to air-gap and made it impossible to push a bundle BEFORE the
+      # transition the bundle is supposed to make safe.
+      #
+      # Its port differs from the serving one because this pod is host-networked: the same port would
+      # mean whichever process starts second dies with `address already in use`.
+      - name: distribution-push
+        image: {{ include "helm_lib_module_image" (list $ "dockerDistribution") }}
+        imagePullPolicy: IfNotPresent
+        args: ["serve", "/config-push/config.yaml"]
+        ports:
+        - name: registry-push
+          containerPort: 5003
+        volumeMounts:
+        - name: config-push
+          mountPath: /config-push
+        - name: pki
+          mountPath: /pki
+        - name: data
+          mountPath: /data
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $ | nindent 12 }}
+            {{- include "registry_storage_distribution_resources" $ | nindent 12 }}
+      # The token service. The registry sends every client here to exchange
+      # credentials for a scoped token, and fetches the token on the client's behalf
+      # over the loopback address — which is why this listens on loopback only and
+      # needs neither a published address nor a certificate covering one.
+      #
+      # Without it the registry would advertise a token endpoint that answers nowhere,
+      # and every authenticated pull from the cache would fail at the exchange.
+      - name: auth
+        image: {{ include "helm_lib_module_image" (list $ "dockerAuth") }}
+        imagePullPolicy: IfNotPresent
+        args:
+        - -logtostderr
+        - /auth/auth_config.yaml
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 5051
+            scheme: HTTPS
+            # Explicit, because the pod shares the host network and the default probe
+            # host would be the node address, where this does not listen.
+            host: 127.0.0.1
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 5051
+            scheme: HTTPS
+            host: 127.0.0.1
+        volumeMounts:
+        - name: auth-config
+          mountPath: /auth
+          readOnly: true
+        - name: pki
+          mountPath: /pki
+          readOnly: true
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $ | nindent 12 }}
+            {{- include "registry_storage_auth_resources" $ | nindent 12 }}
+      # What the cluster scrapes, for both the registry and the syncer. Two upstreams
+      # behind one proxy rather than two proxies: they are one pod, they are read by one
+      # scraper, and the authorization decision is the same for both.
+      #
+      # The registry's own metrics endpoint is part of its debug listener, which also
+      # serves pprof — so it binds loopback and nothing but this reaches it.
+      - name: kube-rbac-proxy
+        image: {{ include "helm_lib_module_common_image" (list $ "kubeRbacProxy") }}
+        imagePullPolicy: IfNotPresent
+        args:
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4285"
+        - "--v=2"
+        - "--logtostderr=true"
+        - "--stale-cache-interval=1h30m"
+        env:
+        # The node address, because the pod shares the host network and has no address of
+        # its own.
+        - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        - name: KUBE_RBAC_PROXY_CONFIG
+          value: |
+            upstreams:
+            - upstream: http://127.0.0.1:4284/metrics
+              path: /metrics
+              authorization:
+                resourceAttributes:
+                  namespace: d8-system
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: statefulsets
+                  subresource: prometheus-metrics
+                  name: registry-storage
+            - upstream: http://127.0.0.1:5002/metrics
+              path: /registry/metrics
+              authorization:
+                resourceAttributes:
+                  namespace: d8-system
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: statefulsets
+                  subresource: prometheus-metrics
+                  name: registry-storage
+        ports:
+        - name: https-metrics
+          containerPort: 4285
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $ | nindent 12 }}
+            {{- include "registry_storage_kube_rbac_proxy_resources" $ | nindent 12 }}
+      - name: syncer
+        image: {{ include "helm_lib_module_image" (list $ "registrySyncer") }}
+        imagePullPolicy: IfNotPresent
+        args:
+        - --config-path=/config/config.yaml
+        # The write endpoint's configuration, rendered from the same spec by the same pass so the two
+        # instances cannot drift on authentication or on where the blobs live.
+        - --write-config-path=/config-push/config.yaml
+        # Beside the configuration, on the writable emptyDir: /pki is a Secret mount and
+        # the syncer has to be able to remove this file when the upstream stops carrying a CA.
+        - --upstream-ca-path=/config/upstream-registry-ca.crt
+        - --registry-process-name=registry
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: NODE_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        # The identity of this replica's own registry, needed to fill it and to read
+        # its catalogue. From the pod rather than from the custom resource: the
+        # storage has to stay reachable even when the desired state cannot be read.
+        - name: REGISTRY_HTTP_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: registry-storage-access
+              key: http-secret
+        - name: REGISTRY_TOKEN_ISSUER
+          valueFrom:
+            secretKeyRef:
+              name: registry-storage-access
+              key: token-issuer
+        - name: REGISTRY_LOCAL_CA
+          valueFrom:
+            secretKeyRef:
+              name: registry-storage-access
+              key: ca.crt
+        # The sync account, not the one the nodes pull with.
+        #
+        # This client both reads and WRITES: it fills the store from an upstream and replicates it
+        # from the leader. The node account cannot write — deliberately, since it is on every node —
+        # so a syncer holding it asked for `pull,push`, was issued `pull`, and had every reference
+        # refused with "insufficient scope". Measured on a three-master air-gapped cluster, where it
+        # left both followers holding nothing while reporting that they were replicating.
+        - name: REGISTRY_LOCAL_USER
+          valueFrom:
+            secretKeyRef:
+              name: registry-storage-access
+              key: sync-username
+        - name: REGISTRY_LOCAL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: registry-storage-access
+              key: sync-password
+        volumeMounts:
+        - name: config
+          mountPath: /config
+        # And the write endpoint's configuration directory, because the syncer is what WRITES that file.
+        #
+        # Missing here at first, and the failure was one-sided in the worst way: the second instance
+        # mounted the directory and waited for a file nobody could put there, so it crash-looped for
+        # eight restarts while every other container reported ready — measured on `ly-cache`, where it
+        # took the bootstrap down with it.
+        - name: config-push
+          mountPath: /config-push
+        - name: pki
+          mountPath: /pki
+        # The store, so that the garbage collection can reclaim the blobs its deletions leave
+        # unreachable. The collector walks the filesystem directly, which is why reclaiming
+        # cannot be done through the registry API alone.
+        - name: data
+          mountPath: /data
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $ | nindent 12 }}
+            {{- include "registry_storage_syncer_resources" $ | nindent 12 }}
+      volumes:
+      # The rendered configuration lives on an emptyDir: it is derived state,
+      # rewritten by the syncer on every change, and must not survive as a stale
+      # copy across a pod recreation.
+      - name: config
+        emptyDir: {}
+      # Its own emptyDir rather than a second file on the serving instance's: a single directory shared
+      # by two registries invites one process to be handed the other's configuration by a path typo,
+      # and the failure of that would be a cache that accepts pushes.
+      - name: config-push
+        emptyDir: {}
+      - name: pki
+        secret:
+          secretName: registry-storage-pki
+          defaultMode: 0400
+      - name: auth-config
+        secret:
+          secretName: registry-storage-auth-config
+          defaultMode: 0400
+      # The blobs live on the host, at the path the design fixes as a constant. Not
+      # a persistent volume claim: the storage has to come up before any storage
+      # provisioner does, since the provisioner's own images come from here.
+      - name: data
+        hostPath:
+          path: {{ $storePath.path | default "/opt/deckhouse/registry" }}/local_data
+          type: DirectoryOrCreate
+{{- end }}

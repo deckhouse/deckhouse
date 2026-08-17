@@ -27,10 +27,11 @@ import (
 )
 
 // newManifestBuilder creates a new ManifestBuilder instance.
-func newManifestBuilder(modeModel ModeModel, legacyMode bool) *ManifestBuilder {
+func newManifestBuilder(modeModel ModeModel, legacyMode, bundleBootstrap bool) *ManifestBuilder {
 	return &ManifestBuilder{
-		modeModel:  modeModel,
-		legacyMode: legacyMode,
+		modeModel:       modeModel,
+		legacyMode:      legacyMode,
+		bundleBootstrap: bundleBootstrap,
 	}
 }
 
@@ -38,6 +39,11 @@ func newManifestBuilder(modeModel ModeModel, legacyMode bool) *ManifestBuilder {
 type ManifestBuilder struct {
 	modeModel  ModeModel
 	legacyMode bool
+
+	// bundleBootstrap reaches the node through the bashible context, where it tells the bootstrap
+	// steps that this cluster's registry will be owned by the current implementation and not by the
+	// one whose steps are being borrowed to fill it.
+	bundleBootstrap bool
 }
 
 // DeckhouseRegistrySecretData generates secret data for Deckhouse registry configuration.
@@ -148,7 +154,8 @@ func (b *ManifestBuilder) BashibleContext(pkiProvider PKIProvider) (BashibleCont
 	}
 
 	ctx.Bootstrap = &bashible.ContextBootstrap{
-		Init: pki,
+		Init:       pki,
+		FromBundle: b.bundleBootstrap,
 	}
 
 	if b.modeModel.Mode == constant.ModeProxy {

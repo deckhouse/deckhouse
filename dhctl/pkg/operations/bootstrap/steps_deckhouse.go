@@ -87,6 +87,13 @@ func InstallDeckhouse(
 			return fmt.Errorf("Deckhouse not ready: %w", err)
 		}
 
+		// Before the wait, and only for an installation from a bundle: the store cannot become ready
+		// until it gets the port the bootstrap registry is holding, so waiting first would wait forever.
+		err = registry_config.HandOverBundleStore(ctx, kubeCl, config.Registry)
+		if err != nil {
+			return fmt.Errorf("hand the store over to the cluster: %w", err)
+		}
+
 		err = registry_config.WaitForRegistryReady(ctx, kubeCl, config.Registry)
 		if err != nil {
 			return fmt.Errorf("registry initialization: %v", err)

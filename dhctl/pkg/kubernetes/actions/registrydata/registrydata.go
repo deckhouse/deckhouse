@@ -54,7 +54,23 @@ func GetRegistryDataPreferUpstream(ctx context.Context, kubeCl *client.Kubernete
 		return conf, dockerCfg, nil
 	}
 
-	return GetRegistryData(ctx, kubeCl)
+	// No upstream, which for an air-gapped cluster is not a gap in its configuration but the point of
+	// it. What is left is the cluster's own store, reachable over the SSH connection that is already
+	// open to the master — see mirrorThroughNode, which returns its own docker config as well as its own
+	// address, because both the host a docker config is keyed by and the account it names are different
+	// there.
+	conf, dockerCfg, err = GetRegistryData(ctx, kubeCl)
+	if err != nil {
+		return nil, "", err
+	}
+
+	if throughNode, throughNodeCfg, ok, err := mirrorThroughNode(ctx, kubeCl, conf); err != nil {
+		return nil, "", err
+	} else if ok {
+		return throughNode, throughNodeCfg, nil
+	}
+
+	return conf, dockerCfg, nil
 }
 
 var (

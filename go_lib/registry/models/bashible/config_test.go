@@ -296,3 +296,47 @@ func TestConfigToContext(t *testing.T) {
 		})
 	}
 }
+
+// TestToContextCarriesTheAgent is the one thing every layer of this plumbing exists for:
+// a node cannot be told the agent owns its runtime configuration unless the marker
+// survives the trip. It used to be dropped by a hand-written copy in the bashible
+// apiserver, and nothing failed — the node just silently kept the old behaviour.
+func TestToContextCarriesTheAgent(t *testing.T) {
+	config := Config{
+		Mode:       "Managed",
+		Version:    "v1",
+		ImagesBase: "registry.example.com/deckhouse/ee",
+		Hosts:      map[string]ConfigHosts{},
+		Agent: &ConfigAgent{
+			Endpoint: "127.0.0.1:5001",
+			Layout:   `{"backends":[{"name":"Upstream"}]}`,
+		},
+	}
+
+	ctx := config.ToContext()
+	require.NotNil(t, ctx.Agent)
+	require.Equal(t, "127.0.0.1:5001", ctx.Agent.Endpoint)
+	require.Equal(t, `{"backends":[{"name":"Upstream"}]}`, ctx.Agent.Layout)
+
+	agent, ok := ctx.ToMap()["agent"].(map[string]any)
+	require.True(t, ok, "the template cannot see the agent")
+	require.Equal(t, "127.0.0.1:5001", agent["endpoint"])
+}
+
+// TestToContextWithoutTheAgentOmitsTheKey keeps every existing cluster on the existing
+// behaviour: the bashible step that writes per-registry drop-ins asks whether there is an
+// agent, so an empty marker would have to be absent, not zero-valued.
+func TestToContextWithoutTheAgentOmitsTheKey(t *testing.T) {
+	config := Config{
+		Mode:       "Unmanaged",
+		Version:    "v1",
+		ImagesBase: "registry.example.com/deckhouse/ee",
+		Hosts:      map[string]ConfigHosts{},
+	}
+
+	ctx := config.ToContext()
+	require.Nil(t, ctx.Agent)
+
+	_, present := ctx.ToMap()["agent"]
+	require.False(t, present)
+}

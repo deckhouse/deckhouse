@@ -120,10 +120,12 @@ func TestIsRegistryReady(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("not legacy - readiness flow", func(t *testing.T) {
+	// The state secret still decides, on the two modes whose entire content is a registry the
+	// previous implementation runs in the cluster.
+	t.Run("the previous implementation's own modes - readiness flow", func(t *testing.T) {
 		ctx := t.Context()
 		kubeClient := client.NewFakeKubernetesClient()
-		config := ConfigBuilder()
+		config := ConfigBuilder(WithModeProxy())
 
 		// First run: not ready when module status is unknown
 		err := isRegistryReady(ctx, kubeClient, config)
@@ -143,4 +145,48 @@ func TestIsRegistryReady(t *testing.T) {
 		err = isRegistryReady(ctx, kubeClient, config)
 		require.NoError(t, err)
 	})
+}
+
+// TestNothingWaitsOnAStateSecretThatIsNeverWritten is the wait that cost a working cluster its
+// installation.
+//
+// `registry-state` is written from values the current implementation clears the moment it owns the
+// cluster, which is every cluster installed from now on. Yet Direct — the default for a cluster whose
+// container runtime supports it, and what a plain `mode: Managed` with an upstream resolves to — used
+// to be read as "not legacy, so the previous implementation reports on this" and waited on that
+// secret. A hundred attempts, twenty seconds apart, and then a failed installation of a cluster that
+// was already pulling images.
+//
+// The fake client below has no state secret and no RegistryStorage in it, which is exactly the point:
+// on these configurations nothing must be asked for at all.
+func TestNothingWaitsOnAStateSecretThatIsNeverWritten(t *testing.T) {
+	for _, mode := range []struct {
+		name   string
+		config Config
+	}{
+		{"direct, the default for a supported runtime", ConfigBuilder(WithModeDirect())},
+		{"unmanaged", ConfigBuilder(WithModeUnmanaged())},
+		{"unmanaged, from a legacy initConfiguration", ConfigBuilder(WithLegacyMode())},
+	} {
+		t.Run(mode.name, func(t *testing.T) {
+			require.NoError(t, isRegistryReady(t.Context(), client.NewFakeKubernetesClient(), mode.config))
+		})
+	}
+}
+
+// TestAStoreIsWaitedForWhereverItIsConfigured pins the other half: a store the module runs is waited
+// for on every path, not only on the bundle path it was first written for.
+//
+// A cache configured beside an upstream is the case this was measured on: the store is a real
+// component of that cluster, nothing else in the cluster reports on it, and until this the installer
+// waited instead on the previous implementation's state secret.
+func TestAStoreIsWaitedForWhereverItIsConfigured(t *testing.T) {
+	config := ConfigBuilder(WithModeDirect())
+	config.StoreExpected = true
+
+	err := isRegistryReady(t.Context(), client.NewFakeKubernetesClient(), config)
+	require.Error(t, err, "an absent RegistryStorage is not a store that is ready")
+	require.ErrorIs(t, err, errRegistryCheckTransient,
+		"the object appears when the module starts, which can be after this point, so this has to be "+
+			"worth retrying rather than fatal")
 }

@@ -2930,6 +2930,286 @@ alerts:
         Node {{ $labels.node }} cannot begin the update.
       severity: "8"
       markupFormat: markdown
+    - name: D8RegistryAirGapTransitionHeld
+      sourceFile: modules/038-registry/monitoring/prometheus-rules/registry.yaml
+      moduleUrl: 038-registry
+      module: registry
+      edition: ce
+      description: |-
+        The configuration has no upstream, so the cluster is meant to be air-gapped, and the
+        module is still holding the previous upstream because the cache is not complete
+        enough to stand alone.
+
+        This is the safe outcome and the cluster is pulling images normally. It is also the
+        one transition in this module that could cut every node off from images, which is
+        why it waits rather than proceeds — and why a wait this long is worth looking at:
+        nothing about it resolves on its own if the cache has stopped filling.
+
+        ```
+        kubectl get registrystorage registry -o jsonpath='{.status}' | jq '{phase,fill,safeToDropUpstream,leader}'
+        kubectl get registryconfig registry -o jsonpath='{.status.effectiveUpstream}' | jq
+        ```
+      summary: |
+        The registry upstream cannot be removed yet.
+      severity: "5"
+      markupFormat: markdown
+    - name: D8RegistryConfigInvalid
+      sourceFile: modules/038-registry/monitoring/prometheus-rules/registry.yaml
+      moduleUrl: 038-registry
+      module: registry
+      edition: ce
+      description: |-
+        The `registry` module cannot use its configuration, so the cluster keeps whatever
+        arrangement it already had. Nothing has broken yet; nothing new will take effect
+        either.
+
+        What was wrong is in the resource:
+
+        ```
+        kubectl get registryconfig registry -o jsonpath='{.status.conditions}' | jq
+        ```
+      summary: |
+        The registry configuration was rejected.
+      severity: "4"
+      markupFormat: markdown
+    - name: D8RegistryMigrationPending
+      sourceFile: modules/038-registry/monitoring/prometheus-rules/migration.yaml
+      moduleUrl: 038-registry
+      module: registry
+      edition: ce
+      description: |-
+        This cluster still pulls images the way the previous implementation of the
+        `registry` module arranged it. Nothing is broken and nothing is degraded — the
+        migration has simply not completed, and until it does the current
+        implementation manages nothing.
+
+        Reason: `{{ $labels.reason }}`
+
+        The handover waits because both implementations configure the same thing on
+        every node: which registry the container runtime asks, and with which
+        credentials. Running both would not merge those two answers, it would race
+        them. So the current implementation takes over only once the previous one has
+        let go of the pull path, which is its `Unmanaged` state.
+
+        What to do:
+
+        1. Bring the registry configuration in the `deckhouse` ModuleConfig to
+           `Unmanaged` and wait for that transition to finish:
+
+           ```
+           kubectl get mc deckhouse -o jsonpath='{.spec.settings.registry.mode}'
+           kubectl -n d8-system get secret registry-state -o jsonpath='{.data.state}' | base64 -d | head
+           ```
+
+        2. Once the state reports `mode: Unmanaged` with no pending target mode, the
+           handover happens on the module's next reconciliation and this alert clears.
+           The cluster keeps pulling from the same registry throughout.
+
+        3. To have the module manage the pull path afterwards, set `mode: Managed` in
+           the `registry` ModuleConfig together with the registry to pull from. The
+           module publishes a ready-made configuration for this cluster in the
+           `registry-suggested-config` secret in `d8-system`.
+      summary: |
+        The registry module is still running its previous implementation.
+      severity: "8"
+      markupFormat: markdown
+    - name: D8RegistryNodeNotConverged
+      sourceFile: modules/038-registry/monitoring/prometheus-rules/registry.yaml
+      moduleUrl: 038-registry
+      module: registry
+      edition: ce
+      description: |-
+        The agent on one or more nodes has not applied the layout it was given. Those nodes
+        keep pulling images the way they were configured before, so this is not an outage —
+        but a change made to the registry configuration has not reached them, and the next
+        one will not either.
+
+        Which nodes, and what their agents say:
+
+        ```
+        kubectl get registrynodes -o custom-columns=\
+        NODE:.metadata.name,GEN:.metadata.generation,APPLIED:.status.observedGeneration,OK:.status.reconciled
+        kubectl -n kube-system logs -l component=registry-agent --tail=50
+        ```
+
+        Twenty minutes, because the agent re-reads its layout on a timer and a node that is
+        merely slow or briefly unreachable resolves this on its own.
+      summary: |
+        Some nodes have not applied their registry configuration.
+      severity: "5"
+      markupFormat: markdown
+    - name: D8RegistryNodeRunningFromDisk
+      sourceFile: modules/038-registry/monitoring/prometheus-rules/registry.yaml
+      moduleUrl: 038-registry
+      module: registry
+      edition: ce
+      description: |-
+        The agent on one or more nodes cannot reach the API server and is routing pulls from
+        the copy it keeps on disk. That is the copy working as designed — those nodes pull
+        images normally, which is exactly why this is worth saying out loud: from every
+        other angle it looks like success, and their configuration can drift arbitrarily far
+        behind the cluster's.
+
+        An hour, because a node that briefly loses the API server is not news; a node that
+        has not seen it since is.
+
+        ```
+        kubectl get registrynodes -o json | jq -r '
+          .items[] | select(.status.conditions[]? | select(.type=="Reconciled" and .reason=="AppliedFromCache"))
+          | .metadata.name'
+        ```
+      summary: |
+        Some nodes are routing pulls from their on-disk copy of the configuration.
+      severity: "6"
+      markupFormat: markdown
+    - name: D8RegistryStaleCacheData
+      sourceFile: modules/038-registry/monitoring/prometheus-rules/registry.yaml
+      moduleUrl: 038-registry
+      module: registry
+      edition: ce
+      description: |-
+        Node `{{ $labels.node }}` holds data of the in-cluster registry cache while no cache
+        is configured. Nothing reads it, and nothing will unless the cache is turned back
+        on.
+
+        It is kept on purpose. Turning the cache back on refills from what is already there
+        rather than from scratch, and over a slow link that difference is hours — so the
+        module does not delete it, because that would make the decision irreversible in the
+        one direction that hurts. What it will not do is keep it quietly, which is what this
+        alert is.
+
+        Nothing is wrong and nothing needs doing urgently. To reclaim the space:
+
+        ```
+        ssh {{ $labels.node }} 'du -sh /opt/deckhouse/registry && sudo rm -rf /opt/deckhouse/registry'
+        ```
+
+        Twenty-four hours, so that turning the cache off and on again in one working session
+        never raises it.
+      summary: |
+        A node still holds registry cache data that nothing uses.
+      severity: "8"
+      markupFormat: markdown
+    - name: D8RegistryStorageIncomplete
+      sourceFile: modules/038-registry/monitoring/prometheus-rules/registry.yaml
+      moduleUrl: 038-registry
+      module: registry
+      edition: ce
+      description: |-
+        One or more replicas of the in-cluster cache are still filling, or have stopped
+        short. While an upstream is configured this costs nothing at pull time — a node
+        falls back to it — but it does mean the cluster could not survive losing that
+        upstream, and it is what holds an air-gap transition back.
+
+        Two hours, because filling a cache over a slow link legitimately takes that long.
+
+        ```
+        kubectl get registrystorage registry -o jsonpath='{.status.replicas}' | jq
+        ```
+      summary: |
+        Some registry cache replicas do not hold the whole image set.
+      severity: "6"
+      markupFormat: markdown
+    - name: D8RegistryStorageNotReclaimed
+      sourceFile: modules/038-registry/monitoring/prometheus-rules/registry.yaml
+      moduleUrl: 038-registry
+      module: registry
+      edition: ce
+      description: |-
+        No replica of the in-cluster cache has finished a garbage collection in the last week.
+        Nothing is broken yet: the cache serves images normally, and it will keep doing so until
+        the disk fills.
+
+        It is worth attention because the collection is the only thing that ever removes
+        anything. Every release adds a slice of the repository, so a store nobody reclaims grows
+        in one direction — and a full store cannot be written to, which in an air-gapped cluster
+        means it cannot be updated.
+
+        Where to look:
+
+        ```
+        kubectl get registrystorage registry -o jsonpath='{.status.replicas}' | jq \
+          'map({node, collectedAt, collectionError})'
+        kubectl get registrystorage registry -o jsonpath='{.spec.garbageCollection}' | jq
+        ```
+
+        The likely reasons, in the order they are worth checking:
+
+        - the collection is turned off in the `registry` ModuleConfig under
+          `storage.garbageCollection.enabled`;
+        - the schedule has not come round yet, or names an hour that never arrives — a
+          collection only runs on the schedule, and an unreadable expression is refused rather
+          than guessed at;
+        - no release is deployed, which is the one input that justifies deleting anything: every
+          deletion is "older than what the cluster runs", and without that there is nothing to
+          compare against;
+        - `collectionError` on a replica, which says what its own last attempt hit.
+
+        One reading tells the first two apart from the rest. Each replica logs the time of its next
+        collection, so its absence means none was ever scheduled — a different problem from one
+        that is scheduled and failing:
+
+        ```
+        kubectl -n d8-system logs registry-storage-0 -c syncer | grep -i "garbage collection"
+        ```
+
+        Collecting puts one replica read-only while it runs. That is not an outage — it keeps
+        serving every image it holds — but it does mean the schedule belongs at a quiet hour,
+        which is where it defaults to.
+      summary: |
+        The registry cache has not reclaimed its disk for a week.
+      severity: "6"
+      markupFormat: markdown
+    - name: D8RegistryUpstreamProbeFailing
+      sourceFile: modules/038-registry/monitoring/prometheus-rules/registry.yaml
+      moduleUrl: 038-registry
+      module: registry
+      edition: ce
+      description: |-
+        A change to the primary upstream was refused, and the cluster is still using the
+        last one that worked. Nothing is degraded — that is what holding the previous
+        upstream is for — but the change has not taken effect and will not until the check
+        passes.
+
+        The `outcome` label says which of three things is wrong, and they are not the same
+        problem:
+
+        - `unreachable` — the registry did not answer at all: network, firewall, or the
+          registry itself.
+        - `auth` — it answered and rejected the credentials. Usually an expired or wrong
+          license key.
+        - `sentinel` — it answered and accepted the credentials, but does not hold the
+          Deckhouse images. Usually the wrong repository path.
+
+        Current outcome: `{{ $labels.outcome }}`
+
+        ```
+        kubectl get registryconfig registry -o jsonpath='{.status.conditions}' | jq
+        ```
+      summary: |
+        The configured registry upstream does not pass its preflight check.
+      severity: "4"
+      markupFormat: markdown
+    - name: D8RegistryUpstreamRejected
+      sourceFile: modules/038-registry/monitoring/prometheus-rules/registry.yaml
+      moduleUrl: 038-registry
+      module: registry
+      edition: ce
+      description: |-
+        A `RegistryUpstream` resource was not accepted, so pulls for the registry it names
+        are not intercepted on any node. Whatever asked for it — a module, or an operator —
+        is not getting it.
+
+        Reason: `{{ $labels.reason }}`
+
+        ```
+        kubectl get registryupstreams -o custom-columns=\
+        NAME:.metadata.name,MATCH:.spec.match,ACCEPTED:.status.conditions[0].status,REASON:.status.conditions[0].reason
+        ```
+      summary: |
+        An additional registry was refused.
+      severity: "6"
+      markupFormat: markdown
     - name: D8SecretCopierDeprecatedLabels
       sourceFile: modules/600-secret-copier/monitoring/prometheus-rules/deprecated-label.yaml
       moduleUrl: 600-secret-copier
@@ -4797,6 +5077,7 @@ modules-having-alerts:
     - node-manager
     - okmeter
     - openvpn
+    - registry
     - secret-copier
     - terraform-manager
     - user-authn

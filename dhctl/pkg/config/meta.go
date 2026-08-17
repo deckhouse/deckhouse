@@ -457,6 +457,28 @@ func (m *MetaConfig) prepareRegistry() error {
 		}
 	}
 
+	// Registry mc. An installation whose images come from a bundle is recognised from the registry
+	// module's own configuration — a cache to hold them and no upstream to fetch them from — and
+	// resolves to Local, exactly as RegistryConfigProvider does over the raw documents.
+	//
+	// It has to be decided here too, and not only there, because this is the result the cluster is
+	// built from: it becomes m.Registry, which the bashible context reads, which decides whether the
+	// steps that stand up the registry on the node run at all. Deciding it only where the installer
+	// downloads its own images leaves those steps switched off — the store then stays empty and
+	// Deckhouse never pulls, which is what happened the first time.
+	var bundleFacts registry.BundleBootstrapInputs
+	if mc := m.FindModuleConfig("registry"); mc != nil {
+		rawJSON, err := json.Marshal(mc)
+		if err != nil {
+			return err
+		}
+		bundleFacts, err = registry.BundleFactsFromModuleConfig(rawJSON)
+		if err != nil {
+			return err
+		}
+	}
+	deckhouseSettings, providerOpts := bundleFacts.Resolve(deckhouseSettings)
+
 	// Default CRI. The node-manager ModuleConfig setting takes precedence over the
 	// deprecated ClusterConfiguration.defaultCRI field (see effectiveDefaultCRI).
 	if cri := m.effectiveDefaultCRI(); cri != "" {
@@ -466,6 +488,7 @@ func (m *MetaConfig) prepareRegistry() error {
 	registry, err := registry.NewConfigProvider(
 		initConfig,
 		deckhouseSettings,
+		providerOpts...,
 	).Config(
 		defaultCRI,
 		m.IsStatic(),

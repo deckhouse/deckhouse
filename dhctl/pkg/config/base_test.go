@@ -19,6 +19,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -1168,4 +1169,209 @@ func testCreateDeckhouseRegistrySecret(t *testing.T, kubeCl *client.KubernetesCl
 
 	_, err := kubeCl.CoreV1().Secrets("d8-system").Create(t.Context(), secret, metav1.CreateOptions{})
 	require.NoError(t, err)
+}
+
+// TestRegistryConfigProviderBundleBootstrap covers installing a cluster whose images come from a
+// bundle, recognised from the registry module's own ModuleConfig rather than from the deckhouse one.
+//
+// The third case is the reason this exists at all. Everything that serves images during such an
+// installation — the temporary registry on the first master, the candi schemas, the provider plugins —
+// comes from one local registry reached through a reverse tunnel, and none of that depends on the
+// cluster being static. The refusal that used to stand in the way belongs to the legacy modes and is
+// left untouched for them.
+func TestRegistryConfigProviderBundleBootstrap(t *testing.T) {
+	const mcRegistryCacheNoUpstream = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: registry
+spec:
+  enabled: true
+  version: 1
+  settings:
+    mode: Managed
+    storage:
+      cache: true
+      size: 10Gi
+`
+
+	const mcRegistryWithUpstream = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: registry
+spec:
+  enabled: true
+  version: 1
+  settings:
+    mode: Managed
+    primary:
+      upstream:
+        scheme: HTTPS
+        host: registry.deckhouse.io
+        path: /deckhouse/ce
+    storage:
+      cache: true
+      size: 10Gi
+`
+
+	t.Run("a cache with no upstream installs from the bundle", func(t *testing.T) {
+		provider, err := RegistryConfigProvider([]string{mcRegistryCacheNoUpstream})
+		require.NoError(t, err)
+
+		isLocal, err := provider.IsLocal()
+		require.NoError(t, err)
+		require.True(t, isLocal, "a cache with nothing to fill it from over the network is a bundle install")
+
+		remote, err := provider.RemoteData()
+		require.NoError(t, err)
+		require.Equal(t, registry_const.BundleImagesRepo, remote.ImagesRepo,
+			"the images must be addressed at the local bundle registry, which is what the tunnel serves")
+	})
+
+	t.Run("a cache filled from an upstream is an ordinary install", func(t *testing.T) {
+		provider, err := RegistryConfigProvider([]string{mcRegistryWithUpstream})
+		require.NoError(t, err)
+
+		isLocal, err := provider.IsLocal()
+		require.NoError(t, err)
+		require.False(t, isLocal)
+	})
+
+	t.Run("a cloud cluster is allowed to install from a bundle", func(t *testing.T) {
+		provider, err := RegistryConfigProvider([]string{mcRegistryCacheNoUpstream})
+		require.NoError(t, err)
+
+		// isStatic=false is the whole point: this used to be refused outright with "supported only in
+		// a static cluster", and every cluster this is tested on is a cloud one.
+		_, err = provider.Config(registry_const.CRIContainerdV2, false)
+		require.NoError(t, err, "installing from a bundle must not require a static cluster")
+	})
+
+	t.Run("the deckhouse ModuleConfig keeps precedence", func(t *testing.T) {
+		const mcDeckhouseUnmanaged = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  enabled: true
+  version: 1
+  settings:
+    registry:
+      mode: Unmanaged
+      unmanaged:
+        imagesRepo: r.example.com/test
+        scheme: HTTPS
+`
+
+		provider, err := RegistryConfigProvider([]string{mcDeckhouseUnmanaged, mcRegistryCacheNoUpstream})
+		require.NoError(t, err)
+
+		isLocal, err := provider.IsLocal()
+		require.NoError(t, err)
+		require.False(t, isLocal, "an explicit legacy configuration must not be overridden by inference")
+	})
+}
+
+// TestAConfigurationThatNamesNoRegistryOutsideTheModule is the shape the air-gap test actually uses,
+// and the reason it is honest.
+//
+// `InitConfiguration.deckhouse` keeps only the version to install; the registry is stated once, in the
+// object that owns the pull path. Before the installer could read it there, this configuration
+// resolved to the public CE registry — so a test that removed those fields to prove the module stands
+// on its own proved the opposite of what it claimed, quietly.
+func TestAConfigurationThatNamesNoRegistryOutsideTheModule(t *testing.T) {
+	const initWithoutRegistry = `
+---
+apiVersion: deckhouse.io/v1
+kind: InitConfiguration
+deckhouse:
+  devBranch: "pr21788"
+`
+	const bundleModule = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: registry
+spec:
+  enabled: true
+  version: 1
+  settings:
+    mode: Managed
+    storage:
+      cache: true
+      size: 20Gi
+      source:
+        bundleRef: d8-mirror-bundle
+        expectedDigests: 556
+`
+
+	provider, err := RegistryConfigProvider([]string{initWithoutRegistry, bundleModule})
+	require.NoError(t, err)
+
+	isLocal, err := provider.IsLocal()
+	require.NoError(t, err)
+	require.True(t, isLocal, "a cache with nothing to fill it from over the network is a bundle install")
+
+	remote, err := provider.RemoteData()
+	require.NoError(t, err)
+	assert.Equal(t, registry_const.BundleImagesRepo, remote.ImagesRepo,
+		"the images come from the bundle the installer serves, not from a registry nobody named")
+
+	// And a cloud cluster is allowed to install this way, which every variant of the test matrix is.
+	_, err = provider.Config(registry_const.CRIContainerdV2, false)
+	require.NoError(t, err)
+}
+
+// TestTheRegistryIsTakenFromTheModuleWhenAnUpstreamIsStated is the same rule for every other variant
+// where the module is enabled: the upstream stated in the module's own configuration is what the
+// installer uses.
+func TestTheRegistryIsTakenFromTheModuleWhenAnUpstreamIsStated(t *testing.T) {
+	const initWithoutRegistry = `
+---
+apiVersion: deckhouse.io/v1
+kind: InitConfiguration
+deckhouse:
+  devBranch: "pr21788"
+`
+	const managedModule = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: registry
+spec:
+  enabled: true
+  version: 1
+  settings:
+    mode: Managed
+    primary:
+      upstream:
+        scheme: HTTPS
+        host: dev-registry.deckhouse.io
+        path: /sys/deckhouse-oss
+        # Under auth, which is where the module's own schema puts them. This fixture stated them
+        # one level up, and it passed for as long as nothing read them.
+        auth:
+          username: someone
+          password: secret
+    storage:
+      cache: true
+      size: 10Gi
+`
+
+	provider, err := RegistryConfigProvider([]string{initWithoutRegistry, managedModule})
+	require.NoError(t, err)
+
+	remote, err := provider.RemoteData()
+	require.NoError(t, err)
+	assert.Equal(t, "dev-registry.deckhouse.io/sys/deckhouse-oss", remote.ImagesRepo,
+		"the installer pulls from where the module says, not from the public registry")
+	assert.Equal(t, "someone", remote.Username)
+	assert.Equal(t, "secret", remote.Password)
 }

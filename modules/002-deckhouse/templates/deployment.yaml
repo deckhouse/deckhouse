@@ -346,6 +346,28 @@ spec:
             readOnly: true
           - mountPath: /deckhouse/downloaded
             name: downloaded
+          {{- /*
+            The authority that signs what the node agent of the registry module serves.
+
+            Mounted from the node because it cannot travel any other way: it is generated on
+            each node at bootstrap and never leaves it, so every node has a different one.
+            That is deliberate — a node has to be able to pull before any cluster-wide
+            certificate material could have reached it — and it is why this is a host path
+            rather than a Secret.
+
+            Read-only, and the whole directory rather than the file, because a host path
+            naming a file that does not exist yet is created as a directory and would then
+            be in the way of the material the node generates. `DirectoryOrCreate` on a
+            cluster where the module manages nothing leaves an empty directory, which is
+            what the controller expects to find there: nothing to trust, nothing fetched
+            through an agent.
+
+            The same path inside the pod as on the host, so that one constant describes both
+            sides — see `constant.AgentPKIPath`, asserted against this in the template tests.
+          */}}
+          - mountPath: /etc/kubernetes/registry-agent/pki
+            name: registry-agent-pki
+            readOnly: true
         - name: kube-rbac-proxy
           {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 10 }}
           image: {{ include "helm_lib_module_common_image" (list $ "kubeRbacProxy") }}
@@ -427,4 +449,8 @@ spec:
       - name: downloaded
         hostPath:
           path: /var/lib/deckhouse/downloaded
+          type: DirectoryOrCreate
+      - name: registry-agent-pki
+        hostPath:
+          path: /etc/kubernetes/registry-agent/pki
           type: DirectoryOrCreate

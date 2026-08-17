@@ -96,11 +96,11 @@ func (d *Deployer) Cleanup(ctx context.Context, preserve []deployer.PreservePack
 	ctx, span := otel.Tracer(tracerName).Start(ctx, "Cleanup")
 	defer span.End()
 
-	span.SetAttributes(attribute.String("workingDir", d.workingDir))
+	span.SetAttributes(attribute.String("working_dir", d.workingDir))
 	span.SetAttributes(attribute.String("deployed", d.deployedRoot()))
 
 	logger := d.logger.With(
-		slog.String("workingDir", d.workingDir),
+		slog.String("working_dir", d.workingDir),
 		slog.String("deployed", d.deployedRoot()))
 
 	logger.Debug("cleanup packages")
@@ -344,14 +344,14 @@ func (d *Deployer) download(ctx context.Context, repo registry.Remote, packageDi
 
 	span.SetAttributes(attribute.String("name", name))
 	span.SetAttributes(attribute.String("version", version))
-	span.SetAttributes(attribute.String("packageDir", packageDir))
+	span.SetAttributes(attribute.String("package_dir", packageDir))
 	span.SetAttributes(attribute.String("repository", repo.Name))
 	span.SetAttributes(attribute.String("registry", repo.Repository))
 
 	logger := d.logger.With(
 		slog.String("name", name),
 		slog.String("version", version),
-		slog.String("packageDir", packageDir),
+		slog.String("package_dir", packageDir),
 		slog.String("repository", repo.Name),
 		slog.String("registry", repo.Repository))
 
@@ -442,13 +442,13 @@ func (d *Deployer) symlink(ctx context.Context, packageDir, deployed, name, vers
 	_, span := otel.Tracer(tracerName).Start(ctx, "symlink")
 	defer span.End()
 
-	span.SetAttributes(attribute.String("packageDir", packageDir))
+	span.SetAttributes(attribute.String("package_dir", packageDir))
 	span.SetAttributes(attribute.String("deployed", deployed))
 	span.SetAttributes(attribute.String("name", name))
 	span.SetAttributes(attribute.String("version", version))
 
 	logger := d.logger.With(
-		slog.String("packageDir", packageDir),
+		slog.String("package_dir", packageDir),
 		slog.String("deployed", deployed),
 		slog.String("name", name),
 		slog.String("version", version))

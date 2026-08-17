@@ -1,0 +1,428 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: registrystorages.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: registry
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: registrystorages
+    singular: registrystorage
+    kind: RegistryStorage
+    shortNames:
+      - rstor
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: Phase
+          type: string
+          description: "Fill state of the storage."
+          jsonPath: .status.phase
+        - name: Leader
+          type: string
+          description: "The node holding the storage leader lease."
+          jsonPath: .status.leader
+        - name: Authoritative
+          type: boolean
+          description: "Whether the cache is the only source of images."
+          jsonPath: .status.authoritative
+        - name: SafeToDropUpstream
+          type: boolean
+          description: "Whether the leader holds the expected set, which gates going air-gap."
+          jsonPath: .status.safeToDropUpstream
+        - name: AllReplicasFull
+          type: boolean
+          description: "Whether every replica holds the expected set."
+          jsonPath: .status.allReplicasFull
+          priority: 1
+        - name: Age
+          type: date
+          description: "Time since creation."
+          jsonPath: .metadata.creationTimestamp
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Defines how the in-cluster registry storage operates, and reports the state it is actually in.
+
+            The object is written by the registry controller and read by the syncer sidecar, which reconfigures `distribution` on the fly. This is the path that makes a credential or certificate change take effect while the Deckhouse operator is down: it never goes through a helm re-render.
+
+            It carries a real `spec` rather than being a status-only mirror, because `distribution` has to be told what to do, not merely observed.
+
+            Only one object named `registry` is used.
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              properties:
+                upstream:
+                  type: object
+                  description: |
+                    The primary upstream, projected here by the controller.
+
+                    Set means a pass-through cache. Absent means the cache is authoritative (air-gap).
+
+                    The controller removes this field **only after the leader is full**, so nodes are never left without a source of images — even if the upstream has already been removed from the configuration by the user.
+                  required:
+                    - host
+                  properties:
+                    scheme:
+                      type: string
+                      enum:
+                        - HTTP
+                        - HTTPS
+                      default: HTTPS
+                      description: |
+                        The protocol used to reach the registry.
+                    host:
+                      type: string
+                      minLength: 1
+                      description: |
+                        The registry host, optionally with a port.
+                    path:
+                      type: string
+                      description: |
+                        The repository prefix inside the registry.
+                    ca:
+                      type: string
+                      description: |
+                        A PEM-encoded certificate authority bundle used to verify the registry.
+                    auth:
+                      type: object
+                      description: |
+                        Where the credentials for this endpoint are kept.
+
+                        Named rather than carried. This resource is cluster-scoped and the node agent's role is bound to the `system:nodes` group, so a credential written here would be readable through the API by every kubelet in the cluster — including credentials for registries that node never pulls from. The component that reads this resolves the reference once and keeps the result, so it still works when the API server does not.
+                      properties:
+                        secretRef:
+                          type: object
+                          description: |
+                            The Secret holding the credentials, and the key inside it.
+                          required:
+                            - name
+                            - key
+                          properties:
+                            name:
+                              type: string
+                              description: |
+                                Name of the Secret in the `d8-system` namespace.
+                            key:
+                              type: string
+                              description: |
+                                Key inside it. One Secret holds every credential the module resolved, keyed by what it belongs to.
+                    mirrors:
+                      type: array
+                      description: |
+                        Additional addresses serving the same content. The syncer pulls from whichever is reachable and stores one de-duplicated set.
+                      items:
+                        type: object
+                        required:
+                          - host
+                        properties:
+                          scheme:
+                            type: string
+                            enum:
+                              - HTTP
+                              - HTTPS
+                            default: HTTPS
+                            description: |
+                              The protocol used to reach the mirror.
+                          host:
+                            type: string
+                            minLength: 1
+                            description: |
+                              The mirror host, optionally with a port.
+                          path:
+                            type: string
+                            description: |
+                              The repository prefix inside the mirror.
+                          ca:
+                            type: string
+                            description: |
+                              A PEM-encoded certificate authority bundle used to verify the mirror.
+                          auth:
+                            type: object
+                            description: |
+                              Where the credentials for this mirror are kept.
+
+                              Named rather than carried, for the same reason as the endpoint above: this resource is readable by every node in the cluster. A mirror can need credentials of its own, so it can name a key of its own.
+                            properties:
+                              secretRef:
+                                type: object
+                                description: |
+                                  The Secret holding the credentials, and the key inside it.
+                                required:
+                                  - name
+                                  - key
+                                properties:
+                                  name:
+                                    type: string
+                                    description: |
+                                      Name of the Secret in the `d8-system` namespace.
+                                  key:
+                                    type: string
+                                    description: |
+                                      Key inside it.
+                source:
+                  type: object
+                  description: |
+                    The image set that must end up in the storage.
+                  properties:
+                    bundleRef:
+                      type: string
+                      description: |
+                        The name of the image set.
+                    expectedDigests:
+                      type: integer
+                      format: int32
+                      minimum: 0
+                      description: |
+                        The number of distinct digests the set contains.
+                store:
+                  type: object
+                  description: |
+                    Where `distribution` keeps its blobs.
+                  properties:
+                    path:
+                      type: string
+                      description: |
+                        The path on the node. A module constant, not user input.
+                      x-doc-example: '/opt/deckhouse/registry'
+                    size:
+                      type: string
+                      pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                      description: |
+                        The size of the persistent volume, taken from ModuleConfig.
+                publish:
+                  type: boolean
+                  description: |
+                    Whether to expose an authenticated write endpoint (Ingress) for `d8 mirror push`.
+
+                    Write credentials are separate from read credentials. The endpoint is a separate distribution instance over the same data directory, so publishing it costs the serving instance nothing — one instance cannot both proxy an upstream and accept a push.
+                airGapRequested:
+                  type: boolean
+                  description: |
+                    Whether the configuration asked to run without an upstream, whether or not the upstream has been dropped yet.
+
+                    This is the transition window: air-gap asked for, the upstream still held so the cluster keeps working, images arriving through `d8 mirror push` that the syncer never sees. It is what decides that completeness must be measured by reading the store rather than by counting what a copy wrote — a distinction that matters because a pass-through cache writes into its own store on every miss, so the same reading on a caching cluster would count images it merely fetched.
+                auth:
+                  type: string
+                  description: |
+                    The bearer token guarding the storage.
+
+                    **Sensitive.** Authentication is never disabled, not even in an air-gapped cluster where the cache only serves reads.
+                garbageCollection:
+                  type: object
+                  description: |
+                    When and whether a replica reclaims the disk taken by releases the cluster has moved past.
+
+                    Needed because nothing else ever removes anything: every release adds a slice of the repository, so a cluster that lives for years fills its store and then stops being able to pull.
+
+                    Collecting puts one replica read-only for the duration — it keeps serving every image it holds, but cannot store the result of a cache miss and cannot accept a `d8 mirror push`. Only one replica collects at a time, so the others are unaffected.
+                  properties:
+                    enabled:
+                      type: boolean
+                      description: |
+                        Whether replicas collect at all.
+                    schedule:
+                      type: string
+                      description: |
+                        A five-field cron expression, in the replica's own time zone.
+
+                        Defaults to a night hour, or to the start of the `master` node group's maintenance window when one is set — that being the time an operator has already declared safe for disruption.
+                needSync:
+                  type: boolean
+                  description: |
+                    How the controller hands the syncer a fill or replication task.
+            status:
+              type: object
+              properties:
+                observedGeneration:
+                  type: integer
+                  format: int64
+                  description: |
+                    The `spec` generation the controller last acted on.
+                authoritative:
+                  type: boolean
+                  description: |
+                    Whether the upstream has been dropped and the cache is now the only source of images.
+                phase:
+                  type: string
+                  enum:
+                    - Idle
+                    - Filling
+                    - Verifying
+                    - Ready
+                    - Failed
+                  description: |
+                    A coarse summary of the fill state.
+
+                    - `Idle` — no fill or verification task is running.
+                    - `Filling` — the leader is being populated.
+                    - `Verifying` — the contents are being checked against `spec.source`.
+                    - `Ready` — the leader holds the expected set.
+                    - `Failed` — a fill or verification task failed. The upstream is **not** dropped in this state.
+                fill:
+                  type: object
+                  description: |
+                    Progress of the current fill task.
+                  properties:
+                    filled:
+                      type: integer
+                      format: int32
+                      description: |
+                        The number of digests written so far.
+                    total:
+                      type: integer
+                      format: int32
+                      description: |
+                        The number of digests expected.
+                safeToDropUpstream:
+                  type: boolean
+                  description: |
+                    Whether the **leader** holds the expected set, which is the gate for going air-gap.
+
+                    Deliberately the leader alone and not every replica: followers are filled ahead of time and in parallel, so waiting for all of them would delay the transition without adding safety.
+                allReplicasFull:
+                  type: boolean
+                  description: |
+                    Whether every replica holds the expected set, so losing the leader costs nothing.
+                leader:
+                  type: string
+                  description: |
+                    The node currently holding the storage leader lease.
+
+                    Not a plain election: the lease is only stood for by a replica that holds the whole expected set, and a replica that holds it steps aside when another one does. Leadership is not a symmetric role — the leader is the replication source every follower copies from, and the one whose completeness gates going air-gap.
+
+                    Without that condition an air-gapped cluster can stall. `d8 mirror push` arrives through the publication endpoint and lands on whichever replica the ingress chose, not necessarily the leader; an empty leader has no upstream to fill itself from, the followers replicate its emptiness, and the replica holding the images sits idle. The exception is a cluster where no replica is full yet, which is where every cluster starts — then somebody has to lead in order to begin filling.
+                replicas:
+                  type: array
+                  description: |
+                    The per-replica fill state.
+
+                    This is the **only** place storage completeness is reported. [RegistryNode](cr.html#registrynode) deliberately carries none of it, since completeness is a property of the storage and not of a node.
+                  x-kubernetes-list-type: map
+                  x-kubernetes-list-map-keys:
+                    - node
+                  items:
+                    type: object
+                    required:
+                      - node
+                    properties:
+                      node:
+                        type: string
+                        description: |
+                          The node the replica runs on.
+                      role:
+                        type: string
+                        enum:
+                          - Leader
+                          - Follower
+                        description: |
+                          The replica's role in replication.
+
+                          - `Leader` — filled from the upstream, or by `d8 mirror push` in an air-gapped cluster, and hands out replication tasks.
+                          - `Follower` — filled from the leader, ahead of time, so a leader loss does not mean filling from scratch.
+                      full:
+                        type: boolean
+                        description: |
+                          Whether this replica holds the expected set.
+
+                          Derived from what the syncer actually **wrote**, never from probing the serve path: on a miss a pass-through cache would fetch the image from the upstream and report success on an empty store. In an air-gapped cluster self-filling is impossible, so reading the catalogue and comparing against `spec.source.expectedDigests` is honest there.
+                      verifiedDigests:
+                        type: integer
+                        format: int32
+                        description: |
+                          How many digests **of the set** were confirmed present.
+
+                          The set is what the cluster's releases and the modules it keeps declare — the digests deckhouse-controller knows about — so this number is directly comparable with `full` and is what the air-gap transition is decided from. Anything else the store happens to hold is counted in `totalDigests`.
+                      totalDigests:
+                        type: integer
+                        format: int32
+                        description: |
+                          How many distinct digests this replica holds **altogether**.
+
+                          A different population from `verifiedDigests`, and nothing is decided from it. It is here so that a store holding more than this cluster needs — a bundle pushed with other modules, other editions, attestations — looks like what it is rather than like a shortfall against `spec.source.expectedDigests`.
+                      address:
+                        type: string
+                        description: |
+                          Where this replica answers, as `host:port`.
+
+                          Reported by the replica itself so that a follower can replicate from the leader without resolving a node name into an address, and without the syncers needing to read Node objects at all.
+                      source:
+                        type: string
+                        description: |
+                          The replica this one is filled from. Empty for the leader.
+                      collectedAt:
+                        type: string
+                        format: date-time
+                        description: |
+                          When this replica last reclaimed its disk.
+
+                          Absent until it has. Reported per replica because each collects its own store, one at a time: a cluster where one replica has not collected for a month while the others have is a different problem from one where none has.
+                      collectionError:
+                        type: string
+                        description: |
+                          Why the last attempt to reclaim did not finish, empty when it did.
+
+                          Separate from `error`, which is about filling. A store that cannot be reclaimed still serves every image it holds, so the two say different things about how worried to be.
+                      error:
+                        type: string
+                        description: |
+                          Why the last fill or verification task failed, as reported by this replica's syncer. Empty when the last task succeeded.
+
+                          Safety does not depend on this field: a failed replica is simply not `full`, and the upstream is only ever dropped once the leader **is** full. It exists so that an operator can tell "still filling" from "broken", which the fill counters alone cannot express.
+                conditions:
+                  type: array
+                  description: |
+                    The detailed state of the storage.
+                  x-kubernetes-list-type: map
+                  x-kubernetes-list-map-keys:
+                    - type
+                  items:
+                    type: object
+                    required:
+                      - type
+                      - status
+                      - lastTransitionTime
+                      - reason
+                    properties:
+                      type:
+                        type: string
+                        description: |
+                          The condition type.
+                      status:
+                        type: string
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                        description: |
+                          The condition status.
+                      observedGeneration:
+                        type: integer
+                        format: int64
+                        description: |
+                          The `spec` generation the condition was set for.
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                        description: |
+                          When the condition last changed.
+                      reason:
+                        type: string
+                        description: |
+                          A machine-readable reason for the condition.
+                      message:
+                        type: string
+                        description: |
+                          A human-readable explanation.

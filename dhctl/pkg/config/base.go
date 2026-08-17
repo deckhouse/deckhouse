@@ -782,6 +782,7 @@ func RegistryConfigProvider(docs []string) (*registry.ConfigProvider, error) {
 	var (
 		initConfig        *initconfig.Config
 		deckhouseSettings *moduleconfig.DeckhouseSettings
+		bundleFacts       registry.BundleBootstrapInputs
 	)
 
 	for _, doc := range docs {
@@ -800,19 +801,40 @@ func RegistryConfigProvider(docs []string) (*registry.ConfigProvider, error) {
 			initConfig = ret
 
 		case ModuleConfigKind:
-			if obj.GetName() != "deckhouse" {
-				continue
-			}
+			switch obj.GetName() {
+			case "deckhouse":
+				ret, err := registry.ParseYAMLDeckhouseMC([]byte(doc))
+				if err != nil {
+					return nil, err
+				}
 
-			ret, err := registry.ParseYAMLDeckhouseMC([]byte(doc))
-			if err != nil {
-				return nil, err
-			}
+				deckhouseSettings = ret
 
-			deckhouseSettings = ret
+			case "registry":
+				// An installation whose images come from a bundle, recognised from the registry
+				// module's own configuration: a cache to hold them and no upstream to fetch them
+				// from. The bundle itself arrives by --img-bundle-path, and the absence of that flag
+				// is refused further down by the code that needs it, with a message that already
+				// says so.
+				//
+				// Read here, in the one function all three callers go through, and not only where
+				// the bootstrap starts its bundle registry: the same local registry also serves the
+				// candi schemas and the provider plugins, and a caller that did not know about the
+				// bundle would go looking for those in a registry an air-gapped operator does not
+				// have — failing somewhere far from the reason.
+				facts, err := registry.BundleFactsFromModuleConfig([]byte(doc))
+				if err != nil {
+					return nil, err
+				}
+
+				bundleFacts = facts
+			}
 		}
 	}
-	return registry.NewConfigProvider(initConfig, deckhouseSettings), nil
+
+	deckhouseSettings, opts := bundleFacts.Resolve(deckhouseSettings)
+
+	return registry.NewConfigProvider(initConfig, deckhouseSettings, opts...), nil
 }
 
 func prepareCandiDir(ctx context.Context, conf *image.RegistryConfig, globalOptions *options.GlobalOptions) error {

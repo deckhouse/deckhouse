@@ -45,16 +45,83 @@ func errNonStaticClusterMode(mode constant.ModeType) error {
 	)
 }
 
-func NewConfigProvider(init *init_config.Config, deckhouseSettings *module_config.DeckhouseSettings) *ConfigProvider {
-	return &ConfigProvider{
+func NewConfigProvider(
+	init *init_config.Config,
+	deckhouseSettings *module_config.DeckhouseSettings,
+	opts ...ProviderOption,
+) *ConfigProvider {
+	provider := &ConfigProvider{
 		initConfig:        init,
 		deckhouseSettings: deckhouseSettings,
 	}
+	for _, opt := range opts {
+		opt(provider)
+	}
+
+	return provider
 }
 
 type ConfigProvider struct {
 	initConfig        *init_config.Config
 	deckhouseSettings *module_config.DeckhouseSettings
+
+	// bundleBootstrap records that Local was decided from the registry module's own configuration
+	// rather than read from the deckhouse ModuleConfig.
+	//
+	// The distinction earns its keep in exactly one place — the static-cluster refusal in Config
+	// below. That refusal guards the legacy modes, where it was a deliberate restriction; this path
+	// is allowed in a cloud cluster, because what serves the images is a static pod on the host
+	// network and neither of those depends on the cluster being static.
+	bundleBootstrap bool
+
+	// storeExpected records that the registry module was asked for a store of its own.
+	storeExpected bool
+
+	// agentOwnsRuntime records that the first master is installed with the node agent on it.
+	// See ModeModel.AgentOwnsRuntime for why that is what makes the rest of the nodes possible.
+	agentOwnsRuntime bool
+}
+
+// ProviderOption adjusts a ConfigProvider at construction.
+type ProviderOption func(*ConfigProvider)
+
+// WithBundleBootstrap marks this installation as taking its images from a bundle.
+//
+// Everything downstream then behaves as it does for the legacy Local mode, which is the point: the
+// candi schemas, the provider plugins and the module images all come from the same local registry
+// reached through the reverse tunnel, and none of that code needs to know how the mode was decided.
+func WithBundleBootstrap() ProviderOption {
+	return func(p *ConfigProvider) { p.bundleBootstrap = true }
+}
+
+// WithStore marks that the registry module was asked to run a store in the cluster.
+//
+// What it decides is what the installer waits for at the end. Until the rewrite, that wait read the
+// previous implementation's state secret — and that secret is now never written on a cluster the
+// current implementation owns, which is every cluster installed from now on. So the wait had to be
+// told, from the configuration, whether there is a store to wait for at all: with one, the store's
+// own status is the answer; without one, there is nothing in the cluster that reports on a registry
+// and the installation is finished when Deckhouse is.
+//
+// Read from the registry ModuleConfig rather than inferred from the mode, because the mode does not
+// carry it: `Managed` with an upstream and no cache is a cluster whose pull path the module owns and
+// which has no store in it.
+func WithStore() ProviderOption {
+	return func(p *ConfigProvider) { p.storeExpected = true }
+}
+
+// WithAgent installs the first master with the node agent already on it.
+//
+// Passed for every installation the registry module owns, because the alternative is a cluster that
+// cannot install an agent at all: the package it comes from is fetched through
+// registry-packages-proxy, and that proxy reaches the registry through the agent. The installer is
+// outside that circle — its own proxy serves packages over the dhctl tunnel from the upstream the
+// configuration names — so this is the one moment at which the first agent can be delivered.
+//
+// After it, the proxy on that master serves every other node through the agent beside it, which is
+// how a worker joins without ever touching the upstream itself.
+func WithAgent() ProviderOption {
+	return func(p *ConfigProvider) { p.agentOwnsRuntime = true }
 }
 
 // IsLocal returns true when the bootstrap registry mode is Local.
@@ -107,7 +174,12 @@ func (p *ConfigProvider) Config(defaultCRI constant.CRIType, isStatic bool) (Con
 
 		switch p.deckhouseSettings.Mode {
 		case constant.ModeProxy, constant.ModeLocal:
-			if !isStatic {
+			// The restriction belongs to the legacy modes, and it stays exactly as it was for them.
+			// An installation from a bundle is allowed in a cloud cluster: what serves the images
+			// during it is a static pod on the host network, which the cloud has no say in, and the
+			// cluster's own store serves everything afterwards — already measured on the air-gapped
+			// cloud variants of the test matrix.
+			if !isStatic && !p.bundleBootstrap {
 				return Config{}, errNonStaticClusterMode(p.deckhouseSettings.Mode)
 			}
 		}
@@ -115,6 +187,11 @@ func (p *ConfigProvider) Config(defaultCRI constant.CRIType, isStatic bool) (Con
 		if err := config.useDeckhouseSettings(*p.deckhouseSettings); err != nil {
 			return Config{}, fmt.Errorf("get registry settings from 'moduleConfig/deckhouse': %w", err)
 		}
+
+		// After useDeckhouseSettings, which replaces the whole struct.
+		config.BundleBootstrap = p.bundleBootstrap
+		config.StoreExpected = p.storeExpected
+		config.AgentOwnsRuntime = p.agentOwnsRuntime
 
 	case p.initConfig != nil:
 		if err := config.useInitConfig(*p.initConfig); err != nil {
@@ -134,6 +211,20 @@ type Config struct {
 	Settings          ModeSettings
 	DeckhouseSettings module_config.DeckhouseSettings
 	LegacyMode        bool
+
+	// BundleBootstrap records that the images come from a bundle, which is a fact about this
+	// installation that the mode alone does not carry: on the node the mode is Local, exactly as it is
+	// for a legacy Local cluster, while what owns the registry afterwards is a different
+	// implementation entirely.
+	BundleBootstrap bool
+
+	// StoreExpected records that the registry module runs a store in this cluster, and so that the
+	// installation is not finished until that store reports itself ready. See WithStore.
+	StoreExpected bool
+
+	// AgentOwnsRuntime records that the first master comes up with the node agent on it, installed
+	// from the installer's own packages proxy. See WithAgent.
+	AgentOwnsRuntime bool
 }
 
 // useDefault configures the registry with default CE settings.
@@ -220,7 +311,9 @@ func (c *Config) IsLocal() bool {
 
 // Manifest creates a ManifestBuilder instance for generating configuration manifests.
 func (c *Config) Manifest() *ManifestBuilder {
-	return newManifestBuilder(c.Settings.ToModel(), c.LegacyMode)
+	model := c.Settings.ToModel()
+	model.AgentOwnsRuntime = c.AgentOwnsRuntime
+	return newManifestBuilder(model, c.LegacyMode, c.BundleBootstrap)
 }
 
 // DeepCopyInto copies the receiver into out.

@@ -391,6 +391,70 @@ spec:
 			require.Equal(t, "test-password", registry.Password)
 			require.Equal(t, "-----BEGIN CERTIFICATE-----", registry.CA)
 		})
+		// The mode the whole cluster is built from, not just the mode the installer pulls its own
+		// images with. cfg.Registry is what the bashible context reads, and it decides whether the
+		// steps that stand up the registry on the node run at all — with an Unmanaged answer here they
+		// are skipped, the store stays empty, and Deckhouse never pulls. That is a cluster that
+		// installs successfully and does not work, so it is asserted on the parsed configuration
+		// rather than on the provider that produced it.
+		//
+		// Note the cluster in this template is a Cloud one: this configuration used to be refused
+		// outright before an installation from a bundle was allowed outside static clusters.
+		t.Run("ModuleConfig registry, a cache with no upstream -> the cluster is built with a local registry", func(t *testing.T) {
+			cfg := generateMetaConfigForMetaConfigTest(t, map[string]any{
+				"manifests": []string{
+					`
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: registry
+spec:
+  enabled: true
+  version: 1
+  settings:
+    mode: Managed
+    storage:
+      cache: true
+      size: 20Gi
+      source:
+        bundleRef: d8-mirror-bundle
+        expectedDigests: 556
+`,
+				},
+			})
+			require.Equal(t, registry_const.ModeLocal, cfg.Registry.Settings.Mode,
+				"a cache with nothing to fill it from over the network is an install from a bundle")
+			require.True(t, cfg.Registry.IsLocal())
+			require.Equal(t, registry_const.BundleImagesRepo, cfg.Registry.Settings.RemoteData.ImagesRepo,
+				"the nodes must be pointed at the bundle registry the tunnel serves, not at an upstream they cannot reach")
+		})
+		t.Run("ModuleConfig registry, a cache with an upstream -> an ordinary install", func(t *testing.T) {
+			cfg := generateMetaConfigForMetaConfigTest(t, map[string]any{
+				"manifests": []string{
+					`
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: registry
+spec:
+  enabled: true
+  version: 1
+  settings:
+    mode: Managed
+    primary:
+      upstream:
+        scheme: HTTPS
+        host: registry.deckhouse.io
+        path: /deckhouse/ce
+    storage:
+      cache: true
+      size: 20Gi
+`,
+				},
+			})
+			require.NotEqual(t, registry_const.ModeLocal, cfg.Registry.Settings.Mode,
+				"an upstream is a source of images, so nothing here says bundle")
+		})
 	})
 }
 

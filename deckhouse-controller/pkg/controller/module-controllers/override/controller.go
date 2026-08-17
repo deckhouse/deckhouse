@@ -254,7 +254,7 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 	source := new(v1alpha1.ModuleSource)
 	if err = r.client.Get(ctx, client.ObjectKey{Name: module.Properties.Source}, source); err != nil {
 		if !apierrors.IsNotFound(err) {
-			r.log.Error("failed to get the module source for the module pull override", slog.String("source", module.Properties.Source), slog.String("target", mpo.Name), log.Err(err))
+			r.log.Error("failed to get the module source for the module pull override", slog.String("module_source", module.Properties.Source), slog.String("target", mpo.Name), log.Err(err))
 			return ctrl.Result{}, fmt.Errorf("get: %w", err)
 		}
 

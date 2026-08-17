@@ -41,6 +41,7 @@ import (
 	registryservice "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/registry-service"
 	registryswitcher "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/registry-switcher"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/users"
+	v2 "github.com/deckhouse/deckhouse/modules/038-registry/hooks/v2"
 )
 
 const (
@@ -154,6 +155,32 @@ var _ = sdk.RegisterFunc(
 
 func handle(ctx context.Context, input *go_hook.HookInput) error {
 	moduleValues := helpers.NewValuesAccessor[Values](input, valuesPath)
+
+	// This implementation stands down entirely while the current one owns the cluster.
+	//
+	// One decision in one place rather than a gate on each of its templates, because every
+	// one of them renders from these values — the node-side proxy, the node services
+	// DaemonSet, the PKI and user secrets, and the state secret itself. Clearing the values
+	// is therefore both halves at once: nothing of this implementation is deployed, and
+	// nothing of it is recorded.
+	//
+	// Recording is the half that is easy to overlook and expensive to get wrong. The gate
+	// that decides which implementation is active reads this one's state secret, so a state
+	// machine left running on a cluster the current implementation owns writes down a mode
+	// of its own and, on the next module restart, can take the cluster back — while the
+	// current implementation is already configuring the container runtime on every node.
+	// The two would not merge those answers, they would race them.
+	//
+	// Measured, on a fresh cluster with the cache configured: a `registry-incluster-proxy`
+	// pod sat Pending beside a store that was already serving images. Nothing had asked for
+	// it. It was enough that `d8-system/registry-config` exists on every cluster — module
+	// 002 renders it unconditionally — because that secret is all this hook needed to start
+	// a state machine for a cluster it does not own.
+	if v2.IsActive(input) {
+		moduleValues.Clear()
+		return nil
+	}
+
 	values := moduleValues.Get()
 
 	var (

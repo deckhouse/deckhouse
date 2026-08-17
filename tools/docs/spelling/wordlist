@@ -1292,9 +1292,14 @@ regexp
 RegExp
 RegionOne
 regionTagCategory
+RegistryConfig
 registryDockerCfg
 registryImagesRepo
+RegistryNode
+RegistryNodes
 registrysecret
+RegistryStorage
+RegistryUpstream
 Rego
 reindex
 releaseChannel
@@ -1580,6 +1585,7 @@ uid
 UID
 UIs
 un
+unconfigured
 uncordoned
 uninstall
 uninstalled

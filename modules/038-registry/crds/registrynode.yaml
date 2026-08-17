@@ -1,0 +1,392 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: registrynodes.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: registry
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: registrynodes
+    singular: registrynode
+    kind: RegistryNode
+    shortNames:
+      - rnode
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: Cache
+          type: boolean
+          description: "Whether the agent routes pulls through the in-cluster cache."
+          jsonPath: .spec.cache
+        - name: Reconciled
+          type: boolean
+          description: "Whether the agent has applied the spec it currently sees."
+          jsonPath: .status.reconciled
+        - name: ProxyListening
+          type: boolean
+          description: "Whether the agent is serving the registry endpoint."
+          jsonPath: .status.proxyListening
+        - name: ActiveBackends
+          type: string
+          description: "The backends the agent is currently able to use."
+          jsonPath: .status.activeBackends
+          priority: 1
+        - name: Age
+          type: date
+          description: "Time since creation."
+          jsonPath: .metadata.creationTimestamp
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Defines the complete registry layout of a single node, as compiled for its agent.
+
+            One object per node, named after the node, with an `ownerReference` on it. Written by the registry controller; `status` is written by the agent only.
+
+            The object is deliberately **flat and self-contained**: credentials, certificate authority bundles and routes are inlined, with no references to other objects. The agent keeps a full copy on disk and keeps serving images from it while the API server is unreachable — and at that point there is nothing left to dereference. For the same reason the controller compiles every accepted [RegistryUpstream](cr.html#registryupstream) into `spec.additionalRoutes` instead of having the agent watch N objects: consistency across many objects cannot be guaranteed when the API is down.
+
+            The object carries **no per-node secrets**. Everything in it is global configuration, identical on every node. This is what makes it safe for the whole `system:nodes` group to read, which is how the agent gets access using the kubelet's kubeconfig.
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              properties:
+                cache:
+                  type: boolean
+                  description: |
+                    The cache axis for this node.
+
+                    `true` sends the agent to the in-cluster storage, `false` straight to the primary upstream.
+                backends:
+                  type: array
+                  description: |
+                    The sources of the **primary** image set, in priority order.
+
+                    With the cache on, this is the storage followed by the upstream as a fallback while the cache is still filling; the upstream entry disappears from the layout when the cluster goes air-gap. With the cache off, it is the upstream alone.
+                  x-kubernetes-list-type: map
+                  x-kubernetes-list-map-keys:
+                    - name
+                  items:
+                    type: object
+                    required:
+                      - name
+                      - host
+                    properties:
+                      name:
+                        type: string
+                        enum:
+                          - Storage
+                          - Upstream
+                        description: |
+                          The backend's role.
+
+                          - `Storage` — the in-cluster cache.
+                          - `Upstream` — the primary upstream, used either as the only backend or as a fallback while the cache fills.
+                      scheme:
+                        type: string
+                        enum:
+                          - HTTP
+                          - HTTPS
+                        default: HTTPS
+                        description: |
+                          The protocol used to reach the backend.
+                      host:
+                        type: string
+                        minLength: 1
+                        description: |
+                          The backend host, optionally with a port.
+                        x-doc-example: 'registry.d8-system.svc:5001'
+                      path:
+                        type: string
+                        description: |
+                          The repository prefix inside the backend.
+                      ca:
+                        type: string
+                        description: |
+                          A PEM-encoded certificate authority bundle used to verify the backend.
+                      auth:
+                        type: object
+                        description: |
+                          Where the credentials for this endpoint are kept.
+
+                          Named rather than carried. This resource is cluster-scoped and the node agent's role is bound to the `system:nodes` group, so a credential written here would be readable through the API by every kubelet in the cluster — including credentials for registries that node never pulls from. The component that reads this resolves the reference once and keeps the result, so it still works when the API server does not.
+                        properties:
+                          secretRef:
+                            type: object
+                            description: |
+                              The Secret holding the credentials, and the key inside it.
+                            required:
+                              - name
+                              - key
+                            properties:
+                              name:
+                                type: string
+                                description: |
+                                  Name of the Secret in the `d8-system` namespace.
+                              key:
+                                type: string
+                                description: |
+                                  Key inside it. One Secret holds every credential the module resolved, keyed by what it belongs to.
+                      mirrors:
+                        type: array
+                        description: |
+                          Additional addresses serving the same content, tried on failure.
+                        items:
+                          type: object
+                          required:
+                            - host
+                          properties:
+                            scheme:
+                              type: string
+                              enum:
+                                - HTTP
+                                - HTTPS
+                              default: HTTPS
+                              description: |
+                                The protocol used to reach the mirror.
+                            host:
+                              type: string
+                              minLength: 1
+                              description: |
+                                The mirror host, optionally with a port.
+                            path:
+                              type: string
+                              description: |
+                                The repository prefix inside the mirror.
+                            ca:
+                              type: string
+                              description: |
+                                A PEM-encoded certificate authority bundle used to verify the mirror.
+                            auth:
+                              type: object
+                              description: |
+                                Where the credentials for this mirror are kept.
+
+                                Named rather than carried, for the same reason as the endpoint above: this resource is readable by every node in the cluster. A mirror can need credentials of its own, so it can name a key of its own.
+                              properties:
+                                secretRef:
+                                  type: object
+                                  description: |
+                                    The Secret holding the credentials, and the key inside it.
+                                  required:
+                                    - name
+                                    - key
+                                  properties:
+                                    name:
+                                      type: string
+                                      description: |
+                                        Name of the Secret in the `d8-system` namespace.
+                                    key:
+                                      type: string
+                                      description: |
+                                        Key inside it.
+                additionalRoutes:
+                  type: array
+                  description: |
+                    The accepted [RegistryUpstream](cr.html#registryupstream) objects, compiled by the controller.
+
+                    Always transit, never cached: the agent proxies the pull and streams it through without writing to disk.
+                  x-kubernetes-list-type: map
+                  x-kubernetes-list-map-keys:
+                    - match
+                  items:
+                    type: object
+                    required:
+                      - match
+                      - host
+                    properties:
+                      match:
+                        type: string
+                        minLength: 1
+                        description: |
+                          The registry host intercepted on this node.
+                        x-doc-example: 'images.virtualization.example.com'
+                      scheme:
+                        type: string
+                        enum:
+                          - HTTP
+                          - HTTPS
+                        default: HTTPS
+                        description: |
+                          The protocol used to reach the upstream.
+                      host:
+                        type: string
+                        minLength: 1
+                        description: |
+                          The upstream host, optionally with a port.
+                        x-doc-example: 'registry-vendor.example.com'
+                      path:
+                        type: string
+                        description: |
+                          The repository prefix inside the upstream.
+                      ca:
+                        type: string
+                        description: |
+                          A PEM-encoded certificate authority bundle used to verify the upstream.
+                      auth:
+                        type: object
+                        description: |
+                          Where the credentials for this endpoint are kept.
+
+                          Named rather than carried. This resource is cluster-scoped and the node agent's role is bound to the `system:nodes` group, so a credential written here would be readable through the API by every kubelet in the cluster — including credentials for registries that node never pulls from. The component that reads this resolves the reference once and keeps the result, so it still works when the API server does not.
+                        properties:
+                          secretRef:
+                            type: object
+                            description: |
+                              The Secret holding the credentials, and the key inside it.
+                            required:
+                              - name
+                              - key
+                            properties:
+                              name:
+                                type: string
+                                description: |
+                                  Name of the Secret in the `d8-system` namespace.
+                              key:
+                                type: string
+                                description: |
+                                  Key inside it. One Secret holds every credential the module resolved, keyed by what it belongs to.
+                      mirrors:
+                        type: array
+                        description: |
+                          Additional addresses serving the same content.
+                        items:
+                          type: object
+                          required:
+                            - host
+                          properties:
+                            scheme:
+                              type: string
+                              enum:
+                                - HTTP
+                                - HTTPS
+                              default: HTTPS
+                              description: |
+                                The protocol used to reach the mirror.
+                            host:
+                              type: string
+                              minLength: 1
+                              description: |
+                                The mirror host, optionally with a port.
+                            path:
+                              type: string
+                              description: |
+                                The repository prefix inside the mirror.
+                            ca:
+                              type: string
+                              description: |
+                                A PEM-encoded certificate authority bundle used to verify the mirror.
+                            auth:
+                              type: object
+                              description: |
+                                Where the credentials for this mirror are kept.
+
+                                Named rather than carried, for the same reason as the endpoint above: this resource is readable by every node in the cluster. A mirror can need credentials of its own, so it can name a key of its own.
+                              properties:
+                                secretRef:
+                                  type: object
+                                  description: |
+                                    The Secret holding the credentials, and the key inside it.
+                                  required:
+                                    - name
+                                    - key
+                                  properties:
+                                    name:
+                                      type: string
+                                      description: |
+                                        Name of the Secret in the `d8-system` namespace.
+                                    key:
+                                      type: string
+                                      description: |
+                                        Key inside it.
+            status:
+              type: object
+              description: |
+                Written by the agent only, reporting containerd-side facts.
+
+                It carries no storage completeness: that is a property of the storage and lives in [RegistryStorage](cr.html#registrystorage) `.status.replicas`. Any node can patch any `RegistryNode` status, because RBAC cannot scope `list`/`watch` by field selector, so nothing here may be load-bearing for the pull path — it is observability.
+              properties:
+                observedGeneration:
+                  type: integer
+                  format: int64
+                  description: |
+                    The `spec` generation the agent last applied.
+                reconciled:
+                  type: boolean
+                  description: |
+                    Whether the agent has applied the spec it currently sees.
+                proxyListening:
+                  type: boolean
+                  description: |
+                    Whether the agent is serving the registry endpoint.
+                activeBackends:
+                  type: array
+                  description: |
+                    The backends the agent is currently able to use.
+                  items:
+                    type: string
+                staleStorageDataBytes:
+                  type: integer
+                  format: int64
+                  description: |
+                    How much of the in-cluster cache's data is still on this node while no cache is configured.
+
+                    The blobs are left behind deliberately when the cache is turned off: turning it back on then refills from what is already there rather than from scratch, and over a slow link that difference is hours. What would not be acceptable is keeping them silently, since nothing else in the module would ever mention the disk they occupy — so the agent measures them and an alert says so.
+
+                    To reclaim the space, remove `/opt/deckhouse/registry` on the node. Absent while a cache is configured, and on a node that never held one.
+                conditions:
+                  type: array
+                  description: |
+                    The detailed state reported by the agent.
+
+                    - `Reconciled` — whether the spec has been applied. The reason distinguishes a normal reconcile from one applied out of the on-disk copy because the API server was unreachable.
+                  x-kubernetes-list-type: map
+                  x-kubernetes-list-map-keys:
+                    - type
+                  items:
+                    type: object
+                    required:
+                      - type
+                      - status
+                      - lastTransitionTime
+                      - reason
+                    properties:
+                      type:
+                        type: string
+                        description: |
+                          The condition type.
+                      status:
+                        type: string
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                        description: |
+                          The condition status.
+                      observedGeneration:
+                        type: integer
+                        format: int64
+                        description: |
+                          The `spec` generation the condition was set for.
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                        description: |
+                          When the condition last changed.
+                      reason:
+                        type: string
+                        description: |
+                          A machine-readable reason for the condition.
+                      message:
+                        type: string
+                        description: |
+                          A human-readable explanation.

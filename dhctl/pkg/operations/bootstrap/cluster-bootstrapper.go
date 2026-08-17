@@ -729,7 +729,22 @@ func (b *ClusterBootstrapper) bootstrapDeckhouse(ctx context.Context, bctx *boot
 		DeckhouseTimeout: b.Options.Bootstrap.DeckhouseTimeout,
 	}
 
-	installDeckhouseResult, err := InstallDeckhouse(ctx, &client.KubernetesClient{KubeClient: kubeCl}, bctx.deckhouseInstallConfig, installParams)
+	// With the node interface attached, because installing Deckhouse is where the store on the first
+	// master is handed over to the cluster, and that is done by running commands on that node.
+	//
+	// Constructing the client with only KubeClient set — which is what every call here used to do —
+	// left NodeInterface nil, and the handover skipped both of its steps without saying so.
+	nodeInterface, err := helper.GetNodeInterface(ctx, b.SSHProviderInitializer, b.SSHProviderInitializer.GetSettings())
+	if err != nil {
+		return fmt.Errorf("Could not get NodeInterface: %w", err)
+	}
+
+	installDeckhouseResult, err := InstallDeckhouse(
+		ctx,
+		(&client.KubernetesClient{KubeClient: kubeCl}).WithNodeInterface(nodeInterface),
+		bctx.deckhouseInstallConfig,
+		installParams,
+	)
 	if err != nil {
 		return err
 	}

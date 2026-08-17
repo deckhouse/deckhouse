@@ -17,6 +17,7 @@ limitations under the License.
 package template_tests
 
 import (
+	"encoding/base64"
 	"fmt"
 	"os"
 	"sort"
@@ -1122,6 +1123,55 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 				Expect(openStackCluster.Exists()).To(BeTrue())
 				Expect(openStackCluster.Field("spec.disableAPIServerFloatingIP").Exists()).To(BeFalse())
 				Expect(openStackCluster.Field("spec.controlPlaneEndpoint").Exists()).To(BeFalse())
+			})
+		})
+
+		// The CAPI bootstrap secret is what a machine's user data is built from, and it is built
+		// once: a machine created from it carries whatever it said onto the node for good.
+		//
+		// The token in it comes from a hook that does not run on NodeGroup events, so a render
+		// can see a NodeGroup no token has been ordered for yet. Rendered anyway, the token
+		// became the literal `<no value>`, was written to /var/lib/bashible/bootstrap-token, and
+		// the kube-apiserver answered 401 to everything the node asked with it — a worker that
+		// never joined, on a cluster where the secret itself was correct minutes later.
+		Context("a CAPI NodeGroup whose bootstrap token has not been ordered yet", func() {
+			capiOpenstack := func() {
+				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerOpenstack)
+				f.ValuesSet("nodeManager.internal.capiControllerManagerEnabled", true)
+				f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterKind", "OpenStackCluster")
+				f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterAPIVersion", "infrastructure.cluster.x-k8s.io/v1beta1")
+				f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterName", "openstack")
+				f.ValuesSet("nodeManager.internal.cloudProvider.capiMachineTemplateKind", "OpenStackMachineTemplate")
+				f.ValuesSet("nodeManager.internal.cloudProvider.capiMachineTemplateAPIVersion", "infrastructure.cluster.x-k8s.io/v1beta1")
+				f.ValuesSet("global.discovery.podSubnet", "10.111.0.0/16")
+				setBashibleAPIServerTLSValues(f)
+			}
+
+			It("is not given a bootstrap secret at all, so Cluster API waits instead", func() {
+				capiOpenstack()
+				// Another group has one; this is the window, not a cluster without tokens.
+				f.ValuesSet("nodeManager.internal.bootstrapTokens", map[string]string{"other": "mytoken"})
+				f.HelmRender()
+
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				Expect(f.KubernetesResource("Secret", "d8-cloud-instance-manager", "worker-02320933").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("Secret", "d8-cloud-instance-manager", "worker-6bdb5b0d").Exists()).To(BeFalse())
+			})
+
+			It("gets one carrying the token once it has been ordered", func() {
+				capiOpenstack()
+				f.ValuesSet("nodeManager.internal.bootstrapTokens", map[string]string{"worker": "mytoken"})
+				f.HelmRender()
+
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				secret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "worker-02320933")
+				Expect(secret.Exists()).To(BeTrue())
+
+				userData, err := base64.StdEncoding.DecodeString(secret.Field("data.value").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(string(userData)).To(ContainSubstring("content: mytoken"))
+				Expect(string(userData)).ShouldNot(ContainSubstring("no value"))
 			})
 		})
 

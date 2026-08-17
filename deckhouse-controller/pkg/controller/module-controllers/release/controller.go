@@ -351,7 +351,7 @@ func (r *reconciler) handleRelease(ctx context.Context, release *v1alpha1.Module
 			r.log.With(
 				slog.String("module_name", release.GetModuleName()),
 				slog.String("release_name", release.GetName()),
-				slog.String("source", release.GetModuleSource()),
+				slog.String("module_source", release.GetModuleSource()),
 			).Debug("result of handle deployed release", log.Err(err))
 
 			return res, err
@@ -377,7 +377,7 @@ func (r *reconciler) handleRelease(ctx context.Context, release *v1alpha1.Module
 		r.log.With(
 			slog.String("module_name", release.GetModuleName()),
 			slog.String("release_name", release.GetName()),
-			slog.String("source", release.GetModuleSource()),
+			slog.String("module_source", release.GetModuleSource()),
 		).Debug("result of handle pending release", log.Err(err))
 
 		return res, err
@@ -768,7 +768,7 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 	logger := r.log.With(
 		slog.String("module_name", release.GetModuleName()),
 		slog.String("release_name", release.GetName()),
-		slog.String("source", release.GetModuleSource()),
+		slog.String("module_source", release.GetModuleSource()),
 	)
 
 	logger.Debug("handle pending release")

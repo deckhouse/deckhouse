@@ -8,8 +8,13 @@ cpu: 10m
 memory: 10Mi
 {{- end }}
 
+{{- /*
+  The legacy node-side registry. The other writer of the container runtime's registry
+  configuration, so this is the gate that keeps two of them off the same node.
+  See _ownership.tpl.
+*/ -}}
 {{- $orchestrator := .Values.registry.internal.orchestrator -}}
-{{- if $orchestrator -}}
+{{- if and $orchestrator (eq (include "registry_legacy_owns_the_cluster" .) "true") -}}
 {{- $hash := $orchestrator.hash -}}
 {{- $state := ($orchestrator.state).node_services -}}
 

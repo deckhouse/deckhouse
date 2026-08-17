@@ -6,8 +6,27 @@
           using the hook "https/copy_custom_certificate.go"
         - creates a similar secret named "registry-ingress-tls-customcertificate" in the "d8-system" namespace
 */ -}}
+{{- /*
+  Not behind the legacy gate, and that is not an oversight.
+
+  Copying the operator's certificate into this namespace is shared infrastructure rather than part of
+  either implementation: the CURRENT implementation's publication ingress names the very secret this
+  produces — `helm_lib_module_https_secret_name (list . "registry-ingress-tls")` resolves to
+  `registry-ingress-tls-customcertificate` under `https.mode: CustomCertificate` — and nothing else
+  creates it. Gating it with the rest of the previous implementation left that ingress pointing at a
+  secret that does not exist, which a test caught before any cluster did.
+
+  What still gates it is `ingress_enabled`, which is about whether an endpoint is published at all.
+*/ -}}
 {{- $orchestrator := .Values.registry.internal.orchestrator -}}
-{{- if (($orchestrator).state).ingress_enabled -}}
+{{- /*
+  And gated on the DATA existing, because the helper it calls fails the whole render without it —
+  `internal.customCertificateData is required to copy custom certificate`. The hook fills that value
+  only under `https.mode: CustomCertificate`, so on every other mode this template has nothing to copy
+  and must not try: taking it out from behind the legacy gate without this failed the render of two
+  unrelated specs.
+*/ -}}
+{{- if and ((($orchestrator).state).ingress_enabled) ((.Values.registry.internal).customCertificateData) -}}
 {{- if .Values.global.enabledModules | has "cert-manager" -}}
 
 {{- include "helm_lib_module_https_copy_custom_certificate" (list . "d8-system" "registry-ingress-tls") -}}
