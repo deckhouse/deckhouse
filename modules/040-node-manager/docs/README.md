@@ -180,6 +180,10 @@ Configuring/clearing up a node, joining it to a cluster, and disjoining it can b
 
   To transfer an existing cluster node under CAPS management, it is necessary to prepare the [StaticInstance](cr.html#staticinstance) and [SSHCredentials](cr.html#sshcredentials) resources for this node, as with automatic management in the point above, however the [StaticInstance](cr.html#staticinstance) resource must additionally be annotated as `static.node.deckhouse.io/skip-bootstrap-phase: ""`.
 
+  This annotation is imperative and one-shot: CAPS removes it as soon as the node is adopted, and it can only be set while the [StaticInstance](cr.html#staticinstance) is in the `Pending` phase. It is therefore not suitable for manifests that are managed declaratively (GitOps tools, operators, cluster templates): such a tool would keep re-adding the annotation that CAPS has just removed, and the update would be rejected once the instance leaves the `Pending` phase.
+
+  For declaratively managed manifests, annotate the [StaticInstance](cr.html#staticinstance) with `static.node.deckhouse.io/adopt-if-node-exists: ""` instead. It expresses a condition rather than an action: the node is adopted if a `Node` with the same `spec.address` is already part of the cluster, and bootstrapped as usual otherwise. CAPS neither removes this annotation nor restricts the phase it can be set in, so it may stay in the manifest permanently and produces the correct result for both existing and freshly added nodes.
+
 ### Cluster API Provider Static
 
 Cluster API Provider Static (CAPS) is an implementation of a declarative management provider for static nodes (bare metal servers or virtual machines) for the Kubernetes [Cluster API](https://cluster-api.sigs.k8s.io/). Essentially, CAPS is an additional layer of abstraction to the existing Deckhouse functionality that provides automatic static node configuration and cleanup using scripts generated for each node group (see [Working with Static Nodes](#working-with-static-nodes)).

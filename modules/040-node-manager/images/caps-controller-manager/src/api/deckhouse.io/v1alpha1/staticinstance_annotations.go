@@ -16,4 +16,15 @@ limitations under the License.
 
 package v1alpha1
 
-const SkipBootstrapPhaseAnnotation = "static.node.deckhouse.io/skip-bootstrap-phase"
+const (
+	// SkipBootstrapPhaseAnnotation is an imperative, one-shot request to adopt the node behind
+	// spec.address as-is instead of bootstrapping it. CAPS removes the annotation once the node
+	// is adopted, and it may only be set while the StaticInstance is in the Pending phase.
+	SkipBootstrapPhaseAnnotation = "static.node.deckhouse.io/skip-bootstrap-phase"
+
+	// AdoptIfNodeExistsAnnotation is a declarative request to adopt the node behind
+	// spec.address if a Node with the same address is already part of the cluster, and to
+	// bootstrap it as usual otherwise. Unlike SkipBootstrapPhaseAnnotation it is idempotent
+	// and may stay in a declaratively managed manifest permanently.
+	AdoptIfNodeExistsAnnotation = "static.node.deckhouse.io/adopt-if-node-exists"
+)

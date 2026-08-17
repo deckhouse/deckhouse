@@ -303,8 +303,11 @@ func (r *StaticMachineReconciler) reconcileNormal(
 	r.Recorder.SendNormalEvent(newStaticInstance, staticMachine.Labels["node-group"], "StaticInstanceAttachSucceeded", fmt.Sprintf("Attached to StaticMachine %s", staticMachine.Name))
 	r.Recorder.SendNormalEvent(staticMachine, staticMachine.Labels["node-group"], "StaticInstanceAttachSucceeded", fmt.Sprintf("Attached StaticInstance %s", newStaticInstance.Name))
 
-	_, shouldSkipBootstrap := newStaticInstance.Annotations[deckhousev1.SkipBootstrapPhaseAnnotation]
-	if shouldSkipBootstrap {
+	shouldAdopt, err := newStaticInstance.ShouldAdopt(ctx, r.Client)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to check whether StaticInstance should be adopted: %w", err)
+	}
+	if shouldAdopt {
 		return r.HostClient.AdoptStaticInstance(ctx, newStaticInstance, staticMachine, machine)
 	}
 
@@ -381,9 +384,12 @@ func (r *StaticMachineReconciler) reconcileStaticInstancePhase(ctx context.Conte
 
 	switch staticInstance.GetPhase() {
 	case deckhousev1.StaticInstanceStatusCurrentStatusPhasePending:
-		_, shouldSkipBootstrap := staticInstance.Annotations[deckhousev1.SkipBootstrapPhaseAnnotation]
-		if !shouldSkipBootstrap {
-			logger.Info("SkipBootstrapPhaseAnnotation found, won't reconcile")
+		shouldAdopt, err := staticInstance.ShouldAdopt(ctx, r.Client)
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to check whether StaticInstance should be adopted: %w", err)
+		}
+		if !shouldAdopt {
+			logger.Info("StaticInstance does not request adoption, won't reconcile")
 			return ctrl.Result{}, nil
 		}
 

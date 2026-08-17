@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -88,7 +87,7 @@ func (r *StaticInstanceCustomValidator) ValidateCreate(_ context.Context, obj ru
 		return nil, fmt.Errorf("failed to get StaticInstance %q: %w", staticInstance.Name, err)
 	}
 
-	if err := staticInstance.validateAddressIfNoSkipBootstrap(ctx, r.Reader); err != nil {
+	if err := staticInstance.validateAddressUnlessAdopting(ctx, r.Reader); err != nil {
 		return nil, field.Forbidden(field.NewPath("spec", "address"), err.Error())
 	}
 	return nil, nil
@@ -137,31 +136,26 @@ func (r *StaticInstanceCustomValidator) ValidateDelete(_ context.Context, obj ru
 	return nil, nil
 }
 
-// validateAddressIfNoSkipBootstrap ensures that if StaticInstance does NOT have
-// annotation "static.node.deckhouse.io/skip-bootstrap-phase",
-// then its spec.address must NOT match any existing Node address.
-func (r *StaticInstance) validateAddressIfNoSkipBootstrap(ctx context.Context, cli client.Reader) error {
-	if _, hasSkipBootstrap := r.Annotations["static.node.deckhouse.io/skip-bootstrap-phase"]; hasSkipBootstrap {
-		staticinstancelog.Info("skip-bootstrap annotation found, skipping address validation", "name", r.Name)
+// validateAddressUnlessAdopting ensures that unless the StaticInstance asks to adopt an
+// already existing node (see ShouldAdopt), its spec.address does not match the address of a
+// Node that is already part of the cluster.
+func (r *StaticInstance) validateAddressUnlessAdopting(ctx context.Context, cli client.Reader) error {
+	if r.adoptionRequested() {
+		staticinstancelog.Info("adoption requested, skipping address validation", "name", r.Name)
 		return nil
 	}
 
-	nodes := &corev1.NodeList{}
-	if err := cli.List(ctx, nodes); err != nil {
-		return fmt.Errorf("failed to list cluster nodes: %w", err)
-	}
-
-	instanceAddr := r.Spec.Address
-	if instanceAddr == "" {
+	if r.Spec.Address == "" {
 		return errors.New("spec.address must not be empty")
 	}
 
-	for _, node := range nodes.Items {
-		for _, addr := range node.Status.Addresses {
-			if addr.Address == instanceAddr {
-				return fmt.Errorf("Address %q already exists on node %q, if you need transfer the existing manually-bootstrapped cluster node under CAPS management, you should annotate this StaticInstance with static.node.deckhouse.io/skip-bootstrap-phase: \"\"", instanceAddr, node.Name)
-			}
-		}
+	nodeName, err := r.FindNodeWithSameAddress(ctx, cli)
+	if err != nil {
+		return err
+	}
+
+	if nodeName != "" {
+		return fmt.Errorf("Address %q already exists on node %q, if you need transfer the existing manually-bootstrapped cluster node under CAPS management, you should annotate this StaticInstance with %s: \"\"", r.Spec.Address, nodeName, AdoptIfNodeExistsAnnotation)
 	}
 
 	return nil
