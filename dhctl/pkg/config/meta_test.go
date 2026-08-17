@@ -885,5 +885,5 @@ func TestPrepareGuardErrorNamesTheRemedy(t *testing.T) {
 
 	_, err := m.Prepare(t.Context(), DummyValidatorProvider())
 	require.ErrorContains(t, err, "spec.cloudInstances.classReference")
-	require.ErrorContains(t, err, "dhctl destroy")
+	require.ErrorContains(t, err, "spec.cloudInstances.minPerZone")
 }
