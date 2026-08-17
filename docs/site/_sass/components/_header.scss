@@ -455,6 +455,7 @@ html {
                         }
 
                         @include breakpoints.min-w(xxxl) {
+                            top: 45%;
                             right: 0px;
                         }
                     }
@@ -744,7 +745,11 @@ html {
                     width: 10px;
 
                     @include breakpoints.min-w(s) {
-                        top: 60%;
+                        top: 58%;
+                    }
+
+                    @include breakpoints.min-w(m) {
+                        top: 55%;
                     }
                 }
 
