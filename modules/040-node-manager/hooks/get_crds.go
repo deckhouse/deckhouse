@@ -49,6 +49,7 @@ import (
 const (
 	CRITypeDocker           = "Docker"
 	CRITypeContainerd       = "Containerd"
+	CRITypeContainerdV2     = "ContainerdV2"
 	NodeGroupDefaultCRIType = CRITypeContainerd
 
 	errorStatusField       = "error"
@@ -492,6 +493,10 @@ func getCRDsHandler(_ context.Context, input *go_hook.HookInput) error {
 		// Detect CRI type. Default CRI type is 'Docker' for Kubernetes version less than 1.19.
 		v1_19_0, _ := semver.NewVersion("1.19.0")
 		defaultCRIType := NodeGroupDefaultCRIType
+		// CSE builds no containerd v1 package, so its implicit default cannot be v1.
+		if input.Values.Get("global.deckhouseEdition").String() == "CSE" {
+			defaultCRIType = CRITypeContainerdV2
+		}
 		if effectiveKubeVer.LessThan(v1_19_0) {
 			defaultCRIType = CRITypeDocker
 		}

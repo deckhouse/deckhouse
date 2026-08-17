@@ -34,7 +34,7 @@ requirements:
   "istioMinimalVersion": "1.21" # modules/110-istio/requirements/check.go
   "unmetCloudConditions": "true" # modules/040-node-manager/requirements/check.go
   "nodesMinimalLinuxKernelVersion": "5.8.0" # modules/021-cni-cilium/requirements/check.go
-  # "checkContainerdV1NodesPresent": "true" # modules/040-node-manager/requirements/check.go
+  # "checkContainerdV1NodesPresent": "false" # modules/040-node-manager/requirements/check.go; injected with 'true' only for CSE via .werf/werf-release-channel.yaml (CSE drops containerd v1)
 
 # map of disruptions, associated with a specific release. You have to register check functions before specified release
 disruptions:
