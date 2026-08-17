@@ -34,6 +34,7 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -774,5 +775,78 @@ func TestACopyBringsTheLayersWithIt(t *testing.T) {
 		require.NoError(t, response.Body.Close())
 		assert.Equal(t, http.StatusOK, response.StatusCode,
 			"the destination does not hold layer %s, so only the manifest was copied", digest)
+	}
+}
+
+// manifestOnly is a manifest with nothing behind it, which is what a registry ends up holding when a
+// pull-through cache serves one metadata request, or when a copy is interrupted after the manifest
+// went in. `remote.Put` writes such a value verbatim: a Taggable that is neither an image nor an
+// index has no dependencies for the pusher to walk.
+type manifestOnly struct {
+	raw       []byte
+	mediaType types.MediaType
+}
+
+func (m manifestOnly) RawManifest() ([]byte, error)        { return m.raw, nil }
+func (m manifestOnly) MediaType() (types.MediaType, error) { return m.mediaType, nil }
+
+// TestACopyRepairsAnImageWhoseManifestArrivedAlone is the case the repair path above could not
+// actually repair.
+//
+// Deciding to re-copy is not the same as re-copying: `remote.Pusher.Push` asks the destination
+// whether it holds the manifest and returns success as soon as it does, without writing the blobs the
+// manifest names. So the fill reported writing an image every pass while the destination stayed
+// unpullable — measured on `ly-mmc` as two followers stuck at 398 and 397 of 403 for forty minutes,
+// each missing exactly one blob: the image config, with every layer already there.
+//
+// The assertion is deliberately about pulling and not about counters. The counter was right the whole
+// time this defect existed; the store was empty of what the counter claimed.
+func TestACopyRepairsAnImageWhoseManifestArrivedAlone(t *testing.T) {
+	source := startRegistry(t)
+	destination := startRegistry(t)
+
+	source.Repository = "deckhouse/ee"
+	destination.Repository = "system/deckhouse"
+
+	pushImage(t, source, "deckhouse/ee/registry-controller:v1")
+
+	sourceTag, err := name.NewTag(source.Address+"/deckhouse/ee/registry-controller:v1", name.Insecure)
+	require.NoError(t, err)
+	descriptor, err := remote.Get(sourceTag)
+	require.NoError(t, err)
+
+	destinationTag, err := name.NewTag(
+		destination.Address+"/system/deckhouse/registry-controller:v1", name.Insecure)
+	require.NoError(t, err)
+	require.NoError(t, remote.Put(destinationTag,
+		manifestOnly{raw: descriptor.Manifest, mediaType: descriptor.MediaType}))
+
+	// The manifest is there and the store holds none of its blobs — exactly the state that used to
+	// repeat forever.
+	copier := &Copier{
+		Source: source, Destination: destination, Discover: Catalogue{},
+		StoreDir: t.TempDir(),
+	}
+	report, err := copier.Run(context.Background())
+	require.NoError(t, err)
+	require.Empty(t, report.Failed)
+	assert.EqualValues(t, 1, report.Written)
+
+	image, err := remote.Image(destinationTag)
+	require.NoError(t, err)
+
+	_, err = image.RawConfigFile()
+	require.NoError(t, err, "the config blob has to travel too, and it is not one of the layers")
+
+	layers, err := image.Layers()
+	require.NoError(t, err)
+	require.NotEmpty(t, layers)
+	for _, layer := range layers {
+		digest, err := layer.Digest()
+		require.NoError(t, err)
+
+		content, err := layer.Compressed()
+		require.NoError(t, err, "layer %s is named by the manifest but absent from the destination", digest)
+		require.NoError(t, content.Close())
 	}
 }

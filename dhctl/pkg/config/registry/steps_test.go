@@ -174,19 +174,35 @@ func TestNothingWaitsOnAStateSecretThatIsNeverWritten(t *testing.T) {
 	}
 }
 
-// TestAStoreIsWaitedForWhereverItIsConfigured pins the other half: a store the module runs is waited
-// for on every path, not only on the bundle path it was first written for.
+// TestAStoreIsWaitedForOnlyWhereItIsTheOnlySource pins which installations may proceed with a cache
+// that is still filling, and which may not.
 //
-// A cache configured beside an upstream is the case this was measured on: the store is a real
-// component of that cluster, nothing else in the cluster reports on it, and until this the installer
-// waited instead on the previous implementation's state secret.
-func TestAStoreIsWaitedForWhereverItIsConfigured(t *testing.T) {
-	config := ConfigBuilder(WithModeDirect())
-	config.StoreExpected = true
+// A cache beside an upstream is an optimisation: the agent falls back to the upstream for anything not
+// copied yet, so the cluster pulls everything from the moment it exists. Waiting for the cache anyway
+// means waiting for the whole first sync, because the store reports `Ready` only once its leader is
+// FULL — measured on a three-master cache cluster as twelve gigabytes and about fifteen minutes of a
+// silent log, ended by the bootstrap watchdog killing the installation.
+//
+// Without an upstream the cache is the only source there is, and an installation that proceeds past a
+// half-filled one hands the cluster nodes that cannot pull.
+func TestAStoreIsWaitedForOnlyWhereItIsTheOnlySource(t *testing.T) {
+	t.Run("a cache beside an upstream is not waited for", func(t *testing.T) {
+		config := ConfigBuilder(WithModeDirect())
+		config.StoreExpected = true
 
-	err := isRegistryReady(t.Context(), client.NewFakeKubernetesClient(), config)
-	require.Error(t, err, "an absent RegistryStorage is not a store that is ready")
-	require.ErrorIs(t, err, errRegistryCheckTransient,
-		"the object appears when the module starts, which can be after this point, so this has to be "+
-			"worth retrying rather than fatal")
+		require.NoError(t, isRegistryReady(t.Context(), client.NewFakeKubernetesClient(), config),
+			"the cluster pulls through its upstream, so a filling cache must not hold the installation")
+	})
+
+	t.Run("a bundle installation waits, and an absent store is worth retrying", func(t *testing.T) {
+		config := ConfigBuilder(WithModeLocal())
+		config.StoreExpected = true
+		config.BundleBootstrap = true
+
+		err := isRegistryReady(t.Context(), client.NewFakeKubernetesClient(), config)
+		require.Error(t, err, "an absent RegistryStorage is not a store that is ready")
+		require.ErrorIs(t, err, errRegistryCheckTransient,
+			"the object appears when the module starts, which can be after this point, so this has to "+
+				"be worth retrying rather than fatal")
+	})
 }

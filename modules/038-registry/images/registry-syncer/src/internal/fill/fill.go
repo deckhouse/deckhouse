@@ -36,6 +36,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/partial"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 )
@@ -259,10 +260,132 @@ func (c *Copier) copyOne(
 		return false, nil
 	}
 
+	// Deciding to re-copy is not enough to re-copy anything. `remote.Pusher.Push` asks the
+	// destination whether it already holds the manifest and returns success the moment it does,
+	// WITHOUT writing the blobs the manifest names — see `repoWriter.writeManifest` in
+	// go-containerregistry: `manifestExists` short-circuits ahead of `writeDeps`. So an image whose
+	// manifest arrived on its own can never be repaired by pushing it again.
+	//
+	// Measured on `ly-mmc`: two followers sat at 398 and 397 of 403 for forty minutes, each pass
+	// reporting `written=403 failed=0` while the push instance logged 6625 GETs, 80 HEADs and not one
+	// PUT. The five images were missing exactly one blob each — the image config — and the same five
+	// were "copied" every thirty-five seconds without a byte moving.
+	//
+	// So when the manifest is already there and the store cannot serve it, the blobs are uploaded
+	// directly and the manifest push that follows is left to be the no-op it will be.
+	if present {
+		if err := c.uploadDependencies(ctx, pusher, repository, sourceDescriptor); err != nil {
+			return false, fmt.Errorf("repairing %s: %w", destination, err)
+		}
+	}
+
 	if err := pusher.Push(ctx, destination, sourceDescriptor); err != nil {
 		return false, fmt.Errorf("writing %s: %w", destination, err)
 	}
 	return true, nil
+}
+
+// uploadDependencies writes every blob a manifest names into the destination repository, whether or
+// not the destination already holds the manifest itself.
+//
+// This deliberately duplicates what `Push` would have done, because `Push` will not do it for a
+// manifest that is already present — see copyOne. Indexes are walked so that a child manifest
+// missing its own layers is repaired too, bounded the same way completeness is: a store is data from
+// elsewhere, and a cycle in it must not become a loop here.
+func (c *Copier) uploadDependencies(
+	ctx context.Context, pusher *remote.Pusher, repository name.Repository, descriptor *remote.Descriptor,
+) error {
+	switch {
+	case descriptor.MediaType.IsIndex():
+		index, err := descriptor.ImageIndex()
+		if err != nil {
+			return fmt.Errorf("reading the index: %w", err)
+		}
+		return c.uploadIndexDependencies(ctx, pusher, repository, index, 0)
+	case descriptor.MediaType.IsImage():
+		image, err := descriptor.Image()
+		if err != nil {
+			return fmt.Errorf("reading the image: %w", err)
+		}
+		return c.uploadImageBlobs(ctx, pusher, repository, image)
+	default:
+		// An unknown media type names nothing this can walk. Left to Push, which at worst repeats the
+		// no-op — the alternative would be to guess at the shape of something unrecognised.
+		return nil
+	}
+}
+
+func (c *Copier) uploadIndexDependencies(
+	ctx context.Context, pusher *remote.Pusher, repository name.Repository, index v1.ImageIndex, depth int,
+) error {
+	if depth > 4 {
+		return errors.New("index nests deeper than any image does")
+	}
+
+	manifest, err := index.IndexManifest()
+	if err != nil {
+		return fmt.Errorf("reading the index manifest: %w", err)
+	}
+
+	for _, child := range manifest.Manifests {
+		switch {
+		case child.MediaType.IsIndex():
+			childIndex, err := index.ImageIndex(child.Digest)
+			if err != nil {
+				return fmt.Errorf("reading child index %s: %w", child.Digest, err)
+			}
+			if err := c.uploadIndexDependencies(ctx, pusher, repository, childIndex, depth+1); err != nil {
+				return err
+			}
+			if err := pusher.Push(ctx, repository.Digest(child.Digest.String()), childIndex); err != nil {
+				return fmt.Errorf("writing child index %s: %w", child.Digest, err)
+			}
+		case child.MediaType.IsImage():
+			childImage, err := index.Image(child.Digest)
+			if err != nil {
+				return fmt.Errorf("reading child image %s: %w", child.Digest, err)
+			}
+			if err := c.uploadImageBlobs(ctx, pusher, repository, childImage); err != nil {
+				return err
+			}
+			if err := pusher.Push(ctx, repository.Digest(child.Digest.String()), childImage); err != nil {
+				return fmt.Errorf("writing child image %s: %w", child.Digest, err)
+			}
+		}
+	}
+	return nil
+}
+
+// uploadImageBlobs writes an image's layers and its config.
+//
+// The config is uploaded like any other blob and is named separately because it is not among
+// `Layers()` — and it was the blob actually missing on `ly-mmc`, on all five images: every layer
+// present, the config absent, and the image therefore unpullable.
+func (c *Copier) uploadImageBlobs(
+	ctx context.Context, pusher *remote.Pusher, repository name.Repository, image v1.Image,
+) error {
+	layers, err := image.Layers()
+	if err != nil {
+		return fmt.Errorf("reading layers: %w", err)
+	}
+	for _, layer := range layers {
+		if err := pusher.Upload(ctx, repository, layer); err != nil {
+			digest, digestErr := layer.Digest()
+			if digestErr != nil {
+				return fmt.Errorf("uploading a layer: %w", err)
+			}
+			return fmt.Errorf("uploading layer %s: %w", digest, err)
+		}
+	}
+
+	config, err := partial.ConfigLayer(image)
+	if err != nil {
+		return fmt.Errorf("reading the config: %w", err)
+	}
+	if err := pusher.Upload(ctx, repository, config); err != nil {
+		return fmt.Errorf("uploading the config: %w", err)
+	}
+	return nil
 }
 
 // rewriteRepository maps a source repository onto the destination prefix, so the

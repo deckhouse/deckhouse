@@ -91,13 +91,29 @@ func isRegistryReady(ctx context.Context, kubeClient client.KubeClient, config C
 	logger := dhlog.FromContext(ctx)
 
 	if config.StoreExpected {
-		// Fullness is required only when the store is the only source of images. With an upstream
-		// configured the cluster can pull through the store while it is still filling, so demanding a
-		// complete copy would add the whole first sync — gigabytes, over the operator's link — to
-		// every installation that turns the cache on. Without an upstream there is nowhere else to
-		// pull from, and a store that is merely Ready is a store that will answer "no such host" for
-		// an image it has not copied yet.
-		if err := isStoreReady(ctx, kubeClient, config.BundleBootstrap); err != nil {
+		// The store is waited for only where it is the ONLY source of images, which is an
+		// installation from a bundle. With an upstream configured the cluster can already pull
+		// everything it needs — the agent falls back to the upstream for whatever the cache has not
+		// copied yet — so the cache filling is an optimisation that finishes on its own after the
+		// installation, not a precondition for it.
+		//
+		// Waiting for it anyway is not merely slow, it fails installations. `Ready` is reported only
+		// once the LEADER IS FULL (see the phase switch in the controller's status builder), so this
+		// wait is a wait for the whole first sync: measured on a three-master cache cluster, twelve
+		// gigabytes over the operator's link, around fifteen minutes of a silent log — and the
+		// bootstrap watchdog killed the installation at exit=137 before the store ever reported Ready.
+		//
+		// Without an upstream the opposite holds and nothing here may be relaxed: the cache is where
+		// every image comes from, and a store that is merely running answers "no such host" for
+		// anything it has not copied.
+		if !config.BundleBootstrap {
+			logger.InfoContext(ctx,
+				"The cluster pulls through its upstream, so the cache may finish filling after the "+
+					"installation and is not waited for")
+			return nil
+		}
+
+		if err := isStoreReady(ctx, kubeClient, true); err != nil {
 			logger.DebugContext(ctx, fmt.Sprintf("Error while checking the cluster store: %v", err))
 			return err
 		}
