@@ -42,6 +42,7 @@ type (
 		InitPipeline(ctx context.Context, stateCache dstate.Cache) error
 		Finalize(ctx context.Context, stateCache dstate.Cache) error
 		StartPhase(ctx context.Context, phase OperationPhase, isCritical bool, stateCache dstate.Cache) (bool, error)
+		StartPhaseProgressOnly(ctx context.Context, phase OperationPhase)
 		CompletePhase(ctx context.Context, stateCache dstate.Cache, completedPhaseData OperationPhaseDataT) error
 		CompletePipeline(ctx context.Context, stateCache dstate.Cache) error
 		SwitchPhase(ctx context.Context, phase OperationPhase, isCritical bool, stateCache dstate.Cache, completedPhaseData OperationPhaseDataT) (bool, error)
@@ -179,6 +180,31 @@ func (pec *phasedExecutionContext[OperationPhaseDataT]) StartPhase(ctx context.C
 
 	pec.currentPhase = phase
 	return pec.callOnPhase(ctx, pec.completedPhase, pec.lastState, pec.completedPhaseData, phase, isCritical, stateCache)
+}
+
+// StartPhaseProgressOnly announces a phase to the progress tracker without reporting it through
+// onPhaseFunc. It exists for a phase that runs before any state cache does: reporting a phase
+// publishes a snapshot of the cache, and the phase that creates the cache can only publish an
+// empty one - which Commander reads as a cluster with no uuid and fails the operation over.
+//
+// The phase still becomes the current one, so the CompletePhase inside the next SwitchPhase
+// records it as completed rather than leaving it to be reported as skipped.
+func (pec *phasedExecutionContext[OperationPhaseDataT]) StartPhaseProgressOnly(ctx context.Context, phase OperationPhase) {
+	if pec.stopOperationCondition {
+		return
+	}
+
+	lastCompletedPhase, skipped := pec.progressTracker.FindLastCompletedPhase(pec.completedPhase, phase)
+	opts := ProgressOpts{}
+	if skipped {
+		opts.Action = ProgressActionSkip
+	}
+
+	if err := pec.progressTracker.Progress(lastCompletedPhase, phase, "", opts); err != nil {
+		dhlog.FromContext(ctx).ErrorContext(ctx, strings.TrimRight(fmt.Sprintf("Failed to write progress for phase %v: %v", phase, err), "\n"))
+	}
+
+	pec.currentPhase = phase
 }
 
 // CompletePhase stops previously started phase and saves current snapshot of state::Cache into the phasedExecutionContext.

@@ -52,9 +52,16 @@ type recordingPEC struct {
 }
 
 func (p *recordingPEC) announce(kind string, phase phases.OperationPhase, isCritical bool) bool {
-	announcements := len(p.phasesOf("start", "switch"))
+	announcements := len(p.announcedPhases())
 	p.events = append(p.events, phaseEvent{kind: kind, phase: phase, critical: isCritical})
 	return announcements == p.stopAt
+}
+
+// announcedPhases is every phase the walk announced, in order. Preparation is announced
+// progress-only - it is the one node not reported through onPhaseFunc - so it is not a "start",
+// but it is announced all the same and counts in the order the other nodes are numbered from.
+func (p *recordingPEC) announcedPhases() []phases.OperationPhase {
+	return p.phasesOf("start", "start-progress-only", "switch")
 }
 
 func (p *recordingPEC) phasesOf(kinds ...string) []phases.OperationPhase {
@@ -69,6 +76,12 @@ func (p *recordingPEC) phasesOf(kinds ...string) []phases.OperationPhase {
 
 func (p *recordingPEC) StartPhase(_ context.Context, phase phases.OperationPhase, isCritical bool, _ state.Cache) (bool, error) {
 	return p.announce("start", phase, isCritical), nil
+}
+
+// StartPhaseProgressOnly is recorded under its own kind: it is the one announcement that does not
+// reach onPhaseFunc, and the whole point of using it for Preparation is that Commander is not told.
+func (p *recordingPEC) StartPhaseProgressOnly(_ context.Context, phase phases.OperationPhase) {
+	p.announce("start-progress-only", phase, false)
 }
 
 func (p *recordingPEC) SwitchPhase(_ context.Context, phase phases.OperationPhase, isCritical bool, _ state.Cache, _ any) (bool, error) {
@@ -160,21 +173,21 @@ func TestRunPhases_WalksDeclaredTree(t *testing.T) {
 		critical    []phases.OperationPhase
 	}{
 		{
+			// Preparation is absent on purpose: it is announced progress-only, so it never
+			// reaches Commander and a stop point on it would be one nobody can resume from.
 			clusterType: "Cloud",
 			critical: []phases.OperationPhase{
-				phases.PreparationPhase,
 				phases.PreInfraPreflightsPhase,
 				phases.InstallAdditionalMastersAndStaticNodes,
 			},
 		},
 		{
-			// The node carrying the third flag is cloud-only, so a static bootstrap has two
-			// critical phases and not three. The control-plane-manager wait split out of it is
+			// The node carrying the second flag is cloud-only, so a static bootstrap has one
+			// critical phase and not two. The control-plane-manager wait split out of it is
 			// deliberately not critical: a critical announcement is a stop point for Commander,
 			// and static bootstrap never had one there.
 			clusterType: "Static",
 			critical: []phases.OperationPhase{
-				phases.PreparationPhase,
 				phases.PreInfraPreflightsPhase,
 			},
 		},
@@ -198,7 +211,9 @@ func TestRunPhases_WalksDeclaredTree(t *testing.T) {
 				announced := pec.events[2*i]
 				require.Equal(t, name, announced.phase)
 				if i == 0 {
-					require.Equal(t, "start", announced.kind)
+					require.Equal(t, "start-progress-only", announced.kind,
+						"Preparation produces the state cache, so it is the one node announced without being reported",
+					)
 				} else {
 					require.Equal(t, "switch", announced.kind)
 				}
@@ -241,7 +256,7 @@ func TestRunPhases_CloudOnlyNodesAreGatedOut(t *testing.T) {
 		require.NoError(t, b.runPhases(context.Background(), bctx, recordingPhaseFuncs(pec, "", nil), wholeTree))
 
 		for _, phase := range cloudOnly {
-			require.NotContains(t, pec.phasesOf("start", "switch"), phase, "announced on a static cluster")
+			require.NotContains(t, pec.announcedPhases(), phase, "announced on a static cluster")
 			require.NotContains(t, pec.phasesOf("run"), phase, "executed on a static cluster")
 		}
 
@@ -256,7 +271,7 @@ func TestRunPhases_CloudOnlyNodesAreGatedOut(t *testing.T) {
 		require.NoError(t, b.runPhases(context.Background(), bctx, recordingPhaseFuncs(pec, "", nil), wholeTree))
 
 		for _, phase := range append(cloudOnly, phases.WaitForControlPlaneManagerReadinessPhase) {
-			require.Contains(t, pec.phasesOf("start", "switch"), phase)
+			require.Contains(t, pec.announcedPhases(), phase)
 			require.Contains(t, pec.phasesOf("run"), phase)
 		}
 	})
@@ -300,7 +315,7 @@ func TestRunPhases_FirstMasterIsAnnouncedBetweenBaseInfraAndPostInfraPreflights(
 
 	require.NoError(t, b.runPhases(context.Background(), bctx, recordingPhaseFuncs(pec, "", nil), wholeTree))
 
-	announced := pec.phasesOf("start", "switch")
+	announced := pec.announcedPhases()
 	at := slices.Index(announced, phases.BaseInfraPhase)
 	require.NotEqual(t, -1, at)
 	require.GreaterOrEqual(t, len(announced), at+3)
@@ -386,7 +401,7 @@ func TestRunPhases_RestrictedToOneNode(t *testing.T) {
 	require.NoError(t, b.runPhases(context.Background(), bctx, recordingPhaseFuncs(pec, "", nil), phases.BaseInfraPhase))
 
 	expected := []phases.OperationPhase{phases.PreparationPhase, phases.BaseInfraPhase}
-	require.Equal(t, expected, pec.phasesOf("start", "switch"))
+	require.Equal(t, expected, pec.announcedPhases())
 	require.Equal(t, expected, pec.phasesOf("run"))
 	require.Equal(t, "complete", pec.events[len(pec.events)-1].kind)
 }
@@ -446,7 +461,7 @@ func TestRunPhases_SkipsNamedPhases(t *testing.T) {
 	expected := slices.DeleteFunc(declaredPhases("Cloud"), func(p phases.OperationPhase) bool {
 		return p == phases.CreateResourcesPhase
 	})
-	require.Equal(t, expected, pec.phasesOf("start", "switch"))
+	require.Equal(t, expected, pec.announcedPhases())
 	require.Equal(t, expected, pec.phasesOf("run"))
 	require.Len(t, pec.phasesOf("complete"), 1)
 }
@@ -501,7 +516,7 @@ func TestRunPhases_StopConditionHaltsWalk(t *testing.T) {
 
 	require.NoError(t, b.runPhases(context.Background(), bctx, recordingPhaseFuncs(pec, "", nil), wholeTree))
 
-	require.Equal(t, declared[:3], pec.phasesOf("start", "switch"))
+	require.Equal(t, declared[:3], pec.announcedPhases())
 	require.Equal(t, declared[:2], pec.phasesOf("run"))
 	require.Empty(t, pec.phasesOf("complete"))
 }
@@ -608,24 +623,19 @@ func TestBootstrap_ReplacesThePhaseContextBeforeAnnouncingPreparation(t *testing
 	}
 	b.Options.Global.ConfigPaths = []string{configPath}
 
-	announcedOn := make([]phases.DefaultPhasedExecutionContext, 0)
-	announced := make([]phases.OperationPhase, 0)
-	b.OnPhaseFunc = func(data phases.OnPhaseFuncData[phases.DefaultContextType]) error {
-		announced = append(announced, data.NextPhase)
-		announcedOn = append(announcedOn, b.PhasedExecutionContext)
-		return nil
-	}
-
 	require.Error(t, b.Bootstrap(context.Background()),
 		"the ClusterConfiguration is incomplete, so the walk stops inside Preparation",
 	)
 
+	require.NotSame(t, phases.DefaultPhasedExecutionContext(discarded), b.PhasedExecutionContext,
+		"interactive mode replaces the phase context",
+	)
+	// The recorder is what makes the ordering observable: had the replacement happened after the
+	// announcement rather than before it, Preparation would be sitting in these events. Its
+	// announcement is progress-only and reaches no OnPhaseFunc, so this is the only witness -
+	// and an empty recorder is the whole assertion.
 	require.Empty(t, discarded.events,
 		"interactive mode discards the initial phase context: nothing may be announced on it",
-	)
-	require.Equal(t, []phases.OperationPhase{phases.PreparationPhase}, announced)
-	require.Same(t, b.PhasedExecutionContext, announcedOn[0],
-		"Preparation must be announced on the context that outlives it, not on one replaced afterwards",
 	)
 }
 
@@ -641,7 +651,7 @@ func TestRunPhases_PhaseErrorHaltsWalk(t *testing.T) {
 	err := b.runPhases(context.Background(), bctx, recordingPhaseFuncs(pec, declared[2], failure), wholeTree)
 
 	require.Equal(t, failure, err)
-	require.Equal(t, declared[:3], pec.phasesOf("start", "switch"))
+	require.Equal(t, declared[:3], pec.announcedPhases())
 	require.Equal(t, declared[:3], pec.phasesOf("run"))
 	require.Empty(t, pec.phasesOf("complete"))
 }

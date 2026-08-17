@@ -314,10 +314,11 @@ type bootstrapPhase struct {
 // ever executes.
 func (b *ClusterBootstrapper) bootstrapPhaseFuncs() map[phases.OperationPhase]bootstrapPhase {
 	return map[phases.OperationPhase]bootstrapPhase{
-		// Preparation is critical because it is the one node that cannot be skipped: everything
-		// after it reads what it produces, so there is no state in which stopping before it and
-		// continuing from the next node is meaningful.
-		phases.PreparationPhase:         {critical: true, run: b.bootstrapPreparation},
+		// Preparation carries no critical flag because nothing reads one: the flag marks an
+		// announcement Commander may stop and resume from, and this is the one node announced
+		// progress-only, so Commander is never told about it. Stopping before it would be
+		// meaningless anyway - it produces the state cache a resume would have to read.
+		phases.PreparationPhase:         {run: b.bootstrapPreparation},
 		phases.PreInfraPreflightsPhase:  {critical: true, run: b.bootstrapPreflight},
 		phases.BaseInfraPhase:           {run: b.bootstrapBaseInfra},
 		phases.FirstMasterPhase:         {run: b.bootstrapFirstMaster},
@@ -419,13 +420,12 @@ func (b *ClusterBootstrapper) runPreparation(ctx context.Context, bctx *bootstra
 		return false, fmt.Errorf("Internal error: bootstrap declares phase %q, but nothing implements it", phases.PreparationPhase)
 	}
 
-	shouldStop, err := b.PhasedExecutionContext.StartPhase(ctx, phases.PreparationPhase, preparation.critical, bctx.cacheOrGlobal())
-	if err != nil {
-		return false, err
-	}
-	if shouldStop {
-		return true, nil
-	}
+	// Progress only, unlike every other node: reporting a phase publishes a snapshot of the state
+	// cache, and this node is what creates it - so reporting it hands Commander a state with no
+	// cluster uuid in it, and Commander fails the bootstrap over that empty uuid before the node
+	// that would have written it has run. The first phase Commander is told about stays
+	// PreInfraPreflights, whose snapshot already carries the uuid, as it is on main.
+	b.PhasedExecutionContext.StartPhaseProgressOnly(ctx, phases.PreparationPhase)
 
 	// Read back by the node itself: it resolves the cluster type the restriction is checked
 	// against, and refuses there rather than here, before the rest of it runs.
