@@ -32,7 +32,7 @@ import (
 func (b *ClusterBootstrapper) openImmutableChannel(ctx context.Context, bctx *bootstrapContext, remotePort int, purpose string) (string, func(), error) {
 	sshConfig := bastionConfig(b.SSHProviderInitializer.GetConfig())
 	if sshConfig == nil {
-		return net.JoinHostPort(bctx.masterIP, strconv.Itoa(remotePort)), func() {}, nil
+		return net.JoinHostPort(bctx.immutable.masterIP, strconv.Itoa(remotePort)), func() {}, nil
 	}
 
 	localPort, err := freeLocalPort()
@@ -40,7 +40,7 @@ func (b *ClusterBootstrapper) openImmutableChannel(ctx context.Context, bctx *bo
 		return "", nil, fmt.Errorf("reserve a local port for the %s tunnel: %w", purpose, err)
 	}
 
-	stop, err := b.openBastionTunnel(ctx, sshConfig, bctx.masterIP, remotePort, localPort, purpose)
+	stop, err := b.openBastionTunnel(ctx, sshConfig, bctx.immutable.masterIP, remotePort, localPort, purpose)
 	if err != nil {
 		return "", nil, err
 	}

@@ -40,7 +40,7 @@ func (b *ClusterBootstrapper) printHowToReachTheCluster(ctx context.Context, kub
 	// With a bastion that address is reachable from the bastion and nowhere else,
 	// so the line above is true only inside the network. Print how to get there
 	// rather than leave the operator to guess the shape of the tunnel.
-	if line := bastionForwardLine(bastionConfig(b.SSHProviderInitializer.GetConfig()), bctx.masterIP, kubeconfigPath); line != "" {
+	if line := bastionForwardLine(bastionConfig(b.SSHProviderInitializer.GetConfig()), bctx.immutable.masterIP, kubeconfigPath); line != "" {
 		logger.InfoContext(ctx, "The master has no public address; reach it through the bastion first:",
 			dhlog.ShowInCompacted())
 		// ConnectionString rather than ShowInCompacted: the terminal UI pins it as

@@ -120,7 +120,7 @@ func (b *ClusterBootstrapper) saveAdminKubeconfig(ctx context.Context, content [
 	if err := file.Close(); err != nil {
 		return fmt.Errorf("write the admin kubeconfig to %s: %w", path, err)
 	}
-	bctx.adminKubeconfigPath = path
+	bctx.immutable.kubeconfigPath = path
 
 	// Recorded before the confirmation, not after: a run that died between the two
 	// with the record unwritten would leave every rerun dialling a closed channel

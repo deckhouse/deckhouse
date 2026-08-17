@@ -31,6 +31,36 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight/suites"
 )
 
+// immutableBootstrap is what this path carries between phases. A node on it
+// runs no sshd and no bashible: dhctl hands it a cloud-init payload and then
+// only talks to its API, over a bastion tunnel when there is one.
+type immutableBootstrap struct {
+	masterNodeName string
+	// masterIP is where that API answers; the BaseInfra phase reports it.
+	masterIP string
+	// kubeconfigPath is where the collected admin credentials were written, empty
+	// until the node has handed them over.
+	kubeconfigPath string
+	tunnelStop     func()
+}
+
+// stopImmutableTunnel closes the bastion tunnel the path opened, if it opened one.
+func (c *bootstrapContext) stopImmutableTunnel() {
+	if c.immutable == nil || c.immutable.tunnelStop == nil {
+		return
+	}
+	c.immutable.tunnelStop()
+}
+
+// printCollectedKubeconfig says how to reach the cluster once the node has
+// handed its credentials over. Silent until then, and on every other path.
+func (b *ClusterBootstrapper) printCollectedKubeconfig(ctx context.Context, bctx *bootstrapContext) {
+	if bctx.immutable == nil || bctx.immutable.kubeconfigPath == "" {
+		return
+	}
+	b.printHowToReachTheCluster(ctx, bctx.immutable.kubeconfigPath, bctx)
+}
+
 // detectImmutableMaster decides how the very first node is created, so it runs
 // before anything touches the infrastructure.
 func (b *ClusterBootstrapper) detectImmutableMaster(ctx context.Context, bctx *bootstrapContext) error {
@@ -46,7 +76,9 @@ func (b *ClusterBootstrapper) detectImmutableMaster(ctx context.Context, bctx *b
 	}
 
 	dhlog.FromContext(ctx).InfoContext(ctx, "Master NodeGroup asks for an immutable system: bootstrapping without SSH and bashible")
-	bctx.immutableMaster = true
+	bctx.immutable = &immutableBootstrap{
+		masterNodeName: firstMasterNodeName(bctx.metaConfig),
+	}
 
 	return nil
 }
@@ -55,7 +87,7 @@ func (b *ClusterBootstrapper) detectImmutableMaster(ctx context.Context, bctx *b
 // master and drops the ones that reach the master over SSH, which it does not
 // answer.
 func (b *ClusterBootstrapper) applyImmutablePreflights(runner *preflight.Preflight, bctx *bootstrapContext) {
-	if !bctx.immutableMaster {
+	if bctx.immutable == nil {
 		return
 	}
 
@@ -72,9 +104,13 @@ func (b *ClusterBootstrapper) applyImmutablePreflights(runner *preflight.Preflig
 }
 
 // buildImmutableMasterPayload renders the cloud-init the first master boots
-// with. A progress line of its own: it decides what the machine will be, and it
-// runs before the machine exists.
+// with, and "" on every other path. A progress line of its own: it decides what
+// the machine will be, and it runs before the machine exists.
 func (b *ClusterBootstrapper) buildImmutableMasterPayload(ctx context.Context, bctx *bootstrapContext, nodeName string) (string, error) {
+	if bctx.immutable == nil {
+		return "", nil
+	}
+
 	var cloudConfig string
 
 	err := dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Prepare immutable master payload", func(ctx context.Context) error {
@@ -96,7 +132,7 @@ func (b *ClusterBootstrapper) buildImmutableMasterPayload(ctx context.Context, b
 // hands the rest of the bootstrap a Kubernetes client. No bashible pipeline:
 // dhctl never sees a cluster key until the node gives it one.
 func (b *ClusterBootstrapper) connectToImmutableMaster(ctx context.Context, bctx *bootstrapContext) error {
-	if bctx.masterIP == "" {
+	if bctx.immutable.masterIP == "" {
 		return errors.New("the first master address is unknown: rerun the bootstrap so the BaseInfra phase reports it")
 	}
 
@@ -108,7 +144,7 @@ func (b *ClusterBootstrapper) connectToImmutableMaster(ctx context.Context, bctx
 		return err
 	}
 	if collectedPath != "" {
-		bctx.adminKubeconfigPath = collectedPath
+		bctx.immutable.kubeconfigPath = collectedPath
 		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf(
 			"A previous attempt already collected the credentials; reusing the admin kubeconfig at %s", collectedPath,
 		))
@@ -118,7 +154,7 @@ func (b *ClusterBootstrapper) connectToImmutableMaster(ctx context.Context, bctx
 		// Printed here too: the other two calls are the first-collection path and
 		// the end of a successful run, so a stalled rerun would otherwise never
 		// say where the credentials are.
-		b.printHowToReachTheCluster(ctx, bctx.adminKubeconfigPath, bctx)
+		b.printHowToReachTheCluster(ctx, bctx.immutable.kubeconfigPath, bctx)
 	}
 
 	// The tunnel behind it stays open for the rest of the bootstrap.
@@ -126,7 +162,7 @@ func (b *ClusterBootstrapper) connectToImmutableMaster(ctx context.Context, bctx
 	if err != nil {
 		return err
 	}
-	bctx.immutableTunnelStop = stop
+	bctx.immutable.tunnelStop = stop
 	server := "https://" + address
 
 	if complete == nil {
@@ -136,7 +172,7 @@ func (b *ClusterBootstrapper) connectToImmutableMaster(ctx context.Context, bctx
 		}
 	}
 
-	content, err := immutable.RetargetKubeconfig(ctx, complete, server, bctx.masterNodeName)
+	content, err := immutable.RetargetKubeconfig(ctx, complete, server, bctx.immutable.masterNodeName)
 	if err != nil {
 		return err
 	}
@@ -167,7 +203,7 @@ func (b *ClusterBootstrapper) connectToImmutableMaster(ctx context.Context, bctx
 	// shutdown hook means admin credentials on disk for hours.
 	removeImmutableKubeconfig(ctx, kubeconfigPath)
 
-	return waitForImmutableMasterNode(ctx, kubeCl, bctx.masterNodeName)
+	return waitForImmutableMasterNode(ctx, kubeCl, bctx.immutable.masterNodeName)
 }
 
 // waitForImmutableMasterNode waits until kubelet has registered the node. The

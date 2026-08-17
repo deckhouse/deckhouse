@@ -171,7 +171,7 @@ func TestSaveAdminKubeconfigOnRerunHonoursKubeconfigOut(t *testing.T) {
 	written, err := os.ReadFile(out)
 	require.NoError(t, err)
 	require.Equal(t, content, written)
-	require.Equal(t, out, bctx.adminKubeconfigPath)
+	require.Equal(t, out, bctx.immutable.kubeconfigPath)
 
 	// The record follows the file, or the next rerun reads the path this one left.
 	recorded, err := immutable.LoadCollectedKubeconfig(t.Context(), bctx.stateCache)
@@ -197,7 +197,7 @@ func TestSaveAdminKubeconfigRecordsThePathBeforeTheChannelCloses(t *testing.T) {
 
 	recorded, err := immutable.LoadCollectedKubeconfig(t.Context(), bctx.stateCache)
 	require.NoError(t, err)
-	require.Equal(t, bctx.adminKubeconfigPath, recorded,
+	require.Equal(t, bctx.immutable.kubeconfigPath, recorded,
 		"the rerun path must be usable from the moment the file exists, not from the confirmation")
 }
 
@@ -210,12 +210,12 @@ func TestSaveAdminKubeconfigNamesTheFileAfterTheCluster(t *testing.T) {
 
 	require.NoError(t, b.saveAdminKubeconfig(t.Context(), []byte("apiVersion: v1\nkind: Config\n"), bctx))
 
-	require.Equal(t, filepath.Join(b.TmpDir, "example-admin.kubeconfig"), bctx.adminKubeconfigPath)
-	require.FileExists(t, bctx.adminKubeconfigPath)
+	require.Equal(t, filepath.Join(b.TmpDir, "example-admin.kubeconfig"), bctx.immutable.kubeconfigPath)
+	require.FileExists(t, bctx.immutable.kubeconfigPath)
 
 	// The tmp cleaner spares this file by suffix, so the per-cluster name has to
 	// keep the suffix or the credentials are swept away with the rest of TmpDir.
-	require.True(t, strings.HasSuffix(bctx.adminKubeconfigPath, cache.AdminKubeconfigName))
+	require.True(t, strings.HasSuffix(bctx.immutable.kubeconfigPath, cache.AdminKubeconfigName))
 }
 
 // The file holds cluster-admin credentials: writing into whatever is already at the
@@ -276,9 +276,12 @@ func immutableTestBootstrapper(t *testing.T) (*ClusterBootstrapper, *bootstrapCo
 
 	b := &ClusterBootstrapper{Params: &Params{Options: opts}}
 
+	metaConfig := immutableTestMetaConfig(t)
+
 	return b, &bootstrapContext{
-		metaConfig: immutableTestMetaConfig(t),
+		metaConfig: metaConfig,
 		stateCache: stateCache,
+		immutable:  &immutableBootstrap{masterNodeName: firstMasterNodeName(metaConfig)},
 	}
 }
 
@@ -393,10 +396,10 @@ func immutableWaitingBootstrapper(t *testing.T) (*ClusterBootstrapper, *bootstra
 	t.Cleanup(func() { libretry.InTestEnvironment = inTestEnvironment })
 
 	b, bctx := immutableTestBootstrapper(t)
-	bctx.masterIP = "127.0.0.1"
-	bctx.masterNodeName = "example-master-0"
+	bctx.immutable.masterIP = "127.0.0.1"
+	bctx.immutable.masterNodeName = "example-master-0"
 
-	material, err := immutable.HandoffMaterialFor(t.Context(), bctx.stateCache, bctx.masterNodeName)
+	material, err := immutable.HandoffMaterialFor(t.Context(), bctx.stateCache, bctx.immutable.masterNodeName)
 	require.NoError(t, err)
 
 	return b, bctx, material

@@ -121,7 +121,7 @@ func (b *ClusterBootstrapper) collectImmutableKubeconfig(ctx context.Context, bc
 		// The endpoint's certificate is issued for the node's name, not for the
 		// address dhctl dialled: that address did not exist when the payload
 		// was built.
-		ServerName: bctx.masterNodeName,
+		ServerName: bctx.immutable.masterNodeName,
 		Material:   material,
 	}
 	defer stop()
@@ -232,7 +232,7 @@ func (b *ClusterBootstrapper) confirmImmutableHandoff(ctx context.Context, bctx 
 	}
 	defer stop()
 
-	input := immutable.FetchKubeconfigInput{Address: address, ServerName: bctx.masterNodeName, Material: material}
+	input := immutable.FetchKubeconfigInput{Address: address, ServerName: bctx.immutable.masterNodeName, Material: material}
 	switch err := immutable.ConfirmCollected(ctx, input); {
 	case err == nil:
 		logger.InfoContext(ctx, "Confirmed the handover; the first master closed its bootstrap channel.")
