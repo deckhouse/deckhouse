@@ -163,9 +163,6 @@ spec:
                 description: Module _weight_ (priority).
                 type: integer
             type: object
-          spec:
-            type: object
-            x-kubernetes-preserve-unknown-fields: true
           status:
             properties:
               conditions:
