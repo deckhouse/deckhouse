@@ -15,3 +15,7 @@ description: "Управление облачными ресурсами в Deck
 - Заказ CloudEphemeral-узлов через Machine Controller Manager (MCM). Параметры виртуальных машин задаются в ресурсе [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass).
 - Регистрация в модуле [`node-manager`](/modules/node-manager/), чтобы [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) можно было указывать при описании [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 - Автоматическое включение CNI для новых кластеров. По умолчанию используется [`cni-cilium`](/modules/cni-cilium/).
+
+{% alert level="warning" %}
+Модуль находится в процессе миграции управления CloudEphemeral-узлами с Machine Controller Manager (MCM) на Cluster API (CAPI). Существующие NodeGroup продолжают использовать MCM, а новые по умолчанию создаются с использованием CAPI. Порядок миграции существующих групп — в разделе [«Как мигрировать группы узлов на Cluster API (CAPI)»](/products/kubernetes-platform/documentation/v1/faq.html#как-мигрировать-группы-узлов-на-cluster-api-capi).
+{% endalert %}
