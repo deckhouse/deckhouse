@@ -31,6 +31,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/yaml"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
@@ -40,32 +41,41 @@ import (
 
 /*
 Description:
-	Hook generates 3 kind of snapshots:
+	Hook generates 4 kinds of snapshots:
 		- control-plane pods with annotation "control-plane-manager.deckhouse.io/kubernetes-version" from kube-system NS
-		- all Nodes (filtering .status.modeInfo.kubeletVersion)
-		- Secret: d8-cluster-configuration from NS: kube-system - get only maxUsedControlPlaneKubernetesVersion field
-	and get desired k8s version from `global.clusterConfiguration.kubernetesVersion`
+		- all Nodes (filtering .status.nodeInfo.kubeletVersion)
+		- Secret: d8-cluster-configuration from NS: kube-system - deckhouseDefaultKubernetesVersion,
+		  plus maxUsedControlPlaneKubernetesVersion as a migration seed
+		- ConfigMap: d8-cluster-kubernetes from NS: kube-system - only status.maxUsedKubernetesVersion
+	and get desired k8s version from `global.discovery.targetKubernetesVersion`
 
 	Then process following logic:
 	```
-	if global.clusterConfiguration.kubernetesVersion > maxNodeVersion
+	floor = max(values maxUsedKubernetesVersion, ConfigMap maxUsedKubernetesVersion, Secret maxUsedControlPlaneKubernetesVersion)
+	if floor is unknown: floor = maxControlPlaneVersion   // no history => the control plane is the maximum
+
+	if global.discovery.targetKubernetesVersion > maxNodeVersion
 		if minNodeVersion < minControlPlaneVersion:
 			effectiveKubernetesVersion = minControlPlaneVersion
 		else:
 			effectiveKubernetesVersion =  minControlPlaneVersion.IncMinor() // bumped minor version
-	else if global.clusterConfiguration.kubernetesVersion < maxNodeVersion:
-		if maxNodeVersion < maxControlPlaneVersion && maxControlPlaneVersion == maxUsedControlPlaneVersion:
+	else if global.discovery.targetKubernetesVersion < maxNodeVersion:
+		if maxNodeVersion < maxControlPlaneVersion && maxControlPlaneVersion == floor:
 			unbumped := fmt.Sprintf("%d.%d.%d", maxControlPlaneVersion.Major(), maxControlPlaneVersion.Minor()-1, maxControlPlaneVersion.Patch())
 			effectiveKubernetesVersion = semver.MustParse(unbumped) // minor version-1
 		else:
 			effectiveKubernetesVersion = maxControlPlaneVersion
 	else:
-		effectiveKubernetesVersion = global.clusterConfiguration.kubernetesVersion
+		effectiveKubernetesVersion = global.discovery.targetKubernetesVersion
 	```
 
-	then save effectiveKubernetesVersion to Values (`global.clusterConfiguration.kubernetesVersion`)
-	and if effectiveKubernetesVersion >= maxUsedControlPlaneVersion:
-		update maxUsedControlPlaneKubernetesVersion in Secret: d8-cluster-configuration
+	then save to Values:
+		controlPlaneManager.internal.effectiveKubernetesVersion = effectiveKubernetesVersion
+		controlPlaneManager.internal.maxUsedKubernetesVersion    = max(floor, effectiveKubernetesVersion)
+
+	Both reach update-observer as container environment of the control-plane-manager DaemonSet;
+	update-observer is the single writer of ConfigMap kube-system/d8-cluster-kubernetes and is what
+	makes maxUsedKubernetesVersion durable. This hook no longer writes the Secret key.
 
      For deckhouse upgrade requirements we are using minimal version of whole cluster.
 */
@@ -74,6 +84,14 @@ const minK8sVersionRequirementKey = "controlPlaneManager:minUsedControlPlaneKube
 
 const maxUsedK8sVersionSecretKey = "maxUsedControlPlaneKubernetesVersion"
 const deckhouseDefaultK8sVersionSecretKey = "deckhouseDefaultKubernetesVersion"
+
+const (
+	clusterKubernetesConfigMapSnapshot = "cluster_kubernetes_config_map"
+	clusterKubernetesConfigMapName     = "d8-cluster-kubernetes"
+	clusterKubernetesNamespace         = "kube-system"
+
+	maxUsedK8sVersionValuesKey = "controlPlaneManager.internal.maxUsedKubernetesVersion"
+)
 
 // This value is set on the controller build in the deckhouse-controller/go-build.sh script.
 // Do not touch it !!!
@@ -128,6 +146,20 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: ekvFilterSecret,
 		},
+		{
+			Name:       clusterKubernetesConfigMapSnapshot,
+			ApiVersion: "v1",
+			Kind:       "ConfigMap",
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{clusterKubernetesConfigMapName},
+			},
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{clusterKubernetesNamespace},
+				},
+			},
+			FilterFunc: ekvFilterClusterKubernetesConfigMap,
+		},
 	},
 }, dependency.WithExternalDependencies(handleEffectiveK8sVersion))
 
@@ -181,9 +213,11 @@ func ekvFilterSecret(unstructured *unstructured.Unstructured) (go_hook.FilterRes
 
 	versions := kubernetesVersionsInSecret{}
 
+	// Trimmed: a hand-typed trailing newline used to fail inside this FilterFunc, taking down the
+	// whole hook.
 	rawMaxUsed, ok := secret.Data[maxUsedK8sVersionSecretKey]
 	if ok {
-		maxUsed, err := semver.NewVersion(string(rawMaxUsed))
+		maxUsed, err := semver.NewVersion(strings.TrimSpace(string(rawMaxUsed)))
 		if err != nil {
 			return nil, err
 		}
@@ -192,7 +226,7 @@ func ekvFilterSecret(unstructured *unstructured.Unstructured) (go_hook.FilterRes
 
 	rawDeckhouseDefault, ok := secret.Data[deckhouseDefaultK8sVersionSecretKey]
 	if ok {
-		deckhouseDefault, err := semver.NewVersion(string(rawDeckhouseDefault))
+		deckhouseDefault, err := semver.NewVersion(strings.TrimSpace(string(rawDeckhouseDefault)))
 		if err != nil {
 			return nil, err
 		}
@@ -202,17 +236,63 @@ func ekvFilterSecret(unstructured *unstructured.Unstructured) (go_hook.FilterRes
 	return versions, nil
 }
 
+// Returns status.maxUsedKubernetesVersion and nothing else. The narrowness is load-bearing:
+// update-observer stamps lastReconciliationTime on every reconcile, so a wider filter would re-run
+// this hook every minute for the whole duration of an upgrade.
+func ekvFilterClusterKubernetesConfigMap(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var configMap corev1.ConfigMap
+	if err := sdk.FromUnstructured(unstructured, &configMap); err != nil {
+		return nil, err
+	}
+
+	var status struct {
+		MaxUsedVersion string `json:"maxUsedKubernetesVersion"`
+	}
+	if err := yaml.Unmarshal([]byte(configMap.Data["status"]), &status); err != nil {
+		return "", nil
+	}
+
+	return strings.TrimSpace(status.MaxUsedVersion), nil
+}
+
+// Highest non-nil version, or nil when every argument is nil.
+func ekvMaxVersion(versions ...*semver.Version) *semver.Version {
+	var maxVersion *semver.Version
+	for _, v := range versions {
+		if v == nil {
+			continue
+		}
+		if maxVersion == nil || v.GreaterThan(maxVersion) {
+			maxVersion = v
+		}
+	}
+	return maxVersion
+}
+
+// nil for anything unusable.
+func ekvParseVersion(raw string) *semver.Version {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil
+	}
+	v, err := semver.NewVersion(raw)
+	if err != nil {
+		return nil
+	}
+	return v
+}
+
 func handleEffectiveK8sVersion(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	prevEffectiveVersion := input.Values.Get("controlPlaneManager.internal.effectiveKubernetesVersion").String()
 
-	configVersionRaw, ok := input.Values.GetOk("global.clusterConfiguration.kubernetesVersion")
-	if !ok {
-		return fmt.Errorf("global.clusterConfiguration.kubernetesVersion required")
+	configVersionRaw := input.Values.Get("global.discovery.targetKubernetesVersion").String()
+	if configVersionRaw == "" {
+		return fmt.Errorf("kubernetesVersion required (global.discovery.targetKubernetesVersion is empty)")
 	}
 
-	configVersion, err := semver.NewVersion(configVersionRaw.String())
+	configVersion, err := semver.NewVersion(configVersionRaw)
 	if err != nil {
-		return fmt.Errorf("global.clusterConfiguration.kubernetesVersion is not valid semver: %s", configVersionRaw.String())
+		return fmt.Errorf("kubernetesVersion is not valid semver: %s", configVersionRaw)
 	}
 
 	// process pods snapshot
@@ -234,10 +314,24 @@ func handleEffectiveK8sVersion(ctx context.Context, input *go_hook.HookInput, dc
 	if err != nil {
 		return err
 	}
-	maxUsedControlPlaneVersion := versionsInSecret.MaxUsed
-	if maxUsedControlPlaneVersion == nil {
-		input.Logger.Warn("deckhouse-managed control plane Pods are not yet deployed, setting max_used_control_plane_version to config_version")
-		maxUsedControlPlaneVersion = configVersion
+
+	// Step 1 of 2: the floor — the highest minor this cluster is known to have converged onto.
+	//
+	// The three sources are the same monotonic quantity at three freshnesses, so the maximum and
+	// "first that has a value" coincide: values is this hook's previous run (lost on Pod restart),
+	// the ConfigMap is the durable record, the Secret is the pre-move one.
+	floor := ekvMaxVersion(
+		ekvParseVersion(input.Values.Get(maxUsedK8sVersionValuesKey).String()),
+		ekvParseVersion(ekvProcessConfigMapSnapshot(input)),
+		versionsInSecret.MaxUsed,
+	)
+	if floor == nil {
+		// No history: the control plane is the maximum by definition. Explicit, because semver's
+		// Equal(nil) returns false rather than panicking and a nil floor would silently disable the
+		// downgrade step. Never configVersion, as this hook used to: that is declared, not observed.
+		floor = maxControlPlaneVersion
+		input.Logger.Warn("no maxUsedKubernetesVersion recorded yet, using the current control plane version as the floor",
+			"maxControlPlaneVersion", maxControlPlaneVersion.String())
 	}
 
 	var effectiveKubernetesVersion *semver.Version
@@ -253,7 +347,8 @@ func handleEffectiveK8sVersion(ctx context.Context, input *go_hook.HookInput, dc
 		}
 
 	case configVersion.LessThan(maxNodeVersion):
-		if maxNodeVersion.LessThan(maxControlPlaneVersion) && maxControlPlaneVersion.Equal(maxUsedControlPlaneVersion) {
+		// Stepping down is allowed only while the control plane stands exactly on the floor.
+		if maxNodeVersion.LessThan(maxControlPlaneVersion) && maxControlPlaneVersion.Equal(floor) {
 			unbumped := fmt.Sprintf("%d.%d.%d", maxControlPlaneVersion.Major(), maxControlPlaneVersion.Minor()-1, maxControlPlaneVersion.Patch())
 			effectiveKubernetesVersion = semver.MustParse(unbumped)
 		} else {
@@ -270,6 +365,21 @@ func handleEffectiveK8sVersion(ctx context.Context, input *go_hook.HookInput, dc
 	input.Values.Set("controlPlaneManager.internal.effectiveKubernetesVersion", resultStr)
 	input.MetricsCollector.Set("d8_kubernetes_version", 1, map[string]string{"k8s_version": resultStr})
 
+	// Step 2 of 2: computed after the switch, which is why the floor above is a separate value — the
+	// throttling condition cannot depend on its own result. effective rather than configVersion keeps
+	// this a record of what ran.
+	newMaxUsed := ekvMaxVersion(floor, effectiveKubernetesVersion)
+	maxUsedStr := fmt.Sprintf("%d.%d", newMaxUsed.Major(), newMaxUsed.Minor())
+	input.Values.Set(maxUsedK8sVersionValuesKey, maxUsedStr)
+
+	// Otherwise the throttling is invisible: one version declared, another converged onto.
+	input.Logger.Info("resolved the effective Kubernetes version",
+		"target", configVersionRaw,
+		"effective", resultStr,
+		"floor", floor.String(),
+		"maxUsed", maxUsedStr,
+	)
+
 	var patch map[string]interface{}
 
 	addToPatch := func(key, value string) {
@@ -281,11 +391,6 @@ func handleEffectiveK8sVersion(ctx context.Context, input *go_hook.HookInput, dc
 
 		data := patch["data"].(map[string]interface{})
 		data[key] = value
-	}
-
-	if !effectiveKubernetesVersion.LessThan(maxUsedControlPlaneVersion) {
-		encoded := base64.StdEncoding.EncodeToString([]byte(resultStr))
-		addToPatch(maxUsedK8sVersionSecretKey, encoded)
 	}
 
 	currentDeckhouseDefault, err := semver.NewVersion(DefaultKubernetesVersion)
@@ -378,6 +483,21 @@ func ekvProcessNodeSnapshot(_ context.Context, input *go_hook.HookInput) (*semve
 	sort.Sort(semver.Collection(nodeVersions))
 
 	return nodeVersions[0], nodeVersions[len(nodeVersions)-1], nil
+}
+
+// Never an error: one of three interchangeable sources, so a missing one is not a failure.
+func ekvProcessConfigMapSnapshot(input *go_hook.HookInput) string {
+	maxUsedVersions, err := sdkobjectpatch.UnmarshalToStruct[string](input.Snapshots, clusterKubernetesConfigMapSnapshot)
+	if err != nil {
+		input.Logger.Warn("cannot unmarshal cluster_kubernetes_config_map snapshot", "error", err)
+		return ""
+	}
+
+	if len(maxUsedVersions) > 0 {
+		return maxUsedVersions[0]
+	}
+
+	return ""
 }
 
 // get semver from secret

@@ -38,6 +38,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/retry"
@@ -187,6 +188,11 @@ func NewDeckhouseController(
 					Namespaces: map[string]cache.Config{
 						app.NamespaceDeckhouse: {
 							LabelSelector: labels.SelectorFromSet(map[string]string{"heritage": "deckhouse"}),
+						},
+						// d8-cluster-kubernetes carries status.availableVersions for the
+						// ModuleConfig admission webhook (and updateMode for DeckhouseRelease).
+						app.NamespaceKubeSystem: {
+							FieldSelector: fields.SelectorFromSet(fields.Set{"metadata.name": "d8-cluster-kubernetes"}),
 						},
 					},
 				},

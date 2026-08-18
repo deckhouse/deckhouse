@@ -102,6 +102,10 @@ const (
 	defaultClusterMasterAddress                = "127.0.0.1"
 	defaultClusterMasterRPPServerPort          = 5444
 	defaultClusterMasterRPPBootstrapServerPort = 4282
+
+	// ClusterConfiguration's "track Deckhouse default" sentinel; ModuleConfig accepts only Default.
+	automaticKubernetesVersion       = "Automatic"
+	defaultKubernetesVersionSentinel = "Default"
 )
 
 func validateProviderConfig(ctx context.Context, validatorProvider MetaConfigValidatorProvider, m *MetaConfig) (*MetaConfig, error) {
@@ -680,11 +684,59 @@ func (m *MetaConfig) StaticClusterConfigYAML() ([]byte, error) {
 	return yaml.Marshal(m.StaticClusterConfig)
 }
 
+// Both sentinels are handled: this is also called on values that never went through
+// kubernetesVersionRaw.
 func resolveKubernetesVersion(v string) string {
-	if v == "Automatic" {
+	if v == "" || isModuleConfigTrackDefault(v) || v == automaticKubernetesVersion {
 		return DefaultKubernetesVersion
 	}
 	return v
+}
+
+// ModuleConfig takes Default only; ClusterConfiguration keeps the older Automatic.
+func isModuleConfigTrackDefault(version string) bool {
+	return version == defaultKubernetesVersionSentinel
+}
+
+func isClusterConfigurationPinned(version string) bool {
+	return version != "" &&
+		version != automaticKubernetesVersion &&
+		version != defaultKubernetesVersionSentinel
+}
+
+// Same preference as global-hooks resolveTargetKubernetesVersion: a present ModuleConfig setting →
+// pinned ClusterConfiguration → empty. Presence of the ModuleConfig field decides, so Default there
+// returns empty and bootstrap starts on the Deckhouse default.
+func (m *MetaConfig) kubernetesVersionRaw() string {
+	mcVersion := ""
+	if mc := m.FindModuleConfig("control-plane-manager"); mc != nil {
+		// Read straight off spec.settings: at bootstrap the settings-version conversion chain is not
+		// wired up. A future conversion touching this key must be reflected here, or dhctl and
+		// admission (which sees converted settings) would disagree. A non-string is dropped, not
+		// coerced: 1.40 would come back as "1.4".
+		if v, ok := mc.Spec.Settings["kubernetesVersion"].(string); ok {
+			mcVersion = v
+		}
+	}
+
+	ccVersion := ""
+	if raw, ok := m.ClusterConfig["kubernetesVersion"]; ok {
+		var v string
+		if err := json.Unmarshal(raw, &v); err == nil {
+			ccVersion = v
+		}
+	}
+
+	switch {
+	case isModuleConfigTrackDefault(mcVersion):
+		return ""
+	case mcVersion != "":
+		return mcVersion
+	case isClusterConfigurationPinned(ccVersion):
+		return ccVersion
+	default:
+		return ""
+	}
 }
 
 func (m *MetaConfig) ClusterConfigMap() (map[string]interface{}, error) {
@@ -697,9 +749,10 @@ func (m *MetaConfig) ClusterConfigMap() (map[string]interface{}, error) {
 		}
 		out[k] = a
 	}
-	if v, _ := out["kubernetesVersion"].(string); v != "" {
-		out["kubernetesVersion"] = resolveKubernetesVersion(v)
-	}
+	// Always publish the effective concrete version (pinned MC → pinned CC → Default) so
+	// control-plane templates and bashible see one resolved value even when the field is
+	// absent from CC.
+	out["kubernetesVersion"] = resolveKubernetesVersion(m.kubernetesVersionRaw())
 	return out, nil
 }
 
@@ -715,9 +768,7 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(ctx context.Context, nodeIP
 		data[key] = t
 	}
 
-	if data["kubernetesVersion"] == "Automatic" {
-		data["kubernetesVersion"] = DefaultKubernetesVersion
-	}
+	data["kubernetesVersion"] = resolveKubernetesVersion(m.kubernetesVersionRaw())
 
 	clusterBootstrap := map[string]any{
 		"clusterDomain":     data["clusterDomain"],

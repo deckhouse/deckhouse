@@ -15,8 +15,6 @@
 package hooks
 
 import (
-	"encoding/base64"
-
 	_ "github.com/flant/addon-operator/sdk"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -32,77 +30,16 @@ var _ = Describe("Global hooks :: discovery/clusterConfiguration ::", func() {
 	)
 
 	var (
-		stateAClusterConfiguration = `
-apiVersion: deckhouse.io/v1
-kind: ClusterConfiguration
-clusterType: Static
-cloud:
-  provider: OpenStack
-  prefix: kube
-podSubnetCIDR: 10.111.0.0/16
-podSubnetNodeCIDRPrefix: "24"
-serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: "1.33"
-clusterDomain: "test.local"
-`
-		stateA = `
-apiVersion: v1
-kind: Secret
-metadata:
-  name: d8-cluster-configuration
-  namespace: kube-system
-data:
-  "cluster-configuration.yaml": ` + base64.StdEncoding.EncodeToString([]byte(stateAClusterConfiguration))
-
-		stateBClusterConfiguration = `
-apiVersion: deckhouse.io/v1
-kind: ClusterConfiguration
-clusterType: Cloud
-cloud:
-  provider: AWS
-  prefix: lube
-podSubnetCIDR: 10.122.0.0/16
-podSubnetNodeCIDRPrefix: "26"
-serviceSubnetCIDR: 10.213.0.0/16
-kubernetesVersion: "1.33"
-clusterDomain: "test.local"
-`
-		stateB = `
-apiVersion: v1
-kind: Secret
-metadata:
-  name: d8-cluster-configuration
-  namespace: kube-system
-data:
-  "cluster-configuration.yaml": ` + base64.StdEncoding.EncodeToString([]byte(stateBClusterConfiguration))
-
-		stateCClusterConfiguration = `
-apiVersion: deckhouse.io/v1
-kind: ClusterConfiguration
-clusterType: Cloud
-cloud:
-  provider: AWS
-  prefix: lube
-podSubnetCIDR: 10.122.0.0/16
-podSubnetNodeCIDRPrefix: "26"
-serviceSubnetCIDR: 10.213.0.0/16
-kubernetesVersion: "Automatic"
-clusterDomain: "test.local"
-`
-		stateC = `
-apiVersion: v1
-kind: Secret
-metadata:
-  name: d8-cluster-configuration
-  namespace: kube-system
-data:
-  "cluster-configuration.yaml": ` + base64.StdEncoding.EncodeToString([]byte(stateCClusterConfiguration))
+		stateA = clusterConfigurationSecret(ccStateAClusterConfiguration)
+		stateB = clusterConfigurationSecret(ccStateBClusterConfiguration)
+		stateC = clusterConfigurationSecret(ccStateCClusterConfiguration)
 	)
 
-	// Set default value for test purposes. Normally this var set to specific kubernetes version on the build stage.
+	// Set default value for test purposes. Normally this var set to specific kube version on the build stage.
 	hooks.DefaultKubernetesVersion = "1.36"
 
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
 
 	Context("Cluster has a d8-cluster-configuration Secret", func() {
 		BeforeEach(func() {
@@ -124,10 +61,15 @@ data:
 			Expect(f.ValuesGet("global.discovery.serviceSubnet").String()).To(Equal("10.222.0.0/16"))
 			Expect(f.ValuesGet("global.discovery.clusterDomain").String()).To(Equal("test.local"))
 
-			metrics := f.MetricsCollector.CollectedMetrics()
-			Expect(metrics).To(HaveLen(1))
-			value := metrics[0].Value
-			Expect(*value).To(Equal(float64(256)))
+			var maxNodes *float64
+			for _, m := range f.MetricsCollector.CollectedMetrics() {
+				if m.Name == "d8_max_nodes_amount_by_pod_cidr" {
+					maxNodes = m.Value
+					break
+				}
+			}
+			Expect(maxNodes).NotTo(BeNil())
+			Expect(*maxNodes).To(Equal(float64(256)))
 		})
 
 		Context("d8-cluster-configuration Secret has changed", func() {
@@ -150,10 +92,15 @@ data:
 				Expect(f.ValuesGet("global.discovery.serviceSubnet").String()).To(Equal("10.213.0.0/16"))
 				Expect(f.ValuesGet("global.discovery.clusterDomain").String()).To(Equal("test.local"))
 
-				metrics := f.MetricsCollector.CollectedMetrics()
-				Expect(metrics).To(HaveLen(1))
-				value := metrics[0].Value
-				Expect(*value).To(Equal(float64(1024)))
+				var maxNodes *float64
+				for _, m := range f.MetricsCollector.CollectedMetrics() {
+					if m.Name == "d8_max_nodes_amount_by_pod_cidr" {
+						maxNodes = m.Value
+						break
+					}
+				}
+				Expect(maxNodes).NotTo(BeNil())
+				Expect(*maxNodes).To(Equal(float64(1024)))
 			})
 		})
 
@@ -173,6 +120,7 @@ data:
 
 	Context("Cluster doesn't have a d8-cluster-configuration Secret", func() {
 		f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
+		f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
 
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts("", 0))
@@ -207,10 +155,16 @@ data:
 			Expect(f.ValuesGet("global.discovery.serviceSubnet").String()).To(Equal("10.213.0.0/16"))
 			Expect(f.ValuesGet("global.discovery.clusterDomain").String()).To(Equal("test.local"))
 
-			metrics := f.MetricsCollector.CollectedMetrics()
-			Expect(metrics).To(HaveLen(1))
-			value := metrics[0].Value
-			Expect(*value).To(Equal(float64(1024)))
+			var maxNodes *float64
+			for _, m := range f.MetricsCollector.CollectedMetrics() {
+				if m.Name == "d8_max_nodes_amount_by_pod_cidr" {
+					maxNodes = m.Value
+					break
+				}
+			}
+			Expect(maxNodes).NotTo(BeNil())
+			Expect(*maxNodes).To(Equal(float64(1024)))
 		})
 	})
+
 })
