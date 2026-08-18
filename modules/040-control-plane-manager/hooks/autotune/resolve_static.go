@@ -29,8 +29,6 @@ type staticResolver struct {
 }
 
 func (r *staticResolver) resolve(_ context.Context, deps resolveDeps, kind resourceKind) (resolvedRequests, error) {
-	deps.input.Logger.Info("autotune: entering resolver", "resource", kind, "resolver", resolverStaticSplit)
-
 	budget, err := r.splitBudget(kind)
 	if err != nil {
 		return resolvedRequests{}, err

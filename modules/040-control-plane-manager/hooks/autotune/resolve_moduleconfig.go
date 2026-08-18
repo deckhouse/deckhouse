@@ -35,8 +35,6 @@ type moduleConfigResolver struct {
 }
 
 func (r *moduleConfigResolver) resolve(ctx context.Context, deps resolveDeps, kind resourceKind) (resolvedRequests, error) {
-	deps.input.Logger.Info("autotune: entering resolver", "resource", kind, "resolver", r.name)
-
 	configured, err := readModuleConfigRequests(deps.input, r.snapshotName)
 	if err != nil {
 		return resolvedRequests{}, degraded(degradedReasonBadOverride, err)
