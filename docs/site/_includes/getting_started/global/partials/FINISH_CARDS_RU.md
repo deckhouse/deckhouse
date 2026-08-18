@@ -1,5 +1,5 @@
 <section class="cards-blocks">
-<div class="cards-blocks__content container">
+<div class="cards-blocks__content">
 <h2 class="cards-blocks__title text_h2">
 Главное
 </h2>
@@ -66,19 +66,13 @@
 Воспользуйтесь нашим [чек-листом](/products/kubernetes-platform/guides/production.html), чтобы убедиться, что вы ничего не забыли.
 </div>
 </div>
-
-<div style="width: 30%">&nbsp;</div>
-{%- endif %}
-
-{% if page.platform_code == 'kind' %}
-<div style="width: 30%">&nbsp;</div>
 {%- endif %}
 </div>
 </div>
 </section>
 
 <section class="cards-blocks">
-<div class="cards-blocks__content container">
+<div class="cards-blocks__content">
 <h2 class="cards-blocks__title text_h2">
 Деплой первого приложения
 </h2>
@@ -125,7 +119,7 @@ Service'у.
 
 {% if page.platform_type == 'cloud' %}
 <section class="cards-blocks">
-<div class="cards-blocks__content container">
+<div class="cards-blocks__content">
 <h2 class="cards-blocks__title text_h2">
 Другие возможности
 </h2>
