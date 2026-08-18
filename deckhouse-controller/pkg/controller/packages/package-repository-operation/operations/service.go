@@ -397,14 +397,15 @@ func latestVersionString(versions []*semver.Version) string {
 
 // ProcessPackageVersions processes a single package: lists version tags from <package>/version,
 // detects type (Application/Module) via detectPackageType, creates APV/MPV resources.
-// Delegates to handleMissingVersionPath when /version path doesn't exist (NAME_UNKNOWN) or has no semver tags on a full scan.
+// A module is additionally walked down its /release history by walkModuleReleases, which is also
+// the only source of versions for a package whose /version path is absent or carries no semver tags.
 func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageName string, operation *v1alpha1.PackageRepositoryOperation) (*PackageProcessResult, error) {
 	foundTags, err := s.foundTagsToProcess(ctx, packageName, operation)
 	if err != nil {
 		// NAME_UNKNOWN means <package>/version path doesn't exist in the registry.
-		// No /version path → legacy module (v1alpha1).
+		// No /version path → legacy module (v1alpha1), its versions live under /release.
 		if isRepoNotFoundError(err) {
-			return s.handleMissingVersionPath(ctx, packageName)
+			return s.walkModuleReleases(ctx, packageName)
 		}
 		return nil, fmt.Errorf("get found tags to process: %w", err)
 	}
@@ -417,23 +418,13 @@ func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageNa
 
 	// /version path exists but no new semver tags to process.
 	//
-	// On a full scan an empty foundTags means /version has no semver tags
-	// for this package. Treat this identically to "no /version path at all":
-	// fall back to /release (legacy v1alpha1 module). The downstream error
-	// surface ("neither /version nor /release" / "no semver release tags
-	// found for legacy module") is therefore the same in both cases.
-	//
-	// On an incremental scan, an empty foundTags only means "no new versions
-	// since lastVersion" - /version itself may still be populated. Do NOT
-	// fall back in that case: it would needlessly hit /release on every
-	// already-fully-processed package.
+	// An empty result on a full scan means /version carries no semver tags at all, so the
+	// package can still be a legacy module holding its versions under /release. On an
+	// incremental scan it only means "nothing new since lastVersion", and /release is walked
+	// below anyway once the package is known to be a module.
 	if len(foundTags) == 0 {
 		if operation.Spec.Update != nil && operation.Spec.Update.FullScan {
-			s.logger.Warn(
-				"no semver tags found in /version path for package, falling back to /release",
-				slog.String("package", packageName),
-			)
-			return s.handleMissingVersionPath(ctx, packageName)
+			return s.walkModuleReleases(ctx, packageName)
 		}
 
 		return &PackageProcessResult{}, nil
@@ -496,96 +487,133 @@ func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageNa
 		}
 	}
 
-	return &PackageProcessResult{
+	result := &PackageProcessResult{
 		PackageType:   pkgType,
 		Done:          foundTags,
 		Failed:        failedVersions,
 		FoundVersions: len(foundTags),
 		NewVersions:   newVersions,
-	}, nil
+	}
+
+	// /version carries only what the new pipeline published, the rest of a module history
+	// stays under /release.
+	if pkgType == PackageTypeModule {
+		releases, err := s.walkModuleReleases(ctx, packageName)
+		if err != nil {
+			return nil, err
+		}
+
+		result.Done = append(result.Done, releases.Done...)
+		result.Failed = append(result.Failed, releases.Failed...)
+		result.FoundVersions += releases.FoundVersions
+		result.NewVersions += releases.NewVersions
+		result.Legacy = releases.Legacy
+	}
+
+	return result, nil
 }
 
-// handleMissingVersionPath - fallback when <package>/version is absent (NAME_UNKNOWN) or
-// has no semver tags. Checks the <package>/release path for legacy module (v1alpha1) version tags.
-// Creates ModulePackageVersion resources with legacy=true label.
-func (s *OperationService) handleMissingVersionPath(ctx context.Context, packageName string) (*PackageProcessResult, error) {
-	s.logger.Info(
-		"no semver tags in /version path, checking /release for legacy module (v1alpha1)",
-		slog.String("package", packageName),
-	)
+// walkModuleReleases walks <package>/release from the newest version down, creating a
+// ModulePackageVersion for every release image that carries a module definition.
+//
+// The walk stops at the first version the cluster already knows - everything below it was settled
+// by an earlier scan - or at the first image without a definition: such a version cannot be
+// offered, and the module is reported legacy to say its history is cut off there.
+func (s *OperationService) walkModuleReleases(ctx context.Context, packageName string) (*PackageProcessResult, error) {
+	release := s.svc.Package(packageName).Release()
 
-	rawTags, err := s.svc.Package(packageName).Release().ListTags(ctx)
+	rawTags, err := release.ListTags(ctx)
 	if err != nil {
+		// Neither /version nor /release: the package offers nothing to install.
 		if isRepoNotFoundError(err) {
-			s.logger.Warn(
-				"package has neither /version nor /release path",
-				slog.String("package", packageName),
-			)
-			return &PackageProcessResult{
-				Failed: []failedVersion{{
-					Error: fmt.Sprintf("package %q has neither /version nor /release path", packageName),
-				}},
-			}, nil
+			return &PackageProcessResult{}, nil
 		}
+
 		return nil, fmt.Errorf("list release tags: %w", err)
 	}
 
 	foundTags := extractOnlySemverTags(rawTags)
-
 	if len(foundTags) == 0 {
-		s.logger.Warn(
-			"no semver tags found in /release path for package",
-			slog.String("package", packageName),
-		)
-		return &PackageProcessResult{
-			Failed: []failedVersion{{
-				Error: fmt.Sprintf("no semver release tags found for legacy module %q", packageName),
-			}},
-		}, nil
+		return &PackageProcessResult{}, nil
 	}
 
-	s.logger.Info(
-		"found legacy module versions in /release path",
-		slog.String("package", packageName),
-		slog.Int("versions", len(foundTags)),
-	)
+	slices.SortFunc(foundTags, func(a, b *semver.Version) int { return b.Compare(a) })
 
 	legacyLabels := map[string]string{
 		v1alpha1.ModulePackageVersionLabelLegacy: "true",
 	}
 
-	var failedVersions []failedVersion
-	var newVersions int
+	result := &PackageProcessResult{PackageType: PackageTypeModule}
+
 	for _, versionTag := range foundTags {
 		version := "v" + versionTag.String()
 
-		isNew, ensureErr := s.ensureModulePackageVersion(ctx, packageName, version, legacyLabels)
-		if ensureErr != nil {
+		known, err := s.moduleVersionExists(ctx, packageName, version)
+		if err != nil {
+			return nil, err
+		}
+		if known {
+			break
+		}
+
+		hasDefinition, err := release.HasModuleDefinition(ctx, version)
+		if err != nil {
+			return nil, fmt.Errorf("check module definition: %w", err)
+		}
+		if !hasDefinition {
+			s.logger.Info(
+				"release image carries no module definition, older versions are left out",
+				slog.String("package", packageName),
+				slog.String("version", version),
+			)
+
+			result.Legacy = true
+
+			break
+		}
+
+		isNew, err := s.ensureModulePackageVersion(ctx, packageName, version, legacyLabels)
+		if err != nil {
 			s.logger.Warn(
 				"failed to create legacy module package version",
 				slog.String("package", packageName),
 				slog.String("version", version),
-				log.Err(ensureErr),
+				log.Err(err),
 			)
-			failedVersions = append(failedVersions, failedVersion{
+
+			result.Failed = append(result.Failed, failedVersion{
 				Name:  version,
-				Error: "ensure legacy module package version: " + ensureErr.Error(),
+				Error: "ensure legacy module package version: " + err.Error(),
 			})
+
 			continue
 		}
 
+		result.Done = append(result.Done, versionTag)
+		result.FoundVersions++
+
 		if isNew {
-			newVersions++
+			result.NewVersions++
 		}
 	}
 
-	return &PackageProcessResult{
-		PackageType:   PackageTypeModule,
-		Done:          foundTags,
-		Failed:        failedVersions,
-		FoundVersions: len(foundTags),
-		NewVersions:   newVersions,
-	}, nil
+	return result, nil
+}
+
+// moduleVersionExists reports whether the cluster already holds the version, which ends the
+// release walk: the scan that created it went through everything older.
+func (s *OperationService) moduleVersionExists(ctx context.Context, packageName, version string) (bool, error) {
+	name := v1alpha1.MakeModulePackageVersionName(s.repo.Name, packageName, version)
+
+	if err := s.client.Get(ctx, types.NamespacedName{Name: name}, new(v1alpha1.ModulePackageVersion)); err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, nil
+		}
+
+		return false, fmt.Errorf("get module package version: %w", err)
+	}
+
+	return true, nil
 }
 
 // detectPackageType determines the package type using the following strategy:
@@ -656,7 +684,10 @@ func (s *OperationService) detectPackageType(ctx context.Context, packageName, l
 }
 
 type PackageProcessResult struct {
-	PackageType   PackageType
+	PackageType PackageType
+	// Legacy reports that the module history reaches back to release images without a module
+	// definition, so the offered versions stop at that boundary.
+	Legacy        bool
 	Done          []*semver.Version
 	Failed        []failedVersion
 	FoundVersions int
@@ -865,7 +896,10 @@ func (s *OperationService) ensureModulePackageVersion(ctx context.Context, packa
 	return true, nil
 }
 
-func (s *OperationService) EnsureModulePackage(ctx context.Context, packageName string) error {
+// EnsureModulePackage creates the ModulePackage for a scanned module and lists the repository
+// among the ones offering it. A legacy module is labelled as such, the label is never taken back:
+// a release image does not grow a definition it was published without.
+func (s *OperationService) EnsureModulePackage(ctx context.Context, packageName string, legacy bool) error {
 	pkg := &v1alpha1.ModulePackage{}
 	err := s.client.Get(ctx, types.NamespacedName{Name: packageName}, pkg)
 	if err != nil && !apierrors.IsNotFound(err) {
@@ -881,10 +915,8 @@ func (s *OperationService) EnsureModulePackage(ctx context.Context, packageName 
 				Kind:       v1alpha1.ModulePackageKind,
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name: packageName,
-				Labels: map[string]string{
-					"heritage": "deckhouse",
-				},
+				Name:   packageName,
+				Labels: modulePackageLabels(legacy),
 			},
 		}
 		s.ensureSharedOwnerReference(pkg)
@@ -897,9 +929,19 @@ func (s *OperationService) EnsureModulePackage(ctx context.Context, packageName 
 		// Existing — make sure we are listed as an owner so a single repo deletion
 		// does not cascade-delete a package that other repositories still contribute.
 		original := pkg.DeepCopy()
-		if s.ensureSharedOwnerReference(pkg) {
+
+		update := s.ensureSharedOwnerReference(pkg)
+		if legacy && pkg.Labels[v1alpha1.ModulePackageLabelLegacy] != "true" {
+			if pkg.Labels == nil {
+				pkg.Labels = make(map[string]string)
+			}
+			pkg.Labels[v1alpha1.ModulePackageLabelLegacy] = "true"
+			update = true
+		}
+
+		if update {
 			if err := s.client.Patch(ctx, pkg, client.MergeFrom(original)); err != nil {
-				return fmt.Errorf("sync module package owner refs: %w", err)
+				return fmt.Errorf("sync module package: %w", err)
 			}
 		}
 	}
@@ -964,4 +1006,14 @@ func (s *OperationService) setOwnerReference(obj client.Object) {
 	}
 
 	obj.SetOwnerReferences([]metav1.OwnerReference{ownerRef})
+}
+
+// modulePackageLabels builds the labels of a freshly created ModulePackage.
+func modulePackageLabels(legacy bool) map[string]string {
+	labels := map[string]string{"heritage": "deckhouse"}
+	if legacy {
+		labels[v1alpha1.ModulePackageLabelLegacy] = "true"
+	}
+
+	return labels
 }

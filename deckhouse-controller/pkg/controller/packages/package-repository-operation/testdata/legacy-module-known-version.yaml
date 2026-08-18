@@ -1,0 +1,42 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepositoryOperation
+metadata:
+  creationTimestamp: null
+  labels:
+    packages.deckhouse.io/repository: deckhouse
+  name: deckhouse-scan-1571326380
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    controller: true
+    kind: PackageRepository
+    name: deckhouse
+    uid: ""
+spec:
+  packageRepositoryName: deckhouse
+  type: Update
+  update:
+    fullScan: true
+    timeout: 5m
+status: {}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepository
+metadata:
+  name: deckhouse
+spec:
+  registry:
+    repo: registry.example.com/test
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackageVersion
+metadata:
+  name: deckhouse-test-package-v1.0.0
+  labels:
+    packages.deckhouse.io/legacy: "true"
+    packages.deckhouse.io/repository: deckhouse
+    packages.deckhouse.io/package: test-package
+spec:
+  packageName: test-package
+  packageVersion: v1.0.0
+  packageRepositoryName: deckhouse

@@ -67,7 +67,7 @@ func (r *reconciler) processNextPackage(ctx context.Context, op *v1alpha1.Packag
 	// Skip resource creation for unrecognized packages (e.g. legacy modules without metadata).
 	switch processResult.PackageType {
 	case operations.PackageTypeModule:
-		if ensureErr := svc.EnsureModulePackage(ctx, currentPackage.Name); ensureErr != nil {
+		if ensureErr := svc.EnsureModulePackage(ctx, currentPackage.Name, processResult.Legacy); ensureErr != nil {
 			r.logger.Error("failed to ensure module package resource",
 				slog.String("package", currentPackage.Name),
 				log.Err(ensureErr))

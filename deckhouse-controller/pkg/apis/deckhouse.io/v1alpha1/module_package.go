@@ -26,6 +26,10 @@ import (
 const (
 	ModulePackageResource = "modulepackages"
 	ModulePackageKind     = "ModulePackage"
+
+	// ModulePackageLabelLegacy marks a module whose history reaches back to release images
+	// without a module definition: the versions offered stop at that boundary.
+	ModulePackageLabelLegacy = "packages.deckhouse.io/legacy"
 )
 
 // Group-version identifiers of ModulePackage.

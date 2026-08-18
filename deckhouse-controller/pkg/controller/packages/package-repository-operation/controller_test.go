@@ -89,6 +89,12 @@ func moduleVersionImage() *fakeRegistry.ImageBuilder {
 		WithFile("package.yaml", "type: Module\n")
 }
 
+// legacyReleaseImage builds a release image carrying the legacy module manifest, the marker the
+// release walk looks for.
+func legacyReleaseImage() *fakeRegistry.ImageBuilder {
+	return fakeRegistry.NewImageBuilder().WithFile("module.yaml", "name: test-package\n")
+}
+
 // invalidTypeVersionImage builds a version image with an unrecognized package type.
 func invalidTypeVersionImage() *fakeRegistry.ImageBuilder {
 	return fakeRegistry.NewImageBuilder().
@@ -589,11 +595,11 @@ func (suite *ControllerTestSuite) TestReconcile() {
 	})
 
 	suite.Run("legacy module from old registry", func() {
-		// /version path returns NAME_UNKNOWN → fallback to /release path.
+		// /version path returns NAME_UNKNOWN → the module history is read from /release.
 		// /release has semver tags + channel names.
 		reg := fakeRegistry.NewRegistry(registryHost)
 		reg.MustAddImage("", "test-package", fakeRegistry.NewImageBuilder().MustBuild())
-		reg.MustAddImage("test-package/release", "v1.0.0", fakeRegistry.NewImageBuilder().MustBuild())
+		reg.MustAddImage("test-package/release", "v1.0.0", legacyReleaseImage().MustBuild())
 		reg.MustAddImage("test-package/release", "stable", fakeRegistry.NewImageBuilder().MustBuild())
 		reg.MustAddImage("test-package/release", "early-access", fakeRegistry.NewImageBuilder().MustBuild())
 		// Wrap with legacyRegistryClient to return NAME_UNKNOWN on /version
@@ -621,13 +627,58 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		reg.MustAddImage("", "test-package", fakeRegistry.NewImageBuilder().MustBuild())
 		// Non-semver tags in /version: path reachable, but extractOnlySemverTags returns [].
 		reg.MustAddImage("test-package/version", "latest", fakeRegistry.NewImageBuilder().MustBuild())
-		reg.MustAddImage("test-package/release", "v1.0.0", fakeRegistry.NewImageBuilder().MustBuild())
+		reg.MustAddImage("test-package/release", "v1.0.0", legacyReleaseImage().MustBuild())
 		reg.MustAddImage("test-package/release", "stable", fakeRegistry.NewImageBuilder().MustBuild())
 		reg.MustAddImage("test-package/release", "early-access", fakeRegistry.NewImageBuilder().MustBuild())
 
 		psm := createFakePSM(newInternalClient(reg))
 
 		suite.setupController("empty-version-tags-legacy-release.yaml", withPackageServiceManager(psm))
+		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
+
+		err := repeat(func() error {
+			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+				NamespacedName: k8stypes.NamespacedName{Name: operation.Name},
+			})
+			return err
+		})
+
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("legacy module release boundary", func() {
+		// The walk goes down from the newest release and stops at v0.9.0, which carries no
+		// module definition: only v1.0.0 is offered and the module is marked legacy.
+		reg := fakeRegistry.NewRegistry(registryHost)
+		reg.MustAddImage("", "test-package", fakeRegistry.NewImageBuilder().MustBuild())
+		reg.MustAddImage("test-package/release", "v1.0.0", legacyReleaseImage().MustBuild())
+		reg.MustAddImage("test-package/release", "v0.9.0", fakeRegistry.NewImageBuilder().MustBuild())
+
+		psm := createFakePSM(&legacyRegistryClient{Client: newInternalClient(reg)})
+
+		suite.setupController("legacy-module-boundary.yaml", withPackageServiceManager(psm))
+		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
+
+		err := repeat(func() error {
+			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+				NamespacedName: k8stypes.NamespacedName{Name: operation.Name},
+			})
+			return err
+		})
+
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("legacy module stops at a known version", func() {
+		// v1.0.0 is already in the cluster, so the walk ends there and only v1.1.0 is added.
+		reg := fakeRegistry.NewRegistry(registryHost)
+		reg.MustAddImage("", "test-package", fakeRegistry.NewImageBuilder().MustBuild())
+		reg.MustAddImage("test-package/release", "v1.1.0", legacyReleaseImage().MustBuild())
+		reg.MustAddImage("test-package/release", "v1.0.0", legacyReleaseImage().MustBuild())
+
+		psm := createFakePSM(&legacyRegistryClient{Client: newInternalClient(reg)})
+
+		suite.setupController("legacy-module-known-version.yaml", withPackageServiceManager(psm))
 		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
 
 		err := repeat(func() error {
