@@ -478,3 +478,49 @@ func TestEnsureModuleEmbeddedSource(t *testing.T) {
 			"a downloaded module must not be forced to the Embedded source")
 	})
 }
+
+// TestEnsureModulePreservesForeignMeta verifies that ensureModule refreshes
+// only the definition-owned annotations and labels: keys written by other
+// components (the module v2 sync annotations, user-set keys) must survive the
+// update, while stale definition-owned keys are dropped.
+func TestEnsureModulePreservesForeignMeta(t *testing.T) {
+	module := testModule("ingress-nginx", v1alpha1.ModuleSourceEmbedded)
+	module.SetAnnotations(map[string]string{
+		v1alpha2.ModuleAnnotationEmbedded:      "true",
+		v1alpha2.ModuleAnnotationDev:           "true",
+		"user.example.com/note":                "keep-me",
+		v1alpha1.ModuleAnnotationDescriptionRu: "устаревшее описание",
+	})
+	module.SetLabels(map[string]string{
+		"module.deckhouse.io/stale-tag": "",
+		"user.example.com/team":         "keep-me",
+	})
+
+	def := &moduletypes.Definition{
+		Name:         "ingress-nginx",
+		Weight:       380,
+		Path:         "/deckhouse/modules/380-ingress-nginx",
+		Tags:         []string{"network"},
+		Descriptions: &moduletypes.ModuleDescriptions{En: "Ingress controller"},
+	}
+
+	l := newEnsureLoader(t, module)
+	require.NoError(t, l.ensureModule(context.Background(), def, true))
+
+	updated := getModule(t, l, "ingress-nginx")
+
+	annotations := updated.GetAnnotations()
+	assert.Equal(t, "true", annotations[v1alpha2.ModuleAnnotationEmbedded],
+		"module v2 annotations must survive the loader update")
+	assert.Equal(t, "true", annotations[v1alpha2.ModuleAnnotationDev])
+	assert.Equal(t, "keep-me", annotations["user.example.com/note"])
+	assert.Equal(t, "Ingress controller", annotations[v1alpha1.ModuleAnnotationDescriptionEn])
+	assert.NotContains(t, annotations, v1alpha1.ModuleAnnotationDescriptionRu,
+		"stale loader-owned description must be dropped")
+
+	labels := updated.GetLabels()
+	assert.Contains(t, labels, "module.deckhouse.io/network")
+	assert.Equal(t, "keep-me", labels["user.example.com/team"])
+	assert.NotContains(t, labels, "module.deckhouse.io/stale-tag",
+		"stale loader-owned label must be dropped")
+}

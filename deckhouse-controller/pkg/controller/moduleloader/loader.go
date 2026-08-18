@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
+	"maps"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -480,6 +481,16 @@ func (l *Loader) syncModuleVersions(modules []v1alpha1.Module) {
 	}
 }
 
+// ensureModule makes the cluster Module object match the module definition
+// read from disk.
+//
+//  1. Skips a downloaded module that has no object yet: the source
+//     controller creates it.
+//  2. Creates the missing object for an embedded module.
+//  3. Refreshes the definition-owned properties, annotations and labels.
+//  4. Pins an embedded module to the Deckhouse version and the Embedded
+//     source.
+//  5. Writes only when something changed.
 func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, embedded bool) error {
 	module := new(v1alpha1.Module)
 	err := retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
@@ -529,8 +540,7 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 			module.Properties.Critical = def.Critical
 			module.Properties.Accessibility = def.Accessibility.ToV1Alpha1()
 
-			module.SetAnnotations(def.Annotations())
-			module.SetLabels(def.Labels())
+			mergeDefinitionMeta(module, def)
 
 			if embedded {
 				// set deckhouse release channel to embedded modules
@@ -572,6 +582,37 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 		return fmt.Errorf("on error: %w", err)
 	}
 	return nil
+}
+
+// mergeDefinitionMeta refreshes the definition-owned annotations and labels on
+// the module. Keys owned by other writers stay intact: the same object carries
+// the module v2 annotations (modules.deckhouse.io/embedded, .../dev) and may
+// carry user-set keys, so the maps must not be replaced wholesale.
+func mergeDefinitionMeta(module *v1alpha1.Module, def *moduletypes.Definition) {
+	annotations := module.GetAnnotations()
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
+	// The loader owns exactly the description annotations: drop the stale
+	// ones, then set the current ones.
+	delete(annotations, v1alpha1.ModuleAnnotationDescriptionRu)
+	delete(annotations, v1alpha1.ModuleAnnotationDescriptionEn)
+	maps.Copy(annotations, def.Annotations())
+	module.SetAnnotations(annotations)
+
+	labels := module.GetLabels()
+	if labels == nil {
+		labels = make(map[string]string)
+	}
+	// The loader owns the "module.deckhouse.io/" label namespace (cni,
+	// cloud-provider and tag labels from the definition).
+	for key := range labels {
+		if strings.HasPrefix(key, "module.deckhouse.io/") {
+			delete(labels, key)
+		}
+	}
+	maps.Copy(labels, def.Labels())
+	module.SetLabels(labels)
 }
 
 func (l *Loader) ensureModuleSettings(ctx context.Context, module string, rawConfig []byte, conversions []v1alpha1.ModuleSettingsConversion) error {
