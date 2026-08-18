@@ -731,6 +731,7 @@ var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() 
           "password": "myPaSsWd",
           "region": "myreg",
           "regionTagCategory": "myregtagcat",
+          "datacenter": "X1",
           "instanceClassDefaults": {
             "datastore": "dev/lun_1",
             "template": "dev/golden_image",
@@ -842,6 +843,7 @@ storageclass.kubernetes.io/is-default-class: "true"
           "password": "myPaSsWd",
           "region": "myreg",
           "regionTagCategory": "myregtagcat",
+          "datacenter": "X1",
           "instanceClassDefaults": {
             "datastore": "dev/lun_1",
             "template": "dev/golden_image",
@@ -916,6 +918,7 @@ storageclass.kubernetes.io/is-default-class: "true"
           "password": "myPaSsWd",
           "region": "myreg",
           "regionTagCategory": "myregtagcat",
+          "datacenter": "X1",
           "instanceClassDefaults": {
             "disableTimesync": true,
             "resourcePoolPath": "kubernetes-dev"
