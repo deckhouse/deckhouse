@@ -8,13 +8,9 @@ package crd
 // Warning! These structs are duplicated in images/metadata-exporter/src/models.go
 
 type AlliancePublicMetadata struct {
-	ClusterUUID string `json:"clusterUUID"`
-	AuthnKeyPub string `json:"authnKeyPub"`
-	RootCA      string `json:"rootCA"`
-	// CRL is this cluster's CA CRL PEM (possibly multi-block). Optional for
-	// backward compatibility with older exporters; peers concatenate peer CRLs
-	// into local ca-crl.pem so federated issuers are covered for TLS verify.
-	CRL         string                     `json:"crl,omitempty"`
+	ClusterUUID string                     `json:"clusterUUID"`
+	AuthnKeyPub string                     `json:"authnKeyPub"`
+	RootCA      string                     `json:"rootCA"`
 	AllianceRef *PublicMetadataAllianceRef `json:"allianceRef,omitempty"`
 }
 

@@ -49,8 +49,6 @@ type AlliancePublicMetadata struct {
 	ClusterUUID string                     `json:"clusterUUID"`
 	AuthnKeyPub string                     `json:"authnKeyPub"`
 	RootCA      string                     `json:"rootCA"`
-	// Optional local CA CRL PEM (blocks signed by this cluster's signing CA only).
-	CRL         string                     `json:"crl,omitempty"`
 	AllianceRef *PublicMetadataAllianceRef `json:"allianceRef,omitempty"`
 }
 

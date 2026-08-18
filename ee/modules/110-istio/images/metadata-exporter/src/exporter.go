@@ -39,7 +39,6 @@ type Exporter struct {
 	lwService                            *cache.ListWatch
 	lwConfigMaps                         *cache.ListWatch
 	lwCertCAConfigMap                    *cache.ListWatch
-	lwCacertsSecret                      *cache.ListWatch
 	lwPublicService                      *cache.ListWatch // for federation
 	lwdRemoteClustersPublicMetadata      *cache.ListWatch
 	lwRemoteAuthnKeypair                 *cache.ListWatch
@@ -48,7 +47,6 @@ type Exporter struct {
 	nodeInformer                         cache.SharedInformer
 	configMapInformer                    cache.SharedInformer
 	certCAConfigMapInformer              cache.SharedInformer
-	cacertsSecretInformer                cache.SharedInformer
 	publicServiceInformer                cache.SharedInformer // for federation
 	remoteClustersPublicMetadataInformer cache.SharedInformer
 	remoteAuthnKeypair                   cache.SharedInformer
@@ -134,15 +132,6 @@ func New(namespace string, labelSelector string) (*Exporter, error) {
 		},
 	)
 
-	lwCacertsSecret := cache.NewFilteredListWatchFromClient(
-		clientSet.CoreV1().RESTClient(),
-		"secrets",
-		namespace,
-		func(options *metav1.ListOptions) {
-			options.FieldSelector = "metadata.name=cacerts"
-		},
-	)
-
 	lwRemoteClustersPublicMetadata := cache.NewFilteredListWatchFromClient(
 		clientSet.CoreV1().RESTClient(),
 		"secrets",
@@ -171,7 +160,6 @@ func New(namespace string, labelSelector string) (*Exporter, error) {
 			lwConfigMaps:                    lwConfigMap,
 			lwPublicService:                 lwPublicServices,
 			lwCertCAConfigMap:               lwCertCAConfigMap,
-			lwCacertsSecret:                 lwCacertsSecret,
 			lwdRemoteClustersPublicMetadata: lwRemoteClustersPublicMetadata,
 			lwRemoteAuthnKeypair:            lwRemoteAuthnKeypair,
 			inlet:                           inlet,
@@ -219,12 +207,6 @@ func (exp *Exporter) watchIngressGateways(ctx context.Context) {
 		0,
 	)
 
-	exp.cacertsSecretInformer = cache.NewSharedInformer(
-		exp.lwCacertsSecret,
-		&v1.Secret{},
-		0,
-	)
-
 	exp.remoteClustersPublicMetadataInformer = cache.NewSharedInformer(
 		exp.lwdRemoteClustersPublicMetadata,
 		&v1.Secret{},
@@ -243,7 +225,6 @@ func (exp *Exporter) watchIngressGateways(ctx context.Context) {
 	go exp.configMapInformer.Run(ctx.Done())
 	go exp.publicServiceInformer.Run(ctx.Done())
 	go exp.certCAConfigMapInformer.Run(ctx.Done())
-	go exp.cacertsSecretInformer.Run(ctx.Done())
 	go exp.remoteClustersPublicMetadataInformer.Run(ctx.Done())
 	go exp.remoteAuthnKeypair.Run(ctx.Done())
 
@@ -254,7 +235,6 @@ func (exp *Exporter) watchIngressGateways(ctx context.Context) {
 		exp.configMapInformer.HasSynced,
 		exp.publicServiceInformer.HasSynced,
 		exp.certCAConfigMapInformer.HasSynced,
-		exp.cacertsSecretInformer.HasSynced,
 		exp.remoteClustersPublicMetadataInformer.HasSynced,
 		exp.remoteAuthnKeypair.HasSynced) {
 		fmt.Println("[ERROR] Failed to sync caches")
@@ -608,90 +588,6 @@ func (exp *Exporter) ExtractRootCaCert() (string, error) {
 	return pubKey, nil
 }
 
-// ExtractLocalCACrl returns ca-crl.pem blocks signed by this cluster's CAs
-// (ca-cert.pem and, when distinct, root-cert.pem). Peer CRLs previously
-// concatenated into cacerts are stripped so federation metadata does not
-// re-export foreign CRLs (N² growth). Root-signed CRLs must be exported too:
-// with CRL_CHECK_ALL, peers need a CRL for every issuer in the remote chain.
-func (exp *Exporter) ExtractLocalCACrl() (string, error) {
-	items := exp.cacertsSecretInformer.GetStore().List()
-	if len(items) == 0 {
-		return "", nil
-	}
-
-	secret, ok := items[0].(*v1.Secret)
-	if !ok {
-		return "", fmt.Errorf("failed to cast item to *v1.Secret")
-	}
-
-	crlPEM := string(secret.Data["ca-crl.pem"])
-	if strings.TrimSpace(crlPEM) == "" {
-		return "", nil
-	}
-
-	signers := localCRLSigners(secret.Data)
-	if len(signers) == 0 {
-		// No local signer to filter against — omit rather than re-export peers.
-		return "", nil
-	}
-
-	return filterLocalCRLPEM(crlPEM, signers), nil
-}
-
-// filterLocalCRLPEM keeps X509 CRL PEM blocks whose signature verifies against
-// any of the local signers (intermediate and/or root).
-func filterLocalCRLPEM(crlPEM string, signers []*x509.Certificate) string {
-	var out strings.Builder
-	rest := []byte(crlPEM)
-	for {
-		var block *pem.Block
-		block, rest = pem.Decode(rest)
-		if block == nil {
-			break
-		}
-		if block.Type != "X509 CRL" {
-			continue
-		}
-		crl, err := x509.ParseRevocationList(block.Bytes)
-		if err != nil {
-			continue
-		}
-		for _, cert := range signers {
-			if err := crl.CheckSignatureFrom(cert); err == nil {
-				out.Write(pem.EncodeToMemory(block))
-				break
-			}
-		}
-	}
-	return out.String()
-}
-
-func localCRLSigners(data map[string][]byte) []*x509.Certificate {
-	var signers []*x509.Certificate
-	seen := map[string]struct{}{}
-	for _, key := range []string{"ca-cert.pem", "root-cert.pem"} {
-		pemBytes := data[key]
-		if strings.TrimSpace(string(pemBytes)) == "" {
-			continue
-		}
-		block, _ := pem.Decode(pemBytes)
-		if block == nil {
-			continue
-		}
-		cert, err := x509.ParseCertificate(block.Bytes)
-		if err != nil {
-			continue
-		}
-		fp := string(cert.Raw)
-		if _, ok := seen[fp]; ok {
-			continue
-		}
-		seen[fp] = struct{}{}
-		signers = append(signers, cert)
-	}
-	return signers
-}
-
 // CheckAuthn check JWT token authentication
 func (exp *Exporter) CheckAuthn(header http.Header, scope string) (string, error) {
 	reqTokenString := header.Get("Authorization")
@@ -822,16 +718,10 @@ func (exp *Exporter) RenderPublicMetadataJSON() string {
 		fmt.Printf("failed to extract root ca cert: %v", err)
 	}
 
-	crlPem, err := exp.ExtractLocalCACrl()
-	if err != nil {
-		fmt.Printf("failed to extract local ca crl: %v", err)
-	}
-
 	pm := AlliancePublicMetadata{
 		ClusterUUID: clusterUUID,
 		AuthnKeyPub: authnKeyPubPem,
 		RootCA:      rootCAPem,
-		CRL:         crlPem,
 	}
 
 	jsonbuf, err := json.MarshalIndent(pm, "", "  ")

@@ -35,7 +35,6 @@ import (
 
 type IstioFederationMergeCrdInfo struct {
 	ClusterUUID              string                            `json:"clusterUUID"`
-	CRL                      string                            `json:"crl,omitempty"`
 	EnableInsecureConnection bool                              `json:"insecureSkipVerify"`
 	IngressGateways          *[]eeCrd.FederationIngressGateway `json:"ingressGateways"`
 	Name                     string                            `json:"name"`
@@ -50,7 +49,6 @@ type IstioMulticlusterMergeCrdInfo struct {
 	APIHost                  string                               `json:"apiHost"`
 	APIJWT                   string                               `json:"apiJWT"`
 	ClusterUUID              string                               `json:"clusterUUID"`
-	CRL                      string                               `json:"crl,omitempty"`
 	EnableIngressGateway     bool                                 `json:"enableIngressGateway"`
 	EnableInsecureConnection bool                                 `json:"insecureSkipVerify"`
 	IngressGateways          *[]eeCrd.MulticlusterIngressGateways `json:"ingressGateways"`
@@ -130,7 +128,6 @@ func applyFederationMergeFilter(obj *unstructured.Unstructured) (go_hook.FilterR
 		p      *eeCrd.AlliancePublicMetadata
 		uuid   string
 		rootCA string
-		crl    string
 	)
 
 	if federation.Status.MetadataCache.Private != nil {
@@ -145,12 +142,10 @@ func applyFederationMergeFilter(obj *unstructured.Unstructured) (go_hook.FilterR
 		p = federation.Status.MetadataCache.Public
 		uuid = federation.Status.MetadataCache.Public.ClusterUUID
 		rootCA = federation.Status.MetadataCache.Public.RootCA
-		crl = federation.Status.MetadataCache.Public.CRL
 	}
 
 	return IstioFederationMergeCrdInfo{
 		ClusterUUID:              uuid,
-		CRL:                      crl,
 		EnableInsecureConnection: federation.Spec.Metadata.EnableInsecureConnection,
 		IngressGateways:          igs,
 		Name:                     federation.GetName(),
@@ -180,7 +175,6 @@ func applyMulticlusterMergeFilter(obj *unstructured.Unstructured) (go_hook.Filte
 		p           *eeCrd.AlliancePublicMetadata
 		uuid        string
 		rootCA      string
-		crl         string
 	)
 
 	if multicluster.Status.MetadataCache.Private != nil {
@@ -194,13 +188,11 @@ func applyMulticlusterMergeFilter(obj *unstructured.Unstructured) (go_hook.Filte
 		p = multicluster.Status.MetadataCache.Public
 		uuid = multicluster.Status.MetadataCache.Public.ClusterUUID
 		rootCA = multicluster.Status.MetadataCache.Public.RootCA
-		crl = multicluster.Status.MetadataCache.Public.CRL
 	}
 
 	return IstioMulticlusterMergeCrdInfo{
 		APIHost:                  apiHost,
 		ClusterUUID:              uuid,
-		CRL:                      crl,
 		EnableIngressGateway:     multicluster.Spec.EnableIngressGateway,
 		EnableInsecureConnection: multicluster.Spec.Metadata.EnableInsecureConnection,
 		IngressGateways:          igs,

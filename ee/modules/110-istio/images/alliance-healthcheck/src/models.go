@@ -28,5 +28,4 @@ type AlliancePublicMetadata struct {
 	ClusterUUID string `json:"clusterUUID"`
 	AuthnKeyPub string `json:"authnKeyPub"`
 	RootCA      string `json:"rootCA"`
-	CRL         string `json:"crl,omitempty"`
 }

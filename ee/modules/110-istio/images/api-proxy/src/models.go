@@ -9,7 +9,6 @@ type PublicMetadata struct {
 	ClusterUUID string `json:"clusterUUID,omitempty"`
 	AuthnKeyPub string `json:"authnKeyPub,omitempty"`
 	RootCA      string `json:"rootCA,omitempty"`
-	CRL         string `json:"crl,omitempty"`
 }
 
 // RemotePublicMetadata map[custerUUID]pubilcMetadata

@@ -20,11 +20,3 @@ Adopted upstream pr https://github.com/istio/istio/pull/58567.
 ## 002-kiali-logout.patch
 
 Enable Logout in Kiali for header auth (DexAuthenticator). The tab that clicks Logout calls `/logout?rd=<app-origin>/` once; other tabs receive a `localStorage` event and only dispatch `sessionExpired` locally (no second sign_out, no reload) to avoid oauth2-proxy CSRF races.
-
-## 003-istio-crl-only-verify-leaf.patch
-
-Wire `D8_CRL_ONLY_VERIFY_LEAF=true` into Envoy `only_verify_leaf_cert_crl` on
-pilot `default_validation_context` (server SDS, ISTIO_MUTUAL clusters, and
-credential/file upstream TLS). Combined with agent SDS CRL via boolean OR merge.
-
-Mapped from ModuleConfig `settings.crl.enableFullCrlChainCheck=false`.

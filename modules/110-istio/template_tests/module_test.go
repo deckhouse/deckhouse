@@ -74,28 +74,24 @@ const istioValues = `
           imageSuffix: "V1x29x6"
           supportsAmbient: true
           supportsOperator: false
-          supportsPeerCaCrl: true
         "1.27.9":
           revision: "v1x27x9"
           fullVersion: "1.27.9"
           imageSuffix: "V1x27x9"
           supportsAmbient: true
           supportsOperator: false
-          supportsPeerCaCrl: false
         "1.25.2":
           revision: "v1x25x2"
           fullVersion: "1.25.2"
           imageSuffix: "V1x25x2"
           supportsAmbient: true
           supportsOperator: true
-          supportsPeerCaCrl: false
         "1.21.6":
           revision: "v1x21x6"
           fullVersion: "1.21.6"
           imageSuffix: "V1x21x6"
           supportsAmbient: false
           supportsOperator: true
-          supportsPeerCaCrl: false
       kialiSigningKey: "kiali"
       remoteAuthnKeypair:
         priv: aaa
