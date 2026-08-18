@@ -85,6 +85,8 @@ const (
 // IST0102 / IST0118 findings are noise (not mesh application workloads).
 var mutedSystemNamespaces = []string{
 	"kube-system",
+	"kube-public",
+	"kube-node-lease",
 }
 
 // mutedCodesForDeckhouseSystem are Info-level findings that are noise for
