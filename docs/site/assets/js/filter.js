@@ -551,16 +551,19 @@ document.addEventListener('DOMContentLoaded', () => {
   if (openMobile) {
     const filter = document.querySelector('.filter__block');
     const hamburgerCollapse = document.querySelector('.hamburger--collapse');
+    const body = document.body;
 
     function closeFilterMobilePanel() {
       if (filter) filter.classList.remove('show');
       if (hamburgerCollapse) hamburgerCollapse.classList.remove('show');
+      if (body) body.classList.remove('filter-opened');
     }
 
     openMobile.addEventListener('click', () => {
       if (!filter) return;
       filter.classList.add('show');
       if (hamburgerCollapse) hamburgerCollapse.classList.add('show');
+      if (body) body.classList.add('filter-opened');
     });
 
     if (applyButtonBlock) {
@@ -611,6 +614,13 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     })
   }
+
+  document.querySelectorAll('.button-tile__stage img').forEach(img => {
+    img.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+  });
 
   initTooltip('.filter__container label[for="experimental"] > img, .button-tile__stage-experimental > img', 'Experimental', texts.experimental);
   initTooltip('.filter__container label[for="preview"] > img, .button-tile__stage-preview > img', 'Preview', texts.preview);
