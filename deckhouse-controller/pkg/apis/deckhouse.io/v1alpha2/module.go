@@ -85,6 +85,14 @@ type Module struct {
 	// Spec defines the behavior of a Module.
 	Spec ModuleSpec `json:"spec"`
 
+	// Properties carries the v1alpha1 `properties` of the same stored object
+	// verbatim. The versions share storage without conversion, so this
+	// passthrough is required: a v1alpha2 read or full update would otherwise
+	// drop the v1alpha1 fields.
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +optional
+	Properties *runtime.RawExtension `json:"properties,omitempty"`
+
 	// Status of a Module.
 	Status ModuleStatus `json:"status,omitempty"`
 }

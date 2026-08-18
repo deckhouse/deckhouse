@@ -143,6 +143,14 @@ type Module struct {
 
 	Properties ModuleProperties `json:"properties,omitempty"`
 
+	// Spec carries the v1alpha2 `spec` of the same stored object verbatim.
+	// The versions share storage without conversion, so this passthrough is
+	// required: a v1alpha1 read or full update would otherwise drop the
+	// v1alpha2 fields.
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +optional
+	Spec *runtime.RawExtension `json:"spec,omitempty"`
+
 	Status ModuleStatus `json:"status,omitempty"`
 }
 

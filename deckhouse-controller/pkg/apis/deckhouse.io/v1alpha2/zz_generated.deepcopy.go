@@ -29,6 +29,11 @@ func (in *Module) DeepCopyInto(out *Module) {
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
 	in.Spec.DeepCopyInto(&out.Spec)
+	if in.Properties != nil {
+		in, out := &in.Properties, &out.Properties
+		*out = new(runtime.RawExtension)
+		(*in).DeepCopyInto(*out)
+	}
 	in.Status.DeepCopyInto(&out.Status)
 }
 

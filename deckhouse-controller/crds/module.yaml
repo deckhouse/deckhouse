@@ -163,6 +163,14 @@ spec:
                 description: Module _weight_ (priority).
                 type: integer
             type: object
+          spec:
+            description: |-
+              Spec carries the v1alpha2 `spec` of the same stored object verbatim.
+              The versions share storage without conversion, so this passthrough is
+              required: a v1alpha1 read or full update would otherwise drop the
+              v1alpha2 fields.
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
           status:
             properties:
               conditions:
@@ -254,6 +262,14 @@ spec:
       openAPIV3Schema:
         description: Module represents a module instance managed via the package system.
         properties:
+          properties:
+            description: |-
+              Properties carries the v1alpha1 `properties` of the same stored object
+              verbatim. The versions share storage without conversion, so this
+              passthrough is required: a v1alpha2 read or full update would otherwise
+              drop the v1alpha1 fields.
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
           spec:
             description: Spec defines the behavior of a Module.
             properties:
