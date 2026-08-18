@@ -43,6 +43,8 @@ import (
 const (
 	finalizerName = "metal3instance.internal.deckhouse.io"
 
+	credentialsSecretType = "cloud-provider.deckhouse.io/credentials"
+
 	labelInstance          = "metal3.deckhouse.io/instance"
 	labelInstanceNamespace = "metal3.deckhouse.io/instance-namespace"
 	labelPool              = "pool"
@@ -277,7 +279,7 @@ func (r *reconciler) ensureCredentialSecret(ctx context.Context, instance *unstr
 					labelInstance: instance.GetName(),
 				},
 			},
-			Type: corev1.SecretTypeOpaque,
+			Type: corev1.SecretType(credentialsSecretType),
 			Data: copySecretData(source.Data),
 		}
 		return r.Create(ctx, target)
@@ -287,7 +289,7 @@ func (r *reconciler) ensureCredentialSecret(ctx context.Context, instance *unstr
 		target.Labels = map[string]string{}
 	}
 	target.Labels[labelInstance] = instance.GetName()
-	target.Type = corev1.SecretTypeOpaque
+	target.Type = corev1.SecretType(credentialsSecretType)
 	target.Data = copySecretData(source.Data)
 	return r.Update(ctx, target)
 }
