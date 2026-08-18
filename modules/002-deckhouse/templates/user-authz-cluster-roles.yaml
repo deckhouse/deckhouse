@@ -35,6 +35,16 @@ rules:
 - apiGroups:
   - deckhouse.io
   resources:
+  - packagerepositoryoperations
+  - applicationpackageversions
+  - applicationpackages
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - deckhouse.io
+  resources:
   - applications
   verbs:
   - create
