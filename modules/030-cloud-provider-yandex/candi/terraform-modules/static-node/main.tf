@@ -122,7 +122,6 @@ resource "yandex_compute_instance" "static" {
       metadata,
       secondary_disk,
     ]
-    create_before_destroy = true
   }
 
   timeouts {
