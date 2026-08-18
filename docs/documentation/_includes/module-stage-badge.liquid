@@ -1,4 +1,3 @@
-{%- unless site.d8Revision == 'CSE' %}
 {%- assign stage = include.stage %}
 {%- assign stage_long = stage | downcase | replace: " ", "_" | append: "_long" %}
 {%- assign moduleName = page['module-kebab-name'] %}
@@ -14,7 +13,7 @@
   {%- capture alert_content %}
 {{ site.data.i18n.features['module_lifecycle_stage'][page.lang] }}: <span  data-tippy-content='{{ site.data.i18n.features[stage_long][page.lang] }}' class='alert__info'>{{ stage }}</span>
   {%- if hasRequirements and site.data.i18n.features['requirements_for_alert'][page.lang] %}
-  <br>{{ site.data.i18n.features['requirements_for_alert'][page.lang] }}
+  <p>{{ site.data.i18n.features['requirements_for_alert'][page.lang] }}</p>
   {%- endif %}
   {% endcapture %}
   {%- if stage == "Experimental" or stage == "Preview" %}
@@ -31,4 +30,3 @@
 {% endalert %}
   {%- endif %}
 {%- endif %}
-{%- endunless %}

@@ -1,16 +1,25 @@
 # Rewrites <a href> links in the final HTML.
 #
 # Controlled by site.config:
-#   link_rewrite_enable: true|false  # global on/off switch
-#   link_rewrite:
-#     whitelist_hosts: [host1, host2]  # links NOT on these hosts (or their subdomains) are stripped
-#     replace:                         # regex URL substitutions, applied before whitelist check
+#   linkRewriteEnable: true|false  # global on/off switch
+#   linkRewrite:
+#     whitelistHosts: [host1, host2]  # links NOT on these hosts (or their subdomains) are stripped
+#     replace:                         # regex URL substitutions, applied to ANY link
 #       - { from: 'regex', to: 'replacement' }
+#     remove:                          # regex patterns; matching links are unwrapped
+#       - 'regex'                      # (applied AFTER replace, BEFORE whitelist)
 #
 # Per-link opt-out: <a data-keep-link="true"> is never touched.
 # In Markdown: [text](https://example.com){:data-keep-link="true"}
 #
-# Relative links and links without a host (mailto:, tel:, /path, #anchor) are always left alone.
+# Flow: for every <a href>:
+#   1. If data-keep-link is set — skip.
+#   2. Apply the first matching replace rule to the href (any link — relative or absolute).
+#   3. If the (possibly rewritten) href matches any 'remove' pattern — unwrap the <a>.
+#   4. Otherwise, if the href is absolute http(s), run the whitelist check —
+#      unwrap the <a> when the host is not in whitelistHosts (or a subdomain of one).
+#   5. Non-http(s) URLs (relative, mailto:, tel:, #anchor) that survived step 3
+#      are kept as is (with the replace result if any rule matched).
 #
 # The plugin only rewrites <a> tags in-place via regex — the rest of the HTML is preserved
 # byte-for-byte (no DOM re-serialization).
@@ -26,7 +35,7 @@ module LinkRewrite
   module_function
 
   def enabled?(site)
-    site.config['link_rewrite_enable'] == true
+    site.config['linkRewriteEnable'] == true
   end
 
   def html_output?(doc)
@@ -34,12 +43,13 @@ module LinkRewrite
   end
 
   def compile_rules(site)
-    cfg = site.config['link_rewrite'] || {}
-    whitelist = Array(cfg['whitelist_hosts']).map { |h| h.to_s.downcase }
+    cfg = site.config['linkRewrite'] || {}
+    whitelist = Array(cfg['whitelistHosts']).map { |h| h.to_s.downcase }
     replaces = Array(cfg['replace']).map do |r|
       [Regexp.new(r['from'].to_s), r['to'].to_s]
     end
-    [whitelist, replaces]
+    removes = Array(cfg['remove']).map { |p| Regexp.new(p.to_s) }
+    [whitelist, replaces, removes]
   end
 
   def host_of(href)
@@ -61,7 +71,7 @@ module LinkRewrite
     href
   end
 
-  def process(doc, whitelist, replaces)
+  def process(doc, whitelist, replaces, removes)
     return if doc.output.nil? || doc.output.empty?
 
     doc.output = doc.output.gsub(A_TAG_RE) do |match|
@@ -74,18 +84,20 @@ module LinkRewrite
       next match unless href_match
       href = href_match[1] || href_match[2]
 
-      host = host_of(href)
-      next match if host.nil?
-
+      # Apply replace rules to ANY link (relative or absolute).
       new_href = apply_replaces(href, replaces)
       if new_href != href
-        new_host = host_of(new_href)
-        if whitelisted?(new_host, whitelist)
-          new_attrs = attrs.sub(href_match[0], %(href="#{new_href}"))
-          next "<a#{new_attrs}>#{inner}</a>"
-        end
-      else
-        next match if whitelisted?(host, whitelist)
+        attrs = attrs.sub(href_match[0], %(href="#{new_href}"))
+      end
+
+      # Explicit removal by URL pattern — applied to ANY link (relative or absolute).
+      next inner if removes.any? { |re| new_href.match?(re) }
+
+      # Whitelist check applies only to absolute http(s) URLs. Anything else
+      # (relative, mailto:, tel:, #anchor) is kept as is.
+      new_host = host_of(new_href)
+      if new_host.nil? || whitelisted?(new_host, whitelist)
+        next "<a#{attrs}>#{inner}</a>"
       end
 
       inner
@@ -98,6 +110,6 @@ Jekyll::Hooks.register [:documents, :pages], :post_render do |doc|
   next unless LinkRewrite.enabled?(site)
   next unless LinkRewrite.html_output?(doc)
 
-  whitelist, replaces = LinkRewrite.compile_rules(site)
-  LinkRewrite.process(doc, whitelist, replaces)
+  whitelist, replaces, removes = LinkRewrite.compile_rules(site)
+  LinkRewrite.process(doc, whitelist, replaces, removes)
 end

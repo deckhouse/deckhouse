@@ -1,10 +1,10 @@
-link_rewrite_enable: true
-link_rewrite:
+linkRewriteEnable: true
+linkRewrite:
   # Allowed hosts. For a link whose host is not listed here (and is not a subdomain
   # of a listed host), the <a> tag is unwrapped: the tag is dropped but the link
   # text stays in place. Relative links, mailto:/tel:/#anchor and links with the
   # data-keep-link attribute are never touched.
-  whitelist_hosts:
+  whitelistHosts:
     - deckhouse.ru
     - deckhouse.io
     - flant.com
@@ -14,3 +14,6 @@ link_rewrite:
   replace:
     - from: '^https?://old\.example\.com/(.*)$'
       to:   'https://new.example.com/\1'
+  remove:
+    - '^.*/products/kubernetes-platform/documentation/(v1/)?architecture/.*$'
+    - '^.*/products/kubernetes-platform/documentation/(v1/)?user/.*$'

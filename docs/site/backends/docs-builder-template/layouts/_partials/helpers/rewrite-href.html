@@ -1,0 +1,78 @@
+{{- /*
+  Link rewriter — decision logic. Single source of truth for the linkRewrite
+  feature; mirrors docs/documentation/_plugins/link_rewrite.rb.
+
+  Input (dict):
+    href (string, required) — the link URL
+    keep (bool,   optional) — force-keep the link untouched (opt-out)
+
+  Returns (via `return`) a dict:
+    strip (bool)   — true if the <a> tag should be unwrapped (link text kept, tag dropped)
+    href  (string) — the (possibly rewritten) URL to use when the link is kept
+
+  Config (config/_default/hugo.yaml under params):
+    linkRewriteEnable: true|false
+    linkRewrite:
+      replace: [{from, to}]  # regex substitutions, applied to ANY link (Go RE2)
+      remove:  [regex, ...]  # patterns that unwrap the link (applied after replace)
+      whitelistHosts: [...]  # for absolute http(s) links: keep only these hosts (or subdomains)
+
+  Flow:
+    1. keep=true or feature disabled  -> keep as is.
+    2. replace: first matching rule rewrites the href (any link, relative or absolute).
+    3. remove: if the rewritten href matches any pattern -> strip.
+    4. whitelist: only for absolute http(s) URLs -> strip when host is not whitelisted.
+       Non-http(s) URLs (relative, mailto:, tel:, #anchor) skip the whitelist check.
+*/ -}}
+{{- $href := .href -}}
+{{- $keep := .keep | default false -}}
+
+{{- /*
+  Effective toggle for the linkRewrite feature.
+  Overridable at runtime with HUGO_PARAMS_LINKREWRITEENABLE (the key has no
+  underscores, so Hugo maps the env var onto params.linkRewriteEnable natively).
+  Env values arrive as strings, so accept both bool and string forms.
+*/ -}}
+{{- $raw := site.Params.linkRewriteEnable | default false -}}
+{{- $enabled := or (eq $raw true) (eq $raw "true") (eq $raw "1") -}}
+{{- $strip := false -}}
+{{- $newHref := $href -}}
+
+{{- if and $enabled (not $keep) -}}
+  {{- $cfg := site.Params.linkRewrite | default dict -}}
+  {{- $replaces := $cfg.replace | default slice -}}
+  {{- $removes := $cfg.remove | default slice -}}
+  {{- $whitelist := $cfg.whitelistHosts | default slice -}}
+
+  {{- /* Apply the first matching replace rule to ANY link (absolute or relative) */ -}}
+  {{- range $replaces -}}
+    {{- if and (eq $newHref $href) (gt (len (findRE .from $newHref)) 0) -}}
+      {{- $newHref = replaceRE .from .to $newHref -}}
+    {{- end -}}
+  {{- end -}}
+
+  {{- /* Explicit removal by URL pattern — applied to ANY link (relative or absolute) */ -}}
+  {{- range $removes -}}
+    {{- if gt (len (findRE . $newHref)) 0 -}}
+      {{- $strip = true -}}
+    {{- end -}}
+  {{- end -}}
+
+  {{- /* Whitelist check only applies when the resulting URL is absolute http(s). */ -}}
+  {{- if not $strip -}}
+    {{- $isAbsolute := or (hasPrefix $newHref "http://") (hasPrefix $newHref "https://") -}}
+    {{- if $isAbsolute -}}
+      {{- $host := lower (replaceRE `^https?://([^/?#]+).*$` "$1" $newHref) -}}
+      {{- $matched := false -}}
+      {{- range $whitelist -}}
+        {{- $w := lower . -}}
+        {{- if or (eq $host $w) (hasSuffix $host (printf ".%s" $w)) -}}
+          {{- $matched = true -}}
+        {{- end -}}
+      {{- end -}}
+      {{- $strip = not $matched -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- return (dict "strip" $strip "href" $newHref) -}}

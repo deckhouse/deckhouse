@@ -82,6 +82,10 @@ spec:
             value: "2"
           - name: HUGO_D8_EDITION
             value: {{ $.Values.global.deckhouseEdition | quote }}
+          {{- if eq .Values.global.deckhouseEdition "CSE" }}
+          - name: HUGO_PARAMS_LINKREWRITEENABLE
+            value: "true"
+          {{- end }}
           - name: POD_IP
             valueFrom:
               fieldRef:

@@ -1,6 +1,37 @@
 relativeURLs: false
 params:
- mode: module
+  mode: module
+  # Turn on/off link rewriting in rendered HTML (see layouts/_markup/render-link.html).
+  # Turned on for the CSE edition in ENV in the modules/810-documentation/templates/deployment.yaml
+  linkRewriteEnable: false
+  linkRewrite:
+    # Allowed hosts. Applied only to absolute http(s) URLs: for a link whose host
+    # is not listed here (and is not a subdomain of a listed host), the <a> tag
+    # is unwrapped — the tag is dropped, the link text stays. Non-http(s) URLs
+    # (relative paths, mailto:, tel:, #anchor) and links with title "keep-link"
+    # skip the whitelist check.
+    whitelistHosts:
+      - deckhouse.ru
+      - deckhouse.io
+      - flant.com
+      - flant.ru
+    # Regex substitutions applied to every link (both relative and absolute) BEFORE
+    # the whitelist check. First matching rule wins. A rule may rewrite an absolute
+    # URL into a relative one — the result then skips the whitelist check.
+    # Uses Go regexp syntax (RE2); use $1, $2 for capture groups in the replacement.
+    replace:
+      - from: '^.*deckhouse\.(ru|io)/documentation/v1/deckhouse-configure-global.html(.*)$'
+        to: '/reference/api/global.html$2'
+      - from: '^https?://old\.example\.com/(.*)$'
+        to: 'https://new.example.com/$1'
+    # Regex patterns for explicit link removal. Applied AFTER replace, BEFORE the
+    # whitelist check, to every link (relative or absolute). A link whose href
+    # matches ANY of these patterns gets its <a> tag unwrapped (text stays).
+    # Uses Go regexp syntax (RE2).
+    remove:
+      - '^.*/products/kubernetes-platform/documentation/(v1/)?architecture/.*$'
+      - '^.*/products/kubernetes-platform/documentation/(v1/)?user/.*$'
+
 markup:
   defaultMarkdownHandler: goldmark
   goldmark:
