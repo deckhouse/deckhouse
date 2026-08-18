@@ -27,13 +27,13 @@ namespace: {{ index . 1 }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: {{ $kind }}
 metadata:
-  name: {{ printf "user-authz:%s:%s" $crd.name $namePostfix }}
+  name: {{ printf "user-authz:%s:%s" $crd.name $namePostfix | quote }}
   {{- include "rbac.namespace" (list $kind $crd.namespace) | nindent 2 }}
   {{- include "helm_lib_module_labels" (list $context) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: {{ $roleName }}
+  name: {{ $roleName | quote }}
 subjects:
 {{ $crd.spec.subjects | toYaml }}
 {{- end }}
