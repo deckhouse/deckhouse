@@ -501,6 +501,38 @@ data:
 
 {% endraw %}
 
+### Granting an application access to the Kubernetes API
+
+A `DexClient` or a [`DexAuthenticator`](cr.html#dexauthenticator) can be allowed to obtain tokens that the Kubernetes API server accepts. To do that, set one of the following annotations on the resource to `"true"`:
+
+* `dexclient.deckhouse.io/allow-access-to-kubernetes` on a `DexClient`;
+* `dexauthenticator.deckhouse.io/allow-access-to-kubernetes` on a `DexAuthenticator`.
+
+{% raw %}
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: DexClient
+metadata:
+  name: myname
+  namespace: mynamespace
+  annotations:
+    dexclient.deckhouse.io/allow-access-to-kubernetes: "true"
+spec:
+  redirectURIs:
+  - https://app.example.com/callback
+```
+
+{% endraw %}
+
+The annotation makes the client a trusted peer of the privileged `kubernetes` OAuth2 client, which lets it request ID tokens intended for the API server. In such a token the username comes from the `email` claim and the groups come from the `groups` claim, so the application acts in the cluster as the authenticated user, with whatever permissions that user has.
+
+{% alert level="warning" %}
+This is a cluster-level grant, not a namespace-level one, even though both resources are namespaced. Because of that, only a subject that is allowed to update the `user-authn` module configuration may add the annotation or change it to a truthy value — for example a user bound to the `d8:manage:permission:module:user-authn:edit` role. Permission to create `DexClient` or `DexAuthenticator` resources in a namespace is not sufficient by itself.
+
+Resources that already carry the annotation are not affected: their owner can keep editing them, including removing the annotation. Only introducing the grant is restricted.
+{% endalert %}
+
 ## Local Authentication
 
 Local authentication provides user verification and access management with support for configurable password policies, two-factor authentication (2FA), and group management.  
@@ -543,6 +575,12 @@ spec:
 ```
 
 {% endraw %}
+
+An [authorization rule](/modules/user-authz/cr.html#authorizationrule) grants privileges to a user by the email carried in the issued token. Because of that, creating a user whose `spec.email` matches a `User` subject of an existing [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule) or [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule) is rejected: the user would silently receive the privileges granted by that rule. Use a different email, or set the `user-authz.deckhouse.io/allow-authorization-rule-collision: "true"` annotation on the user if the match is intentional — for example when the rule was written in advance for that person.
+
+Users that already match a rule keep working and only produce a warning. Note that a GitOps flow which deletes and recreates such a user will hit the rejection on recreation, so add the annotation to the manifest in that case.
+
+Deleting a user does not revoke the rule. The email stays granted, so recreating a user with the same email restores the privileges, and until then the email is available to anyone allowed to create users. Remove the subject from the rule as well if that is not what you want.
 
 ### Local user operations
 
@@ -629,6 +667,10 @@ spec:
 {% endraw %}
 
 Where `members` is a list of users belonging to the group.
+
+The group name reaches the issued token as is, so it is indistinguishable from a group name provided by an external authentication provider. Because of that, creating a group whose `spec.name` matches a `Group` subject of an existing [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule) or [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule) is rejected: every member of such a group would silently receive the privileges granted by that rule. Rename the group, or set the `user-authz.deckhouse.io/allow-authorization-rule-collision: "true"` annotation on it if the match is intentional.
+
+Groups that already match a rule keep working and only produce a warning, and the same GitOps caveat applies as for users: a delete-and-recreate cycle hits the rejection unless the annotation is present in the manifest.
 
 ### Password policy
 

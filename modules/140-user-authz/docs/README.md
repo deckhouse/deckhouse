@@ -72,7 +72,13 @@ The manage role does not grant access to the namespace of user applications.
 The manage role grants access only to system namespaces (starting with `d8-` or `kube-`), and only to those system namespaces where the modules of the corresponding role subsystem are running.
 {% endalert %}
 
-Manage roles are intended for assigning rights to manage the entire platform or a part of it (the [subsystem](#subsystems-of-the-role-based-model)), but not the users applications themselves. The manage role, for example, can allow a security administrator to manage security modules (responsible for the security functions of the cluster). Thus, the security administrator will be able to configure authentication, authorization, security policies, etc., but will not be able to manage other cluster functions (such as network and monitoring settings) or change settings in the namespaces of users applications.
+Manage roles are intended for assigning rights to manage the entire platform or a part of it (the [subsystem](#subsystems-of-the-role-based-model)), but not the users applications themselves. The manage role, for example, can allow a security administrator to manage security modules (responsible for the security functions of the cluster). Thus, the security administrator will be able to configure authentication, authorization, security policies, etc.
+
+{% alert level="warning" %}
+A manage role limits which modules and namespaces a subject can address, but it does not limit the privileges a subject can obtain through the modules it is allowed to manage. This matters most for the `security` subsystem: the right to manage authentication and authorization is equivalent to full control over the cluster.
+
+A subject that can manage the `user-authn` module can register an identity provider or reset the credentials of any local user, and a subject that can manage the `user-authz` module can write authorization rules. In both cases they can obtain an identity with any privileges, including cluster administrator, so treat a `security` subsystem manage role as a cluster administrator role when planning access.
+{% endalert %}
 
 The manage role defines access rights:
 - to cluster-wide Kubernetes resources;
