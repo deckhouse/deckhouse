@@ -14,9 +14,9 @@ The annotation links the LoadBalancer with the appropriate Subnet.
 
 ## Using a separate target group for a NodeGroup
 
-By default, Yandex Cloud Controller Manager adds all suitable cluster nodes to the default target group. To assign nodes to a separate target group, use the `yandex.cpi.flant.com/target-group-name-prefix` annotation. The annotation is also described in the [Service annotations](/modules/cloud-provider-yandex/examples.html#service-annotations) section.
+By default, Yandex Cloud Controller Manager adds all suitable cluster nodes to the default target group. To assign nodes to a separate target group, use the `yandex.cpi.flant.com/target-group-name-prefix` annotation. The annotation is described in the [Service annotations](/modules/cloud-provider-yandex/examples.html#service-annotations) section.
 
-1. In the NodeGroup whose nodes should be included in a separate target group, specify the `yandex.cpi.flant.com/target-group-name-prefix` annotation in the [`spec.nodeTemplate.annotations`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetemplate-annotations) parameter of the NodeGroup resource. For example:
+1. In the NodeGroup whose nodes should be included in a separate target group, specify the `yandex.cpi.flant.com/target-group-name-prefix` annotation in the [`spec.nodeTemplate.annotations`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetemplate-annotations) parameter. For example:
 
    ```yaml
    spec:
@@ -63,7 +63,6 @@ spec:
   nodeTemplate:
     annotations:
       yandex.cpi.flant.com/target-group-name-prefix: frontend-
-  # ...
 ---
 apiVersion: v1
 kind: Service
@@ -73,7 +72,6 @@ metadata:
     yandex.cpi.flant.com/target-group-name-prefix: frontend-
 spec:
   type: LoadBalancer
-  # ...
 ```
 
 {% alert level="warning" %}

@@ -333,16 +333,16 @@ The following annotations are supported by Yandex Cloud Controller Manager:
 1. `yandex.cpi.flant.com/listener-subnet-id` — sets the SubnetID for the Listeners of the LB created for this Service. Overrides the corresponding default value.
 1. `yandex.cpi.flant.com/listener-address-ipv4` — sets a predefined IPv4 address for the Listeners (supported for both internal and external LBs).
 1. `yandex.cpi.flant.com/loadbalancer-external` — enables creation of an external LB for this Service (use it when you need to explicitly create an external load balancer). Overrides the default behavior.
-1. `yandex.cpi.flant.com/target-group-name-prefix` — specifies the name prefix of the target group used by the LoadBalancer. The annotation on the Service identifies the target group but does not select nodes. To include nodes in the target group, set the same annotation value in [`NodeGroup.spec.nodeTemplate.annotations`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetemplate-annotations). Yandex Cloud Controller Manager includes all suitable nodes carrying this annotation value, regardless of their NodeGroup. The target group name is formed as `<ANNOTATION_VALUE><YANDEX_CLOUD_CLUSTER_NAME><NETWORK_ID>`. For details, see [Using a separate target group for a NodeGroup](/modules/cloud-provider-yandex/faq.html#using-a-separate-target-group-for-a-nodegroup).
+1. `yandex.cpi.flant.com/target-group-name-prefix` — specifies the name prefix of the target group used by the LoadBalancer. The annotation on the Service identifies the target group but does not select nodes. To include nodes in the target group, set the same annotation value in [`spec.nodeTemplate.annotations`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetemplate-annotations) in the NodeGroup. Yandex Cloud Controller Manager includes all suitable nodes carrying this annotation value, regardless of their NodeGroup. The target group name is formed as `<ANNOTATION_VALUE><YANDEX_CLOUD_CLUSTER_NAME><NETWORK_ID>`.
 
 If separate Target Groups are created for the control plane or master nodes, add the label `node.kubernetes.io/exclude-from-external-load-balancers: ""` to the master nodes. This prevents the controller from automatically adding master nodes to new Target Groups for load balancers.
 If you create your own load balancer for master nodes and want YCC to also be able to place its load balancers on master nodes, pre-create a Target Group with a name matching the pattern `${CLUSTER-NAME}${VPC.ID}`.
 
 #### Using a separate target group for a NodeGroup
 
-By default, Yandex Cloud Controller Manager adds all suitable cluster nodes to the default target group. To assign nodes to a separate target group, use the `yandex.cpi.flant.com/target-group-name-prefix` annotation. The annotation is also described in the [Service annotations](/modules/cloud-provider-yandex/examples.html#service-annotations) section.
+By default, Yandex Cloud Controller Manager adds all suitable cluster nodes to the default target group. To assign nodes to a separate target group, use the `yandex.cpi.flant.com/target-group-name-prefix` annotation.
 
-1. In the NodeGroup whose nodes should be included in a separate target group, specify the `yandex.cpi.flant.com/target-group-name-prefix` annotation in the [`spec.nodeTemplate.annotations`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetemplate-annotations) parameter of the NodeGroup resource. For example:
+1. In the NodeGroup whose nodes should be included in a separate target group, specify the `yandex.cpi.flant.com/target-group-name-prefix` annotation in the [`spec.nodeTemplate.annotations`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetemplate-annotations) parameter. For example:
 
    ```yaml
    spec:
@@ -389,7 +389,6 @@ spec:
   nodeTemplate:
     annotations:
       yandex.cpi.flant.com/target-group-name-prefix: frontend-
-  # ...
 ---
 apiVersion: v1
 kind: Service
@@ -399,7 +398,6 @@ metadata:
     yandex.cpi.flant.com/target-group-name-prefix: frontend-
 spec:
   type: LoadBalancer
-  # ...
 ```
 
 {% alert level="warning" %}

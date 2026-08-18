@@ -14,9 +14,9 @@ yandex.cpi.flant.com/listener-subnet-id: SubnetID
 
 ## Использование отдельной целевой группы для NodeGroup
 
-По умолчанию Yandex Cloud Controller Manager добавляет все подходящие узлы кластера в целевую группу по умолчанию. Чтобы назначить узлам отдельную целевую группу, используйте аннотацию `yandex.cpi.flant.com/target-group-name-prefix`. Описание аннотации также приведено в разделе [«Аннотации объекта Service»](/modules/cloud-provider-yandex/examples.html#аннотации-объекта-service).
+По умолчанию Yandex Cloud Controller Manager добавляет все подходящие узлы кластера в целевую группу по умолчанию. Чтобы назначить узлам отдельную целевую группу, используйте аннотацию `yandex.cpi.flant.com/target-group-name-prefix`. Описание аннотации приведено в разделе [«Аннотации объекта Service»](/modules/cloud-provider-yandex/examples.html#аннотации-объекта-service).
 
-1. В NodeGroup, узлы которой должны входить в отдельную целевую группу, задайте аннотацию `yandex.cpi.flant.com/target-group-name-prefix` в параметре [`spec.nodeTemplate.annotations`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetemplate-annotations) ресурса NodeGroup. Например:
+1. В NodeGroup, узлы которой должны входить в отдельную целевую группу, задайте аннотацию `yandex.cpi.flant.com/target-group-name-prefix` в параметре [`spec.nodeTemplate.annotations`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetemplate-annotations). Например:
 
    ```yaml
    spec:
@@ -63,7 +63,6 @@ spec:
   nodeTemplate:
     annotations:
       yandex.cpi.flant.com/target-group-name-prefix: frontend-
-  # ...
 ---
 apiVersion: v1
 kind: Service
@@ -73,7 +72,6 @@ metadata:
     yandex.cpi.flant.com/target-group-name-prefix: frontend-
 spec:
   type: LoadBalancer
-  # ...
 ```
 
 {% alert level="warning" %}
@@ -84,7 +82,7 @@ Yandex Cloud не позволяет одному целевому ресурс�
 
 Узлы, для которых задан отдельный префикс целевой группы, исключаются из целевой группы по умолчанию. Поэтому балансировщики, использующие её, перестают направлять трафик на такие узлы.
 
-Такое автоматическое перемещение выполняется только между целевыми группами, которыми управляет Yandex Cloud Controller Manager. Если ресурс уже находится в другой целевой группе, не управляемой Yandex Cloud Controller Manager, удалите его из неё перед использованием аннотации.
+Такое автоматическое перемещение выполняется только между целевыми группами, которыми управляет Yandex Cloud Controller Manager. Если ресурс уже находится в другой целевой группе, не управляемой Yandex Cloud Controller Manager, удалите ресурс из неё перед использованием аннотации.
 
 После изменения или удаления префикса прежняя целевая группа может остаться пустой. Если она больше не используется балансировщиками, удалите её вручную.
 
