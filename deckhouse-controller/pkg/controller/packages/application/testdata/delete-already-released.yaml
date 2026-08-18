@@ -5,6 +5,19 @@ metadata:
   namespace: foobar
   finalizers:
     - application.deckhouse.io/statistic-registered
+  ownerReferences:
+    - apiVersion: deckhouse.io/v1alpha1
+      kind: ApplicationPackageVersion
+      name: deckhouse-test-v1.0.1
+      uid: version-uid
+      controller: false
+      blockOwnerDeletion: true
+    - apiVersion: deckhouse.io/v1alpha1
+      kind: ApplicationPackage
+      name: test
+      uid: package-uid
+      controller: false
+      blockOwnerDeletion: true
 spec:
   packageName: test
   packageRepositoryName: deckhouse

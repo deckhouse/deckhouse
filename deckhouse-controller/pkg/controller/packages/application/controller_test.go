@@ -151,7 +151,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 
 		result, err := suite.ctr.Reconcile(ctx, suite.Request(appName, appNamespace))
 		require.NoError(suite.T(), err)
-		assert.Equal(suite.T(), defaultRequeueAfter, result.RequeueAfter)
+		assert.Equal(suite.T(), 30*time.Second, result.RequeueAfter)
 
 		assert.Empty(suite.T(), suite.manager.updated, "an unresolved application must not reach the runtime")
 		// The finalizer is claimed before the package lookup, so deletion is guarded
@@ -165,7 +165,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 
 		result, err := suite.ctr.Reconcile(ctx, suite.Request(appName, appNamespace))
 		require.NoError(suite.T(), err)
-		assert.Equal(suite.T(), defaultRequeueAfter, result.RequeueAfter)
+		assert.Equal(suite.T(), 30*time.Second, result.RequeueAfter)
 
 		assert.Empty(suite.T(), suite.manager.updated)
 		assert.Empty(suite.T(), suite.getApplicationPackage(packageName).Status.UsedBy)
@@ -176,7 +176,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 
 		result, err := suite.ctr.Reconcile(ctx, suite.Request(appName, appNamespace))
 		require.NoError(suite.T(), err)
-		assert.Equal(suite.T(), defaultRequeueAfter, result.RequeueAfter)
+		assert.Equal(suite.T(), 30*time.Second, result.RequeueAfter)
 
 		assert.Empty(suite.T(), suite.manager.updated, "a draft version must not reach the runtime")
 		assert.Empty(suite.T(), suite.getApplicationPackage(packageName).Status.UsedBy)
@@ -187,7 +187,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 
 		result, err := suite.ctr.Reconcile(ctx, suite.Request(appName, appNamespace))
 		require.NoError(suite.T(), err)
-		assert.Equal(suite.T(), defaultRequeueAfter, result.RequeueAfter)
+		assert.Equal(suite.T(), 30*time.Second, result.RequeueAfter)
 
 		assert.Empty(suite.T(), suite.manager.updated)
 		assert.Empty(suite.T(), suite.getApplicationPackage(packageName).Status.UsedBy)
@@ -323,22 +323,16 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		assert.Empty(suite.T(), suite.getApplicationPackage(packageName).Status.UsedBy)
 	})
 
-	suite.Run("deleted application without owner references releases the finalizer", func() {
-		suite.setupController("delete-not-attached.yaml")
+	suite.Run("deleted application whose lists were already released is still finished", func() {
+		suite.setupController("delete-already-released.yaml")
 
 		require.NoError(suite.T(), suite.Client().Delete(ctx, suite.getApplication(appName, appNamespace)))
 
 		_, err := suite.ctr.Reconcile(ctx, suite.Request(appName, appNamespace))
-		require.NoError(suite.T(), err)
+		require.NoError(suite.T(), err, "a retried deletion must not fail on lists it has already released")
 
-		// Nothing to detach, and the entries another application owns stay in place.
-		pkg := suite.getApplicationPackage(packageName)
-		assert.Equal(suite.T(), int32(1), pkg.Status.UsedByCount)
-		assert.True(suite.T(), pkg.IsAppInstalled(appNamespace, "other-app"))
-
-		version := suite.getApplicationPackageVersion(versionName)
-		assert.Equal(suite.T(), int32(1), version.Status.UsedByCount)
-		assert.True(suite.T(), version.IsAppInstalled(appNamespace, "other-app"))
+		assert.True(suite.T(), suite.getApplicationPackage(packageName).IsAppInstalled(appNamespace, "other-app"))
+		assert.True(suite.T(), suite.getApplicationPackageVersion(versionName).IsAppInstalled(appNamespace, "other-app"))
 
 		err = suite.Client().Get(ctx, client.ObjectKey{Namespace: appNamespace, Name: appName},
 			new(v1alpha1.Application))
@@ -383,12 +377,91 @@ func TestReconcileFailsOnGetError(t *testing.T) {
 	manager := new(packageManagerStub)
 	ctr := newReconciler(cl, manager, modulesInited(true))
 
-	request := ctrl.Request{NamespacedName: types.NamespacedName{Namespace: appNamespace, Name: appName}}
-
-	result, err := ctr.Reconcile(context.Background(), request)
+	result, err := ctr.Reconcile(context.Background(), request(appName, appNamespace))
 	require.ErrorIs(t, err, getErr, "a transient read failure must be retried by the queue, not swallowed")
 	assert.True(t, result.IsZero())
 	assert.Empty(t, manager.updated)
+}
+
+func TestRelinkFailureKeepsTheApplicationOutOfTheRuntime(t *testing.T) {
+	patchErr := errors.New("status patch rejected")
+
+	cl := seedFakeClient(t, "successful-reconcile.yaml", interceptor.Funcs{
+		SubResourcePatch: func(context.Context, client.Client, string, client.Object, client.Patch,
+			...client.SubResourcePatchOption) error {
+			return patchErr
+		},
+	})
+
+	manager := new(packageManagerStub)
+	ctr := newReconciler(cl, manager, modulesInited(true))
+
+	result, err := ctr.Reconcile(context.Background(), request(appName, appNamespace))
+	require.NoError(t, err)
+	assert.Equal(t, 30*time.Second, result.RequeueAfter)
+
+	// The installed lists are the record of what the runtime is allowed to run, so an
+	// application that failed to claim them must not be handed over.
+	assert.Empty(t, manager.updated)
+}
+
+func TestDeleteFailureKeepsTheFinalizer(t *testing.T) {
+	patchErr := errors.New("status patch rejected")
+
+	// Only the package write fails, so the deletion gets half-way: the version is
+	// released and the package is not.
+	cl := seedFakeClient(t, "delete-after-version-edit.yaml", interceptor.Funcs{
+		SubResourcePatch: func(ctx context.Context, cl client.Client, name string, obj client.Object,
+			patch client.Patch, opts ...client.SubResourcePatchOption) error {
+			if _, ok := obj.(*v1alpha1.ApplicationPackage); ok {
+				return patchErr
+			}
+
+			return cl.Status().Patch(ctx, obj, patch)
+		},
+	})
+
+	app := new(v1alpha1.Application)
+	require.NoError(t, cl.Get(context.Background(), objectKey(appName, appNamespace), app))
+	require.NoError(t, cl.Delete(context.Background(), app))
+
+	manager := new(packageManagerStub)
+	ctr := newReconciler(cl, manager, modulesInited(true))
+
+	_, err := ctr.Reconcile(context.Background(), request(appName, appNamespace))
+	require.ErrorIs(t, err, patchErr)
+
+	// Releasing the finalizer here would drop the application while the package still
+	// counts it as an installation, and nothing would ever come back to fix that.
+	require.NoError(t, cl.Get(context.Background(), objectKey(appName, appNamespace), app))
+	assert.Contains(t, app.Finalizers, v1alpha1.ApplicationFinalizerStatisticRegistered)
+	assert.Empty(t, manager.removed, "the runtime must keep the application until it is detached")
+}
+
+func TestDeleteDistinguishesAMissingVersionFromAnUnreadableOne(t *testing.T) {
+	cl := seedFakeClient(t, "delete-after-version-edit.yaml", interceptor.Funcs{
+		Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object,
+			opts ...client.GetOption) error {
+			if _, ok := obj.(*v1alpha1.ApplicationPackageVersion); ok {
+				return apierrors.NewInternalError(errors.New("etcd is unavailable"))
+			}
+
+			return cl.Get(ctx, key, obj, opts...)
+		},
+	})
+
+	app := new(v1alpha1.Application)
+	require.NoError(t, cl.Get(context.Background(), objectKey(appName, appNamespace), app))
+	require.NoError(t, cl.Delete(context.Background(), app))
+
+	manager := new(packageManagerStub)
+	ctr := newReconciler(cl, manager, modulesInited(true))
+
+	// A version that is gone needs no cleanup, but a version that cannot be read is not
+	// gone: treating the two alike would leak the installation entry.
+	_, err := ctr.Reconcile(context.Background(), request(appName, appNamespace))
+	require.Error(t, err)
+	assert.Empty(t, manager.removed)
 }
 
 func TestPreflightPreservesEveryApplication(t *testing.T) {
@@ -439,6 +512,42 @@ func TestPreflightWaitsForModuleManager(t *testing.T) {
 	require.ErrorIs(t, ctr.preflight(ctx), context.DeadlineExceeded)
 	assert.Empty(t, manager.cleanups,
 		"runtime state must not be dropped while the module manager is still initialising")
+}
+
+// seedFakeClient builds a client from a fixture and wraps it with funcs, for the paths that
+// only show up when a write or a read fails. Seeding itself goes through Create, which the
+// interceptors used here leave alone.
+func seedFakeClient(t *testing.T, fixture string, funcs interceptor.Funcs) client.Client {
+	t.Helper()
+
+	scheme := testScheme(t)
+
+	raw, err := reconcilertest.LoadFixture("./testdata", fixture)
+	require.NoError(t, err)
+
+	objs, err := reconcilertest.Decode(scheme, raw)
+	require.NoError(t, err)
+
+	cl := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithStatusSubresource(&v1alpha1.Application{}, &v1alpha1.ApplicationPackage{},
+			&v1alpha1.ApplicationPackageVersion{}).
+		WithInterceptorFuncs(funcs).
+		Build()
+
+	for _, obj := range objs {
+		require.NoError(t, cl.Create(context.TODO(), obj))
+	}
+
+	return cl
+}
+
+func request(name, namespace string) ctrl.Request {
+	return ctrl.Request{NamespacedName: types.NamespacedName{Namespace: namespace, Name: name}}
+}
+
+func objectKey(name, namespace string) client.ObjectKey {
+	return client.ObjectKey{Namespace: namespace, Name: name}
 }
 
 func testScheme(t *testing.T) *runtime.Scheme {
