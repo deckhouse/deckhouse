@@ -50,7 +50,7 @@ func found(t *testing.T, checks []preflightCheck, name string) preflightCheck {
 func ready() preflight {
 	return preflight{
 		HasLegacy:       true,
-		Legacy:          legacyState{Mode: "Direct"},
+		Legacy:          legacyState{Mode: "Unmanaged"},
 		CheckerReported: true,
 		CheckerStatus:   checker.Status{Ready: true},
 		ImageHolder: &imageHolderState{
@@ -79,9 +79,10 @@ func TestAReadyClusterPassesEveryCheck(t *testing.T) {
 	}
 }
 
-// The two hard stops, and only those two. Blocking says the migration must not begin at all, so
-// which checks carry it is part of the contract rather than an implementation detail.
-func TestOnlyLocalAndAnUnreachableRegistryBlockTheMigration(t *testing.T) {
+// Which checks block and which only warn. Blocking says the migration must not begin at all, so
+// which checks carry it is part of the contract rather than an implementation detail — and the two
+// that only warn are the ones an operator, not this code, decides are done.
+func TestWhichChecksBlockAndWhichOnlyWarn(t *testing.T) {
 	cases := []struct {
 		name     string
 		subject  preflight
@@ -100,6 +101,29 @@ func TestOnlyLocalAndAnUnreachableRegistryBlockTheMigration(t *testing.T) {
 		check:    CheckNotLocal,
 		blocking: true,
 		detail:   "fallback runbook",
+	}, {
+		// The stop that only exists in this build: none of the previous implementation's objects
+		// render here, so a cluster arriving in Proxy has had the pull path they served deleted
+		// from under it. "Settled" is not the same as "servable".
+		name: "arrived still in Proxy",
+		subject: func() preflight {
+			subject := ready()
+			subject.Legacy = legacyState{Mode: "Proxy"}
+			return subject
+		}(),
+		check:    CheckMode,
+		blocking: true,
+		detail:   "bring it to Unmanaged on the previous release first",
+	}, {
+		name: "arrived still in Direct",
+		subject: func() preflight {
+			subject := ready()
+			subject.Legacy = legacyState{Mode: "Direct"}
+			return subject
+		}(),
+		check:    CheckMode,
+		blocking: true,
+		detail:   "the cluster is in Direct",
 	}, {
 		name: "the registry does not answer",
 		subject: func() preflight {
@@ -127,12 +151,12 @@ func TestOnlyLocalAndAnUnreachableRegistryBlockTheMigration(t *testing.T) {
 		name: "mid-transition",
 		subject: func() preflight {
 			subject := ready()
-			subject.Legacy = legacyState{Mode: "Direct", TargetMode: "Proxy"}
+			subject.Legacy = legacyState{Mode: "Unmanaged", TargetMode: "Proxy"}
 			return subject
 		}(),
 		check:    CheckMode,
 		blocking: true,
-		detail:   "a transition is in flight: Direct to Proxy",
+		detail:   "a transition is in flight: Unmanaged to Proxy",
 	}, {
 		// Work to do, not a reason the migration is impossible: pre-staging is something the
 		// operator completes, and only they know whether it is done.

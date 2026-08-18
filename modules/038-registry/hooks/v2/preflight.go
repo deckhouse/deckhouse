@@ -21,23 +21,30 @@ limitations under the License.
 // the migration does not begin. Each check names a way the migration is known to go wrong, and
 // each is answered from the cluster rather than assumed:
 //
-//   - the mode the previous implementation is in, and whether it is mid-transition. A cluster on
-//     its way somewhere else has nodes being reconfigured right now, and the handover has to wait.
+//   - the mode the previous implementation is in. In this build only Unmanaged is answerable: the
+//     previous implementation's objects do not render here at all, so a cluster that arrives still
+//     in Direct or Proxy has already lost them. Mid-transition counts too — its nodes are being
+//     reconfigured right now.
 //   - Local. The plan rests on the pull path being reachable from outside the cluster, and a
 //     cluster whose registry IS the cluster has no such path: it needs the fallback runbook.
 //   - an upstream that answers. Bringing the cluster to Unmanaged points every node straight at
 //     the upstream, so an unreachable one turns the documented degradation into an outage.
-//   - the images of the new components already on the nodes. The switch starts a storage and an
-//     agent; if their images have to come through the path being replaced, the migration's first
-//     act is to depend on what it is dismantling.
+//   - the images of the new components already on the nodes. The switch starts a storage and a
+//     syncer; if their images have to come through the path being replaced, the migration's first
+//     act is to depend on what it is dismantling. On this build the answer is currently always no,
+//     and that is a finding rather than a bug here: the DaemonSet that kept images resident belongs
+//     to the previous implementation and does not render any more, so nothing pre-stages anything.
+//     Non-blocking, because a cluster with a reachable registry pulls those images and lives — the
+//     pre-staging the ADR wanted mattered for the isolated case.
 //   - containerd v1 registry configuration written by the operator. The transition rewrites those
 //     files and the ADR says they are carried over by hand, so a cluster holding them must not be
 //     migrated silently.
 //
 // Blocking marks the checks under which the migration must not begin at all, as against the ones
 // naming work to do first. What it does not mean is that this module will refuse: the refusal that
-// matters is the switch gate's, and the gate is already stricter on the mode axis — it hands the
-// cluster over only from Unmanaged, so Local and a transition in flight are enforced there.
+// matters is the switch gate's, which enforces exactly the mode axis — it hands the cluster over
+// only from Unmanaged. The mode check here reports that same axis rather than a second opinion on
+// it, so an operator reads one answer in two places instead of two answers.
 //
 // Reachability deliberately gets no such enforcement. By the time the gate looks, the cluster is
 // Unmanaged and the previous implementation has already let go of the pull path; refusing the
@@ -358,22 +365,42 @@ func (p preflight) report() []preflightCheck {
 	}
 }
 
-// checkMode answers whether the previous implementation is standing still.
+// checkMode answers whether the cluster arrived here in the one state this build serves.
 //
-// A mode mid-transition is the one state in which nothing else here can be trusted: nodes are
-// being reconfigured as the question is asked, so an upstream that answers now and images that
-// are resident now say nothing about the moment the handover happens.
+// Which is the answer that depends on where this code runs, and it runs here. The migration ADR
+// asks this question a release earlier, on the build the cluster is leaving, and there Direct and
+// Proxy are ordinary starting points — "settled, you may begin". On THIS build they are not:
+// `registry_legacy_owns_the_cluster` is false, so none of the previous implementation's objects
+// render, and a cluster that arrives still in Proxy has had the pull path they served deleted from
+// under it. Only Unmanaged, where those objects served nothing to begin with, survives the trip.
+//
+// So the check is not "is it standing still" but "is it standing where this build can serve it".
+// Mid-transition is a stop for the older reason: its nodes are being reconfigured as the question
+// is asked, so nothing else answered here describes the moment that matters.
+//
+// If this ever moves to the previous release — which is where an operator would want to run it,
+// before upgrading — this check inverts, and that is the one to rewrite rather than carry over.
 func (p preflight) checkMode() preflightCheck {
+	unmanaged := string(registry_const.ModeUnmanaged)
+
 	switch {
 	case p.Legacy.Mode == "":
 		return preflightCheck{Name: CheckMode, Blocking: true,
 			Detail: "the previous implementation has not recorded a mode yet"}
+
 	case p.Legacy.TargetMode != "" && p.Legacy.TargetMode != p.Legacy.Mode:
 		return preflightCheck{Name: CheckMode, Blocking: true,
 			Detail: fmt.Sprintf("a transition is in flight: %s to %s", p.Legacy.Mode, p.Legacy.TargetMode)}
+
+	case p.Legacy.Mode != unmanaged:
+		return preflightCheck{Name: CheckMode, Blocking: true,
+			Detail: fmt.Sprintf("the cluster is in %s, and this build renders none of the objects "+
+				"that mode needs; bring it to %s on the previous release first",
+				p.Legacy.Mode, unmanaged)}
+
 	default:
 		return preflightCheck{Name: CheckMode, Passed: true,
-			Detail: fmt.Sprintf("settled in %s", p.Legacy.Mode)}
+			Detail: fmt.Sprintf("settled in %s", unmanaged)}
 	}
 }
 
@@ -414,10 +441,15 @@ func (p preflight) checkUpstream() preflightCheck {
 
 // checkImages answers whether the new components can start without the path being replaced.
 //
-// The previous implementation already keeps images resident on every node, which is the mechanism
-// the migration reuses: if the new components' images are among them, the switch starts from what
-// is on disk. If they are not, the first act of the migration is a pull through the registry it is
-// dismantling.
+// The mechanism it asks about is the previous implementation's: a DaemonSet that keeps images
+// resident on every node, which the migration plan intended to reuse — if the new components'
+// images are among them, the switch starts from what is on disk rather than from a pull through
+// the registry it is dismantling.
+//
+// On this build that DaemonSet does not render at all, so the honest answer is that nothing
+// pre-stages anything, and this reports it as such instead of passing by default. It stays
+// non-blocking: with a reachable registry the images are simply pulled, and pre-staging was the
+// answer to the isolated case, which the ADR sends to a runbook anyway.
 func (p preflight) checkImages() preflightCheck {
 	if p.ImageHolder == nil {
 		return preflightCheck{Name: CheckImagesPreStaged,
