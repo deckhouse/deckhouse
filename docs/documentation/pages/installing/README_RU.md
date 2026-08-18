@@ -22,7 +22,7 @@ relatedLinks:
 {% alert %}
 В разделе {% if site.mode == 'module' %}[«Быстрый старт»]({{ site.urls[page.lang] }}/products/kubernetes-platform/gs/){% else %}[Быстрый старт](/products/kubernetes-platform/gs/){% endif %} доступны пошаговые инструкции по установке Deckhouse Kubernetes Platform.
 
-Попробуйте также [графический установщик Deckhouse Kubernetes Platform]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/#gui-install).
+Попробуйте также [графический установщик Deckhouse Kubernetes Platform]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/installer/).
 {% endalert %}
 
 На этой странице представлена обзорная информация по установке Deckhouse Kubernetes Platform (DKP).
@@ -32,7 +32,7 @@ relatedLinks:
 Установить DKP можно следующими способами:
 
 - с помощью CLI-установщика (доступен в виде образа контейнера и основан на утилите [dhctl](<https://github.com{{ site.github_repo_path }}/tree/main/dhctl/>));
-- с помощью [графического установщика]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/#gui-install).
+- с помощью [графического установщика]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/installer/).
 
 Далее рассмотрен процесс установки с помощью **CLI-установщика**.
 
