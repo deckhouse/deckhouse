@@ -254,7 +254,7 @@ func (suite *ControllerTestSuite) SetupSuite() {
 }
 
 func (suite *ControllerTestSuite) BeforeTest(suiteName, testName string) {
-	if suiteName == "ControllerTestSuite" && testName == "TestCreateReconcile" {
+	if suiteName == "ControllerTestSuite" && (testName == "TestCreateReconcile" || testName == "TestFetchMissingIntermediateReleases") {
 		suite.compareGolden = true
 	}
 }
@@ -492,6 +492,27 @@ func (suite *ControllerTestSuite) parseTestdata(filename string) []byte {
 	suite.goldenFile = filepath.Join("./testdata", "golden", filename)
 
 	return data
+}
+
+// TestFetchMissingIntermediateReleases reproduces the frozen-chain bug: the target
+// release already exists and its checksum matches the one recorded on the source (so
+// the plain checksum guard would skip the fetch), yet the step-by-step chain from the
+// deployed release up to the target has a gap because the intermediate versions were
+// mirrored into the registry only after the target release was first created. The
+// reconcile must re-derive the chain and create the missing intermediate releases.
+func (suite *ControllerTestSuite) TestFetchMissingIntermediateReleases() {
+	suite.Run("frozen chain with missing intermediates is re-derived", func() {
+		dc := newMockedContainerWithData(suite.T(),
+			"v1.55.1",
+			[]string{"console"},
+			[]string{"v1.49.1", "v1.50.0", "v1.51.1", "v1.52.0", "v1.53.2", "v1.54.1", "v1.55.1"})
+		suite.setupTestController(string(suite.parseTestdata("frozen-chain-missing-intermediates.yaml")), withDependencyContainer(dc))
+
+		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
+		require.NoError(suite.T(), err)
+		// the resulting ModuleReleases (including the newly created console-v1.53.2 and
+		// console-v1.54.1) are asserted against the golden snapshot in TearDownSubTest
+	})
 }
 
 func (suite *ControllerTestSuite) TestDeleteReconcile() {
