@@ -14,15 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package application
+package application_test
 
 import (
 	"context"
 	"errors"
-	"sync"
 	"testing"
 	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -32,16 +32,22 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
+	ctrlconfig "sigs.k8s.io/controller-runtime/pkg/config"
+	ctrlmanager "sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
 	packageruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
 	packagestatus "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application"
 	"github.com/deckhouse/deckhouse/go_lib/project"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/deckhouse/deckhouse/testing/controller/reconcilertest"
@@ -62,7 +68,7 @@ func TestControllerTestSuite(t *testing.T) {
 type ControllerTestSuite struct {
 	reconcilertest.Suite
 
-	ctr     *reconciler
+	ctr     *harness
 	manager *packageManagerStub
 }
 
@@ -87,18 +93,79 @@ func (suite *ControllerTestSuite) SetupSuite() {
 func (suite *ControllerTestSuite) setupController(filename string) {
 	suite.Seed(filename)
 
-	suite.manager = new(packageManagerStub)
-	suite.ctr = newReconciler(suite.Client(), suite.manager, modulesInited(true))
+	suite.manager = newPackageManagerStub(suite.T())
+	suite.ctr = reconcilerFor(suite.T(), suite.Client(), suite.manager)
 }
 
-func newReconciler(cl client.Client, manager packageManager, modules moduleManager) *reconciler {
-	return &reconciler{
-		init:          new(sync.WaitGroup),
-		client:        cl,
-		manager:       manager,
-		moduleManager: modules,
-		logger:        log.NewNop(),
+// harness is the controller as RegisterController leaves it behind in the manager: the
+// reconcile entry point and the preflight runnable. Tests drive the package through these
+// two and through nothing else.
+type harness struct {
+	reconcile.Reconciler
+
+	preflight ctrlmanager.Runnable
+}
+
+// reconcilerFor registers the controller and opens the preflight gate that Reconcile waits
+// on, which is the state a running controller reconciles in.
+func reconcilerFor(t *testing.T, cl client.Client, manager *packageManagerStub) *harness {
+	t.Helper()
+
+	h := registerController(t, cl, manager, modulesInited(true))
+	require.NoError(t, h.preflight.Start(context.Background()))
+
+	return h
+}
+
+// registerController runs the package's only exported entry point against a manager stub
+// and picks up the runnables it registered.
+func registerController(t *testing.T, cl client.Client, manager *packageManagerStub, modules modulesInited) *harness {
+	t.Helper()
+
+	mgr := &managerStub{scheme: testScheme(t), client: cl}
+	require.NoError(t, application.RegisterController(mgr, manager, modules, log.NewNop()))
+
+	h := new(harness)
+	for _, runnable := range mgr.runnables {
+		if reconciler, ok := runnable.(reconcile.Reconciler); ok {
+			h.Reconciler = reconciler
+			continue
+		}
+
+		h.preflight = runnable
 	}
+
+	require.NotNil(t, h.Reconciler, "the controller must be registered in the manager")
+	require.NotNil(t, h.preflight, "the preflight must be registered in the manager")
+
+	return h
+}
+
+// managerStub is the part of ctrlmanager.Manager that RegisterController touches. The
+// embedded interface leaves everything else nil, so an unexpected new dependency on the
+// manager fails loudly instead of being silently satisfied.
+type managerStub struct {
+	ctrlmanager.Manager
+
+	scheme    *runtime.Scheme
+	client    client.Client
+	runnables []ctrlmanager.Runnable
+}
+
+func (m *managerStub) GetClient() client.Client   { return m.client }
+func (m *managerStub) GetScheme() *runtime.Scheme { return m.scheme }
+func (m *managerStub) GetLogger() logr.Logger     { return logr.Discard() }
+func (m *managerStub) GetCache() cache.Cache      { return nil }
+
+// GetControllerOptions skips the name check: every test registers the same controller name.
+func (m *managerStub) GetControllerOptions() ctrlconfig.Controller {
+	return ctrlconfig.Controller{SkipNameValidation: ptr.To(true)}
+}
+
+func (m *managerStub) Add(runnable ctrlmanager.Runnable) error {
+	m.runnables = append(m.runnables, runnable)
+
+	return nil
 }
 
 func (suite *ControllerTestSuite) TestReconcile() {
@@ -374,8 +441,8 @@ func TestReconcileFailsOnGetError(t *testing.T) {
 		}).
 		Build()
 
-	manager := new(packageManagerStub)
-	ctr := newReconciler(cl, manager, modulesInited(true))
+	manager := newPackageManagerStub(t)
+	ctr := reconcilerFor(t, cl, manager)
 
 	result, err := ctr.Reconcile(context.Background(), request(appName, appNamespace))
 	require.ErrorIs(t, err, getErr, "a transient read failure must be retried by the queue, not swallowed")
@@ -393,8 +460,8 @@ func TestRelinkFailureKeepsTheApplicationOutOfTheRuntime(t *testing.T) {
 		},
 	})
 
-	manager := new(packageManagerStub)
-	ctr := newReconciler(cl, manager, modulesInited(true))
+	manager := newPackageManagerStub(t)
+	ctr := reconcilerFor(t, cl, manager)
 
 	result, err := ctr.Reconcile(context.Background(), request(appName, appNamespace))
 	require.NoError(t, err)
@@ -425,8 +492,8 @@ func TestDeleteFailureKeepsTheFinalizer(t *testing.T) {
 	require.NoError(t, cl.Get(context.Background(), objectKey(appName, appNamespace), app))
 	require.NoError(t, cl.Delete(context.Background(), app))
 
-	manager := new(packageManagerStub)
-	ctr := newReconciler(cl, manager, modulesInited(true))
+	manager := newPackageManagerStub(t)
+	ctr := reconcilerFor(t, cl, manager)
 
 	_, err := ctr.Reconcile(context.Background(), request(appName, appNamespace))
 	require.ErrorIs(t, err, patchErr)
@@ -454,8 +521,8 @@ func TestDeleteDistinguishesAMissingVersionFromAnUnreadableOne(t *testing.T) {
 	require.NoError(t, cl.Get(context.Background(), objectKey(appName, appNamespace), app))
 	require.NoError(t, cl.Delete(context.Background(), app))
 
-	manager := new(packageManagerStub)
-	ctr := newReconciler(cl, manager, modulesInited(true))
+	manager := newPackageManagerStub(t)
+	ctr := reconcilerFor(t, cl, manager)
 
 	// A version that is gone needs no cleanup, but a version that cannot be read is not
 	// gone: treating the two alike would leak the installation entry.
@@ -473,12 +540,9 @@ func TestPreflightPreservesEveryApplication(t *testing.T) {
 		).
 		Build()
 
-	manager := new(packageManagerStub)
-	ctr := newReconciler(cl, manager, modulesInited(true))
-	// preflight closes the init gate that RegisterController opens.
-	ctr.init.Add(1)
-
-	require.NoError(t, ctr.preflight(context.Background()))
+	manager := newPackageManagerStub(t)
+	ctr := registerController(t, cl, manager, modulesInited(true))
+	require.NoError(t, ctr.preflight.Start(context.Background()))
 
 	require.Len(t, manager.cleanups, 1)
 	assert.ElementsMatch(t, []packageruntime.PreservePackage{
@@ -502,14 +566,12 @@ func TestPreflightPreservesEveryApplication(t *testing.T) {
 func TestPreflightWaitsForModuleManager(t *testing.T) {
 	cl := fake.NewClientBuilder().WithScheme(testScheme(t)).Build()
 
-	manager := new(packageManagerStub)
-	ctr := newReconciler(cl, manager, modulesInited(false))
-	ctr.init.Add(1)
-
+	manager := newPackageManagerStub(t)
+	ctr := registerController(t, cl, manager, modulesInited(false))
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
 	defer cancel()
 
-	require.ErrorIs(t, ctr.preflight(ctx), context.DeadlineExceeded)
+	require.ErrorIs(t, ctr.preflight.Start(ctx), context.DeadlineExceeded)
 	assert.Empty(t, manager.cleanups,
 		"runtime state must not be dropped while the module manager is still initialising")
 }
@@ -587,13 +649,26 @@ type modulesInited bool
 
 func (m modulesInited) AreModulesInited() bool { return bool(m) }
 
-var _ packageManager = (*packageManagerStub)(nil)
-
 // packageManagerStub records the calls the reconciler makes into the package runtime.
+// RegisterController requires it to satisfy the package's manager interface, which is the
+// compile-time check that this stub still matches the real runtime.
 type packageManagerStub struct {
 	updated  []updatedApp
 	removed  []types.NamespacedName
 	cleanups [][]packageruntime.PreservePackage
+
+	queue workqueue.TypedRateLimitingInterface[string]
+}
+
+// newPackageManagerStub hands out a real queue: RegisterController starts the status
+// service on it, and that goroutine only exits once the queue is shut down.
+func newPackageManagerStub(t *testing.T) *packageManagerStub {
+	t.Helper()
+
+	queue := workqueue.NewTypedRateLimitingQueue(workqueue.DefaultTypedControllerRateLimiter[string]())
+	t.Cleanup(queue.ShutDown)
+
+	return &packageManagerStub{queue: queue}
 }
 
 type updatedApp struct {
@@ -614,7 +689,7 @@ func (s *packageManagerStub) GetStatus(string) packagestatus.Status {
 }
 
 func (s *packageManagerStub) GetAppStatusQueue() workqueue.TypedRateLimitingInterface[string] {
-	return nil
+	return s.queue
 }
 
 func (s *packageManagerStub) Cleanup(_ context.Context, preserve []packageruntime.PreservePackage) {
