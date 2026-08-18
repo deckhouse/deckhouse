@@ -23,10 +23,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// ProfileName selects the SLA timings a NodeGroup is fenced under.
-// The matching FencingSLAProfile object is named in lower case, because a
-// Kubernetes object name cannot contain capital letters. Use ObjectName to
-// resolve the profile.
+// ProfileName selects the SLA timings a NodeGroup is fenced under. The matching
+// FencingSLAProfile object is lower case, since object names cannot hold capital
+// letters; use ObjectName to get it.
 // +kubebuilder:validation:Enum=Critical;Medium;Moderate;Slow
 type ProfileName string
 
@@ -37,7 +36,7 @@ const (
 	ProfileSlow     ProfileName = "Slow"
 )
 
-// ObjectName returns the metadata.name of the FencingSLAProfile this profile refers to.
+// ObjectName returns the metadata.name of the matching FencingSLAProfile.
 func (p ProfileName) ObjectName() string {
 	return strings.ToLower(string(p))
 }

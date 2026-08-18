@@ -16,10 +16,10 @@ limitations under the License.
 
 // Package v1alpha1 holds the fencing-agent API types.
 //
-// FencingFailedNodeState and FencingSLAProfile are cluster CRDs (hand-written
-// manifests under crds/). FencingAgentNodeView, FencingAgentPeer and
-// FencingAgentEvent are served read-only by the agent over its unix socket and
-// must not be installed as cluster CRDs.
+// FencingFailedNodeState and FencingSLAProfile are cluster CRDs, with
+// hand-written manifests in crds/. FencingAgentNodeView, FencingAgentPeer and
+// FencingAgentEvent are served read-only over the agent's unix socket and must
+// not be installed as CRDs.
 // +kubebuilder:object:generate=true
 // +groupName=node-manager.deckhouse.io
 package v1alpha1
@@ -30,12 +30,9 @@ import (
 )
 
 var (
-	// GroupVersion is the group version used to register these objects.
 	GroupVersion = schema.GroupVersion{Group: "node-manager.deckhouse.io", Version: "v1alpha1"}
 
-	// SchemeBuilder is used to add go types to the GroupVersionKind scheme.
 	SchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion}
 
-	// AddToScheme adds the types in this group-version to the given scheme.
 	AddToScheme = SchemeBuilder.AddToScheme
 )

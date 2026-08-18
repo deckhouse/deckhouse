@@ -28,21 +28,19 @@ import (
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 
-	v1alpha1 "fencing-agent/api/node-manager.deckhouse.io/v1alpha1"
 	"fencing-agent/internal/adapters/fencingstate"
 	"fencing-agent/internal/adapters/kubeclient"
 	"fencing-agent/internal/agent"
 	"fencing-agent/internal/config"
 	"fencing-agent/internal/domain"
 	"fencing-agent/internal/usecase/profile"
+
+	v1alpha1 "fencing-agent/api/node-manager.deckhouse.io/v1alpha1"
 )
 
-// resolveIdentityTimeout and profileLoadTimeout bound the worst-case startup
-// blocking (30s + 15s = 45s) before the health server starts, since it starts
-// only after both identity resolution and profile load finish. That total
-// must stay under the liveness kill window (~55s: initialDelay 15s + period
-// 20s x failureThreshold 3) or the kubelet kills the pod before it ever
-// answers a liveness probe.
+// The health server starts only after both steps finish, so 30s + 15s must stay
+// under the liveness kill window (~55s: initialDelay 15s + period 20s x
+// failureThreshold 3), or the kubelet kills the pod before it answers a probe.
 const (
 	resolveIdentityTimeout = 30 * time.Second
 	profileLoadTimeout     = 15 * time.Second
@@ -99,8 +97,8 @@ func run(logger *log.Logger) error {
 	profileCtx, cancelProfile := context.WithTimeout(ctx, profileLoadTimeout)
 	defer cancelProfile()
 
-	// Exiting on any profile failure is deliberate (fail closed): the pod
-	// restart loop is the retry mechanism, CrashLoopBackOff is the visibility.
+	// Fail closed on any profile error: the restart loop is the retry and
+	// CrashLoopBackOff is how an operator finds out.
 	sla, err := profile.Load(profileCtx, fencingstate.NewProfiles(deps.FencingClient), v1alpha1.ProfileName(cfg.ProfileRefName), logger)
 	if err != nil {
 		return fmt.Errorf("load SLA profile: %w", err)
@@ -109,8 +107,8 @@ func run(logger *log.Logger) error {
 	return agent.New(cfg, deps, identity, sla, logger).Run(ctx)
 }
 
-// resolveIdentity retries: a cloud controller may populate the InternalIP a few
-// seconds after the pod starts, and a single-shot failure would crash-loop it.
+// resolveIdentity retries because a cloud controller may fill in the InternalIP
+// a few seconds after the pod starts.
 func resolveIdentity(ctx context.Context, k8s kubernetes.Interface, nodeName string, logger *log.Logger) (domain.NodeIdentity, error) {
 	const retryInterval = 2 * time.Second
 

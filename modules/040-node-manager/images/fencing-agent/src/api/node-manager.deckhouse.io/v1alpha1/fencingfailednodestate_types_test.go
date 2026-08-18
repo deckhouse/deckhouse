@@ -26,7 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// TestStatusSectionsAreIsolated checks a nil status section is not serialized.
+// A nil status section must not be serialized.
 func TestStatusSectionsAreIsolated(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -80,7 +80,7 @@ func TestStatusSectionsAreIsolated(t *testing.T) {
 	}
 }
 
-// TestZeroValuedFieldsSurvive checks zero-valued fields stay on the wire.
+// Zero-valued fields must stay on the wire.
 func TestZeroValuedFieldsSurvive(t *testing.T) {
 	raw, err := json.Marshal(FencingFailedNodeStateStatus{
 		Failed:   &FencingFailedNodeStateFailed{AliveCount: 0, QuorumSize: 3},
@@ -97,7 +97,7 @@ func TestZeroValuedFieldsSurvive(t *testing.T) {
 	}
 }
 
-// TestSchemeRegistersEveryKind asserts every type resolves to its expected GVK.
+// Every type must resolve to its expected GVK.
 func TestSchemeRegistersEveryKind(t *testing.T) {
 	scheme := runtime.NewScheme()
 	if err := AddToScheme(scheme); err != nil {
@@ -135,7 +135,7 @@ func TestSchemeRegistersEveryKind(t *testing.T) {
 	}
 }
 
-// TestDeepCopyIsIndependent checks DeepCopy does not alias the pointer sections.
+// DeepCopy must not alias the pointer sections.
 func TestDeepCopyIsIndependent(t *testing.T) {
 	original := &FencingFailedNodeState{
 		Spec: FencingFailedNodeStateSpec{
