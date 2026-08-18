@@ -16,13 +16,6 @@ rolloutFields:
   - disableTimesync
   - runtimeOptions
 
-# failureDomain sits on the generic MachineDeployment node-controller builds — the provider
-# template renders the machine template only. Replaces v1 machine-deployment-spec-patch.yaml,
-# whose sole job was ${zone} string substitution.
-machineDeployment:
-  additionalFields:
-    failureDomain: "{{ .zone }}"
-
 # Rendered under machinetemplate.Render: missingkey=error, sprig sandbox, no access to Helm
 # .Values. Optional fields MUST go through hasKey / get / dig — a direct path like
 # `.instanceClass.runtimeOptions | default dict` still evaluates the missing key first and
@@ -97,13 +90,15 @@ template: |
 
   {{- /* MCM used to attach display-name tags (deckhouse-cluster-name / deckhouse-node-role) for
          vCenter UI grouping. CAPV rejects display names and demands URN-format tag IDs
-         (urn:vmomi:InventoryServiceTag:<uuid>:GLOBAL); resolving/creating those per (NodeGroup,
-         zone) is not wired yet — cloud-data-discoverer does not publish tag URNs. Until it does,
+         (urn:vmomi:InventoryServiceTag:<uuid>:GLOBAL); resolving/creating those per NodeGroup
+         is not wired yet — cloud-data-discoverer does not publish tag URNs. Until it does,
          VMs are created without tags. See PR #21595 follow-up. */ -}}
   {{- $tags := dig "tagURNs" (list) .provider }}
 
   {{- /* Optional string fields — go through get to survive missingkey=error. Fall back to
-         instanceClassDefaults from the discovery payload when the InstanceClass omits them. */ -}}
+         instanceClassDefaults from the discovery payload when the InstanceClass omits them.
+         resourcePool MUST be an absolute inventory path when several ClusterComputeResources
+         share the datacenter — CAPV's finder errors ambiguously on a bare name. */ -}}
   {{- $template := get $ic "template" | default (get $icd "template") }}
   {{- $datastore := get $ic "datastore" | default (get $icd "datastore") }}
   {{- $rootDiskSize := get $ic "rootDiskSize" | default 20 }}
@@ -118,19 +113,8 @@ template: |
         server: {{ .provider.server | quote }}
         folder: {{ .provider.vmFolderPath | quote }}
         datastore: {{ $datastore | quote }}
-        {{- /* Prefer an absolute resourcePool inventory path built from the zone's
-               ClusterComputeResource (published by ensure_failure_domains hook) joined with
-               providerDiscoveryData.resourcePoolPath. CAPV's finder resolves a bare name relative
-               to the datacenter and errors out ambiguously when several compute clusters carry a
-               resource pool of the same name. Fall back to the raw value only if the hook has
-               not populated the map yet (fresh install). */ -}}
         {{- if $rp }}
-        {{- $zoneCluster := dig "zoneComputeClusterPaths" .zone "" .provider }}
-        {{- if $zoneCluster }}
-        resourcePool: {{ printf "%s/Resources/%s" $zoneCluster $rp | quote }}
-        {{- else }}
         resourcePool: {{ $rp | quote }}
-        {{- end }}
         {{- end }}
         numCPUs: {{ $ic.numCPUs | int }}
         memoryMiB: {{ $memoryMiB }}
