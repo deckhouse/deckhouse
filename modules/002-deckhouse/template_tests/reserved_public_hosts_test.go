@@ -28,6 +28,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
+	"github.com/deckhouse/deckhouse/testing/library/object_store"
 )
 
 // The two ways a module in this repository asks for a hostname under publicDomainTemplate: the Helm
@@ -112,6 +113,27 @@ const (
 	httpRouteAPI                        = "gateway.networking.k8s.io/v1/HTTPRoute"
 )
 
+// expectCoversRepositoryPublicDomains fails when a module in this repository publishes a public
+// domain the literal in the template does not name, pointing at the file that publishes it.
+//
+// It reads platformHosts and never hosts: the check is about the literal keeping up with the
+// repository, so a cluster that excluded a service through its ModuleConfig must not be able to
+// answer it. The context that renders with an exclusion calls this too, which is what keeps that
+// distinction from being an unenforced comment.
+func expectCoversRepositoryPublicDomains(cm object_store.KubeObject) {
+	platformHosts := strings.Fields(cm.Field("data.platformHosts").String())
+
+	published := publishedPublicDomains()
+	Expect(published).ToNot(BeEmpty(), "the call site patterns should still match this repository")
+
+	for name, source := range published {
+		Expect(platformHosts).To(ContainElement(name+".example.com"),
+			"%s publishes the public domain %q, but it is not reserved. Add %q to $reservedNames "+
+				"in modules/002-deckhouse/templates/reserved-public-hosts.yaml, otherwise any "+
+				"namespace can claim that hostname.", source, name, name)
+	}
+}
+
 var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 	f := SetupHelmConfig(`{deckhouse: {internal: {currentReleaseImageName: test }}}`)
 
@@ -168,20 +190,7 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 			cm := f.KubernetesResource("ConfigMap", "d8-system", reservedHostsConfigMapName)
-			// platformHosts, not hosts: this check is about the literal in the template keeping up
-			// with the repository, and a cluster that excludes a service through its ModuleConfig
-			// must not be able to answer it.
-			hosts := strings.Fields(cm.Field("data.platformHosts").String())
-
-			published := publishedPublicDomains()
-			Expect(published).ToNot(BeEmpty(), "the call site patterns should still match this repository")
-
-			for name, source := range published {
-				Expect(hosts).To(ContainElement(name+".example.com"),
-					"%s publishes the public domain %q, but it is not reserved. Add %q to $reservedNames "+
-						"in modules/002-deckhouse/templates/reserved-public-hosts.yaml, otherwise any "+
-						"namespace can claim that hostname.", source, name, name)
-			}
+			expectCoversRepositoryPublicDomains(cm)
 		})
 
 		It("denies an Ingress claiming one of them", func() {
@@ -363,6 +372,20 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 
 			cm := f.KubernetesResource("ConfigMap", "d8-system", reservedHostsConfigMapName)
 			Expect(strings.Fields(cm.Field("data.platformHosts").String())).To(ContainElement("grafana.example.com"))
+		})
+
+		It("still answers whether the literal covers the repository, exclusion or not", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			// The excluded service has to be one this repository publishes, otherwise the check
+			// below would hold whichever key it read and would prove nothing.
+			Expect(publishedPublicDomains()).To(HaveKey("grafana"),
+				"this context excludes grafana to show that an exclusion cannot quiet the coverage "+
+					"check, which needs the repository to still publish grafana")
+
+			cm := f.KubernetesResource("ConfigMap", "d8-system", reservedHostsConfigMapName)
+			Expect(strings.Fields(cm.Field("data.hosts").String())).NotTo(ContainElement("grafana.example.com"))
+			expectCoversRepositoryPublicDomains(cm)
 		})
 
 		It("does not touch the per-namespace bypass, the two are independent", func() {
