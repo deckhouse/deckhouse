@@ -153,11 +153,11 @@ apiVersions:
         description: |
           **Deprecated.** Use [`kubernetesVersion`](/modules/control-plane-manager/configuration.html#parameters-kubernetesversion) in the `control-plane-manager` ModuleConfig instead (`d8 k edit mc control-plane-manager`).
 
-          The cluster Kubernetes version is resolved in one order: `kubernetesVersion` in the `control-plane-manager` ModuleConfig, then this field, then the version the current Deckhouse release defaults to. The ModuleConfig setting wins whenever it is set, `Default` included.
+          The cluster Kubernetes version is resolved in the following order: `kubernetesVersion` parameter in the `control-plane-manager` ModuleConfig, then this field, then the version the current DKP release defaults to. The ModuleConfig setting wins whenever it is set, `Default` included.
 
-          This field is optional. While it pins a version and the ModuleConfig setting is unset, this field is what decides the cluster version. Deckhouse raises the `D8ObsoleteKubernetesVersionFieldInClusterConfiguration` alert while the field is present at all — including when the ModuleConfig setting already decides the version — and clears it once the field is removed.
+          This field is optional. While it pins a version and the `kubernetesVersion` in the `control-plane-manager` ModuleConfig setting is unset, this field is what decides the cluster version.  The `D8ObsoleteKubernetesVersionFieldInClusterConfiguration` alert appears in the cluster simply because the field is present — including when the ModuleConfig setting already decides the version — and clears it once the field is removed.
 
-          Do not change this field in a running cluster to upgrade or downgrade Kubernetes — change ModuleConfig instead.
+          Do not change this field in a running cluster to upgrade or downgrade Kubernetes — change `kubernetesVersion` in the `control-plane-manager` ModuleConfig instead.
 
           If `Automatic` is specified, then the control plane version is used, which is considered stable at the moment. If the stable version of control plane is less than the maximum version that has ever been installed in the cluster, more than 1 minor version, then the version of the cluster will not be changed.
           The version may change when the minor version of the Deckhouse release is changed (see a corresponding release message).

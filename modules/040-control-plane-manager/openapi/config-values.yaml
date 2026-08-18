@@ -373,9 +373,9 @@ properties:
       d8 k edit mc control-plane-manager
       ```
 
-      The cluster Kubernetes version is resolved in one order: this parameter, then the deprecated `ClusterConfiguration.kubernetesVersion`, then the version the current Deckhouse release defaults to. This parameter wins whenever it is set, `Default` included; while it is unset, the deprecated field still decides.
+      The cluster Kubernetes version is resolved in the following order: this parameter, then the deprecated `ClusterConfiguration.kubernetesVersion`, then the version the current DKP release defaults to. This parameter wins whenever it is set, `Default` included; while it is unset, the deprecated field still decides.
 
-      If `Default` is specified, Deckhouse selects the version considered stable for the current release. If that version is more than 1 minor version below the maximum version that has ever been used in the cluster, the version is not changed automatically.
+      If `Default` is specified, DKP selects the version considered stable for the current release. If that version is more than 1 minor version below the maximum version that has ever been used in the cluster, the version is not changed automatically.
 
       Downgrading more than 1 minor version below the highest version the cluster has ever run is forbidden.
     enum:
