@@ -340,14 +340,14 @@ func TestCloudProviderIsPerNodeGroupInBuiltContexts(t *testing.T) {
 			},
 		})
 
-		if got := bashibleContextOf(t, built, "worker-aws").CloudProviderType; got != "aws" {
-			t.Fatalf("worker-aws cloudProviderType = %q, want %q", got, "aws")
+		if got := bundleContextOf(t, built, "worker-aws").CloudProvider.Type(); got != "aws" {
+			t.Fatalf("worker-aws cloudProvider.type = %q, want %q", got, "aws")
 		}
-		if got := bashibleContextOf(t, built, "worker-yandex").CloudProviderType; got != "yandex" {
-			t.Fatalf("worker-yandex cloudProviderType = %q, want %q", got, "yandex")
+		if got := bundleContextOf(t, built, "worker-yandex").CloudProvider.Type(); got != "yandex" {
+			t.Fatalf("worker-yandex cloudProvider.type = %q, want %q", got, "yandex")
 		}
-		if got := bashibleContextOf(t, built, "static-ng").CloudProviderType; got != "" {
-			t.Fatalf("static-ng cloudProviderType = %q, want it empty", got)
+		if got := bundleContextOf(t, built, "static-ng").CloudProvider.Type(); got != "" {
+			t.Fatalf("static-ng cloudProvider.type = %q, want it empty", got)
 		}
 
 		if got, want := keysOf(steps["worker-aws"]), []string{"000_common.sh", "010_aws.sh"}; !reflect.DeepEqual(got, want) {
@@ -389,8 +389,8 @@ func TestCloudProviderIsPerNodeGroupInBuiltContexts(t *testing.T) {
 		})
 
 		for _, ng := range []string{"worker-aws", "static-ng"} {
-			if got := bashibleContextOf(t, built, ng).CloudProviderType; got != "aws" {
-				t.Fatalf("%s cloudProviderType = %q, want %q", ng, got, "aws")
+			if got := bundleContextOf(t, built, ng).CloudProvider.Type(); got != "aws" {
+				t.Fatalf("%s cloudProvider.type = %q, want %q", ng, got, "aws")
 			}
 			if got, want := keysOf(steps[ng]), []string{"000_common.sh", "010_aws.sh"}; !reflect.DeepEqual(got, want) {
 				t.Fatalf("%s steps = %v, want %v", ng, got, want)

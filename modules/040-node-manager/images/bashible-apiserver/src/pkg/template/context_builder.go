@@ -166,7 +166,7 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 		bundleNgContext := cb.newBundleNGContext(ng, cb.clusterInputData.Freq, cloudProvider, commonContext)
 		bb.bashibleContexts[bundleContextName] = bundleNgContext
 
-		bashibleContext, err := cb.newBashibleContext(checksumCollector, ng, cb.versionMap, cloudProvider, &bundleNgContext)
+		bashibleContext, err := cb.newBashibleContext(checksumCollector, ng, cb.versionMap, &bundleNgContext)
 		if err != nil {
 			errorsMap[bundleContextName] = err
 		}
@@ -188,7 +188,7 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 	return bb, ngMap, errorsMap
 }
 
-func (cb *ContextBuilder) newBashibleContext(checksumCollector hash.Hash, ng nodeGroup, versionMap map[string]interface{}, cloudProvider cloudProvider, bundleNgContext *bundleNGContext) (bashibleContext, error) {
+func (cb *ContextBuilder) newBashibleContext(checksumCollector hash.Hash, ng nodeGroup, versionMap map[string]interface{}, bundleNgContext *bundleNGContext) (bashibleContext, error) {
 	bc := bashibleContext{
 		KubernetesVersion:                  ng.KubernetesVersion(),
 		ClusterUUID:                        cb.clusterInputData.ClusterUUID,
@@ -208,7 +208,6 @@ func (cb *ContextBuilder) newBashibleContext(checksumCollector hash.Hash, ng nod
 		Registry:                   cb.registryData,
 		Proxy:                      cb.clusterInputData.Proxy,
 		Deckhouse:                  cb.clusterInputData.Deckhouse,
-		CloudProviderType:          cloudProvider.Type(),
 		PackagesProxy:              cb.clusterInputData.PackagesProxy,
 		AllowedKubeletFeatureGates: cb.clusterInputData.AllowedKubeletFeatureGates,
 	}
@@ -410,7 +409,6 @@ type bashibleContext struct {
 	Registry                   map[string]interface{}       `json:"registry" yaml:"registry"`
 	Proxy                      map[string]interface{}       `json:"proxy" yaml:"proxy"`
 	Deckhouse                  deckhouse                    `json:"deckhouse" yaml:"deckhouse"`
-	CloudProviderType          string                       `json:"cloudProviderType" yaml:"cloudProviderType"`
 	PackagesProxy              map[string]interface{}       `json:"packagesProxy" yaml:"packagesProxy"`
 	AllowedKubeletFeatureGates []string                     `json:"allowedKubeletFeatureGates,omitempty" yaml:"allowedKubeletFeatureGates,omitempty"`
 }

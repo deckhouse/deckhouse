@@ -99,6 +99,7 @@ func applyCloudProviderSecretKindZonesFilter(obj *unstructured.Unstructured) (go
 	return map[string]interface{}{
 		"instanceClassKind": secretData["instanceClassKind"],
 		"zones":             secretData["zones"],
+		"type":              secretData["type"],
 	}, nil
 }
 
@@ -205,7 +206,16 @@ func getCRDsHandler(_ context.Context, input *go_hook.HookInput) error {
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal 'cloud_provider_secret' snapshot: %w", err)
 	}
+
+	// cloudProviderType is the provider of the cluster under the name node-controller publishes
+	// into the bashible context. The bootstrap script reads it off the NodeGroup, so both paths
+	// pick the provider's step directory through the same field.
+	cloudProviderType := ""
 	if len(cloudProviderSecrets) > 0 {
+		if v, ok := cloudProviderSecrets[0]["type"].(string); ok {
+			cloudProviderType = v
+		}
+
 		switch v := cloudProviderSecrets[0]["zones"].(type) {
 		case []string:
 			defaultZones.Add(v...)
@@ -243,6 +253,10 @@ func getCRDsHandler(_ context.Context, input *go_hook.HookInput) error {
 		ngForValues["name"] = nodeGroup.Name
 		ngForValues["engine"] = string(calculateNodeGroupEngine(input, nodeGroup))
 		ngForValues["manualRolloutID"] = nodeGroup.ManualRolloutID
+
+		if cloudProviderType != "" {
+			ngForValues["cloudProviderType"] = cloudProviderType
+		}
 
 		// A NodeGroup with a wrong classReference.kind or a missing instanceClass is kept
 		// out of helm rendering; node-controller renders the CAPI/MCM templates and the
