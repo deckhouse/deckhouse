@@ -35,7 +35,6 @@ rules:
 - apiGroups:
   - deckhouse.io
   resources:
-  - packagerepositoryoperations
   - applicationpackageversions
   - applicationpackages
   verbs:
