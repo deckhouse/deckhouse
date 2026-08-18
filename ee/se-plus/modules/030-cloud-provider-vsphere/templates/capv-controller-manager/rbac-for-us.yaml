@@ -54,11 +54,7 @@ rules:
 - apiGroups:
   - apiextensions.k8s.io
   resourceNames:
-  - vsphereclusteridentities.infrastructure.cluster.x-k8s.io
   - vsphereclusters.infrastructure.cluster.x-k8s.io
-  - vsphereclustertemplates.infrastructure.cluster.x-k8s.io
-  - vspheredeploymentzones.infrastructure.cluster.x-k8s.io
-  - vspherefailuredomains.infrastructure.cluster.x-k8s.io
   - vspheremachines.infrastructure.cluster.x-k8s.io
   - vspheremachinetemplates.infrastructure.cluster.x-k8s.io
   - vspherevms.infrastructure.cluster.x-k8s.io
@@ -105,11 +101,7 @@ rules:
 - apiGroups:
   - infrastructure.cluster.x-k8s.io
   resources:
-  - vsphereclusteridentities
   - vsphereclusters
-  - vsphereclustertemplates
-  - vspheredeploymentzones
-  - vspherefailuredomains
   - vspheremachines
   - vspheremachinetemplates
   - vspherevms
@@ -124,9 +116,7 @@ rules:
 - apiGroups:
   - infrastructure.cluster.x-k8s.io
   resources:
-  - vsphereclusteridentities/status
   - vsphereclusters/status
-  - vspheredeploymentzones/status
   - vspheremachines/status
   - vspheremachinetemplates/status
   - vspherevms/status
@@ -164,45 +154,6 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: d8:cloud-provider-vsphere:capv-controller-manager
-subjects:
-- kind: ServiceAccount
-  name: capv-controller-manager
-  namespace: d8-cloud-provider-vsphere
-
----
-# Namespaced write access to the identity Secret CAPV manages.
-# Read stays cluster-wide (see rules above — CAPV needs to watch every Secret
-# referenced by VSphereClusters across the mgmt cluster). delete/patch/update
-# are granted only in d8-cloud-instance-manager because that is where the
-# CAPI Cluster / VSphereCluster / identity Secret live.
-# The Role/RoleBinding sit outside the module namespace on purpose, so they are
-# excluded from the placement lint in .dmtlint.yaml (rbac.exclude-rules.placement).
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: capv-controller-manager:capi-user-credentials
-  namespace: d8-cloud-instance-manager
-  {{- include "helm_lib_module_labels" (list . (dict "app" "capv-controller-manager")) | nindent 2 }}
-rules:
-- apiGroups:
-  - ""
-  resources:
-  - secrets
-  verbs:
-  - delete
-  - patch
-  - update
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: capv-controller-manager:capi-user-credentials
-  namespace: d8-cloud-instance-manager
-  {{- include "helm_lib_module_labels" (list . (dict "app" "capv-controller-manager")) | nindent 2 }}
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: capv-controller-manager:capi-user-credentials
 subjects:
 - kind: ServiceAccount
   name: capv-controller-manager
