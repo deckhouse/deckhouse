@@ -19,7 +19,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
 - apiGroups:
-  - internal.deckhouse.io
+  - deckhouse.io
   resources:
   - metal3instances
   verbs:
@@ -29,13 +29,13 @@ rules:
   - patch
   - update
 - apiGroups:
-  - internal.deckhouse.io
+  - deckhouse.io
   resources:
   - metal3instances/finalizers
   verbs:
   - update
 - apiGroups:
-  - internal.deckhouse.io
+  - deckhouse.io
   resources:
   - metal3instances/status
   verbs:
