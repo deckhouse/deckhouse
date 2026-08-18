@@ -12,7 +12,7 @@
   logo: /images/logos/kubernetes.svg
   license: Apache License 2.0
   id: ccm-yandex
-  version: fix/target-group-reconciliation
+  version: v0.33.5
 
 - name: Yandex Cloud CSI driver
   link: https://github.com/deckhouse/yandex-csi-driver
