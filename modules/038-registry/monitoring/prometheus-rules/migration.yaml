@@ -73,8 +73,13 @@
 
         What each blocking check means:
 
-        - `mode` — the previous implementation is mid-transition, so its nodes are being
-          reconfigured as you read this. Wait for it to settle, then start.
+        - `mode` — the cluster arrived on this release without having been brought to
+          `Unmanaged` first, or the previous implementation is mid-transition. This release
+          renders none of the previous implementation's objects, so whatever they served —
+          the in-cluster proxy in `Proxy`, the `registry` Service — is already gone, and
+          the nodes still point at it. The discriminator has NOT flipped while this is
+          failing, so the way back is the image: return the previous release, bring the
+          cluster to `Unmanaged` by the documented procedure, then upgrade again.
 
         - `not_local` — the cluster's registry *is* the cluster (`Local`). The documented
           procedure brings the cluster through `Unmanaged`, where every node pulls straight

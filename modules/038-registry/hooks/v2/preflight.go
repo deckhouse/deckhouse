@@ -378,8 +378,12 @@ func (p preflight) report() []preflightCheck {
 // Mid-transition is a stop for the older reason: its nodes are being reconfigured as the question
 // is asked, so nothing else answered here describes the moment that matters.
 //
-// If this ever moves to the previous release — which is where an operator would want to run it,
-// before upgrading — this check inverts, and that is the one to rewrite rather than carry over.
+// It is not going to the previous release, by decision: this branch merges into main, and the
+// clusters still on the previous implementation sit on release channels where backporting a checker
+// is expensive. So nobody runs this before upgrading, and the population that sees it is exactly
+// the one that arrived here without having been brought to Unmanaged. The advice therefore has to
+// be actionable from here, which means the image, not the mode: the discriminator has not flipped
+// while this is failing, so returning the previous release restores the objects this build removed.
 func (p preflight) checkMode() preflightCheck {
 	unmanaged := string(registry_const.ModeUnmanaged)
 
@@ -394,9 +398,9 @@ func (p preflight) checkMode() preflightCheck {
 
 	case p.Legacy.Mode != unmanaged:
 		return preflightCheck{Name: CheckMode, Blocking: true,
-			Detail: fmt.Sprintf("the cluster is in %s, and this build renders none of the objects "+
-				"that mode needs; bring it to %s on the previous release first",
-				p.Legacy.Mode, unmanaged)}
+			Detail: fmt.Sprintf("the cluster arrived in %s, and this build renders none of the "+
+				"objects that mode needs; return the previous release, bring it to %s there, "+
+				"then upgrade again", p.Legacy.Mode, unmanaged)}
 
 	default:
 		return preflightCheck{Name: CheckMode, Passed: true,

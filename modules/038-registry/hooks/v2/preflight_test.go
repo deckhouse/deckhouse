@@ -113,7 +113,7 @@ func TestWhichChecksBlockAndWhichOnlyWarn(t *testing.T) {
 		}(),
 		check:    CheckMode,
 		blocking: true,
-		detail:   "bring it to Unmanaged on the previous release first",
+		detail:   "return the previous release, bring it to Unmanaged there",
 	}, {
 		name: "arrived still in Direct",
 		subject: func() preflight {
@@ -123,7 +123,7 @@ func TestWhichChecksBlockAndWhichOnlyWarn(t *testing.T) {
 		}(),
 		check:    CheckMode,
 		blocking: true,
-		detail:   "the cluster is in Direct",
+		detail:   "the cluster arrived in Direct",
 	}, {
 		name: "the registry does not answer",
 		subject: func() preflight {
