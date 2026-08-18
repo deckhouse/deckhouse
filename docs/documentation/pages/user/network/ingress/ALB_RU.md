@@ -626,9 +626,9 @@ spec:
 
 ### Настройка TLS для OpenTelemetry tracing
 
-Если данные OpenTelemetry tracing нужно отправлять по TLS, создайте Kubernetes Secret с CA-сертификатом и укажите его в `spec.openTelemetry.tracing.tls.caSecretName`.
+Чтобы передавать данные трассировки OpenTelemetry по TLS, создайте секрет с CA-сертификатом и укажите его в параметре `spec.openTelemetry.tracing.tls.caSecretName`.
 
-Для ClusterALBInstance и default Deckhouse gateway разместите Secret в неймспейсе `d8-alb`. Secret должен содержать ключ `cacert`.
+При использовании ClusterALBInstance или шлюза Deckhouse по умолчанию разместите секрет в неймспейсе `d8-alb`. CA-сертификат должен быть сохранён в ключе `cacert`.
 
 ```yaml
 apiVersion: v1
@@ -692,7 +692,7 @@ spec:
 Если для прокси шлюза включён Istio-сайдкар с помощью параметра [`istioSidecar`](/modules/alb/cr.html#albinstance-v1alpha1-spec-istiosidecar) объекта ALBInstance или [ClusterALBInstance](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-istiosidecar), трафик к бэкенду должен попадать в сайдкар через объект Service и содержать FQDN этого Service в заголовке `Host`. Настройте объект HTTPRoute следующим образом:
 
 - добавьте аннотацию `alb.network.deckhouse.io/service-upstream: "true"`, чтобы трафик шёл через объект Service, а не напрямую к подам. Это эквивалент аннотации `nginx.ingress.kubernetes.io/service-upstream: "true"` из `ingress-nginx`;
-- добавьте фильтр `URLRewrite`, который задаёт в поле `hostname` FQDN объекта backend-сервиса. Он заменяет аннотацию `nginx.ingress.kubernetes.io/upstream-vhost` из `ingress-nginx`.
+- добавьте фильтр `URLRewrite`, который задаёт в поле `hostname` FQDN объекта бэкенд-сервиса. Он заменяет аннотацию `nginx.ingress.kubernetes.io/upstream-vhost` из `ingress-nginx`.
 
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1
@@ -722,9 +722,9 @@ spec:
 
 ### WAF на HTTPRoute {#waf-on-httproute}
 
-Аннотация `alb.network.deckhouse.io/mod-security` включает WAF ModSecurity/Coraza для конкретного HTTPRoute. Конфигурация применяется на уровне маршрута и не затрагивает другие маршруты, если на них нет такой же аннотации.
+Аннотация `alb.network.deckhouse.io/mod-security` позволяет включить WAF на базе ModSecurity/Coraza для отдельного HTTPRoute. Конфигурация WAF применяется только к маршруту, для которого указана аннотация, и не влияет на остальные маршруты.
 
-Поддерживаемые поля аннотации:
+Аннотация поддерживает следующие поля:
 
 | Поле | Описание |
 | :--- | :--- |
@@ -736,11 +736,11 @@ spec:
 | `configRef.key` | Необязательный ключ в ConfigMap. Если не указан, читаются все ключи в отсортированном порядке |
 | `directives` | Необязательный список директив ModSecurity/Coraza, заданных непосредственно в аннотации; они добавляются после правил из набора и ConfigMap |
 
-Порядок применения директив:
+Директивы и правила применяются в следующем порядке:
 
 1. Базовые директивы, поставляемые модулем (`@coraza.conf`, `SecRuleEngine`, `SecResponseBodyAccess Off`).
 1. Правила из набора, заданного в `preset`.
-1. Правила из `configRef`.
+1. Пользовательские правила из ConfigMap, указанного в `configRef`.
 1. Встроенные директивы из поля `directives`.
 
 Встроенные директивы применяются последними и могут переопределять набор правил или правила из ConfigMap.
@@ -825,12 +825,12 @@ metadata:
       }
 ```
 
-Справка по синтаксису правил:
+Подробнее о синтаксисе правил и директив в документации Coraza и ModSecurity:
 
-- [синтаксис Coraza и формат `SecRule`](https://www.coraza.io/docs/seclang/syntax/);
-- [справочник ModSecurity по variables](https://github.com/SpiderLabs/ModSecurity/wiki/Reference-Manual-%28v2.x%29-Variables);
-- [справочник ModSecurity по operators](https://github.com/SpiderLabs/ModSecurity/wiki/Reference-Manual-%28v2.x%29-Operators);
-- [справочник ModSecurity по `SecRuleEngine` и другим директивам](https://github.com/owasp-modsecurity/ModSecurity/wiki/Reference-Manual-%28v2.x%29).
+- [синтаксис правил Coraza и директива `SecRule`](https://www.coraza.io/docs/seclang/syntax/);
+- [переменные ModSecurity](https://github.com/SpiderLabs/ModSecurity/wiki/Reference-Manual-%28v2.x%29-Variables);
+- [операторы ModSecurity](https://github.com/SpiderLabs/ModSecurity/wiki/Reference-Manual-%28v2.x%29-Operators);
+- [директива `SecRuleEngine` и другие директивы ModSecurity](https://github.com/owasp-modsecurity/ModSecurity/wiki/Reference-Manual-%28v2.x%29).
 
 Текущие особенности и ограничения:
 
@@ -950,7 +950,7 @@ spec:
 
 Параметр модуля [`storageClass`](/modules/alb/configuration.html#parameters-storageclass) задаёт PVC для компонентов GeoIP.
 
-### Настройка OpenTelemetry Tracing {#tracing}
+### Настройка трассировки OpenTelemetry {#tracing}
 
 Модуль `alb` поддерживает экспорт трассировок OpenTelemetry из Envoy-прокси.
 

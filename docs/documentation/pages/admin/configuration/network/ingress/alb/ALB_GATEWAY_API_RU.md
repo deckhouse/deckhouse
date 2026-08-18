@@ -9,15 +9,15 @@ lang: ru
 
 Модуль `alb` реализует прикладной балансировщик нагрузки (Application Load Balancer, ALB) и позволяет публиковать приложения с помощью Kubernetes Gateway API. Он разворачивает и настраивает инфраструктуру для приёма и маршрутизации внешних запросов, а также проверяет пользовательскую конфигурацию Gateway API.
 
-Модуль построен на Kubernetes Gateway API — современном стандарте управления входящим трафиком, который приходит на смену Ingress API. Он предоставляет:
+Модуль построен на Kubernetes Gateway API — современном стандарте управления входящим трафиком, расширяющий возможности Ingress API. Он предоставляет:
 
 - единый декларативный API для HTTP/HTTPS, gRPC, TCP, UDP и TLS passthrough;
 - разделение ответственности между администратором кластера (ClusterALBInstance), администратором неймспейса (ALBInstance/ListenerSet) и командой приложения (маршруты);
 - расширенные возможности обработки запросов: WAF на уровне маршрута, внешнюю аутентификацию, списки разрешённых IP-адресов, ограничение частоты запросов, session affinity, GeoIP, BackendTLSPolicy, Proxy Protocol и HTTP/3.
 
-Несмотря на схожие названия, Kubernetes Gateway API и API Gateway — разные понятия. Kubernetes Gateway API — набор ресурсов Kubernetes, описывающих маршрутизацию входящего трафика к сервисам. API Gateway — архитектурный компонент, который объединяет API приложений за единой точкой входа. Модуль `alb` является реализацией Kubernetes Gateway API.
+Kubernetes Gateway API и API Gateway — разные понятия. Kubernetes Gateway API — это набор ресурсов Kubernetes для описания маршрутизации трафика к приложениям. API Gateway — архитектурный компонент, предоставляющий единую точку входа к API приложений. Модуль `alb` реализует Kubernetes Gateway API.
 
-Сравнение возможностей с `ingress-nginx` — в разделе [Балансировка входящего трафика](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/#сравнение-возможностей-модулей-ingress-nginx-и-alb).
+Сравнение возможностей модулей `alb` и `ingress-nginx` приведено в разделе [«Балансировка входящего трафика»](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/#сравнение-возможностей-модулей-ingress-nginx-и-alb).
 
 {% alert level="info" %}
 ALB средствами Kubernetes Gateway API может использоваться в кластере совместно с ALB средствами Ingress NGINX Controller.
@@ -122,8 +122,8 @@ done | sort
 
 - Каждый объект Gateway обслуживается как минимум одним экземпляром Envoy Proxy.
 - Трафик в него приходит через объект Service типа `LoadBalancer` или напрямую с использованием параметров `HostPort`.
-- Каждый объект Gateway по умолчанию создаёт два обработчика: `d8-http` (порт `80`) и `d8-https` (порт `443`). Они предназначены для служебных целей. Например, для проверки доступности шлюза или работы cert-manager (HTTP-01). Для публикации приложений эти обработчики использовать не рекомендуется, используйте для этого ListenerSet.
-- На один объект Gateway могут ссылаться несколько объектов ClusterALBInstance или ALBInstance (через поле `gatewayName`). В этом случае они описывают общий шлюз, но инфраструктура приёма запросов может отличаться в зависимости от настроек. Можно рассматривать `gatewayName` как аналог `ingressClass` для объектов [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller): данное поле определяет, информация о каких маршрутах будет включена в конфигурацию конкретного экземпляра ALB..
+- Каждый объект Gateway по умолчанию создаёт два обработчика: `d8-http` (порт `80`) и `d8-https` (порт `443`). Они предназначены для служебных целей. Например, для проверки доступности шлюза или работы `cert-manager` (HTTP-01). Для публикации приложений эти обработчики использовать не рекомендуется, используйте для этого ListenerSet.
+- На один объект Gateway могут ссылаться несколько объектов ClusterALBInstance или ALBInstance через поле `gatewayName`. В этом случае они используют общий Gateway, при этом конфигурация инфраструктуры для приёма и обработки трафика может различаться. Поле `gatewayName` можно рассматривать как аналог `ingressClass` для объектов [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller): оно определяет, маршруты какого Gateway будут использоваться при формировании конфигурации конкретного экземпляра ALB.
 
 {% alert level="warning" %}
 Ручная модификация объектов Gateway, управляемых модулем, не допускается.
@@ -153,7 +153,8 @@ spec:
 - для ClusterALBInstance объекты ListenerSet могут располагаться в любом неймспейсе;
 - для ALBInstance объекты ListenerSet рекомендуется располагать в том же неймспейсе, что и родительский ALBInstance.
 
-В обоих случаях объект ListenerSet рекомендуется располагать в том же неймспейсе, что и подключаемые к нему объекты HTTPRoute, GRPCRoute и TLSRoute. Это упрощает читаемость конфигурации и позволяет избежать дополнительных настроек, например, объектов ReferenceGrant. TCPRoute и UDPRoute для обычных TCP/UDP-портов из `additionalPorts` привязываются напрямую к слушателю объекта Gateway.
+В обоих случаях рекомендуется размещать объект ListenerSet в том же неймспейсе, что и связанные с ним объекты HTTPRoute, GRPCRoute и TLSRoute. Это упрощает конфигурацию и позволяет избежать дополнительных настроек, например создания объектов ReferenceGrant.
+Объекты TCPRoute и UDPRout`, использующие TCP- и UDP-порты, указанные в `additionalPorts`, привязываются непосредственно к соответствующему слушателю объекта Gateway.
 
 Пример манифеста ресурса ListenerSet для управления приёмом входящих HTTP- и HTTPS-запросов через общекластерный шлюз:
 
@@ -315,7 +316,7 @@ spec:
         protocol: TCP
 ```
 
-Контроллер добавит на управляемый объект Gateway соответствующий обработчик TCP/UDP-трафика с именем секции (`sectionName`) вида `tcp-port-9000`. Затем можно создать объект TCPRoute, который ссылается на этот объект Gateway и этот `sectionName` напрямую:
+Контроллер добавит в управляемый объект Gateway слушатель для TCP/UDP-трафика с именем секции (`sectionName`), например `tcp-port-9000`. После этого можно создать объект TCPRoute и напрямую привязать его к этому слушателю, указав имя Gateway и соответствующий `sectionName`:
 
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1alpha2
@@ -352,7 +353,7 @@ spec:
 - `LoadBalancer` — приём трафика через объект Service с типом `LoadBalancer` (облачные провайдеры или bare metal с MetalLB). Доступен и для ClusterALBInstance, и для ALBInstance.
 - `HostPort` — приём трафика на портах узлов без внешнего балансировщика. Доступен только для ClusterALBInstance.
 
-Полное описание полей CR: [ClusterALBInstance](/modules/alb/cr.html#clusteralbinstance) и [ALBInstance](/modules/alb/cr.html#albinstance). Дополнительные примеры — в [примерах модуля `alb`](/modules/alb/examples.html).
+Полное описание полей кастомных ресурсов приведено в документации [`ClusterALBInstance`](/modules/alb/cr.html#clusteralbinstance) и [`ALBInstance`](/modules/alb/cr.html#albinstance).
 
 ### Облачный провайдер (инлет LoadBalancer) {#cloud-load-balancer}
 
@@ -368,7 +369,8 @@ spec:
     loadBalancer: {}
 ```
 
-Чтобы задать параметры облачного балансировщика, укажите нужные аннотации объекта Service в [`spec.inlet.loadBalancer.serviceAnnotations`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-loadbalancer-serviceannotations). Например, для Network Load Balancer в AWS:
+Чтобы настроить облачный балансировщик, укажите необходимые аннотации для создаваемого объекта Service типа LoadBalancer в параметре [`spec.inlet.loadBalancer.serviceAnnotations`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-loadbalancer-serviceannotations).
+Пример использования Network Load Balancer (NLB) в AWS:
 
 ```yaml
 apiVersion: network.deckhouse.io/v1alpha1
@@ -494,7 +496,7 @@ spec:
     - 10.0.0.0/16
 ```
 
-Далее для каждого шлюза создайте отдельные объекты ListenerSet и маршруты. Примеры публикации приложений: [Использование Application Load Balancer (ALB)](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb.html).
+Далее для каждого шлюза создайте отдельные объекты ListenerSet и маршруты. Примеры публикации приложений приведены в разделе документации [«Использование Application Load Balancer (ALB)»](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb.html).
 
 ### Публикация в неймспейсе (ALBInstance) {#namespaced-load-balancer}
 
@@ -511,7 +513,7 @@ spec:
     loadBalancer: {}
 ```
 
-После перехода ALBInstance в состояние `Ready` создайте объекты ListenerSet и HTTPRoute в том же неймспейсе. Дальнейшие шаги — в разделе [Публикация приложения через объект ALBInstance](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb.html#публикация-приложения-через-объект-albinstance).
+После перехода ALBInstance`в состояние `Ready` создайте в том же неймспейсе объекты ListenerSet и HTTPRoute. Порядок их настройки и пример публикации приложения приведены в разделе [«Публикация приложения через объект ALBInstance»](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb.html#публикация-приложения-через-объект-albinstance).
 
 ## FAQ и дополнительные материалы {#faq}
 
@@ -525,7 +527,7 @@ spec:
 
 ## Просмотр конфигурации Envoy Proxy {#envoy-config}
 
-Для диагностики полезно посмотреть, какую конфигурацию контроллер и конфигуратор прокси передали в Envoy Proxy, обслуживающий объект Gateway.
+Для диагностики можно просмотреть конфигурацию, переданную контроллером и конфигуратором прокси в Envoy Proxy, обслуживающий объект Gateway.
 
 Для этого выполните следующие действия:
 

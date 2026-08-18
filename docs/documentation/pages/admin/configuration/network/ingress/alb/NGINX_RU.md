@@ -126,7 +126,7 @@ spec:
       service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
 ```
 
-### Пример для GCP/Yandex Cloud/Azure
+### Пример для GCP, Yandex Cloud и Azure
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -278,7 +278,9 @@ spec:
 1. Создайте [ресурс MetalLoadBalancerClass](/modules/metallb/cr.html#metalloadbalancerclass):
 
    {% alert level="info" %}
-   MetalLB-балансировщики должны размещаться на тех же узлах, что и Ingress-контроллеры. В [типовых сценариях развёртывания](/products/kubernetes-platform/guides/hardware-requirements.html#сценарии-развёртывания) для этого используются frontend-узлы (для развёртывания Ingress-контроллеров и MetalLB-балансировщиков на frontend-узлах используйте в их манифестах аннотацию `node-role.deckhouse.io/frontend: ""`).
+   MetalLB-балансировщики должны размещаться на тех же узлах, что и Ingress-контроллеры. В [типовых сценариях развёртывания](/products/kubernetes-platform/guides/hardware-requirements.html#сценарии-развёртывания) для этой цели используются frontend-узлы.
+
+  Чтобы разместить Ingress-контроллеры и MetalLB-балансировщики на frontend-узлах, укажите в их манифестах аннотацию `node-role.deckhouse.io/frontend: ""`.
    {% endalert %}
 
    ```yaml
@@ -320,10 +322,14 @@ spec:
    ```
 
    {% alert level="info" %}
-   При создании Ingress-контроллера также можно указать определенные IP-адреса из пула, которые будут ему присвоены. Для указания адресов, которые должны быть присвоены сервису, используйте аннотацию `network.deckhouse.io/load-balancer-ips`. Если желаемых адресов больше одного, то также должна присутствовать аннотация `network.deckhouse.io/l2-load-balancer-external-ips-count`, в которой необходимо указать количество выделяемых адресов из пула (оно не должно быть меньше количества адресов, перечисленных в `network.deckhouse.io/load-balancer-ips`). [Пример использования аннотаций](/modules/metallb/examples.html#создание-сервиса-c-присвоением-ему-определенных-ip-адресов-из-пула) для присвоения сервису определенных адресов из пула.
+   При создании Ingress-контроллера можно явно указать IP-адреса из пула, которые должны быть назначены его сервису. Для этого используйте аннотацию `network.deckhouse.io/load-balancer-ips`.
+
+  Если требуется назначить несколько IP-адресов, дополнительно укажите аннотацию `network.deckhouse.io/l2-load-balancer-external-ips-count` с количеством выделяемых из пула адресов. Указанное значение не должно быть меньше количества IP-адресов, перечисленных в `network.deckhouse.io/load-balancer-ips`.
+
+  Пример настройки приведён в разделе [«Создание сервиса c присвоением ему определенных IP-адресов из пула»](/modules/metallb/examples.html#создание-сервиса-c-присвоением-ему-определенных-ip-адресов-из-пула).
    {% endalert %}
 
-Платформа создаст сервис с типом LoadBalancer, которому будет присвоено заданное количество адресов:
+DKP создаст сервис с типом LoadBalancer, которому будет присвоено заданное количество адресов:
 
 ```shell
 d8 k -n d8-ingress-nginx get svc
