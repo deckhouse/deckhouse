@@ -135,6 +135,8 @@ spec:
                     The URL of the application from which requests will be redirected to the sign-out URL of the `dex-authenticator`.
 
                     It is used in the application to direct logout requests. A separate Ingress resource will be created for the specified URL, and requests to it will be redirected to `dex-authenticator`.
+                  maxLength: 2048
+                  pattern: '^[^\r\n]*$'
                 keepUsersLoggedInFor:
                   type: string
                   description: |-
@@ -156,6 +158,8 @@ spec:
                   x-doc-default: 'All emails are allowed.'
                   items:
                     type: string
+                    maxLength: 320
+                    pattern: '^[^\r\n]*$'
                 allowedGroups:
                   type: array
                   description: |-
@@ -165,6 +169,8 @@ spec:
                   x-doc-default: 'All groups are allowed.'
                   items:
                     type: string
+                    maxLength: 512
+                    pattern: '^[^\r\n]*$'
                 whitelistSourceRanges:
                   type: array
                   description: |
@@ -331,6 +337,8 @@ spec:
                           The URL of the application from which requests will be redirected to the sign-out URL of the `dex-authenticator`.
 
                           It is used in the application to direct logout requests. A separate Ingress resource will be created for the specified URL, and requests to it will be redirected to `dex-authenticator`.
+                        maxLength: 2048
+                        pattern: '^[^\r\n]*$'
                       whitelistSourceRanges:
                         type: array
                         description: |
@@ -390,6 +398,8 @@ spec:
                           The URL of the application from which requests will be redirected to the sign-out URL of the `dex-authenticator`.
 
                           It is used in the application to direct logout requests. A separate Ingress resource will be created for the specified URL, and requests to it will be redirected to `dex-authenticator`.
+                        maxLength: 2048
+                        pattern: '^[^\r\n]*$'
                       gatewayAPI:
                         type: object
                         required:
@@ -460,6 +470,8 @@ spec:
                   x-doc-default: 'All users are allowed.'
                   items:
                     type: string
+                    maxLength: 320
+                    pattern: '^[^\r\n]*$'
                 allowedGroups:
                   type: array
                   description: |-
@@ -469,6 +481,8 @@ spec:
                   x-doc-default: 'All groups are allowed.'
                   items:
                     type: string
+                    maxLength: 512
+                    pattern: '^[^\r\n]*$'
                 podMetadata:
                   type: object
                   description: |-

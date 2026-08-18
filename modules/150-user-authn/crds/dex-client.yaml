@@ -44,6 +44,8 @@ spec:
                   x-doc-default: 'All users are allowed.'
                   items:
                     type: string
+                    maxLength: 320
+                    pattern: '^[^\r\n]*$'
                 allowedGroups:
                   type: array
                   description: |
@@ -51,11 +53,15 @@ spec:
                     **By default**, all groups can connect.
                   items:
                     type: string
+                    maxLength: 512
+                    pattern: '^[^\r\n]*$'
                 redirectURIs:
                   type: array
                   description: 'Array or urls that Dex can redirect to after successful authentication.'
                   items:
                     type: string
+                    maxLength: 2048
+                    pattern: '^[^\r\n]*$'
                 trustedPeers:
                   type: array
                   description: |
@@ -64,6 +70,8 @@ spec:
                     [Details...](https://developers.google.com/identity/protocols/CrossClientAuth)
                   items:
                     type: string
+                    maxLength: 256
+                    pattern: '^[^\r\n]*$'
                 secretMetadata:
                   type: object
                   description: 'A list of labels and an annotations that will be transferred to the metadata secrets of the DexClient resource.'
