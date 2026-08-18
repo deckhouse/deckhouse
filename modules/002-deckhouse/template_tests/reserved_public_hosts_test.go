@@ -21,6 +21,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 
 	. "github.com/onsi/ginkgo"
@@ -114,14 +115,23 @@ const (
 var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 	f := SetupHelmConfig(`{deckhouse: {internal: {currentReleaseImageName: test }}}`)
 
-	render := func(publicDomainTemplate string, apiVersions ...string) {
+	// reservedPublicHosts is the deckhouse ModuleConfig section under test; an empty string leaves it
+	// absent, which is what a cluster that never configured it looks like.
+	renderWithSettings := func(publicDomainTemplate, reservedPublicHosts string, apiVersions ...string) {
 		f.ValuesSetFromYaml("global", globalValues)
 		f.ValuesSet("global.modulesImages", GetModulesImages())
 		f.ValuesSetFromYaml("deckhouse", moduleValuesForMasterNode)
 		if publicDomainTemplate != "" {
 			f.ValuesSet("global.modules.publicDomainTemplate", publicDomainTemplate)
 		}
+		if reservedPublicHosts != "" {
+			f.ValuesSetFromYaml("deckhouse.reservedPublicHosts", reservedPublicHosts)
+		}
 		f.HelmRender(WithAPIVersions(apiVersions...))
+	}
+
+	render := func(publicDomainTemplate string, apiVersions ...string) {
+		renderWithSettings(publicDomainTemplate, "", apiVersions...)
 	}
 
 	admissionAPIs := []string{validatingAdmissionPolicyAPI, validatingAdmissionPolicyBindingAPI}
@@ -158,7 +168,10 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 			cm := f.KubernetesResource("ConfigMap", "d8-system", reservedHostsConfigMapName)
-			hosts := strings.Fields(cm.Field("data.hosts").String())
+			// platformHosts, not hosts: this check is about the literal in the template keeping up
+			// with the repository, and a cluster that excludes a service through its ModuleConfig
+			// must not be able to answer it.
+			hosts := strings.Fields(cm.Field("data.platformHosts").String())
 
 			published := publishedPublicDomains()
 			Expect(published).ToNot(BeEmpty(), "the call site patterns should still match this repository")
@@ -284,4 +297,153 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 			Expect(f.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", reservedHostsIngressPolicy).Exists()).To(BeFalse())
 		})
 	})
+
+	Context("The settings are present but empty, as the schema defaults leave them", func() {
+		BeforeEach(func() {
+			renderWithSettings("%s.example.com", `{additionalHosts: [], excludedServices: []}`, admissionAPIs...)
+		})
+
+		It("reserves exactly what the platform publishes, as before the settings existed", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			cm := f.KubernetesResource("ConfigMap", "d8-system", reservedHostsConfigMapName)
+			hosts := strings.Fields(cm.Field("data.hosts").String())
+			platform := strings.Fields(cm.Field("data.platformHosts").String())
+			Expect(platform).ToNot(BeEmpty())
+			Expect(hosts).To(ConsistOf(platform))
+		})
+	})
+
+	Context("An operator reserves hostnames of their own", func() {
+		BeforeEach(func() {
+			renderWithSettings("%s.example.com",
+				`{additionalHosts: ["admin.example.com", "billing.corp.example.com"]}`, admissionAPIs...)
+		})
+
+		It("adds them to the list the policies read", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			cm := f.KubernetesResource("ConfigMap", "d8-system", reservedHostsConfigMapName)
+			hosts := strings.Fields(cm.Field("data.hosts").String())
+			Expect(hosts).To(ContainElements("admin.example.com", "billing.corp.example.com"))
+			Expect(hosts).To(ContainElement("console.example.com"))
+			// The policies compare against lowercase, so anything that kept its case would never
+			// match whatever the request claims.
+			for _, host := range hosts {
+				Expect(host).To(Equal(strings.ToLower(host)))
+			}
+		})
+
+		It("leaves the hostnames the platform publishes out of it", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			cm := f.KubernetesResource("ConfigMap", "d8-system", reservedHostsConfigMapName)
+			platform := strings.Fields(cm.Field("data.platformHosts").String())
+			Expect(platform).NotTo(ContainElement("admin.example.com"))
+			Expect(platform).To(ContainElement("console.example.com"))
+		})
+	})
+
+	Context("An operator gives a hostname back to a tenant", func() {
+		BeforeEach(func() {
+			renderWithSettings("%s.example.com", `{excludedServices: ["grafana"]}`, admissionAPIs...)
+		})
+
+		It("stops reserving that hostname and nothing else", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			cm := f.KubernetesResource("ConfigMap", "d8-system", reservedHostsConfigMapName)
+			hosts := strings.Fields(cm.Field("data.hosts").String())
+			Expect(hosts).NotTo(ContainElement("grafana.example.com"))
+			Expect(hosts).To(ContainElements("console.example.com", "prometheus.example.com"))
+		})
+
+		It("keeps the excluded hostname visible as one the platform publishes", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			cm := f.KubernetesResource("ConfigMap", "d8-system", reservedHostsConfigMapName)
+			Expect(strings.Fields(cm.Field("data.platformHosts").String())).To(ContainElement("grafana.example.com"))
+		})
+
+		It("does not touch the per-namespace bypass, the two are independent", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			binding := f.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", reservedHostsIngressPolicy)
+			Expect(binding.Field("spec.validationActions").String()).To(MatchJSON(`["Deny","Audit"]`))
+			Expect(binding.Field("spec.matchResources.namespaceSelector.matchExpressions").String()).To(MatchJSON(`[
+				{"key": "heritage", "operator": "NotIn", "values": ["deckhouse"]},
+				{"key": "security.deckhouse.io/reserved-hosts-bypass", "operator": "NotIn", "values": ["true"]}
+			]`))
+		})
+	})
+
+	Context("An operator adjusts the reservation in both directions at once", func() {
+		BeforeEach(func() {
+			renderWithSettings("%s.example.com",
+				`{additionalHosts: ["admin.example.com", "console.example.com"], excludedServices: ["grafana", "hubble"]}`,
+				admissionAPIs...)
+		})
+
+		It("applies both, and a hostname named on both sides stays reserved once", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			cm := f.KubernetesResource("ConfigMap", "d8-system", reservedHostsConfigMapName)
+			hosts := strings.Fields(cm.Field("data.hosts").String())
+			Expect(hosts).To(ContainElement("admin.example.com"))
+			Expect(hosts).NotTo(ContainElements("grafana.example.com", "hubble.example.com"))
+			Expect(hosts).To(Equal(sortedUnique(hosts)))
+
+			consoleCount := 0
+			for _, host := range hosts {
+				if host == "console.example.com" {
+					consoleCount++
+				}
+			}
+			Expect(consoleCount).To(Equal(1))
+		})
+	})
+
+	Context("An operator excludes a service the platform does not publish", func() {
+		BeforeEach(func() {
+			renderWithSettings("%s.example.com", `{excludedServices: ["graphana"]}`, admissionAPIs...)
+		})
+
+		It("refuses to render rather than leave the hostname reserved unnoticed", func() {
+			Expect(f.RenderError).Should(HaveOccurred())
+			Expect(f.RenderError.Error()).To(ContainSubstring("graphana"))
+			Expect(f.RenderError.Error()).To(ContainSubstring("deckhouse.reservedPublicHosts.excludedServices"))
+			// The message carries the names that would have worked, they exist nowhere else.
+			Expect(f.RenderError.Error()).To(ContainSubstring("grafana"))
+		})
+	})
+
+	Context("An operator reserves their own hostname while the platform publishes none", func() {
+		BeforeEach(func() {
+			renderWithSettings("", `{additionalHosts: ["admin.example.com"]}`, admissionAPIs...)
+		})
+
+		It("reserves it anyway, it does not depend on publicDomainTemplate", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			cm := f.KubernetesResource("ConfigMap", "d8-system", reservedHostsConfigMapName)
+			Expect(cm.Exists()).To(BeTrue())
+			Expect(strings.Fields(cm.Field("data.hosts").String())).To(Equal([]string{"admin.example.com"}))
+			Expect(strings.Fields(cm.Field("data.platformHosts").String())).To(BeEmpty())
+			Expect(f.KubernetesGlobalResource("ValidatingAdmissionPolicy", reservedHostsIngressPolicy).Exists()).To(BeTrue())
+		})
+	})
 })
+
+func sortedUnique(hosts []string) []string {
+	seen := make(map[string]struct{}, len(hosts))
+	unique := make([]string, 0, len(hosts))
+	for _, host := range hosts {
+		if _, ok := seen[host]; ok {
+			continue
+		}
+		seen[host] = struct{}{}
+		unique = append(unique, host)
+	}
+	sort.Strings(unique)
+	return unique
+}

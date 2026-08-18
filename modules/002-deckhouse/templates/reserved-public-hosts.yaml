@@ -39,8 +39,48 @@
   "tools"
   "upmeter"
 }}
-{{- if and .Values.global.modules.publicDomainTemplate (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicy")) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicyBinding")) }}
+{{- /*
+  reservedPublicHosts in the module's ModuleConfig adjusts the reservation in both directions, so an
+  operator never has to edit this template: excludedServices drops a name from the list above,
+  additionalHosts reserves hostnames the platform does not publish itself.
+*/}}
+{{- $settings := .Values.deckhouse.reservedPublicHosts | default dict }}
+{{- $excludedServices := $settings.excludedServices | default list }}
+{{- $additionalHosts := $settings.additionalHosts | default list }}
+{{- if and (or .Values.global.modules.publicDomainTemplate $additionalHosts) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicy")) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicyBinding")) }}
 {{- $paramsName := "d8-reserved-public-hosts" }}
+
+{{- /*
+  A name nobody publishes reserves nothing, so excluding it is a no-op, which is exactly how a
+  misspelled name would look. Refusing to render says so instead of leaving the operator with a
+  hostname they believe they have freed. The list of valid names is in the message, since it is the
+  literal above and nothing else in the cluster carries it.
+*/}}
+{{- $unknownServices := list }}
+{{- range $name := $excludedServices }}
+  {{- if not (has $name $reservedNames) }}
+    {{- $unknownServices = append $unknownServices $name }}
+  {{- end }}
+{{- end }}
+{{- if $unknownServices }}
+  {{- fail (printf "deckhouse.reservedPublicHosts.excludedServices names services the platform does not publish: %s. Excluding them frees nothing. The published services are: %s" (join ", " $unknownServices) (join ", " $reservedNames)) }}
+{{- end }}
+
+{{- $platformHosts := list }}
+{{- $effectiveHosts := list }}
+{{- if .Values.global.modules.publicDomainTemplate }}
+  {{- range $name := $reservedNames }}
+    {{- $host := include "helm_lib_module_public_domain" (list $ $name) | trim | lower }}
+    {{- $platformHosts = append $platformHosts $host }}
+    {{- if not (has $name $excludedServices) }}
+      {{- $effectiveHosts = append $effectiveHosts $host }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+{{- range $host := $additionalHosts }}
+  {{- $effectiveHosts = append $effectiveHosts (lower $host) }}
+{{- end }}
+{{- $effectiveHosts = $effectiveHosts | uniq | sortAlpha }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -49,9 +89,17 @@ metadata:
   namespace: d8-system
   {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse")) | nindent 2 }}
 data:
+  # The list both policies read through paramRef, after the ModuleConfig settings are applied.
   hosts: |
-{{- range $name := $reservedNames }}
-    {{ include "helm_lib_module_public_domain" (list $ $name) | trim | lower }}
+{{- range $host := $effectiveHosts }}
+    {{ $host }}
+{{- end }}
+  # What the platform publishes on its own, before those settings. Nothing reads it: it is here so
+  # that the effect of the settings is visible in one place, and so that the test which keeps the
+  # literal above in sync with the repository cannot be quieted by excluding a name.
+  platformHosts: |
+{{- range $host := $platformHosts }}
+    {{ $host }}
 {{- end }}
 
 {{- /*

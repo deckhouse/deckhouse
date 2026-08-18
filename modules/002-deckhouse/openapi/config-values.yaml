@@ -334,6 +334,49 @@ properties:
 
       If `allowExperimentalModules` is `true`, all experimental modules are allowed and this list is ignored.
 
+  reservedPublicHosts:
+    type: object
+    default: {}
+    x-doc-search: "reserved hostnames, ingress, httproute, public domain, multitenancy"
+    description: |
+      Settings of the reservation that keeps the hostnames of the Deckhouse web interfaces from being claimed by a workload.
+
+      Deckhouse renders those hostnames from the [`global.modules.publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) global parameter and reserves them cluster-wide: an `Ingress` or an `HTTPRoute` created outside a system namespace cannot name one of them. These parameters adjust the reserved set in both directions.
+
+      The reservation is per hostname and applies to every namespace. To exempt a whole namespace from the reservation instead, label the namespace with `security.deckhouse.io/reserved-hosts-bypass: "true"`.
+    x-examples:
+      - additionalHosts: ["admin.example.com"]
+        excludedServices: ["grafana"]
+    properties:
+      additionalHosts:
+        type: array
+        default: []
+        description: |
+          Hostnames to reserve on top of the ones Deckhouse publishes.
+
+          Every entry is a complete hostname, matched exactly and case-insensitively, the same way the built-in ones are. Wildcards are not supported.
+        x-examples:
+          - ["admin.example.com"]
+        items:
+          type: string
+          pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+      excludedServices:
+        type: array
+        default: []
+        description: |
+          Names of the Deckhouse services whose hostname must not be reserved.
+
+          Use it for a cluster where a workload outside a system namespace legitimately serves a path under one of those hostnames.
+
+          A name is the part `global.modules.publicDomainTemplate` substitutes, `grafana` for `grafana.example.com`, and has to be one Deckhouse actually publishes. An unknown name is rejected while the module renders, so a misspelled one cannot leave the hostname reserved unnoticed.
+
+          Excluding a name lifts the reservation of that hostname in every namespace, including the ones Deckhouse itself uses to serve it.
+        x-examples:
+          - ["grafana"]
+        items:
+          type: string
+          pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+
   license:
     type: object
     description: |

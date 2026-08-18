@@ -113,13 +113,23 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts :: CEL ::", func(
 		ingressPolicy   object_store.KubeObject
 		httpRoutePolicy object_store.KubeObject
 		params          map[string]interface{}
+		// The deckhouse ModuleConfig section under test, empty for a cluster that never set it.
+		// Contexts assign it in a BeforeEach; the render happens in JustBeforeEach, after them.
+		reservedPublicHosts string
 	)
 
 	BeforeEach(func() {
+		reservedPublicHosts = ""
+	})
+
+	JustBeforeEach(func() {
 		f.ValuesSetFromYaml("global", globalValues)
 		f.ValuesSet("global.modulesImages", GetModulesImages())
 		f.ValuesSetFromYaml("deckhouse", moduleValuesForMasterNode)
 		f.ValuesSet("global.modules.publicDomainTemplate", "%s.example.com")
+		if reservedPublicHosts != "" {
+			f.ValuesSetFromYaml("deckhouse.reservedPublicHosts", reservedPublicHosts)
+		}
 		f.HelmRender(WithAPIVersions(
 			validatingAdmissionPolicyAPI,
 			validatingAdmissionPolicyBindingAPI,
@@ -212,5 +222,59 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts :: CEL ::", func(
 		object := map[string]interface{}{"spec": map[string]interface{}{}}
 		Expect(evaluatePolicy(httpRoutePolicy, params, object, tenant)).
 			To(Equal(verdict{matched: true, allowed: true}))
+	})
+
+	// The settings only change the list in the ConfigMap; the CEL is the same. What is worth
+	// checking is that the changed list still reaches the same verdicts through it.
+	Context("The reserved list is adjusted through the ModuleConfig", func() {
+		BeforeEach(func() {
+			reservedPublicHosts = `{additionalHosts: ["admin.example.com"], excludedServices: ["grafana"]}`
+		})
+
+		It("denies an Ingress that claims a hostname the operator reserved", func() {
+			Expect(evaluatePolicy(ingressPolicy, params, ingressWithHosts("admin.example.com"), tenant)).
+				To(Equal(verdict{matched: true, allowed: false}))
+		})
+
+		It("denies it whatever case the operator-reserved hostname is written in", func() {
+			Expect(evaluatePolicy(ingressPolicy, params, ingressWithHosts("Admin.Example.COM"), tenant)).
+				To(Equal(verdict{matched: true, allowed: false}))
+		})
+
+		It("allows an Ingress that claims the hostname the operator gave back", func() {
+			Expect(evaluatePolicy(ingressPolicy, params, ingressWithHosts("grafana.example.com"), tenant)).
+				To(Equal(verdict{matched: true, allowed: true}))
+		})
+
+		It("keeps denying the hostnames that stayed reserved", func() {
+			Expect(evaluatePolicy(ingressPolicy, params, ingressWithHosts("console.example.com"), tenant)).
+				To(Equal(verdict{matched: true, allowed: false}))
+		})
+
+		It("denies an Ingress that hides a still-reserved hostname behind the freed one", func() {
+			object := ingressWithHosts("grafana.example.com", "prometheus.example.com")
+			Expect(evaluatePolicy(ingressPolicy, params, object, tenant)).
+				To(Equal(verdict{matched: true, allowed: false}))
+		})
+
+		It("applies the adjusted list to HTTPRoute as well", func() {
+			reserved := map[string]interface{}{"spec": map[string]interface{}{
+				"hostnames": []interface{}{"admin.example.com"},
+			}}
+			Expect(evaluatePolicy(httpRoutePolicy, params, reserved, tenant)).
+				To(Equal(verdict{matched: true, allowed: false}))
+
+			freed := map[string]interface{}{"spec": map[string]interface{}{
+				"hostnames": []interface{}{"grafana.example.com"},
+			}}
+			Expect(evaluatePolicy(httpRoutePolicy, params, freed, tenant)).
+				To(Equal(verdict{matched: true, allowed: true}))
+		})
+
+		It("never reaches the validation for a Deckhouse service account either", func() {
+			object := ingressWithHosts("admin.example.com")
+			Expect(evaluatePolicy(ingressPolicy, params, object, requestFrom("system:serviceaccount:d8-system:deckhouse"))).
+				To(Equal(verdict{matched: false, allowed: true}))
+		})
 	})
 })
