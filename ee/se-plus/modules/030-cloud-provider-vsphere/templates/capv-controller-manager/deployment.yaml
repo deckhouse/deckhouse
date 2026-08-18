@@ -9,7 +9,6 @@ security.deckhouse.io/security-policy-exception: capv-controller-manager
 {{- end -}}
 
 {{- define "capv_controller_manager_args" -}}
-- "--leader-elect"
 - "--health-addr=:4272"
 - "--webhook-port=4270"
 - "--diagnostics-address=:4271"
