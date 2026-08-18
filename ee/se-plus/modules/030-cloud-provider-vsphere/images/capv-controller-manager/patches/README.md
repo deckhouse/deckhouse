@@ -37,6 +37,11 @@ Deckhouse does not ship in `crds/external/`:
 - `VSphereClusterTemplate` — Deckhouse does not use CAPI ClusterClass, so
   the validating webhook + CRD-migrator entry are dead weight.
 
+Also drops the `Watches(&VSphereDeploymentZone{}, ...)` registration on the
+`VSphereCluster` reconciler in `controllers/vspherecluster_controller.go` — a
+missing CRD there does not crash the process immediately but blocks the
+controller cache-sync, so the manager gets liveness-killed after ~2 minutes.
+
 Result: CAPV owns only the four CRDs Deckhouse actually renders or CAPV
 creates as an intermediate object: `VSphereCluster`, `VSphereMachine`,
 `VSphereMachineTemplate`, `VSphereVM` — one-to-one with CAPO's

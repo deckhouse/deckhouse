@@ -48,3 +48,19 @@ diff --git a/main.go b/main.go
 -	return controllers.AddVSphereDeploymentZoneControllerToManager(ctx, controllerCtx, mgr, concurrency(vSphereDeploymentZoneConcurrency))
 +	return nil
  }
+diff --git a/controllers/vspherecluster_controller.go b/controllers/vspherecluster_controller.go
+--- a/controllers/vspherecluster_controller.go
++++ b/controllers/vspherecluster_controller.go
+@@ -141,12 +141,6 @@ func (r *clusterReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manag
+ 			&infrav1.VSphereMachine{},
+ 			handler.EnqueueRequestsFromMapFunc(reconciler.controlPlaneMachineToCluster),
+ 		).
+-		// Watch the Vsphere deployment zone with the Server field matching the
+-		// server field of the VSphereCluster.
+-		Watches(
+-			&infrav1.VSphereDeploymentZone{},
+-			handler.EnqueueRequestsFromMapFunc(reconciler.deploymentZoneToCluster),
+-		).
+ 		// Watch a GenericEvent channel for the controlled resource.
+ 		//
+ 		// This is useful when there are events outside of Kubernetes that
