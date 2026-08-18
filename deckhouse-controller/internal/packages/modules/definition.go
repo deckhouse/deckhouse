@@ -24,11 +24,12 @@ import (
 
 // Definition represents module metadata.
 type Definition struct {
-	Name     string `json:"name" yaml:"name"`
-	Version  string `json:"version" yaml:"version"`
-	Stage    string `json:"stage" yaml:"stage"`
-	Critical bool   `json:"critical,omitempty" yaml:"critical,omitempty"`
-	Weight   uint32 `json:"weight,omitempty" yaml:"weight,omitempty"`
+	Name           string `json:"name" yaml:"name"`
+	Version        string `json:"version" yaml:"version"`
+	Stage          string `json:"stage" yaml:"stage"`
+	Critical       bool   `json:"critical,omitempty" yaml:"critical,omitempty"`
+	Weight         uint32 `json:"weight,omitempty" yaml:"weight,omitempty"`
+	ExclusiveGroup string `yaml:"exclusiveGroup,omitempty" json:"exclusiveGroup,omitempty"`
 
 	Requirements   Requirements      `json:"requirements" yaml:"requirements"`
 	Licensing      edition.Licensing `json:"licensing" yaml:"licensing"`

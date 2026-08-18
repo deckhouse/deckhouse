@@ -174,6 +174,11 @@ type ModulePackageVersionStatusMetadata struct {
 	// +optional
 	Critical bool `json:"critical,omitempty"`
 
+	// Indicates the group where only one module can be active at a time.
+	// +crd-enricher:deckhouse:documentation:examples=cni
+	// +optional
+	ExclusiveGroup string `json:"exclusiveGroup,omitempty" yaml:"exclusiveGroup,omitempty"`
+
 	// The system requirements for this package.
 	// +optional
 	Requirements *PackageRequirements `json:"requirements,omitempty"`
@@ -200,6 +205,21 @@ func (m *ModulePackageVersion) IsDraft() bool {
 // rather than discovered as a package in a repository.
 func (m *ModulePackageVersion) IsLegacy() bool {
 	return m.hasTrueLabel(ModulePackageVersionLabelLegacy)
+}
+
+// GetExclusiveGroup returns the exclusive group of this package version.
+func (m *ModulePackageVersion) GetExclusiveGroup() string {
+	return m.Status.PackageMetadata.ExclusiveGroup
+}
+
+// IsModuleExperimental reports whether this package version is marked as experimental.
+func (m *ModulePackageVersion) IsModuleExperimental() bool {
+	return m.Status.PackageMetadata.Stage == "Experimental"
+}
+
+// IsModuleDeprecated reports whether this package version is marked as deprecated.
+func (m *ModulePackageVersion) IsModuleDeprecated() bool {
+	return m.Status.PackageMetadata.Stage == "Deprecated"
 }
 
 // hasTrueLabel reports whether the named label holds a truthy value. An unparsable value

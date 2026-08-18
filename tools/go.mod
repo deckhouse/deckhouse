@@ -54,7 +54,7 @@ require (
 	github.com/deckhouse/deckhouse/pkg/log v0.2.1 // indirect
 	github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0 // indirect
 	github.com/deckhouse/lib-dhctl v0.22.0 // indirect
-	github.com/deckhouse/module-sdk v0.12.1 // indirect
+	github.com/deckhouse/module-sdk v0.12.2 // indirect
 	github.com/denis-tingajkin/go-header v0.4.2 // indirect
 	github.com/docker/cli v29.4.0+incompatible // indirect
 	github.com/docker/distribution v2.8.3+incompatible // indirect
@@ -66,7 +66,7 @@ require (
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/fatih/structtag v1.2.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
-	github.com/flant/addon-operator v1.24.9 // indirect
+	github.com/flant/addon-operator v1.24.11 // indirect
 	github.com/flant/kube-client v1.9.1 // indirect
 	github.com/flant/shell-operator v1.20.2 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
@@ -257,21 +257,21 @@ require (
 	go.uber.org/zap v1.27.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	golang.org/x/crypto v0.53.0 // indirect
+	golang.org/x/crypto v0.54.0 // indirect
 	golang.org/x/exp v0.0.0-20250711185948-6ae5c78190dc // indirect
 	golang.org/x/mod v0.37.0 // indirect
-	golang.org/x/net v0.56.0 // indirect
+	golang.org/x/net v0.57.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
-	golang.org/x/sync v0.21.0 // indirect
-	golang.org/x/sys v0.46.0 // indirect
-	golang.org/x/term v0.44.0 // indirect
-	golang.org/x/text v0.39.0 // indirect
+	golang.org/x/sync v0.22.0 // indirect
+	golang.org/x/sys v0.47.0 // indirect
+	golang.org/x/term v0.45.0 // indirect
+	golang.org/x/text v0.40.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
 	golang.org/x/tools v0.47.0 // indirect
 	golang.org/x/tools/go/expect v0.1.1-deprecated // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20260420184626-e10c466a9529 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260420184626-e10c466a9529 // indirect
-	google.golang.org/grpc v1.80.0 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20260526163538-3dc84a4a5aaa // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa // indirect
+	google.golang.org/grpc v1.82.1 // indirect
 	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
@@ -304,9 +304,11 @@ replace (
 	github.com/deckhouse/deckhouse/dhctl => ../dhctl
 	github.com/deckhouse/deckhouse/egress-gateway-agent => ../ee/se-plus/modules/021-cni-cilium/images/egress-gateway-agent/src
 	github.com/deckhouse/deckhouse/go_lib/cloud-data => ../go_lib/cloud-data
+	github.com/deckhouse/deckhouse/go_lib/cloud-provider => ../go_lib/cloud-provider
 	github.com/deckhouse/deckhouse/go_lib/configtools/conversion => ../go_lib/configtools/conversion
 	github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain => ../go_lib/dependency/k8s/drain
 	github.com/deckhouse/deckhouse/go_lib/dependency/vsphere => ../go_lib/dependency/vsphere
+	github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol => ../go_lib/dhctl-provider-protocol
 	github.com/deckhouse/deckhouse/go_lib/registry => ../go_lib/registry
 )
 

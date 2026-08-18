@@ -28,6 +28,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
@@ -716,4 +717,173 @@ func TestPrepareOnDeepCopyIsIdempotent(t *testing.T) {
 
 	require.Equal(t, m.MasterNodeGroupSpec.Replicas, again.MasterNodeGroupSpec.Replicas)
 	require.Equal(t, m.TerraNodeGroupSpecs, again.TerraNodeGroupSpecs)
+}
+
+// The manifest is a JSON merge patch applied over the NodeGroup the user's
+// resources already put in the cluster, so it must carry dhctl's Manual default
+// only where the user expressed no choice.
+func TestNodeGroupManifestDefersToUserApprovalMode(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		disruptions map[string]interface{}
+		wantPatched bool
+	}{
+		{name: "no disruptions at all", disruptions: nil, wantPatched: true},
+		{name: "explicit approvalMode", disruptions: map[string]interface{}{"approvalMode": "Automatic"}, wantPatched: false},
+		{name: "disruptions without approvalMode", disruptions: map[string]interface{}{
+			"automatic": map[string]interface{}{"drainBeforeApproval": true},
+		}, wantPatched: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ngSpec := map[string]interface{}{
+				"nodeType": "CloudPermanent",
+				"cloudInstances": map[string]interface{}{
+					"minPerZone":     float64(2),
+					"classReference": map[string]interface{}{"kind": "DVPInstanceClass", "name": "worker-dvp"},
+				},
+			}
+			if tc.disruptions != nil {
+				ngSpec["disruptions"] = tc.disruptions
+			}
+
+			m := cloudMetaConfig("")
+			m.CloudProviderVars = &CloudProviderVars{NodeGroups: map[string]map[string]interface{}{
+				"worker": {"spec": ngSpec},
+			}}
+
+			spec, ok := nestedMap(m.NodeGroupManifest(TerraNodeGroupSpec{Name: "worker", Replicas: 2}), "spec")
+			require.True(t, ok)
+			require.NotContains(t, spec, "cloudInstances", "the patch must never carry the replica count")
+
+			disruptions, patched := nestedMap(spec, "disruptions")
+			require.Equal(t, tc.wantPatched, patched)
+			if tc.wantPatched {
+				require.Equal(t, "Manual", disruptions["approvalMode"])
+			}
+		})
+	}
+}
+
+func clusterNodeGroup(spec map[string]interface{}) map[string]interface{} {
+	return map[string]interface{}{
+		"apiVersion": "deckhouse.io/v1",
+		"kind":       "NodeGroup",
+		"spec":       spec,
+	}
+}
+
+func cloudPermanentSpec(minPerZone any) map[string]interface{} {
+	cloudInstances := map[string]interface{}{
+		"classReference": map[string]interface{}{"kind": "DVPInstanceClass", "name": "any"},
+	}
+	if minPerZone != nil {
+		cloudInstances["minPerZone"] = minPerZone
+	}
+	return map[string]interface{}{"nodeType": "CloudPermanent", "cloudInstances": cloudInstances}
+}
+
+// Zero replicas is what converge acts on by deleting the group's nodes, so the
+// mc-flow refuses anything it cannot read a keepable count from.
+func TestPrepareRejectsUnusableReplicaCount(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		nodeGroups map[string]map[string]interface{}
+		wantErr    string
+	}{
+		{
+			name:       "master without cloudInstances",
+			nodeGroups: map[string]map[string]interface{}{"master": clusterNodeGroup(map[string]interface{}{"nodeType": "CloudPermanent"})},
+			wantErr:    "minPerZone",
+		},
+		{
+			name:       "master scaled to zero",
+			nodeGroups: map[string]map[string]interface{}{"master": clusterNodeGroup(cloudPermanentSpec(float64(0)))},
+			wantErr:    "control plane",
+		},
+		{
+			name: "worker without cloudInstances",
+			nodeGroups: map[string]map[string]interface{}{
+				"master": clusterNodeGroup(cloudPermanentSpec(float64(1))),
+				"worker": clusterNodeGroup(map[string]interface{}{"nodeType": "CloudPermanent"}),
+			},
+			wantErr: "minPerZone",
+		},
+		{
+			name: "worker with negative minPerZone",
+			nodeGroups: map[string]map[string]interface{}{
+				"master": clusterNodeGroup(cloudPermanentSpec(float64(1))),
+				"worker": clusterNodeGroup(cloudPermanentSpec(float64(-1))),
+			},
+			wantErr: "negative",
+		},
+		{
+			name:       "master with negative minPerZone",
+			nodeGroups: map[string]map[string]interface{}{"master": clusterNodeGroup(cloudPermanentSpec(float64(-1)))},
+			wantErr:    "negative",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			m := cloudMetaConfig("")
+			m.CloudProviderVars = &CloudProviderVars{NodeGroups: tc.nodeGroups}
+
+			_, err := m.Prepare(t.Context(), DummyValidatorProvider())
+			require.ErrorContains(t, err, tc.wantErr)
+		})
+	}
+}
+
+// A non-master group scaled to zero is a deliberate choice, not a broken object.
+func TestPrepareAllowsZeroReplicasOnNonMaster(t *testing.T) {
+	m := cloudMetaConfig("")
+	m.CloudProviderVars = &CloudProviderVars{NodeGroups: map[string]map[string]interface{}{
+		"master": clusterNodeGroup(cloudPermanentSpec(float64(1))),
+		"worker": clusterNodeGroup(cloudPermanentSpec(float64(0))),
+	}}
+
+	m, err := m.Prepare(t.Context(), DummyValidatorProvider())
+	require.NoError(t, err)
+	require.Equal(t, 1, m.MasterNodeGroupSpec.Replicas)
+	require.Len(t, m.TerraNodeGroupSpecs, 1)
+	require.Equal(t, 0, m.TerraNodeGroupSpecs[0].Replicas)
+}
+
+// The legacy flow reads replicas from its ProviderClusterConfiguration, and its
+// NodeGroups carry no cloudInstances by design.
+func TestPrepareGuardIsOffForLegacyProviderConfig(t *testing.T) {
+	m := cloudMetaConfig("")
+	m.ProviderClusterConfig = map[string]json.RawMessage{
+		"layout":          json.RawMessage(`"Standard"`),
+		"masterNodeGroup": json.RawMessage(`{"replicas":1}`),
+		"nodeGroups":      json.RawMessage(`[{"name":"legacy","replicas":2}]`),
+	}
+	m.CloudProviderVars = &CloudProviderVars{NodeGroups: map[string]map[string]interface{}{
+		"master": clusterNodeGroup(map[string]interface{}{"nodeType": "CloudPermanent"}),
+	}}
+
+	_, err := m.Prepare(t.Context(), DummyValidatorProvider())
+	require.NoError(t, err)
+}
+
+// A cluster whose NodeGroups lost their replica count must still be destroyable.
+func TestPrepareGuardIsOffForDestroy(t *testing.T) {
+	m := cloudMetaConfig("")
+	m.Operation = proto.OperationDestroy
+	m.CloudProviderVars = &CloudProviderVars{NodeGroups: map[string]map[string]interface{}{
+		"master": clusterNodeGroup(map[string]interface{}{"nodeType": "CloudPermanent"}),
+	}}
+
+	_, err := m.Prepare(t.Context(), DummyValidatorProvider())
+	require.NoError(t, err)
+}
+
+// The guard blocks converge and check, so its message has to carry the way out.
+func TestPrepareGuardErrorNamesTheRemedy(t *testing.T) {
+	m := cloudMetaConfig("")
+	m.CloudProviderVars = &CloudProviderVars{NodeGroups: map[string]map[string]interface{}{
+		masterNodeGroupName: clusterNodeGroup(map[string]interface{}{"nodeType": "CloudPermanent"}),
+	}}
+
+	_, err := m.Prepare(t.Context(), DummyValidatorProvider())
+	require.ErrorContains(t, err, "spec.cloudInstances.classReference")
+	require.ErrorContains(t, err, "spec.cloudInstances.minPerZone")
 }

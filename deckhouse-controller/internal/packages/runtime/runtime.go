@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
@@ -37,8 +38,8 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/util/retry"
 	"k8s.io/client-go/util/workqueue"
-	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
 	kclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/module-sdk/pkg/settingscheck"
 
@@ -71,16 +72,32 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	d8requirements "github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 const (
+	// bootstrappedGlobalValue is the global value indicating completed cluster bootstrap.
 	bootstrappedGlobalValue = "clusterIsBootstrapped"
-	kubernetesVersionValue  = "kubernetesVersion"
-	deckhouseVersionValue   = "deckhouseVersion"
+	// kubernetesVersionValue is the global value containing the Kubernetes version.
+	kubernetesVersionValue = "kubernetesVersion"
+	// deckhouseVersionValue is the global value containing the Deckhouse version.
+	deckhouseVersionValue = "deckhouseVersion"
 
+	// runtimeTracer identifies tracing spans emitted by the package runtime.
 	runtimeTracer = "package-runtime"
+
+	// debugSocketPath is the Unix socket the package runtime debug API listens on.
+	debugSocketPath = "/tmp/deckhouse-debug.socket"
+	// debugAddress and debugPort are the loopback TCP endpoint serving the same API.
+	// 9652 is taken by the shell-operator debug server.
+	debugAddress = "127.0.0.1"
+	debugPort    = "9653"
+	// nelmMonitorRequestTimeout bounds discovery and metadata requests made by the NELM monitor client.
+	nelmMonitorRequestTimeout = 30 * time.Second
+	// debugShutdownTimeout bounds how long shutdown waits for in-flight debug requests.
+	debugShutdownTimeout = 5 * time.Second
 )
 
 // Runtime orchestrates the full lifecycle of application packages: discovery,
@@ -105,7 +122,7 @@ type Runtime struct {
 
 	status      *status.Service     // Tracks per-package condition chain
 	scheduler   *schedule.Scheduler // Evaluates enable/disable based on version constraints
-	debugServer *debug.Server       // Unix socket debug API
+	debugServer *debug.Server       // Debug API: full over the Unix socket, opt-in subset over HTTP
 
 	crdService        *crd.Service                        // Installs CRDs from package paths
 	objectPatcher     *objectpatch.ObjectPatcher          // Applies resource patches from hooks
@@ -223,7 +240,11 @@ func Build(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Conta
 		return nil, fmt.Errorf("build health service: %w", err)
 	}
 
-	if err := r.registerDebugServer("/tmp/deckhouse-debug.socket"); err != nil {
+	if err := r.registerDebugServer(debug.Config{
+		SocketPath: debugSocketPath,
+		Address:    debugAddress,
+		Port:       debugPort,
+	}); err != nil {
 		return nil, fmt.Errorf("register debug server: %w", err)
 	}
 
@@ -262,15 +283,30 @@ func (r *Runtime) loadGlobal(ctx context.Context) error {
 	return nil
 }
 
-// registerDebugServer starts a Unix socket HTTP server exposing debug endpoints
-// for package state introspection (/packages/dump, /packages/global/dump, /packages/queues/dump, /packages/render/{name}).
-func (r *Runtime) registerDebugServer(socketPath string) error {
-	r.debugServer = debug.NewServer(r.logger)
-	if err := r.debugServer.Start(socketPath); err != nil {
-		return fmt.Errorf("start debug server: %w", err)
+// registerDebugServer exposes debug endpoints for package state introspection
+// (/packages/dump, /packages/global/dump, /packages/queues/dump, /packages/render/{name})
+// over a Unix socket and a loopback TCP address, then starts serving them.
+//
+// Only endpoints marked debug.AddHTTP reach the TCP listener. Everything that
+// serializes package values, rendered manifests or hook snapshots stays
+// debug.SocketOnly: those carry registry credentials and Secret contents, and
+// the pod's loopback is shared with sidecars and `kubectl port-forward`.
+//
+// Every route is registered before Start because the router does not tolerate
+// registration while requests are being served.
+func (r *Runtime) registerDebugServer(cfg debug.Config) error {
+	r.debugServer = debug.NewServer(cfg, r.logger)
+
+	var errs []error
+
+	registerGet := func(url string, exposure debug.Exposure, handler http.HandlerFunc) {
+		if err := r.debugServer.Register(http.MethodGet, url, handler, exposure); err != nil {
+			errs = append(errs, err)
+		}
 	}
 
-	r.debugServer.Register(http.MethodGet, "/packages/dump", func(w http.ResponseWriter, req *http.Request) {
+	// Values include registry credentials and generated passwords.
+	registerGet("/packages/dump", debug.SocketOnly, func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/yaml")
 		w.WriteHeader(http.StatusOK)
 
@@ -281,14 +317,15 @@ func (r *Runtime) registerDebugServer(socketPath string) error {
 		}
 	})
 
-	r.debugServer.Register(http.MethodGet, "/packages/global/dump", func(w http.ResponseWriter, _ *http.Request) {
+	// Global values carry cluster-wide secrets.
+	registerGet("/packages/global/dump", debug.SocketOnly, func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/yaml")
 		w.WriteHeader(http.StatusOK)
 
 		w.Write(r.DumpGlobal()) //nolint:errcheck
 	})
 
-	r.debugServer.Register(http.MethodGet, "/packages/queues/dump", func(w http.ResponseWriter, req *http.Request) {
+	registerGet("/packages/queues/dump", debug.AddHTTP, func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/yaml")
 		w.WriteHeader(http.StatusOK)
 
@@ -296,7 +333,7 @@ func (r *Runtime) registerDebugServer(socketPath string) error {
 		w.Write(r.queueService.Dump(queues...)) //nolint:errcheck
 	})
 
-	r.debugServer.Register(http.MethodGet, "/packages/scheduler/dump", func(w http.ResponseWriter, req *http.Request) {
+	registerGet("/packages/scheduler/dump", debug.AddHTTP, func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/yaml")
 		w.WriteHeader(http.StatusOK)
 
@@ -307,7 +344,8 @@ func (r *Runtime) registerDebugServer(socketPath string) error {
 		}
 	})
 
-	r.debugServer.Register(http.MethodGet, "/packages/render/{name}", func(w http.ResponseWriter, req *http.Request) {
+	// Rendered manifests contain Secret objects in cleartext.
+	registerGet("/packages/render/{name}", debug.SocketOnly, func(w http.ResponseWriter, req *http.Request) {
 		packageName := chi.URLParam(req, "name")
 		if packageName == "" {
 			http.Error(w, "package name is required", http.StatusBadRequest)
@@ -329,7 +367,8 @@ func (r *Runtime) registerDebugServer(socketPath string) error {
 		w.Write([]byte(rendered)) //nolint:errcheck
 	})
 
-	r.debugServer.Register(http.MethodGet, "/packages/snapshots/{name}", func(w http.ResponseWriter, req *http.Request) {
+	// Hook snapshots hold the raw objects the bindings matched, Secrets included.
+	registerGet("/packages/snapshots/{name}", debug.SocketOnly, func(w http.ResponseWriter, req *http.Request) {
 		packageName := chi.URLParam(req, "name")
 		if packageName == "" {
 			http.Error(w, "package name is required", http.StatusBadRequest)
@@ -358,6 +397,31 @@ func (r *Runtime) registerDebugServer(socketPath string) error {
 		w.WriteHeader(http.StatusOK)
 		w.Write(data) //nolint:errcheck
 	})
+
+	registerGet("/requirements", debug.AddHTTP, func(w http.ResponseWriter, _ *http.Request) {
+		data, _ := yaml.Marshal(d8requirements.DumpValues()) //nolint:errcheck
+		w.Header().Set("Content-Type", "application/yaml")
+		w.WriteHeader(http.StatusOK)
+		w.Write(data) //nolint:errcheck
+	})
+
+	registerGet("/healthz", debug.AddHTTP, func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("ok")) //nolint:errcheck
+	})
+
+	registerGet("/readyz", debug.AddHTTP, func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("ok")) //nolint:errcheck
+	})
+
+	if err := errors.Join(errs...); err != nil {
+		return fmt.Errorf("register debug endpoints: %w", err)
+	}
+
+	if err := r.debugServer.Start(); err != nil {
+		return fmt.Errorf("start debug server: %w", err)
+	}
 
 	return nil
 }
@@ -424,11 +488,7 @@ func (r *Runtime) buildKubeEventsManager() error {
 // NELM manages Helm releases and monitors their resources for drift detection.
 // This requires:
 //  1. A dedicated Kubernetes client with rate limits tuned for monitoring
-//  2. A controller-runtime cache for efficient resource queries
-//
-// The cache must be started and synced before the NELM service can function:
-//   - cache.Start() runs the cache informers in the background
-//   - cache.WaitForCacheSync() blocks until initial resource listing completes
+//  2. A metadata client for bounded, point-in-time resource queries
 //
 // Resource monitoring detects:
 //   - Missing resources (deleted outside of Helm)
@@ -440,32 +500,14 @@ func (r *Runtime) buildNelmService() error {
 	client.WithContextName(app.KubeContext())
 	client.WithConfigPath(app.KubeConfig())
 	client.WithRateLimiterSettings(app.HelmMonitorKubeClientQPS(), app.HelmMonitorKubeClientBurst())
+	client.WithTimeout(nelmMonitorRequestTimeout)
 	client.WithMetricPrefix("packages_nelm_monitor_")
 
 	if err := client.Init(); err != nil {
 		return fmt.Errorf("initialize nelm service client: %w", err)
 	}
 
-	// Create controller-runtime cache for efficient resource queries during monitoring
-	cache, err := runtimecache.New(client.RestConfig(), runtimecache.Options{})
-	if err != nil {
-		return fmt.Errorf("create runtime cache: %w", err)
-	}
-
-	// Start cache informers in background
-	go func() {
-		if err = cache.Start(context.Background()); err != nil {
-			r.logger.Error("failed to start cache", "error", err)
-		}
-	}()
-
-	// Wait for cache to complete initial sync before proceeding
-	// This ensures monitors have current resource state from the start
-	if !cache.WaitForCacheSync(context.Background()) {
-		return fmt.Errorf("cache sync failed")
-	}
-
-	r.nelmService = nelm.NewService(cache, r.scheduler.Reschedule, r.status, r.logger)
+	r.nelmService = nelm.NewService(client, r.scheduler.Reschedule, r.status, r.logger)
 
 	return nil
 }
@@ -836,6 +878,14 @@ func (r *Runtime) Stop() {
 
 	// Stop reflecting status to CRs (unblocks the status consumer loop)
 	r.status.Shutdown()
+
+	// Close the debug listeners last so state stays introspectable during shutdown
+	ctx, cancel := context.WithTimeout(context.Background(), debugShutdownTimeout)
+	defer cancel()
+
+	if err := r.debugServer.Stop(ctx); err != nil {
+		r.logger.Warn("stop debug server failed", log.Err(err))
+	}
 }
 
 // PreservePackage identifies one installed Package instance to preserve during Cleanup.

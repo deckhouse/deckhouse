@@ -1,4 +1,4 @@
-2816
+2845
 1GB
 2GB
 5XX
@@ -164,6 +164,7 @@ Burstable
 BusyBox
 BypassFwMark
 CAA
+cacerts
 caef
 CAInjector
 camelCase
@@ -642,6 +643,7 @@ hasn
 hdd
 healthcheck
 healthchecks
+healthz
 HEC
 helmignore
 helthcheck
@@ -730,6 +732,7 @@ InitContainer
 initContainers
 InitContainers
 initiatorType
+inline
 Inline
 inode
 inodes
@@ -778,8 +781,10 @@ ISP
 isSudoer
 IssueBasic
 issuerName
+IST
 istio
 istio-api-proxy
+istioctl
 istiod
 IstioFederation
 IstioMulticluster
@@ -1122,6 +1127,7 @@ OpenStackClusterConfiguration
 OpenStackEE
 OpenStackInstanceClass
 OpenStackInstanceClasses
+OpenTelemetry
 opentofu
 Opentofu
 OpenTofu
@@ -1139,6 +1145,7 @@ ORM
 os
 OSes
 OSI
+OTLP
 Outlier
 outlierDetection
 overprovisioned
@@ -1317,6 +1324,7 @@ ReplicatedStorageClass
 ReplicatedStoragePool
 ReplicationController
 repo
+Repointing
 repos
 reprovisioning
 repurposed
@@ -1419,6 +1427,7 @@ SIGTERM
 SimpleWithInternalNetwork
 Sitemap
 SizingPolicy
+SkyWalking
 SLA
 smokeMini
 snaphost
@@ -1706,6 +1715,10 @@ VXLAN
 VzZS
 WaitingForDisruptiveApproval
 WAL
+waypoint
+Waypoint
+WaypointInstance
+waypoints
 WebAuthn
 webgraphviz
 webhook
@@ -1810,6 +1823,7 @@ ZvirtInstanceClass
 Алертинг
 алертинга
 алертов
+алертом
 алерту
 алерты
 Алерты
@@ -1865,6 +1879,7 @@ ZvirtInstanceClass
 БД
 бекенды
 беспроблемный
+бесшовно
 биллинга
 биндинг
 биндинга
@@ -1930,6 +1945,7 @@ ZvirtInstanceClass
 внутрикластерное
 внутрикластерной
 внутрикластерным
+внутрикластерный
 воркеров
 выгрузок
 выдаватель
@@ -2182,6 +2198,7 @@ ZvirtInstanceClass
 масштабируется
 Мб
 МБ
+МиБ
 медиафайлов
 медиафайлы
 межкластерная
@@ -2196,6 +2213,9 @@ ZvirtInstanceClass
 мержит
 Метадата
 метаинформацию
+меш
+меша
+меше
 мигрирована
 микросегментация
 микросервисов
@@ -2226,6 +2246,7 @@ ZvirtInstanceClass
 мультимастерном
 мультимастерный
 мультимастерными
+мультиплатформенного
 мультиплатформенной
 мультитенантности
 мультитенантность
@@ -2362,6 +2383,7 @@ ZvirtInstanceClass
 перегенерации
 перегенерация
 перегенерировать
+перегенерируйте
 Перегенерируйте
 передеплоятся
 перезагрузится
@@ -2389,6 +2411,7 @@ ZvirtInstanceClass
 перенастраиваются
 переоткрытии
 переподключиться
+перепубликует
 переразвернуть
 Переразвертывание
 переразвёртывание
@@ -2573,10 +2596,12 @@ ZvirtInstanceClass
 сайдкар
 Сайдкар
 сайдкара
+сайдкарами
 сайдкаров
 сайдкаром
 сайдкары
 самоподписанном
+самоподписанному
 самоподписанные
 самоподписанный
 самоподписанных
@@ -2648,6 +2673,8 @@ ZvirtInstanceClass
 сопоставление
 сопоставления
 Сохраняеем
+спанов
+спаны
 спецзаголовки
 спринты
 стейта
@@ -2657,6 +2684,7 @@ ZvirtInstanceClass
 Столярова
 Стрибог
 субресурс
+субресурса
 сущностей
 сущностям
 сущностями
@@ -2701,6 +2729,7 @@ ZvirtInstanceClass
 тредами
 трейсов
 трейсы
+тренд
 трендов
 тренды
 триал

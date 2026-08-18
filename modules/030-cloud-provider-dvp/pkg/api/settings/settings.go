@@ -14,6 +14,16 @@
 
 package settings
 
+import (
+	"reflect"
+
+	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
+)
+
+var (
+	_ cpapi.ModuleSettingsObject = (*ModuleConfigSettings)(nil)
+)
+
 // Describes the configuration of a cloud cluster in Deckhouse Virtualization Platform (DVP).
 //
 // Used by the cloud provider if a cluster's control plane is hosted in the DVP cloud.
@@ -237,3 +247,23 @@ type NodesParameters struct {
 }
 
 type CCMParameters struct{}
+
+// HasProviderSection reports whether the provider settings section is set.
+func (s *ModuleConfigSettings) HasProviderSection() bool {
+	return s != nil && !reflect.DeepEqual(s.Provider, Provider{})
+}
+
+// HasNodesSection reports whether the nodes settings section is set.
+func (s *ModuleConfigSettings) HasNodesSection() bool {
+	return s != nil && !reflect.DeepEqual(s.Nodes, Nodes{})
+}
+
+// HasStorageSection reports whether the storage settings section is set.
+func (s *ModuleConfigSettings) HasStorageSection() bool {
+	return s != nil && !reflect.DeepEqual(s.Storage, Storage{})
+}
+
+// HasCCMSection reports whether the ccm settings section is set.
+func (s *ModuleConfigSettings) HasCCMSection() bool {
+	return s != nil && !reflect.DeepEqual(s.CCM, CCM{})
+}

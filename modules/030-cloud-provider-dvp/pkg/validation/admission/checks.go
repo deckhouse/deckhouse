@@ -19,12 +19,14 @@ import (
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	cpval "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation"
+	cpvalapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/api"
 
-	dvpmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation/meta"
+	dvpicv1alpha1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/api/instanceclass/v1alpha1"
+	dvpval "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation"
 )
 
 // ValidateCredentialSecret validates credential Secret admission requests.
-func ValidateCredentialSecret(state *cpval.State, operation admissionv1.Operation) cpval.Result {
+func ValidateCredentialSecret(state *dvpval.State, operation admissionv1.Operation) cpvalapi.Result {
 	result, ok := validationResult(state)
 	if !ok {
 		return result
@@ -32,7 +34,7 @@ func ValidateCredentialSecret(state *cpval.State, operation admissionv1.Operatio
 
 	switch operation {
 	case admissionv1.Create, admissionv1.Update:
-		result.Merge(cpval.ValidateCredentialSecretContent(state, dvpmeta.AllowedCredentialAuthSchemes))
+		result.Merge(cpval.ValidateCredentialSecretContent(state, cpapi.CredentialSecretName, dvpval.CredentialsValidator))
 	}
 
 	return result
@@ -40,7 +42,11 @@ func ValidateCredentialSecret(state *cpval.State, operation admissionv1.Operatio
 
 // ValidateInstanceClass validates InstanceClass admission requests.
 // deletedClass must be set when operation is Delete.
-func ValidateInstanceClass(state *cpval.State, operation admissionv1.Operation, deletedClass *cpapi.InstanceClass) cpval.Result {
+func ValidateInstanceClass(
+	state *dvpval.State,
+	operation admissionv1.Operation,
+	deletedClass *dvpicv1alpha1.DVPInstanceClass,
+) cpvalapi.Result {
 	result, ok := validationResult(state)
 	if !ok {
 		return result
@@ -57,7 +63,7 @@ func ValidateInstanceClass(state *cpval.State, operation admissionv1.Operation, 
 }
 
 // ValidateNodeGroup validates NodeGroup admission requests.
-func ValidateNodeGroup(state *cpval.State, operation admissionv1.Operation) cpval.Result {
+func ValidateNodeGroup(state *dvpval.State, operation admissionv1.Operation) cpvalapi.Result {
 	result, ok := validationResult(state)
 	if !ok {
 		return result
@@ -65,21 +71,23 @@ func ValidateNodeGroup(state *cpval.State, operation admissionv1.Operation) cpva
 
 	switch operation {
 	case admissionv1.Create, admissionv1.Update:
-		result.Merge(cpval.ValidateNodeGroupsClassReference(state, false))
-		result.Merge(cpval.ValidateInstanceClassesEtcdDisk(state))
+		result.Merge(
+			cpval.ValidateNodeGroupsClassReference(state, false),
+			cpval.ValidateInstanceClassesEtcdDisk(state),
+		)
 	}
 
 	return result
 }
 
-func validationResult(state *cpval.State) (cpval.Result, bool) {
+func validationResult(state *dvpval.State) (cpvalapi.Result, bool) {
 	if state == nil {
-		return cpval.ResultForNilState(), false
+		return cpvalapi.ResultForNilState(), false
 	}
 
 	if cpapi.ShouldSkipNewModelValidation(state.MigrationStatus) {
-		return cpval.Result{}, false
+		return cpvalapi.Result{}, false
 	}
 
-	return cpval.Result{}, true
+	return cpvalapi.Result{}, true
 }

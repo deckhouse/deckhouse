@@ -204,6 +204,23 @@ document.addEventListener('DOMContentLoaded', function() {
     button.classList.remove('show');
 
     if (!button.dataset.wrapInitialized) {
+      const wrapBtnTippy = tippy(button, {
+        placement: 'left',
+        arrow: false,
+        animation: 'scale',
+        theme: 'light',
+        content: texts.unwrap,
+        trigger: 'mouseenter',
+        hideOnClick: false,
+        delay: [300, 1000],
+        offset: [0, 10],
+        duration: [300],
+        zIndex: 90,
+        popperOptions: {
+          strategy: 'fixed',
+        },
+      });
+
       button.addEventListener('click', function() {
         isWrapped = !isWrapped;
         code.classList.toggle('wrap');
@@ -211,34 +228,12 @@ document.addEventListener('DOMContentLoaded', function() {
         if (isWrapped) {
           wrapIcon.style.display = 'inline';
           unwrapIcon.style.display = 'none';
+          wrapBtnTippy.setContent(texts.wrap);
         } else {
           wrapIcon.style.display = 'none';
           unwrapIcon.style.display = 'inline';
+          wrapBtnTippy.setContent(texts.unwrap);
         }
-      });
-
-      tippy(wrapIcon, {
-        placement: 'left',
-        arrow: false,
-        animation: 'scale',
-        theme: 'light',
-        content: texts.wrap,
-        hideOnClick: false,
-        delay: [300, 50],
-        offset: [0, 10],
-        duration: [300],
-      });
-
-      tippy(unwrapIcon, {
-        placement: 'left',
-        arrow: false,
-        animation: 'scale',
-        theme: 'light',
-        content: texts.unwrap,
-        hideOnClick: false,
-        delay: [300, 50],
-        offset: [0, 10],
-        duration: [300],
       });
 
       button.dataset.wrapInitialized = 'true';
@@ -264,9 +259,13 @@ document.addEventListener('DOMContentLoaded', function() {
         theme: 'light',
         content: texts.copy,
         hideOnClick: false,
-        delay: [300, 50],
+        delay: [300, 1000],
         offset: [0, 10],
         duration: [300],
+        zIndex: 90,
+        popperOptions: {
+          strategy: 'fixed',
+        },
       });
 
       copyBtn.addEventListener('click', () => {

@@ -2,50 +2,8 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "merged-vex-5a7af0f8c8656570f312693f05dd9d0c8f523f7fa16225650a88b0a022e5a27c",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 14,
+  "version": 15,
   "statements": [
-    {
-      "vulnerability": {
-        "name": "CVE-2025-1767"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/k8s.io/kubernetes"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_present",
-      "impact_statement": "В CVE-2025-1767 описана уязвимость в kubelet, позволяющая копировать репозиторий из volume с типом gitRepo в пределах одной ноды. Поскольку в crictl импортируются только типы из kubelet и не используется его рантайм, эксплуатация уязвимости исключается",
-      "timestamp": "2025-10-09T10:24:07.119115Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2025-5187"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/k8s.io/kubernetes"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_present",
-      "impact_statement": "В CVE-2025-5187 описана уязвимость в NodeRestriction admission controller, позволяющая через патч объекта с OwnerReference удалить объект Node. В crictl не используется код admission controller-а",
-      "timestamp": "2025-10-09T10:21:53.069107Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2025-13281"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/k8s.io/kubernetes"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_present",
-      "impact_statement": "Уязвимость CVE-2025-13281 затрагивает серверный компонент kube-controller-manager при работе с Portworx StorageClass. Сrictl не содержит активного кода, выполняющего уязвимые операции управления хранилищами в control plane.",
-      "timestamp": "2026-01-21T10:25:02Z"
-    },
     {
       "vulnerability": {
         "name": "CVE-2026-24051"
@@ -118,20 +76,6 @@
     },
     {
       "vulnerability": {
-        "name": "CVE-2025-54410"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/github.com/docker/docker"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость находится в коде Docker daemon (AuthZ-плагины). crictl является клиентом CRI и не запускает Docker daemon, не использует AuthZ-плагины Moby; уязвимый путь выполнения отсутствует.",
-      "timestamp": "2026-05-20T09:30:44.786353Z"
-    },
-    {
-      "vulnerability": {
         "name": "CVE-2026-29181"
       },
       "products": [
@@ -188,5 +132,5 @@
     }
   ],
   "timestamp": "2026-01-21T10:25:02Z",
-  "last_updated": "2026-07-15T09:49:20Z"
+  "last_updated": "2026-08-12T12:00:00Z"
 }

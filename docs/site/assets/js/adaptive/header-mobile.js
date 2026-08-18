@@ -210,12 +210,15 @@ document.addEventListener('DOMContentLoaded', function () {
         closeNavModal();
         hamburgerCollapse.classList.add('show');
         headerSidebar.classList.add('show');
+        if (body) body.classList.add('sidebar-opened');
+        ensureOverlay();
     }
 
     function closeBurgerSidebar() {
         closeNavModal();
         if (headerSidebar) headerSidebar.classList.remove('show');
         if (hamburgerCollapse) hamburgerCollapse.classList.remove('show');
+        if (body) body.classList.remove('sidebar-opened');
     }
 
     function closeFilter() {
@@ -279,7 +282,7 @@ document.addEventListener('DOMContentLoaded', function () {
         body.appendChild(overlay);
         overlay.addEventListener('click', function (e) {
             if (e.target !== overlay) return;
-            closeNavModal();
+            closeBurgerSidebar();
         });
     }
 

@@ -117,6 +117,7 @@
 810-documentation/                                               @z9r5
 
 /candi/                                  @borg-z @090809
+/candi/alt_base_images.yml               @AntonFomichev-Flant
 /candi/control-plane/                    @sprait
 /ee/candi/                               @borg-z @090809
 /ee/**/candi/                            @borg-z @090809
@@ -128,7 +129,7 @@ csi/                                     @AleksZimin @duckhawk @szhem
 deckhouse-controller/                    @ldmonster
 dhctl/                                   @borg-z @090809
 docs/                                    @z9r5
-docs/documentation/pages/architecture/   @voitenkov @z9r5
+docs/documentation/pages/architecture/   @voitenkov @xstayer @z9r5
 helm_lib/                                @ldmonster
 crds/                                    @z9r5
 openapi/                                 @z9r5

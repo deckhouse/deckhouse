@@ -1142,8 +1142,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
 }
 
 .docs {
-    //margin-bottom: 50px;
-    margin-bottom: 112px;
+    margin-bottom: 60px;
 }
 
 .docs .hidden {
@@ -1181,6 +1180,10 @@ a.comparison-table__module-proprietaryOkmeter::after {
     @include breakpoints.max-w(xs) {
       font-size: 12px;
       letter-spacing: 0px;
+
+      small {
+        font-size: 11px;
+      }
     }
 }
 
@@ -1247,6 +1250,10 @@ a.comparison-table__module-proprietaryOkmeter::after {
   position: absolute;
   left: -15px;
   top: 8px;
+
+  @include breakpoints.max-w(s) {
+    top: 7px;
+  }
 
   @include breakpoints.max-w(xs) {
     width: 5px;
@@ -1380,7 +1387,11 @@ a.comparison-table__module-proprietaryOkmeter::after {
     margin-left: 30px;
 
     @include breakpoints.max-w(xl) {
-      margin-left: 20px;
+      margin-left: 18px;
+    }
+
+    @include breakpoints.max-w(s) {
+      margin-left: 16px;
     }
 
     ul, ol {
@@ -1636,7 +1647,6 @@ a.comparison-table__module-proprietaryOkmeter::after {
 
   @include breakpoints.max-w(l) {
     font-size: 22px;
-    line-height: 20px;
   }
 
   @include breakpoints.max-w(s) {
@@ -1796,7 +1806,15 @@ a.comparison-table__module-proprietaryOkmeter::after {
       margin-left: 37px;
 
       @include breakpoints.max-w(xl) {
-        padding-right: 50px;
+        padding-right: 55px;
+      }
+
+      @include breakpoints.max-w(s) {
+        margin-left: 32px;
+      }
+
+      @include breakpoints.max-w(s) {
+        margin-left: 26px;
       }
 
       &::before {
@@ -1813,6 +1831,14 @@ a.comparison-table__module-proprietaryOkmeter::after {
         @include breakpoints.max-w(xl) {
           width: 35px;
         }
+
+        @include breakpoints.max-w(s) {
+           width: 30px;
+        }
+
+        @include breakpoints.max-w(xxs) {
+           width: 26px;
+        }
       }
     }
 }
@@ -1824,7 +1850,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
 .docs pre {
     font-family: 'Source Code Pro', monospace;
     border-radius: 4px;
-    padding: 10px;
+    padding: 12px 10px;
     overflow-x: auto;
     margin: 5px 0 25px 0;
     display: block;
@@ -1887,23 +1913,34 @@ a.comparison-table__module-proprietaryOkmeter::after {
 }
 
 .docs .details .details__summary {
-    margin-left: 0px;
+    position: relative;
+    margin-left: 14px;
 }
 
 .docs .details .details__summary::before {
     content: '';
-    display: inline-block;
+    position: absolute;
+    left: -14px;
+    top: 5px;
     width: 10px;
     height: 10px;
     background: url('../../images/icons/dropdown.svg');
     background-repeat: no-repeat;
     background-size: contain;
     transform: rotate(-90deg);
-    margin-right: 5px;
+
+    @include breakpoints.max-w(xs) {
+      top: 4px;
+    }
 }
 
 .docs .details.active .details__summary::before {
+    top: 7px;
     transform: rotate(0deg);
+
+    @include breakpoints.max-w(s) {
+      top: 6px;
+    }
 }
 
 .docs .details > .details__content {
@@ -2449,15 +2486,46 @@ ul .resources__prop_name.deprecated {
     & .form--inline {
       display: flex;
       align-items: flex-end;
+
+      @include breakpoints.max-w(l) {
+        flex-wrap: wrap;
+      }
+
+      .button_alt {
+        flex-shrink: 0;
+        padding: .5em 1.5em;
+
+        @include breakpoints.max-w(s) {
+          padding: .467em 1em;
+        }
+      }
+
+      .textfield {
+        @include breakpoints.max-w(l) {
+          min-width: 0;
+        }
+      }
     }
 
     & .form__row {
       margin-bottom: 0;
-      min-width: 383px;
-    }
+      width: 383px;
+      margin-right: 20px;
 
-    & a.button {
-      margin-left: 20px;
+      @include breakpoints.max-w(l) {
+        flex: 1 1 0;
+        width: auto;
+        min-width: 0;
+        max-width: 383px;
+      }
+
+      @include breakpoints.max-w(s) {
+        margin-right: 10px;
+      }
+
+      @include breakpoints.max-w(xs) {
+        margin-right: 8px;
+      }
     }
   }
 
@@ -2475,7 +2543,15 @@ ul .resources__prop_name.deprecated {
     align-items: center;
     color: #dc3545;
     height: 43px;
-    margin-left: 30px;
+
+    @include breakpoints.min-w(l) {
+      margin-left: 20px;
+    }
+
+    @include breakpoints.max-w(l) {
+      flex: 0 0 100%;
+      margin-top: 8px;
+    }
   }
 
   &-request {
@@ -2912,6 +2988,7 @@ select#contact-select {
       color: #9e9e9e;
 
       @include breakpoints.max-w(s) {
+        left: 6px;
         line-height: 16px;
       }
 

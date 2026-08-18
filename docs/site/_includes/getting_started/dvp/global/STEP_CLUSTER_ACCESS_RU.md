@@ -130,6 +130,7 @@
      status.domain.my
      tools.domain.my
      upmeter.domain.my
+     virtualization.domain.my
      ```
 
    Если DNS-сервера нет, добавьте записи на **рабочей станции** (в Windows — `%SystemRoot%\system32\drivers\etc\hosts`):
@@ -154,6 +155,7 @@
    $PUBLIC_IP status.domain.my
    $PUBLIC_IP tools.domain.my
    $PUBLIC_IP upmeter.domain.my
+   $PUBLIC_IP virtualization.domain.my
    EOF
    "
    ```

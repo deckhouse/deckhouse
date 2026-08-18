@@ -29,14 +29,18 @@ const (
 	deckhouseDisableAdditionalPropertiesMarker                = "deckhouse:DisableAdditionalProperties"
 	deckhouseXDocSearchMarker                                 = "deckhouse:XDocSearch"
 	deckhouseXDocSkipMarker                                   = "deckhouse:XDocSkip"
+	deckhouseXDocDefaultMarker                                = "deckhouse:XDocDefault"
 	deckhouseXDocExampleMarker                                = "deckhouse:XDocExample"
+	deckhouseXDocExamplesMarker                               = "deckhouse:XDocExamples"
 	deckhouseXRulesMarker                                     = "deckhouse:XRules"
 	deckhouseXConfigVersionMarker                             = "deckhouse:XConfigVersion"
 	deckhouseValidationAdditionalPropertiesItemsPatternMarker = "deckhouse:validation:AdditionalProperties:items:Pattern"
 )
 
 const (
+	XDocDefaultExtensionKey    = "x-doc-default"
 	XDocExampleExtensionKey    = "x-doc-example"
+	XDocExamplesExtensionKey   = "x-doc-examples"
 	XDocSkipExtensionKey       = "x-doc-skip"
 	XDocSearchExtensionKey     = "x-doc-search"
 	XRulesExtensionKey         = "x-rules"
@@ -68,6 +72,17 @@ type deckhouseExampleType struct {
 
 type deckhouseDisableAdditionalPropertiesType struct {
 	Value bool `marker:",optional"`
+}
+
+type deckhouseXDocDefaultType struct {
+	Value any `marker:"value,optional"`
+}
+
+type deckhouseXDocExamplesType struct {
+	// Value is any: x-doc-examples must accept numeric and object examples,
+	// not only strings, matching deckhouseXDocDefaultType.
+	Value  any `marker:"value,optional"`
+	values []any
 }
 
 type deckhouseXDocSearchType struct {
@@ -105,6 +120,8 @@ func BuildDeckhouseOpenAPIMarkerRegistry() (*ctmarkers.Registry, error) {
 			deckhouseXDocSearchMarker:                                 deckhouseXDocSearchType{},
 			deckhouseXDocSkipMarker:                                   deckhouseXDocSkipType{},
 			deckhouseXDocExampleMarker:                                deckhouseXDocExampleType{},
+			deckhouseXDocDefaultMarker:                                deckhouseXDocDefaultType{},
+			deckhouseXDocExamplesMarker:                               deckhouseXDocExamplesType{},
 			deckhouseXRulesMarker:                                     deckhouseXRulesType{},
 			deckhouseXConfigVersionMarker:                             deckhouseXConfigVersionType{},
 			deckhouseValidationAdditionalPropertiesItemsPatternMarker: deckhouseValidationAdditionalPropertiesItemsPatternType{},
@@ -186,30 +203,64 @@ func (m deckhouseDisableAdditionalPropertiesType) ApplyToSchema(schema *openapi3
 }
 
 func (m deckhouseXDocSearchType) ApplyToSchema(schema *openapi3.Schema) error {
-	schema.Extensions[XDocSearchExtensionKey] = m.Value
+	setExtension(schema, XDocSearchExtensionKey, m.Value)
 	return nil
 }
 
 func (m deckhouseXDocSkipType) ApplyToSchema(schema *openapi3.Schema) error {
-	if schema.Extensions == nil {
-		schema.Extensions = make(map[string]any)
-	}
-	schema.Extensions[XDocSkipExtensionKey] = true
+	setExtension(schema, XDocSkipExtensionKey, true)
 	return nil
 }
 
 func (m deckhouseXDocExampleType) ApplyToSchema(schema *openapi3.Schema) error {
-	schema.Extensions[XDocExampleExtensionKey] = m.Value
+	setExtension(schema, XDocExampleExtensionKey, m.Value)
+	return nil
+}
+
+func (m deckhouseXDocDefaultType) ApplyToSchema(schema *openapi3.Schema) error {
+	setExtension(schema, XDocDefaultExtensionKey, m.Value)
+	return nil
+}
+
+func (m deckhouseXDocExamplesType) MergeFrom(occurrences []any) (SchemaMarker, error) {
+	if len(occurrences) == 0 {
+		return nil, fmt.Errorf("merge: empty occurrences")
+	}
+	var result deckhouseXDocExamplesType
+	for i, raw := range occurrences {
+		typed, ok := raw.(deckhouseXDocExamplesType)
+		if !ok {
+			return nil, fmt.Errorf("merge: occurrence[%d] has type %T, want deckhouseXDocExamplesType", i, raw)
+		}
+		result.values = append(result.values, typed.Value)
+	}
+	return result, nil
+}
+
+func (m deckhouseXDocExamplesType) ApplyToSchema(schema *openapi3.Schema) error {
+	// values is filled by MergeFrom. Applying an unmerged marker would write a null
+	// x-doc-examples into the schema, so fall back to the single parsed occurrence.
+	values := m.values
+	if len(values) == 0 {
+		if m.Value == nil {
+			return nil
+		}
+
+		values = []any{m.Value}
+	}
+
+	setExtension(schema, XDocExamplesExtensionKey, values)
+
 	return nil
 }
 
 func (m deckhouseXRulesType) ApplyToSchema(schema *openapi3.Schema) error {
-	schema.Extensions[XRulesExtensionKey] = m.Value
+	setExtension(schema, XRulesExtensionKey, m.Value)
 	return nil
 }
 
 func (m deckhouseXConfigVersionType) ApplyToSchema(schema *openapi3.Schema) error {
-	schema.Extensions[XConfigVersionExtensionKey] = m.Value
+	setExtension(schema, XConfigVersionExtensionKey, m.Value)
 	return nil
 }
 
@@ -227,4 +278,14 @@ func (m deckhouseValidationAdditionalPropertiesItemsPatternType) ApplyToSchema(s
 
 	schema.AdditionalProperties.Schema.Value.Items.Value.Pattern = m.Value
 	return nil
+}
+
+// setExtension writes a schema extension, initializing the map when needed, so that
+// the order in which markers are applied to a schema cannot cause a nil map panic.
+func setExtension(schema *openapi3.Schema, key string, value any) {
+	if schema.Extensions == nil {
+		schema.Extensions = make(map[string]any)
+	}
+
+	schema.Extensions[key] = value
 }

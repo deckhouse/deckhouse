@@ -469,8 +469,9 @@ func loadModulePackageDefinition(packageDir string) (*dto.ModuleDefinition, erro
 			Requirements: requirements,
 			Licensing:    legacyModuleLicensing(def.Accessibility),
 		},
-		Weight:   int(def.Weight),
-		Critical: def.Critical,
+		Weight:         int(def.Weight),
+		Critical:       def.Critical,
+		ExclusiveGroup: def.ExclusiveGroup,
 	}, nil
 }
 

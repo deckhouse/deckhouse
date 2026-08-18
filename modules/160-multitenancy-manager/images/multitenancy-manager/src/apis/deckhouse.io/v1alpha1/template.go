@@ -119,8 +119,11 @@ func (p *ParametersSchema) DeepCopy() *ParametersSchema {
 }
 func (p *ParametersSchema) DeepCopyInto(newObj *ParametersSchema) {
 	*newObj = *p
-	for key, value := range p.OpenAPIV3Schema {
-		newObj.OpenAPIV3Schema[key] = value
+	if p.OpenAPIV3Schema != nil {
+		newObj.OpenAPIV3Schema = make(map[string]interface{}, len(p.OpenAPIV3Schema))
+		for key, value := range p.OpenAPIV3Schema {
+			newObj.OpenAPIV3Schema[key] = value
+		}
 	}
 }
 

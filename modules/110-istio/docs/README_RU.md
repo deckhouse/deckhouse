@@ -104,11 +104,11 @@ Istio позволяет осуществлять сбор трейсов с п�
 
 Инструмент для визуализации дерева сервисов вашего приложения. Позволяет быстро оценить обстановку в сетевой связности благодаря визуализации запросов и их количественных характеристик непосредственно на схеме.
 
-### Метрики mesh и access log (Telemetry API)
+### Метрики меша и access log (Telemetry API)
 
 Дашборды Grafana для workload и количественные данные в Kiali опираются на стандартные метрики `istio_*`, которые Prometheus забирает с `istio-proxy`. Начиная с Istio&nbsp;1.21+, они настраиваются через Telemetry API и связанные провайдеры по умолчанию в `meshConfig`, а не только через прежний блок `telemetry.v2`.
 
-В DKP параметр — [`telemetryAPI.enabled`](configuration.html#parameters-telemetryapi-enabled): `false` оставляет полностью включённым `telemetry.v2`, `true` переводит mesh на режим Telemetry API (`defaultProviders`, управляемые модулем `Telemetry` CR и формат строки доступа из [`dataPlane.accessLog`](configuration.html#parameters-dataplane-accesslog)). Подробнее с примерами — в разделе [Telemetry API: метрики mesh, трассировка и журналы доступа](examples.html#telemetry-api-mesh-observability).
+В DKP параметр — [`telemetryAPI.enabled`](configuration.html#parameters-telemetryapi-enabled): `false` оставляет полностью включённым `telemetry.v2`, `true` переводит меш на режим Telemetry API (`defaultProviders`, управляемые модулем `Telemetry` CR и формат строки доступа из [`dataPlane.accessLog`](configuration.html#parameters-dataplane-accesslog)). Подробнее с примерами — в разделе [Telemetry API: метрики меша, трассировка и журналы доступа](examples.html#telemetry-api-mesh-observability).
 
 ## Архитектура кластера с включённым Istio
 
@@ -119,10 +119,10 @@ Istio позволяет осуществлять сбор трейсов с п�
 
 ![Архитектура кластера с включённым Istio](images/istio-architecture.png)
 
-Все сервисы из data plane группируются в mesh. Его характеристики:
+Все сервисы из data plane группируются в меш. Его характеристики:
 
-- Общий неймспейс для генерации идентификатора сервиса в формате `<TrustDomain>/ns/<Namespace>/sa/<ServiceAccount>`. Каждый mesh имеет идентификатор TrustDomain, который в нашем случае совпадает с доменом кластера. Например: `mycluster.local/ns/myns/sa/myapp`.
-- Сервисы в рамках одного mesh имеют возможность аутентифицировать друг друга с помощью доверенных корневых сертификатов.
+- Общий неймспейс для генерации идентификатора сервиса в формате `<TrustDomain>/ns/<Namespace>/sa/<ServiceAccount>`. Каждый меш имеет идентификатор TrustDomain, который в нашем случае совпадает с доменом кластера. Например: `mycluster.local/ns/myns/sa/myapp`.
+- Сервисы в рамках одного меша имеют возможность аутентифицировать друг друга с помощью доверенных корневых сертификатов.
 
 Элементы control plane:
 
@@ -244,8 +244,10 @@ Istio-proxy, работающий как сайдкар-контейнер, по
 - TCP-запросы — решение принимается только по IP-адресу назначения и номеру порта.
 
 {% alert level="warning" %}
-- `cluster.local` — неизменяемый псевдоним для домена локального кластера. Указание `cluster.local` как principals в `AuthorizationPolicy` всегда указывает на локальный кластер, даже если в mesh присутствует кластер с явно заданным `clusterDomain: cluster.local` ([рекомендации Istio по миграции trust domain](https://istio.io/latest/docs/tasks/security/authorization/authz-td-migration/#best-practices)).
+
+- `cluster.local` — неизменяемый псевдоним для домена локального кластера. Указание `cluster.local` как principals в `AuthorizationPolicy` всегда указывает на локальный кластер, даже если в меше присутствует кластер с явно заданным `clusterDomain: cluster.local` ([рекомендации Istio по миграции trust domain](https://istio.io/latest/docs/tasks/security/authorization/authz-td-migration/#best-practices)).
 - Если IP-адреса сервисов или подов пересекаются между кластерами, под правила маршрутизации, запрета или разрешения Istio могут попасть запросы подов из других кластеров. Пересечение подсетей сервисов и подов жёстко запрещено в режиме single-network и допустимо, но не рекомендуется в режиме multi-networks ([модели развёртывания Istio](https://istio.io/latest/docs/ops/deployment/deployment-models/#single-network)).
+
 {% endalert %}
 
 {% alert level="info" %}
@@ -386,6 +388,7 @@ Istio работает в режиме [multi-network](https://istio.io/latest/d
 Для сборки мультикластера необходимо в каждом кластере создать набор ресурсов `IstioMulticluster`, которые описывают все остальные кластеры.
 
 В случае проблем при работе с мультикластером необходимо проверить в каждом кластере:
+
 1. Состояние ресурсов `IstioMultiCluster`. Для этого выполните команду `d8 k describe istiomulticluster cluster-name`. Важно, чтобы в статусе ресурса был указан `Root CA` и в поле `Public Last Fetch Timestamp` была свежий лейбл времени.
 1. В поле `Ingress Gateways` ресурса `IstioMultiCluster` должен быть указан корректный адрес (IP или FQDN) IngressGateway второго кластера.
 1. С помощью утилиты `istioctl` из debug-контейнера DKP убедитесь, что удалённые кластеры находятся в состоянии `synced`, и для них указан экземпляр `istiod` (подробнее — в подразделе [«Диагностика Istio с помощью istioctl»](examples.html#диагностика-istio-с-помощью-istioctl-из-debug-контейнера)):
