@@ -18,7 +18,7 @@ searchable: false
 
 1. Images в `images/` — по аналогии с предыдущим minor.
 2. Версия в `oss.yaml`.
-3. Общий набор CRD в `crds/istio/`. Конфигурационные CRD берутся из Istio 1.29.6, а operator/Sail CRD сохраняются для совместимости с Istio 1.25. Для обновления используйте `crds/istio/_update.py`.
+3. Общий набор CRD в `crds/vendor/`. Конфигурационные CRD берутся из Istio 1.29.6, а operator/Sail CRD сохраняются для совместимости с Istio 1.25. Для обновления используйте `crds/vendor/_update.py`.
 4. **Без оператора:** `_rules_v-<major>-<minor>.tpl` + ветка в `_istiod_clusterroles.tpl`.
 5. Grafana — [`istio-grafana-dashboards.sh`](istio-grafana-dashboards.sh).
 6. **Без оператора:** каталог `files/<revision>/` — см. ниже.
