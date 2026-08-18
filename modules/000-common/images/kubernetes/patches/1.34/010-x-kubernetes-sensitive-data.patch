@@ -2366,7 +2366,7 @@ index 00000000000..90094074c07
 +	}
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
-index d1dc5a091a3..15e61c38d91 100644
+index d1dc5a091a3..ba461e88681 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
 @@ -37,6 +37,7 @@ import (
@@ -2497,7 +2497,7 @@ index d1dc5a091a3..15e61c38d91 100644
  		return handlers.ListResource(storage, storage, requestScope, forceWatch, r.minRequestTimeout)
  	case "create":
  		// we want to track recently created CRDs so that in HA environments we don't have server A allow a create and server B
-@@ -400,14 +448,27 @@ func (r *crdHandler) serveResource(w http.ResponseWriter, req *http.Request, req
+@@ -400,20 +448,39 @@ func (r *crdHandler) serveResource(w http.ResponseWriter, req *http.Request, req
  		if terminating {
  			a = &forbidCreateAdmission{delegate: a}
  		}
@@ -2525,7 +2525,19 @@ index d1dc5a091a3..15e61c38d91 100644
  		return handlers.PatchResource(storage, requestScope, a, supportedTypes)
  	case "delete":
  		allowsOptions := true
-@@ -424,16 +485,64 @@ func (r *crdHandler) serveResource(w http.ResponseWriter, req *http.Request, req
++		if needsMasking {
++			return handlers.DeleteResource(&maskingDeleter{GracefulDeleter: storage, schemas: sensitiveSchemaSlice}, allowsOptions, requestScope, r.admission)
++		}
+ 		return handlers.DeleteResource(storage, allowsOptions, requestScope, r.admission)
+ 	case "deletecollection":
+ 		checkBody := true
++		if needsMasking {
++			return handlers.DeleteCollection(&maskingCollectionDeleter{CollectionDeleter: storage, schemas: sensitiveSchemaSlice}, checkBody, requestScope, r.admission)
++		}
+ 		return handlers.DeleteCollection(storage, checkBody, requestScope, r.admission)
+ 	default:
+ 		responsewriters.ErrorNegotiated(
+@@ -424,16 +491,64 @@ func (r *crdHandler) serveResource(w http.ResponseWriter, req *http.Request, req
  	}
  }
  
@@ -2590,7 +2602,7 @@ index d1dc5a091a3..15e61c38d91 100644
  		return handlers.PatchResource(storage, requestScope, r.admission, supportedTypes)
  	default:
  		responsewriters.ErrorNegotiated(
-@@ -528,6 +637,15 @@ func (r *crdHandler) updateCustomResourceDefinition(oldObj, newObj interface{})
+@@ -528,6 +643,15 @@ func (r *crdHandler) updateCustomResourceDefinition(oldObj, newObj interface{})
  func (r *crdHandler) removeStorage_locked(uid types.UID) {
  	storageMap := r.customStorage.Load().(crdStorageMap)
  	if oldInfo, ok := storageMap[uid]; ok {
@@ -2606,7 +2618,7 @@ index d1dc5a091a3..15e61c38d91 100644
  		// Copy because we cannot write to storageMap without a race
  		// as it is used without locking elsewhere.
  		storageMap2 := storageMap.clone()
-@@ -565,6 +683,14 @@ func (r *crdHandler) removeDeadStorage() {
+@@ -565,6 +689,14 @@ func (r *crdHandler) removeDeadStorage() {
  	for uid, crdInfo := range storageMap {
  		if _, ok := storageMap2[uid]; !ok {
  			klog.V(4).Infof("Removing dead CRD storage for %s/%s", crdInfo.spec.Group, crdInfo.spec.Names.Kind)
@@ -2621,7 +2633,7 @@ index d1dc5a091a3..15e61c38d91 100644
  			go r.tearDown(crdInfo)
  		}
  	}
-@@ -606,6 +732,14 @@ func (r *crdHandler) destroy() {
+@@ -606,6 +738,14 @@ func (r *crdHandler) destroy() {
  
  	storageMap := r.customStorage.Load().(crdStorageMap)
  	for _, crdInfo := range storageMap {
@@ -2636,7 +2648,7 @@ index d1dc5a091a3..15e61c38d91 100644
  		for _, storage := range crdInfo.storages {
  			// DestroyFunc have to be implemented in idempotent way,
  			// so the potential race with r.tearDown() (being called
-@@ -698,6 +832,17 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
+@@ -698,6 +838,17 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
  		structuralSchemas[v.Name] = s
  	}
  
@@ -2654,7 +2666,7 @@ index d1dc5a091a3..15e61c38d91 100644
  	openAPIModels, err := buildOpenAPIModelsForApply(r.staticOpenAPISpec, crd)
  	if err != nil {
  		utilruntime.HandleError(fmt.Errorf("error building openapi models for %s: %v", crd.Name, err))
-@@ -1109,9 +1254,20 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
+@@ -1109,9 +1260,20 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
  		deprecated:          deprecated,
  		warnings:            warnings,
  		storageVersion:      storageVersion,
@@ -2692,10 +2704,10 @@ index 12b6f7c896a..8fbe1c80db9 100644
  	}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_access.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_access.go
 new file mode 100644
-index 00000000000..cb7830b717d
+index 00000000000..5d057899668
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_access.go
-@@ -0,0 +1,163 @@
+@@ -0,0 +1,202 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -2858,6 +2870,45 @@ index 00000000000..cb7830b717d
 +		maskWithAllSchemas(u.Object, s.schemas)
 +	}
 +	return obj, created, nil
++}
++
++type maskingDeleter struct {
++	rest.GracefulDeleter
++	schemas []*structuralschema.Structural
++}
++
++func (s *maskingDeleter) Delete(ctx context.Context, name string, deleteValidation rest.ValidateObjectFunc, options *metav1.DeleteOptions) (runtime.Object, bool, error) {
++	obj, deleted, err := s.GracefulDeleter.Delete(ctx, name, deleteValidation, options)
++	if err != nil || obj == nil {
++		return obj, deleted, err
++	}
++	obj = obj.DeepCopyObject()
++	if u, ok := obj.(*unstructured.Unstructured); ok {
++		maskWithAllSchemas(u.Object, s.schemas)
++	}
++	return obj, deleted, nil
++}
++
++type maskingCollectionDeleter struct {
++	rest.CollectionDeleter
++	schemas []*structuralschema.Structural
++}
++
++func (s *maskingCollectionDeleter) DeleteCollection(ctx context.Context, deleteValidation rest.ValidateObjectFunc, options *metav1.DeleteOptions, listOptions *metainternalversion.ListOptions) (runtime.Object, error) {
++	obj, err := s.CollectionDeleter.DeleteCollection(ctx, deleteValidation, options, listOptions)
++	if err != nil || obj == nil {
++		return obj, err
++	}
++	obj = obj.DeepCopyObject()
++	switch v := obj.(type) {
++	case *unstructured.UnstructuredList:
++		for i := range v.Items {
++			maskWithAllSchemas(v.Items[i].Object, s.schemas)
++		}
++	case *unstructured.Unstructured:
++		maskWithAllSchemas(v.Object, s.schemas)
++	}
++	return obj, nil
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_access_test.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_access_test.go
 new file mode 100644
