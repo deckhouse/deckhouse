@@ -128,7 +128,7 @@ spec:
                         Section name from the ListenerSet object in the Gateway API the HTTPRoute refers to.
                       x-doc-examples: ['default-listener']
                       pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
-                      maxLength: 
+                      maxLength: 253
                 signOutURL:
                   type: string
                   description: |-
