@@ -1123,7 +1123,7 @@ spec:
 
                         - `Watchdog` — использует модуль ядра watchdog для автоматической перезагрузки узлов, потерявших связь с кластером. Также в этом режиме fencing-agent отслеживает доступность узлов в кластере.
 
-                        При включении `fencing` скрипт NodeGroupConfiguration загружает модуль ядра `softdog` с параметром `soft_margin`, равным значению `spec.fencing.watchdog.timeout` (по умолчанию 60 секунд), и параметром `soft_panic=1`.
+                        При включении `fencing` скрипт NodeGroupConfiguration загружает модуль ядра `softdog` с параметром `soft_panic=1`. Таймаут watchdog задает сам fencing-agent при вооружении устройства, беря его из профиля FencingSLAProfile, указанного в `spec.fencing.profile`.
 
                         Как работает fencing-agent:
 
@@ -1163,6 +1163,8 @@ spec:
                           default: 60s
                           description: |
                             Длительность таймаута watchdog. Указывается в секундах, минутах или часах.
+
+                            Устарело и больше не действует: таймаут берется из профиля FencingSLAProfile, указанного в `spec.fencing.profile`, и применяется fencing-агентом к устройству.
                           x-doc-default: 60s
                       required:
                         - timeout
