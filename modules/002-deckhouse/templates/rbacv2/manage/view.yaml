@@ -21,7 +21,9 @@ rules:
   - modulereleases
   - modules
   - modulesettingsdefinitions
+  - modulesources
   - moduleupdatepolicies
+  - packagerepositories
   - packagerepositoryoperations
   - applicationpackageversions
   - applicationpackages
