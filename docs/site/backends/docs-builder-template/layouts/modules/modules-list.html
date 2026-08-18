@@ -209,8 +209,8 @@
           {{- $moduleEditionsString = delimit $_editions "," }}
         {{- end }}
 
-        {{- /* CSE build: hide modules that are not available in either cse-lite or cse-pro */}}
-        {{- if eq $buildEdition "CSE" }}
+        {{- /* CSE build: hide embedded modules that are not available in either cse-lite or cse-pro. External modules are kept regardless. */}}
+        {{- if and (eq $buildEdition "CSE") .embedded }}
           {{- $moduleEditionsList := split $moduleEditionsString "," }}
           {{- if and (not (in $moduleEditionsList "cse-lite")) (not (in $moduleEditionsList "cse-pro")) }}
             {{- continue }}
