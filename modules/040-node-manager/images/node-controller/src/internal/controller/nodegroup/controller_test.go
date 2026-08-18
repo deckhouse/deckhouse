@@ -336,3 +336,115 @@ func TestReconcile_CloudValidationErrorPublished(t *testing.T) {
 		t.Fatal("expected validation event")
 	}
 }
+
+// Every group publishes the provider whose scripts configure its nodes.
+func TestReconcile_CloudProviderTypeIsPublished(t *testing.T) {
+	registration := func() *corev1.Secret {
+		return &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      cloudprovider.SecretNamePrefix,
+				Namespace: cloudprovider.SecretNamespace,
+				Labels:    map[string]string{cloudprovider.SecretLabel: ""},
+			},
+			Data: map[string][]byte{
+				"type":                    []byte("yandex"),
+				"instanceClassKind":       []byte("YandexInstanceClass"),
+				"instanceClassAPIVersion": []byte("v1"),
+			},
+		}
+	}
+	cloudCluster := func() *corev1.Secret {
+		return &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: "d8-cluster-configuration", Namespace: "kube-system"},
+			Data: map[string][]byte{
+				// ClusterConfiguration spells it Yandex, the registration yandex.
+				"cluster-configuration.yaml": []byte("clusterType: Cloud\ncloud:\n  provider: Yandex\n"),
+			},
+		}
+	}
+
+	for _, tc := range []struct {
+		name      string
+		nodeType  v1.NodeType
+		classKind string
+		want      string
+	}{
+		{name: "static", nodeType: v1.NodeTypeStatic, want: "yandex"},
+		{name: "cloudstatic", nodeType: v1.NodeTypeCloudStatic, want: "yandex"},
+		{name: "master", nodeType: v1.NodeTypeCloudPermanent, want: "yandex"},
+		{name: "worker", nodeType: v1.NodeTypeCloudEphemeral, classKind: "YandexInstanceClass", want: "yandex"},
+	} {
+		t.Run(string(tc.nodeType), func(t *testing.T) {
+			setEnv(t)
+			ng := &v1.NodeGroup{
+				ObjectMeta: metav1.ObjectMeta{Name: tc.name},
+				Spec:       v1.NodeGroupSpec{NodeType: tc.nodeType},
+			}
+			if tc.classKind != "" {
+				ng.Spec.CloudInstances = &v1.CloudInstancesSpec{
+					ClassReference: v1.ClassReference{Kind: tc.classKind, Name: tc.name},
+				}
+			}
+
+			r, _ := newReconciler(t, ng, registration(), cloudCluster())
+			doReconcile(t, r, tc.name)
+
+			if got := getNodeGroup(t, r, tc.name).Status.CloudProviderType; got != tc.want {
+				t.Fatalf("status.cloudProviderType = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+// A cluster with no cloud says so, rather than leaving the field empty.
+func TestReconcile_CloudProviderTypeIsNoneInAStaticCluster(t *testing.T) {
+	setEnv(t)
+	ng := &v1.NodeGroup{
+		ObjectMeta: metav1.ObjectMeta{Name: "static"},
+		Spec:       v1.NodeGroupSpec{NodeType: v1.NodeTypeStatic},
+	}
+	clusterConfig := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "d8-cluster-configuration", Namespace: "kube-system"},
+		Data: map[string][]byte{
+			"cluster-configuration.yaml": []byte("clusterType: Static\n"),
+		},
+	}
+
+	r, _ := newReconciler(t, ng, clusterConfig)
+	doReconcile(t, r, "static")
+
+	if got := getNodeGroup(t, r, "static").Status.CloudProviderType; got != "None" {
+		t.Fatalf("status.cloudProviderType = %q, want %q", got, "None")
+	}
+}
+
+// The status follows the cluster: a group whose provider changed reports the new one.
+func TestReconcile_CloudProviderTypeFollowsTheCurrentProvider(t *testing.T) {
+	setEnv(t)
+	ng := &v1.NodeGroup{
+		ObjectMeta: metav1.ObjectMeta{Name: "static"},
+		Spec:       v1.NodeGroupSpec{NodeType: v1.NodeTypeStatic},
+		Status:     v1.NodeGroupStatus{CloudProviderType: "aws"},
+	}
+	registration := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cloudprovider.SecretNamePrefix,
+			Namespace: cloudprovider.SecretNamespace,
+			Labels:    map[string]string{cloudprovider.SecretLabel: ""},
+		},
+		Data: map[string][]byte{"type": []byte("yandex")},
+	}
+	clusterConfig := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "d8-cluster-configuration", Namespace: "kube-system"},
+		Data: map[string][]byte{
+			"cluster-configuration.yaml": []byte("clusterType: Cloud\ncloud:\n  provider: Yandex\n"),
+		},
+	}
+
+	r, _ := newReconciler(t, ng, registration, clusterConfig)
+	doReconcile(t, r, "static")
+
+	if got := getNodeGroup(t, r, "static").Status.CloudProviderType; got != "yandex" {
+		t.Fatalf("status.cloudProviderType = %q, want %q", got, "yandex")
+	}
+}

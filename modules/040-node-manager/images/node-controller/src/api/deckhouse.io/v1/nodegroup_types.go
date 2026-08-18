@@ -519,6 +519,11 @@ type NodeGroupStatus struct {
 	// +optional
 	Engine string `json:"engine,omitempty"`
 
+	// CloudProviderType names the cloud provider whose scripts configure the nodes of this group,
+	// "None" when none do.
+	// +optional
+	CloudProviderType string `json:"cloudProviderType,omitempty"`
+
 	// Ready specifies the number of ready nodes
 	Ready int32 `json:"ready,omitempty"`
 

@@ -82,6 +82,7 @@ NodeGroup changed (or secondary resource triggers re-enqueue)
 | `status.conditions` | Calculated conditions array |
 | `status.conditionSummary` | Human-readable summary |
 | `status.lastMachineFailures` | Recent machine creation failures |
+| `status.cloudProviderType` | Provider whose bashible steps configure the nodes, `None` when none do |
 | `status.deckhouse.observed` / `processed` / `synced` | Second patch through `processed_status` |
 
 ## Sub-packages

@@ -568,6 +568,12 @@ spec:
               type: object
               required: []
               properties:
+                cloudProviderType:
+                  type: string
+                  description: |
+                    Cloud provider whose node configuration scripts are applied to the nodes of this group.
+
+                    `None` means the nodes are configured without cloud provider scripts.
                 engine:
                   type: string
                   enum:
@@ -1200,6 +1206,12 @@ spec:
               type: object
               required: []
               properties:
+                cloudProviderType:
+                  type: string
+                  description: |
+                    Cloud provider whose node configuration scripts are applied to the nodes of this group.
+
+                    `None` means the nodes are configured without cloud provider scripts.
                 engine:
                   type: string
                   enum:
@@ -2373,6 +2385,12 @@ spec:
               type: object
               required: []
               properties:
+                cloudProviderType:
+                  type: string
+                  description: |
+                    Cloud provider whose node configuration scripts are applied to the nodes of this group.
+
+                    `None` means the nodes are configured without cloud provider scripts.
                 engine:
                   type: string
                   enum:

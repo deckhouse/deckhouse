@@ -103,28 +103,20 @@ func (ps Providers) Empty() bool {
 
 // ForNodeGroup returns the provider a NodeGroup runs on. It performs no I/O.
 //
-// CloudEphemeral resolves through the InstanceClass kind it references. CloudPermanent and
-// CloudStatic reference none, so both fall back to the provider of the cluster: their nodes run in
-// that cloud, Deckhouse just does not order them. Static has no provider — its nodes are outside
-// every cloud.
+// Only CloudEphemeral can belong to a provider other than the cluster's, and it says so through the
+// InstanceClass it references; a group without one resolves to nothing. Every other type takes the
+// provider of the cluster: that is what created its nodes, or the only cloud they can be in.
 func (ps Providers) ForNodeGroup(ng *v1.NodeGroup) (Provider, bool) {
-	switch ng.Spec.NodeType {
-	case v1.NodeTypeCloudEphemeral, v1.NodeTypeCloudPermanent, v1.NodeTypeCloudStatic:
-	default:
+	// CloudEphemeral -> Get provider by ng.Spec.CloudInstances.ClassReference.Kind
+	if ng.Spec.NodeType == v1.NodeTypeCloudEphemeral {
+		if ng.Spec.CloudInstances != nil {
+			return ps.byInstanceClassKind(ng.Spec.CloudInstances.ClassReference.Kind)
+		}
 		return Provider{}, false
 	}
 
-	if ng.Spec.CloudInstances != nil {
-		if found, ok := ps.byInstanceClassKind(ng.Spec.CloudInstances.ClassReference.Kind); ok {
-			return found, true
-		}
-	}
-
-	if ng.Spec.NodeType != v1.NodeTypeCloudEphemeral {
-		return ps.byName(ps.clusterProvider)
-	}
-
-	return Provider{}, false
+	// CloudPermanent / CloudStatic / Static -> Default provider by cluster configuration
+	return ps.byName(ps.clusterProvider)
 }
 
 // InstanceClassKinds returns every kind of InstanceClass the cluster accepts, ordered by provider
@@ -181,7 +173,15 @@ func (ps Providers) InstanceClassGVKs() []schema.GroupVersionKind {
 }
 
 // byName matches case-insensitively: ClusterConfiguration spells OpenStack, the Secret openstack.
+//
+// No name matches nothing, even though a registration that published no type carries an empty one:
+// "this group named no provider" and "this registration is malformed" must not resolve to the same
+// answer.
 func (ps Providers) byName(name string) (Provider, bool) {
+	if name == "" {
+		return Provider{}, false
+	}
+
 	name = strings.ToLower(name)
 
 	for i := range ps.providers {

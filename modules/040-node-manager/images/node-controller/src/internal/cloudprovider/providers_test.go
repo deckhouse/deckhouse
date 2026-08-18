@@ -271,10 +271,13 @@ func TestForNodeGroup(t *testing.T) {
 			expFound: true,
 		},
 		{
-			// Handing this one a provider is what used to apply cloud bashible steps to nodes that
-			// are not in any cloud.
-			name: "Static has no provider",
-			ng:   nodeGroupOfType("static", v1.NodeTypeStatic),
+			// Static groups were rendered with the cluster's provider before providers became
+			// per-NodeGroup, and their nodes carry what those steps installed. Dropping the
+			// provider here is what would take it away from them.
+			name:     "Static falls back to the cluster provider",
+			ng:       nodeGroupOfType("static", v1.NodeTypeStatic),
+			expType:  "yandex",
+			expFound: true,
 		},
 		{
 			// CloudStatic nodes do run in the cluster's cloud, Deckhouse just does not order them:
@@ -283,6 +286,12 @@ func TestForNodeGroup(t *testing.T) {
 			ng:       nodeGroupOfType("cloudstatic", v1.NodeTypeCloudStatic),
 			expType:  "yandex",
 			expFound: true,
+		},
+		{
+			// A CloudEphemeral group is defined by the machines it orders, and it orders them from
+			// the InstanceClass. Without one there is no cloud to fall back to.
+			name: "CloudEphemeral without a classReference resolves to nothing",
+			ng:   nodeGroupOfType("worker", v1.NodeTypeCloudEphemeral),
 		},
 	}
 
@@ -294,6 +303,20 @@ func TestForNodeGroup(t *testing.T) {
 			assert.Equal(t, tc.expType, got.Type)
 		})
 	}
+}
+
+// A registration that published no type is kept on load for the InstanceClass kind it carries, so
+// its Type is the empty string — the same empty string a NodeGroup has when it named no provider
+// and the cluster names none either. The two must not meet: a static cluster with a registration
+// left behind by a disabled provider module would otherwise hand every group a nameless provider.
+func TestForNodeGroup_NoNameMatchesNoRegistration(t *testing.T) {
+	providers := loadFrom(t, registrationSecret(SecretNamePrefix, map[string][]byte{
+		"instanceClassKind": []byte("AWSInstanceClass"),
+	}))
+
+	_, ok := providers.ForNodeGroup(nodeGroupOfType("static", v1.NodeTypeStatic))
+
+	assert.False(t, ok)
 }
 
 // ClusterConfiguration spells providers OpenStack and vSphere; their Secrets spell them lower case.

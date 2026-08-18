@@ -16,13 +16,14 @@ limitations under the License.
 
 package cloudprovider
 
+// StatusNone is the provider of a NodeGroup whose nodes get no provider steps.
+const StatusNone = "None"
+
 // The registration Secret a provider module publishes.
 const (
 	SecretNamespace = "kube-system"
-
 	// Selection is by this label, not by name: that is what makes a second provider visible.
 	SecretLabel = "cloud-provider.deckhouse.io/registration"
-
 	// Every provider publishes two copies: the bare prefix and prefix + "-<provider>". The prefix,
 	// not either full name, is what identifies a registration.
 	SecretNamePrefix = "d8-node-manager-cloud-provider"
@@ -31,14 +32,12 @@ const (
 // Keys of the registration Secret that callers outside this package name.
 const (
 	InstanceClassKindKey = "instanceClassKind"
-
 	// The storage version of the provider's CRD; empty means it has not registered yet, and callers
 	// must wait rather than pick one. Never resolve it from discovery: a non-pinned read returns a
 	// different value once the conversion webhook is wired or once another RESTMapper wins the
 	// cache, and that changes the instance-class checksum — which renames an immutable
 	// MachineTemplate and recreates every node in the NodeGroup.
 	InstanceClassAPIVersionKey = "instanceClassAPIVersion"
-
 	// What the CAPI keys fall back to when a provider publishes none.
 	defaultInfraAPIVersion = "infrastructure.cluster.x-k8s.io/v1alpha1"
 )
@@ -47,7 +46,6 @@ const (
 const (
 	clusterConfigSecretName = "d8-cluster-configuration"
 	clusterConfigSecretKey  = "cluster-configuration.yaml"
-
 	// ClusterConfiguration.clusterType of a cluster that runs in a cloud.
 	cloudClusterType = "Cloud"
 )
