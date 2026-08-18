@@ -90,7 +90,7 @@ spec:
                     description: Full BMC address accepted by BareMetalHost, for example redfish+https://10.0.5.17/redfish/v1/Systems/system.
                   credentialsName:
                     type: string
-                    description: Name of the source Secret with username and password keys in the Metal3Instance namespace.
+                    description: Name of the source Secret with type cloud-provider.deckhouse.io/credentials and username and password keys in the Metal3Instance namespace.
                   disableCertificateVerification:
                     type: boolean
                     description: Disables TLS certificate verification for BMC access.
