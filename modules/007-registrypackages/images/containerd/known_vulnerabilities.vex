@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-0a7dee882b0213b53ce1f13791d223657afca21285b99e07e15b935fa0456093",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 11,
+  "version": 12,
   "statements": [
     {
       "vulnerability": {
@@ -38,7 +38,7 @@
       },
       "products": [
         {
-          "@id": "pkg:golang/github.com/docker/cli@v25.0.5%2Bincompatible"
+          "@id": "pkg:golang/github.com/docker/cli"
         }
       ],
       "status": "not_affected",
@@ -94,10 +94,10 @@
       },
       "products": [
         {
-          "@id": "pkg:golang/github.com/go-jose/go-jose/v3@v3.0.4"
+          "@id": "pkg:golang/github.com/go-jose/go-jose/v3"
         },
         {
-          "@id": "pkg:golang/github.com/go-jose/go-jose/v4@v4.0.5"
+          "@id": "pkg:golang/github.com/go-jose/go-jose/v4"
         }
       ],
       "status": "not_affected",
