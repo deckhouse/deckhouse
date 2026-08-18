@@ -111,6 +111,12 @@ template: |
       spec:
         template: {{ $template | quote }}
         server: {{ .provider.server | quote }}
+        {{- /* datacenter is REQUIRED when the vCenter hosts more than one — CAPV's finder
+               defaults to "*" and folder/datastore/network lookup fails ambiguously
+               otherwise. Populated by templates/registration.yaml from discovery data. */ -}}
+        {{- if hasKey .provider "datacenter" }}
+        datacenter: {{ .provider.datacenter | quote }}
+        {{- end }}
         folder: {{ .provider.vmFolderPath | quote }}
         datastore: {{ $datastore | quote }}
         {{- if $rp }}

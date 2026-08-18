@@ -37,6 +37,13 @@ capiMachineTemplateAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1beta
 {{- $_ := set $vsphereValues "region" $providerClusterConfiguration.region }}
 {{- $_ := set $vsphereValues "sshKey" $providerClusterConfiguration.sshPublicKey }}
 {{- $_ := set $vsphereValues "vmFolderPath" $providerClusterConfiguration.vmFolderPath }}
+{{- /* datacenter comes from providerDiscoveryData (published by cloud-data-discoverer).
+       Rendered into VSphereMachineTemplate.spec.template.spec.datacenter so CAPV's
+       finder resolves folder/datastore/network relative to it — without the field CAPV
+       defaults to "*" and errors "folder ... not found" when several datacenters exist. */ -}}
+{{- if $providerDiscoveryData.datacenter }}
+  {{- $_ := set $vsphereValues "datacenter" $providerDiscoveryData.datacenter }}
+{{- end }}
 {{- $_ := set $vsphereValues "instanceClassDefaults" dict }}
 {{- if hasKey $providerDiscoveryData "resourcePoolPath" }}
   {{- $_ := set $vsphereValues.instanceClassDefaults "resourcePoolPath" $providerDiscoveryData.resourcePoolPath }}
