@@ -458,16 +458,6 @@ properties:
                   type: string
                   minLength: 1
             description: List of storage policies
-          zoneComputeClusterPaths:
-            type: object
-            additionalProperties:
-              type: string
-            description: |
-              Zone tag name → ClusterComputeResource inventory path (absolute, e.g.
-              "/DatacenterLAB/host/clStage"). Populated by ensure_failure_domains hook
-              from vCenter and consumed by capi/machine-template.yaml to render an
-              absolute resourcePool (relative names collide when several compute
-              clusters share a datacenter).
       cniSecretData:
         type: string
         x-examples:
