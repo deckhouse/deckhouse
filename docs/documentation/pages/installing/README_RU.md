@@ -695,7 +695,9 @@ dhctl bootstrap-phase abort
 DKP можно установить из стороннего хранилища образов или через проксирующий сервер внутри закрытого контура.
 
 {% alert level="warning" %}
-DKP поддерживает аутентификацию в хранилище образов только по схеме Bearer token.
+DKP поддерживает аутентификацию в хранилище образов по схемам Basic и Bearer token (сначала проверяется Basic, при неуспехе — Bearer).
+
+Если перед хранилищем стоит прокси-сервер, он должен корректно проксировать заголовок Registry API v2 `Docker-Distribution-API-Version: registry/2.0`, иначе проверка Basic может завершиться ошибкой, а последующая попытка Bearer сообщением с ошибкой `couldn't find bearer realm parameter`.
 
 Протестирована и гарантируется работа со следующими хранилищами образов:
 {%- for registry in site.data.supported_versions.registries %}
