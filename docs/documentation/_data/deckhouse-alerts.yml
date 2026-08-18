@@ -3013,6 +3013,52 @@ alerts:
         The registry module is still running its previous implementation.
       severity: "8"
       markupFormat: markdown
+    - name: D8RegistryMigrationPreflightBlocked
+      sourceFile: modules/038-registry/monitoring/prometheus-rules/migration.yaml
+      moduleUrl: 038-registry
+      module: registry
+      edition: ce
+      description: |-
+        A precondition of the `registry` module's migration is not met, and the migration
+        must not be started until it is: `{{ $labels.check }}` — {{ $labels.detail }}.
+
+        Nothing is broken right now. This cluster keeps pulling images exactly as it does
+        today; the alert is about the procedure that moves it to the current implementation
+        of the module.
+
+        What each blocking check means:
+
+        - `mode` — the cluster arrived on this release without having been brought to
+          `Unmanaged` first, or the previous implementation is mid-transition. This release
+          renders none of the previous implementation's objects, so whatever they served —
+          the in-cluster proxy in `Proxy`, the `registry` Service — is already gone, and
+          the nodes still point at it. The discriminator has NOT flipped while this is
+          failing, so the way back is the image: return the previous release, bring the
+          cluster to `Unmanaged` by the documented procedure, then upgrade again.
+
+        - `not_local` — the cluster's registry *is* the cluster (`Local`). The documented
+          procedure brings the cluster through `Unmanaged`, where every node pulls straight
+          from an upstream, and this cluster has no upstream to pull from. It needs the
+          fallback runbook, which adopts the existing store instead.
+
+        - `upstream_reachable` — the registry this cluster pulls from does not answer. The
+          procedure points every node straight at it, so starting now turns a documented
+          step into an outage. Fix the reachability first:
+
+          ```
+          kubectl -n d8-system get secret registry-state -o jsonpath='{.data.state}' | base64 -d | head
+          kubectl -n d8-system logs deploy/deckhouse -c deckhouse | grep -i 'registry checker'
+          ```
+
+        The non-blocking checks are reported by the same metric with `blocking="false"`:
+
+        ```
+        d8_registry_migration_preflight
+        ```
+      summary: |
+        The registry migration must not be started on this cluster yet.
+      severity: "6"
+      markupFormat: markdown
     - name: D8RegistryNodeNotConverged
       sourceFile: modules/038-registry/monitoring/prometheus-rules/registry.yaml
       moduleUrl: 038-registry
