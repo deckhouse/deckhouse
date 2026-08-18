@@ -165,8 +165,6 @@ resource "yandex_compute_instance" "master" {
       condition     = local._network_type_raw == "" || local.network_type != null
       error_message = "ERROR: unknown YandexInstanceClass networkType '${local._network_type_raw}' on instance class '${local._instance_class_name}': expected one of ${join(", ", keys(var.network_types))}."
     }
-
-    create_before_destroy = true
   }
 
   timeouts {
