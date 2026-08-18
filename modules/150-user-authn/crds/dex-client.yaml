@@ -41,6 +41,8 @@ spec:
                     A list of emails of users are allowed to connect to the client.
 
                     **By default**, all users can connect.
+
+                    Values must not contain line breaks.
                   x-doc-default: 'All users are allowed.'
                   items:
                     type: string
@@ -51,13 +53,18 @@ spec:
                   description: |
                     A list of groups whose members are allowed to connect to the client;
                     **By default**, all groups can connect.
+
+                    Values must not contain line breaks.
                   items:
                     type: string
                     maxLength: 512
                     pattern: '^[^\r\n]*$'
                 redirectURIs:
                   type: array
-                  description: 'Array or urls that Dex can redirect to after successful authentication.'
+                  description: |
+                    Array or urls that Dex can redirect to after successful authentication.
+
+                    Values must not contain line breaks.
                   items:
                     type: string
                     maxLength: 2048
@@ -66,6 +73,8 @@ spec:
                   type: array
                   description: |
                     OAuth2 client IDs that allowed cross authentication with the current client.
+
+                    Values must not contain line breaks.
 
                     [Details...](https://developers.google.com/identity/protocols/CrossClientAuth)
                   items:

@@ -135,6 +135,8 @@ spec:
                     The URL of the application from which requests will be redirected to the sign-out URL of the `dex-authenticator`.
 
                     It is used in the application to direct logout requests. A separate Ingress resource will be created for the specified URL, and requests to it will be redirected to `dex-authenticator`.
+
+                    The value must not contain line breaks.
                   maxLength: 2048
                   pattern: '^[^\r\n]*$'
                 keepUsersLoggedInFor:
@@ -155,6 +157,8 @@ spec:
                     A list of emails of users are allowed to connect to the client.
 
                     **By default**, all users can connect.
+
+                    Values must not contain line breaks.
                   x-doc-default: 'All emails are allowed.'
                   items:
                     type: string
@@ -166,6 +170,8 @@ spec:
                     A list of groups whose members are allowed to connect to the client.
 
                     **By default**, all groups can connect.
+
+                    Values must not contain line breaks.
                   x-doc-default: 'All groups are allowed.'
                   items:
                     type: string
@@ -337,6 +343,8 @@ spec:
                           The URL of the application from which requests will be redirected to the sign-out URL of the `dex-authenticator`.
 
                           It is used in the application to direct logout requests. A separate Ingress resource will be created for the specified URL, and requests to it will be redirected to `dex-authenticator`.
+
+                          The value must not contain line breaks.
                         maxLength: 2048
                         pattern: '^[^\r\n]*$'
                       whitelistSourceRanges:
@@ -398,6 +406,8 @@ spec:
                           The URL of the application from which requests will be redirected to the sign-out URL of the `dex-authenticator`.
 
                           It is used in the application to direct logout requests. A separate Ingress resource will be created for the specified URL, and requests to it will be redirected to `dex-authenticator`.
+
+                          The value must not contain line breaks.
                         maxLength: 2048
                         pattern: '^[^\r\n]*$'
                       gatewayAPI:
@@ -467,6 +477,8 @@ spec:
                     A list of emails of users are allowed to connect to the client.
 
                     **By default**, all users can connect.
+
+                    Values must not contain line breaks.
                   x-doc-default: 'All users are allowed.'
                   items:
                     type: string
@@ -478,6 +490,8 @@ spec:
                     A list of groups whose members are allowed to connect to the client.
 
                     **By default**, all groups can connect.
+
+                    Values must not contain line breaks.
                   x-doc-default: 'All groups are allowed.'
                   items:
                     type: string
