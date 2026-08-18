@@ -417,6 +417,9 @@ delete,deletecollection:
     - apps/replicasets
     - cert-manager.io/certificaterequests
     - extensions/replicasets
+read:
+    - deckhouse.io/applicationpackages
+    - deckhouse.io/applicationpackageversions
 read-write:
     - deckhouse.io/authorizationrules
 write:
@@ -439,6 +442,8 @@ delete,deletecollection:
 patch,update:
     - nodes
 read:
+    - deckhouse.io/applicationpackages
+    - deckhouse.io/applicationpackageversions
     - deckhouse.io/containerdintegritypolicies
     - deckhouse.io/ingressistiocontrollers
     - deckhouse.io/istiofederations
@@ -511,8 +516,6 @@ read:
     - nfd.k8s-sigs.io/nodefeaturerules
     - nfd.k8s-sigs.io/nodefeatures
 read-write:
-    - deckhouse.io/applicationpackages
-    - deckhouse.io/applicationpackageversions
     - deckhouse.io/clusterauthorizationrules
     - deckhouse.io/deckhousereleases
     - deckhouse.io/dexproviderchecks
@@ -544,6 +547,8 @@ write:
     - config.gatekeeper.sh/configs
     - connection.gatekeeper.sh/connections
     - constraints.gatekeeper.sh/*
+    - deckhouse.io/applicationpackages
+    - deckhouse.io/applicationpackageversions
     - deckhouse.io/awsinstanceclasses
     - deckhouse.io/azureinstanceclasses
     - deckhouse.io/containerdintegritypolicies
