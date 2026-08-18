@@ -7,31 +7,31 @@ metadata:
   name: {{ $crd.encodedID }}
   namespace: d8-{{ $context.Chart.Name }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" "dex-client")) | nindent 2 }}
-id: {{ $crd.id }}
-name: {{ $crd.id }}
-secret: {{ $crd.clientSecret }}
+id: {{ $crd.id | quote }}
+name: {{ $crd.id | quote }}
+secret: {{ $crd.clientSecret | quote }}
   {{ if $crd.spec.trustedPeers }}
 trustedPeers:
 {{- range $peer := $crd.spec.trustedPeers }}
-  - {{ $peer }}
+  - {{ $peer | quote }}
 {{- end }}
   {{- end }}
   {{ if $crd.spec.redirectURIs }}
 redirectURIs:
 {{- range $uri := $crd.spec.redirectURIs }}
-  - {{ $uri }}
+  - {{ $uri | quote }}
 {{- end }}
   {{- end }}
   {{ if $crd.spec.allowedEmails }}
 allowedEmails:
 {{- range $email := $crd.spec.allowedEmails }}
-- {{ $email }}
+- {{ $email | quote }}
 {{- end }}
   {{- end }}
   {{ if $crd.spec.allowedGroups }}
 allowedGroups:
 {{- range $group := $crd.spec.allowedGroups }}
-- {{ $group }}
+- {{ $group | quote }}
 {{- end }}
   {{- end }}
 
@@ -44,31 +44,31 @@ metadata:
   name: {{ $crd.legacyEncodedID }}
   namespace: d8-{{ $context.Chart.Name }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" "dex-client")) | nindent 2 }}
-id: {{ $crd.legacyID }}
-name: {{ $crd.legacyID }}
-secret: {{ $crd.clientSecret }}
+id: {{ $crd.legacyID | quote }}
+name: {{ $crd.legacyID | quote }}
+secret: {{ $crd.clientSecret | quote }}
   {{ if $crd.spec.trustedPeers }}
 trustedPeers:
 {{- range $peer := $crd.spec.trustedPeers }}
-  - {{- $peer }}
+  - {{ $peer | quote }}
 {{- end }}
   {{- end }}
   {{ if $crd.spec.redirectURIs }}
 redirectURIs:
 {{- range $uri := $crd.spec.redirectURIs }}
-  - {{ $uri }}
+  - {{ $uri | quote }}
 {{- end }}
   {{- end }}
   {{ if $crd.spec.allowedEmails }}
 allowedEmails:
 {{- range $email := $crd.spec.allowedEmails }}
-  - {{ $email }}
+  - {{ $email | quote }}
 {{- end }}
   {{- end }}
   {{ if $crd.spec.allowedGroups }}
 allowedGroups:
 {{- range $group := $crd.spec.allowedGroups }}
-- {{ $group }}
+- {{ $group | quote }}
 {{- end }}
   {{- end }}
 {{- end }}
