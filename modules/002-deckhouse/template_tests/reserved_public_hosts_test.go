@@ -431,12 +431,27 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 			renderWithSettings("%s.example.com", `{excludedServices: ["graphana"]}`, admissionAPIs...)
 		})
 
-		It("refuses to render rather than leave the hostname reserved unnoticed", func() {
-			Expect(f.RenderError).Should(HaveOccurred())
-			Expect(f.RenderError.Error()).To(ContainSubstring("graphana"))
-			Expect(f.RenderError.Error()).To(ContainSubstring("deckhouse.reservedPublicHosts.excludedServices"))
-			// The message carries the names that would have worked, they exist nowhere else.
-			Expect(f.RenderError.Error()).To(ContainSubstring("grafana"))
+		It("keeps rendering, since a typo must not stop the module that deploys Deckhouse", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			cm := f.KubernetesResource("ConfigMap", "d8-system", reservedHostsConfigMapName)
+			Expect(cm.Exists()).To(BeTrue())
+			// The reservation the operator meant to lift is untouched.
+			Expect(strings.Fields(cm.Field("data.hosts").String())).To(ContainElement("grafana.example.com"))
+		})
+
+		It("publishes the name so that the no-op is visible", func() {
+			cm := f.KubernetesResource("ConfigMap", "d8-system", reservedHostsConfigMapName)
+			Expect(strings.Fields(cm.Field("data.unknownExcludedServices").String())).To(Equal([]string{"graphana"}))
+		})
+
+		It("reports nothing when every excluded name is published", func() {
+			renderWithSettings("%s.example.com", `{excludedServices: ["grafana"]}`, admissionAPIs...)
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			cm := f.KubernetesResource("ConfigMap", "d8-system", reservedHostsConfigMapName)
+			Expect(strings.Fields(cm.Field("data.unknownExcludedServices").String())).To(BeEmpty())
+			Expect(strings.Fields(cm.Field("data.hosts").String())).NotTo(ContainElement("grafana.example.com"))
 		})
 	})
 

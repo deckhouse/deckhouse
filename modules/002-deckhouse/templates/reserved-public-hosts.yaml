@@ -52,9 +52,11 @@
 
 {{- /*
   A name nobody publishes reserves nothing, so excluding it is a no-op, which is exactly how a
-  misspelled name would look. Refusing to render says so instead of leaving the operator with a
-  hostname they believe they have freed. The list of valid names is in the message, since it is the
-  literal above and nothing else in the cluster carries it.
+  misspelled name would look. Such a name is collected and published below rather than failing the
+  render: this template ships in the module that renders Deckhouse itself, so a typo in a
+  ModuleConfig must not stop the module from converging. It would also become an upgrade hazard,
+  because dropping a name from the list above would then break every cluster whose ModuleConfig
+  excludes it, at upgrade time and for a reason the operator did not cause.
 */}}
 {{- $unknownServices := list }}
 {{- range $name := $excludedServices }}
@@ -62,9 +64,7 @@
     {{- $unknownServices = append $unknownServices $name }}
   {{- end }}
 {{- end }}
-{{- if $unknownServices }}
-  {{- fail (printf "deckhouse.reservedPublicHosts.excludedServices names services the platform does not publish: %s. Excluding them frees nothing. The published services are: %s" (join ", " $unknownServices) (join ", " $reservedNames)) }}
-{{- end }}
+{{- $unknownServices = $unknownServices | uniq | sortAlpha }}
 
 {{- $platformHosts := list }}
 {{- $effectiveHosts := list }}
@@ -100,6 +100,13 @@ data:
   platformHosts: |
 {{- range $host := $platformHosts }}
     {{ $host }}
+{{- end }}
+  # Names in excludedServices that the platform does not publish. Excluding them frees nothing, so
+  # this is where a misspelled name shows up: the reservation an operator meant to lift is still in
+  # `hosts` above, and the name they typed is here.
+  unknownExcludedServices: |
+{{- range $name := $unknownServices }}
+    {{ $name }}
 {{- end }}
 
 {{- /*

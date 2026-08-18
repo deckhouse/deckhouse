@@ -368,7 +368,7 @@ properties:
 
           Use it for a cluster where a workload outside a system namespace legitimately serves a path under one of those hostnames.
 
-          A name is the part `global.modules.publicDomainTemplate` substitutes, `grafana` for `grafana.example.com`, and has to be one Deckhouse actually publishes. An unknown name is rejected while the module renders, so a misspelled one cannot leave the hostname reserved unnoticed.
+          A name is the part `global.modules.publicDomainTemplate` substitutes, `grafana` for `grafana.example.com`, and has to be one Deckhouse actually publishes. A name Deckhouse does not publish reserves nothing, so excluding it has no effect; such names are listed in the `unknownExcludedServices` key of the `d8-reserved-public-hosts` ConfigMap in the `d8-system` namespace, which is where to look if a hostname stayed reserved unexpectedly.
 
           Excluding a name lifts the reservation of that hostname in every namespace, including the ones Deckhouse itself uses to serve it.
         x-examples:
