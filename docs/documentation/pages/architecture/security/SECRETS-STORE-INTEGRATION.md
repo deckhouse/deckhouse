@@ -26,7 +26,7 @@ The module provides the following capabilities:
 
 The operating mode (`Manual` or `DiscoverLocalStronghold`) is specified by the
 [`settings.connectionConfiguration`](/modules/secrets-store-integration/configuration.html#parameters-connectionconfiguration)
-module parameter of the [ModuleConfig](../../reference/api/cr.html#moduleconfig) custom resource.
+parameter in the module settings.
 
 The module works with the following custom resources:
 
@@ -35,7 +35,7 @@ The module works with the following custom resources:
   and path mappings in the container.
 - SecretProviderClassPodStatus: Contains the status of the secret mounting process in a pod
   and diagnostic information.
-- [SecretsStoreImport](/modules/secrets-store-integration/alpha/cr.html#secretsstoreimport):
+- [SecretsStoreImport](/modules/secrets-store-integration/cr.html#secretsstoreimport):
   Stores the mapping of secrets between a Vault-compatible store and files in containers.
 
 For more details about the module, refer to the [corresponding documentation section](/modules/secrets-store-integration/).

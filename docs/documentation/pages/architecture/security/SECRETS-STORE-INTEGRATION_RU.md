@@ -17,13 +17,13 @@ description: Архитектура модуля secrets-store-integration в De
 - подмена команды запуска (entrypoint) для приложений, которые нельзя модифицировать для прямого чтения секретов из хранилища;
 - доставка бинарных секретов в формате Base64 (например, JKS-хранилища, keytab-файлы для Kerberos) с автоматическим раскодированием.
 
-Режим работы (`Manual` или `DiscoverLocalStronghold`) задаётся параметром модуля [`settings.connectionConfiguration`](/modules/secrets-store-integration/configuration.html#parameters-connectionconfiguration) кастомного ресурса [ModuleConfig](../../reference/api/cr.html#moduleconfig).
+Режим работы (`Manual` или `DiscoverLocalStronghold`) задаётся параметром [`settings.connectionConfiguration`](/modules/secrets-store-integration/configuration.html#parameters-connectionconfiguration) в настройках модуля.
 
 Модуль работает со следующими кастомными ресурсами:
 
 - SecretProviderClass — описывает, какие секреты и из какого внешнего хранилища нужно доставлять в под. В спецификации этого ресурса также определяются параметры подключения к источнику секретов и сопоставление путей в контейнере;
 - SecretProviderClassPodStatus — содержит статус процесса монтирования секретов в под и диагностическую информацию;
-- [SecretsStoreImport](/modules/secrets-store-integration/alpha/cr.html#secretsstoreimport) — хранит сопоставление секретов между Vault-совместимым хранилищем и файлами в контейнерах.
+- [SecretsStoreImport](/modules/secrets-store-integration/cr.html#secretsstoreimport) — хранит сопоставление секретов между Vault-совместимым хранилищем и файлами в контейнерах.
 
 Подробнее с описанием модуля можно ознакомиться в [соответствующем разделе документации](/modules/secrets-store-integration/).
 
@@ -60,7 +60,7 @@ description: Архитектура модуля secrets-store-integration в De
    - **injector-puller** — init-контейнер, который выполняет однократный запуск файл-инжектора (исполняемого файла для безопасного внедрения секретов из внешнего хранилища в окружение приложения внутри пода) из служебного образа `secrets-store-integration/env-injector`. Однократный запуск необходим для предварительной загрузки этого образа на каждый узел кластера. Образ используется компонентом webhook для доставки секретов в пользовательское приложение в виде переменных окружения.
    - **csi-node-driver-registrar** — сайдкар-контейнер, регистрирующий CSI Node Plugin в kubelet. Вызывает RPC `GetPluginInfo` и `NodeGetInfo` в контейнере secrets-store, чтобы получить информацию о плагине и узле;
    - **secrets-store** — основной контейнер;
-   - **csi-livenessprobe** — сайдкар-контейнер, который отслеживает состояние Unix-сокета CSI-драйвера и предоставляет HTTP-эндпоинт /healthz, за которым следит kubelet. При неуспешном выполнении проверки `livenessProbe` kubelet перезапускает под csi-secrets-store;
+   - **csi-livenessprobe** — сайдкар-контейнер, который отслеживает состояние Unix-сокета CSI-драйвера и предоставляет HTTP-эндпоинт `/healthz`, за которым следит kubelet. При неуспешном выполнении проверки `livenessProbe` kubelet перезапускает под csi-secrets-store;
    - **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищённого доступа к метрикам контейнера secrets-store.
 
 1. **Vault-csi-provider** (DaemonSet) — компонент работает на всех узлах кластера и состоит из одного контейнера **vault-csi-provider**. Vault-csi-provider авторизуется в хранилище секретов, получает из него данные и передаёт их csi-secrets-store.
@@ -87,7 +87,7 @@ description: Архитектура модуля secrets-store-integration в De
 
    Компонент содержит следующие контейнеры:
 
-  - **copy-env-injector** — init-контейнер, добавленный компонентом webhook, выполняет копирование исполняемого файл-инжектора из служебного образа `secrets-store-integration/env-injector`;
+  - **copy-env-injector** — init-контейнер, добавленный компонентом webhook, который выполняет копирование исполняемого файл-инжектора из служебного образа `secrets-store-integration/env-injector`;
   - **&lt;CONTAINER_NAME&gt;** — один или несколько контейнеров (в том числе init-контейнеры) оригинального приложения пользователя, команда запуска которых изменена компонентом webhook на запуск файл-инжектора.
 
    Файл-инжектор авторизуется в хранилище секретов, получает данные, передаёт секреты приложению через переменные окружения и запускает исходную команду контейнера. Если указана аннотация `secrets-store.deckhouse.io/restart-on-secret-change` со значением `watch-for-lease` или `watch-for-data`, файл-инжектор выполняет ротацию секретов при их изменении в хранилище.
