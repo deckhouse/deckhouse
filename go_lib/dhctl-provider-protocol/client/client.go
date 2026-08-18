@@ -48,15 +48,20 @@ func WithCallOptions(opts ...grpc.CallOption) Option {
 	}
 }
 
+func DefaultCallOptions() []Option {
+	return []Option{
+		WithCallOptions(
+			grpc.MaxCallRecvMsgSize(MaxMessageSize),
+			grpc.MaxCallSendMsgSize(MaxMessageSize),
+		),
+	}
+}
+
 // NewClient creates a new client from a gRPC connection. It does not dial, so the
 // caller keeps control of the connection's lifetime and of how readiness is awaited.
 func NewClient(conn grpc.ClientConnInterface, opts ...Option) Client {
-	cfg := Config{
-		callOptions: []grpc.CallOption{
-			grpc.MaxCallRecvMsgSize(MaxMessageSize),
-			grpc.MaxCallSendMsgSize(MaxMessageSize),
-		},
-	}
+	cfg := Config{}
+
 	for _, opt := range opts {
 		opt(&cfg)
 	}

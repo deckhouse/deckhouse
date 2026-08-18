@@ -21,19 +21,13 @@ import (
 	protogen "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/gen"
 )
 
-// Translation between this action's Go types and its wire types. Both transport
-// halves use these, so a request built by the client and the input a plugin sees
-// cannot drift apart.
-
 // ToPBRequest encodes the input for the wire.
 func ToPBRequest(input Input) (*protogen.ValidateRequest, error) {
-	payload, err := json.Marshal(input)
+	inputJSON, err := json.Marshal(input)
 	if err != nil {
-		// The payload carries credentials; the error must not quote it.
 		return nil, fmt.Errorf("encode validate input: %w", err)
 	}
-
-	return &protogen.ValidateRequest{InputJson: payload}, nil
+	return &protogen.ValidateRequest{InputJson: inputJSON}, nil
 }
 
 // FromPBRequest decodes the input a request carries.
@@ -42,7 +36,6 @@ func FromPBRequest(req *protogen.ValidateRequest) (Input, error) {
 	if err := json.Unmarshal(req.GetInputJson(), &input); err != nil {
 		return input, fmt.Errorf("decode validate input: %w", err)
 	}
-
 	return input, nil
 }
 
@@ -60,8 +53,10 @@ func FromPBResponse(resp *protogen.ValidateResponse) Result {
 	if resp == nil {
 		return Result{}
 	}
-
-	return NewResult(FromPBViolations(resp.GetErrors()), FromPBViolations(resp.GetWarnings()))
+	return NewResult(
+		FromPBViolations(resp.GetErrors()),
+		FromPBViolations(resp.GetWarnings()),
+	)
 }
 
 // ToPBViolations renders violations for the wire. Value becomes a string via
@@ -72,7 +67,7 @@ func ToPBViolations(violations []Violation) []*protogen.Violation {
 		return nil
 	}
 
-	out := make([]*protogen.Violation, 0, len(violations))
+	ret := make([]*protogen.Violation, 0, len(violations))
 	for _, violation := range violations {
 		wire := &protogen.Violation{
 			Path:    violation.Path,
@@ -82,10 +77,9 @@ func ToPBViolations(violations []Violation) []*protogen.Violation {
 		if violation.Value != nil {
 			wire.Value = fmt.Sprint(violation.Value)
 		}
-		out = append(out, wire)
+		ret = append(ret, wire)
 	}
-
-	return out
+	return ret
 }
 
 // FromPBViolations decodes violations off the wire.
@@ -94,25 +88,21 @@ func FromPBViolations(violations []*protogen.Violation) []Violation {
 		return nil
 	}
 
-	out := make([]Violation, 0, len(violations))
+	ret := make([]Violation, 0, len(violations))
 	for _, violation := range violations {
-		out = append(out, Violation{
+		ret = append(ret, Violation{
 			Path:    violation.GetPath(),
 			Code:    violation.GetCode(),
 			Message: violation.GetMessage(),
-			// Value stays a string on the way back: the wire form is already
-			// rendered, and re-parsing it into its original type would be a guess.
-			Value: valueOrNil(violation.GetValue()),
+			Value:   valueOrNil(violation.GetValue()),
 		})
 	}
-
-	return out
+	return ret
 }
 
 func valueOrNil(value string) any {
 	if value == "" {
 		return nil
 	}
-
 	return value
 }
