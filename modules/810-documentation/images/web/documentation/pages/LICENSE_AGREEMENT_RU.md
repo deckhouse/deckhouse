@@ -1,6 +1,8 @@
 ---
 title: "Лицензионное соглашение"
 permalink: ru/license-agreement.html
+extractedLinksMax: 0
+extractedLinksOnlyMax: 0
 lang: ru
 ---
 
