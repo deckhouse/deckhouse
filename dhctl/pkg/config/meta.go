@@ -30,6 +30,7 @@ import (
 	"github.com/iancoleman/strcase"
 	"sigs.k8s.io/yaml"
 
+	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/initconfig"
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/moduleconfig"
@@ -180,7 +181,9 @@ func (m *MetaConfig) Prepare(ctx context.Context, validatorProvider MetaConfigVa
 	// typed fields stay zeroed and bootstrap creates neither the additional
 	// masters nor any CloudPermanent node. Re-entrant by the guards inside —
 	// check and converge re-run Prepare on a DeepCopy of a prepared config.
-	applyNodeGroupReplicasFromCloudProviderVars(m)
+	if err := applyNodeGroupReplicasFromCloudProviderVars(m); err != nil {
+		return nil, err
+	}
 
 	return validateProviderConfig(ctx, validatorProvider, m)
 }
@@ -229,12 +232,22 @@ func (m *MetaConfig) extractProviderClusterFields() error {
 // it is not supported in Deckhouse.
 const masterNodeGroupName = "master"
 
-func applyNodeGroupReplicasFromCloudProviderVars(m *MetaConfig) {
+func applyNodeGroupReplicasFromCloudProviderVars(m *MetaConfig) error {
 	if m.CloudProviderVars == nil {
-		return
+		return nil
 	}
-	if _, hasMaster := m.CloudProviderVars.NodeGroups[masterNodeGroupName]; hasMaster && m.MasterNodeGroupSpec.Replicas == 0 {
-		if r := nodeGroupReplicas(m.CloudProviderVars.NodeGroups, masterNodeGroupName); r > 0 {
+	// Only a flow that reads the count from the NodeGroups needs it known, and only
+	// an operation that acts on it: legacy takes it from ProviderClusterConfiguration,
+	// destroy removes the nodes regardless and must stay possible.
+	mustKnowNodeCount := !m.HasLegacyProviderConfig() && m.Operation != proto.OperationDestroy
+
+	if masterNg, hasMaster := m.CloudProviderVars.NodeGroups[masterNodeGroupName]; hasMaster && m.MasterNodeGroupSpec.Replicas == 0 {
+		if mustKnowNodeCount {
+			if err := requireNodeGroupReplicas(masterNg, masterNodeGroupName); err != nil {
+				return err
+			}
+		}
+		if r, ok := nodeGroupMinPerZone(masterNg); ok && r > 0 {
 			m.MasterNodeGroupSpec.Replicas = r
 		}
 	}
@@ -242,16 +255,17 @@ func applyNodeGroupReplicasFromCloudProviderVars(m *MetaConfig) {
 		// Iterate over sorted names so the order of TerraNodeGroupSpecs
 		// is reproducible. Map iteration is randomised by the Go runtime;
 		// downstream state-hash comparisons see spurious drift otherwise.
-		//
-		// All non-master CloudPermanent NodeGroups (already filtered by
-		// IsCloudPermanentNodeGroup before reaching here) are emitted as
-		// TerraNodeGroupSpecs so converge keeps managing them.
 		for _, name := range sortedKeys(m.CloudProviderVars.NodeGroups) {
 			if name == masterNodeGroupName {
 				continue
 			}
 			ng := m.CloudProviderVars.NodeGroups[name]
-			r := nodeGroupReplicas(m.CloudProviderVars.NodeGroups, name)
+			if mustKnowNodeCount {
+				if err := requireNodeGroupReplicas(ng, name); err != nil {
+					return err
+				}
+			}
+			r, _ := nodeGroupMinPerZone(ng)
 			nodeTemplate, _ := nestedMap(ng, "spec", "nodeTemplate")
 			m.TerraNodeGroupSpecs = append(m.TerraNodeGroupSpecs, TerraNodeGroupSpec{
 				Name:         name,
@@ -260,25 +274,51 @@ func applyNodeGroupReplicasFromCloudProviderVars(m *MetaConfig) {
 			})
 		}
 	}
+
+	return nil
 }
 
-// nodeGroupReplicas derives the replica count for a CloudPermanent NodeGroup
-// from spec.cloudInstances.minPerZone, which CloudPermanent NGs always set
-// (they are the only kind that reaches here — see IsCloudPermanentNodeGroup).
-// Returning zero is interpreted by MasterNodeGroupController as "scale to
-// zero", so the caller must explicitly guard the master NG against that
-// outcome.
-func nodeGroupReplicas(ngs map[string]map[string]interface{}, name string) int {
-	ng, ok := ngs[name]
+// requireNodeGroupReplicas rejects a CloudPermanent NodeGroup no keepable node
+// count can be read from. Converge acts on a zero by deleting every node of the
+// group, so an unreadable count must stop it rather than be read as zero.
+func requireNodeGroupReplicas(ng map[string]interface{}, name string) error {
+	replicas, ok := nodeGroupMinPerZone(ng)
 	if !ok {
-		return 0
+		return fmt.Errorf(
+			"NodeGroup %q is CloudPermanent but has no spec.cloudInstances.minPerZone: "+
+				"dhctl cannot tell how many nodes it must keep. Set spec.cloudInstances.classReference "+
+				"and spec.cloudInstances.minPerZone on it, or re-apply the NodeGroup from your configuration", name)
 	}
-	if ci, ok := nestedMap(ng, "spec", "cloudInstances"); ok {
-		if r := toPositiveInt(ci["minPerZone"]); r > 0 {
-			return r
-		}
+	if replicas < 0 {
+		return fmt.Errorf(
+			"NodeGroup %q has spec.cloudInstances.minPerZone: %d: it cannot be negative",
+			name, replicas)
 	}
-	return 0
+	if name == masterNodeGroupName && replicas < 1 {
+		return fmt.Errorf(
+			"NodeGroup %q has spec.cloudInstances.minPerZone: %d: the control plane cannot be scaled to zero",
+			name, replicas)
+	}
+	return nil
+}
+
+// nodeGroupMinPerZone reports the node count of a CloudPermanent NodeGroup and
+// whether it is set at all; an explicit zero and an absent value mean different
+// things to the caller.
+func nodeGroupMinPerZone(ng map[string]interface{}) (int, bool) {
+	cloudInstances, ok := nestedMap(ng, "spec", "cloudInstances")
+	if !ok {
+		return 0, false
+	}
+	switch n := cloudInstances["minPerZone"].(type) {
+	case float64:
+		return int(n), true
+	case int64:
+		return int(n), true
+	case int:
+		return n, true
+	}
+	return 0, false
 }
 
 func sortedKeys(m map[string]map[string]interface{}) []string {
@@ -288,24 +328,6 @@ func sortedKeys(m map[string]map[string]interface{}) []string {
 	}
 	sort.Strings(keys)
 	return keys
-}
-
-func toPositiveInt(v interface{}) int {
-	switch n := v.(type) {
-	case float64:
-		if n > 0 {
-			return int(n)
-		}
-	case int64:
-		if n > 0 {
-			return int(n)
-		}
-	case int:
-		if n > 0 {
-			return n
-		}
-	}
-	return 0
 }
 
 func nestedMap(obj map[string]interface{}, path ...string) (map[string]interface{}, bool) {
@@ -560,25 +582,42 @@ func (m *MetaConfig) ExtractMasterNodeGroupStaticSettings(ctx context.Context) m
 	return static
 }
 
-// NodeGroupManifest prepares NodeGroup custom resource for static nodes, which were ordered by infrastructure utility
+// NodeGroupManifest prepares NodeGroup custom resource for static nodes, which were ordered by infrastructure utility.
+// Applied as a merge patch over the user's NodeGroup, so it carries neither
+// cloudInstances nor an approvalMode the user already chose.
 func (m *MetaConfig) NodeGroupManifest(terraNodeGroup TerraNodeGroupSpec) map[string]any {
 	if terraNodeGroup.NodeTemplate == nil {
 		terraNodeGroup.NodeTemplate = make(map[string]any)
 	}
+
+	spec := map[string]any{
+		"nodeType":     "CloudPermanent",
+		"nodeTemplate": terraNodeGroup.NodeTemplate,
+	}
+	if !m.nodeGroupSetsApprovalMode(terraNodeGroup.Name) {
+		spec["disruptions"] = map[string]any{"approvalMode": "Manual"}
+	}
+
 	return map[string]any{
 		"apiVersion": "deckhouse.io/v1",
 		"kind":       "NodeGroup",
 		"metadata": map[string]any{
 			"name": terraNodeGroup.Name,
 		},
-		"spec": map[string]any{
-			"nodeType": "CloudPermanent",
-			"disruptions": map[string]any{
-				"approvalMode": "Manual",
-			},
-			"nodeTemplate": terraNodeGroup.NodeTemplate,
-		},
+		"spec": spec,
 	}
+}
+
+func (m *MetaConfig) nodeGroupSetsApprovalMode(nodeGroupName string) bool {
+	if m.CloudProviderVars == nil {
+		return false
+	}
+	disruptions, ok := nestedMap(m.CloudProviderVars.NodeGroups[nodeGroupName], "spec", "disruptions")
+	if !ok {
+		return false
+	}
+	mode, _ := disruptions["approvalMode"].(string)
+	return mode != ""
 }
 
 func (m *MetaConfig) MarshalFullConfig() []byte {
