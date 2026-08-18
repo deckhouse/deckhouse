@@ -48,8 +48,6 @@ type dynamicResolver struct {
 }
 
 func (r *dynamicResolver) resolve(ctx context.Context, deps resolveDeps, kind resourceKind) (resolvedRequests, error) {
-	// Not getOrCreateMeasurement: the entry would leak into the ConfigMap for a
-	// kind another link answers.
 	measurement := r.state[kind]
 
 	overrideRemoved := measurement != nil && measurement.AppliedOverride != nil
