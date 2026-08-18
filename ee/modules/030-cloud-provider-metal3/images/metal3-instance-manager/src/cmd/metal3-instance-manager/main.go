@@ -41,7 +41,7 @@ import (
 )
 
 const (
-	finalizerName = "metal3instance.internal.deckhouse.io"
+	finalizerName = "metal3instance.deckhouse.io"
 
 	credentialsSecretType = "cloud-provider.deckhouse.io/credentials"
 
@@ -54,7 +54,7 @@ const (
 
 var (
 	metal3InstanceGVK = schema.GroupVersionKind{
-		Group:   "internal.deckhouse.io",
+		Group:   "deckhouse.io",
 		Version: "v1alpha1",
 		Kind:    "Metal3Instance",
 	}

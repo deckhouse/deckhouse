@@ -4,9 +4,9 @@ metadata:
   labels:
     heritage: deckhouse
     module: cloud-provider-metal3
-  name: metal3instances.internal.deckhouse.io
+  name: metal3instances.deckhouse.io
 spec:
-  group: internal.deckhouse.io
+  group: deckhouse.io
   names:
     kind: Metal3Instance
     listKind: Metal3InstanceList
