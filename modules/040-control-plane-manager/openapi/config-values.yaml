@@ -362,6 +362,32 @@ properties:
       - "ECDSA-P256"
     x-examples:
       - "ECDSA-P256"
+  kubernetesVersion:
+    type: string
+    description: |
+      Desired Kubernetes version of the control plane components.
+
+      This is the preferred place to manage the cluster Kubernetes version. Edit with:
+
+      ```shell
+      d8 k edit mc control-plane-manager
+      ```
+
+      The cluster Kubernetes version is resolved in the following order: this parameter, then the deprecated `ClusterConfiguration.kubernetesVersion`, then the version the current DKP release defaults to. This parameter wins whenever it is set, `Default` included; while it is unset, the deprecated field still decides.
+
+      If `Default` is specified, DKP selects the version considered stable for the current release. If that version is more than 1 minor version below the maximum version that has ever been used in the cluster, the version is not changed automatically.
+
+      Downgrading more than 1 minor version below the highest version the cluster has ever run is forbidden.
+    enum:
+      - "1.32"
+      - "1.33"
+      - "1.34"
+      - "1.35"
+      - "1.36"
+      - "Default"
+    x-examples:
+      - "1.35"
+      - "Default"
   rootKubeconfigSymlink:
     type: boolean
     default: true

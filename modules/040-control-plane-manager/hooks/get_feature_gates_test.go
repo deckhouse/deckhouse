@@ -120,39 +120,33 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_feature_gates
 
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
 
-	setClusterConfigWithVersion := func(version string) {
-		f.ValuesSet("global.clusterConfiguration.apiVersion", "deckhouse.io/v1")
-		f.ValuesSet("global.clusterConfiguration.kind", "ClusterConfiguration")
-		f.ValuesSet("global.clusterConfiguration.clusterType", "Static")
-		f.ValuesSet("global.clusterConfiguration.podSubnetCIDR", "10.111.0.0/16")
-		f.ValuesSet("global.clusterConfiguration.serviceSubnetCIDR", "10.222.0.0/16")
-		f.ValuesSet("global.clusterConfiguration.clusterDomain", "cluster.local")
-		f.ValuesSet("global.clusterConfiguration.kubernetesVersion", version)
+	// Was setClusterConfigWithVersion, which no longer described anything: no cluster config is set
+	// here. That helper had to populate seven global.clusterConfiguration fields because the
+	// object's openAPISpec marks them required; a flat scalar needs one line.
+	setTargetKubernetesVersion := func(version string) {
+		f.ValuesSet("global.discovery.targetKubernetesVersion", version)
 	}
 
+	// Unlike the ClusterConfiguration field this replaced, targetKubernetesVersion has no `default`
+	// and is not required, so "not set" is reachable in production — the global hook has not run
+	// yet, or failed. Publishing empty allowedFeatureGates there would strip the operator's
+	// enabledFeatureGates from the control plane, so the hook must fail instead.
 	Context("Kubernetes version not set", func() {
 		BeforeEach(func() {
+			f.ValuesSet("global.discovery.targetKubernetesVersion", "")
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 
-		It("Must be executed successfully", func() {
-			Expect(f).To(ExecuteSuccessfully())
-		})
-
-		It("internal.allowedFeatureGates must have empty arrays for all components", func() {
-			Expect(f.ValuesGet("controlPlaneManager.internal.allowedFeatureGates").String()).To(MatchJSON(`{
-				"apiserver": [],
-				"kubelet": [],
-				"kubeControllerManager": [],
-				"kubeScheduler": []
-			}`))
+		It("must fail instead of publishing an empty allow-list", func() {
+			Expect(f).NotTo(ExecuteSuccessfully())
+			Expect(f.GoHookError.Error()).To(ContainSubstring("global.discovery.targetKubernetesVersion is empty"))
 		})
 	})
 
 	Context("Empty feature gates array", func() {
 		BeforeEach(func() {
-			setClusterConfigWithVersion("1.32")
+			setTargetKubernetesVersion("1.32")
 			f.ValuesSet("controlPlaneManager.enabledFeatureGates", []interface{}{})
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
@@ -175,7 +169,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_feature_gates
 
 	Context("Feature gates for Kubernetes 1.32", func() {
 		BeforeEach(func() {
-			setClusterConfigWithVersion("1.32")
+			setTargetKubernetesVersion("1.32")
 			f.ValuesSet("controlPlaneManager.enabledFeatureGates", []interface{}{
 				"APIServerIdentity",
 				"StorageVersionAPI",
@@ -205,7 +199,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_feature_gates
 
 	Context("Forbidden feature gates for Kubernetes 1.35", func() {
 		BeforeEach(func() {
-			setClusterConfigWithVersion("1.35")
+			setTargetKubernetesVersion("1.35")
 			f.ValuesSet("controlPlaneManager.enabledFeatureGates", []interface{}{
 				"SomeProblematicFeature",
 				"CPUManager",
@@ -232,7 +226,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_feature_gates
 
 	Context("Non-existent feature gates", func() {
 		BeforeEach(func() {
-			setClusterConfigWithVersion("1.32")
+			setTargetKubernetesVersion("1.32")
 			f.ValuesSet("controlPlaneManager.enabledFeatureGates", []interface{}{
 				"NonExistentFeature",
 				"AnotherNonExistentFeature",
@@ -292,7 +286,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_feature_gates
 
 	Context("Feature gates deprecated in future versions", func() {
 		BeforeEach(func() {
-			setClusterConfigWithVersion("1.32")
+			setTargetKubernetesVersion("1.32")
 			f.ValuesSet("controlPlaneManager.enabledFeatureGates", []interface{}{
 				"DynamicResourceAllocation",
 				"TestDeprecatedGate",
@@ -342,7 +336,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_feature_gates
 
 	Context("Feature gates already deprecated in current version", func() {
 		BeforeEach(func() {
-			setClusterConfigWithVersion("1.33")
+			setTargetKubernetesVersion("1.33")
 			f.ValuesSet("controlPlaneManager.enabledFeatureGates", []interface{}{
 				"DynamicResourceAllocation",
 				"APIServerIdentity",
@@ -376,7 +370,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_feature_gates
 
 	Context("No deprecated feature gates in use", func() {
 		BeforeEach(func() {
-			setClusterConfigWithVersion("1.35")
+			setTargetKubernetesVersion("1.35")
 			f.ValuesSet("controlPlaneManager.enabledFeatureGates", []interface{}{
 				"APIServerIdentity",
 				"CPUManager",
@@ -406,7 +400,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_feature_gates
 
 	Context("Forbidden feature gates in current version", func() {
 		BeforeEach(func() {
-			setClusterConfigWithVersion("1.33")
+			setTargetKubernetesVersion("1.33")
 			f.ValuesSet("controlPlaneManager.enabledFeatureGates", []interface{}{
 				"SomeProblematicFeature",
 				"APIServerIdentity",

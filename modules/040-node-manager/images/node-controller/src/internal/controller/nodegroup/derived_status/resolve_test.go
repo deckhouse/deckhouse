@@ -45,8 +45,26 @@ func newTestScheme(t *testing.T) *runtime.Scheme {
 
 func newTestService(t *testing.T, objs ...client.Object) *Service {
 	t.Helper()
+	if !hasClusterKubernetesConfigMap(objs) {
+		objs = append([]client.Object{kubernetesSourceConfigMap("1.32")}, objs...)
+	}
+	return newTestServiceRaw(t, objs...)
+}
+
+func newTestServiceRaw(t *testing.T, objs ...client.Object) *Service {
+	t.Helper()
 	c := fake.NewClientBuilder().WithScheme(newTestScheme(t)).WithObjects(objs...).Build()
 	return &Service{Client: c}
+}
+
+func hasClusterKubernetesConfigMap(objs []client.Object) bool {
+	for _, obj := range objs {
+		cm, ok := obj.(*corev1.ConfigMap)
+		if ok && cm.Name == clusterKubernetesConfigMapName && cm.Namespace == clusterConfigSecretNamespace {
+			return true
+		}
+	}
+	return false
 }
 
 func testSecret(ns, name string, data map[string][]byte) *corev1.Secret {

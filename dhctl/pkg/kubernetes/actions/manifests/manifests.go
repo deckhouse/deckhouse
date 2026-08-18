@@ -659,6 +659,40 @@ func SecretWithClusterConfig(data []byte) *apiv1.Secret {
 	)
 }
 
+const (
+	ClusterKubernetesCm          = "d8-cluster-kubernetes"
+	ClusterKubernetesCmNamespace = "kube-system"
+)
+
+// update-observer owns this object but only starts once the control-plane-manager DaemonSet is up,
+// while node-controller and the release requirements check read it immediately — hence the seed.
+// The heritage label is load-bearing: the label-objects ValidatingAdmissionPolicy keys off it, and
+// that is what stops anyone but the platform's own service accounts from deleting this object.
+func ClusterKubernetesConfigMap(kubernetesVersion string, trackDefault bool) *apiv1.ConfigMap {
+	// A ConfigMap protocol value, unrelated to the ModuleConfig enum of the same spelling.
+	updateMode := "Manual"
+	if trackDefault {
+		updateMode = "Automatic"
+	}
+
+	spec := fmt.Sprintf("desiredVersion: %q\nupdateMode: %s\n", kubernetesVersion, updateMode)
+	// Only the floor: the rest of the status is observed, and its absence is what tells the hooks and
+	// the observer that nothing has reconciled yet.
+	status := fmt.Sprintf("maxUsedKubernetesVersion: %q\n", kubernetesVersion)
+
+	return &apiv1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      ClusterKubernetesCm,
+			Namespace: ClusterKubernetesCmNamespace,
+			Labels: map[string]string{
+				"heritage": "deckhouse",
+				"name":     ClusterKubernetesCm,
+			},
+		},
+		Data: map[string]string{"spec": spec, "status": status},
+	}
+}
+
 func SecretWithProviderClusterConfig(configData, discoveryData []byte) *apiv1.Secret {
 	data := make(map[string][]byte)
 	if configData != nil {

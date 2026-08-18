@@ -42,8 +42,8 @@ import (
 )
 
 const (
-	deckhouseClusterConfigurationConfig = "d8-cluster-configuration"
-	k8sAutomaticVersion                 = "Automatic"
+	deckhouseClusterKubernetesConfigMap = "d8-cluster-kubernetes"
+	k8sAutomaticUpdateMode              = "Automatic"
 	reqCheckerServiceName               = "requirements-checker"
 	MigratedModulesRequirementFieldName = "migratedModules"
 )
@@ -180,8 +180,8 @@ func (c *deckhouseVersionCheck) Verify(_ context.Context, dr *v1alpha1.Deckhouse
 type kubernetesVersionCheck struct {
 	name string
 
-	enabledModules           set.Set
-	clusterKubernetesVersion string
+	enabledModules              set.Set
+	clusterKubernetesUpdateMode string
 
 	k8sclient client.Client
 }
@@ -222,36 +222,40 @@ func (c *kubernetesVersionCheck) Verify(_ context.Context, dr *v1alpha1.Deckhous
 }
 
 func (c *kubernetesVersionCheck) isKubernetesVersionAutomatic() bool {
-	return c.clusterKubernetesVersion == k8sAutomaticVersion
+	return c.clusterKubernetesUpdateMode == k8sAutomaticUpdateMode
 }
 
-type clusterConf struct {
-	KubernetesVersion string `json:"kubernetesVersion"`
+type clusterKubernetesSpec struct {
+	UpdateMode string `json:"updateMode"`
 }
 
+// The ConfigMap rather than values, which belong to the addon-operator process and are not visible
+// here. A missing ConfigMap or empty updateMode is non-Automatic (fail-open): this checker must not
+// block Deckhouse updates on cold start.
 func (c *kubernetesVersionCheck) initClusterKubernetesVersion(ctx context.Context) error {
-	key := client.ObjectKey{Namespace: app.NamespaceKubeSystem, Name: deckhouseClusterConfigurationConfig}
-	secret := new(corev1.Secret)
-	if err := c.k8sclient.Get(ctx, key, secret); err != nil {
-		// the secret does not exist in managed cluster
+	key := client.ObjectKey{Namespace: app.NamespaceKubeSystem, Name: deckhouseClusterKubernetesConfigMap}
+	cm := new(corev1.ConfigMap)
+	if err := c.k8sclient.Get(ctx, key, cm); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil
 		}
-		return fmt.Errorf("failed to get the 'd8-cluster-configuration' secret: %w", err)
+		return fmt.Errorf("failed to get the %q ConfigMap: %w", deckhouseClusterKubernetesConfigMap, err)
 	}
 
-	clusterConfigurationRaw, ok := secret.Data["cluster-configuration.yaml"]
-	if !ok {
-		return fmt.Errorf("expected field 'cluster-configuration.yaml' not found in secret %s", secret.Name)
+	specRaw, ok := cm.Data["spec"]
+	if !ok || specRaw == "" {
+		return nil
 	}
 
-	conf := new(clusterConf)
-	if err := yaml.Unmarshal(clusterConfigurationRaw, conf); err != nil {
-		return fmt.Errorf("failed to unmarshal cluster configuration: %w", err)
+	spec := new(clusterKubernetesSpec)
+	if err := yaml.Unmarshal([]byte(specRaw), spec); err != nil {
+		// Degrade rather than fail: this error reaches both the DeckhouseRelease reconciler and its
+		// webhook, so one hand-broken key would stop all release processing cluster-wide.
+		log.Warn("cannot parse the cluster kubernetes ConfigMap spec, treating the update mode as unknown",
+			slog.String("configMap", deckhouseClusterKubernetesConfigMap), log.Err(err))
+		return nil
 	}
-
-	c.clusterKubernetesVersion = conf.KubernetesVersion
-
+	c.clusterKubernetesUpdateMode = spec.UpdateMode
 	return nil
 }
 

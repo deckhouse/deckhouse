@@ -113,6 +113,7 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
       loadBalancer: {}
   internal:
     effectiveKubernetesVersion: "1.32"
+    maxUsedKubernetesVersion: "1.32"
     etcdServers:
       - https://192.168.199.186:2379
     mastersNode:
@@ -131,6 +132,7 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
 	const moduleValuesOnlyIssuer = `
 internal:
   effectiveKubernetesVersion: "1.32"
+  maxUsedKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
   authn: {}
@@ -145,6 +147,7 @@ apiserver:
 	const moduleValuesIssuerAdditionalAudiences = `
 internal:
   effectiveKubernetesVersion: "1.32"
+  maxUsedKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
   authn: {}
@@ -163,6 +166,7 @@ apiserver:
 	const moduleValuesAdditionalIssuerOnly = `
 internal:
   effectiveKubernetesVersion: "1.32"
+  maxUsedKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
   authn: {}
@@ -180,6 +184,7 @@ apiserver:
 	const moduleValuesCombo = `
 internal:
   effectiveKubernetesVersion: "1.32"
+  maxUsedKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
   authn: {}
@@ -199,6 +204,7 @@ apiserver:
 	const moduleValuesSuperCombo = `
 internal:
   effectiveKubernetesVersion: "1.32"
+  maxUsedKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
   authn: {}
@@ -220,6 +226,7 @@ apiserver:
 	const additionalAPIIssuersSuperComboWithDublicates = `
 internal:
   effectiveKubernetesVersion: "1.32"
+  maxUsedKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
   authn: {}
@@ -240,6 +247,7 @@ apiserver:
 	const additionalAPIIssuersSuperComboWithDublicates2 = `
 internal:
   effectiveKubernetesVersion: "1.32"
+  maxUsedKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
   authn: {}
@@ -260,6 +268,7 @@ apiserver:
 	const emptyApiserverConfig = `
 internal:
   effectiveKubernetesVersion: "1.32"
+  maxUsedKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
   authn: {}
@@ -273,6 +282,7 @@ apiserver:
 	const apiServerWithOidcFull = `
 internal:
   effectiveKubernetesVersion: "1.32"
+  maxUsedKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
   authn: {}
@@ -292,6 +302,7 @@ apiserver:
 	const apiServerWithOidcIssuerOnly = `
 internal:
   effectiveKubernetesVersion: "1.32"
+  maxUsedKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
   authn: {}
@@ -308,6 +319,7 @@ apiserver:
 	const apiServerWithOidcEmpty = `
 internal:
   effectiveKubernetesVersion: "1.32"
+  maxUsedKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
   authn: {}
@@ -1062,6 +1074,7 @@ resources:
 		const webhookTestValues = `
 internal:
   effectiveKubernetesVersion: "1.32"
+  maxUsedKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
   mastersNode:
@@ -1087,6 +1100,7 @@ apiserver:
 		const webhookAuthzMissingCATestValues = `
 internal:
   effectiveKubernetesVersion: "1.32"
+  maxUsedKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
   mastersNode:
@@ -1177,6 +1191,7 @@ apiserver:
 					const testValuesTemplate = `
 internal:
   effectiveKubernetesVersion: "1.32"
+  maxUsedKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
   mastersNode:
@@ -1286,6 +1301,79 @@ apiserver:
 
 			It("should not set encryption-algorithm key in Secret", func() {
 				assertEncryptionAlgorithm(f, "")
+			})
+		})
+	})
+
+	// Nothing else in this suite renders the DaemonSet env block, so a template mistake here reaches a
+	// cluster unnoticed.
+	Context("update-observer environment", func() {
+		envValue := func(name string) (string, bool) {
+			ds := f.KubernetesResource("DaemonSet", "kube-system", "d8-control-plane-manager")
+			Expect(ds.Exists()).To(BeTrue())
+
+			for _, container := range ds.Field("spec.template.spec.containers").Array() {
+				if container.Get("name").String() != "control-plane-manager" {
+					continue
+				}
+				for _, env := range container.Get("env").Array() {
+					if env.Get("name").String() == name {
+						return env.Get("value").String(), true
+					}
+				}
+			}
+			return "", false
+		}
+
+		assertEnv := func(name, want string) {
+			value, found := envValue(name)
+			Expect(found).To(BeTrue(), "%s must be present in the DaemonSet", name)
+			Expect(value).To(Equal(want))
+		}
+
+		Context("when the cluster tracks the Deckhouse default", func() {
+			BeforeEach(func() {
+				f.ValuesSet("global.discovery.targetKubernetesVersion", "1.35")
+				f.ValuesSet("global.discovery.kubernetesVersionIsDefault", true)
+				f.ValuesSet("controlPlaneManager.internal.maxUsedKubernetesVersion", "1.36")
+				f.HelmRender()
+			})
+
+			It("passes the declared version, Automatic mode and the historical maximum", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				assertEnv("DESIRED_KUBERNETES_VERSION", "1.35")
+				assertEnv("KUBERNETES_UPDATE_MODE", "Automatic")
+				assertEnv("MAX_USED_KUBERNETES_VERSION", "1.36")
+			})
+		})
+
+		Context("when the version is pinned", func() {
+			BeforeEach(func() {
+				f.ValuesSet("global.discovery.targetKubernetesVersion", "1.34")
+				f.ValuesSet("global.discovery.kubernetesVersionIsDefault", false)
+				f.ValuesSet("controlPlaneManager.internal.maxUsedKubernetesVersion", "1.34")
+				f.HelmRender()
+			})
+
+			It("passes Manual mode", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				assertEnv("DESIRED_KUBERNETES_VERSION", "1.34")
+				assertEnv("KUBERNETES_UPDATE_MODE", "Manual")
+			})
+		})
+
+		// A values set predating the key yields an untyped nil, which `ternary` rejects and the whole
+		// chart goes down with it.
+		Context("when kubernetesVersionIsDefault is absent from values", func() {
+			BeforeEach(func() {
+				f.ValuesSet("global.discovery.targetKubernetesVersion", "1.34")
+				f.ValuesSet("controlPlaneManager.internal.maxUsedKubernetesVersion", "1.34")
+				f.HelmRender()
+			})
+
+			It("still renders, falling back to Manual", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				assertEnv("KUBERNETES_UPDATE_MODE", "Manual")
 			})
 		})
 	})

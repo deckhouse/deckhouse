@@ -297,6 +297,7 @@ document.addEventListener("DOMContentLoaded", function () {
     openModal(e) {
       e.preventDefault();
       this.wrapper.style.display = 'flex';
+      document.body.classList.add('modal-opened');
       document.addEventListener('keydown', this.closeModalOnEscape.bind(this));
     }
 
@@ -306,6 +307,7 @@ document.addEventListener("DOMContentLoaded", function () {
       this.intro.style.display = 'block';
       this.success.style.display = 'none';
       this.error.style.display = 'none';
+      document.body.classList.remove('modal-opened');
     }
 
     closeModalOnEscape(e) {
@@ -314,6 +316,7 @@ document.addEventListener("DOMContentLoaded", function () {
         this.intro.style.display = 'block';
         this.success.style.display = 'none';
         this.error.style.display = 'none';
+        document.body.classList.remove('modal-opened');
       }
     }
 

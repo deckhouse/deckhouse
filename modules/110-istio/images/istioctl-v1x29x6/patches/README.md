@@ -2,4 +2,4 @@
 
 ## 001-deckhouse-default-istio-namespace.patch
 
-Fix default Istio namespace to Deckhouse Istio namespace.
+Set `constants.IstioSystemNamespace` to the Deckhouse Istio namespace (`d8-istio`).

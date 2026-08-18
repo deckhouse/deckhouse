@@ -1,46 +1,64 @@
 @use "components/common/_variables.scss";
+@use 'components/common/_breakpoints.scss';
+
+.cards-text,
+.cards-blocks {
+    &__content {
+        box-sizing: border-box;
+    }
+
+    &__title {
+        margin-top: 0;
+        margin-bottom: variables.$spacing-l;
+    }
+}
 
 .cards-text {
     background: variables.$color-smooth;
     padding: 100px 0;
+
     &__content {
-        box-sizing: border-box;
         display: flex;
         flex-direction: row;
         align-items: center;
         justify-content: flex-start;
     }
+
     &__info {
         width: 400px;
+
         p {
             line-height: 1.5;
         }
+
         a {
             color: variables.$color-alt;
+
             &:hover {
                 text-decoration: none;
             }
         }
     }
-    &__title {
-        margin-top: 0px;
-        margin-bottom: variables.$spacing-l;
-    }
+
     &__cards {
         flex: 1;
         display: flex;
         flex-direction: column;
         justify-content: center;
         align-items: center;
+
         .cards-item {
             width: 400px;
             box-sizing: border-box;
+
             &:nth-child(2n+1) {
                 margin-right: 100px;
             }
+
             &:nth-child(2n) {
                 margin-left: 100px;
             }
+
             &:not(:last-child) {
                 margin-bottom: 50px;
             }
@@ -50,12 +68,22 @@
 
 .cards-item {
     padding: 30px;
+
+    @include breakpoints.max-w(xxl) {
+        padding: 20px;
+    }
+
+    @include breakpoints.max-w(m) {
+        padding: 16px;
+    }
+
     &__title {
-        margin-top: 0px !important;
+        margin-top: 0 !important;
         margin-bottom: variables.$spacing-m;
         color: variables.$color-alt;
+
         a {
-            color: variables.$color-alt;
+            color: inherit;
             text-decoration: none;
         }
     }
@@ -70,34 +98,44 @@
 }
 
 .cards-blocks {
-    margin: variables.$spacing-l*2 0;
-    &__content {
-        box-sizing: border-box;
-    }
-    &__title {
-        margin-top: 0px;
-        margin-bottom: variables.$spacing-l;
-    }
+    margin: variables.$spacing-l * 2 0;
+
     &__cards {
         display: flex;
         flex-direction: row;
-        justify-content: space-between;
-        align-items: stretch;
         flex-wrap: wrap;
-    }
-    .cards-item {
-        width: 45%;
-        box-sizing: border-box;
-        margin-bottom: variables.$spacing-l*2;
-        border: 1px solid #ddd;
+        gap: 30px;
 
-        @media (min-width: variables.$container-breakpoint-lg) {
-            width: 30%;
+        @include breakpoints.max-w(xxl) {
+            gap: 20px;
         }
-        // kostyl
 
-        p {
-            font-size: variables.$font-size-base;
+        @include breakpoints.max-w(l) {
+            gap: 16px;
+        }
+
+        .cards-item {
+            flex-basis: calc(33.3% - 30px);
+            box-sizing: border-box;
+            border: 1px solid #ddd;
+
+            @include breakpoints.max-w(xxl) {
+                flex-basis: calc(33.3% - 20px);
+            }
+
+            @include breakpoints.max-w(l) {
+                flex-basis: calc(50% - 16px);
+            }
+
+            @include breakpoints.max-w(m) {
+                flex-basis: 100%;
+            }
+
+            h3 {
+                @include breakpoints.max-w(m) {
+                    font-size: 16px;
+                } 
+            }
         }
     }
 }

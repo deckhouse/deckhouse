@@ -22,7 +22,6 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -42,8 +41,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
-
-	"github.com/deckhouse/lib-dhctl/pkg/yaml/validation"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
@@ -129,6 +126,11 @@ func init() {
 	}
 }
 
+// The Kubernetes bindings below are triggers only — the resolved answer comes from values, which are
+// not an event source. Without them the K8sVersionsWithDeprecations requirement, which gates
+// DeckhouseRelease installation, would keep a stale answer until the next hourly tick.
+//
+// OnStartup must not be combined with Kubernetes bindings (addon-operator panics).
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: moduleQueue + "/helm-releases-scan",
 	Schedule: []go_hook.ScheduleConfig{
@@ -139,50 +141,51 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:              "kubernetesVersion",
+			Name:         "kubernetesVersion",
+			ApiVersion:   "deckhouse.io/v1alpha1",
+			Kind:         "ModuleConfig",
+			NameSelector: &types.NameSelector{MatchNames: []string{"control-plane-manager"}},
+			FilterFunc:   filterModuleConfigTriggerOnly,
+		},
+		{
+			Name:              "clusterConfiguration",
 			ApiVersion:        "v1",
 			Kind:              "Secret",
 			NamespaceSelector: &types.NamespaceSelector{NameSelector: &types.NameSelector{MatchNames: []string{"kube-system"}}},
 			NameSelector:      &types.NameSelector{MatchNames: []string{"d8-cluster-configuration"}},
-			FilterFunc:        applyClusterConfigurationYamlFilter,
+			FilterFunc:        filterClusterConfigurationVersionTriggerOnly,
 		},
 	},
-	// we don't need the startup hook, because this hook will start on synchronization
 }, dependency.WithExternalDependencies(handleHelmReleases))
 
-func applyClusterConfigurationYamlFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+// Narrowed to one field: the whole Secret changes for unrelated reasons, each costing a full
+// helm-release scan.
+func filterClusterConfigurationVersionTriggerOnly(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	secret := &v1.Secret{}
-	err := sdk.FromUnstructured(obj, secret)
-	if err != nil {
-		return nil, err
+	if err := sdk.FromUnstructured(obj, secret); err != nil {
+		return "", nil
 	}
 
-	ccYaml, ok := secret.Data["cluster-configuration.yaml"]
-	if !ok {
-		return nil, fmt.Errorf(`"cluster-configuration.yaml" not found in "d8-cluster-configuration" Secret`)
+	var cfg struct {
+		KubernetesVersion string `json:"kubernetesVersion"`
+	}
+	if err := yaml.Unmarshal(secret.Data["cluster-configuration.yaml"], &cfg); err != nil {
+		return "", nil
 	}
 
-	kubernetesVersion, err := getKubernetesVersion(ccYaml)
-	if err != nil {
-		return nil, err
-	}
-
-	return kubernetesVersion, err
+	return cfg.KubernetesVersion, nil
 }
 
-func getKubernetesVersion(data []byte) (string, error) {
-	if err := validation.ValidateData([]string{}, &data); err != nil {
-		if !errors.Is(err, validation.ErrSchemaNotFound) {
-			return "", err
-		}
+// Narrowed to one field: returning the whole object would re-run a helm-release scan on every
+// unrelated ModuleConfig edit.
+func filterModuleConfigTriggerOnly(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	raw, found, err := unstructured.NestedFieldNoCopy(obj.UnstructuredContent(), "spec", "settings", "kubernetesVersion")
+	if err != nil || !found {
+		return "", nil
 	}
-	var cfg struct {
-		KubernetesVersion string `yaml:"kubernetesVersion"`
-	}
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return "", fmt.Errorf("unmarshal YAML: %w", err)
-	}
-	return cfg.KubernetesVersion, nil
+
+	version, _ := raw.(string)
+	return version, nil
 }
 
 func handleHelmReleases(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
@@ -195,18 +198,8 @@ func handleHelmReleases(_ context.Context, input *go_hook.HookInput, dc dependen
 	}
 	k8sCurrentVersion := semver.MustParse(k8sCurrentVersionRaw.String())
 
-	var isAutomaticK8s bool
-	var kubernetesVersion string
-	kubernetesVersionSnapshots := input.Snapshots.Get("kubernetesVersion")
-	if len(kubernetesVersionSnapshots) > 0 {
-		err := kubernetesVersionSnapshots[0].UnmarshalTo(&kubernetesVersion)
-		if err != nil {
-			return fmt.Errorf("failed to unmarshal 'kubernetesVersion': %w", err)
-		}
-	}
-
-	if kubernetesVersion == "Automatic" {
-		isAutomaticK8s = true
+	isDefaultK8s := input.Values.Get("global.discovery.kubernetesVersionIsDefault").Bool()
+	if isDefaultK8s {
 		requirements.SaveValue(K8sVersionsWithDeprecations, "initial")
 	}
 
@@ -236,7 +229,7 @@ func handleHelmReleases(_ context.Context, input *go_hook.HookInput, dc dependen
 		return err
 	}
 
-	if isAutomaticK8s {
+	if isDefaultK8s {
 		if deprecations != "" {
 			requirements.SaveValue(K8sVersionsWithDeprecations, deprecations)
 		} else {

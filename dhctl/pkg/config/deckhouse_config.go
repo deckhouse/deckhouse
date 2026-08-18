@@ -53,6 +53,11 @@ type DeckhouseInstaller struct {
 	ProviderName             string
 	ModuleConfigs            []*ModuleConfig
 
+	// The resolved version, never the "Default" sentinel. TrackDefault becomes updateMode in the
+	// ConfigMap.
+	KubernetesVersion             string
+	TrackDefaultKubernetesVersion bool
+
 	// ModuleConfigCRDPath is the path to the ModuleConfig CRD manifest shipped
 	// in the installer image (or downloaded candi image). Empty means the file
 	// is unavailable and the CRD will be installed by deckhouse-controller.
@@ -258,6 +263,10 @@ func PrepareDeckhouseInstallConfig(ctx context.Context, metaConfig *MetaConfig, 
 		InstallerVersion:      metaConfig.InstallerVersion,
 		VersionFilePath:       metaConfig.VersionFilePath,
 		DownloadDir:           metaConfig.DownloadRootDir,
+
+		// "" means "track the Deckhouse default".
+		KubernetesVersion:             resolveKubernetesVersion(metaConfig.kubernetesVersionRaw()),
+		TrackDefaultKubernetesVersion: metaConfig.kubernetesVersionRaw() == "",
 	}
 
 	return &installConfig, nil

@@ -35,7 +35,7 @@ func TestResolvedNodeGroup_SpecPassthrough(t *testing.T) {
 		}),
 	}, Result{
 		Engine:            "None",
-		KubernetesVersion: "1.29",
+		KubernetesVersion: "1.32",
 		CRIType:           "Containerd",
 		SerializedLabels:  "node.deckhouse.io/group=worker",
 		SerializedTaints:  "",
@@ -47,7 +47,7 @@ func TestResolvedNodeGroup_SpecPassthrough(t *testing.T) {
 	assert.NotContains(t, nodeGroupValues, "update", "spec.update must be dropped (not in nodeGroupForValues)")
 	assert.Equal(t, "worker", nodeGroupValues["name"])
 	assert.Equal(t, "None", nodeGroupValues["engine"])
-	assert.Equal(t, "1.29", nodeGroupValues["kubernetesVersion"])
+	assert.Equal(t, "1.32", nodeGroupValues["kubernetesVersion"])
 	assert.Equal(t, "12345", nodeGroupValues["updateEpoch"])
 	// cri is synthesized from the resolved type even without a spec cri block.
 	assert.Equal(t, map[string]interface{}{"type": "Containerd"}, nodeGroupValues["cri"])

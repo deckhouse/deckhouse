@@ -19,8 +19,10 @@ package controller
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
+	"go.yaml.in/yaml/v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -28,6 +30,7 @@ import (
 	"control-plane-manager/internal/controllers/update-observer/cluster"
 	"control-plane-manager/internal/controllers/update-observer/common"
 	podstatus "control-plane-manager/internal/controllers/update-observer/pkg/pod-status"
+	"control-plane-manager/internal/controllers/update-observer/pkg/version"
 )
 
 func (r *reconciler) getClusterState(ctx context.Context, cfg *cluster.Configuration, configmapLabels map[string]string, downgradeInProgress bool) (*cluster.State, error) {
@@ -43,26 +46,39 @@ func (r *reconciler) getClusterState(ctx context.Context, cfg *cluster.Configura
 		return nil, fmt.Errorf("failed to get control plane state: %w", err)
 	}
 
-	maxUsedVersion := configmapLabels[common.MaxK8sVersionLabelKey]
 	versionSettings, err := cluster.LoadVersionSettingsFromEnv()
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse versions from env: %w", err)
 	}
 
-	return cluster.GetState(cfg, nodesState, controlPlaneState, versionSettings, maxUsedVersion, sourceVersion, downgradeInProgress), nil
+	// availableVersions follows the maxUsed computed this pass: the label and the stored value both
+	// describe the previous one, so the list would lag behind the floor admission enforces.
+	return cluster.GetState(cfg, nodesState, controlPlaneState, versionSettings, sourceVersion, downgradeInProgress), nil
 }
 
-func (r *reconciler) getClusterConfiguration(ctx context.Context) (*cluster.Configuration, error) {
-	secret := &corev1.Secret{}
-	err := r.client.Get(ctx, client.ObjectKey{
-		Name:      common.SecretName,
-		Namespace: common.KubeSystemNamespace,
-	}, secret)
+// The max() is what makes maxUsed monotonic in practice: the environment is a snapshot from when this
+// Pod's template was rendered, so mid-rollout an older Pod can be the one reconciling. ConfigMap
+// reads bypass the cache (internal/manager.go), so the stored value is live.
+func desiredConfiguration(configMap *corev1.ConfigMap) (*cluster.Configuration, error) {
+	cfg, err := cluster.LoadConfigurationFromEnv()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get secret: %w", err)
+		return nil, err
 	}
 
-	return cluster.GetConfiguration(secret)
+	cfg.MaxUsedVersion = version.GetMax(storedMaxUsedVersion(configMap), cfg.MaxUsedVersion)
+
+	return cfg, nil
+}
+
+// Unreadable is not an error: refusing to reconcile over a hand-mangled block would block the write
+// that repairs it.
+func storedMaxUsedVersion(configMap *corev1.ConfigMap) string {
+	var status Status
+	if err := yaml.Unmarshal([]byte(configMap.Data["status"]), &status); err != nil {
+		return ""
+	}
+
+	return strings.TrimSpace(status.MaxUsedVersion)
 }
 
 func (r *reconciler) getNodesState(ctx context.Context, desiredVersion, sourceVersion string) (*cluster.NodesState, error) {

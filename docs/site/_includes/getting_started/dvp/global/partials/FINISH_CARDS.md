@@ -1,5 +1,5 @@
 <section class="cards-blocks">
-<div class="cards-blocks__content container">
+<div class="cards-blocks__content">
 <h2 class="cards-blocks__title text_h2">
 What's next?
 </h2>
@@ -27,7 +27,6 @@ Use our [checklist](/products/virtualization-platform/guides/production.html) to
 </div>
 </div>
 
-<div style="width: 30%">&nbsp;</div>
 </div>
 </div>
 </section>
@@ -71,7 +70,6 @@ Web service name: {% include getting_started/global/partials/dns-template-title.
 </div>
 </div>
 
-<div style="width: 30%">&nbsp;</div>
 </div>
 </div>
 </section>

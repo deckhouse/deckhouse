@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -36,6 +37,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
@@ -171,21 +173,22 @@ func (b *ClusterBootstrapper) getCleanupFunc(ctx context.Context, metaConfig *co
 }
 
 type bootstrapContext struct {
-	masterAddressesForSSH   map[string]string
-	metaConfig              *config.MetaConfig
-	stateCache              state.Cache
-	configHash              string
-	deckhouseInstallConfig  *config.DeckhouseInstaller
-	bootstrapState          *State
-	nodeIP                  string
-	devicePath              string
-	resourcesTemplateData   map[string]any
-	resourcesToCreateBefore template.Resources
-	resourcesToCreateAfter  template.Resources
-	installDeckhouseResult  *InstallDeckhouseResult
-	cleanup                 func()
-	finishProgress          func()
-	preflightRunner         *preflight.Preflight
+	masterAddressesForSSH     map[string]string
+	metaConfig                *config.MetaConfig
+	stateCache                state.Cache
+	configHash                string
+	deckhouseInstallConfig    *config.DeckhouseInstaller
+	bootstrapState            *State
+	nodeIP                    string
+	devicePath                string
+	resourcesTemplateData     map[string]any
+	resourcesToCreateBefore   template.Resources
+	resourcesToCreateProvider template.Resources
+	resourcesToCreateAfter    template.Resources
+	installDeckhouseResult    *InstallDeckhouseResult
+	cleanup                   func()
+	finishProgress            func()
+	preflightRunner           *preflight.Preflight
 }
 
 func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
@@ -638,9 +641,12 @@ func (b *ClusterBootstrapper) bootstrapPostInfraPreflights(ctx context.Context, 
 			return err
 		}
 
-		before, after := splitResourcesOnPreAndPostDeckhouseInstall(ctx, parsedResources)
+		before, provider, after := splitResourcesOnPreAndPostDeckhouseInstall(ctx, parsedResources, nodesComeFromResources(bctx.metaConfig))
+
+		applyMasterNodeGroupDefaults(provider)
 
 		bctx.resourcesToCreateBefore = before
+		bctx.resourcesToCreateProvider = provider
 		bctx.resourcesToCreateAfter = after
 	}
 
@@ -762,7 +768,11 @@ func (b *ClusterBootstrapper) bootstrapAdditionalNodes(ctx context.Context, bctx
 			return err
 		}
 
-		localBootstraper := func(action func() error) error {
+		if err := b.createProviderResources(ctx, bctx, &client.KubernetesClient{KubeClient: kubeCl}); err != nil {
+			return err
+		}
+
+		inClusterLock := func(action func() error) error {
 			if b.CommanderMode {
 				return action()
 			}
@@ -775,7 +785,7 @@ func (b *ClusterBootstrapper) bootstrapAdditionalNodes(ctx context.Context, bctx
 			).Run(ctx, action)
 		}
 
-		err = localBootstraper(func() error {
+		err = inClusterLock(func() error {
 			return bootstrapAdditionalNodesForCloudCluster(
 				ctx,
 				&client.KubernetesClient{KubeClient: kubeCl},
@@ -804,6 +814,20 @@ func (b *ClusterBootstrapper) bootstrapAdditionalNodes(ctx context.Context, bctx
 	b.PhasedExecutionContext.CompleteSubPhase(ctx, phases.InstallAdditionalMastersAndStaticNodesSubPhaseWait)
 
 	return nil
+}
+
+// createProviderResources puts the CloudPermanent NodeGroups and the instance
+// classes they reference in the cluster before dhctl builds any node from them.
+// Converge later reads the node count back from those same objects.
+func (b *ClusterBootstrapper) createProviderResources(ctx context.Context, bctx *bootstrapContext, kubeCl *client.KubernetesClient) error {
+	return createResources(
+		ctx,
+		kubeCl,
+		bctx.resourcesToCreateProvider,
+		nil,
+		true,
+		b.Options.Bootstrap.ResourcesTimeout,
+	)
 }
 
 func (b *ClusterBootstrapper) bootstrapCreateResources(ctx context.Context, bctx *bootstrapContext) error {
@@ -1010,8 +1034,16 @@ func bootstrapAdditionalNodesForCloudCluster(
 	})
 }
 
-func splitResourcesOnPreAndPostDeckhouseInstall(ctx context.Context, resourcesToCreate template.Resources) (template.Resources, template.Resources) {
+// nodesComeFromResources reports whether dhctl builds this cluster's cloud nodes
+// from the user's resources. Only the ModuleConfig flow does: a static cluster
+// builds no cloud nodes, a legacy one builds them from ProviderClusterConfiguration.
+func nodesComeFromResources(metaConfig *config.MetaConfig) bool {
+	return metaConfig.ClusterType == config.CloudClusterType && !metaConfig.HasLegacyProviderConfig()
+}
+
+func splitResourcesOnPreAndPostDeckhouseInstall(ctx context.Context, resourcesToCreate template.Resources, nodesFromResources bool) (template.Resources, template.Resources, template.Resources) {
 	before := make(template.Resources, 0, len(resourcesToCreate))
+	provider := make(template.Resources, 0, len(resourcesToCreate))
 	after := make(template.Resources, 0, len(resourcesToCreate))
 
 	for _, resource := range resourcesToCreate {
@@ -1019,18 +1051,76 @@ func splitResourcesOnPreAndPostDeckhouseInstall(ctx context.Context, resourcesTo
 		hasBeforeAnnotation := annotations != nil && annotations["dhctl.deckhouse.io/bootstrap-resource-place"] == "before-deckhouse"
 
 		if hasBeforeAnnotation || isCloudProviderCredentialSecret(resource) {
-			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Add resource %s - %s to after queue", resource.String(), resource.Object.GetName()))
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Add resource %s - %s to before queue", resource.String(), resource.Object.GetName()))
 			before = append(before, resource)
 			continue
 		}
 
-		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Add resource %s - %s to before queue", resource.String(), resource.Object.GetName()))
+		if nodesFromResources && isProviderNodeResource(resource) {
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Add resource %s - %s to provider queue", resource.String(), resource.Object.GetName()))
+			provider = append(provider, resource)
+			continue
+		}
+
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Add resource %s - %s to after queue", resource.String(), resource.Object.GetName()))
 		after = append(after, resource)
 	}
 
 	before = prependMissingNamespaces(before)
 
-	return before, after
+	return before, provider, after
+}
+
+// isProviderNodeResource reports the objects dhctl builds cloud nodes from. They
+// describe what is about to be built, so they reach the cluster before the build
+// rather than with the rest of the user's resources once it is over.
+func isProviderNodeResource(resource *template.Resource) bool {
+	if resource.GVK.Group != "deckhouse.io" {
+		return false
+	}
+	if strings.HasSuffix(resource.GVK.Kind, "InstanceClass") {
+		return true
+	}
+	return resource.GVK.Kind == "NodeGroup" && config.IsCloudPermanentNodeGroup(resource.Object.Object)
+}
+
+// applyMasterNodeGroupDefaults fills in the control-plane defaults that
+// node-manager's CreateIfNotExists hook never corrects once dhctl has already
+// written the object. Absent keys only: what the user set stays.
+func applyMasterNodeGroupDefaults(resources template.Resources) {
+	for _, resource := range resources {
+		if resource.GVK.Kind != "NodeGroup" || resource.GVK.Group != "deckhouse.io" {
+			continue
+		}
+		if resource.Object.GetName() != global.MasterNodeGroupName {
+			continue
+		}
+
+		if _, found, _ := unstructured.NestedString(resource.Object.Object, "spec", "disruptions", "approvalMode"); !found {
+			_ = unstructured.SetNestedField(resource.Object.Object, "Manual", "spec", "disruptions", "approvalMode")
+		}
+
+		// NestedMap preserves non-string label values instead of NestedStringMap's
+		// all-or-nothing error, so a stray non-string label doesn't get wiped below.
+		if labels, _, err := unstructured.NestedMap(resource.Object.Object, "spec", "nodeTemplate", "labels"); err == nil {
+			if labels == nil {
+				labels = map[string]interface{}{}
+			}
+			for _, key := range []string{"node-role.kubernetes.io/control-plane", "node-role.kubernetes.io/master"} {
+				if _, ok := labels[key]; !ok {
+					labels[key] = ""
+				}
+			}
+			_ = unstructured.SetNestedMap(resource.Object.Object, labels, "spec", "nodeTemplate", "labels")
+		}
+
+		if _, found, _ := unstructured.NestedFieldNoCopy(resource.Object.Object, "spec", "nodeTemplate", "taints"); !found {
+			_ = unstructured.SetNestedSlice(resource.Object.Object, []any{map[string]any{
+				"key":    "node-role.kubernetes.io/control-plane",
+				"effect": "NoSchedule",
+			}}, "spec", "nodeTemplate", "taints")
+		}
+	}
 }
 
 // isCloudProviderCredentialSecret returns true for Secret resources carrying
@@ -1121,9 +1211,11 @@ func createResources(
 					retry.WithWhitelist(actions.ErrManifestTaskTransient),
 				)
 
-				return retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
+				if err := retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
 					return task.Do(kubeCl)
-				})
+				}); err != nil {
+					return err
+				}
 			}
 
 			return nil
