@@ -52,19 +52,36 @@ spec:
       expression: '!(["system:sudouser", "system:apiserver", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler", "dhctl", "observability"].exists(e, (e == request.userInfo.username)))'
     - name: 'exclude-kinds'
       expression: '!(has(request.kind) && ["StorageClass", "DeckhouseRelease", "ModuleRelease"].exists(e, (e == request.kind.kind)))'
+    # Let non-system users trigger `kubectl rollout restart` on protected objects.
+    # matchConditions are ANDed, so a false condition switches the whole policy off
+    # for the request: this one may only do that when the old and the new object
+    # differ at most in the restartedAt annotation of the pod template.
     - name: 'exclude-restartedAt'
-      expression: '!((has(object.spec) && has(object.spec.template) && has(object.spec.template.metadata)
-          && has(oldObject.spec) && has(oldObject.spec.template) && has(oldObject.spec.template.metadata))
-          && ((!has(oldObject.spec.template.metadata.annotations) && has(object.spec.template.metadata.annotations)
-          && "kubectl.kubernetes.io/restartedAt" in object.spec.template.metadata.annotations)
-          || (has(oldObject.spec.template.metadata.annotations) && has(object.spec.template.metadata.annotations)
-          && !("kubectl.kubernetes.io/restartedAt" in oldObject.spec.template.metadata.annotations)
-          && "kubectl.kubernetes.io/restartedAt" in object.spec.template.metadata.annotations)
-          || (has(oldObject.spec.template.metadata.annotations) && has(object.spec.template.metadata.annotations)
-          && "kubectl.kubernetes.io/restartedAt" in oldObject.spec.template.metadata.annotations
-          && "kubectl.kubernetes.io/restartedAt" in object.spec.template.metadata.annotations
-          && oldObject.spec.template.metadata.annotations["kubectl.kubernetes.io/restartedAt"]
-          != object.spec.template.metadata.annotations["kubectl.kubernetes.io/restartedAt"])))'
+      expression: |
+        !(
+          request.operation == "UPDATE"
+          && has(object.spec) && has(object.spec.template) && has(object.spec.template.metadata)
+          && has(oldObject.spec) && has(oldObject.spec.template) && has(oldObject.spec.template.metadata)
+          && has(object.spec.template.metadata.annotations)
+          // the pod template annotations differ at most in restartedAt
+          && object.spec.template.metadata.annotations.all(k, k == "kubectl.kubernetes.io/restartedAt"
+               || (has(oldObject.spec.template.metadata.annotations) && k in oldObject.spec.template.metadata.annotations
+                   && oldObject.spec.template.metadata.annotations[k] == object.spec.template.metadata.annotations[k]))
+          && (!has(oldObject.spec.template.metadata.annotations)
+              || oldObject.spec.template.metadata.annotations.all(k, k == "kubectl.kubernetes.io/restartedAt"
+                   || k in object.spec.template.metadata.annotations))
+          // nothing else differs, apart from the metadata fields the API server bumps on every write
+          && object.spec.template.metadata.all(k, k == "annotations" || (k in oldObject.spec.template.metadata && oldObject.spec.template.metadata[k] == object.spec.template.metadata[k]))
+          && oldObject.spec.template.metadata.all(k, k == "annotations" || k in object.spec.template.metadata)
+          && object.spec.template.all(k, k == "metadata" || (k in oldObject.spec.template && oldObject.spec.template[k] == object.spec.template[k]))
+          && oldObject.spec.template.all(k, k == "metadata" || k in object.spec.template)
+          && object.spec.all(k, k == "template" || (k in oldObject.spec && oldObject.spec[k] == object.spec[k]))
+          && oldObject.spec.all(k, k == "template" || k in object.spec)
+          && object.metadata.all(k, k in ["generation", "resourceVersion", "managedFields"] || (k in oldObject.metadata && oldObject.metadata[k] == object.metadata[k]))
+          && oldObject.metadata.all(k, k in ["generation", "resourceVersion", "managedFields"] || k in object.metadata)
+          && object.all(k, k in ["metadata", "spec"] || (k in oldObject && oldObject[k] == object[k]))
+          && oldObject.all(k, k in ["metadata", "spec"] || k in object)
+        )
     - name: 'exclude-heritage-bypass-delete'
       expression: |
         !(
@@ -74,18 +91,23 @@ spec:
           && "security.deckhouse.io/heritage-bypass" in oldObject.metadata.labels
           && oldObject.metadata.labels["security.deckhouse.io/heritage-bypass"] == "delete"
         )
+    # Let non-system users tune the scan interval of a protected ModuleSource,
+    # under the same rule as the restart exemption above: the old and the new
+    # object may differ in spec.scanInterval and in nothing else.
     - name: 'exclude-module-source-scan-interval'
       expression: |
         !(
           request.operation == "UPDATE"
           && has(request.kind) && request.kind.kind == "ModuleSource"
-          && (
-            (!has(oldObject.spec.scanInterval) && has(object.spec.scanInterval))
-            || (has(oldObject.spec.scanInterval) && !has(object.spec.scanInterval))
-            || (has(oldObject.spec.scanInterval) && has(object.spec.scanInterval)
-                && oldObject.spec.scanInterval != object.spec.scanInterval)
-          )
-          && object.spec.registry == oldObject.spec.registry
+          && has(object.spec) && has(oldObject.spec)
+          // the spec differs at most in scanInterval
+          && object.spec.all(k, k == "scanInterval" || (k in oldObject.spec && oldObject.spec[k] == object.spec[k]))
+          && oldObject.spec.all(k, k == "scanInterval" || k in object.spec)
+          // nothing else differs, apart from the metadata fields the API server bumps on every write
+          && object.metadata.all(k, k in ["generation", "resourceVersion", "managedFields"] || (k in oldObject.metadata && oldObject.metadata[k] == object.metadata[k]))
+          && oldObject.metadata.all(k, k in ["generation", "resourceVersion", "managedFields"] || k in object.metadata)
+          && object.all(k, k in ["metadata", "spec"] || (k in oldObject && oldObject[k] == object[k]))
+          && oldObject.all(k, k in ["metadata", "spec"] || k in object)
         )
   validations:
     - expression: |
