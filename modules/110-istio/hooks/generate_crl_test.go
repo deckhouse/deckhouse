@@ -22,21 +22,13 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/deckhouse/deckhouse/go_lib/certificate"
-	"github.com/deckhouse/deckhouse/pkg/log"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-func mustTestCA() certificate.Authority {
-	ca, err := certificate.GenerateCA(log.NewNop(), "d8-istio-crl-test")
-	Expect(err).NotTo(HaveOccurred())
-	return ca
-}
-
 var _ = Describe("Istio hooks :: generate_crl ::", func() {
-	f := HookExecutionConfigInit(`{"istio":{"internal":{"ca":{}}}}`, "")
+	f := HookExecutionConfigInit(`{"istio":{"internal":{}}}`, "")
 
-	Context("No CA material and no settings.crl", func() {
+	Context("settings.crl is unset", func() {
 		BeforeEach(func() {
 			f.RunHook()
 		})
@@ -47,83 +39,29 @@ var _ = Describe("Istio hooks :: generate_crl ::", func() {
 		})
 	})
 
-	Context("settings.crl.pem is set", func() {
+	Context("settings.crl is empty", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("istio.crl", []byte(`
-pem: my-operator-crl
-`))
-			f.ValuesSet("istio.internal.ca.cert", "ignored-for-override")
-			f.ValuesSet("istio.internal.ca.key", "ignored-for-override")
+			f.ValuesSet("istio.crl", "   ")
 			f.RunHook()
 		})
 
-		It("Should prefer ModuleConfig settings.crl.pem", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(strings.TrimSpace(f.ValuesGet("istio.internal.crl").String())).To(Equal("my-operator-crl"))
-		})
-	})
-
-	Context("settings.crl.pem set; federation peer CRL is set", func() {
-		BeforeEach(func() {
-			f.ValuesSetFromYaml("istio.crl", []byte(`
-pem: |
-  -----BEGIN X509 CRL-----
-  LOCAL
-  -----END X509 CRL-----
-`))
-			f.ValuesSetFromYaml("istio.internal.federations", []byte(`
-- name: peer
-  clusterUUID: uuid-peer
-  trustDomain: peer.local
-  rootCA: ---PEER-ROOT---
-  crl: |
-    -----BEGIN X509 CRL-----
-    PEERCRL
-    -----END X509 CRL-----
-`))
-			f.RunHook()
-		})
-
-		It("Should append peer CRL after local settings.crl.pem", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			crlPEM := f.ValuesGet("istio.internal.crl").String()
-			Expect(crlPEM).To(ContainSubstring("LOCAL"))
-			Expect(crlPEM).To(ContainSubstring("PEERCRL"))
-		})
-	})
-
-	Context("internal CA present; no settings.crl", func() {
-		BeforeEach(func() {
-			ca := mustTestCA()
-			f.ValuesSet("istio.internal.ca.cert", ca.Cert)
-			f.ValuesSet("istio.internal.ca.key", ca.Key)
-			f.RunHook()
-		})
-
-		It("Should leave istio.internal.crl unset (no auto-dummy)", func() {
+		It("Should leave istio.internal.crl unset", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("istio.internal.crl").Exists()).To(BeFalse())
 		})
 	})
 
-	Context("peer CRL present but settings.crl absent", func() {
+	Context("settings.crl PEM is set", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("istio.internal.federations", []byte(`
-- name: peer
-  clusterUUID: uuid-peer
-  trustDomain: peer.local
-  rootCA: ---PEER-ROOT---
-  crl: |
-    -----BEGIN X509 CRL-----
-    PEERCRL
-    -----END X509 CRL-----
-`))
+			f.ValuesSet("istio.crl", "-----BEGIN X509 CRL-----\nLOCAL\n-----END X509 CRL-----\n")
 			f.RunHook()
 		})
 
-		It("Should not publish peer CRL alone", func() {
+		It("Should copy PEM to istio.internal.crl", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("istio.internal.crl").Exists()).To(BeFalse())
+			Expect(strings.TrimSpace(f.ValuesGet("istio.internal.crl").String())).To(Equal(
+				"-----BEGIN X509 CRL-----\nLOCAL\n-----END X509 CRL-----",
+			))
 		})
 	})
 })

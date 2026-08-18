@@ -22,7 +22,6 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/tidwall/gjson"
 )
 
 const (
@@ -31,69 +30,24 @@ const (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	// After generate_ca (10) and alliance_metadata_merge (10): peer CRLs come
-	// from federation/multicluster values populated by metadata exchange.
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 11},
 }, publishCRL)
 
-// publishCRL sets istio.internal.crl for rendering ca-crl.pem.
-//
-// Local part: only non-empty settings.crl.pem (manual delivery). No auto-dummy —
-// absent settings.crl means no ca-crl.pem, so federation stays healthy until
-// an operator explicitly enables CRL.
-//
-// Then append peer CRLs from istio.internal.federations[].crl and
-// istio.internal.multiclusters[].crl (metadata exchange PoC) so remote
-// issuers are covered for mTLS verify when CRL enforcement is on.
+// publishCRL copies ModuleConfig settings.crl (PEM) to istio.internal.crl
+// for rendering Secret d8-istio/cacerts ca-crl.pem. Empty/unset means no
+// ca-crl.pem (CRL enforcement off). No federation merge, no dummy CRL.
 func publishCRL(_ context.Context, input *go_hook.HookInput) error {
-	local := resolveLocalCRL(input)
-	if local == "" {
+	if !input.Values.Exists(crlConfigPath) {
 		input.Values.Remove(internalCRLPath)
 		return nil
 	}
 
-	input.Values.Set(internalCRLPath, concatCRLPEMs(local, collectPeerCRLs(input)))
+	pem := strings.TrimSpace(input.Values.Get(crlConfigPath).String())
+	if pem == "" {
+		input.Values.Remove(internalCRLPath)
+		return nil
+	}
+
+	input.Values.Set(internalCRLPath, pem)
 	return nil
-}
-
-func resolveLocalCRL(input *go_hook.HookInput) string {
-	if !input.Values.Exists(crlConfigPath) {
-		return ""
-	}
-	v := input.Values.Get(crlConfigPath)
-	if !v.IsObject() {
-		return ""
-	}
-	return strings.TrimSpace(v.Get("pem").String())
-}
-
-func collectPeerCRLs(input *go_hook.HookInput) string {
-	var b strings.Builder
-	appendPeerCRLArray(&b, input.Values.Get("istio.internal.federations").Array())
-	appendPeerCRLArray(&b, input.Values.Get("istio.internal.multiclusters").Array())
-	return b.String()
-}
-
-func appendPeerCRLArray(b *strings.Builder, peers []gjson.Result) {
-	for _, peer := range peers {
-		crl := peer.Get("crl").String()
-		if strings.TrimSpace(crl) == "" {
-			continue
-		}
-		b.WriteString(strings.TrimSpace(crl))
-		b.WriteByte('\n')
-	}
-}
-
-func concatCRLPEMs(parts ...string) string {
-	var b strings.Builder
-	for _, p := range parts {
-		p = strings.TrimSpace(p)
-		if p == "" {
-			continue
-		}
-		b.WriteString(p)
-		b.WriteByte('\n')
-	}
-	return b.String()
 }

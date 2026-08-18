@@ -522,64 +522,26 @@ properties:
             default: d8-istio
             pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
   crl:
-    type: object
+    type: string
     description: |
-      Optional Certificate Revocation List (CRL) settings.
+      Certificate Revocation List (CRL) in PEM format. One or more X.509 CRL
+      blocks may be concatenated.
 
-      When unset (or `pem` empty), the module does not publish `ca-crl.pem`
-      (CRL checks stay off). That keeps federation / multicluster mTLS healthy
-      until CRL is enabled explicitly and peer CRLs are exchanged via
-      metadata-exporter.
+      When unset or empty, the module does not publish `ca-crl.pem` and CRL
+      checks stay off. When set, the PEM is written to Secret `d8-istio/cacerts`
+      as `ca-crl.pem`. Istiod distributes it to mesh namespaces as ConfigMap
+      `istio-ca-crl`. With ambient mode and control plane 1.29+, ztunnel mounts
+      that ConfigMap and enforces CRL checks on peer certificates.
 
-      When `pem` is set, it is published as-is (one or more PEM CRL blocks, for
-      example a root-signed CRL and intermediate-signed CRLs concatenated), and
-      peer CRLs from federation/multicluster metadata are appended. Generating
-      the local PEM (which serials, which issuer) is the operator's
-      responsibility.
-
-      Istiod distributes `ca-crl.pem` to mesh namespaces as the `istio-ca-crl`
-      ConfigMap. With ambient mode and control plane 1.29+, ztunnel mounts it and
-      enforces CRL checks on peer certificate chains.
-
-      Requires CA material in `cacerts` (module-generated or plugged-in via `ca`).
-    properties:
-      pem:
-        type: string
-        description: |
-          One or more X.509 CRL blocks in PEM format.
-        x-examples:
-        - |
-          -----BEGIN X509 CRL-----
-          MIIB...
-          -----END X509 CRL-----
-      enableFullCrlChainCheck:
-        type: boolean
-        default: true
-        description: |
-          When `true` (default), Envoy verifies CRLs for the full peer certificate
-          chain (`CRL_CHECK_ALL` semantics). When `false`, only the leaf certificate
-          CRL is required (`only_verify_leaf_cert_crl`).
-
-          Set to `false` if intermediate issuers may lack a CRL entry while leaf
-          revocation must still be enforced.
-        x-doc-default: true
-      enableStrictCrlCheck:
-        type: boolean
-        default: true
-        description: |
-          Reserved for a future Envoy-backed mode. When implemented, `true` means
-          missing a CRL for an issuer in the chain fails verification (fail-closed);
-          `false` allows soft-missing (absence of CRL for an issuer does not deny).
-
-          Today this flag is accepted in ModuleConfig but not yet wired to the data plane.
-        x-doc-default: true
+      Generating the PEM (which serials, which issuer) is the operator's
+      responsibility. Federation / multicluster CRL exchange is not implemented:
+      paste the same PEM into each cluster's ModuleConfig if remote issuers
+      must be covered.
     x-examples:
-    - pem: |
-        -----BEGIN X509 CRL-----
-        MIIB...
-        -----END X509 CRL-----
-      enableFullCrlChainCheck: true
-      enableStrictCrlCheck: true
+    - |
+      -----BEGIN X509 CRL-----
+      MIIB...
+      -----END X509 CRL-----
   jwksResolverAdditionalRootCA:
     type: string
     description: |

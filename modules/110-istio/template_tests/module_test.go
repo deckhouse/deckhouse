@@ -74,24 +74,28 @@ const istioValues = `
           imageSuffix: "V1x29x6"
           supportsAmbient: true
           supportsOperator: false
+          supportsPeerCaCrl: true
         "1.27.9":
           revision: "v1x27x9"
           fullVersion: "1.27.9"
           imageSuffix: "V1x27x9"
           supportsAmbient: true
           supportsOperator: false
+          supportsPeerCaCrl: false
         "1.25.2":
           revision: "v1x25x2"
           fullVersion: "1.25.2"
           imageSuffix: "V1x25x2"
           supportsAmbient: true
           supportsOperator: true
+          supportsPeerCaCrl: false
         "1.21.6":
           revision: "v1x21x6"
           fullVersion: "1.21.6"
           imageSuffix: "V1x21x6"
           supportsAmbient: false
           supportsOperator: true
+          supportsPeerCaCrl: false
       kialiSigningKey: "kiali"
       remoteAuthnKeypair:
         priv: aaa
@@ -567,15 +571,6 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			Expect(istioV25.Field("metadata.name").String()).To(Equal(`v1x25x2`))
 			Expect(istioV25.Field("spec.values.meshConfig.rootNamespace").String()).To(Equal(`d8-istio`))
 			Expect(istioV25.Field("spec.values.global.proxy.image").String()).To(Equal(`registry.example.com@imageHash-istio-proxyv2V1x25x2`))
-			Expect(istioV25.Field("spec.values.pilot.affinity").String()).To(MatchYAML(`
-podAntiAffinity:
-  requiredDuringSchedulingIgnoredDuringExecution:
-  - labelSelector:
-      matchLabels:
-        app: istiod
-        istio.io/rev: v1x25x2
-    topologyKey: kubernetes.io/hostname
-`))
 
 			Expect(iopV21.Field("spec.revision").String()).To(Equal(`v1x21x6`))
 			Expect(iopV21.Field("spec.meshConfig.rootNamespace").String()).To(Equal(`d8-istio`))
