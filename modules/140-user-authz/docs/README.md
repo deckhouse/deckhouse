@@ -222,12 +222,9 @@ read:
     - configmaps
     - connection.gatekeeper.sh/connections
     - constraints.gatekeeper.sh/*
-    - deckhouse.io/applicationpackages
-    - deckhouse.io/applicationpackageversions
     - deckhouse.io/applications
     - deckhouse.io/awsinstanceclasses
     - deckhouse.io/azureinstanceclasses
-    - deckhouse.io/deckhousereleases
     - deckhouse.io/deschedulers
     - deckhouse.io/dexauthenticators
     - deckhouse.io/dexclients
@@ -239,16 +236,9 @@ read:
     - deckhouse.io/instances
     - deckhouse.io/keepalivedinstances
     - deckhouse.io/localpathprovisioners
-    - deckhouse.io/moduledocumentations
-    - deckhouse.io/modulepulloverrides
-    - deckhouse.io/modulereleases
-    - deckhouse.io/modules
-    - deckhouse.io/modulesettingsdefinitions
-    - deckhouse.io/moduleupdatepolicies
     - deckhouse.io/nodegroups
     - deckhouse.io/openstackinstanceclasses
     - deckhouse.io/operationpolicies
-    - deckhouse.io/packagerepositoryoperations
     - deckhouse.io/projecttemplates
     - deckhouse.io/securitypolicies
     - deckhouse.io/securitypolicyexceptions
@@ -515,14 +505,23 @@ read:
     - nfd.k8s-sigs.io/nodefeaturerules
     - nfd.k8s-sigs.io/nodefeatures
 read-write:
+    - deckhouse.io/applicationpackages
+    - deckhouse.io/applicationpackageversions
     - deckhouse.io/clusterauthorizationrules
+    - deckhouse.io/deckhousereleases
     - deckhouse.io/dexproviderchecks
     - deckhouse.io/dexproviders
     - deckhouse.io/groups
     - deckhouse.io/moduleconfigs
+    - deckhouse.io/moduledocumentations
+    - deckhouse.io/modulepulloverrides
+    - deckhouse.io/modulereleases
+    - deckhouse.io/modules
     - deckhouse.io/modulesources
+    - deckhouse.io/moduleupdatepolicies
     - deckhouse.io/nodeusers
     - deckhouse.io/packagerepositories
+    - deckhouse.io/packagerepositoryoperations
     - deckhouse.io/sshcredentials
     - deckhouse.io/useroperations
     - deckhouse.io/users
@@ -539,12 +538,9 @@ write:
     - config.gatekeeper.sh/configs
     - connection.gatekeeper.sh/connections
     - constraints.gatekeeper.sh/*
-    - deckhouse.io/applicationpackages
-    - deckhouse.io/applicationpackageversions
     - deckhouse.io/awsinstanceclasses
     - deckhouse.io/azureinstanceclasses
     - deckhouse.io/containerdintegritypolicies
-    - deckhouse.io/deckhousereleases
     - deckhouse.io/deschedulers
     - deckhouse.io/dvpinstanceclasses
     - deckhouse.io/dynamixinstanceclasses
@@ -554,14 +550,8 @@ write:
     - deckhouse.io/istiofederations
     - deckhouse.io/istiomulticlusters
     - deckhouse.io/localpathprovisioners
-    - deckhouse.io/moduledocumentations
-    - deckhouse.io/modulepulloverrides
-    - deckhouse.io/modulereleases
-    - deckhouse.io/modules
-    - deckhouse.io/moduleupdatepolicies
     - deckhouse.io/openstackinstanceclasses
     - deckhouse.io/operationpolicies
-    - deckhouse.io/packagerepositoryoperations
     - deckhouse.io/projects
     - deckhouse.io/projecttemplates
     - deckhouse.io/securitypolicies
