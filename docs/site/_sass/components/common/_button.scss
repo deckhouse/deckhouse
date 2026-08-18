@@ -9,11 +9,15 @@
     box-sizing: border-box;
     padding: 0.75em 1.5em;
     font-weight: variables.$font-weight-semibold;
+    letter-spacing: .01em;
+    line-height: 1.5;
+
     &_default {
         color: variables.$color-main !important;
         background: variables.$color-inverse;
         border: 2px solid variables.$color-main;
     }
+
     &_alt {
         color: variables.$color-inverse !important;
         background: variables.$color-alt;
@@ -54,47 +58,57 @@
         background: variables.$color-inverse;
         border: 2px solid variables.$color-inverse;
     }
+
     &:not(.button_disabled):not(.button_card):not(.button--primary):not(.gdpr__button):not(.button--outline):not(.button--contact):not(.button-form):not(:disabled):hover {
         color: variables.$color-inverse !important;
         background: variables.$color-main;
         border: 2px solid variables.$color-main;
         text-decoration: none !important;
     }
+
     &_main {
         color: variables.$color-inverse !important;
         background: variables.$color-main;
         border: 2px solid variables.$color-main;
+
         &:not(.button_disabled):hover {
             color: variables.$color-inverse !important;
             background: variables.$color-alt;
             border: 2px solid variables.$color-alt;
         }
     }
+
     &_img {
         color: variables.$color-main !important;
         background: variables.$color-inverse;
         border: 2px solid variables.$color-main;
         padding: 0.5em 1.5em;
+
         &:not(.button_disabled):hover {
           color: variables.$color-main !important;
           background: variables.$color-inverse;
           border: 2px solid variables.$color-inverse;
         }
+
         img {
           height: variables.$font-size-base*1.5;
           display: block;
         }
     }
+
     &_disabled {
         opacity: 0.3;
         cursor: not-allowed;
     }
+
     &_big {
         font-size: variables.$font-size-h2;
+
         img {
           height: variables.$font-size-h2*1.5;
         }
     }
+
     &--primary {
         @include mixins.color(mixins.$white);
         @include mixins.bg-color(mixins.$primary-700);
@@ -106,6 +120,7 @@
             border: 2px solid mixins.$primary-900;
         }
     }
+
     &--small {
         font-size: 10px;
         line-height: 12px;
@@ -115,7 +130,6 @@
     &--outline {
       @include mixins.color(mixins.$primary-700);
       border: currentColor solid 2px;
-      text-transform: uppercase;
 
       &:hover {
         @include mixins.color(mixins.$primary-900);
@@ -137,10 +151,7 @@
         overflow: hidden;
         @include mixins.bg-color(mixins.$primary-700);
         font-weight: 500;
-        letter-spacing: .01em;
-        line-height: 1.5;
         @include mixins.color(mixins.$white);
-        text-transform: uppercase;
         text-decoration: none;
         transition: .2s;
 
@@ -149,7 +160,7 @@
         }
     }
 
-  &_card {
+    &_card {
         display: flex;
         transition: all .25s ease;
         flex-direction: column;
@@ -169,6 +180,7 @@
             width: 40px;
             height: 40px;
         }
+
         & span.name {
             margin: 5px 0px 0px 0px;
 
@@ -178,52 +190,53 @@
         }
 
         & div.footer {
-          display: flex;
-          flex-direction: row;
-          gap: 1rem;
-          padding: 0.5em 2em;
-          margin: auto -1.5rem -0.75rem -1.5rem;
-          background-color: #02003E;
+            display: flex;
+            flex-direction: row;
+            gap: 1rem;
+            padding: 0.5em 2em;
+            margin: auto -1.5rem -0.75rem -1.5rem;
+            background-color: #02003E;
         }
 
     }
 
     &_guides_card {
-            display: flex;
-            transition: all .25s ease;
-            flex-direction: column;
-            flex-wrap: wrap;
-            border-radius: 0.5em;
-            height: 8em;
-            overflow: hidden;
-            width: 49em;
+        display: flex;
+        transition: all .25s ease;
+        flex-direction: column;
+        flex-wrap: wrap;
+        border-radius: 0.5em;
+        height: 8em;
+        overflow: hidden;
+        width: 49em;
 
-            &:not(.button_disabled):hover {
-                transform: scale(1.1);
-            }
-
-            & div.icon {
-                display: flex;
-                align-items: center;
-                margin-right: 10px;
-                width: 40px;
-                height: 40px;
-            }
-            & span.name {
-                font-width: 2em;
-                margin: 5px 0px 0px 0px;
-            }
-
-            & div.footer {
-              display: flex;
-              flex-direction: row;
-              gap: 1rem;
-              padding: 0.5em 2em;
-              margin: auto -1.5rem -0.75rem -1.5rem;
-              background-color: #02003E;
-            }
-
+        &:not(.button_disabled):hover {
+            transform: scale(1.1);
         }
+
+        & div.icon {
+            display: flex;
+            align-items: center;
+            margin-right: 10px;
+            width: 40px;
+            height: 40px;
+        }
+
+        & span.name {
+            font-width: 2em;
+            margin: 5px 0px 0px 0px;
+        }
+
+        & div.footer {
+            display: flex;
+            flex-direction: row;
+            gap: 1rem;
+            padding: 0.5em 2em;
+            margin: auto -1.5rem -0.75rem -1.5rem;
+            background-color: #02003E;
+        }
+
+    }
 }
 
 .button-group {
