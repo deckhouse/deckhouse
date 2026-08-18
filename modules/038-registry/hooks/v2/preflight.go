@@ -85,6 +85,7 @@ const (
 
 	nodeConfigurationSnapName = "preflight-node-configurations"
 	imageHolderSnapName       = "preflight-image-holder"
+	preflightSwitchSnapName   = "preflight-v2-switch"
 	// Its own subscription to the same secret the switch gate reads: snapshots belong to the
 	// hook that asked for them, so sharing the gate's name would read as empty here.
 	preflightLegacyStateSnapName = "preflight-legacy-state"
@@ -133,6 +134,22 @@ var _ = sdk.RegisterFunc(
 		OnBeforeHelm: &go_hook.OrderedConfig{Order: 6},
 		Queue:        "/modules/registry/v2",
 		Kubernetes: []go_hook.KubernetesConfig{
+			{
+				// The marker that the handover has happened. Subscribed to because the
+				// previous implementation's state secret outlives the migration: without
+				// this, a cluster that finished migrating would go on being asked whether
+				// it is ready to start.
+				Name:       preflightSwitchSnapName,
+				ApiVersion: "v1",
+				Kind:       "Secret",
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{SwitchSecretName},
+				},
+				NamespaceSelector: &types.NamespaceSelector{
+					NameSelector: &types.NameSelector{MatchNames: []string{"d8-system"}},
+				},
+				FilterFunc: filterSwitchSecret,
+			},
 			{
 				Name:       preflightLegacyStateSnapName,
 				ApiVersion: "v1",
@@ -230,16 +247,14 @@ func filterImageHolder(obj *unstructured.Unstructured) (go_hook.FilterResult, er
 func handlePreflight(ctx context.Context, input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire(preflightMetricGroup)
 
-	subject, migrating := readPreflight(ctx, input)
-	if !migrating {
-		// No legacy state at all: this cluster was installed on the current implementation and
-		// has no migration ahead of it. Reporting checks here would invent a decision nobody
-		// has to make.
-		input.Logger.Debug("no previous implementation state, so there is no migration to check")
+	// A cluster installed on this implementation has no legacy state, and a migrated one has a
+	// handover behind it. Either way there is no decision to report, and inventing one would
+	// put an operator's attention on a question nobody has to answer.
+	checks := readPreflight(ctx, input).report()
+	if len(checks) == 0 {
+		input.Logger.Debug("there is no migration to check on this cluster")
 		return nil
 	}
-
-	checks := subject.report()
 
 	blocking, failed := 0, make([]string, 0, len(checks))
 	for _, check := range checks {
@@ -281,6 +296,14 @@ func handlePreflight(ctx context.Context, input *go_hook.HookInput) error {
 // operator deciding whether to start an irreversible procedure, so it has to be reproducible from
 // a written-down cluster state rather than from whatever a hook happened to see.
 type preflight struct {
+	// AlreadySwitched reports that the handover has happened. Everything below describes a
+	// decision that is then in the past, so nothing is reported at all.
+	AlreadySwitched bool
+
+	// HasLegacy reports that the previous implementation has recorded a state at all. A
+	// cluster installed on this implementation never has, and has no migration ahead of it.
+	HasLegacy bool
+
 	// Legacy is what the previous implementation says about itself.
 	Legacy legacyState
 
@@ -318,6 +341,14 @@ var whatTheNewComponentsNeed = map[string]string{
 }
 
 func (p preflight) report() []preflightCheck {
+	if !p.HasLegacy || p.AlreadySwitched {
+		// Silent rather than green. A migrated cluster keeps the previous implementation's
+		// state secret, so the checks would go on being answerable — and would go on
+		// answering about an upstream this cluster no longer reaches the same way, telling
+		// an operator not to start something that finished.
+		return nil
+	}
+
 	return []preflightCheck{
 		p.checkMode(),
 		p.checkNotLocal(),
@@ -456,14 +487,23 @@ func (p preflight) checkNodeConfigurations() preflightCheck {
 		Detail: "no node configuration writes registry settings"}
 }
 
-// readPreflight collects the inputs, and reports whether there is a migration to check at all.
-func readPreflight(ctx context.Context, input *go_hook.HookInput) (preflight, bool) {
+// readPreflight collects the inputs.
+//
+// A subject with no checks to report is how "there is no migration here" is expressed, so that the
+// two ways of having none — never started, already finished — are decided in one pure place rather
+// than in the handler.
+func readPreflight(ctx context.Context, input *go_hook.HookInput) preflight {
+	if _, err := helpers.SnapshotToSingle[string](input, preflightSwitchSnapName); err == nil {
+		return preflight{AlreadySwitched: true}
+	}
+
 	legacy, err := helpers.SnapshotToSingle[legacyState](input, preflightLegacyStateSnapName)
 	if err != nil {
-		return preflight{}, false
+		return preflight{}
 	}
 
 	subject := preflight{
+		HasLegacy:       true,
 		Legacy:          legacy,
 		CheckerReported: checker.Initialized(input),
 		CheckerStatus:   checker.GetStatus(ctx, input),
@@ -491,5 +531,5 @@ func readPreflight(ctx context.Context, input *go_hook.HookInput) (preflight, bo
 		subject.NodeConfigurations = configurations
 	}
 
-	return subject, true
+	return subject
 }

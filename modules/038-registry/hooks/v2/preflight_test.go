@@ -49,6 +49,7 @@ func found(t *testing.T, checks []preflightCheck, name string) preflightCheck {
 // resident everywhere, and nothing an operator wrote for the nodes.
 func ready() preflight {
 	return preflight{
+		HasLegacy:       true,
 		Legacy:          legacyState{Mode: "Direct"},
 		CheckerReported: true,
 		CheckerStatus:   checker.Status{Ready: true},
@@ -227,6 +228,27 @@ func TestNodeConfigurationsThatCannotBeReadAreNotReportedAsAbsent(t *testing.T) 
 
 	assert.False(t, check.Passed)
 	assert.Contains(t, check.Detail, "could not be read")
+}
+
+// Nothing is reported where there is no decision to make: a cluster installed on this
+// implementation has no previous state, and a migrated one has the handover behind it. The second
+// is the one that bites — the previous implementation's state secret outlives the migration, so
+// every check would go on being answerable, and an unreachable-registry answer would tell an
+// operator not to start a migration that finished months ago.
+func TestNothingIsReportedWhereThereIsNoDecisionToMake(t *testing.T) {
+	migrated := ready()
+	migrated.AlreadySwitched = true
+	assert.Empty(t, migrated.report(), "a migrated cluster is still asked about its migration")
+
+	// Blocking answers in particular: this is what would reach an operator as an alert.
+	migrated.CheckerStatus = checker.Status{Ready: false, Message: "dial tcp: i/o timeout"}
+	assert.Empty(t, migrated.report())
+
+	installedOnThisOne := ready()
+	installedOnThisOne.HasLegacy = false
+	installedOnThisOne.Legacy = legacyState{}
+	assert.Empty(t, installedOnThisOne.report(),
+		"a cluster that never ran the previous implementation is asked about a migration")
 }
 
 // The DaemonSet filter answers two questions: which images are kept resident, and on how many
