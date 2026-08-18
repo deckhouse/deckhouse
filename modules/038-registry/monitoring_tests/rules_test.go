@@ -209,6 +209,8 @@ func TestNothingAlertsOnAModuleManagingNothing(t *testing.T) {
 			"would silence the only state it describes",
 		"D8RegistryMigrationPending": "the cluster is on the previous implementation, which is " +
 			"the opposite of managing nothing",
+		"D8RegistryMigrationPreflightBlocked": "the series only exists on a cluster that still " +
+			"has the previous implementation's state, so it cannot fire on one managing nothing",
 		"D8RegistryAirGapTransitionHeld": "the gauge only exists while the controller is running",
 		"D8RegistryUpstreamRejected":     "the gauge only exists while the controller is running",
 	}

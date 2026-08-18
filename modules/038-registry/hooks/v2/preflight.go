@@ -1,0 +1,495 @@
+/*
+Copyright 2026 Flant JSC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+// The migration preflight: what has to be true before a cluster still on the previous
+// implementation is moved to this one.
+//
+// Phase 1 of the migration ADR, whose rule is stated there plainly — without a green preflight
+// the migration does not begin. Each check names a way the migration is known to go wrong, and
+// each is answered from the cluster rather than assumed:
+//
+//   - the mode the previous implementation is in, and whether it is mid-transition. A cluster on
+//     its way somewhere else has nodes being reconfigured right now, and the handover has to wait.
+//   - Local. The plan rests on the pull path being reachable from outside the cluster, and a
+//     cluster whose registry IS the cluster has no such path: it needs the fallback runbook.
+//   - an upstream that answers. Bringing the cluster to Unmanaged points every node straight at
+//     the upstream, so an unreachable one turns the documented degradation into an outage.
+//   - the images of the new components already on the nodes. The switch starts a storage and an
+//     agent; if their images have to come through the path being replaced, the migration's first
+//     act is to depend on what it is dismantling.
+//   - containerd v1 registry configuration written by the operator. The transition rewrites those
+//     files and the ADR says they are carried over by hand, so a cluster holding them must not be
+//     migrated silently.
+//
+// Blocking marks the checks under which the migration must not begin at all, as against the ones
+// naming work to do first. What it does not mean is that this module will refuse: the refusal that
+// matters is the switch gate's, and the gate is already stricter on the mode axis — it hands the
+// cluster over only from Unmanaged, so Local and a transition in flight are enforced there.
+//
+// Reachability deliberately gets no such enforcement. By the time the gate looks, the cluster is
+// Unmanaged and the previous implementation has already let go of the pull path; refusing the
+// takeover then would leave the cluster with neither implementation rather than with a reachable
+// registry. It is blocking for the operator's decision, which is made a phase earlier, and that is
+// the only place it can be acted on.
+//
+// The report is a metric per check plus a line in the log. Not a condition on an object, because
+// there is no object that belongs to this: the module's own status describes the module, and this
+// describes a cluster's readiness to stop being what it is.
+package v2
+
+import (
+	"context"
+	"fmt"
+	"sort"
+	"strings"
+
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
+	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	v1apps "k8s.io/api/apps/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
+	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/checker"
+	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/helpers"
+)
+
+const (
+	// PreflightMetric carries one series per check, so an alert names what is wrong rather
+	// than only that something is.
+	PreflightMetric      = "d8_registry_migration_preflight"
+	preflightMetricGroup = "d8_registry_migration_preflight"
+
+	// ImageHolderName is the DaemonSet of the previous implementation that keeps images
+	// resident on every node.
+	ImageHolderName = "registry-nodeservices-manager"
+
+	// moduleDigestsValuesPath is where the digests of this module's own images are, keyed by
+	// the werf image name.
+	moduleDigestsValuesPath = "global.modulesImages.digests.registry"
+
+	nodeConfigurationSnapName = "preflight-node-configurations"
+	imageHolderSnapName       = "preflight-image-holder"
+	// Its own subscription to the same secret the switch gate reads: snapshots belong to the
+	// hook that asked for them, so sharing the gate's name would read as empty here.
+	preflightLegacyStateSnapName = "preflight-legacy-state"
+)
+
+// Names of the checks, so that the metric labels and the tests speak the same words.
+const (
+	CheckMode              = "mode"
+	CheckNotLocal          = "not_local"
+	CheckUpstreamReachable = "upstream_reachable"
+	CheckImagesPreStaged   = "images_pre_staged"
+	CheckNodeConfiguration = "node_registry_configuration"
+)
+
+// preflightCheck is one answer, phrased as what is missing.
+type preflightCheck struct {
+	Name   string
+	Passed bool
+
+	// Blocking says the migration must not begin while this is unmet — a statement about the
+	// operator's decision, not about what this module will allow. See the package doc.
+	Blocking bool
+
+	Detail string
+}
+
+// imageHolderState is what the DaemonSet tells us: which images it keeps resident, and
+// whether it is actually doing so on every node.
+type imageHolderState struct {
+	Images    []string
+	Desired   int32
+	Available int32
+}
+
+// nodeConfiguration is one operator-written node configuration, reduced to the question
+// this asks of it.
+type nodeConfiguration struct {
+	Name              string
+	TouchesContainerd bool
+}
+
+var _ = sdk.RegisterFunc(
+	&go_hook.HookConfig{
+		// After the switch gate, which reads the same legacy state: this report describes a
+		// migration that gate may already have allowed.
+		OnBeforeHelm: &go_hook.OrderedConfig{Order: 6},
+		Queue:        "/modules/registry/v2",
+		Kubernetes: []go_hook.KubernetesConfig{
+			{
+				Name:       preflightLegacyStateSnapName,
+				ApiVersion: "v1",
+				Kind:       "Secret",
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{LegacyStateSecretName},
+				},
+				NamespaceSelector: &types.NamespaceSelector{
+					NameSelector: &types.NameSelector{MatchNames: []string{"d8-system"}},
+				},
+				FilterFunc: filterLegacyState,
+			},
+			{
+				Name:       nodeConfigurationSnapName,
+				ApiVersion: "deckhouse.io/v1alpha1",
+				Kind:       "NodeGroupConfiguration",
+				// Only what an operator wrote. The platform ships configurations of its own,
+				// and a check that counted those would report every cluster as holding
+				// registry configuration to carry over — a finding that is never actionable
+				// reads the same as one that is.
+				//
+				// NotIn and not DoesNotExist: NotIn matches an object that has no such label
+				// at all, which is what an operator's own configuration usually looks like.
+				LabelSelector: &v1.LabelSelector{
+					MatchExpressions: []v1.LabelSelectorRequirement{{
+						Key:      "heritage",
+						Operator: v1.LabelSelectorOpNotIn,
+						Values:   []string{"deckhouse"},
+					}},
+				},
+				FilterFunc: filterNodeConfiguration,
+			},
+			{
+				Name:       imageHolderSnapName,
+				ApiVersion: "apps/v1",
+				Kind:       "DaemonSet",
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{ImageHolderName},
+				},
+				NamespaceSelector: &types.NamespaceSelector{
+					NameSelector: &types.NameSelector{MatchNames: []string{"d8-system"}},
+				},
+				FilterFunc: filterImageHolder,
+			},
+		},
+	},
+	handlePreflight,
+)
+
+func filterNodeConfiguration(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	content, found, err := unstructured.NestedString(obj.Object, "spec", "content")
+	if err != nil {
+		return nil, fmt.Errorf("reading spec.content of %s: %w", obj.GetName(), err)
+	}
+
+	// Recognised by what it writes, not by its name: an operator names these anything, and the
+	// question is whether the transition will overwrite what they wrote. The transition owns the
+	// runtime's registry configuration, so a configuration touching it is one to carry over.
+	touches := false
+	if found {
+		lower := strings.ToLower(content)
+		for _, marker := range []string{"/etc/containerd/conf.d", "hosts.toml", "registry.d", "registry.mirrors"} {
+			if strings.Contains(lower, marker) {
+				touches = true
+				break
+			}
+		}
+	}
+
+	return nodeConfiguration{Name: obj.GetName(), TouchesContainerd: touches}, nil
+}
+
+func filterImageHolder(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var daemonSet v1apps.DaemonSet
+	if err := sdk.FromUnstructured(obj, &daemonSet); err != nil {
+		return nil, fmt.Errorf("converting the daemonset: %w", err)
+	}
+
+	state := imageHolderState{
+		Desired:   daemonSet.Status.DesiredNumberScheduled,
+		Available: daemonSet.Status.NumberAvailable,
+	}
+	for _, container := range daemonSet.Spec.Template.Spec.Containers {
+		// Only the holders. The manager itself runs in the same pod and is not an image being
+		// kept resident for somebody else.
+		if strings.HasPrefix(container.Name, "image-holder-") {
+			state.Images = append(state.Images, container.Image)
+		}
+	}
+	sort.Strings(state.Images)
+
+	return state, nil
+}
+
+func handlePreflight(ctx context.Context, input *go_hook.HookInput) error {
+	input.MetricsCollector.Expire(preflightMetricGroup)
+
+	subject, migrating := readPreflight(ctx, input)
+	if !migrating {
+		// No legacy state at all: this cluster was installed on the current implementation and
+		// has no migration ahead of it. Reporting checks here would invent a decision nobody
+		// has to make.
+		input.Logger.Debug("no previous implementation state, so there is no migration to check")
+		return nil
+	}
+
+	checks := subject.report()
+
+	blocking, failed := 0, make([]string, 0, len(checks))
+	for _, check := range checks {
+		value := 0.0
+		if !check.Passed {
+			value = 1
+			failed = append(failed, fmt.Sprintf("%s (%s)", check.Name, check.Detail))
+			if check.Blocking {
+				blocking++
+			}
+		}
+
+		input.MetricsCollector.Set(PreflightMetric, value,
+			map[string]string{
+				"check":    check.Name,
+				"blocking": fmt.Sprintf("%t", check.Blocking),
+				"detail":   check.Detail,
+			},
+			metrics.WithGroup(preflightMetricGroup))
+	}
+
+	switch {
+	case blocking > 0:
+		input.Logger.Warn("the migration must not start on this cluster",
+			"blocking", blocking, "checks", strings.Join(failed, "; "))
+	case len(failed) > 0:
+		input.Logger.Info("the migration has work to do first",
+			"checks", strings.Join(failed, "; "))
+	default:
+		input.Logger.Info("the migration preflight is green")
+	}
+
+	return nil
+}
+
+// preflight is everything the checks are answered from.
+//
+// Collected first and judged after, the way the switch gate is: what this reports is read by an
+// operator deciding whether to start an irreversible procedure, so it has to be reproducible from
+// a written-down cluster state rather than from whatever a hook happened to see.
+type preflight struct {
+	// Legacy is what the previous implementation says about itself.
+	Legacy legacyState
+
+	// CheckerReported says the registry checker has run at least once. Without it a Status
+	// that reads "not ready" is indistinguishable from one nobody has filled in.
+	CheckerReported bool
+	CheckerStatus   checker.Status
+
+	// ImageHolder is the previous implementation's image-holding DaemonSet, or nil when it
+	// is not running.
+	ImageHolder *imageHolderState
+
+	// RequiredImages maps an image of a new component to the digest identifying it. Empty
+	// entries are dropped by the reader: comparing against a digest nobody supplied would
+	// report absence it cannot know.
+	RequiredImages map[string]string
+
+	// NodeConfigurations is what operators have told the nodes to do.
+	NodeConfigurations []nodeConfiguration
+
+	// NodeConfigurationsUnreadable is why they could not be read, when they could not.
+	NodeConfigurationsUnreadable error
+}
+
+// whatTheNewComponentsNeed names the images that have to be on a node before the switch, and
+// what to call them in the report.
+//
+// The agent is not among them. It arrives as a registry package and is imported into the
+// container runtime by bashible, so no image kept resident by the previous implementation could
+// stand in for it.
+var whatTheNewComponentsNeed = map[string]string{
+	"dockerDistribution": "the storage",
+	"dockerAuth":         "the storage's auth",
+	"registrySyncer":     "the syncer",
+}
+
+func (p preflight) report() []preflightCheck {
+	return []preflightCheck{
+		p.checkMode(),
+		p.checkNotLocal(),
+		p.checkUpstream(),
+		p.checkImages(),
+		p.checkNodeConfigurations(),
+	}
+}
+
+// checkMode answers whether the previous implementation is standing still.
+//
+// A mode mid-transition is the one state in which nothing else here can be trusted: nodes are
+// being reconfigured as the question is asked, so an upstream that answers now and images that
+// are resident now say nothing about the moment the handover happens.
+func (p preflight) checkMode() preflightCheck {
+	switch {
+	case p.Legacy.Mode == "":
+		return preflightCheck{Name: CheckMode, Blocking: true,
+			Detail: "the previous implementation has not recorded a mode yet"}
+	case p.Legacy.TargetMode != "" && p.Legacy.TargetMode != p.Legacy.Mode:
+		return preflightCheck{Name: CheckMode, Blocking: true,
+			Detail: fmt.Sprintf("a transition is in flight: %s to %s", p.Legacy.Mode, p.Legacy.TargetMode)}
+	default:
+		return preflightCheck{Name: CheckMode, Passed: true,
+			Detail: fmt.Sprintf("settled in %s", p.Legacy.Mode)}
+	}
+}
+
+// checkNotLocal is the hard stop the ADR spells out.
+//
+// In Local the cluster's registry is the cluster. Bringing it to Unmanaged points every node at
+// an upstream it does not have, so the documented procedure cannot apply and the fallback runbook
+// does — adoption of the existing store, by hand, on single clusters.
+func (p preflight) checkNotLocal() preflightCheck {
+	if p.Legacy.Mode == string(registry_const.ModeLocal) {
+		return preflightCheck{Name: CheckNotLocal, Blocking: true,
+			Detail: "the cluster is in Local: use the fallback runbook, not this procedure"}
+	}
+	return preflightCheck{Name: CheckNotLocal, Passed: true, Detail: "not in Local"}
+}
+
+// checkUpstream reports what the registry checker already established.
+//
+// Its own probe is deliberately not opened: the checker asks this question on a schedule and
+// holds the answer, while a hook dialling a registry would hold the queue while doing it and
+// answer a different moment than the one the migration happens in.
+func (p preflight) checkUpstream() preflightCheck {
+	switch {
+	case !p.CheckerReported:
+		return preflightCheck{Name: CheckUpstreamReachable, Blocking: true,
+			Detail: "the registry checker has not reported yet, so reachability is unknown"}
+	case !p.CheckerStatus.Ready:
+		detail := p.CheckerStatus.Message
+		if detail == "" {
+			detail = "the checker reports the registry as not ready"
+		}
+		return preflightCheck{Name: CheckUpstreamReachable, Blocking: true, Detail: detail}
+	default:
+		return preflightCheck{Name: CheckUpstreamReachable, Passed: true,
+			Detail: "the checker reaches the registry the cluster pulls from"}
+	}
+}
+
+// checkImages answers whether the new components can start without the path being replaced.
+//
+// The previous implementation already keeps images resident on every node, which is the mechanism
+// the migration reuses: if the new components' images are among them, the switch starts from what
+// is on disk. If they are not, the first act of the migration is a pull through the registry it is
+// dismantling.
+func (p preflight) checkImages() preflightCheck {
+	if p.ImageHolder == nil {
+		return preflightCheck{Name: CheckImagesPreStaged,
+			Detail: "the previous implementation is not keeping any images resident on the nodes"}
+	}
+
+	if p.ImageHolder.Desired == 0 || p.ImageHolder.Available < p.ImageHolder.Desired {
+		return preflightCheck{Name: CheckImagesPreStaged,
+			Detail: fmt.Sprintf("images are resident on %d of %d nodes",
+				p.ImageHolder.Available, p.ImageHolder.Desired)}
+	}
+
+	missing := make([]string, 0, len(p.RequiredImages))
+	for image, digest := range p.RequiredImages {
+		if !heldBy(p.ImageHolder.Images, digest) {
+			missing = append(missing, whatTheNewComponentsNeed[image])
+		}
+	}
+	sort.Strings(missing)
+
+	if len(missing) > 0 {
+		return preflightCheck{Name: CheckImagesPreStaged,
+			Detail: fmt.Sprintf("not resident on the nodes yet: %s", strings.Join(missing, ", "))}
+	}
+
+	return preflightCheck{Name: CheckImagesPreStaged, Passed: true,
+		Detail: fmt.Sprintf("the new components' images are resident on all %d nodes",
+			p.ImageHolder.Desired)}
+}
+
+func heldBy(images []string, digest string) bool {
+	for _, image := range images {
+		if strings.Contains(image, digest) {
+			return true
+		}
+	}
+	return false
+}
+
+// checkNodeConfigurations answers whether the operator wrote registry configuration of their own.
+//
+// The transition owns the container runtime's registry files, so anything an operator put there is
+// overwritten by it. The ADR carries those over by hand, which makes this a warning naming the
+// configurations rather than a stop: only the operator knows whether the carrying over is done.
+func (p preflight) checkNodeConfigurations() preflightCheck {
+	if p.NodeConfigurationsUnreadable != nil {
+		return preflightCheck{Name: CheckNodeConfiguration,
+			Detail: fmt.Sprintf("the node configurations could not be read: %s",
+				p.NodeConfigurationsUnreadable.Error())}
+	}
+
+	touching := make([]string, 0, len(p.NodeConfigurations))
+	for _, configuration := range p.NodeConfigurations {
+		if configuration.TouchesContainerd {
+			touching = append(touching, configuration.Name)
+		}
+	}
+	sort.Strings(touching)
+
+	if len(touching) > 0 {
+		return preflightCheck{Name: CheckNodeConfiguration,
+			Detail: fmt.Sprintf("carry over by hand, the transition overwrites what they write: %s",
+				strings.Join(touching, ", "))}
+	}
+
+	return preflightCheck{Name: CheckNodeConfiguration, Passed: true,
+		Detail: "no node configuration writes registry settings"}
+}
+
+// readPreflight collects the inputs, and reports whether there is a migration to check at all.
+func readPreflight(ctx context.Context, input *go_hook.HookInput) (preflight, bool) {
+	legacy, err := helpers.SnapshotToSingle[legacyState](input, preflightLegacyStateSnapName)
+	if err != nil {
+		return preflight{}, false
+	}
+
+	subject := preflight{
+		Legacy:          legacy,
+		CheckerReported: checker.Initialized(input),
+		CheckerStatus:   checker.GetStatus(ctx, input),
+		RequiredImages:  make(map[string]string, len(whatTheNewComponentsNeed)),
+	}
+
+	if holder, err := helpers.SnapshotToSingle[imageHolderState](input, imageHolderSnapName); err == nil {
+		subject.ImageHolder = &holder
+	}
+
+	for image := range whatTheNewComponentsNeed {
+		digest, err := helpers.GetValue[string](input, moduleDigestsValuesPath+"."+image)
+		if err != nil || digest == "" {
+			// Unknown rather than missing: without a digest to compare against, reporting the
+			// image as absent from the nodes would be a guess.
+			continue
+		}
+		subject.RequiredImages[image] = digest
+	}
+
+	configurations, err := helpers.SnapshotToList[nodeConfiguration](input, nodeConfigurationSnapName)
+	if err != nil {
+		subject.NodeConfigurationsUnreadable = err
+	} else {
+		subject.NodeConfigurations = configurations
+	}
+
+	return subject, true
+}

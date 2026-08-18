@@ -45,3 +45,53 @@
            the `registry` ModuleConfig together with the registry to pull from. The
            module publishes a ready-made configuration for this cluster in the
            `registry-suggested-config` secret in `d8-system`.
+
+  # Scoped to the blocking checks on purpose. The rest of the preflight names work an operator
+  # has to do before starting, which is a decision they make on their own schedule; these two
+  # say the documented procedure does not apply to this cluster at all, and an operator who
+  # starts it anyway takes the cluster's pull path down.
+  - alert: D8RegistryMigrationPreflightBlocked
+    expr: max by (check, detail) (d8_registry_migration_preflight{blocking="true"}) > 0
+    for: 15m
+    labels:
+      severity_level: "6"
+      tier: cluster
+      d8_module: registry
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_registry_migration_preflight: "D8RegistryMigrationPreflightBlocked,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_registry_migration_preflight: "D8RegistryMigrationPreflightBlocked,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: The registry migration must not be started on this cluster yet.
+      description: |-
+        A precondition of the `registry` module's migration is not met, and the migration
+        must not be started until it is: `{{ $labels.check }}` — {{ $labels.detail }}.
+
+        Nothing is broken right now. This cluster keeps pulling images exactly as it does
+        today; the alert is about the procedure that moves it to the current implementation
+        of the module.
+
+        What each blocking check means:
+
+        - `mode` — the previous implementation is mid-transition, so its nodes are being
+          reconfigured as you read this. Wait for it to settle, then start.
+
+        - `not_local` — the cluster's registry *is* the cluster (`Local`). The documented
+          procedure brings the cluster through `Unmanaged`, where every node pulls straight
+          from an upstream, and this cluster has no upstream to pull from. It needs the
+          fallback runbook, which adopts the existing store instead.
+
+        - `upstream_reachable` — the registry this cluster pulls from does not answer. The
+          procedure points every node straight at it, so starting now turns a documented
+          step into an outage. Fix the reachability first:
+
+          ```
+          kubectl -n d8-system get secret registry-state -o jsonpath='{.data.state}' | base64 -d | head
+          kubectl -n d8-system logs deploy/deckhouse -c deckhouse | grep -i 'registry checker'
+          ```
+
+        The non-blocking checks are reported by the same metric with `blocking="false"`:
+
+        ```
+        d8_registry_migration_preflight
+        ```
