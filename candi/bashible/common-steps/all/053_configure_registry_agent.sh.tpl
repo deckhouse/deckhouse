@@ -260,6 +260,24 @@ bb-sync-file /etc/kubernetes/manifests/registry-agent.yaml - << EOF
 apiVersion: v1
 kind: Pod
 metadata:
+  annotations:
+    # The digest of the image this manifest was written for, so that a new agent actually starts.
+    #
+    # For containerd the image reference above is a fixed local tag — the agent cannot be pulled
+    # through the agent, so it is imported from a tar and named `deckhouse.local/images:registry-agent`
+    # (see step 034). That tag never changes, so neither did this file: a new build reinstalled the
+    # package, re-imported the tar and left kubelet with a manifest identical to the one it already
+    # ran, which means the OLD container kept serving.
+    #
+    # Measured on `ly-direct`: the bashible configuration on the node already named
+    # registryAgent sha256:93a9f40d1688 while the running agent was the previous build, and
+    # restarting the platform, the bashible apiserver and the container itself changed nothing —
+    # a fix shipped in the agent could not reach an existing cluster at all.
+    #
+    # An annotation is what makes the file differ. `bb-sync-file` then rewrites it, kubelet sees a
+    # changed static pod and restarts it onto the freshly imported image. The digest is the honest
+    # value to put here: it changes exactly when the image does.
+    registry.deckhouse.io/agent-image-digest: "{{ index .images.registry "registryAgent" }}"
   labels:
     component: registry-agent
     tier: control-plane

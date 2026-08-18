@@ -414,3 +414,35 @@ func TestTheAgentAuthorityStaysReadable(t *testing.T) {
 			"step 098 sweeps the agent directory again: %s", line)
 	}
 }
+
+// TestTheAgentManifestNamesTheImageDigest is what makes a new agent actually start on a node that
+// already runs one.
+//
+// For containerd the image reference in the static pod is a fixed local tag: the agent cannot be pulled
+// through the agent, so it is imported from a tar as `deckhouse.local/images:registry-agent`. That tag
+// is the same in every build, so the manifest was byte-identical from one build to the next — a new
+// package was installed, a new tar imported, and kubelet went on running the container it already had.
+//
+// Measured on `ly-direct`: the node's bashible configuration named the new agent digest while the
+// running agent was the previous build, and restarting the platform, the bashible apiserver and the
+// container itself changed nothing. A fix shipped in the agent could not reach an existing cluster.
+//
+// The digest in an annotation is what makes the file differ, so `bb-sync-file` rewrites it and kubelet
+// restarts the pod onto the imported image.
+func TestTheAgentManifestNamesTheImageDigest(t *testing.T) {
+	const step = "all/053_configure_registry_agent.sh.tpl"
+
+	body := render(t, step, agentRegistry())
+
+	require.Contains(t, body, `registry.deckhouse.io/agent-image-digest: "sha256:agent"`,
+		"the manifest has to change when the image does, or kubelet keeps the old container")
+
+	// The image reference itself stays the local tag: pulling the agent through the agent is the
+	// circle this whole arrangement avoids.
+	require.Contains(t, body, "image: deckhouse.local/images:registry-agent")
+
+	// And the annotation must sit in the file kubelet watches, not somewhere else in the step.
+	manifest := body[strings.Index(body, "bb-sync-file /etc/kubernetes/manifests/registry-agent.yaml"):]
+	require.Contains(t, manifest[:2000], "agent-image-digest",
+		"the digest belongs in the static pod manifest, which is the file that triggers a restart")
+}
