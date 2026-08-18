@@ -26,10 +26,73 @@ Network (внутренняя сеть) может быть настроена �
 
 ### Права пользователя
 
-Пользователь, под которым будет осуществляться доступ к API VMware Cloud Director, должен иметь следующие права:
+Для доступа к API VMware Cloud Director используйте один из следующих вариантов:
 
-* Роль `Organization Administrator` с дополнительным правилом `Preserve All ExtraConfig Elements During OVF Import and Export`.
-* Правило `Preserve All ExtraConfig Elements During OVF Import and Export` должно быть продублировано в используемом `Right Bundle` пользователя.
+* роль `Organization Administrator` с дополнительным правом `Preserve All ExtraConfig Elements During OVF Import and Export`;
+* пользовательскую роль с набором прав, приведённым ниже. Этого набора достаточно для создания кластера, заказа узлов, включая CloudEphemeral со статической адресацией и DHCP, а также для работы с CSI-дисками и StorageClass.
+
+В VMware Cloud Director права пользователя складываются из роли и из Rights Bundle — набора прав, который публикуется для организации. Право `Preserve All ExtraConfig Elements During OVF Import and Export` нужно добавить и в роль, и в Rights Bundle организации.
+
+{% alert level="warning" %}
+Без права `Preserve All ExtraConfig Elements During OVF Import and Export` в роли и в Rights Bundle организации `userdata` не передаётся в эфемерные виртуальные машины.
+{% endalert %}
+
+Чтобы создать пользовательскую роль, включите права, как показано ниже. Названия прав приведены как в интерфейсе VCD.
+
+1. В разделах «ACCESS CONTROL» и «ADMINISTRATION» включите следующие права:
+
+   * Organization → View: `View Organization Administrative Details`, `View vApp ACL`;
+   * User → Manage: `Manage user's own API token`;
+   * General → View: `View Certificates Library`, `Administrator View`, `View Quota Policy Capabilities`;
+   * General → Manage: `Administrator Control`.
+
+   ![Права пользователя, Access Control и Administration](images/role-setup/access-control.png)
+
+1. В разделе «COMPUTE» → «Organization VDC» включите все права View и следующие права Manage:
+
+   * `Edit Disk IOPS`;
+   * `Edit Tenant Kubernetes Policy`;
+   * `Change Owner`;
+   * `Create a Disk`;
+   * `Delete a Disk`;
+   * `Edit Disk Properties`;
+   * `Move a Disk`;
+   * `Create a Shared Disk`.
+
+   В разделе «Provider VDC» → View включите `Limited Provider VDC Storage Policy View` и `Limited Provider VDC View`:
+
+   ![Права пользователя, Organization VDC](images/role-setup/compute-organization-vdc.png)
+
+1. В разделе «COMPUTE» → «vApp» включите права, как на скриншоте. Убедитесь, что включено `Preserve All ExtraConfig Elements During OVF Import and Export`. В проверенной роли среди View включены `View Encryption Status of VMs and VM's disks` и `View VM metrics`; `View vApp Shadow VMs` и остальные варианты Preserve ExtraConfig не включены:
+
+   ![Права пользователя, vApp](images/role-setup/compute-vapp.png)
+
+1. В разделе «LIBRARIES» включите следующие права:
+
+   * Catalog → View: `View Private and Shared Catalogs within Current Organization`, `View Shared Catalogs from Other Organizations` (чтобы использовать образы из общих каталогов);
+   * Catalog → Manage: `Add a vApp from My Cloud`;
+   * Catalog Item → View: `View vApp Templates / Media`;
+   * Catalog Item → Manage: `Copy / Move a vApp Template / Media`, `Edit vApp Template / Media Properties`, `Add to My Cloud`.
+
+   В разделе «VMware Cloud Director Extension» → View включите `View Tenant Portal Plugin Information`:
+
+   ![Права пользователя, Libraries](images/role-setup/libraries.png)
+
+1. В разделе «NETWORKING» включите следующие права:
+
+   * Edge Gateway → View: `View Gateway`;
+   * Edge Gateway Services → View: все пункты;
+   * Edge Gateway Services → Manage: `Load Balancer Configure`, `NAT Configure`;
+   * IP Spaces → View: `View IP Spaces`;
+   * IP Spaces → Manage: `Allocate IP Spaces`, `Manage IP Spaces`;
+   * Organization VDC Network → View: `View Properties`;
+   * Organization VDC Network → Manage: `Edit Properties` (чтобы создавать сети в организации).
+
+   ![Права пользователя, Networking](images/role-setup/networking.png)
+
+1. В разделе «Provider Gateway Services» включите все права View. В разделе «KubeClusterExtension» включите все права View и Manage:
+
+   ![Права пользователя, Provider Gateway и KubeClusterExtension](images/role-setup/provider-gateway-kubecluster.png)
 
 ### Добавление сети
 
