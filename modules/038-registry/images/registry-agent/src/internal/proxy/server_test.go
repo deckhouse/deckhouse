@@ -816,3 +816,64 @@ func TestServeAsksForTheWholeRepositoryWhenThatIsTheImage(t *testing.T) {
 	require.NotEmpty(t, scopes)
 	assert.Equal(t, "repository:deckhouse/ee:pull", scopes[0])
 }
+
+// TestPaginationLeadsBackToThisProxy is the header a client follows, and it used to lead somewhere
+// this proxy does not serve.
+//
+// A registry paginates a tag listing by handing out the next page's URL, built from ITS OWN repository
+// name. This proxy rewrites the repository on the way out, so unless it rewrites it back on the way in,
+// the client's next request names the upstream repository — which the proxy then prefixes again.
+//
+// Measured on `ly-direct`: `system/deckhouse/modules/ingress-nginx` listed fine, the Link header named
+// `sys/deckhouse-oss/...`, the Deckhouse controller followed it, and the answer was `NAME_UNKNOWN` for
+// `sys/deckhouse-oss/sys/deckhouse-oss/modules/ingress-nginx`. Five installed modules never got their
+// release lists and the cluster would not converge.
+func TestPaginationLeadsBackToThisProxy(t *testing.T) {
+	const (
+		requested = "/v2/system/deckhouse/modules/ingress-nginx/tags/list"
+		sent      = "/v2/sys/deckhouse-oss/modules/ingress-nginx/tags/list"
+		cursor    = "?last=1771f355d5aad2c66cccee098168bdfba1f0091777b653b2087af1db&n=100"
+	)
+
+	for _, testcase := range []struct {
+		name   string
+		header string
+		want   string
+	}{
+		{
+			name:   "the next page comes back on the path the client used",
+			header: "<" + sent + cursor + ">; rel=\"next\"",
+			want:   "<" + requested + cursor + ">; rel=\"next\"",
+		},
+		{
+			// The cursor is the upstream's own opaque token. Rewriting the path must not touch it.
+			name:   "the cursor is left exactly as the upstream wrote it",
+			header: "<" + sent + "?last=sys/deckhouse-oss-shaped-cursor&n=1>; rel=\"next\"",
+			want:   "<" + requested + "?last=sys/deckhouse-oss-shaped-cursor&n=1>; rel=\"next\"",
+		},
+		{
+			name:   "a header naming something else is left alone",
+			header: "</v2/other/repository/tags/list?n=1>; rel=\"next\"",
+			want:   "</v2/other/repository/tags/list?n=1>; rel=\"next\"",
+		},
+	} {
+		t.Run(testcase.name, func(t *testing.T) {
+			if got := restorePath(testcase.header, requested, sent); got != testcase.want {
+				t.Fatalf("restorePath:\n  got  %s\n  want %s", got, testcase.want)
+			}
+		})
+	}
+
+	// And the degenerate cases: nothing to undo means nothing is touched.
+	header := "<" + sent + cursor + ">; rel=\"next\""
+	for _, testcase := range []struct{ requested, sent string }{
+		{requested: "", sent: sent},
+		{requested: requested, sent: ""},
+		{requested: sent, sent: sent},
+	} {
+		if got := restorePath(header, testcase.requested, testcase.sent); got != header {
+			t.Fatalf("restorePath(%q, %q) rewrote a header it should not have: %s",
+				testcase.requested, testcase.sent, got)
+		}
+	}
+}

@@ -25,6 +25,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -232,7 +233,7 @@ func (s *Server) forward(writer http.ResponseWriter, request *http.Request) {
 		// It answered, so whatever was wrong with it before is no longer true.
 		s.markWorking(target.Name)
 		s.count(string(decision.Kind), result(response.StatusCode))
-		s.relay(writer, response)
+		s.relay(writer, response, request.URL.Path, target.Path)
 		return
 	}
 
@@ -353,11 +354,16 @@ func (s *Server) attempt(
 //
 // Nothing is written to disk and nothing is held in memory: a layer can be gigabytes,
 // and the agent runs on every node.
-func (s *Server) relay(writer http.ResponseWriter, response *http.Response) {
+func (s *Server) relay(
+	writer http.ResponseWriter, response *http.Response, requested, sent string,
+) {
 	defer func() { _ = response.Body.Close() }()
 
 	for key, values := range response.Header {
 		for _, value := range values {
+			if http.CanonicalHeaderKey(key) == "Link" {
+				value = restorePath(value, requested, sent)
+			}
 			writer.Header().Add(key, value)
 		}
 	}
@@ -368,6 +374,29 @@ func (s *Server) relay(writer http.ResponseWriter, response *http.Response) {
 		// The runtime sees a truncated body and retries, which is the correct outcome.
 		s.Log.Warn("the transfer was interrupted", "error", err.Error())
 	}
+}
+
+// restorePath puts the path the client asked for back into a Link header.
+//
+// A registry paginates by handing out the URL of the next page, and the upstream builds that URL
+// from ITS OWN repository name — which is not the one the client used. This proxy rewrites the path
+// on the way out and has to undo that on the way back, or the client follows the header straight to
+// a path this proxy does not serve.
+//
+// Measured on `ly-direct`: a tag listing of `system/deckhouse/modules/ingress-nginx` answered 200
+// with `link: </v2/sys/deckhouse-oss/modules/ingress-nginx/tags/list?last=...&n=100>`, the Deckhouse
+// controller followed it, and the agent answered `NAME_UNKNOWN` for
+// `sys/deckhouse-oss/sys/deckhouse-oss/modules/ingress-nginx` — the upstream prefix applied twice.
+// Five installed modules never got their release lists, the ModuleSource reported "Some errors
+// occurred", and the cluster did not converge. Anything that pages through a listing hits this.
+//
+// Only the path is touched, and only when it is the one that was sent: the query carries the
+// upstream's own cursor, which is opaque and must survive untouched.
+func restorePath(header, requested, sent string) string {
+	if requested == "" || sent == "" || requested == sent {
+		return header
+	}
+	return strings.ReplaceAll(header, sent, requested)
 }
 
 // client returns an HTTP client trusting the given certificate authority.
