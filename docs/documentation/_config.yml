@@ -76,6 +76,24 @@ exclude:
 highlighter: rouge
 feedback_disable: true
 
+# Link rewriting in generated HTML (see _plugins/link_rewrite.rb).
+# When enabled, an <a href="..."> whose host is not in whitelist_hosts (and is
+# not a subdomain of a listed host) is unwrapped — the tag is dropped, the link
+# text stays. Per-link opt-out: <a data-keep-link="true">.
+# By default, link rewriting is disabled. But it is enabled for the CSE edition in the documentation module.
+link_rewrite_enable: false
+link_rewrite:
+  # Allowed hosts. For a link whose host is not listed here (and is not a subdomain
+  # of a listed host), the <a> tag is unwrapped: the tag is dropped but the link
+  # text stays in place. Relative links, mailto:/tel:/#anchor and links with the
+  # data-keep-link attribute are never touched.
+  whitelist_hosts: []
+  # Regex URL substitutions applied BEFORE the whitelist check — a rule can
+  # redirect an external URL to an allowed host so the link survives.
+  replace:
+  #  - from: '^https?://old\.example\.com/(.*)$'
+  #    to:   'https://new.example.com/\1'
+
 plugins:
   - jekyll-regex-replace
   - jekyll_include_plugin

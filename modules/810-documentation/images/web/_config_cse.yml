@@ -1,0 +1,16 @@
+link_rewrite_enable: true
+link_rewrite:
+  # Allowed hosts. For a link whose host is not listed here (and is not a subdomain
+  # of a listed host), the <a> tag is unwrapped: the tag is dropped but the link
+  # text stays in place. Relative links, mailto:/tel:/#anchor and links with the
+  # data-keep-link attribute are never touched.
+  whitelist_hosts:
+    - deckhouse.ru
+    - deckhouse.io
+    - flant.com
+    - flant.ru
+  # Regex URL substitutions applied BEFORE the whitelist check — a rule can
+  # redirect an external URL to an allowed host so the link survives.
+  replace:
+    - from: '^https?://old\.example\.com/(.*)$'
+      to:   'https://new.example.com/\1'

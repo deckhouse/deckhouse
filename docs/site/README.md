@@ -474,6 +474,46 @@ Below are some data structures used in the Jekyll projects.
   }
   ```
 
+## Link rewriting in HTML output
+
+The plugin at `docs/documentation/_plugins/link_rewrite.rb` post-processes the generated HTML of the Jekyll documentation site and rewrites `<a href>` links according to the rules from `_config.yml`. It runs on `:post_render` for both `:documents` and `:pages`, operates on the final HTML via Nokogiri, and only touches files with `.html` output — other artifacts like `sitemap.xml` and `search.json` are ignored.
+
+### Configuration
+
+Add the following keys to `docs/documentation/_config.yml`:
+
+```yaml
+# Link rewriting in generated HTML (see _plugins/link_rewrite.rb).
+# When enabled, an <a href="..."> whose host is not in whitelist_hosts (and is
+# not a subdomain of a listed host) is unwrapped — the tag is dropped, the link
+# text stays. Per-link opt-out: <a data-keep-link="true">.
+link_rewrite_enable: true
+link_rewrite:
+  # Allowed hosts. For a link whose host is not listed here (and is not a subdomain
+  # of a listed host), the <a> tag is unwrapped: the tag is dropped but the link
+  # text stays in place. Relative links, mailto:/tel:/#anchor and links with the
+  # data-keep-link attribute are never touched.
+  whitelist_hosts:
+    - deckhouse.ru
+    - deckhouse.io
+    - flant.com
+    - flant.ru
+  # Regex URL substitutions applied BEFORE the whitelist check — a rule can
+  # redirect an external URL to an allowed host so the link survives.
+  replace:
+    - from: '^https?://old\.example\.com/(.*)$'
+      to:   'https://new.example.com/\1'
+```
+
+### Behavior
+
+- Links with the `data-keep-link` attribute are never touched. In Markdown use the Kramdown IAL syntax: `[link](https://github.com){:data-keep-link="true"}`.
+- Relative links and links without a host (`mailto:`, `tel:`, `/path`, `#anchor`) are always left alone.
+- `replace` rules are applied first (first match wins). The resulting URL is then checked against `whitelist_hosts`.
+- If the resulting host is in `whitelist_hosts` — the link is kept as is; otherwise the `<a>` tag is replaced with its child nodes (text and inline formatting like `<b>`, `<code>` are preserved).
+- Host matching is case-insensitive. An entry in `whitelist_hosts` matches the host itself and any of its subdomains — e.g. `deckhouse.ru` matches `deckhouse.ru`, `www.deckhouse.ru`, `registry.deckhouse.ru`.
+- `link_rewrite_enable: false` (or the key being absent) disables the plugin entirely — the HTML is left untouched.
+
 ## Search
 
 This feature allows you to display a contextual message above the "ready" search message to inform users about what they're searching in.

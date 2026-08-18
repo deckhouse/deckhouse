@@ -110,6 +110,11 @@ shell:
         cat <<'EOD' > /srv/jekyll-data/documentation/_config_additional.yml
         {{- .Files.Get (printf "%smodules/810-documentation/images/web/_config.yml" .ModulePath) | nindent 8 }}
         EOD
+        {{ if eq .Edition "CSE" }}
+        cat <<'EOD' > /srv/jekyll-data/documentation/_config_cse.yml
+        {{- .Files.Get (printf "%smodules/810-documentation/images/web/_config_cse.yml" .ModulePath) | nindent 8 }}
+        EOD
+        {{ end }}
         cat <<'EOD' > /tmp/_config_section_defaults.yml
         {{- .Files.Get (printf "%smodules/810-documentation/images/web/_config_section_defaults.yml" .ModulePath) | nindent 8 }}
         EOD
@@ -134,7 +139,7 @@ shell:
         cd ..
         mkdir -m 777 -p /app/_site/
 {{ if eq .ModuleName "documentation" }}
-        JEKYLL_ENV=production jekyll build -d /app/_site/ --config _config.yml,/srv/jekyll-data/documentation/_config_additional.yml
+        JEKYLL_ENV=production jekyll build -d /app/_site/ --config _config.yml,/srv/jekyll-data/documentation/_config_additional.yml{{ if eq .Edition "CSE" }},/srv/jekyll-data/documentation/_config_cse.yml{{ end }}
         rm -rf /app/_site/documentation/compare/
 {{ else }}
         {{- if eq .Mode "development" }}
