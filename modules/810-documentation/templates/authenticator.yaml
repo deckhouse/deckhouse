@@ -1,6 +1,8 @@
 {{- $moduleGateway := dict }}
 {{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
-{{- if .Values.documentation.internal.deployDexAuthenticator }}
+{{- $ingressEnabled := eq (include "helm_lib_module_ingress_enabled" .) "true" }}
+{{- $gatewayEnabled := eq (include "helm_lib_module_gateway_enabled" .) "true" }}
+{{- if and .Values.documentation.internal.deployDexAuthenticator (or $ingressEnabled $gatewayEnabled) }}
 ---
 apiVersion: deckhouse.io/v1
 kind: DexAuthenticator
@@ -10,12 +12,12 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "dex-authenticator" "name" "documentation" )) | nindent 2 }}
 spec:
   applicationDomain: {{ include "helm_lib_module_public_domain" (list . "documentation") }}
-  {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
+  {{- if and $ingressEnabled (include "helm_lib_module_https_ingress_tls_enabled" .) }}
   applicationIngressCertificateSecretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
-    {{- if $moduleGateway }}
+  {{- end }}
+  {{- if and $gatewayEnabled (include "helm_lib_module_https_route_tls_enabled" .) }}
   gatewayAPI:
     applicationHTTPRouteListenerSetName: "documentation"
-    {{- end }}
   {{- end }}
   applicationIngressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
   {{- with .Values.documentation.auth.allowedUserEmails }}

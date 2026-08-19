@@ -1,4 +1,4 @@
-{{- if and .Values.global.modules.publicDomainTemplate .Values.global.clusterIsBootstrapped }}
+{{- if and (eq (include "helm_lib_module_ingress_enabled" .) "true") .Values.global.modules.publicDomainTemplate .Values.global.clusterIsBootstrapped }}
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress

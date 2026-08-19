@@ -2,7 +2,7 @@
 # if you change this file please evaluate to change files
 # /global-hooks/openapi/config-values.yaml
 # /ee/cse/global-hooks/openapi/config-values.yaml
-x-config-version: 2
+x-config-version: 3
 type: object
 default: {}
 additionalProperties: false
@@ -64,8 +64,34 @@ properties:
     default: {}
     type: object
     properties:
+      gatewayAPI:
+        type: object
+        additionalProperties: false
+        properties:
+          enabled:
+            type: boolean
+          gateway:
+            description: |
+              Reference to the Gateway object (from the Gateway API) used by modules of the Deckhouse ecosystem when creating Gateway API resources.
+
+              If not specified, modules use the Gateway automatically discovered in the cluster (if any).
+            type: object
+            required:
+              - name
+              - namespace
+            properties:
+              name:
+                type: string
+                description: |
+                  Name of the Gateway object.
+              namespace:
+                type: string
+                description: |
+                  Namespace of the Gateway object.
       gatewayAPIGateway:
         type: object
+        deprecated: true
+        x-doc-deprecated: true
         properties:
           name:
             type: string
@@ -79,13 +105,28 @@ properties:
           - name
           - namespace
         description: |
+          > **Deprecated**. Use [settings.modules.gatewayAPI.gateway](#parameters-modules-gatewayAPI-gateway) instead.
           Reference to the Gateway object (from the Gateway API) used by modules of the Deckhouse ecosystem when creating Gateway API resources.
 
           If not specified, modules use the Gateway automatically discovered in the cluster (if any).
+      ingress:
+        default: {}
+        type: object
+        additionalProperties: false
+        properties:
+          ingressClass:
+            type: string
+            default: nginx
+          enabled:
+            type: boolean
+            default: true
       ingressClass:
         type: string
+        deprecated: true
         default: nginx
+        x-doc-deprecated: true
         description: |
+          > **Deprecated**. Use [settings.modules.ingress.ingressClass](#parameters-modules-ingress-ingressClass) instead.
           Default [IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class) name used by the Deckhouse ecosystem modules when creating Ingress resources.
 
           Some modules support their own `ingressClass` parameter, which lets you use a different IngressClass instead of the default one.
