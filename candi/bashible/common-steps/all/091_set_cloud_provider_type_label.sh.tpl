@@ -14,10 +14,9 @@
 
 # bashible: parallel-group=light-labels
 
-{{- $nodeTypeList := list "CloudEphemeral" "CloudPermanent" "CloudStatic" }}
 mkdir -p /var/lib/node_labels/
-{{- if and (has .nodeGroup.nodeType $nodeTypeList) .nodeGroup.cloudProviderType }}
-echo "node.deckhouse.io/cloud-provider-type={{ .nodeGroup.cloudProviderType }}" > /var/lib/node_labels/cloud-provider-type
+{{- with .nodeGroup.cloudProviderType }}
+echo "node.deckhouse.io/cloud-provider-type={{ . }}" > /var/lib/node_labels/cloud-provider-type
 {{- else }}
 rm -f /var/lib/node_labels/cloud-provider-type
 {{- end }}

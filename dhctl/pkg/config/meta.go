@@ -806,11 +806,6 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(ctx context.Context, nodeIP
 
 	configForBashibleBundleTemplate["runType"] = "ClusterBootstrap"
 
-	// Deprecated: use `.nodeGroup.cloudProviderType`
-	if m.ClusterType == CloudClusterType {
-		configForBashibleBundleTemplate["provider"] = m.ProviderName
-	}
-
 	configForBashibleBundleTemplate["cri"] = data["defaultCRI"]
 	configForBashibleBundleTemplate["kubernetesVersion"] = data["kubernetesVersion"]
 	configForBashibleBundleTemplate["nodeGroup"] = nodeGroup
