@@ -35,7 +35,7 @@ var removeFinalizersPatch = map[string]interface{}{
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnAfterDeleteHelm: &go_hook.OrderedConfig{Order: 10},
+	OnBeforeDeleteHelm: &go_hook.OrderedConfig{Order: 10},
 }, dependency.WithExternalDependencies(cleanupIronicOnDelete))
 
 func cleanupIronicOnDelete(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
