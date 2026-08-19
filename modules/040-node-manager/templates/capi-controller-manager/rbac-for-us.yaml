@@ -280,6 +280,8 @@ rules:
     - zvirtmachines
     - zvirtmachinetemplates
     - vsphereclusters
+    - vspheredeploymentzones
+    - vspherefailuredomains
     - vspheremachines
     - vspheremachinetemplates
     - vspherevms

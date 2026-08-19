@@ -15,6 +15,28 @@ webhooks:
     service:
       name: capv-controller-manager-webhook-service
       namespace: d8-cloud-provider-vsphere
+      path: /validate-infrastructure-cluster-x-k8s-io-v1beta1-vspherefailuredomain
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: validation.vspherefailuredomain.infrastructure.cluster.x-k8s.io
+  rules:
+  - apiGroups:
+    - infrastructure.cluster.x-k8s.io
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - vspherefailuredomains
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    caBundle: {{ .Values.cloudProviderVsphere.internal.capvControllerManagerWebhookCert.ca | b64enc }}
+    service:
+      name: capv-controller-manager-webhook-service
+      namespace: d8-cloud-provider-vsphere
       path: /validate-infrastructure-cluster-x-k8s-io-v1beta1-vspheremachine
   failurePolicy: Fail
   matchPolicy: Equivalent
