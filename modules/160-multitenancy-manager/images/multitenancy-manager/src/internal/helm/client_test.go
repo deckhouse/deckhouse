@@ -53,19 +53,38 @@ func parseManifest(raw string) (*unstructured.Unstructured, bool, error) {
 	return object, true, nil
 }
 
+// shippedTemplates points the cases that cover a shipped ProjectTemplate at the file that ships,
+// instead of a copy of it under testdata. The copies had drifted: they still carried the unquoted
+// substitution the shipped templates were fixed for, so quoting those changed no golden file and
+// nothing here would have noticed a shipped template regressing to an unquoted one.
+var shippedTemplates = map[string]string{
+	"default_case":                    "../../templates/default.yaml",
+	"secure_case":                     "../../templates/secure.yaml",
+	"secure_with_dedicated_node_case": "../../templates/secure-with-dedicated-nodes.yaml",
+}
+
 func Test(t *testing.T) {
 	templates, err := parseHelmTemplates("../../helmlib")
 	assert.Nil(t, err)
 	for _, c := range []string{"default_case", "secure_case", "secure_with_dedicated_node_case", "empty_case", "without_ns_case", "skip_heritage_and_unmanaged_case"} {
 		t.Run(c, func(t *testing.T) {
 			basePath := filepath.Join("./testdata", c)
-			assert.Nil(t, test(templates, basePath))
+			templatePath := filepath.Join(basePath, "template.yaml")
+			if shipped, ok := shippedTemplates[c]; ok {
+				// Asked for outright: read() answers a missing file with an empty object, so a
+				// renamed template would arrive here as a template with nothing in it and fail as a
+				// golden mismatch rather than as the rename it is.
+				_, statErr := os.Stat(shipped)
+				assert.NoErrorf(t, statErr, "the shipped template %s is gone", shipped)
+				templatePath = shipped
+			}
+			assert.Nil(t, test(templates, basePath, templatePath))
 		})
 	}
 }
 
-func test(templates map[string][]byte, basePath string) error {
-	projectTemplate, err := read[v1alpha1.ProjectTemplate](filepath.Join(basePath, "template.yaml"))
+func test(templates map[string][]byte, basePath, templatePath string) error {
+	projectTemplate, err := read[v1alpha1.ProjectTemplate](templatePath)
 	if err != nil {
 		return err
 	}
