@@ -16,6 +16,7 @@ package openapi
 
 import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // SchemaURL represents a schema url.
@@ -104,6 +105,12 @@ type OpenAPIV3Schema struct {
 	// x-deckhouse-ui-validation-message overrides the validation error.
 	// +optional
 	XUIValidationMessage string `json:"x-deckhouse-ui-validation-message,omitempty"`
+
+	// x-deckhouse-ui-resource-name binds a string settings field to a live selection of
+	// cluster resources of the given kind: the web console renders a dropdown of
+	// matching resource names from the application's namespace.
+	// +optional
+	XUIResourceName *UIResourceNameSelector `json:"x-deckhouse-ui-resource-name,omitempty"`
 }
 
 // OpenAPIV3SchemaOrArray represents a value that can either be an OpenAPIV3Schema
@@ -159,4 +166,14 @@ type ValidationRule struct {
 	// FieldPath represents the field path returned when the validation fails.
 	// +optional
 	FieldPath string `json:"fieldPath,omitempty"`
+}
+
+// UIResourceNameSelector selects objects of a cluster resource kind (apiVersion + kind); the
+// optional labelSelector narrows the selection to objects whose labels match it.
+type UIResourceNameSelector struct {
+	APIVersion string `json:"apiVersion"`
+	Kind       string `json:"kind"`
+
+	// +optional
+	LabelSelector *metav1.LabelSelector `json:"labelSelector,omitempty"`
 }
