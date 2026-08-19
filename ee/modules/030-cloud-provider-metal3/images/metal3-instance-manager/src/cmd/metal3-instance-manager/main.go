@@ -33,7 +33,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -51,8 +50,6 @@ const (
 	labelPool              = "pool"
 
 	deleteRequeueAfter = 15 * time.Second
-
-	ironicCleanupFinalizer = "ironic.metal3.io"
 )
 
 var (
@@ -78,18 +75,6 @@ type reconciler struct {
 }
 
 func main() {
-	if len(os.Args) > 1 && os.Args[1] == "cleanup-ironic-finalizer" {
-		if err := runIronicFinalizerCleanup(os.Args[2:]); err != nil {
-			fmt.Fprintf(os.Stderr, "cleanup ironic finalizer: %v\n", err)
-			os.Exit(1)
-		}
-		return
-	}
-
-	runManager()
-}
-
-func runManager() {
 	var targetNamespace string
 	var defaultOnline bool
 	var defaultAutomatedCleaningMode string
@@ -144,53 +129,6 @@ func runManager() {
 		fmt.Fprintf(os.Stderr, "run manager: %v\n", err)
 		os.Exit(1)
 	}
-}
-
-func runIronicFinalizerCleanup(args []string) error {
-	fs := flag.NewFlagSet("cleanup-ironic-finalizer", flag.ExitOnError)
-	namespace := fs.String("namespace", "d8-cloud-provider-metal3", "namespace containing the Ironic resource")
-	name := fs.String("name", "ironic", "Ironic resource name")
-	finalizer := fs.String("finalizer", ironicCleanupFinalizer, "Ironic finalizer to remove")
-	if err := fs.Parse(args); err != nil {
-		return err
-	}
-
-	config, err := ctrl.GetConfig()
-	if err != nil {
-		return fmt.Errorf("get kubernetes config: %w", err)
-	}
-	c, err := client.New(config, client.Options{Scheme: runtime.NewScheme()})
-	if err != nil {
-		return fmt.Errorf("create kubernetes client: %w", err)
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
-	defer cancel()
-
-	key := types.NamespacedName{Namespace: *namespace, Name: *name}
-	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		ironic := &unstructured.Unstructured{}
-		ironic.SetGroupVersionKind(schema.GroupVersionKind{
-			Group:   "ironic.metal3.io",
-			Version: "v1alpha1",
-			Kind:    "Ironic",
-		})
-
-		if err := c.Get(ctx, key, ironic); err != nil {
-			return client.IgnoreNotFound(err)
-		}
-		if !controllerutil.ContainsFinalizer(ironic, *finalizer) {
-			return nil
-		}
-
-		original := ironic.DeepCopy()
-		controllerutil.RemoveFinalizer(ironic, *finalizer)
-		if err := c.Patch(ctx, ironic, client.MergeFrom(original)); err != nil {
-			return fmt.Errorf("patch Ironic %s finalizers: %w", key, err)
-		}
-		fmt.Fprintf(os.Stdout, "removed finalizer %q from Ironic %s\n", *finalizer, key)
-		return nil
-	})
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {

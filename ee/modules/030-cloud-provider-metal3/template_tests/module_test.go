@@ -166,14 +166,6 @@ defaultAutomatedCleaningMode: disabled
 			Expect(instanceManagerArgs).To(ContainSubstring("--default-online=true"))
 			Expect(instanceManagerArgs).To(ContainSubstring("--default-automated-cleaning-mode=disabled"))
 
-			ironicCleanupJob := f.KubernetesResource("Job", "d8-cloud-provider-metal3", "ironic-finalizer-cleanup")
-			Expect(ironicCleanupJob.Exists()).To(BeTrue())
-			Expect(ironicCleanupJob.Field("metadata.annotations.werf\\.io/deploy-on").String()).To(Equal("pre-uninstall"))
-			Expect(ironicCleanupJob.Field("spec.template.spec.serviceAccountName").String()).To(Equal("ironic-finalizer-cleanup"))
-			ironicCleanupArgs := ironicCleanupJob.Field("spec.template.spec.containers.0.args").String()
-			Expect(ironicCleanupArgs).To(ContainSubstring("cleanup-ironic-finalizer"))
-			Expect(ironicCleanupArgs).To(ContainSubstring("--finalizer=ironic.metal3.io"))
-
 			bmoWebhook := f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "baremetal-operator-validating-webhook-configuration")
 			Expect(bmoWebhook.Exists()).To(BeTrue())
 			Expect(bmoWebhook.Field("webhooks.0.clientConfig.service.namespace").String()).To(Equal("d8-cloud-provider-metal3"))
