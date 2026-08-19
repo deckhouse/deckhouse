@@ -602,7 +602,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (elements.length === 0) return;
 
     elements.forEach(element => {
-      tippy(element, {
+      const tooltip = tippy(element, {
         allowHTML: true,
         content: () => createTooltipContent(titleText, descriptionText),
         arrow: true,
@@ -611,6 +611,12 @@ document.addEventListener('DOMContentLoaded', () => {
         delay: [300, 50],
         offset: [0, 10],
         duration: [300],
+      });
+
+      element.addEventListener('click', () => {
+        setTimeout(() => {
+          tooltip.hide();
+        }, 1000);
       });
     })
   }
