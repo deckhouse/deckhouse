@@ -51,6 +51,27 @@ description: Модуль cni-cilium Deckhouse обеспечивает рабо
 
 * `Hybrid` — в данном режиме TCP-трафик обрабатывается в режиме `DSR`, а UDP — в режиме `SNAT`.
 
+## Особенность эксплуатации CNI Cilium в облаке AWS
+
+Если Cilium работает в режиме [VXLAN](configuration.html#parameters-tunnelmode) (единственный доступный для AWS), то по умолчанию не работают соединения изнутри кластера (с узла или из пода) к внутренним ресурсам, опубликованным через балансировщик (Load Balancer) типа `internal`. При этом снаружи кластера адрес балансировщика отвечает. Причина - включенная опция `preserve_client_ip` ("Preserve client IP addresses") на целевой группе (Target Group): балансировщик не делает NAT и обратный трафик уходит напрямую через VXLAN-туннель мимо балансировщика. Трафик становится асимметричным, соединение сбрасывается. Чтобы устранить проблему, отключите `preserve_client_ip` для целевой группы одним из двух способов.
+
+{% alert level="warning" %}
+После отключения `preserve_client_ip` балансировщик выполняет SNAT, и приложение перестает видеть реальный IP-адрес клиента на сетевом уровне. Для HTTP/HTTPS-трафика это не проблема: адрес все равно передается в заголовке `X-Forwarded-For`.
+{% endalert %}
+
+**Через веб-интерфейс AWS.** Откройте **EC2** → **Target groups**, выберите целевую группу балансировщика (например, `k8s-d8ingres-internal-...`), нажмите **Edit target group attributes** и в блоке **Traffic configuration** отключите переключатель **Preserve client IP addresses**.
+
+![Настройка Preserve client IP addresses в веб-интерфейсе AWS](images/preserve-client-ip-disabled.png)
+
+**Через CLI AWS.** Выполните команду, подставив ARN своей целевой группы и регион (ARN можно посмотреть в том же разделе **Target groups** или командой `aws elbv2 describe-target-groups`):
+
+```bash
+aws elbv2 modify-target-group-attributes \
+  --target-group-arn arn:aws:elasticloadbalancing:REGION:ACCOUNT:targetgroup/NAME/ID \
+  --attributes Key=preserve_client_ip.enabled,Value=false \
+  --region REGION
+```
+
 ## Использование CiliumClusterwideNetworkPolicy
 
 {% alert level="danger" %}
