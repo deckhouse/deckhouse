@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-965feae7158c81b99d9011ec6c79e82c8b8b4a7ae9dc9ea04a3e07a5218773a2",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 5,
+  "version": 6,
   "statements": [
     {
       "vulnerability": {
@@ -269,6 +269,20 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2026-46597 невозможно эксплуатировать в kubeadm в рамках Deckhouse: panic AES-GCM SSH packet decoder возможен только при SSH-сессии; транспорт kubeadm — TLS к API, не SSH.",
       "timestamp": "2026-07-21T14:30:02.0488Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "GO-2026-5932 относится к пакету golang.org/x/crypto/openpgp, который объявлен unmaintained и не имеет исправленной версии. Ссылок на golang.org/x/crypto/openpgp в поставляемом бинарнике нет, следоваительно эксплуатация в рамках данного образа недоступна.",
+      "timestamp": "2026-08-19T07:55:26Z"
     }
   ],
   "timestamp": "2025-10-09T09:57:48Z",
