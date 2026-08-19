@@ -192,7 +192,7 @@ func TestLoad_Errors(t *testing.T) {
 				registrationSecret(SecretNamePrefix+"-aws", map[string][]byte{"type": []byte("aws")}),
 				cloudCluster("Yandex"),
 			},
-			wantErr: `"yandex" of the cluster configuration published no registration`,
+			wantErr: `registration secret not found for cloud provider "yandex"`,
 		},
 	}
 
