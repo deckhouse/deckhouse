@@ -371,6 +371,7 @@ dapp
 dappdeps
 darwin
 dashboard
+DAST
 datacenter
 Datacenter
 DatacenterName
@@ -402,6 +403,7 @@ DeckhouseReleases
 defaultClusterStorageClass
 DefaultContainerResourcePolicy
 defaultCRI
+DefectDojo
 defragment
 Defragment
 defragmentation
@@ -507,6 +509,7 @@ enableBasicAuth
 enablement
 enableMultiTenancy
 endofftopic
+Engagement
 entrypoint
 enum
 env
@@ -1308,6 +1311,7 @@ registryDockerCfg
 registryImagesRepo
 registrysecret
 Rego
+reimport
 reindex
 releaseChannel
 RemoveDuplicates
@@ -1368,6 +1372,7 @@ SaaSUninstall
 SAML
 SANs
 SASL
+SAST
 SBOM
 schedulable
 SchedulingDisabled
