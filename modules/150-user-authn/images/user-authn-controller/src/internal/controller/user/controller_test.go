@@ -296,8 +296,12 @@ func TestReconcile_StatusLockFromLockedUntilAndAdminAnnotation(t *testing.T) {
 				"lockedUntil": tt.lockedUntil,
 			}, map[string]string{heritageLabel: heritageValue}, tt.annots)
 			r := newTestReconciler(t, now, namespaceObj(), userObj(adminUserName, adminEmail, adminPassword, ""), pw)
-			if _, err := r.Reconcile(t.Context(), userReq(adminUserName)); err != nil {
+			res, err := r.Reconcile(t.Context(), userReq(adminUserName))
+			if err != nil {
 				t.Fatalf("Reconcile: %v", err)
+			}
+			if res.RequeueAfter != 2*time.Hour {
+				t.Errorf("RequeueAfter = %v, want 2h so status unlocks when lockedUntil expires", res.RequeueAfter)
 			}
 			lock := userStatusLock(t, getUser(t, r, adminUserName))
 			if lock.State != tt.wantState {
@@ -333,9 +337,24 @@ func TestReconcile_ExpiredAdminAnnotationStrippedOnExisting(t *testing.T) {
 		helmResourcePolicyAnnotation: helmResourcePolicyKeep,
 	})
 
-	r := newTestReconciler(t, now, namespaceObj(), userObj(adminUserName, adminEmail, adminPassword, ""), pw)
-	if _, err := r.Reconcile(t.Context(), userReq(adminUserName)); err != nil {
+	stale := userObj(adminUserName, adminEmail, adminPassword, "")
+	stale.Object["status"] = map[string]any{
+		"groups": []any{},
+		"lock": map[string]any{
+			"state":   true,
+			"reason":  lockReasonAdministrator,
+			"message": lockMessageAdministrator,
+			"until":   expired,
+		},
+	}
+
+	r := newTestReconciler(t, now, namespaceObj(), stale, pw)
+	res, err := r.Reconcile(t.Context(), userReq(adminUserName))
+	if err != nil {
 		t.Fatalf("Reconcile: %v", err)
+	}
+	if res.RequeueAfter != 0 {
+		t.Errorf("RequeueAfter = %v, want 0 after lock expiry", res.RequeueAfter)
 	}
 
 	got := getPassword(t, r, adminEncodedPW)
@@ -345,6 +364,9 @@ func TestReconcile_ExpiredAdminAnnotationStrippedOnExisting(t *testing.T) {
 	lock := userStatusLock(t, getUser(t, r, adminUserName))
 	if lock.State {
 		t.Error("status.lock.state = true, want false after expired lock")
+	}
+	if lock.Reason != "" || lock.Message != "" || lock.Until != "" {
+		t.Errorf("stale lock fields remain: %+v", lock)
 	}
 }
 

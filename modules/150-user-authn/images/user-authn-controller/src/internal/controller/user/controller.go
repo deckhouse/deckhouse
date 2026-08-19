@@ -108,8 +108,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	if err != nil {
 		return reconcile.Result{}, err
 	}
+
+	var lockRequeue time.Duration
 	if userFound {
-		if err := r.reconcileUser(ctx, user, nsExists, now); err != nil {
+		lockRequeue, err = r.reconcileUser(ctx, user, nsExists, now)
+		if err != nil {
 			return reconcile.Result{}, err
 		}
 	}
@@ -123,17 +126,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	if userFound && !nsExists {
 		return reconcile.Result{RequeueAfter: namespaceRequeueAfter}, nil
 	}
-	return reconcile.Result{}, nil
+	return reconcile.Result{RequeueAfter: lockRequeue}, nil
 }
 
-func (r *Reconciler) reconcileUser(ctx context.Context, user userView, nsExists bool, now time.Time) error {
+func (r *Reconciler) reconcileUser(ctx context.Context, user userView, nsExists bool, now time.Time) (time.Duration, error) {
 	if err := ctx.Err(); err != nil {
-		return err
+		return 0, err
 	}
 
 	groups, err := r.groupsForUserName(ctx, user.Name)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	expireAt, err := expireAtForUser(user, now)
@@ -147,16 +150,19 @@ func (r *Reconciler) reconcileUser(ctx context.Context, user userView, nsExists 
 		email := strings.ToLower(user.Email)
 		live, err = r.reconcilePassword(ctx, user, email, groups, now)
 		if err != nil {
-			return err
+			return 0, err
 		}
 	}
 
 	lock := lockFromPassword(live, now)
-	return r.patchUserStatus(ctx, user, userStatusPatch{
+	if err := r.patchUserStatus(ctx, user, userStatusPatch{
 		ExpireAt: expireAt,
 		Groups:   groups,
 		Lock:     lock,
-	})
+	}); err != nil {
+		return 0, err
+	}
+	return controller.RequeueAfterTime(live.LockedUntil, now), nil
 }
 
 func (r *Reconciler) namespaceExists(ctx context.Context) (bool, error) {

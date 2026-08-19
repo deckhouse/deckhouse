@@ -58,8 +58,12 @@ func TestReconcile_LocalPasswordProjectsAttemptsLockEmail(t *testing.T) {
 
 	r := newTestReconciler(t, now, pw, user)
 	name := naming.LocalName("jane@example.com")
-	if _, err := r.Reconcile(t.Context(), reconcile.Request{NamespacedName: types.NamespacedName{Name: name}}); err != nil {
+	res, err := r.Reconcile(t.Context(), reconcile.Request{NamespacedName: types.NamespacedName{Name: name}})
+	if err != nil {
 		t.Fatalf("Reconcile: %v", err)
+	}
+	if res.RequeueAfter != 2*time.Hour {
+		t.Errorf("RequeueAfter = %v, want 2h so the account unlocks when lockedUntil expires", res.RequeueAfter)
 	}
 
 	var ua v1alpha1.UserAccount
@@ -125,8 +129,12 @@ func TestReconcile_ExpiredLockedUntilUnlocked(t *testing.T) {
 			}}
 			r := newTestReconciler(t, now, pw)
 			name := naming.LocalName("exp@example.com")
-			if _, err := r.Reconcile(t.Context(), reconcile.Request{NamespacedName: types.NamespacedName{Name: name}}); err != nil {
+			res, err := r.Reconcile(t.Context(), reconcile.Request{NamespacedName: types.NamespacedName{Name: name}})
+			if err != nil {
 				t.Fatalf("Reconcile: %v", err)
+			}
+			if res.RequeueAfter != 0 {
+				t.Errorf("RequeueAfter = %v, want 0 after lock expiry", res.RequeueAfter)
 			}
 			var ua v1alpha1.UserAccount
 			if err := r.client.Get(t.Context(), types.NamespacedName{Name: name}, &ua); err != nil {

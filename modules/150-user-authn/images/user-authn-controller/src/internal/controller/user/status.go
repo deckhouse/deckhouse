@@ -83,10 +83,18 @@ func (r *Reconciler) patchUserStatus(ctx context.Context, user userView, desired
 	if statusUnchanged(user, desired) {
 		return nil
 	}
-	if desired.Groups == nil {
-		desired.Groups = []string{}
+	groups := desired.Groups
+	if groups == nil {
+		groups = []string{}
 	}
-	raw, err := json.Marshal(map[string]any{"status": desired})
+	status := map[string]any{
+		"groups": groups,
+		"lock":   lockStatusMap(desired.Lock),
+	}
+	if desired.ExpireAt != "" {
+		status["expireAt"] = desired.ExpireAt
+	}
+	raw, err := json.Marshal(map[string]any{"status": status})
 	if err != nil {
 		return fmt.Errorf("marshal user status patch: %w", err)
 	}
@@ -97,4 +105,23 @@ func (r *Reconciler) patchUserStatus(ctx context.Context, user userView, desired
 	}
 	r.log.Info("synced user status", "user", user.Name)
 	return nil
+}
+
+// lockStatusMap sends explicit nulls for inactive lock fields so a merge-patch
+// clears stale reason/message/until. omitempty on userLock would leave them.
+func lockStatusMap(lock userLock) map[string]any {
+	if !lock.State {
+		return map[string]any{
+			"state":   false,
+			"reason":  nil,
+			"message": nil,
+			"until":   nil,
+		}
+	}
+	return map[string]any{
+		"state":   true,
+		"reason":  lock.Reason,
+		"message": lock.Message,
+		"until":   lock.Until,
+	}
 }

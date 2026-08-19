@@ -108,14 +108,27 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	switch {
 	case desired != nil && !exists:
-		return reconcile.Result{}, r.create(ctx, desired)
+		if err := r.create(ctx, desired); err != nil {
+			return reconcile.Result{}, err
+		}
 	case desired != nil && exists:
-		return reconcile.Result{}, r.updateIfChanged(ctx, existing, desired)
+		if err := r.updateIfChanged(ctx, existing, desired); err != nil {
+			return reconcile.Result{}, err
+		}
 	case desired == nil && exists:
 		return reconcile.Result{}, r.delete(ctx, existing)
 	default:
 		return reconcile.Result{}, nil
 	}
+	return reconcile.Result{RequeueAfter: requeueAfterLockedUntil(desired.Status.LockedUntil, r.now())}, nil
+}
+
+func requeueAfterLockedUntil(until *metav1.Time, now time.Time) time.Duration {
+	if until == nil {
+		return 0
+	}
+	t := until.Time
+	return controller.RequeueAfterTime(&t, now)
 }
 
 func (r *Reconciler) create(ctx context.Context, desired *desiredAccount) error {
