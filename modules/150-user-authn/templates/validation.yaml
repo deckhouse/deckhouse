@@ -52,25 +52,33 @@ spec:
       expression: 'object.metadata.?annotations.orValue({})'
     - name: oldAnnotations
       expression: 'oldObject == null ? {} : oldObject.metadata.?annotations.orValue({})'
-    # The truthy set is a superset of what strconv.ParseBool accepts in the hooks, so no value that
-    # the hooks would honour can slip through unchecked.
+    # Presence of the key, not its value, is what the policy gates. Hook generations disagree on how
+    # the value is read: some parse it with strconv.ParseBool and fail closed, older ones grant on
+    # the mere presence of the key. Gating presence keeps the policy sound whichever hook is running
+    # and removes the coupling to the hook's parsing altogether.
+    - name: annotated
+      expression: 'variables.annotation in variables.annotations'
+    - name: annotatedBefore
+      expression: 'variables.annotation in variables.oldAnnotations'
+    # Truthiness is only used to decide whether an update makes an already annotated object more
+    # permissive; it is never what allows the key to appear in the first place.
     - name: grantsAccess
-      expression: 'variables.annotation in variables.annotations
+      expression: 'variables.annotated
         && variables.annotations[variables.annotation].lowerAscii() in ["1", "t", "true"]'
     - name: grantedBefore
-      expression: 'variables.annotation in variables.oldAnnotations
+      expression: 'variables.annotatedBefore
         && variables.oldAnnotations[variables.annotation].lowerAscii() in ["1", "t", "true"]'
   validations:
-    # Only a newly granted access is gated, so objects that already carry the annotation stay editable
-    # by their owners. Authority is proven by the right to update the user-authn ModuleConfig, which
-    # only cluster-wide administrators of this module hold.
+    # Only a newly introduced or newly widened annotation is gated, so objects that already carry it
+    # stay editable by their owners. Authority is proven by the right to update the user-authn
+    # ModuleConfig, which only cluster-wide administrators of this module hold.
     - expression: 'request.userInfo.username == "system:serviceaccount:d8-system:deckhouse"
-        || !variables.grantsAccess
-        || variables.grantedBefore
+        || !variables.annotated
+        || (variables.annotatedBefore && (!variables.grantsAccess || variables.grantedBefore))
         || authorizer.group("deckhouse.io").resource("moduleconfigs").name("user-authn").check("update").allowed()'
       reason: Forbidden
-      messageExpression: '"the " + variables.annotation + " annotation grants access to the Kubernetes API
-        and must be applied by a cluster administrator who is allowed to manage the user-authn module"'
+      messageExpression: '"the " + variables.annotation + " annotation controls access to the Kubernetes API
+        and may only be introduced or widened by a cluster administrator who is allowed to manage the user-authn module"'
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
 kind: ValidatingAdmissionPolicyBinding
