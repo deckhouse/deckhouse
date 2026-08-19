@@ -323,8 +323,8 @@ The steps below describe a setup where users sign in through an OIDC provider (f
 
 ### Prerequisites
 
-- An OIDC provider that passes the user email and the list of their groups.
-- An LDAP directory with the same users and with groups whose names allow determining the role (for example, `dh-code-developer-backend`).
+- An OIDC provider.
+- An LDAP directory with the same users and with groups whose names allow determining the role.
 - An LDAP service account with read access to the directory (the `bind_dn` and `password` parameters).
 
 The `uid` or email value in the OIDC provider must match the value of the corresponding attribute in LDAP, otherwise linking will not work (see [How the LDAP account is found](#how-the-ldap-account-is-found)).
@@ -362,43 +362,18 @@ main:
   }
 ```
 
-### Step 2. Configure the OIDC provider
+### Step 2. Configure the OIDC provider and enable linking to LDAP
 
-The configuration is set in the `spec.appConfig.omniauth.` section. Connection parameters are defined according to the [GitLab documentation](https://docs.gitlab.com/integration/omniauth/), while access and administrative privileges are controlled by the `allowed_groups` and `admin_groups` parameters:
+The configuration is set in the `spec.appConfig.omniauth.` section.
 
 ```yaml
+auto_link_ldap_user: true
 providers:
   - name: 'openid_connect'
-    allowed_groups:
-      - 'gitlab'
-    admin_groups:
-      - 'admin'
     groups_attribute: 'gitlab_group'
 ```
 
-### Step 3. Enable linking to LDAP
-
-The configuration is set in the `spec.appConfig.` section:
-
-```yaml
-omniauth:
-  auto_link_ldap_user: true
-  # The user is not found in LDAP — the account is created blocked,
-  # pending administrator approval.
-  block_auto_created_users: true
-```
-
-### Step 4. Set the synchronization schedule
-
-The configuration is set in the `spec.appConfig.` section:
-
-```yaml
-cron_jobs:
-  ldap_sync_worker:
-    cron: "0 * * * *"
-```
-
-### Step 5. Verify linking on the first sign-in
+### Step 3. Verify linking on the first sign-in
 
 1. Sign in with a test user through the OIDC provider.
 1. Open the user page in the admin area (`/admin/users/<username>/identities`). A linked account must have two identities: `openid_connect` and `ldapmain` (the LDAP identity name consists of the `ldap` prefix and the LDAP server name, `main` in this example).
@@ -409,7 +384,7 @@ If the LDAP identity is missing, check the following:
 - the user falls within the `base` search scope and is not filtered out by `user_filter`;
 - the `auto_link_ldap_user` parameter is enabled.
 
-### Step 6. Wait for the permissions to be synchronized
+### Step 4. Wait for the permissions to be synchronized
 
 Right after the first sign-in, the user has an account but no group or project memberships. Wait for the next synchronization or run it manually (see [Manual synchronization run](#manual-synchronization-run)), then check that:
 
