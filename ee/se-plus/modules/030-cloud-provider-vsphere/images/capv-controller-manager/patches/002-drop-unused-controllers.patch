@@ -1,17 +1,15 @@
 diff --git a/main.go b/main.go
 --- a/main.go
 +++ b/main.go
-@@ -385,9 +385,6 @@ func setupControllers(ctx context.Context, controllerCtx *capvcontext.Controlle
+@@ -385,7 +385,6 @@ func setupControllers(ctx context.Context, controllerCtx *capvcontext.Controlle
  			crdMigratorConfig[&infrav1.VSphereMachine{}] = crdmigrator.ByObjectConfig{UseCache: true, UseStatusForStorageVersionMigration: true}
  			crdMigratorConfig[&infrav1.VSphereMachineTemplate{}] = crdmigrator.ByObjectConfig{UseCache: true}
  			crdMigratorConfig[&infrav1.VSphereVM{}] = crdmigrator.ByObjectConfig{UseCache: true, UseStatusForStorageVersionMigration: true}
 -			crdMigratorConfig[&infrav1.VSphereClusterIdentity{}] = crdmigrator.ByObjectConfig{UseCache: true, UseStatusForStorageVersionMigration: true}
--			crdMigratorConfig[&infrav1.VSphereDeploymentZone{}] = crdmigrator.ByObjectConfig{UseCache: true, UseStatusForStorageVersionMigration: true}
--			crdMigratorConfig[&infrav1.VSphereFailureDomain{}] = crdmigrator.ByObjectConfig{UseCache: true}
+ 			crdMigratorConfig[&infrav1.VSphereDeploymentZone{}] = crdmigrator.ByObjectConfig{UseCache: true, UseStatusForStorageVersionMigration: true}
+ 			crdMigratorConfig[&infrav1.VSphereFailureDomain{}] = crdmigrator.ByObjectConfig{UseCache: true}
  		}
- 		if isSupervisorCRDLoaded {
- 			crdMigratorConfig[&vmwarev1.VSphereCluster{}] = crdmigrator.ByObjectConfig{UseCache: true, UseStatusForStorageVersionMigration: true}
-@@ -458,10 +455,6 @@ func setupControllers(ctx context.Context, controllerCtx *capvcontext.Controlle
+@@ -458,10 +457,6 @@ func setupControllers(ctx context.Context, controllerCtx *capvcontext.Controlle
  }
 
  func setupVAPIControllers(ctx context.Context, controllerCtx *capvcontext.ControllerManagerContext, mgr ctrlmgr.Manager, clusterCache clustercache.ClusterCache) error {
@@ -22,22 +20,7 @@ diff --git a/main.go b/main.go
  	if err := (&webhooks.VSphereMachine{}).SetupWebhookWithManager(mgr); err != nil {
  		return err
  	}
-@@ -474,14 +467,6 @@ func setupVAPIControllers(ctx context.Context, controllerCtx *capvcontext.Contro
- 		return err
- 	}
-
--	if err := (&webhooks.VSphereDeploymentZone{}).SetupWebhookWithManager(mgr); err != nil {
--		return err
--	}
--
--	if err := (&webhooks.VSphereFailureDomain{}).SetupWebhookWithManager(mgr); err != nil {
--		return err
--	}
--
- 	if err := controllers.AddClusterControllerToManager(ctx, controllerCtx, mgr, false, concurrency(vSphereClusterConcurrency)); err != nil {
- 		return err
- 	}
-@@ -491,9 +476,6 @@ func setupVAPIControllers(ctx context.Context, controllerCtx *capvcontext.Contro
+@@ -491,9 +486,6 @@ func setupVAPIControllers(ctx context.Context, controllerCtx *capvcontext.Contro
  	if err := controllers.AddVMControllerToManager(ctx, controllerCtx, mgr, clusterCache, concurrency(vSphereVMConcurrency)); err != nil {
  		return err
  	}
@@ -45,22 +28,5 @@ diff --git a/main.go b/main.go
 -		return err
 -	}
 
--	return controllers.AddVSphereDeploymentZoneControllerToManager(ctx, controllerCtx, mgr, concurrency(vSphereDeploymentZoneConcurrency))
-+	return nil
+ 	return controllers.AddVSphereDeploymentZoneControllerToManager(ctx, controllerCtx, mgr, concurrency(vSphereDeploymentZoneConcurrency))
  }
-diff --git a/controllers/vspherecluster_controller.go b/controllers/vspherecluster_controller.go
---- a/controllers/vspherecluster_controller.go
-+++ b/controllers/vspherecluster_controller.go
-@@ -141,12 +141,6 @@ func (r *clusterReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manag
- 			&infrav1.VSphereMachine{},
- 			handler.EnqueueRequestsFromMapFunc(reconciler.controlPlaneMachineToCluster),
- 		).
--		// Watch the Vsphere deployment zone with the Server field matching the
--		// server field of the VSphereCluster.
--		Watches(
--			&infrav1.VSphereDeploymentZone{},
--			handler.EnqueueRequestsFromMapFunc(reconciler.deploymentZoneToCluster),
--		).
- 		// Watch a GenericEvent channel for the controlled resource.
- 		//
- 		// This is useful when there are events outside of Kubernetes that
