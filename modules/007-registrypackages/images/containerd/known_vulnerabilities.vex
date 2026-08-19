@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-0a7dee882b0213b53ce1f13791d223657afca21285b99e07e15b935fa0456093",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 11,
+  "version": 13,
   "statements": [
     {
       "vulnerability": {
@@ -38,7 +38,7 @@
       },
       "products": [
         {
-          "@id": "pkg:golang/github.com/docker/cli@v25.0.5%2Bincompatible"
+          "@id": "pkg:golang/github.com/docker/cli"
         }
       ],
       "status": "not_affected",
@@ -94,15 +94,15 @@
       },
       "products": [
         {
-          "@id": "pkg:golang/github.com/go-jose/go-jose/v3@v3.0.4"
+          "@id": "pkg:golang/github.com/go-jose/go-jose/v3"
         },
         {
-          "@id": "pkg:golang/github.com/go-jose/go-jose/v4@v4.0.5"
+          "@id": "pkg:golang/github.com/go-jose/go-jose/v4"
         }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "Уязвимость CVE-2026-34986 невозможно эксплуатировать в рамках Deckhouse: плтаформа не использует шифрование образов, в ней не настроен и не используется ctd-decoder, цепочка вызовов которого (containerd -\u003e imgcrypt -\u003e ocicrypt -\u003e go-jose) и может привести к эксплуатации уязвимости, при всех воплощённых в ней условиях.",
+      "impact_statement": "Уязвимость CVE-2026-34986 невозможно эксплуатировать в рамках Deckhouse: плтаформа не использует шифрование образов, в ней не настроен и не используется ctd-decoder, цепочка вызовов которого (containerd -> imgcrypt -> ocicrypt -> go-jose) и может привести к эксплуатации уязвимости, при всех воплощённых в ней условиях.",
       "timestamp": "2026-04-07T13:06:33.386247Z"
     },
     {
@@ -190,6 +190,20 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2026-41567 невозможно эксплуатировать в рамках Deckhouse: уязвимость затрагивает серверный обработчик PUT /containers/{id}/archive в демоне Docker Engine. Уязвимый код в патчах, привносящих данную зависимость в containerd, не выполняется.",
       "timestamp": "2026-06-18T12:31:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "GO-2026-5932 относится к пакету golang.org/x/crypto/openpgp, который объявлен unmaintained и не имеет исправленной версии. В бинарнике containerd этот пакет присутствует: он приходит транзитивно через github.com/containerd/imgcrypt/images/encryption -> github.com/containers/ocicrypt, то есть вместе с поддержкой зашифрованных OCI-образов. Единственный вход в этот код со стороны containerd только при config.ImageDecryption.KeyModel == \"node\", а иначе возвращает nil. Deckhouse поставляет конфигурацию containerd с пустым key_model для обоих CRI-плагинов, поэтому опции расшифровки не создаются и код openpgp не вызывается ни при одной операции pull. В бинарники ctr и containerd-shim-runc-v2 пакет openpgp не влинкован вовсе.",
+      "timestamp": "2026-08-19T07:55:26Z"
     }
   ],
   "timestamp": "2026-03-04T12:00:38Z",
