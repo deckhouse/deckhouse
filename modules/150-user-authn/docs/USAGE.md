@@ -530,7 +530,9 @@ The annotation makes the client a trusted peer of the privileged `kubernetes` OA
 {% alert level="warning" %}
 This is a cluster-level grant, not a namespace-level one, even though both resources are namespaced. Because of that, only a subject that is allowed to update the `user-authn` module configuration may add the annotation or change it to a truthy value — for example a user bound to the `d8:manage:permission:module:user-authn:edit` role. Permission to create `DexClient` or `DexAuthenticator` resources in a namespace is not sufficient by itself.
 
-Resources that already carry the annotation are not affected: their owner can keep editing them, including removing the annotation. Only introducing the grant is restricted.
+Adding the annotation is restricted whatever its value, including `"false"`, because releases older than v1.77 grant the access on the mere presence of the key. Express the absence of the grant by omitting the annotation.
+
+Resources that already carry the annotation are not affected: their owner can keep editing them, including removing the annotation or changing its value to a non-truthy one. Only introducing the grant, or widening it on a resource that already carries the annotation, is restricted.
 {% endalert %}
 
 ## Local Authentication
