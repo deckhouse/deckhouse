@@ -18,6 +18,11 @@ package template_tests
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strconv"
 
 	celgo "github.com/google/cel-go/cel"
 	celtypes "github.com/google/cel-go/common/types"
@@ -28,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/version"
 	"k8s.io/apiserver/pkg/admission"
 	admissioncel "k8s.io/apiserver/pkg/admission/plugin/cel"
 	celconfig "k8s.io/apiserver/pkg/apis/cel"
@@ -110,10 +116,10 @@ var _ = Describe("Module :: user-authn :: helm template :: validation", func() {
 
 			Expect(policy.Field("spec.validations.0.reason").String()).To(Equal("Forbidden"))
 			Expect(policy.Field("spec.validations.0.messageExpression").String()).To(
-				ContainSubstring("grants access to the Kubernetes API"),
+				ContainSubstring("controls access to the Kubernetes API"),
 			)
 			Expect(policy.Field("spec.validations.0.messageExpression").String()).To(
-				ContainSubstring("must be applied by a cluster administrator"),
+				ContainSubstring("may only be introduced or widened by a cluster administrator"),
 			)
 
 			binding := hec.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", allowAccessPolicyName)
@@ -155,14 +161,19 @@ var _ = Describe("Module :: user-authn :: helm template :: validation", func() {
 					allowed:     true,
 				},
 				{
-					name:        "annotation explicitly disabled",
+					name:        "annotation explicitly disabled on create",
 					annotations: map[string]string{dexClientAnnotation: "false"},
-					allowed:     true,
+					allowed:     false,
 				},
 				{
-					name:        "annotation value is not a boolean the hooks would honour",
+					name:        "annotation value is not a boolean",
 					annotations: map[string]string{dexClientAnnotation: "yes"},
-					allowed:     true,
+					allowed:     false,
+				},
+				{
+					name:        "annotation value is empty",
+					annotations: map[string]string{dexClientAnnotation: ""},
+					allowed:     false,
 				},
 				{
 					name:        "truthy value in another casing",
@@ -220,11 +231,32 @@ var _ = Describe("Module :: user-authn :: helm template :: validation", func() {
 					allowed:        false,
 				},
 				{
+					name:           "annotation is flipped from a value no hook reads as true to true",
+					operation:      admission.Update,
+					annotations:    map[string]string{dexClientAnnotation: "true"},
+					oldAnnotations: map[string]string{dexClientAnnotation: "yes"},
+					allowed:        false,
+				},
+				{
 					name:           "annotation is flipped from true to false",
 					operation:      admission.Update,
 					annotations:    map[string]string{dexClientAnnotation: "false"},
 					oldAnnotations: map[string]string{dexClientAnnotation: "true"},
 					allowed:        true,
+				},
+				{
+					name:           "object that already carries a disabled annotation stays editable",
+					operation:      admission.Update,
+					annotations:    map[string]string{dexClientAnnotation: "false"},
+					oldAnnotations: map[string]string{dexClientAnnotation: "false"},
+					allowed:        true,
+				},
+				{
+					name:           "disabled annotation is added to an object that had none",
+					operation:      admission.Update,
+					annotations:    map[string]string{dexClientAnnotation: "false"},
+					oldAnnotations: nil,
+					allowed:        false,
 				},
 				{
 					name:           "annotation is dropped by an update",
@@ -250,8 +282,15 @@ var _ = Describe("Module :: user-authn :: helm template :: validation", func() {
 					allowed:        true,
 				},
 				{
-					name:        "annotation of the other kind is not gated",
+					name:        "dex client carrying the dex authenticator annotation is not gated",
 					annotations: map[string]string{dexAuthenticatorAnnotation: "true"},
+					allowed:     true,
+				},
+				{
+					name:        "dex authenticator carrying the dex client annotation is not gated",
+					resource:    "dexauthenticators",
+					kind:        "DexAuthenticator",
+					annotations: map[string]string{dexClientAnnotation: "true"},
 					allowed:     true,
 				},
 			}
@@ -286,8 +325,92 @@ var _ = Describe("Module :: user-authn :: helm template :: validation", func() {
 				Expect(allowed).To(Equal(tc.allowed), tc.name)
 			}
 		})
+
+		It("Should deny every annotation value that any hook generation reads as a grant", func() {
+			policy := compileRenderedPolicy(
+				hec.KubernetesGlobalResource("ValidatingAdmissionPolicy", allowAccessPolicyName).ToYaml(),
+			)
+
+			for _, value := range annotationValueCorpus {
+				granting := make([]string, 0, len(hookGenerations))
+				for _, generation := range hookGenerations {
+					if generation.grants(value) {
+						granting = append(granting, generation.name)
+					}
+				}
+
+				if len(granting) == 0 {
+					continue
+				}
+
+				By(fmt.Sprintf("value %q is honoured as a grant by the %v hook", value, granting))
+
+				annotations := map[string]string{dexClientAnnotation: value}
+
+				denied, err := policy.validate(dexAdmissionInput{
+					resource:    "dexclients",
+					kind:        "DexClient",
+					operation:   admission.Create,
+					username:    namespaceEditor,
+					annotations: annotations,
+				})
+				Expect(err).ToNot(HaveOccurred())
+				Expect(denied).To(BeFalse(),
+					"a subject without authority over the user-authn ModuleConfig must not set %q", value)
+
+				// The gate must stop the unauthorised subject only, otherwise the loop above would
+				// pass just as well against a policy that denies everything.
+				granted, err := policy.validate(dexAdmissionInput{
+					resource:    "dexclients",
+					kind:        "DexClient",
+					operation:   admission.Create,
+					username:    namespaceEditor,
+					canManage:   true,
+					annotations: annotations,
+				})
+				Expect(err).ToNot(HaveOccurred())
+				Expect(granted).To(BeTrue(),
+					"a subject with authority over the user-authn ModuleConfig must be able to set %q", value)
+			}
+		})
 	})
 })
+
+// hookGeneration models how a released version of the hooks decides that the annotation grants
+// access to the Kubernetes API. The policy's soundness depends on it denying at least everything
+// the hooks honour, so both sides are derived here instead of being restated in a comment: if a
+// hook is ever widened, this list is the single place that has to change, and the assertions
+// following from it start failing until the policy is widened too.
+type hookGeneration struct {
+	name   string
+	grants func(value string) bool
+}
+
+var hookGenerations = []hookGeneration{
+	{
+		// modules/150-user-authn/hooks/get_dex_client_crds.go and get_dex_authenticator_crds.go
+		// parse the value with strconv.ParseBool and fail closed on anything else.
+		name: "value honouring",
+		grants: func(value string) bool {
+			granted, err := strconv.ParseBool(value)
+
+			return err == nil && granted
+		},
+	},
+	{
+		// Earlier revisions of the same hooks looked the key up and ignored its value entirely.
+		name:   "presence honouring",
+		grants: func(string) bool { return true },
+	},
+}
+
+// annotationValueCorpus covers everything strconv.ParseBool accepts, in both polarities, plus
+// spellings around it that a user could plausibly write.
+var annotationValueCorpus = []string{
+	"1", "t", "T", "TRUE", "true", "True",
+	"0", "f", "F", "FALSE", "false", "False",
+	"", " ", "yes", "no", "on", "off", "enabled", "2", "TrUe", "true ",
+}
 
 // compiledPolicy evaluates the validation expressions of a ValidatingAdmissionPolicy through the
 // same CEL machinery kube-apiserver uses, so the expressions the module ships are under test.
@@ -304,8 +427,16 @@ func compileRenderedPolicy(renderedPolicy string) compiledPolicy {
 	validationVars := admissioncel.OptionalVariableDeclarations{HasAuthorizer: true, StrictCost: true}
 	messageVars := admissioncel.OptionalVariableDeclarations{StrictCost: true}
 
+	// The environment is pinned to the lowest Kubernetes version this branch supports, not to the
+	// compatibility version of the vendored apiserver, which is higher. With failurePolicy: Fail an
+	// expression needing a newer CEL feature would not merely fail to evaluate, it would deny every
+	// DexClient and DexAuthenticator write on the oldest supported cluster.
+	//
+	// The mode has to be NewExpressions for the pin to mean anything: StoredExpressions deliberately
+	// keeps every library available so that policies already persisted in etcd keep evaluating, and
+	// it is NewExpressions that kube-apiserver validates a freshly submitted policy against.
 	compiler, err := admissioncel.NewCompositedCompiler(
-		environment.MustBaseEnvSet(environment.DefaultCompatibilityVersion(), true),
+		environment.MustBaseEnvSet(minimalSupportedKubernetesVersion(), true),
 	)
 	Expect(err).ToNot(HaveOccurred())
 
@@ -314,7 +445,7 @@ func compileRenderedPolicy(renderedPolicy string) compiledPolicy {
 	for _, variable := range policy.Spec.Variables {
 		result := compiler.CompileAndStoreVariable(
 			namedExpression{name: variable.Name, expression: variable.Expression},
-			validationVars, environment.StoredExpressions,
+			validationVars, environment.NewExpressions,
 		)
 		Expect(result.Error).To(BeNil(), "variable %q should compile", variable.Name)
 	}
@@ -322,18 +453,59 @@ func compileRenderedPolicy(renderedPolicy string) compiledPolicy {
 	validations := make([]admissioncel.ExpressionAccessor, 0, len(policy.Spec.Validations))
 	for _, validation := range policy.Spec.Validations {
 		condition := boolExpression{expression: validation.Expression}
-		Expect(compiler.CompileCELExpression(condition, validationVars, environment.StoredExpressions).Error).To(BeNil(),
+		Expect(compiler.CompileCELExpression(condition, validationVars, environment.NewExpressions).Error).To(BeNil(),
 			"validation %q should compile", validation.Expression)
 
 		message := stringExpression{expression: validation.MessageExpression}
-		Expect(compiler.CompileCELExpression(message, messageVars, environment.StoredExpressions).Error).To(BeNil(),
+		Expect(compiler.CompileCELExpression(message, messageVars, environment.NewExpressions).Error).To(BeNil(),
 			"message expression %q should compile", validation.MessageExpression)
 
 		validations = append(validations, condition)
 	}
 
 	return compiledPolicy{
-		validations: compiler.CompileCondition(validations, validationVars, environment.StoredExpressions),
+		validations: compiler.CompileCondition(validations, validationVars, environment.NewExpressions),
+	}
+}
+
+// minimalSupportedKubernetesVersion reads the lowest Kubernetes version listed in
+// candi/version_map.yml, which is the oldest cluster a Deckhouse release from this branch runs on.
+func minimalSupportedKubernetesVersion() *version.Version {
+	raw, err := os.ReadFile(filepath.Join(repositoryRoot(), "candi", "version_map.yml"))
+	Expect(err).ToNot(HaveOccurred())
+
+	var versionMap struct {
+		K8s map[string]json.RawMessage `json:"k8s"`
+	}
+	Expect(yaml.Unmarshal(raw, &versionMap)).To(Succeed())
+	Expect(versionMap.K8s).ToNot(BeEmpty())
+
+	var minimal *version.Version
+	for supported := range versionMap.K8s {
+		parsed, err := version.ParseGeneric(supported)
+		Expect(err).ToNot(HaveOccurred(), "kubernetes version %q should parse", supported)
+
+		if minimal == nil || parsed.LessThan(minimal) {
+			minimal = parsed
+		}
+	}
+
+	return minimal
+}
+
+// repositoryRoot walks up from the package directory to the checkout root.
+func repositoryRoot() string {
+	directory, err := os.Getwd()
+	Expect(err).ToNot(HaveOccurred())
+
+	for {
+		if _, err := os.Stat(filepath.Join(directory, "go.mod")); err == nil {
+			return directory
+		}
+
+		parent := filepath.Dir(directory)
+		Expect(parent).ToNot(Equal(directory), "the repository root should be reachable from %s", directory)
+		directory = parent
 	}
 }
 
