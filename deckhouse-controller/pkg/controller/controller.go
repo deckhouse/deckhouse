@@ -54,6 +54,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/pkgsync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/modulesync"
 	packageruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
@@ -99,6 +100,7 @@ type DeckhouseController struct {
 	preflightCountDown *sync.WaitGroup
 
 	moduleLoader   *moduleloader.Loader
+	moduleSync     *modulesync.Syncer
 	packageRuntime *packageruntime.Runtime
 
 	dc dependency.Container
@@ -208,6 +210,9 @@ func NewDeckhouseController(
 				&v1alpha2.ModuleUpdatePolicy{}:  {},
 				&v1alpha2.ModulePullOverride{}:  {},
 				&v1alpha1.DeckhouseRelease{}:    {},
+				// module v2 resources are filled on every cluster during the
+				// transition, and the controllers read them through the cache
+				&v1alpha2.Module{}: {},
 			},
 		},
 	}
@@ -225,7 +230,6 @@ func NewDeckhouseController(
 	if app.ModulePackagesEnabled() {
 		opts.Cache.ByObject[&v1alpha1.ModulePackage{}] = cache.ByObject{}
 		opts.Cache.ByObject[&v1alpha1.ModulePackageVersion{}] = cache.ByObject{}
-		opts.Cache.ByObject[&v1alpha2.Module{}] = cache.ByObject{}
 	}
 
 	admission, serveWebhooks := app.TakeOverAdmissionServer()
@@ -337,6 +341,10 @@ func NewDeckhouseController(
 	preflightCountDown := new(sync.WaitGroup)
 
 	loader := moduleloader.New(runtimeManager.GetClient(), version, operator.ModuleManager.ModulesDir, operator.ModuleManager.GlobalHooksDir, dc, exts, embeddedPolicy, conversionsStore, logger.Named("module-loader"))
+
+	// the transitional module v2 sync: the old module stack owns the module
+	// catalog here, so orphaned modules are not deleted
+	moduleSync := modulesync.New(runtimeManager.GetClient(), runtimeManager.GetAPIReader(), dc.GetClock(), logger.Named("module-v2-sync"))
 	operator.ModuleManager.SetModuleLoader(loader)
 
 	err = deckhouserelease.NewDeckhouseReleaseController(ctx, runtimeManager, dc, exts, operator.ModuleManager, settingsContainer, operator.MetricStorage, preflightCountDown, version, logger.Named("deckhouse-release-controller"))
@@ -449,6 +457,7 @@ func NewDeckhouseController(
 	return &DeckhouseController{
 		runtimeManager:     runtimeManager,
 		moduleLoader:       loader,
+		moduleSync:         moduleSync,
 		packageRuntime:     pkgRuntime,
 		preflightCountDown: preflightCountDown,
 
@@ -471,9 +480,15 @@ func setModulesEnvironment(operator *addonoperator.AddonOperator) {
 
 // Start loads and ensures modules from FS, starts controllers and runs deckhouse config event loop
 func (c *DeckhouseController) Start(ctx context.Context) error {
-	// give the old module stack its package system objects before any
-	// controller runs; the sync reads through the API reader, so it does not
-	// need the manager cache
+	// fill the module v2 resources before any controller runs; the sync reads
+	// through the API reader, so it does not need the manager cache
+	if _, err := c.moduleSync.Sync(ctx); err != nil {
+		return fmt.Errorf("sync module v2 resources: %w", err)
+	}
+
+	// give the old module stack its package system objects while the
+	// controllers still wait; runs after the module sync, so a deployed
+	// duplicate it superseded no longer counts
 	if err := pkgsync.Sync(ctx, c.runtimeManager.GetAPIReader(), c.runtimeManager.GetClient(), c.dc, app.Version, app.EmbeddedModulesDir, c.log.Named("pkgsync")); err != nil {
 		return fmt.Errorf("sync package objects: %w", err)
 	}
