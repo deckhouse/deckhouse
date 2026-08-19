@@ -48,12 +48,12 @@ type Providers struct {
 // An empty result is a legitimate state; a failed read is returned rather than swallowed, because
 // downstream it is indistinguishable from "no cloud" and shifts the checksum of every node.
 func Load(ctx context.Context, r client.Reader) (Providers, error) {
-	providers, err := loadProviders(ctx, r)
+	providers, err := getProviders(ctx, r)
 	if err != nil {
 		return Providers{}, err
 	}
 
-	clusterProvider, err := readClusterProvider(ctx, r)
+	clusterProvider, err := getClusterProvider(ctx, r)
 	if err != nil {
 		return Providers{}, err
 	}
@@ -85,6 +85,7 @@ func NewProviders(providers []Provider, clusterProvider string) Providers {
 // Validate reports a cluster whose configured provider published no registration: CloudPermanent
 // resolves through that name alone, so the master would render without provider steps.
 func (ps Providers) Validate() error {
+	// Static cluster
 	if ps.clusterProvider == "" {
 		return nil
 	}
@@ -216,9 +217,9 @@ func DeclarationError(declared string, resolved Provider) string {
 	return ""
 }
 
-// loadProviders is the Secret half of Load, separate so the lazy InstanceClass watch does not
+// getProviders is the Secret half of Load, separate so the lazy InstanceClass watch does not
 // depend on the cluster configuration being readable.
-func loadProviders(ctx context.Context, r client.Reader) ([]Provider, error) {
+func getProviders(ctx context.Context, r client.Reader) ([]Provider, error) {
 	secrets := &corev1.SecretList{}
 
 	if err := r.List(ctx, secrets,
@@ -248,9 +249,9 @@ func loadProviders(ctx context.Context, r client.Reader) ([]Provider, error) {
 	return ret, nil
 }
 
-// readClusterProvider returns ClusterConfiguration.cloud.provider
+// getClusterProvider returns ClusterConfiguration.cloud.provider
 // from d8-cluster-configuration secret
-func readClusterProvider(ctx context.Context, r client.Reader) (string, error) {
+func getClusterProvider(ctx context.Context, r client.Reader) (string, error) {
 	secret := &corev1.Secret{}
 	err := r.Get(
 		ctx,

@@ -126,7 +126,9 @@ func TestLoad(t *testing.T) {
 			name: "every labelled registration is seen, ordered by type",
 			objs: []client.Object{
 				registrationSecret(SecretNamePrefix+"-yandex", yandexData),
-				aws, unlabelled, cloudCluster("Yandex"),
+				aws,
+				unlabelled,
+				cloudCluster("Yandex"),
 			},
 			types: []string{"aws", "yandex"},
 		},

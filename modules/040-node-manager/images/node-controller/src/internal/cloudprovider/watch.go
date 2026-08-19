@@ -146,7 +146,7 @@ func NodeGroupHandler(r client.Reader) handler.EventHandler {
 func nodeGroupRequests(ctx context.Context, r client.Reader, carried ...Provider) []reconcile.Request {
 	logger := log.FromContext(ctx)
 
-	clusterProvider, err := readClusterProvider(ctx, r)
+	clusterProvider, err := getClusterProvider(ctx, r)
 	if err != nil {
 		logger.Error(err, "read the cluster provider for a cloud provider registration event")
 		return nil
@@ -225,7 +225,7 @@ func LazyInstanceClassSource(informers cache.Cache, eventHandler handler.EventHa
 				case <-poke:
 				}
 
-				providers, err := loadProviders(ctx, informers)
+				providers, err := getProviders(ctx, informers)
 				if err != nil {
 					logger.V(1).Info("list instance class providers", "error", err.Error())
 					continue
