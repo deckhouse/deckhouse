@@ -130,9 +130,9 @@ template: |
         {{- end }}
         datastore: {{ $datastore | quote }}
         {{- /* resourcePool: govmomi Finder.ResourcePool searches from hostFolder and
-               expects "{cluster}/Resources/{pool}" form. A bare "E2E/32226..." from
-               discovery would not resolve. When datacenter is known, prefix with
-               "/{dc}/host/*/Resources/" and let vSphere finder match the single
+               expects a "{cluster}/Resources/{pool}" shape. A bare "E2E/32226..." from
+               discovery would not resolve. When the datacenter is known, prefix with an
+               absolute path under host and let vSphere finder wildcard the single
                ComputeCluster in that datacenter. Multi-cluster installations must
                spell the absolute path themselves in VsphereInstanceClass.resourcePool. */ -}}
         {{- if $rp }}
