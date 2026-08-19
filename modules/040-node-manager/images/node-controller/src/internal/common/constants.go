@@ -20,8 +20,12 @@ const (
 	MachineNamespace                 = "d8-cloud-instance-manager"
 	ConfigurationChecksumsSecretName = "configuration-checksums"
 
+	// KubeSystemNamespace holds the cluster-wide objects a node is built from:
+	// the bootstrap tokens, the cluster configuration, the projected CA.
+	KubeSystemNamespace = "kube-system"
+
 	CloudProviderSecretName      = "d8-node-manager-cloud-provider"
-	CloudProviderSecretNamespace = "kube-system"
+	CloudProviderSecretNamespace = KubeSystemNamespace
 
 	// CloudProviderRegistrationLabel marks every registration Secret a cloud provider module
 	// publishes. CloudProviderSecretName above is only the legacy fixed name — each provider also

@@ -129,12 +129,6 @@ spec:
                     * `InProgress` — the node has been prepared (drained, unless the drain was skipped) and is carrying the operation out;
                     * `Completed` — the operation finished successfully;
                     * `Failed` — the operation failed. See `conditions` and the events for the reason.
-                observedGeneration:
-                  type: integer
-                  format: int64
-                  minimum: 0
-                  description: |
-                    The generation of the spec this status reflects.
                 startedAt:
                   type: string
                   format: date-time

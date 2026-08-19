@@ -58,7 +58,6 @@ type Reconciler struct {
 	apiReader client.Reader
 }
 
-// Setup wires the uncached reader.
 func (r *Reconciler) Setup(_ context.Context, mgr ctrl.Manager) error {
 	r.apiReader = mgr.GetAPIReader()
 	return nil
@@ -125,23 +124,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, err
 	}
 
-	// A finished operation is history: kept for the record, never acted on
-	// again until old enough to collect. The node goes back to the scheduler —
-	// except after a Drain that got what it asked for, which was to keep it out.
 	if terminal(op) {
-		// A Drain that failed gives its marker back like any other operation,
-		// or the draining controller evicts for one that has given up.
-		keptOut := op.Spec.Type == v1alpha1.NodeOperationTypeDrain && op.Status.Phase == v1alpha1.NodeOperationPhaseCompleted
-		if !keptOut {
-			if err := r.releaseNode(ctx, op, logger); err != nil {
-				return ctrl.Result{}, err
-			}
-		}
-		return r.collect(ctx, op, logger)
+		return r.retire(ctx, op, logger)
 	}
 
+	// Past the cache: the spec is immutable, so failing an operation is final,
+	// and a node the informer has not caught up with would end it for good.
 	node := &corev1.Node{}
-	if err := r.Client.Get(ctx, types.NamespacedName{Name: op.Spec.NodeName}, node); err != nil {
+	if err := r.apiReader.Get(ctx, types.NamespacedName{Name: op.Spec.NodeName}, node); err != nil {
 		if apierrors.IsNotFound(err) {
 			return ctrl.Result{}, r.fail(ctx, op, "NodeNotFound",
 				fmt.Sprintf("node %s does not exist", op.Spec.NodeName), logger)
@@ -157,6 +147,27 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, err
 	}
 
+	return r.carryOut(ctx, op, node, logger)
+}
+
+// retire is what becomes of a finished operation: history, kept for the record
+// until old enough to collect. The node goes back to the scheduler — except
+// after a Drain that got what it asked for, which was to keep it out.
+func (r *Reconciler) retire(ctx context.Context, op *v1alpha1.NodeOperation, logger logr.Logger) (ctrl.Result, error) {
+	// A Drain that failed gives its marker back like any other operation, or
+	// the draining controller evicts for one that has given up.
+	keptOut := op.Spec.Type == v1alpha1.NodeOperationTypeDrain && op.Status.Phase == v1alpha1.NodeOperationPhaseCompleted
+	if !keptOut {
+		if err := r.releaseNode(ctx, op, logger); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+	return r.collect(ctx, op, logger)
+}
+
+// carryOut moves a live operation one step towards its end: empty the node,
+// hand it to the node, wait for the report — each stretch bounded.
+func (r *Reconciler) carryOut(ctx context.Context, op *v1alpha1.NodeOperation, node *corev1.Node, logger logr.Logger) (ctrl.Result, error) {
 	// Every stretch of the operation is bounded, not only the node's: a Drain
 	// whose eviction never finishes would otherwise hold its parent Pending
 	// forever, and with it the node out of the scheduler.
@@ -197,7 +208,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	return ctrl.Result{RequeueAfter: max(time.Until(hardDeadline(op)), minRequeue)}, nil
 }
 
-// begin queues an operation nobody has started yet, once.
 func (r *Reconciler) begin(ctx context.Context, op *v1alpha1.NodeOperation, node *corev1.Node, logger logr.Logger) error {
 	if op.Status.Phase != "" {
 		return nil
@@ -328,14 +338,21 @@ func (r *Reconciler) collect(ctx context.Context, op *v1alpha1.NodeOperation, lo
 	return ctrl.Result{}, nil
 }
 
-// stampFinished records when a finished operation finished, for the operations
-// whose last phase was written by the node rather than by this controller.
 func (r *Reconciler) stampFinished(ctx context.Context, op *v1alpha1.NodeOperation) error {
+	return r.patchStatus(ctx, op, fmt.Sprintf("record when %s finished", op.Name), func() {
+		now := metav1.Now()
+		op.Status.FinishedAt = &now
+	})
+}
+
+// patchStatus writes a status change under an optimistic lock. The lock is the
+// point: the node and this controller both write here, so a patch built from a
+// stale read would silently undo the other's.
+func (r *Reconciler) patchStatus(ctx context.Context, op *v1alpha1.NodeOperation, what string, mutate func()) error {
 	patch := client.MergeFromWithOptions(op.DeepCopy(), client.MergeFromWithOptimisticLock{})
-	now := metav1.Now()
-	op.Status.FinishedAt = &now
+	mutate()
 	if err := r.Client.Status().Patch(ctx, op, patch); err != nil {
-		return fmt.Errorf("record when %s finished: %w", op.Name, err)
+		return fmt.Errorf("%s: %w", what, err)
 	}
 	return nil
 }
@@ -350,29 +367,29 @@ func (r *Reconciler) setPhase(ctx context.Context, op *v1alpha1.NodeOperation, p
 	if terminal(op) {
 		return nil
 	}
-	// Under an optimistic lock, because the guard above is only as fresh as
-	// the cache: a node reporting Completed just as the deadline fires would
-	// otherwise be overwritten with Failed.
-	patch := client.MergeFromWithOptions(op.DeepCopy(), client.MergeFromWithOptimisticLock{})
-	op.Status.Phase = phase
-	op.Status.ObservedGeneration = op.Generation
-	if phase == v1alpha1.NodeOperationPhaseInProgress && op.Status.StartedAt == nil {
-		now := metav1.Now()
-		op.Status.StartedAt = &now
-	}
-	if phase == v1alpha1.NodeOperationPhaseCompleted || phase == v1alpha1.NodeOperationPhaseFailed {
-		now := metav1.Now()
-		op.Status.FinishedAt = &now
-	}
-	meta.SetStatusCondition(&op.Status.Conditions, metav1.Condition{
-		Type:               conditionProgress,
-		Status:             metav1.ConditionTrue,
-		Reason:             reason,
-		Message:            message,
-		ObservedGeneration: op.Generation,
+	// The optimistic lock matters here beyond the usual: the guard above is
+	// only as fresh as the cache, so a node reporting Completed just as the
+	// deadline fires would otherwise be overwritten with Failed.
+	err := r.patchStatus(ctx, op, fmt.Sprintf("set %s phase of %s", phase, op.Name), func() {
+		op.Status.Phase = phase
+		if phase == v1alpha1.NodeOperationPhaseInProgress && op.Status.StartedAt == nil {
+			now := metav1.Now()
+			op.Status.StartedAt = &now
+		}
+		if phase == v1alpha1.NodeOperationPhaseCompleted || phase == v1alpha1.NodeOperationPhaseFailed {
+			now := metav1.Now()
+			op.Status.FinishedAt = &now
+		}
+		meta.SetStatusCondition(&op.Status.Conditions, metav1.Condition{
+			Type:               conditionProgress,
+			Status:             metav1.ConditionTrue,
+			Reason:             reason,
+			Message:            message,
+			ObservedGeneration: op.Generation,
+		})
 	})
-	if err := r.Client.Status().Patch(ctx, op, patch); err != nil {
-		return fmt.Errorf("set %s phase of %s: %w", phase, op.Name, err)
+	if err != nil {
+		return err
 	}
 	logger.Info("operation phase", "operation", op.Name, "type", op.Spec.Type, "node", op.Spec.NodeName, "phase", phase)
 	return nil

@@ -36,6 +36,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 )
@@ -149,7 +150,7 @@ func newGoldenReconciler(t *testing.T) *Reconciler {
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: kubeSystemNS,
 				Name:      "bootstrap-token-abcdef",
-				Labels:    map[string]string{bootstrapTokenNGLabel: "cloud-worker"},
+				Labels:    map[string]string{nodecommon.BootstrapTokenNodeGroupLabel: "cloud-worker"},
 			},
 			Type: corev1.SecretTypeBootstrapToken,
 			Data: map[string][]byte{"token-id": []byte("abcdef"), "token-secret": []byte("0123456789abcdef")},

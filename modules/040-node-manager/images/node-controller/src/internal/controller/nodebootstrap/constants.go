@@ -31,22 +31,13 @@ const (
 	// machine whose VM is created late must not keep its first copy.
 	bootstrapRefreshInterval = 10 * time.Minute
 
-	// kubeSystemNS holds the per-group bootstrap-token secrets.
-	kubeSystemNS = "kube-system"
-
-	// bootstrapTokenNGLabel labels a bootstrap-token secret with the NodeGroup
-	// it belongs to.
-	bootstrapTokenNGLabel = "node-manager.deckhouse.io/node-group"
-
 	// machineNodeGroupLabel is the NodeGroup a Machine and the bootstrap config
 	// cloned for it belong to. node-controller stamps it on the MachineDeployment
 	// template, so CAPI copies it onto every Machine and every clone.
 	machineNodeGroupLabel = "node-group"
 
-	// nodeConfigPath is where the on-node loader reads its config from.
 	nodeConfigPath = "/config/nodeconfig.yaml"
 
-	// dataSecretSuffix names the Secret holding a machine's bootstrap userdata.
 	dataSecretSuffix = "-bootstrap-data"
 
 	// secretValueKey is the key the infrastructure provider (capdvp) reads the
@@ -56,8 +47,6 @@ const (
 	secretFormatKey         = "format"
 	secretFormatCloudConfig = "cloud-config"
 
-	// machineKind and nodeBootstrapConfigKind name the owner references the
-	// controller reads and writes.
 	machineKind             = "Machine"
 	nodeBootstrapConfigKind = "NodeBootstrapConfig"
 

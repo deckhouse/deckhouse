@@ -104,10 +104,6 @@ type NodeOperationStatus struct {
 	// +optional
 	Phase NodeOperationPhase `json:"phase,omitempty"`
 
-	// ObservedGeneration is the generation of the spec this status reflects.
-	// +optional
-	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
-
 	// StartedAt is when the node was handed the operation; the wait for the
 	// node is measured from here rather than from a condition timestamp, which
 	// would still be the moment the operation was queued.
@@ -139,8 +135,6 @@ type NodeOperationStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
-// NodeOperationList is a list of NodeOperation objects.
-//
 // +kubebuilder:object:root=true
 type NodeOperationList struct {
 	metav1.TypeMeta `json:",inline"`

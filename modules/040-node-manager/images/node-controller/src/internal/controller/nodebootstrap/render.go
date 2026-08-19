@@ -19,9 +19,7 @@ package nodebootstrap
 import (
 	"context"
 	"fmt"
-	"time"
 
-	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	sigsyaml "sigs.k8s.io/yaml"
 
@@ -40,11 +38,14 @@ func renderBootstrapData(ctx context.Context, cl client.Client, reader client.Re
 		return nil, fmt.Errorf("render bootstrap spec: %w", err)
 	}
 
-	token, err := readBootstrapToken(ctx, reader, ng.Name)
+	tokens, err := nodecommon.BootstrapTokens(ctx, reader)
 	if err != nil {
 		return nil, err
 	}
-	spec.Kubelet.BootstrapToken = token
+	if tokens[ng.Name] == "" {
+		return nil, fmt.Errorf("no valid bootstrap token for NodeGroup %s", ng.Name)
+	}
+	spec.Kubelet.BootstrapToken = tokens[ng.Name]
 
 	return wrapCloudConfig(spec, machineName, ng.Name)
 }
@@ -64,8 +65,6 @@ type bootstrapMetadata struct {
 	Labels map[string]string `json:"labels,omitempty"`
 }
 
-// wrapCloudConfig marshals the NodeConfig for the machine and wraps it in the
-// cloud-config document the on-node loader reads from /config/nodeconfig.yaml.
 func wrapCloudConfig(spec internalv1alpha1.NodeSpec, machineName, ngName string) ([]byte, error) {
 	config := &bootstrapDocument{
 		APIVersion: internalv1alpha1.GroupVersion.String(),
@@ -94,45 +93,4 @@ func wrapCloudConfig(spec internalv1alpha1.NodeSpec, machineName, ngName string)
 	}
 
 	return append([]byte("#cloud-config\n"), body...), nil
-}
-
-// readBootstrapToken returns the newest non-expired bootstrap token of the
-// NodeGroup from the labelled kube-system secrets. Kept in step with
-// groupBootstrapToken in dhctl's pkg/operations/bootstrap/steps_immutable_join.go.
-func readBootstrapToken(ctx context.Context, reader client.Reader, ngName string) (string, error) {
-	secrets := &corev1.SecretList{}
-	if err := reader.List(ctx, secrets,
-		client.InNamespace(kubeSystemNS),
-		client.MatchingLabels{bootstrapTokenNGLabel: ngName},
-	); err != nil {
-		return "", fmt.Errorf("list bootstrap tokens: %w", err)
-	}
-
-	token, newest := "", time.Time{}
-	for i := range secrets.Items {
-		sec := &secrets.Items[i]
-		if sec.Type != corev1.SecretTypeBootstrapToken {
-			continue
-		}
-		if raw, ok := sec.Data["expiration"]; ok {
-			expire, err := time.Parse(time.RFC3339, string(raw))
-			if err != nil || time.Until(expire) < 0 {
-				continue
-			}
-		}
-		id, hasID := sec.Data["token-id"]
-		secretPart, hasSecret := sec.Data["token-secret"]
-		if !hasID || !hasSecret {
-			continue
-		}
-		if token == "" || sec.CreationTimestamp.After(newest) {
-			token = string(id) + "." + string(secretPart)
-			newest = sec.CreationTimestamp.Time
-		}
-	}
-
-	if token == "" {
-		return "", fmt.Errorf("no valid bootstrap token for NodeGroup %s", ngName)
-	}
-	return token, nil
 }

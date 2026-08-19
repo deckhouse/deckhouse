@@ -65,61 +65,12 @@ type NodeBootstrapConfig struct {
 }
 
 // +kubebuilder:object:root=true
-
-// NodeBootstrapConfigList is a list of NodeBootstrapConfig objects.
 type NodeBootstrapConfigList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []NodeBootstrapConfig `json:"items"`
 }
 
-// NodeBootstrapConfigTemplateSpec wraps the template body CAPI clones per
-// Machine.
-type NodeBootstrapConfigTemplateSpec struct {
-	Template NodeBootstrapConfigTemplateResource `json:"template"`
-}
-
-// NodeBootstrapConfigTemplateResource is the body copied onto every cloned
-// NodeBootstrapConfig: its metadata (labels/annotations) and the empty spec.
-type NodeBootstrapConfigTemplateResource struct {
-	// +optional
-	ObjectMeta TemplateObjectMeta      `json:"metadata,omitempty"`
-	Spec       NodeBootstrapConfigSpec `json:"spec"`
-}
-
-// TemplateObjectMeta is the subset of metadata CAPI copies onto each clone.
-type TemplateObjectMeta struct {
-	// +optional
-	Labels map[string]string `json:"labels,omitempty"`
-	// +optional
-	Annotations map[string]string `json:"annotations,omitempty"`
-}
-
-// +kubebuilder:object:root=true
-
-// NodeBootstrapConfigTemplate is the CAPI bootstrap template a MachineDeployment
-// references. The MachineSet clones a NodeBootstrapConfig from spec.template for
-// every Machine of the group.
-type NodeBootstrapConfigTemplate struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	Spec NodeBootstrapConfigTemplateSpec `json:"spec"`
-}
-
-// +kubebuilder:object:root=true
-
-// NodeBootstrapConfigTemplateList is a list of NodeBootstrapConfigTemplate
-// objects.
-type NodeBootstrapConfigTemplateList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []NodeBootstrapConfigTemplate `json:"items"`
-}
-
 func init() {
-	SchemeBuilder.Register(
-		&NodeBootstrapConfig{}, &NodeBootstrapConfigList{},
-		&NodeBootstrapConfigTemplate{}, &NodeBootstrapConfigTemplateList{},
-	)
+	SchemeBuilder.Register(&NodeBootstrapConfig{}, &NodeBootstrapConfigList{})
 }

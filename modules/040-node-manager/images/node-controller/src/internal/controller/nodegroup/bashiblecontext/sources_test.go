@@ -32,6 +32,8 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	nodecommon "github.com/deckhouse/node-controller/internal/common"
 )
 
 func newScheme(t *testing.T) *runtime.Scheme {
@@ -131,7 +133,7 @@ func bootstrapTokenSecret(name, ng, id, sec string, created time.Time, expireIn 
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:         kubeSystemNS,
 			Name:              name,
-			Labels:            map[string]string{bootstrapTokenNGLabel: ng},
+			Labels:            map[string]string{nodecommon.BootstrapTokenNodeGroupLabel: ng},
 			CreationTimestamp: metav1.NewTime(created),
 		},
 		Type: corev1.SecretTypeBootstrapToken,

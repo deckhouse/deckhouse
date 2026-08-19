@@ -41,10 +41,6 @@ func init() {
 	register.RegisterController("node-draining", &corev1.Node{}, &Reconciler{})
 }
 
-const (
-	defaultDrainTimeout = 10 * time.Minute
-)
-
 type Reconciler struct {
 	register.Base
 	kubeClient kubernetes.Interface
@@ -117,7 +113,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 	}
 
-	drainTimeout := r.getDrainTimeout(ctx, node.Labels[nodecommon.NodeGroupLabel])
+	drainTimeout := nodecommon.DrainTimeout(ctx, r.Client, node.Labels[nodecommon.NodeGroupLabel])
 	logger.V(1).Info("drain timeout resolved", "node", node.Name, "timeout", drainTimeout)
 
 	if node.Spec.Unschedulable {
@@ -163,23 +159,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	r.Recorder.Eventf(node, corev1.EventTypeNormal, "DrainSucceeded", "node %q drained successfully", node.Name)
 
 	return ctrl.Result{}, nil
-}
-
-func (r *Reconciler) getDrainTimeout(ctx context.Context, ngName string) time.Duration {
-	if ngName == "" {
-		return defaultDrainTimeout
-	}
-
-	ng, err := nodecommon.GetNodeGroup(ctx, r.Client, ngName)
-	if err != nil {
-		return defaultDrainTimeout
-	}
-
-	if ng.Spec.NodeDrainTimeoutSecond != nil {
-		return time.Duration(*ng.Spec.NodeDrainTimeoutSecond) * time.Second
-	}
-
-	return defaultDrainTimeout
 }
 
 func (r *Reconciler) cordonNode(ctx context.Context, node *corev1.Node) error {

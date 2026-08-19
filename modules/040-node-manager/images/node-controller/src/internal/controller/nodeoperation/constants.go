@@ -16,10 +16,7 @@ limitations under the License.
 
 package nodeoperation
 
-import (
-	"math"
-	"time"
-)
+import "time"
 
 const (
 	controllerName = "node-operation"
@@ -37,16 +34,6 @@ const (
 	// node to act, and — on top of the group's drain timeout — the wait for
 	// the eviction. A node silent this long is not coming back on its own.
 	operationTimeout = 30 * time.Minute
-
-	// defaultDrainTimeout mirrors the draining controller's fallback when the
-	// group sets no nodeDrainTimeoutSecond. Kept as its own copy of the
-	// contract; a test pins the two values together.
-	defaultDrainTimeout = 10 * time.Minute
-
-	// maxDrainTimeout guards the seconds-to-Duration multiplication against
-	// overflowing into a negative deadline (~292 years). Deliberately not a
-	// policy cap — that belongs in the CRD, which bounds nodeDrainTimeoutSecond.
-	maxDrainTimeout = time.Duration(math.MaxInt64)
 
 	// waitPollInterval is how often an operation waiting on an eviction looks
 	// again: events are the normal wake-up, this only covers a dropped event

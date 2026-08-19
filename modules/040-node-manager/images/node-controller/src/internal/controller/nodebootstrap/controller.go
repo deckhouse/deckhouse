@@ -98,7 +98,6 @@ func machineRenderInputsChanged(before, after client.Object) bool {
 	return consumed(oldMachine) != consumed(newMachine)
 }
 
-// machineToConfig enqueues the NodeBootstrapConfig a Machine boots from.
 func machineToConfig(_ context.Context, obj client.Object) []reconcile.Request {
 	machine, ok := obj.(*capiv1beta2.Machine)
 	if !ok {
@@ -147,6 +146,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil
 	}
 
+	return r.renderFor(ctx, config, machine, logger)
+}
+
+// renderFor renders the userdata of a machine whose group is immutable, and
+// records why it cannot yet when the group is unnamed, missing or bashible's.
+// Those three answers are requeued rather than left to an event: this
+// controller watches Machines, not NodeGroups, so a group created or switched
+// to Immutable later would only be noticed if its Machine changed.
+func (r *Reconciler) renderFor(ctx context.Context, config *bootstrapv1alpha1.NodeBootstrapConfig, machine *capiv1beta2.Machine, logger logr.Logger) (ctrl.Result, error) {
 	ngName := machine.Labels[machineNodeGroupLabel]
 	if ngName == "" {
 		logger.Info("machine carries no node-group label yet, waiting", "machine", machine.Name)
@@ -155,9 +163,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 				fmt.Sprintf("machine %s carries no %s label yet", machine.Name, machineNodeGroupLabel))
 	}
 
-	// Both answers below are requeued rather than left to an event: this
-	// controller watches Machines, not NodeGroups, so a group created or
-	// switched to Immutable later would only be noticed if its Machine changed.
 	ng := &v1.NodeGroup{}
 	if err := r.Client.Get(ctx, types.NamespacedName{Name: ngName}, ng); err != nil {
 		if apierrors.IsNotFound(err) {

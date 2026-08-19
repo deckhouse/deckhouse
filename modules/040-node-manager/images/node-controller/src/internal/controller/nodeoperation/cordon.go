@@ -48,12 +48,9 @@ func (r *Reconciler) rememberCordon(ctx context.Context, op *v1alpha1.NodeOperat
 		wasUnschedulable = *recorded
 	}
 
-	patch := client.MergeFromWithOptions(op.DeepCopy(), client.MergeFromWithOptimisticLock{})
-	op.Status.NodeWasUnschedulable = ptr.To(wasUnschedulable)
-	if err := r.Client.Status().Patch(ctx, op, patch); err != nil {
-		return fmt.Errorf("record how %s found the node: %w", op.Name, err)
-	}
-	return nil
+	return r.patchStatus(ctx, op, fmt.Sprintf("record how %s found the node", op.Name), func() {
+		op.Status.NodeWasUnschedulable = ptr.To(wasUnschedulable)
+	})
 }
 
 // cordonRecordedByHolder returns what an operation already holding this node
@@ -80,8 +77,11 @@ func (r *Reconciler) cordonRecordedByHolder(ctx context.Context, op *v1alpha1.No
 // every reconcile of a terminal operation until collection, so it touches only
 // this operation's own markers and a cordon no other operation relies on.
 func (r *Reconciler) releaseNode(ctx context.Context, op *v1alpha1.NodeOperation, logger logr.Logger) error {
+	// Past the cache, like every read this controller decides a write from: the
+	// erasure below removes whatever value the key holds now, so a stale marker
+	// read here wipes the request a sibling operation has since written.
 	node := &corev1.Node{}
-	if err := r.Client.Get(ctx, types.NamespacedName{Name: op.Spec.NodeName}, node); err != nil {
+	if err := r.apiReader.Get(ctx, types.NamespacedName{Name: op.Spec.NodeName}, node); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil
 		}

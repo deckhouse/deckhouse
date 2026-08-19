@@ -90,21 +90,21 @@ func requestedByAnother(op *v1alpha1.NodeOperation, node *corev1.Node) bool {
 // first time only, until when it may run. The deadline is written once and
 // never moved: a deadline renewed on every re-issue is no deadline.
 func (r *Reconciler) recordDrainRequested(ctx context.Context, op *v1alpha1.NodeOperation, node *corev1.Node) error {
-	patch := client.MergeFromWithOptions(op.DeepCopy(), client.MergeFromWithOptimisticLock{})
-	meta.SetStatusCondition(&op.Status.Conditions, metav1.Condition{
-		Type:               conditionDrainRequested,
-		Status:             metav1.ConditionTrue,
-		Reason:             "Draining",
-		Message:            fmt.Sprintf("the draining controller was asked to empty %s", op.Spec.NodeName),
-		ObservedGeneration: op.Generation,
+	deadline := metav1.NewTime(time.Now().Add(
+		nodecommon.DrainTimeout(ctx, r.Client, node.Labels[nodecommon.NodeGroupLabel])))
+
+	return r.patchStatus(ctx, op, fmt.Sprintf("record that %s asked for its eviction", op.Name), func() {
+		meta.SetStatusCondition(&op.Status.Conditions, metav1.Condition{
+			Type:               conditionDrainRequested,
+			Status:             metav1.ConditionTrue,
+			Reason:             "Draining",
+			Message:            fmt.Sprintf("the draining controller was asked to empty %s", op.Spec.NodeName),
+			ObservedGeneration: op.Generation,
+		})
+		if op.Status.DrainDeadline == nil {
+			op.Status.DrainDeadline = ptr.To(deadline)
+		}
 	})
-	if op.Status.DrainDeadline == nil {
-		op.Status.DrainDeadline = ptr.To(metav1.NewTime(time.Now().Add(r.drainTimeout(ctx, node))))
-	}
-	if err := r.Client.Status().Patch(ctx, op, patch); err != nil {
-		return fmt.Errorf("record that %s asked for its eviction: %w", op.Name, err)
-	}
-	return nil
 }
 
 func skipDrain(op *v1alpha1.NodeOperation) bool {
