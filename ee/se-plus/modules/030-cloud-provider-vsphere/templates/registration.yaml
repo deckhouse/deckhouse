@@ -44,6 +44,13 @@ capiMachineTemplateAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1beta
 {{- if $providerDiscoveryData.datacenter }}
   {{- $_ := set $vsphereValues "datacenter" $providerDiscoveryData.datacenter }}
 {{- end }}
+{{- /* zoneComputeClusterPaths is a zone → ClusterComputeResource inventoryPath map that
+       ensure_failure_domains hook populates by asking vCenter. capi/template.yaml joins
+       it with resourcePoolPath to render an absolute resourcePool; relative names are
+       ambiguous when multiple compute clusters live under the same datacenter. */ -}}
+{{- if hasKey $providerDiscoveryData "zoneComputeClusterPaths" }}
+  {{- $_ := set $vsphereValues "zoneComputeClusterPaths" $providerDiscoveryData.zoneComputeClusterPaths }}
+{{- end }}
 {{- $_ := set $vsphereValues "instanceClassDefaults" dict }}
 {{- if hasKey $providerDiscoveryData "resourcePoolPath" }}
   {{- $_ := set $vsphereValues.instanceClassDefaults "resourcePoolPath" $providerDiscoveryData.resourcePoolPath }}

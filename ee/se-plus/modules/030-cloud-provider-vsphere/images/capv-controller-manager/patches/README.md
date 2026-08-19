@@ -21,8 +21,8 @@ Mirrors the intent of `cluster-api-provider-openstack`'s
 
 ## 002-drop-unused-controllers.patch
 
-Drops the controllers, webhooks, and CRD-migrator entries for CRDs that
-Deckhouse does not ship in `crds/external/`:
+Drops the CRD-migrator entry, controller and webhook registrations for the two
+CRDs Deckhouse does not ship in `crds/external/`:
 
 - `VSphereClusterIdentity` — Deckhouse manages the vCenter credential Secret
   (`capi-user-credentials`) as regular Kubernetes Secret referenced by
@@ -30,20 +30,24 @@ Deckhouse does not ship in `crds/external/`:
   unused. Without the patch the manager crashes with
   `no matches for kind "VSphereClusterIdentity"` at startup because the
   controller registration is unconditional.
-- `VSphereDeploymentZone` / `VSphereFailureDomain` — Deckhouse renders
-  the resource-pool / datastore / network directly into
-  `VSphereMachineTemplate`, matching the CAPO pattern of a stringly-typed
-  `failureDomain`. The CRD-based multi-zone topology is not used.
-- `VSphereClusterTemplate` — Deckhouse does not use CAPI ClusterClass, so
-  the validating webhook + CRD-migrator entry are dead weight.
+- `VSphereClusterTemplate` — Deckhouse does not use CAPI ClusterClass, so the
+  validating webhook + CRD-migrator entry are dead weight.
 
-Also drops the `Watches(&VSphereDeploymentZone{}, ...)` registration on the
-`VSphereCluster` reconciler in `controllers/vspherecluster_controller.go` — a
-missing CRD there does not crash the process immediately but blocks the
-controller cache-sync, so the manager gets liveness-killed after ~2 minutes.
+`VSphereDeploymentZone` / `VSphereFailureDomain` are **kept intact** — their
+CRDs, controllers, webhooks and the `VSphereCluster` reconciler's
+`Watches(&VSphereDeploymentZone{}, ...)` all stay in place. Deckhouse creates
+the two zone CRs from `ensure_failure_domains.go` per NodeGroup zone, and CAPV
+uses them at reconcile time to override `VSphereVM.spec.{Server,Datacenter,
+Folder,ResourcePool,Datastore,Networks}` from the resolved topology
+(`pkg/services/vimmachine.go` `overrideWithFailureDomainFunc`) — this is the
+only mechanism CAPV has for real multi-zone placement.
 
-Result: CAPV owns only the four CRDs Deckhouse actually renders or CAPV
-creates as an intermediate object: `VSphereCluster`, `VSphereMachine`,
-`VSphereMachineTemplate`, `VSphereVM` — one-to-one with CAPO's
-`OpenStackCluster` / `OpenStackMachine` / `OpenStackMachineTemplate` /
-`OpenStackServer`.
+## Why `VSphereVM` is kept even though nothing renders it
+
+CAPV's govmomi flavor spawns a `VSphereVM` per `VSphereMachine` from
+`pkg/services/vimmachine.go` (`createOrPatchVSphereVM`, owner ref →
+`VSphereMachine`) and reconciles it in `controllers/vspherevm_controller.go`.
+This is the layer that tracks long-running vCenter clone tasks
+(`VSphereVM.Status.TaskRef`), IP allocation, and MAC address — the equivalent
+of CAPO's `OpenStackServer`. Deleting the CRD sends the manager into CrashLoop
+with a `CacheSyncTimeout` because the CRD is not optional in this flavor.

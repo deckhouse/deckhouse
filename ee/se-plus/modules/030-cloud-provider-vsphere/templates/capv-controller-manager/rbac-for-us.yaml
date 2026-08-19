@@ -55,6 +55,8 @@ rules:
   - apiextensions.k8s.io
   resourceNames:
   - vsphereclusters.infrastructure.cluster.x-k8s.io
+  - vspheredeploymentzones.infrastructure.cluster.x-k8s.io
+  - vspherefailuredomains.infrastructure.cluster.x-k8s.io
   - vspheremachines.infrastructure.cluster.x-k8s.io
   - vspheremachinetemplates.infrastructure.cluster.x-k8s.io
   - vspherevms.infrastructure.cluster.x-k8s.io
@@ -102,6 +104,8 @@ rules:
   - infrastructure.cluster.x-k8s.io
   resources:
   - vsphereclusters
+  - vspheredeploymentzones
+  - vspherefailuredomains
   - vspheremachines
   - vspheremachinetemplates
   - vspherevms
@@ -117,6 +121,7 @@ rules:
   - infrastructure.cluster.x-k8s.io
   resources:
   - vsphereclusters/status
+  - vspheredeploymentzones/status
   - vspheremachines/status
   - vspheremachinetemplates/status
   - vspherevms/status
