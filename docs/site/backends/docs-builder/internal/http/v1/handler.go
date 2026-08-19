@@ -15,7 +15,9 @@
 package v1
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -122,9 +124,18 @@ func (h *DocsBuilderHandler) handleUpload(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusCreated)
 }
 
-func (h *DocsBuilderHandler) handleBuild(w http.ResponseWriter, _ *http.Request) {
-	err := h.docsService.Build()
+func (h *DocsBuilderHandler) handleBuild(w http.ResponseWriter, r *http.Request) {
+	err := h.docsService.Build(r.Context())
 	if err != nil {
+		// The client went away (its request timeout fired) or the server is
+		// shutting down: the build was intentionally abandoned, not broken.
+		// Under load this is the common path, so keep it out of the error log
+		// and don't dirty the response — the caller is no longer listening.
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			h.logger.Debug("build canceled", log.Err(err))
+			return
+		}
+
 		h.logger.Error("build", log.Err(err))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
