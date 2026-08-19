@@ -17,6 +17,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"path"
@@ -336,6 +337,7 @@ func (i *actionIniter) initDirectories(dirs directoriesToInitialize) error {
 
 // empty is command not passed
 var skipTeeLoggerCommands = []string{"", grpcServerCmd, oneShotDhctlServerCmd}
+var disableLoggerCommands = []string{phaseCatalogCmd}
 
 func (i *actionIniter) initLogger(c *kingpin.ParseContext, tmpDir string) (onShutdownFunc, error) {
 	// Terminal logging axes:
@@ -350,6 +352,15 @@ func (i *actionIniter) initLogger(c *kingpin.ParseContext, tmpDir string) (onShu
 	interactive := stdoutTTY && !verbose
 
 	commandName := getCommandName(c)
+
+	// Fully mute the logger for commands that emit pristine stdout (JSON catalogs, etc.).
+	// Both sinks discard, so nothing can corrupt the command's output.
+	if slices.Contains(disableLoggerCommands, commandName) {
+		i.bindSlogRoot(c, telemetry.WithOTLPLogExport(logger.NewRoot(logger.Options{
+			FileWriter: io.Discard,
+		})))
+		return doNothingOnShutdownFunc, nil
+	}
 
 	// Skip cases: build a working slog root WITHOUT a debug file. Every path still sets
 	// i.slogRoot + SetDefault + binds klog/shell-op, so logger.FromContext always routes

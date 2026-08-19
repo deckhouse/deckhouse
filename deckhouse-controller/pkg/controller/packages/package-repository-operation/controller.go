@@ -32,7 +32,7 @@ import (
 
 	registryService "github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry/service"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/operations"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository-operation/operations"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -255,6 +255,7 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, op *v1alpha1.Packa
 	if err != nil {
 		return r.failOperation(ctx, op, err)
 	}
+	svc.WarnUnavailablePartialScan(op)
 
 	discovered, err := svc.DiscoverPackage(ctx)
 	if err != nil {

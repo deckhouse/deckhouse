@@ -107,6 +107,47 @@ const (
 	CommanderDetachDetachPhase OperationPhase = "Detach"
 )
 
+// AllPhases returns all known phases.
+func allPhases() []OperationPhase {
+	return []OperationPhase{
+		// Common phases
+		PreparationPhase,
+		BaseInfraPhase,
+		FinalizationPhase,
+		// Bootstrap phases
+		PreInfraPreflightsPhase,
+		PostInfraPreflightsPhase,
+		InstallKubernetesPhase,
+		InstallDeckhousePhase,
+		CreateResourcesPhase,
+		InstallAdditionalMastersAndStaticNodes,
+		DeleteResourcesPhase,
+		ExecPostBootstrapPhase,
+		// Converge phases
+		ConvergeCheckPhase,
+		AllNodesPhase,
+		ScaleToMultiMasterPhase,
+		ScaleToSingleMasterPhase,
+		DeckhouseConfigurationPhase,
+		// Destroy phases
+		CreateStaticDestroyerNodeUserPhase,
+		UpdateStaticDestroyerIPs,
+		WaitStaticDestroyerNodeUserPhase,
+		SetDeckhouseResourcesDeletedPhase,
+		CommanderUUIDWasChecked,
+		// Check phases
+		CheckInfra,
+		CheckConfiguration,
+		// Commander attach phases
+		CommanderAttachScanPhase,
+		CommanderAttachCapturePhase,
+		CommanderAttachCheckPhase,
+		// Commander detach phases
+		CommanderDetachCheckPhase,
+		CommanderDetachDetachPhase,
+	}
+}
+
 var ErrStopOperationCondition = errors.New("StopOperationCondition")
 
 // bootstrap sub phases
@@ -145,6 +186,37 @@ const (
 	InstallAdditionalMastersAndStaticNodeSubPhaseStaticNodes        OperationSubPhase = "StaticNodes"
 	InstallAdditionalMastersAndStaticNodesSubPhaseWait              OperationSubPhase = "WaitForControlPlaneManagerReadiness"
 )
+
+// AllSubPhases returns all known subphases.
+func allSubPhases() []OperationSubPhase {
+	return []OperationSubPhase{
+		// Bootstrap subphases
+		InstallDeckhouseSubPhaseConnect,
+		InstallDeckhouseSubPhaseInstall,
+		InstallDeckhouseSubPhaseWait,
+		// Preparation subphases
+		PreparationSubPhaseImagesDownload,
+		PreparationSubPhaseConfigValidation,
+		PreparationSubPhaseCachePreparation,
+		PreparationSubPhaseStatePreparation,
+		// BaseInfra subphases
+		BaseInfraSubPhaseBaseInfra,
+		BaseInfraSubPhaseFirstMaster,
+		// InstallKubernetes subphases
+		InstallKubernetesSubPhaseBundlePreparation,
+		InstallKubernetesSubPhaseRegistryPackagesProxy,
+		InstallKubernetesSubPhaseNodePreparation,
+		InstallKubernetesSubPhaseModulesPreparation,
+		InstallKubernetesSubPhaseExecuteBashibleBundle,
+		// InstallAdditionalMastersAndStaticNodes subphases
+		InstallAdditionalMastersAndStaticNodesSubPhaseAdditionalMasters,
+		InstallAdditionalMastersAndStaticNodeSubPhaseStaticNodes,
+		InstallAdditionalMastersAndStaticNodesSubPhaseWait,
+
+		OperationSubPhase(CheckInfra),
+		OperationSubPhase(CheckConfiguration),
+	}
+}
 
 func BootstrapPhases() []PhaseWithSubPhases {
 	return []PhaseWithSubPhases{
@@ -262,16 +334,19 @@ type phasesOpts struct {
 	clusterConfig ClusterConfig
 }
 
-func operationPhases(operation Operation, opts phasesOpts) []PhaseWithSubPhases {
-	p := map[Operation][]PhaseWithSubPhases{
+func allOperationPhases() map[Operation][]PhaseWithSubPhases {
+	return map[Operation][]PhaseWithSubPhases{
 		OperationBootstrap:       BootstrapPhases(),
 		OperationConverge:        ConvergePhases(),
 		OperationCheck:           CheckPhases(),
 		OperationDestroy:         DestroyPhases(),
 		OperationCommanderAttach: CommanderAttachPhases(),
 		OperationCommanderDetach: CommanderDetachPhases(),
-	}[operation]
+	}
+}
 
+func operationPhases(operation Operation, opts phasesOpts) []PhaseWithSubPhases {
+	p := allOperationPhases()[operation]
 	phases := make([]PhaseWithSubPhases, 0, len(p))
 	for _, phase := range p {
 		if phase.includeIf == nil || phase.includeIf(opts) {
