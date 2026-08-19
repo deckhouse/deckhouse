@@ -17,8 +17,10 @@ linkRewrite:
   replace:
     - from: '^(.*)/platform/(.*)$'
       to: '\1/\2'
-    - from: '^(.*deckhouse\.(ru|io)/documentation/v1)/deckhouse-configure-global.html(.*)$'
-      to: '/reference/api/global.html\3'
+    #- from: '^(.*deckhouse\.(ru|io)/documentation/v1)/deckhouse-configure-global.html(.*)$'
+    #  to: '/reference/api/global.html\3'
+    - from: '^.*/deckhouse-configure-global.html(.*)$'
+      to: '/ru/reference/api/global.html\1'
     - from: '^(.*/modules/)[0-9]+-([^/]+/.*)$'
       to: '\1\2'
   remove:
