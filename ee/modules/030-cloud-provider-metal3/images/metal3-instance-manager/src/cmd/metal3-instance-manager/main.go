@@ -361,16 +361,86 @@ func (r *reconciler) ensureBareMetalHost(ctx context.Context, instance *unstruct
 		delete(desiredLabels, labelPool)
 	}
 
-	existingSpec, _, _ := unstructured.NestedMap(bmh.Object, "spec")
-	if reflect.DeepEqual(existingLabels, desiredLabels) && reflect.DeepEqual(existingSpec, desired) {
+	specUpdated, err := updateBareMetalHostSpec(bmh, spec, r.generatedSecretName(instance))
+	if err != nil {
+		return nil, err
+	}
+
+	if reflect.DeepEqual(existingLabels, desiredLabels) && !specUpdated {
 		return bmh, nil
 	}
 
 	bmh.SetLabels(desiredLabels)
-	if err := unstructured.SetNestedMap(bmh.Object, desired, "spec"); err != nil {
-		return nil, err
-	}
 	return bmh, r.Update(ctx, bmh)
+}
+
+func updateBareMetalHostSpec(bmh *unstructured.Unstructured, spec instanceSpec, credentialsName string) (bool, error) {
+	updated := false
+
+	if changed, err := setNestedBool(bmh, spec.Online, "spec", "online"); err != nil {
+		return false, err
+	} else if changed {
+		updated = true
+	}
+
+	if changed, err := setNestedString(bmh, spec.AutomatedCleaningMode, "spec", "automatedCleaningMode"); err != nil {
+		return false, err
+	} else if changed {
+		updated = true
+	}
+
+	if spec.BootMACAddress != "" {
+		if changed, err := setNestedString(bmh, spec.BootMACAddress, "spec", "bootMACAddress"); err != nil {
+			return false, err
+		} else if changed {
+			updated = true
+		}
+	} else if _, ok, _ := unstructured.NestedString(bmh.Object, "spec", "bootMACAddress"); ok {
+		unstructured.RemoveNestedField(bmh.Object, "spec", "bootMACAddress")
+		updated = true
+	}
+
+	if changed, err := setNestedString(bmh, spec.BMCAddress, "spec", "bmc", "address"); err != nil {
+		return false, err
+	} else if changed {
+		updated = true
+	}
+
+	if changed, err := setNestedString(bmh, credentialsName, "spec", "bmc", "credentialsName"); err != nil {
+		return false, err
+	} else if changed {
+		updated = true
+	}
+
+	if changed, err := setNestedBool(bmh, spec.BMCDisableCertificateValidation, "spec", "bmc", "disableCertificateVerification"); err != nil {
+		return false, err
+	} else if changed {
+		updated = true
+	}
+
+	return updated, nil
+}
+
+func setNestedString(obj *unstructured.Unstructured, value string, fields ...string) (bool, error) {
+	current, ok, err := unstructured.NestedString(obj.Object, fields...)
+	if err != nil {
+		return false, err
+	}
+	if ok && current == value {
+		return false, nil
+	}
+	return true, unstructured.SetNestedField(obj.Object, value, fields...)
+}
+
+func setNestedBool(obj *unstructured.Unstructured, value bool, fields ...string) (bool, error) {
+	current, ok, err := unstructured.NestedBool(obj.Object, fields...)
+	if err != nil {
+		return false, err
+	}
+	if ok && current == value {
+		return false, nil
+	}
+	return true, unstructured.SetNestedField(obj.Object, value, fields...)
 }
 
 func (r *reconciler) setStatus(ctx context.Context, instance *unstructured.Unstructured, bmh *unstructured.Unstructured, secretName, message string) error {

@@ -4,6 +4,8 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
+  annotations:
+    werf.io/delete-dependency-ironic: state=absent,kind=Ironic,group=ironic.metal3.io,version=v1alpha1,name=ironic,namespace=d8-cloud-provider-metal3
   labels:
     app.kubernetes.io/component: rbac
     app.kubernetes.io/created-by: ironic-standalone-operator
@@ -17,6 +19,8 @@ metadata:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
+  annotations:
+    werf.io/delete-dependency-ironic: state=absent,kind=Ironic,group=ironic.metal3.io,version=v1alpha1,name=ironic,namespace=d8-cloud-provider-metal3
   labels:
     app.kubernetes.io/component: rbac
     app.kubernetes.io/created-by: ironic-standalone-operator
@@ -62,6 +66,8 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
+  annotations:
+    werf.io/delete-dependency-ironic: state=absent,kind=Ironic,group=ironic.metal3.io,version=v1alpha1,name=ironic,namespace=d8-cloud-provider-metal3
   name: ironic-standalone-operator-manager-role
 rules:
 - apiGroups:
@@ -190,6 +196,8 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
+  annotations:
+    werf.io/delete-dependency-ironic: state=absent,kind=Ironic,group=ironic.metal3.io,version=v1alpha1,name=ironic,namespace=d8-cloud-provider-metal3
   labels:
     app.kubernetes.io/component: rbac
     app.kubernetes.io/created-by: ironic-standalone-operator
@@ -211,6 +219,8 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
+  annotations:
+    werf.io/delete-dependency-ironic: state=absent,kind=Ironic,group=ironic.metal3.io,version=v1alpha1,name=ironic,namespace=d8-cloud-provider-metal3
   labels:
     app.kubernetes.io/component: rbac
     app.kubernetes.io/created-by: ironic-standalone-operator
@@ -231,12 +241,16 @@ subjects:
 apiVersion: v1
 kind: ConfigMap
 metadata:
+  annotations:
+    werf.io/delete-dependency-ironic: state=absent,kind=Ironic,group=ironic.metal3.io,version=v1alpha1,name=ironic,namespace=d8-cloud-provider-metal3
   name: ironic-standalone-operator-ironic-standalone-operator-config
   namespace: d8-cloud-provider-metal3
 ---
 apiVersion: v1
 kind: Service
 metadata:
+  annotations:
+    werf.io/delete-dependency-ironic: state=absent,kind=Ironic,group=ironic.metal3.io,version=v1alpha1,name=ironic,namespace=d8-cloud-provider-metal3
   labels:
     app.kubernetes.io/component: webhook
     app.kubernetes.io/created-by: ironic-standalone-operator
@@ -257,6 +271,8 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  annotations:
+    werf.io/delete-dependency-ironic: state=absent,kind=Ironic,group=ironic.metal3.io,version=v1alpha1,name=ironic,namespace=d8-cloud-provider-metal3
   labels:
     app.kubernetes.io/component: manager
     app.kubernetes.io/created-by: ironic-standalone-operator
@@ -341,6 +357,8 @@ spec:
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
+  annotations:
+    werf.io/delete-dependency-ironic: state=absent,kind=Ironic,group=ironic.metal3.io,version=v1alpha1,name=ironic,namespace=d8-cloud-provider-metal3
   labels:
     app.kubernetes.io/component: certificate
     app.kubernetes.io/created-by: ironic-standalone-operator
@@ -362,6 +380,8 @@ spec:
 apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
+  annotations:
+    werf.io/delete-dependency-ironic: state=absent,kind=Ironic,group=ironic.metal3.io,version=v1alpha1,name=ironic,namespace=d8-cloud-provider-metal3
   labels:
     app.kubernetes.io/component: certificate
     app.kubernetes.io/created-by: ironic-standalone-operator
@@ -378,6 +398,7 @@ apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
   annotations:
+    werf.io/delete-dependency-ironic: state=absent,kind=Ironic,group=ironic.metal3.io,version=v1alpha1,name=ironic,namespace=d8-cloud-provider-metal3
     cert-manager.io/inject-ca-from: d8-cloud-provider-metal3/ironic-standalone-operator-serving-cert
   labels:
     app.kubernetes.io/component: webhook
