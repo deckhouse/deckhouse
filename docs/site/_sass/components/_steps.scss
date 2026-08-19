@@ -1,19 +1,88 @@
 @use "components/common/_variables.scss";
+@use "components/common/_mixins";
+@use 'components/common/_breakpoints.scss';
 
 .gs-steps {
     position: relative;
     width: 90%;
     margin: 45px auto 125px;
-    &__points {
+
+    @include breakpoints.max-w(l) {
+        width: 100%;
+        overflow-x: auto;
+        box-sizing: border-box;
+        padding: 53px 50px 90px;
+        margin: 0;
+        scrollbar-width: none;
+    }
+
+    @include breakpoints.max-w(m) {
+        padding: 0 0 20px;
+        overflow-x: visible;
+    }
+
+    &__track {
         position: relative;
+
+        @include breakpoints.max-w(m) {
+            overflow-x: auto;
+            padding: 45px 8px 30px;
+            scrollbar-width: none;
+        }
+    }
+
+    &__current-title {
+        display: none;
+        font-size: variables.$font-size-base;
+        font-weight: variables.$font-weight-semibold;
+        color: variables.$color-alt;
+
+        @include breakpoints.max-w(m) {
+            display: block;
+        }
+
+        @include breakpoints.max-w(s) {
+            font-size: 12px;
+        }
+    }
+
+    &__points {
         z-index: 2;
         display: flex;
         flex-direction: row;
         justify-content: space-between;
+
+        @include breakpoints.max-w(l) {
+            min-width: 850px;
+        }
+
+        @include breakpoints.max-w(m) {
+            min-width: 600px;
+        }
+
+        @include breakpoints.max-w(s) {
+            min-width: 500px;
+        }
+
+        @include breakpoints.max-w(xs) {
+            min-width: 430px;
+        }
+
+        &:has(> .gs-steps__point:nth-child(2):last-child),
+        &:has(> .gs-steps__point:nth-child(3):last-child) {
+            width: 100%;
+            min-width: 0;
+        }
     }
+
     &__point {
-        position: relative;
+        flex-shrink: 0;
         text-decoration: none !important;
+
+        @media screen and (min-width: 727px) {
+            position: relative;
+        }
+
         &-num {
             display: flex;
             flex-direction: column;
@@ -24,28 +93,32 @@
             box-sizing: border-box;
             border: 2px solid transparent;
             transform: rotate(45deg);
-
             background: variables.$color-smooth;
             color: #999;
+
             &_future {
                 font-weight: variables.$font-weight-semibold;
                 background: variables.$color-smooth;
-                color: #999 !important;
+                color: #999;
             }
+
             &_active {
                 font-weight: variables.$font-weight-semibold;
                 background: variables.$color-alt;
-                color: variables.$color-inverse !important;
+                color: variables.$color-inverse;
             }
+
             &_past {
                 font-weight: variables.$font-weight-semibold;
                 background: variables.$color-alt;
-                color: variables.$color-inverse !important;
+                color: variables.$color-inverse;
             }
+            
             span {
                 transform: rotate(-45deg);
             }
         }
+
         &-title {
             position: absolute;
             left: 50%;
@@ -53,44 +126,84 @@
             transform: translateX(-50%);
             font-size: variables.$font-size-base;
             font-weight: variables.$font-weight-semibold;
-
             text-align: center;
             width: 125px;
-            color: variables.$color-alt !important;
+            color: variables.$color-alt;
+
+            @include breakpoints.max-w(m) {
+                display: none;
+            }
+
+            &_future {
+                color: #999;
+            }
 
             @media (min-width: variables.$container-breakpoint-lg) {
                 width: 150px;
             }
-
-            &_future {
-                color: #999 !important;
-            }
         }
+
         &:hover &-num_future,
         &:hover &-num_past {
-            color: variables.$color-inverse !important;
+            color: variables.$color-inverse;
             background: variables.$color-main;
             border-color: transparent;
-            text-decoration: none !important;
+            text-decoration: none;
         }
+
         &:hover &-title:not(.gs-steps__point-title_active) {
-            color: variables.$color-main !important;
+            color: variables.$color-main;
         }
     }
+
     &__sections {
         width: 100%;
         position: absolute;
         left: 0;
         top: 13px;
         z-index: -1;
-
         display: flex;
         flex-direction: row;
+
+        @include breakpoints.max-w(l) {
+            top: 13px;
+            width: 850px;
+            min-width: 850px;
+        }
+
+        @include breakpoints.max-w(m) {
+            left: 10px;
+            top: 59px;
+            width: 600px;
+            min-width: 600px;
+        }
+
+        @include breakpoints.max-w(s) {
+            width: 500px;
+            min-width: 500px;
+        }
+
+        @include breakpoints.max-w(xs) {
+            width: 430px;
+            min-width: 430px;
+        }
     }
+
+    &__track:has(.gs-steps__point:nth-child(2):last-child) &__sections,
+    &__track:has(.gs-steps__point:nth-child(3):last-child) &__sections {
+        width: 100%;
+        min-width: 0;
+
+        @include breakpoints.max-w(m) {
+            width: 93%;
+        }
+    }
+
     &__section {
         flex: 1;
         height: 3px;
         background: variables.$color-smooth;
+
         &_past {
             background: variables.$color-alt;
         }

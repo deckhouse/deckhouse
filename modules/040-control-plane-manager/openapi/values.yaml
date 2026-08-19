@@ -7,6 +7,7 @@ properties:
     default: {}
     x-required-for-helm:
     - effectiveKubernetesVersion
+    - maxUsedKubernetesVersion
     - kubeSchedulerExtenders
     properties:
       audit:
@@ -40,6 +41,12 @@ properties:
       effectiveKubernetesVersion:
         type: string
         enum: ["1.32", "1.33", "1.34", "1.35", "1.36"]
+        x-examples: ["1.32"]
+      maxUsedKubernetesVersion:
+        type: string
+        # A pattern, not an enum: after a Deckhouse downgrade this value can legitimately exceed what
+        # the release supports, and an enum would block the whole module from rendering.
+        pattern: '^[0-9]+\.[0-9]+$'
         x-examples: ["1.32"]
       etcdServers:
         type: array

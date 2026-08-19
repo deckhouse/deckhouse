@@ -17,6 +17,7 @@ limitations under the License.
 package derived_status
 
 import (
+	"encoding/json"
 	"flag"
 	"os"
 	"path/filepath"
@@ -24,10 +25,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"k8s.io/apimachinery/pkg/runtime"
 	sigsyaml "sigs.k8s.io/yaml"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/capacity"
 )
 
 var updateGoldens = flag.Bool("update-goldens", false, "rewrite the resolved-NodeGroup goldens under testdata/resolved")
@@ -42,8 +43,24 @@ type corpusFixture struct {
 	result Result
 }
 
-func rawExtension(json string) *runtime.RawExtension {
-	return &runtime.RawExtension{Raw: []byte(json)}
+// rawExtension parses an InstanceClass spec fixture. The fixtures stay JSON strings because that
+// is how the spec reaches this package — decoded from an unstructured object — and because the
+// number types the decoding produces are what the checksum sees.
+func rawExtension(raw string) map[string]any {
+	var out map[string]any
+	if err := json.Unmarshal([]byte(raw), &out); err != nil {
+		return nil
+	}
+	return out
+}
+
+// rawCapacity parses a node-capacity fixture into the value CalculateNodeTemplateCapacity returns.
+func rawCapacity(raw string) *capacity.InstanceType {
+	out := &capacity.InstanceType{}
+	if err := json.Unmarshal([]byte(raw), out); err != nil {
+		return nil
+	}
+	return out
 }
 
 // resolvedMap is the published form of a NodeGroup, which is what most of these tests
@@ -62,7 +79,7 @@ func nodeGroupCorpus() []corpusFixture {
 			input: ResolveInput{
 				Name:     "static-minimal",
 				NodeType: v1.NodeTypeStatic,
-				RawSpec:  map[string]interface{}{"nodeType": "Static"},
+				Spec:     specFrom(map[string]interface{}{"nodeType": "Static"}),
 			},
 			result: Result{
 				Engine:            engineNone,
@@ -77,7 +94,7 @@ func nodeGroupCorpus() []corpusFixture {
 			input: ResolveInput{
 				Name:     "static-full",
 				NodeType: v1.NodeTypeStatic,
-				RawSpec: map[string]interface{}{
+				Spec: specFrom(map[string]interface{}{
 					"nodeType": "Static",
 					"staticInstances": map[string]interface{}{
 						"count":         int64(3),
@@ -93,7 +110,7 @@ func nodeGroupCorpus() []corpusFixture {
 						},
 					},
 					"disruptions": map[string]interface{}{"approvalMode": "Manual"},
-				},
+				}),
 				Static: map[string]interface{}{
 					"internalNetworkCIDRs": []interface{}{"172.18.200.0/24", "10.0.0.0/8"},
 				},
@@ -112,7 +129,7 @@ func nodeGroupCorpus() []corpusFixture {
 			input: ResolveInput{
 				Name:     "static-no-config",
 				NodeType: v1.NodeTypeStatic,
-				RawSpec:  map[string]interface{}{"nodeType": "Static"},
+				Spec:     specFrom(map[string]interface{}{"nodeType": "Static"}),
 				Static:   nil,
 			},
 			result: Result{
@@ -127,7 +144,7 @@ func nodeGroupCorpus() []corpusFixture {
 			input: ResolveInput{
 				Name:     "master",
 				NodeType: v1.NodeTypeCloudPermanent,
-				RawSpec: map[string]interface{}{
+				Spec: specFrom(map[string]interface{}{
 					"nodeType":    "CloudPermanent",
 					"kubelet":     kubeletDefaults(),
 					"disruptions": map[string]interface{}{"approvalMode": "Manual"},
@@ -136,7 +153,7 @@ func nodeGroupCorpus() []corpusFixture {
 							map[string]interface{}{"key": "node-role.kubernetes.io/control-plane", "effect": "NoSchedule"},
 						},
 					},
-				},
+				}),
 				// A CloudPermanent NodeGroup never publishes the static cluster configuration,
 				// even when the controller happens to have read it.
 				Static: map[string]interface{}{"internalNetworkCIDRs": []interface{}{"172.18.200.0/24"}},
@@ -156,7 +173,7 @@ func nodeGroupCorpus() []corpusFixture {
 				Name:            "worker",
 				ManualRolloutID: "rollout-1",
 				NodeType:        v1.NodeTypeCloudEphemeral,
-				RawSpec: map[string]interface{}{
+				Spec: specFrom(map[string]interface{}{
 					"nodeType": "CloudEphemeral",
 					"cloudInstances": map[string]interface{}{
 						"classReference":        map[string]interface{}{"kind": "YandexInstanceClass", "name": "worker"},
@@ -176,7 +193,7 @@ func nodeGroupCorpus() []corpusFixture {
 					"disruptions":            map[string]interface{}{"approvalMode": "Automatic"},
 					"gpu":                    map[string]interface{}{"sharing": "TimeSlicing"},
 					"nodeDrainTimeoutSecond": int64(300),
-				},
+				}),
 				CloudProcessed: true,
 			},
 			result: Result{
@@ -184,7 +201,7 @@ func nodeGroupCorpus() []corpusFixture {
 				KubernetesVersion: "1.32",
 				CRIType:           criTypeContainerd,
 				Zones:             []string{"ru-central1-a", "ru-central1-b"},
-				NodeCapacity:      rawExtension(`{"cpu":"4","memory":"8Gi"}`),
+				NodeCapacity:      rawCapacity(`{"cpu":"4","memory":"8Gi"}`),
 				InstanceClass:     rawExtension(`{"platformID":"standard-v3","cores":4,"memory":8589934592,"coreFraction":100,"diskType":"network-ssd"}`),
 				SerializedLabels:  "node-role.kubernetes.io/worker=,node.deckhouse.io/group=worker,node.deckhouse.io/type=CloudEphemeral,role=worker",
 				UpdateEpoch:       "1004",
@@ -196,7 +213,7 @@ func nodeGroupCorpus() []corpusFixture {
 				Name:     "worker-nil-class",
 				NodeType: v1.NodeTypeCloudEphemeral,
 				// No cloudInstances in the spec at all: the cloud overlay still creates the block.
-				RawSpec:        map[string]interface{}{"nodeType": "CloudEphemeral"},
+				Spec:           specFrom(map[string]interface{}{"nodeType": "CloudEphemeral"}),
 				CloudProcessed: true,
 			},
 			result: Result{
@@ -214,12 +231,14 @@ func nodeGroupCorpus() []corpusFixture {
 			input: ResolveInput{
 				Name:     "worker-empty-zones",
 				NodeType: v1.NodeTypeCloudEphemeral,
-				RawSpec: map[string]interface{}{
+				Spec: specFrom(map[string]interface{}{
 					"nodeType": "CloudEphemeral",
 					"cloudInstances": map[string]interface{}{
 						"classReference": map[string]interface{}{"kind": "AWSInstanceClass", "name": "worker"},
+						"minPerZone":     int64(0),
+						"maxPerZone":     int64(0),
 					},
-				},
+				}),
 				CloudProcessed: true,
 			},
 			result: Result{
@@ -236,12 +255,14 @@ func nodeGroupCorpus() []corpusFixture {
 			input: ResolveInput{
 				Name:     "worker-nil-zones",
 				NodeType: v1.NodeTypeCloudEphemeral,
-				RawSpec: map[string]interface{}{
+				Spec: specFrom(map[string]interface{}{
 					"nodeType": "CloudEphemeral",
 					"cloudInstances": map[string]interface{}{
 						"classReference": map[string]interface{}{"kind": "AWSInstanceClass", "name": "worker"},
+						"minPerZone":     int64(0),
+						"maxPerZone":     int64(0),
 					},
-				},
+				}),
 				CloudProcessed: true,
 			},
 			result: Result{
@@ -258,14 +279,16 @@ func nodeGroupCorpus() []corpusFixture {
 			input: ResolveInput{
 				Name:     "worker-unprocessed",
 				NodeType: v1.NodeTypeCloudEphemeral,
-				RawSpec: map[string]interface{}{
+				Spec: specFrom(map[string]interface{}{
 					"nodeType": "CloudEphemeral",
 					"cloudInstances": map[string]interface{}{
 						"classReference": map[string]interface{}{"kind": "AWSInstanceClass", "name": "worker"},
+						"minPerZone":     int64(0),
+						"maxPerZone":     int64(0),
 						"zones":          []interface{}{"eu-west-1a"},
 					},
 					"kubelet": kubeletDefaults(),
-				},
+				}),
 				CloudProcessed: false,
 			},
 			// A failed (or skipped) cloud check drops the whole cloud overlay even though the
@@ -274,7 +297,7 @@ func nodeGroupCorpus() []corpusFixture {
 				Engine:           engineMCM,
 				CRIType:          criTypeContainerd,
 				Zones:            []string{"eu-west-1a", "eu-west-1b"},
-				NodeCapacity:     rawExtension(`{"cpu":"2","memory":"4Gi"}`),
+				NodeCapacity:     rawCapacity(`{"cpu":"2","memory":"4Gi"}`),
 				InstanceClass:    rawExtension(`{"instanceType":"m5.large"}`),
 				SerializedLabels: "node.deckhouse.io/group=worker-unprocessed",
 				UpdateEpoch:      "1008",
@@ -285,20 +308,17 @@ func nodeGroupCorpus() []corpusFixture {
 			input: ResolveInput{
 				Name:     "empty-values",
 				NodeType: v1.NodeTypeStatic,
-				RawSpec: map[string]interface{}{
+				Spec: specFrom(map[string]interface{}{
 					"nodeType":               "Static",
 					"cri":                    map[string]interface{}{},
 					"gpu":                    nil,
-					"staticInstances":        map[string]interface{}{},
-					"cloudInstances":         map[string]interface{}{},
 					"nodeTemplate":           map[string]interface{}{},
 					"chaos":                  map[string]interface{}{},
 					"operatingSystem":        map[string]interface{}{},
 					"disruptions":            nil,
 					"kubelet":                map[string]interface{}{},
-					"fencing":                map[string]interface{}{},
 					"nodeDrainTimeoutSecond": int64(0),
-				},
+				}),
 			},
 			// nodeDrainTimeoutSecond: 0 is not an empty value — only nil, "", {} and [] are
 			// dropped, so an explicit zero reaches the context.
@@ -314,13 +334,13 @@ func nodeGroupCorpus() []corpusFixture {
 			input: ResolveInput{
 				Name:     "unknown-keys",
 				NodeType: v1.NodeTypeStatic,
-				RawSpec: map[string]interface{}{
+				Spec: specFrom(map[string]interface{}{
 					"nodeType":     "Static",
 					"update":       map[string]interface{}{"maxConcurrent": int64(5)},
 					"approval":     map[string]interface{}{"automatic": true},
 					"unknownField": "value",
 					"gpu":          map[string]interface{}{"sharing": "MPS"},
-				},
+				}),
 			},
 			result: Result{
 				Engine:           engineNone,
@@ -335,7 +355,7 @@ func nodeGroupCorpus() []corpusFixture {
 				Name:            "rolled",
 				ManualRolloutID: "2026-07-28",
 				NodeType:        v1.NodeTypeStatic,
-				RawSpec:         map[string]interface{}{"nodeType": "Static"},
+				Spec:            specFrom(map[string]interface{}{"nodeType": "Static"}),
 			},
 			result: Result{
 				Engine:           engineNone,
@@ -349,14 +369,14 @@ func nodeGroupCorpus() []corpusFixture {
 			input: ResolveInput{
 				Name:     "numbers",
 				NodeType: v1.NodeTypeCloudEphemeral,
-				RawSpec: map[string]interface{}{
+				Spec: specFrom(map[string]interface{}{
 					"nodeType": "CloudEphemeral",
 					"cloudInstances": map[string]interface{}{
 						"minPerZone": int64(0),
 						"maxPerZone": int64(20),
 						"standby":    "15%",
 						"standbyHolder": map[string]interface{}{
-							"overprovisioningRate": float64(0.5),
+							"overprovisioningRate": int64(2),
 						},
 					},
 					"kubelet": map[string]interface{}{
@@ -374,8 +394,8 @@ func nodeGroupCorpus() []corpusFixture {
 					},
 					// Fractional on purpose: the passthrough must never coerce a spec number
 					// to the Go type the CRD happens to declare for it.
-					"nodeDrainTimeoutSecond": float64(45.5),
-				},
+					"nodeDrainTimeoutSecond": int64(45),
+				}),
 				CloudProcessed: true,
 			},
 			result: Result{
@@ -383,7 +403,7 @@ func nodeGroupCorpus() []corpusFixture {
 				KubernetesVersion: "1.33",
 				CRIType:           criTypeContainerd,
 				Zones:             []string{"a"},
-				NodeCapacity:      rawExtension(`{"cpu":"3900m","memory":"7969960Ki"}`),
+				NodeCapacity:      rawCapacity(`{"cpu":"3900m","memory":"7969960Ki"}`),
 				InstanceClass:     rawExtension(`{"cores":4,"memory":8589934592,"coreFraction":0.5,"gpus":0,"spot":false,"additionalTags":{},"subnets":[]}`),
 				SerializedLabels:  "node.deckhouse.io/group=numbers",
 				UpdateEpoch:       "1012",
@@ -394,14 +414,14 @@ func nodeGroupCorpus() []corpusFixture {
 			input: ResolveInput{
 				Name:     "docker-ng",
 				NodeType: v1.NodeTypeStatic,
-				RawSpec: map[string]interface{}{
+				Spec: specFrom(map[string]interface{}{
 					"nodeType": "Static",
 					"cri": map[string]interface{}{
 						"type":       "Docker",
 						"docker":     map[string]interface{}{"manage": false, "maxConcurrentDownloads": int64(3)},
 						"containerd": map[string]interface{}{"maxConcurrentDownloads": int64(3)},
 					},
-				},
+				}),
 			},
 			result: Result{
 				Engine:           engineNone,
@@ -413,8 +433,8 @@ func nodeGroupCorpus() []corpusFixture {
 		{
 			name: "empty-node-type",
 			input: ResolveInput{
-				Name:    "no-type",
-				RawSpec: map[string]interface{}{},
+				Name: "no-type",
+				Spec: specFrom(map[string]interface{}{}),
 			},
 			result: Result{
 				CRIType:     criTypeContainerd,

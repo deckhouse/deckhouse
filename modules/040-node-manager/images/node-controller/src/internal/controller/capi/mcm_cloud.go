@@ -38,7 +38,7 @@ import (
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/machineclass"
 )
 
-func (r *MachineDeploymentReconciler) reconcileCloudMCMs(ctx context.Context, ng *deckhousev1.NodeGroup, rawSpec map[string]interface{}) error {
+func (r *MachineDeploymentReconciler) reconcileCloudMCMs(ctx context.Context, ng *deckhousev1.NodeGroup) error {
 	logger := log.FromContext(ctx)
 
 	if ng.Spec.CloudInstances == nil {
@@ -58,8 +58,8 @@ func (r *MachineDeploymentReconciler) reconcileCloudMCMs(ctx context.Context, ng
 	cloudType, _ := cloudProvider["type"].(string)
 	region, _ := cloudProvider["region"].(string)
 
-	ds := &derived_status.Service{Client: r.Client, Reader: r.APIReader}
-	resolved, validationErr, err := ds.ResolveNodeGroup(ctx, ng, rawSpec)
+	ds := &derived_status.Service{Client: r.Client}
+	resolved, validationErr, err := ds.ResolveNodeGroup(ctx, ng)
 	if err != nil {
 		return fmt.Errorf("resolve NodeGroup %s: %w", ng.Name, err)
 	}
@@ -359,6 +359,21 @@ func (r *MachineDeploymentReconciler) readCloudProviderTree(ctx context.Context)
 	return decodeCloudProviderSecret(secret.Data), nil
 }
 
+// readCloudProviderRegistration reads the same Secret as readCloudProviderTree, but typed. The
+// tree stays for the template render context, which needs the provider's own subtree verbatim.
+func (r *MachineDeploymentReconciler) readCloudProviderRegistration(ctx context.Context) (derived_status.CloudProviderRegistration, error) {
+	secret := &corev1.Secret{}
+	if err := r.Client.Get(ctx, types.NamespacedName{
+		Name: cloudProviderSecretName, Namespace: cloudProviderSecretNamespace,
+	}, secret); err != nil {
+		if client.IgnoreNotFound(err) == nil {
+			return derived_status.CloudProviderRegistration{}, nil
+		}
+		return derived_status.CloudProviderRegistration{}, fmt.Errorf("get cloud-provider secret: %w", err)
+	}
+	return derived_status.DecodeRegistration(secret.Data), nil
+}
+
 func decodeCloudProviderSecret(data map[string][]byte) map[string]interface{} {
 	res := make(map[string]interface{}, len(data))
 	for k, v := range data {
@@ -400,7 +415,7 @@ func (r *MachineDeploymentReconciler) readPodSubnet(ctx context.Context) (string
 
 // instanceClassSpot reports the provider spot flag; only aws acts on it.
 func instanceClassSpot(resolved derived_status.ResolvedNodeGroup) bool {
-	instanceClass, _ := resolved.InstanceClass.(map[string]interface{})
+	instanceClass := resolved.InstanceClass
 	spot, _ := instanceClass["spot"].(bool)
 	return spot
 }

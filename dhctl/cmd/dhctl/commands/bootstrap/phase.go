@@ -152,7 +152,10 @@ func DefineBootstrapAbortCommand(cmd *kingpin.CmdClause, opts *options.Options) 
 
 		interactive := input.IsTerminal() && !opts.Global.ShowProgress
 		if interactive {
-			progressCh, finishProgress := phases.InitProgress(ctx, dhlog.FromContext(ctx), "Destroy cluster")
+			progressCh, finishProgress, err := phases.InitProgress(ctx, dhlog.FromContext(ctx), "Destroy cluster")
+			if err != nil {
+				return err
+			}
 			defer finishProgress()
 
 			onUpdateFunc := func(progress phases.Progress) error {

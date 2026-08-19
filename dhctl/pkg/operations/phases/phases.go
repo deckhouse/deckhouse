@@ -149,6 +149,22 @@ const (
 	CommanderDetachDetachPhase OperationPhase = "Detach"
 )
 
+// allPhases lists the phase codes the catalog must carry ON TOP of everything the operation
+// trees declare - the trees are the primary source (titles_test.go projects all six of them,
+// ungated), so only codes no node names belong here:
+//   - CommanderUUIDWasChecked is announced outside the walk, by the destroyer itself
+//     (destroy/deckhouse/destroyer.go), so no tree can declare it;
+//   - ScaleToMultiMaster and ScaleToSingleMaster are converge STATE values persisted in
+//     ConvergeState.Phase, never announced; they keep their catalog entries because Commander
+//     reads the state back and renders it.
+func allPhases() []OperationPhase {
+	return []OperationPhase{
+		CommanderUUIDWasChecked,
+		ScaleToMultiMasterPhase,
+		ScaleToSingleMasterPhase,
+	}
+}
+
 var ErrStopOperationCondition = errors.New("StopOperationCondition")
 
 // bootstrap sub phases

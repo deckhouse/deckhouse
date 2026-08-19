@@ -69,5 +69,5 @@ func TestDecodeCloudProviderSecret(t *testing.T) {
 func TestReconcileCloudMCMs_NoCloudInstances(t *testing.T) {
 	r := &MachineDeploymentReconciler{}
 	ng := &deckhousev1.NodeGroup{}
-	assert.NoError(t, r.reconcileCloudMCMs(context.Background(), ng, nil))
+	assert.NoError(t, r.reconcileCloudMCMs(context.Background(), ng))
 }

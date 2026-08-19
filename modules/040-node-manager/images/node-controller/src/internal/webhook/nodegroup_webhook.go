@@ -40,6 +40,7 @@ import (
 	"net/http"
 	"reflect"
 	"regexp"
+	"sort"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -55,6 +56,7 @@ import (
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/clusterprefix"
+	nodecommon "github.com/deckhouse/node-controller/internal/common"
 )
 
 var webhookLog = logf.Log.WithName("nodegroup-webhook")
@@ -137,6 +139,15 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 		}
 	}
 
+	validationMessage, err := w.validateInstanceClassKind(ctx, ng, oldNG)
+	if err != nil {
+		webhookLog.Error(err, "failed to validate InstanceClass kind")
+		return admission.Errored(http.StatusInternalServerError, err)
+	}
+	if validationMessage != "" {
+		return admission.Denied(validationMessage)
+	}
+
 	if ng.Spec.Kubelet != nil && ng.Spec.Kubelet.MaxPods != nil {
 		maxPods := *ng.Spec.Kubelet.MaxPods
 		prefix := clusterConfig.PodSubnetNodeCIDRPrefix
@@ -174,6 +185,10 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 
 	if ng.Spec.CRI != nil && ng.Spec.CRI.Type == v1.CRITypeDocker {
 		return admission.Denied("it is forbidden to set cri type to Docker")
+	}
+
+	if nodecommon.IsCSEEdition() && ng.Spec.CRI != nil && ng.Spec.CRI.Type == v1.CRITypeContainerd {
+		return admission.Denied("CRI Containerd (containerd v1) is not supported in the CSE edition, use ContainerdV2")
 	}
 
 	if ng.Spec.CRI != nil {
@@ -319,7 +334,7 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 
 	if req.Operation == "UPDATE" {
 		if ng.Spec.Kubelet != nil && ng.Spec.Kubelet.MemorySwap != nil {
-			if ng.Spec.Kubelet.MemorySwap.Behavior == "LimitedSwap" {
+			if ng.Spec.Kubelet.MemorySwap.SwapBehavior == "LimitedSwap" {
 				unsupportedNodes, err := w.getNodesWithoutContainerdV2Support(ctx, ng.Name)
 				if err != nil {
 					webhookLog.Error(err, "failed to get nodes without cgroup v2 support")
@@ -438,7 +453,11 @@ func getCRIType(ng *v1.NodeGroup, defaultCRI string) string {
 	if defaultCRI != "" {
 		return defaultCRI
 	}
-	return "Containerd"
+	// CSE builds with no containerd v1 package, so its implicit default cannot be v1.
+	if nodecommon.IsCSEEdition() {
+		return string(v1.CRITypeContainerdV2)
+	}
+	return string(v1.CRITypeContainerd)
 }
 
 // ClusterConfig holds relevant fields from d8-cluster-configuration Secret
@@ -657,4 +676,54 @@ func (w *NodeGroupValidator) getNodesWithoutContainerdV2Support(ctx context.Cont
 		names = append(names, node.Name)
 	}
 	return names, nil
+}
+
+func (w *NodeGroupValidator) validateInstanceClassKind(
+	ctx context.Context,
+	ng, oldNG *v1.NodeGroup,
+) (string, error) {
+	if ng.Spec.CloudInstances == nil {
+		return "", nil
+	}
+
+	kind := ng.Spec.CloudInstances.ClassReference.Kind
+
+	if oldNG != nil &&
+		oldNG.Spec.CloudInstances != nil &&
+		oldNG.Spec.CloudInstances.ClassReference.Kind == kind {
+		return "", nil
+	}
+
+	gvks, err := nodecommon.RegisteredInstanceClassGVKs(ctx, w.Client)
+	if err != nil {
+		return "", fmt.Errorf("get registered InstanceClass kinds: %w", err)
+	}
+
+	supportedSet := make(map[string]struct{}, len(gvks))
+	for _, gvk := range gvks {
+		supportedSet[gvk.Kind] = struct{}{}
+	}
+
+	if _, ok := supportedSet[kind]; ok {
+		return "", nil
+	}
+
+	supportedKinds := make([]string, 0, len(supportedSet))
+	for supportedKind := range supportedSet {
+		supportedKinds = append(supportedKinds, supportedKind)
+	}
+	sort.Strings(supportedKinds)
+
+	if len(supportedKinds) == 0 {
+		return fmt.Sprintf(
+			"spec.cloudInstances.classReference.kind %q is not supported: no InstanceClass kinds are registered in the cluster",
+			kind,
+		), nil
+	}
+
+	return fmt.Sprintf(
+		"spec.cloudInstances.classReference.kind %q is not supported; registered kinds: %s",
+		kind,
+		strings.Join(supportedKinds, ", "),
+	), nil
 }

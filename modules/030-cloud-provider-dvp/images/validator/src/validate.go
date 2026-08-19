@@ -21,6 +21,7 @@ import (
 	cpvalprotocol "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/protocol"
 	dhctlproto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 	dvpmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/meta"
+	dvpvalidation "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation"
 	dvppreflight "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation/preflight"
 )
 
@@ -29,15 +30,12 @@ func validate(_ context.Context, input dhctlproto.ValidateInput) error {
 		return nil
 	}
 
-	stateBuilder := cpvalprotocol.NewStateBuilder(
-		cpvalprotocol.StateBuilderConfig{
-			ModuleName:        dvpmeta.ModuleName,
-			NamespaceName:     dvpmeta.Namespace,
-			InstanceClassKind: dvpmeta.InstanceClassKind,
-		},
-	)
+	stateBuilderFactory := dvpvalidation.NewProtocolStateBuilderFactory(cpvalprotocol.StateBuilderConfig{
+		ModuleName:    dvpmeta.ModuleName,
+		NamespaceName: dvpmeta.Namespace,
+	})
 
-	state, err := stateBuilder.Build(input)
+	state, err := stateBuilderFactory.CreateBuilder().Build(input)
 	if err != nil {
 		return fmt.Errorf("internal error: build validation state: %w", err)
 	}

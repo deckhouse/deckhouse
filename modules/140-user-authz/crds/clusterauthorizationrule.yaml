@@ -123,6 +123,7 @@ spec:
                         x-doc-examples: ['Group']
                       name:
                         type: string
+                        minLength: 1
                         description: 'Resource name.'
                         x-doc-examples: ['some-group-name']
                       namespace:
@@ -370,6 +371,7 @@ spec:
                         x-doc-examples: ['Group']
                       name:
                         type: string
+                        minLength: 1
                         description: 'Resource name.'
                         x-doc-examples: ['some-group-name']
                       namespace:

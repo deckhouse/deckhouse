@@ -36,6 +36,7 @@ spec:
   group: deckhouse.io
   names:
     kind: TestCrd
+    listKind: TestCrdList
     plural: testcrds
     singular: testcrd
   preserveUnknownFields: false
@@ -51,10 +52,8 @@ spec:
               a:
                 description: a
                 type: string
-                x-description: a
               b:
                 type: string
-                x-doc-default: b
             type: object
         required:
         - spec
@@ -131,6 +130,7 @@ spec:
   group: deckhouse.io
   names:
     kind: TestCrd
+    listKind: TestCrdList
     plural: testcrds
     singular: testcrd
   preserveUnknownFields: false
@@ -146,10 +146,8 @@ spec:
               a:
                 description: a
                 type: string
-                x-description: a
               b:
                 type: string
-                x-doc-default: b
             type: object
         required:
         - spec

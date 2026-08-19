@@ -18,25 +18,39 @@ import (
 	"fmt"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
+	cpvalapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/api"
+)
+
+// Validation violation codes for InstanceClass validation.
+const (
+	CodeMasterEtcdDiskRequired        = "master_etcd_disk_required"
+	CodeEtcdDiskForbiddenForNonMaster = "etcd_disk_forbidden_for_non_master"
+	CodeInstanceClassInUse            = "instance_class_in_use"
+	CodeInstanceClassHasConsumers     = "instance_class_has_consumers"
 )
 
 // ValidateInstanceClassesEtcdDisk checks spec.etcdDisk for all InstanceClasses:
 // master-attached classes must define etcdDisk; etcdDisk is forbidden on non-master attachments.
-func ValidateInstanceClassesEtcdDisk(state *State) Result {
+func ValidateInstanceClassesEtcdDisk[
+	IC cpapi.InstanceClassObject,
+	S cpapi.ModuleSettingsObject,
+	PCC cpapi.ProviderClusterConfigObject,
+](state *cpvalapi.State[IC, S, PCC]) cpvalapi.Result {
 	if state == nil {
-		return ResultForNilState()
+		return cpvalapi.ResultForNilState()
 	}
 
-	result := Result{}
-	consumers := collectNodeGroupConsumersByInstanceClass(state.InstanceClassKind, state.NodeGroups)
+	result := cpvalapi.Result{}
+	consumers := state.ListInstanceClassConsumers()
 
 	for _, class := range state.InstanceClasses {
-		if class.Kind != "" && class.Kind != state.InstanceClassKind {
+		if cpvalapi.IsResourceAbsent(class) {
 			continue
 		}
 
-		path := getNamedResourcePath(state.InstanceClassKind, class.Name)
-		nodeGroups := consumers[class.Name]
+		kind := class.GroupVersionKind().Kind
+		path := getNamedResourcePath(kind, class.GetName())
+		nodeGroups := consumers[class.GetName()]
 
 		hasMaster := false
 		hasNonMaster := false
@@ -49,20 +63,20 @@ func ValidateInstanceClassesEtcdDisk(state *State) Result {
 			hasNonMaster = true
 		}
 
-		if hasMaster && class.Spec.EtcdDisk == nil {
+		if hasMaster && class.GetEtcdDisk() == nil {
 			result.AddError(
-				path+".spec.etcdDisk",
-				"master_etcd_disk_required",
+				fmt.Sprintf("%s.spec.etcdDisk", path),
+				CodeMasterEtcdDiskRequired,
 				nil,
-				fmt.Sprintf("%s for NodeGroup master must define spec.etcdDisk", state.InstanceClassKind),
+				fmt.Sprintf("%s for NodeGroup master must define spec.etcdDisk", kind),
 			)
 		}
 
-		if hasNonMaster && class.Spec.EtcdDisk != nil {
+		if hasNonMaster && class.GetEtcdDisk() != nil {
 			result.AddError(
-				path+".spec.etcdDisk",
-				"etcd_disk_forbidden_for_non_master",
-				class.Spec.EtcdDisk,
+				fmt.Sprintf("%s.spec.etcdDisk", path),
+				CodeEtcdDiskForbiddenForNonMaster,
+				class.GetEtcdDisk(),
 				"InstanceClass.spec.etcdDisk can be used only when class is attached to NodeGroup master",
 			)
 		}
@@ -73,16 +87,22 @@ func ValidateInstanceClassesEtcdDisk(state *State) Result {
 
 // ValidateInstanceClassDeletion checks whether an InstanceClass can be safely deleted
 // (whether an InstanceClass has NodeGroup consumers).
-func ValidateInstanceClassDeletion(state *State, deletedClass *cpapi.InstanceClass) Result {
+func ValidateInstanceClassDeletion[
+	IC cpapi.InstanceClassObject,
+	S cpapi.ModuleSettingsObject,
+	PCC cpapi.ProviderClusterConfigObject,
+](state *cpvalapi.State[IC, S, PCC], deletedClass IC) cpvalapi.Result {
 	if state == nil {
-		return ResultForNilState()
+		return cpvalapi.ResultForNilState()
 	}
 
-	result := Result{}
+	result := cpvalapi.Result{}
 
-	if deletedClass == nil {
+	if cpvalapi.IsResourceAbsent(deletedClass) {
 		return result
 	}
+
+	deletedKind := deletedClass.GroupVersionKind().Kind
 
 	for _, nodeGroup := range state.NodeGroups {
 		if nodeGroup.Spec.CloudInstances == nil || nodeGroup.Spec.CloudInstances.ClassReference == nil {
@@ -90,41 +110,24 @@ func ValidateInstanceClassDeletion(state *State, deletedClass *cpapi.InstanceCla
 		}
 
 		ref := nodeGroup.Spec.CloudInstances.ClassReference
-		if ref.Kind == state.InstanceClassKind && ref.Name == deletedClass.Name {
+		if ref.Kind == deletedKind && ref.Name == deletedClass.GetName() {
 			result.AddError(
-				state.InstanceClassKind+"/"+deletedClass.Name,
-				"instance_class_in_use",
+				fmt.Sprintf("%s/%s", deletedKind, deletedClass.GetName()),
+				CodeInstanceClassInUse,
 				nodeGroup.Name,
 				fmt.Sprintf("InstanceClass is used by NodeGroup %q", nodeGroup.Name),
 			)
 		}
 	}
 
-	if len(deletedClass.Status.NodeGroupConsumers) > 0 {
+	consumers := deletedClass.GetNodeGroupConsumers()
+	if len(consumers) > 0 {
 		result.AddError(
-			state.InstanceClassKind+"/"+deletedClass.Name+".status.nodeGroupConsumers",
-			"instance_class_has_consumers",
-			len(deletedClass.Status.NodeGroupConsumers),
-			fmt.Sprintf("%s is used by %d NodeGroup consumers", state.InstanceClassKind, len(deletedClass.Status.NodeGroupConsumers)),
+			fmt.Sprintf("%s/%s.status.nodeGroupConsumers", deletedKind, deletedClass.GetName()),
+			CodeInstanceClassHasConsumers,
+			len(consumers),
+			fmt.Sprintf("%s is used by %d NodeGroup consumers", deletedKind, len(consumers)),
 		)
-	}
-
-	return result
-}
-
-func collectNodeGroupConsumersByInstanceClass(instanceClassKind string, nodeGroups []cpapi.NodeGroup) map[string][]string {
-	result := make(map[string][]string, len(nodeGroups))
-	for _, nodeGroup := range nodeGroups {
-		if nodeGroup.Spec.CloudInstances == nil || nodeGroup.Spec.CloudInstances.ClassReference == nil {
-			continue
-		}
-
-		classRef := nodeGroup.Spec.CloudInstances.ClassReference
-		if classRef.Kind != instanceClassKind || classRef.Name == "" {
-			continue
-		}
-
-		result[classRef.Name] = append(result[classRef.Name], nodeGroup.Name)
 	}
 
 	return result

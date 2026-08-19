@@ -116,4 +116,61 @@ admissionPolicyEngine:
 			Expect(rendered).To(ContainSubstring("key: node-role.kubernetes.io/control-plane"))
 		})
 	})
+	Context("In an HA cluster", func() {
+		BeforeEach(func() {
+			f.ValuesSet(
+				"global.discovery.clusterControlPlaneIsHighlyAvailable",
+				true,
+			)
+			f.HelmRender()
+		})
+
+		It("must scope required pod anti-affinity to the Deployment revision", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			dp := f.KubernetesResource(
+				"Deployment",
+				nsName,
+				"gatekeeper-controller-manager",
+			)
+			Expect(dp.Exists()).To(BeTrue())
+
+			antiAffinityPath := "spec.template.spec.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution"
+
+			Expect(dp.Field(antiAffinityPath).Exists()).To(BeTrue())
+			Expect(dp.Field(antiAffinityPath + ".0.labelSelector.matchLabels.app").String()).
+				To(Equal("gatekeeper"))
+			Expect(dp.Field(antiAffinityPath + ".0.labelSelector.matchLabels.control-plane").String()).
+				To(Equal("controller-manager"))
+			Expect(dp.Field(antiAffinityPath + ".0.matchLabelKeys.0").String()).
+				To(Equal("pod-template-hash"))
+			Expect(dp.Field(antiAffinityPath + ".0.topologyKey").String()).
+				To(Equal("kubernetes.io/hostname"))
+		})
+	})
+
+	Context("In a non-HA cluster", func() {
+		BeforeEach(func() {
+			f.ValuesSet(
+				"global.discovery.clusterControlPlaneIsHighlyAvailable",
+				false,
+			)
+			f.HelmRender()
+		})
+
+		It("must not render pod anti-affinity", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			dp := f.KubernetesResource(
+				"Deployment",
+				nsName,
+				"gatekeeper-controller-manager",
+			)
+			Expect(dp.Exists()).To(BeTrue())
+
+			Expect(dp.Field(
+				"spec.template.spec.affinity.podAntiAffinity",
+			).Exists()).To(BeFalse())
+		})
+	})
 })

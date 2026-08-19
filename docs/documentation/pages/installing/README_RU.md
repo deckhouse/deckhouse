@@ -22,7 +22,7 @@ relatedLinks:
 {% alert %}
 В разделе {% if site.mode == 'module' %}[«Быстрый старт»]({{ site.urls[page.lang] }}/products/kubernetes-platform/gs/){% else %}[Быстрый старт](/products/kubernetes-platform/gs/){% endif %} доступны пошаговые инструкции по установке Deckhouse Kubernetes Platform.
 
-Попробуйте также [графический установщик Deckhouse Kubernetes Platform]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/#gui-install).
+Попробуйте также [графический установщик Deckhouse Kubernetes Platform]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/installer/).
 {% endalert %}
 
 На этой странице представлена обзорная информация по установке Deckhouse Kubernetes Platform (DKP).
@@ -36,7 +36,7 @@ relatedLinks:
 Установить DKP можно следующими способами:
 
 - с помощью CLI-установщика (доступен в виде образа контейнера и основан на утилите [dhctl](<https://github.com{{ site.github_repo_path }}/tree/main/dhctl/>));
-- с помощью [графического установщика]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/#gui-install).
+- с помощью [графического установщика]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/installer/).
 
 Далее рассмотрен процесс установки с помощью **CLI-установщика**.
 
@@ -571,7 +571,7 @@ dhctl bootstrap \
 ### Проверки перед началом установки
 
 {% alert level="info" %}
-Начиная с версии 1.74, в DKP встроен механизм контроля целостности модулей, который защищает их от подмены и изменения. Этот механизм включается автоматически при поддержке модуля ядра `erofs` операционной системой на узлах кластера. При отсутствии этой поддержки механизм контроля целостности модулей будет отключен, и в системе мониторинга появится соответствующий алерт.
+Начиная с версии 1.74, модули DKP устанавливаются в виде образов в формате EROFS, подключаемых только для чтения, что защищает их от изменения после установки. Этот механизм включается автоматически, если на узле, где работает контроллер DKP (по умолчанию — master-узел), в ядре зарегистрирована файловая система `erofs`. DKP загружает этот модуль ядра только на узлах с containerd v2, поэтому при использовании containerd v1 на master-узлах загрузку `erofs` нужно обеспечить средствами операционной системы. Иначе DKP будет устанавливать модули обычным способом, без защиты их целостности и без отдельного алерта. Подробнее — в разделе [«Защита целостности модулей DKP»](../architecture/security/integrity-control.html#защита-целостности-модулей-dkp).
 {% endalert %}
 
 {% offtopic title="Схема выполнения проверок, выполняемых установщиком перед началом установки..." %}
@@ -695,7 +695,9 @@ dhctl bootstrap-phase abort
 DKP можно установить из стороннего хранилища образов или через проксирующий сервер внутри закрытого контура.
 
 {% alert level="warning" %}
-DKP поддерживает аутентификацию в хранилище образов только по схеме Bearer token.
+DKP поддерживает аутентификацию в хранилище образов по схемам Basic и Bearer token (сначала проверяется Basic, при неуспехе — Bearer).
+
+Если перед хранилищем стоит прокси-сервер, он должен корректно проксировать заголовок Registry API v2 `Docker-Distribution-API-Version: registry/2.0`, иначе проверка Basic может завершиться ошибкой, а последующая попытка Bearer сообщением с ошибкой `couldn't find bearer realm parameter`.
 
 Протестирована и гарантируется работа со следующими хранилищами образов:
 {%- for registry in site.data.supported_versions.registries %}

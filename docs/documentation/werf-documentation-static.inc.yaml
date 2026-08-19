@@ -41,7 +41,7 @@ shell:
 
         # "Converting public documentation links to internal relative..."
         grep -rl '](https://deckhouse.io' /srv/jekyll-data/documentation/_data/schemas/ | \
-          xargs sed -Ei 's$\]\(https://deckhouse.io/(ru|en)/documentation/v[0-9]+/(modules/|#)$](/\1/\2$'
+          xargs -r sed -Ei 's$\]\(https://deckhouse.io/(ru|en)/documentation/v[0-9]+/(modules/|#)$](/\1/\2$'
 
         cat <<'EOD' > /tmp/_config_additional.yml
         {{- .Files.Get (printf "%smodules/810-documentation/images/web/_config.yml" .ModulePath) | nindent 8 }}

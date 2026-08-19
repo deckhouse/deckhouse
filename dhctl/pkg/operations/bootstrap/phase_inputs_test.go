@@ -116,6 +116,7 @@ func TestPhaseInputs_MissingInputNamesItsProducer(t *testing.T) {
 			remove: func(_ *ClusterBootstrapper, bctx *bootstrapContext) {
 				bctx.resourcesToCreateBefore = nil
 				bctx.resourcesToCreateAfter = nil
+				bctx.resourcesToCreateProvider = nil
 			},
 			producer: `"ParseResources"`,
 		},
@@ -236,6 +237,7 @@ func TestPhaseInputs_EmptyResourceDocumentIsNotAMissingProducer(t *testing.T) {
 	b, bctx := satisfiedInputs()
 	bctx.resourcesToCreateBefore = nil
 	bctx.resourcesToCreateAfter = nil
+	bctx.resourcesToCreateProvider = nil
 
 	bctx.metaConfig.ResourcesYAML = ""
 	require.NoError(t, b.validateDeckhouseInputs(context.Background(), bctx))

@@ -26,14 +26,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
-	cpval "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation"
+	cpvalapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/api"
+	dvpval "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation"
 )
 
-func shouldSkipState(state *cpval.State) bool {
+func shouldSkipState(state *dvpval.State) bool {
 	return state != nil && cpapi.ShouldSkipNewModelValidation(state.MigrationStatus)
 }
 
-func resultToAdmission(result cpval.Result) (admission.Warnings, error) {
+func resultToAdmission(result cpvalapi.Result) (admission.Warnings, error) {
 	warnings := violationsToAdmissionWarnings(result.Warnings())
 
 	if !result.HasErrors() {
@@ -52,7 +53,7 @@ func resultToAdmission(result cpval.Result) (admission.Warnings, error) {
 	return warnings, apierrors.NewInvalid(schema.GroupKind{}, "", fieldErrors)
 }
 
-func violationsToAdmissionWarnings(violations []cpval.Violation) admission.Warnings {
+func violationsToAdmissionWarnings(violations []cpvalapi.Violation) admission.Warnings {
 	if len(violations) == 0 {
 		return nil
 	}
@@ -65,7 +66,7 @@ func violationsToAdmissionWarnings(violations []cpval.Violation) admission.Warni
 	return warningStrs
 }
 
-func violationMessage(violation cpval.Violation) string {
+func violationMessage(violation cpvalapi.Violation) string {
 	if violation.Path == "" {
 		return violation.Message
 	}
@@ -73,7 +74,7 @@ func violationMessage(violation cpval.Violation) string {
 	return violation.Path + ": " + violation.Message
 }
 
-func violationMessages(violations []cpval.Violation) []string {
+func violationMessages(violations []cpvalapi.Violation) []string {
 	if len(violations) == 0 {
 		return nil
 	}

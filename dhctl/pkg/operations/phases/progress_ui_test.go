@@ -25,8 +25,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func testTitles(t *testing.T) *Titles {
+	t.Helper()
+
+	titles, err := LoadTitles()
+	require.NoError(t, err)
+
+	return titles
+}
+
 func TestPhaseToString_DeclaredPhasesHaveTitles(t *testing.T) {
 	t.Parallel()
+
+	titles := testTitles(t)
 
 	for operation, list := range map[Operation][]PhaseWithSubPhases{
 		OperationBootstrap: BootstrapPhases(),
@@ -34,26 +45,22 @@ func TestPhaseToString_DeclaredPhasesHaveTitles(t *testing.T) {
 		OperationDestroy:   DestroyPhases(),
 	} {
 		for _, phase := range list {
-			phaseTitle := strings.TrimSpace(phaseToString(Progress{CurrentPhase: phase.Phase}, false))
-			require.NotEmptyf(t, phaseTitle, "%s: phase %q has no title", operation, phase.Phase)
+			// Compare against the catalog itself rather than against the raw code: a missing
+			// entry makes phaseToString fall back to the code, but an entry legitimately equal
+			// to it exists too (Preparation: "Preparation"), so "rendered != code" proves nothing.
+			require.NotEmptyf(t, titles.Phase(phase.Phase), "%s: phase %q has no catalog entry", operation, phase.Phase)
 
-			if phase.Phase == FinalizationPhase {
-				// The only phase whose title is literally its value; renaming it is out of scope.
-				assert.Equal(t, string(FinalizationPhase), phaseTitle)
-			} else {
-				assert.NotEqualf(t, string(phase.Phase), phaseTitle,
-					"%s: phase %q has no title and falls back to its raw name", operation, phase.Phase,
-				)
-			}
+			rendered := strings.TrimSpace(phaseToString(titles, Progress{CurrentPhase: phase.Phase}, false))
+			assert.Equalf(t, titles.Phase(phase.Phase), rendered, "%s: phase %q", operation, phase.Phase)
 
 			for _, subPhase := range phase.SubPhases {
-				line := strings.TrimSpace(phaseToString(Progress{CurrentPhase: phase.Phase, CurrentSubPhase: subPhase}, false))
+				require.NotEmptyf(t, titles.SubPhase(subPhase), "%s: sub-phase %q has no catalog entry", operation, subPhase)
 
-				_, subPhaseTitle, ok := strings.Cut(line, ": ")
+				line := strings.TrimSpace(phaseToString(titles, Progress{CurrentPhase: phase.Phase, CurrentSubPhase: subPhase}, false))
+
+				_, renderedSub, ok := strings.Cut(line, ": ")
 				require.Truef(t, ok, "%s: sub-phase %q renders as %q", operation, subPhase, line)
-				assert.NotEqualf(t, string(subPhase), subPhaseTitle,
-					"%s: sub-phase %q has no title and falls back to its raw name", operation, subPhase,
-				)
+				assert.Equalf(t, titles.SubPhase(subPhase), renderedSub, "%s: sub-phase %q", operation, subPhase)
 			}
 		}
 	}
@@ -83,7 +90,7 @@ func TestConsumeProgress_BarIsFullWhenTheDeclaredTailDidNotRun(t *testing.T) {
 	assert.Equal(t, 1.0, recorder.bar())
 	// The last phase that ran is named twice, by its own transition and by Complete. Only the
 	// first of those is a phase transition; the second exists to carry the bar to the end.
-	assert.Equal(t, []string{"Check converge", "Install Deckhouse", "Process all nodes"}, recorder.titles)
+	assert.Equal(t, []string{"Check cluster configuration", "Install Deckhouse", "Process all nodes"}, recorder.titles)
 }
 
 // replay drives consumeProgress with the recorded events and returns what it logged.
@@ -91,6 +98,7 @@ func replay(t *testing.T, events []Progress) *progressRecorder {
 	t.Helper()
 
 	recorder := &progressRecorder{}
+	titles := testTitles(t)
 	progressCh := make(chan Progress)
 	stop := make(chan struct{})
 	done := make(chan struct{})
@@ -98,7 +106,7 @@ func replay(t *testing.T, events []Progress) *progressRecorder {
 	go func() {
 		defer close(done)
 
-		consumeProgress(t.Context(), slog.New(recorder), progressCh, stop)
+		consumeProgress(t.Context(), slog.New(recorder), titles, progressCh, stop)
 	}()
 
 	for _, event := range events {
@@ -152,7 +160,7 @@ func TestPhaseToString_UnknownNameFallsBackToRawName(t *testing.T) {
 
 	const unknown OperationPhase = "PhaseAddedLater"
 
-	assert.Equal(t, string(unknown), strings.TrimSpace(phaseToString(Progress{CurrentPhase: unknown}, false)))
+	assert.Equal(t, string(unknown), strings.TrimSpace(phaseToString(testTitles(t), Progress{CurrentPhase: unknown}, false)))
 }
 
 func TestPhaseLists_MatchWhatIsAnnounced(t *testing.T) {

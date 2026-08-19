@@ -40,6 +40,7 @@ const (
 	DHCTL_Converge_FullMethodName        = "/dhctl.DHCTL/Converge"
 	DHCTL_CommanderAttach_FullMethodName = "/dhctl.DHCTL/CommanderAttach"
 	DHCTL_CommanderDetach_FullMethodName = "/dhctl.DHCTL/CommanderDetach"
+	DHCTL_GetPhaseCatalog_FullMethodName = "/dhctl.DHCTL/GetPhaseCatalog"
 )
 
 // DHCTLClient is the client API for DHCTL service.
@@ -53,6 +54,7 @@ type DHCTLClient interface {
 	Converge(ctx context.Context, opts ...grpc.CallOption) (DHCTL_ConvergeClient, error)
 	CommanderAttach(ctx context.Context, opts ...grpc.CallOption) (DHCTL_CommanderAttachClient, error)
 	CommanderDetach(ctx context.Context, opts ...grpc.CallOption) (DHCTL_CommanderDetachClient, error)
+	GetPhaseCatalog(ctx context.Context, in *PhaseCatalogRequest, opts ...grpc.CallOption) (*PhaseCatalog, error)
 }
 
 type dHCTLClient struct {
@@ -280,6 +282,15 @@ func (x *dHCTLCommanderDetachClient) Recv() (*CommanderDetachResponse, error) {
 	return m, nil
 }
 
+func (c *dHCTLClient) GetPhaseCatalog(ctx context.Context, in *PhaseCatalogRequest, opts ...grpc.CallOption) (*PhaseCatalog, error) {
+	out := new(PhaseCatalog)
+	err := c.cc.Invoke(ctx, DHCTL_GetPhaseCatalog_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // DHCTLServer is the server API for DHCTL service.
 // All implementations must embed UnimplementedDHCTLServer
 // for forward compatibility
@@ -291,6 +302,7 @@ type DHCTLServer interface {
 	Converge(DHCTL_ConvergeServer) error
 	CommanderAttach(DHCTL_CommanderAttachServer) error
 	CommanderDetach(DHCTL_CommanderDetachServer) error
+	GetPhaseCatalog(context.Context, *PhaseCatalogRequest) (*PhaseCatalog, error)
 	mustEmbedUnimplementedDHCTLServer()
 }
 
@@ -318,6 +330,9 @@ func (UnimplementedDHCTLServer) CommanderAttach(DHCTL_CommanderAttachServer) err
 }
 func (UnimplementedDHCTLServer) CommanderDetach(DHCTL_CommanderDetachServer) error {
 	return status.Errorf(codes.Unimplemented, "method CommanderDetach not implemented")
+}
+func (UnimplementedDHCTLServer) GetPhaseCatalog(context.Context, *PhaseCatalogRequest) (*PhaseCatalog, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPhaseCatalog not implemented")
 }
 func (UnimplementedDHCTLServer) mustEmbedUnimplementedDHCTLServer() {}
 
@@ -514,13 +529,36 @@ func (x *dHCTLCommanderDetachServer) Recv() (*CommanderDetachRequest, error) {
 	return m, nil
 }
 
+func _DHCTL_GetPhaseCatalog_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PhaseCatalogRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DHCTLServer).GetPhaseCatalog(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DHCTL_GetPhaseCatalog_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DHCTLServer).GetPhaseCatalog(ctx, req.(*PhaseCatalogRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // DHCTL_ServiceDesc is the grpc.ServiceDesc for DHCTL service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var DHCTL_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "dhctl.DHCTL",
 	HandlerType: (*DHCTLServer)(nil),
-	Methods:     []grpc.MethodDesc{},
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetPhaseCatalog",
+			Handler:    _DHCTL_GetPhaseCatalog_Handler,
+		},
+	},
 	Streams: []grpc.StreamDesc{
 		{
 			StreamName:    "Check",

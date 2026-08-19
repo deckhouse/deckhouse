@@ -18,11 +18,15 @@ package version
 
 import (
 	"fmt"
+	"strings"
 
 	semver "github.com/Masterminds/semver/v3"
 )
 
 func Normalize(version string) (string, error) {
+	// Trimmed because these values arrive from a hand-editable ConfigMap, and the hooks trim the same
+	// ones on their side.
+	version = strings.TrimSpace(version)
 	if version == "" {
 		return "", nil
 	}

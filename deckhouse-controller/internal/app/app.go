@@ -51,3 +51,26 @@ func SetKubeClientFieldManager(name string) {
 func SetDebugUnixSocket(path string) {
 	adapp.DebugUnixSocket = path
 }
+
+// Admission carries the settings the validating webhook server starts with.
+type Admission struct {
+	ListenPort string
+	CertsDir   string
+}
+
+// TakeOverAdmissionServer hands the admission settings to the caller and keeps
+// addon-operator's own admission server down, since both would bind the same
+// port. Reports false when there is nothing to serve: the dhctl bootstrap
+// incarnation mounts no certificates.
+func TakeOverAdmissionServer() (Admission, bool) {
+	if !adapp.AdmissionServerEnabled {
+		return Admission{}, false
+	}
+
+	adapp.AdmissionServerEnabled = false
+
+	return Admission{
+		ListenPort: adapp.AdmissionServerListenPort,
+		CertsDir:   adapp.AdmissionServerCertsDir,
+	}, true
+}

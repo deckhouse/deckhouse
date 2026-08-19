@@ -24,6 +24,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -37,6 +38,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/retry"
@@ -47,6 +49,7 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
@@ -186,6 +189,11 @@ func NewDeckhouseController(
 						app.NamespaceDeckhouse: {
 							LabelSelector: labels.SelectorFromSet(map[string]string{"heritage": "deckhouse"}),
 						},
+						// d8-cluster-kubernetes carries status.availableVersions for the
+						// ModuleConfig admission webhook (and updateMode for DeckhouseRelease).
+						app.NamespaceKubeSystem: {
+							FieldSelector: fields.SelectorFromSet(fields.Set{"metadata.name": "d8-cluster-kubernetes"}),
+						},
 					},
 				},
 				// for deckhouse.io apis
@@ -215,6 +223,19 @@ func NewDeckhouseController(
 		opts.Cache.ByObject[&v1alpha1.ModulePackage{}] = cache.ByObject{}
 		opts.Cache.ByObject[&v1alpha1.ModulePackageVersion{}] = cache.ByObject{}
 		opts.Cache.ByObject[&v1alpha2.Module{}] = cache.ByObject{}
+	}
+
+	admission, serveWebhooks := app.TakeOverAdmissionServer()
+	if serveWebhooks {
+		listenPort, err := strconv.Atoi(admission.ListenPort)
+		if err != nil {
+			return nil, fmt.Errorf("parse admission server listen port: %w", err)
+		}
+
+		opts.WebhookServer = webhook.NewServer(webhook.Options{
+			Port:    listenPort,
+			CertDir: admission.CertsDir,
+		})
 	}
 
 	runtimeManager, err := controllerruntime.NewManager(operator.KubeClient().RestConfig(), opts)
@@ -304,7 +325,7 @@ func NewDeckhouseController(
 	dc := dependency.NewDependencyContainer()
 	settingsContainer := helpers.NewDeckhouseSettingsContainer(nil, operator.MetricStorage)
 
-	pkgRuntime, err := packageruntime.Build(runtimeManager.GetClient(), edition, operator.ModuleManager, dc, operator.MetricStorage, logger)
+	pkgRuntime, err := packageruntime.Build(runtimeManager.GetClient(), operator.ModuleManager, dc, operator.MetricStorage, logger)
 	if err != nil {
 		return nil, fmt.Errorf("create package operator: %w", err)
 	}
@@ -403,19 +424,22 @@ func NewDeckhouseController(
 		}
 	}
 
-	validation.RegisterAdmissionHandlers(
-		operator.AdmissionServer,
-		runtimeManager.GetClient(),
-		operator.ModuleManager,
-		pkgRuntime,
-		configtools.NewValidator(operator.ModuleManager, conversionsStore),
-		loader,
-		operator.MetricStorage,
-		config.NewSchemaStore(nil),
-		settingsContainer,
-		exts,
-		edition,
-	)
+	if serveWebhooks {
+		// GetWebhookServer, not the server above: this call adds it to the runnables.
+		validation.RegisterAdmissionHandlers(
+			runtimeManager.GetWebhookServer(),
+			runtimeManager.GetClient(),
+			operator.ModuleManager,
+			pkgRuntime,
+			configtools.NewValidator(operator.ModuleManager, conversionsStore),
+			loader,
+			operator.MetricStorage,
+			config.NewSchemaStore(nil),
+			settingsContainer,
+			exts,
+			edition,
+		)
+	}
 
 	return &DeckhouseController{
 		runtimeManager:     runtimeManager,

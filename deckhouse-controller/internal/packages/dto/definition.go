@@ -63,8 +63,9 @@ type ModuleDefinition struct {
 	TypeMeta   `yaml:",inline"`
 	Definition `yaml:",inline"`
 
-	Weight   int  `yaml:"weight" json:"weight"`
-	Critical bool `yaml:"critical,omitempty" json:"critical,omitempty"`
+	Weight         int    `yaml:"weight,omitempty" json:"weight,omitempty"`
+	Critical       bool   `yaml:"critical,omitempty" json:"critical,omitempty"`
+	ExclusiveGroup string `yaml:"exclusiveGroup,omitempty" json:"exclusiveGroup,omitempty"`
 }
 
 // Licensing describes package availability and default bundle enablement by edition.
@@ -256,11 +257,12 @@ func (d *ModuleDefinition) Convert() (modules.Definition, error) {
 	}
 
 	return modules.Definition{
-		Name:     d.Name,
-		Version:  d.Version,
-		Critical: d.Critical,
-		Weight:   uint32(d.Weight),
-		Stage:    d.Stage,
+		Name:           d.Name,
+		Version:        d.Version,
+		Critical:       d.Critical,
+		Weight:         uint32(d.Weight),
+		ExclusiveGroup: d.ExclusiveGroup,
+		Stage:          d.Stage,
 		DisableOptions: modules.DisableOptions{
 			Confirmation: d.DisableOptions.Confirmation,
 			Messages: modules.DisableMessages{

@@ -390,6 +390,57 @@ func TestRunPhases_SkippingTheResourceProducerWithoutResourcesIsAllowed(t *testi
 	require.Contains(t, pec.phasesOf("run"), phases.BaseInfraPhase)
 }
 
+// TestRunPhases_SkippingTheProviderResourceConsumerIsRefused covers the third queue. The
+// CloudPermanent NodeGroups and the instance classes they reference are applied by
+// InstallAdditionalMastersAndStaticNodes and by nothing else - they were split out of the
+// CreateResources queue precisely so that they land before the nodes are built from them - so
+// skipping that node on a cluster whose nodes come from the resource document would drop them
+// with no signal: an unapplied queue is silent, and converge would later read a node count back
+// from objects that never reached the cluster. The refusal lands before any infrastructure, and
+// applies only where the queue can be non-empty: a legacy cloud cluster builds its nodes from
+// ProviderClusterConfiguration and leaves nothing in it.
+func TestRunPhases_SkippingTheProviderResourceConsumerIsRefused(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		name    string
+		legacy  bool
+		hasYAML bool
+		refused bool
+	}{
+		{name: "nodes come from resources", hasYAML: true, refused: true},
+		{name: "no resource document to drop", hasYAML: false},
+		{name: "legacy provider config builds the nodes", legacy: true, hasYAML: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			b, bctx, pec := runPhasesFixture("Cloud", -1)
+			b.Options.Bootstrap.SkipPhases = []string{string(phases.InstallAdditionalMastersAndStaticNodes)}
+			if tt.hasYAML {
+				bctx.metaConfig.ResourcesYAML = "---"
+			}
+			if tt.legacy {
+				bctx.metaConfig.ProviderClusterConfig = map[string]json.RawMessage{"masterNodeGroup": json.RawMessage(`{}`)}
+			}
+
+			err := b.runPhases(context.Background(), bctx, recordingPhaseFuncs(pec, "", nil), wholeTree)
+
+			if !tt.refused {
+				require.NoError(t, err)
+				require.NotContains(t, pec.phasesOf("run"), phases.InstallAdditionalMastersAndStaticNodes)
+				require.Contains(t, pec.phasesOf("run"), phases.BaseInfraPhase)
+				return
+			}
+
+			require.ErrorContains(t, err, string(phases.InstallAdditionalMastersAndStaticNodes))
+			require.ErrorContains(t, err, "--skip-phase")
+			require.NotContains(t, pec.phasesOf("run"), phases.BaseInfraPhase)
+			require.Empty(t, pec.phasesOf("complete"))
+		})
+	}
+}
+
 // TestRunPhases_RestrictedToOneNode covers the standalone phase commands, base-infra being the
 // first of them: the walk runs Preparation - the config it loads is what the gates are resolved
 // against - then the one node it was given and nothing else, and still completes the pipeline.

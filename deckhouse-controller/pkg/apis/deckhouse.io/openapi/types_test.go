@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func jsonPtr(raw string) *apiextensionsv1.JSON {
@@ -183,6 +184,16 @@ func TestMarshalRoundtrip_xDeckhouseExtensions(t *testing.T) {
 				XUIAdvanced: true,
 				XUIOrder:    int64Ptr(2),
 			},
+			"secretName": {
+				Type: "string",
+				XUIResourceName: &UIResourceNameSelector{
+					APIVersion: "v1",
+					Kind:       "Secret",
+					LabelSelector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{"app": "echo"},
+					},
+				},
+			},
 		},
 		XValidations: []ValidationRule{
 			{Rule: "self.storageClass != ''", Message: "storageClass must be set"},
@@ -225,6 +236,48 @@ func TestMarshalRoundtrip_xDeckhouseExtensions(t *testing.T) {
 	}
 	if len(restored.XValidations) != 1 || restored.XValidations[0].Rule != "self.storageClass != ''" {
 		t.Errorf("x-deckhouse-validations: got %+v", restored.XValidations)
+	}
+
+	sec, ok := restored.Properties["secretName"]
+	if !ok || sec.XUIResourceName == nil {
+		t.Fatal("x-deckhouse-ui-resource-name lost")
+	}
+	if sec.XUIResourceName.APIVersion != "v1" || sec.XUIResourceName.Kind != "Secret" {
+		t.Errorf("x-deckhouse-ui-resource-name apiVersion/kind: got %+v", sec.XUIResourceName)
+	}
+	if sec.XUIResourceName.LabelSelector == nil || sec.XUIResourceName.LabelSelector.MatchLabels["app"] != "echo" {
+		t.Errorf("x-deckhouse-ui-resource-name labelSelector lost: got %+v", sec.XUIResourceName.LabelSelector)
+	}
+}
+
+// TestUIResourceName_invalidTypeRejected verifies a non-object x-deckhouse-ui-resource-name fails to unmarshal.
+func TestUIResourceName_invalidTypeRejected(t *testing.T) {
+	var restored OpenAPIV3Schema
+	err := json.Unmarshal([]byte(`{"type":"string","x-deckhouse-ui-resource-name":"Secret"}`), &restored)
+	if err == nil {
+		t.Fatal("expected error unmarshaling string into x-deckhouse-ui-resource-name, got nil")
+	}
+}
+
+// TestUIResourceNameSelector_deepCopy verifies DeepCopy produces an independent labelSelector.
+func TestUIResourceNameSelector_deepCopy(t *testing.T) {
+	original := &OpenAPIV3Schema{
+		Type: "string",
+		XUIResourceName: &UIResourceNameSelector{
+			APIVersion:    "v1",
+			Kind:          "Secret",
+			LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "echo"}},
+		},
+	}
+
+	copied := original.DeepCopy()
+	if copied.XUIResourceName == original.XUIResourceName {
+		t.Fatal("DeepCopy shares the x-deckhouse-ui-resource-name pointer with original")
+	}
+
+	copied.XUIResourceName.LabelSelector.MatchLabels["app"] = "mutated"
+	if original.XUIResourceName.LabelSelector.MatchLabels["app"] != "echo" {
+		t.Errorf("DeepCopy shares the labelSelector map with original")
 	}
 }
 

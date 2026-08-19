@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -43,6 +44,23 @@ type etcdInstance struct {
 	MaxDbSize int64
 	PodName   string
 	Node      string
+}
+
+// KubernetesVersionBelowFloor reports whether target lands more than one minor below floor.
+//
+// The single "how far down may we go" rule, in one place because admission and the soft guard in
+// global-hooks/discovery/target_kubernetes_version.go must answer it identically — they used to be
+// two copies of this switch. The minor comparison is an addition on target so the uint64 never
+// underflows.
+func KubernetesVersionBelowFloor(target, floor *semver.Version) bool {
+	switch {
+	case target.Major() > floor.Major():
+		return false
+	case target.Major() == floor.Major() && target.Minor()+1 >= floor.Minor():
+		return false
+	default:
+		return true
+	}
 }
 
 func getETCDClient(input *go_hook.HookInput, dc dependency.Container, endpoints []string) (etcd.Client, error) {

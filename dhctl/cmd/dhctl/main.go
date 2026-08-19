@@ -43,6 +43,7 @@ const (
 	autoConvergeCmd       = "converge-periodical"
 	terraformGroupCmd     = "terraform"
 	exporterCmd           = "converge-exporter"
+	phaseCatalogCmd       = "phase-catalog"
 )
 
 var commandList = []Command{
@@ -118,6 +119,11 @@ var commandList = []Command{
 		Name:       "destroy",
 		Help:       "Destroy Kubernetes cluster.",
 		DefineFunc: commands.DefineDestroyCommand,
+	},
+	{
+		Name:       phaseCatalogCmd,
+		Help:       "Print the phase and subphase title catalog as JSON.",
+		DefineFunc: commands.DefinePhaseCatalogCommand,
 	},
 	{
 		Name:       "session",

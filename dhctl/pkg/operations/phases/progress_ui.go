@@ -32,7 +32,10 @@ import (
 // now driven automatically by dhlog.RunProcess markers, so no label channel is
 // needed here.
 func RunProgress(ctx context.Context, l *slog.Logger, name string, body func(progressCh chan Progress) error) error {
-	progressCh, finish := InitProgress(ctx, l, name)
+	progressCh, finish, err := InitProgress(ctx, l, name)
+	if err != nil {
+		return err
+	}
 	defer finish()
 
 	return body(progressCh)
@@ -46,7 +49,12 @@ func RunProgress(ctx context.Context, l *slog.Logger, name string, body func(pro
 //
 // This mirrors the contract of the legacy deferred-finish progress bar
 // initializer, but drives the slog TerminalUIHandler instead of the pterm bar.
-func InitProgress(ctx context.Context, l *slog.Logger, name string) (chan Progress, func()) {
+func InitProgress(ctx context.Context, l *slog.Logger, name string) (chan Progress, func(), error) {
+	titles, err := LoadTitles()
+	if err != nil {
+		return nil, nil, fmt.Errorf("load phase titles: %w", err)
+	}
+
 	progressCh := make(chan Progress, 5)
 
 	dhlog.StartProgress(ctx, l, name)
@@ -55,7 +63,7 @@ func InitProgress(ctx context.Context, l *slog.Logger, name string) (chan Progre
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		consumeProgress(ctx, l, progressCh, stop)
+		consumeProgress(ctx, l, titles, progressCh, stop)
 	}()
 
 	var finished bool
@@ -75,7 +83,7 @@ func InitProgress(ctx context.Context, l *slog.Logger, name string) (chan Progre
 		dhlog.FinishProgress(ctx, l)
 	}
 
-	return progressCh, finish
+	return progressCh, finish, nil
 }
 
 // consumeProgress reads Progress events and advances the new progress bar. The
@@ -83,7 +91,7 @@ func InitProgress(ctx context.Context, l *slog.Logger, name string) (chan Progre
 // legacy bar operated on an integer scale of 0..100, here we keep the same
 // integer math and report the resulting fraction (current/100) to
 // dhlog.Progress.
-func consumeProgress(ctx context.Context, l *slog.Logger, progressCh chan Progress, stop <-chan struct{}) {
+func consumeProgress(ctx context.Context, l *slog.Logger, titles *Titles, progressCh chan Progress, stop <-chan struct{}) {
 	inc := 0
 	lastCompleted := ""
 	current := 0 // 0..100, mirrors the legacy pterm bar's Current.
@@ -103,14 +111,14 @@ func consumeProgress(ctx context.Context, l *slog.Logger, progressCh chan Progre
 				inc = 100 / nodes
 			}
 
-			text := phaseToString(msg, false)
+			text := phaseToString(titles, msg, false)
 			if text != "" {
 				dhlog.Progress(ctx, l, float64(current)/100, text)
 			}
 		}
 
 		if msg.CompletedPhase != "" {
-			completed := phaseToString(msg, true)
+			completed := phaseToString(titles, msg, true)
 
 			// A repeated title still moves the bar when the record carries more progress: the
 			// final Complete event names the last phase that RAN, which is the phase already
@@ -140,78 +148,31 @@ func consumeProgress(ctx context.Context, l *slog.Logger, progressCh chan Progre
 				l.InfoContext(ctx, strings.TrimSpace(completed), dhlog.ShowInCompacted(), dhlog.BadgeSuccess())
 			}
 
-			dhlog.Progress(ctx, l, float64(current)/100, phaseToString(msg, false))
+			dhlog.Progress(ctx, l, float64(current)/100, phaseToString(titles, msg, false))
 		}
 	}
 }
 
-// phaseToString maps a Progress event to a human-readable bar title. Ported
-// verbatim from the legacy phaseToString in the pkg/util progress bar.
-func phaseToString(p Progress, completed bool) string {
-	// Butify bootstrap: phases with subphases
-	phasesMap := make(map[OperationPhase]string)
-	phasesMap[PreparationPhase] = "Prepare the installation"
-	phasesMap[PreInfraPreflightsPhase] = "Common preflight checks"
-	phasesMap[PostInfraPreflightsPhase] = "Static and post-infra preflight checks"
-	phasesMap[ParseResourcesPhase] = "Prepare resources to create"
-	phasesMap[WaitForSSHOnMasterPhase] = "Wait for SSH on master to become ready"
-	phasesMap[BaseInfraPhase] = "Base Infrastructure"
-	phasesMap[FirstMasterPhase] = "First master node"
-	phasesMap[InstallKubernetesPhase] = "Install Kubernetes on the first master node"
-	phasesMap[InstallDeckhousePhase] = "Install Deckhouse"
-	phasesMap[CreateResourcesPhase] = "Create resources"
-	phasesMap[InstallAdditionalMastersAndStaticNodes] = "Install additional master nodes and CloudPermanent nodes"
-	phasesMap[WaitForControlPlaneManagerReadinessPhase] = "Wait for control plane manager become ready"
-	phasesMap[ExecPostBootstrapPhase] = "Execute post-bootstrap script"
-	phasesMap[DeleteResourcesPhase] = "Delete resources"
-	phasesMap[AllNodesPhase] = "Process all nodes"
-	phasesMap[FinalizationPhase] = "Finalization"
-
-	phasesMap[ConvergeCheckPhase] = "Check converge"
-	phasesMap[ScaleToMultiMasterPhase] = "Scale cluster to multimaster"
-	phasesMap[ScaleToSingleMasterPhase] = "Scale cluster to singlemaster"
-	phasesMap[DeckhouseConfigurationPhase] = "Configure Deckhouse"
-
-	phasesMap[CreateStaticDestroyerNodeUserPhase] = "Create NodeUser for static destroyer"
-	phasesMap[UpdateStaticDestroyerIPs] = "Update static destroyer IPs"
-	phasesMap[WaitStaticDestroyerNodeUserPhase] = "Wait for NodeUser"
-	phasesMap[SetDeckhouseResourcesDeletedPhase] = "Set Deckhouse resources to deleted"
-	phasesMap[CommanderUUIDWasChecked] = "Commander UUID was checked"
-
-	subphasesMap := make(map[OperationSubPhase]string)
-	subphasesMap[PreparationSubPhaseImagesDownload] = "Download images"
-	subphasesMap[PreparationSubPhaseConfigValidation] = "Validate configuration"
-	subphasesMap[PreparationSubPhaseCachePreparation] = "Prepare cache"
-	subphasesMap[PreparationSubPhaseStatePreparation] = "Prepare state"
-	subphasesMap[InstallDeckhouseSubPhaseConnect] = "Connect to master host"
-	subphasesMap[InstallDeckhouseSubPhaseInstall] = "Install..."
-	subphasesMap[InstallDeckhouseSubPhaseWait] = "Wait for the first master readiness"
-	subphasesMap[CheckInfra] = "Check Infrastructure"
-	subphasesMap[CheckConfiguration] = "Check configuration"
-	subphasesMap[BaseInfraSubPhaseBaseInfra] = "Base Infrastructure"
-	subphasesMap[InstallKubernetesSubPhaseBundlePreparation] = "Prepare bashible bundle"
-	subphasesMap[InstallKubernetesSubPhaseRegistryPackagesProxy] = "Prepare registry packages proxy"
-	subphasesMap[InstallKubernetesSubPhaseNodePreparation] = "Prepare node"
-	subphasesMap[InstallKubernetesSubPhaseModulesPreparation] = "Prepare modules"
-	subphasesMap[InstallKubernetesSubPhaseExecuteBashibleBundle] = "Execute bashible bundle"
-	subphasesMap[InstallAdditionalMastersAndStaticNodesSubPhaseAdditionalMasters] = "Install additional master nodes"
-	subphasesMap[InstallAdditionalMastersAndStaticNodeSubPhaseStaticNodes] = "Install additional static nodes"
-
+// phaseToString maps a Progress event to a human-readable bar title. Titles
+// are sourced from the embedded i18n catalog (see titles.go), so the CLI
+// progress bar, the GetPhaseCatalog RPC and the `phase-catalog` CLI command
+// share a single source of truth.
+func phaseToString(titles *Titles, p Progress, completed bool) string {
 	msg := ""
 	if completed {
 		if p.CompletedSubPhase != "" {
-			msg = fmt.Sprintf("%s: %s", title(phasesMap, p.CurrentPhase), title(subphasesMap, p.CompletedSubPhase))
+			msg = fmt.Sprintf("%s: %s", phaseTitle(titles, p.CurrentPhase), subPhaseTitle(titles, p.CompletedSubPhase))
 		} else {
-			msg = title(phasesMap, p.CompletedPhase)
+			msg = phaseTitle(titles, p.CompletedPhase)
 		}
 	} else {
 		if p.CurrentSubPhase != "" {
-			msg = fmt.Sprintf("%s: %s", title(phasesMap, p.CurrentPhase), title(subphasesMap, p.CurrentSubPhase))
+			msg = fmt.Sprintf("%s: %s", phaseTitle(titles, p.CurrentPhase), subPhaseTitle(titles, p.CurrentSubPhase))
 		} else {
 			if p.CurrentPhase != "" {
-				msg = title(phasesMap, p.CurrentPhase)
+				msg = phaseTitle(titles, p.CurrentPhase)
 			} else {
-				msg = title(phasesMap, p.CompletedPhase)
+				msg = phaseTitle(titles, p.CompletedPhase)
 			}
 		}
 	}
@@ -219,14 +180,24 @@ func phaseToString(p Progress, completed bool) string {
 	return fmt.Sprintf("%-60s", msg)
 }
 
-// title looks up the human-readable name of a phase or a sub-phase, falling back
-// to the raw name. Without the fallback an unnamed phase renders as blank padding
-// and, since the bar advances only when the rendered title changes
-// (consumeProgress compares it with the previous one), also freezes the bar.
-func title[K ~string](titles map[K]string, key K) string {
-	if t, ok := titles[key]; ok {
+// phaseTitle and subPhaseTitle look up the catalog title of a phase or a sub-phase,
+// falling back to the raw code. Without the fallback an untranslated phase renders as
+// blank padding and, since the bar advances only when the rendered title changes
+// (consumeProgress compares it with the previous one), also freezes the bar. The
+// fallback lives here and not in Titles.Phase/SubPhase, which report a missing entry
+// as the empty string on purpose.
+func phaseTitle(titles *Titles, phase OperationPhase) string {
+	if t := titles.Phase(phase); t != "" {
 		return t
 	}
 
-	return string(key)
+	return string(phase)
+}
+
+func subPhaseTitle(titles *Titles, subPhase OperationSubPhase) string {
+	if t := titles.SubPhase(subPhase); t != "" {
+		return t
+	}
+
+	return string(subPhase)
 }

@@ -1,4 +1,10 @@
 @use "components/common/_variables.scss";
+@use 'components/common/_mixins.scss';
+@use 'components/common/_breakpoints.scss';
+
+body.modal-opened {
+    overflow: hidden;
+}
 
 .modal-window {
     position: fixed;
@@ -28,12 +34,26 @@
     &__wrap {
         position: relative;
         width: 550px;
-        padding: 31.75px 41.2px 22.2px 41.2px;
+        padding: 31.75px 41.2px 22.2px;
         box-sizing: border-box;
         overflow: auto;
         z-index: 1002;
         border-radius: .5em;
         background: variables.$color-inverse;
+
+        @include breakpoints.max-w(m) {
+            width: 500px;
+            padding: 20px 30px;
+        }
+
+        @include breakpoints.max-w(s) {
+            width: 400px;
+            padding: 20px;
+        }
+
+        @include breakpoints.max-w(xs) {
+            width: 350px;
+        }
 
         h3 {
             margin-top: 0;

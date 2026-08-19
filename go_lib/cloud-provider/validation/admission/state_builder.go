@@ -16,11 +16,9 @@ package admission
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 
-	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -30,47 +28,362 @@ import (
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	cpval "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation"
+	cpvalapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/api"
 )
 
 var (
 	nodeGroupListGVK = schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1", Kind: "NodeGroupList"}
+	moduleConfigGVK  = schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "ModuleConfig"}
 )
 
-// StateBuilderConfig holds provider-specific settings for StateBuilder.
+// StateBuilderConfig holds provider-specific settings shared by every state builder.
 type StateBuilderConfig struct {
-	// InstanceClassKind is the provider InstanceClass resource kind.
-	InstanceClassKind string
+	// InstanceClassGVK is the provider InstanceClass resource group, version, kind.
+	InstanceClassGVK schema.GroupVersionKind
 	// NamespaceName is the module namespace used for credential Secrets and migration markers.
 	NamespaceName string
 	// ModuleName is the cloud-provider ModuleConfig name.
 	ModuleName string
 }
 
-// instanceClassGVK returns the GroupVersionKind for the configured InstanceClass kind.
-func (c StateBuilderConfig) instanceClassGVK() schema.GroupVersionKind {
-	return schema.GroupVersionKind{
-		Group:   "deckhouse.io",
-		Version: "v1alpha1",
-		Kind:    c.InstanceClassKind,
-	}
-}
-
-// StateBuilder loads cluster state and applies admission object changes on top of it.
-type StateBuilder struct {
+// StateBuilderFactory produces a fresh StateBuilder per admission request.
+//
+// The factory holds the immutable provider context — client and configuration — while the
+// builder it creates owns the mutable state, so concurrent admission requests never share it.
+type StateBuilderFactory[
+	IC cpapi.InstanceClassObject,
+	S cpapi.ModuleSettingsObject,
+	PCC cpapi.ProviderClusterConfigObject,
+] struct {
 	client client.Client
 	config StateBuilderConfig
 }
 
-// NewStateBuilder creates a state builder for the given provider configuration.
-func NewStateBuilder(client client.Client, config StateBuilderConfig) *StateBuilder {
-	return &StateBuilder{
+// NewStateBuilderFactory creates a state builder factory for the given provider configuration.
+func NewStateBuilderFactory[
+	IC cpapi.InstanceClassObject,
+	S cpapi.ModuleSettingsObject,
+	PCC cpapi.ProviderClusterConfigObject,
+](client client.Client, config StateBuilderConfig) *StateBuilderFactory[IC, S, PCC] {
+	return &StateBuilderFactory[IC, S, PCC]{
 		client: client,
 		config: config,
 	}
 }
 
-// IsMigrationPending reports whether the migration marker ConfigMap is present in the module namespace.
-func (b *StateBuilder) IsMigrationPending(ctx context.Context) (bool, error) {
+// CreateBuilder returns a builder holding a state with the module identity filled in.
+//
+// Each surface then adds only the resources its rules inspect:
+//
+//	factory.CreateBuilder().AddNodeGroup(ctx, obj).AddAssociatedInstanceClasses(ctx, name).Build(ctx)
+func (f *StateBuilderFactory[IC, S, PCC]) CreateBuilder() *StateBuilder[IC, S, PCC] {
+	return &StateBuilder[IC, S, PCC]{
+		client: f.client,
+		config: f.config,
+		state: &cpvalapi.State[IC, S, PCC]{
+			NamespaceName: f.config.NamespaceName,
+			ModuleName:    f.config.ModuleName,
+		},
+	}
+}
+
+// StateBuilder assembles a validation State for a single admission request.
+//
+// Every Add* method returns the builder so steps can be chained, and the first failure is
+// remembered and returned by Build: a chain never has to be interrupted by error checks.
+// Steps that take the reviewed object accept a context as well, so that every step in a chain
+// reads the same, even though only the cluster-reading ones use it.
+type StateBuilder[
+	IC cpapi.InstanceClassObject,
+	S cpapi.ModuleSettingsObject,
+	PCC cpapi.ProviderClusterConfigObject,
+] struct {
+	client client.Client
+	config StateBuilderConfig
+	state  *cpvalapi.State[IC, S, PCC]
+	err    error
+}
+
+// Build returns the assembled state, or the first error a step ran into.
+//
+// It also resolves the migration status: while the d8-module-is-migrating ConfigMap exists the
+// migration is still expected to happen and the new-model resources do not exist yet, so there
+// is nothing to validate against and the gate stays closed. Rules check it through
+// cpapi.ShouldSkipNewModelValidation.
+func (b *StateBuilder[IC, S, PCC]) Build(ctx context.Context) (*cpvalapi.State[IC, S, PCC], error) {
+	if b.err != nil {
+		return nil, b.err
+	}
+
+	migrationPending, err := b.migrationPending(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if migrationPending {
+		b.state.MigrationStatus = cpapi.MigrationStatus{
+			LegacyPCCPresent: true,
+			MigrationPending: true,
+		}
+	}
+
+	return b.state, nil
+}
+
+// SetModuleConfig puts the reviewed ModuleConfig into the state.
+func (b *StateBuilder[IC, S, PCC]) SetModuleConfig(_ context.Context, obj runtime.Object) *StateBuilder[IC, S, PCC] {
+	if b.err != nil {
+		return b
+	}
+
+	if obj == nil {
+		return b
+	}
+
+	moduleConfig, err := DecodeModuleConfigObject[S](b.config.ModuleName, obj)
+	if err != nil {
+		b.err = err
+		return b
+	}
+
+	b.state.ModuleConfig = moduleConfig
+
+	return b
+}
+
+// AddModuleConfig reads the module ModuleConfig from the cluster.
+//
+// Surfaces whose reviewed object is not the ModuleConfig itself need it when a rule reads
+// settings — the NodeGroup surface, for instance, validates node counts against
+// settings.nodes.parameters.externalIPAddresses. An absent ModuleConfig leaves the state field
+// nil, which the rules report on their own.
+func (b *StateBuilder[IC, S, PCC]) AddModuleConfig(ctx context.Context) *StateBuilder[IC, S, PCC] {
+	if b.err != nil {
+		return b
+	}
+
+	obj := newUnstructured(moduleConfigGVK)
+	err := b.client.Get(ctx, client.ObjectKey{Name: b.config.ModuleName}, obj)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return b
+		}
+
+		b.err = fmt.Errorf("get ModuleConfig %q: %w", b.config.ModuleName, err)
+		return b
+	}
+
+	moduleConfig, err := cpval.DecodeModuleConfig[S](b.config.ModuleName, obj.Object)
+	if err != nil {
+		b.err = fmt.Errorf("decode ModuleConfig %q: %w", b.config.ModuleName, err)
+		return b
+	}
+
+	b.state.ModuleConfig = moduleConfig
+
+	return b
+}
+
+// SetCredentialSecret puts the reviewed credential Secret into the state.
+// Secrets that the module does not manage are ignored.
+func (b *StateBuilder[IC, S, PCC]) SetCredentialSecret(_ context.Context, secret *corev1.Secret) *StateBuilder[IC, S, PCC] {
+	if b.err != nil {
+		return b
+	}
+
+	if secret == nil {
+		return b
+	}
+
+	credentialSecret := secretToCredentialSecret(secret)
+	if !credentialSecret.IsManaged() {
+		return b
+	}
+
+	b.state.CredentialSecrets = append(b.state.CredentialSecrets, credentialSecret)
+
+	return b
+}
+
+// SetNodeGroup puts the reviewed NodeGroup into the state.
+//
+// Only CloudPermanent NodeGroups reach the state here: the NodeGroup surface validates
+// cloud-permanent rules, and a NodeGroup of another type has nothing for them to check.
+func (b *StateBuilder[IC, S, PCC]) SetNodeGroup(_ context.Context, obj runtime.Object) *StateBuilder[IC, S, PCC] {
+	if b.err != nil {
+		return b
+	}
+
+	if obj == nil {
+		return b
+	}
+
+	nodeGroup, err := DecodeNodeGroupObject(obj)
+	if err != nil {
+		b.err = err
+		return b
+	}
+
+	if nodeGroup.Spec.NodeType != cpapi.NodeTypeCloudPermanent {
+		return b
+	}
+
+	b.state.NodeGroups = append(b.state.NodeGroups, *nodeGroup)
+
+	return b
+}
+
+// AddNodeGroups reads every CloudPermanent NodeGroup from the cluster.
+//
+// The ModuleConfig surface needs all of them at once: rules that compare settings against node
+// groups — external IP addressing, for one — would otherwise see no node groups at all.
+func (b *StateBuilder[IC, S, PCC]) AddNodeGroups(ctx context.Context) *StateBuilder[IC, S, PCC] {
+	if b.err != nil {
+		return b
+	}
+
+	list := newUnstructuredList(nodeGroupListGVK)
+	if err := b.client.List(ctx, list); err != nil {
+		b.err = fmt.Errorf("list NodeGroups: %w", err)
+		return b
+	}
+
+	for i := range list.Items {
+		nodeGroup, err := cpval.DecodeNodeGroup(list.Items[i].Object)
+		if err != nil {
+			b.err = fmt.Errorf("decode NodeGroup: %w", err)
+			return b
+		}
+
+		if nodeGroup.Spec.NodeType != cpapi.NodeTypeCloudPermanent {
+			continue
+		}
+
+		b.state.NodeGroups = append(b.state.NodeGroups, *nodeGroup)
+	}
+
+	return b
+}
+
+// AddAssociatedNodeGroups reads every NodeGroup that references the given InstanceClass,
+// regardless of its nodeType, so deletion and etcd-disk rules see all class consumers.
+//
+// The nodeType filter belongs to the rules, not here: ValidateInstanceClassDeletion must
+// block deletion of a class a CloudEphemeral NodeGroup still points at, while the
+// etcd-disk rules narrow the set down through State.ListInstanceClassConsumers.
+func (b *StateBuilder[IC, S, PCC]) AddAssociatedNodeGroups(ctx context.Context, className string) *StateBuilder[IC, S, PCC] {
+	if b.err != nil {
+		return b
+	}
+
+	className = strings.TrimSpace(className)
+	if className == "" {
+		return b
+	}
+
+	list := newUnstructuredList(nodeGroupListGVK)
+	if err := b.client.List(ctx, list); err != nil {
+		b.err = fmt.Errorf("list NodeGroups: %w", err)
+		return b
+	}
+
+	for i := range list.Items {
+		nodeGroup, err := cpval.DecodeNodeGroup(list.Items[i].Object)
+		if err != nil {
+			b.err = fmt.Errorf("decode NodeGroup: %w", err)
+			return b
+		}
+
+		if nodeGroup.Spec.CloudInstances == nil || nodeGroup.Spec.CloudInstances.ClassReference == nil {
+			continue
+		}
+
+		classRef := nodeGroup.Spec.CloudInstances.ClassReference
+		if classRef.Kind != b.config.InstanceClassGVK.Kind || classRef.Name != className {
+			continue
+		}
+
+		b.state.NodeGroups = append(b.state.NodeGroups, *nodeGroup)
+	}
+
+	return b
+}
+
+// SetInstanceClass puts the reviewed InstanceClass into the state.
+func (b *StateBuilder[IC, S, PCC]) SetInstanceClass(_ context.Context, obj runtime.Object) *StateBuilder[IC, S, PCC] {
+	if b.err != nil {
+		return b
+	}
+
+	if obj == nil {
+		return b
+	}
+
+	instanceClass, err := DecodeInstanceClassObject[IC](obj)
+	if err != nil {
+		b.err = fmt.Errorf("decode %s: %w", b.config.InstanceClassGVK.Kind, err)
+		return b
+	}
+
+	b.state.InstanceClasses = append(b.state.InstanceClasses, instanceClass)
+
+	return b
+}
+
+// AddAssociatedInstanceClasses reads the InstanceClass referenced by the given NodeGroup.
+//
+// The named NodeGroup must already be in the state: call SetNodeGroup or AddNodeGroups
+// earlier in the chain, otherwise this step silently adds nothing.
+//
+// A NodeGroup references at most one class, so at most one is added; a reference to another
+// provider's kind, an empty name or a missing object leave the state untouched.
+func (b *StateBuilder[IC, S, PCC]) AddAssociatedInstanceClasses(ctx context.Context, nodeGroupName string) *StateBuilder[IC, S, PCC] {
+	if b.err != nil {
+		return b
+	}
+
+	nodeGroup, found := b.state.FindNodeGroup(nodeGroupName)
+	if !found {
+		return b
+	}
+
+	if nodeGroup.Spec.CloudInstances == nil || nodeGroup.Spec.CloudInstances.ClassReference == nil {
+		return b
+	}
+
+	classRef := nodeGroup.Spec.CloudInstances.ClassReference
+	if classRef.Kind != b.config.InstanceClassGVK.Kind {
+		return b
+	}
+
+	className := strings.TrimSpace(classRef.Name)
+	if className == "" {
+		return b
+	}
+
+	obj := newUnstructured(b.config.InstanceClassGVK)
+	err := b.client.Get(ctx, client.ObjectKey{Name: className}, obj)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return b
+		}
+
+		b.err = fmt.Errorf("get %s %q: %w", b.config.InstanceClassGVK.Kind, className, err)
+		return b
+	}
+
+	instanceClass, err := cpval.DecodeInstanceClass[IC](obj.Object)
+	if err != nil {
+		b.err = fmt.Errorf("decode %s %q: %w", b.config.InstanceClassGVK.Kind, className, err)
+		return b
+	}
+
+	b.state.InstanceClasses = append(b.state.InstanceClasses, instanceClass)
+
+	return b
+}
+
+func (b *StateBuilder[IC, S, PCC]) migrationPending(ctx context.Context) (bool, error) {
 	// Runtime admission uses the migration marker ConfigMap created by the module hook
 	// while ProviderClusterConfiguration is still present. The dhctl validator instead
 	// derives MigrationStatus from the incoming PCC payload and resource completeness.
@@ -92,197 +405,33 @@ func (b *StateBuilder) IsMigrationPending(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
-// BuildForCredentialSecret returns validation state with the admission credential Secret applied.
-func (b *StateBuilder) BuildForCredentialSecret(
-	ctx context.Context,
-	operation admissionv1.Operation,
-	secret cpapi.CredentialSecret,
-) (*cpval.State, error) {
-	state, err := b.newBaseState(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("build base state: %w", err)
+// secretToCredentialSecret converts a Kubernetes Secret into a typed CredentialSecret.
+func secretToCredentialSecret(secret *corev1.Secret) cpapi.CredentialSecret {
+	if secret == nil {
+		return cpapi.CredentialSecret{}
 	}
 
-	if !secret.IsManaged() {
-		return state, nil
+	return cpapi.CredentialSecret{
+		TypeMeta: cpapi.TypeMeta{
+			APIVersion: secret.APIVersion,
+			Kind:       secret.Kind,
+		},
+		ObjectMeta: cpapi.ObjectMeta{
+			Name:      secret.Name,
+			Namespace: secret.Namespace,
+		},
+		Type: string(secret.Type),
+		Data: cpapi.CredentialSecretData{
+			AuthScheme: secret.Data[cpapi.CredentialSecretAuthSchemeKey],
+			Identity:   secret.Data[cpapi.CredentialSecretIdentityKey],
+			Secret:     secret.Data[cpapi.CredentialSecretSecretKey],
+		},
+		StringData: cpapi.CredentialSecretStringData{
+			AuthScheme: cpapi.AuthScheme(secret.StringData[cpapi.CredentialSecretAuthSchemeKey]),
+			Identity:   secret.StringData[cpapi.CredentialSecretIdentityKey],
+			Secret:     secret.StringData[cpapi.CredentialSecretSecretKey],
+		},
 	}
-
-	state.CredentialSecrets = make([]cpapi.CredentialSecret, 0)
-
-	if operation != admissionv1.Delete {
-		state.CredentialSecrets = append(state.CredentialSecrets, secret)
-	}
-
-	return state, nil
-}
-
-// BuildForNodeGroup returns validation state with the admission NodeGroup applied.
-func (b *StateBuilder) BuildForNodeGroup(
-	ctx context.Context,
-	operation admissionv1.Operation,
-	obj runtime.Object,
-) (*cpval.State, error) {
-	state, err := b.newBaseState(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("build base state: %w", err)
-	}
-
-	state.NodeGroups = make([]cpapi.NodeGroup, 0)
-
-	if operation != admissionv1.Delete {
-		objMap, err := runtimeObjectToMap(obj)
-		if err != nil {
-			return nil, fmt.Errorf("convert runtime object to map: %w", err)
-		}
-
-		nodeGroup, err := cpval.DecodeNodeGroup(objMap)
-		if err != nil {
-			return nil, fmt.Errorf("decode NodeGroup: %w", err)
-		}
-
-		if nodeGroup.Spec.NodeType == cpapi.NodeTypeCloudPermanent {
-			state.NodeGroups = append(state.NodeGroups, *nodeGroup)
-
-			instanceClass, err := b.getInstanceClassByNodeGroup(ctx, nodeGroup)
-			if err != nil {
-				return nil, err
-			}
-			if instanceClass != nil {
-				state.InstanceClasses = []cpapi.InstanceClass{*instanceClass}
-			}
-		}
-	}
-
-	return state, nil
-}
-
-// BuildForInstanceClass returns validation state with the admission InstanceClass applied.
-func (b *StateBuilder) BuildForInstanceClass(
-	ctx context.Context,
-	operation admissionv1.Operation,
-	obj runtime.Object,
-) (*cpval.State, *cpapi.InstanceClass, error) {
-	state, err := b.newBaseState(ctx)
-	if err != nil {
-		return nil, nil, fmt.Errorf("build base state: %w", err)
-	}
-
-	objMap, err := runtimeObjectToMap(obj)
-	if err != nil {
-		return nil, nil, fmt.Errorf("convert runtime object to map: %w", err)
-	}
-
-	instanceClass, err := cpval.DecodeInstanceClass(objMap)
-	if err != nil {
-		return nil, nil, fmt.Errorf("decode %s: %w", b.config.InstanceClassKind, err)
-	}
-
-	nodeGroups, err := b.listNodeGroupsByInstanceClass(ctx, instanceClass.Name)
-	if err != nil {
-		return nil, nil, fmt.Errorf("list NodeGroups referencing %s: %w", b.config.InstanceClassKind, err)
-	}
-	state.NodeGroups = nodeGroups
-
-	state.InstanceClasses = make([]cpapi.InstanceClass, 0)
-	if operation == admissionv1.Delete {
-		return state, instanceClass, nil
-	}
-
-	state.InstanceClasses = append(state.InstanceClasses, *instanceClass)
-
-	return state, nil, nil
-}
-
-func (b *StateBuilder) newBaseState(ctx context.Context) (*cpval.State, error) {
-	state := &cpval.State{
-		InstanceClassKind: b.config.InstanceClassKind,
-		NamespaceName:     b.config.NamespaceName,
-		ModuleName:        b.config.ModuleName,
-	}
-
-	migrationPending, err := b.IsMigrationPending(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("check migration pending: %w", err)
-	}
-
-	if migrationPending {
-		state.MigrationStatus = cpapi.MigrationStatus{
-			LegacyPCCPresent: true,
-			MigrationPending: true,
-		}
-	}
-
-	return state, nil
-}
-
-func (b *StateBuilder) getInstanceClassByNodeGroup(ctx context.Context, nodeGroup *cpapi.NodeGroup) (*cpapi.InstanceClass, error) {
-	if nodeGroup == nil || nodeGroup.Spec.CloudInstances == nil || nodeGroup.Spec.CloudInstances.ClassReference == nil {
-		return nil, nil
-	}
-
-	classRef := nodeGroup.Spec.CloudInstances.ClassReference
-	if classRef.Kind != b.config.InstanceClassKind {
-		return nil, nil
-	}
-
-	className := strings.TrimSpace(classRef.Name)
-	if className == "" {
-		return nil, nil
-	}
-
-	return b.getInstanceClassByName(ctx, className)
-}
-
-func (b *StateBuilder) getInstanceClassByName(ctx context.Context, name string) (*cpapi.InstanceClass, error) {
-	obj := newUnstructured(b.config.instanceClassGVK())
-	err := b.client.Get(ctx, client.ObjectKey{Name: name}, obj)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil, nil
-		}
-
-		return nil, fmt.Errorf("get %s %q: %w", b.config.InstanceClassKind, name, err)
-	}
-
-	instanceClass, err := cpval.DecodeInstanceClass(obj.Object)
-	if err != nil {
-		return nil, fmt.Errorf("decode %s %q: %w", b.config.InstanceClassKind, name, err)
-	}
-
-	return instanceClass, nil
-}
-
-func (b *StateBuilder) listNodeGroupsByInstanceClass(ctx context.Context, className string) ([]cpapi.NodeGroup, error) {
-	className = strings.TrimSpace(className)
-	if className == "" {
-		return nil, nil
-	}
-
-	list := newUnstructuredList(nodeGroupListGVK)
-	if err := b.client.List(ctx, list); err != nil {
-		return nil, fmt.Errorf("list NodeGroups: %w", err)
-	}
-
-	result := make([]cpapi.NodeGroup, 0, len(list.Items))
-	for i := range list.Items {
-		nodeGroup, err := cpval.DecodeNodeGroup(list.Items[i].Object)
-		if err != nil {
-			return nil, fmt.Errorf("decode NodeGroup: %w", err)
-		}
-
-		if nodeGroup.Spec.CloudInstances == nil || nodeGroup.Spec.CloudInstances.ClassReference == nil {
-			continue
-		}
-
-		classRef := nodeGroup.Spec.CloudInstances.ClassReference
-		if classRef.Kind != b.config.InstanceClassKind || classRef.Name != className {
-			continue
-		}
-
-		result = append(result, *nodeGroup)
-	}
-
-	return result, nil
 }
 
 func newUnstructured(gvk schema.GroupVersionKind) *unstructured.Unstructured {
@@ -295,26 +444,4 @@ func newUnstructuredList(gvk schema.GroupVersionKind) *unstructured.Unstructured
 	list := &unstructured.UnstructuredList{}
 	list.SetGroupVersionKind(gvk)
 	return list
-}
-
-func runtimeObjectToMap(obj runtime.Object) (map[string]any, error) {
-	if obj == nil {
-		return nil, nil
-	}
-
-	if unstructuredObj, ok := obj.(*unstructured.Unstructured); ok {
-		return unstructuredObj.Object, nil
-	}
-
-	raw, err := json.Marshal(obj)
-	if err != nil {
-		return nil, fmt.Errorf("marshal runtime object: %w", err)
-	}
-
-	var object map[string]any
-	if err := json.Unmarshal(raw, &object); err != nil {
-		return nil, fmt.Errorf("unmarshal runtime object: %w", err)
-	}
-
-	return object, nil
 }

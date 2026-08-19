@@ -1,0 +1,139 @@
+@use "components/common/_variables.scss";
+@use 'components/common/_mixins.scss';
+@use 'components/common/_breakpoints.scss';
+
+.gs__container {
+    .docs__title {
+        font-weight: 400;
+    }
+
+    .gs-tabs {
+        width: 100%;
+        max-width: 100%;
+        margin: 20px auto 16px;
+
+        &__list {
+            position: relative;
+            display: flex;
+            gap: 8px;
+            padding: 0;
+            margin: 0;
+
+            @include breakpoints.max-w(s) {
+                flex-direction: column;
+            }
+        }
+
+        a.gs-tabs__item {
+            display: inline-block;
+            box-sizing: border-box;
+            position: relative;
+            padding: 16px 26px;
+            border: variables.$primary-700 solid 2px;
+            background-color: white;
+            color: variables.$primary-700;
+            text-decoration: none;
+            text-transform: uppercase;
+            cursor: pointer;
+
+            @include breakpoints.max-w(xl) {
+                padding: 16px 26px;
+            }
+
+            @include breakpoints.max-w(l) {
+                padding: 12px 18px;
+            }
+
+            @include breakpoints.max-w(m) {
+                padding: 12px;
+            }
+
+            @include breakpoints.max-w(s) {
+                text-align: center;
+            }
+
+            &:hover,
+            &:focus,
+            &:focus-visible {
+                text-decoration: none;
+            }
+
+            &:visited:not(.gs-tabs__item--active) {
+                color: variables.$primary-700;
+            }
+
+            &.gs-tabs__item--active {
+                background-color: variables.$primary-700;
+                color: white;
+
+                &:hover,
+                &:focus,
+                &:focus-visible {
+                    text-decoration: none;
+                }
+            }
+        }
+    }
+
+    .block__columns {
+        flex-direction: column;
+
+        &>* {
+            width: 100%;
+        }
+
+        .button-group {
+            gap: 20px;
+
+            @include breakpoints.max-w(l) {
+                gap: 16px;
+            }
+
+            .button {
+                flex-direction: row;
+                align-items: center;
+                flex-basis: calc(20% - 20px);
+                gap: 12px;
+                height: 90px;
+                margin-right: 0;
+                margin-bottom: 0;
+                padding: 12px 16px;
+                border-radius: 8px;
+                border: 1.5px solid #CDD1E6;
+
+                @include breakpoints.max-w(xxl) {
+                    flex-basis: calc(25% - 20px);
+                }
+
+                @include breakpoints.max-w(l) {
+                    flex-basis: calc(33.3% - 16px);
+                    height: 80px;
+                    padding: 12px;
+                }
+
+                @include breakpoints.max-w(m) {
+                    flex-basis: calc(50% - 16px);
+                    height: 70px;
+                }
+
+                @include breakpoints.max-w(s) {
+                    flex-basis: 100%;
+                }
+
+                div.icon {
+                    width: 37px;
+                    height: 37px;
+                    margin-right: 0;
+                }
+
+                span.name {
+                    margin: 0;
+
+                    @include breakpoints.min-w(xl) {
+                        font-size: 16px;
+                    }
+                }
+            }
+        }
+    }
+}

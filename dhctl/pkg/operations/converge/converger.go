@@ -234,7 +234,10 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 
 	interactive := input.IsTerminal() && !c.Options.Global.ShowProgress
 	if interactive {
-		progressCh, finishProgress := phases.InitProgress(ctx, dhlog.FromContext(ctx), "Converge")
+		progressCh, finishProgress, err := phases.InitProgress(ctx, dhlog.FromContext(ctx), "Converge")
+		if err != nil {
+			return nil, err
+		}
 		defer finishProgress()
 
 		onUpdateFunc := func(progress phases.Progress) error {

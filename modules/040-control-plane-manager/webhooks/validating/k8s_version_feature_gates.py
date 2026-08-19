@@ -15,6 +15,8 @@
 # limitations under the License.
 
 import base64
+import logging
+import re
 import yaml
 from typing import Optional, List
 from deckhouse import hook
@@ -22,7 +24,21 @@ from dotmap import DotMap
 
 from feature_gates_generated import is_deprecated, is_feature_gate_deprecated_up_to_version
 
-CLUSTER_CONFIG_SNAPSHOT_NAME = "d8-cluster-configuration"
+from k8s_version_common import (
+    AUTOMATIC_VERSION,
+    CLUSTER_CONFIG_SNAPSHOT_NAME,
+    CLUSTER_KUBERNETES_SNAPSHOT_NAME,
+    DEFAULT_VERSION,
+    VERSION_RE,
+    get_cluster_configuration_secret_data,
+    get_deckhouse_default_version_from_configmap,
+    get_deckhouse_default_version_from_secret,
+    get_k8s_version_from_cluster_config,
+    is_cluster_configuration_pinned,
+    is_module_config_track_default,
+    usable_declared_version,
+)
+
 MODULE_CONFIG_SNAPSHOT_NAME = "module-config-control-plane-manager"
 
 config = f"""
@@ -30,7 +46,7 @@ configVersion: v1
 kubernetesValidating:
 - name: cpm-k8s-version-feature-gates.deckhouse.io
   group: cpm-feature-gates-validation
-  includeSnapshotsFrom: ["{CLUSTER_CONFIG_SNAPSHOT_NAME}", "{MODULE_CONFIG_SNAPSHOT_NAME}"]
+  includeSnapshotsFrom: ["{CLUSTER_CONFIG_SNAPSHOT_NAME}", "{MODULE_CONFIG_SNAPSHOT_NAME}", "{CLUSTER_KUBERNETES_SNAPSHOT_NAME}"]
   namespace:
     labelSelector:
       matchLabels:
@@ -44,6 +60,20 @@ kubernetesValidating:
     operations:  ["UPDATE"]
     resources:   ["secrets"]
     scope:       "Namespaced"
+# kubernetesVersion can also be set directly on the ModuleConfig, without ever touching the
+# d8-cluster-configuration secret above — this binding covers that path.
+- name: cpm-k8s-version-feature-gates-mc.deckhouse.io
+  group: cpm-feature-gates-validation
+  includeSnapshotsFrom: ["{CLUSTER_CONFIG_SNAPSHOT_NAME}", "{CLUSTER_KUBERNETES_SNAPSHOT_NAME}"]
+  matchConditions:
+  - name: "only-control-plane-manager-module"
+    expression: 'request.name == "control-plane-manager"'
+  rules:
+  - apiGroups:   ["deckhouse.io"]
+    apiVersions: ["*"]
+    operations:  ["CREATE", "UPDATE"]
+    resources:   ["moduleconfigs"]
+    scope:       "Cluster"
 
 kubernetes:
 - name: {CLUSTER_CONFIG_SNAPSHOT_NAME}
@@ -71,6 +101,26 @@ kubernetes:
   executeHookOnEvent: []
   executeHookOnSynchronization: true
   keepFullObjectsInMemory: true
+
+# spec.automaticVersion of this ConfigMap is what "Default" resolves to for the running Deckhouse
+# build. It replaces deckhouseDefaultKubernetesVersion in the Secret above, which was only ever
+# raised and therefore kept answering with a default that no longer exists after a Deckhouse
+# downgrade. The Secret key stays as a fallback for the window before update-observer first writes
+# this object.
+- name: {CLUSTER_KUBERNETES_SNAPSHOT_NAME}
+  apiVersion: v1
+  kind: ConfigMap
+  group: cpm-version-validation
+  namespace:
+    nameSelector:
+      matchNames:
+      - kube-system
+  nameSelector:
+    matchNames:
+    - d8-cluster-kubernetes
+  executeHookOnEvent: []
+  executeHookOnSynchronization: true
+  keepFullObjectsInMemory: true
 """
 
 
@@ -83,53 +133,28 @@ def main(ctx: hook.Context):
         else:
             ctx.output.validations.allow()
     except Exception as e:
-        ctx.output.validations.deny(str(e))
+        # deny(), not validations.error(): in deckhouse==0.4.11 error() uses the message as the dict
+        # *key*, so the response carries no "message" at all. This binding covers ModuleConfig, so a
+        # bug here blocks the very edit that would work around it.
+        ctx.output.validations.deny(f"internal error in the kubernetesVersion feature gates webhook: {e}")
 
 
-def get_deckhouse_default_version_from_secret(secret_data) -> Optional[str]:
-    encoded_version = secret_data.get('deckhouseDefaultKubernetesVersion')
-    if not encoded_version:
-        return None
-    
-    try:
-        decoded_version = base64.b64decode(encoded_version).decode('utf-8').strip()
-        if decoded_version:
-            return decoded_version
-    except Exception as e:
-        logging.error(f"Failed to decode deckhouse default Kubernetes version from base64: {e}")
-    
-    return None
-
-
-def get_k8s_version_from_cluster_config(secret_data) -> Optional[str]:
-    encoded_config = secret_data.get('cluster-configuration.yaml')
-    if not encoded_config:
-        return None
-    
-    try:
-        decoded_config = base64.b64decode(encoded_config).decode('utf-8')
-        config_dict = yaml.safe_load(decoded_config)
-        if config_dict and isinstance(config_dict, dict):
-            kubernetes_version = config_dict.get('kubernetesVersion')
-            if kubernetes_version and isinstance(kubernetes_version, str):
-                return kubernetes_version
-    except Exception as e:
-        logging.error(f"Failed to decode Kubernetes version from cluster configuration: {e}")
-    
-    return None
-
-
-def get_enabled_feature_gates(ctx: DotMap) -> List[str]:
+def get_module_config_settings(ctx: DotMap) -> dict:
     snapshot = ctx.snapshots.get(MODULE_CONFIG_SNAPSHOT_NAME, [])
     if not snapshot or len(snapshot) == 0:
-        return []
+        return {}
     
     module_config = snapshot[0]
     if not module_config or not hasattr(module_config, 'object'):
-        return []
+        return {}
     
     spec = module_config.object.get('spec', {})
     settings = spec.get('settings', {})
+    return settings if isinstance(settings, dict) else {}
+
+
+def get_enabled_feature_gates(ctx: DotMap) -> List[str]:
+    settings = get_module_config_settings(ctx)
     enabled_feature_gates = settings.get('enabledFeatureGates', [])
     
     if not enabled_feature_gates or not isinstance(enabled_feature_gates, list):
@@ -144,59 +169,69 @@ def normalize_version(version: str) -> str:
         return version
     return f"{version_parts[0]}.{version_parts[1]}"
 
-def validate(ctx: DotMap) -> Optional[str]:
-    req = ctx.review.request
-    
-    old_secret = req.get('oldObject')
-    new_secret = req.get('object')
-    
-    if not old_secret:
+
+def resolve_effective_version(
+    mc_kubernetes_version: Optional[str],
+    ctx: DotMap,
+    secret_data=None,
+) -> Optional[str]:
+    # Mirrors resolveTargetKubernetesVersion: a present ModuleConfig setting decides on its own,
+    # Default included; only an absent one falls back to ClusterConfiguration.
+    if mc_kubernetes_version and not is_module_config_track_default(mc_kubernetes_version):
+        mc_pin = usable_declared_version(mc_kubernetes_version, "ModuleConfig control-plane-manager")
+        if mc_pin:
+            return mc_pin
+
+    if secret_data is None:
+        secret_data = get_cluster_configuration_secret_data(ctx)
+
+    def deckhouse_default() -> Optional[str]:
+        version = get_deckhouse_default_version_from_configmap(ctx)
+        if version:
+            return version
+        if secret_data:
+            return get_deckhouse_default_version_from_secret(secret_data)
         return None
-    
-    if not new_secret:
-        return None
-    
-    old_data = old_secret.get('data')
-    new_data = new_secret.get('data')
-    
-    if not old_data or not new_data:
-        return None
-    
-    old_config_version = get_k8s_version_from_cluster_config(old_data)
-    new_config_version = get_k8s_version_from_cluster_config(new_data)
-    
-    if old_config_version == new_config_version:
-        return None
-    
-    if not new_config_version:
-        return None
-    
-    target_version = new_config_version
-    
-    if target_version == "Automatic":
-        default_version = get_deckhouse_default_version_from_secret(new_data)
-        if not default_version:
-            return None
-        target_version = default_version
-    
+
+    if is_module_config_track_default(mc_kubernetes_version):
+        version = deckhouse_default()
+        return version
+
+    if secret_data:
+        cc_version = get_k8s_version_from_cluster_config(secret_data)
+        if is_cluster_configuration_pinned(cc_version):
+            cc_pin = usable_declared_version(cc_version, "ClusterConfiguration")
+            if cc_pin:
+                return cc_pin
+
+    return deckhouse_default()
+
+
+def build_deprecated_feature_gates_error(target_version: str, enabled_feature_gates: List[str]) -> Optional[str]:
     normalized_version = normalize_version(target_version)
-    
-    enabled_feature_gates = get_enabled_feature_gates(ctx)
-    if not enabled_feature_gates:
+
+    # The per-gate `except Exception: continue` below cannot tell "this gate is not in the
+    # deprecation table" from "the version is unusable, so nothing can be looked up". Rejecting an
+    # unusable version up front keeps the second case from passing as a clean check, and logs it.
+    if not VERSION_RE.match(normalized_version):
+        logging.warning(
+            "skipping the deprecated feature gates check: %r is not a usable Kubernetes version",
+            target_version,
+        )
         return None
-    
+
     deprecated_feature_gates = []
-    
+
     for feature_gate in enabled_feature_gates:
         if not feature_gate:
             continue
-        
+
         try:
             if is_feature_gate_deprecated_up_to_version(feature_gate, normalized_version):
                 deprecated_feature_gates.append(feature_gate)
         except Exception:
             continue
-    
+
     if deprecated_feature_gates:
         feature_gates_str = ', '.join(f"'{fg}'" for fg in deprecated_feature_gates)
         return (
@@ -204,10 +239,114 @@ def validate(ctx: DotMap) -> Optional[str]:
             f"The following feature gates are deprecated in this version or earlier: {feature_gates_str}\n"
             f"You can remove them from the enabledFeatureGates in the control-plane-manager ModuleConfig."
         )
-    
+
+    return None
+
+
+def validate_cluster_configuration_change(ctx: DotMap) -> Optional[str]:
+    req = ctx.review.request
+
+    old_secret = req.get('oldObject')
+    new_secret = req.get('object')
+
+    if not old_secret:
+        return None
+
+    if not new_secret:
+        return None
+
+    old_data = old_secret.get('data')
+    new_data = new_secret.get('data')
+
+    if not old_data or not new_data:
+        return None
+
+    old_config_version = get_k8s_version_from_cluster_config(old_data)
+    new_config_version = get_k8s_version_from_cluster_config(new_data)
+
+    if old_config_version == new_config_version:
+        return None
+
+    enabled_feature_gates = get_enabled_feature_gates(ctx)
+    if not enabled_feature_gates:
+        return None
+
+    mc_version = get_module_config_settings(ctx).get('kubernetesVersion')
+
+    # Whenever ModuleConfig carries a value at all, this edit cannot move the effective version:
+    # resolve_effective_version returns the MC pin outright, and for Default/Automatic it reads the
+    # deckhouseDefaultKubernetesVersion key — never ClusterConfiguration.kubernetesVersion. Denying
+    # here blocked exactly the documented migration step (dropping the deprecated field from
+    # ClusterConfiguration) that the D8ObsoleteKubernetesVersionFieldInClusterConfiguration alert asks operators to
+    # perform. The ModuleConfig branch guards against this class of error explicitly; this one did not.
+    if mc_version:
+        return None
+
+    target_version = resolve_effective_version(mc_version, ctx, new_data)
+    if not target_version:
+        return None
+
+    return build_deprecated_feature_gates_error(target_version, enabled_feature_gates)
+
+
+def get_guarded_settings(obj) -> tuple:
+    # The pair this webhook is about. Anything else in the ModuleConfig is none of its business.
+    if not obj:
+        return (None, None)
+
+    settings = obj.get('spec', {}).get('settings', {})
+
+    return (settings.get('kubernetesVersion'), settings.get('enabledFeatureGates'))
+
+
+def validate_module_config_change(ctx: DotMap) -> Optional[str]:
+    req = ctx.review.request
+
+    new_object = req.get('object')
+    if not new_object:
+        return None
+
+    # Mirror the ClusterConfiguration branch above and bail out when nothing relevant changed.
+    # Without this the check re-runs on every edit of the ModuleConfig, so a config that already
+    # carries a deprecated feature gate becomes uneditable as a whole: changing an unrelated
+    # setting gets rejected with a message about a kubernetesVersion nobody touched. Worse, a
+    # Deckhouse upgrade that adds entries to the deprecation table would put existing clusters in
+    # that state without any user action. On CREATE there is no old object, so the check runs.
+    old_object = req.get('oldObject')
+    if old_object and get_guarded_settings(old_object) == get_guarded_settings(new_object):
+        return None
+
+    settings = new_object.get('spec', {}).get('settings', {})
+
+    enabled_feature_gates = settings.get('enabledFeatureGates', [])
+    if not enabled_feature_gates or not isinstance(enabled_feature_gates, list):
+        return None
+    enabled_feature_gates = [fg for fg in enabled_feature_gates if fg]
+    if not enabled_feature_gates:
+        return None
+
+    target_version = resolve_effective_version(settings.get('kubernetesVersion'), ctx)
+    if not target_version:
+        return None
+
+    return build_deprecated_feature_gates_error(target_version, enabled_feature_gates)
+
+
+def validate(ctx: DotMap) -> Optional[str]:
+    req = ctx.review.request
+    # DotMap returns an empty DotMap for missing keys; calling .lower() on it raises
+    # AttributeError, which main() turns into deny — with failurePolicy:Fail that would
+    # lock ModuleConfig edits. Resolve kind defensively.
+    kind = str(req.get('kind', {}).get('kind', '') or '').lower()
+
+    if kind == "secret":
+        return validate_cluster_configuration_change(ctx)
+
+    if kind == "moduleconfig":
+        return validate_module_config_change(ctx)
+
     return None
 
 
 if __name__ == "__main__":
     hook.run(main, config=config)
-

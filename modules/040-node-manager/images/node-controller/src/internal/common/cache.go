@@ -101,9 +101,13 @@ func CacheOptions() (cache.Options, client.Options) {
 			},
 			&corev1.ConfigMap{}: {
 				Namespaces: map[string]cache.Config{
-					"kube-system": {
-						FieldSelector: fields.SelectorFromSet(fields.Set{"metadata.name": "d8-cluster-uuid"}),
-					},
+					// Unfiltered on purpose, the same trade as the kube-system Secrets above: this
+					// binary reads two ConfigMaps here — d8-cluster-uuid and d8-cluster-kubernetes,
+					// the source of the target Kubernetes version — and a name FieldSelector can pin
+					// exactly one object, field selectors having no OR. The set is bounded by the
+					// platform and every object in it is small, so caching all of them is cheaper
+					// than turning either read into a live GET on the derived-status hot path.
+					"kube-system": {},
 					"d8-system": {
 						FieldSelector: fields.SelectorFromSet(fields.Set{"metadata.name": "d8-deckhouse-version-info"}),
 					},
