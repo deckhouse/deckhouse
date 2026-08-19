@@ -682,11 +682,25 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
 1. При переключении на DKP CSE возможна временная недоступность компонентов кластера.
 1. Каждый узел кластера будет поочерёдно перезагружен с очисткой кеша образов containerd. Чтобы управлять моментом перезагрузки, заранее переведите все NodeGroup, включая `master`, в ручной режим подтверждения простоя:
 
-   ```shell
-   d8 k patch ng <ИМЯ_NODEGROUP> --type=merge -p '{"spec":{"disruptions":{"approvalMode":"Manual"}}}'
-   ```
+   1. Сохраните текущий режим подтверждения простоя всех NodeGroup, чтобы вернуть исходные значения после переключения:
 
-   Исходное значение верните после завершения переключения.
+      ```shell
+      d8 k get ng -o custom-columns=NAME:.metadata.name,MODE:.spec.disruptions.approvalMode
+      ```
+
+      Значение `<none>` означает, что режим не задан явно и используется значение по умолчанию (`Automatic`).
+
+   1. Переведите все NodeGroup в ручной режим:
+
+      ```shell
+      d8 k patch ng <ИМЯ_NODEGROUP> --type=merge -p '{"spec":{"disruptions":{"approvalMode":"Manual"}}}'
+      ```
+
+   После завершения переключения верните исходные значения: группам, где режим был задан явно, установите прежнее значение; группам со значением `<none>` удалите параметр:
+
+   ```shell
+   d8 k patch ng <ИМЯ_NODEGROUP> --type=json -p='[{"op":"remove","path":"/spec/disruptions/approvalMode"}]'
+   ```
 1. Переключение на DKP CSE возможно только с DKP EE (Enterprise Edition). Переключение поддерживается только **между одинаковыми минорными версиями** DKP. Например, с DKP EE 1.67.x на DKP CSE 1.67.x.
 
    При необходимости, выполните обновление DKP EE до соответствующей минорной версии и последней патч-версии.
