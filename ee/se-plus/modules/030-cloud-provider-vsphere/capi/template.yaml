@@ -114,13 +114,33 @@ template: |
         {{- /* datacenter is REQUIRED when the vCenter hosts more than one — CAPV's finder
                defaults to "*" and folder/datastore/network lookup fails ambiguously
                otherwise. Populated by templates/registration.yaml from discovery data. */ -}}
-        {{- if hasKey .provider "datacenter" }}
-        datacenter: {{ .provider.datacenter | quote }}
+        {{- $dc := get .provider "datacenter" }}
+        {{- if $dc }}
+        datacenter: {{ $dc | quote }}
         {{- end }}
-        folder: {{ .provider.vmFolderPath | quote }}
+        {{- /* folder must be an absolute inventory path (/{dc}/vm/{path}). CAPV's finder
+               looks up paths relative to the datacenter root (not the /vm subtree), so a
+               bare "E2E/32226..." fails with "folder ... not found" even though terraform
+               created the folder in the /vm/ subtree at bootstrap. */ -}}
+        {{- $folder := .provider.vmFolderPath }}
+        {{- if and $dc (not (hasPrefix "/" $folder)) }}
+        folder: {{ printf "/%s/vm/%s" $dc $folder | quote }}
+        {{- else }}
+        folder: {{ $folder | quote }}
+        {{- end }}
         datastore: {{ $datastore | quote }}
+        {{- /* resourcePool: govmomi Finder.ResourcePool searches from hostFolder and
+               expects "{cluster}/Resources/{pool}" form. A bare "E2E/32226..." from
+               discovery would not resolve. When datacenter is known, prefix with
+               "/{dc}/host/*/Resources/" and let vSphere finder match the single
+               ComputeCluster in that datacenter. Multi-cluster installations must
+               spell the absolute path themselves in VsphereInstanceClass.resourcePool. */ -}}
         {{- if $rp }}
+        {{- if and $dc (not (hasPrefix "/" $rp)) }}
+        resourcePool: {{ printf "/%s/host/*/Resources/%s" $dc $rp | quote }}
+        {{- else }}
         resourcePool: {{ $rp | quote }}
+        {{- end }}
         {{- end }}
         numCPUs: {{ $ic.numCPUs | int }}
         memoryMiB: {{ $memoryMiB }}
