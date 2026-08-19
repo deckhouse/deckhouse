@@ -41,7 +41,7 @@ ALB средствами [Kubernetes Gateway API](https://kubernetes.io/docs/con
 
 ALB на основе модуля [`istio`](/modules/istio/) позволяет получить расширенные возможности по управлению трафиком. ALB на базе istio стоит рассмотреть, если вам нужны:
 
-- продвинутая маршрутизация, например, для реализации [canary deployment](../canary-deployment.html).
+- продвинутая маршрутизация, например, для реализации [canary deployment](../canary-deployment.html);
 - распределение трафика между версиями приложения и микросервисами;
 - mTLS для шифрования трафика между подами;
 - трассировка запросов.
@@ -301,7 +301,7 @@ spec:
       protocol: TLS
       hostname: pass.example.com
       tls:
-        mode: Passthrough # Режим TLS - сквозной.
+        mode: Passthrough # Режим TLS — сквозной.
 ---
 apiVersion: gateway.networking.k8s.io/v1alpha3
 kind: TLSRoute
@@ -491,9 +491,9 @@ spec:
 
 1. Получите у администратора кластера имя и неймспейс объекта ClusterALBInstance или создайте объект ALBInstance, чтобы контроллер создал новый объект Gateway.
 1. Создайте объект ListenerSet с теми же именами хостов, портами и TLS-настройками. В `spec.parentRef` укажите новый объект Gateway.
-1. В существующий объект TTPRoute, в `parentRefs`добавьте ещё один объект, который указывает на новый объект ListenerSet.
+1. В существующий объект HTTPRoute, в `parentRefs` добавьте ещё один объект, который указывает на новый объект ListenerSet.
 1. Проверьте доступность приложения через новый шлюз.
-1. После проверки удалите из `parentRefs` объекта HTTPRout ссылку на неактуальные ListenerSet.
+1. После проверки удалите из `parentRefs` объекта HTTPRoute ссылку на неактуальные ListenerSet.
 
 ### Привязка маршрута в одном неймспейсе к ListenerSet объекту в другом неймспейсе
 
@@ -558,7 +558,7 @@ spec:
 
 ### Настройка параметров TLS через BackendTLSPolicy
 
-Если трафик от шлюза к backend должен идти по TLS, необходимо создать объект BackendTLSPolicy в неймспейсе backend-объекта Service. В примере ниже показаны объект HTTPRoute, backend-объект Service с именованным портом, ConfigMap с CA bundle и объект BackendTLSPolicy, который задаёт TLS-валидацию для этого backend:
+Если трафик от шлюза к бэкенду должен идти по TLS, необходимо создать объект BackendTLSPolicy в неймспейсе бэкенд-объекта Service. В примере ниже показаны объект HTTPRoute, бэкенд-объект Service с именованным портом, ConfigMap с CA bundle и объект BackendTLSPolicy, который задаёт TLS-валидацию для этого бэкенда:
 
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1
