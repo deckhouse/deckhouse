@@ -100,3 +100,68 @@
         ```
         d8_registry_migration_preflight
         ```
+
+  # Its own alert rather than a line in the migration one: this is not about migrating, it is about a
+  # cluster that already runs this implementation and has a node whose next ordinary bashible run will
+  # stop converging. An operator who reads it has minutes of work to do and, usually, hours before the
+  # consequence — which is exactly the gap the alert exists to close.
+  - alert: D8RegistryNodeForeignRegistryConfig
+    expr: max by (node) (d8_registry_node_foreign_registry_config) > 0
+    for: 5m
+    labels:
+      severity_level: "5"
+      tier: cluster
+      d8_module: registry
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_registry_foreign_config: "D8RegistryNodeForeignRegistryConfig,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_registry_foreign_config: "D8RegistryNodeForeignRegistryConfig,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: Node {{ $labels.node }} carries container runtime registry configuration the registry module did not write.
+      description: |-
+        Node `{{ $labels.node }}` has a file under `/etc/containerd/conf.d/` (containerd v1) or
+        `/etc/containerd/conf2.d/` (containerd v2) that configures a registry, and the `registry`
+        module manages this cluster's registry configuration. Two writers of that configuration is
+        not a state the platform supports, so bashible refuses to merge such a file.
+
+        **Right now nothing is broken, and that is the danger.** The refusal happens inside the
+        bashible step that builds the container runtime configuration, and that step only runs when
+        something makes it run. Until then the file has no effect at all — measured on a test
+        cluster: the file was added, bashible reported "Configuration is in sync, nothing to do",
+        and the configuration was simply ignored.
+
+        The step does run on its own, though: a node re-applies its whole configuration
+        periodically (roughly every four hours), and also on any registry change, platform upgrade
+        or reboot. At that point the step fails with
+
+        ```
+        Failed to merge /etc/containerd/conf.d/<file>: it contains custom registry fields,
+        configure them in /etc/containerd/registry.d instead
+        ```
+
+        and retries, so the node stops applying configuration entirely — hours after the change
+        that caused it, and with nothing else to connect the two.
+
+        What to do, before that happens:
+
+        1. Find the file on the node:
+
+           ```
+           ls /etc/containerd/conf.d/ /etc/containerd/conf2.d/ 2>/dev/null
+           grep -l registry /etc/containerd/conf.d/*.toml /etc/containerd/conf2.d/*.toml 2>/dev/null
+           ```
+
+        2. Move the registry part of it to a host directory, which is where this platform
+           configures registries and where the module's node agent leaves other people's entries
+           alone:
+
+           ```
+           /etc/containerd/registry.d/<registry host>/hosts.toml
+           ```
+
+        3. Remove the registry section from the `conf.d` file (anything non-registry in it can
+           stay), and remove the `NodeGroupConfiguration` that writes it if that is where it comes
+           from.
+
+        A node already stuck in the retry loop recovers on its own once the file is gone: measured,
+        the configuration checksum returned in 75 seconds.
