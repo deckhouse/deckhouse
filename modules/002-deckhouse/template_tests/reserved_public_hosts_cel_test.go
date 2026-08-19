@@ -164,7 +164,9 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts :: CEL ::", func(
 
 	BeforeEach(func() {
 		domainTemplate = "%s.example.com"
-		reservedPublicHosts = ""
+		// Asked for explicitly, so that these contexts test Template mode on a branch that ships
+		// either default.
+		reservedPublicHosts = `{mode: Template}`
 		snapshot = ""
 	})
 
@@ -350,7 +352,7 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts :: CEL ::", func(
 	Context("Template mode without a publicDomainTemplate", func() {
 		BeforeEach(func() {
 			domainTemplate = ""
-			reservedPublicHosts = `{additionalHosts: ["admin.example.com"]}`
+			reservedPublicHosts = `{mode: Template, additionalHosts: ["admin.example.com"]}`
 		})
 
 		It("reserves nothing but what the operator named, rather than everything", func() {
@@ -365,7 +367,7 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts :: CEL ::", func(
 
 	Context("An operator adjusts the reservation under Template mode", func() {
 		BeforeEach(func() {
-			reservedPublicHosts = `{excludedServices: ["grafana", "shop"], additionalHosts: ["admin.corp.example.org", "prometheus.example.com"]}`
+			reservedPublicHosts = `{mode: Template, excludedServices: ["grafana", "shop"], additionalHosts: ["admin.corp.example.org", "prometheus.example.com"]}`
 		})
 
 		It("gives back exactly the hostnames the excluded names render to", func() {

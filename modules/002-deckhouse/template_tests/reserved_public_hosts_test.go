@@ -26,6 +26,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/modules/002-deckhouse/internal/publicdomain"
 	. "github.com/deckhouse/deckhouse/testing/helm"
@@ -116,6 +117,33 @@ const (
 	listenerSetAPI                      = "gateway.networking.k8s.io/v1/ListenerSet"
 )
 
+// schemaDefaultMode reads settings.reservedPublicHosts.mode's default out of the module's own schema,
+// so that the checks below hold whichever of the two reservations a branch ships by default. A
+// release branch that judges the wider one too risky for a patch release changes it there.
+func schemaDefaultMode() string {
+	content, err := os.ReadFile(filepath.Join(repositoryRoot(), "modules/002-deckhouse/openapi/config-values.yaml"))
+	Expect(err).ShouldNot(HaveOccurred())
+
+	var schema struct {
+		Properties struct {
+			ReservedPublicHosts struct {
+				Properties struct {
+					Mode struct {
+						Default string   `json:"default"`
+						Enum    []string `json:"enum"`
+					} `json:"mode"`
+				} `json:"properties"`
+			} `json:"reservedPublicHosts"`
+		} `json:"properties"`
+	}
+	Expect(yaml.Unmarshal(content, &schema)).To(Succeed())
+
+	mode := schema.Properties.ReservedPublicHosts.Properties.Mode
+	Expect(mode.Enum).To(ConsistOf("Template", "List"), "there are two reservations and no third one")
+	Expect(mode.Default).To(BeElementOf(mode.Enum))
+	return mode.Default
+}
+
 // expectCoversRepositoryPublicDomains fails when a module in this repository publishes a public
 // domain $reservedNames does not name, pointing at the file that publishes it.
 //
@@ -169,8 +197,11 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 		renderWith(publicDomainTemplate, reservedPublicHosts, "", apiVersions...)
 	}
 
+	// render asks for Template mode explicitly. Every context below that is about Template mode says
+	// so, rather than leaning on whatever this branch defaults to, so that a release branch which
+	// ships the other default keeps testing both and has nothing to edit here.
 	render := func(publicDomainTemplate string, apiVersions ...string) {
-		renderWith(publicDomainTemplate, "", "", apiVersions...)
+		renderWith(publicDomainTemplate, `{mode: Template}`, "", apiVersions...)
 	}
 
 	admissionAPIs := []string{validatingAdmissionPolicyAPI, validatingAdmissionPolicyBindingAPI}
@@ -179,6 +210,32 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 		Expect(f.RenderError).ShouldNot(HaveOccurred())
 		return f.KubernetesResource("ConfigMap", "d8-system", reservedHostsConfigMapName)
 	}
+
+	// Which reservation a cluster gets when its ModuleConfig says nothing is decided by the schema
+	// default, because addon-operator fills the section in before Helm sees it. The template carries
+	// a fallback for the same choice, which is what a bare render without that defaulting uses. The
+	// two are compared against the schema rather than against a literal, so that a branch which
+	// ships the other default has to move both and cannot leave the tests exercising the one it does
+	// not ship.
+	Context("The mode a cluster gets when it asks for nothing", func() {
+		It("is the one the schema defaults to, once the defaults are applied", func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("deckhouse", moduleValuesForMasterNode)
+			f.ValuesSet("global.modules.publicDomainTemplate", "%s.example.com")
+			f.ApplyOpenAPIDefaults()
+			f.HelmRender(WithAPIVersions(admissionAPIs...))
+
+			Expect(configMap().Field("data.mode").String()).To(Equal(schemaDefaultMode()))
+		})
+
+		It("is the same one the template falls back to without them", func() {
+			renderWith("%s.example.com", "", "", admissionAPIs...)
+			Expect(configMap().Field("data.mode").String()).To(Equal(schemaDefaultMode()),
+				"the fallback in templates/reserved-public-hosts.yaml has to agree with the schema, "+
+					"or a bare render of the chart would reserve something else than a cluster does")
+		})
+	})
 
 	Context("The reservation follows publicDomainTemplate by default", func() {
 		BeforeEach(func() {
@@ -420,7 +477,7 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 
 	Context("An operator reserves their own hostname while the platform publishes none", func() {
 		BeforeEach(func() {
-			renderWithSettings("", `{additionalHosts: ["admin.example.com"]}`, admissionAPIs...)
+			renderWithSettings("", `{mode: Template, additionalHosts: ["admin.example.com"]}`, admissionAPIs...)
 		})
 
 		It("reserves it and derives no pattern, so nothing else becomes reserved", func() {
@@ -451,7 +508,7 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 	Context("An operator reserves hostnames of their own", func() {
 		BeforeEach(func() {
 			renderWithSettings("%s.example.com",
-				`{additionalHosts: ["admin.corp.example.org", "billing.corp.example.com"]}`, admissionAPIs...)
+				`{mode: Template, additionalHosts: ["admin.corp.example.org", "billing.corp.example.com"]}`, admissionAPIs...)
 		})
 
 		It("adds them to what the policies match exactly", func() {
@@ -469,7 +526,7 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 
 	Context("An operator gives a hostname back to a tenant", func() {
 		BeforeEach(func() {
-			renderWithSettings("%s.example.com", `{excludedServices: ["grafana"]}`, admissionAPIs...)
+			renderWithSettings("%s.example.com", `{mode: Template, excludedServices: ["grafana"]}`, admissionAPIs...)
 		})
 
 		It("renders the hostname the name stands for into the allowlist", func() {
@@ -510,7 +567,7 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 
 	Context("An operator excludes a service the platform does not publish", func() {
 		BeforeEach(func() {
-			renderWithSettings("%s.example.com", `{excludedServices: ["graphana"]}`, admissionAPIs...)
+			renderWithSettings("%s.example.com", `{mode: Template, excludedServices: ["graphana"]}`, admissionAPIs...)
 		})
 
 		It("keeps rendering, since a typo must not stop the module that deploys Deckhouse", func() {
@@ -526,7 +583,7 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 		})
 
 		It("reports nothing when every excluded name is published", func() {
-			renderWithSettings("%s.example.com", `{excludedServices: ["grafana"]}`, admissionAPIs...)
+			renderWithSettings("%s.example.com", `{mode: Template, excludedServices: ["grafana"]}`, admissionAPIs...)
 			cm := configMap()
 			Expect(strings.Fields(cm.Field("data.unknownExcludedServices").String())).To(BeEmpty())
 			Expect(strings.Fields(cm.Field("data.allowedHosts").String())).To(ContainElement("grafana.example.com"))
@@ -535,7 +592,7 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 
 	Context("The upgrade recorded what tenants already served", func() {
 		BeforeEach(func() {
-			renderWith("%s.example.com", `{excludedServices: ["grafana"]}`,
+			renderWith("%s.example.com", `{mode: Template, excludedServices: ["grafana"]}`,
 				`{recorded: true, hosts: ["shop.example.com", "store.example.com"]}`, admissionAPIs...)
 		})
 
@@ -615,7 +672,7 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 			// Two %s in the same label: the schema's pattern on
 			// global.modules.publicDomainTemplate does not admit it, so splitting on %s no longer
 			// yields a prefix and a suffix.
-			renderWithSettings("%s-%s.example.com", "", admissionAPIs...)
+			renderWithSettings("%s-%s.example.com", `{mode: Template}`, admissionAPIs...)
 		})
 
 		It("falls back to the list rather than to a regex built from parts that are not there", func() {
