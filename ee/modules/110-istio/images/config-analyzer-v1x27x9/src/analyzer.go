@@ -77,9 +77,15 @@ func runAnalysis(ctx context.Context, istioNamespace, revision string, allNamesp
 }
 
 const (
-	deckhouseSystemNamespacePrefix = "d8-"
-	sidecarInjectLabel             = "sidecar.istio.io/inject"
+	sidecarInjectLabel = "sidecar.istio.io/inject"
 )
+
+// mutedSystemNamespacePrefixes are Deckhouse/system namespace name prefixes where
+// IST0102 / IST0118 findings are noise (not mesh application workloads).
+var mutedSystemNamespacePrefixes = []string{
+	"d8-",
+	"upmeter-probe-namespace-",
+}
 
 // mutedSystemNamespaces are Kubernetes/Deckhouse system namespaces where
 // IST0102 / IST0118 findings are noise (not mesh application workloads).
@@ -137,8 +143,10 @@ func hasIstioSidecarInject(message diag.Message) bool {
 }
 
 func isMutedSystemNamespace(ns string) bool {
-	if strings.HasPrefix(ns, deckhouseSystemNamespacePrefix) {
-		return true
+	for _, prefix := range mutedSystemNamespacePrefixes {
+		if strings.HasPrefix(ns, prefix) {
+			return true
+		}
 	}
 	for _, systemNS := range mutedSystemNamespaces {
 		if ns == systemNS {
