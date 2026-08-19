@@ -35,9 +35,12 @@ type Renderer struct {
 	Name      string
 	Namespace string
 	LintMode  bool
-	// APIVersions extends the capabilities the chart is rendered with. Helm's defaults carry
-	// group/version strings only, so a template guarded by helm_lib_kind_exists renders nothing
-	// unless the group/version/Kind it looks for is named here.
+	// APIVersions extends the capabilities the chart is rendered with. Helm's defaults are
+	// group/version pairs with no kind in them, so every guard that asks after a kind answers no
+	// until the kind is named here. The guards read this list in two ways: helm_lib_kind_exists
+	// takes a bare kind and looks for it as a case-insensitive "/<Kind>" suffix, while
+	// helm_lib_api_version_exists and inline .Capabilities.APIVersions.Has compare a whole
+	// "group/version/Kind" string. An entry spelled that way satisfies both.
 	APIVersions []string
 }
 
