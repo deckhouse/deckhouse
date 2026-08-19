@@ -356,7 +356,7 @@ properties:
         description: |
           How much of the platform's domain is reserved.
 
-          - `Template` — every hostname `global.modules.publicDomainTemplate` can render, plus its wildcard form where the template's `%s` is the whole first label. A module never has to ask to be covered, and a hostname is reserved as soon as the template can produce it, whether or not any Deckhouse module publishes it today. A hostname that a workload legitimately serves is given back with `excludedServices` or `additionalHosts` below, or with the per-namespace label.
+          - `Template` — every hostname `global.modules.publicDomainTemplate` can render, plus its wildcard form where the template's `%s` is the whole first label. A module never has to ask to be covered, and a hostname is reserved as soon as the template can produce it, whether or not any Deckhouse module publishes it today. A hostname that a workload legitimately serves is given back with `excludedServices` below, or with the per-namespace label. The wildcard form is the exception: it is reserved by exact match and `excludedServices` cannot free it, so a workload that serves it needs the per-namespace label or `List` below.
           - `List` — only the hostnames of the Deckhouse services Deckhouse knows it publishes. Narrower, and it leaves a public domain that Deckhouse learns to publish later unreserved until the list catches up.
 
           Ecosystem applications are unaffected either way: `global.applications.publicDomainTemplate` puts the application name and its namespace in two different labels, so an application hostname has one label more than anything this reservation covers.
