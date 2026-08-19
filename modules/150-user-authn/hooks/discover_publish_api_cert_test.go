@@ -94,7 +94,8 @@ data:
 `
 	DescribeTable("publishAPI discovery cert",
 		func(in inputPublishAPICACert, out string) {
-			f.BindingContexts.Set(f.KubeStateSet(in.manifests))
+			f.KubeStateSet(in.manifests)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.ValuesSet("userAuthn.publishAPI.https.mode", in.publishAPIMode)
 			f.ValuesSet("userAuthn.https.mode", in.httpMode)
 
@@ -220,7 +221,8 @@ data:
 		BeforeEach(func() {
 			f.ValuesSet("userAuthn.publishAPI.https.mode", "SelfSigned")
 			f.ValuesSet("userAuthn.https.mode", "CertManager")
-			f.BindingContexts.Set(f.KubeStateSet(selfSignedCertSecret + certManagerCertSecret + customCertSecret))
+			f.KubeStateSet(selfSignedCertSecret + certManagerCertSecret + customCertSecret)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 
@@ -228,6 +230,23 @@ data:
 			Expect(f.KubernetesResource("Secret", "d8-user-authn", "kubernetes-tls-selfsigned").Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("Secret", "d8-user-authn", "kubernetes-tls").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Secret", "d8-user-authn", "kubernetes-tls-customcertificate").Exists()).To(BeFalse())
+		})
+	})
+
+	Context("With all secrets and the control-plane-manager export in cluster", func() {
+		BeforeEach(func() {
+			f.ValuesSet("userAuthn.publishAPI.https.mode", "SelfSigned")
+			f.ValuesSet("userAuthn.https.mode", "CertManager")
+			f.KubeStateSet(selfSignedCertSecret + certManagerCertSecret + customCertSecret + cpmConfigSecret)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("Should keep every secret", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesResource("Secret", "d8-user-authn", "kubernetes-tls").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Secret", "d8-user-authn", "kubernetes-tls-selfsigned").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Secret", "d8-user-authn", "kubernetes-tls-customcertificate").Exists()).To(BeTrue())
 		})
 	})
 })
