@@ -516,35 +516,30 @@ func (cp cloudProvider) Type() string {
 		return ""
 	}
 
-	pType, ok := cp["type"].(string)
-	if !ok {
-		return ""
-	}
-
+	pType, _ := cp["type"].(string)
 	return pType
 }
 
 type inputData struct {
-	Version                 int                     `json:"version,omitempty" yaml:"version,omitempty"`
-	Deckhouse               deckhouse               `json:"deckhouse" yaml:"deckhouse"`
-	PodSubnetNodeCIDRPrefix string                  `json:"podSubnetNodeCIDRPrefix" yaml:"podSubnetNodeCIDRPrefix"`
-	ClusterDomain           string                  `json:"clusterDomain" yaml:"clusterDomain"`
-	ClusterDNSAddress       string                  `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
-	ClusterUUID             string                  `json:"clusterUUID,omitempty" yaml:"clusterUUID,omitempty"`
-	ClusterMasterEndpoints  []clusterMasterEndpoint `json:"clusterMasterEndpoints,omitempty" yaml:"clusterMasterEndpoints,omitempty"`
-	// Deprecated: answers for NodeGroups that name no provider, remove in the next release.
-	CloudProvider              cloudProvider          `json:"cloudProvider,omitempty" yaml:"cloudProvider,omitempty"`
-	CloudProviders             []cloudProvider        `json:"cloudProviders,omitempty" yaml:"cloudProviders,omitempty"`
-	Proxy                      map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
-	BootstrapTokens            map[string]string      `json:"bootstrapTokens,omitempty" yaml:"bootstrapTokens,omitempty"`
-	PackagesProxy              map[string]interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
-	APIServerEndpoints         []string               `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
-	APIServerProxyCerts        map[string]interface{} `json:"apiserverProxyCerts" yaml:"apiserverProxyCerts"`
-	KubernetesCA               string                 `json:"kubernetesCA" yaml:"kubernetesCA"`
-	AllowedBundles             []string               `json:"allowedBundles" yaml:"allowedBundles"`
-	NodeGroups                 []nodeGroup            `json:"nodeGroups" yaml:"nodeGroups"`
-	Freq                       interface{}            `json:"NodeStatusUpdateFrequency,omitempty" yaml:"NodeStatusUpdateFrequency,omitempty"`
-	AllowedKubeletFeatureGates []string               `json:"allowedKubeletFeatureGates,omitempty" yaml:"allowedKubeletFeatureGates,omitempty"`
+	Version                    int                     `json:"version,omitempty" yaml:"version,omitempty"`
+	Deckhouse                  deckhouse               `json:"deckhouse" yaml:"deckhouse"`
+	PodSubnetNodeCIDRPrefix    string                  `json:"podSubnetNodeCIDRPrefix" yaml:"podSubnetNodeCIDRPrefix"`
+	ClusterDomain              string                  `json:"clusterDomain" yaml:"clusterDomain"`
+	ClusterDNSAddress          string                  `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
+	ClusterUUID                string                  `json:"clusterUUID,omitempty" yaml:"clusterUUID,omitempty"`
+	ClusterMasterEndpoints     []clusterMasterEndpoint `json:"clusterMasterEndpoints,omitempty" yaml:"clusterMasterEndpoints,omitempty"`
+	CloudProvider              cloudProvider           `json:"cloudProvider,omitempty" yaml:"cloudProvider,omitempty"` // Deprecated
+	CloudProviders             []cloudProvider         `json:"cloudProviders,omitempty" yaml:"cloudProviders,omitempty"`
+	Proxy                      map[string]interface{}  `json:"proxy,omitempty" yaml:"proxy,omitempty"`
+	BootstrapTokens            map[string]string       `json:"bootstrapTokens,omitempty" yaml:"bootstrapTokens,omitempty"`
+	PackagesProxy              map[string]interface{}  `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
+	APIServerEndpoints         []string                `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
+	APIServerProxyCerts        map[string]interface{}  `json:"apiserverProxyCerts" yaml:"apiserverProxyCerts"`
+	KubernetesCA               string                  `json:"kubernetesCA" yaml:"kubernetesCA"`
+	AllowedBundles             []string                `json:"allowedBundles" yaml:"allowedBundles"`
+	NodeGroups                 []nodeGroup             `json:"nodeGroups" yaml:"nodeGroups"`
+	Freq                       interface{}             `json:"NodeStatusUpdateFrequency,omitempty" yaml:"NodeStatusUpdateFrequency,omitempty"`
+	AllowedKubeletFeatureGates []string                `json:"allowedKubeletFeatureGates,omitempty" yaml:"allowedKubeletFeatureGates,omitempty"`
 }
 
 // getCloudProvider returns the registration a NodeGroup named, or nil when it named none.
@@ -560,11 +555,11 @@ func (input inputData) getCloudProvider(pType string) cloudProvider {
 		return nil
 	}
 
-	for _, provider := range input.CloudProviders {
+	for i := range input.CloudProviders {
+		provider := input.CloudProviders[i]
 		if provider.Type() == pType {
 			return provider
 		}
 	}
-
 	return nil
 }

@@ -92,7 +92,6 @@ func (ps Providers) Validate() error {
 	if _, ok := ps.byName(ps.clusterProvider); !ok {
 		return fmt.Errorf("cloud provider %q of the cluster configuration published no registration secret", ps.clusterProvider)
 	}
-
 	return nil
 }
 
@@ -121,42 +120,6 @@ func (ps Providers) ForNodeGroup(ng *v1.NodeGroup) (Provider, bool) {
 	// byName reports no match on an empty name, so a static cluster — which names no provider —
 	// resolves to nothing here without a branch of its own.
 	return ps.byName(ps.clusterProvider)
-}
-
-// DeclarationError reports why a NodeGroup's spec.providerType disagrees with the provider it
-// resolved to, or "" when the two agree.
-//
-// The field declares an answer, it does not pick one: leaving it empty is always correct, and
-// naming anything other than the resolved provider is a statement about the NodeGroup that a
-// retry cannot fix.
-func DeclarationError(declared string, resolved Provider) string {
-	switch {
-	case declared == "":
-		return ""
-
-	case strings.EqualFold(declared, StatusNone):
-		if resolved.Type == "" {
-			return ""
-		}
-		return fmt.Sprintf(
-			"Invalid providerType '%s'. The nodes of this group run in the '%s' cloud. "+
-				"Please remove the field or set it to '%s'.",
-			StatusNone, resolved.Type, resolved.Type)
-
-	case resolved.Type == "":
-		return fmt.Sprintf(
-			"Invalid providerType '%s'. The nodes of this group run in no cloud. "+
-				"Please remove the field or set it to '%s'.",
-			declared, StatusNone)
-
-	case !strings.EqualFold(declared, resolved.Type):
-		return fmt.Sprintf(
-			"Invalid providerType '%s'. Expected '%s'. Please update the NodeGroup to name the "+
-				"cloud provider its nodes run in.",
-			declared, resolved.Type)
-	}
-
-	return ""
 }
 
 // InstanceClassGVKs returns the GVK every provider registered its InstanceClass under.
@@ -207,7 +170,6 @@ func (ps Providers) byName(name string) (Provider, bool) {
 	if name == "" {
 		return Provider{}, false
 	}
-
 	name = strings.ToLower(name)
 
 	for i := range ps.providers {
@@ -215,8 +177,43 @@ func (ps Providers) byName(name string) (Provider, bool) {
 			return ps.providers[i], true
 		}
 	}
-
 	return Provider{}, false
+}
+
+// DeclarationError reports why a NodeGroup's spec.providerType disagrees with the provider it
+// resolved to, or "" when the two agree.
+//
+// The field declares an answer, it does not pick one: leaving it empty is always correct, and
+// naming anything other than the resolved provider is a statement about the NodeGroup that a
+// retry cannot fix.
+func DeclarationError(declared string, resolved Provider) string {
+	switch {
+	case declared == "":
+		return ""
+
+	case strings.EqualFold(declared, StatusNone):
+		if resolved.Type == "" {
+			return ""
+		}
+		return fmt.Sprintf(
+			"Invalid providerType '%s'. The nodes of this group run in the '%s' cloud. "+
+				"Please remove the field or set it to '%s'.",
+			StatusNone, resolved.Type, resolved.Type)
+
+	case resolved.Type == "":
+		return fmt.Sprintf(
+			"Invalid providerType '%s'. The nodes of this group run in no cloud. "+
+				"Please remove the field or set it to '%s'.",
+			declared, StatusNone)
+
+	case !strings.EqualFold(declared, resolved.Type):
+		return fmt.Sprintf(
+			"Invalid providerType '%s'. Expected '%s'. Please update the NodeGroup to name the "+
+				"cloud provider its nodes run in.",
+			declared, resolved.Type)
+	}
+
+	return ""
 }
 
 // loadProviders is the Secret half of Load, separate so the lazy InstanceClass watch does not
