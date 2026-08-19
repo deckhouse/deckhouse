@@ -16,6 +16,7 @@ package config
 
 import (
 	"context"
+	"github.com/jonboulle/clockwork"
 	"sync"
 	"testing"
 
@@ -30,7 +31,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/modulesync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/confighandler"
 	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
@@ -64,6 +67,7 @@ func (suite *ControllerTestSuite) SetupSuite() {
 			v1alpha1.SchemeGroupVersion.WithKind("ModuleConfig"),
 			v1alpha1.SchemeGroupVersion.WithKind("Module"),
 			v1alpha1.SchemeGroupVersion.WithKind("ModuleRelease"),
+			v1alpha2.SchemeGroupVersion.WithKind("Module"),
 		},
 		ObjectNormalizers: []reconcilertest.ObjectNormalizer{clearModuleConditionTimes},
 		GoldenMode:        reconcilertest.PerDocument,
@@ -102,6 +106,7 @@ func (suite *ControllerTestSuite) buildReconciler() {
 	rec := &reconciler{
 		init:             new(sync.WaitGroup),
 		client:           suite.Client(),
+		moduleSync:       modulesync.New(suite.Client(), suite.Client(), clockwork.NewRealClock(), log.NewNop()),
 		logger:           log.NewNop(),
 		handler:          newMockHandler(),
 		conversionsStore: conversionsStore,

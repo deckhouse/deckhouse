@@ -17,6 +17,7 @@ package config
 import (
 	"context"
 	"fmt"
+	"github.com/jonboulle/clockwork"
 	"log/slog"
 	"sync"
 	"time"
@@ -41,6 +42,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/modulesync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/confighandler"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
@@ -78,6 +80,7 @@ func RegisterController(
 	r := &reconciler{
 		init:             new(sync.WaitGroup),
 		client:           runtimeManager.GetClient(),
+		moduleSync:       modulesync.New(runtimeManager.GetClient(), runtimeManager.GetAPIReader(), clockwork.NewRealClock(), logger),
 		logger:           logger,
 		handler:          handler,
 		conversionsStore: conversionsStore,
@@ -127,6 +130,7 @@ func RegisterController(
 type reconciler struct {
 	init             *sync.WaitGroup
 	client           client.Client
+	moduleSync       *modulesync.Syncer
 	conversionsStore *conversion.ConversionsStore
 	edition          *d8edition.Edition
 	handler          *confighandler.Handler
@@ -223,6 +227,14 @@ func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alp
 
 	if err := r.refreshModuleConfig(ctx, moduleConfig.Name); err != nil {
 		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
+	}
+
+	// mirror the config into the module v2 resource; runs for every module
+	// kind, including the embedded and system ones processModule skips
+	if err := r.moduleSync.EnsureModuleConfig(ctx, moduleConfig); err != nil {
+		r.logger.Error("failed to mirror the module config into the module v2", slog.String("name", moduleConfig.Name), log.Err(err))
+
+		return ctrl.Result{Requeue: true}, nil
 	}
 
 	module := new(v1alpha1.Module)

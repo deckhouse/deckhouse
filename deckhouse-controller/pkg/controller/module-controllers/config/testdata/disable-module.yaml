@@ -18,3 +18,8 @@ status:
   conditions:
     - type: EnabledByModuleConfig
       status: "True" 
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Module
+metadata:
+  name: test-module

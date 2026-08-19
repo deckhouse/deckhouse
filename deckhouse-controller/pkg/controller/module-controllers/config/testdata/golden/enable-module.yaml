@@ -29,3 +29,17 @@ status:
     status: "True"
     type: EnabledByModuleConfig
   phase: Available
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Module
+metadata:
+  name: test-module
+  resourceVersion: "1000"
+spec:
+  enabled: true
+  packageRepositoryName: test-source
+  packageVersion: v1.0.0
+  updatePolicy: Auto
+status:
+  lastAppliedConfiguration: null
+  tracking: null
