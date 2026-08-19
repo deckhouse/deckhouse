@@ -152,3 +152,16 @@ status:
     status: "True"
     type: LastReleaseDeployed
   phase: Ready
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Module
+metadata:
+  name: echo
+  resourceVersion: "1"
+spec:
+  packageRepositoryName: test
+  packageVersion: v0.4.54
+  settingsVersion: 1
+status:
+  lastAppliedConfiguration: null
+  tracking: null

@@ -132,3 +132,16 @@ status:
     reason: ReleaseDeployedIsNotReady
     status: "False"
     type: LastReleaseDeployed
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Module
+metadata:
+  name: upmeter
+  resourceVersion: "1"
+spec:
+  packageRepositoryName: foxtrot
+  packageVersion: v1.71.0
+  settingsVersion: 1
+status:
+  lastAppliedConfiguration: null
+  tracking: null

@@ -141,3 +141,16 @@ status:
     status: "True"
     type: LastReleaseDeployed
   phase: Ready
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Module
+metadata:
+  name: upmeter
+  resourceVersion: "3"
+spec:
+  packageRepositoryName: foxtrot
+  packageVersion: v1.72.0
+  settingsVersion: 1
+status:
+  lastAppliedConfiguration: null
+  tracking: null

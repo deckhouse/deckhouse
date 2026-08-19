@@ -64,3 +64,16 @@ status:
     lastTransitionTime: "2019-10-17T15:33:00Z"
     status: "True"
     type: LastReleaseDeployed
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Module
+metadata:
+  name: parca
+  resourceVersion: "1"
+spec:
+  packageRepositoryName: foxtrot-suitable
+  packageVersion: v1.26.2
+  settingsVersion: 1
+status:
+  lastAppliedConfiguration: null
+  tracking: null

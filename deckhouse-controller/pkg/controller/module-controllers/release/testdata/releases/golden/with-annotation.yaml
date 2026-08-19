@@ -63,3 +63,16 @@ status:
     lastTransitionTime: "2019-10-17T15:33:00Z"
     status: "True"
     type: LastReleaseDeployed
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Module
+metadata:
+  name: deckhouse-commander
+  resourceVersion: "1"
+spec:
+  packageRepositoryName: deckhouse-prod
+  packageVersion: v1.3.10
+  settingsVersion: 1
+status:
+  lastAppliedConfiguration: null
+  tracking: null

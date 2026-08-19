@@ -101,3 +101,16 @@ status:
     lastTransitionTime: "2019-10-17T15:33:00Z"
     status: "True"
     type: LastReleaseDeployed
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Module
+metadata:
+  name: upmeter
+  resourceVersion: "1"
+spec:
+  packageRepositoryName: foxtrot
+  packageVersion: v1.70.1
+  settingsVersion: 1
+status:
+  lastAppliedConfiguration: null
+  tracking: null

@@ -92,3 +92,16 @@ status:
     status: "True"
     type: LastReleaseDeployed
   phase: Ready
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Module
+metadata:
+  name: parca
+  resourceVersion: "1"
+spec:
+  packageRepositoryName: foxtrot-suitable
+  packageVersion: v1.0.0
+  settingsVersion: 1
+status:
+  lastAppliedConfiguration: null
+  tracking: null
