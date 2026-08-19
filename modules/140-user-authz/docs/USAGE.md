@@ -263,40 +263,77 @@ Write an email for the `User` subject in lowercase. It's recorded to the token i
 
 This restriction is applied during the User and Group resource creation only and doesn't prevent adding existing users or groups to a ClusterAuthorizationRule. If a matching User or Group already exists, it receives the privileges immediately after it's added to the rule.
 
-## Assigning permissions via CLI
+## Managing permissions via CLI
 
 The [`d8 iam access`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-access) command provides a convenient way to manage authorization rules without writing YAML manifests. It creates and deletes [ClusterAuthorizationRule](cr.html#clusterauthorizationrule) and [AuthorizationRule](cr.html#authorizationrule) resources.
 
 Available access levels: `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`, `ClusterAdmin`, `SuperAdmin`.
 
+Examples of granting permissions with the `d8 iam access` command:
+
+Grant the Admin role to a user in the `dev` namespace:
+
 ```shell
-# Grant the Admin role to a user in the dev namespace
 d8 iam access grant user anton --access-level Admin -n dev
+```
 
-# Grant the Admin role in multiple namespaces
+Grant the Admin role to a user in multiple namespaces:
+
+```shell
 d8 iam access grant user anton --access-level Admin -n dev -n stage
+```
 
-# Cluster-wide role (excluding system namespaces)
+Grant a cluster-wide role to a user (excluding system namespaces):
+
+```shell
 d8 iam access grant user anton --access-level ClusterAdmin --scope cluster
+```
 
-# Cluster-wide role (including system namespaces)
+Grant a cluster-wide role to a user in all namespaces (including system namespaces):
+
+```shell
 d8 iam access grant user anton --access-level ClusterAdmin --scope all-namespaces
+```
 
-# Role scoped by namespace label selector
+Grant a role to group members by a namespace label selector:
+
+```shell
 d8 iam access grant group admins --access-level Editor --scope labels=team=platform,tier=prod
+```
 
-# With additional capabilities
+Grant a role to group members with additional capabilities:
+
+```shell
 d8 iam access grant group admins --access-level Editor -n dev --port-forwarding --allow-scale
+```
 
-# Preview the manifest without applying it
+Preview the manifest without applying it:
+
+```shell
 d8 iam access grant user anton --access-level Admin -n dev --dry-run -o yaml
+```
 
-# Revoke permissions
+Revoke a user's permissions in a namespace:
+
+```shell
 d8 iam access revoke user anton -n dev
-d8 iam access revoke user anton --scope cluster
+```
 
-# View authorization rules
+Revoke a user's cluster-wide permissions:
+
+```shell
+d8 iam access revoke user anton --scope cluster
+```
+
+List all access rules in the cluster:
+
+```shell
 d8 iam list rules
+```
+
+Show detailed information about a specific rule:
+
+```shell
 d8 iam get rule <name>
 ```
 

@@ -17,22 +17,37 @@ lang: ru
 
 ## Создание статического пользователя
 
-Рекомендуемый способ создания локального пользователя — команда [`d8 iam user create`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-user-create). Она поддерживает интерактивный ввод пароля, автоматическую генерацию пароля, добавление в группы и TTL для временных пользователей:
+Рекомендуемый способ создания локального пользователя — команда [`d8 iam user create`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-user-create). Она поддерживает интерактивный ввод пароля, автоматическую генерацию пароля, добавление в группы и TTL для временных пользователей.
+
+Примеры:
+
+Интерактивный ввод пароля (по умолчанию если stdin — терминал):
 
 ```shell
-# Интерактивный ввод пароля (по умолчанию если stdin — терминал)
 d8 iam user create anton --email anton@abc.com
+```
 
-# Автогенерация пароля (показывается один раз)
+Автогенерация пароля (сгенерированный пароль показывается в выводе команды один раз):
+
+```shell
 d8 iam user create anton --email anton@abc.com --generate-password
+```
 
-# Пароль из stdin (для CI/CD пайплайнов)
+Пароль из stdin (для CI/CD пайплайнов):
+
+```shell
 echo "s3cret" | d8 iam user create anton --email anton@abc.com --password-stdin
+```
 
-# Создать пользователя и добавить в группы (с автосозданием групп)
+Создать пользователя и добавить в группы (с автосозданием групп):
+
+```shell
 d8 iam user create anton --email anton@abc.com --generate-password --member-of admins --create-groups
+```
 
-# Создать временного пользователя с TTL
+Создать временного пользователя с TTL:
+
+```shell
 d8 iam user create anton --email anton@abc.com --generate-password --ttl 24h
 ```
 
@@ -68,13 +83,19 @@ echo -n '<PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 
 
 ## Удаление пользователя
 
-Для удаления локального пользователя используйте команду [`d8 iam user delete`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-user-delete). По умолчанию команда также удаляет пользователя из всех ресурсов [Group](/modules/user-authn/cr.html#group), в которых он состоит:
+Для удаления локального пользователя используйте команду [`d8 iam user delete`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-user-delete). По умолчанию команда также удаляет пользователя из всех ресурсов [Group](/modules/user-authn/cr.html#group), в которых он состоит.
+
+Примеры:
+
+Удалить пользователя (плюс автоматически удалить из всех групп):
 
 ```shell
-# Удалить пользователя (+ автоматически удалить из всех групп)
 d8 iam user delete anton
+```
 
-# Удалить пользователя, оставив ссылки в группах
+Удалить пользователя, оставив ссылки в группах:
+
+```shell
 d8 iam user delete anton --keep-memberships
 ```
 
@@ -149,7 +170,7 @@ d8 iam user delete anton --keep-memberships
 
 ### Ручное создание UserOperation
 
-Когда CLI `d8 iam user` недоступен (например, в CI/CD, GitOps или скриптах автоматизации), ресурс [UserOperation](/modules/user-authn/cr.html#useroperation) можно создать напрямую. Пример — сброс пароля локального пользователя (в `newPasswordHash` указывается bcrypt-хеш без кодирования в Base64; хук кодирует его автоматически):
+Когда выполнение команды `d8 iam user` в CLI недоступно (например, в CI/CD, GitOps или скриптах автоматизации), ресурс [UserOperation](/modules/user-authn/cr.html#useroperation) можно создать напрямую. Пример — сброс пароля локального пользователя (в `newPasswordHash` указывается bcrypt-хеш без кодирования в Base64; хук кодирует его автоматически):
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -164,7 +185,7 @@ spec:
     newPasswordHash: "$2y$10$..."
 ```
 
-Для пользователей, аутентифицируемых через внешние провайдеры (LDAP, Atlassian Crowd), вместо `spec.user` используется `spec.target`. Для внешних пользователей поддерживаются только операции `Lock` и `Unlock`. Пример — блокировка внешнего пользователя на 30 минут:
+Для пользователей, аутентифицируемых через внешние провайдеры (LDAP, Atlassian Crowd), вместо `spec.user` используется [`spec.target`](/modules/user-authn/cr.html#useroperation-v1-spec-target). Для внешних пользователей поддерживаются только операции `Lock` и `Unlock`. Пример — блокировка внешнего пользователя на 30 минут:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -194,19 +215,29 @@ UserOperation — **одноразовый** и **неизменяемый** о�
 Аутентификация таких пользователей или участников этих групп будет отклонена, а в логах `kube-apiserver` появится соответствующее предупреждение.
 {% endalert %}
 
-Рекомендуемый способ управления группами — команда [`d8 iam group`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-group):
+Рекомендуемый способ управления группами — команда [`d8 iam group`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-group). Примеры:
+
+Создать группу:
 
 ```shell
-# Создать группу
 d8 iam group create admins
+```
 
-# Добавить пользователя в группу
+Добавить пользователя в группу:
+
+```shell
 d8 iam group add-member admins user anton
+```
 
-# Удалить участника из группы
+Удалить пользователя из группы:
+
+```shell
 d8 iam group remove-member admins user anton
+```
 
-# Удалить группу
+Удалить группу:
+
+```shell
 d8 iam group delete admins
 ```
 

@@ -259,7 +259,7 @@ Alternatively, create a new UserOperation resource with `type: Unlock`. Note tha
 
 ## A user was locked automatically — why?
 
-The number of failed login attempts exceeded `passwordPolicy.lockout.maxAttempts`. The user is locked for the duration specified in `passwordPolicy.lockout.lockDuration` and is unlocked automatically afterwards. An administrator can also unlock the user manually with `d8 iam user unlock <username>` or by creating a UserOperation with `type: Unlock`.
+The number of failed login attempts exceeded [`passwordPolicy.lockout.maxAttempts`](configuration.html#parameters-passwordpolicy-lockout-maxattempts). The user is locked for the duration specified in [`passwordPolicy.lockout.lockDuration`](configuration.html#parameters-passwordpolicy-lockout-lockduration) and is unlocked automatically afterwards. An administrator can also unlock the user manually with `d8 iam user unlock <username>` or by creating a UserOperation with `type: Unlock`.
 
 ## Can I cancel a UserOperation?
 

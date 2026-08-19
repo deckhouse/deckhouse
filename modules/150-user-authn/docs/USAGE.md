@@ -548,26 +548,47 @@ The implementation complies with OWASP recommendations, ensuring reliable protec
 
 The recommended way to create a local user is the [`d8 iam user create`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-user-create) command. It supports interactive password entry, automatic password generation, group assignment, and time-to-live (TTL) for temporary users.
 
+Examples:
+
+Interactive password prompt (default when stdin is a terminal):
+
 ```shell
-# Interactive password prompt (default when stdin is a terminal)
 d8 iam user create anton --email anton@abc.com
+```
 
-# Automatically generate a password (shown once)
+Automatically generate a password (the generated password is shown in the command output once):
+
+```shell
 d8 iam user create anton --email anton@abc.com --generate-password
+```
 
-# Read the password from stdin (for CI/CD pipelines)
+Read the password from stdin (for CI/CD pipelines):
+
+```shell
 echo "s3cret" | d8 iam user create anton --email anton@abc.com --password-stdin
+```
 
-# Use a pre-computed bcrypt hash (e.g. from htpasswd)
+Use a pre-computed bcrypt hash (e.g. from htpasswd):
+
+```shell
 d8 iam user create anton --email anton@abc.com --password-hash '$2y$10$abcdef...'
+```
 
-# Create the user and add to groups (auto-creating groups if missing)
+Create the user and add them to groups (auto-creating groups if missing):
+
+```shell
 d8 iam user create anton --email anton@abc.com --generate-password --member-of admins --create-groups
+```
 
-# Create a temporary user with a TTL
+Create a temporary user with a TTL:
+
+```shell
 d8 iam user create anton --email anton@abc.com --generate-password --ttl 24h
+```
 
-# Preview the manifest without applying it
+Preview the manifest without applying it:
+
+```shell
 d8 iam user create anton --email anton@abc.com --generate-password --dry-run -o yaml
 ```
 
@@ -623,11 +644,17 @@ Deleting a user does not automatically remove the corresponding subject from the
 
 To delete a local user, use the [`d8 iam user delete`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-user-delete) command. By default, it also removes the user from all [Group](cr.html#group) resources they belong to.
 
-```shell
-# Delete the user and remove them from all groups
-d8 iam user delete anton
+Examples:
 
-# Delete the user but keep their references in groups
+Delete the user (and automatically remove them from all groups):
+
+```shell
+d8 iam user delete anton
+```
+
+Delete the user but keep their references in groups:
+
+```shell
 d8 iam user delete anton --keep-memberships
 ```
 
@@ -772,7 +799,7 @@ spec:
 
 #### Operations on external users (LDAP/Crowd)
 
-For users authenticated through external providers (LDAP, Atlassian Crowd), use the `spec.target` field instead of `spec.user`. Only the `Lock` and `Unlock` operation types are supported for external users.
+For users authenticated through external providers (LDAP, Atlassian Crowd), use the [`spec.target`](cr.html#useroperation-v1-spec-target) field instead of `spec.user`. Only the `Lock` and `Unlock` operation types are supported for external users.
 
 Example — lock an external user by `connectorID` + email for 30 minutes:
 
@@ -793,6 +820,8 @@ spec:
 
 #### UserOperation lifecycle and side effects
 
+Using a UserOperation object has the following specifics:
+
 - A UserOperation is a **single-use** object: after creation, the hook processes it and writes the result to `status.phase` (`Succeeded` or `Failed`).
 - Completed operations are **automatically deleted** after 24 hours.
 - A UserOperation is **immutable**: its specification cannot be changed after creation.
@@ -804,41 +833,65 @@ The `ResetPassword`, `Reset2FA`, and `Lock` operations terminate all active sess
 
 #### Checking operation status
 
-```shell
-# List all operations
-d8 k get useroperations
+To check the operation status, follow these steps:
 
-# Show the full status of an operation
-d8 k get useroperation <name> -o yaml
+1. Get the list of all operations:
 
-# Print only the completion status
-d8 k get useroperation <name> -o jsonpath='{.status.phase}'
-```
+   ```shell
+   d8 k get useroperations
+   ```
+
+1. Get the full status of an operation:
+
+   ```shell
+   d8 k get useroperation <name> -o yaml
+   ```
+
+1. Get only the completion status:
+
+   ```shell
+   d8 k get useroperation <name> -o jsonpath='{.status.phase}'
+   ```
 
 #### Automatic system operations
 
 The system automatically creates a UserOperation with `initiatorType: system` in the following case:
 
-- Automatic user lockout after the number of failed login attempts exceeds `passwordPolicy.lockout.maxAttempts`. The lockout lasts for `lockout.lockDuration`; afterwards the user is unlocked automatically. An administrator can also unlock the user manually with `d8 iam user unlock` or a UserOperation of type `Unlock`.
+- Automatic user lockout after the number of failed login attempts exceeds [`passwordPolicy.lockout.maxAttempts`](configuration.html#parameters-passwordpolicy-lockout-maxattempts). The lockout lasts for [`lockout.lockDuration`](configuration.html#parameters-passwordpolicy-lockout-lockduration); afterwards the user is unlocked automatically. An administrator can also unlock the user manually with `d8 iam user unlock` or a UserOperation of type `Unlock`.
 
 ### Adding a user to a group
 
-Users can be grouped to manage access rights. The recommended way to manage groups is the [`d8 iam group`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-group) command:
+Users can be grouped to manage access rights. The recommended way to manage groups is the [`d8 iam group`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-group) command.
+
+Examples:
+
+Create a group:
 
 ```shell
-# Create a group
 d8 iam group create admins
+```
 
-# Add a user to a group
+Add a user to a group:
+
+```shell
 d8 iam group add-member admins user anton
+```
 
-# Add a nested group
+Add a nested group:
+
+```shell
 d8 iam group add-member admins group devops
+```
 
-# Remove a member from a group
+Remove a user from a group:
+
+```shell
 d8 iam group remove-member admins user anton
+```
 
-# Delete a group
+Delete a group:
+
+```shell
 d8 iam group delete admins
 ```
 
@@ -876,19 +929,31 @@ Deleting a group does not automatically remove the corresponding subject from th
 
 ### Viewing users and groups
 
-Use the [`d8 iam get`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-get) and [`d8 iam list`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-list) commands to view users, groups, and their effective access (groups, grants, and access level):
+Use the [`d8 iam get`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-get) and [`d8 iam list`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-list) commands to view users, groups, and their effective access (groups, grants, and access level).
+
+Examples:
+
+List all users with effective access:
 
 ```shell
-# List all users with effective access summary
 d8 iam list users
+```
 
-# Show a single user's details (groups, grants, access level)
+Details for a specific user (groups, grants, access level):
+
+```shell
 d8 iam get user anton
+```
 
-# List all groups
+List all groups:
+
+```shell
 d8 iam list groups
+```
 
-# Show a single group's details (members, grants)
+Details for a specific group (members, grants):
+
+```shell
 d8 iam get group admins
 ```
 

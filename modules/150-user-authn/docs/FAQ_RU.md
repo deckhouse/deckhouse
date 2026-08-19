@@ -258,7 +258,7 @@ d8 iam user unlock <имя>
 
 ## Пользователь заблокирован автоматически — почему?
 
-Количество неудачных попыток входа превысило `passwordPolicy.lockout.maxAttempts`. Пользователь блокируется на время, указанное в `passwordPolicy.lockout.lockDuration`, после чего разблокируется автоматически. Администратор может также разблокировать пользователя вручную командой `d8 iam user unlock <имя>` или создав UserOperation с `type: Unlock`.
+Количество неудачных попыток входа превысило [`passwordPolicy.lockout.maxAttempts`](configuration.html#parameters-passwordpolicy-lockout-maxattempts). Пользователь блокируется на время, указанное в [`passwordPolicy.lockout.lockDuration`](configuration.html#parameters-passwordpolicy-lockout-lockduration), после чего разблокируется автоматически. Администратор может также разблокировать пользователя вручную командой `d8 iam user unlock <имя>` или создав UserOperation с `type: Unlock`.
 
 ## Можно ли отменить операцию UserOperation?
 

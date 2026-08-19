@@ -16,22 +16,37 @@ Local authentication involves creating User and Group resources in the cluster f
 
 ## Creating a static user
 
-The recommended way to create a local user is the [`d8 iam user create`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-user-create) command. It supports interactive password entry, automatic password generation, group assignment, and TTL for temporary users:
+The recommended way to create a local user is the [`d8 iam user create`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-user-create) command. It supports interactive password entry, automatic password generation, group assignment, and TTL for temporary users.
+
+Examples:
+
+Interactive password prompt (default when stdin is a terminal):
 
 ```shell
-# Interactive password prompt (default when stdin is a terminal)
 d8 iam user create anton --email anton@abc.com
+```
 
-# Automatically generate a password (shown once)
+Automatically generate a password (the generated password is shown in the command output once):
+
+```shell
 d8 iam user create anton --email anton@abc.com --generate-password
+```
 
-# Read the password from stdin (for CI/CD pipelines)
+Read the password from stdin (for CI/CD pipelines):
+
+```shell
 echo "s3cret" | d8 iam user create anton --email anton@abc.com --password-stdin
+```
 
-# Create the user and add to groups (auto-creating groups if missing)
+Create the user and add them to groups (auto-creating groups if missing):
+
+```shell
 d8 iam user create anton --email anton@abc.com --generate-password --member-of admins --create-groups
+```
 
-# Create a temporary user with a TTL
+Create a temporary user with a TTL:
+
+```shell
 d8 iam user create anton --email anton@abc.com --generate-password --ttl 24h
 ```
 
@@ -67,13 +82,19 @@ If the `htpasswd` command is not available, install the appropriate package:
 
 ## Deleting a user
 
-To delete a local user, use the [`d8 iam user delete`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-user-delete) command. By default, it also removes the user from all [Group](/modules/user-authn/cr.html#group) resources they belong to:
+To delete a local user, use the [`d8 iam user delete`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-user-delete) command. By default, it also removes the user from all [Group](/modules/user-authn/cr.html#group) resources they belong to.
+
+Examples:
+
+Delete the user (and automatically remove them from all groups):
 
 ```shell
-# Delete the user and remove them from all groups
 d8 iam user delete anton
+```
 
-# Delete the user but keep their references in groups
+Delete the user but keep their references in groups:
+
+```shell
 d8 iam user delete anton --keep-memberships
 ```
 
@@ -148,7 +169,7 @@ For user-facing password change and reset scenarios, see [Configuring authentica
 
 ### Creating UserOperation manually
 
-When the `d8 iam user` CLI is unavailable (e.g. in CI/CD, GitOps, or automation), you can create a [UserOperation](/modules/user-authn/cr.html#useroperation) resource directly. Example — reset a local user's password (the `newPasswordHash` contains a bcrypt hash without Base64 encoding; the hook encodes it automatically):
+When running the `d8 iam user` CLI command is unavailable (e.g. in CI/CD, GitOps, or automation), you can create a [UserOperation](/modules/user-authn/cr.html#useroperation) resource directly. Example — reset a local user's password (the `newPasswordHash` contains a bcrypt hash without Base64 encoding; the hook encodes it automatically):
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -163,7 +184,7 @@ spec:
     newPasswordHash: "$2y$10$..."
 ```
 
-For users authenticated through external providers (LDAP, Atlassian Crowd), use `spec.target` instead of `spec.user`. Only `Lock` and `Unlock` are supported for external users. Example — lock an external user for 30 minutes:
+For users authenticated through external providers (LDAP, Atlassian Crowd), use [`spec.target`](/modules/user-authn/cr.html#useroperation-v1-spec-target) instead of `spec.user`. Only `Lock` and `Unlock` are supported for external users. Example — lock an external user for 30 minutes:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -193,19 +214,29 @@ It is forbidden to use users and groups with the `system:` prefix.
 Authentication attempts by such users or members of such groups will be rejected, and a corresponding warning will appear in the `kube-apiserver` logs.
 {% endalert %}
 
-The recommended way to manage groups is the [`d8 iam group`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-group) command:
+The recommended way to manage groups is the [`d8 iam group`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-group) command. Examples:
+
+Create a group:
 
 ```shell
-# Create a group
 d8 iam group create admins
+```
 
-# Add a user to a group
+Add a user to a group:
+
+```shell
 d8 iam group add-member admins user anton
+```
 
-# Remove a member from a group
+Remove a user from a group:
+
+```shell
 d8 iam group remove-member admins user anton
+```
 
-# Delete a group
+Delete a group:
+
+```shell
 d8 iam group delete admins
 ```
 

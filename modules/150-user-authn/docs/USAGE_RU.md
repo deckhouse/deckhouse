@@ -551,26 +551,47 @@ spec:
 
 Рекомендуемый способ создания локального пользователя — команда [`d8 iam user create`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-user-create). Она поддерживает интерактивный ввод пароля, автоматическую генерацию пароля, добавление в группы и TTL для временных пользователей.
 
+Примеры:
+
+Интерактивный ввод пароля (по умолчанию если stdin — терминал):
+
 ```shell
-# Интерактивный ввод пароля (по умолчанию если stdin — терминал)
 d8 iam user create anton --email anton@abc.com
+```
 
-# Автогенерация пароля (показывается один раз)
+Автогенерация пароля (сгенерированный пароль показывается в выводе команды один раз):
+
+```shell
 d8 iam user create anton --email anton@abc.com --generate-password
+```
 
-# Пароль из stdin (для CI/CD пайплайнов)
+Пароль из stdin (для CI/CD пайплайнов):
+
+```shell
 echo "s3cret" | d8 iam user create anton --email anton@abc.com --password-stdin
+```
 
-# Готовый bcrypt-хеш (например от htpasswd)
+Готовый bcrypt-хеш (например от htpasswd):
+
+```shell
 d8 iam user create anton --email anton@abc.com --password-hash '$2y$10$abcdef...'
+```
 
-# Создать пользователя и добавить в группы (с автосозданием групп)
+Создать пользователя и добавить в группы (с автосозданием групп):
+
+```shell
 d8 iam user create anton --email anton@abc.com --generate-password --member-of admins --create-groups
+```
 
-# Создать временного пользователя с TTL
+Создать временного пользователя с TTL:
+
+```shell
 d8 iam user create anton --email anton@abc.com --generate-password --ttl 24h
+```
 
-# Превью манифеста без применения
+Предпросмотр манифеста без применения:
+
+```shell
 d8 iam user create anton --email anton@abc.com --generate-password --dry-run -o yaml
 ```
 
@@ -626,11 +647,17 @@ spec:
 
 Для удаления локального пользователя используйте команду [`d8 iam user delete`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-user-delete). По умолчанию команда также удаляет пользователя из всех ресурсов [Group](cr.html#group), в которых он состоит.
 
-```shell
-# Удалить пользователя (+ автоматически удалить из всех групп)
-d8 iam user delete anton
+Примеры:
 
-# Удалить пользователя, оставив ссылки в группах
+Удалить пользователя (и автоматически удалить из всех групп):
+
+```shell
+d8 iam user delete anton
+```
+
+Удалить пользователя, оставив ссылки в группах:
+
+```shell
 d8 iam user delete anton --keep-memberships
 ```
 
@@ -775,7 +802,7 @@ spec:
 
 #### Операции над внешними пользователями (LDAP/Crowd)
 
-Для пользователей, аутентифицируемых через внешние провайдеры (LDAP, Atlassian Crowd), вместо `spec.user` используется поле `spec.target`. Для внешних пользователей поддерживаются только операции `Lock` и `Unlock`.
+Для пользователей, аутентифицируемых через внешние провайдеры (LDAP, Atlassian Crowd), вместо `spec.user` используется поле [`spec.target`](cr.html#useroperation-v1-spec-target). Для внешних пользователей поддерживаются только операции `Lock` и `Unlock`.
 
 Пример — блокировка внешнего пользователя по `connectorID` + email на 30 минут:
 
@@ -796,9 +823,11 @@ spec:
 
 #### Жизненный цикл и побочные эффекты UserOperation
 
+Использование объекта UserOperation имеет следующие особенности:
+
 - UserOperation — **одноразовый** объект: после создания хук обрабатывает его и записывает результат в `status.phase` (`Succeeded` или `Failed`).
 - Завершённые операции **автоматически удаляются** через 24 часа.
-- UserOperation — **immutable**: после создания спецификация не изменяется.
+- UserOperation — **неизменяем**: после создания спецификация не изменяется.
 - Для нового действия нужно создать новый UserOperation.
 
 {% alert level="warning" %}
@@ -807,41 +836,65 @@ spec:
 
 #### Проверка статуса операции
 
-```shell
-# Список всех операций
-d8 k get useroperations
+Для проверки статуса операции выполните следующие действия:
 
-# Полный статус операции
-d8 k get useroperation <имя> -o yaml
+1. Получите список всех операций:
 
-# Вывести только статус завершения
-d8 k get useroperation <имя> -o jsonpath='{.status.phase}'
-```
+   ```shell
+   d8 k get useroperations
+   ```
+
+1. Получите полный статус операции:
+
+   ```shell
+   d8 k get useroperation <имя> -o yaml
+   ```
+
+1. Получите только статус завершения:
+
+   ```shell
+   d8 k get useroperation <имя> -o jsonpath='{.status.phase}'
+   ```
 
 #### Автоматические операции системы
 
 Система автоматически создаёт UserOperation с `initiatorType: system` в следующем случае:
 
-- Автоблокировка пользователя при превышении `passwordPolicy.lockout.maxAttempts` неудачных попыток входа. Блокировка длится `lockout.lockDuration`, после чего пользователь разблокируется автоматически. Администратор может также разблокировать пользователя вручную командой `d8 iam user unlock` или создав UserOperation с типом `Unlock`.
+- Автоблокировка пользователя при превышении количества неудачных попыток входа, заданного в [`passwordPolicy.lockout.maxAttempts`](configuration.html#parameters-passwordpolicy-lockout-maxattempts). Блокировка длится [`lockout.lockDuration`](configuration.html#parameters-passwordpolicy-lockout-lockduration), после чего пользователь разблокируется автоматически. Администратор может также разблокировать пользователя вручную командой `d8 iam user unlock` или создав UserOperation с типом `Unlock`.
 
 ### Добавление пользователя в группу
 
-Пользователи могут быть объединены в группы для управления правами доступа. Рекомендуемый способ управления группами — команда [`d8 iam group`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-group):
+Пользователи могут быть объединены в группы для управления правами доступа. Рекомендуемый способ управления группами — команда [`d8 iam group`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-group).
+
+Примеры:
+
+Создать группу:
 
 ```shell
-# Создать группу
 d8 iam group create admins
+```
 
-# Добавить пользователя в группу
+Добавить пользователя в группу:
+
+```shell
 d8 iam group add-member admins user anton
+```
 
-# Добавить вложенную группу
+Добавить вложенную группу:
+
+```shell
 d8 iam group add-member admins group devops
+```
 
-# Удалить участника из группы
+Удалить пользователя из группы:
+
+```shell
 d8 iam group remove-member admins user anton
+```
 
-# Удалить группу
+Удалить группу:
+
+```shell
 d8 iam group delete admins
 ```
 
@@ -879,19 +932,31 @@ spec:
 
 ### Просмотр пользователей и групп
 
-Для просмотра пользователей, групп и их эффективных прав (группы, гранты, уровень доступа) используйте команды [`d8 iam get`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-get) и [`d8 iam list`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-list):
+Для просмотра пользователей, групп и их эффективных прав (группы, гранты, уровень доступа) используйте команды [`d8 iam get`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-get) и [`d8 iam list`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-list).
+
+Примеры:
+
+Список всех пользователей с effective access
 
 ```shell
-# Список всех пользователей с effective access
 d8 iam list users
+```
 
-# Детали конкретного пользователя (группы, гранты, уровень доступа)
+Детали для конкретного пользователя (группы, гранты, уровень доступа):
+
+```shell
 d8 iam get user anton
+```
 
-# Список всех групп
+Список всех групп:
+
+```shell
 d8 iam list groups
+```
 
-# Детали конкретной группы (участники, гранты)
+Детали для конкретной группы (участники, гранты):
+
+```shell
 d8 iam get group admins
 ```
 
