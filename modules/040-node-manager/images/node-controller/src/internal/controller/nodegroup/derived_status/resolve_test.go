@@ -82,6 +82,14 @@ func providerSecret(data map[string][]byte) *corev1.Secret {
 	return secret
 }
 
+// cloudClusterConfig names the provider a NodeGroup resolves to. Without it the cluster runs no
+// cloud, every group resolves to nothing, and the cloud checks have nothing to run against.
+func cloudClusterConfig(provider string) *corev1.Secret {
+	return testSecret(clusterConfigSecretNamespace, clusterConfigSecretName, map[string][]byte{
+		"cluster-configuration.yaml": []byte("clusterType: Cloud\ncloud:\n  provider: " + provider + "\n"),
+	})
+}
+
 func testRegistry(t *testing.T, s *Service) cloudprovider.Providers {
 	t.Helper()
 	providers, err := cloudprovider.Load(context.Background(), s.Client)
@@ -172,7 +180,7 @@ func TestResolveNodeGroup_CloudKindMismatchErrors(t *testing.T) {
 		"type":                    []byte(`yandex`),
 		"instanceClassKind":       []byte(`"YandexInstanceClass"`),
 		"instanceClassAPIVersion": []byte("v1alpha1"),
-	}))
+	}), cloudClusterConfig("Yandex"))
 	ng := &v1.NodeGroup{
 		ObjectMeta: metav1.ObjectMeta{Name: "worker"},
 		Spec: v1.NodeGroupSpec{

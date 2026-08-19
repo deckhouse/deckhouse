@@ -245,53 +245,50 @@ func TestForNodeGroup(t *testing.T) {
 		expFound bool
 	}{
 		{
-			name:     "CloudEphemeral resolves through the InstanceClass kind it references",
+			// The InstanceClass a group references does not pick its provider while the cluster
+			// runs one cloud: a group of the second provider's kind still resolves to the
+			// cluster's own. Kind mismatch is a verdict about the NodeGroup, and
+			// derived_status.RunCloudChecks reports it.
+			name:     "CloudEphemeral takes the cluster provider, not the one its kind belongs to",
 			ng:       cloudEphemeral("worker-aws", "AWSInstanceClass"),
-			expType:  "aws",
-			expFound: true,
-		},
-		{
-			name:     "a second provider in the same cluster resolves to itself",
-			ng:       cloudEphemeral("worker-yandex", "YandexInstanceClass"),
 			expType:  "yandex",
 			expFound: true,
 		},
 		{
-			// The provider is what decides which kinds exist; an unknown kind is a verdict about
-			// the NodeGroup, which derived_status.Validate reports.
-			name: "CloudEphemeral referencing a kind nobody registered resolves to nothing",
-			ng:   cloudEphemeral("worker", "VsphereInstanceClass"),
+			name:     "CloudEphemeral referencing a kind nobody registered still takes the cluster provider",
+			ng:       cloudEphemeral("worker", "VsphereInstanceClass"),
+			expType:  "yandex",
+			expFound: true,
 		},
 		{
 			// CloudPermanent nodes are created by the installer and reference no InstanceClass, so
 			// the cluster configuration is the only thing left to name their provider.
-			name:     "CloudPermanent falls back to the cluster provider",
+			name:     "CloudPermanent takes the cluster provider",
 			ng:       nodeGroupOfType("master", v1.NodeTypeCloudPermanent),
-			expType:  "yandex",
-			expFound: true,
-		},
-		{
-			// Static groups were rendered with the cluster's provider before providers became
-			// per-NodeGroup, and their nodes carry what those steps installed. Dropping the
-			// provider here is what would take it away from them.
-			name:     "Static falls back to the cluster provider",
-			ng:       nodeGroupOfType("static", v1.NodeTypeStatic),
 			expType:  "yandex",
 			expFound: true,
 		},
 		{
 			// CloudStatic nodes do run in the cluster's cloud, Deckhouse just does not order them:
 			// they still need the provider steps and the cloud variables.
-			name:     "CloudStatic falls back to the cluster provider",
+			name:     "CloudStatic takes the cluster provider",
 			ng:       nodeGroupOfType("cloudstatic", v1.NodeTypeCloudStatic),
 			expType:  "yandex",
 			expFound: true,
 		},
 		{
-			// A CloudEphemeral group is defined by the machines it orders, and it orders them from
-			// the InstanceClass. Without one there is no cloud to fall back to.
-			name: "CloudEphemeral without a classReference resolves to nothing",
-			ng:   nodeGroupOfType("worker", v1.NodeTypeCloudEphemeral),
+			// The whole point of the per-NodeGroup provider: a Static node lives outside every
+			// cloud, so the provider steps must not reach it even in a cloud cluster.
+			name: "Static resolves to no provider in a cloud cluster",
+			ng:   nodeGroupOfType("static", v1.NodeTypeStatic),
+		},
+		{
+			// A CloudEphemeral group with no classReference is still a group in the cluster's
+			// cloud — nothing about it says otherwise.
+			name:     "CloudEphemeral without a classReference takes the cluster provider",
+			ng:       nodeGroupOfType("worker", v1.NodeTypeCloudEphemeral),
+			expType:  "yandex",
+			expFound: true,
 		},
 	}
 
@@ -314,7 +311,9 @@ func TestForNodeGroup_NoNameMatchesNoRegistration(t *testing.T) {
 		"instanceClassKind": []byte("AWSInstanceClass"),
 	}))
 
-	_, ok := providers.ForNodeGroup(nodeGroupOfType("static", v1.NodeTypeStatic))
+	// CloudStatic, not Static: Static resolves to nothing by its own rule and would pass this
+	// test without the guard under it.
+	_, ok := providers.ForNodeGroup(nodeGroupOfType("cloudstatic", v1.NodeTypeCloudStatic))
 
 	assert.False(t, ok)
 }
@@ -353,4 +352,38 @@ func TestInstanceClassGVKs_SkipsProvidersWithoutAVersion(t *testing.T) {
 	assert.Equal(t, schema.GroupVersionKind{
 		Group: v1.GroupVersion.Group, Version: "v1", Kind: "AWSInstanceClass",
 	}, gvks[0])
+}
+
+// The field declares an answer rather than picking one, so the predicate compares it against what
+// the NodeGroup already resolved to. Empty always agrees — the field is optional.
+func TestDeclarationError(t *testing.T) {
+	yandex := Provider{Type: "yandex"}
+	none := Provider{}
+
+	for _, tc := range []struct {
+		name     string
+		declared string
+		resolved Provider
+		wantErr  bool
+	}{
+		{name: "empty agrees with a provider", resolved: yandex},
+		{name: "empty agrees with no provider", resolved: none},
+		{name: "the resolved provider", declared: "yandex", resolved: yandex},
+		{name: "case does not matter", declared: "Yandex", resolved: yandex},
+		{name: "None where there is none", declared: "None", resolved: none},
+		{name: "none is spelled case-insensitively too", declared: "none", resolved: none},
+
+		{name: "another provider", declared: "aws", resolved: yandex, wantErr: true},
+		{name: "a provider where there is none", declared: "yandex", resolved: none, wantErr: true},
+		{name: "None where there is one", declared: "None", resolved: yandex, wantErr: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := DeclarationError(tc.declared, tc.resolved)
+			if tc.wantErr {
+				assert.NotEmpty(t, got)
+				return
+			}
+			assert.Empty(t, got)
+		})
+	}
 }

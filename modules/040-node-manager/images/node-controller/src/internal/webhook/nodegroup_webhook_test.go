@@ -31,10 +31,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 )
 
 func newScheme() *runtime.Scheme {
@@ -134,6 +136,59 @@ func kubernetesEndpoints(addressCount int) *corev1.Endpoints {
 		Subsets: []corev1.EndpointSubset{
 			{Addresses: addresses},
 		},
+	}
+}
+
+// spec.providerType declares the provider a group runs in. The webhook is the fast refusal; the
+// reconcile keeps the verdict, so an unreadable registration warns instead of blocking the write.
+func TestValidation_ProviderType(t *testing.T) {
+	registration := func() *corev1.Secret {
+		return &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      cloudprovider.SecretNamePrefix,
+				Namespace: cloudprovider.SecretNamespace,
+				Labels:    map[string]string{cloudprovider.SecretLabel: ""},
+			},
+			Data: map[string][]byte{"type": []byte("openstack")},
+		}
+	}
+
+	for _, tc := range []struct {
+		name     string
+		nodeType v1.NodeType
+		declared string
+		cloud    bool
+		allowed  bool
+	}{
+		{name: "empty is always allowed", nodeType: v1.NodeTypeCloudStatic, cloud: true, allowed: true},
+		{name: "the cluster provider", nodeType: v1.NodeTypeCloudStatic, declared: "openstack", cloud: true, allowed: true},
+		{name: "case does not matter", nodeType: v1.NodeTypeCloudStatic, declared: "OpenStack", cloud: true, allowed: true},
+		{name: "None on Static", nodeType: v1.NodeTypeStatic, declared: "None", cloud: true, allowed: true},
+		{name: "None in a static cluster", nodeType: v1.NodeTypeCloudStatic, declared: "None", allowed: true},
+
+		{name: "another provider", nodeType: v1.NodeTypeCloudStatic, declared: "aws", cloud: true},
+		{name: "a provider on Static", nodeType: v1.NodeTypeStatic, declared: "openstack", cloud: true},
+		{name: "None in a cloud", nodeType: v1.NodeTypeCloudStatic, declared: "openstack", cloud: false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			s := newScheme()
+			objs := []client.Object{}
+			if tc.cloud {
+				objs = append(objs, clusterConfigSecret("Cloud", "prefix", "", 0), registration())
+			} else {
+				objs = append(objs, clusterConfigSecret("Static", "", "", 0))
+			}
+			c := fake.NewClientBuilder().WithScheme(s).WithObjects(objs...).Build()
+			w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+
+			ng := baseNodeGroup("worker", tc.nodeType)
+			ng.Spec.ProviderType = tc.declared
+
+			resp := w.Handle(context.Background(), makeAdmissionRequest(t, "UPDATE", ng, ng))
+			if resp.Allowed != tc.allowed {
+				t.Fatalf("allowed = %v, want %v (%v)", resp.Allowed, tc.allowed, resp.Result)
+			}
+		})
 	}
 }
 

@@ -82,6 +82,14 @@ func kubeDNSService(clusterIP string) *corev1.Service {
 	}
 }
 
+// cloudClusterConfig is what hands a NodeGroup its provider: without it every group resolves to
+// none, and the checks these tests exercise have nothing left to fail on.
+func cloudClusterConfig(provider string) *corev1.Secret {
+	return secret(kubeSystemNS, clusterConfigSecretName, map[string][]byte{
+		clusterConfigKey: []byte("clusterType: Cloud\ncloud:\n  provider: " + provider + "\n"),
+	})
+}
+
 func staticNodeGroup(name string) *v1.NodeGroup {
 	return &v1.NodeGroup{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
@@ -132,6 +140,7 @@ func TestAssemble_PreservesPriorOnValidationFailure(t *testing.T) {
 		secret(secretNamespace, secretName, map[string][]byte{
 			secretInputKey: priorInput,
 		}),
+		cloudClusterConfig("Yandex"),
 	)
 
 	require.NoError(t, r.Assemble(context.Background()))
@@ -171,6 +180,7 @@ func TestAssemble_PriorEntryGetsTheProviderOfItsNodeGroup(t *testing.T) {
 		secret(secretNamespace, secretName, map[string][]byte{
 			secretInputKey: priorInput,
 		}),
+		cloudClusterConfig("Yandex"),
 	)
 
 	require.NoError(t, r.Assemble(context.Background()))
@@ -198,6 +208,7 @@ func TestAssemble_OmitsFailingNodeGroupWithoutPrior(t *testing.T) {
 			"instanceClassKind":       []byte(`"YandexInstanceClass"`),
 			"instanceClassAPIVersion": []byte("v1alpha1"),
 		}),
+		cloudClusterConfig("Yandex"),
 	)
 
 	require.NoError(t, r.Assemble(context.Background()))

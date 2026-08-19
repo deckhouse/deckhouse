@@ -112,7 +112,7 @@ func TestBuildSnapshot_ClassDeletedMidPassIsRecorded(t *testing.T) {
 			"type":                    []byte(`aws`),
 			"instanceClassKind":       []byte(kind),
 			"instanceClassAPIVersion": []byte(`v1`),
-		})).
+		}), cloudClusterConfig("AWS")).
 		WithInterceptorFuncs(interceptor.Funcs{
 			// The List still returns it; the Get no longer does.
 			Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {

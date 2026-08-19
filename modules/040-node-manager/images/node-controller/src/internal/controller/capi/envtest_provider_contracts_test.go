@@ -227,9 +227,25 @@ var _ = Describe("shipped provider contracts", Ordered, func() {
 		}, eventually, poll).Should(BeTrue(), "the CRD must be established before objects of that kind are created")
 	}
 
+	// pointClusterAt names the provider in the cluster configuration. It is what gives a NodeGroup
+	// its provider, so rewriting the registration alone would leave every group resolving to a
+	// provider that no longer has a registration — and Load rejects exactly that.
+	pointClusterAt := func(name string) {
+		clusterCfg := &corev1.Secret{}
+		Expect(k8sClient.Get(suiteCtx, types.NamespacedName{
+			Namespace: clusterConfigSecretNamespace, Name: clusterConfigSecretName,
+		}, clusterCfg)).To(Succeed())
+		clusterCfg.Data["cluster-configuration.yaml"] = []byte(fmt.Sprintf(
+			"kubernetesVersion: \"1.31\"\ndefaultCRI: Containerd\npodSubnetCIDR: 10.111.0.0/16\nclusterType: Cloud\ncloud:\n  provider: %s\n",
+			name))
+		Expect(k8sClient.Update(suiteCtx, clusterCfg)).To(Succeed())
+	}
+
 	// publishProvider points the whole cluster at one provider: its discovery secret and its real
 	// contract file. The suite's own DVP-shaped fixture is restored afterwards.
 	publishProvider := func(p providerContract) {
+		pointClusterAt(p.name)
+
 		contract, err := os.ReadFile(p.contractPath)
 		Expect(err).NotTo(HaveOccurred(), "the provider must ship %s", p.contractPath)
 
@@ -282,6 +298,8 @@ var _ = Describe("shipped provider contracts", Ordered, func() {
 	}
 
 	restoreSuiteProvider := func(p providerContract) {
+		pointClusterAt("DVP")
+
 		discovery := &corev1.Secret{}
 		Expect(k8sClient.Get(suiteCtx, types.NamespacedName{
 			Namespace: cloudprovider.SecretNamespace, Name: cloudprovider.SecretNamePrefix,

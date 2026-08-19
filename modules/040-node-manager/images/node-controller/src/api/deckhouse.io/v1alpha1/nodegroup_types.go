@@ -67,6 +67,10 @@ type NodeGroupSpec struct {
 	// +kubebuilder:validation:Required
 	NodeType NodeType `json:"nodeType"`
 
+	// ProviderType declares the cloud provider the nodes of this group run in.
+	// +optional
+	ProviderType string `json:"providerType,omitempty"`
+
 	// CRI specifies container runtime settings
 	// +optional
 	CRI *CRISpec `json:"cri,omitempty"`
@@ -312,10 +316,6 @@ type NodeGroupStatus struct {
 	// Engine specifies machinery used to control nodes in this group
 	// +optional
 	Engine string `json:"engine,omitempty"`
-
-	// CloudProviderType names the cloud provider the nodes of this group run in
-	// +optional
-	CloudProviderType string `json:"cloudProviderType,omitempty"`
 
 	// Ready specifies the number of ready nodes
 	Ready int32 `json:"ready,omitempty"`

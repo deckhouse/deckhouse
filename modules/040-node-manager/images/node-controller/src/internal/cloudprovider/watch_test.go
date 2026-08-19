@@ -119,8 +119,8 @@ func TestNodeGroupHandler(t *testing.T) {
 			aws, yandex, clusterConfigurationSecret("Yandex"),
 			cloudEphemeral("worker-aws", "AWSInstanceClass"),
 			cloudEphemeral("worker-yandex", "YandexInstanceClass"),
-			// Names a kind nobody registered: its status carries the list of kinds that do exist,
-			// so it belongs to no provider and still depends on the set.
+			// Names a kind nobody registered. The kind does not route a NodeGroup while the
+			// cluster runs one cloud, so this group hangs off the cluster provider like the rest.
 			cloudEphemeral("worker-unknown", "VsphereInstanceClass"),
 			nodeGroupOfType("master", v1.NodeTypeCloudPermanent),
 			nodeGroupOfType("cloudstatic", v1.NodeTypeCloudStatic),
@@ -145,62 +145,57 @@ func TestNodeGroupHandler(t *testing.T) {
 	}
 
 	// A rotated credential or an edited zone list — what registration updates overwhelmingly are —
-	// changes what one provider's NodeGroups render, and nothing else in the cluster.
-	t.Run("an update reaches only the NodeGroups of that provider", func(t *testing.T) {
-		h, queue := newHandler(t)
-		rotated := aws.DeepCopy()
-		rotated.Data["zones"] = []byte(`["eu-central-1a"]`)
-
-		h.Update(context.Background(), event.UpdateEvent{ObjectOld: aws, ObjectNew: rotated}, queue)
-
-		assert.Equal(t, []string{"worker-aws"}, drain(t, queue))
-	})
-
-	// Every group that names no InstanceClass hangs off the cluster provider — an event on that
-	// registration has to reach them all, and an event on the other one must not.
-	t.Run("the cluster provider takes its InstanceClass-less groups with it", func(t *testing.T) {
+	// changes what the NodeGroups of the cluster's own cloud render. Static is not among them: it
+	// runs outside every cloud.
+	t.Run("the cluster provider takes every non-Static group with it", func(t *testing.T) {
 		h, queue := newHandler(t)
 		rotated := yandex.DeepCopy()
 		rotated.Data["zones"] = []byte(`["ru-central1-a"]`)
 
 		h.Update(context.Background(), event.UpdateEvent{ObjectOld: yandex, ObjectNew: rotated}, queue)
 
-		assert.Equal(t, []string{"cloudstatic", "master", "static", "worker-yandex"}, drain(t, queue))
+		assert.Equal(t,
+			[]string{"cloudstatic", "master", "worker-aws", "worker-unknown", "worker-yandex"},
+			drain(t, queue))
+	})
+
+	// A registration is published by every enabled cloud-provider module, but only the one named
+	// by the cluster configuration has NodeGroups on it.
+	t.Run("a registration that is not the cluster provider reaches nothing", func(t *testing.T) {
+		h, queue := newHandler(t)
+		rotated := aws.DeepCopy()
+		rotated.Data["zones"] = []byte(`["eu-central-1a"]`)
+
+		h.Update(context.Background(), event.UpdateEvent{ObjectOld: aws, ObjectNew: rotated}, queue)
+
+		assert.Empty(t, drain(t, queue))
 	})
 
 	// The provider is decoded from the event object, which on a delete is the only place it
 	// still exists.
 	t.Run("create and delete resolve from the event object", func(t *testing.T) {
+		want := []string{"cloudstatic", "master", "worker-aws", "worker-unknown", "worker-yandex"}
+
 		h, queue := newHandler(t)
-		h.Create(context.Background(), event.CreateEvent{Object: aws}, queue)
-		assert.Equal(t, []string{"worker-aws"}, drain(t, queue))
+		h.Create(context.Background(), event.CreateEvent{Object: yandex}, queue)
+		assert.Equal(t, want, drain(t, queue))
 
 		h, queue = newHandler(t)
-		h.Delete(context.Background(), event.DeleteEvent{Object: aws}, queue)
-		assert.Equal(t, []string{"worker-aws"}, drain(t, queue))
-	})
-
-	// The kind is what routes a NodeGroup to a provider: the group that matched the old kind has to
-	// be told it no longer resolves, and it is in no set the new object can produce.
-	t.Run("a re-kinded provider reaches the groups of both sides", func(t *testing.T) {
-		h, queue := newHandler(t)
-		rekinded := aws.DeepCopy()
-		rekinded.Data["instanceClassKind"] = []byte("VsphereInstanceClass")
-
-		h.Update(context.Background(), event.UpdateEvent{ObjectOld: aws, ObjectNew: rekinded}, queue)
-
-		assert.Equal(t, []string{"worker-aws", "worker-unknown"}, drain(t, queue))
+		h.Delete(context.Background(), event.DeleteEvent{Object: yandex}, queue)
+		assert.Equal(t, want, drain(t, queue))
 	})
 
 	// An informer resync replays the object, and helm rewrites annotations without touching the
 	// data — which is why the check is on the raw data and not on the object.
 	t.Run("an update that changes no data enqueues nothing", func(t *testing.T) {
 		h, queue := newHandler(t)
-		relabelled := aws.DeepCopy()
+		// The cluster provider on purpose: a data change on this one does enqueue, so an empty
+		// queue here can only come from the equality check.
+		relabelled := yandex.DeepCopy()
 		relabelled.ResourceVersion = "2"
-		relabelled.Annotations = map[string]string{"meta.helm.sh/release-name": "cloud-provider-aws"}
+		relabelled.Annotations = map[string]string{"meta.helm.sh/release-name": "cloud-provider-yandex"}
 
-		h.Update(context.Background(), event.UpdateEvent{ObjectOld: aws, ObjectNew: relabelled}, queue)
+		h.Update(context.Background(), event.UpdateEvent{ObjectOld: yandex, ObjectNew: relabelled}, queue)
 
 		assert.Empty(t, drain(t, queue))
 	})

@@ -18,7 +18,6 @@ package derived_status
 
 import (
 	"fmt"
-	"strings"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/cloudprovider"
@@ -31,32 +30,24 @@ import (
 // as one — the status controller publishes it, the bashible context falls back to its last good
 // entry, and the MachineDeployment reconciler skips rendering.
 func Validate(ng *v1.NodeGroup, snap Snapshot) CloudCheckResult {
-	if ng.Spec.NodeType != v1.NodeTypeCloudEphemeral {
-		return CloudCheckResult{Processed: false}
+	// The declared provider is checked for every node type, not just CloudEphemeral: it is a
+	// statement about the NodeGroup, and Static — which resolves to no provider at all — is
+	// exactly where the statement is most likely to be wrong.
+	if msg := cloudprovider.DeclarationError(ng.Spec.ProviderType, snap.Provider); msg != "" {
+		return CloudCheckResult{Error: msg}
 	}
 
-	// The NodeGroup resolved to no provider while the cluster has registrations: its
-	// classReference names a kind nobody registered. That is check #1 in the world where the kind
-	// selects the provider — the check itself can no longer run, because there is no provider to
-	// compare against. With no registrations at all this stays silent: the provider module may
-	// still be starting, and its Secret is watched.
-	if snap.Provider.InstanceClassKind == "" {
-		if len(snap.RegisteredClassKinds) == 0 {
-			return CloudCheckResult{Processed: false}
-		}
-		refKind := ""
-		if ng.Spec.CloudInstances != nil {
-			refKind = ng.Spec.CloudInstances.ClassReference.Kind
-		}
-		return CloudCheckResult{Error: fmt.Sprintf(
-			"Invalid classReference.kind '%s'. Expected '%s'. Please update the NodeGroup to use the correct instance class kind.",
-			refKind, strings.Join(snap.RegisteredClassKinds, "', '"))}
+	if ng.Spec.NodeType != v1.NodeTypeCloudEphemeral {
+		return CloudCheckResult{Processed: false}
 	}
 
 	// The provider names a kind but no version to read it at. Reporting it as a validation
 	// error is what every consumer already handles: rendering is skipped, and the bashible
 	// context keeps the entry it published last instead of dropping the cloud fields.
-	if snap.Provider.InstanceClassAPIVersion == "" {
+	//
+	// A provider that published no kind at all is left to RunCloudChecks, which reports the
+	// NodeGroup unprocessed rather than wrong.
+	if snap.Provider.InstanceClassKind != "" && snap.Provider.InstanceClassAPIVersion == "" {
 		return CloudCheckResult{Error: fmt.Sprintf(
 			"Cloud provider has not published %s yet. The %s cannot be read until it does.",
 			cloudprovider.InstanceClassAPIVersionKey, snap.Provider.InstanceClassKind)}

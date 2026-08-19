@@ -144,9 +144,10 @@ var _ = BeforeSuite(func() {
 	clusterCfg.Namespace = clusterConfigSecretNamespace
 	clusterCfg.Name = clusterConfigSecretName
 	// The derived-status service and the pod-subnet reader resolve this secret by its
-	// production name, so the fixture name must match exactly.
+	// production name, so the fixture name must match exactly. cloud.provider has to name the
+	// registration published above: it is what gives a NodeGroup its provider.
 	clusterCfg.Data = map[string][]byte{
-		"cluster-configuration.yaml": []byte("kubernetesVersion: \"1.31\"\ndefaultCRI: Containerd\npodSubnetCIDR: 10.111.0.0/16\n"),
+		"cluster-configuration.yaml": []byte("kubernetesVersion: \"1.31\"\ndefaultCRI: Containerd\npodSubnetCIDR: 10.111.0.0/16\nclusterType: Cloud\ncloud:\n  provider: DVP\n"),
 	}
 	Expect(client.IgnoreAlreadyExists(k8sClient.Create(suiteCtx, clusterCfg))).To(Succeed())
 

@@ -106,6 +106,10 @@ spec:
                     - Cloud
                     - Static
                     - Hybrid
+                providerType:
+                  description: |
+                    Cloud provider the nodes of this group run in, or `None` for a group that runs outside any cloud.
+                  type: string
                 kubernetesVersion:
                   description: |
                     The desired minor version of Kubernetes.
@@ -568,12 +572,6 @@ spec:
               type: object
               required: []
               properties:
-                cloudProviderType:
-                  type: string
-                  description: |
-                    Cloud provider whose node configuration scripts are applied to the nodes of this group.
-
-                    `None` means the nodes are configured without cloud provider scripts.
                 engine:
                   type: string
                   enum:
@@ -748,6 +746,10 @@ spec:
                     - Cloud
                     - Static
                     - Hybrid
+                providerType:
+                  description: |
+                    Cloud provider the nodes of this group run in, or `None` for a group that runs outside any cloud.
+                  type: string
                 cri:
                   type: object
                   description: |
@@ -1206,12 +1208,6 @@ spec:
               type: object
               required: []
               properties:
-                cloudProviderType:
-                  type: string
-                  description: |
-                    Cloud provider whose node configuration scripts are applied to the nodes of this group.
-
-                    `None` means the nodes are configured without cloud provider scripts.
                 engine:
                   type: string
                   enum:
@@ -1433,6 +1429,10 @@ spec:
                     - CloudPermanent
                     - CloudStatic
                     - Static
+                providerType:
+                  description: |
+                    Cloud provider the nodes of this group run in, or `None` for a group that runs outside any cloud.
+                  type: string
                 nodeDrainTimeoutSecond:
                   type: integer
                   description: |
@@ -2385,12 +2385,6 @@ spec:
               type: object
               required: []
               properties:
-                cloudProviderType:
-                  type: string
-                  description: |
-                    Cloud provider whose node configuration scripts are applied to the nodes of this group.
-
-                    `None` means the nodes are configured without cloud provider scripts.
                 engine:
                   type: string
                   enum:

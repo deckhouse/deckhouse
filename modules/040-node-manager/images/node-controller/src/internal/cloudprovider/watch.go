@@ -99,7 +99,7 @@ func RegistrationSecretsRequests(ctx context.Context, r client.Reader) []reconci
 // question as a create at a point where the Secret is already gone.
 //
 // An update compares the raw data first: one that changed none of it enqueues nothing. A real edit
-// resolves both sides, because a re-kinded provider moves NodeGroups between providers and the
+// resolves both sides, because an edit that renames the provider moves NodeGroups off it, and the
 // group that just left is in no set the new object can produce.
 func NodeGroupHandler(r client.Reader) handler.EventHandler {
 	enqueue := func(ctx context.Context, q workqueue.TypedRateLimitingInterface[reconcile.Request], carried ...Provider) {

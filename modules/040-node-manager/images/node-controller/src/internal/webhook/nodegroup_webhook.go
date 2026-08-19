@@ -54,6 +54,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	"github.com/deckhouse/node-controller/internal/clusterprefix"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 )
@@ -129,6 +130,25 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 	if req.Operation == "UPDATE" && oldNG != nil {
 		if oldNG.Spec.NodeType != ng.Spec.NodeType {
 			return admission.Denied(".spec.nodeType field is immutable")
+		}
+	}
+
+	// spec.providerType declares the provider the group runs in; the same predicate the reconcile
+	// uses decides whether the declaration holds. Denying here only catches the typo early — the
+	// verdict belongs to the reconcile, which sees a provider that changed after this write.
+	if ng.Spec.ProviderType != "" {
+		providers, err := cloudprovider.Load(ctx, w.Client)
+		if err != nil {
+			// A registration we cannot read is not the NodeGroup's fault. Blocking every write
+			// until the Secret comes back is worse than letting a typo through to status.error.
+			webhookLog.Error(err, "failed to load cloud provider registrations")
+			warnings = append(warnings,
+				".spec.providerType was not validated: the cloud provider registrations are unreadable")
+		} else {
+			resolved, _ := providers.ForNodeGroup(ng)
+			if msg := cloudprovider.DeclarationError(ng.Spec.ProviderType, resolved); msg != "" {
+				return admission.Denied(msg)
+			}
 		}
 	}
 

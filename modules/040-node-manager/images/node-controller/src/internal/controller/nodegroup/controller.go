@@ -233,16 +233,6 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 		}
 	}
 
-	// Publish the provider whose bashible steps configure the nodes of this group. An unresolved
-	// group in a cloud cluster keeps its last value: the provider module may still be starting, and
-	// its watch re-triggers this reconcile.
-	switch provider, ok := providers.ForNodeGroup(ng); {
-	case ok:
-		ng.Status.CloudProviderType = provider.Type
-	case providers.Empty():
-		ng.Status.CloudProviderType = cloudprovider.StatusNone
-	}
-
 	if !apiequality.Semantic.DeepEqual(statusBefore, ng.Status) {
 		if err := r.Client.Status().Patch(ctx, ng, patch); err != nil {
 			if errors.IsConflict(err) {

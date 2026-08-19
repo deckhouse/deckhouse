@@ -286,12 +286,21 @@ func TestZonesCount(t *testing.T) {
 			want:      2,
 		},
 		{
-			// Two providers registered: taking the zones of the wrong one would size the NodeGroup
-			// by another cloud's topology.
-			name: "the other provider's zones are not used",
+			// Two registrations, one cluster provider: the zones come from the cluster's own, not
+			// from whichever registration happens to be listed first.
+			name: "only the cluster provider's zones are used",
+			ng:   cloudEphemeralWithClass("YandexInstanceClass"),
+			providers: cloudprovider.NewProviders(
+				[]cloudprovider.Provider{zoneless, yandex}, "yandex"),
+			want: 2,
+		},
+		{
+			// A provider that published no zones sizes the NodeGroup at zero rather than
+			// borrowing the other registration's topology.
+			name: "a zoneless cluster provider yields no zones",
 			ng:   cloudEphemeralWithClass("VsphereInstanceClass"),
 			providers: cloudprovider.NewProviders(
-				[]cloudprovider.Provider{yandex, zoneless}, "yandex"),
+				[]cloudprovider.Provider{yandex, zoneless}, "vsphere"),
 			want: 0,
 		},
 		{

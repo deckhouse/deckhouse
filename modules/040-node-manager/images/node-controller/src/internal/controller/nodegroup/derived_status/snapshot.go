@@ -52,12 +52,6 @@ type Snapshot struct {
 
 	// StaticConfig is carried by Static NodeGroups only.
 	StaticConfig map[string]interface{}
-
-	// RegisteredClassKinds is every InstanceClass kind the cluster accepts. It tells the two ways
-	// Provider can be empty apart: no provider registered yet (transient, the registration Secret
-	// is watched) versus a NodeGroup referencing a kind nobody registered (a verdict about the
-	// NodeGroup, which Validate reports).
-	RegisteredClassKinds []string
 }
 
 // BuildSnapshot is the only place in this package that talks to the API. Everything downstream is
@@ -87,12 +81,11 @@ func (s *Service) BuildSnapshot(ctx context.Context, ng *v1.NodeGroup, providers
 	}
 
 	snap := Snapshot{
-		Provider:             provider,
-		ClusterUUID:          clusterUUID,
-		TargetVersion:        targetVersion,
-		DefaultCRI:           defaultCRI,
-		APIServerMin:         apiServerMin,
-		RegisteredClassKinds: providers.InstanceClassKinds(),
+		Provider:      provider,
+		ClusterUUID:   clusterUUID,
+		TargetVersion: targetVersion,
+		DefaultCRI:    defaultCRI,
+		APIServerMin:  apiServerMin,
 	}
 
 	if ng.Spec.NodeType == v1.NodeTypeStatic {

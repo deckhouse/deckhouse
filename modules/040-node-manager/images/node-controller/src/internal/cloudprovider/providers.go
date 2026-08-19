@@ -103,34 +103,55 @@ func (ps Providers) Empty() bool {
 
 // ForNodeGroup returns the provider a NodeGroup runs on. It performs no I/O.
 //
-// Only CloudEphemeral can belong to a provider other than the cluster's, and it says so through the
-// InstanceClass it references; a group without one resolves to nothing. Every other type takes the
-// provider of the cluster: that is what created its nodes, or the only cloud they can be in.
+// The cluster runs one cloud, so the answer follows from the node type alone. When several
+// providers become possible, the branching appears here and nowhere else: every consumer already
+// asks this function rather than reading a Secret of its own.
 func (ps Providers) ForNodeGroup(ng *v1.NodeGroup) (Provider, bool) {
-	// CloudEphemeral -> Get provider by ng.Spec.CloudInstances.ClassReference.Kind
-	if ng.Spec.NodeType == v1.NodeTypeCloudEphemeral {
-		if ng.Spec.CloudInstances != nil {
-			return ps.byInstanceClassKind(ng.Spec.CloudInstances.ClassReference.Kind)
-		}
+	// A Static node lives outside every cloud. The provider steps do not apply to it, and some of
+	// them actively fight the configuration it was set up with by hand.
+	if ng.Spec.NodeType == v1.NodeTypeStatic {
 		return Provider{}, false
 	}
 
-	// CloudPermanent / CloudStatic / Static -> Default provider by cluster configuration
+	// byName reports no match on an empty name, so a static cluster — which names no provider —
+	// resolves to nothing here without a branch of its own.
 	return ps.byName(ps.clusterProvider)
 }
 
-// InstanceClassKinds returns every kind of InstanceClass the cluster accepts, ordered by provider
-// type.
-func (ps Providers) InstanceClassKinds() []string {
-	ret := make([]string, 0, len(ps.providers))
+// DeclarationError reports why a NodeGroup's spec.providerType disagrees with the provider it
+// resolved to, or "" when the two agree.
+//
+// The field declares an answer, it does not pick one: leaving it empty is always correct, and
+// naming anything other than the resolved provider is a statement about the NodeGroup that a
+// retry cannot fix.
+func DeclarationError(declared string, resolved Provider) string {
+	switch {
+	case declared == "":
+		return ""
 
-	for i := range ps.providers {
-		if ps.providers[i].InstanceClassKind != "" {
-			ret = append(ret, ps.providers[i].InstanceClassKind)
+	case strings.EqualFold(declared, StatusNone):
+		if resolved.Type == "" {
+			return ""
 		}
+		return fmt.Sprintf(
+			"Invalid providerType '%s'. The nodes of this group run in the '%s' cloud. "+
+				"Please remove the field or set it to '%s'.",
+			StatusNone, resolved.Type, resolved.Type)
+
+	case resolved.Type == "":
+		return fmt.Sprintf(
+			"Invalid providerType '%s'. The nodes of this group run in no cloud. "+
+				"Please remove the field or set it to '%s'.",
+			declared, StatusNone)
+
+	case !strings.EqualFold(declared, resolved.Type):
+		return fmt.Sprintf(
+			"Invalid providerType '%s'. Expected '%s'. Please update the NodeGroup to name the "+
+				"cloud provider its nodes run in.",
+			declared, resolved.Type)
 	}
 
-	return ret
+	return ""
 }
 
 // InstanceClassGVKs returns the GVK every provider registered its InstanceClass under.
@@ -186,21 +207,6 @@ func (ps Providers) byName(name string) (Provider, bool) {
 
 	for i := range ps.providers {
 		if ps.providers[i].Type == name {
-			return ps.providers[i], true
-		}
-	}
-
-	return Provider{}, false
-}
-
-// byInstanceClassKind returns the provider that registered a kind of InstanceClass.
-func (ps Providers) byInstanceClassKind(kind string) (Provider, bool) {
-	if kind == "" {
-		return Provider{}, false
-	}
-
-	for i := range ps.providers {
-		if ps.providers[i].InstanceClassKind == kind {
 			return ps.providers[i], true
 		}
 	}
