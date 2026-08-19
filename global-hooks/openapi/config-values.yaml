@@ -118,7 +118,7 @@ properties:
             type: string
             default: nginx
           enabled:
-            type boolean
+            type: boolean
             default: true
       ingressClass:
         type: string
