@@ -487,6 +487,44 @@ func TestOnceIdleKeepsTheDenominatorToo(t *testing.T) {
 		"a pass that did not count the set must keep the size it was told, or the status loses its denominator")
 }
 
+// TestTheDenominatorAppearsOnACachingClusterWithNothingToFill is the configuration the first two
+// versions of this fix both missed, and the one most clusters are in.
+//
+// With an upstream, a cache and no air-gap declaration, a steady-state pass computes nobody's set: the
+// fill path knows only what it wrote, the survey that keeps the store's size up to date is asked
+// without a set deliberately, and a freshly started process has nothing in memory to fall back on.
+// Measured on the static stand: `totalDigests` climbing pass after pass, `declaredDigests` absent, and
+// therefore no `fill` in the status — the very thing this was supposed to fix, surviving two fixes.
+func TestTheDenominatorAppearsOnACachingClusterWithNothingToFill(t *testing.T) {
+	local := startRegistry(t)
+
+	one := pushDigest(t, local, "system/deckhouse")
+	two := pushDigest(t, local, "system/deckhouse")
+	pushImage(t, local, "system/deckhouse:v1.70.1")
+	pushInstaller(t, local, "system/deckhouse/install:v1.70.1", []string{one, two})
+
+	loop, c, _ := newLoop(t, true, storageWith(registryv1alpha1.RegistryStorageSpec{
+		Upstream: &registryv1alpha1.Upstream{
+			Endpoint: registryv1alpha1.Endpoint{
+				Scheme: registryv1alpha1.SchemeHTTP,
+				Host:   local,
+				Path:   "/system/deckhouse",
+			},
+		},
+		// Nothing asked of it: no fill, no air-gap declaration. The ordinary caching cluster.
+		NeedSync: false,
+	}), deployedRelease("v1.70.1"))
+	loop.LocalAddress = local
+	loop.WriteAddress = local
+	loop.DataDir = t.TempDir()
+
+	require.NoError(t, loop.once(context.Background()))
+
+	replica := replicaOf(t, c, "master-0")
+	assert.NotZero(t, replica.DeclaredDigests,
+		"a cluster with an upstream must still learn how big the set is, or its status has no denominator")
+}
+
 // TestOnceAppliesACredentialChange is the story the whole component exists for: the
 // upstream credentials change in the custom resource, and the serving process picks
 // them up without the Deckhouse operator being involved.

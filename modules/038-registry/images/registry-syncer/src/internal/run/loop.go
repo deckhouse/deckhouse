@@ -529,11 +529,22 @@ func (l *Loop) once(ctx context.Context) error {
 		l.lastTotalDigests.Store(state.TotalDigests)
 	}
 
-	// And the denominator, which has exactly the same shape of problem: the fill and replication paths
-	// know how much they wrote, not how big the set is, and a status published from one of them would
-	// otherwise report progress out of nothing.
+	// And the denominator, which has the same shape of problem and one wrinkle of its own: memory is
+	// empty in a freshly started process, and on a cluster with an upstream and no air-gap declaration
+	// NOTHING on a steady-state pass computes the set — not the fill path, which knows only what it
+	// wrote, and not the survey above, which is asked without a set on purpose. Measured on the static
+	// stand after the first version of this fix: `totalDigests` climbing pass after pass while
+	// `declaredDigests` stayed absent, so the status still showed no progress at all.
+	//
+	// So it is asked for, and only while it is unknown: one API read on the passes before the first
+	// answer, and nothing afterwards. The store is not walked again for it — the size of the set comes
+	// from what the cluster declares, not from the disk.
 	if state.DeclaredDigests == 0 {
-		state.DeclaredDigests = l.lastDeclaredDigests.Load()
+		if declared, _, err := l.declaredSet(ctx); err == nil && len(declared) > 0 {
+			state.DeclaredDigests = int32(len(declared))
+		} else {
+			state.DeclaredDigests = l.lastDeclaredDigests.Load()
+		}
 	}
 	if state.DeclaredDigests > 0 {
 		l.lastDeclaredDigests.Store(state.DeclaredDigests)
