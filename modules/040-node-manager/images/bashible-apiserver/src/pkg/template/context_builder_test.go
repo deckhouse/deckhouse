@@ -255,72 +255,40 @@ func TestGetCloudProvider(t *testing.T) {
 	aws := cloudProvider{"type": "aws", "region": "eu-central-1"}
 	yandex := cloudProvider{"type": "yandex"}
 
-	t.Run("an unversioned document answers with the deprecated field", func(t *testing.T) {
-		input := inputData{CloudProvider: aws}
+	versioned := inputData{Version: 1, CloudProvider: aws, CloudProviders: []cloudProvider{aws, yandex}}
+	unversioned := inputData{CloudProvider: aws}
 
-		if got := input.getCloudProvider("aws"); !reflect.DeepEqual(got, aws) {
-			t.Fatalf("getCloudProvider(aws) = %v, want the deprecated registration %v", got, aws)
-		}
-		if got := input.getCloudProvider(""); !reflect.DeepEqual(got, aws) {
-			t.Fatalf("getCloudProvider(\"\") = %v, want the deprecated registration %v", got, aws)
-		}
-	})
+	tests := []struct {
+		name  string
+		input inputData
+		pType string
+		want  cloudProvider
+	}{
+		// A document written before the per-NodeGroup contract carries no per-group type, so the
+		// single cluster provider answers for every group.
+		{name: "unversioned, no type named", input: unversioned, want: aws},
+		{name: "unversioned, type named", input: unversioned, pType: "aws", want: aws},
 
-	// The version switches the reader, not the presence of the list: a cluster with no cloud
-	// provider publishes an empty one.
-	t.Run("a versioned document with no provider resolves to nothing", func(t *testing.T) {
-		input := inputData{Version: 1, CloudProvider: aws}
+		{name: "versioned, its own provider", input: versioned, pType: "aws", want: aws},
+		{name: "versioned, the other provider", input: versioned, pType: "yandex", want: yandex},
+		// Static names no provider; the deprecated field must not answer for it.
+		{name: "versioned, no type named", input: versioned, pType: ""},
+		// A type outside the list comes from a stale entry: another provider must not answer.
+		{name: "versioned, unknown type", input: versioned, pType: "gcp"},
+	}
 
-		if got := input.getCloudProvider(""); got != nil {
-			t.Fatalf("getCloudProvider(\"\") = %v, want nil", got)
-		}
-		if got := input.getCloudProvider("aws"); got != nil {
-			t.Fatalf("getCloudProvider(aws) = %v, want nil", got)
-		}
-	})
-
-	t.Run("a NodeGroup picks the registration of its own type", func(t *testing.T) {
-		input := inputData{
-			Version:        1,
-			CloudProviders: []cloudProvider{aws, yandex},
-		}
-
-		if got := input.getCloudProvider("aws"); !reflect.DeepEqual(got, aws) {
-			t.Fatalf("getCloudProvider(aws) = %v, want %v", got, aws)
-		}
-		if got := input.getCloudProvider("yandex"); !reflect.DeepEqual(got, yandex) {
-			t.Fatalf("getCloudProvider(yandex) = %v, want %v", got, yandex)
-		}
-	})
-
-	// Static names no provider; the deprecated field must not answer for it.
-	t.Run("a NodeGroup that names no provider gets none even while the deprecated field is published", func(t *testing.T) {
-		input := inputData{
-			Version:        1,
-			CloudProvider:  aws,
-			CloudProviders: []cloudProvider{aws},
-		}
-
-		if got := input.getCloudProvider(""); got != nil {
-			t.Fatalf("getCloudProvider(\"\") = %v, want nil", got)
-		}
-	})
-
-	// A type outside the list comes from a stale entry: another provider must not answer for it.
-	t.Run("a type the list does not carry resolves to nothing", func(t *testing.T) {
-		input := inputData{
-			Version:        1,
-			CloudProvider:  aws,
-			CloudProviders: []cloudProvider{aws},
-		}
-
-		if got := input.getCloudProvider("gcp"); got != nil {
-			t.Fatalf("getCloudProvider(gcp) = %v, want nil", got)
-		}
-	})
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := tc.input.getCloudProvider(tc.pType); !reflect.DeepEqual(got, tc.want) {
+				t.Fatalf("getCloudProvider(%q) = %v, want %v", tc.pType, got, tc.want)
+			}
+		})
+	}
 }
 
-func TestCloudProviderIsPerNodeGroupInBuiltContexts(t *testing.T) {
+// The provider reaches the bundle context of the group that names it and nobody else, and it is
+// what selects the step directory rendered for that group.
+func TestBuild_CloudProviderIsPerNodeGroup(t *testing.T) {
 	aws := cloudProvider{"type": "aws", "region": "eu-central-1"}
 	yandex := cloudProvider{"type": "yandex"}
 
@@ -328,6 +296,16 @@ func TestCloudProviderIsPerNodeGroupInBuiltContexts(t *testing.T) {
 	writeStepTemplate(t, root, "bashible/common-steps/all/000_common.sh.tpl", "echo common")
 	writeStepTemplate(t, root, "cloud-providers/aws/bashible/common-steps/all/010_aws.sh.tpl", "echo aws")
 	writeStepTemplate(t, root, "cloud-providers/yandex/bashible/common-steps/all/010_yandex.sh.tpl", "echo yandex")
+
+	assertGroup := func(t *testing.T, built BashibleContextData, steps map[string]map[string]string, ng string, wantProvider cloudProvider, wantSteps []string) {
+		t.Helper()
+		if got := bundleContextOf(t, built, ng).CloudProvider; !reflect.DeepEqual(got, wantProvider) {
+			t.Fatalf("%s bundle cloudProvider = %v, want %v", ng, got, wantProvider)
+		}
+		if got := keysOf(steps[ng]); !reflect.DeepEqual(got, wantSteps) {
+			t.Fatalf("%s steps = %v, want %v", ng, got, wantSteps)
+		}
+	}
 
 	t.Run("every group renders the steps of the provider it names", func(t *testing.T) {
 		built, steps := buildContexts(t, root, inputData{
@@ -340,43 +318,9 @@ func TestCloudProviderIsPerNodeGroupInBuiltContexts(t *testing.T) {
 			},
 		})
 
-		if got := bundleContextOf(t, built, "worker-aws").CloudProvider.Type(); got != "aws" {
-			t.Fatalf("worker-aws cloudProvider.type = %q, want %q", got, "aws")
-		}
-		if got := bundleContextOf(t, built, "worker-yandex").CloudProvider.Type(); got != "yandex" {
-			t.Fatalf("worker-yandex cloudProvider.type = %q, want %q", got, "yandex")
-		}
-		if got := bundleContextOf(t, built, "static-ng").CloudProvider.Type(); got != "" {
-			t.Fatalf("static-ng cloudProvider.type = %q, want it empty", got)
-		}
-
-		if got, want := keysOf(steps["worker-aws"]), []string{"000_common.sh", "010_aws.sh"}; !reflect.DeepEqual(got, want) {
-			t.Fatalf("worker-aws steps = %v, want %v", got, want)
-		}
-		if got, want := keysOf(steps["worker-yandex"]), []string{"000_common.sh", "010_yandex.sh"}; !reflect.DeepEqual(got, want) {
-			t.Fatalf("worker-yandex steps = %v, want %v", got, want)
-		}
-		if got, want := keysOf(steps["static-ng"]), []string{"000_common.sh"}; !reflect.DeepEqual(got, want) {
-			t.Fatalf("static-ng steps = %v, want %v", got, want)
-		}
-	})
-
-	t.Run("the registration reaches the bundle context of its own group only", func(t *testing.T) {
-		built, _ := buildContexts(t, root, inputData{
-			Version:        1,
-			CloudProviders: []cloudProvider{aws},
-			NodeGroups: []nodeGroup{
-				{"name": "worker-aws", "nodeType": "CloudEphemeral", "cloudProviderType": "aws"},
-				{"name": "static-ng", "nodeType": "Static"},
-			},
-		})
-
-		if got := bundleContextOf(t, built, "worker-aws").CloudProvider; !reflect.DeepEqual(got, aws) {
-			t.Fatalf("worker-aws bundle cloudProvider = %v, want %v", got, aws)
-		}
-		if got := bundleContextOf(t, built, "static-ng").CloudProvider; got != nil {
-			t.Fatalf("static-ng bundle cloudProvider = %v, want nil", got)
-		}
+		assertGroup(t, built, steps, "worker-aws", aws, []string{"000_common.sh", "010_aws.sh"})
+		assertGroup(t, built, steps, "worker-yandex", yandex, []string{"000_common.sh", "010_yandex.sh"})
+		assertGroup(t, built, steps, "static-ng", nil, []string{"000_common.sh"})
 	})
 
 	t.Run("a writer from before this contract keeps every group on the cluster provider", func(t *testing.T) {
@@ -388,14 +332,8 @@ func TestCloudProviderIsPerNodeGroupInBuiltContexts(t *testing.T) {
 			},
 		})
 
-		for _, ng := range []string{"worker-aws", "static-ng"} {
-			if got := bundleContextOf(t, built, ng).CloudProvider.Type(); got != "aws" {
-				t.Fatalf("%s cloudProvider.type = %q, want %q", ng, got, "aws")
-			}
-			if got, want := keysOf(steps[ng]), []string{"000_common.sh", "010_aws.sh"}; !reflect.DeepEqual(got, want) {
-				t.Fatalf("%s steps = %v, want %v", ng, got, want)
-			}
-		}
+		assertGroup(t, built, steps, "worker-aws", aws, []string{"000_common.sh", "010_aws.sh"})
+		assertGroup(t, built, steps, "static-ng", aws, []string{"000_common.sh", "010_aws.sh"})
 	})
 }
 
@@ -422,17 +360,6 @@ func buildContexts(t *testing.T, rootDir string, input inputData) (BashibleConte
 	}
 
 	return data, steps
-}
-
-func bashibleContextOf(t *testing.T, data BashibleContextData, ng string) bashibleContext {
-	t.Helper()
-
-	bc, ok := data.bashibleContexts[fmt.Sprintf("bashible-%s", ng)].(bashibleContext)
-	if !ok {
-		t.Fatalf("no bashible context for NodeGroup %q", ng)
-	}
-
-	return bc
 }
 
 func bundleContextOf(t *testing.T, data BashibleContextData, ng string) bundleNGContext {

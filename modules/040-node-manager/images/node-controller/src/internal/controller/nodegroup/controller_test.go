@@ -365,7 +365,8 @@ func TestReconcile_CloudValidationErrorPublished(t *testing.T) {
 }
 
 // spec.providerType declares the provider; naming a different one is a statement about the
-// NodeGroup, so it lands in status rather than failing the reconcile.
+// NodeGroup, so it lands in status rather than failing the reconcile. Which declarations hold is
+// cloudprovider.TestDeclarationError; what this asserts is that the verdict is published.
 func TestReconcile_ProviderTypeMismatchIsPublished(t *testing.T) {
 	registration := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -389,22 +390,15 @@ func TestReconcile_ProviderTypeMismatchIsPublished(t *testing.T) {
 		declared string
 		wantErr  string
 	}{
-		{name: "empty-agrees", nodeType: v1.NodeTypeCloudStatic},
-		{name: "match-agrees", nodeType: v1.NodeTypeCloudStatic, declared: "yandex"},
-		{name: "case-agrees", nodeType: v1.NodeTypeCloudStatic, declared: "Yandex"},
-		{name: "none-on-static-agrees", nodeType: v1.NodeTypeStatic, declared: "None"},
+		{name: "the-resolved-provider", nodeType: v1.NodeTypeCloudStatic, declared: "Yandex"},
 		{
-			name: "other-provider", nodeType: v1.NodeTypeCloudStatic, declared: "aws",
+			name: "another-provider", nodeType: v1.NodeTypeCloudStatic, declared: "aws",
 			wantErr: "Invalid providerType 'aws'. Expected 'yandex'",
 		},
 		{
 			// A Static group runs in no cloud, so naming one is wrong even when the cluster has it.
-			name: "provider-on-static", nodeType: v1.NodeTypeStatic, declared: "yandex",
+			name: "a-provider-on-static", nodeType: v1.NodeTypeStatic, declared: "yandex",
 			wantErr: "The nodes of this group run in no cloud",
-		},
-		{
-			name: "none-in-a-cloud", nodeType: v1.NodeTypeCloudStatic, declared: "None",
-			wantErr: "The nodes of this group run in the 'yandex' cloud",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

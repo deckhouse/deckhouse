@@ -19,17 +19,18 @@ package cloudprovider
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 // registration.yaml writes some values as bare strings (type: {{ b64enc "aws" }}) and others as
-// JSON (zones: {{ toJson | b64enc }}). The decoder must accept both forms for every field, which is
-// why the map decoder it replaces tried JSON first and fell back to the raw string.
-func TestFromSecretData_BothEncodings(t *testing.T) {
+// JSON (zones: {{ toJson | b64enc }}), so every field tries JSON first and falls back to the raw
+// bytes. Data keeps the whole Secret decoded — the template render context needs it verbatim.
+func TestFromSecretData(t *testing.T) {
 	tests := []struct {
-		name        string
-		data        map[string][]byte
-		expProvider Provider
+		name string
+		data map[string][]byte
+		want Provider
 	}{
 		{
 			name: "bare strings as helm writes them",
@@ -40,7 +41,7 @@ func TestFromSecretData_BothEncodings(t *testing.T) {
 				"machineClassKind":        []byte(`AWSMachineClass`),
 				"zones":                   []byte(`["a","b"]`),
 			},
-			expProvider: Provider{
+			want: Provider{
 				Type:                    "aws",
 				InstanceClassKind:       "AWSInstanceClass",
 				InstanceClassAPIVersion: "v1",
@@ -54,15 +55,28 @@ func TestFromSecretData_BothEncodings(t *testing.T) {
 				"type":            []byte(`"dvp"`),
 				"capiClusterKind": []byte(`"DVPCluster"`),
 			},
-			expProvider: Provider{
+			want: Provider{
 				Type: "dvp",
 				CAPI: CAPIConfig{ClusterKind: "DVPCluster"},
 			},
 		},
 		{
-			name:        "empty secret",
-			data:        map[string][]byte{},
-			expProvider: Provider{},
+			name: "the provider's own tree is keyed by its type",
+			data: map[string][]byte{
+				"type":    []byte(`vsphere`),
+				"vsphere": []byte(`{"instances":{"mainNetwork":"vlan-1"}}`),
+			},
+			want: Provider{
+				Type: "vsphere",
+				CloudVariables: map[string]any{
+					"instances": map[string]any{"mainNetwork": "vlan-1"},
+				},
+			},
+		},
+		{
+			name: "empty secret",
+			data: map[string][]byte{},
+			want: Provider{},
 		},
 	}
 
@@ -70,26 +84,28 @@ func TestFromSecretData_BothEncodings(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			got := FromSecretData(tc.data)
 
-			require.Equal(t, tc.expProvider.Type, got.Type)
-			require.Equal(t, tc.expProvider.InstanceClassKind, got.InstanceClassKind)
-			require.Equal(t, tc.expProvider.InstanceClassAPIVersion, got.InstanceClassAPIVersion)
-			require.Equal(t, tc.expProvider.MachineClassKind, got.MachineClassKind)
-			require.Equal(t, tc.expProvider.CAPI.ClusterKind, got.CAPI.ClusterKind)
-			require.Equal(t, tc.expProvider.Zones, got.Zones)
+			assert.Equal(t, tc.want.Type, got.Type)
+			assert.Equal(t, tc.want.InstanceClassKind, got.InstanceClassKind)
+			assert.Equal(t, tc.want.InstanceClassAPIVersion, got.InstanceClassAPIVersion)
+			assert.Equal(t, tc.want.MachineClassKind, got.MachineClassKind)
+			assert.Equal(t, tc.want.CAPI.ClusterKind, got.CAPI.ClusterKind)
+			assert.Equal(t, tc.want.Zones, got.Zones)
+			assert.Equal(t, tc.want.CloudVariables, got.CloudVariables)
+
+			// Data is the same content, undecoded into fields: every key of the Secret, JSON
+			// where the value parses as JSON and the raw string where it does not.
+			for k := range tc.data {
+				require.Contains(t, got.Data, k)
+			}
 		})
 	}
 }
 
-func TestFromSecretData_CloudVariablesKeyedByType(t *testing.T) {
-	data := map[string][]byte{
-		"type":    []byte(`vsphere`),
-		"vsphere": []byte(`{"instances":{"mainNetwork":"vlan-1"}}`),
-	}
+// A CAPI key the provider does not publish defaults here rather than at each use site: an empty
+// API version would make the MachineTemplate GVK unparseable.
+func TestFromSecretData_CAPIAPIVersionsDefault(t *testing.T) {
+	got := FromSecretData(map[string][]byte{"type": []byte(`aws`)})
 
-	got := FromSecretData(data)
-
-	require.Equal(t, "vsphere", got.Type)
-	instances, ok := got.CloudVariables["instances"].(map[string]any)
-	require.True(t, ok, "cloud variables must be keyed by the provider type")
-	require.Equal(t, "vlan-1", instances["mainNetwork"])
+	assert.Equal(t, defaultInfraAPIVersion, got.CAPI.ClusterAPIVersion)
+	assert.Equal(t, defaultInfraAPIVersion, got.CAPI.MachineTemplateAPIVersion)
 }

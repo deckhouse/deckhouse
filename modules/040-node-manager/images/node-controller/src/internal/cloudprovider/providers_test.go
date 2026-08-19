@@ -53,13 +53,15 @@ func registrationSecret(name string, data map[string][]byte) *corev1.Secret {
 	}
 }
 
-func clusterConfigurationSecret(provider string) *corev1.Secret {
+func clusterConfigurationSecret(body string) *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Namespace: SecretNamespace, Name: clusterConfigSecretName},
-		Data: map[string][]byte{
-			clusterConfigSecretKey: []byte("cloud:\n  provider: " + provider + "\n  prefix: test\n"),
-		},
+		Data:       map[string][]byte{clusterConfigSecretKey: []byte(body)},
 	}
+}
+
+func cloudCluster(provider string) *corev1.Secret {
+	return clusterConfigurationSecret("clusterType: Cloud\ncloud:\n  provider: " + provider + "\n  prefix: test\n")
 }
 
 func loadFrom(t *testing.T, objs ...client.Object) Providers {
@@ -89,262 +91,205 @@ func nodeGroupOfType(name string, nodeType v1.NodeType) *v1.NodeGroup {
 	}
 }
 
-// Every provider module renders its registration twice — under the legacy fixed name and under a
-// per-provider one. Both carry the label, so a providers that did not deduplicate would report one
-// provider as two and make every "exactly one provider" check fail on a perfectly normal cluster.
-func TestLoad_DeduplicatesTheLegacyAndPerProviderCopies(t *testing.T) {
-	data := map[string][]byte{
+func TestLoad(t *testing.T) {
+	aws := registrationSecret(SecretNamePrefix+"-aws", map[string][]byte{"type": []byte("aws")})
+	yandexData := map[string][]byte{
 		"type":                    []byte("yandex"),
 		"instanceClassKind":       []byte("YandexInstanceClass"),
 		"instanceClassAPIVersion": []byte("v1"),
 	}
-
-	providers := loadFrom(t,
-		registrationSecret(SecretNamePrefix, data),
-		registrationSecret(SecretNamePrefix+"-yandex", data),
-	)
-
-	require.Len(t, providers.All(), 1)
-	assert.Equal(t, "yandex", providers.All()[0].Type)
-}
-
-// Selection is by label, not by name: the per-provider Secret of a second provider is the whole
-// point of this package, and a Secret that carries no registration label is not one.
-func TestLoad_SelectsByLabelAndSeesEveryProvider(t *testing.T) {
 	unlabelled := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Namespace: SecretNamespace, Name: "some-other-secret"},
 		Data:       map[string][]byte{"type": []byte("notaprovider")},
 	}
 
-	providers := loadFrom(t,
-		registrationSecret(SecretNamePrefix+"-aws", map[string][]byte{"type": []byte("aws")}),
-		registrationSecret(SecretNamePrefix+"-yandex", map[string][]byte{"type": []byte("yandex")}),
-		unlabelled,
-	)
-
-	require.Len(t, providers.All(), 2)
-	assert.Equal(t, "aws", providers.All()[0].Type)
-	assert.Equal(t, "yandex", providers.All()[1].Type)
-}
-
-// An unreadable provider must not read as "no cloud provider": an empty one publishes
-// NodeGroups without instanceClass, which shifts the configuration checksum of every node. This is
-// why Load returns the error rather than an empty providers — the callers abort the reconcile.
-func TestLoad_ForbiddenListIsAnError(t *testing.T) {
-	c := fake.NewClientBuilder().
-		WithScheme(testScheme(t)).
-		WithInterceptorFuncs(interceptor.Funcs{
-			List: func(context.Context, client.WithWatch, client.ObjectList, ...client.ListOption) error {
-				return apierrors.NewForbidden(schema.GroupResource{Resource: "secrets"}, "", context.Canceled)
-			},
-		}).
-		Build()
-
-	_, err := Load(context.Background(), c)
-
-	require.ErrorContains(t, err, "list cloud provider registration secrets")
-}
-
-// A cluster with no cloud provider at all is a legitimate state, not a failure.
-func TestLoad_NoProvidersIsEmptyNotAnError(t *testing.T) {
-	providers := loadFrom(t)
-
-	assert.True(t, providers.Empty())
-	assert.Empty(t, providers.All())
-}
-
-// A cloud cluster whose provider cannot be read would publish its CloudPermanent NodeGroups without
-// one, stripping the provider steps from the master's bundle — so it is an error, not an empty name.
-func TestLoad_UnreadableClusterProviderIsAnError(t *testing.T) {
-	clusterConfig := func(data map[string][]byte) *corev1.Secret {
-		return &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Namespace: SecretNamespace, Name: clusterConfigSecretName},
-			Data:       data,
-		}
-	}
-
 	tests := []struct {
-		name    string
-		secret  *corev1.Secret
-		wantErr string
+		name  string
+		objs  []client.Object
+		types []string
 	}{
 		{
-			name:    "the configuration key is missing",
-			secret:  clusterConfig(map[string][]byte{"other.yaml": []byte("{}")}),
-			wantErr: `has no "cluster-configuration.yaml" key`,
+			// Every provider module renders its registration twice — under the legacy fixed name
+			// and under a per-provider one. Both carry the label, so without deduplication one
+			// provider would read as two.
+			name: "the legacy and the per-provider copy are one provider",
+			objs: []client.Object{
+				registrationSecret(SecretNamePrefix, yandexData),
+				registrationSecret(SecretNamePrefix+"-yandex", yandexData),
+				cloudCluster("Yandex"),
+			},
+			types: []string{"yandex"},
 		},
 		{
-			name: "the document does not parse",
-			secret: clusterConfig(map[string][]byte{
-				clusterConfigSecretKey: []byte("cloud:\n\tprovider: [Yandex\n"),
-			}),
-			wantErr: `unmarshal "cluster-configuration.yaml"`,
+			// Selection is by label, not by name: the per-provider Secret of a second provider is
+			// the whole point of this package, and an unlabelled Secret is not a registration.
+			name: "every labelled registration is seen, ordered by type",
+			objs: []client.Object{
+				registrationSecret(SecretNamePrefix+"-yandex", yandexData),
+				aws, unlabelled, cloudCluster("Yandex"),
+			},
+			types: []string{"aws", "yandex"},
 		},
 		{
-			// The schema requires cloud.provider whenever clusterType is Cloud.
-			name: "a cloud cluster names no provider",
-			secret: clusterConfig(map[string][]byte{
-				clusterConfigSecretKey: []byte("clusterType: Cloud\ncloud:\n  prefix: test\n"),
-			}),
-			wantErr: "names no cloud.provider",
+			name: "a cluster with no cloud provider at all",
+		},
+		{
+			name: "a static cluster names no provider",
+			objs: []client.Object{clusterConfigurationSecret("clusterType: Static\npodSubnetCIDR: 10.111.0.0/16\n")},
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			c := fake.NewClientBuilder().WithScheme(testScheme(t)).WithObjects(tc.secret).Build()
+			providers := loadFrom(t, tc.objs...)
 
-			_, err := Load(context.Background(), c)
+			var got []string
+			for _, p := range providers.All() {
+				got = append(got, p.Type)
+			}
+			assert.Equal(t, tc.types, got)
+			assert.Equal(t, len(tc.types) == 0, providers.Empty())
+		})
+	}
+}
+
+// An unreadable source must not read as "no cloud provider": an empty registry publishes
+// NodeGroups without instanceClass, which shifts the configuration checksum of every node, and a
+// CloudPermanent group resolves through the cluster's provider name and nothing else — so a
+// configured provider that published no registration would render the master without its steps.
+func TestLoad_Errors(t *testing.T) {
+	tests := []struct {
+		name    string
+		objs    []client.Object
+		deny    bool
+		wantErr string
+	}{
+		{
+			name:    "the registrations cannot be listed",
+			deny:    true,
+			wantErr: "list cloud provider registration secrets",
+		},
+		{
+			name:    "the configuration key is missing",
+			objs:    []client.Object{&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: SecretNamespace, Name: clusterConfigSecretName}}},
+			wantErr: `has no "cluster-configuration.yaml" key`,
+		},
+		{
+			name:    "the document does not parse",
+			objs:    []client.Object{clusterConfigurationSecret("cloud:\n\tprovider: [Yandex\n")},
+			wantErr: `unmarshal "cluster-configuration.yaml"`,
+		},
+		{
+			// The schema requires cloud.provider whenever clusterType is Cloud.
+			name:    "a cloud cluster names no provider",
+			objs:    []client.Object{clusterConfigurationSecret("clusterType: Cloud\ncloud:\n  prefix: test\n")},
+			wantErr: "names no cloud.provider",
+		},
+		{
+			name: "the cluster provider published no registration",
+			objs: []client.Object{
+				registrationSecret(SecretNamePrefix+"-aws", map[string][]byte{"type": []byte("aws")}),
+				cloudCluster("Yandex"),
+			},
+			wantErr: `"yandex" of the cluster configuration published no registration`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			builder := fake.NewClientBuilder().WithScheme(testScheme(t)).WithObjects(tc.objs...)
+			if tc.deny {
+				// The last-resort tool: producing a Forbidden needs RBAC that envtest does not run.
+				builder = builder.WithInterceptorFuncs(interceptor.Funcs{
+					List: func(context.Context, client.WithWatch, client.ObjectList, ...client.ListOption) error {
+						return apierrors.NewForbidden(schema.GroupResource{Resource: "secrets"}, "", context.Canceled)
+					},
+				})
+			}
+
+			_, err := Load(context.Background(), builder.Build())
 
 			require.ErrorContains(t, err, tc.wantErr)
 		})
 	}
 }
 
-// The cluster names a provider that published nothing: CloudPermanent resolves through that name
-// and nothing else, so the master would render without provider steps and no one would say why.
-func TestLoad_ClusterProviderWithoutRegistrationIsAnError(t *testing.T) {
-	c := fake.NewClientBuilder().WithScheme(testScheme(t)).WithObjects(
-		registrationSecret(SecretNamePrefix+"-aws", map[string][]byte{"type": []byte("aws")}),
-		clusterConfigurationSecret("Yandex"),
-	).Build()
-
-	_, err := Load(context.Background(), c)
-
-	require.ErrorContains(t, err, `"yandex" of the cluster configuration published no registration`)
-}
-
-// A static cluster names no provider, and that is not a failure.
-func TestLoad_StaticClusterHasNoProvider(t *testing.T) {
-	providers := loadFrom(t, &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Namespace: SecretNamespace, Name: clusterConfigSecretName},
-		Data: map[string][]byte{
-			clusterConfigSecretKey: []byte("clusterType: Static\npodSubnetCIDR: 10.111.0.0/16\n"),
-		},
-	})
-
-	_, ok := providers.ForNodeGroup(nodeGroupOfType("master", v1.NodeTypeCloudPermanent))
-	assert.False(t, ok)
-}
-
+// The cluster runs one cloud, so the node type alone decides: everything but Static belongs to the
+// provider the cluster configuration names, whatever InstanceClass kind the group references.
 func TestForNodeGroup(t *testing.T) {
-	aws := registrationSecret(SecretNamePrefix+"-aws", map[string][]byte{
-		"type":              []byte("aws"),
-		"instanceClassKind": []byte("AWSInstanceClass"),
-	})
-	yandex := registrationSecret(SecretNamePrefix+"-yandex", map[string][]byte{
-		"type":              []byte("yandex"),
-		"instanceClassKind": []byte("YandexInstanceClass"),
-	})
-	providers := loadFrom(t, aws, yandex, clusterConfigurationSecret("Yandex"))
+	yandex := Provider{Type: "yandex", InstanceClassKind: "YandexInstanceClass"}
+	aws := Provider{Type: "aws", InstanceClassKind: "AWSInstanceClass"}
+	// A registration that published no type is kept on load for the InstanceClass kind it carries.
+	// Its empty type must not meet the empty name of a cluster that configures no provider.
+	nameless := Provider{InstanceClassKind: "VsphereInstanceClass"}
+
+	inYandexCloud := NewProviders([]Provider{aws, yandex, nameless}, "Yandex")
+	staticCluster := NewProviders([]Provider{nameless}, "")
 
 	tests := []struct {
-		name     string
-		ng       *v1.NodeGroup
-		expType  string
-		expFound bool
+		name      string
+		providers Providers
+		ng        *v1.NodeGroup
+		want      string
 	}{
 		{
-			// The InstanceClass a group references does not pick its provider while the cluster
-			// runs one cloud: a group of the second provider's kind still resolves to the
-			// cluster's own. Kind mismatch is a verdict about the NodeGroup, and
-			// derived_status.RunCloudChecks reports it.
-			name:     "CloudEphemeral takes the cluster provider, not the one its kind belongs to",
-			ng:       cloudEphemeral("worker-aws", "AWSInstanceClass"),
-			expType:  "yandex",
-			expFound: true,
+			// The kind a group references does not pick its provider: a kind mismatch is a verdict
+			// about the NodeGroup, and derived_status.RunCloudChecks is what reports it.
+			name:      "CloudEphemeral takes the cluster provider, not the one its kind belongs to",
+			providers: inYandexCloud, ng: cloudEphemeral("worker-aws", "AWSInstanceClass"), want: "yandex",
 		},
 		{
-			name:     "CloudEphemeral referencing a kind nobody registered still takes the cluster provider",
-			ng:       cloudEphemeral("worker", "VsphereInstanceClass"),
-			expType:  "yandex",
-			expFound: true,
+			name:      "CloudEphemeral without a classReference takes the cluster provider",
+			providers: inYandexCloud, ng: nodeGroupOfType("worker", v1.NodeTypeCloudEphemeral), want: "yandex",
 		},
 		{
 			// CloudPermanent nodes are created by the installer and reference no InstanceClass, so
 			// the cluster configuration is the only thing left to name their provider.
-			name:     "CloudPermanent takes the cluster provider",
-			ng:       nodeGroupOfType("master", v1.NodeTypeCloudPermanent),
-			expType:  "yandex",
-			expFound: true,
+			name:      "CloudPermanent takes the cluster provider",
+			providers: inYandexCloud, ng: nodeGroupOfType("master", v1.NodeTypeCloudPermanent), want: "yandex",
 		},
 		{
 			// CloudStatic nodes do run in the cluster's cloud, Deckhouse just does not order them:
 			// they still need the provider steps and the cloud variables.
-			name:     "CloudStatic takes the cluster provider",
-			ng:       nodeGroupOfType("cloudstatic", v1.NodeTypeCloudStatic),
-			expType:  "yandex",
-			expFound: true,
+			name:      "CloudStatic takes the cluster provider",
+			providers: inYandexCloud, ng: nodeGroupOfType("cloudstatic", v1.NodeTypeCloudStatic), want: "yandex",
 		},
 		{
 			// The whole point of the per-NodeGroup provider: a Static node lives outside every
 			// cloud, so the provider steps must not reach it even in a cloud cluster.
-			name: "Static resolves to no provider in a cloud cluster",
-			ng:   nodeGroupOfType("static", v1.NodeTypeStatic),
+			name:      "Static resolves to no provider in a cloud cluster",
+			providers: inYandexCloud, ng: nodeGroupOfType("static", v1.NodeTypeStatic),
 		},
 		{
-			// A CloudEphemeral group with no classReference is still a group in the cluster's
-			// cloud — nothing about it says otherwise.
-			name:     "CloudEphemeral without a classReference takes the cluster provider",
-			ng:       nodeGroupOfType("worker", v1.NodeTypeCloudEphemeral),
-			expType:  "yandex",
-			expFound: true,
+			name:      "a cluster that names no provider resolves to nothing",
+			providers: staticCluster, ng: nodeGroupOfType("cloudstatic", v1.NodeTypeCloudStatic),
+		},
+		{
+			// ClusterConfiguration spells providers OpenStack and vSphere; the Secrets spell them
+			// lower case.
+			name:      "the cluster provider matches case-insensitively",
+			providers: NewProviders([]Provider{{Type: "openstack"}}, "OpenStack"),
+			ng:        nodeGroupOfType("master", v1.NodeTypeCloudPermanent), want: "openstack",
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, ok := providers.ForNodeGroup(tc.ng)
+			got, ok := tc.providers.ForNodeGroup(tc.ng)
 
-			assert.Equal(t, tc.expFound, ok)
-			assert.Equal(t, tc.expType, got.Type)
+			assert.Equal(t, tc.want != "", ok)
+			assert.Equal(t, tc.want, got.Type)
 		})
 	}
 }
 
-// A registration that published no type is kept on load for the InstanceClass kind it carries, so
-// its Type is the empty string — the same empty string a NodeGroup has when it named no provider
-// and the cluster names none either. The two must not meet: a static cluster with a registration
-// left behind by a disabled provider module would otherwise hand every group a nameless provider.
-func TestForNodeGroup_NoNameMatchesNoRegistration(t *testing.T) {
-	providers := loadFrom(t, registrationSecret(SecretNamePrefix, map[string][]byte{
-		"instanceClassKind": []byte("AWSInstanceClass"),
-	}))
-
-	// CloudStatic, not Static: Static resolves to nothing by its own rule and would pass this
-	// test without the guard under it.
-	_, ok := providers.ForNodeGroup(nodeGroupOfType("cloudstatic", v1.NodeTypeCloudStatic))
-
-	assert.False(t, ok)
-}
-
-// ClusterConfiguration spells providers OpenStack and vSphere; their Secrets spell them lower case.
-func TestForNodeGroup_ClusterProviderMatchesCaseInsensitively(t *testing.T) {
-	providers := loadFrom(t,
-		registrationSecret(SecretNamePrefix, map[string][]byte{"type": []byte("openstack")}),
-		clusterConfigurationSecret("OpenStack"),
-	)
-
-	got, ok := providers.ForNodeGroup(nodeGroupOfType("master", v1.NodeTypeCloudPermanent))
-
-	require.True(t, ok)
-	assert.Equal(t, "openstack", got.Type)
-}
-
-// A provider that names a kind but no version contributes no GVK: guessing a version renames
-// the immutable MachineTemplate the instance-class checksum points at.
-func TestInstanceClassGVKs_SkipsProvidersWithoutAVersion(t *testing.T) {
-	providers := loadFrom(t,
-		registrationSecret(SecretNamePrefix+"-aws", map[string][]byte{
-			"type":                    []byte("aws"),
-			"instanceClassKind":       []byte("AWSInstanceClass"),
-			"instanceClassAPIVersion": []byte("v1"),
-		}),
-		registrationSecret(SecretNamePrefix+"-yandex", map[string][]byte{
-			"type":              []byte("yandex"),
-			"instanceClassKind": []byte("YandexInstanceClass"),
-		}),
-	)
+// A provider that names a kind but no version contributes no GVK: guessing a version renames the
+// immutable MachineTemplate the instance-class checksum points at.
+func TestInstanceClassGVKs(t *testing.T) {
+	providers := NewProviders([]Provider{
+		{Type: "aws", InstanceClassKind: "AWSInstanceClass", InstanceClassAPIVersion: "v1"},
+		{Type: "yandex", InstanceClassKind: "YandexInstanceClass"},
+	}, "aws")
 
 	gvks := providers.InstanceClassGVKs()
 

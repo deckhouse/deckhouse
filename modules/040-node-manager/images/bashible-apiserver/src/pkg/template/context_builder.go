@@ -547,21 +547,22 @@ type inputData struct {
 	AllowedKubeletFeatureGates []string               `json:"allowedKubeletFeatureGates,omitempty" yaml:"allowedKubeletFeatureGates,omitempty"`
 }
 
-// getCloudProvider returns the provider a NodeGroup named
+// getCloudProvider returns the registration a NodeGroup named, or nil when it named none.
+//
+// A document written before the per-NodeGroup contract carries no version and no per-group type;
+// there the single cluster provider is the answer for every group.
 func (input inputData) getCloudProvider(pType string) cloudProvider {
-	// old
 	if input.Version < 1 {
 		return input.CloudProvider
 	}
 
-	// new
 	if pType == "" {
 		return nil
 	}
 
-	for i, provider := range input.CloudProviders {
+	for _, provider := range input.CloudProviders {
 		if provider.Type() == pType {
-			return input.CloudProviders[i]
+			return provider
 		}
 	}
 

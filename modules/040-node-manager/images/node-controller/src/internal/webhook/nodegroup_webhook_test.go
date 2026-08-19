@@ -26,6 +26,7 @@ import (
 
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -33,6 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
@@ -139,54 +141,63 @@ func kubernetesEndpoints(addressCount int) *corev1.Endpoints {
 	}
 }
 
-// spec.providerType declares the provider a group runs in. The webhook is the fast refusal; the
-// reconcile keeps the verdict, so an unreadable registration warns instead of blocking the write.
+// spec.providerType declares the provider a group runs in. Which declarations hold is
+// cloudprovider.TestDeclarationError; what this asserts is that the webhook denies on the verdict,
+// and that an unreadable registration warns instead of blocking the write — a Secret we cannot
+// read is not the NodeGroup's fault.
 func TestValidation_ProviderType(t *testing.T) {
-	registration := func() *corev1.Secret {
-		return &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      cloudprovider.SecretNamePrefix,
-				Namespace: cloudprovider.SecretNamespace,
-				Labels:    map[string]string{cloudprovider.SecretLabel: ""},
-			},
-			Data: map[string][]byte{"type": []byte("openstack")},
-		}
+	registration := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cloudprovider.SecretNamePrefix,
+			Namespace: cloudprovider.SecretNamespace,
+			Labels:    map[string]string{cloudprovider.SecretLabel: ""},
+		},
+		Data: map[string][]byte{"type": []byte("openstack")},
 	}
 
 	for _, tc := range []struct {
 		name     string
 		nodeType v1.NodeType
 		declared string
-		cloud    bool
+		deny     bool
 		allowed  bool
 	}{
-		{name: "empty is always allowed", nodeType: v1.NodeTypeCloudStatic, cloud: true, allowed: true},
-		{name: "the cluster provider", nodeType: v1.NodeTypeCloudStatic, declared: "openstack", cloud: true, allowed: true},
-		{name: "case does not matter", nodeType: v1.NodeTypeCloudStatic, declared: "OpenStack", cloud: true, allowed: true},
-		{name: "None on Static", nodeType: v1.NodeTypeStatic, declared: "None", cloud: true, allowed: true},
-		{name: "None in a static cluster", nodeType: v1.NodeTypeCloudStatic, declared: "None", allowed: true},
-
-		{name: "another provider", nodeType: v1.NodeTypeCloudStatic, declared: "aws", cloud: true},
-		{name: "a provider on Static", nodeType: v1.NodeTypeStatic, declared: "openstack", cloud: true},
-		{name: "None in a cloud", nodeType: v1.NodeTypeCloudStatic, declared: "openstack", cloud: false},
+		{name: "empty is always allowed", nodeType: v1.NodeTypeCloudStatic, allowed: true},
+		{name: "the cluster provider, case-insensitively", nodeType: v1.NodeTypeCloudStatic, declared: "OpenStack", allowed: true},
+		{name: "another provider", nodeType: v1.NodeTypeCloudStatic, declared: "aws"},
+		{name: "a provider on Static", nodeType: v1.NodeTypeStatic, declared: "openstack"},
+		{
+			name:     "unreadable registrations warn instead of denying",
+			nodeType: v1.NodeTypeCloudStatic, declared: "aws", deny: true, allowed: true,
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			s := newScheme()
-			objs := []client.Object{}
-			if tc.cloud {
-				objs = append(objs, clusterConfigSecret("Cloud", "prefix", "", 0), registration())
-			} else {
-				objs = append(objs, clusterConfigSecret("Static", "", "", 0))
+			builder := fake.NewClientBuilder().WithScheme(s).WithObjects(
+				clusterConfigSecret("Cloud", "prefix", "", 0), registration.DeepCopy())
+			if tc.deny {
+				builder = builder.WithInterceptorFuncs(interceptor.Funcs{
+					List: func(ctx context.Context, cl client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+						if _, ok := list.(*corev1.SecretList); ok {
+							return apierrors.NewForbidden(
+								schema.GroupResource{Resource: "secrets"}, "", context.Canceled)
+						}
+						return cl.List(ctx, list, opts...)
+					},
+				})
 			}
-			c := fake.NewClientBuilder().WithScheme(s).WithObjects(objs...).Build()
-			w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+			w := &NodeGroupValidator{Client: builder.Build(), decoder: admission.NewDecoder(s)}
 
 			ng := baseNodeGroup("worker", tc.nodeType)
 			ng.Spec.ProviderType = tc.declared
 
 			resp := w.Handle(context.Background(), makeAdmissionRequest(t, "UPDATE", ng, ng))
+
 			if resp.Allowed != tc.allowed {
 				t.Fatalf("allowed = %v, want %v (%v)", resp.Allowed, tc.allowed, resp.Result)
+			}
+			if tc.deny && len(resp.Warnings) == 0 {
+				t.Fatal("an unreadable registration must warn that providerType was not validated")
 			}
 		})
 	}

@@ -241,30 +241,17 @@ func TestCompute_FrozenAndFailuresSortedLatestError(t *testing.T) {
 	}
 }
 
-// cloudEphemeralWithClass is a NodeGroup that names its provider the way a real one does — through
-// the InstanceClass kind — but sets no zones of its own, so the provider's are what counts.
-func cloudEphemeralWithClass(kind string) *v1.NodeGroup {
+// zonelessNodeGroup names no zones of its own, so its provider's are what counts.
+func zonelessNodeGroup() *v1.NodeGroup {
 	return &v1.NodeGroup{
 		ObjectMeta: metav1.ObjectMeta{Name: "worker"},
-		Spec: v1.NodeGroupSpec{
-			NodeType: v1.NodeTypeCloudEphemeral,
-			CloudInstances: &v1.CloudInstancesSpec{
-				ClassReference: v1.ClassReference{Kind: kind, Name: "worker"},
-			},
-		},
+		Spec:       v1.NodeGroupSpec{NodeType: v1.NodeTypeCloudEphemeral},
 	}
 }
 
 func TestZonesCount(t *testing.T) {
-	yandex := cloudprovider.Provider{
-		Type:              "yandex",
-		InstanceClassKind: "YandexInstanceClass",
-		Zones:             []string{"z1", "z2"},
-	}
-	zoneless := cloudprovider.Provider{
-		Type:              "vsphere",
-		InstanceClassKind: "VsphereInstanceClass",
-	}
+	yandex := cloudprovider.Provider{Type: "yandex", Zones: []string{"z1", "z2"}}
+	zoneless := cloudprovider.Provider{Type: "vsphere"}
 
 	tests := []struct {
 		name      string
@@ -281,7 +268,7 @@ func TestZonesCount(t *testing.T) {
 		},
 		{
 			name:      "no spec zones, fall back to the provider the NodeGroup resolved to",
-			ng:        cloudEphemeralWithClass("YandexInstanceClass"),
+			ng:        zonelessNodeGroup(),
 			providers: cloudprovider.NewProviders([]cloudprovider.Provider{yandex}, "yandex"),
 			want:      2,
 		},
@@ -289,7 +276,7 @@ func TestZonesCount(t *testing.T) {
 			// Two registrations, one cluster provider: the zones come from the cluster's own, not
 			// from whichever registration happens to be listed first.
 			name: "only the cluster provider's zones are used",
-			ng:   cloudEphemeralWithClass("YandexInstanceClass"),
+			ng:   zonelessNodeGroup(),
 			providers: cloudprovider.NewProviders(
 				[]cloudprovider.Provider{zoneless, yandex}, "yandex"),
 			want: 2,
@@ -298,14 +285,14 @@ func TestZonesCount(t *testing.T) {
 			// A provider that published no zones sizes the NodeGroup at zero rather than
 			// borrowing the other registration's topology.
 			name: "a zoneless cluster provider yields no zones",
-			ng:   cloudEphemeralWithClass("VsphereInstanceClass"),
+			ng:   zonelessNodeGroup(),
 			providers: cloudprovider.NewProviders(
 				[]cloudprovider.Provider{yandex, zoneless}, "vsphere"),
 			want: 0,
 		},
 		{
 			name:      "no registrations at all",
-			ng:        cloudEphemeralWithClass("YandexInstanceClass"),
+			ng:        zonelessNodeGroup(),
 			providers: cloudprovider.Providers{},
 			want:      0,
 		},

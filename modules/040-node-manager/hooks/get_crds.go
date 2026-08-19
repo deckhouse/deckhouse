@@ -254,7 +254,9 @@ func getCRDsHandler(_ context.Context, input *go_hook.HookInput) error {
 		ngForValues["engine"] = string(calculateNodeGroupEngine(input, nodeGroup))
 		ngForValues["manualRolloutID"] = nodeGroup.ManualRolloutID
 
-		if cloudProviderType != "" {
+		// Static nodes live outside every cloud, so they name no provider — the same rule
+		// node-controller resolves by when it publishes the bashible context.
+		if cloudProviderType != "" && nodeGroup.Spec.NodeType != ngv1.NodeTypeStatic {
 			ngForValues["cloudProviderType"] = cloudProviderType
 		}
 

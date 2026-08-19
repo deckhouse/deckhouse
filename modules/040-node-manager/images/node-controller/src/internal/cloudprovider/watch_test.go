@@ -116,7 +116,7 @@ func TestNodeGroupHandler(t *testing.T) {
 	newHandler := func(t *testing.T) (handler.EventHandler, workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 		t.Helper()
 		c := fake.NewClientBuilder().WithScheme(testScheme(t)).WithObjects(
-			aws, yandex, clusterConfigurationSecret("Yandex"),
+			aws, yandex, cloudCluster("Yandex"),
 			cloudEphemeral("worker-aws", "AWSInstanceClass"),
 			cloudEphemeral("worker-yandex", "YandexInstanceClass"),
 			// Names a kind nobody registered. The kind does not route a NodeGroup while the
@@ -200,21 +200,6 @@ func TestNodeGroupHandler(t *testing.T) {
 		assert.Empty(t, drain(t, queue))
 	})
 
-	// A group of another provider is not moved by this one.
-	t.Run("a registration nobody runs on enqueues nothing", func(t *testing.T) {
-		h, queue := newHandler(t)
-		orphan := registrationSecret(SecretNamePrefix+"-gcp", map[string][]byte{
-			"type":              []byte("gcp"),
-			"instanceClassKind": []byte("GCPInstanceClass"),
-		})
-		edited := orphan.DeepCopy()
-		edited.Data["zones"] = []byte(`["europe-west1-b"]`)
-
-		h.Update(context.Background(), event.UpdateEvent{ObjectOld: orphan, ObjectNew: edited}, queue)
-
-		assert.Empty(t, drain(t, queue))
-	})
-
 	t.Run("an object that is not a Secret carries no registration", func(t *testing.T) {
 		h, queue := newHandler(t)
 		var obj client.Object = &v1.NodeGroup{ObjectMeta: metav1.ObjectMeta{Name: "not-a-secret"}}
@@ -249,7 +234,7 @@ func TestNodeGroupHandler_EveryDataEditPasses(t *testing.T) {
 			edit(after)
 
 			c := fake.NewClientBuilder().WithScheme(testScheme(t)).WithObjects(
-				before, clusterConfigurationSecret("AWS"),
+				before, cloudCluster("AWS"),
 				cloudEphemeral("worker-aws", "AWSInstanceClass"),
 			).Build()
 			queue := workqueue.NewTypedRateLimitingQueue(

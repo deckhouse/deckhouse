@@ -20,7 +20,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"sort"
+	"slices"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -69,10 +69,15 @@ func Load(ctx context.Context, r client.Reader) (Providers, error) {
 	return ret, nil
 }
 
-// NewProviders builds a Providers from providers already in hand.
+// NewProviders builds a Providers from providers already in hand. It orders them by type, which
+// is what makes All deterministic: its result is published verbatim in the bashible context, and
+// a reordering there rewrites the Secret on every pass.
 func NewProviders(providers []Provider, clusterProvider string) Providers {
+	ordered := slices.Clone(providers)
+	slices.SortFunc(ordered, func(a, b Provider) int { return strings.Compare(a.Type, b.Type) })
+
 	return Providers{
-		providers:       providers,
+		providers:       ordered,
 		clusterProvider: strings.ToLower(clusterProvider),
 	}
 }
@@ -184,11 +189,11 @@ func (ps Providers) InstanceClassGVKs() []schema.GroupVersionKind {
 		ret = append(ret, gvk)
 	}
 
-	sort.Slice(ret, func(i, j int) bool {
-		if ret[i].Version != ret[j].Version {
-			return ret[i].Version < ret[j].Version
+	slices.SortFunc(ret, func(a, b schema.GroupVersionKind) int {
+		if c := strings.Compare(a.Version, b.Version); c != 0 {
+			return c
 		}
-		return ret[i].Kind < ret[j].Kind
+		return strings.Compare(a.Kind, b.Kind)
 	})
 	return ret
 }
@@ -243,7 +248,6 @@ func loadProviders(ctx context.Context, r client.Reader) ([]Provider, error) {
 		ret = append(ret, provider)
 	}
 
-	sort.Slice(ret, func(i, j int) bool { return ret[i].Type < ret[j].Type })
 	return ret, nil
 }
 

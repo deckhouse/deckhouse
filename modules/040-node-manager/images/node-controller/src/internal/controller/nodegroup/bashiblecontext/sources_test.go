@@ -229,7 +229,3 @@ func TestReadEndpoints_EmptyReturnsError(t *testing.T) {
 	assert.Empty(t, got.apiserverEndpoints)
 	assert.Empty(t, got.clusterMasterEndpoints)
 }
-
-// The provider tree is no longer read here — it arrives with the registry the reconciler loads
-// once for the whole context. What this package still owns is putting it into input.yaml, which
-// TestBuild_OptionalBlocksPopulated and TestBuild_PublishesEveryProvider assert.

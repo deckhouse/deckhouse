@@ -65,10 +65,6 @@ func newDeniedSecretService(t *testing.T, deniedNames ...string) *Service {
 	return &Service{Client: c}
 }
 
-// The unreadable-registration case moved out with the read itself: the registry is loaded once by
-// the caller now, so refusing to publish on a failed read is asserted at that boundary, in
-// internal/cloudprovider.
-
 func TestReadClusterConfiguration_ForbiddenIsAnError(t *testing.T) {
 	s := newDeniedSecretService(t, clusterConfigSecretName)
 
