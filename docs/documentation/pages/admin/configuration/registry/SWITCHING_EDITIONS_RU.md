@@ -86,6 +86,7 @@ d8 k annotate node <ИМЯ_УЗЛА> update.node.deckhouse.io/disruption-approve
 ```shell
 d8 k uncordon <ИМЯ_УЗЛА>
 ```
+
 {% endcapture %}
 
 ## Переключение DKP с EE на CSE
@@ -131,6 +132,7 @@ d8 k patch ng <ИМЯ_NODEGROUP> --type=merge -p '{"spec":{"disruptions":{"appro
 ```shell
 d8 k patch ng <ИМЯ_NODEGROUP> --type=json -p='[{"op":"remove","path":"/spec/disruptions/approvalMode"}]'
 ```
+
 {% endalert %}
 
 Для переключения кластера Deckhouse Enterprise Edition на Certified Security Edition нужным способом выполните описанные ниже действия (все команды выполняются на master-узле кластера от имени пользователя с настроенным контекстом `kubectl` или от имени суперпользователя).
