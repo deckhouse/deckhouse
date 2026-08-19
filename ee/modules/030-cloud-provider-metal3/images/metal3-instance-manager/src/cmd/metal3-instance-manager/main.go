@@ -21,6 +21,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"reflect"
 	"strings"
 	"time"
 
@@ -288,9 +289,23 @@ func (r *reconciler) ensureCredentialSecret(ctx context.Context, instance *unstr
 	if target.Labels == nil {
 		target.Labels = map[string]string{}
 	}
-	target.Labels[labelInstance] = instance.GetName()
-	target.Type = corev1.SecretType(credentialsSecretType)
-	target.Data = copySecretData(source.Data)
+	updated := false
+	if target.Labels[labelInstance] != instance.GetName() {
+		target.Labels[labelInstance] = instance.GetName()
+		updated = true
+	}
+	if target.Type != corev1.SecretType(credentialsSecretType) {
+		target.Type = corev1.SecretType(credentialsSecretType)
+		updated = true
+	}
+	data := copySecretData(source.Data)
+	if !reflect.DeepEqual(target.Data, data) {
+		target.Data = data
+		updated = true
+	}
+	if !updated {
+		return nil
+	}
 	return r.Update(ctx, target)
 }
 
@@ -338,10 +353,20 @@ func (r *reconciler) ensureBareMetalHost(ctx context.Context, instance *unstruct
 	if existingLabels == nil {
 		existingLabels = map[string]string{}
 	}
+	desiredLabels := copyStringMap(existingLabels)
 	for key, value := range labels {
-		existingLabels[key] = value
+		desiredLabels[key] = value
 	}
-	bmh.SetLabels(existingLabels)
+	if spec.Pool == "" {
+		delete(desiredLabels, labelPool)
+	}
+
+	existingSpec, _, _ := unstructured.NestedMap(bmh.Object, "spec")
+	if reflect.DeepEqual(existingLabels, desiredLabels) && reflect.DeepEqual(existingSpec, desired) {
+		return bmh, nil
+	}
+
+	bmh.SetLabels(desiredLabels)
 	if err := unstructured.SetNestedMap(bmh.Object, desired, "spec"); err != nil {
 		return nil, err
 	}
@@ -428,6 +453,14 @@ func copySecretData(in map[string][]byte) map[string][]byte {
 	out := make(map[string][]byte, len(in))
 	for key, value := range in {
 		out[key] = append([]byte(nil), value...)
+	}
+	return out
+}
+
+func copyStringMap(in map[string]string) map[string]string {
+	out := make(map[string]string, len(in))
+	for key, value := range in {
+		out[key] = value
 	}
 	return out
 }
