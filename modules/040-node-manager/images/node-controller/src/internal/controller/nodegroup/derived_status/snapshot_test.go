@@ -43,7 +43,7 @@ func TestBuildSnapshot_StaticNodeGroupReadsStaticConfigOnly(t *testing.T) {
 	ng.Name = "master"
 	ng.Spec.NodeType = v1.NodeTypeStatic
 
-	snap, err := s.BuildSnapshot(t.Context(), ng, testRegistry(t, s))
+	snap, err := s.BuildSnapshot(t.Context(), ng, testProvider(t, s, ng))
 
 	require.NoError(t, err)
 	require.NotNil(t, snap.StaticConfig)
@@ -67,7 +67,7 @@ func TestBuildSnapshot_CloudEphemeralWithoutPublishedVersionSkipsInstanceClass(t
 		ClassReference: v1.ClassReference{Kind: "AWSInstanceClass", Name: "worker"},
 	}
 
-	snap, err := s.BuildSnapshot(t.Context(), ng, testRegistry(t, s))
+	snap, err := s.BuildSnapshot(t.Context(), ng, testProvider(t, s, ng))
 
 	require.NoError(t, err)
 	require.Empty(t, snap.Provider.InstanceClassAPIVersion)
@@ -83,7 +83,7 @@ func TestBuildSnapshot_NoCloudProviderIsNotAnError(t *testing.T) {
 	ng.Name = "worker"
 	ng.Spec.NodeType = v1.NodeTypeCloudEphemeral
 
-	snap, err := s.BuildSnapshot(t.Context(), ng, testRegistry(t, s))
+	snap, err := s.BuildSnapshot(t.Context(), ng, testProvider(t, s, ng))
 
 	require.NoError(t, err)
 	require.Empty(t, snap.Provider.InstanceClassKind)
@@ -134,7 +134,7 @@ func TestBuildSnapshot_ClassDeletedMidPassIsRecorded(t *testing.T) {
 		MaxPerZone:     3,
 	}
 
-	snap, err := s.BuildSnapshot(t.Context(), ng, testRegistry(t, s))
+	snap, err := s.BuildSnapshot(t.Context(), ng, testProvider(t, s, ng))
 	require.NoError(t, err)
 	require.Nil(t, snap.InstanceClass)
 	require.Error(t, snap.CapacityErr, "a class that vanished mid-pass must be recorded")
@@ -154,7 +154,7 @@ func TestBuildSnapshot_UnreadableSourceAborts(t *testing.T) {
 	ng.Name = "worker"
 	ng.Spec.NodeType = v1.NodeTypeCloudEphemeral
 
-	_, err := s.BuildSnapshot(t.Context(), ng, cloudprovider.Providers{})
+	_, err := s.BuildSnapshot(t.Context(), ng, cloudprovider.Provider{})
 
 	require.ErrorContains(t, err, "read cluster uuid configmap")
 }

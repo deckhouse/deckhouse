@@ -364,10 +364,10 @@ func TestReconcile_CloudValidationErrorPublished(t *testing.T) {
 	}
 }
 
-// spec.providerType declares the provider; naming a different one is a statement about the
-// NodeGroup, so it lands in status rather than failing the reconcile. Which declarations hold is
-// cloudprovider.TestDeclarationError; what this asserts is that the verdict is published.
-func TestReconcile_ProviderTypeMismatchIsPublished(t *testing.T) {
+// A NodeGroup whose provider cannot be resolved stops the pass before any status is computed:
+// everything below the resolution depends on it. Which declarations hold is
+// cloudprovider.TestForNodeGroup.
+func TestReconcile_UnresolvedProviderFailsTheReconcile(t *testing.T) {
 	registration := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cloudprovider.SecretNamePrefix,
@@ -409,17 +409,25 @@ func TestReconcile_ProviderTypeMismatchIsPublished(t *testing.T) {
 			}
 
 			r, _ := newReconciler(t, ng, registration.DeepCopy(), cloudCluster.DeepCopy())
-			doReconcile(t, r, tc.name)
+			_, err := r.Reconcile(context.Background(), ctrl.Request{
+				NamespacedName: types.NamespacedName{Name: tc.name},
+			})
 
-			got := getNodeGroup(t, r, tc.name).Status.Error
 			if tc.wantErr == "" {
-				if got != "" {
-					t.Fatalf("status.error = %q, want none", got)
+				if err != nil {
+					t.Fatalf("reconcile %s: %v", tc.name, err)
 				}
 				return
 			}
-			if !strings.Contains(got, tc.wantErr) {
-				t.Fatalf("status.error = %q, want it to contain %q", got, tc.wantErr)
+			if err == nil {
+				t.Fatal("an unresolved provider must fail the reconcile")
+			}
+			if !strings.Contains(err.Error(), tc.wantErr) {
+				t.Fatalf("error = %q, want it to contain %q", err, tc.wantErr)
+			}
+			// Nothing was published: the pass stopped before any status was computed.
+			if got := getNodeGroup(t, r, tc.name).Status.Error; got != "" {
+				t.Fatalf("status.error = %q, want none", got)
 			}
 		})
 	}

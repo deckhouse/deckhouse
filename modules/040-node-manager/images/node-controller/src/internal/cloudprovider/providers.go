@@ -79,23 +79,35 @@ type Providers struct {
 	defaultProvider Provider
 }
 
-// Default returns the cluster's own provider, and whether it has one.
-func (ps Providers) Default() (Provider, bool) {
-	return ps.defaultProvider, ps.defaultProvider.Type != ""
-}
-
 // All returns every provider, ordered by type.
 func (ps Providers) All() []Provider {
 	return ps.all
 }
 
-// ForNodeGroup returns the provider a NodeGroup runs on. It performs no I/O.
-func (ps Providers) ForNodeGroup(ng *v1.NodeGroup) (Provider, bool) {
+// ForNodeGroup returns the provider a NodeGroup runs on and the reason its spec.providerType is
+// wrong when it is. It performs no I/O.
+//
+// The provider is returned whether or not the declaration holds: the nodes run where they run, and
+// a NodeGroup being torn down still needs the provider whose objects it left behind.
+func (ps Providers) ForNodeGroup(ng *v1.NodeGroup) (Provider, error) {
+	provider := ps.resolve(ng)
+
+	return provider, declarationError(ng.Spec.ProviderType, provider)
+}
+
+// runs reports whether a NodeGroup runs on a provider of this set. The declaration is not
+// consulted: a group that names the wrong one still runs where it runs.
+func (ps Providers) runs(ng *v1.NodeGroup) bool {
+	return ps.resolve(ng).Type != ""
+}
+
+// resolve returns the provider a NodeGroup runs on, before its declaration is checked.
+func (ps Providers) resolve(ng *v1.NodeGroup) Provider {
 	// A Static node lives outside every cloud.
 	if ng.Spec.NodeType == v1.NodeTypeStatic {
-		return Provider{}, false
+		return Provider{}
 	}
-	return ps.Default()
+	return ps.defaultProvider
 }
 
 // InstanceClassGVKs returns the GVK every provider registered its InstanceClass under.
@@ -134,40 +146,40 @@ func (ps Providers) InstanceClassGVKs() []schema.GroupVersionKind {
 	return ret
 }
 
-// DeclarationError reports why a NodeGroup's spec.providerType disagrees with the provider it
-// resolved to, or "" when the two agree.
+// declarationError reports why a NodeGroup's spec.providerType disagrees with the provider it
+// resolved to, or nil when the two agree.
 //
 // The field declares an answer, it does not pick one: leaving it empty is always correct, and
 // naming anything other than the resolved provider is a statement about the NodeGroup that a
 // retry cannot fix.
-func DeclarationError(declared string, resolved Provider) string {
+func declarationError(declared string, resolved Provider) error {
 	switch {
 	case declared == "":
-		return ""
+		return nil
 
 	case strings.EqualFold(declared, StatusNone):
 		if resolved.Type == "" {
-			return ""
+			return nil
 		}
-		return fmt.Sprintf(
+		return fmt.Errorf(
 			"Invalid providerType '%s'. The nodes of this group run in the '%s' cloud. "+
 				"Please remove the field or set it to '%s'.",
 			StatusNone, resolved.Type, resolved.Type)
 
 	case resolved.Type == "":
-		return fmt.Sprintf(
+		return fmt.Errorf(
 			"Invalid providerType '%s'. The nodes of this group run in no cloud. "+
 				"Please remove the field or set it to '%s'.",
 			declared, StatusNone)
 
 	case !strings.EqualFold(declared, resolved.Type):
-		return fmt.Sprintf(
+		return fmt.Errorf(
 			"Invalid providerType '%s'. Expected '%s'. Please update the NodeGroup to name the "+
 				"cloud provider its nodes run in.",
 			declared, resolved.Type)
 	}
 
-	return ""
+	return nil
 }
 
 // RegisteredInstanceClassGVKs is InstanceClassGVKs over the registrations alone: it answers which

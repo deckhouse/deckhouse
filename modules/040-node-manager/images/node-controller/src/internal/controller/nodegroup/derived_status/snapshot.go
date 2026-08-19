@@ -57,16 +57,15 @@ type Snapshot struct {
 // BuildSnapshot is the only place in this package that talks to the API. Everything downstream is
 // a pure function over the result.
 //
-// The provider registry arrives already loaded: resolving it is one read per reconcile, shared by
-// every NodeGroup of the pass, and picking this NodeGroup's provider out of it is pure.
+// The provider arrives already resolved: the registrations are read once per reconcile, and the
+// verdict on spec.providerType belongs to whoever resolved it.
 //
 // An absent source yields an empty field; an unreadable one is returned as an error, because an
 // empty value here is indistinguishable from "no cloud provider" and would publish a NodeGroup
 // without instanceClass — a checksum shift on every node.
-func (s *Service) BuildSnapshot(ctx context.Context, ng *v1.NodeGroup, providers cloudprovider.Providers) (Snapshot, error) {
+func (s *Service) BuildSnapshot(ctx context.Context, ng *v1.NodeGroup, provider cloudprovider.Provider) (Snapshot, error) {
 	logger := log.FromContext(ctx)
 
-	provider, _ := providers.ForNodeGroup(ng)
 	clusterUUID, err := s.readClusterUUID(ctx)
 	if err != nil {
 		return Snapshot{}, err

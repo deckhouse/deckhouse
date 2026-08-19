@@ -215,8 +215,10 @@ func TestLoad_Errors(t *testing.T) {
 	}
 }
 
-// The cluster runs one cloud, so the node type alone decides: everything but Static belongs to the
-// provider the cluster configuration names, whatever InstanceClass kind the group references.
+// The cluster runs one cloud, so the node type alone decides which provider a group runs in:
+// everything but Static belongs to the one the cluster configuration names, whatever InstanceClass
+// kind the group references. spec.providerType picks nothing — it declares that answer, and a
+// declaration that disagrees is the error this returns.
 func TestForNodeGroup(t *testing.T) {
 	yandex := Provider{Type: "yandex", InstanceClassKind: "YandexInstanceClass"}
 	aws := Provider{Type: "aws", InstanceClassKind: "AWSInstanceClass"}
@@ -230,7 +232,9 @@ func TestForNodeGroup(t *testing.T) {
 		name      string
 		providers Providers
 		ng        *v1.NodeGroup
+		declared  string
 		want      string
+		wantErr   bool
 	}{
 		{
 			// The kind a group references does not pick its provider: a kind mismatch is a verdict
@@ -264,14 +268,53 @@ func TestForNodeGroup(t *testing.T) {
 			name:      "a cluster that names no provider resolves to nothing",
 			providers: staticCluster, ng: nodeGroupOfType("cloudstatic", v1.NodeTypeCloudStatic),
 		},
+
+		{
+			name:      "declaring the resolved provider, case-insensitively",
+			providers: inYandexCloud, ng: nodeGroupOfType("cloudstatic", v1.NodeTypeCloudStatic),
+			declared: "Yandex", want: "yandex",
+		},
+		{
+			name:      "declaring another provider",
+			providers: inYandexCloud, ng: nodeGroupOfType("cloudstatic", v1.NodeTypeCloudStatic),
+			declared: "aws", want: "yandex", wantErr: true,
+		},
+		{
+			// None is how a group outside every cloud spells it.
+			name:      "declaring None on Static",
+			providers: inYandexCloud, ng: nodeGroupOfType("static", v1.NodeTypeStatic),
+			declared: "None",
+		},
+		{
+			name:      "declaring none in a cluster that has none",
+			providers: staticCluster, ng: nodeGroupOfType("cloudstatic", v1.NodeTypeCloudStatic),
+			declared: "none",
+		},
+		{
+			name:      "declaring None in a cloud",
+			providers: inYandexCloud, ng: nodeGroupOfType("cloudstatic", v1.NodeTypeCloudStatic),
+			declared: "None", want: "yandex", wantErr: true,
+		},
+		{
+			// A Static group runs in no cloud, so naming one is wrong even where the cluster has it.
+			name:      "declaring a provider on Static",
+			providers: inYandexCloud, ng: nodeGroupOfType("static", v1.NodeTypeStatic),
+			declared: "yandex", wantErr: true,
+		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, ok := tc.providers.ForNodeGroup(tc.ng)
+			tc.ng.Spec.ProviderType = tc.declared
 
-			assert.Equal(t, tc.want != "", ok)
-			assert.Equal(t, tc.want, got.Type)
+			got, err := tc.providers.ForNodeGroup(tc.ng)
+
+			assert.Equal(t, tc.want, got.Type, "the provider is the answer even when the declaration is not")
+			if tc.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
 		})
 	}
 }
@@ -290,38 +333,4 @@ func TestInstanceClassGVKs(t *testing.T) {
 	assert.Equal(t, schema.GroupVersionKind{
 		Group: v1.GroupVersion.Group, Version: "v1", Kind: "AWSInstanceClass",
 	}, gvks[0])
-}
-
-// The field declares an answer rather than picking one, so the predicate compares it against what
-// the NodeGroup already resolved to. Empty always agrees — the field is optional.
-func TestDeclarationError(t *testing.T) {
-	yandex := Provider{Type: "yandex"}
-	none := Provider{}
-
-	for _, tc := range []struct {
-		name     string
-		declared string
-		resolved Provider
-		wantErr  bool
-	}{
-		{name: "empty agrees with a provider", resolved: yandex},
-		{name: "empty agrees with no provider", resolved: none},
-		{name: "the resolved provider", declared: "yandex", resolved: yandex},
-		{name: "case does not matter", declared: "Yandex", resolved: yandex},
-		{name: "None where there is none", declared: "None", resolved: none},
-		{name: "none is spelled case-insensitively too", declared: "none", resolved: none},
-
-		{name: "another provider", declared: "aws", resolved: yandex, wantErr: true},
-		{name: "a provider where there is none", declared: "yandex", resolved: none, wantErr: true},
-		{name: "None where there is one", declared: "None", resolved: yandex, wantErr: true},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			got := DeclarationError(tc.declared, tc.resolved)
-			if tc.wantErr {
-				assert.NotEmpty(t, got)
-				return
-			}
-			assert.Empty(t, got)
-		})
-	}
 }

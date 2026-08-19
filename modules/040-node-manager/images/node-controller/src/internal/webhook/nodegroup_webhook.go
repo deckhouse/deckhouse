@@ -706,8 +706,11 @@ func (w *NodeGroupValidator) validateProviderType(
 		return "", fmt.Errorf("load cloud provider registrations: %w", err)
 	}
 
-	resolved, _ := providers.ForNodeGroup(ng)
-	return cloudprovider.DeclarationError(ng.Spec.ProviderType, resolved), nil
+	if _, declarationErr := providers.ForNodeGroup(ng); declarationErr != nil {
+		return declarationErr.Error(), nil
+	}
+
+	return "", nil
 }
 
 func (w *NodeGroupValidator) validateInstanceClassKind(

@@ -51,5 +51,5 @@ func TestInstanceClassSpot(t *testing.T) {
 func TestReconcileCloudMCMs_NoCloudInstances(t *testing.T) {
 	r := &MachineDeploymentReconciler{}
 	ng := &deckhousev1.NodeGroup{}
-	assert.NoError(t, r.reconcileCloudMCMs(context.Background(), ng, cloudprovider.Providers{}, cloudprovider.Provider{}))
+	assert.NoError(t, r.reconcileCloudMCMs(context.Background(), ng, cloudprovider.Provider{}))
 }

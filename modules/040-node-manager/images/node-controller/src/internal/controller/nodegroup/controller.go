@@ -127,6 +127,12 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 		return ctrl.Result{}, err
 	}
 
+	provider, err := providers.ForNodeGroup(ng)
+	if err != nil {
+		logger.Error(err, "failed to resolve the cloud provider of the NodeGroup", "nodeGroup", ng.Name)
+		return ctrl.Result{}, err
+	}
+
 	logger.V(1).Info("computing node status", "nodeGroup", ng.Name, "nodeType", ng.Spec.NodeType)
 	nodeService := nodestatus.Service{Client: r.Client}
 	nodeResult, err := nodeService.Compute(ctx, ng.Name)
@@ -136,7 +142,7 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 	}
 
 	cloudService := cloudstatus.Service{Client: r.Client}
-	cloudResult, err := cloudService.Compute(ctx, ng, providers)
+	cloudResult, err := cloudService.Compute(ctx, ng, provider)
 	if err != nil {
 		logger.Error(err, "failed to compute cloud status", "nodeGroup", ng.Name)
 		return ctrl.Result{}, err
@@ -151,7 +157,7 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 	)
 
 	ds := derivedstatus.Service{Client: r.Client}
-	derivedResult, validationResult, err := ds.ComputeWithCloudChecks(ctx, ng, providers)
+	derivedResult, validationResult, err := ds.ComputeWithCloudChecks(ctx, ng, provider)
 	if err != nil {
 		logger.Error(err, "failed to compute derived nodegroup status", "nodeGroup", ng.Name)
 		return ctrl.Result{}, err

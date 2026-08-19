@@ -119,7 +119,7 @@ func TestComputeWithCloudChecks_AbsentSecretIsNotAnError(t *testing.T) {
 	ng.Name = "worker"
 	ng.Spec.NodeType = v1.NodeTypeCloudEphemeral
 
-	_, check, err := s.ComputeWithCloudChecks(t.Context(), ng, testRegistry(t, s))
+	_, check, err := s.ComputeWithCloudChecks(t.Context(), ng, testProvider(t, s, ng))
 
 	require.NoError(t, err)
 	require.False(t, check.Processed)

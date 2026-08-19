@@ -90,11 +90,13 @@ func cloudClusterConfig(provider string) *corev1.Secret {
 	})
 }
 
-func testRegistry(t *testing.T, s *Service) cloudprovider.Providers {
+// testProvider resolves the provider a NodeGroup runs on the way a reconcile does.
+func testProvider(t *testing.T, s *Service, ng *v1.NodeGroup) cloudprovider.Provider {
 	t.Helper()
 	providers, err := cloudprovider.Load(context.Background(), s.Client)
 	require.NoError(t, err)
-	return providers
+	provider, _ := providers.ForNodeGroup(ng)
+	return provider
 }
 
 // An unpublished version must reach the operator as a NodeGroup validation error rather than as a
@@ -163,7 +165,7 @@ func TestResolveNodeGroup_StaticWiresNameRolloutAndStatic(t *testing.T) {
 		Spec: v1.NodeGroupSpec{NodeType: v1.NodeTypeStatic},
 	}
 
-	resolved, errStr, err := s.ResolveNodeGroup(context.Background(), ng, testRegistry(t, s))
+	resolved, errStr, err := s.ResolveNodeGroup(context.Background(), ng, testProvider(t, s, ng))
 	require.NoError(t, err)
 	assert.Empty(t, errStr)
 	assert.Equal(t, "static1", resolved.Name)
@@ -191,7 +193,7 @@ func TestResolveNodeGroup_CloudKindMismatchErrors(t *testing.T) {
 		},
 	}
 
-	resolved, errStr, err := s.ResolveNodeGroup(context.Background(), ng, testRegistry(t, s))
+	resolved, errStr, err := s.ResolveNodeGroup(context.Background(), ng, testProvider(t, s, ng))
 	require.NoError(t, err)
 	assert.Contains(t, errStr, "Invalid classReference.kind 'AWSInstanceClass'. Expected 'YandexInstanceClass'.")
 	assert.NotContains(t, resolved.ToMap(), "instanceClass", "failed check must drop cloud overlays")

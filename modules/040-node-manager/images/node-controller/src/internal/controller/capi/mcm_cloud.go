@@ -38,7 +38,7 @@ import (
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/machineclass"
 )
 
-func (r *MachineDeploymentReconciler) reconcileCloudMCMs(ctx context.Context, ng *deckhousev1.NodeGroup, providers cloudprovider.Providers, provider cloudprovider.Provider) error {
+func (r *MachineDeploymentReconciler) reconcileCloudMCMs(ctx context.Context, ng *deckhousev1.NodeGroup, provider cloudprovider.Provider) error {
 	logger := log.FromContext(ctx)
 
 	if ng.Spec.CloudInstances == nil {
@@ -56,7 +56,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMCMs(ctx context.Context, ng
 	region, _ := cloudProvider["region"].(string)
 
 	ds := &derived_status.Service{Client: r.Client}
-	resolved, validationErr, err := ds.ResolveNodeGroup(ctx, ng, providers)
+	resolved, validationErr, err := ds.ResolveNodeGroup(ctx, ng, provider)
 	if err != nil {
 		return fmt.Errorf("resolve NodeGroup %s: %w", ng.Name, err)
 	}

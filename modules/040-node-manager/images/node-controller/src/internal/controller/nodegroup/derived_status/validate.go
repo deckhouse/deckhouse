@@ -30,13 +30,6 @@ import (
 // as one — the status controller publishes it, the bashible context falls back to its last good
 // entry, and the MachineDeployment reconciler skips rendering.
 func Validate(ng *v1.NodeGroup, snap Snapshot) CloudCheckResult {
-	// The declared provider is checked for every node type, not just CloudEphemeral: it is a
-	// statement about the NodeGroup, and Static — which resolves to no provider at all — is
-	// exactly where the statement is most likely to be wrong.
-	if msg := cloudprovider.DeclarationError(ng.Spec.ProviderType, snap.Provider); msg != "" {
-		return CloudCheckResult{Error: msg}
-	}
-
 	if ng.Spec.NodeType != v1.NodeTypeCloudEphemeral {
 		return CloudCheckResult{Processed: false}
 	}
