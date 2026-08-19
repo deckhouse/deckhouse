@@ -18,13 +18,11 @@ package nodebootstrap
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
-	discoveryv1 "k8s.io/api/discovery/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -34,21 +32,8 @@ import (
 	bootstrapv1alpha1 "github.com/deckhouse/node-controller/api/bootstrap.deckhouse.io/v1alpha1"
 	capiv1beta2 "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/testenv"
-)
-
-const (
-	cloudInstanceManagerNS = "d8-cloud-instance-manager"
-	testKubernetesVersion  = "1.35"
-	testContainerdDigest   = "sha256:1111111111111111111111111111111111111111111111111111111111111111"
-	testPauseDigest        = "sha256:4444444444444444444444444444444444444444444444444444444444444444"
-	testRegistryAddress    = "registry.example.com"
-	testRegistryPath       = "/deckhouse/ce"
-	testCNIDigest          = "sha256:2222222222222222222222222222222222222222222222222222222222222222"
-	testKubeletDigest      = "sha256:3333333333333333333333333333333333333333333333333333333333333333"
-	testNodeletDigest      = "sha256:6666666666666666666666666666666666666666666666666666666666666666"
-	testOSImageDigest      = "sha256:7777777777777777777777777777777777777777777777777777777777777777"
-	testClusterCA          = "-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----\n"
 )
 
 // User story: As a cluster operator, I want every immutable machine to boot
@@ -56,12 +41,12 @@ const (
 // infrastructure provider can hand the data over unchanged.
 var _ = Describe("NodeBootstrap controller", func() {
 	BeforeEach(func(ctx context.Context) {
-		ensureClusterInputs(ctx)
+		testenv.EnsureClusterInputs(ctx, k8sClient)
 	})
 
 	It("renders per-machine bootstrap data with the node name filled in", func(ctx context.Context) {
 		ngName := testenv.UniqueName("imm")
-		createImmutableNodeGroup(ctx, ngName)
+		testenv.CreateImmutableNodeGroup(ctx, k8sClient, ngName)
 		ensureBootstrapToken(ctx, ngName)
 
 		machine := createMachine(ctx, testenv.UniqueName("m"), ngName)
@@ -116,7 +101,7 @@ var _ = Describe("NodeBootstrap controller", func() {
 	// re-rendering would only burn uncached reads for the life of the Machine.
 	It("stops re-rendering once the infrastructure is provisioned", func(ctx context.Context) {
 		ngName := testenv.UniqueName("imm")
-		createImmutableNodeGroup(ctx, ngName)
+		testenv.CreateImmutableNodeGroup(ctx, k8sClient, ngName)
 		ensureBootstrapToken(ctx, ngName)
 
 		machine := createMachine(ctx, testenv.UniqueName("m"), ngName)
@@ -150,7 +135,7 @@ var _ = Describe("NodeBootstrap controller", func() {
 	// created late must not keep the copy it was first given.
 	It("re-renders while the machine has no node, and freezes once it has one", func(ctx context.Context) {
 		ngName := testenv.UniqueName("imm")
-		createImmutableNodeGroup(ctx, ngName)
+		testenv.CreateImmutableNodeGroup(ctx, k8sClient, ngName)
 		ensureBootstrapToken(ctx, ngName)
 
 		machine := createMachine(ctx, testenv.UniqueName("m"), ngName)
@@ -192,21 +177,21 @@ var _ = Describe("NodeBootstrap controller", func() {
 
 	It("does nothing until the config has an owner Machine", func(ctx context.Context) {
 		ngName := testenv.UniqueName("imm")
-		createImmutableNodeGroup(ctx, ngName)
+		testenv.CreateImmutableNodeGroup(ctx, k8sClient, ngName)
 		ensureBootstrapToken(ctx, ngName)
 
 		machine := createMachine(ctx, testenv.UniqueName("m"), ngName)
 
 		// A clone the MachineSet has not re-parented onto the Machine yet.
 		orphan := &bootstrapv1alpha1.NodeBootstrapConfig{
-			ObjectMeta: metav1.ObjectMeta{Name: testenv.UniqueName("cfg"), Namespace: cloudInstanceManagerNS},
+			ObjectMeta: metav1.ObjectMeta{Name: testenv.UniqueName("cfg"), Namespace: nodecommon.MachineNamespace},
 		}
 		Expect(k8sClient.Create(ctx, orphan)).To(Succeed())
 		DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, orphan) })
 
 		secretName := machine.Name + dataSecretSuffix
 		Consistently(func(g Gomega) {
-			err := k8sClient.Get(ctx, types.NamespacedName{Namespace: cloudInstanceManagerNS, Name: secretName}, &corev1.Secret{})
+			err := k8sClient.Get(ctx, types.NamespacedName{Namespace: nodecommon.MachineNamespace, Name: secretName}, &corev1.Secret{})
 			g.Expect(apierrors.IsNotFound(err)).To(BeTrue())
 		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
 
@@ -240,21 +225,21 @@ var _ = Describe("NodeBootstrap controller", func() {
 
 		secretName := machine.Name + dataSecretSuffix
 		Consistently(func(g Gomega) {
-			err := k8sClient.Get(ctx, types.NamespacedName{Namespace: cloudInstanceManagerNS, Name: secretName}, &corev1.Secret{})
+			err := k8sClient.Get(ctx, types.NamespacedName{Namespace: nodecommon.MachineNamespace, Name: secretName}, &corev1.Secret{})
 			g.Expect(apierrors.IsNotFound(err)).To(BeTrue())
 		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
 	})
 
 	It("skips a paused config", func(ctx context.Context) {
 		ngName := testenv.UniqueName("imm")
-		createImmutableNodeGroup(ctx, ngName)
+		testenv.CreateImmutableNodeGroup(ctx, k8sClient, ngName)
 		ensureBootstrapToken(ctx, ngName)
 
 		machine := createMachine(ctx, testenv.UniqueName("m"), ngName)
 		config := &bootstrapv1alpha1.NodeBootstrapConfig{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        testenv.UniqueName("cfg"),
-				Namespace:   cloudInstanceManagerNS,
+				Namespace:   nodecommon.MachineNamespace,
 				Annotations: map[string]string{capiv1beta2.PausedAnnotation: "true"},
 				Labels:      map[string]string{machineNodeGroupLabel: ngName},
 				OwnerReferences: []metav1.OwnerReference{{
@@ -271,7 +256,7 @@ var _ = Describe("NodeBootstrap controller", func() {
 
 		secretName := machine.Name + dataSecretSuffix
 		Consistently(func(g Gomega) {
-			err := k8sClient.Get(ctx, types.NamespacedName{Namespace: cloudInstanceManagerNS, Name: secretName}, &corev1.Secret{})
+			err := k8sClient.Get(ctx, types.NamespacedName{Namespace: nodecommon.MachineNamespace, Name: secretName}, &corev1.Secret{})
 			g.Expect(apierrors.IsNotFound(err)).To(BeTrue())
 		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
 	})
@@ -279,39 +264,14 @@ var _ = Describe("NodeBootstrap controller", func() {
 
 func getSecret(ctx context.Context, g Gomega, name string) *corev1.Secret {
 	secret := &corev1.Secret{}
-	g.Expect(k8sClient.Get(ctx, types.NamespacedName{Namespace: cloudInstanceManagerNS, Name: name}, secret)).To(Succeed())
+	g.Expect(k8sClient.Get(ctx, types.NamespacedName{Namespace: nodecommon.MachineNamespace, Name: name}, secret)).To(Succeed())
 	return secret
 }
 
 func getConfig(ctx context.Context, g Gomega, name string) *bootstrapv1alpha1.NodeBootstrapConfig {
 	config := &bootstrapv1alpha1.NodeBootstrapConfig{}
-	g.Expect(k8sClient.Get(ctx, types.NamespacedName{Namespace: cloudInstanceManagerNS, Name: name}, config)).To(Succeed())
+	g.Expect(k8sClient.Get(ctx, types.NamespacedName{Namespace: nodecommon.MachineNamespace, Name: name}, config)).To(Succeed())
 	return config
-}
-
-func createImmutableNodeGroup(ctx context.Context, name string) *deckhousev1.NodeGroup {
-	GinkgoHelper()
-
-	ng := &deckhousev1.NodeGroup{
-		ObjectMeta: metav1.ObjectMeta{Name: name},
-		Spec: deckhousev1.NodeGroupSpec{
-			NodeType:   deckhousev1.NodeTypeCloudEphemeral,
-			SystemType: deckhousev1.SystemTypeImmutable,
-			CloudInstances: &deckhousev1.CloudInstancesSpec{
-				MinPerZone:     1,
-				MaxPerZone:     3,
-				ClassReference: deckhousev1.ClassReference{Kind: "DVPInstanceClass", Name: "worker"},
-			},
-		},
-	}
-	Expect(k8sClient.Create(ctx, ng)).To(Succeed())
-	DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, ng) })
-
-	fresh := &deckhousev1.NodeGroup{}
-	Expect(k8sClient.Get(ctx, types.NamespacedName{Name: name}, fresh)).To(Succeed())
-	fresh.Status.KubernetesVersion = testKubernetesVersion
-	Expect(k8sClient.Status().Update(ctx, fresh)).To(Succeed())
-	return fresh
 }
 
 func createMachine(ctx context.Context, name, ngName string) *capiv1beta2.Machine {
@@ -320,7 +280,7 @@ func createMachine(ctx context.Context, name, ngName string) *capiv1beta2.Machin
 	machine := &capiv1beta2.Machine{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: cloudInstanceManagerNS,
+			Namespace: nodecommon.MachineNamespace,
 			Labels:    map[string]string{machineNodeGroupLabel: ngName},
 		},
 		Spec: capiv1beta2.MachineSpec{
@@ -339,7 +299,7 @@ func createMachine(ctx context.Context, name, ngName string) *capiv1beta2.Machin
 	DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, machine) })
 
 	fresh := &capiv1beta2.Machine{}
-	Expect(k8sClient.Get(ctx, types.NamespacedName{Namespace: cloudInstanceManagerNS, Name: name}, fresh)).To(Succeed())
+	Expect(k8sClient.Get(ctx, types.NamespacedName{Namespace: nodecommon.MachineNamespace, Name: name}, fresh)).To(Succeed())
 	return fresh
 }
 
@@ -349,7 +309,7 @@ func createBootstrapConfig(ctx context.Context, machine *capiv1beta2.Machine) *b
 	config := &bootstrapv1alpha1.NodeBootstrapConfig{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      testenv.UniqueName("cfg"),
-			Namespace: cloudInstanceManagerNS,
+			Namespace: nodecommon.MachineNamespace,
 			Labels:    map[string]string{machineNodeGroupLabel: machine.Labels[machineNodeGroupLabel]},
 			OwnerReferences: []metav1.OwnerReference{{
 				APIVersion: capiv1beta2.GroupVersion.String(),
@@ -384,11 +344,11 @@ func setOwnerMachine(ctx context.Context, config *bootstrapv1alpha1.NodeBootstra
 func ensureBootstrapToken(ctx context.Context, ngName string) {
 	GinkgoHelper()
 
-	ensureObject(ctx, &corev1.Secret{
+	testenv.EnsureObject(ctx, k8sClient, &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: kubeSystemNS,
+			Namespace: nodecommon.KubeSystemNamespace,
 			Name:      testenv.UniqueName("bootstrap-token"),
-			Labels:    map[string]string{bootstrapTokenNGLabel: ngName},
+			Labels:    map[string]string{nodecommon.BootstrapTokenNodeGroupLabel: ngName},
 		},
 		Type: corev1.SecretTypeBootstrapToken,
 		Data: map[string][]byte{
@@ -406,8 +366,8 @@ func rotateBootstrapToken(ctx context.Context, ngName string) {
 
 	secrets := &corev1.SecretList{}
 	Expect(k8sClient.List(ctx, secrets,
-		client.InNamespace(kubeSystemNS),
-		client.MatchingLabels{bootstrapTokenNGLabel: ngName},
+		client.InNamespace(nodecommon.KubeSystemNamespace),
+		client.MatchingLabels{nodecommon.BootstrapTokenNodeGroupLabel: ngName},
 	)).To(Succeed())
 	Expect(secrets.Items).To(HaveLen(1))
 
@@ -423,7 +383,7 @@ func setNodeRef(ctx context.Context, machineName string) {
 	GinkgoHelper()
 
 	machine := &capiv1beta2.Machine{}
-	Expect(k8sClient.Get(ctx, types.NamespacedName{Namespace: cloudInstanceManagerNS, Name: machineName}, machine)).To(Succeed())
+	Expect(k8sClient.Get(ctx, types.NamespacedName{Namespace: nodecommon.MachineNamespace, Name: machineName}, machine)).To(Succeed())
 	machine.Status.NodeRef = capiv1beta2.MachineNodeReference{Name: machineName}
 	Expect(k8sClient.Status().Update(ctx, machine)).To(Succeed())
 }
@@ -435,7 +395,7 @@ func setInfrastructureProvisioned(ctx context.Context, machineName string) {
 	GinkgoHelper()
 
 	machine := &capiv1beta2.Machine{}
-	Expect(k8sClient.Get(ctx, types.NamespacedName{Namespace: cloudInstanceManagerNS, Name: machineName}, machine)).To(Succeed())
+	Expect(k8sClient.Get(ctx, types.NamespacedName{Namespace: nodecommon.MachineNamespace, Name: machineName}, machine)).To(Succeed())
 	machine.Status.Initialization.InfrastructureProvisioned = ptr.To(true)
 	Expect(k8sClient.Status().Update(ctx, machine)).To(Succeed())
 }
@@ -452,80 +412,4 @@ func nudgeConfig(ctx context.Context, name string) {
 		config.Annotations["test.deckhouse.io/nudge"] = testenv.UniqueName("n")
 		g.Expect(k8sClient.Patch(ctx, config, patch)).To(Succeed())
 	}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
-}
-
-// ensureClusterInputs creates the cluster state the bootstrap userdata is
-// rendered from, the same inputs the day-2 NodeConfig is built from.
-func ensureClusterInputs(ctx context.Context) {
-	GinkgoHelper()
-
-	ensureNamespace(ctx, kubeSystemNS)
-	ensureNamespace(ctx, cloudInstanceManagerNS)
-
-	digests := fmt.Sprintf(`{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q,"nodeletSysext":%q},"nodeManager":{"olcedar":%q},"common":{"pause":%q}}`,
-		testContainerdDigest, testCNIDigest, testKubeletDigest, testNodeletDigest, testOSImageDigest, testPauseDigest)
-	ensureObject(ctx, &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{Namespace: cloudInstanceManagerNS, Name: "bashible-apiserver-files"},
-		Data:       map[string]string{"images_digests.json": digests},
-	})
-
-	ensureObject(ctx, &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Namespace: cloudInstanceManagerNS, Name: "registry-packages-proxy-token"},
-		Data:       map[string][]byte{"token": []byte("proxy-token")},
-	})
-
-	// The registry the cluster was installed from: the userdata names the pause
-	// image against it, so rendering cannot proceed without it.
-	ensureNamespace(ctx, "d8-system")
-	ensureObject(ctx, &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Namespace: "d8-system", Name: "deckhouse-registry"},
-		Data: map[string][]byte{
-			"address":           []byte(testRegistryAddress),
-			"path":              []byte(testRegistryPath),
-			"scheme":            []byte("https"),
-			"imagesRegistry":    []byte(testRegistryAddress + testRegistryPath),
-			".dockerconfigjson": []byte(fmt.Sprintf(`{"auths":{%q:{"auth":"dXNlcjpwYXNzd29yZA=="}}}`, testRegistryAddress)),
-		},
-	})
-
-	ensureObject(ctx, &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{Namespace: kubeSystemNS, Name: "kube-root-ca.crt"},
-		Data:       map[string]string{"ca.crt": testClusterCA},
-	})
-
-	ensureObject(ctx, &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Namespace: kubeSystemNS, Name: "d8-cluster-configuration"},
-		Data: map[string][]byte{
-			"cluster-configuration.yaml": []byte("apiVersion: deckhouse.io/v1\nkind: ClusterConfiguration\nclusterDomain: cluster.local\nkubernetesVersion: \"" + testKubernetesVersion + ".6\"\n"),
-		},
-	})
-
-	// envtest publishes its own apiserver in the default/kubernetes EndpointSlice;
-	// rendering refuses without at least one API server endpoint.
-	slice := &discoveryv1.EndpointSlice{}
-	Expect(k8sClient.Get(ctx, types.NamespacedName{Namespace: "default", Name: "kubernetes"}, slice)).To(Succeed())
-	Expect(slice.Endpoints).NotTo(BeEmpty(), "envtest should publish its apiserver endpoint")
-
-	dnsService := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: kubeSystemNS,
-			Name:      "kube-dns",
-			Labels:    map[string]string{"k8s-app": "kube-dns"},
-		},
-		Spec: corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 53, Protocol: corev1.ProtocolUDP}}},
-	}
-	ensureObject(ctx, dnsService)
-}
-
-func ensureNamespace(ctx context.Context, name string) {
-	GinkgoHelper()
-	ensureObject(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: name}})
-}
-
-func ensureObject(ctx context.Context, obj client.Object) {
-	GinkgoHelper()
-	err := k8sClient.Create(ctx, obj)
-	if err != nil && !apierrors.IsAlreadyExists(err) {
-		Expect(err).NotTo(HaveOccurred())
-	}
 }

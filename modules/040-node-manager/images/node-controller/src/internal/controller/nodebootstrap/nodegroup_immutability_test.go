@@ -37,50 +37,43 @@ const systemTypeFieldOwner = client.FieldOwner("systemtype-immutability-test")
 // envtest runs no webhooks, so only the CRD rule is exercised here.
 var _ = Describe("NodeGroup systemType immutability", func() {
 	It("accepts a group created with a systemType, and one created without", func(ctx context.Context) {
-		immutable := createImmutableNodeGroup(ctx, testenv.UniqueName("born-imm"))
+		immutable := testenv.CreateImmutableNodeGroup(ctx, k8sClient, testenv.UniqueName("born-imm"))
 		Expect(immutable.Spec.SystemType).To(Equal(deckhousev1.SystemTypeImmutable))
 
 		bashible := createBashibleNodeGroup(ctx, testenv.UniqueName("born-mut"))
 		Expect(bashible.Spec.SystemType).To(BeEmpty())
 	})
 
-	// The transition the immutable bootstrap depends on.
-	It("lets a group that named no systemType record Immutable", func(ctx context.Context) {
-		ng := createBashibleNodeGroup(ctx, testenv.UniqueName("adopt"))
+	// Ginkgo runs one apiserver rule per row: what a group may still say about
+	// its systemType once it has named one, and the transition the immutable
+	// bootstrap depends on.
+	DescribeTable("changing the systemType of a group",
+		func(ctx context.Context, named, to deckhousev1.SystemType, allowed bool) {
+			ng := testenv.CreateImmutableNodeGroup(ctx, k8sClient, testenv.UniqueName("st"),
+				func(ng *deckhousev1.NodeGroup) { ng.Spec.SystemType = named })
 
-		ng.Spec.SystemType = deckhousev1.SystemTypeImmutable
-		Expect(k8sClient.Update(ctx, ng)).To(Succeed())
+			ng.Spec.SystemType = to
+			err := k8sClient.Update(ctx, ng)
+			if !allowed {
+				Expect(err).To(MatchError(ContainSubstring("systemType")))
+				return
+			}
+			Expect(err).To(Succeed())
 
-		fresh := &deckhousev1.NodeGroup{}
-		Expect(k8sClient.Get(ctx, types.NamespacedName{Name: ng.Name}, fresh)).To(Succeed())
-		Expect(fresh.Spec.SystemType).To(Equal(deckhousev1.SystemTypeImmutable))
-	})
-
-	It("lets a group that named no systemType record Mutable", func(ctx context.Context) {
-		ng := createBashibleNodeGroup(ctx, testenv.UniqueName("adopt-mut"))
-
-		ng.Spec.SystemType = deckhousev1.SystemTypeMutable
-		Expect(k8sClient.Update(ctx, ng)).To(Succeed())
-	})
-
-	It("refuses to clear a systemType the group named", func(ctx context.Context) {
-		ng := createImmutableNodeGroup(ctx, testenv.UniqueName("noclear"))
-
-		ng.Spec.SystemType = ""
-		Expect(k8sClient.Update(ctx, ng)).To(MatchError(ContainSubstring("systemType")))
-	})
-
-	It("refuses to change a systemType the group named", func(ctx context.Context) {
-		ng := createImmutableNodeGroup(ctx, testenv.UniqueName("nochange"))
-
-		ng.Spec.SystemType = deckhousev1.SystemTypeMutable
-		Expect(k8sClient.Update(ctx, ng)).To(MatchError(ContainSubstring("systemType")))
-	})
+			fresh := &deckhousev1.NodeGroup{}
+			Expect(k8sClient.Get(ctx, types.NamespacedName{Name: ng.Name}, fresh)).To(Succeed())
+			Expect(fresh.Spec.SystemType).To(Equal(to))
+		},
+		Entry("a group that named none records Immutable", deckhousev1.SystemType(""), deckhousev1.SystemTypeImmutable, true),
+		Entry("a group that named none records Mutable", deckhousev1.SystemType(""), deckhousev1.SystemTypeMutable, true),
+		Entry("a named systemType cannot be cleared", deckhousev1.SystemTypeImmutable, deckhousev1.SystemType(""), false),
+		Entry("a named systemType cannot be changed to another", deckhousev1.SystemTypeImmutable, deckhousev1.SystemTypeMutable, false),
+	)
 
 	// A merge patch removes a field by setting it to null, which is not an
 	// update the typed client can express.
 	It("refuses a merge patch that nulls the systemType", func(ctx context.Context) {
-		ng := createImmutableNodeGroup(ctx, testenv.UniqueName("nonull"))
+		ng := testenv.CreateImmutableNodeGroup(ctx, k8sClient, testenv.UniqueName("nonull"))
 
 		patch := client.RawPatch(types.MergePatchType, []byte(`{"spec":{"systemType":null}}`))
 		Expect(k8sClient.Patch(ctx, ng, patch)).To(MatchError(ContainSubstring("systemType")))
@@ -102,7 +95,7 @@ var _ = Describe("NodeGroup systemType immutability", func() {
 	})
 
 	It("allows an unrelated change to either group", func(ctx context.Context) {
-		immutable := createImmutableNodeGroup(ctx, testenv.UniqueName("edit"))
+		immutable := testenv.CreateImmutableNodeGroup(ctx, k8sClient, testenv.UniqueName("edit"))
 		immutable.Spec.CloudInstances.MaxPerZone = 5
 		Expect(k8sClient.Update(ctx, immutable)).To(Succeed())
 

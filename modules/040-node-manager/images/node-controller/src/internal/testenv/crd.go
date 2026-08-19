@@ -37,10 +37,9 @@ const (
 	MCMCRDFile       NodeManagerCRDFile = "mcm.yaml"
 	InstanceCRDFile  NodeManagerCRDFile = "instance.yaml"
 
-	NodeConfigCRDFile                  NodeManagerCRDFile = "nodeconfig.yaml"
-	NodeOperationCRDFile               NodeManagerCRDFile = "nodeoperation.yaml"
-	NodeBootstrapConfigCRDFile         NodeManagerCRDFile = "nodebootstrapconfig.yaml"
-	NodeBootstrapConfigTemplateCRDFile NodeManagerCRDFile = "nodebootstrapconfigtemplate.yaml"
+	NodeConfigCRDFile          NodeManagerCRDFile = "nodeconfig.yaml"
+	NodeOperationCRDFile       NodeManagerCRDFile = "nodeoperation.yaml"
+	NodeBootstrapConfigCRDFile NodeManagerCRDFile = "nodebootstrapconfig.yaml"
 )
 
 // RealCacheCRDPaths returns the CRDs every envtest manager needs regardless of what the

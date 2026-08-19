@@ -17,16 +17,12 @@ limitations under the License.
 package nodebootstrap
 
 import (
-	"context"
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/envtest"
 
 	bootstrapv1alpha1 "github.com/deckhouse/node-controller/api/bootstrap.deckhouse.io/v1alpha1"
 	capiv1beta2 "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
@@ -36,15 +32,7 @@ import (
 	"github.com/deckhouse/node-controller/internal/testenv"
 )
 
-var (
-	testEnv   *envtest.Environment
-	cfg       *rest.Config
-	k8sClient client.Client
-	scheme    *k8sruntime.Scheme
-
-	suiteCtx    context.Context
-	suiteCancel context.CancelFunc
-)
+var k8sClient client.Client
 
 // TestNodeBootstrapControllerEnvtest runs the envtest-backed integration
 // suite: the real controller against a real kube-apiserver. Skipped when
@@ -59,47 +47,23 @@ func TestNodeBootstrapControllerEnvtest(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	testenv.SetupLogger(GinkgoWriter)
-	suiteCtx, suiteCancel = context.WithCancel(context.Background())
-
-	scheme = k8sruntime.NewScheme()
-	Expect(clientgoscheme.AddToScheme(scheme)).To(Succeed())
-	Expect(deckhousev1.AddToScheme(scheme)).To(Succeed())
-	Expect(deckhousev1alpha1.AddToScheme(scheme)).To(Succeed())
-	Expect(internalv1alpha1.AddToScheme(scheme)).To(Succeed())
-	Expect(bootstrapv1alpha1.AddToScheme(scheme)).To(Succeed())
-	Expect(capiv1beta2.AddToScheme(scheme)).To(Succeed())
-
 	By("bootstrapping envtest with the NodeGroup, NodeConfig, NodeBootstrapConfig and Machine CRDs")
-	var err error
-	testEnv, cfg, k8sClient, err = testenv.Start(
-		scheme,
+	suite, stop := testenv.StartSuite(GinkgoWriter,
+		[]func(*k8sruntime.Scheme) error{
+			deckhousev1.AddToScheme,
+			deckhousev1alpha1.AddToScheme,
+			internalv1alpha1.AddToScheme,
+			bootstrapv1alpha1.AddToScheme,
+			capiv1beta2.AddToScheme,
+		},
 		testenv.CRDPaths(
 			testenv.WithNodeGroupCRDFile(),
 			testenv.WithNodeManager(testenv.NodeConfigCRDFile),
 			testenv.WithNodeManager(testenv.NodeBootstrapConfigCRDFile),
-			testenv.WithNodeManager(testenv.NodeBootstrapConfigTemplateCRDFile),
 			testenv.WithMachineCRDFile(),
 		)...,
 	)
-	Expect(err).NotTo(HaveOccurred())
+	DeferCleanup(stop)
 
-	By("starting the manager with the node-bootstrap controller")
-	mgr, err := testenv.NewManager(suiteCtx, cfg, scheme)
-	Expect(err).NotTo(HaveOccurred())
-
-	go func() {
-		defer GinkgoRecover()
-		Expect(mgr.Start(suiteCtx)).To(Succeed())
-	}()
-})
-
-var _ = AfterSuite(func() {
-	By("tearing down the envtest environment")
-	if suiteCancel != nil {
-		suiteCancel()
-	}
-	if testEnv != nil {
-		Expect(testEnv.Stop()).To(Succeed())
-	}
+	k8sClient = suite.Client
 })

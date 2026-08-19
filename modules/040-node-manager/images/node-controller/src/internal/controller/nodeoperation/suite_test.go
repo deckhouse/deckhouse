@@ -17,31 +17,19 @@ limitations under the License.
 package nodeoperation
 
 import (
-	"context"
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/envtest"
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/node-controller/internal/testenv"
 )
 
-var (
-	testEnv   *envtest.Environment
-	cfg       *rest.Config
-	k8sClient client.Client
-	scheme    *k8sruntime.Scheme
-
-	suiteCtx    context.Context
-	suiteCancel context.CancelFunc
-)
+var k8sClient client.Client
 
 // TestNodeOperationControllerEnvtest runs the envtest-backed integration
 // suite: the real controller against a real kube-apiserver. Skipped when
@@ -56,43 +44,20 @@ func TestNodeOperationControllerEnvtest(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	testenv.SetupLogger(GinkgoWriter)
-	suiteCtx, suiteCancel = context.WithCancel(context.Background())
-
-	scheme = k8sruntime.NewScheme()
-	Expect(clientgoscheme.AddToScheme(scheme)).To(Succeed())
-	Expect(deckhousev1alpha1.AddToScheme(scheme)).To(Succeed())
-	// NodeGroup: the wait for an eviction is bounded by the group's own
-	// nodeDrainTimeoutSecond, so the controller reads the node's group.
-	Expect(deckhousev1.AddToScheme(scheme)).To(Succeed())
-
 	By("bootstrapping envtest with the NodeOperation and NodeGroup CRDs")
-	var err error
-	testEnv, cfg, k8sClient, err = testenv.Start(
-		scheme,
+	suite, stop := testenv.StartSuite(GinkgoWriter,
+		[]func(*k8sruntime.Scheme) error{
+			deckhousev1alpha1.AddToScheme,
+			// NodeGroup: the wait for an eviction is bounded by the group's own
+			// nodeDrainTimeoutSecond, so the controller reads the node's group.
+			deckhousev1.AddToScheme,
+		},
 		testenv.CRDPaths(
 			testenv.WithNodeManager(testenv.NodeOperationCRDFile),
 			testenv.WithNodeGroupCRDFile(),
 		)...,
 	)
-	Expect(err).NotTo(HaveOccurred())
+	DeferCleanup(stop)
 
-	By("starting the manager with the node-operation controller")
-	mgr, err := testenv.NewManager(suiteCtx, cfg, scheme)
-	Expect(err).NotTo(HaveOccurred())
-
-	go func() {
-		defer GinkgoRecover()
-		Expect(mgr.Start(suiteCtx)).To(Succeed())
-	}()
-})
-
-var _ = AfterSuite(func() {
-	By("tearing down the envtest environment")
-	if suiteCancel != nil {
-		suiteCancel()
-	}
-	if testEnv != nil {
-		Expect(testEnv.Stop()).To(Succeed())
-	}
+	k8sClient = suite.Client
 })
