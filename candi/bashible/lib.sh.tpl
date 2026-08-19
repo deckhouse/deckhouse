@@ -63,7 +63,9 @@ function bb-bashible-ready-steps-failed() {
     local step_log="/var/lib/bashible/step.log"
     if [[ -f "${step_log}" ]]; then
       # Keep only the latest non-empty line to avoid multi-line "wall of text" in condition message.
-      log_excerpt="$(tail -n 100 "${step_log}" | awk 'NF { line=$0 } END { print line }')"
+      # Drop `set -x` trace lines: from the 3rd attempt the step runs with xtrace, so the
+      # last line is bashbooster cleanup (`+ exit 2`), not the error that failed the step.
+      log_excerpt="$(tail -n 100 "${step_log}" | grep -v '^+' | awk 'NF { line=$0 } END { print line }')"
     else
       log_excerpt="bashible step log is not available."
     fi
@@ -193,7 +195,9 @@ function bb-event-error-create() {
   local eventNote
 
   if [[ -f "${eventLog}" ]]; then
-    eventNote="$(tail -c 500 "${eventLog}")"
+    # Same xtrace filter as bb-bashible-ready-steps-failed: without it the note is
+    # 500 bytes of bashbooster cleanup trace instead of the failure.
+    eventNote="$(tail -n 100 "${eventLog}" | grep -v '^+' | tail -c 500)"
   else
     eventNote="bashible step log is not available."
   fi
