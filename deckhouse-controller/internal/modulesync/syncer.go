@@ -49,6 +49,12 @@ type Syncer struct {
 	// modules (/deckhouse/modules by default); the sync lists this directory
 	// to learn which modules are embedded. Tests point it at a fixture.
 	embeddedDir string
+
+	// deleteOrphans makes Sync delete orphaned modules - those no source
+	// claims and that carry no package. Only the package-runtime bootstrap
+	// turns it on: while the old module stack runs, it owns the module
+	// catalog, and the sync must not remove its resources.
+	deleteOrphans bool
 }
 
 // Option tunes a Syncer.
@@ -58,6 +64,14 @@ type Option func(*Syncer)
 func WithEmbeddedModulesDir(dir string) Option {
 	return func(s *Syncer) {
 		s.embeddedDir = dir
+	}
+}
+
+// WithOrphanDeletion makes Sync delete orphaned modules - see the
+// deleteOrphans field.
+func WithOrphanDeletion() Option {
+	return func(s *Syncer) {
+		s.deleteOrphans = true
 	}
 }
 
@@ -113,7 +127,7 @@ func (s *Syncer) Sync(ctx context.Context) ([]v1alpha2.Module, error) {
 	// write it all into the Module resources
 	modulesV2, err := s.writeModulesV2(ctx, origins, configs)
 	if err != nil {
-		return nil, fmt.Errorf("apply modules: %w", err)
+		return nil, fmt.Errorf("write modules: %w", err)
 	}
 
 	return modulesV2, nil

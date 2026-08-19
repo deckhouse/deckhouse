@@ -64,6 +64,9 @@
 // Running first means the controllers wake up to already filled Module
 // resources.
 //
+// While the old module stack is still in charge, its controllers also
+// mirror their events into the Modules one at a time - see ensure.go.
+//
 // # Write contract
 //
 // The sync writes the fields listed above and nothing else:
@@ -71,8 +74,9 @@
 //   - writes are merge patches (or a create), so fields owned by other
 //     writers survive;
 //   - the sync sends no patch when nothing changed;
-//   - the sync deletes a module that no source claims and nothing backs;
-//     any other module stays as is.
+//   - with WithOrphanDeletion (the bootstrap mode) the sync deletes
+//     orphaned modules - those no source claims and that carry no package;
+//     without it they are left to the old module stack.
 //
 // # Clients
 //
@@ -91,5 +95,6 @@
 // every upgrade. The other inputs leave the platform with the package
 // system rollout - pull overrides and releases first, module configs last.
 // Their resolvers (origin_pull_overrides.go, origin_module_releases.go,
-// configs.go) die with them; the core stays.
+// configs.go) and the controller mirrors (ensure.go) die with them; the
+// core stays.
 package modulesync

@@ -157,10 +157,11 @@ func TestSyncModules(t *testing.T) {
 		conf := &v1alpha1.ModuleConfig{
 			ObjectMeta: metav1.ObjectMeta{Name: "echo"},
 			Spec: v1alpha1.ModuleConfigSpec{
-				Enabled:     &enabled,
-				Version:     2,
-				Settings:    v1alpha1.MakeMappedFields(map[string]any{"logLevel": "Debug"}),
-				Maintenance: "NoResourceReconciliation",
+				Enabled:      &enabled,
+				Version:      2,
+				Settings:     v1alpha1.MakeMappedFields(map[string]any{"logLevel": "Debug"}),
+				Maintenance:  "NoResourceReconciliation",
+				UpdatePolicy: "test-alpha",
 			},
 		}
 
@@ -176,6 +177,7 @@ func TestSyncModules(t *testing.T) {
 		assert.Equal(t, "v1.0.0", module.Spec.PackageVersion)
 		assert.Equal(t, 2, module.Spec.SettingsVersion)
 		assert.Equal(t, "NoResourceReconciliation", module.Spec.Maintenance)
+		assert.Equal(t, "test-alpha", module.Spec.UpdatePolicy)
 		require.NotNil(t, module.Spec.Enabled)
 		assert.True(t, *module.Spec.Enabled)
 		assert.Equal(t, map[string]any{"logLevel": "Debug"}, module.Spec.Settings.GetMap())
@@ -199,7 +201,21 @@ func TestSyncModules(t *testing.T) {
 		assert.Equal(t, "v1.0.0", module.Spec.PackageVersion)
 	})
 
-	t.Run("deletes a module no source claims and nothing backs", func(t *testing.T) {
+	t.Run("deletes an orphaned module in bootstrap mode", func(t *testing.T) {
+		existing := &v1alpha2.Module{ObjectMeta: metav1.ObjectMeta{Name: "echo"}}
+
+		s := newTestSyncer(t, emptyEmbeddedDir(t), existing)
+		WithOrphanDeletion()(s)
+
+		_, err := s.Sync(context.Background())
+		require.NoError(t, err)
+
+		module := new(v1alpha2.Module)
+		err = s.reader.Get(context.Background(), client.ObjectKey{Name: "echo"}, module)
+		assert.True(t, client.IgnoreNotFound(err) == nil && err != nil, "an orphaned module must be deleted in bootstrap mode")
+	})
+
+	t.Run("leaves an orphaned module to the module stack by default", func(t *testing.T) {
 		existing := &v1alpha2.Module{ObjectMeta: metav1.ObjectMeta{Name: "echo"}}
 
 		s := newTestSyncer(t, emptyEmbeddedDir(t), existing)
@@ -207,9 +223,8 @@ func TestSyncModules(t *testing.T) {
 		_, err := s.Sync(context.Background())
 		require.NoError(t, err)
 
-		module := new(v1alpha2.Module)
-		err = s.reader.Get(context.Background(), client.ObjectKey{Name: "echo"}, module)
-		assert.True(t, client.IgnoreNotFound(err) == nil && err != nil, "a module no source claims and nothing backs must be deleted")
+		module := getV2Module(t, s, "echo")
+		assert.Empty(t, module.Spec.PackageVersion, "the sync must not touch a module it does not own")
 	})
 
 	t.Run("keeps a module no source claims but a repository backs", func(t *testing.T) {

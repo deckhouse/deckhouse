@@ -73,16 +73,26 @@ func (s *Syncer) writeModulesV2(ctx context.Context, origins map[string]Origin, 
 	return surviving, nil
 }
 
-// writeExistingModuleV2 patches the module to its origin and config, or deletes it when no
-// source claims it and nothing backs it. It reports whether the module survived.
+// writeExistingModuleV2 patches the module to its origin and config, or deletes it when it
+// is orphaned. It reports whether the module survived.
 func (s *Syncer) writeExistingModuleV2(ctx context.Context, moduleV2 *v1alpha2.Module, origin Origin, conf *v1alpha1.ModuleConfig) (bool, error) {
-	// nothing backs the module when no writer ever put a package version
-	// here, or when the image alone backed it and no longer ships it
+	// the module is orphaned when no source claims it and, on top of that,
+	// no writer ever put a package version here - or only the image supplied
+	// it and no longer ships it
 	neverFilled := moduleV2.Spec.PackageVersion == ""
 	imageOnly := moduleV2.IsEmbedded() && moduleV2.Spec.PackageRepositoryName == embeddedRepositoryName
 
 	if !origin.Known() && (neverFilled || imageOnly) {
-		s.logger.Info("module is not backed by a package, delete it", slog.String("name", moduleV2.Name))
+		// while the old module stack owns the catalog, such modules are its
+		// business: the sync neither deletes nor touches them
+		if !s.deleteOrphans {
+			s.logger.Debug("orphaned module, leave it to the module stack",
+				slog.String("name", moduleV2.Name))
+
+			return false, nil
+		}
+
+		s.logger.Info("orphaned module, delete it", slog.String("name", moduleV2.Name))
 
 		// a module already gone is the outcome asked for
 		if err := s.writer.Delete(ctx, moduleV2); err != nil && !apierrors.IsNotFound(err) {

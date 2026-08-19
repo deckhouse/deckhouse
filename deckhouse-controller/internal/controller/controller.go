@@ -195,7 +195,9 @@ func Build(ctx context.Context, rest *rest.Config, ms metricsstorage.Storage, lo
 
 	settingsCh := make(chan addonutils.Values, 1)
 
-	syncer := modulesync.New(runtime.GetClient(), runtime.GetAPIReader(), dc.GetClock(), logger.Named(controllerName))
+	// the bootstrap owns the module catalog, so orphaned modules are deleted
+	syncer := modulesync.New(runtime.GetClient(), runtime.GetAPIReader(), dc.GetClock(), logger.Named(controllerName),
+		modulesync.WithOrphanDeletion())
 
 	return &Controller{
 		ctrl: runtime,

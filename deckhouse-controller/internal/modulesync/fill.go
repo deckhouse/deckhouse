@@ -24,7 +24,7 @@ import (
 
 // fillModuleV2 writes the origin, its annotations and the config's settings onto the module.
 func fillModuleV2(moduleV2 *v1alpha2.Module, origin Origin, conf *v1alpha1.ModuleConfig) {
-	// a module of unknown origin keeps the spec another writer gave it - only disposable decides its fate
+	// a module of unknown origin keeps the spec another writer gave it
 	if origin.Known() {
 		moduleV2.Spec.PackageRepositoryName = origin.RepositoryName
 		moduleV2.Spec.PackageVersion = origin.PackageVersion
@@ -47,10 +47,18 @@ func fillModuleV2(moduleV2 *v1alpha2.Module, origin Origin, conf *v1alpha1.Modul
 		return
 	}
 
+	// spec.packageVersion is required by the Module schema, so config fields
+	// cannot materialize the spec on their own: the API server would reject
+	// such a write. They are filled once a version is there.
+	if !origin.Known() && moduleV2.Spec.PackageVersion == "" {
+		return
+	}
+
 	moduleV2.Spec.Settings = conf.Spec.Settings
 	moduleV2.Spec.SettingsVersion = conf.Spec.Version
 	moduleV2.Spec.Maintenance = conf.Spec.Maintenance
 	moduleV2.Spec.Enabled = conf.Spec.Enabled
+	moduleV2.Spec.UpdatePolicy = conf.Spec.UpdatePolicy
 }
 
 // markAnnotation sets the marker key to "true", allocating the map when the
