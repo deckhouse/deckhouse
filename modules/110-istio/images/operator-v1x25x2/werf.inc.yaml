@@ -15,14 +15,10 @@ import:
 - image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/istio/manifests
   to: /var/lib/istio/manifests
-  owner: 64535
-  group: 64535
   after: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/operator/resources
   to: /var/lib/sail-operator/resources
-  owner: 64535
-  group: 64535
   after: setup
 {{- include "image mount points" . }}
 imageSpec:
