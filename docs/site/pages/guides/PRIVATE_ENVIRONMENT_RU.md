@@ -63,7 +63,9 @@ layout: sidebar-guides
 ## Подготовка приватного container registry
 
 {% alert level="warning" %}
-DKP поддерживает только Bearer token-схему авторизации в container registry.
+DKP поддерживает аутентификацию в container registry по схемам Basic и Bearer token (сначала проверяется Basic, при неуспехе — Bearer).
+
+Если перед registry стоит прокси-сервер, он должен корректно проксировать заголовок Registry API v2 `Docker-Distribution-API-Version: registry/2.0`, иначе проверка Basic может завершиться ошибкой, а последующая попытка Bearer сообщением с ошибкой `couldn't find bearer realm parameter`.
 {% endalert %}
 
 В качестве приватного container registry можно использовать любой из поддерживаемых. Протестирована и гарантируется работа со следующими container registry — [Nexus](https://github.com/sonatype/nexus-public), [Harbor](https://github.com/goharbor/harbor), [Artifactory](https://jfrog.com/artifactory/), [Docker Registry](https://docs.docker.com/registry/), [Quay](https://quay.io/).
