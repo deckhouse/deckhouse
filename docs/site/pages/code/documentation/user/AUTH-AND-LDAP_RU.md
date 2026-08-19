@@ -13,6 +13,27 @@ weight: 45
 
 Deckhouse Code поддерживает вход через внешних провайдеров аутентификации (OmniAuth), в том числе через OpenID Connect (OIDC) и SAML. Ниже описаны общие параметры OmniAuth, параметры провайдеров и дополнительные возможности Deckhouse Code.
 
+### Поддерживаемые провайдеры
+
+В параметре `name` записи провайдера указывается одно из следующих значений:
+
+- `openid_connect` — OpenID Connect (описан ниже);
+- `saml` — SAML (описан ниже);
+- `oauth2_generic` — произвольный провайдер OAuth 2.0;
+- `jwt` — аутентификация по JWT;
+- `github` — GitHub;
+- `gitlab` — GitLab.com;
+- `google_oauth2` — Google;
+- `azure_activedirectory_v2` — Microsoft Entra ID (Azure AD);
+- `atlassian_oauth2` — Atlassian;
+- `crowd` — Atlassian Crowd;
+- `auth0` — Auth0;
+- `alicloud` — AliCloud;
+- `salesforce` — Salesforce;
+- `shibboleth` — Shibboleth.
+
+Вход через LDAP настраивается отдельно, в секции `spec.appConfig.ldap.` (см. раздел [«Синхронизация с LDAP»](#синхронизация-с-ldap)).
+
 ### Общие параметры OmniAuth
 
 Параметры задаются в секции `spec.appConfig.omniauth.`:
