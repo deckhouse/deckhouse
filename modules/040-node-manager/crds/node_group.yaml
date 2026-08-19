@@ -238,20 +238,8 @@ spec:
                       properties:
                         kind:
                           description: |
-                            The object type (e.g., `OpenStackInstanceClass`). The object type is specified in the documentation of the corresponding `cloud-provider-` module.
+                            The kind of the `InstanceClass` object (e.g., `OpenStackInstanceClass`). Supported kinds are defined by the installed cloud provider modules and specified in their documentation.
                           type: string
-                          enum:
-                            - OpenStackInstanceClass
-                            - GCPInstanceClass
-                            - VsphereInstanceClass
-                            - AWSInstanceClass
-                            - YandexInstanceClass
-                            - AzureInstanceClass
-                            - VCDInstanceClass
-                            - ZvirtInstanceClass
-                            - DynamixInstanceClass
-                            - HuaweiCloudInstanceClass
-                            - DVPInstanceClass
                         name:
                           description: |
                             The name of the required `InstanceClass` object (e.g., `finland-medium`).
@@ -578,7 +566,7 @@ spec:
                     Machinery used to manage nodes in this group.
 
                     The field value indicates which component manages the nodes:
-                    
+
                     - `None` — nodes in the group are not managed by Machine Controller Manager or CAPI.
                     - `MCM` — nodes in the group are managed by Machine Controller Manager.
                     - `CAPI` — nodes in the group are managed by Cluster API.
@@ -901,20 +889,8 @@ spec:
                       properties:
                         kind:
                           description: |
-                            The object type (e.g., `OpenStackInstanceClass`). The object type is specified in the documentation of the corresponding `cloud-provider-` module.
+                            The kind of the `InstanceClass` object (e.g., `OpenStackInstanceClass`). Supported kinds are defined by the installed cloud provider modules and specified in their documentation.
                           type: string
-                          enum:
-                            - OpenStackInstanceClass
-                            - GCPInstanceClass
-                            - VsphereInstanceClass
-                            - AWSInstanceClass
-                            - YandexInstanceClass
-                            - AzureInstanceClass
-                            - VCDInstanceClass
-                            - ZvirtInstanceClass
-                            - DynamixInstanceClass
-                            - HuaweiCloudInstanceClass
-                            - DVPInstanceClass
                         name:
                           description: |
                             The name of the required `InstanceClass` object (e.g., `finland-medium`).
@@ -1210,7 +1186,7 @@ spec:
                     Machinery used to manage nodes in this group.
 
                     The field value indicates which component manages the nodes:
-                    
+
                     - `None` — nodes in the group are not managed by MCM or CAPI.
                     - `MCM` — nodes in the group are managed by machine-controller-manager.
                     - `CAPI` — nodes in the group are managed by Cluster API.
@@ -1830,20 +1806,8 @@ spec:
                       properties:
                         kind:
                           description: |
-                            The object type (e.g., `OpenStackInstanceClass`). The object type is specified in the documentation of the corresponding `cloud-provider-` module.
+                            The kind of the `InstanceClass` object (e.g., `OpenStackInstanceClass`). Supported kinds are defined by the installed cloud provider modules and specified in their documentation.
                           type: string
-                          enum:
-                            - OpenStackInstanceClass
-                            - GCPInstanceClass
-                            - VsphereInstanceClass
-                            - AWSInstanceClass
-                            - YandexInstanceClass
-                            - AzureInstanceClass
-                            - VCDInstanceClass
-                            - ZvirtInstanceClass
-                            - DynamixInstanceClass
-                            - HuaweiCloudInstanceClass
-                            - DVPInstanceClass
                         name:
                           description: |
                             The name of the required `InstanceClass` object (e.g., `finland-medium`).
@@ -2383,7 +2347,7 @@ spec:
                     Machinery used to manage nodes in this group.
 
                     The field value indicates which component manages the nodes:
-                    
+
                     - `None` — nodes in the group are not managed by Machine Controller Manager or CAPI.
                     - `MCM` — nodes in the group are managed by Machine Controller Manager.
                     - `CAPI` — nodes in the group are managed by Cluster API.

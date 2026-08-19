@@ -106,7 +106,7 @@ spec:
                       properties:
                         kind:
                           description: |
-                            Тип объекта (например, `OpenStackInstanceClass`). Тип объекта указан в документации соответствующего модуля облачного провайдера.
+                            Тип объекта `InstanceClass` (например, `OpenStackInstanceClass`). Поддерживаемые типы определяются установленными модулями облачных провайдеров и указаны в их документации.
                         name:
                           description: |
                             Имя нужного `InstanceClass`-объекта (например, `finland-medium`).
@@ -439,7 +439,7 @@ spec:
                       properties:
                         kind:
                           description: |
-                            Тип объекта (например, `OpenStackInstanceClass`). Тип объекта указан в документации соответствующего модуля облачного провайдера.
+                            Тип объекта `InstanceClass` (например, `OpenStackInstanceClass`). Поддерживаемые типы определяются установленными модулями облачных провайдеров и указаны в их документации.
                         name:
                           description: |
                             Имя нужного `InstanceClass`-объекта (например, `finland-medium`).
@@ -898,7 +898,7 @@ spec:
                       properties:
                         kind:
                           description: |
-                            Тип объекта (например, `OpenStackInstanceClass`). Тип объекта указан в документации соответствующего модуля облачного провайдера.
+                            Тип объекта `InstanceClass` (например, `OpenStackInstanceClass`). Поддерживаемые типы определяются установленными модулями облачных провайдеров и указаны в их документации.
                         name:
                           description: |
                             Имя нужного `InstanceClass`-объекта (например, `finland-medium`).
@@ -1221,7 +1221,7 @@ spec:
                     Фактический механизм управления узлами в этой группе.
 
                     Значение поля определяет, каким компонентом управляются узлы:
-                    
+
                     - `None` — узлы группы не управляются через Machine Controller Manager или CAPI;
                     - `MCM` — узлы группы управляются через Machine Controller Manager;
                     - `CAPI` — узлы группы управляются через Cluster API.
