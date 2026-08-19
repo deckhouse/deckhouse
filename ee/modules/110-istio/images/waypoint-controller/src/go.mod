@@ -3,7 +3,7 @@ module waypoint-controller
 go 1.25.0
 
 require (
-	golang.org/x/mod v0.37.0
+	golang.org/x/mod v0.40.0
 	k8s.io/api v0.35.1
 	k8s.io/apiextensions-apiserver v0.35.0
 	k8s.io/apimachinery v0.35.1
