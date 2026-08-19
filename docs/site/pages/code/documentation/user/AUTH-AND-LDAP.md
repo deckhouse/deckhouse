@@ -316,3 +316,109 @@ This approach simplifies synchronization and avoids issues related to recursive 
 Local accounts can still be created and used even when LDAP synchronization is enabled.
 
 To allow such users to sign in through the web interface, the ["Enable password and passkey authentication for the web interface"](https://docs.gitlab.com/administration/settings/sign_in_restrictions/#password-and-passkey-authentication) setting must be enabled.
+
+## Configuration example: signing in through OIDC with permissions from LDAP
+
+The steps below describe a setup where users sign in through an OIDC provider (for example, Keycloak), while groups, memberships, and roles come from LDAP.
+
+### Prerequisites
+
+- An OIDC provider that passes the user email and the list of their groups.
+- An LDAP directory with the same users and with groups whose names allow determining the role (for example, `dh-code-developer-backend`).
+- An LDAP service account with read access to the directory (the `bind_dn` and `password` parameters).
+
+The `uid` or email value in the OIDC provider must match the value of the corresponding attribute in LDAP, otherwise linking will not work (see [How the LDAP account is found](#how-the-ldap-account-is-found)).
+
+### Step 1. Configure the LDAP provider
+
+The configuration is defined in `spec.appConfig.ldap.`:
+
+```yaml
+main:
+  label: ldap
+  host: ldap.example.com
+  port: 3389
+  bind_dn: 'uid=viewer,ou=People,dc=example,dc=com'
+  password: 'viewer123'
+  base: 'ou=People,dc=example,dc=com'
+  uid: 'cn'
+  sync_name: true
+  # Ignore users blocked in the directory (optional).
+  user_filter: '(!(nsAccountLock=TRUE))'
+  # The user is found in LDAP — sign-in is allowed immediately.
+  block_auto_created_users: false
+  group_sync: {
+    create_groups: true,
+    base: 'ou=Groups,dc=example,dc=com',
+    filter: '(objectClass=groupOfNames)',
+    top_level_group: "LdapGroups",
+    name_mask: "(?<=-)[A-z0-9]*$",
+    owner: "root",
+    role_mapping: [
+      { by_name: '.*-maintainer-.*', gitlab_role: 'maintainer' },
+      { by_name: '.*-developer-.*', gitlab_role: 'developer' },
+      { by_name: '.*-participant-.*', gitlab_role: 'reporter' }
+    ]
+  }
+```
+
+### Step 2. Configure the OIDC provider
+
+The configuration is set in the `spec.appConfig.omniauth.` section. Connection parameters are defined according to the [GitLab documentation](https://docs.gitlab.com/integration/omniauth/), while access and administrative privileges are controlled by the `allowed_groups` and `admin_groups` parameters:
+
+```yaml
+providers:
+  - name: 'openid_connect'
+    allowed_groups:
+      - 'gitlab'
+    admin_groups:
+      - 'admin'
+    groups_attribute: 'gitlab_group'
+```
+
+### Step 3. Enable linking to LDAP
+
+The configuration is set in the `spec.appConfig.` section:
+
+```yaml
+omniauth:
+  auto_link_ldap_user: true
+  # The user is not found in LDAP — the account is created blocked,
+  # pending administrator approval.
+  block_auto_created_users: true
+```
+
+### Step 4. Set the synchronization schedule
+
+The configuration is set in the `spec.appConfig.` section:
+
+```yaml
+cron_jobs:
+  ldap_sync_worker:
+    cron: "0 * * * *"
+```
+
+### Step 5. Verify linking on the first sign-in
+
+1. Sign in with a test user through the OIDC provider.
+1. Open the user page in the admin area (`/admin/users/<username>/identities`). A linked account must have two identities: `openid_connect` and `ldapmain` (the LDAP identity name consists of the `ldap` prefix and the LDAP server name, `main` in this example).
+
+If the LDAP identity is missing, check the following:
+
+- the `uid` or email values match in the OIDC provider and in LDAP;
+- the user falls within the `base` search scope and is not filtered out by `user_filter`;
+- the `auto_link_ldap_user` parameter is enabled.
+
+### Step 6. Wait for the permissions to be synchronized
+
+Right after the first sign-in, the user has an account but no group or project memberships. Wait for the next synchronization or run it manually (see [Manual synchronization run](#manual-synchronization-run)), then check that:
+
+- the groups are created inside the group specified in `group_sync.top_level_group`;
+- the user is added to them with the role matching `role_mapping`.
+
+### How it works after the setup
+
+- A new employee is created in LDAP, signs in through the OIDC provider, their account is linked to LDAP, and they receive permissions after the next synchronization.
+- If a user is removed from LDAP, synchronization blocks the account; if the user is restored, it unblocks the account.
+- If a user is removed from an allowed group of the OIDC provider, the account is blocked on their next sign-in.
+- If the LDAP group composition changes, memberships and roles are updated on the next synchronization.
