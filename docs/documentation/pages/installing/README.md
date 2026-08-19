@@ -685,7 +685,9 @@ Available in the following editions: SE, SE+, EE.
 DKP can be installed from an external container registry or via a proxy registry inside an air-gapped environment.
 
 {% alert level="warning" %}
-DKP supports only the Bearer-token authentication scheme for container registries.
+DKP supports Basic and Bearer token authentication schemes for container registries (Basic is tried first; if it fails, Bearer is used).
+
+If a reverse proxy is placed in front of the registry, it must correctly forward the Registry API v2 header `Docker-Distribution-API-Version: registry/2.0`. Otherwise the Basic check may fail, and the subsequent Bearer attempt may fail with the error `couldn't find bearer realm parameter`.
 
 The following container registries were verified and are guaranteed to work:
 {%- for registry in site.data.supported_versions.registries %}
