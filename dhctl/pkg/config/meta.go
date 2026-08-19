@@ -794,9 +794,6 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(ctx context.Context, nodeIP
 		nodeGroup["static"] = m.ExtractMasterNodeGroupStaticSettings(ctx)
 	}
 
-	// The provider a NodeGroup runs on, named the way node-controller names it in the bashible
-	// context it publishes. The bootstrap templates read it from here, so the first master and
-	// every node the cluster grows later resolve their provider through the same field.
 	if m.ClusterType == CloudClusterType {
 		nodeGroup["cloudProviderType"] = m.ProviderName
 	}
