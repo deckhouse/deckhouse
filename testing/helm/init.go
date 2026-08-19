@@ -331,8 +331,11 @@ func WithFilteredRenderOutput(m map[string]string, filters []string) Option {
 }
 
 // WithAPIVersions presents the given group/version/Kind strings to the chart as available in the
-// cluster. Templates guarded by helm_lib_kind_exists render nothing without it, because Helm's
-// default capabilities list group/version pairs only.
+// cluster. Helm's default capabilities are group/version pairs with no kind in them, so a guard
+// that asks after a kind answers no without this. helm_lib_kind_exists takes a bare kind and looks
+// for it as a case-insensitive "/<Kind>" suffix in the list, while helm_lib_api_version_exists and
+// inline .Capabilities.APIVersions.Has compare a whole "group/version/Kind" string; spelling an
+// entry that way satisfies both.
 func WithAPIVersions(versions ...string) Option {
 	return func(options *configOptions) {
 		options.apiVersions = append(options.apiVersions, versions...)
