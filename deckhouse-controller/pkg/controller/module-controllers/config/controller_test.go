@@ -16,7 +16,6 @@ package config
 
 import (
 	"context"
-	"github.com/jonboulle/clockwork"
 	"sync"
 	"testing"
 
@@ -24,6 +23,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
+	"github.com/jonboulle/clockwork"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
