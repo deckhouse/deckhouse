@@ -1,0 +1,79 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ironic-finalizer-cleanup
+  namespace: d8-cloud-provider-metal3
+  annotations:
+    werf.io/deploy-on: pre-uninstall
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ironic-finalizer-cleanup
+  namespace: d8-cloud-provider-metal3
+  annotations:
+    werf.io/deploy-on: pre-uninstall
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+- apiGroups:
+  - ironic.metal3.io
+  resources:
+  - ironics
+  - ironics/finalizers
+  verbs:
+  - get
+  - patch
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ironic-finalizer-cleanup
+  namespace: d8-cloud-provider-metal3
+  annotations:
+    werf.io/deploy-on: pre-uninstall
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: ironic-finalizer-cleanup
+subjects:
+- kind: ServiceAccount
+  name: ironic-finalizer-cleanup
+  namespace: d8-cloud-provider-metal3
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ironic-finalizer-cleanup
+  namespace: d8-cloud-provider-metal3
+  annotations:
+    werf.io/deploy-on: pre-uninstall
+    werf.io/delete-policy: before-creation,succeeded
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: ironic-finalizer-cleanup
+    spec:
+      serviceAccountName: ironic-finalizer-cleanup
+      restartPolicy: OnFailure
+      containers:
+      - name: cleanup
+        image: {{ include "helm_lib_module_image" (list . "metal3InstanceManager") }}
+        args:
+        - cleanup-ironic-finalizer
+        - --namespace=d8-cloud-provider-metal3
+        - --name=ironic
+        - --finalizer=ironic.metal3.io
+        resources:
+          requests:
+            cpu: 10m
+            memory: 32Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
