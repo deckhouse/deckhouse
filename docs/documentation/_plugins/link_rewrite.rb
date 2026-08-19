@@ -14,7 +14,9 @@
 #
 # Flow: for every <a href>:
 #   1. If data-keep-link is set — skip.
-#   2. Apply the first matching replace rule to the href (any link — relative or absolute).
+#   2. Apply replace rules iteratively (any link — relative or absolute): the first
+#      matching rule is applied and the scan restarts, until nothing changes.
+#      A hard pass cap and cycle detection prevent infinite loops.
 #   3. If the (possibly rewritten) href matches any 'remove' pattern — unwrap the <a>.
 #   4. Otherwise, if the href is absolute http(s), run the whitelist check —
 #      unwrap the <a> when the host is not in whitelistHosts (or a subdomain of one).
@@ -63,12 +65,38 @@ module LinkRewrite
     whitelist.any? { |w| host == w || host.end_with?(".#{w}") }
   end
 
-  def apply_replaces(href, replaces)
+  MAX_REPLACE_PASSES = 5
+
+  # Applies the first matching replace rule once. Returns href unchanged if none match.
+  def apply_first_matching_replace(href, replaces)
     replaces.each do |regex, replacement|
       new_href = href.sub(regex, replacement)
       return new_href if new_href != href
     end
     href
+  end
+
+  # Applies replace rules iteratively: the first matching rule is applied and the
+  # scan restarts from the top, until a full pass changes nothing (fixpoint).
+  # Guarded against infinite loops by a hard pass cap and by cycle detection
+  # (a repeated href value means the rules ping-pong). If neither converges, warn
+  # and keep the last value.
+  def apply_replaces(href, replaces)
+    result = href
+    seen = { result => true }
+    MAX_REPLACE_PASSES.times do
+      new_result = apply_first_matching_replace(result, replaces)
+      return result if new_result == result # converged: no rule matched
+
+      result = new_result
+      if seen.key?(result)
+        Jekyll.logger.warn 'linkRewrite:', "replace rules cycle on #{href.inspect}; stopping"
+        return result
+      end
+      seen[result] = true
+    end
+    Jekyll.logger.warn 'linkRewrite:', "replace rules did not converge for #{href.inspect} after #{MAX_REPLACE_PASSES} passes"
+    result
   end
 
   def process(doc, whitelist, replaces, removes)

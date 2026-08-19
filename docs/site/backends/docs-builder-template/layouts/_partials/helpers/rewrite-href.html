@@ -19,7 +19,9 @@
 
   Flow:
     1. keep=true or feature disabled  -> keep as is.
-    2. replace: first matching rule rewrites the href (any link, relative or absolute).
+    2. replace: applied iteratively (any link, relative or absolute) — the first
+       matching rule is applied and the scan restarts, until nothing changes.
+       A hard pass cap and cycle detection prevent infinite loops.
     3. remove: if the rewritten href matches any pattern -> strip.
     4. whitelist: only for absolute http(s) URLs -> strip when host is not whitelisted.
        Non-http(s) URLs (relative, mailto:, tel:, #anchor) skip the whitelist check.
@@ -44,11 +46,35 @@
   {{- $removes := $cfg.remove | default slice -}}
   {{- $whitelist := $cfg.whitelistHosts | default slice -}}
 
-  {{- /* Apply the first matching replace rule to ANY link (absolute or relative) */ -}}
-  {{- range $replaces -}}
-    {{- if and (eq $newHref $href) (gt (len (findRE .from $newHref)) 0) -}}
-      {{- $newHref = replaceRE .from .to $newHref -}}
+  {{- /*
+    Apply replace rules iteratively to ANY link (absolute or relative): on each
+    pass the first matching rule is applied and the scan restarts from the top,
+    until a full pass changes nothing (fixpoint). Guarded against infinite loops
+    by a hard pass cap and by cycle detection (a repeated href value means the
+    rules ping-pong). If neither converges, warn and keep the last value.
+  */ -}}
+  {{- $maxPasses := 5 -}}
+  {{- $seen := slice $newHref -}}
+  {{- $exhausted := true -}}
+  {{- range seq $maxPasses -}}
+    {{- $before := $newHref -}}
+    {{- range $replaces -}}
+      {{- if and (eq $newHref $before) (gt (len (findRE .from $newHref)) 0) -}}
+        {{- $newHref = replaceRE .from .to $newHref -}}
+      {{- end -}}
     {{- end -}}
+    {{- if eq $newHref $before -}}
+      {{- $exhausted = false -}}
+      {{- break -}}
+    {{- else if in $seen $newHref -}}
+      {{- $exhausted = false -}}
+      {{- warnf "linkRewrite: replace rules cycle on %q; stopping" $href -}}
+      {{- break -}}
+    {{- end -}}
+    {{- $seen = $seen | append $newHref -}}
+  {{- end -}}
+  {{- if $exhausted -}}
+    {{- warnf "linkRewrite: replace rules did not converge for %q after %d passes" $href $maxPasses -}}
   {{- end -}}
 
   {{- /* Explicit removal by URL pattern — applied to ANY link (relative or absolute) */ -}}
