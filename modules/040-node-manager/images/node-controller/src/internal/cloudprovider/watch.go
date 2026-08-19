@@ -146,7 +146,7 @@ func NodeGroupHandler(r client.Reader) handler.EventHandler {
 func nodeGroupRequests(ctx context.Context, r client.Reader, carried ...Provider) []reconcile.Request {
 	logger := log.FromContext(ctx)
 
-	clusterProvider, err := getClusterProvider(ctx, r)
+	clusterProvider, err := clusterProviderType(ctx, r)
 	if err != nil {
 		logger.Error(err, "read the cluster provider for a cloud provider registration event")
 		return nil
@@ -158,8 +158,10 @@ func nodeGroupRequests(ctx context.Context, r client.Reader, carried ...Provider
 		return nil
 	}
 
-	// The providers the event carries, resolved by the rules a reconcile uses.
-	changed := NewProviders(carried, clusterProvider)
+	// The providers the event carries, resolved by the rules a reconcile uses. A registration that
+	// is not the cluster's own leaves the default zero, and no NodeGroup runs on it.
+	defaultProvider, _ := byType(carried, clusterProvider)
+	changed := NewProviders(carried, defaultProvider)
 
 	ret := make([]reconcile.Request, 0, len(ngList.Items))
 	for i := range ngList.Items {
@@ -225,12 +227,13 @@ func LazyInstanceClassSource(informers cache.Cache, eventHandler handler.EventHa
 				case <-poke:
 				}
 
-				providers, err := getProviders(ctx, informers)
+				providers, err := allProviders(ctx, informers)
 				if err != nil {
 					logger.V(1).Info("list instance class providers", "error", err.Error())
 					continue
 				}
-				for _, gvk := range NewProviders(providers, "").InstanceClassGVKs() {
+				// Every registered kind is watched, whichever one the cluster runs on.
+				for _, gvk := range NewProviders(providers, Provider{}).InstanceClassGVKs() {
 					if started[gvk] {
 						continue
 					}

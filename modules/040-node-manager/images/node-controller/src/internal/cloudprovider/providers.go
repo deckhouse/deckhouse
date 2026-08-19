@@ -35,67 +35,58 @@ import (
 
 // Load reads every provider registered in the cluster.
 func Load(ctx context.Context, r client.Reader) (Providers, error) {
-	providers, err := getProviders(ctx, r)
+	all, err := allProviders(ctx, r)
 	if err != nil {
 		return Providers{}, err
 	}
 
-	clusterProvider, err := getClusterProvider(ctx, r)
+	pType, err := clusterProviderType(ctx, r)
 	if err != nil {
 		return Providers{}, err
 	}
 
-	ret := NewProviders(
-		providers,
-		clusterProvider,
-	)
-
-	if err := ret.Validate(); err != nil {
-		return Providers{}, err
+	// Static
+	if pType == "" {
+		return NewProviders(all, Provider{}), nil
 	}
-	return ret, nil
+
+	// Cloud
+	provider, ok := byType(all, pType)
+	if !ok {
+		return Providers{}, fmt.Errorf(
+			"registration secret not found for cloud provider %q in cluster configuration",
+			pType,
+		)
+	}
+
+	return NewProviders(all, provider), nil
 }
 
-// NewProviders builds a Providers from providers already in hand.
-func NewProviders(providers []Provider, defaultProvider string) Providers {
+// NewProviders builds a Providers from providers already in hand. The default is the registration
+// itself, not its name: resolving a name is Load's job, and it happens once.
+func NewProviders(providers []Provider, defaultProvider Provider) Providers {
 	ordered := slices.Clone(providers)
 	slices.SortFunc(ordered, func(a, b Provider) int { return strings.Compare(a.Type, b.Type) })
 
 	return Providers{
-		providers:       ordered,
-		defaultProvider: strings.ToLower(defaultProvider),
+		all:             ordered,
+		defaultProvider: defaultProvider,
 	}
 }
 
 type Providers struct {
-	providers       []Provider
-	defaultProvider string
+	all             []Provider
+	defaultProvider Provider
 }
 
-// Validate reports a cluster whose configured provider published no registration: CloudPermanent
-// resolves through that name alone, so the master would render without provider steps.
-func (ps Providers) Validate() error {
-	// Static cluster
-	if ps.defaultProvider == "" {
-		return nil
-	}
-
-	if _, ok := ps.Default(); !ok {
-		return fmt.Errorf(
-			"cloud provider %q of the cluster configuration published no registration secret",
-			ps.defaultProvider,
-		)
-	}
-	return nil
-}
-
+// Default returns the cluster's own provider, and whether it has one.
 func (ps Providers) Default() (Provider, bool) {
-	return ps.byName(ps.defaultProvider)
+	return ps.defaultProvider, ps.defaultProvider.Type != ""
 }
 
 // All returns every provider, ordered by type.
 func (ps Providers) All() []Provider {
-	return ps.providers
+	return ps.all
 }
 
 // ForNodeGroup returns the provider a NodeGroup runs on. It performs no I/O.
@@ -109,11 +100,11 @@ func (ps Providers) ForNodeGroup(ng *v1.NodeGroup) (Provider, bool) {
 
 // InstanceClassGVKs returns the GVK every provider registered its InstanceClass under.
 func (ps Providers) InstanceClassGVKs() []schema.GroupVersionKind {
-	ret := make([]schema.GroupVersionKind, 0, len(ps.providers))
-	seen := make(map[schema.GroupVersionKind]bool, len(ps.providers))
+	ret := make([]schema.GroupVersionKind, 0, len(ps.all))
+	seen := make(map[schema.GroupVersionKind]bool, len(ps.all))
 
-	for i := range ps.providers {
-		p := ps.providers[i]
+	for i := range ps.all {
+		p := ps.all[i]
 		if p.InstanceClassKind == "" || p.InstanceClassAPIVersion == "" {
 			continue
 		}
@@ -141,20 +132,6 @@ func (ps Providers) InstanceClassGVKs() []schema.GroupVersionKind {
 		return strings.Compare(a.Kind, b.Kind)
 	})
 	return ret
-}
-
-func (ps Providers) byName(name string) (Provider, bool) {
-	if name == "" {
-		return Provider{}, false
-	}
-	name = strings.ToLower(name)
-
-	for i := range ps.providers {
-		if ps.providers[i].Type == name {
-			return ps.providers[i], true
-		}
-	}
-	return Provider{}, false
 }
 
 // DeclarationError reports why a NodeGroup's spec.providerType disagrees with the provider it
@@ -193,9 +170,9 @@ func DeclarationError(declared string, resolved Provider) string {
 	return ""
 }
 
-// getProviders is the Secret half of Load, separate so the lazy InstanceClass watch does not
+// allProviders is the Secret half of Load, separate so the lazy InstanceClass watch does not
 // depend on the cluster configuration being readable.
-func getProviders(ctx context.Context, r client.Reader) ([]Provider, error) {
+func allProviders(ctx context.Context, r client.Reader) ([]Provider, error) {
 	secrets := &corev1.SecretList{}
 
 	if err := r.List(ctx, secrets,
@@ -225,9 +202,9 @@ func getProviders(ctx context.Context, r client.Reader) ([]Provider, error) {
 	return ret, nil
 }
 
-// getClusterProvider returns ClusterConfiguration.cloud.provider
+// clusterProviderType returns ClusterConfiguration.cloud.provider
 // from d8-cluster-configuration secret
-func getClusterProvider(ctx context.Context, r client.Reader) (string, error) {
+func clusterProviderType(ctx context.Context, r client.Reader) (string, error) {
 	secret := &corev1.Secret{}
 	err := r.Get(
 		ctx,
@@ -271,4 +248,18 @@ func getClusterProvider(ctx context.Context, r client.Reader) (string, error) {
 	}
 
 	return strings.ToLower(cfg.Cloud.Provider), nil
+}
+
+func byType(all []Provider, pType string) (Provider, bool) {
+	if pType == "" {
+		return Provider{}, false
+	}
+	pType = strings.ToLower(pType)
+
+	for i := range all {
+		if all[i].Type == pType {
+			return all[i], true
+		}
+	}
+	return Provider{}, false
 }

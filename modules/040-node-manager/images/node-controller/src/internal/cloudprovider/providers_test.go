@@ -150,7 +150,6 @@ func TestLoad(t *testing.T) {
 				got = append(got, p.Type)
 			}
 			assert.Equal(t, tc.types, got)
-			assert.Equal(t, len(tc.types) == 0, len(providers.providers))
 		})
 	}
 }
@@ -221,12 +220,11 @@ func TestLoad_Errors(t *testing.T) {
 func TestForNodeGroup(t *testing.T) {
 	yandex := Provider{Type: "yandex", InstanceClassKind: "YandexInstanceClass"}
 	aws := Provider{Type: "aws", InstanceClassKind: "AWSInstanceClass"}
-	// A registration that published no type is kept on load for the InstanceClass kind it carries.
-	// Its empty type must not meet the empty name of a cluster that configures no provider.
+	// Kept on load for the InstanceClass kind it carries; it is nobody's default.
 	nameless := Provider{InstanceClassKind: "VsphereInstanceClass"}
 
-	inYandexCloud := NewProviders([]Provider{aws, yandex, nameless}, "Yandex")
-	staticCluster := NewProviders([]Provider{nameless}, "")
+	inYandexCloud := NewProviders([]Provider{aws, yandex, nameless}, yandex)
+	staticCluster := NewProviders([]Provider{nameless}, Provider{})
 
 	tests := []struct {
 		name      string
@@ -266,13 +264,6 @@ func TestForNodeGroup(t *testing.T) {
 			name:      "a cluster that names no provider resolves to nothing",
 			providers: staticCluster, ng: nodeGroupOfType("cloudstatic", v1.NodeTypeCloudStatic),
 		},
-		{
-			// ClusterConfiguration spells providers OpenStack and vSphere; the Secrets spell them
-			// lower case.
-			name:      "the cluster provider matches case-insensitively",
-			providers: NewProviders([]Provider{{Type: "openstack"}}, "OpenStack"),
-			ng:        nodeGroupOfType("master", v1.NodeTypeCloudPermanent), want: "openstack",
-		},
 	}
 
 	for _, tc := range tests {
@@ -291,7 +282,7 @@ func TestInstanceClassGVKs(t *testing.T) {
 	providers := NewProviders([]Provider{
 		{Type: "aws", InstanceClassKind: "AWSInstanceClass", InstanceClassAPIVersion: "v1"},
 		{Type: "yandex", InstanceClassKind: "YandexInstanceClass"},
-	}, "aws")
+	}, Provider{})
 
 	gvks := providers.InstanceClassGVKs()
 

@@ -263,13 +263,13 @@ func TestZonesCount(t *testing.T) {
 			name: "zones from spec win over the provider",
 			ng:   cloudEphemeralNG("worker", []string{"a", "b", "c"}, 0, 1),
 			providers: cloudprovider.NewProviders(
-				[]cloudprovider.Provider{yandex}, "yandex"),
+				[]cloudprovider.Provider{yandex}, yandex),
 			want: 3,
 		},
 		{
 			name:      "no spec zones, fall back to the provider the NodeGroup resolved to",
 			ng:        zonelessNodeGroup(),
-			providers: cloudprovider.NewProviders([]cloudprovider.Provider{yandex}, "yandex"),
+			providers: cloudprovider.NewProviders([]cloudprovider.Provider{yandex}, yandex),
 			want:      2,
 		},
 		{
@@ -278,7 +278,7 @@ func TestZonesCount(t *testing.T) {
 			name: "only the cluster provider's zones are used",
 			ng:   zonelessNodeGroup(),
 			providers: cloudprovider.NewProviders(
-				[]cloudprovider.Provider{zoneless, yandex}, "yandex"),
+				[]cloudprovider.Provider{zoneless, yandex}, yandex),
 			want: 2,
 		},
 		{
@@ -287,7 +287,7 @@ func TestZonesCount(t *testing.T) {
 			name: "a zoneless cluster provider yields no zones",
 			ng:   zonelessNodeGroup(),
 			providers: cloudprovider.NewProviders(
-				[]cloudprovider.Provider{yandex, zoneless}, "vsphere"),
+				[]cloudprovider.Provider{yandex, zoneless}, zoneless),
 			want: 0,
 		},
 		{
