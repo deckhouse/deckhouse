@@ -46,6 +46,7 @@ trustedPeers:
 - kubeconfig-{{ $slug }}
   {{- end }}
 {{- end }}
+{{- if or $context.Values.userAuthn.kubeconfigGenerator $context.Values.userAuthn.internal.publishAPI.enabled }}
 redirectURIs:
   {{- if $context.Values.userAuthn.kubeconfigGenerator }}
     {{- range $index, $cluster := $context.Values.userAuthn.kubeconfigGenerator }}
@@ -55,4 +56,10 @@ redirectURIs:
   {{- if $context.Values.userAuthn.internal.publishAPI.enabled }}
 - https://{{ include "helm_lib_module_public_domain" (list $context "kubeconfig") }}/callback/
   {{- end }}
+{{- else }}
+# The client exists only to hold trustedPeers of authenticators, which redirect to their own
+# OAuth2Client, so it needs no redirect URI of its own. Emit an empty list rather than a bare key,
+# which would parse as null.
+redirectURIs: []
+{{- end }}
 {{- end }}
