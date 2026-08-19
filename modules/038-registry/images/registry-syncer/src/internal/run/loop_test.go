@@ -451,6 +451,42 @@ func TestOnceIdleKeepsThePreviousCount(t *testing.T) {
 	assert.True(t, replica.Full)
 }
 
+// TestOnceIdleKeepsTheDenominatorToo is the same guard for the other half of the fraction, and it is
+// here because the first version of the denominator did not have it.
+//
+// Measured on the static stand: the process restarted, its first pass was one that does not read the
+// store, so it published the counts it had carried over from the object — and the denominator, which
+// was carried nowhere, came out absent. The status then reported no progress at all on a complete
+// store, which is precisely the defect the denominator was added to fix, reappearing through a path
+// nobody had covered. Six places set the numerator; the denominator has to travel with it in all of
+// them, and a fresh process starts with nothing in memory, so the object is the only source.
+func TestOnceIdleKeepsTheDenominatorToo(t *testing.T) {
+	local := startRegistry(t)
+
+	storage := storageWith(registryv1alpha1.RegistryStorageSpec{
+		Upstream: &registryv1alpha1.Upstream{
+			Endpoint: registryv1alpha1.Endpoint{Scheme: registryv1alpha1.SchemeHTTP, Host: local},
+		},
+		NeedSync: false,
+	})
+	storage.Status.Replicas = []registryv1alpha1.StorageReplicaStatus{{
+		Node: "master-0", Role: registryv1alpha1.ReplicaRoleLeader, Full: true,
+		VerifiedDigests: 405, DeclaredDigests: 405, TotalDigests: 517,
+	}}
+
+	// A loop with nothing remembered, which is what a restarted syncer is.
+	loop, c, _ := newLoop(t, true, storage)
+	loop.LocalAddress = local
+	loop.WriteAddress = local
+
+	require.NoError(t, loop.once(context.Background()))
+
+	replica := replicaOf(t, c, "master-0")
+	assert.EqualValues(t, 405, replica.VerifiedDigests)
+	assert.EqualValues(t, 405, replica.DeclaredDigests,
+		"a pass that did not count the set must keep the size it was told, or the status loses its denominator")
+}
+
 // TestOnceAppliesACredentialChange is the story the whole component exists for: the
 // upstream credentials change in the custom resource, and the serving process picks
 // them up without the Deckhouse operator being involved.

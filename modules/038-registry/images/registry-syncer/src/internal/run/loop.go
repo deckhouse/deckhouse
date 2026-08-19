@@ -132,6 +132,12 @@ type Loop struct {
 	// emptied store.
 	lastTotalDigests atomic.Int32
 
+	// lastDeclaredDigests is the last measured SIZE OF THE SET, carried the same way and for the same
+	// reason. Measured on the static stand when it was not: the process restarted, published the counts
+	// it had carried over from the object, and the denominator — carried nowhere — came out absent, so
+	// the status showed no progress at all while the store was complete.
+	lastDeclaredDigests atomic.Int32
+
 	// complete records whether this replica holds the whole expected set, as of its last pass.
 	//
 	// Kept here rather than re-read from the API because the garbage collection asks it on its own
@@ -256,8 +262,12 @@ func (l *Loop) reportHeld(ctx context.Context, state *report.State) {
 	state.VerifiedDigests = survey.Declared
 	state.TotalDigests = survey.Total
 	// The denominator, from the same reading as the numerator. Taken here rather than computed by the
-	// controller because this is where the set is known at all.
+	// controller because this is where the set is known at all, and remembered for the passes that do
+	// not read the store — the same carry-over the size of the store gets, for the same reason.
 	state.DeclaredDigests = int32(len(declared))
+	if state.DeclaredDigests > 0 {
+		l.lastDeclaredDigests.Store(state.DeclaredDigests)
+	}
 
 	// And completeness from the same reading, which is the half that actually guards the cluster.
 	//
@@ -517,6 +527,16 @@ func (l *Loop) once(ctx context.Context) error {
 	}
 	if state.TotalDigests > 0 {
 		l.lastTotalDigests.Store(state.TotalDigests)
+	}
+
+	// And the denominator, which has exactly the same shape of problem: the fill and replication paths
+	// know how much they wrote, not how big the set is, and a status published from one of them would
+	// otherwise report progress out of nothing.
+	if state.DeclaredDigests == 0 {
+		state.DeclaredDigests = l.lastDeclaredDigests.Load()
+	}
+	if state.DeclaredDigests > 0 {
+		l.lastDeclaredDigests.Store(state.DeclaredDigests)
 	}
 
 	// Remembered for the garbage collection, which asks on its own schedule: an incomplete store
@@ -796,6 +816,8 @@ func (l *Loop) applyCatalogue(ctx context.Context, state *report.State) {
 	}
 	held := survey.Declared
 	state.TotalDigests = survey.Total
+	// The size of the set, from the same survey as the part of it that is present.
+	state.DeclaredDigests = int32(len(declared))
 
 	// The set, and nothing but the set: how full the store is of what the cluster needs. What an
 	// operator stated in `storage.source.expectedDigests` is not consulted, not even when the set comes
@@ -865,6 +887,7 @@ func (l *Loop) carryOverCount(ctx context.Context, state *report.State) error {
 			continue
 		}
 		state.VerifiedDigests = storage.Status.Replicas[i].VerifiedDigests
+		state.DeclaredDigests = storage.Status.Replicas[i].DeclaredDigests
 		state.Full = storage.Status.Replicas[i].Full
 		state.Source = storage.Status.Replicas[i].Source
 		return nil
