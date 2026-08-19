@@ -54,6 +54,9 @@ const (
 	// defaultRequeueAfter is the retry delay for states that need an external change to
 	// make progress, such as a missing package or a version still in draft.
 	defaultRequeueAfter = 30 * time.Second
+	// devRequeueAfter is how often a dev module's tag is re-resolved. A repush moves nothing
+	// in the API server, so the digest behind the tag is only ever seen by looking again.
+	devRequeueAfter = 15 * time.Second
 )
 
 // RegisterController registers the Module controller with the manager.
@@ -101,6 +104,7 @@ type reconciler struct {
 type packageManager interface {
 	UpdateModulesSettings(name string, settingsVersion int, settings addonutils.Values, maintenance string, enabled *bool)
 	UpdateModule(repo registry.Remote, module packageruntime.Module, force bool)
+	GetModuleDigest(ctx context.Context, repo registry.Remote, name, tag string) (string, error)
 	UpdateEmbeddedModule(module packageruntime.Module)
 	RemoveModule(name string)
 	RemoveEmbeddedModule(name string)
@@ -142,6 +146,12 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{RequeueAfter: defaultRequeueAfter}, nil
 	}
 
+	// A dev module follows a mutable tag, and a repush under it changes nothing the informer
+	// watches, so the only way to notice one is to resolve the tag again on a timer.
+	if module.IsDev() && !module.IsEmbedded() {
+		return ctrl.Result{RequeueAfter: devRequeueAfter}, nil
+	}
+
 	return ctrl.Result{}, nil
 }
 
@@ -173,6 +183,12 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, module *v1alpha2.
 	// resolve — the annotation is read before any of them, the way the bootstrap and the runtime do.
 	if module.IsEmbedded() {
 		return r.handleEmbedded(ctx, module, original)
+	}
+
+	// A dev module is pinned to a mutable tag, which the repository scan publishes no version
+	// for, so it is routed before the package and the version are looked up — as embedded is.
+	if module.IsDev() {
+		return r.handleDev(ctx, module, original)
 	}
 
 	pkg := new(v1alpha1.ModulePackage)
@@ -266,6 +282,75 @@ func (r *reconciler) handleEmbedded(ctx context.Context, module, original *v1alp
 	// A reference left behind would block its owner's deletion for ever, and an embedded module owns
 	// neither a package nor a version. The registry annotation goes with them: nothing is pulled.
 	ctrlutils.DropOwnerReferences(module, v1alpha1.ModulePackageVersionKind, v1alpha1.ModulePackageKind)
+	delete(module.Annotations, v1alpha2.ModuleAnnotationRegistrySpecChanged)
+
+	if err := r.client.Patch(ctx, module, client.MergeFrom(original)); err != nil {
+		logger.Error("failed to patch the module", log.Err(err))
+		return fmt.Errorf("patch module '%s': %w", module.Name, err)
+	}
+
+	return nil
+}
+
+// handleDev hands a module pinned to a mutable dev image tag to the package runtime, the way
+// the override controller drives the addon-operator path.
+//
+// No ModulePackageVersion is published for such a tag, so the digest behind it takes the place of
+// a version as the change signal: it is compared with the one the module was last handed over on,
+// and a move forces the runtime past change detection that only ever sees the same tag. The digest
+// is recorded after the handover, so a failure before it re-forces rather than skips.
+func (r *reconciler) handleDev(ctx context.Context, module, original *v1alpha2.Module) error {
+	logger := r.logger.With(slog.String("name", module.Name))
+
+	logger.Debug("handle dev module")
+
+	if module.Spec.PackageRepositoryName == "" {
+		logger.Debug("dev module has no package repository")
+
+		return fmt.Errorf("dev module '%s' has no package repository", module.Name)
+	}
+
+	repo := new(v1alpha1.PackageRepository)
+	if err := r.client.Get(ctx, client.ObjectKey{Name: module.Spec.PackageRepositoryName}, repo); err != nil {
+		logger.Error("failed to get the package repository", log.Err(err))
+		return fmt.Errorf("get package repository '%s': %w", module.Spec.PackageRepositoryName, err)
+	}
+
+	remote := registry.BuildRemote(repo)
+
+	digest, err := r.manager.GetModuleDigest(ctx, remote, module.Name, module.Spec.PackageVersion)
+	if err != nil {
+		logger.Error("failed to resolve the dev image digest", log.Err(err))
+		return fmt.Errorf("get digest of the module '%s': %w", module.Name, err)
+	}
+
+	// Only the digest tells a repushed image from an untouched one, and force is what carries that
+	// verdict past change detection, which sees the same tag either way.
+	forced := module.Annotations[v1alpha2.ModuleAnnotationHash] != digest
+
+	// A version the repository scan produced cannot back a dev tag, and the reference to it would
+	// block its owner's deletion for ever — the module arrives with one when it was released before.
+	if name := ctrlutils.OwnerRefName(module, v1alpha1.ModulePackageVersionKind); name != "" {
+		if err := r.detachVersion(ctx, name); err != nil {
+			logger.Error("failed to detach the module package version", slog.String("mpv", name), log.Err(err))
+			return fmt.Errorf("detach module package version '%s': %w", name, err)
+		}
+	}
+
+	r.manager.UpdateModule(remote, packageruntime.Module{
+		Name: module.Name,
+		Definition: modules.Definition{
+			Name:    module.Name,
+			Version: module.Spec.PackageVersion,
+		},
+		Settings:        module.Spec.Settings.GetMap(),
+		SettingsVersion: module.Spec.SettingsVersion,
+		Maintenance:     module.Spec.Maintenance,
+		Enabled:         module.Spec.Enabled,
+	}, forced)
+
+	ctrlutils.DropOwnerReferences(module, v1alpha1.ModulePackageVersionKind, v1alpha1.ModulePackageKind)
+	module.Annotations[v1alpha2.ModuleAnnotationHash] = digest
 	delete(module.Annotations, v1alpha2.ModuleAnnotationRegistrySpecChanged)
 
 	if err := r.client.Patch(ctx, module, client.MergeFrom(original)); err != nil {
