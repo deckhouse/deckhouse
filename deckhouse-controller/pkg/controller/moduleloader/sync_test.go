@@ -489,7 +489,7 @@ func TestEnsureModulePreservesForeignMeta(t *testing.T) {
 		v1alpha2.ModuleAnnotationEmbedded:      "true",
 		v1alpha2.ModuleAnnotationDev:           "true",
 		"user.example.com/note":                "keep-me",
-		v1alpha1.ModuleAnnotationDescriptionRu: "устаревшее описание",
+		v1alpha1.ModuleAnnotationDescriptionRu: "stale description",
 	})
 	module.SetLabels(map[string]string{
 		"module.deckhouse.io/stale-tag": "",
