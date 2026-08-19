@@ -18,6 +18,30 @@ properties:
       chrootMode:
         type: boolean
         default: false
+      reservedPublicHosts:
+        type: object
+        default: {}
+        description: |
+          The one-time record of the hostnames a tenant already served under the platform's domain
+          when the reservation was first written, produced by hooks/snapshot_reserved_public_hosts.go
+          and rendered into the d8-reserved-public-hosts ConfigMap, which is also where the hook
+          reads it back from.
+        properties:
+          recorded:
+            type: boolean
+            default: false
+            description: |
+              Whether the snapshot has been taken. Once true it is never recomputed, which is what
+              keeps the grandfathering from widening itself on every restart.
+          hosts:
+            type: array
+            default: []
+            items:
+              type: string
+              pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+        x-examples:
+        - recorded: true
+          hosts: ["shop.example.com"]
       releaseVersionImageHash:
         type: string
       currentReleaseImageName:

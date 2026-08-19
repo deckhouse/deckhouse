@@ -341,13 +341,26 @@ properties:
     description: |
       Settings of the reservation that keeps the hostnames of the Deckhouse web interfaces from being claimed by a workload.
 
-      Deckhouse renders those hostnames from the [`global.modules.publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) global parameter and reserves them cluster-wide: an `Ingress` or an `HTTPRoute` created outside a system namespace cannot name one of them. These parameters adjust the reserved set in both directions.
+      Deckhouse renders those hostnames from the [`global.modules.publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) global parameter and reserves them cluster-wide: an `Ingress`, an `HTTPRoute` or a `ListenerSet` created outside a system namespace cannot name one of them. These parameters adjust the reserved set in both directions.
 
       The reservation is per hostname and applies to every namespace. To exempt a whole namespace from the reservation instead, label the namespace with `security.deckhouse.io/reserved-hosts-bypass: "true"`.
     x-examples:
-      - additionalHosts: ["admin.example.com"]
+      - mode: Template
+        additionalHosts: ["admin.example.com"]
         excludedServices: ["grafana"]
     properties:
+      mode:
+        type: string
+        enum: ["Template", "List"]
+        default: Template
+        description: |
+          How much of the platform's domain is reserved.
+
+          - `Template` — every hostname `global.modules.publicDomainTemplate` can render, plus its wildcard form where the template's `%s` is the whole first label. A module never has to ask to be covered, and a hostname is reserved as soon as the template can produce it, whether or not any Deckhouse module publishes it today. A hostname that a workload legitimately serves is given back with `excludedServices` or `additionalHosts` below, or with the per-namespace label.
+          - `List` — only the hostnames of the Deckhouse services Deckhouse knows it publishes. Narrower, and it leaves a public domain that Deckhouse learns to publish later unreserved until the list catches up.
+
+          Ecosystem applications are unaffected either way: `global.applications.publicDomainTemplate` puts the application name and its namespace in two different labels, so an application hostname has one label more than anything this reservation covers.
+        x-examples: ["Template", "List"]
       additionalHosts:
         type: array
         default: []
@@ -355,6 +368,8 @@ properties:
           Hostnames to reserve on top of the ones Deckhouse publishes.
 
           Every entry is a complete hostname, matched exactly and case-insensitively, the same way the built-in ones are. Wildcards are not supported.
+
+          An entry always reserves, whatever `excludedServices` says, so the two settings cannot contradict each other.
         x-examples:
           - ["admin.example.com"]
         items:
@@ -364,11 +379,13 @@ properties:
         type: array
         default: []
         description: |
-          Names of the Deckhouse services whose hostname must not be reserved.
+          Service names whose hostname must not be reserved.
 
           Use it for a cluster where a workload outside a system namespace legitimately serves a path under one of those hostnames.
 
-          A name is the part `global.modules.publicDomainTemplate` substitutes, `grafana` for `grafana.example.com`, and has to be one Deckhouse actually publishes. A name Deckhouse does not publish reserves nothing, so excluding it has no effect; such names are listed in the `unknownExcludedServices` key of the `d8-reserved-public-hosts` ConfigMap in the `d8-system` namespace, which is where to look if a hostname stayed reserved unexpectedly.
+          A name is the part `global.modules.publicDomainTemplate` substitutes, `grafana` for `grafana.example.com`, not the hostname itself. The hostname it renders to is published in the `excludedHosts` key of the `d8-reserved-public-hosts` ConfigMap in the `d8-system` namespace, which is where to check that the name did what was meant.
+
+          Under `mode: Template` any name works, because the reservation covers the whole domain and not only what Deckhouse publishes. Under `mode: List` only a name Deckhouse actually publishes has an effect, because only those are reserved there; the rest are listed in the `unknownExcludedServices` key of the same ConfigMap, which is where to look if a hostname stayed reserved unexpectedly.
 
           Excluding a name lifts the reservation of that hostname in every namespace, including the ones Deckhouse itself uses to serve it.
         x-examples:

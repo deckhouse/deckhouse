@@ -33,7 +33,7 @@ import (
 
 // The two ways a module in this repository asks for a hostname under publicDomainTemplate: the Helm
 // helper in a template, and the certificate SAN helper in a hook. Both take the name portion as a
-// literal, which is what makes the reserved list checkable against them.
+// literal, which is what makes $reservedNames checkable against them.
 var publicDomainCallSites = []*regexp.Regexp{
 	regexp.MustCompile(`helm_lib_module_public_domain"\s+\(list\s+\S+\s+"([a-z0-9-]+)"`),
 	regexp.MustCompile(`PublicDomainSAN\("([a-z0-9-]+)"\)`),
@@ -104,17 +104,25 @@ func publishedPublicDomains() map[string]string {
 }
 
 const (
-	reservedHostsConfigMapName   = "d8-reserved-public-hosts"
-	reservedHostsIngressPolicy   = "reserved-public-hosts-ingress.deckhouse.io"
-	reservedHostsHTTPRoutePolicy = "reserved-public-hosts-httproute.deckhouse.io"
+	reservedHostsConfigMapName     = "d8-reserved-public-hosts"
+	reservedHostsIngressPolicy     = "reserved-public-hosts-ingress.deckhouse.io"
+	reservedHostsHTTPRoutePolicy   = "reserved-public-hosts-httproute.deckhouse.io"
+	reservedHostsListenerSetPolicy = "reserved-public-hosts-listenerset.deckhouse.io"
 
 	validatingAdmissionPolicyAPI        = "admissionregistration.k8s.io/v1/ValidatingAdmissionPolicy"
 	validatingAdmissionPolicyBindingAPI = "admissionregistration.k8s.io/v1/ValidatingAdmissionPolicyBinding"
 	httpRouteAPI                        = "gateway.networking.k8s.io/v1/HTTPRoute"
+	listenerSetAPI                      = "gateway.networking.k8s.io/v1/ListenerSet"
 )
 
 // expectCoversRepositoryPublicDomains fails when a module in this repository publishes a public
-// domain the literal in the template does not name, pointing at the file that publishes it.
+// domain $reservedNames does not name, pointing at the file that publishes it.
+//
+// Under mode: List that list is the reservation, so this is the check that keeps an in-repo module
+// from adding a public domain nobody reserved. Under mode: Template the reservation no longer needs
+// it, and what the check keeps correct is the vocabulary either side of it: platformHosts, which is
+// how an operator reads what the platform serves, and the set of names excludedServices reports as
+// published. Both modes therefore still want the literal in sync with the repository.
 //
 // It reads platformHosts and never hosts: the check is about the literal keeping up with the
 // repository, so a cluster that excluded a service through its ModuleConfig must not be able to
@@ -128,18 +136,19 @@ func expectCoversRepositoryPublicDomains(cm object_store.KubeObject) {
 
 	for name, source := range published {
 		Expect(platformHosts).To(ContainElement(name+".example.com"),
-			"%s publishes the public domain %q, but it is not reserved. Add %q to $reservedNames "+
-				"in modules/002-deckhouse/templates/reserved-public-hosts.yaml, otherwise any "+
-				"namespace can claim that hostname.", source, name, name)
+			"%s publishes the public domain %q, but %q is not named in $reservedNames in "+
+				"modules/002-deckhouse/templates/reserved-public-hosts.yaml, so platformHosts does "+
+				"not mention it and excludedServices reports it as unknown.", source, name, name)
 	}
 }
 
 var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 	f := SetupHelmConfig(`{deckhouse: {internal: {currentReleaseImageName: test }}}`)
 
-	// reservedPublicHosts is the deckhouse ModuleConfig section under test; an empty string leaves it
-	// absent, which is what a cluster that never configured it looks like.
-	renderWithSettings := func(publicDomainTemplate, reservedPublicHosts string, apiVersions ...string) {
+	// reservedPublicHosts is the deckhouse ModuleConfig section under test and snapshot the recorded
+	// grandfathering; an empty string leaves either absent, which is what a cluster that never
+	// configured one looks like.
+	renderWith := func(publicDomainTemplate, reservedPublicHosts, snapshot string, apiVersions ...string) {
 		f.ValuesSetFromYaml("global", globalValues)
 		f.ValuesSet("global.modulesImages", GetModulesImages())
 		f.ValuesSetFromYaml("deckhouse", moduleValuesForMasterNode)
@@ -149,53 +158,104 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 		if reservedPublicHosts != "" {
 			f.ValuesSetFromYaml("deckhouse.reservedPublicHosts", reservedPublicHosts)
 		}
+		if snapshot != "" {
+			f.ValuesSetFromYaml("deckhouse.internal.reservedPublicHosts", snapshot)
+		}
 		f.HelmRender(WithAPIVersions(apiVersions...))
 	}
 
+	renderWithSettings := func(publicDomainTemplate, reservedPublicHosts string, apiVersions ...string) {
+		renderWith(publicDomainTemplate, reservedPublicHosts, "", apiVersions...)
+	}
+
 	render := func(publicDomainTemplate string, apiVersions ...string) {
-		renderWithSettings(publicDomainTemplate, "", apiVersions...)
+		renderWith(publicDomainTemplate, "", "", apiVersions...)
 	}
 
 	admissionAPIs := []string{validatingAdmissionPolicyAPI, validatingAdmissionPolicyBindingAPI}
 
-	Context("Ingress hosts are reserved when the platform publishes any", func() {
+	configMap := func() object_store.KubeObject {
+		Expect(f.RenderError).ShouldNot(HaveOccurred())
+		return f.KubernetesResource("ConfigMap", "d8-system", reservedHostsConfigMapName)
+	}
+
+	Context("The reservation follows publicDomainTemplate by default", func() {
 		BeforeEach(func() {
 			render("%s.example.com", admissionAPIs...)
 		})
 
-		It("reserves the hostname of every service the platform publishes", func() {
-			Expect(f.RenderError).ShouldNot(HaveOccurred())
+		It("derives the namespace of the template as a regex", func() {
+			cm := configMap()
+			Expect(cm.Field("data.mode").String()).To(Equal("Template"))
+			// The literal string the policies feed to CEL matches(), which is RE2. Asserted whole,
+			// because it is the security boundary: a stray character in it either stops reserving or
+			// starts reserving somebody else's domain. The backslashes survive the ConfigMap, which
+			// is the escaping this depends on.
+			Expect(cm.Field("data.hostPattern").String()).
+				To(Equal(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?\.example\.com$`))
+			_, err := regexp.Compile(cm.Field("data.hostPattern").String())
+			Expect(err).ShouldNot(HaveOccurred(), "CEL matches() is RE2, so Go must accept it")
+		})
 
-			cm := f.KubernetesResource("ConfigMap", "d8-system", reservedHostsConfigMapName)
-			Expect(cm.Exists()).To(BeTrue())
+		It("derives it from the whole template when the %s shares its label", func() {
+			render("kube-%s.company.my", admissionAPIs...)
+			Expect(configMap().Field("data.hostPattern").String()).
+				To(Equal(`^kube-[a-z0-9]([-a-z0-9]*[a-z0-9])?\.company\.my$`))
+		})
 
-			hosts := strings.Fields(cm.Field("data.hosts").String())
-			Expect(hosts).To(ContainElements(
+		It("quotes what it puts in the regex, so a dotted domain is not a wildcard", func() {
+			render("%s.a-b.c.example.com", admissionAPIs...)
+			pattern := configMap().Field("data.hostPattern").String()
+			Expect(pattern).To(Equal(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?\.a-b\.c\.example\.com$`))
+			Expect(regexp.MustCompile(pattern).MatchString("shop.axb.c.example.com")).To(BeFalse(),
+				"an unquoted dot would have matched any character here")
+		})
+
+		It("reserves the wildcard form of the namespace by exact match", func() {
+			hosts := strings.Fields(configMap().Field("data.hosts").String())
+			Expect(hosts).To(ContainElement("*.example.com"),
+				"the label the pattern derives cannot match a wildcard, and in Template mode a "+
+					"tenant holding one shadows every platform hostname at once")
+		})
+
+		It("leaves the wildcard alone where it would cover more than the platform's namespace", func() {
+			render("kube-%s.company.my", admissionAPIs...)
+			hosts := strings.Fields(configMap().Field("data.hosts").String())
+			Expect(hosts).To(BeEmpty(),
+				"kube-*.company.my is not a hostname any API server accepts, and *.company.my "+
+					"covers a domain the platform does not own")
+		})
+
+		It("keeps the list of what the platform publishes for an operator to read", func() {
+			cm := configMap()
+			platform := strings.Fields(cm.Field("data.platformHosts").String())
+			Expect(platform).To(ContainElements(
 				"api.example.com",
 				"console.example.com",
-				"dashboard.example.com",
 				"dex.example.com",
 				"grafana.example.com",
 				"kubeconfig.example.com",
 				"prometheus.example.com",
 			))
-			// The policies lowercase the claimed hostname before comparing, so a reserved one that
+			// The policies lowercase the claimed hostname before comparing, so anything here that
 			// kept any uppercase would silently never match.
-			for _, host := range hosts {
+			for _, host := range platform {
 				Expect(host).To(Equal(strings.ToLower(host)))
 			}
 		})
 
 		It("covers every public domain the repository itself publishes", func() {
-			Expect(f.RenderError).ShouldNot(HaveOccurred())
-
-			cm := f.KubernetesResource("ConfigMap", "d8-system", reservedHostsConfigMapName)
-			expectCoversRepositoryPublicDomains(cm)
+			expectCoversRepositoryPublicDomains(configMap())
 		})
 
-		It("denies an Ingress claiming one of them", func() {
-			Expect(f.RenderError).ShouldNot(HaveOccurred())
+		It("records that no grandfathering has happened yet", func() {
+			cm := configMap()
+			Expect(cm.Field("data.grandfatherRecorded").String()).To(Equal("false"))
+			Expect(strings.Fields(cm.Field("data.grandfatheredHosts").String())).To(BeEmpty())
+			Expect(strings.Fields(cm.Field("data.allowedHosts").String())).To(BeEmpty())
+		})
 
+		It("denies an Ingress claiming a hostname in that namespace", func() {
 			vap := f.KubernetesGlobalResource("ValidatingAdmissionPolicy", reservedHostsIngressPolicy)
 			Expect(vap.Exists()).To(BeTrue())
 			Expect(vap.Field("spec.failurePolicy").String()).To(Equal("Fail"))
@@ -206,12 +266,11 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 			// until somebody rewrites it.
 			Expect(vap.Field("spec.matchConstraints.resourceRules.0.operations").String()).To(MatchJSON(`["CREATE","UPDATE"]`))
 			Expect(vap.Field(`spec.variables.#(name=="claimedHosts").expression`).String()).To(ContainSubstring("object.spec.rules"))
+			Expect(vap.Field(`spec.variables.#(name=="conflicts").expression`).String()).To(ContainSubstring("matches(variables.reservedPattern)"))
 			Expect(vap.Field("spec.validations.0.reason").String()).To(Equal("Forbidden"))
 		})
 
 		It("exempts the writers that create the platform's own objects", func() {
-			Expect(f.RenderError).ShouldNot(HaveOccurred())
-
 			vap := f.KubernetesGlobalResource("ValidatingAdmissionPolicy", reservedHostsIngressPolicy)
 			Expect(vap.Field("spec.matchConditions").Array()).To(HaveLen(3))
 			Expect(vap.Field(`spec.matchConditions.#(name=="exclude-system-serviceaccounts").expression`).String()).
@@ -219,8 +278,6 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 		})
 
 		It("binds the policy to the parameters and skips the platform's own namespaces", func() {
-			Expect(f.RenderError).ShouldNot(HaveOccurred())
-
 			binding := f.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", reservedHostsIngressPolicy)
 			Expect(binding.Exists()).To(BeTrue())
 			Expect(binding.Field("spec.policyName").String()).To(Equal(reservedHostsIngressPolicy))
@@ -236,46 +293,66 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 			]`))
 		})
 
-		It("leaves HTTPRoute alone while the Gateway API is not installed", func() {
-			Expect(f.RenderError).ShouldNot(HaveOccurred())
-
-			Expect(f.KubernetesGlobalResource("ValidatingAdmissionPolicy", reservedHostsHTTPRoutePolicy).Exists()).To(BeFalse())
-			Expect(f.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", reservedHostsHTTPRoutePolicy).Exists()).To(BeFalse())
-		})
-	})
-
-	Context("The hostnames follow publicDomainTemplate, whatever shape it has", func() {
-		BeforeEach(func() {
-			render("%s-kube.example.com", admissionAPIs...)
-		})
-
-		It("reserves what the template actually renders, not a fixed subdomain", func() {
-			Expect(f.RenderError).ShouldNot(HaveOccurred())
-
-			cm := f.KubernetesResource("ConfigMap", "d8-system", reservedHostsConfigMapName)
-			hosts := strings.Fields(cm.Field("data.hosts").String())
-			Expect(hosts).To(ContainElement("console-kube.example.com"))
-			Expect(hosts).NotTo(ContainElement("console.example.com"))
+		It("leaves the Gateway API kinds alone while they are not installed", func() {
+			for _, name := range []string{reservedHostsHTTPRoutePolicy, reservedHostsListenerSetPolicy} {
+				Expect(f.KubernetesGlobalResource("ValidatingAdmissionPolicy", name).Exists()).To(BeFalse(), name)
+				Expect(f.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", name).Exists()).To(BeFalse(), name)
+			}
 		})
 	})
 
 	Context("The Gateway API is installed", func() {
 		BeforeEach(func() {
-			render("%s.example.com", append(admissionAPIs, httpRouteAPI)...)
+			render("%s.example.com", append(admissionAPIs, httpRouteAPI, listenerSetAPI)...)
 		})
 
-		It("reserves the same hostnames on HTTPRoute", func() {
+		// Every difference between the three policies is a hostname a tenant can claim on the kind
+		// that got the weaker one, so the fields that must not differ are compared rather than
+		// asserted one by one.
+		It("reserves the same hostnames on every kind that carries one", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			vap := f.KubernetesGlobalResource("ValidatingAdmissionPolicy", reservedHostsHTTPRoutePolicy)
-			Expect(vap.Exists()).To(BeTrue())
-			Expect(vap.Field("spec.matchConstraints.resourceRules.0.apiGroups").String()).To(MatchJSON(`["gateway.networking.k8s.io"]`))
-			Expect(vap.Field("spec.matchConstraints.resourceRules.0.resources").String()).To(MatchJSON(`["httproutes"]`))
-			Expect(vap.Field(`spec.variables.#(name=="claimedHosts").expression`).String()).To(ContainSubstring("object.spec.hostnames"))
+			ingress := f.KubernetesGlobalResource("ValidatingAdmissionPolicy", reservedHostsIngressPolicy)
+			for name, expected := range map[string]struct{ apiGroup, resource, hostField string }{
+				reservedHostsHTTPRoutePolicy:   {"gateway.networking.k8s.io", "httproutes", "object.spec.hostnames"},
+				reservedHostsListenerSetPolicy: {"gateway.networking.k8s.io", "listenersets", "object.spec.listeners"},
+			} {
+				vap := f.KubernetesGlobalResource("ValidatingAdmissionPolicy", name)
+				Expect(vap.Exists()).To(BeTrue(), name)
+				Expect(vap.Field("spec.matchConstraints.resourceRules.0.apiGroups").String()).To(MatchJSON(`["` + expected.apiGroup + `"]`))
+				Expect(vap.Field("spec.matchConstraints.resourceRules.0.resources").String()).To(MatchJSON(`["` + expected.resource + `"]`))
+				Expect(vap.Field("spec.matchConstraints.resourceRules.0.operations").String()).To(MatchJSON(`["CREATE","UPDATE"]`))
+				Expect(vap.Field(`spec.variables.#(name=="claimedHosts").expression`).String()).To(ContainSubstring(expected.hostField), name)
 
-			binding := f.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", reservedHostsHTTPRoutePolicy)
-			Expect(binding.Exists()).To(BeTrue())
-			Expect(binding.Field("spec.paramRef.name").String()).To(Equal(reservedHostsConfigMapName))
+				for _, field := range []string{
+					"spec.failurePolicy",
+					"spec.matchConditions",
+					"spec.validations",
+					`spec.variables.#(name=="reservedHosts").expression`,
+					`spec.variables.#(name=="reservedPattern").expression`,
+					`spec.variables.#(name=="allowedHosts").expression`,
+					`spec.variables.#(name=="conflicts").expression`,
+				} {
+					Expect(vap.Field(field).String()).To(Equal(ingress.Field(field).String()),
+						"%s must not differ between %s and %s", field, name, reservedHostsIngressPolicy)
+				}
+
+				binding := f.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", name)
+				Expect(binding.Exists()).To(BeTrue(), name)
+				ingressBinding := f.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", reservedHostsIngressPolicy)
+				for _, field := range []string{"spec.validationActions", "spec.paramRef", "spec.matchResources"} {
+					Expect(binding.Field(field).String()).To(Equal(ingressBinding.Field(field).String()),
+						"%s must not differ between the %s binding and the Ingress one", field, name)
+				}
+			}
+		})
+
+		It("renders the ListenerSet policy only where the kind exists", func() {
+			render("%s.example.com", append(admissionAPIs, httpRouteAPI)...)
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			Expect(f.KubernetesGlobalResource("ValidatingAdmissionPolicy", reservedHostsHTTPRoutePolicy).Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("ValidatingAdmissionPolicy", reservedHostsListenerSetPolicy).Exists()).To(BeFalse())
 		})
 	})
 
@@ -307,49 +384,52 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 		})
 	})
 
-	Context("The settings are present but empty, as the schema defaults leave them", func() {
+	Context("An operator reserves their own hostname while the platform publishes none", func() {
 		BeforeEach(func() {
-			renderWithSettings("%s.example.com", `{additionalHosts: [], excludedServices: []}`, admissionAPIs...)
+			renderWithSettings("", `{additionalHosts: ["admin.example.com"]}`, admissionAPIs...)
 		})
 
-		It("reserves exactly what the platform publishes, as before the settings existed", func() {
-			Expect(f.RenderError).ShouldNot(HaveOccurred())
+		It("reserves it and derives no pattern, so nothing else becomes reserved", func() {
+			cm := configMap()
+			Expect(cm.Exists()).To(BeTrue())
+			Expect(strings.Fields(cm.Field("data.hosts").String())).To(Equal([]string{"admin.example.com"}))
+			Expect(cm.Field("data.hostPattern").String()).To(BeEmpty(),
+				"an empty pattern is what makes the policies reserve nothing rather than everything")
+			Expect(strings.Fields(cm.Field("data.platformHosts").String())).To(BeEmpty())
+			Expect(f.KubernetesGlobalResource("ValidatingAdmissionPolicy", reservedHostsIngressPolicy).Exists()).To(BeTrue())
+		})
+	})
 
-			cm := f.KubernetesResource("ConfigMap", "d8-system", reservedHostsConfigMapName)
-			hosts := strings.Fields(cm.Field("data.hosts").String())
-			platform := strings.Fields(cm.Field("data.platformHosts").String())
-			Expect(platform).ToNot(BeEmpty())
-			Expect(hosts).To(ConsistOf(platform))
+	Context("The settings are present but empty, as the schema defaults leave them", func() {
+		BeforeEach(func() {
+			renderWithSettings("%s.example.com", `{mode: Template, additionalHosts: [], excludedServices: []}`, admissionAPIs...)
+		})
+
+		It("behaves exactly as if the section had never been written", func() {
+			cm := configMap()
+			Expect(cm.Field("data.mode").String()).To(Equal("Template"))
+			Expect(cm.Field("data.hostPattern").String()).To(Equal(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?\.example\.com$`))
+			Expect(strings.Fields(cm.Field("data.hosts").String())).To(Equal([]string{"*.example.com"}))
+			Expect(strings.Fields(cm.Field("data.allowedHosts").String())).To(BeEmpty())
 		})
 	})
 
 	Context("An operator reserves hostnames of their own", func() {
 		BeforeEach(func() {
 			renderWithSettings("%s.example.com",
-				`{additionalHosts: ["admin.example.com", "billing.corp.example.com"]}`, admissionAPIs...)
+				`{additionalHosts: ["admin.corp.example.org", "billing.corp.example.com"]}`, admissionAPIs...)
 		})
 
-		It("adds them to the list the policies read", func() {
-			Expect(f.RenderError).ShouldNot(HaveOccurred())
-
-			cm := f.KubernetesResource("ConfigMap", "d8-system", reservedHostsConfigMapName)
+		It("adds them to what the policies match exactly", func() {
+			cm := configMap()
 			hosts := strings.Fields(cm.Field("data.hosts").String())
-			Expect(hosts).To(ContainElements("admin.example.com", "billing.corp.example.com"))
-			Expect(hosts).To(ContainElement("console.example.com"))
+			Expect(hosts).To(ContainElements("admin.corp.example.org", "billing.corp.example.com"))
 			// The policies compare against lowercase, so anything that kept its case would never
 			// match whatever the request claims.
 			for _, host := range hosts {
 				Expect(host).To(Equal(strings.ToLower(host)))
 			}
-		})
-
-		It("leaves the hostnames the platform publishes out of it", func() {
-			Expect(f.RenderError).ShouldNot(HaveOccurred())
-
-			cm := f.KubernetesResource("ConfigMap", "d8-system", reservedHostsConfigMapName)
-			platform := strings.Fields(cm.Field("data.platformHosts").String())
-			Expect(platform).NotTo(ContainElement("admin.example.com"))
-			Expect(platform).To(ContainElement("console.example.com"))
+			Expect(strings.Fields(cm.Field("data.platformHosts").String())).NotTo(ContainElement("admin.corp.example.org"))
 		})
 	})
 
@@ -358,33 +438,27 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 			renderWithSettings("%s.example.com", `{excludedServices: ["grafana"]}`, admissionAPIs...)
 		})
 
-		It("stops reserving that hostname and nothing else", func() {
-			Expect(f.RenderError).ShouldNot(HaveOccurred())
-
-			cm := f.KubernetesResource("ConfigMap", "d8-system", reservedHostsConfigMapName)
-			hosts := strings.Fields(cm.Field("data.hosts").String())
-			Expect(hosts).NotTo(ContainElement("grafana.example.com"))
-			Expect(hosts).To(ContainElements("console.example.com", "prometheus.example.com"))
+		It("renders the hostname the name stands for into the allowlist", func() {
+			cm := configMap()
+			Expect(strings.Fields(cm.Field("data.excludedHosts").String())).To(Equal([]string{"grafana.example.com"}),
+				"excludedServices takes a service name, so the hostname has to be rendered for the "+
+					"pattern to be able to let it back out")
+			Expect(strings.Fields(cm.Field("data.allowedHosts").String())).To(ContainElement("grafana.example.com"))
 		})
 
 		It("keeps the excluded hostname visible as one the platform publishes", func() {
-			Expect(f.RenderError).ShouldNot(HaveOccurred())
-
-			cm := f.KubernetesResource("ConfigMap", "d8-system", reservedHostsConfigMapName)
-			Expect(strings.Fields(cm.Field("data.platformHosts").String())).To(ContainElement("grafana.example.com"))
+			Expect(strings.Fields(configMap().Field("data.platformHosts").String())).To(ContainElement("grafana.example.com"))
 		})
 
 		It("still answers whether the literal covers the repository, exclusion or not", func() {
-			Expect(f.RenderError).ShouldNot(HaveOccurred())
-
 			// The excluded service has to be one this repository publishes, otherwise the check
 			// below would hold whichever key it read and would prove nothing.
 			Expect(publishedPublicDomains()).To(HaveKey("grafana"),
 				"this context excludes grafana to show that an exclusion cannot quiet the coverage "+
 					"check, which needs the repository to still publish grafana")
 
-			cm := f.KubernetesResource("ConfigMap", "d8-system", reservedHostsConfigMapName)
-			Expect(strings.Fields(cm.Field("data.hosts").String())).NotTo(ContainElement("grafana.example.com"))
+			cm := configMap()
+			Expect(strings.Fields(cm.Field("data.allowedHosts").String())).To(ContainElement("grafana.example.com"))
 			expectCoversRepositoryPublicDomains(cm)
 		})
 
@@ -400,74 +474,123 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 		})
 	})
 
-	Context("An operator adjusts the reservation in both directions at once", func() {
-		BeforeEach(func() {
-			renderWithSettings("%s.example.com",
-				`{additionalHosts: ["admin.example.com", "console.example.com"], excludedServices: ["grafana", "hubble"]}`,
-				admissionAPIs...)
-		})
-
-		It("applies both, and a hostname named on both sides stays reserved once", func() {
-			Expect(f.RenderError).ShouldNot(HaveOccurred())
-
-			cm := f.KubernetesResource("ConfigMap", "d8-system", reservedHostsConfigMapName)
-			hosts := strings.Fields(cm.Field("data.hosts").String())
-			Expect(hosts).To(ContainElement("admin.example.com"))
-			Expect(hosts).NotTo(ContainElements("grafana.example.com", "hubble.example.com"))
-			Expect(hosts).To(Equal(sortedUnique(hosts)))
-
-			consoleCount := 0
-			for _, host := range hosts {
-				if host == "console.example.com" {
-					consoleCount++
-				}
-			}
-			Expect(consoleCount).To(Equal(1))
-		})
-	})
-
 	Context("An operator excludes a service the platform does not publish", func() {
 		BeforeEach(func() {
 			renderWithSettings("%s.example.com", `{excludedServices: ["graphana"]}`, admissionAPIs...)
 		})
 
 		It("keeps rendering, since a typo must not stop the module that deploys Deckhouse", func() {
-			Expect(f.RenderError).ShouldNot(HaveOccurred())
-
-			cm := f.KubernetesResource("ConfigMap", "d8-system", reservedHostsConfigMapName)
+			cm := configMap()
 			Expect(cm.Exists()).To(BeTrue())
-			// The reservation the operator meant to lift is untouched.
-			Expect(strings.Fields(cm.Field("data.hosts").String())).To(ContainElement("grafana.example.com"))
+			// The reservation the operator meant to lift is untouched: grafana is still covered by
+			// the pattern and nothing let it back out.
+			Expect(strings.Fields(cm.Field("data.allowedHosts").String())).NotTo(ContainElement("grafana.example.com"))
 		})
 
-		It("publishes the name so that the no-op is visible", func() {
-			cm := f.KubernetesResource("ConfigMap", "d8-system", reservedHostsConfigMapName)
-			Expect(strings.Fields(cm.Field("data.unknownExcludedServices").String())).To(Equal([]string{"graphana"}))
+		It("publishes the name so that the misspelling is visible", func() {
+			Expect(strings.Fields(configMap().Field("data.unknownExcludedServices").String())).To(Equal([]string{"graphana"}))
 		})
 
 		It("reports nothing when every excluded name is published", func() {
 			renderWithSettings("%s.example.com", `{excludedServices: ["grafana"]}`, admissionAPIs...)
-			Expect(f.RenderError).ShouldNot(HaveOccurred())
-
-			cm := f.KubernetesResource("ConfigMap", "d8-system", reservedHostsConfigMapName)
+			cm := configMap()
 			Expect(strings.Fields(cm.Field("data.unknownExcludedServices").String())).To(BeEmpty())
-			Expect(strings.Fields(cm.Field("data.hosts").String())).NotTo(ContainElement("grafana.example.com"))
+			Expect(strings.Fields(cm.Field("data.allowedHosts").String())).To(ContainElement("grafana.example.com"))
 		})
 	})
 
-	Context("An operator reserves their own hostname while the platform publishes none", func() {
+	Context("The upgrade recorded what tenants already served", func() {
 		BeforeEach(func() {
-			renderWithSettings("", `{additionalHosts: ["admin.example.com"]}`, admissionAPIs...)
+			renderWith("%s.example.com", `{excludedServices: ["grafana"]}`,
+				`{recorded: true, hosts: ["shop.example.com", "store.example.com"]}`, admissionAPIs...)
 		})
 
-		It("reserves it anyway, it does not depend on publicDomainTemplate", func() {
-			Expect(f.RenderError).ShouldNot(HaveOccurred())
+		It("keeps the recorded hostnames apart from the ones an operator wrote", func() {
+			cm := configMap()
+			Expect(cm.Field("data.grandfatherRecorded").String()).To(Equal("true"))
+			Expect(strings.Fields(cm.Field("data.grandfatheredHosts").String())).
+				To(Equal([]string{"shop.example.com", "store.example.com"}))
+			Expect(strings.Fields(cm.Field("data.excludedHosts").String())).To(Equal([]string{"grafana.example.com"}))
+			Expect(strings.Fields(cm.Field("data.allowedHosts").String())).
+				To(Equal([]string{"grafana.example.com", "shop.example.com", "store.example.com"}),
+					"the policies read one key, but which of the two put a hostname there stays readable")
+		})
+	})
 
-			cm := f.KubernetesResource("ConfigMap", "d8-system", reservedHostsConfigMapName)
-			Expect(cm.Exists()).To(BeTrue())
-			Expect(strings.Fields(cm.Field("data.hosts").String())).To(Equal([]string{"admin.example.com"}))
-			Expect(strings.Fields(cm.Field("data.platformHosts").String())).To(BeEmpty())
-			Expect(f.KubernetesGlobalResource("ValidatingAdmissionPolicy", reservedHostsIngressPolicy).Exists()).To(BeTrue())
+	Context("A cluster asks for the reservation the module shipped before", func() {
+		BeforeEach(func() {
+			renderWithSettings("%s.example.com", `{mode: List}`, admissionAPIs...)
+		})
+
+		It("reserves the hostnames of the named services by exact match and derives no pattern", func() {
+			cm := configMap()
+			Expect(cm.Field("data.mode").String()).To(Equal("List"))
+			Expect(cm.Field("data.hostPattern").String()).To(BeEmpty())
+			hosts := strings.Fields(cm.Field("data.hosts").String())
+			Expect(hosts).To(ContainElements(
+				"api.example.com",
+				"console.example.com",
+				"dex.example.com",
+				"grafana.example.com",
+				"kubeconfig.example.com",
+				"prometheus.example.com",
+			))
+			Expect(hosts).To(Equal(strings.Fields(cm.Field("data.platformHosts").String())),
+				"with no setting applied, List reserves exactly what the platform publishes")
+			Expect(hosts).NotTo(ContainElement("*.example.com"),
+				"wildcards were out of scope of the list, and List has to stay what it was")
+		})
+
+		It("subtracts an exclusion from the list rather than allowing it back out", func() {
+			renderWithSettings("%s.example.com", `{mode: List, excludedServices: ["grafana"]}`, admissionAPIs...)
+			cm := configMap()
+			hosts := strings.Fields(cm.Field("data.hosts").String())
+			Expect(hosts).NotTo(ContainElement("grafana.example.com"))
+			Expect(hosts).To(ContainElements("console.example.com", "prometheus.example.com"))
+			Expect(strings.Fields(cm.Field("data.allowedHosts").String())).To(BeEmpty(),
+				"nothing may be allowed back out of a pattern that does not exist")
+			Expect(strings.Fields(cm.Field("data.excludedHosts").String())).To(Equal([]string{"grafana.example.com"}),
+				"still published, so that the effect of the setting reads the same in both modes")
+		})
+
+		It("does not apply the grandfathering, there is nothing to grandfather", func() {
+			renderWith("%s.example.com", `{mode: List}`, `{recorded: true, hosts: ["console.example.com"]}`, admissionAPIs...)
+			cm := configMap()
+			Expect(strings.Fields(cm.Field("data.grandfatheredHosts").String())).To(Equal([]string{"console.example.com"}),
+				"kept, so that a later switch to Template mode has it and does not snapshot again")
+			Expect(strings.Fields(cm.Field("data.allowedHosts").String())).To(BeEmpty())
+		})
+
+		It("still answers whether the literal covers the repository", func() {
+			expectCoversRepositoryPublicDomains(configMap())
+		})
+
+		It("applies both settings at once, and a hostname named twice is reserved once", func() {
+			renderWithSettings("%s.example.com",
+				`{mode: List, additionalHosts: ["admin.example.com", "console.example.com"], excludedServices: ["grafana", "hubble"]}`,
+				admissionAPIs...)
+			hosts := strings.Fields(configMap().Field("data.hosts").String())
+			Expect(hosts).To(ContainElement("admin.example.com"))
+			Expect(hosts).NotTo(ContainElements("grafana.example.com", "hubble.example.com"))
+			Expect(hosts).To(Equal(sortedUnique(hosts)))
+		})
+	})
+
+	Context("A publicDomainTemplate the global schema would have rejected", func() {
+		BeforeEach(func() {
+			// Two %s in the same label: the schema's pattern on
+			// global.modules.publicDomainTemplate does not admit it, so splitting on %s no longer
+			// yields a prefix and a suffix.
+			renderWithSettings("%s-%s.example.com", "", admissionAPIs...)
+		})
+
+		It("falls back to the list rather than to a regex built from parts that are not there", func() {
+			cm := configMap()
+			Expect(cm.Field("data.mode").String()).To(Equal("List"),
+				"the effective mode is reported, so an operator can see the fallback happened")
+			Expect(cm.Field("data.hostPattern").String()).To(BeEmpty())
+			Expect(strings.Fields(cm.Field("data.hosts").String())).ToNot(BeEmpty(),
+				"the names the platform publishes stay reserved, which is more than nothing")
 		})
 	})
 })

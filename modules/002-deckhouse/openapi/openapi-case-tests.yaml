@@ -67,8 +67,11 @@ positive:
 
   - reservedPublicHosts: {}
   - reservedPublicHosts:
+      mode: Template
       additionalHosts: ["admin.example.com", "billing.corp.example.com"]
       excludedServices: ["grafana"]
+  - reservedPublicHosts:
+      mode: List
   values:
   - internal:
       currentReleaseImageName: registry.deckhouse.io/deckhouse/ce/dev@sha256:e9e41b1abc067bd59f1cdf2d7c44cb80911b733d3d711209abd291c9458e51c4
@@ -144,6 +147,12 @@ negative:
   # excludedServices names a service, not the hostname it is published under.
   - reservedPublicHosts:
       excludedServices: ["grafana.example.com"]
+  # There are two reservations and no third one. A mode nobody implements would silently read as
+  # whichever branch the template falls through to.
+  - reservedPublicHosts:
+      mode: Audit
+  - reservedPublicHosts:
+      mode: template
 
   values:
   - internal:
