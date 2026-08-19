@@ -2366,7 +2366,7 @@ index 00000000000..90094074c07
 +	}
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
-index 0d870f149c6..752b46fd3fb 100644
+index b0fc9b34f85..7c5ed8a5dbc 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
 @@ -17,6 +17,7 @@ limitations under the License.
@@ -2505,23 +2505,23 @@ index 0d870f149c6..752b46fd3fb 100644
  		return handlers.ListResource(storage, storage, requestScope, forceWatch, r.minRequestTimeout)
  	case "create":
  		// we want to track recently created CRDs so that in HA environments we don't have server A allow a create and server B
-@@ -399,10 +448,23 @@ func (r *crdHandler) serveResource(w http.ResponseWriter, req *http.Request, req
+@@ -399,16 +448,35 @@ func (r *crdHandler) serveResource(w http.ResponseWriter, req *http.Request, req
  			responsewriters.ErrorNegotiated(err, Codecs, schema.GroupVersion{Group: requestInfo.APIGroup, Version: requestInfo.APIVersion}, w, req)
  			return nil
  		}
 +		if len(sensitiveSchemaSlice) > 0 {
-+			return handlers.CreateResource(&unmaskingCreater{Creater: storage, schemas: sensitiveSchemaSlice, groupKind: sensitiveGroupKind}, requestScope, r.admission)
++			return handlers.CreateResource(&unmaskingCreater{Creater: storage, schemas: sensitiveSchemaSlice, groupKind: sensitiveGroupKind, needsMasking: needsMasking}, requestScope, r.admission)
 +		}
  		return handlers.CreateResource(storage, requestScope, r.admission)
  	case "update":
 +		if len(sensitiveSchemaSlice) > 0 {
-+			return handlers.UpdateResource(&unmaskingUpdater{Updater: storage, schemas: sensitiveSchemaSlice, groupKind: sensitiveGroupKind}, requestScope, r.admission)
++			return handlers.UpdateResource(&unmaskingUpdater{Updater: storage, schemas: sensitiveSchemaSlice, groupKind: sensitiveGroupKind, needsMasking: needsMasking}, requestScope, r.admission)
 +		}
  		return handlers.UpdateResource(storage, requestScope, r.admission)
  	case "patch":
 +		if len(sensitiveSchemaSlice) > 0 {
 +			inner := handlers.PatchResource(
-+				&unmaskingPatcher{Patcher: storage, schemas: sensitiveSchemaSlice, groupKind: sensitiveGroupKind},
++				&unmaskingPatcher{Patcher: storage, schemas: sensitiveSchemaSlice, groupKind: sensitiveGroupKind, needsMasking: needsMasking},
 +				requestScope, r.admission, supportedTypes,
 +			)
 +			return sensitiveSSABodyUnmasker(inner, storage, sensitiveSchemaSlice, sensitiveGroupKind, requestScope.MaxRequestBodyBytes)
@@ -2529,7 +2529,19 @@ index 0d870f149c6..752b46fd3fb 100644
  		return handlers.PatchResource(storage, requestScope, r.admission, supportedTypes)
  	case "delete":
  		allowsOptions := true
-@@ -419,6 +481,37 @@ func (r *crdHandler) serveResource(w http.ResponseWriter, req *http.Request, req
++		if needsMasking {
++			return handlers.DeleteResource(&maskingDeleter{GracefulDeleter: storage, schemas: sensitiveSchemaSlice}, allowsOptions, requestScope, r.admission)
++		}
+ 		return handlers.DeleteResource(storage, allowsOptions, requestScope, r.admission)
+ 	case "deletecollection":
+ 		checkBody := true
++		if needsMasking {
++			return handlers.DeleteCollection(&maskingCollectionDeleter{CollectionDeleter: storage, schemas: sensitiveSchemaSlice}, checkBody, requestScope, r.admission)
++		}
+ 		return handlers.DeleteCollection(storage, checkBody, requestScope, r.admission)
+ 	default:
+ 		responsewriters.ErrorNegotiated(
+@@ -419,16 +487,64 @@ func (r *crdHandler) serveResource(w http.ResponseWriter, req *http.Request, req
  	}
  }
  
@@ -2567,7 +2579,34 @@ index 0d870f149c6..752b46fd3fb 100644
  func (r *crdHandler) serveStatus(w http.ResponseWriter, req *http.Request, requestInfo *apirequest.RequestInfo, crdInfo *crdInfo, terminating bool, supportedTypes []string) http.HandlerFunc {
  	requestScope := crdInfo.statusRequestScopes[requestInfo.APIVersion]
  	storage := crdInfo.storages[requestInfo.APIVersion].Status
-@@ -523,6 +616,15 @@ func (r *crdHandler) updateCustomResourceDefinition(oldObj, newObj interface{})
+ 
++	needsMasking := r.checkNeedsMasking(req.Context(), requestInfo, crdInfo)
++	var sensitiveSchemaSlice []*structuralschema.Structural
++	if needsMasking {
++		for _, s := range crdInfo.sensitiveSchemas {
++			sensitiveSchemaSlice = append(sensitiveSchemaSlice, s)
++		}
++	}
++
+ 	switch requestInfo.Verb {
+ 	case "get":
++		if needsMasking {
++			return handlers.GetResource(&maskingGetter{Getter: storage, schemas: sensitiveSchemaSlice}, requestScope)
++		}
+ 		return handlers.GetResource(storage, requestScope)
+ 	case "update":
++		if needsMasking {
++			return handlers.UpdateResource(&maskingUpdater{Updater: storage, schemas: sensitiveSchemaSlice}, requestScope, r.admission)
++		}
+ 		return handlers.UpdateResource(storage, requestScope, r.admission)
+ 	case "patch":
++		if needsMasking {
++			return handlers.PatchResource(&maskingPatcher{Patcher: storage, schemas: sensitiveSchemaSlice}, requestScope, r.admission, supportedTypes)
++		}
+ 		return handlers.PatchResource(storage, requestScope, r.admission, supportedTypes)
+ 	default:
+ 		responsewriters.ErrorNegotiated(
+@@ -523,6 +639,15 @@ func (r *crdHandler) updateCustomResourceDefinition(oldObj, newObj interface{})
  func (r *crdHandler) removeStorage_locked(uid types.UID) {
  	storageMap := r.customStorage.Load().(crdStorageMap)
  	if oldInfo, ok := storageMap[uid]; ok {
@@ -2583,7 +2622,7 @@ index 0d870f149c6..752b46fd3fb 100644
  		// Copy because we cannot write to storageMap without a race
  		// as it is used without locking elsewhere.
  		storageMap2 := storageMap.clone()
-@@ -560,6 +662,14 @@ func (r *crdHandler) removeDeadStorage() {
+@@ -560,6 +685,14 @@ func (r *crdHandler) removeDeadStorage() {
  	for uid, crdInfo := range storageMap {
  		if _, ok := storageMap2[uid]; !ok {
  			klog.V(4).Infof("Removing dead CRD storage for %s/%s", crdInfo.spec.Group, crdInfo.spec.Names.Kind)
@@ -2598,7 +2637,7 @@ index 0d870f149c6..752b46fd3fb 100644
  			go r.tearDown(crdInfo)
  		}
  	}
-@@ -601,6 +711,14 @@ func (r *crdHandler) destroy() {
+@@ -601,6 +734,14 @@ func (r *crdHandler) destroy() {
  
  	storageMap := r.customStorage.Load().(crdStorageMap)
  	for _, crdInfo := range storageMap {
@@ -2613,7 +2652,7 @@ index 0d870f149c6..752b46fd3fb 100644
  		for _, storage := range crdInfo.storages {
  			// DestroyFunc have to be implemented in idempotent way,
  			// so the potential race with r.tearDown() (being called
-@@ -693,6 +811,17 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
+@@ -693,6 +834,17 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
  		structuralSchemas[v.Name] = s
  	}
  
@@ -2631,7 +2670,7 @@ index 0d870f149c6..752b46fd3fb 100644
  	openAPIModels, err := buildOpenAPIModelsForApply(r.staticOpenAPISpec, crd)
  	if err != nil {
  		utilruntime.HandleError(fmt.Errorf("error building openapi models for %s: %v", crd.Name, err))
-@@ -1087,9 +1216,20 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
+@@ -1104,9 +1256,20 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
  		deprecated:          deprecated,
  		warnings:            warnings,
  		storageVersion:      storageVersion,
@@ -2669,10 +2708,10 @@ index 3e77fe7197a..79c724f39cf 100644
  	}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_access.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_access.go
 new file mode 100644
-index 00000000000..617d6e4c9f0
+index 00000000000..5d057899668
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_access.go
-@@ -0,0 +1,129 @@
+@@ -0,0 +1,202 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -2801,6 +2840,79 @@ index 00000000000..617d6e4c9f0
 +		event.Object = plainObj
 +		return event, true
 +	}), nil
++}
++
++type maskingUpdater struct {
++	rest.Updater
++	schemas []*structuralschema.Structural
++}
++
++func (s *maskingUpdater) Update(ctx context.Context, name string, objInfo rest.UpdatedObjectInfo, createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc, forceAllowCreate bool, options *metav1.UpdateOptions) (runtime.Object, bool, error) {
++	obj, created, err := s.Updater.Update(ctx, name, objInfo, createValidation, updateValidation, forceAllowCreate, options)
++	if err != nil {
++		return obj, created, err
++	}
++	obj = obj.DeepCopyObject()
++	if u, ok := obj.(*unstructured.Unstructured); ok {
++		maskWithAllSchemas(u.Object, s.schemas)
++	}
++	return obj, created, nil
++}
++
++type maskingPatcher struct {
++	rest.Patcher
++	schemas []*structuralschema.Structural
++}
++
++func (s *maskingPatcher) Update(ctx context.Context, name string, objInfo rest.UpdatedObjectInfo, createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc, forceAllowCreate bool, options *metav1.UpdateOptions) (runtime.Object, bool, error) {
++	obj, created, err := s.Patcher.Update(ctx, name, objInfo, createValidation, updateValidation, forceAllowCreate, options)
++	if err != nil {
++		return obj, created, err
++	}
++	obj = obj.DeepCopyObject()
++	if u, ok := obj.(*unstructured.Unstructured); ok {
++		maskWithAllSchemas(u.Object, s.schemas)
++	}
++	return obj, created, nil
++}
++
++type maskingDeleter struct {
++	rest.GracefulDeleter
++	schemas []*structuralschema.Structural
++}
++
++func (s *maskingDeleter) Delete(ctx context.Context, name string, deleteValidation rest.ValidateObjectFunc, options *metav1.DeleteOptions) (runtime.Object, bool, error) {
++	obj, deleted, err := s.GracefulDeleter.Delete(ctx, name, deleteValidation, options)
++	if err != nil || obj == nil {
++		return obj, deleted, err
++	}
++	obj = obj.DeepCopyObject()
++	if u, ok := obj.(*unstructured.Unstructured); ok {
++		maskWithAllSchemas(u.Object, s.schemas)
++	}
++	return obj, deleted, nil
++}
++
++type maskingCollectionDeleter struct {
++	rest.CollectionDeleter
++	schemas []*structuralschema.Structural
++}
++
++func (s *maskingCollectionDeleter) DeleteCollection(ctx context.Context, deleteValidation rest.ValidateObjectFunc, options *metav1.DeleteOptions, listOptions *metainternalversion.ListOptions) (runtime.Object, error) {
++	obj, err := s.CollectionDeleter.DeleteCollection(ctx, deleteValidation, options, listOptions)
++	if err != nil || obj == nil {
++		return obj, err
++	}
++	obj = obj.DeepCopyObject()
++	switch v := obj.(type) {
++	case *unstructured.UnstructuredList:
++		for i := range v.Items {
++			maskWithAllSchemas(v.Items[i].Object, s.schemas)
++		}
++	case *unstructured.Unstructured:
++		maskWithAllSchemas(v.Object, s.schemas)
++	}
++	return obj, nil
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_access_test.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_access_test.go
 new file mode 100644
@@ -3663,10 +3775,10 @@ index 00000000000..71b57d26ea0
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_unmask.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_unmask.go
 new file mode 100644
-index 00000000000..1394310e406
+index 00000000000..e56b32bf0bd
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_unmask.go
-@@ -0,0 +1,128 @@
+@@ -0,0 +1,157 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -3700,11 +3812,13 @@ index 00000000000..1394310e406
 +	"k8s.io/klog/v2"
 +)
 +
-+// unmaskingCreater rejects MaskedValue in sensitive fields during create.
++// unmaskingCreater rejects MaskedValue in sensitive fields during create and
++// masks sensitive fields in the response when the caller lacks the resource/sensitive permission.
 +type unmaskingCreater struct {
 +	rest.Creater
-+	schemas   []*structuralschema.Structural
-+	groupKind runtimeschema.GroupKind
++	schemas      []*structuralschema.Structural
++	groupKind    runtimeschema.GroupKind
++	needsMasking bool
 +}
 +
 +func (s *unmaskingCreater) Create(ctx context.Context, obj runtime.Object, createValidation rest.ValidateObjectFunc, options *metav1.CreateOptions) (runtime.Object, error) {
@@ -3713,30 +3827,57 @@ index 00000000000..1394310e406
 +			return nil, newSensitiveUnmaskInvalidError(s.groupKind, u.GetName(), err)
 +		}
 +	}
-+	return s.Creater.Create(ctx, obj, createValidation, options)
++	out, err := s.Creater.Create(ctx, obj, createValidation, options)
++	if err != nil {
++		return nil, err
++	}
++	return maskResponse(out, s.needsMasking, s.schemas), nil
 +}
 +
 +// unmaskingUpdater replaces MaskedValue in sensitive fields with old values
-+// before update validation and persistence.
++// before update validation and persistence, and masks sensitive fields in the
++// response when the caller lacks the resource/sensitive permission.
 +type unmaskingUpdater struct {
 +	rest.Updater
-+	schemas   []*structuralschema.Structural
-+	groupKind runtimeschema.GroupKind
++	schemas      []*structuralschema.Structural
++	groupKind    runtimeschema.GroupKind
++	needsMasking bool
 +}
 +
 +func (s *unmaskingUpdater) Update(ctx context.Context, name string, objInfo rest.UpdatedObjectInfo, createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc, forceAllowCreate bool, options *metav1.UpdateOptions) (runtime.Object, bool, error) {
-+	return s.Updater.Update(ctx, name, newUnmaskingObjectInfo(objInfo, s.schemas, s.groupKind), createValidation, updateValidation, forceAllowCreate, options)
++	obj, created, err := s.Updater.Update(ctx, name, newUnmaskingObjectInfo(objInfo, s.schemas, s.groupKind), createValidation, updateValidation, forceAllowCreate, options)
++	if err != nil {
++		return obj, created, err
++	}
++	return maskResponse(obj, s.needsMasking, s.schemas), created, nil
 +}
 +
 +// unmaskingPatcher preserves rest.Patcher's Get method while wrapping Update.
 +type unmaskingPatcher struct {
 +	rest.Patcher
-+	schemas   []*structuralschema.Structural
-+	groupKind runtimeschema.GroupKind
++	schemas      []*structuralschema.Structural
++	groupKind    runtimeschema.GroupKind
++	needsMasking bool
 +}
 +
 +func (s *unmaskingPatcher) Update(ctx context.Context, name string, objInfo rest.UpdatedObjectInfo, createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc, forceAllowCreate bool, options *metav1.UpdateOptions) (runtime.Object, bool, error) {
-+	return s.Patcher.Update(ctx, name, newUnmaskingObjectInfo(objInfo, s.schemas, s.groupKind), createValidation, updateValidation, forceAllowCreate, options)
++	obj, created, err := s.Patcher.Update(ctx, name, newUnmaskingObjectInfo(objInfo, s.schemas, s.groupKind), createValidation, updateValidation, forceAllowCreate, options)
++	if err != nil {
++		return obj, created, err
++	}
++	return maskResponse(obj, s.needsMasking, s.schemas), created, nil
++}
++
++// maskResponse masks sensitive fields in an object returned by a write verb (create/update/patch) when the caller lacks the resource/sensitive permission, mirroring the read path.
++func maskResponse(obj runtime.Object, needsMasking bool, schemas []*structuralschema.Structural) runtime.Object {
++	if !needsMasking || obj == nil {
++		return obj
++	}
++	obj = obj.DeepCopyObject()
++	if u, ok := obj.(*unstructured.Unstructured); ok {
++		maskWithAllSchemas(u.Object, schemas)
++	}
++	return obj
 +}
 +
 +type unmaskingObjectInfo struct {
