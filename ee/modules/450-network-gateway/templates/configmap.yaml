@@ -9,6 +9,8 @@ data:
   config.json: |
     {{- .Values.networkGateway | toJson | nindent 4 }}
   dnsmasq.conf: |
+    user=deckhouse
+    group=deckhouse
     expand-hosts
     localise-queries
     conf-dir=/etc/dnsmasq.conf.d,.rpmnew,.rpmsave,.rpmorig

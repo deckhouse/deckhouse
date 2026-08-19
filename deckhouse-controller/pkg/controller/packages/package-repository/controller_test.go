@@ -91,6 +91,13 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		require.True(suite.T(), result.RequeueAfter > 0)
 	})
 
+	suite.Run("failed first scan", func() {
+		suite.setupController("failed-first-scan.yaml")
+		repo := suite.getPackageRepository("deckhouse")
+		_, err := suite.ctr.Reconcile(ctx, suite.Request(repo.Name, ""))
+		require.NoError(suite.T(), err)
+	})
+
 	suite.Run("delete repository", func() {
 		suite.setupController("delete-repository.yaml")
 		repo := suite.getPackageRepository("deckhouse")

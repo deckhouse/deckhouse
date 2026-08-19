@@ -363,6 +363,13 @@ func (r *Runtime) cleanupModule(name string) func() {
 	}
 }
 
+// GetModuleDigest resolves the digest the tag currently points at. It is what a caller
+// pinning a module to a mutable dev tag compares against, because the runtime's own change
+// detection is blind to a repush under an unchanged tag.
+func (r *Runtime) GetModuleDigest(ctx context.Context, remote registry.Remote, name, tag string) (string, error) {
+	return r.registry.GetImageDigest(ctx, remote, name, tag)
+}
+
 // ValidateModuleExclusiveGroup returns an error if there is an enabled module with the same exclusive group.
 func (r *Runtime) ValidateModuleExclusiveGroup(group string) error {
 	r.mu.RLock()
