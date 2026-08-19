@@ -18,14 +18,14 @@
 # This hook guards the authorization rules owned by this module against a local identity silently
 # landing in one of them.
 #
-# A local identity name reaches the token Dex issues verbatim, and kube-apiserver maps it to a
-# Kubernetes identity with an empty prefix, so there is no namespacing between locally managed
-# identities and identities asserted by an external identity provider:
+# A local identity name reaches the token Dex issues, and kube-apiserver maps it to a Kubernetes
+# identity with an empty prefix, so there is no namespacing between locally managed identities and
+# identities asserted by an external identity provider:
 #
-# - Group.spec.name becomes the group name in the "groups" claim.
-# - User.spec.email becomes the username. The AuthorizationRule and ClusterAuthorizationRule CRDs
-#   say so themselves: "Use the user's `email` as the username to grant privileges to the specific
-#   user".
+# - Group.spec.name becomes the group name in the "groups" claim, byte for byte.
+# - User.spec.email becomes the username, lowercased on the way. The AuthorizationRule and
+#   ClusterAuthorizationRule CRDs say so themselves: "Use the user's `email` as the username to
+#   grant privileges to the specific user".
 #
 # Creating such an object with a name that an existing rule already lists as a subject therefore
 # grants that rule's privileges to it, with nothing in either object recording that it happened.
@@ -38,7 +38,7 @@
 # the other way round and is harmless: the validating rules below name resources owned by
 # user-authn, and if that module is disabled its CRDs are absent, the rules simply never match.
 
-from typing import Optional
+from typing import Callable, NamedTuple, Optional
 
 from deckhouse import hook
 from dotmap import DotMap
@@ -54,7 +54,7 @@ kubernetesValidating:
   rules:
   - apiGroups:   ["deckhouse.io"]
     apiVersions: ["*"]
-    operations:  ["CREATE", "UPDATE"]
+    operations:  ["CREATE", "UPDATE", "DELETE"]
     resources:   ["groups"]
     scope:       "Cluster"
 - name: d8-user-authz-user-authorization-rule-collision.deckhouse.io
@@ -99,6 +99,42 @@ kubernetes:
 COLLISION_ANNOTATION = "user-authz.deckhouse.io/allow-authorization-rule-collision"
 
 
+class IdentityKind(NamedTuple):
+    """
+    Everything this hook needs to know about one of the two validated kinds.
+
+    Attributes:
+        resource: the resource name used in the messages.
+        spec_field: the name of the spec field holding the identity.
+        subjects_key: the jqFilter output key holding the matching rule subjects.
+        token_identity: maps the spec field value to the identity that actually reaches the
+                        token, which is what an authorization rule subject is matched against.
+    """
+    resource: str
+    spec_field: str
+    subjects_key: str
+    token_identity: Callable[[str], str]
+
+    @property
+    def field_path(self) -> str:
+        return f".spec.{self.spec_field}"
+
+
+# Group.spec.name reaches the "groups" claim byte for byte: nothing between the Group object and
+# the Password object Dex serves normalises it (modules/150-user-authn/hooks/get_dex_user_crds.go,
+# makeUserGroupsMap and newPasswordObject), so the comparison is exact in both directions.
+#
+# User.spec.email does not: Deckhouse lowercases it before it reaches the Password object
+# (modules/150-user-authn/hooks/get_dex_user_crds.go:276), so the username in the token is
+# unconditionally spec.email.lower().
+IDENTITY_KINDS = {
+    "group": IdentityKind(resource="groups.deckhouse.io", spec_field="name",
+                          subjects_key="groupSubjects", token_identity=lambda name: name),
+    "user": IdentityKind(resource="users.deckhouse.io", spec_field="email",
+                         subjects_key="userSubjects", token_identity=str.lower),
+}
+
+
 def main(ctx: hook.Context):
     try:
         # DotMap is a dict with dot notation
@@ -114,22 +150,17 @@ def main(ctx: hook.Context):
 
 def validate(ctx: DotMap) -> tuple[Optional[str], list[str]]:
     req = ctx.review.request
-    kind = req.kind.kind.lower()
+    identity = IDENTITY_KINDS.get(req.kind.kind.lower())
+    if identity is None:
+        return None, []
 
-    if kind == "group":
-        return validate_identity(ctx, resource="groups.deckhouse.io", field=".spec.name",
-                                 subjects_key="groupSubjects",
-                                 name=spec_value(req.object, "name"),
-                                 old_name=spec_value(req.oldObject, "name"))
-    if kind == "user":
-        if req.operation == "DELETE":
-            return warn_rule_outlives_user(ctx, spec_value(req.oldObject, "email"))
-        return validate_identity(ctx, resource="users.deckhouse.io", field=".spec.email",
-                                 subjects_key="userSubjects",
-                                 name=spec_value(req.object, "email"),
-                                 old_name=spec_value(req.oldObject, "email"))
+    if req.operation == "DELETE":
+        return warn_rule_outlives_identity(ctx, identity,
+                                           spec_value(req.oldObject, identity.spec_field))
 
-    return None, []
+    return validate_identity(ctx, identity,
+                             name=spec_value(req.object, identity.spec_field),
+                             old_name=spec_value(req.oldObject, identity.spec_field))
 
 
 def spec_value(obj: Optional[DotMap], field: str):
@@ -145,7 +176,7 @@ def spec_value(obj: Optional[DotMap], field: str):
     return obj.spec[field]
 
 
-def validate_identity(ctx: DotMap, resource: str, field: str, subjects_key: str,
+def validate_identity(ctx: DotMap, identity: IdentityKind,
                       name, old_name) -> tuple[Optional[str], list[str]]:
     warnings = []
 
@@ -154,16 +185,21 @@ def validate_identity(ctx: DotMap, resource: str, field: str, subjects_key: str,
         # opinion about — the owning module's own schema and webhooks reject it.
         return None, warnings
 
-    granting_rule = granting_rule_for(ctx, subjects_key, name)
+    granting_rule = granting_rule_for(ctx, identity, name)
     if granting_rule is None:
         return None, warnings
 
-    collision = f"{resource} \"{field}\" \"{name}\" is already granted privileges by {granting_rule}"
+    collision = (f"{identity.resource} \"{identity.field_path}\" \"{name}\" "
+                 f"is already granted privileges by {granting_rule}")
 
     # An already existing collision is only reported: the privileges are effective anyway, and
-    # denying updates would lock such an object out of any further modification. An UPDATE whose
-    # oldObject is missing counts as new, so an unreadable previous value fails closed.
-    name_is_new = ctx.review.request.operation == "CREATE" or old_name != name
+    # denying updates would lock such an object out of any further modification. The comparison is
+    # on the token identity, so rewriting an already colliding email in a different case does not
+    # count as introducing it. An UPDATE whose oldObject is missing counts as new, so an unreadable
+    # previous value fails closed.
+    name_is_new = (ctx.review.request.operation == "CREATE"
+                   or not isinstance(old_name, str)
+                   or identity.token_identity(old_name) != identity.token_identity(name))
     if name_is_new and not is_collision_acknowledged(ctx.review.request.object):
         return (
             f"{collision}; use a different value or set the "
@@ -174,30 +210,45 @@ def validate_identity(ctx: DotMap, resource: str, field: str, subjects_key: str,
     return None, warnings
 
 
-def warn_rule_outlives_user(ctx: DotMap, email) -> tuple[Optional[str], list[str]]:
+def warn_rule_outlives_identity(ctx: DotMap, identity: IdentityKind,
+                                name) -> tuple[Optional[str], list[str]]:
     """
-    Report that deleting the User does not revoke the rule.
+    Report that deleting the object does not revoke the rule.
 
-    The email stays granted, so recreating a User with the same email restores the privileges, and
-    until then the email is free for anyone allowed to create a User.
+    The name stays granted, so recreating a Group or a User with the same name restores the
+    privileges, and until then the name is free for anyone allowed to create one.
     """
-    if not isinstance(email, str) or not email:
+    if not isinstance(name, str) or not name:
         return None, []
 
-    granting_rule = granting_rule_for(ctx, "userSubjects", email)
+    granting_rule = granting_rule_for(ctx, identity, name)
     if granting_rule is None:
         return None, []
 
-    return None, [f"{granting_rule} still grants privileges to \".spec.email\" \"{email}\""]
+    return None, [f"{granting_rule} still grants privileges to "
+                  f"\"{identity.field_path}\" \"{name}\""]
 
 
-def granting_rule_for(ctx: DotMap, subjects_key: str, name: str) -> Optional[str]:
+def granting_rule_for(ctx: DotMap, identity: IdentityKind, name: str) -> Optional[str]:
     """
     Find an authorization rule that already grants privileges to the given identity name.
 
-    The comparison is exact. Dex lowercases the email before putting it into the token, so a rule
-    subject written in another case never matches an issued token and reporting it would be a false
-    positive.
+    A rule subject is matched against the identity that ends up in the token, not against the spec
+    field verbatim, and the two differ for User.spec.email. The asymmetry is deliberate and both
+    directions matter:
+
+    - A mixed-case *incoming* email is a real collision. The username the API server sees is
+      unconditionally spec.email.lower(), so "Privileged@Example.com" inherits everything a rule
+      grants to "privileged@example.com". Comparing verbatim would miss it and make the check
+      bypassable by case alone.
+    - A mixed-case *rule subject* is not a collision. Subjects reach the RoleBinding verbatim
+      (modules/140-user-authz/templates/cluster-role-bindings.yaml:38,
+      modules/140-user-authz/hooks/handle_manage_bindings.go:256) and RBAC matches them exactly, so
+      a subject that is not already lowercase can never match an issued token, and reporting it
+      would be a false positive.
+
+    Group.spec.name has no such normalisation anywhere on its way to the "groups" claim, so both
+    sides are compared verbatim for groups.
 
     Returns:
         Optional[str]: description of the rule granting the privileges, or None when there is none.
@@ -207,16 +258,16 @@ def granting_rule_for(ctx: DotMap, subjects_key: str, name: str) -> Optional[str
 
     for rule in ctx.snapshots.get(CLUSTER_RULES_SNAPSHOT_NAME, []):
         rule_name = f"clusterauthorizationrules.deckhouse.io \"{rule.filterResult.name}\""
-        for subject in rule.filterResult[subjects_key]:
+        for subject in rule.filterResult[identity.subjects_key]:
             privileged.setdefault(subject, rule_name)
 
     for rule in ctx.snapshots.get(NAMESPACED_RULES_SNAPSHOT_NAME, []):
         rule_name = (f"authorizationrules.deckhouse.io "
                      f"\"{rule.filterResult.namespace}/{rule.filterResult.name}\"")
-        for subject in rule.filterResult[subjects_key]:
+        for subject in rule.filterResult[identity.subjects_key]:
             privileged.setdefault(subject, rule_name)
 
-    return privileged.get(name)
+    return privileged.get(identity.token_identity(name))
 
 
 def is_collision_acknowledged(obj: DotMap) -> bool:

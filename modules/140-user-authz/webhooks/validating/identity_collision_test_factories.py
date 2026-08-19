@@ -33,18 +33,30 @@ NAMESPACED_RULE_USER_SUBJECT = "team-lead@example.com"
 CLUSTER_RULE_DESCRIPTION = 'clusterauthorizationrules.deckhouse.io "admin-rule"'
 NAMESPACED_RULE_DESCRIPTION = 'authorizationrules.deckhouse.io "team-a/team-rule"'
 
+# A subject an administrator wrote in mixed case. It reaches the RoleBinding verbatim and RBAC
+# matches subjects exactly, so it can never match an issued token and must not be reported.
+MIXED_CASE_RULE_USER_SUBJECT = "Legacy@Example.com"
+MIXED_CASE_RULE_GROUP_SUBJECT = "Legacy-Group"
 
-def _snapshots(with_rules: bool = True) -> dict:
+
+def _snapshots(with_rules: bool = True,
+               cluster_rule_group_subjects: typing.Optional[list] = None,
+               cluster_rule_user_subjects: typing.Optional[list] = None) -> dict:
     if not with_rules:
         return {CLUSTER_RULES_SNAPSHOT_NAME: [], NAMESPACED_RULES_SNAPSHOT_NAME: []}
+
+    if cluster_rule_group_subjects is None:
+        cluster_rule_group_subjects = [CLUSTER_RULE_GROUP_SUBJECT]
+    if cluster_rule_user_subjects is None:
+        cluster_rule_user_subjects = [CLUSTER_RULE_USER_SUBJECT]
 
     return {
         CLUSTER_RULES_SNAPSHOT_NAME: [
             {
                 "filterResult": {
                     "name": "admin-rule",
-                    "groupSubjects": [CLUSTER_RULE_GROUP_SUBJECT],
-                    "userSubjects": [CLUSTER_RULE_USER_SUBJECT],
+                    "groupSubjects": cluster_rule_group_subjects,
+                    "userSubjects": cluster_rule_user_subjects,
                 }
             }
         ],
@@ -63,7 +75,9 @@ def _snapshots(with_rules: bool = True) -> dict:
 
 def _binding_context(kind: str, resource: str, webhook: str, operation: str,
                      spec: typing.Optional[dict], old_spec: typing.Optional[dict],
-                     acknowledged: bool, with_rules: bool) -> str:
+                     acknowledged: bool, with_rules: bool,
+                     cluster_rule_group_subjects: typing.Optional[list] = None,
+                     cluster_rule_user_subjects: typing.Optional[list] = None) -> str:
     metadata = {"name": "test-object"}
     if acknowledged:
         metadata["annotations"] = {COLLISION_ANNOTATION: "true"}
@@ -96,7 +110,8 @@ def _binding_context(kind: str, resource: str, webhook: str, operation: str,
                 "dryRun": False,
             }
         },
-        "snapshots": _snapshots(with_rules),
+        "snapshots": _snapshots(with_rules, cluster_rule_group_subjects,
+                                cluster_rule_user_subjects),
         "type": "Validating",
     })
 
@@ -104,8 +119,21 @@ def _binding_context(kind: str, resource: str, webhook: str, operation: str,
 def prepare_group_binding_context(group_name: str, operation: str = "CREATE",
                                   old_group_name: typing.Optional[str] = None,
                                   acknowledged: bool = False,
-                                  with_rules: bool = True) -> str:
-    old_spec = None if operation == "CREATE" else {"name": old_group_name, "members": []}
+                                  with_rules: bool = True,
+                                  with_old_object: bool = True,
+                                  cluster_rule_group_subjects: typing.Optional[list] = None) -> str:
+    if operation == "DELETE":
+        return _binding_context(
+            kind="Group", resource="groups",
+            webhook="d8-user-authz-group-authorization-rule-collision.deckhouse.io",
+            operation=operation, spec=None, old_spec={"name": group_name, "members": []},
+            acknowledged=acknowledged, with_rules=with_rules,
+            cluster_rule_group_subjects=cluster_rule_group_subjects,
+        )
+
+    # with_old_object=False models an UPDATE whose oldObject the hook cannot read.
+    old_spec = None if operation == "CREATE" or not with_old_object else {
+        "name": old_group_name, "members": []}
     return _binding_context(
         kind="Group", resource="groups",
         webhook="d8-user-authz-group-authorization-rule-collision.deckhouse.io",
@@ -113,25 +141,64 @@ def prepare_group_binding_context(group_name: str, operation: str = "CREATE",
         spec={"name": group_name, "members": []},
         old_spec=old_spec,
         acknowledged=acknowledged, with_rules=with_rules,
+        cluster_rule_group_subjects=cluster_rule_group_subjects,
     )
 
 
 def prepare_user_binding_context(email: str, operation: str = "CREATE",
                                  old_email: typing.Optional[str] = None,
                                  acknowledged: bool = False,
-                                 with_rules: bool = True) -> str:
+                                 with_rules: bool = True,
+                                 with_old_object: bool = True,
+                                 cluster_rule_user_subjects: typing.Optional[list] = None) -> str:
     if operation == "DELETE":
         return _binding_context(
             kind="User", resource="users",
             webhook="d8-user-authz-user-authorization-rule-collision.deckhouse.io",
             operation=operation, spec=None, old_spec={"email": email},
             acknowledged=acknowledged, with_rules=with_rules,
+            cluster_rule_user_subjects=cluster_rule_user_subjects,
         )
 
-    old_spec = None if operation == "CREATE" else {"email": old_email}
+    old_spec = None if operation == "CREATE" or not with_old_object else {"email": old_email}
     return _binding_context(
         kind="User", resource="users",
         webhook="d8-user-authz-user-authorization-rule-collision.deckhouse.io",
         operation=operation, spec={"email": email}, old_spec=old_spec,
         acknowledged=acknowledged, with_rules=with_rules,
+        cluster_rule_user_subjects=cluster_rule_user_subjects,
     )
+
+
+def prepare_cluster_authorization_rule(subjects: typing.Optional[list]) -> dict:
+    """
+    A ClusterAuthorizationRule object as the API server stores it, to feed a jqFilter.
+
+    subjects=None omits `spec.subjects` entirely, which is what the `[]?` guard in both filters
+    exists for.
+    """
+    spec = {"accessLevel": "Editor"}
+    if subjects is not None:
+        spec["subjects"] = subjects
+
+    return {
+        "apiVersion": "deckhouse.io/v1alpha1",
+        "kind": "ClusterAuthorizationRule",
+        "metadata": {"name": "admin-rule"},
+        "spec": spec,
+    }
+
+
+def prepare_authorization_rule(subjects: typing.Optional[list]) -> dict:
+    """A namespaced AuthorizationRule object, to feed a jqFilter."""
+    rule = prepare_cluster_authorization_rule(subjects)
+    rule["kind"] = "AuthorizationRule"
+    rule["metadata"] = {"name": "team-rule", "namespace": "team-a"}
+    return rule
+
+
+MIXED_KIND_SUBJECTS = [
+    {"kind": "Group", "name": CLUSTER_RULE_GROUP_SUBJECT},
+    {"kind": "ServiceAccount", "name": "builder", "namespace": "ci"},
+    {"kind": "User", "name": CLUSTER_RULE_USER_SUBJECT},
+]

@@ -20,7 +20,8 @@ echo "Proxy: $DISTRO_PACKAGES_PROXY"
 if [ -n "${DISTRO_PACKAGES_PROXY}" ]; then
     sed -iE "s|https://dl-cdn.alpinelinux.org|http://$DISTRO_PACKAGES_PROXY/repository|g" /etc/apk/repositories
 fi
-apk update && apk add --no-cache python3 py3-pip findutils grep
+# jq is needed by tests that execute a hook's jqFilter the way shell-operator would.
+apk update && apk add --no-cache python3 py3-pip findutils grep jq
 
 pip3 install --break-system-packages -r /requirements.txt
 
