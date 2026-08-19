@@ -170,6 +170,17 @@ func DeclarationError(declared string, resolved Provider) string {
 	return ""
 }
 
+// RegisteredInstanceClassGVKs is InstanceClassGVKs over the registrations alone: it answers which
+// kinds exist without needing the cluster configuration to be readable.
+func RegisteredInstanceClassGVKs(ctx context.Context, r client.Reader) ([]schema.GroupVersionKind, error) {
+	providers, err := allProviders(ctx, r)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewProviders(providers, Provider{}).InstanceClassGVKs(), nil
+}
+
 // allProviders is the Secret half of Load, separate so the lazy InstanceClass watch does not
 // depend on the cluster configuration being readable.
 func allProviders(ctx context.Context, r client.Reader) ([]Provider, error) {

@@ -227,13 +227,12 @@ func LazyInstanceClassSource(informers cache.Cache, eventHandler handler.EventHa
 				case <-poke:
 				}
 
-				providers, err := allProviders(ctx, informers)
+				gvks, err := RegisteredInstanceClassGVKs(ctx, informers)
 				if err != nil {
 					logger.V(1).Info("list instance class providers", "error", err.Error())
 					continue
 				}
-				// Every registered kind is watched, whichever one the cluster runs on.
-				for _, gvk := range NewProviders(providers, Provider{}).InstanceClassGVKs() {
+				for _, gvk := range gvks {
 					if started[gvk] {
 						continue
 					}

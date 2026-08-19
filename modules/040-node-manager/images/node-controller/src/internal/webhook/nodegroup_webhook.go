@@ -714,7 +714,7 @@ func (w *NodeGroupValidator) validateInstanceClassKind(
 		return "", nil
 	}
 
-	gvks, err := nodecommon.RegisteredInstanceClassGVKs(ctx, w.Client)
+	gvks, err := cloudprovider.RegisteredInstanceClassGVKs(ctx, w.Client)
 	if err != nil {
 		return "", fmt.Errorf("get registered InstanceClass kinds: %w", err)
 	}
