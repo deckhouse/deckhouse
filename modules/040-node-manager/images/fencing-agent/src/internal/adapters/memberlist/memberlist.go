@@ -33,20 +33,20 @@ const (
 	bindAddress  = "0.0.0.0"
 	leaveTimeout = 3 * time.Second
 
-	// deadNodeReclaimTime lets a hard-died node rejoin under the same name with a
-	// new address; the zero default makes peers refuse it forever.
+	// deadNodeReclaimTime lets a dead node rejoin under the same name with a new
+	// address. The zero default makes peers refuse it forever.
 	deadNodeReclaimTime = 10 * time.Second
 )
 
 type Config struct {
 	NodeName  string
 	NodeGroup string
-	// AdvertiseAddr must be the Node InternalIP: peers reach the pod only through
-	// the hostPort on the Node, so the auto-detected pod IP is unreachable.
+	// AdvertiseAddr must be the Node InternalIP. Peers reach the pod through the
+	// hostPort on the Node, so the auto-detected pod IP is unreachable.
 	AdvertiseAddr string
 	Port          int
-	// Tuning carries the SLA profile timings; it is required, the zero value
-	// would disable probing entirely.
+	// Tuning carries the SLA profile timings. It is required: the zero value
+	// disables probing.
 	Tuning v1alpha1.FencingSLAProfileMemberlist
 }
 
@@ -57,8 +57,8 @@ type Cluster struct {
 }
 
 func New(cfg Config, logger *log.Logger) (*Cluster, error) {
-	// A zero ProbeInterval silently disables probing in memberlist — an agent
-	// that joins gossip but can never detect a failure. Refuse to start instead.
+	// A zero ProbeInterval silently disables probing: the agent would join gossip
+	// and never detect a failure. Refuse to start instead.
 	if cfg.Tuning.ProbeInterval.Duration <= 0 {
 		return nil, errors.New("memberlist tuning is not set: ProbeInterval must be positive")
 	}
@@ -110,8 +110,8 @@ func (c *Cluster) NumMembers() int {
 	return c.list.NumMembers()
 }
 
-// Shutdown leaves before closing so peers see the node as left, not dead: a
-// planned restart must not look like a failure.
+// Shutdown leaves before closing so peers see a node that left, not one that
+// died: a planned restart must not look like a failure.
 func (c *Cluster) Shutdown() error {
 	defer close(c.stop)
 

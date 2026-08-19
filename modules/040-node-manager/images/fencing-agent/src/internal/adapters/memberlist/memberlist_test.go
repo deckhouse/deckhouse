@@ -28,7 +28,6 @@ import (
 	v1alpha1 "fencing-agent/api/node-manager.deckhouse.io/v1alpha1"
 )
 
-// testTuning returns a valid tuning fixture shared by the buildConfig tests.
 func testTuning() v1alpha1.FencingSLAProfileMemberlist {
 	return v1alpha1.FencingSLAProfileMemberlist{
 		ProbeInterval:           metav1.Duration{Duration: 100 * time.Millisecond},
@@ -85,8 +84,8 @@ func TestBuildConfigAdvertisesTheNodeAddress(t *testing.T) {
 		t.Errorf("Name is %q, want worker-1", cfg.Name)
 	}
 
-	// Peers reach the agent through the hostPort on the Node address, so an
-	// auto-detected pod IP here would make the node unreachable.
+	// Peers reach the agent through the hostPort on the Node address; a pod IP here
+	// would make the node unreachable.
 	if cfg.AdvertiseAddr != "10.0.0.1" {
 		t.Errorf("AdvertiseAddr is %q, want the Node InternalIP", cfg.AdvertiseAddr)
 	}
@@ -116,8 +115,7 @@ func TestBuildConfigAdvertisesTheNodeAddress(t *testing.T) {
 }
 
 func TestNewRejectsZeroTuning(t *testing.T) {
-	// No listener is created on this error path (the guard runs before
-	// hcml.Create), so there is no port to clean up.
+	// The guard runs before hcml.Create, so no listener exists to clean up.
 	_, err := New(Config{
 		NodeName:      "worker-1",
 		NodeGroup:     "worker",

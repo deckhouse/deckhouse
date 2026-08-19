@@ -33,9 +33,8 @@ type nodeEvent struct {
 	addr string
 }
 
-// eventDelegate offloads notifications to its own goroutine: memberlist invokes
-// them under its state lock, so the delegate must not block. A full buffer drops
-// and counts events.
+// eventDelegate hands notifications to its own goroutine: memberlist calls them
+// under its state lock, so they must not block. A full buffer drops and counts.
 type eventDelegate struct {
 	logger  *log.Logger
 	events  chan nodeEvent
@@ -54,7 +53,7 @@ func (d *eventDelegate) NotifyJoin(node *hcml.Node) {
 }
 
 func (d *eventDelegate) NotifyLeave(node *hcml.Node) {
-	d.enqueue("left", node)
+	d.enqueue("left_or_failed", node)
 }
 
 func (d *eventDelegate) NotifyUpdate(node *hcml.Node) {

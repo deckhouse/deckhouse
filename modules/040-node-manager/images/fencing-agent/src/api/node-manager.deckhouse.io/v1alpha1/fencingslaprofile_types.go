@@ -21,11 +21,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// FencingSLAProfileSpec mirrors crds/fencingslaprofiles.yaml. Durations are
-// metav1.Duration: the wire format stays the string the CRD pattern validates,
-// while consumers get time.Duration without reparsing. The CRD schema and its
-// CEL rules guard admission only, so an object may predate them — Validate
-// re-checks every value before the agent runs (fail closed).
+// FencingSLAProfileSpec mirrors crds/fencingslaprofiles.yaml. metav1.Duration
+// keeps the wire format the string the CRD pattern validates, while consumers get
+// a time.Duration. The schema and CEL rules only guard admission and an object
+// may predate them, so Validate re-checks every value before the agent runs.
 type FencingSLAProfileSpec struct {
 	// ReactionGoal is documentation-only and is not parsed as a duration.
 	ReactionGoal string `json:"reactionGoal"`
@@ -57,9 +56,8 @@ type FencingSLAProfileMemberlist struct {
 	GossipToTheDeadTime metav1.Duration `json:"gossipToTheDeadTime"`
 }
 
-// FencingSLAProfileFallback tunes the heartbeat of a node that lost gossip
-// quorum but still reaches the Kubernetes API. TTL is consumed by the
-// controller, not by the agent.
+// FencingSLAProfileFallback tunes the heartbeat of a node that lost gossip quorum
+// but still reaches the API. TTL belongs to the controller.
 type FencingSLAProfileFallback struct {
 	Heartbeat            metav1.Duration `json:"heartbeat"`
 	TTL                  metav1.Duration `json:"ttl"`
@@ -72,7 +70,7 @@ type FencingSLAProfileRejoin struct {
 	MaxInterval metav1.Duration `json:"maxInterval"`
 }
 
-// FencingSLAProfileEvacuation is consumed by the controller, not by the agent.
+// FencingSLAProfileEvacuation belongs to the controller, not the agent.
 type FencingSLAProfileEvacuation struct {
 	Delay metav1.Duration `json:"delay"`
 }
@@ -83,9 +81,9 @@ type FencingSLAProfileWatchdog struct {
 	Timeout      metav1.Duration `json:"timeout"`
 }
 
-// FencingSLAProfile is a cluster-scoped, state-less set of fencing timings.
-// The built-in objects (critical/medium/moderate/slow) are shipped by module
-// Helm templates; ProfileName.ObjectName resolves a reference to an object name.
+// FencingSLAProfile is a cluster-scoped, stateless set of fencing timings. The
+// built-in objects (critical/medium/moderate/slow) ship with the module Helm
+// templates; ProfileName.ObjectName resolves a reference to an object name.
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Cluster,shortName=fsp
 type FencingSLAProfile struct {

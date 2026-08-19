@@ -140,8 +140,8 @@ func TestPeersWithoutAddressesAreNotAlone(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
-	// Real peers exist, but the cloud controller has not populated their
-	// addresses yet: the agent must keep retrying, not declare itself alone.
+	// Real peers, but the cloud controller has not filled in their addresses yet:
+	// the agent must keep retrying, not declare itself alone.
 	lister := &fakeLister{peers: []domain.Peer{
 		{Name: "worker-1", IP: "10.0.0.1"},
 		{Name: "worker-2", IP: ""},
@@ -196,7 +196,7 @@ func TestSeedListIsCappedAndSampled(t *testing.T) {
 	}
 
 	// A fixed prefix of the API response would keep hitting the same unreachable
-	// nodes forever, so the sample has to differ between attempts.
+	// nodes, so the sample has to differ between attempts.
 	if len(seen) <= maxSeeds {
 		t.Errorf("seed list is not sampled: %d distinct seeds over 10 attempts", len(seen))
 	}

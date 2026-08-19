@@ -41,8 +41,8 @@ func newLogWriter(logger *log.Logger) io.Writer {
 }
 
 func (w *logWriter) Write(p []byte) (int, error) {
-	// Drop suppressed debug lines before parsing: memberlist is chatty at debug
-	// level and this runs on its goroutines.
+	// Drop suppressed debug lines before parsing: memberlist is chatty and this
+	// runs on its goroutines.
 	if !w.debug && bytes.HasPrefix(p, debugPrefix) {
 		return len(p), nil
 	}

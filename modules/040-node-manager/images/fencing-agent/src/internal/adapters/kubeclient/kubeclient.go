@@ -34,8 +34,8 @@ func NewRestConfig() (*rest.Config, error) {
 }
 
 func New(cfg *rest.Config) (kubernetes.Interface, error) {
-	// Core objects use protobuf: bootstrap relists the whole NodeGroup and
-	// protobuf decodes far cheaper than JSON at scale. CRD clients keep JSON.
+	// Protobuf for core objects: bootstrap relists the whole NodeGroup and
+	// protobuf decodes much cheaper than JSON. CRD clients keep JSON.
 	cfg = rest.CopyConfig(cfg)
 	cfg.ContentType = runtime.ContentTypeProtobuf
 

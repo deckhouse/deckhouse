@@ -77,8 +77,8 @@ func TestDeleteUnknownPeerIsNoop(t *testing.T) {
 	}
 }
 
-// ListNodeGroup adapts the snapshot to the seed source contract of the join
-// usecase; the arguments exist only to satisfy that interface.
+// ListNodeGroup adapts the snapshot to the join usecase's seed source; the
+// arguments only satisfy that interface.
 func TestListNodeGroupReturnsSnapshotCopy(t *testing.T) {
 	m := New(log.NewNop())
 	m.Upsert(domain.Peer{Name: "worker-1", IP: "10.0.0.1"})

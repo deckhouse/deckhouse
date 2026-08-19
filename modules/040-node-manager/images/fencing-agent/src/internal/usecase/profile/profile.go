@@ -31,7 +31,7 @@ import (
 )
 
 // retryInterval paces retries of transient API failures inside the caller's
-// budget; deterministic failures (NotFound, invalid values) end immediately.
+// budget. NotFound and invalid values fail right away.
 const retryInterval = 2 * time.Second
 
 type Getter interface {

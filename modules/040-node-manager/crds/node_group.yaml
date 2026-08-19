@@ -2313,7 +2313,7 @@ spec:
 
                         - `Watchdog`: Uses the watchdog kernel module to automatically reboot nodes that lose connectivity with the cluster. In this mode, the fencing-agent also monitors node availability in the cluster.
 
-                        When `fencing` is enabled, the NodeGroupConfiguration script loads the `softdog` kernel module with the `soft_margin` parameter set to the value of `spec.fencing.watchdog.timeout` (60 seconds by default) and `soft_panic=1`.
+                        When `fencing` is enabled, the NodeGroupConfiguration script loads the `softdog` kernel module with `soft_panic=1`. The watchdog timeout is applied by the fencing-agent itself when it arms the device, and it is taken from the FencingSLAProfile named in `spec.fencing.profile`.
 
                         How the fencing-agent works:
 
@@ -2353,6 +2353,8 @@ spec:
                           default: 60s
                           description: |
                             Watchdog timeout duration. Should be specified in seconds, minutes or hours.
+
+                            Deprecated and no longer in effect: the timeout comes from the FencingSLAProfile named in `spec.fencing.profile`, which the fencing-agent applies to the device.
                           x-doc-default: 60s
                       required:
                         - timeout

@@ -44,9 +44,8 @@ type Config struct {
 	LogLevel               string `env:"LOG_LEVEL" env-default:"info"`
 }
 
-// Load reads and validates the environment. Fencing timings deliberately have
-// no environment variables: they come only from the FencingSLAProfile named by
-// PROFILE_REF_NAME, and without a valid profile the agent must not run.
+// Load reads and validates the environment. Fencing timings have no env vars on
+// purpose: they come only from the FencingSLAProfile named by PROFILE_REF_NAME.
 func (c *Config) Load() error {
 	if err := cleanenv.ReadEnv(c); err != nil {
 		return fmt.Errorf("read environment: %w", err)

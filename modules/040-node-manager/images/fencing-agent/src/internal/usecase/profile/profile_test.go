@@ -67,8 +67,8 @@ func TestLoadReturnsValidatedProfile(t *testing.T) {
 	}
 }
 
-// NotFound is deterministic: the profile is either shipped or referenced
-// wrongly, waiting inside the process would only hide the failure.
+// NotFound is deterministic: the profile is missing or misreferenced, and waiting
+// inside the process would only hide it.
 func TestLoadDoesNotRetryNotFound(t *testing.T) {
 	g := &getterStub{results: []func() (*v1alpha1.FencingSLAProfile, error){
 		func() (*v1alpha1.FencingSLAProfile, error) { return nil, notFound() },
@@ -100,9 +100,9 @@ func TestLoadDoesNotRetryInvalidProfile(t *testing.T) {
 	}
 }
 
-// A malformed duration fails while the response is being decoded, so the error
-// carries no API status. Retrying would re-read the same unparseable object,
-// and the agent must say the profile is invalid instead of blaming the API.
+// A malformed duration fails during decoding, so the error carries no API status.
+// A retry would re-read the same broken object, and the agent must blame the
+// profile, not the API.
 func TestLoadDoesNotRetryDecodeFailure(t *testing.T) {
 	decodeErr := errors.New(`get fencingslaprofile "medium": error unmarshaling JSON: time: invalid duration "soon"`)
 

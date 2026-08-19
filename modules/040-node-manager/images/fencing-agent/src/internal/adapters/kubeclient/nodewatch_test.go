@@ -104,8 +104,8 @@ func TestNodeWatcherFeedsStore(t *testing.T) {
 		t.Fatal("cache did not sync")
 	}
 
-	// Initial fill: the label selector keeps foreign groups out (the fake
-	// applies selectors on LIST, so this is the only phase that can assert it).
+	// Initial fill: the label selector keeps foreign groups out. The fake applies
+	// selectors only on LIST, so this is the only phase that can assert it.
 	store.eventually(t, func(peers map[string]domain.Peer) bool {
 		_, hasWorker := peers["worker-1"]
 		_, hasMaster := peers["master-1"]

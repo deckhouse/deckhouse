@@ -31,17 +31,27 @@ type Server struct {
 	addr   string
 	logger *log.Logger
 	ready  func() bool
+	alive  func() bool
 }
 
-// NewServer serves liveness unconditionally and gates readiness on ready (non-nil).
-func NewServer(addr string, logger *log.Logger, ready func() bool) *Server {
-	return &Server{addr: addr, logger: logger, ready: ready}
+// NewServer needs both callbacks. Liveness asks whether the agent's loops still
+// run; readiness whether it is doing its job: joined to gossip and running the
+// watchdog policy.
+func NewServer(addr string, logger *log.Logger, ready, alive func() bool) *Server {
+	return &Server{addr: addr, logger: logger, ready: ready, alive: alive}
 }
 
 func (s *Server) Run(ctx context.Context) error {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
+		if !s.alive() {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_, _ = w.Write([]byte("watchdog feed loop is stalled"))
+
+			return
+		}
+
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
 	})
@@ -49,7 +59,7 @@ func (s *Server) Run(ctx context.Context) error {
 	mux.HandleFunc("/readyz", func(w http.ResponseWriter, _ *http.Request) {
 		if !s.ready() {
 			w.WriteHeader(http.StatusServiceUnavailable)
-			_, _ = w.Write([]byte("not joined to the gossip network"))
+			_, _ = w.Write([]byte("not joined to the gossip network or the watchdog policy is not in effect"))
 
 			return
 		}

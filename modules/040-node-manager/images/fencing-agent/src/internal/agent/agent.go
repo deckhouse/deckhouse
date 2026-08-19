@@ -25,14 +25,18 @@ import (
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 
-	v1alpha1 "fencing-agent/api/node-manager.deckhouse.io/v1alpha1"
+	"fencing-agent/internal/adapters/events"
 	"fencing-agent/internal/adapters/kubeclient"
 	"fencing-agent/internal/adapters/memberlist"
+	watchdogdevice "fencing-agent/internal/adapters/watchdog"
 	"fencing-agent/internal/config"
 	"fencing-agent/internal/controllers/health"
 	"fencing-agent/internal/domain"
 	"fencing-agent/internal/usecase/join"
 	"fencing-agent/internal/usecase/membership"
+	"fencing-agent/internal/usecase/watchdog"
+
+	v1alpha1 "fencing-agent/api/node-manager.deckhouse.io/v1alpha1"
 )
 
 type Agent struct {
@@ -63,6 +67,13 @@ func (a *Agent) memberlistConfig() memberlist.Config {
 	}
 }
 
+func (a *Agent) watchdogParams() watchdog.Params {
+	return watchdog.Params{
+		FeedInterval: a.sla.Watchdog.FeedInterval.Duration,
+		Timeout:      a.sla.Watchdog.Timeout.Duration,
+	}
+}
+
 func (a *Agent) joinParams() join.Params {
 	return join.Params{
 		NodeName:         a.identity.Name,
@@ -89,6 +100,8 @@ func (a *Agent) Run(ctx context.Context) error {
 		"probe_interval", a.sla.Memberlist.ProbeInterval.Duration.String(),
 		"memberlist_port", a.cfg.MemberlistPort,
 		"watchdog_device", a.cfg.WatchdogDevice,
+		"watchdog_feed_interval", a.sla.Watchdog.FeedInterval.Duration.String(),
+		"watchdog_timeout", a.sla.Watchdog.Timeout.Duration.String(),
 		"api_socket_path", a.cfg.APISocketPath,
 	)
 
@@ -103,9 +116,11 @@ func (a *Agent) Run(ctx context.Context) error {
 		}
 	}()
 
-	// Expected membership: every Node labeled into the NodeGroup, served from
-	// the informer cache. The join seed list and the quorum size come from the
-	// same view, so they can never diverge.
+	recorder := events.New(a.deps.K8sClient, a.identity, a.logger)
+	defer recorder.Shutdown()
+
+	// Every Node labeled into the NodeGroup, from the informer cache. The seed list
+	// and the quorum size read the same view, so they cannot diverge.
 	members := membership.New(a.logger)
 
 	watcher, err := kubeclient.NewNodeWatcher(a.deps.K8sClient, a.cfg.NodeGroup, members, a.logger)
@@ -113,12 +128,37 @@ func (a *Agent) Run(ctx context.Context) error {
 		return fmt.Errorf("create node watcher: %w", err)
 	}
 
+	// The own Node gets its own informer: the watchdog must keep seeing maintenance
+	// annotations even if the Node loses the NodeGroup label.
+	selfState := watchdog.NewSelfState(a.identity.UID, a.logger)
+
+	selfWatcher, err := kubeclient.NewSelfWatcher(a.deps.K8sClient, a.identity.Name, selfState, a.logger)
+	if err != nil {
+		return fmt.Errorf("create own node watcher: %w", err)
+	}
+
+	watchdogManager := watchdog.New(a.watchdogParams(), watchdog.Deps{
+		Open: func() (watchdog.Device, error) {
+			return watchdogdevice.Open(a.cfg.WatchdogDevice, a.logger)
+		},
+		Nowayout: func() (bool, error) {
+			return watchdogdevice.Nowayout(a.cfg.WatchdogDevice)
+		},
+		State:      selfState,
+		Events:     recorder,
+		ShouldFeed: feedGate,
+	}, a.logger)
+
+	defer watchdogManager.Close()
+
 	joiner := join.New(members, cluster, a.joinParams(), a.logger)
 
 	g, gctx := errgroup.WithContext(ctx)
 
 	g.Go(func() error {
-		return health.NewServer(a.cfg.HealthProbeBindAddress, a.logger, joiner.Joined).Run(gctx)
+		ready := func() bool { return joiner.Joined() && watchdogManager.Ready() }
+
+		return health.NewServer(a.cfg.HealthProbeBindAddress, a.logger, ready, watchdogManager.Alive).Run(gctx)
 	})
 
 	g.Go(func() error {
@@ -128,10 +168,15 @@ func (a *Agent) Run(ctx context.Context) error {
 	})
 
 	g.Go(func() error {
-		// WaitForCacheSync blocks while the API is unreachable: the pod simply
-		// stays NotReady until it recovers. It returns false only on shutdown,
-		// never as a verdict on the cluster state (the profile, in contrast,
-		// fails closed).
+		selfWatcher.Run(gctx)
+
+		return nil
+	})
+
+	g.Go(func() error {
+		// WaitForCacheSync blocks while the API is unreachable, leaving the pod
+		// NotReady until it recovers. It returns false only on shutdown, never as a
+		// verdict on the cluster.
 		a.logger.Info("waiting for node cache sync")
 
 		if !watcher.WaitForSync(gctx) {
@@ -142,17 +187,23 @@ func (a *Agent) Run(ctx context.Context) error {
 
 		members.MarkSynced()
 
+		if !selfWatcher.WaitForSync(gctx) {
+			a.logger.Info("own node cache sync aborted by shutdown")
+
+			return nil
+		}
+
 		joiner.Bootstrap(gctx)
 
 		if gctx.Err() != nil {
 			return nil
 		}
 
-		a.logger.Info("gossip network joined, fencing flow is not started")
+		// Arming happens only here: an armed device promises this agent can see its
+		// NodeGroup.
+		a.logger.Info("gossip network joined, starting the watchdog")
 
-		<-gctx.Done()
-
-		return nil
+		return watchdogManager.Run(gctx)
 	})
 
 	if err := g.Wait(); err != nil {
@@ -162,4 +213,8 @@ func (a *Agent) Run(ctx context.Context) error {
 	a.logger.Info("fencing-agent stopped")
 
 	return nil
+}
+
+func feedGate() (bool, string) {
+	return true, "quorum gate is not implemented yet"
 }

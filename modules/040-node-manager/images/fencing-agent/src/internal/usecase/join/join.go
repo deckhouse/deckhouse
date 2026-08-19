@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package join builds the seed list of a NodeGroup from the Kubernetes API and
-// performs the startup join into the gossip network of that NodeGroup.
+// Package join builds a NodeGroup's seed list from the Kubernetes API and does
+// the startup join into its gossip network.
 package join
 
 import (
@@ -33,8 +33,8 @@ import (
 	"fencing-agent/internal/domain"
 )
 
-// maxSeeds caps a join: memberlist dials seeds sequentially and exchanges full
-// state with each, so a few reachable seeds suffice and gossip delivers the rest.
+// maxSeeds caps a join. memberlist dials seeds one by one and exchanges full
+// state with each, so a few reachable ones are enough; gossip does the rest.
 const maxSeeds = 3
 
 type NodeLister interface {
@@ -48,8 +48,8 @@ type Cluster interface {
 
 type Params struct {
 	NodeName string
-	// NodeIP also drops a stale Node object that carries the local IP under
-	// another name, and prevents a hairpin self-join.
+	// NodeIP also drops a stale Node object holding the local IP under another
+	// name, and blocks a hairpin self-join.
 	NodeIP           string
 	NodeGroup        string
 	MemberlistPort   int
@@ -152,8 +152,8 @@ func (j *Joiner) attempt(ctx context.Context) error {
 	return nil
 }
 
-// join wraps the uncancellable Cluster.Join so a SIGTERM does not wait out its
-// per-seed dial timeouts; the abandoned goroutine unblocks when the transport closes.
+// join wraps the uncancellable Cluster.Join so a SIGTERM does not sit through its
+// per-seed dial timeouts. The abandoned goroutine ends with the transport.
 func (j *Joiner) join(ctx context.Context, seeds []string) (int, error) {
 	type result struct {
 		joined int
@@ -233,7 +233,7 @@ func (j *Joiner) seedList(ctx context.Context) ([]string, int, error) {
 	return seeds, peers, nil
 }
 
-// delay is full jitter in [RetryInterval, backoff]: narrow jitter would keep a
+// delay is full jitter in [RetryInterval, backoff]. Narrow jitter would keep the
 // group's agents retrying in lockstep after a shared outage.
 func (j *Joiner) delay(backoff time.Duration) time.Duration {
 	spread := backoff - j.params.RetryInterval

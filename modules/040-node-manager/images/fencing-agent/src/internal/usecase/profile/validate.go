@@ -44,18 +44,17 @@ func (v *validator) atLeastOne(field string, value int32) {
 	}
 }
 
-// lessThan re-checks a CRD CEL invariant of the form "a must be less than b".
+// lessThan re-checks a CRD CEL rule of the form "a must be less than b".
 func (v *validator) lessThan(fieldA string, a metav1.Duration, fieldB string, b metav1.Duration) {
 	if a.Duration >= b.Duration {
 		v.errs = append(v.errs, fmt.Errorf("%s %s must be less than %s %s", fieldA, a.Duration, fieldB, b.Duration))
 	}
 }
 
-// Validate re-checks the profile the agent is about to run on. The CRD schema
-// and CEL rules guard admission only: an object may predate them, so every
-// value is checked here and any error must stop the agent.
-// evacuation.delay belongs to the controller and is not the agent's concern;
-// fallback.ttl is checked because the agent's own timings must fit inside it.
+// Validate re-checks the profile the agent is about to run on. The CRD schema and
+// CEL rules only guard admission, and an object may predate them, so any error
+// here must stop the agent. evacuation.delay belongs to the controller;
+// fallback.ttl is checked because the agent's timings must fit inside it.
 func Validate(profile *v1alpha1.FencingSLAProfile) error {
 	if profile == nil {
 		return errors.New("profile is nil")
@@ -85,7 +84,7 @@ func Validate(profile *v1alpha1.FencingSLAProfile) error {
 		return errors.Join(v.errs...)
 	}
 
-	// The five CRD CEL invariants, re-checked (see the function comment above).
+	// The five CRD CEL rules, re-checked; see the function comment.
 	v.lessThan("memberlist.probeTimeout", spec.Memberlist.ProbeTimeout, "memberlist.probeInterval", spec.Memberlist.ProbeInterval)
 	v.lessThan("fallback.heartbeat", spec.Fallback.Heartbeat, "fallback.ttl", spec.Fallback.TTL)
 	v.lessThan("fallback.kubernetesAPITimeout", spec.Fallback.KubernetesAPITimeout, "fallback.ttl", spec.Fallback.TTL)
