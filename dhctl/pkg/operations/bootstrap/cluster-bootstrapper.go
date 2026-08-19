@@ -420,10 +420,10 @@ func setControlPlaneInstallFlags(installConfig *config.DeckhouseInstaller, metaC
 
 // runPreparation runs the first node outside the walk below. It produces the cluster type every
 // gate reads, so it cannot be selected by a tree that does not exist until it has run.
-func (b *ClusterBootstrapper) runPreparation(ctx context.Context, bctx *bootstrapContext, funcs map[phases.OperationPhase]bootstrapPhase, only phases.OperationPhase) (bool, error) {
+func (b *ClusterBootstrapper) runPreparation(ctx context.Context, bctx *bootstrapContext, funcs map[phases.OperationPhase]bootstrapPhase, only phases.OperationPhase) error {
 	preparation, ok := funcs[phases.PreparationPhase]
 	if !ok {
-		return false, fmt.Errorf("Internal error: bootstrap declares phase %q, but nothing implements it", phases.PreparationPhase)
+		return fmt.Errorf("Internal error: bootstrap declares phase %q, but nothing implements it", phases.PreparationPhase)
 	}
 
 	// Progress only, unlike every other node: reporting a phase publishes a snapshot of the state
@@ -437,7 +437,7 @@ func (b *ClusterBootstrapper) runPreparation(ctx context.Context, bctx *bootstra
 	// against, and refuses there rather than here, before the rest of it runs.
 	bctx.only = only
 
-	return false, preparation.run(ctx, bctx)
+	return preparation.run(ctx, bctx)
 }
 
 // runPhases walks the bootstrap tree: every node the gates keep is announced, run, and left
@@ -463,12 +463,8 @@ func (b *ClusterBootstrapper) runPhases(ctx context.Context, bctx *bootstrapCont
 
 	bctx.skipPhases = skip
 
-	stop, err := b.runPreparation(ctx, bctx, funcs, only)
-	if err != nil {
+	if err := b.runPreparation(ctx, bctx, funcs, only); err != nil {
 		return err
-	}
-	if stop {
-		return nil
 	}
 
 	clusterConfig := phaseClusterConfig(bctx.metaConfig)
