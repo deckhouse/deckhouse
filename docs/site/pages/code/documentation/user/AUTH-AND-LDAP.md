@@ -290,16 +290,23 @@ auto_link_ldap_user: true
 
 #### How the LDAP account is found
 
-On the first sign-in through OIDC, Deckhouse Code queries all configured LDAP servers one by one. For each server, the search is performed in the following order, until the first match:
+On the first sign-in through OIDC, Deckhouse Code looks the user up in LDAP. The search uses two values from the OIDC provider data:
 
-1. By the attribute specified in the LDAP server `uid` parameter (for example, `cn`), using the `uid` value provided by the OIDC provider.
-1. By the mail attributes (`mail`, `email`, `userPrincipalName`), using the `uid` value provided by the OIDC provider.
-1. By the same mail attributes, using the email value provided by the OIDC provider.
-1. By DN, if the `uid` provided by the OIDC provider is a DN.
+- `uid` — the value of the field specified in the provider `uid_field` parameter (for example, `preferred_username`);
+- email — the user email address.
 
-If the user is found, an LDAP identity with the discovered DN is added to their account. If the user is not found, the account is created without an LDAP link.
+The configured LDAP servers are queried one by one. On each server, up to four search attempts are made, until the first match:
 
-For linking to work predictably, the `uid` or email values must match in the OIDC provider and in LDAP.
+| Value being searched for | LDAP attribute searched |
+| ------------------------ | ----------------------- |
+| `uid`                    | The attribute specified in the LDAP server `uid` parameter (for example, `cn`) |
+| `uid`                    | Mail attributes: `mail`, `email`, `userPrincipalName` |
+| email                    | The same mail attributes |
+| `uid`                    | DN — if the `uid` value is a DN itself |
+
+If the user is found, an LDAP identity with the discovered DN is added to their account. If none of the attempts succeeds, the account is created without an LDAP link.
+
+This means linking works only if the `uid` or email from the OIDC provider matches the value of the corresponding attribute in LDAP.
 
 #### First and subsequent sign-ins
 
@@ -491,7 +498,7 @@ providers:
         redirect_uri: 'https://code.example.com/users/auth/openid_connect/callback'
 ```
 
-Pay attention to the `uid_field` parameter: the field it points to becomes the account `uid`, and this value is used when looking the user up in LDAP. It must match the value of the attribute specified in the LDAP server `uid` parameter (`cn` in this example), or the email address. If the parameter is not set, the `sub` field is used, which usually does not match any LDAP attribute.
+Pay attention to the `uid_field` parameter: the field it points to becomes the account `uid`, and this value is used when looking the user up in LDAP. It must match the value of the attribute specified in the LDAP server `uid` parameter (`cn` in this example), or the email address — for details, see [How the LDAP account is found](#how-the-ldap-account-is-found).
 
 The remaining provider parameters are described in the [OpenID Connect (OIDC)](#openid-connect-oidc) section.
 
