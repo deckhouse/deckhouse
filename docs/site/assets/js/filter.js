@@ -616,7 +616,7 @@ document.addEventListener('DOMContentLoaded', () => {
       element.addEventListener('click', () => {
         setTimeout(() => {
           tooltip.hide();
-        }, 8000);
+        }, 5000);
       });
     })
   }
