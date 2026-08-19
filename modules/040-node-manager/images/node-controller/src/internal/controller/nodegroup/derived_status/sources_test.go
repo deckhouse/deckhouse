@@ -110,7 +110,8 @@ func TestComputeDegradesWithoutClusterKubernetesConfigMap(t *testing.T) {
 
 	derive := func(t *testing.T, objects ...client.Object) Result {
 		t.Helper()
-		result, _, err := newTestServiceRaw(t, objects...).ComputeWithCloudChecks(context.Background(), nodeGroup)
+		s := newTestServiceRaw(t, objects...)
+		result, _, err := s.ComputeWithCloudChecks(context.Background(), nodeGroup, testRegistry(t, s))
 		require.NoError(t, err)
 		return result
 	}

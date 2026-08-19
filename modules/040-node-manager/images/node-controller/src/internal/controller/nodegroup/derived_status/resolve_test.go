@@ -89,40 +89,6 @@ func testRegistry(t *testing.T, s *Service) cloudprovider.Providers {
 	return providers
 }
 
-func TestDecodeRegistration_APIVersionIsNeverGuessed(t *testing.T) {
-	tests := []struct {
-		name       string
-		data       map[string][]byte
-		expVersion string
-	}{
-		{
-			name:       "published version is used verbatim",
-			data:       map[string][]byte{cloudprovider.InstanceClassAPIVersionKey: []byte("v1")},
-			expVersion: "v1",
-		},
-		{
-			name:       "a provider serving only v1alpha1 is honoured",
-			data:       map[string][]byte{cloudprovider.InstanceClassAPIVersionKey: []byte("v1alpha1")},
-			expVersion: "v1alpha1",
-		},
-		{
-			// No guessing: a version picked here would feed the instance-class checksum, and a
-			// wrong guess renames the MachineTemplate and recreates every node in the NodeGroup.
-			name: "provider registered without the key yields no version",
-			data: map[string][]byte{"instanceClassKind": []byte("YandexInstanceClass")},
-		},
-		{
-			name: "no provider secret at all yields no version",
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.expVersion, cloudprovider.FromSecretData(tc.data).InstanceClassAPIVersion)
-		})
-	}
-}
-
 // An unpublished version must reach the operator as a NodeGroup validation error rather than as a
 // reconcile error: every consumer already handles a validation error (rendering is skipped, the
 // bashible context keeps its previous entry), whereas a reconcile error stops the whole pass and

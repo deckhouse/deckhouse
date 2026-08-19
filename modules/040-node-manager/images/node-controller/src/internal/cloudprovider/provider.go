@@ -58,11 +58,6 @@ type CAPIConfig struct {
 	MachineDeploymentSpecPatch string
 }
 
-// Empty reports a zero provider — what a cluster with no cloud provider yields.
-func (p Provider) Empty() bool {
-	return p.Type == ""
-}
-
 // FromSecretData reads the Secret data. Helm writes scalars as plain strings and structures as JSON, so
 // every field tries JSON first and falls back to the raw bytes.
 func FromSecretData(data map[string][]byte) Provider {
