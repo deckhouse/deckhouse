@@ -35,7 +35,7 @@ Summary:
 
    <!/REMOVE_FOR_CE>
 
-   1. Get the list of modules not supported in DKP $NEW_EDITION:
+   1. Get the list of internal modules not supported in DKP $NEW_EDITION:
 
       ```shell
       (set -e
@@ -146,7 +146,7 @@ Summary:
 {% endcapture %}
 
 {% capture take_care_deckhuse_imagepullbackoff %}
-1. Make sure that deckhouse has started after the registry change:
+1. Make sure that `deckhouse` pods has started after the registry change:
 
    1. To do this, run the command:
 
@@ -594,7 +594,7 @@ There are two ways to work with the DKP container image registry:
    d8 k edit moduleconfig deckhouse
    ```
 
-   Choose the example for your edition:
+   Choose the example for your target edition:
 
    {% tabs switch-registry-edition %}
    {% tab "DKP CE" %}
