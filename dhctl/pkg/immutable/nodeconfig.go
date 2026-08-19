@@ -18,6 +18,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 	"strconv"
 
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
@@ -36,15 +38,15 @@ const (
 	nodeManagerDigestsKey = "nodeManager"
 	osImageName           = "olcedar"
 
-	// systemDiskSize tells the initramfs which disk to install onto. The
-	// threshold sits between the etcd (10Gi) and system (50Gi) disks: exact
-	// sizes depend on provider rounding, and device names do not follow attach
-	// order.
+	// systemDiskSize tells the initramfs which disk to install onto: a threshold
+	// between the etcd (10Gi) and system (50Gi) disks, because provider rounding
+	// moves the exact sizes and device names do not follow attach order.
 	systemDiskSize = ">=20Gi"
 
-	// Defaults mirroring the nodeConfig CRD field defaults. They are applied
-	// here because the bootstrap payload is marshalled to a file instead of
-	// being created through the API server, where CRD defaulting runs.
+	// The +kubebuilder:default values of the NodeConfig CRD
+	// (modules/040-node-manager/images/node-controller/src/api/internal.deckhouse.io/v1alpha1/nodeconfig_types.go),
+	// applied here because the payload is marshalled to a file instead of being
+	// created through the API server, where CRD defaulting runs.
 	defaultContainerLogMaxSize    = "50Mi"
 	defaultContainerLogMaxFiles   = 4
 	defaultMaxConcurrentDownloads = 3
@@ -54,27 +56,13 @@ const (
 	defaultPodSubnetNodeCIDRPrefix = 24
 )
 
-// nodeConfigInput is everything buildNodeConfig needs.
 type nodeConfigInput struct {
-	// NodeName is the name the node registers under.
-	NodeName string
-	// MetaConfig is the parsed cluster configuration.
+	NodeName   string
 	MetaConfig *config.MetaConfig
-	// Join carries what a node needs to enter a cluster that already runs. It is
-	// nil for the first master, which has no cluster to join.
-	Join *joinInput
-}
-
-// joinInput is what the cluster — not the installer — decides for a joining
-// node. The CA and the token are read from the running cluster: a second
-// source for either would be a second source of truth.
-type joinInput struct {
-	CACert         string
-	BootstrapToken string
-	// APIServerEndpoints are the apiservers already serving the cluster. A
-	// joining node cannot use the first master's placeholder trick: its own
-	// apiserver does not exist until control-plane-manager puts one there.
-	APIServerEndpoints []string
+	// Join carries what the cluster — not the installer — decides for a node
+	// entering a cluster that already runs. It is nil for the first master,
+	// which has no cluster to join.
+	Join *JoinPayloadInput
 }
 
 // buildNodeConfig renders the nodeConfig the first control-plane node boots
@@ -88,36 +76,61 @@ func buildNodeConfig(ctx context.Context, in nodeConfigInput) (*nodeConfig, erro
 		return nil, errors.New("build node config: meta config is nil")
 	}
 
-	kubernetesVersion, err := kubernetesVersion(in.MetaConfig)
+	clusterConfig, err := in.MetaConfig.ClusterConfigMap()
+	if err != nil {
+		return nil, fmt.Errorf("read the cluster configuration: %w", err)
+	}
+
+	spec, err := buildNodeSpec(in, clusterConfig)
 	if err != nil {
 		return nil, err
+	}
+
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf(
+		"Built nodeConfig for %s: Kubernetes %s, %d system extensions, join=%t",
+		in.NodeName, spec.Kubelet.KubernetesVersion, len(spec.Extensions), in.Join != nil,
+	))
+
+	return &nodeConfig{
+		APIVersion: payloadAPIVersion,
+		Kind:       nodeConfigKind,
+		Metadata: objectMeta{
+			Name:   in.NodeName,
+			Labels: map[string]string{global.NodeGroupLabel: global.MasterNodeGroupName},
+		},
+		Spec: spec,
+	}, nil
+}
+
+// buildNodeSpec assembles what the node is told to be. Everything in it holds
+// for any control-plane node; the fields that only hold for the zeroth master
+// are commented where they are set.
+func buildNodeSpec(in nodeConfigInput, clusterConfig map[string]any) (nodeSpec, error) {
+	kubernetesVersion, err := kubernetesVersion(clusterConfig)
+	if err != nil {
+		return nodeSpec{}, err
 	}
 
 	images := in.MetaConfig.Images.ConvertToMap()
 
 	extensions, err := sysextExtensions(images, kubernetesVersion)
 	if err != nil {
-		return nil, err
+		return nodeSpec{}, err
 	}
 
 	registry, err := nodeRegistry(in.MetaConfig)
 	if err != nil {
-		return nil, err
+		return nodeSpec{}, err
 	}
 
 	pauseImage, err := sandboxImage(registry, images)
 	if err != nil {
-		return nil, err
-	}
-
-	podsPerNode, err := maxPods(in.MetaConfig)
-	if err != nil {
-		return nil, err
+		return nodeSpec{}, err
 	}
 
 	osImageRef, err := osImageDigest(images)
 	if err != nil {
-		return nil, err
+		return nodeSpec{}, err
 	}
 
 	spec := nodeSpec{
@@ -125,7 +138,7 @@ func buildNodeConfig(ctx context.Context, in nodeConfigInput) (*nodeConfig, erro
 		OSImage:  osImageRef,
 		Storage: storage{
 			DiskSelector: &diskSelector{Size: systemDiskSize},
-			Mounts:       etcdMounts(),
+			Mounts:       etcdMounts,
 		},
 		Extensions: extensions,
 		Kernel: kernel{
@@ -144,7 +157,7 @@ func buildNodeConfig(ctx context.Context, in nodeConfigInput) (*nodeConfig, erro
 			Hostname:   in.NodeName,
 			Interfaces: []networkInterface{{Name: "eth0", DHCP: true}},
 		},
-		Kubelet: nodeKubelet(in.MetaConfig, kubernetesVersion, podsPerNode),
+		Kubelet: nodeKubelet(in.MetaConfig, kubernetesVersion, maxPods(clusterConfig)),
 		ContainerRuntime: containerRuntime{
 			SandboxImage:           pauseImage,
 			MaxConcurrentDownloads: defaultMaxConcurrentDownloads,
@@ -157,27 +170,22 @@ func buildNodeConfig(ctx context.Context, in nodeConfigInput) (*nodeConfig, erro
 		Registry:           registry,
 	}
 
-	applyJoinToSpec(&spec, in.Join)
+	if in.Join != nil {
+		spec.Kubelet.CACert = in.Join.CACert
+		spec.Kubelet.BootstrapToken = in.Join.BootstrapToken
+		spec.APIServerEndpoints = in.Join.APIServerEndpoints
+		// Deckhouse is running by now, so the serving CSR gets approved. Left off,
+		// this node would keep a self-signed serving certificate — no kubectl exec or
+		// logs against it, for the life of the cluster.
+		spec.Kubelet.ServerTLSBootstrap = nil
+	}
 
-	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf(
-		"Built nodeConfig for %s: Kubernetes %s, %d system extensions, join=%t",
-		in.NodeName, kubernetesVersion, len(extensions), in.Join != nil,
-	))
-
-	return &nodeConfig{
-		APIVersion: payloadAPIVersion,
-		Kind:       nodeConfigKind,
-		Metadata: objectMeta{
-			Name:   in.NodeName,
-			Labels: map[string]string{global.NodeGroupLabel: global.MasterNodeGroupName},
-		},
-		Spec: spec,
-	}, nil
+	return spec, nil
 }
 
-// nodeKubelet is the kubelet section of a control-plane node's config, in the
-// shape the node that starts the cluster needs it; applyJoinToSpec turns it into
-// what a node joining a running cluster needs.
+// nodeKubelet is the kubelet section in the shape the node that starts the
+// cluster needs it; the join branch of buildNodeSpec turns it into what a node
+// joining a running cluster needs.
 func nodeKubelet(metaConfig *config.MetaConfig, kubernetesVersion string, podsPerNode int) kubelet {
 	serverTLSBootstrap := false
 
@@ -214,31 +222,15 @@ func nodeKubelet(metaConfig *config.MetaConfig, kubernetesVersion string, podsPe
 	return k
 }
 
-// applyJoinToSpec adds what a node needs to enter a cluster that already runs,
-// and drops the three fields that only made sense for the one that starts it.
-func applyJoinToSpec(spec *nodeSpec, join *joinInput) {
-	if join == nil {
-		return
-	}
-
-	spec.Kubelet.CACert = join.CACert
-	spec.Kubelet.BootstrapToken = join.BootstrapToken
-	spec.APIServerEndpoints = join.APIServerEndpoints
-	// Deckhouse is running by now, so the serving CSR gets approved. Left off,
-	// this node would keep a self-signed serving certificate — no kubectl exec or
-	// logs against it, for the life of the cluster.
-	spec.Kubelet.ServerTLSBootstrap = nil
-}
-
-// maxPods mirrors the ladder bashible computes in
+// podsPerNodeCIDRPrefix is the ladder bashible computes in
 // candi/bashible/common-steps/all/064_configure_kubelet.sh.tpl — the scheduler
 // believes it as capacity, so a master off the fleet's number skews placement.
-func maxPods(metaConfig *config.MetaConfig) (int, error) {
-	clusterConfig, err := metaConfig.ClusterConfigMap()
-	if err != nil {
-		return 0, fmt.Errorf("read the cluster configuration: %w", err)
-	}
+var podsPerNodeCIDRPrefix = map[int]int{24: 120, 23: 250, 22: 500, 21: 1000}
 
+// maxPods takes the ladder step of the cluster's per-node prefix. A prefix
+// outside the ladder takes the nearest step, as the template's ge/le branches
+// do; the top step is also the maximum the nodeConfig schema accepts.
+func maxPods(clusterConfig map[string]any) int {
 	prefix := defaultPodSubnetNodeCIDRPrefix
 	if raw, ok := clusterConfig["podSubnetNodeCIDRPrefix"].(string); ok {
 		if parsed, err := strconv.Atoi(raw); err == nil {
@@ -246,22 +238,13 @@ func maxPods(metaConfig *config.MetaConfig) (int, error) {
 		}
 	}
 
-	// A prefix outside the ladder takes the nearest step, as the template's
-	// ge/le branches do. The top step is also what the nodeConfig schema accepts
-	// as its maximum, so the ladder needs no further clamp.
-	byPrefix := map[int]int{24: 120, 23: 250, 22: 500, 21: 1000}
-
-	return byPrefix[min(max(prefix, 21), 24)], nil
+	steps := slices.Sorted(maps.Keys(podsPerNodeCIDRPrefix))
+	return podsPerNodeCIDRPrefix[min(max(prefix, steps[0]), steps[len(steps)-1])]
 }
 
 // kubernetesVersion is the cluster's Kubernetes minor version with "Automatic"
-// already resolved to the installer default.
-func kubernetesVersion(metaConfig *config.MetaConfig) (string, error) {
-	clusterConfig, err := metaConfig.ClusterConfigMap()
-	if err != nil {
-		return "", fmt.Errorf("read the cluster configuration: %w", err)
-	}
-
+// already resolved to the installer default by ClusterConfigMap.
+func kubernetesVersion(clusterConfig map[string]any) (string, error) {
 	version, _ := clusterConfig["kubernetesVersion"].(string)
 	if version == "" {
 		return "", errors.New("kubernetesVersion is empty in the cluster configuration")
@@ -295,25 +278,23 @@ func nodeRegistry(metaConfig *config.MetaConfig) (*registrySpec, error) {
 // etcdMounts gives a control-plane node the disk etcd lives on. The disk is
 // described, not named — no /dev path exists before the machine does. No second
 // disk matches nothing, which is supported: etcd shares the data partition.
-func etcdMounts() []mount {
-	return []mount{{
-		// The name is also the label the node writes on the filesystem it makes,
-		// so it is capped at the ext4 label size of 16 characters.
-		Name: "kubernetes-data",
-		PartitionSelector: &partitionSelector{
-			// The smallest disk a cloud installation is ever given for etcd. A size
-			// with no operator means "at least this much", so larger disks match
-			// too while config drives and other small volumes do not.
-			Size: "10Gi",
-			// Without this the selector would see partitions only, and the disk a
-			// cloud attaches has none: no partition table, no filesystem.
-			Blank: true,
-		},
-		// Where the etcd static pod expects its data: the path is a hostPath in
-		// the control-plane manifest, so it is not the node's to choose.
-		BindTo: "/var/lib/etcd",
-		// What etcd checks on every start. A freshly made ext4 has its root at
-		// 0755 and etcd refuses to run on that.
-		Mode: "0700",
-	}}
-}
+var etcdMounts = []mount{{
+	// The name is also the label the node writes on the filesystem it makes,
+	// so it is capped at the ext4 label size of 16 characters.
+	Name: "kubernetes-data",
+	PartitionSelector: &partitionSelector{
+		// The smallest disk a cloud installation is ever given for etcd. A size
+		// with no operator means "at least this much", so larger disks match
+		// too while config drives and other small volumes do not.
+		Size: "10Gi",
+		// Without this the selector would see partitions only, and the disk a
+		// cloud attaches has none: no partition table, no filesystem.
+		Blank: true,
+	},
+	// Where the etcd static pod expects its data: the path is a hostPath in
+	// the control-plane manifest, so it is not the node's to choose.
+	BindTo: "/var/lib/etcd",
+	// What etcd checks on every start. A freshly made ext4 has its root at
+	// 0755 and etcd refuses to run on that.
+	Mode: "0700",
+}}

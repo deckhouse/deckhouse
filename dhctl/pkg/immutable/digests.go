@@ -27,9 +27,13 @@ import (
 
 // ValidateSysext reports whether the installer image carries the system
 // extensions an immutable node runs; a preflight check calls it to fail early.
-// Pure; the context is here for the package's uniform exported signature.
 func ValidateSysext(_ context.Context, metaConfig *config.MetaConfig) error {
-	version, err := kubernetesVersion(metaConfig)
+	clusterConfig, err := metaConfig.ClusterConfigMap()
+	if err != nil {
+		return fmt.Errorf("read the cluster configuration: %w", err)
+	}
+
+	version, err := kubernetesVersion(clusterConfig)
 	if err != nil {
 		return err
 	}
@@ -56,13 +60,9 @@ func sysextExtensions(images map[string]any, kubernetesVersion string) ([]extens
 	}
 	minor := strings.ReplaceAll(kubernetesVersion, ".", "")
 
-	// The order is the payload's: the node writes them in it, and every rendered
-	// document since the first one has carried them this way.
-	//
-	// The set must be the one node-controller renders (nodeconfig/sources.go).
-	// A node prunes every installed extension its document does not list, and
-	// pruning nodelet stops the agent's own unit — after which nothing restarts
-	// it and the node keeps running without its API proxy.
+	// The set and the order must be node-controller's, which renders them in
+	// modules/040-node-manager/images/node-controller/src/internal/controller/nodeconfig/sources.go: a node prunes every extension its
+	// document omits, and pruning nodelet stops the agent's own unit for good.
 	extensions := []extension{
 		{Name: containerdExtension, Digest: containerd, RequestedBy: platformExtensionRequestedBy},
 		{Name: kubeletExtension, Digest: newestPatchDigest(packages, "kubeletSysext"+minor), RequestedBy: platformExtensionRequestedBy},
@@ -82,8 +82,8 @@ func sysextExtensions(images map[string]any, kubernetesVersion string) ([]extens
 }
 
 // versionedImages returns the images named the prefix followed by a version, as
-// image name to version. Everything after the prefix is the version, so a
-// non-numeric tail is another image whose name merely starts the same way.
+// image name to version: a non-numeric tail is another image whose name merely
+// starts the same way. Mirrors modules/040-node-manager/images/node-controller/src/internal/controller/nodeconfig/sources.go:472.
 func versionedImages(packages map[string]string, prefix string) map[string]int {
 	found := map[string]int{}
 	for name := range packages {
@@ -102,7 +102,7 @@ func versionedImages(packages map[string]string, prefix string) map[string]int {
 
 // soleDigest returns the digest of the one image with the given prefix. No
 // "newest" can be told: camelcase strips separators, so "kubernetesCniSysext1610"
-// is ambiguous. Kept in step with node-controller's nodeconfig/sources.go.
+// is ambiguous. Mirrors modules/040-node-manager/images/node-controller/src/internal/controller/nodeconfig/sources.go.
 func soleDigest(packages map[string]string, prefix string) (string, error) {
 	found := slices.Sorted(maps.Keys(versionedImages(packages, prefix)))
 
@@ -122,8 +122,8 @@ func soleDigest(packages map[string]string, prefix string) (string, error) {
 }
 
 // newestPatchDigest returns the newest image with the given prefix, which pins
-// everything but the patch — so the suffix is one number and compares exactly.
-// A string compare would put "kubeletSysext1356" after "kubeletSysext13510".
+// everything but the patch, so the suffix is one number and compares as one.
+// Mirrors modules/040-node-manager/images/node-controller/src/internal/controller/nodeconfig/sources.go:507.
 func newestPatchDigest(packages map[string]string, prefix string) string {
 	best, bestPatch := "", -1
 	for name, patch := range versionedImages(packages, prefix) {
@@ -135,8 +135,8 @@ func newestPatchDigest(packages map[string]string, prefix string) string {
 }
 
 // sandboxImage pins the pause image to the cluster's own registry: the CRD's
-// registry.k8s.io default is unreachable from the node. It takes the registry
-// the document carries, so the reference and spec.registry cannot disagree.
+// registry.k8s.io default is unreachable from the node. Mirrors
+// modules/040-node-manager/images/node-controller/src/internal/controller/nodeconfig/sources.go:233.
 func sandboxImage(registry *registrySpec, images map[string]any) (string, error) {
 	common, err := digestGroup(images, commonDigestsKey)
 	if err != nil {

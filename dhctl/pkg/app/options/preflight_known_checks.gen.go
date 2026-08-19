@@ -12,7 +12,6 @@ var generatedPreflightChecks = []string{
 	"dhctl-edition",
 	"host-network-cidr-intersection",
 	"immutable-installer-images",
-	"immutable-kubeconfig-kept",
 	"immutable-kubeconfig-out",
 	"immutable-post-bootstrap-script",
 	"immutable-registry-mode",

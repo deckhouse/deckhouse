@@ -160,6 +160,9 @@ func DefineBootstrapAbortCommand(cmd *kingpin.CmdClause, opts *options.Options) 
 	app.DefineSanityFlags(cmd, &opts.Global)
 	app.DefineAbortFlags(cmd, &opts.Bootstrap)
 	app.DefineImgBundleFlags(cmd, &opts.Registry)
+	// An immutable master answers no sshd, so the only way to reach the cluster
+	// abort has to delete resources through is the collected admin kubeconfig.
+	app.DefineKubeFlags(cmd, &opts.Kube)
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
@@ -168,7 +171,10 @@ func DefineBootstrapAbortCommand(cmd *kingpin.CmdClause, opts *options.Options) 
 		span.SetAttributes(opts.ToSpanAttributes()...)
 
 		params := app.ProviderParams(&opts.Global, dhlog.FromContext(ctx))
-		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params,
+			providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()),
+			providerinitializer.WithKubeConfig(opts.Kube.Config, opts.Kube.ConfigContext, opts.Kube.InCluster),
+		)
 		if err != nil {
 			if !errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
 				return err

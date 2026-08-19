@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 	libretry "github.com/deckhouse/lib-dhctl/pkg/retry"
@@ -116,6 +117,11 @@ func (b *ClusterBootstrapper) collectImmutableKubeconfig(ctx context.Context, bc
 	if err != nil {
 		return nil, err
 	}
+	// Held rather than closed here: ConfirmCollected is the next thing to use it,
+	// and through a bastion a second dial is a second tunnel to the same port.
+	// stopImmutableChannels closes it on the paths that never confirm.
+	bctx.immutable.handoffAddress, bctx.immutable.handoffStop = address, stop
+
 	input := immutable.FetchKubeconfigInput{
 		Address: address,
 		// The endpoint's certificate is issued for the node's name, not for the
@@ -124,7 +130,6 @@ func (b *ClusterBootstrapper) collectImmutableKubeconfig(ctx context.Context, bc
 		ServerName: bctx.immutable.masterNodeName,
 		Material:   material,
 	}
-	defer stop()
 
 	// Narrated rather than silent: the node answers the status endpoint from the
 	// moment it starts working, so an operator sees what it is doing and a node
@@ -163,17 +168,17 @@ func (b *ClusterBootstrapper) collectImmutableKubeconfig(ctx context.Context, bc
 	return kubeconfig, nil
 }
 
-// handoffGaveUp reports the answers no amount of waiting changes: a payload the
+// handoffTerminal are the answers no amount of waiting changes: a payload the
 // master never booted with, a channel that has already served, and a node that
 // stopped working on the cluster.
+var handoffTerminal = []error{
+	immutable.ErrHandoffUnauthorized,
+	immutable.ErrHandoffAlreadyServed,
+	errImmutableMasterFailed,
+}
+
 func handoffGaveUp(err error) bool {
-	if errors.Is(err, immutable.ErrHandoffUnauthorized) {
-		return true
-	}
-	if errors.Is(err, immutable.ErrHandoffAlreadyServed) {
-		return true
-	}
-	return errors.Is(err, errImmutableMasterFailed)
+	return slices.ContainsFunc(handoffTerminal, func(terminal error) bool { return errors.Is(err, terminal) })
 }
 
 // reportImmutableStatus logs what the node says, once per distinct message.
@@ -199,7 +204,6 @@ func handoffReady(status *immutable.Status) error {
 	return fmt.Errorf("the first master is not ready to hand the credentials over: %s", statusLine(status))
 }
 
-// statusLine renders what the node reports into one readable line.
 func statusLine(status *immutable.Status) string {
 	if status.Message == "" {
 		return string(status.Phase)
@@ -225,12 +229,19 @@ func (b *ClusterBootstrapper) confirmImmutableHandoff(ctx context.Context, bctx 
 		return
 	}
 
-	address, stop, err := b.openImmutableChannel(ctx, bctx, immutable.HandoffPort, "handoff confirmation")
-	if err != nil {
-		logger.WarnContext(ctx, fmt.Sprintf("confirm the handover to the first master: %v", err))
-		return
+	// The collection left its channel open for exactly this; a rerun confirms
+	// without collecting and has none to reuse.
+	defer bctx.stopImmutableHandoff()
+	address := bctx.immutable.handoffAddress
+	if address == "" {
+		opened, stop, err := b.openImmutableChannel(ctx, bctx, immutable.HandoffPort, "handoff confirmation")
+		if err != nil {
+			logger.WarnContext(ctx, fmt.Sprintf("confirm the handover to the first master: %v", err))
+			return
+		}
+		defer stop()
+		address = opened
 	}
-	defer stop()
 
 	input := immutable.FetchKubeconfigInput{Address: address, ServerName: bctx.immutable.masterNodeName, Material: material}
 	switch err := immutable.ConfirmCollected(ctx, input); {

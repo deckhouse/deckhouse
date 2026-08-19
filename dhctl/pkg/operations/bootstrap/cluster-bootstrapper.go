@@ -241,7 +241,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		if bctx.finishProgress != nil {
 			bctx.finishProgress()
 		}
-		bctx.stopImmutableTunnel()
+		bctx.stopImmutableChannels()
 		if bctx.cleanup != nil {
 			bctx.cleanup()
 		}
@@ -820,26 +820,15 @@ func (b *ClusterBootstrapper) bootstrapAdditionalNodes(ctx context.Context, bctx
 			).Run(ctx, action)
 		}
 
-		// An immutable master boots from a payload rendered per node, and it is
-		// tracked by no SSH address: converge builds its session from that cache
-		// and an unreachable host stalls it.
-		addressTracker := bctx.masterAddressesForSSH
-		var buildPayload masterPayloadBuilder
-		if bctx.immutable != nil {
-			addressTracker = nil
-			buildPayload = buildImmutableJoinPayload
-		}
-
 		err = localBootstraper(func() error {
 			return bootstrapAdditionalNodesForCloudCluster(
 				ctx,
 				&client.KubernetesClient{KubeClient: kubeCl},
 				bctx.metaConfig,
-				addressTracker,
+				bctx.masterAddressesForSSH,
 				b.InfrastructureContext,
 				&b.Options.Global,
 				b.PhasedExecutionContext,
-				buildPayload,
 			)
 		})
 		if err != nil {
@@ -1028,12 +1017,11 @@ func bootstrapAdditionalNodesForCloudCluster(
 	infrastructureContext *infrastructure.Context,
 	globalOptions *options.GlobalOptions,
 	pec phases.DefaultPhasedExecutionContext,
-	buildMasterPayload masterPayloadBuilder,
 ) error {
 	ctx, span := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.AdditionalNodesForCloudCluster")
 	defer span.End()
 
-	if err := BootstrapAdditionalMasterNodes(ctx, kubeCl, metaConfig, masterAddressesForSSH, infrastructureContext, cache.Global(), globalOptions, buildMasterPayload); err != nil {
+	if err := BootstrapAdditionalMasterNodes(ctx, kubeCl, metaConfig, masterAddressesForSSH, infrastructureContext, cache.Global(), globalOptions); err != nil {
 		return err
 	}
 

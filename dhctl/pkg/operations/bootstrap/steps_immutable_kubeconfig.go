@@ -31,42 +31,26 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
-// saveAdminKubeconfigOnRerun writes the credentials an earlier attempt collected
-// to a --kubeconfig-out this run names for the first time: the collecting branch
-// is the only other writer, and a rerun skips it.
-func (b *ClusterBootstrapper) saveAdminKubeconfigOnRerun(ctx context.Context, content []byte, bctx *bootstrapContext, collectedPath string) error {
-	out := b.Options.Bootstrap.KubeconfigOut
-	if out == "" || out == collectedPath {
-		return nil
-	}
-	return b.saveAdminKubeconfig(ctx, content, bctx)
-}
-
 // writeImmutableKubeconfig stores the collected admin kubeconfig in a file the
 // Kubernetes client can be built from, with its server URL pointed at the
 // address dhctl reaches the API on.
 func (b *ClusterBootstrapper) writeImmutableKubeconfig(ctx context.Context, dir string, content []byte) (string, error) {
-	// os.CreateTemp opens the file with mode 0600; it holds admin credentials,
-	// so it is removed again once dhctl exits.
+	// os.CreateTemp reserves a name nothing else holds, at mode 0600; it holds
+	// admin credentials, so it is removed again once dhctl exits.
 	file, err := os.CreateTemp(dir, "dhctl-immutable-kubeconfig-*.yaml")
 	if err != nil {
 		return "", fmt.Errorf("create a temporary kubeconfig: %w", err)
 	}
-
-	// Closed explicitly rather than deferred: a flush that fails leaves a
-	// truncated kubeconfig, which surfaces two calls later as an opaque parse
-	// error from the client builder.
-	if _, err := file.Write(content); err != nil {
-		file.Close()
-		return "", fmt.Errorf("write the temporary kubeconfig %s: %w", file.Name(), err)
-	}
+	path := file.Name()
 	if err := file.Close(); err != nil {
-		return "", fmt.Errorf("write the temporary kubeconfig %s: %w", file.Name(), err)
+		return "", fmt.Errorf("create a temporary kubeconfig %s: %w", path, err)
+	}
+	if err := os.WriteFile(path, content, 0o600); err != nil {
+		return "", fmt.Errorf("write the temporary kubeconfig %s: %w", path, err)
 	}
 
 	// The happy path removes the file as soon as the client is built; this
 	// covers the runs that never get that far.
-	path := file.Name()
 	tomb.RegisterOnShutdown("Delete the temporary installer kubeconfig", func() {
 		removeImmutableKubeconfig(ctx, path)
 	})
@@ -133,8 +117,6 @@ func (b *ClusterBootstrapper) saveAdminKubeconfig(ctx context.Context, content [
 	return nil
 }
 
-// removeImmutableKubeconfig deletes the temporary kubeconfig, tolerating a
-// second call.
 func removeImmutableKubeconfig(ctx context.Context, path string) {
 	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
 		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("remove %s: %v", path, err))

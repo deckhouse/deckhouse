@@ -52,9 +52,8 @@ func (b *ClusterBootstrapper) printHowToReachTheCluster(ctx context.Context, kub
 
 // bastionForwardLine builds the commands that make the saved kubeconfig usable
 // from outside, or "" when the master is directly reachable. It forwards to
-// 127.0.0.1, which every apiserver certificate covers — no --tls-server-name needed.
-// The server is retargeted with kubectl rather than sed: kubectl edits the field
-// by name, is idempotent, and fails loudly where a regex silently misses.
+// 127.0.0.1, which every apiserver certificate covers, and retargets the server
+// with kubectl rather than sed, which would silently miss.
 func bastionForwardLine(cfg *sshconfig.Config, masterIP, kubeconfigPath string) string {
 	if cfg == nil {
 		return ""

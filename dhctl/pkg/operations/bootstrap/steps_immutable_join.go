@@ -96,8 +96,8 @@ func clusterCABase64(ctx context.Context, kubeCl *client.KubernetesClient) (stri
 }
 
 // groupBootstrapToken returns the group's newest non-expired bootstrap token, so a
-// node cannot boot with one that expires mid-install. Kept in step with the
-// node-controller's readBootstrapToken (internal/controller/nodebootstrap/render.go).
+// node cannot boot with one that expires mid-install.
+// Mirrors readBootstrapToken of modules/040-node-manager/images/node-controller/src/internal/controller/nodebootstrap/render.go.
 func groupBootstrapToken(ctx context.Context, kubeCl *client.KubernetesClient, ngName string) (string, error) {
 	secrets, err := kubeCl.CoreV1().Secrets(global.ConfigsNS).List(ctx, metav1.ListOptions{
 		LabelSelector: bootstrapTokenNGLabel + "=" + ngName,
@@ -135,8 +135,8 @@ func groupBootstrapToken(ctx context.Context, kubeCl *client.KubernetesClient, n
 }
 
 // apiServerEndpoints are the apiservers a joining node talks to until it runs one
-// itself. Derived from the cluster, not the manual-bootstrap-for-master secret (it is
-// published too late); keep in step with the node-controller's readAPIServerEndpoints.
+// itself. Derived from the cluster, not from the manual-bootstrap-for-master secret,
+// which is published too late. Mirrors modules/040-node-manager/images/node-controller/src/internal/controller/nodeconfig/sources.go:257 readAPIServerEndpoints.
 func apiServerEndpoints(ctx context.Context, kubeCl *client.KubernetesClient) ([]string, error) {
 	set := make(map[string]struct{})
 

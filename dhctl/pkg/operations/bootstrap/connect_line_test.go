@@ -47,7 +47,7 @@ func TestBastionForwardLineShape(t *testing.T) {
 }
 
 // The connect line is printed from three places, and the rerun is the easy one to
-// lose: connectToImmutableMaster short-circuits collection, so a stalled rerun
+// lose: reuseCollectedKubeconfig short-circuits collection, so a stalled rerun
 // would say nothing at all (observed on a live rerun: none of the three lines).
 func TestConnectLineIsPrintedOnTheReusePath(t *testing.T) {
 	src, err := os.ReadFile("steps_immutable.go")
@@ -61,12 +61,12 @@ func TestConnectLineIsPrintedOnTheReusePath(t *testing.T) {
 		t.Fatalf("the reuse branch is gone; this guard needs rewriting against whatever replaced it")
 	}
 	// The print has to sit inside that branch, i.e. between the message and the
-	// first statement after it. A delimiter that stops matching would quietly
-	// widen the search to the rest of the file, so its loss fails the guard.
+	// end of the function carrying it. A delimiter that stops matching would
+	// quietly widen the search to the rest of the file, so its loss fails the guard.
 	rest := string(src)[idx:]
-	end := strings.Index(rest, "b.openImmutableChannel(")
+	end := strings.Index(rest, "\n}\n")
 	if end < 0 {
-		t.Fatalf("the statement that used to follow the reuse branch is gone; this guard needs a new delimiter")
+		t.Fatalf("the function holding the reuse branch no longer ends; this guard needs a new delimiter")
 	}
 	rest = rest[:end]
 	if !strings.Contains(rest, "printHowToReachTheCluster") {

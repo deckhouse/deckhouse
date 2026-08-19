@@ -15,14 +15,14 @@
 package immutable
 
 import (
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable/immutabletest"
 )
 
 // TestRenderControlPlaneBundleOrdersEtcdFirst pins the order the node writes in.
@@ -32,7 +32,7 @@ func TestRenderControlPlaneBundleOrdersEtcdFirst(t *testing.T) {
 	manifests, err := renderControlPlaneBundle(t.Context(), testManifestsInput(t))
 	require.NoError(t, err)
 
-	require.Equal(t, "etcd.yaml", manifests[0].Name)
+	require.Equal(t, etcdManifest, manifests[0].Name)
 	require.Len(t, manifests, 4)
 	require.Len(t, bootstrapExtraFiles, 1)
 	require.Equal(t, "authentication-config.yaml", bootstrapExtraFiles[0].Name)
@@ -159,28 +159,9 @@ func TestRenderWithoutAClusterTypeStillRenders(t *testing.T) {
 	}
 }
 
-// testCandiDir finds the installer's candi directory from wherever the test is
-// run, so the render reads the same templates the classic bootstrap renders.
-func testCandiDir(t *testing.T) string {
-	t.Helper()
-
-	dir, err := os.Getwd()
-	require.NoError(t, err)
-
-	for {
-		candidate := filepath.Join(dir, "candi")
-		if _, err := os.Stat(filepath.Join(candidate, controlPlaneTemplatesDir)); err == nil {
-			return candidate
-		}
-		parent := filepath.Dir(dir)
-		require.NotEqual(t, parent, dir, "candi/%s not found above %s", controlPlaneTemplatesDir, dir)
-		dir = parent
-	}
-}
-
 func testManifestsInput(t *testing.T) manifestsInput {
 	return manifestsInput{
-		CandiDir: testCandiDir(t),
+		CandiDir: immutabletest.CandiDir(t),
 		NodeName: "master-0",
 		NodeIP:   "10.241.32.10",
 		Cluster: controlPlaneRenderParams{

@@ -39,24 +39,9 @@ func destroyCacheIdentity(
 	opts *options.Options,
 	sshProviderInitializer *providerinitializer.SSHProviderInitializer,
 ) (string, libcon.SSHProvider, error) {
-	// A kubeconfig plus an SSH host is refused rather than ranked: --kubeconfig
-	// also reads DHCTL_CLI_KUBE_CONFIG.
 	sshHostConfigured := sshProviderInitializer != nil && sshProviderInitializer.CheckHosts(ctx)
-	kubeSourceConfigured := opts.Kube.Config != "" || opts.Kube.InCluster
-	if sshHostConfigured && kubeSourceConfigured {
-		// Tested before either source is read, so the operator hears about the
-		// collision rather than about a kubeconfig they never meant to name.
-		source := "--kube-client-from-cluster"
-		if opts.Kube.Config != "" {
-			source = "--kubeconfig " + opts.Kube.Config
-		}
-		return "", nil, fmt.Errorf(
-			"%s and an SSH host both name a cluster, and they may be different clusters: "+
-				"the Kubernetes source is where the infrastructure state is read from, the SSH host is where it is not. "+
-				"Note that --kubeconfig also reads the DHCTL_CLI_KUBE_CONFIG environment variable. "+
-				"Unset one of them and run destroy again",
-			source,
-		)
+	if err := refuseTwoClusterSources(opts, sshHostConfigured); err != nil {
+		return "", nil, err
 	}
 
 	// One source names the cluster, and the checks above have already refused the
@@ -98,6 +83,31 @@ func destroyCacheIdentity(
 	}
 }
 
+// refuseTwoClusterSources rejects a kubeconfig and an SSH host naming a cluster
+// together rather than ranking them: they may be different clusters, and
+// --kubeconfig also reads DHCTL_CLI_KUBE_CONFIG.
+func refuseTwoClusterSources(opts *options.Options, sshHostConfigured bool) error {
+	kubeSourceConfigured := opts.Kube.Config != "" || opts.Kube.InCluster
+	if !sshHostConfigured || !kubeSourceConfigured {
+		return nil
+	}
+
+	// Named before either source is read, so the operator hears about the
+	// collision rather than about a kubeconfig they never meant to name.
+	source := "--kube-client-from-cluster"
+	if opts.Kube.Config != "" {
+		source = "--kubeconfig " + opts.Kube.Config
+	}
+
+	return fmt.Errorf(
+		"%s and an SSH host both name a cluster, and they may be different clusters: "+
+			"the Kubernetes source is where the infrastructure state is read from, the SSH host is where it is not. "+
+			"Note that --kubeconfig also reads the DHCTL_CLI_KUBE_CONFIG environment variable. "+
+			"Unset one of them and run destroy again",
+		source,
+	)
+}
+
 // inClusterCacheIdentity names the cluster from the API server this pod talks
 // to, rather than from a bare "in-cluster" constant that every in-cluster run
 // on this machine would share — the same collision one directory further up.
@@ -113,8 +123,7 @@ func inClusterCacheIdentity() (string, error) {
 
 // kubeconfigClusterIdentity names the cluster a kubeconfig points at by what is
 // inside it: its CA and the admin certificate issued against that CA. The address
-// identifies nothing — the printed bastion-forward line retargets every immutable
-// cluster to https://127.0.0.1:6445.
+// identifies nothing — the bastion-forward line retargets every cluster to :6445.
 func kubeconfigClusterIdentity(path, contextName string) (string, error) {
 	cfg, err := clientcmd.LoadFromFile(path)
 	if err != nil {
@@ -156,10 +165,9 @@ func kubeconfigClusterIdentity(path, contextName string) (string, error) {
 		)
 	}
 
-	// The CA is shared by every cluster restored from one PKI — a DR clone, a
-	// cluster rebuilt from an etcd snapshot — and one cache directory for two of
-	// them is destroy deleting the other one's infrastructure. The admin
-	// certificate is issued once per cluster, so it tells them apart.
+	// One PKI can back several clusters — a DR clone, a rebuild from an etcd
+	// snapshot — and one cache directory for two of them is destroy deleting the
+	// other one's infrastructure. The admin certificate is issued once per cluster.
 	adminCertificate, err := adminCertificateBytes(cfg, kubeContext.AuthInfo)
 	if err != nil {
 		return "", err

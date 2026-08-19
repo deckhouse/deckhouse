@@ -23,6 +23,7 @@ import (
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
@@ -142,7 +143,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 			return err
 		}
 
-		b.KubeProvider = b.SSHProviderInitializer.GetKubeProvider(ctx)
+		b.useSSHKubeProviderUnlessImmutable(ctx, metaConfig)
 		// error is OK here in case of abort from cache w/o ssh hosts
 		sshProvider, _ := b.SSHProviderInitializer.GetSSHProvider(ctx)
 
@@ -262,4 +263,15 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 	stateCache.Delete(ctx, state.TombstoneKey)
 
 	return nil
+}
+
+// useSSHKubeProviderUnlessImmutable builds the Kubernetes client over SSH, which
+// an immutable master answers no sshd for: there the provider the caller built
+// from --kubeconfig is kept, and without it the abort has no cluster to reach.
+// Twin of the guard in bootstrapBaseInfrastructure (cluster-bootstrapper.go).
+func (b *ClusterBootstrapper) useSSHKubeProviderUnlessImmutable(ctx context.Context, metaConfig *config.MetaConfig) {
+	if immutable.IsImmutableMaster(ctx, metaConfig) {
+		return
+	}
+	b.KubeProvider = b.SSHProviderInitializer.GetKubeProvider(ctx)
 }

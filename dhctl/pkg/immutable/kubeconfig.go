@@ -36,9 +36,9 @@ var ErrKubeconfigOutRequired = errors.New(
 		"Bootstrap it from the dhctl CLI instead, with --kubeconfig-out naming where to keep the kubeconfig",
 )
 
-// CheckKubeconfigOutSurvivesCleanup rejects a --kubeconfig-out path the tmp
-// cleaner would sweep at exit (anything under tmpDir not ending in a protected
-// suffix) — on an immutable master that file is the only way in. Pure.
+// CheckKubeconfigOutSurvivesCleanup rejects a --kubeconfig-out the tmp cleaner
+// would sweep at exit (under tmpDir, without a protected suffix): on an
+// immutable master that file is the only way in.
 func CheckKubeconfigOutSurvivesCleanup(_ context.Context, kubeconfigOut, tmpDir string) error {
 	if kubeconfigOut == "" || tmpDir == "" {
 		return nil
@@ -83,8 +83,7 @@ func resolvePath(path string) string {
 
 // RetargetKubeconfig points the collected admin kubeconfig at the address dhctl
 // reaches the API server on (e.g. a bastion's local forward) and at the name its
-// certificate is issued for. The retargeted copy is internal; the operator's copy
-// keeps the node's address. Pure.
+// certificate is issued for. The operator's own copy keeps the node's address.
 func RetargetKubeconfig(_ context.Context, content []byte, server, serverName string) ([]byte, error) {
 	if server == "" {
 		return nil, errors.New("retarget the admin kubeconfig: server URL is empty")

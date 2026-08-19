@@ -14,10 +14,9 @@
 
 package immutable
 
-// This file holds what dhctl and the node have to agree on: the payload
-// documents, the bootstrap channel, and the names the node is addressed by.
-// node-controller is a separate Go module, so the values it also knows are
-// repeated here rather than imported; each such constant names its original.
+// This file holds what dhctl and the node have to agree on. node-controller is a
+// separate Go module, so the values it also knows are repeated here rather than
+// imported; each such constant names its original.
 
 // The payload documents. The on-node agent parses both with UnmarshalStrict, so
 // every field name must match the agent's types
@@ -30,10 +29,9 @@ const (
 	nodeConfigKind         = "NodeConfig"
 	controlPlaneConfigKind = "ControlPlaneConfig"
 
-	// nodeConfigPath is where the on-node loader reads the node config from. It
-	// selects the entry by the "nodeconfig.yml"/"nodeconfig.yaml" suffix of the
-	// path, so the name matters and the directory does not.
-	// Mirrors node-controller/src/internal/controller/nodebootstrap/constants.go.
+	// nodeConfigPath is where the on-node loader reads the node config from: it
+	// selects the entry by the path's "nodeconfig.yml"/"nodeconfig.yaml" suffix.
+	// Mirrors modules/040-node-manager/images/node-controller/src/internal/controller/nodebootstrap/constants.go.
 	nodeConfigPath = "/config/nodeconfig.yaml"
 
 	// controlPlaneConfigPath names the payload entry. The node reads cloud-init
@@ -50,7 +48,6 @@ const systemTypeImmutable = "Immutable"
 // The node's one-shot bootstrap channel: what it is doing, the credentials, and
 // the confirmation that ends the handover.
 const (
-	// HandoffPort is the port the node's handoff endpoint listens on.
 	HandoffPort = 50001
 
 	statusPath    = "/bootstrap/status"
@@ -61,7 +58,6 @@ const (
 // APIServerPort is where a control-plane node's own kube-apiserver listens.
 const APIServerPort = 6443
 
-// The labels the node registers itself with.
 const (
 	nodeTypeLabel = "node.deckhouse.io/type"
 	cgroupLabel   = "node.deckhouse.io/cgroup"
@@ -80,8 +76,9 @@ const (
 	nodeletSysextImage = "nodeletSysext"
 
 	// platformExtensionRequestedBy names the module that wants the extension, not
-	// the process that wrote the file — which is why it stays "node-manager" when
+	// the process that wrote the file, so it stays "node-manager" when
 	// node-controller re-renders this node.
+	// Mirrors modules/040-node-manager/images/node-controller/src/internal/controller/nodeconfig/constants.go:107.
 	platformExtensionRequestedBy = "node-manager"
 
 	// registryPackagesDigestsKey is the images_digests.json module the sysext
@@ -106,9 +103,8 @@ const (
 	// payload, and verify the certificate that payload carried.
 	handoffCacheKey = "immutable-control-plane-handoff"
 
-	// collectedKubeconfigCacheKey records that the admin kubeconfig is on disk,
-	// and where; a rerun reads it instead of dialing a closed channel. Written
-	// before ConfirmCollected: a death in between must not leave no record of
-	// the file.
+	// collectedKubeconfigCacheKey records where the admin kubeconfig is on disk;
+	// a rerun reads it instead of dialing a closed channel. Written before
+	// ConfirmCollected, so a death in between still leaves the record.
 	collectedKubeconfigCacheKey = "immutable-control-plane-collected-kubeconfig"
 )

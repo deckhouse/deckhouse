@@ -38,13 +38,11 @@ const (
 	ImmutablePostBootstrapScriptCheckName preflight.CheckName = "immutable-post-bootstrap-script"
 	ImmutableSignatureModeCheckName       preflight.CheckName = "immutable-signature-mode"
 	ImmutableKubeconfigOutCheckName       preflight.CheckName = "immutable-kubeconfig-out"
-	ImmutableKubeconfigKeptCheckName      preflight.CheckName = "immutable-kubeconfig-kept"
 )
 
 // ImmutableInstallerImages fails early when the installer image does not carry
-// what the node boots on: without the system extensions it never starts kubelet,
-// and an unresolved control-plane image reaches it as an empty string that leaves
-// the static pod silently missing.
+// what the node boots on: no system extensions means no kubelet, and an
+// unresolved control-plane image leaves the static pod silently missing.
 func ImmutableInstallerImages(metaConfig *config.MetaConfig) preflight.Check {
 	return preflight.Check{
 		Name:        ImmutableInstallerImagesCheckName,
@@ -117,34 +115,19 @@ func ImmutableSignatureMode(metaConfig *config.MetaConfig, globalOpts *options.G
 	}
 }
 
-// ImmutableKubeconfigKept rejects a --kubeconfig-out that dhctl would delete on
-// its way out: the tmp cleaner empties the very directory the flag's help points
-// at, and on an immutable cluster that file is the only way in.
-func ImmutableKubeconfigKept(bootstrapOpts *options.BootstrapOptions, globalOpts *options.GlobalOptions) preflight.Check {
-	return preflight.Check{
-		Name:        ImmutableKubeconfigKeptCheckName,
-		Description: "the admin kubeconfig is written somewhere dhctl will not delete",
-		Phase:       preflight.PhasePreInfra,
-		Run: func(ctx context.Context) error {
-			return immutable.CheckKubeconfigOutSurvivesCleanup(ctx, bootstrapOpts.KubeconfigOut, globalOpts.TmpDir)
-		},
-	}
-}
-
-// ImmutableKubeconfigOut rejects a Commander-mode bootstrap that names no path for
-// the admin kubeconfig: dhctl-server writes no default (TmpDir is shared by every
-// cluster) and the bootstrap response carries none, so the one-shot credentials would be lost.
-// commanderMode is a bootstrapper field, recorded nowhere in options.Options.
-func ImmutableKubeconfigOut(bootstrapOpts *options.BootstrapOptions, commanderMode bool) preflight.Check {
+// ImmutableKubeconfigOut checks the file that is the only way into a cluster of
+// immutable nodes: dhctl-server names no path, and a path under the tmp directory
+// is swept when dhctl exits. commanderMode is a bootstrapper field, not an option.
+func ImmutableKubeconfigOut(bootstrapOpts *options.BootstrapOptions, globalOpts *options.GlobalOptions, commanderMode bool) preflight.Check {
 	return preflight.Check{
 		Name:        ImmutableKubeconfigOutCheckName,
-		Description: "the admin kubeconfig has somewhere to be written",
+		Description: "the admin kubeconfig has somewhere to be written that dhctl will not delete",
 		Phase:       preflight.PhasePreInfra,
-		Run: func(_ context.Context) error {
-			if !commanderMode || bootstrapOpts.KubeconfigOut != "" {
-				return nil
+		Run: func(ctx context.Context) error {
+			if commanderMode && bootstrapOpts.KubeconfigOut == "" {
+				return immutable.ErrKubeconfigOutRequired
 			}
-			return immutable.ErrKubeconfigOutRequired
+			return immutable.CheckKubeconfigOutSurvivesCleanup(ctx, bootstrapOpts.KubeconfigOut, globalOpts.TmpDir)
 		},
 	}
 }

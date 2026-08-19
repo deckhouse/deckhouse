@@ -26,6 +26,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable/immutabletest"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
@@ -35,7 +36,7 @@ var updateGolden = flag.Bool("update-golden", false, "rewrite the golden payload
 // on-node agent parses strictly, so a silent field rename refuses to bootstrap.
 // Only the freshly-minted handoff strings are replaced with placeholders.
 func TestBuildCloudConfigGolden(t *testing.T) {
-	metaConfig := testMetaConfig(t)
+	metaConfig := immutabletest.MetaConfig(t)
 	globalOptions := options.NewGlobalOptions()
 
 	nodeConfig, err := buildNodeConfig(context.Background(), nodeConfigInput{
@@ -48,7 +49,7 @@ func TestBuildCloudConfigGolden(t *testing.T) {
 		NodeName:      "example-master-0",
 		MetaConfig:    metaConfig,
 		StateCache:    cache.NewTestCache(),
-		CandiDir:      testCandiDir(t),
+		CandiDir:      immutabletest.CandiDir(t),
 		GlobalOptions: &globalOptions,
 	})
 	require.NoError(t, err)
@@ -86,14 +87,14 @@ func TestBuildCloudConfigGolden(t *testing.T) {
 // on the unredacted payload: the handoff serving key is the one key in it, and
 // it is in the handoff section.
 func TestBuildControlPlaneConfigCarriesOnlyTheHandoffKey(t *testing.T) {
-	metaConfig := testMetaConfig(t)
+	metaConfig := immutabletest.MetaConfig(t)
 	globalOptions := options.NewGlobalOptions()
 
 	controlPlaneConfig, err := buildControlPlaneConfig(context.Background(), MasterPayloadInput{
 		NodeName:      "example-master-0",
 		MetaConfig:    metaConfig,
 		StateCache:    cache.NewTestCache(),
-		CandiDir:      testCandiDir(t),
+		CandiDir:      immutabletest.CandiDir(t),
 		GlobalOptions: &globalOptions,
 	})
 	require.NoError(t, err)

@@ -74,7 +74,7 @@ func buildControlPlaneConfig(ctx context.Context, in MasterPayloadInput) (*contr
 		return nil, err
 	}
 
-	images, err := ResolveControlPlaneImages(ctx, in.MetaConfig)
+	images, err := controlPlaneImagesFor(cluster.KubernetesVersion, in.MetaConfig.Images.ConvertToMap())
 	if err != nil {
 		return nil, err
 	}
@@ -173,14 +173,23 @@ func clusterParams(metaConfig *config.MetaConfig) (controlPlaneRenderParams, err
 
 // ResolveControlPlaneImages picks the four static-pod image digests out of the
 // map baked into the installer image; a preflight check calls it to fail early
-// on an unsupported Kubernetes version. Pure; the context is for uniformity.
+// on an unsupported Kubernetes version.
 func ResolveControlPlaneImages(_ context.Context, metaConfig *config.MetaConfig) (controlPlaneImages, error) {
-	version, err := kubernetesVersion(metaConfig)
+	clusterConfig, err := metaConfig.ClusterConfigMap()
+	if err != nil {
+		return controlPlaneImages{}, fmt.Errorf("read the cluster configuration: %w", err)
+	}
+
+	version, err := kubernetesVersion(clusterConfig)
 	if err != nil {
 		return controlPlaneImages{}, err
 	}
 
-	digests, err := digestGroup(metaConfig.Images.ConvertToMap(), controlPlaneDigestsKey)
+	return controlPlaneImagesFor(version, metaConfig.Images.ConvertToMap())
+}
+
+func controlPlaneImagesFor(version string, allImages map[string]any) (controlPlaneImages, error) {
+	digests, err := digestGroup(allImages, controlPlaneDigestsKey)
 	if err != nil {
 		return controlPlaneImages{}, err
 	}

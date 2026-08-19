@@ -15,9 +15,7 @@
 package immutable
 
 import (
-	"crypto/tls"
 	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -25,6 +23,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable/immutabletest"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
@@ -35,14 +34,7 @@ const handoffTestNodeName = "example-master-0"
 func handoffTestServer(t *testing.T, material *HandoffMaterial, handler http.HandlerFunc) string {
 	t.Helper()
 
-	certificate, err := tls.X509KeyPair([]byte(material.ServerCertPEM), []byte(material.ServerKeyPEM))
-	require.NoError(t, err, "the node parses the payload certificate with exactly this call")
-
-	server := httptest.NewUnstartedServer(handler)
-	server.TLS = &tls.Config{Certificates: []tls.Certificate{certificate}}
-	server.StartTLS()
-	t.Cleanup(server.Close)
-
+	server := immutabletest.HandoffServer(t, material.ServerCertPEM, material.ServerKeyPEM, handler)
 	return strings.TrimPrefix(server.URL, "https://")
 }
 

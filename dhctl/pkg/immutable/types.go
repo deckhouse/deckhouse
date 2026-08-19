@@ -25,7 +25,6 @@ type objectMeta struct {
 	Labels map[string]string `json:"labels,omitempty"`
 }
 
-// nodeConfig is the document written to /config/nodeconfig.yaml.
 type nodeConfig struct {
 	APIVersion string     `json:"apiVersion"`
 	Kind       string     `json:"kind"`
@@ -33,14 +32,11 @@ type nodeConfig struct {
 	Spec       nodeSpec   `json:"spec"`
 }
 
-// osImage names the image the node must run. Mirrors the agent contract —
-// internal/config/types.go in the nodelet repository — and the initramfs one,
-// images/init/src/0.1/nodeconfig.go: both parse this document, and a shape they
-// disagree with fails the parse and drops the node into an emergency shell.
+// osImage names the image the node must run. Mirrors the nodelet repository's
+// internal/config/types.go and its initramfs twin images/init/src/0.1/nodeconfig.go:
+// a shape they disagree with drops the node into an emergency shell.
 type osImage struct {
-	Digest         string `json:"digest"`
-	Repository     string `json:"repository,omitempty"`
-	AdditionalPath string `json:"additionalPath,omitempty"`
+	Digest string `json:"digest"`
 }
 
 // nodeSpec carries only the fields dhctl emits. The contract lives in the
@@ -71,12 +67,10 @@ type storage struct {
 	Mounts       []mount       `json:"mounts,omitempty"`
 }
 
-// diskSelector picks a whole disk by its attributes.
 type diskSelector struct {
 	Size string `json:"size,omitempty"`
 }
 
-// mount is one filesystem the node puts in place before kubelet starts.
 type mount struct {
 	Name              string             `json:"name"`
 	PartitionSelector *partitionSelector `json:"partitionSelector,omitempty"`
@@ -88,7 +82,6 @@ type mount struct {
 	Mode string `json:"mode,omitempty"`
 }
 
-// partitionSelector names a device by what it looks like rather than by path.
 type partitionSelector struct {
 	Size string `json:"size,omitempty"`
 	// Blank makes whole disks selectable, and only the ones carrying nothing.
@@ -106,33 +99,26 @@ type registrySpec struct {
 	Auth    string `json:"auth,omitempty"`
 }
 
-// extension is a signed verity sysext merged onto the read-only root.
 type extension struct {
 	Name        string `json:"name"`
 	Digest      string `json:"digest"`
 	RequestedBy string `json:"requestedBy,omitempty"`
 }
 
-// kernel holds sysctl settings applied before kubelet starts.
 type kernel struct {
 	Sysctl map[string]string `json:"sysctl,omitempty"`
 }
 
-// network holds the hostname and the interfaces the node brings up.
 type network struct {
 	Hostname   string             `json:"hostname,omitempty"`
 	Interfaces []networkInterface `json:"interfaces,omitempty"`
 }
 
-// networkInterface describes a single NIC.
 type networkInterface struct {
-	Name      string   `json:"name"`
-	DHCP      bool     `json:"dhcp"`
-	Addresses []string `json:"addresses,omitempty"`
-	Gateway   string   `json:"gateway,omitempty"`
+	Name string `json:"name"`
+	DHCP bool   `json:"dhcp"`
 }
 
-// kubelet configures the node's kubelet.
 type kubelet struct {
 	ClusterDomain string   `json:"clusterDomain,omitempty"`
 	ClusterDNS    []string `json:"clusterDNS,omitempty"`
@@ -155,18 +141,15 @@ type kubelet struct {
 	BootstrapToken string `json:"bootstrapToken,omitempty"`
 }
 
-// resourceReservation controls how much of the node is kept for the system.
 type resourceReservation struct {
 	Mode string `json:"mode"`
 }
 
-// containerRuntime configures containerd.
 type containerRuntime struct {
 	SandboxImage           string `json:"sandboxImage,omitempty"`
 	MaxConcurrentDownloads int    `json:"maxConcurrentDownloads,omitempty"`
 }
 
-// updatePolicy controls how and when the node updates itself.
 type updatePolicy struct {
 	Mode string `json:"mode,omitempty"`
 }
@@ -181,7 +164,6 @@ type controlPlaneConfig struct {
 	Spec       controlPlaneSpec `json:"spec"`
 }
 
-// controlPlaneSpec is the desired state of the node's control plane.
 type controlPlaneSpec struct {
 	// Bootstrap marks the very first control-plane node: the one that has to
 	// create the initial cluster objects nobody else can create yet.
@@ -202,7 +184,6 @@ type controlPlaneSpec struct {
 	Handoff handoff `json:"handoff"`
 }
 
-// renderedFile is one file the node writes without reading it.
 type renderedFile struct {
 	// Name is the file name, not a path: the directory is the node's to choose.
 	Name    string `json:"name"`

@@ -20,87 +20,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable/immutabletest"
 )
-
-const (
-	testContainerdDigest = "sha256:1111111111111111111111111111111111111111111111111111111111111111"
-	testCNIDigest        = "sha256:2222222222222222222222222222222222222222222222222222222222222222"
-	testKubeletDigest    = "sha256:3333333333333333333333333333333333333333333333333333333333333333"
-	testPauseDigest      = "sha256:4444444444444444444444444444444444444444444444444444444444444444"
-	testOSImageDigest    = "sha256:7777777777777777777777777777777777777777777777777777777777777777"
-	testNodeletDigest    = "sha256:9999999999999999999999999999999999999999999999999999999999999999"
-
-	testEtcdDigest              = "sha256:5555555555555555555555555555555555555555555555555555555555555555"
-	testAPIServerDigest         = "sha256:6666666666666666666666666666666666666666666666666666666666666666"
-	testControllerManagerDigest = "sha256:7777777777777777777777777777777777777777777777777777777777777777"
-	testSchedulerDigest         = "sha256:8888888888888888888888888888888888888888888888888888888888888888"
-)
-
-func testMetaConfig(t *testing.T) *config.MetaConfig {
-	t.Helper()
-
-	const masterNodeGroup = `{
-	  "replicas": 1,
-	  "instanceClass": {
-	    "rootDisk": {"size": "50Gi"},
-	    "etcdDisk": {"size": "10Gi"}
-	  }
-	}`
-
-	metaConfig := &config.MetaConfig{
-		ClusterType:       config.CloudClusterType,
-		ClusterPrefix:     "example",
-		ClusterDomain:     "cluster.local",
-		ClusterDNSAddress: "10.223.0.10",
-		ClusterConfig: map[string]json.RawMessage{
-			"kubernetesVersion":       json.RawMessage(`"1.34"`),
-			"serviceSubnetCIDR":       json.RawMessage(`"10.223.0.0/16"`),
-			"podSubnetCIDR":           json.RawMessage(`"10.222.0.0/16"`),
-			"podSubnetNodeCIDRPrefix": json.RawMessage(`"24"`),
-			"clusterDomain":           json.RawMessage(`"cluster.local"`),
-		},
-		ProviderClusterConfig: map[string]json.RawMessage{
-			"masterNodeGroup": json.RawMessage(masterNodeGroup),
-		},
-		Images: map[string]map[string]any{
-			"registrypackages": {
-				"containerdSysext224":    testContainerdDigest,
-				"kubernetesCniSysext162": testCNIDigest,
-				"kubeletSysext1349":      testKubeletDigest,
-				"kubeletSysext1336":      "sha256:0000000000000000000000000000000000000000000000000000000000000000",
-				"nodeletSysext":          testNodeletDigest,
-			},
-			"nodeManager": {
-				"olcedar": testOSImageDigest,
-			},
-			"common": {
-				"pause": testPauseDigest,
-			},
-			"controlPlaneManager": {
-				"etcd":                     testEtcdDigest,
-				"kubeApiserver134":         testAPIServerDigest,
-				"kubeControllerManager134": testControllerManagerDigest,
-				"kubeScheduler134":         testSchedulerDigest,
-			},
-		},
-	}
-
-	metaConfig.Registry.Settings = registry.ModeSettings{
-		Mode: constant.ModeUnmanaged,
-		RemoteData: registry.Data{
-			ImagesRepo: "dev-registry.deckhouse.io/sys/deckhouse-oss",
-			Scheme:     constant.SchemeHTTPS,
-			Username:   "user",
-			Password:   "password",
-		},
-	}
-
-	return metaConfig
-}
 
 // maxPods must match what bashible computes for every other node
 // (candi/bashible/common-steps/all/064_configure_kubelet.sh.tpl) — the scheduler
@@ -122,7 +43,7 @@ func TestNodeConfigMaxPodsFollowsThePodSubnet(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run("prefix "+tt.prefix, func(t *testing.T) {
-			metaConfig := testMetaConfig(t)
+			metaConfig := immutabletest.MetaConfig(t)
 			if tt.prefix == "" {
 				delete(metaConfig.ClusterConfig, "podSubnetNodeCIDRPrefix")
 			} else {
@@ -139,40 +60,71 @@ func TestNodeConfigMaxPodsFollowsThePodSubnet(t *testing.T) {
 	}
 }
 
-func TestSysextDigestsMissing(t *testing.T) {
-	metaConfig := testMetaConfig(t)
-	delete(metaConfig.Images["registrypackages"], "kubeletSysext1349")
+// wrongDigest is what a row plants where the lookup must not land.
+const wrongDigest = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 
-	err := ValidateSysext(t.Context(), metaConfig)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), `no "kubelet" system extension digest for Kubernetes 1.34`)
-}
+// The extensions are looked up by name in images_digests.json, where the sprig
+// camelcase function has already stripped every separator: each row is one way
+// that lookup can land on the wrong image, or on none.
+func TestSysextDigests(t *testing.T) {
+	tests := []struct {
+		name    string
+		images  func(packages map[string]any)
+		want    extension
+		wantErr []string
+	}{
+		{
+			name:    "the installer ships no kubelet extension for this version",
+			images:  func(packages map[string]any) { delete(packages, "kubeletSysext1349") },
+			wantErr: []string{`no "kubelet" system extension digest for Kubernetes 1.34`},
+		},
+		{
+			name: "the newest patch wins, and the suffix compares as a number",
+			images: func(packages map[string]any) {
+				packages["kubeletSysext13410"] = immutabletest.KubeletDigest
+				packages["kubeletSysext1349"] = wrongDigest
+			},
+			want: extension{Name: kubeletExtension, Digest: immutabletest.KubeletDigest, RequestedBy: platformExtensionRequestedBy},
+		},
+		{
+			// "kubernetesCniSysext1610" is 1.6.10, 1.61.0 and 16.1.0 at once; no
+			// comparison gets all three readings right, so two candidates are
+			// refused instead of silently resolved.
+			name: "two candidates whose names do not say which one is newer",
+			images: func(packages map[string]any) {
+				packages["kubernetesCniSysext1610"] = immutabletest.CNIDigest
+				packages["kubernetesCniSysext170"] = wrongDigest
+				delete(packages, "kubernetesCniSysext162")
+			},
+			wantErr: []string{"kubernetesCniSysext1610, kubernetesCniSysext170", "which one is newer"},
+		},
+		{
+			name:   "an image whose name merely starts the same way is not a candidate",
+			images: func(packages map[string]any) { packages["containerdSysextArtifact224"] = wrongDigest },
+			want:   extension{Name: containerdExtension, Digest: immutabletest.ContainerdDigest, RequestedBy: platformExtensionRequestedBy},
+		},
+	}
 
-func TestSysextDigestsPicksNewestPatch(t *testing.T) {
-	metaConfig := testMetaConfig(t)
-	metaConfig.Images["registrypackages"]["kubeletSysext13410"] = testKubeletDigest
-	metaConfig.Images["registrypackages"]["kubeletSysext1349"] = "sha256:9999999999999999999999999999999999999999999999999999999999999999"
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			metaConfig := immutabletest.MetaConfig(t)
+			tt.images(metaConfig.Images["registrypackages"])
 
-	extensions, err := sysextExtensions(metaConfig.Images.ConvertToMap(), "1.34")
-	require.NoError(t, err)
-	require.Contains(t, extensions, extension{
-		Name: kubeletExtension, Digest: testKubeletDigest, RequestedBy: platformExtensionRequestedBy,
-	})
-}
+			extensions, err := sysextExtensions(metaConfig.Images.ConvertToMap(), "1.34")
+			if len(tt.wantErr) == 0 {
+				require.NoError(t, err)
+				require.Contains(t, extensions, tt.want)
+				return
+			}
 
-// The camelcase function strips version separators, so "kubernetesCniSysext1610"
-// is 1.6.10, 1.61.0 and 16.1.0 at once; no comparison gets all readings right,
-// so two candidates are refused instead of silently resolved.
-func TestSysextDigestsRefusesAmbiguousVersions(t *testing.T) {
-	metaConfig := testMetaConfig(t)
-	metaConfig.Images["registrypackages"]["kubernetesCniSysext1610"] = testCNIDigest
-	metaConfig.Images["registrypackages"]["kubernetesCniSysext170"] = "sha256:9999999999999999999999999999999999999999999999999999999999999999"
-	delete(metaConfig.Images["registrypackages"], "kubernetesCniSysext162")
-
-	err := ValidateSysext(t.Context(), metaConfig)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "kubernetesCniSysext1610, kubernetesCniSysext170")
-	require.Contains(t, err.Error(), "which one is newer")
+			require.Error(t, err)
+			for _, fragment := range tt.wantErr {
+				require.Contains(t, err.Error(), fragment)
+			}
+			// The same failure the preflight check reports, before anything is created.
+			require.Error(t, ValidateSysext(t.Context(), metaConfig))
+		})
+	}
 }
 
 // The document dhctl writes must list every extension node-controller renders.
@@ -184,7 +136,7 @@ func TestSysextDigestsRefusesAmbiguousVersions(t *testing.T) {
 func TestNodeConfigListsEveryExtensionNodeControllerRenders(t *testing.T) {
 	nodeConfig, err := buildNodeConfig(t.Context(), nodeConfigInput{
 		NodeName:   "example-master-0",
-		MetaConfig: testMetaConfig(t),
+		MetaConfig: immutabletest.MetaConfig(t),
 	})
 	require.NoError(t, err)
 
@@ -194,20 +146,6 @@ func TestNodeConfigListsEveryExtensionNodeControllerRenders(t *testing.T) {
 	}
 	require.ElementsMatch(t,
 		[]string{containerdExtension, kubeletExtension, cniExtension, nodeletExtension}, names)
-}
-
-// The one containerd and the one CNI extension the installer ships are found by
-// their prefix alone, and an image whose name merely starts the same way is not
-// one of them.
-func TestSysextDigestsIgnoresNonVersionSuffixes(t *testing.T) {
-	metaConfig := testMetaConfig(t)
-	metaConfig.Images["registrypackages"]["containerdSysextArtifact224"] = "sha256:9999999999999999999999999999999999999999999999999999999999999999"
-
-	extensions, err := sysextExtensions(metaConfig.Images.ConvertToMap(), "1.34")
-	require.NoError(t, err)
-	require.Contains(t, extensions, extension{
-		Name: containerdExtension, Digest: testContainerdDigest, RequestedBy: platformExtensionRequestedBy,
-	})
 }
 
 // The sandbox image reference is built from the configured registry, not from
@@ -227,27 +165,27 @@ func TestNodeConfigImageReferencesFollowTheConfiguredRegistry(t *testing.T) {
 			imagesRepo:  "registry.internal.example.com:5000/mirror/deckhouse",
 			wantAddress: "registry.internal.example.com:5000",
 			wantPath:    "/mirror/deckhouse",
-			wantSandbox: "registry.internal.example.com:5000/mirror/deckhouse@" + testPauseDigest,
+			wantSandbox: "registry.internal.example.com:5000/mirror/deckhouse@" + immutabletest.PauseDigest,
 		},
 		{
 			name:        "a trailing slash the schema lets through",
 			imagesRepo:  "registry.example.com/deckhouse/ce/",
 			wantAddress: "registry.example.com",
 			wantPath:    "/deckhouse/ce",
-			wantSandbox: "registry.example.com/deckhouse/ce@" + testPauseDigest,
+			wantSandbox: "registry.example.com/deckhouse/ce@" + immutabletest.PauseDigest,
 		},
 		{
 			name:        "no path at all",
 			imagesRepo:  "registry.example.com",
 			wantAddress: "registry.example.com",
 			wantPath:    "",
-			wantSandbox: "registry.example.com@" + testPauseDigest,
+			wantSandbox: "registry.example.com@" + immutabletest.PauseDigest,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			metaConfig := testMetaConfig(t)
+			metaConfig := immutabletest.MetaConfig(t)
 			metaConfig.Registry.Settings.RemoteData.ImagesRepo = tt.imagesRepo
 
 			nodeConfig, err := buildNodeConfig(t.Context(), nodeConfigInput{
@@ -267,7 +205,7 @@ func TestNodeConfigImageReferencesFollowTheConfiguredRegistry(t *testing.T) {
 // make it work are asserted directly: blank (a cloud disk has no partition
 // table), the static pod's hostPath, and the mode etcd checks on every start.
 func TestEtcdMountClaimsABlankDiskUnderEtcd(t *testing.T) {
-	mounts := etcdMounts()
+	mounts := etcdMounts
 
 	require.Len(t, mounts, 1)
 	require.Equal(t, "/var/lib/etcd", mounts[0].BindTo)

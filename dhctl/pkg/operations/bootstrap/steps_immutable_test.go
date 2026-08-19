@@ -16,14 +16,12 @@ package bootstrap
 
 import (
 	"context"
-	"crypto/tls"
 	"encoding/base64"
-	"encoding/json"
 	"net"
 	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -34,15 +32,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/lib-connection/pkg/kube"
+	"github.com/deckhouse/lib-connection/pkg/provider"
 	libretry "github.com/deckhouse/lib-dhctl/pkg/retry"
 
-	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable/immutabletest"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
@@ -155,18 +152,23 @@ func TestAdminKubeconfigFromCacheStopsWhenTheHandoverIsOver(t *testing.T) {
 // A rerun re-enters this step with the credentials already in hand, which skips
 // the branch that writes them — so a --kubeconfig-out named for the first time
 // on that rerun would be silently ignored.
-func TestSaveAdminKubeconfigOnRerunHonoursKubeconfigOut(t *testing.T) {
+func TestReuseCollectedKubeconfigHonoursKubeconfigOut(t *testing.T) {
 	b, bctx := immutableTestBootstrapper(t)
 	b.TmpDir = t.TempDir()
 
 	content := []byte("apiVersion: v1\nkind: Config\n")
 	collected := filepath.Join(t.TempDir(), "example-admin.kubeconfig")
-	require.NoError(t, os.WriteFile(collected, content, 0o600))
+	// 0644 rather than 0600: saveAdminKubeconfig writes at 0600, so the mode says
+	// whether the second call below rewrote the file.
+	require.NoError(t, os.WriteFile(collected, content, 0o644))
+	require.NoError(t, immutable.SaveCollectedKubeconfig(t.Context(), bctx.stateCache, collected))
 
 	out := filepath.Join(t.TempDir(), "prod.kubeconfig")
 	b.Options.Bootstrap.KubeconfigOut = out
 
-	require.NoError(t, b.saveAdminKubeconfigOnRerun(t.Context(), content, bctx, collected))
+	reused, err := b.reuseCollectedKubeconfig(t.Context(), bctx)
+	require.NoError(t, err)
+	require.Equal(t, content, reused)
 
 	written, err := os.ReadFile(out)
 	require.NoError(t, err)
@@ -181,9 +183,16 @@ func TestSaveAdminKubeconfigOnRerunHonoursKubeconfigOut(t *testing.T) {
 	// Nothing to do when the file is already where the flag names it: the write
 	// clears the path first, and that file is the only copy of the credentials.
 	b.Options.Bootstrap.KubeconfigOut = collected
-	require.NoError(t, os.Remove(collected))
-	require.NoError(t, b.saveAdminKubeconfigOnRerun(t.Context(), content, bctx, collected))
-	require.NoFileExists(t, collected, "the file that is already in place must not be rewritten")
+	require.NoError(t, immutable.SaveCollectedKubeconfig(t.Context(), bctx.stateCache, collected))
+
+	reused, err = b.reuseCollectedKubeconfig(t.Context(), bctx)
+	require.NoError(t, err)
+	require.Equal(t, content, reused)
+
+	info, err := os.Stat(collected)
+	require.NoError(t, err)
+	require.Equal(t, os.FileMode(0o644), info.Mode().Perm(),
+		"the file that is already in place must not be rewritten")
 }
 
 // The record has to be written before ConfirmCollected shuts the node's channel
@@ -260,6 +269,26 @@ func TestSaveAdminKubeconfigWritesAFreshPrivateFile(t *testing.T) {
 	})
 }
 
+// A bootstrap that has to be aborted must still reach the cluster it created,
+// and an immutable master answers no sshd: the SSH-backed Kubernetes client is
+// built against a host that never replies, and abort leaves the VMs and the
+// disks behind. --kubeconfig is what the operator passes instead.
+func TestAbortKeepsTheKubeconfigProviderOfAnImmutableMaster(t *testing.T) {
+	// A provider built the way connectToImmutableMaster builds it, and nil where
+	// the SSH one would come from: a lost guard shows up as a nil provider.
+	kubeProvider := provider.NewDefaultKubeProvider(nil, &kube.Config{}, nil)
+	b := &ClusterBootstrapper{Params: &Params{KubeProvider: kubeProvider}}
+
+	b.useSSHKubeProviderUnlessImmutable(t.Context(), immutabletest.MetaConfig(t))
+	require.Equal(t, kubeProvider, b.KubeProvider,
+		"an immutable master runs no sshd; the client built from --kubeconfig is the only one that works")
+
+	classic := immutabletest.MetaConfig(t)
+	classic.CloudProviderVars = nil
+	b.useSSHKubeProviderUnlessImmutable(t.Context(), classic)
+	require.Nil(t, b.KubeProvider, "the classic path still builds its client over SSH")
+}
+
 // immutableTestBootstrapper builds the smallest bootstrapper that can render
 // the master payload.
 func immutableTestBootstrapper(t *testing.T) (*ClusterBootstrapper, *bootstrapContext) {
@@ -272,11 +301,11 @@ func immutableTestBootstrapper(t *testing.T) (*ClusterBootstrapper, *bootstrapCo
 	// The default CandiDir points into a directory only the installer image
 	// populates; left as is, the test would depend on leftovers of a previous
 	// dhctl run.
-	opts.Global.CandiDir = repoCandiDir(t)
+	opts.Global.CandiDir = immutabletest.CandiDir(t)
 
 	b := &ClusterBootstrapper{Params: &Params{Options: opts}}
 
-	metaConfig := immutableTestMetaConfig(t)
+	metaConfig := immutabletest.MetaConfig(t)
 
 	return b, &bootstrapContext{
 		metaConfig: metaConfig,
@@ -285,102 +314,14 @@ func immutableTestBootstrapper(t *testing.T) (*ClusterBootstrapper, *bootstrapCo
 	}
 }
 
-// repoCandiDir finds the checkout's own candi directory by walking up from the
-// test's working directory.
-func repoCandiDir(t *testing.T) string {
-	t.Helper()
-
-	dir, err := os.Getwd()
-	require.NoError(t, err)
-
-	for {
-		candidate := filepath.Join(dir, "candi")
-		if _, err := os.Stat(filepath.Join(candidate, "control-plane")); err == nil {
-			return candidate
-		}
-		parent := filepath.Dir(dir)
-		require.NotEqual(t, parent, dir, "candi/control-plane not found above %s", dir)
-		dir = parent
-	}
-}
-
-func immutableTestMetaConfig(t *testing.T) *config.MetaConfig {
-	t.Helper()
-
-	const digest = "sha256:1111111111111111111111111111111111111111111111111111111111111111"
-
-	metaConfig := &config.MetaConfig{
-		ClusterType:       config.CloudClusterType,
-		ClusterPrefix:     "example",
-		ClusterDomain:     "cluster.local",
-		ClusterDNSAddress: "10.223.0.10",
-		ClusterConfig: map[string]json.RawMessage{
-			"kubernetesVersion":       json.RawMessage(`"1.34"`),
-			"serviceSubnetCIDR":       json.RawMessage(`"10.223.0.0/16"`),
-			"podSubnetCIDR":           json.RawMessage(`"10.222.0.0/16"`),
-			"podSubnetNodeCIDRPrefix": json.RawMessage(`"24"`),
-			"clusterDomain":           json.RawMessage(`"cluster.local"`),
-		},
-		ProviderClusterConfig: map[string]json.RawMessage{
-			"masterNodeGroup": json.RawMessage(`{
-			  "replicas": 1,
-			  "instanceClass": {
-			    "rootDisk": {"size": "50Gi"},
-			    "etcdDisk": {"size": "10Gi"}
-			  }
-			}`),
-		},
-		Images: map[string]map[string]any{
-			"registrypackages": {
-				"containerdSysext224":    digest,
-				"kubernetesCniSysext162": digest,
-				"kubeletSysext1349":      digest,
-				"nodeletSysext":          digest,
-			},
-			"nodeManager": {"olcedar": digest},
-			"common":      {"pause": digest},
-			"controlPlaneManager": {
-				"etcd":                     digest,
-				"kubeApiserver134":         digest,
-				"kubeControllerManager134": digest,
-				"kubeScheduler134":         digest,
-			},
-		},
-	}
-
-	metaConfig.Registry.Settings = registry.ModeSettings{
-		Mode: constant.ModeUnmanaged,
-		RemoteData: registry.Data{
-			ImagesRepo: "dev-registry.deckhouse.io/sys/deckhouse-oss",
-			Scheme:     constant.SchemeHTTPS,
-			Username:   "user",
-			Password:   "password",
-		},
-	}
-
-	return metaConfig
-}
-
 // immutableHandoffTestServer serves the node's side of the bootstrap channel and
-// returns the port it landed on. Bound to :0 rather than the protocol's fixed
-// port, so a busy port cannot silently skip this test.
+// returns the port it landed on.
 func immutableHandoffTestServer(t *testing.T, material *immutable.HandoffMaterial, handler http.HandlerFunc) int {
 	t.Helper()
 
-	certificate, err := tls.X509KeyPair([]byte(material.ServerCertPEM), []byte(material.ServerKeyPEM))
-	require.NoError(t, err)
+	server := immutabletest.HandoffServer(t, material.ServerCertPEM, material.ServerKeyPEM, handler)
 
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
-	require.NoError(t, err)
-
-	server := httptest.NewUnstartedServer(handler)
-	require.NoError(t, server.Listener.Close())
-	server.Listener = listener
-	server.TLS = &tls.Config{Certificates: []tls.Certificate{certificate}}
-	server.StartTLS()
-	t.Cleanup(server.Close)
-
-	address, ok := listener.Addr().(*net.TCPAddr)
+	address, ok := server.Listener.Addr().(*net.TCPAddr)
 	require.True(t, ok)
 	return address.Port
 }
@@ -430,6 +371,30 @@ func TestCollectImmutableKubeconfigStopsOnAFailedNode(t *testing.T) {
 		"a node that reported Failed must end the wait, not start the next attempt")
 }
 
+// The collection hands its channel to the confirmation instead of dialling the
+// port twice, and the confirmation closes it. The API tunnel beside it carries
+// the Kubernetes client for the rest of the bootstrap: closing that one here
+// leaves every later phase talking to a forward that is gone.
+func TestConfirmImmutableHandoffClosesOnlyTheHandoffChannel(t *testing.T) {
+	b, bctx, material := immutableWaitingBootstrapper(t)
+
+	port := immutableHandoffTestServer(t, material, func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, http.MethodPost, r.Method)
+		w.WriteHeader(http.StatusNoContent)
+	})
+
+	apiTunnelClosed, handoffClosed := false, false
+	bctx.immutable.tunnelStop = func() { apiTunnelClosed = true }
+	bctx.immutable.handoffAddress = net.JoinHostPort("127.0.0.1", strconv.Itoa(port))
+	bctx.immutable.handoffStop = func() { handoffClosed = true }
+
+	b.confirmImmutableHandoff(t.Context(), bctx)
+
+	require.True(t, handoffClosed, "the one-shot channel has served its purpose and must be closed")
+	require.False(t, apiTunnelClosed, "the API tunnel carries the client through the rest of the bootstrap")
+	require.Empty(t, bctx.immutable.handoffAddress, "a closed channel must not be handed to anybody else")
+}
+
 // The bootstrap token of a NodeGroup is minted by an asynchronous node-manager
 // hook, so the first read of a young master group finds none. Without a retry
 // the whole multi-master bootstrap ends there — after the first master is up.
@@ -465,7 +430,7 @@ func TestBuildImmutableJoinPayloadWaitsForTheBootstrapToken(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
 	defer cancel()
 
-	payload, err := buildImmutableJoinPayload(ctx, kubeCl, immutableTestMetaConfig(t), "example-master-1")
+	payload, err := buildImmutableJoinPayload(ctx, kubeCl, immutabletest.MetaConfig(t), "example-master-1")
 	require.NoError(t, err, "a token that is not published yet is what the wait exists for")
 
 	document, err := base64.StdEncoding.DecodeString(payload)

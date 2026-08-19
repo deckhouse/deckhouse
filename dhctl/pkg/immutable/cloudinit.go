@@ -27,12 +27,10 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
-// MasterPayloadInput is everything BuildMasterPayload needs.
 type MasterPayloadInput struct {
 	// NodeName is the name the first master registers under. It is also the name
 	// the handoff endpoint's certificate is issued for.
-	NodeName string
-	// MetaConfig is the parsed cluster configuration.
+	NodeName   string
 	MetaConfig *config.MetaConfig
 	// StateCache carries the handoff material between bootstrap attempts.
 	StateCache state.Cache
@@ -70,12 +68,10 @@ func BuildMasterPayload(ctx context.Context, in MasterPayloadInput) (string, err
 	return base64.StdEncoding.EncodeToString([]byte(document)), nil
 }
 
-// JoinPayloadInput is everything BuildJoinPayload needs. The three cluster
-// facts come from the running cluster, not from the installer's own idea of it.
+// JoinPayloadInput carries three facts read from the running cluster, not from
+// the installer's own idea of it.
 type JoinPayloadInput struct {
-	// NodeName is the name this master registers under.
-	NodeName string
-	// MetaConfig is the parsed cluster configuration.
+	NodeName   string
 	MetaConfig *config.MetaConfig
 	// CACert is the cluster CA, base64-encoded, as the cluster holds it.
 	CACert string
@@ -101,11 +97,7 @@ func BuildJoinPayload(ctx context.Context, in JoinPayloadInput) (string, error) 
 	nodeConfig, err := buildNodeConfig(ctx, nodeConfigInput{
 		NodeName:   in.NodeName,
 		MetaConfig: in.MetaConfig,
-		Join: &joinInput{
-			CACert:             in.CACert,
-			BootstrapToken:     in.BootstrapToken,
-			APIServerEndpoints: in.APIServerEndpoints,
-		},
+		Join:       &in,
 	})
 	if err != nil {
 		return "", fmt.Errorf("build node config: %w", err)

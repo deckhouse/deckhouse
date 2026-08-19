@@ -42,18 +42,36 @@ type immutableBootstrap struct {
 	// until the node has handed them over.
 	kubeconfigPath string
 	tunnelStop     func()
+	// handoffAddress and handoffStop are the node's one-shot bootstrap channel,
+	// held from the collection until the handover is confirmed. Empty on a rerun,
+	// which confirms without collecting and opens one of its own.
+	handoffAddress string
+	handoffStop    func()
 }
 
-// stopImmutableTunnel closes the bastion tunnel the path opened, if it opened one.
-func (c *bootstrapContext) stopImmutableTunnel() {
-	if c.immutable == nil || c.immutable.tunnelStop == nil {
+func (c *bootstrapContext) stopImmutableChannels() {
+	if c.immutable == nil {
 		return
 	}
-	c.immutable.tunnelStop()
+	c.stopImmutableHandoff()
+	if c.immutable.tunnelStop != nil {
+		c.immutable.tunnelStop()
+	}
+}
+
+// stopImmutableHandoff closes the one-shot bootstrap channel alone. The API
+// tunnel beside it carries the Kubernetes client for the rest of the bootstrap,
+// so it must outlive the handover.
+func (c *bootstrapContext) stopImmutableHandoff() {
+	if c.immutable == nil || c.immutable.handoffStop == nil {
+		return
+	}
+	c.immutable.handoffStop()
+	c.immutable.handoffAddress, c.immutable.handoffStop = "", nil
 }
 
 // printCollectedKubeconfig says how to reach the cluster once the node has
-// handed its credentials over. Silent until then, and on every other path.
+// handed its credentials over. Silent until then.
 func (b *ClusterBootstrapper) printCollectedKubeconfig(ctx context.Context, bctx *bootstrapContext) {
 	if bctx.immutable == nil || bctx.immutable.kubeconfigPath == "" {
 		return
@@ -136,25 +154,9 @@ func (b *ClusterBootstrapper) connectToImmutableMaster(ctx context.Context, bctx
 		return errors.New("the first master address is unknown: rerun the bootstrap so the BaseInfra phase reports it")
 	}
 
-	// A rerun does not come back through the channel: once an attempt has
-	// collected the credentials that channel is closed, and what it served is on
-	// disk. Reading from there beats waiting on a listener that may be gone.
-	complete, collectedPath, err := adminKubeconfigFromCache(ctx, bctx.stateCache)
+	complete, err := b.reuseCollectedKubeconfig(ctx, bctx)
 	if err != nil {
 		return err
-	}
-	if collectedPath != "" {
-		bctx.immutable.kubeconfigPath = collectedPath
-		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf(
-			"A previous attempt already collected the credentials; reusing the admin kubeconfig at %s", collectedPath,
-		))
-		if err := b.saveAdminKubeconfigOnRerun(ctx, complete, bctx, collectedPath); err != nil {
-			return err
-		}
-		// Printed here too: the other two calls are the first-collection path and
-		// the end of a successful run, so a stalled rerun would otherwise never
-		// say where the credentials are.
-		b.printHowToReachTheCluster(ctx, bctx.immutable.kubeconfigPath, bctx)
 	}
 
 	// The tunnel behind it stays open for the rest of the bootstrap.
@@ -204,6 +206,37 @@ func (b *ClusterBootstrapper) connectToImmutableMaster(ctx context.Context, bctx
 	removeImmutableKubeconfig(ctx, kubeconfigPath)
 
 	return waitForImmutableMasterNode(ctx, kubeCl, bctx.immutable.masterNodeName)
+}
+
+// reuseCollectedKubeconfig returns the credentials an earlier attempt collected,
+// or nil when there are none. A rerun does not come back through the channel:
+// once an attempt has collected them the channel is closed and what it served is
+// on disk, which beats waiting on a listener that is gone.
+func (b *ClusterBootstrapper) reuseCollectedKubeconfig(ctx context.Context, bctx *bootstrapContext) ([]byte, error) {
+	complete, collectedPath, err := adminKubeconfigFromCache(ctx, bctx.stateCache)
+	if err != nil || collectedPath == "" {
+		return nil, err
+	}
+
+	bctx.immutable.kubeconfigPath = collectedPath
+	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf(
+		"A previous attempt already collected the credentials; reusing the admin kubeconfig at %s", collectedPath,
+	))
+
+	// The collecting branch is the only other writer of --kubeconfig-out and a
+	// rerun skips it, so a path named for the first time on this run is written
+	// here or nowhere. saveAdminKubeconfig says where it wrote them.
+	out := b.Options.Bootstrap.KubeconfigOut
+	if out != "" && out != collectedPath {
+		return complete, b.saveAdminKubeconfig(ctx, complete, bctx)
+	}
+
+	// The other prints fire on a phase error and at the end of a successful run,
+	// so a rerun going on to sit in a long wait would say nothing at all — as one
+	// live rerun did. Guarded by TestConnectLineIsPrintedOnTheReusePath.
+	b.printHowToReachTheCluster(ctx, collectedPath, bctx)
+
+	return complete, nil
 }
 
 // waitForImmutableMasterNode waits until kubelet has registered the node. The

@@ -25,8 +25,8 @@ import (
 )
 
 // IsImmutableMaster reports whether the master NodeGroup asks for an immutable
-// system. The resources section is already parsed into CloudProviderVars by
-// config.Prepare, which rejects a document it cannot read.
+// system. config.Prepare has already parsed the resources section into
+// CloudProviderVars and rejected a document it could not read.
 func IsImmutableMaster(_ context.Context, metaConfig *config.MetaConfig) bool {
 	if metaConfig == nil || metaConfig.CloudProviderVars == nil {
 		return false
@@ -38,10 +38,9 @@ func IsImmutableMaster(_ context.Context, metaConfig *config.MetaConfig) bool {
 	return systemType == systemTypeImmutable
 }
 
-// ValidateClusterType rejects an immutable master outside a cloud cluster. The
-// node runs no sshd, so dhctl only ever reaches it at the address the BaseInfra
-// phase reports — and that phase creates nothing outside a cloud cluster, which
-// leaves the bootstrap with a node it has no way to talk to. Pure.
+// ValidateClusterType rejects an immutable master outside a cloud cluster: dhctl
+// reaches such a node only at the address the BaseInfra phase reports, and that
+// phase creates nothing outside a cloud cluster.
 func ValidateClusterType(_ context.Context, metaConfig *config.MetaConfig) error {
 	if metaConfig.ClusterType == config.CloudClusterType {
 		return nil

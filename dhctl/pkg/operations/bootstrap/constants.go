@@ -20,21 +20,20 @@ import "time"
 // object node-controller also addresses; see the mirrors named below.
 const (
 	// The kubernetes Service's EndpointSlice, the cluster's own record of where
-	// its apiservers answer. Named the same way node-controller names them.
+	// its apiservers answer.
+	// Mirrors modules/040-node-manager/images/node-controller/src/internal/controller/nodeconfig/constants.go.
 	apiServerEndpointSliceNS   = "default"
 	apiServerEndpointSliceName = "kubernetes"
 	apiServerPortName          = "https"
 
-	// clusterCAConfigMap carries the cluster CA every ServiceAccount is given.
-	// node-controller renders day-2 configs from the same source, so a node
-	// bootstrapped here and the same node reconciled later see one CA.
-	// Mirrors node-controller/src/internal/controller/nodeconfig/constants.go.
+	// clusterCAConfigMap carries the cluster CA every ServiceAccount is given, and
+	// the source node-controller renders day-2 configs from, so a node sees one CA.
+	// Mirrors modules/040-node-manager/images/node-controller/src/internal/controller/nodeconfig/constants.go.
 	clusterCAConfigMap = "kube-root-ca.crt"
 	clusterCAKey       = "ca.crt"
 
-	// bootstrapTokenNGLabel labels a bootstrap-token secret with the NodeGroup
-	// it belongs to.
-	// Mirrors node-controller/src/internal/controller/nodebootstrap/constants.go.
+	// bootstrapTokenNGLabel labels a bootstrap-token secret with its NodeGroup.
+	// Mirrors modules/040-node-manager/images/node-controller/src/internal/controller/nodebootstrap/constants.go.
 	bootstrapTokenNGLabel = "node-manager.deckhouse.io/node-group"
 )
 
@@ -60,9 +59,8 @@ var (
 	// next step, so a couple of minutes is generous.
 	waitNodeRegistered = waitBudget{attempts: 120, interval: time.Second}
 
-	// Everything a joining node needs is published by a Deckhouse hook after the
-	// NodeGroup arrives, so the first read of a young cluster finds nothing. The
-	// budget is the classic path's, which waits this long for the group's cloud
-	// config (entity.GetCloudConfig).
+	// A Deckhouse hook publishes what a joining node needs after the NodeGroup
+	// arrives, so the first read of a young cluster finds nothing. The budget is
+	// the classic path's wait for the group's cloud config (entity.GetCloudConfig).
 	waitJoinInputs = waitBudget{attempts: 225, interval: time.Second}
 )

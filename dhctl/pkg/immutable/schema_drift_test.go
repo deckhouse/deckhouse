@@ -18,8 +18,12 @@ package immutable
 
 import (
 	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -124,4 +128,50 @@ func collectUnknownFields(doc interface{}, schema *apiextensionsv1.JSONSchemaPro
 			collectUnknownFields(item, schema.Items.Schema, fmt.Sprintf("%s[%d]", path, i), unknown)
 		}
 	}
+}
+
+// TestDefaultsMatchTheNodeConfigCRD guards the three defaults nodeconfig.go
+// copies out of the CRD: the payload is written to a file instead of created
+// through the API server, so nothing defaults it on the way in.
+func TestDefaultsMatchTheNodeConfigCRD(t *testing.T) {
+	typesPath := filepath.Join("..", "..", "..", "modules", "040-node-manager", "images", "node-controller",
+		"src", "api", "internal.deckhouse.io", "v1alpha1", "nodeconfig_types.go")
+	if _, err := os.Stat(typesPath); os.IsNotExist(err) {
+		// The dhctl CI image ships dhctl alone, without the modules tree; the
+		// guard runs on every full checkout, which is where the CRD is edited.
+		t.Skipf("the NodeConfig types are not in this checkout (%s); run from a full repository checkout", typesPath)
+	}
+
+	defaults := kubebuilderDefaults(t, typesPath)
+
+	require.Equal(t, defaultContainerLogMaxSize, defaults["ContainerLogMaxSize"])
+	require.Equal(t, strconv.Itoa(defaultContainerLogMaxFiles), defaults["ContainerLogMaxFiles"])
+	require.Equal(t, strconv.Itoa(defaultMaxConcurrentDownloads), defaults["MaxConcurrentDownloads"])
+}
+
+// kubebuilderDefaults reads the +kubebuilder:default marker of every field in
+// the file, unquoted, keyed by the Go field name.
+func kubebuilderDefaults(t *testing.T, path string) map[string]string {
+	t.Helper()
+
+	file, err := parser.ParseFile(token.NewFileSet(), path, nil, parser.ParseComments)
+	require.NoError(t, err)
+
+	defaults := map[string]string{}
+	ast.Inspect(file, func(node ast.Node) bool {
+		field, ok := node.(*ast.Field)
+		if !ok || field.Doc == nil || len(field.Names) == 0 {
+			return true
+		}
+		for _, line := range field.Doc.List {
+			value, found := strings.CutPrefix(line.Text, "// +kubebuilder:default=")
+			if !found {
+				continue
+			}
+			defaults[field.Names[0].Name] = strings.Trim(value, `"`)
+		}
+		return true
+	})
+
+	return defaults
 }
