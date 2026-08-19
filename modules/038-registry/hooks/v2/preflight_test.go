@@ -22,11 +22,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	v1apps "k8s.io/api/apps/v1"
-	v1core "k8s.io/api/core/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/checker"
 )
@@ -53,27 +49,13 @@ func ready() preflight {
 		Legacy:          legacyState{Mode: "Unmanaged"},
 		CheckerReported: true,
 		CheckerStatus:   checker.Status{Ready: true},
-		ImageHolder: &imageHolderState{
-			Images: []string{
-				"registry.example.com/system/deckhouse@sha256:aaa",
-				"registry.example.com/system/deckhouse@sha256:bbb",
-				"registry.example.com/system/deckhouse@sha256:ccc",
-			},
-			Desired:   3,
-			Available: 3,
-		},
-		RequiredImages: map[string]string{
-			"dockerDistribution": "sha256:aaa",
-			"dockerAuth":         "sha256:bbb",
-			"registrySyncer":     "sha256:ccc",
-		},
 	}
 }
 
 func TestAReadyClusterPassesEveryCheck(t *testing.T) {
 	checks := ready().report()
 
-	require.Len(t, checks, 5, "every check has to be reported, including the ones that pass")
+	require.Len(t, checks, 4, "every check has to be reported, including the ones that pass")
 	for _, check := range checks {
 		assert.Truef(t, check.Passed, "%s failed: %s", check.Name, check.Detail)
 	}
@@ -158,18 +140,8 @@ func TestWhichChecksBlockAndWhichOnlyWarn(t *testing.T) {
 		blocking: true,
 		detail:   "a transition is in flight: Unmanaged to Proxy",
 	}, {
-		// Work to do, not a reason the migration is impossible: pre-staging is something the
-		// operator completes, and only they know whether it is done.
-		name: "the syncer image is not on the nodes",
-		subject: func() preflight {
-			subject := ready()
-			subject.RequiredImages["registrySyncer"] = "sha256:notheld"
-			return subject
-		}(),
-		check:    CheckImagesPreStaged,
-		blocking: false,
-		detail:   "not resident on the nodes yet: the syncer",
-	}, {
+		// The one check that only warns: carrying user configuration over is work an operator
+		// does and only they know is done.
 		name: "an operator wrote registry configuration for the nodes",
 		subject: func() preflight {
 			subject := ready()
@@ -193,54 +165,6 @@ func TestWhichChecksBlockAndWhichOnlyWarn(t *testing.T) {
 			assert.Contains(t, check.Detail, one.detail)
 		})
 	}
-}
-
-// Pre-staging is answered about the nodes, not about the DaemonSet's existence: images resident on
-// some nodes and not others is exactly the case where the switch starts on a node that has to pull
-// through the path being replaced.
-func TestImagesAreOnlyPreStagedWhenEveryNodeHasThem(t *testing.T) {
-	cases := []struct {
-		name   string
-		holder *imageHolderState
-		detail string
-	}{{
-		name:   "no image holder at all",
-		holder: nil,
-		detail: "not keeping any images resident",
-	}, {
-		name:   "the holder is not on every node yet",
-		holder: &imageHolderState{Images: []string{"x@sha256:aaa"}, Desired: 3, Available: 2},
-		detail: "resident on 2 of 3 nodes",
-	}, {
-		// A DaemonSet scheduled nowhere holds nothing, however healthy it reads.
-		name:   "the holder is scheduled nowhere",
-		holder: &imageHolderState{Desired: 0, Available: 0},
-		detail: "resident on 0 of 0 nodes",
-	}}
-
-	for _, one := range cases {
-		t.Run(one.name, func(t *testing.T) {
-			subject := ready()
-			subject.ImageHolder = one.holder
-
-			check := found(t, subject.report(), CheckImagesPreStaged)
-
-			assert.False(t, check.Passed)
-			assert.Contains(t, check.Detail, one.detail)
-		})
-	}
-}
-
-// A digest nobody supplied cannot be reported as absent from the nodes. The values are missing on
-// a cluster whose module has not been rendered with image digests, and claiming the image is not
-// pre-staged there would be a guess that reads exactly like a finding.
-func TestAnImageWithNoKnownDigestIsNotReportedAsMissing(t *testing.T) {
-	subject := ready()
-	subject.RequiredImages = map[string]string{"dockerDistribution": "sha256:aaa"}
-
-	check := found(t, subject.report(), CheckImagesPreStaged)
-
-	assert.True(t, check.Passed, check.Detail)
 }
 
 // Unreadable node configurations are reported as unread, not as "none".
@@ -273,45 +197,6 @@ func TestNothingIsReportedWhereThereIsNoDecisionToMake(t *testing.T) {
 	installedOnThisOne.Legacy = legacyState{}
 	assert.Empty(t, installedOnThisOne.report(),
 		"a cluster that never ran the previous implementation is asked about a migration")
-}
-
-// The DaemonSet filter answers two questions: which images are kept resident, and on how many
-// nodes. Both come from a real object, because the container names carrying the images are a
-// convention of the previous implementation's template and nothing else enforces it.
-func TestTheImageHolderFilterReadsTheHeldImagesAndTheNodeCount(t *testing.T) {
-	daemonSet := &v1apps.DaemonSet{
-		TypeMeta:   v1.TypeMeta{APIVersion: "apps/v1", Kind: "DaemonSet"},
-		ObjectMeta: v1.ObjectMeta{Name: ImageHolderName, Namespace: "d8-system"},
-		Spec: v1apps.DaemonSetSpec{
-			Template: v1core.PodTemplateSpec{
-				Spec: v1core.PodSpec{
-					Containers: []v1core.Container{
-						{Name: "nodeservices-manager", Image: "registry.example.com/manager@sha256:mgr"},
-						{Name: "image-holder-distribution", Image: "registry.example.com/x@sha256:aaa"},
-						{Name: "image-holder-auth", Image: "registry.example.com/x@sha256:bbb"},
-					},
-				},
-			},
-		},
-		Status: v1apps.DaemonSetStatus{DesiredNumberScheduled: 3, NumberAvailable: 3},
-	}
-
-	object, err := runtime.DefaultUnstructuredConverter.ToUnstructured(daemonSet)
-	require.NoError(t, err)
-
-	result, err := filterImageHolder(&unstructured.Unstructured{Object: object})
-	require.NoError(t, err)
-
-	state, ok := result.(imageHolderState)
-	require.True(t, ok)
-
-	// The manager runs in the same pod and is not an image being kept resident for somebody else.
-	assert.Equal(t, []string{
-		"registry.example.com/x@sha256:aaa",
-		"registry.example.com/x@sha256:bbb",
-	}, state.Images)
-	assert.Equal(t, int32(3), state.Desired)
-	assert.Equal(t, int32(3), state.Available)
 }
 
 // The node configuration filter recognises what a configuration writes, not what it is called: an

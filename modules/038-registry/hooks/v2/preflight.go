@@ -29,16 +29,18 @@ limitations under the License.
 //     cluster whose registry IS the cluster has no such path: it needs the fallback runbook.
 //   - an upstream that answers. Bringing the cluster to Unmanaged points every node straight at
 //     the upstream, so an unreachable one turns the documented degradation into an outage.
-//   - the images of the new components already on the nodes. The switch starts a storage and a
-//     syncer; if their images have to come through the path being replaced, the migration's first
-//     act is to depend on what it is dismantling. On this build the answer is currently always no,
-//     and that is a finding rather than a bug here: the DaemonSet that kept images resident belongs
-//     to the previous implementation and does not render any more, so nothing pre-stages anything.
-//     Non-blocking, because a cluster with a reachable registry pulls those images and lives — the
-//     pre-staging the ADR wanted mattered for the isolated case.
-//   - containerd v1 registry configuration written by the operator. The transition rewrites those
-//     files and the ADR says they are carried over by hand, so a cluster holding them must not be
-//     migrated silently.
+//   - containerd v1 registry configuration written by the operator.
+//     The transition rewrites those files and the ADR says they are carried over by hand, so a
+//     cluster holding them must not be migrated silently.
+//
+// What is deliberately NOT asked is whether the new components' images are already on the nodes.
+// The ADR floated pre-staging them, and the previous implementation even had a DaemonSet that kept
+// images resident, so a check for it looks natural — but the migration has exactly one path, through
+// Unmanaged, and Unmanaged means every node pulls straight from a live upstream with nothing stored
+// locally. A reachable upstream is not one way of getting those images, it is the prerequisite for
+// being in that state at all; where it holds the images are simply pulled, and where it does not the
+// cluster cannot be in Unmanaged to begin with. So a pre-staging check could never pass and would
+// never need to: it would report a permanent warning about a mechanism the plan does not use.
 //
 // Blocking marks the checks under which the migration must not begin at all, as against the ones
 // naming work to do first. What it does not mean is that this module will refuse: the refusal that
@@ -67,7 +69,6 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
-	v1apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -82,16 +83,7 @@ const (
 	PreflightMetric      = "d8_registry_migration_preflight"
 	preflightMetricGroup = "d8_registry_migration_preflight"
 
-	// ImageHolderName is the DaemonSet of the previous implementation that keeps images
-	// resident on every node.
-	ImageHolderName = "registry-nodeservices-manager"
-
-	// moduleDigestsValuesPath is where the digests of this module's own images are, keyed by
-	// the werf image name.
-	moduleDigestsValuesPath = "global.modulesImages.digests.registry"
-
 	nodeConfigurationSnapName = "preflight-node-configurations"
-	imageHolderSnapName       = "preflight-image-holder"
 	preflightSwitchSnapName   = "preflight-v2-switch"
 	// Its own subscription to the same secret the switch gate reads: snapshots belong to the
 	// hook that asked for them, so sharing the gate's name would read as empty here.
@@ -103,7 +95,6 @@ const (
 	CheckMode              = "mode"
 	CheckNotLocal          = "not_local"
 	CheckUpstreamReachable = "upstream_reachable"
-	CheckImagesPreStaged   = "images_pre_staged"
 	CheckNodeConfiguration = "node_registry_configuration"
 )
 
@@ -117,14 +108,6 @@ type preflightCheck struct {
 	Blocking bool
 
 	Detail string
-}
-
-// imageHolderState is what the DaemonSet tells us: which images it keeps resident, and
-// whether it is actually doing so on every node.
-type imageHolderState struct {
-	Images    []string
-	Desired   int32
-	Available int32
 }
 
 // nodeConfiguration is one operator-written node configuration, reduced to the question
@@ -189,18 +172,6 @@ var _ = sdk.RegisterFunc(
 				},
 				FilterFunc: filterNodeConfiguration,
 			},
-			{
-				Name:       imageHolderSnapName,
-				ApiVersion: "apps/v1",
-				Kind:       "DaemonSet",
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{ImageHolderName},
-				},
-				NamespaceSelector: &types.NamespaceSelector{
-					NameSelector: &types.NameSelector{MatchNames: []string{"d8-system"}},
-				},
-				FilterFunc: filterImageHolder,
-			},
 		},
 	},
 	handlePreflight,
@@ -227,28 +198,6 @@ func filterNodeConfiguration(obj *unstructured.Unstructured) (go_hook.FilterResu
 	}
 
 	return nodeConfiguration{Name: obj.GetName(), TouchesContainerd: touches}, nil
-}
-
-func filterImageHolder(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var daemonSet v1apps.DaemonSet
-	if err := sdk.FromUnstructured(obj, &daemonSet); err != nil {
-		return nil, fmt.Errorf("converting the daemonset: %w", err)
-	}
-
-	state := imageHolderState{
-		Desired:   daemonSet.Status.DesiredNumberScheduled,
-		Available: daemonSet.Status.NumberAvailable,
-	}
-	for _, container := range daemonSet.Spec.Template.Spec.Containers {
-		// Only the holders. The manager itself runs in the same pod and is not an image being
-		// kept resident for somebody else.
-		if strings.HasPrefix(container.Name, "image-holder-") {
-			state.Images = append(state.Images, container.Image)
-		}
-	}
-	sort.Strings(state.Images)
-
-	return state, nil
 }
 
 func handlePreflight(ctx context.Context, input *go_hook.HookInput) error {
@@ -319,32 +268,11 @@ type preflight struct {
 	CheckerReported bool
 	CheckerStatus   checker.Status
 
-	// ImageHolder is the previous implementation's image-holding DaemonSet, or nil when it
-	// is not running.
-	ImageHolder *imageHolderState
-
-	// RequiredImages maps an image of a new component to the digest identifying it. Empty
-	// entries are dropped by the reader: comparing against a digest nobody supplied would
-	// report absence it cannot know.
-	RequiredImages map[string]string
-
 	// NodeConfigurations is what operators have told the nodes to do.
 	NodeConfigurations []nodeConfiguration
 
 	// NodeConfigurationsUnreadable is why they could not be read, when they could not.
 	NodeConfigurationsUnreadable error
-}
-
-// whatTheNewComponentsNeed names the images that have to be on a node before the switch, and
-// what to call them in the report.
-//
-// The agent is not among them. It arrives as a registry package and is imported into the
-// container runtime by bashible, so no image kept resident by the previous implementation could
-// stand in for it.
-var whatTheNewComponentsNeed = map[string]string{
-	"dockerDistribution": "the storage",
-	"dockerAuth":         "the storage's auth",
-	"registrySyncer":     "the syncer",
 }
 
 func (p preflight) report() []preflightCheck {
@@ -360,7 +288,6 @@ func (p preflight) report() []preflightCheck {
 		p.checkMode(),
 		p.checkNotLocal(),
 		p.checkUpstream(),
-		p.checkImages(),
 		p.checkNodeConfigurations(),
 	}
 }
@@ -423,9 +350,14 @@ func (p preflight) checkNotLocal() preflightCheck {
 
 // checkUpstream reports what the registry checker already established.
 //
-// Its own probe is deliberately not opened: the checker asks this question on a schedule and
-// holds the answer, while a hook dialling a registry would hold the queue while doing it and
-// answer a different moment than the one the migration happens in.
+// The load-bearing one, now that pre-staging is out: Unmanaged has no local copy of anything, so a
+// reachable upstream is the whole pull path of every node for the length of the migration window.
+//
+// Its own probe is deliberately not opened. The checker asks this question on a schedule and holds
+// the answer, while a hook dialling a registry would hold the queue while doing it and answer a
+// different moment than the one the migration happens in. And it is fed exactly when this reports:
+// `checker.SetParams` is called only by the previous implementation's hook, which runs while the
+// current one is held off — the same condition under which there is a migration to check.
 func (p preflight) checkUpstream() preflightCheck {
 	switch {
 	case !p.CheckerReported:
@@ -441,56 +373,6 @@ func (p preflight) checkUpstream() preflightCheck {
 		return preflightCheck{Name: CheckUpstreamReachable, Passed: true,
 			Detail: "the checker reaches the registry the cluster pulls from"}
 	}
-}
-
-// checkImages answers whether the new components can start without the path being replaced.
-//
-// The mechanism it asks about is the previous implementation's: a DaemonSet that keeps images
-// resident on every node, which the migration plan intended to reuse — if the new components'
-// images are among them, the switch starts from what is on disk rather than from a pull through
-// the registry it is dismantling.
-//
-// On this build that DaemonSet does not render at all, so the honest answer is that nothing
-// pre-stages anything, and this reports it as such instead of passing by default. It stays
-// non-blocking: with a reachable registry the images are simply pulled, and pre-staging was the
-// answer to the isolated case, which the ADR sends to a runbook anyway.
-func (p preflight) checkImages() preflightCheck {
-	if p.ImageHolder == nil {
-		return preflightCheck{Name: CheckImagesPreStaged,
-			Detail: "the previous implementation is not keeping any images resident on the nodes"}
-	}
-
-	if p.ImageHolder.Desired == 0 || p.ImageHolder.Available < p.ImageHolder.Desired {
-		return preflightCheck{Name: CheckImagesPreStaged,
-			Detail: fmt.Sprintf("images are resident on %d of %d nodes",
-				p.ImageHolder.Available, p.ImageHolder.Desired)}
-	}
-
-	missing := make([]string, 0, len(p.RequiredImages))
-	for image, digest := range p.RequiredImages {
-		if !heldBy(p.ImageHolder.Images, digest) {
-			missing = append(missing, whatTheNewComponentsNeed[image])
-		}
-	}
-	sort.Strings(missing)
-
-	if len(missing) > 0 {
-		return preflightCheck{Name: CheckImagesPreStaged,
-			Detail: fmt.Sprintf("not resident on the nodes yet: %s", strings.Join(missing, ", "))}
-	}
-
-	return preflightCheck{Name: CheckImagesPreStaged, Passed: true,
-		Detail: fmt.Sprintf("the new components' images are resident on all %d nodes",
-			p.ImageHolder.Desired)}
-}
-
-func heldBy(images []string, digest string) bool {
-	for _, image := range images {
-		if strings.Contains(image, digest) {
-			return true
-		}
-	}
-	return false
 }
 
 // checkNodeConfigurations answers whether the operator wrote registry configuration of their own.
@@ -543,21 +425,6 @@ func readPreflight(ctx context.Context, input *go_hook.HookInput) preflight {
 		Legacy:          legacy,
 		CheckerReported: checker.Initialized(input),
 		CheckerStatus:   checker.GetStatus(ctx, input),
-		RequiredImages:  make(map[string]string, len(whatTheNewComponentsNeed)),
-	}
-
-	if holder, err := helpers.SnapshotToSingle[imageHolderState](input, imageHolderSnapName); err == nil {
-		subject.ImageHolder = &holder
-	}
-
-	for image := range whatTheNewComponentsNeed {
-		digest, err := helpers.GetValue[string](input, moduleDigestsValuesPath+"."+image)
-		if err != nil || digest == "" {
-			// Unknown rather than missing: without a digest to compare against, reporting the
-			// image as absent from the nodes would be a guess.
-			continue
-		}
-		subject.RequiredImages[image] = digest
 	}
 
 	configurations, err := helpers.SnapshotToList[nodeConfiguration](input, nodeConfigurationSnapName)
