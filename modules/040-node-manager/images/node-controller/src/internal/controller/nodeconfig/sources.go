@@ -17,6 +17,7 @@ limitations under the License.
 package nodeconfig
 
 import (
+	"cmp"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -77,11 +78,9 @@ type clusterInputs struct {
 	Registry *internalv1alpha1.Registry
 }
 
-// sourceReader reads cluster state. Reader goes straight to the API server
-// (decisions followed by writes; the cache is a beat behind); Client is cached,
-// used only for kinds this controller watches. Deliberately no fallback.
+// sourceReader reads cluster state straight from the API server: these
+// decisions are followed by writes and the manager's cache is a beat behind.
 type sourceReader struct {
-	Client client.Client
 	Reader client.Reader
 }
 
@@ -90,73 +89,77 @@ type sourceReader struct {
 // node by node. The cost: while any read fails, no immutable node is rendered.
 func (s *sourceReader) readClusterInputs(ctx context.Context, kubernetesVersion string) (clusterInputs, error) {
 	in := clusterInputs{KubernetesVersion: kubernetesVersion}
-
-	endpoints, err := s.readAPIServerEndpoints(ctx)
-	if err != nil {
+	if err := s.readClusterState(ctx, &in); err != nil {
 		return in, err
 	}
+	if err := s.readReleaseImages(ctx, &in); err != nil {
+		return in, err
+	}
+	return in, nil
+}
+
+// readClusterState fills in what the cluster decides for every node: where its
+// API servers are, its DNS, its CA and its pod density.
+func (s *sourceReader) readClusterState(ctx context.Context, in *clusterInputs) error {
+	endpoints, err := s.readAPIServerEndpoints(ctx)
+	if err != nil {
+		return err
+	}
 	if len(endpoints) == 0 {
-		return in, errors.New("no API server endpoints discovered")
+		return errors.New("no API server endpoints discovered")
 	}
 	in.APIServerEndpoints = endpoints
 
 	config, err := s.readClusterConfiguration(ctx)
 	if err != nil {
-		return in, err
+		return err
 	}
-	in.ClusterDomain = config.clusterDomain()
+	in.ClusterDomain = cmp.Or(config.ClusterDomain, defaultClusterDomain)
 	in.DefaultMaxPods = defaultMaxPodsFor(config.PodSubnetNodeCIDRPrefix)
 
 	dns, err := s.readClusterDNS(ctx)
 	if err != nil {
-		return in, err
+		return err
 	}
 	in.ClusterDNS = dns
 
-	ca, err := s.readClusterCA(ctx)
-	if err != nil {
-		return in, err
-	}
-	in.KubernetesCA = ca
+	in.KubernetesCA, err = s.readClusterCA(ctx)
+	return err
+}
 
-	// One read for both the system extensions and the pause image: they come out
-	// of the same ConfigMap, and a render pass that reads it twice pays twice.
+// readReleaseImages fills in what the release ships and how a node reaches it.
+func (s *sourceReader) readReleaseImages(ctx context.Context, in *clusterInputs) error {
+	// One read for the system extensions, the OS image and the pause image: they
+	// come out of the same ConfigMap, and reading it three times pays three times.
 	images, err := s.readImagesDigests(ctx)
 	if err != nil {
-		return in, err
+		return err
 	}
 
-	digests, err := sysextDigests(images, kubernetesVersion)
+	in.SysextDigests, err = sysextDigests(images, in.KubernetesVersion)
 	if err != nil {
-		return in, err
+		return err
 	}
-	in.SysextDigests = digests
 
-	token, err := s.readPackagesProxyToken(ctx)
+	in.RegistryPackagesProxyToken, err = s.readPackagesProxyToken(ctx)
 	if err != nil {
-		return in, err
+		return err
 	}
-	in.RegistryPackagesProxyToken = token
 
 	registry, imagesRepo, err := s.readRegistry(ctx)
 	if err != nil {
-		return in, err
+		return err
 	}
 	in.Registry = registry
 
-	osImage, err := osImageDigest(images)
+	osImage, err := digestAt(images, nodeManagerDigestsKey, osImageName)
 	if err != nil {
-		return in, err
+		return err
 	}
 	in.OSImage = internalv1alpha1.OSImage{Digest: osImage}
 
-	sandbox, err := sandboxImage(images, imagesRepo)
-	if err != nil {
-		return in, err
-	}
-	in.SandboxImage = sandbox
-
-	return in, nil
+	in.SandboxImage, err = sandboxImage(images, imagesRepo)
+	return err
 }
 
 // reportedNodeIPs returns the node's reported internal addresses, read from the
@@ -231,12 +234,24 @@ func registryAuth(dockerConfig []byte, address string) (string, error) {
 }
 
 // sandboxImage resolves the pause image against the cluster's own registry.
+// Mirrors dhctl/pkg/immutable/digests.go:140.
 func sandboxImage(images map[string]map[string]string, imagesRepo string) (string, error) {
-	digest := images[pauseDigestGroup][pauseDigestName]
-	if digest == "" {
-		return "", fmt.Errorf("no %s/%s digest in %s", pauseDigestGroup, pauseDigestName, imagesDigestsKey)
+	digest, err := digestAt(images, pauseDigestGroup, pauseDigestName)
+	if err != nil {
+		return "", err
 	}
 	return imagesRepo + "@" + digest, nil
+}
+
+// digestAt returns one image's digest out of the release's digest map. Absent
+// means the release did not build it, and rendering stops rather than guessing:
+// a node told a wrong image can neither be installed nor updated.
+func digestAt(all map[string]map[string]string, group, name string) (string, error) {
+	digest := all[group][name]
+	if digest == "" {
+		return "", fmt.Errorf("no %s/%s digest in %s", group, name, imagesDigestsKey)
+	}
+	return digest, nil
 }
 
 // readClusterCA returns the cluster CA, base64-encoded the way the NodeConfig
@@ -347,15 +362,6 @@ type clusterConfiguration struct {
 	PodSubnetNodeCIDRPrefix intstr.IntOrString `json:"podSubnetNodeCIDRPrefix"`
 }
 
-// clusterDomain is the configured domain, or the default ClusterConfiguration
-// applies when the field is left out.
-func (c clusterConfiguration) clusterDomain() string {
-	if c.ClusterDomain == "" {
-		return defaultClusterDomain
-	}
-	return c.ClusterDomain
-}
-
 // readClusterConfiguration reads the cluster configuration secret. A failure is
 // reported rather than replaced by defaults: quietly rendering defaults would
 // reconfigure every node of every immutable group.
@@ -380,12 +386,13 @@ func (s *sourceReader) readClusterConfiguration(ctx context.Context) (clusterCon
 // no scheduler skew between node kinds; dhctl mirrors it (pkg/immutable/nodeconfig.go).
 func defaultMaxPodsFor(prefix intstr.IntOrString) int {
 	byPrefix := map[int]int{24: 120, 23: 250, 22: 500, 21: 1000}
+	steps := slices.Sorted(maps.Keys(byPrefix))
 	bits := prefix.IntValue()
 	if bits == 0 {
 		bits = defaultPodSubnetNodeCIDRPrefix
 	}
 	// A prefix outside the ladder takes the nearest step, as the template does.
-	return byPrefix[min(max(bits, 21), 24)]
+	return byPrefix[min(max(bits, steps[0]), steps[len(steps)-1])]
 }
 
 // readImagesDigests returns the digest of every image the release ships, keyed
@@ -418,21 +425,24 @@ func sysextDigests(all map[string]map[string]string, kubernetesVersion string) (
 		return nil, fmt.Errorf("no %q digests in %s", registryPackagesDigestsKey, imagesDigestsKey)
 	}
 
-	digests := make(map[string]string, 4)
-
 	// The image names carry the version with the separators stripped:
-	// containerdSysext224, kubernetesCniSysext162, kubeletSysext1356.
-	containerd, err := soleDigest(packages, "containerdSysext")
-	if err != nil {
-		return nil, err
+	// containerdSysext224, kubernetesCniSysext162, kubeletSysext1356. Neither of
+	// these two follows the Kubernetes version, so neither is looked up by it.
+	imagePrefixes := map[string]string{
+		containerdExtension: "containerdSysext",
+		cniExtension:        "kubernetesCniSysext",
 	}
-	digests[containerdExtension] = containerd
-
-	cni, err := soleDigest(packages, "kubernetesCniSysext")
-	if err != nil {
-		return nil, err
+	digests := make(map[string]string, len(imagePrefixes)+2)
+	for _, name := range slices.Sorted(maps.Keys(imagePrefixes)) {
+		digest, err := soleDigest(packages, imagePrefixes[name])
+		if err != nil {
+			return nil, err
+		}
+		if digest == "" {
+			return nil, fmt.Errorf("no %s system extension digest in %s", name, imagesDigestsKey)
+		}
+		digests[name] = digest
 	}
-	digests[cniExtension] = cni
 
 	// Read by exact key: the agent image has no version in its name, so the
 	// numeric tail soleDigest looks for is absent by construction.
@@ -442,33 +452,19 @@ func sysextDigests(all map[string]map[string]string, kubernetesVersion string) (
 	}
 	digests[nodeletExtension] = nodelet
 
-	if d := pickKubeletDigest(packages, kubernetesVersion); d != "" {
-		digests[kubeletExtension] = d
+	kubelet := pickKubeletDigest(packages, kubernetesVersion)
+	if kubelet == "" {
+		return nil, fmt.Errorf("no %s system extension digest for Kubernetes %s", kubeletExtension, kubernetesVersion)
 	}
+	digests[kubeletExtension] = kubelet
 
-	for _, name := range []string{containerdExtension, cniExtension, kubeletExtension} {
-		if digests[name] == "" {
-			return nil, fmt.Errorf("no %s system extension digest for Kubernetes %s", name, kubernetesVersion)
-		}
-	}
 	return digests, nil
-}
-
-// osImageDigest picks the olcedar image of this release. Absent means the
-// release did not build it, and rendering stops: a node told no OS image can
-// neither be installed nor updated, and guessing one would point it at whatever
-// the previous release shipped.
-func osImageDigest(all map[string]map[string]string) (string, error) {
-	digest := all[nodeManagerDigestsKey][osImageName]
-	if digest == "" {
-		return "", fmt.Errorf("no %q OS image digest in %s", osImageName, imagesDigestsKey)
-	}
-	return digest, nil
 }
 
 // versionedImages returns the images named the prefix followed by a version, as
 // image name to version. Everything after the prefix is the version, so a
 // non-numeric tail is another image whose name merely starts the same way.
+// Mirrors dhctl/pkg/immutable/digests.go:87.
 func versionedImages(packages map[string]string, prefix string) map[string]int {
 	found := map[string]int{}
 	for name := range packages {
@@ -487,7 +483,7 @@ func versionedImages(packages map[string]string, prefix string) map[string]int {
 
 // soleDigest returns the digest of the one image with the given prefix. It picks
 // no newest because none can be told: "kubernetesCniSysext1610" is ambiguous.
-// Several is a build defect, reported. Kept in step with dhctl's soleDigest.
+// Several is a build defect, reported. Mirrors dhctl/pkg/immutable/digests.go:106.
 func soleDigest(packages map[string]string, prefix string) (string, error) {
 	found := slices.Sorted(maps.Keys(versionedImages(packages, prefix)))
 	switch len(found) {
@@ -501,28 +497,23 @@ func soleDigest(packages map[string]string, prefix string) (string, error) {
 	}
 }
 
-// newestPatchDigest returns the newest image with the given prefix, which pins
-// everything but the patch, so the suffix compares numerically — a string
-// compare would put patch 6 over patch 10.
-func newestPatchDigest(packages map[string]string, prefix string) string {
-	best, bestVersion := "", -1
-	for name, version := range versionedImages(packages, prefix) {
-		if version > bestVersion {
-			best, bestVersion = packages[name], version
-		}
-	}
-	return best
-}
-
 // pickKubeletDigest returns the newest patch of the kubelet extension serving a
-// Kubernetes minor version: for 1.35 the prefix pins kubeletSysext135, and the
-// remaining suffix is the patch alone.
+// Kubernetes minor version: for 1.35 the prefix pins kubeletSysext135, so the
+// remaining suffix is the patch alone and compares numerically — a string
+// compare would put patch 6 over patch 10.
+// Mirrors dhctl/pkg/immutable/digests.go:127.
 func pickKubeletDigest(packages map[string]string, kubernetesVersion string) string {
 	minor := strings.ReplaceAll(kubernetesVersion, ".", "")
 	if minor == "" {
 		return ""
 	}
-	return newestPatchDigest(packages, "kubeletSysext"+minor)
+	best, bestPatch := "", -1
+	for name, patch := range versionedImages(packages, "kubeletSysext"+minor) {
+		if patch > bestPatch {
+			best, bestPatch = packages[name], patch
+		}
+	}
+	return best
 }
 
 // readPackagesProxyToken returns the token the node presents to the registry

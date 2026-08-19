@@ -22,7 +22,7 @@ package nodeconfig
 import (
 	"context"
 	"fmt"
-	"sort"
+	"slices"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -68,7 +68,7 @@ func (r *Reconciler) MaxConcurrentReconciles() int {
 // Setup wires an uncached reader: the secrets and config maps a NodeConfig is
 // rendered from live outside the manager's cache scope.
 func (r *Reconciler) Setup(_ context.Context, mgr ctrl.Manager) error {
-	r.sources = &sourceReader{Client: r.Client, Reader: mgr.GetAPIReader()}
+	r.sources = &sourceReader{Reader: mgr.GetAPIReader()}
 	r.derived = &derived_status.Service{Client: r.Client}
 	return nil
 }
@@ -100,9 +100,8 @@ func (r *Reconciler) SetupWatches(w register.Watcher) {
 		},
 	}))
 	// The system extension digests of the release. Without this watch a new
-	// release re-renders nothing until some unrelated input moves: the digests
-	// are read on every pass, but nothing enqueues one, and no resync period is
-	// set. Scoped to the single ConfigMap, which is also its cache scope.
+	// release re-renders nothing until some unrelated input moves: nothing else
+	// enqueues a pass, and no resync period is set.
 	w.Watches(&corev1.ConfigMap{}, allMapper, builder.WithPredicates(predicate.NewPredicateFuncs(
 		func(obj client.Object) bool {
 			return obj.GetNamespace() == cloudInstanceManagerNS && obj.GetName() == imagesDigestsConfigMapName
@@ -130,8 +129,15 @@ func (r *Reconciler) reconcileAllNodes(ctx context.Context, logger logr.Logger) 
 
 	// Unhealthy nodes first, the way bashible hands its approvals out: with one
 	// slot free, repairing what is broken beats touching what works.
-	sort.SliceStable(nodes.Items, func(i, j int) bool {
-		return !nodeIsReady(&nodes.Items[i]) && nodeIsReady(&nodes.Items[j])
+	slices.SortStableFunc(nodes.Items, func(a, b corev1.Node) int {
+		switch {
+		case nodeIsReady(&a) == nodeIsReady(&b):
+			return 0
+		case nodeIsReady(&a):
+			return 1
+		default:
+			return -1
+		}
 	})
 
 	var firstErr error
@@ -231,28 +237,7 @@ func (r *Reconciler) apply(ctx context.Context, ng *v1.NodeGroup, node *corev1.N
 	existing := &internalv1alpha1.NodeConfig{}
 	err := r.Client.Get(ctx, types.NamespacedName{Name: desired.Name}, existing)
 	if apierrors.IsNotFound(err) {
-		// A payload-provisioned node publishes its own NodeConfig; creating one
-		// here would lose the bootstrap-only fields. Only a CloudEphemeral payload
-		// is rendered by this controller, so only it can be reproduced.
-		if isControlPlaneNode(node) || ng.Spec.NodeType != v1.NodeTypeCloudEphemeral {
-			logger.V(1).Info("waiting for the payload-provisioned node to publish its own NodeConfig", "node", desired.Name)
-			return nil, nil
-		}
-		if err := r.Client.Create(ctx, desired); err != nil {
-			if apierrors.IsAlreadyExists(err) {
-				return nil, nil
-			}
-			return nil, fmt.Errorf("create NodeConfig %s: %w", desired.Name, err)
-		}
-		logger.Info("NodeConfig created", "node", desired.Name)
-		// A node given its first config is updating. A budget this pass has
-		// already read predates the object and has to be told; one read later
-		// lists it itself, still at generation 1 with nothing applied.
-		if budget, ok := p.rollouts[ng.Name]; ok {
-			budget.spend(desired.Name)
-		}
-		r.recordClampedSettings(ng)
-		return desired, nil
+		return r.create(ctx, ng, node, desired, logger, p)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("get NodeConfig %s: %w", desired.Name, err)
@@ -282,9 +267,38 @@ func (r *Reconciler) apply(ctx context.Context, ng *v1.NodeGroup, node *corev1.N
 		return existing, nil
 	}
 
-	// Conditional on the revision the decision above was made against: two
-	// passes rendering the same node at once would otherwise both write, the
-	// second over a slot the first had already spent.
+	return r.patch(ctx, ng, existing, desired, logger, budget)
+}
+
+// create gives a node its first NodeConfig. Only a CloudEphemeral payload is
+// rendered by this controller: for any other node the object carries
+// bootstrap-only fields nothing here can reproduce, so its own is waited for.
+func (r *Reconciler) create(ctx context.Context, ng *v1.NodeGroup, node *corev1.Node, desired *internalv1alpha1.NodeConfig, logger logr.Logger, p *pass) (*internalv1alpha1.NodeConfig, error) {
+	if isControlPlaneNode(node) || ng.Spec.NodeType != v1.NodeTypeCloudEphemeral {
+		logger.V(1).Info("waiting for the payload-provisioned node to publish its own NodeConfig", "node", desired.Name)
+		return nil, nil
+	}
+	if err := r.Client.Create(ctx, desired); err != nil {
+		if apierrors.IsAlreadyExists(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("create NodeConfig %s: %w", desired.Name, err)
+	}
+	logger.Info("NodeConfig created", "node", desired.Name)
+	// A node given its first config is updating. A budget this pass has already
+	// read predates the object and has to be told; one read later lists it
+	// itself, still at generation 1 with nothing applied.
+	if budget, ok := p.rollouts[ng.Name]; ok {
+		budget.spend(desired.Name)
+	}
+	r.recordClampedSettings(ng)
+	return desired, nil
+}
+
+// patch writes the rendered spec onto the object the slot was granted against.
+// The write is conditional on that revision: two passes rendering one node at
+// once would otherwise both write, the second over a slot the first had spent.
+func (r *Reconciler) patch(ctx context.Context, ng *v1.NodeGroup, existing, desired *internalv1alpha1.NodeConfig, logger logr.Logger, budget *rolloutBudget) (*internalv1alpha1.NodeConfig, error) {
 	patch := client.MergeFromWithOptions(existing.DeepCopy(), client.MergeFromWithOptimisticLock{})
 	existing.Spec = desired.Spec
 	existing.Labels = desired.Labels

@@ -22,6 +22,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
@@ -115,6 +117,127 @@ func TestRolloutBudget(t *testing.T) {
 		}
 		require.False(t, budget.hasSlot("node-d"))
 	})
+}
+
+// The NodeConfig watch enqueues the whole fleet, so it must fire on what a pass
+// reads and on nothing else. A node re-recording an extension digest is the
+// noisiest thing in that status and nothing here reads it.
+func TestNodeConfigRolloutInputsChanged(t *testing.T) {
+	config := func(mutate func(*internalv1alpha1.NodeConfig)) *internalv1alpha1.NodeConfig {
+		nc := &internalv1alpha1.NodeConfig{ObjectMeta: metav1.ObjectMeta{Name: "worker-0", Generation: 3}}
+		nc.Status.AppliedGeneration = 3
+		nc.Status.Extensions = []internalv1alpha1.ExtensionStatus{
+			{Name: containerdExtension, Digest: "sha256:old", State: "Ready"},
+		}
+		if mutate != nil {
+			mutate(nc)
+		}
+		return nc
+	}
+
+	tests := []struct {
+		name       string
+		after      *internalv1alpha1.NodeConfig
+		expChanged bool
+	}{
+		{
+			name: "only the recorded digest of an extension moved",
+			after: config(func(nc *internalv1alpha1.NodeConfig) {
+				nc.Status.Extensions[0].Digest = "sha256:new"
+			}),
+			expChanged: false,
+		},
+		{
+			name: "an extension started failing",
+			after: config(func(nc *internalv1alpha1.NodeConfig) {
+				nc.Status.Extensions[0].State = "Failed"
+			}),
+			expChanged: true,
+		},
+		{
+			name: "the node finished applying",
+			after: config(func(nc *internalv1alpha1.NodeConfig) {
+				nc.Status.AppliedGeneration = 4
+			}),
+			expChanged: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.expChanged, nodeConfigRolloutInputsChanged(config(nil), tt.after))
+		})
+	}
+}
+
+// maxConcurrent passes the NodeGroup schema as any integer, and a budget of
+// zero hands out no slot ever: the group is frozen for good, with no error and
+// no event. The floor is this controller's, the shared helper has none.
+func TestGroupConcurrencyNeverFreezesAGroup(t *testing.T) {
+	tests := []struct {
+		name          string
+		maxConcurrent *intstr.IntOrString
+		nodes         int
+		want          int
+	}{
+		{name: "a group that says nothing updates one node at a time", nodes: 5, want: 1},
+		{
+			name:          "zero would freeze the group forever",
+			maxConcurrent: ptr.To(intstr.FromInt32(0)),
+			nodes:         5,
+			want:          1,
+		},
+		{
+			name:          "a negative number, which the schema takes too",
+			maxConcurrent: ptr.To(intstr.FromInt32(-3)),
+			nodes:         5,
+			want:          1,
+		},
+		{
+			name:          "a percentage rounding down to nothing",
+			maxConcurrent: ptr.To(intstr.FromString("10%")),
+			nodes:         5,
+			want:          1,
+		},
+		{
+			name:          "what the operator asked for",
+			maxConcurrent: ptr.To(intstr.FromInt32(3)),
+			nodes:         5,
+			want:          3,
+		},
+		{
+			name:          "a percentage of the group",
+			maxConcurrent: ptr.To(intstr.FromString("40%")),
+			nodes:         5,
+			want:          2,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ng := &v1.NodeGroup{Spec: v1.NodeGroupSpec{Update: &v1.UpdateSpec{MaxConcurrent: tt.maxConcurrent}}}
+
+			require.Equal(t, tt.want, groupConcurrency(ng, tt.nodes))
+		})
+	}
+}
+
+// A node pinned to an address it no longer reports is one apply() is about to
+// rewrite. It is genuinely mid-update, and reading the pending rewrite as
+// "stuck on an older spec" would free a slot to a second node of the group.
+func TestBudgetKeepsANodeWhoseAddressChanged(t *testing.T) {
+	desired := internalv1alpha1.NodeSpec{NodeName: "n1", OSImage: internalv1alpha1.OSImage{Digest: testOSImageDigest}}
+	pinned := desired
+	pinned.Kubelet.NodeIP = "10.0.0.10"
+
+	updating := membersOfUpdating(
+		[]internalv1alpha1.NodeConfig{notApplied("n1", pinned)},
+		map[string]internalv1alpha1.NodeSpec{"n1": desired},
+	)
+
+	if _, ok := updating["n1"]; !ok {
+		t.Fatal("a node whose address the render is about to release must hold its slot")
+	}
 }
 
 // The held node's log line names who it is waiting for, so the order has to be

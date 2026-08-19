@@ -17,12 +17,18 @@ limitations under the License.
 package nodeconfig
 
 import (
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
@@ -471,6 +477,237 @@ func TestRenderSurvivesSettingsTheAgentSchemaRejects(t *testing.T) {
 	// A NodeGroup takes any number; the agent's schema stops at the ceiling. A
 	// ceiling is a better answer than no config at all.
 	require.Equal(t, maxPodsCeiling, renderKubelet(ng, &corev1.Node{}, clusterInputs{}).MaxPods)
+}
+
+// Values a NodeGroup accepts and the agent's schema refuses field by field. The
+// API server rejects the whole object over any one of them, so the group is
+// never configured at all — the clamp has to happen here, per field.
+func TestRenderNarrowsEveryValueTheAgentSchemaRefuses(t *testing.T) {
+	group := func(spec v1.NodeGroupSpec) *v1.NodeGroup {
+		spec.NodeType = v1.NodeTypeCloudEphemeral
+		return &v1.NodeGroup{ObjectMeta: metav1.ObjectMeta{Name: "worker"}, Spec: spec}
+	}
+
+	t.Run("kubelet", func(t *testing.T) {
+		tests := []struct {
+			name          string
+			kubelet       *v1.KubeletSpec
+			expMaxPods    int
+			expLogMaxSize string
+		}{
+			{
+				name:          "nothing configured keeps the CRD defaults",
+				expMaxPods:    120,
+				expLogMaxSize: defaultContainerLogMaxSize,
+			},
+			{
+				// A NodeGroup takes a bare integer; the agent's schema has
+				// Minimum=1, and 0 is dropped by omitempty into a silent 120.
+				name:          "maxPods 0 is legal for a NodeGroup and refused by the agent",
+				kubelet:       &v1.KubeletSpec{MaxPods: ptr.To(int32(0))},
+				expMaxPods:    1,
+				expLogMaxSize: defaultContainerLogMaxSize,
+			},
+			{
+				name:          "maxPods above the ceiling",
+				kubelet:       &v1.KubeletSpec{MaxPods: ptr.To(int32(1500))},
+				expMaxPods:    maxPodsCeiling,
+				expLogMaxSize: defaultContainerLogMaxSize,
+			},
+			{
+				// The NodeGroup pattern is unanchored, so it matches anything
+				// containing "50M"; the agent's CEL rule parses the quantity.
+				name:          "containerLogMaxSize with a suffix that is no quantity",
+				kubelet:       &v1.KubeletSpec{ContainerLogMaxSize: "50Mib"},
+				expMaxPods:    120,
+				expLogMaxSize: defaultContainerLogMaxSize,
+			},
+			{
+				name:          "containerLogMaxSize of zero, which the agent refuses as non-positive",
+				kubelet:       &v1.KubeletSpec{ContainerLogMaxSize: "0Mi"},
+				expMaxPods:    120,
+				expLogMaxSize: defaultContainerLogMaxSize,
+			},
+			{
+				name:          "a quantity both schemas accept is passed through",
+				kubelet:       &v1.KubeletSpec{ContainerLogMaxSize: "1Gi"},
+				expMaxPods:    120,
+				expLogMaxSize: "1Gi",
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				in := clusterInputs{DefaultMaxPods: 120}
+
+				kubelet := renderKubelet(group(v1.NodeGroupSpec{Kubelet: tt.kubelet}), &corev1.Node{}, in)
+
+				require.Equal(t, tt.expMaxPods, kubelet.MaxPods)
+				require.Equal(t, tt.expLogMaxSize, kubelet.ContainerLogMaxSize)
+			})
+		}
+	})
+
+	t.Run("update window", func(t *testing.T) {
+		tests := []struct {
+			name    string
+			windows []v1.DisruptionWindow
+			expFrom string
+			expTo   string
+		}{
+			{
+				// The NodeGroup pattern takes a one-digit hour, the agent's
+				// does not.
+				name:    "a one-digit hour is padded",
+				windows: []v1.DisruptionWindow{{From: "6:00", To: "7:05"}},
+				expFrom: "06:00",
+				expTo:   "07:05",
+			},
+			{
+				name:    "a window both schemas accept is passed through",
+				windows: []v1.DisruptionWindow{{From: "13:00", To: "18:30"}},
+				expFrom: "13:00",
+				expTo:   "18:30",
+			},
+			{
+				name:    "a window that is no clock time is skipped, not published",
+				windows: []v1.DisruptionWindow{{From: "25:00", To: "18:30"}},
+			},
+			{
+				name: "the first window the agent accepts wins",
+				windows: []v1.DisruptionWindow{
+					{From: "nonsense", To: "18:30"},
+					{From: "9:15", To: "10:00"},
+				},
+				expFrom: "09:15",
+				expTo:   "10:00",
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				ng := group(v1.NodeGroupSpec{Disruptions: &v1.DisruptionsSpec{
+					Automatic: &v1.AutomaticDisruptionSpec{Windows: tt.windows},
+				}})
+
+				window := renderUpdatePolicy(ng).Window
+
+				require.Equal(t, tt.expFrom, window.From)
+				require.Equal(t, tt.expTo, window.To)
+			})
+		}
+	})
+}
+
+// A clamp the operator is not told about leaves the group running something
+// nobody configured, so every value the render narrows carries a Warning.
+func TestRecordClampedSettings(t *testing.T) {
+	tests := []struct {
+		name    string
+		maxPods *int32
+		expects string
+	}{
+		{name: "a number both schemas accept is not an event", maxPods: ptr.To(int32(250))},
+		{name: "above the ceiling", maxPods: ptr.To(int32(1500)), expects: "kubelet.maxPods 1500"},
+		{name: "below the floor", maxPods: ptr.To(int32(0)), expects: "kubelet.maxPods 0"},
+		{name: "nothing configured", maxPods: nil},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			recorder := record.NewFakeRecorder(10)
+			r := &Reconciler{}
+			r.Recorder = recorder
+
+			r.recordClampedSettings(&v1.NodeGroup{
+				ObjectMeta: metav1.ObjectMeta{Name: "worker"},
+				Spec:       v1.NodeGroupSpec{Kubelet: &v1.KubeletSpec{MaxPods: tt.maxPods}},
+			})
+			close(recorder.Events)
+
+			var messages []string
+			for event := range recorder.Events {
+				messages = append(messages, event)
+			}
+			if tt.expects == "" {
+				require.Empty(t, messages)
+				return
+			}
+			require.Len(t, messages, 1)
+			require.Contains(t, messages[0], tt.expects)
+			require.Contains(t, messages[0], settingClampedEvent)
+		})
+	}
+}
+
+// Registration taints are rendered for a machine that has not joined yet and
+// have no meaning afterwards. Without carrying the field over, every node is
+// patched once just to drop it, spending a rollout slot on a no-op.
+func TestKeepBootstrapOnlyFieldsKeepsRegistrationTaints(t *testing.T) {
+	ng := &v1.NodeGroup{
+		ObjectMeta: metav1.ObjectMeta{Name: "worker"},
+		Spec: v1.NodeGroupSpec{
+			NodeType: v1.NodeTypeCloudEphemeral,
+			NodeTemplate: &v1.NodeTemplate{Taints: []corev1.Taint{
+				{Key: "dedicated", Value: "frontend", Effect: corev1.TaintEffectNoSchedule},
+			}},
+		},
+	}
+
+	bootstrap := renderSpec(ng, &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "worker-0"}}, clusterInputs{})
+	require.NotEmpty(t, bootstrap.Kubelet.RegisterWithTaints, "a machine that has not joined registers with them")
+
+	registered := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "worker-0", CreationTimestamp: metav1.Now()}}
+	dayTwo := renderSpec(ng, registered, clusterInputs{})
+	keepBootstrapOnlyFields(&dayTwo, &bootstrap, nil)
+
+	require.Equal(t, bootstrap, dayTwo, "the node it was written for reads as up to date")
+}
+
+// The render applies these because the bootstrap file path bypasses API-server
+// CRD defaulting. One that drifts from the schema gives a bootstrapping node
+// different values than a day-2 one, so they are read from the type, not typed.
+func TestRenderDefaultsMatchTheAgentSchema(t *testing.T) {
+	markers := kubebuilderMarkers(t, "../../../api/internal.deckhouse.io/v1alpha1/nodeconfig_types.go")
+
+	require.Equal(t, defaultContainerLogMaxSize, markers["ContainerLogMaxSize"]["default"])
+	require.Equal(t, strconv.Itoa(defaultContainerLogMaxFiles), markers["ContainerLogMaxFiles"]["default"])
+	require.Equal(t, strconv.Itoa(defaultMaxConcurrentDownloads), markers["MaxConcurrentDownloads"]["default"])
+	require.Equal(t, strconv.Itoa(maxPodsCeiling), markers["MaxPods"]["validation:Maximum"])
+}
+
+// kubebuilderMarkers returns every field's +kubebuilder: markers, keyed by field
+// name and then by marker. Field names are unique among the ones read above.
+func kubebuilderMarkers(t *testing.T, path string) map[string]map[string]string {
+	t.Helper()
+
+	file, err := parser.ParseFile(token.NewFileSet(), path, nil, parser.ParseComments)
+	require.NoError(t, err)
+
+	markers := map[string]map[string]string{}
+	ast.Inspect(file, func(node ast.Node) bool {
+		field, ok := node.(*ast.Field)
+		if !ok || field.Doc == nil || len(field.Names) != 1 {
+			return true
+		}
+		for _, line := range field.Doc.List {
+			marker, ok := strings.CutPrefix(line.Text, "// +kubebuilder:")
+			if !ok {
+				continue
+			}
+			name, value, found := strings.Cut(marker, "=")
+			if !found {
+				continue
+			}
+			if markers[field.Names[0].Name] == nil {
+				markers[field.Names[0].Name] = map[string]string{}
+			}
+			markers[field.Names[0].Name][name] = strings.Trim(value, `"`)
+		}
+		return true
+	})
+	require.NotEmpty(t, markers, "no markers read from %s", path)
+	return markers
 }
 
 // kubelet compares label namespaces by suffix. Equality here dropped legal

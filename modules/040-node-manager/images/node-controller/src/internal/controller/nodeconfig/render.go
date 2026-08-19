@@ -21,9 +21,11 @@ import (
 	"maps"
 	"slices"
 	"strings"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -77,11 +79,18 @@ func renderSpec(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) internalv
 }
 
 // keepBootstrapOnlyFields carries over the machine-specific parts of the spec —
-// kubelet.nodeIP (while still reported), explicit network, explicit storage.
-// Everything else is rendered: a value only ever copied can never be corrected.
+// kubelet.nodeIP (while still reported), registration taints, explicit network,
+// explicit storage. The rest is rendered: a copied value is never corrected.
 func keepBootstrapOnlyFields(desired, existing *internalv1alpha1.NodeSpec, reportedNodeIPs []string) {
 	if nodeIPStillHolds(existing.Kubelet.NodeIP, reportedNodeIPs) {
 		desired.Kubelet.NodeIP = existing.Kubelet.NodeIP
+	}
+
+	// Taints take effect while the node registers and are rendered for a machine
+	// that has not joined; dropping them afterwards patches every node once,
+	// spending a rollout slot on a field no node can act on any more.
+	if len(existing.Kubelet.RegisterWithTaints) > 0 {
+		desired.Kubelet.RegisterWithTaints = existing.Kubelet.RegisterWithTaints
 	}
 
 	// A static network belongs to the provisioner: overwriting it with the
@@ -157,8 +166,6 @@ func renderNetwork(node *corev1.Node) internalv1alpha1.Network {
 	}
 }
 
-// renderExtensions lists the system extensions the node merges onto its
-// read-only root, pinned by digest.
 func renderExtensions(digests map[string]string) []internalv1alpha1.Extension {
 	names := slices.Sorted(maps.Keys(digests))
 	extensions := make([]internalv1alpha1.Extension, 0, len(names))
@@ -201,13 +208,10 @@ func renderKubelet(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) intern
 	}
 
 	if ng.Spec.Kubelet != nil {
-		if ng.Spec.Kubelet.MaxPods != nil {
-			// Clamped, not passed through: a NodeGroup has no maximum while the
-			// agent's schema stops at maxPodsCeiling; over it the API server
-			// rejects the whole config and the node is left without one.
-			kubelet.MaxPods = min(int(*ng.Spec.Kubelet.MaxPods), maxPodsCeiling)
+		if maxPods, ok := configuredMaxPods(ng); ok {
+			kubelet.MaxPods = clampMaxPods(maxPods)
 		}
-		if ng.Spec.Kubelet.ContainerLogMaxSize != "" {
+		if positiveQuantity(ng.Spec.Kubelet.ContainerLogMaxSize) {
 			kubelet.ContainerLogMaxSize = ng.Spec.Kubelet.ContainerLogMaxSize
 		}
 		if ng.Spec.Kubelet.ContainerLogMaxFiles != nil {
@@ -215,14 +219,36 @@ func renderKubelet(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) intern
 		}
 	}
 
-	// Taints only take effect while the node registers itself, so they are
-	// rendered for a node that has not joined yet. Afterwards the node-template
-	// controller owns the taints on the Node object.
+	// Taints only take effect while the node registers itself; afterwards the
+	// node-template controller owns them, and keepBootstrapOnlyFields carries
+	// the rendered value on so a joined node is not patched to drop it.
 	if node.CreationTimestamp.IsZero() {
 		kubelet.RegisterWithTaints = renderTaints(ng)
 	}
 
 	return kubelet
+}
+
+func configuredMaxPods(ng *v1.NodeGroup) (int, bool) {
+	if ng.Spec.Kubelet == nil || ng.Spec.Kubelet.MaxPods == nil {
+		return 0, false
+	}
+	return int(*ng.Spec.Kubelet.MaxPods), true
+}
+
+// clampMaxPods holds the group's number inside what the agent's schema accepts
+// (Minimum=1, Maximum=maxPodsCeiling). Outside it the API server rejects the
+// whole config and the node is left without one; the clamp is reported.
+func clampMaxPods(maxPods int) int {
+	return min(max(maxPods, 1), maxPodsCeiling)
+}
+
+// positiveQuantity mirrors the CEL rule the agent's schema puts on
+// containerLogMaxSize (isQuantity && sign > 0). The NodeGroup pattern is
+// unanchored and takes "50Mib" and "0Mi", which that rule refuses outright.
+func positiveQuantity(value string) bool {
+	quantity, err := resource.ParseQuantity(value)
+	return err == nil && quantity.Sign() > 0
 }
 
 // renderResourceReservation maps the group's kubeReserved policy onto the node.
@@ -239,8 +265,6 @@ func renderResourceReservation(ng *v1.NodeGroup) *internalv1alpha1.ResourceReser
 	return &internalv1alpha1.ResourceReservation{Mode: mode}
 }
 
-// configuredReservationMode returns the kubeReserved mode the group asks for,
-// empty when it asks for none.
 func configuredReservationMode(ng *v1.NodeGroup) string {
 	if ng.Spec.Kubelet == nil || ng.Spec.Kubelet.ResourceReservation == nil {
 		return ""
@@ -252,17 +276,17 @@ func configuredReservationMode(ng *v1.NodeGroup) string {
 // did not carry over as written: the agent's schema refuses the value, and
 // silent narrowing would leave the group running something nobody configured.
 func (r *Reconciler) recordClampedSettings(ng *v1.NodeGroup) {
-	if maxPodsClamped(ng) {
+	if maxPods, ok := configuredMaxPods(ng); ok && clampMaxPods(maxPods) != maxPods {
 		r.Recorder.Event(ng, corev1.EventTypeWarning, settingClampedEvent,
-			fmt.Sprintf("kubelet.maxPods %d exceeds the %d an immutable node accepts; the nodes of this group are configured with %d",
-				*ng.Spec.Kubelet.MaxPods, maxPodsCeiling, maxPodsCeiling))
+			fmt.Sprintf("kubelet.maxPods %d is outside the 1..%d an immutable node accepts; the nodes of this group are configured with %d",
+				maxPods, maxPodsCeiling, clampMaxPods(maxPods)))
 	}
 	if ng.Spec.Disruptions != nil && ng.Spec.Disruptions.ApprovalMode == v1.DisruptionApprovalModeRollingUpdate {
 		r.Recorder.Event(ng, corev1.EventTypeWarning, settingClampedEvent,
 			fmt.Sprintf("disruptions.approvalMode %s has no counterpart on an immutable node; the nodes of this group are configured with %s",
 				v1.DisruptionApprovalModeRollingUpdate, v1.DisruptionApprovalModeAutomatic))
 	}
-	if staticReservationClamped(ng) {
+	if configuredReservationMode(ng) == resourceReservationModeStatic {
 		r.Recorder.Event(ng, corev1.EventTypeWarning, settingClampedEvent,
 			fmt.Sprintf("kubelet.resourceReservation.mode %s cannot be honoured on an immutable node, which reserves by capacity or not at all; the nodes of this group are configured with %s",
 				resourceReservationModeStatic, resourceReservationModeAuto))
@@ -272,21 +296,6 @@ func (r *Reconciler) recordClampedSettings(ng *v1.NodeGroup) {
 			fmt.Sprintf("disruptions windows: an immutable node holds a single update window; the nodes of this group are configured with the first of the %d given",
 				len(windows)))
 	}
-}
-
-// maxPodsClamped reports whether the group asks for more pods per node than an
-// immutable node accepts.
-func maxPodsClamped(ng *v1.NodeGroup) bool {
-	if ng.Spec.Kubelet == nil || ng.Spec.Kubelet.MaxPods == nil {
-		return false
-	}
-	return int(*ng.Spec.Kubelet.MaxPods) > maxPodsCeiling
-}
-
-// staticReservationClamped reports whether the group asks for a static resource
-// reservation, which an immutable node cannot honour.
-func staticReservationClamped(ng *v1.NodeGroup) bool {
-	return configuredReservationMode(ng) == resourceReservationModeStatic
 }
 
 // renderNodeLabels returns the labels kubelet registers the node with: the
@@ -312,12 +321,6 @@ func renderNodeLabels(ng *v1.NodeGroup) map[string]internalv1alpha1.NodeLabelVal
 	return labels
 }
 
-// reservedNamespaceMatches repeats how kubelet compares a label namespace with
-// one it knows: the namespace itself, or anything under it.
-func reservedNamespaceMatches(namespace, known string) bool {
-	return namespace == known || strings.HasSuffix(namespace, "."+known)
-}
-
 // kubeletMaySetLabel reports whether kubelet accepts the label on --node-labels.
 // kubelet exits on a refused label, so one such label leaves the node with no
 // kubelet; filtered labels still reach the Node via the node-template controller.
@@ -326,13 +329,16 @@ func kubeletMaySetLabel(key string) bool {
 	if !found {
 		return true
 	}
-	if !reservedNamespaceMatches(namespace, kubernetesLabelNamespace) && !reservedNamespaceMatches(namespace, k8sLabelNamespace) {
+	// kubelet compares by suffix, so a label under a sub-namespace of a listed
+	// one is judged the same way. Matching by equality here dropped legal labels
+	// silently — the operator sets one and it is simply not on the node.
+	under := func(known string) bool {
+		return namespace == known || strings.HasSuffix(namespace, "."+known)
+	}
+	if !slices.ContainsFunc(reservedLabelNamespaces, under) {
 		return true
 	}
-	// kubelet compares by suffix, so a label under a sub-namespace of an allowed
-	// prefix is allowed too. Matching by equality here dropped legal labels
-	// silently — the operator sets one and it is simply not on the node.
-	if reservedNamespaceMatches(namespace, kubeletLabelNamespace) || reservedNamespaceMatches(namespace, nodeLabelNamespace) {
+	if slices.ContainsFunc(kubeletLabelNamespaces, under) {
 		return true
 	}
 	_, allowed := kubeletAllowedLabels[key]
@@ -402,20 +408,38 @@ func renderUpdatePolicy(ng *v1.NodeGroup) internalv1alpha1.UpdatePolicy {
 		policy.Mode = string(mode)
 	}
 
-	// NodeConfig carries a single window; the first one wins until the agent
-	// learns to hold a list.
-	if windows := disruptionWindows(ng); len(windows) > 0 {
-		policy.Window = internalv1alpha1.UpdateWindow{
-			From: windows[0].From,
-			To:   windows[0].To,
-			Days: windows[0].Days,
+	// NodeConfig carries a single window; the first one the agent's schema takes
+	// wins until the agent learns to hold a list. A window it would refuse is
+	// skipped: publishing it costs the node its whole config, not one window.
+	for _, window := range disruptionWindows(ng) {
+		from, fromOK := clockTime(window.From)
+		to, toOK := clockTime(window.To)
+		if !fromOK || !toOK {
+			continue
 		}
+		policy.Window = internalv1alpha1.UpdateWindow{From: from, To: to, Days: window.Days}
+		break
 	}
 	return policy
 }
 
-// disruptionWindows returns the update windows the group configured: the
-// automatic ones, or the rolling-update ones when it configures no automatic.
+// clockTime pads a NodeGroup time to the "HH:MM" the agent's schema takes: a
+// one-digit hour ("6:00") is legal for a NodeGroup and refused there.
+func clockTime(value string) (string, bool) {
+	hour, minute, found := strings.Cut(value, ":")
+	if !found || len(minute) != 2 {
+		return "", false
+	}
+	if len(hour) == 1 {
+		hour = "0" + hour
+	}
+	parsed, err := time.Parse("15:04", hour+":"+minute)
+	if err != nil {
+		return "", false
+	}
+	return parsed.Format("15:04"), true
+}
+
 func disruptionWindows(ng *v1.NodeGroup) []v1.DisruptionWindow {
 	if ng.Spec.Disruptions == nil {
 		return nil

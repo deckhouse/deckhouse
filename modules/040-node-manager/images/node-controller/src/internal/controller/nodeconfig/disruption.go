@@ -31,6 +31,7 @@ import (
 	v1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
+	ua "github.com/deckhouse/node-controller/internal/controller/updateapproval/common"
 )
 
 // reconcileDisruption answers a node that cannot apply its config without a
@@ -59,7 +60,7 @@ func (r *Reconciler) reconcileDisruption(ctx context.Context, ng *v1.NodeGroup, 
 		return nil
 	}
 
-	if approvalMode(ng) == v1.DisruptionApprovalModeManual {
+	if v1.DisruptionApprovalMode(ua.GetApprovalMode(ng)) == v1.DisruptionApprovalModeManual {
 		logger.Info("node needs a disruption an operator has to approve",
 			"node", node.Name, "nodeGroup", ng.Name, "configGeneration", nc.Generation)
 		r.Recorder.Event(ng, corev1.EventTypeNormal, "DisruptionRequired",
@@ -152,13 +153,6 @@ func disruptionRequested(nc *internalv1alpha1.NodeConfig) bool {
 	return cond.ObservedGeneration == nc.Generation
 }
 
-func approvalMode(ng *v1.NodeGroup) v1.DisruptionApprovalMode {
-	if ng.Spec.Disruptions == nil || ng.Spec.Disruptions.ApprovalMode == "" {
-		return v1.DisruptionApprovalModeAutomatic
-	}
-	return ng.Spec.Disruptions.ApprovalMode
-}
-
 // needDrain mirrors the update-approval rule: a group of exactly one is
 // interrupted without a drain. Not "one or fewer" — status.nodes is 0 until its
 // controller runs, and reading that as "one" skipped drains on whole groups.
@@ -169,8 +163,5 @@ func needDrain(ng *v1.NodeGroup) bool {
 	if ng.Spec.Disruptions == nil || ng.Spec.Disruptions.Automatic == nil {
 		return true
 	}
-	if ng.Spec.Disruptions.Automatic.DrainBeforeApproval == nil {
-		return true
-	}
-	return *ng.Spec.Disruptions.Automatic.DrainBeforeApproval
+	return ptr.Deref(ng.Spec.Disruptions.Automatic.DrainBeforeApproval, true)
 }

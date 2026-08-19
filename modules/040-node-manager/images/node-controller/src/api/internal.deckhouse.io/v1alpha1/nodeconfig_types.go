@@ -84,25 +84,12 @@ type NodeConfigStatus struct {
 	LastReconcileTime metav1.Time `json:"lastReconcileTime,omitempty"`
 	// OSImage is how far the node has got with spec.osImage. Mirrors
 	// config.OSImageStatus in the nodelet repository (internal/config/types.go):
-	// a field missing here is pruned on write, and the node's whole status apply
-	// fails with "field not declared in schema" — the update then reports nothing.
+	// a field missing here is pruned and the node's whole status apply fails.
 	// +optional
 	OSImage *OSImageStatus `json:"osImage,omitempty"`
-	// MaintenanceToken authenticates a push to the node's maintenance endpoint.
-	// nodelet generates it once at startup and republishes it here on every pass
-	// while the API is reachable. When the node later loses the API and opens its
-	// :50000 config-push port, an operator reads this token from the last status
-	// the node published and presents it as `Authorization: Bearer <token>` to
-	// push a config — the endpoint rejects a push without it.
-	//
-	// The token is a credential for a root-equivalent config push, so it is
-	// marked sensitive: the API strips it from get/list/watch responses for
-	// any caller without the nodeconfigs/sensitive subresource. Nodes read
-	// NodeConfigs cluster-wide and are deliberately NOT granted it, so one
-	// node cannot read another's token (see the d8:node-manager:node-agent
-	// ClusterRole). The marker itself lives in the CRD — controller-gen cannot
-	// emit it, so it is stamped back in after generating; keep it there when
-	// regenerating crds/nodeconfig.yaml.
+	// MaintenanceToken is the bearer token an operator presents to the node's
+	// :50000 config-push port once the node has lost the API. It is a
+	// root-equivalent credential, hence x-kubernetes-sensitive-data in the CRD.
 	// +optional
 	MaintenanceToken string `json:"maintenanceToken,omitempty"`
 }
@@ -254,10 +241,9 @@ type Registry struct {
 	Auth string `json:"auth,omitempty"`
 }
 
-// OSImage names the image the node must run. Mirrors the agent's contract —
-// internal/config/types.go in the nodelet repository — and the initramfs one,
-// images/init/src/0.1/nodeconfig.go: both parse this document, and a shape they
-// disagree with fails the parse and drops the node into an emergency shell.
+// OSImage names the image the node must run. Mirrors the agent's contract
+// (internal/config/types.go in the nodelet repository) and the initramfs one
+// (images/init/src/0.1/nodeconfig.go); a shape they refuse strands the node.
 type OSImage struct {
 	// Digest pins the exact image, as for an extension. The node records it at
 	// install and compares it on every pass, so a tag would say nothing.
@@ -268,10 +254,9 @@ type OSImage struct {
 	// parameter out, so the proxy uses its own default registry.
 	// +optional
 	Repository string `json:"repository,omitempty"`
-	// AdditionalPath is where the artifact lives inside the registry, forwarded to
-	// the proxy as its "path" parameter. Empty is right for Deckhouse: every image
-	// of a release, the OS included, sits in the repository spec.registry.path
-	// already names.
+	// AdditionalPath is the proxy's "path" parameter. Empty is right for
+	// Deckhouse: every image of a release sits in the repository
+	// spec.registry.path already names.
 	// +optional
 	AdditionalPath string `json:"additionalPath,omitempty"`
 }
@@ -566,10 +551,6 @@ type Kubelet struct {
 	// +kubebuilder:default="50Mi"
 	// +kubebuilder:validation:XValidation:rule="isQuantity(self) && sign(quantity(self)) > 0",message="containerLogMaxSize must be a positive Kubernetes quantity"
 	ContainerLogMaxSize string `json:"containerLogMaxSize,omitempty"`
-	// Maintainers: the maximum below is 1000 because the on-node loader enforces
-	// it; kept in step by hand. Separated from the comment below by a blank line
-	// on purpose — controller-gen ships the touching comment group into the CRD.
-
 	// ContainerLogMaxFiles is the number of rotated log files to retain.
 	// +optional
 	// +kubebuilder:validation:Minimum=1

@@ -110,6 +110,38 @@ func TestFindApprovalIgnoresAnOperationOfAnEarlierNodeConfig(t *testing.T) {
 	require.NotNil(t, previous, "the object it was issued for must still find it, or it is approved twice")
 }
 
+// A NodeOperation fails on a deadline or on a pod nothing can evict. The node
+// keeps asking, so a failed attempt must not be mistaken for one in flight:
+// that leaves the node holding a rollout slot for a disruption nobody will
+// carry out.
+func TestFindApprovalAllowsAFreshAttemptAfterAFailure(t *testing.T) {
+	const uid = "5f5d1c7e-0000-4000-8000-000000000003"
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, v1alpha1.AddToScheme(scheme))
+
+	failed := &v1alpha1.NodeOperation{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "approve-worker-0-fghij",
+			Labels: map[string]string{
+				v1alpha1.NodeOperationNodeLabel: "worker-0",
+				nodeConfigUIDLabel:              uid,
+			},
+		},
+		Spec: v1alpha1.NodeOperationSpec{
+			Type:             v1alpha1.NodeOperationTypeApproveDisruption,
+			NodeName:         "worker-0",
+			ConfigGeneration: ptr.To(int64(2)),
+		},
+		Status: v1alpha1.NodeOperationStatus{Phase: v1alpha1.NodeOperationPhaseFailed},
+	}
+	r := &Reconciler{sources: &sourceReader{Reader: fake.NewClientBuilder().WithScheme(scheme).WithObjects(failed).Build()}}
+
+	found, err := r.findApproval(t.Context(), nodeConfigOf("worker-0", uid, 2))
+	require.NoError(t, err)
+	require.Nil(t, found, "a failed operation must not stand in for one in flight")
+}
+
 func nodeConfigOf(name, uid string, generation int64) *internalv1alpha1.NodeConfig {
 	return &internalv1alpha1.NodeConfig{
 		ObjectMeta: metav1.ObjectMeta{Name: name, UID: types.UID(uid), Generation: generation},

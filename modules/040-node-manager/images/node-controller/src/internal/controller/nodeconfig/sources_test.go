@@ -21,19 +21,21 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-func TestNewestPatchDigest(t *testing.T) {
+func TestPickKubeletDigest(t *testing.T) {
 	tests := []struct {
 		name     string
 		packages map[string]string
-		prefix   string
+		version  string
 		want     string
 	}{
 		{
@@ -42,26 +44,37 @@ func TestNewestPatchDigest(t *testing.T) {
 				"kubeletSysext1356":  "sha256:patch6",
 				"kubeletSysext13510": "sha256:patch10",
 			},
-			prefix: "kubeletSysext135",
-			want:   "sha256:patch10", // 1.35.10 > 1.35.6
+			version: "1.35",
+			want:    "sha256:patch10", // 1.35.10 > 1.35.6
+		},
+		{
+			name:     "another minor version is not this one's kubelet",
+			packages: map[string]string{"kubeletSysext1346": "sha256:v134"},
+			version:  "1.35",
+			want:     "",
 		},
 		{
 			name:     "no matching prefix yields empty",
 			packages: map[string]string{"other": "x"},
-			prefix:   "kubeletSysext",
+			version:  "1.35",
 			want:     "",
 		},
 		{
 			name:     "non-numeric suffix is ignored",
-			packages: map[string]string{"kubeletSysextabc": "x", "kubeletSysext5": "sha256:v5"},
-			prefix:   "kubeletSysext",
+			packages: map[string]string{"kubeletSysext135abc": "x", "kubeletSysext1355": "sha256:v5"},
+			version:  "1.35",
 			want:     "sha256:v5",
+		},
+		{
+			name:     "no version derived yields empty rather than any kubelet at all",
+			packages: map[string]string{"kubeletSysext1356": "sha256:patch6"},
+			want:     "",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := newestPatchDigest(tt.packages, tt.prefix); got != tt.want {
-				t.Fatalf("newestPatchDigest = %q, want %q", got, tt.want)
+			if got := pickKubeletDigest(tt.packages, tt.version); got != tt.want {
+				t.Fatalf("pickKubeletDigest = %q, want %q", got, tt.want)
 			}
 		})
 	}
@@ -127,16 +140,7 @@ func TestReadClusterConfiguration(t *testing.T) {
 		config, err := s.readClusterConfiguration(t.Context())
 
 		require.NoError(t, err)
-		require.Equal(t, "k8s.internal", config.clusterDomain())
-	})
-
-	t.Run("a configuration that names no domain keeps the default", func(t *testing.T) {
-		s := sourceReaderOver(dnsCluster(t, clusterConfigSecret("kubernetesVersion: \"1.35\"\n")))
-
-		config, err := s.readClusterConfiguration(t.Context())
-
-		require.NoError(t, err)
-		require.Equal(t, defaultClusterDomain, config.clusterDomain())
+		require.Equal(t, "k8s.internal", config.ClusterDomain)
 	})
 
 	// ClusterConfiguration writes the prefix as a string; a rendered copy of it
@@ -151,6 +155,49 @@ func TestReadClusterConfiguration(t *testing.T) {
 		config, err = bare.readClusterConfiguration(t.Context())
 		require.NoError(t, err)
 		require.Equal(t, 250, defaultMaxPodsFor(config.PodSubnetNodeCIDRPrefix))
+	})
+}
+
+// The cluster-wide half of the render inputs, end to end: a configuration that
+// names no domain gets the one ClusterConfiguration itself defaults to, and a
+// missing object stops the pass instead of handing every node a made-up value.
+func TestReadClusterState(t *testing.T) {
+	objects := []client.Object{
+		apiServerEndpointSlice("10.0.0.1"),
+		dnsService(kubeDNSServiceName, "kube-dns", "10.0.0.10"),
+		clusterCAConfigMapObject("-----BEGIN CERTIFICATE-----"),
+	}
+
+	t.Run("a configuration that names no domain keeps the default", func(t *testing.T) {
+		s := sourceReaderOver(dnsCluster(t, append(objects, clusterConfigSecret("kubernetesVersion: \"1.35\"\n"))...))
+
+		in := clusterInputs{}
+		require.NoError(t, s.readClusterState(t.Context(), &in))
+
+		require.Equal(t, defaultClusterDomain, in.ClusterDomain)
+		require.Equal(t, []string{"https://10.0.0.1:6443"}, in.APIServerEndpoints)
+		require.Equal(t, "10.0.0.10", in.ClusterDNS)
+		require.NotEmpty(t, in.KubernetesCA)
+	})
+
+	t.Run("the configured domain wins", func(t *testing.T) {
+		s := sourceReaderOver(dnsCluster(t, append(objects, clusterConfigSecret("clusterDomain: k8s.internal\n"))...))
+
+		in := clusterInputs{}
+		require.NoError(t, s.readClusterState(t.Context(), &in))
+
+		require.Equal(t, "k8s.internal", in.ClusterDomain)
+	})
+
+	t.Run("a cluster with no CA to hand out is not rendered at all", func(t *testing.T) {
+		s := sourceReaderOver(dnsCluster(t,
+			apiServerEndpointSlice("10.0.0.1"),
+			dnsService(kubeDNSServiceName, "kube-dns", "10.0.0.10"),
+			clusterConfigSecret("clusterDomain: k8s.internal\n"),
+		))
+
+		in := clusterInputs{}
+		require.ErrorContains(t, s.readClusterState(t.Context(), &in), clusterCAConfigMap)
 	})
 }
 
@@ -249,11 +296,26 @@ func TestRegistryAuth(t *testing.T) {
 	require.ErrorContains(t, err, registryDockerConfigKey)
 }
 
-// sourceReaderOver reads a test cluster through both readers. The two are
-// separate on purpose in production — cached and live — and a unit test that
-// left one of them nil would only find out by panicking.
 func sourceReaderOver(cluster client.Client) *sourceReader {
-	return &sourceReader{Client: cluster, Reader: cluster}
+	return &sourceReader{Reader: cluster}
+}
+
+func apiServerEndpointSlice(address string) client.Object {
+	return &discoveryv1.EndpointSlice{
+		ObjectMeta: metav1.ObjectMeta{Namespace: apiServerEndpointSliceNS, Name: apiServerEndpointSliceName},
+		Ports: []discoveryv1.EndpointPort{{
+			Name: ptr.To(apiServerPortName),
+			Port: ptr.To(int32(apiserverPort)),
+		}},
+		Endpoints: []discoveryv1.Endpoint{{Addresses: []string{address}}},
+	}
+}
+
+func clusterCAConfigMapObject(ca string) client.Object {
+	return &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{Namespace: kubeSystemNS, Name: clusterCAConfigMap},
+		Data:       map[string]string{clusterCAKey: ca},
+	}
 }
 
 func dnsCluster(t *testing.T, objects ...client.Object) client.Client {

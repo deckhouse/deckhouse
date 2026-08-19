@@ -17,6 +17,7 @@ limitations under the License.
 package nodeconfig
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 
@@ -82,14 +83,9 @@ func (r *Reconciler) kubernetesVersion(ctx context.Context, ng *v1.NodeGroup, p 
 	if p.derivedVersion.err != nil {
 		return "", p.derivedVersion.err
 	}
-	if p.derivedVersion.version != "" {
-		return p.derivedVersion.version, nil
-	}
-	return ng.Status.KubernetesVersion, nil
+	return cmp.Or(p.derivedVersion.version, ng.Status.KubernetesVersion), nil
 }
 
-// nodeGroup returns a node's group, read once per group per pass, or nil when
-// the group does not exist.
 func (r *Reconciler) nodeGroup(ctx context.Context, name string, p *pass) (*v1.NodeGroup, error) {
 	if ng, ok := p.groups[name]; ok {
 		return ng, nil

@@ -65,12 +65,21 @@ func nodeConfigRolloutInputsChanged(before, after client.Object) bool {
 		!conditionEqual(oldConfig.Status.Conditions, newConfig.Status.Conditions, disruptionRequiredCondition)
 }
 
+// extensionStatusEqual compares the fields a pass reads. Digest is left out on
+// purpose: nothing here reads it, so a node that only re-recorded a digest is
+// not a re-render of the fleet.
 func extensionStatusEqual(a, b internalv1alpha1.ExtensionStatus) bool {
-	return a.Name == b.Name && a.State == b.State && a.Message == b.Message
+	if a.Name != b.Name {
+		return false
+	}
+	return a.State == b.State && a.Message == b.Message
 }
 
 func ownerRefEqual(a, b metav1.OwnerReference) bool {
-	return a.UID == b.UID && a.Name == b.Name && a.Kind == b.Kind
+	if a.UID != b.UID {
+		return false
+	}
+	return a.Name == b.Name && a.Kind == b.Kind
 }
 
 // conditionEqual compares one condition across two status lists by the two
@@ -106,14 +115,14 @@ func (b *rolloutBudget) hasSlot(nodeName string) bool {
 	return len(b.updating) < b.concurrency
 }
 
-// holders names the nodes occupying the slots, sorted, for the one log line an
-// operator reads when a rollout is not moving.
+// holders names the slot holders, sorted: an operator comparing two log lines
+// must not see the same group reshuffled.
 func (b *rolloutBudget) holders() []string {
 	return slices.Sorted(maps.Keys(b.updating))
 }
 
-// spend records that a node was handed a new spec, so the nodes rendered after
-// it in the same pass are judged against a group where it is updating.
+// spend makes the nodes rendered after this one in the same pass see it as
+// updating.
 func (b *rolloutBudget) spend(nodeName string) {
 	b.updating[nodeName] = struct{}{}
 }
@@ -148,19 +157,16 @@ func (r *Reconciler) rolloutBudget(ctx context.Context, ng *v1.NodeGroup, p *pas
 	}
 
 	budget := &rolloutBudget{
-		concurrency: ua.CalculateConcurrency(maxConcurrent(ng), len(configs.Items)),
+		concurrency: groupConcurrency(ng, len(configs.Items)),
 		updating:    membersOfUpdating(configs.Items, desired),
 	}
 	p.rollouts[ng.Name] = budget
 	return budget, nil
 }
 
-// membersOfUpdating names the nodes that occupy a rollout slot: those carrying
-// the spec the cluster publishes now, and not yet proven.
-//
-// A node stuck on an older spec is not mid-rollout, it is broken, and counting
-// it locks the cure out of a group that is already broken. A NodeConfig with no
-// desired spec has no live Node and is about to be deleted.
+// membersOfUpdating names the nodes carrying the spec the cluster publishes
+// now, unproven. A node stuck on an older spec is broken, not mid-rollout, and
+// counting it locks the cure out of a group that is already broken.
 func membersOfUpdating(configs []internalv1alpha1.NodeConfig,
 	desired map[string]internalv1alpha1.NodeSpec) map[string]struct{} {
 	updating := make(map[string]struct{})
@@ -209,6 +215,13 @@ func applied(nc *internalv1alpha1.NodeConfig) bool {
 		return false
 	}
 	return cond.ObservedGeneration == nc.Generation
+}
+
+// groupConcurrency is how many nodes of the group may be updated at once. The
+// floor is this controller's: maxConcurrent takes any integer, and the shared
+// helper clamps its percentage branch only, so 0 froze the group for good.
+func groupConcurrency(ng *v1.NodeGroup, totalNodes int) int {
+	return max(ua.CalculateConcurrency(maxConcurrent(ng), totalNodes), 1)
 }
 
 func maxConcurrent(ng *v1.NodeGroup) *intstr.IntOrString {

@@ -17,6 +17,7 @@ limitations under the License.
 package nodeconfig
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 
@@ -39,20 +40,14 @@ func RenderBootstrapSpec(ctx context.Context, cl client.Client, reader client.Re
 		return internalv1alpha1.NodeSpec{}, err
 	}
 
-	sources := &sourceReader{Client: cl, Reader: reader}
+	sources := &sourceReader{Reader: reader}
 	in, err := sources.readClusterInputs(ctx, version)
 	if err != nil {
 		return internalv1alpha1.NodeSpec{}, err
 	}
 
-	// Zero CreationTimestamp makes registration taints render. The labels kubelet
-	// will register with must be set too: the render reads them, and a bare-name
-	// node would differ from its first day-2 render.
-	labels := map[string]string{}
-	for key, value := range renderNodeLabels(ng) {
-		labels[key] = string(value)
-	}
-	node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: machineName, Labels: labels}}
+	// Zero CreationTimestamp is what makes the registration taints render.
+	node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: machineName}}
 	return renderSpec(ng, node, in), nil
 }
 
@@ -64,10 +59,7 @@ func resolveKubernetesVersion(ctx context.Context, derived *derived_status.Servi
 	if err != nil {
 		return "", err
 	}
-	if version != "" {
-		return version, nil
-	}
-	return ng.Status.KubernetesVersion, nil
+	return cmp.Or(version, ng.Status.KubernetesVersion), nil
 }
 
 // deriveKubernetesVersion is the cluster's half of the answer above: the version

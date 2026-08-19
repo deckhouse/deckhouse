@@ -32,8 +32,6 @@ const (
 	// again and matched a day-old operation for the object before it.
 	nodeConfigUIDLabel = "node-manager.deckhouse.io/node-config-uid"
 
-	// kubeSystemNS and cloudInstanceManagerNS hold the objects the rendered
-	// config is built from.
 	kubeSystemNS           = "kube-system"
 	cloudInstanceManagerNS = "d8-cloud-instance-manager"
 
@@ -66,7 +64,6 @@ const (
 	pauseDigestGroup = "common"
 	pauseDigestName  = "pause"
 
-	// clusterConfigSecretName holds the cluster domain and pod subnet layout.
 	clusterConfigSecretName = "d8-cluster-configuration"
 	clusterConfigKey        = "cluster-configuration.yaml"
 
@@ -90,11 +87,8 @@ const (
 	clusterCAConfigMap = "kube-root-ca.crt"
 	clusterCAKey       = "ca.crt"
 
-	// apiserverPort is where the node-local API proxy forwards to.
 	apiserverPort = 6443
 
-	// containerdExtension, kubeletExtension, cniExtension and nodeletExtension
-	// are the system extensions every immutable node runs.
 	containerdExtension = "containerd"
 	kubeletExtension    = "kubelet"
 	cniExtension        = "kubernetes-cni"
@@ -118,19 +112,7 @@ const (
 	// registryPackagesDigestsKey is the module the sysext images are built in.
 	registryPackagesDigestsKey = "registrypackages"
 
-	// phaseReady is what the node reports once it has reconciled the spec it
-	// was given.
 	phaseReady = "Ready"
-
-	// kubernetesLabelNamespace and k8sLabelNamespace are the label namespaces a
-	// node may not put itself into, beyond kubeletAllowedLabels below.
-	kubernetesLabelNamespace = "kubernetes.io"
-	k8sLabelNamespace        = "k8s.io"
-
-	// kubeletLabelNamespace and nodeLabelNamespace are the two prefixes inside
-	// them that kubelet does accept from a node.
-	kubeletLabelNamespace = "kubelet.kubernetes.io"
-	nodeLabelNamespace    = "node.kubernetes.io"
 
 	// cgroupLabel tells the cluster which cgroup layout the node runs;
 	// cgroupV2Value is the only answer an olcedar node has. Read by
@@ -157,10 +139,9 @@ const (
 	configurationAppliedCondition = "ConfigurationApplied"
 )
 
-// nodeManagerDigestsKey and osImageName locate the olcedar image of this release
-// in images_digests.json. It is pinned by digest, not by tag: the node decides a
-// rootfs update by comparing this with what it recorded at install, and a tag
-// that moves under the node makes that comparison meaningless.
+// nodeManagerDigestsKey and osImageName locate the olcedar image of this
+// release. Pinned by digest, not by tag: the node decides a rootfs update by
+// comparing it with what it recorded at install, and a tag that moves lies.
 const (
 	nodeManagerDigestsKey = "nodeManager"
 	osImageName           = "olcedar"
@@ -186,6 +167,14 @@ const (
 	defaultContainerLogMaxSize    = "50Mi"
 	defaultContainerLogMaxFiles   = 4
 	defaultMaxConcurrentDownloads = 3
+)
+
+// reservedLabelNamespaces are the label namespaces a node may not put itself
+// into; kubeletLabelNamespaces are the ones inside them kubelet does accept
+// (kubernetes/pkg/kubelet/apis/well_known_labels.go).
+var (
+	reservedLabelNamespaces = []string{"kubernetes.io", "k8s.io"}
+	kubeletLabelNamespaces  = []string{"kubelet.kubernetes.io", "node.kubernetes.io"}
 )
 
 // kubeletAllowedLabels is the set kubelet accepts on --node-labels despite
