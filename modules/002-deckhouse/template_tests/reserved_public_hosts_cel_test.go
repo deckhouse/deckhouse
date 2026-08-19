@@ -174,7 +174,11 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts :: CEL ::", func(
 		f.ValuesSetFromYaml("global", globalValues)
 		f.ValuesSet("global.modulesImages", GetModulesImages())
 		f.ValuesSetFromYaml("deckhouse", moduleValuesForMasterNode)
-		f.ValuesSet("global.modules.publicDomainTemplate", domainTemplate)
+		// Left out rather than set to an empty string: the global schema requires a %s, so an empty
+		// value never reaches a cluster and would fail values validation here.
+		if domainTemplate != "" {
+			f.ValuesSet("global.modules.publicDomainTemplate", domainTemplate)
+		}
 		if reservedPublicHosts != "" {
 			f.ValuesSetFromYaml("deckhouse.reservedPublicHosts", reservedPublicHosts)
 		}

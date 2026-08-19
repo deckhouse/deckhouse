@@ -667,23 +667,9 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 		})
 	})
 
-	Context("A publicDomainTemplate the global schema would have rejected", func() {
-		BeforeEach(func() {
-			// Two %s in the same label: the schema's pattern on
-			// global.modules.publicDomainTemplate does not admit it, so splitting on %s no longer
-			// yields a prefix and a suffix.
-			renderWithSettings("%s-%s.example.com", `{mode: Template}`, admissionAPIs...)
-		})
-
-		It("falls back to the list rather than to a regex built from parts that are not there", func() {
-			cm := configMap()
-			Expect(cm.Field("data.mode").String()).To(Equal("List"),
-				"the effective mode is reported, so an operator can see the fallback happened")
-			Expect(cm.Field("data.hostPattern").String()).To(BeEmpty())
-			Expect(strings.Fields(cm.Field("data.hosts").String())).ToNot(BeEmpty(),
-				"the names the platform publishes stay reserved, which is more than nothing")
-		})
-	})
+	// The fallback for a template the global schema rejects, such as one with two %s in the same
+	// label, has no render test: values validation refuses such a value before the chart is
+	// rendered. The equivalent derivation the hook performs is covered by hooks/lib/publicdomain.
 })
 
 func sortedUnique(hosts []string) []string {

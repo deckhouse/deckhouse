@@ -129,8 +129,12 @@ var _ = Describe("Modules :: deckhouse :: hooks :: snapshot reserved public host
 	f.RegisterCRD("gateway.networking.k8s.io", "v1", "HTTPRoute", true)
 	f.RegisterCRD("gateway.networking.k8s.io", "v1", "ListenerSet", true)
 
+	// An empty template is passed by leaving the value out: the global schema requires a %s, so an
+	// empty string never reaches a cluster, and setting one here would fail values validation.
 	run := func(domainTemplate, kubeState string) {
-		f.ValuesSet("global.modules.publicDomainTemplate", domainTemplate)
+		if domainTemplate != "" {
+			f.ValuesSet("global.modules.publicDomainTemplate", domainTemplate)
+		}
 		f.KubeStateSet(kubeState)
 		f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 		f.RunHook()
@@ -266,20 +270,10 @@ spec:
 		})
 	})
 
-	Context("A publicDomainTemplate the global schema would have rejected", func() {
-		BeforeEach(func() {
-			run("%s-%s.example.com", tenantObjects)
-		})
-
-		It("records nothing rather than guessing at a namespace", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet(reservedPublicHostsValuePath).String()).To(MatchJSON(`{
-				"recorded": false,
-				"hosts": []
-			}`))
-		})
-	})
-
+	// A template the global schema rejects, such as one with two %s, cannot be exercised here:
+	// values validation refuses it before the hook runs. The hooks/lib/publicdomain package covers that
+	// ParseNamespace yields nothing for such a value, which is what makes the hook record nothing
+	// instead of guessing at a namespace.
 	Context("The template puts the service name inside the first label", func() {
 		BeforeEach(func() {
 			run("kube-%s.company.my", `
