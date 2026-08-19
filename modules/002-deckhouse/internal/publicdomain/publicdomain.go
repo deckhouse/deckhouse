@@ -1,0 +1,88 @@
+/*
+Copyright 2026 Flant JSC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+// Package publicdomain describes the set of hostnames global.modules.publicDomainTemplate can
+// render, which is what the deckhouse module reserves from tenant namespaces.
+//
+// templates/reserved-public-hosts.yaml derives the same set in Helm, because the admission policies
+// need it as a regex a ConfigMap can carry. The derivation is the same by construction --
+// sprig's regexQuoteMeta is regexp.QuoteMeta -- and
+// template_tests/reserved_public_hosts_test.go compares the two so that they cannot drift.
+package publicdomain
+
+import (
+	"fmt"
+	"regexp"
+	"strings"
+)
+
+// labelPattern is the RE2 fragment for what a service name may be, which is what the API server
+// accepts as one DNS label. It is the %s of the template, so a hostname matches the pattern below
+// exactly when some service name renders it.
+const labelPattern = `[a-z0-9]([-a-z0-9]*[a-z0-9])?`
+
+// Namespace is the set of hostnames one publicDomainTemplate covers.
+type Namespace struct {
+	// Pattern matches every hostname the template can render.
+	Pattern *regexp.Regexp
+	// Wildcard is the wildcard form of the template, empty unless the template's %s is the whole
+	// first label. Only then is the wildcard the template's namespace and nothing wider: with
+	// "kube-%s.company.my" it would be "kube-*.company.my", which no API server accepts, while
+	// "*.company.my" covers a domain the platform does not own.
+	Wildcard string
+}
+
+// ParseNamespace derives the namespace of a publicDomainTemplate.
+//
+// The schema on global.modules.publicDomainTemplate (global-hooks/openapi/config-values.yaml) admits
+// exactly one %s and only inside the first label, so splitting on %s yields a prefix and a suffix.
+// An error means the value never went through that schema, and the caller must not treat the result
+// as a reservation.
+func ParseNamespace(domainTemplate string) (Namespace, error) {
+	parts := strings.Split(strings.ToLower(domainTemplate), "%s")
+	if len(parts) != 2 {
+		return Namespace{}, fmt.Errorf("publicDomainTemplate %q does not hold exactly one %%s", domainTemplate)
+	}
+	prefix, suffix := parts[0], parts[1]
+
+	pattern, err := regexp.Compile(fmt.Sprintf("^%s%s%s$",
+		regexp.QuoteMeta(prefix), labelPattern, regexp.QuoteMeta(suffix)))
+	if err != nil {
+		// Unreachable: everything outside the fixed skeleton went through QuoteMeta.
+		return Namespace{}, fmt.Errorf("derive pattern from publicDomainTemplate %q: %w", domainTemplate, err)
+	}
+
+	namespace := Namespace{Pattern: pattern}
+	if prefix == "" && strings.HasPrefix(suffix, ".") {
+		namespace.Wildcard = "*" + suffix
+	}
+	return namespace, nil
+}
+
+// Covers reports whether the hostname is one the reservation claims. The hostname is expected to be
+// normalized already.
+func (n Namespace) Covers(host string) bool {
+	if n.Pattern == nil {
+		return false
+	}
+	return host == n.Wildcard && n.Wildcard != "" || n.Pattern.MatchString(host)
+}
+
+// NormalizeHost spells a hostname the way the reservation compares it, matching the lowerAscii and
+// the root-dot trim the admission policies apply to what a request claims.
+func NormalizeHost(host string) string {
+	return strings.TrimSuffix(strings.ToLower(strings.TrimSpace(host)), ".")
+}

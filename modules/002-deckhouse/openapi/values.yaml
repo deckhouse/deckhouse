@@ -36,12 +36,17 @@ properties:
           hosts:
             type: array
             default: []
+            description: |
+              The hostnames recorded, lowercase and without a root dot, spelled the way the policies
+              compare them. A wildcard is admitted here and nowhere else in this schema: the
+              reservation covers the wildcard form of the template, so a tenant that already held it
+              has to be recordable.
             items:
               type: string
-              pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+              pattern: '^(\*\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
         x-examples:
         - recorded: true
-          hosts: ["shop.example.com"]
+          hosts: ["shop.example.com", "*.example.com"]
       releaseVersionImageHash:
         type: string
       currentReleaseImageName:

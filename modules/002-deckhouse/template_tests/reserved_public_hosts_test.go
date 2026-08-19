@@ -27,6 +27,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/deckhouse/deckhouse/modules/002-deckhouse/internal/publicdomain"
 	. "github.com/deckhouse/deckhouse/testing/helm"
 	"github.com/deckhouse/deckhouse/testing/library/object_store"
 )
@@ -201,6 +202,39 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 			render("kube-%s.company.my", admissionAPIs...)
 			Expect(configMap().Field("data.hostPattern").String()).
 				To(Equal(`^kube-[a-z0-9]([-a-z0-9]*[a-z0-9])?\.company\.my$`))
+		})
+
+		// The hook that records what tenants already serve has to decide which hostnames the
+		// reservation is about to claim, and it cannot read the regex out of a ConfigMap that does
+		// not exist yet, so it derives the same set in Go. Same derivation, two languages: compared
+		// here rather than trusted, because a drift between them grandfathers the wrong hostnames.
+		It("derives the same namespace the hook does", func() {
+			for _, domainTemplate := range []string{
+				"%s.example.com",
+				"kube-%s.company.my",
+				"%s-kube.company.my",
+				"pre-%s-post.a-b.c.example.com",
+				"%s.a.b.c.d.example.com",
+			} {
+				render(domainTemplate, admissionAPIs...)
+				cm := configMap()
+
+				namespace, err := publicdomain.ParseNamespace(domainTemplate)
+				Expect(err).ShouldNot(HaveOccurred(), domainTemplate)
+				Expect(cm.Field("data.hostPattern").String()).To(Equal(namespace.Pattern.String()), domainTemplate)
+
+				wildcards := []string{}
+				for _, host := range strings.Fields(cm.Field("data.hosts").String()) {
+					if strings.HasPrefix(host, "*") {
+						wildcards = append(wildcards, host)
+					}
+				}
+				if namespace.Wildcard == "" {
+					Expect(wildcards).To(BeEmpty(), domainTemplate)
+				} else {
+					Expect(wildcards).To(Equal([]string{namespace.Wildcard}), domainTemplate)
+				}
+			}
 		})
 
 		It("quotes what it puts in the regex, so a dotted domain is not a wildcard", func() {
