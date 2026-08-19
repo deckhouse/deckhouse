@@ -19,18 +19,26 @@ params:
     # the whitelist check. First matching rule wins. A rule may rewrite an absolute
     # URL into a relative one — the result then skips the whitelist check.
     # Uses Go regexp syntax (RE2); use $1, $2 for capture groups in the replacement.
+    # Don't forget to put changes also in the modules/810-documentation/images/web/_config_cse.yml for internal modules docs build.
     replace:
-      - from: '^.*deckhouse\.(ru|io)/documentation/v1/deckhouse-configure-global.html(.*)$'
-        to: '/reference/api/global.html$2'
-      - from: '^https?://old\.example\.com/(.*)$'
-        to: 'https://new.example.com/$1'
+      - from: '^(.*)/platform/(.*)$'
+        to: '$1/$2'
+      - from: '^(.*deckhouse\.(ru|io)/documentation/v1)/deckhouse-configure-global.html(.*)$'
+        to: '/reference/api/global.html$3'
+      - from: '^(.*/modules/)[0-9]+-([^/]+/.*)$'
+        to: '$1$2'
     # Regex patterns for explicit link removal. Applied AFTER replace, BEFORE the
     # whitelist check, to every link (relative or absolute). A link whose href
     # matches ANY of these patterns gets its <a> tag unwrapped (text stays).
     # Uses Go regexp syntax (RE2).
+    # Don't forget to put changes also in the modules/810-documentation/images/web/_config_cse.yml for internal modules docs build.
     remove:
-      - '^.*/products/kubernetes-platform/documentation/(v1/)?architecture/.*$'
-      - '^.*/products/kubernetes-platform/documentation/(v1/)?user/.*$'
+    - '^.*(/products/kubernetes-platform/documentation/(latest|v[0-9]+(\.[0-9]+)?)?/)?architecture/.*$'
+    - '^.*(/products/kubernetes-platform/documentation/(latest|v[0-9]+(\.[0-9]+)?)?/)?user/.*$'
+    - '^.*(/products/kubernetes-platform/documentation/(latest|v[0-9]+(\.[0-9]+)?)?/)?admin/.*$'
+    - '^.*(/products/kubernetes-platform/documentation/(latest|v[0-9]+(\.[0-9]+)?)?/)?reference/(release-channels\.html|oss_info\.html|supported_versions\.html).*$'
+    - '^\./(release-channels\.html|oss_info\.html).*$'
+    - '^.*/products/kubernetes-platform/features/.*$'
 
 markup:
   defaultMarkdownHandler: goldmark

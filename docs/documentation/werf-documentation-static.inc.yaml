@@ -65,9 +65,9 @@ shell:
         yq eval-all 'select(fi==0).defaults += select(fi==1).defaults | select(fi==0)' /srv/jekyll-data/documentation/_config.yml /tmp/_config_section_defaults.yml > /srv/jekyll-data/documentation/_config_merged.yml
         mv -f /srv/jekyll-data/documentation/_config_merged.yml /srv/jekyll-data/documentation/_config.yml
 
-        # Use CSE sidebar for CSE edition
+        # CSE edition Jekyl fixes
         {{ if eq .Edition "CSE" }}
-        sed -i 's/sidebar: main/sidebar: cse/' /srv/jekyll-data/documentation/_config.yml
+        sed -i 's/sidebar: main/sidebar: cse/; s/multilang: true/multilang: false/' /srv/jekyll-data/documentation/_config.yml
         {{ end }}
 
         # Use topnav for the documentation module
