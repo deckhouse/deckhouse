@@ -128,6 +128,30 @@ func TestCovers(t *testing.T) {
 	}
 }
 
+func TestPatternCoversLeavesOutTheWildcard(t *testing.T) {
+	t.Parallel()
+
+	namespace, err := ParseNamespace("%s.example.com")
+	if err != nil {
+		t.Fatalf("ParseNamespace: %v", err)
+	}
+
+	// The wildcard is claimed, but by exact match, and the allowlist the snapshot feeds cannot lift
+	// that. Recording it would leave an entry in the record the policies ignore.
+	if namespace.PatternCovers(namespace.Wildcard) {
+		t.Errorf("PatternCovers(%q) = true, want false", namespace.Wildcard)
+	}
+	if !namespace.Covers(namespace.Wildcard) {
+		t.Errorf("Covers(%q) = false, the reservation does claim it", namespace.Wildcard)
+	}
+	if !namespace.PatternCovers("shop.example.com") {
+		t.Error(`PatternCovers("shop.example.com") = false, want true`)
+	}
+	if (Namespace{}).PatternCovers("console.example.com") {
+		t.Error("the zero Namespace should cover nothing")
+	}
+}
+
 func TestCoversZeroValueClaimsNothing(t *testing.T) {
 	t.Parallel()
 

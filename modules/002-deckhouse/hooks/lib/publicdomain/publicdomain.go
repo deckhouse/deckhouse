@@ -81,6 +81,17 @@ func (n Namespace) Covers(host string) bool {
 	return host == n.Wildcard && n.Wildcard != "" || n.Pattern.MatchString(host)
 }
 
+// PatternCovers reports whether the hostname is claimed by the derived pattern, which is the part of
+// the reservation an allowlist can lift. The wildcard form is claimed by exact match instead and is
+// never given back, since holding it shadows every hostname the template can render, including the
+// ones the platform learns to publish later. The hostname is expected to be normalized already.
+func (n Namespace) PatternCovers(host string) bool {
+	if n.Pattern == nil {
+		return false
+	}
+	return n.Pattern.MatchString(host)
+}
+
 // NormalizeHost spells a hostname the way the reservation compares it, matching the lowerAscii and
 // the root-dot trim the admission policies apply to what a request claims.
 func NormalizeHost(host string) string {

@@ -199,11 +199,16 @@ spec:
 `)
 		})
 
-		It("records it, since the reservation is about to claim that too", func() {
+		// The wildcard is reserved by exact match, which the allowlist this record feeds cannot lift,
+		// so recording it would only put an entry in the record that the policies ignore -- and an
+		// operator reading the record would take it for a hostname that still works. Holding the
+		// wildcard shadows every hostname the template renders, including the ones the platform
+		// learns to publish later, so it is the one claim the upgrade does not carry over.
+		It("leaves it out, because the record cannot give the wildcard back", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet(reservedPublicHostsValuePath).String()).To(MatchJSON(`{
 				"recorded": true,
-				"hosts": ["*.example.com"]
+				"hosts": []
 			}`))
 		})
 	})

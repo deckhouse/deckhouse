@@ -214,7 +214,10 @@ func collectTenantHosts(ctx context.Context, client k8s.Client, input *go_hook.H
 			}
 			for _, host := range resource.hosts(object.Object) {
 				host = publicdomain.NormalizeHost(host)
-				if namespace.Covers(host) {
+				// Only what the allowlist can lift is worth recording: the wildcard form of the
+				// namespace is reserved by exact match and stays reserved whatever the allowlist
+				// says, so recording it would put an entry in the record that the policies ignore.
+				if namespace.PatternCovers(host) {
 					hosts.Add(host)
 				}
 			}
