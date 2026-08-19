@@ -258,6 +258,8 @@ spec:
 {% alert level="info" %}
 A `User` or `Group` subject is matched by name against the identity in the token, and a locally managed identity is indistinguishable from one asserted by an external authentication provider. Because of that, creating a [User](/modules/user-authn/cr.html#user) whose `spec.email` or a [Group](/modules/user-authn/cr.html#group) whose `spec.name` matches a subject of an existing rule is rejected, so that the identity does not receive the rule's privileges unnoticed. Set the `user-authz.deckhouse.io/allow-authorization-rule-collision: "true"` annotation on the User or Group if the match is intentional, for example when the rule is written in advance.
 
+Write a `User` subject in lowercase: the email reaches the token lowercased, so a subject spelled `Admin@Example.com` never matches anyone. A `Group` subject is matched exactly, since group names are not lowercased anywhere.
+
 Adding a subject to a rule is not restricted in the same way. If a matching User or Group already exists, it receives the privileges immediately.
 {% endalert %}
 

@@ -578,9 +578,11 @@ spec:
 
 An [authorization rule](/modules/user-authz/cr.html#authorizationrule) grants privileges to a user by the email carried in the issued token. Because of that, creating a user whose `spec.email` matches a `User` subject of an existing [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule) or [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule) is rejected: the user would silently receive the privileges granted by that rule. Use a different email, or set the `user-authz.deckhouse.io/allow-authorization-rule-collision: "true"` annotation on the user if the match is intentional — for example when the rule was written in advance for that person.
 
-Users that already match a rule keep working and only produce a warning. Note that a GitOps flow which deletes and recreates such a user will hit the rejection on recreation, so add the annotation to the manifest in that case.
+The email is compared after lowercasing, because that is the form that reaches the token: `Admin@Example.com` matches the subject `admin@example.com`.
 
-Deleting a user does not revoke the rule. The email stays granted, so recreating a user with the same email restores the privileges, and until then the email is available to anyone allowed to create users. Remove the subject from the rule as well if that is not what you want.
+Users that already match a rule keep working and only produce a warning. Any declarative flow that manages both the rule and the user is affected, not only one that deletes and recreates the user: on a first apply the rule may land before the user, and then the user is rejected. Add the annotation to the manifest in that case.
+
+Deleting a user does not revoke the rule, and produces a warning while the email is still a subject. The email stays granted, so recreating a user with the same email restores the privileges, and until then the email is available to anyone allowed to create users. Remove the subject from the rule as well if that is not what you want.
 
 ### Local user operations
 
@@ -670,7 +672,9 @@ Where `members` is a list of users belonging to the group.
 
 The group name reaches the issued token as is, so it is indistinguishable from a group name provided by an external authentication provider. Because of that, creating a group whose `spec.name` matches a `Group` subject of an existing [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule) or [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule) is rejected: every member of such a group would silently receive the privileges granted by that rule. Rename the group, or set the `user-authz.deckhouse.io/allow-authorization-rule-collision: "true"` annotation on it if the match is intentional.
 
-Groups that already match a rule keep working and only produce a warning, and the same GitOps caveat applies as for users: a delete-and-recreate cycle hits the rejection unless the annotation is present in the manifest.
+Unlike an email, a group name is compared exactly: nothing lowercases it on the way to the token, so `Admins` and `admins` are different names.
+
+Groups that already match a rule keep working and only produce a warning, and the same caveat applies as for users: any declarative flow that manages both the rule and the group can have the rule applied first and see the group rejected. Deleting a group also produces a warning while its name is still a subject, since the rule keeps granting that name to anyone who recreates the group.
 
 ### Password policy
 
