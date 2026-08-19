@@ -150,7 +150,7 @@ func TestLoad(t *testing.T) {
 				got = append(got, p.Type)
 			}
 			assert.Equal(t, tc.types, got)
-			assert.Equal(t, len(tc.types) == 0, providers.Empty())
+			assert.Equal(t, len(tc.types) == 0, len(providers.providers))
 		})
 	}
 }

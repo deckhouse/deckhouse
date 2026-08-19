@@ -33,20 +33,7 @@ import (
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 )
 
-// Providers is the set of providers the cluster publishes, taken once. Every lookup on it is pure,
-// so a reconcile loads it once and passes it down instead of re-reading per NodeGroup.
-type Providers struct {
-	providers []Provider
-
-	// ClusterConfiguration.cloud.provider, lower-cased: CloudPermanent and CloudStatic NodeGroups
-	// name no InstanceClass, so there is nothing else to match them on.
-	clusterProvider string
-}
-
 // Load reads every provider registered in the cluster.
-//
-// An empty result is a legitimate state; a failed read is returned rather than swallowed, because
-// downstream it is indistinguishable from "no cloud" and shifts the checksum of every node.
 func Load(ctx context.Context, r client.Reader) (Providers, error) {
 	providers, err := getProviders(ctx, r)
 	if err != nil {
@@ -69,31 +56,41 @@ func Load(ctx context.Context, r client.Reader) (Providers, error) {
 	return ret, nil
 }
 
-// NewProviders builds a Providers from providers already in hand. It orders them by type, which
-// is what makes All deterministic: its result is published verbatim in the bashible context, and
-// a reordering there rewrites the Secret on every pass.
-func NewProviders(providers []Provider, clusterProvider string) Providers {
+// NewProviders builds a Providers from providers already in hand.
+func NewProviders(providers []Provider, defaultProvider string) Providers {
 	ordered := slices.Clone(providers)
 	slices.SortFunc(ordered, func(a, b Provider) int { return strings.Compare(a.Type, b.Type) })
 
 	return Providers{
 		providers:       ordered,
-		clusterProvider: strings.ToLower(clusterProvider),
+		defaultProvider: strings.ToLower(defaultProvider),
 	}
+}
+
+type Providers struct {
+	providers       []Provider
+	defaultProvider string
 }
 
 // Validate reports a cluster whose configured provider published no registration: CloudPermanent
 // resolves through that name alone, so the master would render without provider steps.
 func (ps Providers) Validate() error {
 	// Static cluster
-	if ps.clusterProvider == "" {
+	if ps.defaultProvider == "" {
 		return nil
 	}
 
-	if _, ok := ps.byName(ps.clusterProvider); !ok {
-		return fmt.Errorf("cloud provider %q of the cluster configuration published no registration secret", ps.clusterProvider)
+	if _, ok := ps.Default(); !ok {
+		return fmt.Errorf(
+			"cloud provider %q of the cluster configuration published no registration secret",
+			ps.defaultProvider,
+		)
 	}
 	return nil
+}
+
+func (ps Providers) Default() (Provider, bool) {
+	return ps.byName(ps.defaultProvider)
 }
 
 // All returns every provider, ordered by type.
@@ -101,32 +98,16 @@ func (ps Providers) All() []Provider {
 	return ps.providers
 }
 
-// Empty reports a cluster with no cloud provider registered.
-func (ps Providers) Empty() bool {
-	return len(ps.providers) == 0
-}
-
 // ForNodeGroup returns the provider a NodeGroup runs on. It performs no I/O.
-//
-// The cluster runs one cloud, so the answer follows from the node type alone. When several
-// providers become possible, the branching appears here and nowhere else: every consumer already
-// asks this function rather than reading a Secret of its own.
 func (ps Providers) ForNodeGroup(ng *v1.NodeGroup) (Provider, bool) {
-	// A Static node lives outside every cloud. The provider steps do not apply to it, and some of
-	// them actively fight the configuration it was set up with by hand.
+	// A Static node lives outside every cloud.
 	if ng.Spec.NodeType == v1.NodeTypeStatic {
 		return Provider{}, false
 	}
-
-	// byName reports no match on an empty name, so a static cluster — which names no provider —
-	// resolves to nothing here without a branch of its own.
-	return ps.byName(ps.clusterProvider)
+	return ps.Default()
 }
 
 // InstanceClassGVKs returns the GVK every provider registered its InstanceClass under.
-//
-// A provider without the version contributes nothing (see InstanceClassAPIVersionKey). The CRD may
-// lag the Secret, so callers must not assume the GVK is already served.
 func (ps Providers) InstanceClassGVKs() []schema.GroupVersionKind {
 	ret := make([]schema.GroupVersionKind, 0, len(ps.providers))
 	seen := make(map[schema.GroupVersionKind]bool, len(ps.providers))
@@ -162,11 +143,6 @@ func (ps Providers) InstanceClassGVKs() []schema.GroupVersionKind {
 	return ret
 }
 
-// byName matches case-insensitively: ClusterConfiguration spells OpenStack, the Secret openstack.
-//
-// No name matches nothing, even though a registration that published no type carries an empty one:
-// "this group named no provider" and "this registration is malformed" must not resolve to the same
-// answer.
 func (ps Providers) byName(name string) (Provider, bool) {
 	if name == "" {
 		return Provider{}, false
