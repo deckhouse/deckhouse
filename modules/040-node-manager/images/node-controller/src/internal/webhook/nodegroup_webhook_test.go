@@ -157,10 +157,6 @@ func kubernetesEndpoints(addressCount int) *corev1.Endpoints {
 	}
 }
 
-// spec.providerType declares the provider a group runs in. Which declarations hold is
-// cloudprovider.TestDeclarationError; what this asserts is that the webhook denies on the verdict,
-// and that an unreadable registration warns instead of blocking the write — a Secret we cannot
-// read is not the NodeGroup's fault.
 func TestValidation_ProviderType(t *testing.T) {
 	registration := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -172,19 +168,24 @@ func TestValidation_ProviderType(t *testing.T) {
 	}
 
 	for _, tc := range []struct {
-		name     string
-		nodeType v1.NodeType
-		declared string
-		deny     bool
-		allowed  bool
+		name        string
+		nodeType    v1.NodeType
+		oldDeclared string
+		declared    string
+		deny        bool
+		allowed     bool
 	}{
 		{name: "empty is always allowed", nodeType: v1.NodeTypeCloudStatic, allowed: true},
 		{name: "the cluster provider, case-insensitively", nodeType: v1.NodeTypeCloudStatic, declared: "OpenStack", allowed: true},
 		{name: "another provider", nodeType: v1.NodeTypeCloudStatic, declared: "aws"},
 		{name: "a provider on Static", nodeType: v1.NodeTypeStatic, declared: "openstack"},
 		{
-			name:     "unreadable registrations warn instead of denying",
-			nodeType: v1.NodeTypeCloudStatic, declared: "aws", deny: true, allowed: true,
+			name:     "an untouched declaration is not re-validated",
+			nodeType: v1.NodeTypeCloudStatic, oldDeclared: "aws", declared: "aws", allowed: true,
+		},
+		{
+			name:     "unreadable registrations fail the request",
+			nodeType: v1.NodeTypeCloudStatic, declared: "openstack", deny: true,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -204,16 +205,15 @@ func TestValidation_ProviderType(t *testing.T) {
 			}
 			w := &NodeGroupValidator{Client: builder.Build(), decoder: admission.NewDecoder(s)}
 
+			oldNG := baseNodeGroup("worker", tc.nodeType)
+			oldNG.Spec.ProviderType = tc.oldDeclared
 			ng := baseNodeGroup("worker", tc.nodeType)
 			ng.Spec.ProviderType = tc.declared
 
-			resp := w.Handle(context.Background(), makeAdmissionRequest(t, "UPDATE", ng, ng))
+			resp := w.Handle(context.Background(), makeAdmissionRequest(t, "UPDATE", ng, oldNG))
 
 			if resp.Allowed != tc.allowed {
 				t.Fatalf("allowed = %v, want %v (%v)", resp.Allowed, tc.allowed, resp.Result)
-			}
-			if tc.deny && len(resp.Warnings) == 0 {
-				t.Fatal("an unreadable registration must warn that providerType was not validated")
 			}
 		})
 	}

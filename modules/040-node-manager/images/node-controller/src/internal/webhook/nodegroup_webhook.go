@@ -134,23 +134,11 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 		}
 	}
 
-	// spec.providerType declares the provider the group runs in; the same predicate the reconcile
-	// uses decides whether the declaration holds. Denying here only catches the typo early — the
-	// verdict belongs to the reconcile, which sees a provider that changed after this write.
-	if ng.Spec.ProviderType != "" {
-		providers, err := cloudprovider.Load(ctx, w.Client)
-		if err != nil {
-			// A registration we cannot read is not the NodeGroup's fault. Blocking every write
-			// until the Secret comes back is worse than letting a typo through to status.error.
-			webhookLog.Error(err, "failed to load cloud provider registrations")
-			warnings = append(warnings,
-				".spec.providerType was not validated: the cloud provider registrations are unreadable")
-		} else {
-			resolved, _ := providers.ForNodeGroup(ng)
-			if msg := cloudprovider.DeclarationError(ng.Spec.ProviderType, resolved); msg != "" {
-				return admission.Denied(msg)
-			}
-		}
+	if providerTypeMessage, err := w.validateProviderType(ctx, ng, oldNG); err != nil {
+		webhookLog.Error(err, "failed to validate providerType")
+		return admission.Errored(http.StatusInternalServerError, err)
+	} else if providerTypeMessage != "" {
+		return admission.Denied(providerTypeMessage)
 	}
 
 	if ng.Spec.CloudInstances != nil {
@@ -696,6 +684,30 @@ func (w *NodeGroupValidator) getNodesWithoutContainerdV2Support(ctx context.Cont
 		names = append(names, node.Name)
 	}
 	return names, nil
+}
+
+// validateProviderType checks spec.providerType against the provider the NodeGroup resolves to.
+// Denying here only catches the typo early — the verdict belongs to the reconcile, which sees a
+// provider that changed after this write.
+func (w *NodeGroupValidator) validateProviderType(
+	ctx context.Context,
+	ng, oldNG *v1.NodeGroup,
+) (string, error) {
+	if ng.Spec.ProviderType == "" {
+		return "", nil
+	}
+
+	if oldNG != nil && oldNG.Spec.ProviderType == ng.Spec.ProviderType {
+		return "", nil
+	}
+
+	providers, err := cloudprovider.Load(ctx, w.Client)
+	if err != nil {
+		return "", fmt.Errorf("load cloud provider registrations: %w", err)
+	}
+
+	resolved, _ := providers.ForNodeGroup(ng)
+	return cloudprovider.DeclarationError(ng.Spec.ProviderType, resolved), nil
 }
 
 func (w *NodeGroupValidator) validateInstanceClassKind(
