@@ -34,7 +34,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 	"github.com/deckhouse/deckhouse/go_lib/set"
-	"github.com/deckhouse/deckhouse/modules/002-deckhouse/internal/publicdomain"
+	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/lib/publicdomain"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 

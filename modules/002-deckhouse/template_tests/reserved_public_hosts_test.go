@@ -28,7 +28,7 @@ import (
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/yaml"
 
-	"github.com/deckhouse/deckhouse/modules/002-deckhouse/internal/publicdomain"
+	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/lib/publicdomain"
 	. "github.com/deckhouse/deckhouse/testing/helm"
 	"github.com/deckhouse/deckhouse/testing/library/object_store"
 )
