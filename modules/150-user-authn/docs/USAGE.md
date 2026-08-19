@@ -674,7 +674,7 @@ Where `members` is a list of users belonging to the group.
 
 The group name reaches the issued token as is, so it is indistinguishable from a group name provided by an external authentication provider. Because of that, creating a group whose `spec.name` matches a `Group` subject of an existing [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule) or [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule) is rejected: every member of such a group would silently receive the privileges granted by that rule. Rename the group, or set the `user-authz.deckhouse.io/allow-authorization-rule-collision: "true"` annotation on it if the match is intentional.
 
-Unlike an email, a group name is compared exactly: nothing lowercases it on the way to the token, so `Admins` and `admins` are different names.
+Unlike an email, a group name is compared exactly: nothing lowercases it on the way to the token, so two names that differ only in letter case are different names.
 
 Groups that already match a rule keep working and only produce a warning, and the same caveat applies as for users: any declarative flow that manages both the rule and the group can have the rule applied first and see the group rejected. Deleting a group also produces a warning while its name is still a subject, since the rule keeps granting that name to anyone who recreates the group.
 
