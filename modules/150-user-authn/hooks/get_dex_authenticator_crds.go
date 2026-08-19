@@ -28,6 +28,7 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -144,8 +145,47 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: applyDexAuthenticatorSecretFilter,
 		},
+		{
+			Name:       "kubernetesClientSecret",
+			ApiVersion: "v1",
+			Kind:       "Secret",
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{kubernetesDexClientAppSecretNamespace},
+				},
+			},
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{kubernetesDexClientAppSecretName},
+			},
+			FilterFunc: applyKubernetesSecretFilter,
+		},
 	},
 }, getDexAuthenticator)
+
+// sharedKubernetesClientSecret returns the secret of the privileged kubernetes OAuth2Client as it
+// exists in the cluster.
+//
+// It deliberately reads this hook's own snapshot instead of kubernetesDexClientAppSecretPath: that
+// values path is written by kubernetesDexClientAppSecret, which runs in the "main" queue while this
+// hook runs in "/modules/user-authn", so nothing orders the two and the value may still be absent
+// here on a cold start. The cluster Secret is also the authoritative source, since it is the object
+// whose content was copied into the application namespaces.
+//
+// An empty result means the shared secret does not exist in the cluster, so no authenticator can be
+// carrying it and there is nothing to migrate.
+func sharedKubernetesClientSecret(input *go_hook.HookInput) (string, error) {
+	snapshots := input.Snapshots.Get("kubernetesClientSecret")
+	if len(snapshots) == 0 {
+		return "", nil
+	}
+
+	var secretContent []byte
+	if err := snapshots[0].UnmarshalTo(&secretContent); err != nil {
+		return "", fmt.Errorf("cannot convert kubernetes client secret to bytes: failed to unmarshal 'kubernetesClientSecret' snapshot: %w", err)
+	}
+
+	return string(secretContent), nil
+}
 
 func getDexAuthenticator(_ context.Context, input *go_hook.HookInput) error {
 	authenticators := input.Snapshots.Get("authenticators")
@@ -166,7 +206,10 @@ func getDexAuthenticator(_ context.Context, input *go_hook.HookInput) error {
 	// Secret, and the "credentials" snapshot above reads it straight back into appDexSecret.
 	// Keep it to detect and rotate those, otherwise the shared secret would never leave the
 	// application namespace.
-	sharedClientSecret := input.Values.Get(kubernetesDexClientAppSecretPath).String()
+	sharedClientSecret, err := sharedKubernetesClientSecret(input)
+	if err != nil {
+		return err
+	}
 
 	dexAuthenticators := make([]DexAuthenticator, 0, len(authenticators))
 	// Build computed names map: key "<name>@<namespace>" => {name, truncated, hash}
@@ -190,9 +233,16 @@ func getDexAuthenticator(_ context.Context, input *go_hook.HookInput) error {
 			existedCredentials.CookieSecret = pwgen.AlphaNum(24)
 		}
 
-		// Migrate authenticators that reuse the shared kubernetes client secret to their own one
+		// Migrate authenticators that reuse the shared kubernetes client secret to their own one.
+		// The non-empty guard keeps an authenticator whose credentials Secret carries no
+		// client-secret from being rotated against an absent shared secret.
 		if sharedClientSecret != "" && existedCredentials.AppDexSecret == sharedClientSecret {
 			existedCredentials.AppDexSecret = pwgen.AlphaNum(20)
+			// Rotating logs every user of this authenticator out and rolls its pods, so make the
+			// upgrade traceable in the Deckhouse log.
+			input.Logger.Warn("Rotating DexAuthenticator client secret that reused the shared kubernetes client secret",
+				slog.String("dexauthenticator", dexAuthenticator.Name),
+				slog.String("namespace", dexAuthenticator.Namespace))
 		}
 
 		if raw := dexAuthenticator.AllowAccessToKubernetesAnnotation; raw != nil {
