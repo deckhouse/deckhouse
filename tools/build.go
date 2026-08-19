@@ -978,7 +978,7 @@ func fileExists(parts ...string) (bool, error) {
 }
 
 func extractCloudProviderName(path string) string {
-	nameMatch := cloudProviderNameRegexp.FindSubmatch([]byte(path))
+	nameMatch := cloudProviderNameRegexp.FindSubmatch([]byte(filepath.Base(path)))
 	if len(nameMatch) == 0 {
 		return ""
 	}

@@ -276,10 +276,6 @@ users:
   - system:serviceaccount:d8-cloud-provider-aws:node-termination-handler
   - system:serviceaccount:d8-cloud-provider-azure:cloud-controller-manager
   - system:serviceaccount:d8-cloud-provider-azure:cloud-data-discoverer
-  - system:serviceaccount:d8-cloud-provider-dvp:capdvp-controller-manager
-  - system:serviceaccount:d8-cloud-provider-dvp:cloud-controller-manager
-  - system:serviceaccount:d8-cloud-provider-dvp:cloud-data-discoverer
-  - system:serviceaccount:d8-cloud-provider-dvp:validation-webhook
   - system:serviceaccount:d8-cloud-provider-dynamix:capd-controller-manager
   - system:serviceaccount:d8-cloud-provider-dynamix:cloud-controller-manager
   - system:serviceaccount:d8-cloud-provider-dynamix:cloud-data-discoverer
@@ -401,7 +397,6 @@ namespaces:
   - d8-cloud-instance-manager
   - d8-cloud-provider-aws
   - d8-cloud-provider-azure
-  - d8-cloud-provider-dvp
   - d8-cloud-provider-dynamix
   - d8-cloud-provider-gcp
   - d8-cloud-provider-huaweicloud
@@ -754,10 +749,6 @@ rules:
       - system:serviceaccount:d8-cloud-provider-aws:node-termination-handler
       - system:serviceaccount:d8-cloud-provider-azure:cloud-controller-manager
       - system:serviceaccount:d8-cloud-provider-azure:cloud-data-discoverer
-      - system:serviceaccount:d8-cloud-provider-dvp:capdvp-controller-manager
-      - system:serviceaccount:d8-cloud-provider-dvp:cloud-controller-manager
-      - system:serviceaccount:d8-cloud-provider-dvp:cloud-data-discoverer
-      - system:serviceaccount:d8-cloud-provider-dvp:validation-webhook
       - system:serviceaccount:d8-cloud-provider-dynamix:capd-controller-manager
       - system:serviceaccount:d8-cloud-provider-dynamix:cloud-controller-manager
       - system:serviceaccount:d8-cloud-provider-dynamix:cloud-data-discoverer
@@ -871,7 +862,6 @@ rules:
       - d8-cloud-instance-manager
       - d8-cloud-provider-aws
       - d8-cloud-provider-azure
-      - d8-cloud-provider-dvp
       - d8-cloud-provider-dynamix
       - d8-cloud-provider-gcp
       - d8-cloud-provider-huaweicloud
