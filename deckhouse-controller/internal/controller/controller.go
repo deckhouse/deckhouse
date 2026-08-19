@@ -45,6 +45,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/pkgsync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/modulesync"
 	pkgruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
@@ -77,6 +78,8 @@ type Controller struct {
 	ctrl ctrlmanager.Manager
 	// sync is held for the whole bootstrap, so a waiter cannot observe a half-restored tree
 	sync *sync.WaitGroup
+
+	syncer *modulesync.Syncer
 
 	manager *pkgruntime.Runtime
 
@@ -192,9 +195,13 @@ func Build(ctx context.Context, rest *rest.Config, ms metricsstorage.Storage, lo
 
 	settingsCh := make(chan addonutils.Values, 1)
 
+	syncer := modulesync.New(runtime.GetClient(), runtime.GetAPIReader(), dc.GetClock(), logger.Named(controllerName))
+
 	return &Controller{
 		ctrl: runtime,
 		sync: synced,
+
+		syncer: syncer,
 
 		manager: manager,
 
@@ -332,26 +339,18 @@ func (c *Controller) Start(ctx context.Context) error {
 		return fmt.Errorf("wait for cache sync")
 	}
 
-	// The bootstrap derives where every module's package comes from before it writes anything, so
-	// the precedence between the image, an override and a release is decided in memory rather than
-	// by the order of the writes.
-	placements, err := c.resolvePlacements(ctx)
+	modules, err := c.syncer.Sync(ctx)
 	if err != nil {
-		return fmt.Errorf("resolve module placements: %w", err)
+		return fmt.Errorf("sync module resources: %w", err)
 	}
 
 	// The old module stack recorded its packages in module releases, and the
 	// image ships the embedded modules; give each of them a package version
 	// object, and the user module sources their repositories, while the
-	// controllers still wait for the sync. Runs after the resolver, so a
+	// controllers still wait for the sync. Runs after the module sync, so a
 	// deployed duplicate it superseded no longer counts.
 	if err := pkgsync.Sync(ctx, c.ctrl.GetAPIReader(), c.ctrl.GetClient(), c.dc, app.Version, app.EmbeddedModulesDir, c.logger.Named("pkgsync")); err != nil {
 		return fmt.Errorf("sync package objects: %w", err)
-	}
-
-	modules, err := c.syncModules(ctx, placements)
-	if err != nil {
-		return fmt.Errorf("sync modules: %w", err)
 	}
 
 	// loadModules below enqueues downloads straight away, so this is the last point at which

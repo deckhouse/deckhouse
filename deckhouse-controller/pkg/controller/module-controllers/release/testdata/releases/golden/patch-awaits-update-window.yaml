@@ -52,10 +52,14 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
+  annotations:
+    modules.deckhouse.io/isUpdating: "false"
+    modules.deckhouse.io/notified: "true"
   finalizers:
   - modules.deckhouse.io/metrics-registered
   labels:
     module: parca
+    modules.deckhouse.io/update-policy: ""
   name: parca-1.26.3
   ownerReferences:
   - apiVersion: deckhouse.io/v1alpha1
@@ -63,13 +67,14 @@ metadata:
     kind: ModuleSource
     name: foxtrot-suitable
     uid: 71d2300f-700b-452a-896a-6a3805f9cef7
-  resourceVersion: "1000"
+  resourceVersion: "1013"
 spec:
   moduleName: parca
   version: 1.26.3
   weight: 900
 status:
   approved: true
+  message: Release is waiting for the update window until 18 Oct 2019 08:00 UTC
   phase: Pending
   pullDuration: 0s
   transitionTime: null
@@ -78,11 +83,14 @@ apiVersion: deckhouse.io/v1alpha1
 kind: Module
 metadata:
   name: parca
-  resourceVersion: "1000"
+  resourceVersion: "1007"
 properties: {}
 status:
   conditions:
   - lastProbeTime: "2019-10-17T15:33:00Z"
     lastTransitionTime: "2019-10-17T15:33:00Z"
-    status: "True"
+    message: 'ModuleRelease could not be applied, release postponed: see details in
+      the module release v1.26.3'
+    reason: ReleaseDeployTimeCheck
+    status: "False"
     type: LastReleaseDeployed

@@ -44,14 +44,25 @@ func patch(input runtime.Object, patchType types.PatchType, patch []byte, scheme
 		applyPatchToCurrentObject(currentObject runtime.Object) (runtime.Object, error)
 	}
 
+	// A typed object from a client Get/List carries no TypeMeta, so resolve
+	// the kind from the scheme: the codecs below cannot encode without it.
+	gvk := input.GetObjectKind().GroupVersionKind()
+	if gvk.Empty() {
+		gvks, _, err := scheme.ObjectKinds(input)
+		if err != nil {
+			return nil, fmt.Errorf("resolve object kind: %w", err)
+		}
+		gvk = gvks[0]
+	}
+
 	typeConverter := managedfields.NewDeducedTypeConverter()
 	fieldManager, err := managedfields.NewDefaultCRDFieldManager(
 		typeConverter,
 		scheme,
 		scheme,
 		scheme,
-		input.GetObjectKind().GroupVersionKind(),
-		input.GetObjectKind().GroupVersionKind().GroupVersion(),
+		gvk,
+		gvk.GroupVersion(),
 		"",
 		nil,
 	)
@@ -68,7 +79,7 @@ func patch(input runtime.Object, patchType types.PatchType, patch []byte, scheme
 			scheme:       scheme,
 		}
 	case types.StrategicMergePatchType:
-		schemaReferenceObj, err := scheme.UnsafeConvertToVersion(input, input.GetObjectKind().GroupVersionKind().GroupVersion())
+		schemaReferenceObj, err := scheme.UnsafeConvertToVersion(input, gvk.GroupVersion())
 		if err != nil {
 			return nil, fmt.Errorf("unsafe convert to version: %w", err)
 		}
@@ -88,7 +99,10 @@ func patch(input runtime.Object, patchType types.PatchType, patch []byte, scheme
 		return nil, fmt.Errorf("%v: unimplemented patch type", patchType)
 	}
 
-	return mechanism.applyPatchToCurrentObject(input.DeepCopyObject())
+	current := input.DeepCopyObject()
+	current.GetObjectKind().SetGroupVersionKind(gvk)
+
+	return mechanism.applyPatchToCurrentObject(current)
 }
 
 type jsonPatcher struct {

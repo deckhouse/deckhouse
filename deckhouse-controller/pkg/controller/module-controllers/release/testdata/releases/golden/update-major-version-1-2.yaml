@@ -56,6 +56,7 @@ metadata:
   - modules.deckhouse.io/metrics-registered
   labels:
     module: parca
+    modules.deckhouse.io/update-policy: ""
   name: parca-2.0.0
   ownerReferences:
   - apiVersion: deckhouse.io/v1alpha1
@@ -63,13 +64,14 @@ metadata:
     kind: ModuleSource
     name: foxtrot-suitable
     uid: 71d2300f-700b-452a-896a-6a3805f9cef7
-  resourceVersion: "1001"
+  resourceVersion: "1010"
 spec:
   moduleName: parca
   version: 2.0.0
   weight: 900
 status:
   approved: true
+  message: major version is greater than deployed 1.26.2
   phase: Pending
   pullDuration: 0s
   transitionTime: null
