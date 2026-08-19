@@ -193,6 +193,12 @@ spec:
               value: "true"
             - name: PACKAGE_NELM_TIMEOUT
               value: "30m"
+            # Per-request timeout for module-documentation -> docs-builder upload/build
+            # calls. Each build is a full-site Hugo rebuild, so 10s (the default HTTP
+            # client timeout) cancels healthy builds under load; raise here if a large
+            # docs site still times out.
+            - name: DOCUMENTATION_BUILD_TIMEOUT
+              value: "120s"
             - name: LOG_TYPE
               value: "json"
             - name: DECKHOUSE_HA
