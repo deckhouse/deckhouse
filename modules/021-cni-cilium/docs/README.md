@@ -51,6 +51,27 @@ Network equipment must be ready for asymmetric traffic flow: IP address anti-spo
 
 * `Hybrid` — in this mode, TCP traffic is processed in `DSR` mode, and UDP in `SNAT` mode.
 
+## Operational specifics of CNI Cilium on AWS
+
+If Cilium runs in [VXLAN](configuration.html#parameters-tunnelmode) mode (the only mode available on AWS), then by default connections from inside the cluster (from a node or a pod) to internal resources exposed through an `internal` load balancer (Load Balancer) do not work. From outside the cluster, the load balancer address answers. The cause is the enabled `preserve_client_ip` option ("Preserve client IP addresses") on the target group (Target Group): the load balancer skips NAT and the return traffic goes straight through the VXLAN tunnel past the load balancer. The traffic becomes asymmetric, and the connection drops. To fix it, disable `preserve_client_ip` on the target group in one of two ways.
+
+{% alert level="warning" %}
+After you disable `preserve_client_ip`, the load balancer performs SNAT, and the application stops seeing the real client IP address at the network level. For HTTP/HTTPS traffic this is not a problem: the address is still passed in the `X-Forwarded-For` header.
+{% endalert %}
+
+**Using the AWS web console.** Open **EC2** → **Target groups**, select the load balancer target group (for example, `k8s-d8ingres-internal-...`), click **Edit target group attributes**, and in the **Traffic configuration** block turn off the **Preserve client IP addresses** toggle.
+
+![Preserve client IP addresses setting in the AWS web console](images/preserve-client-ip-disabled.png)
+
+**Using the AWS CLI.** Run the command with your own target group ARN and region (you can get the ARN in the same **Target groups** section or with `aws elbv2 describe-target-groups`):
+
+```bash
+aws elbv2 modify-target-group-attributes \
+  --target-group-arn arn:aws:elasticloadbalancing:REGION:ACCOUNT:targetgroup/NAME/ID \
+  --attributes Key=preserve_client_ip.enabled,Value=false \
+  --region REGION
+```
+
 ## Using CiliumClusterwideNetworkPolicy
 
 {% alert level="danger" %}
@@ -88,7 +109,7 @@ This mechanism requires Linux kernel version 5.15 or higher to work correctly.
 
 {% alert level="warning" %}The feature is available only in the following Deckhouse Kubernetes Platform editions: SE+, EE.{% endalert %}
 
-Egress Gateway in Deckhouse Kubernetes Platform can be used in one of two modes: [Basic](#basic-mode) and [Mode with Virtual IP](#mode-with-virtual-ip). Use Custom Resource [EgressGateway](cr.html#egressgateway) (parameter `spec.sourceIP.node`) to select the mode.
+Egress Gateway in Deckhouse Kubernetes Platform can be used in one of two modes: [Basic mode](#basic-mode) and [Virtual IP mode](#virtual-ip-mode). Use Custom Resource [EgressGateway](cr.html#egressgateway) (parameter `spec.sourceIP.node`) to select the mode.
 
 ### Basic mode
 
