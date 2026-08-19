@@ -983,24 +983,11 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "100 * sum(max without (exported_namespace, exported_pod, exported_container, container) (DCGM_FI_DEV_FB_USED{Hostname=~\"$node\", gpu=~\"$gpu\"})) by(Hostname, gpu) / clamp_min(sum(max without (exported_namespace, exported_pod, exported_container, container) (DCGM_FI_DEV_FB_USED{Hostname=~\"$node\", gpu=~\"$gpu\"})) by(Hostname, gpu) + sum(max without (exported_namespace, exported_pod, exported_container, container) (DCGM_FI_DEV_FB_FREE{Hostname=~\"$node\", gpu=~\"$gpu\"})) by(Hostname, gpu), 1)",
-          "interval": "",
-          "legendFormat": "GPU {{gpu}}",
-          "range": true,
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${ds_prometheus}"
-          },
-          "editorMode": "code",
-          "exemplar": true,
-          "expr": "100 * max by (Hostname, gpu, GPU_I_PROFILE, GPU_I_ID) (max without (exported_namespace, exported_pod, exported_container, container) (DCGM_FI_DEV_FB_USED{Hostname=~\"$node\", gpu=~\"$gpu\", GPU_I_PROFILE=~\".+\"})) / clamp_min(max by (Hostname, gpu, GPU_I_PROFILE, GPU_I_ID) (max without (exported_namespace, exported_pod, exported_container, container) (DCGM_FI_DEV_FB_USED{Hostname=~\"$node\", gpu=~\"$gpu\", GPU_I_PROFILE=~\".+\"})) + max by (Hostname, gpu, GPU_I_PROFILE, GPU_I_ID) (max without (exported_namespace, exported_pod, exported_container, container) (DCGM_FI_DEV_FB_FREE{Hostname=~\"$node\", gpu=~\"$gpu\", GPU_I_PROFILE=~\".+\"})), 1)",
+          "expr": "100 * sum(max without (exported_namespace, exported_pod, exported_container, container) (DCGM_FI_DEV_FB_USED{Hostname=~\"$node\", gpu=~\"$gpu\"})) by (Hostname, gpu, GPU_I_PROFILE, GPU_I_ID) / clamp_min(sum(max without (exported_namespace, exported_pod, exported_container, container) (DCGM_FI_DEV_FB_USED{Hostname=~\"$node\", gpu=~\"$gpu\"})) by (Hostname, gpu, GPU_I_PROFILE, GPU_I_ID) + sum(max without (exported_namespace, exported_pod, exported_container, container) (DCGM_FI_DEV_FB_FREE{Hostname=~\"$node\", gpu=~\"$gpu\"})) by (Hostname, gpu, GPU_I_PROFILE, GPU_I_ID), 1)",
           "interval": "",
           "legendFormat": "GPU {{gpu}} {{GPU_I_PROFILE}} (ID {{GPU_I_ID}})",
           "range": true,
-          "refId": "B"
+          "refId": "A"
         }
       ],
       "title": "GPU Memory Utilization: ${node}",
@@ -1126,24 +1113,11 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "sum(max without (exported_namespace, exported_pod, exported_container, container) (DCGM_FI_DEV_FB_USED{Hostname=~\"$node\", gpu=~\"$gpu\"})) by(Hostname, gpu)",
-          "interval": "",
-          "legendFormat": "GPU {{gpu}}",
-          "range": true,
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${ds_prometheus}"
-          },
-          "editorMode": "code",
-          "exemplar": true,
-          "expr": "max by (Hostname, gpu, GPU_I_PROFILE, GPU_I_ID) (max without (exported_namespace, exported_pod, exported_container, container) (DCGM_FI_DEV_FB_USED{Hostname=~\"$node\", gpu=~\"$gpu\", GPU_I_PROFILE=~\".+\"}))",
+          "expr": "sum(max without (exported_namespace, exported_pod, exported_container, container) (DCGM_FI_DEV_FB_USED{Hostname=~\"$node\", gpu=~\"$gpu\"})) by (Hostname, gpu, GPU_I_PROFILE, GPU_I_ID)",
           "interval": "",
           "legendFormat": "GPU {{gpu}} {{GPU_I_PROFILE}} (ID {{GPU_I_ID}})",
           "range": true,
-          "refId": "B"
+          "refId": "A"
         }
       ],
       "title": "GPU Framebuffer Memory Used: ${node}",
