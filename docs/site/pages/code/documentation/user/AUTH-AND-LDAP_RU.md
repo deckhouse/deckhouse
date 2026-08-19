@@ -365,14 +365,41 @@ main:
 
 ### Шаг 2. Настройте OIDC-провайдера и включите связывание с LDAP
 
-Конфигурация размещается в секции `spec.appConfig.omniauth.`.
+Конфигурация размещается в секции `spec.appConfig.omniauth.`:
 
 ```yaml
 auto_link_ldap_user: true
 providers:
-  - name: 'openid_connect'
+  - name: 'openid_connect'   # Не изменяйте это значение.
+    label: 'Keycloak'        # Подпись кнопки входа.
     groups_attribute: 'gitlab_group'
+    args:
+      name: 'openid_connect'
+      scope:
+        - 'openid'
+        - 'profile'
+        - 'email'
+      response_type: 'code'
+      issuer: 'https://keycloak.example.com/realms/example'
+      discovery: true
+      client_auth_method: 'query'
+      uid_field: 'preferred_username'
+      send_scope_to_token_endpoint: false
+      pkce: true
+      client_options:
+        identifier: '<client_id>'
+        secret: '<client_secret>'
+        redirect_uri: 'https://code.example.com/users/auth/openid_connect/callback'
 ```
+
+Обратите внимание на следующие параметры:
+
+- `uid_field` — поле из данных провайдера, которое становится значением `uid` учётной записи. Именно это значение используется при поиске пользователя в LDAP, поэтому оно должно совпадать со значением атрибута, указанного в параметре `uid` LDAP-сервера (в примере — `cn`), или с адресом электронной почты. Если параметр не задан, используется поле `sub`, которое обычно не совпадает ни с одним атрибутом LDAP.
+- `issuer` и `discovery` — адрес провайдера и автоматическое получение его настроек по адресу `<issuer>/.well-known/openid-configuration`.
+- `redirect_uri` — адрес установки Deckhouse Code с путём `/users/auth/openid_connect/callback`. Тот же адрес должен быть указан в настройках клиента на стороне провайдера.
+- `groups_attribute` — атрибут, из которого извлекаются группы пользователя. Группы используются параметрами `allowed_groups` и `admin_groups` (см. раздел [«OpenID Connect (OIDC)»](#openid-connect-oidc)).
+
+Остальные параметры описаны в [документации GitLab](https://docs.gitlab.com/administration/auth/oidc/).
 
 ### Шаг 3. Проверьте связывание при первом входе
 

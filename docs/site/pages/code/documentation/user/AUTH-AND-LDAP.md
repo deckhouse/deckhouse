@@ -364,14 +364,41 @@ main:
 
 ### Step 2. Configure the OIDC provider and enable linking to LDAP
 
-The configuration is set in the `spec.appConfig.omniauth.` section.
+The configuration is set in the `spec.appConfig.omniauth.` section:
 
 ```yaml
 auto_link_ldap_user: true
 providers:
-  - name: 'openid_connect'
+  - name: 'openid_connect'   # Do not change this value.
+    label: 'Keycloak'        # Sign-in button label.
     groups_attribute: 'gitlab_group'
+    args:
+      name: 'openid_connect'
+      scope:
+        - 'openid'
+        - 'profile'
+        - 'email'
+      response_type: 'code'
+      issuer: 'https://keycloak.example.com/realms/example'
+      discovery: true
+      client_auth_method: 'query'
+      uid_field: 'preferred_username'
+      send_scope_to_token_endpoint: false
+      pkce: true
+      client_options:
+        identifier: '<client_id>'
+        secret: '<client_secret>'
+        redirect_uri: 'https://code.example.com/users/auth/openid_connect/callback'
 ```
+
+Pay attention to the following parameters:
+
+- `uid_field` — the field from the provider data that becomes the account `uid`. This value is used when looking the user up in LDAP, so it must match the value of the attribute specified in the LDAP server `uid` parameter (`cn` in this example), or the email address. If the parameter is not set, the `sub` field is used, which usually does not match any LDAP attribute.
+- `issuer` and `discovery` — the provider address and automatic retrieval of its settings from `<issuer>/.well-known/openid-configuration`.
+- `redirect_uri` — the address of your Deckhouse Code installation with the `/users/auth/openid_connect/callback` path. The same address must be specified in the client settings on the provider side.
+- `groups_attribute` — the attribute the user groups are extracted from. The groups are used by the `allowed_groups` and `admin_groups` parameters (see [OpenID Connect (OIDC)](#openid-connect-oidc)).
+
+The remaining parameters are described in the [GitLab documentation](https://docs.gitlab.com/administration/auth/oidc/).
 
 ### Step 3. Verify linking on the first sign-in
 
