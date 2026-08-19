@@ -18,13 +18,22 @@ package d8env
 
 import (
 	"os"
+	"time"
 )
 
 const (
 	DownloadedModulesDir = "DOWNLOADED_MODULES_DIR"
 	EmbeddedModulesDir   = "EMBEDDED_MODULES_DIR"
 
-	defaultEmbeddedModulesDir = "/deckhouse/modules"
+	// DocumentationBuildTimeout caps a single upload+build round-trip from the
+	// module-documentation controller to a docs-builder. Every build triggers a
+	// full-site Hugo rebuild serialized across all modules, so this must exceed
+	// the worst-case build time; too low a value cancels healthy builds and
+	// churns the builder. A Go duration string (e.g. "120s", "2m").
+	DocumentationBuildTimeout = "DOCUMENTATION_BUILD_TIMEOUT"
+
+	defaultEmbeddedModulesDir        = "/deckhouse/modules"
+	defaultDocumentationBuildTimeout = 120 * time.Second
 )
 
 func GetDownloadedModulesDir() string {
@@ -44,4 +53,20 @@ func GetEmbeddedModulesDir() string {
 		return value
 	}
 	return defaultEmbeddedModulesDir
+}
+
+// GetDocumentationBuildTimeout is the per-request timeout the module-documentation
+// controller applies to docs-builder upload/build calls. It parses
+// DOCUMENTATION_BUILD_TIMEOUT as a Go duration (per time.ParseDuration) and falls
+// back to 120s when the variable is unset, empty, or unparseable.
+func GetDocumentationBuildTimeout() time.Duration {
+	value := os.Getenv(DocumentationBuildTimeout)
+	if len(value) == 0 {
+		return defaultDocumentationBuildTimeout
+	}
+	parsed, err := time.ParseDuration(value)
+	if err != nil {
+		return defaultDocumentationBuildTimeout
+	}
+	return parsed
 }
