@@ -108,6 +108,7 @@ func TestTheTwoCountsAreSeparate(t *testing.T) {
 		Full:            true,
 		VerifiedDigests: 333,
 		TotalDigests:    556,
+		DeclaredDigests: 405,
 	}))
 
 	replicas := getReplicas(t, c)
@@ -116,6 +117,8 @@ func TestTheTwoCountsAreSeparate(t *testing.T) {
 		"the set the cluster declares, which is what full is decided from")
 	assert.EqualValues(t, 556, replicas[0].TotalDigests,
 		"everything the store holds, the set included, reported and not decided from")
+	assert.EqualValues(t, 405, replicas[0].DeclaredDigests,
+		"how big the set is, which is the only denominator a cluster with an upstream has")
 	assert.True(t, replicas[0].Full,
 		"holding more than the set does not make a replica incomplete")
 }

@@ -90,10 +90,18 @@ func Aggregate(
 	// field cannot claim "safe" while the controller refuses to act on it.
 	status.SafeToDropUpstream = LeaderFull(replicas, leaseHolder)
 
-	if expected := expectedDigests(spec); expected > 0 {
+	// Progress out of whatever denominator is known, and there are two.
+	//
+	// `expectedDigests` is the operator's air-gap declaration and takes precedence: while a transition
+	// is being gated on a stated number, the status has to show progress against THAT number, not
+	// against one the cluster computed about itself. Everywhere else — an ordinary cluster with an
+	// upstream, which is most of them — the leader's own count of the set is the only denominator
+	// there is, and using it is the difference between a progress report and `0/0` beside gigabytes
+	// in flight.
+	if total := fillDenominator(spec, leader); total > 0 {
 		status.Fill = &registryv1alpha1.FillProgress{
 			Filled: leader.VerifiedDigests,
-			Total:  expected,
+			Total:  total,
 		}
 	}
 
@@ -120,6 +128,15 @@ func expectedDigests(spec *registryv1alpha1.RegistryStorageSpec) int32 {
 		return 0
 	}
 	return spec.Source.ExpectedDigests
+}
+
+// fillDenominator picks what the fill is reported out of: the declaration if there is one, the
+// leader's count of the set otherwise.
+func fillDenominator(spec *registryv1alpha1.RegistryStorageSpec, leader *registryv1alpha1.StorageReplicaStatus) int32 {
+	if expected := expectedDigests(spec); expected > 0 {
+		return expected
+	}
+	return leader.DeclaredDigests
 }
 
 // LeaderFull reports whether the leader holds the expected set, which is what

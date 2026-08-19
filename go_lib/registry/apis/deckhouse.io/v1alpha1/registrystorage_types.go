@@ -236,6 +236,22 @@ type StorageReplicaStatus struct {
 	// +optional
 	TotalDigests int32 `json:"totalDigests,omitempty"`
 
+	// DeclaredDigests is how big the set IS — the number VerifiedDigests is out of.
+	//
+	// The third population, and the one nothing else could supply: the set is what the cluster's
+	// releases and kept modules declare, and only the replica computing it knows its size. The
+	// controller owns this object's status but has no way to count that set, so before this field
+	// existed the only denominator available to it was `spec.source.expectedDigests` — which an
+	// operator states when declaring air-gap and nobody states otherwise. A cluster with an upstream
+	// therefore reported `filled: 0, total: 0` through the whole of its longest phase, with gigabytes
+	// moving: measured on the static stand, 11.7 GiB copied against `0/0`.
+	//
+	// Reported, never decided from. Completeness stays `Full`, derived by the replica from the same
+	// reading, and the air-gap gate stays on `expectedDigests` — an operator's declaration is not
+	// replaced by a number the cluster computes about itself.
+	// +optional
+	DeclaredDigests int32 `json:"declaredDigests,omitempty"`
+
 	// Address is where this replica answers, as "host:port".
 	//
 	// Reported by the replica itself so that a follower can replicate from the

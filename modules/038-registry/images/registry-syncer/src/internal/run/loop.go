@@ -255,6 +255,9 @@ func (l *Loop) reportHeld(ctx context.Context, state *report.State) {
 
 	state.VerifiedDigests = survey.Declared
 	state.TotalDigests = survey.Total
+	// The denominator, from the same reading as the numerator. Taken here rather than computed by the
+	// controller because this is where the set is known at all.
+	state.DeclaredDigests = int32(len(declared))
 
 	// And completeness from the same reading, which is the half that actually guards the cluster.
 	//

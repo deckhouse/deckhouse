@@ -446,3 +446,44 @@ func TestTheAgentManifestNamesTheImageDigest(t *testing.T) {
 	require.Contains(t, manifest[:2000], "agent-image-digest",
 		"the digest belongs in the static pod manifest, which is the file that triggers a restart")
 }
+
+// TestTheLegacyCleanupOnlyTouchesWhatIsDead pins the step that removes the previous
+// implementation's files from a node.
+//
+// Written as a test about paths rather than about behaviour, because the risk here is not that the
+// cleanup fails to run — it is that it runs and takes something with it. It executes as root on every
+// node, and `registry-agent` and `registry-proxy` sit next to the two directories it is meant to
+// remove: the first is this implementation's own PKI, the second is what a bundle installation
+// bootstraps through. A glob or a loop over a wildcard would have reached both.
+func TestTheLegacyCleanupOnlyTouchesWhatIsDead(t *testing.T) {
+	const step = "all/054_cleanup_legacy_registry.sh.tpl"
+
+	t.Run("with an agent it removes the previous implementation's directories", func(t *testing.T) {
+		body := effective(render(t, step, agentRegistry()))
+
+		require.Contains(t, body, "rm -rf /etc/kubernetes/registry/auth")
+		require.Contains(t, body, "rm -rf /etc/kubernetes/registry/distribution")
+
+		// Every removal names its path in full. A wildcard in this step is the one way it could
+		// take the agent's own material or the bundle bootstrap's image with it.
+		for _, forbidden := range []string{
+			"rm -rf /etc/kubernetes/registry/*",
+			"rm -rf /etc/kubernetes/registry ",
+			"registry-agent",
+			"registry-proxy",
+			"local_data",
+		} {
+			require.NotContains(t, body, forbidden,
+				"the cleanup must not go anywhere near %s", forbidden)
+		}
+	})
+
+	// Silent while the previous implementation still owns the node: its files are in use then, and
+	// this step has no business deciding the handover has happened.
+	t.Run("without an agent it does nothing", func(t *testing.T) {
+		body := effective(render(t, step, legacyRegistry()))
+
+		require.NotContains(t, body, "rm -rf")
+		require.NotContains(t, body, "rmdir")
+	})
+}

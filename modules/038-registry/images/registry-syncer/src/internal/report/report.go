@@ -59,6 +59,10 @@ type State struct {
 	// Reported, never decided from.
 	TotalDigests int32
 
+	// DeclaredDigests is the size of the set — what VerifiedDigests is out of. Carried because the
+	// controller writes the status and cannot count the set itself. Reported, never decided from.
+	DeclaredDigests int32
+
 	// Address is where OTHER replicas reach this one, so a follower can replicate
 	// from the leader without resolving a node name.
 	Address string
@@ -178,6 +182,7 @@ func Merge(replicas *[]registryv1alpha1.StorageReplicaStatus, state State) bool 
 		Role:            state.Role,
 		Full:            state.Full,
 		VerifiedDigests: state.VerifiedDigests,
+		DeclaredDigests: state.DeclaredDigests,
 		TotalDigests:    state.TotalDigests,
 		Address:         state.Address,
 		Source:          state.Source,

@@ -842,6 +842,14 @@ func TestTotalDigestsSurvivesAPassThatDoesNotReadTheStore(t *testing.T) {
 	replica := replicaOf(t, c, "master-0")
 	assert.NotZero(t, replica.TotalDigests,
 		"a pass that fills rather than reads the store must still report how much the store holds")
+
+	// And the denominator with it. On a cluster with an upstream there is no `expectedDigests` for the
+	// controller to divide by, so a replica that reports how full it is without reporting how big the
+	// set is leaves the status at 0/0 — which is what an operator saw while gigabytes moved.
+	assert.NotZero(t, replica.DeclaredDigests,
+		"the set's size travels with the count of it, or the status has nothing to divide by")
+	assert.GreaterOrEqual(t, replica.DeclaredDigests, replica.VerifiedDigests,
+		"a set cannot be smaller than the part of it that is present")
 }
 
 // tagOnDisk lays out the tag link distribution writes, which is what makes a release RESOLVABLE from

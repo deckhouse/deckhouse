@@ -254,14 +254,38 @@ func TestAggregateFillProgress(t *testing.T) {
 	assert.EqualValues(t, 312, got.Fill.Filled)
 	assert.EqualValues(t, 459, got.Fill.Total)
 
-	// Without an expected count there is no progress to report, and a "312 of 0"
-	// would be worse than nothing.
-	noSource := Aggregate(
+	// With an upstream and no air-gap declaration, the leader's own count of the set is the
+	// denominator. This is the ordinary cluster, and it used to report nothing at all: measured on the
+	// static stand, 11.7 GiB copied against `0/0`, because the only denominator the controller had was
+	// a number an operator states when declaring air-gap.
+	fromLeader := Aggregate(
+		&registryv1alpha1.RegistryStorageSpec{Upstream: testUpstream("registry.deckhouse.io")},
+		[]registryv1alpha1.StorageReplicaStatus{withDeclared(leader("master-0", false, 312), 400)},
+		"master-0",
+	)
+	require.NotNil(t, fromLeader.Fill)
+	assert.EqualValues(t, 312, fromLeader.Fill.Filled)
+	assert.EqualValues(t, 400, fromLeader.Fill.Total)
+
+	// The declaration wins while there is one: a transition gated on a stated number has to show
+	// progress against that number, not against one the cluster computed about itself.
+	declared := Aggregate(passThroughSpec(), []registryv1alpha1.StorageReplicaStatus{withDeclared(leader("master-0", false, 312), 400)}, "master-0")
+	require.NotNil(t, declared.Fill)
+	assert.EqualValues(t, 459, declared.Fill.Total)
+
+	// And a leader that has not counted the set yet reports no progress rather than "312 of 0",
+	// which would read as a store that shrank.
+	noDenominator := Aggregate(
 		&registryv1alpha1.RegistryStorageSpec{Upstream: testUpstream("registry.deckhouse.io")},
 		[]registryv1alpha1.StorageReplicaStatus{leader("master-0", false, 312)},
 		"master-0",
 	)
-	assert.Nil(t, noSource.Fill)
+	assert.Nil(t, noDenominator.Fill)
+}
+
+func withDeclared(replica registryv1alpha1.StorageReplicaStatus, declared int32) registryv1alpha1.StorageReplicaStatus {
+	replica.DeclaredDigests = declared
+	return replica
 }
 
 // TestLeaderFull covers the gate the air-gap transition reads. It is deliberately

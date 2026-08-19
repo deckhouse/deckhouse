@@ -352,6 +352,13 @@ spec:
                           How many distinct digests this replica holds **altogether**.
 
                           A different population from `verifiedDigests`, and nothing is decided from it. It is here so that a store holding more than this cluster needs — a bundle pushed with other modules, other editions, attestations — looks like what it is rather than like a shortfall against `spec.source.expectedDigests`.
+                      declaredDigests:
+                        type: integer
+                        format: int32
+                        description: |
+                          How big the set **is** — the number `verifiedDigests` is out of.
+
+                          Reported by the replica because only the replica computing the set knows its size, and nothing is decided from it. Before it existed the only denominator the status could use was `spec.source.expectedDigests`, which an operator states when declaring air-gap and nobody states otherwise — so a cluster with an upstream showed `filled: 0, total: 0` throughout its longest phase while gigabytes were being copied. Completeness is still `full`, and the air-gap transition is still decided from `spec.source.expectedDigests`: a declaration by an operator is not replaced by a number the cluster computes about itself.
                       address:
                         type: string
                         description: |
