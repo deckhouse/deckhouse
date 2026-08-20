@@ -16,6 +16,7 @@ package deckhouse
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -617,20 +618,8 @@ func DeleteCAPIMachineDeployments(ctx context.Context, kubeCl *client.Kubernetes
 			return fmt.Errorf("get machines: %v", err)
 		}
 
-		for _, machine := range allMachines.Items {
-			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Patch nodeDrainTimeout for machine %s", machine.GetName()))
-			m := machine
-			// we delete cluster anyway and we can force delete machine (without drain)
-			if err = capiGVRs.SetForceDeleteDrainTimeout(m.Object); err != nil {
-				return err
-			}
-
-			_, err = kubeCl.Dynamic().Resource(capiGVRs.MachineGVR).Namespace(machine.GetNamespace()).Update(ctx, &m, metav1.UpdateOptions{})
-			if err != nil {
-				return fmt.Errorf("patch machine %s: %v", machine.GetName(), err)
-			}
-
-			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Machine %s patched", machine.GetName()))
+		if err := patchCAPIMachineDrainTimeouts(ctx, kubeCl, capiGVRs, allMachines.Items); err != nil {
+			return err
 		}
 
 		allMachineDeployments, err := kubeCl.Dynamic().Resource(capiGVRs.MachineDeploymentGVR).Namespace(metav1.NamespaceAll).List(ctx, metav1.ListOptions{})
@@ -662,23 +651,14 @@ func WaitForCAPIMachinesDeletion(ctx context.Context, kubeCl *client.KubernetesC
 			return err
 		}
 
-		resources, err := kubeCl.Dynamic().Resource(capiGVRs.MachineGVR).List(ctx, metav1.ListOptions{})
+		resources, err := kubeCl.Dynamic().Resource(capiGVRs.MachineGVR).Namespace(metav1.NamespaceAll).List(ctx, metav1.ListOptions{})
 		if err != nil {
 			return err
 		}
 
-		machines := make([]unstructured.Unstructured, 0, len(resources.Items))
-		for _, m := range resources.Items {
-			labels := m.GetLabels()
-			if labels != nil {
-				ng, ok := labels["node-group"]
-				if ok && ng == "master" {
-					dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Machine %s was skipped from delete check because it is in master ng. Continue.", m.GetName()))
-					continue
-				}
-			}
-
-			machines = append(machines, m)
+		machines := nonMasterCAPIMachines(ctx, resources.Items)
+		if err := patchCAPIMachineDrainTimeouts(ctx, kubeCl, capiGVRs, machines); err != nil {
+			return err
 		}
 
 		count := len(machines)
@@ -692,4 +672,50 @@ func WaitForCAPIMachinesDeletion(ctx context.Context, kubeCl *client.KubernetesC
 		dhlog.FromContext(ctx).InfoContext(ctx, "All CAPI Machines are deleted from the cluster")
 		return nil
 	})
+}
+
+func nonMasterCAPIMachines(ctx context.Context, machines []unstructured.Unstructured) []unstructured.Unstructured {
+	result := make([]unstructured.Unstructured, 0, len(machines))
+	for _, machine := range machines {
+		labels := machine.GetLabels()
+		if labels != nil {
+			ng, ok := labels["node-group"]
+			if ok && ng == "master" {
+				dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Machine %s was skipped from delete check because it is in master ng. Continue.", machine.GetName()))
+				continue
+			}
+		}
+
+		result = append(result, machine)
+	}
+
+	return result
+}
+
+func patchCAPIMachineDrainTimeouts(ctx context.Context, kubeCl *client.KubernetesClient, capiGVRs capi.GVRs, machines []unstructured.Unstructured) error {
+	patch := make(map[string]interface{})
+	if err := capiGVRs.SetForceDeleteDrainTimeout(patch); err != nil {
+		return err
+	}
+
+	content, err := json.Marshal(patch)
+	if err != nil {
+		return err
+	}
+
+	for _, machine := range machines {
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Patch nodeDrainTimeout for machine %s", machine.GetName()))
+
+		_, err = kubeCl.Dynamic().Resource(capiGVRs.MachineGVR).Namespace(machine.GetNamespace()).Patch(ctx, machine.GetName(), types.MergePatchType, content, metav1.PatchOptions{})
+		if err != nil {
+			if errors.IsNotFound(err) {
+				continue
+			}
+			return fmt.Errorf("patch machine %s: %v", machine.GetName(), err)
+		}
+
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Machine %s patched", machine.GetName()))
+	}
+
+	return nil
 }
