@@ -386,6 +386,17 @@ func platformOwnedNamespaces(ctx context.Context, client k8s.Client, input *go_h
 // A group the cluster does not serve is absent and reported as such, which is how an uninstalled
 // Gateway API is skipped. A discovery call that fails is returned as an error instead, because
 // reading a failure as "no such CRD" would silently record nothing and grandfather nobody.
+//
+// That error fails the hook and blocks the converge, and two properties bound what it can cost.
+// The window is bounded: nothing here runs once a record exists, because snapshotReservedPublicHosts
+// puts the recorded one back and returns before it asks for a client at all, and the record is
+// written only after every resource has been read, so a converge that fails here leaves nothing
+// half-recorded behind. The reach is bounded too: only networking.k8s.io and
+// gateway.networking.k8s.io are ever asked for their resources, and ServerGroups keeps the group
+// list while discarding the group versions that failed to answer
+// (k8s.io/client-go/discovery.(*DiscoveryClient).GroupsAndMaybeResources), so a broken aggregated
+// APIService belonging to some other module is a group version this never asks about rather than a
+// way to stall the module that renders Deckhouse.
 func servedVersion(client k8s.Client, gr schema.GroupResource) (schema.GroupVersionResource, bool, error) {
 	groups, err := client.Discovery().ServerGroups()
 	if err != nil {
