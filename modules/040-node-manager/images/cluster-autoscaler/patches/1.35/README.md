@@ -18,6 +18,7 @@ Applied to both `cluster-autoscaler/go.mod` and `cluster-autoscaler/apis/go.mod`
 - `golang.org/x/sys`: `v0.39.0` -> `v0.47.0`
 - `golang.org/x/crypto`: `v0.46.0` -> `v0.54.0` (x/crypto/ssh CVEs)
 - `golang.org/x/text`: `v0.32.0` -> `v0.40.0` (unicode normalization DoS)
+- `google.golang.org/grpc`: `v1.75.0` -> `v1.82.1`
 
 To recreate this patch, check out the clean tag and re-apply the bumps:
 
@@ -25,10 +26,17 @@ To recreate this patch, check out the clean tag and re-apply the bumps:
 git clone <SOURCE_REPO>/gardener/autoscaler.git
 cd autoscaler && git checkout v1.35.1
 cd cluster-autoscaler
-go get golang.org/x/crypto@v0.54.0
-go get golang.org/x/net@v0.57.0
-go get golang.org/x/sys@v0.47.0
-cd apis && go get golang.org/x/net@v0.57.0 && go get golang.org/x/sys@v0.47.0 && cd ..
+go get google.golang.org/grpc@v1.82.1 \
+  golang.org/x/crypto@v0.54.0 \
+  golang.org/x/net@v0.57.0 \
+  golang.org/x/sys@v0.47.0 \
+  golang.org/x/text@v0.40.0
+cd apis
+go get google.golang.org/grpc@v1.82.1 \
+  golang.org/x/net@v0.57.0 \
+  golang.org/x/sys@v0.47.0 \
+  golang.org/x/text@v0.40.0
+cd ..
 go mod tidy && (cd apis && go mod tidy)
 cd ..
 git diff -- cluster-autoscaler/go.mod cluster-autoscaler/go.sum \
