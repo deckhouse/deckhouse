@@ -77,14 +77,221 @@ func TestIsImmutableMaster(t *testing.T) {
 	})
 }
 
-// A static cluster runs no BaseInfra phase, so it never reports the master's
-// address and the handoff has nothing to dial. Refused before anything is
-// created: every phase before it passes, and every rerun dies the same way.
-func TestValidateClusterType(t *testing.T) {
-	require.NoError(t, ValidateClusterType(t.Context(), &config.MetaConfig{ClusterType: config.CloudClusterType}))
+func TestIsImmutableMasterReadsResourcesOfAStaticCluster(t *testing.T) {
+	metaConfig := &config.MetaConfig{
+		ClusterType: config.StaticClusterType,
+		ResourcesYAML: `
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: master
+spec:
+  nodeType: Static
+  systemType: Immutable
+`,
+	}
 
-	err := ValidateClusterType(t.Context(), &config.MetaConfig{ClusterType: config.StaticClusterType})
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "Immutable")
-	require.Contains(t, err.Error(), config.StaticClusterType)
+	require.True(t, IsImmutableMaster(t.Context(), metaConfig))
+}
+
+func TestIsImmutableMasterIgnoresOtherGroups(t *testing.T) {
+	metaConfig := &config.MetaConfig{
+		ClusterType: config.StaticClusterType,
+		ResourcesYAML: `
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  nodeType: Static
+  systemType: Immutable
+`,
+	}
+
+	require.False(t, IsImmutableMaster(t.Context(), metaConfig))
+}
+
+// The master comes last, behind a foreign document of the same name: a walk that
+// stops at the first NodeGroup, or that reads any kind, misses the real group.
+func TestIsImmutableMasterReadsAMasterDeclaredLast(t *testing.T) {
+	metaConfig := &config.MetaConfig{
+		ClusterType: config.StaticClusterType,
+		ResourcesYAML: `
+apiVersion: internal.deckhouse.io/v1alpha1
+kind: NodeConfig
+metadata:
+  name: master
+spec:
+  systemType: Mutable
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  nodeType: Static
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: master
+spec:
+  nodeType: Static
+  systemType: Immutable
+`,
+	}
+
+	require.True(t, IsImmutableMaster(t.Context(), metaConfig))
+}
+
+// NodeGroupConfiguration is a real deckhouse.io kind, so a document of the right
+// group and the right name can still be the wrong object. Declared first, it
+// masks the master unless the kind is matched too.
+func TestIsImmutableMasterIgnoresAnotherKindOfTheSameGroup(t *testing.T) {
+	metaConfig := &config.MetaConfig{
+		ClusterType: config.StaticClusterType,
+		ResourcesYAML: `
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: master
+spec:
+  weight: 100
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: master
+spec:
+  nodeType: Static
+  systemType: Immutable
+`,
+	}
+
+	require.True(t, IsImmutableMaster(t.Context(), metaConfig))
+}
+
+// A NodeGroup of a foreign API group, named master and declared first, must not
+// mask the real one: the walk returns on its first match, so matching on kind
+// and name alone reads the wrong document and reports no immutable master.
+func TestIsImmutableMasterIgnoresAForeignGroupMaskingTheMaster(t *testing.T) {
+	metaConfig := &config.MetaConfig{
+		ClusterType: config.StaticClusterType,
+		ResourcesYAML: `
+apiVersion: example.com/v1
+kind: NodeGroup
+metadata:
+  name: master
+spec:
+  nodeType: Static
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: master
+spec:
+  nodeType: Static
+  systemType: Immutable
+`,
+	}
+
+	require.True(t, IsImmutableMaster(t.Context(), metaConfig))
+}
+
+// The immutable worker comes first on purpose: a walk that returns the first
+// NodeGroup it meets instead of the master one passes every other case here.
+func TestIsImmutableMasterIgnoresAnImmutableWorkerBeforeTheMaster(t *testing.T) {
+	metaConfig := &config.MetaConfig{
+		ClusterType: config.StaticClusterType,
+		ResourcesYAML: `
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  nodeType: Static
+  systemType: Immutable
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: master
+spec:
+  nodeType: Static
+`,
+	}
+
+	require.False(t, IsImmutableMaster(t.Context(), metaConfig))
+}
+
+// A static cluster runs no BaseInfra phase, so nothing reports the master's
+// address and the handoff has nothing to dial unless the operator names it.
+// Refused before anything is created, so every rerun dies the same way.
+func TestValidateInputsRefusesAStaticClusterWithoutHosts(t *testing.T) {
+	metaConfig := &config.MetaConfig{ClusterType: config.StaticClusterType}
+
+	err := ValidateInputs(t.Context(), metaConfig, nil)
+
+	require.ErrorContains(t, err, "--master-host")
+}
+
+func TestValidateInputsAcceptsAStaticClusterWithHosts(t *testing.T) {
+	metaConfig := &config.MetaConfig{ClusterType: config.StaticClusterType}
+
+	err := ValidateInputs(t.Context(), metaConfig, map[string]string{"master-0": "10.0.0.11"})
+
+	require.NoError(t, err)
+}
+
+func TestValidateInputsRefusesHostsInACloudCluster(t *testing.T) {
+	metaConfig := &config.MetaConfig{ClusterType: config.CloudClusterType}
+
+	err := ValidateInputs(t.Context(), metaConfig, map[string]string{"master-0": "10.0.0.11"})
+
+	require.ErrorContains(t, err, "cloud infrastructure reports")
+}
+
+func TestValidateInputsAcceptsACloudClusterWithoutHosts(t *testing.T) {
+	metaConfig := &config.MetaConfig{ClusterType: config.CloudClusterType}
+
+	require.NoError(t, ValidateInputs(t.Context(), metaConfig, nil))
+}
+
+func TestParseHostsSplitsNameAndAddress(t *testing.T) {
+	hosts, err := ParseHosts([]string{"master-0=10.0.0.11", "master-1=10.0.0.12"})
+
+	require.NoError(t, err)
+	require.Equal(t, map[string]string{"master-0": "10.0.0.11", "master-1": "10.0.0.12"}, hosts)
+}
+
+// kingpin splits DHCTL_CLI_MASTER_HOSTS on newlines and trims only the trailing
+// one, so an indented multi-line envar reaches ParseHosts with the indentation
+// still on the node name, where it fails much later and much less clearly.
+func TestParseHostsTrimsEnvarIndentation(t *testing.T) {
+	hosts, err := ParseHosts([]string{"  master-0=10.0.0.11", "\tmaster-1=10.0.0.12  "})
+
+	require.NoError(t, err)
+	require.Equal(t, map[string]string{"master-0": "10.0.0.11", "master-1": "10.0.0.12"}, hosts)
+}
+
+// The spaces an operator puts around the "=" are not part of either half, and
+// the whole path keys off the node name: a name with a space on it is a node
+// kubelet never registers under and nothing ever finds.
+func TestParseHostsTrimsAroundTheSeparator(t *testing.T) {
+	hosts, err := ParseHosts([]string{"master-0 = 10.0.0.11"})
+
+	require.NoError(t, err)
+	require.Equal(t, map[string]string{"master-0": "10.0.0.11"}, hosts)
+}
+
+func TestParseHostsRefusesAMissingName(t *testing.T) {
+	_, err := ParseHosts([]string{"10.0.0.11"})
+
+	require.ErrorContains(t, err, "<node-name>=<address>")
+}
+
+func TestParseHostsRefusesADuplicate(t *testing.T) {
+	_, err := ParseHosts([]string{"master-0=10.0.0.11", "master-0=10.0.0.12"})
+
+	require.ErrorContains(t, err, "master-0")
 }

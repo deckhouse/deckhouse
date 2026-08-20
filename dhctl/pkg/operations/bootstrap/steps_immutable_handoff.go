@@ -113,24 +113,6 @@ func (b *ClusterBootstrapper) collectImmutableKubeconfig(ctx context.Context, bc
 		return nil, errors.New("the bootstrap handoff credentials are missing from the state cache: rerun the bootstrap so the BaseInfra phase regenerates the master payload")
 	}
 
-	address, stop, err := b.openImmutableChannel(ctx, bctx, handoffPort, "credentials handoff")
-	if err != nil {
-		return nil, err
-	}
-	// Held rather than closed here: ConfirmCollected is the next thing to use it,
-	// and through a bastion a second dial is a second tunnel to the same port.
-	// stopImmutableChannels closes it on the paths that never confirm.
-	bctx.immutable.handoffAddress, bctx.immutable.handoffStop = address, stop
-
-	input := immutable.FetchKubeconfigInput{
-		Address: address,
-		// The endpoint's certificate is issued for the node's name, not for the
-		// address dhctl dialled: that address did not exist when the payload
-		// was built.
-		ServerName: bctx.immutable.masterNodeName,
-		Material:   material,
-	}
-
 	// Narrated rather than silent: the node answers the status endpoint from the
 	// moment it starts working, so an operator sees what it is doing and a node
 	// that fails says why instead of just staying unreachable.
@@ -139,33 +121,75 @@ func (b *ClusterBootstrapper) collectImmutableKubeconfig(ctx context.Context, bc
 		lastMessage string
 	)
 
-	// Nothing here rebuilds the channel: the tunnel keeps its listener through a
-	// broken connection and gossh's keepalive reconnects the client underneath it,
-	// so a failed request is retried, not repaired.
-	err = libretry.NewLoop("Waiting for the first master to bring the control plane up", waitAPIServerUp.attempts, waitAPIServerUp.interval).
-		BreakIf(handoffGaveUp).
-		RunContext(ctx, func() error {
-			status, err := immutable.FetchStatus(ctx, input)
-			if err != nil {
-				return err
-			}
-			reportImmutableStatus(ctx, status, &lastMessage)
-			if err := handoffReady(status); err != nil {
-				return err
-			}
+	// openImmutableChannelTo, not openImmutableChannel: a failure here is already
+	// on its way through withBothAddresses below, which would otherwise name both
+	// addresses twice in one message.
+	openChannel := func() (string, func(), error) {
+		return b.openImmutableChannelTo(ctx, bctx.immutable.masterIP, handoffPort, "credentials handoff")
+	}
 
-			collected, err := immutable.FetchKubeconfig(ctx, input)
-			if err != nil {
-				return err
-			}
-			kubeconfig = collected
-			return nil
-		})
+	loop := libretry.NewLoop("Waiting for the first master to bring the control plane up", waitAPIServerUp.attempts, waitAPIServerUp.interval).
+		BreakIf(handoffGaveUp)
+
+	err = retryWithFreshChannel(ctx, loop, openChannel, func(address string) error {
+		input := immutable.FetchKubeconfigInput{
+			Address: address,
+			// The endpoint's certificate is issued for the node's name, not for the
+			// address dhctl dialled: that address did not exist when the payload
+			// was built.
+			ServerName: bctx.immutable.masterNodeName,
+			Material:   material,
+		}
+
+		status, err := immutable.FetchStatus(ctx, input)
+		if err != nil {
+			return err
+		}
+		reportImmutableStatus(ctx, status, &lastMessage)
+		if err := handoffReady(status); err != nil {
+			return err
+		}
+
+		collected, err := immutable.FetchKubeconfig(ctx, input)
+		if err != nil {
+			return err
+		}
+		kubeconfig = collected
+		return nil
+	})
 	if err != nil {
-		return nil, err
+		return nil, withBothAddresses(bctx, err)
 	}
 
 	return kubeconfig, nil
+}
+
+// retryWithFreshChannel runs do against a channel of its own on every attempt.
+// A dial to a machine that is booting hangs to gossh's 5s deadline, and that
+// error ends the tunnel's accept loop for good while its listener stays bound.
+func retryWithFreshChannel(ctx context.Context, loop *libretry.Loop, open func() (string, func(), error), do func(address string) error) error {
+	return loop.RunContext(ctx, func() error {
+		address, stop, err := open()
+		// open must not hand back a closer together with an error: it is dropped here.
+		if err != nil {
+			return err
+		}
+		defer stop()
+
+		return do(address)
+	})
+}
+
+// withBothAddresses names the address the machine was configured through next to
+// the one it was expected to answer on: only the two together tell a static
+// address the machine never took from a machine that died.
+func withBothAddresses(bctx *bootstrapContext, err error) error {
+	pushAddress := bctx.immutable.hosts[bctx.immutable.masterNodeName]
+	if pushAddress == "" || pushAddress == bctx.immutable.masterIP {
+		return err
+	}
+	return fmt.Errorf("reach %s at %s, the static address its document assigns it, after configuring it at %s: %w",
+		bctx.immutable.masterNodeName, bctx.immutable.masterIP, pushAddress, err)
 }
 
 // handoffTerminal are the answers no amount of waiting changes: a payload the
@@ -204,6 +228,7 @@ func handoffReady(status *immutable.Status) error {
 	return fmt.Errorf("the first master is not ready to hand the credentials over: %s", statusLine(status))
 }
 
+// statusLine renders what the node reports into one readable line.
 func statusLine(status *immutable.Status) string {
 	if status.Message == "" {
 		return string(status.Phase)
@@ -229,19 +254,12 @@ func (b *ClusterBootstrapper) confirmImmutableHandoff(ctx context.Context, bctx 
 		return
 	}
 
-	// The collection left its channel open for exactly this; a rerun confirms
-	// without collecting and has none to reuse.
-	defer bctx.stopImmutableHandoff()
-	address := bctx.immutable.handoffAddress
-	if address == "" {
-		opened, stop, err := b.openImmutableChannel(ctx, bctx, immutable.HandoffPort, "handoff confirmation")
-		if err != nil {
-			logger.WarnContext(ctx, fmt.Sprintf("confirm the handover to the first master: %v", err))
-			return
-		}
-		defer stop()
-		address = opened
+	address, stop, err := b.openImmutableChannel(ctx, bctx, immutable.HandoffPort, "handoff confirmation")
+	if err != nil {
+		logger.WarnContext(ctx, fmt.Sprintf("confirm the handover to the first master: %v", err))
+		return
 	}
+	defer stop()
 
 	input := immutable.FetchKubeconfigInput{Address: address, ServerName: bctx.immutable.masterNodeName, Material: material}
 	switch err := immutable.ConfirmCollected(ctx, input); {

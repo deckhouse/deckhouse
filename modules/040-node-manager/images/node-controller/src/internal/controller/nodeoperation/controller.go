@@ -58,6 +58,7 @@ type Reconciler struct {
 	apiReader client.Reader
 }
 
+// Setup wires the uncached reader.
 func (r *Reconciler) Setup(_ context.Context, mgr ctrl.Manager) error {
 	r.apiReader = mgr.GetAPIReader()
 	return nil
@@ -208,6 +209,7 @@ func (r *Reconciler) carryOut(ctx context.Context, op *v1alpha1.NodeOperation, n
 	return ctrl.Result{RequeueAfter: max(time.Until(hardDeadline(op)), minRequeue)}, nil
 }
 
+// begin queues an operation nobody has started yet, once.
 func (r *Reconciler) begin(ctx context.Context, op *v1alpha1.NodeOperation, node *corev1.Node, logger logr.Logger) error {
 	if op.Status.Phase != "" {
 		return nil
@@ -372,6 +374,7 @@ func (r *Reconciler) setPhase(ctx context.Context, op *v1alpha1.NodeOperation, p
 	// deadline fires would otherwise be overwritten with Failed.
 	err := r.patchStatus(ctx, op, fmt.Sprintf("set %s phase of %s", phase, op.Name), func() {
 		op.Status.Phase = phase
+		op.Status.ObservedGeneration = op.Generation
 		if phase == v1alpha1.NodeOperationPhaseInProgress && op.Status.StartedAt == nil {
 			now := metav1.Now()
 			op.Status.StartedAt = &now

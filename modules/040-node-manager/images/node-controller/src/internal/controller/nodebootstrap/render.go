@@ -65,6 +65,8 @@ type bootstrapMetadata struct {
 	Labels map[string]string `json:"labels,omitempty"`
 }
 
+// wrapCloudConfig marshals the NodeConfig for the machine and wraps it in the
+// cloud-config document the on-node loader reads from /config/nodeconfig.yaml.
 func wrapCloudConfig(spec internalv1alpha1.NodeSpec, machineName, ngName string) ([]byte, error) {
 	config := &bootstrapDocument{
 		APIVersion: internalv1alpha1.GroupVersion.String(),
