@@ -438,7 +438,7 @@ update-lib-helm: yq ## Update lib-helm.
 .PHONY: update-base-images-versions
 update-base-images-versions:
 	##~ Options: version=vMAJOR.MINOR.PATCH
-	cd candi && curl --fail -sSLO https://fox.flant.com/api/v4/projects/4612/packages/generic/base_images/$(version)/base_images.yml
+	cd candi && curl --fail -sSLO https://fox.flant.com/api/v4/projects/deckhouse%2Fbase-images/packages/generic/base_images/$(version)//base_images.yml
 	$(MAKE) render-workflow
 
 BASE_LIMIT_KEYS := REGISTRY_PATH \
