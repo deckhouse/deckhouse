@@ -22,12 +22,15 @@ package immutable
 // The payload documents. The on-node agent parses both with UnmarshalStrict, so
 // every field name must match the agent's types
 // (node-controller/src/api/internal.deckhouse.io/v1alpha1).
+// PayloadAPIVersion and NodeConfigKind are exported because the bootstrap has to
+// recognise the operator's documents in the resources stream before this package
+// parses them.
 const (
-	payloadAPIVersion = "internal.deckhouse.io/v1alpha1"
+	PayloadAPIVersion = "internal.deckhouse.io/v1alpha1"
 
 	// Mirrors node-controller/src/internal/controller/nodebootstrap/render.go,
 	// which spells the same kinds out when it renders a day-2 payload.
-	nodeConfigKind         = "NodeConfig"
+	NodeConfigKind         = "NodeConfig"
 	controlPlaneConfigKind = "ControlPlaneConfig"
 )
 
@@ -57,10 +60,6 @@ const (
 
 	// nodeConfigPushPath is the path both servers on this port accept.
 	nodeConfigPushPath = "/config"
-
-	// whoamiPath answers which of the two holds the port, in one word, without
-	// pushing anything into it: "installer" or "agent".
-	whoamiPath = "/whoami"
 )
 
 // APIServerPort is where a control-plane node's own kube-apiserver listens.

@@ -101,36 +101,3 @@ func TestPushNodeConfigQuotesTheRefusal(t *testing.T) {
 	require.ErrorContains(t, err, "500")
 	require.ErrorContains(t, err, "config partition is read-only")
 }
-
-// Which of the two servers holds the port decides whether the machine may be
-// handed a configuration at all, and the answer has to come from asking rather
-// than from pushing a document to see what happens.
-func TestWhoamiNamesWhoHoldsThePort(t *testing.T) {
-	for _, want := range []string{WhoamiInstaller, WhoamiAgent} {
-		var asked string
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			asked = r.Method + " " + r.URL.Path
-			_, _ = w.Write([]byte(want + "\n"))
-		}))
-
-		got, err := Whoami(t.Context(), strings.TrimPrefix(server.URL, "http://"))
-		server.Close()
-
-		require.NoError(t, err)
-		require.Equal(t, want, got)
-		require.Equal(t, "GET /whoami", asked, "the identity question must not change the machine")
-	}
-}
-
-// An old image, or something else entirely, holds the port: that is not an
-// identity, and must not read as one.
-func TestWhoamiRefusesAServerThatDoesNotAnswerIt(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		http.Error(w, "not found", http.StatusNotFound)
-	}))
-	defer server.Close()
-
-	_, err := Whoami(t.Context(), strings.TrimPrefix(server.URL, "http://"))
-
-	require.ErrorIs(t, err, errPathUnknown)
-}
