@@ -362,6 +362,9 @@ properties:
                 type: string
               insecure:
                 type: boolean
+              thumbprint:
+                type: string
+                pattern: '^([A-Fa-f0-9]{2}:){19}[A-Fa-f0-9]{2}$'
           nsxt:
             type: object
             required: [ defaultIpPoolName, size, tier1GatewayPath, user, password, host, defaultTcpAppProfileName, defaultUdpAppProfileName ]

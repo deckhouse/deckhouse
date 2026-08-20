@@ -1,18 +1,13 @@
 version: v2
 
-# InstanceClass fields whose change requires recreating the machines, carried over one to one
-# from the v1 instance-class.checksum. cloneMode is *not* here on purpose: it is a constant of
-# the template (fullClone) and cannot be flipped from a per-NodeGroup InstanceClass — a future
-# switch will need its own migration path anyway.
+
 rolloutFields:
   - numCPUs
   - memory
   - rootDiskSize
   - template
-  - datastore
   - mainNetwork
   - additionalNetworks
-  - resourcePool
   - disableTimesync
   - runtimeOptions
 
@@ -37,10 +32,21 @@ template: |
   {{- $runtime := get $ic "runtimeOptions" | default dict }}
   {{- $memoryMiB := add ($ic.memory | int) (mod ($ic.memory | int) 4) }}
 
-  {{- /* Network devices: mainNetwork first, then any additionalNetworks. */ -}}
+  {{- /* Network devices: mainNetwork first, then any additionalNetworks. mainNetwork on
+         VsphereInstanceClass is optional — the documented fallback is providerClusterConfiguration
+         .masterNodeGroup.instanceClass.mainNetwork, which templates/registration.yaml already
+         publishes as .provider.instances.mainNetwork. The fallback fires only when the
+         InstanceClass omits the key entirely (v1 semantics preserved: an explicit empty string
+         still renders an empty-name device, matching the pre-migration checksum). */ -}}
   {{- $networks := list }}
   {{- if hasKey $ic "mainNetwork" }}
     {{- $networks = append $networks $ic.mainNetwork }}
+  {{- else }}
+    {{- $providerInstances := get .provider "instances" | default dict }}
+    {{- $fallbackMain := get $providerInstances "mainNetwork" }}
+    {{- if $fallbackMain }}
+      {{- $networks = append $networks $fallbackMain }}
+    {{- end }}
   {{- end }}
   {{- if hasKey $ic "additionalNetworks" }}
     {{- range $n := $ic.additionalNetworks }}
@@ -107,11 +113,18 @@ template: |
   {{- $tags := dig "tagURNs" (list) .provider }}
 
   {{- /* Optional string fields — go through get to survive missingkey=error. Fall back to
-         instanceClassDefaults from the discovery payload when the InstanceClass omits them. */ -}}
+         instanceClassDefaults from the discovery payload when the InstanceClass omits them.
+         resourcePool and datastore intentionally do NOT read from the InstanceClass under CAPI:
+         CAPV's overrideWithFailureDomainFunc rewrites both from the resolved DeploymentZone /
+         FailureDomain topology on every reconcile (pkg/services/vimmachine.go), so a value from
+         the InstanceClass would be a dead-write that never lands on the VM. Sourcing them from
+         the discovery defaults keeps the pre-DZ/FD fresh-install window (before ensure_failure_domains
+         has published the CRs) working without misleading operators into thinking VsphereInstanceClass
+         .{resourcePool,datastore} still tunes the placement. */ -}}
   {{- $template := get $ic "template" | default (get $icd "template") }}
-  {{- $datastore := get $ic "datastore" | default (get $icd "datastore") }}
+  {{- $datastore := get $icd "datastore" }}
   {{- $rootDiskSize := get $ic "rootDiskSize" | default 20 }}
-  {{- $rp := get $ic "resourcePool" | default (get $icd "resourcePoolPath") }}
+  {{- $rp := get $icd "resourcePoolPath" }}
 
   apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
   kind: VSphereMachineTemplate
@@ -120,6 +133,15 @@ template: |
       spec:
         template: {{ $template | quote }}
         server: {{ .provider.server | quote }}
+        {{- /* thumbprint pins the vCenter TLS certificate: CAPV's session code does
+               `insecure := thumbprint == ""` (pkg/session/session.go), so an unset thumbprint on
+               a non-dev vCenter silently disables TLS validation for every clone task. Falls back
+               to the empty string when the operator explicitly opted into providerClusterConfiguration
+               .provider.insecure: true. */ -}}
+        {{- $thumbprint := get .provider "thumbprint" }}
+        {{- if $thumbprint }}
+        thumbprint: {{ $thumbprint | quote }}
+        {{- end }}
         {{- /* datacenter + absolute folder are baseline: CAPV's `generateOverrideFunc` in
                pkg/services/vimmachine.go overrides them from the resolved VSphereDeploymentZone
                / VSphereFailureDomain topology when both CRs exist. If DZ/FD are missing at the

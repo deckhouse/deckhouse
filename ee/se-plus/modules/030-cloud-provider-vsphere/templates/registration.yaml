@@ -32,6 +32,14 @@ capiMachineTemplateAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1beta
 {{- $_ := set $vsphereValues "username" $providerClusterConfiguration.provider.username }}
 {{- $_ := set $vsphereValues "password" $providerClusterConfiguration.provider.password  }}
 {{- $_ := set $vsphereValues "insecure" $providerClusterConfiguration.provider.insecure }}
+{{- /* thumbprint (colon-separated SHA-1 of the vCenter server cert) is rendered into
+       VSphereCluster.spec.thumbprint and VSphereMachineTemplate.spec.template.spec.thumbprint,
+       so CAPV's session code (`insecure := thumbprint == ""`) can pin the certificate instead of
+       silently falling back to insecure. Optional — an empty value keeps the historical
+       insecure behaviour when the operator sets provider.insecure: true. */ -}}
+{{- if hasKey $providerClusterConfiguration.provider "thumbprint" }}
+  {{- $_ := set $vsphereValues "thumbprint" $providerClusterConfiguration.provider.thumbprint }}
+{{- end }}
 {{- $_ := set $vsphereValues "regionTagCategory" $providerClusterConfiguration.regionTagCategory }}
 {{- $_ := set $vsphereValues "zoneTagCategory" $providerClusterConfiguration.zoneTagCategory }}
 {{- $_ := set $vsphereValues "region" $providerClusterConfiguration.region }}

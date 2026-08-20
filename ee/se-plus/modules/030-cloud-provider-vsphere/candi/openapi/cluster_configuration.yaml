@@ -428,6 +428,18 @@ apiVersions:
             type: boolean
             description:  Set to `true` if vCenter has a self-signed certificate.
             x-doc-default: false
+          thumbprint:
+            type: string
+            pattern: '^([A-Fa-f0-9]{2}:){19}[A-Fa-f0-9]{2}$'
+            description: |
+              Colon-separated SHA-1 checksum of the vCenter server host certificate
+              (e.g. `AA:BB:CC:...:99`, 20 hex bytes).
+
+              Consumed by cluster-api-provider-vsphere: rendered into `VSphereCluster.spec.thumbprint`
+              and `VSphereMachineTemplate.spec.template.spec.thumbprint`, which CAPV's session code
+              uses to pin the TLS certificate (`pkg/session/session.go`, `insecure := thumbprint == ""`).
+              When both `thumbprint` and `insecure` are unset the CAPI-side session falls back to
+              `insecure` — which is not the intent on a production vCenter.
         required:
         - server
         - username
