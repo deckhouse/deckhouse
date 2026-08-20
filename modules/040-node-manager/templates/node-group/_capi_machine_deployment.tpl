@@ -35,6 +35,10 @@ metadata:
   {{- end }}
 spec:
   clusterName: {{ $context.Values.nodeManager.internal.cloudProvider.capiClusterName | quote }}
+  # Must stay non-zero: in the v1beta1 MachineSet minReadySeconds is int32+omitempty, so zero is
+  # indistinguishable from unset and the v1beta2 apply never converges, spinning MD<->MS forever.
+  # Drop once machinesets.cluster.x-k8s.io is stored as v1beta2.
+  minReadySeconds: 1
   selector: {}
   template:
     metadata:

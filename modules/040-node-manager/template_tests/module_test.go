@@ -708,6 +708,7 @@ metadata:
 spec:
   clusterName: static
   replicas: 0
+  minReadySeconds: 1
   strategy:
     type: RollingUpdate
     rollingUpdate:
@@ -2093,6 +2094,8 @@ internal:
 					Expect(md.Field("spec.template.spec.clusterName").String()).To(Equal("app"))
 					Expect(md.Field("spec.template.spec.bootstrap.dataSecretName").String()).To(Equal(d.templateName))
 					Expect(md.Field("spec.template.spec.infrastructureRef.name").String()).To(Equal(d.templateName))
+					// Must stay non-zero: zero is unrepresentable in the v1beta1 MachineSet.
+					Expect(md.Field("spec.minReadySeconds").Int()).To(Equal(int64(1)))
 
 					annotations := md.Field("metadata.annotations").Map()
 					Expect(annotations["cluster.x-k8s.io/cluster-api-autoscaler-node-group-min-size"].String()).To(Equal("4"))
@@ -2233,6 +2236,8 @@ internal:
 					Expect(md.Field("spec.template.spec.clusterName").String()).To(Equal("dvp"))
 					Expect(md.Field("spec.template.spec.bootstrap.dataSecretName").String()).To(Equal(d.templateName))
 					Expect(md.Field("spec.template.spec.infrastructureRef.name").String()).To(Equal(d.templateName))
+					// Must stay non-zero: zero is unrepresentable in the v1beta1 MachineSet.
+					Expect(md.Field("spec.minReadySeconds").Int()).To(Equal(int64(1)))
 
 					annotations := md.Field("metadata.annotations").Map()
 					Expect(annotations["cluster.x-k8s.io/cluster-api-autoscaler-node-group-min-size"].String()).To(Equal("4"))
