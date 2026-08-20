@@ -21,6 +21,8 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -29,6 +31,7 @@ import (
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 	_ "github.com/deckhouse/node-controller/internal/controller/nodeoperation"
 	"github.com/deckhouse/node-controller/internal/testenv"
+	"github.com/deckhouse/node-controller/internal/webhook"
 )
 
 var (
@@ -59,12 +62,14 @@ var _ = BeforeSuite(func() {
 	// the pair the cluster runs.
 	By("bootstrapping envtest with the NodeGroup, NodeConfig and NodeOperation CRDs")
 	var stop func()
-	suite, stop = testenv.StartSuite(GinkgoWriter,
+	suite, stop = testenv.StartSuiteWithWebhooks(GinkgoWriter,
 		[]func(*k8sruntime.Scheme) error{
 			deckhousev1.AddToScheme,
 			internalv1alpha1.AddToScheme,
 			v1alpha1.AddToScheme,
 		},
+		nodeConfigWebhookConfiguration(),
+		webhook.SetupWithManager,
 		testenv.CRDPaths(
 			testenv.WithNodeGroupCRDFile(),
 			testenv.WithNodeManager(testenv.NodeConfigCRDFile),
@@ -83,3 +88,39 @@ var _ = JustAfterEach(func() {
 		testenv.KubectlDumpNodeObjects(GinkgoWriter, suite.Env, suite.Config, CurrentSpecReport().LeafNodeText)
 	}
 })
+
+// nodeConfigWebhookConfiguration mirrors the NodeConfig rule of
+// modules/040-node-manager/templates/node-controller/webhook.yaml, minus its
+// matchConditions: the controller has to survive the strictest deployment of
+// this webhook, not only one that carves it out.
+func nodeConfigWebhookConfiguration() []*admissionregistrationv1.ValidatingWebhookConfiguration {
+	failurePolicy := admissionregistrationv1.Fail
+	sideEffects := admissionregistrationv1.SideEffectClassNone
+	// envtest joins host:port and path with a slash, so no leading slash here.
+	path := "validate-internal-deckhouse-io-v1alpha1-nodeconfig"
+
+	return []*admissionregistrationv1.ValidatingWebhookConfiguration{{
+		ObjectMeta: metav1.ObjectMeta{Name: "node-controller-nodeconfig-envtest"},
+		Webhooks: []admissionregistrationv1.ValidatingWebhook{{
+			Name:                    "nodeconfig.validation.node-controller.deckhouse.io",
+			AdmissionReviewVersions: []string{"v1"},
+			FailurePolicy:           &failurePolicy,
+			SideEffects:             &sideEffects,
+			ClientConfig: admissionregistrationv1.WebhookClientConfig{
+				Service: &admissionregistrationv1.ServiceReference{
+					Name:      "node-controller-webhook",
+					Namespace: "d8-cloud-instance-manager",
+					Path:      &path,
+				},
+			},
+			Rules: []admissionregistrationv1.RuleWithOperations{{
+				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Update},
+				Rule: admissionregistrationv1.Rule{
+					APIGroups:   []string{"internal.deckhouse.io"},
+					APIVersions: []string{"v1alpha1"},
+					Resources:   []string{"nodeconfigs"},
+				},
+			}},
+		}},
+	}}
+}

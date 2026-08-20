@@ -1103,6 +1103,52 @@ var _ = Describe("NodeConfig controller", func() {
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
+	// User story: As a cluster operator, I want a machine I installed by hand on
+	// DHCP to be configured by the cluster, so that a NodeConfig naming no
+	// network at all is not frozen out by the webhook that guards one.
+	It("configures a static node that published no network of its own", func(ctx context.Context) {
+		ngName := testenv.UniqueName("static-imm")
+		testenv.CreateImmutableNodeGroup(ctx, k8sClient, ngName, func(ng *deckhousev1.NodeGroup) {
+			ng.Spec.NodeType = deckhousev1.NodeTypeStatic
+			ng.Spec.CloudInstances = nil
+		})
+		nodeName := testenv.UniqueName("static")
+		createNode(ctx, nodeName, ngName)
+
+		// The shape the NodeConfigTemplate hands out: network and storage are
+		// blanked, and a DHCP machine fills in neither.
+		published := &internalv1alpha1.NodeConfig{
+			ObjectMeta: metav1.ObjectMeta{Name: nodeName},
+			Spec: internalv1alpha1.NodeSpec{
+				NodeName: nodeName,
+				OSImage:  internalv1alpha1.OSImage{Digest: testOSImageDigest},
+			},
+		}
+		Expect(k8sClient.Create(ctx, published)).To(Succeed())
+		DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, published) })
+
+		By("letting the controller render over it, admission and all")
+		Eventually(func(g Gomega) {
+			nc := getNodeConfig(ctx, g, nodeName)
+
+			g.Expect(nc.Spec.APIServerEndpoints).To(ConsistOf(apiServerEndpoints))
+			g.Expect(nc.Spec.Kubelet.CACert).NotTo(BeEmpty(), "the node never got its kubelet CA")
+			g.Expect(nc.Spec.Network.Hostname).To(Equal(nodeName))
+			g.Expect(nc.Spec.Network.Interfaces).To(ConsistOf(
+				internalv1alpha1.NetworkInterface{Name: "eth0", DHCP: true}))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		By("still refusing an edit of the network the machine now owns")
+		nc := &internalv1alpha1.NodeConfig{}
+		Expect(k8sClient.Get(ctx, types.NamespacedName{Name: nodeName}, nc)).To(Succeed())
+		nc.Spec.Network.Interfaces = []internalv1alpha1.NetworkInterface{{
+			Name: "eth9", Addresses: []string{"10.9.9.9/24"},
+		}}
+		err := k8sClient.Update(ctx, nc)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("spec.network is written on the machine"))
+	})
+
 	// User story: As a cluster operator, I want the first master to keep working
 	// after Deckhouse is installed, so that installing the very thing that
 	// manages the cluster does not take its control plane down.

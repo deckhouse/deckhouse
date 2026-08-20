@@ -21,17 +21,21 @@ package apiserver
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/wait"
 	endpointsopenapi "k8s.io/apiserver/pkg/endpoints/openapi"
 	"k8s.io/apiserver/pkg/registry/rest"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
 	utilcompatibility "k8s.io/apiserver/pkg/util/compatibility"
+	"k8s.io/klog/v2"
 	openapicommon "k8s.io/kube-openapi/pkg/common"
 	"k8s.io/kube-openapi/pkg/util"
 	"k8s.io/kube-openapi/pkg/validation/spec"
@@ -78,10 +82,14 @@ type Options struct {
 	Storage  rest.Storage
 }
 
+// configRetryInterval is how long a failed startup lookup waits before the next
+// attempt. A variable so the test does not have to sit through it.
+var configRetryInterval = 5 * time.Second
+
 // Run starts the aggregated API server for internal.deckhouse.io/v1alpha1 and
 // blocks until ctx is done.
 func Run(ctx context.Context, opts Options) error {
-	cfg, err := newConfig(opts)
+	cfg, err := newConfig(ctx, opts)
 	if err != nil {
 		return fmt.Errorf("build apiserver config: %w", err)
 	}
@@ -95,8 +103,10 @@ func Run(ctx context.Context, opts Options) error {
 }
 
 // newConfig builds a serving config with delegated authentication and
-// authorization against the cluster kube-apiserver.
-func newConfig(opts Options) (*genericapiserver.RecommendedConfig, error) {
+// authorization against the cluster kube-apiserver. Both look their
+// configuration up in the cluster once, and the kube-apiserver is not answering
+// yet while the pod starts, so a failed attempt is retried until ctx is done.
+func newConfig(ctx context.Context, opts Options) (*genericapiserver.RecommendedConfig, error) {
 	serving := genericoptions.NewSecureServingOptions().WithLoopback()
 	serving.BindPort = opts.BindPort
 	serving.ServerCert.CertKey = genericoptions.CertKey{
@@ -104,6 +114,30 @@ func newConfig(opts Options) (*genericapiserver.RecommendedConfig, error) {
 		KeyFile:  opts.KeyFile,
 	}
 
+	var (
+		cfg     *genericapiserver.RecommendedConfig
+		lastErr error
+	)
+	// ApplyTo keeps the listener it opens on serving, so the next attempt takes
+	// that one over instead of asking for the port again.
+	err := wait.PollUntilContextCancel(ctx, configRetryInterval, true, func(context.Context) (bool, error) {
+		cfg, lastErr = applyOptions(serving)
+		if lastErr != nil {
+			klog.ErrorS(lastErr, "the aggregated API server cannot build its config yet; retrying")
+			return false, nil
+		}
+		return true, nil
+	})
+	if err != nil {
+		if lastErr != nil {
+			return nil, lastErr
+		}
+		return nil, err
+	}
+	return cfg, nil
+}
+
+func applyOptions(serving *genericoptions.SecureServingOptionsWithLoopback) (*genericapiserver.RecommendedConfig, error) {
 	cfg := genericapiserver.NewRecommendedConfig(Codecs)
 	cfg.EffectiveVersion = utilcompatibility.DefaultBuildEffectiveVersion()
 
@@ -129,7 +163,7 @@ func newConfig(opts Options) (*genericapiserver.RecommendedConfig, error) {
 // pair of virtual resources nobody runs `kubectl explain` against.
 func newServer(cfg *genericapiserver.RecommendedConfig, resource string, storage rest.Storage) (*genericapiserver.GenericAPIServer, error) {
 	cfg.OpenAPIV3Config = genericapiserver.DefaultOpenAPIV3Config(
-		openAPIDefinitions(storage), endpointsopenapi.NewDefinitionNamer(Scheme))
+		openAPIDefinitions(), endpointsopenapi.NewDefinitionNamer(Scheme))
 
 	srv, err := cfg.Complete().New(serverName, genericapiserver.NewEmptyDelegate())
 	if err != nil {
@@ -146,19 +180,23 @@ func newServer(cfg *genericapiserver.RecommendedConfig, resource string, storage
 	return srv, nil
 }
 
-// openAPIDefinitions describes the served type as a free-form object: the
-// resource is virtual and has no generated openapi definitions. Running
-// openapi-gen over the api package would give kubectl explain a real schema.
-func openAPIDefinitions(storage rest.Storage) openapicommon.GetOpenAPIDefinitions {
-	definitions := map[string]openapicommon.OpenAPIDefinition{
-		util.GetCanonicalTypeName(storage.New()): {
-			Schema: spec.Schema{
-				SchemaProps: spec.SchemaProps{Type: spec.StringOrArray{"object"}},
-				VendorExtensible: spec.VendorExtensible{
-					Extensions: spec.Extensions{"x-kubernetes-preserve-unknown-fields": true},
-				},
+// openAPIDefinitions describes every type this server can serve as a free-form
+// object: the resources are virtual and have no generated openapi definitions.
+// The list, the Status and the discovery types are served too — a route whose
+// model has no definition leaves the whole group's spec empty.
+func openAPIDefinitions() openapicommon.GetOpenAPIDefinitions {
+	freeForm := openapicommon.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{Type: spec.StringOrArray{"object"}},
+			VendorExtensible: spec.VendorExtensible{
+				Extensions: spec.Extensions{"x-kubernetes-preserve-unknown-fields": true},
 			},
 		},
+	}
+
+	definitions := map[string]openapicommon.OpenAPIDefinition{}
+	for _, known := range Scheme.AllKnownTypes() {
+		definitions[util.GetCanonicalTypeName(reflect.New(known).Interface())] = freeForm
 	}
 
 	return func(openapicommon.ReferenceCallback) map[string]openapicommon.OpenAPIDefinition {

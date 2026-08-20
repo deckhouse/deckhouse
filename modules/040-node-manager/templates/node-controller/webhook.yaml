@@ -115,6 +115,13 @@ webhooks:
   failurePolicy: Fail
   matchPolicy: Equivalent
   sideEffects: None
+  matchConditions:
+  # This webhook freezes what only the machine knows, against an operator
+  # editing it. node-controller renders those same fields onto every node it
+  # manages, and a denial of its own write is permanent: the node is never
+  # configured again. The same carve-out validation.yaml makes for kubelets.
+  - name: exclude-node-controller
+    expression: 'request.userInfo.username != "system:serviceaccount:d8-cloud-instance-manager:node-controller"'
   rules:
   - apiGroups:
     - internal.deckhouse.io

@@ -23,6 +23,8 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -90,10 +92,19 @@ func (s *TemplateStorage) Get(ctx context.Context, name string, _ *metav1.GetOpt
 	return s.render(ctx, ng, tokens[ng.Name])
 }
 
-// List renders a template for every group that has hand-installed machines. A
-// group that cannot be rendered fails the whole list: the same fail-closed rule
-// the render itself follows, a half-list reads as "this group needs no machines".
-func (s *TemplateStorage) List(ctx context.Context, _ *metainternalversion.ListOptions) (k8sruntime.Object, error) {
+// List renders a template for every group that has hand-installed machines and
+// that the request asks for. A group that cannot be rendered fails the whole
+// list: the same fail-closed rule the render itself follows, a half-list reads
+// as "this group needs no machines".
+func (s *TemplateStorage) List(ctx context.Context, opts *metainternalversion.ListOptions) (k8sruntime.Object, error) {
+	if opts == nil {
+		opts = &metainternalversion.ListOptions{}
+	}
+	wanted, err := templateFilter(opts)
+	if err != nil {
+		return nil, err
+	}
+
 	groups := &v1.NodeGroupList{}
 	if err := s.client.List(ctx, groups); err != nil {
 		return nil, fmt.Errorf("list NodeGroups: %w", err)
@@ -107,8 +118,13 @@ func (s *TemplateStorage) List(ctx context.Context, _ *metainternalversion.ListO
 	list := &templatesv1alpha1.NodeConfigTemplateList{}
 	for i := range groups.Items {
 		ng := &groups.Items[i]
-		if !machineOwnedConfig(ng) {
+		if !machineOwnedConfig(ng) || !wanted(ng.Name) {
 			continue
+		}
+		// The limit truncates: this collection is rendered whole on every read,
+		// so there is no revision to hand out a continue token against.
+		if opts.Limit > 0 && int64(len(list.Items)) >= opts.Limit {
+			break
 		}
 		template, err := s.render(ctx, ng, tokens[ng.Name])
 		if err != nil {
@@ -117,6 +133,30 @@ func (s *TemplateStorage) List(ctx context.Context, _ *metainternalversion.ListO
 		list.Items = append(list.Items, *template)
 	}
 	return list, nil
+}
+
+// templateFilter turns the request's selectors into a test run before the
+// render: a template costs a live render and carries a token that joins
+// machines, so a group the client excluded must never be built. A template
+// carries no labels, and metadata.name is the only field it can be picked by.
+func templateFilter(opts *metainternalversion.ListOptions) (func(name string) bool, error) {
+	label := opts.LabelSelector
+	if label == nil {
+		label = labels.Everything()
+	}
+	field := opts.FieldSelector
+	if field == nil {
+		field = fields.Everything()
+	}
+	for _, req := range field.Requirements() {
+		if req.Field != "metadata.name" {
+			return nil, apierrors.NewBadRequest(fmt.Sprintf(
+				"cannot list %s by %q: only metadata.name is supported", templatesv1alpha1.NodeConfigTemplateResource, req.Field))
+		}
+	}
+	return func(name string) bool {
+		return label.Matches(labels.Set(nil)) && field.Matches(fields.Set{"metadata.name": name})
+	}, nil
 }
 
 // render fills in the cluster's half of the config and blanks the machine's:
@@ -130,9 +170,11 @@ func (s *TemplateStorage) render(ctx context.Context, ng *v1.NodeGroup, bootstra
 	}
 
 	// Without it kubelet has nothing to present on first contact, and the
-	// operator has nowhere else to take a token from.
+	// operator has nowhere else to take a token from. The cluster issues one on
+	// its own, so this is a "not yet", not a broken request.
 	if bootstrapToken == "" {
-		return nil, fmt.Errorf("no valid bootstrap token for NodeGroup %s", ng.Name)
+		return nil, apierrors.NewServiceUnavailable(fmt.Sprintf(
+			"NodeGroup %s has no valid bootstrap token yet; read this again once the cluster has issued one", ng.Name))
 	}
 	spec.Kubelet.BootstrapToken = bootstrapToken
 

@@ -42,6 +42,14 @@ import (
 	"github.com/deckhouse/node-controller/internal/testenv"
 )
 
+// renderedStorage is what renderSpec always puts in the desired spec: the guess
+// the cluster makes when nothing else names a disk.
+func renderedStorage() internalv1alpha1.Storage {
+	return internalv1alpha1.Storage{Disk: internalv1alpha1.Disk{
+		DiskSelector: &internalv1alpha1.DiskSelector{Size: systemDiskSelectorSize},
+	}}
+}
+
 // TestKeepBootstrapOnlyFields covers the first master's first day-2 render:
 // only fields with no answer in the cluster survive the wholesale patch.
 // Registry, serverTLSBootstrap and resourceReservation deliberately do NOT.
@@ -85,17 +93,17 @@ func TestKeepBootstrapOnlyFields(t *testing.T) {
 		{
 			name:       "worker with nothing to keep is left as rendered",
 			existing:   internalv1alpha1.NodeSpec{},
-			expStorage: internalv1alpha1.Storage{},
+			expStorage: renderedStorage(),
 		},
 		{
-			// A selector alone is a field this controller renders itself, so it
-			// is re-rendered rather than kept — otherwise the threshold could
+			// The guess this controller renders itself is not the operator's, so
+			// it is re-rendered rather than kept — otherwise the threshold could
 			// never be corrected on a node that already exists.
-			name: "a selector without mounts is re-rendered",
+			name: "a selector equal to the rendered guess is re-rendered",
 			existing: internalv1alpha1.NodeSpec{
-				Storage: internalv1alpha1.Storage{Disk: internalv1alpha1.Disk{DiskSelector: &internalv1alpha1.DiskSelector{Size: ">=2Gi"}}},
+				Storage: renderedStorage(),
 			},
-			expStorage: internalv1alpha1.Storage{},
+			expStorage: renderedStorage(),
 		},
 		{
 			// A statically addressed machine: the render must not put it back
@@ -110,7 +118,7 @@ func TestKeepBootstrapOnlyFields(t *testing.T) {
 					}},
 				},
 			},
-			expStorage: internalv1alpha1.Storage{},
+			expStorage: renderedStorage(),
 			expNetwork: internalv1alpha1.Network{
 				Hostname: "master-0",
 				Interfaces: []internalv1alpha1.NetworkInterface{{
@@ -126,7 +134,7 @@ func TestKeepBootstrapOnlyFields(t *testing.T) {
 					Interfaces: []internalv1alpha1.NetworkInterface{{Name: "eth0", DHCP: true}},
 				},
 			},
-			expStorage: internalv1alpha1.Storage{},
+			expStorage: renderedStorage(),
 			expNetwork: internalv1alpha1.Network{Hostname: "master-0", Interfaces: []internalv1alpha1.NetworkInterface{{Name: "eth0", DHCP: true}}},
 		},
 		{
@@ -164,6 +172,7 @@ func TestKeepBootstrapOnlyFields(t *testing.T) {
 			desired := internalv1alpha1.NodeSpec{
 				NodeName: "master-0",
 				Registry: rendered,
+				Storage:  renderedStorage(),
 				Network: internalv1alpha1.Network{
 					Hostname:   "master-0",
 					Interfaces: []internalv1alpha1.NetworkInterface{{Name: "eth0", DHCP: true}},
@@ -782,6 +791,7 @@ func TestRenderedSpecPassesTheAgentSchema(t *testing.T) {
 		})
 	}
 }
+
 // The rendered network is a guess — eth0 with DHCP — so a machine that named
 // its own interfaces keeps them. A machine that named none keeps the guess:
 // blanking the section leaves the node without a network after a reboot.
@@ -842,4 +852,50 @@ func TestKeepBootstrapOnlyFieldsKeepsAResolverOnlyNetwork(t *testing.T) {
 
 	require.Equal(t, []string{"10.0.0.10"}, desired.Network.DNS.Servers,
 		"the resolvers the machine was given were dropped")
+	// The machine named no interfaces, so the rendered one has to stand: the OS
+	// renders its network from this spec, and one with no interface at all is a
+	// node with no address after a reboot.
+	require.Equal(t, []internalv1alpha1.NetworkInterface{{Name: "eth0", DHCP: true}}, desired.Network.Interfaces)
+	require.Equal(t, "master-0", desired.Network.Hostname)
+}
+
+// A worker installed by hand has no etcd mount, so the document the operator
+// merges into the template names nothing but the disk they picked. The node
+// publishes it once and has no way to publish it again, so a render that
+// overwrites the selector loses that disk for good.
+func TestKeepBootstrapOnlyFieldsKeepsAnOperatorWrittenDiskSelector(t *testing.T) {
+	rendered := internalv1alpha1.Storage{Disk: internalv1alpha1.Disk{
+		DiskSelector: &internalv1alpha1.DiskSelector{Size: systemDiskSelectorSize},
+	}}
+	operatorWritten := internalv1alpha1.Storage{Disk: internalv1alpha1.Disk{
+		DiskSelector: &internalv1alpha1.DiskSelector{Serial: "S3Z8NB0K700001"},
+	}}
+
+	tests := []struct {
+		name     string
+		existing internalv1alpha1.Storage
+		exp      internalv1alpha1.Storage
+	}{
+		{
+			name:     "the disk the operator named survives the render",
+			existing: operatorWritten,
+			exp:      operatorWritten,
+		},
+		{
+			name:     "a node carrying nothing but the rendered guess keeps being rendered",
+			existing: internalv1alpha1.Storage{},
+			exp:      rendered,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			desired := internalv1alpha1.NodeSpec{Storage: *rendered.DeepCopy()}
+			existing := internalv1alpha1.NodeSpec{Storage: tc.existing}
+
+			keepBootstrapOnlyFields(&desired, &existing, nil)
+
+			require.Equal(t, tc.exp, desired.Storage)
+		})
+	}
 }

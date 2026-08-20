@@ -188,9 +188,10 @@ func main() {
 			Resource: templatesv1alpha1.NodeConfigTemplateResource,
 			Storage:  nodebootstrap.NewTemplateStorage(directClient),
 		})
+		// Not fatal: this pod also serves the CRD conversion webhook of NodeGroup
+		// and Instance, so exiting here would break cluster-wide reads of both.
 		if err != nil {
 			setupLog.Error(err, "problem running aggregated API server")
-			os.Exit(1)
 		}
 	}()
 
