@@ -31,9 +31,10 @@ limitations under the License.
 // The FilterFunc keeps only MachineDeployments whose spec.replicas is still owned
 // by the legacy field manager (everything else is dropped from the snapshot by
 // returning a nil result), so the handler's snapshots contain exactly the objects
-// that must be fixed. For each of them it migrates ownership to "deckhouse-hook"
-// by rewriting metadata.managedFields directly (the client-go CSA->SSA upgrade
-// primitive), which drops the legacy manager WITHOUT touching spec.replicas.
+// that must be fixed. For each of them it moves spec.replicas ownership to
+// "deckhouse-hook" by editing metadata.managedFields directly — dropping only that
+// one field from the legacy manager and leaving the replica value and every other
+// field the legacy manager owns untouched.
 //
 // A server-side apply cannot do this: SSA conflict detection is value-based
 // (structured-merge-diff computes conflicts as ownedFields ∩ (Modified ∪ Added)),
@@ -64,9 +65,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	apitypes "k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/util/csaupgrade"
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -233,32 +232,45 @@ func replicasOwnedByLegacyManager(managedFields []metav1.ManagedFieldsEntry) boo
 	return false
 }
 
-// claimReplicasOwnership migrates ownership of every field still tracked by the
-// legacy "deckhouse-controller" Update manager (spec.replicas in particular) to
-// the "deckhouse-hook" Apply manager, without changing any field value, so nelm's
-// adopt-deckhouse-controller-fields gate no longer prunes them.
+// claimReplicasOwnership moves ownership of spec.replicas — and only
+// spec.replicas — off the legacy "deckhouse-controller" field manager onto
+// "deckhouse-hook", without changing the replica value, so nelm's
+// adopt-deckhouse-controller-fields gate no longer prunes it. Any other field the
+// legacy manager happens to own is left untouched.
 //
-// It rewrites metadata.managedFields directly via the client-go CSA->SSA upgrade
-// primitive rather than a server-side apply, because a forced apply that
-// re-applies spec.replicas at its current value does NOT strip the legacy owner:
-// SSA conflict detection only fires for fields an operation adds or modifies, so
-// an unchanged value keeps its existing owner (see the package comment). The
-// upgrade patch pins metadata.resourceVersion, so a concurrent write makes the
-// patch fail with a conflict rather than clobber it; the next converge retries.
+// This is done by rewriting metadata.managedFields directly rather than with a
+// server-side apply, because a forced apply that re-applies spec.replicas at its
+// current value does NOT strip the legacy owner: SSA conflict detection only fires
+// for fields an operation adds or modifies, so re-applying an unchanged value adds
+// a "deckhouse-hook" co-owner but keeps the legacy owner in place (see the package
+// comment). The patch pins metadata.resourceVersion, so a concurrent write makes
+// it fail with a conflict rather than clobber that write; the next converge
+// retries.
 func claimReplicasOwnership(ctx context.Context, dyn dynamic.Interface, gvr schema.GroupVersionResource, name string) error {
 	live, err := dyn.Resource(gvr).Namespace(machineDeploymentNamespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
 
-	patch, err := csaupgrade.UpgradeManagedFieldsPatch(live, sets.New(legacyFieldManager), hookFieldManager)
+	newManagedFields, changed, err := migrateReplicasOwnerToHook(live.GetManagedFields(), gvr.GroupVersion().String())
 	if err != nil {
 		return err
 	}
-	if patch == nil {
-		// Ownership is already off the legacy manager (e.g. a concurrent run or a
+	if !changed {
+		// spec.replicas is already off the legacy manager (a concurrent run or a
 		// prior converge migrated it) — nothing to do.
 		return nil
+	}
+
+	// Replace the whole managedFields array and pin resourceVersion. resourceVersion
+	// is a "replace" (not "test") so a stale object is rejected by etcd with a 409
+	// conflict instead of by the apiserver with an invalid-request error.
+	patch, err := json.Marshal([]map[string]any{
+		{"op": "replace", "path": "/metadata/managedFields", "value": newManagedFields},
+		{"op": "replace", "path": "/metadata/resourceVersion", "value": live.GetResourceVersion()},
+	})
+	if err != nil {
+		return err
 	}
 
 	_, err = dyn.Resource(gvr).Namespace(machineDeploymentNamespace).Patch(
@@ -267,4 +279,156 @@ func claimReplicasOwnership(ctx context.Context, dyn dynamic.Interface, gvr sche
 	)
 
 	return err
+}
+
+// migrateReplicasOwnerToHook returns a copy of managedFields with spec.replicas
+// removed from the legacy "deckhouse-controller" manager (dropping any entry that
+// is left owning nothing) and owned by "deckhouse-hook" instead. Every other field
+// and manager is preserved verbatim. The bool reports whether anything changed; if
+// not, the original slice is returned and no patch is needed. Only entries on the
+// main resource (empty subresource) are considered.
+func migrateReplicasOwnerToHook(entries []metav1.ManagedFieldsEntry, apiVersion string) ([]metav1.ManagedFieldsEntry, bool, error) {
+	out := make([]metav1.ManagedFieldsEntry, 0, len(entries))
+	changed := false
+
+	for _, entry := range entries {
+		if entry.Manager == legacyFieldManager && entry.Subresource == "" && entry.FieldsV1 != nil {
+			removed, newRaw, err := removeReplicasFromFields(entry.FieldsV1.Raw)
+			if err != nil {
+				return nil, false, err
+			}
+			if removed {
+				changed = true
+				if len(newRaw) == 0 {
+					// The legacy entry owned nothing but spec.replicas — drop it.
+					continue
+				}
+				// entry is a copy from range; repointing FieldsV1 does not mutate the
+				// caller's slice (the raw bytes are never modified in place).
+				entry.FieldsV1 = &metav1.FieldsV1{Raw: newRaw}
+			}
+		}
+		out = append(out, entry)
+	}
+
+	if !changed {
+		return entries, false, nil
+	}
+
+	if err := ensureHookOwnsReplicas(&out, apiVersion); err != nil {
+		return nil, false, err
+	}
+
+	return out, true, nil
+}
+
+// removeReplicasFromFields removes the f:spec/f:replicas path from a FieldsV1 blob.
+// It returns whether the path was present, and the re-encoded blob with empty
+// parents pruned (nil when the whole blob is left empty).
+func removeReplicasFromFields(raw []byte) (bool, []byte, error) {
+	top := map[string]json.RawMessage{}
+	if err := json.Unmarshal(raw, &top); err != nil {
+		return false, nil, err
+	}
+
+	specRaw, ok := top["f:spec"]
+	if !ok {
+		return false, raw, nil
+	}
+
+	spec := map[string]json.RawMessage{}
+	if err := json.Unmarshal(specRaw, &spec); err != nil {
+		return false, nil, err
+	}
+	if _, ok := spec["f:replicas"]; !ok {
+		return false, raw, nil
+	}
+
+	delete(spec, "f:replicas")
+	if len(spec) == 0 {
+		delete(top, "f:spec")
+	} else {
+		newSpec, err := json.Marshal(spec)
+		if err != nil {
+			return false, nil, err
+		}
+		top["f:spec"] = newSpec
+	}
+
+	if len(top) == 0 {
+		return true, nil, nil
+	}
+
+	newRaw, err := json.Marshal(top)
+	if err != nil {
+		return false, nil, err
+	}
+
+	return true, newRaw, nil
+}
+
+// ensureHookOwnsReplicas makes the "deckhouse-hook" manager own f:spec/f:replicas:
+// it adds the path to the first existing deckhouse-hook entry on the main resource,
+// or appends a new Update entry when there is none. Update mirrors the entry that
+// set_replicas_on_machine_deployment.go produces and that nelm already leaves
+// alone.
+func ensureHookOwnsReplicas(entries *[]metav1.ManagedFieldsEntry, apiVersion string) error {
+	for i := range *entries {
+		entry := &(*entries)[i]
+		if entry.Manager != hookFieldManager || entry.Subresource != "" || entry.FieldsV1 == nil {
+			continue
+		}
+
+		added, newRaw, err := addReplicasToFields(entry.FieldsV1.Raw)
+		if err != nil {
+			return err
+		}
+		if added {
+			entry.FieldsV1 = &metav1.FieldsV1{Raw: newRaw}
+		}
+		return nil
+	}
+
+	*entries = append(*entries, metav1.ManagedFieldsEntry{
+		Manager:    hookFieldManager,
+		Operation:  metav1.ManagedFieldsOperationUpdate,
+		APIVersion: apiVersion,
+		FieldsType: "FieldsV1",
+		FieldsV1:   &metav1.FieldsV1{Raw: []byte(`{"f:spec":{"f:replicas":{}}}`)},
+	})
+
+	return nil
+}
+
+// addReplicasToFields adds the f:spec/f:replicas path to a FieldsV1 blob, reporting
+// whether it had to change anything (it is a no-op when the path is already there).
+func addReplicasToFields(raw []byte) (bool, []byte, error) {
+	top := map[string]json.RawMessage{}
+	if err := json.Unmarshal(raw, &top); err != nil {
+		return false, nil, err
+	}
+
+	spec := map[string]json.RawMessage{}
+	if specRaw, ok := top["f:spec"]; ok {
+		if err := json.Unmarshal(specRaw, &spec); err != nil {
+			return false, nil, err
+		}
+	}
+	if _, ok := spec["f:replicas"]; ok {
+		return false, raw, nil
+	}
+
+	spec["f:replicas"] = json.RawMessage(`{}`)
+	newSpec, err := json.Marshal(spec)
+	if err != nil {
+		return false, nil, err
+	}
+	top["f:spec"] = newSpec
+
+	newRaw, err := json.Marshal(top)
+	if err != nil {
+		return false, nil, err
+	}
+
+	return true, newRaw, nil
 }

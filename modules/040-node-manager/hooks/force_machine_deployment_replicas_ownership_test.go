@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"encoding/json"
 	"sync"
 	"testing"
 
@@ -234,4 +235,151 @@ func TestReplicasOwnedByLegacyManager(t *testing.T) {
 			}
 		})
 	}
+}
+
+// specFieldOwned reports whether the (manager, subresource) entry owns
+// f:spec/<field> in its managed fields.
+func specFieldOwned(entries []metav1.ManagedFieldsEntry, manager, subresource, field string) bool {
+	for _, e := range entries {
+		if e.Manager != manager || e.Subresource != subresource || e.FieldsV1 == nil {
+			continue
+		}
+		var top map[string]json.RawMessage
+		if json.Unmarshal(e.FieldsV1.Raw, &top) != nil {
+			continue
+		}
+		specRaw, ok := top["f:spec"]
+		if !ok {
+			continue
+		}
+		var spec map[string]json.RawMessage
+		if json.Unmarshal(specRaw, &spec) != nil {
+			continue
+		}
+		if _, ok := spec[field]; ok {
+			return true
+		}
+	}
+	return false
+}
+
+// managerEntries counts the entries owned by the (manager, subresource) pair.
+func managerEntries(entries []metav1.ManagedFieldsEntry, manager, subresource string) int {
+	n := 0
+	for _, e := range entries {
+		if e.Manager == manager && e.Subresource == subresource {
+			n++
+		}
+	}
+	return n
+}
+
+func TestMigrateReplicasOwnerToHook(t *testing.T) {
+	const apiVersion = "machine.sapcloud.io/v1alpha1"
+
+	t.Run("legacy owns only spec.replicas, no hook entry", func(t *testing.T) {
+		in := []metav1.ManagedFieldsEntry{
+			ownerManagedField(legacyFieldManager, "", `{"f:spec":{"f:replicas":{}}}`),
+		}
+
+		out, changed, err := migrateReplicasOwnerToHook(in, apiVersion)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !changed {
+			t.Fatal("expected changed=true")
+		}
+		if managerEntries(out, legacyFieldManager, "") != 0 {
+			t.Errorf("legacy entry must be dropped when it owned only spec.replicas, got %d", managerEntries(out, legacyFieldManager, ""))
+		}
+		if !specFieldOwned(out, hookFieldManager, "", "f:replicas") {
+			t.Error("hook manager must own spec.replicas")
+		}
+		// The fabricated hook entry must be a well-formed Update entry.
+		for _, e := range out {
+			if e.Manager == hookFieldManager {
+				if e.Operation != metav1.ManagedFieldsOperationUpdate {
+					t.Errorf("hook entry operation = %v, want Update", e.Operation)
+				}
+				if e.APIVersion != apiVersion {
+					t.Errorf("hook entry apiVersion = %q, want %q", e.APIVersion, apiVersion)
+				}
+			}
+		}
+	})
+
+	t.Run("legacy owns other spec fields too, only replicas is moved", func(t *testing.T) {
+		in := []metav1.ManagedFieldsEntry{
+			ownerManagedField(legacyFieldManager, "", `{"f:spec":{"f:minReadySeconds":{},"f:replicas":{}}}`),
+		}
+
+		out, changed, err := migrateReplicasOwnerToHook(in, apiVersion)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !changed {
+			t.Fatal("expected changed=true")
+		}
+		if specFieldOwned(out, legacyFieldManager, "", "f:replicas") {
+			t.Error("legacy manager must no longer own spec.replicas")
+		}
+		if !specFieldOwned(out, legacyFieldManager, "", "f:minReadySeconds") {
+			t.Error("legacy manager must keep spec.minReadySeconds")
+		}
+		if !specFieldOwned(out, hookFieldManager, "", "f:replicas") {
+			t.Error("hook manager must own spec.replicas")
+		}
+	})
+
+	t.Run("existing hook entry gains replicas, legacy entry dropped", func(t *testing.T) {
+		in := []metav1.ManagedFieldsEntry{
+			ownerManagedField(hookFieldManager, "", `{"f:spec":{"f:minReadySeconds":{}}}`),
+			ownerManagedField(legacyFieldManager, "", `{"f:spec":{"f:replicas":{}}}`),
+		}
+
+		out, changed, err := migrateReplicasOwnerToHook(in, apiVersion)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !changed {
+			t.Fatal("expected changed=true")
+		}
+		if managerEntries(out, hookFieldManager, "") != 1 {
+			t.Errorf("expected replicas merged into the existing hook entry, got %d hook entries", managerEntries(out, hookFieldManager, ""))
+		}
+		if managerEntries(out, legacyFieldManager, "") != 0 {
+			t.Error("legacy entry must be dropped")
+		}
+		if !specFieldOwned(out, hookFieldManager, "", "f:replicas") || !specFieldOwned(out, hookFieldManager, "", "f:minReadySeconds") {
+			t.Error("hook manager must own both spec.replicas and spec.minReadySeconds")
+		}
+	})
+
+	t.Run("already migrated is a no-op", func(t *testing.T) {
+		in := []metav1.ManagedFieldsEntry{
+			ownerManagedField(hookFieldManager, "", `{"f:spec":{"f:replicas":{}}}`),
+		}
+
+		_, changed, err := migrateReplicasOwnerToHook(in, apiVersion)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if changed {
+			t.Error("expected changed=false when the legacy manager does not own spec.replicas")
+		}
+	})
+
+	t.Run("legacy owns replicas only on the status subresource is untouched", func(t *testing.T) {
+		in := []metav1.ManagedFieldsEntry{
+			ownerManagedField(legacyFieldManager, "status", `{"f:status":{"f:replicas":{}}}`),
+		}
+
+		_, changed, err := migrateReplicasOwnerToHook(in, apiVersion)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if changed {
+			t.Error("expected changed=false for a status-subresource entry")
+		}
+	})
 }
