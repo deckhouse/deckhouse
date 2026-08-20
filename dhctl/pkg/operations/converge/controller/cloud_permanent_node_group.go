@@ -20,7 +20,6 @@ import (
 
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
@@ -107,7 +106,7 @@ func (c *CloudPermanentNodeGroupController) beforeUpdateNodes(*context.Context) 
 	return nil
 }
 
-func (c *CloudPermanentNodeGroupController) updateNode(ctx *context.Context, nodeName string) error {
+func (c *CloudPermanentNodeGroupController) updateNode(ctx *context.Context, nodeName string, nodeIndex int) error {
 	metaConfig, err := ctx.MetaConfig()
 	if err != nil {
 		return err
@@ -117,12 +116,6 @@ func (c *CloudPermanentNodeGroupController) updateNode(ctx *context.Context, nod
 	var nodeState []byte
 	if !ctx.CommanderMode() {
 		nodeState = c.state.State[nodeName]
-	}
-
-	nodeIndex, err := config.GetIndexFromNodeName(nodeName)
-	if err != nil {
-		dhlog.FromContext(ctx.Ctx()).ErrorContext(ctx.Ctx(), fmt.Sprintf("can't extract index from infrastructure state secret (%v), skipping %s", err, nodeName))
-		return nil
 	}
 
 	kubeClient, err := ctx.KubeClientCtx(ctx.Ctx())

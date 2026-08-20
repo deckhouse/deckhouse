@@ -26,7 +26,6 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/ssh/utils"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
@@ -90,12 +89,7 @@ func (c *MasterNodeGroupController) populateNodeToHost(ctx *context.Context) err
 		nodesNames = append(nodesNames, nodeName)
 	}
 
-	nodeToHost, err := utils.CheckSSHHosts(userPassedHosts, nodesNames, string(c.convergeState.Phase), func(msg string) bool {
-		if ctx.CommanderMode() || ctx.ChangesSettings().AutoApprove {
-			return true
-		}
-		return input.NewConfirmation().WithMessage(msg).Ask()
-	})
+	nodeToHost, err := utils.CheckSSHHosts(userPassedHosts, nodesNames, string(c.convergeState.Phase), confirmHostsMapping(ctx))
 	if err != nil {
 		return err
 	}
@@ -103,6 +97,27 @@ func (c *MasterNodeGroupController) populateNodeToHost(ctx *context.Context) err
 	c.nodeToHost = nodeToHost
 
 	return nil
+}
+
+// confirmHostsMapping answers the node-to-host confirmation CheckSSHHosts asks on every
+// run. With no terminal nobody is there to answer, and a silent "no" used to cost the
+// whole control plane hook — the master was then recreated with no guard at all. The
+// mapping is accepted and written to the log instead; a destructive plan still has its
+// own approval.
+func confirmHostsMapping(ctx *context.Context) func(string) bool {
+	return func(msg string) bool {
+		if ctx.CommanderMode() || ctx.ChangesSettings().AutoApprove {
+			return true
+		}
+
+		if !input.IsTerminal() {
+			dhlog.FromContext(ctx.Ctx()).WarnContext(ctx.Ctx(),
+				fmt.Sprintf("Node to host mapping accepted without confirmation: no TTY.\n%s", msg))
+			return true
+		}
+
+		return input.NewConfirmation().WithMessage(msg).Ask()
+	}
 }
 
 func (c *MasterNodeGroupController) Run(ctx *context.Context) error {
@@ -359,7 +374,7 @@ func (c *MasterNodeGroupController) addNewNodesToCache(ctx *context.Context, mas
 	dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Successfully updated master hosts cache with %d new masters. hostsMap: %v", len(masterIPForSSHList), hostsMap))
 }
 
-func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName string) error {
+func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName string, nodeIndex int) error {
 	metaConfig, err := ctx.MetaConfig()
 	if err != nil {
 		return err
@@ -371,13 +386,10 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 		nodeState = c.state.State[nodeName]
 	}
 
-	nodeIndex, err := config.GetIndexFromNodeName(nodeName)
+	hook, err := c.newHookForUpdatePipeline(ctx, nodeName)
 	if err != nil {
-		dhlog.FromContext(ctx.Ctx()).ErrorContext(ctx.Ctx(), fmt.Sprintf("can't extract index from infrastructure state secret (%v), skipping %s", err, nodeName))
-		return nil
+		return fmt.Errorf("build control plane hook for node %s: %w", nodeName, err)
 	}
-
-	hook := c.newHookForUpdatePipeline(ctx, nodeName)
 
 	var nodeGroupSettingsFromConfig []byte
 
@@ -478,10 +490,14 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 	return entity.WaitForSingleNodeBecomeReady(ctx.Ctx(), kubeClient, nodeName)
 }
 
-func (c *MasterNodeGroupController) newHookForUpdatePipeline(ctx *context.Context, convergedNode string) infrastructure.InfraActionHook {
+// newHookForUpdatePipeline reports its failures instead of returning a nil hook:
+// the runner substitutes a DummyHook for a nil one, and a master VM would then be
+// recreated without removing its control plane role, its Node object or its etcd
+// membership.
+func (c *MasterNodeGroupController) newHookForUpdatePipeline(ctx *context.Context, convergedNode string) (infrastructure.InfraActionHook, error) {
 	err := c.populateNodeToHost(ctx)
 	if err != nil {
-		return nil
+		return nil, fmt.Errorf("collect master addresses: %w", err)
 	}
 
 	nodesToCheck := maputil.ExcludeKeys(c.nodeToHost, convergedNode)
@@ -498,7 +514,7 @@ func (c *MasterNodeGroupController) newHookForUpdatePipeline(ctx *context.Contex
 
 	sshProvider, err := ctx.SSHProviderInitializer.GetSSHProvider(ctx.Ctx())
 	if err != nil {
-		return nil
+		return nil, fmt.Errorf("get ssh provider: %w", err)
 	}
 
 	return controlplane.NewHookForUpdatePipeline(
@@ -511,7 +527,7 @@ func (c *MasterNodeGroupController) newHookForUpdatePipeline(ctx *context.Contex
 		WithSourceCommandName("converge").
 		WithNodeToConverge(convergedNode).
 		WithConfirm(confirm).
-		WithClientSwitcher(ctx.ClientSwitcher())
+		WithClientSwitcher(ctx.ClientSwitcher()), nil
 }
 
 func (c *MasterNodeGroupController) deleteNodes(ctx *context.Context, nodesToDeleteInfo []nodeToDeleteInfo) error {
