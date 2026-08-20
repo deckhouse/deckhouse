@@ -13,7 +13,7 @@ The table below shows Istio versions and their support status in Deckhouse Kuber
 |:-------------:|:-----------------------------------------------------------------------------------------------------------------------------:|:------------------------------:|
 |     1.29      |                                                1.29, 1.30, 1.31, 1.32, 1.33, 1.34, 1.35, 1.36                                                | Supported |
 |     1.27      |                                                1.29, 1.30, 1.31, 1.32, 1.33, 1.34, 1.35, 1.36                                                | Supported |
-|     1.25      |                                                1.29, 1.30, 1.31, 1.32, 1.33, 1.34, 1.35, 1.36                                                | Deprecated and scheduled for removal |
+|     1.25      |                                                1.29, 1.30, 1.31, 1.32, 1.33, 1.34, 1.35, 1.36                                                | Deprecated and will be deleted |
 
 {% alert level="warning" %}
 Istio 1.21 is no longer supported. Before upgrading to this DKP release, migrate every global and additional Istio 1.21 revision to a supported version using a previous DKP release that supports both versions. The DKP upgrade is blocked while Istio 1.21 remains configured.
