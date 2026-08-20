@@ -258,7 +258,7 @@ spec:
 ## Example of granting access to all namespaces
 
 {% alert level="info" %}
-The example refers to the [current role-based model](readme.html#current-role-based-model).
+The example refers to the [current role-based model](./#current-role-based-model).
 {% endalert %}
 
 In [multi-tenancy](configuration.html#parameters-enablemultitenancy) mode (`userAuthz.enableMultiTenancy`), namespace-based restrictions are configured using the [ClusterAuthorizationRule](cr.html#clusterauthorizationrule-v1-spec-namespaceselector) resource fields.
@@ -290,7 +290,7 @@ Configuration options:
 If several `ClusterAuthorizationRule` resources match the same subject, the allowed namespaces are **unioned**; the effective `accessLevel` is the **most powerful** among all matching rules. For details, refer to the [FAQ](faq.html#what-if-there-are-two-clusterauthorizationrules-matching-to-a-single-user).
 
 {% alert level="warning" %}
-Namespace restrictions from `ClusterAuthorizationRule` are enforced by the authorization webhook chain. If the webhook is unavailable, these restrictions **do not apply** until the webhook is reachable again. For more information, see the [module description](readme.html#current-role-based-model).
+Namespace restrictions from `ClusterAuthorizationRule` are enforced by the authorization webhook chain. If the webhook is unavailable, these restrictions **do not apply** until the webhook is reachable again. For more information, see the [module description](./#current-role-based-model).
 {% endalert %}
 
 {% offtopic title="Experimental role-based model" %}
