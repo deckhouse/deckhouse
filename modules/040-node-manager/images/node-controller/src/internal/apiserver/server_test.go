@@ -33,13 +33,13 @@ import (
 	utilcompatibility "k8s.io/apiserver/pkg/util/compatibility"
 	restclient "k8s.io/client-go/rest"
 
-	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
+	templatesv1alpha1 "github.com/deckhouse/node-controller/api/templates.internal.deckhouse.io/v1alpha1"
 )
 
 // stubStorage is the minimal read-only storage the installer accepts.
 type stubStorage struct{}
 
-func (stubStorage) New() runtime.Object { return &internalv1alpha1.NodeConfig{} }
+func (stubStorage) New() runtime.Object { return &templatesv1alpha1.NodeConfigTemplate{} }
 
 func (stubStorage) Destroy() {}
 
@@ -49,7 +49,7 @@ func (stubStorage) GetSingularName() string { return "nodeconfigtemplate" }
 
 func (stubStorage) Get(_ context.Context, name string, _ *metav1.GetOptions) (runtime.Object, error) {
 	return nil, apierrors.NewNotFound(schema.GroupResource{
-		Group:    internalv1alpha1.GroupVersion.Group,
+		Group:    templatesv1alpha1.GroupVersion.Group,
 		Resource: "nodeconfigtemplates",
 	}, name)
 }
@@ -74,14 +74,14 @@ func TestServesInternalDeckhouseGroup(t *testing.T) {
 	ts := httptest.NewServer(srv.Handler)
 	t.Cleanup(ts.Close)
 
-	resp, err := http.Get(ts.URL + "/apis/internal.deckhouse.io/v1alpha1")
+	resp, err := http.Get(ts.URL + "/apis/templates.internal.deckhouse.io/v1alpha1")
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = resp.Body.Close() })
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
 	var list metav1.APIResourceList
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&list))
-	require.Equal(t, "internal.deckhouse.io/v1alpha1", list.GroupVersion)
+	require.Equal(t, "templates.internal.deckhouse.io/v1alpha1", list.GroupVersion)
 
 	names := make([]string, 0, len(list.APIResources))
 	for _, r := range list.APIResources {
