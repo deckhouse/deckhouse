@@ -15,7 +15,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость объединяет три проблемы grpc-go: обход авторизации и панику в движке xDS RBAC (google.golang.org/grpc/internal/xds/rbac) и обход защиты от HTTP/2 Rapid Reset в серверном транспорте (internal/transport, http2_server.go). Descheduler использует google.golang.org/grpc только в клиентском режиме: для экспорта трассировок через otlptracegrpc и как транзитивную зависимость клиентских библиотек Kubernetes. gRPC-сервер не создаётся и не запускается, вызов grpc.NewServer в коде компонента отсутствует, а метрики и healthz отдаются обычным HTTP-сервером. Пакеты google.golang.org/grpc/xds и google.golang.org/grpc/internal/xds/rbac не входят в граф зависимостей собираемого бинарного файла. Изменения клиентского транспорта в исправляющем коммите носят характер рефакторинга типов и не связаны с эксплуатацией. Уязвимый код не исполняется.",
+      "impact_statement": "Descheduler использует google.golang.org/grpc только в клиентском режиме: для экспорта трассировок через otlptracegrpc и как транзитивную зависимость клиентских библиотек Kubernetes. gRPC-сервер не создаётся и не запускается, вызов grpc.NewServer в коде компонента отсутствует, а метрики и healthz отдаются обычным HTTP-сервером. Пакеты google.golang.org/grpc/xds и google.golang.org/grpc/internal/xds/rbac не входят в граф зависимостей собираемого бинарного файла. Изменения клиентского транспорта в исправляющем коммите носят характер рефакторинга типов и не связаны с эксплуатацией. Уязвимый код не исполняется.",
       "timestamp": "2026-08-20T14:12:35.847213Z"
     },
     {
