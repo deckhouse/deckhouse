@@ -803,6 +803,9 @@ func ClusterUUIDConfigMap(uuid string) *apiv1.ConfigMap {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      ClusterUUIDCm,
 			Namespace: ClusterUUIDCmNamespace,
+			// The deckhouse global hook creates this same ConfigMap labelled when it
+			// finds none, so dhctl's object must not differ from the hook's.
+			Labels: map[string]string{"heritage": "deckhouse"},
 		},
 		Data: map[string]string{ClusterUUIDCmKey: uuid},
 	}

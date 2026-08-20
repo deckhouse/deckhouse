@@ -36,6 +36,7 @@ func DefineBootstrapCommand(cmd *kingpin.CmdClause, opts *options.Options) *king
 	app.DefineSSHFlags(cmd, &opts.SSH, config.NewConnectionConfigParser(opts))
 	app.DefineConfigFlags(cmd, &opts.Global)
 	app.DefineBecomeFlags(cmd, &opts.Become)
+	app.DefineKubeFlags(cmd, &opts.Kube)
 	app.DefineCacheFlags(cmd, &opts.Cache)
 	app.DefineDropCacheFlags(cmd, &opts.Cache)
 	app.DefineResourcesFlags(cmd, &opts.Bootstrap, false)
@@ -44,6 +45,7 @@ func DefineBootstrapCommand(cmd *kingpin.CmdClause, opts *options.Options) *king
 	app.DefineDontUsePublicImagesFlags(cmd, &opts.Bootstrap)
 	app.DefinePostBootstrapScriptFlags(cmd, &opts.Bootstrap)
 	app.DefinePreflight(cmd, &opts.Preflight)
+	app.DefineSkipPhases(cmd, &opts.Bootstrap)
 	app.DefineImgBundleFlags(cmd, &opts.Registry)
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
@@ -54,7 +56,15 @@ func DefineBootstrapCommand(cmd *kingpin.CmdClause, opts *options.Options) *king
 
 		params := app.ProviderParams(&opts.Global, dhlog.FromContext(ctx))
 
-		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
+		// The kube flags are what points a bootstrap at an API server it did not build: a cluster
+		// with no ClusterConfiguration has a control plane somebody else created, and there is no
+		// master of ours to tunnel to. On a cloud bootstrap the provider built here is replaced by
+		// the FirstMaster phase, and on a static one an empty kube config still resolves to the
+		// same SSH tunnel as before, so the flags only ever add a connection, never take one away.
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params,
+			providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()),
+			providerinitializer.WithKubeConfig(opts.Kube.Config, opts.Kube.ConfigContext, opts.Kube.InCluster),
+		)
 		if err != nil {
 			if !errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
 				return err

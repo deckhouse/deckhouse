@@ -276,8 +276,10 @@ spec:
         ca: "-----BEGIN CERTIFICATE-----"
   version: 1
 `
-			t.Run("Without CRI (module disable) -> error", func(t *testing.T) {
-				_, err := ParseConfigFromData(t.Context(), moduleConfigDeckhouse, DummyValidatorProvider(), nil)
+			// A config with no ClusterConfiguration declares no defaultCRI, so an
+			// unsupported runtime has to be spelled out to be refused.
+			t.Run("Unsupported CRI (module disable) -> error", func(t *testing.T) {
+				_, err := ParseConfigFromData(t.Context(), moduleConfigDeckhouse+clusterConfig+"defaultCRI: NotManaged\n", DummyValidatorProvider(), nil)
 				require.Error(t, err)
 			})
 			t.Run("With CRI (module enable) -> from moduleConfig && not legacy", func(t *testing.T) {

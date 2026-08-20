@@ -138,10 +138,13 @@ func TestInstallDeckhouse(t *testing.T) {
 			registry_mocks.WithModeUnmanaged(),
 			registry_mocks.WithLegacyMode(),
 		),
-		Bundle:    "minimal",
-		LogLevel:  "Info",
-		UUID:      clusterUUID,
-		DevBranch: "pr1111",
+		Bundle:   "minimal",
+		LogLevel: "Info",
+		UUID:     clusterUUID,
+		// resolveClusterUUID keeps dhctl's own UUID only when the config carries a
+		// ClusterConfiguration; without one the cluster is the authority.
+		ClusterConfig: []byte("apiVersion: deckhouse.io/v1\nkind: ClusterConfiguration\n"),
+		DevBranch:     "pr1111",
 	}
 
 	assertDeploymentAndUUIDCmCreated := func(t *testing.T, fakeClient *client.KubernetesClient) {
@@ -169,7 +172,6 @@ func TestInstallDeckhouse(t *testing.T) {
 	getInstallParams := func() InstallDeckhouseParams {
 		return InstallDeckhouseParams{
 			BeforeDeckhouseTask: func() error { return nil },
-			State:               NewBootstrapState(cache.NewTestCache()),
 			DeckhouseTimeout:    15 * time.Minute,
 		}
 	}

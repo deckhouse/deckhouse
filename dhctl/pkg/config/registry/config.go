@@ -94,14 +94,20 @@ func (p *ConfigProvider) RemoteData() (Data, error) {
 }
 
 // Config builds a full registry Config from the provided configuration sources.
-func (p *ConfigProvider) Config(defaultCRI constant.CRIType, isStatic bool) (Config, error) {
+//
+// hasClusterConfiguration is false for a cluster whose control plane dhctl did not create:
+// it carries no ClusterConfiguration, so it declares no defaultCRI and dhctl configures none
+// of its nodes - the container runtime the registry module needs is then not dhctl's to check.
+// The mode defaulting below still sees criSupported=false there, which keeps a cluster with no
+// registry configuration at all on the legacy Unmanaged mode it gets today.
+func (p *ConfigProvider) Config(defaultCRI constant.CRIType, isStatic, hasClusterConfiguration bool) (Config, error) {
 	var config Config
 
 	criSupported := constant.IsCRISupported(defaultCRI)
 
 	switch {
 	case p.deckhouseSettings != nil:
-		if !criSupported {
+		if hasClusterConfiguration && !criSupported {
 			return Config{}, errUnsupportedCRI(defaultCRI)
 		}
 

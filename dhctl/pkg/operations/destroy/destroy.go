@@ -251,10 +251,6 @@ func (d *ClusterDestroyer) DestroyCluster(ctx context.Context, autoApprove bool)
 }
 
 func (d *ClusterDestroyer) destroy(ctx context.Context, autoApprove bool) error {
-	if err := d.d8Destroyer.CheckCommanderUUID(ctx); err != nil {
-		return err
-	}
-
 	// populate cluster state in cache
 	metaConfig, err := d.configPreparator.PopulateMetaConfig(ctx, d.globalOptions)
 	if err != nil {
@@ -266,7 +262,17 @@ func (d *ClusterDestroyer) destroy(ctx context.Context, autoApprove bool) error 
 		return err
 	}
 
-	d.pipeline.SetClusterConfig(phases.ClusterConfig{ClusterType: metaConfig.ClusterType})
+	// Before the first announced phase: CheckCommanderUUID announces one, and that frame carries
+	// the phase list. Built with an empty cluster type, the list is missing all static-only
+	// phases (later frames are fine — SetClusterConfig rebuilds the list).
+	d.pipeline.SetClusterConfig(phases.ClusterConfig{
+		ClusterType:             metaConfig.ClusterType,
+		HasClusterConfiguration: metaConfig.HasClusterConfiguration(),
+	})
+
+	if err := d.d8Destroyer.CheckCommanderUUID(ctx); err != nil {
+		return err
+	}
 
 	err = destroyer.Prepare(ctx)
 	if err != nil {

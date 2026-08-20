@@ -134,6 +134,26 @@ func TestCheckPublicDomainTemplate(t *testing.T) {
 			},
 		},
 		{
+			name: "no ClusterConfiguration",
+			metaConfig: &config.MetaConfig{
+				ModuleConfigs: []*config.ModuleConfig{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "global",
+						},
+						Spec: config.ModuleConfigSpec{
+							Settings: map[string]any{
+								"modules": map[string]any{
+									"publicDomainTemplate": "%s.example.com",
+								},
+							},
+						},
+					},
+				},
+				ClusterConfig: nil,
+			},
+		},
+		{
 			name: "invalid public domain template - matches cluster domain",
 			metaConfig: &config.MetaConfig{
 				ModuleConfigs: []*config.ModuleConfig{

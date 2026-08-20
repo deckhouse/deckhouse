@@ -17,6 +17,7 @@ package phases
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"math"
 	"os"
 	"slices"
@@ -29,8 +30,9 @@ type ProgressTracker struct {
 	progress Progress
 	mx       sync.Mutex
 
-	onProgressFunc func(Progress) error
-	clusterConfig  ClusterConfig
+	onProgressFunc   func(Progress) error
+	clusterConfig    ClusterConfig
+	clusterConfigSet bool
 }
 
 type Progress struct {
@@ -51,10 +53,10 @@ type Progress struct {
 func (p Progress) Clone() Progress {
 	clonedPhases := make([]PhaseWithSubPhases, len(p.Phases))
 	for i, phase := range p.Phases {
-		clonedPhase := PhaseWithSubPhases{
-			Phase:     phase.Phase,
-			SubPhases: slices.Clone(phase.SubPhases),
-		}
+		// PhaseWithSubPhases is a plain projection struct, so copying it whole cannot forget
+		// a field; only the two reference-typed ones need deepening.
+		clonedPhase := phase
+		clonedPhase.SubPhases = slices.Clone(phase.SubPhases)
 
 		if phase.Action != nil {
 			clonedPhase.Action = new(*phase.Action)
@@ -91,16 +93,23 @@ func NewProgressTracker(operation Operation, onProgressFunc func(Progress) error
 
 // SetClusterConfig sets the cluster config and syncs the phase list immediately.
 // Call as soon as meta config is parsed, before any phase is reported.
+//
+// A repeat of the config already in force is ignored, because rebuilding the list would throw
+// away the Action marks accumulated on it - converge sets the same config twice, once per entry
+// point. The first call is never a repeat, whatever it carries: a config with no
+// ClusterConfiguration equals the zero value the tracker is built with, and short-circuiting it
+// would leave the announced list gated on a cluster type nobody has resolved yet.
 func (p *ProgressTracker) SetClusterConfig(cfg ClusterConfig) {
 	p.mx.Lock()
 	defer p.mx.Unlock()
 
-	if p.clusterConfig == cfg {
+	if p.clusterConfigSet && p.clusterConfig == cfg {
 		return
 	}
 
 	phases := operationPhases(p.progress.Operation, phasesOpts{clusterConfig: cfg})
 	p.clusterConfig = cfg
+	p.clusterConfigSet = true
 	p.progress.Phases = phases
 }
 
@@ -118,11 +127,7 @@ func (p *ProgressTracker) FindLastCompletedPhase(completedPhase, nextPhase Opera
 	p.mx.Lock()
 	defer p.mx.Unlock()
 
-	nextPhaseIndex := slices.IndexFunc(p.progress.Phases, func(phases PhaseWithSubPhases) bool {
-		return phases.Phase == nextPhase
-	})
-
-	return nOrEmpty(p.progress.Phases, nextPhaseIndex-1).Phase, true
+	return precedingPhase(p.progress.Phases, nextPhase), true
 }
 
 // Progress updates the progress state with a completed phase or subphase.
@@ -166,10 +171,11 @@ func (p *ProgressTracker) Complete(lastCompletedPhase OperationPhase) error {
 		return nil
 	}
 
-	lastCompletedPhaseIndex := slices.IndexFunc(p.progress.Phases, func(phases PhaseWithSubPhases) bool {
-		return phases.Phase == lastCompletedPhase
-	})
+	lastCompletedPhaseIndex := indexOfPhase(p.progress.Phases, lastCompletedPhase)
 
+	// Only the top level is marked, and not because the walk stops there: the wire carries
+	// sub-phases as bare names (PhaseWithSubPhases.SubPhases), so a child has no Action to set.
+	// Marking children would mean changing the published shape of Progress.phases.
 	for i := range p.progress.Phases {
 		if p.progress.Phases[i].Action != nil {
 			continue
@@ -195,8 +201,10 @@ func (p *ProgressTracker) Complete(lastCompletedPhase OperationPhase) error {
 
 	// If the last phase was not skipped - progress 1
 	if !isLastCompletedPhaseSkipped {
+		ran := lastPhaseThatRan(p.progress.Phases, len(p.progress.Phases)-1)
+
 		p.progress.Progress = 1.0
-		p.progress.CompletedPhase = nOrEmpty(p.progress.Phases, len(p.progress.Phases)-1).Phase
+		p.progress.CompletedPhase = nOrEmpty(p.progress.Phases, ran).Phase
 		p.progress.CurrentPhase = ""
 		p.progress.NextPhase = ""
 		clonedProgress := p.progress.Clone()
@@ -207,17 +215,10 @@ func (p *ProgressTracker) Complete(lastCompletedPhase OperationPhase) error {
 	}
 
 	// If the last phase was skipped - find the last non-skipped phase
-	lastNonSkippedPhaseIndex := -1
-	for i := lastCompletedPhaseIndex; i >= 0; i-- {
-		if p.progress.Phases[i].Action != nil && *p.progress.Phases[i].Action != ProgressActionSkip {
-			lastNonSkippedPhaseIndex = i
-			break
-		}
-	}
-
+	lastNonSkippedPhaseIndex := lastPhaseThatRan(p.progress.Phases, lastCompletedPhaseIndex)
 	if lastNonSkippedPhaseIndex >= 0 {
 		// Found non-skipped phase - calculate progress based on it
-		p.progress.Progress = float64(lastNonSkippedPhaseIndex+1) / float64(len(p.progress.Phases))
+		p.progress.Progress = levelShare(rootShare, lastNonSkippedPhaseIndex+1, len(p.progress.Phases))
 		p.progress.CompletedPhase = p.progress.Phases[lastNonSkippedPhaseIndex].Phase
 	} else {
 		// All phases were skipped - progress 0
@@ -256,17 +257,17 @@ func calculatePhaseProgress(p Progress, completedPhase, currentPhase OperationPh
 		return progress
 	}
 
-	completedPhaseIndex := slices.IndexFunc(p.Phases, func(ph PhaseWithSubPhases) bool {
-		return ph.Phase == completedPhase
-	})
+	completedPhaseIndex := indexOfPhase(p.Phases, completedPhase)
 	if completedPhaseIndex == -1 {
 		// return progress as is if there is no known completedPhase for given operation
+		warnUndeclared(p.Operation, "phase", completedPhase)
+
 		return p
 	}
 
 	currentPhaseIndex := completedPhaseIndex + 1
 	if currentPhase != "" {
-		idx := slices.IndexFunc(p.Phases, func(ph PhaseWithSubPhases) bool { return ph.Phase == currentPhase })
+		idx := indexOfPhase(p.Phases, currentPhase)
 		if idx > completedPhaseIndex {
 			for i := completedPhaseIndex + 1; i < idx; i++ {
 				if p.Phases[i].Action == nil {
@@ -294,7 +295,7 @@ func calculatePhaseProgress(p Progress, completedPhase, currentPhase OperationPh
 	progress.CurrentSubPhase = nOrEmpty(curPhase.SubPhases, 0)
 	progress.NextSubPhase = nOrEmpty(curPhase.SubPhases, 1)
 
-	progress.Progress = max(float64(currentPhaseIndex)/float64(len(p.Phases)), p.Progress)
+	progress.Progress = max(levelShare(rootShare, currentPhaseIndex, len(p.Phases)), p.Progress)
 
 	return progress
 }
@@ -316,6 +317,8 @@ func calculateSubPhaseProgress(p Progress, completedSubPhase OperationSubPhase, 
 	completedSubPhaseIndex := slices.Index(currentPhase.SubPhases, completedSubPhase)
 	if completedSubPhaseIndex == -1 {
 		// return progress as is if there is no known completedSubPhase for given operation
+		warnUndeclared(p.Operation, "sub-phase of "+string(currentPhase.Phase), completedSubPhase)
+
 		return p
 	}
 	currentSubPhaseIndex := completedSubPhaseIndex + 1
@@ -333,7 +336,10 @@ func calculateSubPhaseProgress(p Progress, completedSubPhase OperationSubPhase, 
 	progress.CurrentSubPhase = nOrEmpty(currentPhase.SubPhases, currentSubPhaseIndex)
 	progress.NextSubPhase = nOrEmpty(currentPhase.SubPhases, currentSubPhaseIndex+1)
 
-	progress.Progress += (1 / float64(len(p.Phases))) / float64(len(currentPhase.SubPhases))
+	// One step down the tree: the phase owns its share of the operation, and each of its
+	// sub-phases owns that share split among them.
+	phaseShare := levelShare(rootShare, 1, len(p.Phases))
+	progress.Progress += levelShare(phaseShare, 1, len(currentPhase.SubPhases))
 
 	return progress
 }
@@ -362,6 +368,89 @@ func WriteProgress(path string) OnProgressFunc {
 
 		return nil
 	}
+}
+
+// rootShare is what the whole operation is worth, and so the parent share of every top-level phase.
+const rootShare = 1.0
+
+// levelShare is the progress owned by n nodes of a level whose parent owns parentShare: the
+// parent's share split evenly among the siblings, taken n times.
+//
+// Every fraction in this file goes through it, and always with the count of siblings at the
+// node's own level - never with the size of the whole walk. Taking the denominator from the
+// walk would mix scales: a top-level phase would be counted against every node of the tree,
+// sub-phases included, and the fraction on the wire would drop for no reason the reader can
+// see. Numerator and denominator have to live on one scale, and that scale is a level.
+func levelShare(parentShare float64, n, siblings int) float64 {
+	if siblings <= 0 {
+		// No siblings means no share to hand out. Returning the division would be +Inf, which
+		// json.Marshal refuses, and a refused marshal loses the whole progress record.
+		return 0
+	}
+
+	return parentShare * float64(n) / float64(siblings)
+}
+
+// lastPhaseThatRan returns the position of the last phase at or before from that was not skipped,
+// or -1 when none of them ran.
+//
+// A phase can be left out of a walk by --skip-phase, by an early stop and by a resume that jumps
+// over it, and all three mark it with ProgressActionSkip. Whichever it was, the operation cannot
+// report it as the phase it completed: the tail of the declared list is not the tail of the run.
+func lastPhaseThatRan(phases []PhaseWithSubPhases, from int) int {
+	for i := from; i >= 0; i-- {
+		if phases[i].Action != nil && *phases[i].Action != ProgressActionSkip {
+			return i
+		}
+	}
+
+	return -1
+}
+
+// indexOfPhase returns the position of the named phase among the top-level nodes, or -1 when the
+// operation does not declare it.
+func indexOfPhase(phases []PhaseWithSubPhases, name OperationPhase) int {
+	return slices.IndexFunc(phases, func(ph PhaseWithSubPhases) bool { return ph.Phase == name })
+}
+
+// precedingPhase returns the node visited right before name at name's own level, empty when name
+// comes first or is not declared.
+//
+// The walk stays on the top level because that is the only level ever announced: StartPhase and
+// SwitchPhase take a phase, while sub-phases are completed by name against the current phase.
+// Descending would return the previous phase's last sub-phase - a name calculatePhaseProgress
+// cannot resolve, so the whole event would be dropped.
+func precedingPhase(phases []PhaseWithSubPhases, name OperationPhase) OperationPhase {
+	i := indexOfPhase(phases, name)
+	if i <= 0 {
+		return ""
+	}
+
+	return phases[i-1].Phase
+}
+
+// traversalLen counts every node of the tree, phases and sub-phases alike. This is the one place
+// where a total over the whole walk is the right total: the terminal bar advances once per node
+// visited, whatever level that node lives on.
+func traversalLen(phases []PhaseWithSubPhases) int {
+	n := len(phases)
+	for _, ph := range phases {
+		n += len(ph.SubPhases)
+	}
+
+	return n
+}
+
+// warnUndeclared reports a node that announced itself without being declared for the operation.
+// Such an event moves nothing - there is no position to compute and no Action to set - and the
+// silence is how announced-but-undeclared nodes stayed invisible until they were looked for.
+//
+// The progress arithmetic gets no context, so this goes to slog.Default(), which is what
+// dhlog.FromContext falls back to anyway and what cmd/dhctl wires up to the root logger.
+func warnUndeclared(operation Operation, kind string, name OperationPhase) {
+	slog.Default().Warn(fmt.Sprintf(
+		"Progress: %s %q is not declared for operation %q, progress left unchanged", kind, name, operation,
+	))
 }
 
 func nOrEmpty[T any](s []T, n int) T {

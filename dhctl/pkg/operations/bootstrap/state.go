@@ -22,10 +22,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
-const (
-	PostBootstrapResultCacheKey      = "post-bootstrap-result"
-	ManifestCreatedInClusterCacheKey = "tf-state-and-manifests-in-cluster"
-)
+const PostBootstrapResultCacheKey = "post-bootstrap-result"
 
 type State struct {
 	cache state.Cache
@@ -39,18 +36,6 @@ func NewBootstrapState(stateCache state.Cache) *State {
 
 func (s *State) SavePostBootstrapScriptResult(ctx context.Context, result string) error {
 	return s.cache.Save(ctx, PostBootstrapResultCacheKey, []byte(result))
-}
-
-func (s *State) SaveManifestsCreated(ctx context.Context) error {
-	return s.cache.Save(ctx, ManifestCreatedInClusterCacheKey, []byte("yes"))
-}
-
-func (s *State) IsManifestsCreated(ctx context.Context) (bool, error) {
-	return s.cache.InCache(ctx, ManifestCreatedInClusterCacheKey)
-}
-
-func (s *State) PostBootstrapScriptResult(ctx context.Context) ([]byte, error) {
-	return s.cache.Load(ctx, PostBootstrapResultCacheKey)
 }
 
 func (s *State) Clean(ctx context.Context) {

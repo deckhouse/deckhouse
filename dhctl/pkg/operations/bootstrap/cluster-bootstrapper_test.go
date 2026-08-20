@@ -17,14 +17,21 @@ package bootstrap
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
+	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
+	utilcache "github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
 func TestNodesComeFromResources(t *testing.T) {
@@ -124,6 +131,109 @@ func TestSplitResources_ExplicitNamespaceNotDuplicated(t *testing.T) {
 		}
 	}
 	require.Equal(t, 1, nsCount)
+}
+
+// TestBootstrapPhaseFuncsMatchTree is the declared-equals-executed invariant, checked instead of
+// agreed: the walker resolves the tree and looks every node up by name, so a node declared with
+// nothing behind it is a phase Commander is told about that never runs, and a function with no
+// node is work that never happens. The tree here is the ungated one - gates decide which nodes
+// run in a given cluster, not which ones have to be implemented.
+func TestBootstrapPhaseFuncsMatchTree(t *testing.T) {
+	t.Parallel()
+
+	declared := make([]phases.OperationPhase, 0)
+	for _, phase := range phases.BootstrapPhases() {
+		declared = append(declared, phase.Phase)
+	}
+
+	implemented := make([]phases.OperationPhase, 0)
+	for phase := range (&ClusterBootstrapper{}).bootstrapPhaseFuncs() {
+		implemented = append(implemented, phase)
+	}
+
+	require.ElementsMatch(t, declared, implemented)
+}
+
+// TestSaveStaticConnectionToCache_RecordsEveryHost pins the only record a static bootstrap leaves of
+// the hosts it touched. Recording just the first one leaves an abort of a multi-master cluster
+// unable to reach the rest, and they keep a half-installed control plane running.
+func TestSaveStaticConnectionToCache_RecordsEveryHost(t *testing.T) {
+	t.Parallel()
+
+	stateCache := utilcache.NewTestCache()
+	connectionConfig := &sshconfig.ConnectionConfig{
+		Config: &sshconfig.Config{},
+		Hosts: []sshconfig.Host{
+			{Host: "10.0.0.1"},
+			{Host: "10.0.0.2"},
+			{Host: "10.0.0.3"},
+		},
+	}
+
+	require.NoError(t, saveStaticConnectionToCache(t.Context(), stateCache, connectionConfig))
+
+	hosts, err := state.GetMasterHostsIPs(t.Context(), stateCache)
+	require.NoError(t, err)
+
+	addresses := make([]string, 0, len(hosts))
+	for _, host := range hosts {
+		addresses = append(addresses, host.Host)
+	}
+
+	require.ElementsMatch(t, []string{"10.0.0.1", "10.0.0.2", "10.0.0.3"}, addresses)
+}
+
+func TestSaveStaticConnectionToCache_WithoutHostsRecordsNothing(t *testing.T) {
+	t.Parallel()
+
+	stateCache := utilcache.NewTestCache()
+
+	require.NoError(t, saveStaticConnectionToCache(t.Context(), stateCache, &sshconfig.ConnectionConfig{Config: &sshconfig.Config{}}))
+
+	inCache, err := stateCache.InCache(t.Context(), state.MasterHostsCacheKey)
+	require.NoError(t, err)
+	require.False(t, inCache)
+}
+
+// bootstrapperAskingProvider records whether the cleanup asked for a cloud provider at all. The
+// getter fails the way the real one does on a cluster carrying no UUID, so a run that asks is a
+// run that dies in Preparation.
+func bootstrapperAskingProvider(asked *bool) *ClusterBootstrapper {
+	return &ClusterBootstrapper{
+		Params: &Params{
+			InfrastructureContext: infrastructure.NewContextWithProvider(
+				func(context.Context, *config.MetaConfig) (infrastructure.CloudProvider, error) {
+					*asked = true
+
+					return nil, errors.New("Unable to get full UUID for provider '/'. It is empty")
+				},
+			),
+		},
+	}
+}
+
+func TestGetCleanupFunc_WithoutClusterConfigurationNoProviderIsAsked(t *testing.T) {
+	t.Parallel()
+
+	asked := false
+
+	cleanup, err := bootstrapperAskingProvider(&asked).getCleanupFunc(t.Context(), &config.MetaConfig{})
+
+	require.NoError(t, err)
+	require.NotNil(t, cleanup)
+	require.False(t, asked, "a cluster whose control plane dhctl did not build unpacks no cloud provider")
+}
+
+func TestGetCleanupFunc_WithClusterConfigurationTheProviderIsStillReleased(t *testing.T) {
+	t.Parallel()
+
+	asked := false
+	metaConfig := &config.MetaConfig{ClusterConfig: map[string]json.RawMessage{"clusterType": json.RawMessage(`"Static"`)}}
+
+	_, err := bootstrapperAskingProvider(&asked).getCleanupFunc(t.Context(), metaConfig)
+
+	require.Error(t, err)
+	require.True(t, asked, "the guard must not swallow the cleanup of a cluster dhctl does build")
 }
 
 // dhctl builds the CloudPermanent nodes from these objects, so they go to the

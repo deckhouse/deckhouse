@@ -79,6 +79,12 @@ func NewDefaultPhaseActionProviderWithStateCache(context DefaultPhasedExecutionC
 }
 
 func (a *PhaseActionWithStateCache[OperationPhaseDataT]) Run(ctx context.Context, phase OperationPhase, isCritical bool, action ActionFunc[OperationPhaseDataT]) error {
+	// Run is the only scope that knows a phase is nested, because it is the only place that
+	// pairs StartPhase with its CompletePhase.
+	if pec, ok := a.phaseContext.(*phasedExecutionContext[OperationPhaseDataT]); ok {
+		defer pec.enterRunScope()()
+	}
+
 	if shouldStop, err := a.phaseContext.StartPhase(ctx, phase, isCritical, a.stateCache); err != nil {
 		return err
 	} else if shouldStop {

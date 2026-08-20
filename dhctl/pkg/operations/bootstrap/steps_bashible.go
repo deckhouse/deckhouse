@@ -49,14 +49,18 @@ import (
 )
 
 type BashiblePipelineParams struct {
-	Node                   libcon.Interface
-	NodeIP                 string
-	MetaConfig             *config.MetaConfig
-	DevicePath             string
-	CommanderMode          bool
-	IsDebug                bool
-	PhasedExecutionContext phases.DefaultPhasedExecutionContext
-	GlobalOpts             *options.GlobalOptions
+	Node          libcon.Interface
+	NodeIP        string
+	MetaConfig    *config.MetaConfig
+	DevicePath    string
+	CommanderMode bool
+	IsDebug       bool
+	GlobalOpts    *options.GlobalOptions
+
+	// CompleteSubPhase completes a child of the InstallKubernetes node. The pipeline gets the
+	// node's completer and not the phase context itself: it runs inside one node of the tree and
+	// has no business announcing, switching or completing phases - the walker does that.
+	CompleteSubPhase func(ctx context.Context, subPhase phases.OperationSubPhase)
 }
 
 func (p *BashiblePipelineParams) Validate() error {
@@ -66,6 +70,11 @@ func (p *BashiblePipelineParams) Validate() error {
 
 	if govalue.IsNil(p.MetaConfig) {
 		return p.errIsNil("MetaConfig")
+	}
+
+	// Guards the panic from #20102: every step below reports its completion through this.
+	if p.CompleteSubPhase == nil {
+		return p.errIsNil("CompleteSubPhase")
 	}
 
 	return nil
@@ -120,7 +129,7 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 	if err != nil {
 		return err
 	}
-	params.PhasedExecutionContext.CompleteSubPhase(ctx, phases.InstallKubernetesSubPhaseBundlePreparation)
+	params.CompleteSubPhase(ctx, phases.InstallKubernetesSubPhaseBundlePreparation)
 
 	ready, err := bashible.AlreadyRun(ctx)
 	if err != nil {
@@ -159,7 +168,7 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 	}
 
 	defer registryPackagesProxyCleanup()
-	params.PhasedExecutionContext.CompleteSubPhase(ctx, phases.InstallKubernetesSubPhaseRegistryPackagesProxy)
+	params.CompleteSubPhase(ctx, phases.InstallKubernetesSubPhaseRegistryPackagesProxy)
 
 	if err = PrepareBashibleBundle(ctx, nodeIP, devicePath, cfg, templateController, globalOpts); err != nil {
 		return err
@@ -195,7 +204,7 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 		return err
 	}
 
-	params.PhasedExecutionContext.CompleteSubPhase(ctx, phases.InstallKubernetesSubPhaseNodePreparation)
+	params.CompleteSubPhase(ctx, phases.InstallKubernetesSubPhaseNodePreparation)
 
 	for _, p := range modulesPreparators {
 		// dhlog.FromContext(ctx).DebugContext(ctx).WarnContext(ctx, fmt.Sprintf("Prepare module %s", p.Module()))
@@ -204,7 +213,7 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 		}
 	}
 
-	params.PhasedExecutionContext.CompleteSubPhase(ctx, phases.InstallKubernetesSubPhaseModulesPreparation)
+	params.CompleteSubPhase(ctx, phases.InstallKubernetesSubPhaseModulesPreparation)
 
 	if err := bashible.ExecuteBundle(ctx, dhbashible.ExecuteBundleParams{
 		BundleDir:     templateController.TmpDir,
@@ -214,7 +223,7 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 		return err
 	}
 
-	params.PhasedExecutionContext.CompleteSubPhase(ctx, phases.InstallKubernetesSubPhaseExecuteBashibleBundle)
+	params.CompleteSubPhase(ctx, phases.InstallKubernetesSubPhaseExecuteBashibleBundle)
 	return nil
 }
 

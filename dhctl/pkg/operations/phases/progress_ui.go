@@ -105,13 +105,10 @@ func consumeProgress(ctx context.Context, l *slog.Logger, titles *Titles, progre
 		}
 
 		if inc == 0 || lastCompleted == "" {
-			// calculate increment
-			phasesCount := len(msg.Phases)
-			for _, p := range msg.Phases {
-				phasesCount += len(p.SubPhases)
-			}
-			if phasesCount > 0 {
-				inc = 100 / phasesCount
+			// calculate increment: the bar steps once per node of the whole walk, phases and
+			// sub-phases alike, so unlike the fractions in progress.go it counts them all.
+			if nodes := traversalLen(msg.Phases); nodes > 0 {
+				inc = 100 / nodes
 			}
 
 			text := phaseToString(titles, msg, false)
@@ -123,7 +120,11 @@ func consumeProgress(ctx context.Context, l *slog.Logger, titles *Titles, progre
 		if msg.CompletedPhase != "" {
 			completed := phaseToString(titles, msg, true)
 
-			if completed == lastCompleted {
+			// A repeated title still moves the bar when the record carries more progress: the
+			// final Complete event names the last phase that RAN, which is the phase already
+			// announced whenever the declared tail was skipped.
+			repeated := completed == lastCompleted
+			if repeated && int(math.Round(msg.Progress*100)) <= current {
 				continue
 			}
 
@@ -140,8 +141,13 @@ func consumeProgress(ctx context.Context, l *slog.Logger, titles *Titles, progre
 			current += increment
 			lastCompleted = completed
 
-			// The successful phase transition is THE only thing tagged for the compact view.
-			l.InfoContext(ctx, strings.TrimSpace(completed), dhlog.ShowInCompacted(), dhlog.BadgeSuccess())
+			// The successful phase transition is THE only thing tagged for the compact view. A
+			// repeated title reaches here only to carry the bar the rest of the way, and the
+			// phase it names was announced on the pass that first completed it.
+			if !repeated {
+				l.InfoContext(ctx, strings.TrimSpace(completed), dhlog.ShowInCompacted(), dhlog.BadgeSuccess())
+			}
+
 			dhlog.Progress(ctx, l, float64(current)/100, phaseToString(titles, msg, false))
 		}
 	}
@@ -155,21 +161,43 @@ func phaseToString(titles *Titles, p Progress, completed bool) string {
 	msg := ""
 	if completed {
 		if p.CompletedSubPhase != "" {
-			msg = fmt.Sprintf("%s: %s", titles.Phase(p.CurrentPhase), titles.SubPhase(p.CompletedSubPhase))
+			msg = fmt.Sprintf("%s: %s", phaseTitle(titles, p.CurrentPhase), subPhaseTitle(titles, p.CompletedSubPhase))
 		} else {
-			msg = titles.Phase(p.CompletedPhase)
+			msg = phaseTitle(titles, p.CompletedPhase)
 		}
 	} else {
 		if p.CurrentSubPhase != "" {
-			msg = fmt.Sprintf("%s: %s", titles.Phase(p.CurrentPhase), titles.SubPhase(p.CurrentSubPhase))
+			msg = fmt.Sprintf("%s: %s", phaseTitle(titles, p.CurrentPhase), subPhaseTitle(titles, p.CurrentSubPhase))
 		} else {
 			if p.CurrentPhase != "" {
-				msg = titles.Phase(p.CurrentPhase)
+				msg = phaseTitle(titles, p.CurrentPhase)
 			} else {
-				msg = titles.Phase(p.CompletedPhase)
+				msg = phaseTitle(titles, p.CompletedPhase)
 			}
 		}
 	}
 
 	return fmt.Sprintf("%-60s", msg)
+}
+
+// phaseTitle and subPhaseTitle look up the catalog title of a phase or a sub-phase,
+// falling back to the raw code. Without the fallback an untranslated phase renders as
+// blank padding and, since the bar advances only when the rendered title changes
+// (consumeProgress compares it with the previous one), also freezes the bar. The
+// fallback lives here and not in Titles.Phase/SubPhase, which report a missing entry
+// as the empty string on purpose.
+func phaseTitle(titles *Titles, phase OperationPhase) string {
+	if t := titles.Phase(phase); t != "" {
+		return t
+	}
+
+	return string(phase)
+}
+
+func subPhaseTitle(titles *Titles, subPhase OperationSubPhase) string {
+	if t := titles.SubPhase(subPhase); t != "" {
+		return t
+	}
+
+	return string(subPhase)
 }

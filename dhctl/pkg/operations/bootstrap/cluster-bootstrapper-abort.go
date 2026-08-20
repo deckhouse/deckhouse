@@ -18,8 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/name212/govalue"
-
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -27,7 +25,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/registry"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
@@ -36,17 +33,21 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 )
 
-func (b *ClusterBootstrapper) Abort(ctx context.Context, forceAbortFromCache bool) error {
+// Abort rolls a half-finished bootstrap back from the state cache: it destroys the infrastructure
+// dhctl itself created and cleans the hosts it touched, and it does that without the Kube API and
+// without deleting anything inside the cluster. Deleting a cluster that is already running is the
+// job of "dhctl destroy", which connects to it and removes its resources first.
+func (b *ClusterBootstrapper) Abort(ctx context.Context) error {
 	if !b.Options.Global.SanityCheck {
 		dhlog.FromContext(ctx).WarnContext(ctx, bootstrapAbortCheckMessage)
 	}
 
 	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Abort", func(ctx context.Context) error {
-		return b.doRunBootstrapAbort(ctx, forceAbortFromCache)
+		return b.doRunBootstrapAbort(ctx)
 	})
 }
 
-func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbortFromCache bool) error {
+func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context) error {
 	// Registry shoud run before LoadConfigFromFile
 	registryStop, err := registry.InitFromConfig(
 		ctx,
@@ -69,6 +70,14 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 		return err
 	}
 
+	// Refused here rather than by the loader, which serves bootstrap on a cluster whose control
+	// plane dhctl did not create too. Without this the run would reach the cluster type only in
+	// GetAbortDestroyer, after CachePath has already collapsed to the prefix-less directory every
+	// such cluster shares and the pipeline has written its state into it.
+	if !metaConfig.HasClusterConfiguration() {
+		return fmt.Errorf("dhctl bootstrap-phase abort requires ClusterConfiguration: it destroys the infrastructure dhctl created from it, and finds the state of that infrastructure in a cache named after the cluster prefix and provider it carries")
+	}
+
 	b.PhasedExecutionContext = phases.NewDefaultPhasedExecutionContext(
 		phases.OperationDestroy, b.Params.OnPhaseFunc, b.Params.OnProgressFunc,
 	)
@@ -84,7 +93,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 		WithUseTfCache(b.Options.Cache.UseTfCache).
 		WithDebug(b.Options.Global.IsDebug)
 
-	cachePath := metaConfig.CachePath()
+	cachePath := cacheIdentity(ctx, metaConfig, connectionHosts(b.SSHProviderInitializer), b.Options.Kube, b.Options.Cache.Dir)
 	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("State config for prefix %s:  %s", metaConfig.ClusterPrefix, cachePath))
 	if err = cache.InitWithOptions(ctx, cachePath, cache.CacheOptions{InitialState: b.InitialState, ResetInitialState: b.ResetInitialState, Cache: b.Options.Cache}); err != nil {
 		return fmt.Errorf(bootstrapAbortInvalidCacheMessage, cachePath, err)
@@ -112,6 +121,10 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 				return nil
 			},
 			func() error {
+				if metaConfig.IsStatic() {
+					return fmt.Errorf("No UUID found in the cache. Perhaps the cluster was already bootstrapped, or this abort was given different addresses than the bootstrap: a static cluster names its state cache after its --ssh-host list (or the SSHHost resources of --connection-config), so the abort has to repeat them.")
+				}
+
 				return fmt.Errorf("No UUID found in the cache. Perhaps the cluster was already bootstrapped.")
 			},
 		)
@@ -131,92 +144,29 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 	}
 
 	// init ssh client is safe if master hosts not found (error in base infra)
+	// error is OK here in case of abort from cache w/o ssh hosts
+	sshProvider, _ := b.SSHProviderInitializer.GetSSHProvider(ctx)
 
-	var destroyer destroy.Destroyer
+	b.PhasedExecutionContext.SetClusterConfig(phaseClusterConfig(metaConfig))
 
-	bootstrapState := NewBootstrapState(stateCache)
+	destroyer, err := destroy.GetAbortDestroyer(ctx, &destroy.GetAbortDestroyerParams{
+		MetaConfig:             metaConfig,
+		StateCache:             stateCache,
+		InfrastructureContext:  b.InfrastructureContext,
+		PhasedExecutionContext: b.PhasedExecutionContext,
 
-	err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Choose abort type", func(ctx context.Context) error {
-		ok, err := bootstrapState.IsManifestsCreated(ctx)
-		if err != nil {
-			return err
-		}
+		SSHClientProvider: sshProvider,
+		Logger:            dhlog.FromContext(ctx),
 
-		b.KubeProvider = b.SSHProviderInitializer.GetKubeProvider(ctx)
-		// error is OK here in case of abort from cache w/o ssh hosts
-		sshProvider, _ := b.SSHProviderInitializer.GetSSHProvider(ctx)
-
-		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Abort from cache. tf-state-and-manifests-in-cluster=%v; Force abort %v", ok, forceAbortFromCache))
-		if !ok || forceAbortFromCache {
-			destroyer, err = destroy.GetAbortDestroyer(ctx, &destroy.GetAbortDestroyerParams{
-				MetaConfig:             metaConfig,
-				StateCache:             stateCache,
-				InfrastructureContext:  b.InfrastructureContext,
-				PhasedExecutionContext: b.PhasedExecutionContext,
-
-				SSHClientProvider: sshProvider,
-				Logger:            dhlog.FromContext(ctx),
-
-				TmpDir:        b.TmpDir,
-				GlobalOptions: &b.Options.Global,
-				IsDebug:       b.IsDebug,
-				CommanderMode: b.CommanderMode,
-				SSHUser:       b.Options.SSH.User,
-			})
-			if err != nil {
-				return err
-			}
-
-			logMsg := "Deckhouse installation has not started yet. Aborting from cache"
-			if forceAbortFromCache {
-				logMsg = "Force aborting from cache"
-			}
-
-			dhlog.FromContext(ctx).InfoContext(ctx, logMsg)
-
-			return nil
-		}
-
-		destroyParams := &destroy.Params{
-			StateCache:             cache.Global(),
-			PhasedExecutionContext: b.PhasedExecutionContext,
-			SkipResources:          b.Options.Destroy.SkipResources,
-			InfrastructureContext:  b.InfrastructureContext,
-			SSHProvider:            sshProvider,
-			KubeProvider:           b.KubeProvider,
-			Options:                b.Options,
-		}
-
-		if b.CommanderMode {
-			clusterConfigurationData, err := metaConfig.ClusterConfigYAML()
-			if err != nil {
-				return err
-			}
-			providerClusterConfigurationData, err := metaConfig.ProviderClusterConfigYAML()
-			if err != nil {
-				return err
-			}
-			destroyParams.CommanderMode = true
-			destroyParams.CommanderModeParams = commander.NewCommanderModeParams(clusterConfigurationData, providerClusterConfigurationData)
-		}
-
-		destroyParams.Logger = dhlog.FromContext(ctx)
-		destroyParams.IsDebug = b.IsDebug
-		destroyParams.TmpDir = b.TmpDir
-
-		destroyer, err = destroy.NewClusterDestroyer(ctx, destroyParams)
-		if err != nil {
-			return err
-		}
-
-		dhlog.FromContext(ctx).InfoContext(ctx, "Deckhouse installation has already started. Destroying cluster")
-		return nil
+		TmpDir:        b.TmpDir,
+		GlobalOptions: &b.Options.Global,
+		IsDebug:       b.IsDebug,
+		CommanderMode: b.CommanderMode,
+		SSHUser:       b.Options.SSH.User,
 	})
 	if err != nil {
 		return err
 	}
-
-	b.PhasedExecutionContext.SetClusterConfig(phases.ClusterConfig{ClusterType: metaConfig.ClusterType})
 
 	if metaConfig.IsStatic() {
 		deckhouseInstallConfig, err := config.PrepareDeckhouseInstallConfig(ctx, metaConfig, &b.Options.Global)
@@ -234,16 +184,12 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 			return err
 		}
 		preflightRunner := preflight.New(staticAbortSuite)
-		preflightRunner.UseCache(bootstrapState)
+		preflightRunner.UseCache(NewBootstrapState(stateCache))
 		preflightRunner.SetCacheSalt(state.ConfigHash(ctx, b.Options.Global.ConfigPaths))
 		preflightRunner.DisableChecks(b.Options.Preflight.DisabledChecks()...)
 		if err := preflightRunner.Run(ctx, preflight.PhasePostInfra); err != nil {
 			return err
 		}
-	}
-
-	if govalue.IsNil(destroyer) {
-		return fmt.Errorf("Destroyer not initialized")
 	}
 
 	// destroy cluster cleanup provider

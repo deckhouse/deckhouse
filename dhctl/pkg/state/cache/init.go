@@ -53,10 +53,25 @@ func choiceCache(ctx context.Context, identity string, opts CacheOptions) (state
 	}
 
 	if cacheOpts.KubeNamespace == "" {
+		// Assigned to the concrete type first: returning the (*cache.StateCache, error) pair
+		// straight into this (state.Cache, error) signature turns a nil pointer into a non-nil
+		// interface, and every caller that checks the error still ends up dereferencing it.
+		var (
+			diskCache *cache.StateCache
+			err       error
+		)
+
 		if opts.ResetInitialState {
-			return cache.NewStateCacheWithInitialState(ctx, tmpDir, opts.InitialState)
+			diskCache, err = cache.NewStateCacheWithInitialState(ctx, tmpDir, opts.InitialState)
+		} else {
+			diskCache, err = cache.NewStateCache(tmpDir)
 		}
-		return cache.NewStateCache(tmpDir)
+
+		if err != nil {
+			return nil, err
+		}
+
+		return diskCache, nil
 	}
 
 	dhlog.FromContext(ctx).DebugContext(ctx, "Using Kubernetes state cache")
@@ -100,12 +115,23 @@ func choiceCache(ctx context.Context, identity string, opts CacheOptions) (state
 func initCache(ctx context.Context, identity string, opts CacheOptions) error {
 	var err error
 
+	// globalCache is replaced only on success. A failed init used to install the cache it could
+	// not open, so every later cache.Global() - including the deferred Finalize of the caller
+	// already returning the error - operated on it.
+	install := func() {
+		c, cErr := choiceCache(ctx, identity, opts)
+		if cErr != nil {
+			err = cErr
+			return
+		}
+
+		globalCache = c
+	}
+
 	if opts.ResetInitialState {
-		globalCache, err = choiceCache(ctx, identity, opts)
+		install()
 	} else {
-		once.Do(func() {
-			globalCache, err = choiceCache(ctx, identity, opts)
-		})
+		once.Do(install)
 	}
 
 	return err
