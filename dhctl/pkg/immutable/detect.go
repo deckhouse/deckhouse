@@ -92,6 +92,19 @@ func masterSystemTypeFromResources(resourcesYAML string) (string, error) {
 	return "", nil
 }
 
+// NodeGroupIsImmutable reports whether a NodeGroup read from the cluster asks for an
+// immutable system. The cluster object is the source of truth: a bashible bootstrap
+// Secret exists for an immutable group too, so its presence proves nothing.
+func NodeGroupIsImmutable(ng *unstructured.Unstructured) bool {
+	if ng == nil {
+		return false
+	}
+
+	systemType, _, _ := unstructured.NestedString(ng.Object, "spec", "systemType")
+
+	return systemType == systemTypeImmutable
+}
+
 // ValidateInputs refuses the combinations that leave the bootstrap with a node
 // it cannot talk to: the address comes from the BaseInfra phase, which reports
 // nothing outside a cloud, and naming the machines closes exactly that hole.
