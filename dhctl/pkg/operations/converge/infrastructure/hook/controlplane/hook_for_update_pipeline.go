@@ -193,7 +193,7 @@ func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastr
 	if !h.commanderMode {
 		cl, err := h.sshProvider.Client(ctx)
 		if err != nil {
-			panic("Node interface is not ssh")
+			return fmt.Errorf("get ssh client to move the session to the recreated node: %w", err)
 		}
 
 		if h.oldMasterIPForSSH != "" {

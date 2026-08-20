@@ -202,12 +202,6 @@ func (c *NodeGroupController) deleteRedundantNodes(
 			continue
 		}
 
-		nodeIndex, err := config.GetIndexFromNodeName(nodeToDeleteInfo.name)
-		if err != nil {
-			dhlog.FromContext(ctx.Ctx()).ErrorContext(ctx.Ctx(), fmt.Sprintf("can't extract index from infrastructure state secret (%v), skipping %s", err, nodeToDeleteInfo.name))
-			return nil
-		}
-
 		// NOTE: In the commander mode nodes state should exist in the local state cache, no need to pass state explicitly.
 		var nodeState []byte
 		if !ctx.CommanderMode() {
@@ -218,7 +212,7 @@ func (c *NodeGroupController) deleteRedundantNodes(
 			NodeName:        nodeToDeleteInfo.name,
 			NodeGroupName:   c.name,
 			LayoutStep:      c.layoutStep,
-			NodeIndex:       nodeIndex,
+			NodeIndex:       nodeToDeleteInfo.index,
 			NodeState:       nodeState,
 			NodeCloudConfig: c.cloudConfig,
 			CommanderMode:   ctx.CommanderMode(),
@@ -365,12 +359,13 @@ func (c *NodeGroupController) updateNodes(ctx *context.Context) error {
 
 	var allErrs *multierror.Error
 
-	nodeNames, err := sortNodeNames(c.state.State)
+	nodes, err := sortNodeNames(c.state.State)
 	if err != nil {
 		return err
 	}
 
-	for _, nodeName := range nodeNames {
+	for _, node := range nodes {
+		nodeName := node.name
 		processTitle := fmt.Sprintf("Update Node %s in NodeGroup %s (replicas: %v)", nodeName, c.name, replicas)
 
 		err := dhlog.RunProcess(ctx.Ctx(), dhlog.FromContext(ctx.Ctx()), processTitle, func(gocontext.Context) error {
@@ -379,7 +374,7 @@ func (c *NodeGroupController) updateNodes(ctx *context.Context) error {
 				return nil
 			}
 
-			err = c.nodeGroup.updateNode(ctx, nodeName)
+			err = c.nodeGroup.updateNode(ctx, nodeName, node.index)
 			if err != nil {
 				return err
 			}
@@ -420,17 +415,18 @@ func getNodesToDeleteInfo(ctx gocontext.Context, desiredReplicas int, state map[
 
 	count := len(state)
 
-	nodeNames, err := sortNodeNames(state)
+	nodes, err := sortNodeNames(state)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, nodeName := range nodeNames {
+	for _, node := range nodes {
 		nodesToDeleteInfo = append(nodesToDeleteInfo, nodeToDeleteInfo{
-			name:  nodeName,
-			state: state[nodeName],
+			name:  node.name,
+			index: node.index,
+			state: state[node.name],
 		})
-		delete(state, nodeName)
+		delete(state, node.name)
 		count--
 
 		if count == desiredReplicas {
@@ -444,11 +440,13 @@ func getNodesToDeleteInfo(ctx gocontext.Context, desiredReplicas int, state map[
 
 type nodeToDeleteInfo struct {
 	name  string
+	index int
 	state []byte
 }
 
-// sortNodeNames sorts node names in descending order
-func sortNodeNames(state map[string][]byte) ([]string, error) {
+// sortNodeNames sorts nodes in descending order. It is the only place a node name
+// is parsed: callers take the index from here instead of parsing it again.
+func sortNodeNames(state map[string][]byte) ([]nodeNameWithIndex, error) {
 	index := make([]nodeNameWithIndex, 0, len(state))
 
 	for nodeName := range state {
@@ -466,13 +464,7 @@ func sortNodeNames(state map[string][]byte) ([]string, error) {
 		return cmp.Compare(j.index, i.index)
 	})
 
-	nodeNames := make([]string, len(index))
-
-	for i, nodeName := range index {
-		nodeNames[i] = nodeName.name
-	}
-
-	return nodeNames, nil
+	return index, nil
 }
 
 type nodeNameWithIndex struct {
@@ -483,6 +475,6 @@ type nodeNameWithIndex struct {
 type nodeGroupController interface {
 	addNodes(ctx *context.Context) error
 	beforeUpdateNodes(ctx *context.Context) error
-	updateNode(ctx *context.Context, name string) error
+	updateNode(ctx *context.Context, name string, index int) error
 	deleteNodes(ctx *context.Context, nodesToDeleteInfo []nodeToDeleteInfo) error
 }
