@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/netip"
 	"path"
@@ -86,6 +87,11 @@ type InventoryInterface struct {
 // — it is still booting, and only this sentinel tells the caller which happened.
 var ErrInventoryUnusable = errors.New("the machine answered no usable inventory")
 
+// inventoryResponseLimit caps what is read from a machine that has authenticated
+// nothing yet. Same bound as the handoff channel's: the disks and interfaces of
+// a machine are a page, not a stream.
+const inventoryResponseLimit = 1 << 20
+
 // FetchInventory reads what the machine says about its own hardware. A machine
 // whose image predates the endpoint answers 404, and that is nil, nil: an old
 // image is a check nobody can run, not a bootstrap to fail.
@@ -104,7 +110,7 @@ func FetchInventory(ctx context.Context, address string) (*Inventory, error) {
 	}
 
 	var inventory Inventory
-	if err := json.NewDecoder(response.Body).Decode(&inventory); err != nil {
+	if err := json.NewDecoder(io.LimitReader(response.Body, inventoryResponseLimit)).Decode(&inventory); err != nil {
 		return nil, fmt.Errorf("%w: read the inventory of %s: %w", ErrInventoryUnusable, address, err)
 	}
 	return &inventory, nil
@@ -136,7 +142,7 @@ func CheckDocumentAgainstInventory(ctx context.Context, nodeConfigDocument []byt
 	systemDisk, err := resolveSystemDisk(spec.Storage, inventory)
 	problems := []error{err}
 	for i, m := range spec.Storage.Mounts {
-		problems = append(problems, checkMount(i, m, inventory, systemDisk))
+		problems = append(problems, checkMount(ctx, i, m, inventory, systemDisk))
 	}
 	for i, iface := range spec.Network.Interfaces {
 		problems = append(problems, checkInterface(ctx, i, iface, inventory))
@@ -149,11 +155,19 @@ func CheckDocumentAgainstInventory(ctx context.Context, nodeConfigDocument []byt
 // checkMount refuses a selector matching more than one device, as the node does.
 // Zero is not a refusal: the node skips a mount that matches nothing, which is
 // how a single-disk master keeps etcd on the data partition.
-func checkMount(index int, m mount, inventory *Inventory, systemDisk string) error {
+func checkMount(ctx context.Context, index int, m mount, inventory *Inventory, systemDisk string) error {
 	if m.PartitionSelector == nil {
 		return checkMountDevice(index, m, inventory)
 	}
 	field := fmt.Sprintf("spec.storage.mounts[%d] (%s).partitionSelector", index, m.Name)
+
+	// A selector the inventory cannot answer is a check nobody can run, not an
+	// installation to end: the machine resolves it against itself.
+	if attribute := attributeBeyondInventory(m.PartitionSelector); attribute != "" {
+		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf(
+			"%s selects by %s, which the machine does not report; the mount is not checked against it", field, attribute))
+		return nil
+	}
 
 	matched, err := mountCandidates(m.PartitionSelector, inventory, systemDisk)
 	if err != nil {
@@ -195,41 +209,78 @@ func mountDeviceExists(devicePath string, disks []InventoryDisk) bool {
 // selectPartition in internal/controllers/mounts/partitions.go of the nodelet
 // repository: whole disks only when blank, never the OS partitions.
 func mountCandidates(selector *partitionSelector, inventory *Inventory, systemDisk string) ([]string, error) {
-	type candidate struct {
-		name string
-		size uint64
-	}
-
-	var candidates []candidate
+	var candidates []InventoryPartition
 	for _, disk := range inventory.Disks {
 		// By the time the node resolves the mounts, this disk carries the OS: it
 		// is neither blank any more nor holds a partition a selector may reach.
 		if disk.Name == systemDisk {
 			continue
 		}
+		// A blank disk carries no filesystem, so it answers only to name and size.
 		if selector.Blank && disk.State == "blank" {
-			candidates = append(candidates, candidate{disk.Name, disk.Size})
+			candidates = append(candidates, InventoryPartition{Name: disk.Name, Size: disk.Size})
 		}
 		for _, part := range disk.Partitions {
 			if isOSPartitionLabel(part.Label) {
 				continue
 			}
-			candidates = append(candidates, candidate{part.Name, part.Size})
+			candidates = append(candidates, part)
 		}
 	}
 
 	var matched []string
 	for _, c := range candidates {
-		ok, err := matchPartitionSize(selector.Size, c.size)
+		ok, err := matchPartition(selector, c)
 		if err != nil {
 			return nil, err
 		}
 		if ok {
-			matched = append(matched, "/dev/"+c.name)
+			matched = append(matched, "/dev/"+c.Name)
 		}
 	}
 
 	return matched, nil
+}
+
+// matchPartition ANDs every attribute the selector sets, the string ones as
+// shell globs, as the PartitionSelector of the NodeConfig CRD spells it and as
+// selectPartition in nodelet/internal/controllers/mounts/partitions.go resolves it.
+func matchPartition(selector *partitionSelector, part InventoryPartition) (bool, error) {
+	sized, err := matchPartitionSize(selector.Size, part.Size)
+	if err != nil {
+		return false, err
+	}
+	if !sized {
+		return false, nil
+	}
+
+	for _, attribute := range []struct{ pattern, reported string }{
+		{selector.Name, part.Name},
+		{selector.Label, part.Label},
+		{selector.FSType, part.FSType},
+	} {
+		if !globMatch(attribute.pattern, attribute.reported) {
+			return false, nil
+		}
+	}
+
+	return true, nil
+}
+
+// attributeBeyondInventory names the selector attribute this machine does not
+// report, empty when it reports them all. The wire contract carries a
+// partition's name, size, filesystem and label, and nothing else
+// (InventoryPartition, images/init/src/0.1/inventory.go).
+func attributeBeyondInventory(selector *partitionSelector) string {
+	switch {
+	case selector.UUID != "":
+		return "uuid"
+	case selector.PartUUID != "":
+		return "partUUID"
+	case selector.PartLabel != "":
+		return "partLabel"
+	}
+	return ""
 }
 
 // isOSPartitionLabel reports the labels of the layout the OS installs itself

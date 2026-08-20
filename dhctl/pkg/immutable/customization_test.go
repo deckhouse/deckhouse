@@ -473,3 +473,40 @@ func TestAddressAfterInstall(t *testing.T) {
 func nodeConfigFor(nodeName, spec string) string {
 	return "apiVersion: " + PayloadAPIVersion + "\nkind: " + NodeConfigKind + "\nmetadata:\n  name: " + nodeName + "\nspec:" + spec
 }
+
+// TestParseCustomizationsTakesEveryPartitionSelectorField is the CRD contract:
+// the operator picks the etcd partition with what the machine's own inventory
+// advertises, and every field the NodeConfig CRD offers has to reach the node.
+func TestParseCustomizationsTakesEveryPartitionSelectorField(t *testing.T) {
+	document := `
+apiVersion: internal.deckhouse.io/v1alpha1
+kind: NodeConfig
+metadata:
+  name: master-0
+spec:
+  storage:
+    mounts:
+    - name: kubernetes-data
+      partitionSelector:
+        name: sdb1
+        uuid: 4d3a1b2c-0000-0000-0000-000000000000
+        label: kubernetes-data
+        fsType: ext4
+        partUUID: 8f2b1a3c-0000-0000-0000-000000000000
+        partLabel: data
+        size: ">=10Gi"
+        blank: false
+`
+
+	customizations, err := ParseCustomizations(t.Context(), []string{document})
+
+	require.NoError(t, err)
+	require.Len(t, customizations, 1)
+	selector := customizations[0].storage.Mounts[0].PartitionSelector
+	require.Equal(t, &partitionSelector{
+		Name: "sdb1", UUID: "4d3a1b2c-0000-0000-0000-000000000000",
+		Label: "kubernetes-data", FSType: "ext4",
+		PartUUID: "8f2b1a3c-0000-0000-0000-000000000000", PartLabel: "data",
+		Size: ">=10Gi",
+	}, selector)
+}

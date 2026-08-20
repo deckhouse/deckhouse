@@ -68,12 +68,16 @@ func TestIsImmutableMaster(t *testing.T) {
 				metaConfig.CloudProviderVars = &config.CloudProviderVars{NodeGroups: tt.nodeGroups}
 			}
 
-			require.Equal(t, tt.want, IsImmutableMaster(t.Context(), metaConfig))
+			isImmutable, err := IsImmutableMaster(t.Context(), metaConfig)
+			require.NoError(t, err)
+			require.Equal(t, tt.want, isImmutable)
 		})
 	}
 
 	t.Run("a config nothing has parsed yet", func(t *testing.T) {
-		require.False(t, IsImmutableMaster(t.Context(), &config.MetaConfig{}))
+		isImmutable, err := IsImmutableMaster(t.Context(), &config.MetaConfig{})
+		require.NoError(t, err)
+		require.False(t, isImmutable)
 	})
 }
 
@@ -91,7 +95,9 @@ spec:
 `,
 	}
 
-	require.True(t, IsImmutableMaster(t.Context(), metaConfig))
+	isImmutable, err := IsImmutableMaster(t.Context(), metaConfig)
+	require.NoError(t, err)
+	require.True(t, isImmutable)
 }
 
 func TestIsImmutableMasterIgnoresOtherGroups(t *testing.T) {
@@ -108,7 +114,9 @@ spec:
 `,
 	}
 
-	require.False(t, IsImmutableMaster(t.Context(), metaConfig))
+	isImmutable, err := IsImmutableMaster(t.Context(), metaConfig)
+	require.NoError(t, err)
+	require.False(t, isImmutable)
 }
 
 // The master comes last, behind a foreign document of the same name: a walk that
@@ -141,7 +149,9 @@ spec:
 `,
 	}
 
-	require.True(t, IsImmutableMaster(t.Context(), metaConfig))
+	isImmutable, err := IsImmutableMaster(t.Context(), metaConfig)
+	require.NoError(t, err)
+	require.True(t, isImmutable)
 }
 
 // NodeGroupConfiguration is a real deckhouse.io kind, so a document of the right
@@ -168,7 +178,9 @@ spec:
 `,
 	}
 
-	require.True(t, IsImmutableMaster(t.Context(), metaConfig))
+	isImmutable, err := IsImmutableMaster(t.Context(), metaConfig)
+	require.NoError(t, err)
+	require.True(t, isImmutable)
 }
 
 // A NodeGroup of a foreign API group, named master and declared first, must not
@@ -195,7 +207,9 @@ spec:
 `,
 	}
 
-	require.True(t, IsImmutableMaster(t.Context(), metaConfig))
+	isImmutable, err := IsImmutableMaster(t.Context(), metaConfig)
+	require.NoError(t, err)
+	require.True(t, isImmutable)
 }
 
 // The immutable worker comes first on purpose: a walk that returns the first
@@ -221,7 +235,9 @@ spec:
 `,
 	}
 
-	require.False(t, IsImmutableMaster(t.Context(), metaConfig))
+	isImmutable, err := IsImmutableMaster(t.Context(), metaConfig)
+	require.NoError(t, err)
+	require.False(t, isImmutable)
 }
 
 // A static cluster runs no BaseInfra phase, so nothing reports the master's
@@ -294,4 +310,57 @@ func TestParseHostsRefusesADuplicate(t *testing.T) {
 	_, err := ParseHosts([]string{"master-0=10.0.0.11", "master-0=10.0.0.12"})
 
 	require.ErrorContains(t, err, "master-0")
+}
+
+// config/base.go admits a document with a duplicated root-level kind into the
+// resources, and a walk that skips what it cannot index reads no systemType
+// there: the bootstrap then takes the SSH path against a machine with no sshd.
+func TestIsImmutableMasterRefusesAnAmbiguousDocument(t *testing.T) {
+	metaConfig := &config.MetaConfig{
+		ClusterType: config.StaticClusterType,
+		ResourcesYAML: `
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+kind: NodeGroup
+metadata:
+  name: master
+spec:
+  nodeType: Static
+  systemType: Immutable
+`,
+	}
+
+	_, err := IsImmutableMaster(t.Context(), metaConfig)
+
+	require.ErrorContains(t, err, "resource document 1",
+		"the refusal has to name the document the operator has to fix")
+	require.ErrorContains(t, err, `key "kind" already set in map`,
+		"and say what is wrong with it")
+}
+
+// The other half of that refusal: SplitYAML hands over every chunk of the
+// resources, and one that is no resource at all — a comment, a stray fragment —
+// says nothing about the master and must not end a bootstrap.
+func TestIsImmutableMasterReadsPastWhatIsNotAResource(t *testing.T) {
+	metaConfig := &config.MetaConfig{
+		ClusterType: config.StaticClusterType,
+		ResourcesYAML: `
+# a comment nobody parses
+---
+notAResource: true
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: master
+spec:
+  nodeType: Static
+  systemType: Immutable
+`,
+	}
+
+	isImmutable, err := IsImmutableMaster(t.Context(), metaConfig)
+
+	require.NoError(t, err)
+	require.True(t, isImmutable)
 }

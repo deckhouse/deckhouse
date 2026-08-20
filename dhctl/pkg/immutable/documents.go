@@ -68,9 +68,9 @@ func BuildMasterPayload(ctx context.Context, in MasterPayloadInput) (string, []b
 		return "", nil, fmt.Errorf("build control-plane config: %w", err)
 	}
 
-	document, nodeConfigYAML, err := buildDocumentStream(nodeConfig, controlPlaneConfig)
+	document, nodeConfigYAML, err := buildPayload(in.MetaConfig, nodeConfig, controlPlaneConfig)
 	if err != nil {
-		return "", nil, fmt.Errorf("build the document stream: %w", err)
+		return "", nil, fmt.Errorf("build the payload: %w", err)
 	}
 
 	return base64.StdEncoding.EncodeToString([]byte(document)), nodeConfigYAML, nil
@@ -123,18 +123,63 @@ func BuildJoinPayload(ctx context.Context, in JoinPayloadInput) (string, []byte,
 		applyCustomization(&nodeConfig.Spec, *in.Customization)
 	}
 
-	document, nodeConfigYAML, err := buildDocumentStream(nodeConfig, nil)
+	document, nodeConfigYAML, err := buildPayload(in.MetaConfig, nodeConfig, nil)
 	if err != nil {
-		return "", nil, fmt.Errorf("build the document stream: %w", err)
+		return "", nil, fmt.Errorf("build the payload: %w", err)
 	}
 
 	return base64.StdEncoding.EncodeToString([]byte(document)), nodeConfigYAML, nil
 }
 
+// buildPayload renders the payload in the shape the path it travels accepts. In
+// a cloud the provider's terraform appends its own #cloud-config block after
+// it, and only inside an envelope do those keys land beside the documents
+// instead of on the last one of them.
+func buildPayload(metaConfig *config.MetaConfig, nodeConfig *nodeConfig, controlPlaneConfig *controlPlaneConfig) (string, []byte, error) {
+	if metaConfig.ClusterType == config.CloudClusterType {
+		return buildCloudConfig(nodeConfig, controlPlaneConfig)
+	}
+	return buildDocumentStream(nodeConfig, controlPlaneConfig)
+}
+
+// buildCloudConfig wraps the payload documents into one #cloud-config. The node
+// ignores write_files "encoding"/"permissions", and the provider's terraform
+// appends its own block, so no top-level key it also emits may appear here.
+func buildCloudConfig(nodeConfig *nodeConfig, controlPlaneConfig *controlPlaneConfig) (string, []byte, error) {
+	nodeConfigYAML, err := yaml.Marshal(nodeConfig)
+	if err != nil {
+		return "", nil, fmt.Errorf("marshal nodeConfig: %w", err)
+	}
+
+	files := []map[string]any{
+		{"path": nodeConfigPath, "content": string(nodeConfigYAML)},
+	}
+
+	// Only the cluster-creating node gets one: the document is an order to
+	// generate a cluster CA, and a joining master must never mint a second CA —
+	// it gets its control plane from control-plane-manager after joining.
+	if controlPlaneConfig != nil {
+		controlPlaneYAML, err := yaml.Marshal(controlPlaneConfig)
+		if err != nil {
+			return "", nil, fmt.Errorf("marshal controlPlaneConfig: %w", err)
+		}
+		files = append(files, map[string]any{
+			"path": controlPlaneConfigPath, "content": string(controlPlaneYAML),
+		})
+	}
+
+	body, err := yaml.Marshal(map[string]any{"write_files": files})
+	if err != nil {
+		return "", nil, fmt.Errorf("marshal cloud-config: %w", err)
+	}
+
+	return "#cloud-config\n" + string(body), nodeConfigYAML, nil
+}
+
 // buildDocumentStream renders the documents the machine is provisioned with as
 // one multi-document YAML stream, and hands the NodeConfig back so nobody digs
-// it out again. The node files them by kind: it is a stream of documents, not a
-// script, and there is nothing for cloud-init to do with it.
+// it out again. This is what dhctl PUTs to a machine itself: nothing is appended
+// to it on the way, and the node files the documents by kind.
 func buildDocumentStream(nodeConfig *nodeConfig, controlPlaneConfig *controlPlaneConfig) (string, []byte, error) {
 	nodeConfigYAML, err := yaml.Marshal(nodeConfig)
 	if err != nil {

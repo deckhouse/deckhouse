@@ -15,6 +15,7 @@
 package bootstrap
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"os"
@@ -26,6 +27,7 @@ import (
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 	libretry "github.com/deckhouse/lib-dhctl/pkg/retry"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
@@ -81,8 +83,8 @@ func (b *ClusterBootstrapper) saveAdminKubeconfig(ctx context.Context, content [
 		// second immutable cluster from the same machine would delete the first
 		// one's only credentials. The suffix keeps the tmp cleaner off it.
 		name := cache.AdminKubeconfigName
-		if bctx.metaConfig != nil && bctx.metaConfig.ClusterPrefix != "" {
-			name = bctx.metaConfig.ClusterPrefix + "-" + name
+		if named := clusterFileName(bctx.metaConfig); named != "" {
+			name = named + "-" + name
 		}
 		path = filepath.Join(b.TmpDir, name)
 	}
@@ -115,6 +117,17 @@ func (b *ClusterBootstrapper) saveAdminKubeconfig(ctx context.Context, content [
 
 	b.printHowToReachTheCluster(ctx, path, bctx)
 	return nil
+}
+
+// clusterFileName is what names this cluster in a file name of its own, and "" when nothing does.
+// ClusterPrefix is assigned on the cloud branch of config.Prepare only, so a static cluster is
+// named after the UUID Preparation minted for it (generateClusterUUID).
+func clusterFileName(metaConfig *config.MetaConfig) string {
+	if metaConfig == nil {
+		return ""
+	}
+
+	return cmp.Or(metaConfig.ClusterPrefix, metaConfig.UUID)
 }
 
 func removeImmutableKubeconfig(ctx context.Context, path string) {

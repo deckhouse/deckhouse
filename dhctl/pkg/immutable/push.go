@@ -60,7 +60,10 @@ func do(ctx context.Context, method, url string, body []byte) (*http.Response, e
 		request.Header.Set("Content-Type", "application/yaml")
 	}
 
-	client := &http.Client{Timeout: pushTimeout}
+	// A transport of its own, never the process-wide default: that one proxies
+	// through HTTP_PROXY, and a machine waiting for its configuration is on the
+	// provisioning network, not behind a proxy that would be handed the payload.
+	client := &http.Client{Timeout: pushTimeout, Transport: &http.Transport{}}
 	defer client.CloseIdleConnections()
 
 	return client.Do(request)

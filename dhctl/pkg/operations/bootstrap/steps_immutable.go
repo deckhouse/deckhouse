@@ -80,7 +80,11 @@ func (b *ClusterBootstrapper) printCollectedKubeconfig(ctx context.Context, bctx
 // detectImmutableMaster decides how the very first node is created, so it runs
 // before anything touches the infrastructure.
 func (b *ClusterBootstrapper) detectImmutableMaster(ctx context.Context, bctx *bootstrapContext) error {
-	if !immutable.IsImmutableMaster(ctx, bctx.metaConfig) {
+	immutableMaster, err := immutable.IsImmutableMaster(ctx, bctx.metaConfig)
+	if err != nil {
+		return err
+	}
+	if !immutableMaster {
 		return nil
 	}
 
@@ -166,11 +170,8 @@ func refuseSharedAddresses(hosts map[string]string) error {
 // staticBootstrapNeedsSSHHost reports whether the bootstrap has to be given an
 // SSH host. An immutable machine runs no sshd and is named by --master-host
 // instead, so the usual demand for one sends every later phase at a dead port.
-func staticBootstrapNeedsSSHHost(ctx context.Context, metaConfig *config.MetaConfig) bool {
-	if !metaConfig.IsStatic() {
-		return false
-	}
-	return !immutable.IsImmutableMaster(ctx, metaConfig)
+func staticBootstrapNeedsSSHHost(metaConfig *config.MetaConfig, immutableMaster bool) bool {
+	return metaConfig.IsStatic() && !immutableMaster
 }
 
 // refuseSSHHostOnImmutableStatic refuses an SSH host given alongside
@@ -236,8 +237,8 @@ func isStaticImmutableCluster(bctx *bootstrapContext) bool {
 }
 
 // applyImmutablePreflights adds the checks that only apply to an immutable
-// master and drops the ones that reach the master over SSH, which it does not
-// answer.
+// master. Which checks a static one is left with is decided by the suite it is
+// built from, in preflightSuites, and not by a list of names subtracted here.
 func (b *ClusterBootstrapper) applyImmutablePreflights(runner *preflight.Preflight, bctx *bootstrapContext) {
 	if bctx.immutable == nil {
 		return
@@ -251,22 +252,9 @@ func (b *ClusterBootstrapper) applyImmutablePreflights(runner *preflight.Preflig
 	}))
 
 	// The cloud API check tunnels through the master host; there is no sshd
-	// there to tunnel with.
+	// there to tunnel with. Named rather than dropped from a suite because the
+	// cloud suites are shared with every other cloud bootstrap.
 	runner.DisableCheck(checks.CloudAPICheckName.String())
-
-	// These reach the node over SSH, and without an SSH host their helper falls
-	// back to the machine dhctl runs on (system/helper/helper.go). An immutable
-	// node answers neither, so a check against the installer is worse than none.
-	runner.DisableChecks(
-		checks.SudoAllowedCheckName.String(),
-		checks.HostNetworkCIDRIntersectionCheckName.String(),
-		checks.DeckhouseUserCheckName.String(),
-		checks.StaticSystemRequirementsCheckName.String(),
-		checks.PythonCheckName.String(),
-		checks.PortsCheckName.String(),
-		checks.LocalhostDomainCheckName.String(),
-		checks.TimeDriftCheckName.String(),
-	)
 }
 
 // buildImmutableMasterPayload renders the cloud-init the first master boots
@@ -360,10 +348,7 @@ func (b *ClusterBootstrapper) bootstrapImmutableFirstMaster(ctx context.Context,
 		return fmt.Errorf("decode the payload of %s: %w", nodeName, err)
 	}
 
-	if err := b.pushImmutablePayload(ctx, bctx, nodeName, address, document, nodeConfig); err != nil {
-		return err
-	}
-	if err := savePushedPayload(ctx, bctx.stateCache, nodeName, address); err != nil {
+	if err := b.pushRecordedPayload(ctx, bctx, nodeName, address, document, nodeConfig); err != nil {
 		return err
 	}
 
@@ -418,11 +403,27 @@ func (b *ClusterBootstrapper) handImmutableJoinPayload(ctx context.Context, bctx
 		return fmt.Errorf("decode the payload of %s: %w", nodeName, err)
 	}
 
-	if err := b.pushImmutablePayload(ctx, bctx, nodeName, address, document, nodeConfig); err != nil {
+	return b.pushRecordedPayload(ctx, bctx, nodeName, address, document, nodeConfig)
+}
+
+// pushRecordedPayload records the machine dhctl is about to hand a document to, and then hands it
+// over. The record goes first because olcedar-init closes the port the moment it accepts the
+// document (constants.go): a reply lost on the way back would otherwise read as a machine that was
+// never pushed to, and the rerun's second document is refused by the installed agent for good.
+func (b *ClusterBootstrapper) pushRecordedPayload(ctx context.Context, bctx *bootstrapContext, nodeName, address string, document, nodeConfig []byte) error {
+	if err := savePushedPayload(ctx, bctx.stateCache, nodeName, address); err != nil {
 		return err
 	}
 
-	return savePushedPayload(ctx, bctx.stateCache, nodeName, address)
+	err := b.pushImmutablePayload(ctx, bctx, nodeName, address, document, nodeConfig)
+
+	// The one failure that proves the machine took nothing: the document never left dhctl. Every
+	// other one keeps the record, a lost reply included, which is what it is here for.
+	if errors.Is(err, errDocumentUnfitForMachine) {
+		bctx.stateCache.Delete(ctx, pushedPayloadCacheKey(nodeName))
+	}
+
+	return err
 }
 
 // pushedPayloadCacheKey names the record of the machine that already took this
@@ -433,11 +434,11 @@ func pushedPayloadCacheKey(nodeName string) string {
 	return "immutable-control-plane-pushed-payload-" + nodeName
 }
 
-// savePushedPayload records the machine that took the payload. Returned rather
-// than warned: without the record every rerun walks into the terminal refusal
-// of an installed node, and nothing on disk says why. The address is the record
-// so a rerun with a corrected --master-host pushes again instead of waiting on
-// a machine that never got anything.
+// savePushedPayload records the machine dhctl hands the payload to, written before the push and
+// retracted only where nothing was taken (pushRecordedPayload). Returned rather than warned:
+// without the record every rerun walks into the terminal refusal of an installed node, and
+// nothing on disk says why. The address is the record so a rerun with a corrected --master-host
+// pushes again instead of waiting on a machine that never got anything.
 func savePushedPayload(ctx context.Context, stateCache state.Cache, nodeName, address string) error {
 	if err := stateCache.Save(ctx, pushedPayloadCacheKey(nodeName), []byte(address)); err != nil {
 		return fmt.Errorf("record the configuration handed to %s in the state cache: %w", nodeName, err)
@@ -484,7 +485,7 @@ func (b *ClusterBootstrapper) pushImmutablePayload(ctx context.Context, bctx *bo
 		loop := libretry.NewLoop(fmt.Sprintf("Waiting for %s to ask for a configuration", nodeName), waitMaintenancePort.attempts, waitMaintenancePort.interval).
 			BreakIf(pushGaveUp)
 
-		return retryWithFreshChannel(ctx, loop, openChannel, func(endpoint string) error {
+		err := retryWithFreshChannel(ctx, loop, openChannel, func(endpoint string) error {
 			// The check is inside the loop, because the loop is the wait: a machine
 			// still powering on answers nothing to check against, and the attempt
 			// that reaches it is the last moment before it takes the document.
@@ -493,6 +494,17 @@ func (b *ClusterBootstrapper) pushImmutablePayload(ctx context.Context, bctx *bo
 			}
 			return immutable.PushNodeConfig(ctx, endpoint, document)
 		})
+
+		// Reached only where the state cache holds no record of a push to this machine, so it was
+		// installed by something else. Nothing here can undo that, and the message has to say what
+		// can — the refusal alone reads as a dhctl that painted itself into a corner.
+		if errors.Is(err, immutable.ErrMaintenanceTokenRequired) {
+			return fmt.Errorf(
+				"%w; dhctl handed %s no configuration at %s: point --master-host at a machine waiting in maintenance, or re-image this one",
+				err, nodeName, address)
+		}
+
+		return err
 	})
 }
 

@@ -21,6 +21,7 @@ import (
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
@@ -93,7 +94,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context) error {
 		WithUseTfCache(b.Options.Cache.UseTfCache).
 		WithDebug(b.Options.Global.IsDebug)
 
-	cachePath := cacheIdentity(ctx, metaConfig, connectionHosts(b.SSHProviderInitializer), b.Options.Kube, b.Options.Cache.Dir)
+	cachePath := cacheIdentity(ctx, metaConfig, connectionHosts(b.SSHProviderInitializer), b.Options.Bootstrap.MasterHostsRaw, b.Options.Kube, b.Options.Cache.Dir)
 	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("State config for prefix %s:  %s", metaConfig.ClusterPrefix, cachePath))
 	if err = cache.InitWithOptions(ctx, cachePath, cache.CacheOptions{InitialState: b.InitialState, ResetInitialState: b.ResetInitialState, Cache: b.Options.Cache}); err != nil {
 		return fmt.Errorf(bootstrapAbortInvalidCacheMessage, cachePath, err)
@@ -147,7 +148,11 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context) error {
 	// error is OK here in case of abort from cache w/o ssh hosts
 	sshProvider, _ := b.SSHProviderInitializer.GetSSHProvider(ctx)
 
-	b.PhasedExecutionContext.SetClusterConfig(phaseClusterConfig(ctx, metaConfig))
+	immutableMaster, err := immutable.IsImmutableMaster(ctx, metaConfig)
+	if err != nil {
+		return err
+	}
+	b.PhasedExecutionContext.SetClusterConfig(phaseClusterConfig(metaConfig, immutableMaster))
 
 	destroyer, err := destroy.GetAbortDestroyer(ctx, &destroy.GetAbortDestroyerParams{
 		MetaConfig:             metaConfig,

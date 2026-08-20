@@ -33,19 +33,23 @@ import (
 // IsImmutableMaster reports whether the master NodeGroup asks for an immutable
 // system. A cloud bootstrap has the group parsed into CloudProviderVars; a
 // static one has no cloud filler at all, so the documents are read here.
-func IsImmutableMaster(_ context.Context, metaConfig *config.MetaConfig) bool {
+func IsImmutableMaster(_ context.Context, metaConfig *config.MetaConfig) (bool, error) {
 	if metaConfig == nil {
-		return false
+		return false, nil
 	}
 
 	if metaConfig.CloudProviderVars != nil {
 		master := metaConfig.CloudProviderVars.NodeGroups[global.MasterNodeGroupName]
 		if systemType, _, _ := unstructured.NestedString(master, "spec", "systemType"); systemType == systemTypeImmutable {
-			return true
+			return true, nil
 		}
 	}
 
-	return masterSystemTypeFromResources(metaConfig.ResourcesYAML) == systemTypeImmutable
+	systemType, err := masterSystemTypeFromResources(metaConfig.ResourcesYAML)
+	if err != nil {
+		return false, err
+	}
+	return systemType == systemTypeImmutable, nil
 }
 
 // The group the master NodeGroup must belong to. Matched the way the other
@@ -59,20 +63,23 @@ const (
 // masterSystemTypeFromResources reads spec.systemType of the master NodeGroup
 // straight from the documents. ParseResourcesYAML cannot answer this: it keeps
 // CloudPermanent groups only, and a static master group is not one.
-func masterSystemTypeFromResources(resourcesYAML string) string {
-	for _, document := range libdhctlyaml.SplitYAML(resourcesYAML) {
+func masterSystemTypeFromResources(resourcesYAML string) (string, error) {
+	for i, document := range libdhctlyaml.SplitYAML(resourcesYAML) {
+		// A document with a duplicated root key reads differently depending on
+		// who parses it, and one of those readings is a master NodeGroup nobody
+		// sees. Refused: taken for "not immutable" it sends the bootstrap over SSH.
+		var obj map[string]any
+		if err := yaml.UnmarshalStrict([]byte(document), &obj); err != nil {
+			return "", fmt.Errorf("read resource document %d to find the master NodeGroup: %w", i+1, err)
+		}
+
 		index, err := yamlvalidation.ParseIndex(strings.NewReader(document))
-		// A document this fails on is not ours to judge: it stays in the
-		// resources, where the existing validation reports it.
+		// Only a document with neither kind nor apiVersion fails here now, and a
+		// comment or a stray fragment says nothing about the master.
 		if err != nil {
 			continue
 		}
 		if index.Kind != nodeGroupKind || index.Group() != nodeGroupAPIGroup {
-			continue
-		}
-
-		var obj map[string]any
-		if err := yaml.Unmarshal([]byte(document), &obj); err != nil {
 			continue
 		}
 		if name, _, _ := unstructured.NestedString(obj, "metadata", "name"); name != global.MasterNodeGroupName {
@@ -80,9 +87,9 @@ func masterSystemTypeFromResources(resourcesYAML string) string {
 		}
 
 		systemType, _, _ := unstructured.NestedString(obj, "spec", "systemType")
-		return systemType
+		return systemType, nil
 	}
-	return ""
+	return "", nil
 }
 
 // ValidateInputs refuses the combinations that leave the bootstrap with a node

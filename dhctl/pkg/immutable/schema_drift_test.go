@@ -27,6 +27,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -211,4 +213,81 @@ func kubebuilderDefaults(t *testing.T, path string) map[string]string {
 	})
 
 	return defaults
+}
+
+// TestCustomizableSubtreesMirrorTheNodeConfigCRD walks the contract the other
+// way round. The walk above can only see a field this package has and the CRD
+// does not; a field the CRD has and this package lacks is invisible to it, and
+// it is the one that refuses an operator's document with "unknown field".
+// Only the subtrees an operator writes: elsewhere an absent field is a value
+// dhctl does not emit, which the node then defaults itself.
+func TestCustomizableSubtreesMirrorTheNodeConfigCRD(t *testing.T) {
+	specSchema := nodeConfigCRDSchema(t).Properties["spec"]
+
+	subtrees := map[string]reflect.Type{
+		"storage": reflect.TypeOf(storage{}),
+		"network": reflect.TypeOf(network{}),
+	}
+
+	// The two the payload refuses on purpose. Neither is drift, and neither may
+	// be added without the reason beside it going away first.
+	refusedOnPurpose := map[string]string{
+		"spec.network.ntp":  "nothing on the node reads it: olcedar-init parses it and never uses it, nodelet ignores it",
+		"spec.storage.wipe": "on a machine with a single disk, wiping it destroys the installation media the OS is copied from",
+	}
+
+	var missing []string
+	for name, goType := range subtrees {
+		schema := specSchema.Properties[name]
+		collectMissingFields(&schema, goType, "spec."+name, &missing)
+	}
+	missing = slices.DeleteFunc(missing, func(path string) bool {
+		_, refused := refusedOnPurpose[path]
+		return refused
+	})
+	slices.Sort(missing)
+
+	require.Empty(t, missing,
+		"the NodeConfig CRD offers fields this package cannot parse; an operator's document naming one of them is refused before anything is provisioned")
+}
+
+// collectMissingFields walks the schema against the Go type that mirrors it and
+// records every property no field of that type carries.
+func collectMissingFields(schema *apiextensionsv1.JSONSchemaProps, goType reflect.Type, path string, missing *[]string) {
+	for goType.Kind() == reflect.Pointer {
+		goType = goType.Elem()
+	}
+	if schema.Items != nil && schema.Items.Schema != nil {
+		if goType.Kind() == reflect.Slice {
+			collectMissingFields(schema.Items.Schema, goType.Elem(), path+"[]", missing)
+		}
+		return
+	}
+	if len(schema.Properties) == 0 || goType.Kind() != reflect.Struct {
+		return
+	}
+
+	mirrored := jsonFields(goType)
+	for name, property := range schema.Properties {
+		field, known := mirrored[name]
+		if !known {
+			*missing = append(*missing, path+"."+name)
+			continue
+		}
+		collectMissingFields(&property, field, path+"."+name, missing)
+	}
+}
+
+// jsonFields maps a struct's JSON names to the types behind them.
+func jsonFields(goType reflect.Type) map[string]reflect.Type {
+	fields := make(map[string]reflect.Type, goType.NumField())
+	for i := range goType.NumField() {
+		field := goType.Field(i)
+		name, _, _ := strings.Cut(field.Tag.Get("json"), ",")
+		if name == "" || name == "-" {
+			continue
+		}
+		fields[name] = field.Type
+	}
+	return fields
 }

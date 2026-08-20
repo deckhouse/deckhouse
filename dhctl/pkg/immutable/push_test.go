@@ -15,6 +15,7 @@
 package immutable
 
 import (
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -100,4 +101,39 @@ func TestPushNodeConfigQuotesTheRefusal(t *testing.T) {
 
 	require.ErrorContains(t, err, "500")
 	require.ErrorContains(t, err, "config partition is read-only")
+}
+
+// A machine waiting for its configuration sits on the provisioning network, and
+// what it is handed carries the bootstrap token, the cluster CA and the master's
+// TLS serving key. A client without a transport of its own is the process-wide
+// http.DefaultTransport, which sends all of that to whatever HTTP_PROXY names —
+// and dhctl's own environment carries one often enough to forward it to
+// terraform (pkg/infrastructure/terraform/cmd.go).
+func TestPushNodeConfigKeepsOffTheProcessWideTransport(t *testing.T) {
+	var reached bool
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		reached = true
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	shared := &refusingTransport{}
+	original := http.DefaultTransport
+	http.DefaultTransport = shared
+	t.Cleanup(func() { http.DefaultTransport = original })
+
+	err := PushNodeConfig(t.Context(), strings.TrimPrefix(server.URL, "http://"), []byte("kind: NodeConfig\n"))
+
+	require.NoError(t, err)
+	require.Zero(t, shared.requests,
+		"the push went through http.DefaultTransport, which proxies through HTTP_PROXY and pools its connections process-wide")
+	require.True(t, reached, "the machine was handed nothing")
+}
+
+// refusingTransport stands in for http.DefaultTransport and carries nothing.
+type refusingTransport struct{ requests int }
+
+func (r *refusingTransport) RoundTrip(*http.Request) (*http.Response, error) {
+	r.requests++
+	return nil, errors.New("http.DefaultTransport must carry no payload")
 }

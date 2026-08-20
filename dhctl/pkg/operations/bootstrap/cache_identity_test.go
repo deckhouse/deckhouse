@@ -63,11 +63,12 @@ func TestPrimaryCacheIdentity(t *testing.T) {
 	cloud := &config.MetaConfig{ClusterType: config.CloudClusterType, ClusterPrefix: "dev", ProviderName: "yandex"}
 
 	cases := []struct {
-		name     string
-		meta     *config.MetaConfig
-		hosts    []sshconfig.Host
-		kube     options.KubeOptions
-		expected string
+		name        string
+		meta        *config.MetaConfig
+		hosts       []sshconfig.Host
+		masterHosts []string
+		kube        options.KubeOptions
+		expected    string
 	}{
 		{
 			name:     "a cloud cluster keeps the identity every existing installation holds its state under",
@@ -127,8 +128,15 @@ func TestPrimaryCacheIdentity(t *testing.T) {
 			expected: "in-cluster",
 		},
 		{
-			// A static bootstrap of the current host is legal and carries no address; refusing it
-			// here would break it.
+			// The machines of an immutable cluster, which refuses --ssh-host and names them here.
+			name:        "an immutable cluster is named after the machines --master-host names",
+			meta:        staticConfig(),
+			masterHosts: []string{"master-0=10.0.0.11"},
+			expected:    "master-21f49ca6d401876a5410f57d1cb0a48b",
+		},
+		{
+			// A static bootstrap of the current host is legal and carries neither an --ssh-host nor
+			// a --master-host; refusing it here would break it.
 			name:     "nothing to name the cluster after falls through to the legacy identity",
 			meta:     staticConfig(),
 			expected: legacyIdentity,
@@ -148,7 +156,7 @@ func TestPrimaryCacheIdentity(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			identity := primaryCacheIdentity(tc.meta, tc.hosts, tc.kube)
+			identity := primaryCacheIdentity(tc.meta, tc.hosts, tc.masterHosts, tc.kube)
 
 			require.Equal(t, tc.expected, identity)
 
@@ -193,7 +201,7 @@ func TestCacheIdentityAdoptsTheLegacyCache(t *testing.T) {
 	before, err := os.ReadDir(legacyDir)
 	require.NoError(t, err)
 
-	identity := cacheIdentity(ctx, staticConfig(), hosts("10.0.0.1"), options.KubeOptions{}, dir)
+	identity := cacheIdentity(ctx, staticConfig(), hosts("10.0.0.1"), nil, options.KubeOptions{}, dir)
 
 	require.Equal(t, legacyIdentity, identity,
 		"bootstrap-phase abort finds the record of a half-finished bootstrap here and refuses without it",
@@ -214,7 +222,7 @@ func TestCacheIdentityAdoptsTheLegacyCache(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, clusterUUID, string(loaded), "the adopted directory has to be a usable cache, not just a pile of files")
 
-	require.Equal(t, legacyIdentity, cacheIdentity(ctx, staticConfig(), hosts("10.0.0.1"), options.KubeOptions{}, dir),
+	require.Equal(t, legacyIdentity, cacheIdentity(ctx, staticConfig(), hosts("10.0.0.1"), nil, options.KubeOptions{}, dir),
 		"the claim has to survive into the next run of the same cluster",
 	)
 }
@@ -258,7 +266,7 @@ func TestCacheIdentityRefusesToAdopt(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			dir := withLegacyDir(t, files)
 
-			require.Equal(t, oneHostIdentity, cacheIdentity(t.Context(), staticConfig(), hosts("10.0.0.1"), options.KubeOptions{}, dir))
+			require.Equal(t, oneHostIdentity, cacheIdentity(t.Context(), staticConfig(), hosts("10.0.0.1"), nil, options.KubeOptions{}, dir))
 			requireNoMarker(t, dir)
 		})
 	}
@@ -268,7 +276,7 @@ func TestCacheIdentityRefusesToAdopt(t *testing.T) {
 	t.Run("no legacy directory at all", func(t *testing.T) {
 		dir := t.TempDir()
 
-		require.Equal(t, oneHostIdentity, cacheIdentity(t.Context(), staticConfig(), hosts("10.0.0.1"), options.KubeOptions{}, dir))
+		require.Equal(t, oneHostIdentity, cacheIdentity(t.Context(), staticConfig(), hosts("10.0.0.1"), nil, options.KubeOptions{}, dir))
 		requireNoMarker(t, dir)
 	})
 
@@ -277,7 +285,7 @@ func TestCacheIdentityRefusesToAdopt(t *testing.T) {
 		marker := filepath.Join(dir, legacyDirName+".owner")
 		require.NoError(t, os.WriteFile(marker, []byte(hostAIdentity), 0o600))
 
-		require.Equal(t, oneHostIdentity, cacheIdentity(t.Context(), staticConfig(), hosts("10.0.0.1"), options.KubeOptions{}, dir))
+		require.Equal(t, oneHostIdentity, cacheIdentity(t.Context(), staticConfig(), hosts("10.0.0.1"), nil, options.KubeOptions{}, dir))
 
 		owner, err := os.ReadFile(marker)
 		require.NoError(t, err)
@@ -291,7 +299,7 @@ func TestCacheIdentityRefusesToAdopt(t *testing.T) {
 		require.NoError(t, os.MkdirAll(ownDir, 0o755))
 		require.NoError(t, os.WriteFile(filepath.Join(ownDir, "uuid"), []byte("the-cluster-being-bootstrapped"), 0o600))
 
-		identity := cacheIdentity(t.Context(), staticConfig(), hosts("10.0.0.1"), options.KubeOptions{}, dir)
+		identity := cacheIdentity(t.Context(), staticConfig(), hosts("10.0.0.1"), nil, options.KubeOptions{}, dir)
 
 		require.Equal(t, oneHostIdentity, identity)
 		requireNoMarker(t, dir)
@@ -307,7 +315,7 @@ func TestCacheIdentityRefusesToAdopt(t *testing.T) {
 		dir := withLegacyDir(t, map[string]string{"uuid": "u"})
 		cloud := &config.MetaConfig{ClusterType: config.CloudClusterType, ClusterPrefix: "dev", ProviderName: "yandex"}
 
-		require.Equal(t, "dev-yandex-terraform-state-cache", cacheIdentity(t.Context(), cloud, hosts("10.0.0.1"), options.KubeOptions{}, dir))
+		require.Equal(t, "dev-yandex-terraform-state-cache", cacheIdentity(t.Context(), cloud, hosts("10.0.0.1"), nil, options.KubeOptions{}, dir))
 		requireNoMarker(t, dir)
 	})
 
@@ -315,7 +323,7 @@ func TestCacheIdentityRefusesToAdopt(t *testing.T) {
 		cloud := &config.MetaConfig{ClusterType: config.CloudClusterType, ClusterPrefix: "dev", ProviderName: "yandex"}
 
 		require.Equal(t, "dev-yandex-terraform-state-cache",
-			cacheIdentity(t.Context(), cloud, nil, options.KubeOptions{}, filepath.Join(t.TempDir(), "absent")),
+			cacheIdentity(t.Context(), cloud, nil, nil, options.KubeOptions{}, filepath.Join(t.TempDir(), "absent")),
 		)
 	})
 }
@@ -328,8 +336,8 @@ func TestCacheIdentitySeparatesStaticClusters(t *testing.T) {
 	ctx := t.Context()
 	dir := t.TempDir()
 
-	first := cacheIdentity(ctx, staticConfig(), hosts("10.0.0.1"), options.KubeOptions{}, dir)
-	second := cacheIdentity(ctx, staticConfig(), hosts("10.0.0.2"), options.KubeOptions{}, dir)
+	first := cacheIdentity(ctx, staticConfig(), hosts("10.0.0.1"), nil, options.KubeOptions{}, dir)
+	second := cacheIdentity(ctx, staticConfig(), hosts("10.0.0.2"), nil, options.KubeOptions{}, dir)
 
 	require.NotEqual(t, first, second, "two static clusters must not share one state cache")
 
@@ -342,4 +350,25 @@ func TestCacheIdentitySeparatesStaticClusters(t *testing.T) {
 
 	_, err = utilcache.NewStateCache(filepath.Join(dir, stringsutil.Sha256Encode(second)))
 	require.NoError(t, err, "and the second cluster is not refused by it")
+}
+
+// The machines of an immutable cluster are named by --master-host, and --ssh-host is refused
+// there, so nothing else was left for the identity to read: ClusterPrefix and ProviderName are
+// cloud-only, and the kube flags are unset during a bootstrap. Two clusters collapsed onto one
+// state cache directory: the second read the first one's uuid and admin kubeconfig instead of
+// minting its own, and a finished first one made the second die at "cache marked as exhausted".
+func TestPrimaryCacheIdentityNamesImmutableClustersApart(t *testing.T) {
+	identity := func(masterHosts ...string) string {
+		return primaryCacheIdentity(staticConfig(), nil, masterHosts, options.KubeOptions{})
+	}
+
+	require.NotEqual(t, identity("master-0=10.0.0.11"), identity("master-0=10.0.0.21"),
+		"two clusters of different machines are two caches")
+	require.NotEqual(t, legacyIdentity, identity("master-0=10.0.0.11"),
+		"the collapsed identity is what this arm exists to avoid")
+
+	require.Equal(t,
+		identity("master-0=10.0.0.11", "master-1=10.0.0.12"),
+		identity("master-1=10.0.0.12", "master-0=10.0.0.11"),
+		"the order of --master-host does not name a different cluster, as for --ssh-host")
 }

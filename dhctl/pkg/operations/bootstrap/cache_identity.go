@@ -49,13 +49,21 @@ import (
 // kubeconfig one, whose length is pre-existing behaviour shared with dhctl converge: with
 // --kube-cachestore-namespace and no --kube-cachestore-name the identity is used raw as a
 // Kubernetes Secret name and copied into a label value.
-func primaryCacheIdentity(m *config.MetaConfig, hosts []sshconfig.Host, kube options.KubeOptions) string {
+func primaryCacheIdentity(m *config.MetaConfig, hosts []sshconfig.Host, masterHosts []string, kube options.KubeOptions) string {
 	if m.ClusterPrefix != "" && m.ProviderName != "" {
 		return m.CachePath()
 	}
 
 	if names := canonHosts(hosts); len(names) > 0 {
 		return "ssh-" + stringsutil.Sha256EncodeWithFirstLettersOfHash(strings.Join(names, ","), 32)
+	}
+
+	// An immutable cluster refuses --ssh-host and names its machines with --master-host instead,
+	// so without this arm nothing above or below it reads anything and every such cluster shares
+	// one directory. The pairs are the identity: the name in each is the node's, so a run that
+	// renames a machine is a different cluster.
+	if names := canonMasterHosts(masterHosts); len(names) > 0 {
+		return "master-" + stringsutil.Sha256EncodeWithFirstLettersOfHash(strings.Join(names, ","), 32)
 	}
 
 	if kube.Config != "" {
@@ -69,6 +77,22 @@ func primaryCacheIdentity(m *config.MetaConfig, hosts []sshconfig.Host, kube opt
 	// A static bootstrap of the host it runs on carries no address of its own. Refusing it here
 	// would break a bootstrap the interactive branch of bootstrapPreparation supports.
 	return m.CachePath()
+}
+
+// canonMasterHosts is canonHosts for the raw "name=address" pairs of --master-host, sorted and
+// de-duplicated the same way and for the same reason.
+func canonMasterHosts(raw []string) []string {
+	pairs := make([]string, 0, len(raw))
+
+	for _, pair := range raw {
+		if trimmed := strings.TrimSpace(pair); trimmed != "" {
+			pairs = append(pairs, trimmed)
+		}
+	}
+
+	slices.Sort(pairs)
+
+	return slices.Compact(pairs)
 }
 
 func canonHosts(hosts []sshconfig.Host) []string {
@@ -97,12 +121,13 @@ func cacheIdentity(
 	ctx context.Context,
 	m *config.MetaConfig,
 	hosts []sshconfig.Host,
+	masterHosts []string,
 	kube options.KubeOptions,
 	cacheDir string,
 ) string {
 	legacy := m.CachePath()
 
-	identity := primaryCacheIdentity(m, hosts, kube)
+	identity := primaryCacheIdentity(m, hosts, masterHosts, kube)
 	if identity == legacy {
 		return legacy
 	}

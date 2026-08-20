@@ -27,6 +27,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	utilcache "github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
@@ -131,7 +132,7 @@ func recordingPhaseFuncs(pec *recordingPEC, failOn phases.OperationPhase, failEr
 
 func declaredPhases(clusterType string) []phases.OperationPhase {
 	declared := make([]phases.OperationPhase, 0)
-	for _, n := range phases.PhasesFor(phases.OperationBootstrap, phaseClusterConfig(context.Background(), bootstrappedMetaConfig(clusterType))) {
+	for _, n := range phases.PhasesFor(phases.OperationBootstrap, phaseClusterConfig(bootstrappedMetaConfig(clusterType), false)) {
 		declared = append(declared, n.Phase)
 	}
 	return declared
@@ -490,7 +491,7 @@ func TestRunPhases_RestrictionIsReadableFromInsidePreparation(t *testing.T) {
 		// Stands in for the point bootstrapPreparation reaches once the config is loaded: the
 		// cluster type is known, and nothing past this line has run yet.
 		phases.PreparationPhase: {run: func(_ context.Context, bctx *bootstrapContext) error {
-			return refuseIfExcluded(bctx.only, phaseClusterConfig(context.Background(), bootstrappedMetaConfig("Static")))
+			return refuseIfExcluded(bctx.only, phaseClusterConfig(bootstrappedMetaConfig("Static"), false))
 		}},
 	}, phases.BaseInfraPhase)
 
@@ -724,8 +725,11 @@ spec:
 `
 
 	declared := func(metaConfig *config.MetaConfig) []phases.OperationPhase {
+		immutableMaster, err := immutable.IsImmutableMaster(context.Background(), metaConfig)
+		require.NoError(t, err)
+
 		out := make([]phases.OperationPhase, 0)
-		for _, n := range phases.PhasesFor(phases.OperationBootstrap, phaseClusterConfig(context.Background(), metaConfig)) {
+		for _, n := range phases.PhasesFor(phases.OperationBootstrap, phaseClusterConfig(metaConfig, immutableMaster)) {
 			out = append(out, n.Phase)
 		}
 		return out
@@ -734,4 +738,57 @@ spec:
 	require.Contains(t, declared(immutableStatic), phases.FirstMasterPhase)
 	require.NotContains(t, declared(bootstrappedMetaConfig("Static")), phases.FirstMasterPhase,
 		"a static cluster of classic nodes has no first master to produce")
+}
+
+// immutableStaticMetaConfig is a static cluster whose master NodeGroup asks for an immutable
+// system: the machines exist already and are handed their configuration over the network.
+func immutableStaticMetaConfig() *config.MetaConfig {
+	metaConfig := bootstrappedMetaConfig("Static")
+	metaConfig.ResourcesYAML = `
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: master
+spec:
+  nodeType: Static
+  systemType: Immutable
+`
+	return metaConfig
+}
+
+// immutableStaticFixture is runPhasesFixture for that cluster, with three machines named the way
+// the command line names them.
+func immutableStaticFixture() (*ClusterBootstrapper, *bootstrapContext, *recordingPEC) {
+	b, bctx, pec := runPhasesFixture("Static", -1)
+	bctx.metaConfig = immutableStaticMetaConfig()
+	b.Options.Bootstrap.MasterHostsRaw = []string{"master-0=10.0.0.11", "master-1=10.0.0.12", "master-2=10.0.0.13"}
+
+	return b, bctx, pec
+}
+
+// Masters 2..N of an immutable static cluster are up to an hour of per-machine work, and the node
+// that does it has to be the one named after it. Folded into the control-plane-manager wait they
+// were dropped by a --skip-phase naming only a wait, without a word and with exit code 0, while
+// the phase an operator would reach for was refused as not part of a static bootstrap.
+func TestRunPhases_ImmutableStaticInstallsTheOtherMastersInTheNamedPhase(t *testing.T) {
+	t.Parallel()
+
+	b, bctx, pec := immutableStaticFixture()
+	b.Options.Bootstrap.SkipPhases = []string{string(phases.WaitForControlPlaneManagerReadinessPhase)}
+
+	require.NoError(t, b.runPhases(context.Background(), bctx, recordingPhaseFuncs(pec, "", nil), wholeTree))
+	require.Contains(t, pec.phasesOf("run"), phases.InstallAdditionalMastersAndStaticNodes,
+		"skipping a wait must not drop the machines nobody configured yet")
+
+	skipped, skippedCtx, skippedPEC := immutableStaticFixture()
+	skippedPEC.stopAt = -1
+	skipped.Options.Bootstrap.SkipPhases = []string{string(phases.InstallAdditionalMastersAndStaticNodes)}
+
+	err := skipped.runPhases(context.Background(), skippedCtx, recordingPhaseFuncs(skippedPEC, "", nil), wholeTree)
+
+	require.ErrorContains(t, err, "--skip-phase")
+	require.ErrorContains(t, err, string(phases.InstallAdditionalMastersAndStaticNodes))
+	require.Equal(t, []phases.OperationPhase{phases.PreparationPhase}, skippedPEC.phasesOf("run"),
+		"the refusal lands before anything is configured")
+	require.Empty(t, skippedPEC.phasesOf("complete"))
 }

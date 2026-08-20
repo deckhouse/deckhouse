@@ -32,6 +32,12 @@ const (
 	// which spells the same kinds out when it renders a day-2 payload.
 	NodeConfigKind         = "NodeConfig"
 	controlPlaneConfigKind = "ControlPlaneConfig"
+
+	// The names the write_files entries of a cloud-init payload carry. The node
+	// files the documents by kind and never by name, but cloud-init has no entry
+	// without a path (documentParts, images/init/src/0.1/acquire.go).
+	nodeConfigPath         = "/config/nodeconfig.yaml"
+	controlPlaneConfigPath = "/config/controlplane.yaml"
 )
 
 // systemTypeImmutable is the NodeGroup systemType that asks for a node dhctl

@@ -55,10 +55,12 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
-// TestBuildImmutableMasterPayloadIsBase64DocumentStream pins the contract: the
+// TestBuildImmutableMasterPayloadIsBase64CloudInit pins the contract: the
 // payload travels in the "cloudConfig" tfvar, which every provider's terraform
-// base64decodes, and what it carries is the document stream the node reads.
-func TestBuildImmutableMasterPayloadIsBase64DocumentStream(t *testing.T) {
+// base64decodes, and what it carries is the cloud-init the node reads. The
+// envelope is not decoration — the provider's own #cloud-config block is glued
+// after it, and outside one those keys land on the last payload document.
+func TestBuildImmutableMasterPayloadIsBase64CloudInit(t *testing.T) {
 	b, bctx := immutableTestBootstrapper(t)
 
 	payload, nodeConfigDocument, err := b.buildImmutableMasterPayload(t.Context(), bctx, "example-master-0")
@@ -66,14 +68,16 @@ func TestBuildImmutableMasterPayloadIsBase64DocumentStream(t *testing.T) {
 
 	document, err := base64.StdEncoding.DecodeString(payload)
 	require.NoError(t, err, "the payload must be base64: terraform base64decodes it")
-
-	// What the machine's hardware is checked against is byte-for-byte the document
-	// the machine is handed, and it opens the stream.
-	require.True(t, strings.HasPrefix(string(document), string(nodeConfigDocument)),
-		"the NodeConfig must open the stream, byte for byte")
+	require.True(t, strings.HasPrefix(string(document), "#cloud-config\n"),
+		"the provider appends its own block, and only an envelope keeps it off the documents")
 
 	documents := payloadDocuments(t, document)
 	require.Len(t, documents, 2, "the first master is handed a NodeConfig and a ControlPlaneConfig")
+
+	// What the machine's hardware is checked against is byte-for-byte the document
+	// the machine is handed.
+	require.Equal(t, string(nodeConfigDocument), documents[0],
+		"the NodeConfig checked against the machine must be the one the machine gets")
 
 	// Both documents are parsed on the node, so they have to survive the round
 	// trip as YAML rather than as an opaque blob.
@@ -663,27 +667,16 @@ func TestRemainingMasterNamesSkipTheFirst(t *testing.T) {
 	require.Equal(t, []string{"master-1", "master-2"}, remainingMasterNames(bctx))
 }
 
-// Without an SSH host these checks fall back to the machine dhctl runs on
-// (system/helper/helper.go), and they run after the payload was pushed: they
-// would either kill an installing node's bootstrap or pass for the wrong machine.
-func TestImmutablePreflightsDropTheChecksThatWouldTestTheInstaller(t *testing.T) {
+// The cloud API check tunnels through the master host, and an immutable master answers no sshd.
+// It is disabled by name because the cloud suites carrying it are shared with every other cloud
+// bootstrap; the static path has a suite of its own instead (TestImmutableStaticPreflightsNeedNoSSHHost).
+func TestImmutablePreflightsDropTheCheckThatWouldTunnelThroughTheMaster(t *testing.T) {
 	b, bctx := immutableTestBootstrapper(t)
 	runner := preflight.New()
 
 	b.applyImmutablePreflights(runner, bctx)
 
-	for _, name := range []preflight.CheckName{
-		checks.SudoAllowedCheckName,
-		checks.HostNetworkCIDRIntersectionCheckName,
-		checks.DeckhouseUserCheckName,
-		checks.StaticSystemRequirementsCheckName,
-		checks.PythonCheckName,
-		checks.PortsCheckName,
-		checks.LocalhostDomainCheckName,
-		checks.TimeDriftCheckName,
-	} {
-		require.True(t, runner.IsDisabled(name.String()), "%s must not run against the installer", name)
-	}
+	require.True(t, runner.IsDisabled(checks.CloudAPICheckName.String()))
 }
 
 // An immutable machine runs no sshd, so the question a missing --ssh-host
@@ -691,7 +684,9 @@ func TestImmutablePreflightsDropTheChecksThatWouldTestTheInstaller(t *testing.T)
 // --ssh-host it asks for sends later phases at a machine that answers no SSH.
 func TestStaticBootstrapNeedsSSHHost(t *testing.T) {
 	static := &config.MetaConfig{ClusterType: config.StaticClusterType}
-	require.True(t, staticBootstrapNeedsSSHHost(t.Context(), static))
+	isImmutable, err := immutable.IsImmutableMaster(t.Context(), static)
+	require.NoError(t, err)
+	require.True(t, staticBootstrapNeedsSSHHost(static, isImmutable))
 
 	immutableStatic := &config.MetaConfig{ClusterType: config.StaticClusterType, ResourcesYAML: `
 apiVersion: deckhouse.io/v1
@@ -702,7 +697,9 @@ spec:
   nodeType: Static
   systemType: Immutable
 `}
-	require.False(t, staticBootstrapNeedsSSHHost(t.Context(), immutableStatic))
+	isImmutable, err = immutable.IsImmutableMaster(t.Context(), immutableStatic)
+	require.NoError(t, err)
+	require.False(t, staticBootstrapNeedsSSHHost(immutableStatic, isImmutable))
 }
 
 // An --ssh-host given alongside --master-host makes the static preflight suite
@@ -1146,21 +1143,29 @@ func TestBuildImmutableJoinPayloadWaitsForTheBootstrapToken(t *testing.T) {
 	document, err := base64.StdEncoding.DecodeString(payload)
 	require.NoError(t, err)
 	require.Contains(t, string(document), token, "the payload must carry the token the cluster published")
-	require.True(t, strings.HasPrefix(string(document), string(nodeConfigDocument)),
+
+	documents := payloadDocuments(t, document)
+	require.Len(t, documents, 1, "a joining master gets no ControlPlaneConfig")
+	require.Equal(t, string(nodeConfigDocument), documents[0],
 		"the join path checks the very bytes the joining machine is handed")
 }
 
-// payloadDocuments splits the payload into the YAML documents the node reads out
-// of it, in the order the stream carries them.
+// payloadDocuments returns the documents a cloud payload carries, in order: the
+// node unwraps the write_files of the #cloud-config and files their contents by
+// kind (documentParts, images/init/src/0.1/acquire.go of the initramfs).
 func payloadDocuments(t *testing.T, payload []byte) []string {
 	t.Helper()
 
-	documents := make([]string, 0, 2)
-	for _, part := range strings.Split(string(payload), "\n---\n") {
-		if strings.TrimSpace(part) == "" {
-			continue
-		}
-		documents = append(documents, part)
+	var envelope struct {
+		WriteFiles []struct {
+			Content string `json:"content"`
+		} `json:"write_files"`
+	}
+	require.NoError(t, yaml.Unmarshal(payload, &envelope))
+
+	documents := make([]string, 0, len(envelope.WriteFiles))
+	for _, file := range envelope.WriteFiles {
+		documents = append(documents, file.Content)
 	}
 	return documents
 }
@@ -1205,4 +1210,147 @@ func createJoinInputsWithoutToken(t *testing.T, kubeCl *client.KubernetesClient)
 		Ports:      []discoveryv1.EndpointPort{{Name: &portName, Port: &port}},
 	}, metav1.CreateOptions{})
 	require.NoError(t, err)
+}
+
+// staticInstanceResources is what an operator adds to a static cluster to have node-manager adopt
+// a worker over SSH. The masters of an immutable cluster are not among them and answer no sshd.
+const staticInstanceResources = `
+apiVersion: deckhouse.io/v1alpha1
+kind: SSHCredentials
+metadata:
+  name: worker-creds
+spec:
+  user: caps
+  privateSSHKey: ZmFrZQ==
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: StaticInstance
+metadata:
+  name: worker-0
+spec:
+  address: 10.0.0.31
+  credentialsRef:
+    kind: SSHCredentials
+    name: worker-creds
+`
+
+// The preflights of an immutable static cluster have to hold together as a suite of their own.
+// Built as "the static suite minus a list of names", every check added to the static suite starts
+// running against the installer container, and the one that walks the StaticInstances asks for an
+// SSH provider this path guarantees does not exist — after the first master took its configuration.
+func TestImmutableStaticPreflightsNeedNoSSHHost(t *testing.T) {
+	b, bctx := immutableTestBootstrapper(t)
+	bctx.metaConfig.ClusterType = config.StaticClusterType
+	bctx.metaConfig.ResourcesYAML = staticInstanceResources
+	b.SSHProviderInitializer = providerinitializer.NewSSHProviderInitializer(nil,
+		&sshconfig.ConnectionConfig{Config: &sshconfig.Config{}})
+
+	built, err := b.preflightSuites(t.Context(), bctx)
+	require.NoError(t, err)
+	require.Len(t, built, 2, "the global suite, and the arm this path is checked by")
+
+	// Running it is the assertion: a check that reaches for the SSH provider ends here with
+	// "hosts from cache not found", and one built over the node interface probes the installer
+	// container instead of a machine.
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+	defer cancel()
+
+	runner := preflight.New(built[1])
+	require.NoError(t, runner.Run(ctx, preflight.PhasePreInfra))
+	require.NoError(t, runner.Run(ctx, preflight.PhasePostInfra))
+}
+
+// olcedar-init closes the maintenance port the moment it accepts the document (constants.go), so
+// the machine can be correctly configured while the reply is lost on the way back. Recorded only
+// after a reply, the rerun found no record, pushed again, and the agent of the now-installed node
+// refused the second document terminally: a machine nothing was wrong with, and no way forward.
+func TestBootstrapImmutableFirstMasterSurvivesALostReply(t *testing.T) {
+	b, bctx := immutableTestBootstrapper(t)
+	bctx.immutable.masterNodeName = "example-master-0"
+
+	var pushes atomic.Int64
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPut {
+			return
+		}
+		if pushes.Add(1) == 1 {
+			// The document is taken and the port closes before the reply is flushed.
+			conn, _, err := w.(http.Hijacker).Hijack()
+			if err != nil {
+				t.Errorf("hijack the accepted push: %v", err)
+				return
+			}
+			conn.Close()
+			return
+		}
+		// What the agent of an installed node answers a second document.
+		w.WriteHeader(http.StatusUnauthorized)
+	}))
+	t.Cleanup(server.Close)
+
+	host, port := splitTestServerAddress(t, server)
+	bctx.immutable.hosts = map[string]string{"example-master-0": host}
+	bctx.immutable.maintenancePort = port
+
+	require.Error(t, b.bootstrapImmutableFirstMaster(t.Context(), bctx),
+		"the run that lost the reply cannot know the machine took the document")
+
+	require.NoError(t, b.bootstrapImmutableFirstMaster(t.Context(), bctx),
+		"a rerun must not dead-end on the machine dhctl configured itself")
+	require.Equal(t, host, bctx.immutable.masterIP, "the rerun still has to report the address")
+}
+
+// A document the machine cannot satisfy never leaves dhctl, so the record written before the push
+// has to be retracted: kept, it would make the rerun with a corrected document skip the machine
+// and wait for a master that was handed nothing.
+func TestADocumentTheMachineRefusesLeavesNoPushRecord(t *testing.T) {
+	// Two disks the rendered document's own ">=20Gi" system selector matches, so nothing in the
+	// operator's input is needed to make this machine ambiguous.
+	machine := newTestMachine(t, twoDisksOfOneSize)
+
+	b, bctx := immutableTestBootstrapper(t)
+	bctx.immutable.masterNodeName = "example-master-0"
+	bctx.immutable.hosts = map[string]string{"example-master-0": machine.host}
+	bctx.immutable.maintenancePort = machine.port
+
+	require.ErrorIs(t, b.bootstrapImmutableFirstMaster(t.Context(), bctx), errDocumentUnfitForMachine)
+	require.False(t, machine.pushed.Load(), "the machine must not be handed a document it cannot satisfy")
+
+	pushed, err := payloadAlreadyPushed(t.Context(), bctx.stateCache, "example-master-0", machine.host)
+	require.NoError(t, err)
+	require.False(t, pushed, "a corrected rerun has to push, not skip")
+}
+
+// ClusterPrefix is assigned only on the cloud branch of config.Prepare, so keying the per-cluster
+// name off it collapsed every static cluster onto one <TmpDir>/admin.kubeconfig. The write clears
+// the path first, and the node stops offering the credentials once the handoff is confirmed: the
+// second static cluster bootstrapped from an installer container deleted the first one's only way in.
+func TestSaveAdminKubeconfigNamesTheFileAfterAStaticClusterToo(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	save := func(clusterUUID string) string {
+		b, bctx := immutableTestBootstrapper(t)
+		b.TmpDir = tmpDir
+		bctx.metaConfig.ClusterType = config.StaticClusterType
+		bctx.metaConfig.ClusterPrefix = ""
+		bctx.metaConfig.UUID = clusterUUID
+
+		content := "apiVersion: v1\nkind: Config\n# " + clusterUUID + "\n"
+		require.NoError(t, b.saveAdminKubeconfig(t.Context(), []byte(content), bctx))
+
+		return bctx.immutable.kubeconfigPath
+	}
+
+	first := save("2c4b7bd4-0f5e-4d1a-9d13-6a0f4f2b1a01")
+	second := save("9f1a0c2e-77c8-4f66-b0a2-1d2e3f4a5b02")
+
+	require.NotEqual(t, first, second, "two clusters must not share one file")
+	require.FileExists(t, first, "the second bootstrap must not delete the first cluster's credentials")
+
+	kept, err := os.ReadFile(first)
+	require.NoError(t, err)
+	require.Contains(t, string(kept), "2c4b7bd4-0f5e-4d1a-9d13-6a0f4f2b1a01")
+
+	// The tmp cleaner spares this file by suffix, as for a cloud cluster.
+	require.True(t, strings.HasSuffix(first, cache.AdminKubeconfigName))
 }
