@@ -35,9 +35,9 @@ type verdict struct {
 }
 
 var (
-	allowed = verdict{matched: true, allowed: true}
-	denied  = verdict{matched: true, allowed: false}
-	skipped = verdict{matched: false, allowed: true}
+	verdictAllowed = verdict{matched: true, allowed: true}
+	verdictDenied  = verdict{matched: true, allowed: false}
+	verdictSkipped = verdict{matched: false, allowed: true}
 )
 
 // evaluatePolicy runs the CEL of a rendered ValidatingAdmissionPolicy the way the apiserver does:
@@ -78,7 +78,7 @@ func evaluatePolicy(policy object_store.KubeObject, params, object, request map[
 
 	for _, condition := range policy.Field("spec.matchConditions").Array() {
 		if eval(condition.Get("expression").String()) != true {
-			return skipped
+			return verdictSkipped
 		}
 	}
 
@@ -234,79 +234,79 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts :: CEL ::", func(
 		// here is the verdict and not a missing policy for some other kind.
 		It("denies a single-label hostname the platform does not publish today", func() {
 			Expect(evaluatePolicy(ingressPolicy, params, ingressWithHosts("shop.example.com"), tenant)).
-				To(Equal(denied), "the template could render this for a service named shop, which is "+
+				To(Equal(verdictDenied), "the template could render this for a service named shop, which is "+
 					"what a hand-maintained list of the names Deckhouse happens to publish can never cover")
 		})
 
 		It("denies the wildcard form of the namespace", func() {
 			Expect(evaluatePolicy(ingressPolicy, params, ingressWithHosts("*.example.com"), tenant)).
-				To(Equal(denied), "a tenant holding this shadows every platform hostname at once, "+
+				To(Equal(verdictDenied), "a tenant holding this shadows every platform hostname at once, "+
 					"which is worse than the single-host takeover the reservation is about")
 		})
 
 		It("denies a hostname written with a root dot", func() {
 			Expect(evaluatePolicy(ingressPolicy, params, ingressWithHosts("CONSOLE.EXAMPLE.COM."), tenant)).
-				To(Equal(denied), "the API server rejects a trailing dot on its own, but the policy "+
-					"must not be the reason it is allowed")
+				To(Equal(verdictDenied), "the API server rejects a trailing dot on its own, but the policy "+
+					"must not be the reason it is verdictAllowed")
 		})
 
 		It("allows a two-label hostname, the shape an ecosystem application takes", func() {
 			Expect(evaluatePolicy(ingressPolicy, params, ingressWithHosts("app.ns.example.com"), tenant)).
-				To(Equal(allowed), "applications.publicDomainTemplate puts the instance and its "+
+				To(Equal(verdictAllowed), "applications.publicDomainTemplate puts the instance and its "+
 					"namespace in two labels, so it can never collide with the platform's one")
 		})
 
 		It("decides by whether the template could have rendered the hostname", func() {
 			expectSameOnEveryKind([]hostCase{
-				{"console.example.com", denied, "a hostname the platform publishes today"},
-				{"shop.example.com", denied,
+				{"console.example.com", verdictDenied, "a hostname the platform publishes today"},
+				{"shop.example.com", verdictDenied,
 					"a single label under the platform's domain, which the template could render for a " +
 						"service named shop -- this is what the literal list could never cover"},
-				{"my-console.example.com", denied, "a label may contain a dash, so the template could render it"},
-				{"a.example.com", denied, "a single-character label is a label"},
-				{"app.ns.example.com", allowed,
+				{"my-console.example.com", verdictDenied, "a label may contain a dash, so the template could render it"},
+				{"a.example.com", verdictDenied, "a single-character label is a label"},
+				{"app.ns.example.com", verdictAllowed,
 					"two labels before the tail: the shape applications.publicDomainTemplate renders, " +
 						"which the platform template can never produce"},
-				{"shop.example.org", allowed, "another domain entirely"},
-				{"example.com", allowed, "the tail on its own is not in the namespace"},
-				{"shop.sub.example.com", allowed, "one label too deep"},
+				{"shop.example.org", verdictAllowed, "another domain entirely"},
+				{"example.com", verdictAllowed, "the tail on its own is not in the namespace"},
+				{"shop.sub.example.com", verdictAllowed, "one label too deep"},
 			})
 		})
 
 		It("reserves the wildcard form of the namespace, which no label could match", func() {
 			expectSameOnEveryKind([]hostCase{
-				{"*.example.com", denied,
+				{"*.example.com", verdictDenied,
 					"in Template mode a tenant holding this shadows every platform hostname at once"},
-				{"*.sub.example.com", allowed, "a wildcard over a domain the platform does not own"},
-				{"*.example.org", allowed, "another domain entirely"},
+				{"*.sub.example.com", verdictAllowed, "a wildcard over a domain the platform does not own"},
+				{"*.example.org", verdictAllowed, "another domain entirely"},
 			})
 		})
 
 		It("compares the hostname however it is spelled", func() {
 			expectSameOnEveryKind([]hostCase{
-				{"Console.Example.COM", denied, "lowercased before comparing"},
-				{"console.example.com.", denied, "the root dot is stripped before comparing"},
-				{"CONSOLE.EXAMPLE.COM.", denied, "both at once"},
-				{"*.EXAMPLE.com", denied, "the wildcard form is lowercased too"},
+				{"Console.Example.COM", verdictDenied, "lowercased before comparing"},
+				{"console.example.com.", verdictDenied, "the root dot is stripped before comparing"},
+				{"CONSOLE.EXAMPLE.COM.", verdictDenied, "both at once"},
+				{"*.EXAMPLE.com", verdictDenied, "the wildcard form is lowercased too"},
 			})
 		})
 
 		It("denies a request that hides a reserved hostname among its own", func() {
 			Expect(evaluatePolicy(ingressPolicy, params, ingressWithHosts("shop.example.org", "console.example.com"), tenant)).
-				To(Equal(denied))
+				To(Equal(verdictDenied))
 			Expect(evaluatePolicy(httpRoutePolicy, params, httpRouteWithHosts("shop.example.org", "console.example.com"), tenant)).
-				To(Equal(denied))
+				To(Equal(verdictDenied))
 			Expect(evaluatePolicy(listenerSetPolicy, params, listenerSetWithHosts("shop.example.org", "console.example.com"), tenant)).
-				To(Equal(denied))
+				To(Equal(verdictDenied))
 		})
 
 		It("allows a request that claims no hostname at all", func() {
 			Expect(evaluatePolicy(ingressPolicy, params, map[string]interface{}{"spec": map[string]interface{}{}}, tenant)).
-				To(Equal(allowed))
+				To(Equal(verdictAllowed))
 			Expect(evaluatePolicy(httpRoutePolicy, params, map[string]interface{}{"spec": map[string]interface{}{}}, tenant)).
-				To(Equal(allowed), "an HTTPRoute without hostnames inherits the listener's")
+				To(Equal(verdictAllowed), "an HTTPRoute without hostnames inherits the listener's")
 			Expect(evaluatePolicy(listenerSetPolicy, params, listenerSetWithHosts(""), tenant)).
-				To(Equal(allowed), "a listener without a hostname accepts any")
+				To(Equal(verdictAllowed), "a listener without a hostname accepts any")
 		})
 
 		It("never reaches the validation for the writers of the platform's own objects", func() {
@@ -317,7 +317,7 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts :: CEL ::", func(
 				"dhctl",
 			} {
 				Expect(evaluatePolicy(ingressPolicy, params, ingressWithHosts("console.example.com"), requestFrom(username))).
-					To(Equal(skipped), "user %q", username)
+					To(Equal(verdictSkipped), "user %q", username)
 			}
 		})
 
@@ -328,7 +328,7 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts :: CEL ::", func(
 				"an empty host list": {"data": map[string]interface{}{"hosts": ""}},
 			} {
 				Expect(evaluatePolicy(ingressPolicy, broken, ingressWithHosts("console.example.com"), tenant)).
-					To(Equal(allowed), "with %s the policy must not deny everything", name)
+					To(Equal(verdictAllowed), "with %s the policy must not deny everything", name)
 			}
 		})
 	})
@@ -340,13 +340,13 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts :: CEL ::", func(
 
 		It("derives the namespace from the whole template, prefix included", func() {
 			expectSameOnEveryKind([]hostCase{
-				{"kube-console.company.my", denied, "what the template renders for console"},
-				{"kube-shop.company.my", denied, "what it would render for a service named shop"},
-				{"kube-a-b.company.my", denied, "a label with a dash in it"},
-				{"shop.company.my", allowed, "no kube- prefix, so outside the namespace"},
-				{"kube-shop.company.org", allowed, "another domain"},
-				{"kube-shop.sub.company.my", allowed, "one label too deep"},
-				{"*.company.my", allowed,
+				{"kube-console.company.my", verdictDenied, "what the template renders for console"},
+				{"kube-shop.company.my", verdictDenied, "what it would render for a service named shop"},
+				{"kube-a-b.company.my", verdictDenied, "a label with a dash in it"},
+				{"shop.company.my", verdictAllowed, "no kube- prefix, so outside the namespace"},
+				{"kube-shop.company.org", verdictAllowed, "another domain"},
+				{"kube-shop.sub.company.my", verdictAllowed, "one label too deep"},
+				{"*.company.my", verdictAllowed,
 					"the platform owns kube-* inside company.my, not company.my itself, and " +
 						"kube-*.company.my is not a hostname any API server accepts"},
 			})
@@ -361,10 +361,10 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts :: CEL ::", func(
 
 		It("reserves nothing but what the operator named, rather than everything", func() {
 			expectSameOnEveryKind([]hostCase{
-				{"admin.example.com", denied, "the operator asked for this one"},
-				{"console.example.com", allowed, "the platform publishes nothing, so it owns nothing"},
-				{"shop.example.com", allowed, "an empty pattern must reserve nothing, not match everything"},
-				{"*.example.com", allowed, "there is no namespace to hold a wildcard over"},
+				{"admin.example.com", verdictDenied, "the operator asked for this one"},
+				{"console.example.com", verdictAllowed, "the platform publishes nothing, so it owns nothing"},
+				{"shop.example.com", verdictAllowed, "an empty pattern must reserve nothing, not match everything"},
+				{"*.example.com", verdictAllowed, "there is no namespace to hold a wildcard over"},
 			})
 		})
 	})
@@ -376,21 +376,21 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts :: CEL ::", func(
 
 		It("gives back exactly the hostnames the excluded names render to", func() {
 			expectSameOnEveryKind([]hostCase{
-				{"grafana.example.com", allowed, "excludedServices names the service, the template renders the hostname"},
-				{"shop.example.com", allowed,
+				{"grafana.example.com", verdictAllowed, "excludedServices names the service, the template renders the hostname"},
+				{"shop.example.com", verdictAllowed,
 					"under Template a name the platform does not publish is still reserved, so " +
 						"excluding it is how a workload gets its hostname back"},
-				{"console.example.com", denied, "the rest of the namespace is untouched"},
-				{"grafana.example.org", allowed, "the exclusion is a hostname, not a label"},
-				{"admin.corp.example.org", denied, "additionalHosts reaches outside the namespace"},
-				{"prometheus.example.com", denied,
+				{"console.example.com", verdictDenied, "the rest of the namespace is untouched"},
+				{"grafana.example.org", verdictAllowed, "the exclusion is a hostname, not a label"},
+				{"admin.corp.example.org", verdictDenied, "additionalHosts reaches outside the namespace"},
+				{"prometheus.example.com", verdictDenied,
 					"named on both sides is not a contradiction: additionalHosts always reserves"},
 			})
 		})
 
 		It("still denies a request that hides a reserved hostname behind a freed one", func() {
 			Expect(evaluatePolicy(ingressPolicy, params, ingressWithHosts("grafana.example.com", "console.example.com"), tenant)).
-				To(Equal(denied))
+				To(Equal(verdictDenied))
 		})
 	})
 
@@ -401,9 +401,9 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts :: CEL ::", func(
 
 		It("allows the recorded hostnames and nothing beyond them", func() {
 			expectSameOnEveryKind([]hostCase{
-				{"shop.example.com", allowed, "recorded before the reservation started"},
-				{"store.example.com", denied, "not recorded, so still the platform's namespace"},
-				{"console.example.com", denied, "a platform hostname is reserved however it got claimed"},
+				{"shop.example.com", verdictAllowed, "recorded before the reservation started"},
+				{"store.example.com", verdictDenied, "not recorded, so still the platform's namespace"},
+				{"console.example.com", verdictDenied, "a platform hostname is reserved however it got claimed"},
 			})
 		})
 	})
@@ -415,13 +415,13 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts :: CEL ::", func(
 
 		It("reserves the names the platform publishes and nothing else", func() {
 			expectSameOnEveryKind([]hostCase{
-				{"console.example.com", denied, "on the list"},
-				{"kubeconfig.example.com", denied, "on the list"},
-				{"Console.Example.COM", denied, "lowercased before comparing"},
-				{"shop.example.com", allowed, "not a hostname the platform publishes"},
-				{"my-console.example.com", allowed, "the match is exact, not a substring"},
-				{"*.example.com", allowed, "wildcards were out of scope of the list"},
-				{"app.ns.example.com", allowed, "not a hostname the platform publishes"},
+				{"console.example.com", verdictDenied, "on the list"},
+				{"kubeconfig.example.com", verdictDenied, "on the list"},
+				{"Console.Example.COM", verdictDenied, "lowercased before comparing"},
+				{"shop.example.com", verdictAllowed, "not a hostname the platform publishes"},
+				{"my-console.example.com", verdictAllowed, "the match is exact, not a substring"},
+				{"*.example.com", verdictAllowed, "wildcards were out of scope of the list"},
+				{"app.ns.example.com", verdictAllowed, "not a hostname the platform publishes"},
 			})
 		})
 
@@ -435,7 +435,7 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts :: CEL ::", func(
 			cm := f.KubernetesResource("ConfigMap", "d8-system", reservedHostsConfigMapName)
 			policy := f.KubernetesGlobalResource("ValidatingAdmissionPolicy", reservedHostsIngressPolicy)
 			Expect(evaluatePolicy(policy, paramsFrom(cm), ingressWithHosts("console.example.com"), tenant)).
-				To(Equal(denied))
+				To(Equal(verdictDenied))
 		})
 
 		Context("with an exclusion", func() {
@@ -445,10 +445,10 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts :: CEL ::", func(
 
 			It("frees the excluded hostname and reserves the added one", func() {
 				expectSameOnEveryKind([]hostCase{
-					{"grafana.example.com", allowed, "dropped from the list"},
-					{"admin.example.com", denied, "added to the list"},
-					{"console.example.com", denied, "the rest of the list is untouched"},
-					{"shop.example.com", allowed, "an unpublished name was never reserved under List"},
+					{"grafana.example.com", verdictAllowed, "dropped from the list"},
+					{"admin.example.com", verdictDenied, "added to the list"},
+					{"console.example.com", verdictDenied, "the rest of the list is untouched"},
+					{"shop.example.com", verdictAllowed, "an unpublished name was never reserved under List"},
 				})
 			})
 		})
