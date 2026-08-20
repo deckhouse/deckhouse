@@ -691,6 +691,30 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
+	suite.Run("legacy module fills a gap left by a failed version", func() {
+		// v1.0.2 is in the cluster, v1.0.1 below it is not - the state left behind when creating
+		// it failed. The walk must reach it instead of stopping at the version it already knows.
+		reg := fakeRegistry.NewRegistry(registryHost)
+		reg.MustAddImage("", "test-package", fakeRegistry.NewImageBuilder().MustBuild())
+		reg.MustAddImage("test-package/release", "v1.0.2", legacyReleaseImage().MustBuild())
+		reg.MustAddImage("test-package/release", "v1.0.1", legacyReleaseImage().MustBuild())
+		reg.MustAddImage("test-package/release", "v0.9.9", fakeRegistry.NewImageBuilder().MustBuild())
+
+		psm := createFakePSM(&legacyRegistryClient{Client: newInternalClient(reg)})
+
+		suite.setupController("legacy-module-gap.yaml", withPackageServiceManager(psm))
+		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
+
+		err := repeat(func() error {
+			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+				NamespacedName: k8stypes.NamespacedName{Name: operation.Name},
+			})
+			return err
+		})
+
+		require.NoError(suite.T(), err)
+	})
+
 	suite.Run("empty /version tags and no /release", func() {
 		// /version exists with only non-semver tags, /release does not exist at all.
 		// Must emit the same error as the NAME_UNKNOWN+no-/release path:

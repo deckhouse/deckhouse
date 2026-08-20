@@ -516,9 +516,9 @@ func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageNa
 // walkModuleReleases walks <package>/release from the newest version down, creating a
 // ModulePackageVersion for every release image that carries a module definition.
 //
-// The walk stops at the first version the cluster already knows - everything below it was settled
-// by an earlier scan - or at the first image without a definition: such a version cannot be
-// offered, and the module is reported legacy to say its history is cut off there.
+// The walk stops at the first image without a definition: that version cannot be offered, and the
+// module is reported legacy to say its history is cut off there. Versions the cluster already holds
+// are skipped without reading their image.
 func (s *OperationService) walkModuleReleases(ctx context.Context, packageName string) (*PackageProcessResult, error) {
 	release := s.svc.Package(packageName).Release()
 
@@ -548,12 +548,15 @@ func (s *OperationService) walkModuleReleases(ctx context.Context, packageName s
 	for _, versionTag := range foundTags {
 		version := "v" + versionTag.String()
 
+		// A known version is adopted as it is, without reading its image, and the walk goes on.
+		// Stopping here would strand a version that failed to be created: the newer ones above it
+		// are known from then on, so no later scan would ever reach it again.
 		known, err := s.moduleVersionExists(ctx, packageName, version)
 		if err != nil {
 			return nil, err
 		}
 		if known {
-			break
+			continue
 		}
 
 		hasDefinition, err := release.HasModuleDefinition(ctx, version)
@@ -600,8 +603,8 @@ func (s *OperationService) walkModuleReleases(ctx context.Context, packageName s
 	return result, nil
 }
 
-// moduleVersionExists reports whether the cluster already holds the version, which ends the
-// release walk: the scan that created it went through everything older.
+// moduleVersionExists reports whether the cluster already holds the version, in which case the
+// release walk skips it instead of reading its image.
 func (s *OperationService) moduleVersionExists(ctx context.Context, packageName, version string) (bool, error) {
 	name := v1alpha1.MakeModulePackageVersionName(s.repo.Name, packageName, version)
 
