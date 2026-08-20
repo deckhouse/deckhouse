@@ -299,7 +299,7 @@ func immutableCustomization(bctx *bootstrapContext, nodeName string) *immutable.
 	if !ok {
 		return nil
 	}
-	return new(described)
+	return &described
 }
 
 // addressAfterInstall is where the machine answers once it has installed itself:

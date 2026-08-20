@@ -21,9 +21,9 @@ import (
 	"net"
 	"slices"
 
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
-
 	"sigs.k8s.io/yaml"
+
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 // Customization is the machine-specific part of a node's configuration: what

@@ -29,12 +29,6 @@ const (
 	// which spells the same kinds out when it renders a day-2 payload.
 	nodeConfigKind         = "NodeConfig"
 	controlPlaneConfigKind = "ControlPlaneConfig"
-
-	// nodeConfigPath is where olcedar-init leaves the node config once it has
-	// filed the stream by kind. Named here only for the messages an operator
-	// reads: what the documents are addressed by is their kind.
-	// Mirrors modules/040-node-manager/images/node-controller/src/internal/controller/nodebootstrap/constants.go.
-	nodeConfigPath = "/config/nodeconfig.yaml"
 )
 
 // systemTypeImmutable is the NodeGroup systemType that asks for a node dhctl
