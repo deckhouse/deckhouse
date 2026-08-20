@@ -32,14 +32,8 @@ rules:
   - get
   - list
   - watch
-# Read-only audit access to internal Dex storage CRDs (incident response: enumerate active
-# sessions, see which users have stored passwords). list-only — `get` on a single object
-# would expose bcrypt hashes / refresh tokens.
-# NOTE: plural is `offlinesessionses` (matches Dex CRD name).
-- apiGroups:
-  - dex.coreos.com
-  resources:
-  - passwords
-  - offlinesessionses
-  verbs:
-  - list
+# The internal Dex storage CRDs (`passwords`, `offlinesessionses`) are deliberately absent.
+# Restricting them to `list` is not a mitigation: a collection read returns whole objects, so
+# it discloses `hash` and `previousHashes` — the current and historical bcrypt credentials of
+# every local user, administrators included — plus refresh-token material. This role promises
+# read access to configuration only, so use `deckhouse.io` users for the account inventory.
