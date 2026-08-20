@@ -108,7 +108,7 @@ spec:
                     - Hybrid
                 providerType:
                   description: |
-                    Cloud provider the nodes of this group run in, or `None` for a group that runs outside any cloud.
+                    Cloud provider type of the node group. `None` or an empty value — for a static node group.
                   type: string
                 kubernetesVersion:
                   description: |
@@ -736,7 +736,7 @@ spec:
                     - Hybrid
                 providerType:
                   description: |
-                    Cloud provider the nodes of this group run in, or `None` for a group that runs outside any cloud.
+                    Cloud provider type of the node group. `None` or an empty value — for a static node group.
                   type: string
                 cri:
                   type: object
@@ -1407,7 +1407,7 @@ spec:
                     - Static
                 providerType:
                   description: |
-                    Cloud provider the nodes of this group run in, or `None` for a group that runs outside any cloud.
+                    Cloud provider type of the node group. `None` or an empty value — for a static node group.
                   type: string
                 nodeDrainTimeoutSecond:
                   type: integer

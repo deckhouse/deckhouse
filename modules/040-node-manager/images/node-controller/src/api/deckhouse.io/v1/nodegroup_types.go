@@ -69,8 +69,8 @@ type NodeGroupSpec struct {
 	// +kubebuilder:validation:Required
 	NodeType NodeType `json:"nodeType"`
 
-	// ProviderType declares the cloud provider the nodes of this group run in, or "None" for a
-	// group that runs outside any cloud.
+	// ProviderType is the cloud provider type of the node group. "None" or an empty value — for a
+	// static node group.
 	// +optional
 	ProviderType string `json:"providerType,omitempty"`
 
