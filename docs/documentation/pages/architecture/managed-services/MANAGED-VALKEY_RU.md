@@ -27,7 +27,7 @@ description: Архитектура модуля managed-valkey в Deckhouse Kub
 
 Архитектура модуля [`managed-valkey`](/modules/managed-valkey/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DKP изображена на следующей диаграмме:
 
-![Архитектура модуля managed-valkey](../../images/architecture/managed-services/c4-l2-managed-valkey.ru.png)
+![Архитектура модуля managed-valkey](../../images/architecture/managed-services/c4-l2-managed-valkey.ru.svg)
 
 ## Компоненты модуля
 
@@ -54,12 +54,12 @@ description: Архитектура модуля managed-valkey в Deckhouse Kub
 
 Модуль взаимодействует с компонентом **kube-apiserver**:
 
-  - управляет кастомными ресурсами Valkey, ValkeyClass и [Certificate](https://cert-manager.io/docs/usage/certificate/);
-  - управляет ресурсами StatefulSet, Secret, ConfigMap и PersistentVolumeClaim.
+- управляет кастомными ресурсами Valkey, ValkeyClass и [Certificate](https://cert-manager.io/docs/usage/certificate/);
+- управляет ресурсами StatefulSet, Secret, ConfigMap и PersistentVolumeClaim.
 
 С модулем взаимодействуют следующие внешние компоненты:
 
-1. **Kube-apiserver** — отправляет запросы на валидацию и мутацию кастомных ресурсов Valkey, мутацию кастомных ресурсов ValkeyClass.
+1. **Kube-apiserver** — отправляет запросы на валидацию и мутацию кастомных ресурсов Valkey.
 
 1. **Prometheus-main** — собирает метрики компонентов managed-valkey-operator и managed-valkey-webhook.
 
