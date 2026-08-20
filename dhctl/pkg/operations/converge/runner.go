@@ -174,6 +174,12 @@ func populateNodesState(ctx *convergecontext.Context) (map[string]state.NodeGrou
 }
 
 func (r *runner) migrateTerraNodes(ctx *convergecontext.Context, metaConfig *config.MetaConfig, nodesState map[string]state.NodeGroupInfrastructureState) error {
+	// Refuse before the phase is opened, the same way the converge path refuses before
+	// switching to the node user: both entry points fail on the same condition.
+	if err := refuseImmutableNodeGroups(ctx.Ctx(), ctx, convergedNodeGroupNames(metaConfig, nodesState)); err != nil {
+		return err
+	}
+
 	if shouldStop, err := ctx.StarExecutionPhase(ctx.Ctx(), phases.AllNodesPhase, true); err != nil {
 		return err
 	} else if shouldStop {
@@ -450,6 +456,10 @@ func (r *runner) converge(ctx *convergecontext.Context) error {
 	if !skipInfrastructure && !r.isSkip(phases.AllNodesPhase) {
 		nodesStates, err := populateNodesState(ctx)
 		if err != nil {
+			return err
+		}
+
+		if err := refuseImmutableNodeGroups(ctx.Ctx(), ctx, convergedNodeGroupNames(metaConfig, nodesStates)); err != nil {
 			return err
 		}
 
