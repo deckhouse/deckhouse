@@ -25,6 +25,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -35,7 +36,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/lib/publicdomain"
-	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 /*
@@ -48,6 +48,12 @@ Once is the whole point. A snapshot taken again would make the allowlist widen i
 claims a hostname, the next snapshot legitimises it, and the reservation is defeated by waiting. So
 the hook does not decide by a timestamp or by "has the module been upgraded"; it decides by the
 record it produced last time.
+
+When, is the other half. The record is applied only under Template mode, so it is taken when Template
+mode first takes effect and not on first converge: a cluster installed on List and switched to
+Template a year later gets a snapshot of the day it switched, not one of the day it was installed
+that would grandfather none of what appeared in between. Which mode is in force is decided by
+publicdomain.EffectiveMode, the same decision the template publishes in the ConfigMap's mode key.
 
 That record lives in the d8-reserved-public-hosts ConfigMap in d8-system, the same object the
 policies read their parameters from, and Helm is its only writer. The hook reads the grandfather keys
@@ -89,23 +95,40 @@ const (
 var namespaceResource = schema.GroupVersionResource{Version: "v1", Resource: "namespaces"}
 
 // hostBearingResources are the kinds that carry a hostname a tenant could claim, and where each of
-// them keeps it. The two Gateway API ones may have no CRD in the cluster, which is why the group
-// version is checked against discovery before anything is read from it.
+// them keeps it. It has to name every kind templates/reserved-public-hosts.yaml writes a policy for:
+// a kind the policies deny but this list does not read is denied on its next write with nothing in
+// grandfatheredHosts to let it back out, which is the promise the grandfathering makes.
+//
+// The version is left to discovery rather than pinned. The policies match apiVersions ["*"], so a
+// cluster whose Gateway API came from elsewhere and serves only v1beta1 would otherwise have nothing
+// recorded while every write to those objects is still denied.
 var hostBearingResources = []struct {
-	gvr   schema.GroupVersionResource
+	gr    schema.GroupResource
 	hosts func(object map[string]interface{}) []string
 }{
 	{
-		gvr:   schema.GroupVersionResource{Group: "networking.k8s.io", Version: "v1", Resource: "ingresses"},
-		hosts: hostsFromIngress,
+		gr:    schema.GroupResource{Group: "networking.k8s.io", Resource: "ingresses"},
+		hosts: hostsFromIngressRules,
 	},
 	{
-		gvr:   schema.GroupVersionResource{Group: "gateway.networking.k8s.io", Version: "v1", Resource: "httproutes"},
-		hosts: hostsFromHTTPRoute,
+		gr:    schema.GroupResource{Group: "gateway.networking.k8s.io", Resource: "httproutes"},
+		hosts: hostsFromRouteHostnames,
 	},
 	{
-		gvr:   schema.GroupVersionResource{Group: "gateway.networking.k8s.io", Version: "v1", Resource: "listenersets"},
-		hosts: hostsFromListenerSet,
+		gr:    schema.GroupResource{Group: "gateway.networking.k8s.io", Resource: "grpcroutes"},
+		hosts: hostsFromRouteHostnames,
+	},
+	{
+		gr:    schema.GroupResource{Group: "gateway.networking.k8s.io", Resource: "tlsroutes"},
+		hosts: hostsFromRouteHostnames,
+	},
+	{
+		gr:    schema.GroupResource{Group: "gateway.networking.k8s.io", Resource: "listenersets"},
+		hosts: hostsFromListenerHostnames,
+	},
+	{
+		gr:    schema.GroupResource{Group: "gateway.networking.k8s.io", Resource: "gateways"},
+		hosts: hostsFromListenerHostnames,
 	},
 }
 
@@ -154,21 +177,35 @@ func snapshotReservedPublicHosts(ctx context.Context, input *go_hook.HookInput, 
 	}
 
 	if len(recorded) > 0 && recorded[0].Recorded {
-		// Taken already. Put it back verbatim so that Helm renders what is in the cluster, and read
-		// nothing else: this branch is what makes the grandfathering one-time rather than a list
-		// that grows every time Deckhouse restarts.
-		input.Values.Set(reservedPublicHostsValuePath, recorded[0])
+		// Taken already. Put it back so that Helm renders what is in the cluster, and read nothing
+		// else: this branch is what makes the grandfathering one-time rather than a list that grows
+		// every time Deckhouse restarts.
+		input.Values.Set(reservedPublicHostsValuePath, reservedPublicHostsSnapshot{
+			Recorded: true,
+			Hosts:    hostsFromRecord(recorded[0].Hosts, input),
+		})
 		return nil
 	}
 
-	namespace, err := publicdomain.ParseNamespace(input.Values.Get("global.modules.publicDomainTemplate").String())
-	if err != nil {
-		// No template, or one the global schema would have rejected. Either way nothing is reserved
-		// by pattern, so there is nothing to grandfather and no reason to read the cluster. Left
-		// unrecorded on purpose: the snapshot belongs to the moment the reservation starts, and a
-		// template set later still gets one.
+	domainTemplate := input.Values.Get("global.modules.publicDomainTemplate").String()
+	configuredMode := input.Values.Get("deckhouse.reservedPublicHosts.mode").String()
+
+	if publicdomain.EffectiveMode(configuredMode, domainTemplate) != publicdomain.ModeTemplate {
+		// The record is applied only under Template mode, so recording now would take a snapshot of
+		// a moment the reservation it feeds was not in force at -- and a cluster switched to
+		// Template a year later would find a record from its List days and grandfather nothing that
+		// appeared in between. Left unrecorded, so the snapshot is taken when Template first takes
+		// effect. That also covers the cluster with no publicDomainTemplate, and the one whose
+		// template the global schema would have rejected: neither reserves anything by pattern, so
+		// neither has anything to grandfather or a reason to read the cluster.
 		input.Values.Set(reservedPublicHostsValuePath, reservedPublicHostsSnapshot{Hosts: []string{}})
 		return nil
+	}
+
+	namespace, err := publicdomain.ParseNamespace(domainTemplate)
+	if err != nil {
+		// Unreachable: EffectiveMode above answers List for every template this cannot parse.
+		return fmt.Errorf("derive the reserved namespace: %w", err)
 	}
 
 	client, err := dc.GetK8sClient()
@@ -189,6 +226,40 @@ func snapshotReservedPublicHosts(ctx context.Context, input *go_hook.HookInput, 
 	return nil
 }
 
+// hostsFromRecord spells the record the way the reservation compares hostnames and drops what is not
+// a hostname at all.
+//
+// The header of this file documents editing grandfatheredHosts in the ConfigMap as the way to prune
+// an entry, and this value goes straight into deckhouse.internal.reservedPublicHosts.hosts, which
+// openapi/values.yaml validates. Without this an operator who types Shop.example.com, leaves a root
+// dot or pastes a URL fails values validation and stops the module that renders Deckhouse from
+// converging -- from a hand edit to a ConfigMap they were pointed at. The same reasoning the
+// template applies to a misspelled excludedServices entry, and more strongly, because this is the
+// surface the operator is invited to edit.
+//
+// A dropped entry is visible on the next converge: it disappears from grandfatheredHosts, and the
+// object behind it is denied with a message naming the hostname.
+func hostsFromRecord(recorded []string, input *go_hook.HookInput) []string {
+	hosts := set.New()
+	dropped := make([]string, 0)
+	for _, host := range recorded {
+		normalized := publicdomain.NormalizeHost(host)
+		if !publicdomain.IsHost(normalized) {
+			dropped = append(dropped, host)
+			continue
+		}
+		hosts.Add(normalized)
+	}
+
+	if len(dropped) > 0 {
+		input.Logger.Warn("dropped entries of grandfatheredHosts that are not hostnames",
+			slog.Int("count", len(dropped)),
+			slog.Any("dropped", dropped))
+	}
+
+	return hosts.Slice()
+}
+
 // collectTenantHosts reads every hostname claimed outside the namespaces the platform owns and keeps
 // the ones the reservation is about to claim.
 //
@@ -204,11 +275,17 @@ func collectTenantHosts(ctx context.Context, client k8s.Client, input *go_hook.H
 
 	hosts := set.New()
 	for _, resource := range hostBearingResources {
-		if !servesResource(client, resource.gvr, input) {
+		gvr, served, err := servedVersion(client, resource.gr)
+		if err != nil {
+			return nil, err
+		}
+		if !served {
+			input.Logger.Info("skipped a resource the cluster does not serve while recording the hostnames tenants already serve",
+				slog.String("resource", resource.gr.String()))
 			continue
 		}
 
-		err := eachObject(ctx, client, resource.gvr, func(object *unstructured.Unstructured) {
+		err = eachObject(ctx, client, gvr, func(object *unstructured.Unstructured) {
 			if platformNamespaces.Has(object.GetNamespace()) {
 				return
 			}
@@ -223,7 +300,7 @@ func collectTenantHosts(ctx context.Context, client k8s.Client, input *go_hook.H
 			}
 		})
 		if err != nil {
-			return nil, fmt.Errorf("read %s: %w", resource.gvr.String(), err)
+			return nil, fmt.Errorf("read %s: %w", gvr.String(), err)
 		}
 	}
 
@@ -251,26 +328,65 @@ func platformOwnedNamespaces(ctx context.Context, client k8s.Client, input *go_h
 	return namespaces, nil
 }
 
-// servesResource reports whether the cluster serves the group version at all, which is how an absent
-// Gateway API is told apart from a call that failed.
-func servesResource(client k8s.Client, gvr schema.GroupVersionResource, input *go_hook.HookInput) bool {
-	groupVersion := gvr.GroupVersion().String()
-	served, err := client.Discovery().ServerResourcesForGroupVersion(groupVersion)
+// servedVersion resolves the version the cluster serves a resource under, the way a template asks
+// helm_lib_kind_exists over the capability strings: the group has to be there and the resource has
+// to appear in one of its versions, but which version that is stays the cluster's business. The
+// policies match apiVersions ["*"], so a version pinned here would leave a cluster serving only
+// gateway.networking.k8s.io/v1beta1 with nothing recorded while every write is still denied.
+//
+// A group the cluster does not serve is absent and reported as such, which is how an uninstalled
+// Gateway API is skipped. A discovery call that fails is returned as an error instead, because
+// reading a failure as "no such CRD" would silently record nothing and grandfather nobody.
+func servedVersion(client k8s.Client, gr schema.GroupResource) (schema.GroupVersionResource, bool, error) {
+	groups, err := client.Discovery().ServerGroups()
 	if err != nil {
-		input.Logger.Info("skipped a kind the cluster does not serve while recording the hostnames tenants already serve",
-			slog.String("resource", gvr.String()),
-			log.Err(err))
-		return false
+		return schema.GroupVersionResource{}, false, fmt.Errorf("read the API groups the cluster serves: %w", err)
 	}
-	for _, resource := range served.APIResources {
-		if resource.Name == gvr.Resource {
-			return true
+
+	for _, group := range groups.Groups {
+		if group.Name != gr.Group {
+			continue
+		}
+
+		for _, groupVersion := range versionsPreferredFirst(group) {
+			served, err := client.Discovery().ServerResourcesForGroupVersion(groupVersion)
+			if apierrors.IsNotFound(err) {
+				continue
+			}
+			if err != nil {
+				return schema.GroupVersionResource{}, false, fmt.Errorf("read the resources of %s: %w", groupVersion, err)
+			}
+
+			for _, resource := range served.APIResources {
+				if resource.Name != gr.Resource {
+					continue
+				}
+				parsed, err := schema.ParseGroupVersion(groupVersion)
+				if err != nil {
+					return schema.GroupVersionResource{}, false, fmt.Errorf("parse the group version %q: %w", groupVersion, err)
+				}
+				return parsed.WithResource(gr.Resource), true, nil
+			}
 		}
 	}
 
-	input.Logger.Info("skipped a kind the cluster does not serve while recording the hostnames tenants already serve",
-		slog.String("resource", gvr.String()))
-	return false
+	return schema.GroupVersionResource{}, false, nil
+}
+
+// versionsPreferredFirst orders the versions of a group the way a client should try them: whichever
+// the API server prefers, then the rest, so that a resource served by several versions is read
+// through the one the cluster itself would pick.
+func versionsPreferredFirst(group metav1.APIGroup) []string {
+	versions := make([]string, 0, len(group.Versions)+1)
+	if group.PreferredVersion.GroupVersion != "" {
+		versions = append(versions, group.PreferredVersion.GroupVersion)
+	}
+	for _, version := range group.Versions {
+		if version.GroupVersion != group.PreferredVersion.GroupVersion {
+			versions = append(versions, version.GroupVersion)
+		}
+	}
+	return versions
 }
 
 // eachObject walks a resource page by page, so that a cluster-wide read does not pull every object
@@ -297,7 +413,7 @@ func eachObject(ctx context.Context, client k8s.Client, gvr schema.GroupVersionR
 	}
 }
 
-func hostsFromIngress(object map[string]interface{}) []string {
+func hostsFromIngressRules(object map[string]interface{}) []string {
 	rules, _, err := unstructured.NestedSlice(object, "spec", "rules")
 	if err != nil {
 		return nil
@@ -315,7 +431,9 @@ func hostsFromIngress(object map[string]interface{}) []string {
 	return hosts
 }
 
-func hostsFromHTTPRoute(object map[string]interface{}) []string {
+// hostsFromRouteHostnames reads spec.hostnames, which HTTPRoute, GRPCRoute and TLSRoute all carry
+// under that name and shape.
+func hostsFromRouteHostnames(object map[string]interface{}) []string {
 	hosts, _, err := unstructured.NestedStringSlice(object, "spec", "hostnames")
 	if err != nil {
 		return nil
@@ -323,7 +441,9 @@ func hostsFromHTTPRoute(object map[string]interface{}) []string {
 	return hosts
 }
 
-func hostsFromListenerSet(object map[string]interface{}) []string {
+// hostsFromListenerHostnames reads spec.listeners[].hostname, which ListenerSet and Gateway both
+// carry under that name and shape.
+func hostsFromListenerHostnames(object map[string]interface{}) []string {
 	listeners, _, err := unstructured.NestedSlice(object, "spec", "listeners")
 	if err != nil {
 		return nil

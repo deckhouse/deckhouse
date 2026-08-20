@@ -34,6 +34,22 @@ import (
 // exactly when some service name renders it.
 const labelPattern = `[a-z0-9]([-a-z0-9]*[a-z0-9])?`
 
+// HostPattern is the shape a hostname the reservation carries has to have. It is the literal
+// modules/002-deckhouse/openapi/values.yaml validates every entry of
+// deckhouse.internal.reservedPublicHosts.hosts against, kept here as well so that a hostname can be
+// dropped before it reaches values: that key is fed from a ConfigMap an operator is invited to edit,
+// and a value validation failure there would stop the module that renders Deckhouse from converging.
+// publicdomain_test.go compares the two strings so that they cannot drift.
+const HostPattern = `^(\*\.)?` + labelPattern + `(\.` + labelPattern + `)*$`
+
+// The two reservations settings.reservedPublicHosts.mode selects between.
+const (
+	ModeTemplate = "Template"
+	ModeList     = "List"
+)
+
+var hostRegexp = regexp.MustCompile(HostPattern)
+
 // Namespace is the set of hostnames one publicDomainTemplate covers.
 type Namespace struct {
 	// Pattern matches every hostname the template can render.
@@ -42,6 +58,22 @@ type Namespace struct {
 	// first label. Only then is the wildcard the template's namespace and nothing wider: with
 	// "kube-%s.company.my" it would be "kube-*.company.my", which no API server accepts, while
 	// "*.company.my" covers a domain the platform does not own.
+	//
+	// So a prefixed template leaves a gap an unprefixed one does not. "*.company.my" does match
+	// "kube-anything.company.my", and a tenant holding it catches every prefixed platform hostname
+	// nothing serves by exact match yet -- the window before the platform starts publishing one,
+	// which is exactly what Template mode closes everywhere else. It cannot take a hostname the
+	// platform already serves: the Gateway API gives the more specific hostname precedence, in so
+	// many words ("foo.example.com" over "*.example.com", in the description of
+	// Gateway.spec.listeners[].hostname in the CRD this repository ships at
+	// ee/modules/110-istio/images/waypoint-controller/src/internal/waypointcontroller/crds_gateway_api/gateways.yaml).
+	// The same is believed to hold for ingress-nginx through nginx's own server_name resolution
+	// order, but that module is not in this repository and the claim is not verified here.
+	//
+	// Where admission-policy-engine is enabled and a SecurityPolicy sets blockWildcardDomains, the
+	// gap is covered for Ingress by
+	// modules/015-admission-policy-engine/charts/constraint-templates/templates/security/allowed-ingresses.yaml.
+	// Nothing covers it for the Gateway API kinds.
 	Wildcard string
 }
 
@@ -72,6 +104,26 @@ func ParseNamespace(domainTemplate string) (Namespace, error) {
 	return namespace, nil
 }
 
+// EffectiveMode is the reservation actually in force, which is not always the one the ModuleConfig
+// asked for: a publicDomainTemplate that does not split into a prefix and a suffix never went
+// through the global schema, and a reservation must not be derived from parts that are not there, so
+// it falls back to List.
+//
+// templates/reserved-public-hosts.yaml decides the same thing in Helm and publishes the answer in
+// the mode key of the ConfigMap. It has to be decided the same way on both sides: the record the
+// snapshot hook writes is applied only under Template, so a hook that recorded while the template
+// reserved by List would leave a record taken under one reservation feeding another.
+// template_tests/reserved_public_hosts_test.go compares the two so that they cannot drift.
+func EffectiveMode(configured, domainTemplate string) string {
+	if configured == ModeList {
+		return ModeList
+	}
+	if _, err := ParseNamespace(domainTemplate); err != nil {
+		return ModeList
+	}
+	return ModeTemplate
+}
+
 // Covers reports whether the hostname is one the reservation claims. The hostname is expected to be
 // normalized already.
 func (n Namespace) Covers(host string) bool {
@@ -96,4 +148,11 @@ func (n Namespace) PatternCovers(host string) bool {
 // the root-dot trim the admission policies apply to what a request claims.
 func NormalizeHost(host string) string {
 	return strings.TrimSuffix(strings.ToLower(strings.TrimSpace(host)), ".")
+}
+
+// IsHost reports whether the string is a hostname the reservation can carry, which is the shape
+// openapi/values.yaml admits. Expects a normalized hostname: a spelling NormalizeHost would have
+// fixed is reported as garbage rather than repaired.
+func IsHost(host string) bool {
+	return hostRegexp.MatchString(host)
 }

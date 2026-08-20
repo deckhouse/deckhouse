@@ -16,7 +16,12 @@ limitations under the License.
 
 package publicdomain
 
-import "testing"
+import (
+	"os"
+	"testing"
+
+	"sigs.k8s.io/yaml"
+)
 
 func TestParseNamespacePattern(t *testing.T) {
 	t.Parallel()
@@ -177,6 +182,104 @@ func TestNormalizeHost(t *testing.T) {
 	for host, want := range cases {
 		if got := NormalizeHost(host); got != want {
 			t.Errorf("NormalizeHost(%q) = %q, want %q", host, got, want)
+		}
+	}
+}
+
+func TestIsHost(t *testing.T) {
+	t.Parallel()
+
+	cases := map[string]bool{
+		"console.example.com": true,
+		"*.example.com":       true,
+		"admin":               true,
+		"a.b.c.d.example.com": true,
+		// What an operator editing grandfatheredHosts by hand can leave behind. Each of these would
+		// fail values validation and stop the module that renders Deckhouse from converging, which
+		// is why the hook drops them instead of passing them through.
+		"Console.Example.COM":       false,
+		"console.example.com.":      false,
+		"https://admin.example.com": false,
+		"admin.example.com:443":     false,
+		"-shop.example.com":         false,
+		"shop-.example.com":         false,
+		"shop..example.com":         false,
+		"*.*.example.com":           false,
+		"shop.*.example.com":        false,
+		"":                          false,
+	}
+
+	for host, want := range cases {
+		if got := IsHost(host); got != want {
+			t.Errorf("IsHost(%q) = %v, want %v", host, got, want)
+		}
+	}
+}
+
+// TestHostPatternIsTheOneTheSchemaValidates keeps the predicate the hook filters a hand-edited record
+// with and the pattern values validation applies to the result from drifting apart. A predicate
+// looser than the schema lets a value through that fails validation, which is the failure the filter
+// exists to prevent.
+func TestHostPatternIsTheOneTheSchemaValidates(t *testing.T) {
+	t.Parallel()
+
+	content, err := os.ReadFile("../../../openapi/values.yaml")
+	if err != nil {
+		t.Fatalf("read the module values schema: %v", err)
+	}
+
+	var schema struct {
+		Properties struct {
+			Internal struct {
+				Properties struct {
+					ReservedPublicHosts struct {
+						Properties struct {
+							Hosts struct {
+								Items struct {
+									Pattern string `json:"pattern"`
+								} `json:"items"`
+							} `json:"hosts"`
+						} `json:"properties"`
+					} `json:"reservedPublicHosts"`
+				} `json:"properties"`
+			} `json:"internal"`
+		} `json:"properties"`
+	}
+	if err := yaml.Unmarshal(content, &schema); err != nil {
+		t.Fatalf("parse the module values schema: %v", err)
+	}
+
+	got := schema.Properties.Internal.Properties.ReservedPublicHosts.Properties.Hosts.Items.Pattern
+	if got != HostPattern {
+		t.Errorf("openapi/values.yaml validates %q, HostPattern is %q", got, HostPattern)
+	}
+}
+
+func TestEffectiveMode(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		configured     string
+		domainTemplate string
+		want           string
+	}{
+		{ModeTemplate, "%s.example.com", ModeTemplate},
+		{ModeTemplate, "kube-%s.company.my", ModeTemplate},
+		{ModeList, "%s.example.com", ModeList},
+		// What the template falls back to, and for the same reason: a value that never went through
+		// the global schema must not have a reservation derived from parts that are not there.
+		{ModeTemplate, "", ModeList},
+		{ModeTemplate, "example.com", ModeList},
+		{ModeTemplate, "%s-%s.example.com", ModeList},
+		{ModeList, "example.com", ModeList},
+		// Absent, which is what a ModuleConfig that never named a mode leaves in values. The schema
+		// defaults it to Template and the template treats anything that is not List the same way.
+		{"", "%s.example.com", ModeTemplate},
+	}
+
+	for _, tc := range cases {
+		if got := EffectiveMode(tc.configured, tc.domainTemplate); got != tc.want {
+			t.Errorf("EffectiveMode(%q, %q) = %q, want %q", tc.configured, tc.domainTemplate, got, tc.want)
 		}
 	}
 }

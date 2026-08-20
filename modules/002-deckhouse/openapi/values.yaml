@@ -38,15 +38,20 @@ properties:
             default: []
             description: |
               The hostnames recorded, lowercase and without a root dot, spelled the way the policies
-              compare them. A wildcard is admitted here and nowhere else in this schema: the
-              reservation covers the wildcard form of the template, so a tenant that already held it
-              has to be recordable.
+              compare them. The hook writing this key normalises and filters what it reads out of the
+              ConfigMap against the same pattern, so that a hand edit to a key an operator is invited
+              to edit cannot fail validation here and stop the module from converging.
+
+              A wildcard is admitted by the pattern and is not recorded: the snapshot deliberately
+              leaves it out, because the wildcard form is reserved by exact match and the allowlist
+              this record feeds cannot lift it. The pattern stays permissive so that a record written
+              by an earlier build, when the wildcard was still recorded, still validates.
             items:
               type: string
               pattern: '^(\*\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
         x-examples:
         - recorded: true
-          hosts: ["shop.example.com", "*.example.com"]
+          hosts: ["shop.example.com"]
       releaseVersionImageHash:
         type: string
       currentReleaseImageName:

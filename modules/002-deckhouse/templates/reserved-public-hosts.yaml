@@ -4,7 +4,8 @@
   namespaced object with no cluster-wide uniqueness check: anybody who may write an Ingress in their
   own namespace could name one of them as a host and have the ingress controller merge that rule
   into the routing of the shared host. The same applies to the Gateway API primitives, which carry
-  hostnames on HTTPRoute.spec.hostnames and ListenerSet.spec.listeners[].hostname.
+  hostnames on HTTPRoute, GRPCRoute and TLSRoute in spec.hostnames, and on Gateway and ListenerSet in
+  spec.listeners[].hostname.
 
   Two ways to say which hostnames are the platform's, selected by reservedPublicHosts.mode:
 
@@ -64,14 +65,20 @@
 {{- /*
   splitList "%s" yields exactly two parts for every template the schema admits, so a length other
   than two means the value never went through that schema. Fall back to List rather than to a regex
-  built from parts that are not there, so a value nobody validated widens nothing and reserves at
-  least the names below.
+  built from parts that are not there, so a value nobody validated widens nothing.
+
+  $templateSplits gates every use of the template below, not only the regex. helm_lib_module_public_domain
+  fails the render outright for a value with no %s, and renders console.%!s(MISSING).example.com for
+  one with two, so a fallback that still rendered the names through it would either stop the module
+  that deploys Deckhouse from converging or reserve strings that are not hostnames. Where the
+  template does not split, nothing is reserved beyond what additionalHosts names.
 */}}
 {{- $parts := list }}
 {{- if $domainTemplate }}
   {{- $parts = splitList "%s" $domainTemplate }}
 {{- end }}
-{{- $mode := ternary "Template" "List" (and (ne ($settings.mode | default "Template") "List") (eq (len $parts) 2)) }}
+{{- $templateSplits := eq (len $parts) 2 }}
+{{- $mode := ternary "Template" "List" (and (ne ($settings.mode | default "Template") "List") $templateSplits) }}
 
 {{- if and (or $domainTemplate $additionalHosts) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicy")) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicyBinding")) }}
 {{- $paramsName := "d8-reserved-public-hosts" }}
@@ -111,7 +118,7 @@
   modes.
 */}}
 {{- $platformHosts := list }}
-{{- if $domainTemplate }}
+{{- if $templateSplits }}
   {{- range $name := $reservedNames }}
     {{- $platformHosts = append $platformHosts (include "helm_lib_module_public_domain" (list $ $name) | trim | lower) }}
   {{- end }}
@@ -125,7 +132,7 @@
   out of the pattern instead. Same field, same input, same effect.
 */}}
 {{- $excludedHosts := list }}
-{{- if $domainTemplate }}
+{{- if $templateSplits }}
   {{- range $name := $excludedServices }}
     {{- $excludedHosts = append $excludedHosts (include "helm_lib_module_public_domain" (list $ $name) | trim | lower) }}
   {{- end }}
@@ -155,11 +162,17 @@
 {{- $unknownServices = $unknownServices | uniq | sortAlpha }}
 
 {{- /*
-  Hostnames the upgrade grandfathered: what tenants already served under the namespace when the
-  reservation was first recorded, collected once by hooks/snapshot_reserved_public_hosts.go. Kept in
-  its own key so that an operator can tell what they allowed from what the upgrade allowed, and drop
-  an entry once the workload behind it is gone. Not applied under List, where the reservation covers
-  only what the platform publishes and there is nothing to grandfather.
+  Hostnames the upgrade grandfathered: what tenants already served under the namespace when Template
+  mode first took effect, collected once by hooks/snapshot_reserved_public_hosts.go. Kept in its own
+  key so that an operator can tell what they allowed from what the upgrade allowed, and drop an entry
+  once the workload behind it is gone.
+
+  Not applied under List, where the reservation covers only what the platform publishes and there is
+  nothing to grandfather. The record can exist there all the same -- a cluster that ran Template and
+  was switched back keeps it -- and must stay unapplied, or a hostname recorded under a wider
+  reservation would become an exception to a narrower one that never covered it. The hook reads the
+  same effective mode as $mode above and does not record while it is List, so a cluster switched to
+  Template a year later snapshots then rather than carrying over a record from its List days.
 */}}
 {{- $snapshot := .Values.deckhouse.internal.reservedPublicHosts | default dict }}
 {{- $grandfatheredHosts := $snapshot.hosts | default list }}
@@ -248,27 +261,70 @@ data:
 {{- end }}
 
 {{- /*
-  The three policies differ in one expression, where the kind keeps its hostnames, so they are one
-  definition called three times. Everything else -- the match conditions copied from the other
+  The policies differ in one expression, where the kind keeps its hostnames, so they are one
+  definition called once per kind. Everything else -- the match conditions copied from the other
   policies in this module, the parameters, the binding -- has to stay identical between them, because
   a tenant only needs one kind that is treated more leniently than the rest.
+
+  Every kind here is one modules/140-user-authz/templates/cluster-roles.yaml grants create and update
+  on to a namespace-scoped Editor: ingresses in the networking.k8s.io block, and gateways,
+  grpcroutes, httproutes, listenersets and tlsroutes in a single gateway.networking.k8s.io block with
+  the same user_authz_verbs. So a tenant who may write one of them may write all of them, and a kind
+  left out is the one a tenant would use. TCPRoute and UDPRoute carry no hostname and are out of
+  scope.
+
+  Two shapes of hostname field between them, so two expressions.
 */}}
+{{- $routeHosts := "has(object.spec) && has(object.spec.hostnames) ? object.spec.hostnames.map(h, string(h)) : []" }}
+{{- $listenerHosts := "has(object.spec) && has(object.spec.listeners) ? object.spec.listeners.filter(l, has(l.hostname) && l.hostname != '').map(l, string(l.hostname)) : []" }}
+
 {{- include "reserved_public_hosts_policy" (list . $paramsName "ingress" "networking.k8s.io" "ingresses" "has(object.spec) && has(object.spec.rules) ? object.spec.rules.filter(r, has(r.host) && r.host != '').map(r, r.host) : []") }}
 
+{{- /*
+  helm_lib_kind_exists matches a case-insensitive "/<kind>" suffix over the capability strings, so it
+  answers for a kind name whatever API group serves it. That is unambiguous for the four below: no
+  API group in this repository other than gateway.networking.k8s.io ships an HTTPRoute, GRPCRoute,
+  TLSRoute or ListenerSet.
+*/}}
 {{- if (include "helm_lib_kind_exists" (list . "HTTPRoute")) }}
-{{- include "reserved_public_hosts_policy" (list . $paramsName "httproute" "gateway.networking.k8s.io" "httproutes" "has(object.spec) && has(object.spec.hostnames) ? object.spec.hostnames.map(h, string(h)) : []") }}
+{{- include "reserved_public_hosts_policy" (list . $paramsName "httproute" "gateway.networking.k8s.io" "httproutes" $routeHosts) }}
+{{- end }}
+
+{{- if (include "helm_lib_kind_exists" (list . "GRPCRoute")) }}
+{{- include "reserved_public_hosts_policy" (list . $paramsName "grpcroute" "gateway.networking.k8s.io" "grpcroutes" $routeHosts) }}
+{{- end }}
+
+{{- if (include "helm_lib_kind_exists" (list . "TLSRoute")) }}
+{{- include "reserved_public_hosts_policy" (list . $paramsName "tlsroute" "gateway.networking.k8s.io" "tlsroutes" $routeHosts) }}
+{{- end }}
+
+{{- if (include "helm_lib_kind_exists" (list . "ListenerSet")) }}
+{{- include "reserved_public_hosts_policy" (list . $paramsName "listenerset" "gateway.networking.k8s.io" "listenersets" $listenerHosts) }}
 {{- end }}
 
 {{- /*
-  ListenerSet carries hostnames too, and user-authz grants create and update on listenersets in the
-  same rule block as ingresses and httproutes (modules/140-user-authz/templates/cluster-roles.yaml,
-  the gateway.networking.k8s.io block). Without this a tenant claims a platform hostname on a
-  listener and never touches either of the kinds above.
+  Gateway is the one kind whose name is not unambiguous: networking.istio.io serves a Gateway too
+  (the crd-all.gen.yaml files under modules/110-istio/_crds/istio), and helm_lib_kind_exists would be
+  satisfied by it in a cluster running Istio without the Gateway API, leaving a policy that targets a
+  resource which does not exist. So the capability strings are matched on the group and on the kind,
+  and on the version not at all: a cluster serving only gateway.networking.k8s.io/v1beta1 still gets
+  the policy, which is what keeps it in step with matchConstraints below asking for apiVersions ["*"].
 */}}
-{{- if (include "helm_lib_kind_exists" (list . "ListenerSet")) }}
-{{- include "reserved_public_hosts_policy" (list . $paramsName "listenerset" "gateway.networking.k8s.io" "listenersets" "has(object.spec) && has(object.spec.listeners) ? object.spec.listeners.filter(l, has(l.hostname) && l.hostname != '').map(l, string(l.hostname)) : []") }}
+{{- if (include "reserved_public_hosts_gateway_api_kind_exists" (list . "Gateway")) }}
+{{- include "reserved_public_hosts_policy" (list . $paramsName "gateway" "gateway.networking.k8s.io" "gateways" $listenerHosts) }}
 {{- end }}
 
+{{- end }}
+
+{{- define "reserved_public_hosts_gateway_api_kind_exists" }}
+  {{- $context := index . 0 }}
+  {{- $kind    := index . 1 }}
+  {{- range $capability := $context.Capabilities.APIVersions }}
+    {{- if and (hasPrefix "gateway.networking.k8s.io/" (lower $capability)) (hasSuffix (lower (printf "/%s" $kind)) (lower $capability)) }}
+      found
+      {{- break }}
+    {{- end }}
+  {{- end }}
 {{- end }}
 
 {{- define "reserved_public_hosts_policy" }}
