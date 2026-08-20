@@ -361,6 +361,8 @@ properties:
 
           The hostnames workloads already serve are recorded once, when `Template` first takes effect, and stay allowed. Switching from `List` to `Template` later takes that record then, so a workload that appeared while `List` was in force is grandfathered too.
 
+          The record is taken once and is not taken again. Switching to `List` and back to `Template` keeps the record of the first time, so a workload that claimed a reserved hostname in between is denied on its next write. Recording again on every return would make the reservation avoidable by switching to `List`, claiming the hostname and switching back.
+
           Ecosystem applications are unaffected either way: `global.applications.publicDomainTemplate` puts the application name and its namespace in two different labels, so an application hostname has one label more than anything this reservation covers.
         x-examples: ["Template", "List"]
       additionalHosts:

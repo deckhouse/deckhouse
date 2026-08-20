@@ -202,6 +202,29 @@
 {{- end }}
 {{- $reservedHosts = $reservedHosts | uniq | sortAlpha }}
 {{- $allowedHosts = $allowedHosts | uniq | sortAlpha }}
+
+{{- /*
+  The Gateway the platform's own ListenerSets and HTTPRoutes attach to. Where it is the one
+  global-hooks/discovery/default_gateway.go finds in d8-alb it carries heritage: deckhouse and the
+  binding below never matches it, but global.modules.gatewayAPIGateway takes an arbitrary name and
+  namespace, and an operator-owned Gateway lives in a namespace of their own. Its canonical shape is
+  a listener with the wildcard of the platform's domain and a wildcard certificate -- a hostname
+  reserved by exact match, which no allowlist lifts and the grandfathering deliberately never
+  records. Reserving it would leave the operator unable to create or update the very Gateway the
+  platform's own routes depend on, so that one object is exempt, by identity and not by hostname,
+  and on the Gateway policy alone.
+
+  Read through helm_lib_module_gateway rather than from the values directly, so that the exemption
+  cannot come to name a different object from the one the modules attach to. The helper yields a
+  gateway only when both halves are known, which is also what makes a half-written reference exempt
+  nothing: the platform attaches to no gateway there either.
+*/}}
+{{- $sharedGateway := dict }}
+{{- include "helm_lib_module_gateway" (list . $sharedGateway) }}
+{{- $sharedGatewayRef := "" }}
+{{- if $sharedGateway }}
+  {{- $sharedGatewayRef = printf "%s/%s" $sharedGateway.namespace $sharedGateway.name }}
+{{- end }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -230,6 +253,12 @@ data:
 {{- range $host := $allowedHosts }}
     {{ $host }}
 {{- end }}
+  # The Gateway the platform's own routes attach to, as namespace/name -- the spelling the
+  # default-gateway ConfigMap in d8-alb uses. The Gateway policy leaves that one object alone,
+  # whatever hostnames its listeners carry, because an operator-owned shared Gateway is outside
+  # heritage: deckhouse and its wildcard listener is reserved by exact match. Empty where no gateway
+  # is configured, and empty exempts nothing rather than everything.
+  sharedGateway: {{ $sharedGatewayRef | quote }}
   # What excludedServices renders to. Nothing reads it; it is here so that the setting an operator
   # wrote and the hostnames it freed can be compared without rendering the template by hand.
   excludedHosts: |
@@ -278,40 +307,52 @@ data:
 {{- $routeHosts := "has(object.spec) && has(object.spec.hostnames) ? object.spec.hostnames.map(h, string(h)) : []" }}
 {{- $listenerHosts := "has(object.spec) && has(object.spec.listeners) ? object.spec.listeners.filter(l, has(l.hostname) && l.hostname != '').map(l, string(l.hostname)) : []" }}
 
+{{- /*
+  The one object the reservation lets through by identity, on the Gateway policy and nowhere else.
+  Written as a match condition rather than as an exception inside the validation, so that
+  kubectl get validatingadmissionpolicy shows which object is not covered and why.
+
+  request.namespace is the namespace of the request path and request.name is filled from the object
+  on a create (k8s.io/apiserver/pkg/endpoints/handlers/create.go), while object.metadata carries
+  neither reliably before the storage layer defaults them. The guards are the ones every other
+  parameter here gets: a ConfigMap that lost the key must leave the policy evaluating rather than
+  fail every Gateway write under failurePolicy: Fail, and an empty key must exempt nothing.
+*/}}
+{{- $sharedGatewayExempt := "!(params != null && has(params.data) && 'sharedGateway' in params.data && params.data['sharedGateway'] != '' && params.data['sharedGateway'] == request.namespace + '/' + request.name)" }}
+
 {{- include "reserved_public_hosts_policy" (list . $paramsName "ingress" "networking.k8s.io" "ingresses" "has(object.spec) && has(object.spec.rules) ? object.spec.rules.filter(r, has(r.host) && r.host != '').map(r, r.host) : []") }}
 
 {{- /*
-  helm_lib_kind_exists matches a case-insensitive "/<kind>" suffix over the capability strings, so it
-  answers for a kind name whatever API group serves it. That is unambiguous for the four below: no
-  API group in this repository other than gateway.networking.k8s.io ships an HTTPRoute, GRPCRoute,
-  TLSRoute or ListenerSet.
+  Each Gateway API kind is matched on its group as well as on its name. helm_lib_kind_exists matches
+  a case-insensitive "/<kind>" suffix over the capability strings, so it answers for a kind name
+  whatever API group serves it -- and those strings are the list the cluster serves, not the list
+  this repository ships. networking.istio.io serves a Gateway of its own (the crd-all.gen.yaml files
+  under modules/110-istio/_crds/istio), and nothing stops a customer cluster from carrying a CRD
+  whose kind name ends in any of the other four. A policy written for a resource the cluster does not
+  serve is harmless, but it tells a reader that the Gateway API is covered where it is not installed.
+
+  The version is matched not at all: a cluster serving only gateway.networking.k8s.io/v1beta1 still
+  gets the policy, which is what keeps the guard in step with matchConstraints below asking for
+  apiVersions ["*"].
 */}}
-{{- if (include "helm_lib_kind_exists" (list . "HTTPRoute")) }}
+{{- if (include "reserved_public_hosts_gateway_api_kind_exists" (list . "HTTPRoute")) }}
 {{- include "reserved_public_hosts_policy" (list . $paramsName "httproute" "gateway.networking.k8s.io" "httproutes" $routeHosts) }}
 {{- end }}
 
-{{- if (include "helm_lib_kind_exists" (list . "GRPCRoute")) }}
+{{- if (include "reserved_public_hosts_gateway_api_kind_exists" (list . "GRPCRoute")) }}
 {{- include "reserved_public_hosts_policy" (list . $paramsName "grpcroute" "gateway.networking.k8s.io" "grpcroutes" $routeHosts) }}
 {{- end }}
 
-{{- if (include "helm_lib_kind_exists" (list . "TLSRoute")) }}
+{{- if (include "reserved_public_hosts_gateway_api_kind_exists" (list . "TLSRoute")) }}
 {{- include "reserved_public_hosts_policy" (list . $paramsName "tlsroute" "gateway.networking.k8s.io" "tlsroutes" $routeHosts) }}
 {{- end }}
 
-{{- if (include "helm_lib_kind_exists" (list . "ListenerSet")) }}
+{{- if (include "reserved_public_hosts_gateway_api_kind_exists" (list . "ListenerSet")) }}
 {{- include "reserved_public_hosts_policy" (list . $paramsName "listenerset" "gateway.networking.k8s.io" "listenersets" $listenerHosts) }}
 {{- end }}
 
-{{- /*
-  Gateway is the one kind whose name is not unambiguous: networking.istio.io serves a Gateway too
-  (the crd-all.gen.yaml files under modules/110-istio/_crds/istio), and helm_lib_kind_exists would be
-  satisfied by it in a cluster running Istio without the Gateway API, leaving a policy that targets a
-  resource which does not exist. So the capability strings are matched on the group and on the kind,
-  and on the version not at all: a cluster serving only gateway.networking.k8s.io/v1beta1 still gets
-  the policy, which is what keeps it in step with matchConstraints below asking for apiVersions ["*"].
-*/}}
 {{- if (include "reserved_public_hosts_gateway_api_kind_exists" (list . "Gateway")) }}
-{{- include "reserved_public_hosts_policy" (list . $paramsName "gateway" "gateway.networking.k8s.io" "gateways" $listenerHosts) }}
+{{- include "reserved_public_hosts_policy" (list . $paramsName "gateway" "gateway.networking.k8s.io" "gateways" $listenerHosts $sharedGatewayExempt) }}
 {{- end }}
 
 {{- end }}
@@ -334,6 +375,11 @@ data:
   {{- $apiGroup     := index . 3 }}
   {{- $resource     := index . 4 }}
   {{- $claimedHosts := index . 5 }}
+  {{- /* An optional CEL expression naming an object the policy does not cover. Only Gateway has one. */}}
+  {{- $exempt := "" }}
+  {{- if gt (len .) 6 }}
+    {{- $exempt = index . 6 }}
+  {{- end }}
   {{- $policyName   := printf "reserved-public-hosts-%s.deckhouse.io" $suffix }}
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list $context "ValidatingAdmissionPolicy") }}
@@ -359,6 +405,10 @@ spec:
       expression: '!(["system:sudouser", "system:apiserver", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler", "dhctl", "observability"].exists(e, (e == request.userInfo.username)))'
     - name: 'exclude-system-serviceaccounts'
       expression: '!(request.userInfo.username.startsWith("system:serviceaccount:d8-") || request.userInfo.username.startsWith("system:serviceaccount:kube-"))'
+    {{- if $exempt }}
+    - name: 'exclude-shared-gateway'
+      expression: {{ $exempt | quote }}
+    {{- end }}
   variables:
     - name: claimedHosts
       # Lowercased and stripped of a trailing root dot, so that neither spelling of a hostname is

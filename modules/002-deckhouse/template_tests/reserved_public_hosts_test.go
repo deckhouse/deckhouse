@@ -29,6 +29,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/lib/publicdomain"
+	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/lib/sharedgateway"
 	. "github.com/deckhouse/deckhouse/testing/helm"
 	"github.com/deckhouse/deckhouse/testing/library/object_store"
 )
@@ -142,6 +143,24 @@ var gatewayAPIKinds = map[string]struct {
 	"TLSRoute":    {tlsRouteAPI, reservedHostsTLSRoutePolicy, "tlsroutes", "object.spec.hostnames"},
 	"ListenerSet": {listenerSetAPI, reservedHostsListenerSetPolicy, "listenersets", "object.spec.listeners"},
 	"Gateway":     {gatewayAPI, reservedHostsGatewayPolicy, "gateways", "object.spec.listeners"},
+}
+
+// sharedMatchConditions are the conditions every policy carries. The Gateway policy carries one
+// more, which is the only place the six are allowed to differ in what they match.
+var sharedMatchConditions = []string{"exclude-groups", "exclude-users", "exclude-system-serviceaccounts"}
+
+func matchConditionNames(policy object_store.KubeObject) []string {
+	names := []string{}
+	for _, condition := range policy.Field("spec.matchConditions").Array() {
+		names = append(names, condition.Get("name").String())
+	}
+	return names
+}
+
+// gatewayValues is the shape both places that name a Gateway take, global.modules.gatewayAPIGateway
+// and global.discovery.gatewayAPIDefaultGateway.
+func gatewayValues(ref sharedgateway.Ref) string {
+	return `{name: ` + ref.Name + `, namespace: ` + ref.Namespace + `}`
 }
 
 func gatewayAPIVersions() []string {
@@ -462,6 +481,9 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 			ingress := f.KubernetesGlobalResource("ValidatingAdmissionPolicy", reservedHostsIngressPolicy)
+			Expect(matchConditionNames(ingress)).To(Equal(sharedMatchConditions),
+				"the kind with no exemption is what the others are compared against")
+
 			for name, expected := range gatewayAPIKinds {
 				vap := f.KubernetesGlobalResource("ValidatingAdmissionPolicy", expected.policy)
 				Expect(vap.Exists()).To(BeTrue(), name)
@@ -475,13 +497,27 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 
 				for _, field := range []string{
 					"spec.failurePolicy",
-					"spec.matchConditions",
 					"spec.validations",
 					`spec.variables.#(name=="reservedHosts").expression`,
 					`spec.variables.#(name=="reservedPattern").expression`,
 					`spec.variables.#(name=="allowedHosts").expression`,
 					`spec.variables.#(name=="conflicts").expression`,
 				} {
+					Expect(vap.Field(field).String()).To(Equal(ingress.Field(field).String()),
+						"%s must not differ between %s and %s", field, expected.policy, reservedHostsIngressPolicy)
+				}
+
+				// The one deliberate difference between the six: the Gateway policy leaves the
+				// object the platform's own routes attach to alone, and nothing else does. Compared
+				// by name and by expression rather than as a whole, so that a fourth condition
+				// anywhere else, or a different exemption here, is a failure and not a diff.
+				wanted := sharedMatchConditions
+				if name == "Gateway" {
+					wanted = append(append([]string{}, sharedMatchConditions...), "exclude-shared-gateway")
+				}
+				Expect(matchConditionNames(vap)).To(Equal(wanted), name)
+				for _, condition := range sharedMatchConditions {
+					field := `spec.matchConditions.#(name=="` + condition + `").expression`
 					Expect(vap.Field(field).String()).To(Equal(ingress.Field(field).String()),
 						"%s must not differ between %s and %s", field, expected.policy, reservedHostsIngressPolicy)
 				}
@@ -512,6 +548,88 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 		})
 	})
 
+	// The Gateway an operator names in global.modules.gatewayAPIGateway is their own object in a
+	// namespace of their own, outside heritage: deckhouse, and the shape it takes is a listener with
+	// the wildcard of the platform's domain -- reserved by exact match, which no allowlist lifts and
+	// the grandfathering never records. So it is exempt by identity, and the identity has to be the
+	// one the platform's own routes attach to: the template reads it through
+	// helm_lib_module_gateway, the snapshot hook resolves it in Go, and the two are compared here
+	// rather than assumed identical, the same way the effective mode is.
+	Context("The Gateway the platform's own routes attach to", func() {
+		renderWithGateway := func(named func()) {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("deckhouse", moduleValuesForMasterNode)
+			f.ValuesSet("global.modules.publicDomainTemplate", "%s.example.com")
+			f.ValuesSetFromYaml("deckhouse.reservedPublicHosts", `{mode: Template}`)
+			named()
+			f.HelmRender(WithAPIVersions(append(admissionAPIs, gatewayAPIVersions()...)...))
+		}
+
+		// The module level helm_lib_module_gateway looks at first is not exercised here: the
+		// deckhouse module has no gatewayAPIGateway setting of its own for the helper to find, so it
+		// cannot be reached through a render. hooks/lib/sharedgateway covers the precedence between
+		// all three places, and a reference written with one half, which the global schema refuses.
+		It("is published in the ConfigMap, as the reference the hook resolves", func() {
+			for _, tc := range []struct {
+				what               string
+				global, discovered *sharedgateway.Ref
+				want               string
+			}{
+				{
+					what: "nothing names one",
+					want: "",
+				},
+				{
+					what:       "the one discovered in d8-alb",
+					discovered: &sharedgateway.Ref{Namespace: "d8-alb", Name: "default"},
+					want:       "d8-alb/default",
+				},
+				{
+					what:   "the one the operator named",
+					global: &sharedgateway.Ref{Namespace: "infra", Name: "shared"},
+					want:   "infra/shared",
+				},
+				{
+					what:       "both, where the one the operator named wins",
+					global:     &sharedgateway.Ref{Namespace: "infra", Name: "shared"},
+					discovered: &sharedgateway.Ref{Namespace: "d8-alb", Name: "default"},
+					want:       "infra/shared",
+				},
+			} {
+				renderWithGateway(func() {
+					if tc.global != nil {
+						f.ValuesSetFromYaml("global.modules.gatewayAPIGateway", gatewayValues(*tc.global))
+					}
+					if tc.discovered != nil {
+						f.ValuesSetFromYaml("global.discovery.gatewayAPIDefaultGateway", gatewayValues(*tc.discovered))
+					}
+				})
+
+				published := configMap().Field("data.sharedGateway").String()
+				Expect(published).To(Equal(tc.want), tc.what)
+				Expect(published).To(Equal(sharedgateway.Resolve(nil, tc.global, tc.discovered).String()),
+					"the hook skips the object this key exempts, so the two have to name the same one: %s", tc.what)
+			}
+		})
+
+		It("is named in the Gateway policy by identity and not by hostname", func() {
+			renderWithGateway(func() {
+				f.ValuesSetFromYaml("global.modules.gatewayAPIGateway", `{name: shared, namespace: infra}`)
+			})
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			expression := f.KubernetesGlobalResource("ValidatingAdmissionPolicy", reservedHostsGatewayPolicy).
+				Field(`spec.matchConditions.#(name=="exclude-shared-gateway").expression`).String()
+			Expect(expression).To(ContainSubstring("params.data['sharedGateway'] == request.namespace + '/' + request.name"))
+			// The guards every other parameter gets: a ConfigMap that lost the key must leave the
+			// policy evaluating rather than fail every Gateway write under failurePolicy: Fail, and
+			// an empty key must exempt nothing rather than everything.
+			Expect(expression).To(ContainSubstring("'sharedGateway' in params.data"))
+			Expect(expression).To(ContainSubstring("params.data['sharedGateway'] != ''"))
+		})
+	})
+
 	Context("Only some of the Gateway API kinds are installed", func() {
 		BeforeEach(func() {
 			render("%s.example.com", append(admissionAPIs, httpRouteAPI)...)
@@ -533,19 +651,28 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 	})
 
 	// helm_lib_kind_exists matches a "/<kind>" suffix over the capability strings, so it answers for
-	// a kind name whatever group serves it, and Gateway is a kind name two groups use. A policy
-	// written for a resource the cluster does not serve is harmless but misleading, and it would tell
-	// a reader that the Gateway API is covered in a cluster where it is not installed at all.
-	Context("The cluster runs Istio and no Gateway API", func() {
+	// a kind name whatever group serves it, and those strings are the cluster's list rather than
+	// this repository's. Istio's Gateway is the collision that exists today; a third-party CRD whose
+	// kind name ends the same way is the same accident on any of the other four. A policy written
+	// for a resource the cluster does not serve is harmless but misleading, and it would tell a
+	// reader that the Gateway API is covered in a cluster where it is not installed at all.
+	Context("The cluster serves kinds of those names from another group", func() {
 		BeforeEach(func() {
-			render("%s.example.com", append(admissionAPIs, istioGatewayAPI)...)
+			render("%s.example.com", append(admissionAPIs,
+				istioGatewayAPI,
+				"example.com/v1/HTTPRoute",
+				"example.com/v1/GRPCRoute",
+				"example.com/v1/TLSRoute",
+				"example.com/v1/ListenerSet")...)
 		})
 
-		It("writes no Gateway policy for the Istio kind of the same name", func() {
+		It("writes no policy for a kind gateway.networking.k8s.io does not serve", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			Expect(f.KubernetesGlobalResource("ValidatingAdmissionPolicy", reservedHostsGatewayPolicy).Exists()).To(BeFalse())
-			Expect(f.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", reservedHostsGatewayPolicy).Exists()).To(BeFalse())
+			for name, expected := range gatewayAPIKinds {
+				Expect(f.KubernetesGlobalResource("ValidatingAdmissionPolicy", expected.policy).Exists()).To(BeFalse(), name)
+				Expect(f.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", expected.policy).Exists()).To(BeFalse(), name)
+			}
 		})
 	})
 
