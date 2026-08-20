@@ -73,12 +73,9 @@ spec:
                 type: string
                 pattern: '^([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}$'
                 description: MAC address of the NIC used for PXE boot.
-              automatedCleaningMode:
-                type: string
-                enum:
-                - metadata
-                - disabled
-                description: Ironic automated cleaning mode set on the generated BareMetalHost.
+              disableAutomatedCleaning:
+                type: boolean
+                description: Disables Ironic automated cleaning on the generated BareMetalHost. By default metadata cleaning is enabled.
               bmc:
                 type: object
                 required:

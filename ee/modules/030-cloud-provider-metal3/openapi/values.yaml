@@ -126,12 +126,9 @@ properties:
       defaultOnline:
         type: boolean
         default: true
-      defaultAutomatedCleaningMode:
-        type: string
-        default: disabled
-        enum:
-        - metadata
-        - disabled
+      defaultDisableAutomatedCleaning:
+        type: boolean
+        default: false
   internal:
     type: object
     default: {}

@@ -4,9 +4,7 @@
 {{- if .nodeGroup.instanceClass.hostSelector -}}
   {{- $_ := set $options "hostSelector" .nodeGroup.instanceClass.hostSelector -}}
 {{- end -}}
-{{- if .nodeGroup.instanceClass.automatedCleaningMode -}}
-  {{- $_ := set $options "automatedCleaningMode" .nodeGroup.instanceClass.automatedCleaningMode -}}
-{{- end -}}
+{{- $_ := set $options "disableAutomatedCleaning" (.nodeGroup.instanceClass.disableAutomatedCleaning | default false) -}}
 {{- if hasKey .nodeGroup.instanceClass "nodeReuse" -}}
   {{- $_ := set $options "nodeReuse" .nodeGroup.instanceClass.nodeReuse -}}
 {{- end -}}
