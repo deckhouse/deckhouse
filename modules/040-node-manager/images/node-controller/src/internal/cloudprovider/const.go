@@ -28,7 +28,7 @@ const (
 	RegistrationSecretNamePrefix = "d8-node-manager-cloud-provider"
 )
 
-// The cluster configuration, which names the provider CloudPermanent NodeGroups resolve through.
+// The cluster configuration, which names the provider every non-Static NodeGroup resolves through.
 const (
 	clusterConfigSecretNamespace = "kube-system"
 	clusterConfigSecretName      = "d8-cluster-configuration"

@@ -116,7 +116,7 @@ var _ = BeforeSuite(func() {
 	cloudProvider := &corev1.Secret{}
 	cloudProvider.Namespace = cloudprovider.RegistrationSecretNamespace
 	cloudProvider.Name = cloudprovider.RegistrationSecretNamePrefix
-	// The label is how cloudprovider.Load finds registrations; without it the suite's
+	// The label is how cloudprovider.GetCatalog finds registrations; without it the suite's
 	// controllers would build no InstanceClass watches at all.
 	cloudProvider.Labels = map[string]string{cloudprovider.RegistrationSecretLabel: ""}
 	cloudProvider.Data = map[string][]byte{

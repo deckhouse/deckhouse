@@ -63,7 +63,7 @@ func GetCatalog(ctx context.Context, r client.Reader) (Catalog, error) {
 }
 
 // NewCatalog builds a Catalog from providers already in hand. The default is the registration
-// itself, not its name: resolving a name is Load's job, and it happens once.
+// itself, not its name: resolving a name is GetCatalog's job, and it happens once.
 func NewCatalog(all []Provider, defaultProvider Provider) Catalog {
 	slices.SortFunc(all, func(a, b Provider) int { return strings.Compare(a.Type, b.Type) })
 	return Catalog{
@@ -82,7 +82,8 @@ func (c Catalog) All() []Provider {
 	return c.all
 }
 
-// ByNodeGroup returns the provider a NodeGroup.
+// ByNodeGroup returns the provider a NodeGroup runs on. The verdict on its spec.providerType
+// is ValidateNodeGroup.
 func (c Catalog) ByNodeGroup(ng *v1.NodeGroup) Provider {
 	// A Static node lives outside every cloud.
 	if ng.Spec.NodeType == v1.NodeTypeStatic {
@@ -137,7 +138,7 @@ func RegisteredInstanceClassGVKs(ctx context.Context, r client.Reader) ([]schema
 	return NewCatalog(providers, Provider{}).InstanceClassGVKs(), nil
 }
 
-// getProviders is the Secret half of Load, separate so the lazy InstanceClass watch does not
+// getProviders is the Secret half of GetCatalog, separate so the lazy InstanceClass watch does not
 // depend on the cluster configuration being readable.
 func getProviders(ctx context.Context, r client.Reader) ([]Provider, error) {
 	secrets := &corev1.SecretList{}

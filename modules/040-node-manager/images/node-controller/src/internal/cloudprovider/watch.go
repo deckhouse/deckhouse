@@ -41,8 +41,9 @@ import (
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 )
 
-// IsRegistrationSecret reports whether an object is a registration Secret: right namespace, name prefix
-// and label. It is the single definition of one — Load and every watch resolve through it.
+// IsRegistrationSecret reports whether an object is a registration Secret: right namespace, name
+// prefix and label. Every watch resolves a registration through it. GetCatalog does not: it lists by
+// namespace and label, because a List cannot filter on a name prefix.
 func IsRegistrationSecret(obj client.Object) bool {
 	if obj.GetNamespace() != RegistrationSecretNamespace {
 		return false
@@ -55,7 +56,7 @@ func IsRegistrationSecret(obj client.Object) bool {
 }
 
 // IsRegistrationSecretKey reports whether a reconcile key names a registration Secret. No label check:
-// a key carries none, and the watch behind it already filtered on IsRegistration.
+// a key carries none, and the watch behind it already filtered on IsRegistrationSecret.
 func IsRegistrationSecretKey(key types.NamespacedName) bool {
 	if key.Namespace != RegistrationSecretNamespace {
 		return false
@@ -93,7 +94,7 @@ func RegistrationSecretsRequests(ctx context.Context, r client.Reader) []reconci
 }
 
 // NodeGroupHandler enqueues the NodeGroups that run on the registration the event carries. Pair it
-// with RegistrationPredicate.
+// with RegistrationSecretPredicate.
 func NodeGroupHandler(r client.Reader) handler.EventHandler {
 	enqueue := func(ctx context.Context, q workqueue.TypedRateLimitingInterface[reconcile.Request], carried ...Provider) {
 		for _, req := range nodeGroupRequests(ctx, r, carried...) {
