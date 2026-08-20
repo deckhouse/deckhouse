@@ -18,6 +18,7 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -74,19 +75,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				NameSelector: &types.NameSelector{MatchNames: []string{"kube-system"}},
 			},
 			NameSelector: &types.NameSelector{MatchNames: []string{"d8-node-manager-cloud-provider"}},
-			FilterFunc:   func(*unstructured.Unstructured) (go_hook.FilterResult, error) { return nil, nil },
-		},
-		{
-			// Watch the CAPI Cluster to short-circuit reconciliation during teardown: dhctl issues
-			// delete on the Cluster while capi/capv controllers are still running, and recreating
-			// FD/DZ here would keep finalizers alive and block cluster deletion.
-			Name:       "capi-cluster",
-			ApiVersion: "cluster.x-k8s.io/v1beta2",
-			Kind:       "Cluster",
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{MatchNames: []string{capiClusterNS}},
-			},
-			NameSelector: &types.NameSelector{MatchNames: []string{capiClusterName}},
 			FilterFunc:   func(*unstructured.Unstructured) (go_hook.FilterResult, error) { return nil, nil },
 		},
 	},
@@ -188,7 +176,7 @@ func ensureFailureDomains(ctx context.Context, input *go_hook.HookInput, dc depe
 func clusterIsDeleting(ctx context.Context, dyn dynamic.Interface) (bool, error) {
 	obj, err := dyn.Resource(clusterGVR).Namespace(capiClusterNS).Get(ctx, capiClusterName, metav1.GetOptions{})
 	if err != nil {
-		if apierrors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) || meta.IsNoMatchError(err) {
 			return false, nil
 		}
 		return false, fmt.Errorf("get CAPI Cluster %s/%s: %w", capiClusterNS, capiClusterName, err)
@@ -199,10 +187,16 @@ func clusterIsDeleting(ctx context.Context, dyn dynamic.Interface) (bool, error)
 func zonesMissingResources(ctx context.Context, dyn dynamic.Interface, zones []string) ([]string, error) {
 	fdList, err := dyn.Resource(fdGVR).List(ctx, metav1.ListOptions{})
 	if err != nil {
+		if meta.IsNoMatchError(err) {
+			return append([]string(nil), zones...), nil
+		}
 		return nil, fmt.Errorf("list VSphereFailureDomains: %w", err)
 	}
 	dzList, err := dyn.Resource(dzGVR).List(ctx, metav1.ListOptions{})
 	if err != nil {
+		if meta.IsNoMatchError(err) {
+			return append([]string(nil), zones...), nil
+		}
 		return nil, fmt.Errorf("list VSphereDeploymentZones: %w", err)
 	}
 	fdNames := make(map[string]struct{}, len(fdList.Items))
