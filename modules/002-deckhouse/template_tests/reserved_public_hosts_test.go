@@ -620,6 +620,17 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 			}
 			Expect(strings.Fields(cm.Field("data.platformHosts").String())).NotTo(ContainElement("admin.corp.example.org"))
 		})
+
+		// Every other read of a list key in this file goes through strings.Fields, which discards
+		// leading whitespace. The CEL splits the key on \n and compares each line to the claimed
+		// hostname by exact equality, so a block scalar whose first line is indented differently from
+		// the rest leaves every later entry carrying spaces: the reservation stops matching anything
+		// and every read that trims would still report green. One raw assertion, on a key with more
+		// than one entry, is what makes that visible here rather than only in the CEL test.
+		It("writes one hostname per line with nothing around it", func() {
+			Expect(configMap().Field("data.hosts").String()).
+				To(Equal("*.example.com\nadmin.corp.example.org\nbilling.corp.example.com\n"))
+		})
 	})
 
 	Context("An operator gives a hostname back to a tenant", func() {
