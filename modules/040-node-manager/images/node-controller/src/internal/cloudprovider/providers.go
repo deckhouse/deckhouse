@@ -147,31 +147,33 @@ func (ps Providers) InstanceClassGVKs() []schema.GroupVersionKind {
 // The field declares an answer, it does not pick one: leaving it empty is always correct, and
 // naming anything other than the resolved provider is a statement about the NodeGroup that a
 // retry cannot fix.
-func declarationError(declared string, resolved Provider) error {
-	switch {
-	case declared == "":
+func declarationError(ngPType string, provider Provider) error {
+	// An empty field declares nothing, and declaring nothing is always correct.
+	if ngPType == "" {
 		return nil
+	}
 
-	case strings.EqualFold(declared, StatusNone):
-		if resolved.IsStatic() {
+	switch {
+	case isStatic(ngPType):
+		if provider.IsStatic() {
 			return nil
 		}
 		return fmt.Errorf(
 			"Invalid providerType '%s'. The nodes of this group run in the '%s' cloud. "+
 				"Please remove the field or set it to '%s'.",
-			StatusNone, resolved.Type, resolved.Type)
+			ngPType, provider.Type, provider.Type)
 
-	case resolved.IsStatic():
+	case provider.IsStatic():
 		return fmt.Errorf(
 			"Invalid providerType '%s'. The nodes of this group run in no cloud. "+
-				"Please remove the field or set it to '%s'.",
-			declared, StatusNone)
+				"Please remove the field or set it to 'None'.",
+			ngPType)
 
-	case !strings.EqualFold(declared, resolved.Type):
+	case !strings.EqualFold(ngPType, provider.Type):
 		return fmt.Errorf(
 			"Invalid providerType '%s'. Expected '%s'. Please update the NodeGroup to name the "+
 				"cloud provider its nodes run in.",
-			declared, resolved.Type)
+			ngPType, provider.Type)
 	}
 
 	return nil

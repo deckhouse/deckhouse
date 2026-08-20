@@ -16,8 +16,10 @@ limitations under the License.
 
 package cloudprovider
 
-// StatusNone is the provider of a NodeGroup whose nodes get no provider steps.
-const StatusNone = "None"
+import (
+	"slices"
+	"strings"
+)
 
 // The registration Secret a provider module publishes.
 const (
@@ -47,3 +49,7 @@ const (
 	// What the CAPI keys fall back to when a provider publishes none.
 	defaultInfraAPIVersion = "infrastructure.cluster.x-k8s.io/v1alpha1"
 )
+
+func isStatic(pType string) bool {
+	return slices.Contains([]string{"None", ""}, strings.ToLower(pType))
+}
