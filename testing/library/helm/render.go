@@ -35,6 +35,13 @@ type Renderer struct {
 	Name      string
 	Namespace string
 	LintMode  bool
+	// APIVersions extends the capabilities the chart is rendered with. Helm's defaults are
+	// group/version pairs with no kind in them, so every guard that asks after a kind answers no
+	// until the kind is named here. The guards read this list in two ways: helm_lib_kind_exists
+	// takes a bare kind and looks for it as a case-insensitive "/<Kind>" suffix, while
+	// helm_lib_api_version_exists and inline .Capabilities.APIVersions.Has compare a whole
+	// "group/version/Kind" string. An entry spelled that way satisfies both.
+	APIVersions []string
 }
 
 func (r Renderer) RenderChartFromDir(dir string, values string) (map[string]string, error) {
@@ -66,20 +73,19 @@ func (r Renderer) RenderChart(c *chart.Chart, values string) (map[string]string,
 		IsUpgrade: true,
 	}
 
-	caps := chartutil.DefaultCapabilities
-	vers := []string(caps.APIVersions)
-
-	var found bool
-	for _, ver := range vers {
-		found = ver == "autoscaling.k8s.io/v1/VerticalPodAutoscaler"
+	// A copy: chartutil.DefaultCapabilities is a package-level pointer, and every renderer here
+	// would otherwise be extending the same list for the rest of the process.
+	caps := *chartutil.DefaultCapabilities
+	vers := append(chartutil.VersionSet{}, caps.APIVersions...)
+	vers = append(vers, "autoscaling.k8s.io/v1/VerticalPodAutoscaler")
+	for _, ver := range r.APIVersions {
+		if !vers.Has(ver) {
+			vers = append(vers, ver)
+		}
 	}
-	if !found {
-		vers = append(vers, "autoscaling.k8s.io/v1/VerticalPodAutoscaler")
-	}
-
 	caps.APIVersions = vers
 
-	valuesToRender, err := chartutil.ToRenderValues(c, vals, releaseOptions, nil)
+	valuesToRender, err := chartutil.ToRenderValues(c, vals, releaseOptions, &caps)
 	if err != nil {
 		return nil, fmt.Errorf("helm chart prepare render values: %w", err)
 	}
