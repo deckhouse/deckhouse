@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-5a4509a04e8128126aee080324a6b663a7748bf44b58a9a4b9c74d4801844f53",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 16,
+  "version": 17,
   "statements": [
     {
       "vulnerability": {
@@ -185,8 +185,344 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Зависимость go.mongodb.org/mongo-driver версии v1.14.0 поступает транзитивно через бандл-инструмент образа (promtool из модуля 300-prometheus); webhook-handler не подключается к MongoDB, уязвимый код mongo-драйвера не выполняется.",
       "timestamp": "2026-07-13T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39829"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.49.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh версии v0.49.0 приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не использует SSH-функционал (SSH-сервер/клиент, ssh-agent, работу с known_hosts) — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39830"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.49.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh версии v0.49.0 приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не использует SSH-функционал (SSH-сервер/клиент, ssh-agent, работу с known_hosts) — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39831"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.49.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh версии v0.49.0 приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не использует SSH-функционал (SSH-сервер/клиент, ssh-agent, работу с known_hosts) — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39832"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.49.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh/agent версии v0.49.0 приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не использует SSH-функционал (SSH-сервер/клиент, ssh-agent, работу с known_hosts) — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39833"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.49.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh/agent версии v0.49.0 приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не использует SSH-функционал (SSH-сервер/клиент, ssh-agent, работу с known_hosts) — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39834"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.49.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh версии v0.49.0 приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не использует SSH-функционал (SSH-сервер/клиент, ssh-agent, работу с known_hosts) — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39835"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.49.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh версии v0.49.0 приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не использует SSH-функционал (SSH-сервер/клиент, ssh-agent, работу с known_hosts) — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39827"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.49.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh версии v0.49.0 приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не использует SSH-функционал (SSH-сервер/клиент, ssh-agent, работу с known_hosts) — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42508"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.49.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh/knownhosts версии v0.49.0 приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не использует SSH-функционал (SSH-сервер/клиент, ssh-agent, работу с known_hosts) — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46595"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.49.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh версии v0.49.0 приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не использует SSH-функционал (SSH-сервер/клиент, ssh-agent, работу с known_hosts) — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46597"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.49.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh версии v0.49.0 приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не использует SSH-функционал (SSH-сервер/клиент, ssh-agent, работу с known_hosts) — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46598"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.49.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh/agent версии v0.49.0 приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не использует SSH-функционал (SSH-сервер/клиент, ssh-agent, работу с known_hosts) — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.49.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Пакет golang.org/x/crypto/openpgp помечен как неподдерживаемый и небезопасный по своей конструкции. Зависимость приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не использует OpenPGP-функционал — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-25681"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.52.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/net/html версии v0.52.0 (XSS/RCE при парсинге HTML) приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не парсит и не рендерит недоверенный HTML — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-27136"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.52.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/net/html версии v0.52.0 (XSS при обходе HTML-парсинга) приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не парсит и не рендерит недоверенный HTML — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-25680"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.52.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/net/html версии v0.52.0 (DoS при избыточном HTML-парсинге) приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не парсит и не рендерит недоверенный HTML — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42502"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.52.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/net/html версии v0.52.0 (XSS при неожиданном рендеринге HTML-дерева) приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не парсит и не рендерит недоверенный HTML — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42506"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.52.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/net/html версии v0.52.0 (XSS при произвольном HTML-парсинге) приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не парсит и не рендерит недоверенный HTML — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33814"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.52.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в HTTP/2-стеке golang.org/x/net версии v0.52.0 (DoS через некорректный SETTINGS_MAX_FRAME_SIZE-фрейм) приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не обслуживает HTTP/2-соединения из недоверенной сети через данный стек — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39821"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.52.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/net/idna версии v0.52.0 (эскалация привилегий при некорректной обработке Punycode-меток) приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не обрабатывает недоверенные доменные имена/IDNA через данный код — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46600"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.52.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/net версии v0.52.0 (panic при парсинге некорректной SVCB/HTTPS DNS-записи) приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не разбирает недоверенные DNS-ответы через данный код — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39824"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/sys@v0.42.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/sys/windows версии v0.42.0 (переполнение целочисленного значения в NewNTUnicodeString) относится исключительно к платформе Windows. webhook-handler собирается и исполняется в Linux-контейнере, Windows-специфичный код не компилируется и не выполняется. Зависимость приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus).",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56852"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/text@v0.35.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/text версии v0.35.0 (бесконечный цикл в norm.Iter при обработке специально сформированного ввода) приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не выполняет Unicode-нормализацию недоверенного ввода через данный код — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GHSA-hrxh-6v49-42gf"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/google.golang.org/grpc@v1.80.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в google.golang.org/grpc версии v1.80.0 (проблемы xDS RBAC и HTTP/2) приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не использует gRPC-сервер и xDS/RBAC-функционал — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
     }
   ],
   "timestamp": "2026-02-16T12:00:00Z",
-  "last_updated": "2026-07-13T12:00:00Z"
+  "last_updated": "2026-08-20T12:00:00Z"
 }
