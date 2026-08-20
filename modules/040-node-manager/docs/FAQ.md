@@ -105,58 +105,60 @@ segment of their own until they are installed.
    and leaves the machine's own part empty.
 
    ```shell
-   d8 k get nodeconfigtemplate worker -o yaml > worker-0.yaml
+   d8 k get nodeconfigtemplate worker -o yaml > template.yaml
    ```
 
-1. Ask the machine what it has. The short form prints, under every disk, the
-   selectors that name it and says which of them match more than one:
+1. Ask the machine what it has. It answers in the shape of the document it is
+   waiting for, so that you merge it into the template instead of retyping it.
+   What the machine knows — its interfaces and their addresses — is filled in;
+   what only you know — which disk the system installs onto — is offered as
+   comments:
 
    ```shell
-   curl http://<machine-address>:50000/inventory
+   curl http://<machine-address>:50000/inventory > machine.yaml
    ```
-
-   ```text
-   Disks:
-     sda    30G  blank
-           QEMU HARDDISK · virtio · rotational
-           diskSelector:
-             size: "=32213721088"
-           diskSelector:
-             model: "QEMU HARDDISK"   # matches 2 disks
-   ```
-
-   `/inventory.json` carries the same plus the model, the serial number, the
-   `wwid` and the bus path.
-
-1. Fill the machine's part in: the node name, the network and the disks. Change
-   `apiVersion` and `kind` to the ones the machine reads — the template is a
-   read-only view of a `NodeConfig`, and a `NodeConfig` is what it takes:
 
    ```yaml
    apiVersion: internal.deckhouse.io/v1alpha1
    kind: NodeConfig
-   metadata:
-     name: worker-0
    spec:
-     nodeName: worker-0
      network:
        interfaces:
        - name: eth0
-         dhcp: false
-         addresses:
-         - 192.168.0.23/24
-         gateway: 192.168.0.1
-       dns:
-         servers:
-         - 192.168.0.1
-     storage:
-       diskSelector:
-         size: "=32213721088"
-       mounts:
-       - name: kubernetes-data
-         partitionSelector:
-           blank: true
-           size: "=10739277824"
+         dhcp: true
+         # holds 192.168.0.23/24 via 192.168.0.1 now — to keep that address after the install:
+         #   dhcp: false
+         #   addresses: ["192.168.0.23/24"]
+         #   gateway: "192.168.0.1"
+     storage: {}
+     # sda  30G  blank  QEMU HARDDISK · virtio · rotational
+     #   diskSelector:
+     #     serial: "S3Z8NB0K700001"
+     #   diskSelector:
+     #     size: "=32213721088"
+     #   mounts:
+     #   - name: kubernetes-data
+     #     partitionSelector:
+     #       blank: true
+     #       size: "=32213721088"
+   ```
+
+   The same path serves two more representations, chosen by `Accept`:
+   `application/json` is the machine-readable one dhctl reads, and `text/plain`
+   is an aligned table with the partitions and their filesystems.
+
+1. Uncomment the disk this node installs onto, then merge the two documents. The
+   machine's half wins, which also gives the result the `apiVersion` and `kind`
+   the machine reads:
+
+   ```shell
+   yq eval-all 'select(fi==0) * select(fi==1)' template.yaml machine.yaml > worker-0.yaml
+   ```
+
+1. Give the node its name — `metadata.name` and `spec.nodeName`, the same value:
+
+   ```shell
+   yq -i '.metadata.name = "worker-0" | .spec.nodeName = "worker-0"' worker-0.yaml
    ```
 
 1. Push it:

@@ -110,58 +110,59 @@ search: добавить ноду в кластер, добавить узел �
    оставляет пустой ту часть, которая относится к машине.
 
    ```shell
-   d8 k get nodeconfigtemplate worker -o yaml > worker-0.yaml
+   d8 k get nodeconfigtemplate worker -o yaml > template.yaml
    ```
 
-1. Спросите машину, что у неё есть. Краткая форма печатает под каждым диском
-   селекторы, которые его называют, и отмечает те, что подходят не к одному:
+1. Спросите машину, что у неё есть. Она отвечает в форме того документа,
+   которого ждёт, — чтобы вы смержили ответ с шаблоном, а не перепечатывали его.
+   Известное машине (интерфейсы и их адреса) заполнено, известное только вам
+   (какой диск станет системным) предложено комментариями:
 
    ```shell
-   curl http://<адрес-машины>:50000/inventory
+   curl http://<адрес-машины>:50000/inventory > machine.yaml
    ```
-
-   ```text
-   Disks:
-     sda    30G  blank
-           QEMU HARDDISK · virtio · rotational
-           diskSelector:
-             size: "=32213721088"
-           diskSelector:
-             model: "QEMU HARDDISK"   # matches 2 disks
-   ```
-
-   `/inventory.json` отдаёт то же самое плюс модель, серийный номер, `wwid` и
-   путь на шине.
-
-1. Впишите то, что относится к машине: имя узла, сеть и диски. Замените
-   `apiVersion` и `kind` на те, которые читает машина, — шаблон это способ
-   посмотреть `NodeConfig`, а принимает машина именно `NodeConfig`:
 
    ```yaml
    apiVersion: internal.deckhouse.io/v1alpha1
    kind: NodeConfig
-   metadata:
-     name: worker-0
    spec:
-     nodeName: worker-0
      network:
        interfaces:
        - name: eth0
-         dhcp: false
-         addresses:
-         - 192.168.0.23/24
-         gateway: 192.168.0.1
-       dns:
-         servers:
-         - 192.168.0.1
-     storage:
-       diskSelector:
-         size: "=32213721088"
-       mounts:
-       - name: kubernetes-data
-         partitionSelector:
-           blank: true
-           size: "=10739277824"
+         dhcp: true
+         # holds 192.168.0.23/24 via 192.168.0.1 now — to keep that address after the install:
+         #   dhcp: false
+         #   addresses: ["192.168.0.23/24"]
+         #   gateway: "192.168.0.1"
+     storage: {}
+     # sda  30G  blank  QEMU HARDDISK · virtio · rotational
+     #   diskSelector:
+     #     serial: "S3Z8NB0K700001"
+     #   diskSelector:
+     #     size: "=32213721088"
+     #   mounts:
+     #   - name: kubernetes-data
+     #     partitionSelector:
+     #       blank: true
+     #       size: "=32213721088"
+   ```
+
+   Тот же путь отдаёт ещё две формы, выбор — заголовком `Accept`:
+   `application/json` читает dhctl, `text/plain` — выровненная таблица с
+   разделами и их файловыми системами.
+
+1. Раскомментируйте диск, на который ставится узел, и смержите документы.
+   Машинная половина побеждает, поэтому в результат заодно попадают `apiVersion`
+   и `kind`, которые читает машина:
+
+   ```shell
+   yq eval-all 'select(fi==0) * select(fi==1)' template.yaml machine.yaml > worker-0.yaml
+   ```
+
+1. Дайте узлу имя — `metadata.name` и `spec.nodeName`, одно и то же значение:
+
+   ```shell
+   yq -i '.metadata.name = "worker-0" | .spec.nodeName = "worker-0"' worker-0.yaml
    ```
 
 1. Отправьте её машине:
