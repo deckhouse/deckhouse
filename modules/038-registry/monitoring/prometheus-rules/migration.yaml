@@ -163,5 +163,11 @@
            stay), and remove the `NodeGroupConfiguration` that writes it if that is where it comes
            from.
 
+        Doing it across a fleet with a `NodeGroupConfiguration` has one catch worth knowing in
+        advance: give it a **weight below 32**. The step that refuses the file is
+        `032_configure_containerd`, and a node stops at the step that fails — so a repair placed at
+        a later weight never runs on the nodes that need it most. Measured: a cleanup
+        configuration at weight 10 reached both nodes and cleared the label in 90 seconds.
+
         A node already stuck in the retry loop recovers on its own once the file is gone: measured,
         the configuration checksum returned in 75 seconds.

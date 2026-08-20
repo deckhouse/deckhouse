@@ -209,8 +209,20 @@ internal:
         passwordHash: RW-HASH
 `
 
+// v2AirGapPublished is v2AirGap with the publication fields of the previous schema filled in — the
+// three an operator could already set before this model existed.
+const v2AirGapPublished = `
+whitelistSourceRanges: ["10.0.0.0/10", "192.168.0.0/16"]
+ingressClass: registry-ingress
+https:
+  mode: CustomCertificate
+` + v2AirGapBody
+
 const v2AirGap = `
 whitelistSourceRanges: ["10.0.0.0/10", "192.168.0.0/16"]
+` + v2AirGapBody
+
+const v2AirGapBody = `
 internal:
   orchestrator: {}
   v2:
@@ -756,6 +768,29 @@ var _ = Describe("Module :: registry :: helm template :: v2 publication endpoint
 			ingress := f.KubernetesResource("Ingress", "d8-system", "registry-push")
 			Expect(ingress.Field(`metadata.annotations.nginx\.ingress\.kubernetes\.io/whitelist-source-range`).String()).
 				To(Equal("10.0.0.0/10,192.168.0.0/16"))
+		})
+
+		// The other two fields of the same era. All three were configured against the previous
+		// implementation's publication endpoint, and the design ADR asks what becomes of them here:
+		// they are projected onto this model's write endpoint rather than being reinvented or dropped.
+		// Untested until now, which for `ingressClass` and `https` meant the projection rested on two
+		// helm_lib helpers behaving as expected and nothing saying so.
+		It("projects the ingress class and the https mode of the old schema", func() {
+			renderWith(v2AirGapPublished)
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ingress := f.KubernetesResource("Ingress", "d8-system", "registry-push")
+			Expect(ingress.Exists()).To(BeTrue())
+
+			// Stated in the module's own configuration, and it must win over the global class:
+			// an operator who named a class for the registry's endpoint named it for this one.
+			Expect(ingress.Field("spec.ingressClassName").String()).To(Equal("registry-ingress"))
+
+			// `https: CustomCertificate` has to reach the endpoint as TLS with the copied
+			// secret, or the endpoint publishes plaintext while the configuration says otherwise.
+			Expect(ingress.Field("spec.tls").Exists()).To(BeTrue())
+			Expect(ingress.Field("spec.tls.0.secretName").String()).ToNot(BeEmpty())
+			Expect(ingress.Field("spec.tls.0.hosts").Exists()).To(BeTrue())
 		})
 	})
 })

@@ -153,3 +153,49 @@ func TestSuggestedModuleConfigIsApplicable(t *testing.T) {
 	assert.Equal(t, "registry.deckhouse.io", primary["host"])
 	assert.Equal(t, "the-license-key", primary["auth"].(map[string]any)["password"])
 }
+
+// TestTheConverterStopsOnceItsOutputIsApplied is what idempotency means for something that suggests
+// rather than acts.
+//
+// The suggestion is a ModuleConfig written into a secret for an operator to read and apply. Applying it
+// gives the cluster a `primary`, and from that moment the suggestion has no reader: a converter that
+// went on publishing would be offering an alternative to the answer it asked for, and one that
+// published a DIFFERENT suggestion each pass would make an operator wonder which is current.
+func TestTheConverterStopsOnceItsOutputIsApplied(t *testing.T) {
+	assert.Equal(t, suggestionPublish, decideSuggestion(false),
+		"a cluster with no primary of its own is exactly who the suggestion is for")
+	assert.Equal(t, suggestionWithdraw, decideSuggestion(true),
+		"once a primary is configured the suggestion is withdrawn, whatever it would have said")
+}
+
+// TestTheSuggestionIsByteIdenticalEveryTime pins the one way this could churn.
+//
+// The document is rendered from Go maps, whose iteration order is deliberately random. `sigs.k8s.io/yaml`
+// marshals through JSON, which sorts keys, so the output is stable — but a switch to `gopkg.in/yaml.v3`,
+// which marshals maps in map order, would make every pass produce a different document. The secret would
+// then be rewritten forever, and an operator watching it would see it change with no change behind it.
+//
+// Two hundred renders, because a single comparison of two would pass by luck on a three-key map.
+func TestTheSuggestionIsByteIdenticalEveryTime(t *testing.T) {
+	upstream := func() map[string]any {
+		return map[string]any{
+			"scheme": "HTTPS",
+			"host":   "registry.example.com",
+			"path":   "/deckhouse/ee",
+			"ca":     "-----BEGIN CERTIFICATE-----",
+			"auth": map[string]any{
+				"username": "someone",
+				"password": "not-a-real-password",
+			},
+		}
+	}
+
+	first, err := suggestedModuleConfig(upstream())
+	require.NoError(t, err)
+
+	for i := 0; i < 200; i++ {
+		again, err := suggestedModuleConfig(upstream())
+		require.NoError(t, err)
+		require.Equal(t, first, again, "render %d differs, so the secret would be rewritten on every pass", i)
+	}
+}

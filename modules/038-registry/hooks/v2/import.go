@@ -160,10 +160,12 @@ func handleImport(_ context.Context, input *go_hook.HookInput) error {
 		return nil
 	}
 
-	if facts, err := helpers.SnapshotToSingle[moduleConfigFacts](input, moduleConfigSnapName); err == nil && facts.HasPrimary {
-		// Configured by hand already, and that configuration is the operator's answer.
-		// Suggesting an alternative next to it would only be noise, so the suggestion is
-		// withdrawn.
+	configured := false
+	if facts, err := helpers.SnapshotToSingle[moduleConfigFacts](input, moduleConfigSnapName); err == nil {
+		configured = facts.HasPrimary
+	}
+
+	if decideSuggestion(configured) == suggestionWithdraw {
 		input.PatchCollector.Delete("v1", "Secret", "d8-system", SuggestedConfigSecretName)
 		return nil
 	}
@@ -192,6 +194,36 @@ func handleImport(_ context.Context, input *go_hook.HookInput) error {
 		StringData: map[string]string{SuggestedConfigKey: document},
 	})
 	return nil
+}
+
+// suggestionOutcome is what to do with the suggestion secret.
+type suggestionOutcome int
+
+const (
+	// suggestionPublish writes the suggestion, which is the state of a cluster not yet configured
+	// for this implementation.
+	suggestionPublish suggestionOutcome = iota
+
+	// suggestionWithdraw removes it.
+	suggestionWithdraw
+)
+
+// decideSuggestion answers whether the suggestion still has a reader.
+//
+// The whole of the converter's idempotency lives in this one answer, which is why it is a function
+// rather than a condition inline: the suggestion exists to be applied, and once it has been — once the
+// operator's own ModuleConfig names a primary — a converter that kept offering an alternative would be
+// arguing with the answer it asked for. So a second pass over its own output does nothing but clean up
+// after itself.
+//
+// Deliberately not "is their config identical to what we would suggest": an operator who changed the
+// address, the credentials or the path has answered the question, and being told their answer differs
+// from the machine's is not help.
+func decideSuggestion(operatorNamedAPrimary bool) suggestionOutcome {
+	if operatorNamedAPrimary {
+		return suggestionWithdraw
+	}
+	return suggestionPublish
 }
 
 // suggestedModuleConfig renders the whole ModuleConfig, not only the fragment.
