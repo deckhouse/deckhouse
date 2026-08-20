@@ -163,6 +163,9 @@ func (r *Reconciler) renderFor(ctx context.Context, config *bootstrapv1alpha1.No
 				fmt.Sprintf("machine %s carries no %s label yet", machine.Name, machineNodeGroupLabel))
 	}
 
+	// Both answers below are requeued rather than left to an event: this
+	// controller watches Machines, not NodeGroups, so a group created or
+	// switched to Immutable later would only be noticed if its Machine changed.
 	ng := &v1.NodeGroup{}
 	if err := r.Client.Get(ctx, types.NamespacedName{Name: ngName}, ng); err != nil {
 		if apierrors.IsNotFound(err) {

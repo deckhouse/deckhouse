@@ -84,6 +84,7 @@ spec:
         - --metrics-bind-address=127.0.0.1:4291
         - --health-probe-bind-address=0.0.0.0:4292
         - --webhook-port=4290
+        - --apiserver-port=4293
         {{- /* bashible-context rebuilds the single shared context (all NodeGroups → one
         Secret) on any trigger, so extra workers only duplicate the same full assembly and
         race on the one output object; a single worker + the controller's debounce collapse
@@ -136,6 +137,9 @@ spec:
         ports:
         - containerPort: 4290
           name: webhook-server
+          protocol: TCP
+        - containerPort: 4293
+          name: apiserver
           protocol: TCP
         volumeMounts:
         - mountPath: /tmp/k8s-webhook-server/serving-certs

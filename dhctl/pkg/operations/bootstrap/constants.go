@@ -59,6 +59,15 @@ var (
 	// next step, so a couple of minutes is generous.
 	waitNodeRegistered = waitBudget{attempts: 120, interval: time.Second}
 
+	// A joining master has the same road ahead of it as the first one — install,
+	// reboot, extensions, kubelet — and only at the end of it does
+	// control-plane-manager add its etcd member. The same half hour.
+	waitJoinedControlPlane = waitBudget{attempts: 360, interval: 5 * time.Second}
+
+	// The machine may be powering on when the bootstrap starts, and olcedar-init
+	// opens the port about thirty seconds into the boot. Ten minutes.
+	waitMaintenancePort = waitBudget{attempts: 120, interval: 5 * time.Second}
+
 	// A Deckhouse hook publishes what a joining node needs after the NodeGroup
 	// arrives, so the first read of a young cluster finds nothing. The budget is
 	// the classic path's wait for the group's cloud config (entity.GetCloudConfig).
