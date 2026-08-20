@@ -639,7 +639,7 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 			Expect(hosts).NotTo(ContainElement("grafana.example.com"))
 			Expect(hosts).To(ContainElements("console.example.com", "prometheus.example.com"))
 			Expect(strings.Fields(cm.Field("data.allowedHosts").String())).To(BeEmpty(),
-				"nothing may be allowed back out of a pattern that does not exist")
+				"nothing may be verdictAllowed back out of a pattern that does not exist")
 			Expect(strings.Fields(cm.Field("data.excludedHosts").String())).To(Equal([]string{"grafana.example.com"}),
 				"still published, so that the effect of the setting reads the same in both modes")
 		})
