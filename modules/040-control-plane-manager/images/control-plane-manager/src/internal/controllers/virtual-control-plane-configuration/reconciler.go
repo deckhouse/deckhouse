@@ -363,9 +363,9 @@ func buildTargetPKISecretData(vcp *controlplanev1alpha1.VirtualControlPlane, api
 
 	if _, err := pki.CreatePKIBundle(
 		vcp.Namespace,
-		constants.DefaultTenantClusterDomain,
+		vcp.Spec.Networking.ClusterDomain,
 		advertiseAddress,
-		constants.DefaultTenantServiceSubnetCIDR,
+		vcp.Spec.Networking.ServiceSubnetCIDR,
 		pki.WithPKIDir(pkiDir),
 		pki.WithAPIServerCertSANs(extraSANs),
 	); err != nil {

@@ -89,6 +89,7 @@ func renderManifests(
 		apiAdvertiseAddress,
 		string(globalData["cluster-uuid"]),
 		egressDestinations,
+		vcp.Spec.Networking,
 	)
 
 	rendered := make(map[string][]byte)
@@ -136,6 +137,7 @@ func buildManifestReplacer(
 	apiAdvertiseAddress string,
 	clusterUUID string,
 	egressDestinations []string,
+	networking controlplanev1alpha1.VirtualControlPlaneNetworking,
 ) *strings.Replacer {
 	return strings.NewReplacer(
 		"${VCP_API_VIP}", apiAdvertiseAddress,
@@ -151,9 +153,10 @@ func buildManifestReplacer(
 		"${VCP_NAME}", vcp.Name,
 		"${NAMESPACE}", vcp.Namespace,
 		"${VCP_KONNECTIVITY_SERVER_COUNT}", fmt.Sprintf("%d", vcp.Spec.Replicas),
-		"${CLUSTER_DOMAIN}", constants.DefaultTenantClusterDomain,
-		"${SERVICE_SUBNET_CIDR}", constants.DefaultTenantServiceSubnetCIDR,
-		"${POD_SUBNET_CIDR}", constants.DefaultTenantPodSubnetCIDR,
+		"${CLUSTER_DOMAIN}", networking.ClusterDomain,
+		"${SERVICE_SUBNET_CIDR}", networking.ServiceSubnetCIDR,
+		"${POD_SUBNET_CIDR}", networking.PodSubnetCIDR,
+		"${POD_SUBNET_NODE_CIDR_PREFIX}", networking.PodSubnetNodeCIDRPrefix,
 		"${VCP_API_HOST}", apiExposeHost(vcp),
 		"${VCP_KONN_HOST}", konnExposeHost(vcp),
 		"${VCP_PKG_HOST}", packagesExposeHost(vcp),

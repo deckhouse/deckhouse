@@ -26,11 +26,9 @@ import (
 )
 
 type StepExecutor struct {
-	client            client.Client
-	operation         *controlplanev1alpha1.ControlPlaneOperation
-	tenantIdentity    tenantIdentity
-	clusterDomain     string
-	serviceSubnetCIDR string
+	client         client.Client
+	operation      *controlplanev1alpha1.ControlPlaneOperation
+	tenantIdentity tenantIdentity
 }
 
 func (e *StepExecutor) Execute(ctx context.Context, stepName controlplanev1alpha1.StepName) (result operations.StepResult) {

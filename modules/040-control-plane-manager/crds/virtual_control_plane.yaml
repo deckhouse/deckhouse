@@ -89,6 +89,91 @@ spec:
                 minLength: 1
                 pattern: ^[0-9]+\.[0-9]+(\.[0-9]+)?$
                 type: string
+              networking:
+                description: |-
+                  Tenant cluster's network configuration (Service/Pod CIDRs, cluster domain).
+
+                  Required so that the `clusterDomain` default always applies and every field's immutability
+                  rule always has a previous value to compare against.
+                properties:
+                  clusterDomain:
+                    default: cluster.virtual
+                    description: |-
+                      Tenant cluster's DNS domain. Used to build the apiserver's `--service-account-issuer`
+                      and the `kubernetes.default.svc.<clusterDomain>` certificate SAN.
+
+                      Warning! Changing this parameter on a running tenant is extremely dangerous: the apiserver
+                      serving certificate and `--service-account-issuer` are derived from it only once, at
+                      creation. Create a new VirtualControlPlane and migrate workloads instead of changing it.
+                    maxLength: 253
+                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                    type: string
+                    x-kubernetes-validations:
+                    - message: clusterDomain is immutable. Create a new VirtualControlPlane and migrate workloads.
+                      rule: self == oldSelf
+                  podSubnetCIDR:
+                    description: |-
+                      Address space of the tenant cluster's Pods. Passed to kube-controller-manager as
+                      `--cluster-cidr` and to cilium as the Kubernetes-IPAM Pod CIDR source.
+
+                      Warning! Changing this parameter on a running tenant is extremely dangerous: existing
+                      nodes and Pods already hold addresses from the current range, and switching it means
+                      recreating every node. Create a new VirtualControlPlane and migrate workloads instead
+                      of changing it.
+
+                      Must be an IPv4 CIDR between /8 and /24, and shorter than `podSubnetNodeCIDRPrefix`
+                      so that at least one node subnet fits.
+                    pattern: ^((25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])/([89]|1[0-9]|2[0-4])$
+                    type: string
+                    x-kubernetes-validations:
+                    - message: podSubnetCIDR is immutable. Create a new VirtualControlPlane and migrate workloads.
+                      rule: self == oldSelf
+                  podSubnetNodeCIDRPrefix:
+                    description: |-
+                      Prefix size of the Pod network allocated to each node out of `podSubnetCIDR`. Passed to
+                      kube-controller-manager as `--node-cidr-mask-size`.
+
+                      Warning! Changing this parameter on a running tenant is extremely dangerous: nodes that
+                      already received a PodCIDR keep the previous prefix, silently fragmenting the Pod address
+                      space. Create a new VirtualControlPlane and migrate workloads instead of changing it.
+
+                      This is a policy choice, not a value derivable from `podSubnetCIDR`: the gap between the
+                      two trades maximum node count against Pod addresses per node. With `podSubnetCIDR` of
+                      `/16` — a `/23` prefix gives 128 nodes with 510 addresses each, `/24` gives 256 with 254,
+                      `/25` gives 512 with 126.
+                    pattern: ^(1[6-9]|2[0-9]|30)$
+                    type: string
+                    x-kubernetes-validations:
+                    - message: podSubnetNodeCIDRPrefix is immutable. Create a new VirtualControlPlane and migrate workloads.
+                      rule: self == oldSelf
+                  serviceSubnetCIDR:
+                    description: |-
+                      Address space of the tenant cluster's Services. The tenant apiserver serving certificate
+                      carries the range's 1st address as an IP SAN, and the tenant DNS Service is addressed at
+                      the range's 10th address.
+
+                      Warning! Changing this parameter on a running tenant is extremely dangerous and can lead
+                      to complete tenant failure: existing Services keep ClusterIPs from the current range, the
+                      apiserver serving certificate silently regenerates with a different SAN (dropping the old
+                      `kubernetes.default` SAN), and the tenant DNS Service stays stranded at the old address.
+                      Create a new VirtualControlPlane and migrate workloads instead of changing it.
+
+                      Must be an IPv4 CIDR between /12 and /24. `/12` is the largest range kube-apiserver
+                      accepts; `/24` leaves room for the `kubernetes` Service, the DNS Service and every
+                      Deckhouse module Service.
+                    pattern: ^((25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])/(1[2-9]|2[0-4])$
+                    type: string
+                    x-kubernetes-validations:
+                    - message: serviceSubnetCIDR is immutable. Create a new VirtualControlPlane and migrate workloads.
+                      rule: self == oldSelf
+                required:
+                - serviceSubnetCIDR
+                - podSubnetCIDR
+                - podSubnetNodeCIDRPrefix
+                type: object
+                x-kubernetes-validations:
+                - message: podSubnetNodeCIDRPrefix must be greater than the prefix length of podSubnetCIDR, otherwise no node subnet fits into the Pod address space
+                  rule: int(self.podSubnetNodeCIDRPrefix) > int(self.podSubnetCIDR.split('/')[1])
               replicas:
                 default: 1
                 description: Desired number of control plane replicas.
@@ -96,6 +181,7 @@ spec:
                 type: integer
             required:
             - kubernetesVersion
+            - networking
             type: object
           status:
             description: Observed state of the virtual control plane.

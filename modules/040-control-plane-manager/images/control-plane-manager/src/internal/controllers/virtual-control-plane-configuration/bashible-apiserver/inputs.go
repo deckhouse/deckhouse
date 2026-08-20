@@ -22,7 +22,6 @@ import (
 	"fmt"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
-	"control-plane-manager/internal/constants"
 
 	"sigs.k8s.io/yaml"
 )
@@ -117,6 +116,12 @@ func BuildExternalInputsYAML(p ExternalInputsParams) (string, error) {
 	if p.APIServerProxyCerts.Crt == "" || p.APIServerProxyCerts.Key == "" {
 		return "", fmt.Errorf("apiserverProxyCerts crt and key are required")
 	}
+	// ClusterDNSAddress is derived from spec.networking.serviceSubnetCIDR rather than passed in,
+	// so it can never disagree with the range the tenant apiserver serves.
+	clusterDNSAddress, err := p.VCP.Spec.Networking.ClusterDNSAddress()
+	if err != nil {
+		return "", err
+	}
 
 	clusterUUID := p.ClusterUUID
 	if clusterUUID == "" {
@@ -130,8 +135,8 @@ func BuildExternalInputsYAML(p ExternalInputsParams) (string, error) {
 			Version: "vcp",
 			Edition: "unknown",
 		},
-		PodSubnetNodeCIDRPrefix: "24",
-		ClusterDNSAddress:       constants.DefaultTenantClusterDNS,
+		PodSubnetNodeCIDRPrefix: p.VCP.Spec.Networking.PodSubnetNodeCIDRPrefix,
+		ClusterDNSAddress:       clusterDNSAddress,
 		ClusterUUID:             clusterUUID,
 		BootstrapTokens: map[string]string{
 			"worker": p.JoinToken,

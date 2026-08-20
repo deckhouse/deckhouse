@@ -163,7 +163,7 @@ data:
   bpf-lb-acceleration: "disabled"
   enable-service-topology: "false"
   enable-l2-neigh-discovery: "false"
-  k8s-require-ipv4-pod-cidr: "false"
+  k8s-require-ipv4-pod-cidr: "true"
   k8s-require-ipv6-pod-cidr: "false"
   enable-k8s-networkpolicy: "true"
   enable-endpoint-lockdown-on-policy-overflow: "false"
@@ -180,10 +180,8 @@ data:
   operator-api-serve-addr: ":9234"
 
   enable-hubble: "false"
-  ipam: "cluster-pool"
+  ipam: "kubernetes"
   ipam-cilium-node-update-rate: "15s"
-  cluster-pool-ipv4-cidr: "10.244.0.0/16"
-  cluster-pool-ipv4-mask-size: "24"
 
   default-lb-service-ipam: "lbipam"
   egress-gateway-reconciliation-trigger-interval: "1s"

@@ -38,7 +38,17 @@ func goldenParams() ExternalInputsParams {
 	return ExternalInputsParams{
 		VCP: &controlplanev1alpha1.VirtualControlPlane{
 			ObjectMeta: metav1.ObjectMeta{Name: "golden", Namespace: "vcp-golden"},
-			Spec:       controlplanev1alpha1.VirtualControlPlaneSpec{KubernetesVersion: "1.31"},
+			Spec: controlplanev1alpha1.VirtualControlPlaneSpec{
+				KubernetesVersion: "1.31",
+				// Matches the former hardcoded defaults byte-for-byte (clusterDNS derives to
+				// 10.96.0.10), so the golden files stay unchanged.
+				Networking: controlplanev1alpha1.VirtualControlPlaneNetworking{
+					ServiceSubnetCIDR:       "10.96.0.0/12",
+					PodSubnetCIDR:           "10.244.0.0/16",
+					PodSubnetNodeCIDRPrefix: "24",
+					ClusterDomain:           "cluster.virtual",
+				},
+			},
 		},
 		CA:           []byte("-----BEGIN CERTIFICATE-----\nVCP-CA\n-----END CERTIFICATE-----\n"),
 		JoinToken:    "token",
@@ -114,6 +124,6 @@ func TestExternalInputsMatchContextInput(t *testing.T) {
 		}
 	}
 	// clusterDomain is in the tenant's own d8-cluster-configuration, written by
-	// buildTargetTenantClusterConfigurationSecret from the same constant.
+	// buildTargetTenantClusterConfigurationSecret from the same spec.networking block.
 	require.ElementsMatch(t, []string{"clusterDomain"}, tenantComputed)
 }
