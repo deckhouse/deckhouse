@@ -600,7 +600,7 @@ alerts:
         To disable automatic tuning for this resource and manage requests manually, set
         [`spec.settings.resourcesRequests.{{ $labels.resource }}`](/modules/control-plane-manager/configuration.html#parameters-resourcesrequests) in the ModuleConfig of `control-plane-manager`.
       summary: |
-        Automatic control-plane resource tuning cannot increase `{{ $labels.resource }}` requests due to lack of available capacity.
+        Automatic control-plane resource tuning cannot increase {{ $labels.resource }} requests due to lack of available capacity.
       severity: "5"
       markupFormat: markdown
     - name: D8ControlPlaneDefaultVersionDrift
