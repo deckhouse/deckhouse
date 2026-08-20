@@ -111,6 +111,7 @@ LABEL org.opencontainers.image.licenses="Apache License 2.0"
 LABEL org.opencontainers.image.title="Metal3 Ironic Container"
 LABEL org.opencontainers.image.url="https://github.com/metal3-io/ironic-image"
 LABEL org.opencontainers.image.vendor="Metal3-io"
+LABEL org.deckhouse.metal3.ipa-images="embedded-runtime-copy-v1"
 
 ARG TARGETARCH
 
@@ -180,6 +181,9 @@ microdnf remove -y sqlite
 microdnf clean all
 rm -rf /var/cache/{yum,dnf}/*
 configure-nonroot.sh
+test -x /bin/copy-ipa-images
+test -s /opt/metal3/ipa-images/ironic-python-agent.kernel
+test -s /opt/metal3/ipa-images/ironic-python-agent.initramfs
 rm -f /bin/configure-nonroot.sh
 EORUN
 
