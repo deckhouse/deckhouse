@@ -29,6 +29,16 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/pwgen"
 )
 
+const (
+	// kubernetesDexClientAppSecretPath holds the secret of the privileged kubernetes OAuth2Client.
+	// It is shared by every consumer of the kubernetes client and must never be handed out to
+	// per-application clients.
+	kubernetesDexClientAppSecretPath = "userAuthn.internal.kubernetesDexClientAppSecret"
+
+	kubernetesDexClientAppSecretNamespace = "d8-user-authn"
+	kubernetesDexClientAppSecretName      = "kubernetes-dex-client-app-secret"
+)
+
 type KubernetesSecret []byte
 
 func applyKubernetesSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -49,11 +59,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:       "Secret",
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
-					MatchNames: []string{"d8-user-authn"},
+					MatchNames: []string{kubernetesDexClientAppSecretNamespace},
 				},
 			},
 			NameSelector: &types.NameSelector{
-				MatchNames: []string{"kubernetes-dex-client-app-secret"},
+				MatchNames: []string{kubernetesDexClientAppSecretName},
 			},
 			FilterFunc: applyKubernetesSecretFilter,
 		},
@@ -61,8 +71,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, kubernetesDexClientAppSecret)
 
 func kubernetesDexClientAppSecret(_ context.Context, input *go_hook.HookInput) error {
-	secretPath := "userAuthn.internal.kubernetesDexClientAppSecret"
-	if input.Values.Exists(secretPath) && input.Values.Get(secretPath).String() != "" {
+	if input.Values.Exists(kubernetesDexClientAppSecretPath) && input.Values.Get(kubernetesDexClientAppSecretPath).String() != "" {
 		return nil
 	}
 
@@ -76,14 +85,14 @@ func kubernetesDexClientAppSecret(_ context.Context, input *go_hook.HookInput) e
 
 		// if secret field was removed, generate a new one
 		if len(secretContent) == 0 {
-			input.Values.Set(secretPath, pwgen.AlphaNum(20))
+			input.Values.Set(kubernetesDexClientAppSecretPath, pwgen.AlphaNum(20))
 			return nil
 		}
 
-		input.Values.Set(secretPath, string(secretContent))
+		input.Values.Set(kubernetesDexClientAppSecretPath, string(secretContent))
 		return nil
 	}
 
-	input.Values.Set(secretPath, pwgen.AlphaNum(20))
+	input.Values.Set(kubernetesDexClientAppSecretPath, pwgen.AlphaNum(20))
 	return nil
 }
