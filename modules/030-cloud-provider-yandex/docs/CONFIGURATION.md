@@ -27,6 +27,25 @@ The module automatically creates StorageClasses covering all available disks in 
 
 You can filter out the unnecessary StorageClasses via the [exclude](#parameters-storageclass-exclude) parameter.
 
+Use the [provision](#parameters-storageclass-provision) parameter to create additional StorageClasses or to override the parameters of the ones created by default. It also allows setting the [block size](https://yandex.cloud/en/docs/compute/operations/disk-create/empty-disk-blocksize) of the disks, which defines their maximum size: `8Ti` for the default `4Ki` block, and twice as much for every next block size, up to `256Ti` for the `128Ki` block.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-yandex
+spec:
+  version: 1
+  settings:
+    storageClass:
+      provision:
+      - name: network-ssd-64k
+        type: network-ssd
+        blockSize: 64Ki
+```
+
+> The block size of an existing disk cannot be changed. Changing the `blockSize` parameter recreates the StorageClass, but the volumes provisioned before the change keep their block size.
+
 ## LoadBalancer
 
 The module subscribes to Service objects of the `LoadBalancer` type and creates the corresponding `NetworkLoadBalancer` and `TargetGroup` in Yandex Cloud.

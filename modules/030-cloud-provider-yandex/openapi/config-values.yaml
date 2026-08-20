@@ -9,6 +9,35 @@ properties:
   storageClass:
     type: object
     properties:
+      provision:
+        description: |
+          Defines additional StorageClasses or overrides the parameters of the ones created by default.
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          required: ["name", "type"]
+          properties:
+            name:
+              type: string
+              description: |
+                The name of the StorageClass to create.
+            type:
+              type: string
+              enum: ["network-hdd", "network-ssd", "network-ssd-nonreplicated", "network-ssd-io-m3"]
+              description: |
+                The disk type.
+            blockSize:
+              type: string
+              enum: ["4Ki", "8Ki", "16Ki", "32Ki", "64Ki", "128Ki"]
+              description: |
+                The block size of the disks created by this StorageClass:
+                  * If empty, disks are created with the Yandex Cloud default block size of `4Ki`.
+                  * The block size defines the maximum size of a network disk: `8Ti` for the default `4Ki` block, and twice as much for every next block size, up to `256Ti` for the `128Ki` block.
+                  * The block size of an existing disk cannot be changed. Changing this parameter recreates the StorageClass, but the volumes provisioned before the change keep their block size.
+                  * A detailed description is available in the [official documentation](https://yandex.cloud/en/docs/compute/operations/disk-create/empty-disk-blocksize).
+        x-examples:
+        - [{"name": "network-ssd-64k", "type": "network-ssd", "blockSize": "64Ki"}]
       exclude:
         type: array
         items:
