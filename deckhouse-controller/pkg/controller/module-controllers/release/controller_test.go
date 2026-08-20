@@ -236,6 +236,28 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		assert.True(suite.T(), apierrors.IsNotFound(err), "documentation must not be created for an embedded module")
 	})
 
+	// The module is served by its embedded copy, but a ModuleDocumentation created by
+	// an older Deckhouse (before documentation was skipped for embedded modules) is
+	// still around. It points at a mount that is never created for a staged release,
+	// so the docbuilder would retry it forever - it must be deleted.
+	suite.Run("stale module documentation deleted for embedded module", func() {
+		suite.setupReleaseController(
+			suite.fetchTestFileData("module-documentation-stale-embedded.yaml"),
+			withInstaller(&installermock.Installer{
+				IsEmbeddedPresentFunc: func(string) bool { return true },
+			}),
+		)
+
+		repeatTest(func() {
+			mr := suite.getModuleRelease(suite.testMRName)
+			_, err = suite.ctr.handleRelease(context.TODO(), mr)
+			require.NoError(suite.T(), err)
+		})
+
+		err = suite.client.Get(context.TODO(), client.ObjectKey{Name: "parca"}, new(v1alpha1.ModuleDocumentation))
+		assert.True(suite.T(), apierrors.IsNotFound(err), "stale documentation must be deleted for an embedded module")
+	})
+
 	// The module was still embedded but its embedded copy is no longer on disk
 	// (IsEmbeddedPresent == false), so the release is activated (Install) and the
 	// active source is switched off the "Embedded" sentinel to the real source.
