@@ -122,11 +122,16 @@ func newConfig(opts Options) (*genericapiserver.RecommendedConfig, error) {
 	return cfg, nil
 }
 
+// newServer builds the aggregated server. The v3 OpenAPI config is required —
+// InstallAPIGroup refuses without one — and it is built per group from the
+// definitions below. The v2 config is deliberately left nil: PrepareRun builds a
+// single spec covering every route the generic server carries, /version and
+// /apis included, and calls klog.Fatal on the first model it has no definition
+// for. Filling that in means carrying the whole generated apimachinery set for a
+// pair of virtual resources nobody runs `kubectl explain` against.
 func newServer(cfg *genericapiserver.RecommendedConfig, storage map[string]rest.Storage) (*genericapiserver.GenericAPIServer, error) {
-	definitions := openAPIDefinitions(storage)
-	namer := endpointsopenapi.NewDefinitionNamer(Scheme)
-	cfg.OpenAPIConfig = genericapiserver.DefaultOpenAPIConfig(definitions, namer)
-	cfg.OpenAPIV3Config = genericapiserver.DefaultOpenAPIV3Config(definitions, namer)
+	cfg.OpenAPIV3Config = genericapiserver.DefaultOpenAPIV3Config(
+		openAPIDefinitions(storage), endpointsopenapi.NewDefinitionNamer(Scheme))
 
 	srv, err := cfg.Complete().New(serverName, genericapiserver.NewEmptyDelegate())
 	if err != nil {
