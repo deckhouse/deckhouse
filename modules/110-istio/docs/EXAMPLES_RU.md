@@ -1166,6 +1166,7 @@ d8 k get pods -A -o json | jq --arg revision "v1x25" \
   '.items[] | select(.metadata.annotations."sidecar.istio.io/status" // "{}" | fromjson |
    .revision == $revision) | .metadata.namespace + "/" + .metadata.name'
 ```
+
 <span id="auto-upgrading-istio-data-plane"></span>
 
 ### Автоматическое обновление data plane Istio
