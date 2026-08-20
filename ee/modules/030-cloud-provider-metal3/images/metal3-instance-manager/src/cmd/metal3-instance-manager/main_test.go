@@ -26,7 +26,6 @@ func TestUpdateBareMetalHostSpecPreservesUnmanagedFields(t *testing.T) {
 
 	spec := instanceSpec{
 		Online:                          true,
-		AutomatedCleaningMode:           "metadata",
 		BootMACAddress:                  "aa:bb:cc:dd:ee:ff",
 		BMCAddress:                      "redfish+http://new/redfish/v1/Systems/system",
 		BMCDisableCertificateValidation: true,
@@ -63,5 +62,14 @@ func TestUpdateBareMetalHostSpecPreservesUnmanagedFields(t *testing.T) {
 	}
 	if got, _, _ := unstructured.NestedBool(bmh.Object, "spec", "bmc", "disableCertificateVerification"); !got {
 		t.Fatal("expected disableCertificateVerification to be true")
+	}
+}
+
+func TestAutomatedCleaningMode(t *testing.T) {
+	if got := automatedCleaningMode(false); got != "metadata" {
+		t.Fatalf("expected metadata when automated cleaning is enabled, got %q", got)
+	}
+	if got := automatedCleaningMode(true); got != "disabled" {
+		t.Fatalf("expected disabled when automated cleaning is disabled, got %q", got)
 	}
 }

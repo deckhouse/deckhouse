@@ -4,6 +4,10 @@
 {{- if hasKey $hostManager "defaultOnline" -}}
 {{- $defaultOnline = $hostManager.defaultOnline -}}
 {{- end -}}
+{{- $defaultDisableAutomatedCleaning := false -}}
+{{- if hasKey $hostManager "defaultDisableAutomatedCleaning" -}}
+{{- $defaultDisableAutomatedCleaning = $hostManager.defaultDisableAutomatedCleaning -}}
+{{- end -}}
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -104,7 +108,7 @@ spec:
         args:
         - --target-namespace={{ $hostManager.targetNamespace | default "d8-cloud-instance-manager" }}
         - --default-online={{ $defaultOnline }}
-        - --default-automated-cleaning-mode={{ $hostManager.defaultAutomatedCleaningMode | default "disabled" }}
+        - --default-disable-automated-cleaning={{ $defaultDisableAutomatedCleaning }}
         resources:
           requests:
             cpu: 10m
