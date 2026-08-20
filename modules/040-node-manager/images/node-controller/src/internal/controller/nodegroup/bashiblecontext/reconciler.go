@@ -59,7 +59,12 @@ func (r *Reconciler) Assemble(ctx context.Context) error {
 	for i := range ngList.Items {
 		ng := &ngList.Items[i]
 
-		resolved, errStr, err := r.DerivedStatus.ResolveNodeGroup(ctx, ng, providers)
+		provider, err := providers.ForNodeGroup(ng)
+		if err != nil {
+			return fmt.Errorf("resolve the provider of NodeGroup %s: %w", ng.Name, err)
+		}
+
+		resolved, errStr, err := r.DerivedStatus.ResolveNodeGroup(ctx, ng, provider)
 		if err != nil {
 			return fmt.Errorf("resolve NodeGroup %s: %w", ng.Name, err)
 		}
@@ -67,7 +72,7 @@ func (r *Reconciler) Assemble(ctx context.Context) error {
 		if errStr != "" {
 			logger.Info("NodeGroup failed validation", "nodeGroup", ng.Name, "error", errStr)
 			if p, ok := prior[ng.Name]; ok {
-				nodeGroups = append(nodeGroups, withProviderType(p, providers, ng))
+				nodeGroups = append(nodeGroups, withProviderType(p, provider))
 			}
 			continue
 		}
@@ -86,12 +91,14 @@ func (r *Reconciler) Assemble(ctx context.Context) error {
 
 // withProviderType refreshes the provider of an entry carried over from the last published context:
 // an entry written before the key existed names none, and would render without cloud steps.
-func withProviderType(entry map[string]interface{}, providers cloudprovider.Providers, ng *v1.NodeGroup) map[string]interface{} {
-	if provider, ok := providers.ForNodeGroup(ng); ok {
-		entry["cloudProviderType"] = provider.Type
-	} else {
+func withProviderType(entry map[string]interface{}, provider cloudprovider.Provider) map[string]interface{} {
+	if provider.Type == "" {
 		delete(entry, "cloudProviderType")
+		return entry
 	}
+
+	entry["cloudProviderType"] = provider.Type
+
 	return entry
 }
 

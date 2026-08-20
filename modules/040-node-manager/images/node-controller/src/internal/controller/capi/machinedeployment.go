@@ -158,7 +158,11 @@ func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	provider, _ := providers.ForNodeGroup(ng)
+	provider, err := providers.ForNodeGroup(ng)
+	if err != nil {
+		logger.Error(err, "failed to resolve the cloud provider of the NodeGroup", "nodeGroup", ng.Name)
+		return ctrl.Result{}, err
+	}
 
 	if !ng.DeletionTimestamp.IsZero() {
 		done, err := r.cleanupMachineDeployments(ctx, ng.Name, provider)
@@ -198,11 +202,11 @@ func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		}
 		switch derived_status.ComputeEngine(ng, provider) {
 		case engineCAPI:
-			if err := r.reconcileCloudMDsRendered(ctx, ng, providers, provider); err != nil {
+			if err := r.reconcileCloudMDsRendered(ctx, ng, provider); err != nil {
 				return ctrl.Result{}, err
 			}
 		case engineMCM:
-			if err := r.reconcileCloudMCMs(ctx, ng, providers, provider); err != nil {
+			if err := r.reconcileCloudMCMs(ctx, ng, provider); err != nil {
 				return ctrl.Result{}, err
 			}
 		default:
