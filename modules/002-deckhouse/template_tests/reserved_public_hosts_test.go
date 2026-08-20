@@ -273,6 +273,27 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 		})
 	})
 
+	// The snapshot hook has to know which reservation is in force, because the record it writes is
+	// applied only under Template: recording while List is in force would take a snapshot of a moment
+	// the reservation it feeds was not in force at. The hook cannot read the ConfigMap the template
+	// publishes the answer in -- it may not exist yet -- so it decides the same thing in Go. Compared
+	// here rather than trusted, the same way the derived pattern is.
+	Context("The mode the hook reads and the mode the template publishes", func() {
+		It("is the same decision on both sides", func() {
+			for _, tc := range []struct{ configured, domainTemplate string }{
+				{"Template", "%s.example.com"},
+				{"List", "%s.example.com"},
+				{"Template", "kube-%s.company.my"},
+				{"List", "kube-%s.company.my"},
+			} {
+				renderWithSettings(tc.domainTemplate, `{mode: `+tc.configured+`}`, admissionAPIs...)
+				Expect(configMap().Field("data.mode").String()).
+					To(Equal(publicdomain.EffectiveMode(tc.configured, tc.domainTemplate)),
+						"mode %q with publicDomainTemplate %q", tc.configured, tc.domainTemplate)
+			}
+		})
+	})
+
 	Context("The reservation follows publicDomainTemplate by default", func() {
 		BeforeEach(func() {
 			render("%s.example.com", admissionAPIs...)

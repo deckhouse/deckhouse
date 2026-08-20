@@ -254,3 +254,32 @@ func TestHostPatternIsTheOneTheSchemaValidates(t *testing.T) {
 		t.Errorf("openapi/values.yaml validates %q, HostPattern is %q", got, HostPattern)
 	}
 }
+
+func TestEffectiveMode(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		configured     string
+		domainTemplate string
+		want           string
+	}{
+		{ModeTemplate, "%s.example.com", ModeTemplate},
+		{ModeTemplate, "kube-%s.company.my", ModeTemplate},
+		{ModeList, "%s.example.com", ModeList},
+		// What the template falls back to, and for the same reason: a value that never went through
+		// the global schema must not have a reservation derived from parts that are not there.
+		{ModeTemplate, "", ModeList},
+		{ModeTemplate, "example.com", ModeList},
+		{ModeTemplate, "%s-%s.example.com", ModeList},
+		{ModeList, "example.com", ModeList},
+		// Absent, which is what a ModuleConfig that never named a mode leaves in values. The schema
+		// defaults it to Template and the template treats anything that is not List the same way.
+		{"", "%s.example.com", ModeTemplate},
+	}
+
+	for _, tc := range cases {
+		if got := EffectiveMode(tc.configured, tc.domainTemplate); got != tc.want {
+			t.Errorf("EffectiveMode(%q, %q) = %q, want %q", tc.configured, tc.domainTemplate, got, tc.want)
+		}
+	}
+}

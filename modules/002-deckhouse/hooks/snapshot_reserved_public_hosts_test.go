@@ -356,6 +356,39 @@ spec:
 		})
 	})
 
+	// The record is applied only under Template mode, so recording under List would snapshot a moment
+	// the reservation it feeds was not in force at: a cluster installed on List and switched to
+	// Template a year later would then find a record from its List days and grandfather nothing that
+	// appeared in between.
+	Context("A cluster asks for the reservation the module shipped before", func() {
+		BeforeEach(func() {
+			f.ValuesSet("deckhouse.reservedPublicHosts.mode", "List")
+			run("%s.example.com", tenantObjects)
+		})
+
+		It("records nothing while the reservation the record feeds is not in force", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet(reservedPublicHostsValuePath).String()).To(MatchJSON(`{
+				"recorded": false,
+				"hosts": []
+			}`))
+		})
+	})
+
+	Context("A cluster that asked for Template mode explicitly", func() {
+		BeforeEach(func() {
+			f.ValuesSet("deckhouse.reservedPublicHosts.mode", "Template")
+			run("%s.example.com", tenantObjects)
+		})
+
+		It("records, which is what makes the switch from List take a snapshot of the day it happens", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet(reservedPublicHostsValuePath + ".recorded").Bool()).To(BeTrue())
+			Expect(f.ValuesGet(reservedPublicHostsValuePath + ".hosts").String()).
+				To(ContainSubstring("shop.example.com"))
+		})
+	})
+
 	Context("The parameters exist but say the record has not been made", func() {
 		BeforeEach(func() {
 			run("%s.example.com", tenantObjects+paramsConfigMap("false", ""))

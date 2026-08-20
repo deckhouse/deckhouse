@@ -162,11 +162,17 @@
 {{- $unknownServices = $unknownServices | uniq | sortAlpha }}
 
 {{- /*
-  Hostnames the upgrade grandfathered: what tenants already served under the namespace when the
-  reservation was first recorded, collected once by hooks/snapshot_reserved_public_hosts.go. Kept in
-  its own key so that an operator can tell what they allowed from what the upgrade allowed, and drop
-  an entry once the workload behind it is gone. Not applied under List, where the reservation covers
-  only what the platform publishes and there is nothing to grandfather.
+  Hostnames the upgrade grandfathered: what tenants already served under the namespace when Template
+  mode first took effect, collected once by hooks/snapshot_reserved_public_hosts.go. Kept in its own
+  key so that an operator can tell what they allowed from what the upgrade allowed, and drop an entry
+  once the workload behind it is gone.
+
+  Not applied under List, where the reservation covers only what the platform publishes and there is
+  nothing to grandfather. The record can exist there all the same -- a cluster that ran Template and
+  was switched back keeps it -- and must stay unapplied, or a hostname recorded under a wider
+  reservation would become an exception to a narrower one that never covered it. The hook reads the
+  same effective mode as $mode above and does not record while it is List, so a cluster switched to
+  Template a year later snapshots then rather than carrying over a record from its List days.
 */}}
 {{- $snapshot := .Values.deckhouse.internal.reservedPublicHosts | default dict }}
 {{- $grandfatheredHosts := $snapshot.hosts | default list }}

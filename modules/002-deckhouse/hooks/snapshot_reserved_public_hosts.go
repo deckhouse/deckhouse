@@ -49,6 +49,12 @@ claims a hostname, the next snapshot legitimises it, and the reservation is defe
 the hook does not decide by a timestamp or by "has the module been upgraded"; it decides by the
 record it produced last time.
 
+When, is the other half. The record is applied only under Template mode, so it is taken when Template
+mode first takes effect and not on first converge: a cluster installed on List and switched to
+Template a year later gets a snapshot of the day it switched, not one of the day it was installed
+that would grandfather none of what appeared in between. Which mode is in force is decided by
+publicdomain.EffectiveMode, the same decision the template publishes in the ConfigMap's mode key.
+
 That record lives in the d8-reserved-public-hosts ConfigMap in d8-system, the same object the
 policies read their parameters from, and Helm is its only writer. The hook reads the grandfather keys
 back out of it and puts them in values, Helm renders them from values, and the two agree on a fixed
@@ -181,14 +187,25 @@ func snapshotReservedPublicHosts(ctx context.Context, input *go_hook.HookInput, 
 		return nil
 	}
 
-	namespace, err := publicdomain.ParseNamespace(input.Values.Get("global.modules.publicDomainTemplate").String())
-	if err != nil {
-		// No template, or one the global schema would have rejected. Either way nothing is reserved
-		// by pattern, so there is nothing to grandfather and no reason to read the cluster. Left
-		// unrecorded on purpose: the snapshot belongs to the moment the reservation starts, and a
-		// template set later still gets one.
+	domainTemplate := input.Values.Get("global.modules.publicDomainTemplate").String()
+	configuredMode := input.Values.Get("deckhouse.reservedPublicHosts.mode").String()
+
+	if publicdomain.EffectiveMode(configuredMode, domainTemplate) != publicdomain.ModeTemplate {
+		// The record is applied only under Template mode, so recording now would take a snapshot of
+		// a moment the reservation it feeds was not in force at -- and a cluster switched to
+		// Template a year later would find a record from its List days and grandfather nothing that
+		// appeared in between. Left unrecorded, so the snapshot is taken when Template first takes
+		// effect. That also covers the cluster with no publicDomainTemplate, and the one whose
+		// template the global schema would have rejected: neither reserves anything by pattern, so
+		// neither has anything to grandfather or a reason to read the cluster.
 		input.Values.Set(reservedPublicHostsValuePath, reservedPublicHostsSnapshot{Hosts: []string{}})
 		return nil
+	}
+
+	namespace, err := publicdomain.ParseNamespace(domainTemplate)
+	if err != nil {
+		// Unreachable: EffectiveMode above answers List for every template this cannot parse.
+		return fmt.Errorf("derive the reserved namespace: %w", err)
 	}
 
 	client, err := dc.GetK8sClient()

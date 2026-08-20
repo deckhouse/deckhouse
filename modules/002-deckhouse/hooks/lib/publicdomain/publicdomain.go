@@ -42,6 +42,12 @@ const labelPattern = `[a-z0-9]([-a-z0-9]*[a-z0-9])?`
 // publicdomain_test.go compares the two strings so that they cannot drift.
 const HostPattern = `^(\*\.)?` + labelPattern + `(\.` + labelPattern + `)*$`
 
+// The two reservations settings.reservedPublicHosts.mode selects between.
+const (
+	ModeTemplate = "Template"
+	ModeList     = "List"
+)
+
 var hostRegexp = regexp.MustCompile(HostPattern)
 
 // Namespace is the set of hostnames one publicDomainTemplate covers.
@@ -96,6 +102,26 @@ func ParseNamespace(domainTemplate string) (Namespace, error) {
 		namespace.Wildcard = "*" + suffix
 	}
 	return namespace, nil
+}
+
+// EffectiveMode is the reservation actually in force, which is not always the one the ModuleConfig
+// asked for: a publicDomainTemplate that does not split into a prefix and a suffix never went
+// through the global schema, and a reservation must not be derived from parts that are not there, so
+// it falls back to List.
+//
+// templates/reserved-public-hosts.yaml decides the same thing in Helm and publishes the answer in
+// the mode key of the ConfigMap. It has to be decided the same way on both sides: the record the
+// snapshot hook writes is applied only under Template, so a hook that recorded while the template
+// reserved by List would leave a record taken under one reservation feeding another.
+// template_tests/reserved_public_hosts_test.go compares the two so that they cannot drift.
+func EffectiveMode(configured, domainTemplate string) string {
+	if configured == ModeList {
+		return ModeList
+	}
+	if _, err := ParseNamespace(domainTemplate); err != nil {
+		return ModeList
+	}
+	return ModeTemplate
 }
 
 // Covers reports whether the hostname is one the reservation claims. The hostname is expected to be
