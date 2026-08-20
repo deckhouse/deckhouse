@@ -8,6 +8,8 @@
  - Changes were introduced in the OpenTofu integration to support the new `kubernetes_resource_ready_v1` resource used by `cloud-provider-dvp` and avoid unnecessary or destructive plan changes when data sources depend on readiness checks. Other cloud providers are not affected. If you encounter unexpected converge plans or cluster bootstrap issues when using OpenTofu-based providers (such as DVP, DynamiX, zVirt, or Yandex), report them to Deckhouse Technical Support.
  - Cilium agents will be restarted during the update.
  - During migration to the new Go-based implementation of apiserver-proxy, connection flaps to the API server may occur. This change exposes a new hostPort `6480` for health checks and upstreams statistics.
+ - Fixes recreation of all CloudEphemeral nodes on upgrade to 1.76.9. The MachineDeployment
+    replica count was dropped and the MachineDeployment was scaled to zero.
  - Istiod now enforces trust domain validation. Each remote root CA is now scoped to its declared trust domain in the meshConfig caCertificates. Verify that all IstioFederation resources have correct `trustDomain` values matching the remote cluster configuration.
  - Previously, a transient cluster DNS failure could cause the user-authz-webhook liveness probe to fail and restart the pod, which combined with the fail-closed authorization webhook (failurePolicy: Deny) could deny all API requests, including cluster-admins, until DNS recovered.
  - Previously, the fencing-agent would crash with "permission denied" on /dev/watchdog
@@ -32,8 +34,27 @@
  - Unsafe custom HelperPod settings in the `local-path-config` ConfigMap are no longer accepted. Default DKP installations are unaffected.
  - Users with accessLevel ClusterAdmin in ClusterAuthorizationRule gain read and write access to DVPInstanceClass objects; previously all access was denied.
  - Users with accessLevel ClusterAdmin in ClusterAuthorizationRule gain read and write access to DynamixInstanceClass objects; previously all access was denied.
+ - Values taken from `Project.spec.parameters` are now quoted where they are substituted into the
+    shipped project templates, and a parameter that changes the structure of the rendered manifests
+    rather than only their values is refused for any template, including custom ones. An administrator
+    name may no longer contain control characters, and `clusterLogDestinationName` must be a Kubernetes
+    object name or empty. Both are checked from the reconcile loop as well as at admission, so a
+    project already carrying such a value goes into an error state on its next reconcile rather than
+    at its next edit; the same holds for a custom template that turns a parameter into several objects
+    or into YAML, which is refused when the project is created, edited, or reconciled with a change to
+    apply. The module's admission policy now also matches CREATE, so objects labelled
+    `heritage: multitenancy-manager` can only be created by the module itself.
  - When using containerdV2, the performance of istio-cni breaks when mounting internal paths.
  - With enableMultiTenancy, effective access is now the union of CAR (within its limitNamespaces/namespaceSelector), AuthorizationRules, and plain RoleBindings/ClusterRoleBindings. Previously the webhook denied requests outside the CAR scope even when RBAC explicitly granted them: such existing bindings for subjects with a CAR silently become effective after the upgrade — review them. The CAR access level still does not apply outside its namespace limits. AccessibleNamespaces reflects the same union.
+ - `d8:manage:permission:module:multitenancy-manager:edit` no longer grants write access to
+    `projecttemplates`. A `ProjectTemplate` renders into a release applied by a ServiceAccount bound
+    to `cluster-admin`, and its `spec.resourcesTemplate` is arbitrary, so authoring one is equivalent
+    to holding `cluster-admin` and is not a module-level permission.
+    
+    Reading templates stays in `d8:manage:permission:module:multitenancy-manager:view`, and creating a
+    `Project` on an existing template stays in the edit role. The legacy `ClusterAdmin` access level
+    and the `kubeadm:cluster-admins` group keep the right. A subject that authored templates through
+    the manager role has to be granted one of those instead.
 
 ## Features
 
@@ -236,6 +257,7 @@
  - **[cloud-provider-vcd]** Fix LogrAdapter panic in VCD infra-controller-manager [#20148](https://github.com/deckhouse/deckhouse/pull/20148)
  - **[cloud-provider-vcd]** Fixed CVEs in `cloud-provider-vcd`. [#18113](https://github.com/deckhouse/deckhouse/pull/18113)
  - **[cloud-provider-vcd]** Fixed SecurityPolicyException for VCD components. [#19021](https://github.com/deckhouse/deckhouse/pull/19021)
+ - **[cloud-provider-vcd]** Fixes an intermittent "network still in use" error during cluster deletion with the WithNAT placement strategy. [#22328](https://github.com/deckhouse/deckhouse/pull/22328)
  - **[cloud-provider-vcd]** add werf deploy-dependency annotations to capcd webhook configurations to fix DMT lint and prevent race on install/upgrade [#21117](https://github.com/deckhouse/deckhouse/pull/21117)
  - **[cloud-provider-vcd]** fix vCD CCM TCP health monitors removal [#19089](https://github.com/deckhouse/deckhouse/pull/19089)
  - **[cloud-provider-vsphere]** Added filtering discovered zones and datastores by `zones` from provider configurations. [#18378](https://github.com/deckhouse/deckhouse/pull/18378)
@@ -380,6 +402,7 @@
  - **[istio]** Fix graceful draining of established HTTP connections when application pods terminate. [#22065](https://github.com/deckhouse/deckhouse/pull/22065)
  - **[istio]** Fixed indent in ztunnel daemonset template [#18256](https://github.com/deckhouse/deckhouse/pull/18256)
  - **[istio]** Reduce CPU and RAM for regenerate multicluster JWT token and sort ingressGateway [#18554](https://github.com/deckhouse/deckhouse/pull/18554)
+ - **[istio]** Restore Istiod pod anti-affinity for Istio 1.25 installations managed by the Sail Operator. [#22168](https://github.com/deckhouse/deckhouse/pull/22168)
  - **[istio]** added iptables wrapper in cni-v1x21x6 [#18925](https://github.com/deckhouse/deckhouse/pull/18925)
     istio-cni-nodes will be restarted
  - **[istio]** fixed CVE-2026-33186 in v1.21.6 images [#18676](https://github.com/deckhouse/deckhouse/pull/18676)
@@ -411,8 +434,31 @@
  - **[metallb]** Bump Go dependencies in the metallb and l2lb images to fix known CVEs. [#21549](https://github.com/deckhouse/deckhouse/pull/21549)
     The metallb components (controller, speaker, l2lb) will restart after the update.
  - **[monitoring-kubernetes]** Resolved port conflict with the runtime-audit-engine module and removed excessive pod privileges [#18868](https://github.com/deckhouse/deckhouse/pull/18868)
+ - **[multitenancy-manager]** A project parameter can no longer inject objects into the rendered project manifests. [#22286](https://github.com/deckhouse/deckhouse/pull/22286)
+    Values taken from `Project.spec.parameters` are now quoted where they are substituted into the
+    shipped project templates, and a parameter that changes the structure of the rendered manifests
+    rather than only their values is refused for any template, including custom ones. An administrator
+    name may no longer contain control characters, and `clusterLogDestinationName` must be a Kubernetes
+    object name or empty. Both are checked from the reconcile loop as well as at admission, so a
+    project already carrying such a value goes into an error state on its next reconcile rather than
+    at its next edit; the same holds for a custom template that turns a parameter into several objects
+    or into YAML, which is refused when the project is created, edited, or reconciled with a change to
+    apply. The module's admission policy now also matches CREATE, so objects labelled
+    `heritage: multitenancy-manager` can only be created by the module itself.
+ - **[multitenancy-manager]** The module manager role no longer grants authoring of project templates. [#22330](https://github.com/deckhouse/deckhouse/pull/22330)
+    `d8:manage:permission:module:multitenancy-manager:edit` no longer grants write access to
+    `projecttemplates`. A `ProjectTemplate` renders into a release applied by a ServiceAccount bound
+    to `cluster-admin`, and its `spec.resourcesTemplate` is arbitrary, so authoring one is equivalent
+    to holding `cluster-admin` and is not a module-level permission.
+    
+    Reading templates stays in `d8:manage:permission:module:multitenancy-manager:view`, and creating a
+    `Project` on an existing template stays in the edit role. The legacy `ClusterAdmin` access level
+    and the `kubeadm:cluster-admins` group keep the right. A subject that authored templates through
+    the manager role has to be granted one of those instead.
  - **[multitenancy-manager]** allow DNS queries for default ProjectTemplate [#18572](https://github.com/deckhouse/deckhouse/pull/18572)
  - **[network-gateway]** Fixed Python linking in the network-gateway module image. [#22066](https://github.com/deckhouse/deckhouse/pull/22066)
+ - **[network-gateway]** Fixed user and group in ConfigMap [#22297](https://github.com/deckhouse/deckhouse/pull/22297)
+    network-gateway pod's will be restarted
  - **[network-gateway]** Updated dnsmasq to v2.92-alt2 to address multiple security vulnerabilities (CVE-2026-*) [#19933](https://github.com/deckhouse/deckhouse/pull/19933)
  - **[network-gateway]** Updated python image source and mitigated pip CVE-2026-1703 [#19114](https://github.com/deckhouse/deckhouse/pull/19114)
  - **[network-policy-engine]** Fixed CVE-2026-34040, CVE-2026-33997, and CVE-2026-33186 in network-policy-engine dependencies. [#19005](https://github.com/deckhouse/deckhouse/pull/19005)
@@ -447,6 +493,9 @@
     Operators can now detect degraded fencing states (quorum loss, API unreachability) through log levels and diagnostic fields without parsing log messages.
  - **[node-manager]** Include system labels in CAPI MachineDeployment capacity annotation for correct scale-from-zero behavior [#20387](https://github.com/deckhouse/deckhouse/pull/20387)
     On CAPI-based clusters (DVP, VCD, zVirt, Dynamix, HuaweiCloud), scale-from-zero now correctly handles pods with nodeSelector targeting system labels (node.deckhouse.io/group, node.deckhouse.io/type, node-role.kubernetes.io/<ng-name>). Previously such pods remained Pending indefinitely when NodeGroup had minPerZone=0. No user action required — the fix is applied automatically on upgrade.
+ - **[node-manager]** MachineDeployment `spec.replicas` is no longer dropped on upgrade, so cloud nodes are not recreated. [#22299](https://github.com/deckhouse/deckhouse/pull/22299)
+    Fixes recreation of all CloudEphemeral nodes on upgrade to 1.76.9. The MachineDeployment
+    replica count was dropped and the MachineDeployment was scaled to zero.
  - **[node-manager]** add rbac policies for persistantvolumes to manage from capi-controller-manager. [#20646](https://github.com/deckhouse/deckhouse/pull/20646)
  - **[node-manager]** caps fix inconsistent pending staticinstance [#18379](https://github.com/deckhouse/deckhouse/pull/18379)
  - **[node-manager]** deploy capi controller and webhooks before basic resources to prevent race condition during upgrades. [#18754](https://github.com/deckhouse/deckhouse/pull/18754)
@@ -499,6 +548,7 @@
  - **[candi]** Make flag encryption-provider-config-automatic-reload auto enabled when secretEncryptionKey is true [#19287](https://github.com/deckhouse/deckhouse/pull/19287)
     Apiserver will restart if secretEncryptionKey is true
  - **[candi]** add container-selinux package for selinux policies on rhel based distributions. [#17714](https://github.com/deckhouse/deckhouse/pull/17714)
+ - **[candi]** update base images [#22195](https://github.com/deckhouse/deckhouse/pull/22195)
  - **[candi]** update base_images [#20914](https://github.com/deckhouse/deckhouse/pull/20914)
  - **[cilium-hubble]** Added vex with CVE-2026-33726 for hubble [#18913](https://github.com/deckhouse/deckhouse/pull/18913)
  - **[cilium-hubble]** Fixed vex file [#19001](https://github.com/deckhouse/deckhouse/pull/19001)
@@ -528,6 +578,7 @@
  - **[deckhouse]** Add settings check. [#19116](https://github.com/deckhouse/deckhouse/pull/19116)
  - **[deckhouse]** Allow ClusterAdmin manage ModuleSettingsDefinitions with RBAC. [#21753](https://github.com/deckhouse/deckhouse/pull/21753)
  - **[deckhouse]** Enable packages. [#18529](https://github.com/deckhouse/deckhouse/pull/18529)
+ - **[deckhouse]** Removed the `app` short name from the `Application` resource. [#22140](https://github.com/deckhouse/deckhouse/pull/22140)
  - **[deckhouse]** Replace config-values.yaml with settings.yaml. [#19241](https://github.com/deckhouse/deckhouse/pull/19241)
  - **[descheduler]** Grant RBAC for PersistentVolumeClaims so the descheduler can list and watch PVCs [#18787](https://github.com/deckhouse/deckhouse/pull/18787)
  - **[dhctl]** add root context propagation, starting from dhctl kingping [#19254](https://github.com/deckhouse/deckhouse/pull/19254)
