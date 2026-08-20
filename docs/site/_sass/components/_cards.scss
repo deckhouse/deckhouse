@@ -98,7 +98,11 @@
 }
 
 .cards-blocks {
-    margin: variables.$spacing-l * 2 0;
+    margin: 60px 0;
+
+    @include breakpoints.max-w(m) {
+        margin: 40px 0;
+    }
 
     &__cards {
         display: flex;
