@@ -108,25 +108,25 @@ func storageClasses(_ context.Context, input *go_hook.HookInput) error {
 	provisionValues := input.Values.Get("cloudProviderYandex.storageClass.provision").Array()
 
 	provision := make([]StorageClass, 0, len(provisionValues))
-	provisionNames := make([]string, 0, len(provisionValues))
+	provisionNames := make(map[string]struct{}, len(provisionValues))
 	for _, sc := range provisionValues {
+		name := sc.Get("name").String()
+
 		provision = append(provision, StorageClass{
-			Name:      sc.Get("name").String(),
+			Name:      name,
 			Type:      sc.Get("type").String(),
 			BlockSize: sc.Get("blockSize").String(),
 		})
-		provisionNames = append(provisionNames, sc.Get("name").String())
+		provisionNames[name] = struct{}{}
 	}
 
-	// StorageClasses defined in `provision` override the ones created by default
-	provisionRegexps, err := compileRegexps(provisionNames)
-	if err != nil {
-		return fmt.Errorf("storageClass.provision names compilation error: %v", err)
-	}
-
+	// StorageClasses defined in `provision` override the ones created by default.
+	// Names are compared exactly: unlike `exclude`, they are names of the StorageClasses
+	// to create, not patterns, and the default names are prefixes of each other
+	// (e.g. `network-ssd` and `network-ssd-nonreplicated`).
 	storageClassesFilteredProvision := make([]StorageClass, 0, len(defaultStorageClasses)+len(provision))
 	for _, storageClass := range defaultStorageClasses {
-		if !matchCheck(provisionRegexps, storageClass.Name) {
+		if _, overridden := provisionNames[storageClass.Name]; !overridden {
 			storageClassesFilteredProvision = append(storageClassesFilteredProvision, storageClass)
 		}
 	}

@@ -60,6 +60,18 @@ cloudProviderYandex:
     - .*-hdd
 `
 
+		initValuesStringProvisionOverride = `
+global:
+  discovery: {}
+cloudProviderYandex:
+  internal: {}
+  storageClass:
+    provision:
+    - name: network-ssd
+      type: network-ssd
+      blockSize: 64Ki
+`
+
 		modifiedStorageClass = `
 ---
 apiVersion: storage.k8s.io/v1
@@ -183,6 +195,40 @@ parameters:
 			Expect(p).To(ExecuteSuccessfully())
 			Expect(p.KubernetesGlobalResource("StorageClass", "network-ssd-64k").Exists()).To(BeFalse())
 			Expect(p.KubernetesGlobalResource("StorageClass", "network-ssd").Exists()).To(BeTrue())
+		})
+	})
+
+	o := HookExecutionConfigInit(initValuesStringProvisionOverride, `{}`)
+
+	Context("Cluster with a default storageClass overridden by provision", func() {
+		BeforeEach(func() {
+			o.BindingContexts.Set(o.GenerateBeforeHelmContext())
+			o.RunHook()
+		})
+
+		It("Should override only the storageClass with exactly the same name", func() {
+			Expect(o).To(ExecuteSuccessfully())
+			Expect(o.ValuesGet("cloudProviderYandex.internal.storageClasses").String()).To(MatchJSON(`
+[
+  {
+	"name": "network-hdd",
+	"type": "network-hdd"
+  },
+  {
+	"name": "network-ssd",
+	"type": "network-ssd",
+	"blockSize": "64Ki"
+  },
+  {
+	"name": "network-ssd-io-m3",
+	"type": "network-ssd-io-m3"
+  },
+  {
+	"name": "network-ssd-nonreplicated",
+	"type": "network-ssd-nonreplicated"
+  }
+]
+`))
 		})
 	})
 })
