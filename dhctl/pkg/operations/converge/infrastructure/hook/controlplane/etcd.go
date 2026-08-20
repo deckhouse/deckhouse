@@ -68,23 +68,21 @@ func waitEtcdHasMember(ctx context.Context, kubeGetter kubernetes.KubeClientProv
 		}
 
 		names := make([]string, 0, len(members))
-		hasMember := false
 		for _, m := range members {
 			names = append(names, m.Name)
-			if m.Name == nodeName {
-				hasMember = true
-			}
 		}
 
-		if attempt == 1 || hasMember {
+		voting := hasVotingMember(members, nodeName)
+
+		if attempt == 1 || voting {
 			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Current members: [%s]", strings.Join(names, ", ")))
 		}
 
-		if hasMember {
+		if voting {
 			return nil
 		}
 
-		return fmt.Errorf("%w: '%s' is not yet a member", errEtcdNotExpectedMembership, nodeName)
+		return fmt.Errorf("%w: '%s' is not yet a voting member", errEtcdNotExpectedMembership, nodeName)
 	})
 }
 
@@ -202,4 +200,28 @@ type memberListOutput struct {
 
 type etcdMember struct {
 	Name string `json:"name"`
+	// A learner replicates the log but does not vote, so a master that came back
+	// as one does not restore the quorum the next master replace will spend.
+	IsLearner bool `json:"isLearner"`
+}
+
+// hasVotingMember answers for the name, not for the first entry carrying it: a
+// recreated master can be listed twice, as the stale member and as the learner
+// rejoining, and either of them being a learner means the node is not back yet.
+func hasVotingMember(members []etcdMember, nodeName string) bool {
+	found := false
+
+	for _, m := range members {
+		if m.Name != nodeName {
+			continue
+		}
+
+		if m.IsLearner {
+			return false
+		}
+
+		found = true
+	}
+
+	return found
 }
