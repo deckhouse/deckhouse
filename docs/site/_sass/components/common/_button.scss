@@ -249,10 +249,7 @@
 
     @include breakpoints.max-w(s) {
         flex-direction: column;
-    }
-
-    @include breakpoints.max-w(xs) {
-        gap: 10px;
+        gap: 12px;
     }
 
     .button {

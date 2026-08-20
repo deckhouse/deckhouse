@@ -79,8 +79,11 @@
 
     &__title {
         margin-top: 0 !important;
-        margin-bottom: variables.$spacing-m;
         color: variables.$color-alt;
+
+        @include breakpoints.max-w(m) {
+            margin-bottom: 12px !important;
+        }
 
         a {
             color: inherit;
