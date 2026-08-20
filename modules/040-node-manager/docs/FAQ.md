@@ -73,6 +73,115 @@ To add a static node to a cluster (bare metal server or virtual machine), follow
 
 [An example](examples.html#using-the-cluster-api-provider-static) of adding a static node.
 
+### How do I add a static node running an immutable OS?
+
+A node whose NodeGroup asks for `systemType: Immutable` runs no sshd and no
+bashible, so `bootstrap.sh` does not apply to it. The machine boots the olcedar
+image, finds no configuration and waits on `50000/TCP`; you hand it one there,
+and it installs itself and joins.
+
+{% alert level="warning" %}
+The endpoint on `50000/TCP` checks nobody: a machine that has no configuration
+yet has no secret to prove itself with. Anyone who can reach that port can make
+the machine a node of their own cluster, and the inventory it serves on the same
+port names its disks and their serial numbers. Keep such machines in a network
+segment of their own until they are installed.
+{% endalert %}
+
+1. Create a [NodeGroup](cr.html#nodegroup) for these machines:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1
+   kind: NodeGroup
+   metadata:
+     name: worker
+   spec:
+     nodeType: Static
+     systemType: Immutable
+   ```
+
+1. Read the template of that group. It is rendered on the fly and never stored:
+   the cluster fills in everything it knows, including a live bootstrap token,
+   and leaves the machine's own part empty.
+
+   ```shell
+   d8 k get nodeconfigtemplate worker -o yaml > worker-0.yaml
+   ```
+
+1. Ask the machine what it has. The short form prints, under every disk, the
+   selectors that name it and says which of them match more than one:
+
+   ```shell
+   curl http://<machine-address>:50000/inventory
+   ```
+
+   ```text
+   Disks:
+     sda    30G  blank
+           QEMU HARDDISK · virtio · rotational
+           diskSelector:
+             size: "=32213721088"
+           diskSelector:
+             model: "QEMU HARDDISK"   # matches 2 disks
+   ```
+
+   `/inventory.json` carries the same plus the model, the serial number, the
+   `wwid` and the bus path.
+
+1. Fill the machine's part in: the node name, the network and the disks. Change
+   `apiVersion` and `kind` to the ones the machine reads — the template is a
+   read-only view of a `NodeConfig`, and a `NodeConfig` is what it takes:
+
+   ```yaml
+   apiVersion: internal.deckhouse.io/v1alpha1
+   kind: NodeConfig
+   metadata:
+     name: worker-0
+   spec:
+     nodeName: worker-0
+     network:
+       interfaces:
+       - name: eth0
+         dhcp: false
+         addresses:
+         - 192.168.0.23/24
+         gateway: 192.168.0.1
+       dns:
+         servers:
+         - 192.168.0.1
+     storage:
+       diskSelector:
+         size: "=32213721088"
+       mounts:
+       - name: kubernetes-data
+         partitionSelector:
+           blank: true
+           size: "=10739277824"
+   ```
+
+1. Push it:
+
+   ```shell
+   curl -X PUT --data-binary @worker-0.yaml http://<machine-address>:50000/config
+   ```
+
+   The machine partitions the disk it was told to take, installs the system,
+   reboots and joins the cluster. Nothing else is uploaded to it.
+
+1. Watch it arrive:
+
+   ```shell
+   d8 k get nodes
+   d8 k get nodeconfig worker-0
+   ```
+
+   Once the node registers it publishes its own `NodeConfig`, and the network and
+   the disks you pushed stay in it: the cluster re-renders the rest from the
+   NodeGroup and keeps what only the machine knows.
+
+To replace the hardware behind a node, delete its `NodeConfig` and hand the new
+machine a configuration the same way; it publishes a new one when it registers.
+
 ### How do I add a batch of static nodes to a cluster manually?
 
 Use an existing one or create a new [NodeGroup](cr.html#nodegroup) custom resource ([example](examples.html#an-example-of-the-static-nodegroup-configuration) of the `NodeGroup` called `worker`). The [nodeType](cr.html#nodegroup-v1-spec-nodetype) parameter for static nodes in the NodeGroup must be `Static` or `CloudStatic`.
