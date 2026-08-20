@@ -36,7 +36,7 @@ import (
 	"k8s.io/kube-openapi/pkg/util"
 	"k8s.io/kube-openapi/pkg/validation/spec"
 
-	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
+	templatesv1alpha1 "github.com/deckhouse/node-controller/api/templates.internal.deckhouse.io/v1alpha1"
 )
 
 const serverName = "node-controller-apiserver"
@@ -49,8 +49,8 @@ var (
 )
 
 func init() {
-	utilruntime.Must(internalv1alpha1.AddToScheme(Scheme))
-	metav1.AddToGroupVersion(Scheme, internalv1alpha1.GroupVersion)
+	utilruntime.Must(templatesv1alpha1.AddToScheme(Scheme))
+	metav1.AddToGroupVersion(Scheme, templatesv1alpha1.GroupVersion)
 
 	// The generic server negotiates request options and Status in the unversioned "v1".
 	unversioned := schema.GroupVersion{Group: "", Version: "v1"}
@@ -80,7 +80,7 @@ type Options struct {
 // blocks until ctx is done.
 func Run(ctx context.Context, opts Options) error {
 	if len(opts.Storage) == 0 {
-		return fmt.Errorf("no storage registered for %s", internalv1alpha1.GroupVersion)
+		return fmt.Errorf("no storage registered for %s", templatesv1alpha1.GroupVersion)
 	}
 
 	cfg, err := newConfig(opts)
@@ -138,11 +138,11 @@ func newServer(cfg *genericapiserver.RecommendedConfig, storage map[string]rest.
 		return nil, fmt.Errorf("create generic apiserver: %w", err)
 	}
 
-	info := genericapiserver.NewDefaultAPIGroupInfo(internalv1alpha1.GroupVersion.Group, Scheme, metav1.ParameterCodec, Codecs)
-	info.VersionedResourcesStorageMap[internalv1alpha1.GroupVersion.Version] = storage
+	info := genericapiserver.NewDefaultAPIGroupInfo(templatesv1alpha1.GroupVersion.Group, Scheme, metav1.ParameterCodec, Codecs)
+	info.VersionedResourcesStorageMap[templatesv1alpha1.GroupVersion.Version] = storage
 
 	if err := srv.InstallAPIGroup(&info); err != nil {
-		return nil, fmt.Errorf("install %s: %w", internalv1alpha1.GroupVersion, err)
+		return nil, fmt.Errorf("install %s: %w", templatesv1alpha1.GroupVersion, err)
 	}
 
 	return srv, nil

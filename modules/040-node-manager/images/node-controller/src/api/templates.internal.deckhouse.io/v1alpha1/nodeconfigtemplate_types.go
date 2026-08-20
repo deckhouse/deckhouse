@@ -18,6 +18,8 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 )
 
 // NodeConfigTemplate is what an operator takes to add a machine by hand. It is
@@ -25,15 +27,16 @@ import (
 // read, the operator fills in the network and the disks of the machine in front
 // of them, and pushes the result to it.
 //
-// Served by the aggregated apiserver, never by a CRD: a stored object would
-// hold a live bootstrap token in etcd and go stale against its NodeGroup.
+// Served by the aggregated apiserver, never by a CRD: a stored object would hold
+// a live bootstrap token in etcd and go stale against its NodeGroup. The spec is
+// the NodeConfig spec, so what an operator pushes is what a node reads.
 //
 // +kubebuilder:object:root=true
 type NodeConfigTemplate struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec NodeSpec `json:"spec,omitempty"`
+	Spec internalv1alpha1.NodeSpec `json:"spec,omitempty"`
 }
 
 // +kubebuilder:object:root=true

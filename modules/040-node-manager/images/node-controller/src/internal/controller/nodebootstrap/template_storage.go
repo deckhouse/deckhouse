@@ -31,6 +31,7 @@ import (
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
+	templatesv1alpha1 "github.com/deckhouse/node-controller/api/templates.internal.deckhouse.io/v1alpha1"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodeconfig"
 )
@@ -58,11 +59,11 @@ func NewTemplateStorage(cl client.Client) *TemplateStorage {
 }
 
 func (s *TemplateStorage) New() k8sruntime.Object {
-	return &internalv1alpha1.NodeConfigTemplate{}
+	return &templatesv1alpha1.NodeConfigTemplate{}
 }
 
 func (s *TemplateStorage) NewList() k8sruntime.Object {
-	return &internalv1alpha1.NodeConfigTemplateList{}
+	return &templatesv1alpha1.NodeConfigTemplateList{}
 }
 
 func (s *TemplateStorage) Destroy() {}
@@ -97,7 +98,7 @@ func (s *TemplateStorage) List(ctx context.Context, _ *metainternalversion.ListO
 		return nil, fmt.Errorf("list NodeGroups: %w", err)
 	}
 
-	list := &internalv1alpha1.NodeConfigTemplateList{}
+	list := &templatesv1alpha1.NodeConfigTemplateList{}
 	for i := range groups.Items {
 		ng := &groups.Items[i]
 		if !machineOwnedConfig(ng) {
@@ -116,7 +117,7 @@ func (s *TemplateStorage) List(ctx context.Context, _ *metainternalversion.ListO
 // the interfaces and the disks are what the operator writes in, and a rendered
 // guess (eth0 with DHCP, the first disk over 2Gi) handed over as a template is
 // one nobody notices is wrong. The node name is theirs to pick too.
-func (s *TemplateStorage) render(ctx context.Context, ng *v1.NodeGroup) (*internalv1alpha1.NodeConfigTemplate, error) {
+func (s *TemplateStorage) render(ctx context.Context, ng *v1.NodeGroup) (*templatesv1alpha1.NodeConfigTemplate, error) {
 	spec, err := nodeconfig.RenderBootstrapSpec(ctx, s.client, s.client, ng, "")
 	if err != nil {
 		return nil, fmt.Errorf("render the node config of %s: %w", ng.Name, err)
@@ -136,7 +137,7 @@ func (s *TemplateStorage) render(ctx context.Context, ng *v1.NodeGroup) (*intern
 	spec.Network = internalv1alpha1.Network{}
 	spec.Storage = internalv1alpha1.Storage{}
 
-	return &internalv1alpha1.NodeConfigTemplate{
+	return &templatesv1alpha1.NodeConfigTemplate{
 		ObjectMeta: metav1.ObjectMeta{Name: ng.Name},
 		Spec:       spec,
 	}, nil
@@ -150,5 +151,5 @@ func machineOwnedConfig(ng *v1.NodeGroup) bool {
 }
 
 func templateGroupResource() schema.GroupResource {
-	return schema.GroupResource{Group: internalv1alpha1.GroupVersion.Group, Resource: templateResource}
+	return schema.GroupResource{Group: templatesv1alpha1.GroupVersion.Group, Resource: templateResource}
 }
