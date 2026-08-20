@@ -143,9 +143,9 @@ segment of their own until they are installed.
      #       size: "=32213721088"
    ```
 
-   The same path serves two more representations, chosen by `Accept`:
-   `application/json` is the machine-readable one dhctl reads, and `text/plain`
-   is an aligned table with the partitions and their filesystems.
+   Two more addresses serve the same facts: `/inventory.pretty` is an aligned
+   table with the partitions, their filesystems and their labels, and
+   `/inventory.json` is the machine-readable one dhctl reads.
 
 1. Uncomment the disk this node installs onto, then merge the two documents. The
    machine's half wins, which also gives the result the `apiVersion` and `kind`
