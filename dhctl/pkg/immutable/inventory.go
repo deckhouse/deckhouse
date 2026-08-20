@@ -35,9 +35,15 @@ import (
 )
 
 // inventoryPath is where a machine waiting for its configuration answers with
-// its hardware. Mirrors images/init/src/0.1/acquire.go of the initramfs
-// repository, which registers the route.
-const inventoryPath = "/inventory.json"
+// its hardware, and inventoryAccept is the representation this client reads.
+// One path serves three: the machine defaults to the NodeConfig shape an
+// operator merges by hand, and hands JSON to whoever asks for it. Mirrors
+// images/init/src/0.1/acquire.go of the initramfs repository, which registers
+// the route.
+const (
+	inventoryPath   = "/inventory"
+	inventoryAccept = "application/json"
+)
 
 // Inventory is what a machine says about itself before anything is installed.
 // The shape is the wire contract: Inventory in images/init/src/0.1/inventory.go
@@ -93,6 +99,7 @@ func FetchInventory(ctx context.Context, address string) (*Inventory, error) {
 	if err != nil {
 		return nil, fmt.Errorf("build the inventory request for %s: %w", address, err)
 	}
+	request.Header.Set("Accept", inventoryAccept)
 
 	client := &http.Client{Timeout: pushTimeout}
 	defer client.CloseIdleConnections()
