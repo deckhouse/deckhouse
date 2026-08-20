@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-5a4509a04e8128126aee080324a6b663a7748bf44b58a9a4b9c74d4801844f53",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 18,
+  "version": 19,
   "statements": [
     {
       "vulnerability": {
@@ -730,6 +730,174 @@
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость в golang.org/x/sys/windows версии v0.34.0 (переполнение целочисленного значения в NewNTUnicodeString) относится исключительно к платформе Windows. webhook-handler и входящий в него бинарь yq (образ tools/yq) собираются и исполняются в Linux-контейнере, Windows-специфичный код не компилируется и не выполняется.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-27145"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.10"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в стандартной библиотеке Go 1.25.10 (crypto/x509 (*Certificate).VerifyHostname — квадратичная сложность DoS при большом списке DNS SAN). Приходит через бинарь yq (образ tools/yq) — CLI-обработчик YAML, он не выполняет проверку недоверенных X.509-сертификатов, путь VerifyHostname не задействуется. Устранение — бамп Go toolchain образа tools/yq.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33818"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.10"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в стандартной библиотеке Go 1.25.10 (encoding/asn1 Unmarshal — DoS через избыточную рекурсию). Приходит через бинарь yq (образ tools/yq) — CLI-обработчик YAML, он не разбирает недоверенные ASN.1-структуры, путь asn1.Unmarshal не задействуется. Устранение — бамп Go toolchain образа tools/yq.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39821"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.10"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в стандартной библиотеке Go 1.25.10 (вендоренный net/http golang.org/x/net/idna — эскалация привилегий при некорректной обработке Punycode-меток). Приходит через бинарь yq (образ tools/yq) — CLI-обработчик YAML, он не обрабатывает недоверенные доменные имена/IDNA и не выполняет привилегированных проверок хостнеймов, уязвимый путь не задействуется. Устранение — бамп Go toolchain образа tools/yq.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39822"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.10"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в стандартной библиотеке Go 1.25.10 (os.Root — обход каталога через следование по симлинку при завершающем '/'). Приходит через бинарь yq (образ tools/yq) — CLI-обработчик YAML, он не использует os.Root для доступа к файлам по недоверенным путям, уязвимый путь не задействуется. Устранение — бамп Go toolchain образа tools/yq.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42504"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.10"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в стандартной библиотеке Go 1.25.10 (mime — DoS при разборе специально сформированного MIME-заголовка). Приходит через бинарь yq (образ tools/yq) — CLI-обработчик YAML, он не разбирает недоверенные MIME-заголовки, уязвимый путь не задействуется. Устранение — бамп Go toolchain образа tools/yq.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56853"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.10"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в стандартной библиотеке Go 1.25.10 (net/http — DoS незашифрованных HTTP/2-соединений из-за неприменения ReadHeaderTimeout). Приходит через бинарь yq (образ tools/yq) — CLI-обработчик YAML, он не поднимает HTTP-сервер и не обслуживает сетевые соединения, уязвимый путь не задействуется. Устранение — бамп Go toolchain образа tools/yq.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56858"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.10"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в стандартной библиотеке Go 1.25.10 (html/template — XSS при патологическом вводе). Приходит через бинарь yq (образ tools/yq) — CLI-обработчик YAML, он не использует html/template и не рендерит HTML, уязвимый путь не задействуется. Устранение — бамп Go toolchain образа tools/yq.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56859"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.10"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в стандартной библиотеке Go 1.25.10 (encoding/xml DecodeElement — DoS из-за сброса счётчика глубины рекурсии). Приходит через бинарь yq (образ tools/yq); XML-обработка выполняется над доверенным вводом, формируемым самим Deckhouse, недоверенный XML не разбирается — исчерпание стека не достижимо. Устранение — бамп Go toolchain образа tools/yq.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56860"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.10"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в стандартной библиотеке Go 1.25.10 (net/url — DoS из-за квадратичной сложности разрешения путей с '..'). Приходит через бинарь yq (образ tools/yq) — CLI-обработчик YAML, он не разрешает недоверенные относительные URL, уязвимый путь не задействуется. Устранение — бамп Go toolchain образа tools/yq.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56862"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.10"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в стандартной библиотеке Go 1.25.10 (crypto/tls — DoS через бесконечные KeyUpdate-сообщения). Приходит через бинарь yq (образ tools/yq) — CLI-обработчик YAML, он не поднимает TLS-сервер и не обслуживает TLS-соединения, уязвимый путь не задействуется. Устранение — бамп Go toolchain образа tools/yq.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42505"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.10"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в стандартной библиотеке Go 1.25.10 (crypto/tls — раскрытие информации в Encrypted Client Hello). Приходит через бинарь yq (образ tools/yq) — CLI-обработчик YAML, он не устанавливает TLS-соединения с ECH, уязвимый путь не задействуется. Устранение — бамп Go toolchain образа tools/yq.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42507"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.10"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в стандартной библиотеке Go 1.25.10 (net/textproto — инъекция вводимых данных в сообщения об ошибках). Приходит через бинарь yq (образ tools/yq) — CLI-обработчик YAML, он не использует net/textproto для разбора недоверенного протокольного ввода, уязвимый путь не задействуется. Устранение — бамп Go toolchain образа tools/yq.",
       "timestamp": "2026-08-20T12:00:00Z"
     }
   ],
