@@ -28,6 +28,7 @@ shell:
   install:
   - cd /src/istio/
   - git apply --verbose /patches/001-deckhouse-default-istio-namespace.patch
+  - git apply --verbose /patches/002-deckhouse-default-istio-revision.patch
   - echo {{ $istioVersion }} > version
   - export VERSION={{ $istioVersion }}
   - export BUILDINFO=$(mktemp)

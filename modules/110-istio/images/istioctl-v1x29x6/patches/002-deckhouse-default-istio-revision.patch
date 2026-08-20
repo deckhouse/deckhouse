@@ -1,0 +1,75 @@
+diff --git a/istioctl/pkg/cli/context.go b/istioctl/pkg/cli/context.go
+index 709b88e..6b2a996 100644
+--- a/istioctl/pkg/cli/context.go
++++ b/istioctl/pkg/cli/context.go
+@@ -26,7 +26,6 @@ import (
+ 	"istio.io/istio/istioctl/pkg/util/handlers"
+ 	"istio.io/istio/pkg/cluster"
+ 	"istio.io/istio/pkg/kube"
+-	"istio.io/istio/pkg/log"
+ 	"istio.io/istio/pkg/maps"
+ 	"istio.io/istio/pkg/ptr"
+ 	"istio.io/istio/pkg/revisions"
+@@ -119,6 +118,7 @@ func (i *instance) getImpersonateConfig() rest.ImpersonationConfig {
+ }
+ 
+ func (i *instance) CLIClientWithRevision(rev string) (kube.CLIClient, error) {
++	rev = "v1x29"
+ 	if i.clients == nil {
+ 		i.clients = make(map[string]kube.CLIClient)
+ 	}
+@@ -210,33 +210,7 @@ func handleNamespace(ns, defaultNamespace string) string {
+ }
+ 
+ func (i *instance) RevisionOrDefault(rev string) string {
+-	if rev != "" {
+-		return rev
+-	}
+-
+-	// Try to get the default revision from the default watcher
+-	// We create a simple approach that doesn't cause circular dependencies
+-
+-	stop := make(chan struct{})
+-	defer close(stop)
+-	if i.defaultWatcher == nil {
+-		// Try to initialize the default watcher using a basic client
+-		if basicClient := i.getBasicClientForDefaultWatcher(); basicClient != nil {
+-			i.defaultWatcher = revisions.NewDefaultWatcher(basicClient, "")
+-			basicClient.RunAndWait(stop)
+-			go i.defaultWatcher.Run(stop)
+-			kube.WaitForCacheSync("default revision watcher", stop, i.defaultWatcher.HasSynced)
+-		}
+-	}
+-
+-	if i.defaultWatcher != nil {
+-		if defaultRev := i.defaultWatcher.GetDefault(); defaultRev != "" {
+-			return defaultRev
+-		}
+-		log.Debug("default revision watcher not synced, falling back to \"default\"")
+-	}
+-
+-	return "default"
++	return "v1x29"
+ }
+ 
+ // getBasicClientForDefaultWatcher creates a basic kube client just for watching default revisions
+diff --git a/istioctl/pkg/clioptions/control_plane.go b/istioctl/pkg/clioptions/control_plane.go
+index 0ca06f2..0b3c12f 100644
+--- a/istioctl/pkg/clioptions/control_plane.go
++++ b/istioctl/pkg/clioptions/control_plane.go
+@@ -25,6 +25,14 @@ type ControlPlaneOptions struct {
+ // AttachControlPlaneFlags attaches control-plane flags to a Cobra command.
+ // (Currently just --revision)
+ func (o *ControlPlaneOptions) AttachControlPlaneFlags(cmd *cobra.Command) {
+-	cmd.PersistentFlags().StringVarP(&o.Revision, "revision", "r", "",
++	cmd.PersistentFlags().StringVarP(&o.Revision, "revision", "r", "v1x29",
+ 		"Control plane revision")
++	prevPreRun := cmd.PersistentPreRunE
++	cmd.PersistentPreRunE = func(c *cobra.Command, args []string) error {
++		o.Revision = "v1x29"
++		if prevPreRun != nil {
++			return prevPreRun(c, args)
++		}
++		return nil
++	}
+ }
