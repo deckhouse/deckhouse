@@ -32,11 +32,11 @@ spec:
   ttl: 24h
 ```
 
-Придумайте пароль и укажите его хеш-сумму в поле `password`. Пароль хранится в зашифрованном виде (bcrypt).
-Хеш-сумму можно сгенерировать с помощью команды:
+Придумайте пароль и укажите в поле `password` его bcrypt-хеш в исходном виде или закодированном в Base64.
+Чтобы получить bcrypt-хеш в Base64, выполните команду:
 
 ```shell
-echo "$password" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0
+echo -n '<PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
 ```
 
 {% alert level="info" %}

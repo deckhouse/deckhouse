@@ -1,0 +1,51 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-cf67c1d15ba9b2b3a76640921b70d3ec428d80b094749baab315f0035d5a1fc0",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "GHSA-hrxh-6v49-42gf"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/google.golang.org/grpc"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Descheduler использует google.golang.org/grpc только в клиентском режиме: для экспорта трассировок через otlptracegrpc и как транзитивную зависимость клиентских библиотек Kubernetes. gRPC-сервер не создаётся и не запускается, вызов grpc.NewServer в коде компонента отсутствует, а метрики и healthz отдаются обычным HTTP-сервером. Пакеты google.golang.org/grpc/xds и google.golang.org/grpc/internal/xds/rbac не входят в граф зависимостей собираемого бинарного файла. Изменения клиентского транспорта в исправляющем коммите носят характер рефакторинга типов и не связаны с эксплуатацией. Уязвимый код не исполняется.",
+      "timestamp": "2026-08-20T14:12:35.847213Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56852"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/text"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость представляет собой зацикливание norm.Iter и смежных функций пакета golang.org/x/text/unicode/norm при обработке некорректных последовательностей UTF-8. В бинарном файле descheduler пакет norm достижим только двумя путями: через golang.org/x/net/idna при формировании заголовков исходящих HTTP/2-запросов (httpcommon.EncodeHeaders -> httpguts.PunycodeHostPort) и через golang.org/x/text/cases в OpenAPI-инсталляторе k8s.io/apiserver. В первом случае обрабатывается имя хоста, которое берётся из in-cluster-конфигурации Kubernetes API, адреса OTLP-коллектора и параметров DeschedulerPolicy, то есть задаётся администратором кластера, а не атакующим; для ASCII-имён вызов idna пропускается по быстрому пути. Во втором случае на вход подаются константные строки. Серверный путь обработки входящих HTTP/2-запросов (httpcommon.NewServerRequest) idna и norm не вызывает, поэтому клиент не может передать некорректный UTF-8 в уязвимый код.",
+      "timestamp": "2026-08-20T14:26:09.512874Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46600"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость находится в пакете golang.org/x/net/dns/dnsmessage и проявляется при разборе некорректных ресурсных записей SVCB и HTTPS (Parser.SVCBResource, Parser.HTTPSResource, Message.Unpack). Пакет dns/dnsmessage не входит в граф зависимостей собираемого бинарного файла descheduler: из модуля golang.org/x/net используются только подпакеты idna, http2, http/httpguts, http/httpproxy, websocket и trace. Разрешение имён выполняется штатным резолвером Go, функция net.LookupCNAME, к которой относится одноимённая проблема во вендоренной копии пакета в стандартной библиотеке, компонентом не вызывается, а сборка выполняется с CGO_ENABLED=0. Уязвимый код в образе отсутствует.",
+      "timestamp": "2026-08-20T14:38:52.09164Z"
+    }
+  ],
+  "timestamp": "2026-08-20T14:41:03Z"
+}
