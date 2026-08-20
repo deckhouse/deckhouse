@@ -426,14 +426,12 @@ func renderUpdatePolicy(ng *v1.NodeGroup) internalv1alpha1.UpdatePolicy {
 // clockTime pads a NodeGroup time to the "HH:MM" the agent's schema takes: a
 // one-digit hour ("6:00") is legal for a NodeGroup and refused there.
 func clockTime(value string) (string, bool) {
-	hour, minute, found := strings.Cut(value, ":")
-	if !found || len(minute) != 2 {
-		return "", false
+	// Go has no layout for a one-digit 24-hour clock: "15" is fixed-width and
+	// "3" is the 12-hour one, so the hour is padded before parsing.
+	if hour, _, found := strings.Cut(value, ":"); found && len(hour) == 1 {
+		value = "0" + value
 	}
-	if len(hour) == 1 {
-		hour = "0" + hour
-	}
-	parsed, err := time.Parse("15:04", hour+":"+minute)
+	parsed, err := time.Parse("15:04", value)
 	if err != nil {
 		return "", false
 	}
