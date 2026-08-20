@@ -210,6 +210,10 @@ func (r *reconciler) runModuleEventLoop(ctx context.Context) error {
 }
 
 func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alpha1.ModuleConfig) (ctrl.Result, error) {
+	// the config handler converts spec.settings to the latest schema version
+	// in place; the module v2 mirror must see the spec as stored
+	storedConfig := moduleConfig.DeepCopy()
+
 	// send an event to addon-operator only if the module exists, or it is the global one
 	basicModule := r.moduleManager.GetModule(moduleConfig.Name)
 	if moduleConfig.Name == moduleGlobal || basicModule != nil {
@@ -231,7 +235,7 @@ func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alp
 
 	// mirror the config into the module v2 resource; runs for every module
 	// kind, including the embedded and system ones processModule skips
-	if err := r.moduleSync.EnsureModuleConfig(ctx, moduleConfig); err != nil {
+	if err := r.moduleSync.EnsureModuleConfig(ctx, storedConfig); err != nil {
 		r.logger.Error("failed to mirror the module config into the module v2", slog.String("name", moduleConfig.Name), log.Err(err))
 
 		return ctrl.Result{Requeue: true}, nil

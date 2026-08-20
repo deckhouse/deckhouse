@@ -16,6 +16,8 @@ package config
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"sync"
 	"testing"
 
@@ -201,6 +203,58 @@ spec:
 		assert.NotNil(suite.T(), config.DeletionTimestamp)
 		assert.Len(suite.T(), config.Finalizers, 1)
 	})
+}
+
+// TestMirrorSeesStoredConfig: the config handler converts spec.settings to the
+// latest schema version in place; the module v2 mirror must keep the spec as stored.
+func (suite *ControllerTestSuite) TestMirrorSeesStoredConfig() {
+	conversionsDir := suite.T().TempDir()
+	conversionFile := "version: 2\nconversions:\n  - '.paramNew = .paramOld | del(.paramOld)'\n"
+	require.NoError(suite.T(), os.WriteFile(filepath.Join(conversionsDir, "v2.yaml"), []byte(conversionFile), 0o644))
+	require.NoError(suite.T(), conversionsStore.Add("test-module", conversionsDir))
+
+	m := `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: test-module
+spec:
+  enabled: true
+  version: 1
+  settings:
+    paramOld: "42"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: test-module
+properties:
+  availableSources:
+    - test-source
+status:
+  phase: Available
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Module
+metadata:
+  name: test-module
+spec:
+  packageRepositoryName: test-source
+  packageVersion: v1.0.0
+`
+	suite.setupTestControllerRaw(m)
+
+	_, err := suite.r.handleModuleConfig(context.TODO(), suite.moduleConfig("test-module"))
+	require.NoError(suite.T(), err)
+
+	moduleV2 := new(v1alpha2.Module)
+	require.NoError(suite.T(), suite.Client().Get(context.TODO(), client.ObjectKey{Name: "test-module"}, moduleV2))
+	assert.Equal(suite.T(), 1, moduleV2.Spec.SettingsVersion, "the mirror must write the stored settings version, not the converted one")
+	assert.Equal(suite.T(), map[string]any{"paramOld": "42"}, moduleV2.Spec.Settings.GetMap())
+
+	storedConfig := suite.moduleConfig("test-module")
+	assert.Equal(suite.T(), 1, storedConfig.Spec.Version, "the stored ModuleConfig itself must stay unconverted")
 }
 
 func (suite *ControllerTestSuite) moduleConfig(name string) *v1alpha1.ModuleConfig {
