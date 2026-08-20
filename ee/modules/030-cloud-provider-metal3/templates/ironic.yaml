@@ -6,6 +6,7 @@
 {{- $externalDHCP := $external.dhcp | default dict -}}
 {{- $api := $ironic.api | default dict -}}
 {{- $imageServer := $ironic.imageServer | default dict -}}
+{{- $imageServerPort := $imageServer.port | default 6180 -}}
 {{- $deployRamdisk := $ironic.deployRamdisk | default dict -}}
 {{- $ramdiskImage := $ironic.ramdiskImage | default dict -}}
 {{- $externalRamdiskImage := $ramdiskImage.external | default dict -}}
@@ -22,24 +23,26 @@ metadata:
 spec:
   images:
     ironic: {{ include "helm_lib_module_image" (list . "ironic") | quote }}
-  {{- if or $deployRamdisk $externalRamdiskImage }}
   deployRamdisk:
     {{- if $deployRamdisk.sshKey }}
     sshKey: {{ $deployRamdisk.sshKey | quote }}
     {{- end }}
-    {{- if $externalRamdiskImage }}
     disableDownloader: true
-    {{- end }}
-  {{- end }}
-  {{- if $externalRamdiskImage }}
   overrides:
     agentImages:
-    - {{- if $externalRamdiskImage.architecture }}
+    {{- if $externalRamdiskImage }}
+    -
+      {{- if $externalRamdiskImage.architecture }}
       architecture: {{ $externalRamdiskImage.architecture | quote }}
       {{- end }}
       kernel: {{ $externalRamdiskImage.kernelURL | quote }}
       initramfs: {{ $externalRamdiskImage.initramfsURL | quote }}
-  {{- end }}
+    {{- else }}
+    -
+      architecture: "x86_64"
+      kernel: {{ printf "http://%s:%v/images/ironic-python-agent.kernel" $provisioningNetwork.ipAddress $imageServerPort | quote }}
+      initramfs: {{ printf "http://%s:%v/images/ironic-python-agent.initramfs" $provisioningNetwork.ipAddress $imageServerPort | quote }}
+    {{- end }}
   networking:
     interface: {{ $provisioningNetwork.interface | quote }}
     ipAddress: {{ $provisioningNetwork.ipAddress | quote }}
@@ -50,7 +53,7 @@ spec:
     apiPort: {{ $api.port }}
     {{- end }}
     {{- if $imageServer.port }}
-    imageServerPort: {{ $imageServer.port }}
+    imageServerPort: {{ $imageServerPort }}
     {{- end }}
     {{- if $dhcp }}
     dhcp:

@@ -4,6 +4,8 @@ ARG IPXE_BINARIES_IMAGE=quay.io/metal3-io/ipxe-binaries@sha256:155a410dbafc9537f
 
 ARG PIP_VERSION=24.1
 ARG SETUPTOOLS_VERSION=80.10.2
+ARG IPA_IMAGE_BASE_URL=https://tarballs.opendev.org/openstack/ironic-python-agent/dib/files
+ARG IPA_IMAGE_NAME=ipa-centos9-stable-2026.1
 
 FROM ${SOURCE_IMAGE} AS source
 
@@ -21,6 +23,25 @@ prepare-efi.sh centos
 EORUN
 
 FROM ${IPXE_BINARIES_IMAGE} AS ipxe-binaries
+
+FROM ${BASE_IMAGE} AS ipa-ramdisk
+
+ARG IPA_IMAGE_BASE_URL
+ARG IPA_IMAGE_NAME
+
+RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked <<EORUN
+set -euxo pipefail
+microdnf install -y ca-certificates curl coreutils
+mkdir -p /ipa
+cd /ipa
+for ext in kernel initramfs; do
+  curl -fsSLO "${IPA_IMAGE_BASE_URL}/${IPA_IMAGE_NAME}.${ext}"
+  curl -fsSLO "${IPA_IMAGE_BASE_URL}/${IPA_IMAGE_NAME}.${ext}.sha256"
+  sha256sum -c "${IPA_IMAGE_NAME}.${ext}.sha256"
+done
+mv "${IPA_IMAGE_NAME}.kernel" ironic-python-agent.kernel
+mv "${IPA_IMAGE_NAME}.initramfs" ironic-python-agent.initramfs
+EORUN
 
 FROM ${BASE_IMAGE} AS python-build-base
 
@@ -111,6 +132,8 @@ RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
 
 COPY --from=ipxe-binaries /ipxe/undionly.kpxe /ipxe/snponly-x86_64.efi /ipxe/snponly-arm64.efi /tftpboot/
 COPY --from=ironic-builder /tmp/uefi_esp*.img /templates/
+COPY --from=ipa-ramdisk /ipa/ironic-python-agent.kernel /tmp/ironic-python-agent.kernel
+COPY --from=ipa-ramdisk /ipa/ironic-python-agent.initramfs /tmp/ironic-python-agent.initramfs
 
 RUN <<EORUN
 set -euxo pipefail
@@ -123,6 +146,9 @@ cp /tmp/ironic-config/httpd.conf.j2 /etc/httpd/conf/
 cp /tmp/ironic-config/httpd-modules.conf /etc/httpd/conf.modules.d/
 cp /tmp/ironic-config/apache2-vmedia.conf.j2 /templates/httpd-vmedia.conf.j2
 cp /tmp/ironic-config/apache2-ipxe.conf.j2 /templates/httpd-ipxe.conf.j2
+mkdir -p /shared/html/images
+mv /tmp/ironic-python-agent.kernel /shared/html/images/ironic-python-agent.kernel
+mv /tmp/ironic-python-agent.initramfs /shared/html/images/ironic-python-agent.initramfs
 rm -rf /tmp/ironic-config
 mkdir -p /var/lib/ironic
 sqlite3 /var/lib/ironic/ironic.sqlite "pragma journal_mode=wal"
