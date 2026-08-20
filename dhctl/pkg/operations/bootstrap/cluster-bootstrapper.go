@@ -405,6 +405,25 @@ func refuseIfSkipExcluded(skip []phases.OperationPhase, cfg phases.ClusterConfig
 	return nil
 }
 
+// refuseSkippingImmutableMasters refuses the --skip-phase that would leave the machines past the
+// first one of an immutable static cluster unconfigured. Nothing downstream notices: they answer
+// no SSH and register no node, so the bootstrap ends with a single-member control plane and exit
+// code 0. Refused before anything is announced, like the other two contradictions above.
+func refuseSkippingImmutableMasters(cfg phases.ClusterConfig, masterHosts []string, skip []phases.OperationPhase) error {
+	if !cfg.ImmutableMaster || cfg.ClusterType == config.CloudClusterType {
+		return nil
+	}
+
+	if len(masterHosts) < 2 || !slices.Contains(skip, phases.InstallAdditionalMastersAndStaticNodes) {
+		return nil
+	}
+
+	return fmt.Errorf(
+		"--skip-phase %q would leave %d of the %d machines named by --master-host without a configuration: it is the only phase that hands them one, and nothing later reports them missing",
+		phases.InstallAdditionalMastersAndStaticNodes, len(masterHosts)-1, len(masterHosts),
+	)
+}
+
 func excludedFromBootstrap(phase phases.OperationPhase, cfg phases.ClusterConfig) bool {
 	tree := phases.PhasesFor(phases.OperationBootstrap, cfg)
 
@@ -413,11 +432,11 @@ func excludedFromBootstrap(phase phases.OperationPhase, cfg phases.ClusterConfig
 
 // phaseClusterConfig is the one place the bootstrap package builds the gate inputs, so that the
 // tree the walk resolves for itself cannot disagree with the one the progress tracker announces.
-func phaseClusterConfig(ctx context.Context, metaConfig *config.MetaConfig) phases.ClusterConfig {
+func phaseClusterConfig(metaConfig *config.MetaConfig, immutableMaster bool) phases.ClusterConfig {
 	return phases.ClusterConfig{
 		ClusterType:             metaConfig.ClusterType,
 		HasClusterConfiguration: metaConfig.HasClusterConfiguration(),
-		ImmutableMaster:         immutable.IsImmutableMaster(ctx, metaConfig),
+		ImmutableMaster:         immutableMaster,
 	}
 }
 
@@ -479,7 +498,12 @@ func (b *ClusterBootstrapper) runPhases(ctx context.Context, bctx *bootstrapCont
 		return err
 	}
 
-	clusterConfig := phaseClusterConfig(ctx, bctx.metaConfig)
+	immutableMaster, err := immutable.IsImmutableMaster(ctx, bctx.metaConfig)
+	if err != nil {
+		return err
+	}
+
+	clusterConfig := phaseClusterConfig(bctx.metaConfig, immutableMaster)
 
 	tree := phases.PhasesFor(phases.OperationBootstrap, clusterConfig)
 	if len(tree) == 0 || tree[0].Phase != phases.PreparationPhase {
@@ -518,6 +542,10 @@ func (b *ClusterBootstrapper) runPhases(ctx context.Context, bctx *bootstrapCont
 			"--skip-phase %q would drop the CloudPermanent NodeGroups and instance classes of the resource document: it is the only phase that applies them, and converge reads the node count back from them",
 			phases.InstallAdditionalMastersAndStaticNodes,
 		)
+	}
+
+	if err := refuseSkippingImmutableMasters(clusterConfig, b.Options.Bootstrap.MasterHostsRaw, bctx.skipPhases); err != nil {
+		return err
 	}
 
 	// Preparation is already announced and open, so every remaining node closes its predecessor
@@ -759,7 +787,12 @@ func (b *ClusterBootstrapper) bootstrapPreparation(ctx context.Context, bctx *bo
 
 	b.PhasedExecutionContext.CompleteSubPhase(ctx, phases.PreparationSubPhaseConfigValidation)
 
-	clusterConfig := phaseClusterConfig(ctx, metaConfig)
+	immutableMaster, err := immutable.IsImmutableMaster(ctx, metaConfig)
+	if err != nil {
+		return err
+	}
+
+	clusterConfig := phaseClusterConfig(metaConfig, immutableMaster)
 
 	b.PhasedExecutionContext.SetClusterConfig(clusterConfig)
 
@@ -772,7 +805,7 @@ func (b *ClusterBootstrapper) bootstrapPreparation(ctx context.Context, bctx *bo
 	}
 
 	// Check if static cluster without ssh-host
-	if staticBootstrapNeedsSSHHost(ctx, metaConfig) && !b.SSHProviderInitializer.CheckHosts(ctx) {
+	if staticBootstrapNeedsSSHHost(metaConfig, immutableMaster) && !b.SSHProviderInitializer.CheckHosts(ctx) {
 		if input.IsTerminal() {
 			confirmation := input.NewConfirmation().
 				WithMessage("Do you really want to bootstrap the cluster on the current host?")
@@ -796,7 +829,7 @@ func (b *ClusterBootstrapper) bootstrapPreparation(ctx context.Context, bctx *bo
 		WithDebug(b.Options.Global.IsDebug)
 
 	// next init cache
-	cachePath := cacheIdentity(ctx, metaConfig, connectionHosts(b.SSHProviderInitializer), b.Options.Kube, b.Options.Cache.Dir)
+	cachePath := cacheIdentity(ctx, metaConfig, connectionHosts(b.SSHProviderInitializer), b.Options.Bootstrap.MasterHostsRaw, b.Options.Kube, b.Options.Cache.Dir)
 	if err = cache.InitWithOptions(ctx, cachePath, cache.CacheOptions{InitialState: b.InitialState, ResetInitialState: b.ResetInitialState, Cache: b.Options.Cache}); err != nil {
 		// TODO: it's better to ask for confirmation here
 		return fmt.Errorf(cacheMessage, cachePath, err)
@@ -901,6 +934,13 @@ func (b *ClusterBootstrapper) preflightSuites(ctx context.Context, bctx *bootstr
 
 	if !bctx.metaConfig.HasClusterConfiguration() {
 		return []preflight.Suite{globalSuite}, nil
+	}
+
+	// For the same reason, and not by subtracting names from the static suite: a machine named by
+	// --master-host answers no sshd, so this path guarantees the very SSH provider that suite is
+	// built over cannot be made.
+	if isStaticImmutableCluster(bctx) {
+		return []preflight.Suite{globalSuite, suites.NewImmutableStaticSuite(bctx.metaConfig)}, nil
 	}
 
 	if bctx.metaConfig.ClusterType != config.CloudClusterType {
@@ -1313,9 +1353,9 @@ func (b *ClusterBootstrapper) bootstrapDeckhouse(ctx context.Context, bctx *boot
 	return nil
 }
 
-// bootstrapAdditionalNodes creates the remaining masters and the cloud-permanent nodes. It is
-// cloud-only work, and the cluster-type check that used to wrap it is now the includeIf on its
-// node: on a static cluster the walk does not reach this function at all.
+// bootstrapAdditionalNodes creates the remaining masters and the cloud-permanent nodes. The
+// cluster-type check that used to wrap it is now the includeIf on its node: a static cluster of
+// classic nodes does not reach this function at all.
 func (b *ClusterBootstrapper) bootstrapAdditionalNodes(ctx context.Context, bctx *bootstrapContext) error {
 	ctx, additionalNodesSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.AdditionalNodes")
 	defer additionalNodesSpan.End()
@@ -1323,6 +1363,20 @@ func (b *ClusterBootstrapper) bootstrapAdditionalNodes(ctx context.Context, bctx
 	kubeCl, err := b.KubeProvider.Client(ctx)
 	if err != nil {
 		return err
+	}
+
+	// On a static cluster the machines exist already; only their configuration has to be
+	// delivered, and there is no infrastructure below to create anything from. It is this node
+	// and not the wait after it because a joining master needs a token only a running cluster
+	// can issue, and because a skipped wait must not drop the machines nobody configured yet.
+	if isStaticImmutableCluster(bctx) {
+		if err := b.bootstrapImmutableAdditionalMasters(ctx, bctx, &client.KubernetesClient{KubeClient: kubeCl}); err != nil {
+			return err
+		}
+
+		b.PhasedExecutionContext.CompleteSubPhase(ctx, phases.InstallAdditionalMastersAndStaticNodesSubPhaseAdditionalMasters)
+
+		return nil
 	}
 
 	if err := b.createProviderResources(ctx, bctx, &client.KubernetesClient{KubeClient: kubeCl}); err != nil {
@@ -1370,21 +1424,12 @@ func (b *ClusterBootstrapper) bootstrapAdditionalNodes(ctx context.Context, bctx
 
 // bootstrapWaitControlPlaneManager waits for control-plane-manager to become ready on every
 // master. It is a node of its own rather than the tail of bootstrapAdditionalNodes because it runs
-// on every cluster while that node is cloud-only: as a sub-phase it was completed on static
-// clusters against a phase that had never started.
-func (b *ClusterBootstrapper) bootstrapWaitControlPlaneManager(ctx context.Context, bctx *bootstrapContext) error {
+// on every cluster dhctl builds a control plane for, while that node builds nodes: as a sub-phase
+// it was completed on static clusters against a phase that had never started.
+func (b *ClusterBootstrapper) bootstrapWaitControlPlaneManager(ctx context.Context, _ *bootstrapContext) error {
 	kubeCl, err := b.KubeProvider.Client(ctx)
 	if err != nil {
 		return err
-	}
-
-	// On a static cluster the machines exist already; only their payloads have to be
-	// delivered, and the cloud node above has nothing to create. It runs here because a
-	// joining master needs a token only a running cluster can issue.
-	if isStaticImmutableCluster(bctx) {
-		if err := b.bootstrapImmutableAdditionalMasters(ctx, bctx, &client.KubernetesClient{KubeClient: kubeCl}); err != nil {
-			return err
-		}
 	}
 
 	return controlplane.

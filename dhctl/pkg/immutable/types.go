@@ -106,8 +106,16 @@ type mount struct {
 }
 
 // partitionSelector names a device by what it looks like rather than by path.
+// The whole set of the NodeConfig CRD: an operator writes these, and a field
+// missing here refuses their document instead of reaching the node.
 type partitionSelector struct {
-	Size string `json:"size,omitempty"`
+	Name      string `json:"name,omitempty"`
+	UUID      string `json:"uuid,omitempty"`
+	Label     string `json:"label,omitempty"`
+	FSType    string `json:"fsType,omitempty"`
+	PartUUID  string `json:"partUUID,omitempty"`
+	PartLabel string `json:"partLabel,omitempty"`
+	Size      string `json:"size,omitempty"`
 	// Blank makes whole disks selectable, and only the ones carrying nothing.
 	Blank bool `json:"blank,omitempty"`
 }
