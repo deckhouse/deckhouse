@@ -84,28 +84,23 @@ func TestDatastoreForZone(t *testing.T) {
 	}
 }
 
-func TestDedupSortedStrings(t *testing.T) {
+func TestRfc1123SubdomainName(t *testing.T) {
 	tests := []struct {
 		name string
-		in   []string
-		want []string
+		in   string
+		want string
 	}{
-		{"empty", []string{}, []string{}},
-		{"single", []string{"a"}, []string{"a"}},
-		{"no dups", []string{"a", "b", "c"}, []string{"a", "b", "c"}},
-		{"consecutive dups", []string{"a", "a", "b", "b", "b", "c"}, []string{"a", "b", "c"}},
-		{"all same", []string{"a", "a", "a"}, []string{"a"}},
+		{"lowercase alnum", "e2e-zone-1", "e2e-zone-1"},
+		{"uppercase folded", "E2E-Zone-1", "e2e-zone-1"},
+		{"spaces to dashes", "E2E Zone 1", "e2e-zone-1"},
+		{"illegal chars dropped", "zone/1@lab", "zone1lab"},
+		{"trims leading/trailing separators", "-.zone-1.-", "zone-1"},
+		{"dots preserved", "zone.a.b", "zone.a.b"},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got := dedupSortedStrings(append([]string(nil), tc.in...))
-			if len(got) != len(tc.want) {
-				t.Fatalf("dedupSortedStrings(%v) = %v; want %v", tc.in, got, tc.want)
-			}
-			for i := range got {
-				if got[i] != tc.want[i] {
-					t.Fatalf("dedupSortedStrings(%v)[%d] = %q; want %q", tc.in, i, got[i], tc.want[i])
-				}
+			if got := rfc1123SubdomainName(tc.in); got != tc.want {
+				t.Fatalf("rfc1123SubdomainName(%q) = %q; want %q", tc.in, got, tc.want)
 			}
 		})
 	}
