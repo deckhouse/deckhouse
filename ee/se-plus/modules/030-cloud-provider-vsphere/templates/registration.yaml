@@ -44,10 +44,11 @@ capiMachineTemplateAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1beta
 {{- if $providerDiscoveryData.datacenter }}
   {{- $_ := set $vsphereValues "datacenter" $providerDiscoveryData.datacenter }}
 {{- end }}
-{{- /* zoneComputeClusterPaths is a zone → ClusterComputeResource inventoryPath map that
-       ensure_failure_domains hook populates by asking vCenter. capi/template.yaml joins
-       it with resourcePoolPath to render an absolute resourcePool; relative names are
-       ambiguous when multiple compute clusters live under the same datacenter. */ -}}
+{{- /* zoneComputeClusterPaths is a zone → ClusterComputeResource inventoryPath map published
+       by cloud-data-discoverer (see images/cloud-data-discoverer/src/discoverer.go and
+       go_lib/dependency/vsphere Output.ZoneComputeClusterPaths). capi/template.yaml joins it
+       with resourcePoolPath to render an absolute resourcePool; a bare pool name is ambiguous
+       when several compute clusters live under the same datacenter. */ -}}
 {{- if hasKey $providerDiscoveryData "zoneComputeClusterPaths" }}
   {{- $_ := set $vsphereValues "zoneComputeClusterPaths" $providerDiscoveryData.zoneComputeClusterPaths }}
 {{- end }}

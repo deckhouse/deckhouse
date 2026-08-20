@@ -199,6 +199,7 @@ func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryDa
 	discoveryData.Datacenter = zonesDatastores.Datacenter
 	discoveryData.Zones = mergeZones(discoveryData.Zones, zonesDatastores.Zones)
 	discoveryData.Datastores = mergeDatastores(discoveryData.Datastores, zonesDatastores.ZonedDataStores)
+	discoveryData.ZoneComputeClusterPaths = zonesDatastores.ZoneComputeClusterPaths
 	discoveryData.VMFolderPath = d.vmFolderPath
 
 	for i := range storagePolicies {

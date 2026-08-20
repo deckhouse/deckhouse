@@ -24,6 +24,8 @@ type VsphereCloudDiscoveryData struct {
 	Zones            []string               `json:"zones,omitempty"`
 	Datastores       []VsphereDatastore     `json:"datastores,omitempty"`
 	StoragePolicies  []VsphereStoragePolicy `json:"storagePolicies,omitempty"`
+
+	ZoneComputeClusterPaths map[string]string `json:"zoneComputeClusterPaths,omitempty"`
 }
 
 type VsphereDatastore struct {

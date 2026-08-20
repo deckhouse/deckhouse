@@ -120,7 +120,23 @@ template: |
       spec:
         template: {{ $template | quote }}
         server: {{ .provider.server | quote }}
-        folder: {{ .provider.vmFolderPath | quote }}
+        {{- /* datacenter + absolute folder are baseline: CAPV's `generateOverrideFunc` in
+               pkg/services/vimmachine.go overrides them from the resolved VSphereDeploymentZone
+               / VSphereFailureDomain topology when both CRs exist. If DZ/FD are missing at the
+               time of the first reconcile (fresh install, hook lagging) it returns (nil, false)
+               and only logs a warning — VSphereVM.spec is immutable, so an empty datacenter or
+               a bare folder at that moment survives forever. Keep both explicit so CAPV's own
+               finder can always clone the VM even without the override. */ -}}
+        {{- $dc := get .provider "datacenter" }}
+        {{- if $dc }}
+        datacenter: {{ $dc | quote }}
+        {{- end }}
+        {{- $folder := .provider.vmFolderPath }}
+        {{- if and $dc (not (hasPrefix "/" $folder)) }}
+        folder: {{ printf "/%s/vm/%s" $dc $folder | quote }}
+        {{- else }}
+        folder: {{ $folder | quote }}
+        {{- end }}
         datastore: {{ $datastore | quote }}
         {{- /* Prefer an absolute resourcePool inventory path built from the zone's
                ClusterComputeResource (published by ensure_failure_domains hook) joined with

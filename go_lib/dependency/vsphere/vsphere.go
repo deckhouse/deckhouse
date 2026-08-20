@@ -86,6 +86,12 @@ type Output struct {
 	Datacenter      string           `json:"datacenter"`
 	Zones           []string         `json:"zones"`
 	ZonedDataStores []ZonedDataStore `json:"datastores"`
+	// ZoneComputeClusterPaths maps a zone tag name to the absolute inventory path of the
+	// ClusterComputeResource it is attached to (e.g. "/DatacenterLAB/host/stage-hypers").
+	// It is what cloud-provider-vsphere's ensure_failure_domains hook consumes to render
+	// an absolute resourcePool into VSphereMachineTemplate — a bare pool name collides
+	// when several compute clusters share a datacenter and CAPV's finder errors ambiguously.
+	ZoneComputeClusterPaths map[string]string `json:"zoneComputeClusterPaths,omitempty"`
 }
 
 type StoragePolicy struct {
@@ -127,15 +133,16 @@ func (v *client) GetZonesDatastores() (*Output, error) {
 		panic("no zonedDataStores returned")
 	}
 
-	zones, err := v.getZonesInDC(context.TODO(), dc)
+	zones, zoneComputeClusterPaths, err := v.getZonesInDC(context.TODO(), dc)
 	if err != nil {
 		return nil, err
 	}
 
 	output := Output{
-		Datacenter:      dc.Name(),
-		Zones:           zones,
-		ZonedDataStores: zonedDataStores,
+		Datacenter:              dc.Name(),
+		Zones:                   zones,
+		ZonedDataStores:         zonedDataStores,
+		ZoneComputeClusterPaths: zoneComputeClusterPaths,
 	}
 
 	return &output, nil
@@ -261,23 +268,27 @@ func (v *client) getDCByRegion(ctx context.Context) (*object.Datacenter, error) 
 	return datacenter, nil
 }
 
-func (v *client) getZonesInDC(ctx context.Context, datacenter *object.Datacenter) ([]string, error) {
+func (v *client) getZonesInDC(ctx context.Context, datacenter *object.Datacenter) ([]string, map[string]string, error) {
 	finder := find.NewFinder(v.client.Client, true)
 
 	clusters, err := finder.ClusterComputeResourceList(ctx, path.Join(datacenter.InventoryPath, "..."))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	clusterReferences := make([]mo.Reference, len(clusters))
-	for i := range clusters {
-		clusterReferences[i] = clusters[i]
+	// clusterRefToPath lets us look up a cluster's absolute inventory path from the
+	// ManagedObjectReference that GetAttachedTagsOnObjects returns on match.
+	clusterRefToPath := make(map[types.ManagedObjectReference]string, len(clusters))
+	for i, cluster := range clusters {
+		clusterReferences[i] = cluster
+		clusterRefToPath[cluster.Reference()] = cluster.InventoryPath
 	}
 
 	tagsClient := tags.NewManager(v.restClient)
 
 	zoneTagCategory, err := tagsClient.GetCategory(ctx, v.config.ZoneTagCategory)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	tagsInCategory, _ := tagsClient.ListTagsForCategory(ctx, zoneTagCategory.ID)
@@ -286,14 +297,14 @@ func (v *client) getZonesInDC(ctx context.Context, datacenter *object.Datacenter
 	for _, tagID := range tagsInCategory {
 		tag, err := tagsClient.GetTag(ctx, tagID)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		tagsInCategoryMap[tag.Name] = struct{}{}
 	}
 
 	clustersWithTags, err := tagsClient.GetAttachedTagsOnObjects(ctx, clusterReferences)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	allowedZones := make(map[string]any, len(v.config.Zones))
@@ -302,6 +313,7 @@ func (v *client) getZonesInDC(ctx context.Context, datacenter *object.Datacenter
 	}
 
 	var matchingZonesMap = make(map[string]struct{})
+	zoneComputeClusterPaths := make(map[string]string)
 	for _, clusterTags := range clustersWithTags {
 		for _, clusterTag := range clusterTags.Tags {
 			if _, ok := tagsInCategoryMap[clusterTag.Name]; !ok {
@@ -310,6 +322,9 @@ func (v *client) getZonesInDC(ctx context.Context, datacenter *object.Datacenter
 
 			if isZoneAllowed(allowedZones, clusterTag.Name) {
 				matchingZonesMap[clusterTag.Name] = struct{}{}
+				if path, ok := clusterRefToPath[clusterTags.ObjectID.Reference()]; ok {
+					zoneComputeClusterPaths[clusterTag.Name] = path
+				}
 			}
 		}
 	}
@@ -320,10 +335,10 @@ func (v *client) getZonesInDC(ctx context.Context, datacenter *object.Datacenter
 	}
 
 	if len(matchingZones) == 0 {
-		return nil, errors.New("no matching zones found")
+		return nil, nil, errors.New("no matching zones found")
 	}
 
-	return matchingZones, nil
+	return matchingZones, zoneComputeClusterPaths, nil
 }
 
 func (v *client) getDataStoresInDC(ctx context.Context, datacenter *object.Datacenter) ([]ZonedDataStore, error) {

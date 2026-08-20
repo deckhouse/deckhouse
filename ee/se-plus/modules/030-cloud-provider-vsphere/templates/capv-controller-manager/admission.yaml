@@ -96,3 +96,109 @@ webhooks:
     resources:
     - vspherevms
   sideEffects: None
+---
+# Mutating webhooks apply the upstream CAPV .Default() functions before the object is
+# persisted. Missing them silently promotes runtime nil-pointer bugs:
+#   - VSphereFailureDomain.Default() sets Spec.Zone.AutoConfigure / Spec.Region.AutoConfigure
+#     defaults; without it the controller nil-derefs `*failureDomain.AutoConfigure` in
+#     vspheredeploymentzone_controller_domain.go on any FD authored outside our hook.
+#   - VSphereDeploymentZone.Default(), VSphereMachine.Default(), VSphereVM.Default() populate
+#     required defaults (server, control-plane flag, etc.) the CRD schemas do not carry.
+# The paths mirror the +kubebuilder:webhook markers on internal/webhooks/*.go in CAPV v1.15.3.
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: capv-mutating-webhook
+  annotations:
+    werf.io/deploy-dependency-deployment: state=ready,kind=Deployment,name=capv-controller-manager,namespace=d8-cloud-provider-vsphere
+    werf.io/deploy-dependency-service: state=present,kind=Service,name=capv-controller-manager-webhook-service,namespace=d8-cloud-provider-vsphere
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capv-controller-manager")) | nindent 2 }}
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    caBundle: {{ .Values.cloudProviderVsphere.internal.capvControllerManagerWebhookCert.ca | b64enc }}
+    service:
+      name: capv-controller-manager-webhook-service
+      namespace: d8-cloud-provider-vsphere
+      path: /mutate-infrastructure-cluster-x-k8s-io-v1beta1-vspheredeploymentzone
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: default.vspheredeploymentzone.infrastructure.cluster.x-k8s.io
+  rules:
+  - apiGroups:
+    - infrastructure.cluster.x-k8s.io
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - vspheredeploymentzones
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    caBundle: {{ .Values.cloudProviderVsphere.internal.capvControllerManagerWebhookCert.ca | b64enc }}
+    service:
+      name: capv-controller-manager-webhook-service
+      namespace: d8-cloud-provider-vsphere
+      path: /mutate-infrastructure-cluster-x-k8s-io-v1beta1-vspherefailuredomain
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: default.vspherefailuredomain.infrastructure.cluster.x-k8s.io
+  rules:
+  - apiGroups:
+    - infrastructure.cluster.x-k8s.io
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - vspherefailuredomains
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    caBundle: {{ .Values.cloudProviderVsphere.internal.capvControllerManagerWebhookCert.ca | b64enc }}
+    service:
+      name: capv-controller-manager-webhook-service
+      namespace: d8-cloud-provider-vsphere
+      path: /mutate-infrastructure-cluster-x-k8s-io-v1beta1-vspheremachine
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: default.vspheremachine.infrastructure.cluster.x-k8s.io
+  rules:
+  - apiGroups:
+    - infrastructure.cluster.x-k8s.io
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - vspheremachines
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    caBundle: {{ .Values.cloudProviderVsphere.internal.capvControllerManagerWebhookCert.ca | b64enc }}
+    service:
+      name: capv-controller-manager-webhook-service
+      namespace: d8-cloud-provider-vsphere
+      path: /mutate-infrastructure-cluster-x-k8s-io-v1beta1-vspherevm
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: default.vspherevm.infrastructure.cluster.x-k8s.io
+  rules:
+  - apiGroups:
+    - infrastructure.cluster.x-k8s.io
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - vspherevms
+  sideEffects: None
