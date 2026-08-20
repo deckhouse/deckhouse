@@ -106,7 +106,8 @@ func ingressWithHosts(hosts ...string) map[string]interface{} {
 	return map[string]interface{}{"spec": map[string]interface{}{"rules": rules}}
 }
 
-func httpRouteWithHosts(hosts ...string) map[string]interface{} {
+// routeWithHosts is the shape HTTPRoute, GRPCRoute and TLSRoute share.
+func routeWithHosts(hosts ...string) map[string]interface{} {
 	hostnames := make([]interface{}, 0, len(hosts))
 	for _, host := range hosts {
 		hostnames = append(hostnames, host)
@@ -114,7 +115,8 @@ func httpRouteWithHosts(hosts ...string) map[string]interface{} {
 	return map[string]interface{}{"spec": map[string]interface{}{"hostnames": hostnames}}
 }
 
-func listenerSetWithHosts(hosts ...string) map[string]interface{} {
+// listenersWithHosts is the shape ListenerSet and Gateway share.
+func listenersWithHosts(hosts ...string) map[string]interface{} {
 	listeners := make([]interface{}, 0, len(hosts))
 	for i, host := range hosts {
 		listener := map[string]interface{}{"name": string(rune('a' + i)), "port": 443, "protocol": "HTTPS"}
@@ -148,11 +150,22 @@ func paramsFrom(cm object_store.KubeObject) map[string]interface{} {
 var _ = Describe("Module :: deckhouse :: reserved public hosts :: CEL ::", func() {
 	f := SetupHelmConfig(`{deckhouse: {internal: {currentReleaseImageName: test }}}`)
 
+	// kindUnderPolicy is a rendered policy and the object shape the kind it covers takes, so that the
+	// same table of hostnames can be run against every kind that carries one. A kind treated more
+	// leniently than the rest is all a tenant needs.
+	type kindUnderPolicy struct {
+		name   string
+		policy object_store.KubeObject
+		object func(hosts ...string) map[string]interface{}
+		// listeners tells the kinds that carry their hostname on a listener from the ones that carry
+		// it in a list of their own, which is the only place the two differ.
+		listeners bool
+	}
+
 	var (
-		ingressPolicy     object_store.KubeObject
-		httpRoutePolicy   object_store.KubeObject
-		listenerSetPolicy object_store.KubeObject
-		params            map[string]interface{}
+		ingressPolicy object_store.KubeObject
+		everyKind     []kindUnderPolicy
+		params        map[string]interface{}
 
 		// The deckhouse ModuleConfig section under test and the recorded snapshot, both empty for a
 		// cluster that never set one. Contexts assign them in a BeforeEach; the render happens in
@@ -185,17 +198,23 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts :: CEL ::", func(
 		if snapshot != "" {
 			f.ValuesSetFromYaml("deckhouse.internal.reservedPublicHosts", snapshot)
 		}
-		f.HelmRender(WithAPIVersions(
-			validatingAdmissionPolicyAPI,
-			validatingAdmissionPolicyBindingAPI,
-			httpRouteAPI,
-			listenerSetAPI,
-		))
+		f.HelmRender(WithAPIVersions(append(
+			[]string{validatingAdmissionPolicyAPI, validatingAdmissionPolicyBindingAPI},
+			gatewayAPIVersions()...)...))
 		Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-		ingressPolicy = f.KubernetesGlobalResource("ValidatingAdmissionPolicy", reservedHostsIngressPolicy)
-		httpRoutePolicy = f.KubernetesGlobalResource("ValidatingAdmissionPolicy", reservedHostsHTTPRoutePolicy)
-		listenerSetPolicy = f.KubernetesGlobalResource("ValidatingAdmissionPolicy", reservedHostsListenerSetPolicy)
+		policy := func(name string) object_store.KubeObject {
+			return f.KubernetesGlobalResource("ValidatingAdmissionPolicy", name)
+		}
+		ingressPolicy = policy(reservedHostsIngressPolicy)
+		everyKind = []kindUnderPolicy{
+			{name: "Ingress", policy: ingressPolicy, object: ingressWithHosts},
+			{name: "HTTPRoute", policy: policy(reservedHostsHTTPRoutePolicy), object: routeWithHosts},
+			{name: "GRPCRoute", policy: policy(reservedHostsGRPCRoutePolicy), object: routeWithHosts},
+			{name: "TLSRoute", policy: policy(reservedHostsTLSRoutePolicy), object: routeWithHosts},
+			{name: "ListenerSet", policy: policy(reservedHostsListenerSetPolicy), object: listenersWithHosts, listeners: true},
+			{name: "Gateway", policy: policy(reservedHostsGatewayPolicy), object: listenersWithHosts, listeners: true},
+		}
 
 		params = paramsFrom(f.KubernetesResource("ConfigMap", "d8-system", reservedHostsConfigMapName))
 	})
@@ -213,19 +232,17 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts :: CEL ::", func(
 
 	expectSameOnEveryKind := func(cases []hostCase) {
 		Expect(cases).ToNot(BeEmpty(), "a table that iterates nothing would report green")
-		// A kind with no policy would otherwise be read as a policy with no validation, which every
-		// request passes.
-		Expect(ingressPolicy.Exists()).To(BeTrue(), reservedHostsIngressPolicy)
-		Expect(httpRoutePolicy.Exists()).To(BeTrue(), reservedHostsHTTPRoutePolicy)
-		Expect(listenerSetPolicy.Exists()).To(BeTrue(), reservedHostsListenerSetPolicy)
+		Expect(everyKind).To(HaveLen(len(gatewayAPIKinds)+1), "one entry per kind that carries a hostname")
 
-		for _, c := range cases {
-			Expect(evaluatePolicy(ingressPolicy, params, ingressWithHosts(c.host), tenant)).
-				To(Equal(c.want), "Ingress host %q: %s", c.host, c.why)
-			Expect(evaluatePolicy(httpRoutePolicy, params, httpRouteWithHosts(c.host), tenant)).
-				To(Equal(c.want), "HTTPRoute hostname %q: %s", c.host, c.why)
-			Expect(evaluatePolicy(listenerSetPolicy, params, listenerSetWithHosts(c.host), tenant)).
-				To(Equal(c.want), "ListenerSet listener hostname %q: %s", c.host, c.why)
+		for _, kind := range everyKind {
+			// A kind with no policy would otherwise be read as a policy with no validation, which
+			// every request passes.
+			Expect(kind.policy.Exists()).To(BeTrue(), kind.name)
+
+			for _, c := range cases {
+				Expect(evaluatePolicy(kind.policy, params, kind.object(c.host), tenant)).
+					To(Equal(c.want), "%s hostname %q: %s", kind.name, c.host, c.why)
+			}
 		}
 	}
 
@@ -292,21 +309,26 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts :: CEL ::", func(
 		})
 
 		It("denies a request that hides a reserved hostname among its own", func() {
-			Expect(evaluatePolicy(ingressPolicy, params, ingressWithHosts("shop.example.org", "console.example.com"), tenant)).
-				To(Equal(verdictDenied))
-			Expect(evaluatePolicy(httpRoutePolicy, params, httpRouteWithHosts("shop.example.org", "console.example.com"), tenant)).
-				To(Equal(verdictDenied))
-			Expect(evaluatePolicy(listenerSetPolicy, params, listenerSetWithHosts("shop.example.org", "console.example.com"), tenant)).
-				To(Equal(verdictDenied))
+			for _, kind := range everyKind {
+				Expect(evaluatePolicy(kind.policy, params, kind.object("shop.example.org", "console.example.com"), tenant)).
+					To(Equal(verdictDenied), kind.name)
+			}
 		})
 
 		It("allows a request that claims no hostname at all", func() {
-			Expect(evaluatePolicy(ingressPolicy, params, map[string]interface{}{"spec": map[string]interface{}{}}, tenant)).
-				To(Equal(verdictAllowed))
-			Expect(evaluatePolicy(httpRoutePolicy, params, map[string]interface{}{"spec": map[string]interface{}{}}, tenant)).
-				To(Equal(verdictAllowed), "an HTTPRoute without hostnames inherits the listener's")
-			Expect(evaluatePolicy(listenerSetPolicy, params, listenerSetWithHosts(""), tenant)).
-				To(Equal(verdictAllowed), "a listener without a hostname accepts any")
+			for _, kind := range everyKind {
+				Expect(evaluatePolicy(kind.policy, params, map[string]interface{}{"spec": map[string]interface{}{}}, tenant)).
+					To(Equal(verdictAllowed), "%s with an empty spec", kind.name)
+			}
+			// A listener that names no hostname accepts any, and is a different shape from a spec
+			// with no listeners at all.
+			for _, kind := range everyKind {
+				if !kind.listeners {
+					continue
+				}
+				Expect(evaluatePolicy(kind.policy, params, kind.object(""), tenant)).
+					To(Equal(verdictAllowed), "%s with a listener that names no hostname", kind.name)
+			}
 		})
 
 		It("never reaches the validation for the writers of the platform's own objects", func() {

@@ -109,13 +109,49 @@ const (
 	reservedHostsConfigMapName     = "d8-reserved-public-hosts"
 	reservedHostsIngressPolicy     = "reserved-public-hosts-ingress.deckhouse.io"
 	reservedHostsHTTPRoutePolicy   = "reserved-public-hosts-httproute.deckhouse.io"
+	reservedHostsGRPCRoutePolicy   = "reserved-public-hosts-grpcroute.deckhouse.io"
+	reservedHostsTLSRoutePolicy    = "reserved-public-hosts-tlsroute.deckhouse.io"
 	reservedHostsListenerSetPolicy = "reserved-public-hosts-listenerset.deckhouse.io"
+	reservedHostsGatewayPolicy     = "reserved-public-hosts-gateway.deckhouse.io"
 
 	validatingAdmissionPolicyAPI        = "admissionregistration.k8s.io/v1/ValidatingAdmissionPolicy"
 	validatingAdmissionPolicyBindingAPI = "admissionregistration.k8s.io/v1/ValidatingAdmissionPolicyBinding"
 	httpRouteAPI                        = "gateway.networking.k8s.io/v1/HTTPRoute"
-	listenerSetAPI                      = "gateway.networking.k8s.io/v1/ListenerSet"
+	grpcRouteAPI                        = "gateway.networking.k8s.io/v1/GRPCRoute"
+	// The only version upstream serves TLSRoute under, which is also why the policies match
+	// apiVersions ["*"] rather than naming one.
+	tlsRouteAPI    = "gateway.networking.k8s.io/v1alpha2/TLSRoute"
+	listenerSetAPI = "gateway.networking.k8s.io/v1/ListenerSet"
+	gatewayAPI     = "gateway.networking.k8s.io/v1/Gateway"
+	// Istio serves a Gateway of its own, which is what makes a guard on the kind name alone
+	// insufficient for that one kind.
+	istioGatewayAPI = "networking.istio.io/v1beta1/Gateway"
 )
+
+// gatewayAPIKinds are the kinds the Gateway API carries a hostname on, mapped to what the policy for
+// each has to target. Every one of them is granted to a namespace-scoped Editor in the same
+// user_authz rule block, so a kind missing here is the one a tenant would reach for.
+var gatewayAPIKinds = map[string]struct {
+	apiVersion string
+	policy     string
+	resource   string
+	hostField  string
+}{
+	"HTTPRoute":   {httpRouteAPI, reservedHostsHTTPRoutePolicy, "httproutes", "object.spec.hostnames"},
+	"GRPCRoute":   {grpcRouteAPI, reservedHostsGRPCRoutePolicy, "grpcroutes", "object.spec.hostnames"},
+	"TLSRoute":    {tlsRouteAPI, reservedHostsTLSRoutePolicy, "tlsroutes", "object.spec.hostnames"},
+	"ListenerSet": {listenerSetAPI, reservedHostsListenerSetPolicy, "listenersets", "object.spec.listeners"},
+	"Gateway":     {gatewayAPI, reservedHostsGatewayPolicy, "gateways", "object.spec.listeners"},
+}
+
+func gatewayAPIVersions() []string {
+	versions := make([]string, 0, len(gatewayAPIKinds))
+	for _, kind := range gatewayAPIKinds {
+		versions = append(versions, kind.apiVersion)
+	}
+	sort.Strings(versions)
+	return versions
+}
 
 // schemaDefaultMode reads settings.reservedPublicHosts.mode's default out of the module's own schema,
 // so that the checks below hold whichever of the two reservations a branch ships by default. A
@@ -385,34 +421,35 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 		})
 
 		It("leaves the Gateway API kinds alone while they are not installed", func() {
-			for _, name := range []string{reservedHostsHTTPRoutePolicy, reservedHostsListenerSetPolicy} {
-				Expect(f.KubernetesGlobalResource("ValidatingAdmissionPolicy", name).Exists()).To(BeFalse(), name)
-				Expect(f.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", name).Exists()).To(BeFalse(), name)
+			for _, kind := range gatewayAPIKinds {
+				Expect(f.KubernetesGlobalResource("ValidatingAdmissionPolicy", kind.policy).Exists()).To(BeFalse(), kind.policy)
+				Expect(f.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", kind.policy).Exists()).To(BeFalse(), kind.policy)
 			}
 		})
 	})
 
 	Context("The Gateway API is installed", func() {
 		BeforeEach(func() {
-			render("%s.example.com", append(admissionAPIs, httpRouteAPI, listenerSetAPI)...)
+			render("%s.example.com", append(admissionAPIs, gatewayAPIVersions()...)...)
 		})
 
-		// Every difference between the three policies is a hostname a tenant can claim on the kind
-		// that got the weaker one, so the fields that must not differ are compared rather than
-		// asserted one by one.
+		// Every difference between the policies is a hostname a tenant can claim on the kind that
+		// got the weaker one, so the fields that must not differ are compared rather than asserted
+		// one by one. user_authz grants create and update on all of these in the same rule block, so
+		// a kind treated more leniently than the rest is the one a tenant would use.
 		It("reserves the same hostnames on every kind that carries one", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 			ingress := f.KubernetesGlobalResource("ValidatingAdmissionPolicy", reservedHostsIngressPolicy)
-			for name, expected := range map[string]struct{ apiGroup, resource, hostField string }{
-				reservedHostsHTTPRoutePolicy:   {"gateway.networking.k8s.io", "httproutes", "object.spec.hostnames"},
-				reservedHostsListenerSetPolicy: {"gateway.networking.k8s.io", "listenersets", "object.spec.listeners"},
-			} {
-				vap := f.KubernetesGlobalResource("ValidatingAdmissionPolicy", name)
+			for name, expected := range gatewayAPIKinds {
+				vap := f.KubernetesGlobalResource("ValidatingAdmissionPolicy", expected.policy)
 				Expect(vap.Exists()).To(BeTrue(), name)
-				Expect(vap.Field("spec.matchConstraints.resourceRules.0.apiGroups").String()).To(MatchJSON(`["` + expected.apiGroup + `"]`))
-				Expect(vap.Field("spec.matchConstraints.resourceRules.0.resources").String()).To(MatchJSON(`["` + expected.resource + `"]`))
-				Expect(vap.Field("spec.matchConstraints.resourceRules.0.operations").String()).To(MatchJSON(`["CREATE","UPDATE"]`))
+				Expect(vap.Field("spec.matchConstraints.resourceRules.0.apiGroups").String()).To(MatchJSON(`["gateway.networking.k8s.io"]`), name)
+				Expect(vap.Field("spec.matchConstraints.resourceRules.0.resources").String()).To(MatchJSON(`["`+expected.resource+`"]`), name)
+				Expect(vap.Field("spec.matchConstraints.resourceRules.0.operations").String()).To(MatchJSON(`["CREATE","UPDATE"]`), name)
+				// The version the cluster serves the kind under is none of the policy's business:
+				// the snapshot hook resolves it from discovery for the same reason.
+				Expect(vap.Field("spec.matchConstraints.resourceRules.0.apiVersions").String()).To(MatchJSON(`["*"]`), name)
 				Expect(vap.Field(`spec.variables.#(name=="claimedHosts").expression`).String()).To(ContainSubstring(expected.hostField), name)
 
 				for _, field := range []string{
@@ -425,25 +462,86 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 					`spec.variables.#(name=="conflicts").expression`,
 				} {
 					Expect(vap.Field(field).String()).To(Equal(ingress.Field(field).String()),
-						"%s must not differ between %s and %s", field, name, reservedHostsIngressPolicy)
+						"%s must not differ between %s and %s", field, expected.policy, reservedHostsIngressPolicy)
 				}
 
-				binding := f.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", name)
+				binding := f.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", expected.policy)
 				Expect(binding.Exists()).To(BeTrue(), name)
 				ingressBinding := f.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", reservedHostsIngressPolicy)
 				for _, field := range []string{"spec.validationActions", "spec.paramRef", "spec.matchResources"} {
 					Expect(binding.Field(field).String()).To(Equal(ingressBinding.Field(field).String()),
-						"%s must not differ between the %s binding and the Ingress one", field, name)
+						"%s must not differ between the %s binding and the Ingress one", field, expected.policy)
 				}
 			}
 		})
 
-		It("renders the ListenerSet policy only where the kind exists", func() {
+		// The two kinds keep their hostnames in different places, and a policy that read the wrong
+		// one would find nothing to compare and admit every request.
+		It("reads spec.hostnames on the routes and spec.listeners on the rest", func() {
+			for name, expected := range gatewayAPIKinds {
+				expression := f.KubernetesGlobalResource("ValidatingAdmissionPolicy", expected.policy).
+					Field(`spec.variables.#(name=="claimedHosts").expression`).String()
+				switch expected.hostField {
+				case "object.spec.hostnames":
+					Expect(expression).NotTo(ContainSubstring("object.spec.listeners"), name)
+				case "object.spec.listeners":
+					Expect(expression).NotTo(ContainSubstring("object.spec.hostnames"), name)
+				}
+			}
+		})
+	})
+
+	Context("Only some of the Gateway API kinds are installed", func() {
+		BeforeEach(func() {
 			render("%s.example.com", append(admissionAPIs, httpRouteAPI)...)
+		})
+
+		It("writes a policy for the kind that exists and none for the rest", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 			Expect(f.KubernetesGlobalResource("ValidatingAdmissionPolicy", reservedHostsHTTPRoutePolicy).Exists()).To(BeTrue())
-			Expect(f.KubernetesGlobalResource("ValidatingAdmissionPolicy", reservedHostsListenerSetPolicy).Exists()).To(BeFalse())
+			for _, policy := range []string{
+				reservedHostsGRPCRoutePolicy,
+				reservedHostsTLSRoutePolicy,
+				reservedHostsListenerSetPolicy,
+				reservedHostsGatewayPolicy,
+			} {
+				Expect(f.KubernetesGlobalResource("ValidatingAdmissionPolicy", policy).Exists()).To(BeFalse(), policy)
+			}
+		})
+	})
+
+	// helm_lib_kind_exists matches a "/<kind>" suffix over the capability strings, so it answers for
+	// a kind name whatever group serves it, and Gateway is a kind name two groups use. A policy
+	// written for a resource the cluster does not serve is harmless but misleading, and it would tell
+	// a reader that the Gateway API is covered in a cluster where it is not installed at all.
+	Context("The cluster runs Istio and no Gateway API", func() {
+		BeforeEach(func() {
+			render("%s.example.com", append(admissionAPIs, istioGatewayAPI)...)
+		})
+
+		It("writes no Gateway policy for the Istio kind of the same name", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			Expect(f.KubernetesGlobalResource("ValidatingAdmissionPolicy", reservedHostsGatewayPolicy).Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", reservedHostsGatewayPolicy).Exists()).To(BeFalse())
+		})
+	})
+
+	// The guard has to answer for the group and not for the version: a cluster whose Gateway API came
+	// from elsewhere may serve only v1beta1, and the policies match apiVersions ["*"] anyway.
+	Context("The Gateway API is served under an older version", func() {
+		BeforeEach(func() {
+			render("%s.example.com", append(admissionAPIs,
+				"gateway.networking.k8s.io/v1beta1/Gateway",
+				"gateway.networking.k8s.io/v1beta1/HTTPRoute")...)
+		})
+
+		It("covers the kinds whichever version the cluster serves them under", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			Expect(f.KubernetesGlobalResource("ValidatingAdmissionPolicy", reservedHostsGatewayPolicy).Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("ValidatingAdmissionPolicy", reservedHostsHTTPRoutePolicy).Exists()).To(BeTrue())
 		})
 	})
 

@@ -212,7 +212,7 @@ properties:
     description: |
       Настройки резервирования имён хостов веб-интерфейсов Deckhouse, которое запрещает занимать их приложениям.
 
-      Deckhouse формирует эти имена хостов из глобального параметра [`global.modules.publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) и резервирует их в масштабе кластера: ресурс `Ingress`, `HTTPRoute` или `ListenerSet`, созданный вне системного пространства имён, не может указать ни одно из них. Эти параметры изменяют набор зарезервированных имён в обе стороны.
+      Deckhouse формирует эти имена хостов из глобального параметра [`global.modules.publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) и резервирует их в масштабе кластера: ресурс `Ingress`, а также `Gateway`, `GRPCRoute`, `HTTPRoute`, `ListenerSet` или `TLSRoute` из Gateway API, созданный вне системного пространства имён, не может указать ни одно из них. Эти параметры изменяют набор зарезервированных имён в обе стороны.
 
       Резервирование действует для отдельного имени хоста во всех пространствах имён. Чтобы вместо этого исключить из резервирования пространство имён целиком, установите на него лейбл `security.deckhouse.io/reserved-hosts-bypass: "true"`.
     properties:

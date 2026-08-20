@@ -341,7 +341,7 @@ properties:
     description: |
       Settings of the reservation that keeps the hostnames of the Deckhouse web interfaces from being claimed by a workload.
 
-      Deckhouse renders those hostnames from the [`global.modules.publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) global parameter and reserves them cluster-wide: an `Ingress`, an `HTTPRoute` or a `ListenerSet` created outside a system namespace cannot name one of them. These parameters adjust the reserved set in both directions.
+      Deckhouse renders those hostnames from the [`global.modules.publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) global parameter and reserves them cluster-wide: an `Ingress`, or a `Gateway`, `GRPCRoute`, `HTTPRoute`, `ListenerSet` or `TLSRoute` of the Gateway API, created outside a system namespace cannot name one of them. These parameters adjust the reserved set in both directions.
 
       The reservation is per hostname and applies to every namespace. To exempt a whole namespace from the reservation instead, label the namespace with `security.deckhouse.io/reserved-hosts-bypass: "true"`.
     x-examples:
