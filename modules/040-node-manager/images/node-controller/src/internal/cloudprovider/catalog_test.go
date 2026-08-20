@@ -67,12 +67,12 @@ func cloudCluster(provider string) *corev1.Secret {
 	return clusterConfigurationSecret("clusterType: Cloud\ncloud:\n  provider: " + provider + "\n  prefix: test\n")
 }
 
-func loadFrom(t *testing.T, objs ...client.Object) Providers {
+func loadFrom(t *testing.T, objs ...client.Object) Catalog {
 	t.Helper()
 	c := fake.NewClientBuilder().WithScheme(testScheme(t)).WithObjects(objs...).Build()
-	providers, err := Load(context.Background(), c)
+	pCatalog, err := GetCatalog(context.Background(), c)
 	require.NoError(t, err)
-	return providers
+	return pCatalog
 }
 
 func cloudEphemeral(name, kind string) *v1.NodeGroup {
@@ -146,10 +146,10 @@ func TestLoad(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			providers := loadFrom(t, tc.objs...)
+			pCatalog := loadFrom(t, tc.objs...)
 
 			var got []string
-			for _, p := range providers.All() {
+			for _, p := range pCatalog.All() {
 				got = append(got, p.Type)
 			}
 			assert.Equal(t, tc.types, got)
@@ -211,7 +211,7 @@ func TestLoad_Errors(t *testing.T) {
 				})
 			}
 
-			_, err := Load(context.Background(), builder.Build())
+			_, err := GetCatalog(context.Background(), builder.Build())
 
 			require.ErrorContains(t, err, tc.wantErr)
 		})
@@ -228,80 +228,80 @@ func TestForNodeGroup(t *testing.T) {
 	// Kept on load for the InstanceClass kind it carries; it is nobody's default.
 	nameless := Provider{InstanceClassKind: "VsphereInstanceClass"}
 
-	inYandexCloud := NewProviders([]Provider{aws, yandex, nameless}, yandex)
-	staticCluster := NewProviders([]Provider{nameless}, Provider{})
+	inYandexCloud := NewCatalog([]Provider{aws, yandex, nameless}, yandex)
+	staticCluster := NewCatalog([]Provider{nameless}, Provider{})
 
 	tests := []struct {
-		name      string
-		providers Providers
-		ng        *v1.NodeGroup
-		declared  string
-		want      string
-		wantErr   bool
+		name     string
+		pCatalog Catalog
+		ng       *v1.NodeGroup
+		declared string
+		want     string
+		wantErr  bool
 	}{
 		{
 			// The kind a group references does not pick its provider: a kind mismatch is a verdict
 			// about the NodeGroup, and derived_status.RunCloudChecks is what reports it.
-			name:      "CloudEphemeral takes the cluster provider, not the one its kind belongs to",
-			providers: inYandexCloud, ng: cloudEphemeral("worker-aws", "AWSInstanceClass"), want: "yandex",
+			name:     "CloudEphemeral takes the cluster provider, not the one its kind belongs to",
+			pCatalog: inYandexCloud, ng: cloudEphemeral("worker-aws", "AWSInstanceClass"), want: "yandex",
 		},
 		{
-			name:      "CloudEphemeral without a classReference takes the cluster provider",
-			providers: inYandexCloud, ng: nodeGroupOfType("worker", v1.NodeTypeCloudEphemeral), want: "yandex",
+			name:     "CloudEphemeral without a classReference takes the cluster provider",
+			pCatalog: inYandexCloud, ng: nodeGroupOfType("worker", v1.NodeTypeCloudEphemeral), want: "yandex",
 		},
 		{
 			// CloudPermanent nodes are created by the installer and reference no InstanceClass, so
 			// the cluster configuration is the only thing left to name their provider.
-			name:      "CloudPermanent takes the cluster provider",
-			providers: inYandexCloud, ng: nodeGroupOfType("master", v1.NodeTypeCloudPermanent), want: "yandex",
+			name:     "CloudPermanent takes the cluster provider",
+			pCatalog: inYandexCloud, ng: nodeGroupOfType("master", v1.NodeTypeCloudPermanent), want: "yandex",
 		},
 		{
 			// CloudStatic nodes do run in the cluster's cloud, Deckhouse just does not order them:
 			// they still need the provider steps and the cloud variables.
-			name:      "CloudStatic takes the cluster provider",
-			providers: inYandexCloud, ng: nodeGroupOfType("cloudstatic", v1.NodeTypeCloudStatic), want: "yandex",
+			name:     "CloudStatic takes the cluster provider",
+			pCatalog: inYandexCloud, ng: nodeGroupOfType("cloudstatic", v1.NodeTypeCloudStatic), want: "yandex",
 		},
 		{
 			// The whole point of the per-NodeGroup provider: a Static node lives outside every
 			// cloud, so the provider steps must not reach it even in a cloud cluster.
-			name:      "Static resolves to no provider in a cloud cluster",
-			providers: inYandexCloud, ng: nodeGroupOfType("static", v1.NodeTypeStatic),
+			name:     "Static resolves to no provider in a cloud cluster",
+			pCatalog: inYandexCloud, ng: nodeGroupOfType("static", v1.NodeTypeStatic),
 		},
 		{
-			name:      "a cluster that names no provider resolves to nothing",
-			providers: staticCluster, ng: nodeGroupOfType("cloudstatic", v1.NodeTypeCloudStatic),
+			name:     "a cluster that names no provider resolves to nothing",
+			pCatalog: staticCluster, ng: nodeGroupOfType("cloudstatic", v1.NodeTypeCloudStatic),
 		},
 
 		{
-			name:      "declaring the resolved provider, case-insensitively",
-			providers: inYandexCloud, ng: nodeGroupOfType("cloudstatic", v1.NodeTypeCloudStatic),
+			name:     "declaring the resolved provider, case-insensitively",
+			pCatalog: inYandexCloud, ng: nodeGroupOfType("cloudstatic", v1.NodeTypeCloudStatic),
 			declared: "Yandex", want: "yandex",
 		},
 		{
-			name:      "declaring another provider",
-			providers: inYandexCloud, ng: nodeGroupOfType("cloudstatic", v1.NodeTypeCloudStatic),
+			name:     "declaring another provider",
+			pCatalog: inYandexCloud, ng: nodeGroupOfType("cloudstatic", v1.NodeTypeCloudStatic),
 			declared: "aws", want: "yandex", wantErr: true,
 		},
 		{
 			// None is how a group outside every cloud spells it.
-			name:      "declaring None on Static",
-			providers: inYandexCloud, ng: nodeGroupOfType("static", v1.NodeTypeStatic),
+			name:     "declaring None on Static",
+			pCatalog: inYandexCloud, ng: nodeGroupOfType("static", v1.NodeTypeStatic),
 			declared: "None",
 		},
 		{
-			name:      "declaring none in a cluster that has none",
-			providers: staticCluster, ng: nodeGroupOfType("cloudstatic", v1.NodeTypeCloudStatic),
+			name:     "declaring none in a cluster that has none",
+			pCatalog: staticCluster, ng: nodeGroupOfType("cloudstatic", v1.NodeTypeCloudStatic),
 			declared: "none",
 		},
 		{
-			name:      "declaring None in a cloud",
-			providers: inYandexCloud, ng: nodeGroupOfType("cloudstatic", v1.NodeTypeCloudStatic),
+			name:     "declaring None in a cloud",
+			pCatalog: inYandexCloud, ng: nodeGroupOfType("cloudstatic", v1.NodeTypeCloudStatic),
 			declared: "None", want: "yandex", wantErr: true,
 		},
 		{
 			// A Static group runs in no cloud, so naming one is wrong even where the cluster has it.
-			name:      "declaring a provider on Static",
-			providers: inYandexCloud, ng: nodeGroupOfType("static", v1.NodeTypeStatic),
+			name:     "declaring a provider on Static",
+			pCatalog: inYandexCloud, ng: nodeGroupOfType("static", v1.NodeTypeStatic),
 			declared: "yandex", wantErr: true,
 		},
 	}
@@ -310,7 +310,7 @@ func TestForNodeGroup(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			tc.ng.Spec.ProviderType = tc.declared
 
-			got, err := tc.providers.ForNodeGroup(tc.ng)
+			got, err := tc.pCatalog.ForNodeGroup(tc.ng)
 
 			assert.Equal(t, tc.want, got.Type, "the provider is the answer even when the declaration is not")
 			if tc.wantErr {
@@ -325,12 +325,12 @@ func TestForNodeGroup(t *testing.T) {
 // A provider that names a kind but no version contributes no GVK: guessing a version renames the
 // immutable MachineTemplate the instance-class checksum points at.
 func TestInstanceClassGVKs(t *testing.T) {
-	providers := NewProviders([]Provider{
+	pCatalog := NewCatalog([]Provider{
 		{Type: "aws", InstanceClassKind: "AWSInstanceClass", InstanceClassAPIVersion: "v1"},
 		{Type: "yandex", InstanceClassKind: "YandexInstanceClass"},
 	}, Provider{})
 
-	gvks := providers.InstanceClassGVKs()
+	gvks := pCatalog.InstanceClassGVKs()
 
 	require.Len(t, gvks, 1)
 	assert.Equal(t, schema.GroupVersionKind{

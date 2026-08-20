@@ -93,9 +93,9 @@ func cloudClusterConfig(provider string) *corev1.Secret {
 // testProvider resolves the provider a NodeGroup runs on the way a reconcile does.
 func testProvider(t *testing.T, s *Service, ng *v1.NodeGroup) cloudprovider.Provider {
 	t.Helper()
-	providers, err := cloudprovider.Load(context.Background(), s.Client)
+	pCatalog, err := cloudprovider.GetCatalog(context.Background(), s.Client)
 	require.NoError(t, err)
-	provider, _ := providers.ForNodeGroup(ng)
+	provider, _ := pCatalog.ForNodeGroup(ng)
 	return provider
 }
 

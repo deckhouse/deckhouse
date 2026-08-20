@@ -33,55 +33,53 @@ import (
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 )
 
-// Load reads every provider registered in the cluster.
-func Load(ctx context.Context, r client.Reader) (Providers, error) {
-	all, err := allProviders(ctx, r)
+// GetCatalog reads every provider registered in the cluster.
+func GetCatalog(ctx context.Context, r client.Reader) (Catalog, error) {
+	all, err := getProviders(ctx, r)
 	if err != nil {
-		return Providers{}, err
+		return Catalog{}, err
 	}
 
-	pType, err := clusterProviderType(ctx, r)
+	pType, err := getClusterProviderType(ctx, r)
 	if err != nil {
-		return Providers{}, err
+		return Catalog{}, err
 	}
 
 	// Static
 	if pType == "" {
-		return NewProviders(all, Provider{}), nil
+		return NewCatalog(all, Provider{}), nil
 	}
 
 	// Cloud
 	provider, ok := byType(all, pType)
 	if !ok {
-		return Providers{}, fmt.Errorf(
+		return Catalog{}, fmt.Errorf(
 			"registration secret not found for cloud provider %q in cluster configuration",
 			pType,
 		)
 	}
 
-	return NewProviders(all, provider), nil
+	return NewCatalog(all, provider), nil
 }
 
-// NewProviders builds a Providers from providers already in hand. The default is the registration
+// NewCatalog builds a Catalog from providers already in hand. The default is the registration
 // itself, not its name: resolving a name is Load's job, and it happens once.
-func NewProviders(providers []Provider, defaultProvider Provider) Providers {
-	ordered := slices.Clone(providers)
-	slices.SortFunc(ordered, func(a, b Provider) int { return strings.Compare(a.Type, b.Type) })
-
-	return Providers{
-		all:             ordered,
+func NewCatalog(all []Provider, defaultProvider Provider) Catalog {
+	slices.SortFunc(all, func(a, b Provider) int { return strings.Compare(a.Type, b.Type) })
+	return Catalog{
+		all:             all,
 		defaultProvider: defaultProvider,
 	}
 }
 
-type Providers struct {
+type Catalog struct {
 	all             []Provider
 	defaultProvider Provider
 }
 
 // All returns every provider, ordered by type.
-func (ps Providers) All() []Provider {
-	return ps.all
+func (c Catalog) All() []Provider {
+	return c.all
 }
 
 // ForNodeGroup returns the provider a NodeGroup runs on and the reason its spec.providerType is
@@ -89,29 +87,29 @@ func (ps Providers) All() []Provider {
 //
 // The provider is returned whether or not the declaration holds: the nodes run where they run, and
 // a NodeGroup being torn down still needs the provider whose objects it left behind.
-func (ps Providers) ForNodeGroup(ng *v1.NodeGroup) (Provider, error) {
-	provider := ps.Resolve(ng)
+func (c Catalog) ForNodeGroup(ng *v1.NodeGroup) (Provider, error) {
+	provider := c.Resolve(ng)
 	return provider, declarationError(ng.Spec.ProviderType, provider)
 }
 
 // Resolve returns the provider a NodeGroup runs on, without a verdict on its spec.providerType.
 //
 // It exists for the current migration only and will be deleted.
-func (ps Providers) Resolve(ng *v1.NodeGroup) Provider {
+func (c Catalog) Resolve(ng *v1.NodeGroup) Provider {
 	// A Static node lives outside every cloud.
 	if ng.Spec.NodeType == v1.NodeTypeStatic {
 		return Provider{}
 	}
-	return ps.defaultProvider
+	return c.defaultProvider
 }
 
 // InstanceClassGVKs returns the GVK every provider registered its InstanceClass under.
-func (ps Providers) InstanceClassGVKs() []schema.GroupVersionKind {
-	ret := make([]schema.GroupVersionKind, 0, len(ps.all))
-	seen := make(map[schema.GroupVersionKind]bool, len(ps.all))
+func (c Catalog) InstanceClassGVKs() []schema.GroupVersionKind {
+	ret := make([]schema.GroupVersionKind, 0, len(c.all))
+	seen := make(map[schema.GroupVersionKind]bool, len(c.all))
 
-	for i := range ps.all {
-		p := ps.all[i]
+	for i := range c.all {
+		p := c.all[i]
 		if p.InstanceClassKind == "" || p.InstanceClassAPIVersion == "" {
 			continue
 		}
@@ -182,17 +180,16 @@ func declarationError(ngPType string, provider Provider) error {
 // RegisteredInstanceClassGVKs is InstanceClassGVKs over the registrations alone: it answers which
 // kinds exist without needing the cluster configuration to be readable.
 func RegisteredInstanceClassGVKs(ctx context.Context, r client.Reader) ([]schema.GroupVersionKind, error) {
-	providers, err := allProviders(ctx, r)
+	providers, err := getProviders(ctx, r)
 	if err != nil {
 		return nil, err
 	}
-
-	return NewProviders(providers, Provider{}).InstanceClassGVKs(), nil
+	return NewCatalog(providers, Provider{}).InstanceClassGVKs(), nil
 }
 
-// allProviders is the Secret half of Load, separate so the lazy InstanceClass watch does not
+// getProviders is the Secret half of Load, separate so the lazy InstanceClass watch does not
 // depend on the cluster configuration being readable.
-func allProviders(ctx context.Context, r client.Reader) ([]Provider, error) {
+func getProviders(ctx context.Context, r client.Reader) ([]Provider, error) {
 	secrets := &corev1.SecretList{}
 
 	if err := r.List(ctx, secrets,
@@ -222,9 +219,9 @@ func allProviders(ctx context.Context, r client.Reader) ([]Provider, error) {
 	return ret, nil
 }
 
-// clusterProviderType returns ClusterConfiguration.cloud.provider
+// getClusterProviderType returns ClusterConfiguration.cloud.provider
 // from d8-cluster-configuration secret
-func clusterProviderType(ctx context.Context, r client.Reader) (string, error) {
+func getClusterProviderType(ctx context.Context, r client.Reader) (string, error) {
 	secret := &corev1.Secret{}
 	err := r.Get(
 		ctx,

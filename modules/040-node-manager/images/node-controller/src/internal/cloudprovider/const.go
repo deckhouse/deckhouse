@@ -51,5 +51,5 @@ const (
 )
 
 func isStatic(pType string) bool {
-	return slices.Contains([]string{"None", ""}, strings.ToLower(pType))
+	return slices.Contains([]string{"none", ""}, strings.ToLower(pType))
 }

@@ -55,10 +55,10 @@ var _ = Describe("MCM MachineDeployment and MachineClass teardown", func() {
 	// before the deletion branch, precisely so a NodeGroup being deleted still knows which
 	// infrastructure templates are its own.
 	suiteRegistration := func() cloudprovider.Provider {
-		providers, err := cloudprovider.Load(suiteCtx, k8sClient)
+		pCatalog, err := cloudprovider.GetCatalog(suiteCtx, k8sClient)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(providers.All()).NotTo(BeEmpty(), "the suite publishes one provider")
-		return providers.All()[0]
+		Expect(pCatalog.All()).NotTo(BeEmpty(), "the suite publishes one provider")
+		return pCatalog.All()[0]
 	}
 
 	createMachineClass := func(name string, labels map[string]string) *unstructured.Unstructured {

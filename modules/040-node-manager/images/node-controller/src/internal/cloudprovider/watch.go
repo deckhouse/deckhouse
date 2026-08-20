@@ -94,13 +94,6 @@ func RegistrationSecretsRequests(ctx context.Context, r client.Reader) []reconci
 
 // NodeGroupHandler enqueues the NodeGroups that run on the registration the event carries. Pair it
 // with RegistrationPredicate.
-//
-// The provider is decoded from the event object rather than looked up, so a delete answers the same
-// question as a create at a point where the Secret is already gone.
-//
-// An update compares the raw data first: one that changed none of it enqueues nothing. A real edit
-// resolves both sides, because an edit that renames the provider moves NodeGroups off it, and the
-// group that just left is in no set the new object can produce.
 func NodeGroupHandler(r client.Reader) handler.EventHandler {
 	enqueue := func(ctx context.Context, q workqueue.TypedRateLimitingInterface[reconcile.Request], carried ...Provider) {
 		for _, req := range nodeGroupRequests(ctx, r, carried...) {
@@ -108,7 +101,6 @@ func NodeGroupHandler(r client.Reader) handler.EventHandler {
 		}
 	}
 
-	// Create, delete and generic all ask the same question of the same object.
 	enqueueObject := func(ctx context.Context, obj client.Object, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 		secret, ok := obj.(*corev1.Secret)
 		if !ok {
@@ -146,24 +138,22 @@ func NodeGroupHandler(r client.Reader) handler.EventHandler {
 func nodeGroupRequests(ctx context.Context, r client.Reader, carried ...Provider) []reconcile.Request {
 	logger := log.FromContext(ctx)
 
-	clusterProvider, err := clusterProviderType(ctx, r)
-	if err != nil {
-		logger.Error(err, "read the cluster provider for a cloud provider registration event")
-		return nil
-	}
-
 	ngList := &v1.NodeGroupList{}
 	if err := r.List(ctx, ngList); err != nil {
 		logger.Error(err, "list NodeGroups for a cloud provider registration event")
 		return nil
 	}
 
-	// The providers the event carries, resolved by the rules a reconcile uses. A registration that
-	// is not the cluster's own leaves the default zero, and no NodeGroup runs on it.
-	defaultProvider, _ := byType(carried, clusterProvider)
-	changed := NewProviders(carried, defaultProvider)
+	clusterProvider, err := getClusterProviderType(ctx, r)
+	if err != nil {
+		logger.Error(err, "read the cluster provider for a cloud provider registration event")
+		return nil
+	}
 
+	defaultProvider, _ := byType(carried, clusterProvider)
+	changed := NewCatalog(carried, defaultProvider)
 	ret := make([]reconcile.Request, 0, len(ngList.Items))
+
 	for i := range ngList.Items {
 		ng := &ngList.Items[i]
 		if provider := changed.Resolve(ng); !provider.IsStatic() {

@@ -55,9 +55,9 @@ var _ = Describe("InstanceClass provider enumeration and lazy watches", func() {
 	}
 
 	It("enumerates the suite's provider through the label", func() {
-		providers, err := cloudprovider.Load(suiteCtx, k8sClient)
+		pCatalog, err := cloudprovider.GetCatalog(suiteCtx, k8sClient)
 		Expect(err).NotTo(HaveOccurred())
-		gvks := providers.InstanceClassGVKs()
+		gvks := pCatalog.InstanceClassGVKs()
 		Expect(gvks).To(Equal([]schema.GroupVersionKind{dvpAlpha}))
 	})
 
@@ -66,9 +66,9 @@ var _ = Describe("InstanceClass provider enumeration and lazy watches", func() {
 		Expect(k8sClient.Create(suiteCtx, double)).To(Succeed())
 		DeferCleanup(func() { _ = k8sClient.Delete(suiteCtx, double) })
 
-		providers, err := cloudprovider.Load(suiteCtx, k8sClient)
+		pCatalog, err := cloudprovider.GetCatalog(suiteCtx, k8sClient)
 		Expect(err).NotTo(HaveOccurred())
-		gvks := providers.InstanceClassGVKs()
+		gvks := pCatalog.InstanceClassGVKs()
 		Expect(gvks).To(Equal([]schema.GroupVersionKind{dvpAlpha}))
 	})
 
@@ -77,9 +77,9 @@ var _ = Describe("InstanceClass provider enumeration and lazy watches", func() {
 		Expect(k8sClient.Create(suiteCtx, unversioned)).To(Succeed())
 		DeferCleanup(func() { _ = k8sClient.Delete(suiteCtx, unversioned) })
 
-		providers, err := cloudprovider.Load(suiteCtx, k8sClient)
+		pCatalog, err := cloudprovider.GetCatalog(suiteCtx, k8sClient)
 		Expect(err).NotTo(HaveOccurred())
-		gvks := providers.InstanceClassGVKs()
+		gvks := pCatalog.InstanceClassGVKs()
 		Expect(gvks).To(Equal([]schema.GroupVersionKind{dvpAlpha}),
 			"a kind without a version must contribute nothing — guessing a version is what this mechanism prevents")
 	})

@@ -154,11 +154,11 @@ func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	// One provider read per reconcile: four call sites below used to fetch the registration Secret
 	// each. Loaded before the deletion branch, because the cleanup needs the provider too — the
 	// infrastructure templates are named by its kind, and without it they outlive the NodeGroup.
-	providers, err := cloudprovider.Load(ctx, r.Client)
+	pCatalog, err := cloudprovider.GetCatalog(ctx, r.Client)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	provider, err := providers.ForNodeGroup(ng)
+	provider, err := pCatalog.ForNodeGroup(ng)
 	if err != nil {
 		logger.Error(err, "failed to resolve the cloud provider of the NodeGroup", "nodeGroup", ng.Name)
 		return ctrl.Result{}, err

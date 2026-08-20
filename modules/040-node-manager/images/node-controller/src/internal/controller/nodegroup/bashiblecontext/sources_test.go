@@ -64,11 +64,11 @@ func providerSecret(name string, data map[string][]byte) *corev1.Secret {
 	return s
 }
 
-func testRegistry(t *testing.T, s *Service) cloudprovider.Providers {
+func testRegistry(t *testing.T, s *Service) cloudprovider.Catalog {
 	t.Helper()
-	providers, err := cloudprovider.Load(context.Background(), s.Client)
+	pCatalog, err := cloudprovider.GetCatalog(context.Background(), s.Client)
 	require.NoError(t, err)
-	return providers
+	return pCatalog
 }
 
 func configMap(ns, name string, data map[string]string) *corev1.ConfigMap {

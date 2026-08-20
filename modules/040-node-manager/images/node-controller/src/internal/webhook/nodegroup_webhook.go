@@ -701,12 +701,12 @@ func (w *NodeGroupValidator) validateProviderType(
 		return "", nil
 	}
 
-	providers, err := cloudprovider.Load(ctx, w.Client)
+	pCatalog, err := cloudprovider.GetCatalog(ctx, w.Client)
 	if err != nil {
 		return "", fmt.Errorf("load cloud provider registrations: %w", err)
 	}
 
-	if _, declarationErr := providers.ForNodeGroup(ng); declarationErr != nil {
+	if _, declarationErr := pCatalog.ForNodeGroup(ng); declarationErr != nil {
 		return declarationErr.Error(), nil
 	}
 

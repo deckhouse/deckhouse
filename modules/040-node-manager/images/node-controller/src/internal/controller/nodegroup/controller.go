@@ -122,13 +122,13 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 
 	// One provider read per reconcile, shared by both services below: each used to fetch the
 	// registration Secret of its own.
-	providers, err := cloudprovider.Load(ctx, r.Client)
+	pCatalog, err := cloudprovider.GetCatalog(ctx, r.Client)
 	if err != nil {
 		logger.Error(err, "failed to load cloud provider registrations", "nodeGroup", ng.Name)
 		return ctrl.Result{}, err
 	}
 
-	provider, err := providers.ForNodeGroup(ng)
+	provider, err := pCatalog.ForNodeGroup(ng)
 	cloudprovider.TrackProviderMetrics(ng, provider, err)
 	if err != nil {
 		logger.Error(err, "failed to resolve the cloud provider of the NodeGroup", "nodeGroup", ng.Name)

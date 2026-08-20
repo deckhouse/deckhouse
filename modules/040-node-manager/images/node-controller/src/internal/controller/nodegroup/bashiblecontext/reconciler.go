@@ -50,7 +50,7 @@ func (r *Reconciler) Assemble(ctx context.Context) error {
 
 	// Loaded once for the whole context, not once per NodeGroup: resolving inside the loop meant
 	// one registration read per NodeGroup on every write of the Secret.
-	providers, err := cloudprovider.Load(ctx, r.Client)
+	pCatalog, err := cloudprovider.GetCatalog(ctx, r.Client)
 	if err != nil {
 		return err
 	}
@@ -58,7 +58,7 @@ func (r *Reconciler) Assemble(ctx context.Context) error {
 	nodeGroups := make([]map[string]interface{}, 0, len(ngList.Items))
 	for i := range ngList.Items {
 		ng := &ngList.Items[i]
-		provider := providers.Resolve(ng)
+		provider := pCatalog.Resolve(ng)
 
 		resolved, errStr, err := r.DerivedStatus.ResolveNodeGroup(ctx, ng, provider)
 		if err != nil {
@@ -82,7 +82,7 @@ func (r *Reconciler) Assemble(ctx context.Context) error {
 
 	setNodeGroupInfo(nodeGroups)
 
-	return r.Context.WriteSecret(ctx, nodeGroups, providers)
+	return r.Context.WriteSecret(ctx, nodeGroups, pCatalog)
 }
 
 // withProviderType refreshes the provider of an entry carried over from the last published context:
