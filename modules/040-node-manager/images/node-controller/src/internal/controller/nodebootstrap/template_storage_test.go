@@ -33,7 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
-	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
+	templatesv1alpha1 "github.com/deckhouse/node-controller/api/templates.internal.deckhouse.io/v1alpha1"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/testenv"
 )
@@ -53,7 +53,7 @@ func TestNodeConfigTemplateLeavesTheMachineFieldsToTheOperator(t *testing.T) {
 	object, err := storage.Get(t.Context(), testTemplateNodeGroup, &metav1.GetOptions{})
 	require.NoError(t, err)
 
-	template, ok := object.(*internalv1alpha1.NodeConfigTemplate)
+	template, ok := object.(*templatesv1alpha1.NodeConfigTemplate)
 	require.True(t, ok, "storage returned %T", object)
 
 	require.NotEmpty(t, template.Spec.APIServerEndpoints, "the cluster half must be rendered")
@@ -74,7 +74,7 @@ func TestNodeConfigTemplateCarriesABootstrapToken(t *testing.T) {
 	object, err := storage.Get(t.Context(), testTemplateNodeGroup, &metav1.GetOptions{})
 	require.NoError(t, err)
 
-	template, ok := object.(*internalv1alpha1.NodeConfigTemplate)
+	template, ok := object.(*templatesv1alpha1.NodeConfigTemplate)
 	require.True(t, ok, "storage returned %T", object)
 	require.NotEmpty(t, template.Spec.Kubelet.BootstrapToken)
 }
