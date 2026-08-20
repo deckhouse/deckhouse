@@ -118,21 +118,8 @@ var _ = Describe("Module :: user-authn :: helm template :: dex-config", func() {
 	Context("With Users but without providers", func() {
 		BeforeEach(func() {
 			hec.ValuesSetFromYaml("userAuthn.internal.dexUsersCRDs", `
-- encodedName: encodedUser
-  name: userName
-  spec:
-    email: user@example.com
-    groups:
-    - Everyone
-    password: userPassword
-- encodedName: encodedAdmin
-  name: adminName
-  spec:
-    email: adminTest@example.com
-    groups:
-    - Everyone
-    - Admins
-    password: adminPassword
+- name: userName
+- name: adminName
 `)
 			hec.HelmRender()
 		})
@@ -153,21 +140,8 @@ var _ = Describe("Module :: user-authn :: helm template :: dex-config", func() {
 	Context("With Users and providers", func() {
 		BeforeEach(func() {
 			hec.ValuesSetFromYaml("userAuthn.internal.dexUsersCRDs", `
-- encodedName: encodedUser
-  name: userName
-  spec:
-    email: user@example.com
-    groups:
-    - Everyone
-    password: userPassword
-- encodedName: encodedAdmin
-  name: adminName
-  spec:
-    email: adminTest@example.com
-    groups:
-    - Everyone
-    - Admins
-    password: adminPassword
+- name: userName
+- name: adminName
 `)
 			hec.ValuesSetFromYaml("userAuthn.internal.providers", `
 - id: gitlabID
