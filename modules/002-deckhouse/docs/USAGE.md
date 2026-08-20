@@ -293,6 +293,20 @@ The wildcard form cannot be freed with `excludedServices`, which takes a service
 A workload that serves `*.example.com` needs the namespace label or `mode: List`.
 {% endalert %}
 
+### The Gateway the platform attaches to
+
+The Gateway that the ListenerSets of Deckhouse modules attach to is exempt from the reservation, whatever its listeners claim.
+It is the object named in the [`gatewayAPIGateway`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-gatewayapigateway) global parameter, or, if that parameter is not set, the one discovered in the `default-gateway` ConfigMap of the `d8-alb` namespace.
+The exemption is by name and namespace, and it applies to the Gateway kind only: the same hostname on an Ingress, an HTTPRoute or any other Gateway is still reserved.
+
+This matters because such a Gateway usually carries a listener with the wildcard hostname and a wildcard certificate, and it often lives in a namespace of its own rather than in one labelled `heritage: deckhouse`.
+Without the exemption it would become impossible to modify after the reservation starts to apply, while the platform routes attached to it keep depending on it.
+
+Any other Gateway with a `*.example.com` listener is denied, and the record of what was already served does not cover it.
+Such a Gateway needs the namespace label or `mode: List`, set before the upgrade.
+
+If no shared Gateway is configured or discovered, nothing is exempt.
+
 ### Enabling the reservation in a cluster that already has workloads
 
 When the reservation starts to apply, the hostnames workloads already serve are recorded once and stay allowed.
@@ -307,6 +321,10 @@ An entry that is not a hostname even then, a pasted URL for example, is dropped 
 
 The wildcard form is the exception: it is not recorded, because allowing it would leave every hostname the template renders shadowed, including the ones Deckhouse publishes later.
 A workload serving the wildcard over the platform domain needs the namespace label or `mode: List`, set before the upgrade.
+The Gateway the platform attaches to needs neither, since it is exempt by name.
+
+The record is taken once and never taken again, so switching to `List` and back to `Template` keeps the record of the first `Template` period: what appeared while `List` was in force is denied on its next modification.
+Retaking it would turn the mode into a way around the reservation — switch to `List`, claim the hostnames, switch back and have them recorded as given.
 
 ### Finding out what is reserved and why
 
@@ -320,6 +338,7 @@ The same ConfigMap answers what the reservation covers in this cluster:
 | `allowedHosts` | What is allowed back out of the pattern: the hostnames freed by `excludedServices` and the recorded ones |
 | `excludedHosts` | The hostnames `excludedServices` freed |
 | `grandfatheredHosts` | The hostnames recorded when the reservation started to apply |
+| `sharedGateway` | The Gateway the platform attaches to, as `namespace/name`. Empty when none is configured or discovered |
 | `platformHosts` | The hostnames of the services Deckhouse publishes today. Informational under both modes |
 | `unknownExcludedServices` | The names from `excludedServices` that no module publishes. The place to look when a hostname stayed reserved: the name is probably misspelled |
 
