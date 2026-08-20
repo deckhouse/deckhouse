@@ -89,10 +89,16 @@ spec:
                   domain). Required so that the "clusterDomain" default always materialises and its
                   immutability CEL rule always has an oldSelf to compare against.
 
-                  The cross-field rule below is the one relationship the per-field patterns cannot express:
-                  each node is carved a podSubnetNodeCIDRPrefix-sized slice out of podSubnetCIDR, so the node
+                  The two cross-field rules below are the relationships the per-field patterns cannot express.
+
+                  Each node is carved a podSubnetNodeCIDRPrefix-sized slice out of podSubnetCIDR, so the node
                   prefix must be strictly longer than the pod CIDR's own prefix, otherwise not a single node
                   subnet fits. The gap is log2(max nodes): /16 with /24 per node is 2^8 = 256 nodes.
+
+                  The Pod and Service ranges are allocated by different components (cilium via Kubernetes IPAM,
+                  kube-apiserver's Service allocator) that do not know about each other, so an overlap hands the
+                  same address out twice. Two CIDRs are either disjoint or nested, so testing containment in
+                  both directions is an exact overlap test.
                 properties:
                   clusterDomain:
                     default: cluster.virtual
@@ -143,7 +149,16 @@ spec:
                       This is a policy choice, not something derivable from podSubnetCIDR: the gap between the two
                       trades maximum node count against Pod addresses per node. With podSubnetCIDR /16 — /23 gives
                       128 nodes x 510 addresses, /24 gives 256 x 254, /25 gives 512 x 126.
-                    pattern: ^(1[6-9]|2[0-9]|30)$
+
+                      The upper bound is /25, not /30, because kubelet's maxPods is picked from a lookup table in
+                      candi/bashible/common-steps/all/064_configure_kubelet.sh.tpl whose last branch is "prefix >=
+                      24 -> 120". A /25 leaves 126 usable addresses and still fits those 120 Pods; a /26 leaves 62
+                      and does not, so the scheduler would place Pods the node cannot address and they would hang
+                      in ContainerCreating. A normal cluster can work around this by setting
+                      nodeGroup.kubelet.maxPods, but a tenant's NodeGroup is synthesised in Go (see
+                      bashible-apiserver.BuildExternalInputsYAML) and carries no kubelet section, so there is no
+                      escape hatch here. Widen this bound only together with a maxPods that follows the prefix.
+                    pattern: ^(1[6-9]|2[0-5])$
                     type: string
                     x-kubernetes-validations:
                     - message: 'podSubnetNodeCIDRPrefix is immutable: nodes already
@@ -182,7 +197,12 @@ spec:
                 - message: podSubnetNodeCIDRPrefix must be greater than the prefix
                     length of podSubnetCIDR, otherwise no node subnet fits into the
                     Pod address space
-                  rule: int(self.podSubnetNodeCIDRPrefix) > int(self.podSubnetCIDR.split('/')[1])
+                  rule: int(self.podSubnetNodeCIDRPrefix) > cidr(self.podSubnetCIDR).prefixLength()
+                - message: 'podSubnetCIDR and serviceSubnetCIDR must not overlap:
+                    Pod addresses are allocated by cilium and Service addresses by
+                    kube-apiserver, and neither knows about the other''s range'
+                  rule: '!cidr(self.podSubnetCIDR).containsCIDR(self.serviceSubnetCIDR)
+                    && !cidr(self.serviceSubnetCIDR).containsCIDR(self.podSubnetCIDR)'
               replicas:
                 default: 1
                 description: Replicas is the desired number of control plane replicas.

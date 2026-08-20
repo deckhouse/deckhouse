@@ -141,7 +141,11 @@ spec:
                       two trades maximum node count against Pod addresses per node. With `podSubnetCIDR` of
                       `/16` — a `/23` prefix gives 128 nodes with 510 addresses each, `/24` gives 256 with 254,
                       `/25` gives 512 with 126.
-                    pattern: ^(1[6-9]|2[0-9]|30)$
+
+                      The upper bound is `/25` because kubelet's `maxPods` is 120 for every prefix of `/24`
+                      and above. A `/25` leaves 126 usable addresses and still fits those 120 Pods; a `/26`
+                      leaves 62 and does not, so the scheduler would place Pods the node cannot address.
+                    pattern: ^(1[6-9]|2[0-5])$
                     type: string
                     x-kubernetes-validations:
                     - message: podSubnetNodeCIDRPrefix is immutable. Create a new VirtualControlPlane and migrate workloads.
@@ -173,7 +177,9 @@ spec:
                 type: object
                 x-kubernetes-validations:
                 - message: podSubnetNodeCIDRPrefix must be greater than the prefix length of podSubnetCIDR, otherwise no node subnet fits into the Pod address space
-                  rule: int(self.podSubnetNodeCIDRPrefix) > int(self.podSubnetCIDR.split('/')[1])
+                  rule: int(self.podSubnetNodeCIDRPrefix) > cidr(self.podSubnetCIDR).prefixLength()
+                - message: "podSubnetCIDR and serviceSubnetCIDR must not overlap: Pod addresses are allocated by cilium and Service addresses by kube-apiserver, and neither knows about the other's range"
+                  rule: '!cidr(self.podSubnetCIDR).containsCIDR(self.serviceSubnetCIDR) && !cidr(self.serviceSubnetCIDR).containsCIDR(self.podSubnetCIDR)'
               replicas:
                 default: 1
                 description: Desired number of control plane replicas.
