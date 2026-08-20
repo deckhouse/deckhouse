@@ -42,6 +42,22 @@ type Namespace struct {
 	// first label. Only then is the wildcard the template's namespace and nothing wider: with
 	// "kube-%s.company.my" it would be "kube-*.company.my", which no API server accepts, while
 	// "*.company.my" covers a domain the platform does not own.
+	//
+	// So a prefixed template leaves a gap an unprefixed one does not. "*.company.my" does match
+	// "kube-anything.company.my", and a tenant holding it catches every prefixed platform hostname
+	// nothing serves by exact match yet -- the window before the platform starts publishing one,
+	// which is exactly what Template mode closes everywhere else. It cannot take a hostname the
+	// platform already serves: the Gateway API gives the more specific hostname precedence, in so
+	// many words ("foo.example.com" over "*.example.com", in the description of
+	// Gateway.spec.listeners[].hostname in the CRD this repository ships at
+	// ee/modules/110-istio/images/waypoint-controller/src/internal/waypointcontroller/crds_gateway_api/gateways.yaml).
+	// The same is believed to hold for ingress-nginx through nginx's own server_name resolution
+	// order, but that module is not in this repository and the claim is not verified here.
+	//
+	// Where admission-policy-engine is enabled and a SecurityPolicy sets blockWildcardDomains, the
+	// gap is covered for Ingress by
+	// modules/015-admission-policy-engine/charts/constraint-templates/templates/security/allowed-ingresses.yaml.
+	// Nothing covers it for the Gateway API kinds.
 	Wildcard string
 }
 
