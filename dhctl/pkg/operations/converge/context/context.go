@@ -46,6 +46,11 @@ type Context struct {
 	kubeProvider           libcon.KubeProvider
 	SSHProviderInitializer *providerinitializer.SSHProviderInitializer
 
+	// kubeOwnCredentials states that the Kubernetes client carries credentials of its
+	// own instead of tunnelling to a kubectl proxy over SSH. It comes from the flags
+	// dhctl was started with; --kube-config-context alone still goes over SSH.
+	kubeOwnCredentials bool
+
 	stateCache dstate.Cache
 	// yes we want to save context in struct,
 	// but it is not recommended https://go.dev/wiki/CodeReviewComments#contexts
@@ -74,6 +79,7 @@ type Context struct {
 type Params struct {
 	KubeProvider           libcon.KubeProvider
 	SSHProviderInitializer *providerinitializer.SSHProviderInitializer
+	KubeOwnCredentials     bool
 	Cache                  dstate.Cache
 	ChangeParams           infrastructure.ChangeActionSettings
 	ProviderGetter         infrastructure.CloudProviderGetter
@@ -86,6 +92,7 @@ func newContext(ctx context.Context, params Params) *Context {
 		providerGetter:         params.ProviderGetter,
 		kubeProvider:           params.KubeProvider,
 		SSHProviderInitializer: params.SSHProviderInitializer,
+		kubeOwnCredentials:     params.KubeOwnCredentials,
 		stateCache:             params.Cache,
 		changeParams:           params.ChangeParams,
 		ctx:                    ctx,
@@ -128,6 +135,17 @@ func (c *Context) WithProviderGetter(getter infrastructure.CloudProviderGetter) 
 
 func (c *Context) KubeProvider() kubernetes.KubeClientProviderWithCtx {
 	return c
+}
+
+// SSHless reports that this converge has no way to run anything on a node: it holds
+// Kubernetes credentials of its own and knows no SSH host. Hosts are looked up on every
+// call — the state cache they come from is initialized after the context is built.
+func (c *Context) SSHless() bool {
+	if !c.kubeOwnCredentials {
+		return false
+	}
+
+	return !c.SSHProviderInitializer.CheckHosts(c.ctx)
 }
 
 func (c *Context) KubeClientCtx(ctx context.Context) (*client.KubernetesClient, error) {
