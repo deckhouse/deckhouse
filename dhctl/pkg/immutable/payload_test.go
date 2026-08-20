@@ -26,7 +26,6 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable/immutabletest"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
@@ -35,8 +34,8 @@ var updateGolden = flag.Bool("update-golden", false, "rewrite the golden payload
 // TestBuildCloudConfigGolden pins the exact bytes the master VM boots with: the
 // on-node agent parses strictly, so a silent field rename refuses to bootstrap.
 // Only the freshly-minted handoff strings are replaced with placeholders.
-func TestBuildCloudConfigGolden(t *testing.T) {
-	metaConfig := immutabletest.MetaConfig(t)
+func TestBuildDocumentStreamGolden(t *testing.T) {
+	metaConfig := testMetaConfig(t)
 	globalOptions := options.NewGlobalOptions()
 
 	nodeConfig, err := buildNodeConfig(context.Background(), nodeConfigInput{
@@ -49,7 +48,7 @@ func TestBuildCloudConfigGolden(t *testing.T) {
 		NodeName:      "example-master-0",
 		MetaConfig:    metaConfig,
 		StateCache:    cache.NewTestCache(),
-		CandiDir:      immutabletest.CandiDir(t),
+		CandiDir:      testCandiDir(t),
 		GlobalOptions: &globalOptions,
 	})
 	require.NoError(t, err)
@@ -63,23 +62,23 @@ func TestBuildCloudConfigGolden(t *testing.T) {
 		ClientCSR: "<installer certificate request>",
 	}
 
-	cloudConfig, err := buildCloudConfig(nodeConfig, controlPlaneConfig)
+	stream, _, err := buildDocumentStream(nodeConfig, controlPlaneConfig)
 	require.NoError(t, err)
 
-	goldenPath := filepath.Join("testdata", "master-cloud-init.yaml")
+	goldenPath := filepath.Join("testdata", "master-documents.yaml")
 	if *updateGolden {
 		require.NoError(t, os.MkdirAll("testdata", 0o755))
-		require.NoError(t, os.WriteFile(goldenPath, []byte(cloudConfig), 0o644))
+		require.NoError(t, os.WriteFile(goldenPath, []byte(stream), 0o644))
 	}
 
 	golden, err := os.ReadFile(goldenPath)
 	require.NoError(t, err)
-	require.Equal(t, string(golden), cloudConfig)
+	require.Equal(t, string(golden), stream)
 
 	// The invariant the whole payload is shaped around: no cluster key may
-	// travel in cloud-init, which ends up in Secrets, state and caches. The only
+	// travel in the documents, which end up in Secrets, state and caches. The only
 	// legitimate key is the redacted handoff serving key (one read of one file).
-	require.NotContains(t, cloudConfig, "PRIVATE KEY",
+	require.NotContains(t, stream, "PRIVATE KEY",
 		"the master payload must carry no private key of the cluster")
 }
 
@@ -87,14 +86,14 @@ func TestBuildCloudConfigGolden(t *testing.T) {
 // on the unredacted payload: the handoff serving key is the one key in it, and
 // it is in the handoff section.
 func TestBuildControlPlaneConfigCarriesOnlyTheHandoffKey(t *testing.T) {
-	metaConfig := immutabletest.MetaConfig(t)
+	metaConfig := testMetaConfig(t)
 	globalOptions := options.NewGlobalOptions()
 
 	controlPlaneConfig, err := buildControlPlaneConfig(context.Background(), MasterPayloadInput{
 		NodeName:      "example-master-0",
 		MetaConfig:    metaConfig,
 		StateCache:    cache.NewTestCache(),
-		CandiDir:      immutabletest.CandiDir(t),
+		CandiDir:      testCandiDir(t),
 		GlobalOptions: &globalOptions,
 	})
 	require.NoError(t, err)

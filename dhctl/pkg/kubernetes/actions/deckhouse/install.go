@@ -440,9 +440,15 @@ func getNSTask(kubeCl *client.KubernetesClient) actions.ManifestTask {
 			return manifests.DeckhouseNamespace("d8-system")
 		},
 		CreateFunc: func(ctx context.Context, manifest any) error {
-			_, err := kubeCl.
-				CoreV1().Namespaces().
-				Create(ctx, manifest.(*apiv1.Namespace), metav1.CreateOptions{})
+			ns := manifest.(*apiv1.Namespace)
+			// On a rerun the namespace is already there, ours from an earlier run or
+			// labelled by the Deckhouse chart. Leave it: writing it needs an admission
+			// decision (system-ns.deckhouse.io denies the create) and buys nothing.
+			if _, err := kubeCl.CoreV1().Namespaces().Get(ctx, ns.GetName(), metav1.GetOptions{}); err == nil {
+				dhlog.FromContext(ctx).InfoContext(ctx, "Already exists. Skip!")
+				return nil
+			}
+			_, err := kubeCl.CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
 			return err
 		},
 		UpdateFunc: func(ctx context.Context, manifest any) error {

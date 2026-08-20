@@ -782,3 +782,64 @@ func TestRenderedSpecPassesTheAgentSchema(t *testing.T) {
 		})
 	}
 }
+// The rendered network is a guess — eth0 with DHCP — so a machine that named
+// its own interfaces keeps them. A machine that named none keeps the guess:
+// blanking the section leaves the node without a network after a reboot.
+func TestKeepBootstrapOnlyFieldsKeepsAMachineNamedNetwork(t *testing.T) {
+	rendered := internalv1alpha1.Network{
+		Hostname:   "worker-0",
+		Interfaces: []internalv1alpha1.NetworkInterface{{Name: "eth0", DHCP: true}},
+	}
+	machineNamed := internalv1alpha1.Network{
+		Hostname: "worker-0",
+		Interfaces: []internalv1alpha1.NetworkInterface{{
+			Name: "bond0", Addresses: []string{"192.0.2.10/24"}, Gateway: "192.0.2.1",
+		}},
+	}
+
+	tests := []struct {
+		name     string
+		existing internalv1alpha1.Network
+		exp      internalv1alpha1.Network
+	}{
+		{
+			name:     "the interfaces the machine named survive the render",
+			existing: machineNamed,
+			exp:      machineNamed,
+		},
+		{
+			name:     "a node that named no interfaces is left with the rendered eth0",
+			existing: internalv1alpha1.Network{},
+			exp:      rendered,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			desired := internalv1alpha1.NodeSpec{Network: rendered}
+			existing := internalv1alpha1.NodeSpec{Network: tc.existing}
+
+			keepBootstrapOnlyFields(&desired, &existing, nil)
+
+			require.Equal(t, tc.exp, desired.Network)
+		})
+	}
+}
+
+// renderNetwork answers only a hostname and interfaces, so a machine that set
+// nothing but resolvers has a network that differs from the render in fields
+// the render never fills. Judging emptiness by interfaces alone would drop them.
+func TestKeepBootstrapOnlyFieldsKeepsAResolverOnlyNetwork(t *testing.T) {
+	existing := internalv1alpha1.NodeSpec{Network: internalv1alpha1.Network{
+		DNS: internalv1alpha1.DNS{Servers: []string{"10.0.0.10"}},
+	}}
+	desired := internalv1alpha1.NodeSpec{Network: internalv1alpha1.Network{
+		Hostname:   "master-0",
+		Interfaces: []internalv1alpha1.NetworkInterface{{Name: "eth0", DHCP: true}},
+	}}
+
+	keepBootstrapOnlyFields(&desired, &existing, nil)
+
+	require.Equal(t, []string{"10.0.0.10"}, desired.Network.DNS.Servers,
+		"the resolvers the machine was given were dropped")
+}

@@ -94,6 +94,9 @@ func SetupWithManager(mgr ctrl.Manager) error {
 	hookServer.Register("/validate-instanceclass-delete", &webhook.Admission{
 		Handler: &InstanceClassDeleteValidator{},
 	})
+	hookServer.Register("/validate-internal-deckhouse-io-v1alpha1-nodeconfig", &webhook.Admission{
+		Handler: &NodeConfigValidator{decoder: decoder},
+	})
 
 	// Unified conversion webhook (NodeGroup + Instance) with cluster state access.
 	hookServer.Register("/convert", &ConversionHandler{

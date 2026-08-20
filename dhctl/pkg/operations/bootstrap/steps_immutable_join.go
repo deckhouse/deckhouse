@@ -44,7 +44,8 @@ func buildImmutableJoinPayload(
 	kubeCl *client.KubernetesClient,
 	metaConfig *config.MetaConfig,
 	nodeName string,
-) (string, error) {
+	customization *immutable.Customization,
+) (string, []byte, error) {
 	var (
 		caCert    string
 		token     string
@@ -69,7 +70,7 @@ func buildImmutableJoinPayload(
 			return err
 		})
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
 	return immutable.BuildJoinPayload(ctx, immutable.JoinPayloadInput{
@@ -78,6 +79,7 @@ func buildImmutableJoinPayload(
 		CACert:             caCert,
 		BootstrapToken:     token,
 		APIServerEndpoints: endpoints,
+		Customization:      customization,
 	})
 }
 
