@@ -89,9 +89,9 @@ func TestFetchInventoryTreatsMissingEndpointAsUnknown(t *testing.T) {
 }
 
 func TestFetchInventoryReadsTheMachine(t *testing.T) {
-	var path, accept string
+	var path string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		path, accept = r.URL.Path, r.Header.Get("Accept")
+		path = r.URL.Path
 		_, _ = io.WriteString(w, `{"disks":[{"name":"sda","size":32212254720,"state":"blank",
 			"byId":["scsi-0QEMU_QEMU_HARDDISK_89bf"],"partitions":[{"name":"sda1","size":536870912}]}],
 			"interfaces":[{"name":"eth0","mac":"f2:4e:c6:60:03:72"}]}`)
@@ -102,13 +102,10 @@ func TestFetchInventoryReadsTheMachine(t *testing.T) {
 	if err != nil {
 		t.Fatalf("want no error, got %v", err)
 	}
-	// One path, three representations: the machine answers an operator with the
-	// NodeConfig shape by default, so a client that decodes JSON has to say so.
-	if path != "/inventory" {
-		t.Fatalf("dhctl must read the inventory of the machine, asked for %q", path)
-	}
-	if accept != "application/json" {
-		t.Fatalf("dhctl must ask for the machine-readable representation, sent Accept %q", accept)
+	// /inventory answers an operator with the NodeConfig shape; a program reads
+	// the representation meant for one, or it decodes comments.
+	if path != "/inventory.json" {
+		t.Fatalf("dhctl must read the machine-readable inventory, asked for %q", path)
 	}
 	if len(inv.Disks) != 1 || inv.Disks[0].Size != 32212254720 || inv.Disks[0].State != "blank" {
 		t.Fatalf("disks did not survive the decode: %+v", inv.Disks)
