@@ -63,6 +63,14 @@ func TestServesInternalDeckhouseGroup(t *testing.T) {
 	srv, err := newServer(cfg, map[string]rest.Storage{"nodeconfigtemplates": stubStorage{}})
 	require.NoError(t, err)
 
+	// The startup step the process really takes, and the one that killed it: with
+	// an OpenAPI config set, PrepareRun builds the spec for every route the generic
+	// server carries and calls klog.Fatal on a model it has no definition for.
+	// Nothing before this line notices, so a server that cannot start looks healthy
+	// to a test that only calls newServer.
+	prepared := srv.PrepareRun()
+	require.NotNil(t, prepared)
+
 	ts := httptest.NewServer(srv.Handler)
 	t.Cleanup(ts.Close)
 
