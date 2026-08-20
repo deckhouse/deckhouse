@@ -61,6 +61,10 @@ type Params struct {
 
 	NoSwitchToNodeUser bool
 
+	// KubeOwnCredentials states that the Kubernetes client was given credentials of its
+	// own, so it does not tunnel to a kubectl proxy over SSH.
+	KubeOwnCredentials bool
+
 	CheckHasTerraformStateBeforeMigration bool
 	CacheID                               string
 
@@ -145,6 +149,7 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 		convergeCtx = convergectx.NewContext(ctx, convergectx.Params{
 			KubeProvider:           c.KubeProvider,
 			SSHProviderInitializer: c.SSHProviderInitializer,
+			KubeOwnCredentials:     c.Params.KubeOwnCredentials,
 			Cache:                  stateCache,
 			ChangeParams:           c.Params.ChangesSettings,
 			ProviderGetter:         c.Params.ProviderGetter,
@@ -283,6 +288,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 		convergeCtx = convergectx.NewContext(ctx, convergectx.Params{
 			KubeProvider:           c.KubeProvider,
 			SSHProviderInitializer: c.SSHProviderInitializer,
+			KubeOwnCredentials:     c.Params.KubeOwnCredentials,
 			Cache:                  stateCache,
 			ChangeParams:           c.Params.ChangesSettings,
 			ProviderGetter:         c.ProviderGetter,
