@@ -42,15 +42,18 @@ const maxConcurrentReconciles = 16
 
 // Reconciler runs DexProvider connectivity checks.
 type Reconciler struct {
-	client client.Client
-	log    logr.Logger
-	http   HTTPFactory
-	ldap   LDAPDialer
-	now    func() time.Time
+	client    client.Client
+	apiReader client.Reader
+	log       logr.Logger
+	http      HTTPFactory
+	ldap      LDAPDialer
+	now       func() time.Time
 }
 
 // New constructs a Reconciler. http/ldap/now default when nil.
-func New(c client.Client, log logr.Logger, http HTTPFactory, ldap LDAPDialer, now func() time.Time) *Reconciler {
+// apiReader should bypass the informer cache so a namespaced Secret Get
+// does not start a cluster-wide Secret informer (RBAC is get-only).
+func New(c client.Client, apiReader client.Reader, log logr.Logger, http HTTPFactory, ldap LDAPDialer, now func() time.Time) *Reconciler {
 	if now == nil {
 		now = time.Now
 	}
@@ -60,7 +63,10 @@ func New(c client.Client, log logr.Logger, http HTTPFactory, ldap LDAPDialer, no
 	if ldap == nil {
 		ldap = NewDefaultLDAP()
 	}
-	return &Reconciler{client: c, log: log, http: http, ldap: ldap, now: now}
+	if apiReader == nil {
+		apiReader = c
+	}
+	return &Reconciler{client: c, apiReader: apiReader, log: log, http: http, ldap: ldap, now: now}
 }
 
 // Register wires the DexProviderCheck reconciler onto the manager.
@@ -75,7 +81,7 @@ func Register(mgr manager.Manager) error {
 	if err := AddToScheme(mgr.GetScheme()); err != nil {
 		return fmt.Errorf("add dexprovidercheck types: %w", err)
 	}
-	r := New(mgr.GetClient(), mgr.GetLogger().WithName("dexprovidercheck"), nil, nil, nil)
+	r := New(mgr.GetClient(), mgr.GetAPIReader(), mgr.GetLogger().WithName("dexprovidercheck"), nil, nil, nil)
 	if err := r.SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("setup dexprovidercheck controller: %w", err)
 	}

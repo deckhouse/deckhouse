@@ -115,10 +115,10 @@ func (r *Reconciler) reconcilePassword(
 		if err := r.patchExistingPassword(ctx, existing, user.Name, email, groups); err != nil {
 			return passwordView{}, err
 		}
-		if err := r.stripExpiredAdminLock(ctx, existing, now, isRename); err != nil {
+		if err := r.stripExpiredAdminLock(ctx, existing, now); err != nil {
 			return passwordView{}, err
 		}
-		if stripped := annotationStripped(existing, now); stripped {
+		if stripped := shouldStripAdminLock(existing, now); stripped {
 			delete(existing.Annotations, lockedByAdministratorAnnot)
 			live = existing
 		}
@@ -148,7 +148,7 @@ func (r *Reconciler) passwordFromAPI(ctx context.Context, name, namespace string
 	return decodePassword(obj)
 }
 
-func annotationStripped(existing passwordView, now time.Time) bool {
+func shouldStripAdminLock(existing passwordView, now time.Time) bool {
 	lockActive := existing.LockedUntil != nil && existing.LockedUntil.After(now)
 	if lockActive {
 		return false
@@ -157,8 +157,8 @@ func annotationStripped(existing passwordView, now time.Time) bool {
 	return ok
 }
 
-func (r *Reconciler) stripExpiredAdminLock(ctx context.Context, existing passwordView, now time.Time, isRename bool) error {
-	if isRename || !annotationStripped(existing, now) {
+func (r *Reconciler) stripExpiredAdminLock(ctx context.Context, existing passwordView, now time.Time) error {
+	if !shouldStripAdminLock(existing, now) {
 		return nil
 	}
 	patch := map[string]any{
@@ -317,6 +317,7 @@ func (r *Reconciler) cleanupPasswords(ctx context.Context, reqName string, userF
 	if userFound {
 		expectedName = passwordName(user.Email)
 	}
+	var canonicalNames map[string]struct{}
 	for _, pw := range passwords {
 		if !isModuleManagedPassword(pw) {
 			continue
@@ -324,14 +325,46 @@ func (r *Reconciler) cleanupPasswords(ctx context.Context, reqName string, userF
 		if expectedName != "" && pw.Name == expectedName {
 			continue
 		}
-		if pw.Username != "" && pw.Username != reqName {
-			continue
+		if pw.Username != "" {
+			if pw.Username != reqName {
+				continue
+			}
+		} else {
+			if canonicalNames == nil {
+				var listErr error
+				canonicalNames, listErr = r.canonicalPasswordNames(ctx)
+				if listErr != nil {
+					return listErr
+				}
+			}
+			if _, ok := canonicalNames[pw.Name]; ok {
+				continue
+			}
 		}
 		if err := r.deletePassword(ctx, pw); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func (r *Reconciler) canonicalPasswordNames(ctx context.Context) (map[string]struct{}, error) {
+	list := controller.List(controller.UserGVK)
+	if err := r.client.List(ctx, list); err != nil {
+		return nil, fmt.Errorf("list users: %w", err)
+	}
+	out := make(map[string]struct{}, len(list.Items))
+	for i := range list.Items {
+		u, err := decodeUser(&list.Items[i])
+		if err != nil {
+			return nil, err
+		}
+		if u.Email == "" {
+			continue
+		}
+		out[passwordName(u.Email)] = struct{}{}
+	}
+	return out, nil
 }
 
 func (r *Reconciler) deletePassword(ctx context.Context, pw passwordView) error {

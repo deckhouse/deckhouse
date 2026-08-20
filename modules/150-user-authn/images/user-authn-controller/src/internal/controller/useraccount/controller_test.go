@@ -174,7 +174,7 @@ func TestReconcile_ExternalOnlyLDAPOrCrowd(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			connID := "conn-" + tt.providerType
-			sess := sessionUnstructured("sess-"+tt.providerType, map[string]any{
+			sess := sessionUnstructured(naming.OfflineTokenName("alice", connID), map[string]any{
 				"email":                          "alice@example.com",
 				"userID":                         "alice",
 				"connID":                         connID,
@@ -219,7 +219,7 @@ func TestReconcile_OfflineSessionsLocalConnIDIgnored(t *testing.T) {
 	t.Parallel()
 
 	now := time.Date(2026, 8, 13, 12, 0, 0, 0, time.UTC)
-	sess := sessionUnstructured("sess-local", map[string]any{
+	sess := sessionUnstructured(naming.OfflineTokenName("local-user", "local"), map[string]any{
 		"email":  "local@example.com",
 		"userID": "local-user",
 		"connID": "local",
@@ -318,6 +318,50 @@ func TestReconcile_SkipIfEqualDoesNotUpdate(t *testing.T) {
 	}
 	if ua.ResourceVersion != rv {
 		t.Errorf("resourceVersion changed from %q to %q", rv, ua.ResourceVersion)
+	}
+}
+
+func TestReconcile_ExternalDoesNotListPasswords(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 8, 13, 12, 0, 0, 0, time.UTC)
+	connID := "corp-ldap"
+	sessName := naming.OfflineTokenName("alice", connID)
+	sess := sessionUnstructured(sessName, map[string]any{
+		"email":  "alice@example.com",
+		"userID": "alice",
+		"connID": connID,
+	})
+	provider := providerUnstructured(connID, "LDAP")
+
+	var passwordLists atomic.Int32
+	scheme := newTestScheme(t)
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithRESTMapper(newTestMapper()).
+		WithStatusSubresource(&v1alpha1.UserAccount{}).
+		WithObjects(sess, provider).
+		WithInterceptorFuncs(interceptor.Funcs{
+			List: func(ctx context.Context, cl client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+				if u, ok := list.(*unstructured.UnstructuredList); ok && u.GetKind() == controller.PasswordGVK.Kind+"List" {
+					passwordLists.Add(1)
+				}
+				return cl.List(ctx, list, opts...)
+			},
+		}).
+		Build()
+
+	r := New(c, logr.Discard(), func() time.Time { return now })
+	name := naming.ExternalName(connID, "alice")
+	if _, err := r.Reconcile(t.Context(), reconcile.Request{NamespacedName: types.NamespacedName{Name: name}}); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	if passwordLists.Load() != 0 {
+		t.Fatalf("password lists = %d, want 0 for an external account name", passwordLists.Load())
+	}
+	var ua v1alpha1.UserAccount
+	if err := r.client.Get(t.Context(), types.NamespacedName{Name: name}, &ua); err != nil {
+		t.Fatalf("expected useraccount: %v", err)
 	}
 }
 

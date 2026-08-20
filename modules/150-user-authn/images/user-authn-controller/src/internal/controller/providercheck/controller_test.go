@@ -317,7 +317,7 @@ func newTestReconciler(t *testing.T, now time.Time, httpFake HTTPFactory, ldapFa
 		WithStatusSubresource(&DexProviderCheck{}).
 		WithObjects(objs...).
 		Build()
-	return New(c, logr.Discard(), httpFake, ldapFake, func() time.Time { return now })
+	return New(c, c, logr.Discard(), httpFake, ldapFake, func() time.Time { return now })
 }
 
 func newTestMapper() meta.RESTMapper {

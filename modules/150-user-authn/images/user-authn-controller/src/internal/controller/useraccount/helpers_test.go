@@ -173,6 +173,31 @@ func TestProjectHelpers(t *testing.T) {
 	}
 }
 
+func TestCouldBeLocalAccountNameAndSessionNameFromAccount(t *testing.T) {
+	t.Parallel()
+
+	if !couldBeLocalAccountName(naming.LocalName("jane@example.com")) {
+		t.Error("local-prefixed name should be local")
+	}
+	if !couldBeLocalAccountName(naming.ToFnvLikeDex("long-email")) {
+		t.Error("hash-only name can be a truncated local account")
+	}
+	if couldBeLocalAccountName(naming.ExternalName("corp-ldap", "alice")) {
+		t.Error("external name must not trigger password list fallback")
+	}
+
+	connID := "corp-ldap"
+	userID := "alice"
+	account := naming.ExternalName(connID, userID)
+	if got := sessionNameFromAccount(account); got != naming.OfflineTokenName(userID, connID) {
+		t.Errorf("sessionNameFromAccount(%q) = %q, want OfflineTokenName", account, got)
+	}
+	hash := naming.OfflineTokenName(userID, connID)
+	if got := sessionNameFromAccount(hash); got != hash {
+		t.Errorf("truncated account name = %q, want %q", got, hash)
+	}
+}
+
 func TestMapPasswordUserAndSession(t *testing.T) {
 	t.Parallel()
 

@@ -43,7 +43,6 @@ const (
 	lockReasonAdministrator   = "LockedByAdministrator"
 	lockMessagePasswordPolicy = "Locked due to too many failed login attempts"
 	lockMessageAdministrator  = "Locked by administrator"
-	namespaceRequeueAfter     = 10 * time.Second
 )
 
 type passwordView struct {

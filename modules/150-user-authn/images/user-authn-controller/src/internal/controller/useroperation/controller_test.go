@@ -93,8 +93,8 @@ func TestReconcile_LockLocal(t *testing.T) {
 				t.Errorf("lockedUntil = %q, want %q", until, tt.wantUntil.UTC().Format(time.RFC3339))
 			}
 			annots := got.GetAnnotations()
-			if _, ok := annots[lockedByAdministratorAnnot]; !ok {
-				t.Error("missing locked-by-administrator annotation")
+			if annots[lockedByAdministratorAnnot] != "true" {
+				t.Errorf("locked-by-administrator = %q, want true", annots[lockedByAdministratorAnnot])
 			}
 			assertPhase(t, r, "user-operation-01", "Succeeded", now)
 		})

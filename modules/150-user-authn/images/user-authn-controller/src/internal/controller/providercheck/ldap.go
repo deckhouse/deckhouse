@@ -110,7 +110,7 @@ func (r *Reconciler) checkLDAPKerberosKeytab(ctx context.Context, result *dexPro
 	}
 
 	secret := controller.Object(controller.SecretGVK)
-	err := r.client.Get(ctx, types.NamespacedName{
+	err := r.apiReader.Get(ctx, types.NamespacedName{
 		Namespace: naming.DexNamespace,
 		Name:      provider.Spec.LDAP.Kerberos.KeytabSecretName,
 	}, secret)

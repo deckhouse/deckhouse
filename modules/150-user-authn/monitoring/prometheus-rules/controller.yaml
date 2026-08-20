@@ -39,7 +39,12 @@
         ```
 
   - alert: D8UserAuthnControllerTargetDown
-    expr: sum(up{job="user-authn-controller", namespace="d8-user-authn"}) == 0
+    expr: |
+      (
+        sum(up{job="user-authn-controller", namespace="d8-user-authn"}) == 0
+        or
+        absent(up{job="user-authn-controller", namespace="d8-user-authn"})
+      )
     for: 5m
     labels:
       severity_level: "6"

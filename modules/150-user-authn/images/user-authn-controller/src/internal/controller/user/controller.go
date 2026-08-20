@@ -99,11 +99,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	now := r.now()
 
-	nsExists, err := r.namespaceExists(ctx)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
 	user, userFound, err := r.getUser(ctx, req.Name)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -111,25 +106,20 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	var lockRequeue time.Duration
 	if userFound {
-		lockRequeue, err = r.reconcileUser(ctx, user, nsExists, now)
+		lockRequeue, err = r.reconcileUser(ctx, user, now)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
 	}
 
-	if nsExists {
-		if err := r.cleanupPasswords(ctx, req.Name, userFound, user); err != nil {
-			return reconcile.Result{}, err
-		}
+	if err := r.cleanupPasswords(ctx, req.Name, userFound, user); err != nil {
+		return reconcile.Result{}, err
 	}
 
-	if userFound && !nsExists {
-		return reconcile.Result{RequeueAfter: namespaceRequeueAfter}, nil
-	}
 	return reconcile.Result{RequeueAfter: lockRequeue}, nil
 }
 
-func (r *Reconciler) reconcileUser(ctx context.Context, user userView, nsExists bool, now time.Time) (time.Duration, error) {
+func (r *Reconciler) reconcileUser(ctx context.Context, user userView, now time.Time) (time.Duration, error) {
 	if err := ctx.Err(); err != nil {
 		return 0, err
 	}
@@ -145,13 +135,10 @@ func (r *Reconciler) reconcileUser(ctx context.Context, user userView, nsExists 
 		expireAt = user.ExpireAt
 	}
 
-	var live passwordView
-	if nsExists {
-		email := strings.ToLower(user.Email)
-		live, err = r.reconcilePassword(ctx, user, email, groups, now)
-		if err != nil {
-			return 0, err
-		}
+	email := strings.ToLower(user.Email)
+	live, err := r.reconcilePassword(ctx, user, email, groups, now)
+	if err != nil {
+		return 0, err
 	}
 
 	lock := lockFromPassword(live, now)
@@ -163,18 +150,6 @@ func (r *Reconciler) reconcileUser(ctx context.Context, user userView, nsExists 
 		return 0, err
 	}
 	return controller.RequeueAfterTime(live.LockedUntil, now), nil
-}
-
-func (r *Reconciler) namespaceExists(ctx context.Context) (bool, error) {
-	ns := controller.Object(controller.NamespaceGVK)
-	err := r.client.Get(ctx, types.NamespacedName{Name: naming.DexNamespace}, ns)
-	if err == nil {
-		return true, nil
-	}
-	if apierrors.IsNotFound(err) {
-		return false, nil
-	}
-	return false, fmt.Errorf("get namespace %s: %w", naming.DexNamespace, err)
 }
 
 func (r *Reconciler) getUser(ctx context.Context, name string) (userView, bool, error) {

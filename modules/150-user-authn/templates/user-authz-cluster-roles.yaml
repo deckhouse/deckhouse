@@ -53,6 +53,7 @@ rules:
   - dexproviderchecks
   - dexproviders
   - useroperations
+  - useraccounts
   verbs:
   - get
   - list

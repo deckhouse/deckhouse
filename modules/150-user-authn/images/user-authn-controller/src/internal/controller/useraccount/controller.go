@@ -231,29 +231,22 @@ func (r *Reconciler) desiredLocal(ctx context.Context, name string, now time.Tim
 }
 
 func (r *Reconciler) desiredExternal(ctx context.Context, name string, now time.Time) (*desiredAccount, error) {
-	sessions, err := r.listSessions(ctx)
+	sess, ok, err := r.getSession(ctx, sessionNameFromAccount(name))
 	if err != nil {
 		return nil, err
 	}
-	providers, err := r.listProviders(ctx)
+	if !ok || !isExternalCandidate(sess) || naming.ExternalName(sess.ConnID, sess.UserID) != name {
+		return nil, nil
+	}
+	provider, ok, err := r.getProvider(ctx, sess.ConnID)
 	if err != nil {
 		return nil, err
 	}
-	for _, sess := range sessions {
-		if !isExternalCandidate(sess) {
-			continue
-		}
-		provider, ok := providers[sess.ConnID]
-		if !ok || !isLockableProvider(provider.Type) {
-			continue
-		}
-		if naming.ExternalName(sess.ConnID, sess.UserID) != name {
-			continue
-		}
-		desired := projectExternal(sess, provider.Type, now)
-		return &desired, nil
+	if !ok || !isLockableProvider(provider.Type) {
+		return nil, nil
 	}
-	return nil, nil
+	desired := projectExternal(sess, provider.Type, now)
+	return &desired, nil
 }
 
 func (r *Reconciler) passwordForLocalAccount(ctx context.Context, name string) (passwordView, bool, error) {
@@ -261,6 +254,12 @@ func (r *Reconciler) passwordForLocalAccount(ctx context.Context, name string) (
 		return passwordView{}, false, err
 	} else if ok && isProjectablePassword(pw) && naming.LocalName(localNameInput(pw.Email, pw.Username)) == name {
 		return pw, true, nil
+	}
+
+	// External account names are <connID>-<hash>. A full Password list here
+	// is O(N) JSON per reconcile and is only useful for local leftovers.
+	if !couldBeLocalAccountName(name) {
+		return passwordView{}, false, nil
 	}
 
 	passwords, err := r.listPasswords(ctx)
@@ -285,6 +284,59 @@ func passwordNameFromLocalAccount(accountName string) string {
 		return strings.TrimPrefix(accountName, prefix)
 	}
 	return accountName
+}
+
+func couldBeLocalAccountName(name string) bool {
+	prefix := naming.LocalConnectorID + "-"
+	if strings.HasPrefix(name, prefix) {
+		return true
+	}
+	// Truncated LocalName is the FNV hash alone (no dash).
+	return !strings.Contains(name, "-")
+}
+
+// sessionNameFromAccount is Dex OfflineTokenName: the hash suffix of
+// ExternalName, or the whole name when the prefix was truncated.
+func sessionNameFromAccount(accountName string) string {
+	if i := strings.LastIndex(accountName, "-"); i >= 0 && i+1 < len(accountName) {
+		return accountName[i+1:]
+	}
+	return accountName
+}
+
+func (r *Reconciler) getSession(ctx context.Context, name string) (sessionView, bool, error) {
+	obj := controller.Object(controller.OfflineSessionsGVK)
+	err := r.client.Get(ctx, types.NamespacedName{Name: name, Namespace: naming.DexNamespace}, obj)
+	if apierrors.IsNotFound(err) {
+		return sessionView{}, false, nil
+	}
+	if err != nil {
+		return sessionView{}, false, fmt.Errorf("get offlinesessions %s: %w", name, err)
+	}
+	sess, err := decodeSession(obj)
+	if err != nil {
+		return sessionView{}, false, err
+	}
+	return sess, true, nil
+}
+
+func (r *Reconciler) getProvider(ctx context.Context, name string) (providerView, bool, error) {
+	if name == "" {
+		return providerView{}, false, nil
+	}
+	obj := controller.Object(controller.DexProviderGVK)
+	err := r.client.Get(ctx, types.NamespacedName{Name: name}, obj)
+	if apierrors.IsNotFound(err) {
+		return providerView{}, false, nil
+	}
+	if err != nil {
+		return providerView{}, false, fmt.Errorf("get dexprovider %s: %w", name, err)
+	}
+	p, err := decodeProvider(obj)
+	if err != nil {
+		return providerView{}, false, err
+	}
+	return p, true, nil
 }
 
 func (r *Reconciler) getPassword(ctx context.Context, name string) (passwordView, bool, error) {
@@ -383,22 +435,6 @@ func (r *Reconciler) listUsers(ctx context.Context) ([]userView, error) {
 			return nil, err
 		}
 		out = append(out, u)
-	}
-	return out, nil
-}
-
-func (r *Reconciler) listProviders(ctx context.Context) (map[string]providerView, error) {
-	list := controller.List(controller.DexProviderGVK)
-	if err := r.client.List(ctx, list); err != nil {
-		return nil, fmt.Errorf("list dexproviders: %w", err)
-	}
-	out := make(map[string]providerView, len(list.Items))
-	for i := range list.Items {
-		p, err := decodeProvider(&list.Items[i])
-		if err != nil {
-			return nil, err
-		}
-		out[p.Name] = p
 	}
 	return out, nil
 }

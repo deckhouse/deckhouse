@@ -38,6 +38,7 @@ func TestStripDexSecretsRemovesFieldsWithoutMutatingInput(t *testing.T) {
 		"refresh":                        map[string]any{"tok": map[string]any{"ID": "1", "token": "secret-refresh"}},
 		"totp":                           "secret-totp",
 		"token":                          "secret-token",
+		"obsoleteToken":                  "secret-obsolete-token",
 		"incorrectPasswordLoginAttempts": int64(2),
 	}}
 

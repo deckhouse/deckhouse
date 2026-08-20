@@ -27,7 +27,7 @@ import (
 	"user-authn-controller/internal/naming"
 )
 
-var secretFields = []string{"hash", "previousHashes", "connectorData", "totp", "token"}
+var secretFields = []string{"hash", "previousHashes", "connectorData", "totp", "token", "obsoleteToken"}
 
 // SecretFields returns Dex credential keys stripped from the informer cache
 // and UserAccount. OfflineSessions.refresh is reduced to token IDs so Reset2FA

@@ -90,7 +90,7 @@ func (r *Reconciler) executeLock(ctx context.Context, op operation, now time.Tim
 		"lockedUntil": lockedUntil.UTC().Format(time.RFC3339),
 		"metadata": map[string]any{
 			"annotations": map[string]any{
-				lockedByAdministratorAnnot: "",
+				lockedByAdministratorAnnot: "true",
 			},
 		},
 	}); err != nil {

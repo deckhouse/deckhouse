@@ -370,27 +370,40 @@ func TestReconcile_ExpiredAdminAnnotationStrippedOnExisting(t *testing.T) {
 	}
 }
 
-func TestReconcile_MissingNamespaceSkipsPasswordMutations(t *testing.T) {
+func TestReconcile_NamelessCanonicalPasswordNotStolen(t *testing.T) {
 	t.Parallel()
 
 	now := time.Date(2026, 8, 13, 12, 0, 0, 0, time.UTC)
-	r := newTestReconciler(t, now, userObj(adminUserName, adminEmail, adminPassword, ""))
-	res, err := r.Reconcile(t.Context(), userReq(adminUserName))
-	if err != nil {
-		t.Fatalf("Reconcile: %v", err)
+	bobEmail := "bob@example.com"
+	bobName := "bob"
+	bobPWName := passwordName(bobEmail)
+	nameless := passwordObj(bobPWName, map[string]any{
+		"email":          bobEmail,
+		"hash":           liveHash,
+		"previousHashes": []any{"b2xkSGFzaA=="},
+	}, map[string]string{heritageLabel: heritageValue, moduleLabel: moduleValue, appLabel: appValue}, nil)
+
+	r := newTestReconciler(t, now,
+		userObj(adminUserName, adminEmail, adminPassword, ""),
+		userObj(bobName, bobEmail, adminPassword, ""),
+		nameless,
+	)
+	if _, err := r.Reconcile(t.Context(), userReq(adminUserName)); err != nil {
+		t.Fatalf("Reconcile admin: %v", err)
 	}
-	if res.RequeueAfter != namespaceRequeueAfter {
-		t.Errorf("RequeueAfter = %v, want %v", res.RequeueAfter, namespaceRequeueAfter)
+	if !passwordExists(t, r, bobPWName) {
+		t.Fatal("bob's nameless canonical password was deleted by admin reconcile")
 	}
-	if passwordExists(t, r, adminEncodedPW) {
-		t.Fatal("password created before namespace exists")
+
+	if _, err := r.Reconcile(t.Context(), userReq(bobName)); err != nil {
+		t.Fatalf("Reconcile bob: %v", err)
 	}
-	groups, found, err := unstructured.NestedStringSlice(getUser(t, r, adminUserName).Object, "status", "groups")
-	if err != nil {
-		t.Fatalf("status.groups: %v", err)
+	pw := getPassword(t, r, bobPWName)
+	if got := strField(pw, "hash"); got != liveHash {
+		t.Errorf("hash = %q, want live hash preserved", got)
 	}
-	if !found || len(groups) != 0 {
-		t.Errorf("status.groups = %v, want empty (status still patched)", groups)
+	if got := strField(pw, "username"); got != bobName {
+		t.Errorf("username = %q, want adopted %q", got, bobName)
 	}
 }
 
