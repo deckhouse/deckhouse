@@ -215,6 +215,10 @@ document.addEventListener('DOMContentLoaded', function() {
           wrapIcon.style.display = 'none';
           unwrapIcon.style.display = 'inline';
         }
+
+        setTimeout(() => {
+          wrapBtnTippy.hide();
+        }, 1000);
       });
 
       tippy(wrapIcon, {
