@@ -56,6 +56,15 @@ apiVersions:
               type: string
               minLength: 1
         description: List of storage policies
+      zoneComputeClusterPaths:
+        type: object
+        additionalProperties:
+          type: string
+        description: |
+          Zone tag name to absolute inventory path of the ClusterComputeResource it is
+          attached to (e.g. "e2e-zone-1" -> "/DatacenterLAB/host/stage-hypers"). Populated by
+          cloud-data-discoverer and consumed by the ensure_failure_domains hook to render an
+          absolute resourcePool.
       internalNetworkNames:
         description: List of cluster internal network names
         type: array
