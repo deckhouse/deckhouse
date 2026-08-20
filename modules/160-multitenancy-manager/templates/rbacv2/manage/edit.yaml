@@ -11,11 +11,15 @@ metadata:
     rbac.deckhouse.io/namespace: d8-multitenancy-manager
   name: d8:manage:permission:module:multitenancy-manager:edit
 rules:
+# ProjectTemplate is deliberately free-form: spec.resourcesTemplate is an arbitrary Helm template, and
+# the release it renders into is applied by the module's ServiceAccount, which is bound to cluster-admin.
+# Authoring one is therefore equivalent to holding cluster-admin, and is not granted here — it stays with
+# the legacy ClusterAdmin access level and kubeadm:cluster-admins, both of which can already write RBAC.
+# Reading templates stays in the view role, and creating a Project on an existing template stays here.
 - apiGroups:
   - deckhouse.io
   resources:
   - projects
-  - projecttemplates
   verbs:
   - create
   - update
