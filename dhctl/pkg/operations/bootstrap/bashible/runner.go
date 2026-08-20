@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os/exec"
+	"regexp"
 	"strings"
 	"time"
 
@@ -37,7 +38,47 @@ import (
 
 const (
 	endPipelineFileMark = app.NodeDeckhouseDirectoryPath + "/first-control-plane-bashible-ran"
+
+	// bundleStepsStatusDir must match STEPS_STATUS_DIR set up in bashible.sh.tpl.
+	bundleStepsStatusDir = "/var/lib/bashible/bundle_steps_status"
+
+	// bundleStepsDir must match BUNDLE_STEPS_DIR set up in bashible.sh.tpl.
+	bundleStepsDir = "/var/lib/bashible/bundle_steps"
+
+	// bundleStepsConflictFile must match BUNDLE_STEPS_CONFLICT_FILE set up in
+	// bashible.sh.tpl.
+	bundleStepsConflictFile = "/var/lib/bashible/bundle_steps_conflict"
+
+	stepsStatusPollInterval = 15 * time.Second
 )
+
+var (
+	stepsStatusNameRe     = regexp.MustCompile(`^[A-Za-z0-9_.-]+$`)
+	stepsStatusChecksumRe = regexp.MustCompile(`^[a-f0-9]{64}$`)
+)
+
+// ErrBashibleStepsConflict marks a bundle execution failure as caused by a
+// step whose content changed since it last completed successfully on this
+// node (see bb-run-step's checksum check in bashible.sh.tpl). Retrying the
+// whole bundle again would just hit the exact same mismatch every time, so
+// callers should stop instead of exhausting their retry budget on it.
+var ErrBashibleStepsConflict = errors.New("bashible bundle steps changed since a previous bootstrap attempt")
+
+func newStepsConflictError(steps []string) error {
+	return fmt.Errorf(
+		"%w: %s already completed on this node in a previous bootstrap attempt with different content.\n"+
+			"Resuming would re-run it against a node that already applied its old version, which is unsafe.\n"+
+			"Please run \"dhctl bootstrap-phase abort\" to clean up, then start a fresh bootstrap.",
+		ErrBashibleStepsConflict, strings.Join(steps, ", "),
+	)
+}
+
+// stepsConflictBreakPredicate stops the bundle-execution retry loop as soon
+// as it hits ErrBashibleStepsConflict: every other attempt would just fail
+// with the exact same unresolvable mismatch, so retrying is pure waste.
+func stepsConflictBreakPredicate(err error) bool {
+	return errors.Is(err, ErrBashibleStepsConflict)
+}
 
 var (
 	alreadyRunDefaultOpts      = retry.AttemptsWithWaitOpts(300, 1*time.Second)
@@ -173,6 +214,84 @@ type ExecuteBundleParams struct {
 	BundleDir     string
 	CommanderMode bool
 	GlobalOpts    *options.GlobalOptions
+
+	// OnStepsStatus, if set, is called with the currently known set of
+	// completed bashible bundle steps (name -> content checksum), both
+	// periodically while the bundle is executing and right after each
+	// execution attempt. It lets the caller persist progress so a later
+	// dhctl run can resume instead of re-running already-completed steps.
+	OnStepsStatus func(ctx context.Context, statuses map[string]string)
+}
+
+// FetchStepsStatus reads the bootstrap-only per-step completion markers
+// (name -> content checksum) that bb-run-step writes into bundleStepsStatusDir
+// on the node. Missing/empty directory is not an error, it just yields an
+// empty map.
+func (r *Runner) FetchStepsStatus(ctx context.Context) (map[string]string, error) {
+	cmd := r.nodeInterface.Command("sh", "-c", fmt.Sprintf(
+		`for f in %s/*; do [ -f "$f" ] && printf '%%s %%s\n' "$(basename "$f")" "$(cat "$f")"; done`,
+		bundleStepsStatusDir,
+	))
+	cmd.Sudo(ctx)
+	cmd.WithTimeout(10 * time.Second)
+
+	stdout, _, err := cmd.Output(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("fetch bashible bundle steps status: %w", err)
+	}
+
+	return parseStepsStatus(string(stdout)), nil
+}
+
+func parseStepsStatus(output string) map[string]string {
+	statuses := make(map[string]string)
+
+	for _, line := range strings.Split(output, "\n") {
+		fields := strings.Fields(line)
+		if len(fields) != 2 {
+			continue
+		}
+
+		name, checksum := fields[0], fields[1]
+		if !stepsStatusNameRe.MatchString(name) || !stepsStatusChecksumRe.MatchString(checksum) {
+			continue
+		}
+
+		statuses[name] = checksum
+	}
+
+	return statuses
+}
+
+// PushStepsStatus seeds bundleStepsStatusDir on the node with previously
+// remembered (name -> content checksum) markers before bashible.sh runs, so a
+// resumed bootstrap can skip steps that already succeeded with identical
+// content, even if the node was recreated since the markers were recorded.
+func (r *Runner) PushStepsStatus(ctx context.Context, statuses map[string]string) error {
+	if len(statuses) == 0 {
+		return nil
+	}
+
+	var b strings.Builder
+	fmt.Fprintf(&b, "mkdir -p %s", bundleStepsStatusDir)
+
+	for name, checksum := range statuses {
+		if !stepsStatusNameRe.MatchString(name) || !stepsStatusChecksumRe.MatchString(checksum) {
+			return fmt.Errorf("invalid bashible step status entry: name=%q checksum=%q", name, checksum)
+		}
+
+		fmt.Fprintf(&b, " && printf '%%s' '%s' > '%s/%s'", checksum, bundleStepsStatusDir, name)
+	}
+
+	cmd := r.nodeInterface.Command("sh", "-c", b.String())
+	cmd.Sudo(ctx)
+	cmd.WithTimeout(30 * time.Second)
+
+	if err := cmd.Run(ctx); err != nil {
+		return fmt.Errorf("push bashible bundle steps status: %w", err)
+	}
+
+	return nil
 }
 
 func (r *Runner) ExecuteBundle(ctx context.Context, params ExecuteBundleParams) error {
@@ -215,6 +334,7 @@ func (r *Runner) ExecuteBundle(ctx context.Context, params ExecuteBundleParams) 
 	}
 
 	return retry.NewLoopWithParams(loopParams).
+		BreakIf(stepsConflictBreakPredicate).
 		RunContext(ctx, func() error {
 			// we do not need to restart tunnel because we have HealthMonitor
 			logger := r.logger
@@ -242,6 +362,20 @@ func (r *Runner) attemptExecuteBundle(
 	// we need this, due to not create relay in every attempt, but we need to correct hook data from bashible
 	spanUpdater(span)
 
+	stopStepsStatusPolling := r.startStepsStatusPolling(ctx, params.OnStepsStatus)
+	defer stopStepsStatusPolling()
+
+	// The uploaded tar is only ever extracted on top of whatever is already
+	// on the node ("tar x" adds/overwrites, it never deletes) and bashible.sh
+	// itself only clears this directory on the non-local (converge) path.
+	// Without this, a step removed from the current build (e.g. renamed,
+	// deleted, or reordered) keeps lingering in bundle_steps and keeps
+	// getting executed on every future attempt, forever out of sync with
+	// what dhctl actually built.
+	if err := r.clearBundleStepsDir(ctx); err != nil {
+		return err
+	}
+
 	bundleCmd := r.nodeInterface.UploadScript("bashible.sh", "--local")
 	bundleCmd.WithCleanupAfterExec(false)
 	bundleCmd.Sudo()
@@ -249,7 +383,14 @@ func (r *Runner) attemptExecuteBundle(
 	bundleDir := "bashible"
 
 	_, err := bundleCmd.ExecuteBundle(ctx, parentDir, bundleDir)
+
+	r.reportStepsStatus(ctx, params.OnStepsStatus)
+
 	if err != nil {
+		if conflictedSteps, cErr := r.checkStepsConflict(ctx); cErr == nil && len(conflictedSteps) > 0 {
+			return newStepsConflictError(conflictedSteps)
+		}
+
 		if ee, ok := errors.AsType[*exec.ExitError](err); ok {
 			return fmt.Errorf("bundle '%s' error: %w\nstderr: %s", bundleDir, err, string(ee.Stderr))
 		}
@@ -257,6 +398,99 @@ func (r *Runner) attemptExecuteBundle(
 		return fmt.Errorf("bundle '%s' error: %w", bundleDir, err)
 	}
 	return nil
+}
+
+// clearBundleStepsDir removes any step files left over from a previous
+// bundle upload, so the directory ends up containing exactly what the
+// current build produced once the fresh tar is extracted on top of it. It
+// also clears any leftover steps-conflict marker, so a conflict resolved
+// since the last attempt (e.g. a fresh node) isn't reported again.
+func (r *Runner) clearBundleStepsDir(ctx context.Context) error {
+	cmd := r.nodeInterface.Command("rm", "-rf", bundleStepsDir, bundleStepsConflictFile)
+	cmd.Sudo(ctx)
+	cmd.WithTimeout(10 * time.Second)
+
+	if err := cmd.Run(ctx); err != nil {
+		return fmt.Errorf("clear bundle steps dir: %w", err)
+	}
+
+	return nil
+}
+
+// checkStepsConflict reads the marker bb-run-step writes when it detects a
+// step's content changed since it last completed successfully on this node
+// (a checksum mismatch against bundle_steps_status). A missing/empty marker
+// is not an error, it just means no conflict was hit.
+func (r *Runner) checkStepsConflict(ctx context.Context) ([]string, error) {
+	cmd := r.nodeInterface.Command("sh", "-c", fmt.Sprintf("cat %s 2>/dev/null || true", bundleStepsConflictFile))
+	cmd.Sudo(ctx)
+	cmd.WithTimeout(10 * time.Second)
+
+	stdout, _, err := cmd.Output(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("check bashible bundle steps conflict: %w", err)
+	}
+
+	var steps []string
+	for _, line := range strings.Split(string(stdout), "\n") {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			steps = append(steps, line)
+		}
+	}
+
+	return steps, nil
+}
+
+// startStepsStatusPolling periodically reports the node's current steps
+// status while a (potentially very long, since a single step retries
+// indefinitely without MAX_RETRIES) bundle execution attempt is in flight, so
+// progress isn't lost if dhctl is interrupted mid-attempt. The returned func
+// stops the polling and must be called once the attempt finishes.
+func (r *Runner) startStepsStatusPolling(ctx context.Context, onStatus func(context.Context, map[string]string)) func() {
+	if onStatus == nil {
+		return func() {}
+	}
+
+	done := make(chan struct{})
+
+	go func() {
+		ticker := time.NewTicker(stepsStatusPollInterval)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-done:
+				return
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				r.reportStepsStatus(ctx, onStatus)
+			}
+		}
+	}()
+
+	return func() {
+		close(done)
+	}
+}
+
+func (r *Runner) reportStepsStatus(ctx context.Context, onStatus func(context.Context, map[string]string)) {
+	if onStatus == nil {
+		return
+	}
+
+	statuses, err := r.FetchStepsStatus(ctx)
+	if err != nil {
+		r.logger.DebugContext(ctx, fmt.Sprintf("failed to fetch bashible bundle steps status: %v", err))
+		return
+	}
+
+	if len(statuses) == 0 {
+		return
+	}
+
+	onStatus(ctx, statuses)
 }
 
 func (r *Runner) cleanupPreviousBashibleIfNeed(ctx context.Context) error {
