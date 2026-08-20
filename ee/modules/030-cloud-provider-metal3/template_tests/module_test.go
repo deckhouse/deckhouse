@@ -114,7 +114,7 @@ dhcp:
 enabled: true
 targetNamespace: d8-cloud-instance-manager
 defaultOnline: true
-defaultAutomatedCleaningMode: disabled
+defaultDisableAutomatedCleaning: true
 `)
 			f.HelmRender()
 		})
@@ -164,7 +164,7 @@ defaultAutomatedCleaningMode: disabled
 			instanceManagerArgs := instanceManager.Field("spec.template.spec.containers.0.args").String()
 			Expect(instanceManagerArgs).To(ContainSubstring("--target-namespace=d8-cloud-instance-manager"))
 			Expect(instanceManagerArgs).To(ContainSubstring("--default-online=true"))
-			Expect(instanceManagerArgs).To(ContainSubstring("--default-automated-cleaning-mode=disabled"))
+			Expect(instanceManagerArgs).To(ContainSubstring("--default-disable-automated-cleaning=true"))
 
 			bmoWebhook := f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "baremetal-operator-validating-webhook-configuration")
 			Expect(bmoWebhook.Exists()).To(BeTrue())

@@ -70,19 +70,19 @@ var (
 type reconciler struct {
 	client.Client
 
-	targetNamespace              string
-	defaultOnline                bool
-	defaultAutomatedCleaningMode string
+	targetNamespace                 string
+	defaultOnline                   bool
+	defaultDisableAutomatedCleaning bool
 }
 
 func main() {
 	var targetNamespace string
 	var defaultOnline bool
-	var defaultAutomatedCleaningMode string
+	var defaultDisableAutomatedCleaning bool
 
 	flag.StringVar(&targetNamespace, "target-namespace", "d8-cloud-instance-manager", "namespace where generated BareMetalHost resources are created")
 	flag.BoolVar(&defaultOnline, "default-online", true, "default BareMetalHost online value")
-	flag.StringVar(&defaultAutomatedCleaningMode, "default-automated-cleaning-mode", "disabled", "default BareMetalHost automatedCleaningMode value")
+	flag.BoolVar(&defaultDisableAutomatedCleaning, "default-disable-automated-cleaning", false, "default value for disabling BareMetalHost automated cleaning")
 	flag.Parse()
 
 	zapLogger, err := zap.NewProduction()
@@ -112,10 +112,10 @@ func main() {
 	bmh.SetGroupVersionKind(bareMetalHostGVK)
 
 	r := &reconciler{
-		Client:                       mgr.GetClient(),
-		targetNamespace:              targetNamespace,
-		defaultOnline:                defaultOnline,
-		defaultAutomatedCleaningMode: defaultAutomatedCleaningMode,
+		Client:                          mgr.GetClient(),
+		targetNamespace:                 targetNamespace,
+		defaultOnline:                   defaultOnline,
+		defaultDisableAutomatedCleaning: defaultDisableAutomatedCleaning,
 	}
 
 	if err := ctrl.NewControllerManagedBy(mgr).
@@ -207,7 +207,7 @@ type instanceSpec struct {
 	Pool                            string
 	Online                          bool
 	BootMACAddress                  string
-	AutomatedCleaningMode           string
+	DisableAutomatedCleaning        bool
 	BMCAddress                      string
 	BMCCredentialsName              string
 	BMCDisableCertificateValidation bool
@@ -215,8 +215,8 @@ type instanceSpec struct {
 
 func (r *reconciler) readSpec(instance *unstructured.Unstructured) (instanceSpec, error) {
 	spec := instanceSpec{
-		Online:                r.defaultOnline,
-		AutomatedCleaningMode: r.defaultAutomatedCleaningMode,
+		Online:                   r.defaultOnline,
+		DisableAutomatedCleaning: r.defaultDisableAutomatedCleaning,
 	}
 
 	if pool, ok, _ := unstructured.NestedString(instance.Object, "spec", "pool"); ok {
@@ -225,8 +225,8 @@ func (r *reconciler) readSpec(instance *unstructured.Unstructured) (instanceSpec
 	if online, ok, _ := unstructured.NestedBool(instance.Object, "spec", "online"); ok {
 		spec.Online = online
 	}
-	if mode, ok, _ := unstructured.NestedString(instance.Object, "spec", "automatedCleaningMode"); ok {
-		spec.AutomatedCleaningMode = mode
+	if disableCleaning, ok, _ := unstructured.NestedBool(instance.Object, "spec", "disableAutomatedCleaning"); ok {
+		spec.DisableAutomatedCleaning = disableCleaning
 	}
 	if mac, ok, _ := unstructured.NestedString(instance.Object, "spec", "bootMACAddress"); ok {
 		spec.BootMACAddress = strings.ToLower(mac)
@@ -312,7 +312,7 @@ func (r *reconciler) ensureCredentialSecret(ctx context.Context, instance *unstr
 func (r *reconciler) ensureBareMetalHost(ctx context.Context, instance *unstructured.Unstructured, spec instanceSpec) (*unstructured.Unstructured, error) {
 	desired := map[string]interface{}{
 		"online":                spec.Online,
-		"automatedCleaningMode": spec.AutomatedCleaningMode,
+		"automatedCleaningMode": automatedCleaningMode(spec.DisableAutomatedCleaning),
 		"bmc": map[string]interface{}{
 			"address":         spec.BMCAddress,
 			"credentialsName": r.generatedSecretName(instance),
@@ -383,7 +383,7 @@ func updateBareMetalHostSpec(bmh *unstructured.Unstructured, spec instanceSpec, 
 		updated = true
 	}
 
-	if changed, err := setNestedString(bmh, spec.AutomatedCleaningMode, "spec", "automatedCleaningMode"); err != nil {
+	if changed, err := setNestedString(bmh, automatedCleaningMode(spec.DisableAutomatedCleaning), "spec", "automatedCleaningMode"); err != nil {
 		return false, err
 	} else if changed {
 		updated = true
@@ -419,6 +419,13 @@ func updateBareMetalHostSpec(bmh *unstructured.Unstructured, spec instanceSpec, 
 	}
 
 	return updated, nil
+}
+
+func automatedCleaningMode(disable bool) string {
+	if disable {
+		return "disabled"
+	}
+	return "metadata"
 }
 
 func setNestedString(obj *unstructured.Unstructured, value string, fields ...string) (bool, error) {

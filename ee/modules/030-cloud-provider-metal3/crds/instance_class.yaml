@@ -107,12 +107,9 @@ spec:
                           type: array
                           items:
                             type: string
-              automatedCleaningMode:
-                type: string
-                description: Ironic automated cleaning mode for claimed BareMetalHosts.
-                enum:
-                - metadata
-                - disabled
+              disableAutomatedCleaning:
+                type: boolean
+                description: Disables Ironic automated cleaning for claimed BareMetalHosts. By default metadata cleaning is enabled.
               nodeReuse:
                 type: boolean
                 description: Enables CAPM3 host reuse during upgrades.
@@ -229,12 +226,9 @@ spec:
                           type: array
                           items:
                             type: string
-              automatedCleaningMode:
-                type: string
-                description: Ironic automated cleaning mode for claimed BareMetalHosts.
-                enum:
-                - metadata
-                - disabled
+              disableAutomatedCleaning:
+                type: boolean
+                description: Disables Ironic automated cleaning for claimed BareMetalHosts. By default metadata cleaning is enabled.
               nodeReuse:
                 type: boolean
                 description: Enables CAPM3 host reuse during upgrades.
