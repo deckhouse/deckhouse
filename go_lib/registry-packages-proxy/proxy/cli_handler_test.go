@@ -125,6 +125,8 @@ type fakeCLIRegistryClient struct {
 	layerDigest         string
 	// rawManifests maps "path:ref" -> raw manifest bytes for GetRawManifest.
 	rawManifests map[string]string
+	// repos records cfg.Repository of every call, in order.
+	repos []string
 
 	getPackageCalls int32
 	listTagsCalls   int32
@@ -137,7 +139,23 @@ type fakeCLIRegistryClient struct {
 	manifestErr   error
 }
 
-func (f *fakeCLIRegistryClient) ListTags(_ context.Context, _ pkgLog.Logger, _ *registry.ClientConfig, path string) ([]string, error) {
+func (f *fakeCLIRegistryClient) recordRepo(cfg *registry.ClientConfig) {
+	if cfg == nil {
+		return
+	}
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.repos = append(f.repos, cfg.Repository)
+}
+
+func (f *fakeCLIRegistryClient) seenRepos() []string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return append([]string(nil), f.repos...)
+}
+
+func (f *fakeCLIRegistryClient) ListTags(_ context.Context, _ pkgLog.Logger, cfg *registry.ClientConfig, path string) ([]string, error) {
+	f.recordRepo(cfg)
 	atomic.AddInt32(&f.listTagsCalls, 1)
 	if f.listTagsErr != nil {
 		return nil, f.listTagsErr
@@ -151,7 +169,8 @@ func (f *fakeCLIRegistryClient) ListTags(_ context.Context, _ pkgLog.Logger, _ *
 	return tags, nil
 }
 
-func (f *fakeCLIRegistryClient) ResolveTag(_ context.Context, _ pkgLog.Logger, _ *registry.ClientConfig, path, tag string, platform *v1.Platform) (string, error) {
+func (f *fakeCLIRegistryClient) ResolveTag(_ context.Context, _ pkgLog.Logger, cfg *registry.ClientConfig, path, tag string, platform *v1.Platform) (string, error) {
+	f.recordRepo(cfg)
 	atomic.AddInt32(&f.resolveTagCalls, 1)
 	if f.resolveTagErr != nil {
 		return "", f.resolveTagErr
@@ -171,7 +190,8 @@ func (f *fakeCLIRegistryClient) ResolveTag(_ context.Context, _ pkgLog.Logger, _
 	return d, nil
 }
 
-func (f *fakeCLIRegistryClient) GetPackage(_ context.Context, _ pkgLog.Logger, _ *registry.ClientConfig, _ string, _ string) (int64, string, io.ReadCloser, error) {
+func (f *fakeCLIRegistryClient) GetPackage(_ context.Context, _ pkgLog.Logger, cfg *registry.ClientConfig, _ string, _ string) (int64, string, io.ReadCloser, error) {
+	f.recordRepo(cfg)
 	atomic.AddInt32(&f.getPackageCalls, 1)
 	if f.getPackageErr != nil {
 		return 0, "", nil, f.getPackageErr
@@ -179,7 +199,8 @@ func (f *fakeCLIRegistryClient) GetPackage(_ context.Context, _ pkgLog.Logger, _
 	return int64(len(f.packageBody)), f.layerDigest, io.NopCloser(bytes.NewReader(f.packageBody)), nil
 }
 
-func (f *fakeCLIRegistryClient) GetRawManifest(_ context.Context, _ pkgLog.Logger, _ *registry.ClientConfig, path, ref string) ([]byte, string, error) {
+func (f *fakeCLIRegistryClient) GetRawManifest(_ context.Context, _ pkgLog.Logger, cfg *registry.ClientConfig, path, ref string) ([]byte, string, error) {
+	f.recordRepo(cfg)
 	atomic.AddInt32(&f.manifestCalls, 1)
 	if f.manifestErr != nil {
 		return nil, "", f.manifestErr
@@ -553,4 +574,114 @@ func TestCLIHandler_GetManifest_NotFound(t *testing.T) {
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+}
+
+func TestCLIRegistryRepository(t *testing.T) {
+	t.Parallel()
+
+	cases := map[string]string{
+		// Edition repositories collapse to the shared root.
+		"registry.deckhouse.io/deckhouse/ee":            "registry.deckhouse.io/deckhouse",
+		"registry.deckhouse.io/deckhouse/ce":            "registry.deckhouse.io/deckhouse",
+		"registry.deckhouse.io/deckhouse/be":            "registry.deckhouse.io/deckhouse",
+		"registry.deckhouse.io/deckhouse/se":            "registry.deckhouse.io/deckhouse",
+		"registry.deckhouse.io/deckhouse/se-plus":       "registry.deckhouse.io/deckhouse",
+		"registry.deckhouse.io/deckhouse/fe/":           "registry.deckhouse.io/deckhouse",
+		"registry-cse.deckhouse.ru/deckhouse/cse":       "registry-cse.deckhouse.ru/deckhouse",
+		"registry.company.com:5000/mirror/deckhouse/ee": "registry.company.com:5000/mirror/deckhouse",
+		// Repositories without an edition segment are the root already.
+		"dev-registry.deckhouse.io/sys/deckhouse-oss": "dev-registry.deckhouse.io/sys/deckhouse-oss",
+		"registry.company.com/deckhouse":              "registry.company.com/deckhouse",
+		"registry.company.com/ee-mirror":              "registry.company.com/ee-mirror",
+		"registry.company.com/deckhouse/EE":           "registry.company.com/deckhouse/EE",
+		"registry.local:5000":                         "registry.local:5000",
+	}
+
+	for in, want := range cases {
+		in, want := in, want
+		t.Run(in, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, want, cliRegistryRepository(in))
+		})
+	}
+}
+
+// TestCLIHandler_ResolvesArtifactsAtRegistryRoot: every /v1/images/* route
+// reads from the registry root above the cluster's edition repository, for
+// both deckhouse-cli and its plugins.
+func TestCLIHandler_ResolvesArtifactsAtRegistryRoot(t *testing.T) {
+	fake := &fakeCLIRegistryClient{
+		tags: map[string][]string{
+			"deckhouse-cli":             {"v1.0.0"},
+			"deckhouse-cli/plugins/foo": {"v0.1.0"},
+		},
+		tagToManifestDigest: map[string]string{
+			"deckhouse-cli/plugins/foo:v0.1.0": "sha256:feedface",
+		},
+		rawManifests: map[string]string{
+			"deckhouse-cli/plugins/foo:v0.1.0": `{"schemaVersion":2}`,
+		},
+		packageBody: []byte("plugin-binary"),
+		layerDigest: "abc123",
+	}
+	getter := &fakeCLIGetter{cfg: &registry.ClientConfig{
+		Repository: "registry.deckhouse.io/deckhouse/ee",
+		Scheme:     "https",
+		Auth:       "bGljZW5zZS10b2tlbjpzZWNyZXQ=",
+	}}
+	p := newTestProxy(t, fake, getter, nil)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc(cliImagesPathPrefix, p.CLIHandler())
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	for _, urlPath := range []string{
+		"/v1/images/deckhouse-cli/tags",
+		"/v1/images/deckhouse-cli/plugins/foo/tags",
+		"/v1/images/deckhouse-cli/plugins/foo/manifests/v0.1.0",
+		"/v1/images/deckhouse-cli/plugins/foo/images/v0.1.0",
+	} {
+		resp, err := http.Get(srv.URL + urlPath)
+		require.NoError(t, err, urlPath)
+		_, _ = io.Copy(io.Discard, resp.Body)
+		_ = resp.Body.Close()
+		assert.Equal(t, http.StatusOK, resp.StatusCode, urlPath)
+	}
+
+	repos := fake.seenRepos()
+	// tags, tags, manifest, resolve + pull: five registry calls.
+	require.Len(t, repos, 5)
+	for _, repo := range repos {
+		assert.Equal(t, "registry.deckhouse.io/deckhouse", repo, "edition segment must be dropped for CLI artifacts")
+	}
+	// The rest of the registry config travels unchanged.
+	cfg, err := getter.Get(registry.DefaultRepository)
+	require.NoError(t, err)
+	assert.Equal(t, "registry.deckhouse.io/deckhouse/ee", cfg.Repository, "the getter-owned config must not be mutated")
+}
+
+// TestCLIHandler_KeepsRepositoryWithoutEdition: a cluster repository with no
+// edition segment (dev registries, air-gapped mirrors) is used as is.
+func TestCLIHandler_KeepsRepositoryWithoutEdition(t *testing.T) {
+	fake := &fakeCLIRegistryClient{
+		tags: map[string][]string{"deckhouse-cli/plugins/foo": {"v0.1.0"}},
+	}
+	getter := &fakeCLIGetter{cfg: &registry.ClientConfig{
+		Repository: "dev-registry.deckhouse.io/sys/deckhouse-oss",
+		Scheme:     "https",
+	}}
+	p := newTestProxy(t, fake, getter, nil)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc(cliImagesPathPrefix, p.CLIHandler())
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	resp, err := http.Get(srv.URL + "/v1/images/deckhouse-cli/plugins/foo/tags")
+	require.NoError(t, err)
+	_ = resp.Body.Close()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	assert.Equal(t, []string{"dev-registry.deckhouse.io/sys/deckhouse-oss"}, fake.seenRepos())
 }

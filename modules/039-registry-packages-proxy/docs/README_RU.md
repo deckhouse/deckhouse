@@ -100,6 +100,8 @@ Content-Disposition: attachment; filename="<ИМЯ-ПАКЕТА>.svg"
 - `deckhouse-cli`;
 - `deckhouse-cli/plugins/<PLUGIN>`, где `<PLUGIN>` — один сегмент пути.
 
+Артефакты Deckhouse CLI публикуются один раз для всех редакций: в корне реестра, на уровень выше репозитория редакции кластера. Прокси берёт репозиторий из секрета `d8-system/deckhouse-registry` и отбрасывает завершающий сегмент редакции (`ce`, `be`, `se`, `se-plus`, `ee`, `fe`, `cse`). Например, для кластера с репозиторием `registry.deckhouse.io/deckhouse/ee` образы читаются из `registry.deckhouse.io/deckhouse/deckhouse-cli` и `registry.deckhouse.io/deckhouse/deckhouse-cli/plugins/<PLUGIN>`. Репозиторий без сегмента редакции используется как есть. Учётные данные в обоих случаях берутся из того же секрета.
+
 Эндпоинт `/v1/images/<IMAGE>/images/<VERSION>` принимает необязательный параметр запроса `platform=<OS>-<ARCH>` и выбирает соответствующий дочерний манифест из мультиплатформенного индекса. Если параметр не указан, используется платформа `linux/amd64`.
 
 Пример запроса списка тегов Deckhouse CLI:

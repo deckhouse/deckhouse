@@ -100,6 +100,8 @@ Allowed `<IMAGE>` values:
 - `deckhouse-cli`
 - `deckhouse-cli/plugins/<PLUGIN>`, where `<PLUGIN>` is a single path segment
 
+Deckhouse CLI artifacts are published once for all editions, at the registry root one level above the cluster's edition repository. The proxy takes the repository from the `d8-system/deckhouse-registry` secret and drops the trailing edition segment (`ce`, `be`, `se`, `se-plus`, `ee`, `fe`, `cse`). For example, a cluster with the `registry.deckhouse.io/deckhouse/ee` repository reads the images from `registry.deckhouse.io/deckhouse/deckhouse-cli` and `registry.deckhouse.io/deckhouse/deckhouse-cli/plugins/<PLUGIN>`. A repository without an edition segment is used as is. The credentials come from the same secret in both cases.
+
 The `/v1/images/<IMAGE>/images/<VERSION>` endpoint accepts an optional `platform=<OS>-<ARCH>` query parameter and picks the matching child manifest from a multi-platform index. If the parameter isn't set, the `linux/amd64` platform is used.
 
 The following is an example of a query for a list of Deckhouse CLI tags:
