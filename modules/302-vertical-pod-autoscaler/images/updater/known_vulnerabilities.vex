@@ -1,0 +1,37 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "merged-vex-642feb22aa75cdfead8050beea783a62233df9ea5f46ff497abd7fa75a06a621",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56852"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/text"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость затрагивает итератор golang.org/x/text/unicode/norm.Iter: при обходе входных данных с некорректными UTF-8-последовательностями он может зациклиться. В бинарнике updater пакет unicode/norm присутствует, но его единственный потребитель — golang.org/x/net/idna, который вызывает только API формы нормализации: norm.NFC.String, norm.NFC.Bytes, norm.NFC.QuickSpan и norm.NFC.IsNormalString. Тип norm.Iter не используется ни одним пакетом из графа зависимостей (проверено go list -deps для pkg/updater на vertical-pod-autoscaler-1.7.0 с наложенными патчами модуля), а внутри самого пакета norm он изолирован в iter.go и не вызывается из normalize.go. Воспроизводящий пример из upstream-теста исправления на x/text v0.37.0 зацикливает только norm.Iter, тогда как все перечисленные методы Form возвращаются штатно. Уязвимый код недостижим.",
+      "timestamp": "2026-08-20T13:56:41.128395Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46600"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость находится в пакете golang.org/x/net/dns/dnsmessage — паника при разборе некорректных SVCB/HTTPS-записей, когда размер значения параметра выходит за границы буфера сообщения. В графе пакетов updater этот пакет отсутствует: из модуля golang.org/x/net v0.55.0 в сборку попадают только idna, http/httpguts, http2, http2/hpack, internal/httpcommon и internal/httpsfv (проверено go list -deps для pkg/updater на vertical-pod-autoscaler-1.7.0 с наложенными патчами модуля). Разбор DNS выполняет штатный резолвер Go через собственную vendored-копию dnsmessage в составе стандартной библиотеки — это отдельный продукт (stdlib), который обновляется бампом Go toolchain в рамках планового апгрейда базовых образов, а не зависимостями данного модуля. Уязвимый код из golang.org/x/net в сборку не входит.",
+      "timestamp": "2026-08-20T14:01:18.94702Z"
+    }
+  ],
+  "timestamp": "2026-08-20T14:02:03Z"
+}
