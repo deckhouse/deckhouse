@@ -136,8 +136,16 @@ negative:
       unmanaged:
         imagesRepo: registry.deckhouse.io/test
 
-  # A hostname is a DNS name. The policies compare lowercase, so a value that is not one would be
-  # reserved and never match anything.
+  # additionalHosts admits one spelling of a hostname, the lowercase one the policies compare
+  # against. The template lowercases the value anyway, so this is normalisation at the API boundary
+  # and not a correctness guard: what it buys is that the ModuleConfig an operator reads and the
+  # hosts key of the d8-reserved-public-hosts ConfigMap say the same thing.
+  #
+  # Nothing else is bounded on purpose. A single label with no dot is a hostname an Ingress may
+  # claim, so reserving one is meaningful; a label over 63 characters or a name over 253 is one no
+  # API server accepts on the claiming side, so an entry like that reserves nothing that can exist
+  # and costs nothing to admit -- while a maxLength here would reject a ModuleConfig that harms
+  # nobody, at upgrade time.
   - reservedPublicHosts:
       additionalHosts: ["Admin.Example.Com"]
   - reservedPublicHosts:
