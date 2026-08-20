@@ -182,8 +182,9 @@ rules:
   - ""
   resources:
   - secrets
+  resourceNames:
+  - capi-user-credentials
   verbs:
-  - delete
   - patch
   - update
 ---
