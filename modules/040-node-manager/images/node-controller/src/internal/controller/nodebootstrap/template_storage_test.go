@@ -25,7 +25,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/ptr"
@@ -96,6 +99,84 @@ func TestNodeConfigTemplateIsNotServedForACloudGroup(t *testing.T) {
 	require.True(t, apierrors.IsNotFound(err), "expected NotFound, got %v", err)
 }
 
+// Every template carries a live bootstrap token and the registry credential of
+// its group, and each one costs a full render. A client that asked for one group
+// must be given that group and nothing else.
+func TestNodeConfigTemplateListHonoursTheRequest(t *testing.T) {
+	// Only the first group has a token, so rendering the second one fails: an
+	// answer without an error is proof the second was never rendered.
+	cluster := templateCluster(t,
+		immutableStaticNodeGroup("aaa-wanted"),
+		immutableStaticNodeGroup("zzz-other"),
+		bootstrapTokenSecret("aaa-wanted"),
+	)
+
+	tests := []struct {
+		name    string
+		options metainternalversion.ListOptions
+		exp     []string
+	}{
+		{
+			name:    "a name selector answers for that group alone",
+			options: metainternalversion.ListOptions{FieldSelector: fields.OneTermEqualSelector("metadata.name", "aaa-wanted")},
+			exp:     []string{"aaa-wanted"},
+		},
+		{
+			name:    "a label selector matches nothing: a template carries no labels",
+			options: metainternalversion.ListOptions{LabelSelector: labels.SelectorFromSet(labels.Set{"x": "y"})},
+			exp:     []string{},
+		},
+		{
+			name:    "a limit is not exceeded",
+			options: metainternalversion.ListOptions{Limit: 1},
+			exp:     []string{"aaa-wanted"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			object, err := NewTemplateStorage(cluster).List(t.Context(), &tt.options)
+			require.NoError(t, err)
+
+			list, ok := object.(*templatesv1alpha1.NodeConfigTemplateList)
+			require.True(t, ok, "storage returned %T", object)
+
+			names := make([]string, 0, len(list.Items))
+			for _, item := range list.Items {
+				names = append(names, item.Name)
+			}
+			require.Equal(t, tt.exp, names, "the answer must hold exactly the templates that were asked for")
+		})
+	}
+}
+
+// A field this storage cannot filter on must be refused, not silently ignored:
+// ignoring it answers with every group's joinable credentials.
+func TestNodeConfigTemplateListRefusesAFieldItCannotFilterOn(t *testing.T) {
+	storage := NewTemplateStorage(templateCluster(t,
+		immutableStaticNodeGroup(testTemplateNodeGroup),
+		bootstrapTokenSecret(testTemplateNodeGroup),
+	))
+
+	_, err := storage.List(t.Context(), &metainternalversion.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector("spec.nodeName", "worker-0"),
+	})
+	require.True(t, apierrors.IsBadRequest(err), "expected BadRequest, got %v", err)
+}
+
+// A group whose token has not been issued yet is a state the cluster leaves on
+// its own. Answering 500 tells the operator their request was broken; a client
+// can act on "not yet".
+func TestNodeConfigTemplateIsUnavailableWithoutAToken(t *testing.T) {
+	storage := NewTemplateStorage(templateCluster(t, immutableStaticNodeGroup(testTemplateNodeGroup)))
+
+	_, err := storage.Get(t.Context(), testTemplateNodeGroup, &metav1.GetOptions{})
+	require.True(t, apierrors.IsServiceUnavailable(err), "expected ServiceUnavailable, got %v", err)
+
+	_, err = storage.List(t.Context(), &metainternalversion.ListOptions{})
+	require.True(t, apierrors.IsServiceUnavailable(err), "expected ServiceUnavailable, got %v", err)
+}
+
 func immutableStaticNodeGroup(name string) client.Object {
 	return &deckhousev1.NodeGroup{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
@@ -110,7 +191,7 @@ func bootstrapTokenSecret(ngName string) client.Object {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: nodecommon.KubeSystemNamespace,
-			Name:      "bootstrap-token-abcdef",
+			Name:      "bootstrap-token-" + ngName,
 			Labels:    map[string]string{nodecommon.BootstrapTokenNodeGroupLabel: ngName},
 		},
 		Type: corev1.SecretTypeBootstrapToken,

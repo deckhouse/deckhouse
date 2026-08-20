@@ -58,13 +58,21 @@ func (w *NodeConfigValidator) Handle(_ context.Context, req admission.Request) a
 // Two fields the machine publishes are deliberately left out, because the
 // controller renders them on every pass and freezing them here would deadlock
 // it: the hostname, which must match the Node name, and the disk selector,
-// which the cluster keeps re-rendering so that storage is not write-once.
+// which the cluster renders a guess for when the machine named none.
+//
+// An absent network is not the machine's either: nothing to protect, and the
+// render fills it in. The controller is exempt from this webhook anyway
+// (matchConditions in templates/node-controller/webhook.yaml).
 func validateNodeConfigUpdate(old, updated *internalv1alpha1.NodeConfig) error {
-	if !sameNetworkBesidesHostname(&old.Spec.Network, &updated.Spec.Network) {
+	// A config that named no network has nothing of the machine's to protect,
+	// and the controller renders eth0/DHCP into it on its first pass.
+	namedANetwork := !sameNetworkBesidesHostname(&old.Spec.Network, &internalv1alpha1.Network{})
+	if namedANetwork && !sameNetworkBesidesHostname(&old.Spec.Network, &updated.Spec.Network) {
 		return fmt.Errorf("spec.network is written on the machine and cannot be changed here; " +
 			"delete this NodeConfig and let the node publish what it has")
 	}
 	if old.Spec.Storage.Device != updated.Spec.Storage.Device ||
+		old.Spec.Storage.Wipe != updated.Spec.Storage.Wipe ||
 		!apiequality.Semantic.DeepEqual(old.Spec.Storage.Mounts, updated.Spec.Storage.Mounts) {
 		return fmt.Errorf("spec.storage names the disk this system was installed on and cannot be " +
 			"changed here; delete this NodeConfig and let the node publish what it has")
