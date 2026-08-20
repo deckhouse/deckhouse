@@ -132,6 +132,9 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 	cloudprovider.TrackProviderMetrics(ng, provider, err)
 	if err != nil {
 		logger.Error(err, "failed to resolve the cloud provider of the NodeGroup", "nodeGroup", ng.Name)
+		if patchErr := r.patchStatusError(ctx, ng, err.Error()); patchErr != nil {
+			logger.Error(patchErr, "failed to publish the provider error in the nodegroup status", "nodeGroup", ng.Name)
+		}
 		return ctrl.Result{}, err
 	}
 
@@ -264,4 +267,15 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 	// suppresses the manager resync; the periodic requeue keeps unwatched status inputs
 	// (cluster configuration, a later-created InstanceClass) from going stale forever.
 	return ctrl.Result{RequeueAfter: statusResyncInterval}, nil
+}
+
+func (r *Status) patchStatusError(ctx context.Context, ng *v1.NodeGroup, message string) error {
+	if ng.Status.Error == message {
+		return nil
+	}
+
+	patch := client.MergeFrom(ng.DeepCopy())
+	ng.Status.Error = message
+
+	return r.Client.Status().Patch(ctx, ng, patch)
 }

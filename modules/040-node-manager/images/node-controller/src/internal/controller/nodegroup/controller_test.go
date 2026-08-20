@@ -425,9 +425,10 @@ func TestReconcile_UnresolvedProviderFailsTheReconcile(t *testing.T) {
 			if !strings.Contains(err.Error(), tc.wantErr) {
 				t.Fatalf("error = %q, want it to contain %q", err, tc.wantErr)
 			}
-			// Nothing was published: the pass stopped before any status was computed.
-			if got := getNodeGroup(t, r, tc.name).Status.Error; got != "" {
-				t.Fatalf("status.error = %q, want none", got)
+			// The pass stops before the rest of the status is computed, so status.error is the
+			// only place the NodeGroup gets to say why.
+			if got := getNodeGroup(t, r, tc.name).Status.Error; !strings.Contains(got, tc.wantErr) {
+				t.Fatalf("status.error = %q, want it to contain %q", got, tc.wantErr)
 			}
 		})
 	}

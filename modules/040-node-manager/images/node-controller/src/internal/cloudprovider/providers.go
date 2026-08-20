@@ -90,19 +90,14 @@ func (ps Providers) All() []Provider {
 // The provider is returned whether or not the declaration holds: the nodes run where they run, and
 // a NodeGroup being torn down still needs the provider whose objects it left behind.
 func (ps Providers) ForNodeGroup(ng *v1.NodeGroup) (Provider, error) {
-	provider := ps.resolve(ng)
-
+	provider := ps.Resolve(ng)
 	return provider, declarationError(ng.Spec.ProviderType, provider)
 }
 
-// runs reports whether a NodeGroup runs on a provider of this set. The declaration is not
-// consulted: a group that names the wrong one still runs where it runs.
-func (ps Providers) runs(ng *v1.NodeGroup) bool {
-	return ps.resolve(ng).Type != ""
-}
-
-// resolve returns the provider a NodeGroup runs on, before its declaration is checked.
-func (ps Providers) resolve(ng *v1.NodeGroup) Provider {
+// Resolve returns the provider a NodeGroup runs on, without a verdict on its spec.providerType.
+//
+// It exists for the current migration only and will be deleted.
+func (ps Providers) Resolve(ng *v1.NodeGroup) Provider {
 	// A Static node lives outside every cloud.
 	if ng.Spec.NodeType == v1.NodeTypeStatic {
 		return Provider{}

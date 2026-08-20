@@ -166,7 +166,7 @@ func nodeGroupRequests(ctx context.Context, r client.Reader, carried ...Provider
 	ret := make([]reconcile.Request, 0, len(ngList.Items))
 	for i := range ngList.Items {
 		ng := &ngList.Items[i]
-		if changed.runs(ng) {
+		if provider := changed.Resolve(ng); provider.Type != "" {
 			ret = append(ret, reconcile.Request{NamespacedName: types.NamespacedName{Name: ng.Name}})
 		}
 	}

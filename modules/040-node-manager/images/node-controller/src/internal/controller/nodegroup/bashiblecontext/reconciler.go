@@ -58,11 +58,7 @@ func (r *Reconciler) Assemble(ctx context.Context) error {
 	nodeGroups := make([]map[string]interface{}, 0, len(ngList.Items))
 	for i := range ngList.Items {
 		ng := &ngList.Items[i]
-
-		provider, err := providers.ForNodeGroup(ng)
-		if err != nil {
-			return fmt.Errorf("resolve the provider of NodeGroup %s: %w", ng.Name, err)
-		}
+		provider := providers.Resolve(ng)
 
 		resolved, errStr, err := r.DerivedStatus.ResolveNodeGroup(ctx, ng, provider)
 		if err != nil {
