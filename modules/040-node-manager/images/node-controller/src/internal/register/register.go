@@ -74,7 +74,6 @@ func SetupAll(ctx context.Context, mgr ctrl.Manager, c client.Client, disabledCo
 		if err := setupController(ctx, mgr, c, e.name, e.obj, e.reconciler, maxConcurrent); err != nil {
 			return fmt.Errorf("setting up controller %s: %w", e.name, err)
 		}
-		setupLog.Info("controller enabled", "controller", e.name, "maxConcurrentReconciles", maxConcurrent)
 	}
 
 	return nil

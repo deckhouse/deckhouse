@@ -45,6 +45,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	dvpapi "dvp-common/api"
@@ -1303,5 +1304,14 @@ func (r *DeckhouseMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&infrastructurev1a1.DeckhouseMachine{}).
 		Named("deckhousemachine").
+		// Bootstrap data can appear after creation: per-machine bootstrap
+		// providers (immutable NodeGroups) fill dataSecretName late. Without
+		// this watch the DeckhouseMachine sits WaitingForBootstrapScript until resync.
+		Watches(
+			&clusterv1b2.Machine{},
+			handler.EnqueueRequestsFromMapFunc(
+				capiutil.MachineToInfrastructureMapFunc(infrastructurev1a1.GroupVersion.WithKind("DeckhouseMachine")),
+			),
+		).
 		Complete(r)
 }
