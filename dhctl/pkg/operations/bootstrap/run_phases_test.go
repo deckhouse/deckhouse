@@ -706,3 +706,32 @@ func TestRunPhases_PhaseErrorHaltsWalk(t *testing.T) {
 	require.Equal(t, declared[:3], pec.phasesOf("run"))
 	require.Empty(t, pec.phasesOf("complete"))
 }
+
+// A static cluster whose master NodeGroup asks for an immutable system still has a first master
+// to produce — it is handed a payload instead of being created — so the node that produces it
+// must be declared. Gated on the cluster type alone it was dropped, and the machine was never
+// handed anything.
+func TestFirstMasterIsDeclaredForAnImmutableStaticCluster(t *testing.T) {
+	immutableStatic := bootstrappedMetaConfig("Static")
+	immutableStatic.ResourcesYAML = `
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: master
+spec:
+  nodeType: Static
+  systemType: Immutable
+`
+
+	declared := func(metaConfig *config.MetaConfig) []phases.OperationPhase {
+		out := make([]phases.OperationPhase, 0)
+		for _, n := range phases.PhasesFor(phases.OperationBootstrap, phaseClusterConfig(context.Background(), metaConfig)) {
+			out = append(out, n.Phase)
+		}
+		return out
+	}
+
+	require.Contains(t, declared(immutableStatic), phases.FirstMasterPhase)
+	require.NotContains(t, declared(bootstrappedMetaConfig("Static")), phases.FirstMasterPhase,
+		"a static cluster of classic nodes has no first master to produce")
+}
