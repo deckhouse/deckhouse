@@ -26,7 +26,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
@@ -48,7 +47,13 @@ func BootstrapTerraNodes(
 	})
 }
 
-// BootstrapAdditionalMasterNodes creates every master past the first one.
+// masterPayloadBuilder renders the cloud-init an additional master boots with.
+// nil means the group's own published cloud config is used instead.
+type masterPayloadBuilder func(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, nodeName string) (string, error)
+
+// BootstrapAdditionalMasterNodes creates every master past the first one. A nil
+// addressTracker is a group whose nodes answer no sshd, so there is no address
+// to record for converge.
 func BootstrapAdditionalMasterNodes(
 	ctx context.Context,
 	kubeCl *client.KubernetesClient,
@@ -57,20 +62,19 @@ func BootstrapAdditionalMasterNodes(
 	infrastructureContext *infrastructure.Context,
 	stateCache state.Cache,
 	globalOptions *options.GlobalOptions,
+	buildPayload masterPayloadBuilder,
 ) error {
 	if metaConfig.MasterNodeGroupSpec.Replicas == 1 {
 		dhlog.FromContext(ctx).DebugContext(ctx, "Skipping additional master node bootstrap because replicas == 1")
 		return nil
 	}
 
-	immutableMaster := immutable.IsImmutableMaster(ctx, metaConfig)
-
 	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Bootstrap additional master nodes", func(ctx context.Context) error {
-		// The group's published cloud config is a bashible bundle, which an
-		// immutable node cannot run: its payload is rendered here instead, and it
-		// carries the node's own name — hence per node, below.
+		// The group's published cloud config is a bashible bundle. A caller that
+		// renders the payload itself has a node which cannot run that bundle, and
+		// its payload carries the node's own name — hence per node, below.
 		masterCloudConfig := ""
-		if !immutableMaster {
+		if buildPayload == nil {
 			var err error
 			masterCloudConfig, err = entity.GetCloudConfig(ctx, kubernetes.NewSimpleKubeClientGetter(kubeCl), global.MasterNodeGroupName, global.ShowDeckhouseLogs)
 			if err != nil {
@@ -82,9 +86,9 @@ func BootstrapAdditionalMasterNodes(
 			nodeName := fmt.Sprintf("%s-master-%d", metaConfig.ClusterPrefix, i)
 
 			nodeCloudConfig := masterCloudConfig
-			if immutableMaster {
+			if buildPayload != nil {
 				var err error
-				nodeCloudConfig, err = buildImmutableJoinPayload(ctx, kubeCl, metaConfig, nodeName)
+				nodeCloudConfig, err = buildPayload(ctx, kubeCl, metaConfig, nodeName)
 				if err != nil {
 					return fmt.Errorf("build the payload of %s: %w", nodeName, err)
 				}
@@ -98,7 +102,7 @@ func BootstrapAdditionalMasterNodes(
 			// Converge builds its SSH session from this cache, and a host that
 			// answers no sshd stalls it. The first master is kept out of the same
 			// cache for the same reason.
-			if immutableMaster {
+			if addressTracker == nil {
 				continue
 			}
 			addressTracker[nodeName] = outputs.MasterIPForSSH

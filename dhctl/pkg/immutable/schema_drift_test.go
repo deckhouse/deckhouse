@@ -17,10 +17,14 @@ limitations under the License.
 package immutable
 
 import (
+	"bytes"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -29,6 +33,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/yaml"
 )
 
@@ -36,7 +41,48 @@ import (
 // every field path the golden payload writes must exist in the NodeConfig CRD
 // schema. Types/enums are left to the API server (validating them needs cel-go).
 func TestGoldenPayloadMatchesNodeConfigCRD(t *testing.T) {
-	nodeConfigDoc := goldenNodeConfigDocument(t)
+	var unknown []string
+	collectUnknownFields(goldenNodeConfigDocument(t), nodeConfigCRDSchema(t), "", &unknown)
+	require.Empty(t, unknown,
+		"the payload writes fields the NodeConfig CRD does not know; the agent parses the same shape, so either the payload or the CRD is behind")
+}
+
+// TestCustomizableFieldsExistInNodeConfigCRD covers what the golden payload
+// never carries: the fields only an operator's document fills in. Left to the
+// golden alone they drift from the CRD unnoticed.
+func TestCustomizableFieldsExistInNodeConfigCRD(t *testing.T) {
+	spec := nodeSpec{
+		Storage: storage{
+			Device: "/dev/sda",
+			DiskSelector: &diskSelector{
+				Size: "1Gi", Type: "SSD", Rotational: new(true), Model: "m",
+				Serial: "s", WWID: "w", Name: "n", BusPath: "b",
+			},
+			Mounts: []mount{{Name: "data", Device: "/dev/sdb1", Filesystem: "ext4"}},
+		},
+		Network: network{
+			DNS:    &dns{Servers: []string{"10.0.0.1"}, Search: []string{"example.com"}},
+			Routes: []route{{Name: "r", Networks: []string{"10.1.0.0/16"}, Gateway: "10.0.0.1"}},
+		},
+		Kubelet: kubelet{NodeIP: "10.0.0.1"},
+	}
+
+	raw, err := json.Marshal(spec)
+	require.NoError(t, err)
+	document := map[string]any{}
+	require.NoError(t, json.Unmarshal(raw, &document))
+
+	specSchema := nodeConfigCRDSchema(t).Properties["spec"]
+
+	var unknown []string
+	collectUnknownFields(document, &specSchema, "spec", &unknown)
+	require.Empty(t, unknown,
+		"a customization writes fields the NodeConfig CRD does not know; the node parses the same shape strictly and would refuse to boot")
+}
+
+// nodeConfigCRDSchema is the schema both guards check a document against.
+func nodeConfigCRDSchema(t *testing.T) *apiextensionsv1.JSONSchemaProps {
+	t.Helper()
 
 	crdPath := filepath.Join("..", "..", "..", "modules", "040-node-manager", "crds", "nodeconfig.yaml")
 	raw, err := os.ReadFile(crdPath)
@@ -51,40 +97,31 @@ func TestGoldenPayloadMatchesNodeConfigCRD(t *testing.T) {
 	crd := &apiextensionsv1.CustomResourceDefinition{}
 	require.NoError(t, yaml.Unmarshal(raw, crd))
 	require.Len(t, crd.Spec.Versions, 1, "a second CRD version needs this test to pick the one the payload speaks")
-	versioned := crd.Spec.Versions[0].Schema.OpenAPIV3Schema
 
-	var unknown []string
-	collectUnknownFields(nodeConfigDoc, versioned, "", &unknown)
-	require.Empty(t, unknown,
-		"the payload writes fields the NodeConfig CRD does not know; the agent parses the same shape, so either the payload or the CRD is behind")
-
+	return crd.Spec.Versions[0].Schema.OpenAPIV3Schema
 }
 
-// goldenNodeConfigDocument digs the NodeConfig document out of the golden
-// cloud-config: the file the node reads from /config/nodeconfig.yaml.
+// goldenNodeConfigDocument takes the NodeConfig out of the golden stream, the
+// way the machine does: by kind, not by position.
 func goldenNodeConfigDocument(t *testing.T) map[string]interface{} {
 	t.Helper()
 
-	raw, err := os.ReadFile(filepath.Join("testdata", "master-cloud-init.yaml"))
+	raw, err := os.ReadFile(filepath.Join("testdata", "master-documents.yaml"))
 	require.NoError(t, err)
 
-	var cloudConfig struct {
-		WriteFiles []struct {
-			Path    string `json:"path"`
-			Content string `json:"content"`
-		} `json:"write_files"`
-	}
-	require.NoError(t, yaml.Unmarshal(raw, &cloudConfig))
-
-	for _, f := range cloudConfig.WriteFiles {
-		if f.Path != "/config/nodeconfig.yaml" {
-			continue
-		}
+	decoder := utilyaml.NewYAMLToJSONDecoder(bytes.NewReader(raw))
+	for {
 		doc := map[string]interface{}{}
-		require.NoError(t, yaml.Unmarshal([]byte(f.Content), &doc))
-		return doc
+		err := decoder.Decode(&doc)
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		require.NoError(t, err)
+		if doc["kind"] == "NodeConfig" {
+			return doc
+		}
 	}
-	t.Fatal("the golden cloud-config carries no /config/nodeconfig.yaml")
+	t.Fatal("the golden stream carries no NodeConfig")
 	return nil
 }
 

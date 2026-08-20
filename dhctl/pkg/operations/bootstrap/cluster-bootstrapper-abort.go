@@ -147,7 +147,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context) error {
 	// error is OK here in case of abort from cache w/o ssh hosts
 	sshProvider, _ := b.SSHProviderInitializer.GetSSHProvider(ctx)
 
-	b.PhasedExecutionContext.SetClusterConfig(phaseClusterConfig(metaConfig))
+	b.PhasedExecutionContext.SetClusterConfig(phaseClusterConfig(ctx, metaConfig))
 
 	destroyer, err := destroy.GetAbortDestroyer(ctx, &destroy.GetAbortDestroyerParams{
 		MetaConfig:             metaConfig,
