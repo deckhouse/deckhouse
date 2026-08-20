@@ -36,7 +36,7 @@
         ```
 
   - alert: D8UserAuthnIDTokenTTLTooLong
-    expr: d8_user_authn_id_token_ttl_too_long == 1
+    expr: d8_user_authn_id_token_ttl_too_long{source="deckhouse"} == 1
     for: 5m
     labels:
       severity_level: "6"

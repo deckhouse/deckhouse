@@ -191,7 +191,7 @@
     - alert: D8ObsoleteKubernetesVersionFieldInClusterConfiguration
       for: 5m
       expr: |
-        d8_obsolete_kubernetes_version_field_in_cluster_configuration == 1
+        d8_obsolete_kubernetes_version_field_in_cluster_configuration{source="deckhouse"} == 1
       labels:
         d8_component: control-plane-manager
         d8_module: control-plane-manager
@@ -244,7 +244,7 @@
     - alert: D8ControlPlaneDefaultVersionDrift
       for: 5m
       expr: |
-        d8_control_plane_default_version_drift == 1
+        d8_control_plane_default_version_drift{source="deckhouse"} == 1
       labels:
         d8_component: control-plane-manager
         d8_module: control-plane-manager
