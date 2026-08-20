@@ -209,6 +209,8 @@ spec:
                     scopes:
                       description: |
                         Список [полей](https://github.com/dexidp/website/blob/main/content/docs/configuration/custom-scopes-claims-clients.md) для включения в ответ при запросе токена.
+
+                        Scope — это одиночный токен, он не может содержать пробельные символы: протокол OAuth2 передаёт scope'ы списком, разделённым пробелами.
                     promptType:
                       description: |
                         Определяет — должен ли Issuer запрашивать подтверждение и давать подсказки при аутентификации.
