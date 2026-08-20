@@ -21,7 +21,6 @@ import (
 	"maps"
 	"slices"
 	"strings"
-	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -408,34 +407,16 @@ func renderUpdatePolicy(ng *v1.NodeGroup) internalv1alpha1.UpdatePolicy {
 		policy.Mode = string(mode)
 	}
 
-	// NodeConfig carries a single window; the first one the agent's schema takes
-	// wins until the agent learns to hold a list. A window it would refuse is
-	// skipped: publishing it costs the node its whole config, not one window.
-	for _, window := range disruptionWindows(ng) {
-		from, fromOK := clockTime(window.From)
-		to, toOK := clockTime(window.To)
-		if !fromOK || !toOK {
-			continue
+	// NodeConfig carries a single window; the first one wins until the agent
+	// learns to hold a list.
+	if windows := disruptionWindows(ng); len(windows) > 0 {
+		policy.Window = internalv1alpha1.UpdateWindow{
+			From: windows[0].From,
+			To:   windows[0].To,
+			Days: windows[0].Days,
 		}
-		policy.Window = internalv1alpha1.UpdateWindow{From: from, To: to, Days: window.Days}
-		break
 	}
 	return policy
-}
-
-// clockTime pads a NodeGroup time to the "HH:MM" the agent's schema takes: a
-// one-digit hour ("6:00") is legal for a NodeGroup and refused there.
-func clockTime(value string) (string, bool) {
-	// Go has no layout for a one-digit 24-hour clock: "15" is fixed-width and
-	// "3" is the 12-hour one, so the hour is padded before parsing.
-	if hour, _, found := strings.Cut(value, ":"); found && len(hour) == 1 {
-		value = "0" + value
-	}
-	parsed, err := time.Parse("15:04", value)
-	if err != nil {
-		return "", false
-	}
-	return parsed.Format("15:04"), true
 }
 
 func disruptionWindows(ng *v1.NodeGroup) []v1.DisruptionWindow {

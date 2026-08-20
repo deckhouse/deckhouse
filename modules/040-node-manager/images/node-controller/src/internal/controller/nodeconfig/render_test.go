@@ -548,55 +548,6 @@ func TestRenderNarrowsEveryValueTheAgentSchemaRefuses(t *testing.T) {
 		}
 	})
 
-	t.Run("update window", func(t *testing.T) {
-		tests := []struct {
-			name    string
-			windows []v1.DisruptionWindow
-			expFrom string
-			expTo   string
-		}{
-			{
-				// The NodeGroup pattern takes a one-digit hour, the agent's
-				// does not.
-				name:    "a one-digit hour is padded",
-				windows: []v1.DisruptionWindow{{From: "6:00", To: "7:05"}},
-				expFrom: "06:00",
-				expTo:   "07:05",
-			},
-			{
-				name:    "a window both schemas accept is passed through",
-				windows: []v1.DisruptionWindow{{From: "13:00", To: "18:30"}},
-				expFrom: "13:00",
-				expTo:   "18:30",
-			},
-			{
-				name:    "a window that is no clock time is skipped, not published",
-				windows: []v1.DisruptionWindow{{From: "25:00", To: "18:30"}},
-			},
-			{
-				name: "the first window the agent accepts wins",
-				windows: []v1.DisruptionWindow{
-					{From: "nonsense", To: "18:30"},
-					{From: "9:15", To: "10:00"},
-				},
-				expFrom: "09:15",
-				expTo:   "10:00",
-			},
-		}
-
-		for _, tt := range tests {
-			t.Run(tt.name, func(t *testing.T) {
-				ng := group(v1.NodeGroupSpec{Disruptions: &v1.DisruptionsSpec{
-					Automatic: &v1.AutomaticDisruptionSpec{Windows: tt.windows},
-				}})
-
-				window := renderUpdatePolicy(ng).Window
-
-				require.Equal(t, tt.expFrom, window.From)
-				require.Equal(t, tt.expTo, window.To)
-			})
-		}
-	})
 }
 
 // A clamp the operator is not told about leaves the group running something
