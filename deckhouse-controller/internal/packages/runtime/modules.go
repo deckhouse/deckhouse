@@ -85,7 +85,7 @@ func (r *Runtime) UpdateModulesSettings(name string, settingsVersion int, settin
 	enabledChanged := r.global.SetConfigEnabled(name, enabled)
 
 	if settingsChanged || enabledChanged {
-		r.scheduler.Reschedule(name)
+		r.scheduler.Reschedule(name, reasonConfigChanged)
 	}
 }
 
@@ -117,7 +117,7 @@ func (r *Runtime) UpdateModule(repo registry.Remote, module Module, force bool) 
 	// A forced update skips change detection it would fail anyway.
 	if !force && !r.packages.NeedUpdate(name, version, module.Settings.Checksum(), module.SettingsVersion, module.Maintenance) {
 		if enabledChanged {
-			r.scheduler.Reschedule(name)
+			r.scheduler.Reschedule(name, reasonEnabledChanged)
 		}
 
 		return
@@ -125,7 +125,7 @@ func (r *Runtime) UpdateModule(repo registry.Remote, module Module, force bool) 
 
 	ctx := r.packages.Update(name, version, module.SettingsVersion, module.Settings, module.Maintenance, force)
 	if ctx == nil {
-		r.scheduler.Reschedule(name)
+		r.scheduler.Reschedule(name, reasonSettingsChanged)
 		return
 	}
 
@@ -174,7 +174,7 @@ func (r *Runtime) UpdateEmbeddedModule(module Module) {
 
 	if !r.packages.NeedUpdate(name, version, module.Settings.Checksum(), module.SettingsVersion, module.Maintenance) {
 		if enabledChanged {
-			r.scheduler.Reschedule(name)
+			r.scheduler.Reschedule(name, reasonEnabledChanged)
 		}
 
 		return
@@ -182,7 +182,7 @@ func (r *Runtime) UpdateEmbeddedModule(module Module) {
 
 	ctx := r.packages.Update(name, version, module.SettingsVersion, module.Settings, module.Maintenance, false)
 	if ctx == nil {
-		r.scheduler.Reschedule(name)
+		r.scheduler.Reschedule(name, reasonSettingsChanged)
 		return
 	}
 
@@ -306,7 +306,7 @@ func (r *Runtime) RemoveModule(name string) {
 
 	r.scheduler.RemoveNode(name)
 
-	ctx := r.packages.HandleEvent(lifecycle.EventRemove, name)
+	ctx := r.packages.HandleEvent(lifecycle.EventRemove, name, errPackageRemoved)
 	if ctx == nil {
 		return
 	}
@@ -330,7 +330,7 @@ func (r *Runtime) RemoveEmbeddedModule(name string) {
 
 	r.scheduler.RemoveNode(name)
 
-	ctx := r.packages.HandleEvent(lifecycle.EventRemove, name)
+	ctx := r.packages.HandleEvent(lifecycle.EventRemove, name, errPackageRemoved)
 	if ctx == nil {
 		return
 	}

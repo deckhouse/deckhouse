@@ -125,6 +125,11 @@ type node struct {
 
 	rescheduleOnEnable bool // If true, this node flipping to enabled triggers a full-graph reschedule in compute() (every node reverts to idle), not just the global node.
 
+	// scheduleReason names what put the node back to idle. It is consumed and
+	// cleared by the next EventSchedule, where it becomes the cancellation cause
+	// of the run that reverting the node interrupted.
+	scheduleReason string
+
 	rules []rule.Rule // Ordered rule chain evaluated on each scheduling pass.
 }
 

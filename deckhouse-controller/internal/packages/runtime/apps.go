@@ -90,7 +90,7 @@ func (r *Runtime) UpdateApp(repo registry.Remote, app App) {
 	// applications have immutable tags, so a version change is the only invalidation
 	ctx := r.packages.Update(name, version, app.SettingsVersion, app.Settings, app.Maintenance, false)
 	if ctx == nil {
-		r.scheduler.Reschedule(name)
+		r.scheduler.Reschedule(name, reasonSettingsChanged)
 		return
 	}
 
@@ -185,7 +185,7 @@ func (r *Runtime) RemoveApp(namespace, instance string) {
 	// A removed application no longer reconciles anything, so drop its maintenance gauge.
 	r.setMaintenanceMetric(name, nelm.Managed)
 
-	ctx := r.packages.HandleEvent(lifecycle.EventRemove, name)
+	ctx := r.packages.HandleEvent(lifecycle.EventRemove, name, errPackageRemoved)
 	if ctx == nil {
 		return
 	}

@@ -40,6 +40,17 @@ const (
 	// used to signal enable/disable events to consumers without blocking callers.
 	defaultBufferSize = 1000
 
+	// ReasonScheduled is the first schedule of a package: nothing was interrupted.
+	// Seeing it as a cancellation cause means some revert-to-idle path set no reason.
+	ReasonScheduled = "Scheduled"
+	// ReasonSubscription marks a node reverted because a node it subscribes to was rescheduled.
+	ReasonSubscription = "SubscriptionTriggered"
+	// ReasonDecisionChanged marks a node whose own rule chain flipped it back on.
+	ReasonDecisionChanged = "DecisionChanged"
+	// ReasonGraphReschedule marks the full-graph revert done when a dynamically
+	// enabled module turns on and may have installed CRDs others render against.
+	ReasonGraphReschedule = "GraphRescheduled"
+
 	reasonRequirementsKubernetes = "KubernetesRequirementsUnmet"
 	reasonRequirementsDeckhouse  = "DeckhouseRequirementsUnmet"
 	reasonRequirementsBootstrap  = "BootstrapRequirementsUnmet"
@@ -301,7 +312,10 @@ func (s *Scheduler) Complete(completed string) {
 // subscribers are reverted to idle in the same pass so they are rescheduled too;
 // the cascade is one level deep — a subscriber's own subscribers are not touched.
 // It is a no-op if the package does not exist.
-func (s *Scheduler) Reschedule(name string) {
+//
+// reason names the trigger and is carried on the resulting [EventSchedule], so a
+// run cancelled by this reschedule can report why.
+func (s *Scheduler) Reschedule(name, reason string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -311,12 +325,14 @@ func (s *Scheduler) Reschedule(name string) {
 	}
 
 	n.state = nodeStateIdle
+	n.scheduleReason = reason
 
 	// Direct subscribers only: revert their state inline rather than recursing
 	// through Reschedule, so the cascade stays one level deep.
 	for sub := range n.subscribers {
 		if sn, ok := s.nodes[sub]; ok {
 			sn.state = nodeStateIdle
+			sn.scheduleReason = ReasonSubscription + ":" + name
 		}
 	}
 
@@ -348,7 +364,13 @@ func (s *Scheduler) schedule() {
 
 		if s.canSchedule(n) {
 			n.state = nodeStateScheduled
-			s.send(Event{Name: n.name, Kind: EventSchedule, Enabled: enabled})
+			reason := n.scheduleReason
+			if reason == "" {
+				reason = ReasonScheduled
+			}
+			n.scheduleReason = ""
+
+			s.send(Event{Name: n.name, Kind: EventSchedule, Reason: reason, Enabled: enabled})
 		}
 	}
 }
@@ -367,6 +389,7 @@ func (s *Scheduler) compute() ([]string, []*node) {
 	// leave its members frozen at nodeStateIdle, surfaced quickly by stalled
 	// higher-tier nodes via canSchedule's order-tier gate.
 	reschedule := false
+	trigger := ""
 	sorted, _ := topoSort(s.nodes)
 	for _, n := range sorted {
 		current := n.enabled()
@@ -377,12 +400,17 @@ func (s *Scheduler) compute() ([]string, []*node) {
 
 		if n.enabled() && n.rescheduleOnEnable {
 			reschedule = true
+			trigger = n.name
 		}
 
 		// Decision flipped — reset this node so the next schedule pass can
 		// either re-schedule it (now enabled) or park it active via the
 		// not-enabled sweep below (now off).
 		n.state = nodeStateIdle
+		n.scheduleReason = ReasonDecisionChanged
+		if n.decision.Reason != "" {
+			n.scheduleReason += ":" + n.decision.Reason
+		}
 
 		if !n.enabled() {
 			s.send(Event{Name: n.name, Kind: EventDisable, Reason: n.decision.Reason, Message: n.decision.Message})
@@ -397,6 +425,9 @@ func (s *Scheduler) compute() ([]string, []*node) {
 	if reschedule {
 		for _, n := range sorted {
 			n.state = nodeStateIdle
+			if n.scheduleReason == "" {
+				n.scheduleReason = ReasonGraphReschedule + ":" + trigger
+			}
 		}
 	}
 
@@ -411,6 +442,7 @@ func (s *Scheduler) compute() ([]string, []*node) {
 	for _, n := range sorted {
 		if n.state == nodeStateIdle && !n.enabled() {
 			n.state = nodeStateActive
+			n.scheduleReason = ""
 		}
 
 		// global is the barrier node, not a module — never advertise it in the
