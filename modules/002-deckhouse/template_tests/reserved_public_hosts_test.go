@@ -679,9 +679,14 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 		It("publishes the name so that the misspelling is visible", func() {
 			Expect(strings.Fields(configMap().Field("data.unknownExcludedServices").String())).To(Equal([]string{"graphana"}))
 		})
+	})
 
-		It("reports nothing when every excluded name is published", func() {
+	Context("An operator excludes a service the platform does publish", func() {
+		BeforeEach(func() {
 			renderWithSettings("%s.example.com", `{mode: Template, excludedServices: ["grafana"]}`, admissionAPIs...)
+		})
+
+		It("reports nothing as unknown and frees the hostname", func() {
 			cm := configMap()
 			Expect(strings.Fields(cm.Field("data.unknownExcludedServices").String())).To(BeEmpty())
 			Expect(strings.Fields(cm.Field("data.allowedHosts").String())).To(ContainElement("grafana.example.com"))
@@ -730,8 +735,17 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 				"wildcards were out of scope of the list, and List has to stay what it was")
 		})
 
-		It("subtracts an exclusion from the list rather than allowing it back out", func() {
+		It("still answers whether the literal covers the repository", func() {
+			expectCoversRepositoryPublicDomains(configMap())
+		})
+	})
+
+	Context("A cluster on the narrower reservation gives a hostname back", func() {
+		BeforeEach(func() {
 			renderWithSettings("%s.example.com", `{mode: List, excludedServices: ["grafana"]}`, admissionAPIs...)
+		})
+
+		It("subtracts the exclusion from the list rather than allowing it back out", func() {
 			cm := configMap()
 			hosts := strings.Fields(cm.Field("data.hosts").String())
 			Expect(hosts).NotTo(ContainElement("grafana.example.com"))
@@ -741,27 +755,35 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 			Expect(strings.Fields(cm.Field("data.excludedHosts").String())).To(Equal([]string{"grafana.example.com"}),
 				"still published, so that the effect of the setting reads the same in both modes")
 		})
+	})
 
-		It("does not apply the grandfathering, there is nothing to grandfather", func() {
-			renderWith("%s.example.com", `{mode: List}`, `{recorded: true, hosts: ["console.example.com"]}`, admissionAPIs...)
-			cm := configMap()
-			Expect(strings.Fields(cm.Field("data.grandfatheredHosts").String())).To(Equal([]string{"console.example.com"}),
-				"kept, so that a later switch to Template mode has it and does not snapshot again")
-			Expect(strings.Fields(cm.Field("data.allowedHosts").String())).To(BeEmpty())
-		})
-
-		It("still answers whether the literal covers the repository", func() {
-			expectCoversRepositoryPublicDomains(configMap())
-		})
-
-		It("applies both settings at once, and a hostname named twice is reserved once", func() {
+	Context("A cluster on the narrower reservation applies both settings at once", func() {
+		BeforeEach(func() {
 			renderWithSettings("%s.example.com",
 				`{mode: List, additionalHosts: ["admin.example.com", "console.example.com"], excludedServices: ["grafana", "hubble"]}`,
 				admissionAPIs...)
+		})
+
+		It("reserves a hostname named twice once", func() {
 			hosts := strings.Fields(configMap().Field("data.hosts").String())
 			Expect(hosts).To(ContainElement("admin.example.com"))
 			Expect(hosts).NotTo(ContainElements("grafana.example.com", "hubble.example.com"))
 			Expect(hosts).To(Equal(sortedUnique(hosts)))
+		})
+	})
+
+	Context("A cluster that recorded a snapshot is switched back to the narrower reservation", func() {
+		BeforeEach(func() {
+			renderWith("%s.example.com", `{mode: List}`, `{recorded: true, hosts: ["console.example.com"]}`, admissionAPIs...)
+		})
+
+		It("keeps the record visible without applying it", func() {
+			cm := configMap()
+			Expect(strings.Fields(cm.Field("data.grandfatheredHosts").String())).To(Equal([]string{"console.example.com"}),
+				"kept, so that switching back to Template does not throw away what was grandfathered")
+			Expect(strings.Fields(cm.Field("data.allowedHosts").String())).To(BeEmpty(),
+				"a hostname recorded under the wider reservation must not become an exception to the "+
+					"narrower one, which never covered it")
 		})
 	})
 
