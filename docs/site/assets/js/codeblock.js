@@ -234,6 +234,10 @@ document.addEventListener('DOMContentLoaded', function() {
           unwrapIcon.style.display = 'inline';
           wrapBtnTippy.setContent(texts.unwrap);
         }
+
+        setTimeout(() => {
+          wrapBtnTippy.hide();
+        }, 1000);
       });
 
       button.dataset.wrapInitialized = 'true';
