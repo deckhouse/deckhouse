@@ -19,14 +19,8 @@ import (
 
 	libdhctlyaml "github.com/deckhouse/lib-dhctl/pkg/yaml"
 	yamlvalidation "github.com/deckhouse/lib-dhctl/pkg/yaml/validation"
-)
 
-// nodeConfigKind and nodeConfigAPIGroup name the documents the operator writes
-// about individual machines. Must match nodeConfigKind and payloadAPIVersion in
-// pkg/immutable/constants.go: diverge, and a NodeConfig reaches the applier.
-const (
-	nodeConfigKind     = "NodeConfig"
-	nodeConfigAPIGroup = "internal.deckhouse.io"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable"
 )
 
 // splitNodeCustomizations takes the NodeConfig documents out of the resources:
@@ -35,6 +29,9 @@ const (
 func splitNodeCustomizations(resourcesYAML string) ([]string, string) {
 	var customizations, rest []string
 
+	// The index reports group and version apart, and the payload names them together.
+	group, _, _ := strings.Cut(immutable.PayloadAPIVersion, "/")
+
 	for _, document := range libdhctlyaml.SplitYAML(resourcesYAML) {
 		if strings.TrimSpace(document) == "" {
 			continue
@@ -42,7 +39,7 @@ func splitNodeCustomizations(resourcesYAML string) ([]string, string) {
 		index, err := yamlvalidation.ParseIndex(strings.NewReader(document))
 		// A document this fails on is not ours to judge: it goes back to the
 		// resources, where the existing validation reports it.
-		if err != nil || index.Kind != nodeConfigKind || index.Group() != nodeConfigAPIGroup {
+		if err != nil || index.Kind != immutable.NodeConfigKind || index.Group() != group {
 			rest = append(rest, document)
 			continue
 		}

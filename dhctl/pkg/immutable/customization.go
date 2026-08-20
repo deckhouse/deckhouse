@@ -39,21 +39,38 @@ type Customization struct {
 	nodeIP  string
 }
 
-// Interfaces are the NICs the document brings up, and nil when it says nothing
-// about the network. Read outside the package to learn where a machine given a
-// static address answers once it has installed itself.
-func (c Customization) Interfaces() []networkInterface {
-	if c.network == nil {
-		return nil
+// AddressAfterInstall is where the machine answers once it has installed
+// itself: the push address, unless its document moves it to a static one.
+// Everything after the push — the handoff channel and the apiserver — goes there.
+func (c *Customization) AddressAfterInstall(pushAddress string) string {
+	if c == nil {
+		return pushAddress
 	}
-	return c.network.Interfaces
-}
+	// The document's own nodeIP wins: the machine check has confirmed it is one of
+	// the addresses this document gives it, and on a machine with several NICs it
+	// is not necessarily the first one.
+	if c.nodeIP != "" {
+		return c.nodeIP
+	}
+	if c.network == nil {
+		return pushAddress
+	}
 
-// NodeIP is the address kubelet registers the node under, and "" when the
-// document names none. Read outside the package for the same reason Interfaces
-// is: on a multi-NIC machine it says which address answers after the install.
-func (c Customization) NodeIP() string {
-	return c.nodeIP
+	for _, iface := range c.network.Interfaces {
+		if iface.DHCP || len(iface.Addresses) == 0 {
+			continue
+		}
+		host, _, err := net.ParseCIDR(iface.Addresses[0])
+		if err != nil {
+			// ParseCustomizations refuses an address without a prefix length, so this
+			// is unreachable from a document — and the push address is where the
+			// machine answers now, which beats killing the installer mid-run.
+			return pushAddress
+		}
+		return host.String()
+	}
+
+	return pushAddress
 }
 
 // customizationDocument is the shape the operator writes. Deliberately not the
@@ -85,9 +102,9 @@ func ParseCustomizations(ctx context.Context, documents []string) ([]Customizati
 				"read node customization %d: %w. A machine is described by network, storage and kubelet.nodeIP only; dhctl puts no other field of this document in the payload",
 				i+1, err)
 		}
-		if parsed.APIVersion != payloadAPIVersion || parsed.Kind != nodeConfigKind {
+		if parsed.APIVersion != PayloadAPIVersion || parsed.Kind != NodeConfigKind {
 			return nil, fmt.Errorf("node customization %d is %s/%s, expected %s/%s",
-				i+1, parsed.APIVersion, parsed.Kind, payloadAPIVersion, nodeConfigKind)
+				i+1, parsed.APIVersion, parsed.Kind, PayloadAPIVersion, NodeConfigKind)
 		}
 		if parsed.Metadata.Name == "" {
 			return nil, fmt.Errorf("node customization %d names no node in metadata.name", i+1)
