@@ -1163,10 +1163,6 @@ d8 k get pods -A -o json | jq --arg revision "v1x25" \
    .revision == $revision) | .metadata.namespace + "/" + .metadata.name'
 ```
 
-{% alert level="warning" %}
-Istio 1.21 is no longer supported. Before upgrading DKP to a release that removes Istio 1.21, migrate all global and additional revisions to a supported version using a previous DKP release that still supports both versions. A DKP upgrade is blocked while Istio 1.21 remains configured.
-{% endalert %}
-
 <span id="auto-upgrading-istio-data-plane"></span>
 
 ### Auto upgrading istio data-plane

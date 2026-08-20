@@ -1150,7 +1150,7 @@ UID `1337` зарезервирован Istio для сайдкар-контей
 * Istio заявляет обратную совместимость между data plane и control plane в диапазоне двух минорных версий:
 ![Istio data-plane and control-plane compatibility](images/istio-extended-support.png)
 * Алгоритм обновления (для примера, с версии `1.25` на версию `1.27`):
-  * Добавить целевую версию в параметр модуля [additionalVersions](configuration.html#parameters-additionalversions) (`additionalVersions: ["1.27"]`).
+  * Добавить желаемую версию в параметр модуля [additionalVersions](configuration.html#parameters-additionalversions) (`additionalVersions: ["1.27"]`).
 * Дождаться появления соответствующего пода `istiod-v1x27-xxx-yyy` в неймспейсе `d8-istio`.
 * Для каждого прикладного неймспейса, где включён Istio:
   * поменять лейбл `istio-injection: enabled` на `istio.io/rev: v1x27`;
@@ -1166,11 +1166,6 @@ d8 k get pods -A -o json | jq --arg revision "v1x25" \
   '.items[] | select(.metadata.annotations."sidecar.istio.io/status" // "{}" | fromjson |
    .revision == $revision) | .metadata.namespace + "/" + .metadata.name'
 ```
-
-{% alert level="warning" %}
-Istio 1.21 больше не поддерживается. До обновления DKP на релиз, в котором удалена Istio 1.21, перенесите глобальную и все дополнительные ревизии на поддерживаемую версию, используя предыдущий релиз DKP, который поддерживает обе версии. Обновление DKP блокируется, пока в конфигурации остаётся Istio 1.21.
-{% endalert %}
-
 <span id="auto-upgrading-istio-data-plane"></span>
 
 ### Автоматическое обновление data plane Istio
