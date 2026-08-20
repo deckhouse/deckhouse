@@ -1749,7 +1749,11 @@ entries:
             - title:
                 en: Managed-postgres module
                 ru: Модуль managed-postgres
-              url: /architecture/managed-services/managed-postgres.html              
+              url: /architecture/managed-services/managed-postgres.html   
+            - title:
+                en: Managed-valkey module
+                ru: Модуль managed-valkey
+              url: /architecture/managed-services/managed-valkey.html
         - title:
             en: Virtualization subsystem
             ru: Подсистема Virtualization
