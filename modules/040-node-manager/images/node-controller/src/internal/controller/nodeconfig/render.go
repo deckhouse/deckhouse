@@ -61,8 +61,8 @@ func renderSpec(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) internalv
 		APIServerEndpoints: in.APIServerEndpoints,
 		Extensions:         renderExtensions(in.SysextDigests),
 		// A NodeGroup has no disk field; without a selector the boot path refuses
-		// outright ("neither device nor diskSelector set"). A richer installer
-		// selector survives this value through keepBootstrapOnlyFields.
+		// outright ("neither device nor diskSelector set"). Any selector the
+		// operator wrote survives this one through keepBootstrapOnlyFields.
 		Storage:          internalv1alpha1.Storage{Disk: internalv1alpha1.Disk{DiskSelector: &internalv1alpha1.DiskSelector{Size: systemDiskSelectorSize}}},
 		Kernel:           renderKernel(),
 		Network:          renderNetwork(node),
@@ -93,29 +93,20 @@ func keepBootstrapOnlyFields(desired, existing *internalv1alpha1.NodeSpec, repor
 	}
 
 	// A static network belongs to the provisioner: overwriting it with the
-	// rendered "eth0, DHCP" leaves the node unreachable after a reboot.
-	// Emptiness is judged against the zero value, not against the render: a node
-	// carrying nothing must be left the rendered default, and one carrying only
-	// DNS must keep it.
-	if !networkIsEmpty(&existing.Network) {
-		hostname := desired.Network.Hostname
-		desired.Network = existing.Network
-		// The hostname is the cluster's: it must match the Node name however
-		// the machine was given its addresses.
-		desired.Network.Hostname = hostname
+	// rendered "eth0, DHCP" leaves the node unreachable after a reboot. Two
+	// fields are not the machine's: the hostname, which must match the Node
+	// name, and the interfaces of a machine that named none — a spec with no
+	// interface at all is a node with no address after a reboot.
+	rendered := desired.Network
+	desired.Network = existing.Network
+	desired.Network.Hostname = rendered.Hostname
+	if len(desired.Network.Interfaces) == 0 {
+		desired.Network.Interfaces = rendered.Interfaces
 	}
 
-	if storageIsExplicit(&existing.Storage) {
+	if storageIsExplicit(&existing.Storage, &desired.Storage) {
 		desired.Storage = existing.Storage
 	}
-}
-
-// networkIsEmpty reports whether a node said nothing about its network. The
-// hostname is left out: it is the cluster's either way.
-func networkIsEmpty(network *internalv1alpha1.Network) bool {
-	without := *network
-	without.Hostname = ""
-	return apiequality.Semantic.DeepEqual(without, internalv1alpha1.Network{})
 }
 
 // nodeIPStillHolds reports whether a bootstrapped address is still one the node
@@ -132,10 +123,14 @@ func nodeIPStillHolds(nodeIP string, reported []string) bool {
 }
 
 // storageIsExplicit reports whether storage carries something this controller
-// does not render: only device path and mounts count, deliberately not the disk
-// selector — keeping a differing selector would make storage write-once.
-func storageIsExplicit(storage *internalv1alpha1.Storage) bool {
-	return storage.Device != "" || len(storage.Mounts) > 0
+// does not render. A selector differing from the rendered guess is the
+// operator's: a hand-installed worker names its disk and nothing else, publishes
+// that once, and has no second write to restore it from.
+func storageIsExplicit(storage, rendered *internalv1alpha1.Storage) bool {
+	if storage.Device != "" || len(storage.Mounts) > 0 {
+		return true
+	}
+	return storage.DiskSelector != nil && !apiequality.Semantic.DeepEqual(storage.DiskSelector, rendered.DiskSelector)
 }
 
 // renderKernel publishes the cluster-decided sysctl keys — the same four dhctl

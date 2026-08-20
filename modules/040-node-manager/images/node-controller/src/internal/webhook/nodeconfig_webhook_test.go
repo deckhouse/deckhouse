@@ -70,6 +70,16 @@ func TestValidateNodeConfigUpdate(t *testing.T) {
 			wantMessage: "spec.storage names the disk",
 		},
 		{
+			// Wiping re-partitions the disk the node runs from; on a machine
+			// with a single disk that destroys the installation media.
+			name: "wiping the installed disk is refused",
+			mutate: func(nc *internalv1alpha1.NodeConfig) {
+				nc.Spec.Storage.Wipe = true
+			},
+			wantDenied:  true,
+			wantMessage: "spec.storage names the disk",
+		},
+		{
 			name: "cluster-owned field stays writable",
 			mutate: func(nc *internalv1alpha1.NodeConfig) {
 				nc.Spec.Kubelet.MaxPods = 250
@@ -121,5 +131,25 @@ func TestValidateNodeConfigUpdateLeavesTheControllerRoomToWork(t *testing.T) {
 
 	if err := validateNodeConfigUpdate(old, rendered); err != nil {
 		t.Fatalf("the webhook froze a field the controller renders, which stops every later update: %v", err)
+	}
+}
+
+// A NodeConfig that named no network carries nothing the machine owns, and the
+// controller renders eth0/DHCP into it on its first pass — the shape the
+// NodeConfigTemplate hands out and the shape a DHCP machine publishes.
+func TestValidateNodeConfigUpdateFillsInANetworkTheMachineNeverNamed(t *testing.T) {
+	old := &internalv1alpha1.NodeConfig{
+		ObjectMeta: metav1.ObjectMeta{Name: "worker-0"},
+		Spec:       internalv1alpha1.NodeSpec{NodeName: "worker-0"},
+	}
+
+	rendered := old.DeepCopy()
+	rendered.Spec.Network = internalv1alpha1.Network{
+		Hostname:   "worker-0",
+		Interfaces: []internalv1alpha1.NetworkInterface{{Name: "eth0", DHCP: true}},
+	}
+
+	if err := validateNodeConfigUpdate(old, rendered); err != nil {
+		t.Fatalf("the webhook refused the render of a node that named no network, which stops every later update: %v", err)
 	}
 }
