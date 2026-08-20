@@ -35,6 +35,9 @@ metadata:
   name: {{ $clusterName | quote }}
 spec:
   server: {{ $vsphere.server | quote }}
+  {{- if hasKey $vsphere "thumbprint" }}
+  thumbprint: {{ $vsphere.thumbprint | quote }}
+  {{- end }}
   {{- if and (hasKey $controlPlaneEndpoint "host") (hasKey $controlPlaneEndpoint "port") }}
   controlPlaneEndpoint:
     host: {{ $controlPlaneEndpoint.host | quote }}
