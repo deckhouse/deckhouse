@@ -533,19 +533,28 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 	})
 
 	// helm_lib_kind_exists matches a "/<kind>" suffix over the capability strings, so it answers for
-	// a kind name whatever group serves it, and Gateway is a kind name two groups use. A policy
-	// written for a resource the cluster does not serve is harmless but misleading, and it would tell
-	// a reader that the Gateway API is covered in a cluster where it is not installed at all.
-	Context("The cluster runs Istio and no Gateway API", func() {
+	// a kind name whatever group serves it, and those strings are the cluster's list rather than
+	// this repository's. Istio's Gateway is the collision that exists today; a third-party CRD whose
+	// kind name ends the same way is the same accident on any of the other four. A policy written
+	// for a resource the cluster does not serve is harmless but misleading, and it would tell a
+	// reader that the Gateway API is covered in a cluster where it is not installed at all.
+	Context("The cluster serves kinds of those names from another group", func() {
 		BeforeEach(func() {
-			render("%s.example.com", append(admissionAPIs, istioGatewayAPI)...)
+			render("%s.example.com", append(admissionAPIs,
+				istioGatewayAPI,
+				"example.com/v1/HTTPRoute",
+				"example.com/v1/GRPCRoute",
+				"example.com/v1/TLSRoute",
+				"example.com/v1/ListenerSet")...)
 		})
 
-		It("writes no Gateway policy for the Istio kind of the same name", func() {
+		It("writes no policy for a kind gateway.networking.k8s.io does not serve", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			Expect(f.KubernetesGlobalResource("ValidatingAdmissionPolicy", reservedHostsGatewayPolicy).Exists()).To(BeFalse())
-			Expect(f.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", reservedHostsGatewayPolicy).Exists()).To(BeFalse())
+			for name, expected := range gatewayAPIKinds {
+				Expect(f.KubernetesGlobalResource("ValidatingAdmissionPolicy", expected.policy).Exists()).To(BeFalse(), name)
+				Expect(f.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", expected.policy).Exists()).To(BeFalse(), name)
+			}
 		})
 	})
 

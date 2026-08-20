@@ -281,35 +281,34 @@ data:
 {{- include "reserved_public_hosts_policy" (list . $paramsName "ingress" "networking.k8s.io" "ingresses" "has(object.spec) && has(object.spec.rules) ? object.spec.rules.filter(r, has(r.host) && r.host != '').map(r, r.host) : []") }}
 
 {{- /*
-  helm_lib_kind_exists matches a case-insensitive "/<kind>" suffix over the capability strings, so it
-  answers for a kind name whatever API group serves it. That is unambiguous for the four below: no
-  API group in this repository other than gateway.networking.k8s.io ships an HTTPRoute, GRPCRoute,
-  TLSRoute or ListenerSet.
+  Each Gateway API kind is matched on its group as well as on its name. helm_lib_kind_exists matches
+  a case-insensitive "/<kind>" suffix over the capability strings, so it answers for a kind name
+  whatever API group serves it -- and those strings are the list the cluster serves, not the list
+  this repository ships. networking.istio.io serves a Gateway of its own (the crd-all.gen.yaml files
+  under modules/110-istio/_crds/istio), and nothing stops a customer cluster from carrying a CRD
+  whose kind name ends in any of the other four. A policy written for a resource the cluster does not
+  serve is harmless, but it tells a reader that the Gateway API is covered where it is not installed.
+
+  The version is matched not at all: a cluster serving only gateway.networking.k8s.io/v1beta1 still
+  gets the policy, which is what keeps the guard in step with matchConstraints below asking for
+  apiVersions ["*"].
 */}}
-{{- if (include "helm_lib_kind_exists" (list . "HTTPRoute")) }}
+{{- if (include "reserved_public_hosts_gateway_api_kind_exists" (list . "HTTPRoute")) }}
 {{- include "reserved_public_hosts_policy" (list . $paramsName "httproute" "gateway.networking.k8s.io" "httproutes" $routeHosts) }}
 {{- end }}
 
-{{- if (include "helm_lib_kind_exists" (list . "GRPCRoute")) }}
+{{- if (include "reserved_public_hosts_gateway_api_kind_exists" (list . "GRPCRoute")) }}
 {{- include "reserved_public_hosts_policy" (list . $paramsName "grpcroute" "gateway.networking.k8s.io" "grpcroutes" $routeHosts) }}
 {{- end }}
 
-{{- if (include "helm_lib_kind_exists" (list . "TLSRoute")) }}
+{{- if (include "reserved_public_hosts_gateway_api_kind_exists" (list . "TLSRoute")) }}
 {{- include "reserved_public_hosts_policy" (list . $paramsName "tlsroute" "gateway.networking.k8s.io" "tlsroutes" $routeHosts) }}
 {{- end }}
 
-{{- if (include "helm_lib_kind_exists" (list . "ListenerSet")) }}
+{{- if (include "reserved_public_hosts_gateway_api_kind_exists" (list . "ListenerSet")) }}
 {{- include "reserved_public_hosts_policy" (list . $paramsName "listenerset" "gateway.networking.k8s.io" "listenersets" $listenerHosts) }}
 {{- end }}
 
-{{- /*
-  Gateway is the one kind whose name is not unambiguous: networking.istio.io serves a Gateway too
-  (the crd-all.gen.yaml files under modules/110-istio/_crds/istio), and helm_lib_kind_exists would be
-  satisfied by it in a cluster running Istio without the Gateway API, leaving a policy that targets a
-  resource which does not exist. So the capability strings are matched on the group and on the kind,
-  and on the version not at all: a cluster serving only gateway.networking.k8s.io/v1beta1 still gets
-  the policy, which is what keeps it in step with matchConstraints below asking for apiVersions ["*"].
-*/}}
 {{- if (include "reserved_public_hosts_gateway_api_kind_exists" (list . "Gateway")) }}
 {{- include "reserved_public_hosts_policy" (list . $paramsName "gateway" "gateway.networking.k8s.io" "gateways" $listenerHosts) }}
 {{- end }}
