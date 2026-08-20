@@ -1,4 +1,4 @@
-{{- $shellOperatorVersion := "v1.17.5"}}
+{{- $shellOperatorVersion := "feature/bump-deps"}}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 final: false
