@@ -1,0 +1,37 @@
+# Copy of the real original: olcedar's
+# images/rootfs/config/etc/systemd/system/nodelet.service, baked into /etc by
+# the image build. /etc always wins over this extension's copy in /usr/lib,
+# so a unit change here cannot reach a running node via the extension alone.
+[Unit]
+Description=Deckhouse nodelet
+After=network.target
+Wants=network.target
+# Partitions are mounted by initramfs (carried over switch-root). Fail loudly
+# if any is missing, so a broken boot is visible instead of silently running
+# without /config or /var.
+AssertPathIsMountPoint=/boot
+AssertPathIsMountPoint=/config
+AssertPathIsMountPoint=/var
+# A crashing successor must stop flapping and leave a visibly failed unit
+# instead of restarting for ever. Ten minutes rather than the default ten
+# seconds: under QEMU without KVM wall-clock runs 10-20x slower.
+StartLimitIntervalSec=600
+StartLimitBurst=5
+
+[Service]
+Type=simple
+# The overlay lives in tmpfs and is gone after a reboot, so without this the
+# unit would start the agent baked into the image rather than the one the
+# cluster asked for. ExecStart resolves after ExecStartPre, so /usr/bin/nodelet
+# is already the extension's binary. Leading "-": a failed merge must still
+# leave a bootable node running the image's copy.
+ExecStartPre=-/usr/sbin/systemd-sysext --image-policy=root=signed merge
+ExecStart=/usr/bin/nodelet
+# Output inherits the system default (journal, see system.conf.d/00-console-log.conf).
+# journald forwards it to the serial console per MaxLevelConsole=info in
+# journald.conf, so nodelet's info logs are visible during boot.
+Restart=always
+RestartSec=1
+
+[Install]
+WantedBy=node.target

@@ -38,6 +38,10 @@ const (
 	InstanceCRDFile       NodeManagerCRDFile = "instance.yaml"
 	NodeUserCRDFile       NodeManagerCRDFile = "nodeuser.yaml"
 	StaticInstanceCRDFile NodeManagerCRDFile = "staticinstance.yaml"
+
+	NodeConfigCRDFile          NodeManagerCRDFile = "nodeconfig.yaml"
+	NodeOperationCRDFile       NodeManagerCRDFile = "nodeoperation.yaml"
+	NodeBootstrapConfigCRDFile NodeManagerCRDFile = "nodebootstrapconfig.yaml"
 )
 
 // RealCacheCRDPaths returns the CRDs every envtest manager needs regardless of what the
@@ -46,7 +50,7 @@ const (
 func RealCacheCRDPaths() []string {
 	return slices.Concat(
 		ControllerCRDPaths(MachineCRDFile, MachineDeploymentCRDFile, ClusterCRDFile, MachineHealthCheckCRDFile),
-		NodeManagerCRDPaths(MCMCRDFile),
+		NodeManagerCRDPaths(MCMCRDFile, NodeBootstrapConfigCRDFile),
 		[]string{
 			testdataPath("deckhousecontrolplane-crd.yaml"),
 			testdataPath("moduleconfig-crd.yaml"),
