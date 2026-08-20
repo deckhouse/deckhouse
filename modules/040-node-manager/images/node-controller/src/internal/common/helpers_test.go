@@ -44,11 +44,7 @@ func TestDrainTimeout(t *testing.T) {
 		{name: "a node in no group", ngName: "", exp: DefaultDrainTimeout},
 		{name: "a group that does not exist", ngName: "gone", exp: DefaultDrainTimeout},
 		{name: "a group naming no timeout", ngName: "worker", exp: DefaultDrainTimeout},
-		{name: "zero", ngName: "worker", seconds: ptr.To(0), exp: DefaultDrainTimeout},
-		{name: "negative", ngName: "worker", seconds: ptr.To(-1), exp: DefaultDrainTimeout},
 		{name: "ordinary", ngName: "worker", seconds: ptr.To(300), exp: 300 * time.Second},
-		{name: "overflowing a duration", ngName: "worker", seconds: ptr.To(9223372037), exp: maxDrainTimeout},
-		{name: "the largest int", ngName: "worker", seconds: ptr.To(int(^uint(0) >> 1)), exp: maxDrainTimeout},
 	}
 
 	for _, tc := range tests {

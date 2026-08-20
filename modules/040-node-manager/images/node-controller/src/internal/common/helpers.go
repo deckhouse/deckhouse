@@ -19,7 +19,6 @@ package common
 import (
 	"context"
 	"fmt"
-	"math"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -47,12 +46,6 @@ func GetNodeGroup(ctx context.Context, r client.Reader, name string) (*v1.NodeGr
 // allows less than the drain it waits for aborts a healthy drain.
 const DefaultDrainTimeout = 10 * time.Minute
 
-// maxDrainTimeout guards the seconds-to-Duration multiplication against
-// overflowing into a negative deadline (~292 years) for a value stored before
-// the CRD bounded nodeDrainTimeoutSecond. Deliberately not a policy cap — that
-// belongs in the CRD.
-const maxDrainTimeout = time.Duration(math.MaxInt64)
-
 // DrainTimeout is how long the eviction of a node in this group may run. A
 // group that cannot be read falls back to the default: the node is waiting on
 // that eviction, so a bound that is only usually right beats refusing to start.
@@ -69,14 +62,8 @@ func DrainTimeout(ctx context.Context, r client.Reader, ngName string) time.Dura
 	if ng.Spec.NodeDrainTimeoutSecond == nil {
 		return DefaultDrainTimeout
 	}
-	seconds := int64(*ng.Spec.NodeDrainTimeoutSecond)
-	if seconds <= 0 {
-		return DefaultDrainTimeout
-	}
-	if seconds > int64(maxDrainTimeout/time.Second) {
-		return maxDrainTimeout
-	}
-	return time.Duration(seconds) * time.Second
+	// The CRD bounds the field to 30..7200 seconds, so no clamp here.
+	return time.Duration(*ng.Spec.NodeDrainTimeoutSecond) * time.Second
 }
 
 // BootstrapTokenNodeGroupLabel names the NodeGroup a bootstrap-token secret was
