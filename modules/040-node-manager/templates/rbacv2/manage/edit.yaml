@@ -43,7 +43,7 @@ rules:
 # right to join a machine to the cluster. It belongs with the write verbs, not
 # with the read-only role.
 - apiGroups:
-  - internal.deckhouse.io
+  - templates.internal.deckhouse.io
   resources:
   - nodeconfigtemplates
   verbs:
