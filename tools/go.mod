@@ -66,7 +66,7 @@ require (
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/fatih/structtag v1.2.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
-	github.com/flant/addon-operator v1.24.11 // indirect
+	github.com/flant/addon-operator v1.24.12-0.20260820080708-ec55893fb383 // indirect
 	github.com/flant/kube-client v1.9.1 // indirect
 	github.com/flant/shell-operator v1.20.3-0.20260820080020-f1e82137a083 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
@@ -209,6 +209,7 @@ require (
 	github.com/sanposhiho/wastedassign v1.0.0 // indirect
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
 	github.com/securego/gosec/v2 v2.7.0 // indirect
+	github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3 // indirect
 	github.com/shazow/go-diff v0.0.0-20160112020656-b6b7b6733b8c // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/sirupsen/logrus v1.9.4 // indirect
@@ -277,6 +278,7 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.62.0 // indirect
 	gopkg.in/robfig/cron.v2 v2.0.0-20150107220207-be2e0b0deed5 // indirect
+	gotest.tools/v3 v3.5.1 // indirect
 	helm.sh/helm/v3 v3.19.5 // indirect
 	honnef.co/go/tools v0.1.4 // indirect
 	k8s.io/api v0.35.2 // indirect
