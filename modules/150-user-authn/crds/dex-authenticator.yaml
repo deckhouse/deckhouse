@@ -128,13 +128,17 @@ spec:
                         Section name from the ListenerSet object in the Gateway API the HTTPRoute refers to.
                       x-doc-examples: ['default-listener']
                       pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
-                      maxLength: 
+                      maxLength: 253
                 signOutURL:
                   type: string
                   description: |-
                     The URL of the application from which requests will be redirected to the sign-out URL of the `dex-authenticator`.
 
                     It is used in the application to direct logout requests. A separate Ingress resource will be created for the specified URL, and requests to it will be redirected to `dex-authenticator`.
+
+                    The value must not contain line breaks.
+                  maxLength: 2048
+                  pattern: '^[^\r\n]*$'
                 keepUsersLoggedInFor:
                   type: string
                   description: |-
@@ -153,18 +157,26 @@ spec:
                     A list of emails of users are allowed to connect to the client.
 
                     **By default**, all users can connect.
+
+                    Values must not contain line breaks.
                   x-doc-default: 'All emails are allowed.'
                   items:
                     type: string
+                    maxLength: 320
+                    pattern: '^[^\r\n]*$'
                 allowedGroups:
                   type: array
                   description: |-
                     A list of groups whose members are allowed to connect to the client.
 
                     **By default**, all groups can connect.
+
+                    Values must not contain line breaks.
                   x-doc-default: 'All groups are allowed.'
                   items:
                     type: string
+                    maxLength: 512
+                    pattern: '^[^\r\n]*$'
                 whitelistSourceRanges:
                   type: array
                   description: |
@@ -331,6 +343,10 @@ spec:
                           The URL of the application from which requests will be redirected to the sign-out URL of the `dex-authenticator`.
 
                           It is used in the application to direct logout requests. A separate Ingress resource will be created for the specified URL, and requests to it will be redirected to `dex-authenticator`.
+
+                          The value must not contain line breaks.
+                        maxLength: 2048
+                        pattern: '^[^\r\n]*$'
                       whitelistSourceRanges:
                         type: array
                         description: |
@@ -390,6 +406,10 @@ spec:
                           The URL of the application from which requests will be redirected to the sign-out URL of the `dex-authenticator`.
 
                           It is used in the application to direct logout requests. A separate Ingress resource will be created for the specified URL, and requests to it will be redirected to `dex-authenticator`.
+
+                          The value must not contain line breaks.
+                        maxLength: 2048
+                        pattern: '^[^\r\n]*$'
                       gatewayAPI:
                         type: object
                         required:
@@ -457,18 +477,26 @@ spec:
                     A list of emails of users are allowed to connect to the client.
 
                     **By default**, all users can connect.
+
+                    Values must not contain line breaks.
                   x-doc-default: 'All users are allowed.'
                   items:
                     type: string
+                    maxLength: 320
+                    pattern: '^[^\r\n]*$'
                 allowedGroups:
                   type: array
                   description: |-
                     A list of groups whose members are allowed to connect to the client.
 
                     **By default**, all groups can connect.
+
+                    Values must not contain line breaks.
                   x-doc-default: 'All groups are allowed.'
                   items:
                     type: string
+                    maxLength: 512
+                    pattern: '^[^\r\n]*$'
                 podMetadata:
                   type: object
                   description: |-

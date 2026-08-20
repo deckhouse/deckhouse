@@ -94,7 +94,7 @@ spec:
             name: {{ $svcName }}
             port:
               number: 443
-        path: {{ $app.signOutURL }}
+        path: {{ $app.signOutURL | quote }}
         pathType: ImplementationSpecific
     {{- if (include "helm_lib_module_https_ingress_tls_enabled" $context ) }}
       {{- if $app.ingressSecretName }}
