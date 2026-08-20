@@ -1368,7 +1368,6 @@ modules:
           - deckhouse.io
           resources:
           - projects
-          - projecttemplates
           verbs:
           - create
           - update
