@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"maps"
-	"net"
 	"slices"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -56,6 +55,9 @@ type immutableBootstrap struct {
 	// until the node has handed them over.
 	kubeconfigPath string
 	tunnelStop     func()
+	// maintenancePort is where the machines take their configuration; zero means
+	// immutable.MaintenancePort, and only a test points it anywhere else.
+	maintenancePort int
 }
 
 // stopImmutableTunnel closes the bastion tunnel the path opened, if it opened one.
@@ -110,7 +112,7 @@ func (b *ClusterBootstrapper) detectImmutableMaster(ctx context.Context, bctx *b
 		return err
 	}
 
-	matched, err := customizationsByNode(bctx.metaConfig, hosts, customizations)
+	matched, err := matchCustomizationsToHosts(bctx.metaConfig, hosts, customizations)
 	if err != nil {
 		return err
 	}
@@ -187,27 +189,22 @@ func (b *ClusterBootstrapper) refuseSSHHostOnImmutableStatic(ctx context.Context
 			"drop --ssh-host, or the SSHHost resource of --connection-config")
 }
 
-// customizationsByNode pairs the operator's documents with the machines they
-// describe. In a cloud there are no machines to name: the master NodeGroup's
-// instanceClass describes them, so a document there is in the wrong file.
-func customizationsByNode(metaConfig *config.MetaConfig, hosts map[string]string, customizations []immutable.Customization) (map[string]immutable.Customization, error) {
-	if metaConfig.ClusterType != config.CloudClusterType {
-		return matchCustomizationsToHosts(hosts, customizations)
-	}
-	if len(customizations) > 0 {
+// matchCustomizationsToHosts pairs what the operator wrote about a machine with
+// where that machine is. A document nobody named is a typo in the node name,
+// and letting it pass would boot the machine with defaults it was written to
+// replace.
+func matchCustomizationsToHosts(metaConfig *config.MetaConfig, hosts map[string]string, customizations []immutable.Customization) (map[string]immutable.Customization, error) {
+	// In a cloud there are no machines to name: the master NodeGroup's
+	// instanceClass describes them, so a document there is in the wrong file.
+	if metaConfig.ClusterType == config.CloudClusterType {
+		if len(customizations) == 0 {
+			return nil, nil
+		}
 		return nil, fmt.Errorf(
 			"the configuration describes node %s, but in a cloud the machines are described by the instanceClass of the master NodeGroup: drop the document",
 			customizations[0].NodeName)
 	}
 
-	return nil, nil
-}
-
-// matchCustomizationsToHosts pairs what the operator wrote about a machine with
-// where that machine is. A document nobody named is a typo in the node name,
-// and letting it pass would boot the machine with defaults it was written to
-// replace.
-func matchCustomizationsToHosts(hosts map[string]string, customizations []immutable.Customization) (map[string]immutable.Customization, error) {
 	matched := make(map[string]immutable.Customization, len(customizations))
 
 	for _, customization := range customizations {
@@ -226,6 +223,16 @@ func matchCustomizationsToHosts(hosts map[string]string, customizations []immuta
 	}
 
 	return matched, nil
+}
+
+// isStaticImmutableCluster reports the machines dhctl has to hand their payloads
+// to itself: they exist already, and there is no terraform here to carry the
+// document into a machine it creates.
+func isStaticImmutableCluster(bctx *bootstrapContext) bool {
+	if bctx.immutable == nil {
+		return false
+	}
+	return bctx.metaConfig.ClusterType != config.CloudClusterType
 }
 
 // applyImmutablePreflights adds the checks that only apply to an immutable
@@ -302,39 +309,10 @@ func immutableCustomization(bctx *bootstrapContext, nodeName string) *immutable.
 	return &described
 }
 
-// addressAfterInstall is where the machine answers once it has installed itself:
-// the push address, unless its document moves it to a static one. Everything
-// after the push — the handoff channel and the apiserver — goes there.
-func addressAfterInstall(c *immutable.Customization, pushAddress string) string {
-	if c == nil {
-		return pushAddress
-	}
-	// The document's own nodeIP wins: the machine check has confirmed it is one of
-	// the addresses this document gives it, and on a machine with several NICs it
-	// is not necessarily the first one.
-	if nodeIP := c.NodeIP(); nodeIP != "" {
-		return nodeIP
-	}
-	for _, iface := range c.Interfaces() {
-		if iface.DHCP || len(iface.Addresses) == 0 {
-			continue
-		}
-		host, _, err := net.ParseCIDR(iface.Addresses[0])
-		if err != nil {
-			// ParseCustomizations refuses an address without a prefix length, so this
-			// is unreachable from a document — and the push address is where the
-			// machine answers now, which beats killing the installer mid-run.
-			return pushAddress
-		}
-		return host.String()
-	}
-	return pushAddress
-}
-
 // bootstrapImmutableFirstMaster hands the machine the cluster starts on its
 // payload. This is what the cloud path gets for free: there terraform carries
 // the same document into the machine it creates.
-func (b *ClusterBootstrapper) bootstrapImmutableFirstMaster(ctx context.Context, bctx *bootstrapContext, port int) error {
+func (b *ClusterBootstrapper) bootstrapImmutableFirstMaster(ctx context.Context, bctx *bootstrapContext) error {
 	nodeName := bctx.immutable.masterNodeName
 
 	// The name is read out of the same --master-host list as the addresses, so
@@ -351,7 +329,7 @@ func (b *ClusterBootstrapper) bootstrapImmutableFirstMaster(ctx context.Context,
 
 	// The machine is configured at one address and, when its document gives it a
 	// static one, answers at another from the moment it has installed itself.
-	installedAddress := addressAfterInstall(immutableCustomization(bctx, nodeName), address)
+	installedAddress := immutableCustomization(bctx, nodeName).AddressAfterInstall(address)
 	if installedAddress != address {
 		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf(
 			"%s takes the static address %s its document assigns it; everything after the push goes there, not to %s",
@@ -382,7 +360,7 @@ func (b *ClusterBootstrapper) bootstrapImmutableFirstMaster(ctx context.Context,
 		return fmt.Errorf("decode the payload of %s: %w", nodeName, err)
 	}
 
-	if err := b.pushImmutablePayload(ctx, nodeName, address, port, document, nodeConfig); err != nil {
+	if err := b.pushImmutablePayload(ctx, bctx, nodeName, address, document, nodeConfig); err != nil {
 		return err
 	}
 	if err := savePushedPayload(ctx, bctx.stateCache, nodeName, address); err != nil {
@@ -397,9 +375,9 @@ func (b *ClusterBootstrapper) bootstrapImmutableFirstMaster(ctx context.Context,
 // payloads, one machine at a time: each carries the current bootstrap token and
 // the apiservers that answer now, so the payload is rendered per node and only
 // when its turn comes.
-func (b *ClusterBootstrapper) bootstrapImmutableAdditionalMasters(ctx context.Context, bctx *bootstrapContext, kubeCl *client.KubernetesClient, port int) error {
+func (b *ClusterBootstrapper) bootstrapImmutableAdditionalMasters(ctx context.Context, bctx *bootstrapContext, kubeCl *client.KubernetesClient) error {
 	for _, nodeName := range remainingMasterNames(bctx) {
-		if err := b.handImmutableJoinPayload(ctx, bctx, kubeCl, nodeName, port); err != nil {
+		if err := b.handImmutableJoinPayload(ctx, bctx, kubeCl, nodeName); err != nil {
 			return err
 		}
 
@@ -416,7 +394,7 @@ func (b *ClusterBootstrapper) bootstrapImmutableAdditionalMasters(ctx context.Co
 // handImmutableJoinPayload renders what this machine joins the running cluster
 // with and hands it over, unless an earlier attempt already did: a machine that
 // has its configuration answers the next one as an installed node, terminally.
-func (b *ClusterBootstrapper) handImmutableJoinPayload(ctx context.Context, bctx *bootstrapContext, kubeCl *client.KubernetesClient, nodeName string, port int) error {
+func (b *ClusterBootstrapper) handImmutableJoinPayload(ctx context.Context, bctx *bootstrapContext, kubeCl *client.KubernetesClient, nodeName string) error {
 	// The name came out of the hosts map, so the address is there.
 	address := bctx.immutable.hosts[nodeName]
 
@@ -440,7 +418,7 @@ func (b *ClusterBootstrapper) handImmutableJoinPayload(ctx context.Context, bctx
 		return fmt.Errorf("decode the payload of %s: %w", nodeName, err)
 	}
 
-	if err := b.pushImmutablePayload(ctx, nodeName, address, port, document, nodeConfig); err != nil {
+	if err := b.pushImmutablePayload(ctx, bctx, nodeName, address, document, nodeConfig); err != nil {
 		return err
 	}
 
@@ -455,18 +433,13 @@ func pushedPayloadCacheKey(nodeName string) string {
 	return "immutable-control-plane-pushed-payload-" + nodeName
 }
 
-// pushRecord is what the state cache holds: which machine took which node's
-// payload. The address is part of it so a rerun with a corrected --master-host
-// pushes again instead of waiting on a machine that never got anything.
-func pushRecord(nodeName, address string) string {
-	return nodeName + "=" + address
-}
-
 // savePushedPayload records the machine that took the payload. Returned rather
 // than warned: without the record every rerun walks into the terminal refusal
-// of an installed node, and nothing on disk says why.
+// of an installed node, and nothing on disk says why. The address is the record
+// so a rerun with a corrected --master-host pushes again instead of waiting on
+// a machine that never got anything.
 func savePushedPayload(ctx context.Context, stateCache state.Cache, nodeName, address string) error {
-	if err := stateCache.Save(ctx, pushedPayloadCacheKey(nodeName), []byte(pushRecord(nodeName, address))); err != nil {
+	if err := stateCache.Save(ctx, pushedPayloadCacheKey(nodeName), []byte(address)); err != nil {
 		return fmt.Errorf("record the configuration handed to %s in the state cache: %w", nodeName, err)
 	}
 	return nil
@@ -489,13 +462,18 @@ func payloadAlreadyPushed(ctx context.Context, stateCache state.Cache, nodeName,
 	if err != nil {
 		return false, fmt.Errorf("load %s from the state cache: %w", key, err)
 	}
-	return string(recorded) == pushRecord(nodeName, address), nil
+	return string(recorded) == address, nil
 }
 
 // pushImmutablePayload waits for the machine to open its maintenance port and
 // hands it document, the cloud-init. The wait is generous: the machine may still
 // be POSTing. nodeConfig is the document inside it, checked against the hardware.
-func (b *ClusterBootstrapper) pushImmutablePayload(ctx context.Context, nodeName, address string, port int, document, nodeConfig []byte) error {
+func (b *ClusterBootstrapper) pushImmutablePayload(ctx context.Context, bctx *bootstrapContext, nodeName, address string, document, nodeConfig []byte) error {
+	port := immutable.MaintenancePort
+	if bctx.immutable.maintenancePort != 0 {
+		port = bctx.immutable.maintenancePort
+	}
+
 	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), fmt.Sprintf("Hand %s its configuration", nodeName), func(ctx context.Context) error {
 		// A channel per attempt: this wait starts while the machine is still
 		// powering on, so an early dial hangs to gossh's deadline, which ends the

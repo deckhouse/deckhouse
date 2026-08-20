@@ -28,7 +28,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apiserver/pkg/registry/rest"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	utilcompatibility "k8s.io/apiserver/pkg/util/compatibility"
 	restclient "k8s.io/client-go/rest"
@@ -50,7 +49,7 @@ func (stubStorage) GetSingularName() string { return "nodeconfigtemplate" }
 func (stubStorage) Get(_ context.Context, name string, _ *metav1.GetOptions) (runtime.Object, error) {
 	return nil, apierrors.NewNotFound(schema.GroupResource{
 		Group:    templatesv1alpha1.GroupVersion.Group,
-		Resource: "nodeconfigtemplates",
+		Resource: templatesv1alpha1.NodeConfigTemplateResource,
 	}, name)
 }
 
@@ -60,7 +59,7 @@ func TestServesInternalDeckhouseGroup(t *testing.T) {
 	cfg.ExternalAddress = "127.0.0.1:443"
 	cfg.LoopbackClientConfig = &restclient.Config{Host: "127.0.0.1"}
 
-	srv, err := newServer(cfg, map[string]rest.Storage{"nodeconfigtemplates": stubStorage{}})
+	srv, err := newServer(cfg, templatesv1alpha1.NodeConfigTemplateResource, stubStorage{})
 	require.NoError(t, err)
 
 	// The startup step the process really takes, and the one that killed it: with
@@ -87,5 +86,5 @@ func TestServesInternalDeckhouseGroup(t *testing.T) {
 	for _, r := range list.APIResources {
 		names = append(names, r.Name)
 	}
-	require.Contains(t, names, "nodeconfigtemplates")
+	require.Contains(t, names, templatesv1alpha1.NodeConfigTemplateResource)
 }

@@ -18,7 +18,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
@@ -149,14 +149,14 @@ func renderControlPlaneBundle(ctx context.Context, in manifestsInput) ([]rendere
 // sortEtcdFirst puts etcd at the head and the rest in name order, so the same
 // inputs always produce the same sequence of writes on the node.
 func sortEtcdFirst(files []renderedFile) {
-	sort.Slice(files, func(i, j int) bool {
+	slices.SortFunc(files, func(a, b renderedFile) int {
 		switch {
-		case files[i].Name == etcdManifest:
-			return true
-		case files[j].Name == etcdManifest:
-			return false
+		case a.Name == etcdManifest:
+			return -1
+		case b.Name == etcdManifest:
+			return 1
 		default:
-			return files[i].Name < files[j].Name
+			return strings.Compare(a.Name, b.Name)
 		}
 	})
 }

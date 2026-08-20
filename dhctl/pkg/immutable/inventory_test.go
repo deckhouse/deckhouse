@@ -60,7 +60,7 @@ func TestCheckDocumentAgainstInventoryRefusesTheWholeStream(t *testing.T) {
 // A single document of the wrong kind parses into an empty spec, where every
 // check passes. The refusal has to say which document was wanted.
 func TestCheckDocumentAgainstInventoryRefusesAnotherKind(t *testing.T) {
-	document := []byte("apiVersion: " + payloadAPIVersion + "\nkind: ControlPlaneConfig\nspec:\n  bootstrap: true\n")
+	document := []byte("apiVersion: " + PayloadAPIVersion + "\nkind: ControlPlaneConfig\nspec:\n  bootstrap: true\n")
 
 	err := CheckDocumentAgainstInventory(t.Context(), document, &Inventory{
 		Disks: []InventoryDisk{{Name: "sda", Size: 32212254720}},
@@ -68,7 +68,7 @@ func TestCheckDocumentAgainstInventoryRefusesAnotherKind(t *testing.T) {
 	if err == nil {
 		t.Fatal("a document that is not a NodeConfig must be refused, not silently approved")
 	}
-	if !strings.Contains(err.Error(), nodeConfigKind) {
+	if !strings.Contains(err.Error(), NodeConfigKind) {
 		t.Fatalf("the refusal must name the document it wanted, got %v", err)
 	}
 }
@@ -148,72 +148,60 @@ func TestCheckDocumentAgainstInventory(t *testing.T) {
 	}{
 		{
 			name: "size shared by two disks",
-			document: `apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-spec:
+			document: nodeConfigWithSpec(`
   storage:
     diskSelector:
       size: "=30Gi"
-`,
+`),
 			want: "matches 2 disks",
 		},
 		{
 			name: "device that does not exist",
-			document: `apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-spec:
+			document: nodeConfigWithSpec(`
   storage:
     device: /dev/disk/by-path/pci-0000:0d:00.0-scsi-0:0:0:9
-`,
+`),
 			want: "no disk",
 		},
 		{
 			name: "an address hung on an interface that does not exist",
-			document: `apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-spec:
+			document: nodeConfigWithSpec(`
   network:
     interfaces:
     - name: eth1
       addresses: ["10.0.0.11/24"]
-`,
+`),
 			want: "eth1",
 		},
 		{
 			// Most hardware names its NIC enp3s0 or eno1, and the rendered default
 			// says eth0 on DHCP: refusing that name would refuse the machine itself.
 			name: "a name the machine lacks, on DHCP, is the installer's own guess",
-			document: `apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-spec:
+			document: nodeConfigWithSpec(`
   network:
     interfaces:
     - name: eth9
       dhcp: true
-`,
+`),
 			want: "",
 		},
 		{
 			name: "a mount device that names nothing",
-			document: `apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-spec:
+			document: nodeConfigWithSpec(`
   storage:
     mounts:
     - name: kubernetes-data
       device: /dev/sdz1
-`,
+`),
 			want: "names no device of this machine",
 		},
 		{
 			name: "unique size passes",
-			document: `apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-spec:
+			document: nodeConfigWithSpec(`
   storage:
     diskSelector:
       size: "=10Gi"
-`,
+`),
 			want: "",
 		},
 	}
@@ -245,13 +233,11 @@ func TestRefusalNamesTheMachineAndWhatItHas(t *testing.T) {
 				Model: "QEMU HARDDISK", Serial: "c41d77a2"},
 		},
 	}
-	document := `apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-spec:
+	document := nodeConfigWithSpec(`
   storage:
     diskSelector:
       size: ">=20Gi"
-`
+`)
 
 	err := CheckDocumentAgainstInventory(t.Context(), []byte(document), inv)
 	if err == nil {
@@ -305,30 +291,24 @@ func TestCheckDocumentAcceptsWhatTheMachineWillMatch(t *testing.T) {
 		{
 			name:      "a bare size means at least this much, as on the node",
 			inventory: twoDisks,
-			document: `apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-spec:
+			document: nodeConfigWithSpec(`
   storage:
     diskSelector:
       size: ">=20Gi"
-`,
+`),
 		},
 		{
 			name:      "a device named by its by-id link",
 			inventory: twoDisks,
-			document: `apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-spec:
+			document: nodeConfigWithSpec(`
   storage:
     device: /dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_89bf
-`,
+`),
 		},
 		{
 			name:      "the rendered etcd mount on a machine with a spare disk",
 			inventory: twoDisks,
-			document: `apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-spec:
+			document: nodeConfigWithSpec(`
   storage:
     diskSelector:
       size: ">=20Gi"
@@ -338,16 +318,14 @@ spec:
         size: 10Gi
         blank: true
       bindTo: /var/lib/etcd
-`,
+`),
 		},
 		{
 			// etcdMounts (nodeconfig.go) is rendered for every control-plane node,
 			// and the node skips a mount that matches nothing.
 			name:      "the rendered etcd mount on a machine with one disk",
 			inventory: oneDisk,
-			document: `apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-spec:
+			document: nodeConfigWithSpec(`
   storage:
     diskSelector:
       size: ">=20Gi"
@@ -357,38 +335,32 @@ spec:
         size: 10Gi
         blank: true
       bindTo: /var/lib/etcd
-`,
+`),
 		},
 		{
 			// The machine reads the serial off its by-id link when sysfs has none,
 			// and the inventory publishes an empty one there.
 			name:      "a serial the machine only knows from its by-id link",
 			inventory: twoDisks,
-			document: `apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-spec:
+			document: nodeConfigWithSpec(`
   storage:
     diskSelector:
       serial: 89bf
-`,
+`),
 		},
 		{
 			name:      "a bus path in the spelling of /dev/disk/by-path",
 			inventory: twoDisks,
-			document: `apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-spec:
+			document: nodeConfigWithSpec(`
   storage:
     diskSelector:
       busPath: pci-0000:0d:00.0-scsi-0:0:0:1
-`,
+`),
 		},
 		{
 			name:      "a mount that may not reach the OS partitions",
 			inventory: usedDisk,
-			document: `apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-spec:
+			document: nodeConfigWithSpec(`
   storage:
     diskSelector:
       name: sda
@@ -396,14 +368,12 @@ spec:
     - name: kubernetes-data
       partitionSelector:
         size: 10Gi
-`,
+`),
 		},
 		{
 			name:      "a static address kubelet is told to register with",
 			inventory: twoDisks,
-			document: `apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-spec:
+			document: nodeConfigWithSpec(`
   network:
     interfaces:
     - name: eth0
@@ -411,7 +381,7 @@ spec:
       addresses: ["192.168.0.101/24"]
   kubelet:
     nodeIP: 192.168.0.101
-`,
+`),
 		},
 	}
 	for _, c := range cases {
@@ -442,9 +412,7 @@ func TestCheckDocumentRefusesWhatTheMachineCannotSatisfy(t *testing.T) {
 		{
 			name:      "two spare disks fit the etcd mount",
 			inventory: threeBlank,
-			document: `apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-spec:
+			document: nodeConfigWithSpec(`
   storage:
     diskSelector:
       size: ">=20Gi"
@@ -453,39 +421,33 @@ spec:
       partitionSelector:
         size: 10Gi
         blank: true
-`,
+`),
 			want: "matches 2 devices",
 		},
 		{
 			name:      "a size nothing on the machine is that big",
 			inventory: threeBlank,
-			document: `apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-spec:
+			document: nodeConfigWithSpec(`
   storage:
     diskSelector:
       size: ">=100Gi"
-`,
+`),
 			want: "matches no disk",
 		},
 		{
 			name:      "a size expression the node cannot parse",
 			inventory: threeBlank,
-			document: `apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-spec:
+			document: nodeConfigWithSpec(`
   storage:
     diskSelector:
       size: ">=30 gigs"
-`,
+`),
 			want: "unknown unit",
 		},
 		{
 			name:      "kubelet registers with an address no interface is given",
 			inventory: threeBlank,
-			document: `apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-spec:
+			document: nodeConfigWithSpec(`
   network:
     interfaces:
     - name: eth0
@@ -493,7 +455,7 @@ spec:
       addresses: ["192.168.0.101/24"]
   kubelet:
     nodeIP: 192.168.0.5
-`,
+`),
 			want: "192.168.0.5",
 		},
 	}
@@ -540,9 +502,7 @@ func TestSizeGrammarAgreesWithTheNode(t *testing.T) {
 }
 
 func TestCheckDocumentAgainstNoInventoryIsNoCheckAtAll(t *testing.T) {
-	document := `apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-spec:
+	document := nodeConfigWithSpec(`
   storage:
     diskSelector:
       size: "=30Gi"
@@ -557,7 +517,7 @@ spec:
       dhcp: true
   kubelet:
     nodeIP: 192.168.0.5
-`
+`)
 
 	if err := CheckDocumentAgainstInventory(t.Context(), []byte(document), nil); err != nil {
 		t.Fatalf("a machine that serves no inventory leaves nothing to check against, got %v", err)
@@ -591,21 +551,17 @@ func TestSizeGrammarFollowsItsConsumer(t *testing.T) {
 		{
 			name:      "a quantity suffix the initramfs does not know is refused for the OS disk",
 			inventory: twoDisks,
-			document: `apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-spec:
+			document: nodeConfigWithSpec(`
   storage:
     diskSelector:
       size: 30k
-`,
+`),
 			want: "unknown unit",
 		},
 		{
 			name:      "the same suffix is a plain quantity for a mount",
 			inventory: twoDisks,
-			document: `apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-spec:
+			document: nodeConfigWithSpec(`
   storage:
     device: /dev/sda
     mounts:
@@ -613,15 +569,13 @@ spec:
       partitionSelector:
         size: 30k
         blank: true
-`,
+`),
 			want: "",
 		},
 		{
 			name:      "a suffix the initramfs knows is no quantity for a mount",
 			inventory: twoDisks,
-			document: `apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-spec:
+			document: nodeConfigWithSpec(`
   storage:
     device: /dev/sda
     mounts:
@@ -629,27 +583,23 @@ spec:
       partitionSelector:
         size: 10GB
         blank: true
-`,
+`),
 			want: "is not a size",
 		},
 		{
 			name:      "the same suffix is fine for the OS disk",
 			inventory: twoDisks,
-			document: `apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-spec:
+			document: nodeConfigWithSpec(`
   storage:
     diskSelector:
       size: ">=20GB"
-`,
+`),
 			want: "",
 		},
 		{
 			name:      "a bare size for a mount means at least this much, as on the node",
 			inventory: threeDisks,
-			document: `apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-spec:
+			document: nodeConfigWithSpec(`
   storage:
     device: /dev/sda
     mounts:
@@ -657,7 +607,7 @@ spec:
       partitionSelector:
         size: 10Gi
         blank: true
-`,
+`),
 			want: "matches 2 devices",
 		},
 	}
@@ -690,19 +640,23 @@ func TestOSPartitionLabelsAreCaseSensitiveLikeTheNode(t *testing.T) {
 			}},
 		},
 	}
-	document := `apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-spec:
+	document := nodeConfigWithSpec(`
   storage:
     device: /dev/sda
     mounts:
     - name: kubernetes-data
       partitionSelector:
         size: 10Gi
-`
+`)
 
 	err := CheckDocumentAgainstInventory(t.Context(), []byte(document), inv)
 	if err == nil || !strings.Contains(err.Error(), "matches 2 devices") {
 		t.Fatalf("both partitions are candidates on the node, got %v", err)
 	}
+}
+
+// nodeConfigWithSpec prepends the header every document under test carries, so
+// a case is only the spec it is about.
+func nodeConfigWithSpec(spec string) string {
+	return "apiVersion: " + PayloadAPIVersion + "\nkind: " + NodeConfigKind + "\nspec:" + spec
 }

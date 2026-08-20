@@ -166,8 +166,8 @@ func buildNodeConfig(ctx context.Context, in nodeConfigInput) (*nodeConfig, erro
 	))
 
 	return &nodeConfig{
-		APIVersion: payloadAPIVersion,
-		Kind:       nodeConfigKind,
+		APIVersion: PayloadAPIVersion,
+		Kind:       NodeConfigKind,
 		Metadata: objectMeta{
 			Name:   in.NodeName,
 			Labels: map[string]string{global.NodeGroupLabel: global.MasterNodeGroupName},

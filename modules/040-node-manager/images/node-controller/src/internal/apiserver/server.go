@@ -72,23 +72,21 @@ type Options struct {
 	// CertFile and KeyFile are the PEM paths of the serving certificate.
 	CertFile string
 	KeyFile  string
-	// Storage maps a plural resource name to its REST implementation.
-	Storage map[string]rest.Storage
+	// Resource is the plural name the storage is installed under, Storage its
+	// REST implementation.
+	Resource string
+	Storage  rest.Storage
 }
 
 // Run starts the aggregated API server for internal.deckhouse.io/v1alpha1 and
 // blocks until ctx is done.
 func Run(ctx context.Context, opts Options) error {
-	if len(opts.Storage) == 0 {
-		return fmt.Errorf("no storage registered for %s", templatesv1alpha1.GroupVersion)
-	}
-
 	cfg, err := newConfig(opts)
 	if err != nil {
 		return fmt.Errorf("build apiserver config: %w", err)
 	}
 
-	srv, err := newServer(cfg, opts.Storage)
+	srv, err := newServer(cfg, opts.Resource, opts.Storage)
 	if err != nil {
 		return fmt.Errorf("create apiserver: %w", err)
 	}
@@ -129,7 +127,7 @@ func newConfig(opts Options) (*genericapiserver.RecommendedConfig, error) {
 // /apis included, and calls klog.Fatal on the first model it has no definition
 // for. Filling that in means carrying the whole generated apimachinery set for a
 // pair of virtual resources nobody runs `kubectl explain` against.
-func newServer(cfg *genericapiserver.RecommendedConfig, storage map[string]rest.Storage) (*genericapiserver.GenericAPIServer, error) {
+func newServer(cfg *genericapiserver.RecommendedConfig, resource string, storage rest.Storage) (*genericapiserver.GenericAPIServer, error) {
 	cfg.OpenAPIV3Config = genericapiserver.DefaultOpenAPIV3Config(
 		openAPIDefinitions(storage), endpointsopenapi.NewDefinitionNamer(Scheme))
 
@@ -139,7 +137,7 @@ func newServer(cfg *genericapiserver.RecommendedConfig, storage map[string]rest.
 	}
 
 	info := genericapiserver.NewDefaultAPIGroupInfo(templatesv1alpha1.GroupVersion.Group, Scheme, metav1.ParameterCodec, Codecs)
-	info.VersionedResourcesStorageMap[templatesv1alpha1.GroupVersion.Version] = storage
+	info.VersionedResourcesStorageMap[templatesv1alpha1.GroupVersion.Version] = map[string]rest.Storage{resource: storage}
 
 	if err := srv.InstallAPIGroup(&info); err != nil {
 		return nil, fmt.Errorf("install %s: %w", templatesv1alpha1.GroupVersion, err)
@@ -148,20 +146,19 @@ func newServer(cfg *genericapiserver.RecommendedConfig, storage map[string]rest.
 	return srv, nil
 }
 
-// openAPIDefinitions describes every served type as a free-form object: the
-// resources are virtual and have no generated openapi definitions. Running
+// openAPIDefinitions describes the served type as a free-form object: the
+// resource is virtual and has no generated openapi definitions. Running
 // openapi-gen over the api package would give kubectl explain a real schema.
-func openAPIDefinitions(storage map[string]rest.Storage) openapicommon.GetOpenAPIDefinitions {
-	definitions := make(map[string]openapicommon.OpenAPIDefinition, len(storage))
-	for _, s := range storage {
-		definitions[util.GetCanonicalTypeName(s.New())] = openapicommon.OpenAPIDefinition{
+func openAPIDefinitions(storage rest.Storage) openapicommon.GetOpenAPIDefinitions {
+	definitions := map[string]openapicommon.OpenAPIDefinition{
+		util.GetCanonicalTypeName(storage.New()): {
 			Schema: spec.Schema{
 				SchemaProps: spec.SchemaProps{Type: spec.StringOrArray{"object"}},
 				VendorExtensible: spec.VendorExtensible{
 					Extensions: spec.Extensions{"x-kubernetes-preserve-unknown-fields": true},
 				},
 			},
-		}
+		},
 	}
 
 	return func(openapicommon.ReferenceCallback) map[string]openapicommon.OpenAPIDefinition {

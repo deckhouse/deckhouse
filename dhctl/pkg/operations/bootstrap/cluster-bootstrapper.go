@@ -1004,8 +1004,8 @@ func (b *ClusterBootstrapper) bootstrapFirstMaster(ctx context.Context, bctx *bo
 	// A static cluster of immutable machines has nothing to create: the machines exist and
 	// wait for their configuration, and handing the first one its payload is what the cloud
 	// path asks terraform for.
-	if bctx.immutable != nil && bctx.metaConfig.ClusterType != config.CloudClusterType {
-		return b.bootstrapImmutableFirstMaster(ctx, bctx, immutable.MaintenancePort)
+	if isStaticImmutableCluster(bctx) {
+		return b.bootstrapImmutableFirstMaster(ctx, bctx)
 	}
 
 	// An immutable node configures itself from the payload: there is no bashible run
@@ -1344,10 +1344,8 @@ func (b *ClusterBootstrapper) bootstrapAdditionalNodes(ctx context.Context, bctx
 
 	// An immutable master boots from a payload rendered per node, and it is tracked by no SSH
 	// address: converge builds its session from that cache and an unreachable host stalls it.
-	addressTracker := bctx.masterAddressesForSSH
 	var buildPayload masterPayloadBuilder
 	if bctx.immutable != nil {
-		addressTracker = nil
 		// Nothing describes a machine in a cloud — the documents are refused there — so the
 		// customization this passes is always nil here.
 		buildPayload = func(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, nodeName string) (string, error) {
@@ -1361,7 +1359,7 @@ func (b *ClusterBootstrapper) bootstrapAdditionalNodes(ctx context.Context, bctx
 			ctx,
 			&client.KubernetesClient{KubeClient: kubeCl},
 			bctx.metaConfig,
-			addressTracker,
+			bctx.masterAddressesForSSH,
 			b.InfrastructureContext,
 			&b.Options.Global,
 			b.PhasedExecutionContext,
@@ -1383,8 +1381,8 @@ func (b *ClusterBootstrapper) bootstrapWaitControlPlaneManager(ctx context.Conte
 	// On a static cluster the machines exist already; only their payloads have to be
 	// delivered, and the cloud node above has nothing to create. It runs here because a
 	// joining master needs a token only a running cluster can issue.
-	if bctx.immutable != nil && bctx.metaConfig.ClusterType != config.CloudClusterType {
-		if err := b.bootstrapImmutableAdditionalMasters(ctx, bctx, &client.KubernetesClient{KubeClient: kubeCl}, immutable.MaintenancePort); err != nil {
+	if isStaticImmutableCluster(bctx) {
+		if err := b.bootstrapImmutableAdditionalMasters(ctx, bctx, &client.KubernetesClient{KubeClient: kubeCl}); err != nil {
 			return err
 		}
 	}

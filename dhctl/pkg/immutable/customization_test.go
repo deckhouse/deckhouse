@@ -30,12 +30,7 @@ import (
 )
 
 func TestCustomizationReplacesNetworkKeepingHostname(t *testing.T) {
-	document := `
-apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-metadata:
-  name: master-0
-spec:
+	document := nodeConfigFor("master-0", `
   network:
     interfaces:
     - name: eno1
@@ -44,7 +39,7 @@ spec:
       gateway: 10.0.0.1
   kubelet:
     nodeIP: 10.0.0.11
-`
+`)
 	parsed, err := ParseCustomizations(t.Context(), []string{document})
 	require.NoError(t, err)
 	require.Len(t, parsed, 1)
@@ -64,15 +59,10 @@ spec:
 }
 
 func TestCustomizationRefusesNodeGroupSettings(t *testing.T) {
-	document := `
-apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-metadata:
-  name: master-0
-spec:
+	document := nodeConfigFor("master-0", `
   kubelet:
     maxPods: 250
-`
+`)
 	_, err := ParseCustomizations(t.Context(), []string{document})
 
 	require.ErrorContains(t, err, "maxPods")
@@ -84,16 +74,11 @@ spec:
 // "everything else comes from the NodeGroup" sends the operator looking for a
 // field the NodeGroup does not have either.
 func TestCustomizationRefusesNTPWithoutBlamingTheNodeGroup(t *testing.T) {
-	document := `
-apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-metadata:
-  name: master-0
-spec:
+	document := nodeConfigFor("master-0", `
   network:
     ntp:
       servers: ["10.0.0.1"]
-`
+`)
 	_, err := ParseCustomizations(t.Context(), []string{document})
 
 	require.ErrorContains(t, err, "ntp")
@@ -105,68 +90,48 @@ spec:
 // etcd's static pod carries /var/lib/etcd as a hostPath, so any other bindTo is
 // a node without a working control plane. Refused before a machine is touched.
 func TestCustomizationRefusesBindToOnTheRenderedMount(t *testing.T) {
-	moved := `
-apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-metadata:
-  name: master-0
-spec:
+	moved := nodeConfigFor("master-0", `
   storage:
     mounts:
     - name: kubernetes-data
       device: /dev/sdb1
       bindTo: /mnt/etcd
-`
+`)
 	_, err := ParseCustomizations(t.Context(), []string{moved})
 	require.ErrorContains(t, err, "kubernetes-data")
 	require.ErrorContains(t, err, "bindTo")
 
-	remoded := `
-apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-metadata:
-  name: master-0
-spec:
+	remoded := nodeConfigFor("master-0", `
   storage:
     mounts:
     - name: kubernetes-data
       device: /dev/sdb1
       mode: "0755"
-`
+`)
 	_, err = ParseCustomizations(t.Context(), []string{remoded})
 	require.ErrorContains(t, err, "mode",
 		"etcd refuses to start on the 0755 of a fresh ext4, so this is a node that never comes up")
 
 	// A mount of the operator's own is theirs to place: only the rendered name
 	// carries values the control plane depends on.
-	own := `
-apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-metadata:
-  name: master-0
-spec:
+	own := nodeConfigFor("master-0", `
   storage:
     mounts:
     - name: data
       device: /dev/sdc1
       bindTo: /mnt/data
       mode: "0755"
-`
+`)
 	parsed, err := ParseCustomizations(t.Context(), []string{own})
 	require.NoError(t, err)
 	require.Len(t, parsed, 1)
 }
 
 func TestCustomizationRefusesWipe(t *testing.T) {
-	document := `
-apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-metadata:
-  name: master-0
-spec:
+	document := nodeConfigFor("master-0", `
   storage:
     wipe: true
-`
+`)
 	_, err := ParseCustomizations(t.Context(), []string{document})
 
 	require.ErrorContains(t, err, "wipe",
@@ -174,16 +139,11 @@ spec:
 }
 
 func TestCustomizationPicksTheDiskBySerial(t *testing.T) {
-	document := `
-apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-metadata:
-  name: master-0
-spec:
+	document := nodeConfigFor("master-0", `
   storage:
     diskSelector:
       serial: S4EVNF0N302134
-`
+`)
 	parsed, err := ParseCustomizations(t.Context(), []string{document})
 	require.NoError(t, err)
 
@@ -200,18 +160,13 @@ spec:
 }
 
 func TestCustomizationRoutesOnlyKeepsTheRenderedInterfaces(t *testing.T) {
-	document := `
-apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-metadata:
-  name: master-0
-spec:
+	document := nodeConfigFor("master-0", `
   network:
     routes:
     - name: storage
       networks: ["10.9.0.0/16"]
       gateway: 10.0.0.254
-`
+`)
 	parsed, err := ParseCustomizations(t.Context(), []string{document})
 	require.NoError(t, err)
 
@@ -228,30 +183,20 @@ spec:
 }
 
 func TestCustomizationMergesMountsByName(t *testing.T) {
-	added := `
-apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-metadata:
-  name: master-0
-spec:
+	added := nodeConfigFor("master-0", `
   storage:
     mounts:
     - name: data
       device: /dev/sdc1
-`
+`)
 	// The whole document an operator writes to move etcd onto a named disk: the
 	// mount point and the mode are the render's, not something they repeat.
-	overriding := `
-apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-metadata:
-  name: master-0
-spec:
+	overriding := nodeConfigFor("master-0", `
   storage:
     mounts:
     - name: kubernetes-data
       device: /dev/sdb1
-`
+`)
 	parsed, err := ParseCustomizations(t.Context(), []string{added, overriding})
 	require.NoError(t, err)
 
@@ -275,17 +220,12 @@ spec:
 }
 
 func TestCustomizationDNSOnlyKeepsTheRenderedInterfaces(t *testing.T) {
-	document := `
-apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-metadata:
-  name: master-0
-spec:
+	document := nodeConfigFor("master-0", `
   network:
     dns:
       servers: ["10.0.0.53"]
       search: ["example.com"]
-`
+`)
 	parsed, err := ParseCustomizations(t.Context(), []string{document})
 	require.NoError(t, err)
 
@@ -301,15 +241,10 @@ spec:
 }
 
 func TestCustomizationRefusesHostname(t *testing.T) {
-	document := `
-apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-metadata:
-  name: master-0
-spec:
+	document := nodeConfigFor("master-0", `
   network:
     hostname: whatever
-`
+`)
 	_, err := ParseCustomizations(t.Context(), []string{document})
 
 	require.ErrorContains(t, err, "network.hostname")
@@ -320,19 +255,14 @@ spec:
 // "Address=" line, where it means a single host and leaves the machine off its
 // own subnet. Silent there, so it is refused here.
 func TestCustomizationRefusesAnAddressWithoutAPrefix(t *testing.T) {
-	document := `
-apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-metadata:
-  name: master-0
-spec:
+	document := nodeConfigFor("master-0", `
   network:
     interfaces:
     - name: eno1
       dhcp: false
       addresses: ["192.168.0.101"]
       gateway: 192.168.0.1
-`
+`)
 	_, err := ParseCustomizations(t.Context(), []string{document})
 
 	require.ErrorContains(t, err, "master-0", "the node whose document is wrong")
@@ -342,15 +272,10 @@ spec:
 }
 
 func TestCustomizationRefusesAnEmptyDiskSelector(t *testing.T) {
-	document := `
-apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-metadata:
-  name: master-0
-spec:
+	document := nodeConfigFor("master-0", `
   storage:
     diskSelector: {}
-`
+`)
 	_, err := ParseCustomizations(t.Context(), []string{document})
 
 	require.ErrorContains(t, err, "diskSelector",
@@ -358,15 +283,10 @@ spec:
 }
 
 func TestCustomizationDeviceOnlyClearsTheRenderedSelector(t *testing.T) {
-	document := `
-apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-metadata:
-  name: master-0
-spec:
+	document := nodeConfigFor("master-0", `
   storage:
     device: /dev/nvme0n1
-`
+`)
 	parsed, err := ParseCustomizations(t.Context(), []string{document})
 	require.NoError(t, err)
 
@@ -379,17 +299,12 @@ spec:
 }
 
 func TestCustomizationMountsOnlyKeepTheRenderedSelector(t *testing.T) {
-	document := `
-apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-metadata:
-  name: master-0
-spec:
+	document := nodeConfigFor("master-0", `
   storage:
     mounts:
     - name: data
       device: /dev/sdc1
-`
+`)
 	parsed, err := ParseCustomizations(t.Context(), []string{document})
 	require.NoError(t, err)
 
@@ -404,17 +319,12 @@ spec:
 // TestCustomizationReachesTheMasterPayload is the wiring on the payload that
 // installs the cluster; TestCustomizationReachesTheJoinPayload is the other one.
 func TestCustomizationReachesTheMasterPayload(t *testing.T) {
-	document := `
-apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-metadata:
-  name: example-master-0
-spec:
+	document := nodeConfigFor("example-master-0", `
   kubelet:
     nodeIP: 10.0.0.11
   storage:
     device: /dev/nvme0n1
-`
+`)
 	parsed, err := ParseCustomizations(t.Context(), []string{document})
 	require.NoError(t, err)
 
@@ -438,15 +348,10 @@ spec:
 // TestCustomizationReachesTheJoinPayload is the wiring: applyCustomization is
 // called from both builders, and only a rendered payload proves it.
 func TestCustomizationReachesTheJoinPayload(t *testing.T) {
-	document := `
-apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-metadata:
-  name: master-1
-spec:
+	document := nodeConfigFor("master-1", `
   kubelet:
     nodeIP: 10.0.0.12
-`
+`)
 	parsed, err := ParseCustomizations(t.Context(), []string{document})
 	require.NoError(t, err)
 
@@ -483,12 +388,7 @@ spec: {}
 // only in the static branch (images/init/src/0.1/generate.go). The document
 // boots, so it is not refused — but the operator most likely meant dhcp: false.
 func TestCustomizationWarnsAboutAddressesOnADHCPInterface(t *testing.T) {
-	document := `
-apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-metadata:
-  name: master-0
-spec:
+	document := nodeConfigFor("master-0", `
   network:
     interfaces:
     - name: eno1
@@ -496,7 +396,7 @@ spec:
       addresses: ["192.168.0.101"]
     - name: eno2
       dhcp: true
-`
+`)
 	var log bytes.Buffer
 	ctx := dhlog.ToContext(t.Context(), slog.New(slog.NewTextHandler(&log, nil)))
 
@@ -511,4 +411,65 @@ spec:
 	require.Contains(t, log.String(), "eno1", "the interface the addresses are on")
 	require.Contains(t, log.String(), "192.168.0.101", "the value that is ignored")
 	require.Contains(t, log.String(), "dhcp", "why it is ignored")
+}
+
+// A machine whose document gives it a static address answers there once it has
+// installed itself, not at the address it was pushed at. An interface left on
+// DHCP takes no address from the document, however the field is filled in.
+func TestAddressAfterInstall(t *testing.T) {
+	parse := func(spec string) *Customization {
+		t.Helper()
+		parsed, err := ParseCustomizations(t.Context(), []string{nodeConfigFor("master-0", spec)})
+		require.NoError(t, err)
+		require.Len(t, parsed, 1)
+		return &parsed[0]
+	}
+
+	static := parse(`
+  network:
+    interfaces:
+    - name: eth0
+      dhcp: false
+      addresses: ["192.168.0.101/24"]
+      gateway: 192.168.0.1
+`)
+	require.Equal(t, "192.168.0.101", static.AddressAfterInstall("192.168.0.43"),
+		"a machine told to take a static address answers there")
+
+	require.Equal(t, "192.168.0.43", (*Customization)(nil).AddressAfterInstall("192.168.0.43"),
+		"without a customization the push address stands")
+
+	require.Equal(t, "192.168.0.43", parse("\n  network:\n").AddressAfterInstall("192.168.0.43"),
+		"a document that says nothing about the network leaves the machine where it was pushed")
+
+	dhcp := parse(`
+  network:
+    interfaces:
+    - name: eth0
+      dhcp: true
+      addresses: ["192.168.0.101/24"]
+`)
+	require.Equal(t, "192.168.0.43", dhcp.AddressAfterInstall("192.168.0.43"),
+		"an interface on DHCP takes no address from the document")
+
+	// A master with two NICs: kubelet registers the node under nodeIP, which the
+	// machine check has already confirmed is one of the machine's own addresses.
+	multiNIC := parse(`
+  kubelet:
+    nodeIP: 10.10.0.7
+  network:
+    interfaces:
+    - name: eno1
+      addresses: ["192.168.0.101/24"]
+    - name: eno2
+      addresses: ["10.10.0.7/24"]
+`)
+	require.Equal(t, "10.10.0.7", multiNIC.AddressAfterInstall("192.168.0.43"),
+		"the apiserver answers where kubelet registered, not on whichever NIC comes first")
+}
+
+// nodeConfigFor prepends the header every customization carries, so a case is
+// only the spec it is about.
+func nodeConfigFor(nodeName, spec string) string {
+	return "apiVersion: " + PayloadAPIVersion + "\nkind: " + NodeConfigKind + "\nmetadata:\n  name: " + nodeName + "\nspec:" + spec
 }

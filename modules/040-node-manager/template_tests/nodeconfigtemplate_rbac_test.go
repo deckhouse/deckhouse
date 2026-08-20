@@ -22,6 +22,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	rbacv1 "k8s.io/api/rbac/v1"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
 	"github.com/deckhouse/deckhouse/testing/library/object_store"
@@ -54,11 +55,7 @@ var _ = Describe("Module :: node-manager :: helm template :: NodeConfigTemplate 
 })
 
 func nodeConfigTemplateVerbs(role object_store.KubeObject) []string {
-	var rules []struct {
-		APIGroups []string `json:"apiGroups"`
-		Resources []string `json:"resources"`
-		Verbs     []string `json:"verbs"`
-	}
+	var rules []rbacv1.PolicyRule
 	Expect(json.Unmarshal([]byte(role.Field("rules").String()), &rules)).To(Succeed())
 
 	for _, rule := range rules {

@@ -51,9 +51,7 @@ func BootstrapTerraNodes(
 // nil means the group's own published cloud config is used instead.
 type masterPayloadBuilder func(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, nodeName string) (string, error)
 
-// BootstrapAdditionalMasterNodes creates every master past the first one. A nil
-// addressTracker is a group whose nodes answer no sshd, so there is no address
-// to record for converge.
+// BootstrapAdditionalMasterNodes creates every master past the first one.
 func BootstrapAdditionalMasterNodes(
 	ctx context.Context,
 	kubeCl *client.KubernetesClient,
@@ -100,9 +98,9 @@ func BootstrapAdditionalMasterNodes(
 			}
 
 			// Converge builds its SSH session from this cache, and a host that
-			// answers no sshd stalls it. The first master is kept out of the same
-			// cache for the same reason.
-			if addressTracker == nil {
+			// answers no sshd stalls it — which is every node whose payload is
+			// rendered here. The first master is kept out of the cache likewise.
+			if buildPayload != nil {
 				continue
 			}
 			addressTracker[nodeName] = outputs.MasterIPForSSH

@@ -22,6 +22,10 @@ import (
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 )
 
+// NodeConfigTemplateResource is the plural name the aggregated API server
+// installs the storage under; the APIService and the RBAC rules spell it too.
+const NodeConfigTemplateResource = "nodeconfigtemplates"
+
 // NodeConfigTemplate is what an operator takes to add a machine by hand. It is
 // never stored: the cluster fills in what only it knows at the moment of the
 // read, the operator fills in the network and the disks of the machine in front

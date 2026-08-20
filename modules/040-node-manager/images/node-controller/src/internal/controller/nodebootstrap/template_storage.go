@@ -36,9 +36,6 @@ import (
 	"github.com/deckhouse/node-controller/internal/controller/nodeconfig"
 )
 
-// templateResource is the plural name this storage is installed under.
-const templateResource = "nodeconfigtemplates"
-
 // TemplateStorage serves NodeConfigTemplate: the config a machine an operator
 // installs by hand needs, one object per NodeGroup that has such machines.
 // Nothing is stored — every read renders from the cluster as it is now, so the
@@ -86,7 +83,11 @@ func (s *TemplateStorage) Get(ctx context.Context, name string, _ *metav1.GetOpt
 	if !machineOwnedConfig(ng) {
 		return nil, apierrors.NewNotFound(templateGroupResource(), name)
 	}
-	return s.render(ctx, ng)
+	tokens, err := nodecommon.BootstrapTokens(ctx, s.client)
+	if err != nil {
+		return nil, err
+	}
+	return s.render(ctx, ng, tokens[ng.Name])
 }
 
 // List renders a template for every group that has hand-installed machines. A
@@ -98,13 +99,18 @@ func (s *TemplateStorage) List(ctx context.Context, _ *metainternalversion.ListO
 		return nil, fmt.Errorf("list NodeGroups: %w", err)
 	}
 
+	tokens, err := nodecommon.BootstrapTokens(ctx, s.client)
+	if err != nil {
+		return nil, err
+	}
+
 	list := &templatesv1alpha1.NodeConfigTemplateList{}
 	for i := range groups.Items {
 		ng := &groups.Items[i]
 		if !machineOwnedConfig(ng) {
 			continue
 		}
-		template, err := s.render(ctx, ng)
+		template, err := s.render(ctx, ng, tokens[ng.Name])
 		if err != nil {
 			return nil, err
 		}
@@ -117,7 +123,7 @@ func (s *TemplateStorage) List(ctx context.Context, _ *metainternalversion.ListO
 // the interfaces and the disks are what the operator writes in, and a rendered
 // guess (eth0 with DHCP, the first disk over 2Gi) handed over as a template is
 // one nobody notices is wrong. The node name is theirs to pick too.
-func (s *TemplateStorage) render(ctx context.Context, ng *v1.NodeGroup) (*templatesv1alpha1.NodeConfigTemplate, error) {
+func (s *TemplateStorage) render(ctx context.Context, ng *v1.NodeGroup, bootstrapToken string) (*templatesv1alpha1.NodeConfigTemplate, error) {
 	spec, err := nodeconfig.RenderBootstrapSpec(ctx, s.client, s.client, ng, "")
 	if err != nil {
 		return nil, fmt.Errorf("render the node config of %s: %w", ng.Name, err)
@@ -125,14 +131,10 @@ func (s *TemplateStorage) render(ctx context.Context, ng *v1.NodeGroup) (*templa
 
 	// Without it kubelet has nothing to present on first contact, and the
 	// operator has nowhere else to take a token from.
-	tokens, err := nodecommon.BootstrapTokens(ctx, s.client)
-	if err != nil {
-		return nil, err
-	}
-	if tokens[ng.Name] == "" {
+	if bootstrapToken == "" {
 		return nil, fmt.Errorf("no valid bootstrap token for NodeGroup %s", ng.Name)
 	}
-	spec.Kubelet.BootstrapToken = tokens[ng.Name]
+	spec.Kubelet.BootstrapToken = bootstrapToken
 
 	spec.Network = internalv1alpha1.Network{}
 	spec.Storage = internalv1alpha1.Storage{}
@@ -151,5 +153,5 @@ func machineOwnedConfig(ng *v1.NodeGroup) bool {
 }
 
 func templateGroupResource() schema.GroupResource {
-	return schema.GroupResource{Group: templatesv1alpha1.GroupVersion.Group, Resource: templateResource}
+	return schema.GroupResource{Group: templatesv1alpha1.GroupVersion.Group, Resource: templatesv1alpha1.NodeConfigTemplateResource}
 }
