@@ -180,6 +180,7 @@ sqlite3 /var/lib/ironic/ironic.sqlite "pragma journal_mode=wal"
 microdnf remove -y sqlite
 microdnf clean all
 rm -rf /var/cache/{yum,dnf}/*
+rm -f /var/lib/dnf/history.sqlite-shm /var/lib/dnf/history.sqlite-wal
 configure-nonroot.sh
 test -x /bin/copy-ipa-images
 test -s /opt/metal3/ipa-images/ironic-python-agent.kernel
