@@ -17,11 +17,60 @@ limitations under the License.
 package hooks
 
 import (
+	"os"
+	"regexp"
+	"sort"
+	"testing"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
+
+// policyResources pulls the group and the resource out of every call the template makes to its
+// policy definition, which is the list of what the admission policies deny.
+var policyResources = regexp.MustCompile(
+	`reserved_public_hosts_policy" \(list \. \$paramsName "[a-z]+" "([a-z0-9.]+)" "([a-z]+)"`)
+
+// TestTheSnapshotReadsEveryResourceThePoliciesDeny keeps the two sides of the grandfathering in
+// step. Whatever the policies deny, the snapshot has to be able to record: a resource on one side
+// and not the other means a tenant is denied on its next write with nothing in grandfatheredHosts to
+// let it back out.
+//
+// Compared against the template rather than against a literal, so that adding a policy without
+// adding the resource here fails, which is the drift worth catching.
+func TestTheSnapshotReadsEveryResourceThePoliciesDeny(t *testing.T) {
+	template, err := os.ReadFile("../templates/reserved-public-hosts.yaml")
+	if err != nil {
+		t.Fatalf("read the policy template: %v", err)
+	}
+
+	denied := []string{}
+	for _, match := range policyResources.FindAllStringSubmatch(string(template), -1) {
+		denied = append(denied, match[1]+"/"+match[2])
+	}
+	if len(denied) == 0 {
+		t.Fatal("no policy call sites matched, the pattern no longer fits the template")
+	}
+
+	read := []string{}
+	for _, resource := range hostBearingResources {
+		read = append(read, resource.gr.Group+"/"+resource.gr.Resource)
+	}
+
+	sort.Strings(denied)
+	sort.Strings(read)
+	if len(denied) != len(read) {
+		t.Fatalf("the policies deny %v, the snapshot reads %v", denied, read)
+	}
+	for i := range denied {
+		if denied[i] != read[i] {
+			t.Errorf("the policies deny %v, the snapshot reads %v", denied, read)
+			break
+		}
+	}
+}
 
 // tenantObjects is a cluster where a tenant already serves hostnames the reservation is about to
 // claim, next to hostnames it must leave alone and a platform namespace it must never read.
@@ -87,6 +136,24 @@ spec:
   - Docs.Example.COM.
 ---
 apiVersion: gateway.networking.k8s.io/v1
+kind: GRPCRoute
+metadata:
+  name: rpc
+  namespace: tenant
+spec:
+  hostnames:
+  - rpc.example.com
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TLSRoute
+metadata:
+  name: sni
+  namespace: tenant
+spec:
+  hostnames:
+  - sni.example.com
+---
+apiVersion: gateway.networking.k8s.io/v1
 kind: ListenerSet
 metadata:
   name: listeners
@@ -127,7 +194,16 @@ data:
 var _ = Describe("Modules :: deckhouse :: hooks :: snapshot reserved public hosts ::", func() {
 	f := HookExecutionConfigInit(`{"global": {"modules": {}}, "deckhouse": {"internal": {}}}`, `{}`)
 	f.RegisterCRD("gateway.networking.k8s.io", "v1", "HTTPRoute", true)
+	f.RegisterCRD("gateway.networking.k8s.io", "v1", "GRPCRoute", true)
+	// The only version upstream serves TLSRoute under, which is also why the hook resolves the
+	// version from discovery instead of pinning one.
+	f.RegisterCRD("gateway.networking.k8s.io", "v1alpha2", "TLSRoute", true)
 	f.RegisterCRD("gateway.networking.k8s.io", "v1", "ListenerSet", true)
+	// Gateway is missing on purpose: the fake cluster derives the resource name from the kind with
+	// meta.UnsafeGuessKindToResource, which turns Gateway into "gatewaies" and not "gateways", so a
+	// Gateway registered here would be served under a name no cluster uses. It reads its hostnames
+	// through the same function as ListenerSet, and that the hook asks for the resource the policies
+	// target is checked by TestTheSnapshotReadsEveryResourceThePoliciesDeny below.
 
 	// An empty template is passed by leaving the value out: the global schema requires a %s, so an
 	// empty string never reaches a cluster, and setting one here would fail values validation.
@@ -149,17 +225,30 @@ var _ = Describe("Modules :: deckhouse :: hooks :: snapshot reserved public host
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet(reservedPublicHostsValuePath).String()).To(MatchJSON(`{
 				"recorded": true,
-				"hosts": ["docs.example.com", "portal.example.com", "shop.example.com"]
+				"hosts": [
+					"docs.example.com",
+					"portal.example.com",
+					"rpc.example.com",
+					"shop.example.com",
+					"sni.example.com"
+				]
 			}`))
 		})
 
 		It("reads every kind that can carry a hostname", func() {
-			// One from each: an Ingress rule, an HTTPRoute hostname and a ListenerSet listener. A
-			// kind left out would leave the tenant serving it denied on its next write.
+			// One hostname per kind. A kind the policies deny but this hook does not read leaves the
+			// tenant serving it denied on its next write with nothing in the record to let it back
+			// out, which is the promise the grandfathering makes.
 			hosts := f.ValuesGet(reservedPublicHostsValuePath + ".hosts").String()
-			Expect(hosts).To(ContainSubstring("shop.example.com"))
-			Expect(hosts).To(ContainSubstring("docs.example.com"))
-			Expect(hosts).To(ContainSubstring("portal.example.com"))
+			for kind, host := range map[string]string{
+				"Ingress":     "shop.example.com",
+				"HTTPRoute":   "docs.example.com",
+				"GRPCRoute":   "rpc.example.com",
+				"TLSRoute":    "sni.example.com",
+				"ListenerSet": "portal.example.com",
+			} {
+				Expect(hosts).To(ContainSubstring(host), kind)
+			}
 		})
 
 		It("spells a hostname the way the policies compare it", func() {
@@ -340,6 +429,44 @@ spec:
 			Expect(f.ValuesGet(reservedPublicHostsValuePath).String()).To(MatchJSON(`{
 				"recorded": true,
 				"hosts": ["shop.example.com"]
+			}`))
+		})
+	})
+
+	// The policies match apiVersions ["*"], so the snapshot has to read whichever version the cluster
+	// serves. A version pinned here would leave a cluster whose Gateway API came from elsewhere with
+	// nothing recorded while every write to those objects is still denied.
+	Context("The Gateway API is served under an older version", func() {
+		f := HookExecutionConfigInit(`{"global": {"modules": {}}, "deckhouse": {"internal": {}}}`, `{}`)
+		f.RegisterCRD("gateway.networking.k8s.io", "v1beta1", "HTTPRoute", true)
+
+		BeforeEach(func() {
+			f.ValuesSet("global.modules.publicDomainTemplate", "%s.example.com")
+			f.KubeStateSet(`
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tenant
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: HTTPRoute
+metadata:
+  name: docs
+  namespace: tenant
+spec:
+  hostnames:
+  - docs.example.com
+`)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("reads the version the cluster serves rather than one pinned in the hook", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet(reservedPublicHostsValuePath).String()).To(MatchJSON(`{
+				"recorded": true,
+				"hosts": ["docs.example.com"]
 			}`))
 		})
 	})
