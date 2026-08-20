@@ -74,6 +74,16 @@ func TestFromSecretData(t *testing.T) {
 			},
 		},
 		{
+			// A value that is neither JSON nor a list degrades to no zones, which sizes every
+			// NodeGroup of the provider at zero instead of failing the read.
+			name: "malformed zones",
+			data: map[string][]byte{
+				"type":  []byte(`aws`),
+				"zones": []byte(`not-json`),
+			},
+			want: Provider{Type: "aws"},
+		},
+		{
 			name: "empty secret",
 			data: map[string][]byte{},
 			want: Provider{},

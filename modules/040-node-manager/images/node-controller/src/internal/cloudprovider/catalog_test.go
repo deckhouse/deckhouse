@@ -94,7 +94,7 @@ func nodeGroupOfType(name string, nodeType v1.NodeType) *v1.NodeGroup {
 	}
 }
 
-func TestLoad(t *testing.T) {
+func TestGetCatalog(t *testing.T) {
 	aws := registrationSecret(RegistrationSecretNamePrefix+"-aws", map[string][]byte{"type": []byte("aws")})
 	yandexData := map[string][]byte{
 		"type":                    []byte("yandex"),
@@ -161,7 +161,7 @@ func TestLoad(t *testing.T) {
 // NodeGroups without instanceClass, which shifts the configuration checksum of every node, and a
 // CloudPermanent group resolves through the cluster's provider name and nothing else — so a
 // configured provider that published no registration would render the master without its steps.
-func TestLoad_Errors(t *testing.T) {
+func TestGetCatalog_Errors(t *testing.T) {
 	tests := []struct {
 		name    string
 		objs    []client.Object

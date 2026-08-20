@@ -271,8 +271,8 @@ func TestZonesCount(t *testing.T) {
 			want:     2,
 		},
 		{
-			// A group outside every cloud, and a provider that published no zones, both size the
-			// NodeGroup at zero.
+			// The rule is the length of the list, so a provider that published no zones and no
+			// provider at all are the same answer: zero.
 			name: "no provider zones",
 			ng:   zonelessNodeGroup(),
 		},

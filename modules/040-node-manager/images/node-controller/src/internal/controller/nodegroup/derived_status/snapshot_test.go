@@ -146,7 +146,7 @@ func TestBuildSnapshot_ClassDeletedMidPassIsRecorded(t *testing.T) {
 
 // An unreadable source must abort the pass: an empty provider reads as "no cloud", which drops
 // instanceClass from the published element and re-runs bashible on every node. The provider half
-// of that guard now sits at the load boundary — see cloudprovider.TestLoad_ForbiddenListIsAnError;
+// of that guard now sits at the load boundary — see cloudprovider.TestGetCatalog_Errors;
 // here the cluster UUID stands for the sources this package still reads itself.
 func TestBuildSnapshot_UnreadableSourceAborts(t *testing.T) {
 	s := newDeniedSecretService(t, clusterUUIDConfigMapName)
