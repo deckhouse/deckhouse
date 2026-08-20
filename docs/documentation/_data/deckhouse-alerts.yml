@@ -583,24 +583,24 @@ alerts:
       module: control-plane-manager
       edition: ce
       description: |-
-        The control-plane resources autotune wants to increase `{{ $labels.resource }}` requests for one or more
+        Automatic control-plane resource tuning attempted to increase `{{ $labels.resource }}` requests for one or more
         control-plane components (kube-apiserver, etcd, kube-controller-manager, kube-scheduler), but the
-        proposed total would not fit on the weakest master node after accounting for the kubelet reservation
-        and requests of other (non-control-plane) pods already scheduled there.
+        calculated requests exceed the available capacity of at least one master node after accounting for the kubelet reservation
+        and resource requests of other (non-control-plane) pods already scheduled on the node.
 
         {{- if eq $labels.resource "memory" }}
-        Missing capacity: `{{ humanize $value }}B`.
+        Additional memory required: `{{ humanize $value }}B`.
         {{- else }}
-        Missing capacity: `{{ $value }}m` CPU.
+        Additional CPU required: `{{ $value }}m` CPU.
         {{- end }}
 
-        Free up resources on master nodes (move or shrink other workloads) or increase CPU/RAM so the new
-        control-plane requests can fit without exceeding allocatable capacity.
+        To resolve this, free up resources on master nodes by moving or reducing other workloads or increase the CPU or RAM
+        available on the nodes.
 
-        To disable autotune for this measurement and manage requests manually, set
-        `spec.settings.resourcesRequests.{{ $labels.resource }}` in ModuleConfig `control-plane-manager`.
+        To disable automatic tuning for this resource and manage requests manually, set
+        [`spec.settings.resourcesRequests.{{ $labels.resource }}`](/modules/control-plane-manager/configuration.html#parameters-resourcesrequests) in the ModuleConfig of `control-plane-manager`.
       summary: |
-        Control-plane resources autotune cannot raise {{ $labels.resource }} requests — not enough free capacity on master nodes.
+        Automatic control-plane resource tuning cannot increase `{{ $labels.resource }}` requests due to lack of available capacity.
       severity: "5"
       markupFormat: markdown
     - name: D8ControlPlaneDefaultVersionDrift
