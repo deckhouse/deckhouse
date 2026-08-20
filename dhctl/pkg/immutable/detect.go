@@ -16,40 +16,125 @@ package immutable
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/yaml"
+
+	libdhctlyaml "github.com/deckhouse/lib-dhctl/pkg/yaml"
+	yamlvalidation "github.com/deckhouse/lib-dhctl/pkg/yaml/validation"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 )
 
 // IsImmutableMaster reports whether the master NodeGroup asks for an immutable
-// system. config.Prepare has already parsed the resources section into
-// CloudProviderVars and rejected a document it could not read.
+// system. A cloud bootstrap has the group parsed into CloudProviderVars; a
+// static one has no cloud filler at all, so the documents are read here.
 func IsImmutableMaster(_ context.Context, metaConfig *config.MetaConfig) bool {
-	if metaConfig == nil || metaConfig.CloudProviderVars == nil {
+	if metaConfig == nil {
 		return false
 	}
 
-	master := metaConfig.CloudProviderVars.NodeGroups[global.MasterNodeGroupName]
-	systemType, _, _ := unstructured.NestedString(master, "spec", "systemType")
+	if metaConfig.CloudProviderVars != nil {
+		master := metaConfig.CloudProviderVars.NodeGroups[global.MasterNodeGroupName]
+		if systemType, _, _ := unstructured.NestedString(master, "spec", "systemType"); systemType == systemTypeImmutable {
+			return true
+		}
+	}
 
-	return systemType == systemTypeImmutable
+	return masterSystemTypeFromResources(metaConfig.ResourcesYAML) == systemTypeImmutable
 }
 
-// ValidateClusterType rejects an immutable master outside a cloud cluster: dhctl
-// reaches such a node only at the address the BaseInfra phase reports, and that
-// phase creates nothing outside a cloud cluster.
-func ValidateClusterType(_ context.Context, metaConfig *config.MetaConfig) error {
+// The group the master NodeGroup must belong to. Matched the way the other
+// walks over this same stream do (pkg/config/cloud_provider_resources.go):
+// without it a foreign NodeGroup named master masks the real one.
+const (
+	nodeGroupKind     = "NodeGroup"
+	nodeGroupAPIGroup = "deckhouse.io"
+)
+
+// masterSystemTypeFromResources reads spec.systemType of the master NodeGroup
+// straight from the documents. ParseResourcesYAML cannot answer this: it keeps
+// CloudPermanent groups only, and a static master group is not one.
+func masterSystemTypeFromResources(resourcesYAML string) string {
+	for _, document := range libdhctlyaml.SplitYAML(resourcesYAML) {
+		index, err := yamlvalidation.ParseIndex(strings.NewReader(document))
+		// A document this fails on is not ours to judge: it stays in the
+		// resources, where the existing validation reports it.
+		if err != nil {
+			continue
+		}
+		if index.Kind != nodeGroupKind || index.Group() != nodeGroupAPIGroup {
+			continue
+		}
+
+		var obj map[string]any
+		if err := yaml.Unmarshal([]byte(document), &obj); err != nil {
+			continue
+		}
+		if name, _, _ := unstructured.NestedString(obj, "metadata", "name"); name != global.MasterNodeGroupName {
+			continue
+		}
+
+		systemType, _, _ := unstructured.NestedString(obj, "spec", "systemType")
+		return systemType
+	}
+	return ""
+}
+
+// ValidateInputs refuses the combinations that leave the bootstrap with a node
+// it cannot talk to: the address comes from the BaseInfra phase, which reports
+// nothing outside a cloud, and naming the machines closes exactly that hole.
+func ValidateInputs(_ context.Context, metaConfig *config.MetaConfig, hosts map[string]string) error {
 	if metaConfig.ClusterType == config.CloudClusterType {
+		if len(hosts) > 0 {
+			return errors.New(
+				"--master-host names the machines of a static cluster, and here the cloud infrastructure reports the addresses itself: " +
+					"drop the flag, or set clusterType to Static")
+		}
 		return nil
 	}
 
-	return fmt.Errorf(
-		"the master NodeGroup asks for systemType %q, which is supported in a %q cluster only, and this one is %q: "+
-			"such a node answers no sshd and dhctl reaches its API server at the address the cloud infrastructure reports, "+
-			"which is never reported here. Drop systemType from the master NodeGroup, or bootstrap a cloud cluster",
-		systemTypeImmutable, config.CloudClusterType, metaConfig.ClusterType,
-	)
+	if len(hosts) == 0 {
+		return fmt.Errorf(
+			"the master NodeGroup asks for systemType %q and this is a %q cluster, so nothing reports where the machines are: "+
+				"name each of them with --master-host <node-name>=<address>",
+			systemTypeImmutable, metaConfig.ClusterType)
+	}
+
+	return nil
+}
+
+// ParseHosts turns the repeated --master-host values into node name to address.
+// Both halves are required: the name is what the node registers as, and a
+// static cluster has no prefix to derive it from.
+func ParseHosts(raw []string) (map[string]string, error) {
+	hosts := make(map[string]string, len(raw))
+
+	for _, pair := range raw {
+		name, address := ParseHost(pair)
+		if name == "" || address == "" {
+			return nil, fmt.Errorf("--master-host %q is not <node-name>=<address>", pair)
+		}
+		if previous, taken := hosts[name]; taken {
+			return nil, fmt.Errorf("--master-host names %s twice: %s and %s", name, previous, address)
+		}
+		hosts[name] = address
+	}
+
+	return hosts, nil
+}
+
+// ParseHost splits one --master-host value into node name and address. The only
+// place the flag is normalised: a name read anywhere else has to be the key
+// ParseHosts stored the address under. Empty halves mean the value is not a pair.
+func ParseHost(pair string) (string, string) {
+	// Both halves are trimmed: kingpin splits an envar on newlines and trims only
+	// the trailing one, and the spaces an operator puts around the "=" belong to
+	// neither the node name nor the address.
+	name, address, _ := strings.Cut(pair, "=")
+	return strings.TrimSpace(name), strings.TrimSpace(address)
 }

@@ -555,6 +555,173 @@ Where:
 - `--ssh-agent-private-keys`: Private SSH key file for SSH connection.
 - `<SSH_PRIVATE_KEY_FILE>`: Name of private key. For example, for a key with RSA encryption it can be `id_rsa`, and for a key with ED25519 encryption it can be `id_ed25519`.
 
+### Installing a static cluster on machines with an immutable OS
+
+A [NodeGroup](/modules/node-manager/cr.html#nodegroup) with `systemType: Immutable` describes machines running an immutable operating system: they have no SSH access and no bashible, so the installer neither creates nor configures them over SSH. The installation goes as follows:
+
+1. You write the OS image to the disk of every machine and power the machines on. A machine that has no configuration yet waits for one on port `50000/TCP`.
+1. The installer hands each machine its configuration over that port. Everything else — the disk layout, kubelet, the control plane components — the machine sets up itself from that document.
+1. The machine named first starts the cluster. The rest are handed their configurations after DKP has been installed, and they join one at a time, because etcd accepts one new member at a time.
+
+{% alert level="warning" %}
+The provisioning network must be isolated. The endpoint on port `50000/TCP` is not authenticated: a machine that has no configuration holds no secret to authenticate with. Anyone who can reach that port can install the machine as a node of a foreign cluster. The inventory the machine serves on the same port is not authenticated either: anyone who can reach it reads the machine's disks, their serial numbers and its interfaces. Keep the machines in a separate network segment until the installation is over.
+{% endalert %}
+
+A machine that is waiting for its configuration describes itself on the same port, so you do not have to guess what it has:
+
+```shell
+curl http://<address>:50000/inventory        # for reading
+curl http://<address>:50000/inventory.json   # for scripts
+```
+
+`/inventory` is the short form. Per disk it gives the kernel name, the size, the state — `blank`, `formatted` or `system-layout` — the link under `/dev/disk/by-path`, and the partitions with their filesystems and labels; disks that a size selector cannot tell apart get a warning line of their own. Under every disk it prints a line to paste into a `NodeConfig`: that line names the disk uniquely when anything on the machine distinguishes it, and says outright that nothing does when nothing does. `/inventory.json` carries the same plus everything the short form leaves out — model, vendor, serial, `wwid`, every `/dev/disk/by-id` link, the bus path, the transport and whether the disk rotates. Both forms list the interfaces with their MAC addresses, link state, addresses and gateway. The short form reads like this:
+
+```
+Disks:
+  sda       30G  blank          pci-0000:0d:00.0-scsi-0:0:0:0
+        diskSelector: {serial: "S3Z8NB0K700001"}
+  sdb       30G  system-layout  pci-0000:0d:00.0-scsi-0:0:0:1
+        diskSelector: {serial: "S3Z8NB0K700002"}
+        sdb1         1G vfat   BOOT
+        sdb2       256M ext4   CONFIG
+        sdb3        28G ext4   DATA
+  sdc       10G  blank          pci-0000:0d:00.0-scsi-0:0:0:2
+        diskSelector: {serial: "S3Z8NB0K700003"}
+  ! sda and sdb have the same size — a size selector cannot tell them apart
+Interfaces:
+  eth0   f2:4e:c6:60:03:72 up   192.168.199.11/24 gw 192.168.199.1 (dhcp)
+```
+
+Both endpoints answer only while the machine is waiting. The moment it accepts a configuration, the server that served them is shut down.
+
+Besides [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) with `clusterType: Static` and [StaticClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#staticclusterconfiguration), the installation configuration file must contain:
+
+- A NodeGroup named `master` with `nodeType: Static` and `systemType: Immutable`. This is what tells the installer that the machines are immutable.
+- One `NodeConfig` document per machine, describing what the cluster cannot know about it.
+
+Registry access has to be configured in the `Unmanaged` mode: an immutable node pulls the control plane images and the system extensions from the registry directly, without the in-cluster proxy that does not exist during installation.
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Static
+podSubnetCIDR: 10.111.0.0/16
+serviceSubnetCIDR: 10.222.0.0/16
+kubernetesVersion: "Automatic"
+clusterDomain: cluster.local
+---
+apiVersion: deckhouse.io/v1
+kind: StaticClusterConfiguration
+internalNetworkCIDRs:
+- 192.168.199.0/24
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  enabled: true
+  version: 1
+  settings:
+    releaseChannel: Stable
+    registry:
+      mode: Unmanaged
+      unmanaged:
+        imagesRepo: registry.deckhouse.io/deckhouse/ee
+        scheme: HTTPS
+        username: license-token
+        password: <LICENSE_KEY>
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: master
+spec:
+  nodeType: Static
+  systemType: Immutable
+---
+apiVersion: internal.deckhouse.io/v1alpha1
+kind: NodeConfig
+metadata:
+  name: master-0
+spec:
+  # A machine with a single disk, so spec.storage is left out; see the note below.
+  network:
+    interfaces:
+    - name: eth0
+      dhcp: false
+      addresses:
+      - 192.168.199.11/24
+      gateway: 192.168.199.1
+    dns:
+      servers:
+      - 192.168.199.1
+  kubelet:
+    nodeIP: 192.168.199.11
+```
+
+Every machine needs a document of its own: `master-1` and `master-2` differ from the one above only in the name and the addresses.
+
+A `NodeConfig` document sets only the three things about a machine that the cluster cannot know:
+
+- `spec.network`: the interfaces, the DNS servers and the static routes.
+- `spec.storage`: which disk the OS is installed onto (`diskSelector` or `device`) and the extra mounts.
+- `spec.kubelet.nodeIP`: the address the node registers with.
+
+A machine that takes its address over DHCP needs no `spec.network` at all, whatever its NIC is called: the document the installer renders names `eth0` on DHCP, which is a guess and not knowledge about the machine, and the machine brings DHCP up on the interface it does have — so at most you see one warning that the guessed name is absent. Static addressing is the opposite: name the interface the machine really has (`enp3s0`, `eno1` or `ens18` far more often than `eth0`), because an address hung on a name the machine lacks is refused before anything is pushed, with the machine's own list of interfaces in the message. The inventory is where that name is read off.
+
+Any other field is refused with an explanation: the installer puts nothing else from this document in the payload, and the rest of a node's settings come from its NodeGroup. `spec.storage.wipe` is not accepted at all — on a machine with a single disk, wiping the disk destroys the installation media the OS is being copied from.
+
+Leave `spec.storage` out only on a machine with a single disk. Left out, it renders as `diskSelector` with `size: ">=20Gi"` for the system disk, and the mount for etcd is rendered with a `partitionSelector` that fits a blank disk of 10 GB or more.
+
+That `size: ">=20Gi"` is not a choice of disk, it is a filter, and on a machine where more than one disk is that large nothing gets installed. Before handing a machine anything, the installer reads that machine's inventory and refuses a configuration the machine cannot satisfy: a disk that does not exist, a selector that matches several disks, an interface the machine does not have. The refusal names the field, lists what the machine actually has and prints the line to write instead, and it ends the installation instead of retrying — no amount of waiting grows the machine another disk.
+
+If that check cannot be run, the installer warns and hands over the configuration anyway: a machine whose image is too old to serve an inventory, or one that answers nothing at all, must not be a bootstrap that fails. Then the refusal falls to the machine itself, which installs nothing, prints the disks that matched together with its inventory, and drops to a shell on its console — the only place that message can be read, because a machine that is not a node yet sends its logs nowhere. Before either refusal existed, the first matching disk was taken silently. That is how a node once had the OS written onto a data disk, registered as normal, and failed only at the next boot.
+
+So on a machine with more than one disk, name the disk. `spec.storage.diskSelector` matches on `serial`, `wwid`, `busPath`, `name` and `model` — all five are shell-style patterns — and on `size`, `type` (`nvme`, `ssd`, `hdd`, `sd`) and `rotational`; every field that is set has to match. Instead of a selector, `spec.storage.device` names the disk by path — use a stable one, `/dev/disk/by-path/…` or `/dev/disk/by-id/…`, because `/dev/sda` is handed out in the order the kernel finds the disks and can change between boots. When both are set, the machine reads `diskSelector` and ignores `device`.
+
+Two details are worth knowing when writing that selector. `busPath` matches both spellings the machine reports: the bus path the kernel gives the device, and the name of the link under `/dev/disk/by-path`. And on a hypervisor the disks often have no serial and no `wwid` of their own — for a `virtio-scsi` disk the kernel publishes neither — so the machine reads both from the links under `/dev/disk/by-id`. What a given machine can be matched on at all is what its inventory answers, which is why it is worth reading before the document is written.
+
+`spec.storage.diskSelector` pins the OS disk only. The rendered mount for etcd is checked the same way, so a machine that has more than one device fitting it — a second blank disk of 10 GB or more beside the system disk, say — is refused as well, with those devices named. Name that mount too: add an entry to `spec.storage.mounts` under the name `kubernetes-data` with a `partitionSelector` or a `device` of your own. That entry may not carry `bindTo` or `mode` — the installer refuses the document if it does: `/var/lib/etcd` is the path the etcd static pod carries as a hostPath, so a `bindTo` of your own would leave the node without a working control plane.
+
+{% alert level="warning" %}
+Do not copy a `NodeConfig` out of a running cluster: the output of `kubectl get nodeconfig <name> -o yaml` does not parse. The installer reads these documents strictly and refuses the fields the API server adds to them (`creationTimestamp`, `uid`, `resourceVersion`, `status`). Write a minimal document instead, like the one above.
+{% endalert %}
+
+Example of the installation command:
+
+```shell
+dhctl bootstrap \
+  --config=/config.yml \
+  --master-host master-0=192.168.199.11 \
+  --master-host master-1=192.168.199.12 \
+  --master-host master-2=192.168.199.13
+```
+
+Where:
+
+- `--master-host`: A control-plane machine as `<node-name>=<address>`, given once per machine. The node name must match `metadata.name` of that machine's `NodeConfig`, and it is the name the node registers under. The machine named first is the one the cluster starts on.
+- `--ssh-user` and `--ssh-host` are not used: the machines answer no SSH. An `--ssh-host` (or an `SSHHost` resource in `--connection-config`) is refused before the installation starts, because the checks it turns on would try to log in over SSH to a machine that has no sshd.
+
+The address given in `--master-host` is the one the machine waits for its configuration on, and it may be a lease. If the `NodeConfig` of the first master gives an interface a static address, the installer follows the machine to that address once it has installed itself — to `spec.kubelet.nodeIP` when the document sets one, and otherwise to the first static address the document assigns: the bootstrap channel and the API server are reached there, not at the address the configuration was handed to. Two rules apply to the addresses in `spec.network`:
+
+- An address must carry a prefix length, written as `192.168.0.101/24`. Without one the document is refused, because the machine would configure the interface for a single host and end up off its own subnet with no way to say so.
+- Addresses on an interface with `dhcp: true` are ignored by the machine, which takes its address from the lease. The installer does not refuse them, it warns: write `dhcp: false` to have them configured.
+
+If the installation is restarted, the installer skips every machine it has already handed a configuration to — a machine that is a node already refuses a second one. That record is one file per machine, named `immutable-control-plane-pushed-payload-<node-name>`, in the state cache directory the installer prints on start (`State cache directory: …`; the path is a hashed subdirectory of `--cache-dir`, `/tmp/dhctl` by default). If a single machine was reinstalled between the attempts, delete the file of that machine alone. A restart against a cluster where DKP is already installed no longer stops at the `d8-system` namespace: the installer finds the namespace in place and leaves it alone.
+
+{% alert level="warning" %}
+Do not reach for `--yes-i-want-to-drop-cache` to do that: it empties the whole cache, including the records of the machines that were not reinstalled and the path to the credentials collected from the first master. The first master has been told those credentials are stored and has closed its bootstrap channel, so they cannot be collected a second time. Dropping the cache is only right when every machine has been reinstalled.
+{% endalert %}
+
+Worker nodes are not created by the installer yet. To add one, prepare its `NodeConfig` from the `/config/nodeconfig.yaml` of a node that already runs — change `metadata.name`, `spec.nodeName` and `spec.network`, name the node's group in both `metadata.labels[node.deckhouse.io/group]` and `spec.kubelet.nodeLabels[node.deckhouse.io/group]` (a document copied from a master carries `master` in both), remove the `kubernetes-data` mount of the control plane and the `status` section, and put a fresh `<token-id>.<token-secret>` from a `bootstrap-token-*` Secret of the `kube-system` namespace into `spec.kubelet.bootstrapToken` (such a token is short-lived). Then push the document to the waiting machine:
+
+```shell
+curl -X PUT --data-binary @nodeconfig.yaml http://<address>:50000/config
+```
+
+An OS image built before the `/config` path became the canonical one serves the document at `/nodeconfig.yml` only. The installer falls back to that path on its own; a hand-written `curl` does not.
+
 ### Pre-installation checks
 
 {% alert level="info" %}

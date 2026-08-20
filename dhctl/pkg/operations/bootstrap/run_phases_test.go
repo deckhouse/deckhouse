@@ -131,7 +131,7 @@ func recordingPhaseFuncs(pec *recordingPEC, failOn phases.OperationPhase, failEr
 
 func declaredPhases(clusterType string) []phases.OperationPhase {
 	declared := make([]phases.OperationPhase, 0)
-	for _, n := range phases.PhasesFor(phases.OperationBootstrap, phaseClusterConfig(bootstrappedMetaConfig(clusterType))) {
+	for _, n := range phases.PhasesFor(phases.OperationBootstrap, phaseClusterConfig(context.Background(), bootstrappedMetaConfig(clusterType))) {
 		declared = append(declared, n.Phase)
 	}
 	return declared
@@ -490,7 +490,7 @@ func TestRunPhases_RestrictionIsReadableFromInsidePreparation(t *testing.T) {
 		// Stands in for the point bootstrapPreparation reaches once the config is loaded: the
 		// cluster type is known, and nothing past this line has run yet.
 		phases.PreparationPhase: {run: func(_ context.Context, bctx *bootstrapContext) error {
-			return refuseIfExcluded(bctx.only, phaseClusterConfig(bootstrappedMetaConfig("Static")))
+			return refuseIfExcluded(bctx.only, phaseClusterConfig(context.Background(), bootstrappedMetaConfig("Static")))
 		}},
 	}, phases.BaseInfraPhase)
 

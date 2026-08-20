@@ -14,9 +14,10 @@
 
 package immutable
 
-// This file holds what dhctl and the node have to agree on. node-controller is a
-// separate Go module, so the values it also knows are repeated here rather than
-// imported; each such constant names its original.
+// This file holds what dhctl and the node have to agree on: the payload
+// documents, the bootstrap channel, and the names the node is addressed by.
+// node-controller is a separate Go module, so the values it also knows are
+// repeated here rather than imported; each such constant names its original.
 
 // The payload documents. The on-node agent parses both with UnmarshalStrict, so
 // every field name must match the agent's types
@@ -29,15 +30,11 @@ const (
 	nodeConfigKind         = "NodeConfig"
 	controlPlaneConfigKind = "ControlPlaneConfig"
 
-	// nodeConfigPath is where the on-node loader reads the node config from: it
-	// selects the entry by the path's "nodeconfig.yml"/"nodeconfig.yaml" suffix.
+	// nodeConfigPath is where olcedar-init leaves the node config once it has
+	// filed the stream by kind. Named here only for the messages an operator
+	// reads: what the documents are addressed by is their kind.
 	// Mirrors modules/040-node-manager/images/node-controller/src/internal/controller/nodebootstrap/constants.go.
 	nodeConfigPath = "/config/nodeconfig.yaml"
-
-	// controlPlaneConfigPath names the payload entry. The node reads cloud-init
-	// itself and picks the entry out by this name, so the path is a label and
-	// the name is the contract.
-	controlPlaneConfigPath = "/config/controlplane.yaml"
 )
 
 // systemTypeImmutable is the NodeGroup systemType that asks for a node dhctl
@@ -48,6 +45,7 @@ const systemTypeImmutable = "Immutable"
 // The node's one-shot bootstrap channel: what it is doing, the credentials, and
 // the confirmation that ends the handover.
 const (
+	// HandoffPort is the port the node's handoff endpoint listens on.
 	HandoffPort = 50001
 
 	statusPath    = "/bootstrap/status"
@@ -55,12 +53,34 @@ const (
 	collectedPath = "/bootstrap/collected"
 )
 
+// The port a machine takes its configuration on, held by olcedar-init before
+// the OS is installed and by the agent's maintenance server afterwards.
+const (
+	// MaintenancePort is where olcedar-init waits for a node configuration.
+	// olcedar-init serves it only while the node has none and closes it the
+	// moment the document is accepted.
+	MaintenancePort = 50000
+
+	// nodeConfigPushPath is the path both servers on this port accept.
+	nodeConfigPushPath = "/config"
+
+	// whoamiPath answers which of the two holds the port, in one word, without
+	// pushing anything into it: "installer" or "agent".
+	whoamiPath = "/whoami"
+)
+
 // APIServerPort is where a control-plane node's own kube-apiserver listens.
 const APIServerPort = 6443
 
+// The labels the node registers itself with.
 const (
 	nodeTypeLabel = "node.deckhouse.io/type"
 	cgroupLabel   = "node.deckhouse.io/cgroup"
+
+	// The two nodeTypeLabel values a master can have.
+	// Mirrors NodeType of node-controller/src/api/deckhouse.io/v1.
+	nodeTypeStatic         = "Static"
+	nodeTypeCloudPermanent = "CloudPermanent"
 )
 
 // The system extensions an immutable node runs, and where their digests are
@@ -78,7 +98,7 @@ const (
 	// platformExtensionRequestedBy names the module that wants the extension, not
 	// the process that wrote the file, so it stays "node-manager" when
 	// node-controller re-renders this node.
-	// Mirrors modules/040-node-manager/images/node-controller/src/internal/controller/nodeconfig/constants.go:107.
+	// Mirrors modules/040-node-manager/images/node-controller/src/internal/controller/nodeconfig/constants.go.
 	platformExtensionRequestedBy = "node-manager"
 
 	// registryPackagesDigestsKey is the images_digests.json module the sysext

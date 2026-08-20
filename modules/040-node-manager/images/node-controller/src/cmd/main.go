@@ -26,6 +26,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apiserver/pkg/registry/rest"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/component-base/logs"
@@ -45,8 +46,10 @@ import (
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 	mcmv1alpha1 "github.com/deckhouse/node-controller/api/machine.sapcloud.io/v1alpha1"
+	"github.com/deckhouse/node-controller/internal/apiserver"
 	"github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/controller/crdmigration"
+	"github.com/deckhouse/node-controller/internal/controller/nodebootstrap"
 	cachemetrics "github.com/deckhouse/node-controller/internal/metrics/cache"
 	"github.com/deckhouse/node-controller/internal/register"
 	_ "github.com/deckhouse/node-controller/internal/register/controllers"
@@ -75,6 +78,7 @@ func main() {
 	var metricsAddr string
 	var probeAddr string
 	var webhookPort int
+	var apiserverPort int
 	var disabledControllers string
 	var maxConcurrentReconcilesRaw string
 	var leaderElect bool
@@ -82,6 +86,7 @@ func main() {
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":4291", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":4292", "The address the probe endpoint binds to.")
 	flag.IntVar(&webhookPort, "webhook-port", 4290, "The port the webhook server binds to.")
+	flag.IntVar(&apiserverPort, "apiserver-port", 4293, "The port the aggregated API server binds to.")
 	flag.StringVar(&logOptions.Format, "logging-format", logOptions.Format, "Logging format (text or json)")
 	flag.StringVar(&disabledControllers, "disable-controllers", "", "Comma-separated list of controllers to disable")
 	flag.StringVar(&maxConcurrentReconcilesRaw, "max-concurrent-reconciles", "10", "Maximum number of concurrent reconciles per controller. Format: N or N,controller1=M,controller2=K")
@@ -172,10 +177,44 @@ func main() {
 		os.Exit(1)
 	}
 
+	// The aggregated API server has its own handler chain, so it cannot share the
+	// webhook port. It runs on every replica: the Service load balances over all of
+	// them, so it must not be tied to leader election.
+	apiStorage := apiServerStorage(directClient)
+	if len(apiStorage) == 0 {
+		setupLog.Info("aggregated API server disabled: no resources registered")
+	} else {
+		go func() {
+			err := apiserver.Run(ctx, apiserver.Options{
+				BindPort: apiserverPort,
+				CertFile: webhookCertDir + "/tls.crt",
+				KeyFile:  webhookCertDir + "/tls.key",
+				Storage:  apiStorage,
+			})
+			if err != nil {
+				setupLog.Error(err, "problem running aggregated API server")
+				os.Exit(1)
+			}
+		}()
+	}
+
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
+	}
+}
+
+// webhookCertDir is the controller-runtime default, mounted from Secret/node-controller-webhook-tls.
+const webhookCertDir = "/tmp/k8s-webhook-server/serving-certs"
+
+// apiServerStorage returns the storage of the aggregated internal.deckhouse.io/v1alpha1
+// API group, keyed by plural resource name. The client is the uncached one: the
+// API server starts before the manager, so nothing here may wait on its cache,
+// and a template is rendered on demand from live state anyway.
+func apiServerStorage(cl client.Client) map[string]rest.Storage {
+	return map[string]rest.Storage{
+		"nodeconfigtemplates": nodebootstrap.NewTemplateStorage(cl),
 	}
 }
 

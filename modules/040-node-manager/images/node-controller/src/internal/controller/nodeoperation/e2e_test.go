@@ -53,6 +53,22 @@ var _ = Describe("NodeOperation controller", func() {
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
+	// The status the controller writes is only as real as the CRD lets through:
+	// a property missing from the schema is pruned and the write is lost in
+	// silence, leaving the phase with nothing that says which spec it answers.
+	It("publishes the generation its phase answers", func(ctx context.Context) {
+		node := createNode(ctx, testenv.UniqueName("gen"), false)
+		op := createOperation(ctx, node.Name, v1alpha1.NodeOperationTypeDrain, nil)
+
+		markDrained(ctx, node.Name)
+
+		Eventually(func(g Gomega) {
+			fresh := getOperation(ctx, g, op.Name)
+			g.Expect(fresh.Status.Phase).To(Equal(v1alpha1.NodeOperationPhaseCompleted))
+			g.Expect(fresh.Status.ObservedGeneration).To(Equal(fresh.Generation))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	})
+
 	// The eviction is a step of its own so that it can be watched; creating a
 	// second one would drain the same node twice.
 	It("spawns exactly one eviction and stays idempotent", func(ctx context.Context) {

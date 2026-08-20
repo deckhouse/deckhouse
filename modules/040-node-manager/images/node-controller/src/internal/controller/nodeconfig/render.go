@@ -94,8 +94,10 @@ func keepBootstrapOnlyFields(desired, existing *internalv1alpha1.NodeSpec, repor
 
 	// A static network belongs to the provisioner: overwriting it with the
 	// rendered "eth0, DHCP" leaves the node unreachable after a reboot.
-	// "Explicit" is judged against the render, not the zero value.
-	if !sameNetwork(&existing.Network, &desired.Network) {
+	// Emptiness is judged against the zero value, not against the render: a node
+	// carrying nothing must be left the rendered default, and one carrying only
+	// DNS must keep it.
+	if !networkIsEmpty(&existing.Network) {
 		hostname := desired.Network.Hostname
 		desired.Network = existing.Network
 		// The hostname is the cluster's: it must match the Node name however
@@ -108,12 +110,12 @@ func keepBootstrapOnlyFields(desired, existing *internalv1alpha1.NodeSpec, repor
 	}
 }
 
-// sameNetwork reports whether a node already carries exactly what this render
-// would give it. Hostname is left out: it is the cluster's either way.
-func sameNetwork(existing, desired *internalv1alpha1.Network) bool {
-	a, b := *existing, *desired
-	a.Hostname, b.Hostname = "", ""
-	return apiequality.Semantic.DeepEqual(a, b)
+// networkIsEmpty reports whether a node said nothing about its network. The
+// hostname is left out: it is the cluster's either way.
+func networkIsEmpty(network *internalv1alpha1.Network) bool {
+	without := *network
+	without.Hostname = ""
+	return apiequality.Semantic.DeepEqual(without, internalv1alpha1.Network{})
 }
 
 // nodeIPStillHolds reports whether a bootstrapped address is still one the node

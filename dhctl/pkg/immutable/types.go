@@ -25,6 +25,7 @@ type objectMeta struct {
 	Labels map[string]string `json:"labels,omitempty"`
 }
 
+// nodeConfig is the document written to /config/nodeconfig.yaml.
 type nodeConfig struct {
 	APIVersion string     `json:"apiVersion"`
 	Kind       string     `json:"kind"`
@@ -32,11 +33,14 @@ type nodeConfig struct {
 	Spec       nodeSpec   `json:"spec"`
 }
 
-// osImage names the image the node must run. Mirrors the nodelet repository's
-// internal/config/types.go and its initramfs twin images/init/src/0.1/nodeconfig.go:
-// a shape they disagree with drops the node into an emergency shell.
+// osImage names the image the node must run. Mirrors the agent contract —
+// internal/config/types.go in the nodelet repository — and the initramfs one,
+// images/init/src/0.1/nodeconfig.go: both parse this document, and a shape they
+// disagree with fails the parse and drops the node into an emergency shell.
 type osImage struct {
-	Digest string `json:"digest"`
+	Digest         string `json:"digest"`
+	Repository     string `json:"repository,omitempty"`
+	AdditionalPath string `json:"additionalPath,omitempty"`
 }
 
 // nodeSpec carries only the fields dhctl emits. The contract lives in the
@@ -65,12 +69,26 @@ type storage struct {
 	// unknown field, so this has to match the NodeConfig CRD exactly.
 	DiskSelector *diskSelector `json:"diskSelector,omitempty"`
 	Mounts       []mount       `json:"mounts,omitempty"`
+	// Device names the disk by path, for a machine the operator knows better
+	// than any selector describes.
+	Device string `json:"device,omitempty"`
 }
 
+// diskSelector picks a whole disk by its attributes. The fields mirror the
+// NodeConfig CRD: the initramfs matches them, and a field it does not know
+// fails the parse and drops the node into an emergency shell.
 type diskSelector struct {
-	Size string `json:"size,omitempty"`
+	Size       string `json:"size,omitempty"`
+	Type       string `json:"type,omitempty"`
+	Rotational *bool  `json:"rotational,omitempty"`
+	Model      string `json:"model,omitempty"`
+	Serial     string `json:"serial,omitempty"`
+	WWID       string `json:"wwid,omitempty"`
+	Name       string `json:"name,omitempty"`
+	BusPath    string `json:"busPath,omitempty"`
 }
 
+// mount is one filesystem the node puts in place before kubelet starts.
 type mount struct {
 	Name              string             `json:"name"`
 	PartitionSelector *partitionSelector `json:"partitionSelector,omitempty"`
@@ -80,8 +98,14 @@ type mount struct {
 	// Mode is the mode of the filesystem root, octal. A freshly made ext4 has its
 	// root at 0755, which is a mode etcd refuses to start on.
 	Mode string `json:"mode,omitempty"`
+	// Device names the partition by path, the alternative to PartitionSelector
+	// for an operator who knows the machine. Filesystem is what to create on it
+	// when it is empty.
+	Device     string `json:"device,omitempty"`
+	Filesystem string `json:"filesystem,omitempty"`
 }
 
+// partitionSelector names a device by what it looks like rather than by path.
 type partitionSelector struct {
 	Size string `json:"size,omitempty"`
 	// Blank makes whole disks selectable, and only the ones carrying nothing.
@@ -99,26 +123,53 @@ type registrySpec struct {
 	Auth    string `json:"auth,omitempty"`
 }
 
+// extension is a signed verity sysext merged onto the read-only root.
 type extension struct {
 	Name        string `json:"name"`
 	Digest      string `json:"digest"`
 	RequestedBy string `json:"requestedBy,omitempty"`
 }
 
+// kernel holds sysctl settings applied before kubelet starts.
 type kernel struct {
 	Sysctl map[string]string `json:"sysctl,omitempty"`
 }
 
+// network holds the hostname and the interfaces the node brings up. No ntp,
+// deliberately: the NodeConfig CRD has the field, but nothing on the node reads
+// it — olcedar-init parses it and never uses it, nodelet ignores it entirely.
 type network struct {
 	Hostname   string             `json:"hostname,omitempty"`
 	Interfaces []networkInterface `json:"interfaces,omitempty"`
+	// DNS and Routes are never rendered, only carried from an operator's
+	// document: a static address is unusable without resolvers, and so is a
+	// machine whose gateway sits outside its own subnet.
+	DNS    *dns    `json:"dns,omitempty"`
+	Routes []route `json:"routes,omitempty"`
 }
 
+// dns is the node's resolver configuration.
+type dns struct {
+	Servers []string `json:"servers,omitempty"`
+	Search  []string `json:"search,omitempty"`
+}
+
+// route is one static route.
+type route struct {
+	Name     string   `json:"name,omitempty"`
+	Networks []string `json:"networks,omitempty"`
+	Gateway  string   `json:"gateway,omitempty"`
+}
+
+// networkInterface describes a single NIC.
 type networkInterface struct {
-	Name string `json:"name"`
-	DHCP bool   `json:"dhcp"`
+	Name      string   `json:"name"`
+	DHCP      bool     `json:"dhcp"`
+	Addresses []string `json:"addresses,omitempty"`
+	Gateway   string   `json:"gateway,omitempty"`
 }
 
+// kubelet configures the node's kubelet.
 type kubelet struct {
 	ClusterDomain string   `json:"clusterDomain,omitempty"`
 	ClusterDNS    []string `json:"clusterDNS,omitempty"`
@@ -139,17 +190,24 @@ type kubelet struct {
 	// join payload: the node refuses to bootstrap a new cluster with one.
 	CACert         string `json:"caCert,omitempty"`
 	BootstrapToken string `json:"bootstrapToken,omitempty"`
+	// NodeIP is the address kubelet registers with. On a machine with several
+	// NICs the automatic choice is a guess, and a wrong one is a node nobody
+	// can reach.
+	NodeIP string `json:"nodeIP,omitempty"`
 }
 
+// resourceReservation controls how much of the node is kept for the system.
 type resourceReservation struct {
 	Mode string `json:"mode"`
 }
 
+// containerRuntime configures containerd.
 type containerRuntime struct {
 	SandboxImage           string `json:"sandboxImage,omitempty"`
 	MaxConcurrentDownloads int    `json:"maxConcurrentDownloads,omitempty"`
 }
 
+// updatePolicy controls how and when the node updates itself.
 type updatePolicy struct {
 	Mode string `json:"mode,omitempty"`
 }
@@ -164,6 +222,7 @@ type controlPlaneConfig struct {
 	Spec       controlPlaneSpec `json:"spec"`
 }
 
+// controlPlaneSpec is the desired state of the node's control plane.
 type controlPlaneSpec struct {
 	// Bootstrap marks the very first control-plane node: the one that has to
 	// create the initial cluster objects nobody else can create yet.
@@ -184,6 +243,7 @@ type controlPlaneSpec struct {
 	Handoff handoff `json:"handoff"`
 }
 
+// renderedFile is one file the node writes without reading it.
 type renderedFile struct {
 	// Name is the file name, not a path: the directory is the node's to choose.
 	Name    string `json:"name"`

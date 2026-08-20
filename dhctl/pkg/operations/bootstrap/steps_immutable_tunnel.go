@@ -26,13 +26,24 @@ import (
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
-// openImmutableChannel returns the host:port dhctl reaches the given port on,
-// and the closer of the tunnel behind it — a no-op without a bastion. The
-// forward is a direct-tcpip channel, so no sshd on the master is involved.
+// openImmutableChannel reaches the first master, whose address the rest of the
+// bootstrap talks to. A wrong installed address fails right here, so the failure
+// names both addresses just like the wait that follows it.
 func (b *ClusterBootstrapper) openImmutableChannel(ctx context.Context, bctx *bootstrapContext, remotePort int, purpose string) (string, func(), error) {
+	address, stop, err := b.openImmutableChannelTo(ctx, bctx.immutable.masterIP, remotePort, purpose)
+	if err != nil {
+		return "", nil, withBothAddresses(bctx, err)
+	}
+	return address, stop, nil
+}
+
+// openImmutableChannelTo returns the host:port dhctl reaches the given port of
+// the given machine on, and the closer of the tunnel behind it — a no-op
+// without a bastion. The forward is a direct-tcpip channel, so no sshd there.
+func (b *ClusterBootstrapper) openImmutableChannelTo(ctx context.Context, host string, remotePort int, purpose string) (string, func(), error) {
 	sshConfig := bastionConfig(b.SSHProviderInitializer.GetConfig())
 	if sshConfig == nil {
-		return net.JoinHostPort(bctx.immutable.masterIP, strconv.Itoa(remotePort)), func() {}, nil
+		return net.JoinHostPort(host, strconv.Itoa(remotePort)), func() {}, nil
 	}
 
 	localPort, err := freeLocalPort()
@@ -40,7 +51,7 @@ func (b *ClusterBootstrapper) openImmutableChannel(ctx context.Context, bctx *bo
 		return "", nil, fmt.Errorf("reserve a local port for the %s tunnel: %w", purpose, err)
 	}
 
-	stop, err := b.openBastionTunnel(ctx, sshConfig, bctx.immutable.masterIP, remotePort, localPort, purpose)
+	stop, err := b.openBastionTunnel(ctx, sshConfig, host, remotePort, localPort, purpose)
 	if err != nil {
 		return "", nil, err
 	}
@@ -104,7 +115,9 @@ func (b *ClusterBootstrapper) openBastionTunnel(ctx context.Context, sshConfig *
 		return nil, fmt.Errorf("forward %d to %s:%d through the bastion %s: %w", localPort, masterIP, remotePort, sshConfig.BastionHost, err)
 	}
 
-	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf(
+	// Debug: a wait rebuilds this channel per attempt — up to 360 of them over
+	// half an hour — and one line each would bury the node's own progress.
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf(
 		"%s tunnel through the bastion is up: %s", purpose, tunnel.String(),
 	))
 
@@ -126,6 +139,8 @@ func cleanupSSHProvider(ctx context.Context, sshProvider libcon.SSHProvider) {
 	}
 }
 
+// freeLocalPort reserves an ephemeral port by binding and releasing it, so the
+// tunnel can bind it right after.
 func freeLocalPort() (int, error) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {

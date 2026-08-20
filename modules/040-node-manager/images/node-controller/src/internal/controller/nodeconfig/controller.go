@@ -101,7 +101,8 @@ func (r *Reconciler) SetupWatches(w register.Watcher) {
 	}))
 	// The system extension digests of the release. Without this watch a new
 	// release re-renders nothing until some unrelated input moves: nothing else
-	// enqueues a pass, and no resync period is set.
+	// enqueues a pass, and no resync period is set. Scoped to the single
+	// ConfigMap, which is also its cache scope.
 	w.Watches(&corev1.ConfigMap{}, allMapper, builder.WithPredicates(predicate.NewPredicateFuncs(
 		func(obj client.Object) bool {
 			return obj.GetNamespace() == cloudInstanceManagerNS && obj.GetName() == imagesDigestsConfigMapName

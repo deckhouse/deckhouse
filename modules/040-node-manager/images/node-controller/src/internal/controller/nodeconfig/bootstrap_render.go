@@ -46,8 +46,14 @@ func RenderBootstrapSpec(ctx context.Context, cl client.Client, reader client.Re
 		return internalv1alpha1.NodeSpec{}, err
 	}
 
-	// Zero CreationTimestamp is what makes the registration taints render.
-	node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: machineName}}
+	// Zero CreationTimestamp makes registration taints render. The labels kubelet
+	// will register with must be set too: the render reads them, and a bare-name
+	// node would differ from its first day-2 render.
+	labels := map[string]string{}
+	for key, value := range renderNodeLabels(ng) {
+		labels[key] = string(value)
+	}
+	node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: machineName, Labels: labels}}
 	return renderSpec(ng, node, in), nil
 }
 

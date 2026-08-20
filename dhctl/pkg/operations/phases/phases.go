@@ -85,6 +85,10 @@ type ClusterConfig struct {
 	// then the type is unknown rather than static. Fill it from MetaConfig.HasClusterConfiguration
 	// at every call site - left at its zero value it silently drops the nodes gated on it.
 	HasClusterConfiguration bool
+	// ImmutableMaster says the master NodeGroup asks for systemType: Immutable. Such a machine
+	// is handed its configuration over the network instead of being created, so the node that
+	// creates master-0 runs for it too — on a static cluster, where nothing else would.
+	ImmutableMaster bool
 }
 
 // Define common operations phases for such operations as bootstrap, converge and destroy.
@@ -226,7 +230,7 @@ func bootstrapNodes() []node {
 				{Name: BaseInfraSubPhaseBaseInfra},
 			},
 		},
-		{Name: FirstMasterPhase, includeIf: ifCloud},
+		{Name: FirstMasterPhase, includeIf: ifCloudOrImmutableMaster},
 		// Preflight on the master dhctl just created, before kubeadm runs on it.
 		{Name: PostInfraPreflightsPhase, includeIf: ifHasClusterConfiguration},
 		// Split out of the node above so that gating it keeps the resource queues InstallDeckhouse
@@ -525,6 +529,13 @@ func project(nodes []node) []PhaseWithSubPhases {
 // CheckInfra in convergeNodes.
 func ifCloud(opts phasesOpts) bool {
 	return opts.clusterConfig.ClusterType == "Cloud"
+}
+
+// ifCloudOrImmutableMaster includes the node that produces master-0: a cloud creates the machine,
+// and an immutable master is handed its payload on a machine that already exists — including on a
+// static cluster, which has no infrastructure step at all.
+func ifCloudOrImmutableMaster(opts phasesOpts) bool {
+	return ifCloud(opts) || opts.clusterConfig.ImmutableMaster
 }
 
 func ifStatic(opts phasesOpts) bool {
