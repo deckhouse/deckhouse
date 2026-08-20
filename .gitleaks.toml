@@ -7,9 +7,9 @@ regexes = [
   'kubernetesCni191'
 ]
 
-# base64 of "user:password": the placeholder registry credential both
-# fixtures are built from, one of them in the {"auths":{...,"auth":...}} shape a
-# docker config uses, which is what a scanner is right to notice.
+# base64 of "user:password": the placeholder registry credential these fixtures
+# are built from, most of them in the {"auths":{...,"auth":...}} shape a docker
+# config uses, which is what a scanner is right to notice.
 #
 # Listed file by file rather than allowlisted globally: a global entry also waves
 # through a real credential that happens to be "user:password" anywhere in the
@@ -22,6 +22,24 @@ regexes = [
   'dXNlcjpwYXNzd29yZA=='
 ]
 paths = [
+  # The golden was renamed mid-branch; the scan reads the whole history, so both
+  # names stay listed.
   '''dhctl/pkg/immutable/testdata/master-cloud-init\.yaml$''',
+  '''dhctl/pkg/immutable/testdata/master-documents\.yaml$''',
+  '''modules/040-node-manager/images/node-controller/src/internal/controller/nodebootstrap/e2e_test\.go$''',
+  '''modules/040-node-manager/images/node-controller/src/internal/controller/nodebootstrap/template_storage_test\.go$''',
+  '''modules/040-node-manager/images/node-controller/src/internal/controller/nodeconfig/e2e_test\.go$''',
   '''modules/040-node-manager/images/node-controller/src/internal/testenv/clusterinputs\.go$'''
+]
+
+# The shape of a bootstrap token, not one: two hex groups the joining kubelet
+# presents. The scan reads the whole branch, so the file carrying it must be
+# named here even though the line itself now says gitleaks:allow.
+[[allowlists]]
+condition = "AND"
+regexes = [
+  'abcdef\.0123456789abcdef'
+]
+paths = [
+  '''dhctl/pkg/operations/bootstrap/steps_immutable_test\.go$'''
 ]
