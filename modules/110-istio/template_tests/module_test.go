@@ -2001,6 +2001,66 @@ MY_VAR: "myvalue"
 			Expect(clusterRole.Exists()).To(BeTrue())
 			Expect(clusterRole.Field("rules").String()).To(ContainSubstring("backendtlspolicies"))
 		})
+
+		It("renders istiod ClusterRole with 1.29 gateway API BackendTLSPolicy permissions", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			istiodClusterRole := f.KubernetesGlobalResource("ClusterRole", "d8:istio:control-plane:iop:istiod-v1x29")
+			Expect(istiodClusterRole.Exists()).To(BeTrue())
+			Expect(istiodClusterRole.Field("rules").String()).To(ContainSubstring("backendtlspolicies"))
+			Expect(istiodClusterRole.Field("rules").String()).To(ContainSubstring("backendtlspolicies/status"))
+		})
+	})
+
+	Context("joint install of operator-backed 1.25 and operator-free 1.29", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.versionMap", `
+"1.25":
+  revision: "v1x25"
+  fullVersion: "1.25.2"
+  imageSuffix: "V1x25x2"
+  supportsAmbient: true
+  supportsOperator: true
+"1.29":
+  revision: "v1x29"
+  fullVersion: "1.29.6"
+  imageSuffix: "V1x29x6"
+  supportsAmbient: true
+  supportsOperator: false
+`)
+			// Canary upgrade path: keep 1.25 as global, install 1.29 as additional revision.
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25","1.29"]`)
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.25"]`)
+			f.ValuesSet("istio.internal.globalVersion", "1.25")
+			f.HelmRender()
+		})
+
+		It("renders Sail operator control plane for 1.25 and helm istiod for 1.29", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			istioV25 := f.KubernetesResource("Istio", "d8-istio", "v1x25")
+			Expect(istioV25.Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Deployment", "d8-istio", "operator-v1x25").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Deployment", "d8-istio", "istiod-v1x25").Exists()).To(BeFalse())
+
+			Expect(f.KubernetesResource("Deployment", "d8-istio", "istiod-v1x29").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Service", "d8-istio", "istiod-v1x29").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("ConfigMap", "d8-istio", "istio-v1x29").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("IstioOperator", "d8-istio", "v1x29").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Istio", "d8-istio", "v1x29").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Deployment", "d8-istio", "operator-v1x29").Exists()).To(BeFalse())
+
+			istiodClusterRoleV29 := f.KubernetesGlobalResource("ClusterRole", "d8:istio:control-plane:iop:istiod-v1x29")
+			Expect(istiodClusterRoleV29.Exists()).To(BeTrue())
+			Expect(istiodClusterRoleV29.Field("rules").String()).To(ContainSubstring("backendtlspolicies"))
+
+			istiodClusterRoleV25 := f.KubernetesGlobalResource("ClusterRole", "d8:istio:control-plane:iop:istiod-v1x25")
+			Expect(istiodClusterRoleV25.Exists()).To(BeTrue())
+			Expect(istiodClusterRoleV25.Field("rules").String()).NotTo(ContainSubstring("backendtlspolicies"))
+		})
 	})
 
 	Context("operator-free sidecar with custom static resourcesManagement configuration", func() {
