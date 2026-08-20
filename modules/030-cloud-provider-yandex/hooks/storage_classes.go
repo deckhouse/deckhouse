@@ -105,9 +105,11 @@ func matchCheck(regexps []*regexp.Regexp, storageClassName string) bool {
 }
 
 func storageClasses(_ context.Context, input *go_hook.HookInput) error {
-	provision := make([]StorageClass, 0)
-	provisionNames := make([]string, 0)
-	for _, sc := range input.Values.Get("cloudProviderYandex.storageClass.provision").Array() {
+	provisionValues := input.Values.Get("cloudProviderYandex.storageClass.provision").Array()
+
+	provision := make([]StorageClass, 0, len(provisionValues))
+	provisionNames := make([]string, 0, len(provisionValues))
+	for _, sc := range provisionValues {
 		provision = append(provision, StorageClass{
 			Name:      sc.Get("name").String(),
 			Type:      sc.Get("type").String(),
@@ -130,8 +132,10 @@ func storageClasses(_ context.Context, input *go_hook.HookInput) error {
 	}
 	storageClassesFilteredProvision = append(storageClassesFilteredProvision, provision...)
 
-	excludePatterns := make([]string, 0)
-	for _, excludePattern := range input.Values.Get("cloudProviderYandex.storageClass.exclude").Array() {
+	excludeValues := input.Values.Get("cloudProviderYandex.storageClass.exclude").Array()
+
+	excludePatterns := make([]string, 0, len(excludeValues))
+	for _, excludePattern := range excludeValues {
 		excludePatterns = append(excludePatterns, excludePattern.String())
 	}
 
