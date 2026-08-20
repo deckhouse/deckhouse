@@ -231,12 +231,6 @@ func (r *reconciler) readSpec(instance *unstructured.Unstructured) (instanceSpec
 	if mac, ok, _ := unstructured.NestedString(instance.Object, "spec", "bootMACAddress"); ok {
 		spec.BootMACAddress = strings.ToLower(mac)
 	}
-	if mac, ok, _ := unstructured.NestedString(instance.Object, "spec", "bmc", "bootMACAddress"); ok && spec.BootMACAddress == "" {
-		spec.BootMACAddress = strings.ToLower(mac)
-	}
-	if online, ok, _ := unstructured.NestedBool(instance.Object, "spec", "bmc", "online"); ok {
-		spec.Online = online
-	}
 	if address, ok, _ := unstructured.NestedString(instance.Object, "spec", "bmc", "address"); ok {
 		spec.BMCAddress = address
 	}
