@@ -34,6 +34,16 @@ import (
 // exactly when some service name renders it.
 const labelPattern = `[a-z0-9]([-a-z0-9]*[a-z0-9])?`
 
+// HostPattern is the shape a hostname the reservation carries has to have. It is the literal
+// modules/002-deckhouse/openapi/values.yaml validates every entry of
+// deckhouse.internal.reservedPublicHosts.hosts against, kept here as well so that a hostname can be
+// dropped before it reaches values: that key is fed from a ConfigMap an operator is invited to edit,
+// and a value validation failure there would stop the module that renders Deckhouse from converging.
+// publicdomain_test.go compares the two strings so that they cannot drift.
+const HostPattern = `^(\*\.)?` + labelPattern + `(\.` + labelPattern + `)*$`
+
+var hostRegexp = regexp.MustCompile(HostPattern)
+
 // Namespace is the set of hostnames one publicDomainTemplate covers.
 type Namespace struct {
 	// Pattern matches every hostname the template can render.
@@ -112,4 +122,11 @@ func (n Namespace) PatternCovers(host string) bool {
 // the root-dot trim the admission policies apply to what a request claims.
 func NormalizeHost(host string) string {
 	return strings.TrimSuffix(strings.ToLower(strings.TrimSpace(host)), ".")
+}
+
+// IsHost reports whether the string is a hostname the reservation can carry, which is the shape
+// openapi/values.yaml admits. Expects a normalized hostname: a spelling NormalizeHost would have
+// fixed is reported as garbage rather than repaired.
+func IsHost(host string) bool {
+	return hostRegexp.MatchString(host)
 }

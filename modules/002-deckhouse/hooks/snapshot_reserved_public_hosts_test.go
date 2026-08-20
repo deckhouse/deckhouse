@@ -334,6 +334,28 @@ spec:
 		})
 	})
 
+	Context("An operator hand-edited the record into something that is not a hostname", func() {
+		BeforeEach(func() {
+			run("%s.example.com", tenantObjects+paramsConfigMap("true",
+				"    Shop.example.com\n"+
+					"    store.example.com.\n"+
+					"    https://admin.example.com\n"+
+					"    -not-a-host-.example.com\n"))
+		})
+
+		// The header of the hook points an operator at this key, and its value goes straight into
+		// deckhouse.internal.reservedPublicHosts.hosts, which openapi/values.yaml validates. A typo
+		// there must not stop the module that renders Deckhouse from converging, so what is a
+		// hostname is kept, spelled the way the policies compare it, and the rest is dropped.
+		It("keeps what is a hostname and drops the rest rather than failing values validation", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet(reservedPublicHostsValuePath).String()).To(MatchJSON(`{
+				"recorded": true,
+				"hosts": ["shop.example.com", "store.example.com"]
+			}`))
+		})
+	})
+
 	Context("The parameters exist but say the record has not been made", func() {
 		BeforeEach(func() {
 			run("%s.example.com", tenantObjects+paramsConfigMap("false", ""))

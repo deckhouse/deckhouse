@@ -171,10 +171,13 @@ func snapshotReservedPublicHosts(ctx context.Context, input *go_hook.HookInput, 
 	}
 
 	if len(recorded) > 0 && recorded[0].Recorded {
-		// Taken already. Put it back verbatim so that Helm renders what is in the cluster, and read
-		// nothing else: this branch is what makes the grandfathering one-time rather than a list
-		// that grows every time Deckhouse restarts.
-		input.Values.Set(reservedPublicHostsValuePath, recorded[0])
+		// Taken already. Put it back so that Helm renders what is in the cluster, and read nothing
+		// else: this branch is what makes the grandfathering one-time rather than a list that grows
+		// every time Deckhouse restarts.
+		input.Values.Set(reservedPublicHostsValuePath, reservedPublicHostsSnapshot{
+			Recorded: true,
+			Hosts:    hostsFromRecord(recorded[0].Hosts, input),
+		})
 		return nil
 	}
 
@@ -204,6 +207,40 @@ func snapshotReservedPublicHosts(ctx context.Context, input *go_hook.HookInput, 
 
 	input.Values.Set(reservedPublicHostsValuePath, reservedPublicHostsSnapshot{Recorded: true, Hosts: hosts})
 	return nil
+}
+
+// hostsFromRecord spells the record the way the reservation compares hostnames and drops what is not
+// a hostname at all.
+//
+// The header of this file documents editing grandfatheredHosts in the ConfigMap as the way to prune
+// an entry, and this value goes straight into deckhouse.internal.reservedPublicHosts.hosts, which
+// openapi/values.yaml validates. Without this an operator who types Shop.example.com, leaves a root
+// dot or pastes a URL fails values validation and stops the module that renders Deckhouse from
+// converging -- from a hand edit to a ConfigMap they were pointed at. The same reasoning the
+// template applies to a misspelled excludedServices entry, and more strongly, because this is the
+// surface the operator is invited to edit.
+//
+// A dropped entry is visible on the next converge: it disappears from grandfatheredHosts, and the
+// object behind it is denied with a message naming the hostname.
+func hostsFromRecord(recorded []string, input *go_hook.HookInput) []string {
+	hosts := set.New()
+	dropped := make([]string, 0)
+	for _, host := range recorded {
+		normalized := publicdomain.NormalizeHost(host)
+		if !publicdomain.IsHost(normalized) {
+			dropped = append(dropped, host)
+			continue
+		}
+		hosts.Add(normalized)
+	}
+
+	if len(dropped) > 0 {
+		input.Logger.Warn("dropped entries of grandfatheredHosts that are not hostnames",
+			slog.Int("count", len(dropped)),
+			slog.Any("dropped", dropped))
+	}
+
+	return hosts.Slice()
 }
 
 // collectTenantHosts reads every hostname claimed outside the namespaces the platform owns and keeps
