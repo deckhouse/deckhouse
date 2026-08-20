@@ -248,7 +248,7 @@ In addition to the [standard admission plugins enabled by Kubernetes](#standard-
 | **ExtendedResourceToleration** | Mutating | Automatically adds tolerations to pods requesting extended resources (e.g., GPU, FPGA). This allows you to allocate special nodes for such pods—nodes that are pre-tainted with the resource name—without manually adding tolerations to the pods. |
 | **NodeRestriction** | Validating | Restricts the set of Node and Pod objects that the kubelet can modify. Enhances cluster security. |
 | **PodNodeSelector** | Validating | Defines and restricts which node selectors can be used within a namespace, based on reading the namespace annotation and global configuration. |
-| **PodTolerationRestriction** | Mutating & Validating | Checks the pod’s toleration for conflicts with tolerations specified at the namespace level. If there are no conflicts, it merges the pod’s and namespace’s tolerations. It also checks the pod against a “whitelist” of tolerations. |
+| **PodTolerationRestriction** | Mutating and Validating | Checks the pod’s toleration for conflicts with tolerations specified at the namespace level. If there are no conflicts, it merges the pod’s and namespace’s tolerations. It also checks the pod against a “whitelist” of tolerations. |
 
 {% alert level="info" %}
 
