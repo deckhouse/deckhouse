@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-5a4509a04e8128126aee080324a6b663a7748bf44b58a9a4b9c74d4801844f53",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 17,
+  "version": 18,
   "statements": [
     {
       "vulnerability": {
@@ -520,6 +520,216 @@
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость в google.golang.org/grpc версии v1.80.0 (проблемы xDS RBAC и HTTP/2) приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не использует gRPC-сервер и xDS/RBAC-функционал — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-69247"
+      },
+      "products": [
+        {
+          "@id": "pkg:pypi/cryptography@44.0.1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость затрагивает функции pkcs7_decrypt_der/pkcs7_decrypt_pem/pkcs7_decrypt_smime (Bleichenbacher-оракул при расшифровке недоверенного EnvelopedData). Эксплуатация требует сервиса, автоматически расшифровывающего недоверенный S/MIME/PKCS7 и адаптивно отражающего результат (почтовый шлюз/фильтр). webhook-handler не выполняет расшифровку PKCS7/S/MIME и не обрабатывает недоверенный EnvelopedData — уязвимый код не выполняется.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-69248"
+      },
+      "products": [
+        {
+          "@id": "pkg:pypi/cryptography@44.0.1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в валидации X.509 (DNSConstraint::matches — обход name constraints через wildcard в SAN). webhook-handler не выполняет проверку недоверенных цепочек сертификатов с name constraints средствами pypi/cryptography — уязвимый код не выполняется.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-69249"
+      },
+      "products": [
+        {
+          "@id": "pkg:pypi/cryptography@44.0.1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в построении цепочки сертификатов (build_chain_inner — экспоненциальный рост при дублировании self-signed сертификатов, DoS-амплификация). webhook-handler не выполняет валидацию недоверенных цепочек сертификатов средствами pypi/cryptography — уязвимый код не выполняется.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-25681"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/net/html версии v0.42.0 (XSS через непредвиденное HTML-дерево при Render) приходит транзитивно через бинарь yq (образ tools/yq). yq — обработчик YAML, HTML он не парсит и не рендерит; входные YAML-данные формируются самим Deckhouse и не являются недоверенными — уязвимый код не выполняется.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-27136"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/net/html версии v0.42.0 (XSS при обходе HTML-парсинга) приходит транзитивно через бинарь yq (образ tools/yq). yq — обработчик YAML, HTML он не парсит и не рендерит; входные YAML-данные формируются самим Deckhouse и не являются недоверенными — уязвимый код не выполняется.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-25680"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/net/html версии v0.42.0 (DoS при избыточном HTML-парсинге) приходит транзитивно через бинарь yq (образ tools/yq). yq — обработчик YAML, HTML он не парсит; входные YAML-данные формируются самим Deckhouse и не являются недоверенными — уязвимый код не выполняется.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42502"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/net/html версии v0.42.0 (XSS при непредвиденном рендеринге HTML-дерева) приходит транзитивно через бинарь yq (образ tools/yq). yq — обработчик YAML, HTML он не парсит и не рендерит; входные YAML-данные формируются самим Deckhouse и не являются недоверенными — уязвимый код не выполняется.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42506"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/net/html версии v0.42.0 (XSS при произвольном HTML-парсинге) приходит транзитивно через бинарь yq (образ tools/yq). yq — обработчик YAML, HTML он не парсит и не рендерит; входные YAML-данные формируются самим Deckhouse и не являются недоверенными — уязвимый код не выполняется.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-47911"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/net/html версии v0.42.0 (квадратичная сложность парсинга HTML, DoS) приходит транзитивно через бинарь yq (образ tools/yq). yq — обработчик YAML, HTML он не парсит; входные YAML-данные формируются самим Deckhouse и не являются недоверенными — уязвимый код не выполняется.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-58190"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/net/html версии v0.42.0 (бесконечный цикл в html.Parse, DoS) приходит транзитивно через бинарь yq (образ tools/yq). yq — обработчик YAML, HTML он не парсит; входные YAML-данные формируются самим Deckhouse и не являются недоверенными — уязвимый код не выполняется.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33814"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в HTTP/2-стеке golang.org/x/net версии v0.42.0 (DoS через некорректный SETTINGS_MAX_FRAME_SIZE-фрейм) приходит транзитивно через бинарь yq (образ tools/yq). yq — CLI-обработчик YAML, он не обслуживает HTTP/2-соединения из сети — уязвимый код не выполняется.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39821"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/net/idna версии v0.42.0 (эскалация привилегий при некорректной обработке Punycode-меток) приходит транзитивно через бинарь yq (образ tools/yq). yq — CLI-обработчик YAML, он не обрабатывает недоверенные доменные имена/IDNA — уязвимый код не выполняется.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46600"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/net/dns/dnsmessage версии v0.42.0 (DoS/panic при парсинге некорректной DNS-записи) приходит транзитивно через бинарь yq (образ tools/yq). yq — CLI-обработчик YAML, он не разбирает недоверенные DNS-ответы — уязвимый код не выполняется.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56852"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/text@v0.27.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/text версии v0.27.0 (бесконечный цикл в norm.Iter / DoS при некорректном UTF-8) приходит транзитивно через бинарь yq (образ tools/yq). Входные YAML-данные формируются самим Deckhouse и не являются недоверенными, путь Unicode-нормализации недоверенного ввода не задействуется — уязвимый код не выполняется.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39824"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/sys@v0.34.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/sys/windows версии v0.34.0 (переполнение целочисленного значения в NewNTUnicodeString) относится исключительно к платформе Windows. webhook-handler и входящий в него бинарь yq (образ tools/yq) собираются и исполняются в Linux-контейнере, Windows-специфичный код не компилируется и не выполняется.",
       "timestamp": "2026-08-20T12:00:00Z"
     }
   ],
