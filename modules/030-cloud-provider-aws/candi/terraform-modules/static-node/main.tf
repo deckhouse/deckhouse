@@ -52,9 +52,11 @@ resource "aws_instance" "node" {
   iam_instance_profile = "${var.prefix}-node"
 
   dynamic "metadata_options" {
-    for_each = var.imdsv2 ? [1] : []
+    for_each = var.imdsv2_managed ? [1] : []
     content {
-      http_tokens = "required"
+      http_endpoint               = "enabled"
+      http_tokens                 = var.imdsv2 ? "required" : "optional"
+      http_put_response_hop_limit = 1
     }
   }
 

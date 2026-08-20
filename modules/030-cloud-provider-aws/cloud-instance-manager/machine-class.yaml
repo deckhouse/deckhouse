@@ -14,7 +14,9 @@ spec:
   sourceDestCheck: false
 {{- if .Values.nodeManager.internal.cloudProvider.aws.imdsv2 }}
   metadataOptions:
+    httpEndpoint: enabled
     httpTokens: required
+    httpPutResponseHopLimit: 1
 {{- end }}
 {{- if hasKey .nodeGroup.instanceClass "spot" }}
   {{- if .nodeGroup.instanceClass.spot }}

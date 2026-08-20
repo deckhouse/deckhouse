@@ -247,9 +247,11 @@ resource "aws_instance" "bastion" {
   iam_instance_profile   = "${local.prefix}-node"
 
   dynamic "metadata_options" {
-    for_each = lookup(var.providerClusterConfiguration.provider, "imdsv2", false) ? [1] : []
+    for_each = local.imdsv2_managed ? [1] : []
     content {
-      http_tokens = "required"
+      http_endpoint               = "enabled"
+      http_tokens                 = local.imdsv2 ? "required" : "optional"
+      http_put_response_hop_limit = 1
     }
   }
 

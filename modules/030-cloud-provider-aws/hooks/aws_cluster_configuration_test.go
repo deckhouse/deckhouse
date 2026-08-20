@@ -91,8 +91,8 @@ nodeGroups:
       node-role.kubernetes.io/qqq: ""
   replicas: 1
 vpcNetworkCIDR: 10.222.0.0/16
+imdsv2: true
 provider:
-  imdsv2: true
   providerAccessKeyId: keyzzz
   providerSecretAccessKey: secretzzz
   region: eu-zzz

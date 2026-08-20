@@ -403,6 +403,21 @@ apiVersions:
           - `additionalSecurityGroups` in the `nodeGroups.instanceClass` section.
 
           To configure the security groups used by load balancers, specify them using the `service.beta.kubernetes.io/aws-load-balancer-security-groups` annotation.
+      imdsv2:
+        type: boolean
+        x-doc-default: false
+        description: |
+          Enables IMDSv2 and disables IMDSv1 for all EC2 instances created for the cluster.
+
+          The default is `false` for backward compatibility with existing clusters and applications that only support IMDSv1.
+
+          It is recommended to enable IMDSv2 because it requires session tokens for metadata requests and reduces the risk of unauthorized access to instance metadata, including through server-side request forgery (SSRF).
+
+          **Caution.** Instances keep the default IMDS hop limit of 1, so with IMDSv2 enforced the metadata service becomes unreachable from Pods that do not use the host network — including Pods whose applications do support IMDSv2. Deckhouse components are not affected, they run in the host network. Before enabling it, make sure that all applications accessing instance metadata support IMDSv2 and either run in the host network or do not need instance metadata.
+
+          While the parameter is not set at all, the metadata options of the instances are left untouched, whatever they are. Setting it — to either value — puts them under Deckhouse management: `false` allows both IMDS versions explicitly, `true` requires session tokens.
+
+          To apply the change to master, static and bastion nodes, run `dhctl converge`. Ephemeral nodes are re-created automatically.
       sshAllowList:
         type: array
         items:
@@ -450,15 +465,6 @@ apiVersions:
             description: |
               The name of the AWS region where instances will be provisioned.
             x-unsafe: true
-          imdsv2:
-            type: boolean
-            x-doc-default: false
-            description: |
-              Enables IMDSv2 and disables IMDSv1 for all EC2 instances created for the cluster.
-
-              The default is `false` for backward compatibility with existing clusters and applications that only support IMDSv1.
-
-              It is recommended to enable IMDSv2 because it requires session tokens for metadata requests and reduces the risk of unauthorized access to instance metadata, including through server-side request forgery (SSRF). Before enabling it, make sure that all applications accessing instance metadata support IMDSv2.
       zones:
         type: array
         items:

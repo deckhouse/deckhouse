@@ -38,6 +38,11 @@ variable "imdsv2" {
   default = false
 }
 
+variable "imdsv2_managed" {
+  type = bool
+  default = false
+}
+
 variable "node_index" {
   type = number
 }

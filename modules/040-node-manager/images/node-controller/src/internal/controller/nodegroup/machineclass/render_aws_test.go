@@ -128,5 +128,9 @@ func TestRenderMachineClass_AWSIMDSv2(t *testing.T) {
 	var mc map[string]interface{}
 	require.NoError(t, yaml.Unmarshal(out, &mc))
 	spec := mc["spec"].(map[string]interface{})
-	assert.Equal(t, map[string]interface{}{"httpTokens": "required"}, spec["metadataOptions"])
+	assert.Equal(t, map[string]interface{}{
+		"httpEndpoint":            "enabled",
+		"httpTokens":              "required",
+		"httpPutResponseHopLimit": float64(1),
+	}, spec["metadataOptions"])
 }
