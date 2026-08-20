@@ -31,15 +31,24 @@ limitations under the License.
 // The FilterFunc keeps only MachineDeployments whose spec.replicas is still owned
 // by the legacy field manager (everything else is dropped from the snapshot by
 // returning a nil result), so the handler's snapshots contain exactly the objects
-// that must be fixed. For each of them it force-claims the field for
-// "deckhouse-hook" via server-side apply, re-applying the current value so the
-// count is unchanged. It runs OnBeforeHelm, right before nelm applies the
-// node-manager release, so ownership is migrated BEFORE the apply that would
-// otherwise prune it — that is what prevents the scale-to-zero instead of only
-// healing it afterwards. WaitForSynchronization is left at its default (true) so
-// the snapshots are populated before beforeHelm runs; both CRDs ship in
-// node-manager/crds and node-manager is critical, so they are always present and
-// the synchronization cannot stall.
+// that must be fixed. For each of them it migrates ownership to "deckhouse-hook"
+// by rewriting metadata.managedFields directly (the client-go CSA->SSA upgrade
+// primitive), which drops the legacy manager WITHOUT touching spec.replicas.
+//
+// A server-side apply cannot do this: SSA conflict detection is value-based
+// (structured-merge-diff computes conflicts as ownedFields ∩ (Modified ∪ Added)),
+// so re-applying spec.replicas at its current value adds a "deckhouse-hook" Apply
+// co-owner but never strips the legacy "deckhouse-controller" owner — nelm's
+// adopt gate then still adopts and prunes the field. Only an explicit
+// managedFields rewrite transfers ownership of an unchanged value.
+//
+// It runs OnBeforeHelm, right before nelm applies the node-manager release, so
+// ownership is migrated BEFORE the apply that would otherwise prune it — that is
+// what prevents the scale-to-zero instead of only healing it afterwards.
+// WaitForSynchronization is left at its default (true) so the snapshots are
+// populated before beforeHelm runs; both CRDs ship in node-manager/crds and
+// node-manager is critical, so they are always present and the synchronization
+// cannot stall.
 
 package hooks
 
@@ -55,7 +64,9 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	apitypes "k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/util/csaupgrade"
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -121,14 +132,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, dependency.WithExternalDependencies(handleForceMachineDeploymentReplicasOwnership))
 
-// machineDeploymentReplicas is the snapshot entry for a MachineDeployment that
-// still needs its spec.replicas ownership migrated. MachineDeployments that are
-// already off the legacy manager never reach the snapshot (see the filters).
-type machineDeploymentReplicas struct {
+// machineDeploymentRef is the snapshot entry for a MachineDeployment that still
+// needs its spec.replicas ownership migrated. MachineDeployments that are already
+// off the legacy manager never reach the snapshot (see the filters). Only the
+// name is carried: the migration rewrites managedFields and never reads or writes
+// the replica value.
+type machineDeploymentRef struct {
 	Name string
-	// Replicas is the current value, re-applied verbatim so claiming ownership
-	// never changes the count.
-	Replicas int32
 }
 
 func machineDeploymentReplicasOwnershipFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -144,7 +154,7 @@ func machineDeploymentReplicasOwnershipFilter(obj *unstructured.Unstructured) (g
 		return nil, err
 	}
 
-	return machineDeploymentReplicas{Name: md.Name, Replicas: md.Spec.Replicas}, nil
+	return machineDeploymentRef{Name: md.Name}, nil
 }
 
 func capiMachineDeploymentReplicasOwnershipFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -157,12 +167,7 @@ func capiMachineDeploymentReplicasOwnershipFilter(obj *unstructured.Unstructured
 		return nil, err
 	}
 
-	var replicas int32
-	if md.Spec.Replicas != nil {
-		replicas = *md.Spec.Replicas
-	}
-
-	return machineDeploymentReplicas{Name: md.Name, Replicas: replicas}, nil
+	return machineDeploymentRef{Name: md.Name}, nil
 }
 
 func handleForceMachineDeploymentReplicasOwnership(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
@@ -180,7 +185,7 @@ func handleForceMachineDeploymentReplicasOwnership(ctx context.Context, input *g
 }
 
 func forceReplicasOwnership(ctx context.Context, input *go_hook.HookInput, dyn dynamic.Interface, snaps []pkg.Snapshot, gvr schema.GroupVersionResource) {
-	for md, err := range sdkobjectpatch.SnapshotIter[machineDeploymentReplicas](snaps) {
+	for md, err := range sdkobjectpatch.SnapshotIter[machineDeploymentRef](snaps) {
 		if err != nil {
 			input.Logger.Warn("force replicas ownership: iterate snapshot",
 				slog.String("gvr", gvr.String()), slog.Any("error", err))
@@ -189,8 +194,8 @@ func forceReplicasOwnership(ctx context.Context, input *go_hook.HookInput, dyn d
 
 		// The snapshot only contains MachineDeployments whose spec.replicas is still
 		// legacy-owned (the filter drops the rest), so every entry needs the claim.
-		if err := claimReplicasOwnership(ctx, dyn, gvr, md.Name, md.Replicas); err != nil {
-			input.Logger.Warn("force replicas ownership: claim spec.replicas",
+		if err := claimReplicasOwnership(ctx, dyn, gvr, md.Name); err != nil {
+			input.Logger.Warn("force replicas ownership: migrate spec.replicas owner",
 				slog.String("machinedeployment", md.Name), slog.Any("error", err))
 		}
 	}
@@ -228,32 +233,37 @@ func replicasOwnedByLegacyManager(managedFields []metav1.ManagedFieldsEntry) boo
 	return false
 }
 
-// claimReplicasOwnership takes over ownership of spec.replicas for the
-// hookFieldManager via a forced server-side apply, re-applying the current value
-// so the count is unchanged. A forced apply is the only operation that transfers
-// ownership without changing the value; it moves the field off the legacy manager
-// so nelm's adopt-deckhouse-controller-fields gate no longer prunes it.
-func claimReplicasOwnership(ctx context.Context, dyn dynamic.Interface, gvr schema.GroupVersionResource, name string, replicas int32) error {
-	applyObj := map[string]any{
-		"apiVersion": gvr.GroupVersion().String(),
-		"kind":       "MachineDeployment",
-		"metadata": map[string]any{
-			"name":      name,
-			"namespace": machineDeploymentNamespace,
-		},
-		"spec": map[string]any{
-			"replicas": replicas,
-		},
-	}
-
-	data, err := json.Marshal(applyObj)
+// claimReplicasOwnership migrates ownership of every field still tracked by the
+// legacy "deckhouse-controller" Update manager (spec.replicas in particular) to
+// the "deckhouse-hook" Apply manager, without changing any field value, so nelm's
+// adopt-deckhouse-controller-fields gate no longer prunes them.
+//
+// It rewrites metadata.managedFields directly via the client-go CSA->SSA upgrade
+// primitive rather than a server-side apply, because a forced apply that
+// re-applies spec.replicas at its current value does NOT strip the legacy owner:
+// SSA conflict detection only fires for fields an operation adds or modifies, so
+// an unchanged value keeps its existing owner (see the package comment). The
+// upgrade patch pins metadata.resourceVersion, so a concurrent write makes the
+// patch fail with a conflict rather than clobber it; the next converge retries.
+func claimReplicasOwnership(ctx context.Context, dyn dynamic.Interface, gvr schema.GroupVersionResource, name string) error {
+	live, err := dyn.Resource(gvr).Namespace(machineDeploymentNamespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
 
+	patch, err := csaupgrade.UpgradeManagedFieldsPatch(live, sets.New(legacyFieldManager), hookFieldManager)
+	if err != nil {
+		return err
+	}
+	if patch == nil {
+		// Ownership is already off the legacy manager (e.g. a concurrent run or a
+		// prior converge migrated it) — nothing to do.
+		return nil
+	}
+
 	_, err = dyn.Resource(gvr).Namespace(machineDeploymentNamespace).Patch(
-		ctx, name, apitypes.ApplyPatchType, data,
-		metav1.PatchOptions{FieldManager: hookFieldManager, Force: ptr.To(true)},
+		ctx, name, apitypes.JSONPatchType, patch,
+		metav1.PatchOptions{FieldManager: hookFieldManager},
 	)
 
 	return err

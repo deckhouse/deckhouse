@@ -112,9 +112,10 @@ spec:
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "MachineDeployment", true)
 	f.RegisterCRD("cluster.x-k8s.io", "v1beta1", "MachineDeployment", true)
 
-	// appliedPatches records the names of MachineDeployments that received a
-	// server-side apply (the ownership claim). A single reactor is installed once
-	// the fake client exists; the slice is reset before every run.
+	// appliedPatches records the names of MachineDeployments that received the
+	// managedFields ownership-migration patch (a JSON patch, not a server-side
+	// apply). A single reactor is installed once the fake client exists; the slice
+	// is reset before every run.
 	var (
 		appliedPatches []string
 		spyOnce        sync.Once
@@ -125,11 +126,11 @@ spec:
 			fakeDynamic := f.KubeClient().Dynamic().(*k8sdynamicfake.FakeDynamicClient)
 			fakeDynamic.PrependReactor("patch", "machinedeployments", func(action k8stesting.Action) (bool, k8sruntime.Object, error) {
 				patch := action.(k8stesting.PatchAction)
-				if patch.GetPatchType() == apitypes.ApplyPatchType {
+				if patch.GetPatchType() == apitypes.JSONPatchType {
 					appliedPatches = append(appliedPatches, patch.GetName())
 				}
-				// Short-circuit: record the claim and skip the default apply, whose
-				// server-side-apply emulation is not needed for this assertion.
+				// Short-circuit: record the migration and skip applying the JSON patch,
+				// whose managedFields rewrite is not needed for this assertion.
 				return true, &unstructured.Unstructured{}, nil
 			})
 		})
