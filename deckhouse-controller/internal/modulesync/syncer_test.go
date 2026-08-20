@@ -265,6 +265,16 @@ func TestFillModuleV2(t *testing.T) {
 		assert.False(t, module.IsEmbedded(), "a module no longer shipped in the image loses the annotation")
 	})
 
+	t.Run("unknown origin leaves the annotations alone", func(t *testing.T) {
+		module := &v1alpha2.Module{}
+
+		fillModuleV2(module, Origin{RepositoryName: embeddedRepositoryName, PackageVersion: "v1.77.0", Embedded: true}, nil)
+		require.True(t, module.IsEmbedded())
+
+		fillModuleV2(module, Origin{}, testModuleConfig("echo"))
+		assert.True(t, module.IsEmbedded(), "a config mirror must not strip the embedded annotation")
+	})
+
 	t.Run("dev annotation is only ever set", func(t *testing.T) {
 		module := &v1alpha2.Module{}
 

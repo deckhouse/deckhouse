@@ -30,16 +30,20 @@ func fillModuleV2(moduleV2 *v1alpha2.Module, origin Origin, conf *v1alpha1.Modul
 		moduleV2.Spec.PackageVersion = origin.PackageVersion
 	}
 
-	// the annotation, not the spec, routes a module to the filesystem, so it is reconciled both ways
-	if origin.Embedded {
-		markAnnotation(moduleV2, v1alpha2.ModuleAnnotationEmbedded)
-	} else {
-		delete(moduleV2.Annotations, v1alpha2.ModuleAnnotationEmbedded)
-	}
+	// the embedded annotation, not the spec, routes a module to the filesystem,
+	// so a known origin reconciles it both ways; an unknown origin (a pure
+	// config mirror) owns no annotations and leaves them be
+	if origin.Known() {
+		if origin.Embedded {
+			markAnnotation(moduleV2, v1alpha2.ModuleAnnotationEmbedded)
+		} else {
+			delete(moduleV2.Annotations, v1alpha2.ModuleAnnotationEmbedded)
+		}
 
-	// the dev annotation is only ever set, as it always has been
-	if origin.Dev {
-		markAnnotation(moduleV2, v1alpha2.ModuleAnnotationDev)
+		// the dev annotation is only ever set, as it always has been
+		if origin.Dev {
+			markAnnotation(moduleV2, v1alpha2.ModuleAnnotationDev)
+		}
 	}
 
 	// the config block dies with the ModuleConfig deprecation, together with liveModuleConfigs

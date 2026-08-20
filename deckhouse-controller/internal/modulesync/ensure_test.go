@@ -103,6 +103,25 @@ func TestEnsureModuleConfig(t *testing.T) {
 		assert.Equal(t, map[string]any{"logLevel": "Debug"}, module.Spec.Settings.GetMap())
 	})
 
+	t.Run("keeps the embedded annotation of an embedded module", func(t *testing.T) {
+		existing := &v1alpha2.Module{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        "echo",
+				Annotations: map[string]string{v1alpha2.ModuleAnnotationEmbedded: "true"},
+			},
+			Spec: v1alpha2.ModuleSpec{PackageRepositoryName: embeddedRepositoryName, PackageVersion: "v1.77.0"},
+		}
+
+		s := newTestSyncer(t, emptyEmbeddedDir(t), existing)
+
+		err := s.EnsureModuleConfig(context.Background(), testModuleConfig("echo"))
+		require.NoError(t, err)
+
+		module := getV2Module(t, s, "echo")
+		assert.True(t, module.IsEmbedded(), "the config mirror must not strip the embedded annotation")
+		assert.Equal(t, "test-alpha", module.Spec.UpdatePolicy)
+	})
+
 	t.Run("skips a module that has no package version yet", func(t *testing.T) {
 		existing := &v1alpha2.Module{ObjectMeta: metav1.ObjectMeta{Name: "echo"}}
 
