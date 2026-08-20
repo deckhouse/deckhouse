@@ -1,0 +1,373 @@
+{{- /*
+  Deckhouse publishes its own web interfaces under names rendered from
+  global.modules.publicDomainTemplate. Those hostnames belong to the platform, but an Ingress is a
+  namespaced object with no cluster-wide uniqueness check: anybody who may write an Ingress in their
+  own namespace could name one of them as a host and have the ingress controller merge that rule
+  into the routing of the shared host. The same applies to the Gateway API primitives, which carry
+  hostnames on HTTPRoute.spec.hostnames and ListenerSet.spec.listeners[].hostname.
+
+  Two ways to say which hostnames are the platform's, selected by reservedPublicHosts.mode:
+
+  Template  reserve the whole namespace publicDomainTemplate carves out. The template admits exactly
+            one %s, always inside the first label (global-hooks/openapi/config-values.yaml, the
+            pattern on modules.publicDomainTemplate), so splitting on %s yields a prefix and a
+            suffix and the set of hostnames the template can produce is a regex. No module has to
+            ask to be covered, which is the point: a public domain added anywhere, in this
+            repository or outside it, is reserved the moment it exists.
+
+  List      reserve the names in $reservedNames below, rendered through the template. This is what
+            the reservation was before Template mode and stays available for a cluster where the
+            wider reservation is not wanted.
+
+  The parameters live in a ConfigMap so that all policies read the same ones and a cluster admin can
+  see what is reserved with a single kubectl get.
+*/}}
+
+{{- /*
+  The names the platform publishes its web interfaces under. Under mode: List this list *is* the
+  reservation, and a public domain missing from it is not reserved. Under mode: Template it no longer
+  bounds the reservation; it still drives the platformHosts key below, which is what makes the effect
+  of excludedServices readable, and the "covers every public domain the repository itself publishes"
+  test in template_tests keeps it in sync with the repository either way.
+
+  Roughly half of these names belong to modules shipped outside this repository (console, dashboard,
+  code, commander, status, upmeter), which is why the list cannot be derived from this repository.
+*/}}
+{{- $reservedNames := list
+  "api"
+  "code"
+  "commander"
+  "console"
+  "dashboard"
+  "dex"
+  "documentation"
+  "grafana"
+  "hubble"
+  "istio"
+  "istio-api-proxy"
+  "istio-metadata"
+  "kubeconfig"
+  "openvpn-admin"
+  "prometheus"
+  "registry"
+  "registry-packages-proxy"
+  "status"
+  "tools"
+  "upmeter"
+}}
+
+{{- $settings := .Values.deckhouse.reservedPublicHosts | default dict }}
+{{- $excludedServices := $settings.excludedServices | default list }}
+{{- $additionalHosts := $settings.additionalHosts | default list }}
+{{- $domainTemplate := .Values.global.modules.publicDomainTemplate | default "" | lower }}
+
+{{- /*
+  splitList "%s" yields exactly two parts for every template the schema admits, so a length other
+  than two means the value never went through that schema. Fall back to List rather than to a regex
+  built from parts that are not there, so a value nobody validated widens nothing and reserves at
+  least the names below.
+*/}}
+{{- $parts := list }}
+{{- if $domainTemplate }}
+  {{- $parts = splitList "%s" $domainTemplate }}
+{{- end }}
+{{- $mode := ternary "Template" "List" (and (ne ($settings.mode | default "Template") "List") (eq (len $parts) 2)) }}
+
+{{- if and (or $domainTemplate $additionalHosts) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicy")) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicyBinding")) }}
+{{- $paramsName := "d8-reserved-public-hosts" }}
+
+{{- /*
+  The regex for the namespace the template carves out: its literal parts quoted, and the label the
+  %s stands for in between. regexQuoteMeta is Go's regexp.QuoteMeta, so "%s.example.com" derives
+  ^[a-z0-9]([-a-z0-9]*[a-z0-9])?\.example\.com$ and "kube-%s.company.my" derives
+  ^kube-[a-z0-9]([-a-z0-9]*[a-z0-9])?\.company\.my$. The label alternative is the one the API server
+  itself accepts, so the regex matches a hostname exactly when some service name renders it.
+
+  It is valid RE2 for any input, because the only parts that are not a fixed skeleton went through
+  QuoteMeta. CEL matches() is an unanchored search on RE2, hence the anchors; Go's RE2 leaves $ at
+  the end of the text without (?m), so no second line can slip past it.
+*/}}
+{{- $hostPattern := "" }}
+{{- $wildcardHost := "" }}
+{{- if eq $mode "Template" }}
+  {{- $prefix := index $parts 0 }}
+  {{- $suffix := index $parts 1 }}
+  {{- $hostPattern = printf "^%s[a-z0-9]([-a-z0-9]*[a-z0-9])?%s$" (regexQuoteMeta $prefix) (regexQuoteMeta $suffix) }}
+  {{- /*
+    A wildcard hostname cannot be matched by that label, and in Template mode a tenant claiming one
+    would shadow every platform hostname at once instead of a single one. Reserve the wildcard form
+    of the namespace as well, but only where %s is the whole first label: that is the only shape in
+    which the wildcard is the platform's namespace and nothing more. With "kube-%s.company.my" the
+    wildcard of the namespace would be "kube-*.company.my", which no API server accepts, and
+    "*.company.my" covers a domain the platform does not own, so nothing is reserved there.
+  */}}
+  {{- if and (eq $prefix "") (hasPrefix "." $suffix) }}
+    {{- $wildcardHost = printf "*%s" $suffix }}
+  {{- end }}
+{{- end }}
+
+{{- /*
+  What the platform publishes on its own, before any setting is applied. Informational under both
+  modes.
+*/}}
+{{- $platformHosts := list }}
+{{- if $domainTemplate }}
+  {{- range $name := $reservedNames }}
+    {{- $platformHosts = append $platformHosts (include "helm_lib_module_public_domain" (list $ $name) | trim | lower) }}
+  {{- end }}
+{{- end }}
+{{- $platformHosts = $platformHosts | uniq | sortAlpha }}
+
+{{- /*
+  excludedServices names a service, the part the template substitutes, and means the same thing under
+  both modes: do not reserve the hostname it renders to. Under List that is a name dropped from the
+  list; under Template the list is not what reserves it, so the hostname is rendered and allowed back
+  out of the pattern instead. Same field, same input, same effect.
+*/}}
+{{- $excludedHosts := list }}
+{{- if $domainTemplate }}
+  {{- range $name := $excludedServices }}
+    {{- $excludedHosts = append $excludedHosts (include "helm_lib_module_public_domain" (list $ $name) | trim | lower) }}
+  {{- end }}
+{{- end }}
+{{- $excludedHosts = $excludedHosts | uniq | sortAlpha }}
+
+{{- /*
+  A name nobody publishes reserves nothing under List, so excluding it is a no-op there, which is
+  exactly how a misspelled name would look. Such a name is collected and published below rather than
+  failing the render: this template ships in the module that renders Deckhouse itself, so a typo in a
+  ModuleConfig must not stop the module from converging. It would also become an upgrade hazard,
+  because dropping a name from $reservedNames would then break every cluster whose ModuleConfig
+  excludes it, at upgrade time and for a reason the operator did not cause.
+
+  Under Template the name does take effect, because the pattern reserves the whole namespace and not
+  just what the platform publishes -- freeing a hostname no module serves is the ordinary way to give
+  one back to a workload. The key still says which names are not the platform's, which is where to
+  look when a hostname stayed reserved: the reservation the operator meant to lift is under another
+  spelling.
+*/}}
+{{- $unknownServices := list }}
+{{- range $name := $excludedServices }}
+  {{- if not (has $name $reservedNames) }}
+    {{- $unknownServices = append $unknownServices $name }}
+  {{- end }}
+{{- end }}
+{{- $unknownServices = $unknownServices | uniq | sortAlpha }}
+
+{{- /*
+  Hostnames the upgrade grandfathered: what tenants already served under the namespace when the
+  reservation was first recorded, collected once by hooks/snapshot_reserved_public_hosts.go. Kept in
+  its own key so that an operator can tell what they allowed from what the upgrade allowed, and drop
+  an entry once the workload behind it is gone. Not applied under List, where the reservation covers
+  only what the platform publishes and there is nothing to grandfather.
+*/}}
+{{- $snapshot := .Values.deckhouse.internal.reservedPublicHosts | default dict }}
+{{- $grandfatheredHosts := $snapshot.hosts | default list }}
+
+{{- /*
+  hosts is matched exactly, allowedHosts lets a hostname back out of the pattern. additionalHosts
+  goes into the first and so always reserves, whichever mode is in force and whatever else names the
+  same hostname; excludedServices goes into the second and so only ever relaxes what the pattern
+  claimed, never what an operator asked for by hand.
+*/}}
+{{- $reservedHosts := list }}
+{{- range $host := $additionalHosts }}
+  {{- $reservedHosts = append $reservedHosts (lower $host) }}
+{{- end }}
+{{- $allowedHosts := list }}
+{{- if eq $mode "Template" }}
+  {{- if $wildcardHost }}
+    {{- $reservedHosts = append $reservedHosts $wildcardHost }}
+  {{- end }}
+  {{- $allowedHosts = concat $excludedHosts $grandfatheredHosts }}
+{{- else }}
+  {{- range $host := $platformHosts }}
+    {{- if not (has $host $excludedHosts) }}
+      {{- $reservedHosts = append $reservedHosts $host }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+{{- $reservedHosts = $reservedHosts | uniq | sortAlpha }}
+{{- $allowedHosts = $allowedHosts | uniq | sortAlpha }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $paramsName }}
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse")) | nindent 2 }}
+data:
+  # Which of the two reservations is in force. It is the effective mode: a publicDomainTemplate that
+  # cannot be split into a prefix and a suffix reads List here whatever the ModuleConfig asked for.
+  mode: {{ $mode | quote }}
+  # The namespace the template carves out, as a regex the policies match the claimed hostname
+  # against. Empty under List, and empty means "reserve nothing by pattern" rather than "match
+  # everything", which is what the policies check before using it. A quoted scalar and not a block
+  # one: a block scalar would append a newline and leave a regex that can never match.
+  hostPattern: {{ $hostPattern | quote }}
+  # Hostnames reserved by exact, case-insensitive match, on top of whatever the pattern covers.
+  hosts: |
+{{- range $host := $reservedHosts }}
+    {{ $host }}
+{{- end }}
+  # Hostnames the pattern covers but that are not reserved: excludedHosts and grandfatheredHosts
+  # together, which is what the policies read. The two are also published separately below, because
+  # this key alone cannot say which of them put a hostname here.
+  allowedHosts: |
+{{- range $host := $allowedHosts }}
+    {{ $host }}
+{{- end }}
+  # What excludedServices renders to. Nothing reads it; it is here so that the setting an operator
+  # wrote and the hostnames it freed can be compared without rendering the template by hand.
+  excludedHosts: |
+{{- range $host := $excludedHosts }}
+    {{ $host }}
+{{- end }}
+  # What the upgrade grandfathered, separate from the line above so that "I allowed this" and "the
+  # upgrade allowed this" are two different lists.
+  grandfatheredHosts: |
+{{- range $host := $grandfatheredHosts }}
+    {{ $host }}
+{{- end }}
+  # Whether the one-time snapshot has already been taken. The hook reads this key back and skips the
+  # snapshot when it says true, which is what keeps the grandfathering from running twice and turning
+  # into an allowlist that widens itself. Never edit it to false without emptying grandfatheredHosts.
+  grandfatherRecorded: {{ if $snapshot.recorded }}"true"{{ else }}"false"{{ end }}
+  # What the platform publishes on its own, before those settings. Nothing reads it: it is here so
+  # that the effect of the settings is visible in one place, and so that the test which keeps
+  # $reservedNames in sync with the repository cannot be quieted by excluding a name.
+  platformHosts: |
+{{- range $host := $platformHosts }}
+    {{ $host }}
+{{- end }}
+  # Names in excludedServices that the platform does not publish. Under List, excluding them frees
+  # nothing, so this is where a misspelled name shows up.
+  unknownExcludedServices: |
+{{- range $name := $unknownServices }}
+    {{ $name }}
+{{- end }}
+
+{{- /*
+  The three policies differ in one expression, where the kind keeps its hostnames, so they are one
+  definition called three times. Everything else -- the match conditions copied from the other
+  policies in this module, the parameters, the binding -- has to stay identical between them, because
+  a tenant only needs one kind that is treated more leniently than the rest.
+*/}}
+{{- include "reserved_public_hosts_policy" (list . $paramsName "ingress" "networking.k8s.io" "ingresses" "has(object.spec) && has(object.spec.rules) ? object.spec.rules.filter(r, has(r.host) && r.host != '').map(r, r.host) : []") }}
+
+{{- if (include "helm_lib_kind_exists" (list . "HTTPRoute")) }}
+{{- include "reserved_public_hosts_policy" (list . $paramsName "httproute" "gateway.networking.k8s.io" "httproutes" "has(object.spec) && has(object.spec.hostnames) ? object.spec.hostnames.map(h, string(h)) : []") }}
+{{- end }}
+
+{{- /*
+  ListenerSet carries hostnames too, and user-authz grants create and update on listenersets in the
+  same rule block as ingresses and httproutes (modules/140-user-authz/templates/cluster-roles.yaml,
+  the gateway.networking.k8s.io block). Without this a tenant claims a platform hostname on a
+  listener and never touches either of the kinds above.
+*/}}
+{{- if (include "helm_lib_kind_exists" (list . "ListenerSet")) }}
+{{- include "reserved_public_hosts_policy" (list . $paramsName "listenerset" "gateway.networking.k8s.io" "listenersets" "has(object.spec) && has(object.spec.listeners) ? object.spec.listeners.filter(l, has(l.hostname) && l.hostname != '').map(l, string(l.hostname)) : []") }}
+{{- end }}
+
+{{- end }}
+
+{{- define "reserved_public_hosts_policy" }}
+  {{- $context      := index . 0 }}
+  {{- $paramsName   := index . 1 }}
+  {{- $suffix       := index . 2 }}
+  {{- $apiGroup     := index . 3 }}
+  {{- $resource     := index . 4 }}
+  {{- $claimedHosts := index . 5 }}
+  {{- $policyName   := printf "reserved-public-hosts-%s.deckhouse.io" $suffix }}
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list $context "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "deckhouse")) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  paramKind:
+    apiVersion: v1
+    kind: ConfigMap
+  matchConstraints:
+    resourceRules:
+      - apiGroups:   [{{ $apiGroup | quote }}]
+        apiVersions: ["*"]
+        operations:  ["CREATE", "UPDATE"]
+        resources:   [{{ $resource | quote }}]
+  matchConditions:
+    - name: 'exclude-groups'
+      expression: '!(["system:nodes", "system:serviceaccounts:kube-system", "system:serviceaccounts:d8-system"].exists(e, (e in request.userInfo.groups)))'
+    - name: 'exclude-users'
+      expression: '!(["system:sudouser", "system:apiserver", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler", "dhctl", "observability"].exists(e, (e == request.userInfo.username)))'
+    - name: 'exclude-system-serviceaccounts'
+      expression: '!(request.userInfo.username.startsWith("system:serviceaccount:d8-") || request.userInfo.username.startsWith("system:serviceaccount:kube-"))'
+  variables:
+    - name: claimedHosts
+      # Lowercased and stripped of a trailing root dot, so that neither spelling of a hostname is
+      # compared against a reserved one it does not look like.
+      expression: |
+        ({{ $claimedHosts }}).map(h, h.lowerAscii()).map(h, h.endsWith('.') ? h.substring(0, h.size() - 1) : h)
+    - name: reservedHosts
+      # A missing ConfigMap never reaches these expressions, the binding is skipped instead
+      # (parameterNotFoundAction: Allow); the guards are for a ConfigMap that lost a key.
+      expression: |
+        params != null && has(params.data) && 'hosts' in params.data
+          ? params.data['hosts'].split('\n').filter(h, h != '')
+          : []
+    - name: reservedPattern
+      expression: |
+        params != null && has(params.data) && 'hostPattern' in params.data
+          ? params.data['hostPattern']
+          : ''
+    - name: allowedHosts
+      expression: |
+        params != null && has(params.data) && 'allowedHosts' in params.data
+          ? params.data['allowedHosts'].split('\n').filter(h, h != '')
+          : []
+    - name: conflicts
+      # An empty pattern reserves nothing: a cluster that publishes no public domain, or one under
+      # mode: List, must not have every hostname in it match.
+      expression: |
+        variables.claimedHosts.filter(h,
+          h in variables.reservedHosts
+            || (variables.reservedPattern != ''
+                && !(h in variables.allowedHosts)
+                && h.matches(variables.reservedPattern)))
+  validations:
+    - expression: 'variables.conflicts.size() == 0'
+      reason: Forbidden
+      message: 'This hostname is reserved for Deckhouse platform services and cannot be claimed outside a system namespace'
+      messageExpression: "'Hostname ' + variables.conflicts.join(', ') + ' is reserved for Deckhouse platform services and cannot be claimed outside a system namespace'"
+  auditAnnotations:
+    - key: 'source-user'
+      valueExpression: "'User: ' + string(request.userInfo.username) + ' tries to claim a reserved Deckhouse hostname'"
+---
+{{- /*
+  The binding leaves out the namespaces the platform owns, so its own objects are never matched, and
+  the namespaces a cluster admin has opted out. The opt-out is a namespace label because Namespace is
+  cluster-scoped: a tenant confined to its own namespaces cannot set it.
+*/}}
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list $context "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "deckhouse")) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+  validationActions: [Deny, Audit]
+  paramRef:
+    name: {{ $paramsName }}
+    namespace: d8-system
+    parameterNotFoundAction: Allow
+  matchResources:
+    namespaceSelector:
+      matchExpressions:
+        - key: heritage
+          operator: NotIn
+          values: ["deckhouse"]
+        - key: security.deckhouse.io/reserved-hosts-bypass
+          operator: NotIn
+          values: ["true"]
+{{- end }}
