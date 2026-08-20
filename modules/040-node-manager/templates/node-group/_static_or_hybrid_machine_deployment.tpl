@@ -11,6 +11,8 @@ metadata:
 spec:
   clusterName: static
   replicas: {{ $ng.staticInstances.count | default "0" }}
+  # Must stay non-zero, see _capi_machine_deployment.tpl.
+  minReadySeconds: 1
   strategy:
     type: RollingUpdate
     rollingUpdate:
