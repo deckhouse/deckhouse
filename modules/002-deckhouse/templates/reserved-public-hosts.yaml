@@ -64,14 +64,20 @@
 {{- /*
   splitList "%s" yields exactly two parts for every template the schema admits, so a length other
   than two means the value never went through that schema. Fall back to List rather than to a regex
-  built from parts that are not there, so a value nobody validated widens nothing and reserves at
-  least the names below.
+  built from parts that are not there, so a value nobody validated widens nothing.
+
+  $templateSplits gates every use of the template below, not only the regex. helm_lib_module_public_domain
+  fails the render outright for a value with no %s, and renders console.%!s(MISSING).example.com for
+  one with two, so a fallback that still rendered the names through it would either stop the module
+  that deploys Deckhouse from converging or reserve strings that are not hostnames. Where the
+  template does not split, nothing is reserved beyond what additionalHosts names.
 */}}
 {{- $parts := list }}
 {{- if $domainTemplate }}
   {{- $parts = splitList "%s" $domainTemplate }}
 {{- end }}
-{{- $mode := ternary "Template" "List" (and (ne ($settings.mode | default "Template") "List") (eq (len $parts) 2)) }}
+{{- $templateSplits := eq (len $parts) 2 }}
+{{- $mode := ternary "Template" "List" (and (ne ($settings.mode | default "Template") "List") $templateSplits) }}
 
 {{- if and (or $domainTemplate $additionalHosts) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicy")) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicyBinding")) }}
 {{- $paramsName := "d8-reserved-public-hosts" }}
@@ -111,7 +117,7 @@
   modes.
 */}}
 {{- $platformHosts := list }}
-{{- if $domainTemplate }}
+{{- if $templateSplits }}
   {{- range $name := $reservedNames }}
     {{- $platformHosts = append $platformHosts (include "helm_lib_module_public_domain" (list $ $name) | trim | lower) }}
   {{- end }}
@@ -125,7 +131,7 @@
   out of the pattern instead. Same field, same input, same effect.
 */}}
 {{- $excludedHosts := list }}
-{{- if $domainTemplate }}
+{{- if $templateSplits }}
   {{- range $name := $excludedServices }}
     {{- $excludedHosts = append $excludedHosts (include "helm_lib_module_public_domain" (list $ $name) | trim | lower) }}
   {{- end }}
