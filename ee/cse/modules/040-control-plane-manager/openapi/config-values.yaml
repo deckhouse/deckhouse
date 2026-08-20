@@ -518,6 +518,8 @@ properties:
     description: |
       The amount of CPU and memory resources allocated to control-plane components on each master node.
 
+      If CPU or memory requests are not explicitly specified, the module automatically calculates requests for the corresponding resource for each control plane component once a day based on the average usage over the previous seven days. Explicitly specifying the total amount of CPU or memory disables automatic request calculation for that resource for all control plane components. The specified amount is distributed among the components in fixed proportions.
+
       These settings do not apply if the cluster control plane is managed by a cloud provider (for example, Google Kubernetes Engine or Azure Kubernetes Service).
       More info in the [Kubernetes documentation](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#resource-units-in-kubernetes).
     type: object

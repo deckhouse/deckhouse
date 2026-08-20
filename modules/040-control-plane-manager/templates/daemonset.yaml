@@ -47,10 +47,9 @@ memory: 10Mi
 {{- $_ := set $tpl_context "scheduler" dict }}
 {{- $_ := set $tpl_context "settings" dict }}
 {{- with .Values.controlPlaneManager.internal.resourcesRequests }}
-  {{- $_ := set $tpl_context.settings "resourcesRequests" (dict
-    "milliCPU" .milliCpuControlPlane
-    "memoryBytes" .memoryControlPlane
-  ) }}
+  {{- with .components }}
+    {{- $_ := set $tpl_context.settings "resourcesRequests" (dict "components" .) }}
+  {{- end }}
 {{- end }}
 
 {{- $allowedKubernetesVersions := list }}
