@@ -31,15 +31,14 @@ spec:
   ttl: 24h
 ```
 
-Come up with a password and specify its hashed value in the `password` field. The password is stored in encrypted form (bcrypt).  
-You can generate the hash using the following command:
+Come up with a password and specify it in the `password` field as a raw bcrypt hash or a Base64-encoded bcrypt hash.
+To generate a Base64-encoded bcrypt hash, use the following command:
 
 ```shell
-echo "$password" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0
+echo -n '<PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
 ```
 
 {% alert level="info" %}
-If `htpasswd` command not found, you need to install `apache2-utils` package for Debian-based distribution and `httpd-utils` for CentOS-based distribution.
 If the `htpasswd` command is not available, install the appropriate package:
 
 * `apache2-utils` — for Debian-based distributions.
