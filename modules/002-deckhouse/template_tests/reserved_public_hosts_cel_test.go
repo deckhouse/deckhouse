@@ -129,7 +129,17 @@ func listenersWithHosts(hosts ...string) map[string]interface{} {
 }
 
 func requestFrom(username string) map[string]interface{} {
+	return requestFor(username, "tenant", "workload")
+}
+
+// requestFor is the request the apiserver hands the policy. The namespace is the one in the request
+// path and the name is filled in from the object on a create
+// (k8s.io/apiserver/pkg/endpoints/handlers/create.go), which is why the shared-gateway exemption
+// compares those two rather than object.metadata, where a create carries neither reliably.
+func requestFor(username, namespace, name string) map[string]interface{} {
 	return map[string]interface{}{
+		"namespace": namespace,
+		"name":      name,
 		"userInfo": map[string]interface{}{
 			"username": username,
 			"groups":   []interface{}{"system:authenticated"},
@@ -164,6 +174,7 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts :: CEL ::", func(
 
 	var (
 		ingressPolicy object_store.KubeObject
+		gatewayPolicy object_store.KubeObject
 		everyKind     []kindUnderPolicy
 		params        map[string]interface{}
 
@@ -173,6 +184,7 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts :: CEL ::", func(
 		domainTemplate      string
 		reservedPublicHosts string
 		snapshot            string
+		sharedGateway       string
 	)
 
 	BeforeEach(func() {
@@ -181,6 +193,7 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts :: CEL ::", func(
 		// either default.
 		reservedPublicHosts = `{mode: Template}`
 		snapshot = ""
+		sharedGateway = ""
 	})
 
 	JustBeforeEach(func() {
@@ -198,6 +211,9 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts :: CEL ::", func(
 		if snapshot != "" {
 			f.ValuesSetFromYaml("deckhouse.internal.reservedPublicHosts", snapshot)
 		}
+		if sharedGateway != "" {
+			f.ValuesSetFromYaml("global.modules.gatewayAPIGateway", sharedGateway)
+		}
 		f.HelmRender(WithAPIVersions(append(
 			[]string{validatingAdmissionPolicyAPI, validatingAdmissionPolicyBindingAPI},
 			gatewayAPIVersions()...)...))
@@ -207,6 +223,7 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts :: CEL ::", func(
 			return f.KubernetesGlobalResource("ValidatingAdmissionPolicy", name)
 		}
 		ingressPolicy = policy(reservedHostsIngressPolicy)
+		gatewayPolicy = policy(reservedHostsGatewayPolicy)
 		everyKind = []kindUnderPolicy{
 			{name: "Ingress", policy: ingressPolicy, object: ingressWithHosts},
 			{name: "HTTPRoute", policy: policy(reservedHostsHTTPRoutePolicy), object: routeWithHosts},
@@ -351,6 +368,57 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts :: CEL ::", func(
 			} {
 				Expect(evaluatePolicy(ingressPolicy, broken, ingressWithHosts("console.example.com"), tenant)).
 					To(Equal(verdictAllowed), "with %s the policy must not deny everything", name)
+				// The Gateway policy reads one key more, and reads it in a match condition, where
+				// an expression that errors is a denial rather than a skip: failurePolicy is Fail.
+				Expect(evaluatePolicy(gatewayPolicy, broken, listenersWithHosts("console.example.com"), tenant)).
+					To(Equal(verdictAllowed), "with %s the Gateway policy must still evaluate", name)
+			}
+		})
+
+		It("exempts no object while no shared Gateway is configured", func() {
+			Expect(evaluatePolicy(gatewayPolicy, params, listenersWithHosts("console.example.com"),
+				requestFor("tenant@example.com", "infra", "shared"))).
+				To(Equal(verdictDenied), "an empty sharedGateway key exempts nothing, not everything")
+		})
+	})
+
+	// The Gateway the platform's own ListenerSets and HTTPRoutes attach to is the operator's object
+	// when they name one, so it is outside heritage: deckhouse, and its canonical listener hostname
+	// is the wildcard of the platform's domain -- reserved by exact match, which excludedServices
+	// cannot free and the grandfathering deliberately never records. Left un-exempted, the upgrade
+	// would leave the operator unable to create or update it.
+	Context("An operator names the Gateway the platform's own routes attach to", func() {
+		BeforeEach(func() {
+			sharedGateway = `{name: shared, namespace: infra}`
+		})
+
+		operator := requestFor("operator@example.com", "infra", "shared")
+
+		It("never reaches the validation for that object, whatever its listeners claim", func() {
+			for _, host := range []string{"*.example.com", "console.example.com", "shop.example.com"} {
+				Expect(evaluatePolicy(gatewayPolicy, params, listenersWithHosts(host), operator)).
+					To(Equal(verdictSkipped), "hostname %q: the exemption is on the object, not on what it claims", host)
+			}
+		})
+
+		It("covers every other Gateway, including one that only looks like it", func() {
+			for _, tc := range []struct{ namespace, name, why string }{
+				{"infra", "other", "another Gateway in the namespace the shared one lives in"},
+				{"tenant", "shared", "the same name in a namespace of a tenant's own"},
+			} {
+				Expect(evaluatePolicy(gatewayPolicy, params, listenersWithHosts("console.example.com"),
+					requestFor("tenant@example.com", tc.namespace, tc.name))).
+					To(Equal(verdictDenied), tc.why)
+			}
+		})
+
+		It("exempts nothing on the five kinds that are not Gateway", func() {
+			for _, kind := range everyKind {
+				if kind.name == "Gateway" {
+					continue
+				}
+				Expect(evaluatePolicy(kind.policy, params, kind.object("console.example.com"), operator)).
+					To(Equal(verdictDenied), "%s of the same namespace and name as the shared Gateway", kind.name)
 			}
 		})
 	})

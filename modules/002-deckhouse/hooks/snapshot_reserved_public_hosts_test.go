@@ -24,7 +24,11 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/tidwall/gjson"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/deckhouse/deckhouse/go_lib/set"
+	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/lib/sharedgateway"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -69,6 +73,119 @@ func TestTheSnapshotReadsEveryResourceThePoliciesDeny(t *testing.T) {
 			t.Errorf("the policies deny %v, the snapshot reads %v", denied, read)
 			break
 		}
+	}
+}
+
+// TestOnlyTheSharedGatewayIsLeftOutOfTheRecord covers the decision the fake cluster cannot: it
+// derives a resource name from a kind with meta.UnsafeGuessKindToResource, which turns Gateway into
+// "gatewaies", so no Gateway can be served to the hook there.
+//
+// The shared Gateway is exempt from the Gateway policy, so its hostnames need no exception; and a
+// listener hostname on it that the pattern covers would otherwise go into allowedHosts, where it
+// would free a hostname the platform itself serves for every tenant and every kind.
+func TestOnlyTheSharedGatewayIsLeftOutOfTheRecord(t *testing.T) {
+	object := func(namespace, name string) *unstructured.Unstructured {
+		return &unstructured.Unstructured{Object: map[string]interface{}{
+			"metadata": map[string]interface{}{"namespace": namespace, "name": name},
+		}}
+	}
+	platformNamespaces := set.New("d8-user-authn")
+	shared := sharedgateway.Ref{Namespace: "infra", Name: "shared"}
+
+	gateways := hostBearingResource{}
+	others := []hostBearingResource{}
+	for _, resource := range hostBearingResources {
+		if resource.gr.Resource == "gateways" {
+			gateways = resource
+			continue
+		}
+		others = append(others, resource)
+	}
+	if !gateways.sharedGateway {
+		t.Fatal("the gateways entry is the one the shared-gateway exemption is about")
+	}
+
+	if !exemptFromTheRecord(gateways, platformNamespaces, shared, object("infra", "shared")) {
+		t.Error("the Gateway the platform's own routes attach to has to be left out of the record")
+	}
+	for _, tc := range []struct{ namespace, name, why string }{
+		{"infra", "other", "another Gateway in the same namespace"},
+		{"tenant", "shared", "the same name in a namespace of a tenant's own"},
+	} {
+		if exemptFromTheRecord(gateways, platformNamespaces, shared, object(tc.namespace, tc.name)) {
+			t.Errorf("%s is not the shared Gateway and has to be recorded", tc.why)
+		}
+	}
+	if exemptFromTheRecord(gateways, platformNamespaces, sharedgateway.Ref{}, object("infra", "shared")) {
+		t.Error("no shared Gateway is configured, so nothing is exempt")
+	}
+	for _, resource := range others {
+		if exemptFromTheRecord(resource, platformNamespaces, shared, object("infra", "shared")) {
+			t.Errorf("%s of that namespace and name is a tenant object, the exemption is the Gateway's alone", resource.gr)
+		}
+		if !exemptFromTheRecord(resource, platformNamespaces, shared, object("d8-user-authn", "dex")) {
+			t.Errorf("%s in a namespace the platform owns is never denied and never recorded", resource.gr)
+		}
+	}
+}
+
+// TestTheSharedGatewayIsReadFromTheValuesTheHelperReads covers the values the exemption is resolved
+// from. Which of them wins is hooks/lib/sharedgateway's business and is covered there; what is
+// covered here is that this hook hands it the three the Helm helper looks at, in that order.
+func TestTheSharedGatewayIsReadFromTheValuesTheHelperReads(t *testing.T) {
+	lookup := func(values string) func(string) gjson.Result {
+		return func(path string) gjson.Result { return gjson.Get(values, path) }
+	}
+
+	cases := []struct {
+		name   string
+		values string
+		want   string
+	}{
+		{
+			name:   "a cluster with no Gateway API at all",
+			values: `{"global": {"modules": {}}}`,
+			want:   "",
+		},
+		{
+			// What global-hooks/discovery/default_gateway.go writes when the d8-alb ConfigMap
+			// names nothing, which is every cluster that runs no ALB.
+			name:   "the discovery hook found nothing to discover",
+			values: `{"global": {"discovery": {"gatewayAPIDefaultGateway": {"name": "", "namespace": ""}}}}`,
+			want:   "",
+		},
+		{
+			name:   "the gateway discovered in d8-alb",
+			values: `{"global": {"discovery": {"gatewayAPIDefaultGateway": {"name": "default", "namespace": "d8-alb"}}}}`,
+			want:   "d8-alb/default",
+		},
+		{
+			name: "the gateway the operator named, which wins over the discovered one",
+			values: `{"global": {
+				"modules": {"gatewayAPIGateway": {"name": "shared", "namespace": "infra"}},
+				"discovery": {"gatewayAPIDefaultGateway": {"name": "default", "namespace": "d8-alb"}}
+			}}`,
+			want: "infra/shared",
+		},
+		{
+			name: "a gateway named for this module, which wins over both",
+			values: `{
+				"deckhouse": {"gatewayAPIGateway": {"name": "own", "namespace": "d8-system"}},
+				"global": {
+					"modules": {"gatewayAPIGateway": {"name": "shared", "namespace": "infra"}},
+					"discovery": {"gatewayAPIDefaultGateway": {"name": "default", "namespace": "d8-alb"}}
+				}
+			}`,
+			want: "d8-system/own",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := configuredSharedGateway(lookup(tc.values)).String(); got != tc.want {
+				t.Errorf("configuredSharedGateway() = %q, want %q", got, tc.want)
+			}
+		})
 	}
 }
 

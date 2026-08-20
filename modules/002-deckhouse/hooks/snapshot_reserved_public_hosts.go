@@ -25,6 +25,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	"github.com/tidwall/gjson"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -36,6 +37,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/lib/publicdomain"
+	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/lib/sharedgateway"
 )
 
 /*
@@ -102,10 +104,15 @@ var namespaceResource = schema.GroupVersionResource{Version: "v1", Resource: "na
 // The version is left to discovery rather than pinned. The policies match apiVersions ["*"], so a
 // cluster whose Gateway API came from elsewhere and serves only v1beta1 would otherwise have nothing
 // recorded while every write to those objects is still denied.
-var hostBearingResources = []struct {
+type hostBearingResource struct {
 	gr    schema.GroupResource
 	hosts func(object map[string]interface{}) []string
-}{
+	// sharedGateway marks the one resource the Gateway policy exempts an object of by identity, so
+	// that the exemption and the record cover the same object and no other.
+	sharedGateway bool
+}
+
+var hostBearingResources = []hostBearingResource{
 	{
 		gr:    schema.GroupResource{Group: "networking.k8s.io", Resource: "ingresses"},
 		hosts: hostsFromIngressRules,
@@ -127,8 +134,9 @@ var hostBearingResources = []struct {
 		hosts: hostsFromListenerHostnames,
 	},
 	{
-		gr:    schema.GroupResource{Group: "gateway.networking.k8s.io", Resource: "gateways"},
-		hosts: hostsFromListenerHostnames,
+		gr:            schema.GroupResource{Group: "gateway.networking.k8s.io", Resource: "gateways"},
+		hosts:         hostsFromListenerHostnames,
+		sharedGateway: true,
 	},
 }
 
@@ -264,14 +272,16 @@ func hostsFromRecord(recorded []string, input *go_hook.HookInput) []string {
 // the ones the reservation is about to claim.
 //
 // The kinds are listed once here rather than watched, because a permanent informer over every Ingress
-// in the cluster is a high price for something that runs on one converge, and because two of the
-// three kinds may have no CRD at all. Discovery is asked first for the same reason a template asks
+// in the cluster is a high price for something that runs on one converge, and because every kind but
+// Ingress may have no CRD at all. Discovery is asked first for the same reason a template asks
 // helm_lib_kind_exists: a group version the cluster does not serve has nothing to grandfather.
 func collectTenantHosts(ctx context.Context, client k8s.Client, input *go_hook.HookInput, namespace publicdomain.Namespace) ([]string, error) {
 	platformNamespaces, err := platformOwnedNamespaces(ctx, client, input)
 	if err != nil {
 		return nil, err
 	}
+
+	platformGateway := configuredSharedGateway(input.Values.Get)
 
 	hosts := set.New()
 	for _, resource := range hostBearingResources {
@@ -286,7 +296,7 @@ func collectTenantHosts(ctx context.Context, client k8s.Client, input *go_hook.H
 		}
 
 		err = eachObject(ctx, client, gvr, func(object *unstructured.Unstructured) {
-			if platformNamespaces.Has(object.GetNamespace()) {
+			if exemptFromTheRecord(resource, platformNamespaces, platformGateway, object) {
 				return
 			}
 			for _, host := range resource.hosts(object.Object) {
@@ -305,6 +315,45 @@ func collectTenantHosts(ctx context.Context, client k8s.Client, input *go_hook.H
 	}
 
 	return hosts.Slice(), nil
+}
+
+// exemptFromTheRecord reports whether an object is one the policies never deny, which is what makes
+// it one the record has nothing to grandfather for.
+//
+// The shared Gateway is exempt on both sides for the same reason twice over: its hostnames need no
+// exception, since the Gateway policy leaves that object alone whatever it claims; and a listener
+// hostname on it that the pattern covers would otherwise be written into allowedHosts, where it
+// would free a hostname the platform itself serves for every tenant and every other kind. That is
+// the one mistake this hook must not make.
+func exemptFromTheRecord(resource hostBearingResource, platformNamespaces set.Set, platformGateway sharedgateway.Ref, object *unstructured.Unstructured) bool {
+	if platformNamespaces.Has(object.GetNamespace()) {
+		return true
+	}
+	return resource.sharedGateway && platformGateway.Is(object.GetNamespace(), object.GetName())
+}
+
+// configuredSharedGateway is the Gateway the platform's own routes attach to, read the way
+// helm_lib_module_gateway reads it, so that the object the hook skips is the object
+// templates/reserved-public-hosts.yaml exempts. The module level is asked for as well although the
+// deckhouse module has no gatewayAPIGateway setting of its own, because the precedence is the
+// helper's and not this hook's to shorten.
+func configuredSharedGateway(value func(path string) gjson.Result) sharedgateway.Ref {
+	named := func(path string) *sharedgateway.Ref {
+		gateway := value(path)
+		if !gateway.Exists() {
+			return nil
+		}
+		return &sharedgateway.Ref{
+			Namespace: gateway.Get("namespace").String(),
+			Name:      gateway.Get("name").String(),
+		}
+	}
+
+	return sharedgateway.Resolve(
+		named("deckhouse.gatewayAPIGateway"),
+		named("global.modules.gatewayAPIGateway"),
+		named("global.discovery.gatewayAPIDefaultGateway"),
+	)
 }
 
 // platformOwnedNamespaces are the namespaces the policies never match, so a hostname served from one
