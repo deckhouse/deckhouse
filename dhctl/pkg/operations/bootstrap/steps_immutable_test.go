@@ -17,9 +17,7 @@ package bootstrap
 import (
 	"bytes"
 	"context"
-	"crypto/tls"
 	"encoding/base64"
-	"encoding/json"
 	"io"
 	"log/slog"
 	"net"
@@ -45,13 +43,11 @@ import (
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 	libretry "github.com/deckhouse/lib-dhctl/pkg/retry"
 
-	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable/immutabletest"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight/checks"
@@ -94,7 +90,7 @@ func TestImmutableInputRefusesACustomizationWithoutHost(t *testing.T) {
 	hosts := map[string]string{"master-0": "10.0.0.11"}
 	customizations := []immutable.Customization{{NodeName: "master-0"}, {NodeName: "master-9"}}
 
-	_, err := matchCustomizationsToHosts(hosts, customizations)
+	_, err := matchCustomizationsToHosts(staticMetaConfig(), hosts, customizations)
 
 	require.ErrorContains(t, err, "master-9")
 	require.ErrorContains(t, err, "--master-host")
@@ -107,7 +103,7 @@ func TestImmutableInputRefusesTwoDocumentsForOneNode(t *testing.T) {
 	hosts := map[string]string{"master-0": "10.0.0.11"}
 	customizations := []immutable.Customization{{NodeName: "master-0"}, {NodeName: "master-0"}}
 
-	_, err := matchCustomizationsToHosts(hosts, customizations)
+	_, err := matchCustomizationsToHosts(staticMetaConfig(), hosts, customizations)
 
 	require.ErrorContains(t, err, "master-0")
 	require.ErrorContains(t, err, "twice")
@@ -117,7 +113,7 @@ func TestImmutableInputMatchesByName(t *testing.T) {
 	hosts := map[string]string{"master-0": "10.0.0.11"}
 	customizations := []immutable.Customization{{NodeName: "master-0"}}
 
-	matched, err := matchCustomizationsToHosts(hosts, customizations)
+	matched, err := matchCustomizationsToHosts(staticMetaConfig(), hosts, customizations)
 
 	require.NoError(t, err)
 	require.Contains(t, matched, "master-0")
@@ -164,11 +160,7 @@ spec:
 // no amount of waiting changes that, and spending the ten-minute budget on it
 // buries the one answer that says what is wrong.
 func TestPushImmutablePayloadStopsOnAnInstalledNode(t *testing.T) {
-	// init_test.go collapses every loop to one attempt, which would pass with no
-	// break predicate at all; safe to swap globally — no t.Parallel here.
-	inTestEnvironment := libretry.InTestEnvironment
-	libretry.InTestEnvironment = false
-	t.Cleanup(func() { libretry.InTestEnvironment = inTestEnvironment })
+	noRetryCollapse(t)
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
@@ -177,6 +169,7 @@ func TestPushImmutablePayloadStopsOnAnInstalledNode(t *testing.T) {
 
 	host, port := splitTestServerAddress(t, server)
 	b := &ClusterBootstrapper{Params: &Params{Options: options.New()}}
+	bctx := &bootstrapContext{immutable: &immutableBootstrap{maintenancePort: port}}
 
 	// Bounded so that a loop which keeps retrying fails the assertion below
 	// instead of sitting out the whole budget.
@@ -184,7 +177,7 @@ func TestPushImmutablePayloadStopsOnAnInstalledNode(t *testing.T) {
 	defer cancel()
 
 	started := time.Now()
-	err := b.pushImmutablePayload(ctx, "master-0", host, port, []byte("#cloud-config\n"), nil)
+	err := b.pushImmutablePayload(ctx, bctx, "master-0", host, []byte("#cloud-config\n"), nil)
 
 	require.ErrorIs(t, err, immutable.ErrMaintenanceTokenRequired)
 	require.Less(t, time.Since(started), waitMaintenancePort.interval,
@@ -266,53 +259,88 @@ func TestCheckMachineAgainstDocumentWarnsOnlyWhenTheMachineAnswered(t *testing.T
 
 // The refusal has to reach the operator instead of the machine: a document that
 // contradicts the hardware costs a minute here and a re-imaged machine one PUT
-// later. And no waiting changes the hardware, so the wait ends on it.
-func TestPushImmutablePayloadRefusesADocumentTheMachineCannotSatisfy(t *testing.T) {
-	// init_test.go collapses every loop to one attempt, which would pass with no
-	// break predicate at all; safe to swap globally — no t.Parallel here.
-	inTestEnvironment := libretry.InTestEnvironment
-	libretry.InTestEnvironment = false
-	t.Cleanup(func() { libretry.InTestEnvironment = inTestEnvironment })
+// later. And no waiting changes the hardware, so the wait ends on it. Every
+// entry point that pushes is covered, and the two that render drive the real
+// builders: the machine is checked against the NodeConfig the payload carries,
+// not the #cloud-config wrapper, which unmarshals empty and fits every machine.
+func TestEveryPushPathRefusesADocumentTheMachineCannotSatisfy(t *testing.T) {
+	cases := []struct {
+		name     string
+		unpushed string
+		push     func(ctx context.Context, t *testing.T, machine *testMachine) error
+	}{
+		{
+			name:     "pushImmutablePayload",
+			unpushed: "the machine must not be handed a document it cannot satisfy",
+			push: func(ctx context.Context, _ *testing.T, machine *testMachine) error {
+				b := &ClusterBootstrapper{Params: &Params{Options: options.New()}}
+				bctx := &bootstrapContext{immutable: &immutableBootstrap{maintenancePort: machine.port}}
+				// The two documents differ on purpose: the machine takes the cloud-init,
+				// the check reads the NodeConfig inside it.
+				return b.pushImmutablePayload(ctx, bctx, "master-0", machine.host, []byte("#cloud-config\n"), []byte(ambiguousDiskDocument))
+			},
+		},
+		{
+			name:     "bootstrapImmutableFirstMaster",
+			unpushed: "the first master must not be installed onto a disk nobody chose",
+			push: func(ctx context.Context, t *testing.T, machine *testMachine) error {
+				b, bctx := immutableTestBootstrapper(t)
+				bctx.immutable.masterNodeName = "example-master-0"
+				bctx.immutable.hosts = map[string]string{"example-master-0": machine.host}
+				bctx.immutable.maintenancePort = machine.port
 
-	var pushed atomic.Bool
-	var reads atomic.Int64
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPut {
-			pushed.Store(true)
-			return
-		}
-		reads.Add(1)
-		_, _ = io.WriteString(w, twoDisksOfOneSize)
-	}))
-	t.Cleanup(server.Close)
+				return b.bootstrapImmutableFirstMaster(ctx, bctx)
+			},
+		},
+		{
+			name:     "handImmutableJoinPayload",
+			unpushed: "a joining master must not be installed onto a disk nobody chose",
+			push: func(ctx context.Context, t *testing.T, machine *testMachine) error {
+				b, bctx := immutableTestBootstrapper(t)
+				bctx.metaConfig.ClusterType = config.StaticClusterType
+				bctx.immutable.hosts = map[string]string{"master-1": machine.host}
+				bctx.immutable.maintenancePort = machine.port
 
-	host, port := splitTestServerAddress(t, server)
-	b := &ClusterBootstrapper{Params: &Params{Options: options.New()}}
+				kubeCl := client.NewFakeKubernetesClient()
+				createJoinInputsWithoutToken(t, kubeCl)
+				createBootstrapToken(t, kubeCl)
 
-	// Bounded so that a loop which keeps retrying fails the assertion below
-	// instead of sitting out the whole budget.
-	ctx, cancel := context.WithTimeout(t.Context(), 2*waitMaintenancePort.interval)
-	defer cancel()
+				return b.handImmutableJoinPayload(ctx, bctx, kubeCl, "master-1")
+			},
+		},
+	}
 
-	started := time.Now()
-	// The two documents differ on purpose: the machine takes the cloud-init, the
-	// check reads the NodeConfig inside it.
-	err := b.pushImmutablePayload(ctx, "master-0", host, port, []byte("#cloud-config\n"), []byte(ambiguousDiskDocument))
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			noRetryCollapse(t)
 
-	require.ErrorContains(t, err, "matches 2 disks")
-	require.False(t, pushed.Load(), "the machine must not be handed a document it cannot satisfy")
-	require.Equal(t, int64(1), reads.Load(), "the check costs one round trip on the attempt that reaches the machine")
-	require.Less(t, time.Since(started), waitMaintenancePort.interval,
-		"the hardware will not change while the loop retries: the wait must end on the refusal")
+			// Two disks the rendered document's own ">=20Gi" system selector matches:
+			// nothing in the operator's input is needed to make this machine ambiguous.
+			machine := newTestMachine(t, twoDisksOfOneSize)
+
+			// Bounded so that a loop which keeps retrying fails the assertions below
+			// instead of sitting out the whole budget.
+			ctx, cancel := context.WithTimeout(t.Context(), 2*waitMaintenancePort.interval)
+			defer cancel()
+
+			started := time.Now()
+			err := c.push(ctx, t, machine)
+
+			require.ErrorContains(t, err, "matches 2 disks")
+			require.False(t, machine.pushed.Load(), c.unpushed)
+			require.Equal(t, int64(1), machine.reads.Load(),
+				"the check costs one round trip on the attempt that reaches the machine")
+			require.Less(t, time.Since(started), waitMaintenancePort.interval,
+				"the hardware will not change while the loop retries: the wait must end on the refusal")
+		})
+	}
 }
 
 // The wait for the maintenance port is the push loop itself: a check made before it
 // would run once, against a machine still powering on, and never run again. It has
 // to run on the attempt that reaches the machine.
 func TestPushImmutablePayloadChecksTheMachineThatAnswersLate(t *testing.T) {
-	inTestEnvironment := libretry.InTestEnvironment
-	libretry.InTestEnvironment = false
-	t.Cleanup(func() { libretry.InTestEnvironment = inTestEnvironment })
+	noRetryCollapse(t)
 
 	budget := waitMaintenancePort
 	waitMaintenancePort = waitBudget{attempts: 4, interval: time.Millisecond}
@@ -337,8 +365,9 @@ func TestPushImmutablePayloadChecksTheMachineThatAnswersLate(t *testing.T) {
 
 	host, port := splitTestServerAddress(t, server)
 	b := &ClusterBootstrapper{Params: &Params{Options: options.New()}}
+	bctx := &bootstrapContext{immutable: &immutableBootstrap{maintenancePort: port}}
 
-	err := b.pushImmutablePayload(t.Context(), "master-0", host, port, []byte("#cloud-config\n"), []byte(ambiguousDiskDocument))
+	err := b.pushImmutablePayload(t.Context(), bctx, "master-0", host, []byte("#cloud-config\n"), []byte(ambiguousDiskDocument))
 
 	require.ErrorContains(t, err, "matches 2 disks", "the machine that answers late must be checked too")
 	require.Equal(t, int64(1), pushes.Load(),
@@ -349,103 +378,21 @@ func TestPushImmutablePayloadChecksTheMachineThatAnswersLate(t *testing.T) {
 // always says eth0 on DHCP. That guess must not refuse the machine: the node
 // brings DHCP up on whatever NIC it finds, and no operator wrote the name.
 func TestBootstrapImmutableFirstMasterInstallsOnAMachineWithoutEth0(t *testing.T) {
-	inTestEnvironment := libretry.InTestEnvironment
-	libretry.InTestEnvironment = false
-	t.Cleanup(func() { libretry.InTestEnvironment = inTestEnvironment })
+	noRetryCollapse(t)
 
 	b, bctx := immutableTestBootstrapper(t)
 	bctx.immutable.masterNodeName = "example-master-0"
 
-	var pushed atomic.Bool
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPut {
-			pushed.Store(true)
-			return
-		}
-		_, _ = io.WriteString(w, oneDiskMachineWithoutEth0)
-	}))
-	t.Cleanup(server.Close)
-
-	host, port := splitTestServerAddress(t, server)
-	bctx.immutable.hosts = map[string]string{"example-master-0": host}
+	machine := newTestMachine(t, oneDiskMachineWithoutEth0)
+	bctx.immutable.hosts = map[string]string{"example-master-0": machine.host}
+	bctx.immutable.maintenancePort = machine.port
 
 	ctx, cancel := context.WithTimeout(t.Context(), 2*waitMaintenancePort.interval)
 	defer cancel()
 
-	require.NoError(t, b.bootstrapImmutableFirstMaster(ctx, bctx, port),
+	require.NoError(t, b.bootstrapImmutableFirstMaster(ctx, bctx),
 		"a machine with no eth0 is ordinary hardware, not a misconfiguration")
-	require.True(t, pushed.Load(), "the machine must be handed its configuration")
-}
-
-// The wiring test: the machine is checked against the NodeConfig the payload
-// carries, not the #cloud-config wrapper, which unmarshals empty and fits every
-// machine. Both of these drive the real builders, no hand-written document.
-func TestBootstrapImmutableFirstMasterRefusesADocumentTheMachineCannotSatisfy(t *testing.T) {
-	inTestEnvironment := libretry.InTestEnvironment
-	libretry.InTestEnvironment = false
-	t.Cleanup(func() { libretry.InTestEnvironment = inTestEnvironment })
-
-	b, bctx := immutableTestBootstrapper(t)
-	bctx.immutable.masterNodeName = "example-master-0"
-
-	var pushed atomic.Bool
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPut {
-			pushed.Store(true)
-			return
-		}
-		// Two disks the rendered document's own ">=20Gi" system selector matches:
-		// nothing in the operator's input is needed to make this machine ambiguous.
-		_, _ = io.WriteString(w, twoDisksOfOneSize)
-	}))
-	t.Cleanup(server.Close)
-
-	host, port := splitTestServerAddress(t, server)
-	bctx.immutable.hosts = map[string]string{"example-master-0": host}
-
-	ctx, cancel := context.WithTimeout(t.Context(), 2*waitMaintenancePort.interval)
-	defer cancel()
-
-	err := b.bootstrapImmutableFirstMaster(ctx, bctx, port)
-
-	require.ErrorContains(t, err, "matches 2 disks")
-	require.False(t, pushed.Load(), "the first master must not be installed onto a disk nobody chose")
-}
-
-// The joining masters render through a different builder, and the same wiring
-// has to hold there: they are the machines an operator is least able to watch.
-func TestHandImmutableJoinPayloadRefusesADocumentTheMachineCannotSatisfy(t *testing.T) {
-	inTestEnvironment := libretry.InTestEnvironment
-	libretry.InTestEnvironment = false
-	t.Cleanup(func() { libretry.InTestEnvironment = inTestEnvironment })
-
-	b, bctx := immutableTestBootstrapper(t)
-	bctx.metaConfig.ClusterType = config.StaticClusterType
-
-	kubeCl := client.NewFakeKubernetesClient()
-	createJoinInputsWithoutToken(t, kubeCl)
-	createBootstrapToken(t, kubeCl)
-
-	var pushed atomic.Bool
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPut {
-			pushed.Store(true)
-			return
-		}
-		_, _ = io.WriteString(w, twoDisksOfOneSize)
-	}))
-	t.Cleanup(server.Close)
-
-	host, port := splitTestServerAddress(t, server)
-	bctx.immutable.hosts = map[string]string{"master-1": host}
-
-	ctx, cancel := context.WithTimeout(t.Context(), 2*waitMaintenancePort.interval)
-	defer cancel()
-
-	err := b.handImmutableJoinPayload(ctx, bctx, kubeCl, "master-1", port)
-
-	require.ErrorContains(t, err, "matches 2 disks")
-	require.False(t, pushed.Load(), "a joining master must not be installed onto a disk nobody chose")
+	require.True(t, machine.pushed.Load(), "the machine must be handed its configuration")
 }
 
 // In a cloud the machines are described by the master NodeGroup's instanceClass
@@ -454,7 +401,7 @@ func TestImmutableInputRefusesACloudCustomization(t *testing.T) {
 	metaConfig := &config.MetaConfig{ClusterType: config.CloudClusterType}
 	customizations := []immutable.Customization{{NodeName: "example-master-0"}}
 
-	_, err := customizationsByNode(metaConfig, nil, customizations)
+	_, err := matchCustomizationsToHosts(metaConfig, nil, customizations)
 
 	require.ErrorContains(t, err, "example-master-0")
 	require.NotContains(t, err.Error(), "--master-host", "the flag it would name is refused on a cloud")
@@ -484,12 +431,13 @@ func TestBootstrapImmutableFirstMasterReportsTheAddressAndPushesOnce(t *testing.
 
 	host, port := splitTestServerAddress(t, server)
 	bctx.immutable.hosts = map[string]string{"example-master-0": host}
+	bctx.immutable.maintenancePort = port
 
-	require.NoError(t, b.bootstrapImmutableFirstMaster(t.Context(), bctx, port))
+	require.NoError(t, b.bootstrapImmutableFirstMaster(t.Context(), bctx))
 	require.Equal(t, host, bctx.immutable.masterIP, "the handoff path reads the first master's address from here")
 
 	bctx.immutable.masterIP = ""
-	require.NoError(t, b.bootstrapImmutableFirstMaster(t.Context(), bctx, port),
+	require.NoError(t, b.bootstrapImmutableFirstMaster(t.Context(), bctx),
 		"a rerun must not push at a machine that already has its configuration")
 	require.Equal(t, int64(1), pushes.Load())
 	require.Equal(t, host, bctx.immutable.masterIP, "a rerun still has to report the address")
@@ -515,64 +463,16 @@ func TestBootstrapImmutableFirstMasterFollowsTheStaticAddress(t *testing.T) {
 
 	host, port := splitTestServerAddress(t, server)
 	bctx.immutable.hosts = map[string]string{"example-master-0": host}
+	bctx.immutable.maintenancePort = port
 
-	require.NoError(t, b.bootstrapImmutableFirstMaster(t.Context(), bctx, port))
+	require.NoError(t, b.bootstrapImmutableFirstMaster(t.Context(), bctx))
 	require.Equal(t, "192.168.0.101", bctx.immutable.masterIP,
 		"the handoff and the apiserver are reached at the address the document assigns")
 
 	bctx.immutable.masterIP = ""
-	require.NoError(t, b.bootstrapImmutableFirstMaster(t.Context(), bctx, port))
+	require.NoError(t, b.bootstrapImmutableFirstMaster(t.Context(), bctx))
 	require.Equal(t, "192.168.0.101", bctx.immutable.masterIP,
 		"a rerun must not go back to the address the machine was pushed at")
-}
-
-// A machine whose document gives it a static address answers there once it has
-// installed itself, not at the address it was pushed at. An interface left on
-// DHCP takes no address from the document, however the field is filled in.
-func TestAddressAfterInstall(t *testing.T) {
-	static := parseOneCustomization(t, `
-    interfaces:
-    - name: eth0
-      dhcp: false
-      addresses: ["192.168.0.101/24"]
-      gateway: 192.168.0.1`)
-	require.Equal(t, "192.168.0.101", addressAfterInstall(static, "192.168.0.43"),
-		"a machine told to take a static address answers there")
-
-	require.Equal(t, "192.168.0.43", addressAfterInstall(nil, "192.168.0.43"),
-		"without a customization the push address stands")
-
-	require.Equal(t, "192.168.0.43", addressAfterInstall(parseOneCustomization(t, ""), "192.168.0.43"),
-		"a document that says nothing about the network leaves the machine where it was pushed")
-
-	dhcp := parseOneCustomization(t, `
-    interfaces:
-    - name: eth0
-      dhcp: true
-      addresses: ["192.168.0.101/24"]`)
-	require.Equal(t, "192.168.0.43", addressAfterInstall(dhcp, "192.168.0.43"),
-		"an interface on DHCP takes no address from the document")
-
-	// A master with two NICs: kubelet registers the node under nodeIP, which the
-	// machine check has already confirmed is one of the machine's own addresses.
-	multiNIC, err := immutable.ParseCustomizations(t.Context(), []string{`
-apiVersion: internal.deckhouse.io/v1alpha1
-kind: NodeConfig
-metadata:
-  name: example-master-0
-spec:
-  kubelet:
-    nodeIP: 10.10.0.7
-  network:
-    interfaces:
-    - name: eno1
-      addresses: ["192.168.0.101/24"]
-    - name: eno2
-      addresses: ["10.10.0.7/24"]
-`})
-	require.NoError(t, err)
-	require.Equal(t, "10.10.0.7", addressAfterInstall(&multiNIC[0], "192.168.0.43"),
-		"the apiserver answers where kubelet registered, not on whichever NIC comes first")
 }
 
 // parseOneCustomization builds a customization the way a run does, from a
@@ -674,22 +574,23 @@ spec:
 
 	host, port := splitTestServerAddress(t, server)
 	bctx.immutable.hosts = map[string]string{"master-0": host, "master-1": host, "master-2": host}
+	bctx.immutable.maintenancePort = port
 
 	// master-1 is a control-plane member, so master-2 is handed its payload; the
 	// run then waits on master-2, whose control plane never comes up.
-	require.ErrorContains(t, b.bootstrapImmutableAdditionalMasters(t.Context(), bctx, kubeCl, port), "master-2",
+	require.ErrorContains(t, b.bootstrapImmutableAdditionalMasters(t.Context(), bctx, kubeCl), "master-2",
 		"a registered Node is not a control-plane member: the wait must not end on it")
 	require.Equal(t, []string{"master-1", "master-2"}, pushes,
 		"the first master has its configuration already, and etcd takes the rest one at a time")
 	require.Contains(t, documents[0], "10.99.0.12", "the operator's document must reach a joining master")
 
-	require.Error(t, b.bootstrapImmutableAdditionalMasters(t.Context(), bctx, kubeCl, port))
+	require.Error(t, b.bootstrapImmutableAdditionalMasters(t.Context(), bctx, kubeCl))
 	require.Equal(t, []string{"master-1", "master-2"}, pushes,
 		"a rerun must not push at a master that already joined")
 
 	// And once master-2 is a member too, the same rerun goes through.
 	createReadyControlPlaneNode(t, kubeCl, "master-2")
-	require.NoError(t, b.bootstrapImmutableAdditionalMasters(t.Context(), bctx, kubeCl, port))
+	require.NoError(t, b.bootstrapImmutableAdditionalMasters(t.Context(), bctx, kubeCl))
 	require.Equal(t, []string{"master-1", "master-2"}, pushes)
 }
 
@@ -1060,11 +961,11 @@ func immutableTestBootstrapper(t *testing.T) (*ClusterBootstrapper, *bootstrapCo
 	// The default CandiDir points into a directory only the installer image
 	// populates; left as is, the test would depend on leftovers of a previous
 	// dhctl run.
-	opts.Global.CandiDir = repoCandiDir(t)
+	opts.Global.CandiDir = immutabletest.CandiDir(t)
 
 	b := &ClusterBootstrapper{Params: &Params{Options: opts}}
 
-	metaConfig := immutableTestMetaConfig(t)
+	metaConfig := immutabletest.MetaConfig(t)
 
 	return b, &bootstrapContext{
 		metaConfig: metaConfig,
@@ -1073,115 +974,56 @@ func immutableTestBootstrapper(t *testing.T) (*ClusterBootstrapper, *bootstrapCo
 	}
 }
 
-// repoCandiDir finds the checkout's own candi directory by walking up from the
-// test's working directory.
-func repoCandiDir(t *testing.T) string {
-	t.Helper()
-
-	dir, err := os.Getwd()
-	require.NoError(t, err)
-
-	for {
-		candidate := filepath.Join(dir, "candi")
-		if _, err := os.Stat(filepath.Join(candidate, "control-plane")); err == nil {
-			return candidate
-		}
-		parent := filepath.Dir(dir)
-		require.NotEqual(t, parent, dir, "candi/control-plane not found above %s", dir)
-		dir = parent
-	}
+// staticMetaConfig is a cluster whose machines are named by --master-host, the
+// only shape in which the operator's documents are matched to a machine at all.
+func staticMetaConfig() *config.MetaConfig {
+	return &config.MetaConfig{ClusterType: config.StaticClusterType}
 }
 
-func immutableTestMetaConfig(t *testing.T) *config.MetaConfig {
-	t.Helper()
-
-	const digest = "sha256:1111111111111111111111111111111111111111111111111111111111111111"
-
-	metaConfig := &config.MetaConfig{
-		ClusterType:       config.CloudClusterType,
-		ClusterPrefix:     "example",
-		ClusterDomain:     "cluster.local",
-		ClusterDNSAddress: "10.223.0.10",
-		ClusterConfig: map[string]json.RawMessage{
-			"kubernetesVersion":       json.RawMessage(`"1.34"`),
-			"serviceSubnetCIDR":       json.RawMessage(`"10.223.0.0/16"`),
-			"podSubnetCIDR":           json.RawMessage(`"10.222.0.0/16"`),
-			"podSubnetNodeCIDRPrefix": json.RawMessage(`"24"`),
-			"clusterDomain":           json.RawMessage(`"cluster.local"`),
-		},
-		ProviderClusterConfig: map[string]json.RawMessage{
-			"masterNodeGroup": json.RawMessage(`{
-			  "replicas": 1,
-			  "instanceClass": {
-			    "rootDisk": {"size": "50Gi"},
-			    "etcdDisk": {"size": "10Gi"}
-			  }
-			}`),
-		},
-		Images: map[string]map[string]any{
-			"registrypackages": {
-				"containerdSysext224":    digest,
-				"kubernetesCniSysext162": digest,
-				"kubeletSysext1349":      digest,
-				"nodeletSysext":          digest,
-			},
-			"nodeManager": {"olcedar": digest},
-			"common":      {"pause": digest},
-			"controlPlaneManager": {
-				"etcd":                     digest,
-				"kubeApiserver134":         digest,
-				"kubeControllerManager134": digest,
-				"kubeScheduler134":         digest,
-			},
-		},
-	}
-
-	metaConfig.Registry.Settings = registry.ModeSettings{
-		Mode: constant.ModeUnmanaged,
-		RemoteData: registry.Data{
-			ImagesRepo: "dev-registry.deckhouse.io/sys/deckhouse-oss",
-			Scheme:     constant.SchemeHTTPS,
-			Username:   "user",
-			Password:   "password",
-		},
-	}
-
-	return metaConfig
-}
-
-// immutableHandoffTestServer serves the node's side of the bootstrap channel and
-// returns the port it landed on. Bound to :0 rather than the protocol's fixed
-// port, so a busy port cannot silently skip this test.
-func immutableHandoffTestServer(t *testing.T, material *immutable.HandoffMaterial, handler http.HandlerFunc) int {
-	t.Helper()
-
-	certificate, err := tls.X509KeyPair([]byte(material.ServerCertPEM), []byte(material.ServerKeyPEM))
-	require.NoError(t, err)
-
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
-	require.NoError(t, err)
-
-	server := httptest.NewUnstartedServer(handler)
-	require.NoError(t, server.Listener.Close())
-	server.Listener = listener
-	server.TLS = &tls.Config{Certificates: []tls.Certificate{certificate}}
-	server.StartTLS()
-	t.Cleanup(server.Close)
-
-	address, ok := listener.Addr().(*net.TCPAddr)
-	require.True(t, ok)
-	return address.Port
-}
-
-// immutableWaitingBootstrapper is the smallest bootstrapper collectImmutableKubeconfig
-// runs against: no SSH provider. It also restores real retry behaviour (init_test.go
-// collapses every loop to one attempt); safe to swap globally — no t.Parallel here.
-func immutableWaitingBootstrapper(t *testing.T) (*ClusterBootstrapper, *bootstrapContext, *immutable.HandoffMaterial) {
+// noRetryCollapse restores real retry behaviour: init_test.go collapses every
+// loop to one attempt, which would pass with no break predicate at all. Safe to
+// swap globally — nothing in this file runs in parallel.
+func noRetryCollapse(t *testing.T) {
 	t.Helper()
 
 	inTestEnvironment := libretry.InTestEnvironment
 	libretry.InTestEnvironment = false
 	t.Cleanup(func() { libretry.InTestEnvironment = inTestEnvironment })
+}
+
+// testMachine stands in for a machine waiting in maintenance: it answers the
+// inventory read that precedes every push, and records what it was asked.
+type testMachine struct {
+	host   string
+	port   int
+	pushed atomic.Bool
+	reads  atomic.Int64
+}
+
+func newTestMachine(t *testing.T, inventory string) *testMachine {
+	t.Helper()
+
+	machine := &testMachine{}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPut {
+			machine.pushed.Store(true)
+			return
+		}
+		machine.reads.Add(1)
+		_, _ = io.WriteString(w, inventory)
+	}))
+	t.Cleanup(server.Close)
+
+	machine.host, machine.port = splitTestServerAddress(t, server)
+	return machine
+}
+
+// immutableWaitingBootstrapper is the smallest bootstrapper collectImmutableKubeconfig
+// runs against: no SSH provider, and real retry behaviour.
+func immutableWaitingBootstrapper(t *testing.T) (*ClusterBootstrapper, *bootstrapContext, *immutable.HandoffMaterial) {
+	t.Helper()
+
+	noRetryCollapse(t)
 
 	b, bctx := immutableTestBootstrapper(t)
 	bctx.immutable.masterIP = "127.0.0.1"
@@ -1199,9 +1041,12 @@ func immutableWaitingBootstrapper(t *testing.T) (*ClusterBootstrapper, *bootstra
 func TestCollectImmutableKubeconfigStopsOnAFailedNode(t *testing.T) {
 	b, bctx, material := immutableWaitingBootstrapper(t)
 
-	port := immutableHandoffTestServer(t, material, func(w http.ResponseWriter, _ *http.Request) {
+	// The fixture binds :0 rather than the protocol's fixed port, so a port that
+	// is busy cannot silently skip this test.
+	server := immutabletest.HandoffServer(t, material.ServerCertPEM, material.ServerKeyPEM, func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte(`{"phase":"Failed","message":"pull the kubelet system extension: 404"}`))
 	})
+	_, port := splitTestServerAddress(t, server)
 
 	// Bounded so that a loop which stops treating Failed as terminal fails this
 	// assertion instead of running until the test binary is killed, which takes
@@ -1225,9 +1070,10 @@ func TestCollectImmutableKubeconfigNamesBothAddresses(t *testing.T) {
 	b, bctx, material := immutableWaitingBootstrapper(t)
 	bctx.immutable.hosts = map[string]string{bctx.immutable.masterNodeName: "192.168.0.43"}
 
-	port := immutableHandoffTestServer(t, material, func(w http.ResponseWriter, _ *http.Request) {
+	server := immutabletest.HandoffServer(t, material.ServerCertPEM, material.ServerKeyPEM, func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte(`{"phase":"Failed","message":"pull the kubelet system extension: 404"}`))
 	})
+	_, port := splitTestServerAddress(t, server)
 
 	ctx, cancel := context.WithTimeout(t.Context(), 2*waitAPIServerUp.interval)
 	defer cancel()
@@ -1269,11 +1115,7 @@ func TestOpenImmutableChannelNamesBothAddresses(t *testing.T) {
 func TestBuildImmutableJoinPayloadWaitsForTheBootstrapToken(t *testing.T) {
 	const token = "abcdef.0123456789abcdef" // gitleaks:allow, the shape of a bootstrap token, not one
 
-	// init_test.go collapses every loop to one attempt; safe to swap globally —
-	// no t.Parallel here.
-	inTestEnvironment := libretry.InTestEnvironment
-	libretry.InTestEnvironment = false
-	t.Cleanup(func() { libretry.InTestEnvironment = inTestEnvironment })
+	noRetryCollapse(t)
 
 	kubeCl := client.NewFakeKubernetesClient()
 	createJoinInputsWithoutToken(t, kubeCl)
@@ -1298,7 +1140,7 @@ func TestBuildImmutableJoinPayloadWaitsForTheBootstrapToken(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
 	defer cancel()
 
-	payload, nodeConfigDocument, err := buildImmutableJoinPayload(ctx, kubeCl, immutableTestMetaConfig(t), "example-master-1", nil)
+	payload, nodeConfigDocument, err := buildImmutableJoinPayload(ctx, kubeCl, immutabletest.MetaConfig(t), "example-master-1", nil)
 	require.NoError(t, err, "a token that is not published yet is what the wait exists for")
 
 	document, err := base64.StdEncoding.DecodeString(payload)

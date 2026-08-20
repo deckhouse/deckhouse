@@ -15,12 +15,10 @@
 package immutable
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/netip"
 	"path"
@@ -92,15 +90,7 @@ var ErrInventoryUnusable = errors.New("the machine answered no usable inventory"
 // whose image predates the endpoint answers 404, and that is nil, nil: an old
 // image is a check nobody can run, not a bootstrap to fail.
 func FetchInventory(ctx context.Context, address string) (*Inventory, error) {
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://"+address+inventoryPath, nil)
-	if err != nil {
-		return nil, fmt.Errorf("build the inventory request for %s: %w", address, err)
-	}
-
-	client := &http.Client{Timeout: pushTimeout}
-	defer client.CloseIdleConnections()
-
-	response, err := client.Do(request)
+	response, err := do(ctx, http.MethodGet, "http://"+address+inventoryPath, nil)
 	if err != nil {
 		return nil, fmt.Errorf("read the inventory of %s: %w", address, err)
 	}
@@ -110,11 +100,7 @@ func FetchInventory(ctx context.Context, address string) (*Inventory, error) {
 		return nil, nil
 	}
 	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
-		body, err := io.ReadAll(io.LimitReader(response.Body, maxPushErrorBody))
-		if err != nil {
-			return nil, fmt.Errorf("%w: read the inventory of %s: %s: read the refusal: %w", ErrInventoryUnusable, address, response.Status, err)
-		}
-		return nil, fmt.Errorf("%w: read the inventory of %s: %s: %s", ErrInventoryUnusable, address, response.Status, bytes.TrimSpace(body))
+		return nil, fmt.Errorf("%w: read the inventory of %s: %s: %s", ErrInventoryUnusable, address, response.Status, errorQuote(response))
 	}
 
 	var inventory Inventory
@@ -141,15 +127,14 @@ func CheckDocumentAgainstInventory(ctx context.Context, nodeConfigDocument []byt
 	// A document of any other shape parses into an empty spec, and every check
 	// below then passes on every machine. Refused rather than warned: the caller
 	// is dhctl itself, and the wrong document here is a bug in it.
-	if parsed.APIVersion != payloadAPIVersion || parsed.Kind != nodeConfigKind {
+	if parsed.APIVersion != PayloadAPIVersion || parsed.Kind != NodeConfigKind {
 		return fmt.Errorf("the document to check against the machine is %q/%q, not %s/%s: it says nothing about disks or interfaces",
-			parsed.APIVersion, parsed.Kind, payloadAPIVersion, nodeConfigKind)
+			parsed.APIVersion, parsed.Kind, PayloadAPIVersion, NodeConfigKind)
 	}
 	spec := parsed.Spec
 
-	problems := []error{checkSystemDisk(spec.Storage, inventory)}
-
-	systemDisk := resolveSystemDisk(spec.Storage, inventory)
+	systemDisk, err := resolveSystemDisk(spec.Storage, inventory)
+	problems := []error{err}
 	for i, m := range spec.Storage.Mounts {
 		problems = append(problems, checkMount(i, m, inventory, systemDisk))
 	}
@@ -159,42 +144,6 @@ func CheckDocumentAgainstInventory(ctx context.Context, nodeConfigDocument []byt
 	problems = append(problems, checkNodeIP(spec))
 
 	return errors.Join(problems...)
-}
-
-// checkSystemDisk answers whether the machine has the one disk the OS is to be
-// installed on. The node reads diskSelector first and never looks at device
-// when it is set (selectDisk, images/init/src/0.1/disk.go), so neither does this.
-func checkSystemDisk(st storage, inventory *Inventory) error {
-	if st.DiskSelector != nil {
-		return checkDiskSelector(st.DiskSelector, inventory)
-	}
-	if st.Device == "" {
-		return nil
-	}
-	if diskOfDevicePath(st.Device, inventory.Disks) != "" {
-		return nil
-	}
-	return fmt.Errorf("spec.storage.device %s names no disk of this machine, which has: %s",
-		st.Device, describeDisks(inventory.Disks))
-}
-
-func checkDiskSelector(selector *diskSelector, inventory *Inventory) error {
-	matched, err := matchDisks(selector, inventory.Disks)
-	if err != nil {
-		return fmt.Errorf("spec.storage.diskSelector: %w", err)
-	}
-
-	switch len(matched) {
-	case 1:
-		return nil
-	case 0:
-		return fmt.Errorf("spec.storage.diskSelector matches no disk of this machine, which has: %s",
-			describeDisks(inventory.Disks))
-	default:
-		return fmt.Errorf("spec.storage.diskSelector matches %d disks of this machine and only one can hold "+
-			"the system: %s. Name a single disk instead of an attribute several share",
-			len(matched), describeDisks(matched))
-	}
 }
 
 // checkMount refuses a selector matching more than one device, as the node does.
@@ -246,8 +195,12 @@ func mountDeviceExists(devicePath string, disks []InventoryDisk) bool {
 // selectPartition in internal/controllers/mounts/partitions.go of the nodelet
 // repository: whole disks only when blank, never the OS partitions.
 func mountCandidates(selector *partitionSelector, inventory *Inventory, systemDisk string) ([]string, error) {
-	var matched []string
+	type candidate struct {
+		name string
+		size uint64
+	}
 
+	var candidates []candidate
 	for _, disk := range inventory.Disks {
 		// By the time the node resolves the mounts, this disk carries the OS: it
 		// is neither blank any more nor holds a partition a selector may reach.
@@ -255,25 +208,24 @@ func mountCandidates(selector *partitionSelector, inventory *Inventory, systemDi
 			continue
 		}
 		if selector.Blank && disk.State == "blank" {
-			ok, err := partitionSizeMatches(selector.Size, disk.Size)
-			if err != nil {
-				return nil, err
-			}
-			if ok {
-				matched = append(matched, "/dev/"+disk.Name)
-			}
+			candidates = append(candidates, candidate{disk.Name, disk.Size})
 		}
 		for _, part := range disk.Partitions {
 			if isOSPartitionLabel(part.Label) {
 				continue
 			}
-			ok, err := partitionSizeMatches(selector.Size, part.Size)
-			if err != nil {
-				return nil, err
-			}
-			if ok {
-				matched = append(matched, "/dev/"+part.Name)
-			}
+			candidates = append(candidates, candidate{part.Name, part.Size})
+		}
+	}
+
+	var matched []string
+	for _, c := range candidates {
+		ok, err := matchPartitionSize(selector.Size, c.size)
+		if err != nil {
+			return nil, err
+		}
+		if ok {
+			matched = append(matched, "/dev/"+c.name)
 		}
 	}
 
@@ -288,17 +240,36 @@ func isOSPartitionLabel(label string) bool {
 	return slices.Contains([]string{"BOOT", "CONFIG", "DATA"}, label)
 }
 
-// resolveSystemDisk names the disk the OS will take, or "" when the document
-// does not resolve to exactly one — an ambiguity checkSystemDisk already reports.
-func resolveSystemDisk(st storage, inventory *Inventory) string {
+// resolveSystemDisk names the disk the OS will take, and the reason the machine
+// cannot give it one. The node reads diskSelector first and never looks at
+// device when it is set (selectDisk, images/init/src/0.1/disk.go), so neither
+// does this.
+func resolveSystemDisk(st storage, inventory *Inventory) (string, error) {
 	if st.DiskSelector == nil {
-		return diskOfDevicePath(st.Device, inventory.Disks)
+		name := diskOfDevicePath(st.Device, inventory.Disks)
+		if st.Device == "" || name != "" {
+			return name, nil
+		}
+		return "", fmt.Errorf("spec.storage.device %s names no disk of this machine, which has: %s",
+			st.Device, describeDisks(inventory.Disks))
 	}
+
 	matched, err := matchDisks(st.DiskSelector, inventory.Disks)
-	if err != nil || len(matched) != 1 {
-		return ""
+	if err != nil {
+		return "", fmt.Errorf("spec.storage.diskSelector: %w", err)
 	}
-	return matched[0].Name
+
+	switch len(matched) {
+	case 1:
+		return matched[0].Name, nil
+	case 0:
+		return "", fmt.Errorf("spec.storage.diskSelector matches no disk of this machine, which has: %s",
+			describeDisks(inventory.Disks))
+	default:
+		return "", fmt.Errorf("spec.storage.diskSelector matches %d disks of this machine and only one can hold "+
+			"the system: %s. Name a single disk instead of an attribute several share",
+			len(matched), describeDisks(matched))
+	}
 }
 
 // diskOfDevicePath resolves a /dev path against the inventory, or "" when no
@@ -424,7 +395,7 @@ func matchDisk(selector *diskSelector, disk InventoryDisk) (bool, error) {
 	if selector.Type != "" && !matchType(selector.Type, disk) {
 		return false, nil
 	}
-	return diskSizeMatches(selector.Size, disk.Size)
+	return matchSize(selector.Size, disk.Size)
 }
 
 // serialOf and wwidOf recover what the machine's own matcher sees where sysfs
@@ -480,35 +451,32 @@ func globMatch(pattern, s string) bool {
 	return err == nil && ok
 }
 
-// diskSizeMatches and partitionSizeMatches are two grammars on purpose, because
-// two different programs read them: the initramfs resolves spec.storage
-// diskSelector, the node's agent resolves the mounts. Do not unify them.
-func diskSizeMatches(expression string, size uint64) (bool, error) {
-	if expression == "" {
-		return true, nil
+// splitSizeExpression separates the comparison from the size it compares
+// against. Both grammars below spell the operators the same way and default to
+// ">=" where an expression names none.
+func splitSizeExpression(expression string) (string, string) {
+	rest := strings.TrimSpace(expression)
+	for _, candidate := range []string{">=", "<=", ">", "<", "="} {
+		if after, found := strings.CutPrefix(rest, candidate); found {
+			return candidate, strings.TrimSpace(after)
+		}
 	}
-	return matchSize(expression, size)
+	return ">=", rest
 }
 
-func partitionSizeMatches(expression string, size uint64) (bool, error) {
-	if expression == "" {
-		return true, nil
-	}
-	return matchPartitionSize(expression, size)
-}
+// matchSize and matchPartitionSize are two grammars on purpose, because two
+// different programs read them: the initramfs resolves spec.storage
+// diskSelector, the node's agent resolves the mounts. Do not unify them.
 
 // matchPartitionSize evaluates the size of a partitionSelector as Kubernetes
 // quantity grammar. Mirrors MatchSize and ParseSizeExpression in
 // nodelet/internal/config/size.go, which is what resolves this selector.
 func matchPartitionSize(expression string, actual uint64) (bool, error) {
-	operator := ">="
-	rest := strings.TrimSpace(expression)
-	for _, candidate := range []string{">=", "<=", ">", "<", "="} {
-		if after, found := strings.CutPrefix(rest, candidate); found {
-			operator, rest = candidate, strings.TrimSpace(after)
-			break
-		}
+	if expression == "" {
+		return true, nil
 	}
+
+	operator, rest := splitSizeExpression(expression)
 	if rest == "" {
 		return false, errors.New("no size given")
 	}
@@ -541,14 +509,11 @@ func matchPartitionSize(expression string, actual uint64) (bool, error) {
 // in bytes. Mirrors matchSize in images/init/src/0.1/disk.go of the initramfs
 // repository — the machine matches its own disks with that one.
 func matchSize(expression string, actual uint64) (bool, error) {
-	operator := ">="
-	rest := strings.TrimSpace(expression)
-	for _, candidate := range []string{">=", "<=", ">", "<", "="} {
-		if after, found := strings.CutPrefix(rest, candidate); found {
-			operator, rest = candidate, strings.TrimSpace(after)
-			break
-		}
+	if expression == "" {
+		return true, nil
 	}
+
+	operator, rest := splitSizeExpression(expression)
 
 	want, err := parseSize(rest)
 	if err != nil {

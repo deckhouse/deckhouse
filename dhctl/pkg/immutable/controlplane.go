@@ -108,7 +108,7 @@ func buildControlPlaneConfig(ctx context.Context, in MasterPayloadInput) (*contr
 	}
 
 	return &controlPlaneConfig{
-		APIVersion: payloadAPIVersion,
+		APIVersion: PayloadAPIVersion,
 		Kind:       controlPlaneConfigKind,
 		Metadata:   objectMeta{Name: in.NodeName},
 		Spec: controlPlaneSpec{
