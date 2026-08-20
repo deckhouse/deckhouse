@@ -70,7 +70,12 @@ func Test_sortNodeNames(t *testing.T) {
 
 			require.NoError(t, err)
 
-			require.Equal(t, test.sorted, sorted)
+			names := make([]string, 0, len(sorted))
+			for _, node := range sorted {
+				names = append(names, node.name)
+			}
+
+			require.Equal(t, test.sorted, names)
 		})
 	}
 }
