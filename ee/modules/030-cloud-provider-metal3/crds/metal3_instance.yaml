@@ -91,13 +91,6 @@ spec:
                   disableCertificateVerification:
                     type: boolean
                     description: Disables TLS certificate verification for BMC access.
-                  bootMACAddress:
-                    type: string
-                    pattern: '^([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}$'
-                    description: Deprecated compatibility field. Use spec.bootMACAddress.
-                  online:
-                    type: boolean
-                    description: Deprecated compatibility field. Use spec.online.
           status:
             type: object
             properties:
