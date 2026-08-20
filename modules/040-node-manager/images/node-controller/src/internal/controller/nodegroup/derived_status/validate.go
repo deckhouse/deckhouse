@@ -30,17 +30,14 @@ import (
 // as one — the status controller publishes it, the bashible context falls back to its last good
 // entry, and the MachineDeployment reconciler skips rendering.
 func Validate(ng *v1.NodeGroup, snap Snapshot) CloudCheckResult {
-	if ng.Spec.NodeType != v1.NodeTypeCloudEphemeral {
+	if ng.Spec.NodeType != v1.NodeTypeCloudEphemeral || snap.Provider.InstanceClassKind == "" {
 		return CloudCheckResult{Processed: false}
 	}
 
 	// The provider names a kind but no version to read it at. Reporting it as a validation
 	// error is what every consumer already handles: rendering is skipped, and the bashible
 	// context keeps the entry it published last instead of dropping the cloud fields.
-	//
-	// A provider that published no kind at all is left to RunCloudChecks, which reports the
-	// NodeGroup unprocessed rather than wrong.
-	if snap.Provider.InstanceClassKind != "" && snap.Provider.InstanceClassAPIVersion == "" {
+	if snap.Provider.InstanceClassAPIVersion == "" {
 		return CloudCheckResult{Error: fmt.Sprintf(
 			"Cloud provider has not published %s yet. The %s cannot be read until it does.",
 			cloudprovider.InstanceClassAPIVersionKey, snap.Provider.InstanceClassKind)}
