@@ -82,6 +82,11 @@ func (c Catalog) All() []Provider {
 	return c.all
 }
 
+// Default returns the provider of the cluster itself, the one every non-Static NodeGroup runs on.
+func (c Catalog) Default() Provider {
+	return c.defaultProvider
+}
+
 // ByNodeGroup returns the provider a NodeGroup runs on. The verdict on its spec.providerType
 // is ValidateNodeGroup.
 func (c Catalog) ByNodeGroup(ng *v1.NodeGroup) Provider {

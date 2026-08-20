@@ -79,20 +79,22 @@ func (s *Service) Build(ctx context.Context, globals Globals, nodeGroups []map[s
 		"nodeGroups":     nodeGroups,
 	}
 
-	all := pCatalog.All()
-	if len(all) > 0 {
-		trees := make([]map[string]interface{}, 0, len(all))
-		for _, p := range all {
+	pAll := pCatalog.All()
+	if len(pAll) > 0 {
+		trees := make([]map[string]interface{}, 0, len(pAll))
+		for _, p := range pAll {
 			trees = append(trees, p.Data)
 		}
 		input["cloudProviders"] = trees
-
-		// Deprecated, kept for one release: the previous bashible-apiserver reads only this key.
-		// Remove together with the field in its inputData.
-		if len(all) == 1 {
-			input["cloudProvider"] = all[0].Data
-		}
 	}
+
+	// Deprecated, kept for one release: the previous bashible-apiserver reads only this key.
+	// Remove together with the field in its inputData.
+	pDefault := pCatalog.Default()
+	if !pDefault.IsStatic() {
+		input["cloudProvider"] = pDefault.Data
+	}
+
 	if globals.Proxy != nil {
 		input["proxy"] = globals.Proxy
 	}
