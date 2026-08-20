@@ -4,16 +4,18 @@
 
 `001-go-mod.patch` bumps Go module dependencies to remediate CVEs reported by
 Trivy for the cluster-autoscaler binary. The vulnerabilities live in
-indirect/build dependencies that are linked into the binary (`x/crypto/ssh`,
-`x/net`, and the `k8s.io/*` staging modules), not in cluster-autoscaler logic,
-so the fix is a pure `go.mod`/`go.sum` bump — the gardener source tag is not
-changed. The patch touches both `cluster-autoscaler/go.mod` and
-`cluster-autoscaler/apis/go.mod`.
+dependencies linked into the binary (`google.golang.org/grpc`, `x/crypto/ssh`,
+`x/net`, `x/text`, and the `k8s.io/*` staging modules), not in
+cluster-autoscaler logic, so the fix is a pure `go.mod`/`go.sum` bump — the
+gardener source tag is not changed. The patch covers `go.mod` and `go.sum` in
+both the main `cluster-autoscaler` module and its nested `apis` module.
 
-Typical bumps: `golang.org/x/net` -> `v0.57.0`, `golang.org/x/sys` -> `v0.47.0`,
-`golang.org/x/crypto` -> `v0.54.0`, and (for older minors) `k8s.io/kubernetes`
-(plus all `k8s.io/*` require/replace directives) to the latest fix patch of the
-matching minor (for example `v1.32.10` / `v1.33.6` / `v1.34.2`).
+All active patches use `google.golang.org/grpc v1.82.1`. The 1.32–1.34 patches
+use `golang.org/x/net v0.56.0`, `golang.org/x/text v0.39.0`,
+`golang.org/x/crypto v0.53.0`, and `golang.org/x/sys v0.46.0`; the 1.35 patch
+keeps the newer `x/net v0.57.0`, `x/text v0.40.0`, `x/crypto v0.54.0`, and
+`x/sys v0.47.0`. Older minors also retain their Kubernetes staging-module
+updates (`v1.32.10` / `v1.33.6` / `v1.34.2`).
 
 Because the patch is generated against a specific gardener tag, it must be
 recreated from a clean checkout of that tag; applying a patch made from a

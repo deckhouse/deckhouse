@@ -11,9 +11,11 @@ staging modules), not in cluster-autoscaler logic, so the fix is a pure
 Applied to both `cluster-autoscaler/go.mod` and `cluster-autoscaler/apis/go.mod`:
 
 - `go` directive: `1.23.0` (+ `toolchain go1.23.2`) -> `1.25.0`
-- `golang.org/x/net`: `v0.38.0` -> `v0.55.0` (HTML parser / HTTP2 / idna CVEs)
-- `golang.org/x/sys`: `v0.31.0` -> `v0.45.0`
-- `golang.org/x/crypto`: `v0.36.0` -> `v0.51.0` (x/crypto/ssh CVEs)
+- `google.golang.org/grpc`: `v1.65.0` -> `v1.82.1`
+- `golang.org/x/net`: `v0.38.0` -> `v0.56.0` (HTML parser / HTTP2 / idna CVEs)
+- `golang.org/x/text`: `v0.23.0` -> `v0.39.0` (Unicode processing CVEs)
+- `golang.org/x/sys`: `v0.31.0` -> `v0.46.0`
+- `golang.org/x/crypto`: `v0.36.0` -> `v0.53.0` (x/crypto/ssh CVEs)
 - `k8s.io/kubernetes`: `v1.32.0` -> `v1.32.10`, and all `k8s.io/*` staging
   modules (require + replace) synced to `v0.32.10` (kube-controller-manager
   SSRF, CVE-2025-13281)
@@ -24,12 +26,18 @@ To recreate this patch, check out the clean tag and re-apply the bumps:
 git clone <SOURCE_REPO>/gardener/autoscaler.git
 cd autoscaler && git checkout v1.32.3
 cd cluster-autoscaler
-go get golang.org/x/crypto@v0.51.0
-go get golang.org/x/net@v0.55.0
-go get golang.org/x/sys@v0.45.0
+go get google.golang.org/grpc@v1.82.1 \
+  golang.org/x/crypto@v0.53.0 \
+  golang.org/x/net@v0.56.0 \
+  golang.org/x/sys@v0.46.0 \
+  golang.org/x/text@v0.39.0
 go get k8s.io/kubernetes@v1.32.10
 # sync every k8s.io/* require and replace directive to v0.32.10
-cd apis && go get golang.org/x/net@v0.55.0 && cd ..
+cd apis
+go get google.golang.org/grpc@v1.82.1 \
+  golang.org/x/net@v0.56.0 \
+  golang.org/x/text@v0.39.0
+cd ..
 go mod tidy && (cd apis && go mod tidy)
 cd ..
 git diff -- cluster-autoscaler/go.mod cluster-autoscaler/go.sum \
