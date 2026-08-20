@@ -241,8 +241,8 @@ github.com/flant/addon-operator v1.24.11 h1:R/LhJmLAiY05RLORE4rkg1RfRux/igi3L7lm
 github.com/flant/addon-operator v1.24.11/go.mod h1:X6GklVOyxf6SciOR3XexUFv+lbmXUL+hvcpcsjoVDCc=
 github.com/flant/kube-client v1.9.1 h1:B5Sa++5arl3N/KBdL1KNMlUBtzQXKz1o2FIiFb4X+VA=
 github.com/flant/kube-client v1.9.1/go.mod h1:jAQ01+f5Q8UJJ4RYZlk5xqoA+OOalpr/QJ3e3Q/saqw=
-github.com/flant/shell-operator v1.20.2 h1:rI2lIkhZxIfMVR0NFMSZ5xyXMvtBj+Wai2MPopb/Yp0=
-github.com/flant/shell-operator v1.20.2/go.mod h1:Qj8agNbfPm6x7C3TmCpY1fCtayhqS2Sxncui7grrOVw=
+github.com/flant/shell-operator v1.20.3-0.20260820080020-f1e82137a083 h1:dZ/AE0bdDwEA142m4UrmqwOTSJup00UzBsbrmms18M0=
+github.com/flant/shell-operator v1.20.3-0.20260820080020-f1e82137a083/go.mod h1:CMQ7oz6BbfYB+LO+huREDC4m0nfBbIkhFrGgUHjebyQ=
 github.com/frankban/quicktest v1.14.6 h1:7Xjx+VpznH+oBnejlPUj8oUpdxnVs4f8XU8WnHkI4W8=
 github.com/frankban/quicktest v1.14.6/go.mod h1:4ptaffx2x8+WTWXmUCuVU6aPUX1/Mz7zb5vbUoiM6w0=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=

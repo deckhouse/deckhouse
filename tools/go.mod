@@ -68,7 +68,7 @@ require (
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/flant/addon-operator v1.24.11 // indirect
 	github.com/flant/kube-client v1.9.1 // indirect
-	github.com/flant/shell-operator v1.20.2 // indirect
+	github.com/flant/shell-operator v1.20.3-0.20260820080020-f1e82137a083 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.2 // indirect
 	github.com/fzipp/gocyclo v0.3.1 // indirect
