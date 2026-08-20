@@ -132,7 +132,7 @@ func TestAssemble_PreservesPriorOnValidationFailure(t *testing.T) {
 				},
 			},
 		},
-		providerSecret(cloudprovider.SecretNamePrefix, map[string][]byte{
+		providerSecret(cloudprovider.RegistrationSecretNamePrefix, map[string][]byte{
 			"type":                    []byte(`"yandex"`),
 			"instanceClassKind":       []byte(`"YandexInstanceClass"`),
 			"instanceClassAPIVersion": []byte("v1alpha1"),
@@ -173,7 +173,7 @@ func TestAssemble_PriorEntryGetsTheProviderOfItsNodeGroup(t *testing.T) {
 			},
 		},
 		// The kind resolves; the missing API version is what fails validation.
-		providerSecret(cloudprovider.SecretNamePrefix, map[string][]byte{
+		providerSecret(cloudprovider.RegistrationSecretNamePrefix, map[string][]byte{
 			"type":              []byte(`"yandex"`),
 			"instanceClassKind": []byte(`"YandexInstanceClass"`),
 		}),
@@ -203,7 +203,7 @@ func TestAssemble_OmitsFailingNodeGroupWithoutPrior(t *testing.T) {
 				},
 			},
 		},
-		providerSecret(cloudprovider.SecretNamePrefix, map[string][]byte{
+		providerSecret(cloudprovider.RegistrationSecretNamePrefix, map[string][]byte{
 			"type":                    []byte(`"yandex"`),
 			"instanceClassKind":       []byte(`"YandexInstanceClass"`),
 			"instanceClassAPIVersion": []byte("v1alpha1"),

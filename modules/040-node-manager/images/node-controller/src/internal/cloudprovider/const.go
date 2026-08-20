@@ -21,12 +21,18 @@ const StatusNone = "None"
 
 // The registration Secret a provider module publishes.
 const (
-	SecretNamespace = "kube-system"
-	// Selection is by this label, not by name: that is what makes a second provider visible.
-	SecretLabel = "cloud-provider.deckhouse.io/registration"
-	// Every provider publishes two copies: the bare prefix and prefix + "-<provider>". The prefix,
-	// not either full name, is what identifies a registration.
-	SecretNamePrefix = "d8-node-manager-cloud-provider"
+	RegistrationSecretNamespace  = "kube-system"
+	RegistrationSecretLabel      = "cloud-provider.deckhouse.io/registration"
+	RegistrationSecretNamePrefix = "d8-node-manager-cloud-provider"
+)
+
+// The cluster configuration, which names the provider CloudPermanent NodeGroups resolve through.
+const (
+	clusterConfigSecretNamespace = "kube-system"
+	clusterConfigSecretName      = "d8-cluster-configuration"
+	clusterConfigSecretKey       = "cluster-configuration.yaml"
+	// ClusterConfiguration.clusterType of a cluster that runs in a cloud.
+	cloudClusterType = "Cloud"
 )
 
 // Keys of the registration Secret that callers outside this package name.
@@ -40,12 +46,4 @@ const (
 	InstanceClassAPIVersionKey = "instanceClassAPIVersion"
 	// What the CAPI keys fall back to when a provider publishes none.
 	defaultInfraAPIVersion = "infrastructure.cluster.x-k8s.io/v1alpha1"
-)
-
-// The cluster configuration, which names the provider CloudPermanent NodeGroups resolve through.
-const (
-	clusterConfigSecretName = "d8-cluster-configuration"
-	clusterConfigSecretKey  = "cluster-configuration.yaml"
-	// ClusterConfiguration.clusterType of a cluster that runs in a cloud.
-	cloudClusterType = "Cloud"
 )

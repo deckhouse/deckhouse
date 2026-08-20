@@ -106,7 +106,7 @@ func (r *ClusterReconciler) ensureCloudCluster(ctx context.Context, registration
 
 	secret := &corev1.Secret{}
 	if err := r.APIReader.Get(ctx, types.NamespacedName{
-		Name: registrationName, Namespace: cloudprovider.SecretNamespace,
+		Name: registrationName, Namespace: cloudprovider.RegistrationSecretNamespace,
 	}, secret); err != nil {
 		if client.IgnoreNotFound(err) == nil {
 			return nil

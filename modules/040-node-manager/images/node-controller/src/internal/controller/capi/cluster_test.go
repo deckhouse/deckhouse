@@ -97,9 +97,9 @@ func TestReconcile_StaticClusterIsEnsuredWithoutAnyRegistration(t *testing.T) {
 func TestReconcile_RegistrationKeyEnsuresTheCloudClusterOnly(t *testing.T) {
 	registration := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: cloudprovider.SecretNamespace,
-			Name:      cloudprovider.SecretNamePrefix + "-yandex",
-			Labels:    map[string]string{cloudprovider.SecretLabel: ""},
+			Namespace: cloudprovider.RegistrationSecretNamespace,
+			Name:      cloudprovider.RegistrationSecretNamePrefix + "-yandex",
+			Labels:    map[string]string{cloudprovider.RegistrationSecretLabel: ""},
 		},
 		Data: map[string][]byte{
 			"type":            []byte("yandex"),
@@ -111,7 +111,7 @@ func TestReconcile_RegistrationKeyEnsuresTheCloudClusterOnly(t *testing.T) {
 
 	_, err := r.Reconcile(context.Background(), ctrl.Request{
 		NamespacedName: types.NamespacedName{
-			Namespace: cloudprovider.SecretNamespace,
+			Namespace: cloudprovider.RegistrationSecretNamespace,
 			Name:      registration.Name,
 		},
 	})

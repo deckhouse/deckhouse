@@ -265,7 +265,7 @@ rolloutFields:
 		setProviderConfig := func(config map[string]any) {
 			secret := &corev1.Secret{}
 			Expect(k8sClient.Get(suiteCtx, types.NamespacedName{
-				Namespace: cloudprovider.SecretNamespace, Name: cloudprovider.SecretNamePrefix,
+				Namespace: cloudprovider.RegistrationSecretNamespace, Name: cloudprovider.RegistrationSecretNamePrefix,
 			}, secret)).To(Succeed())
 			raw, err := json.Marshal(config)
 			Expect(err).NotTo(HaveOccurred())
@@ -276,7 +276,7 @@ rolloutFields:
 		clearProviderConfig := func() {
 			secret := &corev1.Secret{}
 			Expect(k8sClient.Get(suiteCtx, types.NamespacedName{
-				Namespace: cloudprovider.SecretNamespace, Name: cloudprovider.SecretNamePrefix,
+				Namespace: cloudprovider.RegistrationSecretNamespace, Name: cloudprovider.RegistrationSecretNamePrefix,
 			}, secret)).To(Succeed())
 			delete(secret.Data, "dvp")
 			Expect(k8sClient.Update(suiteCtx, secret)).To(Succeed())

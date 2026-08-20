@@ -324,10 +324,10 @@ func TestReconcile_CloudValidationErrorPublished(t *testing.T) {
 	}
 	cloudProvider := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cloudprovider.SecretNamePrefix,
-			Namespace: cloudprovider.SecretNamespace,
+			Name:      cloudprovider.RegistrationSecretNamePrefix,
+			Namespace: cloudprovider.RegistrationSecretNamespace,
 			// Registrations are found by this label, never by name.
-			Labels: map[string]string{cloudprovider.SecretLabel: ""},
+			Labels: map[string]string{cloudprovider.RegistrationSecretLabel: ""},
 		},
 		Data: map[string][]byte{
 			"type":                    []byte("aws"),
@@ -370,9 +370,9 @@ func TestReconcile_CloudValidationErrorPublished(t *testing.T) {
 func TestReconcile_UnresolvedProviderFailsTheReconcile(t *testing.T) {
 	registration := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cloudprovider.SecretNamePrefix,
-			Namespace: cloudprovider.SecretNamespace,
-			Labels:    map[string]string{cloudprovider.SecretLabel: ""},
+			Name:      cloudprovider.RegistrationSecretNamePrefix,
+			Namespace: cloudprovider.RegistrationSecretNamespace,
+			Labels:    map[string]string{cloudprovider.RegistrationSecretLabel: ""},
 		},
 		Data: map[string][]byte{"type": []byte("yandex")},
 	}

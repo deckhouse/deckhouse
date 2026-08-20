@@ -116,9 +116,9 @@ func registrationSecret(name, kind, apiVersion string) *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: cloudprovider.SecretNamespace,
+			Namespace: cloudprovider.RegistrationSecretNamespace,
 			Labels: map[string]string{
-				cloudprovider.SecretLabel: "",
+				cloudprovider.RegistrationSecretLabel: "",
 			},
 		},
 		Data: map[string][]byte{
@@ -160,9 +160,9 @@ func kubernetesEndpoints(addressCount int) *corev1.Endpoints {
 func TestValidation_ProviderType(t *testing.T) {
 	registration := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cloudprovider.SecretNamePrefix,
-			Namespace: cloudprovider.SecretNamespace,
-			Labels:    map[string]string{cloudprovider.SecretLabel: ""},
+			Name:      cloudprovider.RegistrationSecretNamePrefix,
+			Namespace: cloudprovider.RegistrationSecretNamespace,
+			Labels:    map[string]string{cloudprovider.RegistrationSecretLabel: ""},
 		},
 		Data: map[string][]byte{"type": []byte("openstack")},
 	}

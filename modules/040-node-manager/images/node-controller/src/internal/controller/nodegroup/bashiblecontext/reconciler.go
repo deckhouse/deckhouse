@@ -88,13 +88,11 @@ func (r *Reconciler) Assemble(ctx context.Context) error {
 // withProviderType refreshes the provider of an entry carried over from the last published context:
 // an entry written before the key existed names none, and would render without cloud steps.
 func withProviderType(entry map[string]interface{}, provider cloudprovider.Provider) map[string]interface{} {
-	if provider.Type == "" {
+	if provider.IsStatic() {
 		delete(entry, "cloudProviderType")
-		return entry
+	} else {
+		entry["cloudProviderType"] = provider.Type
 	}
-
-	entry["cloudProviderType"] = provider.Type
-
 	return entry
 }
 

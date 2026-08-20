@@ -45,9 +45,9 @@ func testScheme(t *testing.T) *runtime.Scheme {
 func registrationSecret(name string, data map[string][]byte) *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: SecretNamespace,
+			Namespace: RegistrationSecretNamespace,
 			Name:      name,
-			Labels:    map[string]string{SecretLabel: ""},
+			Labels:    map[string]string{RegistrationSecretLabel: ""},
 		},
 		Data: data,
 	}
@@ -55,8 +55,11 @@ func registrationSecret(name string, data map[string][]byte) *corev1.Secret {
 
 func clusterConfigurationSecret(body string) *corev1.Secret {
 	return &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Namespace: SecretNamespace, Name: clusterConfigSecretName},
-		Data:       map[string][]byte{clusterConfigSecretKey: []byte(body)},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: clusterConfigSecretNamespace,
+			Name:      clusterConfigSecretName,
+		},
+		Data: map[string][]byte{clusterConfigSecretKey: []byte(body)},
 	}
 }
 
@@ -92,14 +95,14 @@ func nodeGroupOfType(name string, nodeType v1.NodeType) *v1.NodeGroup {
 }
 
 func TestLoad(t *testing.T) {
-	aws := registrationSecret(SecretNamePrefix+"-aws", map[string][]byte{"type": []byte("aws")})
+	aws := registrationSecret(RegistrationSecretNamePrefix+"-aws", map[string][]byte{"type": []byte("aws")})
 	yandexData := map[string][]byte{
 		"type":                    []byte("yandex"),
 		"instanceClassKind":       []byte("YandexInstanceClass"),
 		"instanceClassAPIVersion": []byte("v1"),
 	}
 	unlabelled := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Namespace: SecretNamespace, Name: "some-other-secret"},
+		ObjectMeta: metav1.ObjectMeta{Namespace: RegistrationSecretNamespace, Name: "some-other-secret"},
 		Data:       map[string][]byte{"type": []byte("notaprovider")},
 	}
 
@@ -114,8 +117,8 @@ func TestLoad(t *testing.T) {
 			// provider would read as two.
 			name: "the legacy and the per-provider copy are one provider",
 			objs: []client.Object{
-				registrationSecret(SecretNamePrefix, yandexData),
-				registrationSecret(SecretNamePrefix+"-yandex", yandexData),
+				registrationSecret(RegistrationSecretNamePrefix, yandexData),
+				registrationSecret(RegistrationSecretNamePrefix+"-yandex", yandexData),
 				cloudCluster("Yandex"),
 			},
 			types: []string{"yandex"},
@@ -125,7 +128,7 @@ func TestLoad(t *testing.T) {
 			// the whole point of this package, and an unlabelled Secret is not a registration.
 			name: "every labelled registration is seen, ordered by type",
 			objs: []client.Object{
-				registrationSecret(SecretNamePrefix+"-yandex", yandexData),
+				registrationSecret(RegistrationSecretNamePrefix+"-yandex", yandexData),
 				aws,
 				unlabelled,
 				cloudCluster("Yandex"),
@@ -172,7 +175,7 @@ func TestLoad_Errors(t *testing.T) {
 		},
 		{
 			name:    "the configuration key is missing",
-			objs:    []client.Object{&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: SecretNamespace, Name: clusterConfigSecretName}}},
+			objs:    []client.Object{&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: RegistrationSecretNamespace, Name: clusterConfigSecretName}}},
 			wantErr: `has no "cluster-configuration.yaml" key`,
 		},
 		{
@@ -189,7 +192,7 @@ func TestLoad_Errors(t *testing.T) {
 		{
 			name: "the cluster provider published no registration",
 			objs: []client.Object{
-				registrationSecret(SecretNamePrefix+"-aws", map[string][]byte{"type": []byte("aws")}),
+				registrationSecret(RegistrationSecretNamePrefix+"-aws", map[string][]byte{"type": []byte("aws")}),
 				cloudCluster("Yandex"),
 			},
 			wantErr: `registration secret not found for cloud provider "yandex"`,

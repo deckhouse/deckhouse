@@ -47,6 +47,12 @@ type Provider struct {
 	Data map[string]any
 }
 
+// IsStatic reports that the nodes resolved to this provider run in no cloud: an empty type is how
+// both a Static NodeGroup and a cluster without a cloud provider come back.
+func (p Provider) IsStatic() bool {
+	return p.Type == ""
+}
+
 // CAPIConfig is the CAPI half of the registration. An empty ClusterKind means MCM.
 type CAPIConfig struct {
 	ClusterName       string

@@ -44,7 +44,7 @@ func TestIsRegistrationSecret(t *testing.T) {
 			Namespace: namespace, Name: name, Labels: labels,
 		}}
 	}
-	labelled := map[string]string{SecretLabel: ""}
+	labelled := map[string]string{RegistrationSecretLabel: ""}
 
 	tests := []struct {
 		name string
@@ -53,28 +53,28 @@ func TestIsRegistrationSecret(t *testing.T) {
 	}{
 		{
 			name: "the copy under the bare prefix",
-			obj:  secret(SecretNamespace, SecretNamePrefix, labelled),
+			obj:  secret(RegistrationSecretNamespace, RegistrationSecretNamePrefix, labelled),
 			want: true,
 		},
 		{
 			name: "the per-provider copy",
-			obj:  secret(SecretNamespace, SecretNamePrefix+"-yandex", labelled),
+			obj:  secret(RegistrationSecretNamespace, RegistrationSecretNamePrefix+"-yandex", labelled),
 			want: true,
 		},
 		{
 			// The label alone is not enough: it is an empty-valued label anyone can copy, and a
 			// Secret outside the prefix is not something a provider module publishes.
 			name: "labelled, but named outside the prefix",
-			obj:  secret(SecretNamespace, "some-other-secret", labelled),
+			obj:  secret(RegistrationSecretNamespace, "some-other-secret", labelled),
 		},
 		{
 			name: "named with the prefix, but not labelled",
-			obj:  secret(SecretNamespace, SecretNamePrefix+"-aws", nil),
+			obj:  secret(RegistrationSecretNamespace, RegistrationSecretNamePrefix+"-aws", nil),
 		},
 		{
 			// Registrations live in one namespace; the same name elsewhere is somebody else's.
 			name: "right name and label, wrong namespace",
-			obj:  secret("default", SecretNamePrefix, labelled),
+			obj:  secret("default", RegistrationSecretNamePrefix, labelled),
 		},
 	}
 
@@ -89,11 +89,11 @@ func TestIsRegistrationSecret(t *testing.T) {
 // key that is not a registration must not pass — it names no provider to act on.
 func TestIsRegistrationSecretKey(t *testing.T) {
 	assert.True(t, IsRegistrationSecretKey(types.NamespacedName{
-		Namespace: SecretNamespace, Name: SecretNamePrefix + "-yandex",
+		Namespace: RegistrationSecretNamespace, Name: RegistrationSecretNamePrefix + "-yandex",
 	}))
 	assert.False(t, IsRegistrationSecretKey(types.NamespacedName{Name: "worker"}), "a NodeGroup key")
 	assert.False(t, IsRegistrationSecretKey(types.NamespacedName{
-		Namespace: "default", Name: SecretNamePrefix,
+		Namespace: "default", Name: RegistrationSecretNamePrefix,
 	}), "the right name in the wrong namespace")
 }
 
@@ -109,8 +109,8 @@ func TestNodeGroupHandler(t *testing.T) {
 		"type":              []byte("yandex"),
 		"instanceClassKind": []byte("YandexInstanceClass"),
 	}
-	aws := registrationSecret(SecretNamePrefix+"-aws", awsData)
-	yandex := registrationSecret(SecretNamePrefix+"-yandex", yandexData)
+	aws := registrationSecret(RegistrationSecretNamePrefix+"-aws", awsData)
+	yandex := registrationSecret(RegistrationSecretNamePrefix+"-yandex", yandexData)
 
 	// The cluster provider is yandex, so the CloudPermanent group resolves to it and nothing else.
 	newHandler := func(t *testing.T) (handler.EventHandler, workqueue.TypedRateLimitingInterface[reconcile.Request]) {
@@ -223,7 +223,7 @@ func TestNodeGroupHandler_EveryDataEditPasses(t *testing.T) {
 
 	for name, edit := range edits {
 		t.Run(name, func(t *testing.T) {
-			before := registrationSecret(SecretNamePrefix+"-aws", map[string][]byte{
+			before := registrationSecret(RegistrationSecretNamePrefix+"-aws", map[string][]byte{
 				"type":              []byte("aws"),
 				"instanceClassKind": []byte("AWSInstanceClass"),
 				"machineClassKind":  []byte("AWSMachineClass"),

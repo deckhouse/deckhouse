@@ -44,9 +44,9 @@ var _ = Describe("InstanceClass provider enumeration and lazy watches", func() {
 
 	newRegistrationSecret := func(name, kind, version string) *corev1.Secret {
 		secret := &corev1.Secret{}
-		secret.Namespace = cloudprovider.SecretNamespace
+		secret.Namespace = cloudprovider.RegistrationSecretNamespace
 		secret.Name = name
-		secret.Labels = map[string]string{cloudprovider.SecretLabel: ""}
+		secret.Labels = map[string]string{cloudprovider.RegistrationSecretLabel: ""}
 		secret.Data = map[string][]byte{
 			cloudprovider.InstanceClassKindKey:       []byte(kind),
 			cloudprovider.InstanceClassAPIVersionKey: []byte(version),

@@ -57,7 +57,7 @@ func TrackProviderMetrics(ng *v1.NodeGroup, provider Provider, resolveErr error)
 	}
 
 	// If Static
-	if provider.Type != "" && ng.Spec.ProviderType == "" {
+	if !provider.IsStatic() && ng.Spec.ProviderType == "" {
 		providerTypeUnset.WithLabelValues(ng.Name, nodeType).Set(1)
 	}
 }

@@ -44,23 +44,23 @@ import (
 // IsRegistrationSecret reports whether an object is a registration Secret: right namespace, name prefix
 // and label. It is the single definition of one — Load and every watch resolve through it.
 func IsRegistrationSecret(obj client.Object) bool {
-	if obj.GetNamespace() != SecretNamespace {
+	if obj.GetNamespace() != RegistrationSecretNamespace {
 		return false
 	}
-	if !strings.HasPrefix(obj.GetName(), SecretNamePrefix) {
+	if !strings.HasPrefix(obj.GetName(), RegistrationSecretNamePrefix) {
 		return false
 	}
-	_, ok := obj.GetLabels()[SecretLabel]
+	_, ok := obj.GetLabels()[RegistrationSecretLabel]
 	return ok
 }
 
 // IsRegistrationSecretKey reports whether a reconcile key names a registration Secret. No label check:
 // a key carries none, and the watch behind it already filtered on IsRegistration.
 func IsRegistrationSecretKey(key types.NamespacedName) bool {
-	if key.Namespace != SecretNamespace {
+	if key.Namespace != RegistrationSecretNamespace {
 		return false
 	}
-	return strings.HasPrefix(key.Name, SecretNamePrefix)
+	return strings.HasPrefix(key.Name, RegistrationSecretNamePrefix)
 }
 
 // RegistrationSecretPredicate filters a watch down to the registration Secrets.
@@ -74,8 +74,8 @@ func RegistrationSecretPredicate() predicate.Predicate {
 func RegistrationSecretsRequests(ctx context.Context, r client.Reader) []reconcile.Request {
 	secrets := &corev1.SecretList{}
 	if err := r.List(ctx, secrets,
-		client.InNamespace(SecretNamespace),
-		client.HasLabels{SecretLabel},
+		client.InNamespace(RegistrationSecretNamespace),
+		client.HasLabels{RegistrationSecretLabel},
 	); err != nil {
 		log.FromContext(ctx).Error(err, "list cloud provider registration secrets for enqueue")
 		return nil
@@ -166,7 +166,7 @@ func nodeGroupRequests(ctx context.Context, r client.Reader, carried ...Provider
 	ret := make([]reconcile.Request, 0, len(ngList.Items))
 	for i := range ngList.Items {
 		ng := &ngList.Items[i]
-		if provider := changed.Resolve(ng); provider.Type != "" {
+		if provider := changed.Resolve(ng); !provider.IsStatic() {
 			ret = append(ret, reconcile.Request{NamespacedName: types.NamespacedName{Name: ng.Name}})
 		}
 	}

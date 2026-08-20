@@ -153,7 +153,7 @@ func declarationError(declared string, resolved Provider) error {
 		return nil
 
 	case strings.EqualFold(declared, StatusNone):
-		if resolved.Type == "" {
+		if resolved.IsStatic() {
 			return nil
 		}
 		return fmt.Errorf(
@@ -161,7 +161,7 @@ func declarationError(declared string, resolved Provider) error {
 				"Please remove the field or set it to '%s'.",
 			StatusNone, resolved.Type, resolved.Type)
 
-	case resolved.Type == "":
+	case resolved.IsStatic():
 		return fmt.Errorf(
 			"Invalid providerType '%s'. The nodes of this group run in no cloud. "+
 				"Please remove the field or set it to '%s'.",
@@ -194,8 +194,8 @@ func allProviders(ctx context.Context, r client.Reader) ([]Provider, error) {
 	secrets := &corev1.SecretList{}
 
 	if err := r.List(ctx, secrets,
-		client.InNamespace(SecretNamespace),
-		client.HasLabels{SecretLabel},
+		client.InNamespace(RegistrationSecretNamespace),
+		client.HasLabels{RegistrationSecretLabel},
 	); err != nil {
 		return nil, fmt.Errorf("list cloud provider registration secrets: %w", err)
 	}
@@ -227,7 +227,7 @@ func clusterProviderType(ctx context.Context, r client.Reader) (string, error) {
 	err := r.Get(
 		ctx,
 		types.NamespacedName{
-			Namespace: SecretNamespace,
+			Namespace: clusterConfigSecretNamespace,
 			Name:      clusterConfigSecretName,
 		},
 		secret,

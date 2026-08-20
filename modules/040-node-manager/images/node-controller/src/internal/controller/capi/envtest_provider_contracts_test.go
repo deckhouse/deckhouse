@@ -251,7 +251,7 @@ var _ = Describe("shipped provider contracts", Ordered, func() {
 
 		discovery := &corev1.Secret{}
 		Expect(k8sClient.Get(suiteCtx, types.NamespacedName{
-			Namespace: cloudprovider.SecretNamespace, Name: cloudprovider.SecretNamePrefix,
+			Namespace: cloudprovider.RegistrationSecretNamespace, Name: cloudprovider.RegistrationSecretNamePrefix,
 		}, discovery)).To(Succeed())
 		discovery.Data["type"] = jsonBytes(p.name)
 		discovery.Data["instanceClassKind"] = []byte(p.instanceClassKind)
@@ -302,7 +302,7 @@ var _ = Describe("shipped provider contracts", Ordered, func() {
 
 		discovery := &corev1.Secret{}
 		Expect(k8sClient.Get(suiteCtx, types.NamespacedName{
-			Namespace: cloudprovider.SecretNamespace, Name: cloudprovider.SecretNamePrefix,
+			Namespace: cloudprovider.RegistrationSecretNamespace, Name: cloudprovider.RegistrationSecretNamePrefix,
 		}, discovery)).To(Succeed())
 		discovery.Data["type"] = jsonBytes("dvp")
 		discovery.Data["instanceClassKind"] = []byte("DVPInstanceClass")
