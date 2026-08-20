@@ -72,6 +72,8 @@ module "snat" {
   external_network_type = local.external_network_type
   external_address      = var.providerClusterConfiguration.edgeGateway.externalIP
   external_port         = var.providerClusterConfiguration.edgeGateway.externalPort
+
+  depends_on = [module.network]
 }
 
 module "dnat_bastion" {
@@ -87,6 +89,8 @@ module "dnat_bastion" {
   external_port         = local.dnat_bastion_external_port
   external_network_name = local.external_network_name
   external_network_type = local.external_network_type
+
+  depends_on = [module.network]
 }
 
 
@@ -99,4 +103,6 @@ module "firewall" {
   edge_gateway_type     = var.providerClusterConfiguration.edgeGateway.type
   internal_network_name = var.providerClusterConfiguration.mainNetwork
   internal_network_cidr = var.providerClusterConfiguration.internalNetworkCIDR
+
+  depends_on = [module.network]
 }
