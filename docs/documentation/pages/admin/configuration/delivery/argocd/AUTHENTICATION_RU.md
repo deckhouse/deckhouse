@@ -61,7 +61,7 @@ EOF
 
 ```bash
 ARGOCD_USER=<USER_NAME>
-ARGOCD_PASS=$(echo "<USER_PASSWORD>" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0)
+ARGOCD_PASS=$(echo -n '<USER_PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0)
 d8 k -n argocd patch secret argocd-secret -p "{\"data\":{\"accounts.$ARGOCD_USER.password\":\"$ARGOCD_PASS\"}}"
 ```
 
