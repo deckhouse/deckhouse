@@ -246,8 +246,6 @@ function wait_update_ready() {
     fi
   done
 
-  write_deckhouse_logs
-
   return 1
 }
 
