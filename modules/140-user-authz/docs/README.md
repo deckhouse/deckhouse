@@ -570,6 +570,7 @@ read-write:
     - deckhouse.io/groups
     - deckhouse.io/nodeusers
     - deckhouse.io/sshcredentials
+    - deckhouse.io/useraccounts
     - deckhouse.io/useroperations
     - deckhouse.io/users
     - infrastructure.cluster.x-k8s.io/staticmachinetemplates
