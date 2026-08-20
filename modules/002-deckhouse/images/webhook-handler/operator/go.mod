@@ -4,7 +4,7 @@ go 1.26.4
 
 require (
 	github.com/deckhouse/deckhouse/pkg/log v0.2.0
-	github.com/flant/shell-operator v1.20.3-0.20260820080020-f1e82137a083
+	github.com/flant/shell-operator v1.20.3
 	github.com/stretchr/testify v1.11.1
 	k8s.io/api v0.34.8
 	k8s.io/apiextensions-apiserver v0.34.8
@@ -26,7 +26,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0 // indirect
-	github.com/deckhouse/module-sdk v0.11.1 // indirect
+	github.com/deckhouse/module-sdk v0.12.4 // indirect
 	github.com/emicklei/go-restful/v3 v3.13.0 // indirect
 	github.com/ettle/strcase v0.2.0 // indirect
 	github.com/evanphx/json-patch/v5 v5.9.11 // indirect

@@ -38,8 +38,8 @@ github.com/deckhouse/deckhouse/pkg/log v0.2.0 h1:6tmZQLwNb1o/hP1gzJQBjcwfA/bubbg
 github.com/deckhouse/deckhouse/pkg/log v0.2.0/go.mod h1:pbAxTSDcPmwyl3wwKDcEB3qdxHnRxqTV+J0K+sha8bw=
 github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0 h1:xZvbKuexrSQGEw6CB4n3UC7XbOb9QNLbm8UhcGZ2R1I=
 github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0/go.mod h1:Rz++SzCLkFW03WGgftnn91TimGU2shiKb5S/YuxcBuE=
-github.com/deckhouse/module-sdk v0.11.1 h1:dMhL08TbKNhtBdI+1eVVk7iR2OnRp4mSoeyEMg6uVtQ=
-github.com/deckhouse/module-sdk v0.11.1/go.mod h1:v3pnOUIY8hCv7qQ5YaffiAYKj5oH8WBonG614KvRPXw=
+github.com/deckhouse/module-sdk v0.12.4 h1:f76t70HHz5ft9nfx2Nj+mrOaekbwXe5icBlecz4M08w=
+github.com/deckhouse/module-sdk v0.12.4/go.mod h1:X+o+eFGsfApWJ3n6SqaAw/9Oifrhy2djeG4Inq8umaw=
 github.com/docker/go-units v0.4.0/go.mod h1:fgPhTUdO+D/Jk86RDLlptpiXQzgHJF7gydDDbaIK4Dk=
 github.com/emicklei/go-restful/v3 v3.13.0 h1:C4Bl2xDndpU6nJ4bc1jXd+uTmYPVUwkD6bFY/oTyCes=
 github.com/emicklei/go-restful/v3 v3.13.0/go.mod h1:6n3XBCmQQb25CM2LCACGz8ukIrRry+4bhvbpWn3mrbc=
@@ -55,8 +55,8 @@ github.com/flant/go-openapi-validate v0.19.12-flant.0 h1:xk6kvc9fHKMgUdB6J7kbpbL
 github.com/flant/go-openapi-validate v0.19.12-flant.0/go.mod h1:Rzou8hA/CBw8donlS6WNEUQupNvUZ0waH08tGe6kAQ4=
 github.com/flant/kube-client v1.9.1 h1:B5Sa++5arl3N/KBdL1KNMlUBtzQXKz1o2FIiFb4X+VA=
 github.com/flant/kube-client v1.9.1/go.mod h1:jAQ01+f5Q8UJJ4RYZlk5xqoA+OOalpr/QJ3e3Q/saqw=
-github.com/flant/shell-operator v1.20.3-0.20260820080020-f1e82137a083 h1:dZ/AE0bdDwEA142m4UrmqwOTSJup00UzBsbrmms18M0=
-github.com/flant/shell-operator v1.20.3-0.20260820080020-f1e82137a083/go.mod h1:CMQ7oz6BbfYB+LO+huREDC4m0nfBbIkhFrGgUHjebyQ=
+github.com/flant/shell-operator v1.20.3 h1:yna0aKNw07KmNaSLrknVF/loE2ruZu/ubW4aQsvQ3Dc=
+github.com/flant/shell-operator v1.20.3/go.mod h1:J720QPLkm/RDzMje8JePGkPUnHOI+4XNOA5/qiJtNfQ=
 github.com/fsnotify/fsnotify v1.9.0 h1:2Ml+OJNzbYCTzsxtv8vKSFD9PbJjmhYF14k/jKC7S9k=
 github.com/fsnotify/fsnotify v1.9.0/go.mod h1:8jBTzvmWwFyi3Pb8djgCCO5IBqzKJ/Jwo8TRcHyHii0=
 github.com/fxamacker/cbor/v2 v2.9.2 h1:X4Ksno9+x3cz0TZv69ec1hxP/+tymuR8PXQJyDwfh78=
