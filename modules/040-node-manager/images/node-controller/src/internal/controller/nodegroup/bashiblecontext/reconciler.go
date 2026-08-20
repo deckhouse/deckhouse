@@ -58,7 +58,7 @@ func (r *Reconciler) Assemble(ctx context.Context) error {
 	nodeGroups := make([]map[string]interface{}, 0, len(ngList.Items))
 	for i := range ngList.Items {
 		ng := &ngList.Items[i]
-		provider := pCatalog.Resolve(ng)
+		provider := pCatalog.ByNodeGroup(ng)
 
 		resolved, errStr, err := r.DerivedStatus.ResolveNodeGroup(ctx, ng, provider)
 		if err != nil {

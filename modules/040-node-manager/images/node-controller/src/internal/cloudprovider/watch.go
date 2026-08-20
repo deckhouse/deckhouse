@@ -156,7 +156,7 @@ func nodeGroupRequests(ctx context.Context, r client.Reader, carried ...Provider
 
 	for i := range ngList.Items {
 		ng := &ngList.Items[i]
-		if provider := changed.Resolve(ng); !provider.IsStatic() {
+		if provider := changed.ByNodeGroup(ng); !provider.IsStatic() {
 			ret = append(ret, reconcile.Request{NamespacedName: types.NamespacedName{Name: ng.Name}})
 		}
 	}

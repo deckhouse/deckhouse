@@ -114,7 +114,7 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 	if err != nil {
 		if errors.IsNotFound(err) {
 			logger.V(1).Info("NodeGroup not found, skipping", "name", req.Name)
-			cloudprovider.ClearProviderMetrics(req.Name)
+			cloudprovider.ClearValidateNodeGroupMetrics(req.Name)
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
@@ -128,9 +128,9 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 		return ctrl.Result{}, err
 	}
 
-	provider, err := pCatalog.ForNodeGroup(ng)
-	cloudprovider.TrackProviderMetrics(ng, provider, err)
-	if err != nil {
+	provider := pCatalog.ByNodeGroup(ng)
+	cloudprovider.TrackValidateNodeGroupMetrics(ng, provider)
+	if err := cloudprovider.ValidateNodeGroup(ng, provider); err != nil {
 		logger.Error(err, "failed to resolve the cloud provider of the NodeGroup", "nodeGroup", ng.Name)
 		if patchErr := r.patchStatusError(ctx, ng, err.Error()); patchErr != nil {
 			logger.Error(patchErr, "failed to publish the provider error in the nodegroup status", "nodeGroup", ng.Name)

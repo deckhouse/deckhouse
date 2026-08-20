@@ -250,7 +250,7 @@ func zonelessNodeGroup() *v1.NodeGroup {
 }
 
 func TestZonesCount(t *testing.T) {
-	// Which provider a NodeGroup resolves to is cloudprovider.TestForNodeGroup; here it arrives
+	// Which provider a NodeGroup resolves to is cloudprovider.TestValidateNodeGroupProvider; here it arrives
 	// already resolved, and the only question left is whose zones win.
 	tests := []struct {
 		name     string

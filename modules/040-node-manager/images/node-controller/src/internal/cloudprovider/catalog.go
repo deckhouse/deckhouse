@@ -82,20 +82,8 @@ func (c Catalog) All() []Provider {
 	return c.all
 }
 
-// ForNodeGroup returns the provider a NodeGroup runs on and the reason its spec.providerType is
-// wrong when it is. It performs no I/O.
-//
-// The provider is returned whether or not the declaration holds: the nodes run where they run, and
-// a NodeGroup being torn down still needs the provider whose objects it left behind.
-func (c Catalog) ForNodeGroup(ng *v1.NodeGroup) (Provider, error) {
-	provider := c.Resolve(ng)
-	return provider, declarationError(ng.Spec.ProviderType, provider)
-}
-
-// Resolve returns the provider a NodeGroup runs on, without a verdict on its spec.providerType.
-//
-// It exists for the current migration only and will be deleted.
-func (c Catalog) Resolve(ng *v1.NodeGroup) Provider {
+// ByNodeGroup returns the provider a NodeGroup.
+func (c Catalog) ByNodeGroup(ng *v1.NodeGroup) Provider {
 	// A Static node lives outside every cloud.
 	if ng.Spec.NodeType == v1.NodeTypeStatic {
 		return Provider{}
@@ -137,44 +125,6 @@ func (c Catalog) InstanceClassGVKs() []schema.GroupVersionKind {
 		return strings.Compare(a.Kind, b.Kind)
 	})
 	return ret
-}
-
-// declarationError reports why a NodeGroup's spec.providerType disagrees with the provider it
-// resolved to, or nil when the two agree.
-//
-// The field declares an answer, it does not pick one: leaving it empty is always correct, and
-// naming anything other than the resolved provider is a statement about the NodeGroup that a
-// retry cannot fix.
-func declarationError(ngPType string, provider Provider) error {
-	// An empty field declares nothing, and declaring nothing is always correct.
-	if ngPType == "" {
-		return nil
-	}
-
-	switch {
-	case isStatic(ngPType):
-		if provider.IsStatic() {
-			return nil
-		}
-		return fmt.Errorf(
-			"Invalid providerType '%s'. The nodes of this group run in the '%s' cloud. "+
-				"Please remove the field or set it to '%s'.",
-			ngPType, provider.Type, provider.Type)
-
-	case provider.IsStatic():
-		return fmt.Errorf(
-			"Invalid providerType '%s'. The nodes of this group run in no cloud. "+
-				"Please remove the field or set it to 'None'.",
-			ngPType)
-
-	case !strings.EqualFold(ngPType, provider.Type):
-		return fmt.Errorf(
-			"Invalid providerType '%s'. Expected '%s'. Please update the NodeGroup to name the "+
-				"cloud provider its nodes run in.",
-			ngPType, provider.Type)
-	}
-
-	return nil
 }
 
 // RegisteredInstanceClassGVKs is InstanceClassGVKs over the registrations alone: it answers which

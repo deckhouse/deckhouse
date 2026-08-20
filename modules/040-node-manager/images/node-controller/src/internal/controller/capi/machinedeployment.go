@@ -158,8 +158,8 @@ func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	provider, err := pCatalog.ForNodeGroup(ng)
-	if err != nil {
+	provider := pCatalog.ByNodeGroup(ng)
+	if err := cloudprovider.ValidateNodeGroup(ng, provider); err != nil {
 		logger.Error(err, "failed to resolve the cloud provider of the NodeGroup", "nodeGroup", ng.Name)
 		return ctrl.Result{}, err
 	}

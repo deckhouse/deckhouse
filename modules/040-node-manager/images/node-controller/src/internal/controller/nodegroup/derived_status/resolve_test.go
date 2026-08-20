@@ -95,7 +95,7 @@ func testProvider(t *testing.T, s *Service, ng *v1.NodeGroup) cloudprovider.Prov
 	t.Helper()
 	pCatalog, err := cloudprovider.GetCatalog(context.Background(), s.Client)
 	require.NoError(t, err)
-	provider, _ := pCatalog.ForNodeGroup(ng)
+	provider := pCatalog.ByNodeGroup(ng)
 	return provider
 }
 

@@ -366,7 +366,7 @@ func TestReconcile_CloudValidationErrorPublished(t *testing.T) {
 
 // A NodeGroup whose provider cannot be resolved stops the pass before any status is computed:
 // everything below the resolution depends on it. Which declarations hold is
-// cloudprovider.TestForNodeGroup.
+// cloudprovider.TestValidateNodeGroupProvider.
 func TestReconcile_UnresolvedProviderFailsTheReconcile(t *testing.T) {
 	registration := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
