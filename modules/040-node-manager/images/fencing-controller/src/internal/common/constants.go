@@ -50,3 +50,13 @@ const (
 	EnvPodName      = "POD_NAME"
 	EnvLogLevel     = "LOG_LEVEL"
 )
+
+// ConditionTypeConfigurationError reports that the incident cannot be processed
+// because its SLA profile is unusable. Conditions sit on top of a phase instead
+// of replacing it, so the state machine keeps the phase it reached.
+const ConditionTypeConfigurationError = "ConfigurationError"
+
+const (
+	ReasonProfileUnavailable = "ProfileUnavailable"
+	ReasonProfileResolved    = "ProfileResolved"
+)

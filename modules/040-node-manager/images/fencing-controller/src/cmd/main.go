@@ -31,9 +31,11 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 
 	v1alpha1 "fencing-controller/api/node-manager.deckhouse.io/v1alpha1"
+	"fencing-controller/internal/adapters/fencingstate"
 	"fencing-controller/internal/common"
 	"fencing-controller/internal/config"
 	"fencing-controller/internal/controllers/fencingfailednodestate"
+	"fencing-controller/internal/usecase/profile"
 )
 
 const (
@@ -86,7 +88,9 @@ func runManager(ctx context.Context, cfg *config.Config, logger *log.Logger) err
 		return fmt.Errorf("create manager: %w", err)
 	}
 
-	if err := fencingfailednodestate.New(mgr.GetClient()).SetupWithManager(mgr); err != nil {
+	profiles := profile.NewResolver(fencingstate.NewProfiles(mgr.GetClient()))
+
+	if err := fencingfailednodestate.New(mgr.GetClient(), profiles).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("set up %s controller: %w", common.ControllerName, err)
 	}
 

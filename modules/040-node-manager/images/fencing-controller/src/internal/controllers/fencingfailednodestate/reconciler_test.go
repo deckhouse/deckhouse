@@ -19,12 +19,14 @@ package fencingfailednodestate
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	equality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -34,70 +36,249 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	v1alpha1 "fencing-controller/api/node-manager.deckhouse.io/v1alpha1"
+	"fencing-controller/internal/common"
+	"fencing-controller/internal/domain/fsm"
+	"fencing-controller/internal/usecase/profile"
 )
 
 const nodeName = "worker-3"
 
+// observedAt is the moment every reconcile below runs at, and the timings are
+// those of the medium profile: status timestamps are stored with second
+// precision, so the ages below stay whole seconds.
 var (
-	detectedAt   = metav1.Date(2026, time.June, 2, 15, 0, 1, 0, time.UTC)
-	quorumLostAt = metav1.Date(2026, time.June, 2, 15, 0, 0, 0, time.UTC)
-	heartbeatAt  = metav1.Date(2026, time.June, 2, 15, 0, 2, 0, time.UTC)
+	observedAt = time.Date(2026, time.June, 2, 15, 0, 30, 0, time.UTC)
+
+	medium = fsm.Params{FallbackTTL: 4 * time.Second, EvacuationDelay: 6 * time.Second}
 )
 
-func TestReconcileObservesFailedStateWithoutTouchingIt(t *testing.T) {
-	state := failedState()
-
-	c := newClient(t, state)
-
-	res, err := New(c).Reconcile(t.Context(), request(nodeName))
-	if err != nil {
-		t.Fatalf("reconcile: %v", err)
-	}
-
-	if res != (ctrl.Result{}) {
-		t.Errorf("reconcile requeued %+v, this stage reacts to watch events only", res)
-	}
-
-	assertUnchanged(t, c, state)
-}
-
-func TestReconcileObservesEveryStatusShape(t *testing.T) {
-	both := failedState()
-	both.Status.Phase = v1alpha1.PhaseFallbackAlive
-	both.Status.Fallback = &v1alpha1.FencingFailedNodeStateFallback{
-		Active:                   true,
-		LastHeartbeatAt:          &heartbeatAt,
-		QuorumLostAt:             &quorumLostAt,
-		HeartbeatIntervalSeconds: 1,
-	}
-
-	none := failedState()
-	none.Status = v1alpha1.FencingFailedNodeStateStatus{}
-
-	for name, state := range map[string]*v1alpha1.FencingFailedNodeState{
-		"failed and fallback": both,
-		"status not written":  none,
+func TestReconcileAdvancesThePhase(t *testing.T) {
+	for name, tc := range map[string]struct {
+		phase            v1alpha1.FencingFailedNodeStatePhase
+		failedAgo        time.Duration
+		heartbeatAgo     time.Duration
+		wantPhase        v1alpha1.FencingFailedNodeStatePhase
+		wantRequeueAfter time.Duration
+	}{
+		"failure inside the delay is suspected": {
+			failedAgo:        2 * time.Second,
+			wantPhase:        v1alpha1.PhaseSuspected,
+			wantRequeueAfter: 4 * time.Second,
+		},
+		"failure past the delay is ready to evict": {
+			failedAgo: 20 * time.Second,
+			wantPhase: v1alpha1.PhaseReadyToEvict,
+		},
+		"a fresh heartbeat holds the eviction back": {
+			failedAgo:        20 * time.Second,
+			heartbeatAgo:     time.Second,
+			wantPhase:        v1alpha1.PhaseFallbackAlive,
+			wantRequeueAfter: 3 * time.Second,
+		},
+		"a stale heartbeat releases it": {
+			phase:        v1alpha1.PhaseFallbackAlive,
+			failedAgo:    20 * time.Second,
+			heartbeatAgo: 20 * time.Second,
+			wantPhase:    v1alpha1.PhaseReadyToEvict,
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			c := newClient(t, state)
+			incident := failedState()
+			incident.Status.Phase = tc.phase
+			incident.Status.Failed.DetectedAt = metav1.NewTime(observedAt.Add(-tc.failedAgo))
 
-			if _, err := New(c).Reconcile(t.Context(), request(nodeName)); err != nil {
+			if tc.heartbeatAgo > 0 {
+				at := metav1.NewTime(observedAt.Add(-tc.heartbeatAgo))
+				incident.Status.Fallback = &v1alpha1.FencingFailedNodeStateFallback{
+					Active:                   true,
+					LastHeartbeatAt:          &at,
+					HeartbeatIntervalSeconds: 1,
+				}
+			}
+
+			h := newHarness(t, incident)
+
+			res, err := h.reconcile()
+			if err != nil {
 				t.Fatalf("reconcile: %v", err)
 			}
 
-			assertUnchanged(t, c, state)
+			if res.RequeueAfter != tc.wantRequeueAfter {
+				t.Errorf("requeued after %s, want %s", res.RequeueAfter, tc.wantRequeueAfter)
+			}
+
+			got := h.get()
+
+			if got.Status.Phase != tc.wantPhase {
+				t.Errorf("phase is %q, want %q", got.Status.Phase, tc.wantPhase)
+			}
+
+			assertAgentSectionsUntouched(t, incident, got)
+			assertCondition(t, got, metav1.ConditionFalse, common.ReasonProfileResolved)
 		})
 	}
 }
 
+// TestReconcileRestoresTheMachineFromThePhase covers a controller that restarted
+// mid incident: the phase it finds is where the machine continues from.
+func TestReconcileRestoresTheMachineFromThePhase(t *testing.T) {
+	incident := failedState()
+	incident.Status.Phase = v1alpha1.PhaseReadyToEvict
+	incident.Status.Failed.DetectedAt = metav1.NewTime(observedAt.Add(-20 * time.Second))
+
+	h := newHarness(t, incident)
+
+	if _, err := h.reconcile(); err != nil {
+		t.Fatalf("reconcile: %v", err)
+	}
+
+	// The eviction path is not implemented yet, so nothing moves the incident on.
+	if got := h.get().Status.Phase; got != v1alpha1.PhaseReadyToEvict {
+		t.Errorf("phase is %q, want the observed %q", got, v1alpha1.PhaseReadyToEvict)
+	}
+}
+
+func TestReconcileRejectsAPhaseItCannotRestore(t *testing.T) {
+	incident := failedState()
+	incident.Status.Phase = "Draining"
+
+	if _, err := newHarness(t, incident).reconcile(); err == nil {
+		t.Error("reconcile of an unknown phase succeeded, want an error")
+	}
+}
+
+// TestReconcileLeavesTheHealthyPhaseUnwritten covers the object the agent created
+// before it wrote any evidence: Healthy is not a phase a live object can carry.
+func TestReconcileLeavesTheHealthyPhaseUnwritten(t *testing.T) {
+	incident := failedState()
+	incident.Status = v1alpha1.FencingFailedNodeStateStatus{}
+
+	h := newHarness(t, incident)
+
+	if _, err := h.reconcile(); err != nil {
+		t.Fatalf("reconcile: %v", err)
+	}
+
+	if got := h.get().Status.Phase; got != "" {
+		t.Errorf("phase is %q, want it left unwritten", got)
+	}
+}
+
+// TestReconcileReportsAnUnusableProfile is the degraded configuration case: the
+// incident keeps the phase it had and never reaches the eviction path.
+func TestReconcileReportsAnUnusableProfile(t *testing.T) {
+	missing := fmt.Errorf("%w: fencingslaprofile %q does not exist", profile.ErrConfiguration, "critical")
+
+	for name, phase := range map[string]v1alpha1.FencingFailedNodeStatePhase{
+		"first seen": "",
+		"suspected":  v1alpha1.PhaseSuspected,
+	} {
+		t.Run(name, func(t *testing.T) {
+			incident := failedState()
+			incident.Status.Phase = phase
+			// Old enough that resolved timings would send it to ReadyToEvict.
+			incident.Status.Failed.DetectedAt = metav1.NewTime(observedAt.Add(-20 * time.Second))
+
+			h := newHarness(t, incident)
+			h.profiles.err = missing
+
+			if _, err := h.reconcile(); !errors.Is(err, profile.ErrConfiguration) {
+				t.Fatalf("reconcile returned %v, want the configuration error so the incident is requeued", err)
+			}
+
+			got := h.get()
+
+			if got.Status.Phase != phase {
+				t.Errorf("phase moved from %q to %q while the profile was unusable", phase, got.Status.Phase)
+			}
+
+			assertCondition(t, got, metav1.ConditionTrue, common.ReasonProfileUnavailable)
+			assertAgentSectionsUntouched(t, incident, got)
+		})
+	}
+}
+
+// TestReconcileClearsTheConditionOnceTheProfileIsBack checks the blocker does not
+// outlive its cause.
+func TestReconcileClearsTheConditionOnceTheProfileIsBack(t *testing.T) {
+	incident := failedState()
+	incident.Status.Failed.DetectedAt = metav1.NewTime(observedAt.Add(-2 * time.Second))
+
+	h := newHarness(t, incident)
+	h.profiles.err = fmt.Errorf("%w: fencingslaprofile %q does not exist", profile.ErrConfiguration, "critical")
+
+	if _, err := h.reconcile(); err == nil {
+		t.Fatal("reconcile succeeded while the profile was missing")
+	}
+
+	assertCondition(t, h.get(), metav1.ConditionTrue, common.ReasonProfileUnavailable)
+
+	h.profiles.err = nil
+
+	if _, err := h.reconcile(); err != nil {
+		t.Fatalf("reconcile after the profile came back: %v", err)
+	}
+
+	got := h.get()
+
+	assertCondition(t, got, metav1.ConditionFalse, common.ReasonProfileResolved)
+
+	if got.Status.Phase != v1alpha1.PhaseSuspected {
+		t.Errorf("phase is %q, want %q", got.Status.Phase, v1alpha1.PhaseSuspected)
+	}
+}
+
+// TestReconcileKeepsTransientProfileErrorsRetryable checks an unavailable API is
+// not written to the object as a configuration problem of the operator.
+func TestReconcileKeepsTransientProfileErrorsRetryable(t *testing.T) {
+	apiDown := apierrors.NewServiceUnavailable("etcd leader changed")
+
+	h := newHarness(t, failedState())
+	h.profiles.err = apiDown
+
+	if _, err := h.reconcile(); !errors.Is(err, apiDown) {
+		t.Fatalf("reconcile returned %v, want the API error so controller-runtime retries with backoff", err)
+	}
+
+	if h.statusPatches != 0 {
+		t.Errorf("reconcile wrote the status %d times for a transient failure, want none", h.statusPatches)
+	}
+}
+
+// TestReconcileWritesNothingTwice keeps a settled incident from generating an
+// endless stream of identical status patches.
+func TestReconcileWritesNothingTwice(t *testing.T) {
+	incident := failedState()
+	incident.Status.Failed.DetectedAt = metav1.NewTime(observedAt.Add(-2 * time.Second))
+
+	h := newHarness(t, incident)
+
+	for i := range 3 {
+		if _, err := h.reconcile(); err != nil {
+			t.Fatalf("reconcile %d: %v", i+1, err)
+		}
+	}
+
+	if h.statusPatches != 1 {
+		t.Errorf("three reconciles of one unchanged incident wrote the status %d times, want once", h.statusPatches)
+	}
+}
+
 func TestReconcileTreatsMissingObjectAsHealthy(t *testing.T) {
-	res, err := New(newClient(t)).Reconcile(t.Context(), request(nodeName))
+	h := newHarness(t)
+
+	res, err := h.reconcile()
 	if err != nil {
 		t.Fatalf("reconcile: %v", err)
 	}
 
 	if res != (ctrl.Result{}) {
 		t.Errorf("reconcile requeued %+v for a missing object", res)
+	}
+
+	// The incident is over, so its resolved timings must not be kept forever.
+	if len(h.profiles.forgotten) != 1 || h.profiles.forgotten[0] != nodeName {
+		t.Errorf("forgot %v, want the timings of %q to be dropped", h.profiles.forgotten, nodeName)
 	}
 }
 
@@ -113,7 +294,7 @@ func TestReconcileReturnsAPIErrors(t *testing.T) {
 		}).
 		Build()
 
-	if _, err := New(c).Reconcile(t.Context(), request(nodeName)); !errors.Is(err, apiDown) {
+	if _, err := New(c, &stubProfiles{}).Reconcile(t.Context(), request(nodeName)); !errors.Is(err, apiDown) {
 		t.Fatalf("reconcile returned %v, want the API error so controller-runtime retries with backoff", err)
 	}
 }
@@ -160,11 +341,17 @@ func TestFormatTime(t *testing.T) {
 	}
 }
 
+var (
+	detectedAt  = metav1.Date(2026, time.June, 2, 15, 0, 1, 0, time.UTC)
+	heartbeatAt = metav1.Date(2026, time.June, 2, 15, 0, 2, 0, time.UTC)
+)
+
 func failedState() *v1alpha1.FencingFailedNodeState {
 	return &v1alpha1.FencingFailedNodeState{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:       nodeName,
 			Generation: 1,
+			UID:        types.UID("aaaabbbb-1111-2222-3333-444455556666"),
 			OwnerReferences: []metav1.OwnerReference{{
 				APIVersion: corev1.SchemeGroupVersion.String(),
 				Kind:       "Node",
@@ -177,7 +364,6 @@ func failedState() *v1alpha1.FencingFailedNodeState {
 			ProfileRef: v1alpha1.ProfileRef{Name: v1alpha1.ProfileCritical},
 		},
 		Status: v1alpha1.FencingFailedNodeStateStatus{
-			Phase: v1alpha1.PhaseSuspected,
 			Failed: &v1alpha1.FencingFailedNodeStateFailed{
 				DetectedAt: detectedAt,
 				DetectedBy: "worker-1",
@@ -189,16 +375,28 @@ func failedState() *v1alpha1.FencingFailedNodeState {
 	}
 }
 
-func newClient(t *testing.T, objects ...client.Object) client.Client {
+// harness wires the reconciler to an API that rejects every write except the
+// status patch the controller owns, and counts those patches.
+type harness struct {
+	t             *testing.T
+	client        client.Client
+	reconciler    *Reconciler
+	profiles      *stubProfiles
+	statusPatches int
+}
+
+func newHarness(t *testing.T, objects ...client.Object) *harness {
 	t.Helper()
 
+	h := &harness{t: t, profiles: &stubProfiles{params: medium}}
+
 	reject := func(verb string) error {
-		t.Errorf("reconcile issued %s, this stage must not write to the cluster", verb)
+		t.Errorf("reconcile issued %s, the controller owns the status subresource only", verb)
 
 		return nil
 	}
 
-	return fake.NewClientBuilder().
+	h.client = fake.NewClientBuilder().
 		WithScheme(newScheme(t)).
 		WithObjects(objects...).
 		WithStatusSubresource(&v1alpha1.FencingFailedNodeState{}).
@@ -221,11 +419,60 @@ func newClient(t *testing.T, objects ...client.Object) client.Client {
 			SubResourceUpdate: func(context.Context, client.Client, string, client.Object, ...client.SubResourceUpdateOption) error {
 				return reject("status update")
 			},
-			SubResourcePatch: func(context.Context, client.Client, string, client.Object, client.Patch, ...client.SubResourcePatchOption) error {
-				return reject("status patch")
+			SubResourcePatch: func(
+				ctx context.Context,
+				c client.Client,
+				subResource string,
+				obj client.Object,
+				patch client.Patch,
+				opts ...client.SubResourcePatchOption,
+			) error {
+				h.statusPatches++
+
+				return c.SubResource(subResource).Patch(ctx, obj, patch, opts...)
 			},
 		}).
 		Build()
+
+	h.reconciler = New(h.client, h.profiles)
+	h.reconciler.now = func() time.Time { return observedAt }
+
+	return h
+}
+
+func (h *harness) reconcile() (ctrl.Result, error) {
+	h.t.Helper()
+
+	return h.reconciler.Reconcile(h.t.Context(), request(nodeName))
+}
+
+func (h *harness) get() *v1alpha1.FencingFailedNodeState {
+	h.t.Helper()
+
+	var got v1alpha1.FencingFailedNodeState
+	if err := h.client.Get(h.t.Context(), types.NamespacedName{Name: nodeName}, &got); err != nil {
+		h.t.Fatalf("get after reconcile: %v", err)
+	}
+
+	return &got
+}
+
+type stubProfiles struct {
+	params    fsm.Params
+	err       error
+	forgotten []string
+}
+
+func (s *stubProfiles) Resolve(context.Context, *v1alpha1.FencingFailedNodeState) (fsm.Params, error) {
+	if s.err != nil {
+		return fsm.Params{}, s.err
+	}
+
+	return s.params, nil
+}
+
+func (s *stubProfiles) Forget(node string) {
+	s.forgotten = append(s.forgotten, node)
 }
 
 func newScheme(t *testing.T) *runtime.Scheme {
@@ -239,20 +486,47 @@ func newScheme(t *testing.T) *runtime.Scheme {
 	return s
 }
 
-func assertUnchanged(t *testing.T, c client.Client, want *v1alpha1.FencingFailedNodeState) {
+// assertAgentSectionsUntouched checks the controller stayed out of the parts of
+// the object other writers own: the immutable spec and the evidence sections.
+func assertAgentSectionsUntouched(t *testing.T, before, after *v1alpha1.FencingFailedNodeState) {
 	t.Helper()
 
-	var got v1alpha1.FencingFailedNodeState
-	if err := c.Get(t.Context(), types.NamespacedName{Name: want.Name}, &got); err != nil {
-		t.Fatalf("get after reconcile: %v", err)
+	if !equality.Semantic.DeepEqual(before.Spec, after.Spec) {
+		t.Errorf("spec changed:\nbefore %+v\nafter  %+v", before.Spec, after.Spec)
 	}
 
-	if got.ResourceVersion != want.ResourceVersion {
-		t.Errorf("resourceVersion changed from %q to %q", want.ResourceVersion, got.ResourceVersion)
+	if !equality.Semantic.DeepEqual(before.Status.Failed, after.Status.Failed) {
+		t.Errorf("failed section changed:\nbefore %+v\nafter  %+v", before.Status.Failed, after.Status.Failed)
 	}
 
-	if !equality.Semantic.DeepEqual(want, &got) {
-		t.Errorf("object changed:\nbefore %+v\nafter  %+v", want, &got)
+	if !equality.Semantic.DeepEqual(before.Status.Fallback, after.Status.Fallback) {
+		t.Errorf("fallback section changed:\nbefore %+v\nafter  %+v", before.Status.Fallback, after.Status.Fallback)
+	}
+}
+
+func assertCondition(
+	t *testing.T,
+	incident *v1alpha1.FencingFailedNodeState,
+	want metav1.ConditionStatus,
+	wantReason string,
+) {
+	t.Helper()
+
+	got := meta.FindStatusCondition(incident.Status.Conditions, common.ConditionTypeConfigurationError)
+	if got == nil {
+		t.Fatalf("condition %s is not set", common.ConditionTypeConfigurationError)
+	}
+
+	if got.Status != want {
+		t.Errorf("condition %s is %q, want %q", got.Type, got.Status, want)
+	}
+
+	if got.Reason != wantReason {
+		t.Errorf("condition %s has reason %q, want %q", got.Type, got.Reason, wantReason)
+	}
+
+	if got.ObservedGeneration != incident.Generation {
+		t.Errorf("condition %s observed generation %d, want %d", got.Type, got.ObservedGeneration, incident.Generation)
 	}
 }
 
