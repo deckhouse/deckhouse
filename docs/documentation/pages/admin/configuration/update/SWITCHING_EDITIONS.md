@@ -582,8 +582,7 @@ There are two ways to work with the DKP container image registry:
 {% alert level="warning" %}
 - Before proceeding, complete the preparatory steps described in the [Pre-switch preparation](#pre-switch-preparation) section.
 - This switching method must be performed only in `Unmanaged` mode. Make sure that the cluster uses the `registry` module. ModuleConfig `deckhouse` must contain the registry parameters of the previous DKP edition in `Unmanaged` mode. If this is not the case, perform the [migration to using the registry module](../registry/managing-interaction.html#migration-to-registry-management-format-using-the-registry-module) and switch the registry to `Unmanaged` mode.
-- This method is not applicable for managed Kubernetes (EKS, AKS, GKE) and for DKP CSE **below** 1.73.
-- Switching to CSE is only possible from the EE edition.
+- This method is not applicable for managed Kubernetes (EKS, AKS, GKE).
 {% endalert %}
 
 1. In ModuleConfig [`deckhouse`](/modules/deckhouse/configuration.html#parameters-registry), set `imagesRepo` to the target edition and `checkMode: Relax`:
@@ -698,7 +697,6 @@ There are two ways to work with the DKP container image registry:
 {% alert level="warning" %}
 - Before proceeding, complete the preparatory steps described in the [Pre-switch preparation](#pre-switch-preparation) section.
 - Before applying, make sure that the `registry` module is not used in the cluster. ModuleConfig `deckhouse` must not contain registry parameters. The `registry` module must be disabled. If this is not the case, perform the [migration to the deprecated registry management format (without the registry module)](../registry/managing-interaction.html#migration-to-the-deprecated-registry-management-format-without-the-registry-module).
-- Switching to CSE is only possible from the EE edition.
 {% endalert %}
 
 Choose the target edition:
