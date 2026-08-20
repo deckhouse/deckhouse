@@ -31,7 +31,7 @@ ARG IPA_IMAGE_NAME
 
 RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked <<EORUN
 set -euxo pipefail
-microdnf install -y ca-certificates curl coreutils
+microdnf install -y ca-certificates
 mkdir -p /ipa
 cd /ipa
 for ext in kernel initramfs; do
