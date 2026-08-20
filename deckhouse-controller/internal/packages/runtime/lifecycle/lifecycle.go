@@ -16,7 +16,6 @@ package lifecycle
 
 import (
 	"context"
-	"errors"
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 )
@@ -59,9 +58,18 @@ type Package struct {
 	cancels map[int]context.CancelCauseFunc // per-event child context cancels
 }
 
+// CancelCause is a reason a package context was cancelled. It answers to
+// context.Canceled, so generic cancellation checks keep working on the error a
+// cancelled task returns while the text still names the trigger.
+type CancelCause string
+
+func (c CancelCause) Error() string { return string(c) }
+
+func (c CancelCause) Is(target error) bool { return target == context.Canceled }
+
 // errVersionChanged is the cancellation cause when the whole context tree is
 // replaced because the package version changed (or a reload was forced).
-var errVersionChanged = errors.New("package version changed")
+var errVersionChanged = CancelCause("package version changed")
 
 // newContext creates or renews a context for the given event type.
 //

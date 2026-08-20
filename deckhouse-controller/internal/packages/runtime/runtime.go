@@ -113,9 +113,9 @@ const (
 
 // Cancellation causes reported by tasks whose context the runtime replaces.
 var (
-	errRescheduled     = errors.New("package rescheduled")
-	errPackageDisabled = errors.New("package disabled")
-	errPackageRemoved  = errors.New("package removed")
+	errRescheduled     = lifecycle.CancelCause("package rescheduled")
+	errPackageDisabled = lifecycle.CancelCause("package disabled")
+	errPackageRemoved  = lifecycle.CancelCause("package removed")
 )
 
 // Runtime orchestrates the full lifecycle of application packages: discovery,
