@@ -15,7 +15,6 @@
 package bootstrap
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"slices"
@@ -110,7 +109,7 @@ func TestEKSConfigWithoutClusterConfiguration(t *testing.T) {
 	}
 
 	declared := make([]phases.OperationPhase, 0)
-	for _, phase := range phases.PhasesFor(phases.OperationBootstrap, phaseClusterConfig(context.Background(), metaConfig)) {
+	for _, phase := range phases.PhasesFor(phases.OperationBootstrap, phaseClusterConfig(metaConfig, false)) {
 		declared = append(declared, phase.Phase)
 	}
 

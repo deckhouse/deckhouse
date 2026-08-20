@@ -660,3 +660,67 @@ func TestOSPartitionLabelsAreCaseSensitiveLikeTheNode(t *testing.T) {
 func nodeConfigWithSpec(spec string) string {
 	return "apiVersion: " + PayloadAPIVersion + "\nkind: " + NodeConfigKind + "\nspec:" + spec
 }
+
+// The node ANDs every field of a selector that is set, so the check has to
+// narrow on the same ones: a label that picks a single partition is not a
+// document that matches two devices, and refusing it ends the installation.
+func TestMountSelectorNarrowsOnWhatTheInventoryAnswers(t *testing.T) {
+	inv := &Inventory{
+		Disks: []InventoryDisk{
+			{Name: "sda", Size: 32212254720, State: "blank"},
+			{Name: "sdb", Size: 42949672960, State: "formatted", Partitions: []InventoryPartition{
+				{Name: "sdb1", Size: 21474836480, Label: "kubernetes-data", FSType: "ext4"},
+				{Name: "sdb2", Size: 21474836480, Label: "spare", FSType: "xfs"},
+			}},
+		},
+	}
+
+	cases := []struct {
+		name     string
+		selector string
+	}{
+		{"by label", "        label: kubernetes-data\n"},
+		{"by filesystem", "        fsType: ext4\n"},
+		{"by device name", "        name: sdb1\n"},
+		// The inventory carries no partition UUID, so nothing here can tell the
+		// two apart; the machine resolves it, and a check nobody can run is not
+		// an installation to end.
+		{"by a field the inventory does not carry", "        partUUID: 8f2b1a3c-0000-0000-0000-000000000000\n"},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			document := nodeConfigWithSpec(`
+  storage:
+    device: /dev/sda
+    mounts:
+    - name: kubernetes-data
+      partitionSelector:
+` + c.selector)
+
+			if err := CheckDocumentAgainstInventory(t.Context(), []byte(document), inv); err != nil {
+				t.Fatalf("the machine satisfies this document, got %v", err)
+			}
+		})
+	}
+}
+
+// The machine is not a node yet and nothing has authenticated it, so what it
+// answers is read up to a bound like every other body dhctl takes from it.
+func TestFetchInventoryReadsABoundedBody(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, `{"disks":[{"name":"sda","model":"`)
+		for range (inventoryResponseLimit / 1024) + 1 {
+			_, _ = io.WriteString(w, strings.Repeat("a", 1024))
+		}
+		_, _ = io.WriteString(w, `"}],"interfaces":[]}`)
+	}))
+	defer server.Close()
+
+	inventory, err := FetchInventory(t.Context(), strings.TrimPrefix(server.URL, "http://"))
+
+	if err == nil {
+		t.Fatalf("an unbounded answer was read whole, got %d disks", len(inventory.Disks))
+	}
+}

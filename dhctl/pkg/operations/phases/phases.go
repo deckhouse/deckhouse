@@ -260,16 +260,19 @@ func bootstrapNodes() []node {
 				{Name: InstallDeckhouseSubPhaseWait, includeIf: ifHasClusterConfiguration},
 			},
 		},
+		// Declared for an immutable master too: the masters past the first are handed their
+		// configuration here on a static cluster as well as in a cloud, and this is the node whose
+		// name says so. Nothing builds nodes from an instance class there, hence the gated child.
 		{
 			Name:      InstallAdditionalMastersAndStaticNodes,
-			includeIf: ifCloud,
+			includeIf: ifCloudOrImmutableMaster,
 			Children: []node{
 				{Name: InstallAdditionalMastersAndStaticNodesSubPhaseAdditionalMasters},
-				{Name: InstallAdditionalMastersAndStaticNodeSubPhaseStaticNodes},
+				{Name: InstallAdditionalMastersAndStaticNodeSubPhaseStaticNodes, includeIf: ifCloud},
 			},
 		},
 		// Gated because the checker reports "0 of 0 ready" as success; top-level rather than a child
-		// of the cloud-only node above for the reason in its const doc.
+		// of the node above for the reason in its const doc.
 		{Name: WaitForControlPlaneManagerReadinessPhase, includeIf: ifHasClusterConfiguration},
 		{Name: CreateResourcesPhase},
 		{Name: ExecPostBootstrapPhase},
