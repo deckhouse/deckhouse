@@ -264,7 +264,7 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts :: CEL ::", func(
 		It("denies a hostname written with a root dot", func() {
 			Expect(evaluatePolicy(ingressPolicy, params, ingressWithHosts("CONSOLE.EXAMPLE.COM."), tenant)).
 				To(Equal(verdictDenied), "the API server rejects a trailing dot on its own, but the policy "+
-					"must not be the reason it is verdictAllowed")
+					"must not be the reason it is allowed")
 		})
 
 		It("allows a two-label hostname, the shape an ecosystem application takes", func() {
