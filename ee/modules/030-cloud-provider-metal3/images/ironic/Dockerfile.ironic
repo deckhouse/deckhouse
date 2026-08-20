@@ -146,9 +146,33 @@ cp /tmp/ironic-config/httpd.conf.j2 /etc/httpd/conf/
 cp /tmp/ironic-config/httpd-modules.conf /etc/httpd/conf.modules.d/
 cp /tmp/ironic-config/apache2-vmedia.conf.j2 /templates/httpd-vmedia.conf.j2
 cp /tmp/ironic-config/apache2-ipxe.conf.j2 /templates/httpd-ipxe.conf.j2
-mkdir -p /shared/html/images
-mv /tmp/ironic-python-agent.kernel /shared/html/images/ironic-python-agent.kernel
-mv /tmp/ironic-python-agent.initramfs /shared/html/images/ironic-python-agent.initramfs
+mkdir -p /opt/metal3/ipa-images
+mv /tmp/ironic-python-agent.kernel /opt/metal3/ipa-images/ironic-python-agent.kernel
+mv /tmp/ironic-python-agent.initramfs /opt/metal3/ipa-images/ironic-python-agent.initramfs
+cat > /bin/copy-ipa-images <<'EOF'
+#!/usr/bin/bash
+set -euo pipefail
+
+src_dir=/opt/metal3/ipa-images
+dst_dir=/shared/html/images
+
+mkdir -p "${dst_dir}"
+
+for image in ironic-python-agent.kernel ironic-python-agent.initramfs; do
+  if [[ ! -f "${src_dir}/${image}" || -s "${dst_dir}/${image}" ]]; then
+    continue
+  fi
+
+  tmp_file="$(mktemp "${dst_dir}/${image}.tmp.XXXXXX")"
+  cp "${src_dir}/${image}" "${tmp_file}"
+  chmod 0644 "${tmp_file}"
+  mv -f "${tmp_file}" "${dst_dir}/${image}"
+done
+EOF
+chmod 0755 /bin/copy-ipa-images
+sed -i '/^chmod 0777 \/shared\/html$/a copy-ipa-images' /bin/runhttpd
+sed -i '/IMAGE_CACHE_PREFIX=\/shared\/html\/images\/ironic-python-agent/i copy-ipa-images' /bin/configure-ironic.sh
+chmod -R a+rX /opt/metal3/ipa-images
 rm -rf /tmp/ironic-config
 mkdir -p /var/lib/ironic
 sqlite3 /var/lib/ironic/ironic.sqlite "pragma journal_mode=wal"
