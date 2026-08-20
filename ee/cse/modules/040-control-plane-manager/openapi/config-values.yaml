@@ -83,6 +83,7 @@ properties:
           - `ExtendedResourceToleration`
           - `PodNodeSelector`
           - `PodTolerationRestriction`
+          - `NodeRestriction`
           - `EventRateLimit` with the following config:
 
             ```yaml

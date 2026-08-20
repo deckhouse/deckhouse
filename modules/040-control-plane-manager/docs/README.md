@@ -205,6 +205,57 @@ The module organizes secure metrics collection and provides a basic set of monit
 - `kube-scheduler`;
 - `kube-etcd`.
 
+## Admission plugins enabled by default
+
+When installing the Deckhouse Kubernetes Platform, in addition to the standard admission plugins enabled by Kubernetes, the module enables several additional ones. For more information about admission plugins, see the [Kubernetes documentation](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#validatingadmissionwebhook).
+
+### Standard admission plugins enabled by Kubernetes
+
+Kubernetes enables the following standard admission plugins:
+
+| Admission plugin | Type | Short description |
+| --- | --- | --- |
+| **NamespaceLifecycle** | Validating | Prevents the creation of new objects in namespaces that are in the process of being deleted (termination) or in non-existent namespaces. It also prevents the deletion of system namespaces: `default`, `kube-system`, and `kube-public`. |
+| **LimitRanger** | Mutating and Validating | Monitors incoming requests and checks whether they violate the limits specified in the LimitRange object within the namespace. It is used to enforce resource limits at the container and pod levels. |
+| **ServiceAccount** | Mutating and Validating | Automates the handling of ServiceAccounts. If a pod does not specify a `ServiceAccount`, it automatically assigns the `default` account from the same namespace. It also verifies that the specified ServiceAccount exists. |
+| **TaintNodesByCondition** | Mutating | A standard security plugin that automatically adds taints to newly created nodes based on their status (e.g., `NotReady` or `Unreachable`). This prevents pods from being scheduled on new nodes before their labels are updated to accurately reflect their declared state. |
+| **PodSecurity** | Validating | Checks new pods before they are launched and determines whether to allow them based on the requested security context and the restrictions set by the Pod Security Standards in the namespace where the pod will reside. |
+| **Priority** | Mutating and Validating | Uses the `priorityClassName` field and populates the integer priority value. If the priority class is not found, the pod is rejected. |
+| **DefaultTolerationSeconds** | Mutating | Sets default toleration values for Pods for the `notready:NoExecute` and `unreachable:NoExecute` taints if the Pod does not have its own tolerations. The default value is **5 minutes**. |
+| **DefaultStorageClass** | Mutable | Oversees the creation of PersistentVolumeClaim objects. If a specific StorageClass is not specified in the request, it automatically adds the StorageClass labeled `default`. This ensures that users who do not specify a StorageClass will receive the default StorageClass. |
+| **StorageObjectInUseProtection** | Mutable | Protects storage objects (such as PersistentVolumes) that are in use by pods from accidental deletion. Adds the `kubernetes.io/pvc-protection` or `kubernetes.io/pv-protection` finalizers, which prevent the resource from being deleted while it is in use. |
+| **PersistentVolumeClaimResize** | Validating | Performs additional checks on incoming requests to resize a PersistentVolumeClaim. By default, it prohibits resizing of all claims, except in cases where the claim’s StorageClass explicitly allows resizing by setting the `allowVolumeExpansion` parameter to `true`. |
+| **RuntimeClass** | Mutating and Validating | Takes the `RuntimeClass` into account when creating pods. Sets the `pod.Spec.Overhead` field according to the selected runtime class and validates requests. |
+| **CertificateApproval** | Validating | Monitors requests to approve `CertificateSigningRequests` and performs additional authorization checks to ensure the user has the rights to approve certificate requests. |
+| **CertificateSigning** | Validator | Monitors updates to the `status.certificate` field in a CertificateSigningRequest and verifies that the user has the rights to sign the certificate request, using the `spec.signerName` value specified in the CertificateSigningRequest resource. |
+| **ClusterTrustBundleAttest** | Validator | Analyzes and attests to the trustworthiness of the Kubernetes cluster. This may include verifying certificates, security configurations, and other parameters related to the cluster’s integrity. |
+| **CertificateSubjectRestriction** | Validating | Monitors the creation of CertificateSigningRequests where `spec.signerName` = `kubernetes.io/kube-apiserver-client`. Rejects requests that specify the `system:masters` group. |
+| **DefaultIngressClass** | Mutating | Monitors the creation of Ingress objects. If no Ingress class is specified in the request, it automatically adds the Ingress class labeled as “default.” |
+| **PodTopologyLabels** | Mutating | Adds topology labels (e.g., availability zone) to pods bound to a node, corresponding to the labels of that node. |
+| **MutatingAdmissionPolicy** | Validating and Mutating | A mechanism within the admission control system that allows objects to be modified when they are created or updated during the request admission process. |
+| **MutatingAdmissionWebhook** | Mutating | Invokes all mutating webhooks that correspond to the request. Webhooks can modify the object and are invoked sequentially. |
+| **ValidatingAdmissionPolicy** | Validating | Allows declarative validation to be embedded directly into the API, without using external HTTP calls. It checks the CEL for incoming requests that meet the criteria. It is enabled when both the `validatingadmissionpolicy` feature and the `admissionregistration.k8s.io/v1alpha1` group/version are active. If any of the `ValidatingAdmissionPolicy` policies fail, the request is rejected. |
+| **ValidatingAdmissionWebhook** | Validating | Invokes all validating webhooks that match the request to check the object. |
+| **ResourceQuota** | Validating | Monitors incoming requests and checks whether they violate the limits specified in the ResourceQuota object in the namespace. Used to limit the total consumption of resources (CPU, memory, number of objects) in the namespace. |
+
+### Additional admission plugins enabled by the module
+
+In addition to the [standard admission plugins enabled by Kubernetes](#standard-admission-plugins-enabled-by-kubernetes), the module enables the following admission plugins (which cannot be disabled):
+
+|| Admission plugin | Type | Brief description |
+| --- | --- | --- |
+| **EventRateLimit** | Validating | Addresses the issue of API server overload caused by requests to save new events. Allows you to configure limits at the namespace, user, or global level. |
+| **ExtendedResourceToleration** | Mutating | Automatically adds tolerations to pods requesting extended resources (e.g., GPU, FPGA). This allows you to allocate special nodes for such pods—nodes that are pre-tainted with the resource name—without manually adding tolerations to the pods. |
+| **NodeRestriction** | Validating | Restricts the set of Node and Pod objects that the kubelet can modify. Enhances cluster security. |
+| **PodNodeSelector** | Validating | Defines and restricts which node selectors can be used within a namespace, based on reading the namespace annotation and global configuration. |
+| **PodTolerationRestriction** | Mutating & Validating | Checks the pod’s toleration for conflicts with tolerations specified at the namespace level. If there are no conflicts, it merges the pod’s and namespace’s tolerations. It also checks the pod against a “whitelist” of tolerations. |
+
+{% alert level="info" %}
+
+In addition to the admission plugins listed above (which are enabled by Kubernetes and the module), you can also enable some additional ones. To do this, use the [`apiserver.admissionPlugins`](configuration.html#parameters-apiserver-admissionplugins) parameter.
+
+{% endalert %}
+
 ## Feature Gates
 
 You can configure feature gates using the [enabledFeatureGates](configuration.html#parameters-enabledFeatureGates) parameter of the `control-plane-manager` ModuleConfig.
