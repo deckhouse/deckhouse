@@ -232,7 +232,7 @@ func main() {
 
 Deckhouse publishes its own web interfaces under hostnames rendered from the [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) global parameter: the API, the web interface, Grafana, Dex, the kubeconfig generator and others.
 Those hostnames are reserved cluster-wide.
-An Ingress, HTTPRoute, GRPCRoute, TLSRoute, ListenerSet or Gateway created outside a namespace labelled `heritage: deckhouse` cannot claim one, and such a request is rejected with a message naming the hostname:
+An Ingress, HTTPRoute, GRPCRoute, TLSRoute, ListenerSet or Gateway created outside a namespace labeled `heritage: deckhouse` cannot claim one, and such a request is rejected with a message naming the hostname:
 
 ```console
 Hostname console.example.com is reserved for Deckhouse platform services
@@ -299,7 +299,7 @@ When the reservation starts to apply, the hostnames workloads already serve are 
 Without that, their next modification would be rejected.
 
 The record is kept in the `d8-reserved-public-hosts` ConfigMap of the `d8-system` namespace, in the `grandfatheredHosts` key, separately from the hostnames freed by hand.
-It is taken once, on the first convergence where `Template` mode is in force, and never retaken: otherwise the reservation could be defeated by claiming a hostname and waiting for the next snapshot to legitimise it.
+It is taken once, on the first convergence where `Template` mode is in force, and never retaken: otherwise the reservation could be defeated by claiming a hostname and waiting for the next snapshot to accept it as given.
 
 To stop allowing a recorded hostname once the workload behind it is gone, remove the entry from the key.
 An entry is brought to the spelling the reservation compares — lowercase and without a trailing dot — so editing the key by hand cannot stop the module from converging.
