@@ -1,7 +1,7 @@
 {
   "name": "d8",
   "description": "d8 controls the Deckhouse Kubernetes Platform",
-  "version": "v0.33.1",
+  "version": "v0.33.10",
   "aliases": null,
   "flags": {
     "help": {
@@ -118,179 +118,6 @@
               "description": "Set start timestamp range to dump logs from Loki. (Default get max start timestamp from Loki, ex. \"2025-01-12 15:04:05\".)",
               "shorthand": "",
               "global": false
-            }
-          },
-          "subcommands": null
-        }
-      ]
-    },
-    {
-      "name": "cli",
-      "description": "Manage the deckhouse-cli (d8) binary",
-      "aliases": null,
-      "flags": {
-        "context": {
-          "description": "The name of the kubeconfig context to use",
-          "shorthand": "",
-          "global": false
-        },
-        "kubeconfig": {
-          "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
-          "shorthand": "k",
-          "global": false
-        },
-        "rpp-ca-file": {
-          "description": "Path to a PEM CA bundle used to verify the registry-packages-proxy TLS certificate. Defaults to $D8_RPP_CA_FILE.",
-          "shorthand": "",
-          "global": false
-        },
-        "rpp-endpoint": {
-          "description": "registry-packages-proxy base URL (e.g. https://master:4219). Discovered from the cluster when empty. Defaults to $D8_RPP_ENDPOINT.",
-          "shorthand": "",
-          "global": false
-        },
-        "rpp-insecure-skip-tls-verify": {
-          "description": "Skip registry-packages-proxy TLS verification. For debugging only.",
-          "shorthand": "",
-          "global": false
-        }
-      },
-      "subcommands": [
-        {
-          "name": "check",
-          "description": "Report whether a newer deckhouse-cli version is available",
-          "aliases": null,
-          "flags": {
-            "context": {
-              "description": "The name of the kubeconfig context to use",
-              "shorthand": "",
-              "global": true
-            },
-            "kubeconfig": {
-              "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
-              "shorthand": "k",
-              "global": true
-            },
-            "rpp-ca-file": {
-              "description": "Path to a PEM CA bundle used to verify the registry-packages-proxy TLS certificate. Defaults to $D8_RPP_CA_FILE.",
-              "shorthand": "",
-              "global": true
-            },
-            "rpp-endpoint": {
-              "description": "registry-packages-proxy base URL (e.g. https://master:4219). Discovered from the cluster when empty. Defaults to $D8_RPP_ENDPOINT.",
-              "shorthand": "",
-              "global": true
-            },
-            "rpp-insecure-skip-tls-verify": {
-              "description": "Skip registry-packages-proxy TLS verification. For debugging only.",
-              "shorthand": "",
-              "global": true
-            }
-          },
-          "subcommands": null
-        },
-        {
-          "name": "update",
-          "description": "Update deckhouse-cli to the latest version",
-          "aliases": null,
-          "flags": {
-            "context": {
-              "description": "The name of the kubeconfig context to use",
-              "shorthand": "",
-              "global": true
-            },
-            "kubeconfig": {
-              "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
-              "shorthand": "k",
-              "global": true
-            },
-            "rpp-ca-file": {
-              "description": "Path to a PEM CA bundle used to verify the registry-packages-proxy TLS certificate. Defaults to $D8_RPP_CA_FILE.",
-              "shorthand": "",
-              "global": true
-            },
-            "rpp-endpoint": {
-              "description": "registry-packages-proxy base URL (e.g. https://master:4219). Discovered from the cluster when empty. Defaults to $D8_RPP_ENDPOINT.",
-              "shorthand": "",
-              "global": true
-            },
-            "rpp-insecure-skip-tls-verify": {
-              "description": "Skip registry-packages-proxy TLS verification. For debugging only.",
-              "shorthand": "",
-              "global": true
-            },
-            "version": {
-              "description": "Exact version to install; downgrades are allowed (default: the latest).",
-              "shorthand": "",
-              "global": false
-            }
-          },
-          "subcommands": null
-        },
-        {
-          "name": "use \u003cversion\u003e",
-          "description": "Switch to a specific deckhouse-cli version (no download when it is installed locally)",
-          "aliases": null,
-          "flags": {
-            "context": {
-              "description": "The name of the kubeconfig context to use",
-              "shorthand": "",
-              "global": true
-            },
-            "kubeconfig": {
-              "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
-              "shorthand": "k",
-              "global": true
-            },
-            "rpp-ca-file": {
-              "description": "Path to a PEM CA bundle used to verify the registry-packages-proxy TLS certificate. Defaults to $D8_RPP_CA_FILE.",
-              "shorthand": "",
-              "global": true
-            },
-            "rpp-endpoint": {
-              "description": "registry-packages-proxy base URL (e.g. https://master:4219). Discovered from the cluster when empty. Defaults to $D8_RPP_ENDPOINT.",
-              "shorthand": "",
-              "global": true
-            },
-            "rpp-insecure-skip-tls-verify": {
-              "description": "Skip registry-packages-proxy TLS verification. For debugging only.",
-              "shorthand": "",
-              "global": true
-            }
-          },
-          "subcommands": null
-        },
-        {
-          "name": "versions",
-          "description": "List deckhouse-cli versions available in the cluster registry",
-          "aliases": [
-            "list"
-          ],
-          "flags": {
-            "context": {
-              "description": "The name of the kubeconfig context to use",
-              "shorthand": "",
-              "global": true
-            },
-            "kubeconfig": {
-              "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
-              "shorthand": "k",
-              "global": true
-            },
-            "rpp-ca-file": {
-              "description": "Path to a PEM CA bundle used to verify the registry-packages-proxy TLS certificate. Defaults to $D8_RPP_CA_FILE.",
-              "shorthand": "",
-              "global": true
-            },
-            "rpp-endpoint": {
-              "description": "registry-packages-proxy base URL (e.g. https://master:4219). Discovered from the cluster when empty. Defaults to $D8_RPP_ENDPOINT.",
-              "shorthand": "",
-              "global": true
-            },
-            "rpp-insecure-skip-tls-verify": {
-              "description": "Skip registry-packages-proxy TLS verification. For debugging only.",
-              "shorthand": "",
-              "global": true
             }
           },
           "subcommands": null
@@ -25250,6 +25077,212 @@
       ]
     },
     {
+      "name": "dist",
+      "description": "Manage the d8 distribution: the deckhouse-cli binary and its plugins",
+      "aliases": null,
+      "flags": {
+        "context": {
+          "description": "Kubeconfig context to use. Used to reach registry-packages-proxy and to enforce cluster-side plugin requirements.",
+          "shorthand": "",
+          "global": false
+        },
+        "insecure-skip-tls-verify": {
+          "description": "Skip TLS verification of both the Kubernetes API server and registry-packages-proxy certificates. For debugging only.",
+          "shorthand": "",
+          "global": false
+        },
+        "kubeconfig": {
+          "description": "Path to the kubeconfig file. Used to reach registry-packages-proxy and to enforce cluster-side plugin requirements. Defaults to $KUBECONFIG.",
+          "shorthand": "k",
+          "global": false
+        },
+        "rpp-ca-file": {
+          "description": "Path to a PEM CA bundle used to verify the registry-packages-proxy TLS certificate. Defaults to $D8_RPP_CA_FILE.",
+          "shorthand": "",
+          "global": false
+        },
+        "rpp-endpoint": {
+          "description": "registry-packages-proxy base URL (e.g. https://master:4219). Discovered from the cluster when empty. Defaults to $D8_RPP_ENDPOINT.",
+          "shorthand": "",
+          "global": false
+        }
+      },
+      "subcommands": [
+        {
+          "name": "check",
+          "description": "Report whether a newer deckhouse-cli version is available",
+          "aliases": null,
+          "flags": {
+            "context": {
+              "description": "Kubeconfig context to use. Used to reach registry-packages-proxy and to enforce cluster-side plugin requirements.",
+              "shorthand": "",
+              "global": true
+            },
+            "insecure-skip-tls-verify": {
+              "description": "Skip TLS verification of both the Kubernetes API server and registry-packages-proxy certificates. For debugging only.",
+              "shorthand": "",
+              "global": true
+            },
+            "kubeconfig": {
+              "description": "Path to the kubeconfig file. Used to reach registry-packages-proxy and to enforce cluster-side plugin requirements. Defaults to $KUBECONFIG.",
+              "shorthand": "k",
+              "global": true
+            },
+            "rpp-ca-file": {
+              "description": "Path to a PEM CA bundle used to verify the registry-packages-proxy TLS certificate. Defaults to $D8_RPP_CA_FILE.",
+              "shorthand": "",
+              "global": true
+            },
+            "rpp-endpoint": {
+              "description": "registry-packages-proxy base URL (e.g. https://master:4219). Discovered from the cluster when empty. Defaults to $D8_RPP_ENDPOINT.",
+              "shorthand": "",
+              "global": true
+            }
+          },
+          "subcommands": null
+        },
+        {
+          "name": "status",
+          "description": "Show the distribution status: the d8 version, plugins, what is outdated",
+          "aliases": null,
+          "flags": {
+            "context": {
+              "description": "Kubeconfig context to use. Used to reach registry-packages-proxy and to enforce cluster-side plugin requirements.",
+              "shorthand": "",
+              "global": true
+            },
+            "insecure-skip-tls-verify": {
+              "description": "Skip TLS verification of both the Kubernetes API server and registry-packages-proxy certificates. For debugging only.",
+              "shorthand": "",
+              "global": true
+            },
+            "kubeconfig": {
+              "description": "Path to the kubeconfig file. Used to reach registry-packages-proxy and to enforce cluster-side plugin requirements. Defaults to $KUBECONFIG.",
+              "shorthand": "k",
+              "global": true
+            },
+            "rpp-ca-file": {
+              "description": "Path to a PEM CA bundle used to verify the registry-packages-proxy TLS certificate. Defaults to $D8_RPP_CA_FILE.",
+              "shorthand": "",
+              "global": true
+            },
+            "rpp-endpoint": {
+              "description": "registry-packages-proxy base URL (e.g. https://master:4219). Discovered from the cluster when empty. Defaults to $D8_RPP_ENDPOINT.",
+              "shorthand": "",
+              "global": true
+            }
+          },
+          "subcommands": null
+        },
+        {
+          "name": "update",
+          "description": "Update deckhouse-cli to the latest version",
+          "aliases": null,
+          "flags": {
+            "context": {
+              "description": "Kubeconfig context to use. Used to reach registry-packages-proxy and to enforce cluster-side plugin requirements.",
+              "shorthand": "",
+              "global": true
+            },
+            "insecure-skip-tls-verify": {
+              "description": "Skip TLS verification of both the Kubernetes API server and registry-packages-proxy certificates. For debugging only.",
+              "shorthand": "",
+              "global": true
+            },
+            "kubeconfig": {
+              "description": "Path to the kubeconfig file. Used to reach registry-packages-proxy and to enforce cluster-side plugin requirements. Defaults to $KUBECONFIG.",
+              "shorthand": "k",
+              "global": true
+            },
+            "rpp-ca-file": {
+              "description": "Path to a PEM CA bundle used to verify the registry-packages-proxy TLS certificate. Defaults to $D8_RPP_CA_FILE.",
+              "shorthand": "",
+              "global": true
+            },
+            "rpp-endpoint": {
+              "description": "registry-packages-proxy base URL (e.g. https://master:4219). Discovered from the cluster when empty. Defaults to $D8_RPP_ENDPOINT.",
+              "shorthand": "",
+              "global": true
+            },
+            "version": {
+              "description": "Exact version to install; downgrades are allowed (default: the latest).",
+              "shorthand": "",
+              "global": false
+            }
+          },
+          "subcommands": null
+        },
+        {
+          "name": "use \u003cversion\u003e",
+          "description": "Switch to a specific deckhouse-cli version (no download when it is installed locally)",
+          "aliases": null,
+          "flags": {
+            "context": {
+              "description": "Kubeconfig context to use. Used to reach registry-packages-proxy and to enforce cluster-side plugin requirements.",
+              "shorthand": "",
+              "global": true
+            },
+            "insecure-skip-tls-verify": {
+              "description": "Skip TLS verification of both the Kubernetes API server and registry-packages-proxy certificates. For debugging only.",
+              "shorthand": "",
+              "global": true
+            },
+            "kubeconfig": {
+              "description": "Path to the kubeconfig file. Used to reach registry-packages-proxy and to enforce cluster-side plugin requirements. Defaults to $KUBECONFIG.",
+              "shorthand": "k",
+              "global": true
+            },
+            "rpp-ca-file": {
+              "description": "Path to a PEM CA bundle used to verify the registry-packages-proxy TLS certificate. Defaults to $D8_RPP_CA_FILE.",
+              "shorthand": "",
+              "global": true
+            },
+            "rpp-endpoint": {
+              "description": "registry-packages-proxy base URL (e.g. https://master:4219). Discovered from the cluster when empty. Defaults to $D8_RPP_ENDPOINT.",
+              "shorthand": "",
+              "global": true
+            }
+          },
+          "subcommands": null
+        },
+        {
+          "name": "versions",
+          "description": "List deckhouse-cli versions available in the cluster registry",
+          "aliases": [
+            "list"
+          ],
+          "flags": {
+            "context": {
+              "description": "Kubeconfig context to use. Used to reach registry-packages-proxy and to enforce cluster-side plugin requirements.",
+              "shorthand": "",
+              "global": true
+            },
+            "insecure-skip-tls-verify": {
+              "description": "Skip TLS verification of both the Kubernetes API server and registry-packages-proxy certificates. For debugging only.",
+              "shorthand": "",
+              "global": true
+            },
+            "kubeconfig": {
+              "description": "Path to the kubeconfig file. Used to reach registry-packages-proxy and to enforce cluster-side plugin requirements. Defaults to $KUBECONFIG.",
+              "shorthand": "k",
+              "global": true
+            },
+            "rpp-ca-file": {
+              "description": "Path to a PEM CA bundle used to verify the registry-packages-proxy TLS certificate. Defaults to $D8_RPP_CA_FILE.",
+              "shorthand": "",
+              "global": true
+            },
+            "rpp-endpoint": {
+              "description": "registry-packages-proxy base URL (e.g. https://master:4219). Discovered from the cluster when empty. Defaults to $D8_RPP_ENDPOINT.",
+              "shorthand": "",
+              "global": true
+            }
+          },
+          "subcommands": null
+        }
+      ]
+    },
+    {
       "name": "help [command]",
       "description": "Help about any command",
       "aliases": null,
@@ -46522,12 +46555,12 @@
               "global": false
             },
             "exclude-module": {
-              "description": "Blacklist specific modules from downloading. Format is \"module-name[@version]\". Use one flag per each module. Overridden by use of --include-module.\"",
+              "description": "Blacklist specific modules from downloading. Format is \"module-name[@constraint]\", the same dialect as --include-module, quoting included. Use one flag per each module. Overridden by use of --include-module.",
               "shorthand": "e",
               "global": false
             },
             "exclude-package": {
-              "description": "Blacklist specific packages from downloading. Format is \"package-name[@version]\". Use one flag per each package. Overridden by use of --include-package.",
+              "description": "Blacklist specific packages from downloading. Format is \"package-name[@constraint]\", the same dialect as --include-module, quoting included. Use one flag per each package. Overridden by use of --include-package.",
               "shorthand": "",
               "global": false
             },
@@ -46552,17 +46585,22 @@
               "global": false
             },
             "include-module": {
-              "description": "Whitelist specific modules for downloading. Use one flag per each module. Disables blacklisting by --exclude-module.\"\n\nSemver constraints (caret, tilde, range) keep only the highest patch in each (major, minor) series, mirroring how platform releases are discovered.\nVersions explicitly named with an inclusive boundary operator (\u003e= or \u003c=) are always preserved — that boundary is part of the user's request and must round-trip even when a newer patch exists in the same minor.\nUse the exact-tag form (=) when you need a specific older patch unconditionally.\n\nExample:\nAvailable versions for \u003cmodule-name\u003e: v1.0.0, v1.1.0, v1.2.0, v1.3.0, v1.3.3, v1.4.0, v1.4.1\n\nmodule-name@1.3.0 → semver ^ constraint (^1.3.0): keep latest patch per minor — includes v1.3.3 (1.3.x) and v1.4.1 (1.4.x). Versions currently pinned by release channels are pulled in addition.\n\nmodule-name@~1.3.0 → semver ~ constraint (\u003e=1.3.0 \u003c1.4.0): keep latest patch per minor in range — includes v1.3.3. Versions currently pinned by release channels are pulled in addition.\n\nmodule-name@\u003e=1.3.0 → range constraint with explicit \u003e= anchor: keep latest patch per minor AND the named anchor v1.3.0 — includes v1.3.0 (anchor), v1.3.3 (1.3.x latest), v1.4.1 (1.4.x latest).\n\nmodule-name@\u003e=1.3.0 \u003c=1.4.0 → both anchors honoured: includes v1.3.0, v1.3.3, v1.4.0; v1.4.1 is excluded by the upper bound.\n\nmodule-name@=v1.3.0 → exact tag match: include only v1.3.0 and publish it to all release channels (alpha, beta, early-access, stable, rock-solid).\n\nmodule-name@=bobV1 → exact tag match: include only bobV1 and publish it to all release channels (alpha, beta, early-access, stable, rock-solid).\n\nmodule-name@=v1.3.0+stable → exact tag match: include only v1.3.0 and and publish it to stable channel\n\t\t",
+              "description": "Whitelist specific modules for downloading. Format is \"module-name[@constraint]\". Use one flag per each module. Disables blacklisting by --exclude-module.\n\nQuote the whole value when the constraint uses \u003e= or \u003c=: --include-module \"module-name@\u003e=1.3.0\". Unquoted, the shell takes \u003e as a redirection and d8 receives a module with no version.\n\nA constraint keeps the latest patch in each minor it covers, plus whatever the release channels point at. Versions named with \u003e= or \u003c= are kept as well. An exact tag (=) pins one tag and publishes it to the release channels.\n\nGiven v1.0.0, v1.1.0, v1.2.0, v1.3.0, v1.3.3, v1.4.0, v1.4.1:\n  module-name                     only what the release channels point at, like a pull with no filters\n  module-name@1.3.0               \u003e=1.3.0 \u003c2.0.0, same major line: v1.3.3, v1.4.1\n  module-name@~1.3.0              \u003e=1.3.0 \u003c1.4.0: v1.3.3\n  module-name@^1.3.0              \u003e=1.3.0 \u003c2.0.0: v1.3.3, v1.4.1\n  \"module-name@\u003e=1.3.0\"           the same, plus the named v1.3.0\n  \"module-name@\u003e=1.3.0 \u003c=1.4.0\"   v1.3.0, v1.3.3, v1.4.0\n  module-name@=v1.3.0             only v1.3.0, published to every release channel\n  module-name@=v1.3.0+stable      only v1.3.0, published to stable\n  module-name@=bobV1              only the bobV1 tag, published to every release channel\n\nFor a 0.x module the bare form spans the whole 0.x line (0.4.0 means \u003e=0.4.0 \u003c1.0.0) while the caret locks the minor (^0.4.0 means \u003e=0.4.0 \u003c0.5.0).",
               "shorthand": "i",
               "global": false
             },
             "include-package": {
-              "description": "Whitelist specific packages for downloading. Use one flag per each package. Disables blacklisting by --exclude-package.\n\nPackages are mirrored exactly like modules (same name@version constraint dialect), but live under the packages/ registry segment with their release metadata under packages/\u003cname\u003e/version.",
+              "description": "Whitelist specific packages for downloading. Format is \"package-name[@constraint]\", the same dialect as --include-module, quoting included. Use one flag per each package. Disables blacklisting by --exclude-package.\n\nPackages live under the packages/ registry segment, with release metadata under packages/\u003cname\u003e/version.",
               "shorthand": "",
               "global": false
             },
             "include-platform": {
-              "description": "Select platform releases to download by a semver constraint expression, using the same dialect as --include-module's version part.\nConflicts with --since-version and --deckhouse-tag.\n\nSemver constraints (caret, tilde, range) keep only the highest patch in each (major, minor) series, mirroring the release-discovery rules used for full pulls.\nVersions explicitly named with an inclusive boundary operator (\u003e= or \u003c=) are always preserved — that boundary is part of the user's request and must round-trip even when a newer patch exists in the same minor.\nUse the exact-tag form (=) when you need to pin a specific tag, optionally propagating it to a release channel via the +channel suffix.\n\nExamples (available platform versions: v1.63.x, v1.64.x, v1.65.x, v1.66.x, v1.67.x, v1.68.x, v1.69.x, v1.70.x, v1.71.x):\n\n--include-platform \"\u003e=1.64 \u003c=1.68\" → bounded range: latest patch per minor in v1.64..v1.68, anchors v1.64.0 and v1.68.0 always preserved if present in the registry.\n\n--include-platform \"~1.65.0\" → semver ~ constraint (\u003e=1.65.0 \u003c1.66.0): latest v1.65.x patch only.\n\n--include-platform \"^1.65.0\" → semver ^ constraint (\u003e=1.65.0 \u003c2.0.0): latest patch per minor starting at v1.65.x.\n\n--include-platform \"1.65.0\" → implicit caret (^1.65.0): same as above; shorthand kept for parity with --include-module.\n\n--include-platform \"=v1.65.3\" → exact-tag pin: only v1.65.3 is pulled and propagated to all default release channels, just like --deckhouse-tag.\n\n--include-platform \"=v1.65.3+stable\" → exact-tag pin with channel suffix: only v1.65.3 is pulled (channel propagation matches --deckhouse-tag).",
+              "description": "Select platform releases to download by a semver constraint. Same dialect as the version part of --include-module.\nConflicts with --since-version and --deckhouse-tag.\n\nAlways quote the value: \u003e and \u003c are shell redirections.\n\nA constraint keeps the latest patch in each minor it covers. Versions named with \u003e= or \u003c= are kept as well. An exact tag (=) pins one release and propagates it to the release channels, just like --deckhouse-tag.\n\nGiven platform releases v1.63.x .. v1.71.x:\n  \"\u003e=1.64 \u003c=1.68\"   latest patch per minor in v1.64..v1.68, plus v1.64.0 and v1.68.0\n  \"~1.65.0\"         latest v1.65.x patch\n  \"^1.65.0\"         latest patch per minor from v1.65.x up\n  \"1.65.0\"          same as ^1.65.0 here: platform majors are always \u003e= 1\n  \"=v1.65.3\"        only v1.65.3, published to every release channel\n  \"=v1.65.3+stable\" only v1.65.3; the +channel suffix is accepted but changes nothing here",
+              "shorthand": "",
+              "global": false
+            },
+            "include-plugin": {
+              "description": "Mirror a specific d8 CLI plugin in addition to the automatic selection. Format is \"plugin-name[@constraint]\", the same dialect as --include-module, quoting included. Use one flag per each plugin.\n\nPlugins live under the deckhouse-cli/plugins registry segment. Without this flag, plugins required by the mirrored modules (and their plugin dependencies) are selected automatically.",
               "shorthand": "",
               "global": false
             },
@@ -46582,7 +46620,7 @@
               "global": false
             },
             "modules-path-suffix": {
-              "description": "Suffix to append to source repo path to locate modules.",
+              "description": "Registry path suffix to read modules from, relative to the source repo. Use \"/\" to read modules from the repo root.",
               "shorthand": "",
               "global": false
             },
@@ -46637,7 +46675,7 @@
               "global": false
             },
             "source": {
-              "description": "Source registry to pull Deckhouse images from.",
+              "description": "Source registry to pull Deckhouse images from (format: registry-host[:port]/path).",
               "shorthand": "",
               "global": false
             },
@@ -46685,7 +46723,7 @@
               "global": false
             },
             "modules-path-suffix": {
-              "description": "Suffix to append to source repo path to locate modules.",
+              "description": "Registry path suffix to push modules to, relative to the target repo. Use \"/\" to push modules to the repo root.",
               "shorthand": "",
               "global": false
             },
@@ -46772,9 +46810,11 @@
           "flags": {},
           "subcommands": [
             {
-              "name": "application \u003cname\u003e",
+              "name": "app \u003cname\u003e",
               "description": "Bootstrap a new application package",
-              "aliases": null,
+              "aliases": [
+                "application"
+              ],
               "flags": {
                 "extended": {
                   "description": "Generate extended files in the package",
@@ -46839,6 +46879,21 @@
               "shorthand": "",
               "global": false
             },
+            "final-repo": {
+              "description": "Final repository (env: PACKAGE_BUILD_FINAL_REPOSITORY)",
+              "shorthand": "",
+              "global": false
+            },
+            "final-token": {
+              "description": "Final registry token (env: PACKAGE_BUILD_FINAL_REPOSITORY_TOKEN)",
+              "shorthand": "",
+              "global": false
+            },
+            "final-user": {
+              "description": "Final registry user (env: PACKAGE_BUILD_FINAL_REPOSITORY_USER)",
+              "shorthand": "",
+              "global": false
+            },
             "force": {
               "description": "force update version in registry",
               "shorthand": "f",
@@ -46883,12 +46938,40 @@
           "subcommands": null
         },
         {
+          "name": "doc [linter]",
+          "description": "Show documentation for verify linters and rules",
+          "aliases": null,
+          "flags": {
+            "rule": {
+              "description": "Show documentation for a single rule of the linter",
+              "shorthand": "",
+              "global": false
+            }
+          },
+          "subcommands": null
+        },
+        {
           "name": "render",
           "description": "Render package templates to Kubernetes manifests",
           "aliases": null,
           "flags": {
             "file": {
               "description": "Show only manifests rendered from the template with this file name",
+              "shorthand": "",
+              "global": false
+            },
+            "remote": {
+              "description": "Render a published bundle image by its reference, \u003cregistry-path\u003e/\u003cpackage\u003e:\u003cversion\u003e",
+              "shorthand": "r",
+              "global": false
+            },
+            "remote-password": {
+              "description": "Registry password or token for --remote (env: PACKAGE_REMOTE_PASSWORD)",
+              "shorthand": "",
+              "global": false
+            },
+            "remote-user": {
+              "description": "Registry user for --remote (env: PACKAGE_REMOTE_USER)",
               "shorthand": "",
               "global": false
             },
@@ -46915,13 +46998,435 @@
               "shorthand": "",
               "global": false
             },
-            "remote": {
-              "description": "Verify a package image from a registry reference",
-              "shorthand": "r",
-              "global": false
-            },
             "show-ignored": {
               "description": "Show ignored-level messages",
+              "shorthand": "",
+              "global": false
+            }
+          },
+          "subcommands": [
+            {
+              "name": "remote \u003cregistry-path\u003e \u003cpackage\u003e",
+              "description": "Verify a published package from a registry",
+              "aliases": null,
+              "flags": {
+                "hide-warnings": {
+                  "description": "Hide warning-level messages",
+                  "shorthand": "",
+                  "global": true
+                },
+                "lint-config": {
+                  "description": "Path to lint config file",
+                  "shorthand": "",
+                  "global": true
+                },
+                "release": {
+                  "description": "Also verify the release image published for the version",
+                  "shorthand": "",
+                  "global": false
+                },
+                "show-ignored": {
+                  "description": "Show ignored-level messages",
+                  "shorthand": "",
+                  "global": true
+                },
+                "version": {
+                  "description": "Version to verify (default: the latest published version)",
+                  "shorthand": "",
+                  "global": false
+                }
+              },
+              "subcommands": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "snapshot",
+      "description": "Snapshot operations (create, delete, download, restore, upload, get)",
+      "aliases": null,
+      "flags": {},
+      "subcommands": [
+        {
+          "name": "create \u003cname\u003e",
+          "description": "Create a Snapshot of a namespace",
+          "aliases": null,
+          "flags": {
+            "context": {
+              "description": "The name of the kubeconfig context to use",
+              "shorthand": "",
+              "global": false
+            },
+            "kubeconfig": {
+              "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
+              "shorthand": "k",
+              "global": false
+            },
+            "namespace": {
+              "description": "namespace to create the Snapshot in (defaults to the kubeconfig context namespace)",
+              "shorthand": "n",
+              "global": false
+            },
+            "output": {
+              "description": "Output format: name|json|yaml",
+              "shorthand": "o",
+              "global": false
+            },
+            "selector": {
+              "description": "capture only objects matching this label selector (e.g. app=demo,tier=db); sets spec.resourceSelector.matchLabels",
+              "shorthand": "l",
+              "global": false
+            },
+            "timeout": {
+              "description": "timeout for --wait",
+              "shorthand": "",
+              "global": false
+            },
+            "wait": {
+              "description": "wait until the Snapshot reports Ready",
+              "shorthand": "",
+              "global": false
+            }
+          },
+          "subcommands": null
+        },
+        {
+          "name": "delete [name...]",
+          "description": "Delete one or more Snapshots",
+          "aliases": null,
+          "flags": {
+            "all": {
+              "description": "delete all Snapshots in the namespace",
+              "shorthand": "",
+              "global": false
+            },
+            "context": {
+              "description": "The name of the kubeconfig context to use",
+              "shorthand": "",
+              "global": false
+            },
+            "ignore-not-found": {
+              "description": "do not error if a named Snapshot does not exist",
+              "shorthand": "",
+              "global": false
+            },
+            "kubeconfig": {
+              "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
+              "shorthand": "k",
+              "global": false
+            },
+            "namespace": {
+              "description": "namespace of the Snapshots (defaults to the kubeconfig context namespace)",
+              "shorthand": "n",
+              "global": false
+            },
+            "selector": {
+              "description": "delete Snapshots matching this label selector (e.g. app=demo,tier=db)",
+              "shorthand": "l",
+              "global": false
+            },
+            "timeout": {
+              "description": "timeout for --wait",
+              "shorthand": "",
+              "global": false
+            },
+            "wait": {
+              "description": "wait until the Snapshots are fully deleted",
+              "shorthand": "",
+              "global": false
+            }
+          },
+          "subcommands": null
+        },
+        {
+          "name": "describe [flags] \u003cname\u003e",
+          "description": "Show the snapshot hierarchy as a tree",
+          "aliases": null,
+          "flags": {
+            "context": {
+              "description": "The name of the kubeconfig context to use",
+              "shorthand": "",
+              "global": false
+            },
+            "kubeconfig": {
+              "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
+              "shorthand": "k",
+              "global": false
+            },
+            "namespace": {
+              "description": "snapshot namespace (defaults to the kubeconfig context namespace)",
+              "shorthand": "n",
+              "global": false
+            }
+          },
+          "subcommands": null
+        },
+        {
+          "name": "download [flags] \u003csnapshot\u003e",
+          "description": "Download a snapshot to a local directory tree",
+          "aliases": null,
+          "flags": {
+            "cleanup": {
+              "description": "delete the per-volume DataExport (and its server-side export chain) after each volume completes; --cleanup=false leaves them in the cluster for debugging",
+              "shorthand": "",
+              "global": false
+            },
+            "context": {
+              "description": "The name of the kubeconfig context to use",
+              "shorthand": "",
+              "global": false
+            },
+            "kubeconfig": {
+              "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
+              "shorthand": "k",
+              "global": false
+            },
+            "max-parallel-downloads": {
+              "description": "global cap on concurrent whole-volume-stream downloads across all nodes (independent of --workers and --per-volume-concurrency)",
+              "shorthand": "",
+              "global": false
+            },
+            "namespace": {
+              "description": "snapshot namespace (required)",
+              "shorthand": "n",
+              "global": false
+            },
+            "node": {
+              "description": "restrict download to a single node subtree; format '\u003cKind\u003e/\u003cname\u003e' (e.g. --node DemoVirtualDisk/bk-disk-a, --node Snapshot/my-snap); the generated snapshot CR name form (e.g. DemoVirtualDiskSnapshot/nss-child-abc) is still accepted",
+              "shorthand": "",
+              "global": false
+            },
+            "output": {
+              "description": "root output directory (required)",
+              "shorthand": "o",
+              "global": false
+            },
+            "per-volume-concurrency": {
+              "description": "maximum parallel chunk/file downloads per volume",
+              "shorthand": "",
+              "global": false
+            },
+            "ttl": {
+              "description": "DataExport TTL (e.g. 2h, 30m)",
+              "shorthand": "",
+              "global": false
+            },
+            "volume-compression": {
+              "description": "volume compression codec (none, zstd); block volumes: data.bin[.\u003cext\u003e]; filesystem volumes: per-file compressed entries inside an uncompressed data.tar container",
+              "shorthand": "",
+              "global": false
+            },
+            "volume-compression-level": {
+              "description": "compression level for the selected codec (0 = codec default; ignored when --volume-compression=none)",
+              "shorthand": "",
+              "global": false
+            },
+            "workers": {
+              "description": "maximum number of nodes downloaded concurrently",
+              "shorthand": "",
+              "global": false
+            }
+          },
+          "subcommands": null
+        },
+        {
+          "name": "get",
+          "description": "List Snapshot resources in the cluster",
+          "aliases": [
+            "list",
+            "ls"
+          ],
+          "flags": {
+            "all-namespaces": {
+              "description": "list Snapshots across all namespaces",
+              "shorthand": "A",
+              "global": false
+            },
+            "context": {
+              "description": "The name of the kubeconfig context to use",
+              "shorthand": "",
+              "global": false
+            },
+            "kubeconfig": {
+              "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
+              "shorthand": "k",
+              "global": false
+            },
+            "namespace": {
+              "description": "namespace to list Snapshots from (defaults to the kubeconfig context namespace)",
+              "shorthand": "n",
+              "global": false
+            },
+            "output": {
+              "description": "Output format: table|json|yaml",
+              "shorthand": "o",
+              "global": false
+            }
+          },
+          "subcommands": null
+        },
+        {
+          "name": "local",
+          "description": "Operate on a locally downloaded snapshot archive (no kubeconfig required)",
+          "aliases": null,
+          "flags": {},
+          "subcommands": [
+            {
+              "name": "describe \u003cDIR\u003e",
+              "description": "Show the structure of a locally downloaded snapshot archive as a tree",
+              "aliases": null,
+              "flags": {
+                "allow-unauthenticated-legacy": {
+                  "description": "allow trusted pre-version archives with unauthenticated snapshot.yaml metadata (unsafe compatibility mode)",
+                  "shorthand": "",
+                  "global": false
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "get \u003cDIR\u003e",
+              "description": "Print a one-line summary of a locally downloaded snapshot archive",
+              "aliases": null,
+              "flags": {
+                "allow-unauthenticated-legacy": {
+                  "description": "allow trusted pre-version archives with unauthenticated snapshot.yaml metadata (unsafe compatibility mode)",
+                  "shorthand": "",
+                  "global": false
+                }
+              },
+              "subcommands": null
+            }
+          ]
+        },
+        {
+          "name": "restore [flags] \u003csnapshot\u003e",
+          "description": "Restore a snapshot in-place into its namespace",
+          "aliases": null,
+          "flags": {
+            "context": {
+              "description": "The name of the kubeconfig context to use",
+              "shorthand": "",
+              "global": false
+            },
+            "dry-run": {
+              "description": "validate objects via DryRunAll without persisting; skips --wait (use to preflight a restore)",
+              "shorthand": "",
+              "global": false
+            },
+            "edit": {
+              "description": "open resolved manifests in $KUBE_EDITOR/$EDITOR (falling back to vi) before applying; aborts on non-zero exit, unchanged, or empty content",
+              "shorthand": "",
+              "global": false
+            },
+            "kubeconfig": {
+              "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
+              "shorthand": "k",
+              "global": false
+            },
+            "namespace": {
+              "description": "snapshot namespace; also the restore target namespace (required)",
+              "shorthand": "n",
+              "global": false
+            },
+            "no-auto-edit": {
+              "description": "disable the one automatic editor session for interactive Kubernetes Invalid (HTTP 422) preflight responses",
+              "shorthand": "",
+              "global": false
+            },
+            "node": {
+              "description": "restrict restore to a single node subtree; format '\u003cKind\u003e/\u003cname\u003e' (e.g. --node DemoVirtualDisk/bk-disk-a); the generated snapshot CR name form (e.g. DemoVirtualDiskSnapshot/nss-child-abc123) is still accepted",
+              "shorthand": "",
+              "global": false
+            },
+            "node-api-version": {
+              "description": "disambiguate --node by exact API version: 'v1' for core resources or '\u003cgroup\u003e/\u003cversion\u003e' for named groups (requires --node)",
+              "shorthand": "",
+              "global": false
+            },
+            "object": {
+              "description": "restrict a --scope node restore to a single captured object; format '\u003cKind\u003e/\u003cname\u003e' (requires --scope node)",
+              "shorthand": "",
+              "global": false
+            },
+            "scope": {
+              "description": "restore scope: 'subtree' (default) compiles the addressed node and its whole subtree; 'node' compiles only the addressed node itself",
+              "shorthand": "",
+              "global": false
+            },
+            "timeout": {
+              "description": "timeout for the --wait Bound check",
+              "shorthand": "",
+              "global": false
+            },
+            "wait": {
+              "description": "wait for manifest PVCs to become Bound; a dormant WaitForFirstConsumer PVC with no selected node, live consumer, or provisioning signal completes without polling",
+              "shorthand": "",
+              "global": false
+            }
+          },
+          "subcommands": null
+        },
+        {
+          "name": "upload [flags]",
+          "description": "Upload a downloaded snapshot archive into a namespace",
+          "aliases": [
+            "import"
+          ],
+          "flags": {
+            "allow-existing": {
+              "description": "downgrade namespace preflight conflict check to a warning (import-mode markers from a prior run are never conflicts regardless of this flag)",
+              "shorthand": "",
+              "global": false
+            },
+            "allow-unauthenticated-legacy": {
+              "description": "allow trusted pre-version archives whose snapshot.yaml metadata is unauthenticated (unsafe; explicit compatibility mode)",
+              "shorthand": "",
+              "global": false
+            },
+            "context": {
+              "description": "The name of the kubeconfig context to use",
+              "shorthand": "",
+              "global": false
+            },
+            "input": {
+              "description": "root archive directory produced by 'd8 snapshot download' (required)",
+              "shorthand": "i",
+              "global": false
+            },
+            "kubeconfig": {
+              "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
+              "shorthand": "k",
+              "global": false
+            },
+            "namespace": {
+              "description": "target namespace to import into (required)",
+              "shorthand": "n",
+              "global": false
+            },
+            "node": {
+              "description": "restrict import to a single node subtree; format '\u003cKind\u003e/\u003cname\u003e' (e.g. --node VolumeSnapshot/pvc-1)",
+              "shorthand": "",
+              "global": false
+            },
+            "skip-unsupported-fs-entries": {
+              "description": "skip unsupported filesystem entries and report them after upload (causes data loss for skipped paths)",
+              "shorthand": "",
+              "global": false
+            },
+            "timeout": {
+              "description": "timeout for per-node readiness/completion waits",
+              "shorthand": "",
+              "global": false
+            },
+            "ttl": {
+              "description": "idle TTL for each data-leaf DataImport (e.g. 2h, 30m); must exceed the importer's provisioning and post-upload completion time",
+              "shorthand": "",
+              "global": false
+            },
+            "workers": {
+              "description": "maximum number of data-leaf volume uploads to run in parallel (fixed cap via errgroup.SetLimit; default 5)",
               "shorthand": "",
               "global": false
             }
@@ -47382,10 +47887,17 @@
                 },
                 {
                   "name": "snapshot",
-                  "description": "Restores and saves snapshots from the Raft cluster",
+                  "description": "Restores, saves and inspects snapshots from the Raft cluster",
                   "aliases": null,
                   "flags": {},
                   "subcommands": [
+                    {
+                      "name": "inspect",
+                      "description": "Inspects a Raft snapshot",
+                      "aliases": null,
+                      "flags": {},
+                      "subcommands": null
+                    },
                     {
                       "name": "restore",
                       "description": "Installs the provided snapshot, returning the cluster to the state defined in it",
@@ -48127,15 +48639,15 @@
                   "shorthand": "",
                   "global": true
                 },
-                "editor": {
-                  "description": "Your favourite editor.",
-                  "shorthand": "e",
-                  "global": false
-                },
                 "kubeconfig": {
                   "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
                   "shorthand": "k",
                   "global": true
+                },
+                "output": {
+                  "description": "Output format: yaml|json",
+                  "shorthand": "o",
+                  "global": false
                 }
               },
               "subcommands": null
@@ -48209,6 +48721,11 @@
                   "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
                   "shorthand": "k",
                   "global": true
+                },
+                "output": {
+                  "description": "Output format: yaml|json",
+                  "shorthand": "o",
+                  "global": false
                 }
               },
               "subcommands": null
@@ -48227,6 +48744,11 @@
                   "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
                   "shorthand": "k",
                   "global": true
+                },
+                "output": {
+                  "description": "Output format: yaml|json",
+                  "shorthand": "o",
+                  "global": false
                 }
               },
               "subcommands": null
