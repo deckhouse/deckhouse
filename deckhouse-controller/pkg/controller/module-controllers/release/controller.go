@@ -647,8 +647,21 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 	// (by module config, by bundle or by an enabled script) - EnabledByModuleManager
 	// reflects the effective enabled state, unlike EnabledByModuleConfig which is only
 	// set for modules enabled explicitly via a ModuleConfig
-	if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleManager, corev1.ConditionTrue) && !r.installer.IsEmbeddedPresent(release.GetModuleName()) {
-		if err = utils.EnsureModuleDocumentationForRelease(ctx, r.client, release); err != nil {
+	if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleManager, corev1.ConditionTrue) {
+		if r.installer.IsEmbeddedPresent(release.GetModuleName()) {
+			// The embedded copy serves the module, so the release is only staged and the
+			// /modules/<name> mount a ModuleDocumentation points at is never created, while
+			// the docs of the running (embedded) version ship with the documentation image.
+			// A ModuleDocumentation left over from a Deckhouse that predates this guard makes
+			// the docbuilder stat a path that cannot appear until the embedded copy is dropped
+			// on upgrade, and retry it forever, so delete it. The branch below recreates it
+			// once the module is activated.
+			if err = utils.DeleteModuleDocumentation(ctx, r.client, release.GetModuleName()); err != nil {
+				r.log.Error("failed to delete stale module documentation", slog.String("module", release.GetModuleName()), log.Err(err))
+
+				return res, fmt.Errorf("delete stale module documentation: %w", err)
+			}
+		} else if err = utils.EnsureModuleDocumentationForRelease(ctx, r.client, release); err != nil {
 			r.log.Error("failed to ensure module documentation", slog.String("module", release.GetModuleName()), log.Err(err))
 
 			return res, fmt.Errorf("ensure module documentation: %w", err)
