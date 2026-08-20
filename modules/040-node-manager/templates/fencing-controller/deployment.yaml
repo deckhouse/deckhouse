@@ -90,7 +90,6 @@ spec:
         - --health-probe-bind-address=0.0.0.0:{{ $healthPort }}
         - --metrics-bind-address=127.0.0.1:{{ $metricsPort }}
         - --leader-elect={{ include "helm_lib_is_ha_to_value" (list . "true" "false") }}
-        - -v=4
         env:
         - name: LOG_LEVEL
           value: info

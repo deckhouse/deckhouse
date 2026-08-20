@@ -31,7 +31,7 @@ shell:
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download -x
   setup:
   - cd /src
-  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o fencing-controller ./cmd/main.go
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o fencing-controller ./cmd
   - chown 64535:64535 /src/fencing-controller
   - chmod 0700 /src/fencing-controller
 ---
