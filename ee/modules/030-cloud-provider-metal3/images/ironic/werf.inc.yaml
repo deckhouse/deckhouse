@@ -1,6 +1,7 @@
 {{- $version := include "get_oss_version_by_id" (list "ironic-image-metal3" $) }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
+cacheVersion: ipa-images-runtime-copy-v1
 context: ee/modules/030-cloud-provider-metal3/images/ironic
 dockerfile: Dockerfile.ironic
 dependencies:
