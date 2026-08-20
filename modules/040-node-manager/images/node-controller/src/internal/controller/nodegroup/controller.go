@@ -114,6 +114,7 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 	if err != nil {
 		if errors.IsNotFound(err) {
 			logger.V(1).Info("NodeGroup not found, skipping", "name", req.Name)
+			cloudprovider.ClearProviderMetrics(req.Name)
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
@@ -128,6 +129,7 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 	}
 
 	provider, err := providers.ForNodeGroup(ng)
+	cloudprovider.TrackProviderMetrics(ng, provider, err)
 	if err != nil {
 		logger.Error(err, "failed to resolve the cloud provider of the NodeGroup", "nodeGroup", ng.Name)
 		return ctrl.Result{}, err

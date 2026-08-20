@@ -3,6 +3,7 @@
   "monitoring/prometheus-rules/cloud-data-discovery.tpl"
   "monitoring/prometheus-rules/migrate-to-tofu.yaml"
   "monitoring/prometheus-rules/node-group-deprecate.yaml"
+  "monitoring/prometheus-rules/node-group-provider-type.yaml"
   "monitoring/prometheus-rules/node-group.tpl"
   "monitoring/prometheus-rules/node-unmanaged.tpl"
   "monitoring/prometheus-rules/node-update.yaml"

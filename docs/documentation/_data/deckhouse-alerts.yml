@@ -4302,6 +4302,59 @@ alerts:
         NodeGroup {{ $labels.node_group }} contains nodes in a deprecated availability zone.
       severity: "9"
       markupFormat: markdown
+    - name: NodeGroupProviderTypeIsInvalid
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-group-provider-type.yaml
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        The `spec.providerType` field of NodeGroup `{{ $labels.name }}` is set to `{{ $labels.provider_type }}`,
+        which is not the cloud provider the nodes of the group run in.
+
+        To resolve this issue, set the field to a correct value:
+
+        - If the nodes of the group run in a cloud, set the field to the `type` of that cloud provider,
+          as published in its registration secret:
+
+          ```bash
+          kubectl -n kube-system get secrets -l cloud-provider.deckhouse.io/registration -o json \
+          | jq -r '.items[] | .data.type | @base64d'
+          ```
+
+        - If the cluster is static, or the NodeGroup has `nodeType: Static`, set the field to `None`
+          or leave it empty:
+
+          ```bash
+          kubectl patch nodegroup {{ $labels.name }} --type=merge -p '{"spec":{"providerType":"None"}}'
+          ```
+      summary: |
+        The spec.providerType field is set incorrectly in NodeGroup {{ $labels.name }}.
+      severity: "4"
+      markupFormat: markdown
+    - name: NodeGroupProviderTypeIsNotSet
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-group-provider-type.yaml
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        The `spec.providerType` field is not set in NodeGroup `{{ $labels.name }}`.
+
+        To resolve this issue, set the field to the `type` of the cloud provider the nodes of the group run in:
+
+        ```bash
+        kubectl patch nodegroup {{ $labels.name }} --type=merge -p '{"spec":{"providerType":"<PROVIDER_TYPE>"}}'
+        ```
+
+        To list the values registered in the cluster:
+
+        ```bash
+        kubectl -n kube-system get secrets -l cloud-provider.deckhouse.io/registration -o json \
+        | jq -r '.items[] | .data.type | @base64d'
+        ```
+      summary: |
+        The spec.providerType field is not set in NodeGroup {{ $labels.name }}.
+      severity: "9"
+      markupFormat: markdown
     - name: NodeGroupReplicasUnavailable
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-group.tpl
       moduleUrl: 040-node-manager

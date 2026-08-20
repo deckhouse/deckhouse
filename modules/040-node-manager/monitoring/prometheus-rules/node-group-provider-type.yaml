@@ -1,0 +1,62 @@
+- name: d8.node-group-provider-type
+  rules:
+    - alert: NodeGroupProviderTypeIsNotSet
+      expr: |
+        max by (name, node_type) (d8_node_group_provider_type_unset) > 0
+      for: 1h
+      labels:
+        tier: cluster
+        severity_level: "9"
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__cluster_has_node_groups_deprecation_alerts: "NodeGroupsDeprecationAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__cluster_has_node_groups_deprecation_alerts: "NodeGroupsDeprecationAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: The `spec.providerType` field is not set in NodeGroup {{ $labels.name }}.
+        description: |
+          The `spec.providerType` field is not set in NodeGroup `{{ $labels.name }}`.
+
+          To resolve this issue, set the field to the `type` of the cloud provider the nodes of the group run in:
+
+          ```bash
+          kubectl patch nodegroup {{ $labels.name }} --type=merge -p '{"spec":{"providerType":"<PROVIDER_TYPE>"}}'
+          ```
+
+          To list the values registered in the cluster:
+
+          ```bash
+          kubectl -n kube-system get secrets -l cloud-provider.deckhouse.io/registration -o json \
+          | jq -r '.items[] | .data.type | @base64d'
+          ```
+
+    - alert: NodeGroupProviderTypeIsInvalid
+      expr: |
+        max by (name, node_type, provider_type) (d8_node_group_provider_type_invalid) > 0
+      for: 10m
+      labels:
+        tier: cluster
+        severity_level: "4"
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        summary: The `spec.providerType` field is set incorrectly in NodeGroup {{ $labels.name }}.
+        description: |
+          The `spec.providerType` field of NodeGroup `{{ $labels.name }}` is set to `{{ $labels.provider_type }}`,
+          which is not the cloud provider the nodes of the group run in.
+
+          To resolve this issue, set the field to a correct value:
+
+          - If the nodes of the group run in a cloud, set the field to the `type` of that cloud provider,
+            as published in its registration secret:
+
+            ```bash
+            kubectl -n kube-system get secrets -l cloud-provider.deckhouse.io/registration -o json \
+            | jq -r '.items[] | .data.type | @base64d'
+            ```
+
+          - If the cluster is static, or the NodeGroup has `nodeType: Static`, set the field to `None`
+            or leave it empty:
+
+            ```bash
+            kubectl patch nodegroup {{ $labels.name }} --type=merge -p '{"spec":{"providerType":"None"}}'
+            ```
