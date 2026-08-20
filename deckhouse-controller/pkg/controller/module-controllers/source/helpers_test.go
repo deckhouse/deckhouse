@@ -1,0 +1,199 @@
+// Copyright 2025 Flant JSC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package source
+
+import (
+	"context"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/go_lib/project"
+	"github.com/deckhouse/deckhouse/pkg/log"
+)
+
+func TestReleaseChainToTargetComplete(t *testing.T) {
+	const moduleName = "console"
+
+	moduleRelease := func(version, phase string) *v1alpha1.ModuleRelease {
+		return &v1alpha1.ModuleRelease{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   moduleName + "-v" + version,
+				Labels: map[string]string{v1alpha1.ModuleReleaseLabelModule: moduleName},
+			},
+			Spec:   v1alpha1.ModuleReleaseSpec{ModuleName: moduleName, Version: version},
+			Status: v1alpha1.ModuleReleaseStatus{Phase: phase},
+		}
+	}
+
+	// moduleReleaseFromTo builds a release that declares a from-to transition rule on
+	// itself (the constrained "to" release), allowing a direct jump from `from`.
+	moduleReleaseFromTo := func(version, phase, from, to string) *v1alpha1.ModuleRelease {
+		release := moduleRelease(version, phase)
+		release.Spec.UpdateSpec = &v1alpha1.UpdateSpec{
+			Versions: []v1alpha1.UpdateConstraint{{From: from, To: to}},
+		}
+		return release
+	}
+
+	tests := []struct {
+		name     string
+		target   string
+		releases []*v1alpha1.ModuleRelease
+		want     bool
+		wantErr  bool
+	}{
+		{
+			// the console case: deployed 1.52.0, target 1.55.1, intermediates missing
+			name:   "gap between deployed and target",
+			target: "v1.55.1",
+			releases: []*v1alpha1.ModuleRelease{
+				moduleRelease("1.52.0", v1alpha1.ModuleReleasePhaseDeployed),
+				moduleRelease("1.55.1", v1alpha1.ModuleReleasePhasePending),
+			},
+			want: false,
+		},
+		{
+			name:   "full continuous chain",
+			target: "v1.55.1",
+			releases: []*v1alpha1.ModuleRelease{
+				moduleRelease("1.52.0", v1alpha1.ModuleReleasePhaseDeployed),
+				moduleRelease("1.53.2", v1alpha1.ModuleReleasePhasePending),
+				moduleRelease("1.54.1", v1alpha1.ModuleReleasePhasePending),
+				moduleRelease("1.55.1", v1alpha1.ModuleReleasePhasePending),
+			},
+			want: true,
+		},
+		{
+			// a from-to rule on the target legitimizes the minor jump: the chain is
+			// complete and the fetch must NOT reopen on every reconcile
+			name:   "gap bridged by target from-to rule",
+			target: "v1.55.1",
+			releases: []*v1alpha1.ModuleRelease{
+				moduleRelease("1.52.0", v1alpha1.ModuleReleasePhaseDeployed),
+				moduleReleaseFromTo("1.55.1", v1alpha1.ModuleReleasePhasePending, "1.52", "1.55"),
+			},
+			want: true,
+		},
+		{
+			// a from-to window that does not cover the deployed version does NOT bridge
+			// the gap: the release updater refuses the jump (deployed < from), so the
+			// chain must be reported incomplete and the intermediate releases fetched
+			name:   "from-to window does not cover deployed - not bridged",
+			target: "v1.55.1",
+			releases: []*v1alpha1.ModuleRelease{
+				moduleRelease("1.52.0", v1alpha1.ModuleReleasePhaseDeployed),
+				moduleReleaseFromTo("1.55.1", v1alpha1.ModuleReleasePhasePending, "1.53", "1.55"),
+			},
+			want: false,
+		},
+		{
+			// the reported incident: a from-to whose "to" (2.0) overshoots the release's
+			// own minor (1.55). The release updater ignores such a rule (release
+			// major.minor != to), so the source controller must too - report the chain
+			// incomplete and fetch the missing 1.53/1.54 instead of freezing
+			name:   "from-to to overshoots release minor - not bridged",
+			target: "v1.55.1",
+			releases: []*v1alpha1.ModuleRelease{
+				moduleRelease("1.52.0", v1alpha1.ModuleReleasePhaseDeployed),
+				moduleReleaseFromTo("1.55.1", v1alpha1.ModuleReleasePhasePending, "1.40", "2.0"),
+			},
+			want: false,
+		},
+		{
+			name:   "one intermediate minor missing",
+			target: "v1.55.1",
+			releases: []*v1alpha1.ModuleRelease{
+				moduleRelease("1.52.0", v1alpha1.ModuleReleasePhaseDeployed),
+				moduleRelease("1.53.2", v1alpha1.ModuleReleasePhasePending),
+				moduleRelease("1.55.1", v1alpha1.ModuleReleasePhasePending),
+			},
+			want: false,
+		},
+		{
+			name:   "target release itself missing",
+			target: "v1.55.1",
+			releases: []*v1alpha1.ModuleRelease{
+				moduleRelease("1.52.0", v1alpha1.ModuleReleasePhaseDeployed),
+				moduleRelease("1.53.2", v1alpha1.ModuleReleasePhasePending),
+				moduleRelease("1.54.1", v1alpha1.ModuleReleasePhasePending),
+			},
+			want: false,
+		},
+		{
+			name:     "no deployed release - first install, nothing to bridge",
+			target:   "v1.55.1",
+			releases: []*v1alpha1.ModuleRelease{moduleRelease("1.55.1", v1alpha1.ModuleReleasePhasePending)},
+			want:     true,
+		},
+		{
+			name:   "target not ahead of deployed",
+			target: "v1.52.0",
+			releases: []*v1alpha1.ModuleRelease{
+				moduleRelease("1.52.0", v1alpha1.ModuleReleasePhaseDeployed),
+			},
+			want: true,
+		},
+		{
+			name:   "sequential minor step is complete",
+			target: "v1.53.2",
+			releases: []*v1alpha1.ModuleRelease{
+				moduleRelease("1.52.0", v1alpha1.ModuleReleasePhaseDeployed),
+				moduleRelease("1.53.2", v1alpha1.ModuleReleasePhasePending),
+			},
+			want: true,
+		},
+		{
+			// a corrupt Spec.Version must surface as a handled error, not panic through
+			// GetVersion's semver.MustParse on this steady-state path
+			name:   "malformed release version returns error",
+			target: "v1.55.1",
+			releases: []*v1alpha1.ModuleRelease{
+				moduleRelease("1.52.0", v1alpha1.ModuleReleasePhaseDeployed),
+				moduleRelease("not-a-semver", v1alpha1.ModuleReleasePhasePending),
+			},
+			wantErr: true,
+		},
+	}
+
+	scheme, err := project.Scheme()
+	require.NoError(t, err)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			objects := make([]client.Object, 0, len(tt.releases))
+			for _, rel := range tt.releases {
+				objects = append(objects, rel)
+			}
+
+			r := &reconciler{
+				client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build(),
+				logger: log.NewNop(),
+			}
+
+			got, err := r.releaseChainToTargetComplete(context.Background(), moduleName, tt.target)
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.want, got)
+		})
+	}
+}
