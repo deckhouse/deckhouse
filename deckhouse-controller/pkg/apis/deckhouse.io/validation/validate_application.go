@@ -36,6 +36,10 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 )
 
+// maxApplicationNameLength limits the instance name: it prefixes the name of every object
+// the application creates, and those must fit the 63-character Kubernetes name limit.
+const maxApplicationNameLength = 32
+
 // applicationValidationHandler validations for Application creation
 func applicationValidationHandler(cli client.Client, manager packageManager) http.Handler {
 	vf := kwhvalidating.ValidatorFunc(func(ctx context.Context, _ *kwhmodel.AdmissionReview, obj metav1.Object) (*kwhvalidating.ValidatorResult, error) {
@@ -47,6 +51,10 @@ func applicationValidationHandler(cli client.Client, manager packageManager) htt
 		// no sense to check already deleted app
 		if !app.DeletionTimestamp.IsZero() {
 			return allowResult(nil)
+		}
+
+		if len(app.Name) > maxApplicationNameLength {
+			return rejectResult(fmt.Sprintf("Application name '%s' must be no longer than %d characters", app.Name, maxApplicationNameLength))
 		}
 
 		ap := new(v1alpha1.ApplicationPackage)
