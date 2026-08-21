@@ -222,13 +222,13 @@ Kubernetes enables the following standard admission plugins:
 | **PodSecurity** | Validating | Checks new pods before they are launched and determines whether to allow them based on the requested security context and the restrictions set by the Pod Security Standards in the namespace where the pod will reside. |
 | **Priority** | Mutating and Validating | Uses the `priorityClassName` field and populates the integer priority value. If the priority class is not found, the pod is rejected. |
 | **DefaultTolerationSeconds** | Mutating | Sets default toleration values for Pods for the `notready:NoExecute` and `unreachable:NoExecute` taints if the Pod does not have its own tolerations. The default value is **5 minutes**. |
-| **DefaultStorageClass** | Mutable | Oversees the creation of PersistentVolumeClaim objects. If a specific StorageClass is not specified in the request, it automatically adds the StorageClass labeled `default`. This ensures that users who do not specify a StorageClass will receive the default StorageClass. |
-| **StorageObjectInUseProtection** | Mutable | Protects storage objects (such as PersistentVolumes) that are in use by pods from accidental deletion. Adds the `kubernetes.io/pvc-protection` or `kubernetes.io/pv-protection` finalizers, which prevent the resource from being deleted while it is in use. |
+| **DefaultStorageClass** | Mutating | Oversees the creation of PersistentVolumeClaim objects. If a specific StorageClass is not specified in the request, it automatically adds the StorageClass labeled `default`. This ensures that users who do not specify a StorageClass will receive the default StorageClass. |
+| **StorageObjectInUseProtection** | Mutating | Protects storage objects (such as PersistentVolumes) that are in use by pods from accidental deletion. Adds the `kubernetes.io/pvc-protection` or `kubernetes.io/pv-protection` finalizers, which prevent the resource from being deleted while it is in use. |
 | **PersistentVolumeClaimResize** | Validating | Performs additional checks on incoming requests to resize a PersistentVolumeClaim. By default, it prohibits resizing of all claims, except in cases where the claim’s StorageClass explicitly allows resizing by setting the `allowVolumeExpansion` parameter to `true`. |
 | **RuntimeClass** | Mutating and Validating | Takes the `RuntimeClass` into account when creating pods. Sets the `pod.Spec.Overhead` field according to the selected runtime class and validates requests. |
 | **CertificateApproval** | Validating | Monitors requests to approve `CertificateSigningRequests` and performs additional authorization checks to ensure the user has the rights to approve certificate requests. |
-| **CertificateSigning** | Validator | Monitors updates to the `status.certificate` field in a CertificateSigningRequest and verifies that the user has the rights to sign the certificate request, using the `spec.signerName` value specified in the CertificateSigningRequest resource. |
-| **ClusterTrustBundleAttest** | Validator | Analyzes and attests to the trustworthiness of the Kubernetes cluster. This may include verifying certificates, security configurations, and other parameters related to the cluster’s integrity. |
+| **CertificateSigning** | Validating | Monitors updates to the `status.certificate` field in a CertificateSigningRequest and verifies that the user has the rights to sign the certificate request, using the `spec.signerName` value specified in the CertificateSigningRequest resource. |
+| **ClusterTrustBundleAttest** | Validating | Analyzes and attests to the trustworthiness of the Kubernetes cluster. This may include verifying certificates, security configurations, and other parameters related to the cluster’s integrity. |
 | **CertificateSubjectRestriction** | Validating | Monitors the creation of CertificateSigningRequests where `spec.signerName` = `kubernetes.io/kube-apiserver-client`. Rejects requests that specify the `system:masters` group. |
 | **DefaultIngressClass** | Mutating | Monitors the creation of Ingress objects. If no Ingress class is specified in the request, it automatically adds the Ingress class labeled as “default.” |
 | **PodTopologyLabels** | Mutating | Adds topology labels (e.g., availability zone) to pods bound to a node, corresponding to the labels of that node. |
@@ -242,17 +242,19 @@ Kubernetes enables the following standard admission plugins:
 
 In addition to the [standard admission plugins enabled by Kubernetes](#standard-admission-plugins-enabled-by-kubernetes), the module enables the following admission plugins (which cannot be disabled):
 
-|| Admission plugin | Type | Brief description |
+| Admission plugin | Type | Short description |
 | --- | --- | --- |
 | **EventRateLimit** | Validating | Addresses the issue of API server overload caused by requests to save new events. Allows you to configure limits at the namespace, user, or global level. |
 | **ExtendedResourceToleration** | Mutating | Automatically adds tolerations to pods requesting extended resources (e.g., GPU, FPGA). This allows you to allocate special nodes for such pods—nodes that are pre-tainted with the resource name—without manually adding tolerations to the pods. |
 | **NodeRestriction** | Validating | Restricts the set of Node and Pod objects that the kubelet can modify. Enhances cluster security. |
-| **PodNodeSelector** | Validating | Defines and restricts which node selectors can be used within a namespace, based on reading the namespace annotation and global configuration. |
+| **PodNodeSelector** | Mutating and Validating | Defines and restricts which node selectors can be used within a namespace, based on reading the namespace annotation and global configuration. |
 | **PodTolerationRestriction** | Mutating and Validating | Checks the pod’s toleration for conflicts with tolerations specified at the namespace level. If there are no conflicts, it merges the pod’s and namespace’s tolerations. It also checks the pod against a “whitelist” of tolerations. |
 
 {% alert level="info" %}
 
 In addition to the admission plugins listed above (which are enabled by Kubernetes and the module), you can also enable some additional ones. To do this, use the [`apiserver.admissionPlugins`](configuration.html#parameters-apiserver-admissionplugins) parameter.
+
+The `PodNodeSelector` and `PodTolerationRestriction` plugins are still listed among the allowed values of that parameter for backward compatibility only: they are always enabled, so specifying them has no effect and causes no error.
 
 {% endalert %}
 
