@@ -284,4 +284,48 @@ func TestFillModuleV2(t *testing.T) {
 		fillModuleV2(module, Origin{RepositoryName: "example", PackageVersion: "v1.0.0"}, nil)
 		assert.True(t, module.IsDev(), "the dev annotation is never cleared by the sync")
 	})
+
+	t.Run("config source overrides the origin repository", func(t *testing.T) {
+		module := &v1alpha2.Module{}
+
+		conf := testModuleConfig("echo")
+		conf.Spec.Source = "chosen"
+
+		fillModuleV2(module, Origin{RepositoryName: "example", PackageVersion: "v1.0.0"}, conf)
+
+		assert.Equal(t, "chosen", module.Spec.PackageRepositoryName)
+		assert.Equal(t, "v1.0.0", module.Spec.PackageVersion, "the version still comes from the origin")
+	})
+
+	t.Run("config without a source keeps the origin repository", func(t *testing.T) {
+		module := &v1alpha2.Module{}
+
+		fillModuleV2(module, Origin{RepositoryName: "example", PackageVersion: "v1.0.0"}, testModuleConfig("echo"))
+
+		assert.Equal(t, "example", module.Spec.PackageRepositoryName)
+	})
+
+	t.Run("embedded module ignores the config source", func(t *testing.T) {
+		module := &v1alpha2.Module{}
+
+		conf := testModuleConfig("echo")
+		conf.Spec.Source = "chosen"
+
+		fillModuleV2(module, Origin{RepositoryName: embeddedRepositoryName, PackageVersion: "v1.77.0", Embedded: true}, conf)
+
+		assert.Equal(t, embeddedRepositoryName, module.Spec.PackageRepositoryName)
+	})
+
+	t.Run("config mirror alone moves the repository", func(t *testing.T) {
+		module := &v1alpha2.Module{
+			Spec: v1alpha2.ModuleSpec{PackageRepositoryName: "example", PackageVersion: "v1.0.0"},
+		}
+
+		conf := testModuleConfig("echo")
+		conf.Spec.Source = "chosen"
+
+		fillModuleV2(module, Origin{}, conf)
+
+		assert.Equal(t, "chosen", module.Spec.PackageRepositoryName, "a config event alone repoints the module")
+	})
 }

@@ -63,6 +63,14 @@ func fillModuleV2(moduleV2 *v1alpha2.Module, origin Origin, conf *v1alpha1.Modul
 	moduleV2.Spec.Maintenance = conf.Spec.Maintenance
 	moduleV2.Spec.Enabled = conf.Spec.Enabled
 	moduleV2.Spec.UpdatePolicy = conf.Spec.UpdatePolicy
+
+	// the config names the repository the module must come from, and it wins
+	// over the origin: the origin only reports where the package came from
+	// last. An embedded module keeps "embedded" - it ships in the image, and
+	// no repository serves it.
+	if conf.Spec.Source != "" && !moduleV2.IsEmbedded() {
+		moduleV2.Spec.PackageRepositoryName = conf.Spec.Source
+	}
 }
 
 // markAnnotation sets the marker key to "true", allocating the map when the

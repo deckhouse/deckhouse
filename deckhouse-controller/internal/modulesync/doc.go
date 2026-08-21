@@ -45,10 +45,15 @@
 //
 //	live ModuleConfig
 //	  ├─ spec.settings, spec.settingsVersion
-//	  └─ spec.enabled, spec.maintenance
+//	  ├─ spec.enabled, spec.maintenance, spec.updatePolicy
+//	  └─ spec.packageRepositoryName = spec.source, when the config names one
 //
 // When several sources claim the same module, the first one wins:
 // image > pull override > deployed release.
+//
+// The repository is the exception: a ModuleConfig naming a source overrides
+// the origin, because that name is the user's choice. An embedded module
+// keeps "embedded".
 //
 // The sync also supersedes an older release still marked deployed - its
 // only write outside Module resources.
