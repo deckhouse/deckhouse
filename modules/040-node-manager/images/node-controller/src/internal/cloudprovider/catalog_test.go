@@ -53,20 +53,6 @@ func registrationSecret(name string, data map[string][]byte) *corev1.Secret {
 	}
 }
 
-func clusterConfigurationSecret(body string) *corev1.Secret {
-	return &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: clusterConfigSecretNamespace,
-			Name:      clusterConfigSecretName,
-		},
-		Data: map[string][]byte{clusterConfigSecretKey: []byte(body)},
-	}
-}
-
-func cloudCluster(provider string) *corev1.Secret {
-	return clusterConfigurationSecret("clusterType: Cloud\ncloud:\n  provider: " + provider + "\n  prefix: test\n")
-}
-
 func loadFrom(t *testing.T, objs ...client.Object) Catalog {
 	t.Helper()
 	c := fake.NewClientBuilder().WithScheme(testScheme(t)).WithObjects(objs...).Build()
@@ -95,7 +81,7 @@ func nodeGroupOfType(name string, nodeType v1.NodeType) *v1.NodeGroup {
 }
 
 func TestGetCatalog(t *testing.T) {
-	aws := registrationSecret(RegistrationSecretNamePrefix+"-aws", map[string][]byte{"type": []byte("aws")})
+	aws := registrationSecret(RegistrationSecretBaseName+"-aws", map[string][]byte{"type": []byte("aws")})
 	yandexData := map[string][]byte{
 		"type":                    []byte("yandex"),
 		"instanceClassKind":       []byte("YandexInstanceClass"),
@@ -107,40 +93,48 @@ func TestGetCatalog(t *testing.T) {
 	}
 
 	tests := []struct {
-		name  string
-		objs  []client.Object
-		types []string
+		name        string
+		objs        []client.Object
+		types       []string
+		defaultType string
 	}{
 		{
-			// Every provider module renders its registration twice — under the legacy fixed name
-			// and under a per-provider one. Both carry the label, so without deduplication one
+			// Every provider module renders its registration twice — under the fixed name and
+			// under a per-provider one. Both carry the label, so without deduplication one
 			// provider would read as two.
-			name: "the legacy and the per-provider copy are one provider",
+			name: "the fixed-name and the per-provider copy are one provider",
 			objs: []client.Object{
-				registrationSecret(RegistrationSecretNamePrefix, yandexData),
-				registrationSecret(RegistrationSecretNamePrefix+"-yandex", yandexData),
-				cloudCluster("Yandex"),
+				registrationSecret(RegistrationSecretBaseName, yandexData),
+				registrationSecret(RegistrationSecretBaseName+"-yandex", yandexData),
 			},
-			types: []string{"yandex"},
+			types:       []string{"yandex"},
+			defaultType: "yandex",
+		},
+		{
+			// The whole point of the fixed name: with two providers registered, the default is the
+			// one published under it, not the first by type and not the last read.
+			name: "the default is the fixed-name registration",
+			objs: []client.Object{
+				aws,
+				registrationSecret(RegistrationSecretBaseName, yandexData),
+			},
+			types:       []string{"aws", "yandex"},
+			defaultType: "yandex",
 		},
 		{
 			// Selection is by label, not by name: the per-provider Secret of a second provider is
 			// the whole point of this package, and an unlabelled Secret is not a registration.
+			// Nothing holds the fixed name here, so no NodeGroup resolves to a default.
 			name: "every labelled registration is seen, ordered by type",
 			objs: []client.Object{
-				registrationSecret(RegistrationSecretNamePrefix+"-yandex", yandexData),
+				registrationSecret(RegistrationSecretBaseName+"-yandex", yandexData),
 				aws,
 				unlabelled,
-				cloudCluster("Yandex"),
 			},
 			types: []string{"aws", "yandex"},
 		},
 		{
 			name: "a cluster with no cloud provider at all",
-		},
-		{
-			name: "a static cluster names no provider",
-			objs: []client.Object{clusterConfigurationSecret("clusterType: Static\npodSubnetCIDR: 10.111.0.0/16\n")},
 		},
 	}
 
@@ -153,65 +147,53 @@ func TestGetCatalog(t *testing.T) {
 				got = append(got, p.Type)
 			}
 			assert.Equal(t, tc.types, got)
+			assert.Equal(t, tc.defaultType, pCatalog.Default().Type)
+			assert.Equal(t, tc.defaultType == "", pCatalog.Default().IsStatic())
 		})
 	}
 }
 
 // An unreadable source must not read as "no cloud provider": an empty registry publishes
-// NodeGroups without instanceClass, which shifts the configuration checksum of every node, and a
-// CloudPermanent group resolves through the cluster's provider name and nothing else — so a
-// configured provider that published no registration would render the master without its steps.
+// NodeGroups without instanceClass, which shifts the configuration checksum of every node, and
+// every non-Static group resolves through the default registration and nothing else — so a
+// provider whose Secret could not be read would render the master without its steps.
 func TestGetCatalog_Errors(t *testing.T) {
 	tests := []struct {
-		name    string
-		objs    []client.Object
-		deny    bool
-		wantErr string
+		name     string
+		denyList bool
+		denyGet  bool
+		wantErr  string
 	}{
 		{
-			name:    "the registrations cannot be listed",
-			deny:    true,
-			wantErr: "list cloud provider registration secrets",
+			name:     "the registrations cannot be listed",
+			denyList: true,
+			wantErr:  "list cloud provider registration secrets",
 		},
 		{
-			name:    "the configuration key is missing",
-			objs:    []client.Object{&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: RegistrationSecretNamespace, Name: clusterConfigSecretName}}},
-			wantErr: `has no "cluster-configuration.yaml" key`,
-		},
-		{
-			name:    "the document does not parse",
-			objs:    []client.Object{clusterConfigurationSecret("cloud:\n\tprovider: [Yandex\n")},
-			wantErr: `unmarshal "cluster-configuration.yaml"`,
-		},
-		{
-			// The schema requires cloud.provider whenever clusterType is Cloud.
-			name:    "a cloud cluster names no provider",
-			objs:    []client.Object{clusterConfigurationSecret("clusterType: Cloud\ncloud:\n  prefix: test\n")},
-			wantErr: "names no cloud.provider",
-		},
-		{
-			name: "the cluster provider published no registration",
-			objs: []client.Object{
-				registrationSecret(RegistrationSecretNamePrefix+"-aws", map[string][]byte{"type": []byte("aws")}),
-				cloudCluster("Yandex"),
-			},
-			wantErr: `registration secret not found for cloud provider "yandex"`,
+			// NotFound is the legitimate "no cloud" answer; anything else is not.
+			name:    "the default registration cannot be read",
+			denyGet: true,
+			wantErr: `get secret "d8-node-manager-cloud-provider"`,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			builder := fake.NewClientBuilder().WithScheme(testScheme(t)).WithObjects(tc.objs...)
-			if tc.deny {
-				// The last-resort tool: producing a Forbidden needs RBAC that envtest does not run.
-				builder = builder.WithInterceptorFuncs(interceptor.Funcs{
-					List: func(context.Context, client.WithWatch, client.ObjectList, ...client.ListOption) error {
-						return apierrors.NewForbidden(schema.GroupResource{Resource: "secrets"}, "", context.Canceled)
-					},
-				})
+			builder := fake.NewClientBuilder().WithScheme(testScheme(t))
+			// The last-resort tool: producing a Forbidden needs RBAC that envtest does not run.
+			funcs := interceptor.Funcs{}
+			if tc.denyList {
+				funcs.List = func(context.Context, client.WithWatch, client.ObjectList, ...client.ListOption) error {
+					return apierrors.NewForbidden(schema.GroupResource{Resource: "secrets"}, "", context.Canceled)
+				}
+			}
+			if tc.denyGet {
+				funcs.Get = func(context.Context, client.WithWatch, client.ObjectKey, client.Object, ...client.GetOption) error {
+					return apierrors.NewForbidden(schema.GroupResource{Resource: "secrets"}, "", context.Canceled)
+				}
 			}
 
-			_, err := GetCatalog(context.Background(), builder.Build())
+			_, err := GetCatalog(context.Background(), builder.WithInterceptorFuncs(funcs).Build())
 
 			require.ErrorContains(t, err, tc.wantErr)
 		})

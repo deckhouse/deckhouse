@@ -18,7 +18,6 @@ package cloudprovider
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"slices"
 	"strings"
@@ -28,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	sigsyaml "sigs.k8s.io/yaml"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 )
@@ -40,26 +38,12 @@ func GetCatalog(ctx context.Context, r client.Reader) (Catalog, error) {
 		return Catalog{}, err
 	}
 
-	pType, err := getClusterProviderType(ctx, r)
+	defaultProvider, err := getDefaultProvider(ctx, r)
 	if err != nil {
 		return Catalog{}, err
 	}
 
-	// Static
-	if pType == "" {
-		return NewCatalog(all, Provider{}), nil
-	}
-
-	// Cloud
-	provider, ok := byType(all, pType)
-	if !ok {
-		return Catalog{}, fmt.Errorf(
-			"registration secret not found for cloud provider %q in cluster configuration",
-			pType,
-		)
-	}
-
-	return NewCatalog(all, provider), nil
+	return NewCatalog(all, defaultProvider), nil
 }
 
 // NewCatalog builds a Catalog from providers already in hand. The default is the registration
@@ -90,7 +74,6 @@ func (c Catalog) Default() Provider {
 // ByNodeGroup returns the provider a NodeGroup runs on. The verdict on its spec.providerType
 // is ValidateNodeGroup.
 func (c Catalog) ByNodeGroup(ng *v1.NodeGroup) Provider {
-	// A Static node lives outside every cloud.
 	if ng.Spec.NodeType == v1.NodeTypeStatic {
 		return Provider{}
 	}
@@ -175,52 +158,28 @@ func getProviders(ctx context.Context, r client.Reader) ([]Provider, error) {
 	return ret, nil
 }
 
-// getClusterProviderType returns ClusterConfiguration.cloud.provider
-// from d8-cluster-configuration secret
-func getClusterProviderType(ctx context.Context, r client.Reader) (string, error) {
+// getDefaultProvider returns the provider every non-Static NodeGroup runs on: the registration a
+// provider module publishes under the fixed name, next to its per-provider copy. No such Secret
+// means no cloud — the cluster configuration is not consulted, so a provider that has not
+// registered yet is indistinguishable from a static cluster.
+func getDefaultProvider(ctx context.Context, r client.Reader) (Provider, error) {
 	secret := &corev1.Secret{}
 	err := r.Get(
 		ctx,
 		types.NamespacedName{
-			Namespace: clusterConfigSecretNamespace,
-			Name:      clusterConfigSecretName,
+			Namespace: RegistrationSecretNamespace,
+			Name:      RegistrationSecretBaseName,
 		},
 		secret,
 	)
 	if apierrors.IsNotFound(err) {
-		return "", nil
+		return Provider{}, nil
 	}
-
 	if err != nil {
-		return "", fmt.Errorf("get secret %q: %w", clusterConfigSecretName, err)
+		return Provider{}, fmt.Errorf("get secret %q: %w", RegistrationSecretBaseName, err)
 	}
 
-	raw, ok := secret.Data[clusterConfigSecretKey]
-	if !ok {
-		return "", fmt.Errorf("secret %q has no %q key", clusterConfigSecretName, clusterConfigSecretKey)
-	}
-
-	// Base64-encoded in some installations; plain YAML is never valid base64, so the fallback is safe.
-	if decoded, err := base64.StdEncoding.DecodeString(string(raw)); err == nil {
-		raw = decoded
-	}
-
-	var cfg struct {
-		ClusterType string `json:"clusterType"`
-		Cloud       struct {
-			Provider string `json:"provider"`
-		} `json:"cloud"`
-	}
-	if err := sigsyaml.Unmarshal(raw, &cfg); err != nil {
-		return "", fmt.Errorf("unmarshal %q: %w", clusterConfigSecretKey, err)
-	}
-
-	if cfg.ClusterType == cloudClusterType &&
-		cfg.Cloud.Provider == "" {
-		return "", fmt.Errorf("%q is %q but names no cloud.provider", clusterConfigSecretKey, cloudClusterType)
-	}
-
-	return strings.ToLower(cfg.Cloud.Provider), nil
+	return FromSecretData(secret.Data), nil
 }
 
 func byType(all []Provider, pType string) (Provider, bool) {

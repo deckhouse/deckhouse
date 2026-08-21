@@ -23,18 +23,9 @@ import (
 
 // The registration Secret a provider module publishes.
 const (
-	RegistrationSecretNamespace  = "kube-system"
-	RegistrationSecretLabel      = "cloud-provider.deckhouse.io/registration"
-	RegistrationSecretNamePrefix = "d8-node-manager-cloud-provider"
-)
-
-// The cluster configuration, which names the provider every non-Static NodeGroup resolves through.
-const (
-	clusterConfigSecretNamespace = "kube-system"
-	clusterConfigSecretName      = "d8-cluster-configuration"
-	clusterConfigSecretKey       = "cluster-configuration.yaml"
-	// ClusterConfiguration.clusterType of a cluster that runs in a cloud.
-	cloudClusterType = "Cloud"
+	RegistrationSecretNamespace = "kube-system"
+	RegistrationSecretLabel     = "cloud-provider.deckhouse.io/registration"
+	RegistrationSecretBaseName  = "d8-node-manager-cloud-provider"
 )
 
 // Keys of the registration Secret that callers outside this package name.

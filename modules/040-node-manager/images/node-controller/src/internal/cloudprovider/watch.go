@@ -48,7 +48,7 @@ func IsRegistrationSecret(obj client.Object) bool {
 	if obj.GetNamespace() != RegistrationSecretNamespace {
 		return false
 	}
-	if !strings.HasPrefix(obj.GetName(), RegistrationSecretNamePrefix) {
+	if !strings.HasPrefix(obj.GetName(), RegistrationSecretBaseName) {
 		return false
 	}
 	_, ok := obj.GetLabels()[RegistrationSecretLabel]
@@ -61,7 +61,7 @@ func IsRegistrationSecretKey(key types.NamespacedName) bool {
 	if key.Namespace != RegistrationSecretNamespace {
 		return false
 	}
-	return strings.HasPrefix(key.Name, RegistrationSecretNamePrefix)
+	return strings.HasPrefix(key.Name, RegistrationSecretBaseName)
 }
 
 // RegistrationSecretPredicate filters a watch down to the registration Secrets.
@@ -145,13 +145,13 @@ func nodeGroupRequests(ctx context.Context, r client.Reader, carried ...Provider
 		return nil
 	}
 
-	clusterProvider, err := getClusterProviderType(ctx, r)
+	clusterProvider, err := getDefaultProvider(ctx, r)
 	if err != nil {
 		logger.Error(err, "read the cluster provider for a cloud provider registration event")
 		return nil
 	}
 
-	defaultProvider, _ := byType(carried, clusterProvider)
+	defaultProvider, _ := byType(carried, clusterProvider.Type)
 	changed := NewCatalog(carried, defaultProvider)
 	ret := make([]reconcile.Request, 0, len(ngList.Items))
 

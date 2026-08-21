@@ -98,7 +98,7 @@ func TestReconcile_RegistrationKeyEnsuresTheCloudClusterOnly(t *testing.T) {
 	registration := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: cloudprovider.RegistrationSecretNamespace,
-			Name:      cloudprovider.RegistrationSecretNamePrefix + "-yandex",
+			Name:      cloudprovider.RegistrationSecretBaseName + "-yandex",
 			Labels:    map[string]string{cloudprovider.RegistrationSecretLabel: ""},
 		},
 		Data: map[string][]byte{

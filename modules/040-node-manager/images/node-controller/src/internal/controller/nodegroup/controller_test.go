@@ -324,7 +324,7 @@ func TestReconcile_CloudValidationErrorPublished(t *testing.T) {
 	}
 	cloudProvider := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cloudprovider.RegistrationSecretNamePrefix,
+			Name:      cloudprovider.RegistrationSecretBaseName,
 			Namespace: cloudprovider.RegistrationSecretNamespace,
 			// Registrations are found by this label, never by name.
 			Labels: map[string]string{cloudprovider.RegistrationSecretLabel: ""},
@@ -371,7 +371,7 @@ func TestReconcile_CloudValidationErrorPublished(t *testing.T) {
 func TestReconcile_WrongProviderTypeIsPublishedInTheStatus(t *testing.T) {
 	registration := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cloudprovider.RegistrationSecretNamePrefix,
+			Name:      cloudprovider.RegistrationSecretBaseName,
 			Namespace: cloudprovider.RegistrationSecretNamespace,
 			Labels:    map[string]string{cloudprovider.RegistrationSecretLabel: ""},
 		},

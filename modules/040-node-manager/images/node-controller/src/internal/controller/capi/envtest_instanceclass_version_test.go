@@ -69,7 +69,7 @@ var _ = Describe("InstanceClass API version pinning", func() {
 		GinkgoHelper()
 		secret := &corev1.Secret{}
 		Expect(k8sClient.Get(suiteCtx, types.NamespacedName{
-			Namespace: cloudprovider.RegistrationSecretNamespace, Name: cloudprovider.RegistrationSecretNamePrefix,
+			Namespace: cloudprovider.RegistrationSecretNamespace, Name: cloudprovider.RegistrationSecretBaseName,
 		}, secret)).To(Succeed())
 		if version == "" {
 			delete(secret.Data, cloudprovider.InstanceClassAPIVersionKey)

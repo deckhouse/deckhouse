@@ -160,7 +160,7 @@ func kubernetesEndpoints(addressCount int) *corev1.Endpoints {
 func TestValidation_ProviderType(t *testing.T) {
 	registration := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cloudprovider.RegistrationSecretNamePrefix,
+			Name:      cloudprovider.RegistrationSecretBaseName,
 			Namespace: cloudprovider.RegistrationSecretNamespace,
 			Labels:    map[string]string{cloudprovider.RegistrationSecretLabel: ""},
 		},

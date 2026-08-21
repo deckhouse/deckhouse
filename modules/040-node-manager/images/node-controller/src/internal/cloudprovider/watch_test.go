@@ -53,12 +53,12 @@ func TestIsRegistrationSecret(t *testing.T) {
 	}{
 		{
 			name: "the copy under the bare prefix",
-			obj:  secret(RegistrationSecretNamespace, RegistrationSecretNamePrefix, labelled),
+			obj:  secret(RegistrationSecretNamespace, RegistrationSecretBaseName, labelled),
 			want: true,
 		},
 		{
 			name: "the per-provider copy",
-			obj:  secret(RegistrationSecretNamespace, RegistrationSecretNamePrefix+"-yandex", labelled),
+			obj:  secret(RegistrationSecretNamespace, RegistrationSecretBaseName+"-yandex", labelled),
 			want: true,
 		},
 		{
@@ -69,12 +69,12 @@ func TestIsRegistrationSecret(t *testing.T) {
 		},
 		{
 			name: "named with the prefix, but not labelled",
-			obj:  secret(RegistrationSecretNamespace, RegistrationSecretNamePrefix+"-aws", nil),
+			obj:  secret(RegistrationSecretNamespace, RegistrationSecretBaseName+"-aws", nil),
 		},
 		{
 			// Registrations live in one namespace; the same name elsewhere is somebody else's.
 			name: "right name and label, wrong namespace",
-			obj:  secret("default", RegistrationSecretNamePrefix, labelled),
+			obj:  secret("default", RegistrationSecretBaseName, labelled),
 		},
 	}
 
@@ -89,11 +89,11 @@ func TestIsRegistrationSecret(t *testing.T) {
 // key that is not a registration must not pass — it names no provider to act on.
 func TestIsRegistrationSecretKey(t *testing.T) {
 	assert.True(t, IsRegistrationSecretKey(types.NamespacedName{
-		Namespace: RegistrationSecretNamespace, Name: RegistrationSecretNamePrefix + "-yandex",
+		Namespace: RegistrationSecretNamespace, Name: RegistrationSecretBaseName + "-yandex",
 	}))
 	assert.False(t, IsRegistrationSecretKey(types.NamespacedName{Name: "worker"}), "a NodeGroup key")
 	assert.False(t, IsRegistrationSecretKey(types.NamespacedName{
-		Namespace: "default", Name: RegistrationSecretNamePrefix,
+		Namespace: "default", Name: RegistrationSecretBaseName,
 	}), "the right name in the wrong namespace")
 }
 
@@ -109,14 +109,15 @@ func TestNodeGroupHandler(t *testing.T) {
 		"type":              []byte("yandex"),
 		"instanceClassKind": []byte("YandexInstanceClass"),
 	}
-	aws := registrationSecret(RegistrationSecretNamePrefix+"-aws", awsData)
-	yandex := registrationSecret(RegistrationSecretNamePrefix+"-yandex", yandexData)
+	aws := registrationSecret(RegistrationSecretBaseName+"-aws", awsData)
+	yandex := registrationSecret(RegistrationSecretBaseName+"-yandex", yandexData)
 
-	// The cluster provider is yandex, so the CloudPermanent group resolves to it and nothing else.
+	// The default registration is published under the fixed name, so its type — yandex — is what
+	// the CloudPermanent group resolves to and nothing else.
 	newHandler := func(t *testing.T) (handler.EventHandler, workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 		t.Helper()
 		c := fake.NewClientBuilder().WithScheme(testScheme(t)).WithObjects(
-			aws, yandex, cloudCluster("Yandex"),
+			aws, yandex, registrationSecret(RegistrationSecretBaseName, yandexData),
 			cloudEphemeral("worker-aws", "AWSInstanceClass"),
 			cloudEphemeral("worker-yandex", "YandexInstanceClass"),
 			// Names a kind nobody registered. The kind does not route a NodeGroup while the
@@ -223,7 +224,7 @@ func TestNodeGroupHandler_EveryDataEditPasses(t *testing.T) {
 
 	for name, edit := range edits {
 		t.Run(name, func(t *testing.T) {
-			before := registrationSecret(RegistrationSecretNamePrefix+"-aws", map[string][]byte{
+			before := registrationSecret(RegistrationSecretBaseName+"-aws", map[string][]byte{
 				"type":              []byte("aws"),
 				"instanceClassKind": []byte("AWSInstanceClass"),
 				"machineClassKind":  []byte("AWSMachineClass"),
@@ -234,7 +235,7 @@ func TestNodeGroupHandler_EveryDataEditPasses(t *testing.T) {
 			edit(after)
 
 			c := fake.NewClientBuilder().WithScheme(testScheme(t)).WithObjects(
-				before, cloudCluster("AWS"),
+				before, registrationSecret(RegistrationSecretBaseName, map[string][]byte{"type": []byte("aws")}),
 				cloudEphemeral("worker-aws", "AWSInstanceClass"),
 			).Build()
 			queue := workqueue.NewTypedRateLimitingQueue(
