@@ -4,7 +4,7 @@
       expr: |
         count(
           max by (namespace, verticalpodautoscaler) (
-            kube_verticalpodautoscaler_spec_updatepolicy_updatemode{update_mode="Auto"} == 1
+            kube_verticalpodautoscaler_spec_updatepolicy_updatemode{source="deckhouse", update_mode="Auto"} == 1
           )
         ) > 0
       for: 5m
@@ -35,5 +35,5 @@
           dashboard, or run:
 
           ```prometheus
-          kube_verticalpodautoscaler_spec_updatepolicy_updatemode{update_mode="Auto"} == 1
+          kube_verticalpodautoscaler_spec_updatepolicy_updatemode{source="deckhouse", update_mode="Auto"} == 1
           ```

@@ -7,7 +7,7 @@
   # are migrated.
   - alert: D8UserAuthzLegacyRBACv2CustomRoleFound
     expr: |
-      max by (name) (d8_rbacv2_legacy_custom_role) > 0
+      max by (name) (d8_rbacv2_legacy_custom_role{source="deckhouse"}) > 0
     for: 15m
     labels:
       severity_level: "7"

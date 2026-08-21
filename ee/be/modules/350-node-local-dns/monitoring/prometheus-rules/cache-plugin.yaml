@@ -2,7 +2,7 @@
   rules:
     - alert: D8NodeLocalDNSCacheSuccessEvictionsHigh
       expr: |
-        increase(coredns_cache_evictions_total{type="success", job="node-local-dns"}[5m]) > 100
+        increase(coredns_cache_evictions_total{source="deckhouse", type="success", job="node-local-dns"}[5m]) > 100
       for: 5m
       labels:
         severity_level: "6"
@@ -20,7 +20,7 @@
 
     - alert: D8NodeLocalDNSCacheDenialEvictionsHigh
       expr: |
-        increase(coredns_cache_evictions_total{type="denial", job="node-local-dns"}[5m]) > 100
+        increase(coredns_cache_evictions_total{source="deckhouse", type="denial", job="node-local-dns"}[5m]) > 100
       for: 5m
       labels:
         severity_level: "6"

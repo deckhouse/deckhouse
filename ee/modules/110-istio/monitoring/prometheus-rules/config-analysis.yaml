@@ -3,7 +3,7 @@
   - alert: D8IstioConfigAnalysisReferencedResourceNotFound
     expr: |
       sum by (revision, namespace, resource, code) (
-        d8_istio_config_analysis_issue{type="ReferencedResourceNotFound"}
+        d8_istio_config_analysis_issue{source="deckhouse", type="ReferencedResourceNotFound"}
       ) > 0
     for: 15m
     labels:
@@ -34,7 +34,7 @@
         List matching issues in Prometheus (Grafana → Explore):
 
         ```promql
-        d8_istio_config_analysis_issue{type="ReferencedResourceNotFound",revision="{{$labels.revision}}"}
+        d8_istio_config_analysis_issue{source="deckhouse", type="ReferencedResourceNotFound",revision="{{$labels.revision}}"}
         ```
 
         Check analyzer logs:
@@ -45,7 +45,7 @@
   - alert: D8IstioConfigAnalysisSchemaValidationError
     expr: |
       sum by (revision, namespace, resource, code) (
-        d8_istio_config_analysis_issue{type="SchemaValidationError"}
+        d8_istio_config_analysis_issue{source="deckhouse", type="SchemaValidationError"}
       ) > 0
     for: 15m
     labels:
@@ -76,7 +76,7 @@
         List matching issues in Prometheus (Grafana → Explore):
 
         ```promql
-        d8_istio_config_analysis_issue{type="SchemaValidationError",revision="{{$labels.revision}}"}
+        d8_istio_config_analysis_issue{source="deckhouse", type="SchemaValidationError",revision="{{$labels.revision}}"}
         ```
 
         Check analyzer logs:
@@ -87,7 +87,7 @@
   - alert: D8IstioConfigAnalysisConflictingGateways
     expr: |
       sum by (revision, namespace, resource, code) (
-        d8_istio_config_analysis_issue{type="ConflictingGateways"}
+        d8_istio_config_analysis_issue{source="deckhouse", type="ConflictingGateways"}
       ) > 0
     for: 15m
     labels:
@@ -118,7 +118,7 @@
         List matching issues in Prometheus (Grafana → Explore):
 
         ```promql
-        d8_istio_config_analysis_issue{type="ConflictingGateways",revision="{{$labels.revision}}"}
+        d8_istio_config_analysis_issue{source="deckhouse", type="ConflictingGateways",revision="{{$labels.revision}}"}
         ```
 
         Check analyzer logs:
@@ -129,7 +129,7 @@
   - alert: D8IstioConfigAnalysisInvalidGatewayCredential
     expr: |
       sum by (revision, namespace, resource, code) (
-        d8_istio_config_analysis_issue{type="InvalidGatewayCredential"}
+        d8_istio_config_analysis_issue{source="deckhouse", type="InvalidGatewayCredential"}
       ) > 0
     for: 15m
     labels:
@@ -160,7 +160,7 @@
         List matching issues in Prometheus (Grafana → Explore):
 
         ```promql
-        d8_istio_config_analysis_issue{type="InvalidGatewayCredential",revision="{{$labels.revision}}"}
+        d8_istio_config_analysis_issue{source="deckhouse", type="InvalidGatewayCredential",revision="{{$labels.revision}}"}
         ```
 
         Check analyzer logs:
@@ -171,7 +171,7 @@
   - alert: D8IstioConfigAnalysisImageAutoWithoutInjection
     expr: |
       sum by (revision, namespace, resource, code) (
-        d8_istio_config_analysis_issue{type="ImageAutoWithoutInjectionError"}
+        d8_istio_config_analysis_issue{source="deckhouse", type="ImageAutoWithoutInjectionError"}
       ) > 0
     for: 15m
     labels:
@@ -202,7 +202,7 @@
         List matching issues in Prometheus (Grafana → Explore):
 
         ```promql
-        d8_istio_config_analysis_issue{type="ImageAutoWithoutInjectionError",revision="{{$labels.revision}}"}
+        d8_istio_config_analysis_issue{source="deckhouse", type="ImageAutoWithoutInjectionError",revision="{{$labels.revision}}"}
         ```
 
         Check analyzer logs:
@@ -215,7 +215,7 @@
   - alert: D8IstioConfigAnalysisError
     expr: |
       sum by (revision, type, namespace, resource, code) (
-        d8_istio_config_analysis_issue{severity="Error",type!~"ReferencedResourceNotFound|SchemaValidationError|ConflictingGateways|InvalidGatewayCredential|ImageAutoWithoutInjectionError"}
+        d8_istio_config_analysis_issue{source="deckhouse", severity="Error",type!~"ReferencedResourceNotFound|SchemaValidationError|ConflictingGateways|InvalidGatewayCredential|ImageAutoWithoutInjectionError"}
       ) > 0
     for: 15m
     labels:
@@ -242,7 +242,7 @@
         List analysis issues in Prometheus (Grafana → Explore):
 
         ```promql
-        d8_istio_config_analysis_issue{revision="{{$labels.revision}}",severity="Error"}
+        d8_istio_config_analysis_issue{source="deckhouse", revision="{{$labels.revision}}",severity="Error"}
         ```
 
         Check analyzer pods and logs:
@@ -258,7 +258,7 @@
   - alert: D8IstioConfigAnalysisWarning
     expr: |
       sum by (revision, type, namespace, resource, code) (
-        d8_istio_config_analysis_issue{severity="Warning",type!="InvalidApplicationUID"}
+        d8_istio_config_analysis_issue{source="deckhouse", severity="Warning",type!="InvalidApplicationUID"}
       ) > 0
     for: 1h
     labels:
@@ -285,7 +285,7 @@
         List analysis warnings in Prometheus (Grafana → Explore):
 
         ```promql
-        d8_istio_config_analysis_issue{revision="{{$labels.revision}}",severity="Warning"}
+        d8_istio_config_analysis_issue{source="deckhouse", revision="{{$labels.revision}}",severity="Warning"}
         ```
 
         Check analyzer pods and logs:

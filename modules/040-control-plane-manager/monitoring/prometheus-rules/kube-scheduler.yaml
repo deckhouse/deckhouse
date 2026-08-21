@@ -1,7 +1,7 @@
 - name: coreos.kube-scheduler
   rules:
   - alert: K8SSchedulerTargetDown
-    expr: absent(up{job="kube-scheduler"} == 1)
+    expr: absent(up{source="deckhouse", job="kube-scheduler"} == 1)
     for: 5m
     labels:
       severity_level: "3"

@@ -45,6 +45,8 @@ spec:
     - sourceLabels: [__meta_kubernetes_endpointslice_endpoint_conditions_ready]
       regex: "true"
       action: keep
+    - targetLabel: source
+      replacement: deckhouse
   {{- if eq $profile "main" }}
   - scheme: https
     port: https-metrics
@@ -64,6 +66,8 @@ spec:
     - sourceLabels: [__meta_kubernetes_endpointslice_endpoint_conditions_ready]
       regex: "true"
       action: keep
+    - targetLabel: source
+      replacement: deckhouse
   - scheme: https
     port: https-metrics
     path: /controller-manager/metrics
@@ -83,6 +87,8 @@ spec:
     - sourceLabels: [__meta_kubernetes_endpointslice_endpoint_conditions_ready]
       regex: "true"
       action: keep
+    - targetLabel: source
+      replacement: deckhouse
   {{- end }}
 {{- end }}
 {{- end }}

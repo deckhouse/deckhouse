@@ -2,7 +2,7 @@
   rules:
   - alert: D8SecretCopierDeprecatedLabels
     expr: |
-      max(kube_secret_labels{namespace="default",label_antiopa_secret_copier="yes"}) > 0
+      max(kube_secret_labels{source="deckhouse", namespace="default",label_antiopa_secret_copier="yes"}) > 0
     labels:
       severity_level: "9"
       tier: application

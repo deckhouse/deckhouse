@@ -2,7 +2,7 @@
   rules:
   - alert: D8NeedMigrateStateToOpenTofu
     expr: |
-      d8_need_migrate_to_tofu == 1
+      d8_need_migrate_to_tofu{source="deckhouse"} == 1
     for: 10m
     labels:
       severity_level: "4"

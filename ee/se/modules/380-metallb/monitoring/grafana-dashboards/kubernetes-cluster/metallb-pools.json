@@ -109,7 +109,7 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "metallb_allocator_addresses_total{pool=\"$pool\",namespace=\"d8-metallb\"}",
+          "expr": "metallb_allocator_addresses_total{source=\"deckhouse\", pool=\"$pool\",namespace=\"d8-metallb\"}",
           "interval": "",
           "legendFormat": "Total in {{pool}}",
           "range": true,
@@ -121,7 +121,7 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "metallb_allocator_addresses_in_use_total{pool=\"$pool\",namespace=\"d8-metallb\"}",
+          "expr": "metallb_allocator_addresses_in_use_total{source=\"deckhouse\", pool=\"$pool\",namespace=\"d8-metallb\"}",
           "hide": false,
           "legendFormat": "Used in {{pool}}",
           "range": true,
@@ -191,7 +191,7 @@
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
-          "expr": "metallb_allocator_addresses_in_use_total{pool=\"$pool\",namespace=\"d8-metallb\"} / metallb_allocator_addresses_total{pool=\"$pool\",namespace=\"d8-metallb\"} * 100",
+          "expr": "metallb_allocator_addresses_in_use_total{source=\"deckhouse\", pool=\"$pool\",namespace=\"d8-metallb\"} \/ metallb_allocator_addresses_total{source=\"deckhouse\", pool=\"$pool\",namespace=\"d8-metallb\"} * 100",
           "refId": "A"
         }
       ],
@@ -240,7 +240,7 @@
         "name": "pool",
         "options": [],
         "query": {
-          "query": "label_values(metallb_allocator_addresses_in_use_total{job=\"l2lb-controller\"},pool)",
+          "query": "label_values(metallb_allocator_addresses_in_use_total{source=\"deckhouse\", job=\"l2lb-controller\"},pool)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 2,

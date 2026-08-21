@@ -1,7 +1,7 @@
 - name: d8.multitenancy-manager.grant-violation
   rules:
   - alert: ClusterResourceGrantPolicyViolation
-    expr: max by (project) (d8_cluster_objects_grant_violated) != 0
+    expr: max by (project) (d8_cluster_objects_grant_violated{source="deckhouse"}) != 0
     labels:
       severity_level: "6"
       tier: application

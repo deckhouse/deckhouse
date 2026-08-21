@@ -1,7 +1,7 @@
 - name: d8.metallb
   rules:
     - alert: D8MetallbConfigNotLoaded
-      expr: metallb_k8s_client_config_loaded_bool == 0
+      expr: metallb_k8s_client_config_loaded_bool{source="deckhouse"} == 0
       for: 5m
       labels:
         severity_level: "4"
@@ -22,7 +22,7 @@
         summary: The MetalLB configuration hasn't been loaded.
 
     - alert: D8MetallbConfigStale
-      expr: metallb_k8s_client_config_stale_bool == 1
+      expr: metallb_k8s_client_config_stale_bool{source="deckhouse"} == 1
       for: 5m
       labels:
         severity_level: "4"
@@ -45,7 +45,7 @@
     - alert: D8MetallbBGPSessionDown
       # TODO: After updating to a version higher than 0.15.3, change the expression
       # Fixed in upstream: https://github.com/metallb/metallb/issues/2806
-      expr: metallb_bgp_session_up{peer=~".+:.+"} == 0
+      expr: metallb_bgp_session_up{source="deckhouse", peer=~".+:.+"} == 0
       for: 5m
       labels:
         severity_level: "4"

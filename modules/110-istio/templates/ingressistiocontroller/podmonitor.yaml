@@ -43,6 +43,9 @@ spec:
       sourceLabels:
       - __meta_kubernetes_namespace
       targetLabel: namespace
+    - action: replace
+      replacement: deckhouse
+      targetLabel: source
     scheme: http
   selector:
     matchExpressions:

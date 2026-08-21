@@ -4,6 +4,7 @@
       expr: |
         max by (name) (
           workqueue_depth{
+            source="deckhouse",
             namespace="d8-cloud-instance-manager",
             job="node-controller"
           }
@@ -33,6 +34,7 @@
           0.99,
           sum by (controller, le) (
             rate(controller_runtime_reconcile_time_seconds_bucket{
+              source="deckhouse",
               namespace="d8-cloud-instance-manager",
               job="node-controller"
             }[5m])
@@ -61,6 +63,7 @@
       expr: |
         sum by (controller) (
           rate(controller_runtime_reconcile_errors_total{
+            source="deckhouse",
             namespace="d8-cloud-instance-manager",
             job="node-controller"
           }[5m])

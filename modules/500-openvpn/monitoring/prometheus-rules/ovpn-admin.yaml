@@ -1,7 +1,7 @@
 - name: openvpn.admin.info
   rules:
     - alert: OpenVPNClientCertificateExpired
-      expr: ovpn_client_cert_expire <= 0
+      expr: ovpn_client_cert_expire{source="deckhouse"} <= 0
       for: 1m
       labels:
         severity_level: "4"
@@ -22,7 +22,7 @@
           Check [the documentation](https://deckhouse.io/modules/openvpn/faq.html#how-to-revoke-rotate-or-delete-a-user-certificate) for details.
 
     - alert: OpenVPNClientCertificateExpired
-      expr: ovpn_client_cert_expire < 7
+      expr: ovpn_client_cert_expire{source="deckhouse"} < 7
       for: 1h
       labels:
         severity_level: "5"
@@ -43,7 +43,7 @@
           ```
 
     - alert: OpenVPNClientCertificateExpired
-      expr: ovpn_client_cert_expire < 30
+      expr: ovpn_client_cert_expire{source="deckhouse"} < 30
       for: 1h
       labels:
         severity_level: "6"
@@ -64,7 +64,7 @@
           ```
 
     - alert: OpenVPNServerCertificateExpiresTomorrow
-      expr: ovpn_server_cert_expire == 1
+      expr: ovpn_server_cert_expire{source="deckhouse"} == 1
       for: 1m
       labels:
         severity_level: "4"
@@ -86,7 +86,7 @@
           ```
 
     - alert: OpenVPNServerCertificateExpired
-      expr: ovpn_server_cert_expire == 0
+      expr: ovpn_server_cert_expire{source="deckhouse"} == 0
       for: 1m
       labels:
         severity_level: "4"
@@ -107,7 +107,7 @@
           ```
 
     - alert: OpenVPNServerCACertificateExpiringSoon
-      expr: ovpn_server_ca_cert_expire < 30
+      expr: ovpn_server_ca_cert_expire{source="deckhouse"} < 30
       for: 1h
       labels:
         severity_level: "5"
@@ -129,7 +129,7 @@
           ```
 
     - alert: OpenVPNServerCACertificateExpiringInAWeek
-      expr: ovpn_server_ca_cert_expire < 7
+      expr: ovpn_server_ca_cert_expire{source="deckhouse"} < 7
       for: 1h
       labels:
         severity_level: "5"
@@ -151,7 +151,7 @@
           ```
 
     - alert: OpenVPNServerCACertificateExpiresTomorrow
-      expr: ovpn_server_ca_cert_expire == 1
+      expr: ovpn_server_ca_cert_expire{source="deckhouse"} == 1
       for: 10m
       labels:
         severity_level: "4"
@@ -174,7 +174,7 @@
 
 
     - alert: OpenVPNServerCACertificateExpired
-      expr: ovpn_server_ca_cert_expire == 0
+      expr: ovpn_server_ca_cert_expire{source="deckhouse"} == 0
       for: 1m
       labels:
         severity_level: "4"
