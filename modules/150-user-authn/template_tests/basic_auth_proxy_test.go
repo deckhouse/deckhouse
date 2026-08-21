@@ -91,8 +91,8 @@ var _ = Describe("Module :: user-authn :: helm template :: basic auth proxy", fu
 		hec.ValuesSet("userAuthn.internal.selfSignedCA.cert", "test")
 		hec.ValuesSet("userAuthn.internal.selfSignedCA.key", "test")
 
-		hec.ValuesSet("userAuthn.publishAPI.enabled", true)
-		hec.ValuesSet("userAuthn.publishAPI.addKubeconfigGeneratorEntry", true)
+		hec.ValuesSet("userAuthn.internal.publishAPI.enabled", true)
+		hec.ValuesSet("userAuthn.internal.publishAPI.addKubeconfigGeneratorEntry", true)
 		hec.ValuesSet("userAuthn.internal.basicAuthProxyCert", "dGVzdA==")
 		hec.ValuesSet("userAuthn.internal.basicAuthProxyKey", "dGVzdA==")
 	})
