@@ -21,6 +21,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/name212/govalue"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -99,7 +100,9 @@ func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infras
 }
 
 func (h *HookForDestroyPipeline) AfterAction(ctx context.Context, runner infrastructure.RunnerInterface) error {
-	if h.commanderMode {
+	// Nothing to forget for an immutable node: no SSH session was ever pinned to it,
+	// and with no provider at all the call below dereferences nil.
+	if h.commanderMode || h.immutableNode || govalue.IsNil(h.sshProvider) {
 		return nil
 	}
 
