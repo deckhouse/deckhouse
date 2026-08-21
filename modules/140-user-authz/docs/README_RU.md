@@ -499,9 +499,6 @@ delete,deletecollection,get,list,patch,update,watch:
     - machine.sapcloud.io/yandexmachineclasses
 get,list,patch,update,watch:
     - control-plane.deckhouse.io/controlplanenodes
-list:
-    - dex.coreos.com/offlinesessionses
-    - dex.coreos.com/passwords
 patch,update:
     - deckhouse.io/vcdaffinityrules
     - infrastructure.cluster.x-k8s.io/deckhouseclusters
