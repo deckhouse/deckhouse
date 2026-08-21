@@ -62,6 +62,14 @@ var (
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/cloud-provider-vsphere/ensure-failure-domains",
+	// OnBeforeHelm guarantees a run on every ModuleRun (initial + on any values change), which
+	// covers the case where d8-node-manager-cloud-provider secret does not exist yet at
+	// Synchronization time — the Kubernetes binding below would then produce an empty initial
+	// snapshot and never fire, and FD/DZ would never be created. This hook does NOT open a
+	// vSphere session; it only reads discovery values and Create-if-not-exists two CRs, so it
+	// takes single-digit milliseconds and cannot block the main queue the way the previous
+	// govmomi-in-beforeHelm variant did (which the reviewer flagged as B3).
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 30},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			// Trigger on the cloud-provider registration secret: it is the vehicle that carries
@@ -75,7 +83,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				NameSelector: &types.NameSelector{MatchNames: []string{"kube-system"}},
 			},
 			NameSelector: &types.NameSelector{MatchNames: []string{"d8-node-manager-cloud-provider"}},
-			FilterFunc:   func(*unstructured.Unstructured) (go_hook.FilterResult, error) { return nil, nil },
+			// FilterFunc must return a non-nil result: shell-operator dedupes snapshots by
+			// filter-result hash, and a nil result on the initial Synchronization + on each
+			// Modified event looks identical, so the hook never fires. Returning the object
+			// version turns every change into a fresh snapshot entry that triggers the hook.
+			FilterFunc: func(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+				return obj.GetResourceVersion(), nil
+			},
 		},
 	},
 }, dependency.WithExternalDependencies(ensureFailureDomains))
