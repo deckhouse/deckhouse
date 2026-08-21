@@ -10,7 +10,7 @@ gardener tag stays `v1.31.1`.
 Applied to both `cluster-autoscaler/go.mod` and `cluster-autoscaler/apis/go.mod`:
 
 - `google.golang.org/grpc`: `v1.65.0` -> `v1.82.1`
-- `github.com/google/cel-go`: `v0.20.1` -> `v0.29.0` (GHSA-gcjh-h69q-9w9g)
+- `github.com/google/cel-go`: left at `v0.20.1` (outside GO-2026-6094 affected range; apiserver 0.31 incompatible with cel-go >= v0.29)
 - `golang.org/x/net`: `v0.38.0` -> `v0.56.0`
 - `golang.org/x/text`: `v0.23.0` -> `v0.39.0`
 - `golang.org/x/crypto`: `v0.36.0` -> `v0.53.0` (requested floor was `v0.52.0`;
@@ -28,7 +28,6 @@ git clone <SOURCE_REPO>/gardener/autoscaler.git
 cd autoscaler && git checkout v1.31.1
 cd cluster-autoscaler
 go get google.golang.org/grpc@v1.82.1 \
-  github.com/google/cel-go@v0.29.0 \
   golang.org/x/net@v0.56.0 \
   golang.org/x/text@v0.39.0 \
   golang.org/x/crypto@v0.53.0 \

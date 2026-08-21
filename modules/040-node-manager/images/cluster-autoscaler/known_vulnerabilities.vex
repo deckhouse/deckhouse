@@ -138,6 +138,20 @@
     },
     {
       "vulnerability": {
+        "name": "GO-2026-6094"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/google/cel-go"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "GO-2026-6094 / GHSA-gcjh-h69q-9w9g затрагивает ParseStructTag и NativeTypes в cel-go/ext (json:\"-\" и аналоги). Cluster-autoscaler не вызывает NativeTypes/ParseStructTag; cel-go приходит транзитивно через k8s.io/apiserver CEL environment. На линиях Kubernetes 1.31/1.32 нельзя поднять cel-go до исправленного v0.30.0 из-за несовместимости API TwoVarComprehensions с apiserver 0.31/0.32. На 1.33+ зависимость поднята до v0.30.0. Уязвимый код не исполняется.",
+      "timestamp": "2026-08-21T14:00:00.000000Z"
+    },
+    {
+      "vulnerability": {
         "name": "CVE-2026-41579"
       },
       "products": [
@@ -152,5 +166,5 @@
     }
   ],
   "timestamp": "2026-03-04T14:40:21Z",
-  "last_updated": "2026-08-21T12:00:00Z"
+  "last_updated": "2026-08-21T14:00:00Z"
 }
