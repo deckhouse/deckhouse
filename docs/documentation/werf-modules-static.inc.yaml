@@ -59,7 +59,8 @@ shell:
         bash _tools/modules_prepare.sh
 
         echo '[] Adding permalinks for modules...'
-        for file in $(find . -regex '.*modules_\(ru\|en\)/\([0-9]\+-\)\?[^/]\+/docs/[^/]\+\.\(md\|MD\)' -print | grep -i '\.md$'); do
+        count=0
+        for file in $(find . -regex '.*modules_\(ru\|en\)/\([0-9]+-\)?[^/]+/docs/[^/]+\.\(md\|MD\)' -print | grep -i '\.md$'); do
           ## Has frontmatter in the file
           if $(awk 'BEGIN { in_fm = 0; has_fm = 0 }
                     NR == 1 && /^---$/ { in_fm = 1; next }
@@ -71,8 +72,18 @@ shell:
           # Add permalink
           PERMALINK="/$(echo "${file}" | sed -E 's#(.*/)?modules_(en|ru)/([0-9]+-)?([^/]+)/docs/(.+)\.md#\2/modules/\4/\5.html#I' | tr '[:upper:]' '[:lower:]' | sed 's#readme\.html$##I')"
           sed -i "1apermalink: ${PERMALINK}" "${file}"
+          count=$((count + 1))
           fi
         done
+        if [ "$count" -eq 0 ]; then
+          echo "--------------------------------"
+          echo "ERROR!"
+          echo "No permalinks were added for modules."
+          echo "--------------------------------"
+          exit 1
+        else
+          echo "Total permalinks added: ${count}"
+        fi
 
         echo '[] Generating configuration schemas...'
         export MODULES_DIR=/src/modules
