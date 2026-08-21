@@ -724,7 +724,7 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 		})
 	})
 
-	Context("RBACv2 manage permission roles", func() {
+	Context("RBACv2 subsystem capabilities", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global.enabledModules", `["operator-prometheus", "operator-prometheus-crd"]`)
 			f.ValuesSet("global.deckhouseEdition", "EE")
@@ -734,7 +734,7 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 		It("view_resources should not grant any node subresource", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			cr := f.KubernetesGlobalResource("ClusterRole", "d8:manage:permission:subsystem:kubernetes:view_resources")
+			cr := f.KubernetesGlobalResource("ClusterRole", "d8:subsystem-capability:kubernetes:view_resources")
 			Expect(cr.Exists()).To(BeTrue())
 
 			rules := cr.Field("rules").String()
