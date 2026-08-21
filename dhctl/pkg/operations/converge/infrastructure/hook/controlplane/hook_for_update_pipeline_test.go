@@ -58,6 +58,7 @@ func TestAfterActionReportsUnavailableSSHClient(t *testing.T) {
 		map[string]string{"cluster-master-0": "10.12.1.10"},
 		false,
 		true,
+		false,
 	).WithNodeToConverge("cluster-master-0")
 
 	err := hook.AfterAction(t.Context(), recreatedMasterRunner{})

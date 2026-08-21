@@ -18,24 +18,7 @@ import "time"
 
 // What a joining node reads out of the running cluster. Each of these names an
 // object node-controller also addresses; see the mirrors named below.
-const (
-	// The kubernetes Service's EndpointSlice, the cluster's own record of where
-	// its apiservers answer.
-	// Mirrors modules/040-node-manager/images/node-controller/src/internal/controller/nodeconfig/constants.go.
-	apiServerEndpointSliceNS   = "default"
-	apiServerEndpointSliceName = "kubernetes"
-	apiServerPortName          = "https"
-
-	// clusterCAConfigMap carries the cluster CA every ServiceAccount is given, and
-	// the source node-controller renders day-2 configs from, so a node sees one CA.
-	// Mirrors modules/040-node-manager/images/node-controller/src/internal/controller/nodeconfig/constants.go.
-	clusterCAConfigMap = "kube-root-ca.crt"
-	clusterCAKey       = "ca.crt"
-
-	// bootstrapTokenNGLabel labels a bootstrap-token secret with its NodeGroup.
-	// Mirrors modules/040-node-manager/images/node-controller/src/internal/controller/nodebootstrap/constants.go.
-	bootstrapTokenNGLabel = "node-manager.deckhouse.io/node-group"
-)
+const ()
 
 // waitBudget is how long dhctl keeps asking: attempts spaced by interval.
 type waitBudget struct {
@@ -67,9 +50,4 @@ var (
 	// The machine may be powering on when the bootstrap starts, and olcedar-init
 	// opens the port about thirty seconds into the boot. Ten minutes.
 	waitMaintenancePort = waitBudget{attempts: 120, interval: 5 * time.Second}
-
-	// A Deckhouse hook publishes what a joining node needs after the NodeGroup
-	// arrives, so the first read of a young cluster finds nothing. The budget is
-	// the classic path's wait for the group's cloud config (entity.GetCloudConfig).
-	waitJoinInputs = waitBudget{attempts: 225, interval: time.Second}
 )

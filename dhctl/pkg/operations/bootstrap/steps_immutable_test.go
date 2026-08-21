@@ -33,7 +33,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -45,7 +44,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable/immutabletest"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -306,8 +304,8 @@ func TestEveryPushPathRefusesADocumentTheMachineCannotSatisfy(t *testing.T) {
 				bctx.immutable.maintenancePort = machine.port
 
 				kubeCl := client.NewFakeKubernetesClient()
-				createJoinInputsWithoutToken(t, kubeCl)
-				createBootstrapToken(t, kubeCl)
+				immutabletest.CreateJoinInputsWithoutToken(t, kubeCl)
+				immutabletest.CreateBootstrapToken(t, kubeCl)
 
 				return b.handImmutableJoinPayload(ctx, bctx, kubeCl, "master-1")
 			},
@@ -512,8 +510,8 @@ func TestBootstrapImmutableAdditionalMastersPushOnceInOrder(t *testing.T) {
 	kubeCl := client.NewFakeKubernetesClientWithListGVR(map[schema.GroupVersionResource]string{
 		controlPlaneNodeGVR: "ControlPlaneNodeList",
 	})
-	createJoinInputsWithoutToken(t, kubeCl)
-	createBootstrapToken(t, kubeCl)
+	immutabletest.CreateJoinInputsWithoutToken(t, kubeCl)
+	immutabletest.CreateBootstrapToken(t, kubeCl)
 	// Only this one is a control-plane member up front. master-2 registers when
 	// the handler below serves master-1, so its wait is the thing that fails if
 	// the machines are handed their payloads in the wrong order.
@@ -1106,50 +1104,6 @@ func TestOpenImmutableChannelNamesBothAddresses(t *testing.T) {
 	require.Contains(t, err.Error(), "192.168.0.101", "the address it was expected to answer on")
 }
 
-// The bootstrap token of a NodeGroup is minted by an asynchronous node-manager
-// hook, so the first read of a young master group finds none. Without a retry
-// the whole multi-master bootstrap ends there — after the first master is up.
-func TestBuildImmutableJoinPayloadWaitsForTheBootstrapToken(t *testing.T) {
-	const token = "abcdef.0123456789abcdef" // gitleaks:allow, the shape of a bootstrap token, not one
-
-	noRetryCollapse(t)
-
-	kubeCl := client.NewFakeKubernetesClient()
-	createJoinInputsWithoutToken(t, kubeCl)
-
-	// Published after the first attempt has already failed, the way the hook
-	// publishes it. Bounded by the context so a lost retry fails the test in
-	// seconds instead of sitting out the whole budget.
-	go func() {
-		time.Sleep(immutableJoinTokenDelay)
-		secret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "bootstrap-token-abcdef",
-				Namespace: global.ConfigsNS,
-				Labels:    map[string]string{bootstrapTokenNGLabel: global.MasterNodeGroupName},
-			},
-			Type: corev1.SecretTypeBootstrapToken,
-			Data: map[string][]byte{"token-id": []byte("abcdef"), "token-secret": []byte("0123456789abcdef")},
-		}
-		_, _ = kubeCl.CoreV1().Secrets(global.ConfigsNS).Create(context.Background(), secret, metav1.CreateOptions{})
-	}()
-
-	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
-	defer cancel()
-
-	payload, nodeConfigDocument, err := buildImmutableJoinPayload(ctx, kubeCl, immutabletest.MetaConfig(t), "example-master-1", nil, "")
-	require.NoError(t, err, "a token that is not published yet is what the wait exists for")
-
-	document, err := base64.StdEncoding.DecodeString(payload)
-	require.NoError(t, err)
-	require.Contains(t, string(document), token, "the payload must carry the token the cluster published")
-
-	documents := payloadDocuments(t, document)
-	require.Len(t, documents, 1, "a joining master gets no ControlPlaneConfig")
-	require.Equal(t, string(nodeConfigDocument), documents[0],
-		"the join path checks the very bytes the joining machine is handed")
-}
-
 // payloadDocuments returns the documents a cloud payload carries, in order: the
 // node unwraps the write_files of the #cloud-config and files their contents by
 // kind (documentParts, images/init/src/0.1/acquire.go of the initramfs).
@@ -1168,48 +1122,6 @@ func payloadDocuments(t *testing.T, payload []byte) []string {
 		documents = append(documents, file.Content)
 	}
 	return documents
-}
-
-// immutableJoinTokenDelay makes the token appear while the first attempt is
-// already over: shorter than the loop's interval, so the second attempt finds it.
-const immutableJoinTokenDelay = 100 * time.Millisecond
-
-// createBootstrapToken publishes the group's token, the third of the things a
-// joining master reads from the cluster.
-func createBootstrapToken(t *testing.T, kubeCl *client.KubernetesClient) {
-	t.Helper()
-
-	_, err := kubeCl.CoreV1().Secrets(global.ConfigsNS).Create(t.Context(), &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "bootstrap-token-abcdef",
-			Namespace: global.ConfigsNS,
-			Labels:    map[string]string{bootstrapTokenNGLabel: global.MasterNodeGroupName},
-		},
-		Type: corev1.SecretTypeBootstrapToken,
-		Data: map[string][]byte{"token-id": []byte("abcdef"), "token-secret": []byte("0123456789abcdef")},
-	}, metav1.CreateOptions{})
-	require.NoError(t, err)
-}
-
-// createJoinInputsWithoutToken publishes everything a joining master reads from
-// the cluster except the bootstrap token.
-func createJoinInputsWithoutToken(t *testing.T, kubeCl *client.KubernetesClient) {
-	t.Helper()
-
-	_, err := kubeCl.CoreV1().ConfigMaps(global.ConfigsNS).Create(t.Context(), &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{Name: clusterCAConfigMap, Namespace: global.ConfigsNS},
-		Data:       map[string]string{clusterCAKey: "-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----\n"},
-	}, metav1.CreateOptions{})
-	require.NoError(t, err)
-
-	port := int32(immutable.APIServerPort)
-	portName := apiServerPortName
-	_, err = kubeCl.DiscoveryV1().EndpointSlices(apiServerEndpointSliceNS).Create(t.Context(), &discoveryv1.EndpointSlice{
-		ObjectMeta: metav1.ObjectMeta{Name: apiServerEndpointSliceName, Namespace: apiServerEndpointSliceNS},
-		Endpoints:  []discoveryv1.Endpoint{{Addresses: []string{"192.168.1.10"}}},
-		Ports:      []discoveryv1.EndpointPort{{Name: &portName, Port: &port}},
-	}, metav1.CreateOptions{})
-	require.NoError(t, err)
 }
 
 // staticInstanceResources is what an operator adds to a static cluster to have node-manager adopt
