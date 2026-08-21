@@ -192,6 +192,33 @@ func (s *Store) GetPendingMaintenance(name string) string {
 	return s.packages[name].maintenance
 }
 
+// RemovalState reports how far a package's teardown has got.
+type RemovalState int
+
+const (
+	// RemovalDone means nothing is tracked under the name, so nothing is left to tear down.
+	RemovalDone RemovalState = iota
+	// RemovalPending means the package is still tracked and no teardown has been issued yet.
+	RemovalPending
+	// RemovalInFlight means a teardown is already enqueued; re-issuing EventRemove would cancel it.
+	RemovalInFlight
+)
+
+// RemovalState reports the teardown state of a package. A cleared version is what marks a removal
+// as already issued — the same signal Delete guards on — so callers can wait instead of re-issuing.
+func (s *Store) RemovalState(name string) RemovalState {
+	pkg, ok := s.packages[name]
+	if !ok {
+		return RemovalDone
+	}
+
+	if pkg.version == "" {
+		return RemovalInFlight
+	}
+
+	return RemovalPending
+}
+
 // Delete removes a package entry from the store if it still exists and is in
 // the removed state (version cleared by HandleEvent(EventRemove)).
 // Returns true if the entry was deleted.

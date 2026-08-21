@@ -297,18 +297,28 @@ func (r *Runtime) registerModule(ctx context.Context, conf *modules.Config) (*mo
 	return module, nil
 }
 
-// RemoveModule removes a module and cancels all its running operations.
-// After undeploy, a cleanup goroutine removes the Store entry and stops the queue.
-// See RemoveApp for detailed rationale on the async cleanup pattern.
-func (r *Runtime) RemoveModule(name string) {
+// RemoveModule removes a module, cancels all its running operations and reports whether the
+// teardown has finished. After undeploy, a cleanup goroutine removes the Store entry and stops
+// the queue. See RemoveApp for the idempotence contract and the async cleanup rationale.
+func (r *Runtime) RemoveModule(name string) bool {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
+	switch r.packages.RemovalState(name) {
+	case lifecycle.RemovalDone:
+		return true
+
+	case lifecycle.RemovalInFlight:
+		r.logger.Debug("module removal is still in flight", slog.String("name", name))
+
+		return false
+	}
 
 	r.scheduler.RemoveNode(name)
 
 	ctx := r.packages.HandleEvent(lifecycle.EventRemove, name)
 	if ctx == nil {
-		return
+		return true
 	}
 
 	if pkg := r.modules[name]; pkg != nil {
@@ -318,21 +328,33 @@ func (r *Runtime) RemoveModule(name string) {
 	cleanup := queue.WithOnDone(r.cleanupModule(name))
 
 	r.queueService.Enqueue(ctx, name, taskundeploy.NewModuleTask(name, r.moduleDeployer, r.logger), cleanup)
+
+	return false
 }
 
 // RemoveEmbeddedModule removes an embedded module and cancels all its running operations.
 // It is RemoveModule without Undeploy: the image carries the files, so nothing was ever placed
 // on disk for the deployer to take back. The cleanup therefore rides on Disable, or runs on its
 // own when the module never loaded and there is nothing to disable.
-func (r *Runtime) RemoveEmbeddedModule(name string) {
+func (r *Runtime) RemoveEmbeddedModule(name string) bool {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
+	switch r.packages.RemovalState(name) {
+	case lifecycle.RemovalDone:
+		return true
+
+	case lifecycle.RemovalInFlight:
+		r.logger.Debug("embedded module removal is still in flight", slog.String("name", name))
+
+		return false
+	}
 
 	r.scheduler.RemoveNode(name)
 
 	ctx := r.packages.HandleEvent(lifecycle.EventRemove, name)
 	if ctx == nil {
-		return
+		return true
 	}
 
 	if pkg := r.modules[name]; pkg != nil {
@@ -344,6 +366,8 @@ func (r *Runtime) RemoveEmbeddedModule(name string) {
 	// running and about to want r.mu itself — it would deadlock both. RemoveModule anchors it on
 	// Undeploy; an embedded module has nothing to undeploy, so it anchors on a dummy task.
 	r.queueService.Enqueue(ctx, name, taskdummy.NewTask(name, r.logger), queue.WithOnDone(r.cleanupModule(name)))
+
+	return false
 }
 
 // cleanupModule returns the teardown that drops the Store entry, stops the queue and deletes the
