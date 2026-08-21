@@ -161,6 +161,19 @@ func (h *HookForUpdatePipeline) BeforeAction(ctx context.Context, runner infrast
 		}
 	}
 
+	// The switch above moves an SSH-tunnelled client off the machine about to be
+	// destroyed. An sshless converge has no session to move: whoever runs it decides
+	// which apiserver the kubeconfig names, and if that is this machine the run loses
+	// the cluster mid-flight. Saying so before the destruction beats a stack trace
+	// after it — the converge state is saved, so a rerun continues where this stopped.
+	if h.immutableNode {
+		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf(
+			"About to destroy %s (%s). This converge talks to the cluster over the Kubernetes API: "+
+				"if the kubeconfig points at this very node, the connection dies with it and the run stops. "+
+				"Rerun converge afterwards — the saved state resumes from here.",
+			h.nodeToConverge, masterIP))
+	}
+
 	h.oldMasterIPForSSH = masterIP
 
 	kubeClient, err := h.kubeGetter.KubeClientCtx(ctx)
