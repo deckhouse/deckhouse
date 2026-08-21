@@ -13,7 +13,7 @@
          shell-cloned source on the rendered instructions alone, and a moving
          branch would be built once and cached forever. Bump this line to pick
          up agent changes. */ -}}
-  {{- $nodeletCommit := "700985a268122cd4d9d1175d9dcf32dcf267ad62" }}
+  {{- $nodeletCommit := "6d5b881e4399e9cd0f579dd52c621a3784e0ee5b" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
