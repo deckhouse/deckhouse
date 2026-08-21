@@ -303,8 +303,11 @@ spec:
                       default: ["openid", "profile", "email", "groups", "offline_access"]
                       description: |
                         List of [additional scopes](https://github.com/dexidp/website/blob/main/content/docs/configuration/custom-scopes-claims-clients.md) to request in token response.
+
+                        A scope is a single token and must not contain whitespace: the OAuth2 protocol passes scopes as a space-delimited list.
                       items:
                         type: string
+                        pattern: '^\S+$'
                     allowedGroups:
                       type: array
                       description: |
