@@ -15,10 +15,12 @@ with `patches/1.35/`.
 Applied to both `cluster-autoscaler/go.mod` and `cluster-autoscaler/apis/go.mod`:
 
 - `google.golang.org/grpc`: `v1.75.0` -> `v1.82.1`
-- `github.com/google/cel-go`: `v0.26.1` -> `v0.29.0` (GHSA-gcjh-h69q-9w9g)
+- `github.com/google/cel-go`: `v0.26.1` -> `v0.30.0` (GO-2026-6094 / GHSA-gcjh-h69q-9w9g)
 - `golang.org/x/mod`: `v0.30.0` -> `v0.40.0` (CVE-2026-56864, CVE-2026-56865).
   This pull also raises `x/net` `v0.48.0` -> `v0.58.0`, `x/text` `v0.32.0` ->
   `v0.41.0`, `x/crypto` `v0.46.0` -> `v0.55.0`, `x/sys` `v0.39.0` -> `v0.47.0`.
+- `k8s.io/kubernetes`: `v1.35.0` -> `v1.35.8`, and all `k8s.io/*` staging
+  modules (require + replace) synced to `v0.35.8`
 
 To recreate this patch, check out the clean tag and re-apply the bumps:
 
@@ -27,9 +29,19 @@ git clone <SOURCE_REPO>/gardener/autoscaler.git
 cd autoscaler && git checkout v1.35.1
 cd cluster-autoscaler
 go get google.golang.org/grpc@v1.82.1 \
-  github.com/google/cel-go@v0.29.0 \
+  github.com/google/cel-go@v0.30.0 \
+  golang.org/x/sys@v0.47.0 \
+  golang.org/x/net@v0.58.0 \
+  golang.org/x/text@v0.41.0 \
+  golang.org/x/crypto@v0.55.0 \
   golang.org/x/mod@v0.40.0
-cd apis && go get google.golang.org/grpc@v1.82.1 golang.org/x/mod@v0.40.0 && cd ..
+go get k8s.io/kubernetes@v1.35.8
+# sync every k8s.io/* require and replace directive to v0.35.8
+cd apis
+go get google.golang.org/grpc@v1.82.1 \
+  golang.org/x/net@v0.58.0 \
+  golang.org/x/text@v0.41.0
+cd ..
 go mod tidy && (cd apis && go mod tidy)
 cd ..
 git diff -- cluster-autoscaler/go.mod cluster-autoscaler/go.sum \
