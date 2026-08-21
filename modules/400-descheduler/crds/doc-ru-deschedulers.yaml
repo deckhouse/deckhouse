@@ -100,7 +100,6 @@ spec:
                             priorityFilter: *priority-filter
                             namespaceFilter: *namespace-filter
                             nodeFit: *node-fit
-                            enabled:
                         removeDuplicates:
                           required: [ enabled ]
                           description: |-
