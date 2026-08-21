@@ -42,7 +42,9 @@ rules:
       - nodes/proxy
       - nodes/stats
     verbs:
-      - '*'
+      - get
+      - list
+      - watch
   - apiGroups:
       - node.k8s.io
     resources:
