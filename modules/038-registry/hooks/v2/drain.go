@@ -60,6 +60,7 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1core "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	v1meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -233,6 +234,23 @@ func handleDrain(ctx context.Context, input *go_hook.HookInput, dc dependency.Co
 		return finishDrain(input, values, current, "the module manages the pull path")
 	}
 
+	if record == nil {
+		// The snapshot says there is no drain. Confirmed against the API before believing it, because
+		// the snapshot is an informer and an informer is empty for a moment after the module starts —
+		// and a module restarts mid-drain routinely, since the platform moving its own image reference
+		// off the in-cluster registry is what restarts it.
+		//
+		// Measured on the stand without this: the record was rewritten eleven seconds into a drain and
+		// its `startedAt` jumped from 13:54:42 to 13:55:33. Nothing broke, because a fresh record still
+		// keeps the registry serving — but the clock the alert measures and the count of quiet scans
+		// both went back to zero, so a drain that never finishes could restart its way out of being
+		// reported.
+		record, err = existingDrainRecord(ctx, dc)
+		if err != nil {
+			return err
+		}
+	}
+
 	captured, err := capturedConfig(input)
 	if err != nil {
 		return err
@@ -401,6 +419,35 @@ func readDrainRecord(input *go_hook.HookInput) (*drainRecord, error) {
 	return &record, nil
 }
 
+// existingDrainRecord reads the record straight from the API, for the moment when the informer behind
+// the snapshot has not caught up. Absent is not an error: on almost every cluster there is no drain.
+func existingDrainRecord(ctx context.Context, dc dependency.Container) (*drainRecord, error) {
+	client, err := dc.GetK8sClient()
+	if err != nil {
+		return nil, fmt.Errorf("getting the kubernetes client: %w", err)
+	}
+
+	secret, err := client.CoreV1().Secrets("d8-system").Get(ctx, DrainSecretName, v1meta.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("reading the drain record: %w", err)
+	}
+
+	raw := secret.Data[drainRecordKey]
+	if len(raw) == 0 {
+		return nil, nil
+	}
+
+	var record drainRecord
+	if err := json.Unmarshal(raw, &record); err != nil {
+		return nil, fmt.Errorf("decoding the drain record: %w", err)
+	}
+
+	return &record, nil
+}
+
 func writeDrainRecord(input *go_hook.HookInput, record *drainRecord) error {
 	raw, err := json.Marshal(record)
 	if err != nil {
@@ -492,7 +539,7 @@ func scanReferences(ctx context.Context, dc dependency.Container) (int, []string
 	}
 	for i := range pods.Items {
 		pod := &pods.Items[i]
-		if platformNamespace(pod.Namespace) && namesInClusterRegistry(&pod.Spec) {
+		if platformNamespace(pod.Namespace) && podCouldStillPull(pod) {
 			note("pod", pod.Namespace, pod.Name)
 		}
 	}
@@ -548,6 +595,66 @@ func scanReferences(ctx context.Context, dc dependency.Container) (int, []string
 	}
 
 	return len(found), examples, nil
+}
+
+// podCouldStillPull reports whether this pod could still have to fetch from the in-cluster registry.
+//
+// Naming the address is not the same as needing it. A container that has already started holds its image
+// in the node's content store, and a restart of it does not go back to a registry — unless its pull
+// policy is `Always`, which is the one case where every start is a fetch. So what has to be waited on is
+// a container that names the address AND either has not started yet, or will fetch again when it does.
+//
+// This is the difference between a withdrawal that completes and one that hangs. Measured on the stand:
+// a `trickster` rollout had been stuck for two hours for reasons of its own — the new pod, already on
+// the upstream registry, never became ready, so the superseded ReplicaSet kept its old pod alive. That
+// pod named the in-cluster address, had long since pulled it, and served nothing; waiting on it would
+// have held the module on the pull path indefinitely, and any stuck rollout anywhere in the cluster
+// would do the same.
+//
+// What is still waited on, deliberately: anything not yet started. A pod pulling right now is the case
+// the whole mechanism exists for.
+func podCouldStillPull(pod *v1core.Pod) bool {
+	started := make(map[string]bool, len(pod.Spec.Containers)+len(pod.Spec.InitContainers))
+	for _, statuses := range [][]v1core.ContainerStatus{
+		pod.Status.ContainerStatuses,
+		pod.Status.InitContainerStatuses,
+		pod.Status.EphemeralContainerStatuses,
+	} {
+		for i := range statuses {
+			status := &statuses[i]
+			started[status.Name] = status.State.Running != nil || status.State.Terminated != nil
+		}
+	}
+
+	needs := func(container *v1core.Container) bool {
+		if !strings.HasPrefix(container.Image, registry_const.Host+"/") {
+			return false
+		}
+		if container.ImagePullPolicy == v1core.PullAlways {
+			return true
+		}
+
+		return !started[container.Name]
+	}
+
+	for i := range pod.Spec.Containers {
+		if needs(&pod.Spec.Containers[i]) {
+			return true
+		}
+	}
+	for i := range pod.Spec.InitContainers {
+		if needs(&pod.Spec.InitContainers[i]) {
+			return true
+		}
+	}
+	for i := range pod.Spec.EphemeralContainers {
+		common := v1core.Container(pod.Spec.EphemeralContainers[i].EphemeralContainerCommon)
+		if needs(&common) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // platformNamespace answers whether a namespace is one Deckhouse renders into.

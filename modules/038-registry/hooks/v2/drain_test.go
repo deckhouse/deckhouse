@@ -18,6 +18,7 @@ package v2
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -37,7 +38,7 @@ func managedCapture() *RegistryConfig {
 	return &RegistryConfig{
 		Mode: string(registryv1alpha1.ModeManaged),
 		Primary: ConfigPrimary{
-			Upstream: &ConfigUpstream{Host: "dev-registry.deckhouse.io", Path: "/sys/deckhouse-oss"},
+			Upstream: &ConfigUpstream{Host: "registry.deckhouse.io", Path: "/deckhouse/ee"},
 		},
 		Storage: ConfigStorage{Cache: true},
 	}
@@ -118,8 +119,8 @@ func TestNothingToDrainWhenTheModuleWasNotServing(t *testing.T) {
 // can be wrong in both directions: missing an init container leaves a reference behind and takes the
 // address away from it, and matching too broadly keeps a module serving forever.
 func TestWhatCountsAsNamingTheInClusterRegistry(t *testing.T) {
-	inCluster := registry_const.Host + "/system/deckhouse:pr21788"
-	upstream := "dev-registry.deckhouse.io/sys/deckhouse-oss:pr21788"
+	inCluster := registry_const.Host + "/system/deckhouse:v1"
+	upstream := "registry.deckhouse.io/deckhouse/ee:v1"
 
 	cases := []struct {
 		name  string
@@ -156,7 +157,7 @@ func TestWhatCountsAsNamingTheInClusterRegistry(t *testing.T) {
 			// as ours would keep the module serving an address nobody asked it to.
 			name: "a host that only looks like it",
 			spec: v1core.PodSpec{Containers: []v1core.Container{
-				{Image: registry_const.Host + ".example.com/system/deckhouse:pr21788"},
+				{Image: registry_const.Host + ".example.com/system/deckhouse:v1"},
 			}},
 			names: false,
 		},
@@ -167,6 +168,61 @@ func TestWhatCountsAsNamingTheInClusterRegistry(t *testing.T) {
 			assert.Equal(t, test.names, namesInClusterRegistry(&test.spec))
 		})
 	}
+}
+
+// TestAPodThatHasAlreadyPulledDoesNotHoldTheWithdrawal is the rule that decides whether a withdrawal
+// can finish at all.
+//
+// Measured on the stand: a `trickster` rollout had been stuck for two hours for reasons of its own — the
+// new pod, already on the upstream registry, never became ready, so the superseded ReplicaSet kept its
+// old pod. That pod named the in-cluster address, had long since pulled it, and served nothing. Waiting
+// on it would have held the module on the pull path indefinitely, and any stuck rollout anywhere in the
+// cluster would do the same.
+func TestAPodThatHasAlreadyPulledDoesNotHoldTheWithdrawal(t *testing.T) {
+	image := registry_const.Host + "/system/deckhouse@sha256:abc"
+
+	running := &v1core.Pod{
+		Spec: v1core.PodSpec{Containers: []v1core.Container{
+			{Name: "trickster", Image: image, ImagePullPolicy: v1core.PullIfNotPresent},
+		}},
+		Status: v1core.PodStatus{ContainerStatuses: []v1core.ContainerStatus{
+			{Name: "trickster", State: v1core.ContainerState{Running: &v1core.ContainerStateRunning{}}},
+		}},
+	}
+	assert.False(t, podCouldStillPull(running),
+		"a started container holds its image on the node, so it will not go back to the registry")
+
+	// The case the whole mechanism exists for: a pod that has not started yet is pulling now.
+	pulling := running.DeepCopy()
+	pulling.Status.ContainerStatuses = []v1core.ContainerStatus{{
+		Name:  "trickster",
+		State: v1core.ContainerState{Waiting: &v1core.ContainerStateWaiting{Reason: "ImagePullBackOff"}},
+	}}
+	assert.True(t, podCouldStillPull(pulling), "a container that has not started still needs the registry")
+
+	// And `Always` means every start is a fetch, started or not — the platform's own Deployment uses it.
+	always := running.DeepCopy()
+	always.Spec.Containers[0].ImagePullPolicy = v1core.PullAlways
+	assert.True(t, podCouldStillPull(always), "with Always, a restart fetches again")
+
+	// An init container that has finished is finished; one that has not, is not.
+	initDone := &v1core.Pod{
+		Spec: v1core.PodSpec{InitContainers: []v1core.Container{
+			{Name: "init", Image: image, ImagePullPolicy: v1core.PullIfNotPresent},
+		}},
+		Status: v1core.PodStatus{InitContainerStatuses: []v1core.ContainerStatus{
+			{Name: "init", State: v1core.ContainerState{
+				Terminated: &v1core.ContainerStateTerminated{ExitCode: 0},
+			}},
+		}},
+	}
+	assert.False(t, podCouldStillPull(initDone))
+
+	// A pod on the upstream registry is nothing to do with this either way.
+	upstream := &v1core.Pod{Spec: v1core.PodSpec{Containers: []v1core.Container{
+		{Name: "c", Image: "registry.deckhouse.io/deckhouse/ee:v1"},
+	}}}
+	assert.False(t, podCouldStillPull(upstream))
 }
 
 // TestWhichNamespacesAreScanned records the scope, which is a deliberate limit rather than an
@@ -191,12 +247,13 @@ func TestTheScanFindsEveryKindThatCanRecreateAPod(t *testing.T) {
 	client, err := dc.GetK8sClient()
 	require.NoError(t, err)
 
-	image := registry_const.Host + "/system/deckhouse:pr21788"
+	image := registry_const.Host + "/system/deckhouse:v1"
 	spec := v1core.PodSpec{Containers: []v1core.Container{{Name: "c", Image: image}}}
 	meta := func(name string) v1meta.ObjectMeta {
 		return v1meta.ObjectMeta{Name: name, Namespace: "d8-monitoring"}
 	}
 
+	// No status, so no container has started: a pod that still has to pull, which is what is waited on.
 	_, err = client.CoreV1().Pods("d8-monitoring").Create(ctx,
 		&v1core.Pod{ObjectMeta: meta("grafana"), Spec: spec}, v1meta.CreateOptions{})
 	require.NoError(t, err)
@@ -237,6 +294,45 @@ func TestTheScanFindsEveryKindThatCanRecreateAPod(t *testing.T) {
 	assert.Len(t, examples, 5)
 }
 
+// TestARestartDoesNotRestartTheDrain covers the informer warm-up race directly.
+//
+// A module restarts mid-drain routinely — the platform moving its own image reference off the in-cluster
+// registry is what restarts it — and for a moment after that the snapshot behind the record is empty.
+// Measured on the stand before this was closed: the record was rewritten eleven seconds in and its
+// `startedAt` jumped from 13:54:42 to 13:55:33, taking the alert clock and the quiet-scan counter back
+// to zero with it.
+func TestARestartDoesNotRestartTheDrain(t *testing.T) {
+	ctx := context.Background()
+	dc := dependency.NewMockedContainer()
+	client, err := dc.GetK8sClient()
+	require.NoError(t, err)
+
+	started := time.Date(2026, 8, 21, 13, 54, 42, 0, time.UTC)
+	raw, err := json.Marshal(drainRecord{Config: *managedCapture(), StartedAt: started, ZeroScans: 1})
+	require.NoError(t, err)
+
+	_, err = client.CoreV1().Secrets("d8-system").Create(ctx, &v1core.Secret{
+		ObjectMeta: v1meta.ObjectMeta{Name: DrainSecretName, Namespace: "d8-system"},
+		Data:       map[string][]byte{drainRecordKey: raw},
+	}, v1meta.CreateOptions{})
+	require.NoError(t, err)
+
+	found, err := existingDrainRecord(ctx, dc)
+	require.NoError(t, err)
+	require.NotNil(t, found, "the record is in the cluster, so an empty snapshot must not be believed")
+	assert.Equal(t, started, found.StartedAt, "the clock the alert measures has to survive a restart")
+	assert.Equal(t, 1, found.ZeroScans)
+}
+
+// TestNoRecordIsNotAnError keeps the ordinary case ordinary: almost every cluster has no drain, and the
+// absence must not turn a reconciliation into a failure.
+func TestNoRecordIsNotAnError(t *testing.T) {
+	found, err := existingDrainRecord(context.Background(), dependency.NewMockedContainer())
+
+	require.NoError(t, err)
+	assert.Nil(t, found)
+}
+
 // TestTheScanIsEmptyOnceEverythingMoved is the other end: the state the withdrawal is waiting for has
 // to actually be reachable, and an image on the upstream registry must not be counted.
 func TestTheScanIsEmptyOnceEverythingMoved(t *testing.T) {
@@ -252,10 +348,10 @@ func TestTheScanIsEmptyOnceEverythingMoved(t *testing.T) {
 			ObjectMeta: v1meta.ObjectMeta{Name: "deckhouse", Namespace: "d8-system"},
 			Spec: appsv1.DeploymentSpec{Template: v1core.PodTemplateSpec{Spec: v1core.PodSpec{
 				Containers: []v1core.Container{
-					{Name: "deckhouse", Image: "dev-registry.deckhouse.io/sys/deckhouse-oss:pr21788"},
+					{Name: "deckhouse", Image: "registry.deckhouse.io/deckhouse/ee:v1"},
 				},
 				InitContainers: []v1core.Container{
-					{Name: "init", Image: "dev-registry.deckhouse.io/sys/deckhouse-oss@sha256:abc"},
+					{Name: "init", Image: "registry.deckhouse.io/deckhouse/ee@sha256:abc"},
 				},
 			}}},
 		}, v1meta.CreateOptions{})

@@ -148,11 +148,11 @@ func deployment(image string) *unstructured.Unstructured {
 // image names its own installer.
 func TestFromClusterFallsBackToTheRunningImage(t *testing.T) {
 	t.Run("no release at all", func(t *testing.T) {
-		c := releaseClient(t, deployment("registry.d8-system.svc:5001/system/deckhouse:pr21788"))
+		c := releaseClient(t, deployment("registry.d8-system.svc:5001/system/deckhouse:pr1234"))
 
 		releases, err := FromCluster(context.Background(), c)
 		require.NoError(t, err)
-		assert.Equal(t, "pr21788", releases.Deployed,
+		assert.Equal(t, "pr1234", releases.Deployed,
 			"the tag names the installer image that declares the set")
 		assert.Empty(t, releases.Previous, "there is no previous version to roll back to")
 	})
@@ -173,7 +173,7 @@ func TestFromClusterFallsBackToTheRunningImage(t *testing.T) {
 	t.Run("a deployed release still wins", func(t *testing.T) {
 		c := releaseClient(t,
 			release("a", "v1.76.6", phaseDeployed),
-			deployment("registry.d8-system.svc:5001/system/deckhouse:pr21788"),
+			deployment("registry.d8-system.svc:5001/system/deckhouse:pr1234"),
 		)
 
 		releases, err := FromCluster(context.Background(), c)

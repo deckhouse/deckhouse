@@ -56,5 +56,17 @@
         until they are changed to pull from the registry the cluster was installed with, the
         module will keep serving them — which is the intended behaviour, not a failure.
 
+        One shape of this is worth naming, because it was hit the first time this ran on a live
+        cluster: a rolling update stuck for reasons of its own. The new pod is already on the
+        upstream registry and never becomes ready, so the superseded ReplicaSet keeps its old pod,
+        and that pod names the in-cluster address. A pod that has already pulled is not waited on,
+        so this alone does not hold the withdrawal — but a pod stuck BEFORE its containers start
+        does, and rightly, since it is exactly what would fail. Fix the rollout, or delete the
+        pod that cannot start:
+
+        ```
+        kubectl get pods -A --field-selector status.phase=Pending
+        ```
+
         A drain can also be abandoned by asking for `Managed` again: the module then keeps the
         pull path it never finished giving up, and this alert goes away.
