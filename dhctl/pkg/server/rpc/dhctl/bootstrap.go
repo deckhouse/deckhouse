@@ -197,6 +197,7 @@ func (s *Service) bootstrap(ctx context.Context, p *bootstrapParams) *pb.Bootstr
 	var (
 		configPaths             []string
 		configPath              string
+		kubeConfigPath          string
 		postBootstrapScriptPath string
 		cleanup                 func() error
 	)
@@ -219,6 +220,16 @@ func (s *Service) bootstrap(ctx context.Context, p *bootstrapParams) *pb.Bootstr
 			}
 
 			configPaths = append(configPaths, configPath)
+		}
+
+		// The kubeconfig arrives as contents, but every consumer down the chain wants a path,
+		// so spill it into the same 0600 temp file the configs above get. Never log the value.
+		if len(p.request.Kubeconfig) > 0 {
+			kubeConfigPath, cleanup, err = util.WriteDefaultTempFile([]byte(p.request.Kubeconfig))
+			cleanuper.Add(cleanup)
+			if err != nil {
+				return fmt.Errorf("failed to write kubeconfig: %w", err)
+			}
 		}
 
 		postBootstrapScriptPath, cleanup, err = util.WriteDefaultTempFile([]byte(p.request.PostBootstrapScript))
@@ -258,7 +269,7 @@ func (s *Service) bootstrap(ctx context.Context, p *bootstrapParams) *pb.Bootstr
 	var sshProviderInitializer *providerinitializer.SSHProviderInitializer
 	var kubeProvider libcon.KubeProvider
 	err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Preparing SSH client", func(ctx context.Context) error {
-		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, s.params.IsDebug, s.params.TmpDir, helper.AllowMissingHostsFromCache())
+		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, s.params.IsDebug, s.params.TmpDir, helper.AllowMissingHostsFromCache(), helper.WithKubeConfig(kubeConfigPath))
 		if err != nil {
 			return fmt.Errorf("preparing providers: %w", err)
 		}

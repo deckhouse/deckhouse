@@ -48,6 +48,7 @@ message BootstrapStart {
   string state = 7;
   string post_bootstrap_script = 8;
   BootstrapStartOptions options = 9;
+  string kubeconfig = 10;
 }
 
 message BootstrapPhaseEnd {

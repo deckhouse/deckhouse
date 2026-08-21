@@ -30,6 +30,7 @@ import (
 
 type CreateProvidersOptions struct {
 	allowMissingHostsFromCache bool
+	kubeConfig                 string
 }
 
 type CreateProvidersOption func(*CreateProvidersOptions)
@@ -37,6 +38,15 @@ type CreateProvidersOption func(*CreateProvidersOptions)
 func AllowMissingHostsFromCache() CreateProvidersOption {
 	return func(o *CreateProvidersOptions) {
 		o.allowMissingHostsFromCache = true
+	}
+}
+
+// WithKubeConfig points the kube provider at an already existing API server through the
+// kubeconfig at the given path, the way the --kubeconfig flag does on the CLI. An empty path
+// keeps the previous behaviour: connect over SSH.
+func WithKubeConfig(kubeConfig string) CreateProvidersOption {
+	return func(o *CreateProvidersOptions) {
+		o.kubeConfig = kubeConfig
 	}
 }
 
@@ -56,7 +66,15 @@ func CreateProviders(ctx context.Context, config string, isDebug bool, tmpDir st
 		TmpDir:      tmpDir,
 	}
 
-	sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params, providerinitializer.WithConnectionConfig(config))
+	providerOpts := []providerinitializer.ProviderOptions{providerinitializer.WithConnectionConfig(config)}
+	if options.kubeConfig != "" {
+		providerOpts = append(providerOpts,
+			providerinitializer.WithKubeFlagsDefined(true),
+			providerinitializer.WithKubeConfig(options.kubeConfig, "", false),
+		)
+	}
+
+	sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params, providerOpts...)
 	if err != nil {
 		if !options.allowMissingHostsFromCache || !errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
 			return nil, nil, nil, fmt.Errorf("initializing providers: %w", err)
