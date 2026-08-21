@@ -142,3 +142,11 @@
         }
     }
 }
+
+.gs-revision-tabs  {
+    margin-top: 50px;
+
+    @include breakpoints.max-w(xs) {
+        margin-top: 40px;
+    }
+}

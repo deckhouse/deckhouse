@@ -1142,7 +1142,11 @@ a.comparison-table__module-proprietaryOkmeter::after {
 }
 
 .docs {
-    margin-bottom: 60px;
+  margin-bottom: 60px;
+
+  @include breakpoints.max-w(xs) {
+    margin-bottom: 40px;
+  }
 }
 
 .docs .hidden {

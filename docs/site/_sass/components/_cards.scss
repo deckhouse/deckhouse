@@ -8,8 +8,9 @@
     }
 
     &__title {
-        margin-top: 0;
-        margin-bottom: variables.$spacing-l;
+        @include breakpoints.max-w(xs) {
+            margin-bottom: 20px !important;
+        }
     }
 }
 
@@ -119,6 +120,10 @@
 
         @include breakpoints.max-w(l) {
             gap: 16px;
+        }
+
+        @include breakpoints.max-w(s) {
+            gap: 12px;
         }
 
         .cards-item {
