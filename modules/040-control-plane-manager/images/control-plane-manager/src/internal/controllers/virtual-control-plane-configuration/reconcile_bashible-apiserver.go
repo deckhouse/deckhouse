@@ -415,7 +415,7 @@ func (r *reconciler) reconcileBashibleRegistrySecret(
 			Annotations: registryAnnotations,
 		},
 		Type: parentSecret.Type,
-		Data: maps.Clone(parentSecret.Data),
+		Data: r.resolveTenantRegistryData(ctx, parentSecret),
 	}
 
 	current := &corev1.Secret{}

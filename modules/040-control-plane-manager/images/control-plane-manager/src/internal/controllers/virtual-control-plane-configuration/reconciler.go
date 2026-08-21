@@ -625,7 +625,15 @@ func (r *reconciler) reconcileConfigSecret(ctx context.Context, vcp *controlplan
 		return nil, reconcile.Result{}, fmt.Errorf("collect parent egress destinations: %w", err)
 	}
 
-	data, err := renderManifests(global.Data, vcp, apiAdvertiseAddress, egressDestinations)
+	// Rebase tenant-node image refs onto the external upstream when the parent's registry module hides the real registry behind the in-cluster proxy.
+	var imageBaseOverride string
+	if tr, terr := r.discoverTenantRegistry(ctx); terr != nil {
+		log.FromContext(ctx).Error(terr, "discover tenant registry for image rebase; keeping in-cluster refs")
+	} else if tr != nil {
+		imageBaseOverride = tr.Base()
+	}
+
+	data, err := renderManifests(global.Data, vcp, apiAdvertiseAddress, egressDestinations, imageBaseOverride)
 	if err != nil {
 		return nil, reconcile.Result{}, fmt.Errorf("render manifests: %w", err)
 	}
