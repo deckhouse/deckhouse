@@ -82,13 +82,13 @@ var _ = Describe("Istio hooks :: versions_monitoring ::", func() {
 		})
 	})
 
-	Context("There is one deprecated version installed", func() {
+	Context("Istio 1.25 is deprecated while 1.27 and 1.29 are not", func() {
 		var deprecatedVersions = `
-- version: "1.1"
+- version: "1.25"
   alertSeverity: 4
 `
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", []byte(`["1.1", "1.2", "1.3"]`))
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", []byte(`["1.25", "1.27", "1.29"]`))
 			f.ValuesSetFromYaml("istio.internal.deprecatedVersions", []byte(deprecatedVersions))
 			f.RunHook()
 		})
@@ -108,7 +108,7 @@ var _ = Describe("Istio hooks :: versions_monitoring ::", func() {
 				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(1.0),
 				Labels: map[string]string{
-					"version":        "1.1",
+					"version":        "1.25",
 					"alert_severity": "4",
 				},
 			}))

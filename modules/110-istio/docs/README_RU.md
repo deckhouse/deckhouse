@@ -13,8 +13,11 @@ webIfaces:
 |:------------:|:------------------------------------------------------------------------------------------------------------------------------:|:--------------------------:|
 |     1.29      |                                          1.29, 1.30, 1.31, 1.32, 1.33, 1.34, 1.35, 1.36                                    | Поддерживается |
 |     1.27      |                                          1.29, 1.30, 1.31, 1.32, 1.33, 1.34, 1.35, 1.36                                    | Поддерживается |
-|     1.25      |                                          1.29, 1.30, 1.31, 1.32, 1.33, 1.34, 1.35, 1.36                                    | Поддерживается |
-|     1.21     |                                           1.26, 1.27, 1.28, 1.29, 1.30, 1.31, 1.32, 1.33, 1.34, 1.35, 1.36                  |  Устарела и будет удалена  |
+|     1.25      |                                          1.29, 1.30, 1.31, 1.32, 1.33, 1.34, 1.35, 1.36                                    | Устарела и запланирована к удалению |
+
+{% alert level="warning" %}
+Istio 1.21 больше не поддерживается. До обновления на этот релиз DKP перенесите глобальную и все дополнительные ревизии Istio 1.21 на поддерживаемую версию, используя предыдущий релиз DKP, который поддерживает обе версии. Обновление DKP блокируется, пока в конфигурации остаётся Istio 1.21.
+{% endalert %}
 
 ## Задачи, которые решает Istio
 
@@ -106,7 +109,7 @@ Istio позволяет осуществлять сбор трейсов с п�
 
 ### Метрики меша и access log (Telemetry API)
 
-Дашборды Grafana для workload и количественные данные в Kiali опираются на стандартные метрики `istio_*`, которые Prometheus забирает с `istio-proxy`. Начиная с Istio&nbsp;1.21+, они настраиваются через Telemetry API и связанные провайдеры по умолчанию в `meshConfig`, а не только через прежний блок `telemetry.v2`.
+Дашборды Grafana для workload и количественные данные в Kiali опираются на стандартные метрики `istio_*`, которые Prometheus забирает с `istio-proxy`. В поддерживаемых версиях Istio они настраиваются через Telemetry API и связанные провайдеры по умолчанию в `meshConfig`, а не только через прежний блок `telemetry.v2`.
 
 В DKP параметр — [`telemetryAPI.enabled`](configuration.html#parameters-telemetryapi-enabled): `false` оставляет полностью включённым `telemetry.v2`, `true` переводит меш на режим Telemetry API (`defaultProviders`, управляемые модулем `Telemetry` CR и формат строки доступа из [`dataPlane.accessLog`](configuration.html#parameters-dataplane-accesslog)). Подробнее с примерами — в разделе [Telemetry API: метрики меша, трассировка и журналы доступа](examples.html#telemetry-api-mesh-observability).
 
@@ -190,7 +193,7 @@ Istio позволяет осуществлять сбор трейсов с п�
 
 - Лейбл к неймспейсу — обозначает ваш неймспейс для компонента sidecar-injector. После применения лейбла к новым подам будут добавлены сайдкар-контейнеры:
   - `istio-injection=enabled` — использует глобальную версию Istio (`spec.settings.globalVersion` в `ModuleConfig`);
-  - `istio.io/rev=v1x21` — использует конкретную версию Istio для этого неймспейса;
+  - `istio.io/rev=v1x29` — использует конкретную версию Istio для этого неймспейса;
   - `istio.io/rev=default` — использует глобальную версию Istio (`spec.settings.globalVersion` в `ModuleConfig`).
 - Аннотация к поду `sidecar.istio.io/inject` (`"true"` или `"false"`) позволяет локально переопределить политику `sidecarInjectorPolicy`. Эти аннотации работают только в неймспейсах, обозначенных лейблами из списка выше.
 
@@ -402,7 +405,7 @@ Istio работает в режиме [multi-network](https://istio.io/latest/d
    <!-- markdownlint-disable MD031 -->
    ```console
    NAME          SECRET                                     STATUS     ISTIOD
-   cluster-b     d8-istio/istio-remote-secret-cluster-b     synced     istiod-v1x21-5c57d85b54-k8pl7
+   cluster-b     d8-istio/istio-remote-secret-cluster-b     synced     istiod-v1x29-5c57d85b54-k8pl7
    ```
    {: .nowrap-default }
    <!-- markdownlint-enable MD031 -->

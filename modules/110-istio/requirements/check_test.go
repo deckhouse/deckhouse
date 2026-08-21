@@ -26,24 +26,39 @@ import (
 )
 
 func TestIstioOperatorVersionRequirement(t *testing.T) {
-	requirements.RemoveValue(minVersionValuesKey)
-	t.Run("requirement met", func(t *testing.T) {
-		requirements.SaveValue(minVersionValuesKey, "1.21.6")
-		ok, err := requirements.CheckRequirement(requirementIstioMinimalVersionKey, "1.21")
+	t.Cleanup(func() { requirements.RemoveValue(minVersionValuesKey) })
+
+	t.Run("configured 1.25 satisfies requirement", func(t *testing.T) {
+		requirements.SaveValue(minVersionValuesKey, "1.25")
+		ok, err := requirements.CheckRequirement(requirementIstioMinimalVersionKey, "1.25")
 		assert.True(t, ok)
 		require.NoError(t, err)
 	})
 
-	t.Run("requirement failed", func(t *testing.T) {
-		requirements.SaveValue(minVersionValuesKey, "1.13")
-		ok, err := requirements.CheckRequirement(requirementIstioMinimalVersionKey, "1.21")
+	t.Run("configured 1.21 fails requirement", func(t *testing.T) {
+		requirements.SaveValue(minVersionValuesKey, "1.21.6")
+		ok, err := requirements.CheckRequirement(requirementIstioMinimalVersionKey, "1.25")
 		assert.False(t, ok)
-		require.Error(t, err)
+		require.EqualError(t, err, "installed Istio version '1.21.6' is lower than required")
+	})
+
+	t.Run("newer configured version satisfies requirement", func(t *testing.T) {
+		requirements.SaveValue(minVersionValuesKey, "1.29")
+		ok, err := requirements.CheckRequirement(requirementIstioMinimalVersionKey, "1.25")
+		assert.True(t, ok)
+		require.NoError(t, err)
 	})
 
 	t.Run("Istio is not installed on the cluster", func(t *testing.T) {
 		requirements.RemoveValue(minVersionValuesKey)
-		ok, err := requirements.CheckRequirement(requirementIstioMinimalVersionKey, "1.21")
+		ok, err := requirements.CheckRequirement(requirementIstioMinimalVersionKey, "1.25")
+		assert.True(t, ok)
+		require.NoError(t, err)
+	})
+
+	t.Run("minimum of multiple configured revisions is checked", func(t *testing.T) {
+		requirements.SaveValue(minVersionValuesKey, "1.25")
+		ok, err := requirements.CheckRequirement(requirementIstioMinimalVersionKey, "1.25")
 		assert.True(t, ok)
 		require.NoError(t, err)
 	})
