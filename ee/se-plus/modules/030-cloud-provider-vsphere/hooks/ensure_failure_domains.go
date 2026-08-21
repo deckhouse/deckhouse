@@ -304,10 +304,14 @@ func buildFailureDomain(name, region, regionTagCategory, zone, zoneTagCategory, 
 		"datastore":      datastore,
 	}
 	// autoConfigure is a *bool in CAPV and reconcileInfraFailureDomain dereferences it
-	// unconditionally (vspheredeploymentzone_controller_domain.go). The CRD schema has no default,
-	// so a mutating webhook (capv-mutating-webhook) or an explicit false is required — otherwise
-	// the reconciler nil-derefs on the next tick. We set false: the tags are already attached by
-	// the admin at cluster bootstrap.
+	// unconditionally (vspheredeploymentzone_controller_domain.go). The CRD schema has no default
+	// and Deckhouse does not ship the upstream MutatingWebhookConfiguration for CAPV (it caused a
+	// teardown deadlock — apiserver could not reach the same-cluster webhook once cilium started
+	// removing endpoints and no VSphereVM finalizer would ever be patched off). So we set false
+	// explicitly here: the tags are already attached by the admin at cluster bootstrap. An FD
+	// authored outside this hook without autoConfigure set would nil-deref the DZ reconciler —
+	// document that in the module docs, do not paper over it with a webhook we cannot rely on
+	// during teardown.
 	spec := map[string]interface{}{
 		"region": map[string]interface{}{
 			"name":          region,
