@@ -61,6 +61,15 @@ rules:
   - deletecollection
   - patch
   - update
+# No controller serves these subresources; they carry the authority to let an OAuth2 client reach
+# the Kubernetes API, which the admission policy for the allow-access-to-kubernetes annotation checks.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - dexauthenticators/allow-access-to-kubernetes
+  - dexclients/allow-access-to-kubernetes
+  verbs:
+  - create
 # Read-only audit access to internal Dex storage CRDs. Deliberately without `get`:
 # `passwords` contain bcrypt-hashed credentials, `offlinesessionses` carry refresh tokens —
 # a named read would return the same secret material, so ClusterAdmin stays at the
