@@ -1275,6 +1275,21 @@ func (r *reconciler) runReleaseDeploy(ctx context.Context, release *v1alpha1.Mod
 		return fmt.Errorf("update status with retry: %w", err)
 	}
 
+	// a pull override outranks a release, so the module v2 resource keeps
+	// pointing at the override; the reinstall path reaches this function
+	// without the check handleDeployedRelease does
+	overridden, err := utils.ModulePullOverrideExists(ctx, r.client, release.GetModuleName())
+	if err != nil {
+		return fmt.Errorf("module pull override exists: %w", err)
+	}
+
+	if overridden {
+		r.log.Debug("module is overridden, skip the module v2 mirror",
+			slog.String("module", release.GetModuleName()))
+
+		return nil
+	}
+
 	// mirror the deployed release into the module v2 resource
 	if err = r.moduleSync.EnsureModule(ctx, release.GetModuleName(),
 		modulesync.OriginFromDeployedRelease(release.GetModuleSource(), release.GetModuleVersion())); err != nil {
