@@ -3,6 +3,24 @@ title: "Использование Application Load Balancer (ALB)"
 description: "Настройка Application Load Balancer для HTTP/HTTPS/gRPC трафика в Deckhouse Kubernetes Platform. Использование ingress-nginx и istio для маршрутизации запросов, терминации SSL/TLS и публикации приложений."
 permalink: ru/user/network/ingress/alb.html
 lang: ru
+extractedLinksMax: 2
+relatedLinks:
+  - title: "Документация модуля alb"
+    url: /modules/alb/
+  - title: "Custom Resources модуля alb"
+    url: /modules/alb/cr.html
+  - title: "Параметры модуля alb"
+    url: /modules/alb/configuration.html
+  - title: "FAQ модуля alb"
+    url: /modules/alb/faq.html
+  - title: "Примеры модуля alb"
+    url: /modules/alb/examples.html
+  - title: "ALB средствами Kubernetes Gateway API"
+    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html
+  - title: "ALB средствами Ingress NGINX Controller"
+    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/nginx.html
+  - title: "ALB средствами Istio"
+    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/istio.html
 ---
 
 Публикация приложений и балансировка трафика на прикладном уровне может выполняться средствами:
@@ -11,7 +29,7 @@ lang: ru
 - [Kubernetes Gateway API](#публикация-приложений-средствами-kubernetes-gateway-api) (модуль `alb`).
 - [Istio](#публикация-приложений-средствами-istio) (модуль `istio`).
 
-## Советы по выбору и особенности разных типов ALB
+## Сравнение вариантов ALB
 
 ### Ingress-nginx
 
@@ -25,26 +43,26 @@ ALB средствами Ingress NGINX Controller основана на базе
 
 ALB средствами [Kubernetes Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/) реализуется [модулем `alb`](/modules/alb/). Шлюзы работают на Envoy Proxy, а приём и маршрутизация описываются стандартными объектами API (Gateway, ListenerSet, HTTPRoute и при необходимости GRPCRoute, TLSRoute, TCPRoute, UDPRoute, BackendTLSPolicy). Контроллер разворачивает необходимую инфраструктуру входа и проверяет конфигурацию, чтобы не допускать конфликтующих обработчиков.
 
-Модель Gateway API разделяет ответственность между администратором кластера (ClusterALBInstance), администратором неймспейса (ALBInstance/ListenerSet) и командой приложения (маршруты), что упрощает мультитенантность.
+Модель Gateway API разделяет ответственность между администратором кластера (ClusterALBInstance), администратором неймспейса (ALBInstance/ListenerSet) и командой приложения (команда разработчиков приложений, владельцы маршрутов HTTPRoute и других ресурсов маршрутизации).
 
-Этот вариант стоит выбрать, если вам нужны:
+Используйте этот вариант для:
 
-- публикация приложений в модели Gateway API вместо классического Ingress;
-- общекластерная точка входа или отдельный шлюз для приложения или команды в своём неймспейсе;
-- маршрутизация HTTP/HTTPS, gRPC, TCP, UDP, а также терминация или сквозная передача TLS;
-- WAF на уровне маршрута, обогащение запросов GeoIP, трассировка OpenTelemetry или Istio-сайдкар на прокси шлюза;
-- параметры маршрута, которых нет в спецификации, через [аннотации `HTTPRoute`](#поддерживаемые-аннотации-httproute).
+- публикации приложений в модели Gateway API вместо классического Ingress;
+- общекластерной точки входа или отдельного шлюза для приложения или команды в своём неймспейсе;
+- маршрутизации HTTP/HTTPS, gRPC, TCP, UDP, а также терминации или сквозной передачи TLS;
+- WAF на уровне маршрута, добавления полей GeoIP в заголовки HTTP-запросов, трассировки OpenTelemetry или Istio-сайдкара на прокси шлюза;
+- параметров маршрута, которых нет в спецификации, через [аннотации `HTTPRoute`](#поддерживаемые-аннотации-httproute).
 
-Сравнение с `ingress-nginx` и пояснения по терминологии — в разделе [Балансировка входящего трафика](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/).
+Сравнение с `ingress-nginx` и пояснения по терминологии — в разделе [«Балансировка входящего трафика»](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/).
 
 ### Istio
 
-ALB на основе модуля [`istio`](/modules/istio/) позволяет получить расширенные возможности по управлению трафиком. ALB на базе istio стоит рассмотреть, если вам нужны:
+ALB на основе модуля [`istio`](/modules/istio/) позволяет получить расширенные возможности по управлению трафиком. Используйте этот вариант для:
 
-- продвинутая маршрутизация, например, для реализации [canary deployment](../canary-deployment.html);
-- распределение трафика между версиями приложения и микросервисами;
+- продвинутой маршрутизации, например для реализации [canary deployment](../canary-deployment.html);
+- распределения трафика между версиями приложения и микросервисами;
 - mTLS для шифрования трафика между подами;
-- трассировка запросов.
+- трассировки запросов.
 
 ## Публикация приложений средствами Ingress NGINX Controller
 
@@ -74,7 +92,7 @@ spec:
 
 ## Публикация приложений средствами Kubernetes Gateway API
 
-Публикация приложения возможна через общекластерный шлюз (используется объект ClusterALBInstance, который создается администратором кластера) или через отдельный шлюз для приложения или команды в выделенном неймспейсе (используется объект ClusterALBInstance).
+Публикация приложения возможна через общекластерный шлюз (используется объект ClusterALBInstance, который создается администратором кластера) или через отдельный шлюз для приложения или команды в выделенном неймспейсе (используется объект ALBInstance).
 
 ### Публикация приложения через объект ClusterALBInstance
 
@@ -82,7 +100,7 @@ spec:
 
 Затем создайте объект ListenerSet, который будет привязан к нужному Gateway (параметр `spec.parentRef.name`) и объекты (маршруты) HTTPRoute для маршрутизации входящих запросов к приложению.
 
-Пример:
+Пример ListenerSet и HTTPRoute для публикации приложения через общекластерный шлюз:
 
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1
@@ -159,6 +177,8 @@ spec:
 Для публикации приложения через объект ALBInstance выполните следующие действия:
 
 1. Создайте объект ALBInstance с учетом необходимых [настроек](/modules/alb/cr.html#albinstance):
+
+   Пример минимальной рабочей конфигурации:
 
    ```yaml
    apiVersion: network.deckhouse.io/v1alpha1
@@ -365,7 +385,7 @@ spec:
           port: 8443
 ```
 
-Если TLS нужно терминировать на шлюзе, а затем передать трафик дальше как обычный TCP-поток, создайте объект ListenerSet со слушателем TLS и режимом `Terminate`, после чего подключите объект TCPRoute:
+Если TLS нужно терминировать на шлюзе, а затем передать трафик дальше как TCP-поток к бэкенду, создайте объект ListenerSet со слушателем TLS и режимом `Terminate`, после чего подключите объект TCPRoute:
 
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1
@@ -497,7 +517,7 @@ spec:
 
 ### Привязка маршрута в одном неймспейсе к ListenerSet объекту в другом неймспейсе
 
-Если объект HTTPRoute создаётся в одном неймспейсе и должен подключаться к объекту ListenerSet в другом неймспейсе, в неймспейсе целевого объекта ListenerSet добавьте объект ReferenceGrant. В примере ниже показаны общий объект ListenerSet в неймспейсе `shared-gw`, прикладной объект HTTPRoute в неймспейсе `prod` и объект ReferenceGrant, который разрешает такую привязку:
+Если объект HTTPRoute должен подключаться к объекту ListenerSet из другого неймспейса, в неймспейсе целевого ListenerSet добавьте объект ReferenceGrant. В примере ниже — общий ListenerSet в `shared-gw`, прикладной HTTPRoute в `prod` и ReferenceGrant в `shared-gw`, разрешающий такую привязку между неймспейсами:
 
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1
@@ -668,10 +688,10 @@ spec:
 
 | Аннотация | Описание |
 | :--- | :--- |
-| `alb.network.deckhouse.io/tls-disable-protocol` | Отключает версию протокола TLS для обработчика с именем хоста этого маршрута (например, значение `http2`). Может быть необходимо в редких случаях, когда используется общий сертификат с несколькими DNS-именами в сочетании с перенаправлением запросов |
+| `alb.network.deckhouse.io/tls-disable-protocol` | Отключает протокол обработчика для маршрута с указанным именем хоста (например, значение `http2`). Может быть необходимо в редких случаях, когда используется общий сертификат с несколькими DNS-именами в сочетании с перенаправлением запросов |
 | `alb.network.deckhouse.io/whitelist-source-range` | Ожидает список подсетей в формате CIDR через запятую: фильтр по IP на уровне маршрута; переопределяет глобальный whitelist (например, `10.1.1.10/32, 10.2.2.2/32`) |
 | `alb.network.deckhouse.io/response-headers-to-add` | JSON-объект дополнительных заголовков ответа (например, `{"Strict-Transport-Security": "max-age=31536000; includeSubDomains"}`) |
-| `alb.network.deckhouse.io/session-affinity` | JSON для cookie session affinity (`mode`, `path`, `cookieName`, `ttl` и др.); не все поля обязательны (например, `{"mode": "cookie", "path": "/path", "cookieName": "mycookie", "ttl": 0}`) |
+| `alb.network.deckhouse.io/session-affinity` | JSON для закрепления сессии (session affinity) с режимом cookie (`mode`, `path`, `cookieName`, `ttl` и др.); не все поля обязательны (например, `{"mode": "cookie", "path": "/path", "cookieName": "mycookie", "ttl": 0}`) |
 | `alb.network.deckhouse.io/hash-key` | Например, `source-ip`: консистентный хеш для бэкендов Service у объекта HTTPRoute |
 | `alb.network.deckhouse.io/service-upstream` | `"true"`: трафик к upstream идёт через соответствующий сервис, а не напрямую к подам |
 | `alb.network.deckhouse.io/basic-auth-secret` | `namespace/secret` с данными htpasswd для HTTP Basic Auth на этом маршруте |
@@ -681,7 +701,7 @@ spec:
 | `alb.network.deckhouse.io/auth-response-headers` | Список через запятую: дополнительные заголовки из ответа auth для передачи в upstream (поверх стандартного allowlist) |
 | `alb.network.deckhouse.io/mod-security` | JSON-конфигурация для WAF ModSecurity/Coraza на уровне маршрута |
 | `alb.network.deckhouse.io/rewrite-target` | Позволяет переопределять пути для правил с типом `RegularExpression` используя regex capture groups (например, `/my-path/\1`) |
-| `alb.network.deckhouse.io/buffer-max-request-bytes` | Определяет размер буфера, который допускается использовать в случае буферизации запросов (по умолчанию Envoy Proxy не буферизует запросы) |
+| `alb.network.deckhouse.io/buffer-max-request-bytes` | Определяет размер буфера, который допускается использовать в случае буферизации запросов; значение указывается в байтах (целое число). По умолчанию Envoy Proxy не буферизует запросы |
 | `alb.network.deckhouse.io/limit-rps` | Лимит RPS на маршрут |
 | `alb.network.deckhouse.io/backend-tls-settings` | Например, `{"mode": "SIMPLE", "insecureSkipVerify": true, "clientCertificate": "", "privateKey": "", "caCertificates": "", "sni": "example.com", "secret": "<NAMESPACE>/<SECRET_NAME>"}`; позволяет явно указать параметры TLS подключения к upstream. `<NAMESPACE>` — неймспейс секрета; `<SECRET_NAME>` — имя секрета |
 | `alb.network.deckhouse.io/idle-timeout` | Устанавливает per-route Envoy `idle_timeout`, в секундах. Схоже с `ingress-nginx` `proxy-read-timeout`/`proxy-send-timeout`; это таймаут неактивности, а не таймаут общей длительности запроса |
@@ -741,11 +761,11 @@ spec:
 1. Базовые директивы, поставляемые модулем (`@coraza.conf`, `SecRuleEngine`, `SecResponseBodyAccess Off`).
 1. Правила из набора, заданного в `preset`.
 1. Пользовательские правила из ConfigMap, указанного в `configRef`.
-1. Встроенные директивы из поля `directives`.
+1. Директивы из поля `directives` аннотации.
 
-Встроенные директивы применяются последними и могут переопределять набор правил или правила из ConfigMap.
+Директивы из аннотации применяются последними и могут переопределять набор правил или правила из ConfigMap.
 
-Минимальный пример:
+Пример HTTPRoute с включённым WAF (`"mode": "on"`):
 
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1
@@ -832,7 +852,7 @@ metadata:
 - [операторы ModSecurity](https://github.com/SpiderLabs/ModSecurity/wiki/Reference-Manual-%28v2.x%29-Operators);
 - [директива `SecRuleEngine` и другие директивы ModSecurity](https://github.com/owasp-modsecurity/ModSecurity/wiki/Reference-Manual-%28v2.x%29).
 
-Текущие особенности и ограничения:
+Текущие особенности и ограничения WAF:
 
 - поддерживается только набор правил `owasp-crs`;
 - параметр `paranoiaLevel` применяется только при использовании `preset: owasp-crs`. Если параметр `preset` не указан или имеет другое значение, параметр `paranoiaLevel` игнорируется;
@@ -842,7 +862,7 @@ metadata:
 
 ### Использование GeoIP и GeoLite2 {#geoip}
 
-Модуль `alb` поддерживает обогащение входящих HTTP-запросов заголовками на основе данных баз [MaxMind GeoIP/GeoLite2](https://dev.maxmind.com/geoip/).
+Модуль `alb` поддерживает добавление полей GeoIP в заголовки HTTP-запросов на основе данных баз [MaxMind GeoIP/GeoLite2](https://dev.maxmind.com/geoip/).
 
 На данный момент возможно подключение следующих редакций баз:
 
@@ -923,9 +943,9 @@ spec:
 
 #### Использование заголовков GeoIP {#headers}
 
-В результате настройки GeoIP в неймспейсе, в котором располагается ClusterALBInstance или ALBInstance, будет запущен сервер кеширования и обновления баз GeoIP, а поды Envoy Proxy будут поочередно перезапущены с добавлением функциональности скачивания баз GeoIP с локального сервера GeoIP.
+В результате настройки GeoIP в неймспейсе, где работают прокси ClusterALBInstance или ALBInstance, будет запущен сервер кеширования и обновления баз GeoIP, а поды Envoy Proxy будут поочередно перезапущены с добавлением функциональности скачивания баз GeoIP с локального сервера GeoIP.
 
-Для добавления данных на основе GeoIP в HTTP-запросы необходимо указать имена HTTP-заголовков, которые будут содержать соответствующую информацию, например:
+Для добавления полей GeoIP в заголовки HTTP-запросов необходимо указать имена HTTP-заголовков, которые будут содержать соответствующую информацию, например:
 
 ```yaml
 apiVersion: network.deckhouse.io/v1alpha1
@@ -954,11 +974,16 @@ spec:
 
 Модуль `alb` поддерживает экспорт трассировок OpenTelemetry из Envoy-прокси.
 
-Для включения экспорта укажите адрес целевого OpenTelemetry Collector в формате [`url`](/modules/alb/cr.html#albinstance-v1alpha1-spec-opentelemetry-tracing-url). Трассировки могут передаваться по OTLP/HTTP или OTLP/gRPC. При необходимости можно настроить подключение с использованием [TLS](/modules/alb/cr.html#albinstance-v1alpha1-spec-opentelemetry-tracing-tls).
+Для включения экспорта задайте в `spec.openTelemetry.tracing` адрес OpenTelemetry Collector:
 
-При использовании TLS рекомендуется явно задать параметр [`sni`](/modules/alb/cr.html#albinstance-v1alpha1-spec-opentelemetry-tracing-tls-sni), если OpenTelemetry Collector находится за прокси или балансировщиком, который выбирает upstream на основе Server Name Indication.
+- `service.name` и `service.namespace` — имя и неймспейс сервиса коллектора;
+- `port` — порт;
+- `protocol` — протокол (`HTTP` или `gRPC`);
+- `path` — путь для OTLP/HTTP.
 
-Настройка инфраструктуры шлюза, примеры инлетов и FAQ описаны в разделе [ALB средствами Kubernetes Gateway API](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html). Справочник модуля: [FAQ модуля `alb`](/modules/alb/faq.html), [примеры модуля `alb`](/modules/alb/examples.html), [конфигурация модуля `alb`](/modules/alb/configuration.html), [Custom Resources модуля `alb`](/modules/alb/cr.html).
+Альтернативно можно указать единый параметр [`url`](/modules/alb/cr.html#albinstance-v1alpha1-spec-opentelemetry-tracing-url).
+
+При необходимости настройте подключение с использованием [TLS](/modules/alb/cr.html#albinstance-v1alpha1-spec-opentelemetry-tracing-tls). При использовании TLS рекомендуется явно задать параметр [`sni`](/modules/alb/cr.html#albinstance-v1alpha1-spec-opentelemetry-tracing-tls-sni), если OpenTelemetry Collector находится за прокси или балансировщиком, который выбирает upstream на основе Server Name Indication.
 
 ## Публикация приложений средствами Istio
 

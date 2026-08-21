@@ -3,6 +3,20 @@ title: "Балансировка входящего трафика"
 permalink: ru/admin/configuration/network/ingress/
 description: "Настройка балансировки входящего трафика в Deckhouse Kubernetes Platform с NLB и ALB. Маршрутизация трафика, SSL-терминация и настройка балансировки на уровне приложений."
 lang: ru
+extractedLinksMax: 2
+relatedLinks:
+  - title: "ALB средствами Ingress NGINX Controller"
+    url: alb/nginx.html
+  - title: "ALB средствами Kubernetes Gateway API"
+    url: alb/alb-gateway-api.html
+  - title: "ALB средствами Istio"
+    url: alb/istio.html
+  - title: "Документация модуля ingress-nginx"
+    url: /modules/ingress-nginx/
+  - title: "Документация модуля alb"
+    url: /modules/alb/
+  - title: "Документация модуля istio"
+    url: /modules/istio/
 ---
 
 В этом разделе описываются подходы к балансировке входящего трафика в Deckhouse Kubernetes Platform (DKP):
@@ -57,7 +71,7 @@ Kubernetes Gateway API и API Gateway выполняют разные функц
 | Минимальная версия DKP | Доступен во всех поддерживаемых версиях | 1.76 |
 | Редакции DKP | Все редакции | Все редакции |
 | Модель разграничения ролей | администратор кластера, администратор неймспейса | администратор кластера, администратор неймспейса, команда приложения |
-| Несколько независимых точек входа | Несколько Ingress-контроллеров, выбор через `ingressClass` | Несколько объектов Gateway, выбор через `gatewayName`; шлюзы cluster-scoped и в неймспейсе |
+| Несколько независимых точек входа | Несколько Ingress-контроллеров, выбор через `ingressClass` | Несколько объектов Gateway, выбор через `gatewayName`; общекластерные шлюзы и шлюзы в неймспейсе |
 | HTTP/HTTPS (HTTP/1.1, HTTP/2, HTTP/3) | Есть | Есть |
 | WebSocket | Есть | Есть |
 | gRPC | Есть | Есть |
@@ -66,7 +80,7 @@ Kubernetes Gateway API и API Gateway выполняют разные функц
 | UDP | Нет | Есть (UDPRoute) |
 | TLS passthrough | Есть | Есть (TLSRoute) |
 | Proxy Protocol | Есть | Есть |
-| Способы приёма трафика | Инлеты `LoadBalancer`, `HostNetwork` и `HostPort` | Инлеты `LoadBalancer` и `HostPort` |
+| Способы приёма трафика | Инлеты [`LoadBalancer`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-loadbalancer), [`HostNetwork`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-inlet) и [`HostPort`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-hostport) | Инлеты [`LoadBalancer`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-loadbalancer) и [`HostPort`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-hostport) |
 | Автоматический выпуск TLS-сертификатов (`cert-manager`) | Есть | Есть |
 | Настройка политик HTTPS (версии TLS, шифры, HSTS) | Есть | По умолчанию TLSv1.2/1.3; HSTS — через аннотацию заголовков ответа |
 | WAF | ModSecurity на уровне контроллера или Ingress-ресурса | ModSecurity/Coraza на уровне маршрута, набор правил OWASP CRS |
@@ -74,13 +88,7 @@ Kubernetes Gateway API и API Gateway выполняют разные функц
 | Ограничение доступа по IP (whitelist) | Есть | Есть |
 | Базовая аутентификация | Есть | Есть |
 | Ограничение частоты запросов | Есть | Есть |
-| Session affinity | Есть | Есть |
-| GeoIP | Гео-статистика запросов в метриках | Обогащение запросов заголовками на основе баз MaxMind |
+| Закрепление сессии (session affinity) | Есть | Есть |
+| GeoIP | Гео-статистика запросов в метриках | Добавление полей GeoIP в заголовки HTTP-запросов на основе баз MaxMind |
 | Метрики Prometheus и дашборды Grafana | Есть, с детализацией по неймспейсам, вхостам, Ingress-ресурсам и локациям | Есть: метрики Envoy Proxy и дашборды по запросам, маршрутам и upstream |
 | Трассировка OpenTelemetry | Есть | Есть |
-
-Далее по настройке:
-
-- [ALB средствами Ingress NGINX Controller](alb/nginx.html);
-- [ALB средствами Kubernetes Gateway API](alb/alb-gateway-api.html);
-- [ALB средствами Istio](alb/istio.html).

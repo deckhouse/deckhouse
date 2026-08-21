@@ -3,6 +3,18 @@ title: "ALB средствами Ingress NGINX Controller"
 permalink: ru/admin/configuration/network/ingress/alb/nginx.html
 description: "Настройка балансировщика нагрузки приложения с помощью контроллера Ingress NGINX в Deckhouse Kubernetes Platform. Настройка высокой доступности, терминация SSL и конфигурация маршрутизации трафика."
 lang: ru
+extractedLinksMax: 2
+relatedLinks:
+  - title: "Документация модуля ingress-nginx"
+    url: /modules/ingress-nginx/
+  - title: "Custom Resources модуля ingress-nginx"
+    url: /modules/ingress-nginx/cr.html
+  - title: "Примеры модуля ingress-nginx"
+    url: /modules/ingress-nginx/examples.html
+  - title: "Документация модуля metallb"
+    url: /modules/metallb/
+  - title: "Использование Application Load Balancer (ALB)"
+    url: /products/kubernetes-platform/documentation/v1/user/network/ingress/alb.html
 ---
 
 Для реализации ALB средствами [Ingress NGINX Controller](https://github.com/kubernetes/ingress-nginx) используется модуль [`ingress-nginx`](/modules/ingress-nginx/).
@@ -16,7 +28,7 @@ lang: ru
 Модуль `ingress-nginx` устанавливает Ingress NGINX Controller и управляет им с помощью кастомных ресурсов.
 Если узлов для размещения Ingress-контроллера больше одного, он устанавливается в отказоустойчивом режиме, с учётом особенностей инфраструктуры как облачных, так и bare-metal сред, а также различных типов Kubernetes-кластеров.
 
-Поддерживается одновременный запуск нескольких экземпляров Ingress-контроллеров с независимой конфигурацией: одного **основного** и произвольного количества **дополнительных**.
+Поддерживается одновременный запуск нескольких экземпляров Ingress-контроллеров с независимой конфигурацией: одного основного и произвольного количества дополнительных.
 Это, например, позволяет разделять внешние и внутренние (intranet) Ingress-ресурсы приложений.
 
 ## Варианты терминации трафика
@@ -113,6 +125,8 @@ lang: ru
 
 В том случае, если в зоне всего один экземпляр с Ingress-контроллером, при перезапуске пода IP-адрес балансировщика этой зоны временно исключается из DNS.
 
+Пример IngressNginxController с инлетом [`LoadBalancer`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-loadbalancer) и аннотациями AWS NLB:
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
@@ -127,6 +141,8 @@ spec:
 ```
 
 ### Пример для GCP, Yandex Cloud и Azure
+
+Пример IngressNginxController с инлетом [`LoadBalancer`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-loadbalancer):
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -235,7 +251,7 @@ spec:
       value: frontend
 ```
 
-В случае использования MetalLB его speaker-поды должны быть запущены на тех же узлах, что и поды Ingress-контроллера.
+В случае использования MetalLB его speaker-поды (компонент MetalLB, анонсирующий IP-адреса) должны быть запущены на тех же узлах, что и поды Ingress-контроллера.
 
 Чтобы Ingress-контроллер получал реальные IP-адреса клиентов, его сервис должен быть создан с параметром `externalTrafficPolicy: Local`, исключающим межузловой SNAT. Для соблюдения этого условия MetalLB speaker анонсирует этот Service только с тех узлов, где запущены целевые поды.
 
@@ -280,7 +296,7 @@ spec:
    {% alert level="info" %}
    MetalLB-балансировщики должны размещаться на тех же узлах, что и Ingress-контроллеры. В [типовых сценариях развёртывания](/products/kubernetes-platform/guides/hardware-requirements.html#сценарии-развёртывания) для этой цели используются frontend-узлы.
 
-  Чтобы разместить Ingress-контроллеры и MetalLB-балансировщики на frontend-узлах, укажите в их манифестах аннотацию `node-role.deckhouse.io/frontend: ""`.
+  Чтобы разместить Ingress-контроллеры и MetalLB-балансировщики на frontend-узлах, укажите в `nodeSelector` лейбл `node-role.deckhouse.io/frontend: ""`.
    {% endalert %}
 
    ```yaml

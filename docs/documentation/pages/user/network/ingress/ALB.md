@@ -2,6 +2,24 @@
 title: "Utilizing Application Load Balancer (ALB)"
 description: "Configuring Application Load Balancer for HTTP/HTTPS/gRPC traffic in Deckhouse Kubernetes Platform. Using ingress-nginx and istio for request routing, SSL/TLS termination, and application publishing."
 permalink: en/user/network/ingress/alb.html
+extractedLinksMax: 2
+relatedLinks:
+  - title: "alb module documentation"
+    url: /modules/alb/
+  - title: "alb module Custom Resources"
+    url: /modules/alb/cr.html
+  - title: "alb module configuration"
+    url: /modules/alb/configuration.html
+  - title: "alb module FAQ"
+    url: /modules/alb/faq.html
+  - title: "alb module examples"
+    url: /modules/alb/examples.html
+  - title: "ALB with Kubernetes Gateway API"
+    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html
+  - title: "ALB with Ingress NGINX Controller"
+    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/nginx.html
+  - title: "ALB with Istio"
+    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/istio.html
 ---
 
 Application deployment and application-level traffic balancing can be performed using the following tools:
@@ -10,7 +28,7 @@ Application deployment and application-level traffic balancing can be performed 
 - [Kubernetes Gateway API](#publishing-applications-using-the-kubernetes-gateway-api) (`alb` module).
 - [Istio](#publishing-applications-using-istio) (`istio` module).
 
-## Recommendations for choosing and features of different types of ALBs
+## Comparison of ALB options
 
 ### Ingress-nginx
 
@@ -24,26 +42,26 @@ This option is suitable for:
 
 ALB is implemented using the [Kubernetes Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/) via the [`alb`](/modules/alb/) module. Gateways run on Envoy Proxy, and reception and routing are described using standard API objects (Gateway, ListenerSet, HTTPRoute, and, if necessary, GRPCRoute, TLSRoute, TCPRoute, UDPRoute, BackendTLSPolicy). The controller deploys the necessary ingress infrastructure and validates the configuration to prevent conflicting handlers.
 
-The Gateway API model separates responsibilities between the cluster administrator (ClusterALBInstance), the namespace administrator (ALBInstance/ListenerSet), and the application team (routes), which simplifies multitenancy.
+The Gateway API model separates responsibilities between the cluster administrator (ClusterALBInstance), the namespace administrator (ALBInstance/ListenerSet), and the application team (developers who own HTTPRoute and other route objects).
 
-You should choose this option if you need:
+Use this option for:
 
-- To publish applications using the Gateway API model instead of the classic Ingress.
+- Publishing applications using the Gateway API model instead of the classic Ingress.
 - A cluster-wide entry point or a separate gateway for an application or team within your namespace.
 - HTTP/HTTPS, gRPC, TCP, UDP, and TLS termination or passthrough.
-- Per-route WAF, GeoIP request enrichment, OpenTelemetry tracing, or an Istio sidecar on the gateway proxy.
+- Per-route WAF, adding GeoIP fields to HTTP request headers, OpenTelemetry tracing, or an Istio sidecar on the gateway proxy.
 - Route parameters not included in the specification, via [`HTTPRoute` annotations](#supported-httproute-annotations).
 
-For a comparison with `ingress-nginx` and terminology notes, see [Incoming traffic balancing](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/).
+For a comparison with `ingress-nginx` and terminology notes, see ["Incoming traffic balancing"](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/).
 
 ### Istio
 
 An ALB based on [`istio`](/modules/istio/) module provides advanced traffic management capabilities.
-Consider an istio-based ALB if you need:
+Use an Istio-based ALB for:
 
-- Advanced routing, for example, to implement [canary deployment](../canary-deployment.html).
+- Advanced routing, for example to implement [canary deployment](../canary-deployment.html).
 - Traffic distribution between application versions and microservices.
-- mTLS for encrypting traffic between Pods.
+- Mutual TLS (mTLS) for encrypting traffic between Pods.
 - Request tracing.
 
 ## Publishing applications using the Ingress NGINX Controller
@@ -74,13 +92,15 @@ spec:
 
 ## Publishing applications using the Kubernetes Gateway API
 
-Applications can be deployed via a cluster-wide gateway (using a `ClusterALBInstance` object created by the cluster administrator) or via a separate gateway for an application or pod in a dedicated namespace (using a `ClusterALBInstance` object).
+Applications can be deployed via a cluster-wide gateway (using a `ClusterALBInstance` object created by the cluster administrator) or via a separate gateway for an application or team in a dedicated namespace (using an `ALBInstance` object).
 
 ### Publishing an application through a ClusterALBInstance object
 
 This scenario assumes that the ClusterALBInstance object has already been created by an administrator and has reached the `Ready` state. The name and namespace of the managed Gateway object should be taken from the [`status`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-status) of the ClusterALBInstance object.
 
-Next, create a `ListenerSet` object that will be bound to the desired gateway (using the `spec.parentRef.name` parameter) and HTTPRoute objects (routes) to route incoming requests to the application. Example:
+Next, create a `ListenerSet` object that will be bound to the desired gateway (using the `spec.parentRef.name` parameter) and HTTPRoute objects (routes) to route incoming requests to the application.
+
+The example below shows a ListenerSet and HTTPRoute objects for publishing an application through a cluster-wide gateway:
 
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1
@@ -128,7 +148,7 @@ spec:
         - name: app-svc # Reference to the internal load balancer of the application.
           port: 8080 
 ---
-# Route for HTTP traffic
+# Route for HTTPS traffic
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -158,6 +178,8 @@ To publish an application using the ALBInstance object, follow these steps:
 
 1. Create the ALBInstance object taking into account the required [settings](/modules/alb/cr.html#albinstance):
 
+   Example of a minimal working configuration:
+
    ```yaml
    apiVersion: network.deckhouse.io/v1alpha1
    kind: ALBInstance
@@ -180,7 +202,7 @@ To publish an application using the ALBInstance object, follow these steps:
      namespace: prod
    spec:
      parentRef:
-       name: app-gw # The name of the Gateway object from the ClusterALBInstance.
+       name: app-gw # The name of the Gateway object from the ALBInstance status.
        namespace: prod
      listeners:
        - name: app-https
@@ -256,7 +278,7 @@ spec:
     - grpc.example.com
   rules:
     - backendRefs:
-        - name: grpc-svc # Reference to the Secret with the TLS certificate.
+        - name: grpc-svc # Name of the gRPC backend Service.
           port: 9090
 ```
 
@@ -361,7 +383,7 @@ spec:
           port: 8443
 ```
 
-If TLS must be terminated on the gateway and then the traffic must be passed further as a regular TCP stream, create a ListenerSet object with a TLS listener in `Terminate` mode, then attach a TCPRoute object:
+If TLS must be terminated on the gateway and then forwarded to the backend as a TCP stream, create a ListenerSet object with a TLS listener in `Terminate` mode, then attach a TCPRoute object:
 
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1
@@ -493,7 +515,7 @@ If an application needs to move to another managed Gateway object, change the ro
 
 ### Linking routes in one namespace to ListenerSet object in another
 
-If an HTTPRoute object is created in one namespace and must be attached to a ListenerSet object in another namespace, add a ReferenceGrant object in the namespace of the target ListenerSet object. The example below shows a shared ListenerSet object in namespace `shared-gw`, an application HTTPRoute object in namespace `prod`, and a ReferenceGrant object that allows this attachment:
+If an HTTPRoute object is created in one namespace and must be attached to a ListenerSet object in another namespace, add a ReferenceGrant object in the namespace of the target ListenerSet object. The example below shows a shared ListenerSet object in namespace `shared-gw`, an application HTTPRoute object in namespace `prod`, and a ReferenceGrant object that allows this attachment between namespaces:
 
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1
@@ -664,10 +686,10 @@ Because the current Gateway API specification does not yet cover all features re
 
 | Annotation | Description |
 | :--- | :--- |
-| `alb.network.deckhouse.io/tls-disable-protocol` | Disables a TLS protocol version for the handler with the hostname of this route (for example, value `http2`). This may be required in rare cases when a shared certificate with several DNS names is used together with request redirection |
+| `alb.network.deckhouse.io/tls-disable-protocol` | Disables the listener protocol for the route with the specified hostname (for example, value `http2`). This may be required in rare cases when a shared certificate with several DNS names is used together with request redirection |
 | `alb.network.deckhouse.io/whitelist-source-range` | Expects a comma-separated list of subnets in CIDR format: an IP filter at route level; overrides the global whitelist (for example, `10.1.1.10/32, 10.2.2.2/32`) |
 | `alb.network.deckhouse.io/response-headers-to-add` | JSON object with additional response headers (for example, `{"Strict-Transport-Security": "max-age=31536000; includeSubDomains"}`) |
-| `alb.network.deckhouse.io/session-affinity` | JSON for cookie session affinity (`mode`, `path`, `cookieName`, `ttl`, etc.); not every field is required (for example, `{"mode": "cookie", "path": "/path", "cookieName": "mycookie", "ttl": 0}`) |
+| `alb.network.deckhouse.io/session-affinity` | JSON for session affinity with cookie mode (`mode`, `path`, `cookieName`, `ttl`, etc.); not every field is required (for example, `{"mode": "cookie", "path": "/path", "cookieName": "mycookie", "ttl": 0}`) |
 | `alb.network.deckhouse.io/hash-key` | For example, `source-ip`: consistent hashing for Service backends of the HTTPRoute object |
 | `alb.network.deckhouse.io/service-upstream` | `"true"`: traffic to the upstream goes through the corresponding Service object instead of directly to pods |
 | `alb.network.deckhouse.io/basic-auth-secret` | `namespace/secret` with htpasswd data for HTTP basic auth on this route |
@@ -677,7 +699,7 @@ Because the current Gateway API specification does not yet cover all features re
 | `alb.network.deckhouse.io/auth-response-headers` | Comma-separated list: additional headers from the auth response to pass upstream (on top of the standard allowlist) |
 | `alb.network.deckhouse.io/mod-security` | JSON configuration for the per-route ModSecurity/Coraza WAF |
 | `alb.network.deckhouse.io/rewrite-target` | Allows rewriting paths for rules with `RegularExpression` type by using regex capture groups (for example, `/my-path/\1`) |
-| `alb.network.deckhouse.io/buffer-max-request-bytes` | Defines the buffer size that may be used when requests are buffered (by default Envoy Proxy does not buffer requests) |
+| `alb.network.deckhouse.io/buffer-max-request-bytes` | Defines the buffer size that may be used when requests are buffered; the value is in bytes (integer). By default Envoy Proxy does not buffer requests |
 | `alb.network.deckhouse.io/limit-rps` | RPS limit for a route |
 | `alb.network.deckhouse.io/backend-tls-settings` | For example, `{"mode": "SIMPLE", "insecureSkipVerify": true, "clientCertificate": "", "privateKey": "", "caCertificates": "", "sni": "example.com", "secret": "<NAMESPACE>/<SECRET_NAME>"}`; allows explicit configuration of TLS connection parameters to the upstream. `<NAMESPACE>` — Secret namespace; `<SECRET_NAME>` — Secret name |
 | `alb.network.deckhouse.io/idle-timeout` | Sets the per-route Envoy `idle_timeout`, in seconds. Similar to `ingress-nginx` `proxy-read-timeout`/`proxy-send-timeout`; this is an inactivity timeout, not a total request timeout |
@@ -737,11 +759,11 @@ Directive order:
 1. Base directives shipped with the module (`@coraza.conf`, `SecRuleEngine`, `SecResponseBodyAccess Off`).
 1. Rules from the ruleset in `preset`.
 1. Rules from `configRef`.
-1. Inline `directives`.
+1. Directives from the annotation's `directives` field.
 
-Inline directives are applied last, so they can override the ruleset or ConfigMap rules.
+Directives from the annotation are applied last, so they can override the ruleset or ConfigMap rules.
 
-Minimal example:
+Example HTTPRoute with WAF enabled (`"mode": "on"`):
 
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1
@@ -828,17 +850,17 @@ Rule syntax reference:
 - [ModSecurity operators reference](https://github.com/SpiderLabs/ModSecurity/wiki/Reference-Manual-%28v2.x%29-Operators)
 - [ModSecurity `SecRuleEngine` and related directives](https://github.com/owasp-modsecurity/ModSecurity/wiki/Reference-Manual-%28v2.x%29)
 
-Current notes and limitations:
+Current WAF notes and limitations:
 
-- only the `owasp-crs` ruleset is supported;
+- Only the `owasp-crs` ruleset is supported;
 - `paranoiaLevel` is ignored when `preset` is omitted or differs from `owasp-crs`;
-- valid `paranoiaLevel` values are `1`–`4`; in practice it is recommended to start with `1`;
-- the WAF currently inspects only incoming requests to the application and can block such requests when rules match; responses sent back to the client are not inspected;
-- rules from ConfigMap values may be multiline: lines ending with `\` are joined automatically.
+- Valid `paranoiaLevel` values are `1`–`4`; in practice it is recommended to start with `1`;
+- The WAF currently inspects only incoming requests to the application and can block such requests when rules match; responses sent back to the client are not inspected;
+- Rules from ConfigMap values may be multiline: lines ending with `\` are joined automatically.
 
 ### Using GeoIP and GeoLite2 {#geoip}
 
-The `alb` module supports enriching incoming HTTP requests with headers based on [MaxMind GeoIP/GeoLite2](https://dev.maxmind.com/geoip/) databases.
+The `alb` module supports adding GeoIP fields to HTTP request headers based on [MaxMind GeoIP/GeoLite2](https://dev.maxmind.com/geoip/) databases.
 
 Currently, the following database editions can be used:
 
@@ -919,9 +941,9 @@ spec:
 
 #### Using GeoIP Headers {#headers}
 
-Once GeoIP is configured in the namespace where the ClusterALBInstance or ALBInstance resides, a caching and update server for GeoIP databases will be started, and Envoy Proxy pods will be sequentially restarted with functionality to fetch GeoIP databases from the local GeoIP server.
+Once GeoIP is configured in the namespace where ClusterALBInstance or ALBInstance proxies reside, a caching and update server for GeoIP databases will be started, and Envoy Proxy pods will be sequentially restarted with functionality to fetch GeoIP databases from the local GeoIP server.
 
-To enrich HTTP requests with GeoIP-based data, specify the names of the HTTP headers that will contain the corresponding information, for example:
+To add GeoIP fields to HTTP request headers, specify the names of the HTTP headers that will contain the corresponding information, for example:
 
 ```yaml
 apiVersion: network.deckhouse.io/v1alpha1
@@ -950,11 +972,16 @@ For PVC settings used by GeoIP components, see the [`storageClass`](/modules/alb
 
 The `alb` module supports exporting OpenTelemetry traces from Envoy proxies.
 
-To enable export, specify the target OpenTelemetry Collector address as a [`url`](/modules/alb/cr.html#albinstance-v1alpha1-spec-opentelemetry-tracing-url). Traces can be transmitted over OTLP/HTTP or OTLP/gRPC. [TLS](/modules/alb/cr.html#albinstance-v1alpha1-spec-opentelemetry-tracing-tls) can be optionally configured for secure connections.
+To enable export, set the OpenTelemetry Collector endpoint in `spec.openTelemetry.tracing`:
 
-When using TLS, it is recommended to explicitly set the [`sni`](/modules/alb/cr.html#albinstance-v1alpha1-spec-opentelemetry-tracing-tls-sni) parameter if the OpenTelemetry Collector is behind a proxy or load balancer that selects upstreams based on Server Name Indication.
+- `service.name` and `service.namespace` — Name and namespace of the collector Service.
+- `port` — Port.
+- `protocol` — Protocol (`HTTP` or `gRPC`).
+- `path` — Path for OTLP/HTTP.
 
-Gateway infrastructure setup, inlet examples, and FAQ are covered in [ALB with Kubernetes Gateway API](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html). Module reference: [`alb` module FAQ](/modules/alb/faq.html), [`alb` module examples](/modules/alb/examples.html), [`alb` module configuration](/modules/alb/configuration.html), [`alb` Custom Resources](/modules/alb/cr.html).
+Alternatively, you can specify a single [`url`](/modules/alb/cr.html#albinstance-v1alpha1-spec-opentelemetry-tracing-url).
+
+When using TLS, it is recommended to explicitly set the [`sni`](/modules/alb/cr.html#albinstance-v1alpha1-spec-opentelemetry-tracing-tls-sni) parameter if the OpenTelemetry Collector is behind a proxy or load balancer that selects upstreams based on Server Name Indication. Configure TLS in [`spec.openTelemetry.tracing.tls`](/modules/alb/cr.html#albinstance-v1alpha1-spec-opentelemetry-tracing-tls).
 
 ## Publishing applications using Istio
 
