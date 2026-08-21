@@ -63,6 +63,8 @@ var _ runtime.Object = (*Module)(nil)
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
 // +kubebuilder:storageversion
+// +kubebuilder:printcolumn:name=Stage,type=string,JSONPath=.properties.stage
+// +kubebuilder:printcolumn:name=Source,type=string,JSONPath=.properties.source
 // +kubebuilder:printcolumn:name=Version,type=string,JSONPath=.spec.packageVersion
 // +kubebuilder:printcolumn:name=Repository,type=string,JSONPath=.spec.packageRepositoryName,priority=1
 // +kubebuilder:printcolumn:name="Phase",type="string",JSONPath=".status.phase",description="Module phase."
@@ -82,8 +84,11 @@ type Module struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Spec defines the behavior of a Module.
-	Spec ModuleSpec `json:"spec"`
+	// Spec defines the behavior of a Module. A module the old stack created
+	// carries only properties, so the spec stays optional until a package
+	// version is known.
+	// +optional
+	Spec ModuleSpec `json:"spec,omitempty"`
 
 	// Properties carries the v1alpha1 `properties` of the same stored object
 	// verbatim. The versions share storage without conversion, so this
@@ -105,16 +110,17 @@ type ModuleSpec struct {
 	PackageRepositoryName string `json:"packageRepositoryName,omitempty"`
 
 	// Version of the module package to install
-	// +crd-enricher:deckhouse:documentation:examples=v1.0.0.
-	PackageVersion string `json:"packageVersion"`
+	// +crd-enricher:deckhouse:documentation:examples=v1.0.0
+	// +optional
+	PackageVersion string `json:"packageVersion,omitempty"`
 
 	// Release channel for the module package.
-	// +crd-enricher:deckhouse:documentation:examples=alpha.
+	// +crd-enricher:deckhouse:documentation:examples=alpha
 	// +optional
 	ReleaseChannel string `json:"releaseChannel,omitempty"`
 
 	// Update policy for the module package.
-	// +crd-enricher:deckhouse:documentation:examples=test-alpha.
+	// +crd-enricher:deckhouse:documentation:examples=test-alpha
 	// +optional
 	UpdatePolicy string `json:"updatePolicy,omitempty"`
 

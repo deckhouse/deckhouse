@@ -233,6 +233,12 @@ spec:
     subresources:
       status: {}
   - additionalPrinterColumns:
+    - jsonPath: .properties.stage
+      name: Stage
+      type: string
+    - jsonPath: .properties.source
+      name: Source
+      type: string
     - jsonPath: .spec.packageVersion
       name: Version
       type: string
@@ -303,12 +309,12 @@ spec:
                 description: Version of the module package to install
                 type: string
                 x-doc-examples:
-                - v1.0.0.
+                - v1.0.0
               releaseChannel:
                 description: Release channel for the module package.
                 type: string
                 x-doc-examples:
-                - alpha.
+                - alpha
               settings:
                 description: Configuration settings for the module.
                 type: object
@@ -321,9 +327,7 @@ spec:
                 description: Update policy for the module package.
                 type: string
                 x-doc-examples:
-                - test-alpha.
-            required:
-            - packageVersion
+                - test-alpha
             type: object
           status:
             description: Status of a Module.
@@ -473,8 +477,6 @@ spec:
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
             type: object
-        required:
-        - spec
         type: object
     served: true
     storage: true

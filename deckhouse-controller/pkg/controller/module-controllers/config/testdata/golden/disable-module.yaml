@@ -42,8 +42,7 @@ kind: Module
 metadata:
   name: test-module
   resourceVersion: "999"
-spec:
-  packageVersion: ""
+spec: {}
 status:
   lastAppliedConfiguration: null
   tracking: null
