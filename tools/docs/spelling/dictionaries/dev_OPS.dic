@@ -2883,3 +2883,8 @@ TMPDIR
 benchmarkLock
 goroutines
 runN
+GracefulShutdownPostpone
+NoRunningPodsWithLabel
+PodsWithLabelAreRunningOnNode
+WaitingForShutdownSignal
+olcedar
