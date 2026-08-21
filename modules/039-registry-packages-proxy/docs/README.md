@@ -97,6 +97,8 @@ Allowed `<IMAGE>` values:
 - `deckhouse-cli`
 - `deckhouse-cli/plugins/<PLUGIN>` (single path segment for `<PLUGIN>`)
 
+Deckhouse CLI artifacts are published once for all editions, at the registry root one level above the cluster's edition repository. The proxy takes the repository from the `d8-system/deckhouse-registry` secret and drops the trailing edition segment (`ce`, `be`, `se`, `se-plus`, `ee`, `fe`). For example, a cluster with the `registry.deckhouse.io/deckhouse/ee` repository reads the images from `registry.deckhouse.io/deckhouse/deckhouse-cli` and `registry.deckhouse.io/deckhouse/deckhouse-cli/plugins/<PLUGIN>`. A repository without an edition segment is used as is. The credentials come from the same secret in both cases.
+
 Example:
 
 ```shell

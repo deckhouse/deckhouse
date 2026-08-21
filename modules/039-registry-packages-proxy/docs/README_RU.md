@@ -97,6 +97,8 @@ Content-Disposition: attachment; filename="<ИМЯ-ПАКЕТА>.svg"
 - `deckhouse-cli`
 - `deckhouse-cli/plugins/<ПЛАГИН>` (один сегмент пути для `<ПЛАГИН>`)
 
+Артефакты Deckhouse CLI публикуются один раз для всех редакций: в корне реестра, на уровень выше репозитория редакции кластера. Прокси берёт репозиторий из секрета `d8-system/deckhouse-registry` и отбрасывает завершающий сегмент редакции (`ce`, `be`, `se`, `se-plus`, `ee`, `fe`). Например, для кластера с репозиторием `registry.deckhouse.io/deckhouse/ee` образы читаются из `registry.deckhouse.io/deckhouse/deckhouse-cli` и `registry.deckhouse.io/deckhouse/deckhouse-cli/plugins/<ПЛАГИН>`. Репозиторий без сегмента редакции используется как есть. Учётные данные в обоих случаях берутся из того же секрета.
+
 Пример:
 
 ```shell
