@@ -50,6 +50,29 @@ func TestNewHookForUpdatePipelineFailsWithoutSSHHosts(t *testing.T) {
 	require.Nil(t, hook)
 }
 
+// The map of the other masters is what tells a multi-master cluster from a single-master
+// one: an empty one sends every destructive plan into the 1→3→1 scale dance. Immutable
+// masters have no SSH addresses to fill it with, so it is filled by name.
+func TestPopulateNodeToHostListsImmutableMastersByName(t *testing.T) {
+	convergeCtx := context.NewContext(t.Context(), context.Params{})
+
+	nodeGroup := NewNodeGroupController("master", state.NodeGroupInfrastructureState{
+		State: map[string][]byte{
+			"cluster-master-0": nil,
+			"cluster-master-1": nil,
+			"cluster-master-2": nil,
+		},
+	}, nil, nil)
+	nodeGroup.immutable = true
+
+	controller := NewMasterNodeGroupController(nodeGroup, false)
+
+	require.NoError(t, controller.populateNodeToHost(convergeCtx))
+	require.Equal(t,
+		map[string]string{"cluster-master-0": "", "cluster-master-1": "", "cluster-master-2": ""},
+		controller.nodeToHost)
+}
+
 // CheckSSHHosts asks to confirm the node-to-host mapping on every run, destructive plan
 // or not. Answering "no" for a caller that has no terminal cost the whole hook, so the
 // master was recreated with no guard; the answer is now yes plus a log line. Tests run

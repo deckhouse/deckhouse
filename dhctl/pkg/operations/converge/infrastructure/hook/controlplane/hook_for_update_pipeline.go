@@ -51,6 +51,7 @@ type HookForUpdatePipeline struct {
 	nodeToConverge    string
 	oldMasterIPForSSH string
 	commanderMode     bool
+	immutableNode     bool
 	clientSwitcher    ClientSwitcher
 }
 
@@ -60,12 +61,16 @@ func NewHookForUpdatePipeline(
 	nodeToHostForChecks map[string]string,
 	commanderMode bool,
 	skipChecks bool,
+	immutableNode bool,
 ) *HookForUpdatePipeline {
 	checkers := []hook.NodeChecker{
 		hook.NewKubeNodeReadinessChecker(kubeGetter),
 	}
 
-	if !commanderMode && !skipChecks {
+	// An immutable node answers no sshd: the check would fail on every master, and
+	// what it proves — that the machine is alive and serving — the control plane
+	// checker below proves through the cluster.
+	if !commanderMode && !skipChecks && !immutableNode {
 		checkers = append(
 			checkers,
 			NewSSHChecker(
@@ -90,6 +95,7 @@ func NewHookForUpdatePipeline(
 		kubeGetter:    kubeGetter,
 		sshProvider:   sshProvider,
 		commanderMode: commanderMode,
+		immutableNode: immutableNode,
 	}
 }
 
@@ -162,7 +168,7 @@ func (h *HookForUpdatePipeline) BeforeAction(ctx context.Context, runner infrast
 		return false, fmt.Errorf("Could not get kube client: %w", err)
 	}
 
-	err = removeControlPlaneRoleFromNode(ctx, kubeClient, h.kubeGetter, h.nodeToConverge, h.commanderMode)
+	err = removeControlPlaneRoleFromNode(ctx, kubeClient, h.kubeGetter, h.nodeToConverge, h.commanderMode, h.immutableNode)
 	if err != nil {
 		return false, fmt.Errorf("failed to remove control plane role from node '%s': %v", h.nodeToConverge, err)
 	}
@@ -190,7 +196,8 @@ func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastr
 		return fmt.Errorf("failed to get master node pipeline outputs: %w", err)
 	}
 
-	if !h.commanderMode {
+	// Nothing to move for an immutable node: no session was ever pinned to it.
+	if !h.commanderMode && !h.immutableNode {
 		cl, err := h.sshProvider.Client(ctx)
 		if err != nil {
 			return fmt.Errorf("get ssh client to move the session to the recreated node: %w", err)

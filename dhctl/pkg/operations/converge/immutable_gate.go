@@ -50,10 +50,14 @@ func convergedNodeGroupNames(metaConfig *config.MetaConfig, nodesState map[strin
 	return slices.Compact(names)
 }
 
-// refuseImmutableNodeGroups stops the node phases while a group they walk is immutable.
-// Such a node is driven by its agent from a NodeConfig, and converge would hand a newly
-// created VM the group-wide bashible cloud-init instead: the VM boots and never joins.
-// The refusal is lifted once converge learns to render the join payload.
+// refuseImmutableNodeGroups stops the node phases while a group they walk is immutable
+// and has no join path. Such a node is driven by its agent from a NodeConfig, and
+// converge would hand a newly created VM the group-wide bashible cloud-init instead: the
+// VM boots and never joins.
+//
+// The master group is exempt: it builds a per-node payload from the cluster the way the
+// bootstrap does. Every other CloudPermanent group still gets the bashible secret, so it
+// is still refused.
 //
 // Fail-closed: an unreadable NodeGroup list refuses the phase too. Groups converge never
 // walks (CloudEphemeral and the rest) are left alone, so a bashible cluster keeps
@@ -75,6 +79,10 @@ func refuseImmutableNodeGroups(
 
 	var immutableGroups []string
 	for _, ng := range nodeGroups {
+		if ng.GetName() == global.MasterNodeGroupName {
+			continue
+		}
+
 		if !slices.Contains(convergedGroups, ng.GetName()) {
 			continue
 		}
