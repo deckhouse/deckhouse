@@ -18,6 +18,12 @@ Applied to both `cluster-autoscaler/go.mod` and `cluster-autoscaler/apis/go.mod`
 - `golang.org/x/crypto`: `v0.36.0` -> `v0.53.0` (x/crypto/ssh CVEs)
 - `github.com/google/cel-go`: left at `v0.22.0` (apiserver 0.32.x incompatible with cel-go >= v0.29; GO-2026-6094 covered by VEX — NativeTypes/ParseStructTag not used)
 - `azidentity`: `v1.5.2` -> `v1.6.0`; `jwt/v4`: `v4.5.0` -> `v4.5.2`
+- `github.com/opencontainers/runc`: `v1.2.1` -> `v1.2.9`. This does not change
+  the image — no runc package is linked into the 1.32 binary, so scanners report
+  no runc findings here and `go version -m cluster-autoscaler` lists the same
+  module set with and without the pin. It is kept only to keep the module graph
+  free of a known-vulnerable version and to stay in sync with the release
+  branches that still build 1.31, where runc *is* linked in
 - `k8s.io/kubernetes`: `v1.32.0` -> `v1.32.10`, and all `k8s.io/*` staging
   modules (require + replace) synced to `v0.32.10` (kube-controller-manager
   SSRF, CVE-2025-13281)
@@ -34,7 +40,8 @@ go get google.golang.org/grpc@v1.82.1 \
   golang.org/x/sys@v0.46.0 \
   golang.org/x/text@v0.39.0 \
   github.com/Azure/azure-sdk-for-go/sdk/azidentity@v1.6.0 \
-  github.com/golang-jwt/jwt/v4@v4.5.2
+  github.com/golang-jwt/jwt/v4@v4.5.2 \
+  github.com/opencontainers/runc@v1.2.9
 go get k8s.io/kubernetes@v1.32.10
 # sync every k8s.io/* require and replace directive to v0.32.10
 cd apis
