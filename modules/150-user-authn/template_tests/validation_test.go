@@ -248,10 +248,29 @@ var _ = Describe("Module :: user-authn :: helm template :: validation", func() {
 					allowed:     true,
 				},
 				{
+					// The other half of the dynamic resource resolution: the grant has to admit the
+					// kind it was issued for, not just deny the kind it was not.
+					name:        "subject holding the allow-access subresource grants access on a dex authenticator",
+					resource:    "dexauthenticators",
+					kind:        "DexAuthenticator",
+					canGrant:    true,
+					annotations: map[string]string{dexAuthenticatorAnnotation: "true"},
+					allowed:     true,
+				},
+				{
 					name:            "subresource granted on the other kind does not carry over",
 					canGrant:        true,
 					grantedResource: "dexauthenticators",
 					annotations:     map[string]string{dexClientAnnotation: "true"},
+					allowed:         false,
+				},
+				{
+					name:            "subresource granted on dex clients does not admit a dex authenticator",
+					resource:        "dexauthenticators",
+					kind:            "DexAuthenticator",
+					canGrant:        true,
+					grantedResource: "dexclients",
+					annotations:     map[string]string{dexAuthenticatorAnnotation: "true"},
 					allowed:         false,
 				},
 				{
@@ -514,10 +533,19 @@ func compileRenderedPolicy(renderedPolicy string) compiledPolicy {
 		Expect(result.Error).To(BeNil(), "variable %q should compile", variable.Name)
 	}
 
+	// Match conditions are compiled by a compiler that holds no variables, because kube-apiserver
+	// rejects a match condition referring to them: they are evaluated before the rest of the policy.
+	// The authorizer, in contrast, is declared there as well. Sharing the compiler above would let a
+	// match condition using variables pass here and be refused by a real API server.
+	matchCompiler, err := admissioncel.NewCompositedCompiler(
+		environment.MustBaseEnvSet(minimalSupportedKubernetesVersion(), true),
+	)
+	Expect(err).ToNot(HaveOccurred())
+
 	matchConditions := make([]admissioncel.ExpressionAccessor, 0, len(policy.Spec.MatchConditions))
 	for _, condition := range policy.Spec.MatchConditions {
 		expression := boolExpression{expression: condition.Expression}
-		Expect(compiler.CompileCELExpression(expression, validationVars, environment.NewExpressions).Error).To(BeNil(),
+		Expect(matchCompiler.CompileCELExpression(expression, validationVars, environment.NewExpressions).Error).To(BeNil(),
 			"match condition %q should compile", condition.Name)
 
 		matchConditions = append(matchConditions, expression)
@@ -537,7 +565,7 @@ func compileRenderedPolicy(renderedPolicy string) compiledPolicy {
 	}
 
 	return compiledPolicy{
-		matchConditions: compiler.CompileCondition(matchConditions, validationVars, environment.NewExpressions),
+		matchConditions: matchCompiler.CompileCondition(matchConditions, validationVars, environment.NewExpressions),
 		validations:     compiler.CompileCondition(validations, validationVars, environment.NewExpressions),
 	}
 }
