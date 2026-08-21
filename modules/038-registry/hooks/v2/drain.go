@@ -113,6 +113,17 @@ type drainRecord struct {
 	// scan that lands in that moment sees a clean cluster that is not yet clean.
 	ZeroScans int `json:"zeroScans"`
 
+	// Finished records that the withdrawal has been decided and only the render that removes the
+	// components is outstanding.
+	//
+	// Without it the whole thing loops. The configuration a drain serves from is captured from the
+	// RegistryConfig resource, and that resource is rendered from the values this hook writes — so it
+	// outlives the decision by exactly one render. A hook pass landing in that gap sees `Unmanaged` plus
+	// a resource that says `Managed`, reads it as "still serving", and starts the drain over. Measured on
+	// the stand: zero references for seven minutes, the storage still up, and the record reappearing with
+	// a new `startedAt` every time.
+	Finished bool `json:"finished,omitempty"`
+
 	// LastZeroAt is when the last empty scan was counted, and it is what makes "two scans" mean time
 	// rather than repetition. This hook runs on a schedule AND before every render of the module, and a
 	// drain changes the values on every pass — so two passes can land seconds apart, which is exactly
@@ -255,34 +266,63 @@ func handleDrain(ctx context.Context, input *go_hook.HookInput, dc dependency.Co
 	if err != nil {
 		return err
 	}
-
-	if record == nil && (captured == nil || captured.Mode != string(registryv1alpha1.ModeManaged)) {
-		// Nothing of ours was serving the in-cluster address, so `Unmanaged` is immediate — which is
-		// every cluster that has this module enabled and has never used it. Answered before the scan,
-		// because the scan is the expensive part and this is the common case.
-		return finishDrain(input, values, current, "the module was not serving the pull path")
+	if captured != nil && captured.Mode != string(registryv1alpha1.ModeManaged) {
+		// A resource that says `Unmanaged` describes a module that was not serving anything, so there is
+		// nothing to drain. Flattened to "no configuration" here rather than checked again below: one
+		// answer to "was this module on the pull path" is easier to keep right than two.
+		captured = nil
 	}
 
-	count, examples, scanErr := scanReferences(ctx, dc)
-	if scanErr != nil {
-		// Unknown is not zero. A scan that could not be made says nothing about what still names the
-		// address, and the only harmful action available here is tearing the registry down, so the drain
-		// continues on the last thing that was known.
-		input.Logger.Warn("cannot tell what still names the in-cluster registry, so the drain continues",
-			"error", scanErr.Error())
-		count, examples = -1, nil
+	// Scanned only when the answer can change anything: a decided withdrawal is waiting for a render,
+	// not for the cluster, and there is nothing to count for a drain that has not started.
+	count, examples := -1, []string(nil)
+	if record != nil && !record.Finished {
+		var scanErr error
+		count, examples, scanErr = scanReferences(ctx, dc)
+		if scanErr != nil {
+			// Unknown is not zero. A scan that could not be made says nothing about what still needs the
+			// address, and the only harmful action available here is tearing the registry down, so the
+			// drain continues on the last thing that was known.
+			input.Logger.Warn("cannot tell what still needs the in-cluster registry, so the drain continues",
+				"error", scanErr.Error())
+			count, examples = -1, nil
+		}
 	}
 
-	next, done := nextDrainRecord(record, captured, count, time.Now().UTC())
-	if next == nil {
-		input.Logger.Info("the module leaves the pull path", "reason", done,
+	step, next, reason := nextDrainStep(record, captured, count, time.Now().UTC())
+
+	switch step {
+	case drainForget:
+		return finishDrain(input, values, current, reason)
+
+	case drainWithdrawn:
+		// Nothing to do but stay out of the way of the render that finishes this.
+		if current.Drain != nil {
+			current.Drain = nil
+			values.Set(current)
+		}
+		input.MetricsCollector.Expire(drainMetricGroup)
+
+		return nil
+
+	case drainWithdraw:
+		input.Logger.Info("the module leaves the pull path", "reason", reason,
 			"draining", drainedFor(record))
-		return finishDrain(input, values, current, done)
+		if err := writeDrainRecord(input, next); err != nil {
+			return err
+		}
+		if current.Drain != nil {
+			current.Drain = nil
+			values.Set(current)
+		}
+		input.MetricsCollector.Expire(drainMetricGroup)
+
+		return nil
 	}
 
 	if record == nil {
 		input.Logger.Info(
-			"asked to leave the pull path; the in-cluster registry keeps serving until nothing names it",
+			"asked to leave the pull path; the in-cluster registry keeps serving until nothing needs it",
 			"address", registry_const.Host, "references", count)
 	} else if count != 0 {
 		input.Logger.Info("still serving the in-cluster registry while the platform moves off it",
@@ -291,13 +331,11 @@ func handleDrain(ctx context.Context, input *go_hook.HookInput, dc dependency.Co
 			"draining", drainedFor(record))
 	}
 
-	record = next
-
-	if err := writeDrainRecord(input, record); err != nil {
+	if err := writeDrainRecord(input, next); err != nil {
 		return err
 	}
 
-	served := record.Config
+	served := next.Config
 	// Serving is what `Managed` means, and the drain is a cluster that has been asked to stop and has
 	// not finished stopping. Every template gates on this one value, so saying it here is what keeps the
 	// storage, the controller and the node agent in place without a second gate in each of them.
@@ -306,35 +344,61 @@ func handleDrain(ctx context.Context, input *go_hook.HookInput, dc dependency.Co
 	current.Drain = &DrainState{
 		Active:     true,
 		References: count,
-		StartedAt:  record.StartedAt.Format(time.RFC3339),
+		StartedAt:  next.StartedAt.Format(time.RFC3339),
 		Config:     &served,
 	}
 	values.Set(current)
 
-	publishDrainMetrics(input, count, time.Since(record.StartedAt))
+	publishDrainMetrics(input, count, time.Since(next.StartedAt))
 
 	return nil
 }
 
-// nextDrainRecord is the whole decision, kept away from the reads and writes around it.
+// drainStep is what has to happen to a drain, and the four of them are the whole state machine.
+type drainStep int
+
+const (
+	// drainServe keeps the in-cluster registry up and serving from the captured configuration.
+	drainServe drainStep = iota
+
+	// drainWithdraw stops serving and remembers that it happened, so the render that removes the
+	// components cannot be mistaken for the module still managing.
+	drainWithdraw
+
+	// drainWithdrawn is the wait for that render. Nothing is served and nothing is decided again.
+	drainWithdrawn
+
+	// drainForget removes the record: either it was never needed, or its work is done.
+	drainForget
+)
+
+// nextDrainStep is the whole decision, kept away from the reads and writes around it.
 //
-// Returns the record to persist and keep serving from, or nil and the reason the drain is over. A
-// record that comes back unchanged in everything but its scan counter is the ordinary case: a drain is
-// mostly waiting.
-func nextDrainRecord(
+// `count` is how many workloads still need the in-cluster registry, or -1 when that could not be
+// established — and -1 is not zero: an unknown must never end a drain, because the only harmful action
+// available here is taking a registry away from something that is still pulling from it.
+func nextDrainStep(
 	record *drainRecord,
 	captured *RegistryConfig,
 	count int,
 	now time.Time,
-) (*drainRecord, string) {
+) (drainStep, *drainRecord, string) {
 	if record == nil {
 		if captured == nil {
-			return nil, "the module was not serving the pull path"
+			return drainForget, nil, "the module was not serving the pull path"
 		}
 		// Started even when the scan found nothing, and finished on the next pass if it stays that way.
 		// Starting costs one secret and one extra minute of serving; not starting because a single scan
 		// came back empty is how a cluster mid-render loses the address under it.
-		return &drainRecord{Config: *captured, StartedAt: now}, ""
+		return drainServe, &drainRecord{Config: *captured, StartedAt: now}, ""
+	}
+
+	if record.Finished {
+		if captured == nil {
+			// The release has removed the resource, so there is nothing left to be confused by.
+			return drainForget, nil, "the withdrawal is complete"
+		}
+		return drainWithdrawn, record, "waiting for the release to remove the components"
 	}
 
 	next := *record
@@ -353,10 +417,11 @@ func nextDrainRecord(
 	}
 
 	if next.ZeroScans >= zeroScansToFinish {
-		return nil, "nothing names the in-cluster registry any more"
+		next.Finished = true
+		return drainWithdraw, &next, "nothing needs the in-cluster registry any more"
 	}
 
-	return &next, ""
+	return drainServe, &next, ""
 }
 
 // drainedFor is how long a drain has been going on, for a log line. Empty for one that starts now.

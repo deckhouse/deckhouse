@@ -53,10 +53,10 @@ func managedCapture() *RegistryConfig {
 func TestADrainStartsEvenWhenTheFirstScanIsEmpty(t *testing.T) {
 	now := time.Now().UTC()
 
-	record, done := nextDrainRecord(nil, managedCapture(), 0, now)
+	step, record, done := nextDrainStep(nil, managedCapture(), 0, now)
 
 	require.NotNil(t, record, "a drain has to start: %s", done)
-	assert.Empty(t, done)
+	assert.Equal(t, drainServe, step)
 	assert.Equal(t, 0, record.ZeroScans, "the first pass counts as nothing observed yet")
 	assert.Equal(t, now, record.StartedAt)
 	assert.Equal(t, managedCapture().Primary.Upstream.Host, record.Config.Primary.Upstream.Host,
@@ -69,14 +69,17 @@ func TestADrainNeedsTwoEmptyScansToFinish(t *testing.T) {
 	now := time.Now().UTC()
 	started := &drainRecord{Config: *managedCapture(), StartedAt: now.Add(-2 * time.Minute)}
 
-	first, done := nextDrainRecord(started, managedCapture(), 0, now)
+	step, first, done := nextDrainStep(started, managedCapture(), 0, now)
 	require.NotNil(t, first, "one empty scan must not end it: %s", done)
+	assert.Equal(t, drainServe, step)
 	assert.Equal(t, 1, first.ZeroScans)
 
 	// A gap later, because two scans have to be two moments — see quietGap.
-	second, done := nextDrainRecord(first, managedCapture(), 0, now.Add(quietGap))
-	assert.Nil(t, second, "two consecutive empty scans end it")
-	assert.Contains(t, done, "nothing names the in-cluster registry")
+	step, second, done := nextDrainStep(first, managedCapture(), 0, now.Add(quietGap))
+	assert.Equal(t, drainWithdraw, step, "two consecutive empty scans end it")
+	require.NotNil(t, second)
+	assert.True(t, second.Finished, "and the record remembers it, or the drain starts over")
+	assert.Contains(t, done, "nothing needs the in-cluster registry")
 }
 
 // TestAReferenceThatComesBackResetsTheCount covers a render that puts a workload back onto the
@@ -86,9 +89,10 @@ func TestAReferenceThatComesBackResetsTheCount(t *testing.T) {
 	now := time.Now().UTC()
 	record := &drainRecord{Config: *managedCapture(), StartedAt: now, ZeroScans: 1}
 
-	next, done := nextDrainRecord(record, managedCapture(), 3, now)
+	step, next, done := nextDrainStep(record, managedCapture(), 3, now)
 
 	require.NotNil(t, next, "the drain continues: %s", done)
+	assert.Equal(t, drainServe, step)
 	assert.Equal(t, 0, next.ZeroScans)
 }
 
@@ -99,9 +103,10 @@ func TestAFailedScanKeepsTheDrainGoing(t *testing.T) {
 	now := time.Now().UTC()
 	record := &drainRecord{Config: *managedCapture(), StartedAt: now, ZeroScans: 1}
 
-	next, done := nextDrainRecord(record, managedCapture(), -1, now)
+	step, next, done := nextDrainStep(record, managedCapture(), -1, now)
 
 	require.NotNil(t, next, "an unknown count must not end a drain: %s", done)
+	assert.Equal(t, drainServe, step)
 	assert.Equal(t, 1, next.ZeroScans,
 		"an unknown count is neither progress nor a reference, so the counter stands still")
 }
@@ -109,10 +114,35 @@ func TestAFailedScanKeepsTheDrainGoing(t *testing.T) {
 // TestNothingToDrainWhenTheModuleWasNotServing keeps `Unmanaged` immediate on the clusters where it
 // always was: enabled, never used. Those must not grow a secret and a minute of waiting.
 func TestNothingToDrainWhenTheModuleWasNotServing(t *testing.T) {
-	record, done := nextDrainRecord(nil, nil, 0, time.Now().UTC())
+	step, record, done := nextDrainStep(nil, nil, 0, time.Now().UTC())
 
+	assert.Equal(t, drainForget, step)
 	assert.Nil(t, record)
 	assert.Contains(t, done, "not serving")
+}
+
+// TestAFinishedDrainDoesNotStartItselfAgain is the loop the stand caught, and the reason the record
+// carries `Finished` at all.
+//
+// The configuration a drain serves from is captured from the RegistryConfig resource, and that resource
+// is rendered from the values this hook writes — so it outlives the decision by exactly one render. A
+// pass landing in that gap sees `Unmanaged` plus a resource saying `Managed`. Read as "still serving",
+// it starts the drain over, and the module never leaves the pull path: measured with zero references for
+// seven minutes, the storage still up, and `startedAt` moving every minute.
+func TestAFinishedDrainDoesNotStartItselfAgain(t *testing.T) {
+	now := time.Now().UTC()
+	withdrawn := &drainRecord{Config: *managedCapture(), StartedAt: now.Add(-5 * time.Minute), Finished: true}
+
+	// The render has not happened yet, so the resource is still there.
+	step, kept, why := nextDrainStep(withdrawn, managedCapture(), 0, now)
+	assert.Equal(t, drainWithdrawn, step, "a decided withdrawal is not a reason to serve again: %s", why)
+	require.NotNil(t, kept)
+	assert.True(t, kept.Finished)
+
+	// And once it has, the record has nothing left to protect against.
+	step, gone, why := nextDrainStep(withdrawn, nil, 0, now)
+	assert.Equal(t, drainForget, step, why)
+	assert.Nil(t, gone)
 }
 
 // TestWhatCountsAsNamingTheInClusterRegistry is a test about the prefix, because that is where this
