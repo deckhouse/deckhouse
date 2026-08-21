@@ -20,16 +20,30 @@ v0.29 (`TwoVarComprehensions` API). For 1.32 that finding is covered by
   `x/text v0.39.0`, `x/crypto v0.53.0`, `x/sys v0.46.0` (the CVE floor was
   `crypto v0.52.0` / `sys v0.44.0`, but those exact pins conflict with
   `net@v0.56.0` and `text@v0.39.0`), `azidentity v1.6.0`, `jwt/v4 v4.5.2`,
-  `k8s.io/kubernetes v1.31.6` with staging require+replace synced to
-  `v0.31.6`. There is no 1.31.x fix for CVE-2025-13281; that finding is
-  documented in `known_vulnerabilities.vex`.
+  `runc v1.2.9`, `k8s.io/kubernetes v1.31.6` with staging require+replace
+  synced to `v0.31.6`. There is no 1.31.x fix for CVE-2025-13281; that finding
+  is documented in `known_vulnerabilities.vex`.
 - 1.32–1.34: `x/net v0.56.0`, `x/text v0.39.0`, `x/crypto v0.53.0`,
   `x/sys v0.46.0`, plus Kubernetes staging bumps with require+replace sync
-  (`v1.32.10` / `v1.33.6` / `v1.34.2`). 1.32 also pins `azidentity v1.6.0`
-  and `jwt/v4 v4.5.2`.
+  (`v1.32.10` / `v1.33.6` / `v1.34.2`). 1.32 also pins `azidentity v1.6.0`,
+  `jwt/v4 v4.5.2` and `runc v1.2.9`.
 - 1.35 (also used for the 1.36 image): `k8s.io/kubernetes v1.35.8` (staging
   synced to `v0.35.8`), `x/mod v0.40.0` (CVE-2026-56864/56865), which pulls
   `x/net v0.58.0`, `x/text v0.41.0`, `x/crypto v0.55.0`, `x/sys v0.47.0`.
+
+The runc CVEs (CVE-2024-45310, CVE-2025-31133, CVE-2025-52565,
+CVE-2025-52881) only ever affected the **1.31** image: there `k8s.io/mount-utils`
+imports `runc/libcontainer/userns`, so the module is linked into the binary and
+Trivy reports it. From 1.32 on, `mount-utils` no longer pulls runc in and the
+module is absent from the binary, so the `v1.2.9` pin in `1.32/` is a no-op for
+the image — it is kept only for module-graph hygiene and parity with `1.31/`.
+On 1.33+ `go mod tidy` drops the requirement entirely.
+
+Note that `go mod why -m` answers "is this module needed by the module graph",
+which is not the same as "is it linked into the binary": on 1.32 it reports a
+chain through the kubemark cloud provider, but that provider is not part of the
+build. Always confirm with `go version -m cluster-autoscaler` on the built
+binary, since that is exactly what the image scanners read.
 
 Because the patch is generated against a specific gardener tag, it must be
 recreated from a clean checkout of that tag; applying a patch made from a

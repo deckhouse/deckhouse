@@ -18,6 +18,12 @@ Applied to both `cluster-autoscaler/go.mod` and `cluster-autoscaler/apis/go.mod`
 - `golang.org/x/sys`: `v0.31.0` -> `v0.46.0` (requested floor was `v0.44.0`;
   `text@v0.39.0` requires `sys@v0.46.0`)
 - `azidentity`: `v1.5.2` -> `v1.6.0`; `jwt/v4`: `v4.5.0` -> `v4.5.2`
+- `github.com/opencontainers/runc`: `v1.1.13` -> `v1.2.9` (CVE-2024-45310,
+  CVE-2025-31133, CVE-2025-52565, CVE-2025-52881). This is the only version
+  where runc ends up in the binary: `k8s.io/mount-utils` imports
+  `runc/libcontainer/userns`. From 1.32 on, `mount-utils` no longer pulls runc
+  in, so the module disappears from the image (verify with
+  `go version -m cluster-autoscaler`)
 - `k8s.io/kubernetes`: `v1.31.1` -> `v1.31.6` (no 1.31.x fix for
   CVE-2025-13281; see `known_vulnerabilities.vex`)
 
@@ -34,6 +40,7 @@ go get google.golang.org/grpc@v1.82.1 \
   golang.org/x/sys@v0.46.0 \
   github.com/Azure/azure-sdk-for-go/sdk/azidentity@v1.6.0 \
   github.com/golang-jwt/jwt/v4@v4.5.2 \
+  github.com/opencontainers/runc@v1.2.9 \
   k8s.io/kubernetes@v1.31.6
 cd apis
 go get google.golang.org/grpc@v1.82.1 golang.org/x/net@v0.56.0 golang.org/x/text@v0.39.0
