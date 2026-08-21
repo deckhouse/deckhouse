@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package hooks
+package providercheck
 
 import (
 	"context"
@@ -25,38 +25,38 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
-
-	d8http "github.com/deckhouse/deckhouse/go_lib/dependency/http"
 )
 
-func TestExecuteDexProviderCheckFailsWhenProviderIsMissing(t *testing.T) {
-	status := executeDexProviderCheck(
-		context.Background(),
-		nil,
-		nil,
-		DexProviderCheck{Spec: DexProviderCheckSpec{ProviderName: "missing"}},
+func TestExecuteFailsWhenProviderIsMissing(t *testing.T) {
+	t.Parallel()
+
+	r := &Reconciler{http: newFakeHTTP(), ldap: &fakeLDAP{}, now: time.Now}
+	status := r.execute(
+		t.Context(),
+		&DexProviderCheck{Spec: DexProviderCheckSpec{ProviderName: "missing"}},
 		DexProviderForCheck{},
 	)
 
 	if status.Phase != DexProviderCheckPhaseFailed {
 		t.Fatalf("expected failed phase, got %q", status.Phase)
 	}
-	if len(status.Checks) != 1 || status.Checks[0].Name != "providerExists" || status.Checks[0].Status != dexProviderCheckStepFailed {
+	if len(status.Checks) != 1 || status.Checks[0].Name != "providerExists" || status.Checks[0].Status != stepFailed {
 		t.Fatalf("unexpected checks: %#v", status.Checks)
 	}
 }
 
-func TestExecuteDexProviderCheckFailsWhenProviderIsDisabled(t *testing.T) {
-	status := executeDexProviderCheck(
-		context.Background(),
-		nil,
-		nil,
-		DexProviderCheck{Spec: DexProviderCheckSpec{ProviderName: "github"}},
+func TestExecuteFailsWhenProviderIsDisabled(t *testing.T) {
+	t.Parallel()
+
+	enabled := false
+	r := &Reconciler{http: newFakeHTTP(), ldap: &fakeLDAP{}, now: time.Now}
+	status := r.execute(
+		t.Context(),
+		&DexProviderCheck{Spec: DexProviderCheckSpec{ProviderName: "github"}},
 		DexProviderForCheck{
 			ObjectMeta: metav1.ObjectMeta{Name: "github", Generation: 42},
 			Spec: DexProviderForCheckSpec{
-				Enabled: ptr.To(false),
+				Enabled: &enabled,
 				Type:    "Github",
 			},
 		},
@@ -68,41 +68,28 @@ func TestExecuteDexProviderCheckFailsWhenProviderIsDisabled(t *testing.T) {
 	if status.ObservedDexProviderGeneration != 42 {
 		t.Fatalf("expected observed generation 42, got %d", status.ObservedDexProviderGeneration)
 	}
-	if len(status.Checks) != 2 || status.Checks[1].Name != "providerEnabled" || status.Checks[1].Status != dexProviderCheckStepFailed {
+	if len(status.Checks) != 2 || status.Checks[1].Name != "providerEnabled" || status.Checks[1].Status != stepFailed {
 		t.Fatalf("unexpected checks: %#v", status.Checks)
 	}
 }
 
 func TestLDAPAddressDefaultsPortFromTLSMode(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name string
 		cfg  DexProviderLDAPForCheck
 		want string
 	}{
-		{
-			name: "ldaps default",
-			cfg:  DexProviderLDAPForCheck{Host: "ldap.example.com"},
-			want: "ldap.example.com:636",
-		},
-		{
-			name: "plain ldap default",
-			cfg:  DexProviderLDAPForCheck{Host: "ldap.example.com", InsecureNoSSL: true},
-			want: "ldap.example.com:389",
-		},
-		{
-			name: "starttls default",
-			cfg:  DexProviderLDAPForCheck{Host: "ldap.example.com", StartTLS: true},
-			want: "ldap.example.com:389",
-		},
-		{
-			name: "explicit port",
-			cfg:  DexProviderLDAPForCheck{Host: "ldap.example.com:1636"},
-			want: "ldap.example.com:1636",
-		},
+		{name: "ldaps default", cfg: DexProviderLDAPForCheck{Host: "ldap.example.com"}, want: "ldap.example.com:636"},
+		{name: "plain ldap default", cfg: DexProviderLDAPForCheck{Host: "ldap.example.com", InsecureNoSSL: true}, want: "ldap.example.com:389"},
+		{name: "starttls default", cfg: DexProviderLDAPForCheck{Host: "ldap.example.com", StartTLS: true}, want: "ldap.example.com:389"},
+		{name: "explicit port", cfg: DexProviderLDAPForCheck{Host: "ldap.example.com:1636"}, want: "ldap.example.com:1636"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			got, _, err := ldapAddress(&tt.cfg)
 			if err != nil {
 				t.Fatalf("ldapAddress returned error: %v", err)
@@ -115,8 +102,10 @@ func TestLDAPAddressDefaultsPortFromTLSMode(t *testing.T) {
 }
 
 func TestEarliestCertExpiry(t *testing.T) {
+	t.Parallel()
+
 	ts := httptest.NewTLSServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
-	defer ts.Close()
+	t.Cleanup(ts.Close)
 
 	cert := ts.Certificate()
 	pemBytes := pem.EncodeToMemory(&pem.Block{Bytes: cert.Raw, Type: "CERTIFICATE"})
@@ -135,19 +124,23 @@ func TestEarliestCertExpiry(t *testing.T) {
 }
 
 func TestReportExpiry(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 8, 13, 12, 0, 0, 0, time.UTC)
 	tests := []struct {
 		name     string
 		notAfter time.Time
 		want     string
 	}{
-		{name: "expired", notAfter: time.Now().Add(-time.Hour), want: dexProviderCheckStepFailed},
-		{name: "expires soon", notAfter: time.Now().Add(24 * time.Hour), want: dexProviderCheckStepWarning},
-		{name: "valid", notAfter: time.Now().Add(365 * 24 * time.Hour), want: dexProviderCheckStepSucceeded},
+		{name: "expired", notAfter: now.Add(-time.Hour), want: stepFailed},
+		{name: "expires soon", notAfter: now.Add(24 * time.Hour), want: stepWarning},
+		{name: "valid", notAfter: now.Add(365 * 24 * time.Hour), want: stepSucceeded},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := &dexProviderCheckResult{}
+			t.Parallel()
+			result := &dexProviderCheckResult{now: now}
 			reportExpiry(result, "cert", "test certificate", tt.notAfter)
 			if len(result.checks) != 1 || result.checks[0].Status != tt.want {
 				t.Fatalf("expected status %q, got %#v", tt.want, result.checks)
@@ -157,27 +150,33 @@ func TestReportExpiry(t *testing.T) {
 }
 
 func TestCheckTLSCertificate(t *testing.T) {
+	t.Parallel()
+
 	ts := httptest.NewTLSServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
-	defer ts.Close()
+	t.Cleanup(ts.Close)
 
 	t.Run("insecureSkipVerify reports a warning", func(t *testing.T) {
-		result := &dexProviderCheckResult{}
-		checkTLSCertificate(result, "tls", ts.URL, "", true)
-		if len(result.checks) != 1 || result.checks[0].Status != dexProviderCheckStepWarning {
+		t.Parallel()
+		result := &dexProviderCheckResult{now: time.Now()}
+		checkTLSCertificate(t.Context(), result, "tls", ts.URL, "", true)
+		if len(result.checks) != 1 || result.checks[0].Status != stepWarning {
 			t.Fatalf("expected warning, got %#v", result.checks)
 		}
 	})
 
 	t.Run("non-https endpoint is skipped", func(t *testing.T) {
-		result := &dexProviderCheckResult{}
-		checkTLSCertificate(result, "tls", "http://example.com", "", false)
-		if len(result.checks) != 1 || result.checks[0].Status != dexProviderCheckStepSkipped {
+		t.Parallel()
+		result := &dexProviderCheckResult{now: time.Now()}
+		checkTLSCertificate(t.Context(), result, "tls", "http://example.com", "", false)
+		if len(result.checks) != 1 || result.checks[0].Status != stepSkipped {
 			t.Fatalf("expected skipped, got %#v", result.checks)
 		}
 	})
 }
 
 func TestOIDCDiscoveryMissingEndpoints(t *testing.T) {
+	t.Parallel()
+
 	full := oidcDiscoveryDocument{AuthorizationEndpoint: "https://idp/auth", TokenEndpoint: "https://idp/token"}
 	if missing := full.missingEndpoints(); len(missing) != 0 {
 		t.Fatalf("expected no missing endpoints, got %v", missing)
@@ -189,23 +188,18 @@ func TestOIDCDiscoveryMissingEndpoints(t *testing.T) {
 	}
 }
 
-// TestProbeClientSecret exercises the single, unified client-secret probe used
-// by the OIDC, GitLab and Bitbucket credential checks. The test server selects a
-// canned token-endpoint response based on the client_id, mirroring the real
-// behaviour observed across providers (including Bitbucket, which answers
-// unauthorized_client for invalid consumer credentials).
 func TestProbeClientSecret(t *testing.T) {
+	t.Parallel()
+
 	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_ = r.ParseForm()
 		w.Header().Set("Content-Type", "application/json")
-		// The client id is sent via HTTP Basic auth, with a form-body fallback.
 		clientID, _, _ := r.BasicAuth()
 		if clientID == "" {
 			clientID = r.PostFormValue("client_id")
 		}
 		switch clientID {
 		case "good-bad-code":
-			// Valid secret; only the bogus authorization code is rejected.
 			w.WriteHeader(http.StatusBadRequest)
 			_, _ = w.Write([]byte(`{"error":"invalid_grant","error_description":"Code not valid"}`))
 		case "good-bad-request":
@@ -215,18 +209,19 @@ func TestProbeClientSecret(t *testing.T) {
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte(`{"access_token":"token","token_type":"bearer"}`))
 		case "bad-unauthorized-client":
-			// Bitbucket-style: invalid consumer credentials.
 			w.WriteHeader(http.StatusBadRequest)
 			_, _ = w.Write([]byte(`{"error":"unauthorized_client","error_description":"Invalid OAuth client credentials"}`))
 		default:
-			// invalid_client / HTTP 401: standard client authentication failure.
 			w.WriteHeader(http.StatusUnauthorized)
 			_, _ = w.Write([]byte(`{"error":"invalid_client","error_description":"Invalid client credentials"}`))
 		}
 	}))
-	defer srv.Close()
+	t.Cleanup(srv.Close)
 
-	client := d8http.NewClient(d8http.WithInsecureSkipVerify(), d8http.WithTimeout(5*time.Second))
+	client, err := NewDefaultHTTP().New(TLSOptions{InsecureSkipVerify: true})
+	if err != nil {
+		t.Fatalf("http client: %v", err)
+	}
 
 	tests := []struct {
 		name         string
@@ -242,7 +237,8 @@ func TestProbeClientSecret(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			accepted, detail, err := probeClientSecret(context.Background(), client, srv.URL, tt.clientID, "secret")
+			t.Parallel()
+			accepted, detail, err := probeClientSecret(t.Context(), client, srv.URL, tt.clientID, "secret")
 			if err != nil {
 				t.Fatalf("probeClientSecret returned error: %v", err)
 			}
@@ -253,143 +249,59 @@ func TestProbeClientSecret(t *testing.T) {
 	}
 }
 
-func TestDexProviderCheckUpToDate(t *testing.T) {
-	provider := DexProviderForCheck{ObjectMeta: metav1.ObjectMeta{Generation: 3}}
-	freshFor := func(generation int64, completedAt metav1.Time) DexProviderCheck {
-		return DexProviderCheck{Status: DexProviderCheckStatus{
+func TestCheckUpToDate(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 8, 13, 12, 0, 0, 0, time.UTC)
+	freshFor := func(generation int64, completedAt time.Time) *DexProviderCheck {
+		ct := metav1.NewTime(completedAt)
+		return &DexProviderCheck{Status: DexProviderCheckStatus{
 			ObservedDexProviderGeneration: generation,
-			CompletedAt:                   ptr.To(completedAt),
+			CompletedAt:                   &ct,
 		}}
 	}
 
 	t.Run("never completed is not up to date", func(t *testing.T) {
-		if dexProviderCheckUpToDate(DexProviderCheck{}, provider) {
+		t.Parallel()
+		if checkUpToDate(&DexProviderCheck{}, 3, now) {
 			t.Fatal("expected a check without completedAt not to be up to date")
 		}
 	})
 
 	t.Run("fresh result matching generation is up to date", func(t *testing.T) {
-		if !dexProviderCheckUpToDate(freshFor(provider.Generation, metav1.Now()), provider) {
+		t.Parallel()
+		if !checkUpToDate(freshFor(3, now), 3, now) {
 			t.Fatal("expected a fresh check for the current generation to be up to date")
 		}
 	})
 
 	t.Run("stale result is not up to date", func(t *testing.T) {
-		stale := metav1.NewTime(time.Now().Add(-2 * dexProviderCheckRecheckInterval))
-		if dexProviderCheckUpToDate(freshFor(provider.Generation, stale), provider) {
+		t.Parallel()
+		if checkUpToDate(freshFor(3, now.Add(-2*recheckInterval)), 3, now) {
 			t.Fatal("expected a stale check not to be up to date")
 		}
 	})
 
 	t.Run("generation mismatch is not up to date", func(t *testing.T) {
-		if dexProviderCheckUpToDate(freshFor(provider.Generation-1, metav1.Now()), provider) {
+		t.Parallel()
+		if checkUpToDate(freshFor(2, now), 3, now) {
 			t.Fatal("expected a check from a previous generation not to be up to date")
 		}
 	})
 }
 
-func TestDecideDexProviderCheckAction(t *testing.T) {
-	provider := DexProviderForCheck{ObjectMeta: metav1.ObjectMeta{Name: "p", Generation: 5}}
-
-	completed := func(phase DexProviderCheckPhase, generation int64, completedAt metav1.Time) DexProviderCheck {
-		return DexProviderCheck{Status: DexProviderCheckStatus{
-			Phase:                         phase,
-			ObservedDexProviderGeneration: generation,
-			CompletedAt:                   ptr.To(completedAt),
-		}}
-	}
-	pending := func(generation int64) DexProviderCheck {
-		return DexProviderCheck{Status: DexProviderCheckStatus{
-			Phase:                         DexProviderCheckPhasePending,
-			ObservedDexProviderGeneration: generation,
-		}}
-	}
-
-	tests := []struct {
-		name  string
-		check DexProviderCheck
-		want  dexProviderCheckAction
-	}{
-		{name: "brand-new check is acknowledged as Pending", check: DexProviderCheck{}, want: dexProviderCheckActionMarkPending},
-		{name: "Pending for the current generation is executed", check: pending(provider.Generation), want: dexProviderCheckActionExecute},
-		{name: "Pending from an older generation is re-acknowledged", check: pending(provider.Generation - 1), want: dexProviderCheckActionMarkPending},
-		{name: "fresh Succeeded for the current generation is kept", check: completed(DexProviderCheckPhaseSucceeded, provider.Generation, metav1.Now()), want: dexProviderCheckActionKeep},
-		{name: "fresh Failed for the current generation is kept", check: completed(DexProviderCheckPhaseFailed, provider.Generation, metav1.Now()), want: dexProviderCheckActionKeep},
-		{name: "result from a previous generation is re-run via Pending", check: completed(DexProviderCheckPhaseSucceeded, provider.Generation-1, metav1.Now()), want: dexProviderCheckActionMarkPending},
-		{name: "expired result is re-run via Pending", check: completed(DexProviderCheckPhaseSucceeded, provider.Generation, metav1.NewTime(time.Now().Add(-2*dexProviderCheckRecheckInterval))), want: dexProviderCheckActionMarkPending},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := decideDexProviderCheckAction(tt.check, provider); got != tt.want {
-				t.Fatalf("decideDexProviderCheckAction = %d, want %d", got, tt.want)
-			}
-		})
-	}
-}
-
-// TestDexProviderCheckLifecycleTerminates walks a check through the two-phase
-// pickup to prove it converges and never re-marks an identical Pending (which
-// would make the status write self-trigger the hook forever).
-func TestDexProviderCheckLifecycleTerminates(t *testing.T) {
-	provider := DexProviderForCheck{ObjectMeta: metav1.ObjectMeta{Name: "p", Generation: 7}}
-	check := DexProviderCheck{}
-
-	// 1. Brand-new → acknowledge as Pending.
-	if got := decideDexProviderCheckAction(check, provider); got != dexProviderCheckActionMarkPending {
-		t.Fatalf("new check: got %d, want MarkPending", got)
-	}
-
-	// 2. After the Pending write the next pass must Execute (not MarkPending
-	//    again), so the status write triggers the hook exactly once more.
-	pendingStatus := pendingDexProviderCheckStatus(provider.Generation)
-	check.Status.Phase = DexProviderCheckPhase(pendingStatus["phase"].(string))
-	check.Status.ObservedDexProviderGeneration = pendingStatus["observedDexProviderGeneration"].(int64)
-	check.Status.Checks = nil
-	check.Status.CompletedAt = nil
-	if got := decideDexProviderCheckAction(check, provider); got != dexProviderCheckActionExecute {
-		t.Fatalf("after Pending write: got %d, want Execute", got)
-	}
-
-	// 3. After the terminal write the next pass must Keep, so the result is not
-	//    re-run and the loop terminates.
-	check.Status = DexProviderCheckStatus{
-		Phase:                         DexProviderCheckPhaseSucceeded,
-		ObservedDexProviderGeneration: provider.Generation,
-		CompletedAt:                   ptr.To(metav1.Now()),
-	}
-	if got := decideDexProviderCheckAction(check, provider); got != dexProviderCheckActionKeep {
-		t.Fatalf("after terminal write: got %d, want Keep", got)
-	}
-}
-
-func TestPendingDexProviderCheckStatus(t *testing.T) {
-	status := pendingDexProviderCheckStatus(9)
-
-	if status["phase"] != string(DexProviderCheckPhasePending) {
-		t.Fatalf("phase = %v, want Pending", status["phase"])
-	}
-	if status["observedDexProviderGeneration"] != int64(9) {
-		t.Fatalf("observedDexProviderGeneration = %v, want 9", status["observedDexProviderGeneration"])
-	}
-	// Explicit nils clear a previous run's results through the JSON merge patch,
-	// so a Pending status never shows stale step results or completedAt.
-	if v, ok := status["checks"]; !ok || v != nil {
-		t.Fatalf("checks = %v (present=%v), want explicit nil", v, ok)
-	}
-	if v, ok := status["completedAt"]; !ok || v != nil {
-		t.Fatalf("completedAt = %v (present=%v), want explicit nil", v, ok)
-	}
-}
-
-func TestCanonicalDexProviderCheckName(t *testing.T) {
-	if got := canonicalDexProviderCheckName("my-oidc"); got != "my-oidc" {
+func TestCanonicalCheckName(t *testing.T) {
+	t.Parallel()
+	if got := canonicalCheckName("my-oidc"); got != "my-oidc" {
 		t.Fatalf("expected canonical name to equal provider name, got %q", got)
 	}
 }
 
 func TestParseAcknowledgedWarnings(t *testing.T) {
+	t.Parallel()
+
 	t.Run("absent annotation", func(t *testing.T) {
+		t.Parallel()
 		all, set := parseAcknowledgedWarnings(nil)
 		if all || len(set) != 0 {
 			t.Fatalf("expected no acknowledgements, got all=%v set=%#v", all, set)
@@ -397,8 +309,9 @@ func TestParseAcknowledgedWarnings(t *testing.T) {
 	})
 
 	t.Run("list of steps", func(t *testing.T) {
+		t.Parallel()
 		all, set := parseAcknowledgedWarnings(map[string]string{
-			dexProviderAcknowledgedWarningsAnnotation: "ldapCertificate, oidcCertificate",
+			acknowledgedWarningsAnnotation: "ldapCertificate, oidcCertificate",
 		})
 		if all {
 			t.Fatal("did not expect acknowledge-all")
@@ -409,8 +322,9 @@ func TestParseAcknowledgedWarnings(t *testing.T) {
 	})
 
 	t.Run("wildcard", func(t *testing.T) {
+		t.Parallel()
 		all, _ := parseAcknowledgedWarnings(map[string]string{
-			dexProviderAcknowledgedWarningsAnnotation: "*",
+			acknowledgedWarningsAnnotation: "*",
 		})
 		if !all {
 			t.Fatal("expected acknowledge-all")
@@ -419,37 +333,39 @@ func TestParseAcknowledgedWarnings(t *testing.T) {
 }
 
 func TestWarnAcknowledgement(t *testing.T) {
+	t.Parallel()
+
 	t.Run("unacknowledged warning stays Warning", func(t *testing.T) {
+		t.Parallel()
 		result := &dexProviderCheckResult{}
 		result.warn("ldapCertificate", "verification disabled")
-		if len(result.checks) != 1 || result.checks[0].Status != dexProviderCheckStepWarning {
+		if len(result.checks) != 1 || result.checks[0].Status != stepWarning {
 			t.Fatalf("expected warning, got %#v", result.checks)
 		}
 	})
 
 	t.Run("acknowledged step is downgraded to success", func(t *testing.T) {
+		t.Parallel()
 		result := &dexProviderCheckResult{acknowledgedWarnings: map[string]bool{"ldapCertificate": true}}
 		result.warn("ldapCertificate", "verification disabled")
-		if len(result.checks) != 1 || result.checks[0].Status != dexProviderCheckStepSucceeded {
+		if len(result.checks) != 1 || result.checks[0].Status != stepSucceeded {
 			t.Fatalf("expected success, got %#v", result.checks)
 		}
 	})
 
 	t.Run("acknowledge-all downgrades any warning", func(t *testing.T) {
+		t.Parallel()
 		result := &dexProviderCheckResult{acknowledgeAllWarnings: true}
 		result.warn("oidcCertificate", "expires soon")
-		if len(result.checks) != 1 || result.checks[0].Status != dexProviderCheckStepSucceeded {
+		if len(result.checks) != 1 || result.checks[0].Status != stepSucceeded {
 			t.Fatalf("expected success, got %#v", result.checks)
 		}
 	})
 }
 
-// TestProbeIntrospection exercises the RFC 7662 token-introspection fast path
-// used for OIDC client-secret validation. A correctly authenticated client
-// receives HTTP 200 for a bogus token; invalid credentials get HTTP 401; and an
-// ambiguous response (e.g. the client cannot introspect) leaves the decision to
-// the caller.
 func TestProbeIntrospection(t *testing.T) {
+	t.Parallel()
+
 	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_ = r.ParseForm()
 		clientID, _, _ := r.BasicAuth()
@@ -469,9 +385,12 @@ func TestProbeIntrospection(t *testing.T) {
 			_, _ = w.Write([]byte(`{"error":"access_denied"}`))
 		}
 	}))
-	defer srv.Close()
+	t.Cleanup(srv.Close)
 
-	client := d8http.NewClient(d8http.WithInsecureSkipVerify(), d8http.WithTimeout(5*time.Second))
+	client, err := NewDefaultHTTP().New(TLSOptions{InsecureSkipVerify: true})
+	if err != nil {
+		t.Fatalf("http client: %v", err)
+	}
 
 	tests := []struct {
 		name           string
@@ -479,15 +398,16 @@ func TestProbeIntrospection(t *testing.T) {
 		wantConclusive bool
 		wantStatus     string
 	}{
-		{name: "valid secret", clientID: "good", wantConclusive: true, wantStatus: dexProviderCheckStepSucceeded},
-		{name: "wrong secret", clientID: "bad", wantConclusive: true, wantStatus: dexProviderCheckStepFailed},
+		{name: "valid secret", clientID: "good", wantConclusive: true, wantStatus: stepSucceeded},
+		{name: "wrong secret", clientID: "bad", wantConclusive: true, wantStatus: stepFailed},
 		{name: "ambiguous response falls back", clientID: "no-introspect", wantConclusive: false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			result := &dexProviderCheckResult{}
-			conclusive := probeIntrospection(context.Background(), client, result, srv.URL, tt.clientID, "secret")
+			conclusive := probeIntrospection(t.Context(), client, result, srv.URL, tt.clientID, "secret")
 			if conclusive != tt.wantConclusive {
 				t.Fatalf("expected conclusive=%v, got %v (checks: %#v)", tt.wantConclusive, conclusive, result.checks)
 			}
@@ -505,6 +425,8 @@ func TestProbeIntrospection(t *testing.T) {
 }
 
 func TestClusterInternalHostReason(t *testing.T) {
+	t.Parallel()
+
 	internal := []string{
 		"keycloak.keycloak1.svc",
 		"keycloak.keycloak1.svc.cluster.local",
@@ -537,17 +459,20 @@ func TestClusterInternalHostReason(t *testing.T) {
 }
 
 func TestCheckPublicBrowserURL(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name   string
 		rawURL string
 		want   string
 	}{
-		{name: "internal svc fails", rawURL: "https://keycloak.keycloak1.svc:8443/realms/d8test", want: dexProviderCheckStepFailed},
-		{name: "single label fails", rawURL: "https://keycloak:8443/realms/d8test", want: dexProviderCheckStepFailed},
-		{name: "public domain succeeds", rawURL: "https://keycloak.example.com/realms/d8test", want: dexProviderCheckStepSucceeded},
+		{name: "internal svc fails", rawURL: "https://keycloak.keycloak1.svc:8443/realms/d8test", want: stepFailed},
+		{name: "single label fails", rawURL: "https://keycloak:8443/realms/d8test", want: stepFailed},
+		{name: "public domain succeeds", rawURL: "https://keycloak.example.com/realms/d8test", want: stepSucceeded},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			result := &dexProviderCheckResult{}
 			checkPublicBrowserURL(result, "public", tt.rawURL)
 			if len(result.checks) != 1 || result.checks[0].Status != tt.want {
@@ -558,19 +483,52 @@ func TestCheckPublicBrowserURL(t *testing.T) {
 }
 
 func TestCheckCABundle(t *testing.T) {
+	t.Parallel()
+
 	t.Run("empty is skipped", func(t *testing.T) {
+		t.Parallel()
 		result := &dexProviderCheckResult{}
 		checkCABundle(result, "ca", "")
-		if len(result.checks) != 1 || result.checks[0].Status != dexProviderCheckStepSkipped {
+		if len(result.checks) != 1 || result.checks[0].Status != stepSkipped {
 			t.Fatalf("expected skipped, got %#v", result.checks)
 		}
 	})
 
 	t.Run("invalid bundle fails", func(t *testing.T) {
+		t.Parallel()
 		result := &dexProviderCheckResult{}
 		checkCABundle(result, "ca", "-----BEGIN CERTIFICATE-----\nbroken\n-----END CERTIFICATE-----")
-		if len(result.checks) != 1 || result.checks[0].Status != dexProviderCheckStepFailed {
+		if len(result.checks) != 1 || result.checks[0].Status != stepFailed {
 			t.Fatalf("expected failure, got %#v", result.checks)
 		}
 	})
+}
+
+func TestExecuteHonorsCanceledContext(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	r := &Reconciler{http: newFakeHTTP(), ldap: &fakeLDAP{}, now: time.Now}
+	status := r.execute(ctx, &DexProviderCheck{Spec: DexProviderCheckSpec{ProviderName: "github"}}, DexProviderForCheck{
+		ObjectMeta: metav1.ObjectMeta{Name: "github", Generation: 1},
+		Spec:       DexProviderForCheckSpec{Type: "Github", Github: &DexProviderGithubForCheck{ClientID: "id"}},
+	})
+	if status.Phase != DexProviderCheckPhaseFailed {
+		t.Fatalf("phase = %q, want Failed", status.Phase)
+	}
+	assertNamedStatus(t, status, "dexReady", stepFailed)
+}
+
+func assertNamedStatus(t *testing.T, status DexProviderCheckStatus, name, want string) {
+	t.Helper()
+	for _, step := range status.Checks {
+		if step.Name == name {
+			if step.Status != want {
+				t.Fatalf("step %q status = %q, want %q", name, step.Status, want)
+			}
+			return
+		}
+	}
+	t.Fatalf("missing step %q in %#v", name, status.Checks)
 }

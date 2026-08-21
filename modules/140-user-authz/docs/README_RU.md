@@ -532,6 +532,7 @@ read-write:
     - deckhouse.io/packagerepositories
     - deckhouse.io/packagerepositoryoperations
     - deckhouse.io/sshcredentials
+    - deckhouse.io/useraccounts
     - deckhouse.io/useroperations
     - deckhouse.io/users
     - nodes/configz
