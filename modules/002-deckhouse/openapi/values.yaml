@@ -18,6 +18,40 @@ properties:
       chrootMode:
         type: boolean
         default: false
+      reservedPublicHosts:
+        type: object
+        default: {}
+        description: |
+          The one-time record of the hostnames a tenant already served under the platform's domain
+          when the reservation was first written, produced by hooks/snapshot_reserved_public_hosts.go
+          and rendered into the d8-reserved-public-hosts ConfigMap, which is also where the hook
+          reads it back from.
+        properties:
+          recorded:
+            type: boolean
+            default: false
+            description: |
+              Whether the snapshot has been taken. Once true it is never recomputed, which is what
+              keeps the grandfathering from widening itself on every restart.
+          hosts:
+            type: array
+            default: []
+            description: |
+              The hostnames recorded, lowercase and without a root dot, spelled the way the policies
+              compare them. The hook writing this key normalises and filters what it reads out of the
+              ConfigMap against the same pattern, so that a hand edit to a key an operator is invited
+              to edit cannot fail validation here and stop the module from converging.
+
+              A wildcard is admitted by the pattern and is not recorded: the snapshot deliberately
+              leaves it out, because the wildcard form is reserved by exact match and the allowlist
+              this record feeds cannot lift it. The pattern stays permissive so that a record written
+              by an earlier build, when the wildcard was still recorded, still validates.
+            items:
+              type: string
+              pattern: '^(\*\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+        x-examples:
+        - recorded: true
+          hosts: ["shop.example.com"]
       releaseVersionImageHash:
         type: string
       currentReleaseImageName:
