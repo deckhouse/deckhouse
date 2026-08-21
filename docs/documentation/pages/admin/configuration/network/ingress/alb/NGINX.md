@@ -2,6 +2,18 @@
 title: "ALB with Ingress NGINX Controller"
 permalink: en/admin/configuration/network/ingress/alb/nginx.html
 description: "Configure Application Load Balancer with Ingress NGINX Controller in Deckhouse Kubernetes Platform. High availability setup, SSL termination, and traffic routing configuration."
+extractedLinksMax: 2
+relatedLinks:
+  - title: "ingress-nginx module documentation"
+    url: /modules/ingress-nginx/
+  - title: "ingress-nginx module Custom Resources"
+    url: /modules/ingress-nginx/cr.html
+  - title: "ingress-nginx module examples"
+    url: /modules/ingress-nginx/examples.html
+  - title: "metallb module documentation"
+    url: /modules/metallb/
+  - title: "Utilizing Application Load Balancer (ALB)"
+    url: /products/kubernetes-platform/documentation/v1/user/network/ingress/alb.html
 ---
 
 The [`ingress-nginx`](/modules/ingress-nginx/) module is used to implement ALB using the [Ingress NGINX Controller](https://github.com/kubernetes/ingress-nginx).
@@ -18,7 +30,7 @@ it is deployed in the HA mode, taking into account the infrastructure specifics 
 as well as various Kubernetes cluster types.
 
 The module supports running and configuring several Ingress NGINX controllers simultaneously
-(one of the controllers is the **primary** one; you can create as many **additional** controllers as you want).
+(one of the controllers is the primary one; you can create as many additional controllers as you want).
 This approach allows you to separate extranet and intranet Ingress resources of applications.
 
 ## Traffic termination options
@@ -127,6 +139,8 @@ If no instances remain in a zone, that IP is removed from DNS.
 
 If only one Ingress controller instance exists in a zone, its IP is temporarily removed from DNS during pod restarts.
 
+Example IngressNginxController with the [`LoadBalancer`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-loadbalancer) inlet and AWS NLB annotations:
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
@@ -140,7 +154,9 @@ spec:
       service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
 ```
 
-### Example for GCP/Yandex Cloud/Azure
+### Example for GCP, Yandex Cloud, and Azure
+
+Example IngressNginxController with the [`LoadBalancer`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-loadbalancer) inlet:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -249,7 +265,7 @@ spec:
       value: frontend
 ```
 
-When using MetalLB, its speaker pods must run on the same nodes as the Ingress controller pods.
+When using MetalLB, its speaker pods (MetalLB components that announce IP addresses) must run on the same nodes as the Ingress controller pods.
 
 To preserve the real client IP addresses,
 the Ingress controller Service should be created with `externalTrafficPolicy: Local` to avoid inter-node SNAT.
@@ -296,7 +312,7 @@ Available in DKP Enterprise Edition only.
 1. Create a [MetalLoadBalancerClass](/modules/metallb/cr.html#metalloadbalancerclass) resource:
 
    {% alert level="info" %}
-   MetalLB balancers should be placed on the same nodes as Ingress controllers. In [typical deployment scenarios](/products/kubernetes-platform/guides/hardware-requirements.html#deployment-scenarios), frontend nodes are used for this purpose (to deploy Ingress controllers and MetalLB load balancers on frontend nodes, use the annotation `node-role.deckhouse.io/frontend: ""` in their manifests).
+   MetalLB balancers should be placed on the same nodes as Ingress controllers. In [typical deployment scenarios](/products/kubernetes-platform/guides/hardware-requirements.html#deployment-scenarios), frontend nodes are used for this purpose. To deploy Ingress controllers and MetalLB load balancers on frontend nodes, set the label `node-role.deckhouse.io/frontend: ""` in `nodeSelector`.
    {% endalert %}
 
    ```yaml
@@ -341,7 +357,7 @@ Available in DKP Enterprise Edition only.
    When creating an ingress controller, you can also specify certain IP addresses from the pool that will be assigned to it. To specify the addresses that should be assigned to the service, use the annotation `network.deckhouse.io/load-balancer-ips`. If there is more than one desired address, there must also be an annotation `network.deckhouse.io/l2-load-balancer-external-ips-count`, which must specify the number of addresses allocated from the pool (it must not be less than the number of addresses listed in `network.deckhouse.io/load-balancer-ips`). [Example of using annotations](/modules/metallb/examples.html#creating-a-service-and-assigning-it-specific-ip-addresses-from-the-pool) to assign specific addresses from the pool to the service.
    {% endalert %}
 
-The platform will create a LoadBalancer Service with the specified number of IPs:
+DKP will create a LoadBalancer Service with the specified number of IPs:
 
 ```shell
 d8 k -n d8-ingress-nginx get svc
@@ -368,7 +384,7 @@ For this scenario, we recommend offloading administrative traffic to a separate 
 
 #### Specifics of using a single Ingress controller
 
-Consider an example where a single Ingress controller is used to serve requests from both the public zone and the administrative interface.
+The example below shows a single Ingress controller serving requests from both the public zone and the administrative interface.
 
 Example of Ingress resource configuration for this case:
 
@@ -418,9 +434,9 @@ With [processing and forwarding of X-Forwarded-* headers enabled](/modules/ingre
 
 To avoid the situation described above (when, with [processing and forwarding of X-Forwarded-* headers enabled](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-hostport-behindl7proxy) it is possible, for example, to reach the administrative zone via the Ingress resource that serves public traffic by using `x-forwarded-host`), we recommend that you:
 
-- configure access rules at the Ingress resource level,
-- use separate Ingress controllers,
-- restrict which source addresses are allowed to connect to the Ingress controllers.
+- Configure access rules at the Ingress resource level;
+- Use separate Ingress controllers;
+- Restrict which source addresses are allowed to connect to the Ingress controllers.
 
 Example of Ingress resource configuration for this case:
 
