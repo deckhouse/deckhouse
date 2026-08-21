@@ -259,7 +259,7 @@ Deckhouse Code records what happens to a merge request in a train as system note
 - The merge request started a train, or was added to the train at a specific position in the queue.
 - The merge request was removed from the train by a user.
 - The merge request was removed from the train by Deckhouse Code, including the reason.
-- Automatic queueing when checks pass was enabled, cancelled, or stopped, including the reason.
+- Automatic queuing when checks pass was enabled, canceled, or stopped, including the reason.
 
 If a merge request is removed from the train by Deckhouse Code, its participants also get a to-do item.
 
@@ -299,7 +299,7 @@ The most frequent reasons are:
 - The merge request was marked as a draft.
 - The target branch of the merge request was changed.
 - The merge request can no longer be merged, for example because of a conflict.
-- Auto-merge was cancelled on the merge request.
+- Auto-merge was canceled on the merge request.
 - The merge train pipeline of the merge request did not succeed.
 - The account that queued the merge request was deleted.
 
