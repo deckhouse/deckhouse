@@ -130,6 +130,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:d8-system:terraform-state-exporter",
 	"system:serviceaccount:d8-system:webhook-handler",
 	"system:serviceaccount:d8-user-authn:basic-auth-proxy",
+	"system:serviceaccount:d8-user-authn:controller",
 	"system:serviceaccount:d8-user-authn:dex",
 	"system:serviceaccount:d8-user-authz:permission-browser-apiserver",
 	"system:serviceaccount:d8-user-authz:webhook",
