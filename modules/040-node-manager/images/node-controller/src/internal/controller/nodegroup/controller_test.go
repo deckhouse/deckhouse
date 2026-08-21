@@ -364,10 +364,11 @@ func TestReconcile_CloudValidationErrorPublished(t *testing.T) {
 	}
 }
 
-// A NodeGroup whose provider cannot be resolved stops the pass before any status is computed:
-// everything below the resolution depends on it. Which declarations hold is
-// cloudprovider.TestValidateNodeGroupProvider.
-func TestReconcile_UnresolvedProviderFailsTheReconcile(t *testing.T) {
+// A wrong spec.providerType says nothing about whether the group works: the provider a NodeGroup
+// runs on is resolved from the cluster, never from that field. So the pass runs to the end and
+// publishes the verdict instead of failing, and a corrected field clears it again. Which
+// declarations hold is cloudprovider.TestValidateNodeGroupProvider.
+func TestReconcile_WrongProviderTypeIsPublishedInTheStatus(t *testing.T) {
 	registration := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cloudprovider.RegistrationSecretNamePrefix,
@@ -396,7 +397,6 @@ func TestReconcile_UnresolvedProviderFailsTheReconcile(t *testing.T) {
 			wantErr: "Invalid providerType 'aws'. Expected 'yandex'",
 		},
 		{
-			// A Static group runs in no cloud, so naming one is wrong even when the cluster has it.
 			name: "a-provider-on-static", nodeType: v1.NodeTypeStatic, declared: "yandex",
 			wantErr: "The nodes of this group run in no cloud",
 		},
@@ -409,27 +409,45 @@ func TestReconcile_UnresolvedProviderFailsTheReconcile(t *testing.T) {
 			}
 
 			r, _ := newReconciler(t, ng, registration.DeepCopy(), cloudCluster.DeepCopy())
-			_, err := r.Reconcile(context.Background(), ctrl.Request{
-				NamespacedName: types.NamespacedName{Name: tc.name},
-			})
-
+			doReconcile(t, r, tc.name)
+			requireErrorCondition(t, getNodeGroup(t, r, tc.name), tc.wantErr)
 			if tc.wantErr == "" {
-				if err != nil {
-					t.Fatalf("reconcile %s: %v", tc.name, err)
-				}
 				return
 			}
-			if err == nil {
-				t.Fatal("an unresolved provider must fail the reconcile")
+
+			fixed := getNodeGroup(t, r, tc.name)
+			fixed.Spec.ProviderType = ""
+			if err := r.Client.Update(context.Background(), fixed); err != nil {
+				t.Fatalf("clear spec.providerType: %v", err)
 			}
-			if !strings.Contains(err.Error(), tc.wantErr) {
-				t.Fatalf("error = %q, want it to contain %q", err, tc.wantErr)
-			}
-			// The pass stops before the rest of the status is computed, so status.error is the
-			// only place the NodeGroup gets to say why.
-			if got := getNodeGroup(t, r, tc.name).Status.Error; !strings.Contains(got, tc.wantErr) {
-				t.Fatalf("status.error = %q, want it to contain %q", got, tc.wantErr)
-			}
+			doReconcile(t, r, tc.name)
+			requireErrorCondition(t, getNodeGroup(t, r, tc.name), "")
 		})
+	}
+}
+
+// requireErrorCondition asserts the Error condition carries want; an empty want means it must be
+// raised down and silent.
+func requireErrorCondition(t *testing.T, ng *v1.NodeGroup, want string) {
+	t.Helper()
+
+	var cond *metav1.Condition
+	for i := range ng.Status.Conditions {
+		if ng.Status.Conditions[i].Type == "Error" {
+			cond = &ng.Status.Conditions[i]
+		}
+	}
+	if cond == nil {
+		t.Fatalf("no Error condition published, got %+v", ng.Status.Conditions)
+	}
+
+	if want == "" {
+		if cond.Status != metav1.ConditionFalse || cond.Message != "" {
+			t.Fatalf("Error condition = %+v, want False and empty", cond)
+		}
+		return
+	}
+	if cond.Status != metav1.ConditionTrue || !strings.Contains(cond.Message, want) {
+		t.Fatalf("Error condition = %+v, want True containing %q", cond, want)
 	}
 }

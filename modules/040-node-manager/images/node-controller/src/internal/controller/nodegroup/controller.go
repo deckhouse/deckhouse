@@ -130,13 +130,6 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 
 	provider := pCatalog.ByNodeGroup(ng)
 	cloudprovider.TrackValidateNodeGroupMetrics(ng, provider)
-	if err := cloudprovider.ValidateNodeGroup(ng, provider); err != nil {
-		logger.Error(err, "failed to resolve the cloud provider of the NodeGroup", "nodeGroup", ng.Name)
-		if patchErr := r.patchStatusError(ctx, ng, err.Error()); patchErr != nil {
-			logger.Error(patchErr, "failed to publish the provider error in the nodegroup status", "nodeGroup", ng.Name)
-		}
-		return ctrl.Result{}, err
-	}
 
 	logger.V(1).Info("computing node status", "nodeGroup", ng.Name, "nodeType", ng.Spec.NodeType)
 	nodeService := nodestatus.Service{Client: r.Client}
@@ -188,6 +181,12 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 	if eventMsg != "" {
 		r.conditionService.CreateEventIfChanged(ng, eventMsg)
 		statusMsg = "Machine creation failed. Check events for details."
+	}
+
+	if err := cloudprovider.ValidateNodeGroup(ng, provider); err != nil {
+		providerError := err.Error()
+		conditionErrors = append([]string{providerError}, conditionErrors...)
+		statusMsg = providerError
 	}
 
 	ngForConditions := calcconditions.NodeGroup{
@@ -267,15 +266,4 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 	// suppresses the manager resync; the periodic requeue keeps unwatched status inputs
 	// (cluster configuration, a later-created InstanceClass) from going stale forever.
 	return ctrl.Result{RequeueAfter: statusResyncInterval}, nil
-}
-
-func (r *Status) patchStatusError(ctx context.Context, ng *v1.NodeGroup, message string) error {
-	if ng.Status.Error == message {
-		return nil
-	}
-
-	patch := client.MergeFrom(ng.DeepCopy())
-	ng.Status.Error = message
-
-	return r.Client.Status().Patch(ctx, ng, patch)
 }
