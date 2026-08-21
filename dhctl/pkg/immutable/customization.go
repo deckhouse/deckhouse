@@ -228,6 +228,16 @@ func applyCustomization(spec *nodeSpec, c Customization) {
 	}
 }
 
+// defaultNodeIP names the address kubelet registers the node under when nobody
+// else did. Left unset, the node picks the interface carrying the default route,
+// which on a machine with several networks is not necessarily the one the
+// cluster reaches it on — and the cluster PKI is issued for this address.
+func defaultNodeIP(spec *nodeSpec, address string) {
+	if spec.Kubelet.NodeIP == "" {
+		spec.Kubelet.NodeIP = address
+	}
+}
+
 // mergeMounts overlays the operator's mounts onto the rendered ones by name —
 // the CRD's own list key. Replacing the slice would drop the etcd disk from a
 // control-plane node the moment an operator adds a mount of their own.
