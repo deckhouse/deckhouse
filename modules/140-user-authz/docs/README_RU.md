@@ -376,7 +376,6 @@ read:
     - deckhouse.io/awsinstanceclasses
     - deckhouse.io/azureinstanceclasses
     - deckhouse.io/clusterprojectrolebindings
-    - deckhouse.io/deckhousereleases
     - deckhouse.io/deschedulers
     - deckhouse.io/dexauthenticators
     - deckhouse.io/dexclients
@@ -391,8 +390,6 @@ read:
     - deckhouse.io/nodegroups
     - deckhouse.io/openstackinstanceclasses
     - deckhouse.io/operationpolicies
-    - deckhouse.io/packagerepositories
-    - deckhouse.io/packagerepositoryoperations
     - deckhouse.io/projectnamespaces
     - deckhouse.io/projectrolebindings
     - deckhouse.io/projecttemplates
@@ -635,11 +632,11 @@ write:
 
 ```text
 create:
-    - deckhouse.io/dexauthenticators/allow-access-to-kubernetes
-    - deckhouse.io/dexclients/allow-access-to-kubernetes
     - authorization.deckhouse.io/bulksubjectaccessreviews
     - authorization.deckhouse.io/roleaccessreports
     - authorization.deckhouse.io/subjectaccessreports
+    - deckhouse.io/dexauthenticators/allow-access-to-kubernetes
+    - deckhouse.io/dexclients/allow-access-to-kubernetes
 get,list,patch,update,watch:
     - control-plane.deckhouse.io/controlplanenodes
 patch,update:
