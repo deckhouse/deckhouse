@@ -509,6 +509,22 @@
       "ssdlc"
     ]
   },
+  "monitoring-kubernetes": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "tags": [
+      "observability",
+      "certified",
+      "ssdlc"
+    ]
+  },
   "log-shipper": {
     "editions": [
       "ce",
