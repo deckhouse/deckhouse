@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"strconv"
 
-	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -283,10 +282,12 @@ func kubernetesVersion(metaConfig *config.MetaConfig) (string, error) {
 // control-plane images and the system extensions itself, with no in-cluster
 // registry-packages-proxy to go through during bootstrap.
 func nodeRegistry(metaConfig *config.MetaConfig) (*registrySpec, error) {
+	// Both modes describe the same upstream in RemoteData, and the upstream is what a
+	// booting node needs: the in-cluster proxy Direct mode adds serves nodes that are
+	// already in the cluster. The mode is not the node's business, so it is not read
+	// here — a config parsed from the cluster resolves to Direct where the same cluster
+	// bootstrapped as Unmanaged, and the payload must not differ between the two.
 	settings := metaConfig.Registry.Settings
-	if settings.Mode != constant.ModeUnmanaged {
-		return nil, fmt.Errorf("registry mode %q is not supported for an immutable master, use %q", settings.Mode, constant.ModeUnmanaged)
-	}
 
 	address, path := settings.RemoteData.AddressAndPath()
 	if address == "" {
