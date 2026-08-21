@@ -200,22 +200,40 @@ func handle(_ context.Context, input *go_hook.HookInput) error {
 		}
 
 		config := buildRegistryConfig(parsed)
-		current.RegistryConfig = &config
 
 		if config.Mode == string(registryv1alpha1.ModeUnmanaged) {
-			// Unmanaged means nothing, all the way down to the node. No agent, no node
-			// configuration of ours at all — the bashible apiserver then falls back to
-			// the `deckhouse-registry` secret and points the container runtime straight
-			// at the registry the cluster was installed with, which is the behaviour of
-			// a cluster where this module was never enabled.
-			//
-			// This is also the state a migrating cluster lands in the moment the previous
-			// implementation lets go, so the fallback has to be the thing that carries it
-			// — see withdrawNodeConfiguration.
-			current.BashibleConfig = nil
-			withdrawNodeConfiguration(input)
-			break
+			if drain := current.Drain; drain != nil && drain.Active && drain.Config != nil {
+				// Asked to leave, but the cluster has not finished moving off the address
+				// this module serves: rendered manifests all over it still name
+				// `registry.d8-system.svc:5001`, and they move only as the operator
+				// re-renders one release at a time. So serving continues from the
+				// configuration that was in effect when the user asked, with its mode
+				// already set to `Managed` by the drain — every gate below and every
+				// template reads that one value, so nothing else here has to know.
+				//
+				// What the immediate withdrawal cost, measured: 84s during which the
+				// platform's own Deployment named a registry that no longer existed, and
+				// 680s during which workloads could not pull, 16 at the peak. See
+				// `hooks/v2/drain.go`.
+				config = *drain.Config
+			} else {
+				// Unmanaged means nothing, all the way down to the node. No agent, no node
+				// configuration of ours at all — the bashible apiserver then falls back to
+				// the `deckhouse-registry` secret and points the container runtime straight
+				// at the registry the cluster was installed with, which is the behaviour of
+				// a cluster where this module was never enabled.
+				//
+				// This is also the state a migrating cluster lands in the moment the previous
+				// implementation lets go, so the fallback has to be the thing that carries it
+				// — see withdrawNodeConfiguration.
+				current.RegistryConfig = &config
+				current.BashibleConfig = nil
+				withdrawNodeConfiguration(input)
+				break
+			}
 		}
+
+		current.RegistryConfig = &config
 
 		nodeConfig, err := buildBashibleConfig(config, registryv1alpha1.Auth{
 			Username: state.RO.Name,

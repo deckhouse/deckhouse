@@ -36,6 +36,8 @@ properties:
       Whether the module manages how the cluster pulls images.
 
       - `Unmanaged` — the module manages nothing. No components are created and no node configuration is written; the cluster keeps pulling from the registry it was installed with. This is the default, so enabling the module changes nothing on its own.
+
+        Asking for `Unmanaged` on a cluster the module was managing does not take effect instantly: image references all over the cluster name the in-cluster registry, and they move to the upstream one only as each module's release is rendered again. So the module stops advertising its address at once and keeps serving it until nothing names it any more, which normally takes a few minutes. Until then its components are still running, and `D8RegistryDrainStuck` reports a withdrawal that cannot finish.
       - `Managed` — the module owns the pull path: it configures the container runtime on every node through its node agent, and optionally runs an in-cluster cache.
 
       There is no choice of implementation. A cluster that has never run the previous implementation of this module always uses the current one; a cluster that has runs the previous one until it is brought to its `Unmanaged` state, after which the migration completes on its own.

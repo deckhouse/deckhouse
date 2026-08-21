@@ -268,6 +268,17 @@ internal:
 // owns the cluster rather than the previous one — and it says nothing about the module
 // having been asked to manage anything. The hook still generates the PKI and publishes a
 // resolved config, so these values are what a brand-new cluster actually has.
+// A drain: the user has asked for `Unmanaged`, and workloads that have not been re-rendered
+// yet still name the in-cluster registry, so the module keeps serving it. What the values look
+// like is the point — the resolved mode says `Managed`, because serving is what `Managed`
+// means, and every template gates on it without knowing a drain exists.
+const v2Draining = v2Enabled + `
+    drain:
+      active: true
+      references: 3
+      startedAt: "2026-08-21T11:21:52Z"
+`
+
 const v2EnabledUnmanaged = `
 internal:
   orchestrator: {}
@@ -1558,6 +1569,35 @@ var _ = Describe("Module :: registry :: helm template :: the published image add
 		It("withdraws it, so the cluster falls back to the registry it was installed with", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 			Expect(published().Exists()).To(BeFalse())
+		})
+	})
+
+	Context("leaving the pull path while the cluster still names the in-cluster registry", func() {
+		// The whole decoupling, in one place. Measured on the alternative — withdrawing the
+		// service together with the address — 84 seconds during which the platform's own
+		// Deployment named a registry that no longer existed, and 680 seconds during which
+		// workloads could not pull, 16 of them at the peak.
+		//
+		// The address is empty because the hook clears it the moment a drain starts, which
+		// is what makes every render from then on name the upstream registry.
+		BeforeEach(func() { renderWith(v2Draining, "") })
+
+		It("withdraws the address at once, so the platform starts moving off it", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(published().Exists()).To(BeFalse())
+		})
+
+		It("keeps serving the address it just stopped advertising", func() {
+			// Withdrawing both at the same time is the bug this exists to prevent: what has
+			// not moved yet has to keep being able to pull.
+			Expect(f.KubernetesResource("StatefulSet", "d8-system", "registry-storage").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Service", "d8-system", "registry").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Deployment", "d8-system", "registry-controller").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("RegistryConfig", "registry").Exists()).To(BeTrue())
+		})
+
+		It("keeps telling the nodes the same thing, so pulls keep going through the agent", func() {
+			Expect(f.KubernetesResource("Secret", "d8-system", "registry-bashible-config").Exists()).To(BeTrue())
 		})
 	})
 

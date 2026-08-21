@@ -213,6 +213,9 @@ func TestNothingAlertsOnAModuleManagingNothing(t *testing.T) {
 			"has the previous implementation's state, so it cannot fire on one managing nothing",
 		"D8RegistryNodeForeignRegistryConfig": "the series is published only while this " +
 			"implementation manages the registry, which is the opposite of managing nothing",
+		"D8RegistryDrainStuck": "the series exists only while the module is leaving the pull path, " +
+			"which is a cluster that WAS managing and has not finished stopping — the state this " +
+			"alert is the only report of",
 		"D8RegistryAirGapTransitionHeld": "the gauge only exists while the controller is running",
 		"D8RegistryUpstreamRejected":     "the gauge only exists while the controller is running",
 	}

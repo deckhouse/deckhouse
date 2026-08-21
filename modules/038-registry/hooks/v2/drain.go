@@ -1,0 +1,585 @@
+/*
+Copyright 2026 Flant JSC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+// Leaving the pull path without taking the address away from what still names it.
+//
+// `Managed` -> `Unmanaged` used to be immediate: the moment the mode changed, the storage and the node
+// agent went, and the in-cluster address stopped answering. But the address is named by rendered
+// manifests all over the cluster, and those move to the upstream registry only as the operator
+// re-renders each module's release — one release at a time. Measured on a two-node cloud cluster:
+//
+//	84s   the platform's own Deployment still named `registry.d8-system.svc:5001` after the storage
+//	      and its Service were gone. Nothing failed only because the operator pod happened not to
+//	      restart in that window; the one component able to rewrite that reference is the one that
+//	      could no longer pull. On an earlier stand it did restart, and the cluster needed the image
+//	      in its Deployment patched by hand to come back at all.
+//	680s  workloads across d8-monitoring, d8-ingress-nginx, d8-admission-policy-engine,
+//	      d8-snapshot-controller and kube-system could not pull, 16 of them at the peak, each still
+//	      naming an address that answered nothing.
+//
+// So the two halves are separated here. Withdrawing the ADDRESS is immediate — the ConfigMap goes at
+// once, so every render from that moment on names the upstream registry and the platform starts moving.
+// Withdrawing the SERVICE waits until nothing names the in-cluster address any more. In between, the
+// module keeps serving from the configuration that was in effect when the user asked to leave, which is
+// what this hook persists.
+//
+// The consequence, and it is deliberate: `Unmanaged` is reached when the drain finishes, not when the
+// ModuleConfig is written. A cluster in this state runs the module's components while its ModuleConfig
+// says `Unmanaged`, which would be confusing without something saying why — hence the metric and the
+// alert. The alternative is a documented outage of minutes on a routine configuration change, and on a
+// production cluster that is the worse of the two.
+//
+// What is NOT covered: disabling the module outright (`enabled: false`) instead of asking for
+// `Unmanaged`. Then there is no release to render anything from and helm removes it all in one pass, so
+// the window is back. That path is for a cluster being taken off this module for good, and the way
+// through it is to reach `Unmanaged` first and let the drain finish.
+package v2
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"strings"
+	"time"
+
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
+	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	v1core "k8s.io/api/core/v1"
+	v1meta "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	registryv1alpha1 "github.com/deckhouse/deckhouse/go_lib/registry/apis/deckhouse.io/v1alpha1"
+	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
+	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/helpers"
+)
+
+const (
+	// DrainSecretName persists a drain in progress.
+	//
+	// In a secret rather than in values, because values do not survive a restart of the module and this
+	// state has to: a drain lasts minutes, an operator restart takes seconds, and forgetting mid-drain
+	// would tear the registry down under the workloads still pulling from it — the exact failure this
+	// hook exists to prevent. It holds the configuration that was in effect, which includes upstream
+	// credentials, so a secret is also the right kind of object for it.
+	//
+	// Written and removed by this hook, never by helm: helm renders from values, and the whole point of
+	// this record is to outlive them.
+	DrainSecretName = "registry-drain"
+
+	// DrainReferencesMetric is how many workloads still name the in-cluster registry.
+	DrainReferencesMetric = "d8_registry_drain_references"
+
+	// DrainSecondsMetric is how long the drain has been going on.
+	DrainSecondsMetric = "d8_registry_drain_seconds"
+
+	drainSnapName          = "drain-record"
+	registryConfigSnapName = "registry-config-resource"
+	drainMetricGroup       = "registry_drain"
+
+	// referenceExamples is how many names are logged and no more. The count is the decision; the names
+	// are there to make an alert actionable, and a list of sixteen in a log line is neither.
+	referenceExamples = 5
+)
+
+// drainRecord is what survives a restart.
+type drainRecord struct {
+	// Config is the configuration the module keeps serving from. Captured from the RegistryConfig
+	// resource, which is the resolved configuration the controller was already acting on — rather than
+	// from the ModuleConfig, which by this point says `Unmanaged` and no longer describes a registry.
+	Config RegistryConfig `json:"config"`
+
+	// StartedAt is when the user asked to leave, and what the alert measures from.
+	StartedAt time.Time `json:"startedAt"`
+
+	// ZeroScans counts consecutive scans that found nothing. Two are required rather than one: a
+	// Deployment re-rendered onto the upstream registry has its old pods for a moment longer, and a
+	// scan that lands in that moment sees a clean cluster that is not yet clean.
+	ZeroScans int `json:"zeroScans"`
+
+	// LastZeroAt is when the last empty scan was counted, and it is what makes "two scans" mean time
+	// rather than repetition. This hook runs on a schedule AND before every render of the module, and a
+	// drain changes the values on every pass — so two passes can land seconds apart, which is exactly
+	// the width of the gap between one module release being rendered and the next. Two zeroes inside
+	// that gap would prove nothing at all.
+	LastZeroAt time.Time `json:"lastZeroAt,omitempty"`
+}
+
+// quietGap is how far apart two empty scans have to be before they count as two.
+//
+// Half a minute: the gap being guarded against is one render of one module release, and on the stand the
+// whole platform moved in about eleven minutes across some forty of them.
+const quietGap = 30 * time.Second
+
+var _ = sdk.RegisterFunc(
+	&go_hook.HookConfig{
+		// Before the hook that resolves the configuration, which reads the decision made here.
+		OnBeforeHelm: &go_hook.OrderedConfig{Order: 9},
+		Queue:        "/modules/registry/v2",
+		Schedule: []go_hook.ScheduleConfig{
+			{
+				// Every minute, and the scan itself runs only while a drain is in progress — the check
+				// before it is one read of this module's own values. A drain lasts minutes, so a minute
+				// of granularity costs at most one extra minute of the module serving an address nobody
+				// needs, which is the harmless direction.
+				Name:    "registry-drain",
+				Crontab: "* * * * *",
+			},
+		},
+		Kubernetes: []go_hook.KubernetesConfig{
+			{
+				Name:       drainSnapName,
+				ApiVersion: "v1",
+				Kind:       "Secret",
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{DrainSecretName},
+				},
+				NamespaceSelector: &types.NamespaceSelector{
+					NameSelector: &types.NameSelector{MatchNames: []string{"d8-system"}},
+				},
+				FilterFunc: filterDrainSecret,
+			},
+			{
+				// The resolved configuration as the controller has it, which is what a drain serves
+				// from. Watched rather than reconstructed: the ModuleConfig it came from has already
+				// been changed by the time this hook needs it.
+				Name:       registryConfigSnapName,
+				ApiVersion: "deckhouse.io/v1alpha1",
+				Kind:       "RegistryConfig",
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"registry"},
+				},
+				FilterFunc: filterRegistryConfigSpec,
+			},
+		},
+	},
+	dependency.WithExternalDependencies(handleDrain),
+)
+
+func filterDrainSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var secret v1core.Secret
+	if err := sdk.FromUnstructured(obj, &secret); err != nil {
+		return nil, fmt.Errorf("converting the drain secret: %w", err)
+	}
+
+	return secret.Data[drainRecordKey], nil
+}
+
+// drainRecordKey is the only key in the secret.
+const drainRecordKey = "record"
+
+func filterRegistryConfigSpec(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var resource registryv1alpha1.RegistryConfig
+	if err := sdk.FromUnstructured(obj, &resource); err != nil {
+		return nil, fmt.Errorf("converting the registry configuration: %w", err)
+	}
+
+	// Carried as JSON rather than as the resource's own Go type, because what a drain has to serve is
+	// this module's resolved configuration and the two are the same document — the resource is rendered
+	// from it field by field. Marshalling here keeps the conversion in one place.
+	raw, err := json.Marshal(resource.Spec)
+	if err != nil {
+		return nil, fmt.Errorf("encoding the registry configuration: %w", err)
+	}
+
+	return raw, nil
+}
+
+func handleDrain(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
+	values := accessor(input)
+	current := values.Get()
+
+	if !current.Enabled {
+		// The previous implementation owns the cluster: nothing of ours is on the pull path, so there is
+		// nothing that could be taken away from anything.
+		return finishDrain(input, values, current, "the current implementation is not active")
+	}
+
+	parsed, err := readSettings(input)
+	if err != nil {
+		// The settings are unreadable. Left exactly as it is rather than guessed at: every outcome here
+		// is a change to what the cluster pulls through.
+		return fmt.Errorf("reading the settings: %w", err)
+	}
+
+	mode := parsed.Mode
+	if mode == "" {
+		mode = string(registryv1alpha1.ModeManaged)
+	}
+
+	record, err := readDrainRecord(input)
+	if err != nil {
+		return err
+	}
+
+	if mode == string(registryv1alpha1.ModeManaged) {
+		// Managing again — either it never stopped, or a drain was interrupted by the user changing
+		// their mind. Nothing has to be torn down in either case.
+		return finishDrain(input, values, current, "the module manages the pull path")
+	}
+
+	captured, err := capturedConfig(input)
+	if err != nil {
+		return err
+	}
+
+	if record == nil && (captured == nil || captured.Mode != string(registryv1alpha1.ModeManaged)) {
+		// Nothing of ours was serving the in-cluster address, so `Unmanaged` is immediate — which is
+		// every cluster that has this module enabled and has never used it. Answered before the scan,
+		// because the scan is the expensive part and this is the common case.
+		return finishDrain(input, values, current, "the module was not serving the pull path")
+	}
+
+	count, examples, scanErr := scanReferences(ctx, dc)
+	if scanErr != nil {
+		// Unknown is not zero. A scan that could not be made says nothing about what still names the
+		// address, and the only harmful action available here is tearing the registry down, so the drain
+		// continues on the last thing that was known.
+		input.Logger.Warn("cannot tell what still names the in-cluster registry, so the drain continues",
+			"error", scanErr.Error())
+		count, examples = -1, nil
+	}
+
+	next, done := nextDrainRecord(record, captured, count, time.Now().UTC())
+	if next == nil {
+		input.Logger.Info("the module leaves the pull path", "reason", done,
+			"draining", drainedFor(record))
+		return finishDrain(input, values, current, done)
+	}
+
+	if record == nil {
+		input.Logger.Info(
+			"asked to leave the pull path; the in-cluster registry keeps serving until nothing names it",
+			"address", registry_const.Host, "references", count)
+	} else if count != 0 {
+		input.Logger.Info("still serving the in-cluster registry while the platform moves off it",
+			"references", count,
+			"examples", strings.Join(examples, ", "),
+			"draining", drainedFor(record))
+	}
+
+	record = next
+
+	if err := writeDrainRecord(input, record); err != nil {
+		return err
+	}
+
+	served := record.Config
+	// Serving is what `Managed` means, and the drain is a cluster that has been asked to stop and has
+	// not finished stopping. Every template gates on this one value, so saying it here is what keeps the
+	// storage, the controller and the node agent in place without a second gate in each of them.
+	served.Mode = string(registryv1alpha1.ModeManaged)
+
+	current.Drain = &DrainState{
+		Active:     true,
+		References: count,
+		StartedAt:  record.StartedAt.Format(time.RFC3339),
+		Config:     &served,
+	}
+	values.Set(current)
+
+	publishDrainMetrics(input, count, time.Since(record.StartedAt))
+
+	return nil
+}
+
+// nextDrainRecord is the whole decision, kept away from the reads and writes around it.
+//
+// Returns the record to persist and keep serving from, or nil and the reason the drain is over. A
+// record that comes back unchanged in everything but its scan counter is the ordinary case: a drain is
+// mostly waiting.
+func nextDrainRecord(
+	record *drainRecord,
+	captured *RegistryConfig,
+	count int,
+	now time.Time,
+) (*drainRecord, string) {
+	if record == nil {
+		if captured == nil {
+			return nil, "the module was not serving the pull path"
+		}
+		// Started even when the scan found nothing, and finished on the next pass if it stays that way.
+		// Starting costs one secret and one extra minute of serving; not starting because a single scan
+		// came back empty is how a cluster mid-render loses the address under it.
+		return &drainRecord{Config: *captured, StartedAt: now}, ""
+	}
+
+	next := *record
+	switch {
+	case count > 0:
+		// Progress, or a workload that has just appeared. Either way the count of consecutive empty
+		// scans is no longer consecutive.
+		next.ZeroScans = 0
+		next.LastZeroAt = time.Time{}
+
+	case count == 0 && (next.LastZeroAt.IsZero() || now.Sub(next.LastZeroAt) >= quietGap):
+		next.ZeroScans++
+		next.LastZeroAt = now
+
+		// A count of -1 falls through both: an unknown is neither, and the counter stands still.
+	}
+
+	if next.ZeroScans >= zeroScansToFinish {
+		return nil, "nothing names the in-cluster registry any more"
+	}
+
+	return &next, ""
+}
+
+// drainedFor is how long a drain has been going on, for a log line. Empty for one that starts now.
+func drainedFor(record *drainRecord) string {
+	if record == nil {
+		return "0s"
+	}
+
+	return time.Since(record.StartedAt).Round(time.Second).String()
+}
+
+// zeroScansToFinish is how many consecutive empty scans end a drain. See drainRecord.ZeroScans.
+const zeroScansToFinish = 2
+
+// finishDrain removes the record and the state, and says in the log why.
+//
+// Idempotent on purpose: it is the answer to every path that is not "still draining", and those paths
+// are the common case — a cluster that never left `Managed` reaches this on every reconciliation.
+func finishDrain(
+	input *go_hook.HookInput,
+	values helpers.ValuesAccessor[Values],
+	current Values,
+	because string,
+) error {
+	if current.Drain != nil {
+		current.Drain = nil
+		values.Set(current)
+	}
+
+	input.MetricsCollector.Expire(drainMetricGroup)
+
+	record, err := readDrainRecord(input)
+	if err != nil {
+		return err
+	}
+	if record == nil {
+		return nil
+	}
+
+	input.Logger.Info("removing the drain record", "reason", because)
+	input.PatchCollector.Delete("v1", "Secret", "d8-system", DrainSecretName)
+
+	return nil
+}
+
+func readDrainRecord(input *go_hook.HookInput) (*drainRecord, error) {
+	raw, err := helpers.SnapshotToSingle[[]byte](input, drainSnapName)
+	if err != nil {
+		return nil, nil //nolint:nilerr // Absent is the ordinary case, not a failure.
+	}
+	if len(raw) == 0 {
+		return nil, nil
+	}
+
+	var record drainRecord
+	if err := json.Unmarshal(raw, &record); err != nil {
+		return nil, fmt.Errorf("decoding the drain record: %w", err)
+	}
+
+	return &record, nil
+}
+
+func writeDrainRecord(input *go_hook.HookInput, record *drainRecord) error {
+	raw, err := json.Marshal(record)
+	if err != nil {
+		return fmt.Errorf("encoding the drain record: %w", err)
+	}
+
+	secret := &v1core.Secret{
+		TypeMeta: v1meta.TypeMeta{APIVersion: "v1", Kind: "Secret"},
+		ObjectMeta: v1meta.ObjectMeta{
+			Name:      DrainSecretName,
+			Namespace: "d8-system",
+			Labels: map[string]string{
+				"heritage": "deckhouse",
+				"module":   "registry",
+			},
+		},
+		Data: map[string][]byte{drainRecordKey: raw},
+	}
+
+	object, err := sdk.ToUnstructured(secret)
+	if err != nil {
+		return fmt.Errorf("converting the drain secret: %w", err)
+	}
+
+	input.PatchCollector.CreateOrUpdate(object)
+	return nil
+}
+
+func capturedConfig(input *go_hook.HookInput) (*RegistryConfig, error) {
+	raw, err := helpers.SnapshotToSingle[[]byte](input, registryConfigSnapName)
+	if err != nil {
+		return nil, nil //nolint:nilerr // No resource means nothing was being served.
+	}
+	if len(raw) == 0 {
+		return nil, nil
+	}
+
+	var config RegistryConfig
+	if err := json.Unmarshal(raw, &config); err != nil {
+		return nil, fmt.Errorf("decoding the registry configuration: %w", err)
+	}
+
+	return &config, nil
+}
+
+func publishDrainMetrics(input *go_hook.HookInput, references int, elapsed time.Duration) {
+	input.MetricsCollector.Expire(drainMetricGroup)
+
+	// A negative count means the scan failed, and a gauge cannot say "unknown". Reported as the
+	// duration alone: the alert is about a drain that does not end, and a drain whose scans keep failing
+	// is exactly that.
+	if references >= 0 {
+		input.MetricsCollector.Set(DrainReferencesMetric, float64(references), nil,
+			metrics.WithGroup(drainMetricGroup))
+	}
+
+	input.MetricsCollector.Set(DrainSecondsMetric, elapsed.Seconds(), nil,
+		metrics.WithGroup(drainMetricGroup))
+}
+
+// scanReferences counts the workloads that still name the in-cluster registry.
+//
+// Listed on demand rather than watched. A watch on every pod in the cluster would be paid for
+// permanently, by every cluster, to answer a question that only matters during the minutes after a
+// mode change — and this hook checks its own values before scanning, so a cluster that is not draining
+// pays nothing at all.
+//
+// Both running pods and the templates of what creates them are counted, and the templates are the more
+// important half: a Deployment that has not been re-rendered will create a pod naming the old address
+// the moment the current one restarts, long after the pod list looks clean.
+//
+// Only the platform's own namespaces. Those references come from Deckhouse renders, so those are the
+// namespaces they are in; a workload of the user's that hardcodes the in-cluster address would keep the
+// module serving forever, which is what the alert is for rather than something to wait on silently.
+func scanReferences(ctx context.Context, dc dependency.Container) (int, []string, error) {
+	client, err := dc.GetK8sClient()
+	if err != nil {
+		return 0, nil, fmt.Errorf("getting the kubernetes client: %w", err)
+	}
+
+	var found []string
+	note := func(kind, namespace, name string) {
+		found = append(found, fmt.Sprintf("%s %s/%s", kind, namespace, name))
+	}
+
+	pods, err := client.CoreV1().Pods("").List(ctx, v1meta.ListOptions{})
+	if err != nil {
+		return 0, nil, fmt.Errorf("listing pods: %w", err)
+	}
+	for i := range pods.Items {
+		pod := &pods.Items[i]
+		if platformNamespace(pod.Namespace) && namesInClusterRegistry(&pod.Spec) {
+			note("pod", pod.Namespace, pod.Name)
+		}
+	}
+
+	deployments, err := client.AppsV1().Deployments("").List(ctx, v1meta.ListOptions{})
+	if err != nil {
+		return 0, nil, fmt.Errorf("listing deployments: %w", err)
+	}
+	for i := range deployments.Items {
+		item := &deployments.Items[i]
+		if platformNamespace(item.Namespace) && namesInClusterRegistry(&item.Spec.Template.Spec) {
+			note("deployment", item.Namespace, item.Name)
+		}
+	}
+
+	daemonSets, err := client.AppsV1().DaemonSets("").List(ctx, v1meta.ListOptions{})
+	if err != nil {
+		return 0, nil, fmt.Errorf("listing daemonsets: %w", err)
+	}
+	for i := range daemonSets.Items {
+		item := &daemonSets.Items[i]
+		if platformNamespace(item.Namespace) && namesInClusterRegistry(&item.Spec.Template.Spec) {
+			note("daemonset", item.Namespace, item.Name)
+		}
+	}
+
+	statefulSets, err := client.AppsV1().StatefulSets("").List(ctx, v1meta.ListOptions{})
+	if err != nil {
+		return 0, nil, fmt.Errorf("listing statefulsets: %w", err)
+	}
+	for i := range statefulSets.Items {
+		item := &statefulSets.Items[i]
+		if platformNamespace(item.Namespace) && namesInClusterRegistry(&item.Spec.Template.Spec) {
+			note("statefulset", item.Namespace, item.Name)
+		}
+	}
+
+	cronJobs, err := client.BatchV1().CronJobs("").List(ctx, v1meta.ListOptions{})
+	if err != nil {
+		return 0, nil, fmt.Errorf("listing cronjobs: %w", err)
+	}
+	for i := range cronJobs.Items {
+		item := &cronJobs.Items[i]
+		spec := &item.Spec.JobTemplate.Spec.Template.Spec
+		if platformNamespace(item.Namespace) && namesInClusterRegistry(spec) {
+			note("cronjob", item.Namespace, item.Name)
+		}
+	}
+
+	examples := found
+	if len(examples) > referenceExamples {
+		examples = examples[:referenceExamples]
+	}
+
+	return len(found), examples, nil
+}
+
+// platformNamespace answers whether a namespace is one Deckhouse renders into.
+func platformNamespace(namespace string) bool {
+	return namespace == "kube-system" || strings.HasPrefix(namespace, "d8-")
+}
+
+// namesInClusterRegistry answers whether anything in a pod specification pulls from the in-cluster
+// registry.
+//
+// The storage and the controller of this module are excluded by their namespace being asked about
+// somewhere else — they pull from the upstream registry, not from themselves. Everything a pod can pull
+// is checked, including init containers: the platform's own Deployment names the in-cluster address in
+// one of those, and it was the reference that stranded a cluster on the stand.
+func namesInClusterRegistry(spec *v1core.PodSpec) bool {
+	prefix := registry_const.Host + "/"
+
+	for i := range spec.Containers {
+		if strings.HasPrefix(spec.Containers[i].Image, prefix) {
+			return true
+		}
+	}
+	for i := range spec.InitContainers {
+		if strings.HasPrefix(spec.InitContainers[i].Image, prefix) {
+			return true
+		}
+	}
+	for i := range spec.EphemeralContainers {
+		if strings.HasPrefix(spec.EphemeralContainers[i].Image, prefix) {
+			return true
+		}
+	}
+
+	return false
+}

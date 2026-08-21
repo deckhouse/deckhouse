@@ -1,0 +1,60 @@
+- name: d8.registry.drain
+  rules:
+  - alert: D8RegistryDrainStuck
+    # The metric already IS how long the drain has been going on, so the threshold carries the
+    # duration; the `for` on top of it is there because a gauge can be missed and re-appear, and one
+    # scrape should not raise this. Together they mean "past 25 minutes, and still so five minutes
+    # later" — half an hour, which is well past any drain that is merely waiting on convergence.
+    expr: max(d8_registry_drain_seconds) > 1500
+    for: 5m
+    labels:
+      severity_level: "6"
+      tier: cluster
+      d8_module: registry
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_registry_drain_stuck: "D8RegistryDrainStuck,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_registry_drain_stuck: "D8RegistryDrainStuck,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: The registry module cannot finish leaving the pull path.
+      description: |-
+        The `registry` ModuleConfig asks for `Unmanaged`, and the module is still running its
+        components and still serving `registry.d8-system.svc:5001`. That is deliberate: workloads
+        in the cluster still name that address, and taking it away before they move would leave
+        them unable to pull. It has been waiting for half an hour, which is longer than it
+        should take.
+
+        Nothing is degraded while this alert is firing. The cluster pulls, the module serves, and
+        the only thing not happening is the withdrawal.
+
+        What to look at:
+
+        1. What still names the address. The module logs the first few on every pass, and the
+           count is a metric:
+
+           ```
+           kubectl -n d8-system logs deploy/deckhouse -c deckhouse | grep "still serving the in-cluster registry"
+           ```
+
+        2. Then the workloads themselves, which is where the answer usually is:
+
+           ```
+           kubectl get pods,deployments,daemonsets,statefulsets -A -o json \
+             | jq -r '.items[] | select([.spec.template.spec.containers[]?.image, .spec.containers[]?.image] | any(startswith("registry.d8-system.svc:5001"))) | "\(.kind) \(.metadata.namespace)/\(.metadata.name)"'
+           ```
+
+        Two causes account for it. Either a release is not being re-rendered — check that the
+        operator queue is not stuck, since the references move only as each module's release is
+        rendered again:
+
+        ```
+        kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue main
+        ```
+
+        Or something outside the platform's own renders names the address: a workload of yours
+        that hardcoded it, or a manually edited manifest. Those will never move on their own, and
+        until they are changed to pull from the registry the cluster was installed with, the
+        module will keep serving them — which is the intended behaviour, not a failure.
+
+        A drain can also be abandoned by asking for `Managed` again: the module then keeps the
+        pull path it never finished giving up, and this alert goes away.

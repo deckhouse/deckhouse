@@ -66,6 +66,14 @@ type Values struct {
 	// container runtime's registry configuration to the node agent.
 	BashibleConfig *bashible_model.Config `json:"bashibleConfig,omitempty"`
 
+	// Drain is a withdrawal in progress: the user asked for `Unmanaged`, and workloads that have not
+	// been re-rendered yet still name the in-cluster registry, so it keeps being served.
+	//
+	// While this is set the module manages the pull path from `Drain.Config` rather than from the
+	// ModuleConfig, which by then describes no registry at all. See `hooks/v2/drain.go` for what the
+	// alternative was measured to cost.
+	Drain *DrainState `json:"drain,omitempty"`
+
 	// ImageAddress is the address container image references may be rendered from,
 	// empty until every node's agent is applying the layout the cluster gave it.
 	//
@@ -74,6 +82,24 @@ type Values struct {
 	// platform renders every image reference in one pass. This is what keeps the
 	// second from running ahead of the first.
 	ImageAddress string `json:"imageAddress,omitempty"`
+}
+
+// DrainState is what a drain looks like from the outside.
+type DrainState struct {
+	// Active is the one field the templates and the other hooks act on.
+	Active bool `json:"active"`
+
+	// References is how many workloads still name the in-cluster registry, or -1 when the last scan
+	// could not be made. Reported rather than merely counted: it is what tells an operator whether a
+	// drain is progressing or stuck.
+	References int `json:"references"`
+
+	// StartedAt is when the withdrawal was asked for, in RFC3339.
+	StartedAt string `json:"startedAt,omitempty"`
+
+	// Config is the configuration being served until the drain finishes, with its mode forced to
+	// `Managed` — every template gates on that one value, so the drain needs no gate of its own.
+	Config *RegistryConfig `json:"config,omitempty"`
 }
 
 func accessor(input *go_hook.HookInput) helpers.ValuesAccessor[Values] {

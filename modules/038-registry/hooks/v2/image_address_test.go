@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	registryv1alpha1 "github.com/deckhouse/deckhouse/go_lib/registry/apis/deckhouse.io/v1alpha1"
+	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 )
 
 func TestImageAddressSwitched(t *testing.T) {
@@ -153,4 +154,30 @@ func TestRegistryNodeConvergenceFilter(t *testing.T) {
 			assert.Equal(t, nodeConvergence{Applied: test.applied}, result)
 		})
 	}
+}
+
+// TestADrainTakesTheAddressAwayWhileItIsStillServed is the ordering the withdrawal depends on.
+//
+// The address has to go first and the service second. Reversed — which is what the module used to do —
+// the cluster names a registry that no longer exists: measured at 84 seconds for the platform's own
+// Deployment and 680 seconds of workloads unable to pull, 16 at the peak. The stickiness that normally
+// protects a published address must not protect it here, which is what the first case checks.
+func TestADrainTakesTheAddressAwayWhileItIsStillServed(t *testing.T) {
+	draining := &DrainState{Active: true, References: 3}
+	settled := imageAddressState{Nodes: 2, Layouts: 2, Applied: 2}
+
+	address, because := publishedAddress(imageAddressState{AlreadyPublished: true}, draining)
+	assert.Empty(t, address, "a published address is withdrawn by a drain, sticky or not")
+	assert.Contains(t, because, "leaving the pull path")
+
+	address, _ = publishedAddress(settled, draining)
+	assert.Empty(t, address, "and it is not published again while the drain lasts")
+
+	address, because = publishedAddress(settled, nil)
+	assert.Equal(t, registry_const.HostWithPath, address,
+		"without a drain the answer is unchanged: %s", because)
+
+	address, _ = publishedAddress(settled, &DrainState{Active: false})
+	assert.Equal(t, registry_const.HostWithPath, address,
+		"a drain that has finished is not a drain")
 }

@@ -132,6 +132,42 @@ properties:
 
               The same set the serving certificate is issued for, which is why the
               two are produced together.
+          drain:
+            type: object
+            description: |
+              A withdrawal in progress: `Unmanaged` has been asked for and workloads
+              that have not been re-rendered yet still name the in-cluster registry,
+              so it keeps being served until they do.
+
+              Measured on the alternative, an immediate teardown: 84 seconds during
+              which the platform's own Deployment named a registry that no longer
+              existed, and 680 seconds during which workloads could not pull, 16 of
+              them at the peak. See `hooks/v2/drain.go`.
+            properties:
+              active:
+                type: boolean
+                description: |
+                  Whether a drain is in progress. Every template gates on the
+                  resolved mode rather than on this, so a drain renders exactly what
+                  `Managed` renders; this is what the hooks and the alert read.
+              references:
+                type: integer
+                description: |
+                  How many workloads in the platform's namespaces still name the
+                  in-cluster registry, or -1 when the last scan could not be made.
+              startedAt:
+                type: string
+                description: |
+                  When the withdrawal was asked for, RFC3339. What the alert on a
+                  drain that does not finish measures from.
+              config:
+                type: object
+                description: |
+                  The configuration being served until the drain finishes, in the
+                  same shape as `registryConfig` and with its mode set to `Managed`.
+
+                  Captured from the RegistryConfig resource rather than rebuilt from
+                  the ModuleConfig, which by this point describes no registry at all.
           imageAddress:
             type: string
             description: |

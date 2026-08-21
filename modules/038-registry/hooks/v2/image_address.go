@@ -130,17 +130,36 @@ func handleImageAddress(_ context.Context, input *go_hook.HookInput) error {
 	values := accessor(input)
 	current := values.Get()
 
-	if published.switched() {
-		current.ImageAddress = registry_const.HostWithPath
-	} else {
-		current.ImageAddress = ""
+	address, because := publishedAddress(published, current.Drain)
+	current.ImageAddress = address
+	if address == "" {
 		input.Logger.Info(
-			"image references still point at the registry the cluster was installed with",
-			"reason", published.blockedReason())
+			"image references point at the registry the cluster was installed with",
+			"reason", because)
 	}
 
 	values.Set(current)
 	return nil
+}
+
+// publishedAddress is the whole decision: the address the platform renders image references from, and
+// why, when it is not the in-cluster one.
+//
+// A drain answers first, and answers with nothing. It is the one case where the address is taken away
+// while the module is still serving it, and that is the point: from that moment every render names the
+// upstream registry, so the platform starts moving off an address that still answers. The service
+// outliving its advertisement is the opposite order from the one measured at 84s of the platform naming
+// a registry that was already gone and 680s of workloads unable to pull. See `hooks/v2/drain.go`.
+func publishedAddress(state imageAddressState, drain *DrainState) (string, string) {
+	if drain != nil && drain.Active {
+		return "", "the module is leaving the pull path and the cluster is still moving off it"
+	}
+
+	if state.switched() {
+		return registry_const.HostWithPath, ""
+	}
+
+	return "", state.blockedReason()
 }
 
 // imageAddressState is what the decision is made from.
