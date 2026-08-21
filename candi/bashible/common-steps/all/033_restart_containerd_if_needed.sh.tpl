@@ -23,5 +23,11 @@ if bb-flag? containerd-need-restart; then
   fi
   bb-flag-set kubelet-need-restart
   bb-flag-unset containerd-need-restart
+
+  if bb-flag? cntrd-integrity-restore-kubelet; then
+    bb-log-info "Containerd state was wiped, starting kubelet to restore apiserver access"
+    systemctl start kubelet.service
+    bb-flag-unset cntrd-integrity-restore-kubelet
+  fi
 fi
 {{- end }}
