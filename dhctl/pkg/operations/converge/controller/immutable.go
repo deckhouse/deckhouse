@@ -15,16 +15,24 @@
 package controller
 
 import (
+	gocontext "context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable"
 	dhctlkube "github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/registrydata"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook/controlplane"
+
+	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 )
 
 // A joining master has the whole install ahead of it — extensions, reboot, kubelet —
@@ -59,9 +67,22 @@ func immutableMasterPayload(ctx *context.Context, nodeName string) (string, erro
 		return "", err
 	}
 
+	// A config read from the cluster carries no image digests — only the bootstrap's
+	// file path loads them — and the payload names every extension by digest. They come
+	// from the installer image, so loading them here reads no cluster state.
+	if len(metaConfig.Images) == 0 {
+		if err := metaConfig.LoadImagesDigests(); err != nil {
+			return "", fmt.Errorf("load the image digests the payload of %s names: %w", nodeName, err)
+		}
+	}
+
 	kubeCl, err := ctx.KubeClientCtx(ctx.Ctx())
 	if err != nil {
 		return "", fmt.Errorf("get kube client to build the payload of %s: %w", nodeName, err)
+	}
+
+	if err := useClusterRegistry(ctx.Ctx(), kubeCl, metaConfig); err != nil {
+		return "", fmt.Errorf("read the registry the payload of %s pulls from: %w", nodeName, err)
 	}
 
 	// No customization and no node IP: in a cloud the machine does not exist yet, and
@@ -72,6 +93,33 @@ func immutableMasterPayload(ctx *context.Context, nodeName string) (string, erro
 	}
 
 	return payload, nil
+}
+
+// useClusterRegistry points the payload at the registry the cluster itself pulls from.
+// A configuration parsed from the cluster carries no registry credentials — with no
+// registry ModuleConfig it resolves to the CE default — while the node has to reach the
+// very registry the running cluster uses. The upstream address is preferred over the
+// in-cluster mirror: a machine that is still installing cannot resolve a Service.
+func useClusterRegistry(ctx gocontext.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) error {
+	conf, _, err := registrydata.GetRegistryDataPreferUpstream(ctx, kubeCl, false)
+	if err != nil {
+		return err
+	}
+
+	imagesRepo := conf.GetRegistry()
+	if imagesRepo == "" {
+		return errors.New("the cluster publishes no registry address")
+	}
+
+	metaConfig.Registry.Settings.RemoteData = registry.Data{
+		ImagesRepo: imagesRepo,
+		Scheme:     constant.SchemeType(conf.GetScheme()),
+		CA:         conf.GetCA(),
+		Username:   conf.GetUsername(),
+		Password:   conf.GetPassword(),
+	}
+
+	return nil
 }
 
 // waitForImmutableMasterControlPlane waits until control-plane-manager reports this
