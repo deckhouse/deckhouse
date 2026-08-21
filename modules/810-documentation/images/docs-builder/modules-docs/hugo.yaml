@@ -39,6 +39,16 @@ params:
     - '^.*(/products/kubernetes-platform/documentation/(latest|v[0-9]+(\.[0-9]+)?)?/)?reference/(release-channels\.html|oss_info\.html|supported_versions\.html).*$'
     - '^\./(release-channels\.html|oss_info\.html).*$'
     - '^.*/products/kubernetes-platform/features/.*$'
+    - '^.*/cloud-provider-gcp/.*$'
+    - '^.*/cloud-provider-aws/.*$'
+    - '^.*/cloud-provider-azure/.*$'
+    - '^.*/cloud-provider-vsphere/.*$'
+    - '^.*/cloud-provider-openstack/.*$'
+    - '^.*/csi-s3/.*$'
+    - '^.*/csi-vsphere/.*$'
+    - '^.*/sds-replicated-volume/.*$'
+    - '^.*/state-snapshotter/.*$'
+    - '^.*/sds-elastic/.*$'
 
 markup:
   defaultMarkdownHandler: goldmark
