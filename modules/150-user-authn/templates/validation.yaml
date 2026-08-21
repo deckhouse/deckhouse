@@ -27,6 +27,67 @@ metadata:
 spec:
   policyName: {{ $policyName }}
   validationActions: [Deny]
+{{- $allowAccessPolicyName := "dex-allow-access-to-kubernetes.deckhouse.io" }}
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $allowAccessPolicyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups:   ["deckhouse.io"]
+        apiVersions: ["*"]
+        operations:  ["CREATE", "UPDATE"]
+        resources:   ["dexclients", "dexauthenticators"]
+  variables:
+    # The annotation is named after the kind it belongs to, so the key depends on the matched resource.
+    - name: annotation
+      expression: 'request.resource.resource == "dexclients"
+        ? "dexclient.deckhouse.io/allow-access-to-kubernetes"
+        : "dexauthenticator.deckhouse.io/allow-access-to-kubernetes"'
+    - name: annotations
+      expression: 'object.metadata.?annotations.orValue({})'
+    - name: oldAnnotations
+      expression: 'oldObject == null ? {} : oldObject.metadata.?annotations.orValue({})'
+    # Presence of the key, not its value, is what the policy gates. Hook generations disagree on how
+    # the value is read: some parse it with strconv.ParseBool and fail closed, older ones grant on
+    # the mere presence of the key. Gating presence keeps the policy sound whichever hook is running
+    # and removes the coupling to the hook's parsing altogether.
+    - name: annotated
+      expression: 'variables.annotation in variables.annotations'
+    - name: annotatedBefore
+      expression: 'variables.annotation in variables.oldAnnotations'
+    # Truthiness is only used to decide whether an update makes an already annotated object more
+    # permissive; it is never what allows the key to appear in the first place.
+    - name: grantsAccess
+      expression: 'variables.annotated
+        && variables.annotations[variables.annotation].lowerAscii() in ["1", "t", "true"]'
+    - name: grantedBefore
+      expression: 'variables.annotatedBefore
+        && variables.oldAnnotations[variables.annotation].lowerAscii() in ["1", "t", "true"]'
+  validations:
+    # Only a newly introduced or newly widened annotation is gated, so objects that already carry it
+    # stay editable by their owners. Authority is proven by the right to update the user-authn
+    # ModuleConfig, which only cluster-wide administrators of this module hold.
+    - expression: 'request.userInfo.username == "system:serviceaccount:d8-system:deckhouse"
+        || !variables.annotated
+        || (variables.annotatedBefore && (!variables.grantsAccess || variables.grantedBefore))
+        || authorizer.group("deckhouse.io").resource("moduleconfigs").name("user-authn").check("update").allowed()'
+      reason: Forbidden
+      messageExpression: '"the " + variables.annotation + " annotation controls access to the Kubernetes API
+        and may only be introduced or widened by a cluster administrator who is allowed to manage the user-authn module"'
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $allowAccessPolicyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
+spec:
+  policyName: {{ $allowAccessPolicyName }}
+  validationActions: [Deny]
 {{- if .Values.userAuthn.passwordPolicy }}
 {{- $passwordPolicyName := "user-password-immutable.deckhouse.io" }}
 ---
