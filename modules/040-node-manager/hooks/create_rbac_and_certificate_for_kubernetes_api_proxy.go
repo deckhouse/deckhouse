@@ -98,10 +98,6 @@ func createRBACForKubeAPIServerProxy(_ context.Context, input *go_hook.HookInput
 	}
 
 	if !needToGenerate {
-		// The certificate is still valid: propagate the existing one into values.
-		// Values are not persisted between restarts, so without this the required
-		// helm values would be missing on every reload after the first generation.
-		input.Values.Set("nodeManager.internal.kubernetesAPIProxyDiscoveryCert", certs[0])
 		return nil
 	}
 
