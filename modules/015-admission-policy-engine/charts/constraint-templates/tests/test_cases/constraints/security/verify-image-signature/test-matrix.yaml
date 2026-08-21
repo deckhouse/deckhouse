@@ -122,14 +122,13 @@ spec:
           externalData:
             providers:
               - name: ratify-provider
-                errors:
-                  - "ratify provider cannot validate busybox:latest"
+                errors: []
                 system_error: ""
                 responses:
                   "nginx:latest":
                     isSuccess: true
                   "busybox:latest":
-                    isSuccess: true
+                    isSuccess: false
                   "registry.invalid.local/unsigned/nginx:latest":
                     isSuccess: true
           object:
