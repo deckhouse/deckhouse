@@ -26,9 +26,11 @@ type Origin struct {
 	Embedded       bool
 }
 
-// Known reports whether any source claims the module; the zero Origin means none does.
+// Known reports whether a source claims the module and says where its package
+// comes from. Both halves are required: writing a half-filled origin would
+// blank spec.packageRepositoryName or spec.packageVersion on the module.
 func (o Origin) Known() bool {
-	return o != Origin{}
+	return o.RepositoryName != "" && o.PackageVersion != ""
 }
 
 // mergeOrigins folds the per-source origins into one per module. The argument

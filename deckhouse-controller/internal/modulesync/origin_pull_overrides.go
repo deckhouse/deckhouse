@@ -56,7 +56,17 @@ func (s *Syncer) originsFromModulePullOverrides(ctx context.Context) (map[string
 			continue
 		}
 
-		origins[mpo.Name] = Origin{RepositoryName: moduleV1.Properties.Source, PackageVersion: mpo.Spec.ImageTag, Dev: true}
+		origin := Origin{RepositoryName: moduleV1.Properties.Source, PackageVersion: mpo.Spec.ImageTag, Dev: true}
+
+		// a module without a source gives no repository to pull from; claiming
+		// it here would only hide the release that does know one
+		if !origin.Known() {
+			s.logger.Info("module has no source, skip its pull override", slog.String("name", mpo.Name))
+
+			continue
+		}
+
+		origins[mpo.Name] = origin
 	}
 
 	return origins, nil

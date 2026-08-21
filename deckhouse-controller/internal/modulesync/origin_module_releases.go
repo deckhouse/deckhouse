@@ -66,7 +66,17 @@ func (s *Syncer) originsFromModuleReleases(ctx context.Context) (map[string]Orig
 			continue
 		}
 
-		origins[name] = Origin{RepositoryName: release.GetModuleSource(), PackageVersion: release.GetModuleVersion()}
+		origin := Origin{RepositoryName: release.GetModuleSource(), PackageVersion: release.GetModuleVersion()}
+
+		// a release with neither a ModuleSource owner nor a source label names
+		// no repository, so it cannot say where the package comes from
+		if !origin.Known() {
+			s.logger.Info("release has no source, skip it", slog.String("name", release.GetName()))
+
+			continue
+		}
+
+		origins[name] = origin
 	}
 
 	return origins, nil

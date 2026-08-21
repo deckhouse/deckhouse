@@ -33,6 +33,14 @@ import (
 	"github.com/deckhouse/deckhouse/testing/controller/testclient"
 )
 
+// TestMain gives the embedded origin a version: without ldflags app.Version is
+// empty, and an origin with no version is deliberately not Known.
+func TestMain(m *testing.M) {
+	app.SetDeckhouseVersion("v1.77.0-test")
+
+	os.Exit(m.Run())
+}
+
 func newTestSyncer(t *testing.T, embeddedDir string, objects ...client.Object) *Syncer {
 	t.Helper()
 
@@ -283,6 +291,19 @@ func TestFillModuleV2(t *testing.T) {
 
 		fillModuleV2(module, Origin{RepositoryName: "example", PackageVersion: "v1.0.0"}, nil)
 		assert.True(t, module.IsDev(), "the dev annotation is never cleared by the sync")
+	})
+
+	t.Run("a half-filled origin is not known and leaves the spec alone", func(t *testing.T) {
+		module := &v1alpha2.Module{
+			Spec: v1alpha2.ModuleSpec{PackageRepositoryName: "example", PackageVersion: "v1.0.0"},
+		}
+
+		// an override whose module carries no source
+		fillModuleV2(module, Origin{PackageVersion: "dev-tag", Dev: true}, nil)
+
+		assert.Equal(t, "example", module.Spec.PackageRepositoryName, "the repository must not be blanked")
+		assert.Equal(t, "v1.0.0", module.Spec.PackageVersion)
+		assert.False(t, module.IsDev(), "a half-filled origin sets no annotations")
 	})
 
 	t.Run("config source overrides the origin repository", func(t *testing.T) {
