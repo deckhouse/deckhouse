@@ -2,25 +2,48 @@
 
 ### 001-go-mod.patch
 
-To create this patch run commands:
+Bumps Go module dependencies to remediate CVEs reported by Trivy for the
+cluster-autoscaler binary. CSE on release-1.77 still builds this image
+(`ee/cse/candi/version_map.yml` sets `clusterAutoscalerPatch: '1'`), so the
+gardener tag stays `v1.31.1`.
+
+Applied to both `cluster-autoscaler/go.mod` and `cluster-autoscaler/apis/go.mod`:
+
+- `google.golang.org/grpc`: `v1.65.0` -> `v1.82.1`
+- `github.com/google/cel-go`: `v0.20.1` -> `v0.29.0` (GHSA-gcjh-h69q-9w9g)
+- `golang.org/x/net`: `v0.38.0` -> `v0.56.0`
+- `golang.org/x/text`: `v0.23.0` -> `v0.39.0`
+- `golang.org/x/crypto`: `v0.36.0` -> `v0.53.0` (requested floor was `v0.52.0`;
+  `net@v0.56.0` requires `crypto@v0.53.0`)
+- `golang.org/x/sys`: `v0.31.0` -> `v0.46.0` (requested floor was `v0.44.0`;
+  `text@v0.39.0` requires `sys@v0.46.0`)
+- `azidentity`: `v1.5.2` -> `v1.6.0`; `jwt/v4`: `v4.5.0` -> `v4.5.2`
+- `k8s.io/kubernetes`: `v1.31.1` -> `v1.31.6` (no 1.31.x fix for
+  CVE-2025-13281; see `known_vulnerabilities.vex`)
+
+To recreate this patch, check out the clean tag and re-apply the bumps:
 
 ```shell
+git clone <SOURCE_REPO>/gardener/autoscaler.git
+cd autoscaler && git checkout v1.31.1
 cd cluster-autoscaler
-go mod edit -go 1.23
-go get github.com/golang-jwt/jwt/v4@v4.5.1
-go get github.com/opencontainers/runc@v1.1.14
-go get golang.org/x/crypto@v0.31.0
-go get golang.org/x/net@v0.33.0
-
-go get k8s.io/kubernetes@v1.30.8
-go get k8s.io/kubelet@v0.30.8
-#replase all in k8s.io  v0.30.1 -> v0.30.8
+go get google.golang.org/grpc@v1.82.1 \
+  github.com/google/cel-go@v0.29.0 \
+  golang.org/x/net@v0.56.0 \
+  golang.org/x/text@v0.39.0 \
+  golang.org/x/crypto@v0.53.0 \
+  golang.org/x/sys@v0.46.0 \
+  github.com/Azure/azure-sdk-for-go/sdk/azidentity@v1.6.0 \
+  github.com/golang-jwt/jwt/v4@v4.5.2 \
+  k8s.io/kubernetes@v1.31.6
 cd apis
-go get golang.org/x/net@v0.33.0
+go get google.golang.org/grpc@v1.82.1 golang.org/x/net@v0.56.0 golang.org/x/text@v0.39.0
 cd ..
-go mod tidy
-git diff > patches/001-go_mod.patch
-#git apply patches/001-go_mod.patch
+go mod tidy && (cd apis && go mod tidy)
+cd ..
+git diff -- cluster-autoscaler/go.mod cluster-autoscaler/go.sum \
+            cluster-autoscaler/apis/go.mod cluster-autoscaler/apis/go.sum \
+  > 001-go-mod.patch
 ```
 
 ### 002-kruise-ads.patch

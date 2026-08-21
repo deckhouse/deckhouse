@@ -10,12 +10,21 @@ cluster-autoscaler logic, so the fix is a pure `go.mod`/`go.sum` bump — the
 gardener source tag is not changed. The patch covers `go.mod` and `go.sum` in
 both the main `cluster-autoscaler` module and its nested `apis` module.
 
-All active patches use `google.golang.org/grpc v1.82.1`. The 1.32–1.34 patches
-use `golang.org/x/net v0.56.0`, `golang.org/x/text v0.39.0`,
-`golang.org/x/crypto v0.53.0`, and `golang.org/x/sys v0.46.0`; the 1.35 patch
-keeps the newer `x/net v0.57.0`, `x/text v0.40.0`, `x/crypto v0.54.0`, and
-`x/sys v0.47.0`. Older minors also retain their Kubernetes staging-module
-updates (`v1.32.10` / `v1.33.6` / `v1.34.2`).
+All active patches pin `google.golang.org/grpc v1.82.1` and
+`github.com/google/cel-go v0.29.0`.
+
+- 1.31 (CSE still builds this image from gardener `v1.31.1`): `x/net v0.56.0`,
+  `x/text v0.39.0`, `x/crypto v0.53.0`, `x/sys v0.46.0` (the CVE floor was
+  `crypto v0.52.0` / `sys v0.44.0`, but those exact pins conflict with
+  `net@v0.56.0` and `text@v0.39.0`), `azidentity v1.6.0`, `jwt/v4 v4.5.2`,
+  `k8s.io/kubernetes v1.31.6`. There is no 1.31.x fix for CVE-2025-13281; that
+  finding is documented in `known_vulnerabilities.vex`.
+- 1.32–1.34: `x/net v0.56.0`, `x/text v0.39.0`, `x/crypto v0.53.0`,
+  `x/sys v0.46.0`, plus Kubernetes staging bumps (`v1.32.10` / `v1.33.6` /
+  `v1.34.2`). 1.32 also pins `azidentity v1.6.0` and `jwt/v4 v4.5.2`.
+- 1.35 (also used for the 1.36 image): `x/mod v0.40.0` (CVE-2026-56864/56865),
+  which pulls `x/net v0.58.0`, `x/text v0.41.0`, `x/crypto v0.55.0`,
+  `x/sys v0.47.0`.
 
 Because the patch is generated against a specific gardener tag, it must be
 recreated from a clean checkout of that tag; applying a patch made from a

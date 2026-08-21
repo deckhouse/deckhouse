@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "merged-vex-c2167a7b3cc90a41182606ceaec2db0b24311690a9a2f974d6190b35c543bd2e",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 3,
+  "version": 4,
   "statements": [
     {
       "vulnerability": {
@@ -124,6 +124,20 @@
     },
     {
       "vulnerability": {
+        "name": "CVE-2025-13281"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/k8s.io/kubernetes"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "CVE-2025-13281 — SSRF в kube-controller-manager на пути обработки томов Portworx. Cluster-autoscaler не запускает kube-controller-manager и не обслуживает volume attach/Portworx; k8s.io/kubernetes подключается как библиотека типов и клиентских утилит. Для линии Kubernetes 1.31 исправленного патча нет (фикс есть в 1.32.10 / 1.33.6 / 1.34.2). Уязвимый код не исполняется.",
+      "timestamp": "2026-08-21T12:00:00.000000Z"
+    },
+    {
+      "vulnerability": {
         "name": "CVE-2026-41579"
       },
       "products": [
@@ -138,5 +152,5 @@
     }
   ],
   "timestamp": "2026-03-04T14:40:21Z",
-  "last_updated": "2026-07-31T12:00:00Z"
+  "last_updated": "2026-08-21T12:00:00Z"
 }

@@ -14,11 +14,11 @@ with `patches/1.35/`.
 
 Applied to both `cluster-autoscaler/go.mod` and `cluster-autoscaler/apis/go.mod`:
 
-- `golang.org/x/net`: `v0.48.0` -> `v0.57.0` (HTML parser / HTTP2 / idna / dns CVEs)
-- `golang.org/x/sys`: `v0.39.0` -> `v0.47.0`
-- `golang.org/x/crypto`: `v0.46.0` -> `v0.54.0` (x/crypto/ssh CVEs)
-- `golang.org/x/text`: `v0.32.0` -> `v0.40.0` (unicode normalization DoS)
 - `google.golang.org/grpc`: `v1.75.0` -> `v1.82.1`
+- `github.com/google/cel-go`: `v0.26.1` -> `v0.29.0` (GHSA-gcjh-h69q-9w9g)
+- `golang.org/x/mod`: `v0.30.0` -> `v0.40.0` (CVE-2026-56864, CVE-2026-56865).
+  This pull also raises `x/net` `v0.48.0` -> `v0.58.0`, `x/text` `v0.32.0` ->
+  `v0.41.0`, `x/crypto` `v0.46.0` -> `v0.55.0`, `x/sys` `v0.39.0` -> `v0.47.0`.
 
 To recreate this patch, check out the clean tag and re-apply the bumps:
 
@@ -27,15 +27,10 @@ git clone <SOURCE_REPO>/gardener/autoscaler.git
 cd autoscaler && git checkout v1.35.1
 cd cluster-autoscaler
 go get google.golang.org/grpc@v1.82.1 \
-  golang.org/x/crypto@v0.54.0 \
-  golang.org/x/net@v0.57.0 \
-  golang.org/x/sys@v0.47.0 \
-  golang.org/x/text@v0.40.0
+  github.com/google/cel-go@v0.29.0 \
+  golang.org/x/mod@v0.40.0
 cd apis
-go get google.golang.org/grpc@v1.82.1 \
-  golang.org/x/net@v0.57.0 \
-  golang.org/x/sys@v0.47.0 \
-  golang.org/x/text@v0.40.0
+go get google.golang.org/grpc@v1.82.1 golang.org/x/mod@v0.40.0
 cd ..
 go mod tidy && (cd apis && go mod tidy)
 cd ..

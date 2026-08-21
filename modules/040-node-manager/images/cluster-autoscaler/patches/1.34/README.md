@@ -16,6 +16,7 @@ Applied to both `cluster-autoscaler/go.mod` and `cluster-autoscaler/apis/go.mod`
 - `golang.org/x/text`: `v0.23.0` -> `v0.39.0` (Unicode processing CVEs)
 - `golang.org/x/sys`: `v0.31.0` -> `v0.46.0`
 - `golang.org/x/crypto`: `v0.36.0` -> `v0.53.0` (x/crypto/ssh CVEs)
+- `github.com/google/cel-go`: `v0.26.0` -> `v0.29.0` (GHSA-gcjh-h69q-9w9g)
 - `k8s.io/kubernetes`: `v1.34.1` -> `v1.34.2`, and all `k8s.io/*` staging
   modules (require + replace) synced to `v0.34.2` (kube-controller-manager
   SSRF, CVE-2025-13281)
@@ -27,6 +28,7 @@ git clone <SOURCE_REPO>/gardener/autoscaler.git
 cd autoscaler && git checkout v1.34.1
 cd cluster-autoscaler
 go get google.golang.org/grpc@v1.82.1 \
+  github.com/google/cel-go@v0.29.0 \
   golang.org/x/crypto@v0.53.0 \
   golang.org/x/net@v0.56.0 \
   golang.org/x/sys@v0.46.0 \
