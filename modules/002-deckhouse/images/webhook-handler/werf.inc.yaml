@@ -2,10 +2,10 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/shell-operator
 import:
-- from: {{ .ModuleName }}/{{ .ImageName }}-artifact
-  add: /out/usr/bin/yq
+- from: {{ index $.Images "tools/yq" }}
+  add: /usr/bin/yq
   to: /usr/bin/yq
-  before: setup
+  before: install
 - from: {{ index $.Images "tools/semver" }}
   add: /usr/bin/semver
   to: /usr/bin/semver
@@ -75,12 +75,6 @@ imageSpec:
   config:
     env: {"PYTHONPATH": "/frameworks/python"}
     entrypoint: ["/entrypoint.sh"]
----
-image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-from: {{ index $.Images "builder/distroless" }}
-shell:
-  install:
-  - pm install yq -d /out
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-label-converter-src-artifact
 final: false
