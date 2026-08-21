@@ -10,10 +10,15 @@ so the fix is a pure `go.mod`/`go.sum` bump — the gardener source tag is not
 changed. The patch touches both `cluster-autoscaler/go.mod` and
 `cluster-autoscaler/apis/go.mod`.
 
-Typical bumps: `golang.org/x/net` -> `v0.57.0`, `golang.org/x/sys` -> `v0.47.0`,
-`golang.org/x/crypto` -> `v0.54.0`, and (for older minors) `k8s.io/kubernetes`
-(plus all `k8s.io/*` require/replace directives) to the latest fix patch of the
-matching minor (for example `v1.32.10` / `v1.33.6` / `v1.34.2`).
+All active patches pin `google.golang.org/grpc v1.82.1`,
+`github.com/google/cel-go v0.29.0`, and `go.opentelemetry.io/otel v1.43.0`.
+
+- 1.32–1.34: `x/net v0.56.0`, `x/text v0.39.0`, `x/crypto v0.53.0`,
+  `x/sys v0.46.0`, plus Kubernetes staging bumps (`v1.32.10` / `v1.33.6` /
+  `v1.34.2`). 1.32 also pins `azidentity v1.6.0` and `jwt/v4 v4.5.2`.
+- 1.35 (also used for the 1.36 image): `x/mod v0.40.0` (CVE-2026-56864/56865),
+  which pulls `x/net v0.58.0`, `x/text v0.41.0`, `x/crypto v0.55.0`,
+  `x/sys v0.47.0`.
 
 Because the patch is generated against a specific gardener tag, it must be
 recreated from a clean checkout of that tag; applying a patch made from a
