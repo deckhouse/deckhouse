@@ -63,6 +63,15 @@ rules:
   - deletecollection
   - patch
   - update
+# No controller serves these subresources; they carry the authority to let an OAuth2 client reach
+# the Kubernetes API, which the admission policy for the allow-access-to-kubernetes annotation checks.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - dexauthenticators/allow-access-to-kubernetes
+  - dexclients/allow-access-to-kubernetes
+  verbs:
+  - create
 # The internal Dex storage CRDs (`passwords`, `offlinesessionses`) are deliberately absent.
 # Withholding `get` is not a mitigation: `list` and `watch` return whole objects, so they
 # disclose `hash` and `previousHashes` — the current and historical bcrypt credentials of every

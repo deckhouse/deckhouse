@@ -42,6 +42,19 @@ spec:
         apiVersions: ["*"]
         operations:  ["CREATE", "UPDATE"]
         resources:   ["dexclients", "dexauthenticators"]
+  # The platform's core namespaces are excluded because the module charts that ship an annotated
+  # DexAuthenticator, kiali in istio and the UI in cilium-hubble, are applied by the Deckhouse
+  # service account, and a request from d8-system or kube-system is privileged by construction:
+  # only that same service account and dhctl may create those namespaces in the first place
+  # (modules/002-deckhouse/templates/validation.yaml). Deliberately no exclusion by namespace
+  # prefix: a module from any ModuleSource gets a d8-<module> namespace, and it should have to
+  # declare this authority in its own RBAC like any other provisioner rather than inherit it from
+  # where it happens to run.
+  matchConditions:
+    - name: 'exclude-groups'
+      expression: '!(["system:nodes", "system:serviceaccounts:kube-system", "system:serviceaccounts:d8-system"].exists(e, (e in request.userInfo.groups)))'
+    - name: 'exclude-users'
+      expression: '!(["system:sudouser", "system:apiserver", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler", "dhctl", "observability"].exists(e, (e == request.userInfo.username)))'
   variables:
     # The annotation is named after the kind it belongs to, so the key depends on the matched resource.
     - name: annotation
@@ -70,15 +83,19 @@ spec:
         && variables.oldAnnotations[variables.annotation].lowerAscii() in ["1", "t", "true"]'
   validations:
     # Only a newly introduced or newly widened annotation is gated, so objects that already carry it
-    # stay editable by their owners. Authority is proven by the right to update the user-authn
-    # ModuleConfig, which only cluster-wide administrators of this module hold.
-    - expression: 'request.userInfo.username == "system:serviceaccount:d8-system:deckhouse"
-        || !variables.annotated
+    # stay editable by their owners. Authority is a dedicated permission on a subresource that no
+    # controller serves: it exists solely so that an administrator can delegate "may grant access to
+    # the Kubernetes API" on its own, the way pods/exec or the escalate verb are delegated. Deriving
+    # authority from write access to the user-authn ModuleConfig instead would demand ownership of
+    # the whole authentication stack from every cluster provisioner, and the platform's own role
+    # model keeps these apart: DexClient lives in use roles, ModuleConfig in manage roles.
+    - expression: '!variables.annotated
         || (variables.annotatedBefore && (!variables.grantsAccess || variables.grantedBefore))
-        || authorizer.group("deckhouse.io").resource("moduleconfigs").name("user-authn").check("update").allowed()'
+        || authorizer.group("deckhouse.io").resource(request.resource.resource).subresource("allow-access-to-kubernetes").namespace(request.namespace).check("create").allowed()'
       reason: Forbidden
       messageExpression: '"the " + variables.annotation + " annotation controls access to the Kubernetes API
-        and may only be introduced or widened by a cluster administrator who is allowed to manage the user-authn module"'
+        and may only be introduced or widened by a subject allowed to create the "
+        + request.resource.resource + "/allow-access-to-kubernetes subresource"'
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
 kind: ValidatingAdmissionPolicyBinding

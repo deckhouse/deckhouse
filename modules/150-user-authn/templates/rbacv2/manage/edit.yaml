@@ -59,3 +59,13 @@ rules:
   - update
   - patch
   - delete
+# No controller serves these subresources. They exist so that the authority to let an OAuth2 client
+# reach the Kubernetes API can be delegated on its own, and the admission policy that gates the
+# allow-access-to-kubernetes annotation checks exactly this permission.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - dexauthenticators/allow-access-to-kubernetes
+  - dexclients/allow-access-to-kubernetes
+  verbs:
+  - create
