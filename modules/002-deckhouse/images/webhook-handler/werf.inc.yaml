@@ -3,8 +3,8 @@ image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/shell-operator
 import:
 - from: {{ .ModuleName }}/{{ .ImageName }}-artifact
-  add: /out
-  to: /
+  add: /out/usr/bin/yq
+  to: /usr/bin/yq
   before: setup
 - from: {{ index $.Images "tools/semver" }}
   add: /usr/bin/semver
