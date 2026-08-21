@@ -79,12 +79,20 @@ func TestRefuseImmutableNodeGroups(t *testing.T) {
 		require.NoError(t, refuseImmutableNodeGroups(t.Context(), kubeGetter, convergedGroups))
 	})
 
-	t.Run("one group immutable", func(t *testing.T) {
+	// The master group has a join path of its own: converge builds its payload from
+	// the cluster instead of taking the group's bashible secret.
+	t.Run("immutable master group is not refused", func(t *testing.T) {
 		kubeGetter, _ := gateClient(t, nodeGroup("master", "Immutable"), nodeGroup("worker", ""))
+
+		require.NoError(t, refuseImmutableNodeGroups(t.Context(), kubeGetter, convergedGroups))
+	})
+
+	t.Run("immutable CloudPermanent group is refused", func(t *testing.T) {
+		kubeGetter, _ := gateClient(t, nodeGroup("master", ""), nodeGroup("worker", "Immutable"))
 
 		err := refuseImmutableNodeGroups(t.Context(), kubeGetter, convergedGroups)
 
-		require.ErrorContains(t, err, "master")
+		require.ErrorContains(t, err, "worker")
 		require.ErrorContains(t, err, "not supported yet")
 	})
 

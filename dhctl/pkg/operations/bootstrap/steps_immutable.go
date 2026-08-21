@@ -407,7 +407,7 @@ func (b *ClusterBootstrapper) handImmutableJoinPayload(ctx context.Context, bctx
 		return nil
 	}
 
-	payload, nodeConfig, err := buildImmutableJoinPayload(ctx, kubeCl, bctx.metaConfig, nodeName,
+	payload, nodeConfig, err := immutable.BuildJoinPayloadFromCluster(ctx, kubeCl, bctx.metaConfig, nodeName,
 		immutableCustomization(bctx, nodeName), immutableNodeAddress(bctx, nodeName))
 	if err != nil {
 		return err
