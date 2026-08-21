@@ -12,8 +12,8 @@
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: "markdown"
-        plk_create_group_if_not_exists__d8_obsolete_publishapi_in_user_authn: "D8ObsoletePublishAPIInUserAuthn,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-        plk_grouped_by__d8_obsolete_publishapi_in_user_authn: "D8ObsoletePublishAPIInUserAuthn,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_create_group_if_not_exists__d8_control_plane_manager_migration: "D8ControlPlaneManagerMigrationAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_control_plane_manager_migration: "D8ControlPlaneManagerMigrationAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
         summary: Obsolete Publish API settings in `user-authn` need to be migrated.
         description: |-
           Publish API ingress settings are being migrated from `mc user-authn` to `mc control-plane-manager`.
@@ -64,8 +64,8 @@
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: "markdown"
-        plk_create_group_if_not_exists__d8_obsolete_global_control_plane_resources_requests: "D8ObsoleteGlobalControlPlaneResourcesRequests,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-        plk_grouped_by__d8_obsolete_global_control_plane_resources_requests: "D8ObsoleteGlobalControlPlaneResourcesRequests,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_create_group_if_not_exists__d8_control_plane_manager_migration: "D8ControlPlaneManagerMigrationAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_control_plane_manager_migration: "D8ControlPlaneManagerMigrationAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
         summary: Obsolete global control-plane resource requests need to be migrated.
         description: |-
           Control-plane resource requests are being migrated from global settings to `moduleconfig control-plane-manager`.
@@ -154,8 +154,8 @@
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: "markdown"
-        plk_create_group_if_not_exists__d8_obsolete_encryption_algorithm_in_cluster_configuration: "D8ObsoleteEncryptionAlgorithmInClusterConfiguration,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-        plk_grouped_by__d8_obsolete_encryption_algorithm_in_cluster_configuration: "D8ObsoleteEncryptionAlgorithmInClusterConfiguration,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_create_group_if_not_exists__d8_control_plane_manager_migration: "D8ControlPlaneManagerMigrationAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_control_plane_manager_migration: "D8ControlPlaneManagerMigrationAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
         summary: Obsolete `encryptionAlgorithm` in ClusterConfiguration needs to be migrated to `control-plane-manager` ModuleConfig.
         description: |-
           The `encryptionAlgorithm` field is set to a non-default value in ClusterConfiguration but has not been migrated to ModuleConfig `control-plane-manager` yet.
@@ -200,8 +200,8 @@
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: "markdown"
-        plk_create_group_if_not_exists__d8_control_plane_manager_obsolete_moduleconfig: "D8ControlPlaneManagerObsoleteMonitoringKubernetesControlPlaneModuleConfig,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-        plk_grouped_by__d8_control_plane_manager_obsolete_moduleconfig: "D8ControlPlaneManagerObsoleteMonitoringKubernetesControlPlaneModuleConfig,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_create_group_if_not_exists__d8_control_plane_manager_migration: "D8ControlPlaneManagerMigrationAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_control_plane_manager_migration: "D8ControlPlaneManagerMigrationAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
         summary: Obsolete `monitoring-kubernetes-control-plane` ModuleConfig should be removed.
         description: |-
           The `monitoring-kubernetes-control-plane` module was merged into the `control-plane-manager` module, but its ModuleConfig still exists in the cluster and is no longer used.
