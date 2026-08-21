@@ -614,8 +614,15 @@ func (h *cliHandler) cliClientConfig(w http.ResponseWriter, logger log.Logger) (
 }
 
 // editionSegments are the per-edition segments that end a Deckhouse registry
-// repository, e.g. the "ee" of registry.deckhouse.io/deckhouse/ee. The list
-// follows editions.yaml at the repository root.
+// repository, e.g. the "ee" of registry.deckhouse.io/deckhouse/ee.
+//
+// The list matches Edition.IsValid in the deckhouse-cli client, which decides
+// where `d8 mirror pull` reads the CLI artifacts from and where `d8 mirror
+// push` writes them. Both sides must agree, so keep them in sync.
+//
+// "cse" is absent on purpose: the CSE registry keeps the editionless
+// artifacts (the installer) under deckhouse/cse, so deckhouse/cse is a root
+// of its own, not an edition sub-path.
 var editionSegments = map[string]struct{}{
 	"ce":      {},
 	"be":      {},
@@ -623,7 +630,6 @@ var editionSegments = map[string]struct{}{
 	"se-plus": {},
 	"ee":      {},
 	"fe":      {},
-	"cse":     {},
 }
 
 // cliRegistryRepository returns the repository holding the Deckhouse CLI
@@ -647,7 +653,31 @@ func cliRegistryRepository(clusterRepository string) string {
 		return repo
 	}
 
-	return repo[:idx]
+	root := repo[:idx]
+
+	// The root keeps the host and at least one path segment. A repository
+	// like "registry.example.com/ee" names a project that happens to be
+	// called "ee", not an edition of a Deckhouse repository, and its CLI
+	// artifacts stay where they are.
+	if countPathSegments(root) < 2 {
+		return repo
+	}
+
+	return root
+}
+
+// countPathSegments counts the non-empty slash-separated parts of repo, the
+// host included.
+func countPathSegments(repo string) int {
+	count := 0
+
+	for _, segment := range strings.Split(repo, "/") {
+		if segment != "" {
+			count++
+		}
+	}
+
+	return count
 }
 
 func (h *cliHandler) handleListTags(w http.ResponseWriter, r *http.Request, imagePath string) {
