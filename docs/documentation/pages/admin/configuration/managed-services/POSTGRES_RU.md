@@ -5,82 +5,11 @@ description: "Администрирование managed-сервиса PostgreS
 lang: ru
 ---
 
-## Включение модуля
+Managed PostgreSQL реализуется средствами модуля [`managed-postgres`](/modules/managed-postgres/). На этой странице описано, что и как может настраивать администратор кластера через PostgresClass: ограничения ресурсов, топологию, проверки параметров, значения по умолчанию и привязку к узлам.
 
-Модуль `managed-postgres` предоставляет инструменты для централизованного управления сервисами PostgreSQL через ресурс PostgresClass. Администратор с помощью PostgresClass задаёт правила и ограничения, в рамках которых пользователи создают сервисы PostgreSQL.
+Включение модуля, требования к установке и справочник параметров смотрите [в документации модуля managed-postgres](/modules/managed-postgres/). Пользовательские операции с сервисом описаны [в разделе «Managed PostgreSQL»](/user/managed-services/postgres/).
 
-Пользовательские операции с сервисом описаны в разделе [Managed PostgreSQL](/user/managed-services/postgres/).
-
-Модуль включается через ресурс ModuleConfig одним из трёх способов.
-
-Через веб-интерфейс Deckhouse:
-
-1. Перейдите в раздел «Система» → «Управление системой» → «Deckhouse» → «Модули».
-1. Найдите в списке `managed-postgres`.
-1. Включите модуль и нажмите «Сохранить».
-
-Через Deckhouse CLI:
-
-```shell
-d8 system module enable managed-postgres
-```
-
-Пример вывода:
-
-```console
-[INFO] Module 'managed-postgres' enabled
-```
-
-Через манифест ModuleConfig:
-
-Создайте файл `moduleconfig.yaml` со следующим содержимым:
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: managed-postgres
-spec:
-  enabled: true
-  version: 1
-```
-
-Примените манифест:
-
-```shell
-d8 k apply -f moduleconfig.yaml
-```
-
-## Проверка включения
-
-После включения модуля в неймспейсе `d8-managed-postgres` запускаются служебные компоненты. Проверьте их статус:
-
-```shell
-d8 k -n d8-managed-postgres get pods
-```
-
-Пример вывода:
-
-```console
-NAME                                         READY   STATUS    RESTARTS   AGE
-d8-cnpg-operator-79b448c5bf-zv8d9            1/1     Running   0          4m
-managed-postgres-operator-5dbcbf96b5-8mqqt   1/1     Running   0          4m
-```
-
-Проверьте наличие системного ресурса PostgresClass:
-
-```shell
-d8 k get postgresclass default
-```
-
-Пример вывода:
-
-```console
-NAME      AGE
-default   20s
-```
-
-Модуль автоматически создаёт PostgresClass `default` с базовыми настройками. Это сделано для того, чтобы пользователи могли сразу начать создавать сервисы PostgreSQL без дополнительной настройки со стороны администратора. Однако для production-окружений рекомендуется создавать отдельные классы с явными политиками (например, `production-v1`, `staging-v1`), чтобы иметь полный контроль над ограничениями ресурсов, топологией и другими параметрами.
+После включения модуль создаёт PostgresClass `default` с базовыми настройками, чтобы пользователи могли сразу создавать сервисы PostgreSQL. Для production-окружений рекомендуется готовить отдельные классы с явными политиками (например, `production-v1`, `staging-v1`) и выдавать пользователям их имена.
 
 ## Зависимости для отдельных функций
 
@@ -88,9 +17,9 @@ default   20s
 
 | Функция | Требование | Раздел |
 |---------|-----------|--------------|
-| Резервное копирование (PostgresSnapshot) | Включённый модуль `snapshot-controller` и StorageClass с поддержкой снапшотов | [snapshot-controller](/modules/snapshot-controller/) |
+| Резервное копирование (PostgresSnapshot) | Включённый модуль `snapshot-controller` и StorageClass с поддержкой снимков | [snapshot-controller](/modules/snapshot-controller/) |
 | TLS через `cert-manager` | Включённый модуль `cert-manager` и настроенный ClusterIssuer или Issuer | [cert-manager](/modules/cert-manager/) |
-| Размещение на выделенных узлах | Лейблы на узлах (например, `node.deckhouse.io/group=pg`) и taints при необходимости | [Управление узлами](/products/kubernetes-platform/documentation/v1/admin/configuration/node-management/) |
+| Размещение на выделенных узлах | Лейблы на узлах (например, `node.deckhouse.io/group=pg`) и taints при необходимости | [Управление узлами](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/node-management.html) |
 
 Все перечисленные модули являются стандартными компонентами Deckhouse Kubernetes Platform.
 
@@ -99,7 +28,7 @@ default   20s
 Перед применением полного примера убедитесь, что в вашем кластере достаточно ресурсов. Чтобы оценить доступные ресурсы, выполните:
 
 ```shell
-d8 k describe node master-0 | grep -A 5 "Allocated resources"
+d8 k describe node worker-0 | grep -A 5 "Allocated resources"
 ```
 
 Пример вывода:
@@ -350,7 +279,7 @@ postgresclass.managed-services.deckhouse.io "production-v1" deleted
 - `limits` и `requests` равны (4 ядра).
 - Под получает гарантированное выделение ресурсов, но теряется возможность переиспользовать неиспользуемые ядра другими подами.
 
-Ниже приведён сокращённый фрагмент `spec.sizingPolicies`. Полный вариант приведён в [полном примере конфигурации](#полный-пример-конфигурации).
+Ниже приведён сокращённый фрагмент `spec.sizingPolicies`. Полный вариант приведён [в разделе «Полный пример конфигурации»](#полный-пример-конфигурации).
 
 ```yaml
 spec:
@@ -385,15 +314,15 @@ spec:
 
 Поле [`spec.topology`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-topology) определяет, как сервисы распределяются по зонам доступности. Доступны три режима:
 
-- `Ignored` — стандартное планирование без привязки к зонам.
-- `Zonal` — все экземпляры размещаются в одной зоне (минимальная задержка между репликами).
-- `TransZonal` — экземпляры распределяются по разным зонам (1 primary, 1 синхронная реплика, 1 асинхронная реплика).
+- `Ignored` — стандартное планирование без привязки к зонам;
+- `Zonal` — все экземпляры размещаются в одной зоне (минимальная задержка между репликами);
+- `TransZonal` — экземпляры распределяются по разным зонам (один основной экземпляр, одна синхронная реплика, одна асинхронная реплика).
 
 Полезно применять в production-окружениях с требованиями к отказоустойчивости уровня дата-центра. Режим `TransZonal` защищает от падения целой зоны, но требует больше ресурсов. Режим `Zonal` подходит для сред с низкой задержкой, где потеря зоны допустима.
 
 Администратор указывает разрешённые варианты ([`allowedTopologies`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-topology-allowedtopologies)), топологию по умолчанию ([`defaultTopology`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-topology-defaulttopology)) и список доступных зон ([`allowedZones`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-topology-allowedzones)).
 
-Ниже приведён сокращённый фрагмент `spec.topology`. Полный вариант приведён в [полном примере конфигурации](#полный-пример-конфигурации).
+Ниже приведён сокращённый фрагмент `spec.topology`. Полный вариант приведён [в разделе «Полный пример конфигурации»](#полный-пример-конфигурации).
 
 ```yaml
 spec:
@@ -419,7 +348,7 @@ spec:
 
 В правилах доступны переменные: `configuration.maxConnections`, `configuration.workMem`, `configuration.sharedBuffers`, `configuration.walKeepSize`, `instance.memory.size`, `instance.cpu.cores`.
 
-Ниже приведён сокращённый фрагмент `spec.validations`. Полный набор правил приведён в [полном примере конфигурации](#полный-пример-конфигурации).
+Ниже приведён сокращённый фрагмент `spec.validations`. Полный набор правил приведён [в разделе «Полный пример конфигурации»](#полный-пример-конфигурации).
 
 ```yaml
 spec:
@@ -443,7 +372,7 @@ spec:
 - `workMem`: `(memory.size - sharedBuffers) * 4 / maxConnections`
 - `walKeepSize`: 512Mi
 
-Ниже приведён сокращённый фрагмент `spec.configuration` и `spec.overridableConfiguration`. Полный вариант приведён в [полном примере конфигурации](#полный-пример-конфигурации).
+Ниже приведён сокращённый фрагмент `spec.configuration` и `spec.overridableConfiguration`. Полный вариант приведён [в разделе «Полный пример конфигурации»](#полный-пример-конфигурации).
 
 ```yaml
 spec:
@@ -501,7 +430,7 @@ workMem = 61.44Mi
 
 Размещение на выделенных узлах помогает изолировать сервисы PostgreSQL от пользовательских приложений и сделать использование ресурсов дисковой подсистемы и сети более предсказуемым.
 
-Ниже приведён сокращённый фрагмент `spec.nodeAffinity`, `spec.nodeSelector` и `spec.tolerations`. Полный вариант приведён в [полном примере конфигурации](#полный-пример-конфигурации).
+Ниже приведён сокращённый фрагмент `spec.nodeAffinity`, `spec.nodeSelector` и `spec.tolerations`. Полный вариант приведён [в разделе «Полный пример конфигурации»](#полный-пример-конфигурации).
 
 ```yaml
 spec:
