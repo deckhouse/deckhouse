@@ -16,6 +16,7 @@ package runtime
 
 import (
 	"context"
+	"log/slog"
 	"path/filepath"
 	"slices"
 
@@ -152,7 +153,13 @@ func (r *Runtime) loadApp(ctx context.Context, repo registry.Remote, packagePath
 	return app.GetVersion().String(), nil
 }
 
-// RemoveApp removes an application and cancels all its running operations.
+// RemoveApp removes an application, cancels all its running operations and reports whether the
+// teardown has finished. The caller polls it and holds the Application's finalizer until it
+// returns true, so the CR outlives the Helm release it owns.
+//
+// It is idempotent by contract: a call made while the teardown runs must not re-issue
+// EventRemove, because that cancels the whole context tree (lifecycle.Package.newContext) and
+// would restart the very uninstall the caller is waiting for.
 //
 // After the undeploy task succeeds, a cleanup goroutine removes the
 // Store entry and stops the queue. The goroutine is necessary because
@@ -160,12 +167,25 @@ func (r *Runtime) loadApp(ctx context.Context, repo registry.Remote, packagePath
 // within the queue's own processing loop would deadlock on WaitGroup.
 //
 // Store.Delete has a state guard: if UpdateApp re-created the package
-// between undeploy and cleanup, Delete is a no-op (version != "").
-func (r *Runtime) RemoveApp(namespace, instance string) {
+// between undeploy and cleanup, Delete is a no-op (version != "") and the removal reports
+// unfinished again, now for the re-created generation.
+func (r *Runtime) RemoveApp(namespace, instance string) bool {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	name := apps.BuildName(namespace, instance)
+
+	switch r.packages.RemovalState(name) {
+	case lifecycle.RemovalDone:
+		// nothing is tracked under the name: the teardown finished, or never had to run
+		return true
+
+	case lifecycle.RemovalInFlight:
+		r.logger.Debug("app removal is still in flight", slog.String("name", name))
+
+		return false
+	}
+
 	r.scheduler.RemoveNode(name)
 
 	// A removed application no longer reconciles anything, so drop its maintenance gauge.
@@ -173,7 +193,7 @@ func (r *Runtime) RemoveApp(namespace, instance string) {
 
 	ctx := r.packages.HandleEvent(lifecycle.EventRemove, name)
 	if ctx == nil {
-		return
+		return true
 	}
 
 	if pkg := r.apps[name]; pkg != nil {
@@ -194,4 +214,6 @@ func (r *Runtime) RemoveApp(namespace, instance string) {
 	})
 
 	r.queueService.Enqueue(ctx, name, taskundeploy.NewAppTask(name, r.appDeployer, r.logger), cleanup)
+
+	return false
 }

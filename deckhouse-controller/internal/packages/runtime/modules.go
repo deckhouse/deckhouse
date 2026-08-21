@@ -16,6 +16,7 @@ package runtime
 
 import (
 	"context"
+	"log/slog"
 	"slices"
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
@@ -172,18 +173,28 @@ func (r *Runtime) loadModule(ctx context.Context, repo registry.Remote, packageP
 	return module.GetVersion().String(), nil
 }
 
-// RemoveModule removes a module and cancels all its running operations.
-// After undeploy, a cleanup goroutine removes the Store entry and stops the queue.
-// See RemoveApp for detailed rationale on the async cleanup pattern.
-func (r *Runtime) RemoveModule(name string) {
+// RemoveModule removes a module, cancels all its running operations and reports whether the
+// teardown has finished. After undeploy, a cleanup goroutine removes the Store entry and stops
+// the queue. See RemoveApp for the idempotence contract and the async cleanup rationale.
+func (r *Runtime) RemoveModule(name string) bool {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
+	switch r.packages.RemovalState(name) {
+	case lifecycle.RemovalDone:
+		return true
+
+	case lifecycle.RemovalInFlight:
+		r.logger.Debug("module removal is still in flight", slog.String("name", name))
+
+		return false
+	}
 
 	r.scheduler.RemoveNode(name)
 
 	ctx := r.packages.HandleEvent(lifecycle.EventRemove, name)
 	if ctx == nil {
-		return
+		return true
 	}
 
 	if pkg := r.modules[name]; pkg != nil {
@@ -204,4 +215,6 @@ func (r *Runtime) RemoveModule(name string) {
 	})
 
 	r.queueService.Enqueue(ctx, name, taskundeploy.NewModuleTask(name, r.moduleDeployer, r.logger), cleanup)
+
+	return false
 }
