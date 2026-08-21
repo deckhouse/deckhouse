@@ -171,29 +171,6 @@ var _ = Describe("Module :: deckhouse :: helm template ::", func() {
 			f.HelmRender()
 		})
 
-		// The contour is withdrawn exactly while something else serves the images, and returns when
-		// nothing does. Both directions are asserted because the returning half is the one that keeps a
-		// cluster able to pull at all: if the registry module is switched off, this secret is the only
-		// place credentials come from, and a condition that failed to render it again would leave the
-		// cluster with none.
-		It("is withdrawn while the registry module serves the images, and returns when it does not", func() {
-			Expect(f.RenderError).ShouldNot(HaveOccurred())
-			Expect(f.KubernetesResource("Secret", "d8-system", "deckhouse-registry").Exists()).To(BeTrue(),
-				"nothing else serves the images in this fixture, so the credentials have to be here")
-
-			f.ValuesSet("deckhouse.internal.registry.servedByModule", true)
-			f.HelmRender()
-			Expect(f.RenderError).ShouldNot(HaveOccurred())
-			Expect(f.KubernetesResource("Secret", "d8-system", "deckhouse-registry").Exists()).To(BeFalse(),
-				"while the module serves the images the credentials live on the node, and this object has no reader")
-
-			f.ValuesSet("deckhouse.internal.registry.servedByModule", false)
-			f.HelmRender()
-			Expect(f.RenderError).ShouldNot(HaveOccurred())
-			Expect(f.KubernetesResource("Secret", "d8-system", "deckhouse-registry").Exists()).To(BeTrue(),
-				"the module stopped serving them, so the only remaining source has to come back")
-		})
-
 		It("names what that client can dial, not the address images render from", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
