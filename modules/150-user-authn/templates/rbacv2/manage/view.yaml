@@ -17,6 +17,7 @@ rules:
   - dexproviderchecks
   - dexproviders
   - groups
+  - useraccounts
   - users
   verbs:
   - get

@@ -24,6 +24,15 @@ rules:
   - deletecollection
   - patch
   - update
+# UserAccounts are created by the controller; this ClusterRole is get/list/watch.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - useraccounts
+  verbs:
+  - get
+  - list
+  - watch
 - apiGroups:
   - dex.coreos.com
   resources:
