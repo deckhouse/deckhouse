@@ -44,14 +44,21 @@ import (
 	"github.com/deckhouse/deckhouse/testing/controller/reconcilertest"
 )
 
-var conversionsStore = conversion.NewConversionsStore()
-
 type ControllerTestSuite struct {
 	reconcilertest.Suite
 
 	r *reconciler
 
+	// conversionsStore is rebuilt for every test: it is global state, and a
+	// conversion one test registers would otherwise change the settings
+	// version another test sees.
+	conversionsStore *conversion.ConversionsStore
+
 	compareGolden bool
+}
+
+func (suite *ControllerTestSuite) SetupTest() {
+	suite.conversionsStore = conversion.NewConversionsStore()
 }
 
 func TestControllerTestSuite(t *testing.T) {
@@ -110,8 +117,8 @@ func (suite *ControllerTestSuite) buildReconciler() {
 		client:           suite.Client(),
 		moduleSync:       modulesync.New(suite.Client(), suite.Client(), clockwork.NewRealClock(), log.NewNop()),
 		logger:           log.NewNop(),
-		handler:          newMockHandler(),
-		conversionsStore: conversionsStore,
+		handler:          newMockHandler(suite.conversionsStore),
+		conversionsStore: suite.conversionsStore,
 		moduleManager:    newMockModuleManager(),
 		packageManager:   &stubPackageManager{},
 		edition:          &d8edition.Edition{Name: "fe", Bundle: "Default"},
@@ -211,7 +218,7 @@ func (suite *ControllerTestSuite) TestMirrorSeesStoredConfig() {
 	conversionsDir := suite.T().TempDir()
 	conversionFile := "version: 2\nconversions:\n  - '.paramNew = .paramOld | del(.paramOld)'\n"
 	require.NoError(suite.T(), os.WriteFile(filepath.Join(conversionsDir, "v2.yaml"), []byte(conversionFile), 0o644))
-	require.NoError(suite.T(), conversionsStore.Add("test-module", conversionsDir))
+	require.NoError(suite.T(), suite.conversionsStore.Add("test-module", conversionsDir))
 
 	m := `
 ---
@@ -313,7 +320,7 @@ func (m *mockModuleManager) GetModuleEventsChannel() chan events.ModuleEvent {
 	return make(chan events.ModuleEvent)
 }
 
-func newMockHandler() *confighandler.Handler {
+func newMockHandler(conversionsStore *conversion.ConversionsStore) *confighandler.Handler {
 	// minimal handler for tests with dummy channels
 	deckhouseConfigCh := make(chan addonutils.Values, 10)
 	configEventCh := make(chan config.Event, 10)
