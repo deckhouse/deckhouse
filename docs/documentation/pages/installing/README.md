@@ -567,32 +567,54 @@ A [NodeGroup](/modules/node-manager/cr.html#nodegroup) with `systemType: Immutab
 The provisioning network must be isolated. The endpoint on port `50000/TCP` is not authenticated: a machine that has no configuration holds no secret to authenticate with. Anyone who can reach that port can install the machine as a node of a foreign cluster. The inventory the machine serves on the same port is not authenticated either: anyone who can reach it reads the machine's disks, their serial numbers and its interfaces. Keep the machines in a separate network segment until the installation is over.
 {% endalert %}
 
-A machine that is waiting for its configuration describes itself on the same port, so you do not have to guess what it has:
+A machine that is waiting for its configuration describes itself on the same port, so you do not have to guess what it has. It serves the same facts in three shapes, one address each:
 
 ```shell
-curl http://<address>:50000/inventory        # for reading
-curl http://<address>:50000/inventory.json   # for scripts
+curl http://<address>:50000/inventory          # the document to fill in
+curl http://<address>:50000/inventory.pretty   # the table to read
+curl http://<address>:50000/inventory.json     # everything, for scripts
 ```
 
-`/inventory` is the short form. Per disk it gives the kernel name, the size, the state — `blank`, `formatted` or `system-layout` — the link under `/dev/disk/by-path`, and the partitions with their filesystems and labels; disks that a size selector cannot tell apart get a warning line of their own. Under every disk it prints a line to paste into a `NodeConfig`: that line names the disk uniquely when anything on the machine distinguishes it, and says outright that nothing does when nothing does. `/inventory.json` carries the same plus everything the short form leaves out — model, vendor, serial, `wwid`, every `/dev/disk/by-id` link, the bus path, the transport and whether the disk rotates. Both forms list the interfaces with their MAC addresses, link state, addresses and gateway. The short form reads like this:
+`/inventory` answers in YAML, in the shape of the `NodeConfig` the machine is waiting for, so that you merge it into your document instead of retyping it. Every interface that holds an address is filled in: with the addresses when they are static, and with `dhcp: true` and the current lease in a comment when they are not. Every disk comes as a commented-out `spec.storage` block with a `diskSelector` that names that disk alone and a `kubernetes-data` mount; you uncomment the block of the disk this node installs onto. A disk that nothing on the machine distinguishes says so in place of a selector.
 
-```
+`/inventory.pretty` is the aligned table, laid out to be read rather than merged. Per disk it gives the kernel name, the size, the state — `blank`, `formatted` or `system-layout` — the link under `/dev/disk/by-path`, the model, the transport, the serial, the `wwid` and whether the disk rotates, then every selector that names the disk, each marked with how many disks it matches, and the partitions with their filesystems and labels. A disk that nothing but its kernel name tells apart gets a warning line of its own, because that name changes between boots.
+
+`/inventory.json` is the same facts in JSON, and it is the one the installer itself reads; on top of the table it carries the vendor, every `/dev/disk/by-id` link and the bus path. The table and the JSON also give the interfaces their MAC addresses and link state, while `/inventory` names the interfaces and their addresses, which is all a `NodeConfig` takes. The table reads like this:
+
+```text
 Disks:
-  sda       30G  blank          pci-0000:0d:00.0-scsi-0:0:0:0
-        diskSelector: {serial: "S3Z8NB0K700001"}
-  sdb       30G  system-layout  pci-0000:0d:00.0-scsi-0:0:0:1
-        diskSelector: {serial: "S3Z8NB0K700002"}
-        sdb1         1G vfat   BOOT
-        sdb2       256M ext4   CONFIG
-        sdb3        28G ext4   DATA
-  sdc       10G  blank          pci-0000:0d:00.0-scsi-0:0:0:2
-        diskSelector: {serial: "S3Z8NB0K700003"}
-  ! sda and sdb have the same size — a size selector cannot tell them apart
+  sda    30G  blank          pci-0000:0d:00.0-scsi-0:0:0:0
+        QEMU HARDDISK · scsi · serial S3Z8NB0K700001
+        diskSelector:
+          serial: "S3Z8NB0K700001"
+        diskSelector:
+          busPath: "pci-0000:0d:00.0-scsi-0:0:0:0"
+        diskSelector:
+          model: "QEMU HARDDISK"   # matches 2 disks
+        diskSelector:
+          size: "=32212254720"
+        diskSelector:
+          name: "sda"   # kernel name, changes between boots
+  sdb     8G  system-layout  pci-0000:0d:00.0-scsi-0:0:0:1
+        QEMU HARDDISK · scsi · serial S3Z8NB0K700002
+        diskSelector:
+          serial: "S3Z8NB0K700002"
+        diskSelector:
+          busPath: "pci-0000:0d:00.0-scsi-0:0:0:1"
+        diskSelector:
+          model: "QEMU HARDDISK"   # matches 2 disks
+        diskSelector:
+          size: "=8589934592"
+        diskSelector:
+          name: "sdb"   # kernel name, changes between boots
+        sdb1     1G vfat   "BOOT"
+        sdb2   256M ext4   "CONFIG"
+        sdb3   6.8G ext4   "DATA"
 Interfaces:
-  eth0   f2:4e:c6:60:03:72 up   192.168.199.11/24 gw 192.168.199.1 (dhcp)
+  eth0 f2:4e:c6:60:03:72 up   192.168.199.11/24 gw 192.168.199.1 (dhcp)
 ```
 
-Both endpoints answer only while the machine is waiting. The moment it accepts a configuration, the server that served them is shut down.
+All three answer only while the machine is waiting. The moment it accepts a configuration, the server that served them is shut down.
 
 Besides [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) with `clusterType: Static` and [StaticClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#staticclusterconfiguration), the installation configuration file must contain:
 
@@ -720,7 +742,7 @@ Worker nodes are not created by the installer yet. To add one, prepare its `Node
 curl -X PUT --data-binary @nodeconfig.yaml http://<address>:50000/config
 ```
 
-An OS image built before the `/config` path became the canonical one serves the document at `/nodeconfig.yml` only. The installer falls back to that path on its own; a hand-written `curl` does not.
+Both the installer and a hand-written `curl` push the document to `/config`, and to nothing else. A machine that answers `404` there is not running an OS image of this version, and the installer cannot tell that apart from a machine that is still powering on: it keeps retrying for the whole of its wait — 120 attempts, one every five seconds — and only then fails, naming the address and the path it asked for. Write a current image to that machine and power it on again.
 
 ### Pre-installation checks
 
