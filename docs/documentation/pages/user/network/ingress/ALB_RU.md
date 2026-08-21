@@ -1,10 +1,18 @@
 ---
 title: "Использование Application Load Balancer (ALB)"
-description: "Настройка Application Load Balancer для HTTP/HTTPS/gRPC трафика в Deckhouse Kubernetes Platform. Использование ingress-nginx и istio для маршрутизации запросов, терминации SSL/TLS и публикации приложений."
+description: "Настройка Application Load Balancer для HTTP/HTTPS/gRPC трафика в Deckhouse Kubernetes Platform. Использование ingress-nginx, alb (Gateway API) и istio для маршрутизации запросов, терминации SSL/TLS и публикации приложений."
 permalink: ru/user/network/ingress/alb.html
 lang: ru
-extractedLinksMax: 2
+extractedLinksMax: 4
 relatedLinks:
+  - title: "ALB средствами Kubernetes Gateway API"
+    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html
+  - title: "ALB средствами Ingress NGINX Controller"
+    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/nginx.html
+  - title: "ALB средствами Istio"
+    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/istio.html
+  - title: "Балансировка входящего трафика"
+    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/
   - title: "Документация модуля alb"
     url: /modules/alb/
   - title: "Custom Resources модуля alb"
@@ -15,15 +23,9 @@ relatedLinks:
     url: /modules/alb/faq.html
   - title: "Примеры модуля alb"
     url: /modules/alb/examples.html
-  - title: "ALB средствами Kubernetes Gateway API"
-    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html
-  - title: "ALB средствами Ingress NGINX Controller"
-    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/nginx.html
-  - title: "ALB средствами Istio"
-    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/istio.html
 ---
 
-Публикация приложений и балансировка трафика на прикладном уровне может выполняться средствами:
+Публикация приложений и балансировка трафика на прикладном уровне в Deckhouse Kubernetes Platform (DKP) может выполняться средствами:
 
 - [Ingress NGINX Controller](#публикация-приложений-средствами-ingress-nginx-controller) (модуль `ingress-nginx`).
 - [Kubernetes Gateway API](#публикация-приложений-средствами-kubernetes-gateway-api) (модуль `alb`).
@@ -43,7 +45,7 @@ ALB средствами Ingress NGINX Controller основана на базе
 
 ALB средствами [Kubernetes Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/) реализуется [модулем `alb`](/modules/alb/). Шлюзы работают на Envoy Proxy, а приём и маршрутизация описываются стандартными объектами API (Gateway, ListenerSet, HTTPRoute и при необходимости GRPCRoute, TLSRoute, TCPRoute, UDPRoute, BackendTLSPolicy). Контроллер разворачивает необходимую инфраструктуру входа и проверяет конфигурацию, чтобы не допускать конфликтующих обработчиков.
 
-Модель Gateway API разделяет ответственность между администратором кластера (ClusterALBInstance), администратором неймспейса (ALBInstance/ListenerSet) и командой приложения (команда разработчиков приложений, владельцы маршрутов HTTPRoute и других ресурсов маршрутизации).
+Модель Gateway API разделяет ответственность между администратором кластера (ClusterALBInstance), администратором неймспейса (ALBInstance и ListenerSet — hostname, TLS, порты) и разработчиками приложения (HTTPRoute и другие ресурсы маршрутизации).
 
 Используйте этот вариант для:
 
@@ -57,16 +59,16 @@ ALB средствами [Kubernetes Gateway API](https://kubernetes.io/docs/con
 
 ### Istio
 
-ALB на основе модуля [`istio`](/modules/istio/) позволяет получить расширенные возможности по управлению трафиком. Используйте этот вариант для:
+ALB на основе модуля [`istio`](/modules/istio/) поддерживает управление трафиком в service mesh. Используйте этот вариант для:
 
-- продвинутой маршрутизации, например для реализации [canary deployment](../canary-deployment.html);
+- маршрутизации для [canary deployment](../canary-deployment.html) и аналогичных сценариев;
 - распределения трафика между версиями приложения и микросервисами;
 - mTLS для шифрования трафика между подами;
 - трассировки запросов.
 
 ## Публикация приложений средствами Ingress NGINX Controller
 
-Для публикации приложений администратор кластера должен создать Ingress-контроллер. Имя этого объекта укажите в манифесте ресурса Ingress, который используется для маршрутизации входящего трафика для вашего приложения.
+Для публикации приложений администратор кластера должен создать Ingress-контроллер. Порядок настройки описан в разделе [«ALB средствами Ingress NGINX Controller»](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/nginx.html). Запросите у администратора имя `ingressClass` контроллера и укажите его в манифесте ресурса Ingress, который маршрутизирует входящий трафик к приложению.
 
 Пример базового Ingress-ресурса для публикации приложения.
 
@@ -96,9 +98,11 @@ spec:
 
 ### Публикация приложения через объект ClusterALBInstance
 
-Этот сценарий предполагает, что объект ClusterALBInstance уже создан администратором кластера и перешёл в состояние `Ready`. Запросите у администратора имя и неймспейс управляемого объекта Gateway (шлюза), через который будет публиковаться приложение.
+Этот сценарий предполагает, что объект ClusterALBInstance уже создан администратором кластера и перешёл в состояние `Ready`. Запросите у администратора имя и неймспейс управляемого объекта Gateway из [`status`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-status) ClusterALBInstance.
 
-Затем создайте объект ListenerSet, который будет привязан к нужному Gateway (параметр `spec.parentRef.name`) и объекты (маршруты) HTTPRoute для маршрутизации входящих запросов к приложению.
+Администратор неймспейса создаёт ListenerSet, привязанный к этому Gateway (`spec.parentRef`). Разработчики приложения создают объекты HTTPRoute, привязанные к ListenerSet. Не привязывайте маршруты приложений к служебным слушателям Gateway `d8-http` / `d8-https` — для публикации приложений используйте ListenerSet.
+
+Настройка инфраструктуры (ClusterALBInstance, инлеты, включение модуля) описана в разделе [«ALB средствами Kubernetes Gateway API»](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html).
 
 Пример ListenerSet и HTTPRoute для публикации приложения через общекластерный шлюз:
 
@@ -114,17 +118,17 @@ spec:
     namespace: d8-alb
   listeners:
     - name: app-http
-      port: 80 # Для HTTP трафика необходимо указывать 80 порт.
+      port: 80 # В ListenerSet для HTTP указывайте порт 80. Это не параметр hostPort.httpPort инлета HostPort на узле.
       protocol: HTTP
       hostname: app.example.com
     - name: app-https
-      port: 443 # Для HTTPS трафика необходимо указывать 443 порт.
+      port: 443 # В ListenerSet для HTTPS указывайте порт 443. Это не параметр hostPort.httpsPort инлета HostPort на узле.
       protocol: HTTPS
       hostname: app.example.com
       tls:
         mode: Terminate
         certificateRefs:
-          - name: app-tls   # Наименование секрета, содержащего необходимый TLS-сертификат.
+          - name: app-tls   # Secret с TLS-сертификатом (выпустите через cert-manager или создайте вручную).
             namespace: prod
 ---
 # Маршрут для HTTP-трафика
@@ -172,7 +176,7 @@ spec:
 
 ### Публикация приложения через объект ALBInstance
 
-В этом сценарии объекты ALBInstance, Gateway, ListenerSet и HTTPRoute находятся в одном неймспейсе.
+В этом сценарии объекты ALBInstance, Gateway, ListenerSet и HTTPRoute находятся в одном неймспейсе. Создание ALBInstance требует прав администратора неймспейса; инлет HostPort для ALBInstance недоступен (только LoadBalancer).
 
 Для публикации приложения через объект ALBInstance выполните следующие действия:
 
@@ -208,7 +212,7 @@ spec:
        namespace: prod
      listeners:
        - name: app-https
-         port: 443 # Для HTTPS трафика необходимо указывать 443 порт.
+         port: 443 # В ListenerSet для HTTPS указывайте порт 443. Это не параметр hostPort.httpsPort инлета HostPort на узле.
          protocol: HTTPS
          hostname: app.example.com
          tls:
@@ -254,7 +258,7 @@ spec:
     namespace: prod
   listeners:
     - name: grpc-https
-      port: 443 # Для HTTPS трафика необходимо указывать 443 порт.
+      port: 443 # В ListenerSet для HTTPS указывайте порт 443. Это не параметр hostPort.httpsPort инлета HostPort на узле.
       protocol: HTTPS
       hostname: grpc.example.com
       tls:
@@ -323,7 +327,7 @@ spec:
       tls:
         mode: Passthrough # Режим TLS — сквозной.
 ---
-apiVersion: gateway.networking.k8s.io/v1alpha3
+apiVersion: gateway.networking.k8s.io/v1
 kind: TLSRoute
 metadata:
   name: tls-pass-route
@@ -364,7 +368,7 @@ spec:
       tls:
         mode: Passthrough # Режим TLS - сквозной.
 ---
-apiVersion: gateway.networking.k8s.io/v1alpha3
+apiVersion: gateway.networking.k8s.io/v1
 kind: TLSRoute
 metadata:
   name: https-pass-route
@@ -648,7 +652,10 @@ spec:
 
 Чтобы передавать данные трассировки OpenTelemetry по TLS, создайте секрет с CA-сертификатом и укажите его в параметре `spec.openTelemetry.tracing.tls.caSecretName`.
 
-При использовании ClusterALBInstance или шлюза Deckhouse по умолчанию разместите секрет в неймспейсе `d8-alb`. CA-сертификат должен быть сохранён в ключе `cacert`.
+- Для ClusterALBInstance или шлюза DKP по умолчанию разместите секрет в неймспейсе `d8-alb`.
+- Для ALBInstance разместите секрет в том же неймспейсе, что и объект ALBInstance.
+
+CA-сертификат должен быть сохранён в ключе `cacert`.
 
 ```yaml
 apiVersion: v1
@@ -713,6 +720,8 @@ spec:
 
 - добавьте аннотацию `alb.network.deckhouse.io/service-upstream: "true"`, чтобы трафик шёл через объект Service, а не напрямую к подам. Это эквивалент аннотации `nginx.ingress.kubernetes.io/service-upstream: "true"` из `ingress-nginx`;
 - добавьте фильтр `URLRewrite`, который задаёт в поле `hostname` FQDN объекта бэкенд-сервиса. Он заменяет аннотацию `nginx.ingress.kubernetes.io/upstream-vhost` из `ingress-nginx`.
+
+Пример HTTPRoute для шлюза с Istio-сайдкаром:
 
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1
@@ -987,14 +996,16 @@ spec:
 
 ## Публикация приложений средствами Istio
 
+Публикация средствами Istio настраивается в два слоя: администратор кластера разворачивает IngressIstioController (и связанную инфраструктуру) в разделе [«ALB средствами Istio»](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/istio.html); разработчики приложения создают ресурсы Gateway и VirtualService, как показано ниже.
+
 При публикации приложения средствами Istio можно выбрать один из вариантов:
 
-- [Использование Ingress NGINX](#публикация-приложений-с-использованием-ingress-nginx).
-- [Использование Istio Ingress Gateway](#публикация-приложений-с-использованием-ресурса-istio-ingress-gateway).
+- [«Использование Ingress NGINX»](#публикация-приложений-с-использованием-ingress-nginx).
+- [«Использование Istio Ingress Gateway»](#публикация-приложений-с-использованием-ресурса-istio-ingress-gateway).
 
 ### Публикация приложений с использованием Ingress NGINX
 
-Для публикации приложения средствами Ingress NGINX администратор Deckhouse Kubernetes Platform должен настроить Ingress-контроллер, добавив к нему сайдкар от Istio.
+Для публикации приложения средствами Ingress NGINX администратор DKP должен настроить Ingress-контроллер, добавив к нему сайдкар от Istio.
 
 Для публикации приложения подготовьте Ingress-ресурс, который ссылается на сервис. Обязательные аннотации для Ingress-ресурса:
   
@@ -1047,7 +1058,7 @@ spec:
 
 ### Публикация приложений с использованием ресурса Istio Ingress Gateway
 
-Для публикации приложения средствами Istio Ingress Gateway администратор Deckhouse Kubernetes Platform должен создать ресурс IngressIstioController.
+Для публикации приложения средствами Istio Ingress Gateway администратор DKP должен создать ресурс IngressIstioController.
 
 Для публикации приложения с использованием ресурса Istio Ingress Gateway:
 
@@ -1088,7 +1099,7 @@ spec:
 1. Определите правила маршрутизации с помощью VirtualService, который связывает шлюз и обслуживаемый им сервис:
 
    ```yaml
-   apiVersion: networking.istio.io/v1alpha3
+   apiVersion: networking.istio.io/v1beta1
    kind: VirtualService
    metadata:
      name: vs-app
@@ -1106,4 +1117,6 @@ spec:
 
 ## Балансировка gRPC
 
-Чтобы балансировка gRPC-сервисов заработала автоматически, присвойте имя с префиксом или значением `grpc` для порта соответствующему объекту Service.
+Раздел относится к публикации gRPC через Ingress NGINX Controller (`ingress-nginx`). Для Gateway API используйте [GRPCRoute](#grpcroute-tlsroute-tcproute-and-udproute-objects).
+
+Чтобы балансировка gRPC-сервисов за Ingress NGINX заработала автоматически, присвойте имя с префиксом или значением `grpc` порту соответствующего объекта Service.

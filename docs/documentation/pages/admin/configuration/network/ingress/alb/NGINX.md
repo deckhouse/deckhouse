@@ -2,7 +2,7 @@
 title: "ALB with Ingress NGINX Controller"
 permalink: en/admin/configuration/network/ingress/alb/nginx.html
 description: "Configure Application Load Balancer with Ingress NGINX Controller in Deckhouse Kubernetes Platform. High availability setup, SSL termination, and traffic routing configuration."
-extractedLinksMax: 2
+extractedLinksMax: 4
 relatedLinks:
   - title: "ingress-nginx module documentation"
     url: /modules/ingress-nginx/
@@ -21,7 +21,7 @@ The [`ingress-nginx`](/modules/ingress-nginx/) module is used to implement ALB u
 {% alert level="info" %}
 In 2025, Ingress NGINX was [placed](https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/) in maintenance mode, with no plans for active development of new features. Further evolution of inbound traffic load balancing in Kubernetes is focused on the [Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/).
 
-This does not apply to the module as part of Deckhouse Kubernetes Platform (DKP): the module is maintained by the Deckhouse team, including security updates. For details, see [Module support and security](#module-support-and-security).
+This does not apply to the module as part of Deckhouse Kubernetes Platform (DKP): the module is maintained by the DKP team, including security updates. Details are in ["Module support and security"](#module-support-and-security).
 {% endalert %}
 
 The `ingress-nginx` module installs the Ingress NGINX Controller and manages it with custom resources.
@@ -59,10 +59,9 @@ Thus, it can get SSL certificates automatically and pass them to Ingress NGINX c
 
 ## Monitoring and statistics
 
-The current `ingress-nginx` implementation has a Prometheus-based system for collecting statistical data.
-It uses a variety of metrics based on:
+The current `ingress-nginx` implementation has a Prometheus-based system for collecting statistical data with the following set of metrics:
 
-- The overall and upstream response time
+- Total response time and backend response time separately
 - Response codes
 - Number of repeated requests (retries)
 - Request and response sizes
@@ -77,7 +76,7 @@ The data can be grouped by the:
 - `ingress` resources
 - `location` (in nginx)
 
-All graphs are grouped by Grafana dashboards. Also, you can do a drill-down for any graph:
+All graphs are grouped by Grafana dashboards. From any graph you can open a more detailed view:
 for example, from a `namespace` statistics view, you can click through to the corresponding `vhost` dashboard for more detail,
 and continue down the hierarchy.
 
@@ -156,7 +155,7 @@ spec:
 
 ### Example for GCP, Yandex Cloud, and Azure
 
-Example IngressNginxController with the [`LoadBalancer`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-loadbalancer) inlet:
+IngressNginxController with the [`LoadBalancer`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-loadbalancer) inlet:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -174,6 +173,8 @@ In GCP, nodes must have an annotation allowing external connections for NodePort
 
 ### Example for OpenStack
 
+IngressNginxController with the [`LoadBalancerWithProxyProtocol`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-loadbalancerwithproxyprotocol) inlet and OpenStack Proxy Protocol annotations:
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
@@ -190,7 +191,7 @@ spec:
 
 ### Example for VK Cloud
 
-The following example is relevant when the internal balancer would be used.
+Use this configuration for an internal cloud balancer (without a public address).
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -208,6 +209,8 @@ spec:
 ```
 
 ### Example for bare metal
+
+IngressNginxController with the [`HostWithFailover`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-hostwithfailover) inlet on frontend nodes:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -227,7 +230,7 @@ spec:
 
 ### Example for bare metal with external load balancer
 
-The following example is relevant when using Cloudflare, Qrator, Nginx+, Citrix ADC, Kemp or other external load balancers.
+Use this configuration with Cloudflare, Qrator, Nginx+, Citrix ADC, Kemp, or other external load balancers.
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -248,6 +251,8 @@ spec:
 {% alert level="info" %}
 Available in DKP Enterprise Edition only.
 {% endalert %}
+
+IngressNginxController with the [`LoadBalancer`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-loadbalancer) inlet for use with MetalLB in BGP mode:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -354,7 +359,7 @@ Available in DKP Enterprise Edition only.
    ```
 
    {% alert level="info" %}
-   When creating an ingress controller, you can also specify certain IP addresses from the pool that will be assigned to it. To specify the addresses that should be assigned to the service, use the annotation `network.deckhouse.io/load-balancer-ips`. If there is more than one desired address, there must also be an annotation `network.deckhouse.io/l2-load-balancer-external-ips-count`, which must specify the number of addresses allocated from the pool (it must not be less than the number of addresses listed in `network.deckhouse.io/load-balancer-ips`). [Example of using annotations](/modules/metallb/examples.html#creating-a-service-and-assigning-it-specific-ip-addresses-from-the-pool) to assign specific addresses from the pool to the service.
+   When creating an ingress controller, you can also specify certain IP addresses from the pool that will be assigned to it. To specify the addresses that should be assigned to the service, use the annotation `network.deckhouse.io/load-balancer-ips`. If there is more than one desired address, there must also be an annotation `network.deckhouse.io/l2-load-balancer-external-ips-count`, which must specify the number of addresses allocated from the pool (it must not be less than the number of addresses listed in `network.deckhouse.io/load-balancer-ips`). ["Example of using annotations"](/modules/metallb/examples.html#creating-a-service-and-assigning-it-specific-ip-addresses-from-the-pool) to assign specific addresses from the pool to the service.
    {% endalert %}
 
 DKP will create a LoadBalancer Service with the specified number of IPs:
@@ -524,4 +529,4 @@ spec:
 
 ## Module support and security
 
-The `ingress-nginx` module is covered by Deckhouse Kubernetes Platform maintenance for the entire platform support lifecycle, regardless of the upstream project's development status. The Deckhouse team tracks CVEs in the controller and its dependencies — NGINX, Lua modules, and base images — and delivers fixes in platform releases. For compliance with PCI DSS expectations regarding vendor support and vulnerability remediation timelines, Flant is the responsible vendor of the module. DKP certification with FSTEC of Russia also covers vulnerability management processes and the release of security updates.
+The `ingress-nginx` module is covered by DKP maintenance for the entire platform support lifecycle, regardless of the upstream project's development status. The DKP team tracks CVEs in the controller and its dependencies — NGINX, Lua modules, and base images — and delivers fixes in platform releases. For compliance with PCI DSS expectations regarding vendor support and vulnerability remediation timelines, Flant is the responsible vendor of the module. DKP certification with FSTEC of Russia also covers vulnerability management processes and the release of security updates.

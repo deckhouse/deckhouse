@@ -3,7 +3,7 @@ title: "ALB средствами Ingress NGINX Controller"
 permalink: ru/admin/configuration/network/ingress/alb/nginx.html
 description: "Настройка балансировщика нагрузки приложения с помощью контроллера Ingress NGINX в Deckhouse Kubernetes Platform. Настройка высокой доступности, терминация SSL и конфигурация маршрутизации трафика."
 lang: ru
-extractedLinksMax: 2
+extractedLinksMax: 4
 relatedLinks:
   - title: "Документация модуля ingress-nginx"
     url: /modules/ingress-nginx/
@@ -22,7 +22,7 @@ relatedLinks:
 {% alert level="info" %}
 В 2025 году Ingress NGINX был [переведён](https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/) в режим сопровождения без планов активного развития новых возможностей. Дальнейшее развитие средств балансировки входящего трафика в Kubernetes ориентировано на [Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/).
 
-На поддержку модуля в составе Deckhouse Kubernetes Platform (DKP) это не распространяется: модуль сопровождается командой Deckhouse, включая обновления безопасности. Подробнее — в разделе [«Поддержка и безопасность модуля»](#поддержка-и-безопасность-модуля).
+На поддержку модуля в составе Deckhouse Kubernetes Platform (DKP) это не распространяется: модуль сопровождается командой DKP, включая обновления безопасности. Подробности — в разделе [«Поддержка и безопасность модуля»](#поддержка-и-безопасность-модуля).
 {% endalert %}
 
 Модуль `ingress-nginx` устанавливает Ingress NGINX Controller и управляет им с помощью кастомных ресурсов.
@@ -56,15 +56,15 @@ relatedLinks:
 
 ## Мониторинг и статистика
 
-В этой реализации `ingress-nginx` добавлена система сбора статистики в Prometheus с множеством метрик:
+В этой реализации `ingress-nginx` добавлена система сбора статистики в Prometheus со следующим набором метрик:
 
-* по длительности времени всего ответа и апстрима отдельно;
-* кодам ответа;
-* количеству повторов запросов (retry);
-* размерам запроса и ответа;
-* методам запросов;
-* типам `content-type`;
-* географии распределения запросов и т. д.
+* длительность всего ответа и ответа бэкенда отдельно;
+* коды ответа;
+* количество повторов запросов (retry);
+* размеры запроса и ответа;
+* методы запросов;
+* типы `content-type`;
+* география распределения запросов и т. д.
 
 Данные представлены в нескольких разрезах:
 
@@ -73,7 +73,7 @@ relatedLinks:
 * `ingress`-ресурсы;
 * `location` (в nginx).
 
-Все графики сгруппированы в дашборды Grafana. Реализована возможность drill-down: например, при просмотре статистики по `namespace` можно перейти по ссылке на соответствующий дашборд и получить детализированные данные по `vhosts` в этом `namespace` — и далее по иерархии.
+Все графики сгруппированы в дашборды Grafana. С любого графика можно перейти к более детальному представлению: например, при просмотре статистики по `namespace` — на дашборд по `vhosts` в этом `namespace` и далее по иерархии.
 
 ## Статистика
 
@@ -125,7 +125,7 @@ relatedLinks:
 
 В том случае, если в зоне всего один экземпляр с Ingress-контроллером, при перезапуске пода IP-адрес балансировщика этой зоны временно исключается из DNS.
 
-Пример IngressNginxController с инлетом [`LoadBalancer`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-loadbalancer) и аннотациями AWS NLB:
+IngressNginxController с инлетом [`LoadBalancer`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-loadbalancer) и аннотациями AWS NLB:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -142,7 +142,7 @@ spec:
 
 ### Пример для GCP, Yandex Cloud и Azure
 
-Пример IngressNginxController с инлетом [`LoadBalancer`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-loadbalancer):
+IngressNginxController с инлетом [`LoadBalancer`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-loadbalancer):
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -160,6 +160,8 @@ spec:
 
 ### Пример для OpenStack
 
+IngressNginxController с инлетом [`LoadBalancerWithProxyProtocol`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-loadbalancerwithproxyprotocol) и аннотациями Proxy Protocol для OpenStack:
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
@@ -176,7 +178,7 @@ spec:
 
 ### Пример создания внутреннего балансировщика для VK Cloud
 
-Этот пример подходит, когда нужно создать балансировщик только внутри сети облака (без внешнего адреса).
+Подходит, когда нужно создать балансировщик только внутри сети облака (без внешнего адреса).
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -194,6 +196,8 @@ spec:
 ```
 
 ### Пример для bare metal
+
+IngressNginxController с инлетом [`HostWithFailover`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-hostwithfailover) на frontend-узлах:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -213,7 +217,7 @@ spec:
 
 ### Пример для bare metal при использовании внешнего балансировщика
 
-Пример подходит при использовании Cloudflare, Qrator, Nginx+, Citrix ADC, Kemp и других внешних балансировщиков.
+Подходит при использовании Cloudflare, Qrator, Nginx+, Citrix ADC, Kemp и других внешних балансировщиков.
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -234,6 +238,8 @@ spec:
 {% alert level="info" %}
 Доступно только в DKP Enterprise Edition.
 {% endalert %}
+
+IngressNginxController с инлетом [`LoadBalancer`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-loadbalancer) для использования с MetalLB в режиме BGP:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -512,4 +518,4 @@ spec:
 
 ## Поддержка и безопасность модуля
 
-Модуль `ingress-nginx` входит в сопровождение Deckhouse Kubernetes Platform на весь срок поддержки платформы, вне зависимости от режима развития upstream-проекта. Команда Deckhouse отслеживает CVE в контроллере и зависимостях — NGINX, Lua-модули, базовые образы — и поставляет исправления в релизах платформы. Для соответствия ожиданиям PCI DSS по вендорской поддержке и срокам устранения уязвимостей ответственным вендором модуля является компания «Флант». Сертификация DKP в ФСТЭК России фиксирует, в том числе, процессы управления уязвимостями и выпуск обновлений безопасности.
+Модуль `ingress-nginx` входит в сопровождение DKP на весь срок поддержки платформы, вне зависимости от режима развития upstream-проекта. Команда DKP отслеживает CVE в контроллере и зависимостях — NGINX, Lua-модули, базовые образы — и поставляет исправления в релизах платформы. Для соответствия ожиданиям PCI DSS по вендорской поддержке и срокам устранения уязвимостей ответственным вендором модуля является компания «Флант». Сертификация DKP в ФСТЭК России фиксирует, в том числе, процессы управления уязвимостями и выпуск обновлений безопасности.

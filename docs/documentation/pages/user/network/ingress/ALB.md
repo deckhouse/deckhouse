@@ -1,9 +1,17 @@
 ---
 title: "Utilizing Application Load Balancer (ALB)"
-description: "Configuring Application Load Balancer for HTTP/HTTPS/gRPC traffic in Deckhouse Kubernetes Platform. Using ingress-nginx and istio for request routing, SSL/TLS termination, and application publishing."
+description: "Configuring Application Load Balancer for HTTP/HTTPS/gRPC traffic in Deckhouse Kubernetes Platform. Using ingress-nginx, alb (Gateway API), and istio for request routing, SSL/TLS termination, and application publishing."
 permalink: en/user/network/ingress/alb.html
-extractedLinksMax: 2
+extractedLinksMax: 4
 relatedLinks:
+  - title: "ALB with Kubernetes Gateway API"
+    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html
+  - title: "ALB with Ingress NGINX Controller"
+    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/nginx.html
+  - title: "ALB with Istio"
+    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/istio.html
+  - title: "Incoming traffic balancing"
+    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/
   - title: "alb module documentation"
     url: /modules/alb/
   - title: "alb module Custom Resources"
@@ -14,15 +22,9 @@ relatedLinks:
     url: /modules/alb/faq.html
   - title: "alb module examples"
     url: /modules/alb/examples.html
-  - title: "ALB with Kubernetes Gateway API"
-    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html
-  - title: "ALB with Ingress NGINX Controller"
-    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/nginx.html
-  - title: "ALB with Istio"
-    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/istio.html
 ---
 
-Application deployment and application-level traffic balancing can be performed using the following tools:
+Application deployment and application-level traffic balancing in Deckhouse Kubernetes Platform (DKP) can be performed using the following tools:
 
 - [Ingress NGINX Controller](#publishing-applications-using-the-ingress-nginx-controller) (`ingress-nginx` module).
 - [Kubernetes Gateway API](#publishing-applications-using-the-kubernetes-gateway-api) (`alb` module).
@@ -32,7 +34,7 @@ Application deployment and application-level traffic balancing can be performed 
 
 ### Ingress-nginx
 
-ALB, powered by Ingress NGINX Controller, is based on the nginx web server and is implemented by a [`ingress-nginx`](/modules/ingress-nginx/) module.
+ALB based on the Ingress NGINX Controller uses the nginx web server and is implemented by the [`ingress-nginx`](/modules/ingress-nginx/) module.
 This option is suitable for:
 
 - Basic traffic routing based on domains or URLs.
@@ -42,7 +44,7 @@ This option is suitable for:
 
 ALB is implemented using the [Kubernetes Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/) via the [`alb`](/modules/alb/) module. Gateways run on Envoy Proxy, and reception and routing are described using standard API objects (Gateway, ListenerSet, HTTPRoute, and, if necessary, GRPCRoute, TLSRoute, TCPRoute, UDPRoute, BackendTLSPolicy). The controller deploys the necessary ingress infrastructure and validates the configuration to prevent conflicting handlers.
 
-The Gateway API model separates responsibilities between the cluster administrator (ClusterALBInstance), the namespace administrator (ALBInstance/ListenerSet), and the application team (developers who own HTTPRoute and other route objects).
+The Gateway API model separates responsibilities between the cluster administrator (ClusterALBInstance), the namespace administrator (ALBInstance and ListenerSet — hostname, TLS, ports), and application developers (HTTPRoute and other route objects).
 
 Use this option for:
 
@@ -52,21 +54,21 @@ Use this option for:
 - Per-route WAF, adding GeoIP fields to HTTP request headers, OpenTelemetry tracing, or an Istio sidecar on the gateway proxy.
 - Route parameters not included in the specification, via [`HTTPRoute` annotations](#supported-httproute-annotations).
 
-For a comparison with `ingress-nginx` and terminology notes, see ["Incoming traffic balancing"](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/).
+For a comparison with `ingress-nginx` and terminology notes, read ["Incoming traffic balancing"](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/).
 
 ### Istio
 
-An ALB based on [`istio`](/modules/istio/) module provides advanced traffic management capabilities.
+An ALB based on the [`istio`](/modules/istio/) module supports traffic management in a service mesh.
 Use an Istio-based ALB for:
 
-- Advanced routing, for example to implement [canary deployment](../canary-deployment.html).
+- Routing for [canary deployment](../canary-deployment.html) and similar scenarios.
 - Traffic distribution between application versions and microservices.
 - Mutual TLS (mTLS) for encrypting traffic between Pods.
 - Request tracing.
 
 ## Publishing applications using the Ingress NGINX Controller
 
-To publish applications, the cluster administrator must create an Ingress controller. Specify the name of this object in the Ingress resource manifest, which is used to route incoming traffic to your application.
+To publish applications, the cluster administrator must create an Ingress controller. The setup procedure is described in ["ALB with Ingress NGINX Controller"](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/nginx.html). Ask the administrator for the controller `ingressClass` name and specify it in the Ingress resource that routes traffic to your application.
 
 Example of a basic Ingress resource for publishing an application.
 
@@ -96,11 +98,13 @@ Applications can be deployed via a cluster-wide gateway (using a `ClusterALBInst
 
 ### Publishing an application through a ClusterALBInstance object
 
-This scenario assumes that the ClusterALBInstance object has already been created by an administrator and has reached the `Ready` state. The name and namespace of the managed Gateway object should be taken from the [`status`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-status) of the ClusterALBInstance object.
+This scenario assumes that the ClusterALBInstance object has already been created by a cluster administrator and has reached the `Ready` state. Ask the administrator for the name and namespace of the managed Gateway object from the ClusterALBInstance [`status`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-status).
 
-Next, create a `ListenerSet` object that will be bound to the desired gateway (using the `spec.parentRef.name` parameter) and HTTPRoute objects (routes) to route incoming requests to the application.
+The namespace administrator creates a ListenerSet attached to that Gateway (`spec.parentRef`). Application developers create HTTPRoute objects that attach to the ListenerSet. Do not attach application routes to the default `d8-http` / `d8-https` Gateway listeners — they are for service tasks; use a ListenerSet.
 
-The example below shows a ListenerSet and HTTPRoute objects for publishing an application through a cluster-wide gateway:
+Infrastructure setup (ClusterALBInstance, inlets, enabling the module) is described in ["ALB with Kubernetes Gateway API"](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html).
+
+Example of a ListenerSet and HTTPRoute for publishing an application through a cluster-wide gateway:
 
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1
@@ -114,17 +118,17 @@ spec:
     namespace: d8-alb
   listeners:
     - name: app-http
-      port: 80 # HTTP traffic always uses 80 regardless of ClusterALBInstance settings.
+      port: 80 # ListenerSet HTTP listeners use port 80. This is not the HostPort inlet httpPort on the node.
       protocol: HTTP
       hostname: app.example.com
     - name: app-https
-      port: 443 # HTTPS traffic always uses 443 regardless of ClusterALBInstance settings.
+      port: 443 # ListenerSet HTTPS listeners use port 443. This is not the HostPort inlet httpsPort on the node.
       protocol: HTTPS
       hostname: app.example.com
       tls:
         mode: Terminate
         certificateRefs:
-          - name: app-tls   # Reference to the secret with the TLS certificate.
+          - name: app-tls   # Secret with the TLS certificate (issue with cert-manager or provide manually).
             namespace: prod
 ---
 # Route for HTTP traffic
@@ -140,7 +144,7 @@ spec:
       kind: ListenerSet
       group: gateway.networking.k8s.io
       sectionName: app-http
-      port: 80 # HTTP traffic always uses 80 regardless of ClusterALBInstance settings.
+      port: 80 # ListenerSet HTTP listeners use port 80. This is not the HostPort inlet httpPort on the node.
   hostnames:
     - app.example.com
   rules:
@@ -161,7 +165,7 @@ spec:
       kind: ListenerSet
       group: gateway.networking.k8s.io
       sectionName: app-https
-      port: 443 # HTTPS traffic always uses 443 regardless of ClusterALBInstance settings.
+      port: 443 # ListenerSet HTTPS listeners use port 443. This is not the HostPort inlet httpsPort on the node.
   hostnames:
     - app.example.com
   rules:
@@ -170,9 +174,9 @@ spec:
           port: 8080
 ```
 
-### Publishing an application through a ALBInstance object
+### Publishing an application through an ALBInstance object
 
-In this scenario, the ALBInstance object, the Gateway object, the ListenerSet object, and the HTTPRoute object live in the same namespace.
+In this scenario, the ALBInstance object, the Gateway object, the ListenerSet object, and the HTTPRoute object live in the same namespace. Creating ALBInstance requires namespace-administrator permissions; HostPort inlet is not available for ALBInstance (only LoadBalancer).
 
 To publish an application using the ALBInstance object, follow these steps:
 
@@ -248,7 +252,7 @@ metadata:
   namespace: prod
 spec:
   parentRef:
-    name: app-gw # The name of the Gateway object from the ClusterALBInstance.
+    name: app-gw # The name of the Gateway object from the ALBInstance status.
     namespace: prod
   listeners:
     - name: grpc-https
@@ -311,7 +315,7 @@ metadata:
   namespace: prod
 spec:
   parentRef:
-    name: app-gw # The name of the Gateway object from the ClusterALBInstance.
+    name: app-gw # The name of the Gateway object from the ALBInstance status.
     namespace: prod
   listeners:
     - name: tls-pass
@@ -321,7 +325,7 @@ spec:
       tls:
         mode: Passthrough  # TLS passthrough mode is set explicitly.
 ---
-apiVersion: gateway.networking.k8s.io/v1alpha3
+apiVersion: gateway.networking.k8s.io/v1
 kind: TLSRoute
 metadata:
   name: tls-pass-route
@@ -352,7 +356,7 @@ metadata:
   namespace: prod
 spec:
   parentRef:
-    name: app-gw # The name of the Gateway object from the ClusterALBInstance.
+    name: app-gw # The name of the Gateway object from the ALBInstance status.
     namespace: prod
   listeners:
     - name: https-pass
@@ -362,7 +366,7 @@ spec:
       tls:
         mode: Passthrough  # TLS passthrough mode is set explicitly.
 ---
-apiVersion: gateway.networking.k8s.io/v1alpha3
+apiVersion: gateway.networking.k8s.io/v1
 kind: TLSRoute
 metadata:
   name: https-pass-route
@@ -393,7 +397,7 @@ metadata:
   namespace: prod
 spec:
   parentRef:
-    name: app-gw # The name of the Gateway object from the ClusterALBInstance.
+    name: app-gw # The name of the Gateway object from the ALBInstance status.
     namespace: prod
   listeners:
     - name: tls-term
@@ -646,7 +650,9 @@ spec:
 
 If OpenTelemetry tracing must send data over TLS, create a Kubernetes Secret with the CA certificate and reference it from `spec.openTelemetry.tracing.tls.caSecretName`.
 
-For ClusterALBInstance and the default Deckhouse gateway, place the Secret in the `d8-alb` namespace. The Secret must contain the `cacert` key.
+For ClusterALBInstance and the default DKP gateway, place the Secret in the `d8-alb` namespace.
+For ALBInstance, place the Secret in the same namespace as the ALBInstance object.
+The Secret must contain the `cacert` key.
 
 ```yaml
 apiVersion: v1
@@ -682,7 +688,7 @@ spec:
 
 ### Supported HTTPRoute annotations {#supported-httproute-annotations}
 
-Because the current Gateway API specification does not yet cover all features required for a Deckhouse cluster to operate properly, the module provides a gradually growing set of HTTPRoute object annotations that adds the missing configuration options. The controller reads these keys from `HTTPRoute.metadata.annotations`.
+Because the current Gateway API specification does not yet cover all features required for a DKP cluster to operate properly, the module provides a gradually growing set of HTTPRoute object annotations that adds the missing configuration options. The controller reads these keys from `HTTPRoute.metadata.annotations`.
 
 | Annotation | Description |
 | :--- | :--- |
@@ -711,6 +717,8 @@ When the Istio sidecar is enabled for the gateway proxy through the [`istioSidec
 
 - Add the `alb.network.deckhouse.io/service-upstream: "true"` annotation so that traffic goes through the Service object instead of directly to pods. This is the equivalent of the `ingress-nginx` `nginx.ingress.kubernetes.io/service-upstream: "true"` annotation.
 - Add a `URLRewrite` filter that sets `hostname` to the FQDN of the backend Service object. This replaces the `ingress-nginx` `nginx.ingress.kubernetes.io/upstream-vhost` annotation.
+
+Example of an HTTPRoute configured for a gateway with an Istio sidecar:
 
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1
@@ -966,7 +974,7 @@ spec:
 
 GeoIP databases are updated once per day, both on the caching server and in each individual Envoy Proxy pod using the caching server.
 
-For PVC settings used by GeoIP components, see the [`storageClass`](/modules/alb/configuration.html#parameters-storageclass) module parameter.
+PVC settings for GeoIP components are controlled by the [`storageClass`](/modules/alb/configuration.html#parameters-storageclass) module parameter.
 
 ### OpenTelemetry Tracing Configuration {#tracing}
 
@@ -985,14 +993,16 @@ When using TLS, it is recommended to explicitly set the [`sni`](/modules/alb/cr.
 
 ## Publishing applications using Istio
 
+Application publishing with Istio is configured in two layers: the cluster administrator deploys the IngressIstioController (and related infrastructure) as described in ["ALB with Istio"](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/istio.html); application developers create Gateway and VirtualService resources as shown below.
+
 When deploying an application using Istio, you can choose one of the following options:
 
-- [Using NGINX Ingress](#publishing-applications-using-nginx-ingress).
-- [Use Istio Ingress Gateway](#publishing-applications-using-istio-ingress-gateway-resource).
+- ["Using NGINX Ingress"](#publishing-applications-using-nginx-ingress).
+- ["Publishing applications using Istio Ingress Gateway resource"](#publishing-applications-using-istio-ingress-gateway-resource).
 
 ### Publishing applications using NGINX Ingress
 
-To publish an application using NGINX Ingress, the Deckhouse Kubernetes Platform administrator must configure the Ingress controller by adding an Istio sidecar to it.
+To publish an application using NGINX Ingress, the DKP administrator must configure the Ingress controller by adding an Istio sidecar to it.
 
 To publish an application, prepare an Ingress resource that references a Service.
 Required annotations for the Ingress resource:
@@ -1051,7 +1061,7 @@ spec:
 
 ## Publishing applications using Istio Ingress Gateway resource
 
-To publish an application using the Istio Ingress Gateway, the Deckhouse Kubernetes Platform administrator must create an IngressIstioController resource.
+To publish an application using the Istio Ingress Gateway, the DKP administrator must create an IngressIstioController resource.
 
 To publish an application using the Istio Ingress Gateway resource:
 
@@ -1092,7 +1102,7 @@ To publish an application using the Istio Ingress Gateway resource:
 1. Define routing rules using a VirtualService that links the gateway to the service it serves:
 
    ```yaml
-   apiVersion: networking.istio.io/v1alpha3
+   apiVersion: networking.istio.io/v1beta1
    kind: VirtualService
    metadata:
      name: vs-app
@@ -1109,5 +1119,7 @@ To publish an application using the Istio Ingress Gateway resource:
 
 ## gRPC load balancing
 
-For automatic gRPC service load balancing to work,
+This section applies to gRPC publishing through the Ingress NGINX Controller (`ingress-nginx`). For Gateway API, use [GRPCRoute](#grpcroute-tlsroute-tcproute-and-udproute-objects).
+
+For automatic gRPC service load balancing behind Ingress NGINX to work,
 assign a name with the prefix or value `grpc` to the port in the corresponding Service object.

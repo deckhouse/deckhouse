@@ -2,39 +2,43 @@
 title: "ALB with Kubernetes Gateway API"
 permalink: en/admin/configuration/network/ingress/alb/alb-gateway-api.html
 description: "Publishing applications using the Kubernetes Gateway API."
-extractedLinksMax: 2
+extractedLinksMax: 4
 relatedLinks:
   - title: "alb module documentation"
     url: /modules/alb/
-  - title: "alb module Custom Resources"
-    url: /modules/alb/cr.html
   - title: "alb module configuration"
     url: /modules/alb/configuration.html
+  - title: "alb module Custom Resources"
+    url: /modules/alb/cr.html
+  - title: "Utilizing Application Load Balancer (ALB)"
+    url: /products/kubernetes-platform/documentation/v1/user/network/ingress/alb.html
+  - title: "Incoming traffic balancing"
+    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/
   - title: "alb module FAQ"
     url: /modules/alb/faq.html
   - title: "alb module examples"
     url: /modules/alb/examples.html
-  - title: "Utilizing Application Load Balancer (ALB)"
-    url: /products/kubernetes-platform/documentation/v1/user/network/ingress/alb.html
+  - title: "cert-manager module documentation"
+    url: /modules/cert-manager/
 ---
 
 To implement ALB using the [Kubernetes Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/), the [`alb`](/modules/alb/) module is used.
 
 The `alb` module implements an Application Load Balancer (ALB) and allows you to publish applications through Kubernetes Gateway API. It deploys and configures the infrastructure for receiving and routing external requests, and also verifies the user configuration of the Gateway API.
 
-The module is built on the Kubernetes Gateway API — a specification for inbound traffic routing that extends the Ingress API. It provides:
+The module is built on the Kubernetes Gateway API — an API for inbound traffic routing that extends the Ingress API model. It supports:
 
 - A single declarative API for HTTP/HTTPS, gRPC, TCP, UDP, and TLS passthrough;
-- A separation of responsibilities between the cluster administrator (ClusterALBInstance), the namespace administrator (ALBInstance/ListenerSet), and the application team (routes);
-- Extended request-handling capabilities: per-route WAF, external authentication, IP allowlists, rate limiting, session affinity, GeoIP, BackendTLSPolicy, Proxy Protocol, and HTTP/3.
+- A separation of responsibilities between the cluster administrator (ClusterALBInstance), the namespace administrator (ALBInstance and ListenerSet — hostname, TLS, ports), and application developers (routes);
+- Request-handling features: per-route WAF, external authentication, IP allowlists, rate limiting, session affinity, GeoIP, BackendTLSPolicy, Proxy Protocol, and HTTP/3.
 
 Kubernetes Gateway API and an API gateway serve different purposes. The Kubernetes Gateway API is a set of Kubernetes resources that describe how inbound traffic is routed to services. An API gateway is an architectural component that aggregates application APIs behind a single entry point. The `alb` module is an implementation of the Kubernetes Gateway API.
 
-For a capability comparison with `ingress-nginx`, see the ["Incoming traffic balancing"](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/#comparison-of-the-ingress-nginx-and-alb-modules) section.
+For a capability comparison with `ingress-nginx`, open the ["Incoming traffic balancing"](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/#comparison-of-the-ingress-nginx-and-alb-modules) section.
 
 {% alert level="info" %}
 ALBs created using the Kubernetes Gateway API can be used in a cluster alongside ALBs created using the Ingress NGINX Controller.
-For more information, see the section [Using with other modules and third-party solutions](#using-with-other-modules-and-third-party-solutions).
+Details are in ["Using with other modules and third-party solutions"](#using-with-other-modules-and-third-party-solutions).
 {% endalert %}
 
 ## Validating Gateway API configuration
@@ -43,10 +47,24 @@ In addition to Gateway API infrastructure configuration, the `alb` module valida
 
 ## Steps to take before enabling and configuring ALB in a cluster
 
-Before enabling and configuring ALB in a Deckhouse Kubernetes Platform (DKP) cluster, do the following:
+The `alb` module is in Preview and is available starting with Deckhouse Kubernetes Platform (DKP) 1.76. Module parameters are in [`configuration.html`](/modules/alb/configuration.html).
 
-- Set the global parameter [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) if you plan to [publish service domains](#publishing-service-domains) ([web interfaces for DKP service components](/products/kubernetes-platform/documentation/v1/user/web/ui.html) and other modules). Without this parameter, HTTPRoute, Gateway, and ListenerSet system objects are created incorrectly, and web interfaces of DKP service components and other modules are not published.
-- [Check compatibility](#using-third-party-gateway-api-solutions) between the API versions of third-party Gateway API objects and the versions required by the `alb` module controller if such solutions are already used in the cluster.
+Before enabling and configuring ALB in a DKP cluster, do the following:
+
+- Enable the `alb` module:
+
+  ```yaml
+  apiVersion: deckhouse.io/v1alpha1
+  kind: ModuleConfig
+  metadata:
+    name: alb
+  spec:
+    enabled: true
+  ```
+
+- Set the global parameter [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) if you plan to use ["Publishing service domains"](#publishing-service-domains) ([web interfaces for DKP service components](/products/kubernetes-platform/documentation/v1/user/web/ui.html) and other modules). Without this parameter, HTTPRoute, Gateway, and ListenerSet system objects are created incorrectly, and web interfaces of DKP service components and other modules are not published.
+- Check API version compatibility in ["Using third-party Gateway API solutions"](#using-third-party-gateway-api-solutions) if such solutions are already used in the cluster.
+- On bare metal, for the [`LoadBalancer`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-loadbalancer) inlet prepare an external load balancer or the [`metallb`](/modules/metallb/) module. The [`HostPort`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-hostport) inlet is available for ClusterALBInstance only and does not require MetalLB.
 
 ## Using with other modules and third-party solutions
 
@@ -54,7 +72,7 @@ ALBs implemented using the Kubernetes Gateway API in a DKP cluster can be used i
 
 ### Using with ALB based on the Ingress NGINX Controller
 
-ALBs implemented using the Kubernetes Gateway API can run in a cluster alongside [ALBs based on the Ingress NGINX Controller](nginx.html). In that case, use a separate ClusterIssuer object for each ALB type so that certificate settings and lifecycles are managed independently.
+ALBs implemented using the Kubernetes Gateway API can run in a cluster alongside ["ALB with Ingress NGINX Controller"](nginx.html). In that case, use a separate ClusterIssuer object for each ALB type so that certificate settings and lifecycles are managed independently. The same external hostname must not be served by both ALBs at once without an explicit split at the DNS or external load balancer layer.
 
 {% alert level="info" %}
 For the DKP gateway, a ClusterIssuer object is automatically created by default. This same ClusterIssuer object is used to issue certificates for system domains.
@@ -111,9 +129,9 @@ Otherwise, the module only configures and manages Gateway objects associated wit
 
 The process of publishing an application includes the following steps:
 
-1. [Create a Gateway object](#creating-a-gateway-object) using the [ClusterALBInstance](/modules/alb/cr.html#clusteralbinstance) resource (cluster-scoped) or the [ALBInstance](/modules/alb/cr.html#albinstance) resource (namespaced).
-1. [Create a ListenerSet object](#creating-listenerset-objects-to-manage-the-handling-of-incoming-requests) (manages the reception of incoming requests), which is bound to the Gateway object created in the previous step.
-1. [Create objects (routes)](#creating-routes-and-configuring-routing) to route incoming requests to the application. HTTPRoute, GRPCRoute, and TLSRoute objects are attached to the ListenerSet. TCPRoute and UDPRoute for TCP/UDP ports from [`additionalPorts`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-additionalports) are attached directly to the Gateway listener.
+1. ["Create a Gateway object"](#creating-a-gateway-object) using the [ClusterALBInstance](/modules/alb/cr.html#clusteralbinstance) resource (cluster-scoped) or the [ALBInstance](/modules/alb/cr.html#albinstance) resource (namespaced).
+1. ["Create a ListenerSet object"](#creating-listenerset-objects-to-manage-the-handling-of-incoming-requests) (manages the reception of incoming requests), which is bound to the Gateway object created in the previous step.
+1. ["Create objects (routes)"](#creating-routes-and-configuring-routing) to route incoming requests to the application. HTTPRoute, GRPCRoute, and TLSRoute objects are attached to the ListenerSet. TCPRoute and UDPRoute for TCP/UDP ports from [`additionalPorts`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-additionalports) are attached directly to the Gateway listener.
 
 ### Creating a Gateway object
 
@@ -124,11 +142,11 @@ The characteristics of these resources and the differences between them are desc
 | | ClusterALBInstance | ALBInstance |
 | :--- | :--- | :--- |
 | Purpose | Deploy a cluster-wide Gateway object | Deploy a local Gateway object |
-| Typical use case | - Common entry point (cluster-wide gateway).<br> - System gateway for publishing web interfaces of DKP service components and other modules (may require [cluster preparation](#steps-to-take-before-enabling-and-configuring-alb-in-a-cluster)).<br> - Platform gateway | Dedicated gateway for an application or team in a dedicated namespace |
+| Typical use case | - Common entry point (cluster-wide gateway).<br> - System gateway for publishing web interfaces of DKP service components and other modules (may require ["Steps to take before enabling and configuring ALB in a cluster"](#steps-to-take-before-enabling-and-configuring-alb-in-a-cluster)).<br> - Platform gateway | Dedicated gateway for an application or team in a dedicated namespace |
 | Supported inlet types | [`LoadBalancer`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-loadbalancer), [`HostPort`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-hostport) | [`LoadBalancer`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-loadbalancer) |
 | Proxy implementation | Envoy Proxy | Envoy Proxy |
 | Deployment type | DaemonSet | Deployment |
-| Placement of ListenerSet objects and routes | In any user namespace | In the same namespace as the ALBInstance object |
+| Placement of ListenerSet objects and routes | In any user namespace | In the same namespace as the ALBInstance object (required) |
 | Access level | Cluster administrator | Namespace administrator |
 
 Creating a ClusterALBInstance object or an ALBInstance object results in creation of a managed Gateway object in the cluster. At the same time:
@@ -155,7 +173,7 @@ spec:
     type: LoadBalancer
 ```
 
-An example of an ALBInstance resource manifest for creating a separate gateway for an application or a team in a dedicated namespace is provided in [Publishing an application through an ALBInstance object](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb.html#publishing-an-application-through-a-albinstance-object).
+An example of an ALBInstance resource manifest for creating a separate gateway for an application or a team in a dedicated namespace is provided in ["Publishing an application through an ALBInstance object"](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb.html#publishing-an-application-through-a-albinstance-object).
 
 ### Creating ListenerSet objects to manage the handling of incoming requests
 
@@ -164,9 +182,13 @@ The ListenerSet object describes system and user traffic handlers that define ho
 Placement of ListenerSet objects depends on the type of Gateway object in use:
 
 - For ClusterALBInstance, ListenerSet objects may be placed in any namespace;
-- For ALBInstance, ListenerSet objects are recommended to be placed in the same namespace.
+- For ALBInstance, ListenerSet objects **must** be placed in the same namespace as the parent ALBInstance.
 
-In both cases, it is recommended to place the ListenerSet object in the same namespace as the HTTPRoute, GRPCRoute, and TLSRoute objects attached to it. This improves configuration readability and helps avoid additional setup such as ReferenceGrant objects. TCPRoute and UDPRoute for TCP/UDP ports from [`additionalPorts`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-additionalports) are attached directly to the Gateway listener.
+In both cases, place the ListenerSet object in the same namespace as the HTTPRoute, GRPCRoute, and TLSRoute objects attached to it when possible. This improves configuration readability and helps avoid additional setup such as ReferenceGrant objects.
+
+In ListenerSet, use ports `80` and `443` for HTTP/HTTPS. These are Gateway API listener ports; they are not the same as the HostPort inlet [`httpPort`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-hostport-httpport) / [`httpsPort`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-hostport-httpsport) parameters, which set ports on the node.
+
+TCPRoute and UDPRoute for TCP/UDP ports from [`additionalPorts`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-additionalports) are attached directly to the Gateway listener.
 
 An example of a ListenerSet resource manifest for managing the reception of incoming HTTP and HTTPS requests through a cluster-wide gateway:
 
@@ -182,11 +204,11 @@ spec:
     namespace: d8-alb
   listeners:
     - name: app-http
-      port: 80 # HTTP traffic always uses 80 regardless of ClusterALBInstance settings.
+      port: 80 # In ListenerSet, use port 80 for HTTP. This is not the HostPort inlet httpPort on the node.
       protocol: HTTP
       hostname: app.example.com
     - name: app-https
-      port: 443 # HTTPS traffic always uses 443 regardless of ClusterALBInstance settings.
+      port: 443 # In ListenerSet, use port 443 for HTTPS. This is not the HostPort inlet httpsPort on the node.
       protocol: HTTPS
       hostname: app.example.com
       tls:
@@ -348,7 +370,7 @@ spec:
 If a TCPRoute or UDPRoute object is created in a namespace different from the Gateway object namespace, a corresponding ReferenceGrant object must be created.
 {% endalert %}
 
-[UDPRoute examples and application publishing steps](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb.html#grpcroute-tlsroute-tcproute-and-udproute-objects) are in the user documentation.
+["UDPRoute examples and application publishing steps"](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb.html#grpcroute-tlsroute-tcproute-and-udproute-objects) are in ["Utilizing Application Load Balancer (ALB)"](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb.html).
 
 ## Port conflicts when using multiple ClusterALBInstance/ALBInstance objects for a single Gateway {#conflicts}
 
@@ -507,9 +529,11 @@ spec:
     - 10.0.0.0/16
 ```
 
-Then create separate ListenerSet objects and routes for each gateway. Application publishing examples: [Utilizing Application Load Balancer (ALB)](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb.html).
+Then create separate ListenerSet objects and routes for each gateway. Application publishing examples are in ["Utilizing Application Load Balancer (ALB)"](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb.html).
 
 ### Namespaced publishing (ALBInstance) {#namespaced-load-balancer}
+
+Example of a minimal working ALBInstance configuration for publishing a gateway in a namespace:
 
 ```yaml
 apiVersion: network.deckhouse.io/v1alpha1
@@ -525,6 +549,51 @@ spec:
 ```
 
 After the ALBInstance reaches the `Ready` state, create ListenerSet and HTTPRoute objects in the same namespace. Next steps are in the ["Publishing an application through an ALBInstance object"](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb.html#publishing-an-application-through-a-albinstance-object) section.
+
+## Issuing TLS certificates with cert-manager {#tls-cert-manager}
+
+The `alb` module works with [`cert-manager`](/modules/cert-manager/). The `d8-http` / `d8-https` listeners are used for HTTP-01 challenges; for applications, issue a certificate into a Secret and reference it from `certificateRefs` in the ListenerSet.
+
+Minimal Certificate example that creates the `app-tls` Secret for a ListenerSet:
+
+```yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: app-tls
+  namespace: prod
+spec:
+  secretName: app-tls
+  issuerRef:
+    name: letsencrypt
+    kind: ClusterIssuer
+  dnsNames:
+    - app.example.com
+```
+
+Certificate issuance is described in the ["cert-manager module documentation"](/modules/cert-manager/). When running alongside `ingress-nginx`, use a separate ClusterIssuer for each ALB type.
+
+## Verification and common questions {#verification-and-common-questions}
+
+These steps do not duplicate the ["alb module FAQ"](/modules/alb/faq.html): below is how to verify gateway readiness and answers to common first-setup questions.
+
+- Ready and status — After creating a ClusterALBInstance or ALBInstance, wait for the `Ready` state and take the Gateway name and namespace from `status`. Field descriptions are in [ClusterALBInstance status](/modules/alb/cr.html#clusteralbinstance-v1alpha1-status) and [ALBInstance status](/modules/alb/cr.html#albinstance-v1alpha1-status):
+
+  ```bash
+  d8 k get clusteralbinstance
+  d8 k -n <namespace> get albinstance
+  d8 k -n d8-alb get gateway
+  ```
+
+- EXTERNAL-IP and DNS — With the LoadBalancer inlet, get the address from the load balancer Service (usually in the `d8-alb` namespace) and point DNS for the ListenerSet hostname to it:
+
+  ```bash
+  d8 k -n d8-alb get svc
+  ```
+
+- Same hostname with ingress-nginx — The `alb` and `ingress-nginx` modules can run in the same cluster, but the same external hostname must not be served by both ALBs at once without an explicit split at the DNS or external load balancer layer.
+
+- ListenerSet conflict — If two ListenerSet objects with identical handlers point to the same Gateway, the controller rejects the conflicting configuration. Change the hostname, port, or protocol, or remove the duplicate ListenerSet.
 
 ## Viewing Envoy Proxy Configuration {#envoy-config}
 
