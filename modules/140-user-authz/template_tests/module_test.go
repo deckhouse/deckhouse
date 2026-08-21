@@ -615,4 +615,30 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 		})
 	})
 
+	Context("RBACv2 manage permission roles", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global.enabledModules", `["operator-prometheus", "operator-prometheus-crd"]`)
+			f.ValuesSet("global.deckhouseEdition", "EE")
+			f.HelmRender()
+		})
+
+		It("view_resources should not grant any node subresource", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			cr := f.KubernetesGlobalResource("ClusterRole", "d8:manage:permission:subsystem:kubernetes:view_resources")
+			Expect(cr.Exists()).To(BeTrue())
+
+			rules := cr.Field("rules").String()
+			// nodes/proxy is a raw passthrough to the privileged kubelet API: it allows running
+			// commands in any container on the node regardless of pods/exec permissions, and
+			// nodes/log allows reading arbitrary files under /var/log. Neither belongs in a role
+			// that aggregates into viewer. Upstream keeps them in system:kubelet-api-admin only.
+			Expect(rules).To(ContainSubstring(`"nodes"`))
+			Expect(rules).NotTo(ContainSubstring("nodes/proxy"))
+			Expect(rules).NotTo(ContainSubstring("nodes/log"))
+			Expect(rules).NotTo(ContainSubstring("nodes/metrics"))
+			Expect(rules).NotTo(ContainSubstring("nodes/stats"))
+		})
+	})
+
 })
