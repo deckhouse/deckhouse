@@ -279,6 +279,7 @@ func (b *ClusterBootstrapper) buildImmutableMasterPayload(ctx context.Context, b
 			CandiDir:      b.Options.Global.CandiDir,
 			GlobalOptions: &b.Options.Global,
 			Customization: immutableCustomization(bctx, nodeName),
+			NodeIP:        immutableNodeAddress(bctx, nodeName),
 		})
 		return err
 	})
@@ -295,6 +296,18 @@ func immutableCustomization(bctx *bootstrapContext, nodeName string) *immutable.
 		return nil
 	}
 	return &described
+}
+
+// immutableNodeAddress is where the machine answers once it has installed
+// itself: the address dhctl configures it at, unless its document moves it to a
+// static one. Empty in a cloud, where the machine does not exist yet and only it
+// can tell which of its networks the cluster is on.
+func immutableNodeAddress(bctx *bootstrapContext, nodeName string) string {
+	address := bctx.immutable.hosts[nodeName]
+	if address == "" {
+		return ""
+	}
+	return immutableCustomization(bctx, nodeName).AddressAfterInstall(address)
 }
 
 // bootstrapImmutableFirstMaster hands the machine the cluster starts on its
@@ -317,7 +330,7 @@ func (b *ClusterBootstrapper) bootstrapImmutableFirstMaster(ctx context.Context,
 
 	// The machine is configured at one address and, when its document gives it a
 	// static one, answers at another from the moment it has installed itself.
-	installedAddress := immutableCustomization(bctx, nodeName).AddressAfterInstall(address)
+	installedAddress := immutableNodeAddress(bctx, nodeName)
 	if installedAddress != address {
 		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf(
 			"%s takes the static address %s its document assigns it; everything after the push goes there, not to %s",
@@ -394,7 +407,8 @@ func (b *ClusterBootstrapper) handImmutableJoinPayload(ctx context.Context, bctx
 		return nil
 	}
 
-	payload, nodeConfig, err := buildImmutableJoinPayload(ctx, kubeCl, bctx.metaConfig, nodeName, immutableCustomization(bctx, nodeName))
+	payload, nodeConfig, err := buildImmutableJoinPayload(ctx, kubeCl, bctx.metaConfig, nodeName,
+		immutableCustomization(bctx, nodeName), immutableNodeAddress(bctx, nodeName))
 	if err != nil {
 		return err
 	}

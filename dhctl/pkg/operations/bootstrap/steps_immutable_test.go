@@ -1137,7 +1137,7 @@ func TestBuildImmutableJoinPayloadWaitsForTheBootstrapToken(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
 	defer cancel()
 
-	payload, nodeConfigDocument, err := buildImmutableJoinPayload(ctx, kubeCl, immutabletest.MetaConfig(t), "example-master-1", nil)
+	payload, nodeConfigDocument, err := buildImmutableJoinPayload(ctx, kubeCl, immutabletest.MetaConfig(t), "example-master-1", nil, "")
 	require.NoError(t, err, "a token that is not published yet is what the wait exists for")
 
 	document, err := base64.StdEncoding.DecodeString(payload)

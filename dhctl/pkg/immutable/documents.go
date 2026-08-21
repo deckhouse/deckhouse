@@ -46,6 +46,9 @@ type MasterPayloadInput struct {
 	// Customization is what the operator said about this machine, nil when the
 	// bootstrap was given no document for it.
 	Customization *Customization
+	// NodeIP is the address dhctl reaches this machine at, and empty in a cloud,
+	// where it does not exist yet.
+	NodeIP string
 }
 
 // BuildMasterPayload renders the documents the first master boots with: the node
@@ -62,6 +65,7 @@ func BuildMasterPayload(ctx context.Context, in MasterPayloadInput) (string, []b
 	if in.Customization != nil {
 		applyCustomization(&nodeConfig.Spec, *in.Customization)
 	}
+	defaultNodeIP(&nodeConfig.Spec, in.NodeIP)
 
 	controlPlaneConfig, err := buildControlPlaneConfig(ctx, in)
 	if err != nil {
@@ -92,6 +96,9 @@ type JoinPayloadInput struct {
 	// Customization is what the operator said about this machine, nil when the
 	// bootstrap was given no document for it.
 	Customization *Customization
+	// NodeIP is the address dhctl reaches this machine at, and empty in a cloud,
+	// where it does not exist yet.
+	NodeIP string
 }
 
 // BuildJoinPayload renders the documents an additional master boots with: the
@@ -122,6 +129,7 @@ func BuildJoinPayload(ctx context.Context, in JoinPayloadInput) (string, []byte,
 	if in.Customization != nil {
 		applyCustomization(&nodeConfig.Spec, *in.Customization)
 	}
+	defaultNodeIP(&nodeConfig.Spec, in.NodeIP)
 
 	document, nodeConfigYAML, err := buildPayload(in.MetaConfig, nodeConfig, nil)
 	if err != nil {

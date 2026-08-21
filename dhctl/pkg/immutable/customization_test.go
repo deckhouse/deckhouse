@@ -370,6 +370,66 @@ func TestCustomizationReachesTheJoinPayload(t *testing.T) {
 	require.Contains(t, string(decoded), "nodeIP: 10.0.0.12")
 }
 
+// The address dhctl configures a machine at is the address the cluster reaches
+// it on, and the one its PKI is issued for. Left out of the payload, the node
+// registers with whatever interface carries its default route — on a machine
+// with two networks that is a coin toss, and the etcd of the masters that lose
+// it never joins.
+func TestThePushAddressBecomesTheNodeIP(t *testing.T) {
+	globalOptions := options.NewGlobalOptions()
+	master, _, err := BuildMasterPayload(t.Context(), MasterPayloadInput{
+		NodeName:      "example-master-0",
+		MetaConfig:    testMetaConfig(t),
+		StateCache:    cache.NewTestCache(),
+		CandiDir:      testCandiDir(t),
+		GlobalOptions: &globalOptions,
+		NodeIP:        "10.0.0.11",
+	})
+	require.NoError(t, err)
+	decoded, err := base64.StdEncoding.DecodeString(master)
+	require.NoError(t, err)
+	require.Contains(t, string(decoded), "nodeIP: 10.0.0.11")
+
+	join, _, err := BuildJoinPayload(t.Context(), JoinPayloadInput{
+		NodeName:           "master-1",
+		MetaConfig:         testMetaConfig(t),
+		CACert:             "dGVzdC1jYQ==",
+		BootstrapToken:     "abcdef.0123456789abcdef",
+		APIServerEndpoints: []string{"https://10.0.0.11:6443"},
+		NodeIP:             "10.0.0.12",
+	})
+	require.NoError(t, err)
+	decoded, err = base64.StdEncoding.DecodeString(join)
+	require.NoError(t, err)
+	require.Contains(t, string(decoded), "nodeIP: 10.0.0.12")
+}
+
+// The operator's document is the one place that knows a machine answers
+// somewhere other than where it was configured.
+func TestTheDocumentsNodeIPBeatsThePushAddress(t *testing.T) {
+	parsed, err := ParseCustomizations(t.Context(), []string{nodeConfigFor("master-1", `
+  kubelet:
+    nodeIP: 10.0.0.12
+`)})
+	require.NoError(t, err)
+
+	payload, _, err := BuildJoinPayload(t.Context(), JoinPayloadInput{
+		NodeName:           "master-1",
+		MetaConfig:         testMetaConfig(t),
+		CACert:             "dGVzdC1jYQ==",
+		BootstrapToken:     "abcdef.0123456789abcdef",
+		APIServerEndpoints: []string{"https://10.0.0.11:6443"},
+		Customization:      &parsed[0],
+		NodeIP:             "192.168.0.59",
+	})
+	require.NoError(t, err)
+
+	decoded, err := base64.StdEncoding.DecodeString(payload)
+	require.NoError(t, err)
+	require.Contains(t, string(decoded), "nodeIP: 10.0.0.12")
+	require.NotContains(t, string(decoded), "192.168.0.59")
+}
+
 func TestCustomizationRefusesAnotherKind(t *testing.T) {
 	document := `
 apiVersion: deckhouse.io/v1

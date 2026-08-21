@@ -1403,7 +1403,8 @@ func (b *ClusterBootstrapper) bootstrapAdditionalNodes(ctx context.Context, bctx
 		// Nothing describes a machine in a cloud — the documents are refused there — so the
 		// customization this passes is always nil here.
 		buildPayload = func(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, nodeName string) (string, error) {
-			payload, _, err := buildImmutableJoinPayload(ctx, kubeCl, metaConfig, nodeName, immutableCustomization(bctx, nodeName))
+			payload, _, err := buildImmutableJoinPayload(ctx, kubeCl, metaConfig, nodeName,
+				immutableCustomization(bctx, nodeName), immutableNodeAddress(bctx, nodeName))
 			return payload, err
 		}
 	}
