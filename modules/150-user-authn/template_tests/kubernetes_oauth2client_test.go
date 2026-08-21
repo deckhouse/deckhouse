@@ -64,8 +64,10 @@ var _ = Describe("Module :: user-authn :: helm template :: kubernetes oauth2clie
     appDexSecret: dexSecret
     cookieSecret: cookieSecret
   spec:
-    applicationDomain: authenticator.example.com
-    applicationIngressCertificateSecretName: test
+    applications:
+    - domain: authenticator.example.com
+      ingressClassName: nginx
+      ingressSecretName: test
 `)
 			hec.ValuesSetFromYaml("userAuthn.internal.dexAuthenticatorNames", `
 "test@d8-test":
@@ -75,13 +77,31 @@ var _ = Describe("Module :: user-authn :: helm template :: kubernetes oauth2clie
   secretName: "dex-authenticator-test"
   secretTruncated: false
   secretHash: ""
-  ingressNames: {}
+  ingressNames:
+    "0":
+      name: "test-dex-authenticator"
+      truncated: false
+      hash: ""
 `)
 			hec.HelmRender()
 		})
-		It("Should deploy kubernetes OAuth2Client", func() {
+		It("Should deploy kubernetes OAuth2Client without redirect URIs", func() {
 			Expect(hec.RenderError).ShouldNot(HaveOccurred())
-			Expect(hec.KubernetesResource("OAuth2Client", "d8-user-authn", "nn2wezlsnzsxizltzpzjzzeeeirsk").Exists()).To(BeTrue())
+
+			oauth2Client := hec.KubernetesResource("OAuth2Client", "d8-user-authn", "nn2wezlsnzsxizltzpzjzzeeeirsk")
+			Expect(oauth2Client.Exists()).To(BeTrue())
+
+			redirectURIs := oauth2Client.Field("redirectURIs")
+			Expect(redirectURIs.IsArray()).To(BeTrue(), "redirectURIs must render as a list, not a bare key parsed as null")
+			Expect(redirectURIs.Array()).To(BeEmpty())
+
+			// The authenticator still reaches the privileged client through trustedPeers, so the
+			// empty redirectURIs above is not just an empty render.
+			peers := []string{}
+			for _, p := range oauth2Client.Field("trustedPeers").Array() {
+				peers = append(peers, p.String())
+			}
+			Expect(peers).To(ConsistOf("test-d8-test-dex-authenticator"))
 		})
 	})
 
@@ -95,8 +115,10 @@ var _ = Describe("Module :: user-authn :: helm template :: kubernetes oauth2clie
     appDexSecret: dexSecret
     cookieSecret: cookieSecret
   spec:
-    applicationDomain: authenticator.example.com
-    applicationIngressCertificateSecretName: test
+    applications:
+    - domain: authenticator.example.com
+      ingressClassName: nginx
+      ingressSecretName: test
 `)
 			hec.ValuesSetFromYaml("userAuthn.internal.dexAuthenticatorNames", `
 "test@d8-test":
@@ -106,7 +128,11 @@ var _ = Describe("Module :: user-authn :: helm template :: kubernetes oauth2clie
   secretName: "dex-authenticator-test"
   secretTruncated: false
   secretHash: ""
-  ingressNames: {}
+  ingressNames:
+    "0":
+      name: "test-dex-authenticator"
+      truncated: false
+      hash: ""
 `)
 			hec.HelmRender()
 		})
