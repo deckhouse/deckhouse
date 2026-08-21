@@ -1,0 +1,35 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ApplicationPackage
+metadata:
+  name: test
+  resourceVersion: "3"
+  uid: package-uid
+status:
+  availableRepositories:
+  - deckhouse
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ApplicationPackageVersion
+metadata:
+  name: deckhouse-test-v1.0.1
+  resourceVersion: "3"
+  uid: version-uid
+spec:
+  packageName: test
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.1
+status: {}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepository
+metadata:
+  name: deckhouse
+  resourceVersion: "1"
+spec:
+  registry:
+    ca: test-ca
+    dockerCfg: test-docker-cfg
+    repo: registry.example.com/test
+    scheme: https
+status: {}
