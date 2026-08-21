@@ -65,6 +65,18 @@ func (c *MasterNodeGroupController) populateNodeToHost(ctx *context.Context) err
 		return nil
 	}
 
+	// An immutable master is addressed by name, never by SSH. The map still has to
+	// list the other masters: an empty one reads as "single-master cluster" and turns
+	// every destructive plan into the scale dance.
+	if c.immutable {
+		c.nodeToHost = make(map[string]string, len(c.state.State))
+		for nodeName := range c.state.State {
+			c.nodeToHost[nodeName] = ""
+		}
+
+		return nil
+	}
+
 	if ctx.SSHProviderInitializer == nil {
 		return nil
 	}
@@ -265,12 +277,20 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 		candidateName := fmt.Sprintf("%s-%s-%v", metaConfig.ClusterPrefix, c.name, index)
 
 		if _, ok := c.state.State[candidateName]; !ok {
+			cloudConfig := c.cloudConfig
+			if c.immutable {
+				cloudConfig, err = immutableMasterPayload(ctx, candidateName)
+				if err != nil {
+					return err
+				}
+			}
+
 			output, err := operations.BootstrapAdditionalMasterNode(
 				ctx.Ctx(),
 				kubeClient,
 				metaConfig,
 				index,
-				c.cloudConfig,
+				cloudConfig,
 				ctx.InfrastructureContext(metaConfig),
 				c.globalOptions,
 			)
@@ -284,6 +304,14 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 			count++
 			c.state.State[candidateName] = output.InfrastructureState
 			nodesToWait = append(nodesToWait, candidateName)
+
+			// One at a time: etcd admits a single learner, so the next machine must not
+			// start joining until control-plane-manager has this one voting.
+			if c.immutable {
+				if err := waitForImmutableMasterControlPlane(ctx, candidateName); err != nil {
+					return err
+				}
+			}
 		}
 		index++
 	}
@@ -293,7 +321,10 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 		return err
 	}
 
-	if len(masterIPForSSHList) > 0 {
+	// An immutable node answers no sshd, and its payload comes from the cluster rather
+	// than from the group's bashible secret: registering it as an SSH host and waiting
+	// for that secret to list it would both stall on something that never happens.
+	if len(masterIPForSSHList) > 0 && !c.immutable {
 		if err := c.addNewNodesToSSH(ctx, masterIPForSSHList); err != nil {
 			return err
 		}
@@ -391,6 +422,17 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 		return fmt.Errorf("build control plane hook for node %s: %w", nodeName, err)
 	}
 
+	// The payload only reaches the machine when the VM is recreated: the cloud-init
+	// secret is immutable and its name carries the plan's destructive hash. Building
+	// it here means a recreated master joins with a live token and live apiservers.
+	cloudConfig := c.cloudConfig
+	if c.immutable {
+		cloudConfig, err = immutableMasterPayload(ctx, nodeName)
+		if err != nil {
+			return err
+		}
+	}
+
 	var nodeGroupSettingsFromConfig []byte
 
 	nodeRunner, err := ctx.InfrastructureContext(metaConfig).GetConvergeNodeRunner(ctx.Ctx(), metaConfig, infrastructure.NodeRunnerOptions{
@@ -399,7 +441,7 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 		NodeGroupStep:   c.layoutStep,
 		NodeIndex:       nodeIndex,
 		NodeState:       nodeState,
-		NodeCloudConfig: c.cloudConfig,
+		NodeCloudConfig: cloudConfig,
 		CommanderMode:   ctx.CommanderMode(),
 		StateCache:      ctx.StateCache(),
 		AdditionalStateSaverDestinations: []infrastructure.SaverDestination{
@@ -523,6 +565,7 @@ func (c *MasterNodeGroupController) newHookForUpdatePipeline(ctx *context.Contex
 		nodesToCheck,
 		ctx.CommanderMode(),
 		c.skipChecks,
+		c.immutable,
 	).
 		WithSourceCommandName("converge").
 		WithNodeToConverge(convergedNode).
@@ -567,6 +610,7 @@ func (c *MasterNodeGroupController) deleteNodes(ctx *context.Context, nodesToDel
 					sshProvider,
 					nodeName,
 					ctx.CommanderMode(),
+					c.immutable,
 				)
 			},
 			func(nodeName string) {

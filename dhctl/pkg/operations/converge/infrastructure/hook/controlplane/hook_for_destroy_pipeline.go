@@ -42,14 +42,16 @@ type HookForDestroyPipeline struct {
 	nodeToDestroy     string
 	oldMasterIPForSSH string
 	commanderMode     bool
+	immutableNode     bool
 }
 
-func NewHookForDestroyPipeline(getter kubernetes.KubeClientProviderWithCtx, sshProvider libcon.SSHProvider, nodeToDestroy string, commanderMode bool) *HookForDestroyPipeline {
+func NewHookForDestroyPipeline(getter kubernetes.KubeClientProviderWithCtx, sshProvider libcon.SSHProvider, nodeToDestroy string, commanderMode, immutableNode bool) *HookForDestroyPipeline {
 	return &HookForDestroyPipeline{
 		getter:        getter,
 		sshProvider:   sshProvider,
 		nodeToDestroy: nodeToDestroy,
 		commanderMode: commanderMode,
+		immutableNode: immutableNode,
 	}
 }
 
@@ -66,8 +68,11 @@ func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infras
 
 	// no need to switch client because we try to switch before delete nodes
 
+	// An immutable node is retired over the Kubernetes API alone, so a missing SSH
+	// address says nothing about whether it can be done. Skipping on it would leave
+	// the node an etcd member for good.
 	masterIP := outputs.MasterIPForSSH
-	if masterIP == "" {
+	if masterIP == "" && !h.immutableNode {
 		h.oldMasterIPForSSH = ""
 		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Got empty master IP for ssh for node %s. Skipping removal of control-plane from node.", h.nodeToDestroy))
 		return false, nil
@@ -80,7 +85,7 @@ func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infras
 		return false, fmt.Errorf("Could not get kube client: %w", err)
 	}
 
-	err = removeControlPlaneRoleFromNode(ctx, kubeClient, h.getter, h.nodeToDestroy, h.commanderMode)
+	err = removeControlPlaneRoleFromNode(ctx, kubeClient, h.getter, h.nodeToDestroy, h.commanderMode, h.immutableNode)
 	if err != nil {
 		return false, fmt.Errorf("failed to remove control plane role from node '%s': %v", h.nodeToDestroy, err)
 	}
@@ -115,7 +120,11 @@ func (h *HookForDestroyPipeline) IsReady() error {
 	return nil
 }
 
-func removeControlPlaneRoleFromNode(ctx context.Context, kubeCl *client.KubernetesClient, kubeGetter kubernetes.KubeClientProviderWithCtx, nodeName string, commanderMode bool) error {
+func removeControlPlaneRoleFromNode(ctx context.Context, kubeCl *client.KubernetesClient, kubeGetter kubernetes.KubeClientProviderWithCtx, nodeName string, commanderMode, immutableNode bool) error {
+	if immutableNode {
+		return retireImmutableControlPlaneNode(ctx, kubeCl, kubeGetter, nodeName, commanderMode)
+	}
+
 	err := removeLabelsFromNode(ctx, kubeCl, nodeName, []string{
 		"node-role.kubernetes.io/control-plane",
 		"node-role.kubernetes.io/master",
@@ -133,6 +142,29 @@ func removeControlPlaneRoleFromNode(ctx context.Context, kubeCl *client.Kubernet
 	err = infra_utils.TryToDrainNode(ctx, kubeCl, nodeName, infra_utils.GetDrainConfirmation(commanderMode), infra_utils.DrainOptions{Force: true})
 	if err != nil {
 		return fmt.Errorf("failed to drain node '%s': %v", nodeName, err)
+	}
+
+	return nil
+}
+
+// retireImmutableControlPlaneNode takes a master out of the cluster without touching
+// its labels. On an immutable node the group label is not a marking but the channel
+// its configuration arrives through: removing it deletes the node's NodeConfig, while
+// keeping it makes the node-template controller put the control plane labels back and
+// the etcd member never leaves. Deleting the Node object says the same thing to
+// control-plane-manager — its hook compares members against the nodes it sees — and
+// says it once. Drain comes first, while there is still a Node to drain.
+func retireImmutableControlPlaneNode(ctx context.Context, kubeCl *client.KubernetesClient, kubeGetter kubernetes.KubeClientProviderWithCtx, nodeName string, commanderMode bool) error {
+	if err := infra_utils.TryToDrainNode(ctx, kubeCl, nodeName, infra_utils.GetDrainConfirmation(commanderMode), infra_utils.DrainOptions{Force: true}); err != nil {
+		return fmt.Errorf("failed to drain node '%s': %v", nodeName, err)
+	}
+
+	if err := infra_utils.DeleteNodeObjectFromCluster(ctx, kubeCl, nodeName); err != nil {
+		return fmt.Errorf("failed to delete node object '%s' from cluster: %v", nodeName, err)
+	}
+
+	if err := waitEtcdHasNoMember(ctx, kubeGetter, nodeName); err != nil {
+		return fmt.Errorf("failed to check that etcd has no member '%s': %v", nodeName, err)
 	}
 
 	return nil

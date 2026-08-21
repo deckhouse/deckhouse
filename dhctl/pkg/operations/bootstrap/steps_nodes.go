@@ -101,6 +101,12 @@ func BootstrapAdditionalMasterNodes(
 			// answers no sshd stalls it — which is every node whose payload is
 			// rendered here. The first master is kept out of the cache likewise.
 			if buildPayload != nil {
+				// One at a time: etcd admits a single learner, so the next machine
+				// must not start joining until this one is a voting member. The
+				// static path has always waited here; the cloud path did not.
+				if err := waitForImmutableMasterControlPlane(ctx, kubeCl, nodeName); err != nil {
+					return err
+				}
 				continue
 			}
 			addressTracker[nodeName] = outputs.MasterIPForSSH

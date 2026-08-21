@@ -54,6 +54,10 @@ type NodeGroupController struct {
 	desiredReplicas int
 	layoutStep      infrastructure.Step
 
+	// immutable groups get a per-node payload built from the cluster instead of the
+	// group-wide bashible cloud-init, and their nodes answer no sshd.
+	immutable bool
+
 	globalOptions *options.GlobalOptions
 }
 
@@ -69,14 +73,24 @@ func NewNodeGroupController(name string, state state.NodeGroupInfrastructureStat
 }
 
 func (c *NodeGroupController) Run(ctx *context.Context) error {
-	// we hide deckhouse logs because we always have config
-
-	nodeCloudConfig, err := entity.GetCloudConfig(ctx.Ctx(), ctx, c.name, global.HideDeckhouseLogs)
+	immutableGroup, err := isImmutableNodeGroup(ctx, c.name)
 	if err != nil {
 		return err
 	}
+	c.immutable = immutableGroup
 
-	c.cloudConfig = nodeCloudConfig
+	// An immutable group has no group-wide cloud config to read: its nodes boot from
+	// a per-node payload built where the node is created. The bashible secret exists
+	// for such a group too, and taking it would hand a machine a config it cannot run.
+	if !c.immutable {
+		// we hide deckhouse logs because we always have config
+		nodeCloudConfig, err := entity.GetCloudConfig(ctx.Ctx(), ctx, c.name, global.HideDeckhouseLogs)
+		if err != nil {
+			return err
+		}
+
+		c.cloudConfig = nodeCloudConfig
+	}
 
 	if c.desiredReplicas > len(c.state.State) {
 		err := dhlog.RunProcess(ctx.Ctx(), dhlog.FromContext(ctx.Ctx()), fmt.Sprintf("Add Nodes to NodeGroup %s (replicas: %v)", c.name, c.desiredReplicas), func(gocontext.Context) error {
@@ -377,6 +391,10 @@ func (c *NodeGroupController) updateNodes(ctx *context.Context) error {
 			err = c.nodeGroup.updateNode(ctx, nodeName, node.index)
 			if err != nil {
 				return err
+			}
+
+			if c.immutable {
+				return nil
 			}
 
 			// we hide deckhouse logs because we always have config
