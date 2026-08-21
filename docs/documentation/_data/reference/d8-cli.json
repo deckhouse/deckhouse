@@ -1,7 +1,7 @@
 {
   "name": "d8",
   "description": "d8 controls the Deckhouse Kubernetes Platform",
-  "version": "v0.33.10",
+  "version": "v0.33.11",
   "aliases": null,
   "flags": {
     "help": {
@@ -48907,6 +48907,89 @@
             "hash-length": {
               "description": "Bit-length variant of the algorithm to use. Only 256 (default) and 512 bit lengths are supported.",
               "shorthand": "l",
+              "global": false
+            }
+          },
+          "subcommands": null
+        },
+        {
+          "name": "htpasswd [flags] [passwordfile] [username] [password]",
+          "description": "Manage password files and hash passwords (Apache htpasswd analog)",
+          "aliases": null,
+          "flags": {
+            "batch": {
+              "description": "Batch mode: take the password from the command line.",
+              "shorthand": "b",
+              "global": false
+            },
+            "bcrypt": {
+              "description": "Use bcrypt (secure; the default).",
+              "shorthand": "B",
+              "global": false
+            },
+            "cost": {
+              "description": "bcrypt cost/work factor (4-31); only with -B.",
+              "shorthand": "C",
+              "global": false
+            },
+            "create": {
+              "description": "Create a new password file, overwriting any existing one.",
+              "shorthand": "c",
+              "global": false
+            },
+            "delete": {
+              "description": "Delete the given user from the password file.",
+              "shorthand": "D",
+              "global": false
+            },
+            "des": {
+              "description": "Use CRYPT (DES; INSECURE, 8-char limit).",
+              "shorthand": "d",
+              "global": false
+            },
+            "md5": {
+              "description": "Use Apache MD5 (apr1).",
+              "shorthand": "m",
+              "global": false
+            },
+            "plaintext": {
+              "description": "Store the password in plaintext (INSECURE).",
+              "shorthand": "p",
+              "global": false
+            },
+            "rounds": {
+              "description": "SHA-256/512 rounds (1000-999999999); only with -2/-5.",
+              "shorthand": "r",
+              "global": false
+            },
+            "sha1": {
+              "description": "Use SHA-1 (INSECURE, unsalted).",
+              "shorthand": "s",
+              "global": false
+            },
+            "sha256": {
+              "description": "Use SHA-256 crypt (secure).",
+              "shorthand": "2",
+              "global": false
+            },
+            "sha512": {
+              "description": "Use SHA-512 crypt (secure).",
+              "shorthand": "5",
+              "global": false
+            },
+            "stdin": {
+              "description": "Read the password from stdin without verification.",
+              "shorthand": "i",
+              "global": false
+            },
+            "stdout": {
+              "description": "Do not update a file; print the result to stdout.",
+              "shorthand": "n",
+              "global": false
+            },
+            "verify": {
+              "description": "Verify the given password for the user.",
+              "shorthand": "v",
               "global": false
             }
           },
