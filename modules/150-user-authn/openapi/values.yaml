@@ -222,33 +222,6 @@ properties:
           properties:
             name:
               type: string
-            encodedName:
-              type: string
-            spec:
-              # users spec is copied from custom resources as is and validated by its spec
-              type: object
-              additionalProperties: true
-            status:
-              type: object
-              properties:
-                expireAt:
-                  type: string
-                lock:
-                  type: object
-                  required:
-                    - state
-                  properties:
-                    state:
-                      type: boolean
-                    reason:
-                      type: string
-                      enum:
-                        - PasswordPolicyLockout
-                        - LockedByAdministrator
-                    message:
-                      type: string
-                    until:
-                      type: string
       providers:
         type: array
         default: []

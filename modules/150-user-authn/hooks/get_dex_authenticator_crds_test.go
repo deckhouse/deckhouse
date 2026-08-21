@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"strings"
@@ -35,6 +36,23 @@ type inputDexAuthenticatorAllowAccess struct {
 	allowed    bool
 	warns      bool
 }
+
+type inputDexAuthenticatorClientSecret struct {
+	// existing is the client-secret stored in the authenticator credentials Secret.
+	existing string
+	// omitExisting drops the client-secret key altogether, as a Secret written by an older
+	// template revision that never carried it would look.
+	omitExisting bool
+	// inCluster is data.secret of d8-user-authn/kubernetes-dex-client-app-secret; empty means
+	// the Secret is absent from the cluster.
+	inCluster string
+	// inValues is userAuthn.internal.kubernetesDexClientAppSecret; empty means the sibling hook
+	// has not populated it yet.
+	inValues string
+	rotated  bool
+}
+
+const testSharedKubernetesClientSecret = "sharedKubernetesSecret"
 
 var _ = Describe("User Authn hooks :: get dex authenticator crds ::", func() {
 	f := HookExecutionConfigInit(`{"userAuthn":{"internal": {}}}`, "")
@@ -377,6 +395,109 @@ spec:
 		),
 		Entry("denies access to the Kubernetes API without warning when the annotation is absent",
 			inputDexAuthenticatorAllowAccess{},
+		),
+	)
+
+	DescribeTable("The client secret of an existing DexAuthenticator",
+		func(in inputDexAuthenticatorClientSecret) {
+			const cookieSecret = "testNexttestNexttestNext"
+
+			clientSecretData := ""
+			if !in.omitExisting {
+				clientSecretData = "\n  client-secret: " + base64.StdEncoding.EncodeToString([]byte(in.existing))
+			}
+
+			sharedSecret := ""
+			if in.inCluster != "" {
+				sharedSecret = `
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ` + kubernetesDexClientAppSecretName + `
+  namespace: ` + kubernetesDexClientAppSecretNamespace + `
+data:
+  secret: ` + base64.StdEncoding.EncodeToString([]byte(in.inCluster)) + "\n"
+			}
+
+			if in.inValues == "" {
+				f.ValuesDelete(kubernetesDexClientAppSecretPath)
+			} else {
+				f.ValuesSet(kubernetesDexClientAppSecretPath, in.inValues)
+			}
+
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dex-authenticator-test
+  namespace: test
+  labels:
+    app: dex-authenticator
+    name: credentials
+data:` + clientSecretData + `
+  cookie-secret: ` + base64.StdEncoding.EncodeToString([]byte(cookieSecret)) + `
+---
+apiVersion: deckhouse.io/v2alpha1
+kind: DexAuthenticator
+metadata:
+  name: test
+  namespace: test
+  annotations:
+    dexauthenticator.deckhouse.io/allow-access-to-kubernetes: "true"
+spec:
+  applications:
+  - domain: test
+    ingressClassName: "nginx"
+` + sharedSecret))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+
+			appDexSecret := f.ValuesGet("userAuthn.internal.dexAuthenticatorCRDs.0.credentials.appDexSecret").String()
+			logs := string(f.LoggerOutput.Contents())
+			if in.rotated {
+				Expect(appDexSecret).NotTo(Equal(testSharedKubernetesClientSecret))
+				Expect(appDexSecret).To(HaveLen(20))
+				Expect(logs).To(ContainSubstring("Rotating DexAuthenticator client secret that reused the shared kubernetes client secret"))
+			} else {
+				Expect(appDexSecret).To(Equal(in.existing))
+				Expect(logs).NotTo(ContainSubstring("Rotating DexAuthenticator client secret that reused the shared kubernetes client secret"))
+			}
+		},
+		Entry("is regenerated when it equals the shared kubernetes client secret",
+			inputDexAuthenticatorClientSecret{
+				existing:  testSharedKubernetesClientSecret,
+				inCluster: testSharedKubernetesClientSecret,
+				inValues:  testSharedKubernetesClientSecret,
+				rotated:   true,
+			},
+		),
+		Entry("is preserved when it is unrelated to the shared kubernetes client secret",
+			inputDexAuthenticatorClientSecret{
+				existing:  "perAuthenticatorSecret",
+				inCluster: testSharedKubernetesClientSecret,
+				inValues:  testSharedKubernetesClientSecret,
+			},
+		),
+		// The values path is written by kubernetesDexClientAppSecret, which runs in the "main"
+		// queue while this hook runs in "/modules/user-authn", so it may still be empty here.
+		// The migration must not depend on it.
+		Entry("is regenerated from the cluster Secret when the values path is not populated yet",
+			inputDexAuthenticatorClientSecret{
+				existing:  testSharedKubernetesClientSecret,
+				inCluster: testSharedKubernetesClientSecret,
+				rotated:   true,
+			},
+		),
+		Entry("is preserved when the shared kubernetes client secret does not exist in the cluster",
+			inputDexAuthenticatorClientSecret{existing: "perAuthenticatorSecret"},
+		),
+		// Both sides of the comparison are empty here, so without the non-empty guard every
+		// authenticator whose credentials Secret has no client-secret would be rotated.
+		Entry("is left empty when neither the credentials Secret nor the shared secret carries one",
+			inputDexAuthenticatorClientSecret{omitExisting: true},
 		),
 	)
 })
