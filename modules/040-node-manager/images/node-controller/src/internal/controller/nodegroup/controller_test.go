@@ -445,9 +445,26 @@ func requireErrorCondition(t *testing.T, ng *v1.NodeGroup, want string) {
 		if cond.Status != metav1.ConditionFalse || cond.Message != "" {
 			t.Fatalf("Error condition = %+v, want False and empty", cond)
 		}
+		if ng.Status.Error != "" {
+			t.Fatalf("status.error = %q, want empty", ng.Status.Error)
+		}
+		if s := ng.Status.ConditionSummary; s == nil || s.Ready != "True" || s.StatusMessage != "" {
+			t.Fatalf("conditionSummary = %+v, want ready True with no message", s)
+		}
 		return
 	}
 	if cond.Status != metav1.ConditionTrue || !strings.Contains(cond.Message, want) {
 		t.Fatalf("Error condition = %+v, want True containing %q", cond, want)
+	}
+	// The ERROR column of `kubectl get nodegroup` reads status.error, so the verdict has to reach
+	// it too — the condition list alone is not what an operator looks at first.
+	if !strings.Contains(ng.Status.Error, want) {
+		t.Fatalf("status.error = %q, want it to contain %q", ng.Status.Error, want)
+	}
+	// And the summary, whose statusMessage is the STATUS column: CalculateConditionSummary ignores
+	// the conditions and reads statusMsg alone, so a green summary can sit next to a raised Error
+	// condition unless the verdict is passed there separately.
+	if s := ng.Status.ConditionSummary; s == nil || s.Ready != "False" || !strings.Contains(s.StatusMessage, want) {
+		t.Fatalf("conditionSummary = %+v, want ready False containing %q", s, want)
 	}
 }

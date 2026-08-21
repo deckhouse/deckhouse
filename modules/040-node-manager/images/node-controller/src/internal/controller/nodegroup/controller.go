@@ -160,17 +160,18 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 		logger.Error(err, "failed to compute derived nodegroup status", "nodeGroup", ng.Name)
 		return ctrl.Result{}, err
 	}
-	validationError := validationResult.Error
+	// status.error is one line; the machine-side check owns it until a declaration verdict appears.
+	statusError := validationResult.Error
 
 	var conditionErrors []string
-	if validationError != "" {
-		conditionErrors = append(conditionErrors, validationError)
+	if validationResult.Error != "" {
+		conditionErrors = append(conditionErrors, validationResult.Error)
 	}
 	if cloudResult.LatestError != "" {
 		conditionErrors = append(conditionErrors, cloudResult.LatestError)
 	}
 
-	eventMsg := fmt.Sprintf("%s %s", validationError, cloudResult.LatestError)
+	eventMsg := fmt.Sprintf("%s %s", validationResult.Error, cloudResult.LatestError)
 	eventMsg = strings.TrimSpace(eventMsg)
 	if len(eventMsg) > 1024 {
 		eventMsg = eventMsg[:1024]
@@ -185,8 +186,12 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 
 	if err := cloudprovider.ValidateNodeGroup(ng, provider); err != nil {
 		providerError := err.Error()
+		// Each assignment is the only path to its field: conditionErrors feeds the Error condition,
+		// statusMsg is the whole input of CalculateConditionSummary (which ignores the conditions),
+		// and statusError is the ERROR column of `kubectl get nodegroup`.
 		conditionErrors = append([]string{providerError}, conditionErrors...)
 		statusMsg = providerError
+		statusError = providerError
 	}
 
 	ngForConditions := calcconditions.NodeGroup{
@@ -211,7 +216,7 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 	ng.Status.Nodes = nodeResult.NodesCount
 	ng.Status.Ready = nodeResult.ReadyCount
 	ng.Status.UpToDate = nodeResult.UpToDateCount
-	ng.Status.Error = validationError
+	ng.Status.Error = statusError
 	ng.Status.KubernetesVersion = derivedResult.KubernetesVersion
 	ng.Status.Conditions = newConditions
 	ng.Status.ConditionSummary = conditionSummary
