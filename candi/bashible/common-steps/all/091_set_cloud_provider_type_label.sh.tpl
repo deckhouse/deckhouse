@@ -17,6 +17,25 @@
 mkdir -p /var/lib/node_labels/
 {{- with .nodeGroup.cloudProviderType }}
 echo "node.deckhouse.io/cloud-provider-type={{ . }}" > /var/lib/node_labels/cloud-provider-type
+
+{{- if ne $.runType "Normal" }}
+# 098_update_node_labels, which turns the file above into a label on the Node, is Normal-only.
+if [ -f /etc/kubernetes/kubelet.conf ]; then
+  node="$(bb-d8-node-name)"
+  attempt=0
+  max_attempts=5
+  until bb-curl-helper-patch-node-metadata "$node" "labels" "node.deckhouse.io/cloud-provider-type={{ . }}"; do
+    attempt=$(( attempt + 1 ))
+    if [ "$attempt" -ge "$max_attempts" ]; then
+      >&2 echo "Failed to set node.deckhouse.io/cloud-provider-type on node $node after $max_attempts attempts"
+      break
+    fi
+    echo "Retrying to set cloud-provider-type label on node $node (attempt $attempt of $max_attempts)"
+    sleep 5
+  done
+fi
+{{- end }}
+
 {{- else }}
 rm -f /var/lib/node_labels/cloud-provider-type
 {{- end }}
