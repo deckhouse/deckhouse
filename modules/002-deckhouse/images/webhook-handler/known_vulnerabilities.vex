@@ -370,6 +370,20 @@
     },
     {
       "vulnerability": {
+        "name": "CVE-2026-39828"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.49.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/crypto версии v0.49.0 приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не использует SSH-функционал (SSH-сервер/клиент, ssh-agent, работу с known_hosts) — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
         "name": "CVE-2026-25681"
       },
       "products": [
