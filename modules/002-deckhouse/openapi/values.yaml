@@ -65,5 +65,15 @@ properties:
         type: object
         default: {}
         properties:
+          servedByModule:
+            type: boolean
+            default: false
+            description: |
+              Whether the `registry` module serves this cluster's images — it manages the pull path and
+              every node's agent has applied the layout it was given. Set from the presence of the
+              ConfigMap that module publishes for exactly that state, and used to withdraw the
+              `deckhouse-registry` secret while it has no reader: credentials then live on the node,
+              in the container runtime's configuration, rather than in a pod spec.
+            x-examples: [true]
           mode:
             type: string
