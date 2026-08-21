@@ -18,7 +18,9 @@ package v2
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 
@@ -253,6 +255,79 @@ func TestAPodThatHasAlreadyPulledDoesNotHoldTheWithdrawal(t *testing.T) {
 		{Name: "c", Image: "registry.deckhouse.io/deckhouse/ee:v1"},
 	}}}
 	assert.False(t, podCouldStillPull(upstream))
+}
+
+// TestTheWithdrawalGivesTheClusterSomewhereToGo is the finding this exists for, in the form of a test.
+//
+// A cluster bootstrapped INTO this module has the in-cluster registry written into
+// `deckhouse-registry` — address, path, credentials, all of it — and the upstream then lives in exactly
+// one place: this module's configuration, which has to be emptied to ask for `Unmanaged`. Measured on
+// such a cluster before this existed: 425 container specifications still naming the in-cluster registry
+// twenty-five minutes after the withdrawal was asked for, with nowhere for a single one of them to move,
+// because the platform's own registry address WAS the in-cluster one.
+func TestTheWithdrawalGivesTheClusterSomewhereToGo(t *testing.T) {
+	upstream := &ConfigUpstream{
+		Scheme: "HTTPS",
+		Host:   "registry.deckhouse.io",
+		Path:   "/deckhouse/ee",
+		Auth:   &ConfigAuth{Username: "license-token", Password: "secret"},
+	}
+
+	credentials, err := upstreamCredentials(upstream)
+	require.NoError(t, err)
+
+	var document struct {
+		Auths map[string]struct {
+			Auth string `json:"auth"`
+		} `json:"auths"`
+	}
+	require.NoError(t, json.Unmarshal(credentials, &document))
+
+	entry, ok := document.Auths["registry.deckhouse.io"]
+	require.True(t, ok, "the credentials have to be keyed by the host that will be asked for: %s", credentials)
+	pair, err := base64.StdEncoding.DecodeString(entry.Auth)
+	require.NoError(t, err)
+	assert.Equal(t, "license-token:secret", string(pair))
+}
+
+// TestCredentialsGivenAlreadyEncodedAreNotEncodedTwice covers the other form the user can type: `auth`
+// instead of a username and a password. Encoded again, it becomes credentials for nobody.
+func TestCredentialsGivenAlreadyEncodedAreNotEncodedTwice(t *testing.T) {
+	pair := base64.StdEncoding.EncodeToString([]byte("robot$ci:token"))
+
+	credentials, err := upstreamCredentials(&ConfigUpstream{
+		Host: "harbor.example.com",
+		Auth: &ConfigAuth{Auth: pair},
+	})
+	require.NoError(t, err)
+
+	var document struct {
+		Auths map[string]struct {
+			Auth string `json:"auth"`
+		} `json:"auths"`
+	}
+	require.NoError(t, json.Unmarshal(credentials, &document))
+	decoded, err := base64.StdEncoding.DecodeString(document.Auths["harbor.example.com"].Auth)
+	require.NoError(t, err)
+	assert.Equal(t, "robot$ci:token", string(decoded))
+}
+
+// TestAnUpstreamWithNoCredentialsIsStillADestination: a public registry needs none, and a document with
+// an empty entry is what says so.
+func TestAnUpstreamWithNoCredentialsIsStillADestination(t *testing.T) {
+	credentials, err := upstreamCredentials(&ConfigUpstream{Host: "registry.example.com", Path: "/public"})
+
+	require.NoError(t, err)
+	assert.Contains(t, string(credentials), "registry.example.com")
+}
+
+// TestTheSchemeIsWrittenAsTheGlobalValuesAcceptIt is a one-word test for a mistake already made once on
+// a live cluster: the module's configuration says `HTTPS`, the global values accept `http` or `https`,
+// and writing the first spelling failed a global hook and wedged the main queue for every module.
+func TestTheSchemeIsWrittenAsTheGlobalValuesAcceptIt(t *testing.T) {
+	assert.Equal(t, "https", strings.ToLower(schemeOrDefault("HTTPS")))
+	assert.Equal(t, "https", strings.ToLower(schemeOrDefault("")), "an unset scheme is HTTPS, not empty")
+	assert.Equal(t, "http", strings.ToLower(schemeOrDefault("HTTP")))
 }
 
 // TestWhichNamespacesAreScanned records the scope, which is a deliberate limit rather than an

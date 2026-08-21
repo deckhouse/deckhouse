@@ -50,6 +50,7 @@ package v2
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -67,6 +68,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	registryv1alpha1 "github.com/deckhouse/deckhouse/go_lib/registry/apis/deckhouse.io/v1alpha1"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
+	registry_helpers "github.com/deckhouse/deckhouse/go_lib/registry/helpers"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/helpers"
 )
 
@@ -89,9 +91,16 @@ const (
 	// DrainSecondsMetric is how long the drain has been going on.
 	DrainSecondsMetric = "d8_registry_drain_seconds"
 
-	drainSnapName          = "drain-record"
-	registryConfigSnapName = "registry-config-resource"
-	drainMetricGroup       = "registry_drain"
+	// registryIdentitySecretName is where the cluster records which registry it belongs to.
+	//
+	// Spelled out rather than imported from the module that renders it: this module deliberately shares
+	// no code with that one.
+	registryIdentitySecretName = "deckhouse-registry"
+
+	drainSnapName            = "drain-record"
+	registryIdentitySnapName = "registry-identity"
+	registryConfigSnapName   = "registry-config-resource"
+	drainMetricGroup         = "registry_drain"
 
 	// referenceExamples is how many names are logged and no more. The count is the decision; the names
 	// are there to make an alert actionable, and a list of sixteen in a log line is neither.
@@ -165,6 +174,22 @@ var _ = sdk.RegisterFunc(
 					NameSelector: &types.NameSelector{MatchNames: []string{"d8-system"}},
 				},
 				FilterFunc: filterDrainSecret,
+			},
+			{
+				// The cluster's registry identity, watched so that restoring it happens once and only
+				// when it has to. Its `address` is the whole question: while this module manages a
+				// cluster that was bootstrapped into it, that field names the in-cluster registry and
+				// nothing anywhere else remembers the upstream.
+				Name:       registryIdentitySnapName,
+				ApiVersion: "v1",
+				Kind:       "Secret",
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{registryIdentitySecretName},
+				},
+				NamespaceSelector: &types.NamespaceSelector{
+					NameSelector: &types.NameSelector{MatchNames: []string{"d8-system"}},
+				},
+				FilterFunc: filterRegistryIdentity,
 			},
 			{
 				// The resolved configuration as the controller has it, which is what a drain serves
@@ -320,6 +345,32 @@ func handleDrain(ctx context.Context, input *go_hook.HookInput, dc dependency.Co
 		return nil
 	}
 
+	served := next.Config
+	// Serving is what `Managed` means, and the drain is a cluster that has been asked to stop and has
+	// not finished stopping. Every template gates on this one value, so saying it here is what keeps the
+	// storage, the controller and the node agent in place without a second gate in each of them.
+	served.Mode = string(registryv1alpha1.ModeManaged)
+
+	// The destination, before anything is asked to move towards it.
+	//
+	// Attempted on every serving pass rather than once at the transition, and guarded by the state of the
+	// object itself: a write lost to a restart or a failed patch would otherwise leave the cluster with
+	// nowhere to go and a drain that can never finish.
+	switch identity := currentRegistryIdentity(input); {
+	case served.Primary.Upstream == nil:
+		// Nothing to restore: this cluster was serving from its own store with no upstream at all, which
+		// is the air-gapped case. The withdrawal then genuinely has no destination, and it will not
+		// finish until somebody gives the cluster one — which is what the alert says, and it is a far
+		// better outcome than taking the only registry away from a cluster that cannot reach any other.
+		input.Logger.Warn("the module has no upstream to point the cluster back at, so the withdrawal cannot complete",
+			"help", "give the cluster a registry to pull from, or ask for Managed again")
+
+	case identity != nil && identity.Address == registry_const.Host:
+		if err := restoreRegistryIdentity(input, served.Primary.Upstream); err != nil {
+			return err
+		}
+	}
+
 	if record == nil {
 		input.Logger.Info(
 			"asked to leave the pull path; the in-cluster registry keeps serving until nothing needs it",
@@ -334,12 +385,6 @@ func handleDrain(ctx context.Context, input *go_hook.HookInput, dc dependency.Co
 	if err := writeDrainRecord(input, next); err != nil {
 		return err
 	}
-
-	served := next.Config
-	// Serving is what `Managed` means, and the drain is a cluster that has been asked to stop and has
-	// not finished stopping. Every template gates on this one value, so saying it here is what keeps the
-	// storage, the controller and the node agent in place without a second gate in each of them.
-	served.Mode = string(registryv1alpha1.ModeManaged)
 
 	current.Drain = &DrainState{
 		Active:     true,
@@ -660,6 +705,132 @@ func scanReferences(ctx context.Context, dc dependency.Container) (int, []string
 	}
 
 	return len(found), examples, nil
+}
+
+// registryIdentity is the part of the cluster identity that decides whether it has to be restored.
+type registryIdentity struct {
+	Address string `json:"address"`
+}
+
+func filterRegistryIdentity(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var secret v1core.Secret
+	if err := sdk.FromUnstructured(obj, &secret); err != nil {
+		return nil, fmt.Errorf("converting the registry identity: %w", err)
+	}
+
+	return registryIdentity{Address: string(secret.Data["address"])}, nil
+}
+
+// currentRegistryIdentity reads what the cluster currently says about which registry it belongs to.
+//
+// Absent is an answer rather than a failure: a cluster mid-bootstrap has no such secret yet, and there is
+// nothing there to restore.
+func currentRegistryIdentity(input *go_hook.HookInput) *registryIdentity {
+	identity, err := helpers.SnapshotToSingle[registryIdentity](input, registryIdentitySnapName)
+	if err != nil {
+		return nil
+	}
+
+	return &identity
+}
+
+// restoreRegistryIdentity points the cluster back at the registry the module was fetching from.
+//
+// This is what makes `Unmanaged` reachable at all on a cluster that was bootstrapped INTO this module.
+// There, the installer hands the pull path over and writes the in-cluster registry into
+// `deckhouse-registry` — address, path, credentials, all of it — and dhctl reaches such a cluster through
+// a tunnel on purpose. The upstream then exists in exactly one place: this module's own configuration,
+// which the user has to empty in order to ask for `Unmanaged`. Measured on a cluster installed that way:
+// 425 container specifications still naming the in-cluster registry twenty-five minutes after the
+// withdrawal was asked for, and no destination for a single one of them — because
+// `global.modulesImages.registry.address` WAS the in-cluster registry.
+//
+// So the module restores what the installer overwrote, from the configuration it was serving, and it is
+// the right party to do it: it is the one removing itself from the path, and it already holds the
+// credentials the user gave it. Written at the START of a drain rather than at the end — the platform
+// re-renders from this, so nothing can move off the in-cluster registry until it points elsewhere.
+//
+// Kept idempotent by its own condition rather than by a flag: while the address still names the
+// in-cluster registry there is something to do, and once it does not, there is not. An operator who
+// edits the secret by hand afterwards is not overruled.
+func restoreRegistryIdentity(input *go_hook.HookInput, upstream *ConfigUpstream) error {
+	credentials, err := upstreamCredentials(upstream)
+	if err != nil {
+		return err
+	}
+
+	data := map[string]interface{}{
+		"address": base64.StdEncoding.EncodeToString([]byte(upstream.Host)),
+		"path":    base64.StdEncoding.EncodeToString([]byte(upstream.Path)),
+		// Lower-cased, because the two spellings belong to different schemas: the module's own
+		// configuration says `HTTPS`, and the global values this lands in accept `http` or `https` only.
+		// Measured, while restoring a cluster by hand: `global.modulesImages.registry.scheme in body
+		// should be one of [http https]`, which failed a global hook and wedged the whole main queue.
+		"scheme": base64.StdEncoding.EncodeToString([]byte(strings.ToLower(schemeOrDefault(upstream.Scheme)))),
+		// The registry as anything outside the cluster sees it, which from here on is the upstream.
+		"imagesRegistry": base64.StdEncoding.EncodeToString([]byte(upstream.Host + upstream.Path)),
+		// And where the controller inside the cluster fetches from. The same, now that the module is
+		// leaving: there is no in-cluster registry to prefer any more.
+		"fetchRegistry":     base64.StdEncoding.EncodeToString([]byte(upstream.Host + upstream.Path)),
+		".dockerconfigjson": base64.StdEncoding.EncodeToString(credentials),
+	}
+
+	// Removed rather than left, when the upstream needs no authority of its own. What is in there now is
+	// the authority of the in-cluster registry, and verifying a public upstream against it fails every
+	// pull — a leftover that is worse than an absence.
+	if upstream.CA == "" {
+		data["ca"] = nil
+	} else {
+		data["ca"] = base64.StdEncoding.EncodeToString([]byte(upstream.CA))
+	}
+
+	patch := map[string]interface{}{"data": data}
+
+	input.Logger.Info("pointing the cluster back at the registry it was fetching from",
+		"registry", upstream.Host+upstream.Path)
+	input.PatchCollector.PatchWithMerge(patch, "v1", "Secret", "d8-system", registryIdentitySecretName)
+
+	return nil
+}
+
+// upstreamCredentials builds the credentials document in the form kubelet and every out-of-cluster
+// caller expect, keyed by the host they will be asked for.
+//
+// Built by the shared helper rather than by hand: it normalises the host, and a document keyed by a host
+// spelled differently from the one in the image reference is silently ignored by kubelet — a failure that
+// looks like missing credentials rather than like a mismatch.
+func upstreamCredentials(upstream *ConfigUpstream) ([]byte, error) {
+	username, password := "", ""
+	if auth := upstream.Auth; auth != nil {
+		username, password = auth.Username, auth.Password
+
+		if username == "" && auth.Auth != "" {
+			// A pre-encoded pair, which is what a user who typed `auth` directly gave us. Split rather
+			// than passed through, because the helper encodes the pair itself.
+			decoded, err := base64.StdEncoding.DecodeString(auth.Auth)
+			if err != nil {
+				return nil, fmt.Errorf("decoding the upstream credentials: %w", err)
+			}
+			if user, pass, found := strings.Cut(string(decoded), ":"); found {
+				username, password = user, pass
+			}
+		}
+	}
+
+	document, err := registry_helpers.DockerCfgFromCreds(username, password, upstream.Host)
+	if err != nil {
+		return nil, fmt.Errorf("building the upstream credentials: %w", err)
+	}
+
+	return document, nil
+}
+
+func schemeOrDefault(scheme string) string {
+	if scheme == "" {
+		return "HTTPS"
+	}
+
+	return scheme
 }
 
 // podCouldStillPull reports whether this pod could still have to fetch from the in-cluster registry.

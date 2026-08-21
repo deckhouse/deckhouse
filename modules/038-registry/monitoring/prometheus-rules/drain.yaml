@@ -43,7 +43,19 @@
              | jq -r '.items[] | select([.spec.template.spec.containers[]?.image, .spec.containers[]?.image] | any(startswith("registry.d8-system.svc:5001"))) | "\(.kind) \(.metadata.namespace)/\(.metadata.name)"'
            ```
 
-        Two causes account for it. Either a release is not being re-rendered — check that the
+        A third cause is a cluster with nowhere to go, and it is the one to check first on a cluster
+        that was air-gapped or installed with no upstream. Leaving the pull path means pointing the
+        cluster back at the registry the module was fetching from, and a module serving purely from
+        its own store has no such registry to name. It says so in the log:
+
+        ```
+        kubectl -n d8-system logs deploy/deckhouse -c deckhouse | grep "no upstream to point the cluster back at"
+        ```
+
+        Give the cluster a registry to pull from, or ask for `Managed` again. Nothing is degraded
+        while it waits, and the withdrawal will not complete until one of the two happens.
+
+        Otherwise two causes account for it. Either a release is not being re-rendered — check that the
         operator queue is not stuck, since the references move only as each module's release is
         rendered again:
 
