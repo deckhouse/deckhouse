@@ -3,7 +3,7 @@ title: "ALB средствами Istio"
 permalink: ru/admin/configuration/network/ingress/alb/istio.html
 description: "Настройка Application Load Balancer с Istio в Deckhouse Kubernetes Platform. Настройка Istio Ingress Gateway, управление трафиком и интеграция с service mesh."
 lang: ru
-extractedLinksMax: 2
+extractedLinksMax: 4
 relatedLinks:
   - title: "Документация модуля istio"
     url: /modules/istio/
@@ -15,7 +15,9 @@ relatedLinks:
 
 ALB средствами Istio реализуется через [Istio Ingress Gateway](#istio-ingress-gateway) или [Ingress NGINX](#ingress-nginx). Для этого используется модуль [`istio`](/modules/istio/).
 
-Используйте этот вариант, если требуются расширенные возможности управления трафиком в service mesh, например canary-маршрутизация или mTLS. Подробнее о настройке и возможностях в документации модуля [`istio`](/modules/istio/).
+Используйте этот вариант, если требуется управление трафиком в service mesh, например, canary-маршрутизация или mTLS. Настройка и возможности описаны в [«Документация модуля istio»](/modules/istio/).
+
+Создание IngressIstioController и подготовка инфраструктуры — задача администратора кластера. Публикация приложения ресурсами Gateway и VirtualService описана в разделе [«Публикация приложений средствами Istio»](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb.html#публикация-приложений-средствами-istio).
 
 ## Ingress для публикации приложений
 

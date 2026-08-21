@@ -2,7 +2,7 @@
 title: "Incoming traffic balancing"
 permalink: en/admin/configuration/network/ingress/
 description: "Configure ingress load balancing in Deckhouse Kubernetes Platform with NLB and ALB. Traffic routing, SSL termination, and application-level load balancing setup."
-extractedLinksMax: 2
+extractedLinksMax: 4
 relatedLinks:
   - title: "ALB with Ingress NGINX Controller"
     url: alb/nginx.html
@@ -10,12 +10,16 @@ relatedLinks:
     url: alb/alb-gateway-api.html
   - title: "ALB with Istio"
     url: alb/istio.html
+  - title: "Utilizing Application Load Balancer (ALB)"
+    url: /products/kubernetes-platform/documentation/v1/user/network/ingress/alb.html
   - title: "ingress-nginx module documentation"
     url: /modules/ingress-nginx/
   - title: "alb module documentation"
     url: /modules/alb/
   - title: "istio module documentation"
     url: /modules/istio/
+  - title: "metallb module documentation"
+    url: /modules/metallb/
 ---
 
 This section describes the approaches to balancing incoming traffic in Deckhouse Kubernetes Platform (DKP):
@@ -30,7 +34,7 @@ This section describes the approaches to balancing incoming traffic in Deckhouse
 NLB-based load balancing can be implemented in two ways:
 
 - Using an external load balancer provided by a cloud provider.
-- Using the built-in MetalLB balancer, which works in both cloud and bare-metal clusters.
+- Using the built-in [`metallb`](/modules/metallb/) balancer, which works in both cloud and bare-metal clusters.
 
 ## Application-level load balancing (ALB)
 
@@ -54,10 +58,10 @@ In other words, the Kubernetes Gateway API describes how to configure traffic ro
 When using the `alb` module, responsibilities are typically split as follows:
 
 - Cluster administrator — deploys cluster-scoped gateway infrastructure with ClusterALBInstance;
-- Namespace administrator — deploys namespaced gateway infrastructure with ALBInstance and configures how traffic is accepted with ListenerSet;
-- Application team — publishes applications with HTTPRoute and other route objects.
+- Namespace administrator — deploys namespaced gateway infrastructure with ALBInstance and configures how traffic is accepted with ListenerSet (hostname, TLS, ports);
+- Application developers — configure routing to the application with HTTPRoute and other route objects.
 
-This model separates gateway infrastructure and application routing responsibilities compared with the classic Ingress approach.
+In a typical cluster-wide gateway scenario, the namespace administrator creates the ListenerSet, and application developers create the HTTPRoute. The same person may perform both roles if they have the required permissions.
 
 ### Comparison of the ingress-nginx and alb modules {#comparison-of-the-ingress-nginx-and-alb-modules}
 
@@ -71,7 +75,7 @@ Both modules solve the same task — receiving and routing external traffic to a
 | Development | Maintenance mode: the upstream Ingress NGINX project no longer develops new features, while DKP provides security updates | Actively developed |
 | Minimum DKP version | Available in all supported versions | 1.76 |
 | DKP editions | All editions | All editions |
-| Role separation model | cluster administrator, namespace administrator | cluster administrator, namespace administrator, application team |
+| Role separation model | cluster administrator, namespace administrator | cluster administrator, namespace administrator, application developer |
 | Multiple independent entry points | Multiple Ingress controllers selected via `ingressClass` | Multiple Gateway objects selected via `gatewayName`; cluster-scoped and namespaced gateways |
 | HTTP/HTTPS (HTTP/1.1, HTTP/2, HTTP/3) | Yes | Yes |
 | WebSocket | Yes | Yes |
@@ -93,3 +97,13 @@ Both modules solve the same task — receiving and routing external traffic to a
 | GeoIP | Geo-based request statistics in metrics | Adding GeoIP fields to HTTP request headers based on MaxMind databases |
 | Prometheus metrics and Grafana dashboards | Yes, detailed by namespace, vhost, Ingress resource, and location | Yes: Envoy Proxy metrics and dashboards for requests, routes, and upstreams |
 | OpenTelemetry tracing | Yes | Yes |
+
+## What to do next
+
+1. Choose an ALB implementation: [`ingress-nginx`](alb/nginx.html), [`alb` (Gateway API)](alb/alb-gateway-api.html), or [`istio`](alb/istio.html). Use Istio when you need service-mesh traffic management (canary routing, mTLS between Pods). Use `alb` when you need Gateway API with role separation and protocols beyond classic Ingress. Use `ingress-nginx` when you need a mature Ingress-based ALB.
+2. Enable and configure the corresponding module. For the `alb` module, complete the ["Steps to take before enabling and configuring ALB in a cluster"](alb/alb-gateway-api.html#steps-to-take-before-enabling-and-configuring-alb-in-a-cluster).
+3. Publish applications using ["Utilizing Application Load Balancer (ALB)"](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb.html).
+
+{% alert level="info" %}
+The `alb` module is in Preview and requires DKP 1.76 or later.
+{% endalert %}
