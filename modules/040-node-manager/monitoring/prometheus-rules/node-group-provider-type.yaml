@@ -3,7 +3,7 @@
     - alert: NodeGroupProviderTypeIsNotSet
       expr: |
         max by (name, node_type) (d8_node_group_provider_type_unset) > 0
-      for: 1h
+      for: 10m
       labels:
         tier: cluster
         severity_level: "9"
