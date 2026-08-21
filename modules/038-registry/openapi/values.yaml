@@ -50,7 +50,7 @@ properties:
               Built by a hook out of ModuleConfig, with `auth.license` already
               resolved into a username/password pair, so the template stays free
               of resolution logic.
-            properties:
+            properties: &v2RegistryConfigProperties
               mode:
                 type: string
                 enum: [Managed, Unmanaged]
@@ -163,11 +163,17 @@ properties:
               config:
                 type: object
                 description: |
-                  The configuration being served until the drain finishes, in the
-                  same shape as `registryConfig` and with its mode set to `Managed`.
+                  The configuration being served until the drain finishes, with its
+                  mode set to `Managed`.
 
                   Captured from the RegistryConfig resource rather than rebuilt from
                   the ModuleConfig, which by this point describes no registry at all.
+
+                  The same shape as `registryConfig`, and literally the same
+                  properties: every field of an internal values object has to be
+                  declared or the patch that writes it is refused, and a second copy
+                  of that list would be a second thing to keep in step.
+                properties: *v2RegistryConfigProperties
           imageAddress:
             type: string
             description: |

@@ -277,6 +277,16 @@ const v2Draining = v2Enabled + `
       active: true
       references: 3
       startedAt: "2026-08-21T11:21:52Z"
+      config:
+        mode: Managed
+        primary:
+          upstream:
+            scheme: HTTPS
+            host: registry.deckhouse.io
+            path: /deckhouse/ee
+        storage:
+          cache: true
+          size: 50Gi
 `
 
 const v2EnabledUnmanaged = `
