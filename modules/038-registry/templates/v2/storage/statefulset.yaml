@@ -149,8 +149,22 @@ spec:
       # The syncer signals the registry process to make it re-read its
       # configuration.
       shareProcessNamespace: true
-      imagePullSecrets:
-      - name: deckhouse-registry
+      # No imagePullSecrets, deliberately.
+      #
+      # Credentials for the registry this cluster pulls from live on the NODE, not in a pod spec: the
+      # agent writes them into containerd's per-registry configuration, and before the agent exists
+      # bashible writes them there from the module's own node configuration. A pod therefore needs no
+      # secret of its own to pull, and measured on an air-gapped cluster: a pod with an empty
+      # `imagePullSecrets` pulled `registry.d8-system.svc:5001/system/deckhouse` in 72 ms, from the
+      # cluster's own store, through the agent.
+      #
+      # Removing it matters beyond tidiness. `deckhouse-registry` is the previous contour — written by
+      # dhctl, rendered by module 002 — and this module's own components referencing it was the reason
+      # it could not be retired: design ADR decision 22 asks for that contour to go, and a dependency
+      # from here is a dependency the platform cannot remove.
+      #
+      # The secret stays where it is genuinely the only source, which is a cluster with this module
+      # disabled: then nothing configures the node, and pods do need their own credentials.
       containers:
       - name: distribution
         image: {{ include "helm_lib_module_image" (list $ "dockerDistribution") }}

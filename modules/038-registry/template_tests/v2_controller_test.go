@@ -1623,3 +1623,39 @@ var _ = Describe("Module :: registry :: helm template :: v2 metrics are scrapabl
 			"Prometheus selects PodMonitors by this label; without it the target is never discovered")
 	})
 })
+
+// The absence of an imagePullSecret is a decision, so it is pinned like one.
+//
+// Credentials for the registry live on the node — the agent writes them into containerd's per-registry
+// configuration, and bashible writes them there before the agent exists — so a pod of this module needs
+// none of its own. Measured on an air-gapped cluster: a pod with an empty `imagePullSecrets` pulled
+// `registry.d8-system.svc:5001/system/deckhouse` in 72 ms, out of the cluster's own store.
+//
+// What the test protects is not the tidiness. `deckhouse-registry` is the contour design ADR decision 22
+// asks to retire — written by dhctl, rendered by module 002 — and this module referencing it is exactly
+// what made retiring it impossible. Someone adding the secret back "to be safe" would restore that
+// dependency without meaning to, which is what this catches.
+var _ = Describe("Module :: registry :: helm template :: v2 pulls without an imagePullSecret", func() {
+	f := SetupHelmConfig(``)
+
+	BeforeEach(func() {
+		f.ValuesSetFromYaml("global", globalValues)
+		f.ValuesSet("global.modulesImages", GetModulesImages())
+		f.ValuesSetFromYaml("registry", v2AirGap)
+		f.HelmRender()
+		Expect(f.RenderError).ShouldNot(HaveOccurred())
+	})
+
+	It("the storage carries no imagePullSecrets", func() {
+		storage := f.KubernetesResource("StatefulSet", "d8-system", "registry-storage")
+		Expect(storage.Exists()).To(BeTrue())
+		Expect(storage.Field("spec.template.spec.imagePullSecrets").Exists()).To(BeFalse(),
+			"credentials come from the node; a secret here is a dependency on the contour ADR 22 retires")
+	})
+
+	It("the controller carries no imagePullSecrets", func() {
+		controller := f.KubernetesResource("Deployment", "d8-system", "registry-controller")
+		Expect(controller.Exists()).To(BeTrue())
+		Expect(controller.Field("spec.template.spec.imagePullSecrets").Exists()).To(BeFalse())
+	})
+})
