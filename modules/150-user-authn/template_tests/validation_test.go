@@ -28,6 +28,7 @@ import (
 	celtypes "github.com/google/cel-go/common/types"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	admissionv1 "k8s.io/api/admission/v1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -55,7 +56,14 @@ const (
 	dexAuthenticatorAnnotation = "dexauthenticator.deckhouse.io/allow-access-to-kubernetes"
 
 	deckhouseServiceAccount = "system:serviceaccount:d8-system:deckhouse"
-	namespaceEditor         = "editor@example.com"
+	// A cluster provisioner running as a platform component. Deckhouse Commander patches DexClients
+	// in its own namespace during cluster bootstrap, which is what makes this case load-bearing.
+	commanderServiceAccount  = "system:serviceaccount:d8-commander:commander"
+	kubeSystemServiceAccount = "system:serviceaccount:kube-system:some-controller"
+	tenantServiceAccount     = "system:serviceaccount:attacker-ns:tenant"
+	namespaceEditor          = "editor@example.com"
+
+	allowAccessSubresource = "allow-access-to-kubernetes"
 )
 
 var _ = Describe("Module :: user-authn :: helm template :: validation", func() {
@@ -119,8 +127,14 @@ var _ = Describe("Module :: user-authn :: helm template :: validation", func() {
 				ContainSubstring("controls access to the Kubernetes API"),
 			)
 			Expect(policy.Field("spec.validations.0.messageExpression").String()).To(
-				ContainSubstring("may only be introduced or widened by a cluster administrator"),
+				ContainSubstring("allow-access-to-kubernetes subresource"),
 			)
+
+			// Platform components have to be excluded, otherwise the gate denies the provisioning
+			// flows that create these objects on the cluster's behalf.
+			matchConditions := policy.Field("spec.matchConditions").String()
+			Expect(matchConditions).To(ContainSubstring("system:serviceaccount:d8-"))
+			Expect(matchConditions).To(ContainSubstring("system:serviceaccount:kube-"))
 
 			binding := hec.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", allowAccessPolicyName)
 			Expect(binding.Exists()).To(BeTrue())
@@ -140,15 +154,18 @@ var _ = Describe("Module :: user-authn :: helm template :: validation", func() {
 			)
 
 			cases := []struct {
-				name           string
-				resource       string
-				kind           string
-				operation      admission.Operation
-				username       string
-				canManage      bool
-				annotations    map[string]string
-				oldAnnotations map[string]string
-				allowed        bool
+				name             string
+				resource         string
+				kind             string
+				operation        admission.Operation
+				username         string
+				groups           []string
+				canGrant         bool
+				grantedResource  string
+				grantedNamespace string
+				annotations      map[string]string
+				oldAnnotations   map[string]string
+				allowed          bool
 			}{
 				{
 					name:        "unauthorised subject grants access on create",
@@ -197,10 +214,52 @@ var _ = Describe("Module :: user-authn :: helm template :: validation", func() {
 					allowed:     true,
 				},
 				{
-					name:        "subject allowed to update the user-authn ModuleConfig grants access",
-					canManage:   true,
+					// Cluster provisioners run as platform components and patch these objects during
+					// bootstrap. Gating them buys nothing, and denying them breaks cluster creation.
+					name:        "platform service account provisioning a client grants access",
+					username:    commanderServiceAccount,
 					annotations: map[string]string{dexClientAnnotation: "true"},
 					allowed:     true,
+				},
+				{
+					name:        "service account of a kube-prefixed namespace grants access",
+					username:    kubeSystemServiceAccount,
+					annotations: map[string]string{dexClientAnnotation: "true"},
+					allowed:     true,
+				},
+				{
+					name:        "subject of a system group grants access",
+					groups:      []string{"system:authenticated", "system:serviceaccounts:d8-system"},
+					annotations: map[string]string{dexClientAnnotation: "true"},
+					allowed:     true,
+				},
+				{
+					// A tenant's own service account is not a platform component: the namespace
+					// prefix is what separates them, and this is the case the policy exists for.
+					name:        "tenant service account grants access",
+					username:    tenantServiceAccount,
+					annotations: map[string]string{dexClientAnnotation: "true"},
+					allowed:     false,
+				},
+				{
+					name:        "subject holding the allow-access subresource grants access",
+					canGrant:    true,
+					annotations: map[string]string{dexClientAnnotation: "true"},
+					allowed:     true,
+				},
+				{
+					name:            "subresource granted on the other kind does not carry over",
+					canGrant:        true,
+					grantedResource: "dexauthenticators",
+					annotations:     map[string]string{dexClientAnnotation: "true"},
+					allowed:         false,
+				},
+				{
+					name:             "subresource granted in another namespace does not carry over",
+					canGrant:         true,
+					grantedNamespace: "other-ns",
+					annotations:      map[string]string{dexClientAnnotation: "true"},
+					allowed:          false,
 				},
 				{
 					name:           "existing grant is carried over unchanged",
@@ -312,13 +371,16 @@ var _ = Describe("Module :: user-authn :: helm template :: validation", func() {
 				}
 
 				allowed, err := policy.validate(dexAdmissionInput{
-					resource:       resource,
-					kind:           kind,
-					operation:      operation,
-					username:       username,
-					canManage:      tc.canManage,
-					annotations:    tc.annotations,
-					oldAnnotations: tc.oldAnnotations,
+					resource:         resource,
+					kind:             kind,
+					operation:        operation,
+					username:         username,
+					groups:           tc.groups,
+					canGrant:         tc.canGrant,
+					grantedResource:  tc.grantedResource,
+					grantedNamespace: tc.grantedNamespace,
+					annotations:      tc.annotations,
+					oldAnnotations:   tc.oldAnnotations,
 				})
 
 				Expect(err).ToNot(HaveOccurred(), tc.name)
@@ -356,7 +418,7 @@ var _ = Describe("Module :: user-authn :: helm template :: validation", func() {
 				})
 				Expect(err).ToNot(HaveOccurred())
 				Expect(denied).To(BeFalse(),
-					"a subject without authority over the user-authn ModuleConfig must not set %q", value)
+					"a subject without the allow-access-to-kubernetes subresource must not set %q", value)
 
 				// The gate must stop the unauthorised subject only, otherwise the loop above would
 				// pass just as well against a policy that denies everything.
@@ -365,12 +427,12 @@ var _ = Describe("Module :: user-authn :: helm template :: validation", func() {
 					kind:        "DexClient",
 					operation:   admission.Create,
 					username:    namespaceEditor,
-					canManage:   true,
+					canGrant:    true,
 					annotations: annotations,
 				})
 				Expect(err).ToNot(HaveOccurred())
 				Expect(granted).To(BeTrue(),
-					"a subject with authority over the user-authn ModuleConfig must be able to set %q", value)
+					"a subject holding the allow-access-to-kubernetes subresource must be able to set %q", value)
 			}
 		})
 	})
@@ -412,10 +474,12 @@ var annotationValueCorpus = []string{
 	"", " ", "yes", "no", "on", "off", "enabled", "2", "TrUe", "true ",
 }
 
-// compiledPolicy evaluates the validation expressions of a ValidatingAdmissionPolicy through the
-// same CEL machinery kube-apiserver uses, so the expressions the module ships are under test.
+// compiledPolicy evaluates the match conditions and the validation expressions of a
+// ValidatingAdmissionPolicy through the same CEL machinery kube-apiserver uses, so the expressions
+// the module ships are under test.
 type compiledPolicy struct {
-	validations admissioncel.ConditionEvaluator
+	matchConditions admissioncel.ConditionEvaluator
+	validations     admissioncel.ConditionEvaluator
 }
 
 func compileRenderedPolicy(renderedPolicy string) compiledPolicy {
@@ -450,6 +514,15 @@ func compileRenderedPolicy(renderedPolicy string) compiledPolicy {
 		Expect(result.Error).To(BeNil(), "variable %q should compile", variable.Name)
 	}
 
+	matchConditions := make([]admissioncel.ExpressionAccessor, 0, len(policy.Spec.MatchConditions))
+	for _, condition := range policy.Spec.MatchConditions {
+		expression := boolExpression{expression: condition.Expression}
+		Expect(compiler.CompileCELExpression(expression, validationVars, environment.NewExpressions).Error).To(BeNil(),
+			"match condition %q should compile", condition.Name)
+
+		matchConditions = append(matchConditions, expression)
+	}
+
 	validations := make([]admissioncel.ExpressionAccessor, 0, len(policy.Spec.Validations))
 	for _, validation := range policy.Spec.Validations {
 		condition := boolExpression{expression: validation.Expression}
@@ -464,7 +537,8 @@ func compileRenderedPolicy(renderedPolicy string) compiledPolicy {
 	}
 
 	return compiledPolicy{
-		validations: compiler.CompileCondition(validations, validationVars, environment.NewExpressions),
+		matchConditions: compiler.CompileCondition(matchConditions, validationVars, environment.NewExpressions),
+		validations:     compiler.CompileCondition(validations, validationVars, environment.NewExpressions),
 	}
 }
 
@@ -514,18 +588,27 @@ type dexAdmissionInput struct {
 	kind           string
 	operation      admission.Operation
 	username       string
-	canManage      bool
-	annotations    map[string]string
-	oldAnnotations map[string]string
+	groups         []string
+	// canGrant hands the subject the allow-access-to-kubernetes subresource on the resource it
+	// writes, in the namespace it writes to.
+	canGrant bool
+	// grantedResource and grantedNamespace narrow that permission, so that a grant issued for one
+	// kind or one namespace can be shown not to carry over to another.
+	grantedResource  string
+	grantedNamespace string
+	annotations      map[string]string
+	oldAnnotations   map[string]string
 }
 
-// validate reports whether every validation of the policy admits the request.
-func (p compiledPolicy) validate(input dexAdmissionInput) (bool, error) {
-	const (
-		namespace = "attacker-ns"
-		name      = "app"
-	)
+const (
+	admissionNamespace = "attacker-ns"
+	admissionName      = "app"
+)
 
+// validate reports whether the policy admits the request. Match conditions are evaluated first, the
+// way kube-apiserver does it: a request they do not select never reaches the validations at all, so
+// the policy leaves it alone.
+func (p compiledPolicy) validate(input dexAdmissionInput) (bool, error) {
 	gvk := schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1", Kind: input.kind}
 	gvr := schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1", Resource: input.resource}
 
@@ -533,24 +616,46 @@ func (p compiledPolicy) validate(input dexAdmissionInput) (bool, error) {
 	// present by the admission machinery.
 	var oldObject runtime.Object
 	if input.operation == admission.Update {
-		oldObject = dexObject(gvk, namespace, name, input.oldAnnotations)
+		oldObject = dexObject(gvk, admissionNamespace, admissionName, input.oldAnnotations)
+	}
+
+	groups := input.groups
+	if groups == nil {
+		groups = []string{"system:authenticated"}
 	}
 
 	attributes := admission.NewAttributesRecord(
-		dexObject(gvk, namespace, name, input.annotations), oldObject,
-		gvk, namespace, name, gvr, "", input.operation, nil, false,
-		&user.DefaultInfo{Name: input.username, Groups: []string{"system:authenticated"}},
+		dexObject(gvk, admissionNamespace, admissionName, input.annotations), oldObject,
+		gvk, admissionNamespace, admissionName, gvr, "", input.operation, nil, false,
+		&user.DefaultInfo{Name: input.username, Groups: groups},
 	)
 	versionedAttributes, err := admission.NewVersionedAttributes(attributes, gvk, nil)
 	if err != nil {
 		return false, err
 	}
 
-	results, _, err := p.validations.ForInput(
-		context.Background(), versionedAttributes,
-		admissioncel.CreateAdmissionRequest(attributes, metav1.GroupVersionResource(gvr), metav1.GroupVersionKind(gvk)),
-		admissioncel.OptionalVariableBindings{Authorizer: userAuthnModuleConfigAuthorizer(input.canManage)},
-		nil, celconfig.RuntimeCELCostBudget,
+	request := admissioncel.CreateAdmissionRequest(
+		attributes, metav1.GroupVersionResource(gvr), metav1.GroupVersionKind(gvk),
+	)
+	bindings := admissioncel.OptionalVariableBindings{Authorizer: allowAccessAuthorizer(input)}
+
+	selected, err := p.evaluate(p.matchConditions, versionedAttributes, request, bindings)
+	if err != nil || !selected {
+		return true, err
+	}
+
+	return p.evaluate(p.validations, versionedAttributes, request, bindings)
+}
+
+// evaluate reports whether every expression of the evaluator holds for the request.
+func (p compiledPolicy) evaluate(
+	evaluator admissioncel.ConditionEvaluator,
+	attributes *admission.VersionedAttributes,
+	request *admissionv1.AdmissionRequest,
+	bindings admissioncel.OptionalVariableBindings,
+) (bool, error) {
+	results, _, err := evaluator.ForInput(
+		context.Background(), attributes, request, bindings, nil, celconfig.RuntimeCELCostBudget,
 	)
 	if err != nil {
 		return false, err
@@ -581,15 +686,27 @@ func dexObject(gvk schema.GroupVersionKind, namespace, name string, annotations 
 	return object
 }
 
-// userAuthnModuleConfigAuthorizer mimics RBAC for a subject that either holds or lacks the right to
-// update the user-authn ModuleConfig, and holds nothing else.
-func userAuthnModuleConfigAuthorizer(canManage bool) authorizer.Authorizer {
+// allowAccessAuthorizer mimics RBAC for a subject that holds the allow-access-to-kubernetes
+// subresource on one resource in one namespace, and holds nothing else. Both are narrowed on
+// purpose: a grant on DexClients must not carry over to DexAuthenticators, and a grant in one
+// namespace must not carry over to another.
+func allowAccessAuthorizer(input dexAdmissionInput) authorizer.Authorizer {
+	grantedResource := input.grantedResource
+	if grantedResource == "" {
+		grantedResource = input.resource
+	}
+	grantedNamespace := input.grantedNamespace
+	if grantedNamespace == "" {
+		grantedNamespace = admissionNamespace
+	}
+
 	return authorizerFunc(func(attributes authorizer.Attributes) bool {
-		return canManage &&
+		return input.canGrant &&
 			attributes.GetAPIGroup() == "deckhouse.io" &&
-			attributes.GetResource() == "moduleconfigs" &&
-			attributes.GetName() == "user-authn" &&
-			attributes.GetVerb() == "update"
+			attributes.GetResource() == grantedResource &&
+			attributes.GetSubresource() == allowAccessSubresource &&
+			attributes.GetNamespace() == grantedNamespace &&
+			attributes.GetVerb() == "create"
 	})
 }
 
