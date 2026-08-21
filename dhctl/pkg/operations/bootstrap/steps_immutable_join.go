@@ -45,6 +45,7 @@ func buildImmutableJoinPayload(
 	metaConfig *config.MetaConfig,
 	nodeName string,
 	customization *immutable.Customization,
+	nodeIP string,
 ) (string, []byte, error) {
 	var (
 		caCert    string
@@ -80,6 +81,7 @@ func buildImmutableJoinPayload(
 		BootstrapToken:     token,
 		APIServerEndpoints: endpoints,
 		Customization:      customization,
+		NodeIP:             nodeIP,
 	})
 }
 
