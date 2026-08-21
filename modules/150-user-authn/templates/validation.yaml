@@ -42,16 +42,19 @@ spec:
         apiVersions: ["*"]
         operations:  ["CREATE", "UPDATE"]
         resources:   ["dexclients", "dexauthenticators"]
-  # Platform components provision these objects on the cluster's behalf and are already privileged
-  # by virtue of running in a system namespace, so gating them buys nothing and only breaks
-  # provisioning flows. Tenants cannot place a workload in these namespaces to begin with.
+  # The platform's core namespaces are excluded because the module charts that ship an annotated
+  # DexAuthenticator, kiali in istio and the UI in cilium-hubble, are applied by the Deckhouse
+  # service account, and a request from d8-system or kube-system is privileged by construction:
+  # only that same service account and dhctl may create those namespaces in the first place
+  # (modules/002-deckhouse/templates/validation.yaml). Deliberately no exclusion by namespace
+  # prefix: a module from any ModuleSource gets a d8-<module> namespace, and it should have to
+  # declare this authority in its own RBAC like any other provisioner rather than inherit it from
+  # where it happens to run.
   matchConditions:
     - name: 'exclude-groups'
       expression: '!(["system:nodes", "system:serviceaccounts:kube-system", "system:serviceaccounts:d8-system"].exists(e, (e in request.userInfo.groups)))'
     - name: 'exclude-users'
       expression: '!(["system:sudouser", "system:apiserver", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler", "dhctl", "observability"].exists(e, (e == request.userInfo.username)))'
-    - name: 'exclude-system-serviceaccounts'
-      expression: '!(request.userInfo.username.startsWith("system:serviceaccount:d8-") || request.userInfo.username.startsWith("system:serviceaccount:kube-"))'
   variables:
     # The annotation is named after the kind it belongs to, so the key depends on the matched resource.
     - name: annotation

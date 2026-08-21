@@ -23,6 +23,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	celgo "github.com/google/cel-go/cel"
 	celtypes "github.com/google/cel-go/common/types"
@@ -56,9 +57,9 @@ const (
 	dexAuthenticatorAnnotation = "dexauthenticator.deckhouse.io/allow-access-to-kubernetes"
 
 	deckhouseServiceAccount = "system:serviceaccount:d8-system:deckhouse"
-	// A cluster provisioner running as a platform component. Deckhouse Commander patches DexClients
-	// in its own namespace during cluster bootstrap, which is what makes this case load-bearing.
-	commanderServiceAccount  = "system:serviceaccount:d8-commander:commander"
+	// The identity that patches DexClients during cluster bootstrap: a namespace-scoped service
+	// account outside the core namespaces, holding an enumerated Role rather than broad RBAC.
+	commanderServiceAccount  = "system:serviceaccount:d8-commander:cluster-manager"
 	kubeSystemServiceAccount = "system:serviceaccount:kube-system:some-controller"
 	tenantServiceAccount     = "system:serviceaccount:attacker-ns:tenant"
 	namespaceEditor          = "editor@example.com"
@@ -130,11 +131,13 @@ var _ = Describe("Module :: user-authn :: helm template :: validation", func() {
 				ContainSubstring("allow-access-to-kubernetes subresource"),
 			)
 
-			// Platform components have to be excluded, otherwise the gate denies the provisioning
-			// flows that create these objects on the cluster's behalf.
+			// The core namespaces have to be excluded, otherwise the gate denies the module charts
+			// that ship an annotated DexAuthenticator. Nothing wider: a namespace prefix must not
+			// confer the authority on whatever runs under it.
 			matchConditions := policy.Field("spec.matchConditions").String()
-			Expect(matchConditions).To(ContainSubstring("system:serviceaccount:d8-"))
-			Expect(matchConditions).To(ContainSubstring("system:serviceaccount:kube-"))
+			Expect(matchConditions).To(ContainSubstring("system:serviceaccounts:d8-system"))
+			Expect(matchConditions).To(ContainSubstring("system:serviceaccounts:kube-system"))
+			Expect(matchConditions).ToNot(ContainSubstring("startsWith"))
 
 			binding := hec.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", allowAccessPolicyName)
 			Expect(binding.Exists()).To(BeTrue())
@@ -208,34 +211,46 @@ var _ = Describe("Module :: user-authn :: helm template :: validation", func() {
 					allowed:     false,
 				},
 				{
-					name:        "deckhouse service account grants access",
-					username:    deckhouseServiceAccount,
-					annotations: map[string]string{dexClientAnnotation: "true"},
-					allowed:     true,
-				},
-				{
-					// Cluster provisioners run as platform components and patch these objects during
-					// bootstrap. Gating them buys nothing, and denying them breaks cluster creation.
-					name:        "platform service account provisioning a client grants access",
+					// A cluster provisioner outside the core namespaces is not exempt: it proves the
+					// authority with the permission, which is what the Commander chart's
+					// cluster-manager Role carries.
+					name:        "cluster provisioner without the permission grants access",
 					username:    commanderServiceAccount,
 					annotations: map[string]string{dexClientAnnotation: "true"},
+					allowed:     false,
+				},
+				{
+					name:        "cluster provisioner holding the permission grants access",
+					username:    commanderServiceAccount,
+					canGrant:    true,
+					annotations: map[string]string{dexClientAnnotation: "true"},
 					allowed:     true,
 				},
 				{
-					name:        "service account of a kube-prefixed namespace grants access",
+					// Only the core namespaces are exempt, and a service account of one of them is
+					// recognised through the groups kube-apiserver attaches, not through its name.
+					name:        "service account of kube-system grants access",
 					username:    kubeSystemServiceAccount,
 					annotations: map[string]string{dexClientAnnotation: "true"},
 					allowed:     true,
 				},
 				{
-					name:        "subject of a system group grants access",
-					groups:      []string{"system:authenticated", "system:serviceaccounts:d8-system"},
+					// The identity that applies the module charts shipping an annotated
+					// DexAuthenticator, kiali and the cilium-hubble UI.
+					name:        "deckhouse service account of d8-system grants access",
+					username:    deckhouseServiceAccount,
 					annotations: map[string]string{dexClientAnnotation: "true"},
 					allowed:     true,
 				},
 				{
-					// A tenant's own service account is not a platform component: the namespace
-					// prefix is what separates them, and this is the case the policy exists for.
+					// A module from a ModuleSource lands in d8-<module>, and the namespace prefix
+					// alone must not confer the authority.
+					name:        "service account of a module namespace grants access",
+					username:    "system:serviceaccount:d8-some-module:controller",
+					annotations: map[string]string{dexClientAnnotation: "true"},
+					allowed:     false,
+				},
+				{
 					name:        "tenant service account grants access",
 					username:    tenantServiceAccount,
 					annotations: map[string]string{dexClientAnnotation: "true"},
@@ -612,11 +627,11 @@ func repositoryRoot() string {
 }
 
 type dexAdmissionInput struct {
-	resource       string
-	kind           string
-	operation      admission.Operation
-	username       string
-	groups         []string
+	resource  string
+	kind      string
+	operation admission.Operation
+	username  string
+	groups    []string
 	// canGrant hands the subject the allow-access-to-kubernetes subresource on the resource it
 	// writes, in the namespace it writes to.
 	canGrant bool
@@ -649,7 +664,7 @@ func (p compiledPolicy) validate(input dexAdmissionInput) (bool, error) {
 
 	groups := input.groups
 	if groups == nil {
-		groups = []string{"system:authenticated"}
+		groups = defaultGroups(input.username)
 	}
 
 	attributes := admission.NewAttributesRecord(
@@ -673,6 +688,25 @@ func (p compiledPolicy) validate(input dexAdmissionInput) (bool, error) {
 	}
 
 	return p.evaluate(p.validations, versionedAttributes, request, bindings)
+}
+
+// defaultGroups returns the groups kube-apiserver attaches to the subject. Service accounts get
+// them for free, and the policy's exclusions are written against them, so a test that left them out
+// would exercise a subject the cluster never produces.
+func defaultGroups(username string) []string {
+	groups := []string{"system:authenticated"}
+
+	namespaced := strings.TrimPrefix(username, "system:serviceaccount:")
+	if namespaced == username {
+		return groups
+	}
+
+	namespace, _, found := strings.Cut(namespaced, ":")
+	if !found {
+		return groups
+	}
+
+	return append(groups, "system:serviceaccounts", "system:serviceaccounts:"+namespace)
 }
 
 // evaluate reports whether every expression of the evaluator holds for the request.
