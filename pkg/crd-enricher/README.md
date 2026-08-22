@@ -541,7 +541,7 @@ never overwritten by generation.
 ## CLI reference
 
 ```
-crd-enricher paths=<go-packages> crds=<crd-dir> [dir=<workdir>] [auto-examples] [reindent]
+crd-enricher paths=<go-packages> crds=<crd-dir> [dir=<workdir>] [auto-examples] [reindent] [strict]
 ```
 
 | Argument | Meaning |
@@ -552,6 +552,7 @@ crd-enricher paths=<go-packages> crds=<crd-dir> [dir=<workdir>] [auto-examples] 
 | `dir=` | Optional working directory used to resolve the package patterns. Defaults to the current directory. |
 | `auto-examples`, `--auto-examples`, `auto-examples=<bool>` | Enable [automatic example generation](#automatic-example-generation) (**off by default**). Explicit `examples` markers are applied regardless. |
 | `reindent`, `--reindent`, `reindent=<bool>` | Encode the output with **indented** block sequences (the `goyaml.v3` layout) instead of the default flush `sigs.k8s.io/yaml` layout (**off by default**). Key ordering is unaffected. See [Output layout](#output-layout). |
+| `strict`, `--strict`, `strict=<bool>` | Exit non-zero when any warning was printed (**off by default**). See [Warnings and gotchas](#warnings-and-gotchas). |
 | `-h`, `--help`, `help` | Print usage. |
 
 Example:
@@ -565,7 +566,8 @@ crd-enricher \
 
 On success it prints one `enriched <file>` line per modified file, or
 `no CRDs required enrichment` when nothing changed. It exits non-zero on error
-(e.g. unloadable packages or an unknown argument).
+(e.g. unloadable packages or an unknown argument), and — with `strict` — when
+anything was warned about.
 
 ### Using it as a library
 
@@ -700,3 +702,9 @@ indentation.
   marker is ignored with a warning.
 - **Run order matters.** Always run `crd-enricher` *after* controller-gen against
   the *same* directory and package paths. It edits in place and is idempotent.
+- **Warnings are not fatal unless you ask.** They always go to stderr and the run
+  exits 0, so adopting the tool cannot turn a generation step red on its own. Pass
+  `strict` in CI once the warnings are clean. A re-render gate over a committed
+  `crds/` is **not** a substitute: it catches a marker that used to work and
+  stopped, but never one that never worked — the committed manifest matches the
+  broken render, and the gate stays green for as long as nobody reads stderr.
