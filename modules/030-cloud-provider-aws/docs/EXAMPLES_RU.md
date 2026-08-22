@@ -24,14 +24,14 @@ spec:
 
 Поддерживаются следующие параметры в дополнение к существующим в [upstream](https://cloud-provider-aws.sigs.k8s.io/service_controller/):
 
-1. `service.beta.kubernetes.io/aws-load-balancer-type` — может иметь значение `none`, что приведет к созданию **только** Target Group, без какого-либо LoadBalanacer'а.
+1. `service.beta.kubernetes.io/aws-load-balancer-type` — может иметь значение `none`, что приведет к созданию **только** целевой группы, без какого-либо LoadBalanacer'а.
 2. `service.beta.kubernetes.io/aws-load-balancer-backend-protocol` — используется в связке с `service.beta.kubernetes.io/aws-load-balancer-type: none`:
    * Возможные значения:
      * `tcp` (по умолчанию);
      * `tls`;
      * `http`;
      * `https`.
-   * **Внимание!** При изменении этого параметра `cloud-controller-manager` попытается пересоздать Target Group. Если к ней уже привязаны NLB или ALB, удалить Target Group не получится и он будет бесконечно пытаться это сделать. В таком случае необходимо вручную отсоединить NLB или ALB от Target Group.
+   * **Внимание!** При изменении этого параметра `cloud-controller-manager` попытается пересоздать целевую группу. Если к ней уже привязаны NLB или ALB, удалить целевую группу не получится и он будет бесконечно пытаться это сделать. В таком случае необходимо вручную отсоединить NLB или ALB от целевой группы.
 
 ## Настройка политик безопасности на узлах
 
