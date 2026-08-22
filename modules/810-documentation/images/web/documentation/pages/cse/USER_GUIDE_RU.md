@@ -2,6 +2,8 @@
 title: "Руководство пользователя Deckhouse Kubernetes Platform Certified Security Edition"
 permalink: ru/user-guide.html
 lang: ru
+search: назначение средства, режимы работы, подключение к кластеру, генератор kubeconfig, программа-клиент, d8, веб-интерфейс, Grafana, мониторинг, deckhouse-tools, логирование, настройки логирования, сбор логов, Loki, ClusterLogDestination, PodLoggingConfig, виртуализация, виртуальные машины, VirtualMachine, VirtualDisk, образы, диски, снимки, доставка приложений, werf, werf.yaml, гитерминизм, конфигурация проекта, сборка, развертывание, события безопасности, аварийные ситуации
+searchBoost: 2
 decimalNumber: RU.86432418.00001-01 91 04-1
 ---
 

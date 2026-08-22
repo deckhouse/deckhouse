@@ -1,6 +1,8 @@
 ---
 title: "Руководство по обновлению Deckhouse Kubernetes Platform Certified Security Edition"
 permalink: ru/update.html
+search: обновление, обновление платформы, обновление версии, upgrade, апгрейд, переход на новую версию, миграция, требования к узлам, системные требования, поддерживаемые ОС, РЕД ОС, Astra Linux, Альт, Московская серверная операционная система, действия перед обновлением, подготовка к обновлению, контроль целостности, включение контроля целостности, signature, Migrate, Enforce, containerd, ContainerdV2, cgroups, cgroups v2, erofs, cilium, etcd, etcd member, проверка успешности обновления, проблемы при обновлении, ЗПС, замкнутая программная среда, astra-digsig-control
+searchBoost: 2
 lang: ru
 ---
 
