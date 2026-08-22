@@ -106,7 +106,8 @@ class ModuleSearch {
         ['dexprovider', 'dex providers', 'провайдеры аутентификации'],
         ['modulepulloverride', 'переопределение'],
         ['release.deckhouse.io/approved', 'ручное подтверждение обновлений'],
-        ['siem', 'Security Information and Event Management', 'kuma', 'kesl', 'kaspersky container security', 'Kaspersky Unified Monitoring and Analysis Platform']
+        ['siem', 'Security Information and Event Management', 'kuma', 'kesl', 'kaspersky container security', 'Kaspersky Unified Monitoring and Analysis Platform'],
+        ['topologymanager', 'cpumanager', 'memorymanager']
       ],
       // One-way overrides, if some term must expand without the reverse link:
       // { 'what user types': ['extra query', ...] }. Merged on top of the groups.
