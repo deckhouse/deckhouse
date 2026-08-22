@@ -32,12 +32,12 @@ class ModuleSearch {
       parameterOther: [],
       document: []
     };
+    // Results shown per rendered block initially and added by each "show more"
+    // click. The four API subgroups share the 'api' counter, see displayResults().
+    this.pageSize = 5;
     this.displayedCounts = {
-      isResourceNameMatch: 5,
-      nameMatch: 5,
-      isResourceOther: 5,
-      parameterOther: 5,
-      document: 5
+      api: this.pageSize,
+      document: this.pageSize
     };
     this.isDataLoaded = false;
     this.isLoadingInBackground = false;
@@ -621,7 +621,12 @@ class ModuleSearch {
         if (query.length > 0) {
           // There's a query, execute the search
           this.searchResults.style.display = 'flex';
-          this.handleSearch(query);
+          // Re-running an unchanged query would call resetPagination() and collapse
+          // blocks the user has already expanded (regaining focus after a "show more"
+          // click used to do exactly that). Rendered results are still in the DOM.
+          if (query !== this.lastQuery || !this.searchResults.querySelector('.result-item')) {
+            this.handleSearch(query);
+          }
         } else {
           // No query, show ready message
           this.updateUIState();
@@ -735,6 +740,15 @@ class ModuleSearch {
       }
     });
 
+    // A button inside the dropdown takes focus on mousedown, which blurs the input
+    // and forces the click handler to restore focus - and that focus event used to
+    // re-run the search. Suppressing the default keeps focus in the input all along.
+    this.searchResults.addEventListener('mousedown', (e) => {
+      if (e.target.closest('button')) {
+        e.preventDefault();
+      }
+    });
+
     // Prevent search results from closing when clicking on buttons inside results
     this.searchResults.addEventListener('click', (e) => {
       // If clicking on a button or interactive element, prevent closing
@@ -747,6 +761,11 @@ class ModuleSearch {
 
         // Keep focus on search input to prevent blur from hiding results
         this.searchInput.focus();
+
+        const showMoreButton = e.target.closest('.tile__pagination');
+        if (showMoreButton) {
+          this.loadMore(showMoreButton.dataset.groupType);
+        }
       }
     });
   }
@@ -1832,15 +1851,22 @@ class ModuleSearch {
       resultsHtml += this.renderModulesRow(this.currentResults.modules, highlightTerms);
     }
 
-    // Display API results in priority order
-    if (this.currentResults.isResourceNameMatch.length > 0 || this.currentResults.nameMatch.length > 0 || this.currentResults.isResourceOther.length > 0 || this.currentResults.parameterOther.length > 0) {
+    // The four API subgroups are a single list for the user: they share one header,
+    // so they are concatenated in priority order and paginated by one counter.
+    // Rendering them separately would put up to four "show more" buttons in the
+    // block, each extending its own subgroup somewhere in the middle of the list.
+    const apiResults = [
+      ...this.currentResults.isResourceNameMatch,
+      ...this.currentResults.nameMatch,
+      ...this.currentResults.isResourceOther,
+      ...this.currentResults.parameterOther
+    ];
+
+    if (apiResults.length > 0) {
       resultsHtml += `
         <div class="results-group">
           <div class="results-group-header">${this.t('api')}</div>
-          ${this.currentResults.isResourceNameMatch.length > 0 ? this.renderResultGroup(this.currentResults.isResourceNameMatch, highlightTerms, 'isResourceNameMatch') : ''}
-          ${this.currentResults.nameMatch.length > 0 ? this.renderResultGroup(this.currentResults.nameMatch, highlightTerms, 'nameMatch') : ''}
-          ${this.currentResults.isResourceOther.length > 0 ? this.renderResultGroup(this.currentResults.isResourceOther, highlightTerms, 'isResourceOther') : ''}
-          ${this.currentResults.parameterOther.length > 0 ? this.renderResultGroup(this.currentResults.parameterOther, highlightTerms, 'parameterOther') : ''}
+          ${this.renderResultGroup(apiResults, highlightTerms, 'api')}
         </div>
       `;
     }
@@ -1960,7 +1986,11 @@ class ModuleSearch {
 
       let title, module, description, breadcrumbs;
 
-      if (groupType === 'isResourceNameMatch' || groupType === 'nameMatch' || groupType === 'isResourceOther' || groupType === 'parameterOther') {
+      // Markup is chosen per result, not per group: the API block mixes subgroups,
+      // and doc.type is set for every grouped result by groupResults().
+      const isParameter = doc.type === 'parameter' || (!doc.title && !!doc.name);
+
+      if (isParameter) {
         // For configuration results (parameters) and isResource parameters
         title = this.highlightText(doc.name || '', highlightTerms);
         module = doc.module ? `<div class="result-module">${doc.module}</div>` : '';
@@ -1987,23 +2017,43 @@ class ModuleSearch {
       `;
     });
 
+    // Without this button the group is capped at its initial count with no way
+    // to reach the rest of the matches. Clicks are handled by delegation in
+    // setupEventListeners(), which already keeps the dropdown open.
+    if (displayedCount < results.length) {
+      const remaining = Math.min(this.pageSize, results.length - displayedCount);
+      html += `
+        <button type="button" class="tile__pagination" data-group-type="${groupType}">
+          <p class="tile__pagination--descr">${this.t('showMorePattern', { count: remaining })}</p>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M8 1C8.55229 1 9 1.44772 9 2V7L14 7C14.5523 7 15 7.44772 15 8C15 8.55229 14.5523 9 14 9L9 9L9 14C9 14.5523 8.55229 15 8 15C7.44772 15 7 14.5523 7 14L7 9H2C1.44772 9 1 8.55229 1 8C1 7.44772 1.44772 7 2 7L7 7L7 2C7 1.44772 7.44772 1 8 1Z" fill="#0D69F2"/>
+          </svg>
+        </button>
+      `;
+    }
+
     return html;
   }
 
   loadMore(groupType) {
-    if (groupType === 'isResourceNameMatch' || groupType === 'nameMatch' || groupType === 'isResourceOther' || groupType === 'parameterOther' || groupType === 'document') {
-      this.displayedCounts[groupType] += 5;
-      this.displayResults();
+    if (!Object.prototype.hasOwnProperty.call(this.displayedCounts, groupType)) {
+      return;
+    }
+
+    // displayResults() replaces innerHTML, which resets the dropdown scroll:
+    // keep the position so the list grows below the button instead of jumping up.
+    const scrollTop = this.searchResults ? this.searchResults.scrollTop : 0;
+    this.displayedCounts[groupType] += this.pageSize;
+    this.displayResults();
+    if (this.searchResults) {
+      this.searchResults.scrollTop = scrollTop;
     }
   }
 
   resetPagination() {
     this.displayedCounts = {
-      isResourceNameMatch: 5,
-      nameMatch: 5,
-      isResourceOther: 5,
-      parameterOther: 5,
-      document: 5
+      api: this.pageSize,
+      document: this.pageSize
     };
   }
 

@@ -589,6 +589,15 @@ Hugo:
 data-search-context="{{ T "search_context" }}"
 ```
 
+### Result blocks and pagination
+
+Results are rendered in three blocks in a fixed order — Modules, API (OpenAPI parameters and resources) and Documentation (pages) — and nothing moves a result from one block to another.
+
+- The API and Documentation blocks show 5 results each; the "show more" button below a block adds 5 more (`pageSize` in `search-v3.js`). The button is not rendered once the block has nothing left.
+- Inside the API block results are ordered by four internal priorities (resource name match, parameter name match, other resources, other parameters), but the block is paginated as a single list — one counter, one button.
+- The Modules row shows up to 14 badges and then `... and N more` as plain text, without a way to expand it.
+- The search itself is not limited: Lunr returns every match and grouping keeps them all, so a block may hold hundreds of results with 5 of them rendered. Only the rendering is capped.
+
 ### Ranking a single page (`searchBoost`)
 
 Search results are scored by Lunr (field weights: `title` 10, `keywords` 9, `module` 6, `summary` 3, `content` 1) and then adjusted by `search-v3.js`. To move one specific page up or down without touching those global weights, set `searchBoost` in its front matter:
