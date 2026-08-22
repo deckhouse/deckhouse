@@ -1,10 +1,15 @@
 /*
- * Dedicated search worker protocol:
+ * Dedicated search worker protocol. Query syntax is owned by the main thread: both the
+ * query and the synonym map arrive sanitized, so this file has no rewrite rules of its
+ * own. What it does keep is the search itself - the same code runs in search-v3.js as
+ * the fallback for browsers without workers.
+ *
  * - Main -> Worker:
- *   1) { type: 'INIT', payload: { searchData, currentLang } }
+ *   1) { type: 'INIT', payload: { searchData, currentLang, synonyms } }
  *      Builds Lunr/Fuse indexes and module list in worker thread.
- *   2) { type: 'SEARCH', payload: { requestId, query } }
- *      Runs search for user query.
+ *   2) { type: 'SEARCH', payload: { requestId, query, requireAllWords } }
+ *      Runs search for an already sanitized user query. requireAllWords marks a
+ *      "key: value" pair, whose words all have to be present on the page.
  *
  * - Worker -> Main:
  *   1) { type: 'READY', payload: { availableModules } }
@@ -292,42 +297,6 @@ function getFuzzySuggestions(query) {
   return fuzzyResults.slice(0, 5);
 }
 
-// Sanitizes user query to avoid Lunr syntax/operator parse errors.
-function sanitizeQueryForSearch(query) {
-  const urlPattern = /^https?:\/\/[^\s]+$/i;
-  if (urlPattern.test(query)) {
-    try {
-      const url = new URL(query);
-      const domain = url.hostname.replace(/^www\./, '');
-      const pathSegments = url.pathname.split('/').filter(segment => segment.length > 0);
-      return [domain, ...pathSegments].join(' ');
-    } catch (e) {
-      return query.replace(/^https?:\/\//, '').replace(/[^\w\s-]/g, ' ').trim();
-    }
-  }
-
-  let sanitized = query;
-  let hasChanges = false;
-
-  if (/^[a-zA-Z]*:/.test(sanitized)) {
-    sanitized = sanitized.replace(/:/g, ' ');
-    hasChanges = true;
-  }
-
-  if (sanitized.includes('--')) {
-    sanitized = sanitized.replace(/--/g, ' ');
-    hasChanges = true;
-  }
-
-  const lunrOperatorPattern = /(\s|^)[+\-](\w+)/g;
-  if (lunrOperatorPattern.test(sanitized)) {
-    sanitized = sanitized.replace(lunrOperatorPattern, '$1$2');
-    hasChanges = true;
-  }
-
-  return hasChanges ? sanitized.trim() : query;
-}
-
 function normalizeSynonymKey(value) {
   return String(value || '')
     .toLowerCase()
@@ -335,8 +304,9 @@ function normalizeSynonymKey(value) {
     .trim();
 }
 
-// The INIT payload already carries normalized keys; this pass only guards against
-// a caller passing a raw map, since lookups always go through normalizeSynonymKey().
+// The INIT payload already carries normalized and sanitized entries; this pass only
+// guards against a caller passing a raw map, since lookups always go through
+// normalizeSynonymKey().
 function getNormalizedSynonyms() {
   if (normalizedSynonyms) {
     return normalizedSynonyms;
@@ -383,7 +353,7 @@ function getSynonymCandidates(query) {
     }
     const items = Array.isArray(rawCandidates) ? rawCandidates : [rawCandidates];
     items.forEach((item) => {
-      const candidate = sanitizeQueryForSearch(normalizeSynonymKey(item));
+      const candidate = normalizeSynonymKey(item);
       if (!candidate || seen.has(candidate)) {
         return;
       }
@@ -475,9 +445,18 @@ function expandQueryHighlightTerms(query) {
   return /\s/.test(value) ? [value, ...value.split(/\s+/)] : [value];
 }
 
-// Executes Lunr search and applies fuzzy fallback strategy.
-function runSearch(query) {
-  const sanitizedQuery = sanitizeQueryForSearch(query);
+// Executes Lunr search and applies fuzzy fallback strategy. The query arrives already
+// sanitized: query syntax belongs to the main thread, which also tells us here whether
+// the user typed a "key: value" pair (requireAllWords).
+function runSearch(query, requireAllWords) {
+  const sanitizedQuery = String(query == null ? '' : query);
+
+  // A query built only from operators ("*", "+") sanitizes down to nothing, and an empty
+  // Lunr query matches the entire corpus - 7154 pages on the current index.
+  if (!sanitizedQuery.trim()) {
+    return { results: [], highlightQuery: sanitizedQuery, highlightTerms: [] };
+  }
+
   let results = [];
   let highlightQuery = sanitizedQuery;
   // Every term that contributed to the result set, so the UI highlights synonyms too.
@@ -520,7 +499,24 @@ function runSearch(query) {
     }
   };
 
-  const initialSearch = searchWithFallback(sanitizedQuery);
+  // "kind: configmap" is a key/value pair, so both words are required: that is 29 pages
+  // against 381 when the same words are OR-ed. Pages that never mention them together
+  // are still reachable, because an empty strict result falls back to OR.
+  const searchKeyValueAware = (plainQuery) => {
+    if (requireAllWords) {
+      const strictQuery = buildPhraseQuery(plainQuery);
+      if (strictQuery !== plainQuery) {
+        const strictSearch = searchWithFallback(strictQuery);
+        if (strictSearch.results.length > 0) {
+          // Highlighting keeps the plain query: "+word" is a Lunr operator, not text.
+          return { results: strictSearch.results, highlightQuery: plainQuery };
+        }
+      }
+    }
+    return searchWithFallback(plainQuery);
+  };
+
+  const initialSearch = searchKeyValueAware(sanitizedQuery);
   results = initialSearch.results;
   highlightQuery = initialSearch.highlightQuery;
 
@@ -615,7 +611,7 @@ self.onmessage = (event) => {
         throw new Error('Search index is not initialized');
       }
       const query = payload.query || '';
-      const result = runSearch(query);
+      const result = runSearch(query, payload.requireAllWords === true);
       self.postMessage({
         type: 'SEARCH_RESULT',
         payload: {

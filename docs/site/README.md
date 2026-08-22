@@ -621,6 +621,24 @@ Behavior:
 
 The related key `search` (comma-separated keywords) is often the better first tool: the `keywords` field already carries a weight of 9 and picks up an extra multiplier during post-processing. Reach for `searchBoost` when the page already matches and simply needs to rank higher.
 
+### Query syntax
+
+The search box takes plain text. Lunr's query language is not exposed to visitors: every operator is rewritten before the query reaches the index by the `LUNR_SYNTAX_RULES` table in `docs/site/assets/js/search-v3.js`. That file is the only owner of query syntax — it sanitizes the query before handing it to the worker in the `SEARCH` message (along with a `requireAllWords` flag for the `key: value` case) and sanitizes the synonym map it sends on `INIT`, so `search-v3-worker.js` never sees raw input and needs no copy of the table. The rules are idempotent, because `buildPhraseQuery()` re-adds `+` afterwards.
+
+| Typed | Searched | Note |
+|---|---|---|
+| `+ingress`, `-nginx`, `install --dry-run` | `ingress`, `nginx`, `install dry-run` | presence operators are inert in any script |
+| `ingress~5` | `ingress` | fuzzy matching is off: an edit distance of 5 matched 2464 pages in 76 ms |
+| `ingress^10 nginx` | `ingress nginx` | boosting is off: relevance belongs to the field boosts |
+| `kind: configmap`, `content:nginx` | `+kind +configmap`, `+content +nginx` | see below |
+| `ingres*` | `ingres*` | **the one supported operator** |
+| `a*`, `*gress`, `in*ss` | `a`, `gress`, `in ss` | only a trailing `*` on a term of 3+ characters survives; a leading one cost 111 ms against 2 ms, and `*` alone meant the whole corpus (7154 pages, 993 ms) |
+| `*`, `+`, `:` | — | a query made only of operators sanitizes to nothing and reports "not found"; an empty Lunr query would otherwise return every page |
+
+A colon is read as a `key: value` pair pasted from a manifest, so **both parts are required**: `kind: configmap` matches 29 pages where the same words OR-ed match 381. `kind:configmap` and `kind: configmap` are the same query — the index holds the token `kind`, not `kind:`, because `lunr.trimmer` strips it. If nothing contains all the words, the search falls back to the ordinary OR query, so a pair is never a dead end. This also removes a trap: `content:`, `title:`, `module:`, `summary:` and `keywords:` are real index fields, and such a query used to be silently scoped to one field (`content:nginx` returned 107 pages instead of 218, with nothing in the UI to show it).
+
+Malformed input cannot break the search: `searchWithFallback()` retries once with every non-word character stripped, and a failure after that shows an error message instead of an empty dropdown.
+
 ### Synonyms (`synonymGroups`)
 
 Synonyms let a query find pages that do not contain its words at all — for example, «провайдеры аутентификации» finds the `DexProvider` resource. They live in `options.synonymGroups` in `docs/site/assets/js/search-v3.js` as groups of equivalent terms:
@@ -637,7 +655,7 @@ Every member of a group expands to all the others, so a link works in both direc
 Editing rules:
 
 - `search-v3.js` is the only place to edit. The search itself runs in `search-v3-worker.js`, but the worker receives the derived map with the `INIT` message and keeps no list of its own — a group added there has no effect.
-- Case and extra spaces do not matter: terms are normalized (lowercased, whitespace collapsed) both when the map is built and on lookup. Keep them lowercase anyway, for consistency with the existing groups.
+- Case and extra spaces do not matter: terms are normalized (lowercased, whitespace collapsed) and sanitized once, when the map is built, and lookups use the same normalization. Keep them lowercase anyway, for consistency with the existing groups.
 - Expansion is matched against the whole query and against every window of up to 4 consecutive words in it, so `update policy for a module` expands as well as `update policy`.
 
 Behavior:

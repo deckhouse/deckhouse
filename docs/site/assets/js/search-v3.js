@@ -1,3 +1,37 @@
+// Rewrites applied to every query before it reaches Lunr, in order. The search box
+// takes plain text: the only operator left is a trailing "*" on a term of at least
+// three characters. Measured on the site index (562 documents, 6592 parameters):
+// "ingress~5" matched 2464 pages in 76 ms, a leading "*gress" cost 111 ms against
+// 2 ms for "ingres*", "*" alone meant the whole corpus (7154 hits, 993 ms), and
+// "content:nginx" silently narrowed 218 hits to 107 with nothing in the UI to show it.
+//
+// This table lives here only: the main thread sanitizes every query before it reaches
+// the worker (see searchWithWorker()) and sanitizes the synonym map it sends on INIT,
+// so search-v3-worker.js never sees raw user input. The rules are still idempotent,
+// because buildPhraseQuery() re-adds "+" to build conjunctions after this pass.
+const LUNR_SYNTAX_RULES = [
+  // Presence: "+ingress", "-nginx", "install --dry-run". The old rule captured (\w+),
+  // and \w is ASCII only, so "+кластер" stayed a working operator while "+ingress"
+  // did not - the lookahead makes this independent of the keyboard layout.
+  [/(^|\s)[+-]+(?=[^\s+-])/gu, '$1'],
+  // A dangling "+" or "-" is a parse error on its own.
+  [/(^|\s)[+-]+(?=\s|$)/gu, '$1'],
+  // Fuzzy matching: too blunt (an edit distance of 5 matches almost anything) and it
+  // throws on a non-numeric operand.
+  [/~\d*/gu, ' '],
+  // Boost: relevance is the job of the field boosts in buildLunrIndex().
+  [/\^\d*/gu, ' '],
+  // Wildcards: keep one trailing "*", drop the expensive forms. A star inside a term
+  // acts as a separator, mirroring how the colon is treated below.
+  [/\*+(?=[^\s*])/gu, ' '],
+  [/(^|\s)([^\s*]{0,2})\*+/gu, '$1$2'],
+  [/\*{2,}/gu, '*'],
+  // Field scoping: "kind: configmap" has to search for words. The index holds "kind",
+  // not "kind:" - lunr.trimmer strips it - so a space reproduces the indexed tokens.
+  // The pair itself stays meaningful, see isKeyValueQuery().
+  [/:/gu, ' ']
+];
+
 class ModuleSearch {
   constructor(options = {}) {
     this.searchInput = document.getElementById('search-input');
@@ -41,6 +75,7 @@ class ModuleSearch {
     };
     this.isDataLoaded = false;
     this.isLoadingInBackground = false;
+    this.searchIndexLoadPromise = null; // Shared by concurrent loadSearchIndex() callers
     this.searchTimeout = null; // For debouncing search input
     this.useSearchWorker = typeof Worker !== 'undefined';
     this.workerCompatibilityChecked = false;
@@ -365,8 +400,10 @@ class ModuleSearch {
     this.extractAvailableModules();
   }
 
-  // Sends a search request to worker and resolves by requestId.
-  searchWithWorker(query) {
+  // Sends a search request to worker and resolves by requestId. The query is sanitized
+  // here, not in the worker: query syntax is owned by the main thread, which passes the
+  // result of that reading along - requireAllWords for a "key: value" pair.
+  searchWithWorker(query, requireAllWords) {
     return new Promise((resolve, reject) => {
       if (!this.searchWorker || !this.workerInitialized) {
         reject(new Error('Search worker is not ready'));
@@ -380,7 +417,8 @@ class ModuleSearch {
         type: 'SEARCH',
         payload: {
           requestId,
-          query
+          query,
+          requireAllWords: requireAllWords === true
         }
       });
     });
@@ -798,6 +836,13 @@ class ModuleSearch {
       return;
     }
 
+    // An on-demand load is already running: joining it silently keeps its UI branch,
+    // which reports progress in the dropdown the user is looking at.
+    if (this.searchIndexLoadPromise) {
+      await this.searchIndexLoadPromise;
+      return;
+    }
+
     this.isLoadingInBackground = true;
 
     try {
@@ -809,11 +854,24 @@ class ModuleSearch {
     }
   }
 
-  async loadSearchIndex() {
+  // Single-flight wrapper: focus starts a load without awaiting it, and the first
+  // keystroke awaits one too. Without sharing the in-flight promise both ran, so the
+  // worker got a second INIT and rebuilt the index - hence lunr's "Overwriting
+  // existing registered function: lunr-multi-trimmer-en-ru".
+  loadSearchIndex() {
     if (this.isDataLoaded) {
-      return; // Already loaded
+      return Promise.resolve();
     }
+    if (!this.searchIndexLoadPromise) {
+      this.searchIndexLoadPromise = this.loadSearchIndexOnce()
+        .finally(() => {
+          this.searchIndexLoadPromise = null;
+        });
+    }
+    return this.searchIndexLoadPromise;
+  }
 
+  async loadSearchIndexOnce() {
     try {
       // Refresh language before reading cache to keep entries separated by page language.
       this.refreshLanguageDetection();
@@ -1364,36 +1422,20 @@ class ModuleSearch {
       }
     }
 
-    // Apply comprehensive sanitization for all Lunr special operators and patterns
-    let sanitized = query;
-    let hasChanges = false;
+    // A query is plain text: everything Lunr would read as syntax is neutralized here.
+    const sanitized = LUNR_SYNTAX_RULES
+      .reduce((value, [pattern, replacement]) => value.replace(pattern, replacement), query)
+      .replace(/\s+/g, ' ')
+      .trim();
 
-    // Handle field patterns like "field:value" or queries starting with colon like ":version"
-    if (/^[a-zA-Z]*:/.test(sanitized)) {
-      sanitized = sanitized.replace(/:/g, ' ');
-      hasChanges = true;
-    }
+    return sanitized === query ? query : sanitized;
+  }
 
-    // Handle Lunr PRESENCE operator (--)
-    if (sanitized.includes('--')) {
-      sanitized = sanitized.replace(/--/g, ' ');
-      hasChanges = true;
-    }
-
-    // Handle other Lunr operators (+ and - at the beginning of words)
-    const lunrOperatorPattern = /(\s|^)[+\-](\w+)/g;
-    if (lunrOperatorPattern.test(sanitized)) {
-      sanitized = sanitized.replace(lunrOperatorPattern, '$1$2');
-      hasChanges = true;
-    }
-
-    if (hasChanges) {
-      sanitized = sanitized.trim();
-      // console.log(`Lunr operators detected, sanitized: "${query}" -> "${sanitized}"`);
-      return sanitized;
-    }
-
-    return query;
+  // A colon means the user pasted a "key: value" pair from a manifest, where both parts
+  // have to appear on the page. Sanitization has already turned the colon into a space
+  // by the time the query is searched, so the hint is read from the raw input.
+  isKeyValueQuery(query) {
+    return /[\p{L}\p{N}][ \t]*:[ \t]*[\p{L}\p{N}]/u.test(String(query == null ? '' : query));
   }
 
   normalizeSynonymKey(value) {
@@ -1406,6 +1448,8 @@ class ModuleSearch {
   // Builds the directed lookup map (normalized term -> extra queries) out of
   // synonymGroups plus the optional one-way synonyms overrides. Keys are
   // normalized here, because lookups always go through normalizeSynonymKey().
+  // Both sides are sanitized once, at build time: the map is looked up with an
+  // already-sanitized query, and the worker receives it ready to search with.
   getNormalizedSynonyms() {
     if (this.normalizedSynonyms) {
       return this.normalizedSynonyms;
@@ -1413,8 +1457,8 @@ class ModuleSearch {
 
     const normalized = {};
     const addLink = (from, to) => {
-      const key = this.normalizeSynonymKey(from);
-      const value = this.normalizeSynonymKey(to);
+      const key = this.sanitizeQueryForSearch(this.normalizeSynonymKey(from));
+      const value = this.sanitizeQueryForSearch(this.normalizeSynonymKey(to));
       if (!key || !value || key === value) {
         return;
       }
@@ -1471,7 +1515,7 @@ class ModuleSearch {
       }
       const items = Array.isArray(rawCandidates) ? rawCandidates : [rawCandidates];
       items.forEach((item) => {
-        const candidate = this.sanitizeQueryForSearch(this.normalizeSynonymKey(item));
+        const candidate = this.normalizeSynonymKey(item);
         if (!candidate || seen.has(candidate)) {
           return;
         }
@@ -1504,9 +1548,18 @@ class ModuleSearch {
     try {
       // Sanitize the query to handle URLs and other problematic patterns
       const sanitizedQuery = this.sanitizeQueryForSearch(query);
+      // Read from the raw input: sanitization has already turned the colon into a space.
+      const requireAllWords = this.isKeyValueQuery(query);
 
       this.lastQuery = query; // Keep original query for display
       this.resetPagination();
+
+      // A query built only from operators ("*", "+") sanitizes down to nothing, and an
+      // empty Lunr query matches the entire corpus - 7154 pages on the current index.
+      if (!sanitizedQuery.trim()) {
+        this.showNoResults(query);
+        return;
+      }
 
       // Clear any existing fuzzy search messages
       this.clearFuzzySearchMessages();
@@ -1520,7 +1573,7 @@ class ModuleSearch {
 
       if (this.useSearchWorker && this.workerInitialized) {
         try {
-          const workerResponse = await this.searchWithWorker(query);
+          const workerResponse = await this.searchWithWorker(sanitizedQuery, requireAllWords);
           results = workerResponse.results || [];
           highlightQuery = workerResponse.highlightQuery || sanitizedQuery;
           highlightTerms = (workerResponse.highlightTerms && workerResponse.highlightTerms.length > 0)
@@ -1578,8 +1631,25 @@ class ModuleSearch {
           }
         };
 
+        // "kind: configmap" is a key/value pair, so both words are required: that is 29
+        // pages against 381 when the same words are OR-ed. Pages that never mention them
+        // together are still reachable, because an empty strict result falls back to OR.
+        const searchKeyValueAware = (plainQuery) => {
+          if (requireAllWords) {
+            const strictQuery = this.buildPhraseQuery(plainQuery);
+            if (strictQuery !== plainQuery) {
+              const strictSearch = searchWithFallback(strictQuery);
+              if (strictSearch.results.length > 0) {
+                // Highlighting keeps the plain query: "+word" is a Lunr operator, not text.
+                return { results: strictSearch.results, highlightQuery: plainQuery };
+              }
+            }
+          }
+          return searchWithFallback(plainQuery);
+        };
+
         try {
-          const initialSearch = searchWithFallback(sanitizedQuery);
+          const initialSearch = searchKeyValueAware(sanitizedQuery);
           results = initialSearch.results;
           highlightQuery = initialSearch.highlightQuery;
           highlightTerms = this.expandQueryHighlightTerms(highlightQuery);
