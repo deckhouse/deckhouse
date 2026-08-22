@@ -594,6 +594,7 @@ data-search-context="{{ T "search_context" }}"
 Results are rendered in three blocks in a fixed order — Modules, API (OpenAPI parameters and resources) and Documentation (pages) — and nothing moves a result from one block to another.
 
 - The API and Documentation blocks show 5 results each; the "show more" button below a block adds 5 more (`pageSize` in `search-v3.js`). The button is not rendered once the block has nothing left.
+- The button also states how much is left in its own block — «Показать еще 5 (осталось 43)» — so the number of clicks to the end of the list is visible. On the last click the remainder equals the batch, and the label drops the parentheses.
 - Inside the API block results are ordered by four internal priorities (resource name match, parameter name match, other resources, other parameters), but the block is paginated as a single list — one counter, one button.
 - The Modules row shows up to 14 badges and then `... and N more` as plain text, without a way to expand it.
 - The search itself is not limited: Lunr returns every match and grouping keeps them all, so a block may hold hundreds of results with 5 of them rendered. Only the rendering is capped.

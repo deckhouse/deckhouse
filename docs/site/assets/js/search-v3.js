@@ -142,6 +142,7 @@ class ModuleSearch {
         noResults: `Results for "{query}" not found.\nTry different keywords or check your spelling.`,
         error: 'An error occurred during search.',
         showMorePattern: 'Show {count} more',
+        showMoreRemainingPattern: 'Show {count} more ({remaining} left)',
         modulesMore: '... and +{count} more'
       },
       ru: {
@@ -154,6 +155,7 @@ class ModuleSearch {
         noResults: "Нет результатов для \"{query}\".\nПопробуйте другие ключевые слова или проверьте правописание.",
         error: 'An error occurred during search.',
         showMorePattern: 'Показать еще {count}',
+        showMoreRemainingPattern: 'Показать еще {count} (осталось {remaining})',
         modulesMore: '... и ещё {count}'
       }
     };
@@ -2095,10 +2097,16 @@ class ModuleSearch {
     // to reach the rest of the matches. Clicks are handled by delegation in
     // setupEventListeners(), which already keeps the dropdown open.
     if (displayedCount < results.length) {
-      const remaining = Math.min(this.pageSize, results.length - displayedCount);
+      const remaining = results.length - displayedCount;
+      const nextBatch = Math.min(this.pageSize, remaining);
+      // The whole remainder goes in the label too: with only the batch size shown there
+      // was no way to tell whether one more click ends the list or forty do.
+      const label = remaining > nextBatch
+        ? this.t('showMoreRemainingPattern', { count: nextBatch, remaining })
+        : this.t('showMorePattern', { count: nextBatch });
       html += `
         <button type="button" class="tile__pagination" data-group-type="${groupType}">
-          <p class="tile__pagination--descr">${this.t('showMorePattern', { count: remaining })}</p>
+          <p class="tile__pagination--descr">${label}</p>
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path fill-rule="evenodd" clip-rule="evenodd" d="M8 1C8.55229 1 9 1.44772 9 2V7L14 7C14.5523 7 15 7.44772 15 8C15 8.55229 14.5523 9 14 9L9 9L9 14C9 14.5523 8.55229 15 8 15C7.44772 15 7 14.5523 7 14L7 9H2C1.44772 9 1 8.55229 1 8C1 7.44772 1.44772 7 2 7L7 7L7 2C7 1.44772 7.44772 1 8 1Z" fill="#0D69F2"/>
           </svg>
