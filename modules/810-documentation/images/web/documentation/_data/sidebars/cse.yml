@@ -68,7 +68,3 @@ entries:
         en: FAQ
         ru: FAQ
       url: /faq.html
-    - title:
-        en: Release notes
-        ru: История изменений
-      url: /release-notes.html
