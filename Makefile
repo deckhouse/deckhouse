@@ -733,7 +733,7 @@ enrich-crds-local: generate-crds crd-enricher-local ## Enrich CRDs with the loca
 .PHONY: test-crd-enricher
 test-crd-enricher: ## Run crd-enricher unit/golden tests (CRD_ENRICHER_TEST_FLAGS=-golden regenerates goldens).
 	@echo "Running crd-enricher tests..."
-	@cd $(CRD_ENRICHER_SRC) && go test ./... $(CRD_ENRICHER_TEST_FLAGS)
+	@cd $(CRD_ENRICHER_SRC) && go test -race -cover -timeout=${TESTS_TIMEOUT} ./... $(CRD_ENRICHER_TEST_FLAGS)
 
 ## Generate clientset
 .PHONY: client-gen-generate
