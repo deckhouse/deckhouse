@@ -71,15 +71,15 @@ metadata:
     service.beta.kubernetes.io/aws-load-balancer-subnets: "subnet-12345,subnet-67890"
 ```
 
-- `service.beta.kubernetes.io/aws-load-balancer-type` — при значении none создаётся только Target Group, без самого LoadBalancer.
-- `service.beta.kubernetes.io/aws-load-balancer-backend-protocol` — применяется только в связке с `aws-load-balancer-type`: `none` и определяет протокол взаимодействия с Target Group. Поддерживаются следующие значения:
+- `service.beta.kubernetes.io/aws-load-balancer-type` — при значении none создаётся только целевая группа, без самого LoadBalancer.
+- `service.beta.kubernetes.io/aws-load-balancer-backend-protocol` — применяется только в связке с `aws-load-balancer-type`: `none` и определяет протокол взаимодействия с целевой группой. Поддерживаются следующие значения:
   - `tcp` (значение по умолчанию);
   - `tls`;
   - `http`;
   - `https`.
 
 {% alert level="info" %}
-При изменении значения этой аннотации `cloud-controller-manager` попытается пересоздать Target Group. Если она уже используется в связке с NLB или ALB, удалить её не удастся, и контроллер будет бесконечно повторять попытку. Чтобы избежать этого, необходимо вручную отсоединить балансировщик от группы.
+При изменении значения этой аннотации `cloud-controller-manager` попытается пересоздать целевую группу. Если она уже используется в связке с NLB или ALB, удалить её не удастся, и контроллер будет бесконечно повторять попытку. Чтобы избежать этого, необходимо вручную отсоединить балансировщик от группы.
 
 Если Ingress-узлы есть не во всех зонах, укажите явно подсети в `aws-load-balancer-subnets`.
 {% endalert %}
