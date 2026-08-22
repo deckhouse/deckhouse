@@ -589,6 +589,54 @@ Hugo:
 data-search-context="{{ T "search_context" }}"
 ```
 
+### Ranking a single page (`searchBoost`)
+
+Search results are scored by Lunr (field weights: `title` 10, `keywords` 9, `module` 6, `summary` 3, `content` 1) and then adjusted by `search-v3.js`. To move one specific page up or down without touching those global weights, set `searchBoost` in its front matter:
+
+```yaml
+---
+title: "Overview"
+searchBoost: 1.5
+---
+```
+
+Behavior:
+
+- The value is a multiplier applied to the page's score. `> 1` promotes, `< 1` demotes (`0.3` is a good starting point for release notes and other low-value pages).
+- The value is not capped. A missing, zero, negative or non-numeric value is ignored (multiplier `1`), so a typo cannot break the search — but a wrong *number* is applied as written, so keep an eye on it in review. Note that the value is a multiplier, not a percentage: `searchBoost: 300` is enormous, not "300 %".
+- Start at `2` and check the results. A page competing only on `content` matches usually needs `1.5`–`3`. Beating a competitor that matches in `title` takes roughly `40`+ — in that case add `search` keywords instead (see below), which is both cheaper and less disruptive.
+- It **reorders results within a group only**. Results are rendered as Modules → API → Documentation, and that order is fixed — no boost will lift a documentation page above the API block.
+- It reorders matches, it does not create them. A page that the query does not match at all will not appear no matter how high the boost.
+- Works in both generators: `page.searchBoost` for Jekyll (`docs/documentation`), `.Params.searchBoost` for Hugo (external modules).
+- Applies to pages only. OpenAPI parameters have no front matter — use `x-doc-search` keywords for those.
+
+The related key `search` (comma-separated keywords) is often the better first tool: the `keywords` field already carries a weight of 9 and picks up an extra multiplier during post-processing. Reach for `searchBoost` when the page already matches and simply needs to rank higher.
+
+### Synonyms (`synonymGroups`)
+
+Synonyms let a query find pages that do not contain its words at all — for example, «провайдеры аутентификации» finds the `DexProvider` resource. They live in `options.synonymGroups` in `docs/site/assets/js/search-v3.js` as groups of equivalent terms:
+
+```js
+synonymGroups: [
+  ['moduleupdatepolicy', 'update policy', 'module update policy', 'политика обновления'],
+  ['dexprovider', 'dex providers', 'провайдеры аутентификации'],
+],
+```
+
+Every member of a group expands to all the others, so a link works in both directions with no reverse entries to maintain. If a term must expand *without* the reverse link, use the `options.synonyms` map instead (`{ 'what the user types': ['extra query'] }`); it is merged on top of the groups.
+
+Editing rules:
+
+- `search-v3.js` is the only place to edit. The search itself runs in `search-v3-worker.js`, but the worker receives the derived map with the `INIT` message and keeps no list of its own — a group added there has no effect.
+- Case and extra spaces do not matter: terms are normalized (lowercased, whitespace collapsed) both when the map is built and on lookup. Keep them lowercase anyway, for consistency with the existing groups.
+- Expansion is matched against the whole query and against every window of up to 4 consecutive words in it, so `update policy for a module` expands as well as `update policy`.
+
+Behavior:
+
+- Each expansion is run as a separate Lunr query and its results are merged into the original set with a 1.15 multiplier. Synonyms therefore add and reorder results — they do not turn an irrelevant page into a match.
+- Every applied term is highlighted, not just what the user typed: searching «провайдеры аутентификации» marks `DexProvider` in titles, breadcrumbs and snippets, and the snippet itself is picked by coverage of all the terms, so a sentence mentioning only the synonym still wins.
+- Highlighting tolerates inflections (a Russian query «провайдеры» also marks «провайдеров»), prefers whole phrases over separate words, and anchors matches at word starts.
+
 ### OpenAPI Specifications rendering
 
 The `x-doc-` prefix in the parameter names is reserved in the OpenAPI specifications for rendering the documentation. Parameters with this prefix are only used for rendering the documentation and are not mandatory.

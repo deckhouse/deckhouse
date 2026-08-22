@@ -9,8 +9,10 @@
  * - Worker -> Main:
  *   1) { type: 'READY', payload: { availableModules } }
  *      Sent when initialization is complete and worker can accept SEARCH.
- *   2) { type: 'SEARCH_RESULT', payload: { requestId, results, highlightQuery } }
- *      Search result for a specific requestId.
+ *   2) { type: 'SEARCH_RESULT', payload: { requestId, results, highlightQuery, highlightTerms } }
+ *      Search result for a specific requestId. highlightTerms lists every term the
+ *      result set was matched by (original query, applied synonyms, fuzzy fallback),
+ *      so the UI can highlight synonyms too.
  *   3) { type: 'ERROR', payload: { message } }
  *      Initialization/runtime error.
  *      For search-time errors: { type: 'ERROR', payload: { requestId, message } }.
@@ -25,16 +27,10 @@ let lunrIndex = null;
 let searchDictionary = [];
 let fuseIndex = null;
 let availableModules = [];
-let synonyms = {
-  'update policy': ['moduleupdatepolicy'],
-  'dex Providers': ['dexprovider'],
-  'провайдеры аутентификации': ['dexprovider'],
-  'переопределение': ['modulepulloverride'],
-  'release.deckhouse.io/approved': ['Ручное подтверждение обновлений'],
-  moduleupdatepolicy: ['update policy', 'module update policy', 'политика обновления'],
-  dexprovider: ['провайдеры аутентификации', 'dex providers'],
-  modulepulloverride: ['переопределение']
-};
+// Synonyms arrive from the main thread with INIT (search-v3.js owns the list);
+// keeping a copy here would be dead code silently overwritten on every init.
+let synonyms = {};
+let normalizedSynonyms = null;
 
 function parseKeywords(keywords) {
   if (Array.isArray(keywords)) {
@@ -339,21 +335,64 @@ function normalizeSynonymKey(value) {
     .trim();
 }
 
+// The INIT payload already carries normalized keys; this pass only guards against
+// a caller passing a raw map, since lookups always go through normalizeSynonymKey().
+function getNormalizedSynonyms() {
+  if (normalizedSynonyms) {
+    return normalizedSynonyms;
+  }
+
+  const source = synonyms || {};
+  normalizedSynonyms = {};
+  Object.keys(source).forEach((key) => {
+    const normalizedKey = normalizeSynonymKey(key);
+    if (!normalizedKey) {
+      return;
+    }
+    const values = Array.isArray(source[key]) ? source[key] : [source[key]];
+    normalizedSynonyms[normalizedKey] = (normalizedSynonyms[normalizedKey] || []).concat(values);
+  });
+
+  return normalizedSynonyms;
+}
+
+// Looks up synonyms for the whole query and for every word window inside it,
+// so "провайдеры аутентификации в dex" still expands to dexprovider.
 function getSynonymCandidates(query) {
   const normalizedQuery = normalizeSynonymKey(query);
-  if (!normalizedQuery || !synonyms) {
+  if (!normalizedQuery) {
     return [];
   }
 
-  const rawCandidates = synonyms[normalizedQuery];
-  if (!rawCandidates) {
-    return [];
+  const synonymMap = getNormalizedSynonyms();
+  const words = normalizedQuery.split(' ').filter(Boolean);
+  const lookupKeys = new Set([normalizedQuery]);
+  const maxWindow = Math.min(words.length, 4);
+  for (let size = maxWindow; size >= 1; size--) {
+    for (let start = 0; start + size <= words.length; start++) {
+      lookupKeys.add(words.slice(start, start + size).join(' '));
+    }
   }
 
-  const items = Array.isArray(rawCandidates) ? rawCandidates : [rawCandidates];
-  return items
-    .map((item) => sanitizeQueryForSearch(normalizeSynonymKey(item)))
-    .filter((item) => item && item !== normalizedQuery);
+  const candidates = [];
+  const seen = new Set([normalizedQuery]);
+  lookupKeys.forEach((key) => {
+    const rawCandidates = synonymMap[key];
+    if (!rawCandidates) {
+      return;
+    }
+    const items = Array.isArray(rawCandidates) ? rawCandidates : [rawCandidates];
+    items.forEach((item) => {
+      const candidate = sanitizeQueryForSearch(normalizeSynonymKey(item));
+      if (!candidate || seen.has(candidate)) {
+        return;
+      }
+      seen.add(candidate);
+      candidates.push(candidate);
+    });
+  });
+
+  return candidates;
 }
 
 // Extracts unique module names for synthetic "module page" results in UI.
@@ -384,6 +423,8 @@ function runSearch(query) {
   const sanitizedQuery = sanitizeQueryForSearch(query);
   let results = [];
   let highlightQuery = sanitizedQuery;
+  // Every term that contributed to the result set, so the UI highlights synonyms too.
+  const highlightTerms = [sanitizedQuery];
   const mergeSearchResults = (baseResults, synonymResults, synonymBoost = 1.15) => {
     const mergedByRef = new Map();
 
@@ -431,7 +472,10 @@ function runSearch(query) {
   for (const synonymQuery of synonymCandidates) {
     try {
       const synonymSearch = searchWithFallback(synonymQuery);
-      synonymResults.push(...synonymSearch.results);
+      if (synonymSearch.results.length > 0) {
+        synonymResults.push(...synonymSearch.results);
+        highlightTerms.push(synonymSearch.highlightQuery);
+      }
     } catch (synonymError) {
       // Ignore invalid synonym query and continue with next candidate.
     }
@@ -450,6 +494,7 @@ function runSearch(query) {
       const bestSuggestion = fuzzySuggestions[0].item;
       results = lunrIndex.search(bestSuggestion);
       highlightQuery = bestSuggestion;
+      highlightTerms.push(bestSuggestion);
     }
   }
 
@@ -460,6 +505,7 @@ function runSearch(query) {
       if (wordResults.length > 0) {
         results = wordResults;
         highlightQuery = suggestion.item;
+        highlightTerms.push(suggestion.item);
         break;
       }
     }
@@ -467,7 +513,8 @@ function runSearch(query) {
 
   return {
     results,
-    highlightQuery
+    highlightQuery,
+    highlightTerms: Array.from(new Set(highlightTerms.filter(Boolean)))
   };
 }
 
@@ -480,6 +527,7 @@ self.onmessage = (event) => {
       searchData = payload.searchData || { documents: [], parameters: [] };
       currentLang = payload.currentLang || 'en';
       synonyms = payload.synonyms || synonyms;
+      normalizedSynonyms = null;
       buildLunrIndex();
       buildSearchDictionary();
       buildFuseIndex();
@@ -514,7 +562,8 @@ self.onmessage = (event) => {
         payload: {
           requestId,
           results: result.results,
-          highlightQuery: result.highlightQuery
+          highlightQuery: result.highlightQuery,
+          highlightTerms: result.highlightTerms
         }
       });
     } catch (error) {

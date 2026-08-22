@@ -52,7 +52,7 @@ class ModuleSearch {
     this.workerPendingRequests = new Map();
     this.indexedDBAvailable = false; // Flag to track IndexedDB availability
     this.dbName = 'ModuleSearchDB';
-    this.dbVersion = 1;
+    this.dbVersion = 2; // Bump to drop caches built before the searchBoost field existed
     this.storeName = 'searchIndexes';
     this.cacheExpirationMs = 3600000; // 1 hour in milliseconds
 
@@ -63,16 +63,19 @@ class ModuleSearch {
       backgroundLoadDelay: 1000, // Delay before starting background loading (1 second)
       searchContext: '', // Search context message to display above ready message
       workerPath: '/assets/js/search-v3-worker.js',
-      synonyms: {
-        'update policy': ['moduleupdatepolicy'],
-        'dex Providers': ['dexprovider'],
-        'провайдеры аутентификации': ['dexprovider'],
-        'переопределение': ['modulepulloverride'],
-        'release.deckhouse.io/approved': ['Ручное подтверждение обновлений'],
-        moduleupdatepolicy: ['update policy', 'module update policy', 'политика обновления'],
-        dexprovider: ['провайдеры аутентификации', 'dex providers'],
-        modulepulloverride: ['переопределение']
-      },
+      // Groups of equivalent terms: every member expands to all the others, so
+      // links work in both directions without hand-written reverse entries.
+      // This is the single source of truth — the worker gets the derived map on INIT.
+      synonymGroups: [
+        ['moduleupdatepolicy', 'update policy', 'module update policy', 'политика обновления'],
+        ['dexprovider', 'dex providers', 'провайдеры аутентификации'],
+        ['modulepulloverride', 'переопределение'],
+        ['release.deckhouse.io/approved', 'ручное подтверждение обновлений'],
+        ['siem', 'Security Information and Event Management', 'kuma', 'kesl', 'kaspersky container security', 'Kaspersky Unified Monitoring and Analysis Platform']
+      ],
+      // One-way overrides, if some term must expand without the reverse link:
+      // { 'what user types': ['extra query', ...] }. Merged on top of the groups.
+      synonyms: {},
       ...options
     };
 
@@ -338,7 +341,8 @@ class ModuleSearch {
           payload: {
             searchData: this.searchData,
             currentLang: this.currentLang,
-            synonyms: this.options.synonyms
+            // Derived map, not the raw options: the worker has no synonym data of its own.
+            synonyms: this.getNormalizedSynonyms()
           }
         });
 
@@ -409,9 +413,12 @@ class ModuleSearch {
 
         request.onupgradeneeded = (event) => {
           const db = event.target.result;
-          if (!db.objectStoreNames.contains(this.storeName)) {
-            db.createObjectStore(this.storeName, { keyPath: 'cacheKey' });
+          // Recreate the store on every version bump: cached indexes are disposable
+          // and may predate index format changes (e.g. the searchBoost field).
+          if (db.objectStoreNames.contains(this.storeName)) {
+            db.deleteObjectStore(this.storeName);
           }
+          db.createObjectStore(this.storeName, { keyPath: 'cacheKey' });
         };
       });
     } catch (error) {
@@ -1035,6 +1042,19 @@ class ModuleSearch {
     return this.parseKeywords(keywords).join(' ');
   }
 
+  // Converts the page-level searchBoost front matter value to a multiplier.
+  // The value is not capped: overriding a title match legitimately needs a large
+  // multiplier. Anything missing, non-numeric or non-positive falls back to 1.
+  normalizeSearchBoost(searchBoost) {
+    const value = typeof searchBoost === 'string' ? parseFloat(searchBoost) : searchBoost;
+
+    if (typeof value !== 'number' || !isFinite(value) || value <= 0) {
+      return 1;
+    }
+
+    return value;
+  }
+
   buildSearchDictionary() {
     const dictionary = new Set();
 
@@ -1361,21 +1381,84 @@ class ModuleSearch {
       .trim();
   }
 
+  // Builds the directed lookup map (normalized term -> extra queries) out of
+  // synonymGroups plus the optional one-way synonyms overrides. Keys are
+  // normalized here, because lookups always go through normalizeSynonymKey().
+  getNormalizedSynonyms() {
+    if (this.normalizedSynonyms) {
+      return this.normalizedSynonyms;
+    }
+
+    const normalized = {};
+    const addLink = (from, to) => {
+      const key = this.normalizeSynonymKey(from);
+      const value = this.normalizeSynonymKey(to);
+      if (!key || !value || key === value) {
+        return;
+      }
+      if (!normalized[key]) {
+        normalized[key] = [];
+      }
+      if (!normalized[key].includes(value)) {
+        normalized[key].push(value);
+      }
+    };
+
+    (this.options.synonymGroups || []).forEach((group) => {
+      const members = (Array.isArray(group) ? group : [group])
+        .filter((member) => typeof member === 'string' && member.trim().length > 0);
+      members.forEach((member) => {
+        members.forEach((other) => addLink(member, other));
+      });
+    });
+
+    const directed = this.options.synonyms || {};
+    Object.keys(directed).forEach((key) => {
+      const values = Array.isArray(directed[key]) ? directed[key] : [directed[key]];
+      values.forEach((value) => addLink(key, value));
+    });
+
+    this.normalizedSynonyms = normalized;
+    return normalized;
+  }
+
+  // Looks up synonyms for the whole query and for every word window inside it,
+  // so "провайдеры аутентификации в dex" still expands to dexprovider.
   getSynonymCandidates(query) {
     const normalizedQuery = this.normalizeSynonymKey(query);
-    if (!normalizedQuery || !this.options.synonyms) {
+    if (!normalizedQuery) {
       return [];
     }
 
-    const rawCandidates = this.options.synonyms[normalizedQuery];
-    if (!rawCandidates) {
-      return [];
+    const synonymMap = this.getNormalizedSynonyms();
+    const words = normalizedQuery.split(' ').filter(Boolean);
+    const lookupKeys = new Set([normalizedQuery]);
+    const maxWindow = Math.min(words.length, 4);
+    for (let size = maxWindow; size >= 1; size--) {
+      for (let start = 0; start + size <= words.length; start++) {
+        lookupKeys.add(words.slice(start, start + size).join(' '));
+      }
     }
 
-    const items = Array.isArray(rawCandidates) ? rawCandidates : [rawCandidates];
-    return items
-      .map((item) => this.sanitizeQueryForSearch(this.normalizeSynonymKey(item)))
-      .filter((item) => item && item !== normalizedQuery);
+    const candidates = [];
+    const seen = new Set([normalizedQuery]);
+    lookupKeys.forEach((key) => {
+      const rawCandidates = synonymMap[key];
+      if (!rawCandidates) {
+        return;
+      }
+      const items = Array.isArray(rawCandidates) ? rawCandidates : [rawCandidates];
+      items.forEach((item) => {
+        const candidate = this.sanitizeQueryForSearch(this.normalizeSynonymKey(item));
+        if (!candidate || seen.has(candidate)) {
+          return;
+        }
+        seen.add(candidate);
+        candidates.push(candidate);
+      });
+    });
+
+    return candidates;
   }
 
   async handleSearch(query) {
@@ -1409,12 +1492,18 @@ class ModuleSearch {
       // Search is executed in worker when available, otherwise in main thread.
       let results = [];
       let highlightQuery = sanitizedQuery; // Use sanitized query for highlighting
+      // Terms the result set was matched by: query itself plus applied synonyms
+      // and fuzzy fallbacks, so all of them get highlighted in snippets.
+      let highlightTerms = [sanitizedQuery];
 
       if (this.useSearchWorker && this.workerInitialized) {
         try {
           const workerResponse = await this.searchWithWorker(query);
           results = workerResponse.results || [];
           highlightQuery = workerResponse.highlightQuery || sanitizedQuery;
+          highlightTerms = (workerResponse.highlightTerms && workerResponse.highlightTerms.length > 0)
+            ? workerResponse.highlightTerms
+            : [highlightQuery];
         } catch (workerError) {
           console.warn('Worker search failed, falling back to main thread:', workerError);
           this.useSearchWorker = false;
@@ -1471,6 +1560,7 @@ class ModuleSearch {
           const initialSearch = searchWithFallback(sanitizedQuery);
           results = initialSearch.results;
           highlightQuery = initialSearch.highlightQuery;
+          highlightTerms = [highlightQuery];
         } catch (error) {
           console.warn('Lunr search error with sanitized query:', error);
           this.showError('Search query contains invalid characters. Please try a different search term.');
@@ -1483,7 +1573,10 @@ class ModuleSearch {
         for (const synonymQuery of synonymCandidates) {
           try {
             const synonymSearch = searchWithFallback(synonymQuery);
-            synonymResults.push(...synonymSearch.results);
+            if (synonymSearch.results.length > 0) {
+              synonymResults.push(...synonymSearch.results);
+              highlightTerms.push(synonymSearch.highlightQuery);
+            }
           } catch (synonymError) {
             console.warn('Synonym search failed:', synonymError);
           }
@@ -1507,6 +1600,7 @@ class ModuleSearch {
             results = this.lunrIndex.search(bestSuggestion);
             // Use the fuzzy suggestion for highlighting
             highlightQuery = bestSuggestion;
+            highlightTerms.push(bestSuggestion);
           }
         }
 
@@ -1519,6 +1613,7 @@ class ModuleSearch {
               results = wordResults;
               // Use the fuzzy suggestion for highlighting
               highlightQuery = suggestion.item;
+              highlightTerms.push(suggestion.item);
               break;
             }
           }
@@ -1547,6 +1642,9 @@ class ModuleSearch {
         if (doc._indexBoost) {
           boost *= doc._indexBoost;
         }
+
+        // Apply per-document boost declared in page front matter
+        boost *= this.normalizeSearchBoost(doc.searchBoost);
 
         // Check if the search query matches the module name
         const queryLower = sanitizedQuery.toLowerCase();
@@ -1637,6 +1735,7 @@ class ModuleSearch {
       // Store current results and display them
       this.currentResults = this.groupResults(boostedResults);
       this.currentHighlightQuery = highlightQuery; // Store the query to use for highlighting
+      this.currentHighlightTerms = Array.from(new Set(highlightTerms.filter(Boolean)));
       this.displayResults();
 
     } catch (error) {
@@ -1723,9 +1822,14 @@ class ModuleSearch {
 
     let resultsHtml = '';
 
+    // Highlight by every matched term (query + synonyms), not just the raw query.
+    const highlightTerms = (this.currentHighlightTerms && this.currentHighlightTerms.length > 0)
+      ? this.currentHighlightTerms
+      : [this.currentHighlightQuery || this.lastQuery];
+
     // Display Modules as a row at the top
     if (this.currentResults.modules.length > 0) {
-      resultsHtml += this.renderModulesRow(this.currentResults.modules, this.currentHighlightQuery || this.lastQuery);
+      resultsHtml += this.renderModulesRow(this.currentResults.modules, highlightTerms);
     }
 
     // Display API results in priority order
@@ -1733,10 +1837,10 @@ class ModuleSearch {
       resultsHtml += `
         <div class="results-group">
           <div class="results-group-header">${this.t('api')}</div>
-          ${this.currentResults.isResourceNameMatch.length > 0 ? this.renderResultGroup(this.currentResults.isResourceNameMatch, this.currentHighlightQuery || this.lastQuery, 'isResourceNameMatch') : ''}
-          ${this.currentResults.nameMatch.length > 0 ? this.renderResultGroup(this.currentResults.nameMatch, this.currentHighlightQuery || this.lastQuery, 'nameMatch') : ''}
-          ${this.currentResults.isResourceOther.length > 0 ? this.renderResultGroup(this.currentResults.isResourceOther, this.currentHighlightQuery || this.lastQuery, 'isResourceOther') : ''}
-          ${this.currentResults.parameterOther.length > 0 ? this.renderResultGroup(this.currentResults.parameterOther, this.currentHighlightQuery || this.lastQuery, 'parameterOther') : ''}
+          ${this.currentResults.isResourceNameMatch.length > 0 ? this.renderResultGroup(this.currentResults.isResourceNameMatch, highlightTerms, 'isResourceNameMatch') : ''}
+          ${this.currentResults.nameMatch.length > 0 ? this.renderResultGroup(this.currentResults.nameMatch, highlightTerms, 'nameMatch') : ''}
+          ${this.currentResults.isResourceOther.length > 0 ? this.renderResultGroup(this.currentResults.isResourceOther, highlightTerms, 'isResourceOther') : ''}
+          ${this.currentResults.parameterOther.length > 0 ? this.renderResultGroup(this.currentResults.parameterOther, highlightTerms, 'parameterOther') : ''}
         </div>
       `;
     }
@@ -1746,7 +1850,7 @@ class ModuleSearch {
       resultsHtml += `
         <div class="results-group">
           <div class="results-group-header">${this.t('documentation')}</div>
-          ${this.renderResultGroup(this.currentResults.document, this.currentHighlightQuery || this.lastQuery, 'document')}
+          ${this.renderResultGroup(this.currentResults.document, highlightTerms, 'document')}
         </div>
       `;
     }
@@ -1754,7 +1858,7 @@ class ModuleSearch {
     this.searchResults.innerHTML = resultsHtml;
   }
 
-  renderModulesRow(results, query) {
+  renderModulesRow(results, highlightTerms) {
     const moduleBadges = results.map(result => {
       if (result._isModulePage) {
         const moduleName = result._moduleName;
@@ -1785,7 +1889,7 @@ class ModuleSearch {
     return html;
   }
 
-  renderBreadcrumbsRow(breadcrumbs, query) {
+  renderBreadcrumbsRow(breadcrumbs, highlightTerms) {
     if (!Array.isArray(breadcrumbs) || breadcrumbs.length === 0) {
       return '';
     }
@@ -1817,7 +1921,7 @@ class ModuleSearch {
 
     const breadcrumbBadges = visibleItems.map((item, index) => {
       const separator = index > 0 ? '<span class="result-breadcrumbs-separator">→</span>' : '';
-      return `${separator}<span class="result-breadcrumbs">${this.highlightText(item, query)}</span>`;
+      return `${separator}<span class="result-breadcrumbs">${this.highlightText(item, highlightTerms)}</span>`;
     });
 
     if (isTruncated) {
@@ -1831,7 +1935,7 @@ class ModuleSearch {
     return `<div class="breadcrumbs-row">${breadcrumbBadges.join('')}</div>`;
   }
 
-  renderResultGroup(results, query, groupType) {
+  renderResultGroup(results, highlightTerms, groupType) {
     const displayedCount = this.displayedCounts[groupType];
     const topResults = results.slice(0, displayedCount);
 
@@ -1858,19 +1962,19 @@ class ModuleSearch {
 
       if (groupType === 'isResourceNameMatch' || groupType === 'nameMatch' || groupType === 'isResourceOther' || groupType === 'parameterOther') {
         // For configuration results (parameters) and isResource parameters
-        title = this.highlightText(doc.name || '', query);
+        title = this.highlightText(doc.name || '', highlightTerms);
         module = doc.module ? `<div class="result-module">${doc.module}</div>` : '';
         if (doc.resName != doc.name) {
           module += doc.resName ? `<div class="result-module">${doc.resName}</div>` : '';
         }
-        breadcrumbs = this.renderBreadcrumbsRow(doc.bc, query);
-        description = this.highlightText(this.getRelevantContentSnippet(doc.content || '', query) || '', query);
+        breadcrumbs = this.renderBreadcrumbsRow(doc.bc, highlightTerms);
+        description = this.highlightText(this.getRelevantContentSnippet(doc.content || '', highlightTerms), highlightTerms);
       } else {
         // For other documentation
-        title = this.highlightText(doc.title || '', query);
+        title = this.highlightText(doc.title || '', highlightTerms);
         module = doc.module ? `<div class="result-module">${doc.module}</div>` : '';
-        breadcrumbs = this.renderBreadcrumbsRow(doc.bc, query);
-        description = this.highlightText(this.getRelevantContentSnippet(doc.content || '', query) || '', query);
+        breadcrumbs = this.renderBreadcrumbsRow(doc.bc, highlightTerms);
+        description = this.highlightText(this.getRelevantContentSnippet(doc.content || '', highlightTerms), highlightTerms);
       }
 
       html += `
@@ -1903,8 +2007,13 @@ class ModuleSearch {
     };
   }
 
-  getRelevantContentSnippet(content, query) {
-    if (!content || !query) return '';
+  // Returns a plain-text snippet; callers highlight it once via highlightText().
+  // Every highlight term (query, its words, synonyms) participates in scoring, so a
+  // snippet mentioning only the synonym (dexprovider) still wins for a RU query.
+  getRelevantContentSnippet(content, terms) {
+    if (!content) return '';
+
+    const highlightTerms = this.normalizeHighlightTerms(terms);
 
     // Helper function to truncate text without cutting words
     const truncateText = (text, maxLength) => {
@@ -1924,61 +2033,144 @@ class ModuleSearch {
 
     // Split content into sentences or paragraphs
     const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 0);
+    if (sentences.length === 0) return '';
 
-    // Find sentences that contain the search query
-    const relevantSentences = sentences.filter(sentence =>
-      sentence.toLowerCase().includes(query.toLowerCase())
-    );
+    const scoredTerms = highlightTerms
+      .map((term) => ({ term, regex: this.buildHighlightRegex([term]) }))
+      .filter((entry) => entry.regex);
 
-    if (relevantSentences.length > 0) {
-      // Take the first relevant sentence and truncate if too long
-      let snippet = relevantSentences[0].trim();
-      if (snippet.length > 200) {
-        snippet = truncateText(snippet, 200);
-      }
-      return this.highlightText(snippet, query);
-    }
-
-    // If no exact matches, find sentences with partial matches
-    const queryWords = query.toLowerCase().split(/\s+/).filter(w => w.length > 2);
-    const scoredSentences = sentences.map(sentence => {
-      const lowerSentence = sentence.toLowerCase();
+    let best = null;
+    sentences.forEach((sentence) => {
+      // Score against tag-free text: a hit inside markup would never be highlighted.
+      const plainSentence = sentence.replace(/<[^>]*>/g, ' ');
+      let matchedTerms = 0;
       let score = 0;
-      queryWords.forEach(word => {
-        if (lowerSentence.includes(word)) {
-          score += word.length; // Longer words get higher scores
+
+      scoredTerms.forEach(({ term, regex }) => {
+        regex.lastIndex = 0;
+        if (regex.test(plainSentence)) {
+          matchedTerms++;
+          score += term.length; // Longer terms and whole phrases weigh more
         }
       });
-      return { sentence, score };
-    }).filter(item => item.score > 0);
 
-    if (scoredSentences.length > 0) {
-      // Sort by score and take the best match
-      scoredSentences.sort((a, b) => b.score - a.score);
-      let snippet = scoredSentences[0].sentence.trim();
-      if (snippet.length > 200) {
-        snippet = truncateText(snippet, 200);
+      if (matchedTerms === 0) return;
+
+      // Prefer sentences covering more distinct terms, then the heavier match.
+      const weight = matchedTerms * 1000 + score;
+      if (!best || weight > best.weight) {
+        best = { sentence, weight };
       }
-      return this.highlightText(snippet, query);
-    }
+    });
 
     // Fallback: take the first sentence and truncate
-    if (sentences.length > 0) {
-      let snippet = sentences[0].trim();
-      if (snippet.length > 200) {
-        snippet = truncateText(snippet, 200);
-      }
-      return snippet;
-    }
-
-    return '';
+    const snippet = (best ? best.sentence : sentences[0]).trim();
+    return snippet.length > 200 ? truncateText(snippet, 200) : snippet;
   }
 
-  highlightText(text, query) {
+  escapeRegExp(value) {
+    return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  // Flattens highlight input (string or array) into a unique term list: whole
+  // phrases first, then their separate words, longest first so phrases win.
+  normalizeHighlightTerms(terms) {
+    const source = Array.isArray(terms) ? terms : [terms];
+    const collected = [];
+    const seen = new Set();
+
+    const push = (value) => {
+      const term = String(value == null ? '' : value).trim();
+      if (term.length < 2) return;
+      const key = term.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      collected.push(term);
+    };
+
+    source.forEach((entry) => {
+      const value = String(entry == null ? '' : entry).trim();
+      if (!value) return;
+      push(value);
+      if (/\s/.test(value)) {
+        value.split(/\s+/).forEach(push);
+      }
+    });
+
+    return collected.sort((a, b) => b.length - a.length);
+  }
+
+  // Builds a regexp source for a single term, tolerating inflections so the
+  // query "провайдеры" also marks "провайдеров" in the text.
+  buildHighlightTermPattern(term) {
+    if (/\s/.test(term)) {
+      // Phrase: allow any whitespace run between words.
+      return term.split(/\s+/).map((word) => this.buildHighlightTermPattern(word)).join('\\s+');
+    }
+
+    const escaped = this.escapeRegExp(term);
+    if (term.length < 5 || !/^[\p{L}\p{N}]+$/u.test(term)) {
+      return escaped;
+    }
+
+    const isCyrillic = /\p{Script=Cyrillic}/u.test(term);
+    if (!isCyrillic) {
+      // Latin: allow a short suffix (plural, -ing, -ed).
+      return `${escaped}[\\p{L}]{0,2}`;
+    }
+
+    const cut = term.length >= 8 ? 3 : 2;
+    return `${this.escapeRegExp(term.slice(0, term.length - cut))}[\\p{L}]{0,4}`;
+  }
+
+  // Compiles (and caches) one alternation regex covering all highlight terms.
+  buildHighlightRegex(terms) {
+    const normalized = this.normalizeHighlightTerms(terms);
+    if (normalized.length === 0) return null;
+
+    if (!this.highlightRegexCache) {
+      this.highlightRegexCache = new Map();
+    }
+
+    const cacheKey = normalized.join('\u0000');
+    if (this.highlightRegexCache.has(cacheKey)) {
+      return this.highlightRegexCache.get(cacheKey);
+    }
+
+    const pattern = `(${normalized.map((term) => this.buildHighlightTermPattern(term)).join('|')})`;
+    let regex = null;
+    try {
+      // Lookbehind keeps matches at word starts, so a stem never lights up the
+      // middle of an unrelated word.
+      regex = new RegExp(`(?<![\\p{L}\\p{N}])${pattern}`, 'giu');
+    } catch (error) {
+      try {
+        regex = new RegExp(pattern, 'giu');
+      } catch (fallbackError) {
+        console.warn('Failed to build highlight regex:', fallbackError);
+        regex = null;
+      }
+    }
+
+    if (this.highlightRegexCache.size > 64) {
+      this.highlightRegexCache.clear();
+    }
+    this.highlightRegexCache.set(cacheKey, regex);
+    return regex;
+  }
+
+  highlightText(text, terms) {
     if (!text) return '';
 
-    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-    return text.replace(regex, '<mark>$1</mark>');
+    const regex = this.buildHighlightRegex(terms);
+    if (!regex) return text;
+
+    // Snippets may carry markup, so only text between tags is marked up: otherwise
+    // a match inside an attribute (href="/dexprovider/") would corrupt the HTML.
+    return String(text)
+      .split(/(<[^>]*>)/)
+      .map((chunk) => (chunk.charAt(0) === '<' ? chunk : chunk.replace(regex, '<mark>$1</mark>')))
+      .join('');
   }
 
   buildTargetUrl(originalTargetUrl, moduleType = null, moduleName = null) {
