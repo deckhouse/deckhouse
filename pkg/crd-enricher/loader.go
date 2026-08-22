@@ -158,7 +158,7 @@ func (info *packageInfo) collectType(pkg *packages.Package, typeSpec *ast.TypeSp
 		info.collectFields(name, structType)
 	}
 
-	if hasMarker(markers, rootMarker) {
+	if isRootObject(markers) {
 		if named := lookupNamed(pkg.Types, name); named != nil {
 			info.roots[name] = named
 		}

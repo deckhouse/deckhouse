@@ -170,6 +170,52 @@ const sensitiveDataKey = "x-kubernetes-sensitive-data"
 // generated CRD.
 const rootMarker = "kubebuilder:object:root"
 
+// legacyRootMarker is the pre-kubebuilder marker that designates a root object,
+// by declaring that deepcopy-gen should give the type a DeepCopyObject method.
+// controller-gen still honours it and renders a CRD for such a type, so the
+// enricher has to recognise it too: a package that carries only this form used
+// to have every crd-enricher marker on its root type silently ignored, because
+// the type never made it into packageInfo.roots.
+const legacyRootMarker = "k8s:deepcopy-gen:interfaces"
+
+// runtimeObject is the interface the legacy marker has to name for the type to
+// be a root object rather than merely deep-copyable.
+const runtimeObject = "k8s.io/apimachinery/pkg/runtime.Object"
+
+// isRootObject reports whether the markers designate a CRD root type, by either
+// spelling controller-gen accepts.
+//
+// The value of the kubebuilder marker is honoured: "object:root=false" is how a
+// type opts out, and treating it as a root would apply CRD-level settings to a
+// kind that has no CRD.
+func isRootObject(markers []marker) bool {
+	for _, m := range markers {
+		switch m.name {
+		case rootMarker:
+			if m.hasValue && !isTrue(m.rawValue) {
+				continue
+			}
+			return true
+		case legacyRootMarker:
+			if strings.TrimSpace(m.rawValue) == runtimeObject {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// isTrue reports whether a marker value spells the boolean true. controller-gen
+// accepts the Go literals, and a value-less marker is true by convention, which
+// isRootObject handles before calling this.
+func isTrue(raw string) bool {
+	switch strings.TrimSpace(raw) {
+	case "true", "True", "TRUE":
+		return true
+	}
+	return false
+}
+
 // marker is a single parsed comment marker, for example
 // "+crd-enricher:deckhouse:documentation:default=3m".
 type marker struct {
@@ -275,14 +321,4 @@ func commentLines(text string) []string {
 	default:
 		return []string{text}
 	}
-}
-
-// hasMarker reports whether the slice contains a marker with the given name.
-func hasMarker(markers []marker, name string) bool {
-	for _, m := range markers {
-		if m.name == name {
-			return true
-		}
-	}
-	return false
 }
