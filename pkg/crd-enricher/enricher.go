@@ -798,10 +798,6 @@ func (e *Enricher) applyMarkers(schema map[string]any, markers []marker, ctx nod
 			last.hasName = true
 
 		case strings.HasPrefix(m.name, rawMarkerPrefix):
-			value, ok := e.decodeMarkerValue(m, ctx)
-			if !ok {
-				continue
-			}
 			// raw:<key> injects a standard schema field named <key> directly
 			// (not under an x-doc-* key). It is used for fields controller-gen
 			// cannot emit on some types (for example a pattern on a Duration).
@@ -809,6 +805,21 @@ func (e *Enricher) applyMarkers(schema map[string]any, markers []marker, ctx nod
 			// override descriptions that controller-gen pulls from a shared type
 			// (for example items.description on a []metav1.Condition field).
 			key := strings.TrimPrefix(m.name, rawMarkerPrefix)
+			if key == "" {
+				e.warnf(ctx, "raw marker has no key; write raw:<field>=<value> or raw:<node>.<field>=<value>")
+				continue
+			}
+			// A value-less raw: marker would decode to null and write it, which is
+			// never what its author meant -- and the one thing they might have
+			// meant, taking the field out, is what unset: is for.
+			if !m.hasValue {
+				e.warnf(ctx, "raw marker for %q has no value and would write null; use unset:%s to remove the field", key, key)
+				continue
+			}
+			value, ok := e.decodeMarkerValue(m, ctx)
+			if !ok {
+				continue
+			}
 			if strings.Contains(key, ".") {
 				if !setNested(schema, strings.Split(key, "."), value) {
 					e.warnf(ctx, "raw path %q does not resolve to a schema node", key)
@@ -824,11 +835,26 @@ func (e *Enricher) applyMarkers(schema map[string]any, markers []marker, ctx nod
 			// which raw: can only overwrite, never remove. It carries no value: a
 			// key set to null is not the same schema as a key that is not there.
 			key := strings.TrimPrefix(m.name, unsetMarkerPrefix)
+			if key == "" {
+				e.warnf(ctx, "unset marker has no key; write unset:<field> or unset:<node>.<field>")
+				continue
+			}
 			if m.hasValue {
 				e.warnf(ctx, "unset marker for %q takes no value, ignoring %q", key, m.rawValue)
 			}
-			if !deleteNested(schema, strings.Split(key, ".")) {
+			path := strings.Split(key, ".")
+			// Refuse to remove a field the structural schema requires. Obeying
+			// would produce a manifest the apiserver rejects at apply time, with
+			// nothing to connect the refusal back to this marker.
+			if last := path[len(path)-1]; structuralKeys[last] {
+				e.warnf(ctx, "unset path %q would remove %q, which a structural schema requires; the apiserver would reject the CRD", key, last)
+				continue
+			}
+			switch deleteNested(schema, path) {
+			case unsetNotFound:
 				e.warnf(ctx, "unset path %q is not present in the schema", key)
+			case unsetEmptiedParent:
+				e.warnf(ctx, "unset path %q left its parent node empty, which is a different schema from an absent one", key)
 			}
 
 		case m.name == sensitiveDataMarker:
@@ -930,6 +956,9 @@ func (e *Enricher) buildExamples(entries []exampleEntry, ctx nodeCtx) []any {
 // nodes controller-gen emitted); it returns false otherwise so a mistyped path
 // surfaces as a warning rather than silently growing the schema.
 func setNested(schema map[string]any, path []string, value any) bool {
+	if len(path) == 0 {
+		return false
+	}
 	node := schema
 	for _, key := range path[:len(path)-1] {
 		child, ok := node[key].(map[string]any)
@@ -942,27 +971,50 @@ func setNested(schema map[string]any, path []string, value any) bool {
 	return true
 }
 
+// unsetOutcome is what deleteNested did. The three cases each want saying
+// differently, and as a type the impossible fourth -- emptied a parent without
+// removing anything -- cannot be spelled.
+type unsetOutcome int
+
+const (
+	// unsetNotFound means the path did not resolve, or the field was not there,
+	// and nothing changed. The caller wants to hear about it: the marker was
+	// written to remove something, so removing nothing means it has outlived its
+	// target -- the vendored godoc changed, or the path was mistyped.
+	unsetNotFound unsetOutcome = iota
+	// unsetRemoved means the field is gone and its parent still has other keys.
+	unsetRemoved
+	// unsetEmptiedParent means the field is gone and its parent is now an empty
+	// mapping. An empty node is not the same schema as an absent one, and for the
+	// nodes apiextensions constrains it is not a valid one either.
+	unsetEmptiedParent
+)
+
 // deleteNested removes the field named by the last path element, walking the
-// mappings named by the ones before it. It reports false and changes nothing
-// when the path does not resolve or the field is not there, so the caller can
-// tell a marker that did something from one that has gone stale -- a
-// no-longer-emitted node is exactly the case worth hearing about, since the
-// marker was written to remove it.
-func deleteNested(schema map[string]any, path []string) bool {
+// mappings named by the ones before it. path must be non-empty.
+func deleteNested(schema map[string]any, path []string) unsetOutcome {
+	if len(path) == 0 {
+		return unsetNotFound
+	}
 	node := schema
 	for _, key := range path[:len(path)-1] {
 		child, ok := node[key].(map[string]any)
 		if !ok {
-			return false
+			return unsetNotFound
 		}
 		node = child
 	}
 	last := path[len(path)-1]
 	if _, ok := node[last]; !ok {
-		return false
+		return unsetNotFound
 	}
 	delete(node, last)
-	return true
+	// The schema root is not a "parent node" in this sense: emptying it means the
+	// document has no schema left, which a single-element path cannot express.
+	if len(path) > 1 && len(node) == 0 {
+		return unsetEmptiedParent
+	}
+	return unsetRemoved
 }
 
 // infoFor returns the packageInfo of a named type, or nil when the type lives

@@ -59,6 +59,11 @@ func decodeValue(raw string) (any, error) {
 // way the override is lost without an error. The heuristic is deliberately
 // narrow: an author writing a real mapping in a marker reaches for the flow form
 // or quotes the value.
+//
+// It does fire on a genuine single-pair mapping written as bare "k: v", because
+// in one line that is indistinguishable from prose with a colon in it. That is
+// the deliberate cost of catching the prose case, so the message names the flow
+// form as well -- an author who meant a mapping has a way to say so.
 func unquotedMappingWarning(name, raw string, decoded any) string {
 	if _, ok := decoded.(map[string]any); !ok {
 		return ""
@@ -71,7 +76,8 @@ func unquotedMappingWarning(name, raw string, decoded any) string {
 		return ""
 	}
 	return fmt.Sprintf(
-		"marker %q: the value contains %q and parsed as a mapping, not a string; quote it to keep it text", name, ": ")
+		"marker %q: the value contains %q and parsed as a mapping, not a string; "+
+			"quote it to keep it text, or write it as {k: v} if a mapping was intended", name, ": ")
 }
 
 // orderedEntry is a single key/value pair of an orderedMap.

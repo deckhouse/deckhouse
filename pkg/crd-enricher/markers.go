@@ -23,7 +23,7 @@ import (
 // canonical root every enricher marker carries; no bare or legacy forms are
 // honoured. These shapes are recognised:
 //
-//	+crd-enricher:raw:<key>[=<value>]                        // raw schema injection
+//	+crd-enricher:raw:<key>=<value>                          // raw schema injection
 //	+crd-enricher:unset:<key>                                // raw schema removal
 //	+crd-enricher:deckhouse:documentation:<entity>[=<value>] // documentation entity
 //	+crd-enricher:crd:<key>[=<value>]                        // CRD-level setting
@@ -118,6 +118,16 @@ const rawMarkerPrefix = "raw:"
 // warning rather than silently accepted, so a marker left behind by a generator
 // bump does not pass for a working one.
 const unsetMarkerPrefix = "unset:"
+
+// structuralKeys are the schema fields apiextensions requires to be there: an
+// array node must declare its items, and every node must declare its type.
+// Removing one produces a document the apiserver rejects at apply time
+// ("must be specified"), with nothing in the failure to point back at the marker
+// that caused it -- so unset: refuses these rather than obeying.
+var structuralKeys = map[string]bool{
+	"type":  true,
+	"items": true,
+}
 
 // crdMarker is the type-level entity that configures CRD-level settings that
 // controller-gen cannot express (preserveUnknownFields, the minimal style and

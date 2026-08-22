@@ -153,8 +153,8 @@ The value after `=` is parsed as **YAML**, so scalars, lists and maps all work.
 ```
 +crd-enricher:deckhouse:documentation:<entity>[=<value>]   # documentation fields
 +crd-enricher:deckhouse:sensitive-data                     # sensitive field flag
-+crd-enricher:raw:<key>[=<value>]                          # raw schema injection
-+crd-enricher:unset:<key>                                   # raw schema removal
++crd-enricher:raw:<key>=<value>                            # raw schema injection
++crd-enricher:unset:<key>                                  # raw schema removal
 +crd-enricher:crd:<key>[=<value>]                          # CRD-level setting (type-level only)
 ```
 
@@ -386,10 +386,16 @@ type PackageRepositorySpecRegistry struct {
 ### `raw:<key>` — inject an arbitrary standard schema field
 
 Some standard schema fields cannot be produced by controller-gen for certain Go
-types. `raw:<key>` sets `<key>` **directly** (not under an `x-doc-*` prefix). A
-**dotted** `<key>` walks into nested schema nodes; the intermediate nodes must
-already exist (controller-gen must have emitted them), otherwise you get a
-warning instead of a silently grown schema.
+types. `raw:<key>=<value>` sets `<key>` **directly** (not under an `x-doc-*`
+prefix). A **dotted** `<key>` walks into nested schema nodes; the intermediate
+nodes must already exist (controller-gen must have emitted them), otherwise you
+get a warning instead of a silently grown schema.
+
+The value is **required**. `raw:<key>` with no `=` would decode to `null` and
+write `<key>: null`, which is never a valid schema for the fields anyone reaches
+for this marker with — and the one thing its author might have meant by it,
+taking the field out, is what [`unset:<key>`](#unsetkey--remove-a-standard-schema-field)
+is for. So it is refused with a warning naming that marker.
 
 Set a `pattern` on a `metav1.Duration` (which controller-gen renders as an
 opaque string):
@@ -447,6 +453,19 @@ A `<key>` that is already absent is **a warning, not a no-op**: the marker was
 written to remove something, so a marker that has outlived its target — because
 the vendored godoc changed, or the path was mistyped — is worth hearing about
 rather than accepting silently.
+
+Two more things it will not do quietly:
+
+- **`type` and `items` are refused.** A structural schema must declare the `type`
+  of every node and the `items` of every array, so removing one produces a
+  manifest the apiserver rejects at `kubectl apply` time (`items: Required
+  value: must be specified`) — with nothing in the refusal pointing back at the
+  marker. `unset:items` and `unset:<path>.type` therefore warn and change
+  nothing.
+- **Emptying a node is reported.** `unset:items.description` on an `items` whose
+  only key was `description` leaves `items: {}`, which is a different schema from
+  no `items` at all. The removal still happens — you asked for it — but you hear
+  about it.
 
 ### `crd:<key>` — CRD-level settings (type-level only)
 
@@ -640,9 +659,16 @@ indentation.
 - **Dotted `raw:` paths must already exist.** `raw:items.description` only works
   if controller-gen already produced `items`; otherwise it warns rather than
   creating the node.
+- **`raw:` needs a value.** `raw:items.description` with no `=` is refused: it
+  would write `description: null`. Use `unset:items.description` to take the field
+  out.
 - **`unset:` must find something to remove.** `unset:items.description` warns if
   `items` was never emitted *or* if it carries no `description` — the marker
   removing nothing is the case you want to be told about.
+- **`unset:` will not break the structural schema.** `unset:type` and
+  `unset:items` are refused, because the apiserver requires both and would reject
+  the manifest with a message that says nothing about the marker. Emptying a node
+  (`items: {}`) is allowed but reported.
 - **`sensitive-data` on the root type is dropped** with a warning — put it on
   `spec` or a specific field.
 - **Values are YAML, not strings.** `examples=1` yields the integer `1`;
@@ -655,7 +681,10 @@ indentation.
   string`), but the manifest is already wrong by then — quote the value:
   ``raw:description="Ready is False while deleting (`reason: Deleting`)"``. A
   multi-line value is the same double-quoted form with `\n` in it; the renderer
-  turns it into a `|-` block.
+  turns it into a `|-` block. The check cannot tell this from a *deliberate*
+  single-pair mapping written bare, so if you really do want one, write it in the
+  flow form — `raw:x-kubernetes-validations={rule: self != \"\"}` — which is left
+  alone.
 - **gofmt rewrites some quotes inside doc comments.** The doc-comment formatter
   turns a doubled ASCII quote `''` into `”` and a doubled backtick into `“`, so a
   CEL rule written as `self.x != ''` is silently corrupted the next time anyone
@@ -671,5 +700,3 @@ indentation.
   marker is ignored with a warning.
 - **Run order matters.** Always run `crd-enricher` *after* controller-gen against
   the *same* directory and package paths. It edits in place and is idempotent.
-</content>
-</invoke>

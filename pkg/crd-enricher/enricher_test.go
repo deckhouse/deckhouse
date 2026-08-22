@@ -15,6 +15,7 @@
 package crdenricher
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -446,6 +447,118 @@ func TestApplyMarkersUnsetIgnoresValue(t *testing.T) {
 	}
 	if len(e.warnings) != 1 {
 		t.Fatalf("warnings = %v, want exactly one about the ignored value", e.warnings)
+	}
+}
+
+func TestApplyMarkersUnsetRefusesStructuralKeys(t *testing.T) {
+	// Removing "items" from an array node, or "type" from any node, produces a
+	// manifest the apiserver rejects with a message that says nothing about the
+	// marker that caused it. Refusing keeps the document applicable and puts the
+	// complaint where the author can act on it.
+	for _, tc := range []struct {
+		name   string
+		schema map[string]any
+		key    string
+	}{
+		{
+			name:   "items on an array node",
+			schema: map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
+			key:    "unset:items",
+		},
+		{
+			name:   "type on the node itself",
+			schema: map[string]any{"type": "string", "description": "text"},
+			key:    "unset:type",
+		},
+		{
+			name: "type of a nested node",
+			schema: map[string]any{
+				"type":  "array",
+				"items": map[string]any{"type": "object", "description": "text"},
+			},
+			key: "unset:items.type",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			e := &Enricher{}
+			before := fmt.Sprintf("%v", tc.schema)
+
+			e.applyMarkers(tc.schema, []marker{{name: tc.key, enricher: true}}, nodeCtx{})
+
+			if got := fmt.Sprintf("%v", tc.schema); got != before {
+				t.Errorf("schema changed: %s", got)
+			}
+			if len(e.warnings) != 1 || !strings.Contains(e.warnings[0], "structural schema requires") {
+				t.Errorf("warnings = %v, want one naming the structural requirement", e.warnings)
+			}
+		})
+	}
+}
+
+func TestApplyMarkersUnsetReportsEmptiedParent(t *testing.T) {
+	// items: {} is not the same schema as no items at all, and under type: array
+	// it is not a valid one either. The removal still happens -- the author asked
+	// for it -- but silence here is what would send them to a stand to find out.
+	e := &Enricher{}
+	schema := map[string]any{
+		"type":  "array",
+		"items": map[string]any{"description": "the only key"},
+	}
+
+	e.applyMarkers(schema, []marker{{name: "unset:items.description", enricher: true}}, nodeCtx{})
+
+	items := schema["items"].(map[string]any)
+	if len(items) != 0 {
+		t.Errorf("items = %#v, want it emptied", items)
+	}
+	if len(e.warnings) != 1 || !strings.Contains(e.warnings[0], "left its parent node empty") {
+		t.Errorf("warnings = %v, want one about the emptied parent", e.warnings)
+	}
+}
+
+func TestApplyMarkersKeylessMarkersWarn(t *testing.T) {
+	// "raw:" and "unset:" with nothing after the colon used to be reported as a
+	// path that is missing from the schema, sending the author to look for a node
+	// instead of at their own typo.
+	for _, tc := range []struct {
+		name string
+		key  string
+		want string
+	}{
+		{name: "raw", key: "raw:", want: "raw marker has no key"},
+		{name: "unset", key: "unset:", want: "unset marker has no key"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			e := &Enricher{}
+			schema := map[string]any{"type": "string"}
+
+			e.applyMarkers(schema, []marker{{name: tc.key, enricher: true}}, nodeCtx{})
+
+			if len(e.warnings) != 1 || !strings.Contains(e.warnings[0], tc.want) {
+				t.Errorf("warnings = %v, want one containing %q", e.warnings, tc.want)
+			}
+		})
+	}
+}
+
+func TestApplyMarkersRawWithoutValueRefused(t *testing.T) {
+	// A value-less raw: marker decoded to null and wrote it, producing a
+	// description the apiserver rejects. The only thing its author could have
+	// meant is the removal unset: now does, so the marker is refused and says so.
+	e := &Enricher{}
+	schema := map[string]any{
+		"type":  "array",
+		"items": map[string]any{"type": "object", "description": "vendored"},
+	}
+
+	e.applyMarkers(schema, []marker{{name: "raw:items.description", enricher: true}}, nodeCtx{})
+
+	items := schema["items"].(map[string]any)
+	if got := items["description"]; got != "vendored" {
+		t.Errorf("items.description = %#v, want it left alone rather than nulled", got)
+	}
+	if len(e.warnings) != 1 || !strings.Contains(e.warnings[0], "unset:items.description") {
+		t.Errorf("warnings = %v, want one pointing at the unset marker", e.warnings)
 	}
 }
 

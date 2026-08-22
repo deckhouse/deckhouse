@@ -25,19 +25,19 @@
 //
 // Markers are regular Go comments that start with a plus sign, exactly like
 // the markers consumed by controller-gen. Every enricher marker is namespaced
-// with the canonical "crd-enricher:" prefix and comes in two shapes:
+// with the canonical "crd-enricher:" prefix and comes in one of these shapes:
 //
-//	+crd-enricher:raw:<key>[=<value>]                        // raw schema injection
+//	+crd-enricher:raw:<key>=<value>                          // raw schema injection
 //	+crd-enricher:unset:<key>                                // raw schema removal
 //	+crd-enricher:deckhouse:documentation:<entity>[=<value>] // documentation entity
 //	+crd-enricher:crd:<key>[=<value>]                        // CRD-level setting
 //	+crd-enricher:deckhouse:sensitive-data                   // sensitive field flag
 //
 // The raw and unset entities inject and remove a standard schema field and live
-// directly under the prefix; the documentation entities (examples, deprecated, default) carry the
-// extra "deckhouse:documentation" sub-namespace; the crd entity configures the
-// CRD itself and carries the shorter "deckhouse" sub-namespace. No bare or
-// legacy form is recognised:
+// directly under the prefix, as does the crd entity, which configures the CRD
+// document itself; the documentation entities (examples, deprecated, default)
+// carry the extra "deckhouse:documentation" sub-namespace, and sensitive-data
+// carries the shorter "deckhouse" one. No bare or legacy form is recognised:
 //
 //	type ModuleSourceSpec struct {
 //		// +crd-enricher:deckhouse:documentation:default=3m
@@ -68,8 +68,10 @@
 //   - default — rendered as x-doc-default set to the parsed YAML value (any
 //     valued simple entity becomes x-doc-<entity>);
 //
-//   - raw:<key> — injects an arbitrary standard schema field named <key>
-//     directly (a dotted <key> walks into nested schema nodes);
+//   - raw:<key>=<value> — injects an arbitrary standard schema field named <key>
+//     directly (a dotted <key> walks into nested schema nodes). The value is
+//     required: without one the marker would write null, and the one thing its
+//     author might have meant by that is what unset:<key> is for;
 //
 //   - unset:<key> — deletes the standard schema field named <key>, the mirror of
 //     raw:<key> and the only way to take a node out rather than overwrite it.
@@ -80,7 +82,10 @@
 //     reproduced from the Go types while raw: is the only tool. The marker takes
 //     no value, since a field set to null is not the same schema as a field that
 //     is absent, and a <key> that is already missing is reported as a warning so
-//     a marker that has outlived its target does not pass for a working one;
+//     a marker that has outlived its target does not pass for a working one. A
+//     <key> naming a field the structural schema requires (type, items) is
+//     refused outright: obeying would produce a manifest the apiserver rejects,
+//     with nothing in the refusal pointing back at the marker;
 //
 //   - sensitive-data — a schema-level flag rendered as
 //     x-kubernetes-sensitive-data: true. It marks a field (or an object/array
