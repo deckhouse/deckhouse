@@ -96,9 +96,18 @@ func run(args []string) error {
 		}
 	}
 
-	changed, err := crdenricher.Run(opts)
+	changed, warnings, err := crdenricher.RunWithWarnings(opts)
 	if err != nil {
 		return err
+	}
+
+	// Warnings go to stderr rather than being dropped: each one is a marker that
+	// did not do what its author wrote it to do -- a path that does not resolve,
+	// a field the schema has no property for -- and the enrichment carries on
+	// regardless, so nothing else would say so. They are not fatal: a repository
+	// that gates its crds/ on a re-render still sees the real difference there.
+	for _, w := range warnings {
+		fmt.Fprintf(os.Stderr, "warning: %s\n", w)
 	}
 
 	for _, file := range changed {

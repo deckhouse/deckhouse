@@ -520,9 +520,9 @@ changed, err := crdenricher.Run(crdenricher.Options{
 ```
 
 `Run` returns the list of modified files. Non-fatal problems (markers pointing at
-schema nodes that don't exist, unresolvable `raw:` and `unset:` paths, sensitive-data on the
-root) are collected as warnings — construct an `Enricher` directly if you want to
-inspect `Enricher.Warnings()`.
+schema nodes that don't exist, unresolvable `raw:` and `unset:` paths,
+sensitive-data on the root) are collected as warnings; use `RunWithWarnings` to
+get them alongside the file list. The CLI prints them to stderr.
 
 ## Output layout
 

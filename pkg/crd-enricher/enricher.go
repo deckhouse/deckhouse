@@ -96,17 +96,29 @@ type Enricher struct {
 
 // Run loads the API packages, then walks and enriches every CRD file in the
 // configured directory. It returns the list of files that were modified.
+//
+// Warnings collected along the way are dropped; use RunWithWarnings to see them.
 func Run(opts Options) ([]string, error) {
+	changed, _, err := RunWithWarnings(opts)
+	return changed, err
+}
+
+// RunWithWarnings is Run, returning the non-fatal problems it collected as well:
+// markers naming a field the schema has no property for, raw and unset paths
+// that do not resolve, sensitive-data on a root type. None of them stops the
+// enrichment, and every one of them means a marker did not do what its author
+// wrote it to do, so a caller that has somewhere to print them should.
+func RunWithWarnings(opts Options) ([]string, []string, error) {
 	if len(opts.Paths) == 0 {
-		return nil, fmt.Errorf("no package paths provided")
+		return nil, nil, fmt.Errorf("no package paths provided")
 	}
 	if opts.CRDDir == "" {
-		return nil, fmt.Errorf("no CRD directory provided")
+		return nil, nil, fmt.Errorf("no CRD directory provided")
 	}
 
 	pkgByPath, err := loadPackages(opts.Dir, opts.Paths...)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	enr := &Enricher{
@@ -126,21 +138,21 @@ func Run(opts Options) ([]string, error) {
 
 	files, err := crdFiles(opts.CRDDir)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	var changed []string
 	for _, file := range files {
 		modified, err := enr.enrichFile(file)
 		if err != nil {
-			return nil, fmt.Errorf("enrich %s: %w", file, err)
+			return nil, nil, fmt.Errorf("enrich %s: %w", file, err)
 		}
 		if modified {
 			changed = append(changed, file)
 		}
 	}
 
-	return changed, nil
+	return changed, enr.Warnings(), nil
 }
 
 // Warnings returns the non-fatal problems collected during the last Run.
