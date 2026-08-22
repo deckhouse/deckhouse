@@ -160,6 +160,21 @@ func (e *Enricher) Warnings() []string {
 	return e.warnings
 }
 
+// decodeMarkerValue decodes a marker value and records the non-fatal problems
+// worth telling the author about. The boolean result is false when the value
+// could not be decoded at all, in which case the marker has to be skipped.
+func (e *Enricher) decodeMarkerValue(m marker) (any, bool) {
+	value, err := decodeValue(m.rawValue)
+	if err != nil {
+		e.warnings = append(e.warnings, err.Error())
+		return nil, false
+	}
+	if warn := unquotedMappingWarning(m.name, m.rawValue, value); warn != "" {
+		e.warnings = append(e.warnings, warn)
+	}
+	return value, true
+}
+
 // crdFiles returns the sorted list of YAML files in a directory.
 func crdFiles(dir string) ([]string, error) {
 	entries, err := os.ReadDir(dir)
@@ -334,9 +349,8 @@ func (e *Enricher) applyCRDMarkers(crd map[string]any, markers []marker) {
 		}
 		var value any = true
 		if m.hasValue {
-			decoded, err := decodeValue(m.rawValue)
-			if err != nil {
-				e.warnings = append(e.warnings, err.Error())
+			decoded, valid := e.decodeMarkerValue(m)
+			if !valid {
 				continue
 			}
 			value = decoded
@@ -649,9 +663,8 @@ func (e *Enricher) applyMarkers(schema map[string]any, markers []marker) {
 					"%s marker has no preceding %s marker to attach to", examplesDescriptionMarker, examplesMarker))
 				continue
 			}
-			value, err := decodeValue(m.rawValue)
-			if err != nil {
-				e.warnings = append(e.warnings, err.Error())
+			value, ok := e.decodeMarkerValue(m)
+			if !ok {
 				continue
 			}
 			last := &examples[len(examples)-1]
@@ -670,9 +683,8 @@ func (e *Enricher) applyMarkers(schema map[string]any, markers []marker) {
 					"%s marker has no preceding %s marker to attach to", examplesNameMarker, examplesMarker))
 				continue
 			}
-			value, err := decodeValue(m.rawValue)
-			if err != nil {
-				e.warnings = append(e.warnings, err.Error())
+			value, ok := e.decodeMarkerValue(m)
+			if !ok {
 				continue
 			}
 			last := &examples[len(examples)-1]
@@ -684,9 +696,8 @@ func (e *Enricher) applyMarkers(schema map[string]any, markers []marker) {
 			last.hasName = true
 
 		case strings.HasPrefix(m.name, rawMarkerPrefix):
-			value, err := decodeValue(m.rawValue)
-			if err != nil {
-				e.warnings = append(e.warnings, err.Error())
+			value, ok := e.decodeMarkerValue(m)
+			if !ok {
 				continue
 			}
 			// raw:<key> injects a standard schema field named <key> directly
@@ -725,9 +736,8 @@ func (e *Enricher) applyMarkers(schema map[string]any, markers []marker) {
 			// object or array node it marks the whole subtree as sensitive. It
 			// is a value-less flag by default but accepts an explicit boolean.
 			if m.hasValue {
-				value, err := decodeValue(m.rawValue)
-				if err != nil {
-					e.warnings = append(e.warnings, err.Error())
+				value, ok := e.decodeMarkerValue(m)
+				if !ok {
 					continue
 				}
 				schema[sensitiveDataKey] = value
@@ -743,9 +753,8 @@ func (e *Enricher) applyMarkers(schema map[string]any, markers []marker) {
 		default:
 			// A valued simple entity (for example default) stores its parsed
 			// YAML value under x-doc-<entity>.
-			value, err := decodeValue(m.rawValue)
-			if err != nil {
-				e.warnings = append(e.warnings, err.Error())
+			value, ok := e.decodeMarkerValue(m)
+			if !ok {
 				continue
 			}
 			schema[docKeyPrefix+m.name] = value

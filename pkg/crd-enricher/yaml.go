@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"fmt"
 	"sort"
+	"strings"
 
 	"sigs.k8s.io/yaml"
 	goyaml2 "sigs.k8s.io/yaml/goyaml.v2"
@@ -46,6 +47,31 @@ func decodeValue(raw string) (any, error) {
 		return nil, fmt.Errorf("decode value %q: %w", raw, err)
 	}
 	return out, nil
+}
+
+// unquotedMappingWarning reports the marker value that was written as prose but
+// parsed as a mapping, or an empty string when the value is fine.
+//
+// A marker value is YAML, so a description that contains a colon followed by a
+// space -- "(`reason: ReconcileFailed`)" -- turns into a single-entry map unless
+// it is quoted. The map is then written into the schema in place of the string
+// the author meant, or rejected by the node that expected a scalar, and either
+// way the override is lost without an error. The heuristic is deliberately
+// narrow: an author writing a real mapping in a marker reaches for the flow form
+// or quotes the value.
+func unquotedMappingWarning(name, raw string, decoded any) string {
+	if _, ok := decoded.(map[string]any); !ok {
+		return ""
+	}
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" || strings.HasPrefix(trimmed, "{") || strings.HasPrefix(trimmed, `"`) || strings.HasPrefix(trimmed, "'") {
+		return ""
+	}
+	if !strings.Contains(trimmed, ": ") {
+		return ""
+	}
+	return fmt.Sprintf(
+		"marker %q: the value contains %q and parsed as a mapping, not a string; quote it to keep it text", name, ": ")
 }
 
 // orderedEntry is a single key/value pair of an orderedMap.
