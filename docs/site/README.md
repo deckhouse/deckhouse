@@ -538,6 +538,84 @@ Hugo:
 data-search-context="{{ T "search_context" }}"
 ```
 
+### Result blocks and pagination
+
+Results are rendered in three blocks in a fixed order — Modules, API (OpenAPI parameters and resources) and Documentation (pages) — and nothing moves a result from one block to another.
+
+- The API and Documentation blocks show 5 results each; the "show more" button below a block adds 5 more (`pageSize` in `search-v3.js`). The button is not rendered once the block has nothing left.
+- The button also states how much is left in its own block — «Показать еще 5 (осталось 43)» — so the number of clicks to the end of the list is visible. On the last click the remainder equals the batch, and the label drops the parentheses.
+- Inside the API block results are ordered by four internal priorities (resource name match, parameter name match, other resources, other parameters), but the block is paginated as a single list — one counter, one button.
+- The Modules row shows up to 14 badges and then `... and N more` as plain text, without a way to expand it.
+- The search itself is not limited: Lunr returns every match and grouping keeps them all, so a block may hold hundreds of results with 5 of them rendered. Only the rendering is capped.
+
+### Ranking a single page (`searchBoost`)
+
+Search results are scored by Lunr (field weights: `title` 10, `keywords` 9, `module` 6, `summary` 3, `content` 1) and then adjusted by `search-v3.js`. To move one specific page up or down without touching those global weights, set `searchBoost` in its front matter:
+
+```yaml
+---
+title: "Overview"
+searchBoost: 1.5
+---
+```
+
+Behavior:
+
+- The value is a multiplier applied to the page's score. `> 1` promotes, `< 1` demotes (`0.3` is a good starting point for release notes and other low-value pages).
+- The value is not capped. A missing, zero, negative or non-numeric value is ignored (multiplier `1`), so a typo cannot break the search — but a wrong *number* is applied as written, so keep an eye on it in review. Note that the value is a multiplier, not a percentage: `searchBoost: 300` is enormous, not "300 %".
+- Start at `2` and check the results. A page competing only on `content` matches usually needs `1.5`–`3`. Beating a competitor that matches in `title` takes roughly `40`+ — in that case add `search` keywords instead (see below), which is both cheaper and less disruptive.
+- It **reorders results within a group only**. Results are rendered as Modules → API → Documentation, and that order is fixed — no boost will lift a documentation page above the API block.
+- It reorders matches, it does not create them. A page that the query does not match at all will not appear no matter how high the boost.
+- Works in both generators: `page.searchBoost` for Jekyll (`docs/documentation`), `.Params.searchBoost` for Hugo (external modules).
+- Applies to pages only. OpenAPI parameters have no front matter — use `x-doc-search` keywords for those.
+
+The related key `search` (comma-separated keywords) is often the better first tool: the `keywords` field already carries a weight of 9 and picks up an extra multiplier during post-processing. Reach for `searchBoost` when the page already matches and simply needs to rank higher.
+
+### Query syntax
+
+The search box takes plain text. Lunr's query language is not exposed to visitors: every operator is rewritten before the query reaches the index by the `LUNR_SYNTAX_RULES` table in `docs/site/assets/js/search-v3.js`. That file is the only owner of query syntax — it sanitizes the query before handing it to the worker in the `SEARCH` message (along with a `requireAllWords` flag for the `key: value` case) and sanitizes the synonym map it sends on `INIT`, so `search-v3-worker.js` never sees raw input and needs no copy of the table. The rules are idempotent, because `buildPhraseQuery()` re-adds `+` afterwards.
+
+| Typed | Searched | Note |
+|---|---|---|
+| `+ingress`, `-nginx`, `install --dry-run` | `ingress`, `nginx`, `install dry-run` | presence operators are inert in any script |
+| `ingress~5` | `ingress` | fuzzy matching is off: an edit distance of 5 matched 2464 pages in 76 ms |
+| `ingress^10 nginx` | `ingress nginx` | boosting is off: relevance belongs to the field boosts |
+| `kind: configmap`, `content:nginx` | `+kind +configmap`, `+content +nginx` | see below |
+| `ingres*` | `ingres*` | **the one supported operator** |
+| `a*`, `*gress`, `in*ss` | `a`, `gress`, `in ss` | only a trailing `*` on a term of 3+ characters survives; a leading one cost 111 ms against 2 ms, and `*` alone meant the whole corpus (7154 pages, 993 ms) |
+| `*`, `+`, `:` | — | a query made only of operators sanitizes to nothing and reports "not found"; an empty Lunr query would otherwise return every page |
+
+A colon is read as a `key: value` pair pasted from a manifest, so **both parts are required**: `kind: configmap` matches 29 pages where the same words OR-ed match 381. `kind:configmap` and `kind: configmap` are the same query — the index holds the token `kind`, not `kind:`, because `lunr.trimmer` strips it. If nothing contains all the words, the search falls back to the ordinary OR query, so a pair is never a dead end. This also removes a trap: `content:`, `title:`, `module:`, `summary:` and `keywords:` are real index fields, and such a query used to be silently scoped to one field (`content:nginx` returned 107 pages instead of 218, with nothing in the UI to show it).
+
+Malformed input cannot break the search: `searchWithFallback()` retries once with every non-word character stripped, and a failure after that shows an error message instead of an empty dropdown.
+
+### Synonyms (`synonymGroups`)
+
+Synonyms let a query find pages that do not contain its words at all — for example, «провайдеры аутентификации» finds the `DexProvider` resource. They live in `options.synonymGroups` in `docs/site/assets/js/search-v3.js` as groups of equivalent terms:
+
+```js
+synonymGroups: [
+  ['moduleupdatepolicy', 'update policy', 'module update policy', 'политика обновления'],
+  ['dexprovider', 'dex providers', 'провайдеры аутентификации'],
+],
+```
+
+Every member of a group expands to all the others, so a link works in both directions with no reverse entries to maintain. If a term must expand *without* the reverse link, use the `options.synonyms` map instead (`{ 'what the user types': ['extra query'] }`); it is merged on top of the groups.
+
+Editing rules:
+
+- `search-v3.js` is the only place to edit. The search itself runs in `search-v3-worker.js`, but the worker receives the derived map with the `INIT` message and keeps no list of its own — a group added there has no effect.
+- Case and extra spaces do not matter: terms are normalized (lowercased, whitespace collapsed) and sanitized once, when the map is built, and lookups use the same normalization. Keep them lowercase anyway, for consistency with the existing groups.
+- Expansion is matched against the whole query and against every window of up to 4 consecutive words in it, so `update policy for a module` expands as well as `update policy`.
+
+Behavior:
+
+- Each expansion is run as a separate Lunr query and its results are merged into the original set with a 1.15 multiplier. Synonyms therefore add and reorder results — they do not turn an irrelevant page into a match.
+- A multi-word synonym is matched as a whole. Lunr has no phrase queries, so the expansion is rewritten into required terms (`Security Information and Event Management` → `+security +information +event +management`) and a page has to contain all of them. Passed as a plain string it would be an OR over the words: 1031 hits instead of 3, everything that merely says «management». Stop words (`and`, `и`, `в`) are left out of such a query — they are dropped when the index is built, so requiring one empties the result set.
+- Every applied term is highlighted, not just what the user typed: searching «провайдеры аутентификации» marks `DexProvider` in titles, breadcrumbs and snippets, and the snippet itself is picked by coverage of all the terms, so a sentence mentioning only the synonym still wins.
+- A synonym is highlighted exactly as written, never word by word: `siem` marks «Security Information and Event Management» and leaves a stray «management» alone. Words of the *query* are still highlighted separately, because Lunr does match them independently. The trade-off: a page found through a synonym whose phrase it does not contain literally gets a snippet with nothing marked.
+- Highlighting tolerates inflections (a Russian query «провайдеры» also marks «провайдеров»), prefers whole phrases over separate words, and anchors matches at word starts.
+
 ### OpenAPI Specifications rendering
 
 The `x-doc-` prefix in the parameter names is reserved in the OpenAPI specifications for rendering the documentation. Parameters with this prefix are only used for rendering the documentation and are not mandatory.

@@ -27,6 +27,9 @@
               {{- if gt (len $keywords) 0 -}}
               "keywords": {{ $keywords | jsonify }},
               {{- end -}}
+              {{- with .Params.searchBoost -}}
+              "searchBoost": {{ . | jsonify }},
+              {{- end -}}
               "module": {{ $moduleName | jsonify }},
               "moduletype": "source",
               "summary": {{ if .Summary }}{{ .Summary | plainify | jsonify }}{{ else if .Description }}{{ .Description | plainify | jsonify }}{{ else }}""{{ end }},
