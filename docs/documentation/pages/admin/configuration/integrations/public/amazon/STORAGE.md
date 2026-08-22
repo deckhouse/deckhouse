@@ -77,9 +77,9 @@ metadata:
 
 Where:
 
-- `service.beta.kubernetes.io/aws-load-balancer-type`: If set to none, only a Target Group is created (no LoadBalancer).
+- `service.beta.kubernetes.io/aws-load-balancer-type`: If set to none, only a target group is created (no LoadBalancer).
 - `service.beta.kubernetes.io/aws-load-balancer-backend-protocol`: Only applicable when `aws-load-balancer-type` is `none`.
-  Specifies the protocol for communication with the Target Group.
+  Specifies the protocol for communication with the target group.
   Supported values:
   - `tcp` (default)
   - `tls`
@@ -87,7 +87,7 @@ Where:
   - `https`
 
 {% alert level="info" %}
-When you change this annotation, `cloud-controller-manager` will attempt to recreate the Target Group.
+When you change this annotation, `cloud-controller-manager` will attempt to recreate the target group.
 If it’s already associated with an NLB or ALB, the deletion will fail, and the controller will enter a retry loop.
 To avoid this, manually detach the load balancer from the group.
 
