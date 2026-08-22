@@ -16,6 +16,7 @@ package crdenricher
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -89,7 +90,7 @@ func TestApplyMarkersScalarAndFlag(t *testing.T) {
 		{name: "default", rawValue: "3m", hasValue: true, enricher: true},
 		{name: "deprecated", enricher: true},
 		{name: "kubebuilder:validation:Required"}, // not an enricher marker, ignored
-	})
+	}, nodeCtx{})
 
 	if got := schema["x-doc-default"]; got != "3m" {
 		t.Errorf("x-doc-default = %#v, want %q", got, "3m")
@@ -108,7 +109,7 @@ func TestApplyMarkersSensitiveData(t *testing.T) {
 
 	e.applyMarkers(schema, []marker{
 		{name: "sensitive-data", enricher: true},
-	})
+	}, nodeCtx{})
 
 	if got := schema["x-kubernetes-sensitive-data"]; got != true {
 		t.Errorf("x-kubernetes-sensitive-data = %#v, want true", got)
@@ -126,7 +127,7 @@ func TestApplyMarkersExamplesAccumulate(t *testing.T) {
 		{name: "examples", rawValue: "5m", hasValue: true, enricher: true},
 		{name: "examples", rawValue: "1h", hasValue: true, enricher: true},
 		{name: "examples", rawValue: "[10m, 20m]", hasValue: true, enricher: true},
-	})
+	}, nodeCtx{})
 
 	want := []any{"5m", "1h", "10m", "20m"}
 	if got := schema["x-doc-examples"]; !reflect.DeepEqual(got, want) {
@@ -136,15 +137,16 @@ func TestApplyMarkersExamplesAccumulate(t *testing.T) {
 
 func TestApplyMarkersExampleObject(t *testing.T) {
 	e := &Enricher{}
+	fs := &fileState{}
 	schema := map[string]any{"type": "object"}
 
 	// The keys are authored out of alphabetical order on purpose: an example
 	// object must keep the authored order instead of being sorted.
 	e.applyMarkers(schema, []marker{
 		{name: "examples", rawValue: "{kind: ModuleSource, spec: {registry: {repo: example.io, dockerCfg: secret}}}", hasValue: true, enricher: true},
-	})
+	}, nodeCtx{file: fs})
 
-	if !e.orderedExamples {
+	if !fs.orderedExamples {
 		t.Error("orderedExamples flag not set for an object example")
 	}
 
@@ -166,6 +168,7 @@ func TestApplyMarkersExampleObject(t *testing.T) {
 
 func TestApplyMarkersExamplesDescription(t *testing.T) {
 	e := &Enricher{}
+	fs := &fileState{}
 	schema := map[string]any{"type": "object"}
 
 	// Each examples marker is followed by its description; the pairs must render
@@ -175,9 +178,9 @@ func TestApplyMarkersExamplesDescription(t *testing.T) {
 		{name: "examples-description", rawValue: "my super example", hasValue: true, enricher: true},
 		{name: "examples", rawValue: "{field: value2}", hasValue: true, enricher: true},
 		{name: "examples-description", rawValue: "my super example two", hasValue: true, enricher: true},
-	})
+	}, nodeCtx{file: fs})
 
-	if !e.orderedExamples {
+	if !fs.orderedExamples {
 		t.Error("orderedExamples flag not set for described examples")
 	}
 
@@ -201,6 +204,7 @@ func TestApplyMarkersExamplesDescription(t *testing.T) {
 
 func TestApplyMarkersExamplesName(t *testing.T) {
 	e := &Enricher{}
+	fs := &fileState{}
 	schema := map[string]any{"type": "object"}
 
 	// A name alone (no description) switches to the wrapper form; the wrapper
@@ -208,9 +212,9 @@ func TestApplyMarkersExamplesName(t *testing.T) {
 	e.applyMarkers(schema, []marker{
 		{name: "examples", rawValue: "{field: value}", hasValue: true, enricher: true},
 		{name: "examples-name", rawValue: "My example", hasValue: true, enricher: true},
-	})
+	}, nodeCtx{file: fs})
 
-	if !e.orderedExamples {
+	if !fs.orderedExamples {
 		t.Error("orderedExamples flag not set for a named example")
 	}
 
@@ -235,7 +239,7 @@ func TestApplyMarkersExamplesNameAndDescription(t *testing.T) {
 		{name: "examples", rawValue: "5m", hasValue: true, enricher: true},
 		{name: "examples-name", rawValue: "five minutes", hasValue: true, enricher: true},
 		{name: "examples-description", rawValue: "a short interval", hasValue: true, enricher: true},
-	})
+	}, nodeCtx{})
 
 	want := []any{
 		orderedMap{
@@ -259,7 +263,7 @@ func TestApplyMarkersExamplesDescriptionMixed(t *testing.T) {
 		{name: "examples", rawValue: "5m", hasValue: true, enricher: true},
 		{name: "examples", rawValue: "1h", hasValue: true, enricher: true},
 		{name: "examples-description", rawValue: "one hour", hasValue: true, enricher: true},
-	})
+	}, nodeCtx{})
 
 	want := []any{
 		orderedMap{
@@ -282,7 +286,7 @@ func TestApplyMarkersExamplesDescriptionWithoutExample(t *testing.T) {
 	// A dangling description with no preceding example must warn and be dropped.
 	e.applyMarkers(schema, []marker{
 		{name: "examples-description", rawValue: "orphan", hasValue: true, enricher: true},
-	})
+	}, nodeCtx{})
 
 	if _, ok := schema["x-doc-examples"]; ok {
 		t.Errorf("x-doc-examples must stay unset: %#v", schema["x-doc-examples"])
@@ -298,7 +302,7 @@ func TestApplyMarkersRawKey(t *testing.T) {
 
 	e.applyMarkers(schema, []marker{
 		{name: "raw:pattern", rawValue: `^(\d+h)?(\d+m)?(\d+s)?$`, hasValue: true, enricher: true},
-	})
+	}, nodeCtx{})
 
 	if got := schema["pattern"]; got != `^(\d+h)?(\d+m)?(\d+s)?$` {
 		t.Errorf("pattern = %#v, want the regex", got)
@@ -325,7 +329,7 @@ func TestApplyMarkersRawNestedKey(t *testing.T) {
 	e.applyMarkers(schema, []marker{
 		{name: "raw:items.description", rawValue: "custom item description", hasValue: true, enricher: true},
 		{name: "raw:items.properties.reason.description", rawValue: "custom reason", hasValue: true, enricher: true},
-	})
+	}, nodeCtx{})
 
 	items := schema["items"].(map[string]any)
 	if got := items["description"]; got != "custom item description" {
@@ -342,7 +346,7 @@ func TestApplyMarkersRawNestedKey(t *testing.T) {
 	// A path that does not resolve must warn instead of growing the schema.
 	e2 := &Enricher{}
 	s2 := map[string]any{"type": "string"}
-	e2.applyMarkers(s2, []marker{{name: "raw:items.description", rawValue: "x", hasValue: true, enricher: true}})
+	e2.applyMarkers(s2, []marker{{name: "raw:items.description", rawValue: "x", hasValue: true, enricher: true}}, nodeCtx{})
 	if _, ok := s2["items"]; ok {
 		t.Errorf("nonexistent path should not be created")
 	}
@@ -368,7 +372,7 @@ func TestApplyMarkersUnsetKey(t *testing.T) {
 	e.applyMarkers(schema, []marker{
 		{name: "unset:items.description", enricher: true},
 		{name: "unset:items.properties.reason.description", enricher: true},
-	})
+	}, nodeCtx{})
 
 	items := schema["items"].(map[string]any)
 	if _, ok := items["description"]; ok {
@@ -391,7 +395,7 @@ func TestApplyMarkersUnsetKey(t *testing.T) {
 	// A single-element key addresses the node itself.
 	e2 := &Enricher{}
 	s2 := map[string]any{"type": "string", "description": "text"}
-	e2.applyMarkers(s2, []marker{{name: "unset:description", enricher: true}})
+	e2.applyMarkers(s2, []marker{{name: "unset:description", enricher: true}}, nodeCtx{})
 	if _, ok := s2["description"]; ok {
 		t.Errorf("description survived the unset marker")
 	}
@@ -416,7 +420,7 @@ func TestApplyMarkersUnsetMissingWarns(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			e := &Enricher{}
-			e.applyMarkers(tc.schema, []marker{{name: tc.key, enricher: true}})
+			e.applyMarkers(tc.schema, []marker{{name: tc.key, enricher: true}}, nodeCtx{})
 			if len(e.warnings) == 0 {
 				t.Fatalf("expected a warning for %q", tc.key)
 			}
@@ -435,7 +439,7 @@ func TestApplyMarkersUnsetIgnoresValue(t *testing.T) {
 
 	e.applyMarkers(schema, []marker{
 		{name: "unset:description", rawValue: "whatever", hasValue: true, enricher: true},
-	})
+	}, nodeCtx{})
 
 	if _, ok := schema["description"]; ok {
 		t.Errorf("description survived the unset marker")
@@ -445,8 +449,58 @@ func TestApplyMarkersUnsetIgnoresValue(t *testing.T) {
 	}
 }
 
+func TestWarningsCarryTheirLocation(t *testing.T) {
+	// A warning that does not say which manifest and which declaration it is
+	// about cannot be acted on: raw:description and unset:items.description are
+	// the most common markers in the set, and they recur across every CRD.
+	e := &Enricher{}
+	fs := &fileState{path: "/tmp/bin/crd/bases/storage.deckhouse.io_things.yaml"}
+	ctx := nodeCtx{file: fs}.at("ThingStatus", "Conditions")
+
+	e.applyMarkers(map[string]any{"type": "array"},
+		[]marker{{name: "unset:items.description", enricher: true}}, ctx)
+
+	if len(e.warnings) != 1 {
+		t.Fatalf("warnings = %v, want exactly one", e.warnings)
+	}
+	got := e.warnings[0]
+	for _, want := range []string{
+		"storage.deckhouse.io_things.yaml", // the manifest, by base name only
+		"ThingStatus.Conditions",           // the Go declaration the marker sat on
+		"items.description",                // the marker's own subject
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("warning %q does not carry %q", got, want)
+		}
+	}
+	if strings.Contains(got, "/tmp/bin/crd/bases") {
+		t.Errorf("warning %q spells the whole path; the base name is what identifies the file", got)
+	}
+}
+
+func TestWarningsAreDeduplicated(t *testing.T) {
+	// The same marker is visited once per version of every document naming its
+	// kind, so an unfiltered list repeats each problem and buries the distinct
+	// ones.
+	e := &Enricher{}
+	ctx := nodeCtx{file: &fileState{path: "things.yaml"}}.at("ThingSpec", "Phase")
+
+	for range 3 {
+		e.applyMarkers(map[string]any{"type": "string"},
+			[]marker{{name: "unset:absent", enricher: true}}, ctx)
+	}
+
+	if got := e.Warnings(); len(got) != 1 {
+		t.Errorf("Warnings() = %v, want the repeats collapsed to one", got)
+	}
+	if len(e.warnings) != 3 {
+		t.Errorf("the raw list should keep every occurrence, got %v", e.warnings)
+	}
+}
+
 func TestApplyCRDMarkers(t *testing.T) {
 	e := &Enricher{}
+	fs := &fileState{}
 	crd := map[string]any{
 		"metadata": map[string]any{
 			"annotations": map[string]any{"controller-gen.kubebuilder.io/version": "v0.19.0"},
@@ -479,9 +533,9 @@ func TestApplyCRDMarkers(t *testing.T) {
 		{name: "crd:preserveUnknownFields", rawValue: "false", hasValue: true, enricher: true},
 		{name: "crd:minimal", rawValue: "true", hasValue: true, enricher: true},
 		{name: "crd:stripFormat", rawValue: "true", hasValue: true, enricher: true},
-	})
+	}, nodeCtx{file: fs})
 
-	if !e.curatedStyle {
+	if !fs.curatedStyle {
 		t.Error("curatedStyle not set")
 	}
 

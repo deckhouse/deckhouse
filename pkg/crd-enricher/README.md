@@ -562,10 +562,20 @@ changed, err := crdenricher.Run(crdenricher.Options{
 })
 ```
 
-`Run` returns the list of modified files. Non-fatal problems (markers pointing at
-schema nodes that don't exist, unresolvable `raw:` and `unset:` paths,
-sensitive-data on the root) are collected as warnings; use `RunWithWarnings` to
-get them alongside the file list. The CLI prints them to stderr.
+`RunWithWarnings` is the same call returning the non-fatal problems as well
+(markers pointing at schema nodes that don't exist, unresolvable `raw:` and
+`unset:` paths, sensitive-data on the root). Prefer it: every warning means a
+marker did not do what its author wrote it to do, and nothing else in the run says
+so. `Run` keeps the older two-value signature and drops them.
+
+```go
+changed, warnings, err := crdenricher.RunWithWarnings(opts)
+```
+
+Each warning names the manifest and the Go declaration it came from
+(`things.yaml: ThingStatus.Conditions: unset path … is not present in the
+schema`), and repeats are collapsed — the same marker is visited once per version
+of every document naming its kind.
 
 ## Output layout
 

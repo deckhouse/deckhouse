@@ -244,6 +244,18 @@ func (m marker) isDoc() bool {
 	return m.enricher
 }
 
+// hasEnricherMarker reports whether the slice holds a marker the enricher acts
+// on. Everything else in it -- +optional, the kubebuilder markers -- belongs to
+// another generator, so its presence is not a reason to say anything.
+func hasEnricherMarker(markers []marker) bool {
+	for _, m := range markers {
+		if m.isDoc() {
+			return true
+		}
+	}
+	return false
+}
+
 // parseMarkerLine turns a single trimmed comment line into a marker. The
 // boolean result is false when the line is not a marker (does not start with a
 // plus sign).
