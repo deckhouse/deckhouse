@@ -162,6 +162,21 @@ Markers can be attached to **struct fields** and to **struct types**. A
 type-level marker applies to the schema node of that type (for the root type,
 that is `openAPIV3Schema`).
 
+### Which types the enricher walks
+
+The enricher starts from the **root types** and follows the fields from there, so
+a type that is not reachable from a root is never visited and its markers never
+applied. A root is a type that carries either spelling controller-gen accepts:
+
+```go
+// +kubebuilder:object:root=true                                        // the kubebuilder marker
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object  // the pre-kubebuilder one
+```
+
+`+kubebuilder:object:root=false` opts a type out, and
+`+k8s:deepcopy-gen=true` on its own is not enough — it asks for `DeepCopy`, not
+for a CRD.
+
 ### `examples` — sample values
 
 Rendered as `x-doc-examples`. The marker may be **repeated**; each value is
@@ -444,6 +459,15 @@ annotation and switches the file to the curated style (no leading `---`).
 > natively by controller-gen from `+kubebuilder:metadata:labels` and
 > `+kubebuilder:metadata:annotations`.
 
+**Moving a hand-written `crds/` to generation?** `minimal=true` plus
+`preserveUnknownFields=false` is the pair that reproduces the shape a curated
+Deckhouse CRD already has. Without them the rendered file gains `listKind`, the
+implicit `apiVersion`/`kind`/`metadata` root properties and the generator-version
+annotation — all of which then show up on the module's public API reference page,
+turning a refactor into a documentation change. `stripFormat` is the one to leave
+alone unless the committed manifest carries no `format` at all: dropping every
+`int32` also drops the ones the manifest does declare.
+
 ## Automatic example generation
 
 > **Opt-in.** This is **off by default**. Without it, the enricher only applies
@@ -595,6 +619,20 @@ indentation.
 - **Values are YAML, not strings.** `examples=1` yields the integer `1`;
   `examples="1"` yields the string `"1"`; `stripFormat=[int32]` yields a list.
   Quote when you need a string.
+- **Prose containing `: ` has to be quoted.** A description like
+  ``raw:description=Ready is False while deleting (`reason: Deleting`)`` parses as
+  a *mapping*, not a string, and the mapping is what lands in the schema. The
+  enricher warns (`the value contains ": " and parsed as a mapping, not a
+  string`), but the manifest is already wrong by then — quote the value:
+  ``raw:description="Ready is False while deleting (`reason: Deleting`)"``. A
+  multi-line value is the same double-quoted form with `\n` in it; the renderer
+  turns it into a `|-` block.
+- **gofmt rewrites some quotes inside doc comments.** The doc-comment formatter
+  turns a doubled ASCII quote `''` into `”` and a doubled backtick into `“`, so a
+  CEL rule written as `self.x != ''` is silently corrupted the next time anyone
+  runs `gofmt`. Spell the empty string `\"\"` instead, and keep `gofmt -l` clean
+  *before* diffing the rendered manifests — otherwise the formatter edits text you
+  have already checked.
 - **Example generation is opt-in.** Without the `auto-examples` flag only the
   `x-doc-examples` you write explicitly are emitted; the synthesized root/tree
   examples are not.

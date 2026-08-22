@@ -116,6 +116,17 @@
 // themselves. Type-level markers are applied to the schema node of the type
 // (for the root type this is openAPIV3Schema).
 //
+// The enricher walks the root types and the fields reachable from them, so a
+// type no root reaches is never visited. A root is one that carries either
+// spelling controller-gen accepts: +kubebuilder:object:root=true, or the
+// pre-kubebuilder +k8s:deepcopy-gen:interfaces naming
+// k8s.io/apimachinery/pkg/runtime.Object. An explicit object:root=false opts
+// out.
+//
+// The value after "=" is YAML, which means prose containing a colon followed by
+// a space parses as a mapping rather than a string; such a value has to be
+// quoted, and the enricher warns when it sees one that was not.
+//
 // # Example generation
 //
 // Beyond the explicit examples markers, the enricher can synthesize
