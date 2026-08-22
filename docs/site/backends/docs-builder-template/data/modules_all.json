@@ -34,6 +34,18 @@
       "ssdlc"
     ]
   },
+  "ansible": {
+    "editions": [
+      "ce",
+      "se-plus",
+      "ee"
+    ],
+    "tags": [
+      "helper",
+      "virtualization",
+      "ssdlc"
+    ]
+  },
   "code": {
     "editions": [
       "ee",
@@ -228,16 +240,6 @@
       "ssdlc"
     ]
   },
-  "delivery-kit": {
-    "editions": [
-      "cse-lite",
-      "cse-pro"
-    ],
-    "tags": [
-      "delivery",
-      "ssdlc"
-    ]
-  },
   "dashboard": {
     "editions": [
       "ce",
@@ -394,6 +396,17 @@
       "ssdlc"
     ]
   },
+  "managed-starrocks": {
+    "editions": [
+      "ee",
+      "se",
+      "se-plus"
+    ],
+    "tags": [
+      "managed services",
+      "ssdlc"
+    ]
+  },
   "managed-trino": {
     "editions": [
       "ee"
@@ -415,6 +428,36 @@
     ]
   },
   "monitoring-custom": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "tags": [
+      "observability",
+      "ssdlc"
+    ]
+  },
+  "monitoring-applications": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "tags": [
+      "observability",
+      "ssdlc"
+    ]
+  },
+  "monitoring-kubernetes": {
     "editions": [
       "ce",
       "be",
@@ -690,6 +733,15 @@
       "ee",
       "cse-lite",
       "cse-pro"
+    ],
+    "tags": [
+      "storage",
+      "ssdlc"
+    ]
+  },
+  "sds-object": {
+    "editions": [
+      "ee"
     ],
     "tags": [
       "storage",
