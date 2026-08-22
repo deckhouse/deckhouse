@@ -21,24 +21,27 @@ import (
 
 // markerPrefix namespaces every marker owned by the enricher. It is the single,
 // canonical root every enricher marker carries; no bare or legacy forms are
-// honoured. Three shapes are recognised:
+// honoured. These shapes are recognised:
 //
 //	+crd-enricher:raw:<key>[=<value>]                        // raw schema injection
+//	+crd-enricher:unset:<key>                                // raw schema removal
 //	+crd-enricher:deckhouse:documentation:<entity>[=<value>] // documentation entity
 //	+crd-enricher:crd:<key>[=<value>]                        // CRD-level setting
 //	+crd-enricher:deckhouse:sensitive-data                   // sensitive field flag
 //
-// The raw entity lives directly under the prefix because it injects a standard
-// schema field rather than deckhouse-specific documentation. The documentation
-// entities (examples, deprecated, default) carry the extra
-// "deckhouse:documentation" sub-namespace. The sensitive-data entity configures
-// the schema and carries the shorter "deckhouse" sub-namespace. The crd entity
-// lives directly under the prefix (no sub-namespace). Every shape is reduced to
-// the bare entity name during parsing so the rest of the enricher matches on it.
+// The raw and unset entities live directly under the prefix because they inject
+// and remove a standard schema field rather than deckhouse-specific
+// documentation. The documentation entities (examples, deprecated, default)
+// carry the extra "deckhouse:documentation" sub-namespace. The sensitive-data
+// entity configures the schema and carries the shorter "deckhouse"
+// sub-namespace. The crd entity lives directly under the prefix (no
+// sub-namespace). Every shape is reduced to the bare entity name during parsing
+// so the rest of the enricher matches on it.
 const markerPrefix = "crd-enricher:"
 
 // docSubPrefix is the "deckhouse:documentation" sub-namespace stripped from the
-// documentation entities after markerPrefix. The raw entity does not carry it.
+// documentation entities after markerPrefix. The raw and unset entities do not
+// carry it.
 const docSubPrefix = "deckhouse:documentation:"
 
 // deckhouseSubPrefix is the "deckhouse" sub-namespace stripped from the
@@ -100,6 +103,21 @@ const (
 // directly (such as a regex pattern on a metav1.Duration). A dotted <key> walks
 // into nested schema nodes.
 const rawMarkerPrefix = "raw:"
+
+// unsetMarkerPrefix is the entity that deletes a standard schema field named by
+// the <key> that follows it, the mirror of rawMarkerPrefix. It takes no value:
+//
+//	+crd-enricher:unset:items.description
+//
+// It exists because raw: can only overwrite. A node controller-gen fills in from
+// a vendored type -- items.description on a []metav1.Condition field is the
+// worked example -- can be given different text with raw:, but not taken out, and
+// a hand-curated manifest that never carried the field cannot be reproduced from
+// the Go types while the field is there. A dotted <key> walks into nested schema
+// nodes, exactly as raw: does, and a key that is already absent is reported as a
+// warning rather than silently accepted, so a marker left behind by a generator
+// bump does not pass for a working one.
+const unsetMarkerPrefix = "unset:"
 
 // crdMarker is the type-level entity that configures CRD-level settings that
 // controller-gen cannot express (preserveUnknownFields, the minimal style and

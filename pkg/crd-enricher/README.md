@@ -58,6 +58,7 @@ exception of `x-kubernetes-sensitive-data`, which the apiserver acts on.
 | `x-doc-deprecated` | `deckhouse:documentation:deprecated` | Marks a field as deprecated in the docs (renders a deprecation badge). |
 | `x-kubernetes-sensitive-data` | `deckhouse:sensitive-data` | **Behavioral**, not documentation. Tells the apiserver's `CRDSensitiveData` feature to encrypt the value in etcd, filter it by RBAC and mask it in audit logs. |
 | *(arbitrary standard field)* | `raw:<key>` | Injects a plain schema field controller-gen cannot produce for a given Go type (e.g. `pattern` on a `metav1.Duration`, or an overridden `description`). |
+| *(arbitrary standard field, removed)* | `unset:<key>` | Deletes a plain schema field controller-gen emitted and the manifest is not supposed to carry (e.g. the `items.description` it renders from the `metav1.Condition` godoc). Takes no value. |
 
 Why not just use `kubebuilder:default` / native `example`?
 
@@ -153,6 +154,7 @@ The value after `=` is parsed as **YAML**, so scalars, lists and maps all work.
 +crd-enricher:deckhouse:documentation:<entity>[=<value>]   # documentation fields
 +crd-enricher:deckhouse:sensitive-data                     # sensitive field flag
 +crd-enricher:raw:<key>[=<value>]                          # raw schema injection
++crd-enricher:unset:<key>                                   # raw schema removal
 +crd-enricher:crd:<key>[=<value>]                          # CRD-level setting (type-level only)
 ```
 
@@ -379,6 +381,39 @@ This also works to override a shared item description on a slice field, e.g.
 `raw:items.description` or `raw:items.properties.reason.description` on a
 `[]metav1.Condition` field.
 
+### `unset:<key>` — remove a standard schema field
+
+`raw:<key>` can only overwrite. `unset:<key>` is its mirror: it deletes `<key>`,
+walking a **dotted** path into nested nodes exactly as `raw:` does. It takes no
+value — a field set to `null` is a different schema from a field that is not
+there.
+
+It exists for the nodes controller-gen fills in from vendored types.
+controller-gen writes a `description` for every node it can reach, so a
+`[]metav1.Condition` field gets `items.description` from the `metav1.Condition`
+godoc of whatever `k8s.io/apimachinery` the API module happens to pin. A manifest
+that never carried that text cannot be reproduced from the Go types while `raw:`
+is the only tool available — the best you can do is pin the upstream sentence in
+a marker, which puts a generic *"Condition contains details for one aspect of the
+current state of this API Resource"* on the reference page and leaves it to be
+translated in every doc-ru overlay.
+
+```go
+// +optional
+// +listType=map
+// +listMapKey=type
+// +crd-enricher:unset:items.description
+// +crd-enricher:raw:items.properties.type.description=Condition type. `Ready` is `True` once the StorageClass is in place.
+Conditions []metav1.Condition `json:"conditions,omitempty"`
+```
+
+→ `items.description` is gone; the descriptions the module does want stay.
+
+A `<key>` that is already absent is **a warning, not a no-op**: the marker was
+written to remove something, so a marker that has outlived its target — because
+the vendored godoc changed, or the path was mistyped — is worth hearing about
+rather than accepting silently.
+
 ### `crd:<key>` — CRD-level settings (type-level only)
 
 Placed on the **root type**, these configure the CRD document itself — things
@@ -485,7 +520,7 @@ changed, err := crdenricher.Run(crdenricher.Options{
 ```
 
 `Run` returns the list of modified files. Non-fatal problems (markers pointing at
-schema nodes that don't exist, unresolvable `raw:` paths, sensitive-data on the
+schema nodes that don't exist, unresolvable `raw:` and `unset:` paths, sensitive-data on the
 root) are collected as warnings — construct an `Enricher` directly if you want to
 inspect `Enricher.Warnings()`.
 
@@ -552,6 +587,9 @@ indentation.
 - **Dotted `raw:` paths must already exist.** `raw:items.description` only works
   if controller-gen already produced `items`; otherwise it warns rather than
   creating the node.
+- **`unset:` must find something to remove.** `unset:items.description` warns if
+  `items` was never emitted *or* if it carries no `description` — the marker
+  removing nothing is the case you want to be told about.
 - **`sensitive-data` on the root type is dropped** with a warning — put it on
   `spec` or a specific field.
 - **Values are YAML, not strings.** `examples=1` yields the integer `1`;

@@ -28,12 +28,13 @@
 // with the canonical "crd-enricher:" prefix and comes in two shapes:
 //
 //	+crd-enricher:raw:<key>[=<value>]                        // raw schema injection
+//	+crd-enricher:unset:<key>                                // raw schema removal
 //	+crd-enricher:deckhouse:documentation:<entity>[=<value>] // documentation entity
 //	+crd-enricher:crd:<key>[=<value>]                        // CRD-level setting
 //	+crd-enricher:deckhouse:sensitive-data                   // sensitive field flag
 //
-// The raw entity injects a standard schema field and lives directly under the
-// prefix; the documentation entities (examples, deprecated, default) carry the
+// The raw and unset entities inject and remove a standard schema field and live
+// directly under the prefix; the documentation entities (examples, deprecated, default) carry the
 // extra "deckhouse:documentation" sub-namespace; the crd entity configures the
 // CRD itself and carries the shorter "deckhouse" sub-namespace. No bare or
 // legacy form is recognised:
@@ -69,6 +70,17 @@
 //
 //   - raw:<key> — injects an arbitrary standard schema field named <key>
 //     directly (a dotted <key> walks into nested schema nodes);
+//
+//   - unset:<key> — deletes the standard schema field named <key>, the mirror of
+//     raw:<key> and the only way to take a node out rather than overwrite it.
+//     controller-gen renders a description for every node it can reach, the
+//     vendored ones included: items.description on a []metav1.Condition field
+//     comes from the metav1.Condition godoc of whatever apimachinery the API
+//     module pins, and a manifest that is not supposed to carry it cannot be
+//     reproduced from the Go types while raw: is the only tool. The marker takes
+//     no value, since a field set to null is not the same schema as a field that
+//     is absent, and a <key> that is already missing is reported as a warning so
+//     a marker that has outlived its target does not pass for a working one;
 //
 //   - sensitive-data — a schema-level flag rendered as
 //     x-kubernetes-sensitive-data: true. It marks a field (or an object/array

@@ -41,6 +41,7 @@ func TestParseMarkerLine(t *testing.T) {
 		{"crd subkey flag", "+crd-enricher:crd:minimal", marker{name: "crd:minimal", enricher: true}, true},
 		{"sensitive-data", "+crd-enricher:deckhouse:sensitive-data", marker{name: "sensitive-data", enricher: true}, true},
 		{"raw", "+crd-enricher:raw:pattern=^a$", marker{name: "raw:pattern", rawValue: "^a$", hasValue: true, enricher: true}, true},
+		{"unset", "+crd-enricher:unset:items.description", marker{name: "unset:items.description", enricher: true}, true},
 	}
 
 	for _, tc := range cases {
@@ -347,6 +348,100 @@ func TestApplyMarkersRawNestedKey(t *testing.T) {
 	}
 	if len(e2.warnings) == 0 {
 		t.Errorf("expected a warning for unresolved path")
+	}
+}
+
+func TestApplyMarkersUnsetKey(t *testing.T) {
+	e := &Enricher{}
+	schema := map[string]any{
+		"type":        "array",
+		"description": "field description",
+		"items": map[string]any{
+			"type":        "object",
+			"description": "vendored type description",
+			"properties": map[string]any{
+				"reason": map[string]any{"type": "string", "description": "vendored reason"},
+			},
+		},
+	}
+
+	e.applyMarkers(schema, []marker{
+		{name: "unset:items.description", enricher: true},
+		{name: "unset:items.properties.reason.description", enricher: true},
+	})
+
+	items := schema["items"].(map[string]any)
+	if _, ok := items["description"]; ok {
+		t.Errorf("items.description survived the unset marker")
+	}
+	if got := items["type"]; got != "object" {
+		t.Errorf("items.type = %#v, want the node left otherwise intact", got)
+	}
+	reason := items["properties"].(map[string]any)["reason"].(map[string]any)
+	if _, ok := reason["description"]; ok {
+		t.Errorf("items.properties.reason.description survived the unset marker")
+	}
+	if got := schema["description"]; got != "field description" {
+		t.Errorf("the field's own description = %#v, want it untouched", got)
+	}
+	if len(e.warnings) != 0 {
+		t.Errorf("unexpected warnings: %v", e.warnings)
+	}
+
+	// A single-element key addresses the node itself.
+	e2 := &Enricher{}
+	s2 := map[string]any{"type": "string", "description": "text"}
+	e2.applyMarkers(s2, []marker{{name: "unset:description", enricher: true}})
+	if _, ok := s2["description"]; ok {
+		t.Errorf("description survived the unset marker")
+	}
+	if len(e2.warnings) != 0 {
+		t.Errorf("unexpected warnings: %v", e2.warnings)
+	}
+}
+
+func TestApplyMarkersUnsetMissingWarns(t *testing.T) {
+	// A path whose parent is not there, and a key that is already absent, are
+	// both warnings: the marker was written to remove something, so removing
+	// nothing means it has outlived its target.
+	cases := []struct {
+		name   string
+		schema map[string]any
+		key    string
+	}{
+		{"missing parent", map[string]any{"type": "string"}, "unset:items.description"},
+		{"missing key", map[string]any{"type": "object", "items": map[string]any{"type": "object"}}, "unset:items.description"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			e := &Enricher{}
+			e.applyMarkers(tc.schema, []marker{{name: tc.key, enricher: true}})
+			if len(e.warnings) == 0 {
+				t.Fatalf("expected a warning for %q", tc.key)
+			}
+			if _, ok := tc.schema["description"]; ok {
+				t.Errorf("the marker must not touch the node it does not address")
+			}
+		})
+	}
+}
+
+func TestApplyMarkersUnsetIgnoresValue(t *testing.T) {
+	// unset carries no value. A marker written with one still removes the key,
+	// but says so rather than letting the author believe the value did anything.
+	e := &Enricher{}
+	schema := map[string]any{"type": "string", "description": "text"}
+
+	e.applyMarkers(schema, []marker{
+		{name: "unset:description", rawValue: "whatever", hasValue: true, enricher: true},
+	})
+
+	if _, ok := schema["description"]; ok {
+		t.Errorf("description survived the unset marker")
+	}
+	if len(e.warnings) != 1 {
+		t.Fatalf("warnings = %v, want exactly one about the ignored value", e.warnings)
 	}
 }
 

@@ -692,6 +692,21 @@ func (e *Enricher) applyMarkers(schema map[string]any, markers []marker) {
 				schema[key] = value
 			}
 
+		case strings.HasPrefix(m.name, unsetMarkerPrefix):
+			// unset:<key> deletes a standard schema field, the mirror of raw:<key>.
+			// It is how a field takes out a node controller-gen filled in from a
+			// vendored type -- items.description on a []metav1.Condition field --
+			// which raw: can only overwrite, never remove. It carries no value: a
+			// key set to null is not the same schema as a key that is not there.
+			key := strings.TrimPrefix(m.name, unsetMarkerPrefix)
+			if m.hasValue {
+				e.warnings = append(e.warnings, fmt.Sprintf(
+					"unset marker for %q takes no value, ignoring %q", key, m.rawValue))
+			}
+			if !deleteNested(schema, strings.Split(key, ".")) {
+				e.warnings = append(e.warnings, fmt.Sprintf("unset path %q is not present in the schema", key))
+			}
+
 		case m.name == sensitiveDataMarker:
 			// sensitive-data renders to the kube-apiserver flag
 			// x-kubernetes-sensitive-data rather than an x-doc-* key. On an
@@ -796,6 +811,29 @@ func setNested(schema map[string]any, path []string, value any) bool {
 		node = child
 	}
 	node[path[len(path)-1]] = value
+	return true
+}
+
+// deleteNested removes the field named by the last path element, walking the
+// mappings named by the ones before it. It reports false and changes nothing
+// when the path does not resolve or the field is not there, so the caller can
+// tell a marker that did something from one that has gone stale -- a
+// no-longer-emitted node is exactly the case worth hearing about, since the
+// marker was written to remove it.
+func deleteNested(schema map[string]any, path []string) bool {
+	node := schema
+	for _, key := range path[:len(path)-1] {
+		child, ok := node[key].(map[string]any)
+		if !ok {
+			return false
+		}
+		node = child
+	}
+	last := path[len(path)-1]
+	if _, ok := node[last]; !ok {
+		return false
+	}
+	delete(node, last)
 	return true
 }
 
