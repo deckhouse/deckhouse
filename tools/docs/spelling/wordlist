@@ -226,6 +226,7 @@ Deckhouse
 DeckhouseRelease
 DeckhouseReleases
 DefaultContainerResourcePolicy
+DefectDojo
 Defragment
 Defragmentation
 Defragmenting
@@ -1236,6 +1237,7 @@ ghcr
 gibibytes
 giterminism
 gitignore
+gitleaks
 globalVersion
 govc
 grafana
@@ -1699,6 +1701,7 @@ tls
 toolchain
 trdl
 trivy
+trufflehog
 ttl
 tuf
 tunnelMode
