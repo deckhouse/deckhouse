@@ -970,6 +970,9 @@ class ModuleSearch {
   buildLunrIndex() {
     const searchData = this.searchData;
     const useRussianSupport = this.currentLang === 'ru' && typeof lunr.multiLanguage !== 'undefined';
+    // Inside lunr(function() {...}) `this` is the Lunr builder, so class methods have
+    // to be captured beforehand - calling this.normalizeKeywords() there throws.
+    const normalizeKeywords = (keywords) => this.normalizeKeywords(keywords);
 
     // Use multilingual support for Russian, default for English
     this.lunrIndex = lunr(function() {
@@ -993,7 +996,7 @@ class ModuleSearch {
           const docData = {
             id: `doc_${docCounter}`,
             title: doc.title || '',
-            keywords: this.normalizeKeywords(doc.keywords),
+            keywords: normalizeKeywords(doc.keywords),
             module: doc.module || '',
             summary: doc.summary || '',
             content: doc.content || '',
@@ -1018,7 +1021,7 @@ class ModuleSearch {
           const paramData = {
             id: `param_${paramCounter}`,
             title: param.name || '',
-            keywords: this.normalizeKeywords(param.keywords),
+            keywords: normalizeKeywords(param.keywords),
             module: param.module || '',
             resName: param.resName || '',
             content: param.content || '',
@@ -1513,7 +1516,7 @@ class ModuleSearch {
       let highlightQuery = sanitizedQuery; // Use sanitized query for highlighting
       // Terms the result set was matched by: query itself plus applied synonyms
       // and fuzzy fallbacks, so all of them get highlighted in snippets.
-      let highlightTerms = [sanitizedQuery];
+      let highlightTerms = this.expandQueryHighlightTerms(sanitizedQuery);
 
       if (this.useSearchWorker && this.workerInitialized) {
         try {
@@ -1522,7 +1525,7 @@ class ModuleSearch {
           highlightQuery = workerResponse.highlightQuery || sanitizedQuery;
           highlightTerms = (workerResponse.highlightTerms && workerResponse.highlightTerms.length > 0)
             ? workerResponse.highlightTerms
-            : [highlightQuery];
+            : this.expandQueryHighlightTerms(highlightQuery);
         } catch (workerError) {
           console.warn('Worker search failed, falling back to main thread:', workerError);
           this.useSearchWorker = false;
@@ -1579,7 +1582,7 @@ class ModuleSearch {
           const initialSearch = searchWithFallback(sanitizedQuery);
           results = initialSearch.results;
           highlightQuery = initialSearch.highlightQuery;
-          highlightTerms = [highlightQuery];
+          highlightTerms = this.expandQueryHighlightTerms(highlightQuery);
         } catch (error) {
           console.warn('Lunr search error with sanitized query:', error);
           this.showError('Search query contains invalid characters. Please try a different search term.');
@@ -1591,10 +1594,11 @@ class ModuleSearch {
         const synonymResults = [];
         for (const synonymQuery of synonymCandidates) {
           try {
-            const synonymSearch = searchWithFallback(synonymQuery);
+            const synonymSearch = searchWithFallback(this.buildPhraseQuery(synonymQuery));
             if (synonymSearch.results.length > 0) {
               synonymResults.push(...synonymSearch.results);
-              highlightTerms.push(synonymSearch.highlightQuery);
+              // Highlighted as written: matched as a whole phrase, never word by word.
+              highlightTerms.push(synonymQuery);
             }
           } catch (synonymError) {
             console.warn('Synonym search failed:', synonymError);
@@ -1619,7 +1623,7 @@ class ModuleSearch {
             results = this.lunrIndex.search(bestSuggestion);
             // Use the fuzzy suggestion for highlighting
             highlightQuery = bestSuggestion;
-            highlightTerms.push(bestSuggestion);
+            highlightTerms.push(...this.expandQueryHighlightTerms(bestSuggestion));
           }
         }
 
@@ -1632,7 +1636,7 @@ class ModuleSearch {
               results = wordResults;
               // Use the fuzzy suggestion for highlighting
               highlightQuery = suggestion.item;
-              highlightTerms.push(suggestion.item);
+              highlightTerms.push(...this.expandQueryHighlightTerms(suggestion.item));
               break;
             }
           }
@@ -2138,16 +2142,68 @@ class ModuleSearch {
       collected.push(term);
     };
 
-    source.forEach((entry) => {
-      const value = String(entry == null ? '' : entry).trim();
-      if (!value) return;
-      push(value);
-      if (/\s/.test(value)) {
-        value.split(/\s+/).forEach(push);
-      }
-    });
+    // Terms arrive ready to use: query words are split by expandQueryHighlightTerms(),
+    // while a synonym phrase stays whole so "siem" does not mark every "management".
+    source.forEach(push);
 
     return collected.sort((a, b) => b.length - a.length);
+  }
+
+  // A query is an OR over its words, and a document may match just one of them, so
+  // every word is highlighted on its own alongside the full string. Synonym phrases
+  // are excluded from this: they are matched whole, see buildPhraseQuery().
+  expandQueryHighlightTerms(query) {
+    const value = String(query == null ? '' : query).trim();
+    if (!value) {
+      return [];
+    }
+    return /\s/.test(value) ? [value, ...value.split(/\s+/)] : [value];
+  }
+
+  // Lunr has no phrase queries: a multi-word synonym passed as a plain string is an OR
+  // over its words, so "siem" would drag in every page that merely says "management"
+  // (1031 hits against 3 for the phrase as a whole). Requiring every word instead
+  // ("+security +information +event +management") keeps the match tied to the phrase.
+  buildPhraseQuery(phrase) {
+    const words = String(phrase == null ? '' : phrase).trim().split(/\s+/).filter(Boolean);
+    if (words.length < 2) {
+      return phrase;
+    }
+
+    // Bail out instead of risking a parse error on Lunr query operators (+ - : ^ ~ *).
+    if (words.some((word) => !/^[\p{L}\p{N}_./-]+$/u.test(word))) {
+      return phrase;
+    }
+
+    const required = words.filter((word) => !this.isSearchStopWord(word));
+
+    if (required.length === 0) {
+      return phrase;
+    }
+    if (required.length === 1) {
+      return required[0];
+    }
+
+    return required.map((word) => `+${word}`).join(' ');
+  }
+
+  // Stop words are dropped when the index is built, so a required clause made of one
+  // ("+and") empties the entire result set. The search pipeline keeps them, unlike the
+  // indexing pipeline, so they have to be recognized explicitly.
+  isSearchStopWord(word) {
+    const lower = String(word == null ? '' : word).toLowerCase();
+    const filters = typeof lunr === 'undefined'
+      ? []
+      : [lunr.stopWordFilter, lunr.ru ? lunr.ru.stopWordFilter : null];
+
+    return filters.some((filter) => {
+      if (typeof filter !== 'function') return false;
+      try {
+        return !filter(lower);
+      } catch (error) {
+        return false;
+      }
+    });
   }
 
   // Builds a regexp source for a single term, tolerating inflections so the

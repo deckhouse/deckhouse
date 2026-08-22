@@ -395,6 +395,52 @@ function getSynonymCandidates(query) {
   return candidates;
 }
 
+// Stop words are dropped when the index is built, so a required clause made of one
+// ("+and") empties the entire result set. The search pipeline keeps them, unlike the
+// indexing pipeline, so they have to be recognized explicitly.
+function isSearchStopWord(word) {
+  const lower = String(word == null ? '' : word).toLowerCase();
+  const filters = typeof lunr === 'undefined'
+    ? []
+    : [lunr.stopWordFilter, lunr.ru ? lunr.ru.stopWordFilter : null];
+
+  return filters.some((filter) => {
+    if (typeof filter !== 'function') return false;
+    try {
+      return !filter(lower);
+    } catch (error) {
+      return false;
+    }
+  });
+}
+
+// Lunr has no phrase queries: a multi-word synonym passed as a plain string is an OR
+// over its words, so "siem" would drag in every page that merely says "management"
+// (1031 hits against 3 for the phrase as a whole). Requiring every word instead
+// ("+security +information +event +management") keeps the match tied to the phrase.
+function buildPhraseQuery(phrase) {
+  const words = String(phrase == null ? '' : phrase).trim().split(/\s+/).filter(Boolean);
+  if (words.length < 2) {
+    return phrase;
+  }
+
+  // Bail out instead of risking a parse error on Lunr query operators (+ - : ^ ~ *).
+  if (words.some((word) => !/^[\p{L}\p{N}_./-]+$/u.test(word))) {
+    return phrase;
+  }
+
+  const required = words.filter((word) => !isSearchStopWord(word));
+
+  if (required.length === 0) {
+    return phrase;
+  }
+  if (required.length === 1) {
+    return required[0];
+  }
+
+  return required.map((word) => `+${word}`).join(' ');
+}
+
 // Extracts unique module names for synthetic "module page" results in UI.
 function buildAvailableModules() {
   const modules = new Set();
@@ -418,13 +464,24 @@ function buildAvailableModules() {
   availableModules = Array.from(modules);
 }
 
+// A query is an OR over its words, and a document may match just one of them, so
+// every word is highlighted on its own alongside the full string. Synonym phrases
+// are excluded from this: they are matched whole, see buildPhraseQuery().
+function expandQueryHighlightTerms(query) {
+  const value = String(query == null ? '' : query).trim();
+  if (!value) {
+    return [];
+  }
+  return /\s/.test(value) ? [value, ...value.split(/\s+/)] : [value];
+}
+
 // Executes Lunr search and applies fuzzy fallback strategy.
 function runSearch(query) {
   const sanitizedQuery = sanitizeQueryForSearch(query);
   let results = [];
   let highlightQuery = sanitizedQuery;
   // Every term that contributed to the result set, so the UI highlights synonyms too.
-  const highlightTerms = [sanitizedQuery];
+  const highlightTerms = expandQueryHighlightTerms(sanitizedQuery);
   const mergeSearchResults = (baseResults, synonymResults, synonymBoost = 1.15) => {
     const mergedByRef = new Map();
 
@@ -471,10 +528,12 @@ function runSearch(query) {
   const synonymResults = [];
   for (const synonymQuery of synonymCandidates) {
     try {
-      const synonymSearch = searchWithFallback(synonymQuery);
+      const synonymSearch = searchWithFallback(buildPhraseQuery(synonymQuery));
       if (synonymSearch.results.length > 0) {
         synonymResults.push(...synonymSearch.results);
-        highlightTerms.push(synonymSearch.highlightQuery);
+        // The synonym is highlighted as written, not word by word: it was matched as
+        // a whole phrase, and its words on their own mean nothing to the reader.
+        highlightTerms.push(synonymQuery);
       }
     } catch (synonymError) {
       // Ignore invalid synonym query and continue with next candidate.
@@ -494,7 +553,7 @@ function runSearch(query) {
       const bestSuggestion = fuzzySuggestions[0].item;
       results = lunrIndex.search(bestSuggestion);
       highlightQuery = bestSuggestion;
-      highlightTerms.push(bestSuggestion);
+      highlightTerms.push(...expandQueryHighlightTerms(bestSuggestion));
     }
   }
 
@@ -505,7 +564,7 @@ function runSearch(query) {
       if (wordResults.length > 0) {
         results = wordResults;
         highlightQuery = suggestion.item;
-        highlightTerms.push(suggestion.item);
+        highlightTerms.push(...expandQueryHighlightTerms(suggestion.item));
         break;
       }
     }

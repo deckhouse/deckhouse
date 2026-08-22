@@ -643,7 +643,9 @@ Editing rules:
 Behavior:
 
 - Each expansion is run as a separate Lunr query and its results are merged into the original set with a 1.15 multiplier. Synonyms therefore add and reorder results — they do not turn an irrelevant page into a match.
+- A multi-word synonym is matched as a whole. Lunr has no phrase queries, so the expansion is rewritten into required terms (`Security Information and Event Management` → `+security +information +event +management`) and a page has to contain all of them. Passed as a plain string it would be an OR over the words: 1031 hits instead of 3, everything that merely says «management». Stop words (`and`, `и`, `в`) are left out of such a query — they are dropped when the index is built, so requiring one empties the result set.
 - Every applied term is highlighted, not just what the user typed: searching «провайдеры аутентификации» marks `DexProvider` in titles, breadcrumbs and snippets, and the snippet itself is picked by coverage of all the terms, so a sentence mentioning only the synonym still wins.
+- A synonym is highlighted exactly as written, never word by word: `siem` marks «Security Information and Event Management» and leaves a stray «management» alone. Words of the *query* are still highlighted separately, because Lunr does match them independently. The trade-off: a page found through a synonym whose phrase it does not contain literally gets a snippet with nothing marked.
 - Highlighting tolerates inflections (a Russian query «провайдеры» also marks «провайдеров»), prefers whole phrases over separate words, and anchors matches at word starts.
 
 ### OpenAPI Specifications rendering
