@@ -19,6 +19,7 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
+	"strings"
 
 	"golang.org/x/tools/go/packages"
 )
@@ -158,11 +159,81 @@ func (info *packageInfo) collectType(pkg *packages.Package, typeSpec *ast.TypeSp
 		info.collectFields(name, structType)
 	}
 
-	if isRootObject(markers) {
-		if named := lookupNamed(pkg.Types, name); named != nil {
-			info.roots[name] = named
+	if named := lookupNamed(pkg.Types, name); named != nil && isCRDRoot(markers, named) {
+		info.roots[name] = named
+	}
+}
+
+// metav1PkgPath is the import path of the package whose TypeMeta and ObjectMeta
+// structs are what makes a Go type a Kubernetes object.
+const metav1PkgPath = "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+// isCRDRoot reports whether a type gets a CRD from controller-gen, and therefore
+// whether its crd-enricher markers have a manifest to be applied to.
+//
+// The decisive half is the embedding, not the markers. controller-gen's CRD
+// generator never looks at +kubebuilder:object:root: FindKubeKinds
+// (controller-tools pkg/crd/gen.go) "locates all types that contain TypeMeta and
+// ObjectMeta (and thus may be a Kubernetes object)" and renders a CRD for every
+// one of them. The root markers are read by a different generator -- the deepcopy
+// one -- and only decide whether the type gets a DeepCopyObject method.
+//
+// Keying the root set on the marker alone is what let a whole CRD's settings be
+// dropped without a word: a type embedding both structs but spelling
+// object:root=false, or spelling no root marker at all, still gets a manifest,
+// and every marker on it used to be silently ignored because the type never
+// entered packageInfo.roots.
+//
+// isRootObject stays as a fallback for types that declare themselves objects
+// without embedding the metav1 structs. It can only add roots, never remove
+// them, so a spurious one is inert: enrichCRD matches a root against the kind of
+// an actual CRD document, and a type no manifest names is never visited.
+func isCRDRoot(markers []marker, named *types.Named) bool {
+	return embedsObjectMeta(named) || isRootObject(markers)
+}
+
+// embedsObjectMeta reports whether a struct embeds both metav1.TypeMeta and
+// metav1.ObjectMeta, mirroring controller-gen's FindKubeKinds. Only embedded
+// fields count, exactly as there: a named field of either type does not make the
+// enclosing struct an object.
+func embedsObjectMeta(named *types.Named) bool {
+	structType, ok := named.Underlying().(*types.Struct)
+	if !ok {
+		return false
+	}
+
+	var hasTypeMeta, hasObjectMeta bool
+	for i := 0; i < structType.NumFields(); i++ {
+		field := structType.Field(i)
+		if !field.Embedded() {
+			continue
+		}
+		embedded := namedOf(field.Type())
+		if embedded == nil {
+			continue
+		}
+		obj := embedded.Obj()
+		if obj.Pkg() == nil || nonVendorPath(obj.Pkg().Path()) != metav1PkgPath {
+			continue
+		}
+		switch obj.Name() {
+		case "TypeMeta":
+			hasTypeMeta = true
+		case "ObjectMeta":
+			hasObjectMeta = true
 		}
 	}
+	return hasTypeMeta && hasObjectMeta
+}
+
+// nonVendorPath strips the vendor prefix from an import path so a vendored
+// apimachinery compares equal to the module-cache one, the way controller-gen's
+// loader.NonVendorPath does.
+func nonVendorPath(path string) string {
+	if idx := strings.LastIndex(path, "/vendor/"); idx >= 0 {
+		return path[idx+len("/vendor/"):]
+	}
+	return strings.TrimPrefix(path, "vendor/")
 }
 
 // collectFields records the markers attached to every field of a struct,

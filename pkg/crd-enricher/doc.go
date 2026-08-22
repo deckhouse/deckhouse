@@ -117,11 +117,18 @@
 // (for the root type this is openAPIV3Schema).
 //
 // The enricher walks the root types and the fields reachable from them, so a
-// type no root reaches is never visited. A root is one that carries either
-// spelling controller-gen accepts: +kubebuilder:object:root=true, or the
-// pre-kubebuilder +k8s:deepcopy-gen:interfaces naming
-// k8s.io/apimachinery/pkg/runtime.Object. An explicit object:root=false opts
-// out.
+// type no root reaches is never visited. A root is any type that embeds both
+// metav1.TypeMeta and metav1.ObjectMeta, which is the only thing
+// controller-gen's CRD generator looks at (FindKubeKinds, "locates all types
+// that contain TypeMeta and ObjectMeta"). The root markers --
+// +kubebuilder:object:root=true and the pre-kubebuilder
+// +k8s:deepcopy-gen:interfaces naming k8s.io/apimachinery/pkg/runtime.Object --
+// are read by controller-gen's deepcopy generator, not its CRD one, so they
+// decide whether the type gets a DeepCopyObject method and nothing else. The
+// enricher accepts them as a fallback for types that declare themselves objects
+// without embedding the metav1 structs, but neither of them, and in particular
+// not object:root=false, keeps a type that embeds both structs from getting a
+// CRD -- and therefore from having its markers applied.
 //
 // The value after "=" is YAML, which means prose containing a colon followed by
 // a space parses as a mapping rather than a string; such a value has to be

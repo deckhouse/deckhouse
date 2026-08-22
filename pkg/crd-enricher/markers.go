@@ -165,29 +165,31 @@ const sensitiveDataMarker = "sensitive-data"
 // sensitiveDataKey is the schema field the sensitiveDataMarker renders to.
 const sensitiveDataKey = "x-kubernetes-sensitive-data"
 
-// rootMarker is the controller-gen marker that designates a Go type as the
-// root object of a CRD. The enricher relies on it to know which types map to a
-// generated CRD.
+// rootMarker is the controller-gen marker that declares a Go type an object
+// root. Beware: it does NOT gate CRD generation -- see isCRDRoot for the rule
+// controller-gen's CRD generator actually applies. It is honoured here only as a
+// secondary signal, for types that announce themselves as objects without
+// embedding the metav1 structs (the enricher's own fixtures, for one).
 const rootMarker = "kubebuilder:object:root"
 
-// legacyRootMarker is the pre-kubebuilder marker that designates a root object,
-// by declaring that deepcopy-gen should give the type a DeepCopyObject method.
-// controller-gen still honours it and renders a CRD for such a type, so the
-// enricher has to recognise it too: a package that carries only this form used
-// to have every crd-enricher marker on its root type silently ignored, because
-// the type never made it into packageInfo.roots.
+// legacyRootMarker is the pre-kubebuilder spelling of rootMarker, declaring that
+// deepcopy-gen should give the type a DeepCopyObject method. controller-gen's
+// deepcopy generator still honours it (pkg/deepcopy/gen.go, genObjectInterface),
+// so the enricher recognises it for the same reason it recognises rootMarker.
 const legacyRootMarker = "k8s:deepcopy-gen:interfaces"
 
 // runtimeObject is the interface the legacy marker has to name for the type to
-// be a root object rather than merely deep-copyable.
+// be an object root rather than merely deep-copyable. controller-gen compares
+// the whole marker value against this path, so a comma-separated list of
+// interfaces does not match there either -- matching it here would diverge.
 const runtimeObject = "k8s.io/apimachinery/pkg/runtime.Object"
 
-// isRootObject reports whether the markers designate a CRD root type, by either
+// isRootObject reports whether the markers declare an object root, by either
 // spelling controller-gen accepts.
 //
-// The value of the kubebuilder marker is honoured: "object:root=false" is how a
-// type opts out, and treating it as a root would apply CRD-level settings to a
-// kind that has no CRD.
+// The value of the kubebuilder marker is honoured, so "object:root=false" makes
+// this return false -- but that is not an opt-out from CRD generation, and
+// isCRDRoot is where that distinction is handled.
 func isRootObject(markers []marker) bool {
 	for _, m := range markers {
 		switch m.name {

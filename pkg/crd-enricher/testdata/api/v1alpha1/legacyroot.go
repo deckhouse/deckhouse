@@ -14,15 +14,21 @@
 
 package v1alpha1
 
-// LegacyRoot exercises the pre-kubebuilder root marker. controller-gen renders a
-// CRD for a type that only declares deepcopy-gen should give it a
-// DeepCopyObject method, so a package written that way -- and several of the
-// storage modules are -- gets a manifest without ever spelling
-// kubebuilder:object:root. Every crd-enricher marker on such a type used to be
-// dropped, because the type never entered the root set the enricher walks.
+// LegacyRoot exercises the marker fallback in isCRDRoot: a type that names no
+// kubebuilder:object:root, only the pre-kubebuilder spelling, and does not embed
+// the metav1 structs either (this module has no apimachinery dependency, which is
+// why the embedding rule is pinned separately in kuberoot_test.go).
+//
+// Every crd-enricher marker on such a type used to be dropped, because the type
+// never entered the root set the enricher walks. The settings below are the ones
+// that were lost in the real case -- crd:minimal is what strips the listKind, the
+// implicit apiVersion/kind/metadata root properties and the generator-version
+// annotation, all of which would otherwise reach the module's public API
+// reference page.
 //
 // +k8s:deepcopy-gen=true
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +crd-enricher:crd:minimal=true
 // +crd-enricher:crd:preserveUnknownFields=false
 type LegacyRoot struct {
 	Spec LegacyRootSpec `json:"spec"`

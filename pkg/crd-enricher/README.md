@@ -166,16 +166,35 @@ that is `openAPIV3Schema`).
 
 The enricher starts from the **root types** and follows the fields from there, so
 a type that is not reachable from a root is never visited and its markers never
-applied. A root is a type that carries either spelling controller-gen accepts:
+applied. A root is any type that **embeds both `metav1.TypeMeta` and
+`metav1.ObjectMeta`**:
 
 ```go
-// +kubebuilder:object:root=true                                        // the kubebuilder marker
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object  // the pre-kubebuilder one
+type SCSIStorageClass struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+	// ...
+}
 ```
 
-`+kubebuilder:object:root=false` opts a type out, and
-`+k8s:deepcopy-gen=true` on its own is not enough — it asks for `DeepCopy`, not
-for a CRD.
+That is the rule and the whole rule, because it is the one controller-gen's CRD
+generator uses — [`FindKubeKinds`](https://github.com/kubernetes-sigs/controller-tools/blob/v0.19.0/pkg/crd/gen.go#L265)
+*"locates all types that contain TypeMeta and ObjectMeta (and thus may be a
+Kubernetes object)"* and renders a CRD for every one of them.
+
+> **The root markers do not gate CRD generation.** Neither
+> `+kubebuilder:object:root=true` nor the pre-kubebuilder
+> `+k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object` is read by
+> the CRD generator at all — they are read by controller-gen's *deepcopy*
+> generator and decide whether the type gets a `DeepCopyObject` method. In
+> particular **`+kubebuilder:object:root=false` is not an opt-out from getting a
+> CRD**: a type embedding both metav1 structs gets its manifest regardless, and
+> its `crd-enricher` markers have to be applied to it.
+>
+> The enricher does accept either marker as a **fallback**, for a type that
+> declares itself an object without embedding the metav1 structs. A spurious root
+> is harmless: roots are matched against the `kind` of an actual CRD document, so
+> a type no manifest names is never visited.
 
 ### `examples` — sample values
 
