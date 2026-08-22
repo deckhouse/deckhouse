@@ -85,7 +85,7 @@ For a server with a private or self-signed certificate, provide its CA in one of
 - (recommended) the "Certificate trust" → "Trust the certificate authority below" option in the integration form; or
 - a **File**-type CI variable `CODESCORING_SSL_FILE` ("Settings" → "CI/CD" → "Variables").
 
-The `codescoring_scan` job exports whichever is set to `SSL_CERT_FILE`, which both `curl` and the Johnny agent trust; when both are present, the CA from the integration takes precedence.
+Each CodeScoring job exports whichever is set to `SSL_CERT_FILE`, which both `curl` and the Johnny agent trust; when both are present, the CA from the integration takes precedence.
 
 ## Running the scan
 
@@ -108,10 +108,11 @@ To configure automatic scanning, do the following:
 
 1. Link the policy project to the target project in "Settings" → "Security policy".
 
-After that, every pipeline automatically gains a **`codescoring_scan`** job (stage `fe-security-scanner`) that:
+After that, every pipeline automatically gains a **`codescoring_sca`** job (composition analysis) in stage `fe-security-scanner`. When the Secrets module is enabled in the policy, each selected engine additionally runs as its own job in the same stage — `codescoring_secrets_gitleaks`, `codescoring_secrets_trufflehog`, `codescoring_secrets_kingfisher` — so the searches run in parallel and a run failure is attributable to the engine that had it.
 
-- Provides the console agent Johnny according to the "Agent delivery" mode set in the integration (downloaded from the server by token by default; for a self-signed server, using the CA from the integration setting or the `CODESCORING_SSL_FILE` variable).
-- Runs the scan once for each stage selected in the policy and submits native GitLab reports. On the project's default branch, the scan is recorded as the default project version.
+Every CodeScoring job provides the console agent Johnny according to the "Agent delivery" mode set in the integration (downloaded from the server by token by default; for a self-signed server, using the CA from the integration setting or the `CODESCORING_SSL_FILE` variable).
+
+The `codescoring_sca` job runs the scan once for each stage selected in the policy and submits native GitLab reports; on the project's default branch, the scan is recorded as the default project version. The secret-search jobs keep their findings on the CodeScoring server and publish no pipeline reports.
 
 ### Scan options
 
@@ -135,23 +136,21 @@ CodeScoring.OSA is part of the SCA options; it is not a separate module.
 
 #### Secrets
 
+Pick one or more search engines; each selected engine runs in its own job (`codescoring_secrets_<engine>`). Per engine you can provide:
+
 | Option | Description |
 |--------|-------------|
-| Secret-search engine | Engine used to search for secrets: `gitleaks`, `trufflehog`, or `kingfisher`. |
-| Engine binary path | Path to the engine executable. |
-| Engine configuration path | Path to the engine configuration file. |
-| Ignore paths | Paths excluded from the secret search. |
-| Extra secret-search arguments | Additional command-line arguments passed to the engine. |
+| Search engines | One or more of `gitleaks`, `trufflehog`, `kingfisher`. |
+| Configuration | The engine configuration, given inline or as a path to a file in the repository. `gitleaks` reads a TOML config and `trufflehog` a YAML one (the inline editor highlights it accordingly); `kingfisher` takes no configuration file. |
+| Ignore / exclude | Entries the engine ignores or excludes, given inline or as a path to a file in the repository. |
 
-{% alert level="info" %}
-The Secrets block is expected to change in a future Code version; the options above describe its current state.
-{% endalert %}
+The secret search keeps its findings on the CodeScoring server and publishes no GitLab report: it is the same `gitleaks` as secret detection, and the agent's report carries no line numbers, so a second report would only double-count.
 
 A manual `include` and manual `CODESCORING_*` variables are not required. The integration and the policy provide everything required.
 
 ## Reports and viewing results
 
-A single `codescoring_scan` job produces all reports in one run. Deckhouse Code is based on GitLab FOSS, where some EE widgets are absent, so results are surfaced as follows:
+The `codescoring_sca` job produces all reports in one run (the secret-search jobs publish none). Deckhouse Code is based on GitLab FOSS, where some EE widgets are absent, so results are surfaced as follows:
 
 | Report | Where to view |
 |--------|---------------|
@@ -172,7 +171,7 @@ The "Dependency list" and "License compliance" pages are a Deckhouse Code FE imp
 
 ## Policies and blocking
 
-The `codescoring_scan` job **fails the pipeline** when a finding is at or above the `FE_SECURITY_FAIL_ON` severity threshold (`high` by default) — a severity gate. Two more optional gates come from the scan execution policy: "Fail the job on a refused component" (when OSA refuses a component) and "Fail on an empty result" (when the scan resolves no components). Reports are still uploaded regardless (including on failed attempts, via `artifacts:when: always`), so findings are never lost.
+The `codescoring_sca` job **fails the pipeline** when a finding is at or above the `FE_SECURITY_FAIL_ON` severity threshold (`high` by default) — a severity gate. Two more optional gates come from the scan execution policy: "Fail the job on a refused component" (when OSA refuses a component) and "Fail on an empty result" (when the scan resolves no components). Reports are still uploaded regardless (including on failed attempts, via `artifacts:when: always`), so findings are never lost.
 
 Triage and policy configuration (severity thresholds, finding suppression) are handled on the CodeScoring platform side.
 
@@ -198,13 +197,13 @@ Check the following:
 
 - The CodeScoring integration is active in project settings (URL and token are set).
 - The policy project is linked to the project and contains the `- scan: codescoring` action.
-- A `codescoring_scan` job is present in the pipeline and a GitLab Runner with a `docker` executor is available.
+- A `codescoring_sca` job is present in the pipeline and a GitLab Runner with a `docker` executor is available.
 
 ### Results do not appear on the Dependency list or License compliance pages
 
 Check the following:
 
-- The `codescoring_scan` job completed and uploaded the `gl-dependency-scanning-report.json` and `gl-sbom.cdx.json` artifacts (collected with `when: always`).
+- The `codescoring_sca` job completed and uploaded the `gl-dependency-scanning-report.json` and `gl-sbom.cdx.json` artifacts (collected with `when: always`).
 - You are viewing the default branch page (the pages read the latest pipeline's report).
 
 ### Code Quality widget is not displayed in the merge request
