@@ -1,8 +1,8 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "merged-vex-657cc8e24f379f9db5883959c6236cf22cb5d871f1bc036fbe9c8a7511586308",
-  "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 1,
+  "@id": "https://deckhouse.io/vex/network-policy-engine/kube-router",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 2,
   "statements": [
     {
       "vulnerability": {
@@ -31,7 +31,49 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "kube-router использует только клиентский SDK Docker (client.NewClientWithOpts и ContainerInspect) в pkg/controllers/proxy/linux_networking.go для подготовки DSR-эндпоинтов. CVE-2026-34040 затрагивает серверную часть Docker daemon — пересылку запросов к AuthZ-плагинам (GHSA-x744-4wpc-v9h2). В advisory указано: If you don't use AuthZ plugins, you are not affected. kube-router не запускает Docker daemon, уязвимый серверный код недостижим.",
       "timestamp": "2026-04-07T13:59:56.480049Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-41567"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "CVE-2026-41567 (GHSA-x86f-5xw2-fm2r) затрагивает серверную обработку запроса PUT /containers/{id}/archive в Docker daemon, приводящую к выполнению бинаря контейнера на хосте. kube-router использует Docker SDK исключительно как клиент — вызовы client.NewClientWithOpts() и ContainerInspect() в pkg/controllers/proxy/linux_networking.go для чтения сетевого namespace контейнера. Анализ графа вызовов govulncheck (GOOS=linux) подтверждает, что из уязвимого пакета достигаются только клиентские символы, серверный код архивирования не исполняется.",
+      "timestamp": "2026-04-07T14:05:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-41568"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "CVE-2026-41568 (GHSA-vp62-88p7-qqf5) — состояние гонки в серверной реализации docker cp в Docker daemon, позволяющее создание произвольных файлов. kube-router не запускает Docker daemon и не вызывает операции копирования: используется только клиентский вызов ContainerInspect() в pkg/controllers/proxy/linux_networking.go. Анализ графа вызовов govulncheck (GOOS=linux) подтверждает достижимость только клиентских символов Docker SDK, серверный путь docker cp недостижим.",
+      "timestamp": "2026-04-07T14:05:30.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42306"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "CVE-2026-42306 (GHSA-rg2x-37c3-w2rh) — состояние гонки в серверной реализации docker cp в Docker daemon, приводящее к перенаправлению bind mount. kube-router обращается к Docker только клиентски через ContainerInspect() в pkg/controllers/proxy/linux_networking.go и не выполняет операций копирования. Анализ графа вызовов govulncheck (GOOS=linux) подтверждает достижимость только клиентских символов Docker SDK, серверный код docker cp не исполняется.",
+      "timestamp": "2026-04-07T14:06:00.000000Z"
     }
   ],
-  "timestamp": "2026-04-07T14:00:18Z"
+  "timestamp": "2026-04-07T14:06:30.000000Z"
 }
