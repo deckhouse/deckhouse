@@ -5,6 +5,12 @@ from: {{ index $.Images "builder/distroless" }}
 shell:
   beforeInstall:
   - pm install python@3.12 gnu-glibc grep sed coreutils bash -d /out
+  # pip is not needed at runtime: iptables-loop.py uses only the Python stdlib
+  # (json, os, time). pip ships only as a side artifact of the python@3.12
+  # package. Remove it from the rootfs so no pip component reaches the final
+  # image (fixes CVE-2026-1703, CVE-2026-3219, CVE-2026-6357, CVE-2026-8643).
+  - rm -rf /out/usr/lib/python3.12/site-packages/pip /out/usr/lib/python3.12/site-packages/pip-*.dist-info
+  - rm -rf /out/usr/lib/python3.12/ensurepip/_bundled
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ index $.Images "base/distroless-fin" }}
