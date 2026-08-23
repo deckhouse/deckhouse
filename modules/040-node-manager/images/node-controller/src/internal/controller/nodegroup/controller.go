@@ -114,7 +114,7 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 	if err != nil {
 		if errors.IsNotFound(err) {
 			logger.V(1).Info("NodeGroup not found, skipping", "name", req.Name)
-			cloudprovider.ClearValidateNodeGroupMetrics(req.Name)
+			cloudprovider.ClearNodeGroupMetrics(req.Name)
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
@@ -129,7 +129,7 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 	}
 
 	provider := pCatalog.ByNodeGroup(ng)
-	cloudprovider.TrackValidateNodeGroupMetrics(ng, provider)
+	cloudprovider.TrackNodeGroupMetrics(ng, provider)
 
 	logger.V(1).Info("computing node status", "nodeGroup", ng.Name, "nodeType", ng.Spec.NodeType)
 	nodeService := nodestatus.Service{Client: r.Client}
@@ -184,7 +184,7 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 		statusMsg = "Machine creation failed. Check events for details."
 	}
 
-	if err := cloudprovider.ValidateNodeGroup(ng, provider); err != nil {
+	if err := cloudprovider.ValidateNodeGroupPType(ng, provider); err != nil {
 		providerError := err.Error()
 		// Each assignment is the only path to its field: conditionErrors feeds the Error condition,
 		// statusMsg is the whole input of CalculateConditionSummary (which ignores the conditions),

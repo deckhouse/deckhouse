@@ -176,7 +176,8 @@ func TestValidation_ProviderType(t *testing.T) {
 		allowed     bool
 	}{
 		{name: "empty is always allowed", nodeType: v1.NodeTypeCloudStatic, allowed: true},
-		{name: "the cluster provider, case-insensitively", nodeType: v1.NodeTypeCloudStatic, declared: "OpenStack", allowed: true},
+		{name: "the cluster provider", nodeType: v1.NodeTypeCloudStatic, declared: "openstack", allowed: true},
+		{name: "the cluster provider in another case", nodeType: v1.NodeTypeCloudStatic, declared: "OpenStack"},
 		{name: "another provider", nodeType: v1.NodeTypeCloudStatic, declared: "aws"},
 		{name: "a provider on Static", nodeType: v1.NodeTypeStatic, declared: "openstack"},
 		{

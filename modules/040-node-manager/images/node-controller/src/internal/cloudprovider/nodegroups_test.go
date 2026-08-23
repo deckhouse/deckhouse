@@ -31,7 +31,7 @@ func nodeGroupSeries(gauge *prometheus.GaugeVec, name string) int {
 	return gauge.DeletePartialMatch(prometheus.Labels{"name": name})
 }
 
-func TestTrackValidateNodeGroupMetrics(t *testing.T) {
+func TestTrackNodeGroupMetrics(t *testing.T) {
 	yandex := Provider{Type: "yandex"}
 
 	for _, tc := range []struct {
@@ -47,6 +47,13 @@ func TestTrackValidateNodeGroupMetrics(t *testing.T) {
 			nodeType:  v1.NodeTypeCloudEphemeral,
 			provider:  yandex,
 			wantUnset: 1,
+		},
+		{
+			// The gauge asks owners to fill the field in; a group that already did must not be asked.
+			name:     "a CloudStatic NodeGroup declaring its provider is clean",
+			nodeType: v1.NodeTypeCloudStatic,
+			declared: "yandex",
+			provider: yandex,
 		},
 		{
 			name:     "a cloud NodeGroup declaring its provider is clean",
@@ -78,7 +85,7 @@ func TestTrackValidateNodeGroupMetrics(t *testing.T) {
 			ng := &v1.NodeGroup{Spec: v1.NodeGroupSpec{NodeType: tc.nodeType, ProviderType: tc.declared}}
 			ng.Name = "worker"
 
-			TrackValidateNodeGroupMetrics(ng, tc.provider)
+			TrackNodeGroupMetrics(ng, tc.provider)
 
 			assert.Equal(t, tc.wantUnset, nodeGroupSeries(providerTypeUnset, ng.Name))
 			assert.Equal(t, tc.wantInvalid, nodeGroupSeries(providerTypeInvalid, ng.Name))
@@ -141,9 +148,9 @@ func TestValidateNodeGroupProvider(t *testing.T) {
 		},
 
 		{
-			name:     "declaring the resolved provider, case-insensitively",
+			name:     "declaring the resolved provider",
 			pCatalog: inYandexCloud, ng: nodeGroupOfType("cloudstatic", v1.NodeTypeCloudStatic),
-			declared: "Yandex", want: "yandex",
+			declared: "yandex", want: "yandex",
 		},
 		{
 			name:     "declaring another provider",
@@ -179,7 +186,7 @@ func TestValidateNodeGroupProvider(t *testing.T) {
 			tc.ng.Spec.ProviderType = tc.declared
 
 			got := tc.pCatalog.ByNodeGroup(tc.ng)
-			err := ValidateNodeGroup(tc.ng, got)
+			err := ValidateNodeGroupPType(tc.ng, got)
 
 			assert.Equal(t, tc.want, got.Type, "the provider is the answer even when the declaration is not")
 			if tc.wantErr {

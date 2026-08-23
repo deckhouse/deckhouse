@@ -391,10 +391,15 @@ func TestReconcile_WrongProviderTypeIsPublishedInTheStatus(t *testing.T) {
 		declared string
 		wantErr  string
 	}{
-		{name: "the-resolved-provider", nodeType: v1.NodeTypeCloudStatic, declared: "Yandex"},
+		{name: "the-resolved-provider", nodeType: v1.NodeTypeCloudStatic, declared: "yandex"},
+		{
+			// The comparison is exact: a registration publishes one spelling of its type.
+			name: "the-resolved-provider-in-another-case", nodeType: v1.NodeTypeCloudStatic, declared: "Yandex",
+			wantErr: `Provider type invalid: "Yandex". Expected "yandex"`,
+		},
 		{
 			name: "another-provider", nodeType: v1.NodeTypeCloudStatic, declared: "aws",
-			wantErr: "Invalid providerType 'aws'. Expected 'yandex'",
+			wantErr: `Provider type invalid: "aws". Expected "yandex"`,
 		},
 		{
 			name: "a-provider-on-static", nodeType: v1.NodeTypeStatic, declared: "yandex",
