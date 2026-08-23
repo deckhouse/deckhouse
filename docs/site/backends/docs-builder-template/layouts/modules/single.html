@@ -127,6 +127,8 @@
 
       {{ partial "related-links" . }}
 
+      {{- partial "module-page-navigation" . }}
+
     </div>
     {{- if ne site.Params.mode "module" }}
      {{- "<!--#include virtual=\"/includes/feedback.html\" -->"  | safeHTML }}
