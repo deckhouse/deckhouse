@@ -96,7 +96,37 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "os.Root symlink following - Уязвимость перехода по символическим ссылкам в os.Root (обход песочницы при финальном компоненте-симлинке и завершающем '/') требует использования приложением API os.Root/OpenRoot. docs-builder не использует os.Root: изоляция путей загрузки и удаления обеспечивается строгим allow-list имён модулей и каналов (регулярное выражение RFC 1123, запрещающее '/', '.' и '..') и проверкой ensureWithinBase (filepath.Rel относительно базового каталога). Уязвимый код os.Root не входит в путь исполнения, поэтому directory traversal для образа недостижим.",
       "timestamp": "2026-07-22T00:00:00Z"
-    }
+    },
+    {
+      "vulnerability": {
+        "name": "GHSA-c3wq-j5vh-68rc",
+        "description": "Hugo: Symlink confinement bypass in os.ReadFile"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/gohugoio/hugo@v0.162.1"
+        },
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "os.Root symlink following - Уязвимость перехода по символическим ссылкам в os.Root (обход песочницы при финальном компоненте-симлинке и завершающем '/') требует использования приложением API os.Root/OpenRoot. docs-builder не использует os.Root: изоляция путей загрузки и удаления обеспечивается строгим allow-list имён модулей и каналов (регулярное выражение RFC 1123, запрещающее '/', '.' и '..') и проверкой ensureWithinBase (filepath.Rel относительно базового каталога). Уязвимый код os.Root не входит в путь исполнения, поэтому directory traversal для образа недостижим.",
+      "timestamp": "2026-08-24T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GHSA-q76j-gcg9-vxc6",
+        "description": "Hugo: XSS via unescaped code-fence language in default code block renderer"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/gohugoio/hugo@v0.162.1"
+        },
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость GHSA-q76j-gcg9-vxc6 невозможно эксплуатировать в docs-builder. Docs-builder не выполняет render сторонних блоков кода.",
+      "timestamp": "2026-08-24T00:00:00Z"
+    },
   ],
   "timestamp": "2026-07-22T00:00:00Z"
 }
