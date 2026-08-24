@@ -377,6 +377,16 @@ groups:
     description:
       en: "`service-with-healthchecks` module metrics"
       ru: "Метрики модуля `service-with-healthchecks`"
+  - ports: "4264"
+    protocol: TCP
+    description:
+      en: "`node-local-dns` safe-updater healthcheck"
+      ru: "Healthcheck компонента safe-updater модуля `node-local-dns`"
+  - ports: "4265"
+    protocol: TCP
+    description:
+      en: "`node-local-dns` safe-updater pprof"
+      ru: "pprof компонента safe-updater модуля `node-local-dns`"
   - ports: "4266"
     protocol: TCP
     description:
@@ -387,6 +397,11 @@ groups:
     description:
       en: "`csi-scsi-generic` CSI node metrics"
       ru: "Метрики CSI-агентов модуля `csi-scsi-generic`"
+  - ports: "4268"
+    protocol: TCP
+    description:
+      en: "`sds-replicated-volume` CSI node metrics"
+      ru: "Метрики CSI-агентов модуля `sds-replicated-volume`"
   - ports: "4269"
     protocol: TCP
     description:
