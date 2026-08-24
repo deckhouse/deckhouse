@@ -51,7 +51,7 @@ DKP provides two web interfaces for availability assessment:
   You can get the page address in the web interface on the main page in the "Tools" section (Component availability tile), or by running the command:
   
   ```shell
-  d8 k -n d8-upmeter get ing upmeter -o jsonpath='{.spec.rules[*].host}'
+  d8 k -n d8-upmeter get ing webui -o jsonpath='{.spec.rules[*].host}'
   ``` 
 
   Example of the component availability page:
@@ -84,7 +84,7 @@ spec:
 
 ## Authentication
 
-By default, the [`user-authn`](/modules/user-authn/) module is used for authentication. You can also configure authentication via `externalAuthentication` (see below).
+By default, the [`user-authn`](/modules/user-authn/) module is used for authentication. You can also configure authentication via [`externalAuthentication`](/modules/upmeter/configuration.html#parameters-auth-externalauthentication).
 If these options are disabled, the module will enable basic authentication with a generated password.
 
 You can view the generated password with the command:
@@ -115,7 +115,7 @@ d8 k -n d8-upmeter delete secret/basic-auth-status
 
 ## FAQ
 
-### Why are some upmeter pods periodically deleted or cannot be scheduled?
+### Periodic deletion and unschedulable upmeter pods
 
 The module implements availability tests and health checks for various Kubernetes controllers. Tests are performed by creating and deleting temporary pods.
 
