@@ -35,9 +35,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/yaml"
 
-	providermock "github.com/deckhouse/node-controller/internal/cloudprovider/mock"
-
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	providermock "github.com/deckhouse/node-controller/internal/cloudprovider/mock"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 )
@@ -131,7 +130,7 @@ func newGoldenReconciler(t *testing.T) *Reconciler {
 			"spec": "desiredVersion: \"1.32\"\nupdateMode: Manual\n",
 		}),
 		secret(kubeSystemNS, clusterConfigSecretName, map[string][]byte{
-			clusterConfigKey: []byte("kubernetesVersion: \"1.32\"\ndefaultCRI: Containerd\npodSubnetNodeCIDRPrefix: \"24\"\nclusterDomain: cluster.local\nclusterType: Cloud\ncloud:\n  provider: Yandex\nproxy:\n  httpProxy: http://proxy.example.com\n  noProxy:\n  - 10.0.0.0/8\n"),
+			clusterConfigKey: []byte("kubernetesVersion: \"1.32\"\ndefaultCRI: Containerd\npodSubnetNodeCIDRPrefix: \"24\"\nclusterDomain: cluster.local\nproxy:\n  httpProxy: http://proxy.example.com\n  noProxy:\n  - 10.0.0.0/8\n"),
 		}),
 		secret(kubeSystemNS, "d8-static-cluster-configuration", map[string][]byte{
 			"static-cluster-configuration.yaml": []byte("internalNetworkCIDRs:\n- 172.18.200.0/24\n"),
