@@ -129,6 +129,33 @@ var structuralKeys = map[string]bool{
 	"items": true,
 }
 
+// validationKeys are the schema fields that decide what the apiserver accepts.
+// Removing one is legal -- the resulting document applies cleanly -- and that is
+// the problem: the API silently starts admitting values it used to reject, and the
+// crds/ re-render gate cannot notice, because the committed manifest and the render
+// both come from the same marker. So unset: obeys here and says so, rather than
+// refusing as it does for structuralKeys.
+var validationKeys = map[string]bool{
+	"enum":                     true,
+	"exclusiveMaximum":         true,
+	"exclusiveMinimum":         true,
+	"format":                   true,
+	"maxItems":                 true,
+	"maxLength":                true,
+	"maxProperties":            true,
+	"maximum":                  true,
+	"minItems":                 true,
+	"minLength":                true,
+	"minProperties":            true,
+	"minimum":                  true,
+	"multipleOf":               true,
+	"nullable":                 true,
+	"pattern":                  true,
+	"required":                 true,
+	"uniqueItems":              true,
+	"x-kubernetes-validations": true,
+}
+
 // crdMarker is the type-level entity that configures CRD-level settings that
 // controller-gen cannot express (preserveUnknownFields, the minimal style and
 // schema format stripping) and switches the document to the hand-curated
@@ -217,15 +244,19 @@ func isRootObject(markers []marker) bool {
 	return false
 }
 
-// isTrue reports whether a marker value spells the boolean true. controller-gen
-// accepts the Go literals, and a value-less marker is true by convention, which
-// isRootObject handles before calling this.
+// isTrue reports whether a marker value spells the boolean true.
+//
+// Only the lowercase spelling counts, because that is the only one that can reach
+// here: controller-tools' own marker scanner (pkg/markers) parses a bool as the Go
+// literal "true" or "false" and errors on anything else, so a type written
+// "object:root=True" fails generation before the enricher sees the document.
+// Accepting more would make this the only place in the toolchain where such a
+// value means something.
+//
+// A value-less marker is true by convention, which isRootObject handles before
+// calling this.
 func isTrue(raw string) bool {
-	switch strings.TrimSpace(raw) {
-	case "true", "True", "TRUE":
-		return true
-	}
-	return false
+	return strings.TrimSpace(raw) == "true"
 }
 
 // marker is a single parsed comment marker, for example

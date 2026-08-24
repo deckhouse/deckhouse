@@ -84,8 +84,13 @@
 //     is absent, and a <key> that is already missing is reported as a warning so
 //     a marker that has outlived its target does not pass for a working one. A
 //     <key> naming a field the structural schema requires (type, items) is
-//     refused outright: obeying would produce a manifest the apiserver rejects,
-//     with nothing in the refusal pointing back at the marker;
+//     refused outright, and so is a removal that would leave the parent node an
+//     empty mapping: obeying either would produce a manifest the apiserver
+//     rejects, with nothing in the refusal pointing back at the marker. Removing
+//     a validation key (required, enum, pattern, x-kubernetes-validations and the
+//     rest of that vocabulary) is obeyed but reported, because the result applies
+//     cleanly while the API starts admitting values it used to reject, and a
+//     re-render gate cannot see it;
 //
 //   - sensitive-data — a schema-level flag rendered as
 //     x-kubernetes-sensitive-data: true. It marks a field (or an object/array

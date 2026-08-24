@@ -846,15 +846,23 @@ func (e *Enricher) applyMarkers(schema map[string]any, markers []marker, ctx nod
 			// Refuse to remove a field the structural schema requires. Obeying
 			// would produce a manifest the apiserver rejects at apply time, with
 			// nothing to connect the refusal back to this marker.
-			if last := path[len(path)-1]; structuralKeys[last] {
+			last := path[len(path)-1]
+			if structuralKeys[last] {
 				e.warnf(ctx, "unset path %q would remove %q, which a structural schema requires; the apiserver would reject the CRD", key, last)
 				continue
+			}
+			// Removing a validation key is legal and the apiserver will accept the
+			// result, which is exactly why it is worth a line: the API then admits
+			// values it used to reject, and the crds/ re-render gate cannot see it
+			// -- both sides of that comparison come from this same marker.
+			if validationKeys[last] {
+				e.warnf(ctx, "unset path %q removes the validation key %q; the apiserver will accept values it rejected before", key, last)
 			}
 			switch deleteNested(schema, path) {
 			case unsetNotFound:
 				e.warnf(ctx, "unset path %q is not present in the schema", key)
-			case unsetEmptiedParent:
-				e.warnf(ctx, "unset path %q left its parent node empty, which is a different schema from an absent one", key)
+			case unsetWouldEmptyParent:
+				e.warnf(ctx, "unset path %q would leave its parent node empty, which the apiserver rejects (\"must not be empty for specified object fields\"); refusing", key)
 			}
 
 		case m.name == sensitiveDataMarker:
@@ -984,14 +992,20 @@ const (
 	unsetNotFound unsetOutcome = iota
 	// unsetRemoved means the field is gone and its parent still has other keys.
 	unsetRemoved
-	// unsetEmptiedParent means the field is gone and its parent is now an empty
-	// mapping. An empty node is not the same schema as an absent one, and for the
-	// nodes apiextensions constrains it is not a valid one either.
-	unsetEmptiedParent
+	// unsetWouldEmptyParent means the removal was refused: it would have left the
+	// parent an empty mapping. An empty node is not the same schema as an absent
+	// one, and for the nodes apiextensions constrains it is not a valid one
+	// either -- the apiserver answers "must not be empty for specified object
+	// fields" at apply time, with nothing in the failure pointing back at the
+	// marker. Refused rather than done-and-warned for the same reason
+	// structuralKeys are: a warning is not fatal by default, so obeying would ship
+	// a document the apiserver rejects.
+	unsetWouldEmptyParent
 )
 
 // deleteNested removes the field named by the last path element, walking the
-// mappings named by the ones before it. path must be non-empty.
+// mappings named by the ones before it. path must be non-empty. The schema is
+// left untouched unless the outcome is unsetRemoved.
 func deleteNested(schema map[string]any, path []string) unsetOutcome {
 	if len(path) == 0 {
 		return unsetNotFound
@@ -1008,12 +1022,12 @@ func deleteNested(schema map[string]any, path []string) unsetOutcome {
 	if _, ok := node[last]; !ok {
 		return unsetNotFound
 	}
-	delete(node, last)
 	// The schema root is not a "parent node" in this sense: emptying it means the
 	// document has no schema left, which a single-element path cannot express.
-	if len(path) > 1 && len(node) == 0 {
-		return unsetEmptiedParent
+	if len(path) > 1 && len(node) == 1 {
+		return unsetWouldEmptyParent
 	}
+	delete(node, last)
 	return unsetRemoved
 }
 

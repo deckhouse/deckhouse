@@ -495,10 +495,12 @@ func TestApplyMarkersUnsetRefusesStructuralKeys(t *testing.T) {
 	}
 }
 
-func TestApplyMarkersUnsetReportsEmptiedParent(t *testing.T) {
+func TestApplyMarkersUnsetRefusesToEmptyParent(t *testing.T) {
 	// items: {} is not the same schema as no items at all, and under type: array
-	// it is not a valid one either. The removal still happens -- the author asked
-	// for it -- but silence here is what would send them to a stand to find out.
+	// the apiserver rejects it outright ("must not be empty for specified object
+	// fields"). Refused rather than done-and-warned, because a warning is not fatal
+	// by default: obeying would ship a document that fails at apply time, with
+	// nothing in the failure naming the marker that caused it.
 	e := &Enricher{}
 	schema := map[string]any{
 		"type":  "array",
@@ -508,11 +510,57 @@ func TestApplyMarkersUnsetReportsEmptiedParent(t *testing.T) {
 	e.applyMarkers(schema, []marker{{name: "unset:items.description", enricher: true}}, nodeCtx{})
 
 	items := schema["items"].(map[string]any)
-	if len(items) != 0 {
-		t.Errorf("items = %#v, want it emptied", items)
+	if len(items) != 1 || items["description"] != "the only key" {
+		t.Errorf("items = %#v, want it left alone", items)
 	}
-	if len(e.warnings) != 1 || !strings.Contains(e.warnings[0], "left its parent node empty") {
-		t.Errorf("warnings = %v, want one about the emptied parent", e.warnings)
+	if len(e.warnings) != 1 || !strings.Contains(e.warnings[0], "would leave its parent node empty") {
+		t.Errorf("warnings = %v, want one about refusing to empty the parent", e.warnings)
+	}
+}
+
+func TestApplyMarkersUnsetWarnsOnValidationKeys(t *testing.T) {
+	// Removing a validation key is legal and applies cleanly, which is exactly why
+	// it needs saying: the API then admits values it used to reject, and the crds/
+	// re-render gate cannot notice -- the committed manifest and the render both
+	// come from this marker.
+	for _, key := range []string{"enum", "required", "maxLength", "x-kubernetes-validations"} {
+		t.Run(key, func(t *testing.T) {
+			e := &Enricher{}
+			schema := map[string]any{
+				"type": "string",
+				key:    "whatever the key holds",
+				"keep": "so the parent does not end up empty",
+			}
+
+			e.applyMarkers(schema, []marker{{name: "unset:" + key, enricher: true}}, nodeCtx{})
+
+			if _, still := schema[key]; still {
+				t.Errorf("%s survived; unset: is expected to obey here, only to say so", key)
+			}
+			if len(e.warnings) != 1 || !strings.Contains(e.warnings[0], "removes the validation key") {
+				t.Errorf("warnings = %v, want one naming the validation key", e.warnings)
+			}
+		})
+	}
+}
+
+func TestApplyMarkersUnsetStaysQuietOnDescription(t *testing.T) {
+	// The motivating case must not become noisy: items.description is what unset:
+	// exists for.
+	e := &Enricher{}
+	schema := map[string]any{
+		"type":        "string",
+		"description": "from a vendored type",
+		"keep":        "so the parent does not end up empty",
+	}
+
+	e.applyMarkers(schema, []marker{{name: "unset:description", enricher: true}}, nodeCtx{})
+
+	if _, still := schema["description"]; still {
+		t.Error("description survived")
+	}
+	if len(e.warnings) != 0 {
+		t.Errorf("warnings = %v, want none", e.warnings)
 	}
 }
 

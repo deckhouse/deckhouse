@@ -454,7 +454,7 @@ written to remove something, so a marker that has outlived its target — becaus
 the vendored godoc changed, or the path was mistyped — is worth hearing about
 rather than accepting silently.
 
-Two more things it will not do quietly:
+Three more things it will not do quietly:
 
 - **`type` and `items` are refused.** A structural schema must declare the `type`
   of every node and the `items` of every array, so removing one produces a
@@ -462,10 +462,18 @@ Two more things it will not do quietly:
   value: must be specified`) — with nothing in the refusal pointing back at the
   marker. `unset:items` and `unset:<path>.type` therefore warn and change
   nothing.
-- **Emptying a node is reported.** `unset:items.description` on an `items` whose
-  only key was `description` leaves `items: {}`, which is a different schema from
-  no `items` at all. The removal still happens — you asked for it — but you hear
-  about it.
+- **Emptying a node is refused.** `unset:items.description` on an `items` whose
+  only key was `description` would leave `items: {}`, which the apiserver rejects
+  the same way (`must not be empty for specified object fields`). Same reasoning
+  as above, so the same answer: the marker warns and the schema is left alone.
+  Warnings are not fatal unless `strict` is passed, so obeying here would ship a
+  document that fails at apply time.
+- **Removing a validation key is reported.** `required`, `enum`, `pattern`,
+  `maxLength`, `x-kubernetes-validations` and the rest of that vocabulary are
+  *obeyed* — the resulting document applies cleanly — and that is exactly why the
+  removal is worth a line: the API then admits values it used to reject, and a
+  re-render gate over a committed `crds/` cannot see it, because the committed
+  manifest and the render both come from the same marker.
 
 ### `crd:<key>` — CRD-level settings (type-level only)
 
