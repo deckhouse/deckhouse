@@ -21,7 +21,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule"
 )
 
-// dump is the serialization envelope for the debug endpoint.
+// dump is the serialization envelope for the scheduler endpoint.
 type dump struct {
 	Nodes map[string]nodeDump `json:"nodes" yaml:"nodes"`
 }
@@ -68,7 +68,7 @@ func (s *Scheduler) Dump() any {
 
 // DumpByName returns a snapshot of a single scheduler node by name.
 // Returns nil if the node is not found.
-// It is used by the debug endpoint to inspect the scheduling state of an
+// It is used by the scheduler endpoint to inspect the scheduling state of an
 // individual package without dumping the entire graph.
 func (s *Scheduler) DumpByName(name string) any {
 	s.mu.RLock()

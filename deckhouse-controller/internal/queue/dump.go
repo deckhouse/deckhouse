@@ -56,7 +56,7 @@ func (s *Service) Dump(include ...string) Dump {
 	}
 }
 
-// dump creates queue dump for debug
+// dump creates the snapshot of one queue
 func (q *queue) dump() QueueDump {
 	q.mu.Lock()
 	defer q.mu.Unlock()

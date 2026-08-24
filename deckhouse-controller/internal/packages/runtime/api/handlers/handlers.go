@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-// Package handlers composes the root endpoint tree of a debug server: the
+// Package handlers composes the root endpoint tree of an API server: the
 // versioned API, the process probes, pprof and route discovery.
 package handlers
 

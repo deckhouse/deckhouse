@@ -65,7 +65,7 @@ func (c *socketClient) Close() {
 	}
 }
 
-// Get sends a GET request to the debug server. Path segments are joined to form the URL.
+// Get sends a GET request to the runtime API. Path segments are joined to form the URL.
 // Returns the response body or an error if the request fails or the server returns a non-2xx status.
 func (c *socketClient) Get(ctx context.Context, paths ...string) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, makeURL(paths...), nil)

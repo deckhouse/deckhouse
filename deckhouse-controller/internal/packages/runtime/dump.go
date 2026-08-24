@@ -26,7 +26,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 )
 
-// dump is the serialization envelope for the debug endpoint.
+// dump is the serialization envelope for the packages endpoint.
 type dump struct {
 	Apps    map[string]appDump    `json:"apps"`
 	Modules map[string]moduleDump `json:"modules"`
@@ -54,8 +54,8 @@ type globalDump struct {
 //
 // The snapshot mirrors global.Info: instance name, running state, filesystem
 // path, current values, and the names of registered hooks. Returns nil when the
-// global module has not been initialized (r.global is nil), which the debug
-// handler surfaces as an empty body.
+// global module has not been initialized (r.global is nil), which the handler
+// serves as a null document.
 func (r *Runtime) DumpGlobal() any {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

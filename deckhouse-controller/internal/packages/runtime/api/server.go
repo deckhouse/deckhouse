@@ -57,7 +57,7 @@ func Serve(listen func() (net.Listener, error), handler http.Handler, logger *lo
 		// (/debug/pprof/profile?seconds=N), and a write deadline truncates the dump.
 	}
 
-	// The goroutine ends when Shutdown closes the listener. A debug listener
+	// The goroutine ends when Shutdown closes the listener. An API listener
 	// dying must never take the process with it.
 	go func() {
 		if err := srv.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
