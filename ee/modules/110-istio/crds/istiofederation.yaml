@@ -48,7 +48,7 @@ spec:
                   description: |
                     The TrustDomain of the remote cluster.
 
-                    A mandatory parameter, but it is not currently utilized, as Istio does not yet support mapping TrustDomain to a root Certificate Authority (CA).
+                    Bound to the remote cluster's root CA in `meshConfig.caCertificates`, so that the peer CA is trusted only for this trust domain and cannot issue identities of the local mesh.
                   pattern: '^[0-9a-zA-Z._-]+$'
                   x-doc-examples: ['cluster.local']
                 metadataEndpoint:
