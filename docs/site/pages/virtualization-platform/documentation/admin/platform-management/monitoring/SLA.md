@@ -7,7 +7,7 @@ DVP can collect statistics about the availability of cluster components and Deck
 
 In addition, using the custom resource [UpmeterRemoteWrite](/modules/upmeter/cr.html#upmeterremotewrite), you can export availability metrics via the Prometheus Remote Write protocol.
 
-To start collecting availability metrics and activate the [interface](#interface), enable the `upmeter` module [in the Deckhouse web interface](/modules/console/stable/) or using the following command:
+To start collecting availability metrics and activate the [interface](#interface), enable the `upmeter` module [in the Deckhouse web interface](/modules/console/stable/) or use the following command:
 
 ```shell
 d8 system module enable upmeter
@@ -87,7 +87,7 @@ spec:
 By default, the [`user-authn`](/modules/user-authn/) module is used for authentication. You can also configure authentication via [`externalAuthentication`](/modules/upmeter/configuration.html#parameters-auth-externalauthentication).
 If these options are disabled, the module will enable basic authentication with a generated password.
 
-You can view the generated password with the command:
+You can view the generated password using the following command:
 
 ```shell
 d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values upmeter -o json | jq '.upmeter.internal.auth.webui.password'
@@ -99,7 +99,7 @@ To generate a new password, you need to delete the Secret:
 d8 k -n d8-upmeter delete secret/basic-auth-webui
 ```
 
-You can view the generated password for the status page with the command:
+You can view the generated password for the status page using the following command:
 
 ```shell
 d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values upmeter -o json | jq '.upmeter.internal.auth.status.password'
@@ -120,5 +120,5 @@ Upmeter tests create temporary pods to check that Kubernetes components are work
 The following objects take part in the checks:
 
 - `upmeter-probe-scheduler`: Checks the scheduler. The test creates a pod, schedules it to a node, and then deletes it.
-- `upmeter-probe-controller-manager`: Checks `kube-controller-manager`. The test creates a StatefulSet and verifies that the object spawned a pod. This test does not check pod placement on a node, so it creates a pod that cannot be scheduled and stays in the `Pending` state. Then the StatefulSet is deleted, and the test verifies that the spawned pod is deleted as well.
-- `smoke-mini`: Checks network connectivity between nodes. Five StatefulSets with one replica each are deployed. The test checks connectivity between `smoke-mini` pods and with `upmeter-agent` pods on master nodes. Once a minute, one of the `smoke-mini` pods is moved to another node.
+- `upmeter-probe-controller-manager`: Checks `kube-controller-manager`. The test creates a StatefulSet and verifies that the StatefulSet created a pod. This test does not check pod placement on a node, so it creates a pod that cannot be scheduled and stays in the `Pending` state. Then the StatefulSet is deleted, and the test verifies that the spawned pod is deleted as well.
+- `smoke-mini`: Checks network connectivity between nodes. Five StatefulSets with one replica each are created. The test checks connectivity between `smoke-mini` pods and `upmeter-agent` pods on master nodes. Once a minute, one of the `smoke-mini` pods is moved to another node.

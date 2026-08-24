@@ -100,7 +100,7 @@ d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller
 d8 k -n d8-upmeter delete secret/basic-auth-webui
 ```
 
-Посмотреть сгенерированный пароль для страницы статуса можно командой:
+Посмотреть сгенерированный пароль для страницы статуса можно с помощью команды:
 
 ```shell
 d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values upmeter -o json | jq '.upmeter.internal.auth.status.password'
@@ -122,4 +122,4 @@ d8 k -n d8-upmeter delete secret/basic-auth-status
 
 - `upmeter-probe-scheduler` — проверка планировщика. Тест создает под, размещает его на узле и затем удаляет.
 - `upmeter-probe-controller-manager` — проверка `kube-controller-manager`. Тест создает StatefulSet и убеждается, что StatefulSet создал под. Размещение пода на узле в этом тесте не проверяется, поэтому создается под, который заведомо не может быть размещен и остаётся в состоянии `Pending`. Затем StatefulSet удаляется, и проверяется, что созданный им под тоже удален.
-- `smoke-mini` — проверка сетевой связности между узлами. Создаются пять StatefulSet с одной репликой каждый. Тест проверяет связность между подами `smoke-mini` и с подами `upmeter-agent` на master-узлах. Раз в минуту один из подов `smoke-mini` переносится на другой узел.
+- `smoke-mini` — проверка сетевой связности между узлами. Создаются пять StatefulSet с одной репликой каждый. Тест проверяет связность между подами `smoke-mini` и подами `upmeter-agent` на master-узлах. Раз в минуту один из подов `smoke-mini` переносится на другой узел.

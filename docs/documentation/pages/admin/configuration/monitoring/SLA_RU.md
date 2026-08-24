@@ -9,7 +9,7 @@ DKP может собирать статистику о доступности �
 
 Кроме того, с помощью кастомного ресурса [UpmeterRemoteWrite](/modules/upmeter/cr.html#upmeterremotewrite) можно экспортировать метрики доступности по протоколу Prometheus Remote Write.
 
-Чтобы начать собирать метрики доступности и активировать [интерфейс](#интерфейс), включите [модуль `upmeter`](/modules/upmeter/) [в веб-интерфейсе Deckhouse](/modules/console/) или с помощью следующей команды:
+Чтобы начать собирать метрики доступности и активировать [интерфейс](#интерфейс), включите [модуль `upmeter`](/modules/upmeter/) [в веб-интерфейсе Deckhouse](/modules/console/) или воспользуйтесь командой:
 
 ```shell
 d8 system module enable upmeter
@@ -88,7 +88,7 @@ spec:
 По умолчанию для аутентификации используется модуль [`user-authn`](/modules/user-authn/). Также можно настроить аутентификацию через [`externalAuthentication`](/modules/upmeter/configuration.html#parameters-auth-externalauthentication).
 Если эти варианты отключены, модуль включит базовую аутентификацию со сгенерированным паролем.
 
-Посмотреть сгенерированный пароль можно командой:
+Посмотреть сгенерированный пароль можно с помощью команды:
 
 ```shell
 d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values upmeter -o json | jq '.upmeter.internal.auth.webui.password'
@@ -100,7 +100,7 @@ d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller
 d8 k -n d8-upmeter delete secret/basic-auth-webui
 ```
 
-Посмотреть сгенерированный пароль для страницы статуса можно командой:
+Посмотреть сгенерированный пароль для страницы статуса можно с помощью команды:
 
 ```shell
 d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values upmeter -o json | jq '.upmeter.internal.auth.status.password'
@@ -121,5 +121,5 @@ d8 k -n d8-upmeter delete secret/basic-auth-status
 Ниже описано, какие объекты участвуют в проверках:
 
 - `upmeter-probe-scheduler` — проверка планировщика. Тест создает под, размещает его на узле и затем удаляет.
-- `upmeter-probe-controller-manager` — проверка `kube-controller-manager`. Тест создает StatefulSet и убеждается, что объект породил под. Размещение пода на узле в этом тесте не проверяется, поэтому создается под, который заведомо не может быть размещен и остается в состоянии `Pending`. Затем StatefulSet удаляется, и проверяется, что созданный им под тоже удален.
-- `smoke-mini` — проверка сетевой связности между узлами. Размещаются пять StatefulSet с одной репликой. Тест проверяет связность между подами `smoke-mini` и подами `upmeter-agent` на master-узлах. Раз в минуту один из подов `smoke-mini` переносится на другой узел.
+- `upmeter-probe-controller-manager` — проверка `kube-controller-manager`. Тест создает StatefulSet и убеждается, что StatefulSet создал под. Размещение пода на узле в этом тесте не проверяется, поэтому создается под, который заведомо не может быть размещен и остаётся в состоянии `Pending`. Затем StatefulSet удаляется, и проверяется, что созданный им под тоже удален.
+- `smoke-mini` — проверка сетевой связности между узлами. Создаются пять StatefulSet с одной репликой каждый. Тест проверяет связность между подами `smoke-mini` и подами `upmeter-agent` на master-узлах. Раз в минуту один из подов `smoke-mini` переносится на другой узел.
