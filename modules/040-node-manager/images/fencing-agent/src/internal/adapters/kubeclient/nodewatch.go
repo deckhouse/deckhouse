@@ -88,7 +88,7 @@ func (w *NodeWatcher) upsert(obj any) {
 		return
 	}
 
-	w.store.Upsert(domain.Peer{Name: node.Name, IP: internalIP(node)})
+	w.store.Upsert(domain.Peer{Name: node.Name, IP: internalIP(node), UID: string(node.UID)})
 }
 
 func (w *NodeWatcher) delete(obj any) {

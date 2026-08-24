@@ -141,6 +141,8 @@ spec:
                       type: string
                       description: |
                         Why the node is considered failed.
+
+                        The agent always reports `MemberlistDead`: memberlist keeps the difference between a node that left on purpose and one that died to itself and notifies its consumers the same way in both cases. A planned departure is recognized by the fencing controller, from the state of the node and of the agent pod in the Kubernetes API, not from this field.
                       enum:
                         - MemberlistDead
                         - MemberlistLeft
