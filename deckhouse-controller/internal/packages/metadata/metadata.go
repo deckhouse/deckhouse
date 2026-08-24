@@ -12,12 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package metadata projects parsed package definitions onto the version
-// metadata the catalog CRs carry. It is the single mapping between the
-// package.yaml world (internal/packages/dto) and the ModulePackageVersion
-// status shapes, so every writer of that status - the version controller
-// filling drafts from the registry and the startup sync filling embedded
-// versions from disk - produces the same metadata for the same definition.
 package metadata
 
 import (
