@@ -40,7 +40,7 @@ import (
 // the application creates, and those must fit the 63-character Kubernetes name limit.
 const maxApplicationNameLength = 32
 
-// applicationValidationHandler validations for Application creation
+// applicationValidationHandler validates Application create and update requests.
 func applicationValidationHandler(cli client.Client, manager packageManager) http.Handler {
 	vf := kwhvalidating.ValidatorFunc(func(ctx context.Context, _ *kwhmodel.AdmissionReview, obj metav1.Object) (*kwhvalidating.ValidatorResult, error) {
 		app, ok := obj.(*v1alpha1.Application)
@@ -64,16 +64,21 @@ func applicationValidationHandler(cli client.Client, manager packageManager) htt
 
 		name := apps.BuildName(app.Namespace, app.Name)
 
-		res, err := manager.ValidatePackageSettings(ctx, name, 0, app.Spec.Settings.GetMap())
-		if err != nil {
-			return nil, err
+		var warnings []string
+		if app.Status.CurrentVersion != nil && app.Status.CurrentVersion.Version == app.Spec.PackageVersion {
+			res, err := manager.ValidatePackageSettings(ctx, name, 0, app.Spec.Settings.GetMap())
+			if err != nil {
+				return nil, err
+			}
+
+			if !res.Valid {
+				return rejectResult(res.Message)
+			}
+
+			warnings = res.Warnings
 		}
 
-		if !res.Valid {
-			return rejectResult(res.Message)
-		}
-
-		if err = validateAppAgainstApv(ctx, cli, manager, app); err != nil {
+		if err := validateAppAgainstApv(ctx, cli, manager, app); err != nil {
 			// The denial message is the only feedback `kubectl apply` prints, and
 			// it arrives without the object it belongs to: name the Application
 			// and the package version whose requirements were evaluated, so the
@@ -82,7 +87,7 @@ func applicationValidationHandler(cli client.Client, manager packageManager) htt
 				app.Namespace, app.Name, app.Spec.PackageName, app.Spec.PackageVersion, err))
 		}
 
-		return allowResult(res.Warnings)
+		return allowResult(warnings)
 	})
 
 	// Create webhook.
