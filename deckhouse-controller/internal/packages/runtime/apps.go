@@ -33,6 +33,7 @@ import (
 	taskdisable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/disable"
 	taskload "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/load"
 	taskundeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/undeploy"
+	taskuninstall "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/uninstall"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
@@ -177,9 +178,9 @@ func (r *Runtime) loadApp(ctx context.Context, repo registry.Remote, packagePath
 // queueService.Remove stops the queue — calling it synchronously from
 // within the queue's own processing loop would deadlock on WaitGroup.
 //
-// Store.Delete has a state guard: if UpdateApp re-created the package
-// between undeploy and cleanup, Delete is a no-op (version != "") and the removal reports
-// unfinished again, now for the re-created generation.
+// Store.Delete has a state guard: if UpdateApp re-created the package between undeploy and cleanup,
+// Update cleared the removal marker, so Delete is a no-op and removal reports unfinished again for
+// the re-created generation.
 func (r *Runtime) RemoveApp(namespace, instance string) bool {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -211,6 +212,9 @@ func (r *Runtime) RemoveApp(namespace, instance string) bool {
 
 	if pkg := r.apps[name]; pkg != nil {
 		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, pkg.GetNamespace(), false, r.nelmService, r.queueService, r.logger))
+	} else {
+		// A failed Load may roll the instance out of r.apps while the previous release is still live.
+		r.queueService.Enqueue(ctx, name, taskuninstall.NewTask(name, namespace, r.nelmService, r.logger))
 	}
 
 	cleanup := queue.WithOnDone(func() {

@@ -34,6 +34,7 @@ import (
 	taskdummy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/dummy"
 	taskload "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/load"
 	taskundeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/undeploy"
+	taskuninstall "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/uninstall"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
@@ -323,6 +324,9 @@ func (r *Runtime) RemoveModule(name string) bool {
 
 	if pkg := r.modules[name]; pkg != nil {
 		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, app.NamespaceDeckhouse, false, r.nelmService, r.queueService, r.logger))
+	} else {
+		// A failed Load may roll the instance out of r.modules while the previous release is still live.
+		r.queueService.Enqueue(ctx, name, taskuninstall.NewTask(name, app.NamespaceDeckhouse, r.nelmService, r.logger))
 	}
 
 	cleanup := queue.WithOnDone(r.cleanupModule(name))
@@ -334,8 +338,8 @@ func (r *Runtime) RemoveModule(name string) bool {
 
 // RemoveEmbeddedModule removes an embedded module and cancels all its running operations.
 // It is RemoveModule without Undeploy: the image carries the files, so nothing was ever placed
-// on disk for the deployer to take back. The cleanup therefore rides on Disable, or runs on its
-// own when the module never loaded and there is nothing to disable.
+// on disk for the deployer to take back. Cleanup always rides on Dummy after Disable, or after
+// Uninstall when the module instance is unavailable.
 func (r *Runtime) RemoveEmbeddedModule(name string) bool {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -359,6 +363,9 @@ func (r *Runtime) RemoveEmbeddedModule(name string) bool {
 
 	if pkg := r.modules[name]; pkg != nil {
 		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, app.NamespaceDeckhouse, false, r.nelmService, r.queueService, r.logger))
+	} else {
+		// A failed Load may roll the instance out of r.modules while the previous release is still live.
+		r.queueService.Enqueue(ctx, name, taskuninstall.NewTask(name, app.NamespaceDeckhouse, r.nelmService, r.logger))
 	}
 
 	// The teardown rides the last task in the package's queue, never runs inline: it stops that queue
