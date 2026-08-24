@@ -1,0 +1,31 @@
+{{- if and (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicy")) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicyBinding")) }}
+{{- $policyName := "protect-istio-default-tag.deckhouse.io" }}
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "istiod") ) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["admissionregistration.k8s.io"]
+        apiVersions: ["*"]
+        operations: ["CREATE", "UPDATE", "DELETE"]
+        resources: ["mutatingwebhookconfigurations"]
+        resourceNames: ["istio-revision-tag-default-d8-istio"]
+  validations:
+    - expression: 'false'
+      reason: Forbidden
+      message: 'istioctl revision tag "default" is not allowed; use ModuleConfig istio.settings.globalVersion'
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "istiod") ) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+  validationActions: [Deny]
+{{- end }}
