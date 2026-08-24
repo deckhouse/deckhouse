@@ -225,6 +225,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const filterBlock = document.querySelector('.filter__block');
         const isOpen = filterBlock !== null && filterBlock.classList.contains('show');
         if (filterBlock) filterBlock.classList.remove('show');
+        if (isOpen && body) body.classList.remove('filter-opened');
         return isOpen;
     }
 

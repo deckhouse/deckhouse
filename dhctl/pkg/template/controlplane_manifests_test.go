@@ -44,6 +44,7 @@ func TestControlplaneRendering(t *testing.T) {
 		"Missing Coverage":              testMissingCoverage,
 		"Full Manifests Rendering":      testManifestsRendering,
 		"Encryption API Server args":    testSignatureArgsAPIServerRender,
+		"Resources Requests":            testResourcesRequests,
 	}
 
 	for name, doTest := range tests {
@@ -1068,6 +1069,103 @@ func renderFullManifests(data map[string]any, requestedManifests ...string) (map
 	}
 
 	return manifests, nil
+}
+
+// testResourcesRequests locks the bootstrap contract: dhctl has no ConfigMap and
+// no autotune hook, so it passes the ModuleConfig budget as
+// settings.resourcesRequests.{milliCPU,memoryBytes} for the templates to split.
+// Asserting only that rendering succeeds let that contract break silently once.
+func testResourcesRequests(t *testing.T) {
+	// Same percentages as componentFallbackPercent in the control-plane-manager hooks.
+	components := map[string]struct {
+		manifest  string
+		container string
+		percent   int64
+	}{
+		"kube-apiserver":          {"kube-apiserver.yaml", "kube-apiserver", 45},
+		"etcd":                    {"etcd.yaml", "etcd", 35},
+		"kube-controller-manager": {"kube-controller-manager.yaml", "kube-controller-manager", 10},
+		"kube-scheduler":          {"kube-scheduler.yaml", "kube-scheduler", 10},
+	}
+
+	requestsOf := func(t *testing.T, data map[string]any, name string) corev1.ResourceList {
+		t.Helper()
+		c := components[name]
+		manifests, err := renderFullManifests(data, name)
+		require.NoError(t, err, "manifests should render")
+		require.Contains(t, manifests, c.manifest)
+
+		pod := corev1.Pod{}
+		require.NoError(t, yaml.Unmarshal([]byte(manifests[c.manifest]), &pod), "pod should unmarshal")
+		for _, container := range pod.Spec.Containers {
+			if container.Name == c.container {
+				return container.Resources.Requests
+			}
+		}
+		t.Fatalf("container %s not found in %s", c.container, c.manifest)
+		return nil
+	}
+
+	const (
+		milliCPU    = int64(1000)
+		memoryBytes = int64(1073741824)
+	)
+
+	t.Run("ModuleConfig budget is split across components", func(t *testing.T) {
+		for name, c := range components {
+			t.Run(name, func(t *testing.T) {
+				data := getDataForFullManifestRendering("1.33")
+				data["settings"] = map[string]any{
+					"resourcesRequests": map[string]any{
+						"milliCPU":    milliCPU,
+						"memoryBytes": memoryBytes,
+					},
+				}
+				requests := requestsOf(t, data, name)
+				require.Equal(t, milliCPU*c.percent/100, requests.Cpu().MilliValue())
+				require.Equal(t, memoryBytes*c.percent/100, requests.Memory().Value())
+			})
+		}
+	})
+
+	t.Run("without a ModuleConfig budget the built-in default is split", func(t *testing.T) {
+		const (
+			defaultMilliCPU    = int64(512)
+			defaultMemoryBytes = int64(536870912)
+		)
+		for name, c := range components {
+			t.Run(name, func(t *testing.T) {
+				data := getDataForFullManifestRendering("1.33")
+				delete(data, "settings")
+				requests := requestsOf(t, data, name)
+				require.Equal(t, defaultMilliCPU*c.percent/100, requests.Cpu().MilliValue())
+				require.Equal(t, defaultMemoryBytes*c.percent/100, requests.Memory().Value())
+			})
+		}
+	})
+
+	t.Run("per-component map wins over the combined budget", func(t *testing.T) {
+		data := getDataForFullManifestRendering("1.33")
+		data["settings"] = map[string]any{
+			"resourcesRequests": map[string]any{
+				"milliCPU":    milliCPU,
+				"memoryBytes": memoryBytes,
+				"components": map[string]any{
+					"etcd": map[string]any{
+						"milliCPU":    int64(777),
+						"memoryBytes": "888888888",
+					},
+				},
+			},
+		}
+		requests := requestsOf(t, data, "etcd")
+		require.Equal(t, int64(777), requests.Cpu().MilliValue())
+		require.Equal(t, int64(888888888), requests.Memory().Value())
+
+		// A component absent from the map still falls back to the combined budget.
+		apiserver := requestsOf(t, data, "kube-apiserver")
+		require.Equal(t, milliCPU*45/100, apiserver.Cpu().MilliValue())
+	})
 }
 
 func testSignatureArgsAPIServerRender(t *testing.T) {

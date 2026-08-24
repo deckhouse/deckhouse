@@ -192,6 +192,13 @@ func TestCheckCidrIntersection(t *testing.T) {
 			},
 		},
 		{
+			name: "no ClusterConfiguration",
+			fields: fields{metaConfig: &config.MetaConfig{
+				ClusterConfig: nil,
+			}},
+			wantErr: assert.NoError,
+		},
+		{
 			name: "invalid podSubnetCIDR",
 			fields: fields{metaConfig: &config.MetaConfig{
 				ClusterConfig: map[string]json.RawMessage{

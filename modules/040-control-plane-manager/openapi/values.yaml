@@ -26,18 +26,28 @@ properties:
         default: {}
         additionalProperties: false
         properties:
-          milliCpuControlPlane:
-            type: integer
-            format: int64
-            minimum: 0
-            x-examples: [1024]
-            default: 0
-          memoryControlPlane:
-            type: integer
-            format: int64
-            minimum: 0
-            x-examples: [536870912]
-            default: 0
+          components:
+            type: object
+            default: {}
+            description: |
+              Per-component resource requests (kubeApiserver, etcd,
+              kubeControllerManager, kubeScheduler) written by the sync hook from
+              ConfigMap d8-control-plane-manager-resources-autotune-state.
+              Control-plane templates use an absent key as follows: the combined
+              budget settings.resourcesRequests.milliCPU / memoryBytes, which
+              dhctl passes from ModuleConfig on bootstrap, and failing that the
+              built-in 512m / 512Mi. Both are split 45/35/10/10.
+            additionalProperties:
+              type: object
+              additionalProperties: false
+              properties:
+                milliCPU:
+                  type: integer
+                  format: int64
+                  minimum: 0
+                memoryBytes:
+                  type: string
+                  x-examples: ["536870912"]
       effectiveKubernetesVersion:
         type: string
         enum: ["1.32", "1.33", "1.34", "1.35", "1.36"]

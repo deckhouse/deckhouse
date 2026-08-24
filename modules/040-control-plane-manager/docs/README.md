@@ -100,6 +100,8 @@ spec:
 
 The specified values are used as a common requests budget for control plane components on each master node. Deckhouse Kubernetes Platform (DKP) distributes this budget between control plane static pods when rendering their manifests.
 
+If CPU or memory requests are not explicitly specified, the module automatically calculates requests for the corresponding resource for each control plane component once a day based on the average usage over the previous seven days. Explicitly specifying the total amount of CPU or memory disables automatic request calculation for that resource for all control plane components. The specified amount is distributed among the components in fixed proportions.
+
 {% alert level="info" %}
 These settings do not apply if the cluster control plane is managed by a cloud provider, for example in GKE, AKS, or EKS.
 {% endalert %}

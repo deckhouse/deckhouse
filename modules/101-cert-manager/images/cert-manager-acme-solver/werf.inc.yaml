@@ -8,3 +8,5 @@ import:
 imageSpec:
   config:
     entrypoint: ["/bin/acmesolver"]
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

@@ -7,6 +7,9 @@
 {"title": "{{ page.title | escape }}",
 "url": "{{ page.url | remove_first: "/" | regex_replace: '^(ru/|en/)', '' }}",
 "keywords": {{ page.search | jsonify }},
+{%- if page.searchBoost %}
+"searchBoost": {{ page.searchBoost | jsonify }},
+{%- endif %}
 "bc": {{ bc_items | jsonify }},
 "content": {{ page.content | normalizeSearchContent | jsonify -}}
 }

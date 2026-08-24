@@ -15,21 +15,30 @@
 package app
 
 import (
+	"fmt"
+	"strings"
+
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 )
 
-// DefineBashibleBundleFlags registers --internal-node-ip and --device-path.
-func DefineBashibleBundleFlags(cmd *kingpin.CmdClause, o *options.BootstrapOptions) {
-	cmd.Flag("internal-node-ip", "Address of a node from internal network.").
-		Required().
-		Envar(configEnvName("INTERNAL_NODE_IP")).
-		StringVar(&o.InternalNodeIP)
-	cmd.Flag("device-path", "Path of kubernetes-data device.").
-		Required().
-		Envar(configEnvName("DEVICE_PATH")).
-		StringVar(&o.DevicePath)
+// DefineSkipPhases registers --skip-phase and checks the paths it is given against the bootstrap
+// tree. Only the path itself is checked here: the cluster type is loaded by the Preparation phase,
+// which runs in the command action, so whether a phase is part of this particular run cannot be
+// known yet and is checked by the walk instead.
+func DefineSkipPhases(cmd *kingpin.CmdClause, o *options.BootstrapOptions) {
+	desc := fmt.Sprintf("Skip a bootstrap phase by name (repeatable). Skippable phases: %s", strings.Join(phases.SkippablePhases(phases.BootstrapPhases()), ", "))
+	cmd.Flag("skip-phase", desc).
+		Envar(configEnvName("SKIP_PHASES")).
+		PlaceHolder("phase").
+		StringsVar(&o.SkipPhases)
+
+	cmd.PreAction(func(_ *kingpin.ParseContext) error {
+		_, err := phases.ResolveSkipPhases(phases.BootstrapPhases(), o.SkipPhases)
+		return err
+	})
 }
 
 // DefineDeckhouseFlags registers --deckhouse-timeout.
@@ -71,10 +80,11 @@ Deprecated. Please use the --config flag repeatedly for logical separation of re
 	}
 }
 
-// DefineAbortFlags registers --force-abort-from-cache.
+// DefineAbortFlags registers --force-abort-from-cache. The flag is a no-op: abort always works
+// from the cache now. It stays registered because dhctl-e2e passes it on every abort invocation,
+// and an unknown flag is a parse error, not a warning.
 func DefineAbortFlags(cmd *kingpin.CmdClause, o *options.BootstrapOptions) {
-	const help = `Skip the 'use dhctl destroy command' error. This forces bootstrap abortion from cache.
-Experimental. This feature may be deleted in the future.`
+	const help = `DEPRECATED. Has no effect: abort always works from the cache.`
 	cmd.Flag("force-abort-from-cache", help).
 		Envar(configEnvName("FORCE_ABORT_FROM_CACHE")).
 		Default("false").

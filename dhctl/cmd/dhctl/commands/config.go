@@ -35,6 +35,30 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
 
+// loadConfigForRender loads the config of a render command together with the check the loader no
+// longer makes for it: the loader also serves bootstrap on a cluster whose control plane dhctl did
+// not create, and that cluster carries no ClusterConfiguration. Rendering without one fails
+// silently - ConfigForBashibleBundleTemplate and ClusterConfigMap range over an empty map and
+// return no error - so every one of these commands would write out a bundle with no cluster domain
+// and no Kubernetes version and report success.
+func loadConfigForRender(ctx context.Context, command string, opts *options.Options) (*config.MetaConfig, error) {
+	metaConfig, err := config.LoadConfigFromFile(
+		ctx,
+		opts.Global.ConfigPaths,
+		infrastructureprovider.MetaConfigValidatorProvider(),
+		&opts.Global,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if !metaConfig.HasClusterConfiguration() {
+		return nil, fmt.Errorf("%s requires ClusterConfiguration: everything it renders is built out of the cluster domain, Kubernetes version and cluster type it carries", command)
+	}
+
+	return metaConfig, nil
+}
+
 func DefineRenderBashibleBundle(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
 	app.DefineConfigFlags(cmd, &opts.Global)
 	app.DefineRenderConfigFlags(cmd, &opts.Render)
@@ -55,12 +79,7 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause, opts *options.Options) *
 		}
 		defer registryStop()
 
-		metaConfig, err := config.LoadConfigFromFile(
-			ctx,
-			opts.Global.ConfigPaths,
-			infrastructureprovider.MetaConfigValidatorProvider(),
-			&opts.Global,
-		)
+		metaConfig, err := loadConfigForRender(ctx, "dhctl config render bashible-bundle", opts)
 		if err != nil {
 			return err
 		}
@@ -111,12 +130,7 @@ func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause, opts *options.Options) 
 		}
 		defer registryStop()
 
-		metaConfig, err := config.LoadConfigFromFile(
-			ctx,
-			opts.Global.ConfigPaths,
-			infrastructureprovider.MetaConfigValidatorProvider(),
-			&opts.Global,
-		)
+		metaConfig, err := loadConfigForRender(ctx, "dhctl config render master-bootstrap-scripts", opts)
 		if err != nil {
 			return err
 		}
@@ -155,12 +169,7 @@ func DefineRenderControlPlaneAndPKI(cmd *kingpin.CmdClause, opts *options.Option
 		}
 		defer registryStop()
 
-		metaConfig, err := config.LoadConfigFromFile(
-			ctx,
-			opts.Global.ConfigPaths,
-			infrastructureprovider.MetaConfigValidatorProvider(),
-			&opts.Global,
-		)
+		metaConfig, err := loadConfigForRender(ctx, "dhctl config render control-plane-manifests", opts)
 		if err != nil {
 			return err
 		}

@@ -45,7 +45,6 @@
 021-cni-cilium/                                                  @AndreyPavlovFlant @apolovov
 025-static-routing-manager/                                      @AndreyPavlovFlant @apolovov
 030-cloud-provider-*/                                            @aleksey-su @pabateman
-**/030-cloud-provider-*/candi/                                   @aleksey-su @pabateman
 031-local-path-provisioner/                                      @AleksZimin @duckhawk @szhem
 035-cni-flannel/                                                 @AndreyPavlovFlant @apolovov
 035-cni-simple-bridge/                                           @AndreyPavlovFlant @apolovov
@@ -124,6 +123,7 @@
 candi/version_map.yml                    @sprait
 candi/cloud-providers/                   @aleksey-su @pabateman
 candi/terraform_versions.yml             @aleksey-su @pabateman
+**/030-cloud-provider-*/candi/           @aleksey-su @pabateman
 cloud-controller-manager/                @aleksey-su @pabateman
 csi/                                     @AleksZimin @duckhawk @szhem
 deckhouse-controller/                    @ldmonster
@@ -141,5 +141,6 @@ testing/cloud_layouts/                   @Nikolay1224 @KraMorK @Taior @himax1991
 /monitoring/prometheus-rules/            @sudoroot-null
 /release.yaml                            @yalosev @ldmonster
 go_lib/cloud-data/                       @aleksey-su @pabateman
+go_lib/cloud-provider                    @aleksey-su @pabateman
 go_lib/registry/                         @nabokihms @vadimartynov
 go_lib/controlplane/                     @sprait @AmazinMax
