@@ -277,7 +277,10 @@ spec:
             type: object
             x-kubernetes-preserve-unknown-fields: true
           spec:
-            description: Spec defines the behavior of a Module.
+            description: |-
+              Spec defines the behavior of a Module. A module the old stack created
+              carries only properties, so the spec stays optional until a package
+              version is known.
             properties:
               enabled:
                 description: Enables or disables the module. Unset leaves the decision
