@@ -17,15 +17,18 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
 	"os"
 	"regexp"
 	"sort"
+	"strings"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/tidwall/gjson"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/lib/sharedgateway"
@@ -35,7 +38,7 @@ import (
 // policyResources pulls the group and the resource out of every call the template makes to its
 // policy definition, which is the list of what the admission policies deny.
 var policyResources = regexp.MustCompile(
-	`reserved_public_hosts_policy" \(list \. \$paramsName "[a-z]+" "([a-z0-9.]+)" "([a-z]+)"`)
+	`reserved_public_hosts_policy" \(list \. \$reserved "[a-z]+" "([a-z0-9.]+)" "([a-z]+)"`)
 
 // TestTheSnapshotReadsEveryResourceThePoliciesDeny keeps the two sides of the grandfathering in
 // step. Whatever the policies deny, the snapshot has to be able to record: a resource on one side
@@ -73,6 +76,30 @@ func TestTheSnapshotReadsEveryResourceThePoliciesDeny(t *testing.T) {
 			t.Errorf("the policies deny %v, the snapshot reads %v", denied, read)
 			break
 		}
+	}
+}
+
+// TestTheRecordLimitMatchesTheSchema keeps the number the hook truncates to and the number the
+// schema declares the same one. A schema capping lower would reject a record the hook considers
+// valid and stop the module that renders Deckhouse from converging, which is the failure truncating
+// exists to avoid; a schema capping higher would leave the bound on the policies unstated.
+func TestTheRecordLimitMatchesTheSchema(t *testing.T) {
+	values, err := os.ReadFile("../openapi/values.yaml")
+	if err != nil {
+		t.Fatalf("read the values schema: %v", err)
+	}
+
+	asJSON, err := yaml.YAMLToJSON(values)
+	if err != nil {
+		t.Fatalf("parse the values schema: %v", err)
+	}
+
+	declared := gjson.GetBytes(asJSON, "properties.internal.properties.reservedPublicHosts.properties.hosts.maxItems")
+	if !declared.Exists() {
+		t.Fatal("the record has no maxItems in the values schema, so nothing bounds what the policies carry")
+	}
+	if declared.Int() != reservedPublicHostsRecordLimit {
+		t.Errorf("the hook truncates to %d, the schema caps at %d", reservedPublicHostsRecordLimit, declared.Int())
 	}
 }
 
@@ -470,6 +497,31 @@ spec:
 				"recorded": true,
 				"hosts": ["shop.example.com", "store.example.com"]
 			}`))
+		})
+	})
+
+	Context("An operator hand-edited the record longer than the policies can carry", func() {
+		BeforeEach(func() {
+			record := strings.Builder{}
+			for i := 0; i < reservedPublicHostsRecordLimit+500; i++ {
+				fmt.Fprintf(&record, "    host-%06d.example.com\n", i)
+			}
+			run("%s.example.com", tenantObjects+paramsConfigMap("true", record.String()))
+		})
+
+		// The record goes into every policy as a CEL literal, so its length is what bounds their
+		// size, and openapi/values.yaml caps the same key. Truncating keeps a record over the cap
+		// converging, where validation would reject it and stop the module outright.
+		It("keeps the cap's worth and drops the rest rather than failing values validation", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			hosts := f.ValuesGet(reservedPublicHostsValuePath + ".hosts").Array()
+			Expect(hosts).To(HaveLen(reservedPublicHostsRecordLimit))
+			// The record is sorted before it is cut, so which entries survive is the same on every
+			// converge rather than whichever a map iteration offered first.
+			Expect(hosts[0].String()).To(Equal("host-000000.example.com"))
+			Expect(hosts[len(hosts)-1].String()).
+				To(Equal(fmt.Sprintf("host-%06d.example.com", reservedPublicHostsRecordLimit-1)))
 		})
 	})
 
