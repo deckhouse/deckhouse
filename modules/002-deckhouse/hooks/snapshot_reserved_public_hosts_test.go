@@ -35,7 +35,7 @@ import (
 // policyResources pulls the group and the resource out of every call the template makes to its
 // policy definition, which is the list of what the admission policies deny.
 var policyResources = regexp.MustCompile(
-	`reserved_public_hosts_policy" \(list \. \$\w+ "[a-z]+" "([a-z0-9.]+)" "([a-z]+)"`)
+	`reserved_public_hosts_policy" \(list \. \$reserved "[a-z]+" "([a-z0-9.]+)" "([a-z]+)"`)
 
 // TestTheSnapshotReadsEveryResourceThePoliciesDeny keeps the two sides of the grandfathering in
 // step. Whatever the policies deny, the snapshot has to be able to record: a resource on one side

@@ -91,7 +91,7 @@
 {{- $mode := ternary "Template" "List" (and (ne ($settings.mode | default "Template") "List") $templateSplits) }}
 
 {{- if and (or $domainTemplate $additionalHosts) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicy")) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicyBinding")) }}
-{{- $paramsName := "d8-reserved-public-hosts" }}
+{{- $configMapName := "d8-reserved-public-hosts" }}
 
 {{- /*
   The regex for the namespace the template carves out: its literal parts quoted, and the label the
@@ -246,7 +246,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ $paramsName }}
+  name: {{ $configMapName }}
   namespace: d8-system
   {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse")) | nindent 2 }}
 data:
@@ -309,7 +309,7 @@ data:
 {{- /*
   The policies differ in one expression, where the kind keeps its hostnames, so they are one
   definition called once per kind. Everything else -- the match conditions copied from the other
-  policies in this module, the parameters, the binding -- has to stay identical between them, because
+  policies in this module, the reserved set, the binding -- has to stay identical between them, because
   a tenant only needs one kind that is treated more leniently than the rest.
 
   Every kind here is one modules/140-user-authz/templates/cluster-roles.yaml grants create and update
@@ -341,9 +341,9 @@ data:
   The reserved set, as the policies carry it. Same three variables the ConfigMap above publishes, so
   the two can never disagree about what is reserved.
 */}}
-{{- $policyParams := dict "hostPattern" $hostPattern "hosts" $reservedHosts "allowedHosts" $allowedHosts }}
+{{- $reserved := dict "hostPattern" $hostPattern "hosts" $reservedHosts "allowedHosts" $allowedHosts }}
 
-{{- include "reserved_public_hosts_policy" (list . $policyParams "ingress" "networking.k8s.io" "ingresses" "has(object.spec) && has(object.spec.rules) ? object.spec.rules.filter(r, has(r.host) && r.host != '').map(r, r.host) : []") }}
+{{- include "reserved_public_hosts_policy" (list . $reserved "ingress" "networking.k8s.io" "ingresses" "has(object.spec) && has(object.spec.rules) ? object.spec.rules.filter(r, has(r.host) && r.host != '').map(r, r.host) : []") }}
 
 {{- /*
   Each Gateway API kind is matched on its group as well as on its name. helm_lib_kind_exists matches
@@ -359,23 +359,23 @@ data:
   apiVersions ["*"].
 */}}
 {{- if (include "reserved_public_hosts_gateway_api_kind_exists" (list . "HTTPRoute")) }}
-{{- include "reserved_public_hosts_policy" (list . $policyParams "httproute" "gateway.networking.k8s.io" "httproutes" $routeHosts) }}
+{{- include "reserved_public_hosts_policy" (list . $reserved "httproute" "gateway.networking.k8s.io" "httproutes" $routeHosts) }}
 {{- end }}
 
 {{- if (include "reserved_public_hosts_gateway_api_kind_exists" (list . "GRPCRoute")) }}
-{{- include "reserved_public_hosts_policy" (list . $policyParams "grpcroute" "gateway.networking.k8s.io" "grpcroutes" $routeHosts) }}
+{{- include "reserved_public_hosts_policy" (list . $reserved "grpcroute" "gateway.networking.k8s.io" "grpcroutes" $routeHosts) }}
 {{- end }}
 
 {{- if (include "reserved_public_hosts_gateway_api_kind_exists" (list . "TLSRoute")) }}
-{{- include "reserved_public_hosts_policy" (list . $policyParams "tlsroute" "gateway.networking.k8s.io" "tlsroutes" $routeHosts) }}
+{{- include "reserved_public_hosts_policy" (list . $reserved "tlsroute" "gateway.networking.k8s.io" "tlsroutes" $routeHosts) }}
 {{- end }}
 
 {{- if (include "reserved_public_hosts_gateway_api_kind_exists" (list . "ListenerSet")) }}
-{{- include "reserved_public_hosts_policy" (list . $policyParams "listenerset" "gateway.networking.k8s.io" "listenersets" $listenerHosts) }}
+{{- include "reserved_public_hosts_policy" (list . $reserved "listenerset" "gateway.networking.k8s.io" "listenersets" $listenerHosts) }}
 {{- end }}
 
 {{- if (include "reserved_public_hosts_gateway_api_kind_exists" (list . "Gateway")) }}
-{{- include "reserved_public_hosts_policy" (list . $policyParams "gateway" "gateway.networking.k8s.io" "gateways" $listenerHosts $sharedGatewayExempt) }}
+{{- include "reserved_public_hosts_policy" (list . $reserved "gateway" "gateway.networking.k8s.io" "gateways" $listenerHosts $sharedGatewayExempt) }}
 {{- end }}
 
 {{- end }}
@@ -393,7 +393,7 @@ data:
 
 {{- define "reserved_public_hosts_policy" }}
   {{- $context      := index . 0 }}
-  {{- $params       := index . 1 }}
+  {{- $reserved     := index . 1 }}
   {{- $suffix       := index . 2 }}
   {{- $apiGroup     := index . 3 }}
   {{- $resource     := index . 4 }}
@@ -440,11 +440,11 @@ spec:
       # hostname is data and never source -- a backslash in the pattern survives as one, and nothing
       # an operator writes in additionalHosts can be read as an expression. quote then wraps that
       # literal for YAML, without which the list would parse as a YAML sequence instead of a string.
-      expression: {{ $params.hosts | toJson | quote }}
+      expression: {{ $reserved.hosts | toJson | quote }}
     - name: reservedPattern
-      expression: {{ $params.hostPattern | toJson | quote }}
+      expression: {{ $reserved.hostPattern | toJson | quote }}
     - name: allowedHosts
-      expression: {{ $params.allowedHosts | toJson | quote }}
+      expression: {{ $reserved.allowedHosts | toJson | quote }}
     - name: conflicts
       # An empty pattern reserves nothing: a cluster that publishes no public domain, or one under
       # mode: List, must not have every hostname in it match.

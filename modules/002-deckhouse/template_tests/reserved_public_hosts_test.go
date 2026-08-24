@@ -288,6 +288,27 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 		return f.KubernetesResource("ConfigMap", "d8-system", reservedHostsConfigMapName)
 	}
 
+	// The reserved set is compiled into the policy instead of being read through paramKind, so that
+	// no apiserver has to hold a cluster-wide read on the parameter type to enforce it. Any
+	// aggregated apiserver runs the ValidatingAdmissionPolicy plugin out of the default admission
+	// chain, and one that cannot list the type fails its own informer-sync readiness check for good
+	// -- which is how a policy over Ingress hostnames stopped namespace deletion cluster-wide.
+	//
+	// What is compiled in has to stay what the ConfigMap publishes, so that what an operator reads
+	// there and what the apiserver enforces cannot drift apart. Called from every context that fills
+	// a different combination of the three, because a mistake in one of them is invisible in a render
+	// where the other two are empty.
+	expectPolicyCarriesConfigMap := func() {
+		vap := f.KubernetesGlobalResource("ValidatingAdmissionPolicy", reservedHostsIngressPolicy)
+		Expect(vap.Exists()).To(BeTrue())
+		cm := configMap()
+
+		Expect(vap.Field("spec.paramKind").Exists()).To(BeFalse())
+		Expect(celStringLiteral(vap, "reservedPattern")).To(Equal(cm.Field("data.hostPattern").String()))
+		Expect(celStringList(vap, "reservedHosts")).To(Equal(strings.Fields(cm.Field("data.hosts").String())))
+		Expect(celStringList(vap, "allowedHosts")).To(Equal(strings.Fields(cm.Field("data.allowedHosts").String())))
+	}
+
 	// Which reservation a cluster gets when its ModuleConfig says nothing is decided by the schema
 	// default, because addon-operator fills the section in before Helm sees it. The template carries
 	// a fallback for the same choice, which is what a bare render without that defaulting uses. The
@@ -465,21 +486,8 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 				To(ContainSubstring("system:serviceaccount:d8-"))
 		})
 
-		// The reserved set is compiled into the policy instead of being read through paramKind, so
-		// that no apiserver has to hold a cluster-wide read on the parameter type to enforce it. Any
-		// aggregated apiserver runs the ValidatingAdmissionPolicy plugin out of the default admission
-		// chain, and one that cannot list the type fails its own informer-sync readiness check for
-		// good -- which is how a policy over Ingress hostnames stopped namespace deletion cluster-wide.
 		It("carries the reserved set as literals rather than reading it from the ConfigMap", func() {
-			vap := f.KubernetesGlobalResource("ValidatingAdmissionPolicy", reservedHostsIngressPolicy)
-			cm := configMap()
-
-			Expect(vap.Field("spec.paramKind").Exists()).To(BeFalse())
-			// The same values the ConfigMap publishes, so what an operator reads there and what the
-			// apiserver enforces cannot drift apart.
-			Expect(celStringLiteral(vap, "reservedPattern")).To(Equal(cm.Field("data.hostPattern").String()))
-			Expect(celStringList(vap, "reservedHosts")).To(Equal(strings.Fields(cm.Field("data.hosts").String())))
-			Expect(celStringList(vap, "allowedHosts")).To(Equal(strings.Fields(cm.Field("data.allowedHosts").String())))
+			expectPolicyCarriesConfigMap()
 		})
 
 		It("skips the platform's own namespaces and references no parameters", func() {
@@ -816,6 +824,10 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 			Expect(configMap().Field("data.hosts").String()).
 				To(Equal("*.example.com\nadmin.corp.example.org\nbilling.corp.example.com\n"))
 		})
+
+		It("carries what an operator added into the policy too", func() {
+			expectPolicyCarriesConfigMap()
+		})
 	})
 
 	Context("An operator gives a hostname back to a tenant", func() {
@@ -887,6 +899,10 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 			Expect(strings.Fields(cm.Field("data.unknownExcludedServices").String())).To(BeEmpty())
 			Expect(strings.Fields(cm.Field("data.allowedHosts").String())).To(ContainElement("grafana.example.com"))
 		})
+
+		It("carries the allowlist into the policy too", func() {
+			expectPolicyCarriesConfigMap()
+		})
 	})
 
 	Context("The upgrade recorded what tenants already served", func() {
@@ -904,6 +920,10 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 			Expect(strings.Fields(cm.Field("data.allowedHosts").String())).
 				To(Equal([]string{"grafana.example.com", "shop.example.com", "store.example.com"}),
 					"the policies read one key, but which of the two put a hostname there stays readable")
+		})
+
+		It("carries the recorded hostnames into the policy too", func() {
+			expectPolicyCarriesConfigMap()
 		})
 	})
 
@@ -929,6 +949,12 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 				"with no setting applied, List reserves exactly what the platform publishes")
 			Expect(hosts).NotTo(ContainElement("*.example.com"),
 				"wildcards were out of scope of the list, and List has to stay what it was")
+		})
+
+		// The one render where the pattern is empty, which is the case an equality against a
+		// non-empty pattern elsewhere would not catch.
+		It("carries the whole list and the empty pattern into the policy too", func() {
+			expectPolicyCarriesConfigMap()
 		})
 
 		It("still answers whether the literal covers the repository", func() {
