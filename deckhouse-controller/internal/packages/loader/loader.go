@@ -250,6 +250,19 @@ func resolveEmbeddedPath(packagePath string) (string, error) {
 	return matches[0], nil
 }
 
+// LoadEmbeddedDefinition loads the package definition of an embedded module
+// (package.yaml with a module.yaml fallback), without the hooks, values and
+// schemas LoadEmbeddedConf brings. The path may name the module directly or
+// carry the on-disk weight prefix.
+func LoadEmbeddedDefinition(moduleDir string) (*dto.ModuleDefinition, error) {
+	moduleDir, err := resolveEmbeddedPath(moduleDir)
+	if err != nil {
+		return nil, fmt.Errorf("resolve embedded path: %w", err)
+	}
+
+	return loadModulePackageDefinition(moduleDir)
+}
+
 // LoadModuleConf loads a module package from the given directory on the filesystem.
 //
 // Steps:

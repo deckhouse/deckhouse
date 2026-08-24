@@ -338,11 +338,12 @@ func (c *Controller) Start(ctx context.Context) error {
 		return fmt.Errorf("resolve module placements: %w", err)
 	}
 
-	// The old module stack recorded its packages in module releases and v1alpha1
-	// modules; give each of them a package version object while the controllers
-	// still wait for the sync. Runs after the resolver, so a deployed duplicate
-	// it superseded no longer counts.
-	if err := versionsync.Sync(ctx, c.ctrl.GetAPIReader(), c.ctrl.GetClient(), app.Version, c.logger.Named("version-sync")); err != nil {
+	// The old module stack recorded its packages in module releases, and the
+	// image ships the embedded modules; give each of them a package version
+	// object while the controllers still wait for the sync. Runs after the
+	// resolver, so a deployed duplicate it superseded no longer counts.
+	versions := versionsync.New(c.ctrl.GetAPIReader(), c.ctrl.GetClient(), c.dc, app.Version, app.EmbeddedModulesDir, c.logger.Named("version-sync"))
+	if err := versions.Sync(ctx); err != nil {
 		return fmt.Errorf("sync package versions: %w", err)
 	}
 

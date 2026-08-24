@@ -45,12 +45,6 @@ const (
 	embeddedRepositoryName = "embedded"
 )
 
-// dummyModules are modules that should be skipped.
-var dummyModules = []string{
-	"000-common",
-	"007-registrypackages",
-}
-
 // placement is where a module's package comes from, as the bootstrap derives it.
 type placement struct {
 	repository string
@@ -114,7 +108,7 @@ func (c *Controller) embeddedPlacements(ctx context.Context) (map[string]placeme
 	g.SetLimit(embeddedLoadWorkers)
 
 	for i, entry := range entries {
-		if !entry.IsDir() || slices.Contains(dummyModules, entry.Name()) {
+		if !entry.IsDir() || slices.Contains(app.DummyModules, entry.Name()) {
 			continue
 		}
 
