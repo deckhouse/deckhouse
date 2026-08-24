@@ -29,6 +29,7 @@ import (
 // +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
 // +kubebuilder:metadata:labels="heritage=deckhouse"
 // +kubebuilder:metadata:labels="module=node-manager"
+// +crd-enricher:crd:minimal=true
 type NodeConfig struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
