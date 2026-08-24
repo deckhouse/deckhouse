@@ -28,10 +28,9 @@ secrets:
 shell:
   install:
   - cd /src
-  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download -x
-  setup:
-  - cd /src
-  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o kubernetes-api-proxy ./cmd/kubernetes-api-proxy/main.go
+  - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOPROXY=$(cat /run/secrets/GOPROXY)
+  - go mod download -x
+  - go build -ldflags="-s -w" -o kubernetes-api-proxy ./cmd/kubernetes-api-proxy/main.go
   - chown 64535:64535 /src/kubernetes-api-proxy
   - chmod 0700 /src/kubernetes-api-proxy
 ---
