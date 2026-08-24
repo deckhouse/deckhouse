@@ -105,11 +105,11 @@
       "products": [
         {
           "@id": "pkg:golang/github.com/gohugoio/hugo@v0.162.1"
-        },
+        }
       ],
       "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "os.Root symlink following - Уязвимость перехода по символическим ссылкам в os.Root (обход песочницы при финальном компоненте-симлинке и завершающем '/') требует использования приложением API os.Root/OpenRoot. docs-builder не использует os.Root: изоляция путей загрузки и удаления обеспечивается строгим allow-list имён модулей и каналов (регулярное выражение RFC 1123, запрещающее '/', '.' и '..') и проверкой ensureWithinBase (filepath.Rel относительно базового каталога). Уязвимый код os.Root не входит в путь исполнения, поэтому directory traversal для образа недостижим.",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Symlink confinement bypass в os.ReadFile - Уязвимость связана с регрессией в виртуальной ФС Hugo: RootMappingFs.statRoot вызывает Stat (переход по символическим ссылкам) вместо Lstat, из-за чего прямой поиск (resources.Get / os.ReadFile) по симлинку, размещённому внутри смонтированного каталога, читает содержимое цели за пределами mount'а. Эксплуатация требует, чтобы атакующий смог подложить симлинк внутрь смонтированного каталога (например, локально вендоренной темы в themes/). В docs-builder этого пути нет: рендерится доверенная документация модулей, а не произвольный пользовательский ввод; локальные вендоренные темы с симлинками не используются, а темы, подключаемые как Go-модули, скачиваются со снятыми симлинками. Подконтрольный атакующему симлинк во входных данных отсутствует, поэтому чтение произвольных файлов для образа недостижимо.",
       "timestamp": "2026-08-24T00:00:00Z"
     },
     {
@@ -120,13 +120,13 @@
       "products": [
         {
           "@id": "pkg:golang/github.com/gohugoio/hugo@v0.162.1"
-        },
+        }
       ],
       "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость GHSA-q76j-gcg9-vxc6 невозможно эксплуатировать в docs-builder. Docs-builder не выполняет render сторонних блоков кода.",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "XSS через неэкранированный language в code-fence - Штатный code-block renderer Hugo записывает info-string (язык) code-fence в атрибуты class/data-lang обёртки без HTML-экранирования, что позволяет вырваться из атрибута и внедрить <script>. Эксплуатация требует контроля над содержимым рендерируемого Markdown. В docs-builder весь рендерируемый контент доверенный: это документация модулей из исходников, а не произвольный пользовательский ввод. Подконтрольный атакующему info-string во входных данных отсутствует, поэтому XSS для образа недостижим.",
       "timestamp": "2026-08-24T00:00:00Z"
-    },
+    }
   ],
   "timestamp": "2026-07-22T00:00:00Z"
 }
