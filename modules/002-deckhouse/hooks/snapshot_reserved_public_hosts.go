@@ -92,6 +92,14 @@ const (
 	// The pages a cluster-wide read is taken in. Large enough that a cluster of any ordinary size is
 	// one or two requests, small enough that no single response has to be held whole.
 	reservedPublicHostsPageLimit = 500
+
+	// The most hostnames the record holds. It is rendered into every policy as a CEL literal, so this
+	// is what bounds their size, and openapi/values.yaml carries the same number as maxItems.
+	//
+	// Only what a tenant already serves under the platform's own domain is ever recorded, so an
+	// ordinary cluster is orders of magnitude below this, and a full record is tens of kilobytes in an
+	// object whose limit is measured in megabytes.
+	reservedPublicHostsRecordLimit = 1000
 )
 
 var namespaceResource = schema.GroupVersionResource{Version: "v1", Resource: "namespaces"}
@@ -190,7 +198,7 @@ func snapshotReservedPublicHosts(ctx context.Context, input *go_hook.HookInput, 
 		// every time Deckhouse restarts.
 		input.Values.Set(reservedPublicHostsValuePath, reservedPublicHostsSnapshot{
 			Recorded: true,
-			Hosts:    hostsFromRecord(recorded[0].Hosts, input),
+			Hosts:    hostsWithinTheLimit(hostsFromRecord(recorded[0].Hosts, input), input),
 		})
 		return nil
 	}
@@ -225,6 +233,7 @@ func snapshotReservedPublicHosts(ctx context.Context, input *go_hook.HookInput, 
 	if err != nil {
 		return err
 	}
+	hosts = hostsWithinTheLimit(hosts, input)
 
 	input.Logger.Info("recorded the hostnames tenants already serve under the platform's domain",
 		slog.Int("count", len(hosts)),
@@ -266,6 +275,28 @@ func hostsFromRecord(recorded []string, input *go_hook.HookInput) []string {
 	}
 
 	return hosts.Slice()
+}
+
+// hostsWithinTheLimit bounds what goes into values, and with it what every policy carries. Both
+// records are sorted, which is what makes the entries kept the same ones on every converge rather
+// than whichever a map iteration offered first.
+//
+// Truncating rather than letting the schema reject the value is the choice hostsFromRecord makes for
+// a malformed entry, for the same reason: a dropped entry un-grandfathers one object, whose next
+// write is denied with a message naming the hostname, while a rejected value stops the module that
+// renders Deckhouse from converging at all.
+func hostsWithinTheLimit(hosts []string, input *go_hook.HookInput) []string {
+	if len(hosts) <= reservedPublicHostsRecordLimit {
+		return hosts
+	}
+
+	dropped := hosts[reservedPublicHostsRecordLimit:]
+	input.Logger.Warn("truncated the record of what tenants already serve, which un-grandfathers the entries dropped",
+		slog.Int("limit", reservedPublicHostsRecordLimit),
+		slog.Int("count", len(dropped)),
+		slog.Any("dropped", dropped))
+
+	return hosts[:reservedPublicHostsRecordLimit]
 }
 
 // collectTenantHosts reads every hostname claimed outside the namespaces the platform owns and keeps
