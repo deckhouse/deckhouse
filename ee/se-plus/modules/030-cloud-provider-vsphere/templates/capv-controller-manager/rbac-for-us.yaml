@@ -164,13 +164,18 @@ subjects:
   name: capv-controller-manager
   namespace: d8-cloud-provider-vsphere
 ---
-# Namespaced patch/update on the identity Secret. CAPV's VSphereCluster reconciler
-# adds a finalizer + owner reference to capi-user-credentials via Patch(), which
-# needs write access in d8-cloud-instance-manager. CAPO does not do this, so its
-# module skips this Role — cargo-culting from openstack fails here. Cluster-wide
-# read (get/list/watch on secrets) is granted by the ClusterRole above.
-# The Role/RoleBinding sit outside the module namespace on purpose, so they are
-# excluded from the placement lint in .dmtlint.yaml (rbac.exclude-rules.placement).
+# Namespaced write access to the single identity Secret (capi-user-credentials).
+# CAPV's VSphereCluster reconciler:
+#   - Patches the Secret on reconcile to add finalizer + owner reference,
+#   - Delete()s it explicitly on teardown (vspherecluster_reconciler.go:243). Cascade cleanup
+#     via owner references does NOT cover this — without the delete verb here dhctl destroy
+#     hangs forever with "Cluster status: deletion_failed".
+# CAPO does not do this, so its module skips this Role — cargo-culting from openstack fails.
+# Cluster-wide read (get/list/watch on secrets) stays in the ClusterRole above; the write
+# path is scoped to a single object name to limit blast radius (bootstrap tokens and other
+# Secrets in the same namespace are untouched).
+# The Role/RoleBinding sit outside the module namespace on purpose, so they are excluded
+# from the placement lint in .dmtlint.yaml (rbac.exclude-rules.placement).
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -185,6 +190,7 @@ rules:
   resourceNames:
   - capi-user-credentials
   verbs:
+  - delete
   - patch
   - update
 ---
