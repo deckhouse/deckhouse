@@ -12,15 +12,14 @@ require (
 	k8s.io/apiextensions-apiserver v0.34.8
 	k8s.io/apimachinery v0.34.8
 	k8s.io/client-go v0.34.8
-	sigs.k8s.io/controller-runtime v0.21.0
+	sigs.k8s.io/controller-runtime v0.22.5
 )
 
 require (
 	github.com/DataDog/gostackparse v0.7.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol v0.0.0-00010101000000-000000000000 // indirect
 	github.com/deckhouse/deckhouse/pkg/log v0.0.0-00010101000000-000000000000 // indirect
 	github.com/emicklei/go-restful/v3 v3.12.2 // indirect
