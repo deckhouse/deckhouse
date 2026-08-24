@@ -624,7 +624,7 @@ func (r *reconciler) reconcileConfigSecret(ctx context.Context, vcp *controlplan
 		return nil, reconcile.Result{}, fmt.Errorf("collect parent egress destinations: %w", err)
 	}
 
-	// Rebase tenant-node image refs onto the external upstream when the parent's registry module hides the real registry behind the in-cluster proxy.
+	// Rebase tenant-node refs onto the external upstream (Direct/Proxy hides the real registry behind the in-cluster proxy).
 	var imageBaseOverride string
 	if tr, terr := r.discoverTenantRegistry(ctx); terr != nil {
 		log.FromContext(ctx).Error(terr, "discover tenant registry for image rebase; keeping in-cluster refs")

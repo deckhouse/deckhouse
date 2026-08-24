@@ -36,18 +36,14 @@ const (
 	registryModeLocal        = "Local"
 )
 
-// errRegistryLocalNoUpstream is returned when the parent runs the registry
-// module in Local mode: there is no external upstream reachable from tenant
-// worker nodes, so direct pull cannot work (this needs in-cluster routing).
+// Local mode has no external upstream reachable from tenant nodes; direct pull impossible.
 var errRegistryLocalNoUpstream = errors.New(
 	"registry mode Local has no external upstream reachable from tenant nodes; direct tenant pull is unsupported",
 )
 
-// tenantRegistry is the external upstream registry the tenant cluster and its
-// worker nodes pull Deckhouse images from directly, bypassing the parent's in-cluster registry proxy (module 038).
-//
-// It is discovered from the operator's registry input Secret d8-system/registry-config (rendered by the deckhouse module 002 from ModuleConfig/deckhouse .spec.settings.registry).
-// That Secret holds the real external upstream even when module 038 is Direct/Proxy, unlike global.modulesImages.registry, which points at the in-cluster proxy.
+// tenantRegistry is the external upstream tenant nodes pull from directly, bypassing the parent in-cluster proxy (module 038).
+// Discovered from d8-system/registry-config (operator input); holds the real external repo even when 038 is Direct/Proxy,
+// unlike global.modulesImages.registry, which points at the in-cluster proxy.
 type tenantRegistry struct {
 	Address          string // host[:port]
 	Path             string // "/deckhouse/ee"
@@ -56,12 +52,10 @@ type tenantRegistry struct {
 	DockerConfigJSON []byte
 }
 
-// Base returns "address/path", the image reference base (== imagesRepo).
+// Base = "address/path", the image ref base (== imagesRepo).
 func (t *tenantRegistry) Base() string { return t.Address + t.Path }
 
-// registrySecretData renders the tenant deckhouse-registry Secret .data.
-// Keys mirror what the global discovery hook expects (see
-// global-hooks/discovery/deckhouse_registry.go).
+// registrySecretData renders deckhouse-registry .data (keys per global-hooks/discovery/deckhouse_registry.go).
 func (t *tenantRegistry) registrySecretData() map[string][]byte {
 	data := map[string][]byte{
 		".dockerconfigjson": t.DockerConfigJSON,
@@ -75,9 +69,8 @@ func (t *tenantRegistry) registrySecretData() map[string][]byte {
 	return data
 }
 
-// discoverTenantRegistry reads d8-system/registry-config and returns the external upstream.
-// It returns (nil, nil) when the Secret is absent or does not describe an external upstream (deprecated non-configurable Unmanaged) so callers fall
-// back to cloning the parent deckhouse-registry Secret, which already points at the real registry in that case. Local mode returns errRegistryLocalNoUpstream.
+// discoverTenantRegistry reads d8-system/registry-config for the external upstream.
+// (nil, nil) when absent or no external repo (non-configurable Unmanaged) so callers clone the parent secret; Local returns errRegistryLocalNoUpstream.
 func (r *reconciler) discoverTenantRegistry(ctx context.Context) (*tenantRegistry, error) {
 	sec, err := r.getSecret(ctx, registryConfigSecretNS, registryConfigSecretName)
 	if apierrors.IsNotFound(err) {
@@ -93,7 +86,7 @@ func (r *reconciler) discoverTenantRegistry(ctx context.Context) (*tenantRegistr
 
 	imagesRepo := string(sec.Data["imagesRepo"])
 	if imagesRepo == "" {
-		// Non-configurable Unmanaged (no imagesRepo): fall back to parent clone.
+		// non-configurable Unmanaged: no imagesRepo -> fall back to parent clone.
 		return nil, nil
 	}
 
@@ -117,9 +110,8 @@ func (r *reconciler) discoverTenantRegistry(ctx context.Context) (*tenantRegistr
 	}, nil
 }
 
-// resolveTenantRegistryData returns the deckhouse-registry Secret .data for the tenant:
-// the discovered external upstream when available, otherwise a clone of the parent Secret.
-// Discovery errors (including Local mode) are logged and fall back to the parent clone rather than failing the reconcile.
+// resolveTenantRegistryData returns deckhouse-registry .data: discovered external upstream if any, else a clone of the parent secret.
+// Discovery errors (incl. Local) are logged and fall back to the parent clone rather than failing the reconcile.
 func (r *reconciler) resolveTenantRegistryData(ctx context.Context, parent *corev1.Secret) map[string][]byte {
 	tr, err := r.discoverTenantRegistry(ctx)
 	if err != nil {
@@ -132,8 +124,7 @@ func (r *reconciler) resolveTenantRegistryData(ctx context.Context, parent *core
 	return tr.registrySecretData()
 }
 
-// splitAddressAndPath splits "registry.example.com/deckhouse/ee" into
-// ("registry.example.com", "/deckhouse/ee").
+// splitAddressAndPath: "reg.io/a/b" -> ("reg.io", "/a/b").
 func splitAddressAndPath(ref string) (address, path string) {
 	parts := strings.SplitN(ref, "/", 2)
 	if len(parts) < 2 {
@@ -159,8 +150,7 @@ func buildDockerConfigJSON(address, username, password string) ([]byte, error) {
 	return json.Marshal(map[string]map[string]authEntry{"auths": {address: entry}})
 }
 
-// rebaseImageRef re-points a "<base>@<digest>" reference at newBase, preserving the digest.
-// Used to move VCP-baked tenant-node image refs off the parent in-cluster registry onto the discovered external upstream.
+// rebaseImageRef swaps the base of "<base>@<digest>", keeping the digest. Moves VCP-baked tenant-node refs off the in-cluster registry onto the external upstream.
 func rebaseImageRef(ref, newBase string) string {
 	at := strings.LastIndex(ref, "@")
 	if at < 0 || newBase == "" {

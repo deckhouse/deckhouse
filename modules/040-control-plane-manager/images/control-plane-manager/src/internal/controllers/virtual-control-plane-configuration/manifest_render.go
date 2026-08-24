@@ -83,10 +83,9 @@ func renderManifests(
 		return nil, fmt.Errorf("no images for kubernetes version %q", vcp.Spec.KubernetesVersion)
 	}
 
-	// konnectivity-agent is the only tenant-node image whose ref is VCP-baked (control-plane images run in the parent and keep the in-cluster base),
-	// and it has no imagePullSecret, so it must target the external registry those nodes reach.
-	// imageBaseOverride is set only in Direct/Proxy where the baked ref points at the unreachable in-cluster proxy;
-	// in Unmanaged it is empty and the baked ref is already external, so this is a no-op.
+	// konnectivity-agent is the only VCP-baked tenant-node ref (control-plane images run in the parent, keep the in-cluster base). Its baked ref hits the
+	// in-cluster proxy unreachable from tenant nodes, so rebase onto the external registry (the pod carries a matching deckhouse-registry imagePullSecret).
+	// imageBaseOverride is set only in Direct/Proxy; in Unmanaged it is empty and the baked ref is already external, so this is a no-op.
 	fixed := table.Fixed
 	fixed.KonnectivityAgent = rebaseImageRef(fixed.KonnectivityAgent, imageBaseOverride)
 

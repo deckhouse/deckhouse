@@ -169,9 +169,8 @@ func (r *reconciler) reconcileTenantRegistrySecret(ctx context.Context, tc clien
 	}
 
 	target := buildTargetRegistrySecret(parent, deckhouseSystemNamespace, deckhouseRegistrySecretName)
-	// Seed the tenant with the real external upstream (registry-config) instead
-	// of the parent's in-cluster proxy address, which tenant worker nodes cannot
-	// reach. Falls back to the parent Secret when no external upstream exists.
+	// Seed the tenant from the external upstream (registry-config), not the parent in-cluster proxy address unreachable from tenant nodes.
+	// Falls back to the parent secret when there is no external upstream.
 	target.Data = r.resolveTenantRegistryData(ctx, parent)
 	// The deckhouse module's chart renders this secret too; without helm
 	// adoption metadata the release install fails with "invalid ownership
