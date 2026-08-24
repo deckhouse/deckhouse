@@ -502,6 +502,34 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
+	suite.Run("adopt precreated module versions", func() {
+		// Two versions pre-created from ModuleReleases before the repository
+		// existed: a draft stub and a complete one. The scan must adopt both —
+		// labels ensured, repository becomes the controller owner — without
+		// touching the draft state or the status, and without counting them as
+		// newly found.
+		reg := fakeRegistry.NewRegistry(registryHost)
+		reg.MustAddImage("", "test-package", fakeRegistry.NewImageBuilder().MustBuild())
+		modImg := moduleVersionImage().MustBuild()
+		reg.MustAddImage("test-package/version", "v1.0.0", modImg)
+		reg.MustAddImage("test-package/version", "v1.1.0", modImg)
+
+		psm := createFakePSM(newInternalClient(reg))
+
+		suite.setupController("adopt-precreated-module-versions.yaml", withPackageServiceManager(psm))
+		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
+
+		err := repeat(func() error {
+			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+				NamespacedName: k8stypes.NamespacedName{Name: operation.Name},
+			})
+
+			return err
+		})
+
+		require.NoError(suite.T(), err)
+	})
+
 	suite.Run("incremental scan keeps only the latest patch of every minor", func() {
 		// Registry holds several patch releases for every minor line.
 		// The incremental scan must process only the newest patch of each

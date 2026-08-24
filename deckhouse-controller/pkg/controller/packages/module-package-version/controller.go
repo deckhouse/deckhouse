@@ -27,11 +27,14 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metautils "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/dto"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
@@ -73,8 +76,38 @@ func RegisterController(sync *sync.WaitGroup, runtimeManager manager.Manager, dc
 	return ctrl.NewControllerManagedBy(runtimeManager).
 		Named(controllerName).
 		For(&v1alpha1.ModulePackageVersion{}).
+		// a draft created before its repository exists fails with
+		// GetPackageRepositoryError and waits out the backoff; the repository
+		// event requeues such drafts immediately
+		Watches(&v1alpha1.PackageRepository{},
+			handler.EnqueueRequestsFromMapFunc(r.enqueueDraftVersionsForRepository)).
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxConcurrentReconciles}).
 		Complete(r)
+}
+
+// enqueueDraftVersionsForRepository requeues every draft version the repository
+// serves, so drafts pre-created before the repository start filling on its
+// arrival instead of waiting out the reconcile backoff.
+func (r *reconciler) enqueueDraftVersionsForRepository(ctx context.Context, obj client.Object) []reconcile.Request {
+	versions := new(v1alpha1.ModulePackageVersionList)
+	if err := r.client.List(ctx, versions); err != nil {
+		r.logger.Warn("failed to list module package versions", log.Err(err))
+
+		return nil
+	}
+
+	var requests []reconcile.Request
+
+	for i := range versions.Items {
+		mpv := &versions.Items[i]
+		if mpv.Spec.PackageRepositoryName != obj.GetName() || !mpv.IsDraft() {
+			continue
+		}
+
+		requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: mpv.Name}})
+	}
+
+	return requests
 }
 
 // reconciler promotes draft ModulePackageVersion resources by loading package
