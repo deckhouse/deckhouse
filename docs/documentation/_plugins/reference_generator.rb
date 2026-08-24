@@ -157,7 +157,7 @@ module ReferenceGenerator
         long_description = escape_liquid_tags(long_description)
         long_description = long_description.gsub(/\r\n?|\n/, '&#10;')
         long_description_id = build_long_description_id(parent_titles, data['name'])
-        result += %Q(<div id="#{long_description_id}" markdown="0" class="details"><p class="details__lnk"><a href="javascript:void(0)" class="details__summary">{{ site.data.i18n.common['show_more'][page.lang] }}</a></p><div class="details__content"><div class="expand" style="white-space: pre-wrap;">#{long_description}</div></div></div>\n)
+        result += %Q(<div id="#{long_description_id}" markdown="0" class="details"><p class="details__lnk"><a href="javascript:void(0)" class="details__summary">{{ site.data.i18n.common['show_more'][page.lang] }}...</a></p><div class="details__content"><div class="expand" style="white-space: pre-wrap;">#{long_description}</div></div></div>\n)
       end
       if data['version'].to_s.strip != ''
         version = escape_liquid_tags(data['version'].to_s)
