@@ -315,7 +315,9 @@ func (c *Controller) Start(ctx context.Context) error {
 	defer c.sync.Done()
 
 	// run the manager in the background
-	c.manager.Run()
+	if err := c.manager.Run(); err != nil {
+		return fmt.Errorf("run package runtime: %w", err)
+	}
 
 	// starts all child controllers
 	go func() {

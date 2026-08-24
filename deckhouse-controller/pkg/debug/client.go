@@ -26,15 +26,15 @@ import (
 	"time"
 )
 
-// Client communicates with a debug Server over a Unix domain socket using HTTP.
-// All requests are routed through the socket; the HTTP host is ignored by the transport.
-type Client struct {
+// socketClient talks to the runtime API over its Unix domain socket.
+// The HTTP host is ignored by the transport; every request goes through the socket.
+type socketClient struct {
 	httpClient *http.Client
 }
 
-// NewClient creates a Client that connects to the debug server at the given Unix socket path.
+// newSocketClient connects to the runtime API at the given Unix socket path.
 // Returns an error if the socket file does not exist.
-func NewClient(socketPath string) (*Client, error) {
+func newSocketClient(socketPath string) (*socketClient, error) {
 	if _, err := os.Stat(socketPath); err != nil {
 		return nil, fmt.Errorf("stat socket file '%s': %w", socketPath, err)
 	}
@@ -51,13 +51,13 @@ func NewClient(socketPath string) (*Client, error) {
 		},
 	}
 
-	return &Client{
+	return &socketClient{
 		httpClient: client,
 	}, nil
 }
 
 // Close releases transport resources held by the underlying HTTP client.
-func (c *Client) Close() {
+func (c *socketClient) Close() {
 	if c.httpClient != nil {
 		if transport, ok := c.httpClient.Transport.(*http.Transport); ok {
 			transport.CloseIdleConnections()
@@ -67,7 +67,7 @@ func (c *Client) Close() {
 
 // Get sends a GET request to the debug server. Path segments are joined to form the URL.
 // Returns the response body or an error if the request fails or the server returns a non-2xx status.
-func (c *Client) Get(ctx context.Context, paths ...string) ([]byte, error) {
+func (c *socketClient) Get(ctx context.Context, paths ...string) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, makeURL(paths...), nil)
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
@@ -78,7 +78,7 @@ func (c *Client) Get(ctx context.Context, paths ...string) ([]byte, error) {
 
 // do executes an HTTP request and returns the response body.
 // Returns an error for non-2xx status codes.
-func (c *Client) do(req *http.Request) ([]byte, error) {
+func (c *socketClient) do(req *http.Request) ([]byte, error) {
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, err

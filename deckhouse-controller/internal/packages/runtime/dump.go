@@ -19,8 +19,6 @@ import (
 	"errors"
 	"path/filepath"
 
-	"sigs.k8s.io/yaml"
-
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
@@ -52,13 +50,13 @@ type globalDump struct {
 	global.Info
 }
 
-// DumpGlobal returns a YAML snapshot of the global module's package info.
+// DumpGlobal returns a snapshot of the global module's package info.
 //
 // The snapshot mirrors global.Info: instance name, running state, filesystem
 // path, current values, and the names of registered hooks. Returns nil when the
 // global module has not been initialized (r.global is nil), which the debug
 // handler surfaces as an empty body.
-func (r *Runtime) DumpGlobal() []byte {
+func (r *Runtime) DumpGlobal() any {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -66,16 +64,13 @@ func (r *Runtime) DumpGlobal() []byte {
 		return nil
 	}
 
-	d := globalDump{
+	return globalDump{
 		Status: r.status.GetStatus(r.global.GetName()),
 		Info:   r.global.GetInfo(),
 	}
-
-	marshalled, _ := yaml.Marshal(d)
-	return marshalled
 }
 
-// Dump returns a YAML snapshot of all packages and their current state.
+// Dump returns a snapshot of all packages and their current state.
 //
 // Includes for each package:
 //   - Status: Current phase (Pending/Loaded/Running)
@@ -84,7 +79,7 @@ func (r *Runtime) DumpGlobal() []byte {
 //
 // Used for debugging and introspection of operator internal state.
 // Skips packages that have been removed from the manager.
-func (r *Runtime) Dump() []byte {
+func (r *Runtime) Dump() any {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -107,52 +102,75 @@ func (r *Runtime) Dump() []byte {
 		}
 	}
 
-	marshalled, _ := yaml.Marshal(d)
-	return marshalled
+	return d
 }
 
-// DumpByName returns a YAML snapshot of a single package by name.
-// Checks apps first, then modules. Returns an empty dump if not found.
-func (r *Runtime) DumpByName(name string) []byte {
+// DumpByName returns a snapshot of a single package by name.
+// Checks apps first, then modules. Returns nil if not found.
+func (r *Runtime) DumpByName(name string) any {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	var marshalled []byte
-
 	if app := r.apps[name]; app != nil {
-		marshalled, _ = yaml.Marshal(appDump{
-			r.status.GetStatus(app.GetName()),
-			app.GetInfo(),
-		})
+		return appDump{
+			Status: r.status.GetStatus(app.GetName()),
+			Info:   app.GetInfo(),
+		}
 	}
 
 	if mod := r.modules[name]; mod != nil {
-		marshalled, _ = yaml.Marshal(moduleDump{
-			r.status.GetStatus(mod.GetName()),
-			mod.GetInfo(),
-		})
+		return moduleDump{
+			Status: r.status.GetStatus(mod.GetName()),
+			Info:   mod.GetInfo(),
+		}
 	}
 
-	return marshalled
+	return nil
 }
 
-// renderManifests renders the Helm chart for a loaded package. Used by the debug server.
-func (r *Runtime) renderManifests(ctx context.Context, name string) (string, error) {
-	r.mu.Lock()
+// Snapshots returns the hook snapshots of a package, reporting false when no
+// package with that name is loaded.
+func (r *Runtime) Snapshots(name string) (any, bool) {
+	r.mu.RLock()
+	app := r.apps[name]
+	mod := r.modules[name]
+	r.mu.RUnlock()
 
-	if app := r.apps[name]; app != nil {
-		r.mu.Unlock()
-		return r.nelmService.Render(ctx, app.GetNamespace(), app)
+	switch {
+	case app != nil:
+		return app.GetHookSnapshotsDump(), true
+	case mod != nil:
+		return mod.GetHookSnapshotsDump(), true
+	case name == r.global.GetName():
+		return r.global.GetHookSnapshotsDump(), true
 	}
 
-	if module := r.modules[name]; module != nil {
+	return nil, false
+}
+
+// Render renders the Helm chart of a loaded package.
+func (r *Runtime) Render(ctx context.Context, name string) (string, error) {
+	r.mu.Lock()
+
+	if pkg := r.apps[name]; pkg != nil {
 		r.mu.Unlock()
-		return r.nelmService.Render(ctx, app.NamespaceDeckhouse, module)
+		return r.nelmService.Render(ctx, pkg.GetNamespace(), pkg)
+	}
+
+	if pkg := r.modules[name]; pkg != nil {
+		r.mu.Unlock()
+		return r.nelmService.Render(ctx, app.NamespaceDeckhouse, pkg)
 	}
 
 	r.mu.Unlock()
 
 	return "", errors.New("no package found")
+}
+
+// DumpQueues returns a snapshot of the task queues of one package, or of every
+// queue when name is empty.
+func (r *Runtime) DumpQueues(name string) any {
+	return r.queueService.Dump(r.collectQueues(name)...)
 }
 
 // collectQueues expands a package name into all its queue names (main + hook sub-queues).
