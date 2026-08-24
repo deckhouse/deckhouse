@@ -160,6 +160,9 @@ func (h *Handler) valuesByModuleConfig(moduleConfig *v1alpha1.ModuleConfig) (uti
 	}
 
 	converter := h.conversionsStore.Get(moduleConfig.Name)
+	if converter.LatestVersion() == -1 {
+		return utils.Values(settings), nil
+	}
 	newVersion, newSettings, err := converter.ConvertToLatest(moduleConfig.Spec.Version, settings)
 	if err != nil {
 		return utils.Values{}, fmt.Errorf("convert to latest: %w", err)

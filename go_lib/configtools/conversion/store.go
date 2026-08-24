@@ -51,5 +51,6 @@ func (s *ConversionsStore) Get(module string) *Converter {
 	if con, ok := s.converters[module]; ok {
 		return con
 	}
-	return &Converter{latest: 1}
+	// if no version found, return -1 as latest version
+	return &Converter{latest: -1}
 }
