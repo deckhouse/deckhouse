@@ -282,20 +282,27 @@ func (r *reconciler) handleDelete(ctx context.Context, app *v1alpha1.Application
 	logger.Debug("handle delete application")
 	defer logger.Debug("handle delete application complete")
 
-	// Detach by owner reference, not by spec: the references name what the application
-	// was actually attached to, which a spec edit just before deletion would have changed.
-	if name := ctrlutils.OwnerRefName(app, v1alpha1.ApplicationPackageVersionKind); name != "" {
-		if err := r.detachVersion(ctx, app, name); err != nil {
-			logger.Error("failed to detach the application package version", slog.String("apv", name), log.Err(err))
-			return err
-		}
+	// Detach by owner reference, falling back to the spec: the reference names what the
+	// application was actually attached to, which a spec edit just before deletion would have
+	// changed, but it is written after the attach, so an attached application can lack it.
+	apvName := ctrlutils.OwnerRefName(app, v1alpha1.ApplicationPackageVersionKind)
+	if apvName == "" {
+		apvName = v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepositoryName, app.Spec.PackageName, app.Spec.PackageVersion)
 	}
 
-	if name := ctrlutils.OwnerRefName(app, v1alpha1.ApplicationPackageKind); name != "" {
-		if err := r.detachPackage(ctx, app, name); err != nil {
-			logger.Error("failed to detach the application package", slog.String("package", name), log.Err(err))
-			return err
-		}
+	if err := r.detachVersion(ctx, app, apvName); err != nil {
+		logger.Error("failed to detach the application package version", slog.String("apv", apvName), log.Err(err))
+		return err
+	}
+
+	pkgName := ctrlutils.OwnerRefName(app, v1alpha1.ApplicationPackageKind)
+	if pkgName == "" {
+		pkgName = app.Spec.PackageName
+	}
+
+	if err := r.detachPackage(ctx, app, pkgName); err != nil {
+		logger.Error("failed to detach the application package", slog.String("package", pkgName), log.Err(err))
+		return err
 	}
 
 	// call PackageOperator method (PackageRemover interface)
