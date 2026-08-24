@@ -17,9 +17,12 @@ limitations under the License.
 package memberlist
 
 import (
+	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	hcml "github.com/hashicorp/memberlist"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -151,5 +154,74 @@ func TestSplitLevel(t *testing.T) {
 				t.Errorf("got (%q, %q), want (%q, %q)", level, msg, tt.wantLevel, tt.wantMsg)
 			}
 		})
+	}
+}
+
+func TestMembersReportsNodeNames(t *testing.T) {
+	// The alive set is built from these strings and compared against Node names
+	// from Kubernetes: an address here would make every peer look failed.
+	cluster, err := New(Config{
+		NodeName:      "worker-1",
+		NodeGroup:     "worker",
+		AdvertiseAddr: "127.0.0.1",
+		Port:          0,
+		Tuning:        testTuning(),
+	}, log.NewNop())
+	if err != nil {
+		t.Fatalf("create cluster: %v", err)
+	}
+
+	t.Cleanup(func() {
+		if err := cluster.Shutdown(); err != nil {
+			t.Errorf("shutdown: %v", err)
+		}
+	})
+
+	members := cluster.Members()
+
+	if len(members) != 1 || members[0] != "worker-1" {
+		t.Errorf("Members() = %v, want [worker-1]", members)
+	}
+}
+
+func TestWakeCollapsesABurst(t *testing.T) {
+	// The reader re-reads the whole membership, so a burst owes it one wake-up,
+	// not one per member, and a full buffer must never block the caller:
+	// memberlist runs these under its own node lock.
+	delegate := newEventDelegate(log.NewNop())
+
+	for range 5 {
+		delegate.wake()
+	}
+
+	select {
+	case <-delegate.changed:
+	default:
+		t.Fatal("no wake-up was queued")
+	}
+
+	select {
+	case <-delegate.changed:
+		t.Error("the burst queued more than one wake-up")
+	default:
+	}
+}
+
+func TestChangedFiresOnMembershipEvents(t *testing.T) {
+	delegate := newEventDelegate(log.NewNop())
+
+	stop := make(chan struct{})
+	defer close(stop)
+
+	go delegate.run(stop)
+
+	for _, notify := range []func(*hcml.Node){delegate.NotifyJoin, delegate.NotifyLeave} {
+		notify(&hcml.Node{Name: "worker-" + strconv.Itoa(1)})
+
+		select {
+		case <-delegate.changed:
+		case <-time.After(2 * time.Second):
+			t.Fatal("no wake-up after a membership change")
+		}
 	}
 }

@@ -104,6 +104,11 @@ func run(logger *log.Logger) error {
 		return fmt.Errorf("load SLA profile: %w", err)
 	}
 
+	deps.FencingCache, err = fencingstate.NewCache(restCfg, cfg.NodeGroup)
+	if err != nil {
+		return fmt.Errorf("create FencingFailedNodeState cache: %w", err)
+	}
+
 	return agent.New(cfg, deps, identity, sla, logger).Run(ctx)
 }
 

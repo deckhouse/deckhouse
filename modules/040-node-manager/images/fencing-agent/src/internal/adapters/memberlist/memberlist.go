@@ -51,9 +51,10 @@ type Config struct {
 }
 
 type Cluster struct {
-	list   *hcml.Memberlist
-	logger *log.Logger
-	stop   chan struct{}
+	list    *hcml.Memberlist
+	logger  *log.Logger
+	stop    chan struct{}
+	changed <-chan struct{}
 }
 
 func New(cfg Config, logger *log.Logger) (*Cluster, error) {
@@ -73,7 +74,7 @@ func New(cfg Config, logger *log.Logger) (*Cluster, error) {
 	stop := make(chan struct{})
 	go events.run(stop)
 
-	return &Cluster{list: list, logger: logger, stop: stop}, nil
+	return &Cluster{list: list, logger: logger, stop: stop, changed: events.changed}, nil
 }
 
 func buildConfig(cfg Config, logger *log.Logger, events hcml.EventDelegate) *hcml.Config {
@@ -110,8 +111,23 @@ func (c *Cluster) NumMembers() int {
 	return c.list.NumMembers()
 }
 
-// Shutdown leaves before closing so peers see a node that left, not one that
-// died: a planned restart must not look like a failure.
+
+func (c *Cluster) Members() []string {
+	members := c.list.Members()
+	names := make([]string, 0, len(members))
+
+	for _, member := range members {
+		names = append(names, member.Name)
+	}
+
+	return names
+}
+
+func (c *Cluster) Changed() <-chan struct{} {
+	return c.changed
+}
+
+
 func (c *Cluster) Shutdown() error {
 	defer close(c.stop)
 

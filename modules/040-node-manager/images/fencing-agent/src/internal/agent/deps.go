@@ -18,10 +18,12 @@ package agent
 
 import (
 	"k8s.io/client-go/kubernetes"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type Deps struct {
 	K8sClient     kubernetes.Interface
 	FencingClient client.Client
+	FencingCache cache.Cache
 }
