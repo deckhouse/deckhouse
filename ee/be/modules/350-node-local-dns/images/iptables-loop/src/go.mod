@@ -1,6 +1,6 @@
 module iptables-loop
 
-go 1.25
+go 1.25.0
 
 require (
 	github.com/coreos/go-iptables v0.8.0
