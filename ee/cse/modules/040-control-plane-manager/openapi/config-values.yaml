@@ -96,7 +96,7 @@ properties:
               cacheSize: 2000
             ```
 
-          > Note that the `PodNodeSelector` admission plugin [does not require](https://github.com/kubernetes/kubernetes/blob/f0ea54070bec90dd829b7054117d670f9f90839f/plugin/pkg/admission/podnodeselector/admission.go#L74-L97) specifying a global configuration, it relies on annotated Namespaces.
+          > Note that the `PodNodeSelector` admission plugin [does not require  specifying a global configuration](https://github.com/kubernetes/kubernetes/blob/f0ea54070bec90dd829b7054117d670f9f90839f/plugin/pkg/admission/podnodeselector/admission.go#L74-L97), it relies on annotated Namespaces.
 
           During DKP installation, Kubernetes enables the standard admission plugins. In addition to these, the module enables several more. For details, see the [“Admission plugins enabled by default”](./#admission-plugins-enabled-by-default) section.
 

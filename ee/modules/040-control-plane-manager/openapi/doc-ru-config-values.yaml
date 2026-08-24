@@ -61,7 +61,7 @@ properties:
               cacheSize: 2000
             ```
 
-          > Admission-плагин `PodNodeSelector` [не требует](https://github.com/kubernetes/kubernetes/blob/f0ea54070bec90dd829b7054117d670f9f90839f/plugin/pkg/admission/podnodeselector/admission.go#L74-L97) указания глобальной конфигурации, он использует только аннотации на неймспейсах.
+          > Admission-плагин `PodNodeSelector` [не требует  указания глобальной конфигурации](https://github.com/kubernetes/kubernetes/blob/f0ea54070bec90dd829b7054117d670f9f90839f/plugin/pkg/admission/podnodeselector/admission.go#L74-L97), он использует только аннотации на неймспейсах.
 
           При установке DKP Kubernetes включает стандартные admission-плагины. Дополнительно к ним модуль включает несколько дополнительных. Подробнее — в разделе [«Admission-плагины, включаемые по умолчанию»](./#admission-плагины-включаемые-по-умолчанию).
 
