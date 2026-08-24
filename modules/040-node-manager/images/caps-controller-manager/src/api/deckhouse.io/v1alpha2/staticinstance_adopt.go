@@ -24,55 +24,71 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// ShouldAdopt reports whether the node behind spec.address has to be adopted as-is instead of
-// being bootstrapped.
+// ResolveAdoption reports what has to happen to the node behind spec.address: whether it is
+// bootstrapped as usual, adopted as-is, or neither.
 //
 // Adoption is requested either imperatively, with SkipBootstrapPhaseAnnotation (adopt
 // unconditionally), or declaratively, with AdoptIfNodeExistsAnnotation (adopt only if a Node
-// with the same address is already part of the cluster). Without either annotation the
-// instance is bootstrapped as usual.
+// with the same address is already part of the cluster and is fit to be adopted, see
+// adoptionDecisionForNode). Without either annotation the instance is bootstrapped as usual.
 //
 // The declarative form deliberately re-checks cluster state on every call instead of relying
 // on a stored decision: skipping the bootstrap of a node that is not actually configured
 // would leave that node unusable.
-func (r *StaticInstance) ShouldAdopt(ctx context.Context, cli client.Reader) (bool, error) {
+func (r *StaticInstance) ResolveAdoption(ctx context.Context, cli client.Reader, nodeGroup string) (AdoptDecision, error) {
 	if _, ok := r.Annotations[SkipBootstrapPhaseAnnotation]; ok {
-		return true, nil
+		return AdoptDecision{
+			Action:  AdoptActionAdopt,
+			Reason:  AdoptReasonRequestedImperatively,
+			Message: fmt.Sprintf("Adoption is requested with the %s annotation", SkipBootstrapPhaseAnnotation),
+		}, nil
 	}
 
 	if _, ok := r.Annotations[AdoptIfNodeExistsAnnotation]; !ok {
-		return false, nil
+		return AdoptDecision{
+			Action:  AdoptActionBootstrap,
+			Reason:  AdoptReasonNotRequested,
+			Message: "Adoption is not requested",
+		}, nil
 	}
 
-	nodeName, err := r.FindNodeWithSameAddress(ctx, cli)
+	node, err := r.FindNodeWithSameAddress(ctx, cli)
 	if err != nil {
-		return false, err
+		return AdoptDecision{}, err
 	}
 
-	return nodeName != "", nil
+	if node == nil {
+		return AdoptDecision{
+			Action:  AdoptActionBootstrap,
+			Reason:  AdoptReasonNoNodeWithAddress,
+			Message: fmt.Sprintf("No Node with address %q is part of the cluster", r.Spec.Address),
+		}, nil
+	}
+
+	return adoptionDecisionForNode(node, nodeGroup), nil
 }
 
-// FindNodeWithSameAddress returns the name of a Node that is already part of the cluster and
-// shares an address with spec.address, or an empty string if there is no such Node.
-func (r *StaticInstance) FindNodeWithSameAddress(ctx context.Context, cli client.Reader) (string, error) {
+// FindNodeWithSameAddress returns the Node that is already part of the cluster and shares an
+// address with spec.address, or nil if there is no such Node.
+func (r *StaticInstance) FindNodeWithSameAddress(ctx context.Context, cli client.Reader) (*corev1.Node, error) {
 	if r.Spec.Address == "" {
-		return "", nil
+		return nil, nil
 	}
 
 	nodes := &corev1.NodeList{}
 	if err := cli.List(ctx, nodes); err != nil {
-		return "", fmt.Errorf("failed to list cluster nodes: %w", err)
+		return nil, fmt.Errorf("failed to list cluster nodes: %w", err)
 	}
 
 	for _, node := range nodes.Items {
 		for _, addr := range node.Status.Addresses {
 			if addr.Address == r.Spec.Address {
-				return node.Name, nil
+				return &node, nil
 			}
 		}
 	}
 
-	return "", nil
+	return nil, nil
 }
 
 // adoptionRequested reports whether any of the adoption annotations is set. It only looks at

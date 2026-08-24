@@ -303,12 +303,16 @@ func (r *StaticMachineReconciler) reconcileNormal(
 	r.Recorder.SendNormalEvent(newStaticInstance, staticMachine.Labels["node-group"], "StaticInstanceAttachSucceeded", fmt.Sprintf("Attached to StaticMachine %s", staticMachine.Name))
 	r.Recorder.SendNormalEvent(staticMachine, staticMachine.Labels["node-group"], "StaticInstanceAttachSucceeded", fmt.Sprintf("Attached StaticInstance %s", newStaticInstance.Name))
 
-	shouldAdopt, err := newStaticInstance.ShouldAdopt(ctx, r.Client)
+	decision, err := newStaticInstance.ResolveAdoption(ctx, r.Client, staticMachine.Labels["node-group"])
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to check whether StaticInstance should be adopted: %w", err)
+		return ctrl.Result{}, fmt.Errorf("failed to resolve StaticInstance adoption: %w", err)
 	}
-	if shouldAdopt {
+
+	switch decision.Action {
+	case deckhousev1.AdoptActionAdopt:
 		return r.HostClient.AdoptStaticInstance(ctx, newStaticInstance, staticMachine, machine)
+	case deckhousev1.AdoptActionWait, deckhousev1.AdoptActionReject:
+		return r.postponeAdoption(ctx, staticMachine, newStaticInstance, decision), nil
 	}
 
 	return r.HostClient.Bootstrap(ctx, newStaticInstance, staticMachine, machine)
@@ -384,13 +388,17 @@ func (r *StaticMachineReconciler) reconcileStaticInstancePhase(ctx context.Conte
 
 	switch staticInstance.GetPhase() {
 	case deckhousev1.StaticInstanceStatusCurrentStatusPhasePending:
-		shouldAdopt, err := staticInstance.ShouldAdopt(ctx, r.Client)
+		decision, err := staticInstance.ResolveAdoption(ctx, r.Client, staticMachine.Labels["node-group"])
 		if err != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to check whether StaticInstance should be adopted: %w", err)
+			return ctrl.Result{}, fmt.Errorf("failed to resolve StaticInstance adoption: %w", err)
 		}
-		if !shouldAdopt {
+
+		switch decision.Action {
+		case deckhousev1.AdoptActionBootstrap:
 			logger.Info("StaticInstance does not request adoption, won't reconcile")
 			return ctrl.Result{}, nil
+		case deckhousev1.AdoptActionWait, deckhousev1.AdoptActionReject:
+			return r.postponeAdoption(ctx, staticMachine, staticInstance, decision), nil
 		}
 
 		logger.Info("StaticInstance is adopting")
@@ -426,6 +434,39 @@ func (r *StaticMachineReconciler) reconcileStaticInstancePhase(ctx context.Conte
 	default:
 		return ctrl.Result{}, fmt.Errorf("unknown StaticInstance state %s", staticInstance.GetPhase())
 	}
+}
+
+// postponeAdoption records why the Node behind a StaticInstance cannot be adopted yet and
+// asks for another attempt later.
+//
+// A rejected adoption is retried as well instead of failing the StaticMachine outright: the
+// mismatch is resolved on the Node side, and until it is, CAPS must neither adopt the Node
+// nor bootstrap over it. An adoption that never becomes possible is still bounded by
+// DefaultStaticInstanceAdoptTimeout.
+func (r *StaticMachineReconciler) postponeAdoption(
+	ctx context.Context,
+	staticMachine *infrav1.StaticMachine,
+	staticInstance *deckhousev1.StaticInstance,
+	decision deckhousev1.AdoptDecision,
+) ctrl.Result {
+	ctrl.LoggerFrom(ctx).Info("Postponing adoption", "reason", decision.Reason, "message", decision.Message)
+
+	staticMachine.Status.Ready = false
+	staticMachine.Status.Initialization.Provisioned = ptr.To(false)
+
+	conditions.Set(staticMachine, metav1.Condition{
+		Type:               infrav1.StaticMachineStaticInstanceReadyCondition,
+		Reason:             decision.Reason,
+		Status:             metav1.ConditionFalse,
+		Message:            decision.Message,
+		LastTransitionTime: metav1.Now(),
+	})
+
+	if decision.Action == deckhousev1.AdoptActionReject {
+		r.Recorder.SendWarningEvent(staticInstance, staticMachine.Labels["node-group"], "StaticInstanceAdoptRejected", decision.Message)
+	}
+
+	return ctrl.Result{RequeueAfter: RequeueForStaticInstancePending}
 }
 
 // SetupWithManager sets up the controller with the Manager.

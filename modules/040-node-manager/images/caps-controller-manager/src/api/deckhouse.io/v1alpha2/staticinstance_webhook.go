@@ -137,8 +137,8 @@ func (r *StaticInstanceCustomValidator) ValidateDelete(_ context.Context, obj ru
 }
 
 // validateAddressUnlessAdopting ensures that unless the StaticInstance asks to adopt an
-// already existing node (see ShouldAdopt), its spec.address does not match the address of a
-// Node that is already part of the cluster.
+// already existing node (see ResolveAdoption), its spec.address does not match the address of
+// a Node that is already part of the cluster.
 func (r *StaticInstance) validateAddressUnlessAdopting(ctx context.Context, cli client.Reader) error {
 	if r.adoptionRequested() {
 		staticinstancelog.Info("adoption requested, skipping address validation", "name", r.Name)
@@ -149,13 +149,13 @@ func (r *StaticInstance) validateAddressUnlessAdopting(ctx context.Context, cli 
 		return errors.New("spec.address must not be empty")
 	}
 
-	nodeName, err := r.FindNodeWithSameAddress(ctx, cli)
+	node, err := r.FindNodeWithSameAddress(ctx, cli)
 	if err != nil {
 		return err
 	}
 
-	if nodeName != "" {
-		return fmt.Errorf("Address %q already exists on node %q, if you need transfer the existing manually-bootstrapped cluster node under CAPS management, you should annotate this StaticInstance with %s: \"\"", r.Spec.Address, nodeName, AdoptIfNodeExistsAnnotation)
+	if node != nil {
+		return fmt.Errorf("Address %q already exists on node %q, if you need transfer the existing manually-bootstrapped cluster node under CAPS management, you should annotate this StaticInstance with %s: \"\"", r.Spec.Address, node.Name, AdoptIfNodeExistsAnnotation)
 	}
 
 	return nil
