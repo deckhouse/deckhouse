@@ -4,13 +4,13 @@ permalink: en/admin/configuration/app-scaling/pod-eviction/priority-classes.html
 description: "Configure pod priority classes in Deckhouse Kubernetes Platform. Pod eviction policies, resource allocation priorities, and cluster resource management optimization."
 ---
 
-Deckhouse Kubernetes Platform (DKP) provides a set of priority classes (PriorityClass) for its components and for applications running in the cluster. The scheduler takes pod priority into account when distributing workloads: if resources are insufficient, pods with lower priority are preempted first.
+Deckhouse Kubernetes Platform (DKP) creates a set of priority classes (PriorityClass) in the cluster and assigns them to its components. Applications can use these classes by setting the `priorityClassName` field. The scheduler takes pod priority into account: if resources are insufficient, pods with lower priority are preempted first.
 
-For example, if pods have `priorityClassName: production-low` and the cluster lacks resources for them, the scheduler first considers pods with `priorityClassName: develop` for preemption, then pods with `cluster-low`, and so on. When choosing a priority class, consider the application type and the environment it runs in. If a pod does not specify `priorityClassName`, the default class `develop` applies.
+For example, if a pod with the `production-low` class cannot be scheduled due to insufficient resources, the scheduler first preempts pods with a lower priority, such as `develop`, then `cluster-low`, and so on. If `priorityClassName` is not set, the pod is treated as having the lowest priority.
 
 ## Available priority classes
 
-The table lists available priority classes.
+The table lists the priority classes that DKP creates in the cluster. Choose a class based on the environment and workload criticality.
 
 {% alert level="danger" %}
 Do not use the `system-node-critical`, `system-cluster-critical`, `cluster-medium`, or `cluster-low` priority classes, as they are reserved for critical cluster components.
@@ -19,7 +19,7 @@ Do not use the `system-node-critical`, `system-cluster-critical`, `cluster-mediu
 | Priority class             | Description                                                                                                                                                                                                                  | Value        |
 |----------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------|
 | `system-node-critical`     | Cluster components that must be present on the node. Also fully protected from eviction by the kubelet. <br/> Examples: `node-exporter`, `csi`, and others.                                                                  | 2000001000   |
-| `system-cluster-critical`  | Cluster components without which the cluster cannot operate correctly. MutatingWebhooks and Extension API servers must use this PriorityClass. Also fully protected from eviction by the kubelet. <br/> Examples: `kube-dns`, `kube-proxy`, `cni-flannel`, `cni-cilium`, and others. | 2000000000   |
+| `system-cluster-critical`  | Cluster components without which the cluster cannot operate correctly. MutatingWebhooks and Extension API servers must use this priority class. Also fully protected from eviction by the kubelet. <br/> Examples: `kube-dns`, `kube-proxy`, `cni-flannel`, `cni-cilium`, and others. | 2000000000   |
 | `production-high`          | Stateful applications whose absence in a production environment leads to complete service unavailability or data loss. <br/> Examples: `PostgreSQL`, `Memcached`, `Redis`, `MongoDB`, and others.                            | 9000         |
 | `cluster-medium`           | Cluster components that affect monitoring (alerts, diagnostics) and autoscaling. Without monitoring, you cannot assess the scope of an incident; without autoscaling, applications cannot get the resources they need. <br/> Examples: `deckhouse`, `node-local-dns`, `grafana`, `upmeter`, and others. | 7000         |
 | `production-medium`        | Main stateless applications in production that serve end users.                                                                                                                        | 6000         |
@@ -30,136 +30,105 @@ Do not use the `system-node-critical`, `system-cluster-critical`, `cluster-mediu
 | `develop` (default)        | Development environments for applications. Default class if no other class is specified.                                                                                                                                     | 1000         |
 | `standby`                  | Not intended for applications. Used for system purposes to reserve nodes.                                                                                                                                                    | -1           |
 
-## Creating custom priority classes
+## Creating additional priority classes
 
-In addition to the classes that DKP creates in the cluster, you can create a custom PriorityClass with a name and a numeric priority value for a specific application. Assign the class to pods using the `priorityClassName` field.
+In addition to the classes that DKP creates in the cluster, you can create an additional priority class by specifying a name and a numeric priority value. Assign the class to pods using the `priorityClassName` field.
 
-Create a file `my-priority.yaml` with the following content — a PriorityClass named `my-app-critical` with priority `8000`:
+Create a file `critical-applications.yaml` with the following content — a `critical-applications` priority class with priority `8000`:
 
 ```yaml
 apiVersion: scheduling.k8s.io/v1
 kind: PriorityClass
 metadata:
-  name: my-app-critical
+  name: critical-applications
 value: 8000
 globalDefault: false
 description: "Priority for critical applications"
 ```
 
-A PriorityClass manifest uses the following fields:
+A PriorityClass resource manifest uses the following fields:
 
-- `metadata.name` — class name. Specify it in pods in the `priorityClassName` field.
+- `metadata.name` — the priority class name referenced by the `priorityClassName` field in pod specifications.
 - `value` — numeric priority. The higher the value, the higher the priority.
 - `globalDefault` — specifies whether this class is assigned to pods that do not explicitly set `priorityClassName`.
 - `description` — class description.
 
 {% alert level="warning" %}
-Be careful with the `globalDefault: true` field. If you set it for a custom class, this priority will be assigned to all pods that do not explicitly specify a priority class, which may lead to unpredictable preemption of system components.
+Be careful with the `globalDefault: true` field. If you enable it for an additional class, that class will be assigned to pods that do not explicitly specify `priorityClassName`, which may cause unexpected preemption of system components.
 {% endalert %}
 
 Apply the manifest to the cluster:
 
 ```shell
-d8 k apply -f my-priority.yaml
+d8 k apply -f critical-applications.yaml
 ```
 
 Verify that the resource was created:
 
 ```shell
-d8 k get priorityclass my-app-critical
+d8 k get priorityclass critical-applications
 ```
 
 Example output:
 
 ```console
 NAME              VALUE   GLOBAL-DEFAULT   AGE   PREEMPTIONPOLICY
-my-app-critical   8000    false            7s    PreemptLowerPriority
+critical-applications   8000    false            7s    PreemptLowerPriority
 ```
 
 {% alert level="info" %}
-Do not create custom classes with values above 1,000,000 to avoid disrupting critical system components.
+Do not create additional classes with values above 1,000,000 to avoid disrupting critical system components.
 {% endalert %}
 
 ## Preemption mechanism
 
 ### How it works
 
-The scheduler decides on preemption based solely on the numeric priority value. The workload type (Deployment, StatefulSet, DaemonSet, or a standalone pod) does not matter — the scheduler compares only the numeric priority values: a higher-priority pod can preempt a lower-priority pod to free resources for scheduling.
+The scheduler makes preemption decisions based on numeric priority values. The workload type (Deployment, StatefulSet, DaemonSet, or standalone pod) does not affect preemption decisions. The scheduler compares pod priority values regardless of the workload type: a higher-priority pod can preempt a lower-priority pod to free resources on the node.
 
-Preemption does not occur when priorities are equal. If a new pod has the same priority as existing pods on the node, the scheduler will not preempt them — the new pod remains in `Pending` status until free resources appear.
+Preemption does not occur when priorities are equal. If a new pod has the same priority as existing pods, the scheduler does not preempt them. The new pod remains `Pending` until sufficient resources become available.
 
-For practical scenarios and step-by-step demonstrations, see [Using PriorityClass](/products/kubernetes-platform/documentation/v1/user/configuration/app-scaling/priority-classes.html).
+For practical scenarios and step-by-step demonstrations, see [Using priority classes](/products/kubernetes-platform/documentation/v1/user/configuration/app-scaling/priority-classes.html).
 
 ### Protection from eviction
 
-The primary way to reduce the likelihood of a pod being preempted is to assign it a sufficiently high priority. However, even with a high priority, a pod can still be preempted if another pod with an even higher priority appears in the cluster.
+The only way to protect a pod from preemption is to assign it a sufficiently high priority. However, even with a high priority, the pod will be preempted if another pod with an even higher priority appears in the cluster.
 
-To reduce the risks associated with preemption, combine the following mechanisms:
+To reduce the risks associated with preemption, combine the following three mechanisms. These mechanisms are universal and apply to any critical applications:
 
-1. A high `priorityClassName` — makes the pod a less likely preemption candidate.
-1. PodDisruptionBudget (PDB) — limits the number of replicas removed at the same time. During preemption, PDB acts as a recommendation (unlike planned operations such as `d8 k drain`, where PDB is a hard constraint).
-1. `terminationGracePeriodSeconds` — gives the application time to flush buffers and close connections before forced termination. This allows the application to shut down gracefully and helps preserve data integrity even if the PDB cannot be honored.
+1. A high `priorityClassName` — reduces the likelihood that the pod will be selected for preemption.
+1. PodDisruptionBudget (PDB) — limits how many replicas can be disrupted at the same time. During preemption, the scheduler treats PDB constraints as best-effort rather than strict requirements (unlike planned operations such as draining a node, where PDB is a hard constraint).
+1. `terminationGracePeriodSeconds` — gives the application time to flush buffers and close connections before forced termination. This helps preserve data integrity when a pod must be terminated, including cases where the PDB cannot be honored.
 
 {% alert level="info" %}
-Insufficient time for graceful termination may result in unsaved data being lost, database corruption, or a lengthy filesystem check on the next startup. Graceful shutdown gives the application time to flush pending data and close connections before termination.
+Without the `terminationGracePeriodSeconds` parameter on a pod, an immediate termination may lead to loss of data that was not written to disk and, for example, to database corruption.
 {% endalert %}
 
 ### Differences from other resource management mechanisms
 
-PriorityClass is often confused with other resource management mechanisms. It is important to understand their differences:
+Priority classes serve a different purpose from other resource management mechanisms:
 
-| Mechanism | Purpose | Difference from PriorityClass |
-|-----------|---------|-------------------------------|
-| ResourceQuota | Limits resource consumption in a namespace | Limits total consumption; does not affect pod preemption. |
+| Mechanism | Purpose | Difference from priority classes |
+|-----------|---------|----------------------------------|
+| ResourceQuota | Limits resource consumption in a namespace | Limits total resource consumption within a namespace; does not determine preemption order. |
 | LimitRange | Default limits and requests for pods | Sets minimum and maximum values; does not affect preemption. |
 
-Unlike these mechanisms, PriorityClass affects the order of pod preemption when resources are insufficient, not consumption limits.
+Unlike ResourceQuota and LimitRange, priority classes determine which pods take precedence when resources are insufficient; they do not limit resource consumption.
 
 ## Operations and diagnostics
 
-If pod priority does not work as expected, check scheduler events to determine the cause. This section describes possible causes and cluster-level actions. Practical commands to check specific pods and example output are provided in the [Operations and diagnostics](/products/kubernetes-platform/documentation/v1/user/configuration/app-scaling/priority-classes.html#operations-and-diagnostics) user section.
+If a pod does not start despite available resources in the cluster, the issue is often related to pod placement rather than its priority class.
 
-### Preemption does not occur
+Possible cluster-level causes:
 
-If a higher-priority pod remains `Pending` and lower-priority pods are not preempted, check the pod and scheduler events. Typical signs:
+- Available CPU and memory are distributed across multiple nodes, and no single node has enough resources to accommodate the pod, even after preemption.
+- No eligible pods can be preempted because all pods on the target node have equal or higher priority. How to check — see the [Practical check when no suitable pods are available](/products/kubernetes-platform/documentation/v1/user/configuration/app-scaling/priority-classes.html#practical-check-when-no-suitable-pods-are-available) user section.
+- No nodes satisfy the pod's scheduling requirements, for example because of taints that the pod does not tolerate.
+- The pod limit per node (`Capacity.pods`) has been reached. Preemption cannot resolve this condition because replacing one pod with another does not reduce the total pod count.
 
-- `FailedPreemption` with the message `no preemption victims found for pod`;
-- `Preemption is not helpful for scheduling` in `FailedScheduling` events.
+What you can do:
 
-Possible causes:
-
-- Resource fragmentation — free CPU and memory are spread across different nodes, and no single node can fit the new pod entirely even after preemption.
-- No suitable candidates — all pods on the node have a priority equal to or higher than that of the incoming pod, so the scheduler cannot choose a victim for preemption.
-
-To check this situation for a specific pod, use the commands and examples from the [Practical diagnostics when preemption is impossible](/products/kubernetes-platform/documentation/v1/user/configuration/app-scaling/priority-classes.html#practical-diagnostics-when-preemption-is-impossible) user section.
-
-### No lower-priority pods available
-
-If a pod does not start and scheduler events contain the message `No preemption victims found for incoming pod`, there are no lower-priority pods on the target node that can be preempted.
-
-| Message | Meaning |
-|---------|---------|
-| `0/N nodes are available` | The cluster has nodes, but none can accommodate the pod. |
-| `No preemption victims found for incoming pod` | On the node with insufficient resources, there are no lower-priority pods to preempt. |
-
-Possible cluster-level solutions:
-
-- Assign the application a higher priority class [from Available priority classes](#available-priority-classes).
-- Free resources on the node — remove or relocate less critical pods.
-- Add nodes or redistribute workloads if the problem is related to resource fragmentation.
-
-To check pod priorities on a specific node and verify that there are no suitable preemption candidates, follow the [Practical check when no suitable pods are available](/products/kubernetes-platform/documentation/v1/user/configuration/app-scaling/priority-classes.html#practical-check-when-no-suitable-pods-are-available) user example.
-
-### Pod limit per node
-
-Even with sufficient CPU and memory, the limit on the maximum number of pods per node (`Capacity.pods`) can prevent a high-priority pod from starting. Preemption cannot resolve this issue because replacing a lower-priority pod with the incoming pod does not reduce the total number of pods on the node.
-
-A typical sign in pod events is `Too many pods`.
-
-Possible cluster-level solutions:
-
-- Add worker nodes and distribute the workload.
-- Reduce the number of pods on the overloaded node — remove or relocate low-priority workloads.
-- Review the number of DaemonSet and system pods running on the node.
-
-To diagnose a situation where pod startup is limited by the maximum number of pods per node, see the [Practical example "Pod limit per node"](/products/kubernetes-platform/documentation/v1/user/configuration/app-scaling/priority-classes.html#practical-example-pod-limit-per-node) user section.
+1. Add worker nodes or redistribute workloads if available resources are spread across different nodes.
+1. Free resources on the overloaded node by removing or relocating less critical pods.
+1. Review the density of DaemonSet and system pods on the node.
+1. If needed, assign the application a higher priority class [from Available priority classes](#available-priority-classes).

@@ -1,15 +1,17 @@
 ---
-title: "Приоритеты подов"
+title: "Классы приоритета"
 permalink: ru/user/configuration/app-scaling/priority-classes.html
-description: "Использование PriorityClass в Deckhouse Kubernetes Platform: примеры настройки приоритетов подов, демонстрация вытеснения и практическая диагностика."
+description: "Использование классов приоритета в Deckhouse Kubernetes Platform: примеры настройки, демонстрация вытеснения и практическая диагностика."
 lang: ru
 ---
 
-## Использование PriorityClass в поде
+Класс приоритета задаёт, какие поды важнее при нехватке ресурсов на узле. Можно назначить класс в манифесте, проверить вытеснение и понять, почему под застрял в `Pending`.
 
-Помимо предустановленных в Deckhouse Kubernetes Platform (DKP) классов приоритета администратор может создать пользовательский PriorityClass. В этом примере используется класс `my-app-critical` — порядок его создания описан [в разделе «Создание пользовательских классов приоритета»](/products/kubernetes-platform/documentation/v1/admin/configuration/app-scaling/pod-eviction/priority-classes.html#создание-пользовательских-классов-приоритета).
+## Использование класса приоритета в поде
 
-Создайте файл `test-pod.yaml`, чтобы запустить под с классом `my-app-critical`:
+В Deckhouse Kubernetes Platform (DKP) уже есть набор классов приоритета. В этом примере используется предустановленный класс `production-medium`.
+
+Создайте файл `test-pod.yaml`, чтобы запустить под с классом `production-medium`:
 
 ```yaml
 apiVersion: v1
@@ -17,7 +19,7 @@ kind: Pod
 metadata:
   name: test-priority-pod
 spec:
-  priorityClassName: my-app-critical
+  priorityClassName: production-medium
   containers:
   - name: nginx
     image: nginx
@@ -38,17 +40,17 @@ d8 k describe pod test-priority-pod | grep Priority
 Пример вывода:
 
 ```console
-Priority:             8000
-Priority Class Name:  my-app-critical
+Priority:             6000
+Priority Class Name:  production-medium
 ```
 
 {% alert level="warning" %}
 Параметр `priorityClassName` нельзя изменить у работающего пода. Это поле является неизменяемым. Единственный способ изменить приоритет — удалить под и создать его заново с новым классом.
 {% endalert %}
 
-## Использование PriorityClass в Deployment
+## Использование класса приоритета в Deployment
 
-PriorityClass можно указать в шаблоне Deployment. В этом случае все поды, созданные этим Deployment, наследуют указанный класс приоритета.
+Класс приоритета можно указать в шаблоне Deployment. В этом случае все поды, созданные этим Deployment, наследуют указанный класс приоритета.
 
 Создайте файл `deployment-with-priority.yaml`, чтобы развернуть приложение с предустановленным в DKP классом `production-high` (значение `9000`, [в разделе «Доступные классы приоритета»](/products/kubernetes-platform/documentation/v1/admin/configuration/app-scaling/pod-eviction/priority-classes.html#доступные-классы-приоритета)):
 
@@ -104,7 +106,7 @@ my-app-7d8f9b5c4f-9w5r8   production-high   9000
 В примерах вместо `worker-0` укажите имя своего worker-узла.
 
 {% alert level="info" %}
-Поведение зависит от количества worker-узлов и может отличаться от приведённого в примере: демонстрация рассчитана на кластер с одним worker-узлом. Если worker-узлов несколько, поды могут быть распределены по разным узлам, и вытеснение на одном узле может не произойти.
+Пример рассчитан на один worker-узел с 4 CPU и 8 Gi памяти. Если узлов несколько, поды могут разместиться на разных узлах, и вытеснения не будет. Подберите `requests` так, чтобы под с низким приоритетом занял большую часть свободных ресурсов узла.
 {% endalert %}
 
 Проверьте список узлов в кластере:
@@ -141,11 +143,7 @@ Allocated resources:
   memory:             2Gi (28%)
 ```
 
-В этом примере на узле свободно примерно 2600m CPU и 5Gi памяти. Создайте под с низким приоритетом, который займёт значительную часть этих ресурсов, а затем под с высоким приоритетом, которому не хватит оставшегося места.
-
-{% alert level="info" %}
-Значения `requests` в этом примере (2 CPU и 4Gi памяти) подобраны для узла с 4 CPU и 8Gi памяти, где уже занято около 30% ресурсов. Если в кластере узлы мощнее или слабее, адаптируйте эти значения так, чтобы под с низким приоритетом занял примерно 70–80% свободных ресурсов узла.
-{% endalert %}
+Создайте под с низким приоритетом, который займёт значительную часть свободных ресурсов, а затем под с высоким приоритетом, которому не хватит оставшегося места.
 
 Создайте файл `low-priority-pod.yaml`:
 
@@ -226,133 +224,19 @@ high-priority-pod   1/1     Running   0          5s
 Проверьте события вытеснения:
 
 ```shell
-d8 k get events --field-selector reason=Preempted
+d8 k get events -A --field-selector reason=Preempted
 ```
 
 Пример вывода:
 
 ```console
-LAST SEEN   TYPE     REASON      OBJECT                 MESSAGE
-68s         Normal   Preempted   pod/low-priority-pod   Preempted by pod d9d25b95-4a7d-4214-8a30-8ce1fd616f67 on node worker-0
+NAMESPACE   LAST SEEN   TYPE     REASON      OBJECT                 MESSAGE
+default     68s         Normal   Preempted   pod/low-priority-pod   Preempted by pod d9d25b95-4a7d-4214-8a30-8ce1fd616f67 on node worker-0
 ```
 
 ## Разделение окружений по приоритетам
 
-Этот сценарий показывает, как приоритеты помогают защитить production-нагрузку на уровне всего кластера — не только внутри одного неймспейса. В отличие [от «Пошаговой демонстрации вытеснения»](#пошаговая-демонстрация-вытеснения), где сравниваются два отдельных пода, здесь моделируется типичная ситуация: фоновая задача из окружения разработки занимает узел, а затем в production требуется запустить критичный сервис с более высоким приоритетом.
-
-Разделение окружений только по неймспейсам не защищает критичные сервисы от нехватки ресурсов на уровне всего кластера. Использование классов приоритета позволяет выстроить чёткую иерархию потребления ресурсов.
-
-Предположим, что узел кластера полностью загружен фоновой задачей из окружения разработки. В этот момент в production-окружении требуется масштабировать критичный сервис. Благодаря разнице в приоритетах (`9000` у `production-high` против `1000` у `develop`) планировщик автоматически вытеснит задачу из окружения разработки, чтобы освободить ресурсы для критичного production-сервиса.
-
-{% alert level="info" %}
-Без изменения приоритетов обратная ситуация — вытеснение production-сервиса задачами разработки — невозможна.
-{% endalert %}
-
-В окружении разработки создайте файл `dev-data-processor.yaml`, чтобы запустить фоновую задачу с предустановленным классом `develop`:
-
-```yaml
-apiVersion: batch/v1
-kind: CronJob
-metadata:
-  name: dev-data-processor
-spec:
-  schedule: "0 * * * *"
-  jobTemplate:
-    spec:
-      template:
-        spec:
-          priorityClassName: develop
-          containers:
-          - name: processor
-            image: busybox:latest
-            command: ["sleep", "infinity"]
-            resources:
-              requests:
-                cpu: "2"
-                memory: "4Gi"
-              limits:
-                cpu: "2"
-                memory: "4Gi"
-          restartPolicy: OnFailure
-```
-
-Примените манифест:
-
-```shell
-d8 k apply -f dev-data-processor.yaml
-```
-
-{% alert level="info" %}
-Команда `command: ["sleep", "infinity"]` используется как учебная заглушка. Она заставляет контейнер работать бесконечно, гарантированно удерживая запрошенные ресурсы, что необходимо для надёжной демонстрации нехватки ресурсов на узле без развёртывания реального приложения.
-{% endalert %}
-
-Создайте задачу вручную для немедленного запуска:
-
-```shell
-d8 k create job --from=cronjob/dev-data-processor manual-test
-```
-
-Проверьте, что под запустился:
-
-```shell
-d8 k get pods | grep manual-test
-```
-
-Пример вывода:
-
-```console
-manual-test-mh9f4                   1/1     Running   0          15h
-```
-
-В production-окружении создайте файл `prod-api.yaml` и запустите критичный сервис с высоким приоритетом, используя предустановленный класс `production-high`:
-
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: prod-api
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: prod-api
-  template:
-    metadata:
-      labels:
-        app: prod-api
-    spec:
-      priorityClassName: production-high
-      containers:
-      - name: api
-        image: busybox:latest
-        command: ["sleep", "infinity"]
-        resources:
-          requests:
-            cpu: "2"
-            memory: "4Gi"
-          limits:
-            cpu: "2"
-            memory: "4Gi"
-```
-
-Примените манифест:
-
-```shell
-d8 k apply -f prod-api.yaml
-```
-
-Проверьте события, чтобы убедиться, что вытеснение произошло:
-
-```shell
-d8 k get events --field-selector reason=Preempted --sort-by='.lastTimestamp'
-```
-
-Пример вывода:
-
-```console
-LAST SEEN   TYPE     REASON      OBJECT                  MESSAGE
-15s         Normal   Preempted   pod/manual-test-tnksn   Preempted by pod 3205b347-705d-49b0-9a20-a1e56f51cb7e on node worker-0
-```
+Неймспейс сам по себе не влияет на вытеснение: планировщик сравнивает только классы приоритета подов, независимо от того, в каких неймспейсах они находятся. Чтобы защитить production-нагрузку, в тестовых и develop-окружениях указывайте более низкий класс приоритета (`develop`, `staging`), а в production — более высокий (`production-low`, `production-medium`, `production-high`).
 
 ## Защита Stateful-приложений
 
@@ -362,7 +246,7 @@ Stateful-приложения (с сохранением состояния, н�
 
 Для защиты Stateful-приложений в данном примере используется комбинация трёх механизмов:
 
-- Высокий `priorityClassName` (рекомендуется `production-high` со значением `9000` и выше, [в разделе «Доступные классы приоритета»](/products/kubernetes-platform/documentation/v1/admin/configuration/app-scaling/pod-eviction/priority-classes.html#доступные-классы-приоритета)) делает поды менее вероятными кандидатами на вытеснение.
+- Высокий `priorityClassName` — в примере у StatefulSet указан `production-medium` (`6000`). Для реальных критичных Stateful-приложений обычно берут `production-high` (`9000`) и выше, см. [раздел «Доступные классы приоритета»](/products/kubernetes-platform/documentation/v1/admin/configuration/app-scaling/pod-eviction/priority-classes.html#доступные-классы-приоритета). Так поды реже становятся кандидатами на вытеснение.
 - PodDisruptionBudget (PDB) гарантирует минимальное количество работающих реплик (например, `minAvailable: 5`).
 - Параметр `terminationGracePeriodSeconds` задаёт время на запись данных на диск и закрытие транзакций перед завершением пода (рекомендуется 30–60 секунд).
 
@@ -462,7 +346,7 @@ d8 k apply -f emergency-task.yaml
 Проверьте статус подов:
 
 ```shell
-d8 k get pods -l app=mock-stateful
+d8 k get pods | grep -E 'mock-stateful|emergency-task'
 ```
 
 Ожидаемый пример вывода (процесс вытеснения):
@@ -575,17 +459,21 @@ Allocated resources:
 Если вытеснение подов с низким приоритетом не происходит, хотя ресурсы свободны, проверьте события с причиной `FailedPreemption`:
 
 ```shell
-d8 k get events --field-selector reason=FailedPreemption --sort-by='.metadata.creationTimestamp'
+d8 k get events -A --field-selector reason=FailedPreemption --sort-by='.metadata.creationTimestamp'
 ```
 
 Пример вывода:
 
 ```console
-LAST SEEN   TYPE      REASON             OBJECT                    MESSAGE
-30s         Warning   FailedPreemption   pod/high-priority-pod     no preemption victims found for pod
+NAMESPACE   LAST SEEN   TYPE      REASON             OBJECT                    MESSAGE
+default     30s         Warning   FailedPreemption   pod/high-priority-pod     no preemption victims found for pod
 ```
 
-Почему так бывает и что делать на уровне кластера, смотрите [в разделе «Вытеснение не происходит»](/products/kubernetes-platform/documentation/v1/admin/configuration/app-scaling/pod-eviction/priority-classes.html#вытеснение-не-происходит).
+Сообщение `no preemption victims found for pod` обычно значит, что на узле нет подов с более низким приоритетом — их нельзя вытеснить ради нового пода. Разбор такого случая — [в разделе «Практическая проверка отсутствия подходящих подов»](#практическая-проверка-отсутствия-подходящих-подов).
+
+Под может не запуститься и по причинам, не связанным с классом приоритета: например, нет подходящих узлов из-за taint и tolerations. Тогда в событиях будет `FailedScheduling` с сообщениями вроде `untolerated taint(s)`, а не `FailedPreemption`.
+
+Возможные действия на уровне кластера смотрите [в разделе «Эксплуатация и диагностика»](/products/kubernetes-platform/documentation/v1/admin/configuration/app-scaling/pod-eviction/priority-classes.html#эксплуатация-и-диагностика).
 
 ### Практическая проверка отсутствия подходящих подов
 
@@ -636,7 +524,7 @@ Events:
 | `0/2 nodes are available` | В кластере есть 2 узла, но ни один не подходит для размещения пода. |
 | `1 No preemption victims found for incoming pod` | На узле с нехваткой памяти нет подов с более низким приоритетом, которые можно было бы вытеснить. |
 
-Что делать на уровне кластера, смотрите [в разделе «Отсутствие подов с более низким приоритетом»](/products/kubernetes-platform/documentation/v1/admin/configuration/app-scaling/pod-eviction/priority-classes.html#отсутствие-подов-с-более-низким-приоритетом).
+Что делать на уровне кластера, смотрите [в разделе «Эксплуатация и диагностика»](/products/kubernetes-platform/documentation/v1/admin/configuration/app-scaling/pod-eviction/priority-classes.html#эксплуатация-и-диагностика).
 
 ### Практический пример «Лимит подов на узле»
 
@@ -764,13 +652,13 @@ Events:
 Проверьте, что вытеснения не произошло:
 
 ```shell
-d8 k get events --field-selector reason=Preempted
+d8 k get events -A --field-selector reason=Preempted
 ```
 
 Пример вывода (пусто):
 
 ```console
-No resources found in default namespace.
+No resources found
 ```
 
 Суть проблемы: лимит подов на узле уже достигнут, поэтому даже под с высоким приоритетом не может запуститься. Вытеснение существующих подов не помогает, так как количество подов останется прежним (вытесненный под будет заменён новым).
@@ -793,10 +681,6 @@ d8 k get pods -A -o jsonpath='{range .items[*]}{.spec.priorityClassName}{"\n"}{e
       6 production-high
 ```
 
-{% alert level="info" %}
-События хранятся ограниченное время (обычно около часа). Если вытеснения давно не было, эти команды могут ничего не вернуть — повторите демонстрацию вытеснения и выполните команды сразу после неё.
-{% endalert %}
-
 Просмотрите события вытеснения во всех неймспейсах:
 
 ```shell
@@ -812,6 +696,10 @@ d8-console         backend-58f9989c9d-4svjw                            Preempted
 d8-monitoring      prometheus-main-0                                   Preempted by pod 91f6e071-... on node worker-0
 default            log-collector-dlxpv                                 Preempted by pod 91f6e071-... on node worker-0
 ```
+
+{% alert level="info" %}
+События хранятся ограниченное время (обычно около часа). Если вытеснения давно не было, эти команды могут ничего не вернуть — повторите демонстрацию вытеснения и выполните команды сразу после неё.
+{% endalert %}
 
 Проверьте, какие поды вытеснялись чаще всего:
 
