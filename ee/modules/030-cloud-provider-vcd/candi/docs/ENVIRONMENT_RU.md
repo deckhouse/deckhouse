@@ -26,12 +26,12 @@ Network (внутренняя сеть) может быть настроена �
 
 ### Права пользователя
 
-Для доступа к API VMware Cloud Director используйте один из следующих вариантов:
+Для доступа к API VMware Cloud Director достаточно одного из следующих вариантов:
 
-* роль `Organization Administrator` с дополнительным правом `Preserve All ExtraConfig Elements During OVF Import and Export`;
-* пользовательскую роль с набором прав, приведённым ниже. Этого набора достаточно для создания кластера, заказа узлов, включая CloudEphemeral со статической адресацией и DHCP, а также для работы с CSI-дисками и StorageClass.
+* роль `Organization Administrator` с правом `Preserve All ExtraConfig Elements During OVF Import and Export`. Такой вариант не требует настройки отдельной роли, но предоставляет пользователю полный административный доступ к организации;
+* пользовательская роль с набором прав, перечисленным ниже. Этого набора достаточно для создания кластера, заказа узлов, включая CloudEphemeral со статической адресацией и DHCP, а также для работы с CSI-дисками и StorageClass без предоставления дополнительных административных прав.
 
-В VMware Cloud Director права пользователя складываются из роли и из Rights Bundle — набора прав, который публикуется для организации. Право `Preserve All ExtraConfig Elements During OVF Import and Export` нужно добавить и в роль, и в Rights Bundle организации.
+В VMware Cloud Director права пользователя складываются из роли и из **Rights Bundle** — набора прав, который публикуется для организации. Право `Preserve All ExtraConfig Elements During OVF Import and Export` нужно добавить и в роль, и в Rights Bundle организации.
 
 {% alert level="warning" %}
 Без права `Preserve All ExtraConfig Elements During OVF Import and Export` в роли и в Rights Bundle организации `userdata` не передаётся в эфемерные виртуальные машины.

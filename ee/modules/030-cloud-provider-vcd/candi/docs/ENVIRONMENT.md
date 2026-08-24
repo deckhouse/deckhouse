@@ -26,12 +26,12 @@ Network (internal network) can be configured either by your VMware Cloud Directo
 
 ### User permissions
 
-To access the VMware Cloud Director API, use one of the following options:
+For access to the VMware Cloud Director API, one of the following options is sufficient:
 
-* The `Organization Administrator` role with the additional right `Preserve All ExtraConfig Elements During OVF Import and Export`.
-* A custom role with the set of rights listed below. This set is sufficient to create a cluster, provision nodes (including CloudEphemeral with static addressing and DHCP), and work with CSI disks and StorageClass.
+* The `Organization Administrator` role with the `Preserve All ExtraConfig Elements During OVF Import and Export` right. This option does not require configuring a separate role, but grants the user full administrative access to the organization.
+* A custom role with the set of rights listed below. This set is sufficient to create a cluster, provision nodes (including CloudEphemeral with static addressing and DHCP), and work with CSI disks and StorageClass without granting additional administrative rights.
 
-In VMware Cloud Director, user permissions come from the role and from a Rights Bundle — a set of rights published to the organization. Add the `Preserve All ExtraConfig Elements During OVF Import and Export` right both to the role and to the organization's Rights Bundle.
+In VMware Cloud Director, user permissions come from the role and from a **Rights Bundle** — a set of rights published to the organization. Add the `Preserve All ExtraConfig Elements During OVF Import and Export` right both to the role and to the organization's Rights Bundle.
 
 {% alert level="warning" %}
 Without the `Preserve All ExtraConfig Elements During OVF Import and Export` right in both the role and the organization's Rights Bundle, `userdata` is not passed to ephemeral virtual machines.
