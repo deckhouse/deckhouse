@@ -16,6 +16,7 @@ package utils //nolint:revive
 
 import (
 	"context"
+	"crypto/md5"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -29,6 +30,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -316,6 +318,43 @@ func EnsureModuleDocumentation(
 	}
 
 	return nil
+}
+
+// DeleteModuleDocumentation deletes module documentation, ignoring NotFound
+func DeleteModuleDocumentation(ctx context.Context, cli client.Client, moduleName string) error {
+	md := &v1alpha1.ModuleDocumentation{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: moduleName,
+		},
+	}
+
+	if err := cli.Delete(ctx, md); err != nil && !apierrors.IsNotFound(err) {
+		return fmt.Errorf("delete the '%s' module documentation: %w", moduleName, err)
+	}
+
+	return nil
+}
+
+// EnsureModuleDocumentationForRelease ensures module documentation from a deployed release
+func EnsureModuleDocumentationForRelease(ctx context.Context, cli client.Client, release *v1alpha1.ModuleRelease) error {
+	// mount point path: /modules/<module>
+	modulePath := fmt.Sprintf("/modules/%s", release.GetModuleName())
+	moduleVersion := "v" + release.GetVersion().String()
+
+	moduleChecksum := release.Labels[v1alpha1.ModuleReleaseLabelReleaseChecksum]
+	if moduleChecksum == "" {
+		moduleChecksum = fmt.Sprintf("%x", md5.Sum([]byte(moduleVersion)))
+	}
+
+	ownerRef := metav1.OwnerReference{
+		APIVersion: v1alpha1.ModuleReleaseGVK.GroupVersion().String(),
+		Kind:       v1alpha1.ModuleReleaseGVK.Kind,
+		Name:       release.GetName(),
+		UID:        release.GetUID(),
+		Controller: ptr.To(true),
+	}
+
+	return EnsureModuleDocumentation(ctx, cli, release.GetModuleName(), release.GetModuleSource(), moduleChecksum, moduleVersion, modulePath, ownerRef)
 }
 
 // GetNotificationConfig gets config from discovery secret

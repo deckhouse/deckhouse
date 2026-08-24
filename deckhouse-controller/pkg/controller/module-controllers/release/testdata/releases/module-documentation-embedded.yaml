@@ -65,3 +65,8 @@ properties:
   source: Embedded
 status:
   phase: Ready
+  conditions:
+    - type: EnabledByModuleConfig
+      status: "True"
+    - type: EnabledByModuleManager
+      status: "True"

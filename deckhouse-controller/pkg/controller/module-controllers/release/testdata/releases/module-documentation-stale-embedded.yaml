@@ -61,13 +61,15 @@ apiVersion: deckhouse.io/v1alpha1
 kind: Module
 metadata:
   name: parca
+properties:
+  source: Embedded
 status:
+  phase: Ready
   conditions:
     - type: EnabledByModuleConfig
       status: "True"
     - type: EnabledByModuleManager
       status: "True"
-  phase: Ready
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleDocumentation
@@ -83,5 +85,5 @@ metadata:
       name: parca-v1.4.2
 spec:
   checksum: 0b95d0f1c9b3d6f2b0e5f5b4a3c2d1e0
-  path: /parca/v1.4.2
+  path: /modules/parca
   version: v1.4.2
