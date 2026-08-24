@@ -69,3 +69,5 @@ shell:
       {{- include "image-build.build" $buildContext | indent 6 }}
     - chown 64535:64535 multitenancy-manager
     - chmod 0700 multitenancy-manager
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}
