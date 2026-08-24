@@ -374,4 +374,21 @@ document.addEventListener('DOMContentLoaded', function () {
 
     syncHeaderDisplay();
     window.addEventListener('resize', syncHeaderDisplay);
+
+    //Step scrolling in Getting started on mobile devices
+    const activeStep = document.querySelector('.gs-steps__point-num_active');
+    if (activeStep) {
+        function centerActiveStep(behavior) {
+            activeStep.scrollIntoView({
+                inline: 'center',
+                block: 'nearest',
+                behavior: behavior
+            });
+        }
+
+        centerActiveStep('smooth');
+        window.addEventListener('resize', function () {
+            centerActiveStep('auto');
+        });
+    }
 });
