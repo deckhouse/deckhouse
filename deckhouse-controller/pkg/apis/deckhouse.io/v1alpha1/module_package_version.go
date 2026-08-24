@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"strconv"
+	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -245,4 +246,53 @@ type ModulePackageVersionList struct {
 // MakeModulePackageVersionName returns a name following the format <repository>-<packageName>-<version>
 func MakeModulePackageVersionName(repository, packageName, version string) string {
 	return repository + "-" + packageName + "-" + version
+}
+
+// Names of the repositories the module packages come from during the migration
+// off the module sources.
+const (
+	// ModuleSourceNameDeckhouse is the built-in module source shipped with the platform.
+	ModuleSourceNameDeckhouse = "deckhouse"
+
+	// PackageRepositoryNameDeckhouseModules serves the modules of the "deckhouse"
+	// ModuleSource. The plain "deckhouse" name belongs to the application-packages
+	// repository, while the module source points at <registry>/modules.
+	PackageRepositoryNameDeckhouseModules = "deckhouse-modules"
+
+	// PackageRepositoryNameEmbedded stands for the Deckhouse image itself and
+	// resolves to no PackageRepository object.
+	PackageRepositoryNameEmbedded = "embedded"
+)
+
+// PackageRepositoryNameForModuleSource maps a ModuleSource name to the name of the
+// PackageRepository serving the same registry path.
+func PackageRepositoryNameForModuleSource(sourceName string) string {
+	if sourceName == ModuleSourceNameDeckhouse {
+		return PackageRepositoryNameDeckhouseModules
+	}
+
+	return sourceName
+}
+
+// MakeEmbeddedModulePackageVersionName returns the name of the version an embedded
+// module ships in: "embedded-<module>-<deckhouse version>". The version is sanitized:
+// a development build carries "+" metadata, which an object name cannot hold.
+func MakeEmbeddedModulePackageVersionName(moduleName, deckhouseVersion string) string {
+	return MakeModulePackageVersionName(PackageRepositoryNameEmbedded, moduleName, SanitizeVersionForName(deckhouseVersion))
+}
+
+// SanitizeVersionForName converts a version string into a form an object name can
+// hold: lowercased, every character outside [a-z0-9.-] replaced with "-", and
+// non-alphanumeric edges trimmed.
+func SanitizeVersionForName(version string) string {
+	mapped := strings.Map(func(r rune) rune {
+		switch {
+		case r >= 'a' && r <= 'z', r >= '0' && r <= '9', r == '.', r == '-':
+			return r
+		default:
+			return '-'
+		}
+	}, strings.ToLower(version))
+
+	return strings.Trim(mapped, ".-")
 }
