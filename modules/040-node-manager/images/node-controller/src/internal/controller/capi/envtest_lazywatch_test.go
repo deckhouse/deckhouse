@@ -21,7 +21,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -32,6 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/deckhouse/node-controller/internal/cloudprovider"
+	providermock "github.com/deckhouse/node-controller/internal/cloudprovider/mock"
 	"github.com/deckhouse/node-controller/internal/testenv"
 )
 
@@ -42,18 +42,6 @@ import (
 var _ = Describe("InstanceClass provider enumeration and lazy watches", func() {
 	dvpAlpha := schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "DVPInstanceClass"}
 
-	newRegistrationSecret := func(name, kind, version string) *corev1.Secret {
-		secret := &corev1.Secret{}
-		secret.Namespace = cloudprovider.RegistrationSecretNamespace
-		secret.Name = name
-		secret.Labels = map[string]string{cloudprovider.RegistrationSecretLabel: ""}
-		secret.Data = map[string][]byte{
-			cloudprovider.InstanceClassKindKey:       []byte(kind),
-			cloudprovider.InstanceClassAPIVersionKey: []byte(version),
-		}
-		return secret
-	}
-
 	It("enumerates the suite's provider through the label", func() {
 		pCatalog, err := cloudprovider.GetCatalog(suiteCtx, k8sClient)
 		Expect(err).NotTo(HaveOccurred())
@@ -62,7 +50,7 @@ var _ = Describe("InstanceClass provider enumeration and lazy watches", func() {
 	})
 
 	It("collapses the legacy and the per-provider Secret into one GVK", func() {
-		double := newRegistrationSecret("d8-node-manager-cloud-provider-dvp", "DVPInstanceClass", "v1alpha1")
+		double := providermock.InstanceClassRegistration("d8-node-manager-cloud-provider-dvp", "DVPInstanceClass", "v1alpha1")
 		Expect(k8sClient.Create(suiteCtx, double)).To(Succeed())
 		DeferCleanup(func() { _ = k8sClient.Delete(suiteCtx, double) })
 
@@ -73,7 +61,7 @@ var _ = Describe("InstanceClass provider enumeration and lazy watches", func() {
 	})
 
 	It("ignores a provider that does not publish the version", func() {
-		unversioned := newRegistrationSecret("d8-node-manager-cloud-provider-aws", "AWSInstanceClass", "")
+		unversioned := providermock.InstanceClassRegistration("d8-node-manager-cloud-provider-aws", "AWSInstanceClass", "")
 		Expect(k8sClient.Create(suiteCtx, unversioned)).To(Succeed())
 		DeferCleanup(func() { _ = k8sClient.Delete(suiteCtx, unversioned) })
 
@@ -128,7 +116,7 @@ var _ = Describe("InstanceClass provider enumeration and lazy watches", func() {
 		drainUntil("v1alpha1-" + ic.GetName())
 
 		By("registering the same kind at another served version after the source started")
-		late := newRegistrationSecret("d8-node-manager-cloud-provider-late", "DVPInstanceClass", "v1")
+		late := providermock.InstanceClassRegistration("d8-node-manager-cloud-provider-late", "DVPInstanceClass", "v1")
 		Expect(k8sClient.Create(ctx, late)).To(Succeed())
 		DeferCleanup(func() { _ = k8sClient.Delete(suiteCtx, late) })
 

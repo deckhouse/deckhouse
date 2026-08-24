@@ -31,6 +31,7 @@ import (
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/cloudprovider"
+	providermock "github.com/deckhouse/node-controller/internal/cloudprovider/mock"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 )
 
@@ -72,22 +73,6 @@ func testSecret(ns, name string, data map[string][]byte) *corev1.Secret {
 		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: name},
 		Data:       data,
 	}
-}
-
-// providerSecret builds a registration the way a provider module publishes one: labelled, because
-// the label is how it is found at all.
-func providerSecret(data map[string][]byte) *corev1.Secret {
-	secret := testSecret(cloudprovider.RegistrationSecretNamespace, cloudprovider.RegistrationSecretBaseName, data)
-	secret.Labels = map[string]string{cloudprovider.RegistrationSecretLabel: ""}
-	return secret
-}
-
-// cloudClusterConfig names the provider a NodeGroup resolves to. Without it the cluster runs no
-// cloud, every group resolves to nothing, and the cloud checks have nothing to run against.
-func cloudClusterConfig(provider string) *corev1.Secret {
-	return testSecret(clusterConfigSecretNamespace, clusterConfigSecretName, map[string][]byte{
-		"cluster-configuration.yaml": []byte("clusterType: Cloud\ncloud:\n  provider: " + provider + "\n"),
-	})
 }
 
 // testProvider resolves the provider a NodeGroup runs on the way a reconcile does.
@@ -178,11 +163,11 @@ func TestResolveNodeGroup_StaticWiresNameRolloutAndStatic(t *testing.T) {
 }
 
 func TestResolveNodeGroup_CloudKindMismatchErrors(t *testing.T) {
-	s := newTestService(t, providerSecret(map[string][]byte{
+	s := newTestService(t, providermock.DefaultRegistration(map[string][]byte{
 		"type":                    []byte(`yandex`),
 		"instanceClassKind":       []byte(`"YandexInstanceClass"`),
 		"instanceClassAPIVersion": []byte("v1alpha1"),
-	}), cloudClusterConfig("Yandex"))
+	}))
 	ng := &v1.NodeGroup{
 		ObjectMeta: metav1.ObjectMeta{Name: "worker"},
 		Spec: v1.NodeGroupSpec{

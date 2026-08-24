@@ -30,6 +30,7 @@ import (
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/cloudprovider"
+	providermock "github.com/deckhouse/node-controller/internal/cloudprovider/mock"
 )
 
 // The snapshot is the package's whole input. Building it in one place is what makes the derive and
@@ -56,7 +57,7 @@ func TestBuildSnapshot_StaticNodeGroupReadsStaticConfigOnly(t *testing.T) {
 // guess goes through the provider's conversion webhook, changes the spec, and renames the immutable
 // machine template the checksum points at.
 func TestBuildSnapshot_CloudEphemeralWithoutPublishedVersionSkipsInstanceClass(t *testing.T) {
-	s := newTestService(t, providerSecret(map[string][]byte{
+	s := newTestService(t, providermock.DefaultRegistration(map[string][]byte{
 		"type":              []byte(`aws`),
 		"instanceClassKind": []byte(`AWSInstanceClass`),
 	}))
@@ -108,11 +109,11 @@ func TestBuildSnapshot_ClassDeletedMidPassIsRecorded(t *testing.T) {
 
 	c := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(existing, providerSecret(map[string][]byte{
+		WithObjects(existing, providermock.DefaultRegistration(map[string][]byte{
 			"type":                    []byte(`aws`),
 			"instanceClassKind":       []byte(kind),
 			"instanceClassAPIVersion": []byte(`v1`),
-		}), cloudClusterConfig("AWS")).
+		})).
 		WithInterceptorFuncs(interceptor.Funcs{
 			// The List still returns it; the Get no longer does.
 			Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {

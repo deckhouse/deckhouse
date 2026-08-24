@@ -22,7 +22,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -36,6 +35,7 @@ import (
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/cloudprovider"
+	providermock "github.com/deckhouse/node-controller/internal/cloudprovider/mock"
 	"github.com/deckhouse/node-controller/internal/register"
 )
 
@@ -95,18 +95,11 @@ func TestReconcile_StaticClusterIsEnsuredWithoutAnyRegistration(t *testing.T) {
 
 // One key, one Cluster: a registration key must not also ensure the static one.
 func TestReconcile_RegistrationKeyEnsuresTheCloudClusterOnly(t *testing.T) {
-	registration := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: cloudprovider.RegistrationSecretNamespace,
-			Name:      cloudprovider.RegistrationSecretBaseName + "-yandex",
-			Labels:    map[string]string{cloudprovider.RegistrationSecretLabel: ""},
-		},
-		Data: map[string][]byte{
-			"type":            []byte("yandex"),
-			"capiClusterName": []byte("yandex"),
-			"capiClusterKind": []byte("YandexCluster"),
-		},
-	}
+	registration := providermock.Registration(cloudprovider.RegistrationSecretBaseName+"-yandex", map[string][]byte{
+		"type":            []byte("yandex"),
+		"capiClusterName": []byte("yandex"),
+		"capiClusterKind": []byte("YandexCluster"),
+	})
 	r, c := clusterReconciler(t, registration, staticNodeGroup("worker"))
 
 	_, err := r.Reconcile(context.Background(), ctrl.Request{

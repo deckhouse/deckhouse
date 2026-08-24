@@ -38,7 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
-	"github.com/deckhouse/node-controller/internal/cloudprovider"
+	providermock "github.com/deckhouse/node-controller/internal/cloudprovider/mock"
 )
 
 func newScheme() *runtime.Scheme {
@@ -112,22 +112,6 @@ func providerConfigSecret(zones []string) *corev1.Secret {
 	}
 }
 
-func registrationSecret(name, kind, apiVersion string) *corev1.Secret {
-	return &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: cloudprovider.RegistrationSecretNamespace,
-			Labels: map[string]string{
-				cloudprovider.RegistrationSecretLabel: "",
-			},
-		},
-		Data: map[string][]byte{
-			cloudprovider.InstanceClassKindKey:       []byte(kind),
-			cloudprovider.InstanceClassAPIVersionKey: []byte(apiVersion),
-		},
-	}
-}
-
 func moduleConfigGlobal(customTolerationKeys []string) *unstructured.Unstructured {
 	obj := &unstructured.Unstructured{}
 	obj.SetGroupVersionKind(schema.GroupVersionKind{
@@ -158,14 +142,7 @@ func kubernetesEndpoints(addressCount int) *corev1.Endpoints {
 }
 
 func TestValidation_ProviderType(t *testing.T) {
-	registration := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cloudprovider.RegistrationSecretBaseName,
-			Namespace: cloudprovider.RegistrationSecretNamespace,
-			Labels:    map[string]string{cloudprovider.RegistrationSecretLabel: ""},
-		},
-		Data: map[string][]byte{"type": []byte("openstack")},
-	}
+	registration := providermock.DefaultRegistration(map[string][]byte{"type": []byte("openstack")})
 
 	for _, tc := range []struct {
 		name        string
@@ -272,7 +249,7 @@ func TestValidation_MinPerZoneGreaterThanMaxPerZone(t *testing.T) {
 func TestValidation_MinPerZoneLessOrEqualMaxPerZone(t *testing.T) {
 	s := newScheme()
 
-	registration := registrationSecret(
+	registration := providermock.InstanceClassRegistration(
 		"d8-cloud-provider-aws",
 		"AWSInstanceClass",
 		"v1",
@@ -362,7 +339,7 @@ func TestValidation_RollingUpdateOnlyForCloudEphemeral(t *testing.T) {
 func TestValidation_RollingUpdateAllowedForCloudEphemeral(t *testing.T) {
 	s := newScheme()
 
-	registration := registrationSecret(
+	registration := providermock.InstanceClassRegistration(
 		"d8-cloud-provider-aws",
 		"AWSInstanceClass",
 		"v1",
@@ -494,7 +471,7 @@ func TestValidation_CloudNameLengthOK(t *testing.T) {
 
 	sec := clusterConfigSecret("Cloud", "short", "", 0)
 
-	registration := registrationSecret(
+	registration := providermock.InstanceClassRegistration(
 		"d8-cloud-provider-aws",
 		"AWSInstanceClass",
 		"v1",
@@ -561,7 +538,7 @@ func TestValidation_ValidZones(t *testing.T) {
 	clusterSec := clusterConfigSecret("Cloud", "test", "", 0)
 	provSec := providerConfigSecret([]string{"eu-west-1a", "eu-west-1b", "eu-west-1c"})
 
-	registration := registrationSecret(
+	registration := providermock.InstanceClassRegistration(
 		"d8-cloud-provider-aws",
 		"AWSInstanceClass",
 		"v1",
@@ -592,7 +569,7 @@ func TestValidation_ZonesValidation_NoProviderConfig(t *testing.T) {
 	// No provider config secret - zones validation is skipped (no zones to check against)
 	clusterSec := clusterConfigSecret("Cloud", "test", "", 0)
 
-	registration := registrationSecret(
+	registration := providermock.InstanceClassRegistration(
 		"d8-cloud-provider-aws",
 		"AWSInstanceClass",
 		"v1",
@@ -623,7 +600,7 @@ func TestValidation_ZonesValidation_SkippedWhenNoZonesSpecified(t *testing.T) {
 	clusterSec := clusterConfigSecret("Cloud", "test", "", 0)
 	provSec := providerConfigSecret([]string{"eu-west-1a"})
 
-	registration := registrationSecret(
+	registration := providermock.InstanceClassRegistration(
 		"d8-cloud-provider-aws",
 		"AWSInstanceClass",
 		"v1",
@@ -947,7 +924,7 @@ func TestValidation_ProviderConfigNotFound_AnyCluster(t *testing.T) {
 	// No provider config - zones validation is skipped when no provider config exists
 	clusterSec := clusterConfigSecret("Cloud", "test", "", 0)
 
-	registration := registrationSecret(
+	registration := providermock.InstanceClassRegistration(
 		"d8-cloud-provider-aws",
 		"AWSInstanceClass",
 		"v1",
@@ -1080,7 +1057,7 @@ func TestLoadProviderClusterConfig_InvalidJSON(t *testing.T) {
 func TestValidation_RegisteredInstanceClassKindAllowed(t *testing.T) {
 	s := newScheme()
 
-	registration := registrationSecret(
+	registration := providermock.InstanceClassRegistration(
 		"d8-cloud-provider-dvp",
 		"DVPInstanceClass",
 		"v1",
@@ -1122,7 +1099,7 @@ func TestValidation_RegisteredInstanceClassKindAllowed(t *testing.T) {
 func TestValidation_UnregisteredInstanceClassKindDenied(t *testing.T) {
 	s := newScheme()
 
-	registration := registrationSecret(
+	registration := providermock.InstanceClassRegistration(
 		"d8-cloud-provider-dvp",
 		"DVPInstanceClass",
 		"v1",
@@ -1207,12 +1184,12 @@ func TestValidation_UnchangedInstanceClassKindAllowedOnUpdate(t *testing.T) {
 func TestValidation_MultipleRegisteredInstanceClassKinds(t *testing.T) {
 	s := newScheme()
 
-	dvpRegistration := registrationSecret(
+	dvpRegistration := providermock.InstanceClassRegistration(
 		"d8-cloud-provider-dvp",
 		"DVPInstanceClass",
 		"v1",
 	)
-	awsRegistration := registrationSecret(
+	awsRegistration := providermock.InstanceClassRegistration(
 		"d8-cloud-provider-aws",
 		"AWSInstanceClass",
 		"v1",

@@ -30,7 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
-	"github.com/deckhouse/node-controller/internal/cloudprovider"
+	providermock "github.com/deckhouse/node-controller/internal/cloudprovider/mock"
 	"github.com/deckhouse/node-controller/internal/register"
 )
 
@@ -322,29 +322,12 @@ func TestReconcile_CloudValidationErrorPublished(t *testing.T) {
 			},
 		},
 	}
-	cloudProvider := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cloudprovider.RegistrationSecretBaseName,
-			Namespace: cloudprovider.RegistrationSecretNamespace,
-			// Registrations are found by this label, never by name.
-			Labels: map[string]string{cloudprovider.RegistrationSecretLabel: ""},
-		},
-		Data: map[string][]byte{
-			"type":                    []byte("aws"),
-			"instanceClassKind":       []byte("AWSInstanceClass"),
-			"instanceClassAPIVersion": []byte("v1alpha1"),
-		},
-	}
-	// The cluster configuration is what hands a NodeGroup its provider, and the provider is what
-	// names the only InstanceClass kind the group may reference.
-	clusterConfig := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Name: "d8-cluster-configuration", Namespace: "kube-system"},
-		Data: map[string][]byte{
-			"cluster-configuration.yaml": []byte("clusterType: Cloud\ncloud:\n  provider: AWS\n"),
-		},
-	}
-
-	r, rec := newReconciler(t, ng, cloudProvider, clusterConfig)
+	cloudProvider := providermock.DefaultRegistration(map[string][]byte{
+		"type":                    []byte("aws"),
+		"instanceClassKind":       []byte("AWSInstanceClass"),
+		"instanceClassAPIVersion": []byte("v1alpha1"),
+	})
+	r, rec := newReconciler(t, ng, cloudProvider)
 	doReconcile(t, r, "cloud")
 
 	updated := getNodeGroup(t, r, "cloud")
@@ -369,21 +352,7 @@ func TestReconcile_CloudValidationErrorPublished(t *testing.T) {
 // publishes the verdict instead of failing, and a corrected field clears it again. Which
 // declarations hold is cloudprovider.TestValidateNodeGroupProvider.
 func TestReconcile_WrongProviderTypeIsPublishedInTheStatus(t *testing.T) {
-	registration := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cloudprovider.RegistrationSecretBaseName,
-			Namespace: cloudprovider.RegistrationSecretNamespace,
-			Labels:    map[string]string{cloudprovider.RegistrationSecretLabel: ""},
-		},
-		Data: map[string][]byte{"type": []byte("yandex")},
-	}
-	cloudCluster := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Name: "d8-cluster-configuration", Namespace: "kube-system"},
-		Data: map[string][]byte{
-			// ClusterConfiguration spells it Yandex, the registration yandex.
-			"cluster-configuration.yaml": []byte("clusterType: Cloud\ncloud:\n  provider: Yandex\n"),
-		},
-	}
+	registration := providermock.DefaultRegistration(map[string][]byte{"type": []byte("yandex")})
 
 	for _, tc := range []struct {
 		name     string
@@ -413,7 +382,7 @@ func TestReconcile_WrongProviderTypeIsPublishedInTheStatus(t *testing.T) {
 				Spec:       v1.NodeGroupSpec{NodeType: tc.nodeType, ProviderType: tc.declared},
 			}
 
-			r, _ := newReconciler(t, ng, registration.DeepCopy(), cloudCluster.DeepCopy())
+			r, _ := newReconciler(t, ng, registration.DeepCopy())
 			doReconcile(t, r, tc.name)
 			requireErrorCondition(t, getNodeGroup(t, r, tc.name), tc.wantErr)
 			if tc.wantErr == "" {

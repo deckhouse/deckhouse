@@ -27,7 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/yaml"
 
-	"github.com/deckhouse/node-controller/internal/cloudprovider"
+	providermock "github.com/deckhouse/node-controller/internal/cloudprovider/mock"
 )
 
 var mandatoryInputKeys = []string{
@@ -63,7 +63,7 @@ func TestBuild_MandatoryFieldsAlwaysPresent(t *testing.T) {
 
 func TestBuild_OptionalBlocksPopulated(t *testing.T) {
 	s := newService(t,
-		providerSecret(cloudprovider.RegistrationSecretBaseName, map[string][]byte{"type": []byte(`"yandex"`)}),
+		providermock.DefaultRegistration(map[string][]byte{"type": []byte(`"yandex"`)}),
 		secret(kubeSystemNS, apiProxyCertSecretName, map[string][]byte{"crt": []byte("C"), "key": []byte("K")}),
 		secret(kubeSystemNS, controlPlaneArgsSecretName, map[string][]byte{
 			"arguments.json":    []byte(`{"nodeMonitorGracePeriod":40}`),
