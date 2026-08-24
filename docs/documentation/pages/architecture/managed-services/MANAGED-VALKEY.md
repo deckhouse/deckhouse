@@ -33,34 +33,34 @@ The level-2 C4 architecture of the [`managed-valkey`](/modules/managed-valkey/) 
 
 The module consists of the following components:
 
-1. `managed-valkey-operator` (Deployment): Kubernetes operator consisting of a single container `manager` that performs the following operations:
+1. managed-valkey-operator (Deployment): Kubernetes operator consisting of a single container manager that performs the following operations:
 
    * It reconciles [Valkey](/modules/managed-valkey/cr.html#valkey) custom resources in all user namespaces. The Valkey resource defines the settings of the Valkey instance.
 
    * It creates and manages StatefulSet, Secret, ConfigMap, and PersistentVolumeClaim resources related to the Valkey instance.
 
-1. `managed-valkey-webhook` (Deployment): Component consisting of a single container `manager`.
+1. managed-valkey-webhook (Deployment): Component consisting of a single container manager.
 
-   The `managed-valkey-webhook` component validates and mutates [Valkey](/modules/managed-valkey/cr.html#valkey) custom resources, and mutates [ValkeyClass](/modules/managed-valkey/cr.html#valkeyclass) custom resources using the [Validating/Mutating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/) mechanism.
+   The managed-valkey-webhook component validates and mutates [Valkey](/modules/managed-valkey/cr.html#valkey) custom resources, and mutates [ValkeyClass](/modules/managed-valkey/cr.html#valkeyclass) custom resources using the [Validating/Mutating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/) mechanism.
 
-1. `d8ms-valkey-\<INSTANCE_NAME>` (StatefulSet): Component that starts and prepares the Valkey instance. It is created by the `managed-valkey-operator` component.
+1. d8ms-valkey-\<INSTANCE_NAME> (StatefulSet): Component that starts and prepares the Valkey instance. It is created by the managed-valkey-operator component.
 
    It consists of two containers:
 
-   * `valkey`: It is an [open-source project](https://github.com/valkey-io/valkey).
-   * `agent`: Sidecar container that configures the main container according to the parameters in the Valkey resource.
+   * valkey: It is an [open-source project](https://github.com/valkey-io/valkey).
+   * agent: Sidecar container that configures the main container according to the parameters in the Valkey resource.
 
 ## Module interactions
 
-The module interacts with the `kube-apiserver` component, through which:
+The module interacts with the kube-apiserver component, through which:
 
 * It manages Valkey, ValkeyClass, and [Certificate](https://cert-manager.io/docs/usage/certificate/) custom resources.
 * It manages StatefulSet, Secret, ConfigMap, and PersistentVolumeClaim resources.
 
 The following external components interact with the module:
 
-1. `kube-apiserver`: Processes requests to validate and mutate Valkey custom resources.
+1. kube-apiserver: Processes requests to validate and mutate Valkey custom resources.
 
-1. `prometheus-main`: Collects metrics from the `managed-valkey-operator` and `managed-valkey-webhook` components.
+1. prometheus-main: Collects metrics from the managed-valkey-operator and managed-valkey-webhook components.
 
 1. User applications: Send requests to the Valkey instance.

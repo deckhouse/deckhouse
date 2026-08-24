@@ -33,34 +33,34 @@ description: Архитектура модуля managed-valkey в Deckhouse Kub
 
 Модуль состоит из следующих компонентов:
 
-1. `managed-valkey-operator` (Deployment) — оператор Kubernetes, состоящий из одного контейнера `manager` и выполняющий следующие операции:
+1. managed-valkey-operator (Deployment) — оператор Kubernetes, состоящий из одного контейнера manager и выполняющий следующие операции:
 
    - согласование состояния кастомных ресурсов [Valkey](/modules/managed-valkey/cr.html#valkey) во всех пользовательских неймспейсах. Ресурс Valkey определяет настройки инстанса Valkey;
 
    - создание и управление ресурсами StatefulSet, Secret, ConfigMap и PersistentVolumeClaim, относящимися к инстансу Valkey.
 
-1. `managed-valkey-webhook` (Deployment) — компонент, состоящий из одного контейнера `manager`.
+1. managed-valkey-webhook (Deployment) — компонент, состоящий из одного контейнера manager.
 
    Компонент выполняет валидацию и мутацию кастомных ресурсов [Valkey](/modules/managed-valkey/cr.html#valkey), а также мутацию кастомных ресурсов [ValkeyClass](/modules/managed-valkey/cr.html#valkeyclass) с помощью механизмов [Validating Admission Controller и Mutating Admission Controller](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/).
 
-1. `d8ms-valkey-\<INSTANCE_NAME>` (StatefulSet) — компонент выполняет запуск и подготовку инстанса Valkey. Создаётся компонентом `managed-valkey-operator`.
+1. d8ms-valkey-\<INSTANCE_NAME> (StatefulSet) — компонент выполняет запуск и подготовку инстанса Valkey. Создаётся компонентом managed-valkey-operator.
 
    Состоит из двух контейнеров:
 
-   - `valkey` — является [Open Source-проектом](https://github.com/valkey-io/valkey);
-   - `agent` — сайдкар-контейнер, выполняющий настройку основного контейнера в соответствии с параметрами в ресурсе Valkey.
+   - valkey — является [Open Source-проектом](https://github.com/valkey-io/valkey);
+   - agent — сайдкар-контейнер, выполняющий настройку основного контейнера в соответствии с параметрами в ресурсе Valkey.
 
 ## Взаимодействия модуля
 
-Модуль взаимодействует с компонентом `kube-apiserver`, через который:
+Модуль взаимодействует с компонентом kube-apiserver, через который:
 
 - управляет кастомными ресурсами Valkey, ValkeyClass и [Certificate](https://cert-manager.io/docs/usage/certificate/);
 - управляет ресурсами StatefulSet, Secret, ConfigMap и PersistentVolumeClaim.
 
 С модулем взаимодействуют следующие внешние компоненты:
 
-1. `kube-apiserver` — обрабатывает запросы на валидацию и мутацию кастомных ресурсов Valkey.
+1. kube-apiserver — обрабатывает запросы на валидацию и мутацию кастомных ресурсов Valkey.
 
-1. `prometheus-main` — собирает метрики компонентов `managed-valkey-operator` и `managed-valkey-webhook`.
+1. prometheus-main — собирает метрики компонентов managed-valkey-operator и managed-valkey-webhook.
 
 1. Пользовательские приложения — отправляют запросы к инстансу Valkey.
