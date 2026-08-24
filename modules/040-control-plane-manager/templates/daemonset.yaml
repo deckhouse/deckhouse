@@ -258,6 +258,7 @@ spec:
       labels:
         app: {{ $dsMode }}
         component: control-plane-manager
+        security.deckhouse.io/security-policy-exception: d8-control-plane-manager
     spec:
       {{- if eq $profile "main" }}
       {{- include "helm_lib_node_selector" (tuple $ "master") | nindent 6 }}

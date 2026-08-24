@@ -1,0 +1,54 @@
+{{- if or (.Values.global.discovery.apiVersions | has "deckhouse.io/v1alpha1/SecurityPolicyException") (.Capabilities.APIVersions.Has "deckhouse.io/v1alpha1/SecurityPolicyException") }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: kube-scheduler
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kube-scheduler")) | nindent 2 }}
+spec:
+  securityContext:
+    allowPrivilegeEscalation:
+      allowedValue: true
+      metadata:
+        description: |
+          kube-scheduler does not set allowPrivilegeEscalation explicitly; the runtime
+          default is true. The static pod runs as root with host mounts and cannot use
+          the restricted default without changing the control-plane image.
+    runAsNonRoot:
+      allowedValue: false
+      metadata:
+        description: |
+          kube-scheduler must run as root to read its kubeconfig and Deckhouse extra
+          files from the master node filesystem.
+    runAsUser:
+      allowedValues:
+        - 0
+      metadata:
+        description: |
+          UID 0 is required for hostPath access to scheduler configuration.
+  network:
+    hostNetwork:
+      allowedValue: true
+      metadata:
+        description: |
+          kube-scheduler is a static control-plane pod that serves secure health and
+          metrics endpoints on the node loopback/network.
+  volumes:
+    types:
+      allowedValues:
+        - hostPath
+      metadata:
+        description: |
+          kube-scheduler mounts host kubeconfig and Deckhouse extra files.
+    hostPath:
+      allowedValues:
+        - path: /etc/kubernetes/deckhouse/extra-files
+          readOnly: true
+          metadata:
+            description: Deckhouse-managed scheduler configuration snippets.
+        - path: /etc/kubernetes/scheduler.conf
+          readOnly: true
+          metadata:
+            description: scheduler kubeconfig on the master node.
+{{- end }}

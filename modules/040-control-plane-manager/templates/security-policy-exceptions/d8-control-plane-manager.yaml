@@ -1,0 +1,72 @@
+{{- if or (.Values.global.discovery.apiVersions | has "deckhouse.io/v1alpha1/SecurityPolicyException") (.Capabilities.APIVersions.Has "deckhouse.io/v1alpha1/SecurityPolicyException") }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: d8-control-plane-manager
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-control-plane-manager")) | nindent 2 }}
+spec:
+  securityContext:
+    runAsNonRoot:
+      allowedValue: false
+      metadata:
+        description: |
+          control-plane-manager must run as root to manage host control-plane files
+          under /etc/kubernetes, /var/lib/etcd and kubelet PKI directories.
+    runAsUser:
+      allowedValues:
+        - 0
+      metadata:
+        description: |
+          UID 0 is required for hostPath writes used to render static-pod manifests
+          and manage etcd/PKI state on the node.
+    capabilities:
+      allowedValues:
+        add:
+          - SYS_CHROOT
+        drop:
+          - ALL
+      metadata:
+        description: |
+          SYS_CHROOT is required to enter the host filesystem namespace when managing
+          control-plane configuration on the master node.
+  network:
+    hostNetwork:
+      allowedValue: true
+      metadata:
+        description: |
+          control-plane-manager talks to the local kubernetes-api-proxy on 127.0.0.1
+          so it stays available while the cluster network is being configured.
+    hostPorts:
+      - port: 4296
+        protocol: TCP
+        metadata:
+          description: HTTPS metrics endpoint of control-plane-manager (containerPort with hostNetwork).
+  volumes:
+    types:
+      allowedValues:
+        - hostPath
+      metadata:
+        description: |
+          control-plane-manager manages control-plane files on the node and cannot
+          replace these mounts with pod-local storage.
+    hostPath:
+      allowedValues:
+        - path: /etc/kubernetes/
+          readOnly: false
+          metadata:
+            description: Control-plane manifests, kubeconfigs and related node state.
+        - path: /root/.kube/
+          readOnly: false
+          metadata:
+            description: Node-admin kubeconfig symlink directory on master nodes.
+        - path: /var/lib/etcd
+          readOnly: false
+          metadata:
+            description: etcd data directory managed during control-plane operations.
+        - path: /var/lib/kubelet/pki/
+          readOnly: false
+          metadata:
+            description: kubelet PKI directory used by control-plane certificate management.
+{{- end }}

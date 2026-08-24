@@ -41,6 +41,7 @@ metadata:
   labels:
     component: kube-scheduler
     tier: control-plane
+    security.deckhouse.io/security-policy-exception: kube-scheduler
   name: kube-scheduler
   namespace: kube-system
 spec:

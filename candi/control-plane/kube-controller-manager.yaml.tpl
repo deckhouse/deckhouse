@@ -42,6 +42,7 @@ metadata:
   labels:
     component: kube-controller-manager
     tier: control-plane
+    security.deckhouse.io/security-policy-exception: kube-controller-manager
   name: kube-controller-manager
   namespace: kube-system
 spec:

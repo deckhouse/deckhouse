@@ -20,6 +20,7 @@ metadata:
   labels:
     component: etcd
     tier: control-plane
+    security.deckhouse.io/security-policy-exception: etcd
   name: etcd
   namespace: kube-system
 spec:

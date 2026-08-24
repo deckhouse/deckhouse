@@ -1,0 +1,72 @@
+{{- if or (.Values.global.discovery.apiVersions | has "deckhouse.io/v1alpha1/SecurityPolicyException") (.Capabilities.APIVersions.Has "deckhouse.io/v1alpha1/SecurityPolicyException") }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: kube-controller-manager
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kube-controller-manager")) | nindent 2 }}
+spec:
+  securityContext:
+    allowPrivilegeEscalation:
+      allowedValue: true
+      metadata:
+        description: |
+          kube-controller-manager does not set allowPrivilegeEscalation explicitly; the
+          runtime default is true. The static pod runs as root with host mounts and
+          cannot use the restricted default without changing the control-plane image.
+    runAsNonRoot:
+      allowedValue: false
+      metadata:
+        description: |
+          kube-controller-manager must run as root to read its kubeconfig, PKI and
+          CA trust stores from the master node filesystem.
+    runAsUser:
+      allowedValues:
+        - 0
+      metadata:
+        description: |
+          UID 0 is required for hostPath access to controller-manager configuration
+          and certificates.
+  network:
+    hostNetwork:
+      allowedValue: true
+      metadata:
+        description: |
+          kube-controller-manager is a static control-plane pod that serves secure
+          health and metrics endpoints on the node loopback/network.
+  volumes:
+    types:
+      allowedValues:
+        - hostPath
+      metadata:
+        description: |
+          kube-controller-manager mounts host kubeconfig, PKI, CA bundles and the
+          flexvolume plugin directory.
+    hostPath:
+      allowedValues:
+        - path: /etc/kubernetes/controller-manager.conf
+          readOnly: true
+          metadata:
+            description: controller-manager kubeconfig on the master node.
+        - path: /etc/kubernetes/deckhouse/extra-files
+          readOnly: true
+          metadata:
+            description: Deckhouse-managed controller-manager configuration snippets.
+        - path: /etc/kubernetes/pki
+          readOnly: true
+          metadata:
+            description: Kubernetes control-plane PKI directory.
+        - path: /etc/ssl/certs
+          readOnly: true
+          metadata:
+            description: Host SSL certificate bundle.
+        - path: /usr/libexec/kubernetes/kubelet-plugins/volume/exec
+          readOnly: false
+          metadata:
+            description: FlexVolume plugin directory used by volume controllers.
+        - path: /usr/share/ca-certificates
+          readOnly: true
+          metadata:
+            description: Distribution CA certificates.
+{{- end }}

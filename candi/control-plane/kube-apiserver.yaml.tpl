@@ -93,6 +93,7 @@ metadata:
   labels:
     component: kube-apiserver
     tier: control-plane
+    security.deckhouse.io/security-policy-exception: kube-apiserver
   name: kube-apiserver
   namespace: kube-system
 spec:
