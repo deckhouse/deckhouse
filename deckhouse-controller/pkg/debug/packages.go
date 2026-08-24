@@ -47,7 +47,7 @@ func DefinePackagesCommands(rootCmd *cobra.Command) {
 				defer client.Close()
 
 				ctx := context.Background()
-				out, err := client.Get(ctx, withQuery("packages/dump", "name", packageName))
+				out, err := client.Get(ctx, withQuery("api/v1/packages/dump", "name", packageName))
 				if err != nil {
 					return err
 				}
@@ -76,7 +76,7 @@ func DefinePackagesCommands(rootCmd *cobra.Command) {
 				defer client.Close()
 
 				ctx := context.Background()
-				out, err := client.Get(ctx, "packages/global/dump")
+				out, err := client.Get(ctx, "api/v1/packages/global/dump")
 				if err != nil {
 					return err
 				}
@@ -105,7 +105,7 @@ func DefinePackagesCommands(rootCmd *cobra.Command) {
 				defer client.Close()
 
 				ctx := context.Background()
-				out, err := client.Get(ctx, withQuery("packages/scheduler/dump", "name", packageName))
+				out, err := client.Get(ctx, withQuery("api/v1/scheduler/dump", "name", packageName))
 				if err != nil {
 					return err
 				}
@@ -135,7 +135,7 @@ func DefinePackagesCommands(rootCmd *cobra.Command) {
 				defer client.Close()
 
 				ctx := context.Background()
-				out, err := client.Get(ctx, withQuery("packages/queues/dump", "name", packageName))
+				out, err := client.Get(ctx, withQuery("api/v1/queues/dump", "name", packageName))
 				if err != nil {
 					return err
 				}
@@ -162,7 +162,7 @@ func DefinePackagesCommands(rootCmd *cobra.Command) {
 				defer client.Close()
 
 				ctx := context.Background()
-				out, err := client.Get(ctx, "packages/render", args[0])
+				out, err := client.Get(ctx, "api/v1/packages/render", args[0])
 				if err != nil {
 					return err
 				}
@@ -188,7 +188,7 @@ func DefinePackagesCommands(rootCmd *cobra.Command) {
 				defer client.Close()
 
 				ctx := context.Background()
-				out, err := client.Get(ctx, "packages/snapshots", args[0])
+				out, err := client.Get(ctx, "api/v1/packages/snapshots", args[0])
 				if err != nil {
 					return err
 				}

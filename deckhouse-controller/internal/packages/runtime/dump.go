@@ -136,23 +136,49 @@ func (r *Runtime) DumpByName(name string) []byte {
 	return marshalled
 }
 
-// renderManifests renders the Helm chart for a loaded package. Used by the debug server.
-func (r *Runtime) renderManifests(ctx context.Context, name string) (string, error) {
-	r.mu.Lock()
+// Snapshots returns the hook snapshots of a package, reporting false when no
+// package with that name is loaded.
+func (r *Runtime) Snapshots(name string) ([]byte, bool) {
+	r.mu.RLock()
+	app := r.apps[name]
+	mod := r.modules[name]
+	r.mu.RUnlock()
 
-	if app := r.apps[name]; app != nil {
-		r.mu.Unlock()
-		return r.nelmService.Render(ctx, app.GetNamespace(), app)
+	switch {
+	case app != nil:
+		return app.GetHookSnapshotsDump(), true
+	case mod != nil:
+		return mod.GetHookSnapshotsDump(), true
+	case name == r.global.GetName():
+		return r.global.GetHookSnapshotsDump(), true
 	}
 
-	if module := r.modules[name]; module != nil {
+	return nil, false
+}
+
+// Render renders the Helm chart of a loaded package.
+func (r *Runtime) Render(ctx context.Context, name string) (string, error) {
+	r.mu.Lock()
+
+	if pkg := r.apps[name]; pkg != nil {
 		r.mu.Unlock()
-		return r.nelmService.Render(ctx, app.NamespaceDeckhouse, module)
+		return r.nelmService.Render(ctx, pkg.GetNamespace(), pkg)
+	}
+
+	if pkg := r.modules[name]; pkg != nil {
+		r.mu.Unlock()
+		return r.nelmService.Render(ctx, app.NamespaceDeckhouse, pkg)
 	}
 
 	r.mu.Unlock()
 
 	return "", errors.New("no package found")
+}
+
+// DumpQueues returns a YAML snapshot of the task queues of one package, or of
+// every queue when name is empty.
+func (r *Runtime) DumpQueues(name string) []byte {
+	return r.queueService.Dump(r.collectQueues(name)...)
 }
 
 // collectQueues expands a package name into all its queue names (main + hook sub-queues).
