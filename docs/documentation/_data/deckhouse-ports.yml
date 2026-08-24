@@ -180,8 +180,13 @@ groups:
   - ports: "4216"
     protocol: TCP
     description:
+      en: "`storage-status` agent metrics, the address the proxy forwards to"
+      ru: "Метрики агента модуля `storage-status`, адрес, на который проксируется запрос"
+  - ports: "4217"
+    protocol: TCP
+    description:
       en: "`storage-status` agent metrics"
-      ru: "Метрики агента `storage-status`"
+      ru: "Метрики агента модуля `storage-status`"
   - ports: "4218"
     protocol: TCP/UDP
     description:
@@ -372,26 +377,46 @@ groups:
     description:
       en: "`service-with-healthchecks` module metrics"
       ru: "Метрики модуля `service-with-healthchecks`"
+  - ports: "4266"
+    protocol: TCP
+    description:
+      en: "`csi-scsi-generic` CSI controller metrics"
+      ru: "Метрики CSI-контроллера модуля `csi-scsi-generic`"
+  - ports: "4267"
+    protocol: TCP
+    description:
+      en: "`csi-scsi-generic` CSI node metrics"
+      ru: "Метрики CSI-агентов модуля `csi-scsi-generic`"
   - ports: "4269"
     protocol: TCP
     description:
-      en: "`sds-replicated-volume` CSI node healthcheck"
-      ru: "Healthcheck CSI-агентов модуля `sds-replicated-volume`"
+      en: "`sds-replicated-volume` agent healthcheck"
+      ru: "Healthcheck агента модуля `sds-replicated-volume`"
   - ports: "4270"
     protocol: TCP
     description:
-      en: "`sds-replicated-volume` CSI node metrics"
-      ru: "Метрики CSI-агентов модуля `sds-replicated-volume`"
+      en: "`sds-replicated-volume` agent metrics, the address the proxy forwards to"
+      ru: "Метрики агента модуля `sds-replicated-volume`, адрес, на который проксируется запрос"
   - ports: "4271"
     protocol: TCP
     description:
-      en: "`sds-replicated-volume` CSI controller healthcheck"
-      ru: "Healthcheck CSI-контроллера модуля `sds-replicated-volume`"
+      en: "`sds-replicated-volume` controller healthcheck"
+      ru: "Healthcheck контроллера модуля `sds-replicated-volume`"
   - ports: "4272"
     protocol: TCP
     description:
-      en: "`sds-replicated-volume` CSI controller metrics"
-      ru: "Метрики CSI-контроллера модуля `sds-replicated-volume`"
+      en: "`sds-replicated-volume` controller metrics"
+      ru: "Метрики контроллера модуля `sds-replicated-volume`"
+  - ports: "4273"
+    protocol: TCP
+    description:
+      en: "`sds-replicated-volume` DRBD metrics of the agent"
+      ru: "Метрики DRBD агента модуля `sds-replicated-volume`"
+  - ports: "4274"
+    protocol: TCP
+    description:
+      en: "`sds-replicated-volume` DRBD metrics of the agent, the address the proxy forwards to"
+      ru: "Метрики DRBD агента модуля `sds-replicated-volume`, адрес, на который проксируется запрос"
   - ports: "4135-4199"
     protocol: TCP
     description:
