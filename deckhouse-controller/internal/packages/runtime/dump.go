@@ -175,9 +175,9 @@ func (r *Runtime) Render(ctx context.Context, name string) (string, error) {
 	return "", errors.New("no package found")
 }
 
-// DumpQueues returns a YAML snapshot of the task queues of one package, or of
-// every queue when name is empty.
-func (r *Runtime) DumpQueues(name string) []byte {
+// DumpQueues returns a snapshot of the task queues of one package, or of every
+// queue when name is empty. The transport decides the response format.
+func (r *Runtime) DumpQueues(name string) any {
 	return r.queueService.Dump(r.collectQueues(name)...)
 }
 

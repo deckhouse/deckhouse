@@ -25,8 +25,9 @@ import (
 
 // Provider provides task queue state to the endpoints.
 type Provider interface {
-	// DumpQueues returns the queues of one package, or every queue when name is empty.
-	DumpQueues(name string) []byte
+	// DumpQueues returns a serialisable snapshot of the queues of one package, or
+	// of every queue when name is empty.
+	DumpQueues(name string) any
 }
 
 // Handler serves the queue endpoints.
@@ -49,7 +50,7 @@ func (h *Handler) Routes() chi.Router {
 }
 
 // dump serves every queue with its tasks, or the queues of the package named by
-// the name query parameter.
+// the name query parameter. The format query parameter selects YAML or JSON.
 func (h *Handler) dump(w http.ResponseWriter, req *http.Request) {
-	respond.YAML(w, h.provider.DumpQueues(req.URL.Query().Get("name")))
+	respond.Dump(w, req, h.provider.DumpQueues(req.URL.Query().Get("name")))
 }
