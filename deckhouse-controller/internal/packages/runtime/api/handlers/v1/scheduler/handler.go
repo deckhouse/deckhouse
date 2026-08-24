@@ -4,14 +4,13 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
 // Package scheduler serves the scheduler nodes that decide package enablement.
 package scheduler
 
@@ -20,41 +19,38 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/debug/handlers/respond"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/api"
 )
 
 // Provider provides scheduler state to the endpoints.
 type Provider interface {
-	Dump() []byte
+	Dump() any
 	// DumpByName returns nil when no scheduler node has that name.
-	DumpByName(name string) []byte
+	DumpByName(name string) any
 }
 
-// Handler serves the scheduler endpoints.
-type Handler struct {
-	provider Provider
-}
+// NewHandler returns the scheduler subtree, ready to mount.
+func NewHandler(provider Provider) chi.Router {
+	h := &handler{provider: provider}
 
-// New creates the handler on top of the scheduler.
-func New(provider Provider) *Handler {
-	return &Handler{provider: provider}
-}
-
-// Routes returns the subtree to mount.
-func (h *Handler) Routes() chi.Router {
 	router := chi.NewRouter()
-
 	router.Get("/dump", h.dump)
 
 	return router
 }
 
+// handler serves the scheduler endpoints.
+type handler struct {
+	provider Provider
+}
+
 // dump serves every scheduler node, or the one named by the name query parameter.
-func (h *Handler) dump(w http.ResponseWriter, req *http.Request) {
+func (h *handler) dump(w http.ResponseWriter, req *http.Request) {
 	if name := req.URL.Query().Get("name"); name != "" {
-		respond.YAML(w, h.provider.DumpByName(name))
+		api.Write(w, req, h.provider.DumpByName(name))
+
 		return
 	}
 
-	respond.YAML(w, h.provider.Dump())
+	api.Write(w, req, h.provider.Dump())
 }

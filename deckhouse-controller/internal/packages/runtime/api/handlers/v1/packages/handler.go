@@ -4,14 +4,13 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
 // Package packages serves the state of loaded packages: values, rendered
 // manifests and hook snapshots. Every route here carries registry credentials
 // or Secret contents, so the subtree belongs on the socket transport only.
@@ -26,34 +25,25 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/debug/handlers/respond"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/api"
 )
 
 // Provider provides package state to the endpoints.
 type Provider interface {
-	Dump() []byte
+	Dump() any
 	// DumpByName returns nil when no package has that name.
-	DumpByName(name string) []byte
-	DumpGlobal() []byte
+	DumpByName(name string) any
+	DumpGlobal() any
 	Render(ctx context.Context, name string) (string, error)
 	// Snapshots reports false when no package with that name is loaded.
-	Snapshots(name string) ([]byte, bool)
+	Snapshots(name string) (any, bool)
 }
 
-// Handler serves the package endpoints.
-type Handler struct {
-	provider Provider
-}
+// NewHandler returns the package subtree, ready to mount.
+func NewHandler(provider Provider) chi.Router {
+	h := &handler{provider: provider}
 
-// New creates the handler on top of the runtime state.
-func New(provider Provider) *Handler {
-	return &Handler{provider: provider}
-}
-
-// Routes returns the subtree to mount.
-func (h *Handler) Routes() chi.Router {
 	router := chi.NewRouter()
-
 	router.Get("/dump", h.dump)
 	router.Get("/global/dump", h.global)
 	router.Get("/render/{name}", h.render)
@@ -62,23 +52,30 @@ func (h *Handler) Routes() chi.Router {
 	return router
 }
 
+// handler serves the package endpoints.
+type handler struct {
+	provider Provider
+}
+
 // dump serves every package, or the one named by the name query parameter.
-func (h *Handler) dump(w http.ResponseWriter, req *http.Request) {
+func (h *handler) dump(w http.ResponseWriter, req *http.Request) {
 	if name := req.URL.Query().Get("name"); name != "" {
-		respond.YAML(w, h.provider.DumpByName(name))
+		api.Write(w, req, h.provider.DumpByName(name))
+
 		return
 	}
 
-	respond.YAML(w, h.provider.Dump())
+	api.Write(w, req, h.provider.Dump())
 }
 
 // global serves the state of the global module.
-func (h *Handler) global(w http.ResponseWriter, _ *http.Request) {
-	respond.YAML(w, h.provider.DumpGlobal())
+func (h *handler) global(w http.ResponseWriter, req *http.Request) {
+	api.Write(w, req, h.provider.DumpGlobal())
 }
 
 // render serves the Helm manifests rendered for the package named in the path.
-func (h *Handler) render(w http.ResponseWriter, req *http.Request) {
+// The response is the manifest document itself, not a JSON envelope.
+func (h *handler) render(w http.ResponseWriter, req *http.Request) {
 	rendered, err := h.provider.Render(req.Context(), chi.URLParam(req, "name"))
 	if err != nil {
 		if errors.Is(err, nelm.ErrPackageNotHelm) {
@@ -90,16 +87,17 @@ func (h *Handler) render(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	respond.YAML(w, []byte(rendered))
+	w.Header().Set("Content-Type", "application/yaml")
+	_, _ = w.Write([]byte(rendered))
 }
 
 // snapshots serves the hook snapshots of the package named in the path.
-func (h *Handler) snapshots(w http.ResponseWriter, req *http.Request) {
-	data, found := h.provider.Snapshots(chi.URLParam(req, "name"))
+func (h *handler) snapshots(w http.ResponseWriter, req *http.Request) {
+	snapshots, found := h.provider.Snapshots(chi.URLParam(req, "name"))
 	if !found {
 		http.Error(w, "package not found", http.StatusNotFound)
 		return
 	}
 
-	respond.YAML(w, data)
+	api.Write(w, req, snapshots)
 }

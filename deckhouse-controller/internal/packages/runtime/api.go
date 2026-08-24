@@ -19,20 +19,20 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/debug/handlers"
-	v1 "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/debug/handlers/v1"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/debug/socket"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/debug/tcp"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/api/handlers"
+	v1 "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/api/handlers/v1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/api/socket"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/api/tcp"
 	d8requirements "github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 )
 
-// buildDebugServers creates both introspection servers with the route tree each
-// of them serves. Nothing is bound here: startDebugServers binds the listeners
+// buildAPIServers creates both API servers with the route tree each
+// of them serves. Nothing is bound here: startAPIServers binds the listeners
 // once the runtime is actually running.
 //
 // The socket gets the private tree, which exposes package values, rendered
 // manifests and hook snapshots; the TCP listener gets the public tree only.
-func (r *Runtime) buildDebugServers() {
+func (r *Runtime) buildAPIServers() {
 	deps := v1.Deps{
 		Packages:     r,
 		Queues:       r,
@@ -40,12 +40,12 @@ func (r *Runtime) buildDebugServers() {
 		Requirements: d8requirements.DumpValues,
 	}
 
-	r.socketServer = socket.New(debugSocketPath, handlers.NewPrivateRouter(deps), r.logger)
-	r.tcpServer = tcp.New(debugTCPAddress, debugTCPPort, handlers.NewPublicRouter(deps), r.logger)
+	r.socketServer = socket.NewServer(apiSocketPath, handlers.NewRootHandler(v1.NewPrivateHandler(deps)), r.logger)
+	r.tcpServer = tcp.NewServer(apiTCPAddress, apiTCPPort, handlers.NewRootHandler(v1.NewPublicHandler(deps)), r.logger)
 }
 
-// startDebugServers binds the socket and the loopback TCP listener.
-func (r *Runtime) startDebugServers() error {
+// startAPIServers binds the socket and the loopback TCP listener.
+func (r *Runtime) startAPIServers() error {
 	if err := r.socketServer.Start(); err != nil {
 		return fmt.Errorf("start socket server: %w", err)
 	}
@@ -57,7 +57,7 @@ func (r *Runtime) startDebugServers() error {
 	return nil
 }
 
-// stopDebugServers closes both listeners; closing the socket unlinks its file.
-func (r *Runtime) stopDebugServers(ctx context.Context) error {
+// stopAPIServers closes both listeners; closing the socket unlinks its file.
+func (r *Runtime) stopAPIServers(ctx context.Context) error {
 	return errors.Join(r.socketServer.Shutdown(ctx), r.tcpServer.Shutdown(ctx))
 }

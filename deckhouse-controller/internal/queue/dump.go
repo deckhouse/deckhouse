@@ -21,26 +21,25 @@ import (
 
 // Dump is a snapshot of the queues and the tasks waiting in them.
 type Dump struct {
-	Queues map[string]QueueDump `json:"queues" yaml:"queues"`
+	Queues map[string]QueueDump `json:"queues"`
 }
 
 // QueueDump is a snapshot of one queue.
 type QueueDump struct {
-	Length int        `json:"length" yaml:"length"`
-	Tasks  []TaskDump `json:"tasks,omitempty" yaml:"tasks,omitempty"`
+	Length int        `json:"length"`
+	Tasks  []TaskDump `json:"tasks,omitempty"`
 }
 
 // TaskDump is a snapshot of one task waiting in a queue.
 type TaskDump struct {
-	Index     int     `json:"index" yaml:"index"`
-	Name      string  `json:"name" yaml:"name"`
-	Enqueued  string  `json:"enqueued" yaml:"enqueued"`
-	NextRetry string  `json:"next_retry" yaml:"next_retry"`
-	Error     *string `json:"error,omitempty" yaml:"error,omitempty"`
+	Index     int     `json:"index"`
+	Name      string  `json:"name"`
+	Enqueued  string  `json:"enqueued"`
+	NextRetry string  `json:"next_retry"`
+	Error     *string `json:"error,omitempty"`
 }
 
-// Dump creates dump of all queues. The caller marshals it in whatever format it
-// serves, so the queues do not decide the response format.
+// Dump creates dump of all queues.
 func (s *Service) Dump(include ...string) Dump {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
@@ -57,7 +56,7 @@ func (s *Service) Dump(include ...string) Dump {
 	}
 }
 
-// dump creates queue dump for debug
+// dump creates the snapshot of one queue
 func (q *queue) dump() QueueDump {
 	q.mu.Lock()
 	defer q.mu.Unlock()

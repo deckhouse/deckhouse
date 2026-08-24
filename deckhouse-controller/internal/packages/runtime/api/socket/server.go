@@ -4,18 +4,17 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
-// Package socket serves the debug API over a Unix socket. The socket lives in
-// the container's own filesystem with mode 0600, so only this process's user
-// reaches it — this is the transport for endpoints carrying package values,
-// rendered manifests or hook snapshots.
+// Package socket serves the API over a Unix socket. The socket lives in the
+// container's own filesystem with mode 0600, so only this process's user reaches
+// it — this is the transport for endpoints carrying package values, rendered
+// manifests or hook snapshots.
 //
 // Example access: curl --unix-socket /path/to/socket http://localhost/endpoint
 package socket
@@ -29,49 +28,68 @@ import (
 	"os"
 	"path"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/debug"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/api"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
-	// socketMode restricts the debug socket to its owner.
+	// socketMode restricts the socket to its owner.
 	socketMode = 0o600
-	// socketDirMode restricts the debug socket directory to its owner.
+	// socketDirMode restricts the socket directory to its owner.
 	socketDirMode = 0o700
 )
 
 // Server serves the given handler on the Unix socket at its path.
 type Server struct {
-	server     *debug.Server
 	socketPath string
+	handler    http.Handler
+	srv        *http.Server
+
+	logger *log.Logger
 }
 
-// New creates a server for the given socket path. Nothing is bound until Start.
-func New(socketPath string, handler http.Handler, logger *log.Logger) *Server {
+// NewServer creates a server for the given socket path. Nothing is bound until
+// Start.
+func NewServer(socketPath string, handler http.Handler, logger *log.Logger) *Server {
 	return &Server{
-		server:     debug.NewServer(handler, logger.Named("debug-socket-server")),
 		socketPath: socketPath,
+		handler:    handler,
+		logger:     logger.Named("api-socket-server"),
 	}
 }
 
-// Start binds the socket and serves the routes on it. The socket is bound
-// synchronously, so a busy path is reported here rather than from a background
-// goroutine.
+// Start binds the socket and serves the handler on it.
 func (s *Server) Start() error {
-	return s.server.Serve(func() (net.Listener, error) {
+	srv, err := api.Serve(func() (net.Listener, error) {
 		return listen(s.socketPath)
-	})
+	}, s.handler, s.logger)
+	if err != nil {
+		return err
+	}
+
+	s.srv = srv
+
+	return nil
 }
 
-// Shutdown stops serving and unlinks the socket file.
+// Shutdown stops serving and unlinks the socket file. Safe to call when Start
+// was never reached, which happens when the other transport failed to bind.
 func (s *Server) Shutdown(ctx context.Context) error {
-	return s.server.Shutdown(ctx)
+	if s.srv == nil {
+		return nil
+	}
+
+	if err := s.srv.Shutdown(ctx); err != nil {
+		return fmt.Errorf("shutdown: %w", err)
+	}
+
+	return nil
 }
 
 // listen binds the socket, replacing a stale file left by a previous run.
 //
 // The socket is chmod'ed after binding: net.Listen creates it with 0777 &^ umask,
-// which would let any user in the container drive the debug API.
+// which would let any user in the container drive the API.
 func listen(socketPath string) (net.Listener, error) {
 	dir := path.Dir(socketPath)
 	if err := os.MkdirAll(dir, socketDirMode); err != nil {

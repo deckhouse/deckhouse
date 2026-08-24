@@ -21,8 +21,6 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/debug"
 )
 
 var packagesDebugSocket = "/tmp/deckhouse-debug.socket"
@@ -40,14 +38,14 @@ func DefinePackagesCommands(rootCmd *cobra.Command) {
 			Use:   "dump",
 			Short: "Dump all/specific packages state from memory.",
 			RunE: func(_ *cobra.Command, _ []string) error {
-				client, err := debug.NewClient(packagesDebugSocket)
+				client, err := newSocketClient(packagesDebugSocket)
 				if err != nil {
 					return err
 				}
 				defer client.Close()
 
 				ctx := context.Background()
-				out, err := client.Get(ctx, withQuery("api/v1/packages/dump", "name", packageName))
+				out, err := client.Get(ctx, dumpURL("api/v1/packages/dump", packageName))
 				if err != nil {
 					return err
 				}
@@ -69,14 +67,14 @@ func DefinePackagesCommands(rootCmd *cobra.Command) {
 			Use:   "dump",
 			Short: "Dump the global module state from memory.",
 			RunE: func(_ *cobra.Command, _ []string) error {
-				client, err := debug.NewClient(packagesDebugSocket)
+				client, err := newSocketClient(packagesDebugSocket)
 				if err != nil {
 					return err
 				}
 				defer client.Close()
 
 				ctx := context.Background()
-				out, err := client.Get(ctx, "api/v1/packages/global/dump")
+				out, err := client.Get(ctx, dumpURL("api/v1/packages/global/dump", ""))
 				if err != nil {
 					return err
 				}
@@ -98,14 +96,14 @@ func DefinePackagesCommands(rootCmd *cobra.Command) {
 			Use:   "dump",
 			Short: "Dump all scheduler node state from memory.",
 			RunE: func(_ *cobra.Command, _ []string) error {
-				client, err := debug.NewClient(packagesDebugSocket)
+				client, err := newSocketClient(packagesDebugSocket)
 				if err != nil {
 					return err
 				}
 				defer client.Close()
 
 				ctx := context.Background()
-				out, err := client.Get(ctx, withQuery("api/v1/scheduler/dump", "name", packageName))
+				out, err := client.Get(ctx, dumpURL("api/v1/scheduler/dump", packageName))
 				if err != nil {
 					return err
 				}
@@ -128,14 +126,14 @@ func DefinePackagesCommands(rootCmd *cobra.Command) {
 			Use:   "dump",
 			Short: "Dump all package queues with tasks.",
 			RunE: func(_ *cobra.Command, _ []string) error {
-				client, err := debug.NewClient(packagesDebugSocket)
+				client, err := newSocketClient(packagesDebugSocket)
 				if err != nil {
 					return err
 				}
 				defer client.Close()
 
 				ctx := context.Background()
-				out, err := client.Get(ctx, withQuery("api/v1/queues/dump", "name", packageName))
+				out, err := client.Get(ctx, dumpURL("api/v1/queues/dump", packageName))
 				if err != nil {
 					return err
 				}
@@ -155,7 +153,7 @@ func DefinePackagesCommands(rootCmd *cobra.Command) {
 			Short: "Render package Helm templates.",
 			Args:  cobra.ExactArgs(1),
 			RunE: func(_ *cobra.Command, args []string) error {
-				client, err := debug.NewClient(packagesDebugSocket)
+				client, err := newSocketClient(packagesDebugSocket)
 				if err != nil {
 					return err
 				}
@@ -181,14 +179,14 @@ func DefinePackagesCommands(rootCmd *cobra.Command) {
 			Short: "Dump hook snapshots for a package.",
 			Args:  cobra.ExactArgs(1),
 			RunE: func(_ *cobra.Command, args []string) error {
-				client, err := debug.NewClient(packagesDebugSocket)
+				client, err := newSocketClient(packagesDebugSocket)
 				if err != nil {
 					return err
 				}
 				defer client.Close()
 
 				ctx := context.Background()
-				out, err := client.Get(ctx, "api/v1/packages/snapshots", args[0])
+				out, err := client.Get(ctx, dumpURL("api/v1/packages/snapshots/"+args[0], ""))
 				if err != nil {
 					return err
 				}
@@ -211,10 +209,13 @@ func definePackagesDebugSocketFlag(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&packagesDebugSocket, "debug-unix-socket", defaultSocket, "Path to Unix socket for packages debug endpoint.")
 }
 
-// withQuery appends a query parameter to a path if value is non-empty.
-func withQuery(path, key, value string) string {
-	if value == "" {
-		return path
+// dumpURL builds a dump request. The CLI prints to a terminal, so it asks for
+// YAML; the API answers JSON by default. An empty name means every package.
+func dumpURL(path, name string) string {
+	query := url.Values{"output": {"yaml"}}
+	if name != "" {
+		query.Set("name", name)
 	}
-	return path + "?" + url.QueryEscape(key) + "=" + url.QueryEscape(value)
+
+	return path + "?" + query.Encode()
 }

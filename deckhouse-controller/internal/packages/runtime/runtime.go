@@ -52,8 +52,8 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules/global"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/debug/socket"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/debug/tcp"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/api/socket"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/api/tcp"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/hookevent"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/lifecycle"
 	taskconfigure "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/configure"
@@ -84,17 +84,17 @@ const (
 	// runtimeTracer identifies tracing spans emitted by the package runtime.
 	runtimeTracer = "package-runtime"
 
-	// debugSocketPath is the Unix socket the package runtime debug API listens on.
-	debugSocketPath = "/tmp/deckhouse-debug.socket"
-	// debugTCPAddress and debugTCPPort are the loopback TCP endpoint serving the
+	// apiSocketPath is the Unix socket the package runtime API listens on.
+	apiSocketPath = "/tmp/deckhouse-debug.socket"
+	// apiTCPAddress and apiTCPPort are the loopback TCP endpoint serving the
 	// subset of the API that is safe for the pod network.
 	// 9652 is taken by the shell-operator debug server.
-	debugTCPAddress = "127.0.0.1"
-	debugTCPPort    = "9653"
+	apiTCPAddress = "127.0.0.1"
+	apiTCPPort    = "9653"
 	// nelmMonitorRequestTimeout bounds discovery and metadata requests made by the NELM monitor client.
 	nelmMonitorRequestTimeout = 30 * time.Second
-	// debugShutdownTimeout bounds how long shutdown waits for in-flight debug requests.
-	debugShutdownTimeout = 5 * time.Second
+	// apiShutdownTimeout bounds how long shutdown waits for in-flight API requests.
+	apiShutdownTimeout = 5 * time.Second
 )
 
 // Runtime orchestrates the full lifecycle of application packages: discovery,
@@ -238,7 +238,7 @@ func Build(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Conta
 		return nil, fmt.Errorf("build health service: %w", err)
 	}
 
-	r.buildDebugServers()
+	r.buildAPIServers()
 
 	return r, nil
 }
@@ -513,13 +513,13 @@ func (r *Runtime) buildScheduler(cli kclient.Client) {
 		schedule.WithKubeVersionGetter(kubernetesVersionGetter))
 }
 
-// Run binds the introspection listeners and starts the scheduler event loop in a
+// Run binds the API listeners and starts the scheduler event loop in a
 // background goroutine. The loop listens for schedule and disable events from
 // the scheduler and dispatches them to the appropriate handler, driving the
 // enable/disable lifecycle for all packages.
 func (r *Runtime) Run() error {
-	if err := r.startDebugServers(); err != nil {
-		return fmt.Errorf("start debug servers: %w", err)
+	if err := r.startAPIServers(); err != nil {
+		return fmt.Errorf("start api servers: %w", err)
 	}
 
 	r.hookEventHandler.Start()
@@ -735,12 +735,12 @@ func (r *Runtime) Stop() {
 	// Stop reflecting status to CRs (unblocks the status consumer loop)
 	r.status.Shutdown()
 
-	// Close the debug listeners last so state stays introspectable during shutdown
-	ctx, cancel := context.WithTimeout(context.Background(), debugShutdownTimeout)
+	// Close the API listeners last so state stays introspectable during shutdown
+	ctx, cancel := context.WithTimeout(context.Background(), apiShutdownTimeout)
 	defer cancel()
 
-	if err := r.stopDebugServers(ctx); err != nil {
-		r.logger.Warn("stop debug servers failed", log.Err(err))
+	if err := r.stopAPIServers(ctx); err != nil {
+		r.logger.Warn("stop api servers failed", log.Err(err))
 	}
 }
 

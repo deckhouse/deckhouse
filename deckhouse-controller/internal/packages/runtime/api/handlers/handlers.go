@@ -4,15 +4,14 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
-// Package handlers composes the root endpoint tree of a debug server: the
+// Package handlers composes the root endpoint tree of an API server: the
 // versioned API, the process probes, pprof and route discovery.
 package handlers
 
@@ -24,28 +23,14 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/debug/handlers/respond"
-	v1 "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/debug/handlers/v1"
 )
 
 // apiPrefix is where the versioned tree is mounted.
 const apiPrefix = "/api/v1"
 
-// NewPublicRouter composes the tree safe for a transport others can reach.
-func NewPublicRouter(deps v1.Deps) chi.Router {
-	return newRouter(v1.NewPublicRouter(deps))
-}
-
-// NewPrivateRouter composes the full tree, including the endpoints that expose
-// package values, rendered manifests and hook snapshots.
-func NewPrivateRouter(deps v1.Deps) chi.Router {
-	return newRouter(v1.NewPrivateRouter(deps))
-}
-
-// newRouter mounts the versioned tree next to the routes every transport serves.
-// Discovery is registered last so that it walks the complete tree.
-func newRouter(api chi.Router) chi.Router {
+// NewRootHandler mounts the versioned tree next to the routes every transport
+// serves. Discovery is registered last so that it walks the complete tree.
+func NewRootHandler(api http.Handler) chi.Router {
 	router := chi.NewRouter()
 	router.Use(middleware.Recoverer)
 
@@ -66,7 +51,8 @@ func newRouter(api chi.Router) chi.Router {
 
 // alive reports that the process is up and serving.
 func alive(w http.ResponseWriter, _ *http.Request) {
-	respond.Text(w, "ok")
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	_, _ = w.Write([]byte("ok"))
 }
 
 // discovery lists every route of the given router as plain text.
@@ -92,6 +78,7 @@ func discovery(router chi.Router) http.HandlerFunc {
 
 		buf.WriteString("GET /debug/pprof/*\n")
 
-		respond.Text(w, buf.String())
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		_, _ = w.Write(buf.Bytes())
 	}
 }
