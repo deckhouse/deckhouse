@@ -124,9 +124,12 @@ spec:
                     - Hybrid
                 systemType:
                   description: |
-                    How the node is managed:
-                    - `Mutable` — the classic node configured on the fly by bashible. This is what an unset field means;
-                    - `Immutable` — an agent on the node brings it to the state described in a NodeConfig object; bashible is not used.
+                    How the node is managed.
+
+                    Possible values:
+
+                    - `Mutable` — the classic node configured on the fly by bashible. This is what an unset field means.
+                    - `Immutable` — an agent on the node brings it to the state described in a NodeConfig object. bashible is not used.
 
                     Once the field names a value, that value can no longer be changed or removed. A NodeGroup that names none can still record one — but not `Immutable` while it holds nodes bashible has already configured, since those nodes cannot be handed over to the on-node agent.
                   type: string
@@ -775,9 +778,12 @@ spec:
                     - Hybrid
                 systemType:
                   description: |
-                    How the node is managed:
-                    - `Mutable` — the classic node configured on the fly by bashible. This is what an unset field means;
-                    - `Immutable` — an agent on the node brings it to the state described in a NodeConfig object; bashible is not used.
+                    How the node is managed.
+
+                    Possible values:
+
+                    - `Mutable` — the classic node configured on the fly by bashible. This is what an unset field means.
+                    - `Immutable` — an agent on the node brings it to the state described in a NodeConfig object. bashible is not used.
 
                     Once the field names a value, that value can no longer be changed or removed. A NodeGroup that names none can still record one — but not `Immutable` while it holds nodes bashible has already configured, since those nodes cannot be handed over to the on-node agent.
                   type: string
@@ -1469,9 +1475,12 @@ spec:
                     - Static
                 systemType:
                   description: |
-                    How the node is managed:
-                    - `Mutable` — the classic node configured on the fly by bashible. This is what an unset field means;
-                    - `Immutable` — an agent on the node brings it to the state described in a NodeConfig object; bashible is not used.
+                    How the node is managed.
+
+                    Possible values:
+
+                    - `Mutable` — the classic node configured on the fly by bashible. This is what an unset field means.
+                    - `Immutable` — an agent on the node brings it to the state described in a NodeConfig object. bashible is not used.
 
                     Once the field names a value, that value can no longer be changed or removed. A NodeGroup that names none can still record one — but not `Immutable` while it holds nodes bashible has already configured, since those nodes cannot be handed over to the on-node agent.
                   type: string

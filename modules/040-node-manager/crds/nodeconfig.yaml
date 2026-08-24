@@ -270,8 +270,12 @@ spec:
                       mode:
                         default: Auto
                         description: |-
-                          Mode is Auto to compute the reservation from the node's capacity, or Off
-                          to reserve nothing.
+                          Mode is the reservation policy.
+
+                          Possible values:
+
+                          - `Auto` — compute the reservation from the node's capacity.
+                          - `Off` — reserve nothing.
                         enum:
                         - Auto
                         - "Off"

@@ -38,13 +38,13 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Describes an operation on a node that interrupts its work: a reboot, an eviction of its workload, or the permission a node needs before applying a configuration it cannot apply without a pause.
+            Describes an operation on a node that interrupts its work (a disruptive operation): a reboot, an eviction of its workload, or the permission a node needs before applying a configuration that cannot be applied without interrupting the node.
 
-            An operation is a record of intent, not a switch: it is created once, carried through its phases by node-manager and the on-node agent, and kept afterwards as the history of what was done to the node and why. Editing the spec of an existing operation is rejected — create another one instead.
+            An operation is a record of intent, not a switch: it is created once, carried through its phases by `node-manager` and the on-node agent, and kept afterwards as the history of what was done to the node and why. Editing the `spec` of an existing operation is rejected — create a new one if needed.
 
-            Operations are how disruptive work is coordinated for the nodes of a NodeGroup with `systemType: Immutable`, and the same resource is available to an operator who needs to reboot or drain such a node by hand.
+            Operations are how disruptive work is coordinated for the nodes of a NodeGroup with `systemType: Immutable`. The same resource is available to an operator who needs to reboot or drain such a node by hand.
 
-            Every operation carries the label `node-manager.deckhouse.io/node` with the value of `.spec.nodeName`; node-manager stamps it on operations that reach it without one. It is how operations on the same node find each other, which is what keeps two of them from disagreeing about the state the node was in before either started.
+            Every operation carries the label `node-manager.deckhouse.io/node` with the value of `.spec.nodeName`. `node-manager` stamps it on operations that reach it without one. It is how operations on the same node find each other, which is what keeps two of them from disagreeing about the state the node was in before either started.
           required:
             - spec
           properties:
@@ -76,13 +76,15 @@ spec:
                     - Drain
                     - ApproveDisruption
                   description: |
-                    The operation to perform on the node:
+                    The operation to perform on the node.
 
-                    * `Reboot` — reboot the node;
-                    * `Drain` — evict the workload from the node and keep it unschedulable. The operation is complete once the workload is gone; the node stays out of the scheduler until an operator returns it;
-                    * `ApproveDisruption` — allow the node to apply a configuration whose application interrupts it (restarting kubelet or the container runtime, remerging the system extensions, changing the system image).
+                    Possible values:
 
-                    An `ApproveDisruption` operation is normally created by node-manager in answer to a node that asked for it; the other two are meant for an operator.
+                    * `Reboot` — reboot the node.
+                    * `Drain` — evict the workload from the node and keep it unschedulable. The operation is complete once the workload has been removed from the node. The node stays out of the scheduler until an operator returns it.
+                    * `ApproveDisruption` — allow the node to apply a configuration whose application interrupts it (restarting kubelet or the container runtime, rebuilding the system extensions layer, changing the system image).
+
+                    An `ApproveDisruption` operation is normally created by `node-manager` in answer to a node that asked for it. The other two are meant for an operator.
                 nodeName:
                   type: string
                   minLength: 1
@@ -97,13 +99,13 @@ spec:
                   description: |
                     The revision of the node's NodeConfig this permission covers (`.metadata.generation` of the NodeConfig object).
 
-                    The permission is deliberately narrow: it authorises the interruption one particular configuration needs, so a configuration published afterwards asks again. Only meaningful for `ApproveDisruption`.
+                    The permission is deliberately narrow: it authorises the interruption of the node's work that one particular configuration needs, so the next published configuration asks for permission again. Only meaningful for `ApproveDisruption`.
                 drain:
                   type: object
                   description: |
                     How to evict the workload before the node is interrupted.
 
-                    The eviction is carried out by a `Drain` operation of its own, created for and owned by this one, so it can be watched like any other operation and is removed together with its parent.
+                    The eviction is carried out by a `Drain` operation of its own, created for and owned by this one. It can be watched like any other operation and is removed together with its parent.
                   properties:
                     skip:
                       type: boolean

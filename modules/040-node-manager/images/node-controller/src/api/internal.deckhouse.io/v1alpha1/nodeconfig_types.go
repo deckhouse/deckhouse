@@ -601,8 +601,12 @@ type Kubelet struct {
 
 // ResourceReservation is the kubeReserved policy for the node.
 type ResourceReservation struct {
-	// Mode is Auto to compute the reservation from the node's capacity, or Off
-	// to reserve nothing.
+	// Mode is the reservation policy.
+	//
+	// Possible values:
+	//
+	// - `Auto` — compute the reservation from the node's capacity.
+	// - `Off` — reserve nothing.
 	// +kubebuilder:validation:Enum=Auto;Off
 	// +kubebuilder:default=Auto
 	Mode string `json:"mode,omitempty"`
