@@ -36,7 +36,7 @@ DVP provides two web interfaces for availability assessment:
 
 1. Status page.
 
-   You can get the page address in the web interface on the main page in the "Tools" section (the "Status page" tile), or by running the command:
+   You can get the page address in the web interface on the main page in the "Tools" section (the "Status page" block), or by running the command:
    
    ```shell
    d8 k -n d8-upmeter get ing status -o jsonpath='{.spec.rules[*].host}'
@@ -48,7 +48,7 @@ DVP provides two web interfaces for availability assessment:
 
 1. Component availability page.
 
-   You can get the page address in the web interface on the main page in the "Tools" section (the "Component availability" tile), or by running the command:
+   You can get the page address in the web interface on the main page in the "Tools" section (the "Component availability" block), or by running the command:
    
    ```shell
    d8 k -n d8-upmeter get ing webui -o jsonpath='{.spec.rules[*].host}'
@@ -113,17 +113,12 @@ d8 k -n d8-upmeter delete secret/basic-auth-status
 
 > **Attention!** The `auth.status.password` and `auth.webui.password` parameters are no longer supported.
 
-## FAQ
+## Behavior of upmeter pods
 
-### Periodic deletion and unschedulable upmeter pods
+Upmeter tests create temporary pods to check that Kubernetes components are working. As a result, some pods are periodically deleted, remain in the `Pending` state, or move between nodes.
 
-The module implements availability tests and health checks for various Kubernetes controllers. Tests are performed by creating and deleting temporary pods.
+The following objects take part in the checks:
 
-The `upmeter-probe-scheduler` objects are responsible for checking the scheduler health. As part of the test, a pod is created and scheduled to a node. Then this pod is deleted.
-
-The `upmeter-probe-controller-manager` objects are responsible for testing the `kube-controller-manager` health.  
-As part of the test, a StatefulSet is created and it is checked that this object spawned a pod (since actual pod scheduling is not required and is checked in another test, a pod is created that is guaranteed to not be schedulable, i.e., remains in the `Pending` state). Then the StatefulSet is deleted and a check is performed to ensure that the pod it spawned is also deleted.
-
-The `smoke-mini` objects implement network connectivity testing between nodes.
-To check, five StatefulSets with one replica are deployed. As part of the test, connectivity between `smoke-mini` pods is checked, as well as network connectivity with `upmeter-agent` pods running on master nodes.  
-Once a minute, one of the `smoke-mini` pods is moved to another node.
+- `upmeter-probe-scheduler`: Checks the scheduler. The test creates a pod, schedules it to a node, and then deletes it.
+- `upmeter-probe-controller-manager`: Checks `kube-controller-manager`. The test creates a StatefulSet and verifies that the object spawned a pod. This test does not check pod placement on a node, so it creates a pod that cannot be scheduled and stays in the `Pending` state. Then the StatefulSet is deleted, and the test verifies that the spawned pod is deleted as well.
+- `smoke-mini`: Checks network connectivity between nodes. Five StatefulSets with one replica each are deployed. The test checks connectivity between `smoke-mini` pods and with `upmeter-agent` pods on master nodes. Once a minute, one of the `smoke-mini` pods is moved to another node.
