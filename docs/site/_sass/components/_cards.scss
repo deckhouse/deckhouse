@@ -8,8 +8,9 @@
     }
 
     &__title {
-        margin-top: 0;
-        margin-bottom: variables.$spacing-l;
+        @include breakpoints.max-w(xs) {
+            margin-bottom: 20px !important;
+        }
     }
 }
 
@@ -79,8 +80,11 @@
 
     &__title {
         margin-top: 0 !important;
-        margin-bottom: variables.$spacing-m;
         color: variables.$color-alt;
+
+        @include breakpoints.max-w(m) {
+            margin-bottom: 12px !important;
+        }
 
         a {
             color: inherit;
@@ -98,7 +102,11 @@
 }
 
 .cards-blocks {
-    margin: variables.$spacing-l * 2 0;
+    margin: 60px 0;
+
+    @include breakpoints.max-w(m) {
+        margin: 40px 0;
+    }
 
     &__cards {
         display: flex;
@@ -112,6 +120,10 @@
 
         @include breakpoints.max-w(l) {
             gap: 16px;
+        }
+
+        @include breakpoints.max-w(s) {
+            gap: 12px;
         }
 
         .cards-item {
