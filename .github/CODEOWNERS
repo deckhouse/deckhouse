@@ -17,6 +17,7 @@
 **/000-common/images/shell-operator                              @ldmonster
 **/000-common/images/vxlan-offloading-fixer                      @apolovov
 002-deckhouse/                                                   @ldmonster
+002-deckhouse/templates/validation.yaml                          @AlwxSin
 007-registrypackages/                                            @RomanenkoDenys
 **/007-registrypackages/images/containerd                        @sprait
 **/007-registrypackages/images/crictl                            @sprait
