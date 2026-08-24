@@ -32,6 +32,7 @@ import (
 	taskdisable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/disable"
 	taskload "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/load"
 	taskundeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/undeploy"
+	taskuninstall "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/uninstall"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
@@ -199,6 +200,9 @@ func (r *Runtime) RemoveModule(name string) bool {
 
 	if pkg := r.modules[name]; pkg != nil {
 		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, app.NamespaceDeckhouse, false, r.nelmService, r.queueService, r.logger))
+	} else {
+		// A failed Load may roll the instance out of r.modules while the previous release is still live.
+		r.queueService.Enqueue(ctx, name, taskuninstall.NewTask(name, app.NamespaceDeckhouse, r.nelmService, r.logger))
 	}
 
 	cleanup := queue.WithOnDone(func() {

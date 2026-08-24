@@ -263,7 +263,9 @@ type operatorStub struct{}
 func (o *operatorStub) UpdateApp(_ registry.Remote, _ packageoperator.App) {
 }
 
-func (o *operatorStub) RemoveApp(_, _ string) {
+// RemoveApp reports the teardown as finished: the stub tears nothing down.
+func (o *operatorStub) RemoveApp(_, _ string) bool {
+	return true
 }
 
 func (o *operatorStub) GetStatus(name string) packagestatus.Status {
