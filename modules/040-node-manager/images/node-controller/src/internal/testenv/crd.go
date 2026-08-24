@@ -39,8 +39,8 @@ const (
 	NodeUserCRDFile       NodeManagerCRDFile = "nodeuser.yaml"
 	StaticInstanceCRDFile NodeManagerCRDFile = "staticinstance.yaml"
 
-	NodeConfigCRDFile          NodeManagerCRDFile = "nodeconfig.yaml"
-	NodeOperationCRDFile       NodeManagerCRDFile = "nodeoperation.yaml"
+	NodeConfigCRDFile    NodeManagerCRDFile = "nodeconfig.yaml"
+	NodeOperationCRDFile NodeManagerCRDFile = "nodeoperation.yaml"
 	// Under crds/internal: nobody creates the Cluster API bootstrap objects by
 	// hand, so they are kept out of the documentation and installed by a hook.
 	NodeBootstrapConfigCRDFile NodeManagerCRDFile = "internal/nodebootstrapconfig.yaml"
