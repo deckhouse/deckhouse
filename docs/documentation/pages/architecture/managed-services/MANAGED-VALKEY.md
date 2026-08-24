@@ -11,7 +11,7 @@ The [`managed-valkey`](/modules/managed-valkey/) module manages [Valkey](https:/
 * **Standalone**: Supports deployment of a standalone instance.
 * **Persistent Storage**: Allows configuring different data storage options: `AOF`, `RDB`, `AOF+RDB`.
 * **Configuration Management**: Separate [ValkeyClass](/modules/managed-valkey/cr.html#valkeyclass) resource for templating service creation and flexible validation of user parameters.
-* **Status**: Set of states for tracking the status of the deployed Valkey instance.
+* **Status**: Displays the current status of the deployed Valkey instance.
 
 For more details about module settings and usage examples, refer to the [module documentation](/modules/managed-valkey/).
 
