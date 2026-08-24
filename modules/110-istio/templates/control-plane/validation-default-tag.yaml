@@ -1,5 +1,5 @@
 {{- if and (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicy")) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicyBinding")) }}
-{{- $policyName := "protect-istio-default-tag.deckhouse.io" }}
+{{- $policyName := "d8-istio-protect-default-tag.deckhouse.io" }}
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
 kind: ValidatingAdmissionPolicy
