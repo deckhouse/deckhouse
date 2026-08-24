@@ -20,8 +20,18 @@
             the reservation was before Template mode and stays available for a cluster where the
             wider reservation is not wanted.
 
-  The parameters live in a ConfigMap so that all policies read the same ones and a cluster admin can
-  see what is reserved with a single kubectl get.
+  The reservation is compiled into the policies rather than read from a ConfigMap through paramKind.
+  A paramKind naming a core type makes every apiserver that runs the policy open a cluster-wide
+  informer on that type, and that includes every aggregated apiserver, which runs the
+  ValidatingAdmissionPolicy plugin out of the default RecommendedOptions admission chain and holds no
+  such permission. permission-browser-apiserver in d8-user-authz was the first one on a library where
+  the plugin is GA rather than gated off: it failed the built-in informer-sync readiness check for
+  good, its APIService went unavailable, and namespace deletion stopped cluster-wide on stale
+  discovery -- for policies whose matchConstraints name resources it does not even serve.
+
+  The d8-reserved-public-hosts ConfigMap below is rendered from the same values, so a cluster admin
+  still sees what is reserved with a single kubectl get, and the grandfather record still comes back
+  out of it through hooks/snapshot_reserved_public_hosts.go.
 */}}
 
 {{- /*
@@ -225,6 +235,13 @@
 {{- if $sharedGateway }}
   {{- $sharedGatewayRef = printf "%s/%s" $sharedGateway.namespace $sharedGateway.name }}
 {{- end }}
+
+{{- /*
+  What is reserved, in one object an operator can read. No policy reads it -- they carry the same
+  values compiled in, from the same variables -- so a key that goes missing here changes nothing
+  about what is enforced. The grandfather keys are the exception in the other direction: the snapshot
+  hook reads those back out of this object and into values, and Helm renders them from there.
+*/}}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -236,10 +253,10 @@ data:
   # Which of the two reservations is in force. It is the effective mode: a publicDomainTemplate that
   # cannot be split into a prefix and a suffix reads List here whatever the ModuleConfig asked for.
   mode: {{ $mode | quote }}
-  # The namespace the template carves out, as a regex the policies match the claimed hostname
-  # against. Empty under List, and empty means "reserve nothing by pattern" rather than "match
-  # everything", which is what the policies check before using it. A quoted scalar and not a block
-  # one: a block scalar would append a newline and leave a regex that can never match.
+  # The namespace the template carves out, as a regex, compiled into the policies as reservedPattern.
+  # Empty under List, and empty means "reserve nothing by pattern" rather than "match everything",
+  # which is what the policies check before using it. A quoted scalar and not a block one: a block
+  # scalar would append a newline and leave a regex that can never match.
   hostPattern: {{ $hostPattern | quote }}
   # Hostnames reserved by exact, case-insensitive match, on top of whatever the pattern covers.
   hosts: |
@@ -247,8 +264,8 @@ data:
     {{ $host }}
 {{- end }}
   # Hostnames the pattern covers but that are not reserved: excludedHosts and grandfatheredHosts
-  # together, which is what the policies read. The two are also published separately below, because
-  # this key alone cannot say which of them put a hostname here.
+  # together, the same value the policies carry as allowedHosts. The two are also published
+  # separately below, because this key alone cannot say which of them put a hostname here.
   allowedHosts: |
 {{- range $host := $allowedHosts }}
     {{ $host }}
@@ -314,13 +331,19 @@ data:
 
   request.namespace is the namespace of the request path and request.name is filled from the object
   on a create (k8s.io/apiserver/pkg/endpoints/handlers/create.go), while object.metadata carries
-  neither reliably before the storage layer defaults them. The guards are the ones every other
-  parameter here gets: a ConfigMap that lost the key must leave the policy evaluating rather than
-  fail every Gateway write under failurePolicy: Fail, and an empty key must exempt nothing.
+  neither reliably before the storage layer defaults them. No guard for an absent reference: where
+  nothing names a gateway the reference renders empty, and an empty string cannot equal
+  namespace + '/' + name, so the condition exempts nothing on its own.
 */}}
-{{- $sharedGatewayExempt := "!(params != null && has(params.data) && 'sharedGateway' in params.data && params.data['sharedGateway'] != '' && params.data['sharedGateway'] == request.namespace + '/' + request.name)" }}
+{{- $sharedGatewayExempt := printf "%s != request.namespace + '/' + request.name" ($sharedGatewayRef | toJson) }}
 
-{{- include "reserved_public_hosts_policy" (list . $paramsName "ingress" "networking.k8s.io" "ingresses" "has(object.spec) && has(object.spec.rules) ? object.spec.rules.filter(r, has(r.host) && r.host != '').map(r, r.host) : []") }}
+{{- /*
+  The reserved set, as the policies carry it. Same three variables the ConfigMap above publishes, so
+  the two can never disagree about what is reserved.
+*/}}
+{{- $policyParams := dict "hostPattern" $hostPattern "hosts" $reservedHosts "allowedHosts" $allowedHosts }}
+
+{{- include "reserved_public_hosts_policy" (list . $policyParams "ingress" "networking.k8s.io" "ingresses" "has(object.spec) && has(object.spec.rules) ? object.spec.rules.filter(r, has(r.host) && r.host != '').map(r, r.host) : []") }}
 
 {{- /*
   Each Gateway API kind is matched on its group as well as on its name. helm_lib_kind_exists matches
@@ -336,23 +359,23 @@ data:
   apiVersions ["*"].
 */}}
 {{- if (include "reserved_public_hosts_gateway_api_kind_exists" (list . "HTTPRoute")) }}
-{{- include "reserved_public_hosts_policy" (list . $paramsName "httproute" "gateway.networking.k8s.io" "httproutes" $routeHosts) }}
+{{- include "reserved_public_hosts_policy" (list . $policyParams "httproute" "gateway.networking.k8s.io" "httproutes" $routeHosts) }}
 {{- end }}
 
 {{- if (include "reserved_public_hosts_gateway_api_kind_exists" (list . "GRPCRoute")) }}
-{{- include "reserved_public_hosts_policy" (list . $paramsName "grpcroute" "gateway.networking.k8s.io" "grpcroutes" $routeHosts) }}
+{{- include "reserved_public_hosts_policy" (list . $policyParams "grpcroute" "gateway.networking.k8s.io" "grpcroutes" $routeHosts) }}
 {{- end }}
 
 {{- if (include "reserved_public_hosts_gateway_api_kind_exists" (list . "TLSRoute")) }}
-{{- include "reserved_public_hosts_policy" (list . $paramsName "tlsroute" "gateway.networking.k8s.io" "tlsroutes" $routeHosts) }}
+{{- include "reserved_public_hosts_policy" (list . $policyParams "tlsroute" "gateway.networking.k8s.io" "tlsroutes" $routeHosts) }}
 {{- end }}
 
 {{- if (include "reserved_public_hosts_gateway_api_kind_exists" (list . "ListenerSet")) }}
-{{- include "reserved_public_hosts_policy" (list . $paramsName "listenerset" "gateway.networking.k8s.io" "listenersets" $listenerHosts) }}
+{{- include "reserved_public_hosts_policy" (list . $policyParams "listenerset" "gateway.networking.k8s.io" "listenersets" $listenerHosts) }}
 {{- end }}
 
 {{- if (include "reserved_public_hosts_gateway_api_kind_exists" (list . "Gateway")) }}
-{{- include "reserved_public_hosts_policy" (list . $paramsName "gateway" "gateway.networking.k8s.io" "gateways" $listenerHosts $sharedGatewayExempt) }}
+{{- include "reserved_public_hosts_policy" (list . $policyParams "gateway" "gateway.networking.k8s.io" "gateways" $listenerHosts $sharedGatewayExempt) }}
 {{- end }}
 
 {{- end }}
@@ -370,7 +393,7 @@ data:
 
 {{- define "reserved_public_hosts_policy" }}
   {{- $context      := index . 0 }}
-  {{- $paramsName   := index . 1 }}
+  {{- $params       := index . 1 }}
   {{- $suffix       := index . 2 }}
   {{- $apiGroup     := index . 3 }}
   {{- $resource     := index . 4 }}
@@ -389,9 +412,6 @@ metadata:
   {{- include "helm_lib_module_labels" (list $context (dict "app" "deckhouse")) | nindent 2 }}
 spec:
   failurePolicy: Fail
-  paramKind:
-    apiVersion: v1
-    kind: ConfigMap
   matchConstraints:
     resourceRules:
       - apiGroups:   [{{ $apiGroup | quote }}]
@@ -416,22 +436,15 @@ spec:
       expression: |
         ({{ $claimedHosts }}).map(h, h.lowerAscii()).map(h, h.endsWith('.') ? h.substring(0, h.size() - 1) : h)
     - name: reservedHosts
-      # A missing ConfigMap never reaches these expressions, the binding is skipped instead
-      # (parameterNotFoundAction: Allow); the guards are for a ConfigMap that lost a key.
-      expression: |
-        params != null && has(params.data) && 'hosts' in params.data
-          ? params.data['hosts'].split('\n').filter(h, h != '')
-          : []
+      # Two layers of quoting, and both are load-bearing. toJson renders the CEL literal, so a
+      # hostname is data and never source -- a backslash in the pattern survives as one, and nothing
+      # an operator writes in additionalHosts can be read as an expression. quote then wraps that
+      # literal for YAML, without which the list would parse as a YAML sequence instead of a string.
+      expression: {{ $params.hosts | toJson | quote }}
     - name: reservedPattern
-      expression: |
-        params != null && has(params.data) && 'hostPattern' in params.data
-          ? params.data['hostPattern']
-          : ''
+      expression: {{ $params.hostPattern | toJson | quote }}
     - name: allowedHosts
-      expression: |
-        params != null && has(params.data) && 'allowedHosts' in params.data
-          ? params.data['allowedHosts'].split('\n').filter(h, h != '')
-          : []
+      expression: {{ $params.allowedHosts | toJson | quote }}
     - name: conflicts
       # An empty pattern reserves nothing: a cluster that publishes no public domain, or one under
       # mode: List, must not have every hostname in it match.
@@ -463,10 +476,6 @@ metadata:
 spec:
   policyName: {{ $policyName }}
   validationActions: [Deny, Audit]
-  paramRef:
-    name: {{ $paramsName }}
-    namespace: d8-system
-    parameterNotFoundAction: Allow
   matchResources:
     namespaceSelector:
       matchExpressions:

@@ -58,7 +58,7 @@ that would grandfather none of what appeared in between. Which mode is in force 
 publicdomain.EffectiveMode, the same decision the template publishes in the ConfigMap's mode key.
 
 That record lives in the d8-reserved-public-hosts ConfigMap in d8-system, the same object the
-policies read their parameters from, and Helm is its only writer. The hook reads the grandfather keys
+template publishes the reserved set in, and Helm is its only writer. The hook reads the grandfather keys
 back out of it and puts them in values, Helm renders them from values, and the two agree on a fixed
 point instead of arguing over the object -- the flow this repository already uses for a hook that has
 to produce something a template owns (go_lib/hooks/tls_certificate/internal_tls.go, where a
