@@ -76,6 +76,16 @@
         }
     }
 
+    h2 {
+        margin-top: 40px !important;
+    }
+
+    h3 {
+        @include breakpoints.max-w(xs) {
+            margin-bottom: 20px !important;
+        } 
+    }
+
     .block__columns {
         flex-direction: column;
 
