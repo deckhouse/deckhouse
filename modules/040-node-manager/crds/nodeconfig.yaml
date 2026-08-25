@@ -345,10 +345,9 @@ spec:
                 properties:
                   additionalPath:
                     description: |-
-                      AdditionalPath is where the artifact lives inside the registry, forwarded to
-                      the proxy as its "path" parameter. Empty is right for Deckhouse: every image
-                      of a release, the OS included, sits in the repository spec.registry.path
-                      already names.
+                      AdditionalPath is the proxy's "path" parameter. Empty is right for
+                      Deckhouse: every image of a release sits in the repository
+                      spec.registry.path already names.
                     type: string
                   digest:
                     description: |-
@@ -745,8 +744,7 @@ spec:
                 description: |-
                   OSImage is how far the node has got with spec.osImage. Mirrors
                   config.OSImageStatus in the nodelet repository (internal/config/types.go):
-                  a field missing here is pruned on write, and the node's whole status apply
-                  fails with "field not declared in schema" — the update then reports nothing.
+                  a field missing here is pruned and the node's whole status apply fails.
                 properties:
                   attemptsLeft:
                     description: |-
