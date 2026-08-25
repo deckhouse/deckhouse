@@ -53,6 +53,22 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
+// Names of the repositories the module packages come from during the migration
+// off the module sources.
+const (
+	// moduleSourceNameDeckhouse is the built-in module source shipped with the platform.
+	moduleSourceNameDeckhouse = "deckhouse"
+
+	// repositoryNameDeckhouseModules serves the modules of the "deckhouse"
+	// ModuleSource. The plain "deckhouse" name belongs to the application-packages
+	// repository, while the module source points at <registry>/modules.
+	repositoryNameDeckhouseModules = "deckhouse-modules"
+
+	// repositoryNameEmbedded stands for the Deckhouse image itself and
+	// resolves to no PackageRepository object.
+	repositoryNameEmbedded = "embedded"
+)
+
 // Syncer creates the missing package versions once at start, while the
 // controllers still wait for the sync phase.
 type Syncer struct {
@@ -88,32 +104,12 @@ func New(reader client.Reader, writer client.Client, dc dependency.Container, de
 // name, an unreadable module dir) is skipped with a warning; an API failure
 // stops the sync.
 func (s *Syncer) Sync(ctx context.Context) error {
-	if err := s.syncEmbedded(ctx); err != nil {
-		return err
-	}
-
-	if err := s.syncReleases(ctx); err != nil {
+	if err := s.syncModulePackageVersions(ctx); err != nil {
 		return err
 	}
 
 	return s.syncModulePackages(ctx)
 }
-
-// Names of the repositories the module packages come from during the migration
-// off the module sources.
-const (
-	// moduleSourceNameDeckhouse is the built-in module source shipped with the platform.
-	moduleSourceNameDeckhouse = "deckhouse"
-
-	// repositoryNameDeckhouseModules serves the modules of the "deckhouse"
-	// ModuleSource. The plain "deckhouse" name belongs to the application-packages
-	// repository, while the module source points at <registry>/modules.
-	repositoryNameDeckhouseModules = "deckhouse-modules"
-
-	// repositoryNameEmbedded stands for the Deckhouse image itself and
-	// resolves to no PackageRepository object.
-	repositoryNameEmbedded = "embedded"
-)
 
 // repositoryNameForSource maps a ModuleSource name to the name of the
 // PackageRepository serving the same registry path.

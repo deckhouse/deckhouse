@@ -52,7 +52,7 @@ func TestEmbeddedVersion(t *testing.T) {
 	}
 }
 
-func TestSyncEmbedded(t *testing.T) {
+func TestSyncVersionsFromImage(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("creates a complete version from package.yaml", func(t *testing.T) {
@@ -194,7 +194,7 @@ func TestSyncEmbedded(t *testing.T) {
 	})
 }
 
-func TestSyncReleases(t *testing.T) {
+func TestSyncVersionsFromReleases(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("creates a draft stub for deployed and pending releases", func(t *testing.T) {

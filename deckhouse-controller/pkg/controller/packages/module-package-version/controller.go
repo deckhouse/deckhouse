@@ -55,6 +55,11 @@ const (
 	// legacyPathSegment is the registry sub-path for legacy module images
 	// produced before the registry layout was unified under "version".
 	legacyPathSegment = "release"
+
+	// legacyOptionalSuffix marks a legacy module.yaml parentModules dependency as
+	// conditional (skippable if the parent module is absent). See
+	// go_lib/dependency/extenders/moduledependency for the original parser.
+	legacyOptionalSuffix = "!optional"
 )
 
 // RegisterController creates and registers the ModulePackageVersion controller.
@@ -373,11 +378,6 @@ func legacyAccessibilityToCR(access *moduletypes.ModuleAccessibility) *v1alpha1.
 
 	return &v1alpha1.PackageLicensing{Editions: editions}
 }
-
-// legacyOptionalSuffix marks a legacy module.yaml parentModules dependency as
-// conditional (skippable if the parent module is absent). See
-// go_lib/dependency/extenders/moduledependency for the original parser.
-const legacyOptionalSuffix = "!optional"
 
 // legacyRequirementsToCR projects legacy module.yaml requirements (flat strings
 // plus a name to constraint map) onto the PackageRequirements CR shape. A constraint

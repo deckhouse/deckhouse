@@ -37,9 +37,20 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-// syncEmbedded walks the embedded modules dir and ensures a complete version
-// for every module the running image ships.
-func (s *Syncer) syncEmbedded(ctx context.Context) error {
+// syncModulePackageVersions ensures a version object for every module package
+// the old stack carries: embedded modules come out complete with the disk
+// metadata, deployed and pending releases become draft stubs.
+func (s *Syncer) syncModulePackageVersions(ctx context.Context) error {
+	if err := s.syncVersionsFromImage(ctx); err != nil {
+		return err
+	}
+
+	return s.syncVersionsFromReleases(ctx)
+}
+
+// syncVersionsFromImage walks the embedded modules dir and ensures a complete
+// version for every module the running image ships.
+func (s *Syncer) syncVersionsFromImage(ctx context.Context) error {
 	version, ok := s.embeddedVersion()
 	if !ok {
 		return nil
@@ -135,8 +146,8 @@ func weightFromDirName(dirName string) int32 {
 	return int32(weight)
 }
 
-// syncReleases ensures a draft stub for every deployed or pending release.
-func (s *Syncer) syncReleases(ctx context.Context) error {
+// syncVersionsFromReleases ensures a draft stub for every deployed or pending release.
+func (s *Syncer) syncVersionsFromReleases(ctx context.Context) error {
 	releases := new(v1alpha1.ModuleReleaseList)
 	if err := s.reader.List(ctx, releases); err != nil {
 		return fmt.Errorf("list module releases: %w", err)
