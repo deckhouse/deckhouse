@@ -222,7 +222,7 @@ func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alp
 		moduleConfig.Spec.Enabled)
 
 	if err := r.refreshModuleConfig(ctx, moduleConfig.Name); err != nil {
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 	}
 
 	module := new(v1alpha1.Module)

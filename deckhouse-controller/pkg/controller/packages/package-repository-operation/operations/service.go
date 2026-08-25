@@ -233,7 +233,7 @@ func (s *OperationService) performIncrementalScan(ctx context.Context, packageNa
 	if lastVersion != "" {
 		s.logger.Debug("found last processed version",
 			slog.String("package", packageName),
-			slog.String("lastVersion", lastVersion))
+			slog.String("last_version", lastVersion))
 	}
 
 	tags, err := s.listTagsFromVersion(ctx, packageName, lastVersion)
@@ -680,7 +680,7 @@ type failedVersion struct {
 func (s *OperationService) ensureApplicationPackageVersion(ctx context.Context, packageName, version string) (bool, error) {
 	apvName := v1alpha1.MakeApplicationPackageVersionName(s.repo.Name, packageName, version)
 
-	logger := s.logger.With(slog.String("package version", apvName))
+	logger := s.logger.With(slog.String("package_version", apvName))
 
 	pkgVersion := &v1alpha1.ApplicationPackageVersion{}
 	err := s.client.Get(ctx, types.NamespacedName{Name: apvName}, pkgVersion)

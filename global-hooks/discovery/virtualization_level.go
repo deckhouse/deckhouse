@@ -76,7 +76,7 @@ func applyMasterNodesFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 func setGlobalVirtualizationLevel(_ context.Context, input *go_hook.HookInput) error {
 	virtualizationLevel := getVirtualizationLevelFromMasterNodesLabels(input.Snapshots.Get("master_nodes"))
 	input.Values.Set("global.discovery.dvpNestingLevel", virtualizationLevel)
-	input.Logger.Info("set DVP nesting level", slog.Int("level", virtualizationLevel))
+	input.Logger.Info("set DVP nesting level", slog.Int("dvp_nesting_level", virtualizationLevel))
 
 	return nil
 }
