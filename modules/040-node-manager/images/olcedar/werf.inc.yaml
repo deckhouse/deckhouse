@@ -1,4 +1,4 @@
-{{- $version := "04d4baf43d7652dbbf2eb3ccbdc7544dd6379ca4a2a54dff4b090d57-1786519230738"  }}
+{{- $version := "v0.1.1"  }}
 {{- if ne $.Env "CSE" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
