@@ -38,14 +38,12 @@ const (
 
 // reconcileMaster drives the reconciler with the live envtest client. Production injects the
 // manager cache instead, so a NodeGroup cache scope narrower than cluster-wide is not covered here.
-func reconcileMaster() ctrl.Result {
+func reconcileMaster() (ctrl.Result, error) {
 	r := &Reconciler{}
 	r.InjectClient(k8sClient)
-	res, err := r.Reconcile(suiteCtx, ctrl.Request{
+	return r.Reconcile(suiteCtx, ctrl.Request{
 		NamespacedName: types.NamespacedName{Name: masterNodeGroupName},
 	})
-	Expect(err).NotTo(HaveOccurred())
-	return res
 }
 
 func getMaster() *deckhousev1.NodeGroup {
@@ -69,27 +67,39 @@ func deleteMaster() {
 	Eventually(masterExists, eventuallyTimeout, eventuallyPoll).Should(BeFalse())
 }
 
+// The suite shares one cluster-configuration Secret, created as a Cloud cluster in BeforeSuite;
+// every spec that touches it restores that state, so the specs do not depend on their order.
+var clusterConfigRef = types.NamespacedName{Namespace: clusterConfigSecretNamespace, Name: clusterConfigSecretName}
+
 func setClusterConfig(data map[string][]byte) {
+	DeferCleanup(restoreClusterConfig)
 	secret := &corev1.Secret{}
-	Expect(k8sClient.Get(suiteCtx, types.NamespacedName{
-		Namespace: clusterConfigSecretNamespace,
-		Name:      clusterConfigSecretName,
-	}, secret)).To(Succeed())
+	Expect(k8sClient.Get(suiteCtx, clusterConfigRef, secret)).To(Succeed())
 	secret.Data = data
 	Expect(k8sClient.Update(suiteCtx, secret)).To(Succeed())
 }
 
 func deleteClusterConfigSecret() {
+	DeferCleanup(restoreClusterConfig)
+	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: clusterConfigRef.Namespace, Name: clusterConfigRef.Name}}
+	Expect(client.IgnoreNotFound(k8sClient.Delete(suiteCtx, secret))).To(Succeed())
+}
+
+func restoreClusterConfig() {
+	cloud := map[string][]byte{clusterConfigKey: []byte("clusterType: Cloud\n")}
 	secret := &corev1.Secret{}
-	err := k8sClient.Get(suiteCtx, types.NamespacedName{
-		Namespace: clusterConfigSecretNamespace,
-		Name:      clusterConfigSecretName,
-	}, secret)
+	err := k8sClient.Get(suiteCtx, clusterConfigRef, secret)
 	if apierrors.IsNotFound(err) {
+		secret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Namespace: clusterConfigRef.Namespace, Name: clusterConfigRef.Name},
+			Data:       cloud,
+		}
+		Expect(k8sClient.Create(suiteCtx, secret)).To(Succeed())
 		return
 	}
 	Expect(err).NotTo(HaveOccurred())
-	Expect(k8sClient.Delete(suiteCtx, secret)).To(Succeed())
+	secret.Data = cloud
+	Expect(k8sClient.Update(suiteCtx, secret)).To(Succeed())
 }
 
 // User story: As a user bootstrapping a cluster, I want the `master` NodeGroup to exist without
@@ -121,7 +131,8 @@ var _ = Describe("MasterNodeGroup controller", func() {
 		deleteMaster()
 		setClusterConfig(map[string][]byte{clusterConfigKey: []byte("clusterType: Static\n")})
 
-		Expect(reconcileMaster()).To(Equal(ctrl.Result{}))
+		_, err := reconcileMaster()
+		Expect(err).NotTo(HaveOccurred())
 
 		Expect(getMaster().Spec.NodeType).To(Equal(deckhousev1.NodeTypeStatic))
 	})
@@ -132,7 +143,8 @@ var _ = Describe("MasterNodeGroup controller", func() {
 		deleteMaster()
 		setClusterConfig(map[string][]byte{"unrelated-key": []byte("clusterType: Static\n")})
 
-		Expect(reconcileMaster()).To(Equal(ctrl.Result{RequeueAfter: requeueOnFailure}))
+		_, err := reconcileMaster()
+		Expect(err).To(HaveOccurred())
 
 		Expect(masterExists()).To(BeFalse())
 	})
@@ -141,7 +153,8 @@ var _ = Describe("MasterNodeGroup controller", func() {
 		deleteMaster()
 		setClusterConfig(map[string][]byte{clusterConfigKey: []byte("clusterDomain: cluster.local\n")})
 
-		Expect(reconcileMaster()).To(Equal(ctrl.Result{RequeueAfter: requeueOnFailure}))
+		_, err := reconcileMaster()
+		Expect(err).To(HaveOccurred())
 
 		Expect(masterExists()).To(BeFalse())
 	})
@@ -150,7 +163,8 @@ var _ = Describe("MasterNodeGroup controller", func() {
 		deleteMaster()
 		deleteClusterConfigSecret()
 
-		Expect(reconcileMaster()).To(Equal(ctrl.Result{RequeueAfter: requeueOnFailure}))
+		_, err := reconcileMaster()
+		Expect(err).To(HaveOccurred())
 
 		Expect(masterExists()).To(BeFalse())
 	})
@@ -169,7 +183,8 @@ var _ = Describe("MasterNodeGroup controller", func() {
 		}
 		Expect(k8sClient.Create(suiteCtx, userOwned)).To(Succeed())
 
-		Expect(reconcileMaster()).To(Equal(ctrl.Result{}))
+		_, err := reconcileMaster()
+		Expect(err).NotTo(HaveOccurred())
 
 		master := getMaster()
 		Expect(master.Spec.Disruptions.ApprovalMode).To(Equal(deckhousev1.DisruptionApprovalModeAutomatic))

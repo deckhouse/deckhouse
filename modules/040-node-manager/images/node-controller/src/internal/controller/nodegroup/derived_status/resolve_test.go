@@ -142,6 +142,16 @@ func TestReadStatic_ParsesInternalNetworkCIDRs(t *testing.T) {
 	}, got)
 }
 
+// A corrupt Secret must not read as "this cluster has no static config": that is exactly what a
+// deliberate removal of internalNetworkCIDRs looks like, and the two need different handling.
+func TestReadStatic_MalformedIsAnError(t *testing.T) {
+	s := newTestService(t, testSecret(staticConfigSecretNamespace, staticConfigSecretName, map[string][]byte{
+		staticConfigKey: []byte("internalNetworkCIDRs: 172.18.200.0/24\n"),
+	}))
+	_, err := s.readStatic(context.Background())
+	require.ErrorContains(t, err, staticConfigKey)
+}
+
 func TestReadStatic_AbsentReturnsNil(t *testing.T) {
 	got, err := newTestService(t).readStatic(context.Background())
 	require.NoError(t, err)

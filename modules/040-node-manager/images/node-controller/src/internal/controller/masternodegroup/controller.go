@@ -19,7 +19,6 @@ package masternodegroup
 import (
 	"context"
 	"fmt"
-	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -50,8 +49,6 @@ const (
 	clusterConfigKey             = "cluster-configuration.yaml"
 
 	clusterTypeStatic = "Static"
-
-	requeueOnFailure = 10 * time.Second
 )
 
 type Reconciler struct {
@@ -85,25 +82,22 @@ func (r *Reconciler) Reconcile(ctx context.Context, _ ctrl.Request) (ctrl.Result
 		return ctrl.Result{}, fmt.Errorf("get NodeGroup %s: %w", masterNodeGroupName, err)
 	}
 
+	// The node type follows the cluster type, so guessing it would give a static cluster a
+	// CloudPermanent master group — and nodeType is immutable. Fail and retry instead.
 	clusterType, err := r.readClusterType(ctx)
 	if err != nil {
-		// The node type follows the cluster type, so guessing it would give a static cluster a
-		// CloudPermanent master group. Wait for the configuration instead of creating anything.
-		logger.Info("cannot determine the cluster type, will retry", "error", err.Error())
-		return ctrl.Result{RequeueAfter: requeueOnFailure}, nil
+		return ctrl.Result{}, err
 	}
 
 	logger.Info("creating the master NodeGroup", "clusterType", clusterType)
 
+	// The NodeGroup validating webhook is served by node-controller itself, so a create issued
+	// before the webhook server listens is rejected; the workqueue backoff covers that window.
 	if err := r.Client.Create(ctx, masterNodeGroup(clusterType)); err != nil {
 		if errors.IsAlreadyExists(err) {
 			return ctrl.Result{}, nil
 		}
-		// The NodeGroup validating webhook is served by node-controller itself, so a create
-		// issued before the webhook server accepts connections is rejected — retry instead of
-		// failing, exactly as the hook did on its own queue.
-		logger.Info("creating the master NodeGroup failed, will retry", "error", err.Error())
-		return ctrl.Result{RequeueAfter: requeueOnFailure}, nil
+		return ctrl.Result{}, fmt.Errorf("create NodeGroup %s: %w", masterNodeGroupName, err)
 	}
 
 	logger.Info("master NodeGroup created")

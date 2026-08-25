@@ -19,7 +19,7 @@ package bashiblecontext
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
 )
 
 func staticContextEntry(name string, cidrs ...string) map[string]interface{} {
@@ -34,50 +34,24 @@ func staticContextEntry(name string, cidrs ...string) map[string]interface{} {
 	}
 }
 
-func TestDropsInternalNetworkCIDRs(t *testing.T) {
-	tests := []struct {
-		name     string
-		prior    map[string]interface{}
-		current  map[string]interface{}
-		expDrops bool
-	}{
-		{
-			name:    "nothing published before: nothing to protect",
-			prior:   staticContextEntry("static-worker"),
-			current: staticContextEntry("static-worker"),
-		},
-		{
-			name:    "CIDRs unchanged",
-			prior:   staticContextEntry("static-worker", "172.18.200.0/24"),
-			current: staticContextEntry("static-worker", "172.18.200.0/24"),
-		},
-		{
-			name:    "CIDRs added",
-			prior:   staticContextEntry("static-worker"),
-			current: staticContextEntry("static-worker", "172.18.200.0/24"),
-		},
-		{
-			name:    "CIDRs changed to another network",
-			prior:   staticContextEntry("static-worker", "172.18.200.0/24"),
-			current: staticContextEntry("static-worker", "10.0.0.0/24"),
-		},
-		{
-			name:     "CIDRs disappeared",
-			prior:    staticContextEntry("static-worker", "172.18.200.0/24"),
-			current:  staticContextEntry("static-worker"),
-			expDrops: true,
-		},
-		{
-			name:     "the whole static block disappeared",
-			prior:    staticContextEntry("static-worker", "172.18.200.0/24"),
-			current:  map[string]interface{}{"name": "static-worker", "nodeType": "Static"},
-			expDrops: true,
-		},
-	}
+func TestPublishedStaticBlock(t *testing.T) {
+	cidrs := map[string]interface{}{"internalNetworkCIDRs": []interface{}{"172.18.200.0/24"}}
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			require.Equal(t, tc.expDrops, dropsInternalNetworkCIDRs(tc.prior, tc.current))
-		})
-	}
+	t.Run("nothing published", func(t *testing.T) {
+		assert.Nil(t, publishedStaticBlock(nil))
+	})
+	t.Run("published entries without CIDRs", func(t *testing.T) {
+		prior := map[string]map[string]interface{}{
+			"a": staticContextEntry("a"),
+			"b": {"name": "b", "nodeType": "CloudEphemeral"},
+		}
+		assert.Nil(t, publishedStaticBlock(prior))
+	})
+	t.Run("one entry carries them", func(t *testing.T) {
+		prior := map[string]map[string]interface{}{
+			"a": staticContextEntry("a"),
+			"b": staticContextEntry("b", "172.18.200.0/24"),
+		}
+		assert.Equal(t, cidrs, publishedStaticBlock(prior))
+	})
 }
