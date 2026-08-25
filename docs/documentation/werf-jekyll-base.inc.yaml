@@ -1,6 +1,7 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}/base-jekyll
 from: {{ index $.Images "builder/distroless" }}
+final: false
 shell:
   beforeInstall:
   - pm install jq yq ruby ruby-devel gnu-gcc-devel
