@@ -390,6 +390,39 @@ positive:
 
   values:
     # ==========================================
+    # Bootstrap from a legacy YandexClusterConfiguration alone, with no
+    # ModuleConfig to seed the settings sections.
+    #
+    # This is the state of the module values while the TLS hooks registered by
+    # go_lib/hooks/tls_certificate run: they fire on the Kubernetes binding at
+    # OperatorStartup and again with OnBeforeHelm order 5, both of which happen
+    # before hooks/yandex_cluster_configuration.go (order 20) projects the PCC
+    # onto provider/nodes. Their input.Values.Set must not be rejected — with a
+    # ModuleConfig v1 around, openapi/conversions/v2.yaml fills these sections in
+    # advance, which is why the failure only shows on a PCC-only cluster.
+    # ==========================================
+
+    - provider:
+        parameters:
+          cloudID: PLACEHOLDER_REPLACE_ME
+          folderID: PLACEHOLDER_REPLACE_ME
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa PLACEHOLDER_REPLACE_ME
+          # NodesParameters embeds these as structs rather than pointers, so they are
+          # serialized even when empty. Keeping them here pins that shape: adding a required
+          # field to either section would break the seeding hook, and this case catches it.
+          withNATInstance: {}
+          dhcpOptions: {}
+      internal:
+        capyControllerManagerWebhookCert:
+          crt: YjY0ZW5jX3N0cmluZwo= # gitleaks:allow
+          key: YjY0ZW5jX3N0cmluZwo= # gitleaks:allow
+          ca: YjY0ZW5jX3N0cmluZwo= # gitleaks:allow
+
+    # ==========================================
     # Internal: minimal providerClusterConfiguration
     # (Standard layout)
     # ==========================================
