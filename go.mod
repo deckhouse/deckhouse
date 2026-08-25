@@ -59,6 +59,7 @@ require (
 	github.com/deckhouse/deckhouse/go_lib/configtools/conversion v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/dependency/vsphere v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/registry v0.0.0-00010101000000-000000000000
+	github.com/deckhouse/deckhouse/go_lib/registry/apis v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/pkg/log v0.2.1
 	github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0
 	github.com/deckhouse/deckhouse/pkg/registry v0.0.0-20260525111533-9e5ba68242f7
@@ -68,7 +69,6 @@ require (
 	github.com/evanphx/json-patch v5.9.11+incompatible
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/gammazero/deque v1.1.0
-	github.com/go-ldap/ldap/v3 v3.4.13
 	github.com/go-logr/logr v1.4.3
 	github.com/go-openapi/swag/conv v0.26.0
 	github.com/go-openapi/swag/loading v0.26.0
@@ -106,19 +106,18 @@ require (
 	cel.dev/expr v0.25.2 // indirect
 	dario.cat/mergo v1.0.1 // indirect
 	github.com/090809/oteljsonl v0.0.2 // indirect
-	github.com/Azure/go-ntlmssp v0.1.0 // indirect
 	github.com/VividCortex/ewma v1.2.0 // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.0 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/containerd/console v1.0.5 // indirect
+	github.com/deckhouse/deckhouse/go_lib/controlplane v0.0.0-00010101000000-000000000000 // indirect
 	github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol v0.0.0-00010101000000-000000000000 // indirect
-	github.com/deckhouse/deckhouse/go_lib/registry/apis v0.0.0-00010101000000-000000000000 // indirect
 	github.com/deckhouse/lib-connection v0.15.0 // indirect
 	github.com/deckhouse/lib-gossh v0.3.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.2 // indirect
-	github.com/go-asn1-ber/asn1-ber v1.5.8-0.20250403174932-29230038a667 // indirect
+	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
 	github.com/go-openapi/swag v0.26.0 // indirect
 	github.com/go-openapi/swag/cmdutils v0.26.0 // indirect
 	github.com/go-openapi/swag/fileutils v0.26.0 // indirect
@@ -343,7 +342,7 @@ require (
 	go.opentelemetry.io/proto/otlp v1.10.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
-	golang.org/x/crypto v0.55.0
+	golang.org/x/crypto v0.55.0 // indirect
 	golang.org/x/image v0.21.0 // indirect
 	golang.org/x/net v0.58.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
