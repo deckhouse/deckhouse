@@ -52,6 +52,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/syncer"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	packageruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -98,6 +99,7 @@ type DeckhouseController struct {
 	preflightCountDown *sync.WaitGroup
 
 	moduleLoader   *moduleloader.Loader
+	packageSync    *syncer.Syncer
 	packageRuntime *packageruntime.Runtime
 
 	deckhouseConfigCh <-chan utils.Values
@@ -325,6 +327,8 @@ func NewDeckhouseController(
 	dc := dependency.NewDependencyContainer()
 	settingsContainer := helpers.NewDeckhouseSettingsContainer(nil, operator.MetricStorage)
 
+	packageSync := syncer.New(runtimeManager.GetAPIReader(), runtimeManager.GetClient(), dc, version, app.EmbeddedModulesDir, logger.Named("syncer"))
+
 	pkgRuntime, err := packageruntime.Build(runtimeManager.GetClient(), operator.ModuleManager, dc, operator.MetricStorage, logger)
 	if err != nil {
 		return nil, fmt.Errorf("create package operator: %w", err)
@@ -444,6 +448,7 @@ func NewDeckhouseController(
 	return &DeckhouseController{
 		runtimeManager:     runtimeManager,
 		moduleLoader:       loader,
+		packageSync:        packageSync,
 		packageRuntime:     pkgRuntime,
 		preflightCountDown: preflightCountDown,
 
@@ -464,6 +469,13 @@ func setModulesEnvironment(operator *addonoperator.AddonOperator) {
 
 // Start loads and ensures modules from FS, starts controllers and runs deckhouse config event loop
 func (c *DeckhouseController) Start(ctx context.Context) error {
+	// give the old module stack its package system objects before any
+	// controller runs; the sync reads through the API reader, so it does not
+	// need the manager cache
+	if err := c.packageSync.Sync(ctx); err != nil {
+		return fmt.Errorf("sync package versions: %w", err)
+	}
+
 	// run preflight check
 	c.startModulesControllers(ctx)
 
