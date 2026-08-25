@@ -34,7 +34,7 @@ Network (внутренняя сеть) может быть настроена �
 В VMware Cloud Director права пользователя складываются из роли и из **Rights Bundle** — набора прав, который публикуется для организации. Право `Preserve All ExtraConfig Elements During OVF Import and Export` нужно добавить и в роль, и в Rights Bundle организации.
 
 {% alert level="warning" %}
-Без права `Preserve All ExtraConfig Elements During OVF Import and Export` в роли и в Rights Bundle организации `userdata` не передаётся в эфемерные виртуальные машины.
+Без права `Preserve All ExtraConfig Elements During OVF Import and Export` в роли и в Rights Bundle организации `userdata` не передаётся в виртуальные машины эфемерных узлов.
 {% endalert %}
 
 Чтобы создать пользовательскую роль, включите права, как показано ниже. Названия прав приведены как в интерфейсе VCD.

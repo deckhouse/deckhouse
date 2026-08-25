@@ -34,7 +34,7 @@ For access to the VMware Cloud Director API, one of the following options is suf
 In VMware Cloud Director, user permissions come from the role and from a **Rights Bundle** — a set of rights published to the organization. Add the `Preserve All ExtraConfig Elements During OVF Import and Export` right both to the role and to the organization's Rights Bundle.
 
 {% alert level="warning" %}
-Without the `Preserve All ExtraConfig Elements During OVF Import and Export` right in both the role and the organization's Rights Bundle, `userdata` is not passed to ephemeral virtual machines.
+Without the `Preserve All ExtraConfig Elements During OVF Import and Export` right in both the role and the organization's Rights Bundle, `userdata` is not passed to the virtual machines of ephemeral nodes.
 {% endalert %}
 
 To create a custom role, enable the rights as shown below. Right names match the VCD UI.
