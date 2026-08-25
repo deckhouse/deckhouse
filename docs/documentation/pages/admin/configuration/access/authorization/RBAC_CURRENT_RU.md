@@ -105,6 +105,10 @@ create:
 create,get:
     - pods/attach
     - pods/exec
+    - pods/proxy
+    - services/proxy
+create,update:
+    - pods/ephemeralcontainers
 delete,deletecollection:
     - pods
 read:
@@ -114,6 +118,8 @@ read:
 {{site.data.i18n.common.role[page.lang] | capitalize }} `Editor` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`):
 
 ```text
+create:
+    - pods/bindibg
 read-write:
     - apps/deployments
     - apps/statefulsets
@@ -130,7 +136,10 @@ read-write:
     - persistentvolumeclaims
     - policy/poddisruptionbudgets
     - serviceaccounts
+    - serviceaccounts/token
     - services
+update:
+    - pods/resize
 write:
     - secrets
 ```
@@ -167,6 +176,15 @@ write:
 ```text
 read-write:
     - deckhouse.io/clusterauthorizationrules
+    - nodes/log
+    - nodes/metrics
+    - nodes/proxy
+    - nodes/stats
+    - nodes/configz
+    - nodes/healthz
+    - nodes/pods
+update:
+    - namespaces/finalize
 write:
     - limitranges
     - namespaces
