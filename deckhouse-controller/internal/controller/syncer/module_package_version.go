@@ -40,6 +40,11 @@ import (
 // syncEmbedded walks the embedded modules dir and ensures a complete version
 // for every module the running image ships.
 func (s *Syncer) syncEmbedded(ctx context.Context) error {
+	version, ok := s.embeddedVersion()
+	if !ok {
+		return nil
+	}
+
 	entries, err := os.ReadDir(s.embeddedModulesDir)
 	if err != nil {
 		return fmt.Errorf("read embedded modules dir: %w", err)
@@ -50,7 +55,7 @@ func (s *Syncer) syncEmbedded(ctx context.Context) error {
 			continue
 		}
 
-		if err := s.ensureEmbeddedVersion(ctx, entry.Name()); err != nil {
+		if err := s.ensureEmbeddedVersion(ctx, entry.Name(), version); err != nil {
 			return err
 		}
 	}
@@ -58,10 +63,30 @@ func (s *Syncer) syncEmbedded(ctx context.Context) error {
 	return nil
 }
 
+// embeddedVersion returns the version the embedded packages carry: the
+// deckhouse version without the prerelease and metadata parts, so it stays
+// stable across builds of one release. A "dev" binary counts as v2.0.0,
+// matching the package runtime. Any other non-semver version names no
+// versions and skips the embedded sync with a warning.
+func (s *Syncer) embeddedVersion() (string, bool) {
+	if s.deckhouseVersion == "dev" {
+		return "v2.0.0", true
+	}
+
+	parsed, err := semver.NewVersion(s.deckhouseVersion)
+	if err != nil {
+		s.logger.Warn("deckhouse version is not a semver, skip the embedded package versions",
+			slog.String("version", s.deckhouseVersion), log.Err(err))
+
+		return "", false
+	}
+
+	return fmt.Sprintf("v%d.%d.%d", parsed.Major(), parsed.Minor(), parsed.Patch()), true
+}
+
 // ensureEmbeddedVersion ensures the complete version of one module shipped in
-// the image: the object name carries a sanitized version, the spec keeps the
-// raw one, and the metadata comes from the module files on disk.
-func (s *Syncer) ensureEmbeddedVersion(ctx context.Context, dirName string) error {
+// the image; the metadata comes from the module files on disk.
+func (s *Syncer) ensureEmbeddedVersion(ctx context.Context, dirName, version string) error {
 	moduleDir := filepath.Join(s.embeddedModulesDir, dirName)
 
 	def, err := loader.LoadEmbeddedDefinition(moduleDir)
@@ -72,7 +97,7 @@ func (s *Syncer) ensureEmbeddedVersion(ctx context.Context, dirName string) erro
 		return nil
 	}
 
-	name := v1alpha1.MakeEmbeddedModulePackageVersionName(def.Name, s.deckhouseVersion)
+	name := v1alpha1.MakeModulePackageVersionName(repositoryNameEmbedded, def.Name, version)
 	if !s.validName(name, def.Name) {
 		return nil
 	}
@@ -87,8 +112,8 @@ func (s *Syncer) ensureEmbeddedVersion(ctx context.Context, dirName string) erro
 
 	spec := v1alpha1.ModulePackageVersionSpec{
 		PackageName:           def.Name,
-		PackageRepositoryName: v1alpha1.PackageRepositoryNameEmbedded,
-		PackageVersion:        s.deckhouseVersion,
+		PackageRepositoryName: repositoryNameEmbedded,
+		PackageVersion:        version,
 	}
 
 	return s.ensureFilled(ctx, name, spec, meta)
@@ -160,7 +185,7 @@ func (s *Syncer) specForRelease(release *v1alpha1.ModuleRelease) (string, v1alph
 	}
 
 	version := "v" + parsed.String()
-	repository := v1alpha1.PackageRepositoryNameForModuleSource(source)
+	repository := repositoryNameForSource(source)
 
 	name := v1alpha1.MakeModulePackageVersionName(repository, moduleName, version)
 	if !s.validName(name, moduleName) {

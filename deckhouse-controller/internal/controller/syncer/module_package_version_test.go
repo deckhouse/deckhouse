@@ -26,7 +26,31 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
+
+func TestEmbeddedVersion(t *testing.T) {
+	cases := []struct {
+		version string
+		want    string
+		ok      bool
+	}{
+		{version: "v1.78.0", want: "v1.78.0", ok: true},
+		{version: "v1.78.0-pr22189+8776a42", want: "v1.78.0", ok: true},
+		{version: "v1.0.0-RC1", want: "v1.0.0", ok: true},
+		{version: "dev", want: "v2.0.0", ok: true},
+		{version: "latest", want: "", ok: false},
+		{version: "", want: "", ok: false},
+	}
+
+	for _, c := range cases {
+		s := &Syncer{deckhouseVersion: c.version, logger: log.NewNop()}
+
+		got, ok := s.embeddedVersion()
+		assert.Equal(t, c.ok, ok, c.version)
+		assert.Equal(t, c.want, got, c.version)
+	}
+}
 
 func TestSyncEmbedded(t *testing.T) {
 	ctx := context.Background()
@@ -72,15 +96,36 @@ func TestSyncEmbedded(t *testing.T) {
 		assert.Equal(t, int32(910), mpv.Status.PackageMetadata.Weight, "the weight comes from the directory name")
 	})
 
-	t.Run("a dev build version is sanitized in the name only", func(t *testing.T) {
+	t.Run("a build version is normalized in the name and the spec", func(t *testing.T) {
 		dir := t.TempDir()
 		writeModuleYAML(t, filepath.Join(dir, "900-echo"), "name: echo\n")
 
 		s, cl := newTestSyncer(t, "v1.78.0-pr22453+1b47ed2", dir)
 		require.NoError(t, s.Sync(ctx))
 
-		mpv := getVersion(t, cl, "embedded-echo-v1.78.0-pr22453-1b47ed2")
-		assert.Equal(t, "v1.78.0-pr22453+1b47ed2", mpv.Spec.PackageVersion, "the spec keeps the raw version")
+		mpv := getVersion(t, cl, "embedded-echo-v1.78.0")
+		assert.Equal(t, "v1.78.0", mpv.Spec.PackageVersion, "prerelease and metadata are dropped")
+	})
+
+	t.Run("a dev binary counts as v2.0.0", func(t *testing.T) {
+		dir := t.TempDir()
+		writeModuleYAML(t, filepath.Join(dir, "900-echo"), "name: echo\n")
+
+		s, cl := newTestSyncer(t, "dev", dir)
+		require.NoError(t, s.Sync(ctx))
+
+		mpv := getVersion(t, cl, "embedded-echo-v2.0.0")
+		assert.Equal(t, "v2.0.0", mpv.Spec.PackageVersion)
+	})
+
+	t.Run("a broken deckhouse version skips the embedded sync", func(t *testing.T) {
+		dir := t.TempDir()
+		writeModuleYAML(t, filepath.Join(dir, "900-echo"), "name: echo\n")
+
+		s, cl := newTestSyncer(t, "latest", dir)
+		require.NoError(t, s.Sync(ctx))
+
+		assert.Empty(t, listVersionNames(t, cl))
 	})
 
 	t.Run("skips dummy and unreadable dirs", func(t *testing.T) {

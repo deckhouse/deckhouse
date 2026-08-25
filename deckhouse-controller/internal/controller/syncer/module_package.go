@@ -59,7 +59,7 @@ func repositoriesForSources(sources []string) []string {
 	repositories := make([]string, 0, len(sources))
 
 	for _, source := range sources {
-		repository := v1alpha1.PackageRepositoryNameForModuleSource(source)
+		repository := repositoryNameForSource(source)
 		if !slices.Contains(repositories, repository) {
 			repositories = append(repositories, repository)
 		}

@@ -109,6 +109,22 @@ func getPackage(t *testing.T, cl client.Client, name string) *v1alpha1.ModulePac
 	return pkg
 }
 
+func TestRepositoryNameForSource(t *testing.T) {
+	cases := []struct {
+		source string
+		want   string
+	}{
+		{source: "deckhouse", want: "deckhouse-modules"},
+		{source: "example", want: "example"},
+		{source: "deckhouse-prod", want: "deckhouse-prod"},
+		{source: "", want: ""},
+	}
+
+	for _, c := range cases {
+		assert.Equal(t, c.want, repositoryNameForSource(c.source), c.source)
+	}
+}
+
 func TestSyncIsIdempotent(t *testing.T) {
 	ctx := context.Background()
 
