@@ -10,7 +10,7 @@ description: "Управление облачными ресурсами в Deck
 - Управление ресурсами vSphere через `cloud-controller-manager`:
   - создаёт сетевые маршруты для сети `PodNetwork` на стороне vSphere;
   - актуализирует метаданные виртуальных машин и узлов Kubernetes и удаляет из Kubernetes узлы, которых больше нет в vSphere.
-- Заказ дисков через CSI на datastore. По умолчанию используются CNS-тома с изменением размера на лету. Режим First-Class Disk (FCD) доступен как legacy и настраивается параметром [compatibilityFlag](/modules/cloud-provider-vsphere/configuration.html#parameters-storageclass-compatibilityflag).
+- Заказ дисков через CSI на datastore. По умолчанию используются CNS-тома с изменением размера на лету. Режим First-Class Disk (FCD) доступен как legacy и настраивается параметром [`compatibilityFlag`](/modules/cloud-provider-vsphere/configuration.html#parameters-storageclass-compatibilityflag).
 - Заказ CloudEphemeral-узлов через Machine Controller Manager (MCM). Параметры виртуальных машин задаются в ресурсе [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass).
 - Регистрация в модуле [`node-manager`](/modules/node-manager/), чтобы [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) можно было указывать при описании [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 - Автоматическое включение CNI для новых кластеров. По умолчанию используется [`cni-cilium`](/modules/cni-cilium/).
