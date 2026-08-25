@@ -242,13 +242,14 @@ func NewPackageVersionService(basicService *BasicService) *PackageVersionService
 }
 
 // PackageReleaseService provides access to the <package>/release path for legacy v1alpha1 modules.
+// A release image carries the same metadata files as a version one, so the reads are the same.
 type PackageReleaseService struct {
-	*BasicService
+	*PackageVersionService
 }
 
 func NewPackageReleaseService(basicService *BasicService) *PackageReleaseService {
 	return &PackageReleaseService{
-		BasicService: basicService,
+		PackageVersionService: NewPackageVersionService(basicService),
 	}
 }
 
@@ -295,17 +296,16 @@ func (s *PackageVersionService) ReadPackageDefinition(ctx context.Context, tag s
 }
 
 // HasModuleDefinition checks whether the image contains a module.yaml (or module.yml) file.
-// It tells a module image apart from one that carries the version alone, on both the version
-// and the release path.
+// It tells a module image apart from one that carries the version alone.
 //
 // Returns (false, nil) if the image does not exist.
-func (s *BasicService) HasModuleDefinition(ctx context.Context, tag string) (bool, error) {
+func (s *PackageVersionService) HasModuleDefinition(ctx context.Context, tag string) (bool, error) {
 	img, err := s.GetImage(ctx, tag)
 	if err != nil {
 		if errors.Is(err, client.ErrImageNotFound) {
 			return false, nil
 		}
-		return false, fmt.Errorf("get image: %w", err)
+		return false, fmt.Errorf("get version image: %w", err)
 	}
 
 	rc := img.Extract()
@@ -318,7 +318,7 @@ func (s *BasicService) HasModuleDefinition(ctx context.Context, tag string) (boo
 			return false, nil
 		}
 		if err != nil {
-			return false, fmt.Errorf("read image tar: %w", err)
+			return false, fmt.Errorf("read version image tar: %w", err)
 		}
 		if hdr.Name == "module.yaml" || hdr.Name == "module.yml" {
 			return true, nil
