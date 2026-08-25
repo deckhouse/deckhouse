@@ -87,8 +87,7 @@ type NodeConfigStatus struct {
 	LastReconcileTime metav1.Time `json:"lastReconcileTime,omitempty"`
 	// OSImage is how far the node has got with spec.osImage. Mirrors
 	// config.OSImageStatus in the nodelet repository (internal/config/types.go):
-	// a field missing here is pruned on write, and the node's whole status apply
-	// fails with "field not declared in schema" — the update then reports nothing.
+	// a field missing here is pruned and the node's whole status apply fails.
 	// +optional
 	OSImage *OSImageStatus `json:"osImage,omitempty"`
 	// MaintenanceToken is the bearer token an operator presents to the node's
@@ -247,10 +246,9 @@ type Registry struct {
 	Auth string `json:"auth,omitempty"`
 }
 
-// OSImage names the image the node must run. Mirrors the agent's contract —
-// internal/config/types.go in the nodelet repository — and the initramfs one,
-// images/init/src/0.1/nodeconfig.go: both parse this document, and a shape they
-// disagree with fails the parse and drops the node into an emergency shell.
+// OSImage names the image the node must run. Mirrors the agent's contract
+// (internal/config/types.go in the nodelet repository) and the initramfs one
+// (images/init/src/0.1/nodeconfig.go); a shape they refuse strands the node.
 type OSImage struct {
 	// Digest pins the exact image, as for an extension. The node records it at
 	// install and compares it on every pass, so a tag would say nothing.
@@ -261,10 +259,9 @@ type OSImage struct {
 	// parameter out, so the proxy uses its own default registry.
 	// +optional
 	Repository string `json:"repository,omitempty"`
-	// AdditionalPath is where the artifact lives inside the registry, forwarded to
-	// the proxy as its "path" parameter. Empty is right for Deckhouse: every image
-	// of a release, the OS included, sits in the repository spec.registry.path
-	// already names.
+	// AdditionalPath is the proxy's "path" parameter. Empty is right for
+	// Deckhouse: every image of a release sits in the repository
+	// spec.registry.path already names.
 	// +optional
 	AdditionalPath string `json:"additionalPath,omitempty"`
 }

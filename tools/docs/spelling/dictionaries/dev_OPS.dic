@@ -2854,8 +2854,3 @@ ZvirtInstanceClass
 юзера
 юнит
 юнита
-GracefulShutdownPostpone
-NoRunningPodsWithLabel
-PodsWithLabelAreRunningOnNode
-WaitingForShutdownSignal
-olcedar
