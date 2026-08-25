@@ -15,7 +15,9 @@
 package crdenricher
 
 import (
+	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -41,6 +43,7 @@ func TestParseMarkerLine(t *testing.T) {
 		{"crd subkey flag", "+crd-enricher:crd:minimal", marker{name: "crd:minimal", enricher: true}, true},
 		{"sensitive-data", "+crd-enricher:deckhouse:sensitive-data", marker{name: "sensitive-data", enricher: true}, true},
 		{"raw", "+crd-enricher:raw:pattern=^a$", marker{name: "raw:pattern", rawValue: "^a$", hasValue: true, enricher: true}, true},
+		{"unset", "+crd-enricher:unset:items.description", marker{name: "unset:items.description", enricher: true}, true},
 	}
 
 	for _, tc := range cases {
@@ -88,7 +91,7 @@ func TestApplyMarkersScalarAndFlag(t *testing.T) {
 		{name: "default", rawValue: "3m", hasValue: true, enricher: true},
 		{name: "deprecated", enricher: true},
 		{name: "kubebuilder:validation:Required"}, // not an enricher marker, ignored
-	})
+	}, nodeCtx{})
 
 	if got := schema["x-doc-default"]; got != "3m" {
 		t.Errorf("x-doc-default = %#v, want %q", got, "3m")
@@ -107,7 +110,7 @@ func TestApplyMarkersSensitiveData(t *testing.T) {
 
 	e.applyMarkers(schema, []marker{
 		{name: "sensitive-data", enricher: true},
-	})
+	}, nodeCtx{})
 
 	if got := schema["x-kubernetes-sensitive-data"]; got != true {
 		t.Errorf("x-kubernetes-sensitive-data = %#v, want true", got)
@@ -125,7 +128,7 @@ func TestApplyMarkersExamplesAccumulate(t *testing.T) {
 		{name: "examples", rawValue: "5m", hasValue: true, enricher: true},
 		{name: "examples", rawValue: "1h", hasValue: true, enricher: true},
 		{name: "examples", rawValue: "[10m, 20m]", hasValue: true, enricher: true},
-	})
+	}, nodeCtx{})
 
 	want := []any{"5m", "1h", "10m", "20m"}
 	if got := schema["x-doc-examples"]; !reflect.DeepEqual(got, want) {
@@ -135,15 +138,16 @@ func TestApplyMarkersExamplesAccumulate(t *testing.T) {
 
 func TestApplyMarkersExampleObject(t *testing.T) {
 	e := &Enricher{}
+	fs := &fileState{}
 	schema := map[string]any{"type": "object"}
 
 	// The keys are authored out of alphabetical order on purpose: an example
 	// object must keep the authored order instead of being sorted.
 	e.applyMarkers(schema, []marker{
 		{name: "examples", rawValue: "{kind: ModuleSource, spec: {registry: {repo: example.io, dockerCfg: secret}}}", hasValue: true, enricher: true},
-	})
+	}, nodeCtx{file: fs})
 
-	if !e.orderedExamples {
+	if !fs.orderedExamples {
 		t.Error("orderedExamples flag not set for an object example")
 	}
 
@@ -165,6 +169,7 @@ func TestApplyMarkersExampleObject(t *testing.T) {
 
 func TestApplyMarkersExamplesDescription(t *testing.T) {
 	e := &Enricher{}
+	fs := &fileState{}
 	schema := map[string]any{"type": "object"}
 
 	// Each examples marker is followed by its description; the pairs must render
@@ -174,9 +179,9 @@ func TestApplyMarkersExamplesDescription(t *testing.T) {
 		{name: "examples-description", rawValue: "my super example", hasValue: true, enricher: true},
 		{name: "examples", rawValue: "{field: value2}", hasValue: true, enricher: true},
 		{name: "examples-description", rawValue: "my super example two", hasValue: true, enricher: true},
-	})
+	}, nodeCtx{file: fs})
 
-	if !e.orderedExamples {
+	if !fs.orderedExamples {
 		t.Error("orderedExamples flag not set for described examples")
 	}
 
@@ -200,6 +205,7 @@ func TestApplyMarkersExamplesDescription(t *testing.T) {
 
 func TestApplyMarkersExamplesName(t *testing.T) {
 	e := &Enricher{}
+	fs := &fileState{}
 	schema := map[string]any{"type": "object"}
 
 	// A name alone (no description) switches to the wrapper form; the wrapper
@@ -207,9 +213,9 @@ func TestApplyMarkersExamplesName(t *testing.T) {
 	e.applyMarkers(schema, []marker{
 		{name: "examples", rawValue: "{field: value}", hasValue: true, enricher: true},
 		{name: "examples-name", rawValue: "My example", hasValue: true, enricher: true},
-	})
+	}, nodeCtx{file: fs})
 
-	if !e.orderedExamples {
+	if !fs.orderedExamples {
 		t.Error("orderedExamples flag not set for a named example")
 	}
 
@@ -234,7 +240,7 @@ func TestApplyMarkersExamplesNameAndDescription(t *testing.T) {
 		{name: "examples", rawValue: "5m", hasValue: true, enricher: true},
 		{name: "examples-name", rawValue: "five minutes", hasValue: true, enricher: true},
 		{name: "examples-description", rawValue: "a short interval", hasValue: true, enricher: true},
-	})
+	}, nodeCtx{})
 
 	want := []any{
 		orderedMap{
@@ -258,7 +264,7 @@ func TestApplyMarkersExamplesDescriptionMixed(t *testing.T) {
 		{name: "examples", rawValue: "5m", hasValue: true, enricher: true},
 		{name: "examples", rawValue: "1h", hasValue: true, enricher: true},
 		{name: "examples-description", rawValue: "one hour", hasValue: true, enricher: true},
-	})
+	}, nodeCtx{})
 
 	want := []any{
 		orderedMap{
@@ -281,7 +287,7 @@ func TestApplyMarkersExamplesDescriptionWithoutExample(t *testing.T) {
 	// A dangling description with no preceding example must warn and be dropped.
 	e.applyMarkers(schema, []marker{
 		{name: "examples-description", rawValue: "orphan", hasValue: true, enricher: true},
-	})
+	}, nodeCtx{})
 
 	if _, ok := schema["x-doc-examples"]; ok {
 		t.Errorf("x-doc-examples must stay unset: %#v", schema["x-doc-examples"])
@@ -297,7 +303,7 @@ func TestApplyMarkersRawKey(t *testing.T) {
 
 	e.applyMarkers(schema, []marker{
 		{name: "raw:pattern", rawValue: `^(\d+h)?(\d+m)?(\d+s)?$`, hasValue: true, enricher: true},
-	})
+	}, nodeCtx{})
 
 	if got := schema["pattern"]; got != `^(\d+h)?(\d+m)?(\d+s)?$` {
 		t.Errorf("pattern = %#v, want the regex", got)
@@ -324,7 +330,7 @@ func TestApplyMarkersRawNestedKey(t *testing.T) {
 	e.applyMarkers(schema, []marker{
 		{name: "raw:items.description", rawValue: "custom item description", hasValue: true, enricher: true},
 		{name: "raw:items.properties.reason.description", rawValue: "custom reason", hasValue: true, enricher: true},
-	})
+	}, nodeCtx{})
 
 	items := schema["items"].(map[string]any)
 	if got := items["description"]; got != "custom item description" {
@@ -341,7 +347,7 @@ func TestApplyMarkersRawNestedKey(t *testing.T) {
 	// A path that does not resolve must warn instead of growing the schema.
 	e2 := &Enricher{}
 	s2 := map[string]any{"type": "string"}
-	e2.applyMarkers(s2, []marker{{name: "raw:items.description", rawValue: "x", hasValue: true, enricher: true}})
+	e2.applyMarkers(s2, []marker{{name: "raw:items.description", rawValue: "x", hasValue: true, enricher: true}}, nodeCtx{})
 	if _, ok := s2["items"]; ok {
 		t.Errorf("nonexistent path should not be created")
 	}
@@ -350,8 +356,312 @@ func TestApplyMarkersRawNestedKey(t *testing.T) {
 	}
 }
 
+func TestApplyMarkersUnsetKey(t *testing.T) {
+	e := &Enricher{}
+	schema := map[string]any{
+		"type":        "array",
+		"description": "field description",
+		"items": map[string]any{
+			"type":        "object",
+			"description": "vendored type description",
+			"properties": map[string]any{
+				"reason": map[string]any{"type": "string", "description": "vendored reason"},
+			},
+		},
+	}
+
+	e.applyMarkers(schema, []marker{
+		{name: "unset:items.description", enricher: true},
+		{name: "unset:items.properties.reason.description", enricher: true},
+	}, nodeCtx{})
+
+	items := schema["items"].(map[string]any)
+	if _, ok := items["description"]; ok {
+		t.Errorf("items.description survived the unset marker")
+	}
+	if got := items["type"]; got != "object" {
+		t.Errorf("items.type = %#v, want the node left otherwise intact", got)
+	}
+	reason := items["properties"].(map[string]any)["reason"].(map[string]any)
+	if _, ok := reason["description"]; ok {
+		t.Errorf("items.properties.reason.description survived the unset marker")
+	}
+	if got := schema["description"]; got != "field description" {
+		t.Errorf("the field's own description = %#v, want it untouched", got)
+	}
+	if len(e.warnings) != 0 {
+		t.Errorf("unexpected warnings: %v", e.warnings)
+	}
+
+	// A single-element key addresses the node itself.
+	e2 := &Enricher{}
+	s2 := map[string]any{"type": "string", "description": "text"}
+	e2.applyMarkers(s2, []marker{{name: "unset:description", enricher: true}}, nodeCtx{})
+	if _, ok := s2["description"]; ok {
+		t.Errorf("description survived the unset marker")
+	}
+	if len(e2.warnings) != 0 {
+		t.Errorf("unexpected warnings: %v", e2.warnings)
+	}
+}
+
+func TestApplyMarkersUnsetMissingWarns(t *testing.T) {
+	// A path whose parent is not there, and a key that is already absent, are
+	// both warnings: the marker was written to remove something, so removing
+	// nothing means it has outlived its target.
+	cases := []struct {
+		name   string
+		schema map[string]any
+		key    string
+	}{
+		{"missing parent", map[string]any{"type": "string"}, "unset:items.description"},
+		{"missing key", map[string]any{"type": "object", "items": map[string]any{"type": "object"}}, "unset:items.description"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			e := &Enricher{}
+			e.applyMarkers(tc.schema, []marker{{name: tc.key, enricher: true}}, nodeCtx{})
+			if len(e.warnings) == 0 {
+				t.Fatalf("expected a warning for %q", tc.key)
+			}
+			if _, ok := tc.schema["description"]; ok {
+				t.Errorf("the marker must not touch the node it does not address")
+			}
+		})
+	}
+}
+
+func TestApplyMarkersUnsetIgnoresValue(t *testing.T) {
+	// unset carries no value. A marker written with one still removes the key,
+	// but says so rather than letting the author believe the value did anything.
+	e := &Enricher{}
+	schema := map[string]any{"type": "string", "description": "text"}
+
+	e.applyMarkers(schema, []marker{
+		{name: "unset:description", rawValue: "whatever", hasValue: true, enricher: true},
+	}, nodeCtx{})
+
+	if _, ok := schema["description"]; ok {
+		t.Errorf("description survived the unset marker")
+	}
+	if len(e.warnings) != 1 {
+		t.Fatalf("warnings = %v, want exactly one about the ignored value", e.warnings)
+	}
+}
+
+func TestApplyMarkersUnsetRefusesStructuralKeys(t *testing.T) {
+	// Removing "items" from an array node, or "type" from any node, produces a
+	// manifest the apiserver rejects with a message that says nothing about the
+	// marker that caused it. Refusing keeps the document applicable and puts the
+	// complaint where the author can act on it.
+	for _, tc := range []struct {
+		name   string
+		schema map[string]any
+		key    string
+	}{
+		{
+			name:   "items on an array node",
+			schema: map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
+			key:    "unset:items",
+		},
+		{
+			name:   "type on the node itself",
+			schema: map[string]any{"type": "string", "description": "text"},
+			key:    "unset:type",
+		},
+		{
+			name: "type of a nested node",
+			schema: map[string]any{
+				"type":  "array",
+				"items": map[string]any{"type": "object", "description": "text"},
+			},
+			key: "unset:items.type",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			e := &Enricher{}
+			before := fmt.Sprintf("%v", tc.schema)
+
+			e.applyMarkers(tc.schema, []marker{{name: tc.key, enricher: true}}, nodeCtx{})
+
+			if got := fmt.Sprintf("%v", tc.schema); got != before {
+				t.Errorf("schema changed: %s", got)
+			}
+			if len(e.warnings) != 1 || !strings.Contains(e.warnings[0], "structural schema requires") {
+				t.Errorf("warnings = %v, want one naming the structural requirement", e.warnings)
+			}
+		})
+	}
+}
+
+func TestApplyMarkersUnsetRefusesToEmptyParent(t *testing.T) {
+	// items: {} is not the same schema as no items at all, and under type: array
+	// the apiserver rejects it outright ("must not be empty for specified object
+	// fields"). Refused rather than done-and-warned, because a warning is not fatal
+	// by default: obeying would ship a document that fails at apply time, with
+	// nothing in the failure naming the marker that caused it.
+	e := &Enricher{}
+	schema := map[string]any{
+		"type":  "array",
+		"items": map[string]any{"description": "the only key"},
+	}
+
+	e.applyMarkers(schema, []marker{{name: "unset:items.description", enricher: true}}, nodeCtx{})
+
+	items := schema["items"].(map[string]any)
+	if len(items) != 1 || items["description"] != "the only key" {
+		t.Errorf("items = %#v, want it left alone", items)
+	}
+	if len(e.warnings) != 1 || !strings.Contains(e.warnings[0], "would leave its parent node empty") {
+		t.Errorf("warnings = %v, want one about refusing to empty the parent", e.warnings)
+	}
+}
+
+func TestApplyMarkersUnsetWarnsOnValidationKeys(t *testing.T) {
+	// Removing a validation key is legal and applies cleanly, which is exactly why
+	// it needs saying: the API then admits values it used to reject, and the crds/
+	// re-render gate cannot notice -- the committed manifest and the render both
+	// come from this marker.
+	for _, key := range []string{"enum", "required", "maxLength", "x-kubernetes-validations"} {
+		t.Run(key, func(t *testing.T) {
+			e := &Enricher{}
+			schema := map[string]any{
+				"type": "string",
+				key:    "whatever the key holds",
+				"keep": "so the parent does not end up empty",
+			}
+
+			e.applyMarkers(schema, []marker{{name: "unset:" + key, enricher: true}}, nodeCtx{})
+
+			if _, still := schema[key]; still {
+				t.Errorf("%s survived; unset: is expected to obey here, only to say so", key)
+			}
+			if len(e.warnings) != 1 || !strings.Contains(e.warnings[0], "removes the validation key") {
+				t.Errorf("warnings = %v, want one naming the validation key", e.warnings)
+			}
+		})
+	}
+}
+
+func TestApplyMarkersUnsetStaysQuietOnDescription(t *testing.T) {
+	// The motivating case must not become noisy: items.description is what unset:
+	// exists for.
+	e := &Enricher{}
+	schema := map[string]any{
+		"type":        "string",
+		"description": "from a vendored type",
+		"keep":        "so the parent does not end up empty",
+	}
+
+	e.applyMarkers(schema, []marker{{name: "unset:description", enricher: true}}, nodeCtx{})
+
+	if _, still := schema["description"]; still {
+		t.Error("description survived")
+	}
+	if len(e.warnings) != 0 {
+		t.Errorf("warnings = %v, want none", e.warnings)
+	}
+}
+
+func TestApplyMarkersKeylessMarkersWarn(t *testing.T) {
+	// "raw:" and "unset:" with nothing after the colon used to be reported as a
+	// path that is missing from the schema, sending the author to look for a node
+	// instead of at their own typo.
+	for _, tc := range []struct {
+		name string
+		key  string
+		want string
+	}{
+		{name: "raw", key: "raw:", want: "raw marker has no key"},
+		{name: "unset", key: "unset:", want: "unset marker has no key"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			e := &Enricher{}
+			schema := map[string]any{"type": "string"}
+
+			e.applyMarkers(schema, []marker{{name: tc.key, enricher: true}}, nodeCtx{})
+
+			if len(e.warnings) != 1 || !strings.Contains(e.warnings[0], tc.want) {
+				t.Errorf("warnings = %v, want one containing %q", e.warnings, tc.want)
+			}
+		})
+	}
+}
+
+func TestApplyMarkersRawWithoutValueRefused(t *testing.T) {
+	// A value-less raw: marker decoded to null and wrote it, producing a
+	// description the apiserver rejects. The only thing its author could have
+	// meant is the removal unset: now does, so the marker is refused and says so.
+	e := &Enricher{}
+	schema := map[string]any{
+		"type":  "array",
+		"items": map[string]any{"type": "object", "description": "vendored"},
+	}
+
+	e.applyMarkers(schema, []marker{{name: "raw:items.description", enricher: true}}, nodeCtx{})
+
+	items := schema["items"].(map[string]any)
+	if got := items["description"]; got != "vendored" {
+		t.Errorf("items.description = %#v, want it left alone rather than nulled", got)
+	}
+	if len(e.warnings) != 1 || !strings.Contains(e.warnings[0], "unset:items.description") {
+		t.Errorf("warnings = %v, want one pointing at the unset marker", e.warnings)
+	}
+}
+
+func TestWarningsCarryTheirLocation(t *testing.T) {
+	// A warning that does not say which manifest and which declaration it is
+	// about cannot be acted on: raw:description and unset:items.description are
+	// the most common markers in the set, and they recur across every CRD.
+	e := &Enricher{}
+	fs := &fileState{path: "/tmp/bin/crd/bases/storage.deckhouse.io_things.yaml"}
+	ctx := nodeCtx{file: fs}.at("ThingStatus", "Conditions")
+
+	e.applyMarkers(map[string]any{"type": "array"},
+		[]marker{{name: "unset:items.description", enricher: true}}, ctx)
+
+	if len(e.warnings) != 1 {
+		t.Fatalf("warnings = %v, want exactly one", e.warnings)
+	}
+	got := e.warnings[0]
+	for _, want := range []string{
+		"storage.deckhouse.io_things.yaml", // the manifest, by base name only
+		"ThingStatus.Conditions",           // the Go declaration the marker sat on
+		"items.description",                // the marker's own subject
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("warning %q does not carry %q", got, want)
+		}
+	}
+	if strings.Contains(got, "/tmp/bin/crd/bases") {
+		t.Errorf("warning %q spells the whole path; the base name is what identifies the file", got)
+	}
+}
+
+func TestWarningsAreDeduplicated(t *testing.T) {
+	// The same marker is visited once per version of every document naming its
+	// kind, so an unfiltered list repeats each problem and buries the distinct
+	// ones.
+	e := &Enricher{}
+	ctx := nodeCtx{file: &fileState{path: "things.yaml"}}.at("ThingSpec", "Phase")
+
+	for range 3 {
+		e.applyMarkers(map[string]any{"type": "string"},
+			[]marker{{name: "unset:absent", enricher: true}}, ctx)
+	}
+
+	if got := e.Warnings(); len(got) != 1 {
+		t.Errorf("Warnings() = %v, want the repeats collapsed to one", got)
+	}
+	if len(e.warnings) != 3 {
+		t.Errorf("the raw list should keep every occurrence, got %v", e.warnings)
+	}
+}
+
 func TestApplyCRDMarkers(t *testing.T) {
 	e := &Enricher{}
+	fs := &fileState{}
 	crd := map[string]any{
 		"metadata": map[string]any{
 			"annotations": map[string]any{"controller-gen.kubebuilder.io/version": "v0.19.0"},
@@ -384,9 +694,9 @@ func TestApplyCRDMarkers(t *testing.T) {
 		{name: "crd:preserveUnknownFields", rawValue: "false", hasValue: true, enricher: true},
 		{name: "crd:minimal", rawValue: "true", hasValue: true, enricher: true},
 		{name: "crd:stripFormat", rawValue: "true", hasValue: true, enricher: true},
-	})
+	}, nodeCtx{file: fs})
 
-	if !e.curatedStyle {
+	if !fs.curatedStyle {
 		t.Error("curatedStyle not set")
 	}
 
