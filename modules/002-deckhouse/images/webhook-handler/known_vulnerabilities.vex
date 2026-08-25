@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-5a4509a04e8128126aee080324a6b663a7748bf44b58a9a4b9c74d4801844f53",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 16,
+  "version": 17,
   "statements": [
     {
       "vulnerability": {
@@ -185,8 +185,736 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Зависимость go.mongodb.org/mongo-driver версии v1.14.0 поступает транзитивно через бандл-инструмент образа (promtool из модуля 300-prometheus); webhook-handler не подключается к MongoDB, уязвимый код mongo-драйвера не выполняется.",
       "timestamp": "2026-07-13T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39829"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.49.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh версии v0.49.0 приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не использует SSH-функционал (SSH-сервер/клиент, ssh-agent, работу с known_hosts) — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39830"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.49.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh версии v0.49.0 приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не использует SSH-функционал (SSH-сервер/клиент, ssh-agent, работу с known_hosts) — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39831"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.49.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh версии v0.49.0 приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не использует SSH-функционал (SSH-сервер/клиент, ssh-agent, работу с known_hosts) — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39832"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.49.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh/agent версии v0.49.0 приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не использует SSH-функционал (SSH-сервер/клиент, ssh-agent, работу с known_hosts) — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39833"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.49.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh/agent версии v0.49.0 приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не использует SSH-функционал (SSH-сервер/клиент, ssh-agent, работу с known_hosts) — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39834"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.49.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh версии v0.49.0 приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не использует SSH-функционал (SSH-сервер/клиент, ssh-agent, работу с known_hosts) — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39835"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.49.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh версии v0.49.0 приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не использует SSH-функционал (SSH-сервер/клиент, ssh-agent, работу с known_hosts) — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39827"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.49.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh версии v0.49.0 приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не использует SSH-функционал (SSH-сервер/клиент, ssh-agent, работу с known_hosts) — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42508"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.49.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh/knownhosts версии v0.49.0 приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не использует SSH-функционал (SSH-сервер/клиент, ssh-agent, работу с known_hosts) — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46595"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.49.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh версии v0.49.0 приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не использует SSH-функционал (SSH-сервер/клиент, ssh-agent, работу с known_hosts) — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46597"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.49.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh версии v0.49.0 приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не использует SSH-функционал (SSH-сервер/клиент, ssh-agent, работу с known_hosts) — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46598"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.49.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh/agent версии v0.49.0 приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не использует SSH-функционал (SSH-сервер/клиент, ssh-agent, работу с known_hosts) — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.49.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Пакет golang.org/x/crypto/openpgp помечен как неподдерживаемый и небезопасный по своей конструкции. Зависимость приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не использует OpenPGP-функционал — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39828"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.49.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/crypto версии v0.49.0 приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не использует SSH-функционал (SSH-сервер/клиент, ssh-agent, работу с known_hosts) — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-25681"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.52.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/net/html версии v0.52.0 (XSS/RCE при парсинге HTML) приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не парсит и не рендерит недоверенный HTML — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-27136"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.52.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/net/html версии v0.52.0 (XSS при обходе HTML-парсинга) приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не парсит и не рендерит недоверенный HTML — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-25680"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.52.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/net/html версии v0.52.0 (DoS при избыточном HTML-парсинге) приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не парсит и не рендерит недоверенный HTML — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42502"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.52.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/net/html версии v0.52.0 (XSS при неожиданном рендеринге HTML-дерева) приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не парсит и не рендерит недоверенный HTML — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42506"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.52.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/net/html версии v0.52.0 (XSS при произвольном HTML-парсинге) приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не парсит и не рендерит недоверенный HTML — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33814"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.52.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в HTTP/2-стеке golang.org/x/net версии v0.52.0 (DoS через некорректный SETTINGS_MAX_FRAME_SIZE-фрейм) приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не обслуживает HTTP/2-соединения из недоверенной сети через данный стек — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39821"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.52.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/net/idna версии v0.52.0 (эскалация привилегий при некорректной обработке Punycode-меток) приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не обрабатывает недоверенные доменные имена/IDNA через данный код — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46600"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.52.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/net версии v0.52.0 (panic при парсинге некорректной SVCB/HTTPS DNS-записи) приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не разбирает недоверенные DNS-ответы через данный код — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39824"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/sys@v0.42.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/sys/windows версии v0.42.0 (переполнение целочисленного значения в NewNTUnicodeString) относится исключительно к платформе Windows. webhook-handler собирается и исполняется в Linux-контейнере, Windows-специфичный код не компилируется и не выполняется. Зависимость приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus).",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56852"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/text@v0.35.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/text версии v0.35.0 (бесконечный цикл в norm.Iter при обработке специально сформированного ввода) приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не выполняет Unicode-нормализацию недоверенного ввода через данный код — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GHSA-hrxh-6v49-42gf"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/google.golang.org/grpc@v1.80.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в google.golang.org/grpc версии v1.80.0 (проблемы xDS RBAC и HTTP/2) приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не использует gRPC-сервер и xDS/RBAC-функционал — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-69247"
+      },
+      "products": [
+        {
+          "@id": "pkg:pypi/cryptography@44.0.1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость затрагивает функции pkcs7_decrypt_der/pkcs7_decrypt_pem/pkcs7_decrypt_smime (Bleichenbacher-оракул при расшифровке недоверенного EnvelopedData). Эксплуатация требует сервиса, автоматически расшифровывающего недоверенный S/MIME/PKCS7 и адаптивно отражающего результат (почтовый шлюз/фильтр). webhook-handler не выполняет расшифровку PKCS7/S/MIME и не обрабатывает недоверенный EnvelopedData — уязвимый код не выполняется.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-69248"
+      },
+      "products": [
+        {
+          "@id": "pkg:pypi/cryptography@44.0.1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в валидации X.509 (DNSConstraint::matches — обход name constraints через wildcard в SAN). webhook-handler не выполняет проверку недоверенных цепочек сертификатов с name constraints средствами pypi/cryptography — уязвимый код не выполняется.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-69249"
+      },
+      "products": [
+        {
+          "@id": "pkg:pypi/cryptography@44.0.1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в построении цепочки сертификатов (build_chain_inner — экспоненциальный рост при дублировании self-signed сертификатов, DoS-амплификация). webhook-handler не выполняет валидацию недоверенных цепочек сертификатов средствами pypi/cryptography — уязвимый код не выполняется.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-25681"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/net/html версии v0.42.0 (XSS через непредвиденное HTML-дерево при Render) приходит транзитивно через бинарь yq (образ tools/yq). yq — обработчик YAML, HTML он не парсит и не рендерит; входные YAML-данные формируются самим Deckhouse и не являются недоверенными — уязвимый код не выполняется.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-27136"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/net/html версии v0.42.0 (XSS при обходе HTML-парсинга) приходит транзитивно через бинарь yq (образ tools/yq). yq — обработчик YAML, HTML он не парсит и не рендерит; входные YAML-данные формируются самим Deckhouse и не являются недоверенными — уязвимый код не выполняется.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-25680"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/net/html версии v0.42.0 (DoS при избыточном HTML-парсинге) приходит транзитивно через бинарь yq (образ tools/yq). yq — обработчик YAML, HTML он не парсит; входные YAML-данные формируются самим Deckhouse и не являются недоверенными — уязвимый код не выполняется.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42502"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/net/html версии v0.42.0 (XSS при непредвиденном рендеринге HTML-дерева) приходит транзитивно через бинарь yq (образ tools/yq). yq — обработчик YAML, HTML он не парсит и не рендерит; входные YAML-данные формируются самим Deckhouse и не являются недоверенными — уязвимый код не выполняется.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42506"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/net/html версии v0.42.0 (XSS при произвольном HTML-парсинге) приходит транзитивно через бинарь yq (образ tools/yq). yq — обработчик YAML, HTML он не парсит и не рендерит; входные YAML-данные формируются самим Deckhouse и не являются недоверенными — уязвимый код не выполняется.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-47911"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/net/html версии v0.42.0 (квадратичная сложность парсинга HTML, DoS) приходит транзитивно через бинарь yq (образ tools/yq). yq — обработчик YAML, HTML он не парсит; входные YAML-данные формируются самим Deckhouse и не являются недоверенными — уязвимый код не выполняется.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-58190"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/net/html версии v0.42.0 (бесконечный цикл в html.Parse, DoS) приходит транзитивно через бинарь yq (образ tools/yq). yq — обработчик YAML, HTML он не парсит; входные YAML-данные формируются самим Deckhouse и не являются недоверенными — уязвимый код не выполняется.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33814"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в HTTP/2-стеке golang.org/x/net версии v0.42.0 (DoS через некорректный SETTINGS_MAX_FRAME_SIZE-фрейм) приходит транзитивно через бинарь yq (образ tools/yq). yq — CLI-обработчик YAML, он не обслуживает HTTP/2-соединения из сети — уязвимый код не выполняется.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39821"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/net/idna версии v0.42.0 (эскалация привилегий при некорректной обработке Punycode-меток) приходит транзитивно через бинарь yq (образ tools/yq). yq — CLI-обработчик YAML, он не обрабатывает недоверенные доменные имена/IDNA — уязвимый код не выполняется.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46600"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/net/dns/dnsmessage версии v0.42.0 (DoS/panic при парсинге некорректной DNS-записи) приходит транзитивно через бинарь yq (образ tools/yq). yq — CLI-обработчик YAML, он не разбирает недоверенные DNS-ответы — уязвимый код не выполняется.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56852"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/text@v0.27.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/text версии v0.27.0 (бесконечный цикл в norm.Iter / DoS при некорректном UTF-8) приходит транзитивно через бинарь yq (образ tools/yq). Входные YAML-данные формируются самим Deckhouse и не являются недоверенными, путь Unicode-нормализации недоверенного ввода не задействуется — уязвимый код не выполняется.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39824"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/sys@v0.34.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/sys/windows версии v0.34.0 (переполнение целочисленного значения в NewNTUnicodeString) относится исключительно к платформе Windows. webhook-handler и входящий в него бинарь yq (образ tools/yq) собираются и исполняются в Linux-контейнере, Windows-специфичный код не компилируется и не выполняется.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-27145"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.10"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в стандартной библиотеке Go 1.25.10 (crypto/x509 (*Certificate).VerifyHostname — квадратичная сложность DoS при большом списке DNS SAN). Приходит через бинарь yq (образ tools/yq) — CLI-обработчик YAML, он не выполняет проверку недоверенных X.509-сертификатов, путь VerifyHostname не задействуется. Устранение — бамп Go toolchain образа tools/yq.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33818"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.10"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в стандартной библиотеке Go 1.25.10 (encoding/asn1 Unmarshal — DoS через избыточную рекурсию). Приходит через бинарь yq (образ tools/yq) — CLI-обработчик YAML, он не разбирает недоверенные ASN.1-структуры, путь asn1.Unmarshal не задействуется. Устранение — бамп Go toolchain образа tools/yq.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39821"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.10"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в стандартной библиотеке Go 1.25.10 (вендоренный net/http golang.org/x/net/idna — эскалация привилегий при некорректной обработке Punycode-меток). Приходит через бинарь yq (образ tools/yq) — CLI-обработчик YAML, он не обрабатывает недоверенные доменные имена/IDNA и не выполняет привилегированных проверок хостнеймов, уязвимый путь не задействуется. Устранение — бамп Go toolchain образа tools/yq.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39822"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.10"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в стандартной библиотеке Go 1.25.10 (os.Root — обход каталога через следование по симлинку при завершающем '/'). Приходит через бинарь yq (образ tools/yq) — CLI-обработчик YAML, он не использует os.Root для доступа к файлам по недоверенным путям, уязвимый путь не задействуется. Устранение — бамп Go toolchain образа tools/yq.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42504"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.10"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в стандартной библиотеке Go 1.25.10 (mime — DoS при разборе специально сформированного MIME-заголовка). Приходит через бинарь yq (образ tools/yq) — CLI-обработчик YAML, он не разбирает недоверенные MIME-заголовки, уязвимый путь не задействуется. Устранение — бамп Go toolchain образа tools/yq.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56853"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.10"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в стандартной библиотеке Go 1.25.10 (net/http — DoS незашифрованных HTTP/2-соединений из-за неприменения ReadHeaderTimeout). Приходит через бинарь yq (образ tools/yq) — CLI-обработчик YAML, он не поднимает HTTP-сервер и не обслуживает сетевые соединения, уязвимый путь не задействуется. Устранение — бамп Go toolchain образа tools/yq.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56858"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.10"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в стандартной библиотеке Go 1.25.10 (html/template — XSS при патологическом вводе). Приходит через бинарь yq (образ tools/yq) — CLI-обработчик YAML, он не использует html/template и не рендерит HTML, уязвимый путь не задействуется. Устранение — бамп Go toolchain образа tools/yq.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56859"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.10"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в стандартной библиотеке Go 1.25.10 (encoding/xml DecodeElement — DoS из-за сброса счётчика глубины рекурсии). Приходит через бинарь yq (образ tools/yq); XML-обработка выполняется над доверенным вводом, формируемым самим Deckhouse, недоверенный XML не разбирается — исчерпание стека не достижимо. Устранение — бамп Go toolchain образа tools/yq.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56860"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.10"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в стандартной библиотеке Go 1.25.10 (net/url — DoS из-за квадратичной сложности разрешения путей с '..'). Приходит через бинарь yq (образ tools/yq) — CLI-обработчик YAML, он не разрешает недоверенные относительные URL, уязвимый путь не задействуется. Устранение — бамп Go toolchain образа tools/yq.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56862"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.10"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в стандартной библиотеке Go 1.25.10 (crypto/tls — DoS через бесконечные KeyUpdate-сообщения). Приходит через бинарь yq (образ tools/yq) — CLI-обработчик YAML, он не поднимает TLS-сервер и не обслуживает TLS-соединения, уязвимый путь не задействуется. Устранение — бамп Go toolchain образа tools/yq.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42505"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.10"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в стандартной библиотеке Go 1.25.10 (crypto/tls — раскрытие информации в Encrypted Client Hello). Приходит через бинарь yq (образ tools/yq) — CLI-обработчик YAML, он не устанавливает TLS-соединения с ECH, уязвимый путь не задействуется. Устранение — бамп Go toolchain образа tools/yq.",
+      "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42507"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.10"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в стандартной библиотеке Go 1.25.10 (net/textproto — инъекция вводимых данных в сообщения об ошибках). Приходит через бинарь yq (образ tools/yq) — CLI-обработчик YAML, он не использует net/textproto для разбора недоверенного протокольного ввода, уязвимый путь не задействуется. Устранение — бамп Go toolchain образа tools/yq.",
+      "timestamp": "2026-08-20T12:00:00Z"
     }
   ],
   "timestamp": "2026-02-16T12:00:00Z",
-  "last_updated": "2026-07-13T12:00:00Z"
+  "last_updated": "2026-08-20T12:00:00Z"
 }
