@@ -236,6 +236,14 @@ func zonesMissingResources(ctx context.Context, dyn dynamic.Interface, zones []s
 // lowercase alphanumerics, '-' and '.', starting and ending with an alphanumeric character.
 // Mirrors discover.go:getStorageClassName. Without this, a tag like "E2E Zone 1" would fail
 // the object-name validator at Create with 422 and loop the reconcile forever.
+//
+// capi/template.yaml duplicates this sanitization in sprig (`lower | replace " " "-" |
+// regexReplaceAll "[^a-z0-9.-]" ""` + `trimAll "-."`), because Machine.Spec.FailureDomain must
+// match VSphereDeploymentZone.metadata.name for CAPV's override to fire. Keeping the two
+// copies in sync is enforced by ensure_failure_domains_sanitize_parity_test.go — it extracts
+// the literal from template.yaml, runs it through the same text/template sandbox
+// node-controller uses at render time, and asserts equality with this function on a golden
+// set of inputs.
 func rfc1123SubdomainName(value string) string {
 	mapFn := func(r rune) rune {
 		if r >= 'a' && r <= 'z' ||
