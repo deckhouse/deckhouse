@@ -19,15 +19,22 @@ import (
 	"encoding/base64"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1core "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	registry_helpers "github.com/deckhouse/deckhouse/go_lib/registry/helpers"
 	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouseregistry"
 )
 
@@ -46,7 +53,30 @@ const (
 	// every image reference in the cluster at something nothing can pull.
 	imageAddressConfigMapName = "registry-image-address"
 	imageAddressConfigMapKey  = "base"
+
+	// registryConfigSnap is the resolved configuration of the registry module: cluster-scoped,
+	// singleton, and on a cluster running that module the only description of the registry that is kept
+	// current.
+	//
+	// Preferred over the secret below for the fields that describe WHICH registry this cluster belongs
+	// to. The secret is written once, at bootstrap, and then only by this module out of these very
+	// values — so on a cluster whose registry has moved since, it says where the registry used to be.
+	// Measured on a migrated cluster: the upstream had been moved to
+	// `dev-registry.deckhouse.io/sys/deckhouse-oss`, while the legacy contour still named the mirror the
+	// cluster came from, with that mirror's robot account.
+	registryConfigResourceName = "registry"
 )
+
+// registryUpstream is what the resource says about the registry this cluster pulls from. Flat and
+// small on purpose: only the fields the global values need.
+type registryUpstream struct {
+	Address  string `json:"address"`
+	Path     string `json:"path"`
+	Scheme   string `json:"scheme"`
+	CA       string `json:"ca"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
 
 type registrySecret struct {
 	RegistryDockercfg []byte
@@ -87,7 +117,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: applyImageAddressFilter,
 		},
 	},
-}, discoveryDeckhouseRegistry)
+}, dependency.WithExternalDependencies(discoveryDeckhouseRegistry))
 
 func applyD8RegistrySecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var secret v1core.Secret
@@ -121,17 +151,132 @@ func applyImageAddressFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 	return cm.Data[imageAddressConfigMapKey], nil
 }
 
-func discoveryDeckhouseRegistry(_ context.Context, input *go_hook.HookInput) error {
+// resolvedUpstream reads the upstream out of the registry module's resolved configuration.
+//
+// Read on demand rather than subscribed to, and that is not a detail. A kubernetes binding on a kind
+// the cluster does not have cannot be enabled at all — "Cannot get GroupVersionResource info for
+// apiVersion 'deckhouse.io/v1alpha1' kind 'RegistryConfig'" — and a GLOBAL hook that cannot enable its
+// bindings takes the whole queue with it. Every cluster without this module installed is such a cluster.
+// The same shape cost this platform a wedged operator once already, through another module's hooks
+// starting before its own CRD existed.
+//
+// So: one GET, and every way it can fail to answer is an answer of "ask something else". An absent
+// upstream is one of those: a cluster with no upstream at all is what air-gap means.
+func resolvedUpstream(ctx context.Context, dc dependency.Container) (*registryUpstream, error) {
+	client, err := dc.GetK8sClient()
+	if err != nil {
+		return nil, fmt.Errorf("getting the kubernetes client: %w", err)
+	}
+
+	gvr := schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1alpha1", Resource: "registryconfigs"}
+
+	object, err := client.Dynamic().Resource(gvr).Get(ctx, registryConfigResourceName, metav1.GetOptions{})
+	switch {
+	case apierrors.IsNotFound(err), meta.IsNoMatchError(err):
+		return nil, nil
+	case err != nil:
+		return nil, fmt.Errorf("reading RegistryConfig: %w", err)
+	}
+
+	upstream, found, err := unstructured.NestedMap(object.Object, "spec", "primary", "upstream")
+	if err != nil {
+		return nil, fmt.Errorf("read the upstream from RegistryConfig: %w", err)
+	}
+	if !found {
+		return nil, nil
+	}
+
+	host, _ := upstream["host"].(string)
+	if host == "" {
+		return nil, nil
+	}
+
+	result := &registryUpstream{Address: host}
+	result.Path, _ = upstream["path"].(string)
+	result.CA, _ = upstream["ca"].(string)
+
+	// Lower-cased: this resource says `HTTPS`, and the global values accept `http` or `https` only.
+	// Measured while repairing a cluster by hand — the other spelling fails the values schema and takes
+	// the whole main queue down with it.
+	result.Scheme = "https"
+	if scheme, _ := upstream["scheme"].(string); scheme != "" {
+		result.Scheme = strings.ToLower(scheme)
+	}
+
+	if auth, ok := upstream["auth"].(map[string]interface{}); ok {
+		result.Username, _ = auth["username"].(string)
+		result.Password, _ = auth["password"].(string)
+
+		if result.Username == "" {
+			if encoded, _ := auth["auth"].(string); encoded != "" {
+				decoded, err := base64.StdEncoding.DecodeString(encoded)
+				if err != nil {
+					return nil, fmt.Errorf("decode the upstream credentials: %w", err)
+				}
+				if user, pass, cut := strings.Cut(string(decoded), ":"); cut {
+					result.Username, result.Password = user, pass
+				}
+			}
+		}
+	}
+
+	return result, nil
+}
+
+func discoveryDeckhouseRegistry(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	registryConfSnap, err := sdkobjectpatch.UnmarshalToStruct[registrySecret](input.Snapshots, imageModulesD8RegistryConfSnap)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal %s snapshot: %w", imageModulesD8RegistryConfSnap, err)
 	}
 
-	if len(registryConfSnap) == 0 {
-		return fmt.Errorf("not found 'deckhouse-registry' secret")
+	// Two sources, and the ORDER is the point of this whole function.
+	//
+	// The resource is preferred because it is the one kept current: the registry module resolves it from
+	// `mc/registry` on every change. The secret is written at bootstrap and afterwards only by this
+	// platform out of these very values, so on a cluster whose registry has moved it describes where the
+	// registry used to be. Measured on a migrated cluster: the upstream had been moved to
+	// `dev-registry.deckhouse.io/sys/deckhouse-oss` while the contour still named the mirror the cluster
+	// came from, with that mirror's robot account — and everything downstream believed the contour.
+	//
+	// And the secret is no longer REQUIRED, which is the other half. Refusing to run without it made
+	// this hook the thing that could deadlock a cluster: it runs at Operator-Startup, so a missing
+	// secret stopped the main queue before ConvergeModules, which is what would have removed the
+	// condition. Measured, on a cluster where that secret was deleted on purpose: nine tasks behind this
+	// one and no way out but recreating the secret by hand.
+	registrySecretRaw, fromSecret := registrySecret{}, false
+	if len(registryConfSnap) > 0 {
+		registrySecretRaw, fromSecret = registryConfSnap[0], true
 	}
 
-	registrySecretRaw := registryConfSnap[0]
+	resolvedFromResource, err := resolvedUpstream(ctx, dc)
+	if err != nil {
+		return err
+	}
+
+	if resolvedFromResource != nil {
+		resolved := *resolvedFromResource
+		input.Logger.Info("taking the registry from the resource the registry module keeps current",
+			slog.String("address", resolved.Address+resolved.Path))
+
+		dockercfg, err := registry_helpers.DockerCfgFromCreds(resolved.Username, resolved.Password, resolved.Address)
+		if err != nil {
+			return fmt.Errorf("build the docker config from RegistryConfig: %w", err)
+		}
+
+		registrySecretRaw = registrySecret{
+			RegistryDockercfg: dockercfg,
+			Address:           resolved.Address,
+			Path:              resolved.Path,
+			Scheme:            resolved.Scheme,
+			CA:                resolved.CA,
+		}
+		fromSecret = false
+	}
+
+	if !fromSecret && registrySecretRaw.Address == "" {
+		// Neither source has anything: a cluster mid-bootstrap, before either object exists.
+		return fmt.Errorf("neither the RegistryConfig resource nor the 'deckhouse-registry' secret describes a registry yet")
+	}
 
 	if string(registrySecretRaw.RegistryDockercfg) == "" {
 		return fmt.Errorf("docker config not found in 'deckhouse-registry' secret")

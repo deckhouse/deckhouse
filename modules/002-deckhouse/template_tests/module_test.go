@@ -163,6 +163,39 @@ var _ = Describe("Module :: deckhouse :: helm template ::", func() {
 	// module source moving with it.
 	//
 	// The fixture gives them different values on purpose, so this is observable at all.
+	// The previous implementation's registry contour, and the one fact that decides whether it exists.
+	//
+	// Measured on a migrated cluster: `registry-config` still named the registry the cluster had been
+	// migrated FROM, with that mirror's robot account, because nothing writes `deckhouse.registry.*`
+	// after the handover — and dhctl preferred it over the cluster's own configuration. So the object
+	// has to disappear exactly when the handover record appears, and come back if it ever does not.
+	Context("The legacy registry contour", func() {
+		legacyContourExists := func() bool {
+			return f.KubernetesResource("Secret", "d8-system", "registry-config").Exists()
+		}
+
+		It("is rendered while the previous implementation is the one configuring nodes", func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("deckhouse", moduleValuesForMasterNode)
+			f.HelmRender()
+
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(legacyContourExists()).To(BeTrue())
+		})
+
+		It("is not rendered once the registry module has taken over", func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("deckhouse", moduleValuesForMasterNode)
+			f.ValuesSet("deckhouse.internal.registry.v2Active", true)
+			f.HelmRender()
+
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(legacyContourExists()).To(BeFalse())
+		})
+	})
+
 	Context("What the controller fetches itself", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues+clusterIsBootstrapped)

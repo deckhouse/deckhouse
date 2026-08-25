@@ -21,6 +21,8 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/image"
@@ -143,4 +145,89 @@ func TestGetRegistryDataPreferUpstream(t *testing.T) {
 		require.Nil(t, conf)
 		require.Empty(t, b64dc)
 	})
+}
+
+// createRegistryConfigResource plants the object the controller-based implementation resolves its
+// configuration into: cluster-scoped, singleton, and the only source of the upstream that is kept
+// current on such a cluster.
+func createRegistryConfigResource(t *testing.T, kubeCl *client.KubernetesClient, host, path string, auth map[string]interface{}) {
+	t.Helper()
+
+	upstream := map[string]interface{}{"scheme": "HTTPS", "host": host, "path": path}
+	if auth != nil {
+		upstream["auth"] = auth
+	}
+
+	object := &unstructured.Unstructured{Object: map[string]interface{}{
+		"apiVersion": "deckhouse.io/v1alpha1",
+		"kind":       "RegistryConfig",
+		"metadata":   map[string]interface{}{"name": registryConfigResourceName},
+		"spec": map[string]interface{}{
+			"mode":    "Managed",
+			"primary": map[string]interface{}{"upstream": upstream},
+		},
+	}}
+
+	gvr := schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1alpha1", Resource: "registryconfigs"}
+	_, err := kubeCl.Dynamic().Resource(gvr).Create(t.Context(), object, metav1.CreateOptions{})
+	require.NoError(t, err)
+}
+
+// TestTheConfigResourceWinsOverTheLegacySecret is about a stale answer being worse than no answer.
+//
+// `registry-config` is rendered from the PREVIOUS implementation's settings in `mc/deckhouse`, and on a
+// migrated cluster nobody writes those any more — so it keeps describing whatever registry the cluster
+// was migrated from. Measured on such a cluster: the secret named `111.88.253.76.sslip.io/dh-dev-registry/...`
+// with that mirror's robot account while the cluster's upstream had been moved to
+// `dev-registry.deckhouse.io/sys/deckhouse-oss`, and this package preferred the secret. Absence falls
+// back and works; staleness dials the wrong registry with the wrong account.
+func TestTheConfigResourceWinsOverTheLegacySecret(t *testing.T) {
+	const (
+		current = "dev-registry.deckhouse.io/sys/deckhouse-oss"
+		stale   = "111.88.253.76.sslip.io/dh-dev-registry/sys/deckhouse-oss"
+		mirror  = "registry.d8-system.svc:5001/system/deckhouse"
+	)
+
+	kubeCl := client.NewFakeKubernetesClient()
+	createRegistryConfigResource(t, kubeCl, "dev-registry.deckhouse.io", "/sys/deckhouse-oss",
+		map[string]interface{}{"username": "license-token", "password": "current-key"})
+	createRegistryConfigSecret(t, kubeCl, map[string][]byte{
+		"mode": []byte("Unmanaged"), "imagesRepo": []byte(stale), "scheme": []byte("HTTPS"),
+		"username": []byte("robot$old"), "password": []byte("old-key"),
+	})
+	createDeckhouseRegistrySecret(t, kubeCl, mirror)
+
+	conf, b64dc, err := GetRegistryDataPreferUpstream(t.Context(), kubeCl, false)
+	require.NoError(t, err)
+	require.Equal(t, current, conf.GetRegistry(), "the resource the cluster keeps current has to win")
+
+	// And the credentials travel with it, keyed on the host that will be asked for.
+	dockerCfg, err := image.DecodeDockerConfig(b64dc)
+	require.NoError(t, err)
+	registryConf, err := image.RegistryConfigFromDockerConfig(dockerCfg, "HTTPS", current)
+	require.NoError(t, err)
+	require.Equal(t, "license-token", registryConf.GetUsername())
+	require.Equal(t, "current-key", registryConf.GetPassword())
+}
+
+// TestAnAirGappedResourceFallsThrough: a resource with no upstream is not a gap in the configuration,
+// it is the definition of an air-gapped cluster — and the caller must then reach the store through the
+// SSH connection rather than be handed an empty registry.
+func TestAnAirGappedResourceFallsThrough(t *testing.T) {
+	const mirror = "registry.d8-system.svc:5001/system/deckhouse"
+
+	kubeCl := client.NewFakeKubernetesClient()
+	gvr := schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1alpha1", Resource: "registryconfigs"}
+	_, err := kubeCl.Dynamic().Resource(gvr).Create(t.Context(), &unstructured.Unstructured{Object: map[string]interface{}{
+		"apiVersion": "deckhouse.io/v1alpha1",
+		"kind":       "RegistryConfig",
+		"metadata":   map[string]interface{}{"name": registryConfigResourceName},
+		"spec":       map[string]interface{}{"mode": "Managed", "storage": map[string]interface{}{"cache": true}},
+	}}, metav1.CreateOptions{})
+	require.NoError(t, err)
+	createDeckhouseRegistrySecret(t, kubeCl, mirror)
+
+	conf, _, err := GetRegistryDataPreferUpstream(t.Context(), kubeCl, false)
+	require.NoError(t, err)
+	require.Equal(t, mirror, conf.GetRegistry(), "with no upstream the store is the only thing left")
 }

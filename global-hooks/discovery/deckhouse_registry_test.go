@@ -23,6 +23,7 @@ User-stories:
 package hooks
 
 import (
+	"encoding/base64"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -104,7 +105,27 @@ data:
 `
 	)
 
+	const stateRegistryConfigResource = `
+apiVersion: deckhouse.io/v1alpha1
+kind: RegistryConfig
+metadata:
+  name: registry
+spec:
+  mode: Managed
+  primary:
+    upstream:
+      scheme: HTTPS
+      host: dev-registry.deckhouse.io
+      path: /sys/deckhouse-oss
+      auth:
+        username: license-token
+        password: current-key
+`
+
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
+	// Registered because the resource is a CRD of another module: without this the harness cannot hold
+	// such an object at all, and the hook reads it through the same fake cluster.
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "RegistryConfig", false)
 
 	Context("Cluster is empty", func() {
 		BeforeEach(func() {
@@ -190,6 +211,49 @@ data:
 		It("renders image references from the registry the cluster was installed with", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("global.modulesImages.registry.base").String()).To(Equal("registry.test.com/deckhouse"))
+		})
+	})
+
+	// The resource wins over the secret, and this is the whole point of reading it.
+	//
+	// The secret is written at bootstrap and afterwards only out of these very values, so on a cluster
+	// whose registry has moved it names where the registry used to be. Measured on a migrated cluster:
+	// the upstream had been moved to `dev-registry.deckhouse.io/sys/deckhouse-oss` while the contour
+	// still named the mirror the cluster came from, with that mirror's robot account.
+	Context("The registry module has a resolved configuration and the secret is stale", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateDeckhouseRegistrySecret + stateRegistryConfigResource))
+			f.RunHook()
+		})
+
+		It("takes the registry from the resource, not from the secret", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.modulesImages.registry.address").String()).To(Equal("dev-registry.deckhouse.io"))
+			Expect(f.ValuesGet("global.modulesImages.registry.path").String()).To(Equal("/sys/deckhouse-oss"))
+			Expect(f.ValuesGet("global.modulesImages.registry.scheme").String()).To(Equal("https"))
+			Expect(f.ValuesGet("global.modulesImages.registry.base").String()).To(Equal("dev-registry.deckhouse.io/sys/deckhouse-oss"))
+
+			// And the credentials travel with it, keyed on the host that will be asked for.
+			raw, err := base64.StdEncoding.DecodeString(f.ValuesGet("global.modulesImages.registry.dockercfg").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(raw)).To(ContainSubstring("dev-registry.deckhouse.io"))
+		})
+	})
+
+	// And without the secret at all, which is the case that used to deadlock a cluster: this hook runs
+	// at Operator-Startup, so refusing to run stopped the main queue before ConvergeModules — the very
+	// thing that would have removed the condition. Measured: nine tasks behind it and no way out but
+	// recreating the secret by hand.
+	Context("Only the resolved configuration exists", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateRegistryConfigResource))
+			f.RunHook()
+		})
+
+		It("runs, and the values describe the registry the resource names", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.modulesImages.registry.address").String()).To(Equal("dev-registry.deckhouse.io"))
+			Expect(f.ValuesGet("global.modulesImages.registry.base").String()).To(Equal("dev-registry.deckhouse.io/sys/deckhouse-oss"))
 		})
 	})
 
