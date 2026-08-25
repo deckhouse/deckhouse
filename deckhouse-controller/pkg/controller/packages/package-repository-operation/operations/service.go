@@ -397,8 +397,8 @@ func latestVersionString(versions []*semver.Version) string {
 
 // ProcessPackageVersions processes a single package: lists version tags from <package>/version,
 // detects type (Application/Module) via detectPackageType, creates APV/MPV resources.
-// A module is additionally walked down its /release history by walkModuleReleases, which is also
-// the only source of versions for a package whose /version path is absent or carries no semver tags.
+// A package whose /version path is absent or carries no semver tags is a legacy module, and
+// walkModuleReleases reads its versions from /release instead.
 func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageName string, operation *v1alpha1.PackageRepositoryOperation) (*PackageProcessResult, error) {
 	foundTags, err := s.foundTagsToProcess(ctx, packageName, operation)
 	if err != nil {
@@ -487,30 +487,13 @@ func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageNa
 		}
 	}
 
-	result := &PackageProcessResult{
+	return &PackageProcessResult{
 		PackageType:   pkgType,
 		Done:          foundTags,
 		Failed:        failedVersions,
 		FoundVersions: len(foundTags),
 		NewVersions:   newVersions,
-	}
-
-	// /version carries only what the new pipeline published, the rest of a module history
-	// stays under /release.
-	if pkgType == PackageTypeModule {
-		releases, err := s.walkModuleReleases(ctx, packageName)
-		if err != nil {
-			return nil, err
-		}
-
-		result.Done = append(result.Done, releases.Done...)
-		result.Failed = append(result.Failed, releases.Failed...)
-		result.FoundVersions += releases.FoundVersions
-		result.NewVersions += releases.NewVersions
-		result.Legacy = releases.Legacy
-	}
-
-	return result, nil
+	}, nil
 }
 
 // walkModuleReleases walks <package>/release from the newest version down, creating a
