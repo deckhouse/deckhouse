@@ -18,9 +18,6 @@ import (
 	gocontext "context"
 	"errors"
 	"fmt"
-	"time"
-
-	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
@@ -33,14 +30,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook/controlplane"
 
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
-)
-
-// A joining master has the whole install ahead of it — extensions, reboot, kubelet —
-// and only at the end of it does control-plane-manager add its etcd member. The
-// budget matches the bootstrap's wait for the same event.
-const (
-	joinedControlPlaneAttempts = 360
-	joinedControlPlaneInterval = 5 * time.Second
 )
 
 // isImmutableNodeGroup reads systemType off the live NodeGroup. The cluster object is
@@ -131,18 +120,5 @@ func waitForImmutableMasterControlPlane(ctx *context.Context, nodeName string) e
 		return fmt.Errorf("get kube client to wait for the control plane of %s: %w", nodeName, err)
 	}
 
-	checker := controlplane.NewManagerReadinessChecker(dhctlkube.NewSimpleKubeClientGetter(kubeCl))
-
-	return retry.NewLoop(fmt.Sprintf("Waiting for the control plane of %s", nodeName),
-		joinedControlPlaneAttempts, joinedControlPlaneInterval).
-		RunContext(ctx.Ctx(), func() error {
-			ready, err := checker.IsReady(ctx.Ctx(), nodeName)
-			if err != nil {
-				return fmt.Errorf("check the control plane of %s: %w", nodeName, err)
-			}
-			if !ready {
-				return fmt.Errorf("the control plane of %s is not ready yet", nodeName)
-			}
-			return nil
-		})
+	return controlplane.NewManagerReadinessChecker(dhctlkube.NewSimpleKubeClientGetter(kubeCl)).WaitReady(ctx.Ctx(), nodeName)
 }

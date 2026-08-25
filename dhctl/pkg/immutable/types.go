@@ -156,20 +156,17 @@ type network struct {
 	Routes []route `json:"routes,omitempty"`
 }
 
-// dns is the node's resolver configuration.
 type dns struct {
 	Servers []string `json:"servers,omitempty"`
 	Search  []string `json:"search,omitempty"`
 }
 
-// route is one static route.
 type route struct {
 	Name     string   `json:"name,omitempty"`
 	Networks []string `json:"networks,omitempty"`
 	Gateway  string   `json:"gateway,omitempty"`
 }
 
-// networkInterface describes a single NIC.
 type networkInterface struct {
 	Name      string   `json:"name"`
 	DHCP      bool     `json:"dhcp"`
@@ -177,7 +174,6 @@ type networkInterface struct {
 	Gateway   string   `json:"gateway,omitempty"`
 }
 
-// kubelet configures the node's kubelet.
 type kubelet struct {
 	ClusterDomain string   `json:"clusterDomain,omitempty"`
 	ClusterDNS    []string `json:"clusterDNS,omitempty"`
@@ -215,7 +211,6 @@ type containerRuntime struct {
 	MaxConcurrentDownloads int    `json:"maxConcurrentDownloads,omitempty"`
 }
 
-// updatePolicy controls how and when the node updates itself.
 type updatePolicy struct {
 	Mode string `json:"mode,omitempty"`
 }
@@ -230,7 +225,6 @@ type controlPlaneConfig struct {
 	Spec       controlPlaneSpec `json:"spec"`
 }
 
-// controlPlaneSpec is the desired state of the node's control plane.
 type controlPlaneSpec struct {
 	// Bootstrap marks the very first control-plane node: the one that has to
 	// create the initial cluster objects nobody else can create yet.

@@ -228,7 +228,6 @@ func handoffReady(status *immutable.Status) error {
 	return fmt.Errorf("the first master is not ready to hand the credentials over: %s", statusLine(status))
 }
 
-// statusLine renders what the node reports into one readable line.
 func statusLine(status *immutable.Status) string {
 	if status.Message == "" {
 		return string(status.Phase)
