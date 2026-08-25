@@ -21,16 +21,6 @@ spec:
         description: |
           UID 0 is required for hostPath writes used to render static-pod manifests
           and manage etcd/PKI state on the node.
-    capabilities:
-      allowedValues:
-        add:
-          - SYS_CHROOT
-        drop:
-          - ALL
-      metadata:
-        description: |
-          SYS_CHROOT is required to enter the host filesystem namespace when managing
-          control-plane configuration on the master node.
   network:
     hostNetwork:
       allowedValue: true
@@ -65,8 +55,4 @@ spec:
           readOnly: false
           metadata:
             description: etcd data directory managed during control-plane operations.
-        - path: /var/lib/kubelet/pki/
-          readOnly: false
-          metadata:
-            description: kubelet PKI directory used by control-plane certificate management.
 {{- end }}

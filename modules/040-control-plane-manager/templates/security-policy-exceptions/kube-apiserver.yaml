@@ -8,13 +8,6 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "kube-apiserver")) | nindent 2 }}
 spec:
   securityContext:
-    allowPrivilegeEscalation:
-      allowedValue: true
-      metadata:
-        description: |
-          kube-apiserver does not set allowPrivilegeEscalation explicitly; the runtime
-          default is true. The static pod runs as root with host mounts and cannot use
-          the restricted default without changing the control-plane image.
     runAsNonRoot:
       allowedValue: false
       metadata:

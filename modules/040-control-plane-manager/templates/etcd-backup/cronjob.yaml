@@ -36,13 +36,6 @@ spec:
       metadata:
         description: |
           UID 0 is required for hostPath access to etcd data and certificates.
-  network:
-    hostNetwork:
-      allowedValue: true
-      metadata:
-        description: |
-          etcd-backup runs on the host network to reach the local etcd instance
-          on the same master node.
   volumes:
     types:
       allowedValues:
