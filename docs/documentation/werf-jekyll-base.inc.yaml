@@ -6,17 +6,20 @@ shell:
   - pm install jq yq ruby ruby-devel gnu-gcc-devel
   install:
   - |
+      set -euo pipefail
       cd /srv/jekyll-data/documentation
-      gem update --system 4.0.16
+      mkdir -p /tmp/rubygems && chmod 700 /tmp/rubygems && export TMPDIR=/tmp/rubygems
+      bundle config set --global silence_root_warning true
+      gem update --system 4.0.16 --no-document --quiet
       current_version="$(awk '/BUNDLED WITH/{getline; print $1}' Gemfile.lock)"
       system_version="$(bundle --version | awk '{print $1}')"
       if [[ "$current_version" != "$system_version" ]]; then
           echo "bundler version in Gemfile.lock ($current_version) is not equal to system bundler version ($system_version)"
           exit 1
       fi
-  - |
-      bundle config set --global silence_root_warning true
-      bundle install
+  - bundle cache
+  - echo "Installing bundles..."
+  - bundle install --local
   - find /usr/lib/ruby/gems/ \(
        -type d -name .git
     -o -type d -name .github

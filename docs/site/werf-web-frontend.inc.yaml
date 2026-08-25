@@ -55,6 +55,7 @@ shell:
         bash _tools/prepare_resources.sh
 
         # "Building static files"
+        mkdir -p /tmp/jekyll && chmod 700 /tmp/jekyll && export TMPDIR=/tmp/jekyll
         export JEKYLL_ENV=production
         mkdir -m 777 -p /app/_site/
         jekyll build -d /app/_site/ --config  _config.yml

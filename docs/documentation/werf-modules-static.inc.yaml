@@ -12,9 +12,7 @@ shell:
         yq -V
         echo "jq: $(jq -V)"
 
-        mkdir -p "$HOME/.tmp-jekyll"
-        chmod 700 "$HOME/.tmp-jekyll"
-        export TMPDIR="$HOME/.tmp-jekyll"
+        mkdir -p /tmp/jekyll && chmod 700 /tmp/jekyll && export TMPDIR=/tmp/jekyll
 
         cd /srv/jekyll-data/documentation/
 
