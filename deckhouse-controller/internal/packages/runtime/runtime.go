@@ -747,6 +747,45 @@ func (r *Runtime) Stop() {
 	}
 }
 
+// PreservePackage identifies one installed Package instance to preserve during Cleanup.
+type PreservePackage struct {
+	PackageName string
+	Repository  string
+	Version     string
+
+	ReleaseName      string
+	ReleaseNamespace string
+}
+
+// Cleanup removes downloaded application packages on disk and orphan nelm
+// releases in the cluster that are not in preserves. Runs once during preflight.
+func (r *Runtime) Cleanup(ctx context.Context, preserves []PreservePackage) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	fsPreserve := make([]deployer.PreservePackage, 0, len(preserves))
+	keepReleases := make(map[string]struct{}, len(preserves))
+	for _, preserve := range preserves {
+		fsPreserve = append(fsPreserve, deployer.PreservePackage{
+			Name:       preserve.PackageName,
+			Repository: preserve.Repository,
+			Version:    preserve.Version,
+		})
+
+		keepReleases[preserve.ReleaseNamespace+"/"+preserve.ReleaseName] = struct{}{}
+	}
+
+	if err := r.appDeployer.Cleanup(ctx, fsPreserve); err != nil {
+		r.logger.Warn("cleanup apps failed", log.Err(err))
+		return
+	}
+
+	// do not cleanup modules namespace
+	if err := r.nelmService.Cleanup(ctx, keepReleases, app.NamespaceDeckhouse); err != nil {
+		r.logger.Warn("cleanup releases failed", log.Err(err))
+	}
+}
+
 // PreserveApplication identifies one installed application instance to preserve during CleanupV2.
 type PreserveApplication struct {
 	Namespace string
@@ -795,7 +834,7 @@ func (r *Runtime) CleanupV2(ctx context.Context, preserveApps []PreserveApplicat
 	}
 
 	// every release is kept by name now, so the Deckhouse namespace is no longer exempt
-	if err := r.nelmService.Cleanup(ctx, keepReleases(preserveApps, preserveModules)); err != nil {
+	if err := r.nelmService.Cleanup(ctx, releasePreserveKeys(preserveApps, preserveModules)); err != nil {
 		errs = errors.Join(errs, fmt.Errorf("cleanup releases: %w", err))
 	}
 
@@ -835,9 +874,9 @@ func modulePreservePackages(preserves []PreserveModule) []deployer.PreservePacka
 	return packages
 }
 
-// keepReleases returns the releases to keep, keyed "<namespace>/<release>". An embedded module is
-// kept here, unlike on disk: it owns a release as any other module does.
-func keepReleases(preserveApps []PreserveApplication, preserveModules []PreserveModule) map[string]struct{} {
+// releasePreserveKeys returns the releases to keep, keyed "<namespace>/<release>". An embedded
+// module is kept here, unlike on disk: it owns a release as any other module does.
+func releasePreserveKeys(preserveApps []PreserveApplication, preserveModules []PreserveModule) map[string]struct{} {
 	keep := make(map[string]struct{}, len(preserveApps)+len(preserveModules))
 
 	for _, preserve := range preserveApps {

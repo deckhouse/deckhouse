@@ -510,7 +510,7 @@ func (s *Service) GetConversionWebhooks(ctx context.Context, namespace string, p
 // Cleanup uninstalls releases owned by this service (carrying the managed-by
 // annotation) whose name is not in keep. keep keys are "<namespace>/<release-name>".
 // One release failing to uninstall does not stop the others; every failure is returned.
-func (s *Service) Cleanup(ctx context.Context, keep map[string]struct{}) error {
+func (s *Service) Cleanup(ctx context.Context, keep map[string]struct{}, ignoreNamespaces ...string) error {
 	releases, err := s.client.ListReleases(ctx, nelm.ListOptions{
 		Selector: map[string]string{managedByAnnotation: managedByAnnotationValue},
 	})
@@ -521,6 +521,10 @@ func (s *Service) Cleanup(ctx context.Context, keep map[string]struct{}) error {
 	var errs error
 	for _, r := range releases {
 		if _, alive := keep[r.Namespace+"/"+r.Name]; alive {
+			continue
+		}
+
+		if slices.Contains(ignoreNamespaces, r.Namespace) {
 			continue
 		}
 

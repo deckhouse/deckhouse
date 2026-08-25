@@ -75,7 +75,7 @@ func RegisterController(
 
 	r.init.Add(1)
 
-	// add preflight to gate reconciles on the module manager
+	// add preflight to set the cluster UUID
 	if err := runtime.Add(ctrlmanager.RunnableFunc(r.preflight)); err != nil {
 		return fmt.Errorf("add preflight: %w", err)
 	}
@@ -113,9 +113,10 @@ type packageManager interface {
 	RemoveApp(namespace, name string) bool
 	GetStatus(name string) packagestatus.Status
 	GetAppStatusQueue() workqueue.TypedRateLimitingInterface[string]
+	Cleanup(ctx context.Context, preserve []packageruntime.PreservePackage)
 }
 
-// preflight holds reconciles back until the module manager is inited.
+// preflight waits for the module manager and drops runtime state no Application claims.
 func (r *reconciler) preflight(ctx context.Context) error {
 	defer r.init.Done()
 
@@ -126,6 +127,33 @@ func (r *reconciler) preflight(ctx context.Context) error {
 	}); err != nil {
 		return fmt.Errorf("init module manager: %w", err)
 	}
+
+	appsList := new(v1alpha1.ApplicationList)
+	if err := r.client.List(ctx, appsList); err != nil {
+		return fmt.Errorf("list applications: %w", err)
+	}
+
+	preserve := make([]packageruntime.PreservePackage, 0, len(appsList.Items))
+	for _, app := range appsList.Items {
+		// An application already being deleted is not preserved. The runtime forgets its teardown
+		// across a restart, so handleDelete would find nothing left to tear down and release the
+		// finalizer; this cleanup is the last owner of the release, and skipping it here is what
+		// makes that answer true.
+		if !app.DeletionTimestamp.IsZero() {
+			continue
+		}
+
+		preserve = append(preserve, packageruntime.PreservePackage{
+			PackageName: app.Spec.PackageName,
+			Repository:  app.Spec.PackageRepositoryName,
+			Version:     app.Spec.PackageVersion,
+
+			ReleaseName:      apps.BuildName(app.Namespace, app.Name),
+			ReleaseNamespace: app.Namespace,
+		})
+	}
+
+	r.manager.Cleanup(ctx, preserve)
 
 	r.logger.Debug("controller is ready")
 
