@@ -57,10 +57,10 @@ func TestPushNodeConfigNamesAnInstalledNode(t *testing.T) {
 
 	require.ErrorContains(t, err, "already installed")
 	require.ErrorIs(t, err, ErrMaintenanceTokenRequired, "the caller tells this terminal refusal from a transient one by the sentinel")
-	require.Equal(t, []string{"/config"}, served, "a token demand is not a missing path: the legacy fallback must stay untried")
+	require.Equal(t, []string{"/config"}, served, "a token demand is terminal: no second request follows it")
 }
 
-func TestPushNodeConfigNamesTheMachineWhenNeitherPathIsServed(t *testing.T) {
+func TestPushNodeConfigNamesTheMachineWhenThePathIsNotServed(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 	}))
@@ -74,8 +74,8 @@ func TestPushNodeConfigNamesTheMachineWhenNeitherPathIsServed(t *testing.T) {
 	require.ErrorContains(t, err, "/config")
 }
 
-// One path, one request. The machine either serves /config or is not a machine
-// waiting for a configuration, and probing a second path only hides that.
+// One path, one request: the machine either serves /config or is not waiting
+// for a configuration at all.
 func TestPushNodeConfigAsksOnePath(t *testing.T) {
 	var served []string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

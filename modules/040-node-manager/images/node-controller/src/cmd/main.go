@@ -45,7 +45,6 @@ import (
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 	mcmv1alpha1 "github.com/deckhouse/node-controller/api/machine.sapcloud.io/v1alpha1"
-	templatesv1alpha1 "github.com/deckhouse/node-controller/api/templates.internal.deckhouse.io/v1alpha1"
 	"github.com/deckhouse/node-controller/internal/apiserver"
 	"github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/controller/crdmigration"
@@ -185,7 +184,6 @@ func main() {
 			BindPort: apiserverPort,
 			CertFile: webhookCertDir + "/tls.crt",
 			KeyFile:  webhookCertDir + "/tls.key",
-			Resource: templatesv1alpha1.NodeConfigTemplateResource,
 			Storage:  nodebootstrap.NewTemplateStorage(directClient),
 		})
 		// Not fatal: this pod also serves the CRD conversion webhook of NodeGroup

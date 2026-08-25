@@ -373,7 +373,6 @@ func (r *Reconciler) setPhase(ctx context.Context, op *v1alpha1.NodeOperation, p
 	// deadline fires would otherwise be overwritten with Failed.
 	err := r.patchStatus(ctx, op, fmt.Sprintf("set %s phase of %s", phase, op.Name), func() {
 		op.Status.Phase = phase
-		op.Status.ObservedGeneration = op.Generation
 		if phase == v1alpha1.NodeOperationPhaseInProgress && op.Status.StartedAt == nil {
 			now := metav1.Now()
 			op.Status.StartedAt = &now

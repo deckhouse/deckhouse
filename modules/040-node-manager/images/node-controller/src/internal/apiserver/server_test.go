@@ -75,7 +75,7 @@ func newPreparedServer(t *testing.T) *genericapiserver.GenericAPIServer {
 	cfg.ExternalAddress = "127.0.0.1:443"
 	cfg.LoopbackClientConfig = &restclient.Config{Host: "127.0.0.1"}
 
-	srv, err := newServer(cfg, templatesv1alpha1.NodeConfigTemplateResource, stubStorage{})
+	srv, err := newServer(cfg, stubStorage{})
 	require.NoError(t, err)
 	require.NotNil(t, srv.PrepareRun())
 	return srv

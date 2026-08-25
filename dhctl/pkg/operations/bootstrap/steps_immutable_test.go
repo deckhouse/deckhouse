@@ -40,7 +40,6 @@ import (
 
 	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
-	libretry "github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -69,7 +68,7 @@ func TestBuildImmutableMasterPayloadIsBase64CloudInit(t *testing.T) {
 	require.True(t, strings.HasPrefix(string(document), "#cloud-config\n"),
 		"the provider appends its own block, and only an envelope keeps it off the documents")
 
-	documents := payloadDocuments(t, document)
+	documents := immutabletest.PayloadDocuments(t, document)
 	require.Len(t, documents, 2, "the first master is handed a NodeConfig and a ControlPlaneConfig")
 
 	// What the machine's hardware is checked against is byte-for-byte the document
@@ -162,7 +161,7 @@ spec:
 // no amount of waiting changes that, and spending the ten-minute budget on it
 // buries the one answer that says what is wrong.
 func TestPushImmutablePayloadStopsOnAnInstalledNode(t *testing.T) {
-	noRetryCollapse(t)
+	immutabletest.NoRetryCollapse(t)
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
@@ -314,7 +313,7 @@ func TestEveryPushPathRefusesADocumentTheMachineCannotSatisfy(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			noRetryCollapse(t)
+			immutabletest.NoRetryCollapse(t)
 
 			// Two disks the rendered document's own ">=20Gi" system selector matches:
 			// nothing in the operator's input is needed to make this machine ambiguous.
@@ -342,7 +341,7 @@ func TestEveryPushPathRefusesADocumentTheMachineCannotSatisfy(t *testing.T) {
 // would run once, against a machine still powering on, and never run again. It has
 // to run on the attempt that reaches the machine.
 func TestPushImmutablePayloadChecksTheMachineThatAnswersLate(t *testing.T) {
-	noRetryCollapse(t)
+	immutabletest.NoRetryCollapse(t)
 
 	budget := waitMaintenancePort
 	waitMaintenancePort = waitBudget{attempts: 4, interval: time.Millisecond}
@@ -380,7 +379,7 @@ func TestPushImmutablePayloadChecksTheMachineThatAnswersLate(t *testing.T) {
 // always says eth0 on DHCP. That guess must not refuse the machine: the node
 // brings DHCP up on whatever NIC it finds, and no operator wrote the name.
 func TestBootstrapImmutableFirstMasterInstallsOnAMachineWithoutEth0(t *testing.T) {
-	noRetryCollapse(t)
+	immutabletest.NoRetryCollapse(t)
 
 	b, bctx := immutableTestBootstrapper(t)
 	bctx.immutable.masterNodeName = "example-master-0"
@@ -972,13 +971,6 @@ func immutableTestBootstrapper(t *testing.T) (*ClusterBootstrapper, *bootstrapCo
 // noRetryCollapse restores real retry behaviour: init_test.go collapses every
 // loop to one attempt, which would pass with no break predicate at all. Safe to
 // swap globally — nothing in this file runs in parallel.
-func noRetryCollapse(t *testing.T) {
-	t.Helper()
-
-	inTestEnvironment := libretry.InTestEnvironment
-	libretry.InTestEnvironment = false
-	t.Cleanup(func() { libretry.InTestEnvironment = inTestEnvironment })
-}
 
 // testMachine stands in for a machine waiting in maintenance: it answers the
 // inventory read that precedes every push, and records what it was asked.
@@ -1012,7 +1004,7 @@ func newTestMachine(t *testing.T, inventory string) *testMachine {
 func immutableWaitingBootstrapper(t *testing.T) (*ClusterBootstrapper, *bootstrapContext, *immutable.HandoffMaterial) {
 	t.Helper()
 
-	noRetryCollapse(t)
+	immutabletest.NoRetryCollapse(t)
 
 	b, bctx := immutableTestBootstrapper(t)
 	bctx.immutable.masterIP = "127.0.0.1"
@@ -1096,26 +1088,6 @@ func TestOpenImmutableChannelNamesBothAddresses(t *testing.T) {
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "192.168.0.43", "the address the machine was configured through")
 	require.Contains(t, err.Error(), "192.168.0.101", "the address it was expected to answer on")
-}
-
-// payloadDocuments returns the documents a cloud payload carries, in order: the
-// node unwraps the write_files of the #cloud-config and files their contents by
-// kind (documentParts, images/init/src/0.1/acquire.go of the initramfs).
-func payloadDocuments(t *testing.T, payload []byte) []string {
-	t.Helper()
-
-	var envelope struct {
-		WriteFiles []struct {
-			Content string `json:"content"`
-		} `json:"write_files"`
-	}
-	require.NoError(t, yaml.Unmarshal(payload, &envelope))
-
-	documents := make([]string, 0, len(envelope.WriteFiles))
-	for _, file := range envelope.WriteFiles {
-		documents = append(documents, file.Content)
-	}
-	return documents
 }
 
 // staticInstanceResources is what an operator adds to a static cluster to have node-manager adopt

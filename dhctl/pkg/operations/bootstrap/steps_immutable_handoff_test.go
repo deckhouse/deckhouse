@@ -26,6 +26,7 @@ import (
 	libretry "github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable/immutabletest"
 )
 
 // handoffTestLoop keeps the loop real — init_test.go collapses every loop to one
@@ -34,9 +35,7 @@ import (
 func handoffTestLoop(t *testing.T, attempts int) *libretry.Loop {
 	t.Helper()
 
-	inTestEnvironment := libretry.InTestEnvironment
-	libretry.InTestEnvironment = false
-	t.Cleanup(func() { libretry.InTestEnvironment = inTestEnvironment })
+	immutabletest.NoRetryCollapse(t)
 
 	return libretry.NewLoop("waiting in a test", attempts, time.Millisecond).BreakIf(handoffGaveUp)
 }
