@@ -212,13 +212,6 @@ properties:
         description: |
           Private key for API server used by bashible.
 
-      nodeStatusUpdateFrequency:
-        type: [integer, string]
-        description: |
-          Seconds for nodeStatusUpdateFrequency field in kubelet config. The frequency that kubelet computes node status.
-        x-examples:
-          - "10"
-
       bootstrapTokens:
         type: object
         # This is a dictionary nodeGroup name -> bootstrap token.
@@ -471,10 +464,3 @@ properties:
             type: array
             items:
               type: string
-      allowedKubeletFeatureGates:
-        type: array
-        description: |
-          Allowed kubelet feature gates from control-plane-manager.
-        default: []
-        items:
-          type: string

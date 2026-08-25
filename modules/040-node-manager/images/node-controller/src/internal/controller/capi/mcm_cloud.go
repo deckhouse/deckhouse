@@ -34,6 +34,7 @@ import (
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/common"
+	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/machineclass"
 )
@@ -209,7 +210,7 @@ func (r *MachineDeploymentReconciler) pruneStaleMCMs(ctx context.Context, reader
 	})
 	if err := reader.List(ctx, list,
 		client.InNamespace(common.MachineNamespace),
-		client.MatchingLabels{"node-group": ngName},
+		client.MatchingLabels{ngcommon.MachineDeploymentNodeGroupLabel: ngName},
 	); err != nil {
 		if meta.IsNoMatchError(err) {
 			return 0, nil
@@ -269,7 +270,7 @@ func (r *MachineDeploymentReconciler) deleteOrphanMachineClasses(ctx context.Con
 	// nothing else reads.
 	if err := r.APIReader.List(ctx, list,
 		client.InNamespace(common.MachineNamespace),
-		client.MatchingLabels{"node-group": ngName},
+		client.MatchingLabels{ngcommon.MachineDeploymentNodeGroupLabel: ngName},
 	); err != nil {
 		if meta.IsNoMatchError(err) {
 			return nil
@@ -303,7 +304,7 @@ func (r *MachineDeploymentReconciler) adoptMachineClass(ctx context.Context, mac
 	mc := newUnstructured("machine.sapcloud.io", "v1alpha1", machineClassKind)
 	mc.SetName(name)
 	mc.SetNamespace(common.MachineNamespace)
-	patch := fmt.Appendf(nil, `{"metadata":{"labels":{"node-group":%q}}}`, ngName)
+	patch := fmt.Appendf(nil, `{"metadata":{"labels":{%q:%q}}}`, ngcommon.MachineDeploymentNodeGroupLabel, ngName)
 	err := r.Client.Patch(ctx, mc, client.RawPatch(types.MergePatchType, patch))
 	if err != nil && !errors.IsNotFound(err) && !meta.IsNoMatchError(err) {
 		return fmt.Errorf("label MachineClass %s: %w", name, err)
@@ -316,7 +317,7 @@ func setNodeGroupLabel(obj *unstructured.Unstructured, ngName string) {
 	if labels == nil {
 		labels = map[string]string{}
 	}
-	labels["node-group"] = ngName
+	labels[ngcommon.MachineDeploymentNodeGroupLabel] = ngName
 	obj.SetLabels(labels)
 }
 

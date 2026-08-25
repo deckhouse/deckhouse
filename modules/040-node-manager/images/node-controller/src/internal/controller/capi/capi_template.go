@@ -29,6 +29,7 @@ import (
 	sigsyaml "sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/node-controller/internal/common"
+	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/machineclass"
 )
 
@@ -95,7 +96,7 @@ func (r *MachineDeploymentReconciler) pruneStaleCAPI(
 	})
 	if err := r.Client.List(ctx, mdList,
 		client.InNamespace(common.MachineNamespace),
-		client.MatchingLabels{"node-group": ngName},
+		client.MatchingLabels{ngcommon.MachineDeploymentNodeGroupLabel: ngName},
 	); err != nil {
 		return fmt.Errorf("list CAPI MachineDeployments for NodeGroup %s: %w", ngName, err)
 	}
@@ -128,7 +129,7 @@ func (r *MachineDeploymentReconciler) pruneStaleCAPI(
 	// other cloud) would stop node-controller from starting.
 	if err := r.APIReader.List(ctx, tmplList,
 		client.InNamespace(common.MachineNamespace),
-		client.MatchingLabels{"node-group": ngName},
+		client.MatchingLabels{ngcommon.MachineDeploymentNodeGroupLabel: ngName},
 	); err != nil {
 		return fmt.Errorf("list CAPI MachineTemplates for NodeGroup %s: %w", ngName, err)
 	}
@@ -207,7 +208,7 @@ func (r *MachineDeploymentReconciler) deleteInfraMachineTemplates(ctx context.Co
 	// and is not in cache.Options.ByObject.
 	if err := r.APIReader.List(ctx, list,
 		client.InNamespace(common.MachineNamespace),
-		client.MatchingLabels{"node-group": ngName},
+		client.MatchingLabels{ngcommon.MachineDeploymentNodeGroupLabel: ngName},
 	); err != nil {
 		if meta.IsNoMatchError(err) {
 			return nil
@@ -236,7 +237,7 @@ func (r *MachineDeploymentReconciler) templatesInUse(ctx context.Context, ngName
 	})
 	if err := r.APIReader.List(ctx, msList,
 		client.InNamespace(common.MachineNamespace),
-		client.MatchingLabels{"node-group": ngName},
+		client.MatchingLabels{ngcommon.MachineDeploymentNodeGroupLabel: ngName},
 	); err != nil {
 		return nil, fmt.Errorf("list CAPI MachineSets for NodeGroup %s: %w", ngName, err)
 	}

@@ -26,6 +26,10 @@ const (
 	ConditionTypeScaling                      = "Scaling"
 	ConditionTypeFrozen                       = "Frozen"
 
+	// MachineDeploymentNodeGroupLabel names the NodeGroup a MachineDeployment belongs to. It is
+	// the MCM/CAPI label on machine objects, not NodeGroupLabel, which lives on nodes.
+	MachineDeploymentNodeGroupLabel = "node-group"
+
 	// Re-exported from internal/common.
 	CloudProviderSecretName          = nodecommon.CloudProviderSecretName
 	NodeGroupLabel                   = nodecommon.NodeGroupLabel
