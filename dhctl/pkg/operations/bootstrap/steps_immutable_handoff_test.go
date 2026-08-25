@@ -15,6 +15,7 @@
 package bootstrap
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -23,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 	libretry "github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable"
@@ -45,7 +47,7 @@ func handoffTestLoop(t *testing.T, attempts int) *libretry.Loop {
 // later attempt reaches a port nobody serves. On a live stand: 348 wasted.
 func TestHandoffRebuildsTheChannelAfterItDies(t *testing.T) {
 	var opened int
-	openChannel := func() (string, func(), error) {
+	openChannel := func(context.Context) (string, func(), error) {
 		opened++
 		return "127.0.0.1:0", func() {}, nil
 	}
@@ -86,7 +88,7 @@ func TestHandoffClosesEveryChannelItOpens(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			var opened, closed int
-			openChannel := func() (string, func(), error) {
+			openChannel := func(context.Context) (string, func(), error) {
 				opened++
 				return "127.0.0.1:0", func() { closed++ }, nil
 			}
@@ -112,7 +114,7 @@ func TestHandoffClosesTheChannelWhenTheWaitIsCancelled(t *testing.T) {
 	defer cancel()
 
 	var opened, closed int
-	openChannel := func() (string, func(), error) {
+	openChannel := func(context.Context) (string, func(), error) {
 		opened++
 		return "127.0.0.1:0", func() { closed++ }, nil
 	}
@@ -134,7 +136,7 @@ func TestHandoffClosesTheChannelWhenTheWaitIsCancelled(t *testing.T) {
 // the wait has to sit through rather than a reason to end the bootstrap.
 func TestHandoffRetriesAChannelThatCannotBeOpened(t *testing.T) {
 	var opened, closed, fetched int
-	openChannel := func() (string, func(), error) {
+	openChannel := func(context.Context) (string, func(), error) {
 		opened++
 		if opened < 3 {
 			return "", nil, errors.New("connect to the bastion host 198.51.100.7: connection refused")
@@ -191,5 +193,70 @@ func TestBothWaitsUseAFreshChannelPerAttempt(t *testing.T) {
 				t.Fatal("a channel held for the whole wait dies with the machine's boot and every later attempt dials a dead port")
 			}
 		})
+	}
+}
+
+// A channel is opened every attempt, so the SSH progress behind it repeats every
+// few seconds for a wait that runs for minutes. On a live stand it printed three
+// lines per attempt and buried the only line that carried the node's own state.
+func TestOpeningAChannelIsNotNarratedOnEveryAttempt(t *testing.T) {
+	var terminal bytes.Buffer
+	ctx := dhlog.ToContext(context.Background(), dhlog.NewBufferLogger(&terminal))
+
+	openChannel := func(ctx context.Context) (string, func(), error) {
+		dhlog.FromContext(ctx).InfoContext(ctx, "Get SSH client")
+		return "127.0.0.1:0", func() {}, nil
+	}
+
+	if err := retryWithFreshChannel(ctx, handoffTestLoop(t, 1), openChannel, func(string) error { return nil }); err != nil {
+		t.Fatalf("wait: %v", err)
+	}
+
+	if strings.Contains(terminal.String(), `level=INFO msg="Get SSH client"`) {
+		t.Error("opening a channel must not narrate itself: it repeats every attempt of a minutes-long wait")
+	}
+	if !strings.Contains(terminal.String(), "Get SSH client") {
+		t.Error("the SSH progress must still reach the debug log; it is how a channel that will not open is diagnosed")
+	}
+}
+
+// The node stops answering while kubelet takes the machine over — four minutes of
+// it on a live stand — and a wait that says nothing for that long reads as a hang.
+func TestTheWaitRepeatsItselfWhileNothingChanges(t *testing.T) {
+	var terminal bytes.Buffer
+	ctx := dhlog.ToContext(context.Background(), dhlog.NewBufferLogger(&terminal))
+
+	now := time.Date(2026, 8, 25, 20, 0, 0, 0, time.UTC)
+	say := narrateWait(ctx, func() time.Time { return now })
+
+	say("master-0 is not answering its bootstrap channel yet")
+	now = now.Add(5 * time.Second)
+	say("master-0 is not answering its bootstrap channel yet")
+	now = now.Add(waitProgressInterval)
+	say("master-0 is not answering its bootstrap channel yet")
+
+	if got := strings.Count(terminal.String(), "not answering"); got != 2 {
+		t.Errorf("the same message must be repeated once per %s, said it %d times", waitProgressInterval, got)
+	}
+	if !strings.Contains(terminal.String(), "(35s so far)") {
+		t.Errorf("a repeat must carry how long the wait has been running, got:\n%s", terminal.String())
+	}
+}
+
+// The provider's own retry loop prints three lines per channel, and a channel is
+// opened every attempt. Its logger comes from the settings, not from the context,
+// so muting the context alone leaves the screen exactly as noisy as before.
+func TestTheTunnelNarratesWhereItsContextNarrates(t *testing.T) {
+	src, err := os.ReadFile("steps_immutable_tunnel.go")
+	if err != nil {
+		t.Fatalf("read steps_immutable_tunnel.go: %v", err)
+	}
+
+	body := string(src)
+	if !strings.Contains(body, "channelSettings{Settings: b.SSHProviderInitializer.GetSettings(), logger: dhlog.FromContext(ctx)}") {
+		t.Error("the SSH provider must take its logger from the context, or a wait cannot quiet the plumbing behind it")
+	}
+	if strings.Contains(body, "provider.NewDefaultSSHProvider(\n\t\tb.SSHProviderInitializer.GetSettings(),") {
+		t.Error("the bare settings narrate onto the screen whatever the caller asked for")
 	}
 }
