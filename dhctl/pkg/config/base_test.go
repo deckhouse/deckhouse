@@ -277,9 +277,20 @@ spec:
         ca: "-----BEGIN CERTIFICATE-----"
   version: 1
 `
-			t.Run("Without CRI (module disable) -> error", func(t *testing.T) {
-				_, err := ParseConfigFromData(t.Context(), moduleConfigDeckhouse, DummyValidatorProvider(), nil)
-				require.Error(t, err)
+			// No ClusterConfiguration, and therefore no defaultCRI to check — which is not an error any
+			// more. A cluster whose control plane dhctl did not create declares no runtime and dhctl
+			// configures none of its nodes, so the runtime the registry module needs is not dhctl's to
+			// validate; see `ConfigProvider.Config` and its `hasClusterConfiguration` parameter.
+			//
+			// This case used to require an error, from before that parameter existed. What it asserts now
+			// is the contract as it stands: the configuration is read, and it comes from the ModuleConfig
+			// rather than from the legacy contour.
+			t.Run("Without a ClusterConfiguration the CRI is not dhctl's to check", func(t *testing.T) {
+				metaConfig, err := ParseConfigFromData(t.Context(), moduleConfigDeckhouse, DummyValidatorProvider(), nil)
+				require.NoError(t, err)
+				require.False(t, metaConfig.Registry.LegacyMode)
+				require.Equal(t, registry_const.ModeUnmanaged, metaConfig.Registry.Settings.Mode)
+				require.Equal(t, "r.example.com/test", metaConfig.Registry.Settings.RemoteData.ImagesRepo)
 			})
 			t.Run("With CRI (module enable) -> from moduleConfig && not legacy", func(t *testing.T) {
 				metaConfig, err := ParseConfigFromData(t.Context(), moduleConfigDeckhouse+clusterConfig, DummyValidatorProvider(), nil)
@@ -1246,7 +1257,7 @@ spec:
 
 		// isStatic=false is the whole point: this used to be refused outright with "supported only in
 		// a static cluster", and every cluster this is tested on is a cloud one.
-		_, err = provider.Config(registry_const.CRIContainerdV2, false)
+		_, err = provider.Config(registry_const.CRIContainerdV2, false, true)
 		require.NoError(t, err, "installing from a bundle must not require a static cluster")
 	})
 
@@ -1324,7 +1335,7 @@ spec:
 		"the images come from the bundle the installer serves, not from a registry nobody named")
 
 	// And a cloud cluster is allowed to install this way, which every variant of the test matrix is.
-	_, err = provider.Config(registry_const.CRIContainerdV2, false)
+	_, err = provider.Config(registry_const.CRIContainerdV2, false, true)
 	require.NoError(t, err)
 }
 

@@ -1314,3 +1314,36 @@ func GetIndexFromNodeName(name string) (int, error) {
 	}
 	return index, nil
 }
+
+// effectiveDefaultCRI resolves the container runtime that should be used for the
+// bootstrapped node. The node-manager ModuleConfig setting (spec.settings.defaultCRI)
+// is the new home for this option and takes precedence over the deprecated
+// ClusterConfiguration.defaultCRI field when it is set to a non-default value.
+//
+// When neither source specifies a value it falls back to the built-in default
+// (Containerd), but only if a ClusterConfiguration is present. This mirrors the
+// former ClusterConfiguration schema default, which applied only within a
+// ClusterConfiguration document: with no ClusterConfiguration there is no cluster
+// to bootstrap, and the registry config relies on an empty CRI to stay disabled.
+func (m *MetaConfig) effectiveDefaultCRI() string {
+	if mc := m.FindModuleConfig("node-manager"); mc != nil {
+		if raw, ok := mc.Spec.Settings["defaultCRI"]; ok {
+			if cri, ok := raw.(string); ok && cri != "" && cri != string(registry_const.CRIContainerdV1) {
+				return cri
+			}
+		}
+	}
+
+	if raw, ok := m.ClusterConfig["defaultCRI"]; ok {
+		var cri string
+		if err := json.Unmarshal(raw, &cri); err == nil && cri != "" {
+			return cri
+		}
+	}
+
+	if len(m.ClusterConfig) > 0 {
+		return string(registry_const.CRIContainerdV1)
+	}
+
+	return ""
+}
