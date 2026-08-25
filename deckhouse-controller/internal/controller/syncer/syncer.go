@@ -96,7 +96,7 @@ func (s *Syncer) Sync(ctx context.Context) error {
 		return err
 	}
 
-	return s.syncPackages(ctx)
+	return s.syncModulePackages(ctx)
 }
 
 // Names of the repositories the module packages come from during the migration

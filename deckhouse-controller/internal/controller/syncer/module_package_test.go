@@ -25,7 +25,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 )
 
-func TestSyncPackages(t *testing.T) {
+func TestSyncModulePackages(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("creates a package for every module the sources offer", func(t *testing.T) {

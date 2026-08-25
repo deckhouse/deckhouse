@@ -27,10 +27,10 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 )
 
-// syncPackages ensures a ModulePackage for every module the old module sources
-// offer, so the catalog knows where each package is available before any
-// repository scan ran.
-func (s *Syncer) syncPackages(ctx context.Context) error {
+// syncModulePackages ensures a ModulePackage for every module the old module
+// sources offer, so the catalog knows where each package is available before
+// any repository scan ran.
+func (s *Syncer) syncModulePackages(ctx context.Context) error {
 	modules := new(v1alpha1.ModuleList)
 	if err := s.reader.List(ctx, modules); err != nil {
 		return fmt.Errorf("list modules: %w", err)
@@ -45,7 +45,7 @@ func (s *Syncer) syncPackages(ctx context.Context) error {
 			continue
 		}
 
-		if err := s.ensurePackage(ctx, module.Name, repositoriesForSources(module.Properties.AvailableSources)); err != nil {
+		if err := s.ensureModulePackage(ctx, module.Name, repositoriesForSources(module.Properties.AvailableSources)); err != nil {
 			return err
 		}
 	}
@@ -68,13 +68,13 @@ func repositoriesForSources(sources []string) []string {
 	return repositories
 }
 
-// ensurePackage makes sure the package exists with the given repositories in
-// its status. An existing package is left untouched unless its repository list
-// is empty, which a create interrupted before the status patch leaves behind;
-// such a package is completed in place. No owner is set: the repositories the
-// status names may not exist yet, and the scan adopts the package once one
-// appears.
-func (s *Syncer) ensurePackage(ctx context.Context, name string, repositories []string) error {
+// ensureModulePackage makes sure the package exists with the given repositories
+// in its status. An existing package is left untouched unless its repository
+// list is empty, which a create interrupted before the status patch leaves
+// behind; such a package is completed in place. No owner is set: the
+// repositories the status names may not exist yet, and the scan adopts the
+// package once one appears.
+func (s *Syncer) ensureModulePackage(ctx context.Context, name string, repositories []string) error {
 	pkg := new(v1alpha1.ModulePackage)
 
 	err := s.reader.Get(ctx, client.ObjectKey{Name: name}, pkg)
