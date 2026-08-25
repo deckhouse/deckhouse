@@ -3,16 +3,16 @@ title: "Cloud provider — OpenStack"
 description: "Cloud resource management in Deckhouse Kubernetes Platform using OpenStack."
 ---
 
-The `cloud-provider-openstack` module integrates Deckhouse Kubernetes Platform with [OpenStack](https://www.openstack.org/)-based clouds. It allows the [node-manager](/modules/node-manager/) module to use OpenStack resources when provisioning nodes for a [NodeGroup](/modules/node-manager/cr.html#nodegroup).
+The `cloud-provider-openstack` module integrates Deckhouse Kubernetes Platform with [OpenStack](https://www.openstack.org/)-based clouds. It allows the [`node-manager`](/modules/node-manager/) module to use OpenStack resources when provisioning nodes for a [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 
 Features of the `cloud-provider-openstack` module:
 
 - Managing OpenStack resources via `cloud-controller-manager`:
   - updates OpenStack server and Kubernetes node metadata and removes from Kubernetes nodes that no longer exist in OpenStack;
-  - creates load balancers (Octavia) for Services of the `LoadBalancer` type.
+  - creates load balancers (Octavia) for Services of the LoadBalancer type.
 - Provisioning block disks via the Cinder CSI driver (`cinder.csi.openstack.org`). Manila (filesystem) is not supported. The Cinder CSI driver supports re-authentication in OpenStack with service catalog refresh, which improves resilience for long-running pods with volumes.
 - Provisioning CloudEphemeral nodes via Machine Controller Manager (MCM) or Cluster API (CAPI). Virtual machine parameters are set in the [OpenStackInstanceClass](cr.html#openstackinstanceclass) resource.
-- Registering with [node-manager](/modules/node-manager/) so that `OpenStackInstanceClass` can be used when describing a `NodeGroup`.
+- Registering with [`node-manager`](/modules/node-manager/) so that OpenStackInstanceClass can be used when describing a NodeGroup.
 - Enabling CNI for new clusters automatically. By default, [`cni-cilium`](/modules/cni-cilium/) is used. The network mode — `VXLAN` or `DirectWithNodeRoutes` — depends on the `podNetworkMode` parameter.
 
 {% alert level="warning" %}
