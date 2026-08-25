@@ -446,6 +446,7 @@ BASE_LIMIT_KEYS := REGISTRY_PATH \
                 builder/distroless \
                 builder/golang-1.25 \
                 builder/golang-1.26 \
+                builder/golang-1.27 \
                 builder/golang \
                 minget-0.1 \
                 minget
