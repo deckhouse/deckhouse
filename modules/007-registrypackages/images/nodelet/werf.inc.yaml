@@ -9,11 +9,10 @@
 # it discovers there (systemd-dissect --list, see extensions/sysext.go), so an
 # image without one is merged and never takes effect.
 {{- if ne $.Env "CSE" }}
-  {{- /* The agent has no releases yet, so it is pinned by commit: werf keys a
-         shell-cloned source on the rendered instructions alone, and a moving
-         branch would be built once and cached forever. Bump this line to pick
-         up agent changes. */ -}}
-  {{- $nodeletCommit := "6d5b881e4399e9cd0f579dd52c621a3784e0ee5b" }}
+  {{- /* Pinned by release tag: werf keys a shell-cloned source on the rendered
+         instructions alone, so a moving branch would be built once and cached
+         forever. Bump this line to pick up agent changes. */ -}}
+  {{- $nodeletVersion := "v0.1.2" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
@@ -24,7 +23,7 @@ secrets:
 shell:
   install:
   - git clone git@$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO):deckhouse/container-base/nodelet.git /src
-  - git -C /src checkout {{ $nodeletCommit }}
+  - git -C /src checkout {{ $nodeletVersion }}
   - rm -rf /src/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
@@ -42,9 +41,9 @@ secrets:
   value: {{ $.GOPROXY }}
 shell:
   install:
-  # The commit is stamped in because nothing else on a node says which agent it
+  # The version is stamped in because nothing else on a node says which agent it
   # runs: the binary is the same path whichever copy the overlay serves.
-  - cd /src && GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-w -s -X main.version={{ $nodeletCommit }}" -o /nodelet ./cmd/nodelet
+  - cd /src && GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-w -s -X main.version={{ $nodeletVersion }}" -o /nodelet ./cmd/nodelet
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-artifact
 final: false
