@@ -7,10 +7,42 @@ shell:
   install:
   - |
       cd /srv/jekyll-data/documentation
-
       gem update --system 4.0.16
+      current_version="$(awk '/BUNDLED WITH/{getline; print $1}' Gemfile.lock)"
+      system_version="$(bundle --version | awk '{print $1}')"
+      if [[ "$current_version" != "$system_version" ]]; then
+          echo "bundler version in Gemfile.lock ($current_version) is not equal to system bundler version ($system_version)"
+          exit 1
+      fi
+  - |
       bundle config set --global silence_root_warning true
       bundle install
+  - find /usr/lib/ruby/gems/ \(
+       -type d -name .git
+    -o -type d -name .github
+    -o -type d -name .circleci
+    -o -type d -name doc
+    -o -type d -name docs
+    -o -type d -name examples
+    -o -type d -name rakelib
+    -o -type d -path "*/railties-*/lib/rails/generators/rails/app"
+    -o -type f -name .appveyor.yml
+    -o -type f -name .travis.yml
+    -o -type f -name Dockerfile*
+    -o -type f -name gitlab-ci.yml*
+    -o -type f -name Rakefile
+    -o -type f -path "*/bin/console"
+    -o -type f -path "*/bin/pry"
+    -o -type f -path "*/bin/setup"
+    -o -type f -path "*/mini_mime-*/bin/db_pull_request"
+    -o -type f -path "*/acts_as_archival-*/script/setup"
+    \) -exec rm -rfv \{} +
+  - find /usr/lib/ruby/gems/ \(
+       -type f -path "*/sidekiq-*/web/assets/images/*"
+    -o -type f -path "*/json-schema-*/lib/json-schema/util/*"
+    \) -exec chmod -x \{} +
+  - rm -rfv /usr/lib/ruby/gems/3.4.0/cache
+  - |
       echo "Bundle: $(bundle --version)"
       echo "Ruby: $(ruby --version)"
       echo "Gem: $(gem --version)"
