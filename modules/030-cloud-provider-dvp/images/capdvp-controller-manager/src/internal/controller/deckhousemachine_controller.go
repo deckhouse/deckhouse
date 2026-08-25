@@ -43,10 +43,13 @@ import (
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	dvpapi "dvp-common/api"
 
@@ -237,7 +240,9 @@ func (r *DeckhouseMachineReconciler) reconcileUpdates(
 			LastTransitionTime: metav1.Now(),
 		})
 
-		return ctrl.Result{}, nil
+		// The Machine watch is the fast path here; the requeue is the backstop
+		// for a missed event, without which this branch waits for the resync.
+		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 	}
 
 	logger.Info("Reconciling DeckhouseMachine")
@@ -1299,6 +1304,19 @@ func (r *DeckhouseMachineReconciler) migrateDiskStorageClassIfNeeded(
 	}
 }
 
+// dataSecretNameChanged reports whether an update moved the bootstrap secret
+// reference — the only Machine field a reconcile pass uses as input.
+func dataSecretNameChanged(before, after client.Object) bool {
+	oldMachine, okOld := before.(*clusterv1b2.Machine)
+	newMachine, okNew := after.(*clusterv1b2.Machine)
+	if !okOld || !okNew {
+		// Fail open: a spurious reconcile is cheap, a missed one parks the
+		// DeckhouseMachine until the requeue backstop fires.
+		return true
+	}
+	return !ptr.Equal(oldMachine.Spec.Bootstrap.DataSecretName, newMachine.Spec.Bootstrap.DataSecretName)
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *DeckhouseMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
@@ -1312,6 +1330,15 @@ func (r *DeckhouseMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			handler.EnqueueRequestsFromMapFunc(
 				capiutil.MachineToInfrastructureMapFunc(infrastructurev1a1.GroupVersion.WithKind("DeckhouseMachine")),
 			),
+			// The one thing a pass reads off its Machine is the bootstrap secret
+			// name; the constant CAPI status rewrites are noise here. Creates and
+			// deletes pass: a create is how a machine that appeared after its
+			// DeckhouseMachine parked wakes it up.
+			builder.WithPredicates(predicate.Funcs{
+				UpdateFunc: func(e event.UpdateEvent) bool {
+					return dataSecretNameChanged(e.ObjectOld, e.ObjectNew)
+				},
+			}),
 		).
 		Complete(r)
 }
