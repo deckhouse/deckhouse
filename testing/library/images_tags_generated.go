@@ -246,7 +246,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"descheduler": "imageHash-descheduler-descheduler",
 	},
 	"documentation": map[string]interface{}{
-		"baseJekyll":  "imageHash-documentation-baseJekyll",
 		"docsBuilder": "imageHash-documentation-docsBuilder",
 		"web":         "imageHash-documentation-web",
 	},
