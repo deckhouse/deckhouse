@@ -105,9 +105,9 @@ type Writer struct {
 	deps   Deps
 	logger *log.Logger
 
-	seen      domain.SeenAlive
-	incidents map[string]*incident
-	waiting map[string]time.Time
+	seen            domain.SeenAlive
+	incidents       map[string]*incident
+	waiting         map[string]time.Time
 	ownStateCleared bool
 }
 
@@ -324,7 +324,6 @@ func (w *Writer) clear(ctx context.Context, view domain.View, state *v1alpha1.Fe
 		return
 	}
 
-
 	if !w.myTurn(domain.WriterRank(view.Alive(), state.Name, w.params.NodeName), w.waitingSince(clearKey(state.Name))) {
 		return
 	}
@@ -342,7 +341,6 @@ func (w *Writer) clear(ctx context.Context, view domain.View, state *v1alpha1.Fe
 	w.logger.Info("fencing state removed", "member", state.Name, "reason", reason)
 	w.deps.Events.Normal(reasonStateCleared, fmt.Sprintf("fencing state of %s removed: %s", state.Name, reason))
 }
-
 
 func (w *Writer) unexpectedLongEnough(name string) bool {
 	return !w.deps.Now().Before(w.waitingSince(unexpectedKey(name)).Add(unexpectedGrace))
@@ -393,7 +391,6 @@ func (w *Writer) incident(name string) *incident {
 
 	return known
 }
-
 
 func (w *Writer) forgetRecovered(failed []domain.Peer) {
 	for name := range w.incidents {

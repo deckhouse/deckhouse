@@ -44,8 +44,8 @@ type eventDelegate struct {
 
 func newEventDelegate(logger *log.Logger) *eventDelegate {
 	return &eventDelegate{
-		logger: logger,
-		events: make(chan nodeEvent, eventBuffer),
+		logger:  logger,
+		events:  make(chan nodeEvent, eventBuffer),
 		changed: make(chan struct{}, 1),
 	}
 }
