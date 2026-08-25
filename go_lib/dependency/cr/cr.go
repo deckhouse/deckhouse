@@ -194,6 +194,15 @@ func (r *client) ListTags(ctx context.Context) ([]string, error) {
 }
 
 func (r *client) Digest(ctx context.Context, tag string) (string, error) {
+	// Try a cheap HEAD request first: it returns the manifest digest via the
+	// Docker-Content-Digest header without transferring the manifest body or any layers.
+	// Not every registry answers HEAD on a manifest, so on any error fall back to the
+	// previous behaviour of pulling the manifest with a GET - this keeps the error
+	// semantics (e.g. a transport 404 for a missing image) identical for callers.
+	if digest, err := r.head(ctx, tag); err == nil {
+		return digest, nil
+	}
+
 	image, err := r.Image(ctx, tag)
 	if err != nil {
 		return "", fmt.Errorf("image: %w", err)
@@ -205,6 +214,61 @@ func (r *client) Digest(ctx context.Context, tag string) (string, error) {
 	}
 
 	return d.String(), nil
+}
+
+// head issues a HEAD request against the tag's manifest and returns its digest string.
+// It transfers only the manifest descriptor (no manifest body, no layers), so it is the
+// cheapest way to learn whether a tag has moved. Returns an error if the registry does
+// not support HEAD on the manifest, letting the caller fall back to a GET.
+func (r *client) head(ctx context.Context, tag string) (string, error) {
+	imageURL := r.registryURL + ":" + tag
+
+	var nameOpts []name.Option
+	if r.options.useHTTP {
+		nameOpts = append(nameOpts, name.Insecure)
+	}
+
+	ref, err := name.ParseReference(imageURL, nameOpts...)
+	if err != nil {
+		return "", fmt.Errorf("parse reference: %w", err)
+	}
+
+	headOptions := make([]remote.Option, 0)
+	headOptions = append(headOptions, remote.WithUserAgent(r.options.userAgent))
+	if !r.options.withoutAuth {
+		headOptions = append(headOptions, remote.WithAuth(authn.FromConfig(r.authConfig)))
+	}
+
+	if r.options.ca != "" {
+		headOptions = append(headOptions, remote.WithTransport(GetHTTPTransport(r.options.ca)))
+	}
+
+	if r.options.timeout > 0 {
+		// add default timeout to prevent an endless request; here we can defer cancel
+		// because we return a string, not a lazy *v1.Image that reads on demand.
+		ctxWTO, cancel := context.WithTimeout(ctx, r.options.timeout)
+		defer cancel()
+
+		headOptions = append(headOptions, remote.WithContext(ctxWTO))
+	} else {
+		headOptions = append(headOptions, remote.WithContext(ctx))
+	}
+
+	desc, err := remote.Head(ref, headOptions...)
+	if err != nil {
+		return "", fmt.Errorf("head: %w", err)
+	}
+
+	// A tag that points at a multi-arch index resolves under GET (remote.Image) to a
+	// platform-specific child manifest whose digest differs from the index digest that
+	// HEAD reports. To keep Digest's result identical to the GET path for every caller
+	// (e.g. the deckhouse-release restart check compares it against the running image
+	// hash), only trust HEAD for a single manifest and fall back to GET for an index.
+	if desc.MediaType.IsIndex() {
+		return "", fmt.Errorf("head: %s is an index, falling back to GET", desc.MediaType)
+	}
+
+	return desc.Digest.String(), nil
 }
 
 func readAuthConfig(repo, dockerCfg, login, password string) (authn.AuthConfig, error) {

@@ -404,6 +404,44 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		metricModuleGroup := metrics.D8ModuleUpdatingGroup + "_" + strcase.ToSnake(moduleName) + "_" + strcase.ToSnake(source.GetName())
 		r.metricStorage.Grouped().ExpireGroupMetrics(metricModuleGroup)
 
+		// Cheaply probe the release channel before pulling the whole release image. The
+		// channel image digest is the module checksum recorded in the source status; when it
+		// has not moved, the version and the module definition inside the image are identical
+		// to what we already have, so there is nothing to download or process for the module.
+		//
+		// An unchanged checksum alone is not enough to skip: the target ModuleRelease may have
+		// been removed, or intermediate minor releases may have been mirrored into the registry
+		// after the target was first created (releaseUpToDate verifies both from the cache). On
+		// any probe/verify error we do not skip - we fall through to the full download below,
+		// which handles the module and its errors exactly as before.
+		if availableModule.Checksum != "" && availableModule.Version != "" && availableModule.Version != "unknown" {
+			channelChecksum, err := md.GetReleaseChannelChecksum(ctx, moduleName, policy.Spec.ReleaseChannel)
+			switch {
+			case err != nil:
+				logger.Debug("failed to probe release channel checksum, downloading metadata", log.Err(err))
+
+			case channelChecksum != availableModule.Checksum:
+				logger.Debug("release channel checksum changed, downloading metadata",
+					slog.String("old_checksum", availableModule.Checksum), slog.String("new_checksum", channelChecksum))
+
+			default:
+				upToDate, err := r.releaseUpToDate(ctx, source.Name, moduleName, availableModule.Checksum, availableModule.Version)
+				switch {
+				case err != nil:
+					logger.Debug("failed to verify release is up to date, downloading metadata", log.Err(err))
+
+				case upToDate:
+					logger.Debug("release channel unchanged and release up to date, skip module",
+						slog.String("checksum", availableModule.Checksum), slog.String("version", availableModule.Version))
+					availableModules = append(availableModules, availableModule)
+					continue
+
+				default:
+					logger.Debug("release channel unchanged but release chain is incomplete, downloading metadata")
+				}
+			}
+		}
+
 		logger.Debug("download module meta from release channel")
 
 		meta, err := md.DownloadMetadataFromReleaseChannel(ctx, moduleName, policy.Spec.ReleaseChannel)
