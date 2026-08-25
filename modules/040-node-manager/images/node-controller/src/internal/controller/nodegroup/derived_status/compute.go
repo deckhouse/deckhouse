@@ -95,29 +95,30 @@ func defaultCloudEphemeralEngine(reg CloudProviderRegistration, useMCM bool) str
 	}
 }
 
-// ResolveEngine returns the engine a NodeGroup runs on, in order of decreasing authority:
-// status.engine once written, then the MachineDeployments the group already has, then the provider
-// default. The middle step keeps a cluster upgraded from before the CAPI migration on MCM: its
-// groups carry no pin, and a both-kinds provider defaults to CAPI, recreating every machine.
-//
-// reader must be backed by informers watching both MachineDeployment kinds — the nodegroup and the
-// capi controllers watch them, and internal/common/cache.go scopes both to the machine namespace.
-// A kind that is watched by nobody would answer "no machines" and pin the default irreversibly.
+// ResolveEngine returns the engine a NodeGroup runs on: status.engine once written, else the
+// MachineDeployments it already has, else the provider default. The middle step keeps a group
+// upgraded from before the CAPI migration on MCM instead of recreating its machines on CAPI.
 func ResolveEngine(
 	ctx context.Context, reader client.Reader, ng *v1.NodeGroup, reg CloudProviderRegistration,
 ) (string, error) {
-	if !engineUndecided(ng) {
-		return engineFrom(ng, reg, ngcommon.MachineDeployments{}), nil
+	if !engineUndecided(ng, reg) {
+		return engineFrom(ng, reg, machineDeployments{}), nil
 	}
 
-	live, err := ngcommon.FindMachineDeployments(ctx, reader, ng.Name)
+	live, err := findMachineDeployments(ctx, reader, ng.Name)
 	if err != nil {
 		return "", fmt.Errorf("resolve engine of NodeGroup %s: %w", ng.Name, err)
 	}
 	return engineFrom(ng, reg, live), nil
 }
 
-func engineFrom(ng *v1.NodeGroup, reg CloudProviderRegistration, live ngcommon.MachineDeployments) string {
+// machineDeployments reports which engines already have MachineDeployments for a NodeGroup.
+type machineDeployments struct {
+	MCM  bool
+	CAPI bool
+}
+
+func engineFrom(ng *v1.NodeGroup, reg CloudProviderRegistration, live machineDeployments) string {
 	if ng.Status.Engine != "" {
 		return ng.Status.Engine
 	}
@@ -132,10 +133,31 @@ func engineFrom(ng *v1.NodeGroup, reg CloudProviderRegistration, live ngcommon.M
 	return defaultEngine(ng, reg)
 }
 
-// engineUndecided reports whether the answer still depends on the group's MachineDeployments —
-// the only case worth reading them for.
-func engineUndecided(ng *v1.NodeGroup) bool {
-	return ng.Status.Engine == "" && ng.Spec.NodeType == v1.NodeTypeCloudEphemeral
+// engineUndecided is true only when the default is a guess: no pin, a CloudEphemeral group, and a
+// provider publishing both kinds. Everywhere else the answer follows from the spec alone.
+func engineUndecided(ng *v1.NodeGroup, reg CloudProviderRegistration) bool {
+	if ng.Status.Engine != "" || ng.Spec.NodeType != v1.NodeTypeCloudEphemeral {
+		return false
+	}
+	return reg.MachineClassKind != "" && reg.CAPIClusterKind != ""
+}
+
+// findMachineDeployments lists MCM first: a group that has any runs on MCM whatever else exists,
+// so the CAPI list is paid only when MCM comes back empty.
+func findMachineDeployments(ctx context.Context, reader client.Reader, ngName string) (machineDeployments, error) {
+	mcm, err := ngcommon.ListMachineDeployments(ctx, reader, ngcommon.MCMMachineDeploymentGVK, ngName)
+	if err != nil {
+		return machineDeployments{}, err
+	}
+	if len(mcm.Items) > 0 {
+		return machineDeployments{MCM: true}, nil
+	}
+
+	capi, err := ngcommon.ListMachineDeployments(ctx, reader, ngcommon.CAPIMachineDeploymentGVK, ngName)
+	if err != nil {
+		return machineDeployments{}, err
+	}
+	return machineDeployments{CAPI: len(capi.Items) > 0}, nil
 }
 
 // serializeLabels mirrors get_crds.serializeLabels.

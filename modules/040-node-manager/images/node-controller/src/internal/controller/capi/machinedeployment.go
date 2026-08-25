@@ -191,7 +191,7 @@ func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		// Derive the engine instead of waiting for the status controller to publish
 		// status.engine: with the derived value the MachineDeployment is rendered in the
 		// first reconcile right after the NodeGroup is created. status.engine, once set,
-		// stays the pin (ResolveEngine prefers it).
+		// stays the pin (ResolveNodeGroup prefers it).
 		registration, err := r.readCloudProviderRegistration(ctx)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -204,17 +204,20 @@ func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Re
 			logger.V(1).Info("skipping: instanceClassAPIVersion is not published yet")
 			return ctrl.Result{RequeueAfter: resyncInterval}, nil
 		}
-		engine, err := derived_status.ResolveEngine(ctx, r.Client, ng, registration)
+		// Resolved once here and handed down: the engine branch and the rendered element must
+		// agree within one pass, and the snapshot behind ResolveNodeGroup already carries it.
+		ds := &derived_status.Service{Client: r.Client}
+		resolved, validationErr, err := ds.ResolveNodeGroup(ctx, ng)
 		if err != nil {
-			return ctrl.Result{}, err
+			return ctrl.Result{}, fmt.Errorf("resolve NodeGroup %s: %w", ng.Name, err)
 		}
-		switch engine {
+		switch resolved.Engine {
 		case engineCAPI:
-			if err := r.reconcileCloudMDsRendered(ctx, ng); err != nil {
+			if err := r.reconcileCloudMDsRendered(ctx, ng, resolved, validationErr); err != nil {
 				return ctrl.Result{}, err
 			}
 		case engineMCM:
-			if err := r.reconcileCloudMCMs(ctx, ng); err != nil {
+			if err := r.reconcileCloudMCMs(ctx, ng, resolved, validationErr); err != nil {
 				return ctrl.Result{}, err
 			}
 		default:

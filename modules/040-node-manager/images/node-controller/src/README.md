@@ -66,7 +66,7 @@ reconcile loop.
 | `nodegroup-status` | NodeGroup | Writes the whole `NodeGroup.status`: node counts, readiness, effective Kubernetes version, conditions, and the one-time `status.engine` pin (MCM or CAPI). | `update_node_group_status.go` — [docs](docs/controller-nodegroup-status.md) |
 | `bashible-context` | NodeGroup | Assembles the Secret `d8-cloud-instance-manager/bashible-apiserver-context` — the single input bashible-apiserver renders node configuration from. | helm define `bashible_input_data` |
 | `nodegroup-update-approval` | NodeGroup | Approves node updates one at a time and handles disruption approval. | `update_approval.go` — [docs](docs/controller-update-approval.md) |
-| `master-node-group` | NodeGroup | Creates the `master` NodeGroup once at startup if it is absent; never touches an existing one. Node type comes from `clusterType` in the Secret `kube-system/d8-cluster-configuration`. | `create_master_node_group.go` |
+| `master-node-group` | — (one-shot at startup) | Creates the `master` NodeGroup once at startup if it is absent; never touches an existing one. Node type comes from `clusterType` in the Secret `kube-system/d8-cluster-configuration`. | `create_master_node_group.go` |
 
 ### Node-driven
 
@@ -91,6 +91,14 @@ Details: [docs/controller-capi.md](docs/controller-capi.md).
 | `capi-api-version` | MachineDeployment (CAPI) | Backfills the infrastructure `apiGroup` on objects created under the older v1beta1 contract. |
 | `capi-finalizer-cleanup` | Cluster (CAPI) | Removes the `deckhouse.io/capi-controller-manager` finalizer so a deleted Cluster is not stuck. |
 | `capi-md-metrics` | MachineDeployment (CAPI) | Exports per-MachineDeployment gauges to the metrics endpoint. |
+
+### Immutable OS nodes (olcedar)
+
+| Controller | Watches | What it does |
+|---|---|---|
+| `node-config` | Node | Renders a `NodeConfig` for every node of an olcedar NodeGroup from the NodeGroup and live cluster state; the on-node agent reconciles the node towards it. |
+| `node-bootstrap` | NodeBootstrapConfig | Cluster API bootstrap provider for immutable NodeGroups: renders each Machine's `NodeConfig` userdata into a Secret and advertises it through the `NodeBootstrapConfig` status CAPI waits on. |
+| `node-operation` | NodeOperation | Carries a node-interrupting operation (reboot, eviction, permission to apply a disruptive config) from recorded intent to result: evicts, hands over via `InProgress`, the node reports back. |
 
 ### Instances and users
 

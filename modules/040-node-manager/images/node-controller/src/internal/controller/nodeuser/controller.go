@@ -121,9 +121,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	return ctrl.Result{}, nil
 }
 
-// staleNodeNames returns the blamed nodes that no longer exist or are no longer managed by
-// Deckhouse. Nodes are read one by one: status.errors holds a handful of names, while listing
-// every node would copy the whole cluster out of the cache on each event.
+// staleNodeNames returns the blamed nodes that are gone or no longer carry the node-group label —
+// the hook's selector. Reached on every NodeUser write too, not only on node deletion. Nodes are
+// read one by one: listing every node would copy the whole cluster out of the cache each time.
 func (r *Reconciler) staleNodeNames(ctx context.Context, statusErrors map[string]string) ([]string, error) {
 	var stale []string
 	for name := range statusErrors {

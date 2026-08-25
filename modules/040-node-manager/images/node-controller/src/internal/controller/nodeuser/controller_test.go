@@ -76,7 +76,7 @@ func TestStaleNodeNames(t *testing.T) {
 			expStale: []string{"a"},
 		},
 		{
-			// A node without the group label is not ours, so an error blaming it is stale.
+			// The hook selected nodes by the node-group label: one without it is not ours.
 			name:     "an unmanaged node counts as gone",
 			errs:     map[string]string{"stripped": "boom"},
 			nodes:    []client.Object{&corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "stripped"}}},

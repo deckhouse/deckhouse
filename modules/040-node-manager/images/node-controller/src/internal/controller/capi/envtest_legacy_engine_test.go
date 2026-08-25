@@ -52,34 +52,33 @@ var _ = Describe("Live MCM MachineDeployments of a NodeGroup", func() {
 		ngName := testenv.UniqueName("legacy-mcm")
 		createMCMDeployment(ngName+"-nova", ngName)
 
-		live, err := ngcommon.FindMachineDeployments(suiteCtx, k8sClient, ngName)
+		list, err := ngcommon.ListMachineDeployments(suiteCtx, k8sClient, ngcommon.MCMMachineDeploymentGVK, ngName)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(live.MCM).To(BeTrue())
+		Expect(list.Items).To(HaveLen(1))
 	})
 
 	It("reports false for a group that has none", func() {
-		live, err := ngcommon.FindMachineDeployments(suiteCtx, k8sClient, testenv.UniqueName("no-mcm"))
+		list, err := ngcommon.ListMachineDeployments(suiteCtx, k8sClient, ngcommon.MCMMachineDeploymentGVK, testenv.UniqueName("no-mcm"))
 		Expect(err).NotTo(HaveOccurred())
-		Expect(live.MCM).To(BeFalse())
-		Expect(live.CAPI).To(BeFalse())
+		Expect(list.Items).To(BeEmpty())
 	})
 
 	It("does not count a deployment of the same group in another namespace", func() {
 		ngName := testenv.UniqueName("foreign-ns")
 		createMCMDeploymentIn("default", ngName+"-nova", ngName)
 
-		live, err := ngcommon.FindMachineDeployments(suiteCtx, k8sClient, ngName)
+		list, err := ngcommon.ListMachineDeployments(suiteCtx, k8sClient, ngcommon.MCMMachineDeploymentGVK, ngName)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(live.MCM).To(BeFalse())
+		Expect(list.Items).To(BeEmpty())
 	})
 
 	It("does not count another group's deployment", func() {
 		other := testenv.UniqueName("other")
 		createMCMDeployment(other+"-nova", other)
 
-		live, err := ngcommon.FindMachineDeployments(suiteCtx, k8sClient, testenv.UniqueName("mine"))
+		list, err := ngcommon.ListMachineDeployments(suiteCtx, k8sClient, ngcommon.MCMMachineDeploymentGVK, testenv.UniqueName("mine"))
 		Expect(err).NotTo(HaveOccurred())
-		Expect(live.MCM).To(BeFalse())
+		Expect(list.Items).To(BeEmpty())
 	})
 
 	It("resolves an ambiguous engine to MCM when the group already runs on it", func() {

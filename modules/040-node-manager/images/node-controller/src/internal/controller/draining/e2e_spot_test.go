@@ -96,6 +96,29 @@ var _ = Describe("Draining controller, spot instance deletion", func() {
 		}, eventuallyTimeout, eventuallyPoll).Should(BeFalse())
 	})
 
+	// A drained annotation left over from an earlier bashible run must not release the VM while
+	// the termination's own drain is still pending: workloads would die with the VM instead of
+	// being evicted. The drain in flight wins, and only its completion deletes the Instance.
+	It("drains a spot-terminating node that still carries a stale drained annotation first", func() {
+		name := testenv.UniqueName("spot-stale")
+		createInstance(name)
+		createSpotNode(name, map[string]string{
+			nodecommon.DrainingAnnotation: "aws-spot",
+			nodecommon.DrainedAnnotation:  "bashible",
+		})
+
+		Eventually(func(g Gomega) {
+			state := getNodeState(name)
+			g.Expect(state.Spec.Unschedulable).To(BeTrue(), "the node must be cordoned before its Instance goes")
+			g.Expect(state.Annotations).To(HaveKeyWithValue(nodecommon.DrainedAnnotation, "aws-spot"))
+			g.Expect(state.Annotations).NotTo(HaveKey(nodecommon.DrainingAnnotation))
+		}, eventuallyTimeout, eventuallyPoll).Should(Succeed())
+
+		Eventually(func() bool {
+			return instanceExists(name)
+		}, eventuallyTimeout, eventuallyPoll).Should(BeFalse())
+	})
+
 	It("keeps the Instance of a drained node that is not spot-terminating", func() {
 		name := testenv.UniqueName("plain-drained")
 		createInstance(name)

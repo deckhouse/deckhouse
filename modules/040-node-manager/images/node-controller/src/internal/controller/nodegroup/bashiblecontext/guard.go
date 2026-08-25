@@ -18,11 +18,17 @@ package bashiblecontext
 
 import "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-// dropsInternalNetworkCIDRs reports whether a derived entry lost the internalNetworkCIDRs its
-// published predecessor had. Nodes match their own IP against them (candi/bashible/common-steps/
-// all/000_discover_node_ip.sh.tpl:23), so clearing the field silently would rewire every node.
-func dropsInternalNetworkCIDRs(prior, current map[string]interface{}) bool {
-	return hasInternalNetworkCIDRs(prior) && !hasInternalNetworkCIDRs(current)
+// publishedStaticBlock returns the static block of the published context that carries
+// internalNetworkCIDRs, if any. They come from one Secret for every static group, so the first
+// entry that has them speaks for the cluster.
+func publishedStaticBlock(prior map[string]map[string]interface{}) map[string]interface{} {
+	for _, entry := range prior {
+		if hasInternalNetworkCIDRs(entry) {
+			static, _ := entry["static"].(map[string]interface{})
+			return static
+		}
+	}
+	return nil
 }
 
 func hasInternalNetworkCIDRs(nodeGroup map[string]interface{}) bool {
