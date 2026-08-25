@@ -89,6 +89,10 @@ DKP supports both automatic and manual scaling of master nodes in cloud and bare
 
 ### Removing the master role from a node without deleting the node itself
 
+{% alert level="warning" %}
+If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before changing master nodes. We strongly recommend creating a [backup of the module's data](/products/stronghold/documentation/admin/backups/overview/) before making any changes.
+{% endalert %}
+
 If you need to remove a node from the set of master nodes but keep it in the cluster for other purposes, follow these steps:
 
 1. Remove the labels so the node is no longer treated as a master:
@@ -127,6 +131,12 @@ If you need to remove a node from the set of master nodes but keep it in the clu
 After completing these steps, the node will no longer be considered a master node, but it will remain part of the cluster and can be used for other tasks.
 
 ### Changing the OS image of master nodes in a multi-master cluster
+
+#### In a cloud cluster
+
+{% alert level="warning" %}
+If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before changing master nodes. We strongly recommend creating a [backup of the module's data](/products/stronghold/documentation/admin/backups/overview/) before making any changes.
+{% endalert %}
 
 1. Create a [backup of etcd](../../backup/backup-and-restore.html#backing-up-etcd) and the `/etc/kubernetes` directory.
 1. Copy the resulting archive outside the cluster (e.g., to a local machine).
@@ -223,7 +233,111 @@ After completing these steps, the node will no longer be considered a master nod
 
 1. Proceed to updating the next master node.
 
+#### In a static cluster
+
+{% alert level="warning" %}
+If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before adding or removing a master node. We strongly recommend creating a [backup of the module's data](/products/stronghold/documentation/admin/backups/overview/) before making any changes.
+{% endalert %}
+
+1. Create a [backup of etcd](../../backup/backup-and-restore.html#backing-up-etcd) and the `/etc/kubernetes` directory. If the `stronghold` module is enabled, make sure its data has also been backed up.
+1. Check the cluster health and make sure there are no alerts or pending Deckhouse queue tasks:
+
+   ```shell
+   d8 status
+   ```
+
+1. Perform the following steps for each master node, one node at a time. Do not proceed to the next node until the current node has rejoined the cluster and is healthy.
+1. Remove the master node labels from the node:
+
+   ```shell
+   d8 k label node <MASTER_NODE_NAME> node-role.kubernetes.io/control-plane- \
+     node-role.kubernetes.io/master- node.deckhouse.io/group-
+   ```
+
+   where `<MASTER_NODE_NAME>`: Name of the master node being changed.
+
+1. Make sure the node has been removed from the etcd cluster member list:
+
+   ```shell
+   for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
+     d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+       --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+       --endpoints https://127.0.0.1:2379/ member list -w table
+     if [ $? -eq 0 ]; then
+       break
+     fi
+   done
+   ```
+
+1. Drain the node:
+
+   ```shell
+   d8 k drain <MASTER_NODE_NAME> --ignore-daemonsets --delete-emptydir-data
+   ```
+
+1. Force-delete any Pods remaining on the node:
+
+   ```shell
+   d8 k delete pods --all-namespaces --field-selector spec.nodeName=<MASTER_NODE_NAME> --force
+   ```
+
+1. Delete the Node object:
+
+   ```shell
+   d8 k delete node <MASTER_NODE_NAME>
+   ```
+
+1. Clean up the DKP data on the removed master node:
+
+   {% alert level="danger" %}
+   This command removes Kubernetes and DKP data from the node. Before running it, make sure you have selected the correct node and created the required backups.
+   {% endalert %}
+
+   ```shell
+   bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing
+   ```
+
+1. Install the required OS on the node.
+1. On a healthy master node, retrieve and decode the script for adding a master node:
+
+   ```shell
+   d8 k -n d8-cloud-instance-manager get secret manual-bootstrap-for-master \
+     -o jsonpath='{.data.bootstrap\.sh}' | base64 -d > bootstrap.sh
+   ```
+
+1. Securely copy `bootstrap.sh` to the node being added and run it as `root` on that node:
+
+   ```shell
+   bash bootstrap.sh
+   ```
+
+1. Wait for Deckhouse queue tasks to complete and make sure the master node is present in the etcd cluster member list again:
+
+   ```shell
+   d8 status
+   for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
+     d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+       --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+       --endpoints https://127.0.0.1:2379/ member list -w table
+     if [ $? -eq 0 ]; then
+       break
+     fi
+   done
+   ```
+
+1. Make sure there are no alerts or pending queue tasks:
+
+   ```shell
+   d8 status
+   ```
+
+1. Repeat the procedure for the next master node.
+
 ### Changing the OS image in a single-master cluster
+
+{% alert level="warning" %}
+If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before changing master nodes. We strongly recommend creating a [backup of the module's data](/products/stronghold/documentation/admin/backups/overview/) before making any changes.
+{% endalert %}
 
 1. Convert the single-master cluster into a multi-master one according to the [instructions](#adding-master-nodes-in-a-cloud-cluster).
 1. Update the master nodes as described in the [instructions](#changing-the-os-image-of-master-nodes-in-a-multi-master-cluster).
@@ -232,6 +346,10 @@ After completing these steps, the node will no longer be considered a master nod
 ## Adding master nodes to a static or hybrid cluster
 
 > It is important to have an odd number of masters to ensure a quorum.
+
+{% alert level="warning" %}
+If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before changing master nodes. We strongly recommend creating a [backup of the module's data](/products/stronghold/documentation/admin/backups/overview/) before making any changes.
+{% endalert %}
 
 When installing Deckhouse Kubernetes Platform with default settings, the NodeGroup `master` lacks the section [`spec.staticInstances.labelSelector`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) with label filter settings for `staticInstances` resources. Because of this, after changing the number of `staticInstances` nodes in the NodeGroup `master` (parameter [`spec.staticInstances.count`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)), when adding a regular node using Cluster API Provider Static (CAPS), it can be "intercepted" and added to the NodeGroup `master`, even if the corresponding `StaticInstance` (in `metadata`) specifies a label with a `role` different from `master`.
 To avoid this "interception", after installing DKP, edit the NodeGroup `master` — add the section [`spec.staticInstances.labelSelector`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) with label filter settings for `staticInstances` resources. Example of NodeGroup `master` with `spec.staticInstances.labelSelector`:

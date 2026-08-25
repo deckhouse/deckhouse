@@ -89,6 +89,10 @@ Deckhouse Kubernetes Platform (DKP) поддерживает автоматич�
 
 ### Удаление роли master с узла без удаления самого узла
 
+{% alert level="warning" %}
+Если в кластере используется модуль [`stronghold`](/modules/stronghold/), перед изменением master-узлов убедитесь, что модуль находится в полностью работоспособном состоянии. Перед началом изменений настоятельно рекомендуется создать [резервную копию данных модуля](/products/stronghold/documentation/admin/backups/overview/).
+{% endalert %}
+
 Если необходимо вывести узел из состава master-узлов, но сохранить его в кластере для других задач, выполните следующие шаги:
 
 1. Снимите лейблы, чтобы узел больше не рассматривался как master:
@@ -129,6 +133,12 @@ Deckhouse Kubernetes Platform (DKP) поддерживает автоматич�
 После выполнения этих шагов узел больше не будет считаться master-узлом, но останется в кластере и может использоваться для других задач.
 
 ### Изменение образа ОС master-узлов в мультимастерном кластере
+
+#### В облачном кластере
+
+{% alert level="warning" %}
+Если в кластере используется модуль [`stronghold`](/modules/stronghold/), перед изменением master-узлов убедитесь, что модуль находится в полностью работоспособном состоянии. Перед началом изменений настоятельно рекомендуется создать [резервную копию данных модуля](/products/stronghold/documentation/admin/backups/overview/).
+{% endalert %}
 
 1. Сделайте [резервную копию etcd](../../backup/backup-and-restore.html#резервное-копирование-etcd) и директории `/etc/kubernetes`.
 1. Скопируйте полученный архив за пределы кластера (например, на локальную машину).
@@ -223,7 +233,111 @@ Deckhouse Kubernetes Platform (DKP) поддерживает автоматич�
 
 1. Перейдите к обновлению следующего узла.
 
+#### В статическом кластере
+
+{% alert level="warning" %}
+Если в кластере используется модуль [`stronghold`](/modules/stronghold/), перед добавлением или удалением master-узла убедитесь, что модуль находится в полностью работоспособном состоянии. Перед началом любых изменений настоятельно рекомендуется создать [резервную копию данных модуля](/products/stronghold/documentation/admin/backups/overview/).
+{% endalert %}
+
+1. Сделайте [резервную копию etcd](../../backup/backup-and-restore.html#резервное-копирование-etcd) и директории `/etc/kubernetes`. Если используется модуль `stronghold`, убедитесь, что создана резервная копия его данных.
+1. Проверьте состояние кластера, отсутствие алертов и незавершённых задач в очереди Deckhouse:
+
+   ```shell
+   d8 status
+   ```
+
+1. Выполняйте следующие действия поочерёдно для каждого master-узла. Переходите к следующему узлу только после того, как текущий узел вернулся в кластер и стал работоспособен.
+1. Снимите с узла лейблы master-узла:
+
+   ```shell
+   d8 k label node <MASTER_NODE_NAME> node-role.kubernetes.io/control-plane- \
+     node-role.kubernetes.io/master- node.deckhouse.io/group-
+   ```
+
+   где `<MASTER_NODE_NAME>` — имя изменяемого master-узла.
+
+1. Убедитесь, что узел удалён из списка членов кластера etcd:
+
+   ```shell
+   for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
+     d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+       --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+       --endpoints https://127.0.0.1:2379/ member list -w table
+     if [ $? -eq 0 ]; then
+       break
+     fi
+   done
+   ```
+
+1. Выполните drain узла:
+
+   ```shell
+   d8 k drain <MASTER_NODE_NAME> --ignore-daemonsets --delete-emptydir-data
+   ```
+
+1. Принудительно удалите оставшиеся на узле поды:
+
+   ```shell
+   d8 k delete pods --all-namespaces --field-selector spec.nodeName=<MASTER_NODE_NAME> --force
+   ```
+
+1. Удалите объект Node:
+
+   ```shell
+   d8 k delete node <MASTER_NODE_NAME>
+   ```
+
+1. На удаляемом master-узле очистите данные DKP:
+
+   {% alert level="danger" %}
+   Команда удаляет данные Kubernetes и DKP с узла. Перед её выполнением убедитесь, что выбран правильный узел и созданы необходимые резервные копии.
+   {% endalert %}
+
+   ```shell
+   bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing
+   ```
+
+1. Установите на узле требуемую ОС.
+1. На работающем master-узле получите и раскодируйте скрипт для добавления master-узла:
+
+   ```shell
+   d8 k -n d8-cloud-instance-manager get secret manual-bootstrap-for-master \
+     -o jsonpath='{.data.bootstrap\.sh}' | base64 -d > bootstrap.sh
+   ```
+
+1. Безопасно скопируйте файл `bootstrap.sh` на добавляемый узел и выполните его на этом узле от пользователя `root`:
+
+   ```shell
+   bash bootstrap.sh
+   ```
+
+1. Дождитесь завершения задач в очереди Deckhouse и убедитесь, что master-узел снова появился в списке членов кластера etcd:
+
+   ```shell
+   d8 status
+   for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
+     d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+       --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+       --endpoints https://127.0.0.1:2379/ member list -w table
+     if [ $? -eq 0 ]; then
+       break
+     fi
+   done
+   ```
+
+1. Убедитесь, что в кластере нет алертов и незавершённых задач:
+
+   ```shell
+   d8 status
+   ```
+
+1. Повторите процедуру для следующего master-узла.
+
 ### Изменение образа ОС в кластере с одним master-узлом
+
+{% alert level="warning" %}
+Если в кластере используется модуль [`stronghold`](/modules/stronghold/), перед изменением master-узлов убедитесь, что модуль находится в полностью работоспособном состоянии. Перед началом изменений настоятельно рекомендуется создать [резервную копию данных модуля](/products/stronghold/documentation/admin/backups/overview/).
+{% endalert %}
 
 1. Преобразуйте кластер с одним master-узлом в мультимастерный в соответствии с [инструкцией](#добавление-master-узлов-в-облачном-кластере).
 1. Обновите master-узлы в соответствии с [инструкцией](#изменение-образа-ос-master-узлов-в-мультимастерном-кластере).
@@ -232,6 +346,10 @@ Deckhouse Kubernetes Platform (DKP) поддерживает автоматич�
 ## Добавление master-узлов в статический или гибридный кластер
 
 > Важно иметь нечетное количество master-узлов для обеспечения кворума.
+
+{% alert level="warning" %}
+Если в кластере используется модуль [`stronghold`](/modules/stronghold/), перед изменением master-узлов убедитесь, что модуль находится в полностью работоспособном состоянии. Перед началом изменений настоятельно рекомендуется создать [резервную копию данных модуля](/products/stronghold/documentation/admin/backups/overview/).
+{% endalert %}
 
 В процессе установки Deckhouse Kubernetes Platform с настройками по умолчанию в NodeGroup `master` отсутствует секция [`spec.staticInstances.labelSelector`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) с настройками фильтра лейблов по ресурсам `staticInstances`. Из-за этого после изменения количества узлов `staticInstances` в NodeGroup `master` (параметр [`spec.staticInstances.count`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)) при добавлении обычного узла с помощью Cluster API Provider Static (CAPS) он может быть «перехвачен» и добавлен в NodeGroup `master`, даже если в соответствующем ему `StaticInstance` (в `metadata`) указан лейбл с `role`, отличающейся от `master`.
 Чтобы избежать этого «перехвата», после установки DKP измените NodeGroup `master` — добавьте в нее секцию [`spec.staticInstances.labelSelector`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) с настройками фильтра лейблов по ресурсам `staticInstances`. Пример NodeGroup `master` с `spec.staticInstances.labelSelector`:
