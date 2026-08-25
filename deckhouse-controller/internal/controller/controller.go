@@ -43,9 +43,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/syncer"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	pkgruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/versionsync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/docbuilder"
@@ -342,7 +342,7 @@ func (c *Controller) Start(ctx context.Context) error {
 	// image ships the embedded modules; give each of them a package version
 	// object while the controllers still wait for the sync. Runs after the
 	// resolver, so a deployed duplicate it superseded no longer counts.
-	versions := versionsync.New(c.ctrl.GetAPIReader(), c.ctrl.GetClient(), c.dc, app.Version, app.EmbeddedModulesDir, c.logger.Named("version-sync"))
+	versions := syncer.New(c.ctrl.GetAPIReader(), c.ctrl.GetClient(), c.dc, app.Version, app.EmbeddedModulesDir, c.logger.Named("syncer"))
 	if err := versions.Sync(ctx); err != nil {
 		return fmt.Errorf("sync package versions: %w", err)
 	}

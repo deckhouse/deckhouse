@@ -1,0 +1,140 @@
+// Copyright 2026 Flant JSC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package syncer
+
+import (
+	"context"
+	"os"
+	"path/filepath"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/project"
+	"github.com/deckhouse/deckhouse/pkg/log"
+)
+
+func newTestSyncer(t *testing.T, version, embeddedDir string, objects ...client.Object) (*Syncer, client.Client) {
+	t.Helper()
+
+	sc, err := project.Scheme()
+	require.NoError(t, err)
+
+	cl := fake.NewClientBuilder().
+		WithScheme(sc).
+		WithStatusSubresource(&v1alpha1.ModulePackageVersion{}, &v1alpha1.ModulePackage{}).
+		WithObjects(objects...).
+		Build()
+
+	return New(cl, cl, dependency.NewMockedContainer(), version, embeddedDir, log.NewNop()), cl
+}
+
+func writeModuleYAML(t *testing.T, dir, content string) {
+	t.Helper()
+	require.NoError(t, os.MkdirAll(dir, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "module.yaml"), []byte(content), 0o644))
+}
+
+func writePackageYAML(t *testing.T, dir, content string) {
+	t.Helper()
+	require.NoError(t, os.MkdirAll(dir, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "package.yaml"), []byte(content), 0o644))
+}
+
+func testModule(name, source string, available ...string) *v1alpha1.Module {
+	return &v1alpha1.Module{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Properties: v1alpha1.ModuleProperties{Source: source, AvailableSources: available},
+	}
+}
+
+func testRelease(module, source, version, phase string) *v1alpha1.ModuleRelease {
+	return &v1alpha1.ModuleRelease{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   module + "-v" + version,
+			Labels: map[string]string{"source": source},
+		},
+		Spec:   v1alpha1.ModuleReleaseSpec{ModuleName: module, Version: version},
+		Status: v1alpha1.ModuleReleaseStatus{Phase: phase},
+	}
+}
+
+func listVersionNames(t *testing.T, cl client.Client) []string {
+	t.Helper()
+
+	list := new(v1alpha1.ModulePackageVersionList)
+	require.NoError(t, cl.List(context.Background(), list))
+
+	names := make([]string, 0, len(list.Items))
+	for _, item := range list.Items {
+		names = append(names, item.Name)
+	}
+
+	return names
+}
+
+func getVersion(t *testing.T, cl client.Client, name string) *v1alpha1.ModulePackageVersion {
+	t.Helper()
+
+	mpv := new(v1alpha1.ModulePackageVersion)
+	require.NoError(t, cl.Get(context.Background(), client.ObjectKey{Name: name}, mpv))
+
+	return mpv
+}
+
+func getPackage(t *testing.T, cl client.Client, name string) *v1alpha1.ModulePackage {
+	t.Helper()
+
+	pkg := new(v1alpha1.ModulePackage)
+	require.NoError(t, cl.Get(context.Background(), client.ObjectKey{Name: name}, pkg))
+
+	return pkg
+}
+
+func TestSyncIsIdempotent(t *testing.T) {
+	ctx := context.Background()
+
+	dir := t.TempDir()
+	writeModuleYAML(t, filepath.Join(dir, "900-echo"), "name: echo\nstage: General Availability\n")
+
+	s, cl := newTestSyncer(t, "v1.80.0", dir,
+		testRelease("parca", "deckhouse", "1.4.3", v1alpha1.ModuleReleasePhaseDeployed),
+		testRelease("console", "deckhouse", "1.60.1", v1alpha1.ModuleReleasePhasePending),
+		testModule("parca", "deckhouse", "deckhouse"),
+	)
+
+	require.NoError(t, s.Sync(ctx))
+
+	versions := make(map[string]string)
+	for _, name := range listVersionNames(t, cl) {
+		versions[name] = getVersion(t, cl, name).ResourceVersion
+	}
+	require.Len(t, versions, 3)
+	packageRV := getPackage(t, cl, "parca").ResourceVersion
+
+	require.NoError(t, s.Sync(ctx))
+
+	assert.Len(t, listVersionNames(t, cl), 3)
+	for name, rv := range versions {
+		assert.Equal(t, rv, getVersion(t, cl, name).ResourceVersion, name)
+	}
+	assert.Equal(t, packageRV, getPackage(t, cl, "parca").ResourceVersion)
+}
