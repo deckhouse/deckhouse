@@ -192,7 +192,7 @@ func targetKubernetesVersion(_ context.Context, input *go_hook.HookInput) error 
 				input.Logger.Warn(
 					"kubernetesVersion soft guard is disabled: cannot compare the target with the maxUsed baseline",
 					slog.String("target", target),
-					slog.String("maxUsed", maxUsed),
+					slog.String("max_used", maxUsed),
 					dlog.Err(err),
 				)
 			}
@@ -227,9 +227,9 @@ func targetKubernetesVersion(_ context.Context, input *go_hook.HookInput) error 
 		// The drift metric alone does not say at what version the digit is held.
 		if froze {
 			input.Logger.Info("holding the Kubernetes version below the Deckhouse default",
-				slog.String("deckhouseDefault", target),
+				slog.String("deckhouse_default", target),
 				slog.String("published", publishedTarget),
-				slog.String("maxUsed", maxUsed),
+				slog.String("max_used", maxUsed),
 			)
 		}
 	}
