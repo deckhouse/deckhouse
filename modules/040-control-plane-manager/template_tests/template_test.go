@@ -1514,4 +1514,78 @@ apiserver:
 			})
 		})
 	})
+
+	Context("SecurityPolicyException resources", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global.discovery.apiVersions", `["deckhouse.io/v1alpha1/SecurityPolicyException"]`)
+		})
+
+		Context("Always rendered exceptions", func() {
+			BeforeEach(func() {
+				f.HelmRender()
+			})
+
+			It("should render SecurityPolicyExceptions for control-plane components", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "etcd").Exists()).To(BeTrue())
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "kube-apiserver").Exists()).To(BeTrue())
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "kube-controller-manager").Exists()).To(BeTrue())
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "kube-scheduler").Exists()).To(BeTrue())
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "d8-control-plane-manager").Exists()).To(BeTrue())
+			})
+
+			It("should not render control-plane-proxy or etcd-backup exceptions without their prerequisites", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "control-plane-proxy").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "d8-etcd-backup").Exists()).To(BeFalse())
+			})
+		})
+
+		Context("With prometheus enabled", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global.enabledModules", `["prometheus"]`)
+				f.HelmRender()
+			})
+
+			It("should render SecurityPolicyException for control-plane-proxy", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "control-plane-proxy").Exists()).To(BeTrue())
+			})
+		})
+
+		Context("With cluster bootstrapped", func() {
+			BeforeEach(func() {
+				f.ValuesSet("global.clusterIsBootstrapped", true)
+				f.HelmRender()
+			})
+
+			It("should render SecurityPolicyException for etcd-backup", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "d8-etcd-backup").Exists()).To(BeTrue())
+			})
+		})
+
+		Context("Without SecurityPolicyException API", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global.discovery.apiVersions", `[]`)
+				f.ValuesSetFromYaml("global.enabledModules", `["prometheus"]`)
+				f.ValuesSet("global.clusterIsBootstrapped", true)
+				f.HelmRender()
+			})
+
+			It("should not render any SecurityPolicyException", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "etcd").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "kube-apiserver").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "kube-controller-manager").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "kube-scheduler").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "d8-control-plane-manager").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "control-plane-proxy").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "d8-etcd-backup").Exists()).To(BeFalse())
+			})
+		})
+	})
 })
