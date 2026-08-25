@@ -111,7 +111,6 @@ func (c *Cluster) NumMembers() int {
 	return c.list.NumMembers()
 }
 
-
 func (c *Cluster) Members() []string {
 	members := c.list.Members()
 	names := make([]string, 0, len(members))
@@ -126,7 +125,6 @@ func (c *Cluster) Members() []string {
 func (c *Cluster) Changed() <-chan struct{} {
 	return c.changed
 }
-
 
 func (c *Cluster) Shutdown() error {
 	defer close(c.stop)

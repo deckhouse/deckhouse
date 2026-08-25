@@ -28,14 +28,13 @@ import (
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 
+	v1alpha1 "fencing-agent/api/node-manager.deckhouse.io/v1alpha1"
 	"fencing-agent/internal/adapters/fencingstate"
 	"fencing-agent/internal/adapters/kubeclient"
 	"fencing-agent/internal/agent"
 	"fencing-agent/internal/config"
 	"fencing-agent/internal/domain"
 	"fencing-agent/internal/usecase/profile"
-
-	v1alpha1 "fencing-agent/api/node-manager.deckhouse.io/v1alpha1"
 )
 
 // The health server starts only after both steps finish, so 30s + 15s must stay

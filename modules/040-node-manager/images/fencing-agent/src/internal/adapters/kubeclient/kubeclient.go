@@ -29,7 +29,6 @@ import (
 	"fencing-agent/internal/domain"
 )
 
-
 const clientQPS = -1
 
 func NewRestConfig() (*rest.Config, error) {
