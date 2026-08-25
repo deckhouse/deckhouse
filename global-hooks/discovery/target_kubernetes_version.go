@@ -281,7 +281,7 @@ func usableDeclaredVersion(input *go_hook.HookInput, version, source string, isP
 	if _, err := semver.NewVersion(version); err != nil {
 		input.Logger.Warn(
 			"ignoring the declared kubernetesVersion: not a version and not a sentinel this document accepts",
-			slog.String("source", source),
+			slog.String("module_source", source),
 			slog.String("value", version),
 		)
 		return ""
@@ -301,7 +301,7 @@ func usableMaxUsedVersion(input *go_hook.HookInput, source, value string) string
 	if _, err := semver.NewVersion(value); err != nil {
 		input.Logger.Warn(
 			"ignoring an unusable maxUsedKubernetesVersion baseline, falling through to the next source",
-			slog.String("source", source),
+			slog.String("module_source", source),
 			slog.String("value", value),
 			dlog.Err(err),
 		)
