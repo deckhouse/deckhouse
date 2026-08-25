@@ -36,6 +36,7 @@ memory: 25Mi
   {{- $additionalCsiNodePodAnnotations := $config.additionalCsiNodePodAnnotations | default false }}
   {{- $csiNodeHostNetwork := $config.csiNodeHostNetwork | default "true" }}
   {{- $csiNodeHostPID := $config.csiNodeHostPID | default "false" }}
+  {{- $startupProbeFailureThreshold := $config.startupProbeFailureThreshold | default 0 }}
   {{- $dnsPolicy := $config.dnsPolicy | default "ClusterFirstWithHostNet" }}
   {{- $securityPolicyExceptionEnabled := $config.securityPolicyExceptionEnabled | default false }}
   {{- $kubernetesSemVer := semver $context.Values.global.discovery.kubernetesVersion }}
@@ -215,6 +216,15 @@ spec:
             path: /healthz
             port: {{ $livenessProbePort }}
           initialDelaySeconds: 5
+          timeoutSeconds: 5
+      {{- end }}
+      {{- if and $livenessProbePort $startupProbeFailureThreshold }}
+        startupProbe:
+          httpGet:
+            path: /healthz
+            port: {{ $livenessProbePort }}
+          periodSeconds: 10
+          failureThreshold: {{ $startupProbeFailureThreshold }}
           timeoutSeconds: 5
       {{- end }}
         volumeMounts:
