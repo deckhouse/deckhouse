@@ -21,7 +21,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -31,7 +30,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/deckhouse/node-controller/internal/common"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
+	providermock "github.com/deckhouse/node-controller/internal/cloudprovider/mock"
 	"github.com/deckhouse/node-controller/internal/testenv"
 )
 
@@ -39,44 +39,35 @@ import (
 // real apiserver and a provider CRD — both of which this suite already carries. The lazy source
 // is driven directly against its own cache and queue; the handler encodes the GVK version into
 // the request name so events arriving through different informers stay distinguishable.
-var _ = Describe("InstanceClass registration enumeration and lazy watches", func() {
+var _ = Describe("InstanceClass provider enumeration and lazy watches", func() {
 	dvpAlpha := schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "DVPInstanceClass"}
 
-	newRegistrationSecret := func(name, kind, version string) *corev1.Secret {
-		secret := &corev1.Secret{}
-		secret.Namespace = cloudProviderSecretNamespace
-		secret.Name = name
-		secret.Labels = map[string]string{common.CloudProviderRegistrationLabel: ""}
-		secret.Data = map[string][]byte{
-			common.InstanceClassKindKey:       []byte(kind),
-			common.InstanceClassAPIVersionKey: []byte(version),
-		}
-		return secret
-	}
-
-	It("enumerates the suite's registration through the label", func() {
-		gvks, err := common.RegisteredInstanceClassGVKs(suiteCtx, k8sClient)
+	It("enumerates the suite's provider through the label", func() {
+		pCatalog, err := cloudprovider.GetCatalog(suiteCtx, k8sClient)
 		Expect(err).NotTo(HaveOccurred())
+		gvks := pCatalog.InstanceClassGVKs()
 		Expect(gvks).To(Equal([]schema.GroupVersionKind{dvpAlpha}))
 	})
 
 	It("collapses the legacy and the per-provider Secret into one GVK", func() {
-		double := newRegistrationSecret("d8-node-manager-cloud-provider-dvp", "DVPInstanceClass", "v1alpha1")
+		double := providermock.InstanceClassRegistration("d8-node-manager-cloud-provider-dvp", "DVPInstanceClass", "v1alpha1")
 		Expect(k8sClient.Create(suiteCtx, double)).To(Succeed())
 		DeferCleanup(func() { _ = k8sClient.Delete(suiteCtx, double) })
 
-		gvks, err := common.RegisteredInstanceClassGVKs(suiteCtx, k8sClient)
+		pCatalog, err := cloudprovider.GetCatalog(suiteCtx, k8sClient)
 		Expect(err).NotTo(HaveOccurred())
+		gvks := pCatalog.InstanceClassGVKs()
 		Expect(gvks).To(Equal([]schema.GroupVersionKind{dvpAlpha}))
 	})
 
-	It("ignores a registration that does not publish the version", func() {
-		unversioned := newRegistrationSecret("d8-node-manager-cloud-provider-aws", "AWSInstanceClass", "")
+	It("ignores a provider that does not publish the version", func() {
+		unversioned := providermock.InstanceClassRegistration("d8-node-manager-cloud-provider-aws", "AWSInstanceClass", "")
 		Expect(k8sClient.Create(suiteCtx, unversioned)).To(Succeed())
 		DeferCleanup(func() { _ = k8sClient.Delete(suiteCtx, unversioned) })
 
-		gvks, err := common.RegisteredInstanceClassGVKs(suiteCtx, k8sClient)
+		pCatalog, err := cloudprovider.GetCatalog(suiteCtx, k8sClient)
 		Expect(err).NotTo(HaveOccurred())
+		gvks := pCatalog.InstanceClassGVKs()
 		Expect(gvks).To(Equal([]schema.GroupVersionKind{dvpAlpha}),
 			"a kind without a version must contribute nothing — guessing a version is what this mechanism prevents")
 	})
@@ -100,7 +91,7 @@ var _ = Describe("InstanceClass registration enumeration and lazy watches", func
 				Name: obj.GetObjectKind().GroupVersionKind().Version + "-" + obj.GetName(),
 			}}}
 		})
-		Expect(common.LazyInstanceClassSource(sourceCache, versionedName).Start(ctx, queue)).To(Succeed())
+		Expect(cloudprovider.LazyInstanceClassSource(sourceCache, versionedName).Start(ctx, queue)).To(Succeed())
 
 		drainUntil := func(want string) {
 			GinkgoHelper()
@@ -114,7 +105,7 @@ var _ = Describe("InstanceClass registration enumeration and lazy watches", func
 			}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Equal(want))
 		}
 
-		By("the suite's registration is picked up from the store replay, no event needed")
+		By("the suite's provider is picked up from the store replay, no event needed")
 		ic := &unstructured.Unstructured{}
 		ic.SetAPIVersion("deckhouse.io/v1alpha1")
 		ic.SetKind("DVPInstanceClass")
@@ -125,7 +116,7 @@ var _ = Describe("InstanceClass registration enumeration and lazy watches", func
 		drainUntil("v1alpha1-" + ic.GetName())
 
 		By("registering the same kind at another served version after the source started")
-		late := newRegistrationSecret("d8-node-manager-cloud-provider-late", "DVPInstanceClass", "v1")
+		late := providermock.InstanceClassRegistration("d8-node-manager-cloud-provider-late", "DVPInstanceClass", "v1")
 		Expect(k8sClient.Create(ctx, late)).To(Succeed())
 		DeferCleanup(func() { _ = k8sClient.Delete(suiteCtx, late) })
 
@@ -142,7 +133,7 @@ var _ = Describe("InstanceClass registration enumeration and lazy watches", func
 				seen[req.Name] = true
 			}
 			g.Expect(seen).To(HaveKey("v1-"+ic.GetName()),
-				"the late registration must have started a watch at its version, with nothing restarted")
+				"the late provider must have started a watch at its version, with nothing restarted")
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 })

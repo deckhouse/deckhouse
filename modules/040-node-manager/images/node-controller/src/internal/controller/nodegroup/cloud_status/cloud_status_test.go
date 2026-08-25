@@ -30,6 +30,7 @@ import (
 	capiv1beta2 "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	mcmv1alpha1 "github.com/deckhouse/node-controller/api/machine.sapcloud.io/v1alpha1"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 )
 
@@ -118,7 +119,7 @@ func TestCompute_NonCloudEphemeralReturnsEmpty(t *testing.T) {
 		Spec:       v1.NodeGroupSpec{NodeType: v1.NodeTypeStatic},
 	}
 	s := &Service{Client: newClient(t)}
-	res, err := s.Compute(context.Background(), ng)
+	res, err := s.Compute(context.Background(), ng, cloudprovider.Provider{})
 	if err != nil {
 		t.Fatalf("Compute() error: %v", err)
 	}
@@ -136,7 +137,7 @@ func TestCompute_MinMaxFromZonesAndReplicas(t *testing.T) {
 		mcmMachine("m2", "worker"),
 	)}
 
-	res, err := s.Compute(context.Background(), ng)
+	res, err := s.Compute(context.Background(), ng, cloudprovider.Provider{})
 	if err != nil {
 		t.Fatalf("Compute() error: %v", err)
 	}
@@ -161,7 +162,7 @@ func TestCompute_DesiredBumpedToMin(t *testing.T) {
 		mcmMachineDeployment("worker-md", "worker", 1),
 	)}
 
-	res, err := s.Compute(context.Background(), ng)
+	res, err := s.Compute(context.Background(), ng, cloudprovider.Provider{})
 	if err != nil {
 		t.Fatalf("Compute() error: %v", err)
 	}
@@ -184,7 +185,7 @@ func TestCompute_CombinesMCMAndCAPIReplicasAndMachines(t *testing.T) {
 		capiMachine("cm2", "worker"),
 	)}
 
-	res, err := s.Compute(context.Background(), ng)
+	res, err := s.Compute(context.Background(), ng, cloudprovider.Provider{})
 	if err != nil {
 		t.Fatalf("Compute() error: %v", err)
 	}
@@ -224,7 +225,7 @@ func TestCompute_FrozenAndFailuresSortedLatestError(t *testing.T) {
 	}, "status", "failedMachines")
 
 	s := &Service{Client: newClient(t, md)}
-	res, err := s.Compute(context.Background(), ng)
+	res, err := s.Compute(context.Background(), ng, cloudprovider.Provider{})
 	if err != nil {
 		t.Fatalf("Compute() error: %v", err)
 	}
@@ -240,77 +241,47 @@ func TestCompute_FrozenAndFailuresSortedLatestError(t *testing.T) {
 	}
 }
 
-func TestGetZonesCount(t *testing.T) {
+// zonelessNodeGroup names no zones of its own, so its provider's are what counts.
+func zonelessNodeGroup() *v1.NodeGroup {
+	return &v1.NodeGroup{
+		ObjectMeta: metav1.ObjectMeta{Name: "worker"},
+		Spec:       v1.NodeGroupSpec{NodeType: v1.NodeTypeCloudEphemeral},
+	}
+}
+
+func TestZonesCount(t *testing.T) {
+	// Which provider a NodeGroup resolves to is cloudprovider.TestValidateNodeGroupProvider; here it arrives
+	// already resolved, and the only question left is whose zones win.
 	tests := []struct {
-		name   string
-		ng     *v1.NodeGroup
-		secret *corev1.Secret
-		want   int32
+		name     string
+		ng       *v1.NodeGroup
+		provider cloudprovider.Provider
+		want     int32
 	}{
 		{
-			name: "zones from spec",
-			ng:   cloudEphemeralNG("worker", []string{"a", "b", "c"}, 0, 1),
-			want: 3,
+			name:     "zones from spec win over the provider",
+			ng:       cloudEphemeralNG("worker", []string{"a", "b", "c"}, 0, 1),
+			provider: cloudprovider.Provider{Type: "yandex", Zones: []string{"z1", "z2"}},
+			want:     3,
 		},
 		{
-			name: "no spec zones, fall back to provider secret",
-			ng: &v1.NodeGroup{
-				ObjectMeta: metav1.ObjectMeta{Name: "worker"},
-				Spec:       v1.NodeGroupSpec{NodeType: v1.NodeTypeCloudEphemeral, CloudInstances: &v1.CloudInstancesSpec{}},
-			},
-			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "kube-system", Name: common.CloudProviderSecretName},
-				Data:       map[string][]byte{"zones": []byte(`["z1","z2"]`)},
-			},
-			want: 2,
+			name:     "no spec zones, fall back to the provider",
+			ng:       zonelessNodeGroup(),
+			provider: cloudprovider.Provider{Type: "yandex", Zones: []string{"z1", "z2"}},
+			want:     2,
 		},
 		{
-			name: "no spec zones, no secret",
-			ng: &v1.NodeGroup{
-				ObjectMeta: metav1.ObjectMeta{Name: "worker"},
-				Spec:       v1.NodeGroupSpec{NodeType: v1.NodeTypeCloudEphemeral, CloudInstances: &v1.CloudInstancesSpec{}},
-			},
-			want: 0,
-		},
-		{
-			name: "secret with empty zones array",
-			ng: &v1.NodeGroup{
-				ObjectMeta: metav1.ObjectMeta{Name: "worker"},
-				Spec:       v1.NodeGroupSpec{NodeType: v1.NodeTypeCloudEphemeral, CloudInstances: &v1.CloudInstancesSpec{}},
-			},
-			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "kube-system", Name: common.CloudProviderSecretName},
-				Data:       map[string][]byte{"zones": []byte(`[]`)},
-			},
-			want: 0,
-		},
-		{
-			name: "secret with malformed zones",
-			ng: &v1.NodeGroup{
-				ObjectMeta: metav1.ObjectMeta{Name: "worker"},
-				Spec:       v1.NodeGroupSpec{NodeType: v1.NodeTypeCloudEphemeral, CloudInstances: &v1.CloudInstancesSpec{}},
-			},
-			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "kube-system", Name: common.CloudProviderSecretName},
-				Data:       map[string][]byte{"zones": []byte(`not-json`)},
-			},
-			want: 0,
+			// The rule is the length of the list, so a provider that published no zones and no
+			// provider at all are the same answer: zero.
+			name: "no provider zones",
+			ng:   zonelessNodeGroup(),
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var objs []client.Object
-			if tt.secret != nil {
-				objs = append(objs, tt.secret)
-			}
-			s := &Service{Client: newClient(t, objs...)}
-			got, err := s.getZonesCount(context.Background(), tt.ng)
-			if err != nil {
-				t.Fatalf("getZonesCount() error: %v", err)
-			}
-			if got != tt.want {
-				t.Fatalf("getZonesCount() = %d, want %d", got, tt.want)
+			if got := zonesCount(tt.ng, tt.provider); got != tt.want {
+				t.Fatalf("zonesCount() = %d, want %d", got, tt.want)
 			}
 		})
 	}

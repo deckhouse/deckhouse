@@ -55,6 +55,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	"github.com/deckhouse/node-controller/internal/clusterprefix"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 )
@@ -145,6 +146,13 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 		if oldNG.Spec.NodeType != ng.Spec.NodeType {
 			return admission.Denied(".spec.nodeType field is immutable")
 		}
+	}
+
+	if providerTypeMessage, err := w.validateProviderType(ctx, ng, oldNG); err != nil {
+		webhookLog.Error(err, "failed to validate providerType")
+		return admission.Errored(http.StatusInternalServerError, err)
+	} else if providerTypeMessage != "" {
+		return admission.Denied(providerTypeMessage)
 	}
 
 	if ng.Spec.CloudInstances != nil {
@@ -692,6 +700,32 @@ func (w *NodeGroupValidator) getNodesWithoutContainerdV2Support(ctx context.Cont
 	return names, nil
 }
 
+// validateProviderType checks spec.providerType against the provider the NodeGroup resolves to.
+// Denying here only catches the typo early — the verdict belongs to the reconcile, which sees a
+// provider that changed after this write.
+func (w *NodeGroupValidator) validateProviderType(
+	ctx context.Context,
+	ng, oldNG *v1.NodeGroup,
+) (string, error) {
+	if ng.Spec.ProviderType == "" {
+		return "", nil
+	}
+
+	if oldNG != nil && oldNG.Spec.ProviderType == ng.Spec.ProviderType {
+		return "", nil
+	}
+
+	pCatalog, err := cloudprovider.GetCatalog(ctx, w.Client)
+	if err != nil {
+		return "", fmt.Errorf("load cloud provider registrations: %w", err)
+	}
+
+	if err := cloudprovider.ValidateNodeGroupPType(ng, pCatalog.ByNodeGroup(ng)); err != nil {
+		return err.Error(), nil
+	}
+	return "", nil
+}
+
 func (w *NodeGroupValidator) validateInstanceClassKind(
 	ctx context.Context,
 	ng, oldNG *v1.NodeGroup,
@@ -708,7 +742,7 @@ func (w *NodeGroupValidator) validateInstanceClassKind(
 		return "", nil
 	}
 
-	gvks, err := nodecommon.RegisteredInstanceClassGVKs(ctx, w.Client)
+	gvks, err := cloudprovider.RegisteredInstanceClassGVKs(ctx, w.Client)
 	if err != nil {
 		return "", fmt.Errorf("get registered InstanceClass kinds: %w", err)
 	}

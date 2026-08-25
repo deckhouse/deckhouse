@@ -30,6 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	providermock "github.com/deckhouse/node-controller/internal/cloudprovider/mock"
 	"github.com/deckhouse/node-controller/internal/register"
 )
 
@@ -321,14 +322,11 @@ func TestReconcile_CloudValidationErrorPublished(t *testing.T) {
 			},
 		},
 	}
-	cloudProvider := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Name: "d8-node-manager-cloud-provider", Namespace: "kube-system"},
-		Data: map[string][]byte{
-			"instanceClassKind":       []byte("AWSInstanceClass"),
-			"instanceClassAPIVersion": []byte("v1alpha1"),
-		},
-	}
-
+	cloudProvider := providermock.DefaultRegistration(map[string][]byte{
+		"type":                    []byte("aws"),
+		"instanceClassKind":       []byte("AWSInstanceClass"),
+		"instanceClassAPIVersion": []byte("v1alpha1"),
+	})
 	r, rec := newReconciler(t, ng, cloudProvider)
 	doReconcile(t, r, "cloud")
 
@@ -346,5 +344,101 @@ func TestReconcile_CloudValidationErrorPublished(t *testing.T) {
 		}
 	default:
 		t.Fatal("expected validation event")
+	}
+}
+
+// A wrong spec.providerType says nothing about whether the group works: the provider a NodeGroup
+// runs on is resolved from the cluster, never from that field. So the pass runs to the end and
+// publishes the verdict instead of failing, and a corrected field clears it again. Which
+// declarations hold is cloudprovider.TestValidateNodeGroupProvider.
+func TestReconcile_WrongProviderTypeIsPublishedInTheStatus(t *testing.T) {
+	registration := providermock.DefaultRegistration(map[string][]byte{"type": []byte("yandex")})
+
+	for _, tc := range []struct {
+		name     string
+		nodeType v1.NodeType
+		declared string
+		wantErr  string
+	}{
+		{name: "the-resolved-provider", nodeType: v1.NodeTypeCloudStatic, declared: "yandex"},
+		{
+			// The comparison is exact: a registration publishes one spelling of its type.
+			name: "the-resolved-provider-in-another-case", nodeType: v1.NodeTypeCloudStatic, declared: "Yandex",
+			wantErr: `Provider type invalid: "Yandex". Expected "yandex"`,
+		},
+		{
+			name: "another-provider", nodeType: v1.NodeTypeCloudStatic, declared: "aws",
+			wantErr: `Provider type invalid: "aws". Expected "yandex"`,
+		},
+		{
+			name: "a-provider-on-static", nodeType: v1.NodeTypeStatic, declared: "yandex",
+			wantErr: "The nodes of this group run in no cloud",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			setEnv(t)
+			ng := &v1.NodeGroup{
+				ObjectMeta: metav1.ObjectMeta{Name: tc.name},
+				Spec:       v1.NodeGroupSpec{NodeType: tc.nodeType, ProviderType: tc.declared},
+			}
+
+			r, _ := newReconciler(t, ng, registration.DeepCopy())
+			doReconcile(t, r, tc.name)
+			requireErrorCondition(t, getNodeGroup(t, r, tc.name), tc.wantErr)
+			if tc.wantErr == "" {
+				return
+			}
+
+			fixed := getNodeGroup(t, r, tc.name)
+			fixed.Spec.ProviderType = ""
+			if err := r.Client.Update(context.Background(), fixed); err != nil {
+				t.Fatalf("clear spec.providerType: %v", err)
+			}
+			doReconcile(t, r, tc.name)
+			requireErrorCondition(t, getNodeGroup(t, r, tc.name), "")
+		})
+	}
+}
+
+// requireErrorCondition asserts the Error condition carries want; an empty want means it must be
+// raised down and silent.
+func requireErrorCondition(t *testing.T, ng *v1.NodeGroup, want string) {
+	t.Helper()
+
+	var cond *metav1.Condition
+	for i := range ng.Status.Conditions {
+		if ng.Status.Conditions[i].Type == "Error" {
+			cond = &ng.Status.Conditions[i]
+		}
+	}
+	if cond == nil {
+		t.Fatalf("no Error condition published, got %+v", ng.Status.Conditions)
+	}
+
+	if want == "" {
+		if cond.Status != metav1.ConditionFalse || cond.Message != "" {
+			t.Fatalf("Error condition = %+v, want False and empty", cond)
+		}
+		if ng.Status.Error != "" {
+			t.Fatalf("status.error = %q, want empty", ng.Status.Error)
+		}
+		if s := ng.Status.ConditionSummary; s == nil || s.Ready != "True" || s.StatusMessage != "" {
+			t.Fatalf("conditionSummary = %+v, want ready True with no message", s)
+		}
+		return
+	}
+	if cond.Status != metav1.ConditionTrue || !strings.Contains(cond.Message, want) {
+		t.Fatalf("Error condition = %+v, want True containing %q", cond, want)
+	}
+	// The ERROR column of `kubectl get nodegroup` reads status.error, so the verdict has to reach
+	// it too — the condition list alone is not what an operator looks at first.
+	if !strings.Contains(ng.Status.Error, want) {
+		t.Fatalf("status.error = %q, want it to contain %q", ng.Status.Error, want)
+	}
+	// And the summary, whose statusMessage is the STATUS column: CalculateConditionSummary ignores
+	// the conditions and reads statusMsg alone, so a green summary can sit next to a raised Error
+	// condition unless the verdict is passed there separately.
+	if s := ng.Status.ConditionSummary; s == nil || s.Ready != "False" || !strings.Contains(s.StatusMessage, want) {
+		t.Fatalf("conditionSummary = %+v, want ready False containing %q", s, want)
 	}
 }

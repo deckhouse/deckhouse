@@ -20,7 +20,7 @@ import (
 	"fmt"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
-	nodecommon "github.com/deckhouse/node-controller/internal/common"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 )
 
 // Validate runs the four cloud checks over the snapshot. It performs no I/O.
@@ -40,7 +40,7 @@ func Validate(ng *v1.NodeGroup, snap Snapshot) CloudCheckResult {
 	if snap.Provider.InstanceClassAPIVersion == "" {
 		return CloudCheckResult{Error: fmt.Sprintf(
 			"Cloud provider has not published %s yet. The %s cannot be read until it does.",
-			nodecommon.InstanceClassAPIVersionKey, snap.Provider.InstanceClassKind)}
+			cloudprovider.InstanceClassAPIVersionKey, snap.Provider.InstanceClassKind)}
 	}
 
 	in := CloudCheckInput{

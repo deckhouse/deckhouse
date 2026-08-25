@@ -37,6 +37,7 @@ import (
 	capiv1beta2 "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	mcmv1alpha1 "github.com/deckhouse/node-controller/api/machine.sapcloud.io/v1alpha1"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	cloudstatus "github.com/deckhouse/node-controller/internal/controller/nodegroup/cloud_status"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
@@ -86,15 +87,16 @@ func (r *Status) SetupWatches(w register.Watcher) {
 	w.Watches(&capiv1beta2.Machine{}, handler.EnqueueRequestsFromMapFunc(ngcommon.MachineToNodeGroup))
 	w.Watches(ngcommon.NewUnstructured(ngcommon.CAPIMachineDeploymentGVK), handler.EnqueueRequestsFromMapFunc(ngcommon.MachineDeploymentToNodeGroup))
 	w.Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(r.secretToAllNodeGroups), builder.WithPredicates(nodecommon.ChecksumSecretPredicate()))
-	w.Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(r.secretToAllNodeGroups), builder.WithPredicates(predicate.NewPredicateFuncs(func(obj client.Object) bool {
-		return obj.GetNamespace() == "kube-system" && obj.GetName() == ngcommon.CloudProviderSecretName
-	})))
+	// Not every NodeGroup on every registration event: the handler narrows a payload change down
+	// to the groups of that provider, because one pass through this Reconcile lists every Machine
+	// and MachineDeployment in the cluster.
+	w.Watches(&corev1.Secret{}, cloudprovider.NodeGroupHandler(r.Client), builder.WithPredicates(cloudprovider.RegistrationSecretPredicate()))
 	// status.error and the capacity checks are computed from the InstanceClass, so a class
 	// that appears, changes or is deleted must refresh the status of the NodeGroups pointing
 	// at it instead of leaving a stale error until the resync. The source is deferred: the kind
 	// and version come from the provider registration Secret, which may appear only after this
 	// pod started.
-	w.WatchesRawSource(nodecommon.LazyInstanceClassSource(r.cache, handler.EnqueueRequestsFromMapFunc(
+	w.WatchesRawSource(cloudprovider.LazyInstanceClassSource(r.cache, handler.EnqueueRequestsFromMapFunc(
 		func(ctx context.Context, obj client.Object) []reconcile.Request {
 			return nodecommon.InstanceClassToNodeGroups(ctx, r.Client, obj)
 		})))
@@ -112,10 +114,22 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 	if err != nil {
 		if errors.IsNotFound(err) {
 			logger.V(1).Info("NodeGroup not found, skipping", "name", req.Name)
+			cloudprovider.ClearNodeGroupMetrics(req.Name)
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
 	}
+
+	// One provider read per reconcile, shared by both services below: each used to fetch the
+	// registration Secret of its own.
+	pCatalog, err := cloudprovider.GetCatalog(ctx, r.Client)
+	if err != nil {
+		logger.Error(err, "failed to load cloud provider registrations", "nodeGroup", ng.Name)
+		return ctrl.Result{}, err
+	}
+
+	provider := pCatalog.ByNodeGroup(ng)
+	cloudprovider.TrackNodeGroupMetrics(ng, provider)
 
 	logger.V(1).Info("computing node status", "nodeGroup", ng.Name, "nodeType", ng.Spec.NodeType)
 	nodeService := nodestatus.Service{Client: r.Client}
@@ -126,7 +140,7 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 	}
 
 	cloudService := cloudstatus.Service{Client: r.Client}
-	cloudResult, err := cloudService.Compute(ctx, ng)
+	cloudResult, err := cloudService.Compute(ctx, ng, provider)
 	if err != nil {
 		logger.Error(err, "failed to compute cloud status", "nodeGroup", ng.Name)
 		return ctrl.Result{}, err
@@ -141,22 +155,23 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 	)
 
 	ds := derivedstatus.Service{Client: r.Client}
-	derivedResult, validationResult, err := ds.ComputeWithCloudChecks(ctx, ng)
+	derivedResult, validationResult, err := ds.ComputeWithCloudChecks(ctx, ng, provider)
 	if err != nil {
 		logger.Error(err, "failed to compute derived nodegroup status", "nodeGroup", ng.Name)
 		return ctrl.Result{}, err
 	}
-	validationError := validationResult.Error
+	// status.error is one line; the machine-side check owns it until a declaration verdict appears.
+	statusError := validationResult.Error
 
 	var conditionErrors []string
-	if validationError != "" {
-		conditionErrors = append(conditionErrors, validationError)
+	if validationResult.Error != "" {
+		conditionErrors = append(conditionErrors, validationResult.Error)
 	}
 	if cloudResult.LatestError != "" {
 		conditionErrors = append(conditionErrors, cloudResult.LatestError)
 	}
 
-	eventMsg := fmt.Sprintf("%s %s", validationError, cloudResult.LatestError)
+	eventMsg := fmt.Sprintf("%s %s", validationResult.Error, cloudResult.LatestError)
 	eventMsg = strings.TrimSpace(eventMsg)
 	if len(eventMsg) > 1024 {
 		eventMsg = eventMsg[:1024]
@@ -167,6 +182,16 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 	if eventMsg != "" {
 		r.conditionService.CreateEventIfChanged(ng, eventMsg)
 		statusMsg = "Machine creation failed. Check events for details."
+	}
+
+	if err := cloudprovider.ValidateNodeGroupPType(ng, provider); err != nil {
+		providerError := err.Error()
+		// Each assignment is the only path to its field: conditionErrors feeds the Error condition,
+		// statusMsg is the whole input of CalculateConditionSummary (which ignores the conditions),
+		// and statusError is the ERROR column of `kubectl get nodegroup`.
+		conditionErrors = append([]string{providerError}, conditionErrors...)
+		statusMsg = providerError
+		statusError = providerError
 	}
 
 	ngForConditions := calcconditions.NodeGroup{
@@ -191,7 +216,7 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 	ng.Status.Nodes = nodeResult.NodesCount
 	ng.Status.Ready = nodeResult.ReadyCount
 	ng.Status.UpToDate = nodeResult.UpToDateCount
-	ng.Status.Error = validationError
+	ng.Status.Error = statusError
 	ng.Status.KubernetesVersion = derivedResult.KubernetesVersion
 	ng.Status.Conditions = newConditions
 	ng.Status.ConditionSummary = conditionSummary

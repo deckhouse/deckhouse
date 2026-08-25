@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 )
 
@@ -47,27 +48,8 @@ func TestInstanceClassSpot(t *testing.T) {
 	})
 }
 
-func TestDecodeCloudProviderSecret(t *testing.T) {
-	data := map[string][]byte{
-		"type":             []byte(`"aws"`),
-		"region":           []byte(`"eu-west-1"`),
-		"machineClassKind": []byte(`"AWSMachineClass"`),
-		"aws":              []byte(`{"keyName":"kn","instances":{"ami":"ami-1"}}`),
-		"plainString":      []byte(`not-json`),
-	}
-	tree := decodeCloudProviderSecret(data)
-	assert.Equal(t, "aws", tree["type"])
-	assert.Equal(t, "eu-west-1", tree["region"])
-	assert.Equal(t, "AWSMachineClass", tree["machineClassKind"])
-	aws, ok := tree["aws"].(map[string]interface{})
-	assert.True(t, ok)
-	assert.Equal(t, "kn", aws["keyName"])
-	// Non-JSON values fall back to the raw string, matching decodeSecretData.
-	assert.Equal(t, "not-json", tree["plainString"])
-}
-
 func TestReconcileCloudMCMs_NoCloudInstances(t *testing.T) {
 	r := &MachineDeploymentReconciler{}
 	ng := &deckhousev1.NodeGroup{}
-	assert.NoError(t, r.reconcileCloudMCMs(context.Background(), ng))
+	assert.NoError(t, r.reconcileCloudMCMs(context.Background(), ng, cloudprovider.Provider{}))
 }

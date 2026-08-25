@@ -124,8 +124,8 @@ common/coredns {{ $base }}@{{ . }}
 nodeManager/{{ $name }} {{ $base }}@{{ $digest }}
 {{- end }}
 {{- end }}
-{{- if .provider }}
-{{- $cpSection := printf "cloudProvider%s" (.provider | title) }}
+{{- if .nodeGroup.cloudProviderType }}
+{{- $cpSection := printf "cloudProvider%s" (.nodeGroup.cloudProviderType | title) }}
 {{- range $name, $digest := (index $.images $cpSection | default dict) }}
 {{ $cpSection }}/{{ $name }} {{ $base }}@{{ $digest }}
 {{- end }}

@@ -26,13 +26,14 @@ import (
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/capacity"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 )
 
 // Snapshot is everything this package reads. It is built once per pass, so the derive and the
 // validate halves cannot disagree about the world, and so no source is read twice — the two halves
 // used to read the zones, the InstanceClass and the type catalog once each.
 type Snapshot struct {
-	Provider      CloudProviderRegistration
+	Provider      cloudprovider.Provider
 	ClusterUUID   string
 	TargetVersion *semver.Version
 	DefaultCRI    string
@@ -56,16 +57,15 @@ type Snapshot struct {
 // BuildSnapshot is the only place in this package that talks to the API. Everything downstream is
 // a pure function over the result.
 //
+// The provider arrives already resolved: the registrations are read once per reconcile, and the
+// verdict on spec.providerType belongs to whoever resolved it.
+//
 // An absent source yields an empty field; an unreadable one is returned as an error, because an
 // empty value here is indistinguishable from "no cloud provider" and would publish a NodeGroup
 // without instanceClass — a checksum shift on every node.
-func (s *Service) BuildSnapshot(ctx context.Context, ng *v1.NodeGroup) (Snapshot, error) {
+func (s *Service) BuildSnapshot(ctx context.Context, ng *v1.NodeGroup, provider cloudprovider.Provider) (Snapshot, error) {
 	logger := log.FromContext(ctx)
 
-	provider, err := s.readCloudProviderData(ctx)
-	if err != nil {
-		return Snapshot{}, err
-	}
 	clusterUUID, err := s.readClusterUUID(ctx)
 	if err != nil {
 		return Snapshot{}, err

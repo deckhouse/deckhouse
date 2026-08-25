@@ -804,14 +804,14 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(ctx context.Context, nodeIP
 		nodeGroup["static"] = m.ExtractMasterNodeGroupStaticSettings(ctx)
 	}
 
+	if m.ClusterType == CloudClusterType {
+		nodeGroup["cloudProviderType"] = m.ProviderName
+	}
+
 	configForBashibleBundleTemplate := make(map[string]any)
 	maps.Copy(configForBashibleBundleTemplate, m.VersionMap)
 
 	configForBashibleBundleTemplate["runType"] = "ClusterBootstrap"
-
-	if m.ClusterType == CloudClusterType {
-		configForBashibleBundleTemplate["provider"] = m.ProviderName
-	}
 
 	configForBashibleBundleTemplate["cri"] = data["defaultCRI"]
 	configForBashibleBundleTemplate["kubernetesVersion"] = data["kubernetesVersion"]

@@ -25,12 +25,18 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/yaml"
+
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 )
 
 const (
 	secretName      = "bashible-apiserver-context"
 	secretNamespace = "d8-cloud-instance-manager"
 	secretInputKey  = "input.yaml"
+
+	// contextVersion tells bashible-apiserver how to read the document. No version means the old
+	// one: a single cloud provider for every NodeGroup.
+	contextVersion = 1
 )
 
 type Globals struct {
@@ -44,7 +50,7 @@ type Globals struct {
 	Proxy                   map[string]interface{}
 }
 
-func (s *Service) Build(ctx context.Context, globals Globals, nodeGroups []map[string]interface{}) (map[string]interface{}, error) {
+func (s *Service) Build(ctx context.Context, globals Globals, nodeGroups []map[string]interface{}, pCatalog cloudprovider.Catalog) (map[string]interface{}, error) {
 	cpArgs := s.readControlPlaneArguments(ctx)
 	certs := s.readAPIServerProxyCerts(ctx)
 	eps, err := s.readEndpoints(ctx)
@@ -53,6 +59,7 @@ func (s *Service) Build(ctx context.Context, globals Globals, nodeGroups []map[s
 	}
 
 	input := map[string]interface{}{
+		"version": contextVersion,
 		"deckhouse": map[string]interface{}{
 			"channel": defaultString(globals.DeckhouseChannel, "unknown"),
 			"version": globals.DeckhouseVersion,
@@ -72,9 +79,22 @@ func (s *Service) Build(ctx context.Context, globals Globals, nodeGroups []map[s
 		"nodeGroups":     nodeGroups,
 	}
 
-	if cp := s.readCloudProvider(ctx); cp != nil {
-		input["cloudProvider"] = cp
+	pAll := pCatalog.All()
+	if len(pAll) > 0 {
+		trees := make([]map[string]interface{}, 0, len(pAll))
+		for _, p := range pAll {
+			trees = append(trees, p.Data)
+		}
+		input["cloudProviders"] = trees
 	}
+
+	// Deprecated, kept for one release: the previous bashible-apiserver reads only this key.
+	// Remove together with the field in its inputData.
+	pDefault := pCatalog.Default()
+	if !pDefault.IsStatic() {
+		input["cloudProvider"] = pDefault.Data
+	}
+
 	if globals.Proxy != nil {
 		input["proxy"] = globals.Proxy
 	}
@@ -101,7 +121,7 @@ func Marshal(input map[string]interface{}) ([]byte, error) {
 	return yaml.Marshal(input)
 }
 
-func (s *Service) WriteSecret(ctx context.Context, nodeGroups []map[string]interface{}) error {
+func (s *Service) WriteSecret(ctx context.Context, nodeGroups []map[string]interface{}, pCatalog cloudprovider.Catalog) error {
 	logger := log.FromContext(ctx)
 
 	globals := s.ReadGlobals(ctx)
@@ -112,7 +132,7 @@ func (s *Service) WriteSecret(ctx context.Context, nodeGroups []map[string]inter
 	if globals.ClusterDNSAddress == "" {
 		return fmt.Errorf("cluster DNS address not discovered yet: refusing to publish bashible context without it")
 	}
-	input, err := s.Build(ctx, globals, nodeGroups)
+	input, err := s.Build(ctx, globals, nodeGroups, pCatalog)
 	if err != nil {
 		return err
 	}

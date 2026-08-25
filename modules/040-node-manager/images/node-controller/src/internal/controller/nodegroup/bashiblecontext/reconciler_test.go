@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	providermock "github.com/deckhouse/node-controller/internal/cloudprovider/mock"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 )
 
@@ -123,7 +124,8 @@ func TestAssemble_PreservesPriorOnValidationFailure(t *testing.T) {
 				},
 			},
 		},
-		secret(kubeSystemNS, cloudProviderSecretName, map[string][]byte{
+		providermock.DefaultRegistration(map[string][]byte{
+			"type":                    []byte(`"yandex"`),
 			"instanceClassKind":       []byte(`"YandexInstanceClass"`),
 			"instanceClassAPIVersion": []byte("v1alpha1"),
 		}),
@@ -141,6 +143,45 @@ func TestAssemble_PreservesPriorOnValidationFailure(t *testing.T) {
 	assert.Equal(t, "kept-from-prior", el["marker"], "failed NG must reuse the prior element")
 }
 
+// An entry written before cloudProviderType existed names no provider, and would render without
+// cloud steps.
+func TestAssemble_PriorEntryGetsTheProviderOfItsNodeGroup(t *testing.T) {
+	priorInput, err := Marshal(map[string]interface{}{
+		"nodeGroups": []interface{}{
+			map[string]interface{}{"name": "worker", "marker": "kept-from-prior"},
+		},
+	})
+	require.NoError(t, err)
+
+	r := newReconciler(t,
+		&v1.NodeGroup{
+			ObjectMeta: metav1.ObjectMeta{Name: "worker"},
+			Spec: v1.NodeGroupSpec{
+				NodeType: v1.NodeTypeCloudEphemeral,
+				CloudInstances: &v1.CloudInstancesSpec{
+					ClassReference: v1.ClassReference{Kind: "YandexInstanceClass", Name: "worker"},
+				},
+			},
+		},
+		// The kind resolves; the missing API version is what fails validation.
+		providermock.DefaultRegistration(map[string][]byte{
+			"type":              []byte(`"yandex"`),
+			"instanceClassKind": []byte(`"YandexInstanceClass"`),
+		}),
+		secret(secretNamespace, secretName, map[string][]byte{
+			secretInputKey: priorInput,
+		}),
+	)
+
+	require.NoError(t, r.Assemble(context.Background()))
+
+	ngs := readAssembledNodeGroups(t, r.Client)
+	require.Len(t, ngs, 1)
+	el := ngs[0].(map[string]interface{})
+	assert.Equal(t, "kept-from-prior", el["marker"], "the prior element must still be reused")
+	assert.Equal(t, "yandex", el["cloudProviderType"], "the prior element must name its provider")
+}
+
 func TestAssemble_OmitsFailingNodeGroupWithoutPrior(t *testing.T) {
 	r := newReconciler(t,
 		&v1.NodeGroup{
@@ -152,7 +193,8 @@ func TestAssemble_OmitsFailingNodeGroupWithoutPrior(t *testing.T) {
 				},
 			},
 		},
-		secret(kubeSystemNS, cloudProviderSecretName, map[string][]byte{
+		providermock.DefaultRegistration(map[string][]byte{
+			"type":                    []byte(`"yandex"`),
 			"instanceClassKind":       []byte(`"YandexInstanceClass"`),
 			"instanceClassAPIVersion": []byte("v1alpha1"),
 		}),

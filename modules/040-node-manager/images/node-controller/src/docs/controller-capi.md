@@ -11,7 +11,7 @@ each has its own primary resource, watches and reconcile loop. All share the
 | Registered name | Primary resource | File |
 |-----------------|------------------|------|
 | `capi-machine-deployment` | `NodeGroup` | `machinedeployment.go` |
-| `capi-cluster-resources` | `Secret` (cloud-provider) | `cluster.go` |
+| `capi-cluster-resources` | `Secret` (provider registration) | `cluster.go` |
 | `capi-api-version` | `MachineDeployment` (CAPI) | `apiversion.go` |
 | `capi-control-plane` | `DeckhouseControlPlane` | `controlplane.go` |
 | `capi-finalizer-cleanup` | `Cluster` (CAPI) | `finalizer.go` |
@@ -24,8 +24,8 @@ each has its own primary resource, watches and reconcile loop. All share the
 | | |
 |---|---|
 | **Primary** | `NodeGroup` |
-| **Watches** | MCM `MachineDeployment` (v1alpha1) + CAPI `MachineDeployment` (v1beta2), both mapped to a NodeGroup by the `node-group` label |
-| **Reads** | `global` ModuleConfig (prefix), cloud-provider Secret `d8-node-manager-cloud-provider`, `d8-cluster-configuration`, ConfigMap `d8-cluster-uuid` (see [Data source keys](#data-source-keys)) |
+| **Watches** | MCM `MachineDeployment` (v1alpha1) + CAPI `MachineDeployment` (v1beta2), both mapped to a NodeGroup by the `node-group` label (generation changes only, Create dropped); registration Secrets, mapped to the NodeGroups of that provider; every provider `InstanceClass` kind, mapped to the NodeGroups referencing it (deferred source — the kind comes from the registration Secret, which may appear after startup) |
+| **Reads** | `global` ModuleConfig (prefix), the registration Secret the NodeGroup resolves to (`kube-system`, named `d8-node-manager-cloud-provider*` and labelled `cloud-provider.deckhouse.io/registration`), `d8-cluster-configuration`, ConfigMap `d8-cluster-uuid` (see [Data source keys](#data-source-keys)) |
 | **Output** | one or more `MachineDeployment` per NodeGroup (CAPI or MCM) |
 
 Reconciles the desired set of MachineDeployments (or MCM replica counts) for one NodeGroup.
@@ -108,15 +108,30 @@ Replica math is unchanged (`calculateReplicas(current, min, max)`). Replaces the
 
 | | |
 |---|---|
-| **Primary** | `Secret` `d8-node-manager-cloud-provider` (kube-system) |
-| **Watches** | that Secret (event filter) + all NodeGroups (any NodeGroup change re-enqueues the Secret request) |
-| **Reads** | the cloud-provider Secret, `d8-cluster-configuration` (cluster network) |
+| **Primary** | `Secret` — registration Secrets only (kube-system, named `d8-node-manager-cloud-provider*`, label `cloud-provider.deckhouse.io/registration`) |
+| **Watches** | two NodeGroup watches, both on generation changes: one enqueues the NodeGroup's own name when it has `staticInstances`, the other enqueues one request per registration Secret on any NodeGroup change |
+| **Reads** | the registration Secret named by the request (cloud branch), all NodeGroups (static branch), `d8-cluster-configuration` (cluster network) |
 | **Output** | top-level CAPI `Cluster` + `MachineHealthCheck` |
 
 Ensures the `Cluster` and `MachineHealthCheck` objects exist. Uses `Create`-if-not-exists
 (never overwrites a running cluster).
 
-- **ensureCloudCluster:** when `capiClusterName`/`capiClusterKind` are set, creates a
+The two Clusters are keyed by different objects, so the request name decides the branch —
+`cloudprovider.IsRegistrationSecretKey` tells them apart. A provider-less cluster has no
+registration to key on, which is why the static Cluster is keyed by the NodeGroup asking for it:
+
+```
+Reconcile(req)
+  │
+  ├─ read d8-cluster-configuration (cluster network)
+  │
+  ├─ req names a registration Secret? → ensureCloudCluster(req.Name)
+  │
+  └─ otherwise (req is a NodeGroup name) → ensureStaticCluster
+```
+
+- **ensureCloudCluster:** reads the registration the request was keyed by (missing or no longer
+  a registration → no-op). When `capiClusterName`/`capiClusterKind` are set, creates a
   `Cluster` (infrastructureRef from the secret, controlPlaneRef → `{name}-control-plane`
   `DeckhouseControlPlane`) and a `MachineHealthCheck` (`{name}-machine-health-check`,
   nodeStartup 1200s, Ready=Unknown/False timeout 300s).
@@ -124,6 +139,10 @@ Ensures the `Cluster` and `MachineHealthCheck` objects exist. Uses `Create`-if-n
   `Cluster` named `static` (infrastructureRef → `StaticCluster`, controlPlaneRef →
   `static-control-plane`) and `static-machine-health-check`
   (Ready=Unknown timeout 2147483647s — effectively never).
+
+Both copies of one registration (the bare name and the per-provider one) carry the label, so a
+single-provider cluster ensures its cloud Cluster twice. `createIfNotExists` makes the second
+pass a no-op.
 
 Cluster network (`pods`/`services`/`serviceDomain`) comes from `d8-cluster-configuration`.
 
@@ -208,9 +227,9 @@ Referenced by `capi-machine-deployment` and `capi-cluster-resources`:
 |-------|----------|-----|
 | `clusterUUID` | ConfigMap `d8-cluster-uuid` (kube-system) | `cluster-uuid` |
 | `instancePrefix` | `global` ModuleConfig `spec.settings.prefix`, else Secret `d8-cluster-configuration` (kube-system) | `spec.settings.prefix`; fallback `cluster-configuration.yaml` → `cloud.prefix` |
-| `capiClusterName`, `capiClusterKind`, `capiClusterAPIVersion` | Secret `d8-node-manager-cloud-provider` (kube-system) | same keys |
+| `capiClusterName`, `capiClusterKind`, `capiClusterAPIVersion` | the NodeGroup's registration Secret (kube-system) | same keys |
 | `capiMachineTemplateKind`, `capiMachineTemplateAPIVersion` | same Secret | same keys |
-| `zones` | Secret `d8-node-manager-cloud-provider` or NodeGroup | `zones` / `spec.cloudInstances.zones` |
+| `zones` | the NodeGroup's registration Secret or NodeGroup | `zones` / `spec.cloudInstances.zones` |
 | `podSubnetCIDR`, `serviceSubnetCIDR`, `clusterDomain` | Secret `d8-cluster-configuration` | `cluster-configuration.yaml` |
 | `instanceClassChecksum` | infrastructure MachineTemplate annotation | `checksum/instance-class` |
 

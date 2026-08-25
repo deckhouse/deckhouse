@@ -35,6 +35,7 @@ import (
 	capiv1beta2 "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	mcmv1alpha1 "github.com/deckhouse/node-controller/api/machine.sapcloud.io/v1alpha1"
+	providermock "github.com/deckhouse/node-controller/internal/cloudprovider/mock"
 	"github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/testenv"
 )
@@ -112,13 +113,7 @@ var _ = BeforeSuite(func() {
 	Expect(client.IgnoreAlreadyExists(k8sClient.Create(suiteCtx, ns))).To(Succeed())
 
 	By("publishing the cloud-provider discovery secret (CAPI engine, DVP-like)")
-	cloudProvider := &corev1.Secret{}
-	cloudProvider.Namespace = cloudProviderSecretNamespace
-	cloudProvider.Name = cloudProviderSecretName
-	// The label is how RegisteredInstanceClassGVKs finds registrations; without it the suite's
-	// controllers would build no InstanceClass watches at all.
-	cloudProvider.Labels = map[string]string{common.CloudProviderRegistrationLabel: ""}
-	cloudProvider.Data = map[string][]byte{
+	cloudProvider := providermock.DefaultRegistration(map[string][]byte{
 		"type": []byte(`"dvp"`),
 		// Raw, unquoted, exactly as the registration template's b64enc writes it.
 		"instanceClassKind":             []byte("DVPInstanceClass"),
@@ -135,7 +130,7 @@ var _ = BeforeSuite(func() {
 		// openstack patch, which uses ${zone}); helm's {{ .name }} is never expanded and would
 		// leave the literal text as the selector value.
 		"capiMachineDeploymentSpecPatch": []byte(`{"selector":{"matchLabels":{"node-group":"${nodeGroupName}"}}}`),
-	}
+	})
 	Expect(client.IgnoreAlreadyExists(k8sClient.Create(suiteCtx, cloudProvider))).To(Succeed())
 
 	By("publishing the cluster-configuration secret")

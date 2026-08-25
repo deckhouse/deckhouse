@@ -30,7 +30,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
-	nodecommon "github.com/deckhouse/node-controller/internal/common"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
+	providermock "github.com/deckhouse/node-controller/internal/cloudprovider/mock"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 )
 
@@ -74,38 +75,13 @@ func testSecret(ns, name string, data map[string][]byte) *corev1.Secret {
 	}
 }
 
-func TestDecodeRegistration_APIVersionIsNeverGuessed(t *testing.T) {
-	tests := []struct {
-		name       string
-		data       map[string][]byte
-		expVersion string
-	}{
-		{
-			name:       "published version is used verbatim",
-			data:       map[string][]byte{nodecommon.InstanceClassAPIVersionKey: []byte("v1")},
-			expVersion: "v1",
-		},
-		{
-			name:       "a provider serving only v1alpha1 is honoured",
-			data:       map[string][]byte{nodecommon.InstanceClassAPIVersionKey: []byte("v1alpha1")},
-			expVersion: "v1alpha1",
-		},
-		{
-			// No guessing: a version picked here would feed the instance-class checksum, and a
-			// wrong guess renames the MachineTemplate and recreates every node in the NodeGroup.
-			name: "provider registered without the key yields no version",
-			data: map[string][]byte{"instanceClassKind": []byte("YandexInstanceClass")},
-		},
-		{
-			name: "no provider secret at all yields no version",
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.expVersion, DecodeRegistration(tc.data).InstanceClassAPIVersion)
-		})
-	}
+// testProvider resolves the provider a NodeGroup runs on the way a reconcile does.
+func testProvider(t *testing.T, s *Service, ng *v1.NodeGroup) cloudprovider.Provider {
+	t.Helper()
+	pCatalog, err := cloudprovider.GetCatalog(context.Background(), s.Client)
+	require.NoError(t, err)
+	provider := pCatalog.ByNodeGroup(ng)
+	return provider
 }
 
 // An unpublished version must reach the operator as a NodeGroup validation error rather than as a
@@ -124,7 +100,7 @@ func TestRunCloudChecks_UnpublishedAPIVersionIsAValidationError(t *testing.T) {
 	}
 
 	check := Validate(ng, Snapshot{
-		Provider: CloudProviderRegistration{InstanceClassKind: "YandexInstanceClass"},
+		Provider: cloudprovider.Provider{InstanceClassKind: "YandexInstanceClass"},
 	})
 
 	assert.Contains(t, check.Error, "has not published instanceClassAPIVersion")
@@ -156,7 +132,7 @@ func TestReadDefaultZonesIncludesExistingMCMMachineDeploymentZones(t *testing.T)
 	md.SetAnnotations(map[string]string{"zone": "zone-a"})
 
 	s := newTestService(t, md)
-	got, err := s.readDefaultZones(context.Background(), CloudProviderRegistration{Zones: []string{"zone-b", "zone-a"}})
+	got, err := s.readDefaultZones(context.Background(), cloudprovider.Provider{Zones: []string{"zone-b", "zone-a"}})
 	require.NoError(t, err)
 
 	assert.Equal(t, []string{"zone-a", "zone-b"}, got)
@@ -174,7 +150,7 @@ func TestResolveNodeGroup_StaticWiresNameRolloutAndStatic(t *testing.T) {
 		Spec: v1.NodeGroupSpec{NodeType: v1.NodeTypeStatic},
 	}
 
-	resolved, errStr, err := s.ResolveNodeGroup(context.Background(), ng)
+	resolved, errStr, err := s.ResolveNodeGroup(context.Background(), ng, testProvider(t, s, ng))
 	require.NoError(t, err)
 	assert.Empty(t, errStr)
 	assert.Equal(t, "static1", resolved.Name)
@@ -187,7 +163,8 @@ func TestResolveNodeGroup_StaticWiresNameRolloutAndStatic(t *testing.T) {
 }
 
 func TestResolveNodeGroup_CloudKindMismatchErrors(t *testing.T) {
-	s := newTestService(t, testSecret(cloudProviderSecretNamespace, cloudProviderSecretName, map[string][]byte{
+	s := newTestService(t, providermock.DefaultRegistration(map[string][]byte{
+		"type":                    []byte(`yandex`),
 		"instanceClassKind":       []byte(`"YandexInstanceClass"`),
 		"instanceClassAPIVersion": []byte("v1alpha1"),
 	}))
@@ -201,7 +178,7 @@ func TestResolveNodeGroup_CloudKindMismatchErrors(t *testing.T) {
 		},
 	}
 
-	resolved, errStr, err := s.ResolveNodeGroup(context.Background(), ng)
+	resolved, errStr, err := s.ResolveNodeGroup(context.Background(), ng, testProvider(t, s, ng))
 	require.NoError(t, err)
 	assert.Contains(t, errStr, "Invalid classReference.kind 'AWSInstanceClass'. Expected 'YandexInstanceClass'.")
 	assert.NotContains(t, resolved.ToMap(), "instanceClass", "failed check must drop cloud overlays")
