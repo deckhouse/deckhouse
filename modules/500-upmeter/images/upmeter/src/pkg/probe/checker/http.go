@@ -103,13 +103,20 @@ func doRequest(client *http.Client, req *http.Request) ([]byte, check.Error) {
 	return body, nil
 }
 
+// insecureTransport is shared by all insecure clients. A single connection pool with an idle
+// timeout keeps abandoned keep-alive connections from accumulating when clients are created
+// per request (e.g. in polling loops).
+var insecureTransport = &http.Transport{
+	TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	IdleConnTimeout: 90 * time.Second,
+	MaxIdleConns:    10,
+}
+
 // newInsecureClient creates http.Client omitting TLS verificaton. Useful for accessing APIs via
 // kube-rbac-proxy which has self-signed certificates.
 func newInsecureClient(timeout time.Duration) *http.Client {
 	return &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-		Timeout: timeout,
+		Transport: insecureTransport,
+		Timeout:   timeout,
 	}
 }
