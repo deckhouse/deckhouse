@@ -95,10 +95,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 	}
 
-	// A spot node that finished draining has no reason to live: deleting its Instance is what
-	// releases the cloud VM. Checked before the drain flow so it also covers a node that was
-	// already drained, and reached through the event raised by this controller's own drained patch.
-	if drainedSource != "" && node.Labels[spotTerminationLabel] == "true" {
+	// A spot node whose drain is over has no reason to live: deleting its Instance releases the
+	// VM. A drain still in flight wins, so a drained annotation left over from an earlier bashible
+	// run cannot release the VM before the workloads have been evicted for this termination.
+	if drainingSource == "" && drainedSource != "" && node.Labels[spotTerminationLabel] == "true" {
 		return ctrl.Result{}, r.deleteInstance(ctx, node.Name)
 	}
 

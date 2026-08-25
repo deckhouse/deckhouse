@@ -41,6 +41,8 @@ func (r *Reconciler) Assemble(ctx context.Context) error {
 	logger := log.FromContext(ctx)
 
 	prior := r.readPriorNodeGroups(ctx)
+	publishedStatic := publishedStaticBlock(prior)
+	var keptCIDRs []string
 
 	ngList := &v1.NodeGroupList{}
 	if err := r.Client.List(ctx, ngList); err != nil {
@@ -65,12 +67,12 @@ func (r *Reconciler) Assemble(ctx context.Context) error {
 		}
 
 		entry := resolved.ToMap()
-		// Only the static block is kept: republishing the whole prior entry would freeze the
-		// Kubernetes version and the kubelet config of this NodeGroup for good, since prior is
-		// read back from the Secret this very pass writes.
-		if p, ok := prior[ng.Name]; ok && dropsInternalNetworkCIDRs(p, entry) {
-			logger.Info("NodeGroup lost internalNetworkCIDRs, keeping the published ones", "nodeGroup", ng.Name)
-			entry["static"] = p["static"]
+		// Nodes match their own IP against internalNetworkCIDRs (candi/bashible/common-steps/all/
+		// 000_discover_node_ip.sh.tpl:23), so a static group that lost them keeps the published
+		// ones — only that block, the rest of the entry stays fresh — and the pass reports it.
+		if publishedStatic != nil && ng.Spec.NodeType == v1.NodeTypeStatic && !hasInternalNetworkCIDRs(entry) {
+			entry["static"] = publishedStatic
+			keptCIDRs = append(keptCIDRs, ng.Name)
 		}
 
 		nodeGroups = append(nodeGroups, entry)
@@ -82,7 +84,16 @@ func (r *Reconciler) Assemble(ctx context.Context) error {
 
 	setNodeGroupInfo(nodeGroups)
 
-	return r.Context.WriteSecret(ctx, nodeGroups)
+	if err := r.Context.WriteSecret(ctx, nodeGroups); err != nil {
+		return err
+	}
+	if len(keptCIDRs) > 0 {
+		return fmt.Errorf("static-cluster-configuration no longer has internalNetworkCIDRs, "+
+			"but the published context has %v: kept for NodeGroups %v instead of clearing them silently; "+
+			"restore the field, or delete Secret %s/%s to republish without it",
+			publishedStatic["internalNetworkCIDRs"], keptCIDRs, secretNamespace, secretName)
+	}
+	return nil
 }
 
 // readPriorNodeGroups returns the entries of the currently published context, keyed by NodeGroup

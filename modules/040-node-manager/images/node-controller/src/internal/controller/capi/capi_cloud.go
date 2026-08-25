@@ -302,7 +302,9 @@ func secretDataEqual(a, b map[string][]byte) bool {
 	return true
 }
 
-func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Context, ng *deckhousev1.NodeGroup) error {
+func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(
+	ctx context.Context, ng *deckhousev1.NodeGroup, resolved derived_status.ResolvedNodeGroup, validationErr string,
+) error {
 	logger := log.FromContext(ctx)
 
 	if ng.Spec.CloudInstances == nil {
@@ -325,11 +327,6 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 	}
 	cloudType, _ := cloudProvider["type"].(string)
 
-	ds := &derived_status.Service{Client: r.Client}
-	resolved, validationErr, err := ds.ResolveNodeGroup(ctx, ng)
-	if err != nil {
-		return fmt.Errorf("resolve NodeGroup %s: %w", ng.Name, err)
-	}
 	if validationErr != "" {
 		logger.Info("skipping CAPI: NodeGroup failed validation", "nodeGroup", ng.Name, "error", validationErr)
 		return nil
