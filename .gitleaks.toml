@@ -28,15 +28,3 @@ paths = [
   '''dhctl/pkg/immutable/testdata/master-documents\.yaml$''',
   '''modules/040-node-manager/images/node-controller/src/internal/testenv/clusterinputs\.go$'''
 ]
-
-# The shape of a bootstrap token, not one: two hex groups the joining kubelet
-# presents. The scan reads the whole branch, so the file carrying it must be
-# named here even though the line itself now says gitleaks:allow.
-[[allowlists]]
-condition = "AND"
-regexes = [
-  'abcdef\.0123456789abcdef'
-]
-paths = [
-  '''dhctl/pkg/operations/bootstrap/steps_immutable_test\.go$'''
-]
