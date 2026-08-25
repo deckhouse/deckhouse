@@ -100,7 +100,7 @@ spec:
           imagePullSecrets:
           - name: deckhouse-registry
           restartPolicy: Never
-          hostNetwork: true
+          hostNetwork: false
           dnsPolicy: ClusterFirstWithHostNet
           containers:
           - name: backup
@@ -112,7 +112,11 @@ spec:
               value: {{ $etcdQuotaBackendBytes | quote }}
             - name: HOSTPATH
               value: {{ $backupHostPath | quote }}
-            resources:
+            - name: NODEIP
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: status.hostIP            resources:
               requests:
               {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 50 | nindent 16 }}
               {{- if not ( $.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
