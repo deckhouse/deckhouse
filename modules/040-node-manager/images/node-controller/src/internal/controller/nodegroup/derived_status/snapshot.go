@@ -32,7 +32,12 @@ import (
 // validate halves cannot disagree about the world, and so no source is read twice — the two halves
 // used to read the zones, the InstanceClass and the type catalog once each.
 type Snapshot struct {
-	Provider      CloudProviderRegistration
+	Provider CloudProviderRegistration
+
+	// Engine is resolved here rather than in Derive: it is the one derived value that needs a
+	// read, and resolving it once keeps every consumer of the snapshot on the same answer.
+	Engine string
+
 	ClusterUUID   string
 	TargetVersion *semver.Version
 	DefaultCRI    string
@@ -85,6 +90,11 @@ func (s *Service) BuildSnapshot(ctx context.Context, ng *v1.NodeGroup) (Snapshot
 		TargetVersion: targetVersion,
 		DefaultCRI:    defaultCRI,
 		APIServerMin:  apiServerMin,
+	}
+
+	snap.Engine, err = ResolveEngine(ctx, s.Client, ng, provider)
+	if err != nil {
+		return Snapshot{}, err
 	}
 
 	if ng.Spec.NodeType == v1.NodeTypeStatic {

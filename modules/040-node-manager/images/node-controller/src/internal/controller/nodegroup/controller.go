@@ -58,13 +58,11 @@ func init() {
 
 type Status struct {
 	register.Base
-	apiReader        client.Reader
 	cache            cache.Cache
 	conditionService ngconditions.Service
 }
 
 func (r *Status) Setup(_ context.Context, mgr ctrl.Manager) error {
-	r.apiReader = mgr.GetAPIReader()
 	r.cache = mgr.GetCache()
 	return nil
 }
@@ -218,7 +216,8 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 	// left empty so a later reconcile — re-triggered by the cloud-provider
 	// secret watch — can fill it, instead of getting stuck on a sticky "None".
 	if ng.Status.Engine == "" {
-		if engine := derivedResult.Engine; engine != "" && engine != "None" {
+		engine := derivedResult.Engine
+		if engine != "" && engine != "None" {
 			ng.Status.Engine = engine
 		}
 	}

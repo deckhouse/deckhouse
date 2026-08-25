@@ -68,7 +68,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
 }, dependency.WithExternalDependencies(setKeepPolicyOnCapiResources))
 
-func setKeepPolicyOnCapiResources(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
+// Remove in 1.81: the hook only protects objects adopted during the #21372 migration, and an
+// upgrade from a pre-migration release is impossible once 1.81 is the oldest supported hop.
+func setKeepPolicyOnCapiResources(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	k8sClient, err := dc.GetK8sClient()
 	if err != nil {
 		return fmt.Errorf("get k8s client: %w", err)
@@ -98,7 +100,7 @@ func setKeepPolicyOnCapiResources(_ context.Context, input *go_hook.HookInput, d
 		if len(preference) == 0 {
 			preference = storedVersionPreference
 		}
-		version, ok, err := pickStoredVersion(dynClient, res.Group, res.Resource, preference)
+		version, ok, err := pickStoredVersion(ctx, dynClient, res.Group, res.Resource, preference)
 		if err != nil {
 			return fmt.Errorf("resolve stored version for %s: %w", res.Resource, err)
 		}
@@ -107,7 +109,7 @@ func setKeepPolicyOnCapiResources(_ context.Context, input *go_hook.HookInput, d
 		}
 		gvr := schema.GroupVersionResource{Group: res.Group, Version: version, Resource: res.Resource}
 
-		list, err := dynClient.Resource(gvr).Namespace(capiNamespace).List(context.TODO(), metav1.ListOptions{LabelSelector: helmManagedSelector})
+		list, err := dynClient.Resource(gvr).Namespace(capiNamespace).List(ctx, metav1.ListOptions{LabelSelector: helmManagedSelector})
 		if err != nil {
 			if isConversionUnavailable(err) {
 				input.Logger.Info("skipping resource, conversion webhook unavailable", slog.String("resource", res.Resource), slog.String("version", version))
@@ -121,7 +123,7 @@ func setKeepPolicyOnCapiResources(_ context.Context, input *go_hook.HookInput, d
 				continue
 			}
 			if _, err := dynClient.Resource(gvr).Namespace(item.GetNamespace()).Patch(
-				context.TODO(),
+				ctx,
 				item.GetName(),
 				types.MergePatchType,
 				patch,
@@ -132,7 +134,7 @@ func setKeepPolicyOnCapiResources(_ context.Context, input *go_hook.HookInput, d
 			input.Logger.Info("stamped keep policy", slog.String("resource", res.Resource), slog.String("name", item.GetName()))
 		}
 
-		verify, err := dynClient.Resource(gvr).Namespace(capiNamespace).List(context.TODO(), metav1.ListOptions{LabelSelector: helmManagedSelector})
+		verify, err := dynClient.Resource(gvr).Namespace(capiNamespace).List(ctx, metav1.ListOptions{LabelSelector: helmManagedSelector})
 		if err != nil {
 			return fmt.Errorf("verify list %s/%s: %w", res.Resource, version, err)
 		}
@@ -146,8 +148,8 @@ func setKeepPolicyOnCapiResources(_ context.Context, input *go_hook.HookInput, d
 	return nil
 }
 
-func pickStoredVersion(dynClient dynamic.Interface, group, resource string, preference []string) (string, bool, error) {
-	crd, err := dynClient.Resource(crdGVR).Get(context.TODO(), resource+"."+group, metav1.GetOptions{})
+func pickStoredVersion(ctx context.Context, dynClient dynamic.Interface, group, resource string, preference []string) (string, bool, error) {
+	crd, err := dynClient.Resource(crdGVR).Get(ctx, resource+"."+group, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return "", false, nil

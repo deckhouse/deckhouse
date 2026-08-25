@@ -36,7 +36,7 @@ func Derive(ctx context.Context, ng *v1.NodeGroup, snap Snapshot) (Result, error
 	logger := log.FromContext(ctx)
 
 	result := Result{
-		Engine:           ComputeEngine(ng, snap.Provider),
+		Engine:           snap.Engine,
 		SerializedLabels: serializeLabels(ng),
 		SerializedTaints: serializeTaints(ng),
 		UpdateEpoch:      calculateUpdateEpoch(epochTimestampAccessor(), snap.ClusterUUID, ng.Name),

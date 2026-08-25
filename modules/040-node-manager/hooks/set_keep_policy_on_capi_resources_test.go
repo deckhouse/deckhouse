@@ -50,7 +50,7 @@ func TestPickStoredVersion(t *testing.T) {
 		testCRD("staticmachinetemplates.infrastructure.cluster.x-k8s.io", []string{"v1alpha1"}),
 	)
 
-	version, ok, err := pickStoredVersion(dyn, "machine.sapcloud.io", "machinedeployments", mcmStoredVersions)
+	version, ok, err := pickStoredVersion(t.Context(), dyn, "machine.sapcloud.io", "machinedeployments", mcmStoredVersions)
 	if err != nil {
 		t.Fatalf("pick MCM version: %v", err)
 	}
@@ -58,7 +58,7 @@ func TestPickStoredVersion(t *testing.T) {
 		t.Fatalf("MCM version=%q ok=%v, want v1alpha1/true", version, ok)
 	}
 
-	version, ok, err = pickStoredVersion(dyn, "cluster.x-k8s.io", "machinedeployments", storedVersionPreference)
+	version, ok, err = pickStoredVersion(t.Context(), dyn, "cluster.x-k8s.io", "machinedeployments", storedVersionPreference)
 	if err != nil {
 		t.Fatalf("pick CAPI version: %v", err)
 	}
@@ -66,7 +66,7 @@ func TestPickStoredVersion(t *testing.T) {
 		t.Fatalf("CAPI version=%q ok=%v, want v1beta1/true", version, ok)
 	}
 
-	version, ok, err = pickStoredVersion(dyn, "cluster.x-k8s.io", "missing", storedVersionPreference)
+	version, ok, err = pickStoredVersion(t.Context(), dyn, "cluster.x-k8s.io", "missing", storedVersionPreference)
 	if err != nil {
 		t.Fatalf("missing CRD returned error: %v", err)
 	}
@@ -74,7 +74,7 @@ func TestPickStoredVersion(t *testing.T) {
 		t.Fatalf("missing CRD version=%q ok=%v, want empty/false", version, ok)
 	}
 
-	version, ok, err = pickStoredVersion(dyn, "infrastructure.cluster.x-k8s.io", "staticmachinetemplates", []string{"v1alpha1"})
+	version, ok, err = pickStoredVersion(t.Context(), dyn, "infrastructure.cluster.x-k8s.io", "staticmachinetemplates", []string{"v1alpha1"})
 	if err != nil {
 		t.Fatalf("pick StaticMachineTemplate version: %v", err)
 	}

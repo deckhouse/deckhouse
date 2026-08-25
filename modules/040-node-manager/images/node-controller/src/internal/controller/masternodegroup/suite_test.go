@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package draining
+package masternodegroup
 
 import (
 	"context"
@@ -22,6 +22,9 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -29,7 +32,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
-	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/node-controller/internal/testenv"
 )
 
@@ -43,19 +45,18 @@ var (
 	suiteCancel context.CancelFunc
 )
 
-// TestDrainingControllerEnvtest runs the envtest-backed integration suite. The real draining
-// controller runs inside a manager against a real kube-apiserver, so the user-observable state
-// transitions (cordon, pod eviction, draining->drained annotation flip) are exercised against a
-// real API server rather than a fake client. It is the complement to the pure-logic unit tests in
-// controller_test.go. The suite is skipped when envtest assets are not available so the unit tests
-// stay runnable without `make envtest`.
-func TestDrainingControllerEnvtest(t *testing.T) {
+// TestMasterNodeGroupControllerEnvtest runs the envtest-backed integration suite. The cluster
+// configuration Secret is published before the manager starts, so the first spec observes the real
+// startup path: the controller's one-shot enqueue creating the master NodeGroup against a real
+// apiserver. The remaining specs drive Reconcile directly, because the startup source fires once
+// per manager and each case needs its own cluster configuration.
+func TestMasterNodeGroupControllerEnvtest(t *testing.T) {
 	if !testenv.AssetsAvailable() {
 		t.Skip("envtest assets not found; run `make envtest` (or set KUBEBUILDER_ASSETS) to run the integration suite")
 	}
 
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Draining Controller Envtest Suite")
+	RunSpecs(t, "MasterNodeGroup Controller Envtest Suite")
 }
 
 var _ = BeforeSuite(func() {
@@ -65,23 +66,20 @@ var _ = BeforeSuite(func() {
 	scheme = k8sruntime.NewScheme()
 	Expect(clientgoscheme.AddToScheme(scheme)).To(Succeed())
 	Expect(deckhousev1.AddToScheme(scheme)).To(Succeed())
-	// Instance is deleted when a spot node finishes draining.
-	Expect(deckhousev1alpha2.AddToScheme(scheme)).To(Succeed())
 
-	By("bootstrapping the envtest environment with the NodeGroup and Instance CRDs")
+	By("bootstrapping the envtest environment with the NodeGroup CRD")
 	var err error
-	testEnv, cfg, k8sClient, err = testenv.Start(
-		scheme,
-		testenv.CRDPaths(
-			testenv.WithNodeGroupCRDFile(),
-			testenv.WithInstanceCRDFile(),
-		)...,
-	)
+	testEnv, cfg, k8sClient, err = testenv.Start(scheme, testenv.CRDPaths(testenv.WithNodeGroupCRDFile())...)
 	Expect(err).NotTo(HaveOccurred())
 
-	// The draining controller registered itself via its package init(); since only this package is
-	// compiled into the test binary, NewManager wires up just the draining controller.
-	By("starting the manager with the draining controller")
+	By("publishing the cluster configuration of a cloud cluster")
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Namespace: clusterConfigSecretNamespace, Name: clusterConfigSecretName},
+		Data:       map[string][]byte{clusterConfigKey: []byte("clusterType: Cloud\n")},
+	}
+	Expect(k8sClient.Create(suiteCtx, secret)).To(Succeed())
+
+	By("starting the manager with the master-node-group controller")
 	mgr, err := testenv.NewManager(suiteCtx, cfg, scheme)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -98,12 +96,5 @@ var _ = AfterSuite(func() {
 	}
 	if testEnv != nil {
 		Expect(testEnv.Stop()).To(Succeed())
-	}
-})
-
-// ENVTEST_DEBUG=1 dumps cluster state (real `kubectl get … -o wide`) after every spec.
-var _ = JustAfterEach(func() {
-	if testenv.DebugEnabled() {
-		testenv.KubectlDumpNodeObjects(GinkgoWriter, testEnv, cfg, CurrentSpecReport().LeafNodeText)
 	}
 })

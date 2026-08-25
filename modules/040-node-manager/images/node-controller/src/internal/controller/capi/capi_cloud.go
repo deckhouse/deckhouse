@@ -36,6 +36,7 @@ import (
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/common"
+	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/machineclass"
 	"github.com/deckhouse/node-controller/internal/machinetemplate"
@@ -80,9 +81,9 @@ func buildCAPIMachineDeployment(in capiMDInput) *unstructured.Unstructured {
 	// selector, prune and cleanup depends on.
 	commonLabels := func() map[string]interface{} {
 		return map[string]interface{}{
-			"heritage":   "deckhouse",
-			"module":     "node-manager",
-			"node-group": in.ng.Name,
+			"heritage":                               "deckhouse",
+			"module":                                 "node-manager",
+			ngcommon.MachineDeploymentNodeGroupLabel: in.ng.Name,
 		}
 	}
 
@@ -583,9 +584,9 @@ func buildStaticMachineTemplate(ng *deckhousev1.NodeGroup) (*unstructured.Unstru
 	// later merge into spec write through into the object's own metadata.labels.
 	labels := func() map[string]interface{} {
 		return map[string]interface{}{
-			"heritage":   "deckhouse",
-			"module":     "node-manager",
-			"node-group": ng.Name,
+			"heritage":                               "deckhouse",
+			"module":                                 "node-manager",
+			ngcommon.MachineDeploymentNodeGroupLabel: ng.Name,
 		}
 	}
 

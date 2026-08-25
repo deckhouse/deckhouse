@@ -39,7 +39,7 @@ func (s *Service) getMachinesCount(ctx context.Context, ngName string) int32 {
 	}
 
 	capiList := &capiv1beta2.MachineList{}
-	if err := s.Client.List(ctx, capiList, client.InNamespace(common.MachineNamespace), client.MatchingLabels{"node-group": ngName}); err == nil {
+	if err := s.Client.List(ctx, capiList, client.InNamespace(common.MachineNamespace), client.MatchingLabels{common.MachineDeploymentNodeGroupLabel: ngName}); err == nil {
 		count += int32(len(capiList.Items))
 	}
 

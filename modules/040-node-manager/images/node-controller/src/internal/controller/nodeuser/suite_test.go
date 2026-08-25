@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package draining
+package nodeuser
 
 import (
 	"context"
@@ -22,6 +22,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -29,7 +30,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
-	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/node-controller/internal/testenv"
 )
 
@@ -43,19 +43,16 @@ var (
 	suiteCancel context.CancelFunc
 )
 
-// TestDrainingControllerEnvtest runs the envtest-backed integration suite. The real draining
-// controller runs inside a manager against a real kube-apiserver, so the user-observable state
-// transitions (cordon, pod eviction, draining->drained annotation flip) are exercised against a
-// real API server rather than a fake client. It is the complement to the pure-logic unit tests in
-// controller_test.go. The suite is skipped when envtest assets are not available so the unit tests
-// stay runnable without `make envtest`.
-func TestDrainingControllerEnvtest(t *testing.T) {
+// TestNodeUserErrorsControllerEnvtest runs the envtest-backed integration suite: the controller
+// runs in a real manager against a real apiserver, so the NodeUser status subresource, the
+// node-delete watch and the "nothing to clear" no-op are exercised faithfully.
+func TestNodeUserErrorsControllerEnvtest(t *testing.T) {
 	if !testenv.AssetsAvailable() {
 		t.Skip("envtest assets not found; run `make envtest` (or set KUBEBUILDER_ASSETS) to run the integration suite")
 	}
 
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Draining Controller Envtest Suite")
+	RunSpecs(t, "NodeUserErrors Controller Envtest Suite")
 }
 
 var _ = BeforeSuite(func() {
@@ -65,23 +62,13 @@ var _ = BeforeSuite(func() {
 	scheme = k8sruntime.NewScheme()
 	Expect(clientgoscheme.AddToScheme(scheme)).To(Succeed())
 	Expect(deckhousev1.AddToScheme(scheme)).To(Succeed())
-	// Instance is deleted when a spot node finishes draining.
-	Expect(deckhousev1alpha2.AddToScheme(scheme)).To(Succeed())
 
-	By("bootstrapping the envtest environment with the NodeGroup and Instance CRDs")
+	By("bootstrapping the envtest environment with the NodeUser CRD")
 	var err error
-	testEnv, cfg, k8sClient, err = testenv.Start(
-		scheme,
-		testenv.CRDPaths(
-			testenv.WithNodeGroupCRDFile(),
-			testenv.WithInstanceCRDFile(),
-		)...,
-	)
+	testEnv, cfg, k8sClient, err = testenv.Start(scheme, testenv.CRDPaths(testenv.WithNodeUserCRDFile())...)
 	Expect(err).NotTo(HaveOccurred())
 
-	// The draining controller registered itself via its package init(); since only this package is
-	// compiled into the test binary, NewManager wires up just the draining controller.
-	By("starting the manager with the draining controller")
+	By("starting the manager with the nodeuser-status controller")
 	mgr, err := testenv.NewManager(suiteCtx, cfg, scheme)
 	Expect(err).NotTo(HaveOccurred())
 
