@@ -615,7 +615,7 @@ GOTESTSUM = $(LOCALBIN)/gotestsum
 
 ## TODO: remap in yaml file (version.yaml or smthng)
 ## Tool Versions
-GOLANGCI_LINT_VERSION = v2.8.0
+GOLANGCI_LINT_VERSION = v2.13.1
 DECKHOUSE_CLI_VERSION ?= v0.33.1
 CRD_ENRICHER_VERSION ?= v0.0.2
 DMT_VERSION ?= 0.1.95
