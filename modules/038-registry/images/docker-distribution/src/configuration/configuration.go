@@ -151,35 +151,11 @@ type Configuration struct {
 	// registry events are dispatched.
 	Notifications Notifications `yaml:"notifications,omitempty"`
 
-	// Redis configures the redis pool available to the registry webapp.
-	Redis struct {
-		// Addr specifies the the redis instance available to the application.
-		Addr string `yaml:"addr,omitempty"`
-
-		// Password string to use when making a connection.
-		Password string `yaml:"password,omitempty"`
-
-		// DB specifies the database to connect to on the redis instance.
-		DB int `yaml:"db,omitempty"`
-
-		DialTimeout  time.Duration `yaml:"dialtimeout,omitempty"`  // timeout for connect
-		ReadTimeout  time.Duration `yaml:"readtimeout,omitempty"`  // timeout for reads of data
-		WriteTimeout time.Duration `yaml:"writetimeout,omitempty"` // timeout for writes of data
-
-		// Pool configures the behavior of the redis connection pool.
-		Pool struct {
-			// MaxIdle sets the maximum number of idle connections.
-			MaxIdle int `yaml:"maxidle,omitempty"`
-
-			// MaxActive sets the maximum number of connections that should be
-			// opened before blocking a connection request.
-			MaxActive int `yaml:"maxactive,omitempty"`
-
-			// IdleTimeout sets the amount time to wait before closing
-			// inactive connections.
-			IdleTimeout time.Duration `yaml:"idletimeout,omitempty"`
-		} `yaml:"pool,omitempty"`
-	} `yaml:"redis,omitempty"`
+	// Upstream configures a Redis pool here, for the blob descriptor cache that used it. Both are
+	// gone: nothing this module runs configures one, and the client library was the only dependency
+	// of this tree that no other module in this repository uses — so the linter in CI had to fetch it
+	// into a module cache it cannot write to, and failed there rather than on any code. A
+	// configuration carrying a `redis` section is accepted and ignored, as any unknown section is.
 
 	Health  Health  `yaml:"health,omitempty"`
 	Catalog Catalog `yaml:"catalog,omitempty"`

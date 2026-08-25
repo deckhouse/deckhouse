@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"crypto/rand"
-	"expvar"
 	"fmt"
 	"math"
 	"math/big"
@@ -32,14 +31,12 @@ import (
 	"github.com/docker/distribution/registry/proxy"
 	"github.com/docker/distribution/registry/storage"
 	memorycache "github.com/docker/distribution/registry/storage/cache/memory"
-	rediscache "github.com/docker/distribution/registry/storage/cache/redis"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/factory"
 	storagemiddleware "github.com/docker/distribution/registry/storage/driver/middleware"
 	"github.com/docker/distribution/version"
 	"github.com/docker/go-metrics"
 	"github.com/docker/libtrust"
-	"github.com/gomodule/redigo/redis"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 )
@@ -74,8 +71,6 @@ type App struct {
 		sink   notifications.Sink
 		source notifications.SourceRecord
 	}
-
-	redis *redis.Pool
 
 	// trustKey is a deprecated key used to sign manifests converted to
 	// schema1 for backward compatibility. It should not be used for any
@@ -158,7 +153,6 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 
 	app.configureSecret(config)
 	app.configureEvents(config)
-	app.configureRedis(config)
 	app.configureLogHook(config)
 
 	options := registrymiddleware.GetRegistryOptions()
@@ -267,17 +261,10 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 		}
 
 		switch v {
-		case "redis":
-			if app.redis == nil {
-				panic("redis configuration required to use for layerinfo cache")
-			}
-			cacheProvider := rediscache.NewRedisBlobDescriptorCacheProvider(app.redis)
-			localOptions := append(options, storage.BlobDescriptorCacheProvider(cacheProvider))
-			app.registry, err = storage.NewRegistry(app, app.driver, localOptions...)
-			if err != nil {
-				panic("could not create registry: " + err.Error())
-			}
-			dcontext.GetLogger(app).Infof("using redis blob descriptor cache")
+		// Upstream also offers a Redis-backed descriptor cache. It is gone here: nothing this module
+		// runs configures one, and its client library was the only dependency of this tree that no
+		// other module in this repository uses — which meant the linter in CI had to fetch it into a
+		// module cache it cannot write to, and failed on that rather than on any code.
 		case "inmemory":
 			cacheProvider := memorycache.NewInMemoryBlobDescriptorCacheProvider()
 			localOptions := append(options, storage.BlobDescriptorCacheProvider(cacheProvider))
@@ -497,90 +484,6 @@ func (app *App) configureEvents(configuration *configuration.Configuration) {
 		Addr:       hostname,
 		InstanceID: dcontext.GetStringValue(app, "instance.id"),
 	}
-}
-
-type redisStartAtKey struct{}
-
-func (app *App) configureRedis(configuration *configuration.Configuration) {
-	if configuration.Redis.Addr == "" {
-		dcontext.GetLogger(app).Infof("redis not configured")
-		return
-	}
-
-	pool := &redis.Pool{
-		Dial: func() (redis.Conn, error) {
-			// TODO(stevvooe): Yet another use case for contextual timing.
-			ctx := context.WithValue(app, redisStartAtKey{}, time.Now())
-
-			done := func(err error) {
-				logger := dcontext.GetLoggerWithField(ctx, "redis.connect.duration",
-					dcontext.Since(ctx, redisStartAtKey{}))
-				if err != nil {
-					logger.Errorf("redis: error connecting: %v", err)
-				} else {
-					logger.Infof("redis: connect %v", configuration.Redis.Addr)
-				}
-			}
-
-			conn, err := redis.DialTimeout("tcp",
-				configuration.Redis.Addr,
-				configuration.Redis.DialTimeout,
-				configuration.Redis.ReadTimeout,
-				configuration.Redis.WriteTimeout)
-			if err != nil {
-				dcontext.GetLogger(app).Errorf("error connecting to redis instance %s: %v",
-					configuration.Redis.Addr, err)
-				done(err)
-				return nil, err
-			}
-
-			// authorize the connection
-			if configuration.Redis.Password != "" {
-				if _, err = conn.Do("AUTH", configuration.Redis.Password); err != nil {
-					defer conn.Close()
-					done(err)
-					return nil, err
-				}
-			}
-
-			// select the database to use
-			if configuration.Redis.DB != 0 {
-				if _, err = conn.Do("SELECT", configuration.Redis.DB); err != nil {
-					defer conn.Close()
-					done(err)
-					return nil, err
-				}
-			}
-
-			done(nil)
-			return conn, nil
-		},
-		MaxIdle:     configuration.Redis.Pool.MaxIdle,
-		MaxActive:   configuration.Redis.Pool.MaxActive,
-		IdleTimeout: configuration.Redis.Pool.IdleTimeout,
-		TestOnBorrow: func(c redis.Conn, t time.Time) error {
-			// TODO(stevvooe): We can probably do something more interesting
-			// here with the health package.
-			_, err := c.Do("PING")
-			return err
-		},
-		Wait: false, // if a connection is not available, proceed without cache.
-	}
-
-	app.redis = pool
-
-	// setup expvar
-	registry := expvar.Get("registry")
-	if registry == nil {
-		registry = expvar.NewMap("registry")
-	}
-
-	registry.(*expvar.Map).Set("redis", expvar.Func(func() interface{} {
-		return map[string]interface{}{
-			"Config": configuration.Redis,
-			"Active": app.redis.ActiveCount(),
-		}
-	}))
 }
 
 // configureLogHook prepares logging hook parameters.

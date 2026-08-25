@@ -10,10 +10,20 @@ Not carried over:
   which was in a golangci-lint format this repository's linter refuses to load. `.golangci.yaml` here
   replaces it.
 - The `digest` and `registry-api-descriptor-template` commands. The image ships one binary.
-- The S3 storage driver and the `silly` and `htpasswd` authenticators. Nothing configures them: the
-  storage this module runs is always a filesystem directory and always authenticates with the token
-  service beside it. Dropping the S3 driver also drops the AWS SDK from the module graph, which is
-  most of what the vulnerability scan used to have to say about this image.
+- The S3 storage driver and the `htpasswd` authenticator. Nothing configures them: the storage this
+  module runs is always a filesystem directory and always authenticates with the token service beside
+  it. Dropping the S3 driver also drops the AWS SDK from the module graph, which is most of what the
+  vulnerability scan used to have to say about this image. (`silly`, upstream's demo authenticator,
+  stays for upstream's own tests but is not imported by `cmd/registry`, so the binary cannot be
+  configured to use it.)
+- The Redis blob descriptor cache, and the `redis` configuration section that fed it. Nothing
+  configures one — and its client library was the only dependency of this tree that no other module in
+  this repository uses, which broke the lint job in CI: the linter had to fetch it into a module cache
+  the container cannot write to, and reported that as a typecheck error on
+  `registry/storage/cache/redis/redis.go`. Keep it that way when bumping the version: every module this
+  tree requires should be required, at the same version, by something else in the repository.
+- Upstream's example configurations under `cmd/registry/`. The image is handed a configuration rendered
+  by the syncer, and the examples described the Redis cache that is now gone.
 
 ## Changes made here
 

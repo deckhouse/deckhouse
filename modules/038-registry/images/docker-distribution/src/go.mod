@@ -7,7 +7,6 @@ require (
 	github.com/distribution/reference v0.6.0
 	github.com/docker/go-metrics v0.0.1
 	github.com/docker/libtrust v0.0.0-20160708172513-aabc10ec26b7
-	github.com/gomodule/redigo v1.9.3
 	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/mux v1.8.1
 	github.com/opencontainers/go-digest v1.0.0
