@@ -52,17 +52,6 @@ type Applier struct {
 	// registry would start with a path that does not exist.
 	UpstreamCAPath string
 
-	// WriteConfigPath is the configuration file the SECOND instance reads — the one behind the ingress
-	// that `d8 mirror push` writes to.
-	//
-	// Rendered from the same spec with WriteEndpoint set, so the two instances cannot drift on
-	// authentication, storage path or the token service: they are the same registry seen from two
-	// sides, and only two things differ (this one never proxies, and it demands a client certificate).
-	//
-	// Empty means there is no second instance to configure, which is how a replica running an older
-	// pod template stays working.
-	WriteConfigPath string
-
 	// Restarter is invoked only when something changed.
 	Restarter Restarter
 
@@ -109,28 +98,14 @@ func (a *Applier) apply(spec *registryv1alpha1.RegistryStorageSpec, options Opti
 		return false, fmt.Errorf("writing the configuration: %w", err)
 	}
 
-	// The write endpoint's own configuration, rendered from the same spec.
-	//
-	// ReadOnly is deliberately carried over: a garbage collection computes the reachable set and then
-	// deletes the rest, so a push landing between those two steps loses its blobs. The whole point of
-	// refusing writes during a collection is that NO path accepts one, and a second instance that kept
-	// accepting them would quietly reintroduce exactly the corruption the read-only window prevents.
-	writeChanged := false
-	if a.WriteConfigPath != "" {
-		writeOptions := options
-		writeOptions.WriteEndpoint = true
-
-		renderedWrite, err := Render(spec, writeOptions)
-		if err != nil {
-			return false, fmt.Errorf("rendering the write endpoint configuration: %w", err)
-		}
-
-		if writeChanged, err = writeIfChanged(a.WriteConfigPath, renderedWrite, 0o600); err != nil {
-			return false, fmt.Errorf("writing the write endpoint configuration: %w", err)
-		}
-	}
-
-	if !configChanged && !caChanged && !writeChanged {
+	// One file for both halves of the registry. The write endpoint is a second listener of the same
+	// process, derived from this same configuration, so authentication, the storage path, the token
+	// service and the read-only flag a garbage collection sets cannot drift between them — there is
+	// only one of each. It used to be a second rendered file for a second container, and the read-only
+	// flag had to be written into both by hand: a collection computes the reachable set and then
+	// deletes the rest, so an instance that went on accepting writes would lose exactly the blobs the
+	// read-only window exists to protect.
+	if !configChanged && !caChanged {
 		return false, nil
 	}
 

@@ -24,11 +24,11 @@ The storage of the controller-based implementation.
 Rendered only under the implementation discriminator, so on a cluster still running
 the legacy implementation none of this exists.
 
-Two containers on purpose. The registry reads its configuration once at startup, so
-a credential or certificate change means the process has to come back — and the
-syncer brings it back by signalling it, which needs a shared process namespace. The
-pod object is never touched in the process, which is exactly what keeps such a
-change working while the Deckhouse operator is down.
+The registry reads its configuration once at startup, so a credential or certificate
+change means the process has to come back — and the syncer brings it back by
+signalling it, which needs a shared process namespace. The pod object is never
+touched in the process, which is exactly what keeps such a change working while the
+Deckhouse operator is down.
 */ -}}
 {{- if eq (include "registry_v2_caches" .) "true" }}
 {{- $storePath := ((.Values.registry.internal.v2).registryConfig).storage | default dict }}
@@ -173,38 +173,23 @@ spec:
         ports:
         - name: registry
           containerPort: 5001
-        volumeMounts:
-        - name: config
-          mountPath: /config
-        - name: pki
-          mountPath: /pki
-        - name: data
-          mountPath: /data
-        resources:
-          requests:
-            {{- include "helm_lib_module_ephemeral_storage_only_logs" $ | nindent 12 }}
-            {{- include "registry_storage_distribution_resources" $ | nindent 12 }}
-      # The write endpoint: a second registry over the SAME data directory, which is what `d8 mirror
-      # push` and any operator pushing their own modules write to.
-      #
-      # Two instances rather than one, because one cannot be both: docker distribution refuses every
-      # write while it is configured as a pull-through cache (measured — `POST /v2/.../blobs/uploads/`
-      # answered UNSUPPORTED). Publishing through the serving instance therefore meant turning the cache
-      # off, which confined publication to air-gap and made it impossible to push a bundle BEFORE the
-      # transition the bundle is supposed to make safe.
-      #
-      # Its port differs from the serving one because this pod is host-networked: the same port would
-      # mean whichever process starts second dies with `address already in use`.
-      - name: distribution-push
-        image: {{ include "helm_lib_module_image" (list $ "dockerDistribution") }}
-        imagePullPolicy: IfNotPresent
-        args: ["serve", "/config-push/config.yaml"]
-        ports:
+        # The write endpoint: the same registry, the same store, a second listener with no cache in
+        # front of it. It is what `d8 mirror push` writes to, what an operator publishing their own
+        # modules writes to, and what this replica's own fill writes to.
+        #
+        # A second listener rather than a second container, which is how this was done before: a cache
+        # refuses every write (measured — `POST /v2/.../blobs/uploads/` answered UNSUPPORTED), so the
+        # writes need a non-proxying view of the store, and the registry now serves one itself. Two
+        # containers meant two rendered configurations that must not be swapped, and a store-wide flag
+        # to stop each process from deleting the other's data on startup.
+        #
+        # A different port because the pod is host-networked, and because two listeners in one process
+        # cannot share one either way.
         - name: registry-push
           containerPort: 5003
         volumeMounts:
-        - name: config-push
-          mountPath: /config-push
+        - name: config
+          mountPath: /config
         - name: pki
           mountPath: /pki
         - name: data
@@ -307,9 +292,6 @@ spec:
         imagePullPolicy: IfNotPresent
         args:
         - --config-path=/config/config.yaml
-        # The write endpoint's configuration, rendered from the same spec by the same pass so the two
-        # instances cannot drift on authentication or on where the blobs live.
-        - --write-config-path=/config-push/config.yaml
         # Beside the configuration, on the writable emptyDir: /pki is a Secret mount and
         # the syncer has to be able to remove this file when the upstream stops carrying a CA.
         - --upstream-ca-path=/config/upstream-registry-ca.crt
@@ -365,14 +347,6 @@ spec:
         volumeMounts:
         - name: config
           mountPath: /config
-        # And the write endpoint's configuration directory, because the syncer is what WRITES that file.
-        #
-        # Missing here at first, and the failure was one-sided in the worst way: the second instance
-        # mounted the directory and waited for a file nobody could put there, so it crash-looped for
-        # eight restarts while every other container reported ready — measured on `ly-cache`, where it
-        # took the bootstrap down with it.
-        - name: config-push
-          mountPath: /config-push
         - name: pki
           mountPath: /pki
         # The store, so that the garbage collection can reclaim the blobs its deletions leave
@@ -389,11 +363,6 @@ spec:
       # rewritten by the syncer on every change, and must not survive as a stale
       # copy across a pod recreation.
       - name: config
-        emptyDir: {}
-      # Its own emptyDir rather than a second file on the serving instance's: a single directory shared
-      # by two registries invites one process to be handed the other's configuration by a path typo,
-      # and the failure of that would be a cache that accepts pushes.
-      - name: config-push
         emptyDir: {}
       - name: pki
         secret:

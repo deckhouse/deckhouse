@@ -48,21 +48,6 @@ func renderToMap(t *testing.T, spec *registryv1alpha1.RegistryStorageSpec) map[s
 	return parsed
 }
 
-// renderWriteEndpoint is the second instance: the one behind the ingress that a push writes to.
-func renderWriteEndpoint(t *testing.T, spec *registryv1alpha1.RegistryStorageSpec) map[string]any {
-	t.Helper()
-
-	opts := testOptions()
-	opts.WriteEndpoint = true
-
-	rendered, err := Render(spec, opts)
-	require.NoError(t, err)
-
-	var parsed map[string]any
-	require.NoError(t, yaml.Unmarshal(rendered, &parsed))
-	return parsed
-}
-
 func TestRenderPassThroughCache(t *testing.T) {
 	spec := &registryv1alpha1.RegistryStorageSpec{
 		Upstream: &registryv1alpha1.Upstream{
@@ -270,41 +255,38 @@ func TestDecodeBasic(t *testing.T) {
 	}
 }
 
-// TestTheTwoInstancesListenOnDifferentPorts is a host-network constraint, not a formality.
+// TestTheTwoListenersDoNotShareAPort is a host-network constraint, not a formality.
 //
-// The storage pod is host-networked, so these are ports on the node: two instances asking for the same
-// one means the second to start dies with `address already in use` and the pod crash-loops with nothing
-// in it about registries.
-func TestTheTwoInstancesListenOnDifferentPorts(t *testing.T) {
-	spec := &registryv1alpha1.RegistryStorageSpec{Publish: true}
+// The storage pod is host-networked, so these are ports on the node, and the two listeners belong to
+// one process: asking for the same one means the process fails to start with `address already in use`
+// and the pod crash-loops with nothing in it about registries.
+func TestTheTwoListenersDoNotShareAPort(t *testing.T) {
+	config := renderToMap(t, &registryv1alpha1.RegistryStorageSpec{Publish: true})
 
-	serving := renderToMap(t, spec)
-	writing := renderWriteEndpoint(t, spec)
+	http, _ := config["http"].(map[string]any)
+	write, _ := config["writeendpoint"].(map[string]any)
 
-	servingHTTP, _ := serving["http"].(map[string]any)
-	writingHTTP, _ := writing["http"].(map[string]any)
+	require.NotEmpty(t, http["addr"])
+	require.NotEmpty(t, write["addr"])
+	assert.NotEqual(t, http["addr"], write["addr"],
+		"the serving listener and the write listener cannot share a node port")
 
-	require.NotEmpty(t, servingHTTP["addr"])
-	require.NotEmpty(t, writingHTTP["addr"])
-	assert.NotEqual(t, servingHTTP["addr"], writingHTTP["addr"],
-		"the serving instance and the write endpoint cannot share a node port")
-
-	servingDebug, _ := servingHTTP["debug"].(map[string]any)
-	writingDebug, _ := writingHTTP["debug"].(map[string]any)
-	assert.NotEqual(t, servingDebug["addr"], writingDebug["addr"],
-		"nor can their debug listeners, which is the same failure one port over")
+	debug, _ := http["debug"].(map[string]any)
+	assert.NotEqual(t, debug["addr"], write["addr"],
+		"nor can the write listener take the debug port, which is the same failure one port over")
 }
 
-// TestTheWriteEndpointNeverProxies is the circle this closes, and the reason there are two instances.
+// TestTheCacheKeepsProxyingWhileTheWriteEndpointExists is the circle this closes.
 //
 // A registry configured as a pull-through cache is read-only: docker distribution answers every write
 // with UNSUPPORTED. Measured on a cluster: `d8 mirror push` failed on POST /v2/.../blobs/uploads/.
 // Publication therefore used to turn the proxy off — which confined it to air-gap and made the cache
 // stop caching exactly when the cluster still depended on it.
 //
-// Now the push goes to a separate instance over the same data directory: that one never proxies, and
-// the serving one proxies whenever there is an upstream, air-gap window included.
-func TestTheWriteEndpointNeverProxies(t *testing.T) {
+// Now the push arrives on a second listener of the same registry, which never proxies (the registry's
+// own tests cover that), so the serving half keeps its cache whenever there is an upstream — air-gap
+// transition window included.
+func TestTheCacheKeepsProxyingWhileTheWriteEndpointExists(t *testing.T) {
 	upstream := &registryv1alpha1.Upstream{
 		Endpoint: registryv1alpha1.Endpoint{
 			Scheme: registryv1alpha1.SchemeHTTPS, Host: "registry.deckhouse.io", Path: "/deckhouse/ee",
@@ -315,52 +297,65 @@ func TestTheWriteEndpointNeverProxies(t *testing.T) {
 	caching := renderToMap(t, &registryv1alpha1.RegistryStorageSpec{Upstream: upstream})
 	assert.Contains(t, caching, "proxy", "a cache with an upstream must serve misses from it")
 
-	// Publication no longer changes that: the serving instance keeps its proxy even once air-gap has
-	// been asked for and the endpoint is up, because the push lands somewhere else entirely.
+	// Publication no longer changes that: the push lands on the other listener.
 	published := renderToMap(t, &registryv1alpha1.RegistryStorageSpec{
 		Upstream: upstream, Publish: true, AirGapRequested: true,
 	})
 	assert.Contains(t, published, "proxy",
-		"publishing must not stop the cache serving misses; the push has its own instance")
+		"publishing must not stop the cache serving misses; the push has a listener of its own")
+	assert.Contains(t, published, "writeendpoint",
+		"and that listener has to be configured for the push to arrive anywhere")
 
-	// And that instance never proxies, which is what makes it writable.
-	writing := renderWriteEndpoint(t, &registryv1alpha1.RegistryStorageSpec{Upstream: upstream, Publish: true})
-	writingProxy, _ := writing["proxy"].(map[string]any)
-	assert.NotContains(t, writingProxy, "remoteurl",
-		"a registry that proxies cannot be pushed to, and this is the instance a push arrives at")
-	// And the one that used to delete the store on every start, which is why the flag matters most
-	// here: it never proxies, so it always looked like a mode change.
-	assert.Equal(t, true, writingProxy["skipmodecleanup"],
-		"the write instance shares the store with the serving one and must not wipe it")
+	// Whatever the mode, the store is never wiped because the registry decided the mode changed.
+	proxy, _ := published["proxy"].(map[string]any)
+	assert.Equal(t, true, proxy["skipmodecleanup"],
+		"this is the flag whose absence deleted twelve gigabytes two seconds after a start")
 }
 
-// TestRenderPublicationRequiresAClientCertificate covers the write path. It is the
-// one path that can replace an image, and it is reachable from outside the cluster,
-// so credentials alone must not be enough to use it.
-func TestRenderPublicationRequiresAClientCertificate(t *testing.T) {
-	config := renderWriteEndpoint(t, &registryv1alpha1.RegistryStorageSpec{Publish: true})
-
-	http, _ := config["http"].(map[string]any)
-	realip, ok := http["realip"].(map[string]any)
-	require.True(t, ok, "the write path must be gated on a client certificate")
-	assert.Equal(t, true, realip["enabled"])
-
-	clientcert, _ := realip["clientcert"].(map[string]any)
-	assert.Equal(t, IngressClientCAFile, clientcert["ca"])
-}
-
-// TestTheServingInstanceHasNoWritePath keeps the client-certificate trust off the instance the cluster
-// pulls through, whether or not anything is published.
+// TestTheWriteListenerTrustsTheIngressAuthority covers the one path reachable from outside the
+// cluster.
 //
-// It is not the endpoint, so trusting the ingress authority there would be surface for nothing — and
-// worse, it would make the two instances look interchangeable when only one of them may be written to.
-func TestTheServingInstanceHasNoWritePath(t *testing.T) {
+// What the client certificate decides is whose word about the real client address is taken: without it
+// every push would appear to come from the ingress controller. It is not what admits the push — that
+// is the token service and its ACL, the same for both listeners.
+func TestTheWriteListenerTrustsTheIngressAuthority(t *testing.T) {
+	config := renderToMap(t, &registryv1alpha1.RegistryStorageSpec{Publish: true})
+
+	write, ok := config["writeendpoint"].(map[string]any)
+	require.True(t, ok, "there is no write listener to reach through the ingress")
+	assert.Equal(t, IngressClientCAFile, write["clientcertca"])
+}
+
+// TestTheWriteEndpointIsAlwaysConfigured, because the syncer fills the store through it too.
+//
+// Filling through the serving address fills nothing, silently: before uploading a layer the client
+// asks whether the destination already holds it, the cache answers yes by fetching it from the
+// upstream, and the store is left with manifests naming blobs it does not have. Measured: 400 layers
+// reported written, the store unchanged at 333 MB. So the listener exists on every replica, whether or
+// not anything is published from outside.
+func TestTheWriteEndpointIsAlwaysConfigured(t *testing.T) {
+	for _, published := range []bool{false, true} {
+		config := renderToMap(t, &registryv1alpha1.RegistryStorageSpec{Publish: published})
+
+		write, ok := config["writeendpoint"].(map[string]any)
+		require.True(t, ok, "no write listener, published=%v", published)
+		assert.Contains(t, write["addr"], ":5003", "published=%v", published)
+	}
+}
+
+// TestTheServingListenerDoesNotTrustProxyHeaders keeps the ingress authority off the address the
+// cluster pulls through.
+//
+// Only one listener is fronted by an ingress, and the registry gives that one its own trust in
+// process. Trusting a forwarded client address on the other would be surface for nothing: nothing
+// forwards to it, so anything claiming to would be lying.
+func TestTheServingListenerDoesNotTrustProxyHeaders(t *testing.T) {
 	for _, published := range []bool{false, true} {
 		config := renderToMap(t, &registryv1alpha1.RegistryStorageSpec{Publish: published})
 
 		http, _ := config["http"].(map[string]any)
 		assert.NotContains(t, http, "realip",
-			"the serving instance is never the write path, published=%v", published)
+			"the serving listener is not the one behind the ingress, published=%v", published)
 	}
 }
 

@@ -3,29 +3,32 @@
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
 fromImage: common/src-artifact
 final: false
+# The source lives in this repository now, under `src/`, rather than being cloned from a fork and patched
+# at build time.
+#
+# What that clone cost: two changes carried as build steps rather than as code — `patches/*.patch`, whose
+# context had to match the fork byte for byte (including a Cyrillic letter in a typo upstream, which this
+# repository's own validation then refused), and `no-proxy-expiry.sh`, which rewrote two methods with awk
+# and left their bodies unreachable behind an early return. Both are ordinary source edits here, readable
+# and reviewable, and the fork is no longer a dependency of the build.
+#
+# `vendor/` is not carried: this module's other images build from `go.mod` with GOPROXY, and one style is
+# better than two.
 git:
   - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
     to: /src/scripts
     stageDependencies:
       install:
         - '**/*'
-  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-    to: /patches
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+    to: /src/distribution
     stageDependencies:
       install:
         - '**/*'
-secrets:
-  - id: SOURCE_REPO
-    value: "{{ $.SOURCE_REPO }}"
 shell:
   install:
     - mkdir -m 1777 /src/tmp
     - chmod +x /src/scripts/*
-    - git config --global advice.detachedHead false
-    - git clone --depth 1 --single-branch --branch {{ $version }} $(cat /run/secrets/SOURCE_REPO)/deckhouse/3p-distribution.git /src/distribution
-    - /src/scripts/no-proxy-expiry.sh /src/distribution
-    - cd /src/distribution && git apply /patches/*.patch --verbose
-    - rm -rf /src/distribution/.git
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
 from: {{ index $.Images "builder/golang" }}
@@ -46,9 +49,10 @@ shell:
     - export GOARCH=amd64
     - export CGO_ENABLED=0
     - cd /src/distribution
-    - make build
-    - make binaries
-    - chmod +x ./registry
+    # `make binaries` builds the one command the image runs. The version is passed in because the tree
+    # is a directory in this repository, not a checkout of the upstream one, so `git describe` finds
+    # nothing here.
+    - make binaries VERSION={{ $version }}
     - mv ./bin/registry /registry
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}"

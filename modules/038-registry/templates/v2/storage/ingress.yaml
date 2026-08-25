@@ -10,10 +10,11 @@ for air-gap drops the upstream — so a bundle could never be in the store BEFOR
 transition it is meant to make safe. It also left an operator no way to put their own
 modules into an ordinary cluster's store.
 
-What makes this affordable now is that the push lands on a SECOND distribution instance
-over the same data directory (see statefulset.yaml), so the cache is not turned off to
-accept a write. The endpoint demands a client certificate from the ingress authority on
-top of credentials, because it is the one path that can REPLACE an image.
+What makes this affordable now is that the push lands on the registry's write listener —
+the same process and the same store, served without the cache in front of it (see
+statefulset.yaml) — so accepting a write no longer means turning the cache off. The
+ingress presents a client certificate from the module's authority, which is how the
+registry knows the real client address behind it rather than the controller's.
 
 Waits for cert-manager, the same way the previous implementation's ingress does. Not a
 statement about needing certificates: this module has weight 38 and cert-manager has 101,
@@ -43,7 +44,7 @@ spec:
   - name: registry-push
     port: 5001
     protocol: TCP
-    # The write instance, not the one the cluster pulls through — that one proxies, and a proxying
+    # The write listener, not the one the cluster pulls through — that one proxies, and a proxying
     # registry answers every write with UNSUPPORTED.
     targetPort: registry-push
 ---
@@ -55,8 +56,9 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "registry-storage")) | nindent 2 }}
   annotations:
     nginx.ingress.kubernetes.io/backend-protocol: HTTPS
-    # The storage requires a client certificate on this path, so a leaked password
-    # alone cannot be used to replace an image.
+    # The client certificate the storage trusts on this path: what it decides is whose word about
+    # the client's address is taken. What admits a push is the token service and its ACL, where the
+    # write credentials are separate from the read ones.
     nginx.ingress.kubernetes.io/proxy-ssl-secret: "d8-system/registry-storage-ingress-client"
     nginx.ingress.kubernetes.io/proxy-ssl-verify: "off"
     # An image layer has no meaningful size limit, and the default would reject the

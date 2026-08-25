@@ -37,6 +37,12 @@ var CELicenseRe = regexp.MustCompile(`(?s)[/#{!-]*(\s)*Copyright 202[1-9] Flant 
 [/#{!-]*(\s)*limitations under the License.[-!}\n]*`)
 
 var fileToCheckRe = regexp.MustCompile(`\.go$|/[^/.]+$|\.sh$|\.lua$|\.py$|^\.github/(scripts|workflows|workflow_templates)/.+\.(js|yml|yaml|sh)$`)
+
+// Third-party source kept in this repository rather than cloned at build time. It is covered by the
+// LICENSE file that sits beside it, carries no per-file headers upstream, and adding some would make
+// every future version bump a diff against text this repository wrote.
+var vendoredSourceRe = regexp.MustCompile(`modules/038-registry/images/docker-distribution/src/`)
+
 var fileToSkipRe = regexp.MustCompile(`geohash.lua$|\.github/CODEOWNERS|Dockerfile$|Makefile$|/docs/documentation/|/docs/site/|bashrc$|inputrc$|modules_menu_skip$|LICENSE$|tools/docs/spelling/.+`)
 
 func RunCopyrightValidation(info *DiffInfo) (exitCode int) {
@@ -56,7 +62,7 @@ func RunCopyrightValidation(info *DiffInfo) (exitCode int) {
 
 		fileName := fileInfo.NewFileName
 
-		if fileToCheckRe.MatchString(fileName) && !fileToSkipRe.MatchString(fileName) {
+		if fileToCheckRe.MatchString(fileName) && !fileToSkipRe.MatchString(fileName) && !vendoredSourceRe.MatchString(fileName) {
 			msgs.Add(checkFileCopyright(fileName))
 		} else {
 			msgs.Add(NewSkip(fileName, ""))

@@ -70,10 +70,10 @@ type Loop struct {
 	// catalogue read and as the destination of a fill.
 	LocalAddress string
 
-	// WriteAddress is where the NON-PROXYING instance of this replica's registry answers.
+	// WriteAddress is where the NON-PROXYING listener of this replica's registry answers.
 	//
 	// Its own field rather than the serving address with the port swapped, so that a test can point a
-	// loop at one registry and a deployment can point it at the instance beside the serving one.
+	// loop at one registry and a deployment can point it at the other listener of its own.
 	// Empty falls back to the serving address with the write endpoint's port, which is what the
 	// storage pod always looks like.
 	WriteAddress string
@@ -1016,7 +1016,7 @@ func (l *Loop) localRegistry() (fill.Registry, error) {
 	}, nil
 }
 
-// writeRegistry is the same store, addressed through the instance that does NOT proxy.
+// writeRegistry is the same store, addressed through the listener that does NOT proxy.
 //
 // Filling through the serving instance does not fill anything, and the way it fails is silent. Before
 // uploading a layer the client asks the destination whether it already holds that blob; the serving
@@ -1031,10 +1031,11 @@ func (l *Loop) localRegistry() (fill.Registry, error) {
 // endpoint from outside — which is why installations from a bundle always had a real store and
 // self-filling never did.
 //
-// The second instance exists already, for publication, over the same data directory: it never proxies
-// and it answers on WriteEndpointPort. Its client certificate requirement is about trusting the
-// address a request claims to come from, not about admission — it answers an unauthenticated request
-// with 401, the same as the serving one — so the credentials this replica already holds are enough.
+// The registry serves that listener itself, on WriteEndpointPort, from the same process and the same
+// storage with no proxy in front of it — it used to be a second container over the same data
+// directory. Its client certificate is about trusting the address a request claims to come from, not
+// about admission: it answers an unauthenticated request with 401, the same as the serving listener,
+// so the credentials this replica already holds are enough.
 func (l *Loop) writeRegistry() (fill.Registry, error) {
 	registry, err := l.localRegistry()
 	if err != nil {

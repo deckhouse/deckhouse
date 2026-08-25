@@ -131,28 +131,23 @@ func buildScheme() (*runtime.Scheme, error) {
 
 func main() {
 	var (
-		configPath      string
-		writeConfigPath string
-		upstreamCAPath  string
-		listenAddress   string
-		metricsAddress  string
-		localAddress    string
-		nodeName        string
-		namespace       string
-		leaseName       string
-		gcLeaseName     string
-		registryBinary  string
-		processName     string
-		interval        time.Duration
-		logLevel        string
+		configPath     string
+		upstreamCAPath string
+		listenAddress  string
+		metricsAddress string
+		localAddress   string
+		nodeName       string
+		namespace      string
+		leaseName      string
+		gcLeaseName    string
+		registryBinary string
+		processName    string
+		interval       time.Duration
+		logLevel       string
 	)
 
 	flag.StringVar(&configPath, "config-path", "/config/config.yaml",
 		"Where the registry configuration is written.")
-	// Empty by default, so a syncer running beside an older pod template — one without the second
-	// container — configures nothing that has no reader.
-	flag.StringVar(&writeConfigPath, "write-config-path", "",
-		"Where the configuration of the write endpoint instance is written. Empty means there is none.")
 	flag.StringVar(&upstreamCAPath, "upstream-ca-path", distribution.UpstreamCAFile,
 		"Where the certificate authority of the upstream is written.")
 	flag.StringVar(&gcLeaseName, "gc-lease-name", "registry-storage-gc",
@@ -199,19 +194,18 @@ func main() {
 	ctx := signalContext()
 
 	if err := serve(ctx, log, options{
-		configPath:      configPath,
-		writeConfigPath: writeConfigPath,
-		upstreamCAPath:  upstreamCAPath,
-		listenAddress:   listenAddress,
-		metricsAddress:  metricsAddress,
-		localAddress:    localAddress,
-		nodeName:        nodeName,
-		namespace:       namespace,
-		leaseName:       leaseName,
-		gcLeaseName:     gcLeaseName,
-		registryBinary:  registryBinary,
-		processName:     processName,
-		interval:        interval,
+		configPath:     configPath,
+		upstreamCAPath: upstreamCAPath,
+		listenAddress:  listenAddress,
+		metricsAddress: metricsAddress,
+		localAddress:   localAddress,
+		nodeName:       nodeName,
+		namespace:      namespace,
+		leaseName:      leaseName,
+		gcLeaseName:    gcLeaseName,
+		registryBinary: registryBinary,
+		processName:    processName,
+		interval:       interval,
 	}); err != nil {
 		log.Error("the syncer stopped", "error", err.Error())
 		os.Exit(1)
@@ -219,19 +213,18 @@ func main() {
 }
 
 type options struct {
-	configPath      string
-	writeConfigPath string
-	upstreamCAPath  string
-	listenAddress   string
-	metricsAddress  string
-	localAddress    string
-	nodeName        string
-	namespace       string
-	leaseName       string
-	gcLeaseName     string
-	registryBinary  string
-	processName     string
-	interval        time.Duration
+	configPath     string
+	upstreamCAPath string
+	listenAddress  string
+	metricsAddress string
+	localAddress   string
+	nodeName       string
+	namespace      string
+	leaseName      string
+	gcLeaseName    string
+	registryBinary string
+	processName    string
+	interval       time.Duration
 }
 
 func serve(ctx context.Context, log *slog.Logger, opts options) error {
@@ -259,10 +252,9 @@ func serve(ctx context.Context, log *slog.Logger, opts options) error {
 		Namespace: opts.namespace,
 		Node:      opts.nodeName,
 		Applier: &distribution.Applier{
-			ConfigPath:      opts.configPath,
-			WriteConfigPath: opts.writeConfigPath,
-			UpstreamCAPath:  opts.upstreamCAPath,
-			Restarter:       &distribution.SignalRestarter{ProcessName: opts.processName},
+			ConfigPath:     opts.configPath,
+			UpstreamCAPath: opts.upstreamCAPath,
+			Restarter:      &distribution.SignalRestarter{ProcessName: opts.processName},
 			Options: distribution.Options{
 				ListenAddress: opts.listenAddress,
 				HTTPSecret:    os.Getenv("REGISTRY_HTTP_SECRET"),
@@ -279,10 +271,10 @@ func serve(ctx context.Context, log *slog.Logger, opts options) error {
 		// The loopback address for talking to itself, and the node address for the
 		// neighbours: a replica replicating from this one comes in over the host port.
 		LocalAddress: opts.localAddress,
-		// And where to WRITE, which is a different instance of the same registry over the same data
-		// directory: the serving one is a pull-through cache, and filling through a cache fills
-		// nothing — it answers "already have that blob" by fetching it from the upstream, so the
-		// layers are never uploaded. See Loop.writeRegistry.
+		// And where to WRITE, which is another port of the same registry: the serving one is a
+		// pull-through cache, and filling through a cache fills nothing — it answers "already have
+		// that blob" by fetching it from the upstream, so the layers are never uploaded. See
+		// Loop.writeRegistry.
 		WriteAddress: fmt.Sprintf("%s:%d", opts.listenAddress, distribution.WriteEndpointPort),
 		// The store the replica serves, counted from disk when completeness has to be read
 		// rather than derived from what a fill wrote.

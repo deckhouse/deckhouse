@@ -207,7 +207,7 @@ spec:
                   description: |
                     Whether to expose an authenticated write endpoint (Ingress) for `d8 mirror push`.
 
-                    Write credentials are separate from read credentials. The endpoint is a separate distribution instance over the same data directory, so publishing it costs the serving instance nothing — one instance cannot both proxy an upstream and accept a push.
+                    Write credentials are separate from read credentials. The endpoint is a second listener of the same registry, served without the cache in front of the store, so publishing it costs the address the cluster pulls through nothing — one listener cannot both proxy an upstream and accept a push.
                 airGapRequested:
                   type: boolean
                   description: |

@@ -1,0 +1,42 @@
+# Lint configuration for the vendored copy of docker distribution.
+#
+# Its own file, and deliberately not the repository's: this is third-party source with its own
+# conventions, kept close to upstream so that a version bump stays a readable diff. Linting it to this
+# repository's standards would report hundreds of findings nobody is going to act on, and would fail
+# the pipeline on any change made here.
+#
+# The upstream project's own configuration was in golangci-lint v1 format, which the linter in this
+# repository refuses to load at all.
+#
+# What is kept is the part that catches real defects rather than style: vet, unused code, unused
+# assignments. Anything added here on top of upstream is expected to pass them. Staticcheck is off
+# because upstream carries dozens of deprecation findings (io/ioutil, renamed reference constants)
+# that belong to a version bump, not to a change made here.
+version: "2"
+
+run:
+  timeout: 10m
+
+linters:
+  default: none
+  enable:
+    - govet
+    - ineffassign
+    - unused
+
+  settings:
+    govet:
+      disable:
+        # Reports that a call cannot be inlined because the standard library the linter was built
+        # against is newer than the toolchain this module pins. That is a fact about the two versions,
+        # not about this code, and every finding it produces here is `io/ioutil` in upstream files.
+        - inline
+
+  exclusions:
+    rules:
+      # Upstream's tests format assertions from variables throughout, and the parts of upstream that
+      # predate the linters are not being rewritten here.
+      - path: _test\.go$
+        linters:
+          - govet
+        text: non-constant format string

@@ -114,49 +114,25 @@ type Options struct {
 	// — and a miss simply becomes a pull from the upstream, which the agent already falls
 	// back to.
 	ReadOnly bool
-
-	// WriteEndpoint renders the configuration for the SECOND instance — the one behind the ingress
-	// that `d8 mirror push` writes to — rather than for the one the cluster pulls through.
-	//
-	// Two instances over one data directory, because a single one cannot be both: docker distribution
-	// refuses every write when it is configured as a pull-through cache (`POST /v2/.../blobs/uploads/`
-	// answered `UNSUPPORTED`, measured). Publishing through the serving instance therefore meant
-	// turning its cache off, which is why publication used to exist only in air-gap, and why the
-	// bundle could never be pushed BEFORE the transition it was supposed to make safe.
-	//
-	// The difference is exactly two things: this one never proxies, and it demands a client
-	// certificate. Everything else — storage path, authentication, the token service — is identical,
-	// and identical on purpose: they are the same registry, seen from two sides.
-	WriteEndpoint bool
 }
 
-// The ports of the write endpoint instance.
+// WriteEndpointPort is the second address of the same registry: the one that accepts a push.
 //
-// Distinct from the serving instance's, and that is not a formality: the storage pod is host-networked,
-// so these are ports on the NODE. Two instances asking for the same one means whichever starts second
-// dies with `address already in use`, which is how the bundle host's own registry announced the same
-// mistake earlier — `listen tcp 127.0.0.1:5511: bind: address already in use`.
-const (
-	// WriteEndpointPort is where the instance behind the ingress listens.
-	WriteEndpointPort = 5003
+// A pull-through cache refuses every write (`POST /v2/.../blobs/uploads/` answered `UNSUPPORTED`,
+// measured), and turning the cache off to accept one is not available either — the store is filled BY
+// pushes while it still has an upstream to serve the cluster from. So the writes get their own
+// listener, which the registry serves from the same process over the same storage with no proxy in
+// front of it.
+//
+// A different port from the serving one, necessarily: the storage pod is host-networked, so these are
+// ports on the NODE, and two listeners in one process cannot share one. It used to be a second
+// container over the same data directory, with its own rendered configuration and a store-wide flag
+// keeping each instance from deleting the other's data at startup.
+const WriteEndpointPort = 5003
 
-	// writeEndpointDebugAddress is its debug and metrics listener, on loopback like the other one.
-	writeEndpointDebugAddress = "127.0.0.1:5004"
-)
-
-func listenPort(opts Options) int {
-	if opts.WriteEndpoint {
-		return WriteEndpointPort
-	}
-	return constant.Port
-}
-
-func debugAddress(opts Options) string {
-	if opts.WriteEndpoint {
-		return writeEndpointDebugAddress
-	}
-	return "127.0.0.1:5002"
-}
+// debugAddress is the metrics and pprof listener, on loopback. Only the serving half has one: the
+// write endpoint is the same process, and its metrics namespace is the same namespace.
+const debugAddress = "127.0.0.1:5002"
 
 // Render turns the desired storage state into a registry configuration.
 //
@@ -191,11 +167,11 @@ func Render(spec *registryv1alpha1.RegistryStorageSpec, opts Options) ([]byte, e
 			},
 		},
 		"http": map[string]any{
-			"addr":   fmt.Sprintf("%s:%d", opts.ListenAddress, listenPort(opts)),
+			"addr":   fmt.Sprintf("%s:%d", opts.ListenAddress, constant.Port),
 			"prefix": "/",
 			"secret": opts.HTTPSecret,
 			"debug": map[string]any{
-				"addr": debugAddress(opts),
+				"addr": debugAddress,
 				"prometheus": map[string]any{
 					"enabled": true,
 					"path":    "/metrics",
@@ -250,14 +226,11 @@ func Render(spec *registryv1alpha1.RegistryStorageSpec, opts Options) ([]byte, e
 	// a miss served from the upstream; the node keeps that anyway, because its own
 	// layout carries the upstream as a fallback backend until the transition
 	// completes. And filling does not need it either: the syncer fills by writing.
-	// Which instance this is, not whether anything is published: the write endpoint is its own
-	// process now, so the serving instance goes on proxying whenever there is an upstream to proxy —
-	// including inside the air-gap transition window, where the cache is exactly what keeps the
-	// cluster working while the bundle arrives.
-	if !opts.WriteEndpoint {
-		if proxy := renderProxy(spec.Upstream); proxy != nil {
-			config["proxy"] = proxy
-		}
+	// Rendered whenever there is an upstream to proxy, including inside the air-gap transition window:
+	// the cache is what keeps the cluster working while the bundle arrives, and the push that brings
+	// the bundle lands on the write endpoint, which never proxies.
+	if proxy := renderProxy(spec.Upstream); proxy != nil {
+		config["proxy"] = proxy
 	}
 
 	// Whatever the mode, this store is never wiped because the mode changed.
@@ -276,21 +249,20 @@ func Render(spec *registryv1alpha1.RegistryStorageSpec, opts Options) ([]byte, e
 	// change is the scheduler's own state, and that is deleted either way.
 	setSkipModeCleanup(config)
 
-	if opts.WriteEndpoint {
-		// The publication endpoint is reachable from outside the cluster, so the
-		// registry requires a client certificate from the authority the ingress
-		// presents. Credentials alone would not be enough: this is the one path that
-		// can REPLACE an image, and a leaked password must not be sufficient to use it.
-		//
-		// It doubles as the real client address, without which every write would look
-		// as if it came from the ingress controller.
-		http, _ := config["http"].(map[string]any)
-		http["realip"] = map[string]any{
-			"enabled": true,
-			"clientcert": map[string]any{
-				"ca": IngressClientCAFile,
-			},
-		}
+	// The write endpoint, on its own port of this same registry.
+	//
+	// Always, not only where something is published: the syncer fills the store through it as well.
+	// Filling through the serving address fills nothing and fails silently — before uploading a layer
+	// the client asks whether the destination already holds it, and a cache answers yes by fetching it
+	// from the upstream, so the upload is skipped and the store is left with manifests naming blobs it
+	// does not have (measured: 400 layers "written", the store unchanged at 333 MB).
+	//
+	// The client certificate authority is the ingress's: this is the half an ingress fronts, and
+	// without it every write would appear to come from the ingress controller rather than from the
+	// operator who sent it.
+	config["writeendpoint"] = map[string]any{
+		"addr":         fmt.Sprintf("%s:%d", opts.ListenAddress, WriteEndpointPort),
+		"clientcertca": IngressClientCAFile,
 	}
 
 	rendered, err := yaml.Marshal(config)

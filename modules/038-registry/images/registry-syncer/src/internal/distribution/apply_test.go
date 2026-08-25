@@ -66,53 +66,58 @@ func upstreamSpec(host, ca string) *registryv1alpha1.RegistryStorageSpec {
 	return spec
 }
 
-// TestApplyConfiguresBothInstances covers the pair: the one the cluster pulls through, and the one a
-// push arrives at. Both are rendered from the same spec, so they cannot drift on authentication or on
-// where the blobs live — and exactly one of them proxies, which is what makes the other writable.
-func TestApplyConfiguresBothInstances(t *testing.T) {
+// TestApplyWritesOneConfigurationForBothHalves covers what used to be two files for two containers.
+//
+// The write endpoint is a second listener of the same process, derived from this same file, so the two
+// halves cannot drift on authentication, on where the blobs live, or on the read-only flag a garbage
+// collection sets — there is only one of each to get right.
+func TestApplyWritesOneConfigurationForBothHalves(t *testing.T) {
 	applier := newApplier(t, &countingRestarter{})
-	applier.WriteConfigPath = filepath.Join(t.TempDir(), "config-push", "config.yaml")
 
 	_, err := applier.Apply(upstreamSpec("registry.deckhouse.io", ""))
 	require.NoError(t, err)
 
+	raw, err := os.ReadFile(applier.ConfigPath)
+	require.NoError(t, err)
+	var config map[string]any
+	require.NoError(t, yaml.Unmarshal(raw, &config))
+
 	// Parsed rather than grepped: "proxy" also appears under `auth.token.proxy`, which is how the
 	// registry reaches the token service beside it. A substring check passes on that and says nothing
-	// about pull-through — it failed this test into a false negative on the first run.
-	readConfig := func(path string) map[string]any {
-		raw, err := os.ReadFile(path)
-		require.NoError(t, err)
-		var parsed map[string]any
-		require.NoError(t, yaml.Unmarshal(raw, &parsed))
-		return parsed
-	}
+	// about pull-through — it failed this test into a false negative once.
+	assert.Contains(t, config, "proxy",
+		"the serving listener caches misses from the upstream")
 
-	serving := readConfig(applier.ConfigPath)
-	assert.Contains(t, serving, "proxy",
-		"the serving instance caches misses from the upstream")
+	write, ok := config["writeendpoint"].(map[string]any)
+	require.True(t, ok, "there is nowhere for a push to land")
+	assert.NotEmpty(t, write["addr"])
 
-	writing := readConfig(applier.WriteConfigPath)
-	writingProxy, _ := writing["proxy"].(map[string]any)
-	assert.NotContains(t, writingProxy, "remoteurl",
-		"a proxying registry refuses every write, which is why the push has an instance of its own")
-	assert.Equal(t, true, writingProxy["skipmodecleanup"],
-		"this is the instance that used to delete the store every time it started")
-
-	// Both keep the same authentication and the same blob directory: they are one registry seen from
-	// two sides, and a difference there would let a push land somewhere the cluster does not read.
-	assert.Equal(t, serving["auth"], writing["auth"], "the two instances authenticate identically")
-	assert.Equal(t, serving["storage"], writing["storage"], "the two instances share the blob directory")
+	http, _ := config["http"].(map[string]any)
+	assert.NotEqual(t, http["addr"], write["addr"],
+		"two listeners in one process cannot share an address")
 }
 
-// TestApplyWithoutASecondInstanceWritesNothingExtra keeps a syncer working beside an older pod
-// template, where there is no second container to read that file.
-func TestApplyWithoutASecondInstanceWritesNothingExtra(t *testing.T) {
+// The read-only window a garbage collection opens covers the write endpoint too, because they are one
+// registry: the collection computes the reachable set and then deletes the rest, so a push landing
+// between those two steps loses its blobs. This used to need the flag written into a second file, and
+// an instance that missed it reintroduced exactly the corruption the window prevents.
+func TestApplyReadOnlyCoversTheWriteEndpoint(t *testing.T) {
 	applier := newApplier(t, &countingRestarter{})
-	require.Empty(t, applier.WriteConfigPath)
 
-	changed, err := applier.Apply(upstreamSpec("registry.deckhouse.io", ""))
+	_, err := applier.ApplyReadOnly(upstreamSpec("registry.deckhouse.io", ""))
 	require.NoError(t, err)
-	assert.True(t, changed)
+
+	raw, err := os.ReadFile(applier.ConfigPath)
+	require.NoError(t, err)
+	var config map[string]any
+	require.NoError(t, yaml.Unmarshal(raw, &config))
+
+	storage, _ := config["storage"].(map[string]any)
+	maintenance, _ := storage["maintenance"].(map[string]any)
+	readonly, _ := maintenance["readonly"].(map[string]any)
+	assert.Equal(t, true, readonly["enabled"])
+	require.Contains(t, config, "writeendpoint",
+		"the write listener reads this same file, which is what makes the window cover it")
 }
 
 func TestApplyWritesAndRestarts(t *testing.T) {

@@ -498,39 +498,42 @@ var _ = Describe("Module :: registry :: helm template :: v2 storage", func() {
 	Context("discriminator on", func() {
 		BeforeEach(func() { renderWith(v2Enabled) })
 
-		// The write endpoint's configuration is written by one container and read by another, so both have
-		// to mount the directory it lives in. Only the reader mounted it at first, and the failure was
-		// one-sided in the worst way: the reader crash-looped waiting for a file nobody could put there,
-		// eight restarts deep, while every other container in the pod reported ready — and it took a
-		// bootstrap down with it on `ly-cache`.
-		It("mounts the write endpoint's config directory in both the writer and the reader", func() {
+		// One registry, two listeners: the address the cluster pulls through and the address a push
+		// lands on. It used to be two containers over one data directory, which needed two rendered
+		// configurations that must not be swapped — and the first attempt mounted the second one in the
+		// reader only, so that container crash-looped waiting for a file nobody could put there, eight
+		// restarts deep, while every other container in the pod reported ready. It took a bootstrap down
+		// with it on `ly-cache`.
+		It("serves the write endpoint from the same container as the cache", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 			set := f.KubernetesResource("StatefulSet", "d8-system", "registry-storage")
 			Expect(set.Exists()).To(BeTrue())
 
-			mountsOf := func(container string) []string {
-				var paths []string
-				for _, c := range set.Field("spec.template.spec.containers").Array() {
-					if c.Get("name").String() != container {
-						continue
-					}
-					for _, m := range c.Get("volumeMounts").Array() {
-						if m.Get("name").String() == "config-push" {
-							paths = append(paths, m.Get("mountPath").String())
-						}
-					}
+			var ports []string
+			var mounts []string
+			for _, c := range set.Field("spec.template.spec.containers").Array() {
+				if c.Get("name").String() != "distribution" {
+					continue
 				}
-				return paths
+				for _, port := range c.Get("ports").Array() {
+					ports = append(ports, port.Get("name").String())
+				}
+				for _, mount := range c.Get("volumeMounts").Array() {
+					mounts = append(mounts, mount.Get("mountPath").String())
+				}
 			}
 
-			reader := mountsOf("distribution-push")
-			writer := mountsOf("syncer")
+			Expect(ports).To(ConsistOf("registry", "registry-push"),
+				"the cache and the write endpoint are two listeners of one process")
+			Expect(mounts).To(ContainElement("/config"),
+				"and they are configured by one file, so neither can drift from the other")
 
-			Expect(reader).ToNot(BeEmpty(), "the write endpoint reads its configuration from this volume")
-			Expect(writer).ToNot(BeEmpty(), "and the syncer is what renders that configuration")
-			Expect(writer).To(Equal(reader),
-				"at the same path, or the syncer writes where nothing reads")
+			// Nothing left of the second container: a stale volume would be a directory nobody writes
+			// and a reader nobody starts.
+			for _, volume := range set.Field("spec.template.spec.volumes").Array() {
+				Expect(volume.Get("name").String()).ToNot(Equal("config-push"))
+			}
 		})
 
 		It("renders the storage on the master nodes", func() {
@@ -552,10 +555,10 @@ var _ = Describe("Module :: registry :: helm template :: v2 storage", func() {
 			for _, container := range containers {
 				names = append(names, container.Get("name").String())
 			}
-			// Two registries over one data directory: the one the cluster pulls through, and the write
-			// endpoint a `d8 mirror push` lands on. One instance cannot be both — a pull-through cache
-			// answers every write with UNSUPPORTED.
-			Expect(names).To(ConsistOf("distribution", "distribution-push", "auth", "kube-rbac-proxy", "syncer"))
+			// One registry container. The write endpoint a `d8 mirror push` lands on is a second listener
+			// of that same process: a pull-through cache answers every write with UNSUPPORTED, so the
+			// writes need a non-proxying view of the store, and the registry serves one itself.
+			Expect(names).To(ConsistOf("distribution", "auth", "kube-rbac-proxy", "syncer"))
 
 			// One replica per node, since each owns the store on its own host.
 			Expect(set.Field("spec.template.spec.affinity.podAntiAffinity").String()).
@@ -745,7 +748,7 @@ var _ = Describe("Module :: registry :: helm template :: v2 publication endpoint
 			// Published on every managed cluster now. Gating it on air-gap made the documented order
 			// unwalkable — a push needs this endpoint, the endpoint needed air-gap, and air-gap drops
 			// the upstream — so a bundle could never reach the store before the transition it is meant
-			// to make safe. It costs the cache nothing because the push lands on a second instance.
+			// to make safe. It costs the cache nothing because the push lands on the other listener.
 			Expect(f.KubernetesResource("Ingress", "d8-system", "registry-push").Exists()).To(BeTrue())
 
 			service := f.KubernetesResource("Service", "d8-system", "registry-push")

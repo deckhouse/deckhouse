@@ -57,10 +57,10 @@ var _ Restarter = (*SignalRestarter)(nil)
 
 // Restart signals every matching process.
 //
-// Every, not the one: there are two registries in this pod now — the one the cluster pulls through and
-// the write endpoint behind the ingress — and they run the same executable, so both match. That is the
-// behaviour wanted rather than a tolerated side effect: a pass rewrites both configurations from the
-// same spec, so both have to re-read.
+// Every, not the one, and it stays that way now that the registry serves both its listeners from a
+// single process: what this must not do is pick one of several matches and leave the others on a
+// configuration nobody rewrote. A pod that briefly holds an old process beside a new one is exactly
+// the case where signalling only the first would be wrong.
 func (s *SignalRestarter) Restart() error {
 	procDir := s.ProcDir
 	if procDir == "" {
