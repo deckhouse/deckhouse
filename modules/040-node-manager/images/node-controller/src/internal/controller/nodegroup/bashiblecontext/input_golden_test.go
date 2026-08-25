@@ -125,6 +125,9 @@ func newGoldenReconciler(t *testing.T) *Reconciler {
 		configMap(versionInfoCMNS, versionInfoCMName, map[string]string{
 			"data.json": `{"channel":"stable","version":"v1.70.0","edition":"EE"}`,
 		}),
+		configMap(kubeSystemNS, "d8-cluster-kubernetes", map[string]string{
+			"spec": "desiredVersion: \"1.32\"\nupdateMode: Manual\n",
+		}),
 		secret(kubeSystemNS, clusterConfigSecretName, map[string][]byte{
 			clusterConfigKey: []byte("kubernetesVersion: \"1.32\"\ndefaultCRI: Containerd\npodSubnetNodeCIDRPrefix: \"24\"\nclusterDomain: cluster.local\nproxy:\n  httpProxy: http://proxy.example.com\n  noProxy:\n  - 10.0.0.0/8\n"),
 		}),
@@ -132,11 +135,12 @@ func newGoldenReconciler(t *testing.T) *Reconciler {
 			"static-cluster-configuration.yaml": []byte("internalNetworkCIDRs:\n- 172.18.200.0/24\n"),
 		}),
 		secret(kubeSystemNS, cloudProviderSecretName, map[string][]byte{
-			"type":              []byte(`"yandex"`),
-			"instanceClassKind": []byte(`"` + instanceClassKind + `"`),
-			"machineClassKind":  []byte(`"YandexMachineClass"`),
-			"region":            []byte(`"ru-central1"`),
-			"zones":             []byte(`["ru-central1-a","ru-central1-b"]`),
+			"type":                    []byte(`"yandex"`),
+			"instanceClassKind":       []byte(`"` + instanceClassKind + `"`),
+			"instanceClassAPIVersion": []byte("v1alpha1"),
+			"machineClassKind":        []byte(`"YandexMachineClass"`),
+			"region":                  []byte(`"ru-central1"`),
+			"zones":                   []byte(`["ru-central1-a","ru-central1-b"]`),
 		}),
 		secret(cloudInstanceManagerNS, packagesProxyTokenSecretName, map[string][]byte{"token": []byte("packages-proxy-token")}),
 		secret(kubeSystemNS, apiProxyCertSecretName, map[string][]byte{"crt": []byte("PROXY-CERT"), "key": []byte("PROXY-KEY")}),

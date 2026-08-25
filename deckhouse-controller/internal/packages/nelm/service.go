@@ -27,11 +27,11 @@ import (
 	"time"
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
+	klient "github.com/flant/kube-client/client"
 	"github.com/google/uuid"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/nelm"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/health"
@@ -108,7 +108,7 @@ type Service struct {
 }
 
 // NewService creates a new nelm service for managing Helm releases.
-func NewService(cache runtimecache.Cache, callback drift.AbsentCallback, status *status.Service, logger *log.Logger) *Service {
+func NewService(kubeClient *klient.Client, callback drift.AbsentCallback, status *status.Service, logger *log.Logger) *Service {
 	nelmClient := nelm.New(logger,
 		nelm.WithResourcesLabels(map[string]string{
 			"heritage": "deckhouse",
@@ -123,7 +123,7 @@ func NewService(cache runtimecache.Cache, callback drift.AbsentCallback, status 
 		tmpDir:         os.TempDir(),
 		client:         nelmClient,
 		status:         status,
-		monitorManager: drift.New(cache, nelmClient, callback, logger),
+		monitorManager: drift.New(kubeClient, nelmClient, callback, logger),
 		logger:         logger.Named(nelmServiceTracer),
 	}
 }

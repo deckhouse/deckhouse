@@ -108,10 +108,6 @@ func LoadConfigFromFile(
 
 	metaConfig.ShowProgress = globalOptions.ShowProgress
 
-	if metaConfig.ClusterConfig == nil {
-		return nil, fmt.Errorf("ClusterConfiguration must be provided")
-	}
-
 	versionMapFile := options.DefaultVersionMap
 	if globalOptions.VersionMap != "" {
 		versionMapFile = globalOptions.VersionMap

@@ -68,7 +68,8 @@ spec:
   packageName: test-package
   packageRepositoryName: deckhouse
   packageVersion: v1.0.0
-status: {}
+status:
+  used: false
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModulePackage

@@ -382,6 +382,8 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 			ForceAdoption:           true,
 		},
 		Timeout: c.opts.Timeout,
+		// Package releases are serialized by the runtime task pipeline, so the cluster-wide release lock is redundant.
+		LegacyNoReleaseLock: true,
 	}); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("install nelm release '%s': %w", releaseName, err)
@@ -447,6 +449,15 @@ func (c *Client) Render(ctx context.Context, namespace, releaseName string, opts
 	// Combine all resources into a single YAML document with separators
 	var result strings.Builder
 	for _, resource := range res.Resources {
+		// Keep only regular release resources. Helm hooks live in the cluster just
+		// for the duration of a hook, and standalone crds/ CRDs are never applied at
+		// all because Install passes NoInstallStandaloneCRDs. Both are legitimately
+		// absent from the cluster, so they must not reach the release checksum and
+		// the absent-resources monitor.
+		if resource.StoreAs != common.StoreAsRegular {
+			continue
+		}
+
 		marshalled, err := yaml.Marshal(resource.Unstruct)
 		if err != nil {
 			span.SetStatus(codes.Error, err.Error())
@@ -495,6 +506,8 @@ func (c *Client) Delete(ctx context.Context, namespace, releaseName string) (err
 		ReleaseHistoryLimit:  int(c.opts.HistoryMax),
 		ReleaseStorageDriver: c.driver,
 		Timeout:              c.opts.Timeout,
+		// Package releases are serialized by the runtime task pipeline, so the cluster-wide release lock is redundant.
+		LegacyNoReleaseLock: true,
 	}); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("uninstall nelm release '%s': %w", releaseName, err)

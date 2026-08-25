@@ -181,7 +181,9 @@ properties:
     description: |
       Время жизни ID-токена.
 
-      Задается в виде строки с указанием часов, минут и секунд: `30m`, `20s`, `2h30m10s`, `24h`.
+      Задается в виде строки с указанием часов, минут и секунд: `30m`, `20s`, `2h30m10s`, `5h`.
+
+      Должно быть строго меньше 6 часов (ключи подписи Dex ротируются каждые 6 часов).
 
       Задаёт минимально возможное время жизни пользовательской сессии ([параметр `keepUsersLoggedInFor`](cr.html#dexauthenticator-v1-spec-keepusersloggedinfor) ресурса DexAuthenticator
       и параметры вида `auth.sessionTTL`, например, [в модуле `console`](/modules/console/configuration.html#parameters-auth-sessionttl)).

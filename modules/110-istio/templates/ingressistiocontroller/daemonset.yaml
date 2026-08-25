@@ -38,14 +38,18 @@ spec:
         proxy.istio.io/config: {{ dict "gatewayTopology" $gatewayTopology | toJson | quote }}
         {{- end }}
         {{- end }}
-      {{- include "helm_lib_module_labels" (list $ (dict
+      {{- $podLabels := dict
           "app" "ingress-gateway-controller"
           "instance" $controller.name
           "istio" "ingressgateway"
           "istio.deckhouse.io/ingress-gateway-class" $controller.spec.ingressGatewayClass
           "istio.io/dataplane-mode" "none"
           "sidecar.istio.io/inject" "false"
-      )) | nindent 6 }}
+      }}
+      {{- if eq $controller.spec.inlet "HostPort" }}
+        {{- $_ := set $podLabels "security.deckhouse.io/security-policy-exception" "ingress-gateway-controller" }}
+      {{- end }}
+      {{- include "helm_lib_module_labels" (list $ $podLabels) | nindent 6 }}
     spec:
       {{- include "helm_lib_priority_class" (tuple $ "system-cluster-critical") | nindent 6 }}
       containers:

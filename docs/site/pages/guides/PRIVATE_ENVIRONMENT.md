@@ -6,11 +6,7 @@ lang: en
 layout: sidebar-guides
 ---
 
-This guide describes how to deploy a Deckhouse Kubernetes Platform cluster in a private environment with no direct access to the DKP container image registry (`registry.deckhouse.io`) and to external deb/rpm package repositories used on nodes running [supported operating systems](../documentation/v1/reference/supported_versions.html#linux).
-
-{% alert level="warning" %}
-Note that installing DKP in a private environment is available in the following editions: SE, SE+, EE.
-{% endalert %}
+This guide describes how to deploy a Deckhouse Kubernetes Platform (DKP) cluster in a private environment with no direct access to the DKP container image registry (`registry.deckhouse.io`) and to external deb/rpm package repositories used on nodes running [supported operating systems](../documentation/v1/reference/supported_versions.html#linux).
 
 ## Private environment specifics
 
@@ -58,12 +54,14 @@ Server requirements:
 
 * **Bastion**: at least 4 CPU cores, 8 GB RAM, and 150 GB on fast storage. That much disk space is needed because the bastion host temporarily holds all DKP images used for installation. Images are downloaded from the public DKP registry to the bastion host before being pushed to the private container registry and packed into archives; these steps require substantial free space.
 * **VM for the private registry**: at least 4 CPU cores, 8 GB RAM, and at least 150 GB on fast storage for DKP images. Plan disk capacity with a margin, using the bundle size after `d8 mirror push` as a guide.
-* **Cluster nodes**: choose [resources for future cluster nodes](./hardware-requirements.html#deciding-on-the-amount-of-resources-needed-for-nodes) based on expected workload. For example, the minimum recommended configuration is 4 CPU cores, 8 GB RAM, and 60 GB on fast storage (400+ IOPS) per node.
+* **Cluster nodes**: choose [resources for future cluster nodes](./hardware-requirements.html#deciding-on-the-amount-of-resources-needed-for-nodes) based on expected workload. For example, the minimum recommended configuration is 4 CPU cores (_8 CPU cores recommended_), 8 GB RAM (_16 GB RAM recommended_), and 60 GB on fast storage (400+ IOPS) per node.
 
 ## Preparing a private container registry
 
 {% alert level="warning" %}
-DKP supports only the Bearer token authentication scheme for container registries.
+DKP supports Basic and Bearer token authentication schemes for container registries (Basic is tried first; if it fails, Bearer is used).
+
+If a reverse proxy is placed in front of the registry, it must correctly forward the Registry API v2 header `Docker-Distribution-API-Version: registry/2.0`. Otherwise the Basic check may fail, and the subsequent Bearer attempt may fail with the error `couldn't find bearer realm parameter`.
 {% endalert %}
 
 You may use any supported private container registry. Compatibility has been tested and is guaranteed for the following: [Nexus](https://github.com/sonatype/nexus-public), [Harbor](https://github.com/goharbor/harbor), [Artifactory](https://jfrog.com/artifactory/), [Docker Registry](https://docs.docker.com/registry/), and [Quay](https://quay.io/).
@@ -966,14 +964,14 @@ To connect via SSH to a server without external access, you can use the Bastion 
 
 There are two ways to connect:
 
-1. *Connect via a jump host.* Run the command:
+1. _Connect via a jump host._ Run the command:
 
    ```bash
    ssh -J ubuntu@<BASTION_IP> ubuntu@<NODE_IP>
    ```
 
    In this mode, you first connect to the Bastion host, and then connect through it to the target server using the same SSH key.
-1. *Connect with agent forwarding.* Connect to the Bastion host using:
+1. _Connect with agent forwarding._ Connect to the Bastion host using:
 
    ```bash
    ssh -A ubuntu@<BASTION_IP>

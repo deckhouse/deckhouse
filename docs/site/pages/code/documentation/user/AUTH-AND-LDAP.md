@@ -200,10 +200,10 @@ To view the full synchronization logs:
    ![Ldap sync history table](/images/code/ldap_sync_history_en.png)
 
 2. Connect to the cluster and determine the Sidekiq pod name:
-   `kubectl -n d8-code -l app.kubernetes.io/component=sidekiq get pod -o NAME`
+   `d8 k -n d8-code -l app.kubernetes.io/component=sidekiq get pod -o NAME`
 
 3. Run the log collection command, substituting the copied JID and pod name (POD_NAME):
-   `kubectl -n d8-code logs POD_NAME | jq 'select(.jid=="JID")'`
+   `d8 k -n d8-code logs POD_NAME | jq 'select(.jid=="JID")'`
 
 > Old logs are removed by rotation over time, so they may become unavailable. If needed, rerun the synchronization and collect the latest logs.
 

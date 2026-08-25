@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
+	"github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/internal/testprovider"
 )
 
 func TestDecodeCredentialSecretsNilVars(t *testing.T) {
@@ -45,7 +46,7 @@ func TestDecodeNodeGroupsNilVars(t *testing.T) {
 func TestDecodeInstanceClassesNilVars(t *testing.T) {
 	t.Parallel()
 
-	classes, err := DecodeInstanceClasses(nil)
+	classes, err := DecodeInstanceClasses[*testprovider.InstanceClass](nil)
 	if err != nil || len(classes) != 0 {
 		t.Fatalf("DecodeInstanceClasses(nil) = %#v, err = %v", classes, err)
 	}
@@ -54,16 +55,16 @@ func TestDecodeInstanceClassesNilVars(t *testing.T) {
 func TestDecodeModuleConfigEmptyRaw(t *testing.T) {
 	t.Parallel()
 
-	cfg, err := DecodeModuleConfig(nil)
+	cfg, err := DecodeModuleConfig[*testprovider.Settings]("", nil)
 	if err != nil || cfg != nil {
-		t.Fatalf("DecodeModuleConfig(nil) = %#v, err = %v", cfg, err)
+		t.Fatalf("DecodeModuleConfigForModule(nil) = %#v, err = %v", cfg, err)
 	}
 }
 
 func TestDecodeModuleConfigFullObject(t *testing.T) {
 	t.Parallel()
 
-	cfg, err := DecodeModuleConfig(map[string]any{
+	cfg, err := DecodeModuleConfig[*testprovider.Settings]("cloud-provider-test", map[string]any{
 		"metadata": map[string]any{"name": "cloud-provider-dvp"},
 		"spec": map[string]any{
 			"enabled": true,
@@ -71,19 +72,19 @@ func TestDecodeModuleConfigFullObject(t *testing.T) {
 		},
 	})
 	if err != nil {
-		t.Fatalf("DecodeModuleConfig() error = %v", err)
+		t.Fatalf("DecodeModuleConfigForModule() error = %v", err)
 	}
 	if cfg.Name != "cloud-provider-dvp" {
-		t.Fatalf("DecodeModuleConfig() name = %q", cfg.Name)
+		t.Fatalf("DecodeModuleConfigForModule() name = %q", cfg.Name)
 	}
 }
 
 func TestDecodeModuleConfigSettingsMap(t *testing.T) {
 	t.Parallel()
 
-	moduleConfig, err := DecodeModuleConfigForModule("cloud-provider-dvp", map[string]any{
+	moduleConfig, err := DecodeModuleConfig[*testprovider.Settings]("cloud-provider-test", map[string]any{
 		"provider": map[string]any{
-			"parameters": map[string]any{"namespace": "d8-cloud-provider-dvp"},
+			"parameters": map[string]any{"namespace": "d8-cloud-provider-test"},
 		},
 	})
 	if err != nil {
@@ -92,14 +93,14 @@ func TestDecodeModuleConfigSettingsMap(t *testing.T) {
 	if moduleConfig == nil {
 		return
 	}
-	if moduleConfig.Name != "cloud-provider-dvp" {
+	if moduleConfig.Name != "cloud-provider-test" {
 		t.Fatalf("DecodeModuleConfigForModule() name = %q", moduleConfig.Name)
 	}
 	if moduleConfig.Spec.Version != 2 || moduleConfig.Spec.Enabled == nil || !*moduleConfig.Spec.Enabled {
 		t.Fatalf("DecodeModuleConfigForModule() spec = %#v", moduleConfig.Spec)
 	}
-	if moduleConfig.Spec.Settings.Provider == nil || len(moduleConfig.Spec.Settings.Provider.Parameters) == 0 {
-		t.Fatalf("DecodeModuleConfigForModule() settings = %#v", moduleConfig.Spec.Settings)
+	if !moduleConfig.Spec.Settings.HasProviderSection() {
+		t.Fatalf("DecodeModuleConfigForModule() settings = %#v, want HasProviderSection()=true", moduleConfig.Spec.Settings)
 	}
 }
 
@@ -178,9 +179,9 @@ func TestDecodeNodeGroups(t *testing.T) {
 func TestDecodeInstanceClass(t *testing.T) {
 	t.Parallel()
 
-	instanceClass, err := DecodeInstanceClass(map[string]any{
-		"metadata": map[string]any{"name": "master-dvp"},
-		"kind":     "DVPInstanceClass",
+	instanceClass, err := DecodeInstanceClass[*testprovider.InstanceClass](map[string]any{
+		"metadata": map[string]any{"name": "master-test"},
+		"kind":     "TestInstanceClass",
 		"spec": map[string]any{
 			"etcdDisk": map[string]any{"size": "10Gi"},
 		},
@@ -188,7 +189,7 @@ func TestDecodeInstanceClass(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DecodeInstanceClass() error = %v", err)
 	}
-	if instanceClass.Name != "master-dvp" || instanceClass.Spec.EtcdDisk == nil {
+	if instanceClass.GetName() != "master-test" || instanceClass.GetEtcdDisk() == nil {
 		t.Fatalf("DecodeInstanceClass() = %#v", instanceClass)
 	}
 }
@@ -196,20 +197,20 @@ func TestDecodeInstanceClass(t *testing.T) {
 func TestDecodeInstanceClasses(t *testing.T) {
 	t.Parallel()
 
-	classes, err := DecodeInstanceClasses(map[string]map[string]any{
-		"master-dvp": {
-			"metadata": map[string]any{"name": "master-dvp"},
-			"kind":     "DVPInstanceClass",
+	classes, err := DecodeInstanceClasses[*testprovider.InstanceClass](map[string]map[string]any{
+		"master-test": {
+			"metadata": map[string]any{"name": "master-test"},
+			"kind":     "TestInstanceClass",
 		},
 	})
 	if err != nil {
 		t.Fatalf("DecodeInstanceClasses() error = %v", err)
 	}
-	if len(classes) != 1 || classes[0].Name != "master-dvp" {
+	if len(classes) != 1 || classes[0].GetName() != "master-test" {
 		t.Fatalf("DecodeInstanceClasses() = %#v", classes)
 	}
 
-	_, err = DecodeInstanceClasses(map[string]map[string]any{
+	_, err = DecodeInstanceClasses[*testprovider.InstanceClass](map[string]map[string]any{
 		"broken": {"spec": "invalid"},
 	})
 	if err == nil || !strings.Contains(err.Error(), "decode instance class") {
@@ -220,7 +221,7 @@ func TestDecodeInstanceClasses(t *testing.T) {
 func TestDecodeJSONValueRoundTrip(t *testing.T) {
 	t.Parallel()
 
-	value, err := DecodeJSONValue[cpapi.NodeGroup](map[string]any{
+	value, err := decodeJSONValue[cpapi.NodeGroup](map[string]any{
 		"metadata": map[string]any{"name": "master"},
 		"spec":     map[string]any{"nodeType": "CloudPermanent"},
 	})
@@ -235,8 +236,53 @@ func TestDecodeJSONValueRoundTrip(t *testing.T) {
 func TestDecodeJSONValueInvalidTarget(t *testing.T) {
 	t.Parallel()
 
-	_, err := DecodeJSONValue[int]("not-a-number")
+	_, err := decodeJSONValue[int]("not-a-number")
 	if err == nil || !strings.Contains(err.Error(), "unmarshal value") {
 		t.Fatalf("DecodeJSONValue() error = %v, want unmarshal failure", err)
+	}
+}
+
+func TestDecodeProviderClusterConfigEmpty(t *testing.T) {
+	t.Parallel()
+	pcc, err := DecodeProviderClusterConfig[*testprovider.ProviderClusterConfig](nil)
+	if err != nil {
+		t.Fatalf("DecodeProviderClusterConfig(nil) error = %v", err)
+	}
+	if pcc != nil {
+		t.Fatalf("DecodeProviderClusterConfig(nil) = %#v, want nil", pcc)
+	}
+}
+
+func TestDecodeProviderClusterConfig(t *testing.T) {
+	t.Parallel()
+	pcc, err := DecodeProviderClusterConfig[*testprovider.ProviderClusterConfig](map[string]any{
+		"apiVersion": "deckhouse.io/v1",
+		"kind":       "TestClusterConfiguration",
+		"masterNodeGroup": map[string]any{
+			"replicas": 3,
+		},
+		"nodeGroups": []any{
+			map[string]any{"name": "worker", "replicas": 1},
+		},
+	})
+	if err != nil {
+		t.Fatalf("DecodeProviderClusterConfig() error = %v", err)
+	}
+	if !pcc.HasMasterNodeGroup() {
+		t.Fatal("HasMasterNodeGroup() = false, want true")
+	}
+	names := pcc.NodeGroupNames()
+	if len(names) != 1 || names[0] != "worker" {
+		t.Fatalf("NodeGroupNames() = %v, want [worker]", names)
+	}
+}
+
+func TestDecodeProviderClusterConfigInvalidPayload(t *testing.T) {
+	t.Parallel()
+	_, err := DecodeProviderClusterConfig[*testprovider.ProviderClusterConfig](map[string]any{
+		"masterNodeGroup": "not-an-object",
+	})
+	if err == nil {
+		t.Fatal("DecodeProviderClusterConfig() error = nil, want decode error")
 	}
 }

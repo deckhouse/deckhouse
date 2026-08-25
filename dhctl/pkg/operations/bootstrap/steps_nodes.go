@@ -27,6 +27,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
@@ -61,7 +62,7 @@ func BootstrapAdditionalMasterNodes(
 	}
 
 	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Bootstrap additional master nodes", func(ctx context.Context) error {
-		masterCloudConfig, err := entity.GetCloudConfig(ctx, kubeCl, global.MasterNodeGroupName, global.ShowDeckhouseLogs)
+		masterCloudConfig, err := entity.GetCloudConfig(ctx, kubernetes.NewSimpleKubeClientGetter(kubeCl), global.MasterNodeGroupName, global.ShowDeckhouseLogs)
 		if err != nil {
 			return err
 		}

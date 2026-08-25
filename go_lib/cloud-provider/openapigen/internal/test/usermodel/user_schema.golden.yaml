@@ -16,10 +16,11 @@ properties:
         type: string
       id:
         description: The geo object identificator
-        pattern: .*
         type: string
       lat:
         description: The geoposition latitude
+        maximum: 90
+        minimum: 6
         type: integer
       lon:
         description: The geoposition longitude
@@ -37,19 +38,17 @@ properties:
             description: The owner's name
             type: string
         required:
-          - id
-          - name
-        title: Owner definition
+        - id
+        - name
         type: object
       state:
         type: string
       zip:
         type: string
     required:
-      - id
-      - lat
-      - lon
-    title: Geo definition
+    - id
+    - lat
+    - lon
     type: object
   good:
     description: Good reference
@@ -62,9 +61,9 @@ properties:
       price:
         type: integer
     required:
-      - id
-      - name
-      - price
+    - id
+    - name
+    - price
     type: object
   id:
     default: deadbeefcafe
@@ -74,9 +73,11 @@ properties:
       UUID required
     example: 1234567890
     format: int64
-    pattern: ^[0-9]+$
     title: User ID
     type: string
+    x-kubernetes-validations:
+    - message: must contain digits only
+      rule: self.matches('^[0-9]+$')
   name:
     type: string
   owner:
@@ -90,18 +91,17 @@ properties:
         description: The owner's name
         type: string
     required:
-      - id
-      - name
-    title: Owner definition
+    - id
+    - name
     type: object
   phone:
     description: The user's phone
     type: string
 required:
-  - email
-  - geo
-  - good
-  - id
-  - name
-  - owner
+- id
+- name
+- email
+- geo
+- owner
+- good
 type: object

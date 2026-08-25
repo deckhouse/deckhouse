@@ -40,7 +40,7 @@ func newExporter(istioNamespace, revision string, allNamespaces bool, timeout ti
 				Name: "d8_istio_config_analysis_issue",
 				Help: "Istio configuration analysis issue detected in the cluster (1 means present).",
 			},
-			[]string{"type", "namespace", "resource", "severity", "revision", "code"},
+			[]string{"type", "namespace", "resource", "severity", "revision", "code", "message"},
 		),
 		lastRunGauge: prometheus.NewGauge(
 			prometheus.GaugeOpts{
@@ -100,8 +100,8 @@ func (e *exporter) analyzeOnce(ctx context.Context) {
 
 	e.issuesGauge.Reset()
 	for _, message := range messages {
-		messageType, namespace, resourceName, severity, code := messageLabels(message, e.revision)
-		e.issuesGauge.WithLabelValues(messageType, namespace, resourceName, severity, e.revision, code).Set(1)
+		messageType, namespace, resourceName, severity, code, messageText := messageLabels(message, e.revision)
+		e.issuesGauge.WithLabelValues(messageType, namespace, resourceName, severity, e.revision, code, messageText).Set(1)
 	}
 	e.lastRunGauge.Set(float64(time.Now().Unix()))
 }

@@ -31,7 +31,6 @@ import:
     before: install
 imageSpec:
   config:
-    user: "1337:1337"
     env:  
       ISTIO_META_ISTIO_VERSION: {{ $istioVersion }}
     entrypoint: ["/usr/local/bin/ztunnel"]

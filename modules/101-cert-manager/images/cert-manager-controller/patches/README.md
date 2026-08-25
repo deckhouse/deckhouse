@@ -8,4 +8,10 @@ https://github.com/cert-manager/cert-manager/pull/5158
 ### 999-fix-cve.patch
 
 Fix CVEs:
+- CVE-2026-46600
+- CVE-2026-56852
+
+GHSA:
+- GHSA-gcjh-h69q-9w9g
+- GHSA-hrxh-6v49-42gf
 

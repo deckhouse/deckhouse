@@ -47,6 +47,11 @@ func (c PublicDomainTemplateCheck) Run(ctx context.Context) error {
 		return fmt.Errorf("metaConfig is required")
 	}
 
+	// No ClusterConfiguration, so no clusterDomain to compare publicDomainTemplate against.
+	if !c.MetaConfig.HasClusterConfiguration() {
+		return nil
+	}
+
 	for _, mc := range c.MetaConfig.ModuleConfigs {
 		if mc.GetName() != "global" {
 			continue

@@ -29,7 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -68,15 +67,15 @@ const (
 	cleanupRetryInterval = 15 * time.Second
 )
 
-// The primary object is the unstructured NodeGroup, not the typed one, so that the event, the
-// typed value the logic runs on and the raw spec the rendered objects are hashed from all come
-// from a single informer. Reading the typed object from one informer and the raw spec from
-// another gave two views of the same NodeGroup: under load they disagreed, and a spec hashed
-// from the disagreeing half produced a transient MachineTemplate name — an extra node rollout.
+// The primary object used to be the unstructured NodeGroup, because the rendered objects were
+// hashed from the raw spec and reading the typed value and the raw spec from two informers gave
+// two views of the same NodeGroup — under load they disagreed, and a spec hashed from the
+// disagreeing half produced a transient MachineTemplate name, i.e. an extra node rollout.
+//
+// The element is now built from the typed spec (see specPassthrough), so there is only one view
+// to begin with and the primary object is the typed NodeGroup.
 func init() {
-	register.RegisterController("capi-machine-deployment",
-		newUnstructured(deckhousev1.GroupVersion.Group, deckhousev1.GroupVersion.Version, "NodeGroup"),
-		&MachineDeploymentReconciler{})
+	register.RegisterController("capi-machine-deployment", &deckhousev1.NodeGroup{}, &MachineDeploymentReconciler{})
 }
 
 type MachineDeploymentReconciler struct {
@@ -109,14 +108,14 @@ func (r *MachineDeploymentReconciler) SetupWatches(w register.Watcher) {
 	// The InstanceClass is what the MachineClass and the machine template are rendered from,
 	// and its checksum names the template — an edit here is exactly what must re-render. Without
 	// this watch the change waits for the resync, so the cloud keeps handing out the previous
-	// instance type for up to resyncInterval.
-	for _, gvk := range r.InstanceClassKinds {
-		w.Watches(newUnstructuredForGVK(gvk),
-			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
-				return common.InstanceClassToNodeGroups(ctx, r.Client, obj)
-			}),
-			builder.WithPredicates(predicate.GenerationChangedPredicate{}))
-	}
+	// instance type for up to resyncInterval. The source is deferred, not built from a
+	// setup-time list: the kind and version come from the provider registration Secret, which
+	// may appear only after this pod started.
+	w.WatchesRawSource(common.LazyInstanceClassSource(r.Cache,
+		handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
+			return common.InstanceClassToNodeGroups(ctx, r.Client, obj)
+		}),
+		predicate.GenerationChangedPredicate{}))
 }
 
 // ForPredicates filters NodeGroup events: the rendered MachineDeployments depend only on
@@ -157,18 +156,13 @@ func (r *MachineDeploymentReconciler) enqueueAllNodeGroups(ctx context.Context, 
 func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
-	obj := newUnstructured(deckhousev1.GroupVersion.Group, deckhousev1.GroupVersion.Version, "NodeGroup")
-	if err := r.Client.Get(ctx, req.NamespacedName, obj); err != nil {
+	ng := &deckhousev1.NodeGroup{}
+	if err := r.Client.Get(ctx, req.NamespacedName, ng); err != nil {
 		if client.IgnoreNotFound(err) == nil {
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, fmt.Errorf("get NodeGroup: %w", err)
 	}
-	ng := &deckhousev1.NodeGroup{}
-	if err := runtime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, ng); err != nil {
-		return ctrl.Result{}, fmt.Errorf("decode NodeGroup %s: %w", req.Name, err)
-	}
-	rawSpec, _ := obj.Object["spec"].(map[string]interface{})
 
 	if !ng.DeletionTimestamp.IsZero() {
 		done, err := r.cleanupMachineDeployments(ctx, ng.Name)
@@ -197,17 +191,25 @@ func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		// status.engine: with the derived value the MachineDeployment is rendered in the
 		// first reconcile right after the NodeGroup is created. status.engine, once set,
 		// stays the pin (ComputeEngine prefers it).
-		cloudProvider, err := r.readCloudProviderTree(ctx)
+		registration, err := r.readCloudProviderRegistration(ctx)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
-		switch derived_status.ComputeEngine(ng, cloudProvider) {
+		// Both engines render from the InstanceClass, and the version it is read through decides
+		// the checksum that names the template. Guessing one would rename an immutable template
+		// and roll every machine in the NodeGroup, so wait instead: the provider secret is
+		// watched, and publishing the version re-enqueues this NodeGroup.
+		if registration.InstanceClassAPIVersion == "" {
+			logger.V(1).Info("skipping: instanceClassAPIVersion is not published yet")
+			return ctrl.Result{RequeueAfter: resyncInterval}, nil
+		}
+		switch derived_status.ComputeEngine(ng, registration) {
 		case engineCAPI:
-			if err := r.reconcileCloudMDsRendered(ctx, ng, rawSpec); err != nil {
+			if err := r.reconcileCloudMDsRendered(ctx, ng); err != nil {
 				return ctrl.Result{}, err
 			}
 		case engineMCM:
-			if err := r.reconcileCloudMCMs(ctx, ng, rawSpec); err != nil {
+			if err := r.reconcileCloudMCMs(ctx, ng); err != nil {
 				return ctrl.Result{}, err
 			}
 		default:

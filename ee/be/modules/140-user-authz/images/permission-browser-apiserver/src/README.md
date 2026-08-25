@@ -109,7 +109,7 @@ status:
       reason: "RBAC: allowed by ClusterRoleBinding..."
     - allowed: false
       denied: true
-      reason: "user has no access to the namespace"
+      reason: "either you have no access to the namespace or the namespace does not exist"
 ```
 
 ## Modes of Operation
@@ -129,6 +129,8 @@ The server uses a **composite authorizer** with the following order:
 1. **Multi-tenancy layer**: Enforces Deckhouse `ClusterAuthorizationRule` restrictions (namespace filters, system namespace access). This layer can only **deny**; it never allows.
 
 2. **RBAC layer**: Standard Kubernetes RBAC checks using in-memory informers.
+
+3. **Namespace-ACL reads**: `get`/`list`/`watch` of a cluster-scoped resource whose visibility the apiserver derives from the namespace ACL — currently `deckhouse.io/projects`, visible whenever any namespace of the project is — are reported as **allowed** even when the two layers above say otherwise. The cluster-wide RBAC grant for such a resource is deliberately withheld so that the apiserver's filter engages, and the API answers those reads with the accessible subset (a `get` of an invisible object answers `NotFound`) rather than a 403. Reporting them as denied would make the console hide a section the user can open. Mutating verbs and subresources keep the plain RBAC answer, and so does a cluster that does not serve the resource at all — without `multitenancy-manager` there is no Project CRD, the apiserver's own bypass is gated on the filter being registered for the resource, and an allow here would advertise an API that answers `NotFound`. Resource existence comes from the discovery-backed scope cache.
 
 ### Multi-tenancy Restrictions
 

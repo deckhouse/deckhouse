@@ -36,7 +36,11 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 )
 
-// applicationValidationHandler validations for Application creation
+// maxApplicationNameLength limits the instance name: it prefixes the name of every object
+// the application creates, and those must fit the 63-character Kubernetes name limit.
+const maxApplicationNameLength = 32
+
+// applicationValidationHandler validates Application create and update requests.
 func applicationValidationHandler(cli client.Client, manager packageManager) http.Handler {
 	vf := kwhvalidating.ValidatorFunc(func(ctx context.Context, _ *kwhmodel.AdmissionReview, obj metav1.Object) (*kwhvalidating.ValidatorResult, error) {
 		app, ok := obj.(*v1alpha1.Application)
@@ -49,6 +53,10 @@ func applicationValidationHandler(cli client.Client, manager packageManager) htt
 			return allowResult(nil)
 		}
 
+		if len(app.Name) > maxApplicationNameLength {
+			return rejectResult(fmt.Sprintf("Application name '%s' must be no longer than %d characters", app.Name, maxApplicationNameLength))
+		}
+
 		ap := new(v1alpha1.ApplicationPackage)
 		if err := cli.Get(ctx, client.ObjectKey{Name: app.Spec.PackageName}, ap); err != nil {
 			return rejectResult(fmt.Sprintf("get application package: %v", err))
@@ -56,20 +64,30 @@ func applicationValidationHandler(cli client.Client, manager packageManager) htt
 
 		name := apps.BuildName(app.Namespace, app.Name)
 
-		res, err := manager.ValidatePackageSettings(ctx, name, 0, app.Spec.Settings.GetMap())
-		if err != nil {
-			return nil, err
+		var warnings []string
+		if app.Status.CurrentVersion != nil && app.Status.CurrentVersion.Version == app.Spec.PackageVersion {
+			res, err := manager.ValidatePackageSettings(ctx, name, 0, app.Spec.Settings.GetMap())
+			if err != nil {
+				return nil, err
+			}
+
+			if !res.Valid {
+				return rejectResult(res.Message)
+			}
+
+			warnings = res.Warnings
 		}
 
-		if !res.Valid {
-			return rejectResult(res.Message)
+		if err := validateAppAgainstApv(ctx, cli, manager, app); err != nil {
+			// The denial message is the only feedback `kubectl apply` prints, and
+			// it arrives without the object it belongs to: name the Application
+			// and the package version whose requirements were evaluated, so the
+			// rejection is traceable when several manifests are applied at once.
+			return rejectResult(fmt.Sprintf("Application '%s/%s' (package '%s' version '%s'): %s",
+				app.Namespace, app.Name, app.Spec.PackageName, app.Spec.PackageVersion, err))
 		}
 
-		if err = validateAppAgainstApv(ctx, cli, manager, app); err != nil {
-			return rejectResult(err.Error())
-		}
-
-		return allowResult(res.Warnings)
+		return allowResult(warnings)
 	})
 
 	// Create webhook.

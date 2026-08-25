@@ -1,0 +1,52 @@
+version: v2
+
+# InstanceClass fields whose change requires recreating the machines. The list is carried over
+# from the v1 instance-class.checksum one to one, including the fields that do not appear in the
+# template below (preemptible, additionalLabels, networkType): under v1 they changed the checksum
+# and therefore rolled the machines, and this migration must not change that.
+rolloutFields:
+  - platformID
+  - cores
+  - coreFraction
+  - memory
+  - gpus
+  - diskType
+  - diskSizeGB
+  - imageID
+  - mainSubnet
+  - assignPublicIPAddress
+  - additionalSubnets
+  - preemptible
+  - additionalLabels
+  - networkType
+
+# Optional fields are read with `get`: the sandbox runs with missingkey=error, so a direct path to
+# an absent key fails the render on purpose. `get` returns an empty value instead, which keeps the
+# `| default` chains behaving exactly as they did under v1. cores and memory are required by the
+# CRD and read directly.
+template: |
+  apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+  kind: YandexMachineTemplate
+  spec:
+    template:
+      spec:
+        zoneID: {{ .zone | quote }}
+        platformID: {{ get .instanceClass "platformID" | default "standard-v3" | quote }}
+        resources:
+          cores: {{ .instanceClass.cores | int }}
+          coreFraction: {{ get .instanceClass "coreFraction" | default 100 | int }}
+          memory: {{ printf "%dMi" (.instanceClass.memory | int) | quote }}
+          gpus: {{ get .instanceClass "gpus" | default 0 | int }}
+        bootDisk:
+          typeID: {{ get .instanceClass "diskType" | default "network-hdd" | quote }}
+          size: {{ printf "%dGi" (get .instanceClass "diskSizeGB" | default 50 | int) | quote }}
+          imageID: {{ get .instanceClass "imageID" | default .provider.instanceClassDefaults.imageID | quote }}
+        networkInterfaces:
+          - subnetID: {{ get .instanceClass "mainSubnet" | default (index .provider.zoneToSubnetIdMap .zone) | quote }}
+            hasPublicIP: {{- if hasKey .instanceClass "assignPublicIPAddress" }} {{ .instanceClass.assignPublicIPAddress }}{{- else }} {{ .provider.shouldAssignPublicIPAddress }}{{- end }}
+  {{- range (get .instanceClass "additionalSubnets" | default list) }}
+          - subnetID: {{ . | quote }}
+  {{- end }}
+        metadata:
+          ssh-keys: 'user:{{ .provider.sshKey }}'
+          node-network-cidr: {{ .provider.nodeNetworkCIDR | quote }}

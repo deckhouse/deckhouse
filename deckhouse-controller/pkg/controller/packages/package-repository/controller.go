@@ -173,13 +173,14 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, repo *v1alpha1.Pa
 	}
 
 	// Determine if we should do a full scan or incremental scan
-	// fullScan = true if this is the first operation ever (no operations at all)
-	fullScan := len(operations.Items) == 0
+	// fullScan = true until a scan has processed the repository: an incremental scan starts
+	// from the versions already in the cluster, and there are none to start from yet
+	fullScan := repo.Status.LastScanTime == nil
 
 	// Create a new PackageRepositoryOperation
 	operationName := fmt.Sprintf("%s-scan-%d", repo.Name, r.dc.GetClock().Now().Unix())
 
-	logger.With(slog.String("operation", operationName), slog.Bool("full_scan", fullScan))
+	logger = logger.With(slog.String("operation", operationName), slog.Bool("full_scan", fullScan))
 
 	operation := &v1alpha1.PackageRepositoryOperation{
 		TypeMeta: metav1.TypeMeta{

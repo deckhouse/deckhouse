@@ -20,9 +20,6 @@
 {{- if semverCompare "<=1.32" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "InPlacePodVerticalScaling=true" -}}
 {{- end }}
-{{- if semverCompare "<=1.31" .clusterConfiguration.kubernetesVersion }}
-  {{- $baseFeatureGates = append $baseFeatureGates "AnonymousAuthConfigurableEndpoints=true" -}}
-{{- end }}
 {{- $schedulerFeatureGates := $baseFeatureGates -}}
 {{- if hasKey . "allowedFeatureGates" -}}
   {{- range .allowedFeatureGates.kubeScheduler -}}
@@ -92,8 +89,9 @@ spec:
       timeoutSeconds: 15
     resources:
       requests:
-        cpu: "{{ div (mul $millicpu 10) 100 }}m"
-        memory: "{{ div (mul $memory 10) 100 }}"
+        {{- $c := (($resourcesRequests.components | default dict).kubeScheduler) | default dict }}
+        cpu: "{{ $c.milliCPU | default (div (mul $millicpu 10) 100) }}m"
+        memory: "{{ $c.memoryBytes | default (div (mul $memory 10) 100) }}"
     securityContext:
       capabilities:
         drop:

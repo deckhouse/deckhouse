@@ -465,9 +465,39 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 		}
 	}
 
-	// check previous release
-	// only for awaiting purpose
 	if releaseIdx > 0 {
+		// Patch or minor is measured against the version that is actually running,
+		// independently of the Pending/Deployed predecessor scan below. Otherwise a
+		// minor bump keeps the isPatch=true default and is routed through the patch
+		// path, which skips the minor approval gate — the minor then gets applied
+		// without confirmation in every mode except Manual.
+		//
+		// Only Deployed and Superseded prove that a version ever ran, so only they
+		// can serve as the reference. A Skipped or Suspended neighbour never ran and
+		// must not make a minor bump look like a patch.
+		//
+		// Known gap: if the Deployed object is removed by hand it leaves no
+		// Superseded trace, so the reference falls back to an older minor and a
+		// genuine patch asks for confirmation until checkDeckhouseRelease recreates
+		// the object. An interrupted deploy does leave the trace (the old release is
+		// marked Superseded before the new one is marked Deployed), so it is
+		// classified correctly.
+		referenceVersion := releases[releaseIdx-1].GetVersion()
+
+		if deployedReleaseInfo != nil {
+			referenceVersion = deployedReleaseInfo.Version
+		} else if lastRunRelease := getLatestReleaseInfoByPhase(releases[:releaseIdx], v1alpha1.DeckhouseReleasePhaseSuperseded); lastRunRelease != nil {
+			referenceVersion = lastRunRelease.Version
+		}
+
+		if !isPatchRelease(referenceVersion, release.GetVersion()) {
+			logger.Debug("current release is not a patch", slog.String("reference_version", referenceVersion.Original()))
+
+			isPatch = false
+		}
+
+		// check previous release
+		// only for awaiting purpose
 		logger.Debug("checking previous release for awaiting logic")
 
 		// Find the previous release that is Pending or Deployed (skip Suspended, Superseded, Skipped)
@@ -492,9 +522,7 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 			// if release version is greater in major or minor version than previous release
 			if !isPatchRelease(prevRelease.GetVersion(), release.GetVersion()) ||
 				(deployedReleaseInfo != nil && !isPatchRelease(deployedReleaseInfo.Version, release.GetVersion())) {
-				logger.Debug("current release is not a patch")
-
-				isPatch = false
+				logger.Debug("previous release is not a patch predecessor")
 
 				// it must await if previous release has Pending state (unless it's forced)
 				// truncate all not deployed phase releases
@@ -814,6 +842,25 @@ func getFirstReleaseInfoByPhase(releases []v1alpha1.Release, phase string) *rele
 		Name:               filteredDR.GetName(),
 		Version:            filteredDR.GetVersion(),
 	}
+}
+
+// getLatestReleaseInfoByPhase returns the highest-versioned release in the given phase.
+// Unlike getFirstReleaseInfoByPhase, which returns the lowest match.
+// releases slice must be sorted asc
+func getLatestReleaseInfoByPhase(releases []v1alpha1.Release, phase string) *releaseInfo {
+	for idx, release := range slices.Backward(releases) {
+		if release.GetPhase() != phase {
+			continue
+		}
+
+		return &releaseInfo{
+			IndexInReleaseList: idx,
+			Name:               release.GetName(),
+			Version:            release.GetVersion(),
+		}
+	}
+
+	return nil
 }
 
 // getLatestForcedReleaseInfo

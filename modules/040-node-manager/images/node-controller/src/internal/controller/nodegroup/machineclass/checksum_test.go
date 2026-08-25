@@ -30,7 +30,7 @@ import (
 
 const awsChecksumTemplatePath = "../../../../../../../../030-cloud-provider-aws/cloud-instance-manager/machine-class.checksum"
 
-const yandexCAPIChecksumTemplatePath = "../../../../../../../../030-cloud-provider-yandex/capi/instance-class.checksum"
+const yandexMCMChecksumTemplatePath = "../../../../../../../../030-cloud-provider-yandex/cloud-instance-manager/machine-class.checksum"
 
 func expectedChecksum(t *testing.T, options map[string]interface{}) string {
 	t.Helper()
@@ -72,37 +72,6 @@ func TestRenderChecksum_AWSParity(t *testing.T) {
 	assert.Equal(t, want, got)
 }
 
-func TestRenderChecksum_CAPIYandexParity(t *testing.T) {
-	tmpl, err := os.ReadFile(yandexCAPIChecksumTemplatePath)
-	require.NoError(t, err, "provider CAPI checksum template must exist")
-
-	blobElement := map[string]interface{}{
-		"instanceClass": map[string]interface{}{
-			"platformID": "standard-v3",
-			"cores":      float64(4),
-			"memory":     float64(8589934592),
-			"diskType":   "network-ssd",
-			"imageID":    "img-abc",
-		},
-		"manualRolloutID": "rollout-7",
-	}
-
-	got, err := RenderChecksum(tmpl, blobElement, nil)
-	require.NoError(t, err)
-
-	want := expectedChecksum(t, map[string]interface{}{
-		"platformID":      "standard-v3",
-		"cores":           float64(4),
-		"memory":          float64(8589934592),
-		"diskType":        "network-ssd",
-		"imageID":         "img-abc",
-		"manualRolloutID": "rollout-7",
-	})
-
-	assert.Len(t, got, 64)
-	assert.Equal(t, want, got)
-}
-
 func TestRenderChecksum_AWSDefaultDiskSizeExcluded(t *testing.T) {
 	tmpl, err := os.ReadFile(awsChecksumTemplatePath)
 	require.NoError(t, err)
@@ -130,7 +99,7 @@ func TestRenderChecksum_AWSDefaultDiskSizeExcluded(t *testing.T) {
 func TestChecksumDependsOnlyOnInstanceClassAndRollout(t *testing.T) {
 	awsTmpl, err := os.ReadFile(awsChecksumTemplatePath)
 	require.NoError(t, err)
-	yandexTmpl, err := os.ReadFile(yandexCAPIChecksumTemplatePath)
+	yandexTmpl, err := os.ReadFile(yandexMCMChecksumTemplatePath)
 	require.NoError(t, err)
 
 	cases := []struct {
@@ -148,7 +117,7 @@ func TestChecksumDependsOnlyOnInstanceClassAndRollout(t *testing.T) {
 			},
 		},
 		{
-			name: "yandex-capi",
+			name: "yandex-mcm",
 			tmpl: yandexTmpl,
 			ic: map[string]interface{}{
 				"platformID": "standard-v3",
@@ -192,9 +161,15 @@ func TestChecksumDependsOnlyOnInstanceClassAndRollout(t *testing.T) {
 // instead of float64 out of unstructured, a dropped key, a different toYAML — would move both
 // sides of those assertions together and stay green. These constants cannot move with the code.
 //
-// Important! The checksum names the CAPI infrastructure template and the MCM MachineClass, and
-// both are immutable: a changed checksum renames them, which rolls the MachineDeployment and
-// recreates every VM in it. A failure here means an upgrade would reboot every node in the group.
+// Important! The checksum names the MCM MachineClass, which is immutable: a changed checksum
+// renames it, which rolls the MachineDeployment and recreates every VM in it. A failure here means
+// an upgrade would reboot every node in the group.
+//
+// The CAPI goldens that used to live here (vcd, dvp) are gone with the v1 CAPI files themselves:
+// those providers ship the v2 contract now, where names carry a generation counter instead of a
+// hash and "did anything change" is decided by comparing values. What replaced this guarantee is
+// internal/machinetemplate's parity harness — it renders the archived v1 files and requires the v2
+// decision to match them field by field.
 func TestRenderChecksum_HelmEraGoldens(t *testing.T) {
 	cases := []struct {
 		name            string
@@ -204,51 +179,6 @@ func TestRenderChecksum_HelmEraGoldens(t *testing.T) {
 		manualRolloutID string
 		want            string
 	}{
-		{
-			// From template_tests/module_test.go (nodeManagerVCD), which asserted this exact
-			// annotation on the VCDMachineTemplate with the comment "Prevent checksum changing".
-			name: "vcd capi",
-			path: "../../../../../../../../../ee/modules/030-cloud-provider-vcd/capi/instance-class.checksum",
-			instanceClass: map[string]interface{}{
-				"rootDiskSizeGb":  float64(20),
-				"sizingPolicy":    "s-c572-MSK1-S1-vDC1",
-				"storageProfile":  "vHDD",
-				"template":        "Ubuntu",
-				"placementPolicy": "policy",
-			},
-			cloudProvider: map[string]interface{}{
-				"vcd": map[string]interface{}{
-					"organization":           "org",
-					"virtualDataCenter":      "dc",
-					"virtualApplicationName": "app",
-					"server":                 "https://localhost:5000",
-					"username":               "user",
-					"password":               "pass",
-					"insecure":               true,
-				},
-			},
-			want: "9a87428aa818245d4b86ee9438255d53e6ae2d8a76d43cfb1b7560a6f0eab02e",
-		},
-		{
-			// Same origin (nodeManagerDVP). Note virtualMachineClassName and additionalDisks are
-			// absent from the fixture: the golden pins how a missing key serializes, which is
-			// exactly the kind of drift that would silently rename every machine template.
-			name: "dvp capi",
-			path: "../../../../../../../../030-cloud-provider-dvp/capi/instance-class.checksum",
-			instanceClass: map[string]interface{}{
-				"rootDisk": map[string]interface{}{
-					"image":        map[string]interface{}{"kind": "ClusterVirtualImage", "name": "ubuntu-2204"},
-					"size":         "50Gi",
-					"storageClass": "ceph-pool-r2-csi-rbd-immediate",
-				},
-				"virtualMachine": map[string]interface{}{
-					"bootloader": "EFI",
-					"cpu":        map[string]interface{}{"coreFraction": "100%", "cores": float64(4)},
-					"memory":     map[string]interface{}{"size": "8Gi"},
-				},
-			},
-			want: "2f66b46c3006bc0a32f70593543ee50385f2f4d405b541e17208dfbf27dd4fd9",
-		},
 		{
 			name: "aws",
 			path: awsChecksumTemplatePath,

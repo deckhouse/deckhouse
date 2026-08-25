@@ -1,5 +1,6 @@
 ---
 title: "Управление задачами и проектами"
+description: Как управлять задачами, метками, приоритетами и сроками выполнения
 permalink: ru/code/documentation/user/project-management.html
 lang: ru
 ---

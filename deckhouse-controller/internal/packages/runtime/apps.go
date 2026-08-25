@@ -87,7 +87,8 @@ func (r *Runtime) UpdateApp(repo registry.Remote, app App) {
 		return
 	}
 
-	ctx := r.packages.Update(name, version, app.SettingsVersion, app.Settings, app.Maintenance)
+	// applications have immutable tags, so a version change is the only invalidation
+	ctx := r.packages.Update(name, version, app.SettingsVersion, app.Settings, app.Maintenance, false)
 	if ctx == nil {
 		r.scheduler.Reschedule(name)
 		return
@@ -140,6 +141,14 @@ func (r *Runtime) loadApp(ctx context.Context, repo registry.Remote, packagePath
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
+	// The application was removed while this Load ran — r.mu is what serialises the two, so this is
+	// the last point either can win. Publishing now would give the scheduler a node for a package
+	// nothing tracks, and Enable would then register its hooks with the shared managers with no
+	// removal path left to disable them.
+	if err = ctx.Err(); err != nil {
+		return "", err
+	}
 
 	// Optimistically register the app before AddNode so a successful schedule
 	// can resolve it; if AddNode rejects the addition (dependency cycle),

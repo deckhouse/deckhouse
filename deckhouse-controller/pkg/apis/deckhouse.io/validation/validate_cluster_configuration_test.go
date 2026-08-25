@@ -22,32 +22,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
-func TestValidateDefaultCRI(t *testing.T) {
-	tests := []struct {
-		name       string
-		defaultCRI string
-		wantValid  bool
-	}{
-		{name: "empty (unset) is valid", defaultCRI: "", wantValid: true},
-		{name: "Containerd is valid", defaultCRI: "Containerd", wantValid: true},
-		{name: "NotManaged is valid", defaultCRI: "NotManaged", wantValid: true},
-		{name: "unknown value is rejected", defaultCRI: "Docker", wantValid: false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// cli is only consulted for the ContainerdV2 path, which these cases avoid.
-			res, err := validateDefaultCRI(tt.defaultCRI, nil)
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			if res.Valid != tt.wantValid {
-				t.Fatalf("validateDefaultCRI(%q) valid = %v, want %v (message: %q)", tt.defaultCRI, res.Valid, tt.wantValid, res.Message)
-			}
-		})
-	}
-}
-
 func TestParseVersion(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -289,14 +263,17 @@ func TestValidateKubernetesVersionDowngrade(t *testing.T) {
 			expectError: false,
 		},
 		{
+			// A present-but-empty key is not a value. Treating it as one made parseVersion fail
+			// and took the whole ClusterConfiguration webhook fail-closed — no edit to any field
+			// would be accepted — over bookkeeping that simply had not been written yet.
 			name:       "old version Automatic with empty maxUsed version",
 			oldVersion: "Automatic",
 			newVersion: "1.23.0",
 			secretData: map[string][]byte{
 				"maxUsedControlPlaneKubernetesVersion": []byte(""),
 			},
-			expectValid: false,
-			expectError: true,
+			expectValid: true,
+			expectError: false,
 		},
 		{
 			name:       "new version Automatic with empty deckhouse default",
@@ -305,8 +282,8 @@ func TestValidateKubernetesVersionDowngrade(t *testing.T) {
 			secretData: map[string][]byte{
 				"deckhouseDefaultKubernetesVersion": []byte("   "),
 			},
-			expectValid: false,
-			expectError: true,
+			expectValid: true,
+			expectError: false,
 		},
 		{
 			name: "new version is numeric, old version is numeric too, " +
@@ -342,6 +319,56 @@ func TestValidateKubernetesVersionDowngrade(t *testing.T) {
 			expectValid: false, // Automatic below current version is still rejected
 			expectError: false,
 		},
+		// kubernetesVersion is optional; an absent field means the same as "Automatic".
+		{
+			name:       "field removed, Deckhouse default is higher — allowed",
+			oldVersion: "1.33.0",
+			newVersion: "",
+			secretData: map[string][]byte{
+				"deckhouseDefaultKubernetesVersion":    []byte("1.34.0"),
+				"maxUsedControlPlaneKubernetesVersion": []byte("1.33.0"),
+			},
+			expectValid: true,
+			expectError: false,
+		},
+		{
+			name:       "field removed, Deckhouse default equals current — allowed",
+			oldVersion: "1.34.0",
+			newVersion: "",
+			secretData: map[string][]byte{
+				"deckhouseDefaultKubernetesVersion":    []byte("1.34.0"),
+				"maxUsedControlPlaneKubernetesVersion": []byte("1.34.0"),
+			},
+			expectValid: true,
+			expectError: false,
+		},
+		{
+			name:       "field removed, Deckhouse default is lower — still a real downgrade",
+			oldVersion: "1.34.0",
+			newVersion: "",
+			secretData: map[string][]byte{
+				"deckhouseDefaultKubernetesVersion":    []byte("1.32.0"),
+				"maxUsedControlPlaneKubernetesVersion": []byte("1.34.0"),
+			},
+			expectValid: false,
+			expectError: false,
+		},
+		{
+			name:        "field absent on both sides — no-op",
+			oldVersion:  "",
+			newVersion:  "",
+			secretData:  map[string][]byte{},
+			expectValid: true,
+			expectError: false,
+		},
+		{
+			name:        "field added where there was none — upgrade path, allowed",
+			oldVersion:  "",
+			newVersion:  "1.34.0",
+			secretData:  map[string][]byte{},
+			expectValid: true,
+			expectError: false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -350,7 +377,7 @@ func TestValidateKubernetesVersionDowngrade(t *testing.T) {
 				Data: tt.secretData,
 			}
 
-			result, err := validateKubernetesVersionDowngrade(tt.oldVersion, tt.newVersion, secret)
+			result, err := validateKubernetesVersionDowngrade(tt.oldVersion, tt.newVersion, kubernetesVersionBaselineFromSecret(secret))
 
 			if tt.expectError {
 				if err == nil {
@@ -395,7 +422,7 @@ func TestValidateKubernetesVersionDowngradeIntegration(t *testing.T) {
 		}
 
 		for _, tc := range testCases {
-			result, err := validateKubernetesVersionDowngrade(tc.oldVersion, tc.newVersion, secret)
+			result, err := validateKubernetesVersionDowngrade(tc.oldVersion, tc.newVersion, kubernetesVersionBaselineFromSecret(secret))
 			if err != nil {
 				t.Errorf("unexpected error for %s -> %s: %v", tc.oldVersion, tc.newVersion, err)
 				continue

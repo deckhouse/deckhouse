@@ -38,6 +38,8 @@ name: worker
 nodeCapacity:
   cpu: "4"
   memory: 8Gi
+  name: ""
+  rootDisk: "0"
 nodeDrainTimeoutSecond: 300
 nodeTemplate:
   labels:

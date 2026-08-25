@@ -14,6 +14,16 @@
   {{- end }}
 {{- end -}}
 
+{{- /* Usage: {{ if (include "helm_lib_api_version_exists" (list . "<group>/<version>/<Kind>")) }} */ -}}
+{{- /* returns "true" if the GVK is available: installed from modules' crds (global.discovery.apiVersions) or present in cluster discovery (Capabilities) */ -}}
+{{- define "helm_lib_api_version_exists" -}}
+  {{- $context := index . 0 -}} {{- /* Template context with .Values, .Chart, etc */ -}}
+  {{- $crdAPIVer := index . 1 -}} {{- /* Group/version/kind string, e.g. "snapshot.storage.k8s.io/v1/VolumeSnapshotClass" */ -}}
+  {{- if or ($context.Values.global.discovery.apiVersions | has $crdAPIVer) ($context.Capabilities.APIVersions.Has $crdAPIVer) -}}
+true
+  {{- end -}}
+{{- end -}}
+
 {{- /* Usage: {{ include "helm_lib_get_api_version_by_kind" (list . "<kind-name>") }} */ -}}
 {{- /* returns current apiVersion string, based on available helm capabilities, for the provided kind (not all kinds are supported) */ -}}
 {{- define "helm_lib_get_api_version_by_kind" }}

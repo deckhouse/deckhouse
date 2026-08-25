@@ -44,6 +44,11 @@ func (c CidrIntersectionCheck) Run(ctx context.Context) error {
 		return fmt.Errorf("metaConfig is required")
 	}
 
+	// No ClusterConfiguration, so no pod and service subnets to compare.
+	if !c.MetaConfig.HasClusterConfiguration() {
+		return nil
+	}
+
 	podCIDR, serviceCIDR, err := getCIDRs(c.MetaConfig)
 	if err != nil {
 		return err

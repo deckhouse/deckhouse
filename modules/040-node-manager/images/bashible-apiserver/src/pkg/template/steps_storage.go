@@ -48,6 +48,9 @@ type StepsStorage struct {
 
 	configurationsChanged chan struct{}
 	emitter               changesEmitter
+
+	cloudProviderStepSecrets  map[string]cloudProviderStepsSecret
+	cloudProviderStepsChanged chan struct{}
 }
 
 type nodeConfigurationQueueAction struct {
@@ -70,6 +73,8 @@ func NewStepsStorage(ctx context.Context, rootDir string, ngConfigFactory dynami
 		nodeGroupConfigurations:      make(map[string][]*nodeConfigurationScript),
 		nodeGroupConfigurationsQueue: make(chan nodeConfigurationQueueAction, 100),
 		configurationsChanged:        make(chan struct{}, 1),
+		cloudProviderStepSecrets:     make(map[string]cloudProviderStepsSecret),
+		cloudProviderStepsChanged:    make(chan struct{}, 1),
 	}
 
 	ss.subscribeOnCRD(ctx, ngConfigFactory)
@@ -154,17 +159,53 @@ func (s *StepsStorage) subscribeOnCRD(ctx context.Context, ngConfigFactory dynam
 }
 
 func (s *StepsStorage) renderSystemScripts(target, provider string, templateContext map[string]interface{}) (map[string]string, error) {
-	key := fmt.Sprintf(keyPattern, target, provider)
+	var (
+		providerTemplates      map[string][]byte
+		hasProviderStepsSecret bool
+		err                    error
+	)
+
+	if target == "all" {
+		providerTemplates, hasProviderStepsSecret, err = s.cloudProviderStepsFor(provider)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	filesystemProvider := provider
+	if hasProviderStepsSecret {
+		// Read only common Deckhouse steps from the image.
+		// Provider-specific steps will be taken from the Secret.
+		filesystemProvider = ""
+	}
+
+	key := fmt.Sprintf(keyPattern, target, filesystemProvider)
 
 	s.m.RLock()
 	templates, ok := s.systemScripts[key]
 	s.m.RUnlock()
+
 	if !ok {
-		var err error
-		templates, err = s.loadTemplates(target, provider)
+		templates, err = s.loadTemplates(target, filesystemProvider)
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	if hasProviderStepsSecret {
+		combinedTemplates := make(
+			map[string][]byte,
+			len(templates)+len(providerTemplates),
+		)
+
+		for name, content := range templates {
+			combinedTemplates[name] = content
+		}
+		for name, content := range providerTemplates {
+			combinedTemplates[name] = content
+		}
+
+		templates = combinedTemplates
 	}
 
 	steps := make(map[string]string)

@@ -28,6 +28,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	admissionv1 "k8s.io/api/admission/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -238,6 +239,7 @@ func newTestHandlerWithValidator(t *testing.T, storage *fakeModuleStorage, manag
 	scheme := runtime.NewScheme()
 	require.NoError(t, v1alpha1.AddToScheme(scheme))
 	require.NoError(t, v1alpha2.AddToScheme(scheme))
+	require.NoError(t, corev1.AddToScheme(scheme))
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).Build()
 
@@ -873,6 +875,16 @@ func TestModuleConfigValidationHandler_CELTransition(t *testing.T) {
 			oldVersion:  0, // version == 0 → ExtractLatestSettings returns nil → CEL skipped
 			wantAllowed: true,
 			description: "old object without spec.version → extractOldSettings returns nil → CEL rules skipped",
+		},
+		{
+			name:        "UPDATE: old settings conversion failure skips CEL",
+			operation:   "UPDATE",
+			newSettings: map[string]any{"bundle": "Minimal"},
+			newVersion:  1,
+			oldSettings: map[string]any{"bundle": "Default"},
+			oldVersion:  99,
+			wantAllowed: true,
+			description: "raw settings from an unsupported old schema version must not be evaluated by CEL",
 		},
 		{
 			// Regression test: when old settings are present but without an explicit

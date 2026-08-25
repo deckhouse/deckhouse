@@ -228,12 +228,9 @@ read:
     - configmaps
     - connection.gatekeeper.sh/connections
     - constraints.gatekeeper.sh/*
-    - deckhouse.io/applicationpackages
-    - deckhouse.io/applicationpackageversions
     - deckhouse.io/applications
     - deckhouse.io/awsinstanceclasses
     - deckhouse.io/azureinstanceclasses
-    - deckhouse.io/deckhousereleases
     - deckhouse.io/deschedulers
     - deckhouse.io/dexauthenticators
     - deckhouse.io/dexclients
@@ -245,19 +242,9 @@ read:
     - deckhouse.io/instances
     - deckhouse.io/keepalivedinstances
     - deckhouse.io/localpathprovisioners
-    - deckhouse.io/moduledocumentations
-    - deckhouse.io/modulepulloverrides
-    - deckhouse.io/modulereleases
-    - deckhouse.io/modules
-    - deckhouse.io/modulesettingsdefinitions
-    - deckhouse.io/modulesources
-    - deckhouse.io/moduleupdatepolicies
     - deckhouse.io/nodegroups
     - deckhouse.io/openstackinstanceclasses
     - deckhouse.io/operationpolicies
-    - deckhouse.io/packagerepositories
-    - deckhouse.io/packagerepositoryoperations
-    - deckhouse.io/projects
     - deckhouse.io/projecttemplates
     - deckhouse.io/securitypolicies
     - deckhouse.io/securitypolicyexceptions
@@ -430,24 +417,14 @@ delete,deletecollection:
     - apps/replicasets
     - cert-manager.io/certificaterequests
     - extensions/replicasets
-read-write:
-    - deckhouse.io/authorizationrules
-    - deckhouse.io/moduleconfigs
-write:
-    - autoscaling.k8s.io/verticalpodautoscalercheckpoints
+read:
     - deckhouse.io/applicationpackages
     - deckhouse.io/applicationpackageversions
+read-write:
+    - deckhouse.io/authorizationrules
+write:
+    - autoscaling.k8s.io/verticalpodautoscalercheckpoints
     - deckhouse.io/applications
-    - deckhouse.io/deckhousereleases
-    - deckhouse.io/moduledocumentations
-    - deckhouse.io/modulepulloverrides
-    - deckhouse.io/modulereleases
-    - deckhouse.io/modules
-    - deckhouse.io/modulesources
-    - deckhouse.io/moduleupdatepolicies
-    - deckhouse.io/packagerepositories
-    - deckhouse.io/packagerepositoryoperations
-    - deckhouse.io/securitypolicyexceptions
     - extensions.istio.io/wasmplugins
     - rbac.authorization.k8s.io/rolebindings
     - rbac.authorization.k8s.io/roles
@@ -464,6 +441,8 @@ delete,deletecollection:
 patch,update:
     - nodes
 read:
+    - deckhouse.io/applicationpackages
+    - deckhouse.io/applicationpackageversions
     - deckhouse.io/containerdintegritypolicies
     - deckhouse.io/ingressistiocontrollers
     - deckhouse.io/istiofederations
@@ -479,7 +458,6 @@ read:
     - sailoperator.io/istios
     - sailoperator.io/ztunnels
 read-write:
-    - deckhouse.io/moduleconfigs
     - deckhouse.io/nodegroupconfigurations
     - deckhouse.io/staticinstances
     - multitenancy.deckhouse.io/clusterresourcegrantpolicies
@@ -488,23 +466,11 @@ write:
     - apps/daemonsets
     - autoscaling.k8s.io/verticalpodautoscalercheckpoints
     - cert-manager.io/clusterissuers
-    - deckhouse.io/applicationpackages
-    - deckhouse.io/applicationpackageversions
     - deckhouse.io/applications
-    - deckhouse.io/deckhousereleases
     - deckhouse.io/hubblemonitoringconfigs
     - deckhouse.io/instances
     - deckhouse.io/keepalivedinstances
-    - deckhouse.io/moduledocumentations
-    - deckhouse.io/modulepulloverrides
-    - deckhouse.io/modulereleases
-    - deckhouse.io/modules
-    - deckhouse.io/modulesources
-    - deckhouse.io/moduleupdatepolicies
     - deckhouse.io/nodegroups
-    - deckhouse.io/packagerepositories
-    - deckhouse.io/packagerepositoryoperations
-    - deckhouse.io/securitypolicyexceptions
     - extensions.istio.io/wasmplugins
     - extensions/daemonsets
     - gateway.networking.k8s.io/gatewayclasses
@@ -517,23 +483,11 @@ write:
 {{site.data.i18n.common.role[page.lang] | capitalize }} `ClusterAdmin` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`):
 
 ```text
-delete,deletecollection,get,list,patch,update,watch:
-    - machine.sapcloud.io/alicloudmachineclasses
-    - machine.sapcloud.io/awsmachineclasses
-    - machine.sapcloud.io/azuremachineclasses
-    - machine.sapcloud.io/gcpmachineclasses
-    - machine.sapcloud.io/machinedeployments
-    - machine.sapcloud.io/machines
-    - machine.sapcloud.io/machinesets
-    - machine.sapcloud.io/openstackmachineclasses
-    - machine.sapcloud.io/packetmachineclasses
-    - machine.sapcloud.io/vspheremachineclasses
-    - machine.sapcloud.io/yandexmachineclasses
+create:
+    - deckhouse.io/dexauthenticators/allow-access-to-kubernetes
+    - deckhouse.io/dexclients/allow-access-to-kubernetes
 get,list,patch,update,watch:
     - control-plane.deckhouse.io/controlplanenodes
-list:
-    - dex.coreos.com/offlinesessionses
-    - dex.coreos.com/passwords
 patch,update:
     - deckhouse.io/vcdaffinityrules
     - infrastructure.cluster.x-k8s.io/deckhouseclusters
@@ -552,34 +506,33 @@ patch,update:
     - infrastructure.cluster.x-k8s.io/zvirtclusters
     - infrastructure.cluster.x-k8s.io/zvirtmachines
     - infrastructure.cluster.x-k8s.io/zvirtmachinetemplates
-    - machine.sapcloud.io/machinedeployments/scale
 proxy:
     - nodes
 read:
-    - cluster.x-k8s.io/machinedrainrules
     - control-plane.deckhouse.io/controlplaneoperations
-    - infrastructure.cluster.x-k8s.io/deckhousecontrolplanes
-    - infrastructure.cluster.x-k8s.io/staticclusters
-    - infrastructure.cluster.x-k8s.io/staticmachines
     - nfd.k8s-sigs.io/nodefeaturegroups
     - nfd.k8s-sigs.io/nodefeaturerules
     - nfd.k8s-sigs.io/nodefeatures
 read-write:
-    - cluster.x-k8s.io/clusters
-    - cluster.x-k8s.io/machinedeployments
-    - cluster.x-k8s.io/machinehealthchecks
-    - cluster.x-k8s.io/machinepools
-    - cluster.x-k8s.io/machines
-    - cluster.x-k8s.io/machinesets
     - deckhouse.io/clusterauthorizationrules
+    - deckhouse.io/deckhousereleases
     - deckhouse.io/dexproviderchecks
     - deckhouse.io/dexproviders
     - deckhouse.io/groups
+    - deckhouse.io/moduleconfigs
+    - deckhouse.io/moduledocumentations
+    - deckhouse.io/modulepulloverrides
+    - deckhouse.io/modulereleases
+    - deckhouse.io/modules
+    - deckhouse.io/modulesources
+    - deckhouse.io/moduleupdatepolicies
     - deckhouse.io/nodeusers
+    - deckhouse.io/packagerepositories
+    - deckhouse.io/packagerepositoryoperations
     - deckhouse.io/sshcredentials
+    - deckhouse.io/useraccounts
     - deckhouse.io/useroperations
     - deckhouse.io/users
-    - infrastructure.cluster.x-k8s.io/staticmachinetemplates
     - nodes/configz
     - nodes/healthz
     - nodes/log
@@ -590,10 +543,11 @@ read-write:
 write:
     - cilium.io/ciliumclusterwidenetworkpolicies
     - cilium.io/ciliumnetworkpolicies
-    - cluster.x-k8s.io/machinedeployments/scale
     - config.gatekeeper.sh/configs
     - connection.gatekeeper.sh/connections
     - constraints.gatekeeper.sh/*
+    - deckhouse.io/applicationpackages
+    - deckhouse.io/applicationpackageversions
     - deckhouse.io/awsinstanceclasses
     - deckhouse.io/azureinstanceclasses
     - deckhouse.io/containerdintegritypolicies
@@ -611,6 +565,7 @@ write:
     - deckhouse.io/projects
     - deckhouse.io/projecttemplates
     - deckhouse.io/securitypolicies
+    - deckhouse.io/securitypolicyexceptions
     - deckhouse.io/vcdinstanceclasses
     - deckhouse.io/vsphereinstanceclasses
     - deckhouse.io/yandexinstanceclasses

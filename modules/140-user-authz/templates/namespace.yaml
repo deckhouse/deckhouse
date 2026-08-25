@@ -13,4 +13,20 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (fromYaml (include "labels" .))) | nindent 2 }}
 ---
 {{- include "helm_lib_kube_rbac_proxy_ca_certificate" (list . (printf "d8-%s"  .Chart.Name)) }}
+---
+# Mirrors userAuthz.enableMultiTenancy (already merged with the edition's config-schema
+# default) into a real Kubernetes object: the multitenancy.py validating webhook cannot
+# read module Values directly, only Kubernetes objects. Rendering it in the same block as
+# the namespace above means it only exists — and only ever needs to say "true" — exactly
+# when MultiTenancy is effectively enabled; its absence is read by the webhook as
+# "disabled", and it's created/removed atomically with the rest of this namespace, in the
+# same Helm apply, with no separate hook or bootstrap ordering to get wrong.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: d8-user-authz-multitenancy-state
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+data:
+  enableMultiTenancy: "true"
 {{- end }}

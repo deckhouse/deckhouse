@@ -45,7 +45,8 @@ import (
 )
 
 const (
-	globalModuleName = "global"
+	globalModuleName              = "global"
+	controlPlaneManagerModuleName = "control-plane-manager"
 
 	disableReasonSuffix = "Please annotate ModuleConfig with `modules.deckhouse.io/allow-disabling=true` if you're sure that you want to disable the module."
 )
@@ -127,10 +128,20 @@ func (v *moduleConfigValidator) validate(ctx context.Context, review *kwhmodel.A
 
 	allowExperimental := v.settings.ExperimentalModuleAllowed(cfg.Name)
 
-	var oldSettings map[string]interface{}
+	var (
+		oldSettings                          map[string]interface{}
+		oldSettingsForKubernetesVersionGuard map[string]interface{}
+	)
 
 	switch review.Operation {
 	case kwhmodel.OperationDelete:
+		if cfg.Name == controlPlaneManagerModuleName {
+			// Use raw settings (GetMap), not ExtractLatestSettings/validateCR: a conversion
+			// failure on an unrelated field must not hide an existing kubernetesVersion pin.
+			if res, err := v.validateControlPlaneManagerKubernetesVersion(ctx, nil, rawModuleConfigSettings(cfg)); res != nil || err != nil {
+				return res, err
+			}
+		}
 		return v.validateDelete(ctx, cfg)
 
 	case kwhmodel.OperationConnect, kwhmodel.OperationUnknown:
@@ -145,7 +156,17 @@ func (v *moduleConfigValidator) validate(ctx context.Context, review *kwhmodel.A
 		var extractErr error
 		oldSettings, extractErr = v.extractOldSettings(review.OldObjectRaw)
 		if extractErr != nil {
+			// Explicitly clear: CEL transition must not see partial/unconverted settings
+			// even if a future extractSettingsFromModuleConfig starts returning them with err.
 			oldSettings = nil
+			// Keep the kubernetesVersion clear-guard alive when conversion of the old object
+			// fails, but do not feed unconverted settings to CEL transition rules.
+			oldConfig := new(v1alpha1.ModuleConfig)
+			if json.Unmarshal(review.OldObjectRaw, oldConfig) == nil {
+				oldSettingsForKubernetesVersionGuard = rawModuleConfigSettings(oldConfig)
+			}
+		} else {
+			oldSettingsForKubernetesVersionGuard = oldSettings
 		}
 
 		if res, err := v.validateUpdate(ctx, review, cfg, allowExperimental); res != nil || err != nil {
@@ -153,7 +174,7 @@ func (v *moduleConfigValidator) validate(ctx context.Context, review *kwhmodel.A
 		}
 	}
 
-	return v.validateCommon(ctx, cfg, oldSettings)
+	return v.validateCommon(ctx, cfg, oldSettings, oldSettingsForKubernetesVersionGuard)
 }
 
 // validateDelete guards deletion: a confirmation-required module that is still
@@ -355,12 +376,37 @@ func (v *moduleConfigValidator) checkExperimentalFromStorage(moduleName string, 
 // resolution, update policy existence, settings validation and the
 // exclusive-group conflict check. It returns an allow result with any
 // accumulated warnings when nothing rejects the request.
-func (v *moduleConfigValidator) validateCommon(ctx context.Context, cfg *v1alpha1.ModuleConfig, oldSettings map[string]interface{}) (*kwhvalidating.ValidatorResult, error) {
+func (v *moduleConfigValidator) validateCommon(
+	ctx context.Context,
+	cfg *v1alpha1.ModuleConfig,
+	oldSettings map[string]interface{},
+	oldSettingsForKubernetesVersionGuard map[string]interface{},
+) (*kwhvalidating.ValidatorResult, error) {
 	if cfg.Spec.Source == v1alpha1.ModuleSourceEmbedded {
 		return rejectResult("'Embedded' is a forbidden source")
 	}
 
 	warnings := make([]string, 0, 1)
+
+	// check if spec.version value is valid and the version is the latest
+	result := v.configValidator.Validate(cfg)
+
+	// The kubernetesVersion guard runs before resolveModuleSource on purpose. That call returns a
+	// non-nil *allow* result when the Module CR is missing (fresh install, or the window while the
+	// loader recreates it), which returns from validateCommon before anything below runs — so a
+	// guard placed after it can be bypassed by deleting Module/control-plane-manager and then
+	// applying an out-of-window pin. The DELETE path already runs the guard first for this reason.
+	//
+	// Scoped to control-plane-manager so ordering for every other module is untouched: a
+	// ModuleConfig for a not-yet-installed module must keep being allowed with a warning.
+	if cfg.Name == controlPlaneManagerModuleName {
+		if result.HasError() {
+			return rejectResult(result.Error)
+		}
+		if res, err := v.validateControlPlaneManagerKubernetesVersion(ctx, result.Settings, oldSettingsForKubernetesVersionGuard); res != nil || err != nil {
+			return res, err
+		}
+	}
 
 	sourceResult, sourceWarnings, err := v.resolveModuleSource(ctx, cfg)
 	if sourceResult != nil || err != nil {
@@ -372,8 +418,6 @@ func (v *moduleConfigValidator) validateCommon(ctx context.Context, cfg *v1alpha
 		return res, err
 	}
 
-	// check if spec.version value is valid and the version is the latest
-	result := v.configValidator.Validate(cfg)
 	if result.HasError() {
 		return rejectResult(result.Error)
 	}
@@ -412,13 +456,19 @@ func (v *moduleConfigValidator) extractOldSettings(oldObjectRaw []byte) (map[str
 		return nil, fmt.Errorf("unmarshal old ModuleConfig: %w", err)
 	}
 
-	if oldConfig.Spec.Version == 0 || oldConfig.Spec.Settings == nil {
+	return v.extractSettingsFromModuleConfig(oldConfig)
+}
+
+// extractSettingsFromModuleConfig returns settings in the latest-version form, or nil when
+// the object has no version/settings (same skip semantics as extractOldSettings).
+func (v *moduleConfigValidator) extractSettingsFromModuleConfig(cfg *v1alpha1.ModuleConfig) (map[string]interface{}, error) {
+	if cfg == nil || cfg.Spec.Version == 0 || cfg.Spec.Settings == nil {
 		return nil, nil
 	}
 
-	settings, err := v.configValidator.ExtractLatestSettings(oldConfig)
+	settings, err := v.configValidator.ExtractLatestSettings(cfg)
 	if err != nil {
-		return nil, fmt.Errorf("extract old settings: %w", err)
+		return nil, fmt.Errorf("extract settings: %w", err)
 	}
 
 	return settings, nil

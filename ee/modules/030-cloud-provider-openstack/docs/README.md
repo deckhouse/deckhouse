@@ -11,3 +11,7 @@ The `cloud-provider-openstack` module:
   - The CCM module updates the metadata of the  OpenStack Servers and Kubernetes Nodes and deletes nodes that no longer exist in OpenStack.
 - Provisions disks in Cinder (block) OpenStack using the `CSI storage` component; Manilla (shared filesystem service) is not supported yet. The Cinder CSI driver supports OpenStack re-authentication with service catalog refresh, improving the reliability of volume operations in pods running for a long time without restart.
 - Registers with the [node-manager](/node-manager/) module so that [OpenStackInstanceClasses](cr.html#openstackinstanceclass) can be used when creating the [NodeGroup](/node-manager/cr.html#nodegroup).
+
+{% alert level="warning" %}
+This module is transitioning CloudEphemeral node management from Machine Controller Manager (MCM) to Cluster API (CAPI). Existing NodeGroups continue to use MCM, while newly created NodeGroups use CAPI by default. For the migration procedure for existing groups, see [How to migrate node groups to Cluster API (CAPI)](/products/kubernetes-platform/documentation/v1/faq.html#how-to-migrate-node-groups-to-cluster-api-capi).
+{% endalert %}

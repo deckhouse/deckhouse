@@ -154,10 +154,12 @@ kind: ClusterConfiguration
 metadata:
   name: deckhouse
 `,
-			errContains: `ValidationFailed: [1] deckhouse.io/v1alpha1, Kind=ClusterConfiguration "deckhouse": "ClusterConfiguration, deckhouse.io/v1" document validation failed: 5 errors occurred:
+			// kubernetesVersion is deliberately absent from this list: the field moved to
+			// ModuleConfig control-plane-manager and was dropped from the ClusterConfiguration
+			// `required` set, so a document without it is now schema-valid on that point.
+			errContains: `ValidationFailed: [1] deckhouse.io/v1alpha1, Kind=ClusterConfiguration "deckhouse": "ClusterConfiguration, deckhouse.io/v1" document validation failed: 4 errors occurred:
 	* .metadata is a forbidden property
 	* .clusterType is required
-	* .kubernetesVersion is required
 	* .podSubnetCIDR is required
 	* .serviceSubnetCIDR is required
 

@@ -458,7 +458,7 @@ func ValidateStaticClusterConfiguration(
 // It checks the configuration changes for compliance with the current phase and schema extension rule (x-unsafe).
 // It denies any changes for fields with `x-unsafe: true`.
 // It applies all validation rules to fields with not empty `x-unsafe-rules` extension.
-// On the BaseInfra phase changes are allowed.
+// Unsafe changes are allowed on every phase that runs before the control plane is installed.
 // Non-config resources are checked only for compliance with the yaml format and the validity of apiVersion and kind fields: no changes validation for them.
 // It can be used as an imported functionality in external modules.
 func ValidateClusterSettingsChanges(
@@ -472,8 +472,13 @@ func ValidateClusterSettingsChanges(
 		panic("ValidateClusterSettingsChanges operation is currently supported only in commander mode")
 	}
 
-	// todo: > bashible
-	if phase == phases.BaseInfraPhase {
+	// Everything up to and including master-0 is still just cloud infrastructure: kubeadm and
+	// bashible run in InstallKubernetes. Until then an unsafe change - clusterType, the provider
+	// settings, the pod and service subnets - costs nothing but a re-created VM, so a bootstrap that
+	// died here can be corrected and resumed instead of destroyed and rebuilt. Both names are
+	// needed because master creation used to report itself as BaseInfra and is now FirstMaster;
+	// listing only the former would turn the existing permission into a refusal.
+	if phase == phases.BaseInfraPhase || phase == phases.FirstMasterPhase {
 		return nil
 	}
 

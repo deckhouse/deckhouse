@@ -103,6 +103,15 @@ var _ = BeforeSuite(func() {
 	}
 	Expect(client.IgnoreAlreadyExists(k8sClient.Create(suiteCtx, clusterCfg))).To(Succeed())
 
+	By("publishing the d8-cluster-kubernetes ConfigMap")
+	clusterKubernetes := &corev1.ConfigMap{}
+	clusterKubernetes.Namespace = kubeSystemNS
+	clusterKubernetes.Name = "d8-cluster-kubernetes"
+	clusterKubernetes.Data = map[string]string{
+		"spec": "desiredVersion: \"1.32\"\nupdateMode: Manual\n",
+	}
+	Expect(client.IgnoreAlreadyExists(k8sClient.Create(suiteCtx, clusterKubernetes))).To(Succeed())
+
 	By("pre-issuing the api-proxy discovery certificate")
 	// envtest runs no CSR signer, so letting the controller issue this certificate would block
 	// every assembly for the full csrWaitTimeout. A certificate that is not due for renewal
@@ -119,7 +128,7 @@ var _ = BeforeSuite(func() {
 	Expect(client.IgnoreAlreadyExists(k8sClient.Create(suiteCtx, newKubernetesEndpointSlice("10.10.0.1")))).To(Succeed())
 
 	By("starting the manager with the bashible-context controller")
-	mgr, err := testenv.NewManager(cfg, scheme)
+	mgr, err := testenv.NewManager(suiteCtx, cfg, scheme)
 	Expect(err).NotTo(HaveOccurred())
 	go func() {
 		defer GinkgoRecover()

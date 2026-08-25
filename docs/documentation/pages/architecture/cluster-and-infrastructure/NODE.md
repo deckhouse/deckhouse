@@ -34,7 +34,7 @@ DKP automatically deploys cluster nodes by performing the following **idempotent
   - Required packages are installed from distribution repositories.
   - Kernel parameters, logging settings, log rotation, and other system parameters are configured.
 - Installation of required versions of `containerd` and kubelet, and registration of the node in the Kubernetes cluster.
-- Nginx setup and updating the upstream list for balancing requests from the node to the Kubernetes API.
+- Kubernetes-api-proxy setup and updating the upstream list for balancing requests from the node to the Kubernetes API.
 
 ### Maintaining node state
 

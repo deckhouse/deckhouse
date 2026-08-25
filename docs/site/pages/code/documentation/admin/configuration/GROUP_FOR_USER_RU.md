@@ -1,5 +1,6 @@
 ---
 title: "Создание группы для пользователей"
+description: Как создать группу для пользователей и добавить в неё участников
 permalink: ru/code/documentation/admin/configuration/group.html
 lang: ru
 ---

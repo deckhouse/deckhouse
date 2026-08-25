@@ -154,7 +154,7 @@ func main() {
 	}
 	setupLog.V(1).Info("max-concurrent-reconciles parsed", "default", defaultMaxConcurrent, "perController", perControllerMaxConcurrent)
 
-	if err = register.SetupAll(mgr, instrumentedClient, disabledControllers, defaultMaxConcurrent, perControllerMaxConcurrent); err != nil {
+	if err = register.SetupAll(ctx, mgr, instrumentedClient, disabledControllers, defaultMaxConcurrent, perControllerMaxConcurrent); err != nil {
 		setupLog.Error(err, "unable to setup controllers")
 		os.Exit(1)
 	}

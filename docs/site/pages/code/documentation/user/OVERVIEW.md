@@ -1,5 +1,6 @@
 ---
 title: "Deckhouse Code user guide"
+description: User guide covering repositories, branches, and merge requests
 permalink: en/code/documentation/user/
 ---
 

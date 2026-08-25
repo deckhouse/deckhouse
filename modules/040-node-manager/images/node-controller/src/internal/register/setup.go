@@ -17,7 +17,9 @@ limitations under the License.
 package register
 
 import (
+	"context"
 	"fmt"
+	"reflect"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -25,7 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 )
 
-func setupController(mgr ctrl.Manager, c client.Client, name string, obj client.Object, r Reconciler, maxConcurrentReconciles int) error {
+func setupController(ctx context.Context, mgr ctrl.Manager, c client.Client, name string, obj client.Object, r Reconciler, maxConcurrentReconciles int) error {
 	if maxConcurrentReconciles < 1 {
 		maxConcurrentReconciles = 1
 	}
@@ -38,9 +40,13 @@ func setupController(mgr ctrl.Manager, c client.Client, name string, obj client.
 	}
 
 	if v, ok := r.(NeedsSetup); ok {
-		if err := v.Setup(mgr); err != nil {
+		if err := v.Setup(ctx, mgr); err != nil {
 			return fmt.Errorf("setup %s: %w", name, err)
 		}
+	} else if _, hasMethod := reflect.TypeOf(r).MethodByName("Setup"); hasMethod {
+		// NeedsSetup is optional, so a Setup whose signature drifted is not a compile error — it
+		// is silently never called, and the reconciler runs with its fields left nil.
+		return fmt.Errorf("controller %s has a Setup method that does not implement NeedsSetup: want Setup(context.Context, ctrl.Manager) error", name)
 	}
 
 	b := ctrl.NewControllerManagedBy(mgr).

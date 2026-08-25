@@ -1,5 +1,6 @@
 ---
 title: "Task and project management"
+description: How to manage issues, labels, priorities, and due dates
 permalink: en/code/documentation/user/project-management.html
 lang: en
 ---

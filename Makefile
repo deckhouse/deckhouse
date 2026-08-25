@@ -616,7 +616,7 @@ GOTESTSUM = $(LOCALBIN)/gotestsum
 ## Tool Versions
 GOLANGCI_LINT_VERSION = v2.8.0
 DECKHOUSE_CLI_VERSION ?= v0.33.1
-CRD_ENRICHER_VERSION ?= v0.0.1
+CRD_ENRICHER_VERSION ?= v0.0.2
 DMT_VERSION ?= 0.1.95
 CONTROLLER_TOOLS_VERSION ?= v0.19.0
 CODE_GENERATOR_VERSION ?= v0.34.8
@@ -677,6 +677,8 @@ copy-crds:
 	@cp bin/crd/bases/deckhouse.io_packagerepositories.yaml deckhouse-controller/crds/packagerepository.yaml
 	@cp bin/crd/bases/deckhouse.io_applicationpackageversions.yaml deckhouse-controller/crds/applicationpackageversion.yaml
 	@cp bin/crd/bases/deckhouse.io_applicationpackages.yaml deckhouse-controller/crds/applicationpackage.yaml
+	@cp bin/crd/bases/deckhouse.io_modulepackageversions.yaml deckhouse-controller/crds/modulepackageversion.yaml
+	@cp bin/crd/bases/deckhouse.io_modulepackages.yaml deckhouse-controller/crds/modulepackage.yaml
 
 .PHONY: generate-crds
 generate-crds: controller-gen

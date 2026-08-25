@@ -236,12 +236,6 @@
             "rel": ""
           },
           {
-            "title": "Новости",
-            "url": "/news/",
-            "target": "",
-            "rel": ""
-          },
-          {
             "title": "Вебинары",
             "url": "/webinars/",
             "target": "",

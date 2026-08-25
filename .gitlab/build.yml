@@ -1,0 +1,485 @@
+# Deckhouse image builds (werf). Shell executor.
+#
+# Jobs are split by pipeline context and attach existing rule includes:
+#   :tag     — FE + CE/EE/BE/SE/SE-plus automatic (no tests image, no CSE; GH release has no CSE)
+#   :main    — FE + tests auto; other editions manual
+#   :mr      — FE + tests auto; other editions manual
+#   :release-branch — FE + tests + all editions automatic (incl. CSE)
+
+.publish_image: &publish_image |
+  publish_image() {
+    IMAGE_NAME=$1
+    IMAGE_DST_REPO=$2
+    IMAGE_DST_TAG=$3
+    IMAGE_SRC_REPO="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerRepo" images_tags_werf.json)"
+    IMAGE_SRC_TAG="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerTag" images_tags_werf.json)"
+    IMAGE_DIGEST="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerImageDigest" images_tags_werf.json)"
+    IMAGE_DIGEST="${IMAGE_DIGEST#sha256:}"
+    echo "⚓️ 💫 [$(date -u)] Publishing '${IMAGE_NAME}' image to ${IMAGE_DST_REPO}:${IMAGE_DST_TAG}"
+    regctl image copy --digest-tags "${IMAGE_SRC_REPO}:${IMAGE_SRC_TAG}" "${IMAGE_DST_REPO}:${IMAGE_DST_TAG}"
+  }
+
+.build:
+  extends:
+    - .build_base
+  artifacts:
+    when: always
+    expire_in: 1 week
+    paths:
+      - images_tags_werf.json
+      - only_images.json
+    reports:
+      dotenv: build.env
+  variables:
+    WERF_DOCKER_REGISTRY_DEBUG: "1"
+    IMAGES_TAGS_PATH: images_tags_werf.json
+  script:
+    - *publish_image
+    - |
+      if [[ "${BUILD_MODE}" == "dev" ]]; then
+        export WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC=1
+      fi
+      if [[ "${BUILD_MODE}" == "release" || "${BUILD_MODE}" == "pre-release" ]]; then
+        export WERF_DISABLE_META_TAGS=true
+      fi
+
+      # --- signing (same roles/paths as GitHub build; JWT from GitLab id_token) ---
+      if [[ "${BUILD_MODE}" == "release" ]]; then
+        export WERF_SIGN_KEY="hashivault://dh-prod-v01"
+        export TRANSIT_SECRET_ENGINE_PATH="prod-int-signer"
+        export WERF_VAULT_AUTH_ROLE="${WERF_VAULT_AUTH_ROLE:-dh-signer_dh-signer}"
+        export INTERMEDIARY_CERT_PATH="prod-int-pki/issuer/default/pem"
+        export SIGNING_CERT_PATH="prod-int-pki/cert/1b:95:65:cf:63:56:78:d3:0d:42:e9:a9:08:92:ee:88:ee:aa:30:aa"
+        export REGISTRY_USER="${DECKHOUSE_REGISTRY_STAGE_USER}"
+        export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_STAGE_PASSWORD}"
+      else
+        export WERF_SIGN_KEY="hashivault://dh-dev-v01"
+        export TRANSIT_SECRET_ENGINE_PATH="dev-int-signer"
+        export WERF_VAULT_AUTH_ROLE="${WERF_VAULT_AUTH_ROLE:-dh-signer-dev_dh-signer-dev}"
+        export INTERMEDIARY_CERT_PATH="dev-int-pki/issuer/default/pem"
+        export SIGNING_CERT_PATH="dev-int-pki/cert/56:61:03:74:72:94:e1:e7:7b:d9:ac:44:f1:4c:57:aa:2b:b2:8d:9d"
+        export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
+        export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+      fi
+
+      sign_minimal_version="v2.71.0-dk"
+      sign_current_version="$(werf version)"
+      sign_supported=true
+      if [[ $sign_minimal_version =~ v([0-9]+)\.([0-9]+)\.([0-9]+)-dk ]]; then
+        sign_minimal_major=${BASH_REMATCH[1]}
+        sign_minimal_minor=${BASH_REMATCH[2]}
+      fi
+      if [[ $sign_current_version =~ v([0-9]+)\.([0-9]+)\.([0-9]+)-dk ]]; then
+        sign_current_major=${BASH_REMATCH[1]}
+        sign_current_minor=${BASH_REMATCH[2]}
+      else
+        sign_supported=false
+      fi
+      if (( sign_current_major < sign_minimal_major )); then
+        sign_supported=false
+      elif (( sign_current_major == sign_minimal_major && sign_current_minor < sign_minimal_minor )); then
+        sign_supported=false
+      fi
+
+      if [[ -n "${WERF_VAULT_AUTH_JWT}" ]]; then
+        echo "Received Vault JWT"
+      else
+        echo "Vault JWT empty" >&2
+        exit 1
+      fi
+      export VAULT_TOKEN
+      VAULT_TOKEN="$(curl -sfX POST "${VAULT_ADDR}/v1/auth/${WERF_VAULT_AUTH_PATH}/login" \
+        -H 'Content-Type: application/json' \
+        -d "{\"role\":\"${WERF_VAULT_AUTH_ROLE}\",\"jwt\":\"${WERF_VAULT_AUTH_JWT}\"}" \
+        | jq -r '.auth.client_token')"
+      if [[ -n "${VAULT_TOKEN}" && "${VAULT_TOKEN}" != "null" ]]; then
+        echo "Received Vault token"
+      else
+        echo "Vault token empty" >&2
+        exit 1
+      fi
+
+      if $sign_supported; then
+        echo "Using WERF_SIGN_MANIFEST=${WERF_SIGN_MANIFEST}"
+        export WERF_SIGN_INTERMEDIATES
+        export WERF_SIGN_CERT
+        WERF_SIGN_INTERMEDIATES="$(curl -sf "${VAULT_ADDR}/v1/${INTERMEDIARY_CERT_PATH}" | base64 -w0)"
+        WERF_SIGN_CERT="$(curl -sf --header "X-Vault-Token: ${VAULT_TOKEN}" \
+          "${VAULT_ADDR}/v1/${SIGNING_CERT_PATH}" | jq -r '.data.certificate' | base64 -w0)"
+      else
+        export WERF_SIGN_MANIFEST="0"
+        echo "Fallback to WERF_SIGN_MANIFEST=${WERF_SIGN_MANIFEST}"
+      fi
+
+      # --- registry / image tag ---
+      REPO_SUFFIX="${CI_PROJECT_PATH#deckhouse/deckhouse-}"
+      if [[ "${REPO_SUFFIX}" == "${CI_PROJECT_PATH}" ]]; then
+        REPO_SUFFIX=
+      fi
+
+      REGISTRY_SUFFIX="$(echo "${WERF_ENV}" | tr '[:upper:]' '[:lower:]')"
+
+      if [[ "${BUILD_MODE}" == "release" ]]; then
+        STAGE_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/${REGISTRY_SUFFIX}"
+        export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
+        export WERF_REPO="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/common"
+        export WERF_FINAL_REPO="${STAGE_REGISTRY_PATH}"
+        SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
+        IMAGE_TAG="$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")"
+      else
+        DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+        export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+        export WERF_REPO="${DEV_REGISTRY_PATH}"
+
+        IMAGE_EDITION=
+        if [[ -n "${WERF_ENV}" && "${WERF_ENV,,}" != "fe" ]]; then
+          IMAGE_EDITION="${WERF_ENV,,}"
+        fi
+        if [[ -n "${CI_MERGE_REQUEST_IID:-}" ]]; then
+          IMAGE_TAG_BASE="pr${CI_MERGE_REQUEST_IID}"
+        else
+          IMAGE_TAG_BASE="${CI_COMMIT_REF_SLUG}"
+        fi
+        IMAGE_TAG="${IMAGE_TAG_BASE}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}"
+      fi
+
+      type werf && source "$(werf ci-env gitlab --verbose --as-file)"
+      werf build \
+        --parallel=true --parallel-tasks-limit=5 \
+        --save-build-report=true \
+        --build-report-path images_tags_werf.json
+
+      # Publish images for Git branch / MR.
+      if [[ -n "${CI_COMMIT_BRANCH:-}" || -n "${CI_MERGE_REQUEST_IID:-}" ]]; then
+        echo "⚓️ 💫 [$(date -u)] Publish images for edition '${WERF_ENV}' using tag '${IMAGE_TAG}' ..."
+        publish_image 'dev' "${REGISTRY_PATH}" "${IMAGE_TAG}"
+        publish_image 'dev/install' "${REGISTRY_PATH}/install" "${IMAGE_TAG}"
+        publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "${IMAGE_TAG}"
+        if [[ "${WERF_ENV}" != "CSE" ]]; then
+          publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks" "${IMAGE_TAG}"
+        fi
+
+        if [[ "${WERF_ENV,,}" == "fe" && "${CI_COMMIT_BRANCH:-}" =~ release-([0-9]+\.[0-9]+) ]]; then
+          publish_image 'dev' "${REGISTRY_PATH}" "v${BASH_REMATCH[1]}.0"
+          publish_image 'dev/install' "${REGISTRY_PATH}/install" "v${BASH_REMATCH[1]}.0"
+          publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "v${BASH_REMATCH[1]}.0"
+          publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel" "v${BASH_REMATCH[1]}.0"
+          publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks" "v${BASH_REMATCH[1]}.0"
+        fi
+      else
+        echo "Branch unset, skipping branch publish."
+      fi
+
+      # Publish images for Git tag.
+      # write_registry secrets are intentionally not wired yet for release tags.
+      if [[ "${CI_COMMIT_TAG:-}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        echo "⚓️ 💫 [$(date -u)] Publish images for Git tag '${CI_COMMIT_TAG}' and registry suffix '${REGISTRY_SUFFIX}' using tag '${IMAGE_TAG}' ..."
+        publish_image 'dev' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}" "${IMAGE_TAG}"
+        publish_image 'dev/install' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install" "${IMAGE_TAG}"
+        publish_image 'dev/install-standalone' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone" "${IMAGE_TAG}"
+        publish_image 'release-channel-version' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel" "${IMAGE_TAG}"
+        publish_image 'e2e-opentofu-eks' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/e2e-opentofu-eks" "${IMAGE_TAG}"
+      else
+        echo "Not a release tag, skipping tag publish."
+      fi
+
+      if [[ "${BUILD_MODE}" == "release" && "${CI_COMMIT_TAG:-}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        export REGISTRY_FROM="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/common"
+        export REGISTRY_TO="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/${WERF_ENV,,}"
+        python3 .github/scripts/python/copy_attestations.py
+      fi
+
+      TESTS_IMAGE_NAME="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
+      echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
+      echo "TESTS_IMAGE_NAME=${TESTS_IMAGE_NAME}" > build.env
+      # Same tag naming as publish (includes REPO_SUFFIX for deckhouse-* test repos).
+      echo "DEV_IMAGE_TAG=${IMAGE_TAG}" >> build.env
+
+      if [[ "${BUILD_MODE}" == "dev" && "${WERF_ENV,,}" == "fe" ]]; then
+        regctl image get-file "${DECKHOUSE_DEV_REGISTRY_HOST}/sys/deckhouse-oss:${IMAGE_TAG}" \
+          /deckhouse/modules/images_digests.json > images_digests.json
+        if [[ -n "${CI_MERGE_REQUEST_TARGET_BRANCH_NAME:-}" ]]; then
+          export GITHUB_BASE_REF="origin/${CI_MERGE_REQUEST_TARGET_BRANCH_NAME}"
+        fi
+        BUILD_REPORT_PATH=./images_tags_werf.json \
+          IMAGES_DIGESTS_PATH=./images_digests.json \
+          OUTPUT_CHANGED=./changed_images.json \
+          python3 .github/scripts/python/changed_images.py
+        CHANGED_COUNT="$(jq 'length' changed_images.json)"
+        jq -c '[.[].compact_keys[]?] | unique' changed_images.json > only_images.json
+        echo "CHANGED_COUNT=${CHANGED_COUNT}" >> build.env
+        rm -f images_digests.json changed_images.json
+      else
+        echo "[]" > only_images.json
+        echo "CHANGED_COUNT=0" >> build.env
+      fi
+
+      egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
+      mv images_tags_werf_filtered.json images_tags_werf.json
+
+# ---------------------------------------------------------------------------
+# Edition templates (WERF_ENV only). Concrete jobs attach rule includes below.
+# ---------------------------------------------------------------------------
+
+.build_fe:
+  extends:
+    - .build
+  variables:
+    WERF_ENV: FE
+
+.build_ce:
+  extends:
+    - .build
+  variables:
+    WERF_ENV: CE
+
+.build_ee:
+  extends:
+    - .build
+  variables:
+    WERF_ENV: EE
+
+.build_be:
+  extends:
+    - .build
+  variables:
+    WERF_ENV: BE
+
+.build_se:
+  extends:
+    - .build
+  variables:
+    WERF_ENV: SE
+
+.build_se_plus:
+  extends:
+    - .build
+  variables:
+    WERF_ENV: SE-plus
+
+.build_cse:
+  extends:
+    - .build
+  variables:
+    WERF_ENV: CSE
+
+.build_tests:
+  extends:
+    - .build_base
+  variables:
+    WERF_ENV: FE
+    WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: "1"
+    WERF_SIGN_MANIFEST: "0"
+    REGISTRY_USER: ${DECKHOUSE_DEV_REGISTRY_USER}
+    REGISTRY_PASSWORD: ${DECKHOUSE_DEV_REGISTRY_PASSWORD}
+  artifacts:
+    when: on_success
+    expire_in: 1 week
+    reports:
+      dotenv: build.env
+  script:
+    - *publish_image
+    - |
+      REPO_SUFFIX="${CI_PROJECT_PATH#deckhouse/deckhouse-}"
+      if [[ "${REPO_SUFFIX}" == "${CI_PROJECT_PATH}" ]]; then
+        REPO_SUFFIX=
+      fi
+
+      DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+      export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+      export WERF_REPO="${DEV_REGISTRY_PATH}"
+
+      if [[ -n "${CI_MERGE_REQUEST_IID:-}" ]]; then
+        IMAGE_TAG="pr${CI_MERGE_REQUEST_IID}-tests${REPO_SUFFIX:+-${REPO_SUFFIX}}"
+      else
+        IMAGE_TAG="${CI_COMMIT_REF_SLUG}-tests${REPO_SUFFIX:+-${REPO_SUFFIX}}"
+      fi
+
+      type werf && source "$(werf ci-env gitlab --verbose --as-file)"
+      werf build tests \
+        --parallel=true --parallel-tasks-limit=5 \
+        --save-build-report=true \
+        --final-images-only=true \
+        --build-report-path images_tags_werf.json
+
+      publish_image 'tests' "${REGISTRY_PATH}/tests" "${IMAGE_TAG}"
+
+      TESTS_IMAGE_NAME="${REGISTRY_PATH}/tests:${IMAGE_TAG}"
+      rm -f images_tags_werf.json
+      echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
+      echo "TESTS_IMAGE_NAME=${TESTS_IMAGE_NAME}" > build.env
+      echo "TESTS_IMAGE_TAG=${IMAGE_TAG}" >> build.env
+
+# ---------------------------------------------------------------------------
+# Tag: all editions + tests — automatic
+# ---------------------------------------------------------------------------
+
+build_fe:tag:
+  extends:
+    - .build_fe
+    - .rules:on_tag
+    - .needs_tag_prechecks
+
+build_ce:tag:
+  extends:
+    - .build_ce
+    - .rules:on_tag
+    - .needs_tag_prechecks
+
+build_ee:tag:
+  extends:
+    - .build_ee
+    - .rules:on_tag
+    - .needs_tag_prechecks
+
+build_be:tag:
+  extends:
+    - .build_be
+    - .rules:on_tag
+    - .needs_tag_prechecks
+
+build_se:tag:
+  extends:
+    - .build_se
+    - .rules:on_tag
+    - .needs_tag_prechecks
+
+build_se_plus:tag:
+  extends:
+    - .build_se_plus
+    - .rules:on_tag
+    - .needs_tag_prechecks
+
+# CSE is not built on tags in GitHub release workflow.
+
+# ---------------------------------------------------------------------------
+# main: FE + tests automatic; other editions manual
+# ---------------------------------------------------------------------------
+
+build_fe:main:
+  extends:
+    - .build_fe
+    - .rules:on_main
+
+build_tests:main:
+  extends:
+    - .build_tests
+    - .rules:on_main
+
+build_ce:main:
+  extends:
+    - .build_ce
+    - .rules:on_main_manual
+
+build_ee:main:
+  extends:
+    - .build_ee
+    - .rules:on_main_manual
+
+build_be:main:
+  extends:
+    - .build_be
+    - .rules:on_main_manual
+
+build_se:main:
+  extends:
+    - .build_se
+    - .rules:on_main_manual
+
+build_se_plus:main:
+  extends:
+    - .build_se_plus
+    - .rules:on_main_manual
+
+build_cse:main:
+  extends:
+    - .build_cse
+    - .rules:on_main_manual
+
+# ---------------------------------------------------------------------------
+# merge request: FE + tests automatic; other editions manual
+# ---------------------------------------------------------------------------
+
+build_fe:mr:
+  extends:
+    - .build_fe
+    - .rules:on_merge_request
+
+build_tests:mr:
+  extends:
+    - .build_tests
+    - .rules:on_merge_request
+
+build_ce:mr:
+  extends:
+    - .build_ce
+    - .rules:on_merge_request_manual
+
+build_ee:mr:
+  extends:
+    - .build_ee
+    - .rules:on_merge_request_manual
+
+build_be:mr:
+  extends:
+    - .build_be
+    - .rules:on_merge_request_manual
+
+build_se:mr:
+  extends:
+    - .build_se
+    - .rules:on_merge_request_manual
+
+build_se_plus:mr:
+  extends:
+    - .build_se_plus
+    - .rules:on_merge_request_manual
+
+build_cse:mr:
+  extends:
+    - .build_cse
+    - .rules:on_merge_request_manual
+
+# ---------------------------------------------------------------------------
+# release-x.xx: FE + tests automatic; other editions manual
+# ---------------------------------------------------------------------------
+
+build_fe:release-branch:
+  extends:
+    - .build_fe
+    - .rules:on_release_branch
+
+build_tests:release-branch:
+  extends:
+    - .build_tests
+    - .rules:on_release_branch
+
+build_ce:release-branch:
+  extends:
+    - .build_ce
+    - .rules:on_release_branch
+
+build_ee:release-branch:
+  extends:
+    - .build_ee
+    - .rules:on_release_branch
+
+build_be:release-branch:
+  extends:
+    - .build_be
+    - .rules:on_release_branch
+
+build_se:release-branch:
+  extends:
+    - .build_se
+    - .rules:on_release_branch
+
+build_se_plus:release-branch:
+  extends:
+    - .build_se_plus
+    - .rules:on_release_branch
+
+build_cse:release-branch:
+  extends:
+    - .build_cse
+    - .rules:on_release_branch

@@ -31,7 +31,7 @@ spec:
 
 ### Checking provider connectivity
 
-The web UI  provider details page has a **Check connection** action. It creates a [DexProviderCheck](cr.html#dexprovidercheck) resource and waits for the hook to write the result to its status.
+The web UI provider details page has a **Check connection** action. It creates a [DexProviderCheck](cr.html#dexprovidercheck) resource and waits for the user-authn controller to write the result to its status.
 
 The check verifies that:
 
@@ -547,6 +547,8 @@ spec:
 ### Local user operations
 
 Password reset, 2FA reset, and lock/unlock operations are performed via the [UserOperation](cr.html#useroperation) resource. The `initiatorType` field indicates who initiated the operation: an administrator (`admin`), the system (`system`), or the user (`self`).
+
+> **Caution.** Do not change `User.spec.password` after the User is created (`kubectl edit` / direct patch). That field is immutable and does not update Dex credentials. Always reset passwords via UserOperation (or `d8 iam user reset-password`).
 
 #### Administrative operations
 

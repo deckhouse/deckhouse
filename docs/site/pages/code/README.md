@@ -1,5 +1,6 @@
 ---
 title: "Deckhouse Code documentation"
+description: Deckhouse Code documentation covering repository management, code review, and CI/CD
 permalink: en/code/documentation/
 ---
 

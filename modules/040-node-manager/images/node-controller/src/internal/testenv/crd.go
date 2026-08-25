@@ -29,12 +29,15 @@ type (
 const (
 	MachineCRDFile            ControllerCRDFile = "machine.yaml"
 	MachineDeploymentCRDFile  ControllerCRDFile = "machine-deployment.yaml"
+	MachineSetCRDFile         ControllerCRDFile = "machine-sets.yaml"
 	ClusterCRDFile            ControllerCRDFile = "cluster.yaml"
 	MachineHealthCheckCRDFile ControllerCRDFile = "machine-health-check.yaml"
 
-	NodeGroupCRDFile NodeManagerCRDFile = "node_group.yaml"
-	MCMCRDFile       NodeManagerCRDFile = "mcm.yaml"
-	InstanceCRDFile  NodeManagerCRDFile = "instance.yaml"
+	NodeGroupCRDFile      NodeManagerCRDFile = "node_group.yaml"
+	MCMCRDFile            NodeManagerCRDFile = "mcm.yaml"
+	InstanceCRDFile       NodeManagerCRDFile = "instance.yaml"
+	NodeUserCRDFile       NodeManagerCRDFile = "nodeuser.yaml"
+	StaticInstanceCRDFile NodeManagerCRDFile = "staticinstance.yaml"
 )
 
 // RealCacheCRDPaths returns the CRDs every envtest manager needs regardless of what the
@@ -57,6 +60,13 @@ func ControllerCRDPaths(crds ...ControllerCRDFile) []string {
 
 func NodeManagerCRDPaths(crds ...NodeManagerCRDFile) []string {
 	return resolveUpPaths("040-node-manager/crds", crds)
+}
+
+// ModuleCRDPaths resolves CRD files under the repo's modules directory (e.g.
+// "030-cloud-provider-yandex/candi/openapi/instance_class.yaml") for suites that
+// exercise another module's CRD against the real apiserver.
+func ModuleCRDPaths(paths ...string) []string {
+	return resolveUpPaths("modules", paths)
 }
 
 type crdSet struct {
@@ -102,6 +112,13 @@ func WithMachineCRDFile() crdOpt {
 
 func WithMachineDeploymentCRDFile() crdOpt {
 	return WithController(MachineDeploymentCRDFile)
+}
+
+// WithMachineSetCRDFile installs the MachineSet CRD. A suite exercising the CAPI pruner needs it:
+// the pruner asks which templates the NodeGroup's MachineSets still reference, and without the
+// CRD that list fails, so the whole prune is skipped and the test would silently prove nothing.
+func WithMachineSetCRDFile() crdOpt {
+	return WithController(MachineSetCRDFile)
 }
 
 func WithNodeGroupCRDFile() crdOpt {

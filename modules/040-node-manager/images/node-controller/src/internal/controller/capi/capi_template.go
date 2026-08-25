@@ -137,12 +137,23 @@ func (r *MachineDeploymentReconciler) pruneStaleCAPI(
 		return err
 	}
 
+	names := make([]string, 0, len(tmplList.Items))
+	for i := range tmplList.Items {
+		names = append(names, tmplList.Items[i].GetName())
+	}
+	recent := recentGenerations(names)
+
 	for i := range tmplList.Items {
 		tmpl := &tmplList.Items[i]
 		if _, ok := desiredTemplates[tmpl.GetName()]; ok {
 			continue
 		}
 		if !tmpl.GetDeletionTimestamp().IsZero() {
+			continue
+		}
+		// Superseded generations are kept for a while so an operator can still read what a rollout
+		// changed after the NodeGroup event has expired — see keptGenerations.
+		if _, ok := recent[tmpl.GetName()]; ok {
 			continue
 		}
 		// A rollout keeps the previous MachineSet alive until its Machines are replaced, and

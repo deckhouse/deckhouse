@@ -465,7 +465,7 @@ func TestSetup_BuildsKubeClientFromManagerConfig(t *testing.T) {
 	mgr := &configOnlyManager{cfg: &rest.Config{Host: "https://127.0.0.1:6443"}}
 	r := &Reconciler{}
 
-	if err := r.Setup(mgr); err != nil {
+	if err := r.Setup(t.Context(), mgr); err != nil {
 		t.Fatalf("setup: %v", err)
 	}
 	if r.kubeClient == nil {
@@ -477,7 +477,7 @@ func TestSetup_InvalidConfig_ReturnsError(t *testing.T) {
 	mgr := &configOnlyManager{cfg: &rest.Config{Host: "https://example.com", ExecProvider: &api.ExecConfig{}, AuthProvider: &api.AuthProviderConfig{}}}
 	r := &Reconciler{}
 
-	if err := r.Setup(mgr); err == nil {
+	if err := r.Setup(t.Context(), mgr); err == nil {
 		t.Fatal("expected error from invalid rest.Config, got nil")
 	}
 }

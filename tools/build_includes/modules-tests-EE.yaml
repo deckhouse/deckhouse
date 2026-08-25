@@ -894,6 +894,11 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/modules/110-istio/monitoring/grafana-dashboards/istio/config-health.json
+  to: /deckhouse/modules/110-istio/monitoring/grafana-dashboards/istio/config-health.json
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /ee/modules/150-user-authn/hooks/common_test.go
   to: /deckhouse/modules/150-user-authn/hooks/common_test.go
   stageDependencies:

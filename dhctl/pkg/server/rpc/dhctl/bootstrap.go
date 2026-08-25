@@ -280,6 +280,7 @@ func (s *Service) bootstrap(ctx context.Context, p *bootstrapParams) *pb.Bootstr
 
 	opts.Global.ConfigPaths = configPaths
 	opts.Bootstrap.PostBootstrapScriptPath = postBootstrapScriptPath
+	opts.Bootstrap.SkipPhases = p.request.Options.SkipPhases
 
 	span.SetAttributes(opts.ToSpanAttributes()...)
 

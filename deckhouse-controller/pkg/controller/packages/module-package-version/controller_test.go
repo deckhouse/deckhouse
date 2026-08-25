@@ -19,6 +19,7 @@ package modulepackageversion
 import (
 	"context"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -77,6 +78,7 @@ func withDependencyContainer(dc dependency.Container) reconcilerOption {
 
 func newReconciler(cl client.Client, dc dependency.Container) *reconciler {
 	return &reconciler{
+		init:     new(sync.WaitGroup),
 		client:   cl,
 		logger:   log.NewNop(),
 		dc:       dc,
@@ -226,7 +228,7 @@ func (suite *ControllerTestSuite) getModulePackageVersion(name string) *v1alpha1
 	return &mpv
 }
 
-func TestDeleteBlockedByUsedByCount(t *testing.T) {
+func TestDeleteBlockedWhileUsed(t *testing.T) {
 	ctx := context.Background()
 	ctr, kubeClient := setupFakeController(t, "delete-with-used-by.yaml")
 
@@ -241,10 +243,10 @@ func TestDeleteBlockedByUsedByCount(t *testing.T) {
 	require.NoError(t, kubeClient.Get(ctx, client.ObjectKey{Name: mpvName}, &mpv))
 	require.NoError(t, kubeClient.Delete(ctx, &mpv))
 
-	// Reconcile should block deletion because UsedByCount > 0
+	// Reconcile should block deletion because the version is still used
 	result, err := ctr.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKey{Name: mpvName}})
 	require.NoError(t, err)
-	assert.Equal(t, 15*time.Second, result.RequeueAfter, "should requeue when UsedByCount > 0")
+	assert.Equal(t, 15*time.Second, result.RequeueAfter, "should requeue while the version is used")
 
 	// Verify finalizer is still present (object not deleted)
 	var updated v1alpha1.ModulePackageVersion
@@ -267,7 +269,7 @@ func TestDeleteSucceedsWhenUnused(t *testing.T) {
 	require.NoError(t, kubeClient.Get(ctx, client.ObjectKey{Name: mpvName}, &mpv))
 	require.NoError(t, kubeClient.Delete(ctx, &mpv))
 
-	// Reconcile should remove finalizer because UsedByCount == 0
+	// Reconcile should remove finalizer because the version is unused
 	result, err := ctr.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKey{Name: mpvName}})
 	require.NoError(t, err)
 	assert.Zero(t, result.RequeueAfter, "should not requeue when unused")

@@ -25,9 +25,9 @@ const (
 	ConditionTypeError                        = "Error"
 	ConditionTypeScaling                      = "Scaling"
 	ConditionTypeFrozen                       = "Frozen"
-	CloudProviderSecretName                   = "d8-node-manager-cloud-provider"
 
 	// Re-exported from internal/common.
+	CloudProviderSecretName          = nodecommon.CloudProviderSecretName
 	NodeGroupLabel                   = nodecommon.NodeGroupLabel
 	ConfigurationChecksumAnnotation  = nodecommon.ConfigurationChecksumAnnotation
 	MachineNamespace                 = nodecommon.MachineNamespace

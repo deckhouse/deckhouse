@@ -4,5 +4,5 @@ path = "gitleaks.base.toml"
 
 [allowlist]
 regexes = [
-  'kubernetesCni162'
+  'kubernetesCni191'
 ]

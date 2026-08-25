@@ -25,11 +25,12 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/ettle/strcase"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"sigs.k8s.io/yaml"
+	"gopkg.in/yaml.v3"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/dto"
@@ -288,6 +289,11 @@ func LoadModuleConf(ctx context.Context, moduleDir string, logger *log.Logger) (
 		}
 	}
 
+	// override version has const v2.0.0
+	if _, err := semver.NewVersion(def.Version); err != nil {
+		def.Version = "v2.0.0"
+	}
+
 	// Load values from values.yaml and openapi schemas
 	static, config, values, err := loadValues(def.Name, moduleDir)
 	if err != nil {
@@ -463,8 +469,9 @@ func loadModulePackageDefinition(packageDir string) (*dto.ModuleDefinition, erro
 			Requirements: requirements,
 			Licensing:    legacyModuleLicensing(def.Accessibility),
 		},
-		Weight:   int(def.Weight),
-		Critical: def.Critical,
+		Weight:         int(def.Weight),
+		Critical:       def.Critical,
+		ExclusiveGroup: def.ExclusiveGroup,
 	}, nil
 }
 

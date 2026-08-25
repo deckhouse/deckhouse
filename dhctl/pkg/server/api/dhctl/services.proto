@@ -18,6 +18,7 @@ option go_package = "pb/dhctl";
 
 package dhctl;
 
+import "phase_catalog.proto";
 import "check.proto";
 import "bootstrap.proto";
 import "destroy.proto";
@@ -36,6 +37,7 @@ service DHCTL {
   rpc Converge (stream ConvergeRequest) returns (stream ConvergeResponse) {}
   rpc CommanderAttach (stream CommanderAttachRequest) returns (stream CommanderAttachResponse) {}
   rpc CommanderDetach (stream CommanderDetachRequest) returns (stream CommanderDetachResponse) {}
+  rpc GetPhaseCatalog (PhaseCatalogRequest) returns (PhaseCatalog) {}
 }
 
 service Validation {

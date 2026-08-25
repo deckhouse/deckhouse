@@ -46,13 +46,62 @@ spec:
 
 ## Режимы обновления
 
-DKP поддерживает три режима обновления, которые определяют порядок перехода на новую версию:
+DKP поддерживает два режима обновления, которые [определяют](/modules/deckhouse/configuration.html#parameters-update-mode) порядок перехода на новую версию:
 
-- **Автоматический режим (без окон обновлений)** — кластер обновляется сразу после появления новой версии
-  [на используемом канале обновлений](../../../architecture/updating.html#каналы-обновлений).
-- **Автоматический режим (с окнами обновлений)** — кластер обновляется в ближайшее доступное окно
-  после появления новой версии на канале обновлений.
-- **Ручной режим** — для применения обновления его необходимо подтвердить вручную.
+- **Автоматический режим** — кластер обновляется сразу после появления новой версии [на используемом канале обновлений](../../../architecture/updating.html#каналы-обновлений). Доступно два варианта настройки:
+  - `AutoPatch` — устанавливаются обновления патч-версий в рамках текущей минорной версии;
+  - `Auto` — устанавливаются и патч-версии, и минорные версии.
+- **Ручной режим (`Manual`)** — и патч-версии, и минорные версии применяются после ручного подтверждения.
+
+Для автоматического режима доступны настройки [окна обновлений](#окна-обновлений) — разрешённые обновления применяются с учётом [`update.windows`](/modules/deckhouse/configuration.html#parameters-update-windows), если окна заданы. Если окна не заданы, обновление выполняется сразу после появления версии на канале.
+
+{% alert level="info" %}
+Настройки [`update`](/modules/deckhouse/configuration.html#parameters-update) модуля `deckhouse` (режим и окна) по умолчанию применяются и к встроенным, и к внешним модулям.
+
+Если у модуля нет собственной политики обновления ([ModuleUpdatePolicy](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleupdatepolicy)) и в его ModuleConfig не указан параметр `updatePolicy`, модуль наследует [`releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) и [`update`](/modules/deckhouse/configuration.html#parameters-update) из ModuleConfig `deckhouse`.
+{% endalert %}
+
+### Только патч-версии в рамках текущей минорной (AutoPatch)
+
+Чтобы DKP обновлялся в пределах текущей минорной версии (устанавливались патч-версии), используйте режим `AutoPatch`.
+
+Например, при установленной версии `v1.70.1` DKP сможет автоматически обновиться до `v1.70.2`,
+но не перейдёт на `v1.71.*` без [ручного подтверждения](#ручное-подтверждение-обновлений).
+
+Это значение задано по умолчанию. Чтобы явно установить режим `AutoPatch`, выполните команду:
+
+```shell
+d8 k patch mc deckhouse --type=merge -p='{"spec":{"settings":{"update":{"mode":"AutoPatch"}}}}'
+```
+
+Чтобы подтвердить обновление минорной версии, выполните следующую команду,
+указав необходимую версию DKP вместо `<DECKHOUSE-VERSION>`:
+
+```shell
+d8 k patch DeckhouseRelease <DECKHOUSE-VERSION> --type=merge -p='{"approved": true}'
+```
+
+### Автоматическое обновление всех версий (Auto)
+
+В режиме `Auto` DKP автоматически применяет и патч-версии, и минорные версии
+с учётом [окон обновлений](#окна-обновлений), если они заданы.
+
+Чтобы включить режим `Auto`, выполните команду:
+
+```shell
+d8 k patch mc deckhouse --type=merge -p='{"spec":{"settings":{"update":{"mode":"Auto"}}}}'
+```
+
+### Ручной режим (Manual)
+
+В режиме `Manual` DKP получает информацию о новых версиях в кластер,
+но применение и патч-версий, и минорных версий требует [ручного подтверждения](#ручное-подтверждение-обновлений).
+
+Чтобы включить режим `Manual`, выполните команду:
+
+```shell
+d8 k patch mc deckhouse --type=merge -p='{"spec":{"settings":{"update":{"mode":"Manual"}}}}'
+```
 
 ### Проверка текущего режима обновления
 
@@ -70,6 +119,7 @@ spec:
   settings:
     releaseChannel: Stable
     update:
+      mode: AutoPatch
       windows:
       - days:
         - Mon
@@ -77,7 +127,7 @@ spec:
         to: "20:00"
 ```
 
-### Автоматическое обновление
+### Как применяется автоматическое обновление
 
 Автоматический режим активируется при указании параметра [`releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) в конфигурации модуля `deckhouse`.
 При выполнении этого условия:
@@ -150,18 +200,23 @@ d8 k get deckhousereleases
 - Установить тег необходимой версии DKP для Deployment `deckhouse`
   и удалить [параметр `releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) из конфигурации модуля `deckhouse`.
 
-  В этом случае DKP останется на указанной версии
-  и никакая информация о новых доступных версиях (объекты DeckhouseRelease) в кластере появляться не будет.
-  
-  > **Важно**. Этот режим заблокирует установку патч-релизов,
-  > которые могут содержать исправления критических уязвимостей и ошибок.
+В этом случае DKP останется на указанной версии
+и никакая информация о новых доступных версиях (объекты DeckhouseRelease) в кластере появляться не будет.
 
-  Пример установки версии `v1.66.3` для DKP EE и удаления параметра `releaseChannel` из конфигурации модуля `deckhouse`:
+> **Важно**. Этот режим заблокирует установку патч-релизов,
+> которые могут содержать исправления критических уязвимостей и ошибок.
+> Если нужно получать патчи в рамках текущей минорной версии, используйте режим [`AutoPatch`](#только-патч-версии-в-рамках-текущей-минорной-autopatch)
+> вместо жёсткого закрепления.
 
-  ```shell
-  d8 k -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- kubectl set image deployment/deckhouse deckhouse=registry.deckhouse.ru/deckhouse/ee:v1.66.3
-  d8 k patch mc deckhouse --type=json -p='[{"op": "remove", "path": "/spec/settings/releaseChannel"}]'
-  ```
+Пример установки версии `v1.66.3` для DKP EE и удаления параметра `releaseChannel` из конфигурации модуля `deckhouse`:
+
+```shell
+d8 k -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- kubectl set image deployment/deckhouse deckhouse=registry.deckhouse.ru/deckhouse/ee:v1.66.3
+```
+
+```shell
+d8 k patch mc deckhouse --type=json -p='[{"op": "remove", "path": "/spec/settings/releaseChannel"}]'
+```
 
 ### Ручное подтверждение обновлений
 

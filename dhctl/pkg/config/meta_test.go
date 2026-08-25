@@ -28,6 +28,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
@@ -456,52 +457,30 @@ spec:
 				"an upstream is a source of images, so nothing here says bundle")
 		})
 	})
-}
 
-func TestEffectiveDefaultCRI(t *testing.T) {
-	nodeManagerMC := func(cri string) []*ModuleConfig {
-		settings := SettingsValues{}
-		if cri != "" {
-			settings["defaultCRI"] = cri
-		}
-		mc := &ModuleConfig{Spec: ModuleConfigSpec{Settings: settings}}
-		mc.SetName("node-manager")
-		return []*ModuleConfig{mc}
-	}
-	// presentCC returns a ClusterConfiguration map that always contains a
-	// ClusterConfiguration (marked by clusterType), with defaultCRI only when set.
-	presentCC := func(cri string) map[string]json.RawMessage {
-		cc := map[string]json.RawMessage{"clusterType": json.RawMessage(`"Cloud"`)}
-		if cri != "" {
-			cc["defaultCRI"] = json.RawMessage(`"` + cri + `"`)
-		}
-		return cc
-	}
+	// A managed cluster (EKS) carries no ClusterConfiguration, so there is no defaultCRI to
+	// read. The config is built here instead of parsed from a document: the schema store the
+	// parse path needs is not available in this package's tests.
+	t.Run("Without ClusterConfiguration", func(t *testing.T) {
+		deckhouseMC := &ModuleConfig{Spec: ModuleConfigSpec{
+			Version: 1,
+			Settings: SettingsValues{"registry": map[string]any{
+				"mode": "Unmanaged",
+				"unmanaged": map[string]any{
+					"imagesRepo": "r.example.com/test",
+					"scheme":     "HTTPS",
+				},
+			}},
+		}}
+		deckhouseMC.SetName("deckhouse")
 
-	tests := []struct {
-		name       string
-		clusterCfg map[string]json.RawMessage
-		moduleCRI  string
-		expected   string
-	}{
-		{name: "only ClusterConfiguration", clusterCfg: presentCC("ContainerdV2"), moduleCRI: "", expected: "ContainerdV2"},
-		{name: "only ModuleConfig", clusterCfg: presentCC(""), moduleCRI: "ContainerdV2", expected: "ContainerdV2"},
-		{name: "ModuleConfig overrides ClusterConfiguration", clusterCfg: presentCC("Containerd"), moduleCRI: "ContainerdV2", expected: "ContainerdV2"},
-		{name: "ModuleConfig at default falls back to ClusterConfiguration", clusterCfg: presentCC("ContainerdV2"), moduleCRI: "Containerd", expected: "ContainerdV2"},
-		{name: "ClusterConfiguration present, nothing set, built-in default", clusterCfg: presentCC(""), moduleCRI: "", expected: "Containerd"},
-		{name: "no ClusterConfiguration, empty", clusterCfg: nil, moduleCRI: "", expected: ""},
-		{name: "no ClusterConfiguration but ModuleConfig set", clusterCfg: nil, moduleCRI: "ContainerdV2", expected: "ContainerdV2"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			m := &MetaConfig{
-				ClusterConfig: tt.clusterCfg,
-				ModuleConfigs: nodeManagerMC(tt.moduleCRI),
-			}
-			require.Equal(t, tt.expected, m.effectiveDefaultCRI())
-		})
-	}
+		cfg := &MetaConfig{ModuleConfigs: []*ModuleConfig{deckhouseMC}}
+		cfg, err := cfg.Prepare(t.Context(), DummyValidatorProvider())
+		require.NoError(t, err)
+		require.False(t, cfg.HasClusterConfiguration())
+		require.Equal(t, registry_const.ModeUnmanaged, cfg.Registry.Settings.Mode)
+		require.Equal(t, "r.example.com/test", cfg.Registry.Settings.RemoteData.ImagesRepo)
+	})
 }
 
 func TestEnrichProxyData(t *testing.T) {
@@ -593,7 +572,7 @@ func TestConfigForBashibleBundleTemplateClusterMasterEndpoints(t *testing.T) {
 		"rppBootstrapServerPort": defaultClusterMasterRPPBootstrapServerPort,
 	}, endpoints[0])
 	require.Equal(t, []string{"127.0.0.1:6443"}, data["clusterMasterKubeAPIEndpoints"])
-	require.Equal(t, []string{"127.0.0.1:5444"}, data["clusterMasterRPPAddresses"])
+	require.Equal(t, []string{"http://127.0.0.1:5444"}, data["clusterMasterRPPAddresses"])
 	require.Equal(t, []string{fmt.Sprintf("127.0.0.1:%d", defaultClusterMasterRPPBootstrapServerPort)}, data["clusterMasterRPPBootstrapAddresses"])
 }
 
@@ -616,7 +595,7 @@ func TestConfigForBashibleBundleTemplateDefaultClusterMasterEndpoints(t *testing
 		"rppBootstrapServerPort": defaultClusterMasterRPPBootstrapServerPort,
 	}, endpoints[0])
 	require.Empty(t, data["clusterMasterKubeAPIEndpoints"])
-	require.Equal(t, []string{"127.0.0.1:5444"}, data["clusterMasterRPPAddresses"])
+	require.Equal(t, []string{"http://127.0.0.1:5444"}, data["clusterMasterRPPAddresses"])
 	require.Equal(t, []string{fmt.Sprintf("127.0.0.1:%d", defaultClusterMasterRPPBootstrapServerPort)}, data["clusterMasterRPPBootstrapAddresses"])
 
 	mingetB64, ok := data["mingetB64"].(string)
@@ -627,6 +606,125 @@ func TestConfigForBashibleBundleTemplateDefaultClusterMasterEndpoints(t *testing
 	require.NoError(t, err)
 	require.Equal(t, expectedMingetBytes, mingetBytes)
 }
+
+func TestKubernetesVersionResolution(t *testing.T) {
+	mustRaw := func(v string) json.RawMessage {
+		b, err := json.Marshal(v)
+		require.NoError(t, err)
+		return b
+	}
+	// An empty version models "the setting is absent", which is what the schema allows —
+	// kubernetesVersion is an enum without "" in it, so it can never be stored empty.
+	cpm := func(version string) *ModuleConfig {
+		settings := SettingsValues{}
+		if version != "" {
+			settings["kubernetesVersion"] = version
+		}
+		mc := &ModuleConfig{
+			Spec: ModuleConfigSpec{
+				Enabled:  boolPtr(true),
+				Version:  3,
+				Settings: settings,
+			},
+		}
+		mc.SetName("control-plane-manager")
+		return mc
+	}
+
+	t.Run("ModuleConfig wins over ClusterConfiguration", func(t *testing.T) {
+		m := &MetaConfig{
+			ClusterConfig: map[string]json.RawMessage{"kubernetesVersion": mustRaw("1.32")},
+			ModuleConfigs: []*ModuleConfig{cpm("1.35")},
+		}
+		require.Equal(t, "1.35", m.kubernetesVersionRaw())
+
+		ccm, err := m.ClusterConfigMap()
+		require.NoError(t, err)
+		require.Equal(t, "1.35", ccm["kubernetesVersion"])
+	})
+
+	t.Run("ModuleConfig only when ClusterConfiguration omits the field", func(t *testing.T) {
+		m := &MetaConfig{
+			ClusterConfig: map[string]json.RawMessage{},
+			ModuleConfigs: []*ModuleConfig{cpm("1.34")},
+		}
+		require.Equal(t, "1.34", m.kubernetesVersionRaw())
+
+		ccm, err := m.ClusterConfigMap()
+		require.NoError(t, err)
+		require.Equal(t, "1.34", ccm["kubernetesVersion"])
+	})
+
+	t.Run("ModuleConfig Automatic is not a sentinel and does not override ClusterConfiguration", func(t *testing.T) {
+		// Automatic is legal only in ClusterConfiguration. In ModuleConfig the enum rejects it, so
+		// this predicate must not quietly accept it either — a value the schema refuses must never
+		// take on meaning here.
+		m := &MetaConfig{
+			ClusterConfig: map[string]json.RawMessage{"kubernetesVersion": mustRaw("1.32")},
+			ModuleConfigs: []*ModuleConfig{cpm("Automatic")},
+		}
+		require.Equal(t, "Automatic", m.kubernetesVersionRaw())
+	})
+
+	t.Run("ModuleConfig Default overrides a pinned ClusterConfiguration and starts on the default", func(t *testing.T) {
+		// Presence of the setting decides which document owns the version: an explicit Default
+		// means bootstrap starts on the same version Deckhouse will target afterwards.
+		m := &MetaConfig{
+			ClusterConfig: map[string]json.RawMessage{"kubernetesVersion": mustRaw("1.32")},
+			ModuleConfigs: []*ModuleConfig{cpm("Default")},
+		}
+		require.Equal(t, "", m.kubernetesVersionRaw())
+
+		ccm, err := m.ClusterConfigMap()
+		require.NoError(t, err)
+		require.Equal(t, DefaultKubernetesVersion, ccm["kubernetesVersion"])
+	})
+
+	t.Run("ModuleConfig Default overrides a pinned ClusterConfiguration", func(t *testing.T) {
+		m := &MetaConfig{
+			ClusterConfig: map[string]json.RawMessage{"kubernetesVersion": mustRaw("1.32")},
+			ModuleConfigs: []*ModuleConfig{cpm("Default")},
+		}
+		require.Equal(t, "", m.kubernetesVersionRaw())
+
+		ccm, err := m.ClusterConfigMap()
+		require.NoError(t, err)
+		require.Equal(t, DefaultKubernetesVersion, ccm["kubernetesVersion"])
+	})
+
+	t.Run("unset ModuleConfig defers to pinned ClusterConfiguration", func(t *testing.T) {
+		m := &MetaConfig{
+			ClusterConfig: map[string]json.RawMessage{"kubernetesVersion": mustRaw("1.32")},
+			ModuleConfigs: []*ModuleConfig{cpm("")},
+		}
+		require.Equal(t, "1.32", m.kubernetesVersionRaw())
+
+		ccm, err := m.ClusterConfigMap()
+		require.NoError(t, err)
+		require.Equal(t, "1.32", ccm["kubernetesVersion"])
+	})
+
+	t.Run("unset falls back to DefaultKubernetesVersion", func(t *testing.T) {
+		m := &MetaConfig{ClusterConfig: map[string]json.RawMessage{}}
+		ccm, err := m.ClusterConfigMap()
+		require.NoError(t, err)
+		require.Equal(t, DefaultKubernetesVersion, ccm["kubernetesVersion"])
+	})
+
+	t.Run("Automatic in ClusterConfiguration with Default in ModuleConfig falls back to DefaultKubernetesVersion", func(t *testing.T) {
+		m := &MetaConfig{
+			ClusterConfig: map[string]json.RawMessage{"kubernetesVersion": mustRaw("Automatic")},
+			ModuleConfigs: []*ModuleConfig{cpm("Default")},
+		}
+		require.Equal(t, "", m.kubernetesVersionRaw())
+
+		ccm, err := m.ClusterConfigMap()
+		require.NoError(t, err)
+		require.Equal(t, DefaultKubernetesVersion, ccm["kubernetesVersion"])
+	})
+}
+
+func boolPtr(v bool) *bool { return &v }
 
 func TestMetaConfig_DeepCopy_PreservesValidateInputs(t *testing.T) {
 	src := &MetaConfig{
@@ -693,4 +791,306 @@ func TestApplyModuleConfigSettings_TakesFullModuleConfig(t *testing.T) {
 	masterPool, ok := specSettings["masterPool"].(map[string]interface{})
 	require.True(t, ok)
 	require.Equal(t, float64(3), masterPool["replicas"])
+}
+
+// mcFlowResources mirrors a DVP bootstrap config: the CloudPermanent node
+// groups live in the resources documents, not in a ProviderClusterConfiguration.
+const mcFlowResources = `
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: master
+spec:
+  nodeType: CloudPermanent
+  cloudInstances:
+    minPerZone: 3
+    classReference:
+      kind: DVPInstanceClass
+      name: master-dvp
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  nodeType: CloudPermanent
+  cloudInstances:
+    minPerZone: 2
+    classReference:
+      kind: DVPInstanceClass
+      name: worker-dvp
+  nodeTemplate:
+    labels:
+      node-role: worker
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: system
+spec:
+  nodeType: CloudPermanent
+  cloudInstances:
+    minPerZone: 1
+    classReference:
+      kind: DVPInstanceClass
+      name: worker-dvp
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: ephemeral
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    minPerZone: 5
+    maxPerZone: 7
+    classReference:
+      kind: DVPInstanceClass
+      name: worker-dvp
+`
+
+func cloudMetaConfig(resourcesYAML string) *MetaConfig {
+	return &MetaConfig{
+		ClusterConfig: map[string]json.RawMessage{
+			"clusterType":       json.RawMessage(`"Cloud"`),
+			"serviceSubnetCIDR": json.RawMessage(`"10.222.0.0/16"`),
+			"clusterDomain":     json.RawMessage(`"cluster.local"`),
+			"cloud":             json.RawMessage(`{"provider":"DVP","prefix":"test"}`),
+		},
+		ResourcesYAML: resourcesYAML,
+	}
+}
+
+func TestPrepareDerivesNodeGroupsFromResources(t *testing.T) {
+	m, err := cloudMetaConfig(mcFlowResources).Prepare(t.Context(), DummyValidatorProvider())
+	require.NoError(t, err)
+
+	require.Equal(t, 3, m.MasterNodeGroupSpec.Replicas)
+
+	require.Len(t, m.TerraNodeGroupSpecs, 2, "master is not a terra node group, CloudEphemeral is not provisioned by dhctl")
+	require.Equal(t, "system", m.TerraNodeGroupSpecs[0].Name)
+	require.Equal(t, 1, m.TerraNodeGroupSpecs[0].Replicas)
+	require.Equal(t, "worker", m.TerraNodeGroupSpecs[1].Name)
+	require.Equal(t, 2, m.TerraNodeGroupSpecs[1].Replicas)
+	require.Equal(t, map[string]interface{}{"labels": map[string]interface{}{"node-role": "worker"}}, m.TerraNodeGroupSpecs[1].NodeTemplate)
+}
+
+func TestPrepareKeepsProviderClusterConfigNodeGroups(t *testing.T) {
+	m := cloudMetaConfig(mcFlowResources)
+	m.ProviderClusterConfig = map[string]json.RawMessage{
+		"layout":          json.RawMessage(`"Standard"`),
+		"masterNodeGroup": json.RawMessage(`{"replicas":1}`),
+		"nodeGroups":      json.RawMessage(`[{"name":"legacy","replicas":7}]`),
+	}
+
+	m, err := m.Prepare(t.Context(), DummyValidatorProvider())
+	require.NoError(t, err)
+
+	require.Equal(t, 1, m.MasterNodeGroupSpec.Replicas, "provider cluster configuration wins over cluster node groups")
+	require.Len(t, m.TerraNodeGroupSpecs, 1)
+	require.Equal(t, "legacy", m.TerraNodeGroupSpecs[0].Name)
+	require.Equal(t, 7, m.TerraNodeGroupSpecs[0].Replicas)
+}
+
+// An explicitly empty nodeGroups list in the provider cluster configuration is
+// not distinguished from an absent one: the guard in
+// applyNodeGroupReplicasFromCloudProviderVars checks len(), not nil, so the
+// cluster node groups are still derived. That is a choice of the guard, not a
+// property of the data — this documents the behaviour, it does not bless it.
+func TestPrepareDerivesOnEmptyProviderClusterConfigNodeGroups(t *testing.T) {
+	m := cloudMetaConfig(mcFlowResources)
+	m.ProviderClusterConfig = map[string]json.RawMessage{
+		"layout":          json.RawMessage(`"Standard"`),
+		"masterNodeGroup": json.RawMessage(`{"replicas":1}`),
+		"nodeGroups":      json.RawMessage(`[]`),
+	}
+
+	m, err := m.Prepare(t.Context(), DummyValidatorProvider())
+	require.NoError(t, err)
+
+	require.Len(t, m.TerraNodeGroupSpecs, 2)
+	require.Equal(t, "system", m.TerraNodeGroupSpecs[0].Name)
+	require.Equal(t, "worker", m.TerraNodeGroupSpecs[1].Name)
+}
+
+// check and converge re-run Prepare on a DeepCopy of an already prepared
+// config, so the derivation must not append the same node groups twice.
+func TestPrepareOnDeepCopyIsIdempotent(t *testing.T) {
+	m, err := cloudMetaConfig(mcFlowResources).Prepare(t.Context(), DummyValidatorProvider())
+	require.NoError(t, err)
+
+	again, err := m.DeepCopy().Prepare(t.Context(), DummyValidatorProvider())
+	require.NoError(t, err)
+
+	require.Equal(t, m.MasterNodeGroupSpec.Replicas, again.MasterNodeGroupSpec.Replicas)
+	require.Equal(t, m.TerraNodeGroupSpecs, again.TerraNodeGroupSpecs)
+}
+
+// The manifest is a JSON merge patch applied over the NodeGroup the user's
+// resources already put in the cluster, so it must carry dhctl's Manual default
+// only where the user expressed no choice.
+func TestNodeGroupManifestDefersToUserApprovalMode(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		disruptions map[string]interface{}
+		wantPatched bool
+	}{
+		{name: "no disruptions at all", disruptions: nil, wantPatched: true},
+		{name: "explicit approvalMode", disruptions: map[string]interface{}{"approvalMode": "Automatic"}, wantPatched: false},
+		{name: "disruptions without approvalMode", disruptions: map[string]interface{}{
+			"automatic": map[string]interface{}{"drainBeforeApproval": true},
+		}, wantPatched: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ngSpec := map[string]interface{}{
+				"nodeType": "CloudPermanent",
+				"cloudInstances": map[string]interface{}{
+					"minPerZone":     float64(2),
+					"classReference": map[string]interface{}{"kind": "DVPInstanceClass", "name": "worker-dvp"},
+				},
+			}
+			if tc.disruptions != nil {
+				ngSpec["disruptions"] = tc.disruptions
+			}
+
+			m := cloudMetaConfig("")
+			m.CloudProviderVars = &CloudProviderVars{NodeGroups: map[string]map[string]interface{}{
+				"worker": {"spec": ngSpec},
+			}}
+
+			spec, ok := nestedMap(m.NodeGroupManifest(TerraNodeGroupSpec{Name: "worker", Replicas: 2}), "spec")
+			require.True(t, ok)
+			require.NotContains(t, spec, "cloudInstances", "the patch must never carry the replica count")
+
+			disruptions, patched := nestedMap(spec, "disruptions")
+			require.Equal(t, tc.wantPatched, patched)
+			if tc.wantPatched {
+				require.Equal(t, "Manual", disruptions["approvalMode"])
+			}
+		})
+	}
+}
+
+func clusterNodeGroup(spec map[string]interface{}) map[string]interface{} {
+	return map[string]interface{}{
+		"apiVersion": "deckhouse.io/v1",
+		"kind":       "NodeGroup",
+		"spec":       spec,
+	}
+}
+
+func cloudPermanentSpec(minPerZone any) map[string]interface{} {
+	cloudInstances := map[string]interface{}{
+		"classReference": map[string]interface{}{"kind": "DVPInstanceClass", "name": "any"},
+	}
+	if minPerZone != nil {
+		cloudInstances["minPerZone"] = minPerZone
+	}
+	return map[string]interface{}{"nodeType": "CloudPermanent", "cloudInstances": cloudInstances}
+}
+
+// Zero replicas is what converge acts on by deleting the group's nodes, so the
+// mc-flow refuses anything it cannot read a keepable count from.
+func TestPrepareRejectsUnusableReplicaCount(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		nodeGroups map[string]map[string]interface{}
+		wantErr    string
+	}{
+		{
+			name:       "master without cloudInstances",
+			nodeGroups: map[string]map[string]interface{}{"master": clusterNodeGroup(map[string]interface{}{"nodeType": "CloudPermanent"})},
+			wantErr:    "minPerZone",
+		},
+		{
+			name:       "master scaled to zero",
+			nodeGroups: map[string]map[string]interface{}{"master": clusterNodeGroup(cloudPermanentSpec(float64(0)))},
+			wantErr:    "control plane",
+		},
+		{
+			name: "worker without cloudInstances",
+			nodeGroups: map[string]map[string]interface{}{
+				"master": clusterNodeGroup(cloudPermanentSpec(float64(1))),
+				"worker": clusterNodeGroup(map[string]interface{}{"nodeType": "CloudPermanent"}),
+			},
+			wantErr: "minPerZone",
+		},
+		{
+			name: "worker with negative minPerZone",
+			nodeGroups: map[string]map[string]interface{}{
+				"master": clusterNodeGroup(cloudPermanentSpec(float64(1))),
+				"worker": clusterNodeGroup(cloudPermanentSpec(float64(-1))),
+			},
+			wantErr: "negative",
+		},
+		{
+			name:       "master with negative minPerZone",
+			nodeGroups: map[string]map[string]interface{}{"master": clusterNodeGroup(cloudPermanentSpec(float64(-1)))},
+			wantErr:    "negative",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			m := cloudMetaConfig("")
+			m.CloudProviderVars = &CloudProviderVars{NodeGroups: tc.nodeGroups}
+
+			_, err := m.Prepare(t.Context(), DummyValidatorProvider())
+			require.ErrorContains(t, err, tc.wantErr)
+		})
+	}
+}
+
+// A non-master group scaled to zero is a deliberate choice, not a broken object.
+func TestPrepareAllowsZeroReplicasOnNonMaster(t *testing.T) {
+	m := cloudMetaConfig("")
+	m.CloudProviderVars = &CloudProviderVars{NodeGroups: map[string]map[string]interface{}{
+		"master": clusterNodeGroup(cloudPermanentSpec(float64(1))),
+		"worker": clusterNodeGroup(cloudPermanentSpec(float64(0))),
+	}}
+
+	m, err := m.Prepare(t.Context(), DummyValidatorProvider())
+	require.NoError(t, err)
+	require.Equal(t, 1, m.MasterNodeGroupSpec.Replicas)
+	require.Len(t, m.TerraNodeGroupSpecs, 1)
+	require.Equal(t, 0, m.TerraNodeGroupSpecs[0].Replicas)
+}
+
+// The legacy flow reads replicas from its ProviderClusterConfiguration, and its
+// NodeGroups carry no cloudInstances by design.
+func TestPrepareGuardIsOffForLegacyProviderConfig(t *testing.T) {
+	m := cloudMetaConfig("")
+	m.ProviderClusterConfig = map[string]json.RawMessage{
+		"layout":          json.RawMessage(`"Standard"`),
+		"masterNodeGroup": json.RawMessage(`{"replicas":1}`),
+		"nodeGroups":      json.RawMessage(`[{"name":"legacy","replicas":2}]`),
+	}
+	m.CloudProviderVars = &CloudProviderVars{NodeGroups: map[string]map[string]interface{}{
+		"master": clusterNodeGroup(map[string]interface{}{"nodeType": "CloudPermanent"}),
+	}}
+
+	_, err := m.Prepare(t.Context(), DummyValidatorProvider())
+	require.NoError(t, err)
+}
+
+// A cluster whose NodeGroups lost their replica count must still be destroyable.
+func TestPrepareGuardIsOffForDestroy(t *testing.T) {
+	m := cloudMetaConfig("")
+	m.Operation = proto.OperationDestroy
+	m.CloudProviderVars = &CloudProviderVars{NodeGroups: map[string]map[string]interface{}{
+		"master": clusterNodeGroup(map[string]interface{}{"nodeType": "CloudPermanent"}),
+	}}
+
+	_, err := m.Prepare(t.Context(), DummyValidatorProvider())
+	require.NoError(t, err)
+}
+
+// The guard blocks converge and check, so its message has to carry the way out.
+func TestPrepareGuardErrorNamesTheRemedy(t *testing.T) {
+	m := cloudMetaConfig("")
+	m.CloudProviderVars = &CloudProviderVars{NodeGroups: map[string]map[string]interface{}{
+		masterNodeGroupName: clusterNodeGroup(map[string]interface{}{"nodeType": "CloudPermanent"}),
+	}}
+
+	_, err := m.Prepare(t.Context(), DummyValidatorProvider())
+	require.ErrorContains(t, err, "spec.cloudInstances.classReference")
+	require.ErrorContains(t, err, "spec.cloudInstances.minPerZone")
 }

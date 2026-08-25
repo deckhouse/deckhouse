@@ -127,3 +127,15 @@ lang: ru
 |---------------------|---------------|-------------|
 | `importer-*`        | system/worker |             |
 | `uploader-*`        | system/worker |             |
+
+## Кластер с taints на всех узлах
+
+Иногда taints настроены на всех узлах кластера. Так администратор явно контролирует, на какие узлы могут попадать поды и виртуальные машины.
+
+При работе Deckhouse Virtualization Platform в такой конфигурации учитывайте следующее:
+
+1. При создании [VirtualDisk](/modules/virtualization/cr.html#virtualdisk) обратите внимание на `volumeBindingMode` StorageClass. Если задано `Immediate`, PersistentVolume создаётся сразу после создания диска — ещё до планирования виртуальной машины. Убедитесь, что provisioner может создавать тома на узлах, которые разрешены для виртуальных машин через [параметры размещения](/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html#размещение-вм-по-узлам), включая `nodeSelector`, `tolerations` и настройки в `spec` виртуальной машины или [VirtualMachineClass](/modules/virtualization/cr.html#virtualmachineclass). Иначе диск может оказаться на узле, где виртуальная машина не сможет запуститься. При `WaitForFirstConsumer` том создаётся на узле планирования виртуальной машины, и эта проблема не возникает.
+
+1. Для работы [VirtualImage](/modules/virtualization/cr.html#virtualimage) и [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage) нужны поды `importer-*` и `uploader-*` из таблицы выше. У них есть toleration к taint `dedicated.deckhouse.io=system`.
+
+1. В кластере должна быть NodeGroup `system`, либо администратор сам добавляет taint `dedicated.deckhouse.io=system` на выбранные узлы без создания NodeGroup. Без таких узлов поды `importer-*` и `uploader-*` не будут запланированы, и образы не перейдут в фазу `Ready`.

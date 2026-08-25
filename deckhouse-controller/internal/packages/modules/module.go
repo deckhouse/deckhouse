@@ -391,6 +391,11 @@ func (m *Module) GetConstraints() schedule.Constraints {
 	return m.definition.Constraints()
 }
 
+// GetExclusiveGroup returns the module's exclusive group, if any.
+func (m *Module) GetExclusiveGroup() string {
+	return m.definition.ExclusiveGroup
+}
+
 // HooksInitialized reports whether this instance has already built its hook
 // controllers. When true, the Enable task skips the initialize+sync phase.
 func (m *Module) HooksInitialized() bool {

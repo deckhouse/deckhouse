@@ -54,6 +54,10 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
+// d8aPrefix is reserved for application objects by the d8a-prefix.deckhouse.io
+// admission policy.
+const d8aPrefix = "d8a-"
+
 // Application represents a running instance of a package.
 // It contains hooks, values storage, and configuration for execution.
 //
@@ -282,6 +286,12 @@ func BuildName(namespace, name string) string {
 // GetNamespace returns the application namespace.
 func (a *Application) GetNamespace() string {
 	return a.namespace
+}
+
+// objectPrefix is forced onto the name of every object an application hook
+// creates or patches; package templates spell the same prefix by hand.
+func (a *Application) objectPrefix() string {
+	return d8aPrefix + a.instance
 }
 
 // GetVersion return the package version
@@ -679,7 +689,7 @@ func (a *Application) runHook(ctx context.Context, h hooks.Hook, bctx []bctx.Bin
 		// we have to check if there are some status patches to apply
 		if hookResult != nil && len(hookResult.ObjectPatcherOperations) > 0 {
 			for _, op := range hookResult.ObjectPatcherOperations {
-				op.SetObjectPrefix(a.instance)
+				op.SetObjectPrefix(a.objectPrefix())
 			}
 			patchErr := a.patcher.ExecuteOperations(hookResult.ObjectPatcherOperations)
 			if patchErr != nil {
@@ -692,7 +702,7 @@ func (a *Application) runHook(ctx context.Context, h hooks.Hook, bctx []bctx.Bin
 
 	if len(hookResult.ObjectPatcherOperations) > 0 {
 		for _, op := range hookResult.ObjectPatcherOperations {
-			op.SetObjectPrefix(a.instance)
+			op.SetObjectPrefix(a.objectPrefix())
 		}
 		if err = a.patcher.ExecuteOperations(hookResult.ObjectPatcherOperations); err != nil {
 			return fmt.Errorf("exec operations: %w", err)

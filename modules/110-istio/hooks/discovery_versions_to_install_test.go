@@ -271,6 +271,32 @@ globalVersion: "1.3" # default version "from openapi/values.yaml"
 		})
 	})
 
+	Context("Migration from 1.21 to 1.25 publishes only the configured supported version", func() {
+		BeforeEach(func() {
+			f.KubeStateSet("")
+			values := `
+internal:
+  versionMap: {
+    "1.25": {"fullVersion": "1.25.2"},
+    "1.27": {"fullVersion": "1.27.9"},
+    "1.29": {"fullVersion": "1.29.6"}
+  }
+globalVersion: "1.25"
+`
+			f.ValuesSetFromYaml("istio", []byte(values))
+			f.ConfigValuesSet("istio.globalVersion", "1.25")
+			f.RunHook()
+		})
+
+		It("does not treat the retired revision as installed for release requirements", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("istio.internal.versionsToInstall").AsStringSlice()).To(Equal([]string{"1.25"}))
+			value, exists := requirements.GetValue(minVersionValuesKey)
+			Expect(exists).To(BeTrue())
+			Expect(value).To(BeEquivalentTo("1.25"))
+		})
+	})
+
 	Context("Operator-free versions set minimal version requirement", func() {
 		BeforeEach(func() {
 			f.KubeStateSet("")

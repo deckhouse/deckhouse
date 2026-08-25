@@ -53,7 +53,7 @@ type InstanceController struct {
 	instanceSvc    *instancepkg.InstanceService
 }
 
-func (r *InstanceController) Setup(_ ctrl.Manager) error {
+func (r *InstanceController) Setup(_ context.Context, _ ctrl.Manager) error {
 	r.machineFactory = machine.NewMachineFactory()
 	r.instanceSvc = instancepkg.NewInstanceService(r.Client)
 	return nil

@@ -376,7 +376,7 @@ spec:
 ```
 
 **RemovePodsHavingTooManyRestarts** — evicts pods having too many restarts from nodes.
-Pods become eviction candidates when the total number of restarts across all containers, including init containers, exceeds the [`podRestartThreshold`](cr.html#descheduler-v1alpha2-spec-strategies-removepodshavingtoomanyrestarts-podrestartthreshold) threshold.
+Pods become eviction candidates when the total number of restarts across all containers, including init containers, exceeds the [`podRestartThreshold`](/modules/descheduler/cr.html#descheduler-v1alpha2-spec-strategies-removepodshavingtoomanyrestarts-podrestartthreshold) threshold.
 This strategy is useful for evicting pods in the `CrashLoopBackOff` state or with repeated failures, as well as for freeing up resources and allowing fresh pods to be scheduled on potentially healthier nodes.
 
 Enable the strategy using the `strategies.removePodsHavingTooManyRestarts.enabled` parameter.

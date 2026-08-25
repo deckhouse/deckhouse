@@ -24,6 +24,8 @@ import (
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
+	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -37,6 +39,7 @@ import (
 type fakePackageManager struct {
 	validateResult settingscheck.Result
 	validateErr    error
+	validateCalled bool
 
 	checkErr       error
 	checkCalled    bool
@@ -44,6 +47,8 @@ type fakePackageManager struct {
 }
 
 func (f *fakePackageManager) ValidatePackageSettings(_ context.Context, _ string, _ int, _ addonutils.Values) (settingscheck.Result, error) {
+	f.validateCalled = true
+
 	return f.validateResult, f.validateErr
 }
 
@@ -80,6 +85,61 @@ func newAPV(name string, draft bool, reqs *v1alpha1.PackageRequirements) *v1alph
 	}
 
 	return apv
+}
+
+// applicationValidationHandlerSuite exercises manager and APV validation selection.
+type applicationValidationHandlerSuite struct {
+	suite.Suite
+}
+
+// TestApplicationValidationHandler runs Application admission validation scenarios.
+func TestApplicationValidationHandler(t *testing.T) {
+	suite.Run(t, new(applicationValidationHandlerSuite))
+}
+
+// TestSettingsAreValidatedByManagerForCurrentVersion verifies loaded-schema validation.
+func (s *applicationValidationHandlerSuite) TestSettingsAreValidatedByManagerForCurrentVersion() {
+	const version = "v1.0.0"
+
+	app := newApplication("repo", "pkg", version)
+	app.Status.CurrentVersion = &v1alpha1.ApplicationStatusVersion{Version: version}
+	manager := &fakePackageManager{
+		validateResult: settingscheck.Result{Valid: false, Message: "settings rejected by the loaded schema"},
+	}
+
+	response := s.validate(app, manager)
+
+	s.False(response.Allowed)
+	s.True(manager.validateCalled)
+	s.False(manager.checkCalled)
+}
+
+// TestSettingsAreValidatedOnlyByAPVWhileVersionChanges verifies stale manager schemas are skipped.
+func (s *applicationValidationHandlerSuite) TestSettingsAreValidatedOnlyByAPVWhileVersionChanges() {
+	app := newApplication("repo", "pkg", "v2.0.0")
+	app.Status.CurrentVersion = &v1alpha1.ApplicationStatusVersion{Version: "v1.0.0"}
+	manager := &fakePackageManager{
+		validateResult: settingscheck.Result{Valid: false, Message: "settings rejected by the loaded schema"},
+	}
+
+	response := s.validate(app, manager)
+
+	s.True(response.Allowed)
+	s.False(manager.validateCalled)
+	s.True(manager.checkCalled)
+}
+
+// validate submits an Application update to the admission handler.
+func (s *applicationValidationHandlerSuite) validate(app *v1alpha1.Application, manager *fakePackageManager) *admissionv1.AdmissionResponse {
+	s.T().Helper()
+
+	ap := &v1alpha1.ApplicationPackage{ObjectMeta: metav1.ObjectMeta{Name: app.Spec.PackageName}}
+	apvName := v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepositoryName, app.Spec.PackageName, app.Spec.PackageVersion)
+	apv := newAPV(apvName, false, nil)
+	handler := applicationValidationHandler(newFakeClient(s.T(), ap, apv), manager)
+	review := newModuleConfigAdmissionReview("UPDATE", app, nil)
+
+	return callHandler(s.T(), handler, review)
 }
 
 func TestParsePackageDependencyConstraint(t *testing.T) {
@@ -157,14 +217,14 @@ func TestValidateApplicationSettings(t *testing.T) {
 
 	t.Run("nil settings schema is a no-op", func(t *testing.T) {
 		apv := &v1alpha1.ApplicationPackageVersion{}
-		apv.Status.PackageSchemas = &v1alpha1.ApplicationPackageVersionStatusSchemas{}
+		apv.Status.PackageSchemas = &v1alpha1.PackageVersionStatusSchemas{}
 		app := newApplication("repo", "pkg", "1.0.0")
 		require.NoError(t, validateAppSettings(apv, app))
 	})
 
 	t.Run("settings satisfying the schema pass", func(t *testing.T) {
 		apv := &v1alpha1.ApplicationPackageVersion{}
-		apv.Status.PackageSchemas = &v1alpha1.ApplicationPackageVersionStatusSchemas{
+		apv.Status.PackageSchemas = &v1alpha1.PackageVersionStatusSchemas{
 			SettingsSchema: objectSchema(map[string]openapi.OpenAPIV3Schema{
 				"foo": {Type: "string"},
 			}, []string{"foo"}),
@@ -177,7 +237,7 @@ func TestValidateApplicationSettings(t *testing.T) {
 
 	t.Run("settings violating the schema are rejected", func(t *testing.T) {
 		apv := &v1alpha1.ApplicationPackageVersion{}
-		apv.Status.PackageSchemas = &v1alpha1.ApplicationPackageVersionStatusSchemas{
+		apv.Status.PackageSchemas = &v1alpha1.PackageVersionStatusSchemas{
 			SettingsSchema: objectSchema(map[string]openapi.OpenAPIV3Schema{
 				"foo": {Type: "string"},
 			}, []string{"foo"}),

@@ -1,0 +1,12 @@
+dirs:
+ - /etc/cacerts
+ - /var/run/secrets/istio-dns
+ - /var/run/secrets/istiod/ca
+ - /var/run/secrets/istiod/tls
+ - /var/run/secrets/remote
+ - /var/run/secrets/tokens
+ - /run/secrets/tokens
+ - /run/secrets/istio-dns
+ - /run/secrets/istiod/ca
+ - /run/secrets/istiod/tls
+ - /run/secrets/remote

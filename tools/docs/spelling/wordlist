@@ -95,6 +95,7 @@ autoK
 autoK8sVersion
 autoload
 Autoloading
+AutoPatch
 AutoplaceTarget
 autoscaler
 autoscalers
@@ -162,6 +163,7 @@ Burstable
 BusyBox
 BypassFwMark
 CAA
+cacerts
 caef
 CAInjector
 camelCase
@@ -469,6 +471,7 @@ dst
 DVCR
 dvp
 DVP
+DVPClusterConfiguration
 Dynamix
 DynamiX
 dynDNS
@@ -551,6 +554,8 @@ FileManagement
 filesystem
 FileSystem
 filesystems
+finalizer
+finalizers
 flant
 flavorname
 flavorName
@@ -637,6 +642,7 @@ hasn
 hdd
 healthcheck
 healthchecks
+healthz
 HEC
 helmignore
 helthcheck
@@ -725,6 +731,7 @@ InitContainer
 initContainers
 InitContainers
 initiatorType
+inline
 Inline
 inode
 inodes
@@ -773,8 +780,10 @@ ISP
 isSudoer
 IssueBasic
 issuerName
+IST
 istio
 istio-api-proxy
+istioctl
 istiod
 IstioFederation
 IstioMulticluster
@@ -888,6 +897,7 @@ longtermStorageClass
 LowNodeUtilization
 LRS
 lsblk
+lt
 LTS
 Lua
 LUN
@@ -1116,6 +1126,7 @@ OpenStackClusterConfiguration
 OpenStackEE
 OpenStackInstanceClass
 OpenStackInstanceClasses
+OpenTelemetry
 opentofu
 Opentofu
 OpenTofu
@@ -1133,6 +1144,7 @@ ORM
 os
 OSes
 OSI
+OTLP
 Outlier
 outlierDetection
 overprovisioned
@@ -1316,6 +1328,7 @@ ReplicatedStorageClass
 ReplicatedStoragePool
 ReplicationController
 repo
+Repointing
 repos
 reprovisioning
 repurposed
@@ -1418,6 +1431,7 @@ SIGTERM
 SimpleWithInternalNetwork
 Sitemap
 SizingPolicy
+SkyWalking
 SLA
 smokeMini
 snaphost
@@ -1706,6 +1720,10 @@ VXLAN
 VzZS
 WaitingForDisruptiveApproval
 WAL
+waypoint
+Waypoint
+WaypointInstance
+waypoints
 WebAuthn
 webgraphviz
 webhook
@@ -1790,6 +1808,7 @@ ZvirtInstanceClass
 автосогласования
 агрегатор
 агрегатора
+агрегаторам
 агрегаторе
 агрегаторов
 агрегаторы
@@ -1809,6 +1828,7 @@ ZvirtInstanceClass
 Алертинг
 алертинга
 алертов
+алертом
 алерту
 алерты
 Алерты
@@ -1864,6 +1884,7 @@ ZvirtInstanceClass
 БД
 бекенды
 беспроблемный
+бесшовно
 биллинга
 биндинг
 биндинга
@@ -1929,6 +1950,7 @@ ZvirtInstanceClass
 внутрикластерное
 внутрикластерной
 внутрикластерным
+внутрикластерный
 воркеров
 выгрузок
 выдаватель
@@ -2022,6 +2044,10 @@ ZvirtInstanceClass
 засчет
 захеширован
 захешированном
+зеркалирование
+зеркалировании
+зеркалирования
+зеркалировать
 иcпользовать
 ИБ
 иммутабельный
@@ -2177,6 +2203,7 @@ ZvirtInstanceClass
 масштабируется
 Мб
 МБ
+МиБ
 медиафайлов
 медиафайлы
 межкластерная
@@ -2191,6 +2218,9 @@ ZvirtInstanceClass
 мержит
 Метадата
 метаинформацию
+меш
+меша
+меше
 мигрирована
 микросегментация
 микросервисов
@@ -2221,6 +2251,7 @@ ZvirtInstanceClass
 мультимастерном
 мультимастерный
 мультимастерными
+мультиплатформенного
 мультиплатформенной
 мультитенантности
 мультитенантность
@@ -2357,6 +2388,7 @@ ZvirtInstanceClass
 перегенерации
 перегенерация
 перегенерировать
+перегенерируйте
 Перегенерируйте
 передеплоятся
 перезагрузится
@@ -2380,9 +2412,11 @@ ZvirtInstanceClass
 перенаправление
 перенаправления
 перенаправлениям
+перенаправлениями
 перенастраиваются
 переоткрытии
 переподключиться
+перепубликует
 переразвернуть
 Переразвертывание
 переразвёртывание
@@ -2452,6 +2486,7 @@ ZvirtInstanceClass
 Пререквизиты
 прилинкованным
 применились
+применилось
 применится
 применятся
 примонтировав
@@ -2566,10 +2601,12 @@ ZvirtInstanceClass
 сайдкар
 Сайдкар
 сайдкара
+сайдкарами
 сайдкаров
 сайдкаром
 сайдкары
 самоподписанном
+самоподписанному
 самоподписанные
 самоподписанный
 самоподписанных
@@ -2641,6 +2678,8 @@ ZvirtInstanceClass
 сопоставление
 сопоставления
 Сохраняеем
+спанов
+спаны
 спецзаголовки
 спринты
 стейта
@@ -2650,6 +2689,7 @@ ZvirtInstanceClass
 Столярова
 Стрибог
 субресурс
+субресурса
 сущностей
 сущностям
 сущностями
@@ -2664,6 +2704,7 @@ ZvirtInstanceClass
 таймауты
 тайминги
 таргетов
+таргеты
 тегирование
 тегирования
 тегируются
@@ -2693,6 +2734,7 @@ ZvirtInstanceClass
 тредами
 трейсов
 трейсы
+тренд
 трендов
 тренды
 триал
@@ -2712,6 +2754,16 @@ ZvirtInstanceClass
 фикстурой
 фикстуру
 фикстуры
+финалайзер
+финалайзера
+финалайзерам
+финалайзерами
+финалайзерах
+финалайзере
+финалайзеров
+финалайзером
+финалайзеру
+финалайзеры
 фич
 фичах
 фичи

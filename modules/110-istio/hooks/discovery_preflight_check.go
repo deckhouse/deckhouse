@@ -19,20 +19,10 @@ package hooks
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
-	"gopkg.in/yaml.v3"
-	v1 "k8s.io/api/core/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	"github.com/deckhouse/lib-dhctl/pkg/yaml/validation"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
@@ -40,101 +30,45 @@ import (
 )
 
 const (
-	clusterConfigurationSecretNamespace = "kube-system"
-	clusterConfigurationSecretName      = "d8-cluster-configuration"
-	isK8sVersionAutomaticKey            = "istio:isK8sVersionAutomatic"
-	istioToK8sCompatibilityMapKey       = "istio:istioToK8sCompatibilityMap"
+	isK8sVersionAutomaticKey      = "istio:isK8sVersionAutomatic"
+	istioToK8sCompatibilityMapKey = "istio:istioToK8sCompatibilityMap"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:        lib.Queue("istio-k8s-auto-discovery"),
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
-	Kubernetes: []go_hook.KubernetesConfig{
-		{
-			Name:              "cluster-configuration",
-			ApiVersion:        "v1",
-			Kind:              "Secret",
-			NamespaceSelector: &types.NamespaceSelector{NameSelector: &types.NameSelector{MatchNames: []string{clusterConfigurationSecretNamespace}}},
-			NameSelector:      &types.NameSelector{MatchNames: []string{clusterConfigurationSecretName}},
-			FilterFunc:        applyClusterConfigurationYamlFilter,
-		},
-	},
 }, dependency.WithExternalDependencies(discoveryIsK8sVersionAutomatic))
 
-func applyClusterConfigurationYamlFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	secret := &v1.Secret{}
-	err := sdk.FromUnstructured(obj, secret)
-	if err != nil {
-		return nil, err
-	}
-
-	ccYaml, ok := secret.Data["cluster-configuration.yaml"]
-	if !ok {
-		return nil, fmt.Errorf(`"cluster-configuration.yaml" not found in "d8-cluster-configuration" Secret`)
-	}
-
-	return getKubernetesVersion(ccYaml)
-}
-
-func getKubernetesVersion(data []byte) (string, error) {
-	if err := validation.ValidateData([]string{}, &data); err != nil {
-		if !errors.Is(err, validation.ErrSchemaNotFound) {
-			return "", err
-		}
-	}
-	var cfg struct {
-		KubernetesVersion string `yaml:"kubernetesVersion"`
-	}
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return "", fmt.Errorf("unmarshal YAML: %w", err)
-	}
-	return cfg.KubernetesVersion, nil
-}
-
-func discoveryIsK8sVersionAutomatic(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
-	var kubernetesVersionStr string
-
-	clusterConfigurationSnapshots := input.Snapshots.Get("cluster-configuration")
-	if len(clusterConfigurationSnapshots) > 0 {
-		err := clusterConfigurationSnapshots[0].UnmarshalTo(&kubernetesVersionStr)
-		if err != nil {
-			return fmt.Errorf("failed to unmarshal 'cluster-configuration' snapshot: %w", err)
-		}
-	} else {
-		k8sClient, err := dc.GetK8sClient()
-		if err != nil {
-			return err
-		}
-
-		secret, err := k8sClient.CoreV1().Secrets(clusterConfigurationSecretNamespace).Get(ctx, clusterConfigurationSecretName, metav1.GetOptions{})
-		switch {
-		case err == nil:
-			ccYaml, ok := secret.Data["cluster-configuration.yaml"]
-			if !ok {
-				return fmt.Errorf(`"cluster-configuration.yaml" not found in "d8-cluster-configuration" Secret`)
-			}
-
-			kubernetesVersionStr, err = getKubernetesVersion(ccYaml)
-			if err != nil {
-				return err
-			}
-		case !k8serrors.IsNotFound(err):
-			return err
-		default:
-			versionParts := strings.Split(input.Values.Get("global.discovery.kubernetesVersion").String(), ".")
-			if len(versionParts) < 2 {
-				return errors.New("cluster configuration kubernetesVersion is empty or invalid")
-			}
-			kubernetesVersionStr = versionParts[0] + "." + versionParts[1]
-		}
-	}
-
+func discoveryIsK8sVersionAutomatic(_ context.Context, input *go_hook.HookInput, _ dependency.Container) error {
 	k8sCompatibleVersions := make(map[string][]string)
 	if err := json.Unmarshal([]byte(input.Values.Get("istio.internal.istioToK8sCompatibilityMap").String()), &k8sCompatibleVersions); err != nil {
 		return fmt.Errorf("cannot parse istioToK8sCompatibilityMap: %w", err)
 	}
 	requirements.SaveValue(istioToK8sCompatibilityMapKey, k8sCompatibleVersions)
-	requirements.SaveValue(isK8sVersionAutomaticKey, kubernetesVersionStr == "Automatic")
+
+	// No ClusterConfiguration — a managed cluster: the provider owns the Kubernetes version. The gate
+	// this key feeds compares the *coming* Deckhouse default with the installed Istio versions, which
+	// is meaningless there and would block updates over a version the cluster will never run.
+	//
+	// Same answer as before by another route: global.clusterConfiguration is published from the very
+	// Secret this hook used to read (global-hooks/discovery/cluster_configuration.go), and with that
+	// Secret absent the old code fell through to the real cluster version, never "Automatic".
+	if !input.Values.Get("global.clusterConfiguration").Exists() {
+		requirements.SaveValue(isK8sVersionAutomaticKey, false)
+		return nil
+	}
+
+	// Fail rather than assume "pinned": requirements/check.go treats false as "gate not applicable",
+	// so a wrong false silently skips the Istio↔Kubernetes compatibility check on upgrades.
+	// kubernetesVersionIsDefault defaults to false in the schema, so it cannot tell "pinned" from
+	// "not published yet" — targetKubernetesVersion has no default, and its emptiness can.
+	if input.Values.Get("global.discovery.targetKubernetesVersion").String() == "" {
+		return fmt.Errorf("cannot determine whether the Kubernetes version is pinned: " +
+			"global.discovery.targetKubernetesVersion is empty")
+	}
+
+	isAutomatic := input.Values.Get("global.discovery.kubernetesVersionIsDefault").Bool()
+	requirements.SaveValue(isK8sVersionAutomaticKey, isAutomatic)
 
 	return nil
 }

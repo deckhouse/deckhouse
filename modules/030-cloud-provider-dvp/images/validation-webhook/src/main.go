@@ -28,14 +28,15 @@ import (
 
 	cpvaladmission "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/admission"
 	cpwebhook "github.com/deckhouse/deckhouse/go_lib/cloud-provider/webhook"
+	dvpicv1aplha1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/api/instanceclass/v1alpha1"
 	dvpmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/meta"
+	dvpval "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation"
 
 	"cloud-provider-dvp-validation-webhook/webhooks"
 )
 
 var (
-	instanceClassGVK = schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: dvpmeta.InstanceClassKind}
-	nodeGroupGVK     = schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1", Kind: "NodeGroup"}
+	nodeGroupGVK = schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1", Kind: "NodeGroup"}
 )
 
 func main() {
@@ -64,7 +65,7 @@ func main() {
 			utilruntime.Must(cpwebhook.RegisterUnstructuredGVKs(
 				scheme,
 				nodeGroupGVK,
-				instanceClassGVK,
+				dvpicv1aplha1.GroupVersionKind,
 			))
 
 			cfg := ctrl.GetConfigOrDie()
@@ -75,19 +76,19 @@ func main() {
 				return fmt.Errorf("init webhook server: %w", err)
 			}
 
-			builder := cpvaladmission.NewStateBuilder(
+			factory := dvpval.NewAdmissionStateBuilderFactory(
 				server.Client(),
 				cpvaladmission.StateBuilderConfig{
-					ModuleName:        dvpmeta.ModuleName,
-					NamespaceName:     dvpmeta.Namespace,
-					InstanceClassKind: dvpmeta.InstanceClassKind,
+					ModuleName:       dvpmeta.ModuleName,
+					NamespaceName:    dvpmeta.Namespace,
+					InstanceClassGVK: dvpicv1aplha1.GroupVersionKind,
 				},
 			)
 
 			registrars := []cpwebhook.Registrar{
-				webhooks.NewCredentialSecretValidator(builder, &corev1.Secret{}),
-				webhooks.NewNodeGroupValidator(builder, newWebhookObject(nodeGroupGVK)),
-				webhooks.NewDVPInstanceClassValidator(builder, newWebhookObject(instanceClassGVK)),
+				webhooks.NewCredentialSecretValidator(factory, &corev1.Secret{}),
+				webhooks.NewNodeGroupValidator(factory, newWebhookObject(nodeGroupGVK)),
+				webhooks.NewDVPInstanceClassValidator(factory, newWebhookObject(dvpicv1aplha1.GroupVersionKind)),
 			}
 
 			for _, registrar := range registrars {

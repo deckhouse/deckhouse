@@ -33,6 +33,7 @@ migrate() {
   bb-flag-set need-local-images-import
   bb-flag-set reboot
   bb-flag-unset cntrd-major-version-changed
+  bb-flag-unset cntrd-integrity-migration-required
   bb-flag-unset disruption
   bb-log-info "Finished containerd migration"
 }
@@ -499,7 +500,7 @@ EOF
 {{- end }}
 
 {{- if or ( eq .cri "Containerd") ( eq .cri "ContainerdV2") }}
-if bb-flag? cntrd-major-version-changed; then
+if bb-flag? cntrd-major-version-changed || bb-flag? cntrd-integrity-migration-required; then
   migrate
 fi
 {{- end }}

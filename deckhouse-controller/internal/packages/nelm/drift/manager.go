@@ -21,7 +21,7 @@ import (
 	"context"
 	"sync"
 
-	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
+	klient "github.com/flant/kube-client/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/nelm"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -32,8 +32,8 @@ import (
 type Manager struct {
 	ctx context.Context
 
-	cache runtimecache.Cache
-	nelm  *nelm.Client
+	kubeClient *klient.Client
+	nelm       *nelm.Client
 
 	mtx      sync.Mutex                   // protects monitors map
 	monitors map[string]*resourcesMonitor // keyed by Helm release name
@@ -44,14 +44,14 @@ type Manager struct {
 }
 
 // New creates a new monitor manager instance.
-func New(cache runtimecache.Cache, nelm *nelm.Client, callback AbsentCallback, logger *log.Logger) *Manager {
+func New(kubeClient *klient.Client, nelm *nelm.Client, callback AbsentCallback, logger *log.Logger) *Manager {
 	return &Manager{
-		ctx:      context.Background(),
-		cache:    cache,
-		nelm:     nelm,
-		callback: callback,
-		monitors: make(map[string]*resourcesMonitor),
-		logger:   logger,
+		ctx:        context.Background(),
+		kubeClient: kubeClient,
+		nelm:       nelm,
+		callback:   callback,
+		monitors:   make(map[string]*resourcesMonitor),
+		logger:     logger,
 	}
 }
 
@@ -79,7 +79,7 @@ func (m *Manager) AddMonitor(namespace, name, rendered string) {
 		m.monitors[name].Stop()
 	}
 
-	m.monitors[name] = newMonitor(m.cache, m.nelm, namespace, name, rendered, m.logger)
+	m.monitors[name] = newMonitor(m.kubeClient, m.nelm, namespace, name, rendered, m.logger)
 	m.monitors[name].Start(m.ctx, m.callback)
 }
 

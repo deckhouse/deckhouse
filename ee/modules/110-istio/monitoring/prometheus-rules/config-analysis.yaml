@@ -252,8 +252,9 @@
         d8 k -n d8-istio logs -l app=istio-config-analyzer,istio.io/rev={{$labels.revision}} --tail=100
         ```
   # InvalidApplicationUID (IST0144) is intentionally muted: Deckhouse Istio
-  # components (operator/pilot/…) run as UID 1337 by design, and application
-  # misuse of UID 1337 is already covered by IstioApplicationsUsingReservedUID.
+  # dataplane components (istio-proxy sidecar / ingressgateway) still run as UID
+  # 1337 by design, and application misuse of UID 1337 is already covered by
+  # IstioApplicationsUsingReservedUID.
   - alert: D8IstioConfigAnalysisWarning
     expr: |
       sum by (revision, type, namespace, resource, code) (

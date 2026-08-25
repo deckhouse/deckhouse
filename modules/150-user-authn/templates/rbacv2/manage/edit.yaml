@@ -23,8 +23,16 @@ rules:
   - patch
   - delete
   - deletecollection
-# UserOperations are write-only action objects (force-logout, reset 2FA, etc.). Manager creates
-# them on demand; existing operations are immutable, so create-only is enough.
+# UserAccounts are created by the controller; this role is get/list/watch.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - useraccounts
+  verbs:
+  - get
+  - list
+  - watch
+# DexProviderChecks and UserOperations are created on demand and not updated in place.
 - apiGroups:
   - deckhouse.io
   resources:
@@ -51,3 +59,13 @@ rules:
   - update
   - patch
   - delete
+# No controller serves these subresources. They exist so that the authority to let an OAuth2 client
+# reach the Kubernetes API can be delegated on its own, and the admission policy that gates the
+# allow-access-to-kubernetes annotation checks exactly this permission.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - dexauthenticators/allow-access-to-kubernetes
+  - dexclients/allow-access-to-kubernetes
+  verbs:
+  - create

@@ -73,7 +73,7 @@ var _ = BeforeSuite(func() {
 	// The static-provider-id controller registered itself via its package init(); since only this
 	// package is compiled into the test binary, NewManager wires up just this controller.
 	By("starting the manager with the static-provider-id controller")
-	mgr, err := testenv.NewManager(cfg, scheme)
+	mgr, err := testenv.NewManager(suiteCtx, cfg, scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	go func() {
