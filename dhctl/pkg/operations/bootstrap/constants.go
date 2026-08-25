@@ -16,10 +16,6 @@ package bootstrap
 
 import "time"
 
-// What a joining node reads out of the running cluster. Each of these names an
-// object node-controller also addresses; see the mirrors named below.
-const ()
-
 // waitBudget is how long dhctl keeps asking: attempts spaced by interval.
 type waitBudget struct {
 	attempts int
@@ -41,11 +37,6 @@ var (
 	// Everything after the apiserver answers. Registering the Node is the node's
 	// next step, so a couple of minutes is generous.
 	waitNodeRegistered = waitBudget{attempts: 120, interval: time.Second}
-
-	// A joining master has the same road ahead of it as the first one — install,
-	// reboot, extensions, kubelet — and only at the end of it does
-	// control-plane-manager add its etcd member. The same half hour.
-	waitJoinedControlPlane = waitBudget{attempts: 360, interval: 5 * time.Second}
 
 	// The machine may be powering on when the bootstrap starts, and olcedar-init
 	// opens the port about thirty seconds into the boot. Ten minutes.

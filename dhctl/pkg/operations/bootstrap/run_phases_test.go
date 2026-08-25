@@ -713,16 +713,7 @@ func TestRunPhases_PhaseErrorHaltsWalk(t *testing.T) {
 // must be declared. Gated on the cluster type alone it was dropped, and the machine was never
 // handed anything.
 func TestFirstMasterIsDeclaredForAnImmutableStaticCluster(t *testing.T) {
-	immutableStatic := bootstrappedMetaConfig("Static")
-	immutableStatic.ResourcesYAML = `
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: master
-spec:
-  nodeType: Static
-  systemType: Immutable
-`
+	immutableStatic := immutableStaticMetaConfig()
 
 	declared := func(metaConfig *config.MetaConfig) []phases.OperationPhase {
 		immutableMaster, err := immutable.IsImmutableMaster(context.Background(), metaConfig)
