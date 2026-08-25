@@ -59,6 +59,7 @@ shell:
         export JEKYLL_ENV=production
         mkdir -m 777 -p /app/_site/
         jekyll build -d /app/_site/ --config  _config.yml
+        rm -rf .jekyll-cache .sass-cache
 git:
 # Common files used for building site and documentation (plugins, assets, etc.), plus unversionized products documentation
 - add: /docs/documentation

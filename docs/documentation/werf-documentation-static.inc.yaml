@@ -110,6 +110,7 @@ shell:
         rm -rf /app/_site/documentation/en
         {{- end }}
 {{ end }}
+        rm -rf .jekyll-cache .sass-cache
 git:
 - add: /{{ .ModulePath }}docs
   to: /srv/jekyll-data
