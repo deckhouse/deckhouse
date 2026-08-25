@@ -17,7 +17,6 @@ limitations under the License.
 package memberlist
 
 import (
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -216,7 +215,7 @@ func TestChangedFiresOnMembershipEvents(t *testing.T) {
 	go delegate.run(stop)
 
 	for _, notify := range []func(*hcml.Node){delegate.NotifyJoin, delegate.NotifyLeave} {
-		notify(&hcml.Node{Name: "worker-" + strconv.Itoa(1)})
+		notify(&hcml.Node{Name: "worker-1"})
 
 		select {
 		case <-delegate.changed:

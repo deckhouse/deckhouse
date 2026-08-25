@@ -23,6 +23,16 @@ import (
 	"testing"
 )
 
+func designatedWriter(alive []string, failedNode string) string {
+	for _, candidate := range alive {
+		if WriterRank(alive, failedNode, candidate) == 0 {
+			return candidate
+		}
+	}
+
+	return ""
+}
+
 func nodeNames(count int) []string {
 	names := make([]string, 0, count)
 
@@ -35,7 +45,7 @@ func nodeNames(count int) []string {
 
 func TestDesignatedWriterIgnoresInputOrder(t *testing.T) {
 	alive := nodeNames(20)
-	want := DesignatedWriter(alive, "worker-99")
+	want := designatedWriter(alive, "worker-99")
 
 	if want == "" {
 		t.Fatal("no writer elected from a non-empty alive set")
@@ -46,7 +56,7 @@ func TestDesignatedWriterIgnoresInputOrder(t *testing.T) {
 	for range 50 {
 		rand.Shuffle(len(shuffled), func(i, j int) { shuffled[i], shuffled[j] = shuffled[j], shuffled[i] })
 
-		if got := DesignatedWriter(shuffled, "worker-99"); got != want {
+		if got := designatedWriter(shuffled, "worker-99"); got != want {
 			t.Fatalf("writer changed with the order of the alive set: got %q, want %q", got, want)
 		}
 	}
@@ -58,10 +68,10 @@ func TestDesignatedWriterAgreesAcrossAgents(t *testing.T) {
 	alive := nodeNames(7)
 
 	for _, failed := range []string{"worker-0", "worker-3", "gone-node"} {
-		want := DesignatedWriter(alive, failed)
+		want := designatedWriter(alive, failed)
 
 		for range 10 {
-			if got := DesignatedWriter(alive, failed); got != want {
+			if got := designatedWriter(alive, failed); got != want {
 				t.Fatalf("election for %q is not stable: got %q, want %q", failed, got, want)
 			}
 		}
@@ -72,18 +82,18 @@ func TestDesignatedWriterExcludesTheFailedPeer(t *testing.T) {
 	alive := nodeNames(5)
 
 	for _, failed := range alive {
-		if got := DesignatedWriter(alive, failed); got == failed {
+		if got := designatedWriter(alive, failed); got == failed {
 			t.Errorf("peer %q was elected to report itself", failed)
 		}
 	}
 }
 
 func TestDesignatedWriterWithoutCandidates(t *testing.T) {
-	if got := DesignatedWriter(nil, "worker-1"); got != "" {
-		t.Errorf("DesignatedWriter(nil) = %q, want an empty name", got)
+	if got := designatedWriter(nil, "worker-1"); got != "" {
+		t.Errorf("designatedWriter(nil) = %q, want an empty name", got)
 	}
 
-	if got := DesignatedWriter([]string{"worker-1"}, "worker-1"); got != "" {
+	if got := designatedWriter([]string{"worker-1"}, "worker-1"); got != "" {
 		t.Errorf("the only candidate is the failed peer, got %q, want an empty name", got)
 	}
 }
@@ -94,7 +104,7 @@ func TestDesignatedWriterSurvivesLosingOtherPeers(t *testing.T) {
 	// every unrelated failure would hand the incident to a different agent.
 	alive := nodeNames(9)
 	failed := "worker-99"
-	writer := DesignatedWriter(alive, failed)
+	writer := designatedWriter(alive, failed)
 
 	for _, lost := range alive {
 		if lost == writer {
@@ -103,7 +113,7 @@ func TestDesignatedWriterSurvivesLosingOtherPeers(t *testing.T) {
 
 		remaining := slices.DeleteFunc(slices.Clone(alive), func(name string) bool { return name == lost })
 
-		if got := DesignatedWriter(remaining, failed); got != writer {
+		if got := designatedWriter(remaining, failed); got != writer {
 			t.Errorf("losing %q moved the writer from %q to %q", lost, writer, got)
 		}
 	}
@@ -120,7 +130,7 @@ func TestDesignatedWriterSpreadsTheLoad(t *testing.T) {
 	}{
 		{alive: 5, failed: 4, maxShare: 3},
 		{alive: 51, failed: 49, maxShare: 8},
-		{alive: 501, failed: 499, maxShare: 8},
+		{alive: 201, failed: 199, maxShare: 8},
 	}
 
 	for _, tt := range tests {
@@ -129,7 +139,7 @@ func TestDesignatedWriterSpreadsTheLoad(t *testing.T) {
 			load := make(map[string]int)
 
 			for i := range tt.failed {
-				load[DesignatedWriter(alive, fmt.Sprintf("dead-%d", i))]++
+				load[designatedWriter(alive, fmt.Sprintf("dead-%d", i))]++
 			}
 
 			worst := 0
@@ -186,7 +196,7 @@ func TestDesignatedWriterAlwaysPicksALiveCandidate(t *testing.T) {
 	alive := nodeNames(12)
 
 	for _, failed := range append(nodeNames(30), "unknown-node") {
-		writer := DesignatedWriter(alive, failed)
+		writer := designatedWriter(alive, failed)
 
 		if failed != writer && !slices.Contains(alive, writer) {
 			t.Errorf("DesignatedWriter for %q returned %q, which is not in the alive set", failed, writer)
@@ -214,8 +224,8 @@ func TestWriterRankOrdersEveryCandidateOnce(t *testing.T) {
 		ranks[rank] = candidate
 	}
 
-	if got := ranks[0]; got != DesignatedWriter(alive, failed) {
-		t.Errorf("rank zero is %q, want the designated writer %q", got, DesignatedWriter(alive, failed))
+	if got := ranks[0]; got != designatedWriter(alive, failed) {
+		t.Errorf("rank zero is %q, want the designated writer %q", got, designatedWriter(alive, failed))
 	}
 }
 

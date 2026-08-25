@@ -20,7 +20,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"slices"
 	"strings"
 	"testing"
@@ -43,6 +42,9 @@ const (
 type stubAlive struct{ members []string }
 
 func (s *stubAlive) Members() []string { return s.members }
+
+// Changed is never read: the tests drive reconcile directly rather than the loop.
+func (s *stubAlive) Changed() <-chan struct{} { return nil }
 
 type stubExpected struct{ peers []domain.Peer }
 
@@ -70,6 +72,9 @@ type stubStore struct {
 	failMark   error
 	failList   error
 	failDelete error
+	// keepAfterDelete models an informer that still serves an object the API has
+	// already removed.
+	keepAfterDelete bool
 }
 
 func newStore(states ...v1alpha1.FencingFailedNodeState) *stubStore {
@@ -150,9 +155,11 @@ func (s *stubStore) Delete(_ context.Context, name string, uid types.UID) error 
 		return s.failDelete
 	}
 
-	s.states = slices.DeleteFunc(s.states, func(state v1alpha1.FencingFailedNodeState) bool {
-		return state.Name == name
-	})
+	if !s.keepAfterDelete {
+		s.states = slices.DeleteFunc(s.states, func(state v1alpha1.FencingFailedNodeState) bool {
+			return state.Name == name
+		})
+	}
 
 	return nil
 }
@@ -226,7 +233,7 @@ func newHarnessOfSize(t *testing.T, size int, nodeName string, store *stubStore)
 			Events:   h.events,
 			Now:      h.clock.Now,
 		},
-		log.NewLogger(log.WithOutput(os.Stdout), log.WithLevel(log.LevelFatal.Level())),
+		log.NewNop(),
 	)
 
 	return h
@@ -254,7 +261,13 @@ func writerFor(name string) string {
 func writerForIn(size int, names ...string) string {
 	alive := slices.DeleteFunc(groupNames(size), func(member string) bool { return slices.Contains(names, member) })
 
-	return domain.DesignatedWriter(alive, names[0])
+	for _, candidate := range alive {
+		if domain.WriterRank(alive, names[0], candidate) == 0 {
+			return candidate
+		}
+	}
+
+	return ""
 }
 
 func otherThan(name string) string {
@@ -880,5 +893,103 @@ func TestNextInLineAlsoTakesOverTheRemoval(t *testing.T) {
 
 	if !slices.Equal(store.calls, []string{"delete:" + recovered + ":cr-" + recovered}) {
 		t.Errorf("calls = %v, want the stale record removed after the handover", store.calls)
+	}
+}
+
+func TestOwnRecordWrittenAfterThisProcessStartedIsLeftAlone(t *testing.T) {
+	// A record younger than the agent means a peer considers this node dead right
+	// now. That is a live disagreement for the fallback path to settle: deleting
+	// it would only start a delete-and-create war with the quorate side.
+	const self = "worker-1"
+
+	store := newStore()
+	h := newHarness(t, self, store)
+
+	store.states = append(store.states, v1alpha1.FencingFailedNodeState{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:              self,
+			UID:               "cr-" + self,
+			CreationTimestamp: metav1.NewTime(h.clock.now.Add(time.Second)),
+		},
+		Status: v1alpha1.FencingFailedNodeStateStatus{
+			Failed: &v1alpha1.FencingFailedNodeStateFailed{DetectedBy: "worker-2"},
+		},
+	})
+
+	h.clock.advance(2 * time.Second)
+	h.settle(t.Context())
+
+	if len(store.calls) != 0 {
+		t.Errorf("calls = %v, want none: the record is younger than this process", store.calls)
+	}
+}
+
+func TestRecordIsRemovedOnceEvenWhileTheInformerLags(t *testing.T) {
+	// Delete succeeds but the label-scoped informer keeps serving the object for
+	// a while. Without a memory of what it removed, the writer would delete and
+	// announce the same record on every pass.
+	const failed = "worker-3"
+
+	store := newStore()
+	store.keepAfterDelete = true
+	h := newHarness(t, writerFor(failed), store)
+
+	h.settle(t.Context())
+	h.failPeer(t.Context(), failed)
+	store.calls = nil
+
+	h.settle(t.Context())
+	h.settle(t.Context())
+	h.settle(t.Context())
+
+	deletes := 0
+
+	for _, call := range store.calls {
+		if strings.HasPrefix(call, "delete:") {
+			deletes++
+		}
+	}
+
+	if deletes != 1 {
+		t.Errorf("issued %d deletes across three passes (%v), want exactly one", deletes, store.calls)
+	}
+
+	cleared := 0
+
+	for _, reason := range h.events.normal {
+		if reason == reasonStateCleared {
+			cleared++
+		}
+	}
+
+	if cleared != 1 {
+		t.Errorf("emitted %d %s events, want exactly one", cleared, reasonStateCleared)
+	}
+}
+
+func TestARecreatedRecordIsNotMistakenForTheDeletedOne(t *testing.T) {
+	// The memory of a removal is keyed by UID, so a fresh object under the same
+	// name is still acted on.
+	const failed = "worker-3"
+
+	store := newStore()
+	store.keepAfterDelete = true
+	h := newHarness(t, writerFor(failed), store)
+
+	h.settle(t.Context())
+	h.failPeer(t.Context(), failed)
+	h.settle(t.Context())
+	store.calls = nil
+
+	for i := range store.states {
+		if store.states[i].Name == failed {
+			store.states[i].UID = "cr-" + failed + "-recreated"
+		}
+	}
+
+	h.settle(t.Context())
+
+	if !slices.Equal(store.calls, []string{"delete:" + failed + ":cr-" + failed + "-recreated"}) {
+		t.Errorf("calls = %v, want the recreated object removed on its own merits", store.calls)
 	}
 }

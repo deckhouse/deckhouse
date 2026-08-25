@@ -41,7 +41,7 @@ const (
 // back. The phase and the conditions belong to fencing-controller, and the
 // fallback section to the affected node itself, so nothing here ever writes them.
 type States struct {
-	writer    client.Client
+	api       client.Client
 	reader    client.Reader
 	nodeGroup string
 	profile   v1alpha1.ProfileName
@@ -51,14 +51,14 @@ type States struct {
 }
 
 func NewStates(
-	writer client.Client,
+	api client.Client,
 	reader client.Reader,
 	nodeGroup string,
 	profile v1alpha1.ProfileName,
 	apiTimeout time.Duration,
 ) *States {
 	return &States{
-		writer:     writer,
+		api:        api,
 		reader:     reader,
 		nodeGroup:  nodeGroup,
 		profile:    profile,
@@ -119,7 +119,7 @@ func (s *States) Create(ctx context.Context, peer domain.Peer) (bool, error) {
 	ctx, cancel := s.bounded(ctx)
 	defer cancel()
 
-	if err := s.writer.Create(ctx, state); err != nil {
+	if err := s.api.Create(ctx, state); err != nil {
 		// Another agent got there first while the two views still differed. Its
 		// object is as valid as this one would have been.
 		if apierrors.IsAlreadyExists(err) {
@@ -153,7 +153,7 @@ func (s *States) MarkFailed(ctx context.Context, name string, failed v1alpha1.Fe
 
 		var state v1alpha1.FencingFailedNodeState
 
-		if err := s.writer.Get(attemptCtx, types.NamespacedName{Name: name}, &state); err != nil {
+		if err := s.api.Get(attemptCtx, types.NamespacedName{Name: name}, &state); err != nil {
 			return err
 		}
 
@@ -163,7 +163,7 @@ func (s *States) MarkFailed(ctx context.Context, name string, failed v1alpha1.Fe
 
 		state.Status.Failed = failed.DeepCopy()
 
-		if err := s.writer.Status().Update(attemptCtx, &state); err != nil {
+		if err := s.api.Status().Update(attemptCtx, &state); err != nil {
 			return err
 		}
 
@@ -186,7 +186,7 @@ func (s *States) Delete(ctx context.Context, name string, uid types.UID) error {
 	ctx, cancel := s.bounded(ctx)
 	defer cancel()
 
-	if err := s.writer.Delete(ctx, state, client.Preconditions{UID: &uid}); err != nil {
+	if err := s.api.Delete(ctx, state, client.Preconditions{UID: &uid}); err != nil {
 		// Gone is the outcome this asked for; the garbage collector or another
 		// agent may have won the race.
 		if apierrors.IsNotFound(err) {
