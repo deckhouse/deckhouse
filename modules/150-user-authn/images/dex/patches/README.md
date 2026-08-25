@@ -182,6 +182,15 @@ Key changes:
 Upstream is affected as well, including `master`: an upstream PR is to be opened on top of this
 patch.
 
+### 018-admin-lock-without-lockout-policy.patch
+
+Honor an administrator lock (`LockedUntil` on Password / OfflineSessions) even
+when `passwordPolicy` is unset or `passwordPolicy.lockout` is not configured.
+
+`passwordPolicy.lockout` stays responsible only for automatic lockout after
+the configured number of consecutive failed login attempts. UserOperation
+`Lock` / `d8 iam user lock` no longer depend on that section.
+
 ### 998-fix-cve.patch
 
 #### Fix CVEs

@@ -1,0 +1,267 @@
+diff --git a/server/handlers.go b/server/handlers.go
+index 166bc9a..2b704ee 100644
+--- a/server/handlers.go
++++ b/server/handlers.go
+@@ -445,8 +445,10 @@ func (s *Server) handlePasswordLogin(w http.ResponseWriter, r *http.Request) {
+ 
+ 		var p storage.Password
+ 		var passwordFound bool
+-		// Fetch local password in case of local connector for the further password policies validation
+-		if localConnector && s.passwordPolicy != nil {
++		// Fetch the local Password so an administrator lock (LockedUntil) is
++		// enforced even when passwordPolicy is unset. Failed-attempt lockout
++		// still requires passwordPolicy.lockout and is applied after Login.
++		if localConnector {
+ 			p, err = s.storage.GetPassword(ctx, username)
+ 			if err != nil {
+ 				if err != storage.ErrNotFound {
+@@ -457,7 +459,7 @@ func (s *Server) handlePasswordLogin(w http.ResponseWriter, r *http.Request) {
+ 				// User not found - will be handled as invalid credentials by pwConn.Login
+ 			} else {
+ 				passwordFound = true
+-				if s.passwordPolicy.IsPasswordLocked(p) {
++				if passwordHasActiveLock(p.LockedUntil) {
+ 					s.logger.WarnContext(r.Context(),
+ 						"login attempt for locked account",
+ 						"username", username,
+@@ -482,18 +484,19 @@ func (s *Server) handlePasswordLogin(w http.ResponseWriter, r *http.Request) {
+ 			return
+ 		}
+ 
+-		// Lockout pre-check for non-local connectors. Performed regardless of
+-		// the validPass result: a locked account must not authenticate even
+-		// with the right password until the lock expires.
++		// Honor LockedUntil on OfflineSessions for non-local connectors even
++		// when passwordPolicy.lockout is off (administrator lock via
++		// UserOperation). Failed-attempt lockout still requires
++		// nonLocalLockoutEnabled and is applied after a failed Login.
+ 		//
+ 		// We need identity.UserID to index OfflineSessions, which is supplied
+ 		// by the LDAP / Crowd connectors as a partial Identity even on
+ 		// validPass=false (see their Login implementations).
+-		if nonLocalLockoutEnabled && identity.UserID != "" {
++		if !localConnector && identity.UserID != "" {
+ 			session, sErr := s.storage.GetOfflineSessions(ctx, identity.UserID, authReq.ConnectorID)
+ 			switch {
+ 			case sErr == nil:
+-				if s.passwordPolicy.IsOfflineSessionLocked(session) {
++				if passwordHasActiveLock(session.LockedUntil) {
+ 					s.logger.WarnContext(r.Context(),
+ 						"login attempt for locked account",
+ 						"username", username,
+diff --git a/server/handlers_test.go b/server/handlers_test.go
+index 77f0c57..46617ce 100644
+--- a/server/handlers_test.go
++++ b/server/handlers_test.go
+@@ -18,6 +18,7 @@ import (
+ 	"github.com/AppsFlyer/go-sundheit/checks"
+ 	"github.com/coreos/go-oidc/v3/oidc"
+ 	"github.com/stretchr/testify/require"
++	"golang.org/x/crypto/bcrypt"
+ 	"golang.org/x/oauth2"
+ 
+ 	"github.com/dexidp/dex/connector"
+@@ -611,6 +612,148 @@ func TestHandlePasswordLoginWithPasswordPolicyNonExistingUser(t *testing.T) {
+ 	require.Equal(t, http.StatusUnauthorized, rr.Code, "expected 401 for non-existing user, got %d", rr.Code)
+ }
+ 
++func TestHandlePasswordLoginHonorsAdminLockWithoutPasswordPolicy(t *testing.T) {
++	ctx := t.Context()
++
++	hash, err := bcrypt.GenerateFromPassword([]byte("correct-password"), bcrypt.DefaultCost)
++	require.NoError(t, err)
++
++	future := time.Now().Add(time.Hour)
++	past := time.Now().Add(-time.Minute)
++
++	complexityOnly, err := NewPasswordPolicy("test-policy", WithComplexityLevel("low"))
++	require.NoError(t, err)
++
++	tests := []struct {
++		name           string
++		passwordPolicy *PasswordPolicy
++		lockedUntil    *time.Time
++		password       string
++		expectedCode   int
++	}{
++		{
++			name:         "administrator lock blocks login when passwordPolicy is unset",
++			lockedUntil:  &future,
++			password:     "correct-password",
++			expectedCode: http.StatusTooManyRequests,
++		},
++		{
++			name:           "administrator lock blocks login when passwordPolicy has no lockout",
++			passwordPolicy: complexityOnly,
++			lockedUntil:    &future,
++			password:       "correct-password",
++			expectedCode:   http.StatusTooManyRequests,
++		},
++		{
++			name:         "expired lock does not block login",
++			lockedUntil:  &past,
++			password:     "correct-password",
++			expectedCode: http.StatusSeeOther,
++		},
++		{
++			name:         "wrong password without lockout stays 401, not 429",
++			password:     "wrong-password",
++			expectedCode: http.StatusUnauthorized,
++		},
++	}
++
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			httpServer, s := newTestServer(t, func(c *Config) {
++				c.SkipApprovalScreen = false
++				c.Now = time.Now
++				c.PasswordPolicy = tc.passwordPolicy
++			})
++			defer httpServer.Close()
++			if tc.passwordPolicy == nil {
++				require.Nil(t, s.passwordPolicy)
++			}
++
++			sc := storage.Connector{
++				ID:              "local",
++				Type:            "local",
++				Name:            "Local",
++				ResourceVersion: "1",
++			}
++			require.NoError(t, s.storage.CreateConnector(ctx, sc))
++			if _, err := s.OpenConnector(sc); err != nil {
++				t.Fatalf("open connector: %v", err)
++			}
++			require.NoError(t, s.storage.CreateClient(ctx, storage.Client{
++				ID:           "client_1",
++				Secret:       "secret",
++				RedirectURIs: []string{"cb"},
++				Name:         "test",
++			}))
++			require.NoError(t, s.storage.CreateAuthRequest(ctx, storage.AuthRequest{
++				ID:                  "test",
++				ClientID:            "client_1",
++				ConnectorID:         "local",
++				RedirectURI:         "cb",
++				Expiry:              time.Now().Add(100 * time.Second),
++				ResponseTypes:       []string{responseTypeCode},
++				ForceApprovalPrompt: true,
++			}))
++			require.NoError(t, s.storage.CreatePassword(ctx, storage.Password{
++				Email:       "jane@example.com",
++				Username:    "jane",
++				UserID:      "jane-id",
++				Hash:        hash,
++				LockedUntil: tc.lockedUntil,
++			}))
++
++			rr := httptest.NewRecorder()
++			path := fmt.Sprintf("/auth/local/login?state=test&back=&login=jane@example.com&password=%s", tc.password)
++			s.handlePasswordLogin(rr, httptest.NewRequest("POST", path, nil))
++			require.Equal(t, tc.expectedCode, rr.Code)
++		})
++	}
++}
++
++func TestHandlePasswordLoginHonorsOfflineSessionAdminLockWithoutPasswordPolicy(t *testing.T) {
++	ctx := t.Context()
++	connID := "mockPw"
++	until := time.Now().Add(time.Hour)
++
++	httpServer, s := newTestServer(t, func(c *Config) {
++		c.SkipApprovalScreen = true
++		c.Now = time.Now
++	})
++	defer httpServer.Close()
++	require.Nil(t, s.passwordPolicy)
++
++	sc := storage.Connector{
++		ID:              connID,
++		Type:            "mockPassword",
++		Name:            "MockPassword",
++		ResourceVersion: "1",
++		Config:          []byte(`{"username": "foo", "password": "password"}`),
++	}
++	require.NoError(t, s.storage.CreateConnector(ctx, sc))
++	if _, err := s.OpenConnector(sc); err != nil {
++		t.Fatalf("open connector: %v", err)
++	}
++	require.NoError(t, s.storage.CreateAuthRequest(ctx, storage.AuthRequest{
++		ID:            "test",
++		ConnectorID:   connID,
++		RedirectURI:   "cb",
++		Expiry:        time.Now().Add(100 * time.Second),
++		ResponseTypes: []string{responseTypeCode},
++	}))
++	require.NoError(t, s.storage.CreateOfflineSessions(ctx, storage.OfflineSessions{
++		UserID:      "0-385-28089-0",
++		ConnID:      connID,
++		Email:       "foo@example.com",
++		Refresh:     map[string]*storage.RefreshTokenRef{},
++		LockedUntil: &until,
++	}))
++
++	rr := httptest.NewRecorder()
++	path := fmt.Sprintf("/auth/%s/login?state=test&back=&login=foo&password=password", connID)
++	s.handlePasswordLogin(rr, httptest.NewRequest("POST", path, nil))
++	require.Equal(t, http.StatusTooManyRequests, rr.Code)
++}
++
+ func TestHandleConnectorCallbackWithSkipApproval(t *testing.T) {
+ 	ctx := t.Context()
+ 
+diff --git a/server/lockout_test.go b/server/lockout_test.go
+index 37a42ae..fd768dc 100644
+--- a/server/lockout_test.go
++++ b/server/lockout_test.go
+@@ -103,6 +103,20 @@ func TestIsOfflineSessionLocked(t *testing.T) {
+ 	if pp.IsOfflineSessionLocked(storage.OfflineSessions{}) {
+ 		t.Fatal("expected unlocked when LockedUntil is nil")
+ 	}
++
++	ppNoLockout, err := NewPasswordPolicy("test")
++	if err != nil {
++		t.Fatal(err)
++	}
++	if !ppNoLockout.IsOfflineSessionLocked(storage.OfflineSessions{LockedUntil: &future}) {
++		t.Fatal("administrator lock must apply without passwordPolicy.lockout")
++	}
++	if !ppNoLockout.IsPasswordLocked(storage.Password{LockedUntil: &future}) {
++		t.Fatal("administrator lock on Password must apply without passwordPolicy.lockout")
++	}
++	if ppNoLockout.IsMaxLoginAttemptsExeeded(100) {
++		t.Fatal("failed-attempt lockout must stay off when lockout is not configured")
++	}
+ }
+ 
+ func TestRecordOfflineSessionFailedAttempt_FirstFailureCreatesStub(t *testing.T) {
+diff --git a/server/passwordpolicy.go b/server/passwordpolicy.go
+index adf54fc..2b7758d 100644
+--- a/server/passwordpolicy.go
++++ b/server/passwordpolicy.go
+@@ -342,14 +342,21 @@ type PasswordPolicy struct {
+ }
+ 
+ func (pp PasswordPolicy) IsPasswordLocked(p storage.Password) bool {
+-	return pp.lockout != nil && p.LockedUntil != nil && p.LockedUntil.After(time.Now())
++	// An administrator can set LockedUntil without enabling passwordPolicy.lockout.
++	// lockout only controls automatic lock after consecutive failed logins.
++	return passwordHasActiveLock(p.LockedUntil)
+ }
+ 
+ // IsOfflineSessionLocked reports whether the given OfflineSessions object is
+-// currently within an active lockout window. Used for connector types where
+-// the failed-attempt state is stored in OfflineSessions (LDAP, Crowd, ...).
++// currently within an active lock window. Used for connector types where
++// lock state is stored in OfflineSessions (LDAP, Crowd, ...), including
++// an administrator lock that does not require passwordPolicy.lockout.
+ func (pp PasswordPolicy) IsOfflineSessionLocked(o storage.OfflineSessions) bool {
+-	return pp.lockout != nil && o.LockedUntil != nil && o.LockedUntil.After(time.Now())
++	return passwordHasActiveLock(o.LockedUntil)
++}
++
++func passwordHasActiveLock(until *time.Time) bool {
++	return until != nil && until.After(time.Now())
+ }
+ 
+ func (pp PasswordPolicy) IsMaxLoginAttemptsExeeded(attempts uint64) bool {

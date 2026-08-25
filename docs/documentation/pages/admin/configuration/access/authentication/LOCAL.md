@@ -144,7 +144,9 @@ Once the group is created and includes all necessary users, proceed by configuri
 
 ## Configuring password policy
 
-Password policy allows controlling password complexity, rotation, and user lockout.
+Password policy allows controlling password complexity, rotation, and automatic lockout after consecutive failed login attempts.
+
+An administrator can lock or unlock a user with [`d8 iam user lock` / `unlock`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam) (or a UserOperation) without enabling `passwordPolicy.lockout`. The `lockout` section only turns on automatic lockout after the configured number of failed attempts.
 
 To set up a password policy, use the [`passwordPolicy`](/modules/user-authn/configuration.html#parameters-passwordpolicy) field in the configuration of the `user-authn` module.
 
