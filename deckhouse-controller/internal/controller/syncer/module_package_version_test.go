@@ -79,7 +79,7 @@ func TestSyncVersionsFromImage(t *testing.T) {
 		cond := metautils.FindStatusCondition(mpv.Status.Conditions, v1alpha1.ModulePackageVersionConditionTypeMetadataLoaded)
 		require.NotNil(t, cond)
 		assert.Equal(t, metav1.ConditionTrue, cond.Status)
-		assert.Equal(t, v1alpha1.ModulePackageVersionConditionReasonFilledFromDisk, cond.Reason)
+		assert.Equal(t, "Succeeded", cond.Reason)
 	})
 
 	t.Run("falls back to module.yaml and takes the weight from the dir prefix", func(t *testing.T) {

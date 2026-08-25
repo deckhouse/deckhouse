@@ -43,10 +43,6 @@ const (
 	ModulePackageVersionConditionReasonGetRegistryClientErr = "GetRegistryClientError"
 	ModulePackageVersionConditionReasonGetImageErr          = "GetImageError"
 
-	// ModulePackageVersionConditionReasonFilledFromDisk marks metadata taken from
-	// the module files shipped in the Deckhouse image instead of a package repository.
-	ModulePackageVersionConditionReasonFilledFromDisk = "FilledFromDisk"
-
 	// Finalizer blocking deletion while any module still uses the version.
 	ModulePackageVersionFinalizer = "modulepackageversion.deckhouse.io/used-by-module"
 )

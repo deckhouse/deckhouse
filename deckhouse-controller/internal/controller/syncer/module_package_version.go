@@ -322,7 +322,7 @@ func (s *Syncer) fillMetadata(ctx context.Context, mpv *v1alpha1.ModulePackageVe
 	metautils.SetStatusCondition(&mpv.Status.Conditions, metav1.Condition{
 		Type:               v1alpha1.ModulePackageVersionConditionTypeMetadataLoaded,
 		Status:             metav1.ConditionTrue,
-		Reason:             v1alpha1.ModulePackageVersionConditionReasonFilledFromDisk,
+		Reason:             "Succeeded",
 		ObservedGeneration: mpv.Generation,
 		LastTransitionTime: metav1.NewTime(s.dc.GetClock().Now()),
 	})
