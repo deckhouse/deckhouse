@@ -632,4 +632,39 @@ namespace: d8-ingress-gateway
 			Expect(args).NotTo(ContainSubstring("--enable-gateway-api-listenerset=true"))
 		})
 	})
+
+	Context("issuer endpoint ValidatingAdmissionPolicy", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("global.discovery.apiVersions", `["admissionregistration.k8s.io/v1/ValidatingAdmissionPolicy","admissionregistration.k8s.io/v1/ValidatingAdmissionPolicyBinding"]`)
+			f.ValuesSetFromYaml("certManager", certManager)
+			f.HelmRender()
+		})
+
+		It("restricts namespaced Issuer remote endpoints to public HTTPS hostnames", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			policy := f.KubernetesGlobalResource("ValidatingAdmissionPolicy", "cert-manager-issuer-endpoints.deckhouse.io")
+			Expect(policy.Exists()).To(BeTrue())
+			Expect(policy.Field("kind").String()).To(Equal("ValidatingAdmissionPolicy"))
+			Expect(policy.Field("spec.failurePolicy").String()).To(Equal("Fail"))
+			Expect(policy.Field("spec.matchConstraints.resourceRules.0.apiGroups").String()).To(MatchJSON(`["cert-manager.io"]`))
+			Expect(policy.Field("spec.matchConstraints.resourceRules.0.resources").String()).To(MatchJSON(`["issuers"]`))
+			Expect(policy.Field("spec.matchConstraints.resourceRules.0.operations").String()).To(MatchJSON(`["CREATE","UPDATE"]`))
+			Expect(policy.Field("spec.matchConstraints.resourceRules.0.scope").String()).To(Equal("Namespaced"))
+			Expect(policy.Field("spec.validations").Array()).To(HaveLen(2))
+			Expect(policy.Field("spec.validations.0.expression").String()).To(ContainSubstring("variables.acmeServer"))
+			Expect(policy.Field("spec.validations.0.expression").String()).To(ContainSubstring("variables.vaultServer"))
+			Expect(policy.Field("spec.validations.0.expression").String()).To(ContainSubstring("variables.venafiTppURL"))
+			Expect(policy.Field("spec.validations.0.expression").String()).To(ContainSubstring(`u.startsWith("https://")`))
+			Expect(policy.Field("spec.validations.1.expression").String()).To(ContainSubstring("acmeDNS.host"))
+			Expect(policy.Field("spec.validations.1.expression").String()).To(ContainSubstring("rfc2136.nameserver"))
+
+			binding := f.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", "cert-manager-issuer-endpoints.deckhouse.io")
+			Expect(binding.Exists()).To(BeTrue())
+			Expect(binding.Field("spec.policyName").String()).To(Equal("cert-manager-issuer-endpoints.deckhouse.io"))
+			Expect(binding.Field("spec.validationActions").String()).To(MatchJSON(`["Deny"]`))
+		})
+	})
 })

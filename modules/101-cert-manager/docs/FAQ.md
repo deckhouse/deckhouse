@@ -13,6 +13,8 @@ The module installs the following ClusterIssuers:
 
 If you need support for other types of certificates, you can add them yourself.
 
+Namespaced `Issuer` objects may only use public HTTPS hostnames for ACME, Vault, Venafi, and acme-dns endpoints. Point a private certificate authority at a `ClusterIssuer`.
+
 ## How to add an additional `ClusterIssuer`?
 
 ### When is an additional `ClusterIssuer` required?

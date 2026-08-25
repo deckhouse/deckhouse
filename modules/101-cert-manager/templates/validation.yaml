@@ -1,0 +1,83 @@
+{{- $vapExists := or (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicy")) ((.Values.global.discovery.apiVersions | default list) | has "admissionregistration.k8s.io/v1/ValidatingAdmissionPolicy") }}
+{{- $vapbExists := or (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicyBinding")) ((.Values.global.discovery.apiVersions | default list) | has "admissionregistration.k8s.io/v1/ValidatingAdmissionPolicyBinding") }}
+{{- if and $vapExists $vapbExists }}
+{{- $policyName := "cert-manager-issuer-endpoints.deckhouse.io" }}
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cert-manager")) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["cert-manager.io"]
+        apiVersions: ["*"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["issuers"]
+        scope: Namespaced
+  variables:
+    - name: acmeServer
+      expression: 'has(object.spec.acme) && has(object.spec.acme.server) ? object.spec.acme.server : ""'
+    - name: vaultServer
+      expression: 'has(object.spec.vault) && has(object.spec.vault.server) ? object.spec.vault.server : ""'
+    - name: venafiTppURL
+      expression: 'has(object.spec.venafi) && has(object.spec.venafi.tpp) && has(object.spec.venafi.tpp.url) ? object.spec.venafi.tpp.url : ""'
+    - name: venafiCloudURL
+      expression: 'has(object.spec.venafi) && has(object.spec.venafi.cloud) && has(object.spec.venafi.cloud.url) ? object.spec.venafi.cloud.url : ""'
+  validations:
+    - expression: |
+        [variables.acmeServer, variables.vaultServer, variables.venafiTppURL, variables.venafiCloudURL].all(u,
+          u.size() == 0 || (
+            u.startsWith("https://")
+            && !u.contains("@")
+            && !u.startsWith("https://[")
+            && !u.matches("^https://[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+([:/]|$)")
+            && !u.matches("(?i)^https://localhost([:/]|$)")
+            && !u.matches("(?i)^https://metadata\\.google\\.internal([:/]|$)")
+            && !u.matches("(?i)^https://[^/]*\\.svc([:/.]|$)")
+            && !u.matches("(?i)^https://[^/]*\\.cluster\\.local([:/]|$)")
+            && u.matches("^https://[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)+(:[0-9]+)?(/.*)?$")
+          )
+        )
+      reason: Forbidden
+      message: "Namespaced Issuer ACME, Vault, and Venafi endpoints must be public HTTPS hostnames. Use a ClusterIssuer for a private certificate authority."
+    - expression: |
+        !has(object.spec.acme) || !has(object.spec.acme.solvers) || object.spec.acme.solvers.all(s,
+          !has(s.dns01) || (
+            (!has(s.dns01.acmeDNS) || !has(s.dns01.acmeDNS.host) || (
+              s.dns01.acmeDNS.host.size() == 0 || (
+                s.dns01.acmeDNS.host.startsWith("https://")
+                && !s.dns01.acmeDNS.host.contains("@")
+                && !s.dns01.acmeDNS.host.startsWith("https://[")
+                && !s.dns01.acmeDNS.host.matches("^https://[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+([:/]|$)")
+                && !s.dns01.acmeDNS.host.matches("(?i)^https://localhost([:/]|$)")
+                && !s.dns01.acmeDNS.host.matches("(?i)^https://metadata\\.google\\.internal([:/]|$)")
+                && !s.dns01.acmeDNS.host.matches("(?i)^https://[^/]*\\.svc([:/.]|$)")
+                && !s.dns01.acmeDNS.host.matches("(?i)^https://[^/]*\\.cluster\\.local([:/]|$)")
+                && s.dns01.acmeDNS.host.matches("^https://[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)+(:[0-9]+)?(/.*)?$")
+              )
+            ))
+            && (!has(s.dns01.rfc2136) || !has(s.dns01.rfc2136.nameserver) || (
+              s.dns01.rfc2136.nameserver.size() == 0 || (
+                !s.dns01.rfc2136.nameserver.startsWith("[")
+                && !s.dns01.rfc2136.nameserver.matches("^[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+(:[0-9]+)?$")
+                && !s.dns01.rfc2136.nameserver.matches("(?i)^localhost(:[0-9]+)?$")
+                && s.dns01.rfc2136.nameserver.matches("^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)+(:[0-9]+)?$")
+              )
+            ))
+          )
+        )
+      reason: Forbidden
+      message: "Namespaced Issuer DNS01 solver endpoints must be public hostnames. Use a ClusterIssuer for a private certificate authority."
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cert-manager")) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+  validationActions: [Deny]
+{{- end }}
