@@ -11,6 +11,6 @@ Features of the `cloud-provider-huaweicloud` module:
   - updates instance and Kubernetes node metadata and removes from Kubernetes nodes that no longer exist in the cloud;
   - creates load balancers (ELB) for Services of the LoadBalancer type.
 - Provisioning disks via the EVS CSI driver (`evs.csi.huaweicloud.com`) so that PersistentVolumes can be requested from the cluster.
-- Provisioning CloudEphemeral nodes via Cluster API (CAPI). Virtual machine parameters are set in the [HuaweiCloudInstanceClass](cr.html#huaweicloudinstanceclass) resource.
-- Registering with [`node-manager`](/modules/node-manager/) so that HuaweiCloudInstanceClass can be used when describing a NodeGroup.
-- Enabling CNI for new clusters automatically. By default, [`cni-cilium`](/modules/cni-cilium/) is used in `VXLAN` mode.
+- Provisioning CloudEphemeral nodes via Cluster API (CAPI). Virtual machine parameters are set in the [HuaweiCloudInstanceClass](/modules/cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass) resource.
+- Registering with [`node-manager`](/modules/node-manager/) so that [HuaweiCloudInstanceClass](/modules/cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass) can be used when describing a [NodeGroup](/modules/node-manager/cr.html#nodegroup).
+- Enabling CNI for new clusters automatically. By default, [`cni-cilium`](/modules/cni-cilium/) is used.
