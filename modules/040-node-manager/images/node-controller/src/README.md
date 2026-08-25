@@ -5,10 +5,12 @@ Replaces several shell/Go hooks from the `040-node-manager` module with a native
 
 ## What it replaces
 
-| Original hook | Replaced by | Status |
-|---|---|---|
-| `hooks/node_group.py` (conversion webhook) | `internal/webhook/nodegroup_conversion_handler.go`
-| `hooks/node_group` (validation webhook) | `internal/webhook/nodegroup_webhook.go`
+| Original hook | Replaced by |
+|---|---|
+| `hooks/node_group.py` (conversion webhook) | `internal/webhook/nodegroup_conversion_handler.go` |
+| `hooks/node_group` (validation webhook) | `internal/webhook/nodegroup_webhook.go` |
+
+The hooks replaced by controllers are listed per controller in [Controllers](#controllers).
 
 ## Components
 
@@ -50,6 +52,61 @@ Validations handled by CRD and NOT duplicated in webhook:
 Custom conversion handler (not using standard `conversion.NewWebhookHandler()`) because it needs cluster state access to determine `CloudPermanent` vs `CloudStatic` when converting `Hybrid` nodeType from spoke versions.
 
 Reads provider config from Secret `kube-system/d8-provider-cluster-configuration` to check if a NodeGroup name is listed in provider's node groups (→ CloudPermanent) or not (→ CloudStatic).
+
+## Controllers
+
+Every controller is registered in `internal/register/controllers/controllers.go`, runs in the same
+manager and reads through the same cache. **Watches** is the resource whose events drive its
+reconcile loop.
+
+### NodeGroup-driven
+
+| Controller | Watches | What it does | Took over from |
+|---|---|---|---|
+| `nodegroup-status` | NodeGroup | Writes the whole `NodeGroup.status`: node counts, readiness, effective Kubernetes version, conditions, and the one-time `status.engine` pin (MCM or CAPI). | `update_node_group_status.go` — [docs](docs/controller-nodegroup-status.md) |
+| `bashible-context` | NodeGroup | Assembles the Secret `d8-cloud-instance-manager/bashible-apiserver-context` — the single input bashible-apiserver renders node configuration from. | helm define `bashible_input_data` |
+| `nodegroup-update-approval` | NodeGroup | Approves node updates one at a time and handles disruption approval. | `update_approval.go` — [docs](docs/controller-update-approval.md) |
+| `master-node-group` | NodeGroup | Creates the `master` NodeGroup once at startup if it is absent; never touches an existing one. Node type comes from `clusterType` in the Secret `kube-system/d8-cluster-configuration`. | `create_master_node_group.go` |
+
+### Node-driven
+
+| Controller | Watches | What it does | Took over from |
+|---|---|---|---|
+| `node-template` | Node | Applies labels, annotations and taints from `NodeGroup.spec.nodeTemplate` to the group's nodes. | `handle_node_templates.go` — [docs](docs/controller-node-template.md) |
+| `node-draining` | Node | Drains a node that carries the draining annotation, and once a spot node is drained, deletes its Instance so the cloud VM is released. | `handle_draining.go`, `handle_spot_instance_deletion.go` — [docs](docs/controller-draining.md) |
+| `bashible-cleanup` | Node | Removes bootstrap labels and taints after bashible finishes its first run. | `remove_bashible_completed_labels_and_taints.go` — [docs](docs/controller-bashible-cleanup.md) |
+| `static-provider-id` | Node | Sets `spec.providerID = static://` on Static nodes that have none. | `set_provider_id_on_static_nodes.go` — [docs](docs/controller-static-provider-id.md) |
+| `csi-taint` | Node | Removes the `node.deckhouse.io/csi-not-bootstrapped` taint once the node's CSINode registers a driver. | `remove_csi_taints.go` |
+
+### Machines (CAPI and MCM)
+
+Six independent controllers in `internal/controller/capi` — they share a package, not a loop.
+Details: [docs/controller-capi.md](docs/controller-capi.md).
+
+| Controller | Watches | What it does |
+|---|---|---|
+| `capi-machine-deployment` | NodeGroup | Renders the MachineDeployments of a NodeGroup: CAPI ones per zone, or MCM MachineClass + MachineDeployment when the group runs on MCM. Cleans them up when the NodeGroup is deleted. |
+| `capi-cluster-resources` | Secret `d8-node-manager-cloud-provider` | Creates the cluster-level CAPI `Cluster` and its `MachineHealthCheck`. |
+| `capi-control-plane` | DeckhouseControlPlane | Marks the externally managed control plane ready so CAPI proceeds. |
+| `capi-api-version` | MachineDeployment (CAPI) | Backfills the infrastructure `apiGroup` on objects created under the older v1beta1 contract. |
+| `capi-finalizer-cleanup` | Cluster (CAPI) | Removes the `deckhouse.io/capi-controller-manager` finalizer so a deleted Cluster is not stuck. |
+| `capi-md-metrics` | MachineDeployment (CAPI) | Exports per-MachineDeployment gauges to the metrics endpoint. |
+
+### Instances and users
+
+| Controller | Watches | What it does | Took over from |
+|---|---|---|---|
+| `instance` | Instance | Keeps the cluster-scoped `Instance` objects in sync with what backs them: a CAPI Machine, an MCM Machine, or a plain Node. See [package docs](internal/controller/instance/README.md). | — |
+| `nodeuser-status` | NodeUser | Owns `NodeUser.status`. Nodes write and clear their own `status.errors` entries; this controller drops the entries of nodes that no longer exist. | `clear_nodeuser_errors.go` |
+
+### Migrations
+
+Both are transitional and will be removed once every supported cluster has passed through them.
+
+| Controller | Watches | What it does |
+|---|---|---|
+| `capi-crd-migration` | CustomResourceDefinition | Moves the cluster-api CRDs to `v1beta2` storage and keeps the conversion webhook `caBundle` of the CRDs it owns current. |
+| `cluster-prefix-migration` | ModuleConfig | Copies `cloud.prefix` from the deprecated ClusterConfiguration into the `global` ModuleConfig as `spec.settings.prefix`. |
 
 ## Request Flow
 

@@ -28,6 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 )
 
 func boolPtr(b bool) *bool { return &b }
@@ -86,7 +87,7 @@ func TestDefaultCloudEphemeralEngine(t *testing.T) {
 	}
 }
 
-func TestComputeEngine(t *testing.T) {
+func TestEngine_PinAndDefaults(t *testing.T) {
 	mcmProvider := CloudProviderRegistration{MachineClassKind: "AWSInstanceClass"}
 	capiProvider := CloudProviderRegistration{CAPIClusterKind: "DVPCluster"}
 
@@ -141,7 +142,7 @@ func TestComputeEngine(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.want, ComputeEngine(tc.ng, tc.reg))
+			assert.Equal(t, tc.want, engineFrom(tc.ng, tc.reg, ngcommon.MachineDeployments{}))
 		})
 	}
 }
@@ -262,4 +263,76 @@ func TestSerializeTaints(t *testing.T) {
 		}}}}
 		assert.Equal(t, "dedicated=gpu:NoSchedule,reserved:NoExecute", serializeTaints(ng))
 	})
+}
+
+func TestEngine_ExistingMachineDeploymentsWin(t *testing.T) {
+	bothCapable := CloudProviderRegistration{
+		MachineClassKind: "YandexMachineClass",
+		CAPIClusterKind:  "YandexCluster",
+	}
+
+	cloudEphemeral := func() *v1.NodeGroup {
+		return &v1.NodeGroup{
+			ObjectMeta: metav1.ObjectMeta{Name: "worker"},
+			Spec:       v1.NodeGroupSpec{NodeType: v1.NodeTypeCloudEphemeral},
+		}
+	}
+
+	t.Run("MCM machines keep an unpinned group on MCM, against the CAPI default", func(t *testing.T) {
+		assert.Equal(t, engineMCM, engineFrom(cloudEphemeral(), bothCapable, ngcommon.MachineDeployments{MCM: true}))
+	})
+
+	t.Run("CAPI machines answer CAPI", func(t *testing.T) {
+		assert.Equal(t, engineCAPI, engineFrom(cloudEphemeral(), bothCapable, ngcommon.MachineDeployments{CAPI: true}))
+	})
+
+	// The only case where the CAPI branch changes the answer: the annotation would say MCM, but
+	// the group demonstrably runs CAPI machines, and an annotation does not migrate a live group.
+	t.Run("CAPI machines outrank the use-mcm annotation", func(t *testing.T) {
+		ng := cloudEphemeral()
+		ng.Annotations = map[string]string{useMCMAnnotation: "true"}
+		assert.Equal(t, engineCAPI, engineFrom(ng, bothCapable, ngcommon.MachineDeployments{CAPI: true}))
+	})
+
+	t.Run("MCM wins when both kinds are present", func(t *testing.T) {
+		live := ngcommon.MachineDeployments{MCM: true, CAPI: true}
+		assert.Equal(t, engineMCM, engineFrom(cloudEphemeral(), bothCapable, live))
+	})
+
+	t.Run("no machines at all falls back to the provider default", func(t *testing.T) {
+		assert.Equal(t, engineCAPI, engineFrom(cloudEphemeral(), bothCapable, ngcommon.MachineDeployments{}))
+	})
+
+	// The pin is what the group was already told to be; machines that contradict it are the
+	// symptom of something else and must not flip the engine, which would recreate every node.
+	t.Run("the pin outranks the machines", func(t *testing.T) {
+		ng := cloudEphemeral()
+		ng.Status.Engine = engineCAPI
+		assert.Equal(t, engineCAPI, engineFrom(ng, bothCapable, ngcommon.MachineDeployments{MCM: true}))
+	})
+
+	t.Run("use-mcm decides a group that has no machines yet", func(t *testing.T) {
+		ng := cloudEphemeral()
+		ng.Annotations = map[string]string{useMCMAnnotation: "true"}
+		assert.Equal(t, engineMCM, engineFrom(ng, bothCapable, ngcommon.MachineDeployments{}))
+	})
+
+	t.Run("static groups never consult machines", func(t *testing.T) {
+		ng := cloudEphemeral()
+		ng.Spec.NodeType = v1.NodeTypeStatic
+		assert.Equal(t, engineNone, engineFrom(ng, bothCapable, ngcommon.MachineDeployments{MCM: true}))
+	})
+}
+
+func TestEngineUndecided(t *testing.T) {
+	ng := &v1.NodeGroup{Spec: v1.NodeGroupSpec{NodeType: v1.NodeTypeCloudEphemeral}}
+	assert.True(t, engineUndecided(ng), "an unpinned cloud group is the only case worth a list")
+
+	pinned := ng.DeepCopy()
+	pinned.Status.Engine = engineMCM
+	assert.False(t, engineUndecided(pinned))
+
+	static := ng.DeepCopy()
+	static.Spec.NodeType = v1.NodeTypeStatic
+	assert.False(t, engineUndecided(static))
 }

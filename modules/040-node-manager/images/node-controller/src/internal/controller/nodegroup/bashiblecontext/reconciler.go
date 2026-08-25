@@ -64,7 +64,16 @@ func (r *Reconciler) Assemble(ctx context.Context) error {
 			continue
 		}
 
-		nodeGroups = append(nodeGroups, resolved.ToMap())
+		entry := resolved.ToMap()
+		// Only the static block is kept: republishing the whole prior entry would freeze the
+		// Kubernetes version and the kubelet config of this NodeGroup for good, since prior is
+		// read back from the Secret this very pass writes.
+		if p, ok := prior[ng.Name]; ok && dropsInternalNetworkCIDRs(p, entry) {
+			logger.Info("NodeGroup lost internalNetworkCIDRs, keeping the published ones", "nodeGroup", ng.Name)
+			entry["static"] = p["static"]
+		}
+
+		nodeGroups = append(nodeGroups, entry)
 	}
 
 	sort.Slice(nodeGroups, func(i, j int) bool {
