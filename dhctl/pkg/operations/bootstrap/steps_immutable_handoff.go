@@ -15,11 +15,14 @@
 package bootstrap
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"os"
 	"slices"
+	"strings"
+	"time"
 
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 	libretry "github.com/deckhouse/lib-dhctl/pkg/retry"
@@ -116,15 +119,13 @@ func (b *ClusterBootstrapper) collectImmutableKubeconfig(ctx context.Context, bc
 	// Narrated rather than silent: the node answers the status endpoint from the
 	// moment it starts working, so an operator sees what it is doing and a node
 	// that fails says why instead of just staying unreachable.
-	var (
-		kubeconfig  []byte
-		lastMessage string
-	)
+	var kubeconfig []byte
+	say := narrateWait(ctx, time.Now)
 
 	// openImmutableChannelTo, not openImmutableChannel: a failure here is already
 	// on its way through withBothAddresses below, which would otherwise name both
 	// addresses twice in one message.
-	openChannel := func() (string, func(), error) {
+	openChannel := func(ctx context.Context) (string, func(), error) {
 		return b.openImmutableChannelTo(ctx, bctx.immutable.masterIP, handoffPort, "credentials handoff")
 	}
 
@@ -143,9 +144,12 @@ func (b *ClusterBootstrapper) collectImmutableKubeconfig(ctx context.Context, bc
 
 		status, err := immutable.FetchStatus(ctx, input)
 		if err != nil {
+			// The node stops answering while kubelet takes the machine over, and
+			// that silence is most of the wait: unreported, it reads as a hang.
+			say(fmt.Sprintf("%s is not answering its bootstrap channel yet", bctx.immutable.masterNodeName))
 			return err
 		}
-		reportImmutableStatus(ctx, status, &lastMessage)
+		say(fmt.Sprintf("The first master reports: %s", statusLine(status)))
 		if err := handoffReady(status); err != nil {
 			return err
 		}
@@ -167,9 +171,15 @@ func (b *ClusterBootstrapper) collectImmutableKubeconfig(ctx context.Context, bc
 // retryWithFreshChannel runs do against a channel of its own on every attempt.
 // A dial to a machine that is booting hangs to gossh's 5s deadline, and that
 // error ends the tunnel's accept loop for good while its listener stays bound.
-func retryWithFreshChannel(ctx context.Context, loop *libretry.Loop, open func() (string, func(), error), do func(address string) error) error {
+//
+// Opening one is narrated into a buffer and replayed into the debug log: a wait
+// that runs for minutes opens a channel every few seconds, and the SSH progress
+// of each buries the only line that matters — what the node itself reports.
+func retryWithFreshChannel(ctx context.Context, loop *libretry.Loop, open func(context.Context) (string, func(), error), do func(address string) error) error {
 	return loop.RunContext(ctx, func() error {
-		address, stop, err := open()
+		var opening bytes.Buffer
+		address, stop, err := open(dhlog.ToContext(ctx, dhlog.NewBufferLogger(&opening)))
+		dhlog.FromContext(ctx).DebugContext(ctx, strings.TrimSpace(opening.String()))
 		// open must not hand back a closer together with an error: it is dropped here.
 		if err != nil {
 			return err
@@ -178,6 +188,30 @@ func retryWithFreshChannel(ctx context.Context, loop *libretry.Loop, open func()
 
 		return do(address)
 	})
+}
+
+// waitProgressInterval is how often a wait repeats itself while nothing changes.
+// The control plane takes minutes to come up, and a screen that says nothing for
+// that long is indistinguishable from a hang.
+const waitProgressInterval = 30 * time.Second
+
+// narrateWait returns a reporter that speaks when the message changes and, while
+// it does not, once every waitProgressInterval — carrying how long the wait has
+// been running, which is the number an operator is actually asking for.
+func narrateWait(ctx context.Context, now func() time.Time) func(string) {
+	started := now()
+	var (
+		last string
+		said time.Time
+	)
+	return func(message string) {
+		at := now()
+		if message == last && at.Sub(said) < waitProgressInterval {
+			return
+		}
+		last, said = message, at
+		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("%s (%s so far)", message, at.Sub(started).Round(time.Second)))
+	}
 }
 
 // withBothAddresses names the address the machine was configured through next to
@@ -203,16 +237,6 @@ var handoffTerminal = []error{
 
 func handoffGaveUp(err error) bool {
 	return slices.ContainsFunc(handoffTerminal, func(terminal error) bool { return errors.Is(err, terminal) })
-}
-
-// reportImmutableStatus logs what the node says, once per distinct message.
-func reportImmutableStatus(ctx context.Context, status *immutable.Status, lastMessage *string) {
-	message := statusLine(status)
-	if message == *lastMessage {
-		return
-	}
-	*lastMessage = message
-	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("The first master reports: %s", message))
 }
 
 // handoffReady answers nil once the node will hand the credentials over. A node
