@@ -22,9 +22,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/yaml"
-
-	libretry "github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable"
@@ -40,7 +37,7 @@ const tokenPublishDelay = 100 * time.Millisecond
 // hook, so the first read of a young master group finds none. Without a retry
 // the whole multi-master bootstrap ends there — after the first master is up.
 func TestBuildJoinPayloadFromClusterWaitsForTheBootstrapToken(t *testing.T) {
-	noRetryCollapse(t)
+	immutabletest.NoRetryCollapse(t)
 
 	kubeCl := client.NewFakeKubernetesClient()
 	immutabletest.CreateJoinInputsWithoutToken(t, kubeCl)
@@ -66,38 +63,8 @@ func TestBuildJoinPayloadFromClusterWaitsForTheBootstrapToken(t *testing.T) {
 	require.Contains(t, string(document), immutabletest.BootstrapToken,
 		"the payload must carry the token the cluster published")
 
-	documents := payloadDocuments(t, document)
+	documents := immutabletest.PayloadDocuments(t, document)
 	require.Len(t, documents, 1, "a joining master gets no ControlPlaneConfig")
 	require.Equal(t, string(nodeConfigDocument), documents[0],
 		"the join path checks the very bytes the joining machine is handed")
-}
-
-// noRetryCollapse restores the real retry loop: the test environment collapses it
-// to a single attempt, and a single attempt cannot show a wait working.
-func noRetryCollapse(t *testing.T) {
-	t.Helper()
-
-	inTestEnvironment := libretry.InTestEnvironment
-	libretry.InTestEnvironment = false
-	t.Cleanup(func() { libretry.InTestEnvironment = inTestEnvironment })
-}
-
-// payloadDocuments returns the documents a cloud payload carries, in order: the
-// node unwraps the write_files of the #cloud-config and files their contents by
-// kind (documentParts, images/init/src/0.1/acquire.go of the initramfs).
-func payloadDocuments(t *testing.T, payload []byte) []string {
-	t.Helper()
-
-	var envelope struct {
-		WriteFiles []struct {
-			Content string `json:"content"`
-		} `json:"write_files"`
-	}
-	require.NoError(t, yaml.Unmarshal(payload, &envelope))
-
-	documents := make([]string, 0, len(envelope.WriteFiles))
-	for _, file := range envelope.WriteFiles {
-		documents = append(documents, file.Content)
-	}
-	return documents
 }
