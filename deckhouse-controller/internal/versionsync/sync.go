@@ -63,7 +63,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/loader"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/metadata"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -155,7 +154,7 @@ func (s *Syncer) ensureEmbeddedVersion(ctx context.Context, dirName string) erro
 		return nil
 	}
 
-	meta := metadata.FromPackageDefinition(def)
+	meta := def.ConvertToStatusMetadata()
 
 	// an embedded module carries its weight in the directory name prefix, which
 	// the definition file usually omits

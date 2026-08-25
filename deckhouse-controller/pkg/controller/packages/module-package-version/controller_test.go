@@ -347,3 +347,26 @@ func TestEnqueueDraftVersionsForRepository(t *testing.T) {
 	require.Len(t, requests, 1, "only the draft of the named repository must be requeued")
 	assert.Equal(t, "alpha-echo-v1.0.0", requests[0].Name)
 }
+
+func TestLegacyRequirementsToCR(t *testing.T) {
+	t.Run("optional suffix routes a dependency to conditional", func(t *testing.T) {
+		req := legacyRequirementsToCR(&v1alpha1.ModuleRequirements{
+			ParentModules: map[string]string{
+				"cert-manager": ">= 1.0.0",
+				"prometheus":   ">= 2.0.0 !optional",
+			},
+		})
+
+		require.NotNil(t, req)
+		require.NotNil(t, req.Modules)
+		require.Len(t, req.Modules.Mandatory, 1)
+		assert.Equal(t, "cert-manager", req.Modules.Mandatory[0].Name)
+		require.Len(t, req.Modules.Conditional, 1)
+		assert.Equal(t, "prometheus", req.Modules.Conditional[0].Name)
+		assert.Equal(t, ">= 2.0.0", req.Modules.Conditional[0].Constraint, "the suffix is stripped")
+	})
+
+	t.Run("no requirements collapse to nil", func(t *testing.T) {
+		assert.Nil(t, legacyRequirementsToCR(&v1alpha1.ModuleRequirements{}))
+	})
+}

@@ -12,43 +12,40 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metadata
+package dto
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/dto"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 )
 
-func TestFromPackageDefinition(t *testing.T) {
+func TestModuleDefinitionConvertToStatusMetadata(t *testing.T) {
 	t.Run("maps every carried field", func(t *testing.T) {
-		pd := &dto.ModuleDefinition{
-			Definition: dto.Definition{
+		pd := &ModuleDefinition{
+			Definition: Definition{
 				Stage:        "General Availability",
-				Descriptions: dto.Descriptions{Ru: "ru description", En: "en description"},
-				DisableOptions: dto.DisableOptions{
+				Descriptions: Descriptions{Ru: "ru description", En: "en description"},
+				DisableOptions: DisableOptions{
 					Confirmation: true,
-					Messages:     dto.DisableMessages{Ru: "ru do not", En: "en do not"},
+					Messages:     DisableMessages{Ru: "ru do not", En: "en do not"},
 				},
-				Licensing: dto.Licensing{
-					Editions: map[string]dto.Edition{
+				Licensing: Licensing{
+					Editions: map[string]Edition{
 						"ee": {Available: true, EnabledInBundles: []string{"Default"}},
 					},
 				},
-				Requirements: dto.Requirements{
-					Kubernetes: dto.VersionConstraint{Constraint: ">= 1.27"},
-					Deckhouse:  dto.VersionConstraint{Constraint: ">= 1.70"},
-					Modules: dto.ModulesRequirements{
-						Mandatory:   []dto.ModuleDependency{{Name: "cert-manager", Constraint: ">= 1.0.0"}},
-						Conditional: []dto.ModuleDependency{{Name: "prometheus"}},
-						AnyOf: []dto.ModuleGroup{{
+				Requirements: Requirements{
+					Kubernetes: VersionConstraint{Constraint: ">= 1.27"},
+					Deckhouse:  VersionConstraint{Constraint: ">= 1.70"},
+					Modules: ModulesRequirements{
+						Mandatory:   []ModuleDependency{{Name: "cert-manager", Constraint: ">= 1.0.0"}},
+						Conditional: []ModuleDependency{{Name: "prometheus"}},
+						AnyOf: []ModuleGroup{{
 							Name:        "cni",
 							Description: "one CNI must be present",
-							Modules:     []dto.ModuleDependency{{Name: "cni-cilium"}, {Name: "cni-flannel"}},
+							Modules:     []ModuleDependency{{Name: "cni-cilium"}, {Name: "cni-flannel"}},
 						}},
 					},
 				},
@@ -58,7 +55,7 @@ func TestFromPackageDefinition(t *testing.T) {
 			ExclusiveGroup: "ingress",
 		}
 
-		meta := FromPackageDefinition(pd)
+		meta := pd.ConvertToStatusMetadata()
 
 		assert.Equal(t, "General Availability", meta.Stage)
 		assert.Equal(t, "ru description", meta.Description.Ru)
@@ -87,37 +84,14 @@ func TestFromPackageDefinition(t *testing.T) {
 	})
 
 	t.Run("empty optional sections collapse to nil", func(t *testing.T) {
-		meta := FromPackageDefinition(&dto.ModuleDefinition{
-			Definition: dto.Definition{Stage: "Experimental"},
-		})
+		meta := (&ModuleDefinition{
+			Definition: Definition{Stage: "Experimental"},
+		}).ConvertToStatusMetadata()
 
 		assert.Nil(t, meta.DisableOptions)
 		assert.Nil(t, meta.Licensing)
 		assert.Nil(t, meta.Requirements)
 		require.NotNil(t, meta.Description, "the description block is always present")
 		assert.Empty(t, meta.Description.En)
-	})
-}
-
-func TestLegacyRequirementsToCR(t *testing.T) {
-	t.Run("optional suffix routes a dependency to conditional", func(t *testing.T) {
-		req := LegacyRequirementsToCR(&v1alpha1.ModuleRequirements{
-			ParentModules: map[string]string{
-				"cert-manager": ">= 1.0.0",
-				"prometheus":   ">= 2.0.0 !optional",
-			},
-		})
-
-		require.NotNil(t, req)
-		require.NotNil(t, req.Modules)
-		require.Len(t, req.Modules.Mandatory, 1)
-		assert.Equal(t, "cert-manager", req.Modules.Mandatory[0].Name)
-		require.Len(t, req.Modules.Conditional, 1)
-		assert.Equal(t, "prometheus", req.Modules.Conditional[0].Name)
-		assert.Equal(t, ">= 2.0.0", req.Modules.Conditional[0].Constraint, "the suffix is stripped")
-	})
-
-	t.Run("no requirements collapse to nil", func(t *testing.T) {
-		assert.Nil(t, LegacyRequirementsToCR(&v1alpha1.ModuleRequirements{}))
 	})
 }

@@ -20,6 +20,7 @@ import (
 	"log/slog"
 	"path/filepath"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -35,7 +36,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/metadata"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
@@ -352,7 +352,7 @@ func setPackageMetadata(mpv *v1alpha1.ModulePackageVersion, meta *moduleMetadata
 
 	switch {
 	case meta.packageDefinition != nil:
-		mpv.Status.PackageMetadata = metadata.FromPackageDefinition(meta.packageDefinition)
+		mpv.Status.PackageMetadata = meta.packageDefinition.ConvertToStatusMetadata()
 	case meta.moduleDefinition != nil:
 		setFromModuleDefinition(mpv, meta.moduleDefinition)
 	}
@@ -380,7 +380,7 @@ func setFromModuleDefinition(mpv *v1alpha1.ModulePackageVersion, def *moduletype
 	}
 
 	if def.Requirements != nil {
-		mpv.Status.PackageMetadata.Requirements = metadata.LegacyRequirementsToCR(def.Requirements)
+		mpv.Status.PackageMetadata.Requirements = legacyRequirementsToCR(def.Requirements)
 	}
 
 	mpv.Status.PackageMetadata.Licensing = legacyAccessibilityToCR(def.Accessibility)
@@ -405,4 +405,67 @@ func legacyAccessibilityToCR(access *moduletypes.ModuleAccessibility) *v1alpha1.
 	}
 
 	return &v1alpha1.PackageLicensing{Editions: editions}
+}
+
+// legacyOptionalSuffix marks a legacy module.yaml parentModules dependency as
+// conditional (skippable if the parent module is absent). See
+// go_lib/dependency/extenders/moduledependency for the original parser.
+const legacyOptionalSuffix = "!optional"
+
+// legacyRequirementsToCR projects legacy module.yaml requirements (flat strings
+// plus a name to constraint map) onto the PackageRequirements CR shape. A constraint
+// ending in "!optional" maps to a conditional dependency; the suffix is stripped from
+// the surfaced constraint string.
+func legacyRequirementsToCR(req *v1alpha1.ModuleRequirements) *v1alpha1.PackageRequirements {
+	kubernetes := versionConstraintToCR(req.Kubernetes)
+	deckhouse := versionConstraintToCR(req.Deckhouse)
+
+	var moduleReqs *v1alpha1.PackageModulesRequirements
+	if len(req.ParentModules) > 0 {
+		var (
+			mandatory   []v1alpha1.PackageModuleDependency
+			conditional []v1alpha1.PackageModuleDependency
+		)
+
+		for name, constraint := range req.ParentModules {
+			raw, optional := strings.CutSuffix(constraint, legacyOptionalSuffix)
+			dep := v1alpha1.PackageModuleDependency{
+				Name:       name,
+				Constraint: strings.TrimSpace(raw),
+			}
+
+			if optional {
+				conditional = append(conditional, dep)
+			} else {
+				mandatory = append(mandatory, dep)
+			}
+		}
+
+		if len(mandatory) > 0 || len(conditional) > 0 {
+			moduleReqs = &v1alpha1.PackageModulesRequirements{
+				Mandatory:   mandatory,
+				Conditional: conditional,
+			}
+		}
+	}
+
+	if kubernetes == nil && deckhouse == nil && moduleReqs == nil {
+		return nil
+	}
+
+	return &v1alpha1.PackageRequirements{
+		Kubernetes: kubernetes,
+		Deckhouse:  deckhouse,
+		Modules:    moduleReqs,
+	}
+}
+
+// versionConstraintToCR wraps a raw semver constraint string into the v1alpha1
+// VersionConstraint CR shape, returning nil when the string is empty.
+func versionConstraintToCR(raw string) *v1alpha1.VersionConstraint {
+	if len(raw) == 0 {
+		return nil
+	}
+
+	return &v1alpha1.VersionConstraint{Constraint: raw}
 }
