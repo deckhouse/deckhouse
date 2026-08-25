@@ -17,11 +17,13 @@ package bootstrap
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net"
 	"strconv"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/provider"
+	"github.com/deckhouse/lib-connection/pkg/settings"
 	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
@@ -94,8 +96,11 @@ func (b *ClusterBootstrapper) openBastionTunnel(ctx context.Context, sshConfig *
 	bastionConfig.ForceLegacy = false
 	bastionConfig.ForceModern = true
 
+	// The provider narrates where this context narrates: a wait opens a channel
+	// every attempt, and the retry loop inside the provider prints three lines
+	// per open — on top of the one line that carries the node's own progress.
 	sshProvider := provider.NewDefaultSSHProvider(
-		b.SSHProviderInitializer.GetSettings(),
+		channelSettings{Settings: b.SSHProviderInitializer.GetSettings(), logger: dhlog.FromContext(ctx)},
 		&sshconfig.ConnectionConfig{
 			Config: bastionConfig,
 			Hosts:  []sshconfig.Host{{Host: sshConfig.BastionHost}},
@@ -154,3 +159,13 @@ func freeLocalPort() (int, error) {
 	}
 	return addr.Port, nil
 }
+
+// channelSettings is the SSH settings of this bootstrap with one thing replaced:
+// the logger the plumbing narrates into. Embedded because every other setting
+// must stay exactly what the rest of dhctl was given.
+type channelSettings struct {
+	settings.Settings
+	logger *slog.Logger
+}
+
+func (s channelSettings) Logger() *slog.Logger { return s.logger }

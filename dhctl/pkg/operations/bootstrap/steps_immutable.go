@@ -493,7 +493,7 @@ func (b *ClusterBootstrapper) pushImmutablePayload(ctx context.Context, bctx *bo
 		// A channel per attempt: this wait starts while the machine is still
 		// powering on, so an early dial hangs to gossh's deadline, which ends the
 		// tunnel's accept loop for good and leaves a bound port nobody serves.
-		openChannel := func() (string, func(), error) {
+		openChannel := func(ctx context.Context) (string, func(), error) {
 			return b.openImmutableChannelTo(ctx, address, port, "maintenance")
 		}
 		loop := libretry.NewLoop(fmt.Sprintf("Waiting for %s to ask for a configuration", nodeName), waitMaintenancePort.attempts, waitMaintenancePort.interval).
