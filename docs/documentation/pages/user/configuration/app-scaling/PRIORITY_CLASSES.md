@@ -4,52 +4,11 @@ permalink: en/user/configuration/app-scaling/priority-classes.html
 description: "Using priority classes in Deckhouse Kubernetes Platform: configuration examples, preemption demonstration, and practical diagnostics."
 ---
 
-A priority class defines which pods are more important when a node runs out of resources. You can assign a class in a manifest, verify preemption, and figure out why a pod is stuck in `Pending`.
-
-## Using a priority class in a pod
-
-Deckhouse Kubernetes Platform (DKP) already provides a set of priority classes. This example uses the predefined `production-medium` class.
-
-Create a file `test-pod.yaml` to run a pod with the `production-medium` class:
-
-```yaml
-apiVersion: v1
-kind: Pod
-metadata:
-  name: test-priority-pod
-spec:
-  priorityClassName: production-medium
-  containers:
-  - name: nginx
-    image: nginx
-```
-
-Apply the manifest to the cluster:
-
-```shell
-d8 k apply -f test-pod.yaml
-```
-
-Verify that the pod received the expected priority:
-
-```shell
-d8 k describe pod test-priority-pod | grep Priority
-```
-
-Example output:
-
-```console
-Priority:             6000
-Priority Class Name:  production-medium
-```
-
-{% alert level="warning" %}
-You cannot change the `priorityClassName` field of an existing pod. This field is immutable. To change the priority class, delete the pod and recreate it with a different class.
-{% endalert %}
+A priority class defines which pods are more important when a node runs out of resources. You can assign a class in a Deployment manifest, verify preemption, and figure out why a pod is stuck in `Pending`.
 
 ## Using a priority class in a Deployment
 
-You can specify a priority class in a Deployment's pod template. In this case, all pods created by the Deployment inherit the specified priority class.
+Deckhouse Kubernetes Platform (DKP) already provides a set of priority classes. The following example shows how to use a priority class in a Deployment pod template.
 
 Create a file `deployment-with-priority.yaml` to deploy an application with the DKP predefined class `production-high` (value `9000`, see [Available priority classes](/products/kubernetes-platform/documentation/v1/admin/configuration/app-scaling/pod-eviction/priority-classes.html#available-priority-classes)):
 
@@ -69,6 +28,7 @@ spec:
       labels:
         app: my-app
     spec:
+      # Specify the priority class name.
       priorityClassName: production-high
       containers:
       - name: app
@@ -97,6 +57,10 @@ my-app-7d8f9b5c4f-2xq9t   production-high   9000
 my-app-7d8f9b5c4f-4p7k2   production-high   9000
 my-app-7d8f9b5c4f-9w5r8   production-high   9000
 ```
+
+{% alert level="warning" %}
+You cannot change the `priorityClassName` field of a running pod. This field is immutable. To change the priority, update the template in the Deployment and recreate the pods.
+{% endalert %}
 
 ## Step-by-step preemption demonstration
 
@@ -348,7 +312,7 @@ Check pod status:
 d8 k get pods | grep -E 'mock-stateful|emergency-task'
 ```
 
-Expected example output (during preemption):
+Example output:
 
 ```console
 NAME                      READY   STATUS        RESTARTS   AGE
@@ -372,7 +336,7 @@ Check the logs of a terminating pod:
 d8 k logs mock-stateful-0 --tail=20
 ```
 
-Expected example output:
+Example output:
 
 ```console
 Application started and running...
@@ -654,7 +618,7 @@ Verify that no preemption occurred:
 d8 k get events -A --field-selector reason=Preempted
 ```
 
-Example output (empty):
+Example output:
 
 ```console
 No resources found
@@ -664,13 +628,13 @@ The issue: the pod limit on the node has already been reached, so even a high-pr
 
 ### Useful commands for monitoring priorities
 
-Count pods by priority class:
+Pod count by priority class:
 
 ```shell
 d8 k get pods -A -o jsonpath='{range .items[*]}{.spec.priorityClassName}{"\n"}{end}' | sort | uniq -c | sort -rn
 ```
 
-Expected example output:
+Example output:
 
 ```console
      34 cluster-medium
@@ -680,13 +644,13 @@ Expected example output:
       6 production-high
 ```
 
-View preemption events across all namespaces:
+Preemption events across all namespaces:
 
 ```shell
 d8 k get events -A --field-selector reason=Preempted -o custom-columns=NAMESPACE:.metadata.namespace,POD:.involvedObject.name,MESSAGE:.message
 ```
 
-Expected example output:
+Example output:
 
 ```console
 NAMESPACE          POD                                                 MESSAGE
@@ -700,13 +664,13 @@ default            log-collector-dlxpv                                 Preempted
 Events are retained for a limited time (usually about an hour). If preemption has not occurred recently, these commands may return nothing — repeat the preemption demonstration and run the commands immediately afterward.
 {% endalert %}
 
-Check which pods were preempted most often:
+Most frequently preempted pods:
 
 ```shell
 d8 k get events -A --field-selector reason=Preempted -o jsonpath='{range .items[*]}{.involvedObject.name}{"\n"}{end}' | sort | uniq -c | sort -rn | head -10
 ```
 
-Expected example output:
+Example output:
 
 ```console
       2 prometheus-main-0

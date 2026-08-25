@@ -5,52 +5,11 @@ description: "Использование классов приоритета в 
 lang: ru
 ---
 
-Класс приоритета задаёт, какие поды важнее при нехватке ресурсов на узле. Можно назначить класс в манифесте, проверить вытеснение и понять, почему под застрял в `Pending`.
-
-## Использование класса приоритета в поде
-
-В Deckhouse Kubernetes Platform (DKP) уже есть набор классов приоритета. В этом примере используется предустановленный класс `production-medium`.
-
-Создайте файл `test-pod.yaml`, чтобы запустить под с классом `production-medium`:
-
-```yaml
-apiVersion: v1
-kind: Pod
-metadata:
-  name: test-priority-pod
-spec:
-  priorityClassName: production-medium
-  containers:
-  - name: nginx
-    image: nginx
-```
-
-Примените манифест в кластере:
-
-```shell
-d8 k apply -f test-pod.yaml
-```
-
-Проверьте, что под получил нужный приоритет:
-
-```shell
-d8 k describe pod test-priority-pod | grep Priority
-```
-
-Пример вывода:
-
-```console
-Priority:             6000
-Priority Class Name:  production-medium
-```
-
-{% alert level="warning" %}
-Параметр `priorityClassName` нельзя изменить у работающего пода. Это поле является неизменяемым. Единственный способ изменить приоритет — удалить под и создать его заново с новым классом.
-{% endalert %}
+Класс приоритета задаёт, какие поды важнее при нехватке ресурсов на узле. Можно назначить класс в манифесте Deployment, проверить вытеснение и понять, почему под застрял в `Pending`.
 
 ## Использование класса приоритета в Deployment
 
-Класс приоритета можно указать в шаблоне Deployment. В этом случае все поды, созданные этим Deployment, наследуют указанный класс приоритета.
+В Deckhouse Kubernetes Platform (DKP) уже есть набор классов приоритета. Далее приведён пример использования класса приоритета в шаблоне пода в Deployment.
 
 Создайте файл `deployment-with-priority.yaml`, чтобы развернуть приложение с предустановленным в DKP классом `production-high` (значение `9000`, [в разделе «Доступные классы приоритета»](/products/kubernetes-platform/documentation/v1/admin/configuration/app-scaling/pod-eviction/priority-classes.html#доступные-классы-приоритета)):
 
@@ -70,6 +29,7 @@ spec:
       labels:
         app: my-app
     spec:
+      # Указание имени класса приоритета.
       priorityClassName: production-high
       containers:
       - name: app
@@ -98,6 +58,10 @@ my-app-7d8f9b5c4f-2xq9t   production-high   9000
 my-app-7d8f9b5c4f-4p7k2   production-high   9000
 my-app-7d8f9b5c4f-9w5r8   production-high   9000
 ```
+
+{% alert level="warning" %}
+Параметр `priorityClassName` нельзя изменить у работающего пода. Это поле является неизменяемым. Чтобы сменить приоритет, обновите шаблон в Deployment и пересоздайте поды.
+{% endalert %}
 
 ## Пошаговая демонстрация вытеснения
 
@@ -349,7 +313,7 @@ d8 k apply -f emergency-task.yaml
 d8 k get pods | grep -E 'mock-stateful|emergency-task'
 ```
 
-Ожидаемый пример вывода (процесс вытеснения):
+Пример вывода:
 
 ```console
 NAME                      READY   STATUS        RESTARTS   AGE
@@ -373,7 +337,7 @@ mock-stateful-6           1/1     Terminating   0          43s
 d8 k logs mock-stateful-0 --tail=20
 ```
 
-Ожидаемый пример вывода:
+Пример вывода:
 
 ```console
 Приложение запущено и работает...
@@ -655,7 +619,7 @@ Events:
 d8 k get events -A --field-selector reason=Preempted
 ```
 
-Пример вывода (пусто):
+Пример вывода:
 
 ```console
 No resources found
@@ -665,13 +629,13 @@ No resources found
 
 ### Полезные команды для мониторинга приоритетов
 
-Посчитайте количество подов по классам приоритетов:
+Подсчёт количества подов по классам приоритета:
 
 ```shell
 d8 k get pods -A -o jsonpath='{range .items[*]}{.spec.priorityClassName}{"\n"}{end}' | sort | uniq -c | sort -rn
 ```
 
-Ожидаемый пример вывода:
+Пример вывода:
 
 ```console
      34 cluster-medium
@@ -681,13 +645,13 @@ d8 k get pods -A -o jsonpath='{range .items[*]}{.spec.priorityClassName}{"\n"}{e
       6 production-high
 ```
 
-Просмотрите события вытеснения во всех неймспейсах:
+Просмотр событий вытеснения во всех неймспейсах:
 
 ```shell
 d8 k get events -A --field-selector reason=Preempted -o custom-columns=NAMESPACE:.metadata.namespace,POD:.involvedObject.name,MESSAGE:.message
 ```
 
-Ожидаемый пример вывода:
+Пример вывода:
 
 ```console
 NAMESPACE          POD                                                 MESSAGE
@@ -701,13 +665,13 @@ default            log-collector-dlxpv                                 Preempted
 События хранятся ограниченное время (обычно около часа). Если вытеснения давно не было, эти команды могут ничего не вернуть — повторите демонстрацию вытеснения и выполните команды сразу после неё.
 {% endalert %}
 
-Проверьте, какие поды вытеснялись чаще всего:
+Поды, которые вытеснялись чаще всего:
 
 ```shell
 d8 k get events -A --field-selector reason=Preempted -o jsonpath='{range .items[*]}{.involvedObject.name}{"\n"}{end}' | sort | uniq -c | sort -rn | head -10
 ```
 
-Ожидаемый пример вывода:
+Пример вывода:
 
 ```console
       2 prometheus-main-0
