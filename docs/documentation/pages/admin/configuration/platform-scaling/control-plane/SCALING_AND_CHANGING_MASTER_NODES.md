@@ -90,7 +90,7 @@ DKP supports both automatic and manual scaling of master nodes in cloud and bare
 ### Removing the master role from a node without deleting the node itself
 
 {% alert level="warning" %}
-If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before changing master nodes. We strongly recommend creating a [backup of the module's data](/products/stronghold/documentation/admin/backups/overview/) before making any changes.
+If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before changing master nodes. Create a [backup of the module's data](/products/stronghold/documentation/admin/backups/overview/) before making any changes.
 {% endalert %}
 
 If you need to remove a node from the set of master nodes but keep it in the cluster for other purposes, follow these steps:
@@ -132,10 +132,14 @@ After completing these steps, the node will no longer be considered a master nod
 
 ### Changing the OS image of master nodes in a multi-master cluster
 
+The OS replacement method depends on the cluster type: in a cloud cluster, nodes are replaced with `dhctl converge`; in a static cluster, nodes are replaced manually, one at a time.
+
 #### In a cloud cluster
 
+To change the OS image of master nodes in a cloud multi-master cluster, follow these steps.
+
 {% alert level="warning" %}
-If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before changing master nodes. We strongly recommend creating a [backup of the module's data](/products/stronghold/documentation/admin/backups/overview/) before making any changes.
+If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before changing master nodes. Create a [backup of the module's data](/products/stronghold/documentation/admin/backups/overview/) before making any changes.
 {% endalert %}
 
 1. Create a [backup of etcd](../../backup/backup-and-restore.html#backing-up-etcd) and the `/etc/kubernetes` directory.
@@ -155,9 +159,7 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 
    During the login process, you will need to enter your `Username` and `Password`.
 
-   {% alert level="info" %}
-   When logging in to the `registry.deckhouse.io` registry, the `Username` field must be set to `license-token`, and the `Password` field must contain the Deckhouse Kubernetes Platform license key.
-   {% endalert %}
+   > When logging in to the `registry.deckhouse.io` registry, the `Username` field must be set to `license-token`, and the `Password` field must contain the Deckhouse Kubernetes Platform license key.
 
 1. **On your local machine**, run the Deckhouse installer container for the corresponding edition and version (change the container registry address if necessary):
 
@@ -196,7 +198,7 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
      --ssh-host <MASTER-NODE-0-HOST> --ssh-host <MASTER-NODE-1-HOST> --ssh-host <MASTER-NODE-2-HOST>
    ```
 
-   The following steps (9–12) should be performed **sequentially on each** master node, starting with the highest numbered node (with suffix 2) and ending with the lowest (with suffix 0).
+   The following steps should be performed **sequentially on each** master node, starting with the highest numbered node (with suffix 2) and ending with the lowest (with suffix 0).
 
 1. **On the newly created node**, open the systemd journal for the `bashible.service`.  
    Wait until the setup process is complete — the log should contain the message `nothing to do`:
@@ -235,9 +237,17 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 
 #### In a static cluster
 
+The following instruction describes OS replacement on master nodes that were added to the cluster **manually** using the `bootstrap.sh` script. Perform the steps for each master node, one node at a time. Do not proceed to the next node until the current node has rejoined the cluster and is healthy.
+
 {% alert level="warning" %}
-If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before adding or removing a master node. We strongly recommend creating a [backup of the module's data](/products/stronghold/documentation/admin/backups/overview/) before making any changes.
+If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before adding or removing a master node. Create a [backup of the module's data](/products/stronghold/documentation/admin/backups/overview/) before making any changes.
 {% endalert %}
+
+{% alert level="warning" %}
+If master nodes are managed by Cluster API Provider Static (CAPS) through StaticInstance resources, do not use this instruction. First [delete the StaticInstance](../node/bare-metal-node.html#deleting-a-staticinstance), install the required OS, and [add the node](#adding-master-nodes-to-a-static-or-hybrid-cluster) to the `master` NodeGroup again.
+{% endalert %}
+
+To change the OS of a manually added master node, follow these steps:
 
 1. Create a [backup of etcd](../../backup/backup-and-restore.html#backing-up-etcd) and the `/etc/kubernetes` directory. If the `stronghold` module is enabled, make sure its data has also been backed up.
 1. Check the cluster health and make sure there are no alerts or pending Deckhouse queue tasks:
@@ -246,7 +256,6 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
    d8 status
    ```
 
-1. Perform the following steps for each master node, one node at a time. Do not proceed to the next node until the current node has rejoined the cluster and is healthy.
 1. Remove the master node labels from the node:
 
    ```shell
@@ -269,7 +278,7 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
    done
    ```
 
-1. Drain the node:
+1. Evict workloads from the node with `d8 k drain`:
 
    ```shell
    d8 k drain <MASTER_NODE_NAME> --ignore-daemonsets --delete-emptydir-data
@@ -287,11 +296,7 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
    d8 k delete node <MASTER_NODE_NAME>
    ```
 
-1. Clean up the DKP data on the removed master node:
-
-   {% alert level="danger" %}
-   This command removes Kubernetes and DKP data from the node. Before running it, make sure you have selected the correct node and created the required backups.
-   {% endalert %}
+1. Clean up the DKP data on the removed master node. This command irreversibly removes Kubernetes and DKP data from the node. Before running it, make sure you have selected the correct node and created the required backups:
 
    ```shell
    bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing
@@ -311,10 +316,21 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
    bash bootstrap.sh
    ```
 
-1. Wait for Deckhouse queue tasks to complete and make sure the master node is present in the etcd cluster member list again:
+1. **On the newly created node**, open the systemd journal for the `bashible.service`. Wait until the setup process is complete — the log should contain the message `nothing to do`:
 
    ```shell
-   d8 status
+   journalctl -fu bashible.service
+   ```
+
+1. Wait until the node reaches the `Ready` status:
+
+   ```shell
+   d8 k wait node <MASTER_NODE_NAME> --for=condition=Ready --timeout=10m
+   ```
+
+1. Make sure the node is listed as an etcd cluster member:
+
+   ```shell
    for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
      d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
        --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
@@ -323,6 +339,13 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
        break
      fi
    done
+   ```
+
+1. Make sure that [`control-plane-manager`](/modules/control-plane-manager/) is running on the node:
+
+   ```shell
+   d8 k -n kube-system wait pod --timeout=10m --for=condition=ContainersReady \
+     -l app=d8-control-plane-manager --field-selector spec.nodeName=<MASTER_NODE_NAME>
    ```
 
 1. Make sure there are no alerts or pending queue tasks:
@@ -335,20 +358,30 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 
 ### Changing the OS image in a single-master cluster
 
+The method depends on the cluster type: first add extra master nodes, replace the OS in multi-master mode, then restore the original number of master nodes.
+
 {% alert level="warning" %}
-If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before changing master nodes. We strongly recommend creating a [backup of the module's data](/products/stronghold/documentation/admin/backups/overview/) before making any changes.
+If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before changing master nodes. Create a [backup of the module's data](/products/stronghold/documentation/admin/backups/overview/) before making any changes.
 {% endalert %}
 
+For a **cloud** cluster:
+
 1. Convert the single-master cluster into a multi-master one according to the [instructions](#adding-master-nodes-in-a-cloud-cluster).
-1. Update the master nodes as described in the [instructions](#changing-the-os-image-of-master-nodes-in-a-multi-master-cluster).
+1. Update the master nodes as described in the [instructions](#in-a-cloud-cluster).
 1. Convert the multi-master cluster back to a single-master one following the [instructions](#reducing-the-number-of-master-nodes-in-a-cloud-cluster).
+
+For a **static** cluster:
+
+1. Add extra master nodes according to the [instructions](#adding-master-nodes-to-a-static-or-hybrid-cluster).
+1. Update the master nodes as described in the [instructions](#in-a-static-cluster).
+1. Remove extra master nodes from the control plane role according to the [instructions](#removing-the-master-role-from-a-node-without-deleting-the-node-itself). Then delete them from the cluster with `d8 k delete node <MASTER_NODE_NAME>` and power off the corresponding servers.
 
 ## Adding master nodes to a static or hybrid cluster
 
 > It is important to have an odd number of masters to ensure a quorum.
 
 {% alert level="warning" %}
-If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before changing master nodes. We strongly recommend creating a [backup of the module's data](/products/stronghold/documentation/admin/backups/overview/) before making any changes.
+If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before changing master nodes. Create a [backup of the module's data](/products/stronghold/documentation/admin/backups/overview/) before making any changes.
 {% endalert %}
 
 When installing Deckhouse Kubernetes Platform with default settings, the NodeGroup `master` lacks the section [`spec.staticInstances.labelSelector`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) with label filter settings for `staticInstances` resources. Because of this, after changing the number of `staticInstances` nodes in the NodeGroup `master` (parameter [`spec.staticInstances.count`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)), when adding a regular node using Cluster API Provider Static (CAPS), it can be "intercepted" and added to the NodeGroup `master`, even if the corresponding `StaticInstance` (in `metadata`) specifies a label with a `role` different from `master`.
@@ -407,7 +440,7 @@ It's important to have an odd number of master nodes to maintain etcd quorum.
 {% endalert %}
 
 {% alert level="warning" %}
-If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before adding or removing a master node. We strongly recommend creating a [backup of the module’s data](/products/stronghold/documentation/admin/backups/overview/) before making any changes.
+If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before adding or removing a master node. Create a [backup of the module’s data](/products/stronghold/documentation/admin/backups/overview/) before making any changes.
 {% endalert %}
 
 1. Create a [backup of etcd](../../backup/backup-and-restore.html#backing-up-etcd) and the `/etc/kubernetes` directory.
@@ -427,9 +460,7 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 
    During the login process, you will need to enter your `Username` and `Password`.
 
-   {% alert level="info" %}
-   When logging in to the `registry.deckhouse.io` registry, the `Username` field must be set to `license-token`, and the `Password` field must contain the Deckhouse Kubernetes Platform license key.
-   {% endalert %}
+   > When logging in to the `registry.deckhouse.io` registry, the `Username` field must be set to `license-token`, and the `Password` field must contain the Deckhouse Kubernetes Platform license key.
 
 1. On the **local machine**, run the Deckhouse installer container for the appropriate edition and version (change the container registry address if necessary):
 
@@ -487,7 +518,7 @@ The following steps must be performed starting from the first master node (`mast
 {% endalert %}
 
 {% alert level="warning" %}
-If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before adding or removing a master node. We strongly recommend creating a [backup of the module’s data](/products/stronghold/documentation/admin/backups/overview/) before making any changes.
+If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before adding or removing a master node. Create a [backup of the module’s data](/products/stronghold/documentation/admin/backups/overview/) before making any changes.
 {% endalert %}
 
 1. Create a [backup of etcd](../../backup/backup-and-restore.html#backing-up-etcd) and the `/etc/kubernetes` directory.
@@ -507,9 +538,7 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 
    During the login process, you will need to enter your `Username` and `Password`.
 
-   {% alert level="info" %}
-   When logging in to the `registry.deckhouse.io` registry, the `Username` field must be set to `license-token`, and the `Password` field must contain the Deckhouse Kubernetes Platform license key.
-   {% endalert %}
+   > When logging in to the `registry.deckhouse.io` registry, the `Username` field must be set to `license-token`, and the `Password` field must contain the Deckhouse Kubernetes Platform license key.
 
 1. On the **local machine**, run the DKP installer container for the corresponding edition and version (change the container registry address if needed):
 
