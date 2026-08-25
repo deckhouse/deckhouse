@@ -18,9 +18,27 @@ rolloutFields:
 # hook) and overrides VSphereVM.spec.{Server,Datacenter,Folder,ResourcePool,Datastore,Networks}
 # from that topology in pkg/services/vimmachine.go:474 — this is what makes multi-zone
 # placement actually work.
+#
+# .zone arrives as the raw vSphere tag ("E2E Zone 1"), which is not a valid DNS-1123 subdomain
+# and cannot be a Kubernetes object name. hooks/ensure_failure_domains.go therefore sanitizes
+# the tag before creating VSphereDeploymentZone (rfc1123SubdomainName). CAPV's
+# generateOverrideFunc matches Machine.Spec.FailureDomain against DZ.metadata.name; if this
+# template emitted the raw tag while the DZ carried the sanitized one, the lookup would 404,
+# the override would silently no-op, and every VM in a "Zone 1"-style zone would clone with
+# the baseline topology from this template — no per-zone datastore/resourcePool. That failure
+# is invisible from kubectl: it only shows up in vCenter as VMs on the wrong datastore.
+#
+# The sprig expression below mirrors rfc1123SubdomainName step-for-step. Keeping two copies
+# of the sanitization is guarded by hooks/ensure_failure_domains_sanitize_parity_test.go,
+# which extracts this literal from template.yaml, runs it through the same sandbox
+# node-controller uses at render time, and asserts equality with the Go function on a golden
+# set of inputs. A drift in either implementation fails CI on the next run.
 machineDeployment:
   additionalFields:
-    failureDomain: "{{ .zone }}"
+    failureDomain: >-
+      {{- $s := lower .zone | replace " " "-" -}}
+      {{- $s = regexReplaceAll "[^a-z0-9.-]" $s "" -}}
+      {{- trimAll "-." $s -}}
 
 # Rendered under machinetemplate.Render: missingkey=error, sprig sandbox, no access to Helm
 # .Values. Optional fields MUST go through hasKey / get / dig — a direct path like
