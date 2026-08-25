@@ -92,7 +92,7 @@ func TestImmutableInputRefusesACustomizationWithoutHost(t *testing.T) {
 	hosts := map[string]string{"master-0": "10.0.0.11"}
 	customizations := []immutable.Customization{{NodeName: "master-0"}, {NodeName: "master-9"}}
 
-	_, err := matchCustomizationsToHosts(staticMetaConfig(), hosts, customizations)
+	_, err := matchCustomizationsToHosts(staticConfig(), hosts, customizations)
 
 	require.ErrorContains(t, err, "master-9")
 	require.ErrorContains(t, err, "--master-host")
@@ -105,7 +105,7 @@ func TestImmutableInputRefusesTwoDocumentsForOneNode(t *testing.T) {
 	hosts := map[string]string{"master-0": "10.0.0.11"}
 	customizations := []immutable.Customization{{NodeName: "master-0"}, {NodeName: "master-0"}}
 
-	_, err := matchCustomizationsToHosts(staticMetaConfig(), hosts, customizations)
+	_, err := matchCustomizationsToHosts(staticConfig(), hosts, customizations)
 
 	require.ErrorContains(t, err, "master-0")
 	require.ErrorContains(t, err, "twice")
@@ -115,7 +115,7 @@ func TestImmutableInputMatchesByName(t *testing.T) {
 	hosts := map[string]string{"master-0": "10.0.0.11"}
 	customizations := []immutable.Customization{{NodeName: "master-0"}}
 
-	matched, err := matchCustomizationsToHosts(staticMetaConfig(), hosts, customizations)
+	matched, err := matchCustomizationsToHosts(staticConfig(), hosts, customizations)
 
 	require.NoError(t, err)
 	require.Contains(t, matched, "master-0")
@@ -967,12 +967,6 @@ func immutableTestBootstrapper(t *testing.T) (*ClusterBootstrapper, *bootstrapCo
 		stateCache: stateCache,
 		immutable:  &immutableBootstrap{masterNodeName: firstMasterNodeName(metaConfig)},
 	}
-}
-
-// staticMetaConfig is a cluster whose machines are named by --master-host, the
-// only shape in which the operator's documents are matched to a machine at all.
-func staticMetaConfig() *config.MetaConfig {
-	return &config.MetaConfig{ClusterType: config.StaticClusterType}
 }
 
 // noRetryCollapse restores real retry behaviour: init_test.go collapses every

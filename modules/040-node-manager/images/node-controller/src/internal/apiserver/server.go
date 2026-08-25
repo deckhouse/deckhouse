@@ -15,7 +15,7 @@ limitations under the License.
 */
 
 // Package apiserver runs the aggregated API server that serves the virtual
-// (not persisted) resources of internal.deckhouse.io/v1alpha1.
+// (not persisted) resources of templates.internal.deckhouse.io/v1alpha1.
 package apiserver
 
 import (
@@ -86,7 +86,7 @@ type Options struct {
 // attempt. A variable so the test does not have to sit through it.
 var configRetryInterval = 5 * time.Second
 
-// Run starts the aggregated API server for internal.deckhouse.io/v1alpha1 and
+// Run starts the aggregated API server for templates.internal.deckhouse.io/v1alpha1 and
 // blocks until ctx is done.
 func Run(ctx context.Context, opts Options) error {
 	cfg, err := newConfig(ctx, opts)

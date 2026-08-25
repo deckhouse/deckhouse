@@ -627,19 +627,7 @@ func (b *ClusterBootstrapper) connectToImmutableMaster(ctx context.Context, bctx
 // this master ready, etcd member included: the Node appears when kubelet starts,
 // long before that, and the machine has its whole install ahead of it.
 func waitForImmutableMasterControlPlane(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string) error {
-	checker := controlplane.NewManagerReadinessChecker(dhctlkube.NewSimpleKubeClientGetter(kubeCl))
-
-	return libretry.NewLoop(fmt.Sprintf("Waiting for the control plane of %s", nodeName), waitJoinedControlPlane.attempts, waitJoinedControlPlane.interval).
-		RunContext(ctx, func() error {
-			ready, err := checker.IsReady(ctx, nodeName)
-			if err != nil {
-				return fmt.Errorf("check the control plane of %s: %w", nodeName, err)
-			}
-			if !ready {
-				return fmt.Errorf("the control plane of %s is not ready yet", nodeName)
-			}
-			return nil
-		})
+	return controlplane.NewManagerReadinessChecker(dhctlkube.NewSimpleKubeClientGetter(kubeCl)).WaitReady(ctx, nodeName)
 }
 
 // reuseCollectedKubeconfig returns the credentials an earlier attempt collected,

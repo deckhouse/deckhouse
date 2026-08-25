@@ -28,6 +28,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable/immutabletest"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
@@ -144,7 +145,7 @@ func TestCloudPayloadSurvivesTheProviderBlock(t *testing.T) {
 		NodeName:           "example-master-1",
 		MetaConfig:         testMetaConfig(t),
 		CACert:             base64.StdEncoding.EncodeToString([]byte("cluster ca")),
-		BootstrapToken:     "abcdef.0123456789abcdef",
+		BootstrapToken:     immutabletest.BootstrapToken,
 		APIServerEndpoints: []string{"https://10.0.0.1:6443"},
 	})
 	require.NoError(t, err)

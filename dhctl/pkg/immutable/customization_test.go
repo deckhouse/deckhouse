@@ -26,6 +26,7 @@ import (
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable/immutabletest"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
@@ -359,7 +360,7 @@ func TestCustomizationReachesTheJoinPayload(t *testing.T) {
 		NodeName:           "master-1",
 		MetaConfig:         testMetaConfig(t),
 		CACert:             "dGVzdC1jYQ==",
-		BootstrapToken:     "abcdef.0123456789abcdef",
+		BootstrapToken:     immutabletest.BootstrapToken,
 		APIServerEndpoints: []string{"https://10.0.0.11:6443"},
 		Customization:      &parsed[0],
 	})
@@ -394,7 +395,7 @@ func TestThePushAddressBecomesTheNodeIP(t *testing.T) {
 		NodeName:           "master-1",
 		MetaConfig:         testMetaConfig(t),
 		CACert:             "dGVzdC1jYQ==",
-		BootstrapToken:     "abcdef.0123456789abcdef",
+		BootstrapToken:     immutabletest.BootstrapToken,
 		APIServerEndpoints: []string{"https://10.0.0.11:6443"},
 		NodeIP:             "10.0.0.12",
 	})
@@ -417,7 +418,7 @@ func TestTheDocumentsNodeIPBeatsThePushAddress(t *testing.T) {
 		NodeName:           "master-1",
 		MetaConfig:         testMetaConfig(t),
 		CACert:             "dGVzdC1jYQ==",
-		BootstrapToken:     "abcdef.0123456789abcdef",
+		BootstrapToken:     immutabletest.BootstrapToken,
 		APIServerEndpoints: []string{"https://10.0.0.11:6443"},
 		Customization:      &parsed[0],
 		NodeIP:             "192.168.0.59",

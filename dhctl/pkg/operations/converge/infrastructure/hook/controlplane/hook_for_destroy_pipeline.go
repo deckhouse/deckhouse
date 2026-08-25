@@ -155,8 +155,8 @@ func removeControlPlaneRoleFromNode(ctx context.Context, kubeCl *client.Kubernet
 // its configuration arrives through: removing it deletes the node's NodeConfig, while
 // keeping it makes the node-template controller put the control plane labels back and
 // the etcd member never leaves. Deleting the Node object says the same thing to
-// control-plane-manager — its hook compares members against the nodes it sees — and
-// says it once. Drain comes first, while there is still a Node to drain.
+// control-plane-manager — its hook compares members against the nodes it sees.
+// Drain comes first, while there is still a Node to drain.
 func retireImmutableControlPlaneNode(ctx context.Context, kubeCl *client.KubernetesClient, kubeGetter kubernetes.KubeClientProviderWithCtx, nodeName string, commanderMode bool) error {
 	if err := infra_utils.TryToDrainNode(ctx, kubeCl, nodeName, infra_utils.GetDrainConfirmation(commanderMode), infra_utils.DrainOptions{Force: true}); err != nil {
 		return fmt.Errorf("failed to drain node '%s': %v", nodeName, err)

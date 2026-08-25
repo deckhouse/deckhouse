@@ -54,7 +54,6 @@ const (
 	defaultPodSubnetNodeCIDRPrefix = 24
 )
 
-// nodeConfigInput is everything buildNodeConfig needs.
 type nodeConfigInput struct {
 	// NodeName is the name the node registers under.
 	NodeName string

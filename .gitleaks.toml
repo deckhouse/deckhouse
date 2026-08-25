@@ -26,9 +26,6 @@ paths = [
   # names stay listed.
   '''dhctl/pkg/immutable/testdata/master-cloud-init\.yaml$''',
   '''dhctl/pkg/immutable/testdata/master-documents\.yaml$''',
-  '''modules/040-node-manager/images/node-controller/src/internal/controller/nodebootstrap/e2e_test\.go$''',
-  '''modules/040-node-manager/images/node-controller/src/internal/controller/nodebootstrap/template_storage_test\.go$''',
-  '''modules/040-node-manager/images/node-controller/src/internal/controller/nodeconfig/e2e_test\.go$''',
   '''modules/040-node-manager/images/node-controller/src/internal/testenv/clusterinputs\.go$'''
 ]
 

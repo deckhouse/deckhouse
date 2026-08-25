@@ -58,7 +58,6 @@ type Reconciler struct {
 	apiReader client.Reader
 }
 
-// Setup wires the uncached reader.
 func (r *Reconciler) Setup(_ context.Context, mgr ctrl.Manager) error {
 	r.apiReader = mgr.GetAPIReader()
 	return nil

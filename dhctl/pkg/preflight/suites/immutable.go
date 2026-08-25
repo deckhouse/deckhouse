@@ -47,9 +47,6 @@ func NewImmutableSuite(deps ImmutableDeps) preflight.Suite {
 // takes the two checks of NewStaticSuite that read the configuration and nothing else: every
 // other one is built over an SSH provider this path has none of, or over the node interface
 // helper.GetNodeInterface hands back without one — the installer container itself.
-//
-// Subtracting those by name from the static suite is what this replaces: the list lived in
-// another package, so each check added there silently started running against the installer.
 func NewImmutableStaticSuite(metaConfig *config.MetaConfig) preflight.Suite {
 	return preflight.NewSuite(
 		checks.CidrIntersectionStatic(metaConfig),
