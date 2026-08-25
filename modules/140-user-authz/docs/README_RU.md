@@ -403,6 +403,10 @@ create:
 create,get:
     - pods/attach
     - pods/exec
+    - pods/proxy
+    - services/proxy
+create,update:
+    - pods/ephemeralcontainers
 delete,deletecollection:
     - pods
 read:
@@ -412,6 +416,12 @@ read:
 {{site.data.i18n.common.role[page.lang] | capitalize }} `Editor` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`):
 
 ```text
+create:
+    - pods/bindibg
+read-write:
+    - serviceaccounts/token
+update:
+    - pods/resize
 write:
     - apps/deployments
     - apps/statefulsets
@@ -591,6 +601,8 @@ read-write:
     - nodes/pods
     - nodes/proxy
     - nodes/stats
+update:
+    - namespaces/finalize
 write:
     - cilium.io/ciliumclusterwidenetworkpolicies
     - cilium.io/ciliumnetworkpolicies
