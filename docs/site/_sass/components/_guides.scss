@@ -25,7 +25,7 @@ div.alert__wrap {
   }
 
   & a {
-    color: variables.$color-alt;
+    color: variables.$primary-700;
   }
 
   & p {
@@ -60,26 +60,22 @@ div.alert__wrap {
   }
 
   &.info {
-    border-color: variables.$color-alt;
-
-    & .icon--info {
-      fill: variables.$color-alt;
-    }
+    border-color: variables.$primary-700;
   }
 
   &.warning {
-    border-color: variables.$color-warning;
-
-    & .icon--warning {
-      fill: variables.$color-warning;
-    }
+    border-color: #FFC27B;
   }
 
   &.danger {
-    border-color: variables.$color-danger;
+    border-color: #F3455A;
+  }
 
-    & .icon--danger {
-      fill: variables.$color-danger;
+  .alert__tippy {
+    border-bottom: 1px dotted #0064FF;
+
+    &:hover {
+      border-bottom: 1px solid #0064FF;
     }
   }
 }
