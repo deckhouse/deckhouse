@@ -19,6 +19,8 @@ import (
 	"errors"
 	"fmt"
 
+	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable"
@@ -28,8 +30,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook/controlplane"
-
-	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 )
 
 // isImmutableNodeGroup reads systemType off the live NodeGroup. The cluster object is
