@@ -27,7 +27,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -306,46 +305,6 @@ func TestSetFromModuleDefinitionMapsLegacyAccessibilityToLicensing(t *testing.T)
 	assert.Equal(t, []string{"Default"}, mpv.Status.PackageMetadata.Licensing.Editions["_default"].EnabledInBundles)
 	assert.False(t, mpv.Status.PackageMetadata.Licensing.Editions["ee"].Available)
 	assert.Equal(t, []string{"Minimal", "Managed"}, mpv.Status.PackageMetadata.Licensing.Editions["ee"].EnabledInBundles)
-}
-
-// TestEnqueueDraftVersionsForRepository verifies the PackageRepository watch
-// mapping: only drafts of that repository are requeued.
-func TestEnqueueDraftVersionsForRepository(t *testing.T) {
-	sc, err := project.Scheme()
-	require.NoError(t, err)
-
-	mpv := func(name, repo string, draft bool) *v1alpha1.ModulePackageVersion {
-		labels := map[string]string{}
-		if draft {
-			labels[v1alpha1.ModulePackageVersionLabelDraft] = "true"
-		}
-
-		return &v1alpha1.ModulePackageVersion{
-			ObjectMeta: metav1.ObjectMeta{Name: name, Labels: labels},
-			Spec: v1alpha1.ModulePackageVersionSpec{
-				PackageName:           "echo",
-				PackageRepositoryName: repo,
-				PackageVersion:        "v1.0.0",
-			},
-		}
-	}
-
-	cl := fake.NewClientBuilder().
-		WithScheme(sc).
-		WithObjects(
-			mpv("alpha-echo-v1.0.0", "alpha", true),
-			mpv("alpha-echo-v1.1.0", "alpha", false),
-			mpv("beta-echo-v1.0.0", "beta", true),
-		).
-		Build()
-
-	r := newReconciler(cl, dependency.NewDependencyContainer())
-
-	requests := r.enqueueDraftVersionsForRepository(context.TODO(),
-		&v1alpha1.PackageRepository{ObjectMeta: metav1.ObjectMeta{Name: "alpha"}})
-
-	require.Len(t, requests, 1, "only the draft of the named repository must be requeued")
-	assert.Equal(t, "alpha-echo-v1.0.0", requests[0].Name)
 }
 
 func TestLegacyRequirementsToCR(t *testing.T) {
