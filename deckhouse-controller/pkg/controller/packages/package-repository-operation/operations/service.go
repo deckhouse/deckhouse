@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"maps"
 	"slices"
 	"strings"
 	"time"
@@ -824,16 +823,8 @@ func (s *OperationService) ensureModulePackageVersion(ctx context.Context, packa
 		return false, fmt.Errorf("get module package version: %w", err)
 	}
 
-	// The version already exists, possibly pre-created from a ModuleRelease or an
-	// embedded module before this repository appeared. Adopt it: the scan labels and
-	// the repository ownership are ensured, the draft state and the status are not
-	// touched, filling is the module-package-version controller's job. Adoption is
-	// not a newly found version.
+	// Version already exists
 	if err == nil {
-		if err := s.adoptModulePackageVersion(ctx, pkgVersion, packageName); err != nil {
-			return false, fmt.Errorf("adopt module package version: %w", err)
-		}
-
 		return false, nil
 	}
 
@@ -929,64 +920,6 @@ func (s *OperationService) EnsureModulePackage(ctx context.Context, packageName 
 	}
 
 	return nil
-}
-
-// adoptModulePackageVersion brings a pre-created version under this repository:
-// the scan labels and the controller owner reference are ensured, so the version
-// lives and dies with the repository like a scan-created one. Everything else,
-// the draft state, the legacy mark and the status, stays as is.
-func (s *OperationService) adoptModulePackageVersion(ctx context.Context, pkgVersion *v1alpha1.ModulePackageVersion, packageName string) error {
-	original := pkgVersion.DeepCopy()
-
-	if pkgVersion.Labels == nil {
-		pkgVersion.Labels = make(map[string]string)
-	}
-
-	pkgVersion.Labels["heritage"] = "deckhouse"
-	pkgVersion.Labels[v1alpha1.ModulePackageVersionLabelRepository] = s.repo.Name
-	pkgVersion.Labels[v1alpha1.ModulePackageVersionLabelPackage] = packageName
-
-	changed := !maps.Equal(original.GetLabels(), pkgVersion.GetLabels())
-
-	if s.ensureControllerOwnerReference(pkgVersion) {
-		changed = true
-	}
-
-	if !changed {
-		return nil
-	}
-
-	if err := s.client.Patch(ctx, pkgVersion, client.MergeFrom(original)); err != nil {
-		return fmt.Errorf("patch: %w", err)
-	}
-
-	s.logger.Debug("adopted module package version", slog.String("package_version", pkgVersion.Name))
-
-	return nil
-}
-
-// ensureControllerOwnerReference appends s.repo as the controller owner of obj
-// when no PackageRepository owns it yet. Existing references stay in place: a
-// version already owned by a repository must not be re-owned. Returns true if
-// obj.OwnerReferences was modified.
-func (s *OperationService) ensureControllerOwnerReference(obj client.Object) bool {
-	refs := obj.GetOwnerReferences()
-	for _, ref := range refs {
-		if ref.Kind == v1alpha1.PackageRepositoryKind {
-			return false
-		}
-	}
-
-	refs = append(refs, metav1.OwnerReference{
-		APIVersion: v1alpha1.PackageRepositoryGVK.GroupVersion().String(),
-		Kind:       v1alpha1.PackageRepositoryKind,
-		Name:       s.repo.Name,
-		UID:        s.repo.UID,
-		Controller: &[]bool{true}[0],
-	})
-	obj.SetOwnerReferences(refs)
-
-	return true
 }
 
 // ensureSharedOwnerReference appends s.repo as a non-controller owner of obj if it is not

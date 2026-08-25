@@ -246,6 +246,12 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, mpv *v1alpha1.Mod
 		controllerutil.AddFinalizer(mpv, v1alpha1.ModulePackageVersionFinalizer)
 	}
 
+	// The version lives and dies with its repository: a pre-created draft has no
+	// owner until it is promoted here.
+	if err = controllerutil.SetControllerReference(repo, mpv, r.client.Scheme()); err != nil {
+		return fmt.Errorf("set controller reference '%s': %w", mpv.Name, err)
+	}
+
 	delete(mpv.Labels, v1alpha1.ModulePackageVersionLabelDraft)
 
 	if err = r.client.Patch(ctx, mpv, client.MergeFrom(original)); err != nil {
