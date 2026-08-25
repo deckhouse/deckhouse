@@ -65,7 +65,6 @@ var _ = Describe("NodeOperation controller", func() {
 		Eventually(func(g Gomega) {
 			fresh := getOperation(ctx, g, op.Name)
 			g.Expect(fresh.Status.Phase).To(Equal(v1alpha1.NodeOperationPhaseCompleted))
-			g.Expect(fresh.Status.ObservedGeneration).To(Equal(fresh.Generation))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 

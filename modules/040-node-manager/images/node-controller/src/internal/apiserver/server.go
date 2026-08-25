@@ -76,10 +76,8 @@ type Options struct {
 	// CertFile and KeyFile are the PEM paths of the serving certificate.
 	CertFile string
 	KeyFile  string
-	// Resource is the plural name the storage is installed under, Storage its
-	// REST implementation.
-	Resource string
-	Storage  rest.Storage
+	// Storage is the REST implementation the resource is served from.
+	Storage rest.Storage
 }
 
 // configRetryInterval is how long a failed startup lookup waits before the next
@@ -94,7 +92,7 @@ func Run(ctx context.Context, opts Options) error {
 		return fmt.Errorf("build apiserver config: %w", err)
 	}
 
-	srv, err := newServer(cfg, opts.Resource, opts.Storage)
+	srv, err := newServer(cfg, opts.Storage)
 	if err != nil {
 		return fmt.Errorf("create apiserver: %w", err)
 	}
@@ -161,7 +159,7 @@ func applyOptions(serving *genericoptions.SecureServingOptionsWithLoopback) (*ge
 // /apis included, and calls klog.Fatal on the first model it has no definition
 // for. Filling that in means carrying the whole generated apimachinery set for a
 // pair of virtual resources nobody runs `kubectl explain` against.
-func newServer(cfg *genericapiserver.RecommendedConfig, resource string, storage rest.Storage) (*genericapiserver.GenericAPIServer, error) {
+func newServer(cfg *genericapiserver.RecommendedConfig, storage rest.Storage) (*genericapiserver.GenericAPIServer, error) {
 	cfg.OpenAPIV3Config = genericapiserver.DefaultOpenAPIV3Config(
 		openAPIDefinitions(), endpointsopenapi.NewDefinitionNamer(Scheme))
 
@@ -171,7 +169,7 @@ func newServer(cfg *genericapiserver.RecommendedConfig, resource string, storage
 	}
 
 	info := genericapiserver.NewDefaultAPIGroupInfo(templatesv1alpha1.GroupVersion.Group, Scheme, metav1.ParameterCodec, Codecs)
-	info.VersionedResourcesStorageMap[templatesv1alpha1.GroupVersion.Version] = map[string]rest.Storage{resource: storage}
+	info.VersionedResourcesStorageMap[templatesv1alpha1.GroupVersion.Version] = map[string]rest.Storage{templatesv1alpha1.NodeConfigTemplateResource: storage}
 
 	if err := srv.InstallAPIGroup(&info); err != nil {
 		return nil, fmt.Errorf("install %s: %w", templatesv1alpha1.GroupVersion, err)
