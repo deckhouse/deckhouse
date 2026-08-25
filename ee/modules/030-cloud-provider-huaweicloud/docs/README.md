@@ -3,10 +3,14 @@ title: "Cloud provider — Huawei Cloud"
 description: "Cloud resource management in Deckhouse Kubernetes Platform using Huawei Cloud."
 ---
 
-The `cloud-provider-huaweicloud` module is responsible for interacting with the [Huawei Cloud](https://www.huaweicloud.com/intl/en-us/) cloud resources. It allows the [node manager module](/modules/node-manager/) to use Huawei Cloud resources for provisioning nodes for the specified [node group](/modules/node-manager/cr.html#nodegroup) (a group of nodes that are acted upon as if they were a single entity).
+The `cloud-provider-huaweicloud` module integrates Deckhouse Kubernetes Platform with [Huawei Cloud](https://www.huaweicloud.com/). It allows the [node-manager](/modules/node-manager/) module to use Huawei Cloud resources when provisioning nodes for a [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 
-Key features of the `cloud-provider-huaweicloud` module:
+Features of the `cloud-provider-huaweicloud` module:
 
-- Manages Huawei Cloud resources using the `cloud-controller-manager` (CCM) module
-- Provisions disks using the `CSI storage` component
-- Registers with the [node-manager](/modules/node-manager/) module so that [HuaweiCloudInstanceClasses](cr.html#huaweicloudinstanceclass) can be used when creating the [NodeGroup](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-classreference)
+- Managing Huawei Cloud resources via `cloud-controller-manager`:
+  - updates instance and Kubernetes node metadata and removes from Kubernetes nodes that no longer exist in the cloud;
+  - creates load balancers (ELB) for Services of the `LoadBalancer` type.
+- Provisioning disks via the EVS CSI driver (`evs.csi.huaweicloud.com`) so that PersistentVolumes can be requested from the cluster.
+- Provisioning CloudEphemeral nodes via Cluster API (CAPI). Virtual machine parameters are set in the [HuaweiCloudInstanceClass](cr.html#huaweicloudinstanceclass) resource.
+- Registering with [node-manager](/modules/node-manager/) so that `HuaweiCloudInstanceClass` can be used when describing a `NodeGroup`.
+- Enabling CNI for new clusters automatically. By default, [`cni-cilium`](/modules/cni-cilium/) is used in `VXLAN` mode.
