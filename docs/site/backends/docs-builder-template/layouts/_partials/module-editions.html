@@ -16,7 +16,7 @@
 {{ if $editionsWithRestrictions }}
     <p>
       {{ if index $moduleData.editionsWithRestrictionsComments "all" }}
-        <span data-tippy-content='{{ index $moduleData.editionsWithRestrictionsComments "all" $lang }}' class="alert__tippy">
+        <span data-tippy-content='{{ index $moduleData.editionsWithRestrictionsComments "all" $lang }}' class='alert__info'>
           {{- T "module_available_with_limitations_prefix" -}}
         </span>: 
       {{- else }}
@@ -48,7 +48,7 @@
          {{- $comment := index $moduleData.editionsWithRestrictionsComments $edition -}}
          {{- if $comment }}
            {{- $commentLang := index $comment $lang -}}
-           <span style="border-bottom: 1px dotted #0064FF" data-tippy-content="{{ $commentLang }}" class="alert__tippy">
+           <span style="border-bottom: 1px dotted #0064FF" data-tippy-content="{{ $commentLang }}" class="alert__info">
              {{- with $editionData }}
                {{- if .name_version }}
                  {{ .name_version }}

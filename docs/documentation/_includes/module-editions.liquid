@@ -14,7 +14,7 @@
 {%- if editionsWithRestrictions %}
 <p>
 {%- if editionsWithRestrictionsComments['all'] -%}
-  <span data-tippy-content='{{ editionsWithRestrictionsComments['all'][page.lang] }}' class="alert__tippy">
+  <span data-tippy-content='{{ editionsWithRestrictionsComments['all'][page.lang] }}' class='alert__info'>
     {{- site.data.i18n.common['module_available_with_limitations_prefix'][page.lang] -}}
   </span>: 
 {%- else -%}
@@ -31,7 +31,7 @@
 {%- endfor %}
 {%- for edition in editionsWithRestrictions %}
    {%- if editionsWithRestrictionsComments[edition] -%}
-     <span style='border-bottom: 1px dotted #0064FF' data-tippy-content='{{ editionsWithRestrictionsComments[edition][page.lang] }}' class="alert__tippy">
+     <span data-tippy-content='{{ editionsWithRestrictionsComments[edition][page.lang] }}' class='alert__info'>
          {%- if site.data.editions[edition]['name_version'] %}{{ site.data.editions[edition]['name_version'] }}{% else %}{{ site.data.editions[edition]['name'] }}{% endif -%}
      </span>
    {%- else -%}
