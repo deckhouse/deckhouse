@@ -109,7 +109,7 @@ steps:
 {!{ tmpl.Exec "login_rw_registry_step"  $ctx | strings.Indent 2 }!}
   - name: Run tests
     env:
-      TESTS_IMAGE_NAME: {!{ printf "%s@%s" (datasource "alt_base_images").REGISTRY_PATH (index (datasource "alt_base_images") "builder/golang") | quote }!}
+      TESTS_IMAGE_NAME: {!{ printf "%s@%s" (datasource "alt_base_images").REGISTRY_PATH (index (datasource "alt_base_images") "builder/golang-1.26") | quote }!}
     run: |
       # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
       echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
@@ -143,7 +143,7 @@ steps:
 {!{ tmpl.Exec "login_rw_registry_step"  $ctx | strings.Indent 2 }!}
   - name: Run node-controller tests
     env:
-      TESTS_IMAGE_NAME: {!{ printf "%s@%s" (datasource "alt_base_images").REGISTRY_PATH (index (datasource "alt_base_images") "builder/golang") | quote }!}
+      TESTS_IMAGE_NAME: {!{ printf "%s@%s" (datasource "alt_base_images").REGISTRY_PATH (index (datasource "alt_base_images") "builder/golang-1.26") | quote }!}
     run: |
       # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
       echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
