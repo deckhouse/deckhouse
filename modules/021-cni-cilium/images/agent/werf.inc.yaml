@@ -10,7 +10,7 @@
 #######################################################################
 {{ $baseImagesBinaries := "" }}
 # from coreutils-v9.7
-{{ $baseImagesBinaries := cat $baseImagesBinaries "/usr/bin/env /usr/bin/ls /usr/bin/sleep /usr/bin/basename /usr/bin/cat /usr/bin/cp /usr/bin/coreutils /usr/bin/cut /usr/bin/echo /usr/bin/groups /usr/bin/head /usr/bin/ln /usr/bin/mkdir /usr/bin/mv /usr/bin/od /usr/bin/printf /usr/bin/rm /usr/bin/stat /usr/bin/tail /usr/bin/timeout /usr/bin/wc /usr/bin/true" }}
+{{ $baseImagesBinaries := cat $baseImagesBinaries "/usr/bin/env /usr/bin/ls /usr/bin/sleep /usr/bin/basename /usr/bin/cat /usr/bin/cp /usr/bin/cut /usr/bin/echo /usr/bin/groups /usr/bin/head /usr/bin/ln /usr/bin/mkdir /usr/bin/mv /usr/bin/od /usr/bin/printf /usr/bin/rm /usr/bin/stat /usr/bin/tail /usr/bin/timeout /usr/bin/wc /usr/bin/true" }}
 # from d8-curl-artifact-8-9-1
 {{ $baseImagesBinaries := cat $baseImagesBinaries "/usr/bin/curl" }}
 # from bash-v5.2.37
@@ -193,7 +193,6 @@ import:
   - basename
   - cat
   - cp
-  - coreutils
   - cut
   - echo
   - groups
