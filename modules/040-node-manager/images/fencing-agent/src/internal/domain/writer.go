@@ -26,47 +26,6 @@ import (
 // failed peers would share a score.
 const scoreSeparator = "\x00"
 
-// DesignatedWriter names the single agent responsible for reporting failedNode
-// to Kubernetes. Every agent runs this over its own alive set and reaches the
-// same answer while the sets agree, so the role needs no election protocol and
-// has no leader to lose. It returns an empty string when no candidate is left.
-//
-// While views still differ two agents may both act; that costs one rejected
-// create, never a second incident record.
-func DesignatedWriter(alive []string, failedNode string) string {
-	var (
-		writer string
-		best   uint64
-	)
-
-	for _, candidate := range alive {
-		// A failed peer cannot report itself. It is normally absent from the
-		// alive set already; this only makes that independent of the caller.
-		if candidate == failedNode {
-			continue
-		}
-
-		if score := writerScore(candidate, failedNode); preferred(candidate, score, writer, best) {
-			writer, best = candidate, score
-		}
-	}
-
-	return writer
-}
-
-// preferred reports whether a candidate outranks the current best. Ties break on
-// the name, so even a hash collision elects one writer instead of two.
-func preferred(candidate string, candidateScore uint64, current string, currentScore uint64) bool {
-	switch {
-	case current == "":
-		return true
-	case candidateScore != currentScore:
-		return candidateScore < currentScore
-	default:
-		return candidate < current
-	}
-}
-
 // WriterRank places a candidate in the order the writer role falls through:
 // 0 is the designated writer, 1 the agent that takes over if the record never
 // appears, and so on. A node that is not a candidate gets -1.
@@ -97,6 +56,20 @@ func WriterRank(alive []string, failedNode, candidate string) int {
 	return rank
 }
 
+// preferred reports whether a candidate outranks the current best. Ties break on
+// the name, so even a hash collision puts the two agents in the same order on
+// every node.
+func preferred(candidate string, candidateScore uint64, current string, currentScore uint64) bool {
+	switch {
+	case current == "":
+		return true
+	case candidateScore != currentScore:
+		return candidateScore < currentScore
+	default:
+		return candidate < current
+	}
+}
+
 func writerScore(node, failedNode string) uint64 {
 	sum := fnv.New64a()
 
@@ -109,9 +82,6 @@ func writerScore(node, failedNode string) uint64 {
 // avalanche is the MurmurHash3 finalizer. FNV-1a alone barely mixes its high
 // bits, and those are what an unsigned comparison decides on: with the failed
 // name as a common suffix the candidate order came out nearly the same for every
-// incident, so the role stuck to a handful of agents. Measured over 501 alive
-// and 499 failed peers named worker-N, the worst agent took 100 incidents
-// without this step and 5 with it, against ~4 for an ideal hash.
 func avalanche(sum uint64) uint64 {
 	sum ^= sum >> 33
 	sum *= 0xff51afd7ed558ccd

@@ -41,15 +41,35 @@ const (
 	jitterFraction = 0.2
 
 	unexpectedGrace = 30 * time.Second
+)
 
+
+const (
 	reasonStateCreated     = "FencingStateCreated"
 	reasonStateCleared     = "FencingStateCleared"
 	reasonStateWriteFailed = "FencingStateWriteFailed"
 )
 
+// waitKind names what an agent is waiting its turn for; a key pairs it with the
+// Node the wait is about.
+type waitKind string
+
+const (
+	waitClear      waitKind = "clear"
+	waitUnexpected waitKind = "unexpected"
+)
+
+type waitKey struct {
+	kind waitKind
+	name string
+}
+
 // AliveLister reports the peers gossip sees, without touching the Kubernetes API.
+// AliveLister is the local gossip view: who is alive, and a nudge when that
+// changes.
 type AliveLister interface {
 	Members() []string
+	Changed() <-chan struct{}
 }
 
 // ExpectedSnapshotter reports the peers the NodeGroup should have, from the Node
@@ -85,7 +105,6 @@ type Deps struct {
 	Expected ExpectedSnapshotter
 	States   StateStore
 	Events   EventRecorder
-	Changed  <-chan struct{}
 	Now      func() time.Time
 }
 
@@ -93,6 +112,9 @@ type incident struct {
 	detectedAt time.Time
 	attempts   int
 	retryAfter time.Time
+	// warnedNoUID keeps a peer the informer has no UID for from filling the log
+	// once a second.
+	warnedNoUID bool
 }
 
 func (i *incident) recorded() {
@@ -105,10 +127,16 @@ type Writer struct {
 	deps   Deps
 	logger *log.Logger
 
-	seen            domain.SeenAlive
-	incidents       map[string]*incident
-	waiting         map[string]time.Time
-	ownStateCleared bool
+	seen      domain.SeenAlive
+	incidents map[string]*incident
+	waiting   map[waitKey]time.Time
+	// deleted remembers the objects this agent has already removed, so a lagging
+	// informer cannot make it delete and announce the same one every pass.
+	deleted map[string]types.UID
+	// startedAt separates a record left over from an earlier life of this node
+	// from one a peer wrote about the node as it runs now.
+	startedAt      time.Time
+	warnedOwnState bool
 }
 
 func New(params Params, deps Deps, logger *log.Logger) *Writer {
@@ -121,7 +149,9 @@ func New(params Params, deps Deps, logger *log.Logger) *Writer {
 		deps:      deps,
 		logger:    logger,
 		incidents: make(map[string]*incident),
-		waiting:   make(map[string]time.Time),
+		waiting:   make(map[waitKey]time.Time),
+		deleted:   make(map[string]types.UID),
+		startedAt: deps.Now(),
 	}
 }
 
@@ -137,33 +167,34 @@ func (w *Writer) Run(ctx context.Context) error {
 		case <-ctx.Done():
 			return nil
 		case <-ticker.C:
-		case <-w.deps.Changed:
+		case <-w.deps.Alive.Changed():
 		}
 	}
 }
 
-func (w *Writer) clearOwnState(ctx context.Context, states []v1alpha1.FencingFailedNodeState) {
-	if w.ownStateCleared {
-		return
-	}
 
+func (w *Writer) clearOwnState(ctx context.Context, states []v1alpha1.FencingFailedNodeState) {
 	for _, state := range states {
-		if state.Name != w.params.NodeName {
+		if state.Name != w.params.NodeName || !state.CreationTimestamp.Time.Before(w.startedAt) {
 			continue
 		}
 
 		if err := w.deps.States.Delete(ctx, state.Name, state.UID); err != nil {
-			// The latch stays open, so the next pass tries again.
-			w.logger.Warn("stale fencing state of this node was not removed", "error", err)
+			if !w.warnedOwnState {
+				w.warnedOwnState = true
+
+				w.logger.Warn("stale fencing state of this node was not removed", "error", err)
+			}
 
 			return
 		}
 
+		w.warnedOwnState = false
+		w.deleted[state.Name] = state.UID
+
 		w.logger.Info("stale fencing state of this node removed")
 		w.deps.Events.Normal(reasonStateCleared, "removed the fencing state left over from an earlier incident on this node")
 	}
-
-	w.ownStateCleared = true
 }
 
 func (w *Writer) reconcile(ctx context.Context) {
@@ -214,7 +245,7 @@ func (w *Writer) reconcile(ctx context.Context) {
 		w.clear(ctx, view, &states[i])
 	}
 
-	w.forgetWaitingBeyond(states)
+	w.forgetBeyond(states)
 }
 
 func (w *Writer) myTurn(rank int, since time.Time) bool {
@@ -251,7 +282,11 @@ func (w *Writer) report(
 	}
 
 	if peer.UID == "" {
-		w.logger.Warn("peer has no node UID in the informer cache, its incident cannot be recorded", "member", peer.Name)
+		if !inc.warnedNoUID {
+			inc.warnedNoUID = true
+
+			w.logger.Warn("peer has no node UID in the informer cache, its incident cannot be recorded", "member", peer.Name)
+		}
 
 		return
 	}
@@ -306,9 +341,13 @@ func (w *Writer) clear(ctx context.Context, view domain.View, state *v1alpha1.Fe
 		return
 	}
 
+	if uid, done := w.deleted[state.Name]; done && uid == state.UID {
+		return
+	}
+
 	_, expected := view.Peer(state.Name)
 	if expected {
-		delete(w.waiting, unexpectedKey(state.Name))
+		delete(w.waiting, waitKey{waitUnexpected, state.Name})
 	}
 
 	var reason string
@@ -319,12 +358,12 @@ func (w *Writer) clear(ctx context.Context, view domain.View, state *v1alpha1.Fe
 	case !expected && w.unexpectedLongEnough(state.Name):
 		reason = "the node is no longer part of this NodeGroup"
 	default:
-		delete(w.waiting, clearKey(state.Name))
+		delete(w.waiting, waitKey{waitClear, state.Name})
 
 		return
 	}
 
-	if !w.myTurn(domain.WriterRank(view.Alive(), state.Name, w.params.NodeName), w.waitingSince(clearKey(state.Name))) {
+	if !w.myTurn(domain.WriterRank(view.Alive(), state.Name, w.params.NodeName), w.waitingSince(waitKey{waitClear, state.Name})) {
 		return
 	}
 
@@ -334,19 +373,21 @@ func (w *Writer) clear(ctx context.Context, view domain.View, state *v1alpha1.Fe
 		return
 	}
 
+	w.deleted[state.Name] = state.UID
+
 	delete(w.incidents, state.Name)
-	delete(w.waiting, clearKey(state.Name))
-	delete(w.waiting, unexpectedKey(state.Name))
+	delete(w.waiting, waitKey{waitClear, state.Name})
+	delete(w.waiting, waitKey{waitUnexpected, state.Name})
 
 	w.logger.Info("fencing state removed", "member", state.Name, "reason", reason)
 	w.deps.Events.Normal(reasonStateCleared, fmt.Sprintf("fencing state of %s removed: %s", state.Name, reason))
 }
 
 func (w *Writer) unexpectedLongEnough(name string) bool {
-	return !w.deps.Now().Before(w.waitingSince(unexpectedKey(name)).Add(unexpectedGrace))
+	return !w.deps.Now().Before(w.waitingSince(waitKey{waitUnexpected, name}).Add(unexpectedGrace))
 }
 
-func (w *Writer) waitingSince(key string) time.Time {
+func (w *Writer) waitingSince(key waitKey) time.Time {
 	since, waiting := w.waiting[key]
 	if !waiting {
 		since = w.deps.Now()
@@ -356,27 +397,26 @@ func (w *Writer) waitingSince(key string) time.Time {
 	return since
 }
 
-func (w *Writer) forgetWaitingBeyond(states []v1alpha1.FencingFailedNodeState) {
-	live := make(map[string]struct{}, 2*len(states))
+// forgetBeyond drops the bookkeeping of records that are gone, whoever removed
+// them.
+func (w *Writer) forgetBeyond(states []v1alpha1.FencingFailedNodeState) {
+	live := make(map[string]struct{}, len(states))
 
 	for i := range states {
-		live[clearKey(states[i].Name)] = struct{}{}
-		live[unexpectedKey(states[i].Name)] = struct{}{}
+		live[states[i].Name] = struct{}{}
 	}
 
 	for key := range w.waiting {
-		if _, ok := live[key]; !ok {
+		if _, ok := live[key.name]; !ok {
 			delete(w.waiting, key)
 		}
 	}
-}
 
-func clearKey(name string) string {
-	return "clear/" + name
-}
-
-func unexpectedKey(name string) string {
-	return "unexpected/" + name
+	for name := range w.deleted {
+		if _, ok := live[name]; !ok {
+			delete(w.deleted, name)
+		}
+	}
 }
 
 func (w *Writer) incident(name string) *incident {

@@ -27,7 +27,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 
-	v1alpha1 "fencing-agent/api/node-manager.deckhouse.io/v1alpha1"
 	"fencing-agent/internal/adapters/events"
 	"fencing-agent/internal/adapters/fencingstate"
 	"fencing-agent/internal/adapters/kubeclient"
@@ -40,6 +39,8 @@ import (
 	"fencing-agent/internal/usecase/join"
 	"fencing-agent/internal/usecase/membership"
 	"fencing-agent/internal/usecase/watchdog"
+
+	v1alpha1 "fencing-agent/api/node-manager.deckhouse.io/v1alpha1"
 )
 
 type Agent struct {
@@ -77,7 +78,7 @@ func (a *Agent) watchdogParams() watchdog.Params {
 	}
 }
 
-func (a *Agent) writerParams() failedstate.Params {
+func (a *Agent) failedStateParams() failedstate.Params {
 	return failedstate.Params{
 		NodeName: a.identity.Name,
 		// The rejoin timings pace both loops against the same thing: a component
@@ -169,7 +170,7 @@ func (a *Agent) Run(ctx context.Context) error {
 
 	joiner := join.New(members, cluster, a.joinParams(), a.logger)
 
-	writer := failedstate.New(a.writerParams(), failedstate.Deps{
+	writer := failedstate.New(a.failedStateParams(), failedstate.Deps{
 		Alive:    cluster,
 		Expected: members,
 		States: fencingstate.NewStates(
@@ -179,9 +180,8 @@ func (a *Agent) Run(ctx context.Context) error {
 			v1alpha1.ProfileName(a.cfg.ProfileRefName),
 			a.sla.Fallback.KubernetesAPITimeout.Duration,
 		),
-		Events:  recorder,
-		Changed: cluster.Changed(),
-		Now:     time.Now,
+		Events: recorder,
+		Now:    time.Now,
 	}, a.logger)
 
 	g, gctx := errgroup.WithContext(ctx)
