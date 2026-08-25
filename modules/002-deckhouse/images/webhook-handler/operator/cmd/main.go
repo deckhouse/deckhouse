@@ -19,28 +19,18 @@ package main
 import (
 	"context"
 	"crypto/tls"
-	"errors"
 	"flag"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
-	"sync"
 	"time"
 
-	sh_pkg "github.com/flant/shell-operator/pkg"
 	sh_app "github.com/flant/shell-operator/pkg/app"
-	hook_types "github.com/flant/shell-operator/pkg/hook/types"
 	shell_operator "github.com/flant/shell-operator/pkg/shell-operator"
-	"github.com/flant/shell-operator/pkg/webhook/admission"
-	"github.com/flant/shell-operator/pkg/webhook/conversion"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/apimachinery/pkg/util/wait"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -68,345 +58,6 @@ func init() {
 
 	utilruntime.Must(deckhouseiov1alpha1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
-}
-
-// reloadHooks re-discovers hooks from disk so that shell-operator picks up
-// new or removed webhook configurations without a process restart.
-//
-// HookManager.Init() replaces the hook index atomically, but newly loaded
-// hooks have uninitialised AdmissionLinks/ConversionLinks maps. We must
-// call EnableAdmissionBindings / EnableConversionBindings on every hook that
-// carries validating/mutating/conversion configs so that
-// CanHandleAdmissionEvent / CanHandleConversionEvent can match incoming
-// requests to the right hook.
-//
-// AdmissionWebhookManager.Init() and ConversionWebhookManager.Init() must
-// NOT be called here because they recreate HTTP servers and would either
-// fail with "address already in use" or silently orphan the old listeners.
-func reloadHooks(ctx context.Context, shOp *shell_operator.ShellOperator, logger *log.Logger) error {
-	if err := ctx.Err(); err != nil {
-		return fmt.Errorf("context cancelled before reload: %w", err)
-	}
-
-	logger.Info("reloading shell-operator hooks")
-
-	if shOp.HookManager == nil {
-		return fmt.Errorf("hook manager is not initialized")
-	}
-
-	// Snapshot the current registrations before any mutation.  These are
-	// compared against the rebuilt state later to determine which
-	// ValidatingWebhookConfigurations / MutatingWebhookConfigurations / CRD
-	// conversion settings are stale and must be unregistered.
-	oldValidatingResources := make(map[string]*admission.ValidatingWebhookResource)
-	oldMutatingResources := make(map[string]*admission.MutatingWebhookResource)
-	oldConversionClientConfigs := make(map[string]*conversion.CrdClientConfig)
-
-	if shOp.AdmissionWebhookManager != nil {
-		for confID, resource := range shOp.AdmissionWebhookManager.ValidatingResources {
-			oldValidatingResources[confID] = resource
-		}
-		for confID, resource := range shOp.AdmissionWebhookManager.MutatingResources {
-			oldMutatingResources[confID] = resource
-		}
-	}
-
-	if shOp.ConversionWebhookManager != nil {
-		for crdName, cfg := range shOp.ConversionWebhookManager.ClientConfigs {
-			oldConversionClientConfigs[crdName] = cfg
-		}
-	}
-
-	// Re-discover hooks from disk.  This is the step most likely to fail
-	// (e.g. malformed hook file), so it MUST happen before we clear the
-	// current registration maps — otherwise a failed Init leaves the
-	// shell-operator with empty maps and no way to unregister stale entries.
-	if err := shOp.HookManager.Init(); err != nil {
-		return fmt.Errorf("re-init hook manager: %w", err)
-	}
-
-	// Clear the current registration state AFTER Init has succeeded.
-	// Rebuilding from scratch avoids stale webhook resources after hook
-	// removals.  The Enable*Bindings calls below will repopulate these maps
-	// with fresh entries for every discovered hook.
-	if shOp.AdmissionWebhookManager != nil {
-		shOp.AdmissionWebhookManager.ValidatingResources = make(map[string]*admission.ValidatingWebhookResource)
-		shOp.AdmissionWebhookManager.MutatingResources = make(map[string]*admission.MutatingWebhookResource)
-	}
-
-	if shOp.ConversionWebhookManager != nil {
-		shOp.ConversionWebhookManager.ClientConfigs = make(map[string]*conversion.CrdClientConfig)
-	}
-
-	// Enable admission bindings on every newly loaded hook so that
-	// AdmissionLinks are populated and CanHandleEvent works.
-	admissionHookNames, err := shOp.HookManager.GetHooksInOrder(hook_types.KubernetesValidating)
-	if err != nil {
-		return fmt.Errorf("get validating hooks: %w", err)
-	}
-	mutatingHookNames, err := shOp.HookManager.GetHooksInOrder(hook_types.KubernetesMutating)
-	if err != nil {
-		return fmt.Errorf("get mutating hooks: %w", err)
-	}
-	for _, name := range append(admissionHookNames, mutatingHookNames...) {
-		h := shOp.HookManager.GetHook(name)
-		if h != nil {
-			h.HookController.EnableAdmissionBindings()
-		}
-	}
-
-	// Enable conversion bindings on every newly loaded hook so that
-	// CanHandleConversionEvent works.
-	conversionHookNames, err := shOp.HookManager.GetHooksInOrder(hook_types.KubernetesConversion)
-	if err != nil {
-		return fmt.Errorf("get conversion hooks: %w", err)
-	}
-	for _, name := range conversionHookNames {
-		h := shOp.HookManager.GetHook(name)
-		if h != nil {
-			h.HookController.EnableConversionBindings()
-		}
-	}
-
-	// Re-enable kubernetes bindings on every newly loaded hook so that the
-	// monitors that maintain object caches (snapshots) are recreated and
-	// wired to the freshly rebuilt HookController.
-	//
-	// HookManager.Init() above replaces every Hook (and therefore every
-	// HookController) with a brand new instance whose KubernetesController
-	// has no registered monitors, and every kubernetes binding gets a fresh
-	// random MonitorId. Admission/conversion hooks that pull data via
-	// 'includeSnapshotsFrom' resolve their snapshot through the *current*
-	// hook index, i.e. these freshly rebuilt controllers. If the monitors
-	// for this new index are not wired, the 'snapshots' field is delivered
-	// empty and validating webhooks decide on missing data (e.g. always
-	// denying because a ModuleConfig snapshot looks absent).
-	//
-	// This MUST be driven to completion here rather than relying on the
-	// reconciler to requeue on error. The shell-operator main queue enables
-	// bindings on the *startup* hook index, but every reloadHooks() call
-	// replaces that index with new MonitorIds; the main queue's monitors are
-	// then orphaned relative to the current index. If reloadHooks() returns
-	// before wiring the current index (e.g. a transient apiserver outage)
-	// and no further reload is triggered, the current index stays unwired and
-	// snapshots stay empty indefinitely. So enableKubernetesBindings retries
-	// with backoff until every hook is wired (or ctx/deadline ends).
-	kubernetesHookNames, err := shOp.HookManager.GetHooksInOrder(hook_types.OnKubernetesEvent)
-	if err != nil {
-		return fmt.Errorf("get kubernetes hooks: %w", err)
-	}
-	if err := enableKubernetesBindings(ctx, shOp, kubernetesHookNames, logger); err != nil {
-		return err
-	}
-
-	if err := syncAdmissionWebhookConfigurations(ctx, shOp, oldValidatingResources, oldMutatingResources); err != nil {
-		return fmt.Errorf("sync admission webhook configurations: %w", err)
-	}
-
-	if err := syncConversionWebhookConfigurations(ctx, shOp, oldConversionClientConfigs); err != nil {
-		return fmt.Errorf("sync conversion webhook configurations: %w", err)
-	}
-
-	return nil
-}
-
-const (
-	enableKubernetesBindingsRetryTimeout = 2 * time.Minute
-	enableKubernetesBindingsRetrySteps   = 30
-)
-
-// enableKubernetesBindings wires the monitors (snapshot caches) for every
-// kubernetes hook in the *current* hook index, retrying hooks that fail with
-// bounded backoff until all succeed or the deadline/context ends.
-func enableKubernetesBindings(
-	ctx context.Context,
-	shOp *shell_operator.ShellOperator,
-	hookNames []string,
-	logger *log.Logger,
-) error {
-	// Track hooks still needing a successful enable so each is wired exactly
-	// once regardless of how many retry passes it takes.
-	pending := make(map[string]struct{}, len(hookNames))
-	for _, name := range hookNames {
-		pending[name] = struct{}{}
-	}
-
-	// enableOne wires a single hook by name against the *current* hook index.
-	// Use the same HookController entry point as the shell-operator main
-	// queue, but pass nil to avoid creating synchronization hook-run tasks
-	// during reload.
-	enableOne := func(name string) error {
-		h := shOp.HookManager.GetHook(name)
-		if h == nil {
-			return fmt.Errorf("hook %q not found in hook manager", name)
-		}
-		if h.HookController == nil {
-			return fmt.Errorf("hook controller for hook %q is nil", name)
-		}
-
-		if err := h.HookController.HandleEnableKubernetesBindings(ctx, nil); err != nil {
-			// Leave it pending and do NOT unlock events: the cache is not
-			// filled, so emitting events would be premature.
-			return err
-		}
-
-		// Cache is filled; allow the monitors to emit future events.
-		h.HookController.UnlockKubernetesEvents()
-		return nil
-	}
-
-	var lastErr error
-	attempt := func() bool {
-		var errs []error
-		for name := range pending {
-			if err := enableOne(name); err != nil {
-				errs = append(errs, fmt.Errorf("enable kubernetes bindings for hook %q: %w", name, err))
-				continue
-			}
-			delete(pending, name)
-		}
-		lastErr = errors.Join(errs...)
-		return len(pending) == 0
-	}
-
-	// First pass: attempt every hook once. Continuing past a single failing
-	// hook ensures one transient failure cannot starve the rest.
-	if attempt() {
-		return nil
-	}
-
-	logger.Warn("some kubernetes hooks failed to enable, retrying until wired",
-		slog.Int("pending", len(pending)),
-		log.Err(lastErr))
-
-	// Retry only the still-pending hooks with capped exponential backoff until
-	// they are all wired, the per-reload deadline is reached, or ctx is done.
-	retryCtx, cancel := context.WithTimeout(ctx, enableKubernetesBindingsRetryTimeout)
-	defer cancel()
-
-	waitErr := wait.ExponentialBackoffWithContext(retryCtx, wait.Backoff{
-		Duration: 500 * time.Millisecond,
-		Factor:   2.0,
-		Jitter:   0.1,
-		Steps:    enableKubernetesBindingsRetrySteps,
-		Cap:      10 * time.Second,
-	}, func(context.Context) (bool, error) {
-		return attempt(), nil
-	})
-	if waitErr != nil {
-		// Deadline or context ended with hooks still unwired. Prefer the
-		// underlying enable errors so the reconciler requeues with the real
-		// cause; fall back to the wait error if there is no enable error.
-		if lastErr == nil {
-			lastErr = waitErr
-		}
-		return fmt.Errorf("enable kubernetes bindings (%d hook(s) still unwired after %s): %w",
-			len(pending), enableKubernetesBindingsRetryTimeout, lastErr)
-	}
-
-	logger.Info("all kubernetes hooks enabled and wired")
-	return nil
-}
-
-func syncAdmissionWebhookConfigurations(
-	ctx context.Context,
-	shOp *shell_operator.ShellOperator,
-	oldValidatingResources map[string]*admission.ValidatingWebhookResource,
-	oldMutatingResources map[string]*admission.MutatingWebhookResource,
-) error {
-	if shOp.AdmissionWebhookManager == nil {
-		return nil
-	}
-
-	for confID, resource := range shOp.AdmissionWebhookManager.ValidatingResources {
-		if err := resource.Register(ctx); err != nil {
-			return fmt.Errorf("register validating webhook configuration %q: %w", confID, err)
-		}
-	}
-
-	for confID, resource := range shOp.AdmissionWebhookManager.MutatingResources {
-		if err := resource.Register(ctx); err != nil {
-			return fmt.Errorf("register mutating webhook configuration %q: %w", confID, err)
-		}
-	}
-
-	for confID, resource := range oldValidatingResources {
-		if _, stillPresent := shOp.AdmissionWebhookManager.ValidatingResources[confID]; stillPresent {
-			continue
-		}
-
-		if err := resource.Unregister(); err != nil && !apierrors.IsNotFound(err) {
-			return fmt.Errorf("delete stale validating webhook configuration %q: %w", confID, err)
-		}
-	}
-
-	for confID, resource := range oldMutatingResources {
-		if _, stillPresent := shOp.AdmissionWebhookManager.MutatingResources[confID]; stillPresent {
-			continue
-		}
-
-		if err := resource.Unregister(); err != nil && !apierrors.IsNotFound(err) {
-			return fmt.Errorf("delete stale mutating webhook configuration %q: %w", confID, err)
-		}
-	}
-
-	return nil
-}
-
-func syncConversionWebhookConfigurations(
-	ctx context.Context,
-	shOp *shell_operator.ShellOperator,
-	oldConversionClientConfigs map[string]*conversion.CrdClientConfig,
-) error {
-	if shOp.ConversionWebhookManager == nil {
-		return nil
-	}
-
-	for crdName, cfg := range shOp.ConversionWebhookManager.ClientConfigs {
-		if err := cfg.Update(ctx); err != nil {
-			return fmt.Errorf("update conversion client config for crd %q: %w", crdName, err)
-		}
-	}
-
-	for crdName := range oldConversionClientConfigs {
-		if _, stillPresent := shOp.ConversionWebhookManager.ClientConfigs[crdName]; stillPresent {
-			continue
-		}
-
-		if err := resetCRDConversionToNone(ctx, shOp, crdName); err != nil {
-			return fmt.Errorf("cleanup stale conversion webhook config for crd %q: %w", crdName, err)
-		}
-	}
-
-	return nil
-}
-
-func resetCRDConversionToNone(ctx context.Context, shOp *shell_operator.ShellOperator, crdName string) error {
-	if shOp.KubeClient == nil {
-		return fmt.Errorf("kubernetes client is not initialized")
-	}
-
-	crd, err := shOp.KubeClient.ApiExt().CustomResourceDefinitions().Get(ctx, crdName, metav1.GetOptions{})
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil
-		}
-		return fmt.Errorf("get CRD %q: %w", crdName, err)
-	}
-
-	if crd.Spec.Conversion == nil || crd.Spec.Conversion.Strategy != apiextensionsv1.WebhookConverter {
-		return nil
-	}
-
-	crd.Spec.Conversion = &apiextensionsv1.CustomResourceConversion{
-		Strategy: apiextensionsv1.NoneConverter,
-	}
-
-	if _, err := shOp.KubeClient.ApiExt().CustomResourceDefinitions().Update(ctx, crd, sh_pkg.DefaultUpdateOptions()); err != nil {
-		return fmt.Errorf("update CRD %q conversion strategy: %w", crdName, err)
-	}
-
-	return nil
 }
 
 // nolint:gocyclo
@@ -589,7 +240,7 @@ func main() {
 	// admission HTTPS server (port 9680) only if it discovers at least one
 	// validating/mutating hook on disk during NewShellOperator below. The
 	// reconcilers deliver those hooks too late: they register the
-	// ValidatingWebhookConfiguration but reloadHooks never (re)starts the server,
+	// ValidatingWebhookConfiguration but ReloadHooks never (re)starts the server,
 	// so without presync — on clusters whose enabled modules ship no static
 	// validating hook — the server never comes up and the API server gets
 	// "connection refused" on :9680.
@@ -617,19 +268,10 @@ func main() {
 	}
 
 	// reloadFn is the callback that reconcilers invoke when hooks change on
-	// disk.  It re-discovers hooks and re-registers webhook configurations
-	// without restarting the shell-operator process.
-	//
-	// A mutex serialises concurrent calls from the validation and conversion
-	// reconcilers.  Without it, overlapping HookManager.Init() +
-	// Enable*Bindings sequences can operate on stale/overwritten hook indices.
-	var reloadMu sync.Mutex
-	reloadFn := func(ctx context.Context) error {
-		reloadMu.Lock()
-		defer reloadMu.Unlock()
-
-		return reloadHooks(ctx, shOp, logger.Named("shell-operator"))
-	}
+	// disk.  shell-operator re-discovers hooks and re-registers webhook
+	// configurations without restarting the process, and serialises concurrent
+	// calls from the validation and conversion reconcilers itself.
+	reloadFn := shOp.ReloadHooks
 
 	validationReconciler := controller.NewValidationWebhookReconciler(
 		mgr.GetClient(),
