@@ -49,6 +49,8 @@ type MasterPayloadInput struct {
 	// NodeIP is the address dhctl reaches this machine at, and empty in a cloud,
 	// where it does not exist yet.
 	NodeIP string
+	// NodeGroupName is the group this node joins. Empty means the master group.
+	NodeGroupName string
 }
 
 // BuildMasterPayload renders the documents the first master boots with: the node
@@ -99,6 +101,8 @@ type JoinPayloadInput struct {
 	// NodeIP is the address dhctl reaches this machine at, and empty in a cloud,
 	// where it does not exist yet.
 	NodeIP string
+	// NodeGroupName is the group this node joins. Empty means the master group.
+	NodeGroupName string
 }
 
 // BuildJoinPayload renders the documents an additional master boots with: the
@@ -115,8 +119,9 @@ func BuildJoinPayload(ctx context.Context, in JoinPayloadInput) (string, []byte,
 	}
 
 	nodeConfig, err := buildNodeConfig(ctx, nodeConfigInput{
-		NodeName:   in.NodeName,
-		MetaConfig: in.MetaConfig,
+		NodeName:      in.NodeName,
+		NodeGroupName: in.NodeGroupName,
+		MetaConfig:    in.MetaConfig,
 		Join: &joinInput{
 			CACert:             in.CACert,
 			BootstrapToken:     in.BootstrapToken,

@@ -73,6 +73,7 @@ func BuildJoinPayloadFromCluster(
 	nodeName string,
 	customization *Customization,
 	nodeIP string,
+	nodeGroupName string,
 ) (string, []byte, error) {
 	var (
 		caCert    string
@@ -90,7 +91,7 @@ func BuildJoinPayloadFromCluster(
 			if err != nil {
 				return err
 			}
-			token, err = groupBootstrapToken(ctx, kubeCl, global.MasterNodeGroupName)
+			token, err = groupBootstrapToken(ctx, kubeCl, nodeGroupOrMaster(nodeGroupName))
 			if err != nil {
 				return err
 			}
@@ -109,6 +110,7 @@ func BuildJoinPayloadFromCluster(
 		APIServerEndpoints: endpoints,
 		Customization:      customization,
 		NodeIP:             nodeIP,
+		NodeGroupName:      nodeGroupName,
 	})
 }
 

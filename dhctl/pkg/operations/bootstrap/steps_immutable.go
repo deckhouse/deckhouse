@@ -29,6 +29,7 @@ import (
 	libretry "github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable"
 	dhctlkube "github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -523,7 +524,7 @@ func (b *ClusterBootstrapper) handImmutableJoinPayload(ctx context.Context, bctx
 	}
 
 	payload, nodeConfig, err := immutable.BuildJoinPayloadFromCluster(ctx, kubeCl, bctx.metaConfig, nodeName,
-		immutableCustomization(bctx, nodeName), immutableNodeAddress(bctx, nodeName))
+		immutableCustomization(bctx, nodeName), immutableNodeAddress(bctx, nodeName), global.MasterNodeGroupName)
 	if err != nil {
 		return err
 	}

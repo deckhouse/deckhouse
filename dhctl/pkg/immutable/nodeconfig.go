@@ -58,6 +58,9 @@ const (
 type nodeConfigInput struct {
 	// NodeName is the name the node registers under.
 	NodeName string
+	// NodeGroupName is the group the node joins. Empty means the master group:
+	// every node built here was one until CloudPermanent groups reused the path.
+	NodeGroupName string
 	// MetaConfig is the parsed cluster configuration.
 	MetaConfig *config.MetaConfig
 	// Join carries what a node needs to enter a cluster that already runs. It is
@@ -144,7 +147,7 @@ func buildNodeConfig(ctx context.Context, in nodeConfigInput) (*nodeConfig, erro
 			Hostname:   in.NodeName,
 			Interfaces: []networkInterface{{Name: "eth0", DHCP: true}},
 		},
-		Kubelet: nodeKubelet(in.MetaConfig, kubernetesVersion, podsPerNode),
+		Kubelet: nodeKubelet(in.MetaConfig, kubernetesVersion, podsPerNode, in.NodeGroupName),
 		ContainerRuntime: containerRuntime{
 			SandboxImage:           pauseImage,
 			MaxConcurrentDownloads: defaultMaxConcurrentDownloads,
@@ -169,7 +172,7 @@ func buildNodeConfig(ctx context.Context, in nodeConfigInput) (*nodeConfig, erro
 		Kind:       NodeConfigKind,
 		Metadata: objectMeta{
 			Name:   in.NodeName,
-			Labels: map[string]string{global.NodeGroupLabel: global.MasterNodeGroupName},
+			Labels: map[string]string{global.NodeGroupLabel: nodeGroupOrMaster(in.NodeGroupName)},
 		},
 		Spec: spec,
 	}, nil
@@ -178,7 +181,7 @@ func buildNodeConfig(ctx context.Context, in nodeConfigInput) (*nodeConfig, erro
 // nodeKubelet is the kubelet section of a control-plane node's config, in the
 // shape the node that starts the cluster needs it; applyJoinToSpec turns it into
 // what a node joining a running cluster needs.
-func nodeKubelet(metaConfig *config.MetaConfig, kubernetesVersion string, podsPerNode int) kubelet {
+func nodeKubelet(metaConfig *config.MetaConfig, kubernetesVersion string, podsPerNode int, nodeGroupName string) kubelet {
 	serverTLSBootstrap := false
 
 	// Both follow the cluster type, the way bashible gates them on the group's
@@ -205,7 +208,7 @@ func nodeKubelet(metaConfig *config.MetaConfig, kubernetesVersion string, podsPe
 		// node-role.kubernetes.io/*, and a rejected registration means the node
 		// never joins. The role label and taint come later, from the node.
 		NodeLabels: map[string]string{
-			global.NodeGroupLabel: global.MasterNodeGroupName,
+			global.NodeGroupLabel: nodeGroupOrMaster(nodeGroupName),
 			nodeTypeLabel:         nodeType,
 			cgroupLabel:           "cgroup2fs", // olcedar's only layout; bashible probes it in 092_set_cgroup_type.sh.tpl
 		},
@@ -337,4 +340,14 @@ func etcdMounts() []mount {
 		// 0755 and etcd refuses to run on that.
 		Mode: "0700",
 	}}
+}
+
+// nodeGroupOrMaster names the group a payload puts the node in. The master group
+// is the default because it is the only group the first master can be in, and a
+// caller that does not name a group is building one.
+func nodeGroupOrMaster(name string) string {
+	if name == "" {
+		return global.MasterNodeGroupName
+	}
+	return name
 }
