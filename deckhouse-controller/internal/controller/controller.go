@@ -340,11 +340,12 @@ func (c *Controller) Start(ctx context.Context) error {
 
 	// The old module stack recorded its packages in module releases, and the
 	// image ships the embedded modules; give each of them a package version
-	// object while the controllers still wait for the sync. Runs after the
-	// resolver, so a deployed duplicate it superseded no longer counts.
-	versions := syncer.New(c.ctrl.GetAPIReader(), c.ctrl.GetClient(), c.dc, app.Version, app.EmbeddedModulesDir, c.logger.Named("syncer"))
-	if err := versions.Sync(ctx); err != nil {
-		return fmt.Errorf("sync package versions: %w", err)
+	// object, and the user module sources their repositories, while the
+	// controllers still wait for the sync. Runs after the resolver, so a
+	// deployed duplicate it superseded no longer counts.
+	packageSync := syncer.New(c.ctrl.GetAPIReader(), c.ctrl.GetClient(), c.dc, app.Version, app.EmbeddedModulesDir, c.logger.Named("syncer"))
+	if err := packageSync.Sync(ctx); err != nil {
+		return fmt.Errorf("sync package objects: %w", err)
 	}
 
 	modules, err := c.syncModules(ctx, placements)
