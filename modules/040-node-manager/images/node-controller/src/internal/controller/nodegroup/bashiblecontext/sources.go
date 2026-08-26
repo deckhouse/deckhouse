@@ -44,7 +44,7 @@ const (
 )
 
 // rootCAFiles are the candidate locations of the projected service-account CA, canonical path
-// first. See readKubernetesCA.
+// first. See ReadKubernetesCA.
 var rootCAFiles = []string{
 	"/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
 	"/run/secrets/kubernetes.io/serviceaccount/ca.crt",
@@ -70,7 +70,7 @@ func (s *Service) reader() client.Reader {
 	return s.Client
 }
 
-func (s *Service) readCloudProvider(ctx context.Context) map[string]interface{} {
+func (s *Service) ReadCloudProvider(ctx context.Context) map[string]interface{} {
 	secret := &corev1.Secret{}
 	if err := s.Client.Get(ctx, types.NamespacedName{Namespace: kubeSystemNS, Name: cloudProviderSecretName}, secret); err != nil {
 		return nil
@@ -91,7 +91,7 @@ func decodeSecretData(data map[string][]byte) map[string]interface{} {
 	return res
 }
 
-func (s *Service) readPackagesProxyToken(ctx context.Context) string {
+func (s *Service) ReadPackagesProxyToken(ctx context.Context) string {
 	secret := &corev1.Secret{}
 	if err := s.reader().Get(ctx, types.NamespacedName{Namespace: cloudInstanceManagerNS, Name: packagesProxyTokenSecretName}, secret); err != nil {
 		return ""
@@ -158,12 +158,12 @@ func (s *Service) readAPIServerProxyCerts(ctx context.Context) apiserverProxyCer
 	}
 }
 
-// readKubernetesCA reads the projected service-account CA. The kubelet mounts it under
+// ReadKubernetesCA reads the projected service-account CA. The kubelet mounts it under
 // /var/run/..., which resolves to /run/... only in images where /var/run is a symlink — the
 // hook this was ported from ran in the deckhouse image (where it is), node-controller runs on
 // distroless. Both spellings are therefore tried, so the CA never silently ends up empty in the
 // bashible context.
-func (s *Service) readKubernetesCA() string {
+func (s *Service) ReadKubernetesCA() string {
 	paths := rootCAFiles
 	if s.RootCAFile != "" {
 		paths = []string{s.RootCAFile}
