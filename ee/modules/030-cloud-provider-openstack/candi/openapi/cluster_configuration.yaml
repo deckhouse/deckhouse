@@ -481,6 +481,14 @@ apiVersions:
           internalNetworkSecurity: &internalNetworkSecurity
             description: |
               Defines whether [SecurityGroups](https://deckhouse.io/modules/cloud-provider-openstack/faq.html#how-to-check-whether-the-provider-supports-securitygroups) and [AllowedAddressPairs](https://docs.openstack.org/developer/dragonflow/specs/allowed_address_pairs.html) must be configured for ports of the internal network.
+
+              When enabled, Deckhouse creates a security group named after the cluster `prefix` with the following default inbound rules:
+              - TCP/22 (SSH) from CIDRs in [`sshAllowList`](#openstackclusterconfiguration-sshallowlist) (default `0.0.0.0/0`);
+              - ICMP from `0.0.0.0/0`;
+              - TCP NodePorts `30000–32767` from `0.0.0.0/0`;
+              - all inbound traffic from members of the same security group.
+
+              For details and attaching custom security groups, see [How do I set up security policies on cluster nodes?](faq.html#how-do-i-set-up-security-policies-on-cluster-nodes).
             type: boolean
             default: true
           externalNetworkName: &externalNetworkName

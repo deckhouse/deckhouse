@@ -264,6 +264,14 @@ apiVersions:
           internalNetworkSecurity: &internalNetworkSecurity_ru
             description: |
               Флаг, который определяет необходимость настройки [SecurityGroups](https://deckhouse.ru/modules/cloud-provider-openstack/faq.html#как-проверить-поддерживает-ли-провайдер-securitygroups) и [AllowedAddressPairs](https://docs.openstack.org/developer/dragonflow/specs/allowed_address_pairs.html) на портах внутренней сети.
+
+              При включении Deckhouse создаёт группу безопасности с именем префикса кластера (`prefix`) и следующими правилами входящего трафика по умолчанию:
+              - TCP/22 (SSH) из CIDR в [`sshAllowList`](#openstackclusterconfiguration-sshallowlist) (по умолчанию `0.0.0.0/0`);
+              - ICMP из `0.0.0.0/0`;
+              - TCP NodePort `30000–32767` из `0.0.0.0/0`;
+              - весь входящий трафик от узлов той же группы безопасности.
+
+              Подробнее и про подключение собственных групп безопасности — в разделе [«Как настроить политики безопасности на узлах кластера?»](faq.html#как-настроить-политики-безопасности-на-узлах-кластера).
           externalNetworkName: &externalNetworkName_ru
             description: |
               Имя сети для внешнего взаимодействия.

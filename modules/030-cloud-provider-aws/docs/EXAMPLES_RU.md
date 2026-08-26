@@ -35,6 +35,24 @@ spec:
 
 ## Настройка политик безопасности на узлах
 
+### Группы безопасности по умолчанию
+
+Если [`disableDefaultSecurityGroup`](cluster_configuration.html#awsclusterconfiguration-disabledefaultsecuritygroup) не включён (по умолчанию), модуль создаёт следующие группы безопасности:
+
+* `<prefix>-node` — назначается узлам кластера. По умолчанию разрешены:
+  * весь исходящий трафик в `0.0.0.0/0`;
+  * весь входящий трафик от группы `<prefix>-loadbalancer`;
+  * весь входящий трафик от узлов той же группы `<prefix>-node`;
+  * ICMP из CIDR, указанных в [`publicNetworkAllowList`](cluster_configuration.html#awsclusterconfiguration-publicnetworkallowlist) (по умолчанию `0.0.0.0/0`).
+* `<prefix>-loadbalancer` — используется балансировщиками нагрузки. По умолчанию разрешены:
+  * весь входящий трафик из CIDR в `publicNetworkAllowList`;
+  * весь исходящий трафик к группе `<prefix>-node`.
+* `<prefix>-ssh-accessible` — создаётся, если задан [`sshAllowList`](cluster_configuration.html#awsclusterconfiguration-sshallowlist); разрешает TCP/22 из указанных CIDR (по умолчанию `0.0.0.0/0`).
+
+Дополнительные порты (например, HTTP/HTTPS) в эти группы через конфигурацию модуля не добавляются. Создайте отдельную группу безопасности в AWS и подключите её через `additionalSecurityGroups`. Источники ICMP и доступа к балансировщику можно ограничить параметром `publicNetworkAllowList`, доступ по SSH — параметром `sshAllowList`.
+
+### Подключение собственных групп безопасности
+
 Вариантов, зачем может понадобиться ограничить или, наоборот, расширить входящий или исходящий трафик на виртуальных машинах кластера в AWS, может быть множество. Например:
 
 * Разрешить подключение к узлам кластера с виртуальных машин из другой подсети.

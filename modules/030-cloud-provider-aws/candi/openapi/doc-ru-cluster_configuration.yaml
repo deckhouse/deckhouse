@@ -227,6 +227,8 @@ apiVersions:
           - `additionalSecurityGroups` в секции `nodeGroups.instanceClass`.
 
           Для настройки security group, используемых балансировщиками нагрузки, укажите их через аннотацию `service.beta.kubernetes.io/aws-load-balancer-security-groups`.
+
+          Список групп безопасности и правил, которые Deckhouse создаёт при значении `false`, описан в разделе [«Настройка политик безопасности на узлах»](examples.html#настройка-политик-безопасности-на-узлах).
       sshAllowList:
         description: |
           Список CIDR, разрешенных для подключения к узлам по SSH.

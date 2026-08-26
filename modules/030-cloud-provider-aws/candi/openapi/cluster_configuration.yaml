@@ -403,6 +403,8 @@ apiVersions:
           - `additionalSecurityGroups` in the `nodeGroups.instanceClass` section.
 
           To configure the security groups used by load balancers, specify them using the `service.beta.kubernetes.io/aws-load-balancer-security-groups` annotation.
+
+          For the list of default security groups and rules that Deckhouse creates when this parameter is `false`, see [Configuring security policies on nodes](examples.html#configuring-security-policies-on-nodes).
       sshAllowList:
         type: array
         items:

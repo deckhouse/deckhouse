@@ -96,13 +96,30 @@ spec:
 
 ## How do I set up security policies on cluster nodes?
 
+### Default security groups
+
+In the [`Standard`](layouts.html#standard) and [`StandardWithNoRouter`](layouts.html#standardwithnorouter) layouts, when [`internalNetworkSecurity: true`](cluster_configuration.html#openstackclusterconfiguration-standard-internalnetworksecurity) (the default), the module creates a security group named after the cluster prefix (`prefix`) and assigns it to the nodes.
+
+The created group allows the following inbound connections by default:
+
+* TCP/22 (SSH) from CIDRs listed in [`sshAllowList`](cluster_configuration.html#openstackclusterconfiguration-sshallowlist) (default `0.0.0.0/0`);
+* ICMP from `0.0.0.0/0`;
+* TCP NodePort range `30000–32767` from `0.0.0.0/0` (UDP NodePorts are not opened by default);
+* all inbound traffic from nodes that belong to the same security group.
+
+In the [`Simple`](layouts.html#simple) and [`SimpleWithInternalNetwork`](layouts.html#simplewithinternalnetwork) layouts, the module does not create security groups — prepare them in the cloud in advance and attach them via [`additionalSecurityGroups`](cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups).
+
+The module does not add HTTP/HTTPS or other application ports to the managed security group. Create such rules manually in a separate security group and attach it with `additionalSecurityGroups`.
+
+### Attaching custom security groups
+
 There may be many reasons why you may need to restrict or expand incoming/outgoing traffic on cluster VMs in OpenStack:
 
 - Allow VMs on a different subnet to connect to cluster nodes.
-- Allow connecting to the ports of the static node so that the application can work.
+- Allow connecting to the ports of the static node so that the application can work (for example, HTTP/HTTPS when a public IP is assigned to the VM).
 - Restrict access to external resources or other VMs in the cloud for security reasons.
 
-For all this, additional security groups should be used. You can only use security groups that are created in the cloud tentatively.
+For all this, additional security groups should be used. You can only use security groups that are created in the cloud tentatively. You cannot add arbitrary rules to the Deckhouse-managed security group through the module configuration.
 
 ### Enabling additional security groups on static and master nodes
 
