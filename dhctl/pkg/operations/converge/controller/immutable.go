@@ -23,6 +23,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -34,7 +35,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook/controlplane"
-	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 )
 
 // Same budget as entity.GetNodeGroup: a NodeGroup read must survive an apiserver
