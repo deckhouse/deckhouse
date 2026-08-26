@@ -80,10 +80,7 @@ func ParsePackageType(raw string) (PackageType, error) {
 }
 
 type ProcessResult struct {
-	PackageType PackageType
-	// Legacy reports that the module history reaches back to release images without a module
-	// definition, so the offered versions stop at that boundary.
-	Legacy        bool
+	PackageType   PackageType
 	Done          []*semver.Version
 	Failed        []failedVersion
 	FoundVersions int
@@ -206,8 +203,8 @@ func (s *OperationService) UpdateRepositoryStatus(ctx context.Context, packages 
 }
 
 // ProcessPackageVersions lists <package>/version, detects the type from the newest tag and creates
-// an APV or MPV per version. A package without a /version path is a legacy module, and
-// walkModuleReleases reads its versions from /release instead.
+// an APV or MPV per version. A package with no /version path, or none carrying semver tags on a
+// full scan, is a legacy module, and walkModuleReleases reads its versions from /release instead.
 func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageName string, operation *v1alpha1.PackageRepositoryOperation) (*ProcessResult, error) {
 	foundTags, err := s.foundTagsToProcess(ctx, packageName, operation)
 	if err != nil {
@@ -225,8 +222,15 @@ func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageNa
 		slog.Int("versions", len(foundTags)),
 	)
 
-	// /version path exists but no new semver tags to process.
+	// An empty result on a full scan means /version carries no semver tags at all, so the package
+	// can still be a legacy module holding its versions under /release. On an incremental scan it
+	// only means "nothing new since the watermark", and walking /release would re-read the history
+	// on every scan.
 	if len(foundTags) == 0 {
+		if operation.Spec.Update != nil && operation.Spec.Update.FullScan {
+			return s.walkModuleReleases(ctx, packageName)
+		}
+
 		return &ProcessResult{}, nil
 	}
 
@@ -483,8 +487,8 @@ func extractOnlySemverTags(rawTags []string) []*semver.Version {
 // walkModuleReleases walks <package>/release from the newest version down, creating a
 // ModulePackageVersion for every release image that carries a module definition.
 //
-// The walk stops at the first image without a definition: that version cannot be offered, and the
-// module is reported legacy to say its history is cut off there. A version the cluster already holds
+// The walk stops at the first image without a definition: that version cannot be offered, so the
+// module's history is cut off there. A version the cluster already holds
 // is not re-read from /release, only re-checked for a "not in registry" mark that has since lifted.
 func (s *OperationService) walkModuleReleases(ctx context.Context, packageName string) (*ProcessResult, error) {
 	release := s.svc.Package(packageName).Release()
@@ -510,7 +514,7 @@ func (s *OperationService) walkModuleReleases(ctx context.Context, packageName s
 		v1alpha1.ModulePackageVersionLabelLegacy: "true",
 	}
 
-	result := &ProcessResult{PackageType: PackageTypeModule, Legacy: true}
+	result := &ProcessResult{PackageType: PackageTypeModule}
 
 	for _, versionTag := range foundTags {
 		version := "v" + versionTag.String()

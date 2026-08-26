@@ -72,7 +72,7 @@ func (r *reconciler) processNextPackage(ctx context.Context, op *v1alpha1.Packag
 	// Skip resource creation for unrecognized packages (e.g. legacy modules without metadata).
 	switch result.PackageType {
 	case operations.PackageTypeModule:
-		if ensureErr := r.ensureModulePackage(ctx, currentPackage.Name, repo.Name, repo.UID, result.Legacy); ensureErr != nil {
+		if ensureErr := r.ensureModulePackage(ctx, currentPackage.Name, repo.Name, repo.UID); ensureErr != nil {
 			r.logger.Error("failed to ensure module package resource",
 				slog.String("package", currentPackage.Name),
 				log.Err(ensureErr))
@@ -173,9 +173,8 @@ func (r *reconciler) dequeuePackageWithResult(ctx context.Context, op *v1alpha1.
 }
 
 // ensureModulePackage creates the ModulePackage for a scanned module and lists the repository
-// among the ones offering it. A legacy module is labelled as such, the label is never taken back:
-// a release image does not grow a definition it was published without.
-func (r *reconciler) ensureModulePackage(ctx context.Context, packageName, repoName string, repoUID apitypes.UID, legacy bool) error {
+// among the ones offering it.
+func (r *reconciler) ensureModulePackage(ctx context.Context, packageName, repoName string, repoUID apitypes.UID) error {
 	pkg := new(v1alpha1.ModulePackage)
 	err := r.client.Get(ctx, client.ObjectKey{Name: packageName}, pkg)
 	if err != nil && !apierrors.IsNotFound(err) {
@@ -192,7 +191,7 @@ func (r *reconciler) ensureModulePackage(ctx context.Context, packageName, repoN
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   packageName,
-				Labels: modulePackageLabels(legacy),
+				Labels: map[string]string{"heritage": "deckhouse"},
 			},
 		}
 		ensureSharedOwnerReference(pkg, repoName, repoUID)
@@ -205,16 +204,7 @@ func (r *reconciler) ensureModulePackage(ctx context.Context, packageName, repoN
 		// does not cascade-delete a package that other repositories still contribute.
 		original := pkg.DeepCopy()
 
-		update := ensureSharedOwnerReference(pkg, repoName, repoUID)
-		if legacy && pkg.Labels[v1alpha1.ModulePackageLabelLegacy] != "true" {
-			if pkg.Labels == nil {
-				pkg.Labels = make(map[string]string)
-			}
-			pkg.Labels[v1alpha1.ModulePackageLabelLegacy] = "true"
-			update = true
-		}
-
-		if update {
+		if update := ensureSharedOwnerReference(pkg, repoName, repoUID); update {
 			if err := r.client.Patch(ctx, pkg, client.MergeFrom(original)); err != nil {
 				return fmt.Errorf("sync module package: %w", err)
 			}
@@ -325,14 +315,4 @@ func ensureSharedOwnerReference(obj client.Object, repoName string, repoUID apit
 	})
 	obj.SetOwnerReferences(refs)
 	return true
-}
-
-// modulePackageLabels builds the labels of a freshly created ModulePackage.
-func modulePackageLabels(legacy bool) map[string]string {
-	labels := map[string]string{"heritage": "deckhouse"}
-	if legacy {
-		labels[v1alpha1.ModulePackageLabelLegacy] = "true"
-	}
-
-	return labels
 }

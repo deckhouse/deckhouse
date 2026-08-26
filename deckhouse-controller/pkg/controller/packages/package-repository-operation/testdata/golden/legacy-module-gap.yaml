@@ -84,7 +84,6 @@ kind: ModulePackage
 metadata:
   labels:
     heritage: deckhouse
-    packages.deckhouse.io/legacy: "true"
   name: test-package
   ownerReferences:
   - apiVersion: deckhouse.io/v1alpha1
