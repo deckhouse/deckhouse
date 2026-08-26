@@ -187,6 +187,32 @@ func TestPushImmutablePayloadStopsOnAnInstalledNode(t *testing.T) {
 		"a machine that is already installed must end the wait, not start the next attempt")
 }
 
+// A refused push leaves no record behind. The refusal tells the operator to re-image the machine
+// or point --master-host elsewhere, and a record kept over a machine that took nothing makes the
+// rerun skip it: the bootstrap then waits out its budget on a master nobody configured.
+func TestARefusedPushLeavesNoRecord(t *testing.T) {
+	immutabletest.NoRetryCollapse(t)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+	}))
+	t.Cleanup(server.Close)
+
+	host, port := splitTestServerAddress(t, server)
+	b, bctx := immutableTestBootstrapper(t)
+	bctx.immutable.maintenancePort = port
+
+	ctx, cancel := context.WithTimeout(t.Context(), 2*waitMaintenancePort.interval)
+	defer cancel()
+
+	err := b.pushRecordedPayload(ctx, bctx, "master-0", host, []byte("#cloud-config\n"), nil)
+	require.ErrorIs(t, err, immutable.ErrMaintenanceTokenRequired)
+
+	pushed, err := payloadAlreadyPushed(t.Context(), bctx.stateCache, "master-0", host)
+	require.NoError(t, err)
+	require.False(t, pushed, "a machine that refused the document must not be recorded as configured")
+}
+
 // The stand this check was written for: two disks of one size, and a selector
 // that names the size.
 const oneUsableDisk = `{"disks":[{"name":"sda","size":32212254720}],"interfaces":[{"name":"enp3s0","mac":"f2:4e:c6:60:03:72"}]}`
