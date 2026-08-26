@@ -43,7 +43,6 @@ const (
 	unexpectedGrace = 30 * time.Second
 )
 
-
 const (
 	reasonStateCreated     = "FencingStateCreated"
 	reasonStateCleared     = "FencingStateCleared"
@@ -171,7 +170,6 @@ func (w *Writer) Run(ctx context.Context) error {
 		}
 	}
 }
-
 
 func (w *Writer) clearOwnState(ctx context.Context, states []v1alpha1.FencingFailedNodeState) {
 	for _, state := range states {
