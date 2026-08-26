@@ -36,6 +36,7 @@ import (
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	mcmv1alpha1 "github.com/deckhouse/node-controller/api/machine.sapcloud.io/v1alpha1"
 	"github.com/deckhouse/node-controller/internal/common"
+	"github.com/deckhouse/node-controller/internal/controller/nodegroup/bashiblecontext"
 	"github.com/deckhouse/node-controller/internal/testenv"
 )
 
@@ -74,6 +75,14 @@ const instanceClassChecksumFixture = `{{ .nodeGroup.name }}`
 func testdataDir() string {
 	_, self, _, _ := runtime.Caller(0)
 	return filepath.Join(filepath.Dir(self), "testdata")
+}
+
+// The machine-class render builds its own bashiblecontext.Service, which reads the
+// cluster CA from the pod's projected service-account volume — a path no test process
+// has, and BuildInput refuses an empty CA. In init, so both the specs and the plain
+// tests of this package see the fixture.
+func init() {
+	bashiblecontext.RootCAFiles = []string{filepath.Join(testdataDir(), "ca.crt")}
 }
 
 // TestCAPIMachineDeploymentControllerEnvtest runs the envtest-backed integration suite for
