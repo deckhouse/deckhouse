@@ -137,6 +137,10 @@ metadata:
     heritage: deckhouse
     module: node-manager
     app.kubernetes.io/managed-by: Helm
+  annotations:
+    # _capi_bootstrap_secret.tpl:18-21 hard-codes it, so helm never produces this
+    # Secret without the annotation and the hook's patch of it is a no-op.
+    helm.sh/resource-policy: keep
 type: Opaque
 ---
 apiVersion: v1
@@ -221,9 +225,10 @@ var _ = Describe("node-manager :: hooks :: set_keep_policy_on_capi_resources ::"
 			f.RunHook()
 		})
 
-		// All three shapes node-group.yaml renders, because missing one means helm
-		// prunes it between this release and the one that stops rendering it, and a
-		// node loses its bootstrap data.
+		// Every Secret this migration takes over, because missing one means helm prunes
+		// it between this release and the one that stops rendering it, and a node loses
+		// its bootstrap data. The CAPI one arrives already stamped by its own template;
+		// the other two are the hook's own work.
 		It("stamps keep policy on every bootstrap secret helm still renders", func() {
 			Expect(f).To(ExecuteSuccessfully())
 

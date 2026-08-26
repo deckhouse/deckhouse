@@ -849,6 +849,13 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(machineClassSecretB.Exists()).To(BeTrue())
 			Expect(machineDeploymentB.Exists()).To(BeFalse())
 
+			// Where the hook's name shapes meet what the templates render: the machine-class
+			// Secret must keep matching, deckhouse-registry and bashible-bashbooster must not.
+			assertKeepPolicyCovers(
+				[]object_store.KubeObject{machineClassSecretA, machineClassSecretB},
+				[]object_store.KubeObject{registrySecret, f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bashbooster")},
+			)
+
 			Expect(bashibleSecrets["bashible-bashbooster"].Exists()).To(BeTrue())
 
 			Expect(roles["bashible"].Exists()).To(BeTrue())
@@ -1514,6 +1521,12 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(bashibleSecrets["bashible-bashbooster"].Exists()).To(BeTrue())
 
 			Expect(bootstrapSecrets["manual-bootstrap-for-worker"].Exists()).To(BeTrue())
+
+			// The other half of the same binding: the manual-bootstrap name shape.
+			assertKeepPolicyCovers(
+				[]object_store.KubeObject{bootstrapSecrets["manual-bootstrap-for-worker"]},
+				[]object_store.KubeObject{registrySecret},
+			)
 
 			Expect(roles["bashible"].Exists()).To(BeTrue())
 			Expect(roles["bashible-mcm-bootstrapped-nodes"].Exists()).To(BeTrue())
