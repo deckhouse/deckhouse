@@ -28,9 +28,9 @@ import (
 func TestBastionTunnelCommandShape(t *testing.T) {
 	cfg := &sshconfig.Config{BastionUser: "ubuntu", BastionHost: "198.51.100.7"}
 	line := bastionTunnelCommand(cfg)
-	t.Logf("line: %s", line)
+	t.Logf("tunnel: %s", line)
 
-	if line != "ssh -f -N -D 1080 ubuntu@198.51.100.7" {
+	if line != "ssh -f -N -D 18443 ubuntu@198.51.100.7" {
 		t.Fatalf("tunnel command = %q", line)
 	}
 	// The tunnel outlives the command that opened it, so it must not be glued to
@@ -39,6 +39,45 @@ func TestBastionTunnelCommandShape(t *testing.T) {
 	for _, forbidden := range []string{"kubectl", "&&", "sed", "set-cluster", "--server="} {
 		if strings.Contains(line, forbidden) {
 			t.Fatalf("the tunnel is its own step and rewrites nothing, found %q in %q", forbidden, line)
+		}
+	}
+}
+
+// What the operator types again and again, and what the terminal pins: it has to
+// work on its own. A pinned line that only opens a tunnel leads nowhere, which is
+// what the screen showed on a live run.
+func TestTheCommandsThatUseTheClusterStandAlone(t *testing.T) {
+	behind := strings.Join(clusterUseCommands("/tmp/dhctl/admin.kubeconfig", true), " && ")
+	t.Logf("through a bastion: %s", behind)
+	for _, want := range []string{
+		"export KUBECONFIG=/tmp/dhctl/admin.kubeconfig",
+		"export HTTPS_PROXY=socks5://127.0.0.1:18443",
+		"kubectl get nodes",
+	} {
+		if !strings.Contains(behind, want) {
+			t.Fatalf("missing %q in %q", want, behind)
+		}
+	}
+	if strings.Contains(behind, "ssh ") {
+		t.Fatalf("the tunnel is opened once and does not belong in the line that repeats: %q", behind)
+	}
+	// Joined into the pinned line, the commands are pasted as one: without a
+	// separator the shell reads them as a single export with stray arguments.
+	if strings.Count(behind, " && ") != len(clusterUseCommands("/tmp/dhctl/admin.kubeconfig", true))-1 {
+		t.Fatalf("the pinned line must be runnable as pasted: %q", behind)
+	}
+
+	direct := strings.Join(clusterUseCommands("/tmp/dhctl/admin.kubeconfig", false), " && ")
+	t.Logf("direct: %s", direct)
+	if strings.Contains(direct, "HTTPS_PROXY") {
+		t.Fatalf("a reachable master needs no proxy: %q", direct)
+	}
+	// The saved kubeconfig is the only way into a cluster of immutable nodes, and
+	// its server is the node's own address: an edit made for one tunnel outlives
+	// it and sends every later use at a port nobody listens on.
+	for _, forbidden := range []string{"sed", "set-cluster", "--server="} {
+		if strings.Contains(behind, forbidden) || strings.Contains(direct, forbidden) {
+			t.Fatalf("the saved kubeconfig must not be rewritten (%q)", forbidden)
 		}
 	}
 }
