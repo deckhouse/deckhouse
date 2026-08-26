@@ -57,9 +57,11 @@ const (
 	dexAuthenticatorAnnotation = "dexauthenticator.deckhouse.io/allow-access-to-kubernetes"
 
 	deckhouseServiceAccount = "system:serviceaccount:d8-system:deckhouse"
-	// The identity that patches DexClients during cluster bootstrap: a namespace-scoped service
-	// account outside the core namespaces, holding an enumerated Role rather than broad RBAC.
+	// The identity that patches DexClients during cluster bootstrap. Commander charts older
+	// than 1.18 do not hold the allow-access-to-kubernetes subresource, so the policy skips
+	// this service account by name. Nothing else in d8-commander is skipped with it.
 	commanderServiceAccount  = "system:serviceaccount:d8-commander:cluster-manager"
+	commanderBackendAccount  = "system:serviceaccount:d8-commander:backend"
 	kubeSystemServiceAccount = "system:serviceaccount:kube-system:some-controller"
 	tenantServiceAccount     = "system:serviceaccount:attacker-ns:tenant"
 	namespaceEditor          = "editor@example.com"
@@ -132,11 +134,14 @@ var _ = Describe("Module :: user-authn :: helm template :: validation", func() {
 			)
 
 			// The core namespaces have to be excluded, otherwise the gate denies the module charts
-			// that ship an annotated DexAuthenticator. Nothing wider: a namespace prefix must not
-			// confer the authority on whatever runs under it.
+			// that ship an annotated DexAuthenticator. Commander cluster-manager is skipped by
+			// name so charts older than 1.18 keep bootstrapping. Nothing wider: a namespace
+			// prefix must not confer the authority on whatever runs under it.
 			matchConditions := policy.Field("spec.matchConditions").String()
 			Expect(matchConditions).To(ContainSubstring("system:serviceaccounts:d8-system"))
 			Expect(matchConditions).To(ContainSubstring("system:serviceaccounts:kube-system"))
+			Expect(matchConditions).To(ContainSubstring(commanderServiceAccount))
+			Expect(matchConditions).ToNot(ContainSubstring("system:serviceaccounts:d8-commander"))
 			Expect(matchConditions).ToNot(ContainSubstring("startsWith"))
 
 			binding := hec.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", allowAccessPolicyName)
@@ -211,17 +216,25 @@ var _ = Describe("Module :: user-authn :: helm template :: validation", func() {
 					allowed:     false,
 				},
 				{
-					// A cluster provisioner outside the core namespaces is not exempt: it proves the
-					// authority with the permission, which is what the Commander chart's
-					// cluster-manager Role carries.
-					name:        "cluster provisioner without the permission grants access",
+					// Commander releases older than 1.18 write this annotation and do not hold
+					// the subresource. The policy skips that one service account so those
+					// charts keep working after Deckhouse 1.76.
+					name:        "commander cluster-manager without the permission grants access",
 					username:    commanderServiceAccount,
+					annotations: map[string]string{dexClientAnnotation: "true"},
+					allowed:     true,
+				},
+				{
+					// The skip is the cluster-manager service account, not everyone in
+					// d8-commander. The rest of that namespace still has to prove the grant.
+					name:        "other commander service account without the permission grants access",
+					username:    commanderBackendAccount,
 					annotations: map[string]string{dexClientAnnotation: "true"},
 					allowed:     false,
 				},
 				{
 					name:        "cluster provisioner holding the permission grants access",
-					username:    commanderServiceAccount,
+					username:    "system:serviceaccount:provisioner-ns:controller",
 					canGrant:    true,
 					annotations: map[string]string{dexClientAnnotation: "true"},
 					allowed:     true,
