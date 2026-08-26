@@ -1,5 +1,5 @@
 GEM
-  remote: https://gems.flant.ru/
+  remote: https://rubygems.org/
   specs:
     addressable (2.9.0)
       public_suffix (>= 2.0.2, < 8.0)
