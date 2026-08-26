@@ -26,8 +26,9 @@
 //	     draft stubs below from
 //
 //	embedded modules dir (the running image)
-//	  └─ embedded-<module>-<deckhouse version>, complete: the metadata is
-//	     filled from the module files on disk, no repository ever serves it
+//	  └─ embedded-<module>-<deckhouse version>, complete: the metadata and
+//	     the settings/values schemas are filled from the module files on
+//	     disk, no repository ever serves it
 //
 //	deployed or pending ModuleRelease
 //	  └─ <repository>-<module>-<version>, where the "deckhouse" source maps
@@ -41,8 +42,11 @@
 // source world ("<module>/release"). No owner is set: the repository the spec
 // names may not exist yet, and an owner reference to a missing object would
 // get the version garbage-collected; the repository scan adopts the stubs it
-// recognizes. An existing complete version is never touched, so a restart
-// changes nothing.
+// recognizes. An embedded version follows the disk: one version name spans
+// every rebuild of a release (a dev build always counts as v2.0.0), so its
+// status is refreshed when the module files change and left alone when they
+// match - a no-change restart rewrites nothing. A complete release version is
+// never touched.
 package syncer
 
 import (

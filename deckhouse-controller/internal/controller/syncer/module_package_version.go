@@ -25,21 +25,24 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
+	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metautils "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/loader"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/openapi"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 // syncModulePackageVersions ensures a version object for every module package
 // the old stack carries: embedded modules come out complete with the disk
-// metadata, deployed and pending releases become draft stubs.
+// metadata and schemas, deployed and pending releases become draft stubs.
 func (s *Syncer) syncModulePackageVersions(ctx context.Context) error {
 	if err := s.syncVersionsFromImage(ctx); err != nil {
 		return err
@@ -96,7 +99,8 @@ func (s *Syncer) embeddedVersion() (string, bool) {
 }
 
 // ensureEmbeddedVersion ensures the complete version of one module shipped in
-// the image; the metadata comes from the module files on disk.
+// the image; the metadata and the settings/values schemas come from the
+// module files on disk.
 func (s *Syncer) ensureEmbeddedVersion(ctx context.Context, dirName, version string) error {
 	moduleDir := filepath.Join(s.embeddedModulesDir, dirName)
 
@@ -121,13 +125,73 @@ func (s *Syncer) ensureEmbeddedVersion(ctx context.Context, dirName, version str
 		meta.Weight = weightFromDirName(dirName)
 	}
 
+	settingsRaw, valuesRaw, err := loader.LoadEmbeddedSchemas(moduleDir)
+	if err != nil {
+		s.logger.Warn("module dir holds no readable schemas, skip its package version",
+			slog.String("dir", moduleDir), log.Err(err))
+
+		return nil
+	}
+
+	schemas, err := schemasFromRaw(settingsRaw, valuesRaw)
+	if err != nil {
+		s.logger.Warn("module schemas do not parse, skip its package version",
+			slog.String("dir", moduleDir), log.Err(err))
+
+		return nil
+	}
+
 	spec := v1alpha1.ModulePackageVersionSpec{
 		PackageName:           def.Name,
 		PackageRepositoryName: repositoryNameEmbedded,
 		PackageVersion:        version,
 	}
 
-	return s.ensureFilled(ctx, name, spec, meta)
+	return s.ensureFilled(ctx, name, spec, meta, schemas)
+}
+
+// schemasFromRaw parses the raw openapi files into the status schemas, the
+// same shape the application-package-version controller stores, so every
+// writer of the schemas speaks one language. A module without any schema
+// file yields nil.
+func schemasFromRaw(settings, values []byte) (*v1alpha1.PackageVersionStatusSchemas, error) {
+	settingsSchema, err := packageSchemaFromRaw(settings)
+	if err != nil {
+		return nil, fmt.Errorf("settings schema: %w", err)
+	}
+
+	valuesSchema, err := packageSchemaFromRaw(values)
+	if err != nil {
+		return nil, fmt.Errorf("values schema: %w", err)
+	}
+
+	if settingsSchema == nil && valuesSchema == nil {
+		return nil, nil
+	}
+
+	return &v1alpha1.PackageVersionStatusSchemas{
+		SettingsSchema: settingsSchema,
+		ValuesSchema:   valuesSchema,
+	}, nil
+}
+
+// packageSchemaFromRaw parses one raw openapi file; the x-config-version
+// marker is not part of the schema and is stripped.
+func packageSchemaFromRaw(raw []byte) (*v1alpha1.PackageSchema, error) {
+	if len(raw) == 0 {
+		return nil, nil
+	}
+
+	var wrapper struct {
+		Version string `json:"x-config-version"`
+		openapi.OpenAPIV3Schema
+	}
+
+	if err := yaml.Unmarshal(raw, &wrapper); err != nil {
+		return nil, fmt.Errorf("unmarshal schema: %w", err)
+	}
+
+	return &v1alpha1.PackageSchema{OpenAPIV3Schema: &wrapper.OpenAPIV3Schema}, nil
 }
 
 // weightFromDirName parses the "<weight>-<name>" contract of the embedded
@@ -223,11 +287,14 @@ func (s *Syncer) validName(name, moduleName string) bool {
 	return true
 }
 
-// ensureFilled converges the version to its complete form: created if missing,
-// the metadata filled, no draft label. An existing complete version is left
-// untouched. An existing draft, either a stub of an older build or a leftover
-// of an interrupted fill, is completed in place.
-func (s *Syncer) ensureFilled(ctx context.Context, name string, spec v1alpha1.ModulePackageVersionSpec, meta *v1alpha1.ModulePackageVersionStatusMetadata) error {
+// ensureFilled converges the version to the disk content: created if missing,
+// the metadata and schemas brought to what the module files hold, no draft
+// label. One version name spans every rebuild of a release, so a complete
+// version whose status drifted from the disk is refreshed in place; a
+// matching one is left untouched. An existing draft, either a stub of an
+// older build or a leftover of an interrupted fill, is completed the same
+// way.
+func (s *Syncer) ensureFilled(ctx context.Context, name string, spec v1alpha1.ModulePackageVersionSpec, meta *v1alpha1.ModulePackageVersionStatusMetadata, schemas *v1alpha1.PackageVersionStatusSchemas) error {
 	mpv := new(v1alpha1.ModulePackageVersion)
 
 	err := s.reader.Get(ctx, client.ObjectKey{Name: name}, mpv)
@@ -244,12 +311,20 @@ func (s *Syncer) ensureFilled(ctx context.Context, name string, spec v1alpha1.Mo
 		}
 	}
 
-	if !mpv.IsDraft() {
+	if !mpv.IsDraft() &&
+		equality.Semantic.DeepEqual(mpv.Status.PackageMetadata, meta) &&
+		equality.Semantic.DeepEqual(mpv.Status.PackageSchemas, schemas) {
 		return nil
 	}
 
-	if err := s.fillMetadata(ctx, mpv, meta); err != nil {
+	if err := s.fillMetadata(ctx, mpv, meta, schemas); err != nil {
 		return err
+	}
+
+	if !mpv.IsDraft() {
+		s.logger.Debug("module package version refreshed from disk", slog.String("name", mpv.Name))
+
+		return nil
 	}
 
 	return s.removeDraft(ctx, mpv)
@@ -312,11 +387,12 @@ func (s *Syncer) createStub(ctx context.Context, name string, spec v1alpha1.Modu
 	return mpv, nil
 }
 
-// fillMetadata writes the disk-sourced metadata into the version status.
-func (s *Syncer) fillMetadata(ctx context.Context, mpv *v1alpha1.ModulePackageVersion, meta *v1alpha1.ModulePackageVersionStatusMetadata) error {
+// fillMetadata writes the disk-sourced metadata and schemas into the version status.
+func (s *Syncer) fillMetadata(ctx context.Context, mpv *v1alpha1.ModulePackageVersion, meta *v1alpha1.ModulePackageVersionStatusMetadata, schemas *v1alpha1.PackageVersionStatusSchemas) error {
 	original := mpv.DeepCopy()
 
 	mpv.Status.PackageMetadata = meta
+	mpv.Status.PackageSchemas = schemas
 	mpv.Status.ObservedGeneration = mpv.Generation
 
 	metautils.SetStatusCondition(&mpv.Status.Conditions, metav1.Condition{

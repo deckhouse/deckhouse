@@ -59,6 +59,18 @@ func writePackageYAML(t *testing.T, dir, content string) {
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "package.yaml"), []byte(content), 0o644))
 }
 
+func writeOpenAPI(t *testing.T, dir, settings, values string) {
+	t.Helper()
+	openAPIDir := filepath.Join(dir, "openapi")
+	require.NoError(t, os.MkdirAll(openAPIDir, 0o755))
+	if settings != "" {
+		require.NoError(t, os.WriteFile(filepath.Join(openAPIDir, "settings.yaml"), []byte(settings), 0o644))
+	}
+	if values != "" {
+		require.NoError(t, os.WriteFile(filepath.Join(openAPIDir, "values.yaml"), []byte(values), 0o644))
+	}
+}
+
 func testModuleSource(name, repo string) *v1alpha1.ModuleSource {
 	return &v1alpha1.ModuleSource{
 		ObjectMeta: metav1.ObjectMeta{Name: name},

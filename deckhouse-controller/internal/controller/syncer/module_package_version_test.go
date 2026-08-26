@@ -80,6 +80,37 @@ func TestSyncVersionsFromImage(t *testing.T) {
 		require.NotNil(t, cond)
 		assert.Equal(t, metav1.ConditionTrue, cond.Status)
 		assert.Equal(t, "Succeeded", cond.Reason)
+
+		assert.Nil(t, mpv.Status.PackageSchemas, "no openapi dir, no schemas")
+	})
+
+	t.Run("fills the settings and values schemas from openapi", func(t *testing.T) {
+		dir := t.TempDir()
+		writeModuleYAML(t, filepath.Join(dir, "900-echo"), "name: echo\n")
+		writeOpenAPI(t, filepath.Join(dir, "900-echo"),
+			"type: object\nproperties:\n  logLevel:\n    type: string\n",
+			"type: object\nproperties:\n  internal:\n    type: object\n")
+
+		s, cl := newTestSyncer(t, "v1.80.0", dir)
+		require.NoError(t, s.Sync(ctx))
+
+		mpv := getVersion(t, cl, "embedded-echo-v1.80.0")
+		require.NotNil(t, mpv.Status.PackageSchemas)
+		require.NotNil(t, mpv.Status.PackageSchemas.SettingsSchema)
+		assert.Contains(t, mpv.Status.PackageSchemas.SettingsSchema.OpenAPIV3Schema.Properties, "logLevel")
+		require.NotNil(t, mpv.Status.PackageSchemas.ValuesSchema)
+		assert.Contains(t, mpv.Status.PackageSchemas.ValuesSchema.OpenAPIV3Schema.Properties, "internal")
+	})
+
+	t.Run("a broken schema skips the version", func(t *testing.T) {
+		dir := t.TempDir()
+		writeModuleYAML(t, filepath.Join(dir, "900-echo"), "name: echo\n")
+		writeOpenAPI(t, filepath.Join(dir, "900-echo"), "{not a schema", "")
+
+		s, cl := newTestSyncer(t, "v1.80.0", dir)
+		require.NoError(t, s.Sync(ctx))
+
+		assert.Empty(t, listVersionNames(t, cl))
 	})
 
 	t.Run("falls back to module.yaml and takes the weight from the dir prefix", func(t *testing.T) {
@@ -167,9 +198,10 @@ func TestSyncVersionsFromImage(t *testing.T) {
 		assert.Equal(t, "General Availability", mpv.Status.PackageMetadata.Stage)
 	})
 
-	t.Run("keeps an existing complete version untouched", func(t *testing.T) {
+	t.Run("refreshes a complete version whose status drifted from the disk", func(t *testing.T) {
 		dir := t.TempDir()
 		writeModuleYAML(t, filepath.Join(dir, "900-echo"), "name: echo\nstage: Experimental\n")
+		writeOpenAPI(t, filepath.Join(dir, "900-echo"), "type: object\n", "")
 
 		existing := &v1alpha1.ModulePackageVersion{
 			ObjectMeta: metav1.ObjectMeta{Name: "embedded-echo-v1.80.0"},
@@ -184,13 +216,30 @@ func TestSyncVersionsFromImage(t *testing.T) {
 		}
 
 		s, cl := newTestSyncer(t, "v1.80.0", dir, existing)
-		before := getVersion(t, cl, existing.Name)
 
 		require.NoError(t, s.Sync(ctx))
 
 		after := getVersion(t, cl, existing.Name)
-		assert.Equal(t, before.ResourceVersion, after.ResourceVersion)
-		assert.Equal(t, "General Availability", after.Status.PackageMetadata.Stage)
+		assert.False(t, after.IsDraft(), "a refresh must not bring the draft label back")
+		assert.Equal(t, "Experimental", after.Status.PackageMetadata.Stage, "the status follows the disk")
+		assert.Equal(t, int32(900), after.Status.PackageMetadata.Weight)
+		require.NotNil(t, after.Status.PackageSchemas, "the refresh brings the schemas along")
+		assert.NotNil(t, after.Status.PackageSchemas.SettingsSchema)
+	})
+
+	t.Run("keeps a version matching the disk untouched", func(t *testing.T) {
+		dir := t.TempDir()
+		writeModuleYAML(t, filepath.Join(dir, "900-echo"), "name: echo\nstage: Experimental\n")
+		writeOpenAPI(t, filepath.Join(dir, "900-echo"), "type: object\n", "")
+
+		s, cl := newTestSyncer(t, "v1.80.0", dir)
+		require.NoError(t, s.Sync(ctx))
+		before := getVersion(t, cl, "embedded-echo-v1.80.0")
+
+		require.NoError(t, s.Sync(ctx))
+
+		after := getVersion(t, cl, before.Name)
+		assert.Equal(t, before.ResourceVersion, after.ResourceVersion, "a no-change pass rewrites nothing")
 	})
 }
 
