@@ -20,6 +20,7 @@ package controllers
 
 import (
 	_ "github.com/deckhouse/node-controller/internal/controller/bashiblecleanup"
+	_ "github.com/deckhouse/node-controller/internal/controller/bootstrapsecrets"
 	_ "github.com/deckhouse/node-controller/internal/controller/capi"
 	_ "github.com/deckhouse/node-controller/internal/controller/clusterprefixmigration"
 	_ "github.com/deckhouse/node-controller/internal/controller/crdmigration"
