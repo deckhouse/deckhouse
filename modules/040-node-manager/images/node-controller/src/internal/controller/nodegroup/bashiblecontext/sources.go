@@ -47,8 +47,8 @@ const (
 )
 
 // RootCAFiles are the candidate locations of the projected service-account CA, canonical path
-// first; see ReadKubernetesCA. A var, not a const, only because no test process has either path:
-// the envtest suites point it at a committed fixture. Nothing in production assigns to it.
+// first; see ReadKubernetesCA. Exported only because no test process has either path: the
+// envtest suites point it at a committed fixture. Nothing in production assigns to it.
 var RootCAFiles = []string{
 	"/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
 	"/run/secrets/kubernetes.io/serviceaccount/ca.crt",

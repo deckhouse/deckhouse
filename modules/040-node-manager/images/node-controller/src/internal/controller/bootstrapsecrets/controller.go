@@ -167,7 +167,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 	// A validation error is a statement about the NodeGroup, not a failure of this
 	// pass — helm rendered no bootstrap Secret for such a group either — so it is
-	// reported and retried rather than returned as an error.
+	// reported and retried rather than returned as an error. No token is minted here
+	// either, unlike the hook: a group with no valid InstanceClass gets no machines,
+	// and if one appears anyway nodebootstrap fails loudly rather than silently.
 	if validationErr != "" {
 		logger.V(1).Info("NodeGroup failed validation, writing no bootstrap secret",
 			"nodeGroup", ng.Name, "error", validationErr)
