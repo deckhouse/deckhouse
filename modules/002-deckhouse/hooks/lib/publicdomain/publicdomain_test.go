@@ -307,10 +307,10 @@ func TestEffectiveMode(t *testing.T) {
 			want:           ModeList,
 		},
 		{
-			name:           "absent mode with %s as the whole first label is Template",
+			name:           "absent mode is List",
 			configured:     "",
 			domainTemplate: "%s.example.com",
-			want:           ModeTemplate,
+			want:           ModeList,
 		},
 		{
 			name:           "%s as a prefix of the first label falls back to List",

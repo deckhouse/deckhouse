@@ -345,16 +345,18 @@ properties:
 
       The reservation is per hostname and applies to every namespace. To exempt a whole namespace from the reservation instead, label the namespace with `security.deckhouse.io/reserved-hosts-bypass: "true"`.
     x-examples:
-      - mode: Template
+      - mode: List
         additionalHosts: ["admin.example.com"]
         excludedServices: ["grafana"]
     properties:
       mode:
         type: string
         enum: ["Template", "List"]
-        default: Template
+        default: List
         description: |
           How much of the platform's domain is reserved.
+
+          Default is `List`. Set `Template` to reserve every hostname the template can render.
 
           Possible values:
 

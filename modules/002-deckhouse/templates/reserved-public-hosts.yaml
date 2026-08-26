@@ -97,7 +97,7 @@
   "kube-%s.example.com" keeps Template: the literal is a prefix, so only kube-* is reserved.
 */}}
 {{- $percentSSharesFirstLabelWithASuffix := and $templateSplits (eq (index $parts 0) "") (ne (index $parts 1) "") (not (hasPrefix "." (index $parts 1))) }}
-{{- $mode := ternary "Template" "List" (and (ne ($settings.mode | default "Template") "List") $templateSplits (not $percentSSharesFirstLabelWithASuffix)) }}
+{{- $mode := ternary "Template" "List" (and (ne ($settings.mode | default "List") "List") $templateSplits (not $percentSSharesFirstLabelWithASuffix)) }}
 
 {{- if and (or $domainTemplate $additionalHosts) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicy")) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicyBinding")) }}
 {{- $configMapName := "d8-reserved-public-hosts" }}
