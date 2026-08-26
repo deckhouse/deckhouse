@@ -45,16 +45,6 @@ const (
 	imagesDigestsKey           = "images_digests.json"
 )
 
-// buildInput collects the bootstrap input of a NodeGroup and mints the token the
-// nodes of that group join with.
-func (r *Reconciler) buildInput(ctx context.Context, ng *deckhousev1.NodeGroup, resolved derived_status.ResolvedNodeGroup) (bootstrap.Input, error) {
-	token, err := EnsureToken(ctx, r.Client, ng.Name)
-	if err != nil {
-		return bootstrap.Input{}, err
-	}
-	return BuildInput(ctx, r.context, resolved, token)
-}
-
 // BuildInput collects everything the bootstrap templates read for one NodeGroup.
 // The readers are bashiblecontext's, not copies: ReadEndpoints alone carries the
 // pod-readiness rules a second implementation would drift from silently.

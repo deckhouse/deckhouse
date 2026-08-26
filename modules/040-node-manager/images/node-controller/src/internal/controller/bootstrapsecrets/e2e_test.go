@@ -89,7 +89,10 @@ var _ = Describe("Bootstrap secrets controller", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(validationErr).To(BeEmpty())
 
-		in, err := r.buildInput(suiteCtx, ng, resolved)
+		token, err := EnsureToken(suiteCtx, k8sClient, ng.Name)
+		Expect(err).NotTo(HaveOccurred())
+
+		in, err := BuildInput(suiteCtx, r.context, resolved, token)
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(in.PackagesProxy).To(HaveKeyWithValue("token", testPackagesProxyToken))
@@ -115,6 +118,31 @@ var _ = Describe("Bootstrap secrets controller", func() {
 			err := k8sClient.Get(suiteCtx, manualSecretKey(name), secret)
 			return err == nil
 		}, negativeCheckDuration, eventuallyPoll).Should(BeFalse())
+	})
+
+	// An immutable group gets no bootstrap Secret here, yet nodebootstrap renders the
+	// group's token into every machine's userdata (nodebootstrap/render.go:45) and mints
+	// none: mintToken is the only creator of a bootstrap-token Secret left in the repo.
+	It("mints a bootstrap token for an immutable CloudEphemeral group", func() {
+		name := testenv.UniqueName("immutable")
+		ng := staticNodeGroup(name)
+		ng.Spec.NodeType = deckhousev1.NodeTypeCloudEphemeral
+		ng.Spec.SystemType = deckhousev1.SystemTypeImmutable
+		ng.Spec.CloudInstances = &deckhousev1.CloudInstancesSpec{
+			ClassReference: deckhousev1.ClassReference{Kind: "DVPInstanceClass", Name: "does-not-matter"},
+			MinPerZone:     1,
+			MaxPerZone:     1,
+			Zones:          []string{"zone-a"},
+		}
+		createNodeGroup(ng)
+
+		Eventually(func(g Gomega) {
+			tokens := &corev1.SecretList{}
+			g.Expect(k8sClient.List(suiteCtx, tokens,
+				client.InNamespace(nodecommon.KubeSystemNamespace),
+				client.MatchingLabels{nodecommon.BootstrapTokenNodeGroupLabel: name})).To(Succeed())
+			g.Expect(tokens.Items).NotTo(BeEmpty())
+		}, eventuallyTimeout, eventuallyPoll).Should(Succeed())
 	})
 
 	// The other half of "no Secret, and here is why": a group the cloud checks
