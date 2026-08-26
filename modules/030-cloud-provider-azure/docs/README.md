@@ -12,6 +12,7 @@ Features of the `cloud-provider-azure` module:
   - creates load balancers for Services of the LoadBalancer type;
   - updates cluster node metadata and removes from Kubernetes nodes that no longer exist in Azure.
 - Provisioning disks via the Azure Disk CSI driver (`disk.csi.azure.com`) and creating StorageClasses for Azure disk types so that PersistentVolumes can be requested from the cluster.
+- Provisioning base infrastructure and CloudPermanent nodes using the [Terraform/OpenTofu provider](/products/kubernetes-platform/documentation/v1/architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-azure.html#module-interactions) `hashicorp/azurerm`.
 - Provisioning CloudEphemeral nodes via Machine Controller Manager (MCM). Virtual machine parameters are set in the [AzureInstanceClass](/modules/cloud-provider-azure/cr.html#azureinstanceclass) resource.
 - Registering with [`node-manager`](/modules/node-manager/) so that [AzureInstanceClass](/modules/cloud-provider-azure/cr.html#azureinstanceclass) can be used when describing a [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 - Enabling CNI for new clusters automatically. By default, [`cni-cilium`](/modules/cni-cilium/) is used.

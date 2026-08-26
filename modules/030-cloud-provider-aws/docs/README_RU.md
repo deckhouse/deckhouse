@@ -12,6 +12,7 @@ description: "Управление облачными ресурсами в Deck
   - создаёт балансировщики нагрузки для Service с типом LoadBalancer;
   - актуализирует метаданные узлов кластера и удаляет из Kubernetes узлы, которых больше нет в AWS.
 - Заказ дисков через CSI-драйвер EBS (`ebs.csi.aws.com`) и создание StorageClass для типов томов AWS, чтобы из кластера можно было заказывать PersistentVolume.
+- Заказ базовой инфраструктуры и CloudPermanent-узлов с помощью [Terraform/OpenTofu-провайдера](/products/kubernetes-platform/documentation/v1/architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-aws.html#взаимодействия-модуля) `hashicorp/aws`.
 - Заказ CloudEphemeral-узлов через Machine Controller Manager (MCM). Параметры виртуальных машин задаются в ресурсе [AWSInstanceClass](/modules/cloud-provider-aws/cr.html#awsinstanceclass).
 - Регистрация в модуле [`node-manager`](/modules/node-manager/), чтобы [AWSInstanceClass](/modules/cloud-provider-aws/cr.html#awsinstanceclass) можно было указывать при описании [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 - Автоматическое включение CNI для новых кластеров. По умолчанию используется [`cni-cilium`](/modules/cni-cilium/).

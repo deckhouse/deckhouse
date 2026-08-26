@@ -11,6 +11,7 @@ Features of the `cloud-provider-vsphere` module:
   - creates network routes for the `PodNetwork` network on the vSphere side;
   - updates virtual machine and Kubernetes node metadata and removes from Kubernetes nodes that no longer exist in vSphere.
 - Provisioning disks via CSI on datastore. By default, CNS volumes with online resize are used. First-Class Disk (FCD) mode is available as legacy and is configured with the [`compatibilityFlag`](/modules/cloud-provider-vsphere/configuration.html#parameters-storageclass-compatibilityflag) parameter.
+- Provisioning base infrastructure and CloudPermanent nodes using the [Terraform/OpenTofu provider](/products/kubernetes-platform/documentation/v1/architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-vsphere.html#module-interactions) `hashicorp/vsphere`.
 - Provisioning CloudEphemeral nodes via Machine Controller Manager (MCM). Virtual machine parameters are set in the [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) resource.
 - Registering with [`node-manager`](/modules/node-manager/) so that [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) can be used when describing a [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 - Enabling CNI for new clusters automatically. By default, [`cni-cilium`](/modules/cni-cilium/) is used.

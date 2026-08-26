@@ -11,6 +11,7 @@ description: "Управление облачными ресурсами в Deck
   - актуализирует метаданные серверов OpenStack и узлов Kubernetes и удаляет из Kubernetes узлы, которых больше нет в OpenStack;
   - создаёт балансировщики нагрузки (Octavia) для Service с типом LoadBalancer.
 - Заказ блочных дисков через CSI-драйвер Cinder (`cinder.csi.openstack.org`). Manila (filesystem) не поддерживается. CSI-драйвер Cinder поддерживает повторную аутентификацию в OpenStack с обновлением сервисного каталога, что повышает устойчивость длительно работающих подов с томами.
+- Заказ базовой инфраструктуры и CloudPermanent-узлов с помощью [Terraform/OpenTofu-провайдера](/products/kubernetes-platform/documentation/v1/architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-openstack.html#взаимодействия-модуля) `terraform-provider-openstack/openstack`.
 - Заказ CloudEphemeral-узлов через Machine Controller Manager (MCM) или Cluster API (CAPI). Параметры виртуальных машин задаются в ресурсе [OpenStackInstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass).
 - Регистрация в модуле [`node-manager`](/modules/node-manager/), чтобы [OpenStackInstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass) можно было указывать при описании [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 - Автоматическое включение CNI для новых кластеров. По умолчанию используется [`cni-cilium`](/modules/cni-cilium/). Режим сети зависит от параметра [`podNetworkMode`](/modules/cloud-provider-openstack/configuration.html#parameters-podnetworkmode).

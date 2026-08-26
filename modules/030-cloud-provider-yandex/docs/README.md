@@ -12,6 +12,7 @@ Features of the `cloud-provider-yandex` module:
   - creates Network Load Balancers and target groups for Services of the LoadBalancer type;
   - updates instance and Kubernetes node metadata and removes from Kubernetes nodes that no longer exist in Yandex Cloud.
 - Provisioning disks via the Yandex CSI driver (`yandex.csi.flant.com`) and creating StorageClasses for Yandex Cloud disk types so that PersistentVolumes can be requested from the cluster.
+- Provisioning base infrastructure and CloudPermanent nodes using the [Terraform/OpenTofu provider](/products/kubernetes-platform/documentation/v1/architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-yandex.html#module-interactions) `yandex-cloud/yandex`.
 - Provisioning CloudEphemeral nodes via Machine Controller Manager (MCM) or Cluster API (CAPI). Virtual machine parameters are set in the [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass) resource.
 - Registering with [`node-manager`](/modules/node-manager/) so that [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass) can be used when describing a [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 - Enabling CNI for new clusters automatically. Starting with DKP 1.76, [`cni-cilium`](/modules/cni-cilium/) is used by default.
