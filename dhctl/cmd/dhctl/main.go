@@ -279,6 +279,10 @@ func registerOnShutdown(title string, action onShutdownFunc) {
 	tomb.RegisterOnShutdown(title, action)
 }
 
+func isCompletionInvocation(args []string) bool {
+	return len(args) > 0 && strings.HasPrefix(args[0], "--completion")
+}
+
 func main() {
 	appContext := context.Background()
 
@@ -286,9 +290,11 @@ func main() {
 
 	initGlobalVars()
 
-	if err := telemetry.Bootstrap(appContext); err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
-		os.Exit(1)
+	if !isCompletionInvocation(os.Args[1:]) {
+		if err := telemetry.Bootstrap(appContext); err != nil {
+			fmt.Fprintln(os.Stderr, err.Error())
+			os.Exit(1)
+		}
 	}
 
 	registerOnShutdown("Restore terminal if needed", restoreTerminal())
