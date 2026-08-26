@@ -209,11 +209,13 @@ func (r *metadataReader) untarMetadata(rc io.Reader) error {
 			continue
 		}
 
-		// All known metadata files captured — skip remaining tar entries.
+		// All known metadata files captured — skip remaining tar entries. The
+		// legacy settings name never satisfies the exit: settings.yaml may still
+		// come later in the tar and must win over it.
 		if r.versionReader.Len() > 0 &&
 			r.changelogReader.Len() > 0 &&
 			(r.packageReader.Len() > 0 || r.moduleReader.Len() > 0) &&
-			(r.settingsReader.Len() > 0 || r.legacySettingsReader.Len() > 0) &&
+			r.settingsReader.Len() > 0 &&
 			r.valuesReader.Len() > 0 {
 			return nil
 		}
