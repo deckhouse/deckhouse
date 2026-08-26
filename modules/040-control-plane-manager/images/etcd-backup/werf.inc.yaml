@@ -13,24 +13,6 @@ import:
   add: /etcdctl
   to: /bin/etcdctl
   before: setup
-- from: {{ index $.Images "tools/bash" }}
-  add: /usr/bin/bash
-  to: /bin/bash
-  before: setup
-- from: {{ index $.Images "tools/bash" }}
-  add: /usr/bin/bash
-  to: /bin/sh
-  before: setup
-- from: {{ index $.Images "tools/gawk" }}
-  add: /
-  to: /
-  includePaths:
-  - usr/bin/awk
-  - usr/bin/gawk
-  before: setup
-- from: {{ index $.Images "tools/tar" }}
-  add: /usr/bin/tar
-  before: setup
 - from: {{ index $.Images "tools/coreutils" }}
   add: /
   to: /
@@ -53,5 +35,5 @@ from: {{ index $.Images "builder/distroless" }}
 final: false
 shell:
   beforeInstall:
-  - pm install gzip -d /out
+  - pm install bash gzip tar gawk -d /out
 {{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}
