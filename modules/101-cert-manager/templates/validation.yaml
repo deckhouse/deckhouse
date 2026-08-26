@@ -1,3 +1,18 @@
+{{- /*
+  Close the namespaced-Issuer SSRF sink (arbitrary ACME/Vault/Venafi URL → GET from
+  cert-manager) without breaking published contracts:
+
+  * FAQ / CERTIFICATES: Issuer vault.server = http://vault.<ns>.svc.cluster.local:8200
+  * Istio examples:      Issuer vault.server = https://vault.example.com:8200
+  * CRD rfc2136.nameserver: IP or hostname, IPv6 in [brackets]
+  * Editor writes issuers, not clusterissuers — do not push private Vault onto ClusterIssuer
+
+  ACME directory and acme-dns stay public HTTPS: namespaced private ACME is not a
+  documented happy path (USAGE.md uses ClusterIssuer letsencrypt / selfsigned).
+
+  No paramKind: a parameter type makes every apiserver, including aggregated ones,
+  open a cluster-wide informer and fail readiness if they cannot list it.
+*/}}
 {{- $vapExists := or (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicy")) ((.Values.global.discovery.apiVersions | default list) | has "admissionregistration.k8s.io/v1/ValidatingAdmissionPolicy") }}
 {{- $vapbExists := or (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicyBinding")) ((.Values.global.discovery.apiVersions | default list) | has "admissionregistration.k8s.io/v1/ValidatingAdmissionPolicyBinding") }}
 {{- if and $vapExists $vapbExists }}
@@ -28,21 +43,42 @@ spec:
       expression: 'has(object.spec.venafi) && has(object.spec.venafi.cloud) && has(object.spec.venafi.cloud.url) ? object.spec.venafi.cloud.url : ""'
   validations:
     - expression: |
-        [variables.acmeServer, variables.vaultServer, variables.venafiTppURL, variables.venafiCloudURL].all(u,
+        variables.acmeServer.size() == 0 || (
+          variables.acmeServer.startsWith("https://")
+          && !variables.acmeServer.contains("@")
+          && !variables.acmeServer.startsWith("https://[")
+          && !variables.acmeServer.matches("^https://[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+([:/]|$)")
+          && !variables.acmeServer.matches("(?i)^https://localhost([:/]|$)")
+          && !variables.acmeServer.matches("(?i)^https://metadata\\.google\\.internal([:/]|$)")
+          && !variables.acmeServer.matches("(?i)^https://[^/]*\\.svc([:/.]|$)")
+          && !variables.acmeServer.matches("(?i)^https://[^/]*\\.cluster\\.local([:/]|$)")
+          && variables.acmeServer.matches("^https://[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)+(:[0-9]+)?(/.*)?$")
+        )
+      reason: Forbidden
+      message: "Namespaced Issuer ACME server must be a public HTTPS hostname. Use a ClusterIssuer for a private ACME certificate authority."
+    - expression: |
+        [variables.vaultServer, variables.venafiTppURL, variables.venafiCloudURL].all(u,
           u.size() == 0 || (
-            u.startsWith("https://")
-            && !u.contains("@")
-            && !u.startsWith("https://[")
-            && !u.matches("^https://[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+([:/]|$)")
-            && !u.matches("(?i)^https://localhost([:/]|$)")
-            && !u.matches("(?i)^https://metadata\\.google\\.internal([:/]|$)")
-            && !u.matches("(?i)^https://[^/]*\\.svc([:/.]|$)")
-            && !u.matches("(?i)^https://[^/]*\\.cluster\\.local([:/]|$)")
-            && u.matches("^https://[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)+(:[0-9]+)?(/.*)?$")
+            !u.contains("@")
+            && !u.matches("(?i)^https?://\\[")
+            && !u.matches("(?i)^https?://localhost([:/]|$)")
+            && !u.matches("(?i)^https?://127\\.")
+            && !u.matches("(?i)^https?://0\\.0\\.0\\.0([:/]|$)")
+            && !u.matches("(?i)^https?://169\\.254\\.")
+            && !u.matches("(?i)^https?://metadata\\.google\\.internal([:/]|$)")
+            && !u.matches("(?i)^https?://kubernetes\\.default\\.svc([:/.]|$)")
+            && (
+              u.matches("(?i)^https?://[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)*\\.svc(\\.cluster\\.local)?(:[0-9]+)?(/.*)?$")
+              || (
+                u.startsWith("https://")
+                && !u.matches("^https://[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+([:/]|$)")
+                && u.matches("^https://[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)+(:[0-9]+)?(/.*)?$")
+              )
+            )
           )
         )
       reason: Forbidden
-      message: "Namespaced Issuer ACME, Vault, and Venafi endpoints must be public HTTPS hostnames. Use a ClusterIssuer for a private certificate authority."
+      message: "Namespaced Issuer Vault/Venafi endpoints must be an in-cluster Service DNS name or a public HTTPS hostname. Loopback, link-local, metadata, and kubernetes.default.svc are not allowed."
     - expression: |
         !has(object.spec.acme) || !has(object.spec.acme.solvers) || object.spec.acme.solvers.all(s,
           !has(s.dns01) || (
@@ -61,16 +97,22 @@ spec:
             ))
             && (!has(s.dns01.rfc2136) || !has(s.dns01.rfc2136.nameserver) || (
               s.dns01.rfc2136.nameserver.size() == 0 || (
-                !s.dns01.rfc2136.nameserver.startsWith("[")
-                && !s.dns01.rfc2136.nameserver.matches("^[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+(:[0-9]+)?$")
-                && !s.dns01.rfc2136.nameserver.matches("(?i)^localhost(:[0-9]+)?$")
-                && s.dns01.rfc2136.nameserver.matches("^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)+(:[0-9]+)?$")
+                !s.dns01.rfc2136.nameserver.matches("(?i)^localhost(:[0-9]+)?$")
+                && !s.dns01.rfc2136.nameserver.matches("^127\\.")
+                && !s.dns01.rfc2136.nameserver.matches("^0\\.0\\.0\\.0(:[0-9]+)?$")
+                && !s.dns01.rfc2136.nameserver.matches("^169\\.254\\.")
+                && !s.dns01.rfc2136.nameserver.matches("(?i)^\\[::1\\]")
+                && (
+                  s.dns01.rfc2136.nameserver.matches("^[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+(:[0-9]+)?$")
+                  || s.dns01.rfc2136.nameserver.matches("^\\[[0-9A-Fa-f:]+\\](:[0-9]+)?$")
+                  || s.dns01.rfc2136.nameserver.matches("^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)+(:[0-9]+)?$")
+                )
               )
             ))
           )
         )
       reason: Forbidden
-      message: "Namespaced Issuer DNS01 solver endpoints must be public hostnames. Use a ClusterIssuer for a private certificate authority."
+      message: "Namespaced Issuer acme-dns host must be a public HTTPS hostname. rfc2136 nameserver may be an IP or hostname as in the CRD, except loopback and link-local/metadata."
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
 kind: ValidatingAdmissionPolicyBinding
