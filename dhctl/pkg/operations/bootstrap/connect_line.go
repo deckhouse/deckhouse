@@ -32,27 +32,44 @@ func (b *ClusterBootstrapper) printHowToReachTheCluster(ctx context.Context, kub
 	// terminal. The bashible path tags its SSH line the same way (steps_ssh.go).
 	logger.InfoContext(ctx, fmt.Sprintf("Admin kubeconfig written to %s — cluster-admin credentials, "+
 		"and on a cluster of immutable nodes the only way in.", kubeconfigPath), dhlog.ShowInCompacted())
-	logger.InfoContext(ctx, fmt.Sprintf("To use the cluster:  export KUBECONFIG=%s && kubectl get nodes", kubeconfigPath),
-		dhlog.ShowInCompacted())
-
-	// With a bastion that address is reachable from the bastion and nowhere else,
-	// so the line above is true only inside the network. Print how to get there
-	// rather than leave the operator to guess the shape of the tunnel.
-	if line := bastionProxyLine(bastionConfig(b.SSHProviderInitializer.GetConfig()), kubeconfigPath); line != "" {
-		logger.InfoContext(ctx, "The master has no public address; reach it through the bastion first:",
+	// With a bastion the node's address is reachable from the bastion and nowhere
+	// else, so the plain export is true only inside that network.
+	tunnel := bastionTunnelCommand(bastionConfig(b.SSHProviderInitializer.GetConfig()))
+	if tunnel == "" {
+		logger.InfoContext(ctx, fmt.Sprintf("To use the cluster:  export KUBECONFIG=%s && kubectl get nodes", kubeconfigPath),
 			dhlog.ShowInCompacted())
-		// ConnectionString rather than ShowInCompacted: the terminal UI pins it as
-		// a milestone and repeats it in the closing summary, which is where an
-		// operator looks for it after a long run.
-		logger.InfoContext(ctx, "  "+line, dhlog.ConnectionString())
+		return
+	}
+
+	// The tunnel is its own step on purpose: printed as one command with kubectl
+	// it reads as something to repeat before every call, and an operator who
+	// repeats it collects a background ssh per invocation.
+	logger.InfoContext(ctx, "The master has no public address. Open a tunnel through the bastion — once, it stays up in the background:",
+		dhlog.ShowInCompacted())
+	// ConnectionString rather than ShowInCompacted: the terminal UI pins it as
+	// a milestone and repeats it in the closing summary, which is where an
+	// operator looks for it after a long run.
+	logger.InfoContext(ctx, "  "+tunnel, dhlog.ConnectionString())
+	logger.InfoContext(ctx, "Then, in any shell:", dhlog.ShowInCompacted())
+	for _, line := range []string{
+		fmt.Sprintf("export KUBECONFIG=%s", kubeconfigPath),
+		fmt.Sprintf("export HTTPS_PROXY=socks5://127.0.0.1:%d", socksPort),
+		"kubectl get nodes",
+	} {
+		logger.InfoContext(ctx, "  "+line, dhlog.ShowInCompacted())
 	}
 }
 
-// bastionProxyLine builds the commands that make the saved kubeconfig usable
-// from outside, or "" when the master is directly reachable. A SOCKS proxy over
-// the bastion carries the kubeconfig's own address, so the file stays exactly as
-// the node wrote it: a retargeted server outlives the tunnel it was written for.
-func bastionProxyLine(cfg *sshconfig.Config, kubeconfigPath string) string {
+// socksPort is where the tunnel listens on the operator's own machine. 1080 is
+// the conventional SOCKS port, and unlike 6443 it is not one a local cluster of
+// their own would already be holding.
+const socksPort = 1080
+
+// bastionTunnelCommand builds the one command that makes the saved kubeconfig
+// usable from outside, or "" when the master is directly reachable. A SOCKS
+// proxy carries the kubeconfig's own address, so the file stays exactly as the
+// node wrote it: a retargeted server outlives the tunnel it was written for.
+func bastionTunnelCommand(cfg *sshconfig.Config) string {
 	if cfg == nil {
 		return ""
 	}
@@ -66,9 +83,5 @@ func bastionProxyLine(cfg *sshconfig.Config, kubeconfigPath string) string {
 		port = fmt.Sprintf(" -p %d", *cfg.BastionPort)
 	}
 
-	// 1080 is the conventional SOCKS port, and the proxy is opened on the
-	// operator's own machine, which may well be running a cluster of its own.
-	const localPort = 1080
-	return fmt.Sprintf("ssh -f -N%s -D %d %s  &&  HTTPS_PROXY=socks5://127.0.0.1:%d kubectl --kubeconfig %s get nodes",
-		port, localPort, bastion, localPort, kubeconfigPath)
+	return fmt.Sprintf("ssh -f -N%s -D %d %s", port, socksPort, bastion)
 }
