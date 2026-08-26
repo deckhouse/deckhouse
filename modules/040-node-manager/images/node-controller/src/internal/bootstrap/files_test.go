@@ -69,3 +69,17 @@ func TestLoadFilesFailsWithoutConfigMap(t *testing.T) {
 	_, err := LoadFiles(t.Context(), c)
 	require.Error(t, err)
 }
+
+func TestLoadFilesFailsWithoutLibrary(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(&corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "d8-cloud-instance-manager", Name: TemplatesConfigMapName},
+		Data:       map[string]string{"bb_node_ip.sh.tpl": "IP"},
+	}).Build()
+
+	// A ConfigMap without lib.sh.tpl is as fatal as a missing one: every other
+	// template is rendered on top of the library.
+	_, err := LoadFiles(t.Context(), c)
+	require.Error(t, err)
+}
