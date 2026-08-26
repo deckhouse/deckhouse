@@ -377,7 +377,24 @@ func (c *MasterNodeGroupController) addNewNodesToSSH(ctx *context.Context, maste
 	return nil
 }
 
+// sshProviderForHooks builds the provider the control-plane hooks reach nodes with.
+// An immutable master is never registered as an SSH host, so there is nothing to
+// build: the lookup fails on a master-hosts cache that was never written.
+func (c *MasterNodeGroupController) sshProviderForHooks(ctx *context.Context) (libcon.SSHProvider, error) {
+	if c.immutable {
+		return nil, nil
+	}
+
+	return ctx.SSHProviderInitializer.GetSSHProvider(ctx.Ctx())
+}
+
 func (c *MasterNodeGroupController) addNewNodesToCache(ctx *context.Context, masterIPForSSHList []session.Host) {
+	// An immutable node answers no sshd. A cached address makes every later converge
+	// see an SSH-reachable cluster and wait for bashible on a machine without it.
+	if c.immutable {
+		return
+	}
+
 	dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Updating master hosts cache with %d new masters", len(masterIPForSSHList)))
 
 	// Get current master hosts from cache
@@ -502,29 +519,7 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 
 	// Update master hosts IP cache after successful master node creation/update
 	if outputs.MasterIPForSSH != "" {
-		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Updating master hosts cache: node %s got IP %s", nodeName, outputs.MasterIPForSSH))
-
-		// Get current master hosts from cache
-		stateCache := ctx.StateCache()
-		currentHosts, err := state.GetMasterHostsIPs(ctx.Ctx(), stateCache)
-		if err != nil {
-			dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Could not load current master hosts from cache (this is OK for first master): %v", err))
-			currentHosts = []session.Host{}
-		}
-
-		// Create map from current hosts for easier manipulation
-		hostsMap := make(map[string]string)
-		for _, host := range currentHosts {
-			hostsMap[host.Name] = host.Host
-		}
-
-		hostsMap[nodeName] = outputs.MasterIPForSSH
-
-		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Saving updated master hosts to cache: %v", hostsMap))
-
-		state.SaveMasterHostsToCache(ctx.Ctx(), stateCache, hostsMap)
-
-		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Successfully updated master hosts cache with node %s IP %s. hostsMap: %v", nodeName, outputs.MasterIPForSSH, hostsMap))
+		c.addNewNodesToCache(ctx, []session.Host{{Host: outputs.MasterIPForSSH, Name: nodeName}})
 	} else {
 		dhlog.FromContext(ctx.Ctx()).WarnContext(ctx.Ctx(), fmt.Sprintf("No SSH IP received for master node %s, cache not updated", nodeName))
 	}
@@ -554,7 +549,7 @@ func (c *MasterNodeGroupController) newHookForUpdatePipeline(ctx *context.Contex
 		}
 	}
 
-	sshProvider, err := ctx.SSHProviderInitializer.GetSSHProvider(ctx.Ctx())
+	sshProvider, err := c.sshProviderForHooks(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("get ssh provider: %w", err)
 	}
@@ -595,7 +590,7 @@ func (c *MasterNodeGroupController) deleteNodes(ctx *context.Context, nodesToDel
 			nodesToDelete = append(nodesToDelete, nodeInfo.name)
 		}
 
-		sshProvider, err := ctx.SSHProviderInitializer.GetSSHProvider(ctx.Ctx())
+		sshProvider, err := c.sshProviderForHooks(ctx)
 		if err != nil {
 			return err
 		}
