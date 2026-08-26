@@ -49,8 +49,8 @@ func LoadFiles(ctx context.Context, r client.Reader) (*Files, error) {
 	if err := r.Get(ctx, key, cm); err != nil {
 		return nil, fmt.Errorf("read bootstrap templates %s: %w", key, err)
 	}
-	if len(cm.Data) == 0 {
-		return nil, fmt.Errorf("bootstrap templates %s carry no files", key)
+	if cm.Data["lib.sh.tpl"] == "" {
+		return nil, fmt.Errorf("bootstrap templates %s carry no lib.sh.tpl", key)
 	}
 	return &Files{text: cm.Data, binary: cm.BinaryData}, nil
 }
