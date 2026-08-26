@@ -55,3 +55,41 @@ func TestAbortNeverNamesKubeAPI(t *testing.T) {
 		return true
 	})
 }
+
+// The static abort suite is SSHCredential plus SudoAllowed, and an immutable machine offers no
+// sshd: with no hosts GetNodeInterface hands back the installer container, so the suite would
+// check the container and report it as the cluster. Checked on the source for the same reason as
+// the invariant above — what abort returns does not say which suite it ran.
+func TestStaticAbortSuiteIsNotRunForImmutableMachines(t *testing.T) {
+	t.Parallel()
+
+	const abortFile = "cluster-bootstrapper-abort.go"
+
+	file, err := parser.ParseFile(token.NewFileSet(), abortFile, nil, 0)
+	require.NoError(t, err)
+
+	var guarded bool
+	ast.Inspect(file, func(n ast.Node) bool {
+		branch, ok := n.(*ast.IfStmt)
+		if !ok || !namesIdent(branch.Body, "NewStaticAbortSuite") {
+			return true
+		}
+		guarded = namesIdent(branch.Cond, "immutableMaster")
+		return false
+	})
+
+	require.True(t, guarded,
+		"%s runs the SSH-based static abort suite without excluding an immutable master", abortFile)
+}
+
+// namesIdent reports whether n mentions the given identifier anywhere inside it.
+func namesIdent(n ast.Node, name string) bool {
+	var found bool
+	ast.Inspect(n, func(node ast.Node) bool {
+		if ident, ok := node.(*ast.Ident); ok && ident.Name == name {
+			found = true
+		}
+		return !found
+	})
+	return found
+}
