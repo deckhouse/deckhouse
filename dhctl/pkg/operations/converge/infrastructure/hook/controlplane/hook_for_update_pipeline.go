@@ -148,8 +148,11 @@ func (h *HookForUpdatePipeline) BeforeAction(ctx context.Context, runner infrast
 		return false, fmt.Errorf("failed to get master node pipeline outputs: %w", err)
 	}
 
+	// An immutable node is retired over the Kubernetes API alone, so a missing SSH
+	// address says nothing about whether it can be done. Skipping on it would recreate
+	// the VM while the old node is still a voting etcd member.
 	masterIP := outputs.MasterIPForSSH
-	if masterIP == "" {
+	if masterIP == "" && !h.immutableNode {
 		h.oldMasterIPForSSH = ""
 		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Got empty master IP for ssh for node %s.", h.nodeToConverge))
 		return false, nil
