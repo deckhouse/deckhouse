@@ -1,5 +1,5 @@
 diff --git a/server/handlers.go b/server/handlers.go
-index 166bc9a..2b704ee 100644
+index 166bc9a..5834abb 100644
 --- a/server/handlers.go
 +++ b/server/handlers.go
 @@ -445,8 +445,10 @@ func (s *Server) handlePasswordLogin(w http.ResponseWriter, r *http.Request) {
@@ -20,7 +20,7 @@ index 166bc9a..2b704ee 100644
  			} else {
  				passwordFound = true
 -				if s.passwordPolicy.IsPasswordLocked(p) {
-+				if passwordHasActiveLock(p.LockedUntil) {
++				if lockedUntilIsActive(p.LockedUntil) {
  					s.logger.WarnContext(r.Context(),
  						"login attempt for locked account",
  						"username", username,
@@ -45,15 +45,95 @@ index 166bc9a..2b704ee 100644
  			switch {
  			case sErr == nil:
 -				if s.passwordPolicy.IsOfflineSessionLocked(session) {
-+				if passwordHasActiveLock(session.LockedUntil) {
++				if lockedUntilIsActive(session.LockedUntil) {
  					s.logger.WarnContext(r.Context(),
  						"login attempt for locked account",
  						"username", username,
+@@ -1536,6 +1539,59 @@ func (s *Server) handleUserInfo(w http.ResponseWriter, r *http.Request) {
+ 	w.Write(claims)
+ }
+ 
++// accountHasActiveLock reports whether an administrator lock is in force for
++// this account. Local users store LockedUntil on Password; LDAP/Crowd store
++// it on OfflineSessions. Missing objects are treated as unlocked.
++func (s *Server) accountHasActiveLock(ctx context.Context, userID, email, connID string) (bool, error) {
++	if email != "" {
++		p, err := s.storage.GetPassword(ctx, email)
++		if err != nil && !errors.Is(err, storage.ErrNotFound) {
++			return false, err
++		}
++		if err == nil && lockedUntilIsActive(p.LockedUntil) {
++			return true, nil
++		}
++	}
++	if userID != "" && connID != "" {
++		session, err := s.storage.GetOfflineSessions(ctx, userID, connID)
++		if err != nil && !errors.Is(err, storage.ErrNotFound) {
++			return false, err
++		}
++		if err == nil && lockedUntilIsActive(session.LockedUntil) {
++			return true, nil
++		}
++	}
++	return false, nil
++}
++
++func firstNonEmpty(values ...string) string {
++	for _, v := range values {
++		if v != "" {
++			return v
++		}
++	}
++	return ""
++}
++
++func (s *Server) rejectIfAccountLocked(ctx context.Context, w http.ResponseWriter, userID, email, connID, username string) bool {
++	locked, err := s.accountHasActiveLock(ctx, userID, email, connID)
++	if err != nil {
++		s.logger.ErrorContext(ctx, "failed to read lock state", "err", err, "connector_id", connID)
++		s.tokenErrHelper(w, errServerError, "", http.StatusInternalServerError)
++		return true
++	}
++	if !locked {
++		return false
++	}
++	s.logger.WarnContext(ctx, "token request for locked account",
++		"username", username,
++		"email", email,
++		"connector_id", connID,
++	)
++	s.tokenErrHelper(w, errAccessDenied, "Account locked", http.StatusTooManyRequests)
++	return true
++}
++
+ func (s *Server) handlePasswordGrant(w http.ResponseWriter, r *http.Request, client storage.Client) {
+ 	ctx := r.Context()
+ 	// Parse the fields
+@@ -1620,6 +1676,9 @@ func (s *Server) handlePasswordGrant(w http.ResponseWriter, r *http.Request, cli
+ 		s.tokenErrHelper(w, errInvalidRequest, "Could not login user", http.StatusBadRequest)
+ 		return
+ 	}
++	if s.rejectIfAccountLocked(ctx, w, identity.UserID, firstNonEmpty(identity.Email, username), connID, username) {
++		return
++	}
+ 	if !ok {
+ 		s.logger.ErrorContext(r.Context(), "failed login attempt: Invalid credentials.",
+ 			"user", username,
+@@ -1833,6 +1892,9 @@ func (s *Server) handleTokenExchange(w http.ResponseWriter, r *http.Request, cli
+ 		s.tokenErrHelper(w, errAccessDenied, "", http.StatusUnauthorized)
+ 		return
+ 	}
++	if s.rejectIfAccountLocked(ctx, w, identity.UserID, identity.Email, connID, identity.Username) {
++		return
++	}
+ 
+ 	claims := storage.Claims{
+ 		UserID:            identity.UserID,
 diff --git a/server/handlers_test.go b/server/handlers_test.go
-index 77f0c57..46617ce 100644
+index 77f0c57..2cc320b 100644
 --- a/server/handlers_test.go
 +++ b/server/handlers_test.go
-@@ -18,6 +18,7 @@ import (
+@@ -18,9 +18,11 @@ import (
  	"github.com/AppsFlyer/go-sundheit/checks"
  	"github.com/coreos/go-oidc/v3/oidc"
  	"github.com/stretchr/testify/require"
@@ -61,7 +141,11 @@ index 77f0c57..46617ce 100644
  	"golang.org/x/oauth2"
  
  	"github.com/dexidp/dex/connector"
-@@ -611,6 +612,148 @@ func TestHandlePasswordLoginWithPasswordPolicyNonExistingUser(t *testing.T) {
++	"github.com/dexidp/dex/server/internal"
+ 	"github.com/dexidp/dex/storage"
+ )
+ 
+@@ -611,6 +613,269 @@ func TestHandlePasswordLoginWithPasswordPolicyNonExistingUser(t *testing.T) {
  	require.Equal(t, http.StatusUnauthorized, rr.Code, "expected 401 for non-existing user, got %d", rr.Code)
  }
  
@@ -207,6 +291,127 @@ index 77f0c57..46617ce 100644
 +	require.Equal(t, http.StatusTooManyRequests, rr.Code)
 +}
 +
++func TestHandlePasswordGrantHonorsAdminLock(t *testing.T) {
++	ctx := t.Context()
++	future := time.Now().Add(time.Hour)
++	past := time.Now().Add(-time.Minute)
++
++	tests := []struct {
++		name         string
++		lockedUntil  *time.Time
++		expectedCode int
++	}{
++		{
++			name:         "administrator lock blocks password grant",
++			lockedUntil:  &future,
++			expectedCode: http.StatusTooManyRequests,
++		},
++		{
++			name:         "expired lock allows password grant",
++			lockedUntil:  &past,
++			expectedCode: http.StatusOK,
++		},
++	}
++
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			httpServer, s := newTestServer(t, func(c *Config) {
++				c.PasswordConnector = "test"
++				c.Now = time.Now
++			})
++			defer httpServer.Close()
++			mockConnectorDataTestStorage(t, s.storage)
++			require.NoError(t, s.storage.CreateOfflineSessions(ctx, storage.OfflineSessions{
++				UserID:      "0-385-28089-0",
++				ConnID:      "test",
++				Email:       "kilgore@kilgore.trout",
++				Refresh:     map[string]*storage.RefreshTokenRef{},
++				LockedUntil: tc.lockedUntil,
++			}))
++
++			u, err := url.Parse(s.issuerURL.String())
++			require.NoError(t, err)
++			u.Path = path.Join(u.Path, "/token")
++			v := url.Values{}
++			v.Set("scope", "openid email")
++			v.Set("grant_type", "password")
++			v.Set("username", "test")
++			v.Set("password", "test")
++			req, err := http.NewRequest(http.MethodPost, u.String(), bytes.NewBufferString(v.Encode()))
++			require.NoError(t, err)
++			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
++			req.SetBasicAuth("test", "barfoo")
++			rr := httptest.NewRecorder()
++			s.ServeHTTP(rr, req)
++			require.Equal(t, tc.expectedCode, rr.Code, rr.Body.String())
++		})
++	}
++}
++
++func TestHandleRefreshTokenHonorsAdminLock(t *testing.T) {
++	ctx := t.Context()
++	now := time.Now()
++	until := now.Add(time.Hour)
++
++	httpServer, s := newTestServer(t, func(c *Config) {
++		c.RefreshTokenPolicy = &RefreshTokenPolicy{rotateRefreshTokens: false, reuseInterval: time.Hour, now: func() time.Time { return now }}
++		c.Now = func() time.Time { return now }
++	})
++	defer httpServer.Close()
++
++	require.NoError(t, s.storage.CreateClient(ctx, storage.Client{
++		ID:           "test",
++		Secret:       "barfoo",
++		RedirectURIs: []string{"foo://bar.com/"},
++		Name:         "dex client",
++	}))
++	require.NoError(t, s.storage.CreateConnector(ctx, storage.Connector{
++		ID:   "test",
++		Type: "mockCallback",
++		Name: "mockCallback",
++	}))
++	require.NoError(t, s.storage.CreateRefresh(ctx, storage.RefreshToken{
++		ID:          "test",
++		Token:       "bar",
++		Nonce:       "foo",
++		ClientID:    "test",
++		ConnectorID: "test",
++		Scopes:      []string{"openid", "email", "profile"},
++		CreatedAt:   now.UTC().Round(time.Millisecond),
++		LastUsed:    now.UTC().Round(time.Millisecond),
++		Claims: storage.Claims{
++			UserID:        "1",
++			Username:      "jane",
++			Email:         "jane@example.com",
++			EmailVerified: true,
++		},
++	}))
++	require.NoError(t, s.storage.CreateOfflineSessions(ctx, storage.OfflineSessions{
++		UserID:      "1",
++		ConnID:      "test",
++		Refresh:     map[string]*storage.RefreshTokenRef{"test": {ID: "test", ClientID: "test"}},
++		LockedUntil: &until,
++	}))
++
++	tokenData, err := internal.Marshal(&internal.RefreshToken{RefreshId: "test", Token: "bar"})
++	require.NoError(t, err)
++
++	u, err := url.Parse(s.issuerURL.String())
++	require.NoError(t, err)
++	u.Path = path.Join(u.Path, "/token")
++	form := url.Values{}
++	form.Set("grant_type", "refresh_token")
++	form.Set("refresh_token", tokenData)
++	req, err := http.NewRequest(http.MethodPost, u.String(), bytes.NewBufferString(form.Encode()))
++	require.NoError(t, err)
++	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
++	req.SetBasicAuth("test", "barfoo")
++	rr := httptest.NewRecorder()
++	s.ServeHTTP(rr, req)
++	require.Equal(t, http.StatusTooManyRequests, rr.Code, rr.Body.String())
++	require.Contains(t, rr.Body.String(), "Account locked")
++}
++
  func TestHandleConnectorCallbackWithSkipApproval(t *testing.T) {
  	ctx := t.Context()
  
@@ -236,7 +441,7 @@ index 37a42ae..fd768dc 100644
  
  func TestRecordOfflineSessionFailedAttempt_FirstFailureCreatesStub(t *testing.T) {
 diff --git a/server/passwordpolicy.go b/server/passwordpolicy.go
-index adf54fc..2b7758d 100644
+index adf54fc..69a797b 100644
 --- a/server/passwordpolicy.go
 +++ b/server/passwordpolicy.go
 @@ -342,14 +342,21 @@ type PasswordPolicy struct {
@@ -246,7 +451,7 @@ index adf54fc..2b7758d 100644
 -	return pp.lockout != nil && p.LockedUntil != nil && p.LockedUntil.After(time.Now())
 +	// An administrator can set LockedUntil without enabling passwordPolicy.lockout.
 +	// lockout only controls automatic lock after consecutive failed logins.
-+	return passwordHasActiveLock(p.LockedUntil)
++	return lockedUntilIsActive(p.LockedUntil)
  }
  
  // IsOfflineSessionLocked reports whether the given OfflineSessions object is
@@ -257,11 +462,54 @@ index adf54fc..2b7758d 100644
 +// an administrator lock that does not require passwordPolicy.lockout.
  func (pp PasswordPolicy) IsOfflineSessionLocked(o storage.OfflineSessions) bool {
 -	return pp.lockout != nil && o.LockedUntil != nil && o.LockedUntil.After(time.Now())
-+	return passwordHasActiveLock(o.LockedUntil)
++	return lockedUntilIsActive(o.LockedUntil)
 +}
 +
-+func passwordHasActiveLock(until *time.Time) bool {
++func lockedUntilIsActive(until *time.Time) bool {
 +	return until != nil && until.After(time.Now())
  }
  
  func (pp PasswordPolicy) IsMaxLoginAttemptsExeeded(attempts uint64) bool {
+diff --git a/server/refreshhandlers.go b/server/refreshhandlers.go
+index a263d8e..162fe87 100644
+--- a/server/refreshhandlers.go
++++ b/server/refreshhandlers.go
+@@ -43,6 +43,10 @@ func newBadRequestError(desc string) *refreshError {
+ 	return &refreshError{msg: errInvalidRequest, desc: desc, code: http.StatusBadRequest}
+ }
+ 
++func newAccountLockedRefreshError() *refreshError {
++	return &refreshError{msg: errAccessDenied, desc: "Account locked", code: http.StatusTooManyRequests}
++}
++
+ var (
+ 	invalidErr = newBadRequestError("Refresh token is invalid or has already been claimed by another client.")
+ 	expiredErr = newBadRequestError("Refresh token expired.")
+@@ -682,6 +686,27 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
+ 		return
+ 	}
+ 
++	locked, lockErr := s.accountHasActiveLock(
++		r.Context(),
++		rCtx.storageToken.Claims.UserID,
++		rCtx.storageToken.Claims.Email,
++		rCtx.storageToken.ConnectorID,
++	)
++	if lockErr != nil {
++		s.logger.ErrorContext(r.Context(), "failed to read lock state on refresh", "err", lockErr)
++		s.refreshTokenErrHelper(w, newInternalServerError())
++		return
++	}
++	if locked {
++		s.logger.WarnContext(r.Context(), "refresh denied: account locked",
++			"client_id", client.ID,
++			"email", rCtx.storageToken.Claims.Email,
++			"connector_id", rCtx.storageToken.ConnectorID,
++		)
++		s.refreshTokenErrHelper(w, newAccountLockedRefreshError())
++		return
++	}
++
+ 	newToken, ident, rerr := s.refreshTokenWithRetry(r.Context(), rCtx)
+ 	if rerr != nil {
+ 		s.refreshTokenErrHelper(w, rerr)

@@ -187,9 +187,16 @@ patch.
 Honor an administrator lock (`LockedUntil` on Password / OfflineSessions) even
 when `passwordPolicy` is unset or `passwordPolicy.lockout` is not configured.
 
+The lock is checked on the password login form, on `grant_type=password`
+(ROPC / basic-auth-proxy), on refresh-token requests, and on token exchange.
 `passwordPolicy.lockout` stays responsible only for automatic lockout after
 the configured number of consecutive failed login attempts. UserOperation
 `Lock` / `d8 iam user lock` no longer depend on that section.
+
+For a non-local connector (LDAP, Crowd, …) the login-form path now reads
+`OfflineSessions` on every attempt so an administrator lock is visible even
+when no password policy is configured. That is one extra storage GET on the
+authentication hot path.
 
 ### 998-fix-cve.patch
 
