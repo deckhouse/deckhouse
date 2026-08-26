@@ -113,6 +113,23 @@ func TestSyncVersionsFromImage(t *testing.T) {
 		assert.Empty(t, listVersionNames(t, cl))
 	})
 
+	t.Run("carries the disable options of a module.yaml module", func(t *testing.T) {
+		dir := t.TempDir()
+		writeModuleYAML(t, filepath.Join(dir, "900-echo"),
+			"name: echo\ndisable:\n  confirmation: true\n  message: \"fallback text\"\n  messages:\n    ru: \"ru text\"\n")
+
+		s, cl := newTestSyncer(t, "v1.80.0", dir)
+		require.NoError(t, s.Sync(ctx))
+
+		mpv := getVersion(t, cl, "embedded-echo-v1.80.0")
+		opts := mpv.Status.PackageMetadata.DisableOptions
+		require.NotNil(t, opts, "the module.yaml disable section must survive")
+		assert.True(t, opts.Confirmation)
+		require.NotNil(t, opts.Messages)
+		assert.Equal(t, "ru text", opts.Messages.Ru)
+		assert.Equal(t, "fallback text", opts.Messages.En, "the deprecated message fills the missing language")
+	})
+
 	t.Run("falls back to module.yaml and takes the weight from the dir prefix", func(t *testing.T) {
 		dir := t.TempDir()
 		writeModuleYAML(t, filepath.Join(dir, "910-parca"), "name: parca\nstage: Experimental\n")
