@@ -300,8 +300,8 @@ func TestAnImmutableMasterGetsItsOwnInstallSteps(t *testing.T) {
 
 	install := subPhases(immutable, InstallKubernetesPhase)
 	require.Equal(t, []OperationPhase{
-		OperationPhase(InstallKubernetesSubPhaseWaitForControlPlane),
-		OperationPhase(InstallKubernetesSubPhaseCollectCredentials),
+		OperationPhase(InstallKubernetesSubPhaseWaitForMasterInstall),
+		OperationPhase(InstallKubernetesSubPhaseGetClusterAccess),
 	}, install, "an immutable master waits for a control plane and collects credentials, and does nothing else here")
 
 	require.False(t, declares(immutable, WaitForSSHOnMasterPhase),
@@ -313,5 +313,5 @@ func TestAnImmutableMasterGetsItsOwnInstallSteps(t *testing.T) {
 		OperationPhase(InstallKubernetesSubPhaseExecuteBashibleBundle),
 		"the bashible path keeps its own steps")
 	require.NotContains(t, subPhases(bashible, InstallKubernetesPhase),
-		OperationPhase(InstallKubernetesSubPhaseWaitForControlPlane))
+		OperationPhase(InstallKubernetesSubPhaseWaitForMasterInstall))
 }
