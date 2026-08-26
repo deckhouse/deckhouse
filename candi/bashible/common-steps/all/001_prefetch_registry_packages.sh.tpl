@@ -19,12 +19,13 @@
 #
 # Package list MUST stay identical to 007_fetch_registry_packages.sh.tpl.
 
-{{- $kubernetesVersion := printf "%s%s" (.kubernetesVersion | toString) (index .k8s .kubernetesVersion "patch" | toString) | replace "." "" }}
+{{- /* Digest map keys are built from the minor/major: the image name no longer carries a patch. */}}
+{{- $kubernetesVersion := .kubernetesVersion | toString | replace "." "" }}
 {{- $kubernetesCniVersion := "1.9.1" | replace "." "" }}
 
-{{- $containerd := "containerd1734"}}
+{{- $containerd := "containerd1"}}
 {{- if eq .cri "ContainerdV2" }}
-  {{- $containerd = "containerd227" }}
+  {{- $containerd = "containerd2" }}
 {{- end }}
 
 if ! command -v systemd-run >/dev/null 2>&1 || ! command -v systemctl >/dev/null 2>&1; then

@@ -98,13 +98,26 @@ shell:
   - chmod 755 /out/runc
 {{- end }}
 
+{{- /* Final image name carries the major only (containerd-1 / containerd-2): a patch bump
+       must not rename the image. Hence the constraint: a single build cannot contain two
+       versions of the same major, otherwise their image names would collide. */}}
+{{- $seen_majors := dict }}
+{{- range $containerd_version := $containerd_versions }}
+  {{- $m := index (splitList "." $containerd_version) 0 }}
+  {{- if hasKey $seen_majors $m }}
+    {{- fail (printf "containerd: two versions of major %s in a single build (%s and %s) would both be named containerd-%s" $m (index $seen_majors $m) $containerd_version $m) }}
+  {{- end }}
+  {{- $_ := set $seen_majors $m $containerd_version }}
+{{- end }}
+
 {{- range $containerd_version := $containerd_versions }}
   {{- $image_version := $containerd_version | replace "." "-" }}
   {{- $is_v2 := hasPrefix "2." $containerd_version }}
   {{- $major_version := index (splitList "-" $image_version) 0 }}
+  {{- $image_suffix := $major_version }}
   {{- $runc_version := index $containerd2runc $containerd_version }}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_suffix }}
 from: {{ index $.Images "builder/scratch" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
@@ -247,19 +260,20 @@ shell:
   - strip /pidumount
   - chmod 0700 /pidumount
   {{- end }}
-{{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName $image_version)) }}
+{{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName $image_suffix)) }}
 {{- end }}
 
 {{- if ne $.Env "CSE" }}
 # containerd sysext (built for containerd v2 only)
 
 {{- $image_version := $containerd_v2_version | replace "." "-" }}
+{{- $image_suffix := index (splitList "." $containerd_v2_version) 0 }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-artifact-{{ $image_version }}
 from: {{ index $.Images "builder/distroless" }}
 final: false
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_suffix }}
   add: /
   to: /sysext/opt/deckhouse/bin
   includePaths:
@@ -296,7 +310,7 @@ shell:
   - veritysetup verify /out/containerd.raw /out/containerd.verity "$(cat /out/containerd.roothash)"
 {{- include "olcedar sysext sign" "containerd" }}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-{{ $image_version }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-{{ $image_suffix }}
 from: {{ index $.Images "builder/scratch" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-artifact-{{ $image_version }}
@@ -313,5 +327,5 @@ imageSpec:
     clearCmd: true
     clearEntrypoint: true
     removeEnv: ["/.*/"]
-{{- include "vex mitigation" (list $ (printf "%s/%s-sysext-%s" $.ModuleName $.ImageName $image_version)) }}
+{{- include "vex mitigation" (list $ (printf "%s/%s-sysext-%s" $.ModuleName $.ImageName $image_suffix)) }}
 {{- end }}

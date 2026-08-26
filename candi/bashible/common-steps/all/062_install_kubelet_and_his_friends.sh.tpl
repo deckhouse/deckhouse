@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- $kubernetesVersion := printf "%s%s" (.kubernetesVersion | toString) (index .k8s .kubernetesVersion "patch" | toString) | replace "." "" }}
+{{- /* Digest map key is built from the minor: the kubelet image name no longer carries a patch. */}}
+{{- $kubernetesVersion := .kubernetesVersion | toString | replace "." "" }}
 {{- $kubernetesCniVersion := "1.9.1" | replace "." "" }}
 
 # d8 is the largest registrypackage. Step 004 deliberately skips it; the 001 prefetch

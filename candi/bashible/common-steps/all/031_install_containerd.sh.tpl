@@ -136,9 +136,10 @@ if bb-is-distro-like? "rhel"; then
   fi
 fi
 
-{{- $containerd := "containerd1734"}}
+{{- /* The containerd image is named by major only, so a patch bump does not change this key. */}}
+{{- $containerd := "containerd1"}}
 {{- if eq .cri "ContainerdV2" }}
-  {{- $containerd = "containerd227" }}
+  {{- $containerd = "containerd2" }}
 bb-package-install "erofs:{{ .images.registrypackages.erofs }}" "cryptsetup:{{ .images.registrypackages.cryptsetup }}"
 {{- end }}
 
