@@ -25,6 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -33,7 +34,10 @@ import (
 	sigsyaml "sigs.k8s.io/yaml"
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/bootstrap"
 	"github.com/deckhouse/node-controller/internal/common"
+	"github.com/deckhouse/node-controller/internal/controller/bootstrapsecrets"
+	"github.com/deckhouse/node-controller/internal/controller/nodegroup/bashiblecontext"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/machineclass"
@@ -168,6 +172,11 @@ func (r *MachineDeploymentReconciler) reconcileCloudMCMs(
 			awsSpot:          awsSpot,
 		})
 
+		// Before the MachineClass: machine-controller-manager resolves the credentials and
+		// the cloud-init through secretRef, so a class applied first is a class it cannot act on.
+		if err := r.applyMachineClassSecret(ctx, resolved, cloudType, machineClassName, renderCtx); err != nil {
+			return err
+		}
 		if err := r.Client.Patch(ctx, machineClassObj, client.Apply, client.FieldOwner("node-controller"), client.ForceOwnership); err != nil {
 			return fmt.Errorf("apply MachineClass %s: %w", machineClassName, err)
 		}
@@ -181,6 +190,62 @@ func (r *MachineDeploymentReconciler) reconcileCloudMCMs(
 		return err
 	}
 
+	return nil
+}
+
+// mcmConfigTemplateKey is the provider's own half of the machine-class Secret: the cloud
+// credentials machine-controller-manager authenticates with, as key/base64 pairs.
+const mcmConfigTemplateKey = "config-for-machine-controller-manager.yaml"
+
+// applyMachineClassSecret writes the Secret every MCM MachineClass points its secretRef at:
+// the cloud-init in userData plus the cloud credentials the provider renders from
+// config-for-machine-controller-manager.yaml. Port of the helm define
+// "node_group_machine_class_secret" (templates/node-group/_machine_class_secret.tpl).
+//
+// The name is the contract with the provider templates, which compute it themselves:
+// <ng>-<sha256(clusterUUID+zone)[:8]>, the same name the MachineClass carries.
+func (r *MachineDeploymentReconciler) applyMachineClassSecret(
+	ctx context.Context, resolved derived_status.ResolvedNodeGroup, cloudType, name string, renderCtx map[string]interface{},
+) error {
+	// machine-controller-manager replaces this literal with a token it orders per machine
+	// (pkg/util/provider/machinecontroller/userdata.go:29), so no token is minted here.
+	in, err := bootstrapsecrets.BuildInput(ctx,
+		&bashiblecontext.Service{Client: r.Client, Reader: r.APIReader}, resolved, "<<BOOTSTRAP_TOKEN>>")
+	if err != nil {
+		return err
+	}
+	userData, err := bootstrap.RenderCloudConfig(in)
+	if err != nil {
+		return fmt.Errorf("render cloud-config for NodeGroup %s: %w", resolved.Name, err)
+	}
+
+	configTemplate, err := r.readProviderTemplate(ctx, cloudType, engineMCMTemplates, mcmConfigTemplateKey)
+	if err != nil {
+		return err
+	}
+	config, err := machineclass.RenderMachineClass(configTemplate, renderCtx)
+	if err != nil {
+		return fmt.Errorf("render %s for NodeGroup %s: %w", mcmConfigTemplateKey, resolved.Name, err)
+	}
+	// The fragment is what helm nindented under `data:`, so its values are base64 and the
+	// apiserver decoded them. Unmarshalling into []byte undoes that encoding, which the
+	// client then redoes — a raw copy would hand the provider a double-encoded credential.
+	data := map[string][]byte{}
+	if err := sigsyaml.Unmarshal(config, &data); err != nil {
+		return fmt.Errorf("parse rendered %s for NodeGroup %s: %w", mcmConfigTemplateKey, resolved.Name, err)
+	}
+	data["userData"] = userData
+
+	secret := &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "Secret"},
+		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: common.MachineNamespace,
+			Labels: map[string]string{"heritage": "deckhouse", "module": "node-manager"}},
+		Type: corev1.SecretTypeOpaque,
+		Data: data,
+	}
+	if err := r.Client.Patch(ctx, secret, client.Apply, client.FieldOwner("node-controller"), client.ForceOwnership); err != nil {
+		return fmt.Errorf("apply MachineClass secret %s: %w", name, err)
+	}
 	return nil
 }
 
