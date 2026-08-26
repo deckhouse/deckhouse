@@ -189,8 +189,9 @@ when `passwordPolicy` is unset or `passwordPolicy.lockout` is not configured.
 
 The lock is checked on the password login form, on `grant_type=password`
 (ROPC / basic-auth-proxy), on refresh-token requests, and on token exchange.
-`passwordPolicy.lockout` stays responsible only for automatic lockout after
-the configured number of consecutive failed login attempts. UserOperation
+`passwordPolicy.lockout` still owns automatic lockout after consecutive
+failed attempts; that path now also runs on ROPC (local `Password` counters
+and, when `applyToConnectors` matches, `OfflineSessions`). UserOperation
 `Lock` / `d8 iam user lock` no longer depend on that section.
 
 For a non-local connector (LDAP, Crowd, …) the login-form path now reads
