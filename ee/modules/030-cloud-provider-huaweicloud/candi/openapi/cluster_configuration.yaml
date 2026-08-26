@@ -287,14 +287,14 @@ apiVersions:
               pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$'
           internalNetworkSecurity: &internalNetworkSecurity
             description: |
-              Defines whether [SecurityGroups](faq.html#how-do-i-set-up-security-policies-on-cluster-nodes) must be configured for the internal network ports.
+              Defines whether [SecurityGroups](layouts.html#security-groups) must be configured for the internal network ports.
 
-              When enabled, Deckhouse creates a security group named after the cluster `prefix` with the following default inbound rules:
+              When enabled, DKP creates a security group named after the cluster `prefix` with the following default inbound rules:
               - TCP/22 (SSH) from `0.0.0.0/0` by default;
               - ICMP from `0.0.0.0/0`;
               - TCP NodePorts `30000–32767` from `0.0.0.0/0`.
 
-              For details and attaching custom security groups, see [How do I set up security policies on cluster nodes?](faq.html#how-do-i-set-up-security-policies-on-cluster-nodes).
+              For details and attaching custom security groups, see [Security groups](layouts.html#security-groups).
             type: boolean
             default: true
           enableEIP:

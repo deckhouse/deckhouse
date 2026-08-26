@@ -119,7 +119,7 @@ There may be many reasons why you may need to restrict or expand incoming/outgoi
 - Allow connecting to the ports of the static node so that the application can work (for example, HTTP/HTTPS when a public IP is assigned to the VM).
 - Restrict access to external resources or other VMs in the cloud for security reasons.
 
-For all this, additional security groups should be used. You can only use security groups that are created in the cloud tentatively. You cannot add arbitrary rules to the Deckhouse-managed security group through the module configuration.
+For all this, additional security groups should be used. You can only use security groups that are created in the cloud tentatively. You cannot add arbitrary rules to the DKP-managed security group through the module configuration.
 
 ### Enabling additional security groups on static and master nodes
 
