@@ -59,13 +59,6 @@ func writePackageYAML(t *testing.T, dir, content string) {
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "package.yaml"), []byte(content), 0o644))
 }
 
-func testModule(name, source string, available ...string) *v1alpha1.Module {
-	return &v1alpha1.Module{
-		ObjectMeta: metav1.ObjectMeta{Name: name},
-		Properties: v1alpha1.ModuleProperties{Source: source, AvailableSources: available},
-	}
-}
-
 func testModuleSource(name, repo string) *v1alpha1.ModuleSource {
 	return &v1alpha1.ModuleSource{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
@@ -112,15 +105,6 @@ func getVersion(t *testing.T, cl client.Client, name string) *v1alpha1.ModulePac
 	require.NoError(t, cl.Get(context.Background(), client.ObjectKey{Name: name}, mpv))
 
 	return mpv
-}
-
-func getPackage(t *testing.T, cl client.Client, name string) *v1alpha1.ModulePackage {
-	t.Helper()
-
-	pkg := new(v1alpha1.ModulePackage)
-	require.NoError(t, cl.Get(context.Background(), client.ObjectKey{Name: name}, pkg))
-
-	return pkg
 }
 
 func getRepository(t *testing.T, cl client.Client, name string) *v1alpha1.PackageRepository {
@@ -172,7 +156,6 @@ func TestSyncIsIdempotent(t *testing.T) {
 		testModuleSource("external", "registry.example.io/external"),
 		testRelease("parca", "deckhouse", "1.4.3", v1alpha1.ModuleReleasePhaseDeployed),
 		testRelease("console", "deckhouse", "1.60.1", v1alpha1.ModuleReleasePhasePending),
-		testModule("parca", "deckhouse", "deckhouse"),
 	)
 
 	require.NoError(t, s.Sync(ctx))
@@ -182,7 +165,6 @@ func TestSyncIsIdempotent(t *testing.T) {
 		versions[name] = getVersion(t, cl, name).ResourceVersion
 	}
 	require.Len(t, versions, 3)
-	packageRV := getPackage(t, cl, "parca").ResourceVersion
 	repositoryRV := getRepository(t, cl, "external").ResourceVersion
 
 	require.NoError(t, s.Sync(ctx))
@@ -191,6 +173,5 @@ func TestSyncIsIdempotent(t *testing.T) {
 	for name, rv := range versions {
 		assert.Equal(t, rv, getVersion(t, cl, name).ResourceVersion, name)
 	}
-	assert.Equal(t, packageRV, getPackage(t, cl, "parca").ResourceVersion)
 	assert.Equal(t, repositoryRV, getRepository(t, cl, "external").ResourceVersion)
 }

@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package syncer creates the PackageRepository, ModulePackageVersion and
-// ModulePackage objects for the module packages the old module stack already
-// carries in the cluster, so the package system sees the repositories the
-// modules come from, the versions the cluster runs and the packages its
-// sources offer. Each synced resource lives in its own file.
+// Package syncer creates the PackageRepository and ModulePackageVersion
+// objects for the module packages the old module stack already carries in the
+// cluster, so the package system sees the repositories the modules come from
+// and the versions the cluster runs. Each synced resource lives in its own
+// file.
 //
 // # Data sources
 //
@@ -34,11 +34,6 @@
 //	     to the "deckhouse-modules" repository; a draft stub - the
 //	     module-package-version controller fills it once a PackageRepository
 //	     exists
-//
-//	v1alpha1 Module with a non-empty availableSources
-//	  └─ ModulePackage <module>: availableRepositories carries the sources
-//	     mapped to repository names; the repository scan later adopts the
-//	     package and appends the repositories it really serves
 //
 // A version stays a draft until its metadata lands, so no observer takes a
 // half-created version for a complete one; a fill interrupted mid-way heals on
@@ -119,11 +114,7 @@ func (s *Syncer) Sync(ctx context.Context) error {
 		return err
 	}
 
-	if err := s.syncModulePackageVersions(ctx); err != nil {
-		return err
-	}
-
-	return s.syncModulePackages(ctx)
+	return s.syncModulePackageVersions(ctx)
 }
 
 // repositoryNameForSource maps a ModuleSource name to the name of the
