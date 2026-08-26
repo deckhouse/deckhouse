@@ -2,7 +2,7 @@
   Close the namespaced-Issuer SSRF sink (arbitrary ACME/Vault/Venafi URL → GET from
   cert-manager) without breaking published contracts:
 
-  * FAQ / CERTIFICATES: Issuer vault.server = http://vault.<ns>.svc.cluster.local:8200
+  * FAQ / CERTIFICATES: Issuer vault.server = http://vault.<ns>.svc.<clusterDomain>:8200
   * Istio examples:      Issuer vault.server = https://vault.example.com:8200
   * CRD rfc2136.nameserver: IP or hostname, IPv6 in [brackets]
   * Editor writes issuers, not clusterissuers — do not push private Vault onto ClusterIssuer
@@ -17,6 +17,16 @@
 {{- $vapbExists := or (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicyBinding")) ((.Values.global.discovery.apiVersions | default list) | has "admissionregistration.k8s.io/v1/ValidatingAdmissionPolicyBinding") }}
 {{- if and $vapExists $vapbExists }}
 {{- $policyName := "cert-manager-issuer-endpoints.deckhouse.io" }}
+{{- $clusterDomain := "" }}
+{{- if .Values.global.clusterConfiguration }}
+{{- $clusterDomain = .Values.global.clusterConfiguration.clusterDomain | default "" }}
+{{- end }}
+{{- if not $clusterDomain }}
+{{- if .Values.global.discovery }}
+{{- $clusterDomain = .Values.global.discovery.clusterDomain | default "" }}
+{{- end }}
+{{- end }}
+{{- $clusterDomainRE := $clusterDomain | replace "." "\\\\." }}
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
 kind: ValidatingAdmissionPolicy
@@ -51,7 +61,9 @@ spec:
           && !variables.acmeServer.matches("(?i)^https://localhost([:/]|$)")
           && !variables.acmeServer.matches("(?i)^https://metadata\\.google\\.internal([:/]|$)")
           && !variables.acmeServer.matches("(?i)^https://[^/]*\\.svc([:/.]|$)")
-          && !variables.acmeServer.matches("(?i)^https://[^/]*\\.cluster\\.local([:/]|$)")
+          {{- if $clusterDomainRE }}
+          && !variables.acmeServer.matches("(?i)^https://[^/]*\\.{{ $clusterDomainRE }}([:/]|$)")
+          {{- end }}
           && variables.acmeServer.matches("^https://[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)+(:[0-9]+)?(/.*)?$")
         )
       reason: Forbidden
@@ -68,7 +80,7 @@ spec:
             && !u.matches("(?i)^https?://metadata\\.google\\.internal([:/]|$)")
             && !u.matches("(?i)^https?://kubernetes\\.default\\.svc([:/.]|$)")
             && (
-              u.matches("(?i)^https?://[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)*\\.svc(\\.cluster\\.local)?(:[0-9]+)?(/.*)?$")
+              u.matches("(?i)^https?://[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)*\\.svc{{ if $clusterDomainRE }}(\\.{{ $clusterDomainRE }})?{{ end }}(:[0-9]+)?(/.*)?$")
               || (
                 u.startsWith("https://")
                 && !u.matches("^https://[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+([:/]|$)")
@@ -91,7 +103,9 @@ spec:
                 && !s.dns01.acmeDNS.host.matches("(?i)^https://localhost([:/]|$)")
                 && !s.dns01.acmeDNS.host.matches("(?i)^https://metadata\\.google\\.internal([:/]|$)")
                 && !s.dns01.acmeDNS.host.matches("(?i)^https://[^/]*\\.svc([:/.]|$)")
-                && !s.dns01.acmeDNS.host.matches("(?i)^https://[^/]*\\.cluster\\.local([:/]|$)")
+                {{- if $clusterDomainRE }}
+                && !s.dns01.acmeDNS.host.matches("(?i)^https://[^/]*\\.{{ $clusterDomainRE }}([:/]|$)")
+                {{- end }}
                 && s.dns01.acmeDNS.host.matches("^https://[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)+(:[0-9]+)?(/.*)?$")
               )
             ))

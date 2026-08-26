@@ -637,6 +637,7 @@ namespace: d8-ingress-gateway
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSet("global.clusterConfiguration.clusterDomain", "e2e.test")
 			f.ValuesSetFromYaml("global.discovery.apiVersions", `["admissionregistration.k8s.io/v1/ValidatingAdmissionPolicy","admissionregistration.k8s.io/v1/ValidatingAdmissionPolicyBinding"]`)
 			f.ValuesSetFromYaml("certManager", certManager)
 			f.HelmRender()
@@ -659,19 +660,21 @@ namespace: d8-ingress-gateway
 			acme := policy.Field("spec.validations.0.expression").String()
 			Expect(acme).To(ContainSubstring("variables.acmeServer"))
 			Expect(acme).To(ContainSubstring(`startsWith("https://")`))
+			Expect(acme).To(ContainSubstring(`e2e\\.test`))
 			Expect(acme).NotTo(ContainSubstring("variables.vaultServer"))
 
 			vault := policy.Field("spec.validations.1.expression").String()
 			Expect(vault).To(ContainSubstring("variables.vaultServer"))
 			Expect(vault).To(ContainSubstring("variables.venafiTppURL"))
 			Expect(vault).To(ContainSubstring("svc"))
-			Expect(vault).To(ContainSubstring("cluster"))
+			Expect(vault).To(ContainSubstring(`e2e\\.test`))
 			Expect(vault).To(ContainSubstring("https?"))
 			Expect(vault).To(ContainSubstring("kubernetes"))
 
 			solvers := policy.Field("spec.validations.2.expression").String()
 			Expect(solvers).To(ContainSubstring("acmeDNS.host"))
 			Expect(solvers).To(ContainSubstring("rfc2136.nameserver"))
+			Expect(solvers).To(ContainSubstring(`e2e\\.test`))
 			Expect(solvers).To(ContainSubstring("[0-9]+"))
 			Expect(solvers).To(ContainSubstring("::1"))
 
