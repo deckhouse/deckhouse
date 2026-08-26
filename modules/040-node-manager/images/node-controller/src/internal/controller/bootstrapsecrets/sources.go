@@ -45,7 +45,7 @@ const (
 )
 
 // buildInput collects everything the bootstrap templates read for one NodeGroup.
-// The readers are bashiblecontext's, not copies: readEndpoints alone carries the
+// The readers are bashiblecontext's, not copies: ReadEndpoints alone carries the
 // pod-readiness rules a second implementation would drift from silently.
 func (r *Reconciler) buildInput(ctx context.Context, ng *deckhousev1.NodeGroup, resolved derived_status.ResolvedNodeGroup) (bootstrap.Input, error) {
 	// Helm held this gate as `clusterUUID | required`: with an empty UUID rpp-get
