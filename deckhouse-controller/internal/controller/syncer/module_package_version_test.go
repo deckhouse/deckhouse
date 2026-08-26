@@ -142,6 +142,7 @@ func TestSyncVersionsFromImage(t *testing.T) {
 		require.NotNil(t, mpv.Status.PackageMetadata)
 		assert.Equal(t, "Experimental", mpv.Status.PackageMetadata.Stage)
 		assert.Equal(t, int32(910), mpv.Status.PackageMetadata.Weight, "the weight comes from the directory name")
+		assert.Nil(t, mpv.Status.PackageMetadata.Description, "no descriptions in the file, no description block")
 	})
 
 	t.Run("a build version is normalized in the name and the spec", func(t *testing.T) {

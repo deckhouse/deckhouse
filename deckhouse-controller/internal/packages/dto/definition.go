@@ -295,17 +295,28 @@ func (d *ModuleDefinition) Convert() (modules.Definition, error) {
 // (category, version-compatibility) are not populated here.
 func (d *ModuleDefinition) ConvertToStatusMetadata() *v1alpha1.ModulePackageVersionStatusMetadata {
 	return &v1alpha1.ModulePackageVersionStatusMetadata{
-		Stage: d.Stage,
-		Description: &v1alpha1.PackageDescription{
-			Ru: d.Descriptions.Ru,
-			En: d.Descriptions.En,
-		},
+		Stage:          d.Stage,
+		Description:    descriptionToCR(d.Descriptions),
 		Weight:         int32(d.Weight),
 		Critical:       d.Critical,
 		ExclusiveGroup: d.ExclusiveGroup,
 		DisableOptions: disableOptionsToCR(d.DisableOptions),
 		Licensing:      licensingToCR(d.Licensing),
 		Requirements:   requirementsToCR(d.Requirements),
+	}
+}
+
+// descriptionToCR projects the localized descriptions, returning nil when
+// neither translation is set, so the status field omits like every other
+// optional block of the projection.
+func descriptionToCR(d Descriptions) *v1alpha1.PackageDescription {
+	if d.Ru == "" && d.En == "" {
+		return nil
+	}
+
+	return &v1alpha1.PackageDescription{
+		Ru: d.Ru,
+		En: d.En,
 	}
 }
 
