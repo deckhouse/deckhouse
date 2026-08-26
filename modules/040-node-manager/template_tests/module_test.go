@@ -112,7 +112,6 @@ internal:
     - .*xxx-staging-spot-c5.16xlarge-[0-9a-zA-Z]+$
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
-  kubernetesCA: myclusterca
   cloudProvider:
     type: aws
     machineClassKind: AWSInstanceClass
@@ -170,7 +169,6 @@ internal:
     crt: string
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
-  kubernetesCA: myclusterca
   cloudProvider:
     type: azure
     machineClassKind: AzureMachineClass
@@ -256,7 +254,6 @@ internal:
     crt: string
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
-  kubernetesCA: myclusterca
   cloudProvider:
     type: gcp
     machineClassKind: GCPMachineClass
@@ -314,7 +311,6 @@ internal:
     crt: string
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
-  kubernetesCA: myclusterca
   cloudProvider:
     type: openstack
     machineClassKind: OpenStackMachineClass
@@ -403,7 +399,6 @@ internal:
     crt: string
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
-  kubernetesCA: myclusterca
   cloudProvider:
     type: vsphere
     machineClassKind: VsphereMachineClass
@@ -492,7 +487,6 @@ internal:
     crt: string
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
-  kubernetesCA: myclusterca
   cloudProvider:
     type: yandex
     machineClassKind: YandexMachineClass
@@ -561,9 +555,6 @@ internal:
     crt: string
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
-  kubernetesCA: myclusterca
-  bootstrapTokens:
-    worker: myworker
   nodeGroups:
   - name: worker
     nodeType: Static
@@ -589,9 +580,6 @@ internal:
     crt: string
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
-  kubernetesCA: myclusterca
-  bootstrapTokens:
-    worker: myworker
   nodeGroups:
   - name: worker
     nodeType: Static
@@ -839,22 +827,23 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(clusterAutoscalerClusterRole.Exists()).To(BeTrue())
 			Expect(clusterAutoscalerClusterRoleBinding.Exists()).To(BeTrue())
 
-			// MachineClass CR and MachineDeployment are rendered by node-controller
-			// (capi.reconcileCloudMCMs), not helm; only the MachineClass Secret stays in helm.
+			// MachineClass CR, MachineDeployment and the MachineClass Secret are all written
+			// by node-controller (capi.reconcileCloudMCMs); helm renders none of them.
 			Expect(machineClassA.Exists()).To(BeFalse())
-			Expect(machineClassSecretA.Exists()).To(BeTrue())
+			Expect(machineClassSecretA.Exists()).To(BeFalse())
 			Expect(machineDeploymentA.Exists()).To(BeFalse())
 
 			Expect(machineClassB.Exists()).To(BeFalse())
-			Expect(machineClassSecretB.Exists()).To(BeTrue())
+			Expect(machineClassSecretB.Exists()).To(BeFalse())
 			Expect(machineDeploymentB.Exists()).To(BeFalse())
 
-			// Where the hook's name shapes meet what the templates render: the machine-class
-			// Secret must keep matching, deckhouse-registry and bashible-bashbooster must not.
-			assertKeepPolicyCovers(
-				[]object_store.KubeObject{machineClassSecretA, machineClassSecretB},
-				[]object_store.KubeObject{registrySecret, f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bashbooster")},
-			)
+			// helm renders no Secret the keep policy has to cover any more, so only the other
+			// half is left here: what it does render in this namespace must stay outside the
+			// hook's name shapes.
+			assertKeepPolicyCovers(nil, renderedNames(
+				registrySecret,
+				f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bashbooster"),
+			))
 
 			Expect(bashibleSecrets["bashible-bashbooster"].Exists()).To(BeTrue())
 
@@ -960,14 +949,14 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(clusterAutoscalerClusterRole.Exists()).To(BeTrue())
 			Expect(clusterAutoscalerClusterRoleBinding.Exists()).To(BeTrue())
 
-			// MachineClass CR and MachineDeployment are rendered by node-controller
-			// (capi.reconcileCloudMCMs), not helm; only the MachineClass Secret stays in helm.
+			// MachineClass CR, MachineDeployment and the MachineClass Secret are all written
+			// by node-controller (capi.reconcileCloudMCMs); helm renders none of them.
 			Expect(machineClassA.Exists()).To(BeFalse())
-			Expect(machineClassSecretA.Exists()).To(BeTrue())
+			Expect(machineClassSecretA.Exists()).To(BeFalse())
 			Expect(machineDeploymentA.Exists()).To(BeFalse())
 
 			Expect(machineClassB.Exists()).To(BeFalse())
-			Expect(machineClassSecretB.Exists()).To(BeTrue())
+			Expect(machineClassSecretB.Exists()).To(BeFalse())
 			Expect(machineDeploymentB.Exists()).To(BeFalse())
 
 			Expect(bashibleSecrets["bashible-bashbooster"].Exists()).To(BeTrue())
@@ -1056,20 +1045,20 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(clusterAutoscalerClusterRole.Exists()).To(BeTrue())
 			Expect(clusterAutoscalerClusterRoleBinding.Exists()).To(BeTrue())
 
-			// MachineClass CR and MachineDeployment are rendered by node-controller
-			// (capi.reconcileCloudMCMs), not helm; only the MachineClass Secret stays in helm.
+			// MachineClass CR, MachineDeployment and the MachineClass Secret are all written
+			// by node-controller (capi.reconcileCloudMCMs); helm renders none of them.
 			// OpenstackMachineClass field content (networks/securityGroups/tags/flavorName/imageName)
 			// is covered by render_openstack_test.go.
 			Expect(machineClassA.Exists()).To(BeFalse())
-			Expect(machineClassSecretA.Exists()).To(BeTrue())
+			Expect(machineClassSecretA.Exists()).To(BeFalse())
 			Expect(machineDeploymentA.Exists()).To(BeFalse())
 
 			Expect(machineClassB.Exists()).To(BeFalse())
-			Expect(machineClassSecretB.Exists()).To(BeTrue())
+			Expect(machineClassSecretB.Exists()).To(BeFalse())
 			Expect(machineDeploymentB.Exists()).To(BeFalse())
 
 			Expect(simpleMachineClassA.Exists()).To(BeFalse())
-			Expect(simpleMachineClassSecretA.Exists()).To(BeTrue())
+			Expect(simpleMachineClassSecretA.Exists()).To(BeFalse())
 			Expect(simpleMachineDeploymentA.Exists()).To(BeFalse())
 
 			Expect(bashibleSecrets["bashible-bashbooster"].Exists()).To(BeTrue())
@@ -1086,7 +1075,6 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 		Context("split mode with only CAPI autoscaler enabled", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerOpenstack)
-				f.ValuesSet("nodeManager.internal.bootstrapTokens", map[string]string{"worker": "mytoken"})
 				f.ValuesSet("nodeManager.internal.capiControllerManagerEnabled", true)
 				f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterKind", "OpenStackCluster")
 				f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterAPIVersion", "infrastructure.cluster.x-k8s.io/v1beta1")
@@ -1138,7 +1126,6 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 		Context("split mode with only CAPI autoscaler enabled and VXLAN pod network", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerOpenstack)
-				f.ValuesSet("nodeManager.internal.bootstrapTokens", map[string]string{"worker": "mytoken"})
 				f.ValuesSet("nodeManager.internal.capiControllerManagerEnabled", true)
 				f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterKind", "OpenStackCluster")
 				f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterAPIVersion", "infrastructure.cluster.x-k8s.io/v1beta1")
@@ -1168,7 +1155,6 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 		Context("split mode with OpenStack layout without API floating IP", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerOpenstack)
-				f.ValuesSet("nodeManager.internal.bootstrapTokens", map[string]string{"worker": "mytoken"})
 				f.ValuesSet("nodeManager.internal.capiControllerManagerEnabled", true)
 				f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterKind", "OpenStackCluster")
 				f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterAPIVersion", "infrastructure.cluster.x-k8s.io/v1beta1")
@@ -1275,24 +1261,24 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(clusterAutoscalerClusterRole.Exists()).To(BeTrue())
 			Expect(clusterAutoscalerClusterRoleBinding.Exists()).To(BeTrue())
 
-			// MachineClass CR and MachineDeployment are rendered by node-controller
-			// (capi.reconcileCloudMCMs), not helm; only the MachineClass Secret stays in helm.
+			// MachineClass CR, MachineDeployment and the MachineClass Secret are all written
+			// by node-controller (capi.reconcileCloudMCMs); helm renders none of them.
 			Expect(machineClassA.Exists()).To(BeFalse())
-			Expect(machineClassSecretA.Exists()).To(BeTrue())
+			Expect(machineClassSecretA.Exists()).To(BeFalse())
 			Expect(machineDeploymentA.Exists()).To(BeFalse())
 
 			Expect(machineClassB.Exists()).To(BeFalse())
-			Expect(machineClassSecretB.Exists()).To(BeTrue())
+			Expect(machineClassSecretB.Exists()).To(BeFalse())
 			Expect(machineDeploymentB.Exists()).To(BeFalse())
 
-			// VsphereMachineClass CR / MachineDeployment are controller-owned; the Secret stays in helm.
+			// VsphereMachineClass CR, MachineDeployment and Secret are all controller-owned.
 			// spec.runtimeOptions.nestedHardwareVirtualization content is covered by render_vsphere_test.go.
 			Expect(machineClassAWitoutNestedVirt.Exists()).To(BeFalse())
-			Expect(machineClassSecretAWitoutNestedVirt.Exists()).To(BeTrue())
+			Expect(machineClassSecretAWitoutNestedVirt.Exists()).To(BeFalse())
 			Expect(machineDeploymentAWitoutNestedVirt.Exists()).To(BeFalse())
 
 			Expect(machineClassBWitoutNestedVirt.Exists()).To(BeFalse())
-			Expect(machineClassSecretBWitoutNestedVirt.Exists()).To(BeTrue())
+			Expect(machineClassSecretBWitoutNestedVirt.Exists()).To(BeFalse())
 			Expect(machineDeploymentBWitoutNestedVirt.Exists()).To(BeFalse())
 
 			Expect(bashibleSecrets["bashible-bashbooster"].Exists()).To(BeTrue())
@@ -1378,14 +1364,14 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(clusterAutoscalerClusterRole.Exists()).To(BeTrue())
 			Expect(clusterAutoscalerClusterRoleBinding.Exists()).To(BeTrue())
 
-			// MachineClass CR and MachineDeployment are rendered by node-controller
-			// (capi.reconcileCloudMCMs), not helm; only the MachineClass Secret stays in helm.
+			// MachineClass CR, MachineDeployment and the MachineClass Secret are all written
+			// by node-controller (capi.reconcileCloudMCMs); helm renders none of them.
 			Expect(machineClassA.Exists()).To(BeFalse())
-			Expect(machineClassSecretA.Exists()).To(BeTrue())
+			Expect(machineClassSecretA.Exists()).To(BeFalse())
 			Expect(machineDeploymentA.Exists()).To(BeFalse())
 
 			Expect(machineClassB.Exists()).To(BeFalse())
-			Expect(machineClassSecretB.Exists()).To(BeTrue())
+			Expect(machineClassSecretB.Exists()).To(BeFalse())
 			Expect(machineDeploymentB.Exists()).To(BeFalse())
 
 			Expect(bashibleSecrets["bashible-bashbooster"].Exists()).To(BeTrue())
@@ -1481,6 +1467,8 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			bootstrapSecrets := map[string]object_store.KubeObject{}
 			bootstrapSecrets["manual-bootstrap-for-worker"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "manual-bootstrap-for-worker")
 
+			manualBootstrapRole := f.KubernetesResource("Role", "d8-cloud-instance-manager", "access-to-manual-bootstrap-secrets")
+
 			roles := map[string]object_store.KubeObject{}
 			roles["bashible"] = f.KubernetesResource("Role", "d8-cloud-instance-manager", "bashible")
 			roles["bashible-mcm-bootstrapped-nodes"] = f.KubernetesResource("Role", "d8-cloud-instance-manager", "bashible-mcm-bootstrapped-nodes")
@@ -1520,13 +1508,14 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 
 			Expect(bashibleSecrets["bashible-bashbooster"].Exists()).To(BeTrue())
 
-			Expect(bootstrapSecrets["manual-bootstrap-for-worker"].Exists()).To(BeTrue())
+			Expect(bootstrapSecrets["manual-bootstrap-for-worker"].Exists()).To(BeFalse())
 
-			// The other half of the same binding: the manual-bootstrap name shape.
-			assertKeepPolicyCovers(
-				[]object_store.KubeObject{bootstrapSecrets["manual-bootstrap-for-worker"]},
-				[]object_store.KubeObject{registrySecret},
-			)
+			// helm no longer renders the manual bootstrap Secret, but it still names it in the
+			// Role a node reads it through — the last render the keep policy's shapes can be
+			// bound to, and the names the hook must cover on an upgrade.
+			manualBootstrapNames := manualBootstrapRole.Field("rules.0.resourceNames").AsStringSlice()
+			Expect(manualBootstrapNames).NotTo(BeEmpty())
+			assertKeepPolicyCovers(manualBootstrapNames, renderedNames(registrySecret))
 
 			Expect(roles["bashible"].Exists()).To(BeTrue())
 			Expect(roles["bashible-mcm-bootstrapped-nodes"].Exists()).To(BeTrue())
@@ -1638,7 +1627,7 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 
 			Expect(bashibleSecrets["bashible-bashbooster"].Exists()).To(BeTrue())
 
-			Expect(bootstrapSecrets["manual-bootstrap-for-worker"].Exists()).To(BeTrue())
+			Expect(bootstrapSecrets["manual-bootstrap-for-worker"].Exists()).To(BeFalse())
 
 			Expect(roles["bashible"].Exists()).To(BeTrue())
 			Expect(roles["bashible-mcm-bootstrapped-nodes"].Exists()).To(BeTrue())
@@ -1686,8 +1675,6 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			const nodeManager = `
 internal:
   capiControllerManagerEnabled: true
-  bootstrapTokens:
-    worker: mytoken
   capiControllerManagerWebhookCert:
     ca: string
     key: string
@@ -1702,7 +1689,6 @@ internal:
     crt: string
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
-  kubernetesCA: myclusterca
   cloudProvider:
     type: vcd
     machineClassKind: ""
@@ -1848,8 +1834,6 @@ internal:
 			const nodeManagerVCD = `
 internal:
   capiControllerManagerEnabled: true
-  bootstrapTokens:
-    worker: mytoken
   capiControllerManagerWebhookCert:
     ca: string
     key: string
@@ -1864,7 +1848,6 @@ internal:
     crt: string
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
-  kubernetesCA: myclusterca
   cloudProvider:
     type: vcd
     machineClassKind: ""
@@ -1961,14 +1944,14 @@ internal:
 
 				// The MachineDeployment and the infrastructure VCDMachineTemplate are created
 				// by node-controller (capi.reconcileCloudMDsRendered) from the cloud-provider
-				// CAPI template secret. Helm only renders the bootstrap Secret, still named
-				// after the instance-class checksum ({ng}-{sha(clusterUUID+zone+checksum)}).
+				// CAPI template secret, and the per-zone bootstrap Secret by its bootstrap-secrets
+				// controller. Helm renders none of the three.
 				assertMachineDeploymentAndItsDeps := func(f *Config, d mdParams) {
 					md := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", d.name)
 					Expect(md.Exists()).To(BeFalse())
 
 					secret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", strings.TrimPrefix(d.name, "myprefix-"))
-					Expect(secret.Exists()).To(BeTrue())
+					Expect(secret.Exists()).To(BeFalse())
 
 					vcdTemplate := f.KubernetesResource("VCDMachineTemplate", "d8-cloud-instance-manager", d.templateName)
 					Expect(vcdTemplate.Exists()).To(BeFalse())
@@ -2002,8 +1985,6 @@ internal:
 			const nodeManagerDVP = `
 internal:
   capiControllerManagerEnabled: true
-  bootstrapTokens:
-    worker: mytoken
   capiControllerManagerWebhookCert:
     ca: string
     key: string
@@ -2018,7 +1999,6 @@ internal:
     crt: string
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
-  kubernetesCA: myclusterca
   cloudProvider:
     type: dvp
     machineClassKind: ""
@@ -2082,14 +2062,14 @@ internal:
 
 				// The MachineDeployment and the infrastructure DeckhouseMachineTemplate are
 				// created by node-controller (capi.reconcileCloudMDsRendered) from the
-				// cloud-provider CAPI template secret. Helm only renders the bootstrap Secret,
-				// still named after the instance-class checksum ({ng}-{sha(clusterUUID+zone+checksum)}).
+				// cloud-provider CAPI template secret, and the per-zone bootstrap Secret by its
+				// bootstrap-secrets controller. Helm renders none of the three.
 				assertMachineDeploymentAndItsDeps := func(f *Config, d mdParams) {
 					md := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", d.name)
 					Expect(md.Exists()).To(BeFalse())
 
 					secret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", strings.TrimPrefix(d.name, "myprefix-"))
-					Expect(secret.Exists()).To(BeTrue())
+					Expect(secret.Exists()).To(BeFalse())
 
 					dvpTemplate := f.KubernetesResource("DeckhouseMachineTemplate", "d8-cloud-instance-manager", d.templateName)
 					Expect(dvpTemplate.Exists()).To(BeFalse())

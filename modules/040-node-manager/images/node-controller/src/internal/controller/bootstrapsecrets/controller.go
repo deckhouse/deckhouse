@@ -205,8 +205,9 @@ func (r *Reconciler) writeManualSecret(ctx context.Context, ng *deckhousev1.Node
 	return r.applySecret(ctx, ng.Name, manualSecretPrefix+ng.Name, map[string][]byte{
 		"cloud-config": cloudConfig,
 		"bootstrap.sh": script,
-		// helm's toYaml drops the trailing newline; matching it keeps the bytes
-		// identical to the Secret helm still renders during the handover.
+		// helm's toYaml dropped the trailing newline; matching it keeps the bytes
+		// identical to the Secret the chart rendered before the handover, so the
+		// takeover rewrites nothing.
 		"apiserverEndpoints": bytes.TrimRight(endpoints, "\n"),
 	})
 }

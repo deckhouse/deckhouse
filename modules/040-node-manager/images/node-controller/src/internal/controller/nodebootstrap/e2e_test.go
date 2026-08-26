@@ -340,7 +340,7 @@ func setOwnerMachine(ctx context.Context, config *bootstrapv1alpha1.NodeBootstra
 }
 
 // ensureBootstrapToken creates a per-group rotating bootstrap token, the same
-// kind of secret order_bootstrap_token maintains for bashible nodes.
+// kind of secret the bootstrap-secrets controller keeps for bashible nodes.
 func ensureBootstrapToken(ctx context.Context, ngName string) {
 	GinkgoHelper()
 
@@ -360,7 +360,7 @@ func ensureBootstrapToken(ctx context.Context, ngName string) {
 }
 
 // rotateBootstrapToken replaces the secret part of the group's token, the way
-// order_bootstrap_token does once the current one is close to expiring.
+// EnsureToken does once the current one is close to expiring.
 func rotateBootstrapToken(ctx context.Context, ngName string) {
 	GinkgoHelper()
 
