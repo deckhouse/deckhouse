@@ -124,6 +124,9 @@ func DefineBootstrapAbortCommand(cmd *kingpin.CmdClause, opts *options.Options) 
 	app.DefineCacheFlags(cmd, &opts.Cache)
 	app.DefineSanityFlags(cmd, &opts.Global)
 	app.DefineAbortFlags(cmd, &opts.Bootstrap)
+	// The same machines the bootstrap named: without them abort resolves a different
+	// state cache and finds no record of the cluster it is meant to abort.
+	app.DefineImmutableHostsFlags(cmd, &opts.Bootstrap)
 	app.DefineImgBundleFlags(cmd, &opts.Registry)
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
