@@ -574,7 +574,7 @@ func (r *reconciler) reconcileDeckhouseDeployment(
 		return fmt.Errorf("get parent deckhouse image: %w", err)
 	}
 
-	target, err := buildTargetDeckhouseDeployment(vcp, image, albVIP)
+	target, err := buildTargetDeckhouseDeployment(vcp, image, albVIP, r.parentDeckhouseImageDigest(ctx))
 	if err != nil {
 		return err
 	}
@@ -608,6 +608,7 @@ func buildTargetDeckhouseDeployment(
 	vcp *controlplanev1alpha1.VirtualControlPlane,
 	image string,
 	albVIP string,
+	parentImageDigest string,
 ) (*appsv1.Deployment, error) {
 	rendered := strings.NewReplacer(
 		"${NAMESPACE}", vcp.Namespace,
@@ -641,6 +642,16 @@ func buildTargetDeckhouseDeployment(
 		deployment.Spec.Template.Labels = map[string]string{}
 	}
 	deployment.Spec.Template.Labels[constants.VirtualControlPlaneScopeLabelKey] = vcp.Name
+
+	// A mutable image tag never changes the pod template on a parent rebuild, so the tenant keeps stale content.
+	// The parent's resolved digest here changes with the content and rolls the pod,
+	// which re-pulls the tag.
+	if parentImageDigest != "" {
+		if deployment.Spec.Template.Annotations == nil {
+			deployment.Spec.Template.Annotations = map[string]string{}
+		}
+		deployment.Spec.Template.Annotations["control-plane.deckhouse.io/parent-image-digest"] = parentImageDigest
+	}
 
 	for i := range deployment.Spec.Template.Spec.ImagePullSecrets {
 		if deployment.Spec.Template.Spec.ImagePullSecrets[i].Name == deckhouseRegistrySecretName {
@@ -699,6 +710,44 @@ func (r *reconciler) getParentDeckhouseImage(ctx context.Context) (string, error
 	}
 
 	return "", fmt.Errorf("no %q container", deckhouseContainerName)
+}
+
+// parentDeckhouseImageDigest returns the digest the newest running deckhouse pod resolved to, or "".
+func (r *reconciler) parentDeckhouseImageDigest(ctx context.Context) string {
+	pods := &corev1.PodList{}
+	if err := r.client.List(ctx, pods,
+		client.InNamespace(deckhouseSystemNamespace),
+		client.MatchingLabels{"app": deckhouseDeploymentName},
+	); err != nil {
+		return ""
+	}
+
+	best := ""
+	var bestTS time.Time
+	for i := range pods.Items {
+		pod := &pods.Items[i]
+		if pod.Status.Phase != corev1.PodRunning {
+			continue
+		}
+		for _, cs := range pod.Status.ContainerStatuses {
+			if cs.Name != deckhouseContainerName {
+				continue
+			}
+			if d := digestFromImageID(cs.ImageID); d != "" && pod.CreationTimestamp.After(bestTS) {
+				best, bestTS = d, pod.CreationTimestamp.Time
+			}
+		}
+	}
+	return best
+}
+
+// digestFromImageID returns the repo digest from a containerd imageID (registry/repo@sha256:...),
+// or "" if it carries none.
+func digestFromImageID(imageID string) string {
+	if at := strings.LastIndex(imageID, "@"); at != -1 {
+		return imageID[at+1:]
+	}
+	return ""
 }
 
 // Namespace

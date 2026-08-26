@@ -149,6 +149,7 @@ func buildManifestReplacer(
 	return strings.NewReplacer(
 		"${VCP_API_VIP}", apiAdvertiseAddress,
 		"${VCP_CLUSTER_UUID}", clusterUUID,
+		"${VCP_TENANT_UUID}", string(vcp.UID),
 		"${IMAGE_KUBE_APISERVER}", versioned.Apiserver,
 		"${IMAGE_KUBE_CONTROLLER_MANAGER}", versioned.ControllerManager,
 		"${IMAGE_KUBE_SCHEDULER}", versioned.Scheduler,

@@ -177,7 +177,14 @@ spec:
   - matches:
     - path:
         type: PathPrefix
-        value: /${VCP_CLUSTER_UUID}/rpp-get
+        value: /${VCP_TENANT_UUID}/rpp-get
+    # This filer rewrite tenant cluster UUID to the parent UUID, which registry-packages-proxy validates the bootstrap path only by parentUUID.
+    filters:
+    - type: URLRewrite
+      urlRewrite:
+        path:
+          type: ReplacePrefixMatch
+          replacePrefixMatch: /${VCP_CLUSTER_UUID}/rpp-get
     backendRefs:
     - name: registry-packages-proxy-bootstrap
       namespace: d8-cloud-instance-manager
