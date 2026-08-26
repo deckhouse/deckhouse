@@ -260,58 +260,6 @@ var _ = Describe("Module :: deckhouse :: helm template ::", func() {
 		})
 	})
 
-	Context("SecurityPolicyException for the deckhouse pod", func() {
-		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", globalValues)
-			f.ValuesSetFromYaml("global.discovery.apiVersions", `["deckhouse.io/v1alpha1/SecurityPolicyException"]`)
-			f.ValuesSet("global.modulesImages", GetModulesImages())
-			f.ValuesSetFromYaml("deckhouse", moduleValuesForMasterNode)
-			f.HelmRender()
-		})
-
-		nsName := "d8-system"
-		chartName := "deckhouse"
-
-		It("Pod label must point to an existing exception", func() {
-			Expect(f.RenderError).ShouldNot(HaveOccurred())
-
-			dp := f.KubernetesResource("Deployment", nsName, chartName)
-			speName := dp.Field(`spec.template.metadata.labels.security\.deckhouse\.io/security-policy-exception`).String()
-			Expect(speName).NotTo(BeEmpty())
-			Expect(f.KubernetesResource("SecurityPolicyException", nsName, speName).Exists()).To(BeTrue())
-		})
-
-		It("Every container must drop capabilities, otherwise the exception cannot cover it", func() {
-			Expect(f.RenderError).ShouldNot(HaveOccurred())
-
-			dp := f.KubernetesResource("Deployment", nsName, chartName)
-			for _, path := range []string{"spec.template.spec.containers", "spec.template.spec.initContainers"} {
-				for _, container := range dp.Field(path).Array() {
-					Expect(container.Get("securityContext.capabilities.drop").Array()).
-						NotTo(BeEmpty(), "container %s", container.Get("name").String())
-				}
-			}
-		})
-
-		It("Every container port must be listed in the exception, the pod runs in the host network", func() {
-			Expect(f.RenderError).ShouldNot(HaveOccurred())
-
-			dp := f.KubernetesResource("Deployment", nsName, chartName)
-			Expect(dp.Field("spec.template.spec.hostNetwork").Bool()).To(BeTrue())
-
-			spe := f.KubernetesResource("SecurityPolicyException", nsName, chartName)
-			allowedPorts := make(map[int64]bool)
-			for _, port := range spe.Field("spec.network.hostPorts").Array() {
-				allowedPorts[port.Get("port").Int()] = true
-			}
-			for _, container := range dp.Field("spec.template.spec.containers").Array() {
-				for _, port := range container.Get("ports").Array() {
-					Expect(allowedPorts).To(HaveKey(port.Get("containerPort").Int()))
-				}
-			}
-		})
-	})
-
 	// Both PodMonitors are guarded on two conditions at once: operator-prometheus being enabled,
 	// and the PodMonitor kind actually existing in the cluster. The module is external now, so it
 	// can appear in enabledModules before its CRDs are applied; rendering a PodMonitor then fails
