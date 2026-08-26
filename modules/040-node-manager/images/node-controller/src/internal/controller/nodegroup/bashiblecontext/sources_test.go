@@ -65,7 +65,7 @@ func configMap(ns, name string, data map[string]string) *corev1.ConfigMap {
 }
 
 func TestReadPackagesProxyToken(t *testing.T) {
-	s := newService(t, secret(cloudInstanceManagerNS, packagesProxyTokenSecretName, map[string][]byte{
+	s := newService(t, secret(cloudInstanceManagerNS, PackagesProxyTokenSecretName, map[string][]byte{
 		"token": []byte("tok-123"),
 	}))
 	assert.Equal(t, "tok-123", s.ReadPackagesProxyToken(context.Background()))

@@ -34,7 +34,10 @@ const (
 	cloudInstanceManagerNS = "d8-cloud-instance-manager"
 	kubeSystemNS           = "kube-system"
 
-	packagesProxyTokenSecretName = "registry-packages-proxy-token"
+	// Exported because the bootstrap-secrets controller watches this Secret: it is a
+	// legacy ServiceAccount token, created empty and filled by kube-controller-manager
+	// moments later, and the render must not keep the empty reading.
+	PackagesProxyTokenSecretName = "registry-packages-proxy-token"
 
 	controlPlaneArgsSecretName = "d8-control-plane-manager-control-plane-arguments"
 
@@ -93,7 +96,7 @@ func decodeSecretData(data map[string][]byte) map[string]interface{} {
 
 func (s *Service) ReadPackagesProxyToken(ctx context.Context) string {
 	secret := &corev1.Secret{}
-	if err := s.reader().Get(ctx, types.NamespacedName{Namespace: cloudInstanceManagerNS, Name: packagesProxyTokenSecretName}, secret); err != nil {
+	if err := s.reader().Get(ctx, types.NamespacedName{Namespace: cloudInstanceManagerNS, Name: PackagesProxyTokenSecretName}, secret); err != nil {
 		return ""
 	}
 	return string(secret.Data["token"])

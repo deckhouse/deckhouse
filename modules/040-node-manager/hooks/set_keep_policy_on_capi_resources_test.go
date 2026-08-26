@@ -218,7 +218,7 @@ var _ = Describe("node-manager :: hooks :: set_keep_policy_on_capi_resources ::"
 		return secret.Field(`metadata.annotations.helm\.sh/resource-policy`).String()
 	}
 
-	Context("with the bootstrap secrets helm still renders", func() {
+	Context("with the bootstrap secrets helm used to render", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(helmBootstrapSecretsState)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())

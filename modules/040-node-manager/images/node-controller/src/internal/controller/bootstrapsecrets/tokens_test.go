@@ -56,8 +56,8 @@ func newClient(t *testing.T, objs ...client.Object) client.Client {
 	return fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).Build()
 }
 
-// The 3h threshold from order_bootstrap_token.go:187: a token living longer than
-// that is reused — otherwise every secret rebuild would mint another one.
+// The 3h threshold inherited from the order_bootstrap_token hook: a token living
+// longer than that is reused — otherwise every secret rebuild would mint another one.
 func TestEnsureTokenReusesFreshToken(t *testing.T) {
 	c := newClient(t, tokenSecret("bootstrap-token-abcdef", "worker", 4*time.Hour))
 

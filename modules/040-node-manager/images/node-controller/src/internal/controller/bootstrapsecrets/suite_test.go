@@ -31,6 +31,7 @@ import (
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
+	"github.com/deckhouse/node-controller/internal/controller/nodegroup/bashiblecontext"
 	"github.com/deckhouse/node-controller/internal/testenv"
 )
 
@@ -147,10 +148,19 @@ func clusterKubernetesConfigMap() *corev1.ConfigMap {
 // packagesProxyTokenSecret is where the packages-proxy token in the bootstrap
 // input comes from. No rendered script in this suite shows it, so without the
 // fixture a reader returning nothing would go unnoticed.
+//
+// The app label is not decoration: the namespace-scoped Secret informer selects on
+// it (common/cache.go), and the chart sets it for that reason
+// (039-registry-packages-proxy/templates/token.yaml). Drop it and the controller's
+// watch on this Secret never fires.
 func packagesProxyTokenSecret() *corev1.Secret {
 	return &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Namespace: nodecommon.MachineNamespace, Name: "registry-packages-proxy-token"},
-		Data:       map[string][]byte{"token": []byte(testPackagesProxyToken)},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: nodecommon.MachineNamespace,
+			Name:      bashiblecontext.PackagesProxyTokenSecretName,
+			Labels:    map[string]string{"app": "registry-packages-proxy"},
+		},
+		Data: map[string][]byte{"token": []byte(testPackagesProxyToken)},
 	}
 }
 

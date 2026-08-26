@@ -107,16 +107,25 @@ func (r *Reconciler) SetupWatches(w register.Watcher) {
 	// A candi update arrives as a chart upgrade: without this watch the Secrets
 	// would keep the old script until the next NodeGroup event.
 	w.Watches(&corev1.ConfigMap{}, handler.EnqueueRequestsFromMapFunc(r.allNodeGroups),
-		builder.WithPredicates(predicate.NewPredicateFuncs(func(obj client.Object) bool {
-			return obj.GetNamespace() == nodecommon.MachineNamespace &&
-				obj.GetName() == bootstrap.TemplatesConfigMapName
-		})))
+		builder.WithPredicates(inMachineNamespace(bootstrap.TemplatesConfigMapName)))
+
+	// The token Secret is created empty and filled by kube-controller-manager moments
+	// later — cluster install. A node bootstrapping in that window bakes in
+	// PACKAGES_PROXY_TOKEN=passthrough, which rpp-get never re-reads (config.go resolveToken).
+	w.Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(r.allNodeGroups),
+		builder.WithPredicates(inMachineNamespace(bashiblecontext.PackagesProxyTokenSecretName)))
+}
+
+func inMachineNamespace(name string) predicate.Predicate {
+	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		return obj.GetNamespace() == nodecommon.MachineNamespace && obj.GetName() == name
+	})
 }
 
 func (r *Reconciler) allNodeGroups(ctx context.Context, _ client.Object) []reconcile.Request {
 	ngs := &deckhousev1.NodeGroupList{}
 	if err := r.Client.List(ctx, ngs); err != nil {
-		log.FromContext(ctx).Error(err, "failed to list NodeGroups after a bootstrap templates change")
+		log.FromContext(ctx).Error(err, "failed to list NodeGroups after a bootstrap input change")
 		return nil
 	}
 	requests := make([]reconcile.Request, 0, len(ngs.Items))
