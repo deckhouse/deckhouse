@@ -415,6 +415,14 @@ func TestSummarize_EdgeCases(t *testing.T) {
 		assert.Empty(t, tip)
 	})
 
+	t.Run("scaled before the manifests are applied is not ready yet", func(t *testing.T) {
+		// The health monitor sees a ready workload while the run task is still
+		// inside the apply. Version, URLs and settings are committed under
+		// ManifestsApplied, so the install is not done and must not read Ready.
+		state, _, _ := summaryFor(intCond(intScaled, metav1.ConditionTrue, "Scaled"))
+		assert.Equal(t, statePending, state)
+	})
+
 	t.Run("workload reconciling during reconcile", func(t *testing.T) {
 		// The health monitor reports a rollout as Scaled=False/Reconciling.
 		state, message, tip := summaryFor(installed(), intCond(intScaled, metav1.ConditionFalse, "Reconciling"))
