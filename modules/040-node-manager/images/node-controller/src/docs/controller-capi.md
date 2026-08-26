@@ -1,7 +1,7 @@
 # capi
 
 **Package:** `internal/controller/capi`
-**Replaces helm templates:** `_capi_machine_deployment.tpl`, `_static_or_hybrid_machine_deployment.tpl`, `static-cluster.yaml` (v1beta2 parts), plus the MCM `_machine_class.tpl` / `_machine_deployment.tpl` / `_static_or_hybrid_machine_template.tpl` (now rendered from disk via the `nodegroup/machineclass` package; only the MachineClass Secret stays helm-owned)
+**Replaces helm templates:** `_capi_machine_deployment.tpl`, `_static_or_hybrid_machine_deployment.tpl`, `static-cluster.yaml` (v1beta2 parts), plus the MCM `_machine_class.tpl` / `_machine_deployment.tpl` / `_static_or_hybrid_machine_template.tpl` (now rendered from disk via the `nodegroup/machineclass` package; the MachineClass Secret is written by `applyMachineClassSecret`)
 **Replaces hooks:** `capi_set_replicas`, `machineclass_checksum_assign`, `machineclass_checksum_collect`
 
 The package registers six **independent** controllers. They do not call each other —
@@ -85,8 +85,8 @@ Creates one `MachineDeployment` named `{ng.name}`:
 Renders and server-side-applies, **per zone**, the MCM `MachineClass`
 (machine.sapcloud.io/v1alpha1) and its `MachineDeployment` from the on-disk provider
 templates (via the `nodegroup/machineclass` package), then prunes the MachineDeployments
-and their referenced MachineClasses for zones no longer desired. Only the MachineClass
-**Secret** stays helm-owned. The instance-class checksum (rendered from the provider
+and their referenced MachineClasses for zones no longer desired. The MachineClass
+**Secret** is written here too (`applyMachineClassSecret`). The instance-class checksum (rendered from the provider
 `machine-class.checksum` template) is applied on the MachineClass before its
 MachineDeployment, preserving the "don't roll until the MachineClass updates" ordering.
 Replica math is unchanged (`calculateReplicas(current, min, max)`). Replaces the legacy

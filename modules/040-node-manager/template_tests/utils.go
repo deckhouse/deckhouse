@@ -44,21 +44,31 @@ func decodeK8sObjField(o *object_store.KubeObject, fullPath string) string {
 	return decodedVal
 }
 
-// assertKeepPolicyCovers binds the names helm renders to the shapes
-// set_keep_policy_on_capi_resources selects Secrets by. The names are read off the
-// rendered objects, so a template whose naming formula moved fails here instead of
-// silently losing the annotation and being pruned during the handover.
-func assertKeepPolicyCovers(taken, untouched []object_store.KubeObject) {
-	for _, obj := range taken {
-		name := obj.Field("metadata.name").String()
+// assertKeepPolicyCovers binds Secret names the chart renders to the shapes
+// set_keep_policy_on_capi_resources selects Secrets by. helm stopped rendering the
+// bootstrap Secrets themselves, so the covered names now come from the Role that
+// grants a bootstrapping node access to them; either way the names are read off a
+// render, so a naming formula that moved fails here instead of silently losing the
+// annotation and being pruned during the handover.
+func assertKeepPolicyCovers(taken, untouched []string) {
+	for _, name := range taken {
 		Expect(name).NotTo(BeEmpty())
 		Expect(hooks.IsBootstrapSecretName(name)).To(BeTrue(),
 			"keep policy must cover the rendered secret %s", name)
 	}
-	for _, obj := range untouched {
-		name := obj.Field("metadata.name").String()
+	for _, name := range untouched {
 		Expect(name).NotTo(BeEmpty())
 		Expect(hooks.IsBootstrapSecretName(name)).To(BeFalse(),
 			"keep policy must leave the rendered secret %s alone", name)
 	}
+}
+
+// renderedNames reads metadata.name off rendered objects, so an assertion about a
+// name cannot pass against a literal the test itself wrote.
+func renderedNames(objs ...object_store.KubeObject) []string {
+	names := make([]string, 0, len(objs))
+	for _, obj := range objs {
+		names = append(names, obj.Field("metadata.name").String())
+	}
+	return names
 }

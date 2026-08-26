@@ -14,7 +14,6 @@ defaults:
         kubeApiPort: 6443
         rppServerPort: 4219
         rppBootstrapServerPort: 4282
-    kubernetesCA: myclusterca
     bashibleApiServerCA: myapiserverca
     bashibleApiServerCrt: myapiservercrt
     bashibleApiServerKey: myapiserverprivkey
