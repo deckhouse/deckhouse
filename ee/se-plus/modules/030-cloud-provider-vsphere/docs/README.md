@@ -16,3 +16,9 @@ The `cloud-provider-vsphere` module:
 {% alert level="warning" %}
 This module is transitioning CloudEphemeral node management from Machine Controller Manager (MCM) to Cluster API (CAPI). Existing NodeGroups continue to use MCM, while newly created NodeGroups use CAPI by default. For the migration procedure for existing groups, see [How to migrate node groups to Cluster API (CAPI)](/products/kubernetes-platform/documentation/v1/faq.html#how-to-migrate-node-groups-to-cluster-api-capi).
 {% endalert %}
+
+{% alert level="info" %}
+**vCenter tag parity for CAPI-managed VMs.** Under CAPI, every VM receives the `deckhouse-cluster-name/<clusterUUID>` tag (matching MCM behavior). The per-role tag `deckhouse-node-role/<nodeGroup>-<zone>` that MCM also attached is not yet reproduced by the CAPI pipeline — use Kubernetes node labels (`node.deckhouse.io/group`) to group nodes by NodeGroup instead. Full tag parity is planned as a follow-up.
+
+**Placement fields on `VsphereInstanceClass` under CAPI.** `spec.datastore` and `spec.resourcePool` are ignored for CAPI-managed NodeGroups — CAPV overrides them from the resolved `VSphereDeploymentZone` / `VSphereFailureDomain` topology on every reconcile. Per-InstanceClass override via extra DeploymentZones is planned as a follow-up.
+{% endalert %}

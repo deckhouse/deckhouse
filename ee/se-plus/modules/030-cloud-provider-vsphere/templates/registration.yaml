@@ -60,6 +60,14 @@ capiMachineTemplateAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1beta
 {{- if hasKey $providerDiscoveryData "zoneComputeClusterPaths" }}
   {{- $_ := set $vsphereValues "zoneComputeClusterPaths" $providerDiscoveryData.zoneComputeClusterPaths }}
 {{- end }}
+{{- /* tagURNs is a list of vCenter tag URNs (currently one: deckhouse-cluster-name/<clusterUUID>)
+       resolved by cloud-data-discoverer via EnsureClusterTagURN. capi/template.yaml renders them
+       into VSphereMachineTemplate.spec.tagIDs and CAPV attaches on VM clone. Absence means the
+       discoverer has not run yet (fresh install) or its last cycle failed — VM clones without
+       the tag until the next successful cycle; historically MCM handled this same way. */ -}}
+{{- if hasKey $providerDiscoveryData "tagURNs" }}
+  {{- $_ := set $vsphereValues "tagURNs" $providerDiscoveryData.tagURNs }}
+{{- end }}
 {{- $_ := set $vsphereValues "instanceClassDefaults" dict }}
 {{- if hasKey $providerDiscoveryData "resourcePoolPath" }}
   {{- $_ := set $vsphereValues.instanceClassDefaults "resourcePoolPath" $providerDiscoveryData.resourcePoolPath }}

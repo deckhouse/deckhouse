@@ -16,3 +16,9 @@ description: "Управление облачными ресурсами в Deck
 {% alert level="warning" %}
 Модуль находится в процессе миграции управления CloudEphemeral-узлами с Machine Controller Manager (MCM) на Cluster API (CAPI). Существующие NodeGroup продолжают использовать MCM, а новые по умолчанию создаются с использованием CAPI. Порядок миграции существующих групп — в разделе [«Как мигрировать группы узлов на Cluster API (CAPI)»](/products/kubernetes-platform/documentation/v1/faq.html#как-мигрировать-группы-узлов-на-cluster-api-capi).
 {% endalert %}
+
+{% alert level="info" %}
+**Паритет vCenter-тегов для CAPI-узлов.** Под CAPI на каждую VM ставится тег `deckhouse-cluster-name/<clusterUUID>` (как и в MCM). Тег `deckhouse-node-role/<nodeGroup>-<zone>`, который MCM ставил дополнительно, в CAPI-варианте пока не воспроизводится — для группировки узлов по NodeGroup используйте Kubernetes-лейбл `node.deckhouse.io/group`. Полный паритет тегов — в отдельном follow-up.
+
+**Поля размещения `VsphereInstanceClass` под CAPI.** `spec.datastore` и `spec.resourcePool` игнорируются для NodeGroup-ов под управлением CAPI — CAPV перезаписывает их на каждом reconcile из привязанных `VSphereDeploymentZone` / `VSphereFailureDomain`. Возможность override через отдельные DeploymentZone на InstanceClass — в отдельном follow-up.
+{% endalert %}

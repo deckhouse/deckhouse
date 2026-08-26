@@ -43,6 +43,17 @@ type Client interface {
 	GetZonesDatastores() (*Output, error)
 	ListPolicies() ([]StoragePolicy, error)
 	RefreshClient() error
+	// EnsureClusterTagURN idempotently ensures the "deckhouse-cluster-name" tag category
+	// and a tag inside it with the given cluster UUID as name, then returns the tag URN
+	// (format urn:vmomi:InventoryServiceTag:<uuid>:GLOBAL). CAPV's VSphereVM.spec.tagIDs
+	// takes URNs only — MCM used display names, so plain "GetTag by name" is not enough.
+	//
+	// The vCenter permissions this needs (Tagging.CreateCategory / CreateTag) are already
+	// documented in candi/docs/ENVIRONMENT*.md and were required by MCM as well, so an
+	// operator upgrading from the MCM variant does not need to widen the role. On such an
+	// upgrade both the category and the tag already exist — this returns the existing URN
+	// via GetCategory / GetTagForCategory without a write.
+	EnsureClusterTagURN(ctx context.Context, clusterUUID string) (string, error)
 }
 
 type client struct {
@@ -57,6 +68,8 @@ const (
 	datastoreTypeDatastoreCluster = "DatastoreCluster"
 
 	slugSeparator = "-"
+
+	clusterNameTagCategory = "deckhouse-cluster-name"
 )
 
 type ProviderClusterConfiguration struct {
@@ -92,6 +105,13 @@ type Output struct {
 	// an absolute resourcePool into VSphereMachineTemplate — a bare pool name collides
 	// when several compute clusters share a datacenter and CAPV's finder errors ambiguously.
 	ZoneComputeClusterPaths map[string]string `json:"zoneComputeClusterPaths,omitempty"`
+	// TagURNs are vCenter tag URNs to attach to every VM CAPV clones for this cluster.
+	// Currently a single entry: the "deckhouse-cluster-name/<clusterUUID>" tag URN from
+	// EnsureClusterTagURN. The MCM variant additionally attached a "deckhouse-node-role"
+	// tag per (NodeGroup, zone); that is not published here — see the module USAGE doc for
+	// the rationale and follow-up plan. Keeping this as a slice (rather than a single
+	// field) lets a future per-NodeGroup URN be appended without a schema change.
+	TagURNs []string `json:"tagURNs,omitempty"`
 }
 
 type StoragePolicy struct {
@@ -266,6 +286,45 @@ func (v *client) getDCByRegion(ctx context.Context) (*object.Datacenter, error) 
 	datacenter = dcRef.(*object.Datacenter)
 
 	return datacenter, nil
+}
+
+// EnsureClusterTagURN implements Client.
+func (v *client) EnsureClusterTagURN(ctx context.Context, clusterUUID string) (string, error) {
+	if clusterUUID == "" {
+		return "", errors.New("clusterUUID must not be empty")
+	}
+	tc := tags.NewManager(v.restClient)
+
+	// GetCategory / GetTagForCategory return generic 404-shaped errors on missing objects;
+	// govmomi's tags client does not expose a typed NotFound. Falling through to Create on
+	// any error means Create is what surfaces the real problem (permission denied, transport
+	// error, etc.) instead of the read-side error being swallowed.
+	if _, err := tc.GetCategory(ctx, clusterNameTagCategory); err != nil {
+		if _, cerr := tc.CreateCategory(ctx, &tags.Category{
+			Name: clusterNameTagCategory,
+			// SINGLE — one such tag per object; a duplicate on the same VM is a bug we
+			// want vCenter to reject, not to silently allow.
+			Cardinality:     "SINGLE",
+			AssociableTypes: []string{"VirtualMachine"},
+			Description:     "Deckhouse cluster identifier (UUID).",
+		}); cerr != nil {
+			return "", fmt.Errorf("create tag category %q (get failed: %v): %w", clusterNameTagCategory, err, cerr)
+		}
+	}
+
+	if tag, err := tc.GetTagForCategory(ctx, clusterUUID, clusterNameTagCategory); err == nil {
+		return tag.ID, nil
+	}
+
+	id, err := tc.CreateTag(ctx, &tags.Tag{
+		Name:        clusterUUID,
+		CategoryID:  clusterNameTagCategory,
+		Description: "Deckhouse cluster identifier (UUID).",
+	})
+	if err != nil {
+		return "", fmt.Errorf("create tag %q in category %q: %w", clusterUUID, clusterNameTagCategory, err)
+	}
+	return id, nil
 }
 
 func (v *client) getZonesInDC(ctx context.Context, datacenter *object.Datacenter) ([]string, map[string]string, error) {

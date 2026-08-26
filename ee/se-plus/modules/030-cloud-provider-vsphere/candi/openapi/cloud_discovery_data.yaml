@@ -65,6 +65,16 @@ apiVersions:
           attached to (e.g. "e2e-zone-1" -> "/DatacenterLAB/host/stage-hypers"). Populated by
           cloud-data-discoverer and consumed by the ensure_failure_domains hook to render an
           absolute resourcePool.
+      tagURNs:
+        type: array
+        items:
+          type: string
+        description: |
+          vCenter tag URNs (format urn:vmomi:InventoryServiceTag:<uuid>:GLOBAL) to attach
+          to every VM CAPV clones for this cluster. Populated by cloud-data-discoverer via
+          EnsureClusterTagURN — currently a single entry, the deckhouse-cluster-name/
+          <clusterUUID> tag reused from the MCM era. Consumed by capi/template.yaml which
+          renders them into VSphereMachineTemplate.spec.tagIDs.
       internalNetworkNames:
         description: List of cluster internal network names
         type: array

@@ -26,6 +26,14 @@ type VsphereCloudDiscoveryData struct {
 	StoragePolicies  []VsphereStoragePolicy `json:"storagePolicies,omitempty"`
 
 	ZoneComputeClusterPaths map[string]string `json:"zoneComputeClusterPaths,omitempty"`
+
+	// TagURNs are vCenter tag URNs to be attached to every VM CAPV clones for this
+	// cluster. Populated by cloud-data-discoverer from vsphere.Output.TagURNs; consumed
+	// by capi/template.yaml, which renders them into VSphereMachineTemplate.spec.tagIDs.
+	// Currently a single entry — the "deckhouse-cluster-name/<clusterUUID>" tag URN;
+	// see the module USAGE doc for why the per-NodeGroup MCM tag is intentionally not
+	// published here.
+	TagURNs []string `json:"tagURNs,omitempty"`
 }
 
 type VsphereDatastore struct {

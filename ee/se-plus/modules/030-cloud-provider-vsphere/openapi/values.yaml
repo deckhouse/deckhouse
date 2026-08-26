@@ -471,6 +471,18 @@ properties:
               from vCenter and consumed by capi/template.yaml to render an absolute
               resourcePool (relative names collide when several compute clusters share
               a datacenter).
+          tagURNs:
+            type: array
+            items:
+              type: string
+            description: |
+              vCenter tag URNs to attach to every VM CAPV clones for this cluster
+              (format urn:vmomi:InventoryServiceTag:<uuid>:GLOBAL). Populated by
+              cloud-data-discoverer via EnsureClusterTagURN and consumed by
+              capi/template.yaml which renders them into VSphereMachineTemplate.spec
+              .tagIDs. Currently a single entry — the deckhouse-cluster-name/
+              <clusterUUID> tag from the MCM era, reused so an upgraded cluster keeps
+              its existing tag.
       cniSecretData:
         type: string
         x-examples:
