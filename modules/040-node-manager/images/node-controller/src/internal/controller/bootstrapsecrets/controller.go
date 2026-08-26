@@ -148,6 +148,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if validationErr != "" {
 		logger.V(1).Info("NodeGroup failed validation, writing no bootstrap secret",
 			"nodeGroup", ng.Name, "error", validationErr)
+		// Once a minute for as long as the group stays rejected, which client-go's
+		// event correlator collapses: burst 25, then one per 300s, identical
+		// messages folded into count++. Do not stretch the requeue to protect it.
 		r.Recorder.Event(ng, corev1.EventTypeWarning, eventReasonSkipped, validationErr)
 		return ctrl.Result{RequeueAfter: invalidRequeueInterval}, nil
 	}

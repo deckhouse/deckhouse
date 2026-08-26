@@ -43,6 +43,11 @@ import (
 // under the wrong name: a CAPI Machine reads exactly the name its
 // MachineDeployment carries, and a mismatch means nodes that never join.
 var _ = Describe("CAPI bootstrap secret", func() {
+	const (
+		eventually = 20 * time.Second
+		poll       = 250 * time.Millisecond
+	)
+
 	It("writes the cloud-init under the name the MachineDeployment carries", func() {
 		By("publishing the candi templates and the image digests the render reads")
 		testenv.EnsureObject(suiteCtx, k8sClient, testenv.BootstrapTemplatesConfigMap())
@@ -90,7 +95,7 @@ var _ = Describe("CAPI bootstrap secret", func() {
 			}
 			dataSecretName = *name
 			return nil
-		}, 20*time.Second, 250*time.Millisecond).Should(Succeed())
+		}, eventually, poll).Should(Succeed())
 
 		By("the Secret exists under exactly that name, in the CAPI bootstrap shape")
 		secret := &corev1.Secret{}
@@ -102,8 +107,11 @@ var _ = Describe("CAPI bootstrap secret", func() {
 			// The two keys a CAPI bootstrap data Secret is read by.
 			g.Expect(string(secret.Data["format"])).To(Equal("cloud-config"))
 			g.Expect(string(secret.Data["value"])).To(HavePrefix("#cloud-config\n"))
-			// Rendered from the candi templates, not a placeholder.
+			// The script's own tail, from bootstrap/script.go: proof a render ran.
 			g.Expect(string(secret.Data["value"])).To(ContainSubstring("get_phase2 | bash"))
-		}, 20*time.Second, 250*time.Millisecond).Should(Succeed())
+			// Rendered by a ConfigMap template (01-bootstrap-prerequisites.sh.tpl:26),
+			// so the candi templates really travelled through the ConfigMap.
+			g.Expect(string(secret.Data["value"])).To(ContainSubstring(suiteClusterUUID))
+		}, eventually, poll).Should(Succeed())
 	})
 })
