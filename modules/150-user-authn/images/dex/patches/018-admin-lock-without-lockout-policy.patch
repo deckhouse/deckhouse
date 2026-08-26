@@ -1,5 +1,5 @@
 diff --git a/server/handlers.go b/server/handlers.go
-index 166bc9a..8bcec46 100644
+index 166bc9a..5494c7f 100644
 --- a/server/handlers.go
 +++ b/server/handlers.go
 @@ -445,8 +445,10 @@ func (s *Server) handlePasswordLogin(w http.ResponseWriter, r *http.Request) {
@@ -49,33 +49,42 @@ index 166bc9a..8bcec46 100644
  					s.logger.WarnContext(r.Context(),
  						"login attempt for locked account",
  						"username", username,
-@@ -1536,6 +1539,157 @@ func (s *Server) handleUserInfo(w http.ResponseWriter, r *http.Request) {
+@@ -507,6 +510,8 @@ func (s *Server) handlePasswordLogin(w http.ResponseWriter, r *http.Request) {
+ 				// First contact for this user: no state to check yet.
+ 			default:
+ 				s.logger.ErrorContext(r.Context(), "failed to read offline session for lockout pre-check", "err", sErr)
++				s.renderError(r, w, http.StatusInternalServerError, "Database error.")
++				return
+ 			}
+ 		}
+ 
+@@ -1536,6 +1541,157 @@ func (s *Server) handleUserInfo(w http.ResponseWriter, r *http.Request) {
  	w.Write(claims)
  }
  
-+// accountHasActiveLock reports whether an administrator lock is in force for
-+// this account. Local users store LockedUntil on Password; LDAP/Crowd store
-+// it on OfflineSessions. Missing objects are treated as unlocked.
-+func (s *Server) accountHasActiveLock(ctx context.Context, userID, email, connID string) (bool, error) {
-+	if email != "" {
++// accountHasActiveLock reports whether an administrator lock is in force.
++// Local users store LockedUntil on Password; everyone else stores it on
++// OfflineSessions. The stores are not mixed: a local lock must not block an
++// LDAP login with the same email, and the reverse. Missing objects are unlocked.
++func (s *Server) accountHasActiveLock(ctx context.Context, userID, email, connID string, localUser bool) (bool, error) {
++	if localUser {
++		if email == "" {
++			return false, nil
++		}
 +		p, err := s.storage.GetPassword(ctx, email)
 +		if err != nil && !errors.Is(err, storage.ErrNotFound) {
 +			return false, fmt.Errorf("get password: %w", err)
 +		}
-+		if err == nil && lockedUntilIsActive(p.LockedUntil) {
-+			return true, nil
-+		}
++		return err == nil && lockedUntilIsActive(p.LockedUntil), nil
 +	}
-+	if userID != "" && connID != "" {
-+		session, err := s.storage.GetOfflineSessions(ctx, userID, connID)
-+		if err != nil && !errors.Is(err, storage.ErrNotFound) {
-+			return false, fmt.Errorf("get offline sessions: %w", err)
-+		}
-+		if err == nil && lockedUntilIsActive(session.LockedUntil) {
-+			return true, nil
-+		}
++	if userID == "" || connID == "" {
++		return false, nil
 +	}
-+	return false, nil
++	session, err := s.storage.GetOfflineSessions(ctx, userID, connID)
++	if err != nil && !errors.Is(err, storage.ErrNotFound) {
++		return false, fmt.Errorf("get offline sessions: %w", err)
++	}
++	return err == nil && lockedUntilIsActive(session.LockedUntil), nil
 +}
 +
 +func firstNonEmpty(values ...string) string {
@@ -87,8 +96,8 @@ index 166bc9a..8bcec46 100644
 +	return ""
 +}
 +
-+func (s *Server) rejectIfAccountLocked(ctx context.Context, w http.ResponseWriter, userID, email, connID, username string) bool {
-+	locked, err := s.accountHasActiveLock(ctx, userID, email, connID)
++func (s *Server) rejectIfAccountLocked(ctx context.Context, w http.ResponseWriter, userID, email, connID, username string, localUser bool) bool {
++	locked, err := s.accountHasActiveLock(ctx, userID, email, connID, localUser)
 +	if err != nil {
 +		s.logger.ErrorContext(ctx, "failed to read lock state", "err", err, "connector_id", connID)
 +		s.tokenErrHelper(w, errServerError, "", http.StatusInternalServerError)
@@ -207,7 +216,7 @@ index 166bc9a..8bcec46 100644
  func (s *Server) handlePasswordGrant(w http.ResponseWriter, r *http.Request, client storage.Client) {
  	ctx := r.Context()
  	// Parse the fields
-@@ -1610,7 +1764,7 @@ func (s *Server) handlePasswordGrant(w http.ResponseWriter, r *http.Request, cli
+@@ -1610,7 +1766,7 @@ func (s *Server) handlePasswordGrant(w http.ResponseWriter, r *http.Request, cli
  	password := q.Get("password")
  	identity, ok, err := passwordConnector.Login(ctx, parseScopes(scopes), username, password)
  	if err != nil {
@@ -216,12 +225,12 @@ index 166bc9a..8bcec46 100644
  			"err", err,
  			"user", username,
  			"connector_id", connID,
-@@ -1620,8 +1774,15 @@ func (s *Server) handlePasswordGrant(w http.ResponseWriter, r *http.Request, cli
+@@ -1620,8 +1776,15 @@ func (s *Server) handlePasswordGrant(w http.ResponseWriter, r *http.Request, cli
  		s.tokenErrHelper(w, errInvalidRequest, "Could not login user", http.StatusBadRequest)
  		return
  	}
 +	_, localConnector := passwordConnector.(passwordDB)
-+	if s.rejectIfAccountLocked(ctx, w, identity.UserID, firstNonEmpty(identity.Email, username), connID, username) {
++	if s.rejectIfAccountLocked(ctx, w, identity.UserID, firstNonEmpty(identity.Email, username), connID, username, localConnector) {
 +		return
 +	}
  	if !ok {
@@ -233,7 +242,7 @@ index 166bc9a..8bcec46 100644
  			"user", username,
  			"connector_id", connID,
  			"client_id", client.ID,
-@@ -1630,6 +1791,9 @@ func (s *Server) handlePasswordGrant(w http.ResponseWriter, r *http.Request, cli
+@@ -1630,6 +1793,9 @@ func (s *Server) handlePasswordGrant(w http.ResponseWriter, r *http.Request, cli
  		s.tokenErrHelper(w, errAccessDenied, "Invalid username or password", http.StatusUnauthorized)
  		return
  	}
@@ -243,18 +252,18 @@ index 166bc9a..8bcec46 100644
  
  	// Build the claims to send the id token
  	claims := storage.Claims{
-@@ -1833,6 +1997,9 @@ func (s *Server) handleTokenExchange(w http.ResponseWriter, r *http.Request, cli
+@@ -1833,6 +1999,9 @@ func (s *Server) handleTokenExchange(w http.ResponseWriter, r *http.Request, cli
  		s.tokenErrHelper(w, errAccessDenied, "", http.StatusUnauthorized)
  		return
  	}
-+	if s.rejectIfAccountLocked(ctx, w, identity.UserID, identity.Email, connID, identity.Username) {
++	if s.rejectIfAccountLocked(ctx, w, identity.UserID, identity.Email, connID, identity.Username, connID == LocalConnector) {
 +		return
 +	}
  
  	claims := storage.Claims{
  		UserID:            identity.UserID,
 diff --git a/server/handlers_test.go b/server/handlers_test.go
-index 77f0c57..4611e91 100644
+index 77f0c57..1b90f5f 100644
 --- a/server/handlers_test.go
 +++ b/server/handlers_test.go
 @@ -18,9 +18,11 @@ import (
@@ -269,7 +278,7 @@ index 77f0c57..4611e91 100644
  	"github.com/dexidp/dex/storage"
  )
  
-@@ -611,6 +613,483 @@ func TestHandlePasswordLoginWithPasswordPolicyNonExistingUser(t *testing.T) {
+@@ -611,6 +613,790 @@ func TestHandlePasswordLoginWithPasswordPolicyNonExistingUser(t *testing.T) {
  	require.Equal(t, http.StatusUnauthorized, rr.Code, "expected 401 for non-existing user, got %d", rr.Code)
  }
  
@@ -415,6 +424,66 @@ index 77f0c57..4611e91 100644
 +	require.Equal(t, http.StatusTooManyRequests, rr.Code)
 +}
 +
++type offlineSessionErrorStorage struct {
++	storage.Storage
++	err error
++}
++
++func (s *offlineSessionErrorStorage) GetOfflineSessions(context.Context, string, string) (storage.OfflineSessions, error) {
++	return storage.OfflineSessions{}, s.err
++}
++
++func TestHandlePasswordLoginFailClosedOnOfflineSessionReadError(t *testing.T) {
++	ctx := t.Context()
++	connID := "mockPw"
++
++	httpServer, s := newTestServer(t, func(c *Config) {
++		c.SkipApprovalScreen = true
++		c.Now = time.Now
++	})
++	defer httpServer.Close()
++	require.Nil(t, s.passwordPolicy)
++
++	sc := storage.Connector{
++		ID:              connID,
++		Type:            "mockPassword",
++		Name:            "MockPassword",
++		ResourceVersion: "1",
++		Config:          []byte(`{"username": "foo", "password": "password"}`),
++	}
++	require.NoError(t, s.storage.CreateConnector(ctx, sc))
++	if _, err := s.OpenConnector(sc); err != nil {
++		t.Fatalf("open connector: %v", err)
++	}
++	require.NoError(t, s.storage.CreateAuthRequest(ctx, storage.AuthRequest{
++		ID:            "test",
++		ConnectorID:   connID,
++		RedirectURI:   "cb",
++		Expiry:        time.Now().Add(100 * time.Second),
++		ResponseTypes: []string{responseTypeCode},
++	}))
++	s.storage = &offlineSessionErrorStorage{
++		Storage: s.storage,
++		err:     errors.New("etcd unavailable"),
++	}
++
++	rr := httptest.NewRecorder()
++	path := fmt.Sprintf("/auth/%s/login?state=test&back=&login=foo&password=password", connID)
++	s.handlePasswordLogin(rr, httptest.NewRequest("POST", path, nil))
++	require.Equal(t, http.StatusInternalServerError, rr.Code)
++	require.Contains(t, rr.Body.String(), "Database error")
++}
++
++type countingPasswordStorage struct {
++	storage.Storage
++	gets int
++}
++
++func (s *countingPasswordStorage) GetPassword(ctx context.Context, email string) (storage.Password, error) {
++	s.gets++
++	return s.Storage.GetPassword(ctx, email)
++}
++
 +func TestHandlePasswordGrantHonorsAdminLock(t *testing.T) {
 +	ctx := t.Context()
 +	future := time.Now().Add(time.Hour)
@@ -470,6 +539,115 @@ index 77f0c57..4611e91 100644
 +			require.Equal(t, tc.expectedCode, rr.Code, rr.Body.String())
 +		})
 +	}
++}
++
++func TestHandlePasswordGrantLockStoresAreConnectorScoped(t *testing.T) {
++	ctx := t.Context()
++	future := time.Now().Add(time.Hour)
++	hash, err := bcrypt.GenerateFromPassword([]byte("correct-password"), bcrypt.DefaultCost)
++	require.NoError(t, err)
++
++	t.Run("local Password lock does not block LDAP ROPC with the same email", func(t *testing.T) {
++		httpServer, s := newTestServer(t, func(c *Config) {
++			c.PasswordConnector = "dex-ldap"
++			c.Now = time.Now
++		})
++		defer httpServer.Close()
++		require.NoError(t, s.storage.CreateClient(ctx, storage.Client{
++			ID:     "test",
++			Secret: "barfoo",
++			Name:   "test",
++		}))
++		sc := storage.Connector{ID: "dex-ldap", Type: "ldap", Name: "LDAP", ResourceVersion: "1"}
++		require.NoError(t, s.storage.CreateConnector(ctx, sc))
++		s.mu.Lock()
++		s.connectors["dex-ldap"] = Connector{
++			ResourceVersion: "1",
++			Connector: lockoutPasswordConnector{
++				username: "alice",
++				password: "secret",
++				userID:   "alice-id",
++				email:    "alice@example.com",
++			},
++		}
++		s.mu.Unlock()
++		require.NoError(t, s.storage.CreatePassword(ctx, storage.Password{
++			Email:       "alice@example.com",
++			Username:    "alice",
++			UserID:      "local-alice-id",
++			Hash:        hash,
++			LockedUntil: &future,
++		}))
++
++		rr := postPasswordGrant(t, s, "alice", "secret")
++		require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
++	})
++
++	t.Run("OfflineSessions lock does not block local ROPC", func(t *testing.T) {
++		httpServer, s := newTestServer(t, func(c *Config) {
++			c.PasswordConnector = LocalConnector
++			c.Now = time.Now
++		})
++		defer httpServer.Close()
++		require.NoError(t, s.storage.CreateClient(ctx, storage.Client{
++			ID:     "test",
++			Secret: "barfoo",
++			Name:   "test",
++		}))
++		sc := storage.Connector{ID: LocalConnector, Type: LocalConnector, Name: "Local", ResourceVersion: "1"}
++		require.NoError(t, s.storage.CreateConnector(ctx, sc))
++		if _, err := s.OpenConnector(sc); err != nil {
++			t.Fatalf("open connector: %v", err)
++		}
++		require.NoError(t, s.storage.CreatePassword(ctx, storage.Password{
++			Email:    "jane@example.com",
++			Username: "jane",
++			UserID:   "jane-id",
++			Hash:     hash,
++		}))
++		require.NoError(t, s.storage.CreateOfflineSessions(ctx, storage.OfflineSessions{
++			UserID:      "jane-id",
++			ConnID:      LocalConnector,
++			Email:       "jane@example.com",
++			Refresh:     map[string]*storage.RefreshTokenRef{},
++			LockedUntil: &future,
++		}))
++
++		rr := postPasswordGrant(t, s, "jane@example.com", "correct-password")
++		require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
++	})
++}
++
++func TestHandlePasswordGrantNonLocalDoesNotReadPassword(t *testing.T) {
++	httpServer, s := newTestServer(t, func(c *Config) {
++		c.PasswordConnector = "dex-ldap"
++		c.Now = time.Now
++	})
++	defer httpServer.Close()
++	require.NoError(t, s.storage.CreateClient(t.Context(), storage.Client{
++		ID:     "test",
++		Secret: "barfoo",
++		Name:   "test",
++	}))
++	sc := storage.Connector{ID: "dex-ldap", Type: "ldap", Name: "LDAP", ResourceVersion: "1"}
++	require.NoError(t, s.storage.CreateConnector(t.Context(), sc))
++	s.mu.Lock()
++	s.connectors["dex-ldap"] = Connector{
++		ResourceVersion: "1",
++		Connector: lockoutPasswordConnector{
++			username: "alice",
++			password: "secret",
++			userID:   "alice-id",
++			email:    "alice@example.com",
++		},
++	}
++	s.mu.Unlock()
++	counted := &countingPasswordStorage{Storage: s.storage}
++	s.storage = counted
++
++	rr := postPasswordGrant(t, s, "alice", "secret")
++	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
++	require.Equal(t, 0, counted.gets)
 +}
 +
 +type lockoutPasswordConnector struct {
@@ -686,6 +864,144 @@ index 77f0c57..4611e91 100644
 +	})
 +}
 +
++func TestHandleRefreshTokenHonorsLocalPasswordLock(t *testing.T) {
++	ctx := t.Context()
++	now := time.Now()
++	until := now.Add(time.Hour)
++	hash, err := bcrypt.GenerateFromPassword([]byte("correct-password"), bcrypt.DefaultCost)
++	require.NoError(t, err)
++
++	httpServer, s := newTestServer(t, func(c *Config) {
++		c.RefreshTokenPolicy = &RefreshTokenPolicy{rotateRefreshTokens: false, reuseInterval: time.Hour, now: func() time.Time { return now }}
++		c.Now = func() time.Time { return now }
++	})
++	defer httpServer.Close()
++
++	require.NoError(t, s.storage.CreateClient(ctx, storage.Client{
++		ID:           "test",
++		Secret:       "barfoo",
++		RedirectURIs: []string{"foo://bar.com/"},
++		Name:         "dex client",
++	}))
++	sc := storage.Connector{ID: LocalConnector, Type: LocalConnector, Name: "Local", ResourceVersion: "1"}
++	require.NoError(t, s.storage.CreateConnector(ctx, sc))
++	if _, err := s.OpenConnector(sc); err != nil {
++		t.Fatalf("open connector: %v", err)
++	}
++	require.NoError(t, s.storage.CreatePassword(ctx, storage.Password{
++		Email:       "jane@example.com",
++		Username:    "jane",
++		UserID:      "1",
++		Hash:        hash,
++		LockedUntil: &until,
++	}))
++	require.NoError(t, s.storage.CreateRefresh(ctx, storage.RefreshToken{
++		ID:          "test",
++		Token:       "bar",
++		Nonce:       "foo",
++		ClientID:    "test",
++		ConnectorID: LocalConnector,
++		Scopes:      []string{"openid", "email", "profile"},
++		CreatedAt:   now.UTC().Round(time.Millisecond),
++		LastUsed:    now.UTC().Round(time.Millisecond),
++		Claims: storage.Claims{
++			UserID:        "1",
++			Username:      "jane",
++			Email:         "jane@example.com",
++			EmailVerified: true,
++		},
++	}))
++
++	tokenData, err := internal.Marshal(&internal.RefreshToken{RefreshId: "test", Token: "bar"})
++	require.NoError(t, err)
++
++	u, err := url.Parse(s.issuerURL.String())
++	require.NoError(t, err)
++	u.Path = path.Join(u.Path, "/token")
++	form := url.Values{}
++	form.Set("grant_type", "refresh_token")
++	form.Set("refresh_token", tokenData)
++	req, err := http.NewRequest(http.MethodPost, u.String(), bytes.NewBufferString(form.Encode()))
++	require.NoError(t, err)
++	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
++	req.SetBasicAuth("test", "barfoo")
++	rr := httptest.NewRecorder()
++	s.ServeHTTP(rr, req)
++	require.Equal(t, http.StatusTooManyRequests, rr.Code, rr.Body.String())
++	require.Contains(t, rr.Body.String(), "Account locked")
++}
++
++func TestAccountHasActiveLock(t *testing.T) {
++	ctx := t.Context()
++	future := time.Now().Add(time.Hour)
++	hash, err := bcrypt.GenerateFromPassword([]byte("x"), bcrypt.DefaultCost)
++	require.NoError(t, err)
++
++	httpServer, s := newTestServer(t, nil)
++	defer httpServer.Close()
++
++	require.NoError(t, s.storage.CreatePassword(ctx, storage.Password{
++		Email:       "jane@example.com",
++		Username:    "jane",
++		UserID:      "jane-id",
++		Hash:        hash,
++		LockedUntil: &future,
++	}))
++	require.NoError(t, s.storage.CreateOfflineSessions(ctx, storage.OfflineSessions{
++		UserID:      "ldap-id",
++		ConnID:      "dex-ldap",
++		Email:       "jane@example.com",
++		Refresh:     map[string]*storage.RefreshTokenRef{},
++		LockedUntil: &future,
++	}))
++
++	t.Run("local user reads Password only", func(t *testing.T) {
++		locked, err := s.accountHasActiveLock(ctx, "ldap-id", "jane@example.com", "dex-ldap", true)
++		require.NoError(t, err)
++		require.True(t, locked)
++	})
++	t.Run("non-local user ignores Password lock", func(t *testing.T) {
++		locked, err := s.accountHasActiveLock(ctx, "other-id", "jane@example.com", "dex-ldap", false)
++		require.NoError(t, err)
++		require.False(t, locked)
++	})
++	t.Run("non-local user reads OfflineSessions only", func(t *testing.T) {
++		locked, err := s.accountHasActiveLock(ctx, "ldap-id", "nobody@example.com", "dex-ldap", false)
++		require.NoError(t, err)
++		require.True(t, locked)
++	})
++	t.Run("local user ignores OfflineSessions lock", func(t *testing.T) {
++		locked, err := s.accountHasActiveLock(ctx, "ldap-id", "nobody@example.com", "dex-ldap", true)
++		require.NoError(t, err)
++		require.False(t, locked)
++	})
++	t.Run("storage error on Password is returned", func(t *testing.T) {
++		orig := s.storage
++		s.storage = &passwordErrorStorage{Storage: orig, err: errors.New("etcd unavailable")}
++		t.Cleanup(func() { s.storage = orig })
++		_, err := s.accountHasActiveLock(ctx, "jane-id", "jane@example.com", LocalConnector, true)
++		require.Error(t, err)
++		require.ErrorContains(t, err, "get password")
++	})
++	t.Run("storage error on OfflineSessions is returned", func(t *testing.T) {
++		orig := s.storage
++		s.storage = &offlineSessionErrorStorage{Storage: orig, err: errors.New("etcd unavailable")}
++		t.Cleanup(func() { s.storage = orig })
++		_, err := s.accountHasActiveLock(ctx, "ldap-id", "jane@example.com", "dex-ldap", false)
++		require.Error(t, err)
++		require.ErrorContains(t, err, "get offline sessions")
++	})
++}
++
++type passwordErrorStorage struct {
++	storage.Storage
++	err error
++}
++
++func (s *passwordErrorStorage) GetPassword(context.Context, string) (storage.Password, error) {
++	return storage.Password{}, s.err
++}
++
 +func TestHandleRefreshTokenHonorsAdminLock(t *testing.T) {
 +	ctx := t.Context()
 +	now := time.Now()
@@ -809,7 +1125,7 @@ index adf54fc..69a797b 100644
  
  func (pp PasswordPolicy) IsMaxLoginAttemptsExeeded(attempts uint64) bool {
 diff --git a/server/refreshhandlers.go b/server/refreshhandlers.go
-index a263d8e..162fe87 100644
+index a263d8e..ce9fbbb 100644
 --- a/server/refreshhandlers.go
 +++ b/server/refreshhandlers.go
 @@ -43,6 +43,10 @@ func newBadRequestError(desc string) *refreshError {
@@ -823,7 +1139,7 @@ index a263d8e..162fe87 100644
  var (
  	invalidErr = newBadRequestError("Refresh token is invalid or has already been claimed by another client.")
  	expiredErr = newBadRequestError("Refresh token expired.")
-@@ -682,6 +686,27 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
+@@ -682,6 +686,28 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
  		return
  	}
  
@@ -832,6 +1148,7 @@ index a263d8e..162fe87 100644
 +		rCtx.storageToken.Claims.UserID,
 +		rCtx.storageToken.Claims.Email,
 +		rCtx.storageToken.ConnectorID,
++		rCtx.storageToken.ConnectorID == LocalConnector,
 +	)
 +	if lockErr != nil {
 +		s.logger.ErrorContext(r.Context(), "failed to read lock state on refresh", "err", lockErr)

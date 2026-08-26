@@ -197,7 +197,12 @@ and, when `applyToConnectors` matches, `OfflineSessions`). UserOperation
 For a non-local connector (LDAP, Crowd, …) the login-form path now reads
 `OfflineSessions` on every attempt so an administrator lock is visible even
 when no password policy is configured. That is one extra storage GET on the
-authentication hot path.
+authentication hot path. A storage error on that read fails closed (HTTP 500),
+same as the token and refresh paths.
+
+The lock check is connector-scoped: local users read `Password` only, everyone
+else reads `OfflineSessions` only. A local `UserOperation` Lock therefore does
+not block an LDAP login with the same email, and the reverse.
 
 ### 998-fix-cve.patch
 
