@@ -1,0 +1,201 @@
+#cloud-config
+mounts:
+- [ ephemeral0, /mnt/resource ]
+package_update: false
+package_upgrade: false
+manage_etc_hosts: localhost
+write_files:
+- path: '/var/lib/bashible/bootstrap.sh'
+  permissions: '0700'
+  content: |    
+    #!/usr/bin/env bash
+    set -Eeuo pipefail
+    BOOTSTRAP_DIR="/var/lib/bashible"
+    TMPDIR="/opt/deckhouse/tmp"
+    mkdir -p "${BOOTSTRAP_DIR}" "${TMPDIR}"
+    export PATH="/opt/deckhouse/bin:/usr/local/bin:$PATH"
+    bootstrap_log_init() {
+      if [[ -z ${BOOTSTRAP_LOG:-} ]]; then
+        mkdir -p /var/log/d8/bashible
+        exec {stdout_fd}>&1
+        exec > >(tee -a /var/log/d8/bashible/bootstrap.log >&${stdout_fd}) 2>&1
+        export BOOTSTRAP_LOG=1
+      fi
+    }
+    bootstrap_log_init
+    
+    fetch_bootstrap() {
+      local url="$1" token="$2" out="$3" code
+      code=$(/opt/deckhouse/bin/d8-curl -sSx "" \
+        --connect-timeout 10 \
+        "$url" \
+        -H "Authorization: Bearer $token" \
+        --cacert "$BOOTSTRAP_DIR/ca.crt" \
+        -o "$out" -w '%{http_code}') || {
+          >&2 echo "Failed to fetch bootstrap from ${url}"
+          return 3
+      }
+      case "$code" in
+        200)
+          jq -er '.bootstrap' "$out"
+          ;;
+        401)
+          >&2 echo "Bootstrap token expired"
+          return 2
+          ;;
+        *)
+          >&2 echo "Bootstrap request returned HTTP $code: $(head -c 255 "$out" 2>/dev/null)"
+          return 1
+          ;;
+      esac
+    }
+    get_phase2() {
+      local out="${TMPDIR}/phase2-response.json"
+      local path="/apis/bashible.deckhouse.io/v1alpha1/bootstrap/worker"
+      local rejected_timeout="${BOOTSTRAP_TOKEN_REJECTED_TIMEOUT:-300}"
+      local rejected_since=0
+      local token rc server url attempted rejected now
+      while :; do
+        token="$(<${BOOTSTRAP_DIR}/bootstrap-token)"
+        attempted=0
+        rejected=0
+        for server in 10.0.0.1:6443 10.0.0.2:6443 10.0.0.3:6443; do
+          url="https://${server}${path}"
+          if fetch_bootstrap "$url" "$token" "$out"; then
+            rm -f "$out"
+            return 0
+          else
+            rc=$?
+          fi
+          rm -f "$out"
+          attempted=$((attempted + 1))
+          if (( rc == 2 )); then
+            rejected=$((rejected + 1))
+          else
+            >&2 echo "Failed to get bootstrap from ${url} (exit code $rc)"
+          fi
+        done
+    
+        if (( attempted > 0 && rejected == attempted )); then
+          now="$(date +%s)"
+          if (( rejected_since == 0 )); then
+            rejected_since="$now"
+            >&2 echo "Bootstrap token rejected by every master; retrying for up to ${rejected_timeout}s in case the API servers are still starting"
+          elif (( now - rejected_since >= rejected_timeout )); then
+            >&2 echo "Bootstrap token rejected by every master for ${rejected_timeout}s, giving up"
+            return 1
+          fi
+        else
+          rejected_since=0
+        fi
+    
+        sleep 10
+      done
+    }
+    
+    #!/bin/bash
+    set -Eeo pipefail
+    
+    
+    bb-minget-install() {
+      local path="/opt/deckhouse/bin/minget"
+      if [[ -s "$path" && -x "$path" ]]; then
+        return 0
+      fi
+      mkdir -p "${path%/*}"
+      if ! echo -n 'bWluZ2V0' | base64 -d > "$path"; then
+        rm -f "$path"
+        return 1
+      fi
+      if [[ ! -s "$path" ]]; then
+        rm -f "$path"
+        return 1
+      fi
+      chmod +x "$path"
+    }
+    bb-rpp-get-binary-ready() { "$1" version &>/dev/null; }
+    bb-rpp-get-fetch() {
+      if command -v d8-curl >/dev/null 2>&1; then
+        d8-curl -sS -f -x "" --connect-timeout 10 --max-time 300 "http://$1"
+        return
+      fi
+      /opt/deckhouse/bin/minget "$1"
+    }
+    bb-rpp-get-install() {
+      local bin="/opt/deckhouse/bin/rpp-get"
+      local digest="sha256:rpp"
+      local digest_file="${BB_RP_INSTALLED_PACKAGES_STORE:-/var/cache/registrypackages}/rpp-get/digest"
+      local tmp="${bin}.tmp"
+      local prefix="${PACKAGES_PROXY_BOOTSTRAP_CLUSTER_UUID:+/${PACKAGES_PROXY_BOOTSTRAP_CLUSTER_UUID}}"
+      local attempt address
+      if [[ -f "$digest_file" &&
+            "$(<"$digest_file")" == "$digest" ]] &&
+         bb-rpp-get-binary-ready "$bin"; then
+        return 0
+      fi
+      if [[ -z "${PACKAGES_PROXY_BOOTSTRAP_ADDRESSES:-}" ]]; then
+        >&2 echo "rpp-get bootstrap source is not configured"
+        return 1
+      fi
+      mkdir -p "${bin%/*}" "${digest_file%/*}"
+      for ((attempt = 1; attempt <= 30; attempt++)); do
+        for address in ${PACKAGES_PROXY_BOOTSTRAP_ADDRESSES}; do
+          bb-rpp-get-fetch "${address}${prefix}/rpp-get?digest=${digest}" > "$tmp" || continue
+          chmod +x "$tmp"
+          bb-rpp-get-binary-ready "$tmp" || continue
+          mv -f "$tmp" "$bin"
+          echo "$digest" > "$digest_file"
+          return 0
+        done
+        >&2 echo "Failed to install rpp-get (attempt ${attempt} of 30), retrying in 5 seconds"
+        sleep 5
+      done
+      >&2 echo "Failed to install rpp-get after 30 attempts"
+      rm -f "$tmp"
+      return 1
+    }
+    bb-discover-node-name() {
+      local node_name="/var/lib/bashible/discovered-node-name"
+      local kubelet_crt="/var/lib/kubelet/pki/kubelet-server-current.pem"
+      if [ ! -s "$node_name" ]; then
+        if [[ -s "$kubelet_crt" ]]; then
+          openssl x509 -in "$kubelet_crt" \
+            -noout -subject -nameopt multiline |
+          awk '/^ *commonName/{print $NF}' | cut -d':' -f3- > "$node_name"
+        else
+          if [[ "$(hostname)" != "$(hostname -s)" ]]; then
+            hostnamectl set-hostname "$(hostname -s)"
+          fi
+          hostname > "$node_name"
+        fi
+      fi
+    }
+    export PACKAGES_PROXY_BOOTSTRAP_CLUSTER_UUID="deadbeef-dead-beef-dead-beefdeadbeef"
+    export PACKAGES_PROXY_BOOTSTRAP_ADDRESSES="10.0.0.1:4220"
+    
+    export PACKAGES_PROXY_KUBE_APISERVER_ENDPOINTS="10.0.0.1:6443"
+    
+    bb-minget-install
+    bb-rpp-get-install
+    
+    /opt/deckhouse/bin/rpp-get install "jq:sha256:jq" "curl:sha256:curl" "tailLog:sha256:tail"
+    export PATH="/opt/deckhouse/bin:/usr/local/bin:$PATH"
+    mkdir -p /var/lib/bashible
+    bb-discover-node-name
+    
+    /opt/deckhouse/bin/tail-log ${TMPDIR}/bootstrap.log &
+    log_pid=$!
+    get_phase2 | bash
+    if [ -n "${log_pid:-}" ]; then
+      kill -9 "${log_pid}"
+    fi
+- path: '/var/lib/bashible/ca.crt'
+  permissions: '0644'
+  content: |
+    myclusterca
+- path: /var/lib/bashible/bootstrap-token
+  content: <<BOOTSTRAP_TOKEN>>
+  permissions: '0600'
+- path: /var/lib/bashible/first_run
+runcmd:
+- /var/lib/bashible/bootstrap.sh
