@@ -32,6 +32,7 @@ import (
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/bootstrap"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
+	"github.com/deckhouse/node-controller/internal/controller/nodegroup/bashiblecontext"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 )
@@ -44,39 +45,49 @@ const (
 	imagesDigestsKey           = "images_digests.json"
 )
 
-// buildInput collects everything the bootstrap templates read for one NodeGroup.
-// The readers are bashiblecontext's, not copies: ReadEndpoints alone carries the
-// pod-readiness rules a second implementation would drift from silently.
+// buildInput collects the bootstrap input of a NodeGroup and mints the token the
+// nodes of that group join with.
 func (r *Reconciler) buildInput(ctx context.Context, ng *deckhousev1.NodeGroup, resolved derived_status.ResolvedNodeGroup) (bootstrap.Input, error) {
-	// Helm held this gate as `clusterUUID | required`: with an empty UUID rpp-get
-	// asks the packages proxy for a prefix-less path, gets a 404, and the node
-	// hangs for the whole bootstrap timeout instead of failing loudly.
-	clusterUUID := r.context.ReadGlobals(ctx).ClusterUUID
-	if clusterUUID == "" {
-		return bootstrap.Input{}, fmt.Errorf("build bootstrap input for NodeGroup %s: cluster UUID is empty", ng.Name)
-	}
-
-	endpoints, err := r.context.ReadEndpoints(ctx)
-	if err != nil {
-		return bootstrap.Input{}, fmt.Errorf("read kube-apiserver endpoints: %w", err)
-	}
-
-	files, err := bootstrap.LoadFiles(ctx, r.Client)
-	if err != nil {
-		return bootstrap.Input{}, err
-	}
-
-	images, err := readImages(ctx, r.Client)
-	if err != nil {
-		return bootstrap.Input{}, err
-	}
-
 	token, err := EnsureToken(ctx, r.Client, ng.Name)
 	if err != nil {
 		return bootstrap.Input{}, err
 	}
+	return BuildInput(ctx, r.context, resolved, token)
+}
 
-	cloudProvider := r.context.ReadCloudProvider(ctx)
+// BuildInput collects everything the bootstrap templates read for one NodeGroup.
+// The readers are bashiblecontext's, not copies: ReadEndpoints alone carries the
+// pod-readiness rules a second implementation would drift from silently.
+//
+// token is what the render writes to /var/lib/bashible/bootstrap-token: a minted
+// token for the Secrets this controller writes, the <<BOOTSTRAP_TOKEN>> literal
+// for the MCM machine-class Secret, where machine-controller-manager substitutes
+// a token of its own per machine.
+func BuildInput(ctx context.Context, svc *bashiblecontext.Service, resolved derived_status.ResolvedNodeGroup, token string) (bootstrap.Input, error) {
+	// Helm held this gate as `clusterUUID | required`: with an empty UUID rpp-get
+	// asks the packages proxy for a prefix-less path, gets a 404, and the node
+	// hangs for the whole bootstrap timeout instead of failing loudly.
+	clusterUUID := svc.ReadGlobals(ctx).ClusterUUID
+	if clusterUUID == "" {
+		return bootstrap.Input{}, fmt.Errorf("build bootstrap input for NodeGroup %s: cluster UUID is empty", resolved.Name)
+	}
+
+	endpoints, err := svc.ReadEndpoints(ctx)
+	if err != nil {
+		return bootstrap.Input{}, fmt.Errorf("read kube-apiserver endpoints: %w", err)
+	}
+
+	files, err := bootstrap.LoadFiles(ctx, svc.Client)
+	if err != nil {
+		return bootstrap.Input{}, err
+	}
+
+	images, err := readImages(ctx, svc.Client)
+	if err != nil {
+		return bootstrap.Input{}, err
+	}
+
+	cloudProvider := svc.ReadCloudProvider(ctx)
 	provider, _ := cloudProvider["type"].(string)
 	sshPublicKey, _ := cloudProvider["sshPublicKey"].(string)
 
@@ -86,12 +97,12 @@ func (r *Reconciler) buildInput(ctx context.Context, ng *deckhousev1.NodeGroup, 
 		ClusterMasterEndpoints: endpoints.ClusterMasterEndpoints,
 		ClusterUUID:            clusterUUID,
 		Images:                 images,
-		PackagesProxy:          map[string]any{"token": r.context.ReadPackagesProxyToken(ctx)},
+		PackagesProxy:          map[string]any{"token": svc.ReadPackagesProxyToken(ctx)},
 		// minget is 4KiB (crane export of the image candi/alt_base_images.yml
 		// pins), so inlining its base64 into the script costs ~5KiB per copy.
 		MingetB64:      base64.StdEncoding.EncodeToString(files.Binary("minget")),
 		Provider:       provider,
-		KubernetesCA:   r.context.ReadKubernetesCA(),
+		KubernetesCA:   svc.ReadKubernetesCA(),
 		BootstrapToken: token,
 		SSHPublicKey:   sshPublicKey,
 		Files:          files,
