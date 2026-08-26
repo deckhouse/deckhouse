@@ -75,13 +75,6 @@ func createFakePSM(ic registry.Client) registryService.ServiceManagerInterface[r
 	return psm
 }
 
-// createFailingPSM creates a PackageServiceManager whose Service call fails,
-// simulating an error while creating the registry client.
-func createFailingPSM(err error) registryService.ServiceManagerInterface[registryService.PackagesService] {
-	psm := mock.NewServiceManagerMock[registryService.PackagesService](&testing.T{})
-	psm.ServiceMock.Return(nil, err)
-	return psm
-}
 
 // applicationVersionImage builds a version image with Application type label and package.yaml.
 func applicationVersionImage() *fakeRegistry.ImageBuilder {
@@ -284,11 +277,12 @@ func (suite *ControllerTestSuite) TestReconcile() {
 	})
 
 	suite.Run("registry client creation failed", func() {
-		// The service manager fails to create a registry client for the repository,
-		// so NewService returns a "create package service" error before any listing.
-		failingPSM := createFailingPSM(assert.AnError)
+		// The repository carries a malformed dockerCfg, so the real service manager
+		// fails to build the registry client (bad auth config) and NewService returns
+		// a "create package service" error before any listing happens.
+		psm := registryService.NewPackageServiceManager(log.NewNop())
 
-		suite.setupController("registry-client-failed.yaml", withPackageServiceManager(failingPSM))
+		suite.setupController("registry-client-failed.yaml", withPackageServiceManager(psm))
 		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
 
 		err := repeat(func() error {

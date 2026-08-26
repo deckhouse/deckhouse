@@ -26,5 +26,5 @@ metadata:
   name: deckhouse
 spec:
   registry:
-    repo: incorrect-registry.example.com/incorrect
-    dockerCfg: "test"
+    repo: registry.example.com/test
+    dockerCfg: "incorrect_base64_string"
