@@ -486,6 +486,21 @@
       "justification": "inline_mitigations_already_exist",
       "impact_statement": "archive/tar DoS через вредоносный архив - Пакет archive/tar действительно используется: обработчик загрузки (Service.Upload) читает тело запроса через tar.NewReader. Однако эндпоинт POST /api/v1/doc/{moduleName}/{version} — внутренний (ClusterIP, порт 8081), доступный только из кластера от доверенного контроллера Deckhouse, который и формирует загружаемые tar-архивы из исходников модулей; наружу сервис не публикуется. Потенциальный DoS от патологического архива нивелируется жёсткими лимитами ресурсов контейнера и автоматическим перезапуском (health recovery), что исключает персистентный отказ в обслуживании, повреждение данных или эскалацию привилегий.",
       "timestamp": "2026-08-25T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33811",
+        "description": "net: Denial of Service via long CNAME response in LookupCNAME (cgo resolver)"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "net DoS через длинный CNAME в LookupCNAME - Уязвимость (double-free памяти C и аварийное завершение при очень длинном CNAME-ответе) проявляется исключительно при использовании cgo-резолвера DNS. Образ docs-builder собирается статически с CGO_ENABLED=0 (GOOS=linux), поэтому используется чистый Go-резолвер, а уязвимый cgo-путь в бинарь не включается. Дополнительно приложение не вызывает net.LookupCNAME. Уязвимый код не входит в путь исполнения.",
+      "timestamp": "2026-08-25T00:00:00Z"
     }
   ],
   "timestamp": "2026-07-22T00:00:00Z"
