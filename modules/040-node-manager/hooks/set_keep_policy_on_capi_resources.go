@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"regexp"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -37,13 +38,22 @@ const (
 	helmResourcePolicyAnnotation = "helm.sh/resource-policy"
 	capiNamespace                = "d8-cloud-instance-manager"
 	helmManagedSelector          = "app.kubernetes.io/managed-by=Helm"
+	manualBootstrapSecretPrefix  = "manual-bootstrap-for-"
 )
+
+// zoneHashedSecretName matches the `printf "%s-%s" $ng.name $zone_hash` both the CAPI
+// bootstrap and the machine-class Secret are named by, $zone_hash being `sha256sum | trunc 8`.
+var zoneHashedSecretName = regexp.MustCompile(`-[0-9a-f]{8}$`)
 
 type keepResource struct {
 	Group    string
 	Resource string
 	// versionPreference is tried in order; empty falls back to storedVersionPreference.
 	versionPreference []string
+	// keepName picks the objects of a resource whose namespace is shared with other
+	// owners. nil keeps every helm-managed object of the resource, which is right for
+	// the CAPI kinds: in d8-cloud-instance-manager they are all this module's.
+	keepName func(string) bool
 }
 
 var capiResources = []keepResource{
@@ -54,7 +64,7 @@ var capiResources = []keepResource{
 	// Bootstrap secrets move from helm to node-controller in 1.79; the annotation
 	// must land before helm stops rendering them, or the release prunes them
 	// between the two steps. Remove together with this hook.
-	{Group: "", Resource: "secrets"},
+	{Group: "", Resource: "secrets", keepName: isBootstrapSecretName},
 }
 
 var crdGVR = schema.GroupVersionResource{
@@ -119,6 +129,9 @@ func setKeepPolicyOnCapiResources(ctx context.Context, input *go_hook.HookInput,
 		}
 
 		for _, item := range list.Items {
+			if res.keepName != nil && !res.keepName(item.GetName()) {
+				continue
+			}
 			if item.GetAnnotations()[helmResourcePolicyAnnotation] == "keep" {
 				continue
 			}
@@ -139,6 +152,9 @@ func setKeepPolicyOnCapiResources(ctx context.Context, input *go_hook.HookInput,
 			return fmt.Errorf("verify list %s/%s: %w", res.Resource, version, err)
 		}
 		for _, item := range verify.Items {
+			if res.keepName != nil && !res.keepName(item.GetName()) {
+				continue
+			}
 			if item.GetAnnotations()[helmResourcePolicyAnnotation] != "keep" {
 				return fmt.Errorf("keep policy not set on %s/%s: refusing to proceed to avoid prune", res.Resource, item.GetName())
 			}
@@ -146,6 +162,18 @@ func setKeepPolicyOnCapiResources(ctx context.Context, input *go_hook.HookInput,
 	}
 
 	return nil
+}
+
+// isBootstrapSecretName reports whether a Secret of d8-cloud-instance-manager is one of
+// the three this migration takes over: manual-bootstrap-for-<ng>, and the CAPI bootstrap
+// and MCM machine-class Secrets, both named <ng>-<sha256(clusterUUID+zone)[:8]>
+// (templates/node-group/node-group.yaml:17-18, _machine_class_secret.tpl:9).
+//
+// The namespace is shared and the labels do not separate them: deckhouse-registry,
+// bashible-bashbooster and bashible-api-server-tls carry the same heritage/module pair
+// and no other, and the registry-packages-proxy Secrets belong to another release.
+func isBootstrapSecretName(name string) bool {
+	return strings.HasPrefix(name, manualBootstrapSecretPrefix) || zoneHashedSecretName.MatchString(name)
 }
 
 // keepResourceVersion resolves the version to patch a resource through. A core
