@@ -146,9 +146,10 @@ func collectUnknownFields(doc interface{}, schema *apiextensionsv1.JSONSchemaPro
 			return
 		}
 		for key, child := range value {
-			// The apiserver owns metadata; a CRD schema describes it as an
-			// opaque object, and its contents are not this contract's.
-			if path == "" && key == "metadata" {
+			// The apiserver owns apiVersion, kind and metadata: controller-gen
+			// leaves TypeMeta out of the schema and describes metadata as an
+			// opaque object, and neither is this contract's to check.
+			if path == "" && (key == "metadata" || key == "apiVersion" || key == "kind") {
 				continue
 			}
 			childPath := strings.TrimPrefix(fmt.Sprintf("%s.%s", path, key), ".")

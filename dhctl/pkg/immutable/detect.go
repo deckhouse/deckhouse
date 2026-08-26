@@ -40,9 +40,8 @@ func IsImmutableMaster(_ context.Context, metaConfig *config.MetaConfig) (bool, 
 
 	if metaConfig.CloudProviderVars != nil {
 		master := metaConfig.CloudProviderVars.NodeGroups[global.MasterNodeGroupName]
-		if systemType, _, _ := unstructured.NestedString(master, "spec", "systemType"); systemType == systemTypeImmutable {
-			return true, nil
-		}
+		systemType, _, _ := unstructured.NestedString(master, "spec", "systemType")
+		return systemType == systemTypeImmutable, nil
 	}
 
 	systemType, err := masterSystemTypeFromResources(metaConfig.ResourcesYAML)
@@ -65,25 +64,29 @@ const (
 // CloudPermanent groups only, and a static master group is not one.
 func masterSystemTypeFromResources(resourcesYAML string) (string, error) {
 	for i, document := range libdhctlyaml.SplitYAML(resourcesYAML) {
-		// A document with a duplicated root key reads differently depending on
-		// who parses it, and one of those readings is a master NodeGroup nobody
-		// sees. Refused: taken for "not immutable" it sends the bootstrap over SSH.
+		// Lenient, the way the rest of dhctl reads this stream: this runs on every
+		// bootstrap before any gate, and a document it cannot read — a comment, a
+		// stray fragment, a foreign resource — says nothing about the master.
 		var obj map[string]any
-		if err := yaml.UnmarshalStrict([]byte(document), &obj); err != nil {
-			return "", fmt.Errorf("read resource document %d to find the master NodeGroup: %w", i+1, err)
-		}
-
-		index, err := yamlvalidation.ParseIndex(strings.NewReader(document))
-		// Only a document with neither kind nor apiVersion fails here now, and a
-		// comment or a stray fragment says nothing about the master.
-		if err != nil {
+		if err := yaml.Unmarshal([]byte(document), &obj); err != nil {
 			continue
 		}
+
+		kind, _, _ := unstructured.NestedString(obj, "kind")
+		apiVersion, _, _ := unstructured.NestedString(obj, "apiVersion")
+		index := yamlvalidation.SchemaIndex{Kind: kind, Version: apiVersion}
 		if index.Kind != nodeGroupKind || index.Group() != nodeGroupAPIGroup {
 			continue
 		}
 		if name, _, _ := unstructured.NestedString(obj, "metadata", "name"); name != global.MasterNodeGroupName {
 			continue
+		}
+
+		// The master group, and only it, is read strictly too: a duplicated key reads
+		// differently depending on who parses it, and one of those readings is a master
+		// NodeGroup nobody sees — taken for "not immutable" it sends the bootstrap over SSH.
+		if err := yaml.UnmarshalStrict([]byte(document), &obj); err != nil {
+			return "", fmt.Errorf("read the master NodeGroup in resource document %d: %w", i+1, err)
 		}
 
 		systemType, _, _ := unstructured.NestedString(obj, "spec", "systemType")

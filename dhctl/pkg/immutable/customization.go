@@ -183,6 +183,15 @@ func checkAddresses(ctx context.Context, n *network, nodeName string) error {
 			}
 			continue
 		}
+		// The interfaces replace the rendered ones wholesale, and the machine emits
+		// neither Address= nor DHCP= for this one: the NIC comes up unconfigured and
+		// the node never registers. The CRD defaults dhcp to false, so this is easy.
+		if len(iface.Addresses) == 0 {
+			return fmt.Errorf(
+				"node %s leaves interface %s on dhcp: false and gives it no address, so the machine configures it with neither and never joins: "+
+					"give the interface an address, or write dhcp: true",
+				nodeName, iface.Name)
+		}
 		// A missing prefix means a single host to networkd, which leaves the
 		// machine off its own subnet with no way to say so.
 		for _, address := range iface.Addresses {

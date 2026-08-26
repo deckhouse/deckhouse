@@ -20,7 +20,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable/immutabletest"
 )
 
@@ -224,4 +227,43 @@ func TestEtcdMountClaimsABlankDiskUnderEtcd(t *testing.T) {
 	require.Equal(t, "10Gi", mounts[0].PartitionSelector.Size)
 	require.True(t, mounts[0].PartitionSelector.Blank)
 	require.LessOrEqual(t, len(mounts[0].Name), 16, "the name becomes an ext4 label")
+}
+
+// Local mode's RemoteData is the bundle registry the installer runs on
+// 127.0.0.1, which exists only inside the installer container. Baked into the
+// document the machine pulls nothing, starts no kubelet and says nothing about
+// it, so the builder refuses the mode itself — a preflight can be skipped.
+func TestNodeConfigRefusesTheInstallersOwnBundleRegistry(t *testing.T) {
+	metaConfig := testMetaConfig(t)
+	metaConfig.Registry.Settings = registry.ModeSettings{
+		Mode: constant.ModeLocal,
+		RemoteData: registry.Data{
+			ImagesRepo: constant.BundleImagesRepo,
+			Scheme:     constant.BundleScheme,
+		},
+	}
+
+	_, err := buildNodeConfig(t.Context(), nodeConfigInput{
+		NodeName:   "example-master-0",
+		MetaConfig: metaConfig,
+	})
+
+	require.ErrorContains(t, err, string(constant.ModeLocal), "the mode the operator has to change")
+	require.ErrorContains(t, err, constant.BundleAddressWithPort, "the address that would be baked into the document")
+	require.ErrorContains(t, err, string(constant.ModeUnmanaged), "what to bootstrap with instead")
+}
+
+// Direct carries the same upstream as Unmanaged, and a config parsed from a
+// cluster resolves to it: refusing Local must not take Direct with it.
+func TestNodeConfigTakesTheUpstreamOfADirectRegistry(t *testing.T) {
+	metaConfig := testMetaConfig(t)
+	metaConfig.Registry.Settings.Mode = constant.ModeDirect
+
+	nodeConfig, err := buildNodeConfig(t.Context(), nodeConfigInput{
+		NodeName:   "example-master-0",
+		MetaConfig: metaConfig,
+	})
+
+	require.NoError(t, err)
+	require.Equal(t, "dev-registry.deckhouse.io", nodeConfig.Spec.Registry.Address)
 }

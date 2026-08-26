@@ -364,3 +364,65 @@ spec:
 	require.NoError(t, err)
 	require.True(t, isImmutable)
 }
+
+// IsImmutableMaster runs on every bootstrap before any gate, so a duplicated
+// mapping key in a document that is not the master NodeGroup — the kind a
+// hand-written resources.yml has carried for years — must not end one.
+func TestIsImmutableMasterReadsPastADuplicatedKeyInAnotherDocument(t *testing.T) {
+	metaConfig := &config.MetaConfig{
+		ClusterType: config.StaticClusterType,
+		ResourcesYAML: `
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: something
+metadata:
+  name: something
+data:
+  key: value
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  nodeType: Static
+`,
+	}
+
+	isImmutable, err := IsImmutableMaster(t.Context(), metaConfig)
+
+	require.NoError(t, err, "a document that says nothing about the master must not fail an unrelated bootstrap")
+	require.False(t, isImmutable)
+}
+
+// A cloud bootstrap has the master group parsed into CloudProviderVars, which is
+// the answer: the raw resources are the static cluster's fallback, and reading
+// them anyway makes any malformed document there end a cloud bootstrap.
+func TestIsImmutableMasterAnswersACloudBootstrapFromCloudProviderVars(t *testing.T) {
+	metaConfig := &config.MetaConfig{
+		ClusterType: config.CloudClusterType,
+		CloudProviderVars: &config.CloudProviderVars{
+			NodeGroups: map[string]map[string]any{
+				"master": {
+					"apiVersion": "deckhouse.io/v1",
+					"kind":       "NodeGroup",
+					"spec":       map[string]any{"nodeType": "CloudPermanent"},
+				},
+			},
+		},
+		ResourcesYAML: `
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: something
+metadata:
+  name: something
+`,
+	}
+
+	isImmutable, err := IsImmutableMaster(t.Context(), metaConfig)
+
+	require.NoError(t, err)
+	require.False(t, isImmutable)
+}
