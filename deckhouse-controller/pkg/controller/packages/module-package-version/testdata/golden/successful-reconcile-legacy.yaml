@@ -35,6 +35,11 @@ status:
       - Legacy feature
     description:
       en: Legacy test module
+    disableOptions:
+      confirmation: true
+      messages:
+        en: Fallback disable message
+        ru: RU disable message
     requirements:
       deckhouse:
         constraint: '>= 1.60'

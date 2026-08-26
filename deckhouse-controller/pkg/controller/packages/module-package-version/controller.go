@@ -364,10 +364,44 @@ func setFromModuleDefinition(mpv *v1alpha1.ModulePackageVersion, def *moduletype
 	}
 
 	mpv.Status.PackageMetadata.Licensing = legacyAccessibilityToCR(def.Accessibility)
+	mpv.Status.PackageMetadata.DisableOptions = legacyDisableOptionsToCR(def.DisableOptions)
 
 	mpv.Status.PackageMetadata.Weight = int32(def.Weight)
 	mpv.Status.PackageMetadata.Critical = def.Critical
 	mpv.Status.PackageMetadata.ExclusiveGroup = def.ExclusiveGroup
+}
+
+// legacyDisableOptionsToCR projects the legacy disable options onto the package
+// shape. A language without its own message falls back to the deprecated single
+// message field; empty options yield nil.
+func legacyDisableOptionsToCR(opts *v1alpha1.ModuleDisableOptions) *v1alpha1.PackageDisableOptions {
+	if opts == nil {
+		return nil
+	}
+
+	ru := opts.Messages.Ru
+	if ru == "" {
+		ru = opts.Message
+	}
+
+	en := opts.Messages.En
+	if en == "" {
+		en = opts.Message
+	}
+
+	var messages *v1alpha1.PackageDisableMessages
+	if ru != "" || en != "" {
+		messages = &v1alpha1.PackageDisableMessages{Ru: ru, En: en}
+	}
+
+	if !opts.Confirmation && messages == nil {
+		return nil
+	}
+
+	return &v1alpha1.PackageDisableOptions{
+		Confirmation: opts.Confirmation,
+		Messages:     messages,
+	}
 }
 
 // legacyAccessibilityToCR projects legacy module.yaml accessibility onto package licensing.

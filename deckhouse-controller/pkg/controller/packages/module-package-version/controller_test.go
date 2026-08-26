@@ -172,6 +172,11 @@ stage: Sandbox
 requirements:
   deckhouse: ">= 1.60"
   kubernetes: ">= 1.27"
+disable:
+  confirmation: true
+  message: "Fallback disable message"
+  messages:
+    ru: "RU disable message"
 `,
 			"version.json":               `{"version": "1.0.0"}`,
 			"changelog.yaml":             "features:\n- Legacy feature\n",
@@ -323,6 +328,34 @@ func TestSetFromModuleDefinitionMapsLegacyAccessibilityToLicensing(t *testing.T)
 	assert.Equal(t, []string{"Default"}, mpv.Status.PackageMetadata.Licensing.Editions["_default"].EnabledInBundles)
 	assert.False(t, mpv.Status.PackageMetadata.Licensing.Editions["ee"].Available)
 	assert.Equal(t, []string{"Minimal", "Managed"}, mpv.Status.PackageMetadata.Licensing.Editions["ee"].EnabledInBundles)
+}
+
+func TestLegacyDisableOptionsToCR(t *testing.T) {
+	t.Run("nil and empty options yield nil", func(t *testing.T) {
+		assert.Nil(t, legacyDisableOptionsToCR(nil))
+		assert.Nil(t, legacyDisableOptionsToCR(&v1alpha1.ModuleDisableOptions{}))
+	})
+
+	t.Run("confirmation survives without messages", func(t *testing.T) {
+		opts := legacyDisableOptionsToCR(&v1alpha1.ModuleDisableOptions{Confirmation: true})
+
+		require.NotNil(t, opts)
+		assert.True(t, opts.Confirmation)
+		assert.Nil(t, opts.Messages)
+	})
+
+	t.Run("a language without its own message falls back to the deprecated one", func(t *testing.T) {
+		opts := legacyDisableOptionsToCR(&v1alpha1.ModuleDisableOptions{
+			Confirmation: true,
+			Message:      "fallback",
+			Messages:     v1alpha1.ModuleDisableMessages{Ru: "ru text"},
+		})
+
+		require.NotNil(t, opts)
+		require.NotNil(t, opts.Messages)
+		assert.Equal(t, "ru text", opts.Messages.Ru)
+		assert.Equal(t, "fallback", opts.Messages.En)
+	})
 }
 
 func TestLegacyRequirementsToCR(t *testing.T) {
