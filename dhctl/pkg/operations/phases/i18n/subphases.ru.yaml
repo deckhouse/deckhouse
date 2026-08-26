@@ -11,6 +11,8 @@ RegistryPackagesProxy: "Настройка проксирования репоз
 NodePreparation: "Подготовка master-узла к инициализации"
 ModulesPreparation: "Подготовка модулей"
 ExecuteBashibleBundle: "Выполнение пакета инициализации узла"
+WaitForControlPlane: "Ожидание control plane на первом мастере"
+CollectCredentials: "Получение учётных данных администратора"
 AdditionalMasters: "Master-узлы кластера"
 StaticNodes: "Статические узлы кластера"
 CheckInfra: "Состояние облачных ресурсов"

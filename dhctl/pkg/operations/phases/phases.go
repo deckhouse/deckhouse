@@ -200,6 +200,17 @@ const (
 	InstallKubernetesSubPhaseExecuteBashibleBundle OperationSubPhase = "ExecuteBashibleBundle"
 )
 
+// install kubernetes sub phases of an immutable master. It gets a control plane the
+// same way no other node does — handed a document over the network, and then left to
+// install itself — so the steps above describe none of its work: there is no bundle,
+// no SSH to run one over, and no node to prepare before kubelet starts.
+// The machines are handed their configuration in FirstMaster, so what is left for
+// this phase is the wait and the collection.
+const (
+	InstallKubernetesSubPhaseWaitForControlPlane OperationSubPhase = "WaitForControlPlane"
+	InstallKubernetesSubPhaseCollectCredentials  OperationSubPhase = "CollectCredentials"
+)
+
 // InstallAdditionalMastersAndStaticNodes sub phases
 const (
 	InstallAdditionalMastersAndStaticNodesSubPhaseAdditionalMasters OperationSubPhase = "AdditionalMasters"
@@ -238,16 +249,19 @@ func bootstrapNodes() []node {
 		{Name: ParseResourcesPhase},
 		// InstallKubernetes is the only consumer of the wait, and ungated it would open SSH to
 		// whatever master host the shared state cache happens to hold - another cluster's.
-		{Name: WaitForSSHOnMasterPhase, includeIf: ifHasClusterConfiguration},
+		// An immutable master runs no sshd at all, so there the wait is not late, it is false.
+		{Name: WaitForSSHOnMasterPhase, includeIf: ifBashibleMaster},
 		{
 			Name:      InstallKubernetesPhase,
 			includeIf: ifHasClusterConfiguration,
 			Children: []node{
-				{Name: InstallKubernetesSubPhaseBundlePreparation},
-				{Name: InstallKubernetesSubPhaseRegistryPackagesProxy},
-				{Name: InstallKubernetesSubPhaseNodePreparation},
-				{Name: InstallKubernetesSubPhaseModulesPreparation},
-				{Name: InstallKubernetesSubPhaseExecuteBashibleBundle},
+				{Name: InstallKubernetesSubPhaseBundlePreparation, includeIf: ifBashibleMaster},
+				{Name: InstallKubernetesSubPhaseRegistryPackagesProxy, includeIf: ifBashibleMaster},
+				{Name: InstallKubernetesSubPhaseNodePreparation, includeIf: ifBashibleMaster},
+				{Name: InstallKubernetesSubPhaseModulesPreparation, includeIf: ifBashibleMaster},
+				{Name: InstallKubernetesSubPhaseExecuteBashibleBundle, includeIf: ifBashibleMaster},
+				{Name: InstallKubernetesSubPhaseWaitForControlPlane, includeIf: ifImmutableMaster},
+				{Name: InstallKubernetesSubPhaseCollectCredentials, includeIf: ifImmutableMaster},
 			},
 		},
 		{
@@ -539,6 +553,19 @@ func ifCloud(opts phasesOpts) bool {
 // static cluster, which has no infrastructure step at all.
 func ifCloudOrImmutableMaster(opts phasesOpts) bool {
 	return ifCloud(opts) || opts.clusterConfig.ImmutableMaster
+}
+
+// ifImmutableMaster includes the node on a bootstrap whose master NodeGroup asks for
+// systemType: Immutable, and ifBashibleMaster on every other one that builds a control
+// plane. The pair is exhaustive over clusters dhctl installs Kubernetes on, and both
+// test HasClusterConfiguration for the same reason InstallKubernetes does: a cluster
+// dhctl did not create has neither kind of master.
+func ifImmutableMaster(opts phasesOpts) bool {
+	return opts.clusterConfig.HasClusterConfiguration && opts.clusterConfig.ImmutableMaster
+}
+
+func ifBashibleMaster(opts phasesOpts) bool {
+	return opts.clusterConfig.HasClusterConfiguration && !opts.clusterConfig.ImmutableMaster
 }
 
 func ifStatic(opts phasesOpts) bool {
