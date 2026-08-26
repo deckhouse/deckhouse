@@ -99,12 +99,23 @@ mkdir -p /var/lib/bashible
 
 cat > /var/lib/bashible/bootstrap.sh <<"END"`)
 	out.Write(script)
-	out.WriteString("\nEND\nchmod +x /var/lib/bashible/bootstrap.sh\n\n")
-	out.WriteString("cat > /var/lib/bashible/ca.crt <<\"EOF\"\n" + in.KubernetesCA + "\nEOF\n\n")
-	out.WriteString("cat > /var/lib/bashible/bootstrap-token <<\"EOF\"\n" + in.BootstrapToken + "\nEOF\n")
-	out.WriteString("chmod 0600 /var/lib/bashible/bootstrap-token\n\n")
-	out.WriteString("touch /var/lib/bashible/first_run\n\n")
-	out.WriteString("/var/lib/bashible/bootstrap.sh\n")
+	fmt.Fprintf(&out, `
+END
+chmod +x /var/lib/bashible/bootstrap.sh
+
+cat > /var/lib/bashible/ca.crt <<"EOF"
+%s
+EOF
+
+cat > /var/lib/bashible/bootstrap-token <<"EOF"
+%s
+EOF
+chmod 0600 /var/lib/bashible/bootstrap-token
+
+touch /var/lib/bashible/first_run
+
+/var/lib/bashible/bootstrap.sh
+`, in.KubernetesCA, in.BootstrapToken)
 
 	return out.Bytes(), nil
 }
@@ -120,10 +131,18 @@ write_files:
   permissions: '0700'
   content: |`)
 	out.WriteString(indent4(script))
-	out.WriteString("\n- path: '/var/lib/bashible/ca.crt'\n  permissions: '0644'\n  content: |")
-	out.WriteString("\n" + indent4(in.KubernetesCA))
-	out.WriteString("\n- path: /var/lib/bashible/bootstrap-token\n  content: " + in.BootstrapToken + "\n  permissions: '0600'\n")
-	out.WriteString("- path: /var/lib/bashible/first_run\nruncmd:\n- /var/lib/bashible/bootstrap.sh\n")
+	fmt.Fprintf(out, `
+- path: '/var/lib/bashible/ca.crt'
+  permissions: '0644'
+  content: |
+%s
+- path: /var/lib/bashible/bootstrap-token
+  content: %s
+  permissions: '0600'
+- path: /var/lib/bashible/first_run
+runcmd:
+- /var/lib/bashible/bootstrap.sh
+`, indent4(in.KubernetesCA), in.BootstrapToken)
 }
 
 // indent4 is sprig's `indent 4`: the pad goes in front of every line, the first

@@ -96,25 +96,33 @@ func TestRenderScriptWithoutBashibleLibrary(t *testing.T) {
 	require.ErrorContains(t, err, "candi/bashible/lib.sh.tpl")
 }
 
-// repoFiles loads the templates straight from the repository's candi — the same
-// files helm puts in the ConfigMap, so the golden compares render to render, not
-// delivery to delivery. A missing checkout is a skip, not a false pass.
+// repoFiles loads the templates straight from the repository — the same files
+// helm puts in the ConfigMap, under the keys the ConfigMap uses, so the golden
+// compares render to render, not delivery to delivery.
+//
+// The provider network scripts live next to their cloud-provider module; the
+// build copies them under candi/cloud-providers (tools/build_includes/
+// candi-cloud-providers-*.yaml), which is why a checkout has no such directory
+// and why leaving them out here would silently drop the largest block of a
+// cloud node's script.
 //
 // bb_node_ip.sh.tpl is here although no golden contains it: the prerequisites
 // template pulls it in only under runType ClusterBootstrap, and runType is a key
 // helm never sets. Offering the file proves that branch stays shut anyway.
 func repoFiles(t *testing.T) *Files {
 	t.Helper()
-	dir := filepath.Join("..", "..", "..", "..", "..", "..", "..", "candi")
+	root := filepath.Join("..", "..", "..", "..", "..", "..", "..")
 	text := map[string]string{}
 	for path, key := range map[string]string{
-		"bashible/lib.sh.tpl": "lib.sh.tpl",
-		"bashible/bootstrap/01-bootstrap-prerequisites.sh.tpl": "01-bootstrap-prerequisites.sh.tpl",
-		"bashible/bb_node_ip.sh.tpl":                           "bb_node_ip.sh.tpl",
+		"candi/bashible/lib.sh.tpl":                                                  "lib.sh.tpl",
+		"candi/bashible/bootstrap/01-bootstrap-prerequisites.sh.tpl":                 "01-bootstrap-prerequisites.sh.tpl",
+		"candi/bashible/bb_node_ip.sh.tpl":                                           "bb_node_ip.sh.tpl",
+		"modules/030-cloud-provider-aws/candi/bashible/bootstrap-networks.sh.tpl":    "bootstrap-networks-aws.sh.tpl",
+		"modules/030-cloud-provider-yandex/candi/bashible/bootstrap-networks.sh.tpl": "bootstrap-networks-yandex.sh.tpl",
 	} {
-		data, err := os.ReadFile(filepath.Join(dir, path))
+		data, err := os.ReadFile(filepath.Join(root, path))
 		if err != nil {
-			t.Skipf("candi not found at %s: %v", dir, err)
+			t.Fatalf("read %s: %v", path, err)
 		}
 		text[key] = string(data)
 	}
@@ -176,6 +184,7 @@ func baseInput(files *Files) Input {
 		ClusterUUID: "deadbeef-dead-beef-dead-beefdeadbeef",
 		Images: map[string]any{"registrypackages": map[string]any{
 			"jq171": "sha256:jq", "d8Curl891": "sha256:curl", "tailLog": "sha256:tail", "rppGet": "sha256:rpp",
+			"ec2DescribeTagsV001Flant3": "sha256:ec2",
 		}},
 		PackagesProxy: map[string]any{"token": "mytoken"},
 		MingetB64:     "bWluZ2V0",
