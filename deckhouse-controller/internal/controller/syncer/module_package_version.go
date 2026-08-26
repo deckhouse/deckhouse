@@ -31,11 +31,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/loader"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/openapi"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -133,7 +131,7 @@ func (s *Syncer) ensureEmbeddedVersion(ctx context.Context, dirName, version str
 		return nil
 	}
 
-	schemas, err := schemasFromRaw(settingsRaw, valuesRaw)
+	schemas, err := v1alpha1.ParsePackageSchemas(settingsRaw, valuesRaw)
 	if err != nil {
 		s.logger.Warn("module schemas do not parse, skip its package version",
 			slog.String("dir", moduleDir), log.Err(err))
@@ -148,50 +146,6 @@ func (s *Syncer) ensureEmbeddedVersion(ctx context.Context, dirName, version str
 	}
 
 	return s.ensureFilled(ctx, name, spec, meta, schemas)
-}
-
-// schemasFromRaw parses the raw openapi files into the status schemas, the
-// same shape the application-package-version controller stores, so every
-// writer of the schemas speaks one language. A module without any schema
-// file yields nil.
-func schemasFromRaw(settings, values []byte) (*v1alpha1.PackageVersionStatusSchemas, error) {
-	settingsSchema, err := packageSchemaFromRaw(settings)
-	if err != nil {
-		return nil, fmt.Errorf("settings schema: %w", err)
-	}
-
-	valuesSchema, err := packageSchemaFromRaw(values)
-	if err != nil {
-		return nil, fmt.Errorf("values schema: %w", err)
-	}
-
-	if settingsSchema == nil && valuesSchema == nil {
-		return nil, nil
-	}
-
-	return &v1alpha1.PackageVersionStatusSchemas{
-		SettingsSchema: settingsSchema,
-		ValuesSchema:   valuesSchema,
-	}, nil
-}
-
-// packageSchemaFromRaw parses one raw openapi file; the x-config-version
-// marker is not part of the schema and is stripped.
-func packageSchemaFromRaw(raw []byte) (*v1alpha1.PackageSchema, error) {
-	if len(raw) == 0 {
-		return nil, nil
-	}
-
-	var wrapper struct {
-		Version string `json:"x-config-version"`
-		openapi.OpenAPIV3Schema
-	}
-
-	if err := yaml.Unmarshal(raw, &wrapper); err != nil {
-		return nil, fmt.Errorf("unmarshal schema: %w", err)
-	}
-
-	return &v1alpha1.PackageSchema{OpenAPIV3Schema: &wrapper.OpenAPIV3Schema}, nil
 }
 
 // weightFromDirName parses the "<weight>-<name>" contract of the embedded

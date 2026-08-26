@@ -321,8 +321,8 @@ func (r *reconciler) setMetadataLoadedConditionFalse(mpv *v1alpha1.ModulePackage
 
 // setPackageMetadata projects parsed module metadata onto the ModulePackageVersion
 // status. Dispatches to the v2 package.yaml path or the legacy module.yaml path,
-// then attaches the changelog if present. A nil meta is a no-op so callers may
-// invoke unconditionally after a best-effort parse.
+// then attaches the changelog and the settings/values schemas if present. A nil
+// meta is a no-op so callers may invoke unconditionally after a best-effort parse.
 func setPackageMetadata(mpv *v1alpha1.ModulePackageVersion, meta *moduleMetadata) {
 	if meta == nil {
 		return
@@ -339,6 +339,8 @@ func setPackageMetadata(mpv *v1alpha1.ModulePackageVersion, meta *moduleMetadata
 		Features: meta.changelog.Features,
 		Fixes:    meta.changelog.Fixes,
 	}
+
+	mpv.Status.PackageSchemas = meta.schemas
 }
 
 // setFromModuleDefinition projects a legacy module.yaml onto the MPV status.

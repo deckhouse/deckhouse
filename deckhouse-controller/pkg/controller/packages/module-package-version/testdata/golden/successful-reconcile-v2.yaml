@@ -42,6 +42,19 @@ status:
         en: EN disable message
         ru: RU disable message
     stage: GA
+  packageSchemas:
+    settingsSchema:
+      openAPIV3Schema:
+        properties:
+          logLevel:
+            type: string
+        type: object
+    valuesSchema:
+      openAPIV3Schema:
+        properties:
+          internal:
+            type: object
+        type: object
   used: false
 ---
 apiVersion: deckhouse.io/v1alpha1

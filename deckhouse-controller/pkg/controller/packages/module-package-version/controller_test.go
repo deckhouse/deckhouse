@@ -147,9 +147,11 @@ func (suite *ControllerTestSuite) TestReconcile() {
 	suite.Run("successful reconcile with v2 package metadata", func() {
 		dc := dependency.NewMockedContainer()
 		dc.CRClient.ImageMock.Return(reconcilertest.Image(map[string]string{
-			"package.yaml":   testModuleV2YAML,
-			"version.json":   `{"version": "1.0.0"}`,
-			"changelog.yaml": "features:\n- Added new feature\nfixes:\n- Fixed a bug\n",
+			"package.yaml":          testModuleV2YAML,
+			"version.json":          `{"version": "1.0.0"}`,
+			"changelog.yaml":        "features:\n- Added new feature\nfixes:\n- Fixed a bug\n",
+			"openapi/settings.yaml": "type: object\nproperties:\n  logLevel:\n    type: string\n",
+			"openapi/values.yaml":   "type: object\nproperties:\n  internal:\n    type: object\n",
 		}), nil)
 		dc.CRClient.DigestMock.Return("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", nil)
 
@@ -171,8 +173,9 @@ requirements:
   deckhouse: ">= 1.60"
   kubernetes: ">= 1.27"
 `,
-			"version.json":   `{"version": "1.0.0"}`,
-			"changelog.yaml": "features:\n- Legacy feature\n",
+			"version.json":               `{"version": "1.0.0"}`,
+			"changelog.yaml":             "features:\n- Legacy feature\n",
+			"openapi/config-values.yaml": "type: object\nproperties:\n  legacyOption:\n    type: boolean\n",
 		}), nil)
 		dc.CRClient.DigestMock.Return("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", nil)
 
@@ -207,6 +210,21 @@ stage: Sandbox
 		dc.CRClient.ImageMock.Return(nil, fmt.Errorf("registry error"))
 
 		suite.setupController("registry-error-reconcile.yaml", withDependencyContainer(dc))
+
+		mpv := suite.getModulePackageVersion("deckhouse-test-module-v1.0.0")
+		_, err := suite.ctr.Reconcile(ctx, suite.Request(mpv.Name, ""))
+		require.Error(suite.T(), err)
+	})
+
+	suite.Run("broken schema fails the promotion", func() {
+		dc := dependency.NewMockedContainer()
+		dc.CRClient.ImageMock.Return(reconcilertest.Image(map[string]string{
+			"package.yaml":          testModuleV2YAML,
+			"version.json":          `{"version": "1.0.0"}`,
+			"openapi/settings.yaml": "{broken",
+		}), nil)
+
+		suite.setupController("broken-schema-reconcile.yaml", withDependencyContainer(dc))
 
 		mpv := suite.getModulePackageVersion("deckhouse-test-module-v1.0.0")
 		_, err := suite.ctr.Reconcile(ctx, suite.Request(mpv.Name, ""))

@@ -41,6 +41,13 @@ status:
       kubernetes:
         constraint: '>= 1.27'
     stage: Sandbox
+  packageSchemas:
+    settingsSchema:
+      openAPIV3Schema:
+        properties:
+          legacyOption:
+            type: boolean
+        type: object
   used: false
 ---
 apiVersion: deckhouse.io/v1alpha1
