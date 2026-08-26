@@ -360,23 +360,23 @@ create,get:
     - pods/exec
     - pods/proxy
     - services/proxy
-create,update:
-    - pods/ephemeralcontainers
 delete,deletecollection:
     - pods
 read:
     - secrets
+update:
+    - pods/ephemeralcontainers
 ```
 
 {{site.data.i18n.common.role[page.lang] | capitalize }} `Editor` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`):
 
 ```text
 create:
-    - pods/bindibg
+    - pods/binding
+patch:
+    - pods/resize
 read-write:
     - serviceaccounts/token
-update:
-    - pods/resize
 write:
     - apps/deployments
     - apps/statefulsets

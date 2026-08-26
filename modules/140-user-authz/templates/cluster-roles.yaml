@@ -263,7 +263,6 @@
   resources:
   - pods/ephemeralcontainers
   verbs:
-  - create
   - update
 - apiGroups:
   - ""
@@ -277,7 +276,7 @@
 - apiGroups:
   - ""
   resources:
-  - pods/bindibg
+  - pods/binding
   verbs:
   - create
 - apiGroups:
@@ -285,7 +284,7 @@
   resources:
   - pods/resize
   verbs:
-  - update
+  - patch
 - apiGroups:
   - ""
   resources:
