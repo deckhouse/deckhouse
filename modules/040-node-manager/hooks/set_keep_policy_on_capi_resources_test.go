@@ -111,9 +111,10 @@ func TestIsConversionUnavailable(t *testing.T) {
 	}
 }
 
-// helmBootstrapSecretsState is the shape helm leaves behind: the module labels of
-// helm_lib_module_labels, plus the app.kubernetes.io/managed-by label helm stamps
-// on every object of a release — the label this hook selects on.
+// helmBootstrapSecretsState is what helm leaves in d8-cloud-instance-manager: the
+// three Secrets this migration takes over, the ones it does not, and one an operator
+// made by hand. Everything helm owns carries app.kubernetes.io/managed-by, which helm
+// stamps on every object of a release, on top of the helm_lib_module_labels pair.
 const helmBootstrapSecretsState = `
 ---
 apiVersion: v1
@@ -130,7 +131,74 @@ type: Opaque
 apiVersion: v1
 kind: Secret
 metadata:
-  name: bootstrapped-by-hand
+  name: capi-worker-1a2b3c4d
+  namespace: d8-cloud-instance-manager
+  labels:
+    heritage: deckhouse
+    module: node-manager
+    app.kubernetes.io/managed-by: Helm
+type: Opaque
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mcm-worker-deadbeef
+  namespace: d8-cloud-instance-manager
+  labels:
+    heritage: deckhouse
+    module: node-manager
+    app.kubernetes.io/managed-by: Helm
+type: Opaque
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: deckhouse-registry
+  namespace: d8-cloud-instance-manager
+  labels:
+    heritage: deckhouse
+    module: node-manager
+    app.kubernetes.io/managed-by: Helm
+type: Opaque
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bashible-bashbooster
+  namespace: d8-cloud-instance-manager
+  labels:
+    heritage: deckhouse
+    module: node-manager
+    app.kubernetes.io/managed-by: Helm
+type: Opaque
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bashible-api-server-tls
+  namespace: d8-cloud-instance-manager
+  labels:
+    heritage: deckhouse
+    module: node-manager
+    app.kubernetes.io/managed-by: Helm
+type: Opaque
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: registry-packages-proxy-token
+  namespace: d8-cloud-instance-manager
+  labels:
+    heritage: deckhouse
+    module: registry-packages-proxy
+    app: registry-packages-proxy
+    app.kubernetes.io/managed-by: Helm
+type: Opaque
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: manual-bootstrap-for-handmade
   namespace: d8-cloud-instance-manager
   labels:
     heritage: deckhouse
@@ -141,6 +209,11 @@ type: Opaque
 var _ = Describe("node-manager :: hooks :: set_keep_policy_on_capi_resources ::", func() {
 	f := HookExecutionConfigInit(`{}`, `{}`)
 
+	keepPolicy := func(name string) string {
+		secret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", name)
+		return secret.Field(`metadata.annotations.helm\.sh/resource-policy`).String()
+	}
+
 	Context("with the bootstrap secrets helm still renders", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(helmBootstrapSecretsState)
@@ -148,20 +221,43 @@ var _ = Describe("node-manager :: hooks :: set_keep_policy_on_capi_resources ::"
 			f.RunHook()
 		})
 
-		It("stamps keep policy on the helm-managed bootstrap secrets", func() {
+		// All three shapes node-group.yaml renders, because missing one means helm
+		// prunes it between this release and the one that stops rendering it, and a
+		// node loses its bootstrap data.
+		It("stamps keep policy on every bootstrap secret helm still renders", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			secret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "manual-bootstrap-for-worker")
-			Expect(secret.Field(`metadata.annotations.helm\.sh/resource-policy`).String()).To(Equal("keep"))
+			for _, name := range []string{
+				"manual-bootstrap-for-worker", // node_group_static_or_hybrid_secret
+				"capi-worker-1a2b3c4d",        // capi_node_group_machine_bootstrap_secret
+				"mcm-worker-deadbeef",         // node_group_machine_class_secret
+			} {
+				Expect(keepPolicy(name)).To(Equal("keep"), "secret %s must survive the handover", name)
+			}
 		})
 
-		// The selector is the whole safety net: without it the hook would stamp keep
-		// on a secret helm never owned and nothing would ever collect it.
+		// d8-cloud-instance-manager is shared. Everything else in it keeps its own
+		// lifecycle, the registry-packages-proxy token most of all: that is another
+		// module's release, and the annotation outlives this hook.
+		It("leaves the secrets this migration does not take over alone", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			for _, name := range []string{
+				"deckhouse-registry",
+				"bashible-bashbooster",
+				"bashible-api-server-tls",
+				"registry-packages-proxy-token",
+			} {
+				Expect(keepPolicy(name)).To(BeEmpty(), "secret %s is not this migration's to keep", name)
+			}
+		})
+
+		// The name matches a shape this hook takes over; only the managed-by label
+		// tells the two apart, and helm cannot prune what it never owned.
 		It("leaves a secret helm does not manage alone", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			secret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bootstrapped-by-hand")
-			Expect(secret.Field(`metadata.annotations.helm\.sh/resource-policy`).Exists()).To(BeFalse())
+			Expect(keepPolicy("manual-bootstrap-for-handmade")).To(BeEmpty())
 		})
 	})
 })
