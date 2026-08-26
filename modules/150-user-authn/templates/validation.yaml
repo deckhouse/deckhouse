@@ -50,11 +50,22 @@ spec:
   # prefix: a module from any ModuleSource gets a d8-<module> namespace, and it should have to
   # declare this authority in its own RBAC like any other provisioner rather than inherit it from
   # where it happens to run.
+  #
+  # Commander cluster-manager is the one named exception outside those groups. It has written
+  # DexClient cluster-<uuid> with this annotation since before the gate existed, and Commander
+  # releases older than 1.18 do not carry the allow-access-to-kubernetes subresource on the
+  # cluster-manager Role. The gate shipped in Deckhouse 1.76, so without this skip every
+  # Commander still on <= 1.18 fails bootstrap. The skip is the service account, not the
+  # d8-commander group: backend, sidekiq and the rest of that namespace stay subject to the
+  # gate. Current Commander already declares the subresource; the skip is what keeps the
+  # older charts working until they are upgraded.
   matchConditions:
     - name: 'exclude-groups'
       expression: '!(["system:nodes", "system:serviceaccounts:kube-system", "system:serviceaccounts:d8-system"].exists(e, (e in request.userInfo.groups)))'
     - name: 'exclude-users'
       expression: '!(["system:sudouser", "system:apiserver", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler", "dhctl", "observability"].exists(e, (e == request.userInfo.username)))'
+    - name: 'exclude-commander-cluster-manager'
+      expression: 'request.userInfo.username != "system:serviceaccount:d8-commander:cluster-manager"'
   variables:
     # The annotation is named after the kind it belongs to, so the key depends on the matched resource.
     - name: annotation

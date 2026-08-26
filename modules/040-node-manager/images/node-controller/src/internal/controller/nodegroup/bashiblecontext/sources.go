@@ -21,14 +21,12 @@ import (
 	"encoding/json"
 	"math"
 	"os"
-	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 )
 
@@ -43,8 +41,6 @@ const (
 	apiProxyCertSecretName = "kubernetes-api-proxy-discovery-cert"
 
 	cloudProviderSecretName = ngcommon.CloudProviderSecretName
-
-	bootstrapTokenNGLabel = "node-manager.deckhouse.io/node-group"
 )
 
 // rootCAFiles are the candidate locations of the projected service-account CA, canonical path
@@ -181,58 +177,12 @@ func (s *Service) readKubernetesCA() string {
 	return ""
 }
 
+// readBootstrapTokens keeps the Service's read-or-nothing style: input.yaml is
+// rendered from whatever could be read, and a missing token is a missing key.
 func (s *Service) readBootstrapTokens(ctx context.Context) map[string]string {
-	req, err := labels.NewRequirement(bootstrapTokenNGLabel, selection.Exists, nil)
+	tokens, err := nodecommon.BootstrapTokens(ctx, s.reader())
 	if err != nil {
 		return map[string]string{}
 	}
-	secrets := &corev1.SecretList{}
-	if err := s.reader().List(ctx, secrets,
-		client.InNamespace(kubeSystemNS),
-		client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(*req)},
-	); err != nil {
-		return map[string]string{}
-	}
-
-	type candidate struct {
-		token   string
-		created time.Time
-	}
-	newest := make(map[string]candidate)
-
-	for i := range secrets.Items {
-		sec := &secrets.Items[i]
-		if sec.Type != corev1.SecretTypeBootstrapToken {
-			continue
-		}
-		ng := sec.Labels[bootstrapTokenNGLabel]
-		if ng == "" {
-			continue
-		}
-
-		if raw, ok := sec.Data["expiration"]; ok {
-			expire, err := time.Parse(time.RFC3339, string(raw))
-			if err != nil || time.Until(expire) < 0 {
-				continue
-			}
-		}
-
-		id, hasID := sec.Data["token-id"]
-		secretPart, hasSecret := sec.Data["token-secret"]
-		if !hasID || !hasSecret {
-			continue
-		}
-		token := string(id) + "." + string(secretPart)
-
-		created := sec.CreationTimestamp.Time
-		if cur, ok := newest[ng]; !ok || created.After(cur.created) {
-			newest[ng] = candidate{token: token, created: created}
-		}
-	}
-
-	res := make(map[string]string, len(newest))
-	for ng, c := range newest {
-		res[ng] = c.token
-	}
-	return res
+	return tokens
 }

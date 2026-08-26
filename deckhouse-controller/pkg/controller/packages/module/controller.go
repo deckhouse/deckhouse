@@ -127,7 +127,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 
 		r.logger.Error("failed to get module", slog.String("name", req.Name), log.Err(err))
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 	}
 
 	// handle delete event
