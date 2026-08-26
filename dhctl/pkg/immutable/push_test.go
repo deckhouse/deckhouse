@@ -17,10 +17,14 @@ package immutable
 import (
 	"errors"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -136,4 +140,38 @@ type refusingTransport struct{ requests int }
 func (r *refusingTransport) RoundTrip(*http.Request) (*http.Response, error) {
 	r.requests++
 	return nil, errors.New("http.DefaultTransport must carry no payload")
+}
+
+// do hands the response back for the caller to read, so its
+// CloseIdleConnections runs before the body is: what makes that safe is that the
+// call also marks the transport "close newly idle connections", so the socket is
+// closed when the caller closes the body. Drop the call and it is leaked instead.
+func TestPushNodeConfigLeavesNoOpenConnection(t *testing.T) {
+	var (
+		mu     sync.Mutex
+		states []http.ConnState
+	)
+	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte("config partition is read-only"))
+	}))
+	server.Config.ConnState = func(_ net.Conn, state http.ConnState) {
+		mu.Lock()
+		defer mu.Unlock()
+		states = append(states, state)
+	}
+	server.Start()
+	defer server.Close()
+
+	// The refusal path is the one that reads the body to the end, which is what
+	// leaves a socket the transport would otherwise park in its idle pool.
+	err := PushNodeConfig(t.Context(), strings.TrimPrefix(server.URL, "http://"), []byte("kind: NodeConfig\n"))
+	require.ErrorContains(t, err, "500")
+
+	require.Eventually(t, func() bool {
+		mu.Lock()
+		defer mu.Unlock()
+		return slices.Contains(states, http.StateClosed)
+	}, 5*time.Second, 10*time.Millisecond,
+		"the push left its connection open: the socket sits in the idle pool of a transport nothing drains")
 }
