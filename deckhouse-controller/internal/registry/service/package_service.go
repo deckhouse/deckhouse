@@ -245,13 +245,14 @@ func NewPackageVersionService(basicService *BasicService) *PackageVersionService
 }
 
 // PackageReleaseService provides access to the <package>/release path for legacy v1alpha1 modules.
+// A release image carries the same metadata files as a version one, so the reads are the same.
 type PackageReleaseService struct {
-	*BasicService
+	*PackageVersionService
 }
 
 func NewPackageReleaseService(basicService *BasicService) *PackageReleaseService {
 	return &PackageReleaseService{
-		BasicService: basicService,
+		PackageVersionService: NewPackageVersionService(basicService),
 	}
 }
 
@@ -297,8 +298,8 @@ func (s *PackageVersionService) ReadPackageDefinition(ctx context.Context, tag s
 	}
 }
 
-// HasModuleDefinition checks whether the version image contains a module.yaml (or module.yml) file.
-// This is used as a fallback to identify legacy modules when neither type labels nor package.yaml are present.
+// HasModuleDefinition checks whether the image contains a module.yaml (or module.yml) file.
+// It tells a module image apart from one that carries the version alone.
 //
 // Returns (false, nil) if the image does not exist.
 func (s *PackageVersionService) HasModuleDefinition(ctx context.Context, tag string) (bool, error) {
