@@ -398,7 +398,7 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 				render(domainTemplate, admissionAPIs...)
 				cm := configMap()
 
-				if publicdomain.EffectiveMode("", domainTemplate) == publicdomain.ModeList {
+				if publicdomain.EffectiveMode(publicdomain.ModeTemplate, domainTemplate) == publicdomain.ModeList {
 					Expect(cm.Field("data.mode").String()).To(Equal("List"), domainTemplate)
 					Expect(cm.Field("data.hostPattern").String()).To(BeEmpty(), domainTemplate)
 					continue

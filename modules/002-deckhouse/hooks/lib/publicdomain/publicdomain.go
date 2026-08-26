@@ -104,8 +104,9 @@ func ParseNamespace(domainTemplate string) (Namespace, error) {
 	return namespace, nil
 }
 
-// EffectiveMode is the reservation actually in force, which is not always the one the ModuleConfig
-// asked for. It falls back to List when Template cannot be applied:
+// EffectiveMode is the reservation actually in force. Template is opt-in: anything other than
+// Template, including an unset mode, is List. Template still falls back to List when it cannot
+// be applied:
 //
 //   - a publicDomainTemplate that does not split into a prefix and a suffix never went through the
 //     global schema, and a reservation must not be derived from parts that are not there;
@@ -121,7 +122,7 @@ func ParseNamespace(domainTemplate string) (Namespace, error) {
 // reserved by List would leave a record taken under one reservation feeding another.
 // template_tests/reserved_public_hosts_test.go compares the two so that they cannot drift.
 func EffectiveMode(configured, domainTemplate string) string {
-	if configured == ModeList {
+	if configured != ModeTemplate {
 		return ModeList
 	}
 	if _, err := ParseNamespace(domainTemplate); err != nil {
