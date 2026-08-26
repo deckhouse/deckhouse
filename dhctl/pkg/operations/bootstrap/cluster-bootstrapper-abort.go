@@ -173,7 +173,10 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context) error {
 		return err
 	}
 
-	if metaConfig.IsStatic() {
+	// Both checks of the static abort suite reach the machines over SSH, and an immutable
+	// machine offers no sshd: with no hosts GetNodeInterface hands back the installer container
+	// itself, so the suite would check sudo inside the container and call it the cluster.
+	if metaConfig.IsStatic() && !immutableMaster {
 		deckhouseInstallConfig, err := config.PrepareDeckhouseInstallConfig(ctx, metaConfig, &b.Options.Global)
 		if err != nil {
 			return err
