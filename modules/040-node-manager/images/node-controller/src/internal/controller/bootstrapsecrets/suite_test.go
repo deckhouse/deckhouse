@@ -18,8 +18,6 @@ package bootstrapsecrets
 
 import (
 	"context"
-	"os"
-	"path/filepath"
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -32,7 +30,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
-	"github.com/deckhouse/node-controller/internal/bootstrap"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/testenv"
 )
@@ -42,7 +39,8 @@ const (
 	eventuallyPoll        = testenv.EventuallyPoll
 	negativeCheckDuration = testenv.NegativeCheckDuration
 
-	testClusterUUID = "deadbeef-dead-beef-dead-beefdeadbeef"
+	testClusterUUID        = "deadbeef-dead-beef-dead-beefdeadbeef"
+	testPackagesProxyToken = "packages-proxy-token-fixture"
 
 	clusterUUIDConfigMapName = "d8-cluster-uuid"
 	clusterUUIDKey           = "cluster-uuid"
@@ -90,7 +88,8 @@ var _ = BeforeSuite(func() {
 	create(clusterConfigurationSecret())
 	create(clusterKubernetesConfigMap())
 	create(imagesDigestsConfigMap())
-	create(bootstrapTemplatesConfigMap())
+	create(packagesProxyTokenSecret())
+	create(testenv.BootstrapTemplatesConfigMap())
 
 	By("starting the manager with the bootstrap-secrets controller")
 	mgr, err := testenv.NewManager(suiteCtx, testEnv.Config, scheme)
@@ -117,8 +116,9 @@ func create(obj client.Object) {
 	Expect(client.IgnoreAlreadyExists(k8sClient.Create(suiteCtx, obj))).To(Succeed())
 }
 
-// createClusterUUID writes the d8-cluster-uuid ConfigMap, replacing whatever is
-// there: the empty-UUID spec deletes it and the rest of the suite needs it back.
+// createClusterUUID publishes the d8-cluster-uuid ConfigMap. It is a function
+// rather than a fixture literal because the empty-UUID spec deletes the object
+// and has to put it back for the rest of the suite.
 func createClusterUUID(uuid string) {
 	GinkgoHelper()
 	cm := &corev1.ConfigMap{
@@ -144,6 +144,16 @@ func clusterKubernetesConfigMap() *corev1.ConfigMap {
 	}
 }
 
+// packagesProxyTokenSecret carries the token the rendered script presents to the
+// registry packages proxy; without it every render would carry an empty token
+// and no spec would notice.
+func packagesProxyTokenSecret() *corev1.Secret {
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Namespace: nodecommon.MachineNamespace, Name: "registry-packages-proxy-token"},
+		Data:       map[string][]byte{"token": []byte(testPackagesProxyToken)},
+	}
+}
+
 // imagesDigestsConfigMap carries the digests the bashible templates read by name
 // (bb-rpp-get-install reads registrypackages.rppGet, the prerequisites step the rest).
 func imagesDigestsConfigMap() *corev1.ConfigMap {
@@ -151,27 +161,5 @@ func imagesDigestsConfigMap() *corev1.ConfigMap {
 		ObjectMeta: metav1.ObjectMeta{Namespace: nodecommon.MachineNamespace, Name: imagesDigestsConfigMapName},
 		Data: map[string]string{imagesDigestsKey: `{"registrypackages":{"jq171":"sha256:jq","d8Curl891":"sha256:curl",` +
 			`"tailLog":"sha256:tail","rppGet":"sha256:rpp"}}`},
-	}
-}
-
-// bootstrapTemplatesConfigMap is the delivery channel the chart fills, loaded here
-// from the repository so the suite renders the templates a release really ships.
-func bootstrapTemplatesConfigMap() *corev1.ConfigMap {
-	GinkgoHelper()
-	root := filepath.Join("..", "..", "..", "..", "..", "..", "..", "..")
-	data := map[string]string{}
-	for path, key := range map[string]string{
-		"candi/bashible/lib.sh.tpl":                                  "lib.sh.tpl",
-		"candi/bashible/bootstrap/01-bootstrap-prerequisites.sh.tpl": "01-bootstrap-prerequisites.sh.tpl",
-		"candi/bashible/bb_node_ip.sh.tpl":                           "bb_node_ip.sh.tpl",
-	} {
-		raw, err := os.ReadFile(filepath.Join(root, path))
-		Expect(err).NotTo(HaveOccurred(), "read %s", path)
-		data[key] = string(raw)
-	}
-	return &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{Namespace: nodecommon.MachineNamespace, Name: bootstrap.TemplatesConfigMapName},
-		Data:       data,
-		BinaryData: map[string][]byte{"minget": []byte("minget")},
 	}
 }

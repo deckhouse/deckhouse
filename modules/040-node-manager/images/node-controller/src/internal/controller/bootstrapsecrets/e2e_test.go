@@ -17,6 +17,8 @@ limitations under the License.
 package bootstrapsecrets
 
 import (
+	"encoding/base64"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -27,6 +29,8 @@ import (
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/bootstrap"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
+	"github.com/deckhouse/node-controller/internal/controller/nodegroup/bashiblecontext"
+	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 	"github.com/deckhouse/node-controller/internal/testenv"
 )
 
@@ -63,6 +67,32 @@ var _ = Describe("Bootstrap secrets controller", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(tokens).To(HaveKey(name))
 		Expect(string(secret.Data["bootstrap.sh"])).To(ContainSubstring(tokens[name]))
+	})
+
+	// The rendered script cannot show these: the packages-proxy token reaches it
+	// only through the branch taken when no apiserver endpoint was discovered
+	// (01-bootstrap-prerequisites.sh.tpl:29-33), which envtest never takes, and
+	// the digests only reach it as values inside an rpp-get argument list. A
+	// reader that started returning nothing would otherwise stay green.
+	It("collects the cluster inputs the rendered script cannot show", func() {
+		ng := staticNodeGroup(testenv.UniqueName("inputs"))
+		r := &Reconciler{
+			context:       &bashiblecontext.Service{Client: k8sClient, Reader: k8sClient},
+			derivedStatus: &derived_status.Service{Client: k8sClient},
+		}
+		r.Client = k8sClient
+
+		resolved, validationErr, err := r.derivedStatus.ResolveNodeGroup(suiteCtx, ng)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(validationErr).To(BeEmpty())
+
+		in, err := r.buildInput(suiteCtx, ng, resolved)
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(in.PackagesProxy).To(HaveKeyWithValue("token", testPackagesProxyToken))
+		Expect(in.Images).To(HaveKey("registrypackages"))
+		Expect(in.MingetB64).To(Equal(base64.StdEncoding.EncodeToString([]byte("minget"))))
+		Expect(in.ClusterUUID).To(Equal(testClusterUUID))
 	})
 
 	It("does not write a manual secret for a CloudEphemeral group", func() {
@@ -136,8 +166,31 @@ var _ = Describe("Bootstrap secrets controller", func() {
 			err := k8sClient.Get(suiteCtx, manualSecretKey(name), secret)
 			return err == nil
 		}, negativeCheckDuration, eventuallyPoll).Should(BeFalse())
+
+		By("saying why on the NodeGroup itself, not only in the controller log")
+		Eventually(func(g Gomega) {
+			g.Expect(warningEventMessages(name)).To(ContainElement(ContainSubstring("cluster UUID is empty")))
+		}, eventuallyTimeout, eventuallyPoll).Should(Succeed())
 	})
 })
+
+// warningEventMessages returns the messages of the Warning events this controller
+// recorded on the NodeGroup. A cluster-scoped object's events land in "default".
+func warningEventMessages(ngName string) []string {
+	GinkgoHelper()
+	events := &corev1.EventList{}
+	Expect(k8sClient.List(suiteCtx, events, client.InNamespace("default"))).To(Succeed())
+
+	var messages []string
+	for i := range events.Items {
+		e := &events.Items[i]
+		if e.InvolvedObject.Name != ngName || e.Reason != eventReasonFailed {
+			continue
+		}
+		messages = append(messages, e.Message)
+	}
+	return messages
+}
 
 func staticNodeGroup(name string) *deckhousev1.NodeGroup {
 	return &deckhousev1.NodeGroup{

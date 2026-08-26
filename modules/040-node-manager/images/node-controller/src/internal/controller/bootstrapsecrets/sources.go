@@ -87,12 +87,14 @@ func (r *Reconciler) buildInput(ctx context.Context, ng *deckhousev1.NodeGroup, 
 		ClusterUUID:            clusterUUID,
 		Images:                 images,
 		PackagesProxy:          map[string]any{"token": r.context.ReadPackagesProxyToken(ctx)},
-		MingetB64:              base64.StdEncoding.EncodeToString(files.Binary("minget")),
-		Provider:               provider,
-		KubernetesCA:           r.context.ReadKubernetesCA(),
-		BootstrapToken:         token,
-		SSHPublicKey:           sshPublicKey,
-		Files:                  files,
+		// minget is 4KiB (crane export of the image candi/alt_base_images.yml
+		// pins), so inlining its base64 into the script costs ~5KiB per copy.
+		MingetB64:      base64.StdEncoding.EncodeToString(files.Binary("minget")),
+		Provider:       provider,
+		KubernetesCA:   r.context.ReadKubernetesCA(),
+		BootstrapToken: token,
+		SSHPublicKey:   sshPublicKey,
+		Files:          files,
 	}, nil
 }
 
@@ -103,8 +105,12 @@ func readImages(ctx context.Context, r client.Reader) (map[string]any, error) {
 		return nil, fmt.Errorf("read image digests %s: %w", key, err)
 	}
 
+	raw, ok := cm.Data[imagesDigestsKey]
+	if !ok {
+		return nil, fmt.Errorf("configmap %s has no %q key", key, imagesDigestsKey)
+	}
 	var images map[string]any
-	if err := json.Unmarshal([]byte(cm.Data[imagesDigestsKey]), &images); err != nil {
+	if err := json.Unmarshal([]byte(raw), &images); err != nil {
 		return nil, fmt.Errorf("parse %s of %s: %w", imagesDigestsKey, key, err)
 	}
 	return images, nil
@@ -132,7 +138,11 @@ func (r *Reconciler) capiSecretNames(ctx context.Context, ng *deckhousev1.NodeGr
 		return nil, fmt.Errorf("list CAPI MachineDeployments of NodeGroup %s: %w", ng.Name, err)
 	}
 	for i := range mds.Items {
-		name, _, _ := unstructured.NestedString(mds.Items[i].Object, "spec", "template", "spec", "bootstrap", "dataSecretName")
+		md := &mds.Items[i]
+		name, _, err := unstructured.NestedString(md.Object, "spec", "template", "spec", "bootstrap", "dataSecretName")
+		if err != nil {
+			return nil, fmt.Errorf("read dataSecretName of MachineDeployment %s: %w", md.GetName(), err)
+		}
 		if name != "" {
 			names[name] = struct{}{}
 		}
