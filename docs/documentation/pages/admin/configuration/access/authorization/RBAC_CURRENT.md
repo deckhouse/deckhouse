@@ -111,10 +111,10 @@ create,get:
     - pods/exec
     - pods/proxy
     - services/proxy
-create,update:
-    - pods/ephemeralcontainers
 delete,deletecollection:
     - pods
+update:
+    - pods/ephemeralcontainers
 read:
     - secrets
 ```
@@ -123,7 +123,9 @@ read:
 
 ```text
 create:
-    - pods/bindibg
+    - pods/binding
+patch:
+    - pods/resize
 read-write:
     - apps/deployments
     - apps/statefulsets
@@ -142,8 +144,6 @@ read-write:
     - serviceaccounts
     - serviceaccounts/token
     - services
-update:
-    - pods/resize
 write:
     - secrets
 ```
