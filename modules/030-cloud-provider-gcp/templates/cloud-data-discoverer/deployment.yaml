@@ -6,7 +6,7 @@ checksum/config: {{ include (print $.Template.BasePath "/cloud-controller-manage
 - --credentials-file=/etc/config/credentials.json
 - --project={{ index (.Values.cloudProviderGcp.internal.providerClusterConfiguration.provider.serviceAccountJSON | fromJson) "project_id" }}
   {{- range $zone := .Values.cloudProviderGcp.internal.providerDiscoveryData.zones }}
-- --zone={{ $zone }}
+- "--zone={{ $zone }}"
   {{- end }}
 {{- end -}}
 

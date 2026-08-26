@@ -5,16 +5,28 @@ clientConnection:
   kubeconfig: /etc/kubernetes/scheduler.conf
 profiles:
 - schedulerName: high-node-utilization
+  plugins:
+    score:
+      disabled:
+      - name: NodeResourcesBalancedAllocation
+      - name: ImageLocality
+      enabled:
+      - name: NodeResourcesFit
+        weight: 10
   pluginConfig:
-  - args:
+  - name: NodeResourcesFit
+    args:
       scoringStrategy:
+        type: MostAllocated
         resources:
         - name: cpu
           weight: 1
         - name: memory
           weight: 1
-        type: MostAllocated
-    name: NodeResourcesFit
+  - name: PodTopologySpread
+    args:
+      defaultingType: List
+      defaultConstraints: []
 - schedulerName: default-scheduler
   pluginConfig:
   - name: PodTopologySpread

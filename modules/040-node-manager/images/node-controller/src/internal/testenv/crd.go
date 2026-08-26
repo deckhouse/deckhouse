@@ -38,6 +38,12 @@ const (
 	InstanceCRDFile       NodeManagerCRDFile = "instance.yaml"
 	NodeUserCRDFile       NodeManagerCRDFile = "nodeuser.yaml"
 	StaticInstanceCRDFile NodeManagerCRDFile = "staticinstance.yaml"
+
+	NodeConfigCRDFile    NodeManagerCRDFile = "nodeconfig.yaml"
+	NodeOperationCRDFile NodeManagerCRDFile = "nodeoperation.yaml"
+	// Under crds/internal: nobody creates the Cluster API bootstrap objects by
+	// hand, so they are kept out of the documentation and installed by a hook.
+	NodeBootstrapConfigCRDFile NodeManagerCRDFile = "internal/nodebootstrapconfig.yaml"
 )
 
 // RealCacheCRDPaths returns the CRDs every envtest manager needs regardless of what the
@@ -46,7 +52,7 @@ const (
 func RealCacheCRDPaths() []string {
 	return slices.Concat(
 		ControllerCRDPaths(MachineCRDFile, MachineDeploymentCRDFile, ClusterCRDFile, MachineHealthCheckCRDFile),
-		NodeManagerCRDPaths(MCMCRDFile),
+		NodeManagerCRDPaths(MCMCRDFile, NodeBootstrapConfigCRDFile),
 		[]string{
 			testdataPath("deckhousecontrolplane-crd.yaml"),
 			testdataPath("moduleconfig-crd.yaml"),

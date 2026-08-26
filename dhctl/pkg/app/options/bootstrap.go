@@ -29,6 +29,11 @@ type BootstrapOptions struct {
 	PostBootstrapScriptTimeout time.Duration
 	PostBootstrapScriptPath    string
 
+	// KubeconfigOut is where the admin kubeconfig of a freshly bootstrapped
+	// cluster is written; empty means "do not write it". On a cluster of
+	// immutable nodes it is the only way in — those nodes run no SSH server.
+	KubeconfigOut string
+
 	ForceAbortFromCache             bool
 	DontUsePublicControlPlaneImages bool
 
@@ -54,6 +59,7 @@ func (o *BootstrapOptions) ToSpanAttributes() []otattribute.KeyValue {
 		otattribute.String("bootstrap.deckhouseTimeout", o.DeckhouseTimeout.String()),
 		otattribute.String("bootstrap.postBootstrapScriptTimeout", o.PostBootstrapScriptTimeout.String()),
 		otattribute.String("bootstrap.postBootstrapScriptPath", o.PostBootstrapScriptPath),
+		otattribute.String("bootstrap.kubeconfigOut", o.KubeconfigOut),
 		otattribute.Bool("bootstrap.forceAbortFromCache", o.ForceAbortFromCache),
 		otattribute.Bool("bootstrap.dontUsePublicControlPlaneImages", o.DontUsePublicControlPlaneImages),
 		otattribute.StringSlice("bootstrap.skipPhases", o.SkipPhases),
