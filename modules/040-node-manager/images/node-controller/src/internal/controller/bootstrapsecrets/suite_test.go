@@ -18,6 +18,7 @@ package bootstrapsecrets
 
 import (
 	"context"
+	"path/filepath"
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -53,6 +54,13 @@ var (
 	suiteCtx  context.Context
 	cancel    context.CancelFunc
 )
+
+// The controller builds its own bashiblecontext.Service, which reads the cluster CA
+// from the pod's projected service-account volume — a path no test process has, and
+// BuildInput refuses an empty CA.
+func init() {
+	bashiblecontext.RootCAFiles = []string{filepath.Join("testdata", "ca.crt")}
+}
 
 // TestBootstrapSecrets runs the envtest-backed integration suite for the
 // bootstrap-secrets controller against the production cache scoping.

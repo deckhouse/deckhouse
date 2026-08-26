@@ -17,10 +17,12 @@ limitations under the License.
 package bootstrapsecrets
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -28,8 +30,27 @@ import (
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
+	"github.com/deckhouse/node-controller/internal/controller/nodegroup/bashiblecontext"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
+	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 )
+
+// ReadKubernetesCA returns "" on any failed read, and an empty CA renders a
+// valid-looking Secret whose node cannot verify the apiserver. The same class of
+// silent failure as the cluster UUID, and gated next to it.
+func TestBuildInputRejectsAnUnreadableKubernetesCA(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(&corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{Namespace: nodecommon.KubeSystemNamespace, Name: clusterUUIDConfigMapName},
+		Data:       map[string]string{clusterUUIDKey: testClusterUUID},
+	}).Build()
+	svc := &bashiblecontext.Service{Client: c, RootCAFile: filepath.Join(t.TempDir(), "absent.crt")}
+
+	_, err := BuildInput(t.Context(), svc, derived_status.ResolvedNodeGroup{Name: "worker"}, "token")
+
+	require.ErrorContains(t, err, "kubernetes CA is empty")
+}
 
 // The clusterUUID and the two names are the fixture and the golden of the helm
 // template test (template_tests/module_test.go:46,801): proof the hash mirrored
