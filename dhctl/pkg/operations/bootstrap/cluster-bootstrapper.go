@@ -1400,7 +1400,7 @@ func (b *ClusterBootstrapper) bootstrapAdditionalNodes(ctx context.Context, bctx
 	if bctx.immutable != nil {
 		configureNode = func(ctx context.Context, kubeCl *client.KubernetesClient, nodeGroupName, nodeName, address string) error {
 			payload, nodeConfig, err := immutable.BuildJoinPayloadFromCluster(ctx, kubeCl, bctx.metaConfig, nodeName,
-				immutableCustomization(bctx, nodeName), address)
+				immutableCustomization(bctx, nodeName), address, nodeGroupName)
 			if err != nil {
 				return err
 			}
@@ -1418,7 +1418,7 @@ func (b *ClusterBootstrapper) bootstrapAdditionalNodes(ctx context.Context, bctx
 		// customization this passes is always nil here.
 		buildPayload = func(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, nodeName string) (string, error) {
 			payload, _, err := immutable.BuildJoinPayloadFromCluster(ctx, kubeCl, metaConfig, nodeName,
-				immutableCustomization(bctx, nodeName), immutableNodeAddress(bctx, nodeName))
+				immutableCustomization(bctx, nodeName), immutableNodeAddress(bctx, nodeName), global.MasterNodeGroupName)
 			return payload, err
 		}
 	}

@@ -27,6 +27,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable"
 	dhctlkube "github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
@@ -108,7 +109,7 @@ func immutableMasterPayload(ctx *context.Context, nodeName string) (string, erro
 
 	// No customization and no node IP: in a cloud the machine does not exist yet, and
 	// the operator describes it through the provider configuration, not per machine.
-	payload, _, err := immutable.BuildJoinPayloadFromCluster(ctx.Ctx(), kubeCl, metaConfig, nodeName, nil, "")
+	payload, _, err := immutable.BuildJoinPayloadFromCluster(ctx.Ctx(), kubeCl, metaConfig, nodeName, nil, "", global.MasterNodeGroupName)
 	if err != nil {
 		return "", fmt.Errorf("build the join payload of %s: %w", nodeName, err)
 	}
