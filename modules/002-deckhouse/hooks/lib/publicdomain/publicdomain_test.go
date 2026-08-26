@@ -259,27 +259,91 @@ func TestEffectiveMode(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
+		name           string
 		configured     string
 		domainTemplate string
 		want           string
 	}{
-		{ModeTemplate, "%s.example.com", ModeTemplate},
-		{ModeTemplate, "kube-%s.company.my", ModeTemplate},
-		{ModeList, "%s.example.com", ModeList},
-		// What the template falls back to, and for the same reason: a value that never went through
-		// the global schema must not have a reservation derived from parts that are not there.
-		{ModeTemplate, "", ModeList},
-		{ModeTemplate, "example.com", ModeList},
-		{ModeTemplate, "%s-%s.example.com", ModeList},
-		{ModeList, "example.com", ModeList},
-		// Absent, which is what a ModuleConfig that never named a mode leaves in values. The schema
-		// defaults it to Template and the template treats anything that is not List the same way.
-		{"", "%s.example.com", ModeTemplate},
+		{
+			name:           "Template with %s as the whole first label",
+			configured:     ModeTemplate,
+			domainTemplate: "%s.example.com",
+			want:           ModeTemplate,
+		},
+		{
+			name:           "Template with %s as a suffix of the first label",
+			configured:     ModeTemplate,
+			domainTemplate: "kube-%s.company.my",
+			want:           ModeTemplate,
+		},
+		{
+			name:           "List is always List",
+			configured:     ModeList,
+			domainTemplate: "%s.example.com",
+			want:           ModeList,
+		},
+		{
+			name:           "a template the global schema would have rejected falls back to List",
+			configured:     ModeTemplate,
+			domainTemplate: "",
+			want:           ModeList,
+		},
+		{
+			name:           "a template with no %s falls back to List",
+			configured:     ModeTemplate,
+			domainTemplate: "example.com",
+			want:           ModeList,
+		},
+		{
+			name:           "a template with two %s falls back to List",
+			configured:     ModeTemplate,
+			domainTemplate: "%s-%s.example.com",
+			want:           ModeList,
+		},
+		{
+			name:           "List still wins over an unparseable template",
+			configured:     ModeList,
+			domainTemplate: "example.com",
+			want:           ModeList,
+		},
+		{
+			name:           "absent mode with %s as the whole first label is Template",
+			configured:     "",
+			domainTemplate: "%s.example.com",
+			want:           ModeTemplate,
+		},
+		{
+			name:           "%s as a prefix of the first label falls back to List",
+			configured:     ModeTemplate,
+			domainTemplate: "%s-kube.company.my",
+			want:           ModeList,
+		},
+		{
+			name:           "a cluster-id suffix in the first label falls back to List",
+			configured:     ModeTemplate,
+			domainTemplate: "%s-cluster.example.com",
+			want:           ModeList,
+		},
+		{
+			name:           "absent mode with %s as a prefix of the first label is List",
+			configured:     "",
+			domainTemplate: "%s-cluster.example.com",
+			want:           ModeList,
+		},
+		{
+			name:           "%s in the middle of the first label stays Template",
+			configured:     ModeTemplate,
+			domainTemplate: "pre-%s-post.example.com",
+			want:           ModeTemplate,
+		},
 	}
 
 	for _, tc := range cases {
-		if got := EffectiveMode(tc.configured, tc.domainTemplate); got != tc.want {
-			t.Errorf("EffectiveMode(%q, %q) = %q, want %q", tc.configured, tc.domainTemplate, got, tc.want)
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			if got := EffectiveMode(tc.configured, tc.domainTemplate); got != tc.want {
+				t.Errorf("EffectiveMode(%q, %q) = %q, want %q", tc.configured, tc.domainTemplate, got, tc.want)
+			}
+		})
 	}
 }

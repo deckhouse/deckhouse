@@ -347,6 +347,9 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 				{"List", "%s.example.com"},
 				{"Template", "kube-%s.company.my"},
 				{"List", "kube-%s.company.my"},
+				{"Template", "%s-kube.company.my"},
+				{"Template", "%s-cluster.example.com"},
+				{"List", "%s-cluster.example.com"},
 			} {
 				renderWithSettings(tc.domainTemplate, `{mode: `+tc.configured+`}`, admissionAPIs...)
 				Expect(configMap().Field("data.mode").String()).
@@ -394,6 +397,12 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 			} {
 				render(domainTemplate, admissionAPIs...)
 				cm := configMap()
+
+				if publicdomain.EffectiveMode("", domainTemplate) == publicdomain.ModeList {
+					Expect(cm.Field("data.mode").String()).To(Equal("List"), domainTemplate)
+					Expect(cm.Field("data.hostPattern").String()).To(BeEmpty(), domainTemplate)
+					continue
+				}
 
 				namespace, err := publicdomain.ParseNamespace(domainTemplate)
 				Expect(err).ShouldNot(HaveOccurred(), domainTemplate)
@@ -959,6 +968,25 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 
 		It("still answers whether the literal covers the repository", func() {
 			expectCoversRepositoryPublicDomains(configMap())
+		})
+	})
+
+	Context("A publicDomainTemplate whose %s is only a prefix of the first label", func() {
+		BeforeEach(func() {
+			renderWithSettings("%s-cluster.example.com", `{mode: Template}`, admissionAPIs...)
+		})
+
+		It("reserves List even when Template was asked for, so tenant names that share the suffix are not reserved", func() {
+			cm := configMap()
+			Expect(cm.Field("data.mode").String()).To(Equal("List"))
+			Expect(cm.Field("data.hostPattern").String()).To(BeEmpty())
+			hosts := strings.Fields(cm.Field("data.hosts").String())
+			Expect(hosts).To(ContainElement("grafana-cluster.example.com"))
+			Expect(hosts).NotTo(ContainElement("shop-cluster.example.com"))
+		})
+
+		It("carries that List into the policy too", func() {
+			expectPolicyCarriesConfigMap()
 		})
 	})
 
