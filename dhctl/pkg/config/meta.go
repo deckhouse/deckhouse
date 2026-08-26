@@ -271,9 +271,11 @@ func applyNodeGroupReplicasFromCloudProviderVars(m *MetaConfig) error {
 			}
 			r, _ := nodeGroupMinPerZone(ng)
 			nodeTemplate, _ := nestedMap(ng, "spec", "nodeTemplate")
+			systemType, _ := nestedString(ng, "spec", "systemType")
 			m.TerraNodeGroupSpecs = append(m.TerraNodeGroupSpecs, TerraNodeGroupSpec{
 				Name:         name,
 				Replicas:     r,
+				SystemType:   systemType,
 				NodeTemplate: nodeTemplate,
 			})
 		}
@@ -332,6 +334,16 @@ func sortedKeys(m map[string]map[string]interface{}) []string {
 	}
 	sort.Strings(keys)
 	return keys
+}
+
+// nestedString reads a string at path, and "" when the path names anything else.
+func nestedString(obj map[string]interface{}, path ...string) (string, bool) {
+	parent, ok := nestedMap(obj, path[:len(path)-1]...)
+	if !ok {
+		return "", false
+	}
+	value, ok := parent[path[len(path)-1]].(string)
+	return value, ok
 }
 
 func nestedMap(obj map[string]interface{}, path ...string) (map[string]interface{}, bool) {
