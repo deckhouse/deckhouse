@@ -259,8 +259,8 @@ func (b *ClusterBootstrapper) applyImmutablePreflights(runner *preflight.Preflig
 		BootstrapOpts: &b.Options.Bootstrap,
 		GlobalOpts:    &b.Options.Global,
 		CommanderMode: b.CommanderMode,
-		MachinesWaiting: func(ctx context.Context) error {
-			return b.checkMachinesAreWaiting(ctx, bctx)
+		MachinesAvailability: func(ctx context.Context) error {
+			return b.checkMachinesAreAvailable(ctx, bctx)
 		},
 	}))
 
@@ -270,7 +270,7 @@ func (b *ClusterBootstrapper) applyImmutablePreflights(runner *preflight.Preflig
 	runner.DisableCheck(checks.CloudAPICheckName.String())
 }
 
-// checkMachinesAreWaiting is the preflight body: every machine named with
+// checkMachinesAreAvailable is the preflight body: every machine named with
 // --master-host answers its maintenance port, and the hardware it reports
 // matches the document written for it. Both are read from one inventory call,
 // which is the same request the push does — so a machine that passes here is a
@@ -279,7 +279,7 @@ func (b *ClusterBootstrapper) applyImmutablePreflights(runner *preflight.Preflig
 // The wait is short by design. This is not the wait for a machine to boot (the
 // push has that one, minutes long); it is the check that the operator named
 // machines that exist. A typo in an address costs a minute here instead of ten.
-func (b *ClusterBootstrapper) checkMachinesAreWaiting(ctx context.Context, bctx *bootstrapContext) error {
+func (b *ClusterBootstrapper) checkMachinesAreAvailable(ctx context.Context, bctx *bootstrapContext) error {
 	if bctx.immutable == nil || len(bctx.immutable.hosts) == 0 {
 		return nil
 	}
@@ -291,21 +291,21 @@ func (b *ClusterBootstrapper) checkMachinesAreWaiting(ctx context.Context, bctx 
 
 	names := slices.Sorted(maps.Keys(bctx.immutable.hosts))
 	for _, name := range names {
-		if err := b.checkMachineIsWaiting(ctx, bctx, name, bctx.immutable.hosts[name], port); err != nil {
+		if err := b.checkMachineIsAvailable(ctx, bctx, name, bctx.immutable.hosts[name], port); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-// checkMachineIsWaiting reaches one machine and reads it against its document.
-func (b *ClusterBootstrapper) checkMachineIsWaiting(ctx context.Context, bctx *bootstrapContext, name, address string, port int) error {
+// checkMachineIsAvailable reaches one machine and reads it against its document.
+func (b *ClusterBootstrapper) checkMachineIsAvailable(ctx context.Context, bctx *bootstrapContext, name, address string, port int) error {
 	_, nodeConfig, err := b.buildImmutableMasterPayload(ctx, bctx, name)
 	if err != nil {
 		return fmt.Errorf("build the document of %s to check it against the machine: %w", name, err)
 	}
 
-	loop := libretry.NewSilentLoop(fmt.Sprintf("Reaching %s", name), checkMachinesWaiting.attempts, checkMachinesWaiting.interval)
+	loop := libretry.NewSilentLoop(fmt.Sprintf("Reaching %s", name), checkMachinesAvailable.attempts, checkMachinesAvailable.interval)
 
 	var inventory *immutable.Inventory
 	err = retryWithFreshChannel(ctx, loop,
@@ -326,9 +326,15 @@ func (b *ClusterBootstrapper) checkMachineIsWaiting(ctx context.Context, bctx *b
 			return nil
 		})
 	if err != nil {
-		return fmt.Errorf(
-			"%s at %s is not waiting for a configuration: %w. Check the address, that the machine is powered on, "+
-				"and that it booted the immutable image", name, address, err)
+		// Two different jobs for the operator, so two different sentences: a machine
+		// that never answered is an address, a power state or a boot; a machine that
+		// answered badly is on the line and running something else.
+		if errors.Is(err, immutable.ErrInventoryUnusable) {
+			return fmt.Errorf("%s at %s answers, but not with an inventory: %w. Check that the machine booted "+
+				"the immutable image and is waiting for a configuration", name, address, err)
+		}
+		return fmt.Errorf("could not reach %s at %s: %w. Check the address, that the machine is powered on, "+
+			"and that it booted the immutable image and is waiting for a configuration", name, address, err)
 	}
 
 	// An image too old to serve one leaves nothing to check against. Said here,

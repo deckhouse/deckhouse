@@ -28,9 +28,9 @@ type ImmutableDeps struct {
 	BootstrapOpts *options.BootstrapOptions
 	GlobalOpts    *options.GlobalOptions
 	CommanderMode bool
-	// MachinesWaiting reaches the machines named with --master-host. Supplied by
+	// MachinesAvailability reaches the machines named with --master-host. Supplied by
 	// the bootstrapper, which owns the tunnel to them; nil where there are none.
-	MachinesWaiting func(context.Context) error
+	MachinesAvailability func(context.Context) error
 }
 
 // NewImmutableSuite gathers the checks that only apply when the master
@@ -45,7 +45,7 @@ func NewImmutableSuite(deps ImmutableDeps) preflight.Suite {
 		checks.ImmutablePostBootstrapScript(deps.BootstrapOpts),
 		checks.ImmutableKubeconfigOut(deps.BootstrapOpts, deps.CommanderMode),
 		checks.ImmutableKubeconfigKept(deps.BootstrapOpts, deps.GlobalOpts),
-		checks.ImmutableMachinesWaiting(deps.MachinesWaiting),
+		checks.ImmutableMachinesAvailability(deps.MachinesAvailability),
 	)
 }
 
