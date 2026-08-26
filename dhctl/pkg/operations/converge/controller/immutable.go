@@ -27,7 +27,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable"
 	dhctlkube "github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
@@ -76,9 +75,9 @@ func isImmutableNodeGroup(ctx *context.Context, nodeGroupName string) (bool, err
 	return immutable.NodeGroupIsImmutable(ng), nil
 }
 
-// immutableMasterPayload renders the cloud-init this master joins with. Unlike the
+// immutableNodePayload renders the cloud-init this node joins with. Unlike the
 // group-wide bashible secret it is per node, so it is built where the node is created.
-func immutableMasterPayload(ctx *context.Context, nodeName string) (string, error) {
+func immutableNodePayload(ctx *context.Context, nodeGroupName, nodeName string) (string, error) {
 	shared, err := ctx.MetaConfig()
 	if err != nil {
 		return "", err
@@ -109,7 +108,7 @@ func immutableMasterPayload(ctx *context.Context, nodeName string) (string, erro
 
 	// No customization and no node IP: in a cloud the machine does not exist yet, and
 	// the operator describes it through the provider configuration, not per machine.
-	payload, _, err := immutable.BuildJoinPayloadFromCluster(ctx.Ctx(), kubeCl, metaConfig, nodeName, nil, "", global.MasterNodeGroupName)
+	payload, _, err := immutable.BuildJoinPayloadFromCluster(ctx.Ctx(), kubeCl, metaConfig, nodeName, nil, "", nodeGroupName)
 	if err != nil {
 		return "", fmt.Errorf("build the join payload of %s: %w", nodeName, err)
 	}

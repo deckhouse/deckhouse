@@ -23,12 +23,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// An immutable machine takes its configuration from the maintenance port, the same way a static
-// cluster's machines do. Handing the provider a NodeCloudConfig puts the document back on the
-// cloud-init path, where the image's init and the agent parse it separately and neither checks it
-// against the hardware. Checked on the source: what the provider was handed is not observable from
-// what the phase returns.
-func TestTheFirstMasterIsCreatedWithNoCloudConfig(t *testing.T) {
+// In a cloud the provider carries the document in as the machine's cloud config. Creating the
+// first master without one leaves it waiting in the installer with no cluster to report that to,
+// and the maintenance port - the static cluster's transport - would then have to be reached at an
+// address nothing publishes. Checked on the source: what the provider was handed is not observable
+// from what the phase returns.
+func TestTheFirstMasterIsCreatedWithItsDocument(t *testing.T) {
 	t.Parallel()
 
 	const file = "cluster-bootstrapper.go"
@@ -43,22 +43,27 @@ func TestTheFirstMasterIsCreatedWithNoCloudConfig(t *testing.T) {
 			return true
 		}
 		checked = true
-		require.False(t, namesIdent(fn.Body, "NodeCloudConfig"),
-			"%s hands the provider a NodeCloudConfig; an immutable machine is pushed to, not seeded", file)
+		require.True(t, namesIdent(fn.Body, "NodeCloudConfig"),
+			"%s creates the first master with no cloud config: an immutable machine boots bare and never joins", file)
+		require.True(t, namesIdent(fn.Body, "buildImmutableMasterPayload"),
+			"%s creates the first master without rendering its document", file)
 		return false
 	})
 
 	require.True(t, checked, "bootstrapFirstMaster not found in %s", file)
 }
 
-// The address comes from the infrastructure, and there is nothing to push to without it. Refused
-// rather than pushed at "": an empty address dials whatever answers on the machine dhctl runs on.
-func TestTheCloudMasterNeedsAnAddress(t *testing.T) {
+// A cloud master of a classic cluster must be seeded with nothing: the payload builder answers ""
+// off an immutable-less bootstrap, and a stray document there would be a second source of truth
+// beside the group's own cloud config.
+func TestAClassicCloudMasterIsSeededWithNothing(t *testing.T) {
 	t.Parallel()
 
-	b, bctx := immutableTestBootstrapper(t)
+	b := &ClusterBootstrapper{}
+	bctx := &bootstrapContext{}
 
-	err := b.handImmutableCloudMaster(t.Context(), bctx, "master-0", "")
-	require.ErrorContains(t, err, "no address")
-	require.ErrorContains(t, err, "master-0")
+	cloudConfig, nodeConfig, err := b.buildImmutableMasterPayload(t.Context(), bctx, "master-0")
+	require.NoError(t, err)
+	require.Empty(t, cloudConfig)
+	require.Empty(t, nodeConfig)
 }

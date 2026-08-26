@@ -174,12 +174,6 @@ func populateNodesState(ctx *convergecontext.Context) (map[string]state.NodeGrou
 }
 
 func (r *runner) migrateTerraNodes(ctx *convergecontext.Context, metaConfig *config.MetaConfig, nodesState map[string]state.NodeGroupInfrastructureState) error {
-	// Refuse before the phase is opened, the same way the converge path refuses before
-	// switching to the node user: both entry points fail on the same condition.
-	if err := refuseImmutableNodeGroups(ctx.Ctx(), ctx, convergedNodeGroupNames(metaConfig, nodesState)); err != nil {
-		return err
-	}
-
 	if shouldStop, err := ctx.StarExecutionPhase(ctx.Ctx(), phases.AllNodesPhase, true); err != nil {
 		return err
 	} else if shouldStop {
@@ -462,13 +456,19 @@ func (r *runner) converge(ctx *convergecontext.Context) error {
 			return err
 		}
 
-		if err := refuseImmutableNodeGroups(ctx.Ctx(), ctx, convergedNodeGroupNames(metaConfig, nodesStates)); err != nil {
+		// An immutable control plane answers no sshd: there is no node user to create and
+		// no master to rebuild the client through, and the node phases run against the
+		// client converge already holds.
+		immutableMasters, err := masterGroupIsImmutable(ctx.Ctx(), ctx)
+		if err != nil {
 			return err
 		}
 
-		err = r.switcher.SwitchToNodeUser(ctx.Ctx(), nodesStates[global.MasterNodeGroupName].State)
-		if err != nil {
-			return err
+		if !immutableMasters {
+			err = r.switcher.SwitchToNodeUser(ctx.Ctx(), nodesStates[global.MasterNodeGroupName].State)
+			if err != nil {
+				return err
+			}
 		}
 
 		kubeClientSwitched = true
