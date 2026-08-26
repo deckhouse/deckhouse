@@ -326,8 +326,8 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 		maps.Copy(labels, opts.ResourcesLabels)
 	}
 
-	// reportCh receives progress reports from nelm during resource tracking.
-	// A background goroutine converts each report into a tracking event and
+	// reportCh receives progress reports from nelm during resource tracking. A
+	// background goroutine records the latest one for the apply deadline and
 	// forwards it to the caller's callback.
 	//
 	// We must NOT close reportCh: when a Timeout is set, nelm's ReleaseInstall
@@ -340,18 +340,27 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 	done := make(chan struct{})
 	defer close(done)
 
+	var progress progressTracker
+
 	go func() {
 		for {
 			select {
 			case <-done:
 				return
 			case report := <-reportCh:
+				progress.record(report)
+
 				if opts.OnTrackingEvent != nil {
 					opts.OnTrackingEvent(releaseName, report)
 				}
 			}
 		}
 	}()
+
+	// The deadline is ours, so an apply that outlives it is cancelled with a cause
+	// naming what it waited for, the way the runtime names a reschedule.
+	ctx, stopDeadline := withApplyDeadline(ctx, c.opts.Timeout, &progress)
+	defer stopDeadline()
 
 	if err := action.ReleaseInstall(ctx, releaseName, namespace, action.ReleaseInstallOptions{
 		LegacyProgressReportCh: reportCh,
@@ -381,7 +390,7 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 			ReleaseStorageDriver:    c.driver,
 			ForceAdoption:           true,
 		},
-		Timeout: c.opts.Timeout,
+		Timeout: backstopTimeout(c.opts.Timeout),
 		// Package releases are serialized by the runtime task pipeline, so the cluster-wide release lock is redundant.
 		LegacyNoReleaseLock: true,
 	}); err != nil {
