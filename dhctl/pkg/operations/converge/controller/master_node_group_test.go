@@ -21,10 +21,12 @@ import (
 
 	"github.com/deckhouse/lib-connection/pkg/settings"
 	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
+	"github.com/deckhouse/lib-connection/pkg/ssh/session"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
 // Without SSH hosts the hook cannot be built. Reporting that instead of a nil hook
@@ -48,6 +50,64 @@ func TestNewHookForUpdatePipelineFailsWithoutSSHHosts(t *testing.T) {
 
 	require.Error(t, err)
 	require.Nil(t, hook)
+}
+
+// An immutable master is never registered as an SSH host, so the provider lookup
+// fails on a master-hosts cache nobody wrote. Reporting that aborted every converge
+// of an immutable master before it could render the node's payload.
+func TestNewHookForUpdatePipelineNeedsNoSSHForImmutableMaster(t *testing.T) {
+	noHosts := &sshconfig.ConnectionConfig{Config: &sshconfig.Config{}}
+	convergeCtx := context.NewContext(t.Context(), context.Params{
+		SSHProviderInitializer: providerinitializer.NewSSHProviderInitializer(
+			settings.NewBaseProviders(settings.ProviderParams{}),
+			noHosts,
+		),
+	})
+
+	nodeGroup := NewNodeGroupController("master", state.NodeGroupInfrastructureState{
+		State: map[string][]byte{"cluster-master-0": nil, "cluster-master-1": nil},
+	}, nil, nil)
+	nodeGroup.immutable = true
+
+	hook, err := NewMasterNodeGroupController(nodeGroup, false).
+		newHookForUpdatePipeline(convergeCtx, "cluster-master-0")
+
+	require.NoError(t, err)
+	require.NotNil(t, hook)
+}
+
+// The cached address is what makes Context.SSHless() false. Caching an immutable
+// master sends the next converge looking for a NodeUser and bashible on a machine
+// that runs neither.
+func TestMasterHostsCacheSkipsImmutableNodes(t *testing.T) {
+	newHost := []session.Host{{Host: "10.12.1.10", Name: "cluster-master-0"}}
+
+	t.Run("immutable", func(t *testing.T) {
+		stateCache := cache.NewTestCache()
+		convergeCtx := context.NewContext(t.Context(), context.Params{Cache: stateCache})
+
+		nodeGroup := NewNodeGroupController("master", state.NodeGroupInfrastructureState{}, nil, nil)
+		nodeGroup.immutable = true
+
+		NewMasterNodeGroupController(nodeGroup, false).addNewNodesToCache(convergeCtx, newHost)
+
+		hosts, err := state.GetMasterHostsIPs(t.Context(), stateCache)
+		require.NoError(t, err)
+		require.Empty(t, hosts)
+	})
+
+	t.Run("bashible", func(t *testing.T) {
+		stateCache := cache.NewTestCache()
+		convergeCtx := context.NewContext(t.Context(), context.Params{Cache: stateCache})
+
+		nodeGroup := NewNodeGroupController("master", state.NodeGroupInfrastructureState{}, nil, nil)
+
+		NewMasterNodeGroupController(nodeGroup, false).addNewNodesToCache(convergeCtx, newHost)
+
+		hosts, err := state.GetMasterHostsIPs(t.Context(), stateCache)
+		require.NoError(t, err)
+		require.Equal(t, newHost, hosts)
+	})
 }
 
 // The map of the other masters is what tells a multi-master cluster from a single-master

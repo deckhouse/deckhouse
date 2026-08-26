@@ -18,8 +18,12 @@ import (
 	gocontext "context"
 	"errors"
 	"fmt"
+	"time"
 
-	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
@@ -30,6 +34,14 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook/controlplane"
+	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
+)
+
+// Same budget as entity.GetNodeGroup: a NodeGroup read must survive an apiserver
+// restart, and every converged group starts with one.
+const (
+	nodeGroupReadAttempts = 600
+	nodeGroupReadInterval = 1 * time.Second
 )
 
 // isImmutableNodeGroup reads systemType off the live NodeGroup. The cluster object is
@@ -40,7 +52,22 @@ func isImmutableNodeGroup(ctx *context.Context, nodeGroupName string) (bool, err
 		return false, fmt.Errorf("get kube client to read NodeGroup %s: %w", nodeGroupName, err)
 	}
 
-	ng, err := entity.GetNodeGroupDirect(ctx.Ctx(), kubeCl, nodeGroupName)
+	var ng *unstructured.Unstructured
+	err = retry.NewSilentLoop(fmt.Sprintf("Get NodeGroup %q", nodeGroupName), nodeGroupReadAttempts, nodeGroupReadInterval).
+		BreakIf(apierrors.IsNotFound).
+		RunContext(ctx.Ctx(), func() error {
+			var err error
+			ng, err = entity.GetNodeGroupDirect(ctx.Ctx(), kubeCl, nodeGroupName)
+
+			return err
+		})
+
+	// A NodeGroup deleted from the cluster can still hold infrastructure state, and
+	// converge exists to delete those machines. It needs no systemType to do it.
+	if apierrors.IsNotFound(err) {
+		return false, nil
+	}
+
 	if err != nil {
 		return false, fmt.Errorf("read NodeGroup %s to tell a mutable group from an immutable one: %w", nodeGroupName, err)
 	}
@@ -51,10 +78,15 @@ func isImmutableNodeGroup(ctx *context.Context, nodeGroupName string) (bool, err
 // immutableMasterPayload renders the cloud-init this master joins with. Unlike the
 // group-wide bashible secret it is per node, so it is built where the node is created.
 func immutableMasterPayload(ctx *context.Context, nodeName string) (string, error) {
-	metaConfig, err := ctx.MetaConfig()
+	shared, err := ctx.MetaConfig()
 	if err != nil {
 		return "", err
 	}
+
+	// The digests and the cluster registry below are edits for this one render. The
+	// context hands out the same MetaConfig to everything else in the converge run,
+	// and in AutoConverge the run outlives the tick.
+	metaConfig := shared.DeepCopy()
 
 	// A config read from the cluster carries no image digests — only the bootstrap's
 	// file path loads them — and the payload names every extension by digest. They come
