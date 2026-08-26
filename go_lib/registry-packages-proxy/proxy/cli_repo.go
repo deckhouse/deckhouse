@@ -27,8 +27,7 @@ import (
 // repository, e.g. the "ee" of registry.deckhouse.io/deckhouse/ee.
 //
 // The list matches Edition.IsValid in the deckhouse-cli client, which decides
-// where `d8 mirror pull` reads the CLI artifacts from and where `d8 mirror
-// push` writes them. Both sides must agree, so keep them in sync.
+// where `d8 mirror pull` reads the CLI artifacts from. Keep them in sync.
 //
 // "cse" is absent on purpose: the CSE registry keeps the editionless
 // artifacts (the installer) under deckhouse/cse, so deckhouse/cse is a root
@@ -42,15 +41,17 @@ var editionSegments = map[string]struct{}{
 	"fe":      {},
 }
 
-// cliRegistryRepository returns the repository holding the Deckhouse CLI
-// artifacts: deckhouse-cli and deckhouse-cli/plugins/<name>. They are
-// published once for all editions at the registry root, one level above the
+// cliRegistryRepository returns the edition-trimmed root: where the official
+// registry publishes the CLI artifacts (deckhouse-cli and
+// deckhouse-cli/plugins/<name>), once for all editions, one level above the
 // cluster's edition repository:
 //
 //	registry.deckhouse.io/deckhouse/ee  ->  registry.deckhouse.io/deckhouse
 //
 // A repository that does not end with an edition segment (dev registries,
-// air-gapped mirrors pushed to a plain path) is that root already.
+// air-gapped mirrors pushed to a plain path) is returned unchanged. Mirrored
+// registries may keep the artifacts under the cluster repository itself, so
+// this is one probe candidate, not the only answer; see cliRepoCandidates.
 func cliRegistryRepository(clusterRepository string) string {
 	repo := strings.TrimRight(clusterRepository, "/")
 

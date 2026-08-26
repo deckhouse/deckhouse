@@ -137,6 +137,31 @@ type fakeCLIRegistryClient struct {
 	resolveTagErr error
 	getPackageErr error
 	manifestErr   error
+
+	// availableRepos, when non-nil, lists the cfg.Repository values this fake
+	// serves; every other repository answers ErrPackageNotFound. nil keeps
+	// the legacy behavior: any repository is served.
+	availableRepos map[string]bool
+	// repoErrs, when non-nil, maps cfg.Repository to an error every call
+	// against that repository returns (takes precedence over availableRepos).
+	repoErrs map[string]error
+}
+
+// repoGate applies the per-repository behavior configured via repoErrs and
+// availableRepos. A nil error means the call may proceed to the path maps.
+func (f *fakeCLIRegistryClient) repoGate(cfg *registry.ClientConfig) error {
+	if cfg == nil {
+		return nil
+	}
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if err, ok := f.repoErrs[cfg.Repository]; ok {
+		return err
+	}
+	if f.availableRepos != nil && !f.availableRepos[cfg.Repository] {
+		return registry.ErrPackageNotFound
+	}
+	return nil
 }
 
 func (f *fakeCLIRegistryClient) recordRepo(cfg *registry.ClientConfig) {
@@ -160,6 +185,9 @@ func (f *fakeCLIRegistryClient) ListTags(_ context.Context, _ pkgLog.Logger, cfg
 	if f.listTagsErr != nil {
 		return nil, f.listTagsErr
 	}
+	if err := f.repoGate(cfg); err != nil {
+		return nil, err
+	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	tags, ok := f.tags[path]
@@ -174,6 +202,9 @@ func (f *fakeCLIRegistryClient) ResolveTag(_ context.Context, _ pkgLog.Logger, c
 	atomic.AddInt32(&f.resolveTagCalls, 1)
 	if f.resolveTagErr != nil {
 		return "", f.resolveTagErr
+	}
+	if err := f.repoGate(cfg); err != nil {
+		return "", err
 	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -196,6 +227,9 @@ func (f *fakeCLIRegistryClient) GetPackage(_ context.Context, _ pkgLog.Logger, c
 	if f.getPackageErr != nil {
 		return 0, "", nil, f.getPackageErr
 	}
+	if err := f.repoGate(cfg); err != nil {
+		return 0, "", nil, err
+	}
 	return int64(len(f.packageBody)), f.layerDigest, io.NopCloser(bytes.NewReader(f.packageBody)), nil
 }
 
@@ -204,6 +238,9 @@ func (f *fakeCLIRegistryClient) GetRawManifest(_ context.Context, _ pkgLog.Logge
 	atomic.AddInt32(&f.manifestCalls, 1)
 	if f.manifestErr != nil {
 		return nil, "", f.manifestErr
+	}
+	if err := f.repoGate(cfg); err != nil {
+		return nil, "", err
 	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -576,11 +613,13 @@ func TestCLIHandler_GetManifest_NotFound(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 }
 
-// TestCLIHandler_ResolvesArtifactsAtRegistryRoot: every /v1/images/* route
-// reads from the registry root above the cluster's edition repository, for
-// both deckhouse-cli and its plugins.
+// TestCLIHandler_ResolvesArtifactsAtRegistryRoot: with the official registry
+// layout (CLI artifacts above the edition segment) the first request probes
+// the cluster repository, finds nothing there and falls through to the
+// registry root; every later request goes straight to the remembered root.
 func TestCLIHandler_ResolvesArtifactsAtRegistryRoot(t *testing.T) {
 	fake := &fakeCLIRegistryClient{
+		availableRepos: map[string]bool{"registry.deckhouse.io/deckhouse": true},
 		tags: map[string][]string{
 			"deckhouse-cli":             {"v1.0.0"},
 			"deckhouse-cli/plugins/foo": {"v0.1.0"},
@@ -620,10 +659,13 @@ func TestCLIHandler_ResolvesArtifactsAtRegistryRoot(t *testing.T) {
 	}
 
 	repos := fake.seenRepos()
-	// tags, tags, manifest, resolve + pull: five registry calls.
-	require.Len(t, repos, 5)
-	for _, repo := range repos {
-		assert.Equal(t, "registry.deckhouse.io/deckhouse", repo, "edition segment must be dropped for CLI artifacts")
+	// The first request probes the cluster repo and falls through to the
+	// root; the remaining ones (tags, manifest, resolve + pull) hit the
+	// remembered root directly: six registry calls in total.
+	require.Len(t, repos, 6)
+	assert.Equal(t, "registry.deckhouse.io/deckhouse/ee", repos[0], "the cluster repository probes first")
+	for _, repo := range repos[1:] {
+		assert.Equal(t, "registry.deckhouse.io/deckhouse", repo, "CLI artifacts are served from the registry root")
 	}
 	// The rest of the registry config travels unchanged.
 	cfg, err := getter.Get(registry.DefaultRepository)
