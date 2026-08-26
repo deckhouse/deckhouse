@@ -14,6 +14,11 @@
   link: https://github.com/brancz/kube-rbac-proxy
   logo: /images/logos/kubernetes.svg
   license: Apache License 2.0
+- name: netcat
+  description: Netcat utility for reading/writing across network connections.
+  link: https://salsa.debian.org/debian/netcat
+  logo: /images/logos/linux.svg
+  license: GPL-2.0 license
 - name: Nginx
   description: A HTTP and reverse proxy server, a mail proxy server, and a generic TCP/UDP proxy server and load balancer.
   link: https://nginx.org

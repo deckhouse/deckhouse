@@ -1,23 +1,20 @@
-{{- $binaries := list "sh" "chown" "chmod" "ls" "cp" "rm" "mkdir" "sleep" "true" }}
-{{- $netcatCtx := dict "Files" $.Files "OssYamlPath" "/modules/007-registrypackages/oss.yaml" }}
-{{- $netcatVersion := include "get_oss_version_by_id" (list "netcat" $netcatCtx) }}
-{{- $netcatImageVersion := $netcatVersion | replace "." "-" }}
+{{- $binaries := list "chown" "chmod" "ls" "cp" "rm" "mkdir" "sleep" "true" }}
+{{- $netcatVersion := "1.10-50.1" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ index $.Images "base/distroless-fin" }}
 import:
-# busybox is a static multi-call binary, every applet below is a symlink to it
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /out/usr/bin
   to: /usr/bin
   includePaths:
-  - busybox
+  - sh
+  - bash
 {{- range $binaries }}
   - {{ . | quote }}
 {{- end }}
   before: setup
-# busybox in container-factory is built without the nc applet, reuse the static netcat registrypackage
-- image: registrypackages/netcat-artifact-{{ $netcatImageVersion }}
+- image: {{ .ModuleName }}/{{ .ImageName }}-netcat-artifact
   add: /nc
   to: /usr/bin/nc
   before: setup
@@ -28,4 +25,23 @@ from: {{ index $.Images "builder/distroless" }}
 final: false
 shell:
   beforeInstall:
-  - pm install busybox -d /out
+  - pm install coreutils bash -d /out
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-netcat-artifact
+from: {{ index $.Images "builder/alpine" }}
+final: false
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make g++ git
+  install:
+  - git clone --depth 1 --branch applied/{{ $netcatVersion }} $(cat /run/secrets/SOURCE_REPO)/netcat /src/netcat
+  - rm -rf /src/netcat/.git
+  setup:
+  - cd /src/netcat
+  - make linux LDFLAGS='-static' DFLAGS='-DDEBIAN_VERSION=\"Flant\"'
+  - strip ./nc
+  - mv ./nc /nc
