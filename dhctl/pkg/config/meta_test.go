@@ -1030,3 +1030,37 @@ func TestPrepareGuardErrorNamesTheRemedy(t *testing.T) {
 	require.ErrorContains(t, err, "spec.cloudInstances.classReference")
 	require.ErrorContains(t, err, "spec.cloudInstances.minPerZone")
 }
+
+// The systemType of a NodeGroup decides how its machines are configured, so it
+// has to survive the trip from the NodeGroup resource into the group spec the
+// bootstrap works from. Without it every group looks classic and an immutable
+// one is handed a bashible cloud config it cannot run.
+func TestTerraNodeGroupCarriesItsSystemType(t *testing.T) {
+	m := &MetaConfig{
+		CloudProviderVars: &CloudProviderVars{
+			NodeGroups: map[string]map[string]interface{}{
+				"front": {
+					"spec": map[string]interface{}{
+						"systemType":     "Immutable",
+						"cloudInstances": map[string]interface{}{"minPerZone": int64(1)},
+					},
+				},
+				"worker": {
+					"spec": map[string]interface{}{
+						"cloudInstances": map[string]interface{}{"minPerZone": int64(2)},
+					},
+				},
+			},
+		},
+	}
+
+	require.NoError(t, applyNodeGroupReplicasFromCloudProviderVars(m))
+
+	byName := map[string]TerraNodeGroupSpec{}
+	for _, ng := range m.TerraNodeGroupSpecs {
+		byName[ng.Name] = ng
+	}
+
+	require.Equal(t, "Immutable", byName["front"].SystemType)
+	require.Empty(t, byName["worker"].SystemType, "a group that names no systemType keeps none")
+}

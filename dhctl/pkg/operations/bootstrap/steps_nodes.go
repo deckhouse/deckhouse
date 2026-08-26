@@ -41,9 +41,10 @@ func BootstrapTerraNodes(
 	terraNodeGroups []config.TerraNodeGroupSpec,
 	infrastructureContext *infrastructure.Context,
 	globalOptions *options.GlobalOptions,
+	configure operations.ConfigureImmutableNode,
 ) error {
 	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Create CloudPermanent NG", func(ctx context.Context) error {
-		return operations.ParallelCreateNodeGroup(ctx, kubeCl, metaConfig, terraNodeGroups, infrastructureContext, globalOptions)
+		return operations.ParallelCreateNodeGroup(ctx, kubeCl, metaConfig, terraNodeGroups, infrastructureContext, globalOptions, configure)
 	})
 }
 
