@@ -26,8 +26,10 @@ import (
 	"io"
 	"log/slog"
 	"reflect"
+	"strings"
 
 	"github.com/goccy/go-yaml"
+	"github.com/google/go-containerregistry/pkg/authn"
 
 	registryClient "github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry/client"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
@@ -117,7 +119,7 @@ func (m *ServiceManager[T]) Service(registryURL string, config utils.RegistryCon
 
 	c := registryClient.New(registryURL,
 		append(authOpts,
-			client.WithInsecure(config.Scheme == "http"),
+			client.WithInsecure(strings.ToLower(config.Scheme) == "http"),
 			client.WithCA(config.CA),
 			client.WithUserAgent(config.UserAgent),
 			client.WithLogger(m.logger),
@@ -152,7 +154,8 @@ func (m *ServiceManager[T]) createAuthOptions(registryURL, dockerCFG, login, pas
 		opts = append(opts, opt)
 		m.logger.Debug("init auth from docker config")
 	default:
-		return nil, errors.New("there is no authorization data")
+		opts = append(opts, client.WithAuth(authn.Anonymous))
+		m.logger.Debug("init anonymous auth")
 	}
 
 	return opts, nil

@@ -82,6 +82,7 @@ func createFakePSM(ic registry.Client) registryService.ServiceManagerInterface[r
 	return psm
 }
 
+
 // applicationVersionImage builds a version image with Application type label and package.yaml.
 func applicationVersionImage() *fakeRegistry.ImageBuilder {
 	return fakeRegistry.NewImageBuilder().
@@ -430,11 +431,12 @@ func (suite *ControllerTestSuite) TestReconcile() {
 	})
 
 	suite.Run("registry client creation failed", func() {
-		// Use an empty PSM (no pre-configured services) - PackagesService will fail
-		// because there's no service for the registry URL and it can't create one dynamically
-		emptyPSM := registryService.NewPackageServiceManager(log.NewNop())
+		// The repository carries a malformed dockerCfg, so the real service manager
+		// fails to build the registry client (bad auth config) and NewService returns
+		// a "create package service" error before any listing happens.
+		psm := registryService.NewPackageServiceManager(log.NewNop())
 
-		suite.setupController("registry-client-failed.yaml", withPackageServiceManager(emptyPSM))
+		suite.setupController("registry-client-failed.yaml", withPackageServiceManager(psm))
 		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
 
 		err := repeat(func() error {
