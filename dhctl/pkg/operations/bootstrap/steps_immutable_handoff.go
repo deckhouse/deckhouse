@@ -58,7 +58,8 @@ func adminKubeconfigFromCache(ctx context.Context, stateCache state.Cache) ([]by
 			"read the admin kubeconfig %s a previous attempt collected: %w. "+
 				"The first master has been told the credentials are stored, so it closed its bootstrap channel for good "+
 				"and the installer's client key is gone with it: they cannot be collected a second time. "+
-				"Restore that file, or destroy the cluster and bootstrap it again",
+				"Restore that file; failing that, anyone still holding access to the cluster can issue a new "+
+				"kubeconfig from the CA in the kube-system/d8-pki secret. Otherwise destroy the cluster and bootstrap it again",
 			path, err,
 		)
 	}
