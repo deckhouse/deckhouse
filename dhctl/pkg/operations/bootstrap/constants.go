@@ -46,7 +46,7 @@ var (
 	// machine finished booting" but "did the operator name machines that exist".
 	// Three tries, and the whole thing is over in about ten seconds: an address
 	// nobody answers for is a typo, and a typo must not be waited out.
-	checkMachinesWaiting = waitBudget{attempts: 3, interval: 2 * time.Second}
+	checkMachinesAvailable = waitBudget{attempts: 3, interval: 2 * time.Second}
 )
 
 // checkMachineTimeout bounds one try of the preflight above. Without it a try
