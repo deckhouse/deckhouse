@@ -205,10 +205,10 @@ const (
 // install itself — so the steps above describe none of its work: there is no bundle,
 // no SSH to run one over, and no node to prepare before kubelet starts.
 // The machines are handed their configuration in FirstMaster, so what is left for
-// this phase is the wait and the collection.
+// this phase is the wait for that install and the admin access it hands back.
 const (
-	InstallKubernetesSubPhaseWaitForControlPlane OperationSubPhase = "WaitForControlPlane"
-	InstallKubernetesSubPhaseCollectCredentials  OperationSubPhase = "CollectCredentials"
+	InstallKubernetesSubPhaseWaitForMasterInstall OperationSubPhase = "WaitForMasterInstall"
+	InstallKubernetesSubPhaseGetClusterAccess     OperationSubPhase = "GetClusterAccess"
 )
 
 // InstallAdditionalMastersAndStaticNodes sub phases
@@ -260,8 +260,8 @@ func bootstrapNodes() []node {
 				{Name: InstallKubernetesSubPhaseNodePreparation, includeIf: ifBashibleMaster},
 				{Name: InstallKubernetesSubPhaseModulesPreparation, includeIf: ifBashibleMaster},
 				{Name: InstallKubernetesSubPhaseExecuteBashibleBundle, includeIf: ifBashibleMaster},
-				{Name: InstallKubernetesSubPhaseWaitForControlPlane, includeIf: ifImmutableMaster},
-				{Name: InstallKubernetesSubPhaseCollectCredentials, includeIf: ifImmutableMaster},
+				{Name: InstallKubernetesSubPhaseWaitForMasterInstall, includeIf: ifImmutableMaster},
+				{Name: InstallKubernetesSubPhaseGetClusterAccess, includeIf: ifImmutableMaster},
 			},
 		},
 		{

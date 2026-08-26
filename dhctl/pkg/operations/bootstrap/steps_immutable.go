@@ -678,7 +678,7 @@ func (b *ClusterBootstrapper) connectToImmutableMaster(ctx context.Context, bctx
 	}
 	// Done either way: a rerun that found the credentials in the cache waited for
 	// nothing, and a bar that never marks the step it skipped reads as stuck.
-	b.PhasedExecutionContext.CompleteSubPhase(ctx, phases.InstallKubernetesSubPhaseWaitForControlPlane)
+	b.PhasedExecutionContext.CompleteSubPhase(ctx, phases.InstallKubernetesSubPhaseWaitForMasterInstall)
 
 	content, err := immutable.RetargetKubeconfig(ctx, complete, server, bctx.immutable.masterNodeName)
 	if err != nil {
@@ -689,7 +689,7 @@ func (b *ClusterBootstrapper) connectToImmutableMaster(ctx context.Context, bctx
 	if err != nil {
 		return err
 	}
-	b.PhasedExecutionContext.CompleteSubPhase(ctx, phases.InstallKubernetesSubPhaseCollectCredentials)
+	b.PhasedExecutionContext.CompleteSubPhase(ctx, phases.InstallKubernetesSubPhaseGetClusterAccess)
 
 	kubeProvider, err := newKubeconfigKubeProvider(ctx, b, kubeconfigPath)
 	if err != nil {
