@@ -306,6 +306,8 @@ var _ = Describe("Module :: cloud-provider-azure :: helm template ::", func() {
 			Expect(azureNodePluginDS.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
 			Expect(azureControllerPluginSA.Exists()).To(BeTrue())
 			Expect(azureControllerPluginSS.Exists()).To(BeTrue())
+			Expect(azureControllerPluginSS.Field("spec.template.spec.containers.0.args").String()).ToNot(ContainSubstring("--enable-capacity"))
+			Expect(azureControllerPluginSS.Field("spec.template.spec.containers.0.args").String()).ToNot(ContainSubstring("--capacity-ownerref-level=2"))
 			Expect(azureControllerPluginSS.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
 			Expect(azureAttacherCR.Exists()).To(BeTrue())
 			Expect(azureAttacherCRB.Exists()).To(BeTrue())

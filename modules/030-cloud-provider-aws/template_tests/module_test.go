@@ -290,6 +290,8 @@ var _ = Describe("Module :: cloud-provider-aws :: helm template ::", func() {
 			Expect(ccmClusterRoleBinding.Exists()).To(BeTrue())
 			Expect(ccmSecret.Exists()).To(BeTrue())
 			Expect(ebsControllerPluginDeployment.Exists()).To(BeTrue())
+			Expect(ebsControllerPluginDeployment.Field("spec.template.spec.containers.0.args").String()).ToNot(ContainSubstring("--enable-capacity"))
+			Expect(ebsControllerPluginDeployment.Field("spec.template.spec.containers.0.args").String()).ToNot(ContainSubstring("--capacity-ownerref-level=2"))
 			Expect(ebsControllerPluginDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
 			Expect(ebsCSIDriver.Exists()).To(BeTrue())
 			Expect(ebsNodePluginDaemonSet.Exists()).To(BeTrue())
