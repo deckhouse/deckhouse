@@ -37,8 +37,8 @@ import (
 
 const (
 	// A token is replaced once less than this is left of it, so that a node
-	// which started bootstrapping with it still finishes. Both values are the
-	// hook's: modules/040-node-manager/hooks/order_bootstrap_token.go.
+	// which started bootstrapping with it still finishes. Both values came from the
+	// order_bootstrap_token hook this replaced, removed with the handover.
 	rotateWhenLeftLessThan = 3 * time.Hour
 	tokenTTL               = 4 * time.Hour
 

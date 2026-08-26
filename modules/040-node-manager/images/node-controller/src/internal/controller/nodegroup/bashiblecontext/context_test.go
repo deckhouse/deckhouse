@@ -67,7 +67,7 @@ func TestBuild_OptionalBlocksPopulated(t *testing.T) {
 			"arguments.json":    []byte(`{"nodeMonitorGracePeriod":40}`),
 			"featureGates.json": []byte(`{"kubelet":["X"]}`),
 		}),
-		secret(cloudInstanceManagerNS, packagesProxyTokenSecretName, map[string][]byte{"token": []byte("tok")}),
+		secret(cloudInstanceManagerNS, PackagesProxyTokenSecretName, map[string][]byte{"token": []byte("tok")}),
 		endpointSlice([]string{"10.0.0.1"}, "https", 6443),
 	)
 

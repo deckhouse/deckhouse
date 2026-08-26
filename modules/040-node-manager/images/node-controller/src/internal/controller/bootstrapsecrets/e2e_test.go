@@ -326,6 +326,52 @@ var _ = Describe("Bootstrap secret cleanup", func() {
 		Expect(k8sClient.Get(suiteCtx, client.ObjectKeyFromObject(ofNoGroup), &corev1.Secret{})).
 			To(Succeed(), "a module secret that belongs to no NodeGroup is not this sweep's business")
 	})
+
+	// registry-packages-proxy-token is a legacy ServiceAccount token: helm creates the
+	// shell, kube-controller-manager fills it moments later, and a node that bootstraps in
+	// between bakes in PACKAGES_PROXY_TOKEN=passthrough for good. Nothing else enqueues a
+	// NodeGroup on that Secret, so without the watch the empty reading would stand until
+	// the 30-minute resync — the window is cluster install.
+	//
+	// The token itself is not observable: it reaches the script only through the branch
+	// taken when no apiserver endpoint was found, which envtest never takes. So the spec
+	// deletes the rendered Secret and asks whether the group is reconciled again at all.
+	It("re-renders when the packages-proxy token is filled in", func() {
+		name := testenv.UniqueName("rpp-token")
+		createNodeGroup(staticNodeGroup(name))
+		Eventually(func() error {
+			return k8sClient.Get(suiteCtx, manualSecretKey(name), &corev1.Secret{})
+		}, eventuallyTimeout, eventuallyPoll).Should(Succeed())
+
+		By("removing the rendered secret and confirming nothing else brings it back")
+		Expect(k8sClient.Delete(suiteCtx, &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Namespace: nodecommon.MachineNamespace, Name: manualSecretPrefix + name},
+		})).To(Succeed())
+		Consistently(func() bool {
+			return apierrors.IsNotFound(k8sClient.Get(suiteCtx, manualSecretKey(name), &corev1.Secret{}))
+		}, negativeCheckDuration, eventuallyPoll).Should(BeTrue())
+
+		By("filling the token, the way kube-controller-manager does")
+		token := &corev1.Secret{}
+		tokenKey := types.NamespacedName{
+			Namespace: nodecommon.MachineNamespace,
+			Name:      bashiblecontext.PackagesProxyTokenSecretName,
+		}
+		Expect(k8sClient.Get(suiteCtx, tokenKey, token)).To(Succeed())
+		DeferCleanup(func() {
+			restored := &corev1.Secret{}
+			Expect(k8sClient.Get(suiteCtx, tokenKey, restored)).To(Succeed())
+			restored.Data = map[string][]byte{"token": []byte(testPackagesProxyToken)}
+			Expect(k8sClient.Update(suiteCtx, restored)).To(Succeed())
+		})
+		token.Data = map[string][]byte{"token": []byte("filled-in-by-kube-controller-manager")}
+		Expect(k8sClient.Update(suiteCtx, token)).To(Succeed())
+
+		Eventually(func() error {
+			return k8sClient.Get(suiteCtx, manualSecretKey(name), &corev1.Secret{})
+		}, eventuallyTimeout, eventuallyPoll).Should(Succeed(),
+			"a change to the packages-proxy token must re-render the bootstrap secrets")
+	})
 })
 
 // labelledSecret creates a Secret in the machine namespace with exactly the given

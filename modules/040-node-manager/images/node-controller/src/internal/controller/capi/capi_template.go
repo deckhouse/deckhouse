@@ -80,8 +80,11 @@ func (r *MachineDeploymentReconciler) applyCAPIMachineTemplate(
 
 // pruneStaleCAPI deletes CAPI MachineDeployments and infrastructure MachineTemplates that
 // belong to the NodeGroup but are no longer desired (e.g. after a zone is removed or the
-// instance-class checksum changed). The bootstrap Secret is still helm-owned and pruned by
-// helm, so it is not touched here.
+// instance-class checksum changed).
+//
+// The bootstrap Secret of a removed zone is left behind: helm no longer owns it and
+// CollectOrphanedSecrets only takes Secrets whose NodeGroup is gone. It is inert — the
+// name is deterministic, so re-adding the zone overwrites it — but nothing collects it.
 func (r *MachineDeploymentReconciler) pruneStaleCAPI(
 	ctx context.Context,
 	ngName string,

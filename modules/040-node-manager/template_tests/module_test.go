@@ -837,9 +837,11 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(machineClassSecretB.Exists()).To(BeFalse())
 			Expect(machineDeploymentB.Exists()).To(BeFalse())
 
-			// helm renders no Secret the keep policy has to cover any more, so only the other
-			// half is left here: what it does render in this namespace must stay outside the
-			// hook's name shapes.
+			// The zone-hashed half of the policy has no render left to bind to anywhere: only
+			// node-controller produces those names now, from a Go module that cannot import
+			// IsBootstrapSecretName, and a copy of the regexp there would prove nothing.
+			//
+			// What helm does still render here must stay outside both shapes.
 			assertKeepPolicyCovers(nil, renderedNames(
 				registrySecret,
 				f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bashbooster"),

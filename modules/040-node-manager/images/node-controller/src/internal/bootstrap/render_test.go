@@ -25,12 +25,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// The goldens come from the helm render on main (see golden_gen_test.go). Taking
-// them from our own render would be pointless: such a golden guards nothing but
-// its own drift.
-// Every Input below mirrors the helm values its golden was rendered from.
+// The goldens come from the helm render of the node-group templates, on the values kept
+// verbatim in testdata/helm-values.yaml. Taking them from our own render would be
+// pointless: such a golden guards nothing but its own drift — and the templates are gone,
+// so there is no oracle to regenerate from either. Every Input below mirrors the values
+// its golden was rendered from.
 func TestRenderMatchesHelmGoldens(t *testing.T) {
-	files := repoFiles(t)
+	files := frozenFiles(t)
 
 	cases := []struct {
 		name   string
@@ -97,33 +98,34 @@ func TestRenderScriptWithoutBashibleLibrary(t *testing.T) {
 	require.ErrorContains(t, err, "candi/bashible/lib.sh.tpl")
 }
 
-// repoFiles loads the templates straight from the repository — the same files
-// helm puts in the ConfigMap, under the keys the ConfigMap uses, so the golden
-// compares render to render, not delivery to delivery.
+// frozenFiles loads the templates the goldens were rendered from, under the keys
+// the ConfigMap uses, so the golden compares render to render, not delivery to
+// delivery.
 //
-// The provider network scripts live next to their cloud-provider module; the
-// build copies them under candi/cloud-providers (tools/build_includes/
-// candi-cloud-providers-*.yaml), which is why a checkout has no such directory
-// and why leaving them out here would silently drop the largest block of a
-// cloud node's script.
+// They are copies under testdata/inputs, not the live files at the repository
+// root, because the goldens embed their rendered content — static-instances
+// inlines the whole of lib.sh. Reading the live files would turn an edit to
+// candi/bashible into a red test in this package, with the helm oracle deleted
+// and no honest way to regenerate. These are fixtures, not mirrors: drift from
+// the live templates is expected and is not what this test is about. What it
+// proves stays exact — on these inputs, this renderer emits helm's bytes.
 //
 // bb_node_ip.sh.tpl is here although no golden contains it: the prerequisites
 // template pulls it in only under runType ClusterBootstrap, and runType is a key
 // helm never sets. Offering the file proves that branch stays shut anyway.
-func repoFiles(t *testing.T) *Files {
+func frozenFiles(t *testing.T) *Files {
 	t.Helper()
-	root := filepath.Join("..", "..", "..", "..", "..", "..", "..")
 	text := map[string]string{}
-	for path, key := range map[string]string{
-		"candi/bashible/lib.sh.tpl":                                                  "lib.sh.tpl",
-		"candi/bashible/bootstrap/01-bootstrap-prerequisites.sh.tpl":                 "01-bootstrap-prerequisites.sh.tpl",
-		"candi/bashible/bb_node_ip.sh.tpl":                                           "bb_node_ip.sh.tpl",
-		"modules/030-cloud-provider-aws/candi/bashible/bootstrap-networks.sh.tpl":    "bootstrap-networks-aws.sh.tpl",
-		"modules/030-cloud-provider-yandex/candi/bashible/bootstrap-networks.sh.tpl": "bootstrap-networks-yandex.sh.tpl",
+	for _, key := range []string{
+		"lib.sh.tpl",
+		"01-bootstrap-prerequisites.sh.tpl",
+		"bb_node_ip.sh.tpl",
+		"bootstrap-networks-aws.sh.tpl",
+		"bootstrap-networks-yandex.sh.tpl",
 	} {
-		data, err := os.ReadFile(filepath.Join(root, path))
+		data, err := os.ReadFile(filepath.Join("testdata", "inputs", key))
 		if err != nil {
-			t.Fatalf("read %s: %v", path, err)
+			t.Fatalf("read %s: %v", key, err)
 		}
 		text[key] = string(data)
 	}
