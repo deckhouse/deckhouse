@@ -229,6 +229,10 @@ func (r *MachineDeploymentReconciler) machineClassUserData(ctx context.Context, 
 //
 // The name is the contract with the provider templates, which compute it themselves:
 // <ng>-<sha256(clusterUUID+zone)[:8]>, the same name the MachineClass carries.
+//
+// A Secret whose zone was removed is left behind, the way the CAPI bootstrap Secret is
+// (pruneStaleCAPI): CollectOrphanedSecrets only takes Secrets whose NodeGroup is gone.
+// Inert — the name is deterministic, so re-adding the zone overwrites it.
 func (r *MachineDeploymentReconciler) applyMachineClassSecret(
 	ctx context.Context, ngName, cloudType, secretName string, userData []byte, renderCtx map[string]interface{},
 ) error {
