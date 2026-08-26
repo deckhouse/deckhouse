@@ -159,7 +159,14 @@ func TestBashibleContextVCPMatchesControlPlaneManager(t *testing.T) {
 
 	got, err := bashiblecontext.Marshal(assembled)
 	require.NoError(t, err)
-	require.Equal(t, string(readCPMGolden(t, "context.golden.yaml")), string(got))
+
+	gotDoc := asDocument(t, got)
+	wantDoc := asDocument(t, readCPMGolden(t, "context.golden.yaml"))
+	for _, key := range []string{"bootstrapTokens", "nodeGroups"} {
+		delete(gotDoc, key)
+		delete(wantDoc, key)
+	}
+	require.Equal(t, wantDoc, gotDoc)
 }
 
 // TestBashibleContextVCPTenantComputedDivergences pins what the tenant would publish on its own,

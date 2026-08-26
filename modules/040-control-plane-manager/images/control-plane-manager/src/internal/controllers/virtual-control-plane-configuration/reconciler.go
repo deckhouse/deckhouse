@@ -147,14 +147,8 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return res, err
 	}
 
-	joinToken, res, err := r.reconcileTenantAddons(ctx, vcp, configSecret)
-	if err != nil || !res.IsZero() {
+	if res, err := r.reconcileTenantAddons(ctx, vcp, configSecret); err != nil || !res.IsZero() {
 		return res, err
-	}
-
-	// TODO: Remove this once node-manager is deployed in the tenant cluster.
-	if err := r.reconcileTenantKubeletServingCSRs(ctx, vcp); err != nil {
-		log.FromContext(ctx).Error(err, "approve tenant kubelet-serving CSRs (non-fatal)")
 	}
 
 	if res, err := r.reconcileKonnectivityCPAgentSecret(ctx, vcp, pkiSecret); err != nil || !res.IsZero() {
@@ -165,15 +159,11 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return res, err
 	}
 
-	if res, err := r.reconcileJoinScript(ctx, vcp, pkiSecret, configSecret, joinToken, albVIP); err != nil || !res.IsZero() {
+	if res, err := r.reconcileDeckhouse(ctx, vcp, albVIP, pkiSecret.Data["ca.crt"]); err != nil || !res.IsZero() {
 		return res, err
 	}
 
-	if res, err := r.reconcileDeckhouse(ctx, vcp, albVIP, pkiSecret.Data["ca.crt"], tenantReg); err != nil || !res.IsZero() {
-		return res, err
-	}
-
-	if res, err := r.reconcileBashibleApiserver(ctx, vcp, configSecret, pkiSecret, adminSecret, joinToken); err != nil || !res.IsZero() {
+	if res, err := r.reconcileBashibleApiserver(ctx, vcp, configSecret, pkiSecret, adminSecret, albVIP); err != nil || !res.IsZero() {
 		return res, err
 	}
 

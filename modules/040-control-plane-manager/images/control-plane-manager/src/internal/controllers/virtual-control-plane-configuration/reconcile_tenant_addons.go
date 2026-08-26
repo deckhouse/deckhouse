@@ -22,9 +22,7 @@ import (
 	"maps"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
-	"control-plane-manager/internal/constants"
 
-	"github.com/deckhouse/deckhouse/go_lib/controlplane/bootstraptoken"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -39,43 +37,24 @@ var tenantAddonManifestKeys = []string{
 	"cilium-vcp.yaml.tpl",         // CNI: agent DaemonSet + operator RBAC; operator Deployment runs in the parent cluster
 }
 
-// reconcileTenantAddons ensures all tenant-side resources exist:
-// - node bootstrap-token (returned for join.sh),
-// - node-bootstrapper RBAC, the apiserver->kubelet RBAC
+// reconcileTenantAddons ensures the tenant-side component addons exist:
+// - the apiserver->kubelet and component RBAC (tenant-rbac.yaml.tpl)
 // - konnectivity-agent
 // - Cilium
-// The tenant clients are built once and shared across the sub-steps.
-func (r *reconciler) reconcileTenantAddons(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane, configSecret *corev1.Secret) (string, reconcile.Result, error) {
-	ts, tc, err := r.tenantClients(ctx, vcp)
+// Bootstrap tokens and bootstrapper RBAC belong to the tenant (node-manager).
+func (r *reconciler) reconcileTenantAddons(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane, configSecret *corev1.Secret) (reconcile.Result, error) {
+	_, tc, err := r.tenantClients(ctx, vcp)
 	if err != nil {
-		return "", reconcile.Result{}, fmt.Errorf("build tenant clients: %w", err)
-	}
-
-	scopeLabels := map[string]string{
-		constants.HeritageLabelKey: constants.HeritageLabelValue,
-		"module":                   constants.ControlPlaneManagerName,
-		constants.VirtualControlPlaneScopeLabelKey: vcp.Name,
-	}
-	selector := fmt.Sprintf("%s=%s", constants.VirtualControlPlaneScopeLabelKey, vcp.Name)
-
-	token, err := bootstraptoken.EnsureValid(
-		ctx, ts, selector,
-		[]string{constants.VirtualBootstrapTokenGroup},
-		constants.VirtualBootstrapTokenTTL,
-		constants.VirtualBootstrapTokenRegenBelow,
-		scopeLabels,
-	)
-	if err != nil {
-		return "", reconcile.Result{}, fmt.Errorf("ensure bootstrap token: %w", err)
+		return reconcile.Result{}, fmt.Errorf("build tenant clients: %w", err)
 	}
 
 	for _, key := range tenantAddonManifestKeys {
 		if err := applyTenantManifests(ctx, tc, configSecret, key); err != nil {
-			return "", reconcile.Result{}, fmt.Errorf("apply tenant %s: %w", key, err)
+			return reconcile.Result{}, fmt.Errorf("apply tenant %s: %w", key, err)
 		}
 	}
 
-	return token, reconcile.Result{}, nil
+	return reconcile.Result{}, nil
 }
 
 // applyTenantManifests renders a multi-doc template from the config Secret into the tenant cluster.

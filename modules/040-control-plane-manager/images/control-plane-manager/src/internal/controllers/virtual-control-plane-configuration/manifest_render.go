@@ -104,7 +104,7 @@ func renderManifests(
 		switch {
 		case strings.HasSuffix(key, ".yaml.tpl"), strings.HasSuffix(key, ".sh.tpl"):
 			rendered[key] = []byte(replacer.Replace(string(value)))
-		case key == "images", key == "cluster-uuid", key == "minget":
+		case key == "images", key == "cluster-uuid":
 			rendered[key] = value
 		}
 	}

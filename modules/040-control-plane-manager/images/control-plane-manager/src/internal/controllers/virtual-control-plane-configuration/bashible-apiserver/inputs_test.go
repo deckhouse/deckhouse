@@ -51,10 +51,10 @@ func goldenParams() ExternalInputsParams {
 			},
 		},
 		CA:           []byte("-----BEGIN CERTIFICATE-----\nVCP-CA\n-----END CERTIFICATE-----\n"),
-		JoinToken:    "token",
 		ClusterUUID:  "11111111-2222-3333-4444-555555555555",
 		APIHost:      "api.golden.example.com",
 		PackagesHost: "packages.golden.example.com",
+		ALBVIP:       "10.20.30.40",
 		RPPToken:     "rpp-token",
 		APIServerProxyCerts: ContextAPIServerProxyCerts{
 			Crt: "-----BEGIN CERTIFICATE-----\nPROXY\n-----END CERTIFICATE-----\n",
@@ -111,6 +111,7 @@ func TestExternalInputsMatchContextInput(t *testing.T) {
 
 	// Contract bookkeeping, not a context field.
 	delete(inputsDoc, "version")
+	delete(inputsDoc, "albVIP")
 
 	for key, want := range inputsDoc {
 		require.Contains(t, contextDoc, key, "inputs publish %q, which the context does not have", key)
@@ -123,7 +124,8 @@ func TestExternalInputsMatchContextInput(t *testing.T) {
 			tenantComputed = append(tenantComputed, key)
 		}
 	}
-	// clusterDomain is in the tenant's own d8-cluster-configuration, written by
-	// buildTargetTenantClusterConfigurationSecret from the same spec.networking block.
-	require.ElementsMatch(t, []string{"clusterDomain"}, tenantComputed)
+	// clusterDomain is in the tenant's own d8-cluster-configuration.
+	// bootstrapTokens and nodeGroups are now tenant-owned too: the tenant generates per-NG tokens with
+	// order_bootstrap_token and reads its own NodeGroup objects, so the host no longer publishes them.
+	require.ElementsMatch(t, []string{"clusterDomain", "bootstrapTokens", "nodeGroups"}, tenantComputed)
 }

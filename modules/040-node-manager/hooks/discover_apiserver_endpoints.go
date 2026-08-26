@@ -134,6 +134,11 @@ func apiEndpointsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 }
 
 func handleAPIEndpoints(_ context.Context, input *go_hook.HookInput) error {
+	if nestedControlPlane(input) {
+		// No apiserver pods to read here; the ALB endpoints come from the host via setPhase1Values.
+		return nil
+	}
+
 	endpointsSet := set.NewFromSnapshot(input.Snapshots.Get("kube_apiserver"))
 
 	for ep, err := range sdkobjectpatch.SnapshotIter[[]string](input.Snapshots.Get("apiserver_endpointSlice")) {

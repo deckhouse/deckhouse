@@ -1,3 +1,4 @@
+albVIP: 10.20.30.40
 allowedBundles:
 - ubuntu-lts
 apiserverEndpoints:
@@ -11,8 +12,6 @@ apiserverProxyCerts:
     -----BEGIN RSA PRIVATE KEY-----
     PROXY
     -----END RSA PRIVATE KEY-----
-bootstrapTokens:
-  worker: token
 clusterDNSAddress: 10.96.0.10
 clusterMasterEndpoints:
 - address: api.golden.example.com
@@ -32,12 +31,6 @@ kubernetesCA: |
   -----BEGIN CERTIFICATE-----
   VCP-CA
   -----END CERTIFICATE-----
-nodeGroups:
-- cri:
-    type: Containerd
-  kubernetesVersion: "1.31"
-  name: worker
-  nodeType: Static
 packagesProxy:
   direct: true
   token: rpp-token

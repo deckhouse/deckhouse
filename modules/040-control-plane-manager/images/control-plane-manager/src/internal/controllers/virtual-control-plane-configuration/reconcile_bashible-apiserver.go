@@ -78,7 +78,7 @@ func (r *reconciler) reconcileBashibleApiserver(
 	configSecret *corev1.Secret,
 	pkiSecret *corev1.Secret,
 	adminSecret *corev1.Secret,
-	joinToken string,
+	albVIP string,
 ) (reconcile.Result, error) {
 	// 2. Build a nested client that provides access to the nested cluster.
 	nestedClient, err := bashibleapiserver.BuildNestedClient(adminSecret)
@@ -93,7 +93,7 @@ func (r *reconciler) reconcileBashibleApiserver(
 	}
 
 	// 4. Nested: external inputs the tenant node-manager renders the context Secret from.
-	if res, err := r.reconcileBashibleExternalInputs(ctx, nestedClient, vcp, pkiSecret, joinToken, configSecret); err != nil || !res.IsZero() {
+	if res, err := r.reconcileBashibleExternalInputs(ctx, nestedClient, vcp, pkiSecret, configSecret, albVIP); err != nil || !res.IsZero() {
 		return res, err
 	}
 
@@ -159,6 +159,19 @@ func (r *reconciler) waitForBashibleApiserverCRDs(ctx context.Context, nestedCli
 	return reconcile.Result{}, nil
 }
 
+// registryPackagesProxyToken returns the RPP bearer token from the parent cluster.
+func (r *reconciler) registryPackagesProxyToken(ctx context.Context) (string, error) {
+	sec, err := r.getSecret(ctx, bashibleDeckhouseNamespace, "registry-packages-proxy-token")
+	if err != nil {
+		return "", fmt.Errorf("get rpp token: %w", err)
+	}
+	raw, ok := sec.Data["token"]
+	if !ok {
+		return "", fmt.Errorf("registry-packages-proxy-token secret missing key %q", "token")
+	}
+	return string(raw), nil
+}
+
 // reconcileBashibleExternalInputs publishes the facts a tenant cannot derive from its own
 // cluster into d8-cloud-instance-manager/bashible-external-inputs. The tenant node-manager reads
 // it, overlays it on the context it assembles itself and renders bashible-apiserver-context from
@@ -168,8 +181,8 @@ func (r *reconciler) reconcileBashibleExternalInputs(
 	nestedClient client.Client,
 	vcp *controlplanev1alpha1.VirtualControlPlane,
 	pkiSecret *corev1.Secret,
-	joinToken string,
 	configSecret *corev1.Secret,
+	albVIP string,
 ) (reconcile.Result, error) {
 	publishedInputs, err := getNestedSecret(ctx, nestedClient, bashibleapiserver.ExternalInputsSecretName)
 	if err != nil {
@@ -194,10 +207,10 @@ func (r *reconciler) reconcileBashibleExternalInputs(
 	inputsYAML, err := bashibleapiserver.BuildExternalInputsYAML(bashibleapiserver.ExternalInputsParams{
 		VCP:                 vcp,
 		CA:                  pkiSecret.Data["ca.crt"],
-		JoinToken:           joinToken,
 		ClusterUUID:         string(configSecret.Data["cluster-uuid"]),
 		APIHost:             apiExposeHost(vcp),
 		PackagesHost:        packagesExposeHost(vcp),
+		ALBVIP:              albVIP,
 		RPPToken:            rppToken,
 		APIServerProxyCerts: proxyCerts,
 	})

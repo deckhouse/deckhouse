@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 
@@ -47,8 +48,10 @@ const bashibleExternalInputsVersion = 1
 const bashibleExternalInputsSecretName = "bashible-external-inputs"
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue:        "/modules/node-manager/bashible_context_vcp",
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 20},
+	Queue: "/modules/node-manager/bashible_context_vcp",
+	// After get_crds (10) and order_bootstrap_token (20): the tenant nodeGroups and per-NG tokens
+	// this hook folds into the context are set by those.
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 30},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "inputs",
@@ -85,13 +88,12 @@ type bashibleExternalInputs struct {
 	PodSubnetNodeCIDRPrefix string                         `json:"podSubnetNodeCIDRPrefix"`
 	ClusterDNSAddress       string                         `json:"clusterDNSAddress"`
 	ClusterUUID             string                         `json:"clusterUUID"`
-	BootstrapTokens         map[string]string              `json:"bootstrapTokens"`
 	APIServerEndpoints      []string                       `json:"apiserverEndpoints"`
 	ClusterMasterEndpoints  []bashibleInputsMasterEndpoint `json:"clusterMasterEndpoints"`
+	ALBVIP                  string                         `json:"albVIP"`
 	APIServerProxyCerts     bashibleInputsProxyCerts       `json:"apiserverProxyCerts"`
 	KubernetesCA            string                         `json:"kubernetesCA"`
 	AllowedBundles          []string                       `json:"allowedBundles"`
-	NodeGroups              []map[string]interface{}       `json:"nodeGroups"`
 	PackagesProxy           map[string]interface{}         `json:"packagesProxy"`
 }
 
@@ -161,12 +163,16 @@ func handleBashibleContextVCP(ctx context.Context, input *go_hook.HookInput) err
 		return fmt.Errorf("build a client for the managed cluster: %w", err)
 	}
 
-	assembled, err := service.Build(ctx, service.ReadGlobals(ctx), nil)
+	assembled, err := service.Build(ctx, service.ReadGlobals(ctx), readTenantNodeGroups(input))
 	if err != nil {
 		input.Logger.Warn("cannot assemble the bashible context", log.Err(err))
 		return keepPublishedContext(input, "the context could not be assembled")
 	}
 	applyBashibleExternalInputs(assembled, inputs)
+	setPhase1Values(input, inputs)
+	if tokens := tenantBootstrapTokens(input); tokens != nil {
+		assembled["bootstrapTokens"] = tokens
+	}
 
 	// clusterDomain is the one field left to the tenant: it comes from its own
 	// d8-cluster-configuration and lands in every kubelet config, so an empty one is as bad as
@@ -218,13 +224,13 @@ func usableBashibleExternalInputs(raw string) (*bashibleExternalInputs, string) 
 		return nil, fmt.Sprintf("external inputs version %d is not supported, this Deckhouse reads version %d",
 			inputs.Version, bashibleExternalInputsVersion)
 	}
-	// The credentials a node cannot bootstrap without and the tenant cannot supply. A document
+	// The facts a node cannot bootstrap without and the tenant cannot supply. A document
 	// carrying the right version but not these would assemble into a context that validates and
 	// bootstraps nodes wrong, which is worse than no context at all.
 	if inputs.KubernetesCA == "" ||
 		inputs.APIServerProxyCerts.Crt == "" || inputs.APIServerProxyCerts.Key == "" ||
-		len(inputs.BootstrapTokens) == 0 {
-		return nil, "external inputs carry no kubernetes CA, no api-proxy certificates or no bootstrap token"
+		inputs.ALBVIP == "" {
+		return nil, "external inputs carry no kubernetes CA, no api-proxy certificates or no ALB VIP"
 	}
 	return inputs, ""
 }
@@ -243,14 +249,70 @@ func applyBashibleExternalInputs(assembled map[string]interface{}, inputs *bashi
 	assembled["podSubnetNodeCIDRPrefix"] = inputs.PodSubnetNodeCIDRPrefix
 	assembled["clusterDNSAddress"] = inputs.ClusterDNSAddress
 	assembled["clusterUUID"] = inputs.ClusterUUID
-	assembled["bootstrapTokens"] = inputs.BootstrapTokens
 	assembled["apiserverEndpoints"] = inputs.APIServerEndpoints
 	assembled["clusterMasterEndpoints"] = inputs.ClusterMasterEndpoints
 	assembled["apiserverProxyCerts"] = inputs.APIServerProxyCerts
 	assembled["kubernetesCA"] = inputs.KubernetesCA
 	assembled["allowedBundles"] = inputs.AllowedBundles
-	assembled["nodeGroups"] = inputs.NodeGroups
 	assembled["packagesProxy"] = inputs.PackagesProxy
+}
+
+// setPhase1Values feeds the stock manual-bootstrap templates from the host inputs. A nested
+// tenant cannot discover these itself: it has no apiserver pods, and its own EndpointSlice points at an internal ClusterIP, not the ALB the external node needs.
+//
+// Each endpoint carries one port so the template hasKey checks stay clean. The rpp bootstrap
+// fetch takes the ALB VIP, not a hostname: minget parses a numeric IP.
+func setPhase1Values(input *go_hook.HookInput, inputs *bashibleExternalInputs) {
+	addresses := make([]string, 0, len(inputs.ClusterMasterEndpoints))
+	endpoints := make([]map[string]any, 0, len(inputs.ClusterMasterEndpoints))
+	for _, e := range inputs.ClusterMasterEndpoints {
+		if e.KubeAPIPort != 0 {
+			endpoints = append(endpoints, map[string]any{"address": e.Address, "kubeApiPort": e.KubeAPIPort})
+			addresses = append(addresses, fmt.Sprintf("%s:%d", e.Address, e.KubeAPIPort))
+		}
+		if e.RPPServerPort != 0 {
+			endpoints = append(endpoints, map[string]any{"address": e.Address, "rppServerPort": e.RPPServerPort})
+		}
+		if e.RPPBootstrapServerPort != 0 {
+			endpoints = append(endpoints, map[string]any{"address": inputs.ALBVIP, "rppBootstrapServerPort": e.RPPBootstrapServerPort})
+		}
+	}
+
+	input.Values.Set("nodeManager.internal.clusterMasterAddresses", addresses)
+	input.Values.Set("nodeManager.internal.clusterMasterEndpoints", endpoints)
+	input.Values.Set("nodeManager.internal.albVIP", inputs.ALBVIP)
+	input.Values.Set("nodeManager.internal.kubernetesCA", inputs.KubernetesCA)
+	input.Values.Set("nodeManager.internal.packagesProxy", inputs.PackagesProxy)
+}
+
+// readTenantNodeGroups returns the tenant's own NodeGroups (get_crds fills the value) to drive
+// the context.
+func readTenantNodeGroups(input *go_hook.HookInput) []map[string]interface{} {
+	raw := input.Values.Get("nodeManager.internal.nodeGroups")
+	if !raw.Exists() || raw.String() == "" {
+		return nil
+	}
+	var ngs []map[string]interface{}
+	if err := json.Unmarshal([]byte(raw.String()), &ngs); err != nil {
+		input.Logger.Warn("cannot read tenant nodeGroups for the bashible context", log.Err(err))
+		return nil
+	}
+	return ngs
+}
+
+// tenantBootstrapTokens returns the per-NG tokens order_bootstrap_token generated, folded into
+// the context.
+func tenantBootstrapTokens(input *go_hook.HookInput) map[string]string {
+	raw := input.Values.Get("nodeManager.internal.bootstrapTokens")
+	if !raw.Exists() || raw.String() == "" {
+		return nil
+	}
+	var tokens map[string]string
+	if err := json.Unmarshal([]byte(raw.String()), &tokens); err != nil {
+		input.Logger.Warn("cannot read tenant bootstrapTokens for the bashible context", log.Err(err))
+		return nil
+	}
+	return tokens
 }
 
 var bashibleContextScheme = runtime.NewScheme()

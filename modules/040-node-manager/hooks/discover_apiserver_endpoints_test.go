@@ -154,7 +154,9 @@ status:
 `
 	)
 
-	f := HookExecutionConfigInit(`{"nodeManager":{"internal": {}}}`, `{}`)
+	// deckhouseSelfHosted is the default of the global schema. Without it the hook takes itself
+	// for a nested control plane tenant and returns early instead of discovering endpoints.
+	f := HookExecutionConfigInit(`{"global":{"deckhouseSelfHosted":true},"nodeManager":{"internal": {}}}`, `{}`)
 	expectClusterMasterValues := func(clusterMasterAddresses, clusterMasterEndpoints string) {
 		Expect(f.ValuesGet("nodeManager.internal.clusterMasterAddresses").String()).To(MatchJSON(clusterMasterAddresses))
 		Expect(f.ValuesGet("nodeManager.internal.clusterMasterEndpoints").String()).To(MatchJSON(clusterMasterEndpoints))

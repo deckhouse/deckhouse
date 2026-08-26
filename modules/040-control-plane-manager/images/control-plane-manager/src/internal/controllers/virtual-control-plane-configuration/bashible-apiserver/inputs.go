@@ -55,27 +55,27 @@ const (
 type externalInputs struct {
 	Version int `json:"version"`
 
-	Deckhouse               inputsDeckhouse            `json:"deckhouse"`
-	PodSubnetNodeCIDRPrefix string                     `json:"podSubnetNodeCIDRPrefix"`
-	ClusterDNSAddress       string                     `json:"clusterDNSAddress"`
-	ClusterUUID             string                     `json:"clusterUUID"`
-	BootstrapTokens         map[string]string          `json:"bootstrapTokens"`
-	APIServerEndpoints      []string                   `json:"apiserverEndpoints"`
-	ClusterMasterEndpoints  []inputsMasterEndpoint     `json:"clusterMasterEndpoints"`
-	APIServerProxyCerts     ContextAPIServerProxyCerts `json:"apiserverProxyCerts"`
-	KubernetesCA            string                     `json:"kubernetesCA"`
-	AllowedBundles          []string                   `json:"allowedBundles"`
-	NodeGroups              []map[string]interface{}   `json:"nodeGroups"`
-	PackagesProxy           map[string]interface{}     `json:"packagesProxy"`
+	Deckhouse               inputsDeckhouse        `json:"deckhouse"`
+	PodSubnetNodeCIDRPrefix string                 `json:"podSubnetNodeCIDRPrefix"`
+	ClusterDNSAddress       string                 `json:"clusterDNSAddress"`
+	ClusterUUID             string                 `json:"clusterUUID"`
+	APIServerEndpoints      []string               `json:"apiserverEndpoints"`
+	ClusterMasterEndpoints  []inputsMasterEndpoint `json:"clusterMasterEndpoints"`
+	// ALBVIP is the single tenant ingress VIP. The node maps the control-plane SNI hostnames to it in /etc/hosts, having no DNS for them.
+	ALBVIP              string                     `json:"albVIP"`
+	APIServerProxyCerts ContextAPIServerProxyCerts `json:"apiserverProxyCerts"`
+	KubernetesCA        string                     `json:"kubernetesCA"`
+	AllowedBundles      []string                   `json:"allowedBundles"`
+	PackagesProxy       map[string]interface{}     `json:"packagesProxy"`
 }
 
 type ExternalInputsParams struct {
 	VCP                 *controlplanev1alpha1.VirtualControlPlane
 	CA                  []byte
-	JoinToken           string
 	ClusterUUID         string
 	APIHost             string
 	PackagesHost        string
+	ALBVIP              string
 	RPPToken            string
 	APIServerProxyCerts ContextAPIServerProxyCerts
 }
@@ -104,9 +104,6 @@ type inputsMasterEndpoint struct {
 // sigs.k8s.io/yaml (the same library bashible-apiserver reads input.yaml with), so only the json
 // tags matter.
 func BuildExternalInputsYAML(p ExternalInputsParams) (string, error) {
-	if p.JoinToken == "" {
-		return "", fmt.Errorf("join token is required")
-	}
 	if p.VCP == nil {
 		return "", fmt.Errorf("virtual control plane is required")
 	}
@@ -138,9 +135,6 @@ func BuildExternalInputsYAML(p ExternalInputsParams) (string, error) {
 		PodSubnetNodeCIDRPrefix: p.VCP.Spec.Networking.PodSubnetNodeCIDRPrefix,
 		ClusterDNSAddress:       clusterDNSAddress,
 		ClusterUUID:             clusterUUID,
-		BootstrapTokens: map[string]string{
-			"worker": p.JoinToken,
-		},
 		APIServerEndpoints: []string{
 			fmt.Sprintf("%s:6443", p.APIHost),
 		},
@@ -155,19 +149,10 @@ func BuildExternalInputsYAML(p ExternalInputsParams) (string, error) {
 				RPPBootstrapServerPort: vcpPackagesProxyBootstrapPort,
 			},
 		},
+		ALBVIP:              p.ALBVIP,
 		APIServerProxyCerts: p.APIServerProxyCerts,
 		KubernetesCA:        string(p.CA),
 		AllowedBundles:      []string{"ubuntu-lts"},
-		NodeGroups: []map[string]any{
-			{
-				"name":              "worker",
-				"nodeType":          "Static",
-				"kubernetesVersion": p.VCP.Spec.KubernetesVersion,
-				"cri": map[string]any{
-					"type": "Containerd",
-				},
-			},
-		},
 		PackagesProxy: map[string]any{
 			"direct": true,
 			"token":  p.RPPToken,
