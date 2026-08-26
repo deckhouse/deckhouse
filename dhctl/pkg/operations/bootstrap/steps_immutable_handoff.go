@@ -120,7 +120,7 @@ func (b *ClusterBootstrapper) collectImmutableKubeconfig(ctx context.Context, bc
 	// moment it starts working, so an operator sees what it is doing and a node
 	// that fails says why instead of just staying unreachable.
 	var kubeconfig []byte
-	say := narrateWait(ctx, time.Now)
+	report := waitProgress(ctx, time.Now)
 
 	// openImmutableChannelTo, not openImmutableChannel: a failure here is already
 	// on its way through withBothAddresses below, which would otherwise name both
@@ -146,10 +146,10 @@ func (b *ClusterBootstrapper) collectImmutableKubeconfig(ctx context.Context, bc
 		if err != nil {
 			// The node stops answering while kubelet takes the machine over, and
 			// that silence is most of the wait: unreported, it reads as a hang.
-			say(fmt.Sprintf("%s is not answering its bootstrap channel yet", bctx.immutable.masterNodeName))
+			report(fmt.Sprintf("%s is not answering its bootstrap channel yet", bctx.immutable.masterNodeName))
 			return err
 		}
-		say(fmt.Sprintf("The first master reports: %s", statusLine(status)))
+		report(fmt.Sprintf("The first master reports: %s", statusLine(status)))
 		if err := handoffReady(status); err != nil {
 			return err
 		}
@@ -195,22 +195,25 @@ func retryWithFreshChannel(ctx context.Context, loop *libretry.Loop, open func(c
 // that long is indistinguishable from a hang.
 const waitProgressInterval = 30 * time.Second
 
-// narrateWait returns a reporter that speaks when the message changes and, while
-// it does not, once every waitProgressInterval — carrying how long the wait has
-// been running, which is the number an operator is actually asking for.
-func narrateWait(ctx context.Context, now func() time.Time) func(string) {
-	started := now()
+// waitProgress returns the reporter a minutes-long wait speaks through. It
+// prints a message that differs from the last one immediately, and one that
+// repeats no more often than waitProgressInterval — every line carrying how long
+// the wait has been running, which is what an operator is really asking.
+func waitProgress(ctx context.Context, now func() time.Time) func(message string) {
+	startedAt := now()
 	var (
-		last string
-		said time.Time
+		lastMessage string
+		lastPrinted time.Time
 	)
 	return func(message string) {
 		at := now()
-		if message == last && at.Sub(said) < waitProgressInterval {
+		repeat := message == lastMessage
+		if repeat && at.Sub(lastPrinted) < waitProgressInterval {
 			return
 		}
-		last, said = message, at
-		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("%s (%s so far)", message, at.Sub(started).Round(time.Second)))
+		lastMessage, lastPrinted = message, at
+		dhlog.FromContext(ctx).InfoContext(ctx,
+			fmt.Sprintf("%s (%s so far)", message, at.Sub(startedAt).Round(time.Second)))
 	}
 }
 
