@@ -36,7 +36,7 @@ func tokenSecret(name, ng string, validFor time.Duration) *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:              name,
-			Namespace:         "kube-system",
+			Namespace:         nodecommon.KubeSystemNamespace,
 			CreationTimestamp: metav1.Now(),
 			Labels:            map[string]string{nodecommon.BootstrapTokenNodeGroupLabel: ng},
 		},
@@ -92,7 +92,7 @@ func TestEnsureTokenMintsForGroupWithoutToken(t *testing.T) {
 	assert.Regexp(t, `^[a-z0-9]{6}\.[a-z0-9]{16}$`, token)
 
 	secret := &corev1.Secret{}
-	require.NoError(t, c.Get(t.Context(), types.NamespacedName{Namespace: "kube-system", Name: "bootstrap-token-" + token[:6]}, secret))
+	require.NoError(t, c.Get(t.Context(), types.NamespacedName{Namespace: nodecommon.KubeSystemNamespace, Name: "bootstrap-token-" + token[:6]}, secret))
 	assert.Equal(t, corev1.SecretTypeBootstrapToken, secret.Type)
 	assert.Equal(t, "worker", secret.Labels[nodecommon.BootstrapTokenNodeGroupLabel])
 	assert.Equal(t, []byte("system:bootstrappers:d8-node-manager"), secret.Data["auth-extra-groups"])
@@ -110,8 +110,50 @@ func TestEnsureTokenIgnoresOtherGroupsToken(t *testing.T) {
 	assert.NotEqual(t, "abcdef.0123456789abcdef", token)
 
 	secret := &corev1.Secret{}
-	require.NoError(t, c.Get(t.Context(), types.NamespacedName{Namespace: "kube-system", Name: "bootstrap-token-" + token[:6]}, secret))
+	require.NoError(t, c.Get(t.Context(), types.NamespacedName{Namespace: nodecommon.KubeSystemNamespace, Name: "bootstrap-token-" + token[:6]}, secret))
 	assert.Equal(t, "worker", secret.Labels[nodecommon.BootstrapTokenNodeGroupLabel])
+}
+
+// Минт и nodecommon.BootstrapTokens — по разные стороны границы пакетов: если
+// секрет разъедется с тем, что принимает хелпер, второй вызов выдаст новый токен.
+func TestEnsureTokenMintsWhatBootstrapTokensAccepts(t *testing.T) {
+	c := newClient(t)
+
+	first, err := EnsureToken(t.Context(), c, "worker")
+	require.NoError(t, err)
+
+	second, err := EnsureToken(t.Context(), c, "worker")
+	require.NoError(t, err)
+
+	assert.Equal(t, first, second, "the freshly minted token must be found and reused")
+}
+
+func TestEnsureTokenRejectsEmptyNodeGroup(t *testing.T) {
+	c := newClient(t)
+
+	_, err := EnsureToken(t.Context(), c, "")
+	require.Error(t, err)
+
+	list := &corev1.SecretList{}
+	require.NoError(t, c.List(t.Context(), list))
+	assert.Empty(t, list.Items, "a token nobody can find must not be minted")
+}
+
+// Нечитаемый expiration — это не «истёк»: удалять секрет, который не смогли
+// разобрать, опаснее, чем оставить его дожидаться разбирающегося владельца.
+func TestUnreadableExpirationIsNotCollected(t *testing.T) {
+	broken := tokenSecret("bootstrap-token-abcdef", "worker", time.Hour)
+	broken.Data["expiration"] = []byte("garbage")
+	c := newClient(t, broken)
+
+	require.NoError(t, CollectExpiredTokens(t.Context(), c))
+
+	secret := &corev1.Secret{}
+	require.NoError(t, c.Get(t.Context(), types.NamespacedName{Namespace: nodecommon.KubeSystemNamespace, Name: "bootstrap-token-abcdef"}, secret))
+
+	token, err := EnsureToken(t.Context(), c, "worker")
+	require.NoError(t, err)
+	assert.NotEqual(t, "abcdef.0123456789abcdef", token, "a token with an unreadable expiration is rotated out")
 }
 
 func TestCollectExpiredTokens(t *testing.T) {

@@ -53,6 +53,12 @@ const (
 // when the group has none or the current one expires too soon. The old secret
 // is left alone until CollectExpiredTokens sweeps it.
 func EnsureToken(ctx context.Context, c client.Client, ngName string) (string, error) {
+	// A token labeled with an empty group is one BootstrapTokens never returns,
+	// so without this guard every call would mint another unreachable secret.
+	if ngName == "" {
+		return "", fmt.Errorf("ensure bootstrap token: empty node group name")
+	}
+
 	tokens, err := nodecommon.BootstrapTokens(ctx, c)
 	if err != nil {
 		return "", fmt.Errorf("read bootstrap tokens: %w", err)
