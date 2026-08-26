@@ -255,9 +255,8 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, op *v1alpha1.Packa
 	if err != nil {
 		return r.failOperation(ctx, op, err)
 	}
-	svc.WarnUnavailablePartialScan(op)
 
-	discovered, err := svc.DiscoverPackage(ctx)
+	discovered, err := svc.DiscoverPackages(ctx)
 	if err != nil {
 		return r.failOperation(ctx, op, err)
 	}
@@ -268,15 +267,15 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, op *v1alpha1.Packa
 		op.Status.Packages = new(v1alpha1.PackageRepositoryOperationStatusPackages)
 	}
 
-	packages := make([]v1alpha1.PackageRepositoryOperationStatusDiscoveredPackage, 0, len(discovered.Packages))
-	for _, pkg := range discovered.Packages {
+	packages := make([]v1alpha1.PackageRepositoryOperationStatusDiscoveredPackage, 0, len(discovered))
+	for _, pkg := range discovered {
 		packages = append(packages, v1alpha1.PackageRepositoryOperationStatusDiscoveredPackage{
-			Name: pkg.Name,
+			Name: pkg,
 		})
 	}
 
 	op.Status.Packages.Discovered = packages
-	op.Status.Packages.Total = len(discovered.Packages)
+	op.Status.Packages.Total = len(discovered)
 	op.Status.Packages.ProcessedOverall = 0
 
 	r.setCompletedConditionFalse(op, v1alpha1.PackageRepositoryOperationReasonProcessing, "")
@@ -308,10 +307,6 @@ func (r *reconciler) handleProcessingState(ctx context.Context, op *v1alpha1.Pac
 		return r.failOperation(ctx, op, err)
 	}
 
-	if op.Status.Packages == nil {
-		return ctrl.Result{}, nil
-	}
-
 	// Check if all packages have been processed
 	if len(op.Status.Packages.Discovered) == 0 {
 		r.logger.Info("all packages processed", slog.Int("total", op.Status.Packages.Total))
@@ -324,9 +319,7 @@ func (r *reconciler) handleProcessingState(ctx context.Context, op *v1alpha1.Pac
 		original := op.DeepCopy()
 
 		// All packages processed, mark as completed
-		now := metav1.Now()
-		op.Status.CompletionTime = &now
-
+		op.Status.CompletionTime = new(metav1.Now())
 		r.setCompletedConditionTrue(op, v1alpha1.PackageRepositoryOperationReasonScanSucceeded, "")
 
 		if err := r.client.Status().Patch(ctx, op, client.MergeFrom(original)); err != nil {
@@ -363,11 +356,12 @@ func (r *reconciler) handleCleanupState(ctx context.Context, op *v1alpha1.Packag
 
 	logger.Debug("handle completed state")
 
-	operations := new(v1alpha1.PackageRepositoryOperationList)
-	err := r.client.List(ctx, operations, client.MatchingLabels{
+	selector := client.MatchingLabels{
 		v1alpha1.PackagesRepositoryOperationLabelRepository: op.Spec.PackageRepositoryName,
-	})
-	if err != nil {
+	}
+
+	operations := new(v1alpha1.PackageRepositoryOperationList)
+	if err := r.client.List(ctx, operations, selector); err != nil {
 		return ctrl.Result{}, fmt.Errorf("list operations: %w", err)
 	}
 
@@ -386,7 +380,7 @@ func (r *reconciler) handleCleanupState(ctx context.Context, op *v1alpha1.Packag
 	// Delete everything older than the retention window.
 	for _, toDelete := range operations.Items[cleanupOldOperationsCount:] {
 		logger.Debug("delete old operation", slog.String("name", toDelete.Name))
-		if err = r.client.Delete(ctx, &toDelete); err != nil {
+		if err := r.client.Delete(ctx, &toDelete); err != nil {
 			return ctrl.Result{}, fmt.Errorf("delete old operation: %w", err)
 		}
 	}
