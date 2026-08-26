@@ -56,13 +56,18 @@ const (
 	// Secrets while the token they carry is still accepted.
 	resyncInterval = 30 * time.Minute
 
+	// invalidRequeueInterval retries a NodeGroup the checks rejected. It is far
+	// shorter than the resync because the verdict is usually transient — a group
+	// applied before its InstanceClass — and nothing else enqueues the group when
+	// the InstanceClass finally appears.
+	invalidRequeueInterval = time.Minute
+
 	engineCAPI = "CAPI"
 
-	// maxSecretSize is the apiserver's own cap on the sum of a Secret's values
-	// (k8s.io/kubernetes/pkg/apis/core.MaxSecretSize). The script inlines the
-	// minget binary as base64 twice over — 4KiB today, so the margin is wide —
-	// and the apiserver's own rejection would name no cause.
-	maxSecretSize = 1 << 20
+	// The reasons of the Warning events a group gets when a pass leaves it
+	// without bootstrap Secrets, so `kubectl describe nodegroup` says why.
+	eventReasonSkipped = "BootstrapSecretsSkipped"
+	eventReasonFailed  = "BootstrapSecretsFailed"
 )
 
 func init() {
@@ -137,16 +142,20 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("resolve NodeGroup %s: %w", ng.Name, err)
 	}
-	// A validation error is a statement about the NodeGroup, not about this pass:
-	// helm rendered no bootstrap Secret for such a group either, and retrying
-	// would only repeat the same verdict.
+	// A validation error is a statement about the NodeGroup, not a failure of this
+	// pass — helm rendered no bootstrap Secret for such a group either — so it is
+	// reported and retried rather than returned as an error.
 	if validationErr != "" {
-		logger.Info("NodeGroup failed validation, writing no bootstrap secret",
+		logger.V(1).Info("NodeGroup failed validation, writing no bootstrap secret",
 			"nodeGroup", ng.Name, "error", validationErr)
-		return ctrl.Result{RequeueAfter: resyncInterval}, nil
+		r.Recorder.Event(ng, corev1.EventTypeWarning, eventReasonSkipped, validationErr)
+		return ctrl.Result{RequeueAfter: invalidRequeueInterval}, nil
 	}
 
 	if err := r.writeSecrets(ctx, ng, resolved); err != nil {
+		// Without this the reason lives only in the controller log: the NodeGroup
+		// itself shows no sign of why its nodes cannot bootstrap.
+		r.Recorder.Event(ng, corev1.EventTypeWarning, eventReasonFailed, err.Error())
 		return ctrl.Result{}, err
 	}
 	return ctrl.Result{RequeueAfter: resyncInterval}, nil
@@ -226,16 +235,6 @@ func (r *Reconciler) writeCAPISecrets(ctx context.Context, ng *deckhousev1.NodeG
 // create-or-update: these Secrets carry no app label, so they sit outside the
 // namespace-scoped Secret informer and a cached read would never find them.
 func (r *Reconciler) applySecret(ctx context.Context, name string, data map[string][]byte) error {
-	total := 0
-	for _, value := range data {
-		total += len(value)
-	}
-	if total > maxSecretSize {
-		return fmt.Errorf("bootstrap secret %s/%s is %d bytes, over the %d the apiserver accepts: "+
-			"the bootstrap script inlines the minget binary as base64",
-			nodecommon.MachineNamespace, name, total, maxSecretSize)
-	}
-
 	secret := &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "Secret"},
 		ObjectMeta: metav1.ObjectMeta{
@@ -251,7 +250,13 @@ func (r *Reconciler) applySecret(ctx context.Context, name string, data map[stri
 		return fmt.Errorf("write bootstrap secret %s/%s: %w", nodecommon.MachineNamespace, name, err)
 	}
 
-	log.FromContext(ctx).Info("wrote bootstrap secret",
+	total := 0
+	for _, value := range data {
+		total += len(value)
+	}
+	// "applied", not "wrote": a server-side apply that changes nothing is a no-op
+	// on the apiserver, and this line fires on every resync all the same.
+	log.FromContext(ctx).Info("applied bootstrap secret",
 		"secret", nodecommon.MachineNamespace+"/"+name, "bytes", total)
 	return nil
 }
