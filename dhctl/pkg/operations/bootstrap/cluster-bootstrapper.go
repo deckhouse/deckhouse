@@ -203,6 +203,10 @@ type bootstrapContext struct {
 	registryStop              func()
 	finishProgress            func()
 	preflightRunner           *preflight.Preflight
+
+	// The immutable master path, nil on every other bootstrap. Its fields live
+	// with that path, in steps_immutable.go.
+	immutable *immutableBootstrap
 }
 
 // cacheOrGlobal is the cache to report phase state against. Until Preparation has run
@@ -278,6 +282,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		if bctx.finishProgress != nil {
 			bctx.finishProgress()
 		}
+		bctx.stopImmutableChannels()
 		if bctx.cleanup != nil {
 			bctx.cleanup()
 		}
@@ -289,6 +294,11 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	}()
 
 	err := b.runPhases(ctx, bctx, b.bootstrapPhaseFuncs(), wholeTree)
+	if err != nil {
+		// A failed bootstrap needs the credentials most: the master runs no
+		// sshd, and the success-path print at the end is never reached.
+		b.printCollectedKubeconfig(ctx, bctx)
+	}
 
 	if m := bctx.metaConfig; m != nil {
 		// Cloud context on the bootstrap operation span (one span in both CLI and
@@ -844,7 +854,12 @@ func (b *ClusterBootstrapper) bootstrapPreparation(ctx context.Context, bctx *bo
 
 	b.PhasedExecutionContext.CompleteSubPhase(ctx, phases.PreparationSubPhaseStatePreparation)
 
-	return nil
+	return b.detectImmutableMaster(ctx, bctx)
+}
+
+// firstMasterNodeName is what the node the cluster starts from registers under.
+func firstMasterNodeName(metaConfig *config.MetaConfig) string {
+	return fmt.Sprintf("%s-master-0", metaConfig.ClusterPrefix)
 }
 
 func (b *ClusterBootstrapper) bootstrapPreflight(ctx context.Context, bctx *bootstrapContext) error {
@@ -863,6 +878,7 @@ func (b *ClusterBootstrapper) bootstrapPreflight(ctx context.Context, bctx *boot
 	preflightRunner.UseCache(bctx.bootstrapState)
 	preflightRunner.SetCacheSalt(bctx.configHash)
 	preflightRunner.DisableChecks(b.Options.Preflight.DisabledChecks()...)
+	b.applyImmutablePreflights(preflightRunner, bctx)
 	bctx.preflightRunner = preflightRunner
 
 	return preflightRunner.Run(ctx, preflight.PhasePreInfra)
@@ -981,13 +997,21 @@ func (b *ClusterBootstrapper) bootstrapFirstMaster(ctx context.Context, bctx *bo
 	ctx, firstMasterSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.FirstMaster")
 	defer firstMasterSpan.End()
 
-	masterNodeName := fmt.Sprintf("%s-master-0", bctx.metaConfig.ClusterPrefix)
+	masterNodeName := firstMasterNodeName(bctx.metaConfig)
+
+	// An immutable node configures itself from the cloud-init payload: there is no
+	// bashible run afterwards to hand it anything else. Empty on every other path.
+	nodeCloudConfig, err := b.buildImmutableMasterPayload(ctx, bctx, masterNodeName)
+	if err != nil {
+		return err
+	}
+
 	masterRunner, err := b.Params.InfrastructureContext.GetBootstrapNodeRunner(ctx, bctx.metaConfig, bctx.stateCache, infrastructure.BootstrapNodeRunnerOptions{
 		NodeName:        masterNodeName,
 		NodeGroupStep:   infrastructure.MasterNodeStep,
 		NodeGroupName:   "master",
 		NodeIndex:       0,
-		NodeCloudConfig: "",
+		NodeCloudConfig: nodeCloudConfig,
 	})
 	if err != nil {
 		return err
@@ -1003,20 +1027,35 @@ func (b *ClusterBootstrapper) bootstrapFirstMaster(ctx context.Context, bctx *bo
 	// providers should be reinitialized here
 	baseSettings := b.SSHProviderInitializer.GetSettings()
 	connectionConfig := b.SSHProviderInitializer.GetConfig()
-	connectionConfig.Hosts = append(connectionConfig.Hosts, sshconfig.Host{Host: masterOutputs.MasterIPForSSH})
+
+	// An immutable master is deliberately not registered as an SSH host: CheckHosts
+	// would send later phases down the SSH path. The Kubernetes client is built in
+	// bootstrapKubernetes against the node's API server.
+	if bctx.immutable == nil {
+		connectionConfig.Hosts = append(connectionConfig.Hosts, sshconfig.Host{Host: masterOutputs.MasterIPForSSH})
+	}
 
 	b.SSHProviderInitializer.Reinitialize(
 		ctx,
 		baseSettings,
 		connectionConfig,
 	)
-	b.KubeProvider = b.SSHProviderInitializer.GetKubeProvider(ctx)
+
+	if bctx.immutable == nil {
+		b.KubeProvider = b.SSHProviderInitializer.GetKubeProvider(ctx)
+	}
 
 	bctx.nodeIP = masterOutputs.NodeInternalIP
 	bctx.devicePath = masterOutputs.KubeDataDevicePath
 
 	bctx.deckhouseInstallConfig.NodesInfrastructureState = make(map[string][]byte)
 	bctx.deckhouseInstallConfig.NodesInfrastructureState[masterNodeName] = masterOutputs.InfrastructureState
+
+	if bctx.immutable != nil {
+		bctx.immutable.masterIP = masterOutputs.MasterIPForSSH
+		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("First master address: %s (no SSH access)", masterOutputs.MasterIPForSSH))
+		return nil
+	}
 
 	bctx.masterAddressesForSSH[masterNodeName] = masterOutputs.MasterIPForSSH
 	state.SaveMasterHostsToCache(ctx, bctx.stateCache, bctx.masterAddressesForSSH)
@@ -1165,6 +1204,13 @@ func (b *ClusterBootstrapper) bashibleNodeInterface(ctx context.Context, bctx *b
 }
 
 func (b *ClusterBootstrapper) bootstrapKubernetes(ctx context.Context, bctx *bootstrapContext) error {
+	// An immutable node installs Kubernetes from the payload it booted with, so
+	// there is nothing to push: dhctl only waits for its API server and builds
+	// a client for the phases that follow.
+	if bctx.immutable != nil {
+		return b.connectToImmutableMaster(ctx, bctx)
+	}
+
 	ctx, bashibleBundleSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.BashibleBundle")
 	defer bashibleBundleSpan.End()
 
@@ -1374,6 +1420,8 @@ func (b *ClusterBootstrapper) bootstrapFinalize(ctx context.Context, bctx *boots
 		return err
 	}
 
+	b.printCollectedKubeconfig(ctx, bctx)
+
 	if !b.DisableBootstrapClearCache {
 		_ = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Clear cache", func(ctx context.Context) error {
 			ctx, span := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.ClearCache")
@@ -1393,7 +1441,7 @@ func (b *ClusterBootstrapper) bootstrapFinalize(ctx context.Context, bctx *boots
 
 	dhlog.FromContext(ctx).InfoContext(ctx, "Deckhouse cluster created successfully!", dhlog.ShowInCompacted())
 
-	if bctx.metaConfig.ClusterType == config.CloudClusterType {
+	if bctx.metaConfig.ClusterType == config.CloudClusterType && bctx.immutable == nil {
 		_ = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Kubernetes Master Node addresses for SSH", func(ctx context.Context) error {
 			ctx, span := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.KubernetesMasterNodeAddressesForSSH")
 			defer span.End()

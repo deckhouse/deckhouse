@@ -1,0 +1,130 @@
+{{- /*
+Rendered unconditionally, and against a fixed apiVersion, unlike the module's
+other admission policies.
+
+Those are gated on helm_lib_kind_exists, which answers from the Helm
+capabilities. That gate cannot be satisfied in the template tests, so a gated
+file is never rendered in CI — and these two are the compensating control for a
+cluster-wide RBAC grant, so a silent skip is the failure that matters most. The
+gate has nothing left to protect either: ValidatingAdmissionPolicy has been GA
+since Kubernetes 1.30, and candi/version_map.yml supports 1.32 upwards.
+*/}}
+{{- $policyName := "nodeconfigs-own-node-only.deckhouse.io" }}
+---
+# The agent on an immutable node reaches the API with its kubelet identity, and
+# both NodeConfig and NodeOperation are cluster-scoped, so RBAC can only grant
+# the verbs cluster-wide. This narrows those grants to the node's own objects:
+# without it any kubelet could hand a neighbour a maintenance token of its own
+# choosing and then push that neighbour an arbitrary configuration, or forge the
+# neighbour's applied generation and let the whole group be disrupted at once.
+#
+# It covers every write surface of the resource, not only the ones the node-agent
+# ClusterRole happens to grant today. This policy is the compensating control
+# for a cluster-wide grant, so it has to be the boundary — a verb added to that
+# role later must not open a door the policy never looked at.
+#
+# Reads are outside admission entirely, so nothing here constrains them, and a
+# node can read its neighbours' NodeConfigs. What keeps the one field that
+# matters out of reach is the deliberate absence of a nodeconfigs/sensitive rule
+# in rbac-for-us.yaml, where the reasoning lives.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+    - apiGroups:   ["internal.deckhouse.io"]
+      apiVersions: ["*"]
+      operations:  ["CREATE", "UPDATE", "DELETE"]
+      # The resource and every subresource of it, status and sensitive included.
+      resources:   ["nodeconfigs", "nodeconfigs/*"]
+  matchConditions:
+  # Only kubelets are constrained. node-controller, Deckhouse and cluster-admin
+  # write these objects for every node by design and are not in this group.
+  - name: kubelets-only
+    expression: '"system:nodes" in request.userInfo.groups'
+  variables:
+  # A NodeConfig is named after its node. On DELETE there is no object to read
+  # it from, so the name comes off the request.
+  - name: owner
+    expression: '"system:node:" + (request.operation == "DELETE" ? request.name : object.metadata.name)'
+  validations:
+  - expression: 'request.userInfo.username == variables.owner'
+    reason: Forbidden
+    messageExpression: |
+      "a node may only write its own NodeConfig; " + request.userInfo.username + " tried to " + request.operation + " " + request.name
+  # The object name is what this policy pins the node to, so the config's own
+  # idea of which node it is for has to agree with it. Nothing in node-controller
+  # reads spec.nodeName, but the agent on the node does.
+  - expression: 'request.operation == "DELETE" || object.metadata.name == object.spec.nodeName'
+    reason: Forbidden
+    messageExpression: |
+      "a NodeConfig must name the node it configures; " + request.name + " has spec.nodeName " + object.spec.nodeName
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+  validationActions: [Deny]
+---
+{{- $policyName := "nodeoperations-own-node-only.deckhouse.io" }}
+# A node only ever reports on an operation, so an update of its own node's
+# operation is the only thing it may do here. Creating one is the cluster's
+# decision or an operator's — a node that could mint its own ApproveDisruption
+# would be granting itself the permission this whole resource exists to withhold
+# — and a delete cannot be attributed to a node at all, since the name is
+# generated and DELETE carries no object to read spec.nodeName from.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+    - apiGroups:   ["deckhouse.io"]
+      apiVersions: ["*"]
+      operations:  ["CREATE", "UPDATE", "DELETE"]
+      resources:   ["nodeoperations", "nodeoperations/*"]
+  matchConditions:
+  - name: kubelets-only
+    expression: '"system:nodes" in request.userInfo.groups'
+  validations:
+  - expression: 'request.operation == "UPDATE" && request.userInfo.username == "system:node:" + object.spec.nodeName'
+    reason: Forbidden
+    messageExpression: |
+      "a node may only update its own NodeOperation; " + request.userInfo.username + " tried to " + request.operation
+  # The object under admission is the new one, so the rule above would let a node
+  # take over someone else's operation by retargeting spec.nodeName in the same
+  # write. The CRD refuses that today with its own immutable-spec rule; this does
+  # not depend on that rule staying there.
+  - expression: 'request.operation != "UPDATE" || request.userInfo.username == "system:node:" + oldObject.spec.nodeName'
+    reason: Forbidden
+    messageExpression: |
+      "a node may not take over the operation of " + oldObject.spec.nodeName + "; " + request.userInfo.username + " tried to update it"
+  # The spec is held immutable by the CRD; metadata is held by nothing. The node
+  # label is what every lookup between the operations on one node goes through,
+  # so dropping it would make this one invisible to its siblings — and their
+  # answers about the node wrong.
+  - expression: |
+      request.operation != "UPDATE" ||
+      object.metadata.?labels["node-manager.deckhouse.io/node"].orValue("") == oldObject.metadata.?labels["node-manager.deckhouse.io/node"].orValue("")
+    reason: Forbidden
+    messageExpression: |
+      "the node-manager.deckhouse.io/node label is how the operations on one node find each other; " + request.userInfo.username + " tried to change it"
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+  validationActions: [Deny]

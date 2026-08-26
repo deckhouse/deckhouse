@@ -1,7 +1,11 @@
+{!{/* tests-controller covers ./deckhouse-controller/... and tests-modules the
+     module hooks and templates. Neither crosses a nested go.mod boundary, so a
+     tool module under pkg/ needs naming here explicitly or its tests never run
+     on a pull request -- test-crd-enricher is the crd-enricher module's. */}!}
 {!{ define "unit_run_args" }!}
 # <template: unit_run_args>
 setup_cmd: 'pm install git'
-args: 'sh -c "git config --global --add safe.directory /deckhouse && make tests-controller tests-modules"'
+args: 'sh -c "git config --global --add safe.directory /deckhouse && make tests-controller tests-modules test-crd-enricher"'
 docker_options: '-w /deckhouse -v ${{github.workspace}}:/deckhouse --tmpfs /tmp:mode=1777,exec -e HOME=/tmp -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg'
 exec_options: '-u $(id -u):$(id -g) -e HOME=/tmp -w /deckhouse'
 # </template: unit_run_args>
@@ -109,7 +113,7 @@ steps:
 {!{ tmpl.Exec "login_rw_registry_step"  $ctx | strings.Indent 2 }!}
   - name: Run tests
     env:
-      TESTS_IMAGE_NAME: {!{ printf "%s@%s" (datasource "alt_base_images").REGISTRY_PATH (index (datasource "alt_base_images") "builder/golang") | quote }!}
+      TESTS_IMAGE_NAME: {!{ printf "%s@%s" (datasource "alt_base_images").REGISTRY_PATH (index (datasource "alt_base_images") "builder/golang-1.26") | quote }!}
     run: |
       # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
       echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
@@ -143,7 +147,7 @@ steps:
 {!{ tmpl.Exec "login_rw_registry_step"  $ctx | strings.Indent 2 }!}
   - name: Run node-controller tests
     env:
-      TESTS_IMAGE_NAME: {!{ printf "%s@%s" (datasource "alt_base_images").REGISTRY_PATH (index (datasource "alt_base_images") "builder/golang") | quote }!}
+      TESTS_IMAGE_NAME: {!{ printf "%s@%s" (datasource "alt_base_images").REGISTRY_PATH (index (datasource "alt_base_images") "builder/golang-1.26") | quote }!}
     run: |
       # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
       echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'

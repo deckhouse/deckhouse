@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -112,7 +113,7 @@ func (r *reconciler) dequeuePackageWithError(ctx context.Context, op *v1alpha1.P
 	if err := r.client.Status().Patch(ctx, op, client.MergeFrom(original)); err != nil {
 		return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
 	}
-	return ctrl.Result{Requeue: true}, nil
+	return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 }
 
 // dequeuePackageWithResult removes the head of the Discovered queue and records the
@@ -161,5 +162,5 @@ func (r *reconciler) dequeuePackageWithResult(ctx context.Context, op *v1alpha1.
 	if err := r.client.Status().Patch(ctx, op, client.MergeFrom(original)); err != nil {
 		return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
 	}
-	return ctrl.Result{Requeue: true}, nil
+	return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 }

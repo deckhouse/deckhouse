@@ -86,6 +86,20 @@ func buildCAPIMachineDeployment(in capiMDInput) *unstructured.Unstructured {
 		}
 	}
 
+	// An immutable node boots from a per-machine NodeBootstrapConfig cloned
+	// from the group's template; a bashible node keeps the group-wide helm
+	// secret. configRef has no apiVersion: CAPI resolves it from the contract label.
+	bootstrap := map[string]interface{}{"dataSecretName": in.bootstrapSecretName}
+	if in.ng.Spec.SystemType == deckhousev1.SystemTypeImmutable {
+		bootstrap = map[string]interface{}{
+			"configRef": map[string]interface{}{
+				"apiGroup": "bootstrap.deckhouse.io",
+				"kind":     "NodeBootstrapConfigTemplate",
+				"name":     in.ng.Name,
+			},
+		}
+	}
+
 	return &unstructured.Unstructured{Object: map[string]interface{}{
 		"apiVersion": "cluster.x-k8s.io/v1beta2",
 		"kind":       "MachineDeployment",
@@ -104,9 +118,7 @@ func buildCAPIMachineDeployment(in capiMDInput) *unstructured.Unstructured {
 				},
 				"spec": map[string]interface{}{
 					"clusterName": in.clusterName,
-					"bootstrap": map[string]interface{}{
-						"dataSecretName": in.bootstrapSecretName,
-					},
+					"bootstrap":   bootstrap,
 					"infrastructureRef": map[string]interface{}{
 						"apiGroup": in.infraAPIGroup,
 						"kind":     in.infraKind,
@@ -412,6 +424,16 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 	infraAPIGroup := infraGV.Group
 	infraGVK := infraGV.WithKind(cloudConfig.capiMachineTemplateKind)
 
+	// An immutable group's MachineDeployments reference a NodeBootstrapConfig
+	// template through bootstrap.configRef, so it has to exist before them or
+	// CAPI cannot resolve the reference. One template per group, all zones.
+	if ng.Spec.SystemType == deckhousev1.SystemTypeImmutable {
+		tmpl := buildNodeBootstrapConfigTemplate(ng)
+		if err := r.Client.Patch(ctx, tmpl, client.Apply, client.FieldOwner("node-controller"), client.ForceOwnership); err != nil {
+			return fmt.Errorf("apply NodeBootstrapConfigTemplate %s: %w", ng.Name, err)
+		}
+	}
+
 	desiredMDNames := make(map[string]struct{}, len(zones))
 	desiredTemplateNames := make(map[string]struct{}, len(zones))
 
@@ -527,6 +549,33 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 	}
 
 	return nil
+}
+
+// buildNodeBootstrapConfigTemplate renders the per-group bootstrap template a
+// MachineDeployment points at. Deliberately thin: the bootstrap controller
+// renders userdata from live state; the node-group label is copied onto clones.
+func buildNodeBootstrapConfigTemplate(ng *deckhousev1.NodeGroup) *unstructured.Unstructured {
+	return &unstructured.Unstructured{Object: map[string]interface{}{
+		"apiVersion": "bootstrap.deckhouse.io/v1alpha1",
+		"kind":       "NodeBootstrapConfigTemplate",
+		"metadata": map[string]interface{}{
+			"name":      ng.Name,
+			"namespace": common.MachineNamespace,
+			"labels": map[string]interface{}{
+				"heritage":   "deckhouse",
+				"module":     "node-manager",
+				"node-group": ng.Name,
+			},
+		},
+		"spec": map[string]interface{}{
+			"template": map[string]interface{}{
+				"metadata": map[string]interface{}{
+					"labels": map[string]interface{}{"node-group": ng.Name},
+				},
+				"spec": map[string]interface{}{},
+			},
+		},
+	}}
 }
 
 func buildStaticMachineTemplate(ng *deckhousev1.NodeGroup) (*unstructured.Unstructured, error) {
