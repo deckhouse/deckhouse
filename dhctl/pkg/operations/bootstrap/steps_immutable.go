@@ -546,9 +546,13 @@ func (b *ClusterBootstrapper) pushRecordedPayload(ctx context.Context, bctx *boo
 
 	err := b.pushImmutablePayload(ctx, bctx, nodeName, address, document, nodeConfig)
 
-	// The one failure that proves the machine took nothing: the document never left dhctl. Every
-	// other one keeps the record, a lost reply included, which is what it is here for.
-	if errors.Is(err, errDocumentUnfitForMachine) {
+	// The two failures that prove the machine took nothing: the document never left dhctl, or it
+	// was refused by a node someone else installed — this push is only reached where no record of
+	// one to this machine exists. Every other failure keeps the record, a lost reply included,
+	// which is what it is here for. Without the retraction the message this refusal prints, "point
+	// --master-host at a machine waiting in maintenance, or re-image this one", cannot be acted on:
+	// the rerun would read the record and hand the re-imaged machine nothing.
+	if errors.Is(err, errDocumentUnfitForMachine) || errors.Is(err, immutable.ErrMaintenanceTokenRequired) {
 		bctx.stateCache.Delete(ctx, pushedPayloadCacheKey(nodeName))
 	}
 
