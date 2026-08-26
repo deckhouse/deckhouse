@@ -72,6 +72,16 @@ runs:
         ${{ steps.changelog.outputs.branch_markdown }}
         EOF
 
+    # Patch-version markdown changelog
+    - name: Write Changelog Release Markdown
+      id: release_file
+      shell: bash
+      run: |
+        filename='./CHANGELOG/CHANGELOG-${{ steps.args.outputs.milestone_title }}-release.md'
+        cat > "$filename" <<"EOF"
+        ${{ steps.changelog.outputs.release_markdown }}
+        EOF
+
     - name: Check if changelog files differ from repository
       id: changelog_diff
       shell: bash
@@ -104,7 +114,7 @@ runs:
         milestone: ${{ steps.args.outputs.milestone_number }}
         title: Changelog ${{ steps.args.outputs.milestone_title }}
         body: |
-          ${{ steps.changelog.outputs.release_markdown }}
+          Release notes: `CHANGELOG/CHANGELOG-${{ steps.args.outputs.milestone_title }}-release.md` in the files of this pull request.
 
           For more information, see the [changelog](https://github.com/deckhouse/deckhouse/blob/main/CHANGELOG/CHANGELOG-${{ steps.changelog.outputs.minor_version }}.md) and minor version [release changes](https://github.com/deckhouse/deckhouse/releases/tag/${{ steps.changelog.outputs.minor_version }}.0).
         labels: changelog, auto, status/backport
