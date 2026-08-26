@@ -20,10 +20,14 @@ import (
 	"errors"
 	"testing"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
+
+	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 func testCRD(name string, storedVersions []string) *unstructured.Unstructured {
@@ -106,3 +110,58 @@ func TestIsConversionUnavailable(t *testing.T) {
 		t.Fatal("unrelated errors must not be treated as conversion unavailable")
 	}
 }
+
+// helmBootstrapSecretsState is the shape helm leaves behind: the module labels of
+// helm_lib_module_labels, plus the app.kubernetes.io/managed-by label helm stamps
+// on every object of a release — the label this hook selects on.
+const helmBootstrapSecretsState = `
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: manual-bootstrap-for-worker
+  namespace: d8-cloud-instance-manager
+  labels:
+    heritage: deckhouse
+    module: node-manager
+    app.kubernetes.io/managed-by: Helm
+type: Opaque
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bootstrapped-by-hand
+  namespace: d8-cloud-instance-manager
+  labels:
+    heritage: deckhouse
+    module: node-manager
+type: Opaque
+`
+
+var _ = Describe("node-manager :: hooks :: set_keep_policy_on_capi_resources ::", func() {
+	f := HookExecutionConfigInit(`{}`, `{}`)
+
+	Context("with the bootstrap secrets helm still renders", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(helmBootstrapSecretsState)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("stamps keep policy on the helm-managed bootstrap secrets", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			secret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "manual-bootstrap-for-worker")
+			Expect(secret.Field(`metadata.annotations.helm\.sh/resource-policy`).String()).To(Equal("keep"))
+		})
+
+		// The selector is the whole safety net: without it the hook would stamp keep
+		// on a secret helm never owned and nothing would ever collect it.
+		It("leaves a secret helm does not manage alone", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			secret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bootstrapped-by-hand")
+			Expect(secret.Field(`metadata.annotations.helm\.sh/resource-policy`).Exists()).To(BeFalse())
+		})
+	})
+})
