@@ -12,16 +12,15 @@ shell:
       mkdir -p /tmp/rubygems && chmod 700 /tmp/rubygems && export TMPDIR=/tmp/rubygems
       bundle config set --global silence_root_warning true
       bundle config set --global without 'development test'
-      gem update --system 4.0.16 --no-document --quiet
-      current_version="$(awk '/BUNDLED WITH/{getline; print $1}' Gemfile.lock)"
-      system_version="$(bundle --version | awk '{print $1}')"
-      if [[ "$current_version" != "$system_version" ]]; then
-          echo "bundler version in Gemfile.lock ($current_version) is not equal to system bundler version ($system_version)"
-          exit 1
+      # gem update --system 4.0.16 --no-document
+      bundler_lockfile_version="$(awk '/BUNDLED WITH/{getline; print $1}' Gemfile.lock)"
+      bundler_system_version="$(bundle --version | sed -nE 's/.*([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' | head -1)"
+      if [[ "$bundler_lockfile_version" != "$bundler_system_version" ]]; then
+          echo "Bundler version in Gemfile.lock ($bundler_lockfile_version) is not equal to system bundler version ($bundler_system_version)"
+          echo "Installing bundler version ($bundler_lockfile_version)"
+          gem install bundler:${bundler_lockfile_version} --no-document
       fi
-  - bundle cache --retry 3
-  - echo "Installing bundles..."
-  - bundle install --local && bundle clean --force
+  - bundle install && bundle clean --force
   - gem cleanup
   - find /usr/lib/ruby/gems/ \(
        -type d -name .git
