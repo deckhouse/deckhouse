@@ -72,8 +72,9 @@ spec:
         - --stderrthreshold=0
         - --memory-saver=true
 {{/*        --humanize-memory is deprecated (https://github.com/kubernetes/autoscaler/pull/8400)*/}}
-{{/*        --round-memory-bytes replaces it and rounds recommendations up to the nearest 64Mi*/}}
-        - --round-memory-bytes=67108864
+{{/*        --round-memory-bytes replaces it and rounds recommendations up to the nearest 16Mi*/}}
+        - --round-memory-bytes=16777216
+        - --round-cpu-millicores=10
         - --storage=prometheus
         - --prometheus-address=https://aggregating-proxy.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}
         - --prometheus-insecure=true
