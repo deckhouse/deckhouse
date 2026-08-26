@@ -409,8 +409,8 @@ func immutableNodeAddress(bctx *bootstrapContext, nodeName string) string {
 }
 
 // bootstrapImmutableFirstMaster hands the machine the cluster starts on its
-// payload. This is what the cloud path gets for free: there terraform carries
-// the same document into the machine it creates.
+// payload. The machines of a static cluster exist already and are named with
+// --master-host.
 func (b *ClusterBootstrapper) bootstrapImmutableFirstMaster(ctx context.Context, bctx *bootstrapContext) error {
 	nodeName := bctx.immutable.masterNodeName
 
@@ -422,13 +422,30 @@ func (b *ClusterBootstrapper) bootstrapImmutableFirstMaster(ctx context.Context,
 		return fmt.Errorf("no --master-host names the first master %s", nodeName)
 	}
 
-	// The cloud path prints this from the infrastructure output; on bare metal
-	// nothing else says which of the machines in the room dhctl is configuring.
+	return b.handFirstMasterItsPayload(ctx, bctx, nodeName, address)
+}
+
+// handImmutableCloudMaster configures the machine the infrastructure has just
+// created, at the address it reported for it. One path with the static cluster:
+// the document is pushed to the maintenance port rather than carried in by the
+// provider, so it is rendered, checked against the hardware and handed over in
+// one place instead of two.
+func (b *ClusterBootstrapper) handImmutableCloudMaster(ctx context.Context, bctx *bootstrapContext, nodeName, address string) error {
+	if address == "" {
+		return fmt.Errorf("the infrastructure reported no address for the first master %s to be configured at", nodeName)
+	}
+
+	return b.handFirstMasterItsPayload(ctx, bctx, nodeName, address)
+}
+
+// handFirstMasterItsPayload renders the first master's document and hands it to
+// the machine at address, whoever created it.
+func (b *ClusterBootstrapper) handFirstMasterItsPayload(ctx context.Context, bctx *bootstrapContext, nodeName, address string) error {
 	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("First master: %s at %s (no SSH access)", nodeName, address))
 
 	// The machine is configured at one address and, when its document gives it a
 	// static one, answers at another from the moment it has installed itself.
-	installedAddress := immutableNodeAddress(bctx, nodeName)
+	installedAddress := immutableCustomization(bctx, nodeName).AddressAfterInstall(address)
 	if installedAddress != address {
 		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf(
 			"%s takes the static address %s its document assigns it; everything after the push goes there, not to %s",
