@@ -25,24 +25,25 @@ import (
 // The line has to be usable as printed: an operator copies it, and a wrong
 // port or a missing quote costs them the debugging session the line exists to
 // prevent.
-func TestBastionForwardLineShape(t *testing.T) {
+func TestBastionProxyLineShape(t *testing.T) {
 	cfg := &sshconfig.Config{BastionUser: "ubuntu", BastionHost: "198.51.100.7"}
-	line := bastionForwardLine(cfg, "192.0.2.10", "/tmp/dhctl/admin.kubeconfig")
+	line := bastionProxyLine(cfg, "/tmp/dhctl/admin.kubeconfig")
 	t.Logf("line: %s", line)
 	for _, want := range []string{
-		"ssh -f -N -L 6445:192.0.2.10:6443 ubuntu@198.51.100.7",
-		"kubectl --kubeconfig /tmp/dhctl/admin.kubeconfig config set-cluster kubernetes",
-		"--server=https://127.0.0.1:6445",
+		"ssh -f -N -D 1080 ubuntu@198.51.100.7",
+		"HTTPS_PROXY=socks5://127.0.0.1:1080 kubectl --kubeconfig /tmp/dhctl/admin.kubeconfig get nodes",
 	} {
 		if !strings.Contains(line, want) {
 			t.Fatalf("missing %q in %q", want, line)
 		}
 	}
-	// A regex over the operator's only credentials: it matches a URL nobody
-	// here wrote, drops a .bak beside a 0600 file, and does nothing at all when
-	// it misses. kubectl edits the field by name instead.
-	if strings.Contains(line, "sed") {
-		t.Fatalf("the kubeconfig must not be rewritten with sed: %q", line)
+	// The saved kubeconfig is the operator's only way into the cluster, and its
+	// server is the node's own address: an edit made for one tunnel outlives it
+	// and sends every later use at a port nobody listens on.
+	for _, forbidden := range []string{"sed", "set-cluster", "--server="} {
+		if strings.Contains(line, forbidden) {
+			t.Fatalf("the saved kubeconfig must not be rewritten (%q): %q", forbidden, line)
+		}
 	}
 }
 
