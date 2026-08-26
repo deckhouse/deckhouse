@@ -1,0 +1,22 @@
+{{- /* The bootstrap render moved from helm to node-controller; the templates it
+       needs travel through this ConfigMap instead of being baked into the image,
+       so a release ships the templates and the controller together. */}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bashible-bootstrap-templates
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+data:
+  lib.sh.tpl: |
+{{ .Files.Get "candi/bashible/lib.sh.tpl" | indent 4 }}
+  01-bootstrap-prerequisites.sh.tpl: |
+{{ .Files.Get "candi/bashible/bootstrap/01-bootstrap-prerequisites.sh.tpl" | indent 4 }}
+  bb_node_ip.sh.tpl: |
+{{ .Files.Get "candi/bashible/bb_node_ip.sh.tpl" | indent 4 }}
+  {{- range $path, $_ := .Files.Glob "candi/cloud-providers/*/bashible/bootstrap-networks.sh.tpl" }}
+  {{ printf "bootstrap-networks-%s.sh.tpl" (index (splitList "/" $path) 2) }}: |
+{{ $.Files.Get $path | indent 4 }}
+  {{- end }}
+binaryData:
+  minget: {{ .Files.Get "candi/bashible/bootstrap/minget" | b64enc }}

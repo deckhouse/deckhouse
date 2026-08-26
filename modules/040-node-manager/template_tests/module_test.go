@@ -1523,6 +1523,19 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 
 			assertBashibleAPIServerTLS(f)
 		})
+
+		It("ships the bootstrap templates node-controller renders from", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			cm := f.KubernetesResource("ConfigMap", "d8-cloud-instance-manager", "bashible-bootstrap-templates")
+			Expect(cm.Exists()).To(BeTrue())
+
+			// Keys are basenames: node-controller resolves the full paths the
+			// templates read each other by down to the last segment.
+			Expect(cm.Field(`data.lib\.sh\.tpl`).String()).To(ContainSubstring("bb-d8-node-name"))
+			Expect(cm.Field(`data.01-bootstrap-prerequisites\.sh\.tpl`).String()).To(ContainSubstring("bb-minget-install"))
+			Expect(cm.Field(`data.bb_node_ip\.sh\.tpl`).String()).To(ContainSubstring("discover_internal_network_cidrs"))
+		})
 	})
 
 	Context("Static instances", func() {
