@@ -20,9 +20,7 @@
   logo: /images/logos/kubernetes.svg
   license: Apache License 2.0
   id: csi-yandex
-  # TODO: temporary reference to the branch of deckhouse/yandex-csi-driver#33,
-  # replace with the release tag once the driver is released
-  version: feat/disk-block-size
+  version: v0.16.0
 
 - name: Yandex Cloud Cluster API provider
   link: https://github.com/yandex-cloud/cluster-api-provider-yandex
