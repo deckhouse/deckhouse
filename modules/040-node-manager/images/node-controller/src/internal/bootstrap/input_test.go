@@ -24,8 +24,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// Контекст рендера воспроизводит _bootstrap.tpl:1-40 дословно: шаблоны читают
-// именно эти ключи, а лишний или переименованный ключ меняет рендер молча.
+// The render context reproduces _bootstrap.tpl:1-40 verbatim: the templates read
+// these exact keys, and an extra or renamed one changes the render silently.
 func TestInputTemplateContext(t *testing.T) {
 	in := Input{
 		NodeGroup:              map[string]any{"name": "worker", "nodeType": "Static"},
@@ -42,8 +42,8 @@ func TestInputTemplateContext(t *testing.T) {
 
 	ctx := in.templateContext()
 
-	// Набор ключей целиком: переименование ловится здесь, а отсутствие runType —
-	// тем, что его в наборе нет (helm его не кладёт, от этого зависят две ветки).
+	// The whole key set: a rename is caught here, and runType's absence by its not
+	// being in the set (helm never sets it, and two branches turn on that).
 	assert.ElementsMatch(t, []string{
 		"nodeGroup", "apiserverEndpoints", "clusterMasterEndpoints",
 		"clusterMasterKubeAPIEndpoints", "clusterMasterRPPAddresses",
@@ -55,14 +55,14 @@ func TestInputTemplateContext(t *testing.T) {
 	assert.Equal(t, []string{"10.0.0.1:4219"}, ctx["clusterMasterRPPAddresses"])
 	assert.Equal(t, []string{"10.0.0.1:4220"}, ctx["clusterMasterRPPBootstrapAddresses"])
 
-	// lib.sh.tpl:496 читает адреса через Values, а не через apiserverEndpoints.
+	// lib.sh.tpl:496 reads the addresses through Values, not apiserverEndpoints.
 	values := ctx["Values"].(map[string]any)
 	internal := values["nodeManager"].(map[string]any)["internal"].(map[string]any)
 	assert.Equal(t, []string{"10.0.0.1:6443"}, internal["clusterMasterAddresses"])
 }
 
-// Порт отсутствует в записи эндпоинта — запись просто не попадает в список,
-// как и в helm (`if hasKey $endpoint "kubeApiPort"`).
+// The port is missing from an endpoint entry — the entry simply drops out of the
+// list, as it does in helm (`if hasKey $endpoint "kubeApiPort"`).
 func TestInputTemplateContextSkipsMissingPorts(t *testing.T) {
 	in := Input{ClusterMasterEndpoints: []map[string]any{{"address": "10.0.0.9", "kubeApiPort": int64(6443)}}}
 

@@ -56,8 +56,8 @@ func newClient(t *testing.T, objs ...client.Object) client.Client {
 	return fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).Build()
 }
 
-// Порог 3 часа из order_bootstrap_token.go:187: токен, живущий дольше,
-// переиспользуется — иначе каждая пересборка секретов плодила бы новый.
+// The 3h threshold from order_bootstrap_token.go:187: a token living longer than
+// that is reused — otherwise every secret rebuild would mint another one.
 func TestEnsureTokenReusesFreshToken(t *testing.T) {
 	c := newClient(t, tokenSecret("bootstrap-token-abcdef", "worker", 4*time.Hour))
 
@@ -100,8 +100,8 @@ func TestEnsureTokenMintsForGroupWithoutToken(t *testing.T) {
 	assert.Equal(t, []byte("true"), secret.Data["usage-bootstrap-signing"])
 }
 
-// Токен именован группой: чужой свежий токен переиспользовать нельзя, иначе
-// нода одной группы бутстрапилась бы токеном другой.
+// A token belongs to its group: another group's fresh token must not be reused,
+// or a node of one group would bootstrap with another group's token.
 func TestEnsureTokenIgnoresOtherGroupsToken(t *testing.T) {
 	c := newClient(t, tokenSecret("bootstrap-token-abcdef", "other", 4*time.Hour))
 
@@ -114,8 +114,9 @@ func TestEnsureTokenIgnoresOtherGroupsToken(t *testing.T) {
 	assert.Equal(t, "worker", secret.Labels[nodecommon.BootstrapTokenNodeGroupLabel])
 }
 
-// Минт и nodecommon.BootstrapTokens — по разные стороны границы пакетов: если
-// секрет разъедется с тем, что принимает хелпер, второй вызов выдаст новый токен.
+// Minting and nodecommon.BootstrapTokens sit on opposite sides of a package
+// boundary: if the secret drifts from what the helper accepts, the second call
+// returns a different token.
 func TestEnsureTokenMintsWhatBootstrapTokensAccepts(t *testing.T) {
 	c := newClient(t)
 
@@ -139,8 +140,8 @@ func TestEnsureTokenRejectsEmptyNodeGroup(t *testing.T) {
 	assert.Empty(t, list.Items, "a token nobody can find must not be minted")
 }
 
-// Нечитаемый expiration — это не «истёк»: удалять секрет, который не смогли
-// разобрать, опаснее, чем оставить его дожидаться разбирающегося владельца.
+// An unreadable expiration is not "expired": deleting a secret we failed to parse
+// is more dangerous than leaving it for an owner that can parse it.
 func TestUnreadableExpirationIsNotCollected(t *testing.T) {
 	broken := tokenSecret("bootstrap-token-abcdef", "worker", time.Hour)
 	broken.Data["expiration"] = []byte("garbage")

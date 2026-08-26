@@ -25,8 +25,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Голдены сняты с helm-рендера на main (см. план, Task 3 шаг 1). Снимать их со
-// своего рендера бессмысленно: такой голден охраняет собственное расхождение.
+// The goldens come from the helm render on main (see golden_gen_test.go). Taking
+// them from our own render would be pointless: such a golden guards nothing but
+// its own drift.
 // Every Input below mirrors the helm values its golden was rendered from.
 func TestRenderMatchesHelmGoldens(t *testing.T) {
 	files := repoFiles(t)
