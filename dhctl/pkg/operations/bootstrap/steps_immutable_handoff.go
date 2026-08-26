@@ -130,7 +130,7 @@ func (b *ClusterBootstrapper) collectImmutableKubeconfig(ctx context.Context, bc
 		return b.openImmutableChannelTo(ctx, bctx.immutable.masterIP, handoffPort, "credentials handoff")
 	}
 
-	loop := libretry.NewLoop("Waiting for the first master to bring the control plane up", waitAPIServerUp.attempts, waitAPIServerUp.interval).
+	loop := libretry.NewLoop("Waiting for the master node to install Kubernetes", waitAPIServerUp.attempts, waitAPIServerUp.interval).
 		BreakIf(handoffGaveUp)
 
 	err = retryWithFreshChannel(ctx, loop, openChannel, func(address string) error {
