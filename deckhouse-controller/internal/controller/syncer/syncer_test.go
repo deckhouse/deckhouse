@@ -66,6 +66,20 @@ func testModule(name, source string, available ...string) *v1alpha1.Module {
 	}
 }
 
+func testModuleSource(name, repo string) *v1alpha1.ModuleSource {
+	return &v1alpha1.ModuleSource{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Spec: v1alpha1.ModuleSourceSpec{
+			Registry: v1alpha1.ModuleSourceSpecRegistry{
+				Scheme:    "HTTPS",
+				Repo:      repo,
+				DockerCFG: "ZG9ja2VyY2Zn",
+				CA:        "test-ca",
+			},
+		},
+	}
+}
+
 func testRelease(module, source, version, phase string) *v1alpha1.ModuleRelease {
 	return &v1alpha1.ModuleRelease{
 		ObjectMeta: metav1.ObjectMeta{
@@ -109,6 +123,29 @@ func getPackage(t *testing.T, cl client.Client, name string) *v1alpha1.ModulePac
 	return pkg
 }
 
+func getRepository(t *testing.T, cl client.Client, name string) *v1alpha1.PackageRepository {
+	t.Helper()
+
+	repo := new(v1alpha1.PackageRepository)
+	require.NoError(t, cl.Get(context.Background(), client.ObjectKey{Name: name}, repo))
+
+	return repo
+}
+
+func listRepositoryNames(t *testing.T, cl client.Client) []string {
+	t.Helper()
+
+	list := new(v1alpha1.PackageRepositoryList)
+	require.NoError(t, cl.List(context.Background(), list))
+
+	names := make([]string, 0, len(list.Items))
+	for _, item := range list.Items {
+		names = append(names, item.Name)
+	}
+
+	return names
+}
+
 func TestRepositoryNameForSource(t *testing.T) {
 	cases := []struct {
 		source string
@@ -132,6 +169,7 @@ func TestSyncIsIdempotent(t *testing.T) {
 	writeModuleYAML(t, filepath.Join(dir, "900-echo"), "name: echo\nstage: General Availability\n")
 
 	s, cl := newTestSyncer(t, "v1.80.0", dir,
+		testModuleSource("external", "registry.example.io/external"),
 		testRelease("parca", "deckhouse", "1.4.3", v1alpha1.ModuleReleasePhaseDeployed),
 		testRelease("console", "deckhouse", "1.60.1", v1alpha1.ModuleReleasePhasePending),
 		testModule("parca", "deckhouse", "deckhouse"),
@@ -145,6 +183,7 @@ func TestSyncIsIdempotent(t *testing.T) {
 	}
 	require.Len(t, versions, 3)
 	packageRV := getPackage(t, cl, "parca").ResourceVersion
+	repositoryRV := getRepository(t, cl, "external").ResourceVersion
 
 	require.NoError(t, s.Sync(ctx))
 
@@ -153,4 +192,5 @@ func TestSyncIsIdempotent(t *testing.T) {
 		assert.Equal(t, rv, getVersion(t, cl, name).ResourceVersion, name)
 	}
 	assert.Equal(t, packageRV, getPackage(t, cl, "parca").ResourceVersion)
+	assert.Equal(t, repositoryRV, getRepository(t, cl, "external").ResourceVersion)
 }

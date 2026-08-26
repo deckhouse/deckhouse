@@ -12,12 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package syncer creates the ModulePackageVersion and ModulePackage objects
-// for the module packages the old module stack already carries in the
-// cluster, so the package system sees the versions the cluster runs and the
-// packages its sources offer. Each synced resource lives in its own file.
+// Package syncer creates the PackageRepository, ModulePackageVersion and
+// ModulePackage objects for the module packages the old module stack already
+// carries in the cluster, so the package system sees the repositories the
+// modules come from, the versions the cluster runs and the packages its
+// sources offer. Each synced resource lives in its own file.
 //
 // # Data sources
+//
+//	ModuleSource except the platform-owned "deckhouse" and "flant"
+//	  └─ PackageRepository <source>: the registry spec copied as is, so the
+//	     module-package-version controller has a repository to promote the
+//	     draft stubs below from
 //
 //	embedded modules dir (the running image)
 //	  └─ embedded-<module>-<deckhouse version>, complete: the metadata is
@@ -59,6 +65,10 @@ const (
 	// moduleSourceNameDeckhouse is the built-in module source shipped with the platform.
 	moduleSourceNameDeckhouse = "deckhouse"
 
+	// moduleSourceNameFlant is the module source present on the clusters
+	// managed by Flant.
+	moduleSourceNameFlant = "flant"
+
 	// repositoryNameDeckhouseModules serves the modules of the "deckhouse"
 	// ModuleSource. The plain "deckhouse" name belongs to the application-packages
 	// repository, while the module source points at <registry>/modules.
@@ -99,11 +109,16 @@ func New(reader client.Reader, writer client.Client, dc dependency.Container, de
 	}
 }
 
-// Sync ensures the package versions of the old module stack. A source naming
-// no valid version (no module source, an unparsable version, an illegal object
-// name, an unreadable module dir) is skipped with a warning; an API failure
-// stops the sync.
+// Sync ensures the package objects of the old module stack. The repositories
+// go first, so the version stubs find them in place. A source naming no valid
+// version (no module source, an unparsable version, an illegal object name,
+// an unreadable module dir) is skipped with a warning; an API failure stops
+// the sync.
 func (s *Syncer) Sync(ctx context.Context) error {
+	if err := s.syncPackageRepositories(ctx); err != nil {
+		return err
+	}
+
 	if err := s.syncModulePackageVersions(ctx); err != nil {
 		return err
 	}
