@@ -1275,6 +1275,11 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/cse/modules/110-istio/openapi/values.yaml
+  to: /deckhouse/modules/110-istio/openapi/values.yaml
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /ee/cse/modules/140-user-authz/openapi/config-values.yaml
   to: /deckhouse/modules/140-user-authz/openapi/config-values.yaml
   stageDependencies:
