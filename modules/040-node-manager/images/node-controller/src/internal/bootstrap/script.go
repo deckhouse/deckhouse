@@ -106,28 +106,34 @@ func RenderScript(in Input) ([]byte, error) {
 }
 
 func renderTemplate(name, text string, data any) ([]byte, error) {
-	t, err := template.New(name).Funcs(templateFuncs()).Parse(text)
+	t, err := template.New(name).Funcs(templateFuncs(name)).Parse(text)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parse template %s: %w", name, err)
 	}
 
 	var out bytes.Buffer
 	if err := t.Execute(&out, data); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("execute template %s: %w", name, err)
 	}
 	return out.Bytes(), nil
 }
 
 // templateFuncs is the function set the bashible templates were written
-// against: helm's sprig plus a tpl that recurses the way helm's own does.
-func templateFuncs() template.FuncMap {
+// against: helm's sprig plus a tpl that recurses the way helm's own does. The
+// parent name travels into the nested render so a failure names the template
+// that broke, not just "tpl".
+func templateFuncs(parent string) template.FuncMap {
 	funcs := machineclass.FuncMap()
 	funcs["tpl"] = func(text string, data any) (string, error) {
-		out, err := renderTemplate("tpl", text, data)
+		out, err := renderTemplate(parent+" tpl", text, data)
 		if err != nil {
 			return "", err
 		}
 		return string(out), nil
+	}
+	// machineclass leaves an include stub whose message names its own renderer.
+	funcs["include"] = func(name string, _ any) (string, error) {
+		return "", fmt.Errorf("include %q is not available in the bootstrap renderer", name)
 	}
 	return funcs
 }
