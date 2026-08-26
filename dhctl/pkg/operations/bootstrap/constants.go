@@ -44,7 +44,12 @@ var (
 
 	// The preflight asks a different question than the wait above: not "has this
 	// machine finished booting" but "did the operator name machines that exist".
-	// A minute covers a machine that is a few seconds behind; anything longer
-	// turns a typo in an address into ten minutes of silence.
-	checkMachinesWaiting = waitBudget{attempts: 12, interval: 5 * time.Second}
+	// Three tries, and the whole thing is over in about ten seconds: an address
+	// nobody answers for is a typo, and a typo must not be waited out.
+	checkMachinesWaiting = waitBudget{attempts: 3, interval: 2 * time.Second}
 )
+
+// checkMachineTimeout bounds one try of the preflight above. Without it a try
+// runs to the HTTP client's own 30s: an address that swallows packets — which is
+// what a typo in a private network looks like — then costs minutes, not seconds.
+const checkMachineTimeout = 3 * time.Second
