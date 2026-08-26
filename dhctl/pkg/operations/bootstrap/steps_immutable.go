@@ -85,6 +85,15 @@ func (b *ClusterBootstrapper) detectImmutableMaster(ctx context.Context, bctx *b
 		return err
 	}
 	if !immutableMaster {
+		// The flag is read nowhere else, so without this the machines an operator
+		// named are ignored without a word and the bootstrap goes down the bashible
+		// path — opening SSH to a machine that runs none.
+		if len(b.Options.Bootstrap.MasterHostsRaw) > 0 {
+			return errors.New(
+				"--master-host names control-plane machines, and those exist only for a master NodeGroup with " +
+					"systemType: Immutable, which this configuration does not ask for: add it to the master NodeGroup, " +
+					"or drop the flag")
+		}
 		return nil
 	}
 
@@ -249,12 +258,85 @@ func (b *ClusterBootstrapper) applyImmutablePreflights(runner *preflight.Preflig
 		BootstrapOpts: &b.Options.Bootstrap,
 		GlobalOpts:    &b.Options.Global,
 		CommanderMode: b.CommanderMode,
+		MachinesWaiting: func(ctx context.Context) error {
+			return b.checkMachinesAreWaiting(ctx, bctx)
+		},
 	}))
 
 	// The cloud API check tunnels through the master host; there is no sshd
 	// there to tunnel with. Named rather than dropped from a suite because the
 	// cloud suites are shared with every other cloud bootstrap.
 	runner.DisableCheck(checks.CloudAPICheckName.String())
+}
+
+// checkMachinesAreWaiting is the preflight body: every machine named with
+// --master-host answers its maintenance port, and the hardware it reports
+// matches the document written for it. Both are read from one inventory call,
+// which is the same request the push does — so a machine that passes here is a
+// machine the push can talk to.
+//
+// The wait is short by design. This is not the wait for a machine to boot (the
+// push has that one, minutes long); it is the check that the operator named
+// machines that exist. A typo in an address costs a minute here instead of ten.
+func (b *ClusterBootstrapper) checkMachinesAreWaiting(ctx context.Context, bctx *bootstrapContext) error {
+	if bctx.immutable == nil || len(bctx.immutable.hosts) == 0 {
+		return nil
+	}
+
+	port := immutable.MaintenancePort
+	if bctx.immutable.maintenancePort != 0 {
+		port = bctx.immutable.maintenancePort
+	}
+
+	names := slices.Sorted(maps.Keys(bctx.immutable.hosts))
+	for _, name := range names {
+		if err := b.checkMachineIsWaiting(ctx, bctx, name, bctx.immutable.hosts[name], port); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// checkMachineIsWaiting reaches one machine and reads it against its document.
+func (b *ClusterBootstrapper) checkMachineIsWaiting(ctx context.Context, bctx *bootstrapContext, name, address string, port int) error {
+	_, nodeConfig, err := b.buildImmutableMasterPayload(ctx, bctx, name)
+	if err != nil {
+		return fmt.Errorf("build the document of %s to check it against the machine: %w", name, err)
+	}
+
+	loop := libretry.NewSilentLoop(fmt.Sprintf("Reaching %s", name), checkMachinesWaiting.attempts, checkMachinesWaiting.interval)
+
+	var inventory *immutable.Inventory
+	err = retryWithFreshChannel(ctx, loop,
+		func(ctx context.Context) (string, func(), error) {
+			return b.openImmutableChannelTo(ctx, address, port, "machine check")
+		},
+		func(endpoint string) error {
+			fetched, err := immutable.FetchInventory(ctx, endpoint)
+			if err != nil {
+				return err
+			}
+			inventory = fetched
+			return nil
+		})
+	if err != nil {
+		return fmt.Errorf(
+			"%s at %s is not waiting for a configuration: %w. Check the address, that the machine is powered on, "+
+				"and that it booted the immutable image", name, address, err)
+	}
+
+	// An image too old to serve one leaves nothing to check against. Said here,
+	// once, rather than warned about in the middle of the install.
+	if inventory == nil {
+		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf(
+			"%s at %s serves no inventory (an older image): its document is not checked against the machine", name, address))
+		return nil
+	}
+
+	if err := immutable.CheckDocumentAgainstInventory(ctx, nodeConfig, inventory); err != nil {
+		return fmt.Errorf("the configuration of %s does not match the machine at %s: %w", name, address, err)
+	}
+	return nil
 }
 
 // buildImmutableMasterPayload renders the cloud-init the first master boots

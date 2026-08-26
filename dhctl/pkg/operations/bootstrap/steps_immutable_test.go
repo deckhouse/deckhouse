@@ -735,6 +735,77 @@ spec:
 	require.NotNil(t, bctx.immutable)
 }
 
+// systemType is the one line an operator who never read the documentation leaves
+// out, and --master-host is read nowhere else: without this the machines they
+// named are ignored without a word, and the bootstrap opens SSH to a machine
+// that runs no sshd — ten minutes of retries before it says anything.
+func TestDetectImmutableMasterRefusesHostsWithoutSystemType(t *testing.T) {
+	b, bctx := immutableTestBootstrapper(t)
+	b.Options.Bootstrap.MasterHostsRaw = []string{"master-0=10.0.0.11"}
+	bctx.metaConfig.ClusterType = config.StaticClusterType
+	// A static cluster has no cloud filler, so the group is read from the
+	// documents — which is where the missing line would have been.
+	bctx.metaConfig.CloudProviderVars = nil
+	bctx.metaConfig.ResourcesYAML = `
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: master
+spec:
+  nodeType: Static
+`
+	bctx.immutable = nil
+
+	err := b.detectImmutableMaster(t.Context(), bctx)
+	require.ErrorContains(t, err, "systemType: Immutable")
+	require.ErrorContains(t, err, "--master-host")
+	require.Nil(t, bctx.immutable)
+}
+
+// The preflight is where an operator learns they named a machine that is not
+// there, or a machine whose disks the document cannot pick between. Before it
+// existed both cost the whole push budget — ten minutes — and only then said so.
+func TestMachinesArePreflightedAgainstTheirDocuments(t *testing.T) {
+	immutabletest.NoRetryCollapse(t)
+
+	t.Run("a machine nobody answers for", func(t *testing.T) {
+		b, bctx := immutableTestBootstrapper(t)
+		bctx.metaConfig.ClusterType = config.StaticClusterType
+		// Port 1 on the loopback: nothing listens there, and the dial fails at once
+		// rather than hanging, so the test spends no part of the budget.
+		bctx.immutable.hosts = map[string]string{"master-0": "127.0.0.1"}
+		bctx.immutable.maintenancePort = 1
+
+		ctx, cancel := context.WithTimeout(t.Context(), 2*checkMachinesWaiting.interval)
+		defer cancel()
+
+		err := b.checkMachinesAreWaiting(ctx, bctx)
+		require.ErrorContains(t, err, "master-0")
+		require.ErrorContains(t, err, "not waiting for a configuration")
+	})
+
+	t.Run("a machine the document cannot describe", func(t *testing.T) {
+		machine := newTestMachine(t, twoDisksOfOneSize)
+
+		b, bctx := immutableTestBootstrapper(t)
+		bctx.metaConfig.ClusterType = config.StaticClusterType
+		bctx.immutable.hosts = map[string]string{"master-0": machine.host}
+		bctx.immutable.maintenancePort = machine.port
+
+		err := b.checkMachinesAreWaiting(t.Context(), bctx)
+		require.ErrorContains(t, err, "does not match the machine")
+		require.ErrorContains(t, err, "matches 2 disks")
+		require.False(t, machine.pushed.Load(), "a preflight must not hand the machine anything")
+	})
+
+	t.Run("a cloud names no machines", func(t *testing.T) {
+		b, bctx := immutableTestBootstrapper(t)
+		bctx.immutable.hosts = nil
+
+		require.NoError(t, b.checkMachinesAreWaiting(t.Context(), bctx))
+	})
+}
+
 // splitTestServerAddress returns the host and port a test server landed on.
 func splitTestServerAddress(t *testing.T, server *httptest.Server) (string, int) {
 	t.Helper()

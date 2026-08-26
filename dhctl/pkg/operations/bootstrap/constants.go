@@ -41,4 +41,10 @@ var (
 	// The machine may be powering on when the bootstrap starts, and olcedar-init
 	// opens the port about thirty seconds into the boot. Ten minutes.
 	waitMaintenancePort = waitBudget{attempts: 120, interval: 5 * time.Second}
+
+	// The preflight asks a different question than the wait above: not "has this
+	// machine finished booting" but "did the operator name machines that exist".
+	// A minute covers a machine that is a few seconds behind; anything longer
+	// turns a typo in an address into ten minutes of silence.
+	checkMachinesWaiting = waitBudget{attempts: 12, interval: 5 * time.Second}
 )
