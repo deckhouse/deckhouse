@@ -777,14 +777,35 @@ func TestMachinesArePreflightedAgainstTheirDocuments(t *testing.T) {
 		bctx.immutable.maintenancePort = 1
 
 		started := time.Now()
-		err := b.checkMachinesAreWaiting(t.Context(), bctx)
+		err := b.checkMachinesAreAvailable(t.Context(), bctx)
 		require.ErrorContains(t, err, "master-0")
-		require.ErrorContains(t, err, "not waiting for a configuration")
+		require.ErrorContains(t, err, "could not reach")
+		// A machine that never answered told us nothing about what it is doing, so
+		// the failure may not claim it is not waiting for a configuration.
+		require.NotContains(t, err.Error(), "is not waiting for a configuration")
 		// An address nobody answers for is a typo, and a typo must not be waited
 		// out: on a live run the untimed version sat for minutes, because one try
 		// ran to the HTTP client's own 30s.
 		require.Less(t, time.Since(started), 15*time.Second,
 			"the preflight must give up in seconds, not run the budget of the push")
+	})
+
+	t.Run("a machine that answers with something else", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			http.Error(w, "not the maintenance agent", http.StatusInternalServerError)
+		}))
+		t.Cleanup(server.Close)
+		host, port := splitTestServerAddress(t, server)
+
+		b, bctx := immutableTestBootstrapper(t)
+		bctx.metaConfig.ClusterType = config.StaticClusterType
+		bctx.immutable.hosts = map[string]string{"master-0": host}
+		bctx.immutable.maintenancePort = port
+
+		err := b.checkMachinesAreAvailable(t.Context(), bctx)
+		require.ErrorContains(t, err, "answers, but not with an inventory")
+		require.NotContains(t, err.Error(), "could not reach",
+			"the machine was reached; only what it served was wrong")
 	})
 
 	t.Run("a machine the document cannot describe", func(t *testing.T) {
@@ -795,7 +816,7 @@ func TestMachinesArePreflightedAgainstTheirDocuments(t *testing.T) {
 		bctx.immutable.hosts = map[string]string{"master-0": machine.host}
 		bctx.immutable.maintenancePort = machine.port
 
-		err := b.checkMachinesAreWaiting(t.Context(), bctx)
+		err := b.checkMachinesAreAvailable(t.Context(), bctx)
 		require.ErrorContains(t, err, "does not match the machine")
 		require.ErrorContains(t, err, "matches 2 disks")
 		require.False(t, machine.pushed.Load(), "a preflight must not hand the machine anything")
@@ -805,7 +826,7 @@ func TestMachinesArePreflightedAgainstTheirDocuments(t *testing.T) {
 		b, bctx := immutableTestBootstrapper(t)
 		bctx.immutable.hosts = nil
 
-		require.NoError(t, b.checkMachinesAreWaiting(t.Context(), bctx))
+		require.NoError(t, b.checkMachinesAreAvailable(t.Context(), bctx))
 	})
 }
 
