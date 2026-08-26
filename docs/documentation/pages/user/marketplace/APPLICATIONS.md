@@ -71,7 +71,7 @@ spec:
 
 ### Naming constraints
 
-The Application name (`metadata.name`) must be **at most 32 characters** — an Application with a longer name is rejected on creation. Where possible, keep the name within 24 characters: all pods are prefixed with the instance name, and a 24-char instance name + 24-char resource name + 15-char Deployment suffix fits within the Kubernetes pod name limit of 63 characters.
+The Application name (`metadata.name`) must be **at most 24 characters** — an Application with a longer name is rejected on creation. All pods are prefixed with the instance name: a 24-char instance name + 24-char resource name + 15-char Deployment suffix fits within the Kubernetes pod name limit of 63 characters.
 
 ## Checking application status
 
