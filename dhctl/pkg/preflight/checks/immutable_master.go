@@ -34,14 +34,14 @@ import (
 // systemType: Immutable. Each of them guards an assumption the immutable
 // bootstrap path makes that the classic bashible path does not.
 const (
-	ImmutableInstallerImagesCheckName     preflight.CheckName = "immutable-installer-images"
-	ImmutableRegistryModeCheckName        preflight.CheckName = "immutable-registry-mode"
-	ImmutablePostBootstrapScriptCheckName preflight.CheckName = "immutable-post-bootstrap-script"
-	ImmutableSignatureModeCheckName       preflight.CheckName = "immutable-signature-mode"
-	ImmutableKubeconfigOutCheckName       preflight.CheckName = "immutable-kubeconfig-out"
-	ImmutableKubeconfigKeptCheckName      preflight.CheckName = "immutable-kubeconfig-kept"
-	ImmutableSupportedProviderCheckName   preflight.CheckName = "immutable-supported-provider"
-	ImmutableMachinesAvailabilityCheckName     preflight.CheckName = "immutable-machines-availability"
+	ImmutableInstallerImagesCheckName      preflight.CheckName = "immutable-installer-images"
+	ImmutableRegistryModeCheckName         preflight.CheckName = "immutable-registry-mode"
+	ImmutablePostBootstrapScriptCheckName  preflight.CheckName = "immutable-post-bootstrap-script"
+	ImmutableSignatureModeCheckName        preflight.CheckName = "immutable-signature-mode"
+	ImmutableKubeconfigOutCheckName        preflight.CheckName = "immutable-kubeconfig-out"
+	ImmutableKubeconfigKeptCheckName       preflight.CheckName = "immutable-kubeconfig-kept"
+	ImmutableSupportedProviderCheckName    preflight.CheckName = "immutable-supported-provider"
+	ImmutableMachinesAvailabilityCheckName preflight.CheckName = "immutable-machines-availability"
 )
 
 // Lowercase because MetaConfig.prepareProviderName lowercases cloud.provider;
