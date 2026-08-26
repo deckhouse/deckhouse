@@ -14,6 +14,11 @@ shell:
       bundle config set --global without 'development test'
       bundler_lockfile_version="$(awk '/BUNDLED WITH/{getline; print $1}' Gemfile.lock)"
       bundler_system_version="$(bundle --version | sed -nE 's/.*([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' | head -1)"
+      {{- if $.DistroPackagesProxy }}
+      gem_source_orig=$(grep "^source" Gemfile | cut -d"'" -f2)
+      sed -i "s|${gem_source_orig}|http://{{ $.DistroPackagesProxy }}/repository/rubygems.org|g" Gemfile.lock
+      sed -i "s|${gem_source_orig}|http://{{ $.DistroPackagesProxy }}/repository/rubygems.org|g" Gemfile
+      {{- end }}
       if [[ "$bundler_lockfile_version" != "$bundler_system_version" ]]; then
           echo "Bundler version in Gemfile.lock ($bundler_lockfile_version) is not equal to system bundler version ($bundler_system_version)"
           echo "Installing bundler version ($bundler_lockfile_version)"
