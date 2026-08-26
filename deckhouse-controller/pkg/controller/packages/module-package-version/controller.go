@@ -379,14 +379,18 @@ func legacyDisableOptionsToCR(opts *v1alpha1.ModuleDisableOptions) *v1alpha1.Pac
 		return nil
 	}
 
+	// the deprecated single message is the documented fallback for a language
+	// without its own text
+	fallback := opts.Message //nolint:staticcheck
+
 	ru := opts.Messages.Ru
 	if ru == "" {
-		ru = opts.Message
+		ru = fallback
 	}
 
 	en := opts.Messages.En
 	if en == "" {
-		en = opts.Message
+		en = fallback
 	}
 
 	var messages *v1alpha1.PackageDisableMessages
