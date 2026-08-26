@@ -521,6 +521,7 @@ etcdutl
 eth
 EuropeClouds
 eventsExporter
+EVS
 existingZoneToSubnetIDMap
 explorative
 expr
@@ -1943,8 +1944,8 @@ ZvirtInstanceClass
 внутренного
 внутрикластерное
 внутрикластерной
-внутрикластерным
 внутрикластерный
+внутрикластерным
 воркеров
 выгрузок
 выдаватель
@@ -2197,7 +2198,6 @@ ZvirtInstanceClass
 масштабируется
 Мб
 МБ
-МиБ
 медиафайлов
 медиафайлы
 межкластерная
@@ -2215,6 +2215,7 @@ ZvirtInstanceClass
 меш
 меша
 меше
+МиБ
 мигрирована
 микросегментация
 микросервисов
