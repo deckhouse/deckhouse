@@ -29,7 +29,7 @@ The Network (internal network) can be configured by your VMware Cloud Director s
 For access to the VMware Cloud Director API, one of the following options is sufficient:
 
 * The `Organization Administrator` role with the `Preserve All ExtraConfig Elements During OVF Import and Export` right. This option does not require configuring a separate role, but grants the user full administrative access to the organization.
-* A custom role with the set of rights listed below. This set is sufficient to create a cluster, provision nodes (including CloudEphemeral with static addressing and DHCP), and work with CSI disks and StorageClass without granting additional administrative rights.
+* A custom role with the set of rights listed [below](#user-rights). This set is sufficient to create a cluster, provision nodes (including CloudEphemeral with static addressing and DHCP), and work with CSI disks and StorageClass without granting additional administrative rights.
 
 In VMware Cloud Director, user permissions come from the role and from a **Rights Bundle** — a set of rights published to the organization. Add the `Preserve All ExtraConfig Elements During OVF Import and Export` right both to the role and to the organization's Rights Bundle.
 
@@ -38,6 +38,8 @@ Without the `Preserve All ExtraConfig Elements During OVF Import and Export` rig
 {% endalert %}
 
 To create a custom role, enable the rights as shown below. Right names match the VCD UI.
+
+{: #user-rights .anchored}
 
 1. In the "ACCESS CONTROL" and "ADMINISTRATION" sections, enable the following rights:
 
