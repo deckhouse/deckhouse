@@ -109,6 +109,11 @@ func (r *Reconciler) SetupWatches(w register.Watcher) {
 	w.Watches(&corev1.ConfigMap{}, handler.EnqueueRequestsFromMapFunc(r.allNodeGroups),
 		builder.WithPredicates(inMachineNamespace(bootstrap.TemplatesConfigMapName)))
 
+	// The image digests are baked literally into every bootstrap.sh, and every
+	// release rewrites them: same argument as the templates above.
+	w.Watches(&corev1.ConfigMap{}, handler.EnqueueRequestsFromMapFunc(r.allNodeGroups),
+		builder.WithPredicates(inMachineNamespace(imagesDigestsConfigMapName)))
+
 	// The token Secret is created empty and filled by kube-controller-manager moments
 	// later — cluster install. A node bootstrapping in that window bakes in
 	// PACKAGES_PROXY_TOKEN=passthrough, which rpp-get never re-reads (config.go resolveToken).
