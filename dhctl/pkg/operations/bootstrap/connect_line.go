@@ -17,6 +17,8 @@ package bootstrap
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
@@ -31,32 +33,65 @@ import (
 func (b *ClusterBootstrapper) printHowToReachTheCluster(ctx context.Context, kubeconfigPath string, bctx *bootstrapContext) {
 	logger := dhlog.FromContext(ctx)
 
-	// Tagged for the compact view: an untagged Info record is file-only on a
-	// terminal. The bashible path tags its SSH line the same way (steps_ssh.go).
-	logger.InfoContext(ctx, fmt.Sprintf("Admin kubeconfig: %s — cluster-admin, and the only way in.", kubeconfigPath),
-		dhlog.ShowInCompacted())
-
-	// With a bastion the node's address is reachable from the bastion and nowhere
-	// else, so the plain export is true only inside that network.
 	tunnel := bastionTunnelCommand(bastionConfig(b.SSHProviderInitializer.GetConfig()))
 	if tunnel != "" {
 		logger.InfoContext(ctx, fmt.Sprintf(
 			"The master answers at %s:%d, an address that exists only inside the cluster network. "+
 				"Tunnel to it through the bastion once, then use the cluster from any shell:",
 			bctx.immutable.masterIP, immutable.APIServerPort), dhlog.ShowInCompacted())
-		logger.InfoContext(ctx, "  "+tunnel, dhlog.ShowInCompacted())
 	} else {
 		logger.InfoContext(ctx, "To use the cluster:", dhlog.ShowInCompacted())
 	}
 
-	for _, line := range clusterUseCommands(kubeconfigPath, tunnel != "") {
-		logger.InfoContext(ctx, "  "+line, dhlog.ShowInCompacted())
+	// Banner, not ConnectionString: the terminal pins a connection string as a
+	// single line, and this is four — the operator needs all of them, and needs
+	// them where they do not scroll away behind minutes of module logs.
+	lines := reachTheClusterLines(kubeconfigPath, tunnel)
+	logger.InfoContext(ctx, strings.Join(lines, "\n"), dhlog.Banner())
+	// And once as a single line: the banner lives on the live canvas, which the
+	// closing summary does not have. Joined with && so that the summary's copy is
+	// runnable too — including the tunnel, without which the rest reaches nothing.
+	logger.InfoContext(ctx, strings.Join(runnableLines(lines), " && "), dhlog.ConnectionString())
+}
+
+// runnableLines drops what is prose rather than command: the note about the
+// container path explains the line above it and would not survive a paste.
+func runnableLines(lines []string) []string {
+	runnable := make([]string, 0, len(lines))
+	for _, line := range lines {
+		if strings.HasPrefix(line, "(") {
+			continue
+		}
+		runnable = append(runnable, line)
 	}
-	// ConnectionString rather than ShowInCompacted: the terminal UI pins it as a
-	// milestone and repeats it in the closing summary, which is where an operator
-	// looks for it after a long run. The tunnel is deliberately not in it: it is
-	// opened once, while this is what gets typed again and again.
-	logger.InfoContext(ctx, "  "+strings.Join(clusterUseCommands(kubeconfigPath, tunnel != ""), " && "), dhlog.ConnectionString())
+	return runnable
+}
+
+// reachTheClusterLines is the block pinned at the top of the screen: the tunnel
+// (once), the two exports and the call that proves them. Where dhctl runs inside
+// its own container the path is one only that container can see, and the last
+// line says so — the commands are copied onto the host, where nothing answers at
+// that path and kubectl falls back to localhost:8080.
+func reachTheClusterLines(kubeconfigPath, tunnel string) []string {
+	lines := make([]string, 0, 5)
+	if tunnel != "" {
+		lines = append(lines, tunnel)
+	}
+	lines = append(lines, clusterUseCommands(kubeconfigPath, tunnel != "")...)
+	if runningInContainer() {
+		lines = append(lines, fmt.Sprintf(
+			"(%s is a path inside the installer container: on your own machine it is in whatever directory you mounted at %s)",
+			kubeconfigPath, filepath.Dir(kubeconfigPath)))
+	}
+	return lines
+}
+
+// runningInContainer reports the one case where the kubeconfig path printed above
+// is true here and false everywhere else. /.dockerenv is written by the runtime
+// that starts the installer image, and its absence is the native run.
+func runningInContainer() bool {
+	_, err := os.Stat("/.dockerenv")
+	return err == nil
 }
 
 // clusterUseCommands is what an operator runs to work with the cluster: the
