@@ -334,6 +334,9 @@ func (r *MachineDeploymentReconciler) pruneStaleMCMs(ctx context.Context, reader
 	if err := r.deleteOrphanMachineClasses(ctx, ngName, machineClassKind, desiredClasses, inUse); err != nil {
 		return 0, err
 	}
+	if err := r.deleteOrphanSecrets(ctx, ngName, desiredClasses, inUse); err != nil {
+		return 0, err
+	}
 	return stale, nil
 }
 
@@ -370,6 +373,47 @@ func (r *MachineDeploymentReconciler) deleteOrphanMachineClasses(ctx context.Con
 			return fmt.Errorf("delete MachineClass %s: %w", mc.GetName(), err)
 		}
 		logger.Info("deleted orphan MCM MachineClass", "name", mc.GetName(), "ng", ngName)
+	}
+
+	return nil
+}
+
+// deleteOrphanSecrets deletes the Secrets this module wrote for the NodeGroup that are no
+// longer wanted: the machine-class Secret of a removed zone, and on the teardown pass, where
+// nothing is desired, every one of them. Filtered exactly like the MachineClasses they back,
+// because machine-controller-manager resolves the credentials through secretRef while it drains.
+func (r *MachineDeploymentReconciler) deleteOrphanSecrets(ctx context.Context, ngName string, desired, inUse map[string]struct{}) error {
+	logger := log.FromContext(ctx)
+
+	list := &corev1.SecretList{}
+	// APIReader: these Secrets carry no app label, so the namespace-scoped Secret informer
+	// holds none of them and a cached list would come back empty.
+	//
+	// Both module labels: a Secret an operator wrote by hand carries neither, and is not
+	// this controller's to delete.
+	if err := r.APIReader.List(ctx, list,
+		client.InNamespace(common.MachineNamespace),
+		client.MatchingLabels{
+			"heritage":                               "deckhouse",
+			"module":                                 "node-manager",
+			ngcommon.MachineDeploymentNodeGroupLabel: ngName,
+		},
+	); err != nil {
+		return fmt.Errorf("list secrets of NodeGroup %s: %w", ngName, err)
+	}
+
+	for i := range list.Items {
+		secret := &list.Items[i]
+		if _, ok := desired[secret.Name]; ok {
+			continue
+		}
+		if _, ok := inUse[secret.Name]; ok {
+			continue
+		}
+		if err := r.Client.Delete(ctx, secret); err != nil && !errors.IsNotFound(err) {
+			return fmt.Errorf("delete orphan secret %s: %w", secret.Name, err)
+		}
+		logger.Info("deleted orphan secret of NodeGroup", "name", secret.Name, "ng", ngName)
 	}
 
 	return nil
