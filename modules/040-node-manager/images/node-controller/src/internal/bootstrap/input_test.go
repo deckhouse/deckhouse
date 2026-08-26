@@ -17,6 +17,8 @@ limitations under the License.
 package bootstrap
 
 import (
+	"maps"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -40,21 +42,23 @@ func TestInputTemplateContext(t *testing.T) {
 
 	ctx := in.templateContext()
 
-	assert.Equal(t, []string{"10.0.0.1:6443"}, ctx["apiserverEndpoints"])
+	// Набор ключей целиком: переименование ловится здесь, а отсутствие runType —
+	// тем, что его в наборе нет (helm его не кладёт, от этого зависят две ветки).
+	assert.ElementsMatch(t, []string{
+		"nodeGroup", "apiserverEndpoints", "clusterMasterEndpoints",
+		"clusterMasterKubeAPIEndpoints", "clusterMasterRPPAddresses",
+		"clusterMasterRPPBootstrapAddresses", "clusterUUID", "images",
+		"packagesProxy", "mingetB64", "provider", "Files", "Values",
+	}, slices.Collect(maps.Keys(ctx)))
+
 	assert.Equal(t, []string{"10.0.0.1:6443"}, ctx["clusterMasterKubeAPIEndpoints"])
 	assert.Equal(t, []string{"10.0.0.1:4219"}, ctx["clusterMasterRPPAddresses"])
 	assert.Equal(t, []string{"10.0.0.1:4220"}, ctx["clusterMasterRPPBootstrapAddresses"])
-	assert.Equal(t, "uuid-1", ctx["clusterUUID"])
-	assert.Equal(t, "yandex", ctx["provider"])
 
 	// lib.sh.tpl:496 читает адреса через Values, а не через apiserverEndpoints.
 	values := ctx["Values"].(map[string]any)
 	internal := values["nodeManager"].(map[string]any)["internal"].(map[string]any)
 	assert.Equal(t, []string{"10.0.0.1:6443"}, internal["clusterMasterAddresses"])
-
-	// runType отсутствует: helm его не кладёт, и от этого зависят две ветки.
-	_, hasRunType := ctx["runType"]
-	assert.False(t, hasRunType, "runType must stay absent to match the helm context")
 }
 
 // Порт отсутствует в записи эндпоинта — запись просто не попадает в список,
