@@ -183,17 +183,25 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 }
 
 func (r *Reconciler) writeSecrets(ctx context.Context, ng *deckhousev1.NodeGroup, resolved derived_status.ResolvedNodeGroup) error {
-	if ng.Spec.NodeType == deckhousev1.NodeTypeCloudEphemeral {
-		return r.writeCAPISecrets(ctx, ng, resolved)
+	// Minted before the branch, not inside the render: an immutable group leaves
+	// writeCAPISecrets with no Secret, yet nodebootstrap renders this token into every
+	// machine's userdata (nodebootstrap/render.go:45). The hook minted for every group too.
+	token, err := EnsureToken(ctx, r.Client, ng.Name)
+	if err != nil {
+		return err
 	}
-	return r.writeManualSecret(ctx, ng, resolved)
+
+	if ng.Spec.NodeType == deckhousev1.NodeTypeCloudEphemeral {
+		return r.writeCAPISecrets(ctx, ng, resolved, token)
+	}
+	return r.writeManualSecret(ctx, ng, resolved, token)
 }
 
 // writeManualSecret writes manual-bootstrap-for-<ng>: the Secret an operator
 // bootstraps a static node from, and the one the static MachineDeployment points
 // its StaticMachines at (capi/machinedeployment.go:387).
-func (r *Reconciler) writeManualSecret(ctx context.Context, ng *deckhousev1.NodeGroup, resolved derived_status.ResolvedNodeGroup) error {
-	in, err := r.buildInput(ctx, ng, resolved)
+func (r *Reconciler) writeManualSecret(ctx context.Context, ng *deckhousev1.NodeGroup, resolved derived_status.ResolvedNodeGroup, token string) error {
+	in, err := BuildInput(ctx, r.context, resolved, token)
 	if err != nil {
 		return err
 	}
@@ -223,7 +231,7 @@ func (r *Reconciler) writeManualSecret(ctx context.Context, ng *deckhousev1.Node
 
 // writeCAPISecrets writes the cloud-init a CAPI Machine boots from, under every
 // name the group's MachineDeployments reference.
-func (r *Reconciler) writeCAPISecrets(ctx context.Context, ng *deckhousev1.NodeGroup, resolved derived_status.ResolvedNodeGroup) error {
+func (r *Reconciler) writeCAPISecrets(ctx context.Context, ng *deckhousev1.NodeGroup, resolved derived_status.ResolvedNodeGroup, token string) error {
 	// An immutable node boots from a per-machine NodeBootstrapConfig referenced
 	// through bootstrap.configRef, so it has no cloud-init Secret at all. The MCM
 	// machine-class Secret is the capi controller's to write, not this one's.
@@ -231,7 +239,7 @@ func (r *Reconciler) writeCAPISecrets(ctx context.Context, ng *deckhousev1.NodeG
 		return nil
 	}
 
-	in, err := r.buildInput(ctx, ng, resolved)
+	in, err := BuildInput(ctx, r.context, resolved, token)
 	if err != nil {
 		return err
 	}
