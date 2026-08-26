@@ -913,8 +913,22 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость в стандартной библиотеке Go 1.25.10 (net/textproto — инъекция вводимых данных в сообщения об ошибках). Приходит через бинарь yq (образ tools/yq) — CLI-обработчик YAML, он не использует net/textproto для разбора недоверенного протокольного ввода, уязвимый путь не задействуется. Устранение — бамп Go toolchain образа tools/yq.",
       "timestamp": "2026-08-20T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GHSA-w67g-5rqw-f597"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/gorilla/websocket@v1.5.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в github.com/gorilla/websocket версии v1.5.0 (использование криптографически слабого math/rand для генерации masking key WebSocket-фреймов, до v1.5.3). Приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не устанавливает WebSocket-соединения — promtool применяется только для валидации правил Prometheus, уязвимый код gorilla/websocket не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-08-26T12:00:00Z"
     }
   ],
   "timestamp": "2026-02-16T12:00:00Z",
-  "last_updated": "2026-08-20T12:00:00Z"
+  "last_updated": "2026-08-26T12:00:00Z"
 }
