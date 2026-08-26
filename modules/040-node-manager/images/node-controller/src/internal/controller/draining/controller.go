@@ -63,19 +63,13 @@ func (r *Reconciler) Setup(ctx context.Context, mgr ctrl.Manager) error {
 	return nil
 }
 
-// ForPredicates admits only nodes in a NodeGroup. Deliberately not
-// WithEventFilter, which applies to every source and would drop the name-only
-// Node a finished eviction sends down the wake channel.
-func (r *Reconciler) ForPredicates() []predicate.Predicate {
-	return []predicate.Predicate{
-		predicate.NewPredicateFuncs(func(obj client.Object) bool {
-			_, hasGroup := obj.GetLabels()[nodecommon.NodeGroupLabel]
-			return hasGroup
-		}),
-	}
-}
-
+// SetupWatches subscribes to nodes that belong to a NodeGroup, and to the wake
+// channel a finished eviction writes to.
 func (r *Reconciler) SetupWatches(w register.Watcher) {
+	w.WithEventFilter(predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		_, hasGroup := obj.GetLabels()[nodecommon.NodeGroupLabel]
+		return hasGroup
+	}))
 	w.WatchesRawSource(r.drains.wakeSource())
 }
 

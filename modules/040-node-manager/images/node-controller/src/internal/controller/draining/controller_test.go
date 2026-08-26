@@ -457,10 +457,18 @@ func TestReconcile_DeletedNodeCancelsItsEviction(t *testing.T) {
 	}
 }
 
-func TestForPredicates_AdmitsOnlyNodesInANodeGroup(t *testing.T) {
-	predicates := (&Reconciler{}).ForPredicates()
-	if len(predicates) != 1 {
-		t.Fatalf("got %d predicates, want 1", len(predicates))
+// TestSetupWatches covers both halves of the subscription: only nodes in a
+// NodeGroup are admitted, and the wake channel a finished eviction writes to is
+// registered as a raw source, which WithEventFilter deliberately does not reach.
+func TestSetupWatches(t *testing.T) {
+	w := &captureWatcher{}
+	(&Reconciler{drains: newDrainer(t.Context(), nil)}).SetupWatches(w)
+
+	if len(w.rawSources) != 1 {
+		t.Fatalf("got %d raw sources, want the wake channel", len(w.rawSources))
+	}
+	if w.predicate == nil {
+		t.Fatal("no event filter was registered")
 	}
 
 	for _, tc := range []struct {
@@ -473,27 +481,10 @@ func TestForPredicates_AdmitsOnlyNodesInANodeGroup(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			obj := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: nodeName, Labels: tc.labels}}
-			if got := predicates[0].Create(event.CreateEvent{Object: obj}); got != tc.want {
+			if got := w.predicate.Create(event.CreateEvent{Object: obj}); got != tc.want {
 				t.Fatalf("admitted = %v, want %v", got, tc.want)
 			}
 		})
-	}
-}
-
-// The wake channel must be a raw source and the group filter must not be a
-// global event filter: a global one would also drop the name-only Node that
-// carries a finished eviction back into the workqueue.
-func TestSetupWatches_RegistersTheWakeChannelWithoutAGlobalFilter(t *testing.T) {
-	r := &Reconciler{drains: newDrainer(t.Context(), nil)}
-	w := &captureWatcher{}
-
-	r.SetupWatches(w)
-
-	if len(w.rawSources) != 1 {
-		t.Fatalf("got %d raw sources, want 1", len(w.rawSources))
-	}
-	if w.predicate != nil {
-		t.Fatal("the group filter must not be registered as a global event filter")
 	}
 }
 
