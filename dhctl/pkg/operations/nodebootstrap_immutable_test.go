@@ -16,6 +16,9 @@ package operations
 
 import (
 	"context"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -77,4 +80,46 @@ func TestAConfiguredGroupIsCreatedWithNoCloudConfig(t *testing.T) {
 	cloudConfig, err := groupCloudConfig(t.Context(), nil, "front", configure)
 	require.NoError(t, err, "a configured group must not ask the cluster for a cloud config")
 	require.Empty(t, cloudConfig)
+}
+
+// Both node paths have to honour the configurator. The parallel one is the path
+// a CloudPermanent group actually takes, and it once accepted the argument and
+// dropped it: the group was then created with no cloud config AND never handed a
+// document, so its machines waited in the installer for good.
+func TestBothNodePathsHonourTheConfigurator(t *testing.T) {
+	t.Parallel()
+
+	const file = "nodebootstrap.go"
+
+	parsed, err := parser.ParseFile(token.NewFileSet(), file, nil, 0)
+	require.NoError(t, err)
+
+	seen := map[string]bool{}
+	ast.Inspect(parsed, func(n ast.Node) bool {
+		fn, ok := n.(*ast.FuncDecl)
+		if !ok {
+			return true
+		}
+		switch fn.Name.Name {
+		case "BootstrapAdditionalNode", "BootstrapAdditionalNodeForParallelRun":
+			seen[fn.Name.Name] = true
+			require.Truef(t, namesIdentifier(fn.Body, "configure"),
+				"%s takes a configurator and never calls it: its group is created bare and nothing configures it", fn.Name.Name)
+		}
+		return true
+	})
+
+	require.Len(t, seen, 2, "both node paths must exist in %s", file)
+}
+
+// namesIdentifier reports whether n mentions the given identifier anywhere.
+func namesIdentifier(n ast.Node, name string) bool {
+	var found bool
+	ast.Inspect(n, func(node ast.Node) bool {
+		if ident, ok := node.(*ast.Ident); ok && ident.Name == name {
+			found = true
+		}
+		return !found
+	})
+	return found
 }
