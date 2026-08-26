@@ -289,7 +289,11 @@ func (b *ClusterBootstrapper) checkMachinesAreAvailable(ctx context.Context, bct
 		port = bctx.immutable.maintenancePort
 	}
 
-	names := slices.Sorted(maps.Keys(bctx.immutable.hosts))
+	// The first master first, not whichever name sorts first: building a document
+	// mints the run's one handoff certificate, and it is issued to the node the
+	// first build names. Sorted order is the flag order only by luck, and the
+	// collection later dials with the first master's name in ServerName.
+	names := append([]string{bctx.immutable.masterNodeName}, remainingMasterNames(bctx)...)
 	for _, name := range names {
 		if err := b.checkMachineIsAvailable(ctx, bctx, name, bctx.immutable.hosts[name], port); err != nil {
 			return err
