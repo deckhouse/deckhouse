@@ -16,6 +16,7 @@ package bootstrap
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -1391,6 +1392,26 @@ func (b *ClusterBootstrapper) bootstrapAdditionalNodes(ctx context.Context, bctx
 
 	// An immutable master boots from a payload rendered per node, and it is tracked by no SSH
 	// address: converge builds its session from that cache and an unreachable host stalls it.
+	// An immutable machine of a CloudPermanent group takes the same document, at the
+	// address the provider reports for it: the group's published cloud config is a
+	// bashible script the node cannot run, and waiting for one leaves it in the
+	// installer forever.
+	var configureNode operations.ConfigureImmutableNode
+	if bctx.immutable != nil {
+		configureNode = func(ctx context.Context, kubeCl *client.KubernetesClient, nodeGroupName, nodeName, address string) error {
+			payload, nodeConfig, err := immutable.BuildJoinPayloadFromCluster(ctx, kubeCl, bctx.metaConfig, nodeName,
+				immutableCustomization(bctx, nodeName), address)
+			if err != nil {
+				return err
+			}
+			document, err := base64.StdEncoding.DecodeString(payload)
+			if err != nil {
+				return fmt.Errorf("decode the payload of %s: %w", nodeName, err)
+			}
+			return b.pushRecordedPayload(ctx, bctx, nodeName, address, document, nodeConfig)
+		}
+	}
+
 	var buildPayload masterPayloadBuilder
 	if bctx.immutable != nil {
 		// Nothing describes a machine in a cloud — the documents are refused there — so the
@@ -1412,6 +1433,7 @@ func (b *ClusterBootstrapper) bootstrapAdditionalNodes(ctx context.Context, bctx
 			&b.Options.Global,
 			b.PhasedExecutionContext,
 			buildPayload,
+			configureNode,
 		)
 	})
 }
@@ -1600,6 +1622,7 @@ func bootstrapAdditionalNodesForCloudCluster(
 	globalOptions *options.GlobalOptions,
 	pec phases.DefaultPhasedExecutionContext,
 	buildMasterPayload masterPayloadBuilder,
+	configureNode operations.ConfigureImmutableNode,
 ) error {
 	ctx, span := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.AdditionalNodesForCloudCluster")
 	defer span.End()
@@ -1616,7 +1639,7 @@ func bootstrapAdditionalNodesForCloudCluster(
 
 	pec.CompleteSubPhase(ctx, phases.InstallAdditionalMastersAndStaticNodesSubPhaseAdditionalMasters)
 
-	if err := bootstrapAdditionalTerraNodeGroups(ctx, kubeCl, metaConfig, terraNodeGroups, infrastructureContext, globalOptions); err != nil {
+	if err := bootstrapAdditionalTerraNodeGroups(ctx, kubeCl, metaConfig, terraNodeGroups, infrastructureContext, globalOptions, configureNode); err != nil {
 		return err
 	}
 

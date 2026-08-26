@@ -98,6 +98,13 @@ func masterSystemTypeFromResources(resourcesYAML string) (string, error) {
 // NodeGroupIsImmutable reports whether a NodeGroup read from the cluster asks for an
 // immutable system. The cluster object is the source of truth: a bashible bootstrap
 // Secret exists for an immutable group too, so its presence proves nothing.
+// SystemTypeIsImmutable reports whether a NodeGroup's spec.systemType names the
+// immutable kind, for the callers that already hold the value rather than the
+// object it came from.
+func SystemTypeIsImmutable(systemType string) bool {
+	return systemType == systemTypeImmutable
+}
+
 func NodeGroupIsImmutable(ng *unstructured.Unstructured) bool {
 	if ng == nil {
 		return false

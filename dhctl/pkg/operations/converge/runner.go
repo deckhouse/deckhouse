@@ -273,6 +273,9 @@ func (r *runner) convergeTerraNodes(ctx *convergecontext.Context, metaConfig *co
 		nodeGroupsWithoutStateInCluster,
 		ctx.InfrastructureContext(metaConfig),
 		r.switcher.GetGlobalOptions(),
+		// Converge creates the machines the classic way; the installer configures an
+		// immutable group only while it is bootstrapping the cluster.
+		nil,
 	); err != nil {
 		return err
 	}

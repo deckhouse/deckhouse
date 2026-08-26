@@ -20,9 +20,8 @@ import (
 	"fmt"
 	"strconv"
 
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
-
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"

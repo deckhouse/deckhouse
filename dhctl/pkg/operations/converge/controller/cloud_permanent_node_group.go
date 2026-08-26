@@ -93,6 +93,9 @@ func (c *CloudPermanentNodeGroupController) addNodes(ctx *context.Context) error
 			ctx.InfrastructureContext(metaConfig),
 			false,
 			c.globalOptions,
+			// Converge does not configure immutable machines itself yet; the group is
+			// created the classic way, as before.
+			nil,
 		)
 		return err
 	})
