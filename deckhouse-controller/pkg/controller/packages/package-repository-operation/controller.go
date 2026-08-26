@@ -256,7 +256,7 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, op *v1alpha1.Packa
 		return r.failOperation(ctx, op, err)
 	}
 
-	discovered, err := svc.DiscoverPackages(ctx)
+	discovered, err := svc.Discover(ctx)
 	if err != nil {
 		return r.failOperation(ctx, op, err)
 	}
@@ -311,7 +311,8 @@ func (r *reconciler) handleProcessingState(ctx context.Context, op *v1alpha1.Pac
 	if len(op.Status.Packages.Discovered) == 0 {
 		r.logger.Info("all packages processed", slog.Int("total", op.Status.Packages.Total))
 
-		if err := svc.UpdateRepositoryStatus(ctx, op.Status.Packages.Processed); err != nil {
+		repo := svc.GetRepository()
+		if err := r.updateRepositoryStatus(ctx, repo, op.Status.Packages.Processed); err != nil {
 			logger.Warn("failed to update repository status", log.Err(err))
 			// Continue with operation completion even if repository update fails
 		}
@@ -488,6 +489,56 @@ func (r *reconciler) updatePackageRepositoryCondition(ctx context.Context, op *v
 
 	if err := r.client.Status().Patch(ctx, repo, client.MergeFrom(original)); err != nil {
 		return fmt.Errorf("update package repository status: %w", err)
+	}
+
+	return nil
+}
+
+// updateRepositoryStatus updates the PackageRepository status with the processed packages.
+func (r *reconciler) updateRepositoryStatus(ctx context.Context, repo *v1alpha1.PackageRepository, packages []v1alpha1.PackageRepositoryOperationStatusPackage) error {
+	original := repo.DeepCopy()
+
+	// Type is stable per package; recover it from the previous status when an incremental scan returned empty.
+	cachedTypes := make(map[string]string, len(repo.Status.Packages))
+	for _, p := range repo.Status.Packages {
+		cachedTypes[p.Name] = p.Type
+	}
+
+	repo.Status.Packages = make([]v1alpha1.PackageRepositoryStatusPackage, 0, len(packages))
+
+	var newVersionsTotal int
+	for _, pkg := range packages {
+		newVersionsTotal += pkg.NewVersions
+
+		pkgType := pkg.Type
+		if pkgType == "" {
+			pkgType = cachedTypes[pkg.Name]
+		}
+		if pkgType == "" {
+			continue
+		}
+		repo.Status.Packages = append(repo.Status.Packages, v1alpha1.PackageRepositoryStatusPackage{
+			Name: pkg.Name,
+			Type: pkgType,
+		})
+	}
+
+	now := metav1.NewTime(time.Now())
+
+	repo.Status.PackagesCount = len(repo.Status.Packages)
+	repo.Status.Phase = v1alpha1.PackageRepositoryPhaseActive
+
+	repo.Status.LastScanTime = &now
+	repo.Status.LastNewVersions = newVersionsTotal
+
+	// LastChangeTime is preserved across scans that find nothing new, so only
+	// advance it when the current scan actually found versions.
+	if newVersionsTotal > 0 {
+		repo.Status.LastChangeTime = &now
+	}
+
+	if err := r.client.Status().Patch(ctx, repo, client.MergeFrom(original)); err != nil {
+		return fmt.Errorf("update repository status: %w", err)
 	}
 
 	return nil

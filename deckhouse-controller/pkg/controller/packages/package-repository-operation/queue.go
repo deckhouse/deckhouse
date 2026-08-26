@@ -53,7 +53,7 @@ func (r *reconciler) processNextPackage(ctx context.Context, op *v1alpha1.Packag
 	r.logger.Info("processing package",
 		slog.String("package", currentPackage.Name))
 
-	result, err := svc.ProcessPackageVersions(ctx, currentPackage.Name, op)
+	result, err := svc.ScanPackageVersions(ctx, currentPackage.Name, op)
 	if err != nil {
 		r.logger.Error("failed to process package versions",
 			slog.String("package", currentPackage.Name),
@@ -133,7 +133,7 @@ func (r *reconciler) dequeuePackageWithError(ctx context.Context, op *v1alpha1.P
 // knew the package but couldn't ingest some of its versions.
 //
 // Precondition: Packages non-nil and Discovered non-empty (guaranteed by caller).
-func (r *reconciler) dequeuePackageWithResult(ctx context.Context, op *v1alpha1.PackageRepositoryOperation, packageName string, result *operations.ProcessResult) (ctrl.Result, error) {
+func (r *reconciler) dequeuePackageWithResult(ctx context.Context, op *v1alpha1.PackageRepositoryOperation, packageName string, result *operations.Result) (ctrl.Result, error) {
 	original := op.DeepCopy()
 
 	if len(op.Status.Packages.Discovered) > 0 {

@@ -461,6 +461,50 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
+	suite.Run("walk stops at the first version it cannot create", func() {
+		// Creating v1.0.1 fails. v1.0.2 above it must not be created either: it would raise the
+		// watermark past v1.0.1, and no later incremental scan would ever list v1.0.1 again.
+		reg := fakeRegistry.NewRegistry(registryHost)
+		reg.MustAddImage("", "test-package", fakeRegistry.NewImageBuilder().MustBuild())
+		modImg := moduleVersionImage().MustBuild()
+		for _, v := range []string{"v1.0.0", "v1.0.1", "v1.0.2"} {
+			reg.MustAddImage("test-package/version", v, modImg)
+		}
+
+		psm := createFakePSM(newInternalClient(reg))
+
+		suite.setupController("stops-at-first-failed-version.yaml", withPackageServiceManager(psm))
+
+		suite.ctr.client = &errorInjectingClient{
+			Client: suite.Client(),
+			createErrorNames: map[string]error{
+				"deckhouse-test-package-v1.0.1": fmt.Errorf("simulated create error for v1.0.1"),
+			},
+		}
+
+		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
+
+		err := repeat(func() error {
+			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+				NamespacedName: k8stypes.NamespacedName{Name: operation.Name},
+			})
+
+			return err
+		})
+
+		require.NoError(suite.T(), err)
+
+		var versions v1alpha1.ModulePackageVersionList
+		require.NoError(suite.T(), suite.Client().List(ctx, &versions))
+
+		got := make([]string, 0, len(versions.Items))
+		for _, item := range versions.Items {
+			got = append(got, item.Spec.PackageVersion)
+		}
+
+		assert.ElementsMatch(suite.T(), []string{"v1.0.0"}, got)
+	})
+
 	suite.Run("incremental module scan", func() {
 		// Pre-existing ModulePackageVersion v1.0.0 already processed.
 		// Registry has v1.0.0 and v1.1.0 — incremental scan should only create v1.1.0.

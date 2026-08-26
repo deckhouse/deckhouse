@@ -22,7 +22,6 @@ import (
 	"maps"
 	"slices"
 	"strings"
-	"time"
 
 	"github.com/Masterminds/semver/v3"
 	transport "github.com/google/go-containerregistry/pkg/v1/remote/transport"
@@ -79,10 +78,11 @@ func ParsePackageType(raw string) (PackageType, error) {
 	}
 }
 
-type ProcessResult struct {
-	PackageType   PackageType
-	Done          []*semver.Version
-	Failed        []failedVersion
+type Result struct {
+	PackageType PackageType
+	Failed      []failedVersion
+	// FoundVersions counts the versions the registry offered, including the ones left
+	// unprocessed after a failure stopped the walk.
 	FoundVersions int
 	// NewVersions counts package versions that were either created for the
 	// first time during this operation, or transitioned from the "not in
@@ -137,8 +137,8 @@ func (s *OperationService) GetRepository() *v1alpha1.PackageRepository {
 	return s.repo
 }
 
-// DiscoverPackages lists the package names published under the repository's packages path.
-func (s *OperationService) DiscoverPackages(ctx context.Context) ([]string, error) {
+// Discover lists the package names published under the repository's packages path.
+func (s *OperationService) Discover(ctx context.Context) ([]string, error) {
 	// List packages (packages at the packages level)
 	packages, err := s.svc.ListTags(ctx)
 	if err != nil {
@@ -152,60 +152,11 @@ func (s *OperationService) DiscoverPackages(ctx context.Context) ([]string, erro
 	return packages, nil
 }
 
-// UpdateRepositoryStatus updates the PackageRepository status with the processed packages.
-func (s *OperationService) UpdateRepositoryStatus(ctx context.Context, packages []v1alpha1.PackageRepositoryOperationStatusPackage) error {
-	original := s.repo.DeepCopy()
-
-	// Type is stable per package; recover it from the previous status when an incremental scan returned empty.
-	cachedTypes := make(map[string]string, len(s.repo.Status.Packages))
-	for _, p := range s.repo.Status.Packages {
-		cachedTypes[p.Name] = p.Type
-	}
-
-	s.repo.Status.Packages = make([]v1alpha1.PackageRepositoryStatusPackage, 0, len(packages))
-
-	var newVersionsTotal int
-	for _, pkg := range packages {
-		newVersionsTotal += pkg.NewVersions
-
-		pkgType := pkg.Type
-		if pkgType == "" {
-			pkgType = cachedTypes[pkg.Name]
-		}
-		if pkgType == "" {
-			continue
-		}
-		s.repo.Status.Packages = append(s.repo.Status.Packages, v1alpha1.PackageRepositoryStatusPackage{
-			Name: pkg.Name,
-			Type: pkgType,
-		})
-	}
-
-	now := metav1.NewTime(time.Now())
-
-	s.repo.Status.PackagesCount = len(s.repo.Status.Packages)
-	s.repo.Status.Phase = v1alpha1.PackageRepositoryPhaseActive
-
-	s.repo.Status.LastScanTime = &now
-	s.repo.Status.LastNewVersions = newVersionsTotal
-
-	// LastChangeTime is preserved across scans that find nothing new, so only
-	// advance it when the current scan actually found versions.
-	if newVersionsTotal > 0 {
-		s.repo.Status.LastChangeTime = &now
-	}
-
-	if err := s.client.Status().Patch(ctx, s.repo, client.MergeFrom(original)); err != nil {
-		return fmt.Errorf("update repository status: %w", err)
-	}
-
-	return nil
-}
-
-// ProcessPackageVersions lists <package>/version, detects the type from the newest tag and creates
-// an APV or MPV per version. A package with no /version path, or none carrying semver tags on a
-// full scan, is a legacy module, and walkModuleReleases reads its versions from /release instead.
-func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageName string, operation *v1alpha1.PackageRepositoryOperation) (*ProcessResult, error) {
+// ScanPackageVersions lists <package>/version, detects the type from the newest tag and creates
+// an APV or MPV per version, oldest first, stopping at the first one it fails to create. A package
+// with no /version path, or none carrying semver tags on a full scan, is a legacy module, and
+// walkModuleReleases reads its versions from /release instead.
+func (s *OperationService) ScanPackageVersions(ctx context.Context, packageName string, operation *v1alpha1.PackageRepositoryOperation) (*Result, error) {
 	foundTags, err := s.foundTagsToProcess(ctx, packageName, operation)
 	if err != nil {
 		// NAME_UNKNOWN means <package>/version path doesn't exist in the registry.
@@ -231,10 +182,11 @@ func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageNa
 			return s.walkModuleReleases(ctx, packageName)
 		}
 
-		return &ProcessResult{}, nil
+		return &Result{}, nil
 	}
 
-	// Sort tags to pick the latest version for label check (older versions may have outdated/missing labels)
+	// Ascending: the newest tag carries the type labels older ones may lack, and the walk below
+	// must not create a version above one it failed to create.
 	slices.SortFunc(foundTags, func(a, b *semver.Version) int { return a.Compare(b) })
 	latestTag := "v" + foundTags[len(foundTags)-1].String()
 
@@ -242,13 +194,13 @@ func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageNa
 	if pkgType, err = s.detectPackageType(ctx, packageName, latestTag); err != nil {
 		// No type labels and no package.yaml on /version path - skip
 		if errors.Is(err, ErrTooOldImage) {
-			return &ProcessResult{
+			return &Result{
 				Failed: []failedVersion{{Error: err.Error()}},
 			}, nil
 		}
 
 		if errors.Is(err, ErrPackageTypeInvalid) {
-			return &ProcessResult{
+			return &Result{
 				Failed: []failedVersion{{Name: latestTag, Error: err.Error()}},
 			}, nil
 		}
@@ -283,7 +235,9 @@ func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageNa
 				Error: "ensure package version: " + ensureErr.Error(),
 			})
 
-			continue
+			// Creating the newer versions above this one would raise the watermark past it, and no
+			// later incremental scan would list it again. The next scan resumes from here instead.
+			break
 		}
 
 		if isNew {
@@ -291,9 +245,8 @@ func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageNa
 		}
 	}
 
-	return &ProcessResult{
+	return &Result{
 		PackageType:   pkgType,
-		Done:          foundTags,
 		Failed:        failedVersions,
 		FoundVersions: len(foundTags),
 		NewVersions:   newVersions,
@@ -490,14 +443,14 @@ func extractOnlySemverTags(rawTags []string) []*semver.Version {
 // The walk stops at the first image without a definition: that version cannot be offered, so the
 // module's history is cut off there. A version the cluster already holds
 // is not re-read from /release, only re-checked for a "not in registry" mark that has since lifted.
-func (s *OperationService) walkModuleReleases(ctx context.Context, packageName string) (*ProcessResult, error) {
+func (s *OperationService) walkModuleReleases(ctx context.Context, packageName string) (*Result, error) {
 	release := s.svc.Package(packageName).Release()
 
 	rawTags, err := release.ListTags(ctx)
 	if err != nil {
 		// Neither /version nor /release: the package offers nothing to install.
 		if isRepoNotFoundError(err) {
-			return &ProcessResult{}, nil
+			return &Result{}, nil
 		}
 
 		return nil, fmt.Errorf("list release tags: %w", err)
@@ -505,7 +458,7 @@ func (s *OperationService) walkModuleReleases(ctx context.Context, packageName s
 
 	foundTags := extractOnlySemverTags(rawTags)
 	if len(foundTags) == 0 {
-		return &ProcessResult{}, nil
+		return &Result{}, nil
 	}
 
 	slices.SortFunc(foundTags, func(a, b *semver.Version) int { return b.Compare(a) })
@@ -514,7 +467,7 @@ func (s *OperationService) walkModuleReleases(ctx context.Context, packageName s
 		v1alpha1.ModulePackageVersionLabelLegacy: "true",
 	}
 
-	result := &ProcessResult{PackageType: PackageTypeModule}
+	result := &Result{PackageType: PackageTypeModule}
 
 	for _, versionTag := range foundTags {
 		version := "v" + versionTag.String()
@@ -545,7 +498,6 @@ func (s *OperationService) walkModuleReleases(ctx context.Context, packageName s
 			}
 
 			if rediscovered {
-				result.Done = append(result.Done, versionTag)
 				result.FoundVersions++
 				result.NewVersions++
 			}
@@ -583,7 +535,6 @@ func (s *OperationService) walkModuleReleases(ctx context.Context, packageName s
 			continue
 		}
 
-		result.Done = append(result.Done, versionTag)
 		result.FoundVersions++
 		result.NewVersions++
 	}

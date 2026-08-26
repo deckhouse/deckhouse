@@ -31,22 +31,22 @@ status:
   packages:
     failed:
     - errors:
-      - message: 'ensure package version: create application package version: simulated
-          create error for v1.1.0'
-        version: v1.1.0
+      - message: 'ensure package version: create module package version: simulated
+          create error for v1.0.1'
+        version: v1.0.1
       name: test-package
     newVersionsOverall: 1
     processed:
     - foundVersions: 3
       name: test-package
       newVersions: 1
-      type: Application
+      type: Module
     processedOverall: 1
     total: 1
   startTime: "2025-10-31T12:00:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: ApplicationPackageVersion
+kind: ModulePackageVersion
 metadata:
   labels:
     heritage: deckhouse
@@ -65,7 +65,25 @@ spec:
   packageName: test-package
   packageRepositoryName: deckhouse
   packageVersion: v1.0.0
-status: {}
+status:
+  used: false
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackage
+metadata:
+  labels:
+    heritage: deckhouse
+  name: test-package
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    controller: false
+    kind: PackageRepository
+    name: deckhouse
+    uid: ""
+  resourceVersion: "2"
+status:
+  availableRepositories:
+  - deckhouse
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository
@@ -87,6 +105,6 @@ status:
   lastScanTime: "2025-10-31T12:00:00Z"
   packages:
   - name: test-package
-    type: Application
+    type: Module
   packagesCount: 1
   phase: Active
