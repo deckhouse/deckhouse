@@ -106,7 +106,7 @@ func (d *Deployer) Cleanup(ctx context.Context, preserve []deployer.PreservePack
 	span.SetAttributes(attribute.String("deployed", d.deployedRoot()))
 
 	logger := d.logger.With(
-		slog.String("workingDir", d.workingDir),
+		slog.String("working_dir", d.workingDir),
 		slog.String("deployed", d.deployedRoot()))
 
 	logger.Debug("cleanup packages")
@@ -337,7 +337,7 @@ func (d *Deployer) download(ctx context.Context, repo registry.Remote, packageDi
 	logger := d.logger.With(
 		slog.String("name", name),
 		slog.String("version", version),
-		slog.String("packageDir", packageDir),
+		slog.String("package_dir", packageDir),
 		slog.String("repository", repo.Name),
 		slog.String("registry", repo.Repository))
 
@@ -494,7 +494,7 @@ func (d *Deployer) mount(ctx context.Context, packageDir, deployed, name, versio
 	span.SetAttributes(attribute.String("version", version))
 
 	logger := d.logger.With(
-		slog.String("packageDir", packageDir),
+		slog.String("package_dir", packageDir),
 		slog.String("deployed", deployed),
 		slog.String("name", name),
 		slog.String("version", version))
