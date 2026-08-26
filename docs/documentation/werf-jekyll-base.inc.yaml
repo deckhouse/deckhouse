@@ -17,7 +17,8 @@ shell:
       if [[ "$bundler_lockfile_version" != "$bundler_system_version" ]]; then
           echo "Bundler version in Gemfile.lock ($bundler_lockfile_version) is not equal to system bundler version ($bundler_system_version)"
           echo "Installing bundler version ($bundler_lockfile_version)"
-          gem install bundler:${bundler_lockfile_version} --no-document
+          gem_source=$(grep "^source" Gemfile | cut -d"'" -f2)
+          gem install bundler:${bundler_lockfile_version} --no-document --source $gem_source
       fi
   - bundle install && bundle clean --force
   - gem cleanup
