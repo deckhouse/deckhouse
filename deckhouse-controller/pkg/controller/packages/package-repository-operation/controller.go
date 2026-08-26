@@ -239,7 +239,7 @@ func (r *reconciler) handlePendingState(ctx context.Context, op *v1alpha1.Packag
 		return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
 	}
 
-	return ctrl.Result{Requeue: true}, nil
+	return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 }
 
 // handleDiscoverState connects to the registry, lists packages, and records them in
@@ -285,7 +285,7 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, op *v1alpha1.Packa
 		return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
 	}
 
-	return ctrl.Result{Requeue: true}, nil
+	return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 }
 
 // handleProcessingState drains the Discovered queue one package per reconcile.

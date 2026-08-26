@@ -17,6 +17,7 @@ limitations under the License.
 package template_tests
 
 import (
+	"encoding/json"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -157,6 +158,27 @@ func matchConditionNames(policy object_store.KubeObject) []string {
 	return names
 }
 
+// The reserved set reaches the policies as CEL literals rendered by toJson, so a literal parses back
+// as the JSON it was rendered from. Reading it that way rather than by substring keeps the
+// assertions about what is reserved, not about how the template spells it.
+func celVariable(policy object_store.KubeObject, name string, into any) {
+	expression := policy.Field(`spec.variables.#(name=="` + name + `").expression`).String()
+	Expect(json.Unmarshal([]byte(expression), into)).ShouldNot(HaveOccurred(),
+		"variable %s should be a JSON-compatible CEL literal, got %q", name, expression)
+}
+
+func celStringLiteral(policy object_store.KubeObject, name string) string {
+	var value string
+	celVariable(policy, name, &value)
+	return value
+}
+
+func celStringList(policy object_store.KubeObject, name string) []string {
+	values := []string{}
+	celVariable(policy, name, &values)
+	return values
+}
+
 // gatewayValues is the shape both places that name a Gateway take, global.modules.gatewayAPIGateway
 // and global.discovery.gatewayAPIDefaultGateway.
 func gatewayValues(ref sharedgateway.Ref) string {
@@ -264,6 +286,27 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 	configMap := func() object_store.KubeObject {
 		Expect(f.RenderError).ShouldNot(HaveOccurred())
 		return f.KubernetesResource("ConfigMap", "d8-system", reservedHostsConfigMapName)
+	}
+
+	// The reserved set is compiled into the policy instead of being read through paramKind, so that
+	// no apiserver has to hold a cluster-wide read on the parameter type to enforce it. Any
+	// aggregated apiserver runs the ValidatingAdmissionPolicy plugin out of the default admission
+	// chain, and one that cannot list the type fails its own informer-sync readiness check for good
+	// -- which is how a policy over Ingress hostnames stopped namespace deletion cluster-wide.
+	//
+	// What is compiled in has to stay what the ConfigMap publishes, so that what an operator reads
+	// there and what the apiserver enforces cannot drift apart. Called from every context that fills
+	// a different combination of the three, because a mistake in one of them is invisible in a render
+	// where the other two are empty.
+	expectPolicyCarriesConfigMap := func() {
+		vap := f.KubernetesGlobalResource("ValidatingAdmissionPolicy", reservedHostsIngressPolicy)
+		Expect(vap.Exists()).To(BeTrue())
+		cm := configMap()
+
+		Expect(vap.Field("spec.paramKind").Exists()).To(BeFalse())
+		Expect(celStringLiteral(vap, "reservedPattern")).To(Equal(cm.Field("data.hostPattern").String()))
+		Expect(celStringList(vap, "reservedHosts")).To(Equal(strings.Fields(cm.Field("data.hosts").String())))
+		Expect(celStringList(vap, "allowedHosts")).To(Equal(strings.Fields(cm.Field("data.allowedHosts").String())))
 	}
 
 	// Which reservation a cluster gets when its ModuleConfig says nothing is decided by the schema
@@ -426,7 +469,6 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 			vap := f.KubernetesGlobalResource("ValidatingAdmissionPolicy", reservedHostsIngressPolicy)
 			Expect(vap.Exists()).To(BeTrue())
 			Expect(vap.Field("spec.failurePolicy").String()).To(Equal("Fail"))
-			Expect(vap.Field("spec.paramKind.kind").String()).To(Equal("ConfigMap"))
 			Expect(vap.Field("spec.matchConstraints.resourceRules.0.apiGroups").String()).To(MatchJSON(`["networking.k8s.io"]`))
 			Expect(vap.Field("spec.matchConstraints.resourceRules.0.resources").String()).To(MatchJSON(`["ingresses"]`))
 			// DELETE is deliberately absent: an Ingress that predates the policy stays routable
@@ -444,16 +486,16 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 				To(ContainSubstring("system:serviceaccount:d8-"))
 		})
 
-		It("binds the policy to the parameters and skips the platform's own namespaces", func() {
+		It("carries the reserved set as literals rather than reading it from the ConfigMap", func() {
+			expectPolicyCarriesConfigMap()
+		})
+
+		It("skips the platform's own namespaces and references no parameters", func() {
 			binding := f.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", reservedHostsIngressPolicy)
 			Expect(binding.Exists()).To(BeTrue())
 			Expect(binding.Field("spec.policyName").String()).To(Equal(reservedHostsIngressPolicy))
 			Expect(binding.Field("spec.validationActions").String()).To(MatchJSON(`["Deny","Audit"]`))
-			Expect(binding.Field("spec.paramRef.name").String()).To(Equal(reservedHostsConfigMapName))
-			Expect(binding.Field("spec.paramRef.namespace").String()).To(Equal("d8-system"))
-			// Without this, losing the ConfigMap would take every Ingress write in the cluster
-			// down with it.
-			Expect(binding.Field("spec.paramRef.parameterNotFoundAction").String()).To(Equal("Allow"))
+			Expect(binding.Field("spec.paramRef").Exists()).To(BeFalse())
 			Expect(binding.Field("spec.matchResources.namespaceSelector.matchExpressions").String()).To(MatchJSON(`[
 				{"key": "heritage", "operator": "NotIn", "values": ["deckhouse"]},
 				{"key": "security.deckhouse.io/reserved-hosts-bypass", "operator": "NotIn", "values": ["true"]}
@@ -525,7 +567,7 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 				binding := f.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", expected.policy)
 				Expect(binding.Exists()).To(BeTrue(), name)
 				ingressBinding := f.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", reservedHostsIngressPolicy)
-				for _, field := range []string{"spec.validationActions", "spec.paramRef", "spec.matchResources"} {
+				for _, field := range []string{"spec.validationActions", "spec.matchResources"} {
 					Expect(binding.Field(field).String()).To(Equal(ingressBinding.Field(field).String()),
 						"%s must not differ between the %s binding and the Ingress one", field, expected.policy)
 				}
@@ -619,14 +661,17 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 			})
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			expression := f.KubernetesGlobalResource("ValidatingAdmissionPolicy", reservedHostsGatewayPolicy).
-				Field(`spec.matchConditions.#(name=="exclude-shared-gateway").expression`).String()
-			Expect(expression).To(ContainSubstring("params.data['sharedGateway'] == request.namespace + '/' + request.name"))
-			// The guards every other parameter gets: a ConfigMap that lost the key must leave the
-			// policy evaluating rather than fail every Gateway write under failurePolicy: Fail, and
-			// an empty key must exempt nothing rather than everything.
-			Expect(expression).To(ContainSubstring("'sharedGateway' in params.data"))
-			Expect(expression).To(ContainSubstring("params.data['sharedGateway'] != ''"))
+			sharedGatewayExemption := func() string {
+				return f.KubernetesGlobalResource("ValidatingAdmissionPolicy", reservedHostsGatewayPolicy).
+					Field(`spec.matchConditions.#(name=="exclude-shared-gateway").expression`).String()
+			}
+			Expect(sharedGatewayExemption()).To(Equal(`"infra/shared" != request.namespace + '/' + request.name`))
+
+			// Where nothing names a gateway the reference renders empty, and an empty string cannot
+			// equal namespace + '/' + name, so the condition is left in place and exempts nothing.
+			renderWithGateway(func() {})
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(sharedGatewayExemption()).To(Equal(`"" != request.namespace + '/' + request.name`))
 		})
 	})
 
@@ -779,6 +824,10 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 			Expect(configMap().Field("data.hosts").String()).
 				To(Equal("*.example.com\nadmin.corp.example.org\nbilling.corp.example.com\n"))
 		})
+
+		It("carries what an operator added into the policy too", func() {
+			expectPolicyCarriesConfigMap()
+		})
 	})
 
 	Context("An operator gives a hostname back to a tenant", func() {
@@ -850,6 +899,10 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 			Expect(strings.Fields(cm.Field("data.unknownExcludedServices").String())).To(BeEmpty())
 			Expect(strings.Fields(cm.Field("data.allowedHosts").String())).To(ContainElement("grafana.example.com"))
 		})
+
+		It("carries the allowlist into the policy too", func() {
+			expectPolicyCarriesConfigMap()
+		})
 	})
 
 	Context("The upgrade recorded what tenants already served", func() {
@@ -867,6 +920,10 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 			Expect(strings.Fields(cm.Field("data.allowedHosts").String())).
 				To(Equal([]string{"grafana.example.com", "shop.example.com", "store.example.com"}),
 					"the policies read one key, but which of the two put a hostname there stays readable")
+		})
+
+		It("carries the recorded hostnames into the policy too", func() {
+			expectPolicyCarriesConfigMap()
 		})
 	})
 
@@ -892,6 +949,12 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts ::", func() {
 				"with no setting applied, List reserves exactly what the platform publishes")
 			Expect(hosts).NotTo(ContainElement("*.example.com"),
 				"wildcards were out of scope of the list, and List has to stay what it was")
+		})
+
+		// The one render where the pattern is empty, which is the case an equality against a
+		// non-empty pattern elsewhere would not catch.
+		It("carries the whole list and the empty pattern into the policy too", func() {
+			expectPolicyCarriesConfigMap()
 		})
 
 		It("still answers whether the literal covers the repository", func() {

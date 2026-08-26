@@ -11,7 +11,9 @@ properties:
         default: false
         description: |
           Set automatically when an APIService for the `metrics.k8s.io` API group exists
-          (metrics-server or compatible implementation). Enables `metricsProviders` in the Descheduler policy.
+          (metrics-server or compatible implementation). Enables `metricsProviders` in the Descheduler
+          policy and switches the `LowNodeUtilization` strategy to Metrics API data
+          (`metricsUtilization.source: KubernetesMetrics`) instead of pod requests and limits.
       deschedulers:
         type: array
         default: []

@@ -100,12 +100,13 @@ var _ = Describe("Module :: istio :: helm template :: waypoint-controller", func
 		})
 	})
 
-	Context("Ambient mode enabled with global version 1.21.6 (does not support ambient)", func() {
+	Context("Ambient mode enabled with global version 1.23.0 (does not support ambient)", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
-			f.ValuesSet("istio.internal.globalVersion", "1.21.6")
+			f.ValuesSetFromYaml(`istio.internal.versionMap.1\.23\.0`, `{"supportsAmbient":false,"fullVersion":"1.23.0","imageSuffix":"V1x25x2"}`)
+			f.ValuesSet("istio.internal.globalVersion", "1.23.0")
 			f.ValuesSet("istio.ambient.enabled", true)
 			f.HelmRender()
 		})

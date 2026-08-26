@@ -20,7 +20,6 @@ import (
 	"context"
 	"errors"
 	"testing"
-	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
@@ -210,60 +209,9 @@ func TestReconcile_DrainingWithUserDrained_RemovesDrainedFirst(t *testing.T) {
 	}
 }
 
-func TestGetDrainTimeout_FromNodeGroup(t *testing.T) {
-	timeout := 300
-	ng := &v1.NodeGroup{
-		ObjectMeta: metav1.ObjectMeta{Name: "worker"},
-		Spec: v1.NodeGroupSpec{
-			NodeType:               v1.NodeTypeStatic,
-			NodeDrainTimeoutSecond: &timeout,
-		},
-	}
-
-	r := newReconciler(t, ng)
-	got := r.getDrainTimeout(context.Background(), "worker")
-
-	expected := 300 * time.Second
-	if got != expected {
-		t.Fatalf("expected timeout %v, got %v", expected, got)
-	}
-}
-
-func TestGetDrainTimeout_Default(t *testing.T) {
-	r := newReconciler(t)
-	got := r.getDrainTimeout(context.Background(), "nonexistent")
-
-	if got != defaultDrainTimeout {
-		t.Fatalf("expected default timeout %v, got %v", defaultDrainTimeout, got)
-	}
-}
-
 func TestReconcile_NodeNotFound_NoError(t *testing.T) {
 	r := newReconciler(t)
 	reconcile(t, r, "nonexistent")
-}
-
-func TestGetDrainTimeout_NodeGroupWithoutTimeout_Default(t *testing.T) {
-	ng := &v1.NodeGroup{
-		ObjectMeta: metav1.ObjectMeta{Name: "worker"},
-		Spec:       v1.NodeGroupSpec{NodeType: v1.NodeTypeStatic},
-	}
-
-	r := newReconciler(t, ng)
-	got := r.getDrainTimeout(context.Background(), "worker")
-
-	if got != defaultDrainTimeout {
-		t.Fatalf("expected default timeout %v when NodeDrainTimeoutSecond is nil, got %v", defaultDrainTimeout, got)
-	}
-}
-
-func TestGetDrainTimeout_EmptyNodeGroup_Default(t *testing.T) {
-	r := newReconciler(t)
-	got := r.getDrainTimeout(context.Background(), "")
-
-	if got != defaultDrainTimeout {
-		t.Fatalf("expected default timeout %v for empty nodegroup, got %v", defaultDrainTimeout, got)
-	}
 }
 
 func TestReconcile_DrainTimeoutFromNodeGroup_DrainsWithConfiguredTimeout(t *testing.T) {

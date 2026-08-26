@@ -114,23 +114,27 @@ defaults:
       sidebar: main
       sitemap_include: true
       showPrevNextButton: true
+      searchBoost: 2
   - scope:
       path: "pages/architecture"
     values:
       sidebar: main
       sitemap_include: true
       showPrevNextButton: true
+      searchBoost: 2
   - scope:
       path: "pages/user"
     values:
       sidebar: main
       sitemap_include: true
       showPrevNextButton: true
+      searchBoost: 1.5
   - scope:
       path: "pages/reference"
       sitemap_include: true
     values:
       sidebar: main
+      searchBoost: 1.5
   - scope:
       path: "modules_ru"
       type: "pages"
@@ -144,6 +148,7 @@ defaults:
       section: admin
       searchable: true
       sitemap_include: true
+      searchBoost: 2
   - scope:
       path: "_faq/user"
       type: faq
@@ -151,4 +156,5 @@ defaults:
       section: user
       searchable: true
       sitemap_include: true
+      searchBoost: 2
 timezone: Europe/Moscow

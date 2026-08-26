@@ -29,6 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	bootstrapv1alpha1 "github.com/deckhouse/node-controller/api/bootstrap.deckhouse.io/v1alpha1"
 	capiv1beta2 "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
 	mcmv1alpha1 "github.com/deckhouse/node-controller/api/machine.sapcloud.io/v1alpha1"
 )
@@ -111,6 +112,12 @@ func CacheOptions() (cache.Options, client.Options) {
 					"d8-system": {
 						FieldSelector: fields.SelectorFromSet(fields.Set{"metadata.name": "d8-deckhouse-version-info"}),
 					},
+					// The release's image digests. The nodeconfig controller watches this
+					// one to re-render when a release changes a system extension; the
+					// scope has to carry it, or that watch has no informer to come from.
+					"d8-cloud-instance-manager": {
+						FieldSelector: fields.SelectorFromSet(fields.Set{"metadata.name": "bashible-apiserver-files"}),
+					},
 				},
 			},
 			// The one EndpointSlice behind the kubernetes service: it carries the master
@@ -126,6 +133,10 @@ func CacheOptions() (cache.Options, client.Options) {
 			},
 			&mcmv1alpha1.Machine{}: machineNS,
 			&capiv1beta2.Machine{}: machineNS,
+			// Cloned into the machine namespace by the CAPI MachineSet and
+			// watched by the node-bootstrap controller, so the scope cannot go
+			// stale. The CRD ships with this module, so RESTMapping resolves.
+			&bootstrapv1alpha1.NodeBootstrapConfig{}: machineNS,
 			// NOTE: ByObject keys are mapped by GVK, so a typed and an unstructured key of
 			// the same kind (e.g. corev1.Secret and an unstructured v1/Secret) COLLIDE: map
 			// iteration order decides which scope wins and the loser's reads break

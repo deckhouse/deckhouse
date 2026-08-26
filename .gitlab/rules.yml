@@ -49,6 +49,9 @@ workflow:
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule" && $DKP_E2E_AUTOCLEANER_ENABLE == "true"
 
+.rules:on_schedule_svace_analyze:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $DKP_SVACE_ANALYZE_ENABLE == "true"
 
 # Manual edition builds (MR / main). Release-branch editions are automatic.
 .rules:on_main_manual:
