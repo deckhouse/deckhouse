@@ -17,9 +17,12 @@ package bootstrap
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable"
 )
 
 // printHowToReachTheCluster says where the credentials are — the equivalent of
@@ -30,40 +33,47 @@ func (b *ClusterBootstrapper) printHowToReachTheCluster(ctx context.Context, kub
 
 	// Tagged for the compact view: an untagged Info record is file-only on a
 	// terminal. The bashible path tags its SSH line the same way (steps_ssh.go).
-	logger.InfoContext(ctx, fmt.Sprintf("Admin kubeconfig written to %s — cluster-admin credentials, "+
-		"and on a cluster of immutable nodes the only way in.", kubeconfigPath), dhlog.ShowInCompacted())
+	logger.InfoContext(ctx, fmt.Sprintf("Admin kubeconfig: %s — cluster-admin, and the only way in.", kubeconfigPath),
+		dhlog.ShowInCompacted())
+
 	// With a bastion the node's address is reachable from the bastion and nowhere
 	// else, so the plain export is true only inside that network.
 	tunnel := bastionTunnelCommand(bastionConfig(b.SSHProviderInitializer.GetConfig()))
-	if tunnel == "" {
-		logger.InfoContext(ctx, fmt.Sprintf("To use the cluster:  export KUBECONFIG=%s && kubectl get nodes", kubeconfigPath),
-			dhlog.ShowInCompacted())
-		return
+	if tunnel != "" {
+		logger.InfoContext(ctx, fmt.Sprintf(
+			"The master answers at %s:%d, an address that exists only inside the cluster network. "+
+				"Tunnel to it through the bastion once, then use the cluster from any shell:",
+			bctx.immutable.masterIP, immutable.APIServerPort), dhlog.ShowInCompacted())
+		logger.InfoContext(ctx, "  "+tunnel, dhlog.ShowInCompacted())
+	} else {
+		logger.InfoContext(ctx, "To use the cluster:", dhlog.ShowInCompacted())
 	}
 
-	// The tunnel is its own step on purpose: printed as one command with kubectl
-	// it reads as something to repeat before every call, and an operator who
-	// repeats it collects a background ssh per invocation.
-	logger.InfoContext(ctx, "The master has no public address. Open a tunnel through the bastion — once, it stays up in the background:",
-		dhlog.ShowInCompacted())
-	// ConnectionString rather than ShowInCompacted: the terminal UI pins it as
-	// a milestone and repeats it in the closing summary, which is where an
-	// operator looks for it after a long run.
-	logger.InfoContext(ctx, "  "+tunnel, dhlog.ConnectionString())
-	logger.InfoContext(ctx, "Then, in any shell:", dhlog.ShowInCompacted())
-	for _, line := range []string{
-		fmt.Sprintf("export KUBECONFIG=%s", kubeconfigPath),
-		fmt.Sprintf("export HTTPS_PROXY=socks5://127.0.0.1:%d", socksPort),
-		"kubectl get nodes",
-	} {
+	for _, line := range clusterUseCommands(kubeconfigPath, tunnel != "") {
 		logger.InfoContext(ctx, "  "+line, dhlog.ShowInCompacted())
 	}
+	// ConnectionString rather than ShowInCompacted: the terminal UI pins it as a
+	// milestone and repeats it in the closing summary, which is where an operator
+	// looks for it after a long run. The tunnel is deliberately not in it: it is
+	// opened once, while this is what gets typed again and again.
+	logger.InfoContext(ctx, "  "+strings.Join(clusterUseCommands(kubeconfigPath, tunnel != ""), " && "), dhlog.ConnectionString())
 }
 
-// socksPort is where the tunnel listens on the operator's own machine. 1080 is
-// the conventional SOCKS port, and unlike 6443 it is not one a local cluster of
-// their own would already be holding.
-const socksPort = 1080
+// clusterUseCommands is what an operator runs to work with the cluster: the
+// kubeconfig, the proxy that carries its address when the master sits behind a
+// bastion, and a call that proves both.
+func clusterUseCommands(kubeconfigPath string, throughBastion bool) []string {
+	commands := []string{fmt.Sprintf("export KUBECONFIG=%s", kubeconfigPath)}
+	if throughBastion {
+		commands = append(commands, fmt.Sprintf("export HTTPS_PROXY=socks5://127.0.0.1:%d", socksPort))
+	}
+	return append(commands, "kubectl get nodes")
+}
+
+// socksPort is where the tunnel listens on the operator's own machine. Not 1080:
+// that is the conventional SOCKS port and the one another proxy is likely to be
+// holding. 18443 says what it carries — the API server behind it answers on 6443.
+const socksPort = 18443
 
 // bastionTunnelCommand builds the one command that makes the saved kubeconfig
 // usable from outside, or "" when the master is directly reachable. A SOCKS
