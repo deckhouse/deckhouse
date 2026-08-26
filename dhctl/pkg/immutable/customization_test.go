@@ -571,3 +571,20 @@ spec:
 		Size: ">=10Gi",
 	}, selector)
 }
+
+// The CRD declares dhcp with no default, so a document naming an interface and
+// nothing else asks for a NIC configured with neither DHCP= nor Address=. The
+// interfaces replace the rendered ones wholesale, so the machine never joins.
+func TestCustomizationRefusesAnInterfaceWithNeitherDHCPNorAddress(t *testing.T) {
+	document := nodeConfigFor("master-0", `
+  network:
+    interfaces:
+    - name: eno1
+`)
+	_, err := ParseCustomizations(t.Context(), []string{document})
+
+	require.ErrorContains(t, err, "master-0", "the node whose document is wrong")
+	require.ErrorContains(t, err, "eno1", "the interface that would come up unconfigured")
+	require.ErrorContains(t, err, "address", "one way out")
+	require.ErrorContains(t, err, "dhcp: true", "the other")
+}

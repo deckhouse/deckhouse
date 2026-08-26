@@ -22,6 +22,8 @@ import (
 
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
+	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 )
@@ -281,13 +283,23 @@ func kubernetesVersion(metaConfig *config.MetaConfig) (string, error) {
 // control-plane images and the system extensions itself, with no in-cluster
 // registry-packages-proxy to go through during bootstrap.
 func nodeRegistry(metaConfig *config.MetaConfig) (*registrySpec, error) {
-	// Both modes describe the same upstream in RemoteData, and the upstream is what a
-	// booting node needs: the in-cluster proxy Direct mode adds serves nodes that are
-	// already in the cluster. The mode is not the node's business, so it is not read
-	// here — a config parsed from the cluster resolves to Direct where the same cluster
-	// bootstrapped as Unmanaged, and the payload must not differ between the two.
 	settings := metaConfig.Registry.Settings
 
+	// Local mode puts the installer's own bundle registry in RemoteData, and it
+	// lives on 127.0.0.1 inside the installer container. Refused here rather than
+	// by a preflight: preflights can be skipped, and the machine then dies mute.
+	if settings.Mode == constant.ModeLocal {
+		return nil, fmt.Errorf(
+			"registry mode %q is not supported for an immutable master: it serves the images from %s inside the installer, "+
+				"which the machine cannot reach — it pulls its system extensions and control-plane images itself. Use %q or %q",
+			constant.ModeLocal, constant.BundleAddressWithPort, constant.ModeDirect, constant.ModeUnmanaged)
+	}
+
+	// Direct and Unmanaged describe the same upstream in RemoteData, and the upstream is
+	// what a booting node needs: the in-cluster proxy Direct mode adds serves nodes that
+	// are already in the cluster. Beyond the refusal above the mode is not read — a config
+	// parsed from the cluster resolves to Direct where the same cluster bootstrapped as
+	// Unmanaged, and the payload must not differ between the two.
 	address, path := settings.RemoteData.AddressAndPath()
 	if address == "" {
 		return nil, errors.New("registry address is empty")
