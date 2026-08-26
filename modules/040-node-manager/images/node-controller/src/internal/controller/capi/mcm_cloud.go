@@ -380,12 +380,27 @@ func (r *MachineDeploymentReconciler) deleteOrphanMachineClasses(ctx context.Con
 
 // deleteOrphanSecrets deletes the Secrets this module wrote for the NodeGroup that are no
 // longer wanted: the machine-class Secret of a removed zone, and on the teardown pass, where
-// nothing is desired, every one of them. Filtered exactly like the MachineClasses they back,
+// nothing is desired, every one of them. The desired/in-use filter is the MachineClasses',
 // because machine-controller-manager resolves the credentials through secretRef while it drains.
+//
+// The teardown pass runs from the first reconcile that sees a deletionTimestamp
+// (machinedeployment.go:301), so a Static group's manual-bootstrap Secret goes here before
+// CollectOrphanedSecrets would take it. Nothing reads it by then: CAPS reads bootstrap.sh only
+// to bootstrap a node, and tears one down by running /var/lib/bashible/cleanup_static_node.sh
+// on the node itself (caps-controller-manager/src/internal/client/cleanup.go:124).
+//
+// The selection is stricter than deleteOrphanMachineClasses', which lists by node-group alone:
+// heritage and module are required here, and that is what keeps a hand-made Secret of the same
+// name safe. The cost is the mirror image of adoptMachineClass — a helm-era machine-class Secret
+// of a zone removed before the upgrade carries no node-group label, no MachineDeployment points
+// at it, and nothing can adopt it. It leaks permanently and must be removed by hand.
 func (r *MachineDeploymentReconciler) deleteOrphanSecrets(ctx context.Context, ngName string, desired, inUse map[string]struct{}) error {
 	logger := log.FromContext(ctx)
 
-	list := &corev1.SecretList{}
+	// Metadata-only: this runs on every pass of every MCM NodeGroup, and a machine-class
+	// Secret body is the rendered cloud-init plus the cloud credentials.
+	list := &metav1.PartialObjectMetadataList{}
+	list.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("SecretList"))
 	// APIReader: these Secrets carry no app label, so the namespace-scoped Secret informer
 	// holds none of them and a cached list would come back empty.
 	//
@@ -410,7 +425,8 @@ func (r *MachineDeploymentReconciler) deleteOrphanSecrets(ctx context.Context, n
 		if _, ok := inUse[secret.Name]; ok {
 			continue
 		}
-		if err := r.Client.Delete(ctx, secret); err != nil && !errors.IsNotFound(err) {
+		gone := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secret.Name, Namespace: secret.Namespace}}
+		if err := r.Client.Delete(ctx, gone); err != nil && !errors.IsNotFound(err) {
 			return fmt.Errorf("delete orphan secret %s: %w", secret.Name, err)
 		}
 		logger.Info("deleted orphan secret of NodeGroup", "name", secret.Name, "ng", ngName)

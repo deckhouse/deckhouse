@@ -64,7 +64,7 @@ var capiResources = []keepResource{
 	// Bootstrap secrets move from helm to node-controller in 1.79; the annotation
 	// must land before helm stops rendering them, or the release prunes them
 	// between the two steps. Remove together with this hook.
-	{Group: "", Resource: "secrets", keepName: isBootstrapSecretName},
+	{Group: "", Resource: "secrets", keepName: IsBootstrapSecretName},
 }
 
 var crdGVR = schema.GroupVersionResource{
@@ -164,15 +164,19 @@ func setKeepPolicyOnCapiResources(ctx context.Context, input *go_hook.HookInput,
 	return nil
 }
 
-// isBootstrapSecretName reports whether a Secret of d8-cloud-instance-manager is one of
-// the three this migration takes over: manual-bootstrap-for-<ng>, and the CAPI bootstrap
-// and MCM machine-class Secrets, both named <ng>-<sha256(clusterUUID+zone)[:8]>
-// (templates/node-group/node-group.yaml:17-18, _machine_class_secret.tpl:9).
+// IsBootstrapSecretName reports whether a Secret of d8-cloud-instance-manager is one this
+// migration takes over. Two shapes are at prune risk: manual-bootstrap-for-<ng>, and the MCM
+// machine-class Secret named <ng>-<sha256(clusterUUID+zone)[:8]> (_machine_class_secret.tpl:9).
+// The CAPI bootstrap Secret shares the second shape (node-group.yaml:17-18) but already carries
+// the annotation from its own template (_capi_bootstrap_secret.tpl:18-21), so patching it is a
+// no-op in a real cluster.
 //
-// The namespace is shared and the labels do not separate them: deckhouse-registry,
-// bashible-bashbooster and bashible-api-server-tls carry the same heritage/module pair
-// and no other, and the registry-packages-proxy Secrets belong to another release.
-func isBootstrapSecretName(name string) bool {
+// Selecting by name because the namespace is shared and the labels do not separate them:
+// deckhouse-registry, bashible-bashbooster and bashible-api-server-tls carry the same
+// heritage/module pair and no other, and four registry-packages-proxy Secrets live here too.
+//
+// Exported for the template test that binds these shapes to what helm actually renders.
+func IsBootstrapSecretName(name string) bool {
 	return strings.HasPrefix(name, manualBootstrapSecretPrefix) || zoneHashedSecretName.MatchString(name)
 }
 
