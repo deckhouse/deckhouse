@@ -25,24 +25,20 @@ import (
 // The line has to be usable as printed: an operator copies it, and a wrong
 // port or a missing quote costs them the debugging session the line exists to
 // prevent.
-func TestBastionProxyLineShape(t *testing.T) {
+func TestBastionTunnelCommandShape(t *testing.T) {
 	cfg := &sshconfig.Config{BastionUser: "ubuntu", BastionHost: "198.51.100.7"}
-	line := bastionProxyLine(cfg, "/tmp/dhctl/admin.kubeconfig")
+	line := bastionTunnelCommand(cfg)
 	t.Logf("line: %s", line)
-	for _, want := range []string{
-		"ssh -f -N -D 1080 ubuntu@198.51.100.7",
-		"HTTPS_PROXY=socks5://127.0.0.1:1080 kubectl --kubeconfig /tmp/dhctl/admin.kubeconfig get nodes",
-	} {
-		if !strings.Contains(line, want) {
-			t.Fatalf("missing %q in %q", want, line)
-		}
+
+	if line != "ssh -f -N -D 1080 ubuntu@198.51.100.7" {
+		t.Fatalf("tunnel command = %q", line)
 	}
-	// The saved kubeconfig is the operator's only way into the cluster, and its
-	// server is the node's own address: an edit made for one tunnel outlives it
-	// and sends every later use at a port nobody listens on.
-	for _, forbidden := range []string{"sed", "set-cluster", "--server="} {
+	// The tunnel outlives the command that opened it, so it must not be glued to
+	// a kubectl call: printed as one line it reads as a prelude to every call,
+	// and an operator following it literally collects a background ssh per call.
+	for _, forbidden := range []string{"kubectl", "&&", "sed", "set-cluster", "--server="} {
 		if strings.Contains(line, forbidden) {
-			t.Fatalf("the saved kubeconfig must not be rewritten (%q): %q", forbidden, line)
+			t.Fatalf("the tunnel is its own step and rewrites nothing, found %q in %q", forbidden, line)
 		}
 	}
 }
