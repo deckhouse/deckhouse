@@ -17,8 +17,10 @@ limitations under the License.
 package testenv
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"testing"
 
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
@@ -45,11 +47,32 @@ var bootstrapTemplateFiles = map[string]string{
 func BootstrapTemplatesConfigMap() *corev1.ConfigMap {
 	ginkgo.GinkgoHelper()
 
+	cm, err := bootstrapTemplatesConfigMap()
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	return cm
+}
+
+// BootstrapTemplatesConfigMapFor is BootstrapTemplatesConfigMap for a plain go
+// test: gomega's fail handler is registered by RunSpecs, which `go test -run` of a
+// non-ginkgo test never reaches, and an Expect without one panics.
+func BootstrapTemplatesConfigMapFor(t testing.TB) *corev1.ConfigMap {
+	t.Helper()
+
+	cm, err := bootstrapTemplatesConfigMap()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return cm
+}
+
+func bootstrapTemplatesConfigMap() (*corev1.ConfigMap, error) {
 	root := repoRoot()
 	data := make(map[string]string, len(bootstrapTemplateFiles))
 	for path, key := range bootstrapTemplateFiles {
 		raw, err := os.ReadFile(filepath.Join(root, path))
-		gomega.Expect(err).NotTo(gomega.HaveOccurred(), "read %s", path)
+		if err != nil {
+			return nil, fmt.Errorf("read bootstrap template %s: %w", path, err)
+		}
 		data[key] = string(raw)
 	}
 
@@ -57,7 +80,7 @@ func BootstrapTemplatesConfigMap() *corev1.ConfigMap {
 		ObjectMeta: metav1.ObjectMeta{Namespace: nodecommon.MachineNamespace, Name: bootstrap.TemplatesConfigMapName},
 		Data:       data,
 		BinaryData: map[string][]byte{"minget": []byte("minget")},
-	}
+	}, nil
 }
 
 // repoRoot resolves the repository root from this file's build-time location, so
