@@ -776,12 +776,15 @@ func TestMachinesArePreflightedAgainstTheirDocuments(t *testing.T) {
 		bctx.immutable.hosts = map[string]string{"master-0": "127.0.0.1"}
 		bctx.immutable.maintenancePort = 1
 
-		ctx, cancel := context.WithTimeout(t.Context(), 2*checkMachinesWaiting.interval)
-		defer cancel()
-
-		err := b.checkMachinesAreWaiting(ctx, bctx)
+		started := time.Now()
+		err := b.checkMachinesAreWaiting(t.Context(), bctx)
 		require.ErrorContains(t, err, "master-0")
 		require.ErrorContains(t, err, "not waiting for a configuration")
+		// An address nobody answers for is a typo, and a typo must not be waited
+		// out: on a live run the untimed version sat for minutes, because one try
+		// ran to the HTTP client's own 30s.
+		require.Less(t, time.Since(started), 15*time.Second,
+			"the preflight must give up in seconds, not run the budget of the push")
 	})
 
 	t.Run("a machine the document cannot describe", func(t *testing.T) {

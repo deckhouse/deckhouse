@@ -82,6 +82,31 @@ func TestTheCommandsThatUseTheClusterStandAlone(t *testing.T) {
 	}
 }
 
+// Four commands, pinned together: the operator copies them in order, and the
+// tunnel is the one that must come first. A live run showed why the block cannot
+// be a single pinned line — only the ssh survived on screen, and by itself it
+// leads nowhere.
+func TestTheReachBlockCarriesEveryCommand(t *testing.T) {
+	lines := reachTheClusterLines("/tmp/dhctl/admin.kubeconfig", "ssh -f -N -D 18443 ubuntu@198.51.100.7")
+	t.Logf("block:\n%s", strings.Join(lines, "\n"))
+
+	require := func(index int, want string) {
+		t.Helper()
+		if index >= len(lines) || !strings.Contains(lines[index], want) {
+			t.Fatalf("line %d must carry %q, block is:\n%s", index, want, strings.Join(lines, "\n"))
+		}
+	}
+	require(0, "ssh -f -N -D 18443")
+	require(1, "export KUBECONFIG=/tmp/dhctl/admin.kubeconfig")
+	require(2, "export HTTPS_PROXY=socks5://127.0.0.1:18443")
+	require(3, "kubectl get nodes")
+
+	direct := reachTheClusterLines("/tmp/dhctl/admin.kubeconfig", "")
+	if strings.Contains(strings.Join(direct, "\n"), "ssh ") {
+		t.Fatalf("a reachable master needs no tunnel:\n%s", strings.Join(direct, "\n"))
+	}
+}
+
 // The connect line is printed from three places, and the rerun is the easy one to
 // lose: reuseCollectedKubeconfig short-circuits collection, so a stalled rerun
 // would say nothing at all (observed on a live rerun: none of the three lines).
@@ -142,14 +167,16 @@ func TestConnectLinesAreTaggedForTheTerminal(t *testing.T) {
 		if cut := strings.Index(stmt, ")\n"); cut > 0 {
 			stmt = stmt[:cut]
 		}
-		if !strings.Contains(stmt, "ShowInCompacted()") && !strings.Contains(stmt, "ConnectionString()") {
+		if !strings.Contains(stmt, "ShowInCompacted()") && !strings.Contains(stmt, "ConnectionString()") &&
+			!strings.Contains(stmt, "Banner()") {
 			t.Fatalf("this line would be file-only, so the operator never sees it: %s", strings.TrimSpace(line))
 		}
 	}
 
-	// The tunnel command specifically: ConnectionString pins it as a milestone
-	// and repeats it in the closing summary.
+	// One of them has to be a ConnectionString: the banner lives on the live
+	// canvas, and the closing summary — where an operator looks after a long run
+	// — repeats connection strings only.
 	if !strings.Contains(fn, "dhlog.ConnectionString()") {
-		t.Fatal("the tunnel command must be tagged ConnectionString so it survives to the closing summary")
+		t.Fatal("the commands must also go out as a connection string, or the closing summary carries nothing")
 	}
 }

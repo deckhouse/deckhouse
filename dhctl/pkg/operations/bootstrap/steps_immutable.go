@@ -33,6 +33,7 @@ import (
 	dhctlkube "github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook/controlplane"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight/checks"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight/suites"
@@ -312,7 +313,12 @@ func (b *ClusterBootstrapper) checkMachineIsWaiting(ctx context.Context, bctx *b
 			return b.openImmutableChannelTo(ctx, address, port, "machine check")
 		},
 		func(endpoint string) error {
-			fetched, err := immutable.FetchInventory(ctx, endpoint)
+			// Bounded per try, not per check: the tunnel is up by now, and what is
+			// left to fail is the machine at the other end of it.
+			tryCtx, cancel := context.WithTimeout(ctx, checkMachineTimeout)
+			defer cancel()
+
+			fetched, err := immutable.FetchInventory(tryCtx, endpoint)
 			if err != nil {
 				return err
 			}
@@ -670,6 +676,9 @@ func (b *ClusterBootstrapper) connectToImmutableMaster(ctx context.Context, bctx
 			return err
 		}
 	}
+	// Done either way: a rerun that found the credentials in the cache waited for
+	// nothing, and a bar that never marks the step it skipped reads as stuck.
+	b.PhasedExecutionContext.CompleteSubPhase(ctx, phases.InstallKubernetesSubPhaseWaitForControlPlane)
 
 	content, err := immutable.RetargetKubeconfig(ctx, complete, server, bctx.immutable.masterNodeName)
 	if err != nil {
@@ -680,6 +689,7 @@ func (b *ClusterBootstrapper) connectToImmutableMaster(ctx context.Context, bctx
 	if err != nil {
 		return err
 	}
+	b.PhasedExecutionContext.CompleteSubPhase(ctx, phases.InstallKubernetesSubPhaseCollectCredentials)
 
 	kubeProvider, err := newKubeconfigKubeProvider(ctx, b, kubeconfigPath)
 	if err != nil {
