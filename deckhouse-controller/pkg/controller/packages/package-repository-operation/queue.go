@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
+	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -119,7 +120,7 @@ func (r *reconciler) dequeuePackageWithError(ctx context.Context, op *v1alpha1.P
 		return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
 	}
 
-	return ctrl.Result{Requeue: true}, nil
+	return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 }
 
 // dequeuePackageWithResult removes the head of the Discovered queue and records the
@@ -169,7 +170,7 @@ func (r *reconciler) dequeuePackageWithResult(ctx context.Context, op *v1alpha1.
 		return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
 	}
 
-	return ctrl.Result{Requeue: true}, nil
+	return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 }
 
 // ensureModulePackage creates the ModulePackage for a scanned module and lists the repository
