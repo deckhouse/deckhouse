@@ -41,6 +41,7 @@ const (
 	ImmutableKubeconfigOutCheckName       preflight.CheckName = "immutable-kubeconfig-out"
 	ImmutableKubeconfigKeptCheckName      preflight.CheckName = "immutable-kubeconfig-kept"
 	ImmutableSupportedProviderCheckName   preflight.CheckName = "immutable-supported-provider"
+	ImmutableMachinesWaitingCheckName     preflight.CheckName = "immutable-machines-waiting"
 )
 
 // Lowercase because MetaConfig.prepareProviderName lowercases cloud.provider;
@@ -195,6 +196,27 @@ func ImmutablePostBootstrapScript(bootstrapOpts *options.BootstrapOptions) prefl
 				"--post-bootstrap-script-path (%s) is not supported for an immutable master: the script is executed over SSH and an immutable node runs no sshd",
 				bootstrapOpts.PostBootstrapScriptPath,
 			)
+		},
+	}
+}
+
+// ImmutableMachinesWaiting asks the machines themselves: each one named with
+// --master-host answers its maintenance port, and the hardware it reports is
+// the hardware its document describes. Both come from one inventory read.
+//
+// The work lives in the bootstrapper — it owns the tunnel and the documents —
+// and arrives here as run. A cloud bootstrap names no machines and passes it
+// with nothing to do.
+func ImmutableMachinesWaiting(run func(context.Context) error) preflight.Check {
+	return preflight.Check{
+		Name:        ImmutableMachinesWaitingCheckName,
+		Description: "the machines are waiting for a configuration and match the one written for them",
+		Phase:       preflight.PhasePreInfra,
+		Run: func(ctx context.Context) error {
+			if run == nil {
+				return nil
+			}
+			return run(ctx)
 		},
 	}
 }
