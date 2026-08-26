@@ -558,6 +558,21 @@ spec:
 		})
 	})
 
+	Context("A publicDomainTemplate whose %s is only a prefix of the first label", func() {
+		BeforeEach(func() {
+			f.ValuesSet("deckhouse.reservedPublicHosts.mode", "Template")
+			run("%s-cluster.example.com", tenantObjects)
+		})
+
+		It("records nothing, because Template does not apply and there is nothing to grandfather", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet(reservedPublicHostsValuePath).String()).To(MatchJSON(`{
+				"recorded": false,
+				"hosts": []
+			}`))
+		})
+	})
+
 	Context("The parameters exist but say the record has not been made", func() {
 		BeforeEach(func() {
 			run("%s.example.com", tenantObjects+paramsConfigMap("false", ""))

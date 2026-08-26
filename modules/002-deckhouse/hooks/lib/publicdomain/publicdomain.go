@@ -105,9 +105,15 @@ func ParseNamespace(domainTemplate string) (Namespace, error) {
 }
 
 // EffectiveMode is the reservation actually in force, which is not always the one the ModuleConfig
-// asked for: a publicDomainTemplate that does not split into a prefix and a suffix never went
-// through the global schema, and a reservation must not be derived from parts that are not there, so
-// it falls back to List.
+// asked for. It falls back to List when Template cannot be applied:
+//
+//   - a publicDomainTemplate that does not split into a prefix and a suffix never went through the
+//     global schema, and a reservation must not be derived from parts that are not there;
+//   - a template whose %s is only a prefix of the first label ("%s-cluster.example.com") can render
+//     every hostname that shares the rest of that label, including tenant Ingresses named the same
+//     way. Template would reserve them all. List keeps the platform service names and leaves the
+//     rest alone. "kube-%s.example.com" is the other direction and stays Template: the literal is
+//     a prefix, so only kube-* is reserved.
 //
 // templates/reserved-public-hosts.yaml decides the same thing in Helm and publishes the answer in
 // the mode key of the ConfigMap. It has to be decided the same way on both sides: the record the
@@ -121,7 +127,24 @@ func EffectiveMode(configured, domainTemplate string) string {
 	if _, err := ParseNamespace(domainTemplate); err != nil {
 		return ModeList
 	}
+	if percentSSharesFirstLabelWithASuffix(domainTemplate) {
+		return ModeList
+	}
 	return ModeTemplate
+}
+
+// percentSSharesFirstLabelWithASuffix reports the "%s-cluster.example.com" shape: %s starts the
+// hostname, and more of the first DNS label follows it. Template mode's regex is then any valid
+// label plus that suffix, which is also how applications on that cluster are named.
+//
+// templates/reserved-public-hosts.yaml decides the same thing from the two halves of splitList.
+func percentSSharesFirstLabelWithASuffix(domainTemplate string) bool {
+	parts := strings.Split(strings.ToLower(domainTemplate), "%s")
+	if len(parts) != 2 {
+		return false
+	}
+	prefix, suffix := parts[0], parts[1]
+	return prefix == "" && suffix != "" && !strings.HasPrefix(suffix, ".")
 }
 
 // Covers reports whether the hostname is one the reservation claims. The hostname is expected to be
