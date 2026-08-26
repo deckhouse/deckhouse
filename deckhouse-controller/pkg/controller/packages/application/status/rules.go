@@ -272,16 +272,9 @@ func pipelineBlocker(state condmap.State, chain []string) (string, bool) {
 	return firstFalse(state, chain)
 }
 
-// isInstallComplete reports whether the first install actually landed.
-//
-// why both: intScaled is owned by the workload health monitor, which observes a
-// ready workload as soon as nelm creates it — while the run task is still inside
-// the apply and has not set intManifestsApplied yet. The status service commits
-// currentVersion, urls and lastAppliedConfiguration under intManifestsApplied, so
-// success published off intScaled alone reports an installed application whose
-// status carries none of the three. mapManaged and mapConfigurationApplied
-// already require intManifestsApplied; this is the same gate for the install
-// signals.
+// isInstallComplete reports whether the first install actually landed. intScaled
+// alone is not enough: the status service commits currentVersion, urls and
+// lastAppliedConfiguration under intManifestsApplied.
 func isInstallComplete(state condmap.State) bool {
 	return state.AllIntEqual(metav1.ConditionTrue, intManifestsApplied, intScaled)
 }

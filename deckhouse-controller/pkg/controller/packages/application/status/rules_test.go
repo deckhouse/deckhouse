@@ -184,9 +184,8 @@ func TestInstalledRule(t *testing.T) {
 			},
 		},
 		{
-			// The health monitor sees a ready workload while the run task is still
-			// inside the apply, so Scaled alone must not report a finished install:
-			// the version, URLs and settings are committed under ManifestsApplied.
+			// Scaled alone must not report a finished install: the version, URLs
+			// and settings are committed under ManifestsApplied.
 			name: "absent when Scaled arrives before manifests are applied",
 			opts: []mappingOption{
 				withInternalCondition(string(intstatus.ConditionScaled), metav1.ConditionTrue, "Scaled"),
