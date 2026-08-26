@@ -227,13 +227,13 @@ func TestTheWaitRepeatsItselfWhileNothingChanges(t *testing.T) {
 	ctx := dhlog.ToContext(context.Background(), dhlog.NewBufferLogger(&terminal))
 
 	now := time.Date(2026, 8, 25, 20, 0, 0, 0, time.UTC)
-	say := narrateWait(ctx, func() time.Time { return now })
+	report := waitProgress(ctx, func() time.Time { return now })
 
-	say("master-0 is not answering its bootstrap channel yet")
+	report("master-0 is not answering its bootstrap channel yet")
 	now = now.Add(5 * time.Second)
-	say("master-0 is not answering its bootstrap channel yet")
+	report("master-0 is not answering its bootstrap channel yet")
 	now = now.Add(waitProgressInterval)
-	say("master-0 is not answering its bootstrap channel yet")
+	report("master-0 is not answering its bootstrap channel yet")
 
 	if got := strings.Count(terminal.String(), "not answering"); got != 2 {
 		t.Errorf("the same message must be repeated once per %s, said it %d times", waitProgressInterval, got)
