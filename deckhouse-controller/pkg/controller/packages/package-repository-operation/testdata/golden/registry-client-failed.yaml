@@ -24,8 +24,7 @@ status:
   completionTime: "2025-10-31T12:00:00Z"
   conditions:
   - lastTransitionTime: "2019-10-17T15:33:00Z"
-    message: 'failed to list packages: failed to list tags: Get "https://registry.example.com/v2/":
-      dial tcp: lookup registry.example.com: no such host'
+    message: 'create package service: assert.AnError general error for testing'
     reason: ScanFailed
     status: "True"
     type: Completed
@@ -38,12 +37,12 @@ metadata:
   resourceVersion: "2"
 spec:
   registry:
-    repo: registry.example.com/test
+    dockerCfg: test
+    repo: incorrect-registry.example.com/incorrect
 status:
   conditions:
   - lastTransitionTime: "2019-10-17T15:33:00Z"
-    message: 'failed to list packages: failed to list tags: Get "https://registry.example.com/v2/":
-      dial tcp: lookup registry.example.com: no such host'
+    message: 'create package service: assert.AnError general error for testing'
     reason: ScanFailed
     status: "False"
     type: LastScanSucceeded
