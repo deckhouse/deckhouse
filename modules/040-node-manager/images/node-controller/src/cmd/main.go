@@ -17,12 +17,14 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
 	"strconv"
 	"strings"
 
+	"github.com/go-logr/logr"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -177,25 +179,28 @@ func main() {
 	// The aggregated API server has its own handler chain, so it cannot share the
 	// webhook port. It runs on every replica: the Service load balances over all of
 	// them, so it must not be tied to leader election.
-	go func() {
-		// The client is the uncached one: the API server starts before the
-		// manager, so nothing here may wait on its cache.
-		err := apiserver.Run(ctx, apiserver.Options{
-			BindPort: apiserverPort,
-			CertFile: webhookCertDir + "/tls.crt",
-			KeyFile:  webhookCertDir + "/tls.key",
-			Storage:  nodebootstrap.NewTemplateStorage(directClient),
-		})
-		// Not fatal: this pod also serves the CRD conversion webhook of NodeGroup
-		// and Instance, so exiting here would break cluster-wide reads of both.
-		if err != nil {
-			setupLog.Error(err, "problem running aggregated API server")
-		}
-	}()
+	// The client is the uncached one: the API server starts before the manager,
+	// so nothing here may wait on its cache.
+	go serveAggregatedAPI(ctx, setupLog, apiserver.Options{
+		BindPort: apiserverPort,
+		CertFile: webhookCertDir + "/tls.crt",
+		KeyFile:  webhookCertDir + "/tls.key",
+		Storage:  nodebootstrap.NewTemplateStorage(directClient),
+	})
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running manager")
+		os.Exit(1)
+	}
+}
+
+// serveAggregatedAPI serves the templates API until ctx is done. Its death is
+// fatal: this replica answers the probe and stays in the Endpoints the APIService
+// points at, so a pod that outlives its API server fails discovery cluster-wide.
+func serveAggregatedAPI(ctx context.Context, log logr.Logger, opts apiserver.Options) {
+	if err := apiserver.Run(ctx, opts); err != nil {
+		log.Error(err, "problem running aggregated API server")
 		os.Exit(1)
 	}
 }

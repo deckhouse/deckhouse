@@ -65,6 +65,25 @@ func TestNodeConfigTemplateLeavesTheMachineFieldsToTheOperator(t *testing.T) {
 	require.Nil(t, template.Spec.Storage.DiskSelector)
 }
 
+// The node name is the operator's to pick, and a NodeConfig carries it twice:
+// crds/nodeconfig.yaml requires spec.nodeName, and the own-node-only policy
+// refuses a write whose metadata.name differs from it. Neither may be guessed.
+func TestNodeConfigTemplateNamesNoNode(t *testing.T) {
+	storage := NewTemplateStorage(templateCluster(t,
+		immutableStaticNodeGroup(testTemplateNodeGroup),
+		bootstrapTokenSecret(testTemplateNodeGroup),
+	))
+
+	object, err := storage.Get(t.Context(), testTemplateNodeGroup, &metav1.GetOptions{})
+	require.NoError(t, err)
+
+	template, ok := object.(*templatesv1alpha1.NodeConfigTemplate)
+	require.True(t, ok, "storage returned %T", object)
+
+	require.Empty(t, template.Spec.NodeName)
+	require.Empty(t, template.Name, "the NodeGroup name is not a node name")
+}
+
 // Without the token kubelet has nothing to present on first contact and the
 // machine never joins; the operator has nowhere else to take one from, and a
 // stored template would carry an expired one.
@@ -104,7 +123,8 @@ func TestNodeConfigTemplateIsNotServedForACloudGroup(t *testing.T) {
 // must be given that group and nothing else.
 func TestNodeConfigTemplateListHonoursTheRequest(t *testing.T) {
 	// Only the first group has a token, so rendering the second one fails: an
-	// answer without an error is proof the second was never rendered.
+	// answer without an error is proof the second was never rendered — a
+	// template names no group of its own.
 	cluster := templateCluster(t,
 		immutableStaticNodeGroup("aaa-wanted"),
 		immutableStaticNodeGroup("zzz-other"),
@@ -114,22 +134,22 @@ func TestNodeConfigTemplateListHonoursTheRequest(t *testing.T) {
 	tests := []struct {
 		name    string
 		options metainternalversion.ListOptions
-		exp     []string
+		exp     int
 	}{
 		{
 			name:    "a name selector answers for that group alone",
 			options: metainternalversion.ListOptions{FieldSelector: fields.OneTermEqualSelector("metadata.name", "aaa-wanted")},
-			exp:     []string{"aaa-wanted"},
+			exp:     1,
 		},
 		{
 			name:    "a label selector matches nothing: a template carries no labels",
 			options: metainternalversion.ListOptions{LabelSelector: labels.SelectorFromSet(labels.Set{"x": "y"})},
-			exp:     []string{},
+			exp:     0,
 		},
 		{
 			name:    "a limit is not exceeded",
 			options: metainternalversion.ListOptions{Limit: 1},
-			exp:     []string{"aaa-wanted"},
+			exp:     1,
 		},
 	}
 
@@ -140,12 +160,7 @@ func TestNodeConfigTemplateListHonoursTheRequest(t *testing.T) {
 
 			list, ok := object.(*templatesv1alpha1.NodeConfigTemplateList)
 			require.True(t, ok, "storage returned %T", object)
-
-			names := make([]string, 0, len(list.Items))
-			for _, item := range list.Items {
-				names = append(names, item.Name)
-			}
-			require.Equal(t, tt.exp, names, "the answer must hold exactly the templates that were asked for")
+			require.Len(t, list.Items, tt.exp, "the answer must hold exactly the templates that were asked for")
 		})
 	}
 }
