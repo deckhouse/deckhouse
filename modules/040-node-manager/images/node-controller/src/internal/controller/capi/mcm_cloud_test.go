@@ -33,10 +33,10 @@ import (
 	sigsyaml "sigs.k8s.io/yaml"
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
-	"github.com/deckhouse/node-controller/internal/bootstrap"
 	"github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/machineclass"
+	"github.com/deckhouse/node-controller/internal/testenv"
 )
 
 func TestInstanceClassSpot(t *testing.T) {
@@ -94,6 +94,7 @@ const (
 	helmZoneSecretName  = "worker-02320933"
 	yandexMCMConfigPath = "../../../../../../../030-cloud-provider-yandex/cloud-instance-manager/config-for-machine-controller-manager.yaml"
 	yandexMachineClass  = "../../../../../../../030-cloud-provider-yandex/cloud-instance-manager/machine-class.yaml"
+	yandexNetworksPath  = "../../../../../../../030-cloud-provider-yandex/candi/bashible/bootstrap-networks.sh.tpl"
 )
 
 // The Secret machine-controller-manager reads a machine's cloud-init and its cloud
@@ -103,26 +104,39 @@ func TestApplyMachineClassSecret(t *testing.T) {
 	config, err := os.ReadFile(yandexMCMConfigPath)
 	require.NoError(t, err, "provider config-for-machine-controller-manager.yaml must exist")
 	r := machineClassSecretReconciler(t, config)
+	resolved := derived_status.ResolvedNodeGroup{Name: "worker", NodeType: deckhousev1.NodeTypeCloudEphemeral}
 
+	// The two calls reconcileCloudMCMs makes: the cloud-init once for the group, the
+	// Secret once per zone.
+	userData, err := r.machineClassUserData(t.Context(), resolved)
+	require.NoError(t, err)
 	require.NoError(t, r.applyMachineClassSecret(t.Context(),
-		derived_status.ResolvedNodeGroup{Name: "worker", NodeType: deckhousev1.NodeTypeCloudEphemeral},
-		"yandex", helmZoneSecretName, yandexRenderContext()))
+		resolved.Name, "yandex", helmZoneSecretName, userData, yandexRenderContext()))
 
 	secret := &corev1.Secret{}
 	require.NoError(t, r.Client.Get(t.Context(), types.NamespacedName{
 		Namespace: common.MachineNamespace, Name: helmZoneSecretName,
 	}, secret))
 
-	userData := string(secret.Data["userData"])
-	assert.True(t, strings.HasPrefix(userData, "#cloud-config\n"), "userData is a cloud-init document")
+	written := string(secret.Data["userData"])
+	assert.True(t, strings.HasPrefix(written, "#cloud-config\n"), "userData is a cloud-init document")
 	// machine-controller-manager substitutes a token of its own per machine
 	// (pkg/util/provider/machinecontroller/userdata.go:29), so the placeholder must
 	// reach the node file verbatim — a minted token here would expire in 4 hours.
-	assert.Contains(t, userData, "\n- path: /var/lib/bashible/bootstrap-token\n  content: <<BOOTSTRAP_TOKEN>>\n")
+	assert.Contains(t, written, "\n- path: /var/lib/bashible/bootstrap-token\n  content: <<BOOTSTRAP_TOKEN>>\n")
 	// The UUID reaches the script only through a candi template
 	// (01-bootstrap-prerequisites.sh.tpl:26), so it is proof the ConfigMap-delivered
 	// templates were rendered rather than a literal being copied.
-	assert.Contains(t, userData, `PACKAGES_PROXY_BOOTSTRAP_CLUSTER_UUID="`+helmClusterUUID+`"`)
+	assert.Contains(t, written, `PACKAGES_PROXY_BOOTSTRAP_CLUSTER_UUID="`+helmClusterUUID+`"`)
+	// ip_in_subnet is defined in the yandex bootstrap-networks.sh.tpl and nowhere else
+	// in the repository. It reaches userData only when the cloud-provider Secret named
+	// the provider (01-bootstrap-prerequisites.sh.tpl:40 skips the block otherwise) and
+	// the script was found under the key templateKey maps its path to — the largest
+	// block of a cloud node's script.
+	assert.Contains(t, written, "function ip_in_subnet(){")
+	// The prerequisites template strips the network script's own shebang before
+	// inlining it, so a raw copy of the file would leave a second one here.
+	assert.Equal(t, 1, strings.Count(written, "#!/bin/bash\n"), "the inlined network script keeps no shebang")
 
 	// helm wrote the provider fragment under `data:`, whose values the apiserver
 	// base64-decodes; the Go client encodes Data itself, so the b64enc of the
@@ -130,7 +144,11 @@ func TestApplyMachineClassSecret(t *testing.T) {
 	assert.Equal(t, []byte("myfolder"), secret.Data["folderID"])
 	assert.Equal(t, []byte(`{"id":"sa"}`), secret.Data["serviceAccountJSON"])
 
-	assert.Equal(t, map[string]string{"heritage": "deckhouse", "module": "node-manager"}, secret.Labels)
+	// node-group is not one of helm's labels: it is what a prune of the Secrets left by
+	// a removed zone would select on.
+	assert.Equal(t, map[string]string{
+		"heritage": "deckhouse", "module": "node-manager", "node-group": "worker",
+	}, secret.Labels)
 }
 
 // The Secret name is a contract with every provider's machine-class.yaml: a
@@ -189,15 +207,22 @@ func yandexRenderContext() map[string]interface{} {
 	}
 }
 
-// machineClassSecretReconciler builds a reconciler over a fake cluster carrying
-// everything the machine-class Secret is rendered from: the candi templates, the
-// image digests, the cluster UUID, the apiserver endpoints and the provider's
-// MCM template Secret.
+// machineClassSecretReconciler builds a reconciler over a fake cluster carrying what
+// the machine-class Secret is rendered from: the candi templates plus the yandex
+// network script, the image digests, the cluster UUID, the apiserver endpoints, the
+// cloud-provider discovery Secret and the provider's MCM template Secret.
 func machineClassSecretReconciler(t *testing.T, providerConfig []byte) *MachineDeploymentReconciler {
 	t.Helper()
 
+	templates := testenv.BootstrapTemplatesConfigMapFor(t)
+	// Left out of the shared fixture because it lives next to its cloud-provider module;
+	// the chart globs it in under this key (bootstrap-templates-cm.yaml:16-18).
+	networks, err := os.ReadFile(yandexNetworksPath)
+	require.NoError(t, err, "provider bootstrap-networks.sh.tpl must exist")
+	templates.Data["bootstrap-networks-yandex.sh.tpl"] = string(networks)
+
 	return fakeReconciler(t,
-		bootstrapTemplatesConfigMap(t),
+		templates,
 		&corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{Namespace: clusterUUIDConfigMapNS, Name: clusterUUIDConfigMapName},
 			Data:       map[string]string{"cluster-uuid": helmClusterUUID},
@@ -212,33 +237,18 @@ func machineClassSecretReconciler(t *testing.T, providerConfig []byte) *MachineD
 			Endpoints:  []discoveryv1.Endpoint{{Addresses: []string{"10.0.0.1"}}},
 			Ports:      []discoveryv1.EndpointPort{{Name: ptr("https"), Port: ptr(int32(6443))}},
 		},
+		// Where Input.Provider comes from: without it the render drops the provider
+		// network block entirely.
+		&corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Namespace: cloudProviderSecretNamespace, Name: cloudProviderSecretName},
+			Data: map[string][]byte{
+				"type":         []byte(`"yandex"`),
+				"sshPublicKey": []byte(`"ssh-ed25519 AAAA"`),
+			},
+		},
 		&corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{Namespace: providerTemplateSecretNamespace, Name: "d8-cloud-provider-yandex-mcm"},
 			Data:       map[string][]byte{"config-for-machine-controller-manager.yaml": providerConfig},
 		},
 	)
-}
-
-// bootstrapTemplatesConfigMap is the ConfigMap the chart fills with the candi
-// bootstrap templates (templates/bashible/bootstrap-templates-cm.yaml), read from
-// the repository so the render works on what a release ships. minget is stubbed:
-// only its base64 travels into the script.
-func bootstrapTemplatesConfigMap(t *testing.T) *corev1.ConfigMap {
-	t.Helper()
-
-	data := map[string]string{}
-	for path, key := range map[string]string{
-		"../../../../../../../../candi/bashible/lib.sh.tpl":                                  "lib.sh.tpl",
-		"../../../../../../../../candi/bashible/bootstrap/01-bootstrap-prerequisites.sh.tpl": "01-bootstrap-prerequisites.sh.tpl",
-	} {
-		raw, err := os.ReadFile(path)
-		require.NoError(t, err, "read %s", path)
-		data[key] = string(raw)
-	}
-
-	return &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{Namespace: common.MachineNamespace, Name: bootstrap.TemplatesConfigMapName},
-		Data:       data,
-		BinaryData: map[string][]byte{"minget": []byte("minget")},
-	}
 }

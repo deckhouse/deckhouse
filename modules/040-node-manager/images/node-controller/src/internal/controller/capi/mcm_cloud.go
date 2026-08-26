@@ -107,6 +107,14 @@ func (r *MachineDeploymentReconciler) reconcileCloudMCMs(
 		return fmt.Errorf("render checksum for NodeGroup %s: %w", ng.Name, err)
 	}
 
+	// Rendered once for the whole group: bootstrap.Input carries no zone, so every zone
+	// would get the same bytes. Before the loop, so a cluster read that fails cannot leave
+	// part of the zones applied.
+	userData, err := r.machineClassUserData(ctx, resolved)
+	if err != nil {
+		return err
+	}
+
 	minReplicas, maxReplicas := getMinMax(ng)
 	awsSpot := cloudType == "aws" && instanceClassSpot(resolved)
 
@@ -174,7 +182,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMCMs(
 
 		// Before the MachineClass: machine-controller-manager resolves the credentials and
 		// the cloud-init through secretRef, so a class applied first is a class it cannot act on.
-		if err := r.applyMachineClassSecret(ctx, resolved, cloudType, machineClassName, renderCtx); err != nil {
+		if err := r.applyMachineClassSecret(ctx, ng.Name, cloudType, machineClassName, userData, renderCtx); err != nil {
 			return err
 		}
 		if err := r.Client.Patch(ctx, machineClassObj, client.Apply, client.FieldOwner("node-controller"), client.ForceOwnership); err != nil {
@@ -183,7 +191,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMCMs(
 		if err := r.Client.Patch(ctx, md, client.Apply, client.FieldOwner("node-controller"), client.ForceOwnership); err != nil {
 			return fmt.Errorf("apply MCM MachineDeployment %s: %w", mdName, err)
 		}
-		logger.Info("applied MCM MachineClass + MachineDeployment", "name", mdName, "zone", zone)
+		logger.Info("applied MCM secret + MachineClass + MachineDeployment", "name", mdName, "zone", zone)
 	}
 
 	if _, err := r.pruneStaleMCMs(ctx, r.Client, ng.Name, machineClassKind, desiredMDNames, desiredClassNames); err != nil {
@@ -197,54 +205,64 @@ func (r *MachineDeploymentReconciler) reconcileCloudMCMs(
 // credentials machine-controller-manager authenticates with, as key/base64 pairs.
 const mcmConfigTemplateKey = "config-for-machine-controller-manager.yaml"
 
+// machineClassUserData renders the cloud-init every machine of the NodeGroup boots from —
+// the userData of its machine-class Secret.
+func (r *MachineDeploymentReconciler) machineClassUserData(ctx context.Context, resolved derived_status.ResolvedNodeGroup) ([]byte, error) {
+	// machine-controller-manager replaces this literal with a token it orders per machine
+	// (pkg/util/provider/machinecontroller/userdata.go:29), so no token is minted here.
+	in, err := bootstrapsecrets.BuildInput(ctx,
+		&bashiblecontext.Service{Client: r.Client, Reader: r.APIReader}, resolved, "<<BOOTSTRAP_TOKEN>>")
+	if err != nil {
+		return nil, err
+	}
+	userData, err := bootstrap.RenderCloudConfig(in)
+	if err != nil {
+		return nil, fmt.Errorf("render cloud-config for NodeGroup %s: %w", resolved.Name, err)
+	}
+	return userData, nil
+}
+
 // applyMachineClassSecret writes the Secret every MCM MachineClass points its secretRef at:
-// the cloud-init in userData plus the cloud credentials the provider renders from
+// the given cloud-init in userData plus the cloud credentials the provider renders from
 // config-for-machine-controller-manager.yaml. Port of the helm define
 // "node_group_machine_class_secret" (templates/node-group/_machine_class_secret.tpl).
 //
 // The name is the contract with the provider templates, which compute it themselves:
 // <ng>-<sha256(clusterUUID+zone)[:8]>, the same name the MachineClass carries.
 func (r *MachineDeploymentReconciler) applyMachineClassSecret(
-	ctx context.Context, resolved derived_status.ResolvedNodeGroup, cloudType, name string, renderCtx map[string]interface{},
+	ctx context.Context, ngName, cloudType, secretName string, userData []byte, renderCtx map[string]interface{},
 ) error {
-	// machine-controller-manager replaces this literal with a token it orders per machine
-	// (pkg/util/provider/machinecontroller/userdata.go:29), so no token is minted here.
-	in, err := bootstrapsecrets.BuildInput(ctx,
-		&bashiblecontext.Service{Client: r.Client, Reader: r.APIReader}, resolved, "<<BOOTSTRAP_TOKEN>>")
-	if err != nil {
-		return err
-	}
-	userData, err := bootstrap.RenderCloudConfig(in)
-	if err != nil {
-		return fmt.Errorf("render cloud-config for NodeGroup %s: %w", resolved.Name, err)
-	}
-
 	configTemplate, err := r.readProviderTemplate(ctx, cloudType, engineMCMTemplates, mcmConfigTemplateKey)
 	if err != nil {
-		return err
+		return fmt.Errorf("read %s for NodeGroup %s: %w", mcmConfigTemplateKey, ngName, err)
 	}
 	config, err := machineclass.RenderMachineClass(configTemplate, renderCtx)
 	if err != nil {
-		return fmt.Errorf("render %s for NodeGroup %s: %w", mcmConfigTemplateKey, resolved.Name, err)
+		return fmt.Errorf("render %s for NodeGroup %s: %w", mcmConfigTemplateKey, ngName, err)
 	}
 	// The fragment is what helm nindented under `data:`, so its values are base64 and the
 	// apiserver decoded them. Unmarshalling into []byte undoes that encoding, which the
 	// client then redoes — a raw copy would hand the provider a double-encoded credential.
 	data := map[string][]byte{}
 	if err := sigsyaml.Unmarshal(config, &data); err != nil {
-		return fmt.Errorf("parse rendered %s for NodeGroup %s: %w", mcmConfigTemplateKey, resolved.Name, err)
+		return fmt.Errorf("parse rendered %s for NodeGroup %s: %w", mcmConfigTemplateKey, ngName, err)
 	}
 	data["userData"] = userData
 
 	secret := &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "Secret"},
-		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: common.MachineNamespace,
-			Labels: map[string]string{"heritage": "deckhouse", "module": "node-manager"}},
+		ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: common.MachineNamespace, Labels: map[string]string{
+			"heritage": "deckhouse",
+			"module":   "node-manager",
+			// helm never set it. It is what a prune of the Secret left by a removed zone
+			// would have to select on, the way pruneStaleMCMs selects MachineClasses.
+			ngcommon.MachineDeploymentNodeGroupLabel: ngName,
+		}},
 		Type: corev1.SecretTypeOpaque,
 		Data: data,
 	}
 	if err := r.Client.Patch(ctx, secret, client.Apply, client.FieldOwner("node-controller"), client.ForceOwnership); err != nil {
-		return fmt.Errorf("apply MachineClass secret %s: %w", name, err)
+		return fmt.Errorf("apply MachineClass secret %s: %w", secretName, err)
 	}
 	return nil
 }
