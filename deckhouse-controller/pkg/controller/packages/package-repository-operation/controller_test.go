@@ -15,7 +15,6 @@
 package packagerepositoryoperation
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"net/http"
@@ -260,27 +259,6 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
-	suite.Run("partial scan unavailable", func() {
-		// The repository reports no partial listing, so an incremental scan must say so.
-		var logs bytes.Buffer
-
-		psm := createFakePSM(newInternalClient(fakeRegistry.NewRegistry(registryHost)))
-
-		suite.setupController("partial-scan-unavailable.yaml",
-			withPackageServiceManager(psm), withLogger(log.NewLogger(log.WithOutput(&logs))))
-		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
-
-		err := repeat(func() error {
-			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
-				NamespacedName: k8stypes.NamespacedName{Name: operation.Name},
-			})
-			return err
-		})
-
-		require.NoError(suite.T(), err)
-		require.Contains(suite.T(), logs.String(), "can't handle partial tag listing")
-	})
-
 	suite.Run("registry client creation failed", func() {
 		// Use an empty PSM (no pre-configured services) - PackagesService will fail
 		// because there's no service for the registry URL and it can't create one dynamically
@@ -508,11 +486,9 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
-	suite.Run("incremental scan keeps only the latest patch of every minor", func() {
-		// Registry holds several patch releases for every minor line.
-		// The incremental scan must process only the newest patch of each
-		// major.minor line: v1.0.2, v1.1.1 and v2.0.0 - the intermediate
-		// patches (v1.0.0, v1.0.1, v1.1.0) must not produce resources.
+	suite.Run("incremental scan offers every patch of every minor", func() {
+		// Registry holds several patch releases for every minor line. Every one of them is
+		// offered: the scan does not thin a minor line down to its newest patch.
 		reg := fakeRegistry.NewRegistry(registryHost)
 		reg.MustAddImage("", "test-package", fakeRegistry.NewImageBuilder().MustBuild())
 		modImg := moduleVersionImage().MustBuild()
@@ -522,7 +498,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 
 		psm := createFakePSM(newInternalClient(reg))
 
-		suite.setupController("incremental-scan-latest-minors.yaml", withPackageServiceManager(psm))
+		suite.setupController("incremental-scan-every-patch.yaml", withPackageServiceManager(psm))
 		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
 
 		err := repeat(func() error {
@@ -543,7 +519,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 			got = append(got, item.Spec.PackageVersion)
 		}
 
-		assert.ElementsMatch(suite.T(), []string{"v1.0.2", "v1.1.1", "v2.0.0"}, got)
+		assert.ElementsMatch(suite.T(), []string{"v1.0.0", "v1.0.1", "v1.0.2", "v1.1.0", "v1.1.1", "v2.0.0"}, got)
 	})
 
 	suite.Run("incremental scan with no new versions keeps package in repository status", func() {
