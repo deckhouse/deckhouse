@@ -14,6 +14,7 @@ var generatedPreflightChecks = []string{
 	"immutable-installer-images",
 	"immutable-kubeconfig-kept",
 	"immutable-kubeconfig-out",
+	"immutable-machines-waiting",
 	"immutable-post-bootstrap-script",
 	"immutable-registry-mode",
 	"immutable-signature-mode",
