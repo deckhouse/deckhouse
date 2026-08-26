@@ -36,7 +36,12 @@ import (
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
-var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+var _ = sdk.RegisterFunc(orderBootstrapTokenConfig, handleOrderBootstrapToken)
+
+// orderBootstrapTokenConfig is named so the bindings can be asserted on: whether
+// this hook wakes on a new NodeGroup decides how long a CloudEphemeral machine of
+// that group waits with no bootstrap data.
+var orderBootstrapTokenConfig = &go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 20},
 	Schedule: []go_hook.ScheduleConfig{
 		{
@@ -47,10 +52,15 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/node-manager/order_bootstrap_token",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:                "ngs",
-			ApiVersion:          "deckhouse.io/v1",
-			Kind:                "NodeGroup",
-			ExecuteHookOnEvents: ptr.To(false),
+			Name:       "ngs",
+			ApiVersion: "deckhouse.io/v1",
+			Kind:       "NodeGroup",
+			// A group with no token yet gets none until something else re-renders the
+			// module or the hourly schedule comes round, and a CloudEphemeral machine
+			// created meanwhile waits for it with nothing to boot from. The filter
+			// returns the group's name alone, so an update to its status carries the
+			// same checksum and fires nothing: only a group appearing or leaving does.
+			ExecuteHookOnEvents: ptr.To(true),
 			FilterFunc:          bootstrapTokenFilterNodeGroup,
 		},
 		{
@@ -74,7 +84,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: bootstrapTokenFilterSecret,
 		},
 	},
-}, handleOrderBootstrapToken)
+}
 
 func bootstrapTokenFilterSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var sec corev1.Secret
