@@ -17,15 +17,12 @@ limitations under the License.
 package capi
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"sort"
 	"strings"
 
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -93,8 +90,8 @@ func buildCAPIMachineDeployment(in capiMDInput) *unstructured.Unstructured {
 	}
 
 	// An immutable node boots from a per-machine NodeBootstrapConfig cloned
-	// from the group's template; a bashible node keeps the group-wide helm
-	// secret. configRef has no apiVersion: CAPI resolves it from the contract label.
+	// from the group's template; a bashible node keeps the group-wide bootstrap
+	// Secret. configRef has no apiVersion: CAPI resolves it from the contract label.
 	bootstrap := map[string]interface{}{"dataSecretName": in.bootstrapSecretName}
 	if in.ng.Spec.SystemType == deckhousev1.SystemTypeImmutable {
 		bootstrap = map[string]interface{}{
@@ -229,82 +226,14 @@ func desiredReplicas(existing *existingCAPIMachineDeployment, minReplicas, maxRe
 // that changes nothing the user asked for is not acceptable, so an existing MachineDeployment
 // keeps the name it already carries, forever. Only MachineDeployments created from now on (new
 // clusters, new zones) get the zone-based name; a migrated cluster therefore ends up with mixed
-// names, which is the deliberate price of not rolling.
-func (r *MachineDeploymentReconciler) resolveBootstrapSecretName(
-	ctx context.Context,
-	existing *existingCAPIMachineDeployment,
-	rendered string,
-) (string, error) {
-	if existing == nil || existing.bootstrapSecretName == "" || existing.bootstrapSecretName == rendered {
-		return rendered, nil
+// names, which is the deliberate price of not rolling. The bootstrap-secrets controller writes
+// the Secret under every name the group's MachineDeployments reference, the legacy one included
+// (bootstrapsecrets/sources.go capiSecretNames), so the name picked here always has a Secret.
+func resolveBootstrapSecretName(existing *existingCAPIMachineDeployment, rendered string) string {
+	if existing == nil || existing.bootstrapSecretName == "" {
+		return rendered
 	}
-
-	if err := r.mirrorBootstrapSecret(ctx, rendered, existing.bootstrapSecretName); err != nil {
-		return "", err
-	}
-	return existing.bootstrapSecretName, nil
-}
-
-// mirrorBootstrapSecret copies the Secret helm renders under the current name onto the legacy
-// name an adopted MachineDeployment still references.
-//
-// It is required, not cosmetic: the cloud-init inside the Secret embeds a bootstrap token that is
-// rotated roughly every 4 hours (hooks/order_bootstrap_token.go), and helm only renders the
-// current name. Without mirroring, the adopted Secret would keep a token that expires within
-// hours and the next scale-up would create a Machine that cannot join the cluster.
-//
-// Both reads are live: the bootstrap Secret carries no app label, so it is outside the
-// namespace-scoped Secret informer and a cached read would never find it.
-func (r *MachineDeploymentReconciler) mirrorBootstrapSecret(ctx context.Context, from, to string) error {
-	src := &corev1.Secret{}
-	if err := r.APIReader.Get(ctx, types.NamespacedName{Name: from, Namespace: common.MachineNamespace}, src); err != nil {
-		if errors.IsNotFound(err) {
-			// helm has not rendered it yet; the adopted Secret still holds a usable token.
-			return nil
-		}
-		return fmt.Errorf("get bootstrap secret %s: %w", from, err)
-	}
-
-	dst := &corev1.Secret{}
-	err := r.APIReader.Get(ctx, types.NamespacedName{Name: to, Namespace: common.MachineNamespace}, dst)
-	if errors.IsNotFound(err) {
-		dst = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Name: to, Namespace: common.MachineNamespace, Labels: src.Labels},
-			Type:       src.Type,
-			Data:       src.Data,
-		}
-		if err := r.Client.Create(ctx, dst); err != nil && !errors.IsAlreadyExists(err) {
-			return fmt.Errorf("create adopted bootstrap secret %s: %w", to, err)
-		}
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("get adopted bootstrap secret %s: %w", to, err)
-	}
-	// Write only on a real difference: the token rotation is the only expected change, and an
-	// unconditional update would bump resourceVersion on every reconcile of every zone.
-	if secretDataEqual(dst.Data, src.Data) {
-		return nil
-	}
-	dst.Data = src.Data
-	dst.Type = src.Type
-	if err := r.Client.Update(ctx, dst); err != nil {
-		return fmt.Errorf("refresh adopted bootstrap secret %s: %w", to, err)
-	}
-	return nil
-}
-
-func secretDataEqual(a, b map[string][]byte) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for k, av := range a {
-		bv, ok := b[k]
-		if !ok || !bytes.Equal(av, bv) {
-			return false
-		}
-	}
-	return true
+	return existing.bootstrapSecretName
 }
 
 func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(
@@ -448,17 +377,14 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(
 		}
 		desiredMDNames[mdName] = struct{}{}
 
-		// helm renders the bootstrap Secret under a stable per-zone name, which mdSuffix
-		// reproduces ($ng-$zone_hash). resolveBootstrapSecretName may override it to keep an
+		// The bootstrap Secret gets a stable per-zone name, which mdSuffix reproduces
+		// ($ng-$zone_hash). resolveBootstrapSecretName may override it to keep an
 		// already-created MachineDeployment on its legacy name.
 		existingMD, err := r.readExistingCAPIMachineDeployment(ctx, mdName)
 		if err != nil {
 			return err
 		}
-		bootstrapSecretName, err := r.resolveBootstrapSecretName(ctx, existingMD, mdSuffix)
-		if err != nil {
-			return err
-		}
+		bootstrapSecretName := resolveBootstrapSecretName(existingMD, mdSuffix)
 
 		renderCtx := machinetemplate.RenderContext{
 			InstanceClass: instanceClassSpec,

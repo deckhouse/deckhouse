@@ -129,34 +129,6 @@ properties:
               minimum: 1
               maximum: 65535
 
-      packagesProxy:
-        type: object
-        default: {}
-        properties:
-          addresses:
-            type: array
-            description: |
-              Array of package proxy servers addresses.
-            x-examples:
-              - ["10.0.0.1:5443", "10.0.0.2:5443", "10.0.0.3:5443"]
-            default: []
-            items:
-              type: string
-              pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}:[1-9][0-9]{0,4}$'
-          token:
-            type: string
-            description: |
-              packages proxy token.
-            x-examples:
-            - "mytoken"
-            default: ""
-      kubernetesCA:
-        type: string
-        x-examples:
-          - LS0tQ0VSVC0tLSBhYWFxcXEgLS1FTkQgQ0VSVC0tLQo=
-        description: |
-          kubernetes.ca content
-
       standbyNodeGroups:
         type: array
         description: |
@@ -211,16 +183,6 @@ properties:
           - LS0tcHJpdmtleS0tLSBhYWFxcXEgLS1lbmQgcHJpdmtleS0tLQo=
         description: |
           Private key for API server used by bashible.
-
-      bootstrapTokens:
-        type: object
-        # This is a dictionary nodeGroup name -> bootstrap token.
-        additionalProperties:
-          type: string
-        description: |
-          Bootstrap tokens for node groups.
-        x-examples:
-          - worker: mytoken
 
       customMIGNames:
         type: object

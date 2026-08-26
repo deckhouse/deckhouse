@@ -41,8 +41,9 @@ const (
 	manualBootstrapSecretPrefix  = "manual-bootstrap-for-"
 )
 
-// zoneHashedSecretName matches the `printf "%s-%s" $ng.name $zone_hash` both the CAPI
-// bootstrap and the machine-class Secret are named by, $zone_hash being `sha256sum | trunc 8`.
+// zoneHashedSecretName matches <ng>-<sha256(clusterUUID+zone)[:8]>, the name both the CAPI
+// bootstrap and the machine-class Secret carry — the shape helm gave them and the one
+// node-controller keeps writing them under.
 var zoneHashedSecretName = regexp.MustCompile(`-[0-9a-f]{8}$`)
 
 type keepResource struct {
@@ -61,9 +62,9 @@ var capiResources = []keepResource{
 	{Group: "cluster.x-k8s.io", Resource: "machinehealthchecks"},
 	{Group: "cluster.x-k8s.io", Resource: "machinedeployments"},
 	{Group: "infrastructure.cluster.x-k8s.io", Resource: "staticmachinetemplates", versionPreference: []string{"v1alpha1"}},
-	// Bootstrap secrets move from helm to node-controller in 1.79; the annotation
-	// must land before helm stops rendering them, or the release prunes them
-	// between the two steps. Remove together with this hook.
+	// The bootstrap Secrets are node-controller's from 1.79 on. This hook runs before
+	// helm, so on the upgrade that stops rendering them the annotation is already there
+	// and the release leaves them alone. Remove together with this hook.
 	{Group: "", Resource: "secrets", keepName: IsBootstrapSecretName},
 }
 
@@ -165,17 +166,16 @@ func setKeepPolicyOnCapiResources(ctx context.Context, input *go_hook.HookInput,
 }
 
 // IsBootstrapSecretName reports whether a Secret of d8-cloud-instance-manager is one this
-// migration takes over. Two shapes are at prune risk: manual-bootstrap-for-<ng>, and the MCM
-// machine-class Secret named <ng>-<sha256(clusterUUID+zone)[:8]> (_machine_class_secret.tpl:9).
-// The CAPI bootstrap Secret shares the second shape (node-group.yaml:17-18) but already carries
-// the annotation from its own template (_capi_bootstrap_secret.tpl:18-21), so patching it is a
-// no-op in a real cluster.
+// migration takes over. Two shapes are at prune risk: manual-bootstrap-for-<ng>, and the
+// zone-hashed <ng>-<sha256(clusterUUID+zone)[:8]> that both the MCM machine-class Secret and
+// the CAPI bootstrap Secret carry. A cluster upgrading into 1.79 holds all of them as
+// helm-managed objects the release would otherwise prune.
 //
 // Selecting by name because the namespace is shared and the labels do not separate them:
 // deckhouse-registry, bashible-bashbooster and bashible-api-server-tls carry the same
 // heritage/module pair and no other, and four registry-packages-proxy Secrets live here too.
 //
-// Exported for the template test that binds these shapes to what helm actually renders.
+// Exported for the template test that binds these shapes to the names the chart still renders.
 func IsBootstrapSecretName(name string) bool {
 	return strings.HasPrefix(name, manualBootstrapSecretPrefix) || zoneHashedSecretName.MatchString(name)
 }

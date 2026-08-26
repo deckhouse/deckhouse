@@ -225,17 +225,16 @@ var _ = Describe("node-manager :: hooks :: set_keep_policy_on_capi_resources ::"
 			f.RunHook()
 		})
 
-		// Every Secret this migration takes over, because missing one means helm prunes
-		// it between this release and the one that stops rendering it, and a node loses
-		// its bootstrap data. The CAPI one arrives already stamped by its own template;
-		// the other two are the hook's own work.
-		It("stamps keep policy on every bootstrap secret helm still renders", func() {
+		// Every Secret this migration takes over. The hook runs before helm, so missing
+		// one means the release that stops rendering it prunes it and a node loses its
+		// bootstrap data.
+		It("stamps keep policy on every bootstrap secret helm used to render", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
 			for _, name := range []string{
-				"manual-bootstrap-for-worker", // node_group_static_or_hybrid_secret
-				"capi-worker-1a2b3c4d",        // capi_node_group_machine_bootstrap_secret
-				"mcm-worker-deadbeef",         // node_group_machine_class_secret
+				"manual-bootstrap-for-worker", // manual bootstrap secret of a static group
+				"capi-worker-1a2b3c4d",        // CAPI bootstrap secret, zone-hashed name
+				"mcm-worker-deadbeef",         // MCM machine-class secret, zone-hashed name
 			} {
 				Expect(keepPolicy(name)).To(Equal("keep"), "secret %s must survive the handover", name)
 			}

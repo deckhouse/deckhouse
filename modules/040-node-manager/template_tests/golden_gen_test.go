@@ -257,6 +257,10 @@ const goldenMCMAzure = `
 // Never regenerate a golden from node-controller's own output: a golden taken
 // from the renderer under test guards nothing but its own drift.
 //
+// It cannot run any more — the templates it renders were removed once
+// node-controller took the bootstrap Secrets over — and is kept as the record of
+// the helm values the frozen goldens were rendered from.
+//
 // Three files a checkout does not have must be staged first, and reverted
 // after. Every one of them is present in the built image, so leaving them out
 // would freeze a render that production never performs:
