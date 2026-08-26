@@ -18,6 +18,7 @@ package bootstrapsecrets
 
 import (
 	"encoding/base64"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -213,6 +214,42 @@ var _ = Describe("Bootstrap secrets controller", func() {
 		Eventually(func(g Gomega) {
 			g.Expect(k8sClient.Get(suiteCtx, manualSecretKey(name), secret)).To(Succeed())
 			g.Expect(string(secret.Data["bootstrap.sh"])).To(ContainSubstring(marker))
+		}, eventuallyTimeout, eventuallyPoll).Should(Succeed())
+	})
+
+	// The digests land literally inside every bootstrap.sh and every release rewrites
+	// them. Same argument as the candi templates above: nothing else enqueues a
+	// NodeGroup on this ConfigMap, so a stale digest would stand until the resync.
+	It("re-renders the secrets when the image digests change", func() {
+		name := testenv.UniqueName("digests")
+		createNodeGroup(staticNodeGroup(name))
+
+		secret := &corev1.Secret{}
+		Eventually(func() error {
+			return k8sClient.Get(suiteCtx, manualSecretKey(name), secret)
+		}, eventuallyTimeout, eventuallyPoll).Should(Succeed())
+
+		digest := "sha256:jq-" + name
+		cm := &corev1.ConfigMap{}
+		cmKey := types.NamespacedName{Namespace: nodecommon.MachineNamespace, Name: imagesDigestsConfigMapName}
+		Expect(k8sClient.Get(suiteCtx, cmKey, cm)).To(Succeed())
+		original := cm.Data[imagesDigestsKey]
+		cm.Data[imagesDigestsKey] = strings.Replace(original, `"sha256:jq"`, `"`+digest+`"`, 1)
+		Expect(cm.Data[imagesDigestsKey]).NotTo(Equal(original),
+			"the fixture must still carry the digest this spec rewrites")
+		Expect(k8sClient.Update(suiteCtx, cm)).To(Succeed())
+		DeferCleanup(func() {
+			restored := &corev1.ConfigMap{}
+			Expect(k8sClient.Get(suiteCtx, cmKey, restored)).To(Succeed())
+			restored.Data[imagesDigestsKey] = original
+			Expect(k8sClient.Update(suiteCtx, restored)).To(Succeed())
+		})
+
+		// The digest reaches the script through the rpp-get install line of
+		// 01-bootstrap-prerequisites.sh.tpl:37, so a stale render cannot show it.
+		Eventually(func(g Gomega) {
+			g.Expect(k8sClient.Get(suiteCtx, manualSecretKey(name), secret)).To(Succeed())
+			g.Expect(string(secret.Data["bootstrap.sh"])).To(ContainSubstring(digest))
 		}, eventuallyTimeout, eventuallyPoll).Should(Succeed())
 	})
 
