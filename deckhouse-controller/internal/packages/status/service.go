@@ -276,12 +276,8 @@ func (s *Service) UpdateTracking(name string, report progrep.ProgressReport) {
 		Reason: ConditionReasonApplyingManifests,
 	})
 
-	for i := len(report.StageReports) - 1; i >= 0; i-- {
-		r := report.StageReports[i]
-		if len(r.Operations) == 0 {
-			continue
-		}
-
+	if len(report.StageReports) > 0 {
+		r := report.StageReports[0]
 		completed := 0
 		remaining := 0
 		for _, op := range r.Operations {
@@ -293,7 +289,6 @@ func (s *Service) UpdateTracking(name string, report progrep.ProgressReport) {
 		}
 
 		status.Tracking = Tracking{Completed: completed, Remaining: remaining, Report: r}
-		break
 	}
 	s.mu.Unlock()
 
