@@ -8,10 +8,7 @@ git:
 shell:
   beforeInstall:
   - pm install python@3.12 jq gnu-glibc gawk coreutils grep bash iproute2 bridge-utils procps util-linux findutils curl -d /out
-  # pip is not used at runtime (the entrypoint only needs the Python stdlib, e.g.
-  # `python3 -c 'import ipaddress'`); it ships only as a byproduct of installing
-  # python@3.12. Drop it so it does not reach the final image and surface CVEs.
-  - rm -rf /out/usr/lib/python3.12/site-packages/pip /out/usr/lib/python3.12/site-packages/pip-*.dist-info /out/usr/lib/python3.12/ensurepip /out/usr/bin/pip3 /out/usr/bin/pip3.12
+  - rm -rf /out/usr/lib/python3*/site-packages/pip* /out/usr/bin/pip3*
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ index $.Images "base/distroless-fin" }}
