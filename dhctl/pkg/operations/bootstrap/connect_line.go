@@ -20,8 +20,6 @@ import (
 
 	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable"
 )
 
 // printHowToReachTheCluster says where the credentials are — the equivalent of
@@ -40,7 +38,7 @@ func (b *ClusterBootstrapper) printHowToReachTheCluster(ctx context.Context, kub
 	// With a bastion that address is reachable from the bastion and nowhere else,
 	// so the line above is true only inside the network. Print how to get there
 	// rather than leave the operator to guess the shape of the tunnel.
-	if line := bastionForwardLine(bastionConfig(b.SSHProviderInitializer.GetConfig()), bctx.immutable.masterIP, kubeconfigPath); line != "" {
+	if line := bastionProxyLine(bastionConfig(b.SSHProviderInitializer.GetConfig()), kubeconfigPath); line != "" {
 		logger.InfoContext(ctx, "The master has no public address; reach it through the bastion first:",
 			dhlog.ShowInCompacted())
 		// ConnectionString rather than ShowInCompacted: the terminal UI pins it as
@@ -50,11 +48,11 @@ func (b *ClusterBootstrapper) printHowToReachTheCluster(ctx context.Context, kub
 	}
 }
 
-// bastionForwardLine builds the commands that make the saved kubeconfig usable
-// from outside, or "" when the master is directly reachable. It forwards to
-// 127.0.0.1, which every apiserver certificate covers, and retargets the server
-// with kubectl rather than sed, which would silently miss.
-func bastionForwardLine(cfg *sshconfig.Config, masterIP, kubeconfigPath string) string {
+// bastionProxyLine builds the commands that make the saved kubeconfig usable
+// from outside, or "" when the master is directly reachable. A SOCKS proxy over
+// the bastion carries the kubeconfig's own address, so the file stays exactly as
+// the node wrote it: a retargeted server outlives the tunnel it was written for.
+func bastionProxyLine(cfg *sshconfig.Config, kubeconfigPath string) string {
 	if cfg == nil {
 		return ""
 	}
@@ -68,12 +66,9 @@ func bastionForwardLine(cfg *sshconfig.Config, masterIP, kubeconfigPath string) 
 		port = fmt.Sprintf(" -p %d", *cfg.BastionPort)
 	}
 
-	// 6445 rather than 6443: the port is opened on the operator's own machine,
-	// which may well be running a cluster of its own.
-	const localPort = 6445
-	// The cluster is always named "kubernetes": the node generates this
-	// kubeconfig itself, kubeadm-style, and nothing downstream renames it.
-	return fmt.Sprintf("ssh -f -N%s -L %d:%s:%d %s  &&  kubectl --kubeconfig %s config set-cluster kubernetes --server=https://127.0.0.1:%d",
-		port, localPort, masterIP, immutable.APIServerPort, bastion,
-		kubeconfigPath, localPort)
+	// 1080 is the conventional SOCKS port, and the proxy is opened on the
+	// operator's own machine, which may well be running a cluster of its own.
+	const localPort = 1080
+	return fmt.Sprintf("ssh -f -N%s -D %d %s  &&  HTTPS_PROXY=socks5://127.0.0.1:%d kubectl --kubeconfig %s get nodes",
+		port, localPort, bastion, localPort, kubeconfigPath)
 }
