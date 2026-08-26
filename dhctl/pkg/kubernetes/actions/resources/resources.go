@@ -272,22 +272,6 @@ func (c *Creator) createSingleResource(ctx context.Context, resource *template.R
 				_, err := c.kubeCl.Dynamic().Resource(*gvr).
 					Namespace(namespace).
 					Create(ctx, docCopy, metav1.CreateOptions{})
-				if err == nil || apierrors.IsAlreadyExists(err) {
-					return err
-				}
-
-				// Admission may forbid creating an object that is already there: the
-				// system-ns.deckhouse.io policy denies CREATE of a d8-* namespace to
-				// everyone but Deckhouse itself, and answers before the API server can
-				// report the conflict. A refused create is not proof the object is
-				// missing, so ask - what comes back turns a re-run into the update it
-				// always was.
-				if _, getErr := c.kubeCl.Dynamic().Resource(*gvr).
-					Namespace(namespace).
-					Get(ctx, docCopy.GetName(), metav1.GetOptions{}); getErr == nil {
-					return apierrors.NewAlreadyExists(gvr.GroupResource(), docCopy.GetName())
-				}
-
 				return err
 			},
 			UpdateFunc: func(ctx context.Context, manifest any) error {
