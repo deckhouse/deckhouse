@@ -62,6 +62,14 @@ func BuildInput(ctx context.Context, svc *bashiblecontext.Service, resolved deri
 		return bootstrap.Input{}, fmt.Errorf("build bootstrap input for NodeGroup %s: cluster UUID is empty", resolved.Name)
 	}
 
+	// The same gate for the same reason: ReadKubernetesCA returns "" on any failed
+	// read, and an empty ca.crt yields a valid-looking Secret whose node cannot verify
+	// the apiserver. The discover_kubernetes_ca hook returned that read error too.
+	kubernetesCA := svc.ReadKubernetesCA()
+	if kubernetesCA == "" {
+		return bootstrap.Input{}, fmt.Errorf("build bootstrap input for NodeGroup %s: kubernetes CA is empty", resolved.Name)
+	}
+
 	endpoints, err := svc.ReadEndpoints(ctx)
 	if err != nil {
 		return bootstrap.Input{}, fmt.Errorf("read kube-apiserver endpoints: %w", err)
@@ -92,7 +100,7 @@ func BuildInput(ctx context.Context, svc *bashiblecontext.Service, resolved deri
 		// pins), so inlining its base64 into the script costs ~5KiB per copy.
 		MingetB64:      base64.StdEncoding.EncodeToString(files.Binary("minget")),
 		Provider:       provider,
-		KubernetesCA:   svc.ReadKubernetesCA(),
+		KubernetesCA:   kubernetesCA,
 		BootstrapToken: token,
 		SSHPublicKey:   sshPublicKey,
 		Files:          files,

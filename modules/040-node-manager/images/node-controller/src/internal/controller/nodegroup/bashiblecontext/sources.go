@@ -46,9 +46,10 @@ const (
 	cloudProviderSecretName = ngcommon.CloudProviderSecretName
 )
 
-// rootCAFiles are the candidate locations of the projected service-account CA, canonical path
-// first. See ReadKubernetesCA.
-var rootCAFiles = []string{
+// RootCAFiles are the candidate locations of the projected service-account CA, canonical path
+// first. See ReadKubernetesCA. Exported for the suites whose controllers build the Service
+// themselves: a test process runs in no pod and has neither path.
+var RootCAFiles = []string{
 	"/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
 	"/run/secrets/kubernetes.io/serviceaccount/ca.crt",
 }
@@ -167,7 +168,7 @@ func (s *Service) readAPIServerProxyCerts(ctx context.Context) apiserverProxyCer
 // distroless. Both spellings are therefore tried, so the CA never silently ends up empty in the
 // bashible context.
 func (s *Service) ReadKubernetesCA() string {
-	paths := rootCAFiles
+	paths := RootCAFiles
 	if s.RootCAFile != "" {
 		paths = []string{s.RootCAFile}
 	}
