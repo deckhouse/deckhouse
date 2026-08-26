@@ -19,10 +19,12 @@ package bootstrapsecrets
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -38,6 +40,7 @@ import (
 	"github.com/deckhouse/node-controller/internal/bootstrap"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/bashiblecontext"
+	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 	"github.com/deckhouse/node-controller/internal/register"
 )
@@ -81,11 +84,13 @@ type Reconciler struct {
 	register.Base
 	context       *bashiblecontext.Service
 	derivedStatus *derived_status.Service
+	apiReader     client.Reader
 }
 
 func (r *Reconciler) Setup(_ context.Context, mgr ctrl.Manager) error {
 	r.context = &bashiblecontext.Service{Client: r.Client, Reader: mgr.GetAPIReader()}
 	r.derivedStatus = &derived_status.Service{Client: r.Client}
+	r.apiReader = mgr.GetAPIReader()
 	return nil
 }
 
@@ -124,10 +129,14 @@ func (r *Reconciler) allNodeGroups(ctx context.Context, _ client.Object) []recon
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
-	// The sweep rides the NodeGroup passes; expired token Secrets are the only
-	// rubbish this controller leaves behind and nothing else collects them.
+	// Both sweeps ride the NodeGroup passes, and both are logged rather than
+	// returned: a NodeGroup must still get its Secrets when collecting somebody
+	// else's rubbish fails.
 	if err := CollectExpiredTokens(ctx, r.Client); err != nil {
 		logger.Error(err, "failed to collect expired bootstrap tokens")
+	}
+	if err := CollectOrphanedSecrets(ctx, r.Client, r.apiReader); err != nil {
+		logger.Error(err, "failed to collect orphaned bootstrap secrets")
 	}
 
 	ng := &deckhousev1.NodeGroup{}
@@ -193,7 +202,7 @@ func (r *Reconciler) writeManualSecret(ctx context.Context, ng *deckhousev1.Node
 		return fmt.Errorf("marshal apiserver endpoints for NodeGroup %s: %w", ng.Name, err)
 	}
 
-	return r.applySecret(ctx, manualSecretPrefix+ng.Name, map[string][]byte{
+	return r.applySecret(ctx, ng.Name, manualSecretPrefix+ng.Name, map[string][]byte{
 		"cloud-config": cloudConfig,
 		"bootstrap.sh": script,
 		// helm's toYaml drops the trailing newline; matching it keeps the bytes
@@ -227,7 +236,7 @@ func (r *Reconciler) writeCAPISecrets(ctx context.Context, ng *deckhousev1.NodeG
 	}
 	data := map[string][]byte{"format": []byte("cloud-config"), "value": value}
 	for _, name := range names {
-		if err := r.applySecret(ctx, name, data); err != nil {
+		if err := r.applySecret(ctx, ng.Name, name, data); err != nil {
 			return err
 		}
 	}
@@ -237,13 +246,20 @@ func (r *Reconciler) writeCAPISecrets(ctx context.Context, ng *deckhousev1.NodeG
 // applySecret writes the Secret server-side. Server-side apply rather than
 // create-or-update: these Secrets carry no app label, so they sit outside the
 // namespace-scoped Secret informer and a cached read would never find them.
-func (r *Reconciler) applySecret(ctx context.Context, name string, data map[string][]byte) error {
+func (r *Reconciler) applySecret(ctx context.Context, ngName, name string, data map[string][]byte) error {
 	secret := &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "Secret"},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: nodecommon.MachineNamespace,
-			Labels:    map[string]string{"heritage": "deckhouse", "module": "node-manager"},
+			Labels: map[string]string{
+				"heritage": "deckhouse",
+				"module":   "node-manager",
+				// helm never set it. It is what CollectOrphanedSecrets finds the Secret
+				// by once the NodeGroup is deleted: a CAPI Secret carries the name its
+				// MachineDeployment chose, with no group name in it to parse.
+				ngcommon.MachineDeploymentNodeGroupLabel: ngName,
+			},
 		},
 		Type: corev1.SecretTypeOpaque,
 		Data: data,
@@ -262,4 +278,64 @@ func (r *Reconciler) applySecret(ctx context.Context, name string, data map[stri
 	log.FromContext(ctx).Info("applied bootstrap secret",
 		"secret", nodecommon.MachineNamespace+"/"+name, "bytes", total)
 	return nil
+}
+
+// CollectOrphanedSecrets deletes the bootstrap Secrets written for NodeGroups that
+// no longer exist. Nothing else collects them: the keep annotation stamped ahead of
+// the handover (hooks/set_keep_policy_on_capi_resources.go) relieved helm of pruning
+// this namespace.
+//
+// reader must be uncached on both counts. These Secrets carry no app label, so the
+// namespace-scoped Secret informer holds none of them (common/cache.go), and a
+// NodeGroup missing from a cold cache is not a deleted NodeGroup.
+func CollectOrphanedSecrets(ctx context.Context, c client.Client, reader client.Reader) error {
+	secrets := &corev1.SecretList{}
+	if err := reader.List(ctx, secrets,
+		client.InNamespace(nodecommon.MachineNamespace),
+		// Both labels: a Secret an operator wrote by hand carries neither, and is
+		// not this controller's to delete.
+		client.MatchingLabels{"heritage": "deckhouse", "module": "node-manager"},
+		client.HasLabels{ngcommon.MachineDeploymentNodeGroupLabel},
+	); err != nil {
+		return fmt.Errorf("list bootstrap secrets: %w", err)
+	}
+
+	alive := make(map[string]bool, len(secrets.Items))
+	var deletions []error
+	for i := range secrets.Items {
+		secret := &secrets.Items[i]
+		ngName := secret.Labels[ngcommon.MachineDeploymentNodeGroupLabel]
+		if ngName == "" {
+			continue
+		}
+		if _, checked := alive[ngName]; !checked {
+			exists, err := nodeGroupExists(ctx, reader, ngName)
+			if err != nil {
+				return err
+			}
+			alive[ngName] = exists
+		}
+		if alive[ngName] {
+			continue
+		}
+		if err := c.Delete(ctx, secret); err != nil && !apierrors.IsNotFound(err) {
+			deletions = append(deletions, fmt.Errorf("delete orphaned bootstrap secret %s: %w", secret.Name, err))
+			continue
+		}
+		log.FromContext(ctx).Info("deleted orphaned bootstrap secret",
+			"secret", nodecommon.MachineNamespace+"/"+secret.Name, "nodeGroup", ngName)
+	}
+	return errors.Join(deletions...)
+}
+
+func nodeGroupExists(ctx context.Context, reader client.Reader, name string) (bool, error) {
+	ng := &deckhousev1.NodeGroup{}
+	err := reader.Get(ctx, types.NamespacedName{Name: name}, ng)
+	if apierrors.IsNotFound(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("read NodeGroup %s: %w", name, err)
+	}
+	return true, nil
 }

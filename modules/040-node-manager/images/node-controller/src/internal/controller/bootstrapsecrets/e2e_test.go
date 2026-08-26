@@ -22,6 +22,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -252,4 +253,96 @@ func createNodeGroup(ng *deckhousev1.NodeGroup) {
 
 func manualSecretKey(ngName string) types.NamespacedName {
 	return types.NamespacedName{Namespace: nodecommon.MachineNamespace, Name: manualSecretPrefix + ngName}
+}
+
+// User story: as an operator who deleted a NodeGroup, I do not want its bootstrap
+// Secret left behind. Helm used to prune it; the keep annotation this migration
+// stamps ahead of the handover took that duty away and left it here.
+var _ = Describe("Bootstrap secret cleanup", func() {
+	It("deletes the bootstrap secret of a NodeGroup that is gone", func() {
+		gone := testenv.UniqueName("gone")
+		live := testenv.UniqueName("live")
+		createNodeGroup(staticNodeGroup(gone))
+		createNodeGroup(staticNodeGroup(live))
+
+		secret := &corev1.Secret{}
+		Eventually(func() error {
+			return k8sClient.Get(suiteCtx, manualSecretKey(gone), secret)
+		}, eventuallyTimeout, eventuallyPoll).Should(Succeed())
+		Eventually(func() error {
+			return k8sClient.Get(suiteCtx, manualSecretKey(live), &corev1.Secret{})
+		}, eventuallyTimeout, eventuallyPoll).Should(Succeed())
+
+		// The label is how the sweep finds the Secret once the NodeGroup that names
+		// it is gone: the CAPI Secret's name carries no group name to parse.
+		Expect(secret.Labels).To(HaveKeyWithValue(ngcommon.MachineDeploymentNodeGroupLabel, gone))
+
+		Expect(k8sClient.Delete(suiteCtx, &deckhousev1.NodeGroup{
+			ObjectMeta: metav1.ObjectMeta{Name: gone},
+		})).To(Succeed())
+
+		Eventually(func() bool {
+			return apierrors.IsNotFound(k8sClient.Get(suiteCtx, manualSecretKey(gone), &corev1.Secret{}))
+		}, eventuallyTimeout, eventuallyPoll).Should(BeTrue())
+
+		By("leaving the secret of the NodeGroup that is still there")
+		Expect(k8sClient.Get(suiteCtx, manualSecretKey(live), &corev1.Secret{})).To(Succeed())
+	})
+
+	// The two ways this sweep could take down a running cluster, on one pass it
+	// controls: deleting a Secret an operator made by hand, and deleting the
+	// Secret of a NodeGroup that is still there.
+	It("deletes only the secrets of NodeGroups that are gone", func() {
+		live := testenv.UniqueName("kept")
+		createNodeGroup(staticNodeGroup(live))
+		absent := testenv.UniqueName("absent")
+
+		orphan := labelledSecret("orphan-"+absent, map[string]string{
+			"heritage": "deckhouse", "module": "node-manager",
+			ngcommon.MachineDeploymentNodeGroupLabel: absent,
+		})
+		byHand := labelledSecret("by-hand-"+absent, map[string]string{
+			ngcommon.MachineDeploymentNodeGroupLabel: absent,
+		})
+		ofLiveGroup := labelledSecret("machine-class-"+live, map[string]string{
+			"heritage": "deckhouse", "module": "node-manager",
+			ngcommon.MachineDeploymentNodeGroupLabel: live,
+		})
+		// deckhouse-registry and bashible-bashbooster wear the module labels and
+		// belong to no NodeGroup: nothing in this namespace may go for lack of a
+		// node-group label alone.
+		ofNoGroup := labelledSecret("of-no-group-"+absent, map[string]string{
+			"heritage": "deckhouse", "module": "node-manager",
+		})
+
+		Expect(CollectOrphanedSecrets(suiteCtx, k8sClient, k8sClient)).To(Succeed())
+
+		Expect(apierrors.IsNotFound(k8sClient.Get(suiteCtx, client.ObjectKeyFromObject(orphan), &corev1.Secret{}))).
+			To(BeTrue(), "the secret of a NodeGroup that is gone must be collected")
+		Expect(k8sClient.Get(suiteCtx, client.ObjectKeyFromObject(byHand), &corev1.Secret{})).
+			To(Succeed(), "a secret without the module labels was not written here and is not ours to delete")
+		Expect(k8sClient.Get(suiteCtx, client.ObjectKeyFromObject(ofLiveGroup), &corev1.Secret{})).
+			To(Succeed(), "the secret of a NodeGroup that still exists must survive every sweep")
+		Expect(k8sClient.Get(suiteCtx, client.ObjectKeyFromObject(ofNoGroup), &corev1.Secret{})).
+			To(Succeed(), "a module secret that belongs to no NodeGroup is not this sweep's business")
+	})
+})
+
+// labelledSecret creates a Secret in the machine namespace with exactly the given
+// labels, so a spec can state what the sweep is allowed to select on.
+func labelledSecret(name string, labels map[string]string) *corev1.Secret {
+	GinkgoHelper()
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: nodecommon.MachineNamespace,
+			Name:      name,
+			Labels:    labels,
+		},
+		Data: map[string][]byte{"cloud-config": []byte("#cloud-config")},
+	}
+	Expect(k8sClient.Create(suiteCtx, secret)).To(Succeed())
+	DeferCleanup(func() {
+		Expect(client.IgnoreNotFound(k8sClient.Delete(suiteCtx, secret))).To(Succeed())
+	})
+	return secret
 }
