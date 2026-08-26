@@ -51,6 +51,10 @@ var capiResources = []keepResource{
 	{Group: "cluster.x-k8s.io", Resource: "machinehealthchecks"},
 	{Group: "cluster.x-k8s.io", Resource: "machinedeployments"},
 	{Group: "infrastructure.cluster.x-k8s.io", Resource: "staticmachinetemplates", versionPreference: []string{"v1alpha1"}},
+	// Bootstrap secrets move from helm to node-controller in 1.79; the annotation
+	// must land before helm stops rendering them, or the release prunes them
+	// between the two steps. Remove together with this hook.
+	{Group: "", Resource: "secrets"},
 }
 
 var crdGVR = schema.GroupVersionResource{
@@ -96,11 +100,7 @@ func setKeepPolicyOnCapiResources(ctx context.Context, input *go_hook.HookInput,
 	}
 
 	for _, res := range resources {
-		preference := res.versionPreference
-		if len(preference) == 0 {
-			preference = storedVersionPreference
-		}
-		version, ok, err := pickStoredVersion(ctx, dynClient, res.Group, res.Resource, preference)
+		version, ok, err := keepResourceVersion(ctx, dynClient, res)
 		if err != nil {
 			return fmt.Errorf("resolve stored version for %s: %w", res.Resource, err)
 		}
@@ -146,6 +146,20 @@ func setKeepPolicyOnCapiResources(ctx context.Context, input *go_hook.HookInput,
 	}
 
 	return nil
+}
+
+// keepResourceVersion resolves the version to patch a resource through. A core
+// resource has no CRD to read a stored version from, and v1 is the only version
+// the group has ever served.
+func keepResourceVersion(ctx context.Context, dynClient dynamic.Interface, res keepResource) (string, bool, error) {
+	if res.Group == "" {
+		return "v1", true, nil
+	}
+	preference := res.versionPreference
+	if len(preference) == 0 {
+		preference = storedVersionPreference
+	}
+	return pickStoredVersion(ctx, dynClient, res.Group, res.Resource, preference)
 }
 
 func pickStoredVersion(ctx context.Context, dynClient dynamic.Interface, group, resource string, preference []string) (string, bool, error) {
