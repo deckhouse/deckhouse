@@ -275,7 +275,8 @@ shell:
     curl gnupg lsb-release \
     python3 python3-pip python3-venv \
     libc++-14-dev libc++abi-14-dev \
-    libssl-dev libz-dev libunwind-14-dev unzip
+    libssl-dev libz-dev libunwind-14-dev unzip \
+    ca-certificates-java
   # apt clean
   - apt-get autoclean && apt-get clean
   install:
