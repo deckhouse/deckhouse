@@ -121,13 +121,20 @@ var transitions = map[State]map[Event]State{
 // Transition returns the state the ADR describes for the pair, or false when the
 // ADR describes no such arrow.
 func Transition(from State, event Event) (State, bool) {
+	arrows, known := transitions[from]
+	if !known {
+		return "", false
+	}
+
 	// The ADR allows the terminal skip on an invalid or stale Node reference
-	// from any state, so it is not repeated per state in the table above.
+	// from any state, so it is not repeated per state in the table above. The
+	// lookup above still runs first: a phase that is not a state of the machine
+	// leads nowhere, not even to the skip.
 	if event == EventInvalidNodeReference {
 		return StateError, true
 	}
 
-	next, ok := transitions[from][event]
+	next, ok := arrows[event]
 
 	return next, ok
 }

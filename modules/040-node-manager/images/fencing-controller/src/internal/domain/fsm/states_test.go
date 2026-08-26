@@ -111,9 +111,16 @@ func TestTransitionsAreExactlyTheOnesTheADRDescribes(t *testing.T) {
 	}
 }
 
+// TestTransitionRejectsAnUnknownState walks every event, the terminal skip
+// included: the skip is described for every state of the ADR, and a phase that
+// names no state of the machine is not one of them.
 func TestTransitionRejectsAnUnknownState(t *testing.T) {
-	if got, ok := Transition(State("Draining"), EventFailedDetected); ok {
-		t.Errorf("Transition from an unknown state returned %s, want no transition", got)
+	for _, event := range adrEvents {
+		t.Run(string(event), func(t *testing.T) {
+			if got, ok := Transition(State("Draining"), event); ok {
+				t.Errorf("Transition from an unknown state on %s returned %s, want no transition", event, got)
+			}
+		})
 	}
 }
 

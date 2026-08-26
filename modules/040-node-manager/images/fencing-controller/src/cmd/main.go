@@ -89,8 +89,9 @@ func runManager(ctx context.Context, cfg *config.Config, logger *log.Logger) err
 	}
 
 	profiles := profile.NewResolver(fencingstate.NewProfiles(mgr.GetClient()))
+	recorder := mgr.GetEventRecorderFor(common.ControllerName)
 
-	if err := fencingfailednodestate.New(mgr.GetClient(), profiles).SetupWithManager(mgr); err != nil {
+	if err := fencingfailednodestate.New(mgr.GetClient(), profiles, recorder).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("set up %s controller: %w", common.ControllerName, err)
 	}
 

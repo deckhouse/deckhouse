@@ -22,8 +22,11 @@ import (
 	"fmt"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -45,19 +48,21 @@ type Profiles interface {
 
 // Reconciler drives the fencing state machine of every FencingFailedNodeState.
 //
-// It writes phase and conditions only. The machine holds every transition the
-// ADR describes, but this reconciler drives the timing ones and stops at
-// ReadyToEvict: deleting the pods of a fenced Node and validating the reference
-// from the object to its Node are not implemented yet, so the states past
-// ReadyToEvict are unreachable until they land.
+// Of the object it writes phase and conditions only; the blockers it reports
+// there are also published as events and as a metric. The machine holds every
+// transition the ADR describes, but this reconciler drives the timing ones and
+// stops at ReadyToEvict: deleting the pods of a fenced Node and validating the
+// reference from the object to its Node are not implemented yet, so the states
+// past ReadyToEvict are unreachable until they land.
 type Reconciler struct {
 	client   client.Client
 	profiles Profiles
+	recorder record.EventRecorder
 	now      func() time.Time
 }
 
-func New(c client.Client, profiles Profiles) *Reconciler {
-	return &Reconciler{client: c, profiles: profiles, now: time.Now}
+func New(c client.Client, profiles Profiles, recorder record.EventRecorder) *Reconciler {
+	return &Reconciler{client: c, profiles: profiles, recorder: recorder, now: time.Now}
 }
 
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
@@ -79,6 +84,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			// A missing CR means the Node has no active fencing signal: either a
 			// recovered Node deleted it, or it was collected with its Node.
 			r.profiles.Forget(req.Name)
+			clearConfigurationError(req.Name)
 
 			logger.Info("fencingfailednodestate is gone, node has no active fencing signal", "node", req.Name)
 
@@ -95,12 +101,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, fmt.Errorf("restore fencing state machine of %q: %w", incident.Name, err)
 	}
 
+	// One reconcile decides against one moment. Reading the clock a second time
+	// for the requeue could put the deadline on the other side of it, and the
+	// incident would then be left in a waiting state with no timer to leave it.
+	now := r.now()
+
 	params, err := r.profiles.Resolve(ctx, &incident)
 	if err != nil {
-		return r.reportUnusableProfile(ctx, &incident, machine, err)
+		return r.reportUnusableProfile(ctx, &incident, machine, err, now)
 	}
 
-	if fired := machine.Advance(&incident, params, r.now()); len(fired) > 0 {
+	if fired := machine.Advance(&incident, params, now); len(fired) > 0 {
 		logger.Info("fencing state machine advanced",
 			"node", incident.Name,
 			"events", eventNames(fired),
@@ -110,11 +121,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		)
 	}
 
-	if err := r.writeStatus(ctx, &incident, machine.State(), r.profileResolved(&incident)); err != nil {
+	if err := r.writeStatus(ctx, &incident, machine.State(), profileResolved(&incident, now)); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	return ctrl.Result{RequeueAfter: machine.RequeueAfter(&incident, params, r.now())}, nil
+	r.announceProfileIsBack(&incident)
+	clearConfigurationError(incident.Name)
+
+	return ctrl.Result{RequeueAfter: machine.RequeueAfter(&incident, params, now)}, nil
 }
 
 // reportUnusableProfile records a configuration error without touching the phase
@@ -126,13 +140,27 @@ func (r *Reconciler) reportUnusableProfile(
 	incident *v1alpha1.FencingFailedNodeState,
 	machine *fsm.FSM,
 	cause error,
+	now time.Time,
 ) (ctrl.Result, error) {
 	if !errors.Is(cause, profile.ErrConfiguration) {
 		return ctrl.Result{}, fmt.Errorf("resolve SLA profile of %q: %w", incident.Name, cause)
 	}
 
-	if err := r.writeStatus(ctx, incident, machine.State(), r.configurationError(incident, cause)); err != nil {
+	reportConfigurationError(incident.Name, incident.Spec.ProfileRef.Name)
+
+	// Whether the blocker is new is read from the object as observed, before the
+	// write below records it there.
+	isNew := !blockedOnProfile(incident)
+
+	if err := r.writeStatus(ctx, incident, machine.State(), configurationError(incident, cause, now)); err != nil {
 		return ctrl.Result{}, err
+	}
+
+	// The event marks the moment fencing stopped being possible. Repeating it on
+	// every retry would say nothing new, and the requeue below retries for as
+	// long as the profile stays broken.
+	if isNew {
+		r.recorder.Event(incident, corev1.EventTypeWarning, common.ReasonProfileUnavailable, cause.Error())
 	}
 
 	// The module ships the built-in profiles, so a missing or broken one is
@@ -140,25 +168,43 @@ func (r *Reconciler) reportUnusableProfile(
 	return ctrl.Result{}, fmt.Errorf("fencing of node %q is blocked: %w", incident.Name, cause)
 }
 
-func (r *Reconciler) configurationError(incident *v1alpha1.FencingFailedNodeState, cause error) metav1.Condition {
-	return r.condition(incident, metav1.ConditionTrue, common.ReasonProfileUnavailable, cause.Error())
+// announceProfileIsBack reports that an incident blocked on its profile can be
+// processed again, so an operator watching the events of the object sees the
+// fencing path reopen. The object as observed decides, which keeps an incident
+// that was never blocked from producing an event on every pass.
+func (r *Reconciler) announceProfileIsBack(incident *v1alpha1.FencingFailedNodeState) {
+	if !blockedOnProfile(incident) {
+		return
+	}
+
+	r.recorder.Eventf(incident, corev1.EventTypeNormal, common.ReasonProfileResolved,
+		"SLA profile %q was resolved, fencing of the node continues.", incident.Spec.ProfileRef.Name)
 }
 
-func (r *Reconciler) profileResolved(incident *v1alpha1.FencingFailedNodeState) metav1.Condition {
-	return r.condition(incident, metav1.ConditionFalse, common.ReasonProfileResolved,
-		fmt.Sprintf("SLA profile %q is in force for this incident.", incident.Spec.ProfileRef.Name))
+func blockedOnProfile(incident *v1alpha1.FencingFailedNodeState) bool {
+	return meta.IsStatusConditionTrue(incident.Status.Conditions, common.ConditionTypeConfigurationError)
 }
 
-func (r *Reconciler) condition(
+func configurationError(incident *v1alpha1.FencingFailedNodeState, cause error, now time.Time) metav1.Condition {
+	return condition(incident, metav1.ConditionTrue, common.ReasonProfileUnavailable, cause.Error(), now)
+}
+
+func profileResolved(incident *v1alpha1.FencingFailedNodeState, now time.Time) metav1.Condition {
+	return condition(incident, metav1.ConditionFalse, common.ReasonProfileResolved,
+		fmt.Sprintf("SLA profile %q is in force for this incident.", incident.Spec.ProfileRef.Name), now)
+}
+
+func condition(
 	incident *v1alpha1.FencingFailedNodeState,
 	status metav1.ConditionStatus,
 	reason, message string,
+	now time.Time,
 ) metav1.Condition {
 	return metav1.Condition{
 		Type:               common.ConditionTypeConfigurationError,
 		Status:             status,
 		ObservedGeneration: incident.Generation,
-		LastTransitionTime: metav1.NewTime(r.now()),
+		LastTransitionTime: metav1.NewTime(now),
 		Reason:             reason,
 		Message:            message,
 	}

@@ -20,9 +20,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/testutil"
 	corev1 "k8s.io/api/core/v1"
 	equality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -30,6 +32,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -41,7 +44,12 @@ import (
 	"fencing-controller/internal/usecase/profile"
 )
 
-const nodeName = "worker-3"
+const (
+	nodeName = "worker-3"
+	// eventBuffer only has to outlast one test: the recorder drops what does
+	// not fit, and every test below drains it.
+	eventBuffer = 10
+)
 
 // observedAt is the moment every reconcile below runs at, and the timings are
 // those of the medium profile: status timestamps are stored with second
@@ -115,7 +123,59 @@ func TestReconcileAdvancesThePhase(t *testing.T) {
 
 			assertAgentSectionsUntouched(t, incident, got)
 			assertCondition(t, got, metav1.ConditionFalse, common.ReasonProfileResolved)
+
+			if published := h.events(); len(published) != 0 {
+				t.Errorf("an incident that was never blocked published %v, want silence", published)
+			}
 		})
+	}
+}
+
+// TestReconcileDecidesAgainstOneMoment pins the clock to a single read: the
+// transition and the deadline it requeues on have to be chosen against the same
+// moment, or they can disagree about whether that deadline has passed.
+func TestReconcileDecidesAgainstOneMoment(t *testing.T) {
+	incident := failedState()
+	incident.Status.Failed.DetectedAt = metav1.NewTime(observedAt.Add(-2 * time.Second))
+
+	h := newHarness(t, incident)
+
+	if _, err := h.reconcile(); err != nil {
+		t.Fatalf("reconcile: %v", err)
+	}
+
+	if h.clockReads != 1 {
+		t.Errorf("reconcile read the clock %d times, want one moment per reconcile", h.clockReads)
+	}
+}
+
+// TestReconcileArmsATimerWhileItWaits is the regression the read above guards:
+// with the deadline falling between two reads of the clock, the machine stayed
+// short of ReadyToEvict while the requeue considered the deadline already gone,
+// leaving nothing to wake the incident but an update of the object.
+func TestReconcileArmsATimerWhileItWaits(t *testing.T) {
+	incident := failedState()
+	// medium delays evacuation by 6s, so the deadline lands on observedAt.
+	incident.Status.Failed.DetectedAt = metav1.NewTime(observedAt.Add(-6 * time.Second))
+
+	h := newHarness(t, incident)
+	h.reconciler.now = func() time.Time {
+		h.clockReads++
+
+		if h.clockReads == 1 {
+			return observedAt.Add(-time.Nanosecond)
+		}
+
+		return observedAt.Add(time.Hour)
+	}
+
+	res, err := h.reconcile()
+	if err != nil {
+		t.Fatalf("reconcile: %v", err)
+	}
+
+	if phase := h.get().Status.Phase; phase != v1alpha1.PhaseReadyToEvict && res.RequeueAfter == 0 {
+		t.Errorf("the incident waits in %q with no timer armed, so nothing will re-examine it", phase)
 	}
 }
 
@@ -167,8 +227,6 @@ func TestReconcileLeavesTheHealthyPhaseUnwritten(t *testing.T) {
 // TestReconcileReportsAnUnusableProfile is the degraded configuration case: the
 // incident keeps the phase it had and never reaches the eviction path.
 func TestReconcileReportsAnUnusableProfile(t *testing.T) {
-	missing := fmt.Errorf("%w: fencingslaprofile %q does not exist", profile.ErrConfiguration, "critical")
-
 	for name, phase := range map[string]v1alpha1.FencingFailedNodeStatePhase{
 		"first seen": "",
 		"suspected":  v1alpha1.PhaseSuspected,
@@ -180,7 +238,7 @@ func TestReconcileReportsAnUnusableProfile(t *testing.T) {
 			incident.Status.Failed.DetectedAt = metav1.NewTime(observedAt.Add(-20 * time.Second))
 
 			h := newHarness(t, incident)
-			h.profiles.err = missing
+			h.profiles.err = missingProfile()
 
 			if _, err := h.reconcile(); !errors.Is(err, profile.ErrConfiguration) {
 				t.Fatalf("reconcile returned %v, want the configuration error so the incident is requeued", err)
@@ -205,7 +263,7 @@ func TestReconcileClearsTheConditionOnceTheProfileIsBack(t *testing.T) {
 	incident.Status.Failed.DetectedAt = metav1.NewTime(observedAt.Add(-2 * time.Second))
 
 	h := newHarness(t, incident)
-	h.profiles.err = fmt.Errorf("%w: fencingslaprofile %q does not exist", profile.ErrConfiguration, "critical")
+	h.profiles.err = missingProfile()
 
 	if _, err := h.reconcile(); err == nil {
 		t.Fatal("reconcile succeeded while the profile was missing")
@@ -228,6 +286,106 @@ func TestReconcileClearsTheConditionOnceTheProfileIsBack(t *testing.T) {
 	}
 }
 
+// TestReconcileAnnouncesTheBlockerOnce covers the event the ADR asks for next to
+// the condition: it marks the moment fencing became impossible, and the retries
+// that follow have nothing to add to it.
+func TestReconcileAnnouncesTheBlockerOnce(t *testing.T) {
+	incident := failedState()
+	incident.Status.Failed.DetectedAt = metav1.NewTime(observedAt.Add(-2 * time.Second))
+
+	h := newHarness(t, incident)
+	h.profiles.err = missingProfile()
+
+	if _, err := h.reconcile(); err == nil {
+		t.Fatal("reconcile succeeded while the profile was missing")
+	}
+
+	published := h.events()
+	if len(published) != 1 {
+		t.Fatalf("published %v, want one event naming the blocker", published)
+	}
+
+	assertEvent(t, published[0], corev1.EventTypeWarning, common.ReasonProfileUnavailable, "critical")
+
+	if _, err := h.reconcile(); err == nil {
+		t.Fatal("second reconcile succeeded while the profile was missing")
+	}
+
+	if repeated := h.events(); len(repeated) != 0 {
+		t.Errorf("the retry published %v, want the blocker announced once", repeated)
+	}
+}
+
+func TestReconcileAnnouncesTheProfileIsBack(t *testing.T) {
+	incident := failedState()
+	incident.Status.Failed.DetectedAt = metav1.NewTime(observedAt.Add(-2 * time.Second))
+
+	h := newHarness(t, incident)
+	h.profiles.err = missingProfile()
+
+	if _, err := h.reconcile(); err == nil {
+		t.Fatal("reconcile succeeded while the profile was missing")
+	}
+
+	h.events()
+	h.profiles.err = nil
+
+	if _, err := h.reconcile(); err != nil {
+		t.Fatalf("reconcile after the profile came back: %v", err)
+	}
+
+	published := h.events()
+	if len(published) != 1 {
+		t.Fatalf("published %v, want one event about the recovery", published)
+	}
+
+	assertEvent(t, published[0], corev1.EventTypeNormal, common.ReasonProfileResolved, "Critical")
+
+	if _, err := h.reconcile(); err != nil {
+		t.Fatalf("reconcile of the recovered incident: %v", err)
+	}
+
+	if repeated := h.events(); len(repeated) != 0 {
+		t.Errorf("a settled incident published %v, want silence", repeated)
+	}
+}
+
+// TestReconcileTracksTheConfigurationErrorMetric covers the metric the ADR asks
+// for next to the condition, so a blocked node can be alerted on rather than
+// found by reading objects.
+func TestReconcileTracksTheConfigurationErrorMetric(t *testing.T) {
+	incident := failedState()
+	incident.Status.Failed.DetectedAt = metav1.NewTime(observedAt.Add(-2 * time.Second))
+
+	h := newHarness(t, incident)
+	h.profiles.err = missingProfile()
+
+	if _, err := h.reconcile(); err == nil {
+		t.Fatal("reconcile succeeded while the profile was missing")
+	}
+
+	if got := testutil.CollectAndCount(configurationErrorGauge); got != 1 {
+		t.Fatalf("the gauge holds %d series, want the blocked node alone", got)
+	}
+
+	blocked := configurationErrorGauge.WithLabelValues(nodeName, string(v1alpha1.ProfileCritical))
+	if got := testutil.ToFloat64(blocked); got != 1 {
+		t.Errorf("the gauge of the blocked node reads %v, want 1", got)
+	}
+
+	h.profiles.err = nil
+
+	if _, err := h.reconcile(); err != nil {
+		t.Fatalf("reconcile after the profile came back: %v", err)
+	}
+
+	// The series is dropped rather than zeroed, so a node that is fine again
+	// stops being reported at all.
+	if got := testutil.CollectAndCount(configurationErrorGauge); got != 0 {
+		t.Errorf("the gauge still holds %d series after the profile came back, want none", got)
+	}
+}
+
 // TestReconcileKeepsTransientProfileErrorsRetryable checks an unavailable API is
 // not written to the object as a configuration problem of the operator.
 func TestReconcileKeepsTransientProfileErrorsRetryable(t *testing.T) {
@@ -242,6 +400,14 @@ func TestReconcileKeepsTransientProfileErrorsRetryable(t *testing.T) {
 
 	if h.statusPatches != 0 {
 		t.Errorf("reconcile wrote the status %d times for a transient failure, want none", h.statusPatches)
+	}
+
+	if published := h.events(); len(published) != 0 {
+		t.Errorf("a transient failure published %v, want nothing blamed on the configuration", published)
+	}
+
+	if got := testutil.CollectAndCount(configurationErrorGauge); got != 0 {
+		t.Errorf("a transient failure left %d gauge series, want none", got)
 	}
 }
 
@@ -267,6 +433,8 @@ func TestReconcileWritesNothingTwice(t *testing.T) {
 func TestReconcileTreatsMissingObjectAsHealthy(t *testing.T) {
 	h := newHarness(t)
 
+	reportConfigurationError(nodeName, v1alpha1.ProfileCritical)
+
 	res, err := h.reconcile()
 	if err != nil {
 		t.Fatalf("reconcile: %v", err)
@@ -276,9 +444,14 @@ func TestReconcileTreatsMissingObjectAsHealthy(t *testing.T) {
 		t.Errorf("reconcile requeued %+v for a missing object", res)
 	}
 
-	// The incident is over, so its resolved timings must not be kept forever.
+	// The incident is over, so neither its resolved timings nor the blocker it
+	// was last reported with may outlive it.
 	if len(h.profiles.forgotten) != 1 || h.profiles.forgotten[0] != nodeName {
 		t.Errorf("forgot %v, want the timings of %q to be dropped", h.profiles.forgotten, nodeName)
+	}
+
+	if got := testutil.CollectAndCount(configurationErrorGauge); got != 0 {
+		t.Errorf("the gauge holds %d series for a node with no incident, want none", got)
 	}
 }
 
@@ -294,7 +467,9 @@ func TestReconcileReturnsAPIErrors(t *testing.T) {
 		}).
 		Build()
 
-	if _, err := New(c, &stubProfiles{}).Reconcile(t.Context(), request(nodeName)); !errors.Is(err, apiDown) {
+	reconciler := New(c, &stubProfiles{}, record.NewFakeRecorder(eventBuffer))
+
+	if _, err := reconciler.Reconcile(t.Context(), request(nodeName)); !errors.Is(err, apiDown) {
 		t.Fatalf("reconcile returned %v, want the API error so controller-runtime retries with backoff", err)
 	}
 }
@@ -382,13 +557,19 @@ type harness struct {
 	client        client.Client
 	reconciler    *Reconciler
 	profiles      *stubProfiles
+	recorder      *record.FakeRecorder
 	statusPatches int
+	clockReads    int
 }
 
 func newHarness(t *testing.T, objects ...client.Object) *harness {
 	t.Helper()
 
-	h := &harness{t: t, profiles: &stubProfiles{params: medium}}
+	// The gauge is a package-level collector, so every test starts from a clean
+	// one instead of reading what its predecessors left behind.
+	configurationErrorGauge.Reset()
+
+	h := &harness{t: t, profiles: &stubProfiles{params: medium}, recorder: record.NewFakeRecorder(eventBuffer)}
 
 	reject := func(verb string) error {
 		t.Errorf("reconcile issued %s, the controller owns the status subresource only", verb)
@@ -434,16 +615,42 @@ func newHarness(t *testing.T, objects ...client.Object) *harness {
 		}).
 		Build()
 
-	h.reconciler = New(h.client, h.profiles)
-	h.reconciler.now = func() time.Time { return observedAt }
+	h.reconciler = New(h.client, h.profiles, h.recorder)
+	h.reconciler.now = h.clock(observedAt)
 
 	return h
+}
+
+// clock hands out the same moment every time and counts how often it was asked,
+// so a test can pin how many moments one reconcile decides against.
+func (h *harness) clock(at time.Time) func() time.Time {
+	return func() time.Time {
+		h.clockReads++
+
+		return at
+	}
 }
 
 func (h *harness) reconcile() (ctrl.Result, error) {
 	h.t.Helper()
 
 	return h.reconciler.Reconcile(h.t.Context(), request(nodeName))
+}
+
+// events drains what the reconciler published, as "Type Reason message" lines.
+func (h *harness) events() []string {
+	h.t.Helper()
+
+	var published []string
+
+	for {
+		select {
+		case event := <-h.recorder.Events:
+			published = append(published, event)
+		default:
+			return published
+		}
+	}
 }
 
 func (h *harness) get() *v1alpha1.FencingFailedNodeState {
@@ -501,6 +708,24 @@ func assertAgentSectionsUntouched(t *testing.T, before, after *v1alpha1.FencingF
 
 	if !equality.Semantic.DeepEqual(before.Status.Fallback, after.Status.Fallback) {
 		t.Errorf("fallback section changed:\nbefore %+v\nafter  %+v", before.Status.Fallback, after.Status.Fallback)
+	}
+}
+
+// missingProfile is what the resolver reports when the built-in profile of an
+// incident is not in the cluster.
+func missingProfile() error {
+	return fmt.Errorf("%w: fencingslaprofile %q does not exist", profile.ErrConfiguration, "critical")
+}
+
+// assertEvent reads one line of the fake recorder, formatted as
+// "Type Reason message".
+func assertEvent(t *testing.T, event, wantType, wantReason string, wantInMessage ...string) {
+	t.Helper()
+
+	for _, want := range append([]string{wantType, wantReason}, wantInMessage...) {
+		if !strings.Contains(event, want) {
+			t.Errorf("event %q does not mention %q", event, want)
+		}
 	}
 }
 
