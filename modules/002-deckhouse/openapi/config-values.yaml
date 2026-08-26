@@ -341,20 +341,24 @@ properties:
     description: |
       Settings of the reservation that keeps the hostnames of the Deckhouse web interfaces from being claimed by a workload.
 
+      Accepted so that a ModuleConfig that already has these fields continues to validate. Admission is disabled in this patch: the policies reserved every hostname some `publicDomainTemplate` values can produce, which blocked tenant Ingresses. The settings below are ignored until a release that enforces them again. The default `mode` is `List` so that restore does not come back as `Template` for a cluster that never set the field.
+
       Deckhouse renders those hostnames from the [`global.modules.publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) global parameter and reserves them cluster-wide: an `Ingress`, or a `Gateway`, `GRPCRoute`, `HTTPRoute`, `ListenerSet` or `TLSRoute` of the Gateway API, created outside a system namespace cannot name one of them. These parameters adjust the reserved set in both directions.
 
       The reservation is per hostname and applies to every namespace. To exempt a whole namespace from the reservation instead, label the namespace with `security.deckhouse.io/reserved-hosts-bypass: "true"`.
     x-examples:
-      - mode: Template
+      - mode: List
         additionalHosts: ["admin.example.com"]
         excludedServices: ["grafana"]
     properties:
       mode:
         type: string
         enum: ["Template", "List"]
-        default: Template
+        default: List
         description: |
           How much of the platform's domain is reserved.
+
+          Default is `List`.
 
           - `Template` — every hostname `global.modules.publicDomainTemplate` can render, plus its wildcard form where the template's `%s` is the whole first label. A module never has to ask to be covered, and a hostname is reserved as soon as the template can produce it, whether or not any Deckhouse module publishes it today. A hostname that a workload legitimately serves is given back with `excludedServices` below, or with the per-namespace label. The wildcard form is the exception: it is reserved by exact match and `excludedServices` cannot free it, so a workload that serves it needs the per-namespace label or `List` below.
           - `List` — only the hostnames of the Deckhouse services Deckhouse knows it publishes. Narrower, and it leaves a public domain that Deckhouse learns to publish later unreserved until the list catches up.
