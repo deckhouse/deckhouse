@@ -150,6 +150,11 @@ properties:
             x-examples:
             - "mytoken"
             default: ""
+          direct:
+            type: boolean
+            description: |
+              Fetch packages straight from the parent registry-packages-proxy over the ALB instead
+              of an in-cluster proxy. Set in a virtual control plane tenant.
       kubernetesCA:
         type: string
         x-examples:
