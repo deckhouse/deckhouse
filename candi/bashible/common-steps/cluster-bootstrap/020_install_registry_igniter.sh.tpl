@@ -268,8 +268,8 @@ http:
 proxy:
   remoteurl: "{{ .scheme }}://{{ .host }}"
   {{- if .username }}
-  username: {{ .username | quote }}
-  password: {{ .password | quote }}
+  username: {{ .username | quote | replace "$" "\\$" }}
+  password: {{ .password | quote | replace "$" "\\$" }}
   {{- end }}
   remotepathonly: {{ .path | quote }}
   localpathalias: "/system/deckhouse"
