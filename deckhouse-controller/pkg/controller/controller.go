@@ -99,8 +99,9 @@ type DeckhouseController struct {
 	preflightCountDown *sync.WaitGroup
 
 	moduleLoader   *moduleloader.Loader
-	packageSync    *syncer.Syncer
 	packageRuntime *packageruntime.Runtime
+
+	dc dependency.Container
 
 	deckhouseConfigCh <-chan utils.Values
 
@@ -327,8 +328,6 @@ func NewDeckhouseController(
 	dc := dependency.NewDependencyContainer()
 	settingsContainer := helpers.NewDeckhouseSettingsContainer(nil, operator.MetricStorage)
 
-	packageSync := syncer.New(runtimeManager.GetAPIReader(), runtimeManager.GetClient(), dc, version, app.EmbeddedModulesDir, logger.Named("syncer"))
-
 	pkgRuntime, err := packageruntime.Build(runtimeManager.GetClient(), operator.ModuleManager, dc, operator.MetricStorage, logger)
 	if err != nil {
 		return nil, fmt.Errorf("create package operator: %w", err)
@@ -448,9 +447,10 @@ func NewDeckhouseController(
 	return &DeckhouseController{
 		runtimeManager:     runtimeManager,
 		moduleLoader:       loader,
-		packageSync:        packageSync,
 		packageRuntime:     pkgRuntime,
 		preflightCountDown: preflightCountDown,
+
+		dc: dc,
 
 		deckhouseConfigCh: deckhouseConfigCh,
 
@@ -472,8 +472,9 @@ func (c *DeckhouseController) Start(ctx context.Context) error {
 	// give the old module stack its package system objects before any
 	// controller runs; the sync reads through the API reader, so it does not
 	// need the manager cache
-	if err := c.packageSync.Sync(ctx); err != nil {
-		return fmt.Errorf("sync package versions: %w", err)
+	packageSync := syncer.New(c.runtimeManager.GetAPIReader(), c.runtimeManager.GetClient(), c.dc, app.Version, app.EmbeddedModulesDir, c.log.Named("syncer"))
+	if err := packageSync.Sync(ctx); err != nil {
+		return fmt.Errorf("sync package objects: %w", err)
 	}
 
 	// run preflight check
