@@ -329,12 +329,15 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 	// reportCh receives progress reports from nelm during resource tracking; a
 	// background goroutine forwards each one to the caller's callback.
 	//
-	// ReleaseInstall closes reportCh itself, so closing it here too would panic,
-	// and a receive without the ok check reads a closed channel as an endless
-	// stream of empty reports. done covers the paths where ReleaseInstall fails
-	// before installing a reporter and never closes the channel; the wait keeps
-	// a report from landing after Install returned, once the caller has already
-	// published the result of the apply.
+	// We must not close reportCh: ReleaseInstall closes it whenever it runs the
+	// install to completion, and a second close would panic. The forwarder
+	// leaves on that close — a receive without the ok check reads a closed
+	// channel as an endless stream of empty reports. done is for the paths that
+	// leave it open: a Timeout returns ReleaseInstall on ctx.Done() while the
+	// goroutine that installs (and closes the channel) is still running, and an
+	// early failure never installs a reporter at all. Waiting for the forwarder
+	// is what keeps a report from being delivered after Install returned, once
+	// the caller has published the result of the apply.
 	reportCh := make(chan progrep.ProgressReport, 1)
 	done := make(chan struct{})
 
