@@ -17,7 +17,9 @@ package bootstrap
 import (
 	"bytes"
 	"context"
+	"crypto/x509"
 	"encoding/base64"
+	"encoding/pem"
 	"io"
 	"log/slog"
 	"net"
@@ -187,6 +189,8 @@ func TestPushImmutablePayloadStopsOnAnInstalledNode(t *testing.T) {
 
 // The stand this check was written for: two disks of one size, and a selector
 // that names the size.
+const oneUsableDisk = `{"disks":[{"name":"sda","size":32212254720}],"interfaces":[{"name":"enp3s0","mac":"f2:4e:c6:60:03:72"}]}`
+
 const twoDisksOfOneSize = `{"disks":[{"name":"sda","size":32212254720},{"name":"sdb","size":32212254720}],"interfaces":[{"name":"enp3s0","mac":"f2:4e:c6:60:03:72"}]}`
 
 // What a plain bare-metal master looks like: one system disk, and a NIC named
@@ -828,6 +832,37 @@ func TestMachinesArePreflightedAgainstTheirDocuments(t *testing.T) {
 
 		require.NoError(t, b.checkMachinesAreAvailable(t.Context(), bctx))
 	})
+}
+
+// The run mints one handoff certificate, and it belongs to whichever node the
+// first document is built for. The first master comes from the flag order, so a
+// preflight walking the machines in sorted order issues it to the wrong node and
+// the collection later fails its hostname check with the cluster already up.
+func TestThePreflightMintsTheCertificateForTheFirstMaster(t *testing.T) {
+	machine := newTestMachine(t, oneUsableDisk)
+
+	b, bctx := immutableTestBootstrapper(t)
+	bctx.metaConfig.ClusterType = config.StaticClusterType
+	// The other name sorts first, which is what the bug needed.
+	bctx.immutable.masterNodeName = "zzz-master"
+	bctx.immutable.hosts = map[string]string{
+		"zzz-master": machine.host,
+		"aaa-master": machine.host,
+	}
+	bctx.immutable.maintenancePort = machine.port
+
+	require.NoError(t, b.checkMachinesAreAvailable(t.Context(), bctx))
+
+	material, err := immutable.LoadHandoffMaterial(t.Context(), bctx.stateCache)
+	require.NoError(t, err)
+	require.NotNil(t, material)
+
+	block, _ := pem.Decode([]byte(material.ServerCertPEM))
+	require.NotNil(t, block)
+	cert, err := x509.ParseCertificate(block.Bytes)
+	require.NoError(t, err)
+	require.Equal(t, bctx.immutable.masterNodeName, cert.Subject.CommonName,
+		"the channel certificate must name the master the collection dials")
 }
 
 // splitTestServerAddress returns the host and port a test server landed on.
