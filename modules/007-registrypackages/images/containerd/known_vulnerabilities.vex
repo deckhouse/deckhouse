@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-0a7dee882b0213b53ce1f13791d223657afca21285b99e07e15b935fa0456093",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 13,
+  "version": 14,
   "statements": [
     {
       "vulnerability": {
@@ -204,8 +204,22 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "GO-2026-5932 относится к пакету golang.org/x/crypto/openpgp, который объявлен unmaintained и не имеет исправленной версии. В бинарнике containerd этот пакет присутствует: он приходит транзитивно через github.com/containerd/imgcrypt/images/encryption -> github.com/containers/ocicrypt, то есть вместе с поддержкой зашифрованных OCI-образов. Единственный вход в этот код со стороны containerd только при config.ImageDecryption.KeyModel == \"node\", а иначе возвращает nil. Deckhouse поставляет конфигурацию containerd с пустым key_model для обоих CRI-плагинов, поэтому опции расшифровки не создаются и код openpgp не вызывается ни при одной операции pull. В бинарники ctr и containerd-shim-runc-v2 пакет openpgp не влинкован вовсе.",
       "timestamp": "2026-08-19T07:55:26Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-54410"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Эта неэксплуатируемая уязвимость проявляется только в работе Docker-демона (dockerd), который не запускается containerd; взаимодействия с firewalld не происходит.",
+      "timestamp": "2026-08-25T10:25:34.399236Z"
     }
   ],
   "timestamp": "2026-03-04T12:00:38Z",
-  "last_updated": "2026-06-24T12:00:00Z"
+  "last_updated": "2026-08-25T10:25:34Z"
 }
