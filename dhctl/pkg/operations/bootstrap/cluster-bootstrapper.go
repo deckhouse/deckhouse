@@ -1048,20 +1048,15 @@ func (b *ClusterBootstrapper) bootstrapFirstMaster(ctx context.Context, bctx *bo
 		return b.bootstrapImmutableFirstMaster(ctx, bctx)
 	}
 
-	// An immutable node configures itself from the payload: there is no bashible run
-	// afterwards to hand it anything else. Empty on every other path; the NodeConfig inside
-	// it is checked only where dhctl pushes it itself.
-	nodeCloudConfig, _, err := b.buildImmutableMasterPayload(ctx, bctx, masterNodeName)
-	if err != nil {
-		return err
-	}
-
+	// An immutable machine is created bare and configured afterwards, over the same
+	// maintenance port a static cluster's machines are pushed to. Nothing the provider
+	// carries in: a document that travels as cloud-init is parsed twice, by the image's
+	// init and again by the agent, and is checked against the hardware by neither.
 	masterRunner, err := b.Params.InfrastructureContext.GetBootstrapNodeRunner(ctx, bctx.metaConfig, bctx.stateCache, infrastructure.BootstrapNodeRunnerOptions{
-		NodeName:        masterNodeName,
-		NodeGroupStep:   infrastructure.MasterNodeStep,
-		NodeGroupName:   "master",
-		NodeIndex:       0,
-		NodeCloudConfig: nodeCloudConfig,
+		NodeName:      masterNodeName,
+		NodeGroupStep: infrastructure.MasterNodeStep,
+		NodeGroupName: "master",
+		NodeIndex:     0,
 	})
 	if err != nil {
 		return err
@@ -1102,9 +1097,7 @@ func (b *ClusterBootstrapper) bootstrapFirstMaster(ctx context.Context, bctx *bo
 	bctx.deckhouseInstallConfig.NodesInfrastructureState[masterNodeName] = masterOutputs.InfrastructureState
 
 	if bctx.immutable != nil {
-		bctx.immutable.masterIP = masterOutputs.MasterIPForSSH
-		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("First master address: %s (no SSH access)", masterOutputs.MasterIPForSSH))
-		return nil
+		return b.handImmutableCloudMaster(ctx, bctx, masterNodeName, masterOutputs.MasterIPForSSH)
 	}
 
 	bctx.masterAddressesForSSH[masterNodeName] = masterOutputs.MasterIPForSSH
