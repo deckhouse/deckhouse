@@ -29,11 +29,6 @@ status:
     status: "True"
     type: Completed
   packages:
-    failed:
-    - errors:
-      - message: no semver release tags found for legacy module "test-package"
-        version: ""
-      name: test-package
     processed:
     - name: test-package
     processedOverall: 1

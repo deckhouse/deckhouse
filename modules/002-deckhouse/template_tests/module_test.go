@@ -311,4 +311,46 @@ var _ = Describe("Module :: deckhouse :: helm template ::", func() {
 			}
 		})
 	})
+
+	// Both PodMonitors are guarded on two conditions at once: operator-prometheus being enabled,
+	// and the PodMonitor kind actually existing in the cluster. The module is external now, so it
+	// can appear in enabledModules before its CRDs are applied; rendering a PodMonitor then fails
+	// the whole deckhouse release with "no matches for kind PodMonitor", and Helm installs a
+	// release all-or-nothing, so one unguarded manifest is enough to wedge the module.
+	Context("PodMonitors", func() {
+		const podMonitorAPI = "monitoring.coreos.com/v1/PodMonitor"
+
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("deckhouse", moduleValuesForMasterNode)
+		})
+
+		It("are rendered when operator-prometheus is enabled and the CRD is present", func() {
+			f.HelmRender(WithAPIVersions(podMonitorAPI))
+
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(f.KubernetesResource("PodMonitor", "d8-monitoring", "deckhouse").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("PodMonitor", "d8-monitoring", "webhook-handler").Exists()).To(BeTrue())
+		})
+
+		It("are skipped when the CRD is absent, even with operator-prometheus enabled", func() {
+			f.HelmRender()
+
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(f.KubernetesResource("PodMonitor", "d8-monitoring", "deckhouse").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("PodMonitor", "d8-monitoring", "webhook-handler").Exists()).To(BeFalse())
+		})
+
+		// This is the case that separates `and` from `or` in the guard: with `or` the two tests
+		// above would still pass and this one would fail.
+		It("are skipped when operator-prometheus is disabled, even with the CRD present", func() {
+			f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler", "prometheus"]`)
+			f.HelmRender(WithAPIVersions(podMonitorAPI))
+
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(f.KubernetesResource("PodMonitor", "d8-monitoring", "deckhouse").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("PodMonitor", "d8-monitoring", "webhook-handler").Exists()).To(BeFalse())
+		})
+	})
 })

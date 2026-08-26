@@ -54,7 +54,9 @@ func (p *kubeClientProvider) Cleanup(ctx context.Context, stopSSH bool) {
 		dhlog.FromContext(ctx).WarnContext(ctx, strings.TrimRight(fmt.Sprintf("failed to clean up kube provider: %v", err), "\n"))
 	}
 
-	if stopSSH {
+	// nil on a cluster whose nodes run no SSH server, which is now a cluster
+	// destroy has to be able to handle rather than panic on.
+	if stopSSH && p.sshProvider != nil {
 		err := p.sshProvider.Cleanup(ctx)
 		if err != nil {
 			dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("failed to clean up ssh provider: %v", err))

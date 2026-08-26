@@ -27,3 +27,4 @@ metadata:
 spec:
   registry:
     repo: registry.example.com/test
+    dockerCfg: "incorrect_base64_string"

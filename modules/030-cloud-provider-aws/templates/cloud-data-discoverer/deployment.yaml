@@ -10,7 +10,7 @@
       name: cloud-controller-manager
       key: aws-secret-access-key
 - name: AWS_REGION
-  value: {{ .Values.cloudProviderAws.internal.region }}
+  value: {{ .Values.cloudProviderAws.internal.region | quote }}
 {{- end -}}
 
 {{- define "aws_cdd_pod_annotations" -}}

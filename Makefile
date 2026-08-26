@@ -446,6 +446,7 @@ BASE_LIMIT_KEYS := REGISTRY_PATH \
                 builder/distroless \
                 builder/golang-1.25 \
                 builder/golang-1.26 \
+                builder/golang-1.27 \
                 builder/golang \
                 minget-0.1 \
                 minget
@@ -605,6 +606,16 @@ DECKHOUSE_CLI ?= $(LOCALBIN)/d8
 CRD_ENRICHER ?= $(LOCALBIN)/crd-enricher
 CRD_ENRICHER_LOCAL ?= $(LOCALBIN)/crd-enricher-local
 CRD_ENRICHER_SRC ?= $(CURDIR)/pkg/crd-enricher
+## Fail the enrichment when any marker did not do what it was written to do. The
+## crds/ re-render check cannot stand in for this: it catches a marker that used
+## to work and stopped, never one that never worked, because the committed
+## manifest matches the broken render. Set CRD_ENRICHER_STRICT= to opt out while
+## debugging a marker.
+##
+## Only enrich-crds-local passes it: enrich-crds runs the released
+## $(CRD_ENRICHER_VERSION) binary, which predates the flag and would reject it as
+## an unknown argument.
+CRD_ENRICHER_STRICT ?= strict
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 CLIENT_GEN ?= $(LOCALBIN)/client-gen
 INFORMER_GEN ?= $(LOCALBIN)/informer-gen
@@ -614,10 +625,10 @@ GOTESTSUM = $(LOCALBIN)/gotestsum
 
 ## TODO: remap in yaml file (version.yaml or smthng)
 ## Tool Versions
-GOLANGCI_LINT_VERSION = v2.8.0
+GOLANGCI_LINT_VERSION = v2.13.1
 DECKHOUSE_CLI_VERSION ?= v0.33.1
 CRD_ENRICHER_VERSION ?= v0.0.2
-DMT_VERSION ?= 0.1.95
+DMT_VERSION ?= 0.2.1
 CONTROLLER_TOOLS_VERSION ?= v0.19.0
 CODE_GENERATOR_VERSION ?= v0.34.8
 YQ_VERSION ?= v4.47.2
@@ -704,6 +715,7 @@ enrich-crds: generate-crds crd-enricher ## Add custom x-doc-* fields to the gene
 ##
 ##   make enrich-crds-local
 ##   make enrich-crds-local CRD_ENRICHER_FLAGS=auto-examples
+##   make enrich-crds-local CRD_ENRICHER_STRICT=       # tolerate warnings
 .PHONY: enrich-crds-local
 enrich-crds-local: generate-crds crd-enricher-local ## Enrich CRDs with the local (branch) crd-enricher build.
 	@echo "Enriching CRDs with the local crd-enricher$(if $(CRD_ENRICHER_FLAGS), (flags: $(CRD_ENRICHER_FLAGS)),)..."
@@ -711,6 +723,7 @@ enrich-crds-local: generate-crds crd-enricher-local ## Enrich CRDs with the loca
 		paths="./deckhouse-controller/pkg/apis/deckhouse.io/..." \
 		crds=$(CURDIR)/bin/crd/bases \
 		dir=$(CURDIR) \
+		$(CRD_ENRICHER_STRICT) \
 		$(CRD_ENRICHER_FLAGS)
 
 ## Run the crd-enricher module's unit and golden tests. Pass
@@ -721,7 +734,7 @@ enrich-crds-local: generate-crds crd-enricher-local ## Enrich CRDs with the loca
 .PHONY: test-crd-enricher
 test-crd-enricher: ## Run crd-enricher unit/golden tests (CRD_ENRICHER_TEST_FLAGS=-golden regenerates goldens).
 	@echo "Running crd-enricher tests..."
-	@cd $(CRD_ENRICHER_SRC) && go test ./... $(CRD_ENRICHER_TEST_FLAGS)
+	@cd $(CRD_ENRICHER_SRC) && go test -race -cover -timeout=${TESTS_TIMEOUT} ./... $(CRD_ENRICHER_TEST_FLAGS)
 
 ## Generate clientset
 .PHONY: client-gen-generate
