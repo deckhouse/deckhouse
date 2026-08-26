@@ -199,7 +199,9 @@ spec:
                 conditions:
                   type: array
                   description: |
-                    Conditions describing the incident, maintained by the fencing controller.
+                    Conditions describing the incident, maintained by the fencing controller. A condition is a blocker that sits on top of a phase instead of replacing it, so the same problem can be reported in any phase.
+
+                    `ConfigurationError` is set while the SLA profile named by `spec.profileRef.name` cannot be resolved. The node is not evacuated in that state, because the evacuation delay and the fallback TTL the controller has to respect are unknown.
                   x-kubernetes-list-type: map
                   x-kubernetes-list-map-keys:
                     - type
