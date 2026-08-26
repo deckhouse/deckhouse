@@ -33,6 +33,9 @@
     {{- end }}
   {{- else }}
     {{- /* StaticMachineTemplate and MachineDeployment are rendered by node-controller (capi.reconcileStaticMDRendered). Only the manual-bootstrap Secret stays in helm. */ -}}
+    {{- /* A nested tenant fills kubernetesCA from the host inputs asynchronously; skip the secret until it is ready rather than fail the whole module render. */ -}}
+    {{- if or $.Values.global.deckhouseSelfHosted $.Values.nodeManager.internal.kubernetesCA }}
     {{- include "node_group_static_or_hybrid_secret" (list $ $ng) }}
+    {{- end }}
   {{- end }}
 {{- end }}

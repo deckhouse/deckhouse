@@ -158,6 +158,8 @@ func handleBashibleContextVCP(ctx context.Context, input *go_hook.HookInput) err
 		return keepPublishedContext(input, reason)
 	}
 
+	setPhase1Values(input, inputs)
+
 	service, err := newBashibleContextService()
 	if err != nil {
 		return fmt.Errorf("build a client for the managed cluster: %w", err)
@@ -169,7 +171,6 @@ func handleBashibleContextVCP(ctx context.Context, input *go_hook.HookInput) err
 		return keepPublishedContext(input, "the context could not be assembled")
 	}
 	applyBashibleExternalInputs(assembled, inputs)
-	setPhase1Values(input, inputs)
 	if tokens := tenantBootstrapTokens(input); tokens != nil {
 		assembled["bootstrapTokens"] = tokens
 	}
