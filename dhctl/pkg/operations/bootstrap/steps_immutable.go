@@ -426,19 +426,6 @@ func (b *ClusterBootstrapper) bootstrapImmutableFirstMaster(ctx context.Context,
 	return b.handFirstMasterItsPayload(ctx, bctx, nodeName, address)
 }
 
-// handImmutableCloudMaster configures the machine the infrastructure has just
-// created, at the address it reported for it. One path with the static cluster:
-// the document is pushed to the maintenance port rather than carried in by the
-// provider, so it is rendered, checked against the hardware and handed over in
-// one place instead of two.
-func (b *ClusterBootstrapper) handImmutableCloudMaster(ctx context.Context, bctx *bootstrapContext, nodeName, address string) error {
-	if address == "" {
-		return fmt.Errorf("the infrastructure reported no address for the first master %s to be configured at", nodeName)
-	}
-
-	return b.handFirstMasterItsPayload(ctx, bctx, nodeName, address)
-}
-
 // handFirstMasterItsPayload renders the first master's document and hands it to
 // the machine at address, whoever created it.
 func (b *ClusterBootstrapper) handFirstMasterItsPayload(ctx context.Context, bctx *bootstrapContext, nodeName, address string) error {

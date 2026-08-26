@@ -279,7 +279,7 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 		if _, ok := c.state.State[candidateName]; !ok {
 			cloudConfig := c.cloudConfig
 			if c.immutable {
-				cloudConfig, err = immutableMasterPayload(ctx, candidateName)
+				cloudConfig, err = immutableNodePayload(ctx, global.MasterNodeGroupName, candidateName)
 				if err != nil {
 					return err
 				}
@@ -444,7 +444,7 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 	// it here means a recreated master joins with a live token and live apiservers.
 	cloudConfig := c.cloudConfig
 	if c.immutable {
-		cloudConfig, err = immutableMasterPayload(ctx, nodeName)
+		cloudConfig, err = immutableNodePayload(ctx, global.MasterNodeGroupName, nodeName)
 		if err != nil {
 			return err
 		}

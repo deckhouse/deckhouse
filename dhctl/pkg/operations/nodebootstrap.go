@@ -51,41 +51,42 @@ func NodeName(cfg *config.MetaConfig, nodeGroupName string, index int) string {
 	return fmt.Sprintf("%s-%s-%d", cfg.ClusterPrefix, nodeGroupName, index)
 }
 
-// configureFor returns the configurator for one group: an immutable group takes
-// its NodeConfig from the installer, every other group runs the cloud config the
-// cluster publishes for it.
-func configureFor(ng config.TerraNodeGroupSpec, configure ConfigureImmutableNode) ConfigureImmutableNode {
-	if configure == nil || !immutable.SystemTypeIsImmutable(ng.SystemType) {
+// payloadBuilderFor returns the builder for one group: an immutable group boots
+// with a document the installer renders, every other group with the cloud config
+// the cluster publishes for it.
+func payloadBuilderFor(ng config.TerraNodeGroupSpec, build ImmutablePayloadBuilder) ImmutablePayloadBuilder {
+	if build == nil || !immutable.SystemTypeIsImmutable(ng.SystemType) {
 		return nil
 	}
-	return configure
+	return build
 }
 
 // groupCloudConfig is the cloud config the machines of the group boot with, and
-// "" for a group configured by the installer: an immutable machine understands
-// no bashible script, and asking the cluster for one waits out a timeout.
-func groupCloudConfig(ctx context.Context, kubeCl *client.KubernetesClient, nodeGroupName string, configure ConfigureImmutableNode) (string, error) {
-	if configure != nil {
+// "" for an immutable group, whose machines each get one of their own: an
+// immutable machine understands no bashible script, and asking the cluster for
+// one waits out a timeout.
+func groupCloudConfig(ctx context.Context, kubeCl *client.KubernetesClient, nodeGroupName string, build ImmutablePayloadBuilder) (string, error) {
+	if build != nil {
 		return "", nil
 	}
 	return entity.GetCloudConfig(ctx, kubernetes.NewSimpleKubeClientGetter(kubeCl), nodeGroupName, global.ShowDeckhouseLogs)
 }
 
-// nodeResultExtractor picks what the pipeline has to report about the node it
-// created. The address is read only where the caller has to reach the machine:
-// every other layout publishes no outputs at all, and asking for one would fail
-// every provider on the classic path.
-func nodeResultExtractor(configure ConfigureImmutableNode) func(context.Context, infrastructure.RunnerInterface, *options.GlobalOptions) (*infrastructure.PipelineOutputs, error) {
-	if configure == nil {
-		return infrastructure.OnlyState
-	}
-	return infrastructure.GetStaticNodeResult
-}
+// ImmutablePayloadBuilder renders the document one machine of an immutable group
+// boots with. The provider carries it in as the machine's cloud config, so it is
+// built before the machine exists and asks for no address: the node expands the
+// placeholder from its own. nil for a group that runs the cluster's bashible
+// config.
+type ImmutablePayloadBuilder func(ctx context.Context, kubeCl *client.KubernetesClient, nodeGroupName, nodeName string) (string, error)
 
-// ConfigureImmutableNode hands a machine the provider has just created its
-// NodeConfig, at the address the provider reported for it. nil everywhere the
-// group is configured the classic way, by a cloud config the machine runs.
-type ConfigureImmutableNode func(ctx context.Context, kubeCl *client.KubernetesClient, nodeGroupName, nodeName, address string) error
+// nodeCloudConfig is what this one machine boots with: the group's config, or
+// the document rendered for this machine when the group is immutable.
+func nodeCloudConfig(ctx context.Context, kubeCl *client.KubernetesClient, build ImmutablePayloadBuilder, nodeGroupName, nodeName, groupConfig string) (string, error) {
+	if build == nil {
+		return groupConfig, nil
+	}
+	return build(ctx, kubeCl, nodeGroupName, nodeName)
+}
 
 func BootstrapAdditionalNode(
 	ctx context.Context,
@@ -96,7 +97,7 @@ func BootstrapAdditionalNode(
 	nodeGroupName, cloudConfig string,
 	infrastructureContext *infrastructure.Context,
 	globalOptions *options.GlobalOptions,
-	configure ConfigureImmutableNode,
+	build ImmutablePayloadBuilder,
 ) error {
 	nodeName := NodeName(cfg, nodeGroupName, index)
 
@@ -114,6 +115,11 @@ func BootstrapAdditionalNode(
 
 	nodeGroupSettings := cfg.FindTerraNodeGroup(ctx, nodeGroupName)
 
+	cloudConfig, err = nodeCloudConfig(ctx, kubeCl, build, nodeGroupName, nodeName, cloudConfig)
+	if err != nil {
+		return err
+	}
+
 	// TODO pass cache as argument or better refact func
 	runner, err := infrastructureContext.GetBootstrapNodeRunner(ctx, cfg, cache.Global(), infrastructure.BootstrapNodeRunnerOptions{
 		NodeName:        nodeName,
@@ -129,7 +135,7 @@ func BootstrapAdditionalNode(
 		return err
 	}
 
-	outputs, err := infrastructure.ApplyPipeline(ctx, runner, nodeName, globalOptions, nodeResultExtractor(configure))
+	outputs, err := infrastructure.ApplyPipeline(ctx, runner, nodeName, globalOptions, infrastructure.OnlyState)
 	if err != nil {
 		return err
 	}
@@ -143,10 +149,6 @@ func BootstrapAdditionalNode(
 		return err
 	}
 
-	if configure != nil {
-		return configure(ctx, kubeCl, nodeGroupName, nodeName, outputs.NodeInternalIP)
-	}
-
 	return nil
 }
 
@@ -157,7 +159,7 @@ func BootstrapSequentialTerraNodes(
 	terraNodeGroups []config.TerraNodeGroupSpec,
 	infrastructureContext *infrastructure.Context,
 	globalOptions *options.GlobalOptions,
-	configure ConfigureImmutableNode,
+	build ImmutablePayloadBuilder,
 ) error {
 	for _, ng := range terraNodeGroups {
 		err := dhlog.RunProcess(ctx, dhlog.FromContext(ctx), fmt.Sprintf("Create %s NodeGroup", ng.Name), func(ctx context.Context) error {
@@ -166,15 +168,15 @@ func BootstrapSequentialTerraNodes(
 				return err
 			}
 
-			configureNode := configureFor(ng, configure)
+			buildNodePayload := payloadBuilderFor(ng, build)
 
-			cloudConfig, err := groupCloudConfig(ctx, kubeCl, ng.Name, configureNode)
+			cloudConfig, err := groupCloudConfig(ctx, kubeCl, ng.Name, buildNodePayload)
 			if err != nil {
 				return err
 			}
 
 			for i := 0; i < ng.Replicas; i++ {
-				err = BootstrapAdditionalNode(ctx, kubeCl, metaConfig, i, infrastructure.StaticNodeStep, ng.Name, cloudConfig, infrastructureContext, globalOptions, configureNode)
+				err = BootstrapAdditionalNode(ctx, kubeCl, metaConfig, i, infrastructure.StaticNodeStep, ng.Name, cloudConfig, infrastructureContext, globalOptions, buildNodePayload)
 				if err != nil {
 					return err
 				}
@@ -197,10 +199,16 @@ func BootstrapAdditionalNodeForParallelRun(
 	nodeGroupName, cloudConfig string,
 	infrastructureContext *infrastructure.Context,
 	globalOptions *options.GlobalOptions,
-	configure ConfigureImmutableNode,
+	build ImmutablePayloadBuilder,
 ) error {
 	nodeName := NodeName(cfg, nodeGroupName, index)
 	nodeGroupSettings := cfg.FindTerraNodeGroup(ctx, nodeGroupName)
+
+	cloudConfig, err := nodeCloudConfig(ctx, kubeCl, build, nodeGroupName, nodeName, cloudConfig)
+	if err != nil {
+		return err
+	}
+
 	// TODO pass cache as argument or better refact func
 	runner, err := infrastructureContext.GetBootstrapNodeRunner(ctx, cfg, cache.Global(), infrastructure.BootstrapNodeRunnerOptions{
 		NodeName:        nodeName,
@@ -218,7 +226,7 @@ func BootstrapAdditionalNodeForParallelRun(
 		return err
 	}
 
-	outputs, err := infrastructure.ApplyPipeline(ctx, runner, nodeName, globalOptions, nodeResultExtractor(configure))
+	outputs, err := infrastructure.ApplyPipeline(ctx, runner, nodeName, globalOptions, infrastructure.OnlyState)
 	if err != nil {
 		return err
 	}
@@ -230,10 +238,6 @@ func BootstrapAdditionalNodeForParallelRun(
 	err = infrastructurestate.SaveNodeInfrastructureState(ctx, kubeCl, nodeName, nodeGroupName, outputs.InfrastructureState, nodeGroupSettings)
 	if err != nil {
 		return err
-	}
-
-	if configure != nil {
-		return configure(ctx, kubeCl, nodeGroupName, nodeName, outputs.NodeInternalIP)
 	}
 
 	return nil
@@ -249,7 +253,7 @@ func ParallelBootstrapAdditionalNodes(
 	infrastructureContext *infrastructure.Context,
 	saveLogToBuffer bool,
 	globalOptions *options.GlobalOptions,
-	configure ConfigureImmutableNode,
+	build ImmutablePayloadBuilder,
 ) ([]string, error) {
 	var (
 		nodesToWait []string
@@ -311,7 +315,7 @@ func ParallelBootstrapAdditionalNodes(
 				cloudConfig,
 				infrastructureContext,
 				globalOptions,
-				configure,
+				build,
 			)
 
 			resultsChan <- checkResult{
@@ -365,7 +369,7 @@ func ParallelCreateNodeGroup(
 	terraNodeGroups []config.TerraNodeGroupSpec,
 	infrastructureContext *infrastructure.Context,
 	globalOptions *options.GlobalOptions,
-	configure ConfigureImmutableNode,
+	build ImmutablePayloadBuilder,
 ) error {
 	var msg strings.Builder
 	msg.WriteString("Create NodeGroups ")
@@ -413,9 +417,9 @@ func ParallelCreateNodeGroup(
 					return
 				}
 
-				configureNode := configureFor(group, configure)
+				buildNodePayload := payloadBuilderFor(group, build)
 
-				nodeCloudConfig, err := groupCloudConfig(ngCtx, kubeCl, group.Name, configureNode)
+				groupConfig, err := groupCloudConfig(ngCtx, kubeCl, group.Name, buildNodePayload)
 				if err != nil {
 					resultsChan <- checkResult{
 						name:    group.Name,
@@ -430,7 +434,7 @@ func ParallelCreateNodeGroup(
 					nodesIndexToCreate = append(nodesIndexToCreate, i)
 				}
 
-				_, err = ParallelBootstrapAdditionalNodes(ngCtx, kubeCl, metaConfig, nodesIndexToCreate, infrastructure.StaticNodeStep, group.Name, nodeCloudConfig, infrastructureContext, saveLogToBuffer, globalOptions, configureNode)
+				_, err = ParallelBootstrapAdditionalNodes(ngCtx, kubeCl, metaConfig, nodesIndexToCreate, infrastructure.StaticNodeStep, group.Name, groupConfig, infrastructureContext, saveLogToBuffer, globalOptions, buildNodePayload)
 
 				resultsChan <- checkResult{
 					name:    group.Name,

@@ -165,7 +165,7 @@ func TestImmutableMasterPayloadLeavesSharedMetaConfigUntouched(t *testing.T) {
 	require.NoError(t, err)
 	require.Empty(t, shared.Images, "the configuration parsed from the cluster carries no digests")
 
-	_, err = immutableMasterPayload(convergeCtx, "cluster-master-0")
+	_, err = immutableNodePayload(convergeCtx, "master", "cluster-master-0")
 	require.Error(t, err, "the payload needs the cluster it cannot reach here")
 
 	require.Empty(t, shared.Images, "the payload loaded its image digests into the shared configuration")

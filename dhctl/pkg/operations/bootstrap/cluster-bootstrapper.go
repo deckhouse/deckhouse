@@ -16,7 +16,6 @@ package bootstrap
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -1049,15 +1048,21 @@ func (b *ClusterBootstrapper) bootstrapFirstMaster(ctx context.Context, bctx *bo
 		return b.bootstrapImmutableFirstMaster(ctx, bctx)
 	}
 
-	// An immutable machine is created bare and configured afterwards, over the same
-	// maintenance port a static cluster's machines are pushed to. Nothing the provider
-	// carries in: a document that travels as cloud-init is parsed twice, by the image's
-	// init and again by the agent, and is checked against the hardware by neither.
+	// In a cloud the provider carries the document in as the machine's cloud config, the
+	// way it carries every other node's. The maintenance port is the static cluster's
+	// transport, where no provider exists to hand a document to bare metal; reaching for
+	// it here would buy an address, a push and a record of it for nothing.
+	masterCloudConfig, _, err := b.buildImmutableMasterPayload(ctx, bctx, masterNodeName)
+	if err != nil {
+		return err
+	}
+
 	masterRunner, err := b.Params.InfrastructureContext.GetBootstrapNodeRunner(ctx, bctx.metaConfig, bctx.stateCache, infrastructure.BootstrapNodeRunnerOptions{
-		NodeName:      masterNodeName,
-		NodeGroupStep: infrastructure.MasterNodeStep,
-		NodeGroupName: "master",
-		NodeIndex:     0,
+		NodeName:        masterNodeName,
+		NodeGroupStep:   infrastructure.MasterNodeStep,
+		NodeGroupName:   "master",
+		NodeIndex:       0,
+		NodeCloudConfig: masterCloudConfig,
 	})
 	if err != nil {
 		return err
@@ -1097,8 +1102,11 @@ func (b *ClusterBootstrapper) bootstrapFirstMaster(ctx context.Context, bctx *bo
 	bctx.deckhouseInstallConfig.NodesInfrastructureState = make(map[string][]byte)
 	bctx.deckhouseInstallConfig.NodesInfrastructureState[masterNodeName] = masterOutputs.InfrastructureState
 
+	// An immutable master answers no sshd and its document is already aboard: there is
+	// nothing to register and nothing left to hand over.
 	if bctx.immutable != nil {
-		return b.handImmutableCloudMaster(ctx, bctx, masterNodeName, masterOutputs.MasterIPForSSH)
+		bctx.immutable.masterIP = masterOutputs.NodeInternalIP
+		return nil
 	}
 
 	bctx.masterAddressesForSSH[masterNodeName] = masterOutputs.MasterIPForSSH
@@ -1392,23 +1400,16 @@ func (b *ClusterBootstrapper) bootstrapAdditionalNodes(ctx context.Context, bctx
 
 	// An immutable master boots from a payload rendered per node, and it is tracked by no SSH
 	// address: converge builds its session from that cache and an unreachable host stalls it.
-	// An immutable machine of a CloudPermanent group takes the same document, at the
-	// address the provider reports for it: the group's published cloud config is a
-	// bashible script the node cannot run, and waiting for one leaves it in the
-	// installer forever.
-	var configureNode operations.ConfigureImmutableNode
+	// A machine of an immutable CloudPermanent group boots from a document rendered for
+	// it: the group's published cloud config is a bashible script the node cannot run,
+	// and waiting for one leaves it in the installer forever. The provider carries it in
+	// the way it carries a master's, so nothing here needs the machine's address.
+	var buildNodePayload operations.ImmutablePayloadBuilder
 	if bctx.immutable != nil {
-		configureNode = func(ctx context.Context, kubeCl *client.KubernetesClient, nodeGroupName, nodeName, address string) error {
-			payload, nodeConfig, err := immutable.BuildJoinPayloadFromCluster(ctx, kubeCl, bctx.metaConfig, nodeName,
-				immutableCustomization(bctx, nodeName), address, nodeGroupName)
-			if err != nil {
-				return err
-			}
-			document, err := base64.StdEncoding.DecodeString(payload)
-			if err != nil {
-				return fmt.Errorf("decode the payload of %s: %w", nodeName, err)
-			}
-			return b.pushRecordedPayload(ctx, bctx, nodeName, address, document, nodeConfig)
+		buildNodePayload = func(ctx context.Context, kubeCl *client.KubernetesClient, nodeGroupName, nodeName string) (string, error) {
+			payload, _, err := immutable.BuildJoinPayloadFromCluster(ctx, kubeCl, bctx.metaConfig, nodeName,
+				immutableCustomization(bctx, nodeName), "", nodeGroupName)
+			return payload, err
 		}
 	}
 
@@ -1433,7 +1434,7 @@ func (b *ClusterBootstrapper) bootstrapAdditionalNodes(ctx context.Context, bctx
 			&b.Options.Global,
 			b.PhasedExecutionContext,
 			buildPayload,
-			configureNode,
+			buildNodePayload,
 		)
 	})
 }
@@ -1622,7 +1623,7 @@ func bootstrapAdditionalNodesForCloudCluster(
 	globalOptions *options.GlobalOptions,
 	pec phases.DefaultPhasedExecutionContext,
 	buildMasterPayload masterPayloadBuilder,
-	configureNode operations.ConfigureImmutableNode,
+	buildNodePayload operations.ImmutablePayloadBuilder,
 ) error {
 	ctx, span := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.AdditionalNodesForCloudCluster")
 	defer span.End()
@@ -1639,7 +1640,7 @@ func bootstrapAdditionalNodesForCloudCluster(
 
 	pec.CompleteSubPhase(ctx, phases.InstallAdditionalMastersAndStaticNodesSubPhaseAdditionalMasters)
 
-	if err := bootstrapAdditionalTerraNodeGroups(ctx, kubeCl, metaConfig, terraNodeGroups, infrastructureContext, globalOptions, configureNode); err != nil {
+	if err := bootstrapAdditionalTerraNodeGroups(ctx, kubeCl, metaConfig, terraNodeGroups, infrastructureContext, globalOptions, buildNodePayload); err != nil {
 		return err
 	}
 

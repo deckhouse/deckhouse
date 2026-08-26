@@ -27,66 +27,84 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 )
 
-// Only an immutable group is configured by the installer. Every other group is
-// created the way it always was, and taking the new path for one of them would
-// ask its layout for an address no provider publishes.
-func TestOnlyAnImmutableGroupIsConfiguredByTheInstaller(t *testing.T) {
+// Only an immutable group boots from a document the installer renders. Every
+// other group is created the way it always was, from the cloud config the
+// cluster publishes for it.
+func TestOnlyAnImmutableGroupBuildsItsOwnPayload(t *testing.T) {
 	t.Parallel()
 
-	configure := func(context.Context, *client.KubernetesClient, string, string, string) error { return nil }
+	build := func(context.Context, *client.KubernetesClient, string, string) (string, error) { return "", nil }
 
 	cases := map[string]struct {
-		group     config.TerraNodeGroupSpec
-		configure ConfigureImmutableNode
-		want      bool
+		group config.TerraNodeGroupSpec
+		build ImmutablePayloadBuilder
+		want  bool
 	}{
 		"an immutable group": {
-			group:     config.TerraNodeGroupSpec{Name: "front", SystemType: "Immutable"},
-			configure: configure,
-			want:      true,
+			group: config.TerraNodeGroupSpec{Name: "front", SystemType: "Immutable"},
+			build: build,
+			want:  true,
 		},
 		"a group with no system type": {
-			group:     config.TerraNodeGroupSpec{Name: "worker"},
-			configure: configure,
-			want:      false,
+			group: config.TerraNodeGroupSpec{Name: "worker"},
+			build: build,
+			want:  false,
 		},
 		"a group of another system type": {
-			group:     config.TerraNodeGroupSpec{Name: "worker", SystemType: "Classic"},
-			configure: configure,
-			want:      false,
+			group: config.TerraNodeGroupSpec{Name: "worker", SystemType: "Classic"},
+			build: build,
+			want:  false,
 		},
-		"an immutable group on a bootstrap that configures nothing": {
-			group:     config.TerraNodeGroupSpec{Name: "front", SystemType: "Immutable"},
-			configure: nil,
-			want:      false,
+		"an immutable group on a bootstrap that renders nothing": {
+			group: config.TerraNodeGroupSpec{Name: "front", SystemType: "Immutable"},
+			build: nil,
+			want:  false,
 		},
 	}
 
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			require.Equal(t, tc.want, configureFor(tc.group, tc.configure) != nil)
+			require.Equal(t, tc.want, payloadBuilderFor(tc.group, tc.build) != nil)
 		})
 	}
 }
 
-// A group the installer configures is created bare: its machines take a document
-// pushed to them, and the cloud config published for the group is a bashible
-// script an immutable machine cannot run.
-func TestAConfiguredGroupIsCreatedWithNoCloudConfig(t *testing.T) {
+// An immutable group never asks the cluster for its cloud config: what the
+// cluster publishes for the group is a bashible script its machines cannot run,
+// and each of them boots from a document of its own instead.
+func TestAnImmutableGroupAsksTheClusterForNoCloudConfig(t *testing.T) {
 	t.Parallel()
 
-	configure := func(context.Context, *client.KubernetesClient, string, string, string) error { return nil }
+	build := func(context.Context, *client.KubernetesClient, string, string) (string, error) { return "", nil }
 
-	cloudConfig, err := groupCloudConfig(t.Context(), nil, "front", configure)
-	require.NoError(t, err, "a configured group must not ask the cluster for a cloud config")
+	cloudConfig, err := groupCloudConfig(t.Context(), nil, "front", build)
+	require.NoError(t, err, "an immutable group must not ask the cluster for a cloud config")
 	require.Empty(t, cloudConfig)
 }
 
-// Both node paths have to honour the configurator. The parallel one is the path
-// a CloudPermanent group actually takes, and it once accepted the argument and
-// dropped it: the group was then created with no cloud config AND never handed a
-// document, so its machines waited in the installer for good.
-func TestBothNodePathsHonourTheConfigurator(t *testing.T) {
+// The document is per node - it names the node it is for - so the group's config
+// must never stand in for it.
+func TestEachImmutableMachineGetsItsOwnDocument(t *testing.T) {
+	t.Parallel()
+
+	build := func(_ context.Context, _ *client.KubernetesClient, ng, node string) (string, error) {
+		return ng + "/" + node, nil
+	}
+
+	got, err := nodeCloudConfig(t.Context(), nil, build, "front", "front-0", "the group config")
+	require.NoError(t, err)
+	require.Equal(t, "front/front-0", got)
+
+	classic, err := nodeCloudConfig(t.Context(), nil, nil, "worker", "worker-0", "the group config")
+	require.NoError(t, err)
+	require.Equal(t, "the group config", classic)
+}
+
+// Both node paths have to honour the builder. The parallel one is the path a
+// CloudPermanent group actually takes, and it once accepted the argument and
+// dropped it: the group was then created with no cloud config at all, so its
+// machines waited in the installer for good.
+func TestBothNodePathsHonourTheBuilder(t *testing.T) {
 	t.Parallel()
 
 	const file = "nodebootstrap.go"
@@ -103,8 +121,8 @@ func TestBothNodePathsHonourTheConfigurator(t *testing.T) {
 		switch fn.Name.Name {
 		case "BootstrapAdditionalNode", "BootstrapAdditionalNodeForParallelRun":
 			seen[fn.Name.Name] = true
-			require.Truef(t, namesIdentifier(fn.Body, "configure"),
-				"%s takes a configurator and never calls it: its group is created bare and nothing configures it", fn.Name.Name)
+			require.Truef(t, namesIdentifier(fn.Body, "build"),
+				"%s takes a payload builder and never calls it: its machines are created with no document at all", fn.Name.Name)
 		}
 		return true
 	})

@@ -38,7 +38,6 @@ const (
 	masterSSHIPOutputKey    = "master_ip_address_for_ssh"
 	nodeInternalIPOutputKey = "node_internal_ip_address"
 	kubeDataPathOutputKey   = "kubernetes_data_device_path"
-	staticNodeIPOutputKey   = "node_ip_address"
 )
 
 type PipelineOutputs struct {
@@ -420,25 +419,6 @@ func GetMasterNodeResultNoStrict(ctx context.Context, r RunnerInterface) (*Pipel
 	res.InfrastructureState = tfState
 
 	return res, nil
-}
-
-// GetStaticNodeResult reads the address of a node the provider has just created,
-// for the paths that have to reach the machine themselves. Only the master-node
-// layouts have ever had to publish an address, so a layout that predates this
-// says so by name rather than through a missing-output error nobody can act on.
-func GetStaticNodeResult(ctx context.Context, r RunnerInterface, _ *options.GlobalOptions) (*PipelineOutputs, error) {
-	address, err := getStringOrIntOutput(ctx, r, staticNodeIPOutputKey)
-	if err != nil {
-		return nil, fmt.Errorf("read %q from the static-node layout: %w; a provider bundle that does not publish it "+
-			"cannot host nodes the installer configures itself", staticNodeIPOutputKey, err)
-	}
-
-	tfState, err := r.GetState()
-	if err != nil {
-		return nil, err
-	}
-
-	return &PipelineOutputs{InfrastructureState: tfState, NodeInternalIP: address}, nil
 }
 
 func OnlyState(_ context.Context, r RunnerInterface, _ *options.GlobalOptions) (*PipelineOutputs, error) {

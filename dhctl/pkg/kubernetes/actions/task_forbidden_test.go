@@ -53,7 +53,9 @@ func TestCreateForbiddenReportsTheCreateWhenUpdateFailsToo(t *testing.T) {
 		Name:       "Namespace \"d8-cloud-provider-dvp\"",
 		Manifest:   func() any { return nil },
 		CreateFunc: func(context.Context, any) error { return forbiddenByPolicy() },
-		UpdateFunc: func(context.Context, any) error { return apierrors.NewNotFound(schema.GroupResource{Resource: "namespaces"}, "d8-cloud-provider-dvp") },
+		UpdateFunc: func(context.Context, any) error {
+			return apierrors.NewNotFound(schema.GroupResource{Resource: "namespaces"}, "d8-cloud-provider-dvp")
+		},
 	}
 
 	err := task.CreateOrUpdateSilent(context.Background())
