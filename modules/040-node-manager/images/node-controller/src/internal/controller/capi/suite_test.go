@@ -63,6 +63,10 @@ spec:
       vmClassName: test
 `
 
+// suiteClusterUUID is what the fixture stamps the cluster with; specs that assert
+// on a rendered artifact compare against it.
+const suiteClusterUUID = "11111111-2222-3333-4444-555555555555"
+
 // instanceClassChecksumFixture keeps the checksum stable per NodeGroup, matching the
 // contract that a changed instance class changes the checksum (irrelevant for this suite).
 const instanceClassChecksumFixture = `{{ .nodeGroup.name }}`
@@ -163,7 +167,7 @@ var _ = BeforeSuite(func() {
 	uuidCM := &corev1.ConfigMap{}
 	uuidCM.Namespace = clusterUUIDConfigMapNS
 	uuidCM.Name = clusterUUIDConfigMapName
-	uuidCM.Data = map[string]string{"cluster-uuid": "11111111-2222-3333-4444-555555555555"}
+	uuidCM.Data = map[string]string{"cluster-uuid": suiteClusterUUID}
 	Expect(client.IgnoreAlreadyExists(k8sClient.Create(suiteCtx, uuidCM))).To(Succeed())
 
 	By("publishing the cluster-kubernetes configmap")

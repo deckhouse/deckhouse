@@ -84,7 +84,7 @@ var _ = BeforeSuite(func() {
 	By("publishing the cluster inputs the bootstrap render reads")
 	// No EndpointSlice fixture: envtest's own apiserver already registers itself
 	// as default/kubernetes, which is where ReadEndpoints finds the masters.
-	createClusterUUID(testClusterUUID)
+	createClusterUUID()
 	create(clusterConfigurationSecret())
 	create(clusterKubernetesConfigMap())
 	create(imagesDigestsConfigMap())
@@ -119,11 +119,11 @@ func create(obj client.Object) {
 // createClusterUUID publishes the d8-cluster-uuid ConfigMap. It is a function
 // rather than a fixture literal because the empty-UUID spec deletes the object
 // and has to put it back for the rest of the suite.
-func createClusterUUID(uuid string) {
+func createClusterUUID() {
 	GinkgoHelper()
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{Namespace: nodecommon.KubeSystemNamespace, Name: clusterUUIDConfigMapName},
-		Data:       map[string]string{clusterUUIDKey: uuid},
+		Data:       map[string]string{clusterUUIDKey: testClusterUUID},
 	}
 	Expect(client.IgnoreAlreadyExists(k8sClient.Create(suiteCtx, cm))).To(Succeed())
 }
@@ -144,9 +144,9 @@ func clusterKubernetesConfigMap() *corev1.ConfigMap {
 	}
 }
 
-// packagesProxyTokenSecret carries the token the rendered script presents to the
-// registry packages proxy; without it every render would carry an empty token
-// and no spec would notice.
+// packagesProxyTokenSecret is where the packages-proxy token in the bootstrap
+// input comes from. No rendered script in this suite shows it, so without the
+// fixture a reader returning nothing would go unnoticed.
 func packagesProxyTokenSecret() *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Namespace: nodecommon.MachineNamespace, Name: "registry-packages-proxy-token"},

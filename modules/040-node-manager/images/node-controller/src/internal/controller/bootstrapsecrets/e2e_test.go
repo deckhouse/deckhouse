@@ -30,6 +30,7 @@ import (
 	"github.com/deckhouse/node-controller/internal/bootstrap"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/bashiblecontext"
+	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 	"github.com/deckhouse/node-controller/internal/testenv"
 )
@@ -52,10 +53,11 @@ var _ = Describe("Bootstrap secrets controller", func() {
 			g.Expect(secret.Data).To(HaveKey("bootstrap.sh"))
 			g.Expect(secret.Data).To(HaveKey("apiserverEndpoints"))
 
-			// The tail of the rendered bashible script: proof the ConfigMap
-			// templates were really rendered, not a placeholder written out.
+			// The script's own tail, from bootstrap/script.go: proof a render ran.
 			g.Expect(string(secret.Data["bootstrap.sh"])).To(ContainSubstring("get_phase2 | bash"))
-			// The cluster inputs reached the render.
+			// This one is rendered by a ConfigMap template
+			// (01-bootstrap-prerequisites.sh.tpl:26), so it proves the templates
+			// travelled and that the cluster inputs reached them.
 			g.Expect(string(secret.Data["bootstrap.sh"])).To(ContainSubstring(testClusterUUID))
 			// A YAML list of the discovered endpoints, with no trailing newline:
 			// helm's toYaml trimmed it, and dhctl compares these bytes.
@@ -69,12 +71,12 @@ var _ = Describe("Bootstrap secrets controller", func() {
 		Expect(string(secret.Data["bootstrap.sh"])).To(ContainSubstring(tokens[name]))
 	})
 
-	// The rendered script cannot show these: the packages-proxy token reaches it
-	// only through the branch taken when no apiserver endpoint was discovered
-	// (01-bootstrap-prerequisites.sh.tpl:29-33), which envtest never takes, and
-	// the digests only reach it as values inside an rpp-get argument list. A
-	// reader that started returning nothing would otherwise stay green.
-	It("collects the cluster inputs the rendered script cannot show", func() {
+	// The packages-proxy token reaches the script only through the branch taken
+	// when no apiserver endpoint was discovered (01-bootstrap-prerequisites.sh.tpl:
+	// 28-33), which envtest never takes, so a reader that started returning nothing
+	// would stay green. The other three are asserted here because they come from
+	// the same buildInput pass and cost nothing to check.
+	It("collects the packages-proxy token no rendered script can show", func() {
 		ng := staticNodeGroup(testenv.UniqueName("inputs"))
 		r := &Reconciler{
 			context:       &bashiblecontext.Service{Client: k8sClient, Reader: k8sClient},
@@ -112,6 +114,45 @@ var _ = Describe("Bootstrap secrets controller", func() {
 			err := k8sClient.Get(suiteCtx, manualSecretKey(name), secret)
 			return err == nil
 		}, negativeCheckDuration, eventuallyPoll).Should(BeFalse())
+	})
+
+	// The other half of "no Secret, and here is why": a group the cloud checks
+	// reject. The fixture takes the one path that needs no InstanceClass CRD —
+	// a provider that published a kind but not the apiVersion to read it at
+	// (derived_status/validate.go:40) — and is scoped to this spec so the rest
+	// of the suite keeps running in a cluster with no cloud provider.
+	It("says on the NodeGroup why a rejected group gets no secret", func() {
+		create(&corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: nodecommon.KubeSystemNamespace,
+				Name:      ngcommon.CloudProviderSecretName,
+			},
+			Data: map[string][]byte{"type": []byte(`"dvp"`), nodecommon.InstanceClassKindKey: []byte("DVPInstanceClass")},
+		})
+		DeferCleanup(func() {
+			Expect(client.IgnoreNotFound(k8sClient.Delete(suiteCtx, &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: nodecommon.KubeSystemNamespace,
+					Name:      ngcommon.CloudProviderSecretName,
+				},
+			}))).To(Succeed())
+		})
+
+		name := testenv.UniqueName("rejected")
+		ng := staticNodeGroup(name)
+		ng.Spec.NodeType = deckhousev1.NodeTypeCloudEphemeral
+		ng.Spec.CloudInstances = &deckhousev1.CloudInstancesSpec{
+			ClassReference: deckhousev1.ClassReference{Kind: "DVPInstanceClass", Name: "missing"},
+			MinPerZone:     1,
+			MaxPerZone:     1,
+			Zones:          []string{"zone-a"},
+		}
+		createNodeGroup(ng)
+
+		Eventually(func(g Gomega) {
+			g.Expect(warningEventMessages(name, eventReasonSkipped)).
+				To(ContainElement(ContainSubstring(nodecommon.InstanceClassAPIVersionKey)))
+		}, eventuallyTimeout, eventuallyPoll).Should(Succeed())
 	})
 
 	// A candi update arrives as a chart upgrade, which only rewrites this
@@ -155,7 +196,7 @@ var _ = Describe("Bootstrap secrets controller", func() {
 		Expect(k8sClient.Get(suiteCtx, key, cm)).To(Succeed())
 		Expect(k8sClient.Delete(suiteCtx, cm)).To(Succeed())
 		DeferCleanup(func() {
-			createClusterUUID(testClusterUUID)
+			createClusterUUID()
 		})
 
 		name := testenv.UniqueName("no-uuid")
@@ -169,22 +210,24 @@ var _ = Describe("Bootstrap secrets controller", func() {
 
 		By("saying why on the NodeGroup itself, not only in the controller log")
 		Eventually(func(g Gomega) {
-			g.Expect(warningEventMessages(name)).To(ContainElement(ContainSubstring("cluster UUID is empty")))
+			g.Expect(warningEventMessages(name, eventReasonFailed)).To(ContainElement(ContainSubstring("cluster UUID is empty")))
 		}, eventuallyTimeout, eventuallyPoll).Should(Succeed())
 	})
 })
 
-// warningEventMessages returns the messages of the Warning events this controller
-// recorded on the NodeGroup. A cluster-scoped object's events land in "default".
-func warningEventMessages(ngName string) []string {
+// warningEventMessages returns the messages of the Warning events recorded on the
+// NodeGroup under the given reason. Listed across all namespaces on purpose: the
+// recorder files a cluster-scoped object's events under "default", and pinning
+// that here would make the helper fail silently if it ever changed.
+func warningEventMessages(ngName, reason string) []string {
 	GinkgoHelper()
 	events := &corev1.EventList{}
-	Expect(k8sClient.List(suiteCtx, events, client.InNamespace("default"))).To(Succeed())
+	Expect(k8sClient.List(suiteCtx, events, client.InNamespace(""))).To(Succeed())
 
 	var messages []string
 	for i := range events.Items {
 		e := &events.Items[i]
-		if e.InvolvedObject.Name != ngName || e.Reason != eventReasonFailed {
+		if e.Type != corev1.EventTypeWarning || e.Reason != reason || e.InvolvedObject.Name != ngName {
 			continue
 		}
 		messages = append(messages, e.Message)
