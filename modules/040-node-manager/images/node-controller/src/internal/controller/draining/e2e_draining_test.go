@@ -19,7 +19,6 @@ package draining
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -49,12 +48,20 @@ func getNodeState(name string) *corev1.Node {
 // admits it) plus the given annotations. The group is also a real NodeGroup name when ngName is
 // non-empty; callers that need a NodeGroup create it separately.
 func createGroupNode(name, ngName string, annotations map[string]string) *corev1.Node {
+	return createGroupNodeWithSpec(name, ngName, annotations, corev1.NodeSpec{})
+}
+
+// createGroupNodeWithSpec is createGroupNode for the cases that need the node to
+// already be in a given state — cordoned, typically — before the controller ever
+// sees it, rather than patched into it afterwards in a race with the reconcile.
+func createGroupNodeWithSpec(name, ngName string, annotations map[string]string, spec corev1.NodeSpec) *corev1.Node {
 	node := &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        name,
 			Labels:      map[string]string{nodecommon.NodeGroupLabel: ngName},
 			Annotations: annotations,
 		},
+		Spec: spec,
 	}
 	Expect(k8sClient.Create(suiteCtx, node)).To(Succeed())
 	return node
@@ -117,6 +124,35 @@ func createDaemonSet(name string) *appsv1.DaemonSet {
 	}
 	Expect(k8sClient.Create(suiteCtx, ds)).To(Succeed())
 	return ds
+}
+
+// createStuckPod creates a pod on the node that can be evicted but never goes
+// away: the finalizer keeps the object alive after its deletion is requested,
+// and the drain waits once a second for it to disappear, indefinitely. That is
+// the whole of a hard-stuck drain, without depending on a disruption controller
+// envtest does not run.
+//
+// The finalizer is dropped again when the spec ends, or the pod outlives the
+// suite.
+func createStuckPod(name, nodeName string) *corev1.Pod {
+	pod := createBoundPod(name, nodeName, "")
+	pod.Finalizers = []string{"node-controller.test/hold"}
+	Expect(k8sClient.Update(suiteCtx, pod)).To(Succeed())
+
+	DeferCleanup(func() {
+		Eventually(func(g Gomega) {
+			fresh := &corev1.Pod{}
+			err := k8sClient.Get(suiteCtx, client.ObjectKeyFromObject(pod), fresh)
+			if apierrors.IsNotFound(err) {
+				return
+			}
+			g.Expect(err).NotTo(HaveOccurred())
+			fresh.Finalizers = nil
+			g.Expect(client.IgnoreNotFound(k8sClient.Update(suiteCtx, fresh))).To(Succeed())
+		}, eventuallyTimeout, eventuallyPoll).Should(Succeed())
+	})
+
+	return pod
 }
 
 func podExists(name string) bool {
@@ -212,13 +248,57 @@ var _ = Describe("Draining a node on the draining annotation", func() {
 		}, eventuallyTimeout, eventuallyPoll).Should(Succeed())
 	})
 
-	It("removes a stale drained=user annotation from a schedulable node", func() {
-		name := testenv.UniqueName("stale-user")
-		createGroupNode(name, name, map[string]string{nodecommon.DrainedAnnotation: "user"})
+	// A hand drain records no result any more, so drained=user is always a
+	// leftover — including on the cordoned nodes a hand drain actually produces,
+	// which the old "schedulable only" rule left it sitting on forever.
+	It("removes a drained=user annotation whether the node is cordoned or not", func() {
+		schedulable := testenv.UniqueName("user-schedulable")
+		createGroupNode(schedulable, schedulable, map[string]string{nodecommon.DrainedAnnotation: "user"})
+
+		cordoned := testenv.UniqueName("user-cordoned")
+		createGroupNodeWithSpec(cordoned, cordoned,
+			map[string]string{nodecommon.DrainedAnnotation: "user"},
+			corev1.NodeSpec{Unschedulable: true})
+
+		for _, name := range []string{schedulable, cordoned} {
+			Eventually(func(g Gomega) {
+				g.Expect(getNodeState(name).Annotations).NotTo(HaveKey(nodecommon.DrainedAnnotation))
+			}, eventuallyTimeout, eventuallyPoll).Should(Succeed())
+		}
+
+		// Removing the annotation is not uncordoning: only an interrupted drain
+		// puts a node back into service.
+		Consistently(func() bool {
+			return getNodeState(cordoned).Spec.Unschedulable
+		}, negativeCheckDuration, eventuallyPoll).Should(BeTrue())
+	})
+
+	// User story: as a cluster operator who changed my mind, I want removing the
+	// draining annotation to stop the eviction and give me my node back, instead
+	// of having to wait the drain out and uncordon by hand.
+	It("cancels an in-flight drain and uncordons the node when the request is withdrawn", func() {
+		name := testenv.UniqueName("drain-cancel")
+
+		// The pod comes first: a drain that starts before it exists has nothing
+		// to evict and simply succeeds.
+		createStuckPod("stuck-"+name, name)
+		createGroupNode(name, name, map[string]string{nodecommon.DrainingAnnotation: "bashible"})
+
+		// The pod going into termination is proof the eviction is under way — the
+		// cordon alone is not, since it is written a pass earlier. The finalizer
+		// then guarantees the eviction cannot finish on its own.
+		Eventually(func() bool {
+			return podExists("stuck-" + name)
+		}, eventuallyTimeout, eventuallyPoll).Should(BeFalse())
+		Expect(getNodeState(name).Spec.Unschedulable).To(BeTrue())
+
+		Expect(k8sClient.Patch(suiteCtx, getNodeState(name), client.RawPatch(types.MergePatchType,
+			[]byte(`{"metadata":{"annotations":{"`+nodecommon.DrainingAnnotation+`":null}}}`)))).To(Succeed())
 
 		Eventually(func(g Gomega) {
 			node := getNodeState(name)
-			g.Expect(node.Annotations).NotTo(HaveKey(nodecommon.DrainedAnnotation))
+			g.Expect(node.Spec.Unschedulable).To(BeFalse(), "a cancelled drain must uncordon the node")
+			g.Expect(node.Annotations).NotTo(HaveKey(nodecommon.DrainedAnnotation), "a cancelled drain must not be recorded as done")
 		}, eventuallyTimeout, eventuallyPoll).Should(Succeed())
 	})
 

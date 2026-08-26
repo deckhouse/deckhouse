@@ -18,20 +18,18 @@ package draining
 
 import (
 	"context"
-	"encoding/json"
-	"time"
+	"errors"
+	"fmt"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
+	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-
-	kubedrain "github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain"
 
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/register"
@@ -41,164 +39,188 @@ func init() {
 	register.RegisterController("node-draining", &corev1.Node{}, &Reconciler{})
 }
 
+const (
+	bashibleSource = "bashible"
+	userSource     = "user"
+)
+
+// Reconciler empties a node when somebody annotates it, and answers with a
+// second annotation naming whoever asked. The requesters — bashible, cloud
+// hooks, updateapproval, an operator — cannot evict pods themselves.
 type Reconciler struct {
 	register.Base
-	kubeClient kubernetes.Interface
+
+	drains *drainer
 }
 
-func (r *Reconciler) Setup(_ context.Context, mgr ctrl.Manager) error {
-	var err error
-	r.kubeClient, err = kubernetes.NewForConfig(mgr.GetConfig())
-	return err
+func (r *Reconciler) Setup(ctx context.Context, mgr ctrl.Manager) error {
+	kubeClient, err := kubernetes.NewForConfig(mgr.GetConfig())
+	if err != nil {
+		return fmt.Errorf("create the kubernetes client: %w", err)
+	}
+
+	r.drains = newDrainer(ctx, kubeClient)
+	return nil
+}
+
+// ForPredicates admits only nodes in a NodeGroup. Deliberately not
+// WithEventFilter, which applies to every source and would drop the name-only
+// Node a finished eviction sends down the wake channel.
+func (r *Reconciler) ForPredicates() []predicate.Predicate {
+	return []predicate.Predicate{
+		predicate.NewPredicateFuncs(func(obj client.Object) bool {
+			_, hasGroup := obj.GetLabels()[nodecommon.NodeGroupLabel]
+			return hasGroup
+		}),
+	}
 }
 
 func (r *Reconciler) SetupWatches(w register.Watcher) {
-	w.WithEventFilter(predicate.NewPredicateFuncs(func(obj client.Object) bool {
-		_, hasGroup := obj.GetLabels()[nodecommon.NodeGroupLabel]
-		return hasGroup
-	}))
+	w.WatchesRawSource(r.drains.wakeSource())
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := log.FromContext(ctx)
-
 	node := &corev1.Node{}
 	if err := r.Client.Get(ctx, req.NamespacedName, node); err != nil {
 		if apierrors.IsNotFound(err) {
-			clearDrainMetric(req.Name)
-			return ctrl.Result{}, nil
+			return ctrl.Result{}, r.cleanupDeletedNode(ctx, req.Name)
 		}
 		return ctrl.Result{}, err
 	}
 
-	// Backward compatibility: treat empty annotation value as "bashible" (original hook behavior).
-	var drainingSource, drainedSource string
-	if source, ok := node.Annotations[nodecommon.DrainingAnnotation]; ok {
-		if source == "" {
-			drainingSource = "bashible"
-		} else {
-			drainingSource = source
-		}
-	}
-	if source, ok := node.Annotations[nodecommon.DrainedAnnotation]; ok {
-		if source == "" {
-			drainedSource = "bashible"
-		} else {
-			drainedSource = source
-		}
+	return r.reconcileNode(ctx, node)
+}
+
+func (r *Reconciler) reconcileNode(ctx context.Context, node *corev1.Node) (_ ctrl.Result, resErr error) {
+	logger := log.FromContext(ctx).WithValues("node", node.Name)
+
+	patchHelper, err := patch.NewHelper(node, r.Client)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to init patch helper: %w", err)
 	}
 
-	if drainingSource == "" {
-		clearDrainMetric(node.Name)
-
-		if drainedSource == "user" && !node.Spec.Unschedulable {
-			logger.Info("removing stale drained=user annotation from schedulable node", "node", node.Name)
-			return ctrl.Result{}, r.patchAnnotations(ctx, node.Name, map[string]interface{}{
-				nodecommon.DrainedAnnotation: nil,
-			})
+	defer func() {
+		if err := patchHelper.Patch(ctx, node); err != nil {
+			resErr = errors.Join(resErr, fmt.Errorf("failed to patch Node %s: %w", node.Name, err))
 		}
+	}()
 
-		logger.V(1).Info("skipping: no draining annotation", "node", node.Name, "drainedSource", drainedSource)
+	requestedBy := drainSource(node, nodecommon.DrainingAnnotation)
+	recordedFor := drainSource(node, nodecommon.DrainedAnnotation)
+
+	// drained=user is never written any more, so it can only be a leftover: an
+	// upgraded cluster, or somebody setting it by hand.
+	if recordedFor == userSource {
+		logger.Info("removing an orphan drain result")
+		delete(node.Annotations, nodecommon.DrainedAnnotation)
 		return ctrl.Result{}, nil
 	}
 
-	logger.Info("node drain requested", "node", node.Name, "source", drainingSource, "nodeGroup", node.Labels[nodecommon.NodeGroupLabel])
-
-	if drainedSource == "user" {
-		logger.Info("removing existing drained=user annotation before new drain", "node", node.Name)
-		if err := r.patchAnnotations(ctx, node.Name, map[string]interface{}{
-			nodecommon.DrainedAnnotation: nil,
-		}); err != nil {
-			return ctrl.Result{}, err
-		}
+	// The request is gone: whoever asked has changed their mind.
+	if requestedBy == "" {
+		return ctrl.Result{}, r.cancelDrain(ctx, logger, node)
 	}
 
-	drainTimeout := nodecommon.DrainTimeout(ctx, r.Client, node.Labels[nodecommon.NodeGroupLabel])
-	logger.V(1).Info("drain timeout resolved", "node", node.Name, "timeout", drainTimeout)
-
-	if node.Spec.Unschedulable {
-		logger.V(1).Info("node already cordoned", "node", node.Name)
-	} else {
-		logger.Info("cordoning node", "node", node.Name)
-	}
-	if err := r.cordonNode(ctx, node); err != nil {
-		logger.Error(err, "failed to cordon node", "node", node.Name)
-		return ctrl.Result{}, err
+	// The eviction's outcome decides what is written, so it is collected first.
+	if finished, drainErr := r.drains.result(node.Name); finished {
+		return ctrl.Result{}, r.finishDrain(ctx, logger, node, requestedBy, drainErr)
 	}
 
-	logger.Info("draining node pods", "node", node.Name, "timeout", drainTimeout)
-	drainCtx, cancel := context.WithTimeout(ctx, drainTimeout)
-	defer cancel()
-
-	err := r.drainNode(drainCtx, node.Name)
-	if err != nil {
-		logger.Error(err, "node drain failed", "node", node.Name)
-		r.Recorder.Eventf(node, corev1.EventTypeWarning, "DrainFailed", "drain failed: %v", err)
-		nodeDrainingGauge.WithLabelValues(node.Name, err.Error()).Set(1)
-
-		if drainCtx.Err() != nil {
-			logger.Info("drain timed out, marking as drained anyway", "node", node.Name, "timeout", drainTimeout)
-		} else {
-			return ctrl.Result{}, err
-		}
-	} else {
-		clearDrainMetric(node.Name)
-	}
-
-	if err := r.patchAnnotations(ctx, node.Name, map[string]interface{}{
-		nodecommon.DrainingAnnotation: nil,
-		nodecommon.DrainedAnnotation:  drainingSource,
-	}); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	logger.Info("drain completed, annotations updated",
-		"node", node.Name,
-		"source", drainingSource,
-	)
-	r.Recorder.Eventf(node, corev1.EventTypeNormal, "DrainSucceeded", "node %q drained successfully", node.Name)
-
-	return ctrl.Result{}, nil
+	return ctrl.Result{}, r.startDrain(ctx, logger, node, requestedBy)
 }
 
-func (r *Reconciler) cordonNode(ctx context.Context, node *corev1.Node) error {
-	if node.Spec.Unschedulable {
+// drainSource reads one drain annotation, empty when the node does not carry it.
+func drainSource(node *corev1.Node, annotation string) string {
+	source, ok := node.Annotations[annotation]
+	if !ok {
+		return ""
+	}
+	if source == "" {
+		return bashibleSource
+	}
+
+	return source
+}
+
+// cleanupDeletedNode stops an eviction running for an object nobody can see.
+func (r *Reconciler) cleanupDeletedNode(ctx context.Context, nodeName string) error {
+	clearDrainMetric(nodeName)
+	_, err := r.drains.cancel(ctx, nodeName)
+	return err
+}
+
+// cancelDrain gives the node back when its request disappears.
+//
+// Only a running eviction is undone. A drain that succeeds consumes its own
+// request, so every node passes through here — uncordoning them all would
+// return half-updated nodes to service, and past that point the cordon belongs
+// to updateapproval. A restart forgets the eviction, and such a node keeps its
+// cordon until someone runs kubectl uncordon.
+func (r *Reconciler) cancelDrain(ctx context.Context, logger logr.Logger, node *corev1.Node) error {
+	clearDrainMetric(node.Name)
+
+	cancelled, err := r.drains.cancel(ctx, node.Name)
+	if err != nil {
+		return err
+	}
+	if !cancelled {
 		return nil
 	}
 
-	patch, err := json.Marshal(map[string]interface{}{
-		"spec": map[string]interface{}{
-			"unschedulable": true,
-		},
-	})
-	if err != nil {
-		return err
-	}
-
-	return r.Client.Patch(ctx, node, client.RawPatch(types.MergePatchType, patch))
+	logger.Info("request withdrawn, node going back into service")
+	node.Spec.Unschedulable = false
+	r.Recorder.Eventf(node, corev1.EventTypeNormal, "DrainCancelled",
+		"drain of node %q was cancelled, node is schedulable again", node.Name)
+	return nil
 }
 
-func (r *Reconciler) drainNode(ctx context.Context, nodeName string) error {
-	timeout := time.Duration(0) // 0 means infinite; actual timeout is controlled by ctx
-	drainer := kubedrain.NewDrainer(kubedrain.HelperConfig{
-		Client:  r.kubeClient,
-		Timeout: &timeout,
-	})
-	drainer.Ctx = ctx
+// finishDrain writes down how the eviction ended. The request is consumed
+// either way; only a source that polls for a result gets one.
+func (r *Reconciler) finishDrain(_ context.Context, logger logr.Logger, node *corev1.Node, source string, drainErr error) error {
+	logger = logger.WithValues("source", source)
 
-	return kubedrain.RunNodeDrain(drainer, nodeName)
-}
+	switch {
+	case drainErr == nil:
+		clearDrainMetric(node.Name)
 
-func (r *Reconciler) patchAnnotations(ctx context.Context, nodeName string, annotations map[string]interface{}) error {
-	patch, err := json.Marshal(map[string]interface{}{
-		"metadata": map[string]interface{}{
-			"annotations": annotations,
-		},
-	})
-	if err != nil {
-		return err
+	case errors.Is(drainErr, errDrainDeadline):
+		// Recorded as drained anyway: the cause is durable, a retry gets no
+		// further, and the node's update must not wedge. The gauge stays at 1
+		// for NodeStuckInDraining.
+		logger.Info("eviction timed out, recording it as done anyway", "error", drainErr.Error())
+		r.Recorder.Eventf(node, corev1.EventTypeWarning, "DrainFailed", "drain failed: %v", drainErr)
+		nodeDrainingGauge.WithLabelValues(node.Name, drainErr.Error()).Set(1)
+
+	default:
+		logger.Error(drainErr, "eviction failed")
+		r.Recorder.Eventf(node, corev1.EventTypeWarning, "DrainFailed", "drain failed: %v", drainErr)
+		nodeDrainingGauge.WithLabelValues(node.Name, drainErr.Error()).Set(1)
+		// The request stays, so the requeue starts a fresh eviction.
+		return drainErr
 	}
 
-	node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: nodeName}}
-	return r.Client.Patch(ctx, node, client.RawPatch(types.MergePatchType, patch))
+	delete(node.Annotations, nodecommon.DrainingAnnotation)
+	if source != userSource {
+		node.Annotations[nodecommon.DrainedAnnotation] = source
+	}
+
+	logger.Info("drain finished")
+	r.Recorder.Eventf(node, corev1.EventTypeNormal, "DrainSucceeded", "node %q drained successfully", node.Name)
+	return nil
+}
+
+// startDrain cordons the node, then starts the eviction on the pass that sees
+// the cordon. Not both at once: this reconcile's patch is still unsent, and
+// pods must stop arriving before anything empties the node. The cordon's own
+// event brings us back.
+func (r *Reconciler) startDrain(ctx context.Context, logger logr.Logger, node *corev1.Node, source string) error {
+	timeout := nodecommon.DrainTimeout(ctx, r.Client, node.Labels[nodecommon.NodeGroupLabel])
+
+	if !node.Spec.Unschedulable {
+		logger.Info("cordoning node", "source", source)
+		node.Spec.Unschedulable = true
+		return nil
+	}
+
+	return r.drains.start(logger, node.Name, timeout)
 }
