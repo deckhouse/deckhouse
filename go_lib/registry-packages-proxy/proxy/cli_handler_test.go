@@ -347,6 +347,27 @@ func newTestProxy(t *testing.T, registryClient registry.Client, getter registry.
 	return p
 }
 
+// newCLITestServer mounts the proxy's CLI handler on a fresh test server.
+func newCLITestServer(t *testing.T, p *Proxy) *httptest.Server {
+	t.Helper()
+	mux := http.NewServeMux()
+	mux.HandleFunc(cliImagesPathPrefix, p.CLIHandler())
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+	return srv
+}
+
+// getStatus GETs urlPath from srv and returns the status code, draining the
+// body so connections are reused.
+func getStatus(t *testing.T, srv *httptest.Server, urlPath string) int {
+	t.Helper()
+	resp, err := http.Get(srv.URL + urlPath)
+	require.NoError(t, err)
+	_, _ = io.Copy(io.Discard, resp.Body)
+	_ = resp.Body.Close()
+	return resp.StatusCode
+}
+
 func TestCLIHandler_ListTags_HappyPath(t *testing.T) {
 	fake := &fakeCLIRegistryClient{
 		tags: map[string][]string{
@@ -696,4 +717,176 @@ func TestCLIHandler_KeepsRepositoryWithoutEdition(t *testing.T) {
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
 	assert.Equal(t, []string{"dev-registry.deckhouse.io/sys/deckhouse-oss"}, fake.seenRepos())
+}
+
+// TestCLIHandler_MirroredLayoutServedFromClusterRepo: a registry filled by
+// `d8 mirror push registry.local/dest/ee` keeps the CLI artifacts under the
+// cluster repository itself; every route serves from there and the trimmed
+// root is never consulted.
+func TestCLIHandler_MirroredLayoutServedFromClusterRepo(t *testing.T) {
+	fake := &fakeCLIRegistryClient{
+		availableRepos: map[string]bool{"registry.local/dest/ee": true},
+		tags: map[string][]string{
+			"deckhouse-cli/plugins/foo": {"v0.1.0"},
+		},
+		tagToManifestDigest: map[string]string{
+			"deckhouse-cli/plugins/foo:v0.1.0": "sha256:feedface",
+		},
+		rawManifests: map[string]string{
+			"deckhouse-cli/plugins/foo:v0.1.0": `{"schemaVersion":2}`,
+		},
+		packageBody: []byte("plugin-binary"),
+		layerDigest: "abc123",
+	}
+	getter := &fakeCLIGetter{cfg: &registry.ClientConfig{
+		Repository: "registry.local/dest/ee",
+		Scheme:     "https",
+	}}
+	p := newTestProxy(t, fake, getter, nil)
+	srv := newCLITestServer(t, p)
+
+	for _, urlPath := range []string{
+		"/v1/images/deckhouse-cli/plugins/foo/tags",
+		"/v1/images/deckhouse-cli/plugins/foo/manifests/v0.1.0",
+		"/v1/images/deckhouse-cli/plugins/foo/images/v0.1.0",
+	} {
+		assert.Equal(t, http.StatusOK, getStatus(t, srv, urlPath), urlPath)
+	}
+
+	// tags, manifest, resolve + pull: four calls, all at the cluster repo.
+	repos := fake.seenRepos()
+	require.Len(t, repos, 4)
+	for _, repo := range repos {
+		assert.Equal(t, "registry.local/dest/ee", repo, "mirrored artifacts are served as pushed")
+	}
+}
+
+// TestCLIHandler_BothLayoutsPreferTheClusterRepo: when both roots hold CLI
+// artifacts (e.g. sibling mirrors of two editions under one prefix), the
+// cluster's own repository wins.
+func TestCLIHandler_BothLayoutsPreferTheClusterRepo(t *testing.T) {
+	fake := &fakeCLIRegistryClient{
+		availableRepos: map[string]bool{
+			"registry.local/dest/ee": true,
+			"registry.local/dest":    true,
+		},
+		tags: map[string][]string{"deckhouse-cli/plugins/foo": {"v0.1.0"}},
+	}
+	getter := &fakeCLIGetter{cfg: &registry.ClientConfig{Repository: "registry.local/dest/ee"}}
+	p := newTestProxy(t, fake, getter, nil)
+	srv := newCLITestServer(t, p)
+
+	require.Equal(t, http.StatusOK, getStatus(t, srv, "/v1/images/deckhouse-cli/plugins/foo/tags"))
+	assert.Equal(t, []string{"registry.local/dest/ee"}, fake.seenRepos())
+}
+
+// TestCLIHandler_NotFoundInAllRoots: when no candidate root holds the image,
+// the client gets 404 and both candidates were probed; the next request
+// probes again (failures are not remembered).
+func TestCLIHandler_NotFoundInAllRoots(t *testing.T) {
+	fake := &fakeCLIRegistryClient{availableRepos: map[string]bool{}}
+	getter := &fakeCLIGetter{cfg: &registry.ClientConfig{Repository: "registry.deckhouse.io/deckhouse/ee"}}
+	p := newTestProxy(t, fake, getter, nil)
+	srv := newCLITestServer(t, p)
+
+	require.Equal(t, http.StatusNotFound, getStatus(t, srv, "/v1/images/deckhouse-cli/plugins/foo/tags"))
+	require.Equal(t, http.StatusNotFound, getStatus(t, srv, "/v1/images/deckhouse-cli/plugins/foo/images/v0.1.0"))
+
+	assert.Equal(t, []string{
+		"registry.deckhouse.io/deckhouse/ee", "registry.deckhouse.io/deckhouse",
+		"registry.deckhouse.io/deckhouse/ee", "registry.deckhouse.io/deckhouse",
+	}, fake.seenRepos())
+}
+
+// TestCLIHandler_ErrorOnClusterRepoFallsToRoot: a cluster repo hidden behind
+// 401/403 (registries that mask existence) does not block the artifacts
+// served by the trimmed root, and the root is remembered.
+func TestCLIHandler_ErrorOnClusterRepoFallsToRoot(t *testing.T) {
+	fake := &fakeCLIRegistryClient{
+		repoErrs:       map[string]error{"registry.deckhouse.io/deckhouse/ee": errors.New("access denied")},
+		availableRepos: map[string]bool{"registry.deckhouse.io/deckhouse": true},
+		tags:           map[string][]string{"deckhouse-cli/plugins/foo": {"v0.1.0"}},
+	}
+	getter := &fakeCLIGetter{cfg: &registry.ClientConfig{Repository: "registry.deckhouse.io/deckhouse/ee"}}
+	p := newTestProxy(t, fake, getter, nil)
+	srv := newCLITestServer(t, p)
+
+	require.Equal(t, http.StatusOK, getStatus(t, srv, "/v1/images/deckhouse-cli/plugins/foo/tags"))
+	require.Equal(t, http.StatusOK, getStatus(t, srv, "/v1/images/deckhouse-cli/plugins/foo/tags"))
+
+	// The second request skips the failing cluster repo entirely.
+	assert.Equal(t, []string{
+		"registry.deckhouse.io/deckhouse/ee", "registry.deckhouse.io/deckhouse",
+		"registry.deckhouse.io/deckhouse",
+	}, fake.seenRepos())
+}
+
+// TestCLIHandler_BadGatewayWhenAllRootsFailHard: with no root serving the
+// image and at least one failing with a non-404 error, the client gets 502,
+// not a misleading 404.
+func TestCLIHandler_BadGatewayWhenAllRootsFailHard(t *testing.T) {
+	fake := &fakeCLIRegistryClient{
+		repoErrs:       map[string]error{"registry.deckhouse.io/deckhouse/ee": errors.New("boom")},
+		availableRepos: map[string]bool{},
+	}
+	getter := &fakeCLIGetter{cfg: &registry.ClientConfig{Repository: "registry.deckhouse.io/deckhouse/ee"}}
+	p := newTestProxy(t, fake, getter, nil)
+	srv := newCLITestServer(t, p)
+
+	assert.Equal(t, http.StatusBadGateway, getStatus(t, srv, "/v1/images/deckhouse-cli/plugins/foo/tags"))
+}
+
+// TestCLIHandler_RegistrySwitchReprobes: rewriting the deckhouse-registry
+// secret (registry switch) changes the cluster repository; the remembered
+// root no longer matches and the new repository is probed from scratch.
+func TestCLIHandler_RegistrySwitchReprobes(t *testing.T) {
+	fake := &fakeCLIRegistryClient{
+		availableRepos: map[string]bool{
+			"registry.deckhouse.io/deckhouse": true,
+			"registry.new/dh/ee":              true,
+		},
+		tags: map[string][]string{"deckhouse-cli/plugins/foo": {"v0.1.0"}},
+	}
+	getter := &fakeCLIGetter{cfg: &registry.ClientConfig{Repository: "registry.deckhouse.io/deckhouse/ee"}}
+	p := newTestProxy(t, fake, getter, nil)
+	srv := newCLITestServer(t, p)
+
+	require.Equal(t, http.StatusOK, getStatus(t, srv, "/v1/images/deckhouse-cli/plugins/foo/tags"))
+
+	getter.cfg = &registry.ClientConfig{Repository: "registry.new/dh/ee"}
+	require.Equal(t, http.StatusOK, getStatus(t, srv, "/v1/images/deckhouse-cli/plugins/foo/tags"))
+
+	assert.Equal(t, []string{
+		"registry.deckhouse.io/deckhouse/ee", "registry.deckhouse.io/deckhouse",
+		"registry.new/dh/ee",
+	}, fake.seenRepos())
+}
+
+// TestCLIHandler_ArtifactsMoveReprobes: when the artifacts move between the
+// roots (a re-mirror with a different layout), a 404 on the remembered root
+// falls through within the same request and the memo follows the move.
+func TestCLIHandler_ArtifactsMoveReprobes(t *testing.T) {
+	fake := &fakeCLIRegistryClient{
+		availableRepos: map[string]bool{"registry.local/dest": true},
+		tags:           map[string][]string{"deckhouse-cli/plugins/foo": {"v0.1.0"}},
+	}
+	getter := &fakeCLIGetter{cfg: &registry.ClientConfig{Repository: "registry.local/dest/ee"}}
+	p := newTestProxy(t, fake, getter, nil)
+	srv := newCLITestServer(t, p)
+
+	require.Equal(t, http.StatusOK, getStatus(t, srv, "/v1/images/deckhouse-cli/plugins/foo/tags"))
+
+	// The user re-mirrors: the artifacts now live under the cluster repo.
+	fake.mu.Lock()
+	fake.availableRepos = map[string]bool{"registry.local/dest/ee": true}
+	fake.mu.Unlock()
+
+	require.Equal(t, http.StatusOK, getStatus(t, srv, "/v1/images/deckhouse-cli/plugins/foo/tags"))
+	require.Equal(t, http.StatusOK, getStatus(t, srv, "/v1/images/deckhouse-cli/plugins/foo/tags"))
+
+	assert.Equal(t, []string{
+		"registry.local/dest/ee", "registry.local/dest",
+		"registry.local/dest", "registry.local/dest/ee",
+		"registry.local/dest/ee",
+	}, fake.seenRepos())
 }
