@@ -62,7 +62,7 @@ all at once. Generating steps with an extension apiserver scales better.
 
 The code is based on [sample-apiserver](https://https://github.com/kubernetes/sample-apiserver).
 
-Code generation is provided by the `code-generator` package. The generated code is commited to the repo. To re-generate
+Code generation is provided by the `code-generator` package. The generated code is committed to the repo. To re-generate
 code, run in the project root
 
 ```shell
