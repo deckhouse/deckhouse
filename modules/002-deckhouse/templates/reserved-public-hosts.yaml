@@ -6,7 +6,9 @@
   that cluster are named, and blocked ordinary deploys.
 
   settings.reservedPublicHosts stays in the ModuleConfig schema so a cluster
-  that already wrote those fields keeps validating. The settings are ignored
-  here. Helm rendering nothing for this template deletes the policies and the
-  ConfigMap that a previous patch installed.
+  that already wrote those fields keeps validating. The default mode is List
+  so a later restore of admission does not come back as Template for a
+  cluster that never set the field. The settings are ignored here. Helm
+  rendering nothing for this template deletes the policies and the ConfigMap
+  that a previous patch installed.
 */ -}}
