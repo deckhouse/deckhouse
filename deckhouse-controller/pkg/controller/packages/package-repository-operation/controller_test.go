@@ -276,8 +276,10 @@ func (suite *ControllerTestSuite) TestReconcile() {
 	})
 
 	suite.Run("registry client creation failed", func() {
-		// Use an empty PSM (no pre-configured services) - PackagesService will fail
-		// because there's no service for the registry URL and it can't create one dynamically
+		// An empty PSM, so the service is built here rather than injected, and a repository whose
+		// docker config cannot be parsed — which is what "cannot build the client" now means. Missing
+		// credentials are not that: the node agent asks for none, so a registry with none is dialled
+		// anonymously (see internal/registry/service).
 		emptyPSM := registryService.NewPackageServiceManager(log.NewNop())
 
 		suite.setupController("registry-client-failed.yaml", withPackageServiceManager(emptyPSM))

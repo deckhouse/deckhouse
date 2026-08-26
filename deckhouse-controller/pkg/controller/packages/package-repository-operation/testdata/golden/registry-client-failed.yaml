@@ -24,8 +24,9 @@ status:
   completionTime: "2025-10-31T12:00:00Z"
   conditions:
   - lastTransitionTime: "2019-10-17T15:33:00Z"
-    message: 'create package service: failed to get auth from docker config: there
-      is no authorization data'
+    message: 'create package service: failed to get auth from docker config: failed
+      to get auth from docker config: withDockercfg: read auth config: unmarshal docker
+      config: invalid character ''@'' looking for beginning of value'
     reason: ScanFailed
     status: "True"
     type: Completed
@@ -38,12 +39,14 @@ metadata:
   resourceVersion: "2"
 spec:
   registry:
+    dockerCfg: '@@@ not a docker config @@@'
     repo: registry.example.com/test
 status:
   conditions:
   - lastTransitionTime: "2019-10-17T15:33:00Z"
-    message: 'create package service: failed to get auth from docker config: there
-      is no authorization data'
+    message: 'create package service: failed to get auth from docker config: failed
+      to get auth from docker config: withDockercfg: read auth config: unmarshal docker
+      config: invalid character ''@'' looking for beginning of value'
     reason: ScanFailed
     status: "False"
     type: LastScanSucceeded
