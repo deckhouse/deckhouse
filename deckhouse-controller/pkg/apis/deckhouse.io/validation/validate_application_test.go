@@ -19,6 +19,7 @@ package validation
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
@@ -127,6 +128,19 @@ func (s *applicationValidationHandlerSuite) TestSettingsAreValidatedOnlyByAPVWhi
 	s.True(response.Allowed)
 	s.False(manager.validateCalled)
 	s.True(manager.checkCalled)
+}
+
+// TestLongInstanceNameIsRejected verifies the gate runs before the package is looked up.
+func (s *applicationValidationHandlerSuite) TestLongInstanceNameIsRejected() {
+	app := newApplication("repo", "pkg", "v1.0.0")
+	app.Name = strings.Repeat("a", maxApplicationNameLength+1)
+	manager := &fakePackageManager{}
+
+	response := s.validate(app, manager)
+
+	s.False(response.Allowed)
+	s.False(manager.validateCalled)
+	s.False(manager.checkCalled)
 }
 
 // validate submits an Application update to the admission handler.
