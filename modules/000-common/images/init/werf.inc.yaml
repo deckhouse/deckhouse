@@ -1,21 +1,31 @@
-{{- $binaries := "/bin/sh /bin/chown /bin/chmod /bin/ls /bin/cp /bin/rm /bin/mkdir /bin/nc /bin/sleep /bin/true" }}
+{{- $binaries := list "sh" "chown" "chmod" "ls" "cp" "rm" "mkdir" "sleep" "true" }}
+{{- $netcatCtx := dict "Files" $.Files "OssYamlPath" "/modules/007-registrypackages/oss.yaml" }}
+{{- $netcatVersion := include "get_oss_version_by_id" (list "netcat" $netcatCtx) }}
+{{- $netcatImageVersion := $netcatVersion | replace "." "-" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+from: {{ index $.Images "base/distroless-fin" }}
 import:
+# busybox is a static multi-call binary, every applet below is a symlink to it
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-  add: /relocate
-  to: /
+  add: /out/usr/bin
+  to: /usr/bin
+  includePaths:
+  - busybox
+{{- range $binaries }}
+  - {{ . | quote }}
+{{- end }}
+  before: setup
+# busybox in container-factory is built without the nc applet, reuse the static netcat registrypackage
+- image: registrypackages/netcat-artifact-{{ $netcatImageVersion }}
+  add: /nc
+  to: /usr/bin/nc
   before: setup
 {{- include "image mount points" . }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: common/relocate-artifact
+from: {{ index $.Images "builder/distroless" }}
 final: false
 shell:
   beforeInstall:
-  {{- include "alt packages proxy" . | nindent 2 }}
-  - apt-get install -y netcat
-  - find /var/lib/apt/ /var/cache/apt/ -type f -delete
-  install:
-  - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
+  - pm install busybox -d /out
