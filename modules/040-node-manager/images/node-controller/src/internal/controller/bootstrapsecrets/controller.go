@@ -255,9 +255,11 @@ func (r *Reconciler) applySecret(ctx context.Context, ngName, name string, data 
 			Labels: map[string]string{
 				"heritage": "deckhouse",
 				"module":   "node-manager",
-				// helm never set it. It is what CollectOrphanedSecrets finds the Secret
-				// by once the NodeGroup is deleted: a CAPI Secret carries the name its
-				// MachineDeployment chose, with no group name in it to parse.
+				// helm never set it. It is what CollectOrphanedSecrets finds the Secret by
+				// once the NodeGroup is deleted: the rendered CAPI name starts with the group
+				// name but cannot be parsed back — group names contain dashes, and a migrated
+				// cluster keeps whatever legacy name its MachineDeployment carries
+				// (sources.go:151-159).
 				ngcommon.MachineDeploymentNodeGroupLabel: ngName,
 			},
 		},
@@ -288,8 +290,12 @@ func (r *Reconciler) applySecret(ctx context.Context, ngName, name string, data 
 // reader must be uncached on both counts. These Secrets carry no app label, so the
 // namespace-scoped Secret informer holds none of them (common/cache.go), and a
 // NodeGroup missing from a cold cache is not a deleted NodeGroup.
+//
+// Metadata-only, because this runs on every pass and the bodies are the rendered
+// cloud-init and bootstrap.sh — tens of KB each that the sweep never reads.
 func CollectOrphanedSecrets(ctx context.Context, c client.Client, reader client.Reader) error {
-	secrets := &corev1.SecretList{}
+	secrets := &metav1.PartialObjectMetadataList{}
+	secrets.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("SecretList"))
 	if err := reader.List(ctx, secrets,
 		client.InNamespace(nodecommon.MachineNamespace),
 		// Both labels: a Secret an operator wrote by hand carries neither, and is
@@ -318,7 +324,8 @@ func CollectOrphanedSecrets(ctx context.Context, c client.Client, reader client.
 		if alive[ngName] {
 			continue
 		}
-		if err := c.Delete(ctx, secret); err != nil && !apierrors.IsNotFound(err) {
+		gone := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secret.Name, Namespace: secret.Namespace}}
+		if err := c.Delete(ctx, gone); err != nil && !apierrors.IsNotFound(err) {
 			deletions = append(deletions, fmt.Errorf("delete orphaned bootstrap secret %s: %w", secret.Name, err))
 			continue
 		}

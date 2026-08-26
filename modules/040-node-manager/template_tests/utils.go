@@ -20,6 +20,9 @@ import (
 	"encoding/base64"
 	"fmt"
 
+	. "github.com/onsi/gomega"
+
+	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks"
 	"github.com/deckhouse/deckhouse/testing/library/object_store"
 )
 
@@ -39,4 +42,23 @@ func decodeK8sObjField(o *object_store.KubeObject, fullPath string) string {
 	}
 
 	return decodedVal
+}
+
+// assertKeepPolicyCovers binds the names helm renders to the shapes
+// set_keep_policy_on_capi_resources selects Secrets by. The names are read off the
+// rendered objects, so a template whose naming formula moved fails here instead of
+// silently losing the annotation and being pruned during the handover.
+func assertKeepPolicyCovers(taken, untouched []object_store.KubeObject) {
+	for _, obj := range taken {
+		name := obj.Field("metadata.name").String()
+		Expect(name).NotTo(BeEmpty())
+		Expect(hooks.IsBootstrapSecretName(name)).To(BeTrue(),
+			"keep policy must cover the rendered secret %s", name)
+	}
+	for _, obj := range untouched {
+		name := obj.Field("metadata.name").String()
+		Expect(name).NotTo(BeEmpty())
+		Expect(hooks.IsBootstrapSecretName(name)).To(BeFalse(),
+			"keep policy must leave the rendered secret %s alone", name)
+	}
 }
