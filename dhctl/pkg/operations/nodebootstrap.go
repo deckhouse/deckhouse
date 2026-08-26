@@ -71,6 +71,17 @@ func groupCloudConfig(ctx context.Context, kubeCl *client.KubernetesClient, node
 	return entity.GetCloudConfig(ctx, kubernetes.NewSimpleKubeClientGetter(kubeCl), nodeGroupName, global.ShowDeckhouseLogs)
 }
 
+// nodeResultExtractor picks what the pipeline has to report about the node it
+// created. The address is read only where the caller has to reach the machine:
+// every other layout publishes no outputs at all, and asking for one would fail
+// every provider on the classic path.
+func nodeResultExtractor(configure ConfigureImmutableNode) func(context.Context, infrastructure.RunnerInterface, *options.GlobalOptions) (*infrastructure.PipelineOutputs, error) {
+	if configure == nil {
+		return infrastructure.OnlyState
+	}
+	return infrastructure.GetStaticNodeResult
+}
+
 // ConfigureImmutableNode hands a machine the provider has just created its
 // NodeConfig, at the address the provider reported for it. nil everywhere the
 // group is configured the classic way, by a cloud config the machine runs.
@@ -118,15 +129,7 @@ func BootstrapAdditionalNode(
 		return err
 	}
 
-	// The address is read only where the caller has to reach the machine: every
-	// other layout publishes no outputs at all, and asking for one would fail
-	// every provider on the classic path.
-	extract := infrastructure.OnlyState
-	if configure != nil {
-		extract = infrastructure.GetStaticNodeResult
-	}
-
-	outputs, err := infrastructure.ApplyPipeline(ctx, runner, nodeName, globalOptions, extract)
+	outputs, err := infrastructure.ApplyPipeline(ctx, runner, nodeName, globalOptions, nodeResultExtractor(configure))
 	if err != nil {
 		return err
 	}
@@ -194,6 +197,7 @@ func BootstrapAdditionalNodeForParallelRun(
 	nodeGroupName, cloudConfig string,
 	infrastructureContext *infrastructure.Context,
 	globalOptions *options.GlobalOptions,
+	configure ConfigureImmutableNode,
 ) error {
 	nodeName := NodeName(cfg, nodeGroupName, index)
 	nodeGroupSettings := cfg.FindTerraNodeGroup(ctx, nodeGroupName)
@@ -214,7 +218,7 @@ func BootstrapAdditionalNodeForParallelRun(
 		return err
 	}
 
-	outputs, err := infrastructure.ApplyPipeline(ctx, runner, nodeName, globalOptions, infrastructure.OnlyState)
+	outputs, err := infrastructure.ApplyPipeline(ctx, runner, nodeName, globalOptions, nodeResultExtractor(configure))
 	if err != nil {
 		return err
 	}
@@ -226,6 +230,10 @@ func BootstrapAdditionalNodeForParallelRun(
 	err = infrastructurestate.SaveNodeInfrastructureState(ctx, kubeCl, nodeName, nodeGroupName, outputs.InfrastructureState, nodeGroupSettings)
 	if err != nil {
 		return err
+	}
+
+	if configure != nil {
+		return configure(ctx, kubeCl, nodeGroupName, nodeName, outputs.NodeInternalIP)
 	}
 
 	return nil
@@ -303,6 +311,7 @@ func ParallelBootstrapAdditionalNodes(
 				cloudConfig,
 				infrastructureContext,
 				globalOptions,
+				configure,
 			)
 
 			resultsChan <- checkResult{
