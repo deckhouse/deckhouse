@@ -68,12 +68,12 @@ func TestReadPackagesProxyToken(t *testing.T) {
 	s := newService(t, secret(cloudInstanceManagerNS, packagesProxyTokenSecretName, map[string][]byte{
 		"token": []byte("tok-123"),
 	}))
-	assert.Equal(t, "tok-123", s.readPackagesProxyToken(context.Background()))
+	assert.Equal(t, "tok-123", s.ReadPackagesProxyToken(context.Background()))
 }
 
 func TestReadPackagesProxyToken_Absent(t *testing.T) {
 	s := newService(t)
-	assert.Equal(t, "", s.readPackagesProxyToken(context.Background()))
+	assert.Equal(t, "", s.ReadPackagesProxyToken(context.Background()))
 }
 
 func TestReadControlPlaneArguments(t *testing.T) {
@@ -120,12 +120,12 @@ func TestReadKubernetesCA(t *testing.T) {
 	path := filepath.Join(dir, "ca.crt")
 	require.NoError(t, os.WriteFile(path, []byte("CA-PEM"), 0o600))
 	s := &Service{RootCAFile: path}
-	assert.Equal(t, "CA-PEM", s.readKubernetesCA())
+	assert.Equal(t, "CA-PEM", s.ReadKubernetesCA())
 }
 
 func TestReadKubernetesCA_MissingFile(t *testing.T) {
 	s := &Service{RootCAFile: filepath.Join(t.TempDir(), "nope.crt")}
-	assert.Equal(t, "", s.readKubernetesCA())
+	assert.Equal(t, "", s.ReadKubernetesCA())
 }
 
 func bootstrapTokenSecret(name, ng, id, sec string, created time.Time, expireIn time.Duration) *corev1.Secret {
@@ -195,25 +195,25 @@ func TestReadEndpoints_UnionSortedSplit(t *testing.T) {
 		apiserverPod("kube-apiserver-3", "10.0.0.9", false), // not ready -> excluded
 		endpointSlice([]string{"10.0.0.1"}, "https", 6443),  // duplicate of pod 2
 	)
-	got, err := s.readEndpoints(context.Background())
+	got, err := s.ReadEndpoints(context.Background())
 	require.NoError(t, err)
 
-	assert.Equal(t, []string{"10.0.0.1:6443", "10.0.0.2:6443"}, got.apiserverEndpoints)
-	require.Len(t, got.clusterMasterEndpoints, 2)
+	assert.Equal(t, []string{"10.0.0.1:6443", "10.0.0.2:6443"}, got.APIServerEndpoints)
+	require.Len(t, got.ClusterMasterEndpoints, 2)
 	assert.Equal(t, map[string]interface{}{
 		"address":                "10.0.0.1",
 		"kubeApiPort":            6443,
 		"rppServerPort":          packagesProxyPort,
 		"rppBootstrapServerPort": packagesProxyBootstrapPort,
-	}, got.clusterMasterEndpoints[0])
+	}, got.ClusterMasterEndpoints[0])
 }
 
 func TestReadEndpoints_EmptyReturnsError(t *testing.T) {
 	s := newService(t)
-	got, err := s.readEndpoints(context.Background())
+	got, err := s.ReadEndpoints(context.Background())
 	require.Error(t, err)
-	assert.Empty(t, got.apiserverEndpoints)
-	assert.Empty(t, got.clusterMasterEndpoints)
+	assert.Empty(t, got.APIServerEndpoints)
+	assert.Empty(t, got.ClusterMasterEndpoints)
 }
 
 func TestReadCloudProvider(t *testing.T) {
@@ -221,12 +221,12 @@ func TestReadCloudProvider(t *testing.T) {
 		"type":             []byte(`"yandex"`),
 		"machineClassKind": []byte(`"YandexMachineClass"`),
 	}))
-	got := s.readCloudProvider(context.Background())
+	got := s.ReadCloudProvider(context.Background())
 	assert.Equal(t, "yandex", got["type"])
 	assert.Equal(t, "YandexMachineClass", got["machineClassKind"])
 }
 
 func TestReadCloudProvider_AbsentReturnsNil(t *testing.T) {
 	s := newService(t)
-	assert.Nil(t, s.readCloudProvider(context.Background()))
+	assert.Nil(t, s.ReadCloudProvider(context.Background()))
 }
