@@ -26,6 +26,7 @@ import (
 	"io"
 	"log/slog"
 	"reflect"
+	"strings"
 
 	"github.com/goccy/go-yaml"
 
@@ -117,7 +118,9 @@ func (m *ServiceManager[T]) Service(registryURL string, config utils.RegistryCon
 
 	c := registryClient.New(registryURL,
 		append(authOpts,
-			client.WithInsecure(config.Scheme == "http"),
+			// the scheme arrives in either case: the ModuleSource enum and the
+			// platform template write it uppercase
+			client.WithInsecure(strings.ToLower(config.Scheme) == "http"),
 			client.WithCA(config.CA),
 			client.WithUserAgent(config.UserAgent),
 			client.WithLogger(m.logger),
