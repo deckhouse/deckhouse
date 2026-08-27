@@ -50,30 +50,58 @@ post-install() {
   fi
 }
 
+cntrd_safe_output() {
+  local out rc=0
+  out="$("$@" 2>&1)" || rc=$?
+  if [ "$rc" -ne 0 ] || [ -z "$out" ]; then
+    bb-log-warning "'$*' failed (exit $rc) or produced empty output, skipping check"
+    return 1
+  fi
+  printf '%s' "$out"
+}
+
 cntrd_version_change_check() {
-  local cur target
-  cur=$(containerd --version | awk '{print $3}' | grep -oE '[12]' | head -n1)
+  local cur target version_output
   target={{ if eq .cri "ContainerdV2" }}2{{ else }}1{{ end }}
+
+  version_output="$(cntrd_safe_output containerd --version)" || return 0
+
+  local -a fields
+  read -r -a fields <<< "$version_output"
+  cur="${fields[2]:-}"
+  cur="${cur#v}"
+  cur="${cur%%.*}"
+  [[ "$cur" =~ ^[12]$ ]] || cur=""
+
   if [[ -n $cur && $cur != $target ]]; then
     bb-flag-set cntrd-major-version-changed
     bb-deckhouse-get-disruptive-update-approval
   fi
 }
 
-command -v containerd &>/dev/null && cntrd_version_change_check
+cntrd_version_change_check
 
 {{- $integrityEditions := list "CSE" }}
 {{- if and (eq .cri "ContainerdV2") (has .deckhouse.edition $integrityEditions) }}
 cntrd_integrity_migration_check() {
-  if containerd --help 2>/dev/null | grep -q -- '--integrity-check-interval'; then
+  local migrated_marker="/var/lib/bashible/cntrd-integrity-migrated"
+  [ -f "$migrated_marker" ] && return 0
+
+  local help_output
+  help_output="$(cntrd_safe_output containerd --help)" || return 0
+
+  if [[ "$help_output" == *'--integrity-check-interval'* ]]; then
+    mkdir -p "$(dirname "$migrated_marker")"
+    touch "$migrated_marker"
     return 0
   fi
+
   bb-log-info "Switching to containerd with integrity checks, containerd state wipe is required"
   bb-flag-set cntrd-integrity-migration-required
   bb-deckhouse-get-disruptive-update-approval
 }
 
-command -v containerd &>/dev/null && cntrd_integrity_migration_check
+cntrd_integrity_migration_check
 
 if bb-flag? cntrd-integrity-migration-required; then
   bb-log-info "Pre-installing local image packages before containerd state wipe"
