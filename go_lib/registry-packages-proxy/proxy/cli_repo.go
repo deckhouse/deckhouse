@@ -16,8 +16,11 @@ package proxy
 
 import (
 	"errors"
+	"net/http"
 	"strings"
 	"sync"
+
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/log"
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
@@ -154,6 +157,24 @@ func (m *cliRepoMemo) set(clusterRepo, root string) bool {
 	return true
 }
 
+// isDefinitiveMiss reports whether err proves the probed root does not serve
+// the artifacts: the registry answered 404, or refused access with 401/403 -
+// registries hide foreign paths behind auth errors, and access rules change
+// only with the registry configuration. Network failures and 5xx (already
+// retried inside the registry client) leave the root's content unknown.
+func isDefinitiveMiss(err error) bool {
+	if errors.Is(err, registry.ErrPackageNotFound) {
+		return true
+	}
+
+	e := &transport.Error{}
+	if errors.As(err, &e) {
+		return e.StatusCode == http.StatusUnauthorized || e.StatusCode == http.StatusForbidden
+	}
+
+	return false
+}
+
 // requestCLIArtifacts runs op against the candidate CLI artifact roots until
 // one succeeds and remembers the winner in memo, so later requests try it
 // first. base must be a private config copy with Repository set to the
@@ -165,11 +186,14 @@ func (m *cliRepoMemo) set(clusterRepo, root string) bool {
 //   - registry.ErrPackageNotFound means "not under this root": the next
 //     candidate is tried;
 //   - any other error falls through too, so a root hidden behind 401/403 or a
-//     transient failure does not mask artifacts served by the other root;
+//     network failure does not mask artifacts served by the other root;
 //   - when every candidate fails, the first non-NotFound error in probe order
 //     is returned, or ErrPackageNotFound when all candidates answered 404.
 //
-// The memo is updated only on success, so failures never poison it.
+// The memo is updated only when the winner is proven right: every candidate
+// skipped before it must have answered a definitive miss (see
+// isDefinitiveMiss). A win after a network or 5xx skip serves the request
+// without being remembered, so a blip cannot pin the wrong root.
 func requestCLIArtifacts[T any](
 	memo *cliRepoMemo,
 	logger log.Logger,
@@ -185,6 +209,7 @@ func requestCLIArtifacts[T any](
 	}
 
 	var firstErr error
+	unknownSkip := false
 
 	for _, root := range candidates {
 		cfg := *base
@@ -192,12 +217,15 @@ func requestCLIArtifacts[T any](
 
 		result, err := op(&cfg)
 		if err == nil {
-			if memo.set(clusterRepo, root) {
+			if !unknownSkip && memo.set(clusterRepo, root) {
 				logger.Infof("CLI artifacts for repository %q are served from %q", clusterRepo, root)
 			}
 			return result, &cfg, nil
 		}
 
+		if !isDefinitiveMiss(err) {
+			unknownSkip = true
+		}
 		if firstErr == nil && !errors.Is(err, registry.ErrPackageNotFound) {
 			firstErr = err
 		}

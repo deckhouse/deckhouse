@@ -16,9 +16,11 @@ package proxy
 
 import (
 	"errors"
+	"net/http"
 	"sync"
 	"testing"
 
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -195,10 +197,12 @@ func TestRequestCLIArtifacts_AllNotFound(t *testing.T) {
 	assert.False(t, ok, "failures must not poison the memo")
 }
 
-func TestRequestCLIArtifacts_NonNotFoundErrorFallsThrough(t *testing.T) {
+func TestRequestCLIArtifacts_AuthErrorCountsAsDefinitiveMiss(t *testing.T) {
 	t.Parallel()
 
-	errDenied := errors.New("access denied")
+	// Registries hide foreign paths behind 401/403, so an auth error on the
+	// cluster repo is as final as a 404: the winner is remembered.
+	errDenied := &transport.Error{StatusCode: http.StatusForbidden}
 	op := &cliRepoProbeOp{
 		errs:    map[string]error{"registry.deckhouse.io/deckhouse/ee": errDenied},
 		results: map[string]string{"registry.deckhouse.io/deckhouse": "tags"},
@@ -210,6 +214,38 @@ func TestRequestCLIArtifacts_NonNotFoundErrorFallsThrough(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "tags", res)
 	assert.Equal(t, "registry.deckhouse.io/deckhouse", cfg.Repository)
+
+	// The next request goes straight to the remembered root.
+	op.tried = nil
+	_, _, err = requestCLIArtifacts(&memo, nopCLILogger{}, base, op.run)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"registry.deckhouse.io/deckhouse"}, op.tried)
+}
+
+func TestRequestCLIArtifacts_NetworkErrorServesWithoutPinning(t *testing.T) {
+	t.Parallel()
+
+	// A network failure on the cluster repo says nothing about where the
+	// artifacts live: the request is served from the other root, but the
+	// next request probes the cluster repo again.
+	op := &cliRepoProbeOp{
+		errs:    map[string]error{"registry.deckhouse.io/deckhouse/ee": errors.New("connection reset")},
+		results: map[string]string{"registry.deckhouse.io/deckhouse": "tags"},
+	}
+	var memo cliRepoMemo
+	base := &registry.ClientConfig{Repository: "registry.deckhouse.io/deckhouse/ee"}
+
+	res, _, err := requestCLIArtifacts(&memo, nopCLILogger{}, base, op.run)
+	require.NoError(t, err)
+	assert.Equal(t, "tags", res)
+
+	_, ok := memo.get("registry.deckhouse.io/deckhouse/ee")
+	assert.False(t, ok, "a win after a network skip must not be remembered")
+
+	op.tried = nil
+	_, _, err = requestCLIArtifacts(&memo, nopCLILogger{}, base, op.run)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"registry.deckhouse.io/deckhouse/ee", "registry.deckhouse.io/deckhouse"}, op.tried)
 }
 
 func TestRequestCLIArtifacts_FirstNonNotFoundErrorSurfaces(t *testing.T) {

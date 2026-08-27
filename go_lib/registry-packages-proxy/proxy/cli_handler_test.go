@@ -28,6 +28,7 @@ import (
 	"time"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -803,7 +804,7 @@ func TestCLIHandler_NotFoundInAllRoots(t *testing.T) {
 // served by the trimmed root, and the root is remembered.
 func TestCLIHandler_ErrorOnClusterRepoFallsToRoot(t *testing.T) {
 	fake := &fakeCLIRegistryClient{
-		repoErrs:       map[string]error{"registry.deckhouse.io/deckhouse/ee": errors.New("access denied")},
+		repoErrs:       map[string]error{"registry.deckhouse.io/deckhouse/ee": &transport.Error{StatusCode: http.StatusForbidden}},
 		availableRepos: map[string]bool{"registry.deckhouse.io/deckhouse": true},
 		tags:           map[string][]string{"deckhouse-cli/plugins/foo": {"v0.1.0"}},
 	}
@@ -818,6 +819,28 @@ func TestCLIHandler_ErrorOnClusterRepoFallsToRoot(t *testing.T) {
 	assert.Equal(t, []string{
 		"registry.deckhouse.io/deckhouse/ee", "registry.deckhouse.io/deckhouse",
 		"registry.deckhouse.io/deckhouse",
+	}, fake.seenRepos())
+}
+
+// TestCLIHandler_NetworkErrorDoesNotPinRoot: a network failure on the cluster
+// repo serves the request from the trimmed root but is not remembered - the
+// next request probes the cluster repo again.
+func TestCLIHandler_NetworkErrorDoesNotPinRoot(t *testing.T) {
+	fake := &fakeCLIRegistryClient{
+		repoErrs:       map[string]error{"registry.deckhouse.io/deckhouse/ee": errors.New("connection reset")},
+		availableRepos: map[string]bool{"registry.deckhouse.io/deckhouse": true},
+		tags:           map[string][]string{"deckhouse-cli/plugins/foo": {"v0.1.0"}},
+	}
+	getter := &fakeCLIGetter{cfg: &registry.ClientConfig{Repository: "registry.deckhouse.io/deckhouse/ee"}}
+	p := newTestProxy(t, fake, getter, nil)
+	srv := newCLITestServer(t, p)
+
+	require.Equal(t, http.StatusOK, getStatus(t, srv, "/v1/images/deckhouse-cli/plugins/foo/tags"))
+	require.Equal(t, http.StatusOK, getStatus(t, srv, "/v1/images/deckhouse-cli/plugins/foo/tags"))
+
+	assert.Equal(t, []string{
+		"registry.deckhouse.io/deckhouse/ee", "registry.deckhouse.io/deckhouse",
+		"registry.deckhouse.io/deckhouse/ee", "registry.deckhouse.io/deckhouse",
 	}, fake.seenRepos())
 }
 
