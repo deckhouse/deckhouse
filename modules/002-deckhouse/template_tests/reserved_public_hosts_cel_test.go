@@ -44,7 +44,7 @@ var (
 // match conditions first, then the variables in declaration order, then the validation. Compiling
 // against a bare CEL environment is enough to catch the mistakes worth catching here, syntax and
 // operations that do not exist, without standing up an apiserver.
-func evaluatePolicy(policy object_store.KubeObject, params, object, request map[string]interface{}) verdict {
+func evaluatePolicy(policy object_store.KubeObject, object, request map[string]interface{}) verdict {
 	env, err := cel.NewEnv(
 		// The apiserver puts the string extension in the base environment of every admission
 		// policy, at version 0 up to Kubernetes 1.29 and version 2 after it
@@ -53,16 +53,18 @@ func evaluatePolicy(policy object_store.KubeObject, params, object, request map[
 		cel.Variable("object", cel.DynType),
 		cel.Variable("oldObject", cel.DynType),
 		cel.Variable("request", cel.DynType),
-		cel.Variable("params", cel.DynType),
 		cel.Variable("variables", cel.DynType),
 	)
 	Expect(err).ShouldNot(HaveOccurred())
 
+	// No params variable, deliberately: the policies declare no paramKind, and the apiserver only
+	// puts params in the environment of one that does. An expression that reaches for it fails to
+	// compile here rather than working in this harness and taking out every aggregated apiserver in
+	// a real cluster, which is what a paramKind on a core type does.
 	activation := map[string]interface{}{
 		"object":    object,
 		"oldObject": nil,
 		"request":   request,
-		"params":    params,
 		"variables": map[string]interface{}{},
 	}
 
@@ -147,14 +149,22 @@ func requestFor(username, namespace, name string) map[string]interface{} {
 	}
 }
 
-// paramsFrom hands the policies the whole data map of the ConfigMap that was actually rendered, so
-// that a key the template stops writing, or writes in a shape the CEL cannot read, shows up here
-// rather than being papered over by a map the test built itself.
-func paramsFrom(cm object_store.KubeObject) map[string]interface{} {
-	Expect(cm.Exists()).To(BeTrue(), "the parameters ConfigMap should be rendered")
-	data, ok := cm["data"].(map[string]interface{})
-	Expect(ok).To(BeTrue(), "the parameters ConfigMap should carry a data map")
-	return map[string]interface{}{"data": data}
+// policyExpressions is every CEL expression a rendered policy carries, wherever it keeps it.
+func policyExpressions(policy object_store.KubeObject) []string {
+	expressions := []string{}
+	for _, field := range []string{"spec.matchConditions", "spec.variables"} {
+		for _, entry := range policy.Field(field).Array() {
+			expressions = append(expressions, entry.Get("expression").String())
+		}
+	}
+	for _, validation := range policy.Field("spec.validations").Array() {
+		expressions = append(expressions,
+			validation.Get("expression").String(), validation.Get("messageExpression").String())
+	}
+	for _, annotation := range policy.Field("spec.auditAnnotations").Array() {
+		expressions = append(expressions, annotation.Get("valueExpression").String())
+	}
+	return expressions
 }
 
 var _ = Describe("Module :: deckhouse :: reserved public hosts :: CEL ::", func() {
@@ -176,7 +186,6 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts :: CEL ::", func(
 		ingressPolicy object_store.KubeObject
 		gatewayPolicy object_store.KubeObject
 		everyKind     []kindUnderPolicy
-		params        map[string]interface{}
 
 		// The deckhouse ModuleConfig section under test and the recorded snapshot, both empty for a
 		// cluster that never set one. Contexts assign them in a BeforeEach; the render happens in
@@ -232,8 +241,6 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts :: CEL ::", func(
 			{name: "ListenerSet", policy: policy(reservedHostsListenerSetPolicy), object: listenersWithHosts, listeners: true},
 			{name: "Gateway", policy: policy(reservedHostsGatewayPolicy), object: listenersWithHosts, listeners: true},
 		}
-
-		params = paramsFrom(f.KubernetesResource("ConfigMap", "d8-system", reservedHostsConfigMapName))
 	})
 
 	tenant := requestFrom("tenant@example.com")
@@ -257,7 +264,7 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts :: CEL ::", func(
 			Expect(kind.policy.Exists()).To(BeTrue(), kind.name)
 
 			for _, c := range cases {
-				Expect(evaluatePolicy(kind.policy, params, kind.object(c.host), tenant)).
+				Expect(evaluatePolicy(kind.policy, kind.object(c.host), tenant)).
 					To(Equal(c.want), "%s hostname %q: %s", kind.name, c.host, c.why)
 			}
 		}
@@ -267,25 +274,25 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts :: CEL ::", func(
 		// The three verdicts the reservation is about, checked on Ingress alone so that a failure
 		// here is the verdict and not a missing policy for some other kind.
 		It("denies a single-label hostname the platform does not publish today", func() {
-			Expect(evaluatePolicy(ingressPolicy, params, ingressWithHosts("shop.example.com"), tenant)).
+			Expect(evaluatePolicy(ingressPolicy, ingressWithHosts("shop.example.com"), tenant)).
 				To(Equal(verdictDenied), "the template could render this for a service named shop, which is "+
 					"what a hand-maintained list of the names Deckhouse happens to publish can never cover")
 		})
 
 		It("denies the wildcard form of the namespace", func() {
-			Expect(evaluatePolicy(ingressPolicy, params, ingressWithHosts("*.example.com"), tenant)).
+			Expect(evaluatePolicy(ingressPolicy, ingressWithHosts("*.example.com"), tenant)).
 				To(Equal(verdictDenied), "a tenant holding this shadows every platform hostname at once, "+
 					"which is worse than the single-host takeover the reservation is about")
 		})
 
 		It("denies a hostname written with a root dot", func() {
-			Expect(evaluatePolicy(ingressPolicy, params, ingressWithHosts("CONSOLE.EXAMPLE.COM."), tenant)).
+			Expect(evaluatePolicy(ingressPolicy, ingressWithHosts("CONSOLE.EXAMPLE.COM."), tenant)).
 				To(Equal(verdictDenied), "the API server rejects a trailing dot on its own, but the policy "+
 					"must not be the reason it is allowed")
 		})
 
 		It("allows a two-label hostname, the shape an ecosystem application takes", func() {
-			Expect(evaluatePolicy(ingressPolicy, params, ingressWithHosts("app.ns.example.com"), tenant)).
+			Expect(evaluatePolicy(ingressPolicy, ingressWithHosts("app.ns.example.com"), tenant)).
 				To(Equal(verdictAllowed), "applications.publicDomainTemplate puts the instance and its "+
 					"namespace in two labels, so it can never collide with the platform's one")
 		})
@@ -327,14 +334,14 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts :: CEL ::", func(
 
 		It("denies a request that hides a reserved hostname among its own", func() {
 			for _, kind := range everyKind {
-				Expect(evaluatePolicy(kind.policy, params, kind.object("shop.example.org", "console.example.com"), tenant)).
+				Expect(evaluatePolicy(kind.policy, kind.object("shop.example.org", "console.example.com"), tenant)).
 					To(Equal(verdictDenied), kind.name)
 			}
 		})
 
 		It("allows a request that claims no hostname at all", func() {
 			for _, kind := range everyKind {
-				Expect(evaluatePolicy(kind.policy, params, map[string]interface{}{"spec": map[string]interface{}{}}, tenant)).
+				Expect(evaluatePolicy(kind.policy, map[string]interface{}{"spec": map[string]interface{}{}}, tenant)).
 					To(Equal(verdictAllowed), "%s with an empty spec", kind.name)
 			}
 			// A listener that names no hostname accepts any, and is a different shape from a spec
@@ -343,7 +350,7 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts :: CEL ::", func(
 				if !kind.listeners {
 					continue
 				}
-				Expect(evaluatePolicy(kind.policy, params, kind.object(""), tenant)).
+				Expect(evaluatePolicy(kind.policy, kind.object(""), tenant)).
 					To(Equal(verdictAllowed), "%s with a listener that names no hostname", kind.name)
 			}
 		})
@@ -355,28 +362,29 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts :: CEL ::", func(
 				"system:serviceaccount:kube-system:some-controller",
 				"dhctl",
 			} {
-				Expect(evaluatePolicy(ingressPolicy, params, ingressWithHosts("console.example.com"), requestFrom(username))).
+				Expect(evaluatePolicy(ingressPolicy, ingressWithHosts("console.example.com"), requestFrom(username))).
 					To(Equal(verdictSkipped), "user %q", username)
 			}
 		})
 
-		It("reserves nothing when the parameters are there but say nothing", func() {
-			for name, broken := range map[string]map[string]interface{}{
-				"no data at all":     {"data": map[string]interface{}{}},
-				"an empty pattern":   {"data": map[string]interface{}{"hostPattern": "", "hosts": ""}},
-				"an empty host list": {"data": map[string]interface{}{"hosts": ""}},
-			} {
-				Expect(evaluatePolicy(ingressPolicy, broken, ingressWithHosts("console.example.com"), tenant)).
-					To(Equal(verdictAllowed), "with %s the policy must not deny everything", name)
-				// The Gateway policy reads one key more, and reads it in a match condition, where
-				// an expression that errors is a denial rather than a skip: failurePolicy is Fail.
-				Expect(evaluatePolicy(gatewayPolicy, broken, listenersWithHosts("console.example.com"), tenant)).
-					To(Equal(verdictAllowed), "with %s the Gateway policy must still evaluate", name)
+		// What is reserved is compiled into the policy, so a request is decided from the request
+		// alone and there is no object whose loss could turn the reservation into a denial of
+		// everything under failurePolicy: Fail. The harness declares no params variable, so an
+		// expression that went back to fetching them would fail to compile above; this says so
+		// where a reader looks for it, and says it for all six kinds at once.
+		It("decides from the request alone, with nothing fetched from the cluster", func() {
+			for _, kind := range everyKind {
+				expressions := policyExpressions(kind.policy)
+				Expect(expressions).ToNot(BeEmpty(), kind.name)
+				for _, expression := range expressions {
+					Expect(expression).ToNot(ContainSubstring("params"),
+						"%s reaches for params, which needs a paramKind back: %s", kind.name, expression)
+				}
 			}
 		})
 
 		It("exempts no object while no shared Gateway is configured", func() {
-			Expect(evaluatePolicy(gatewayPolicy, params, listenersWithHosts("console.example.com"),
+			Expect(evaluatePolicy(gatewayPolicy, listenersWithHosts("console.example.com"),
 				requestFor("tenant@example.com", "infra", "shared"))).
 				To(Equal(verdictDenied), "an empty sharedGateway key exempts nothing, not everything")
 		})
@@ -396,7 +404,7 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts :: CEL ::", func(
 
 		It("never reaches the validation for that object, whatever its listeners claim", func() {
 			for _, host := range []string{"*.example.com", "console.example.com", "shop.example.com"} {
-				Expect(evaluatePolicy(gatewayPolicy, params, listenersWithHosts(host), operator)).
+				Expect(evaluatePolicy(gatewayPolicy, listenersWithHosts(host), operator)).
 					To(Equal(verdictSkipped), "hostname %q: the exemption is on the object, not on what it claims", host)
 			}
 		})
@@ -406,7 +414,7 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts :: CEL ::", func(
 				{"infra", "other", "another Gateway in the namespace the shared one lives in"},
 				{"tenant", "shared", "the same name in a namespace of a tenant's own"},
 			} {
-				Expect(evaluatePolicy(gatewayPolicy, params, listenersWithHosts("console.example.com"),
+				Expect(evaluatePolicy(gatewayPolicy, listenersWithHosts("console.example.com"),
 					requestFor("tenant@example.com", tc.namespace, tc.name))).
 					To(Equal(verdictDenied), tc.why)
 			}
@@ -417,7 +425,7 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts :: CEL ::", func(
 				if kind.name == "Gateway" {
 					continue
 				}
-				Expect(evaluatePolicy(kind.policy, params, kind.object("console.example.com"), operator)).
+				Expect(evaluatePolicy(kind.policy, kind.object("console.example.com"), operator)).
 					To(Equal(verdictDenied), "%s of the same namespace and name as the shared Gateway", kind.name)
 			}
 		})
@@ -479,7 +487,7 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts :: CEL ::", func(
 		})
 
 		It("still denies a request that hides a reserved hostname behind a freed one", func() {
-			Expect(evaluatePolicy(ingressPolicy, params, ingressWithHosts("grafana.example.com", "console.example.com"), tenant)).
+			Expect(evaluatePolicy(ingressPolicy, ingressWithHosts("grafana.example.com", "console.example.com"), tenant)).
 				To(Equal(verdictDenied))
 		})
 	})
@@ -522,9 +530,8 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts :: CEL ::", func(
 			f.HelmRender(WithAPIVersions(validatingAdmissionPolicyAPI, validatingAdmissionPolicyBindingAPI))
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			cm := f.KubernetesResource("ConfigMap", "d8-system", reservedHostsConfigMapName)
 			policy := f.KubernetesGlobalResource("ValidatingAdmissionPolicy", reservedHostsIngressPolicy)
-			Expect(evaluatePolicy(policy, paramsFrom(cm), ingressWithHosts("console.example.com"), tenant)).
+			Expect(evaluatePolicy(policy, ingressWithHosts("console.example.com"), tenant)).
 				To(Equal(verdictDenied))
 		})
 

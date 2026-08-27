@@ -1281,7 +1281,7 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/container-factory@sha256:4084498cbdb681577f79312814fb0b07d55c243401e6c301557c4b3b880cbf5f"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/container-factory@sha256:952e32d6731ae0e3a7b6890dd45e4861851c950635ff0e4dba2c1d4165d03869"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
@@ -1290,7 +1290,7 @@ jobs:
           echo "⚓️ 🏎 [$(date -u)] Run tests..."
           CONTAINER_ID=$(docker run -d -w /deckhouse -v ${{github.workspace}}:/deckhouse --tmpfs /tmp:mode=1777,exec -e HOME=/tmp -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} sleep infinity)
           docker exec -u 0:0 ${CONTAINER_ID} pm install git
-          docker exec -u $(id -u):$(id -g) -e HOME=/tmp -w /deckhouse ${CONTAINER_ID} sh -c "git config --global --add safe.directory /deckhouse && make tests-controller tests-modules"
+          docker exec -u $(id -u):$(id -g) -e HOME=/tmp -w /deckhouse ${CONTAINER_ID} sh -c "git config --global --add safe.directory /deckhouse && make tests-controller tests-modules test-crd-enricher"
           docker rm -f ${CONTAINER_ID}
     # </template: tests_before_build_template>
 

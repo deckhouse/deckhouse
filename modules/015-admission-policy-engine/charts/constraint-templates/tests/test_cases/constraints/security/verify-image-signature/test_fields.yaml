@@ -9,6 +9,6 @@ spec:
       level: container
 
       description: Image reference to verify
-      requiredScenarios: [positive, negative, initContainer, multiContainer]
+      requiredScenarios: [positive, negative, initContainer, multiContainer, ephemeralContainer]
   applicableTracks:
     functional: true

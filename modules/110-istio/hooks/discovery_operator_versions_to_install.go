@@ -121,6 +121,9 @@ func operatorRevisionsToInstallDiscovery(_ context.Context, input *go_hook.HookI
 
 			iopVer := versionMap.GetVersionByRevision(iopInfo.Revision)
 			if !versionMap.IsRevisionSupported(iopInfo.Revision) {
+				if isRetiredIstioOperatorRevision(iopInfo.Revision) {
+					continue
+				}
 				unsupportedRevisions = append(unsupportedRevisions, iopInfo.Revision)
 				continue
 			}
@@ -152,6 +155,9 @@ func operatorRevisionsToInstallDiscovery(_ context.Context, input *go_hook.HookI
 
 			istioVer := versionMap.GetVersionByRevision(istioInfo.Revision)
 			if !versionMap.IsRevisionSupported(istioInfo.Revision) {
+				if isRetiredIstioOperatorRevision(istioInfo.Revision) {
+					continue
+				}
 				unsupportedRevisions = append(unsupportedRevisions, istioInfo.Revision)
 				continue
 			}

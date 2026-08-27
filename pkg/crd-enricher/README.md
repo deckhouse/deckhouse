@@ -58,6 +58,7 @@ exception of `x-kubernetes-sensitive-data`, which the apiserver acts on.
 | `x-doc-deprecated` | `deckhouse:documentation:deprecated` | Marks a field as deprecated in the docs (renders a deprecation badge). |
 | `x-kubernetes-sensitive-data` | `deckhouse:sensitive-data` | **Behavioral**, not documentation. Tells the apiserver's `CRDSensitiveData` feature to encrypt the value in etcd, filter it by RBAC and mask it in audit logs. |
 | *(arbitrary standard field)* | `raw:<key>` | Injects a plain schema field controller-gen cannot produce for a given Go type (e.g. `pattern` on a `metav1.Duration`, or an overridden `description`). |
+| *(arbitrary standard field, removed)* | `unset:<key>` | Deletes a plain schema field controller-gen emitted and the manifest is not supposed to carry (e.g. the `items.description` it renders from the `metav1.Condition` godoc). Takes no value. |
 
 Why not just use `kubebuilder:default` / native `example`?
 
@@ -152,13 +153,48 @@ The value after `=` is parsed as **YAML**, so scalars, lists and maps all work.
 ```
 +crd-enricher:deckhouse:documentation:<entity>[=<value>]   # documentation fields
 +crd-enricher:deckhouse:sensitive-data                     # sensitive field flag
-+crd-enricher:raw:<key>[=<value>]                          # raw schema injection
++crd-enricher:raw:<key>=<value>                            # raw schema injection
++crd-enricher:unset:<key>                                  # raw schema removal
 +crd-enricher:crd:<key>[=<value>]                          # CRD-level setting (type-level only)
 ```
 
 Markers can be attached to **struct fields** and to **struct types**. A
 type-level marker applies to the schema node of that type (for the root type,
 that is `openAPIV3Schema`).
+
+### Which types the enricher walks
+
+The enricher starts from the **root types** and follows the fields from there, so
+a type that is not reachable from a root is never visited and its markers never
+applied. A root is any type that **embeds both `metav1.TypeMeta` and
+`metav1.ObjectMeta`**:
+
+```go
+type SCSIStorageClass struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+	// ...
+}
+```
+
+That is the rule and the whole rule, because it is the one controller-gen's CRD
+generator uses — [`FindKubeKinds`](https://github.com/kubernetes-sigs/controller-tools/blob/v0.19.0/pkg/crd/gen.go#L265)
+*"locates all types that contain TypeMeta and ObjectMeta (and thus may be a
+Kubernetes object)"* and renders a CRD for every one of them.
+
+> **The root markers do not gate CRD generation.** Neither
+> `+kubebuilder:object:root=true` nor the pre-kubebuilder
+> `+k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object` is read by
+> the CRD generator at all — they are read by controller-gen's *deepcopy*
+> generator and decide whether the type gets a `DeepCopyObject` method. In
+> particular **`+kubebuilder:object:root=false` is not an opt-out from getting a
+> CRD**: a type embedding both metav1 structs gets its manifest regardless, and
+> its `crd-enricher` markers have to be applied to it.
+>
+> The enricher does accept either marker as a **fallback**, for a type that
+> declares itself an object without embedding the metav1 structs. A spurious root
+> is harmless: roots are matched against the `kind` of an actual CRD document, so
+> a type no manifest names is never visited.
 
 ### `examples` — sample values
 
@@ -350,10 +386,16 @@ type PackageRepositorySpecRegistry struct {
 ### `raw:<key>` — inject an arbitrary standard schema field
 
 Some standard schema fields cannot be produced by controller-gen for certain Go
-types. `raw:<key>` sets `<key>` **directly** (not under an `x-doc-*` prefix). A
-**dotted** `<key>` walks into nested schema nodes; the intermediate nodes must
-already exist (controller-gen must have emitted them), otherwise you get a
-warning instead of a silently grown schema.
+types. `raw:<key>=<value>` sets `<key>` **directly** (not under an `x-doc-*`
+prefix). A **dotted** `<key>` walks into nested schema nodes; the intermediate
+nodes must already exist (controller-gen must have emitted them), otherwise you
+get a warning instead of a silently grown schema.
+
+The value is **required**. `raw:<key>` with no `=` would decode to `null` and
+write `<key>: null`, which is never a valid schema for the fields anyone reaches
+for this marker with — and the one thing its author might have meant by it,
+taking the field out, is what [`unset:<key>`](#unsetkey--remove-a-standard-schema-field)
+is for. So it is refused with a warning naming that marker.
 
 Set a `pattern` on a `metav1.Duration` (which controller-gen renders as an
 opaque string):
@@ -378,6 +420,60 @@ type ApplicationPackage struct { ... }
 This also works to override a shared item description on a slice field, e.g.
 `raw:items.description` or `raw:items.properties.reason.description` on a
 `[]metav1.Condition` field.
+
+### `unset:<key>` — remove a standard schema field
+
+`raw:<key>` can only overwrite. `unset:<key>` is its mirror: it deletes `<key>`,
+walking a **dotted** path into nested nodes exactly as `raw:` does. It takes no
+value — a field set to `null` is a different schema from a field that is not
+there.
+
+It exists for the nodes controller-gen fills in from vendored types.
+controller-gen writes a `description` for every node it can reach, so a
+`[]metav1.Condition` field gets `items.description` from the `metav1.Condition`
+godoc of whatever `k8s.io/apimachinery` the API module happens to pin. A manifest
+that never carried that text cannot be reproduced from the Go types while `raw:`
+is the only tool available — the best you can do is pin the upstream sentence in
+a marker, which puts a generic *"Condition contains details for one aspect of the
+current state of this API Resource"* on the reference page and leaves it to be
+translated in every doc-ru overlay.
+
+```go
+// +optional
+// +listType=map
+// +listMapKey=type
+// +crd-enricher:unset:items.description
+// +crd-enricher:raw:items.properties.type.description=Condition type. `Ready` is `True` once the StorageClass is in place.
+Conditions []metav1.Condition `json:"conditions,omitempty"`
+```
+
+→ `items.description` is gone; the descriptions the module does want stay.
+
+A `<key>` that is already absent is **a warning, not a no-op**: the marker was
+written to remove something, so a marker that has outlived its target — because
+the vendored godoc changed, or the path was mistyped — is worth hearing about
+rather than accepting silently.
+
+Three more things it will not do quietly:
+
+- **`type` and `items` are refused.** A structural schema must declare the `type`
+  of every node and the `items` of every array, so removing one produces a
+  manifest the apiserver rejects at `kubectl apply` time (`items: Required
+  value: must be specified`) — with nothing in the refusal pointing back at the
+  marker. `unset:items` and `unset:<path>.type` therefore warn and change
+  nothing.
+- **Emptying a node is refused.** `unset:items.description` on an `items` whose
+  only key was `description` would leave `items: {}`, which the apiserver rejects
+  the same way (`must not be empty for specified object fields`). Same reasoning
+  as above, so the same answer: the marker warns and the schema is left alone.
+  Warnings are not fatal unless `strict` is passed, so obeying here would ship a
+  document that fails at apply time.
+- **Removing a validation key is reported.** `required`, `enum`, `pattern`,
+  `maxLength`, `x-kubernetes-validations` and the rest of that vocabulary are
+  *obeyed* — the resulting document applies cleanly — and that is exactly why the
+  removal is worth a line: the API then admits values it used to reject, and a
+  re-render gate over a committed `crds/` cannot see it, because the committed
+  manifest and the render both come from the same marker.
 
 ### `crd:<key>` — CRD-level settings (type-level only)
 
@@ -408,6 +504,15 @@ annotation and switches the file to the curated style (no leading `---`).
 > **Note:** CRD labels and annotations are **not** set here — they are emitted
 > natively by controller-gen from `+kubebuilder:metadata:labels` and
 > `+kubebuilder:metadata:annotations`.
+
+**Moving a hand-written `crds/` to generation?** `minimal=true` plus
+`preserveUnknownFields=false` is the pair that reproduces the shape a curated
+Deckhouse CRD already has. Without them the rendered file gains `listKind`, the
+implicit `apiVersion`/`kind`/`metadata` root properties and the generator-version
+annotation — all of which then show up on the module's public API reference page,
+turning a refactor into a documentation change. `stripFormat` is the one to leave
+alone unless the committed manifest carries no `format` at all: dropping every
+`int32` also drops the ones the manifest does declare.
 
 ## Automatic example generation
 
@@ -444,7 +549,7 @@ never overwritten by generation.
 ## CLI reference
 
 ```
-crd-enricher paths=<go-packages> crds=<crd-dir> [dir=<workdir>] [auto-examples] [reindent]
+crd-enricher paths=<go-packages> crds=<crd-dir> [dir=<workdir>] [auto-examples] [reindent] [strict]
 ```
 
 | Argument | Meaning |
@@ -455,6 +560,7 @@ crd-enricher paths=<go-packages> crds=<crd-dir> [dir=<workdir>] [auto-examples] 
 | `dir=` | Optional working directory used to resolve the package patterns. Defaults to the current directory. |
 | `auto-examples`, `--auto-examples`, `auto-examples=<bool>` | Enable [automatic example generation](#automatic-example-generation) (**off by default**). Explicit `examples` markers are applied regardless. |
 | `reindent`, `--reindent`, `reindent=<bool>` | Encode the output with **indented** block sequences (the `goyaml.v3` layout) instead of the default flush `sigs.k8s.io/yaml` layout (**off by default**). Key ordering is unaffected. See [Output layout](#output-layout). |
+| `strict`, `--strict`, `strict=<bool>` | Exit non-zero when any warning was printed (**off by default**). See [Warnings and gotchas](#warnings-and-gotchas). |
 | `-h`, `--help`, `help` | Print usage. |
 
 Example:
@@ -468,7 +574,8 @@ crd-enricher \
 
 On success it prints one `enriched <file>` line per modified file, or
 `no CRDs required enrichment` when nothing changed. It exits non-zero on error
-(e.g. unloadable packages or an unknown argument).
+(e.g. unloadable packages or an unknown argument), and — with `strict` — when
+anything was warned about.
 
 ### Using it as a library
 
@@ -484,10 +591,20 @@ changed, err := crdenricher.Run(crdenricher.Options{
 })
 ```
 
-`Run` returns the list of modified files. Non-fatal problems (markers pointing at
-schema nodes that don't exist, unresolvable `raw:` paths, sensitive-data on the
-root) are collected as warnings — construct an `Enricher` directly if you want to
-inspect `Enricher.Warnings()`.
+`RunWithWarnings` is the same call returning the non-fatal problems as well
+(markers pointing at schema nodes that don't exist, unresolvable `raw:` and
+`unset:` paths, sensitive-data on the root). Prefer it: every warning means a
+marker did not do what its author wrote it to do, and nothing else in the run says
+so. `Run` keeps the older two-value signature and drops them.
+
+```go
+changed, warnings, err := crdenricher.RunWithWarnings(opts)
+```
+
+Each warning names the manifest and the Go declaration it came from
+(`things.yaml: ThingStatus.Conditions: unset path … is not present in the
+schema`), and repeats are collapsed — the same marker is visited once per version
+of every document naming its kind.
 
 ## Output layout
 
@@ -552,11 +669,38 @@ indentation.
 - **Dotted `raw:` paths must already exist.** `raw:items.description` only works
   if controller-gen already produced `items`; otherwise it warns rather than
   creating the node.
+- **`raw:` needs a value.** `raw:items.description` with no `=` is refused: it
+  would write `description: null`. Use `unset:items.description` to take the field
+  out.
+- **`unset:` must find something to remove.** `unset:items.description` warns if
+  `items` was never emitted *or* if it carries no `description` — the marker
+  removing nothing is the case you want to be told about.
+- **`unset:` will not break the structural schema.** `unset:type` and
+  `unset:items` are refused, because the apiserver requires both and would reject
+  the manifest with a message that says nothing about the marker. Emptying a node
+  (`items: {}`) is allowed but reported.
 - **`sensitive-data` on the root type is dropped** with a warning — put it on
   `spec` or a specific field.
 - **Values are YAML, not strings.** `examples=1` yields the integer `1`;
   `examples="1"` yields the string `"1"`; `stripFormat=[int32]` yields a list.
   Quote when you need a string.
+- **Prose containing `: ` has to be quoted.** A description like
+  ``raw:description=Ready is False while deleting (`reason: Deleting`)`` parses as
+  a *mapping*, not a string, and the mapping is what lands in the schema. The
+  enricher warns (`the value contains ": " and parsed as a mapping, not a
+  string`), but the manifest is already wrong by then — quote the value:
+  ``raw:description="Ready is False while deleting (`reason: Deleting`)"``. A
+  multi-line value is the same double-quoted form with `\n` in it; the renderer
+  turns it into a `|-` block. The check cannot tell this from a *deliberate*
+  single-pair mapping written bare, so if you really do want one, write it in the
+  flow form — `raw:x-kubernetes-validations={rule: self != \"\"}` — which is left
+  alone.
+- **gofmt rewrites some quotes inside doc comments.** The doc-comment formatter
+  turns a doubled ASCII quote `''` into `”` and a doubled backtick into `“`, so a
+  CEL rule written as `self.x != ''` is silently corrupted the next time anyone
+  runs `gofmt`. Spell the empty string `\"\"` instead, and keep `gofmt -l` clean
+  *before* diffing the rendered manifests — otherwise the formatter edits text you
+  have already checked.
 - **Example generation is opt-in.** Without the `auto-examples` flag only the
   `x-doc-examples` you write explicitly are emitted; the synthesized root/tree
   examples are not.
@@ -566,5 +710,9 @@ indentation.
   marker is ignored with a warning.
 - **Run order matters.** Always run `crd-enricher` *after* controller-gen against
   the *same* directory and package paths. It edits in place and is idempotent.
-</content>
-</invoke>
+- **Warnings are not fatal unless you ask.** They always go to stderr and the run
+  exits 0, so adopting the tool cannot turn a generation step red on its own. Pass
+  `strict` in CI once the warnings are clean. A re-render gate over a committed
+  `crds/` is **not** a substitute: it catches a marker that used to work and
+  stopped, but never one that never worked — the committed manifest matches the
+  broken render, and the gate stays green for as long as nobody reads stderr.

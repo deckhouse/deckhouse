@@ -145,6 +145,29 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 		if oldNG.Spec.NodeType != ng.Spec.NodeType {
 			return admission.Denied(".spec.nodeType field is immutable")
 		}
+		// Only a value that is already set is frozen: a group with none must be
+		// able to record what it is (the master NodeGroup predates its manifest).
+		// Changing or dropping a set value re-creates every machine in the group.
+		if oldNG.Spec.SystemType != "" && oldNG.Spec.SystemType != ng.Spec.SystemType {
+			return admission.Denied(".spec.systemType field is immutable once set")
+		}
+	}
+
+	// Checked on CREATE as well as UPDATE: recreating a deleted group under
+	// the same name with systemType: Immutable arrives as a CREATE and would
+	// otherwise adopt the old, still-labelled bashible nodes unchecked.
+	if adoptingBashibleNodes(req, ng, oldNG) {
+		bashibleNodes, err := w.getBashibleNodes(ctx, ng.Name)
+		if err != nil {
+			webhookLog.Error(err, "failed to list the group's bashible nodes")
+			return admission.Errored(http.StatusInternalServerError, fmt.Errorf("list bashible nodes of %s: %w", ng.Name, err))
+		}
+		if len(bashibleNodes) > 0 {
+			return admission.Denied(fmt.Sprintf(
+				"it is forbidden to set .spec.systemType to %q on a NodeGroup whose nodes are already configured by bashible: %s. "+
+					"To change it, create a NodeGroup under a different name",
+				v1.SystemTypeImmutable, strings.Join(bashibleNodes, " ")))
+		}
 	}
 
 	if ng.Spec.CloudInstances != nil {
@@ -672,19 +695,51 @@ func (w *NodeGroupValidator) getNodesWithCustomContainerd(ctx context.Context, n
 	return names, nil
 }
 
+// adoptingBashibleNodes reports whether this admission would put nodes that
+// already exist under systemType: Immutable — a group created under that type,
+// or one that had no type recorded until now.
+func adoptingBashibleNodes(req admission.Request, ng, oldNG *v1.NodeGroup) bool {
+	if ng.Spec.SystemType != v1.SystemTypeImmutable {
+		return false
+	}
+	if req.Operation == "CREATE" {
+		return true
+	}
+	return oldNG != nil && oldNG.Spec.SystemType == ""
+}
+
+// getBashibleNodes returns the group's nodes that bashible has configured: the
+// label bashible sets once and never removes. The checksum annotation is blind
+// here (approval-waiting nodes delete it); olcedar nodes never get the label.
+func (w *NodeGroupValidator) getBashibleNodes(ctx context.Context, nodeGroupName string) ([]string, error) {
+	webhookLog.Info("listing Nodes", "filter", "bashible-first-run-finished", "nodeGroup", nodeGroupName)
+	// Unwrapped: the caller says which group it was listing for.
+	return w.nodeNames(ctx, client.MatchingLabels{
+		"node.deckhouse.io/group":                       nodeGroupName,
+		"node.deckhouse.io/bashible-first-run-finished": "true",
+	})
+}
+
 // getNodesWithoutContainerdV2Support returns nodes that don't support containerd v2.
 // Returns error for transient failures (timeout, permission denied, etc.)
 func (w *NodeGroupValidator) getNodesWithoutContainerdV2Support(ctx context.Context, nodeGroupName string) ([]string, error) {
-	nodeList := &corev1.NodeList{}
 	webhookLog.Info("listing Nodes", "filter", "containerd-v2-unsupported", "nodeGroup", nodeGroupName)
-	err := w.Client.List(ctx, nodeList, client.MatchingLabels{
+	names, err := w.nodeNames(ctx, client.MatchingLabels{
 		"node.deckhouse.io/containerd-v2-unsupported": "",
 		"node.deckhouse.io/group":                     nodeGroupName,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list nodes without containerd v2 support: %w", err)
 	}
+	return names, nil
+}
 
+// nodeNames returns the names of the nodes carrying the labels.
+func (w *NodeGroupValidator) nodeNames(ctx context.Context, selector client.MatchingLabels) ([]string, error) {
+	nodeList := &corev1.NodeList{}
+	if err := w.Client.List(ctx, nodeList, selector); err != nil {
+		return nil, err
+	}
 	var names []string
 	for _, node := range nodeList.Items {
 		names = append(names, node.Name)

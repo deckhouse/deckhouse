@@ -21,6 +21,7 @@
 
             @include breakpoints.max-w(s) {
                 flex-direction: column;
+                gap: 12px;
             }
         }
 
@@ -75,6 +76,16 @@
         }
     }
 
+    h2 {
+        margin-top: 40px !important;
+    }
+
+    h3 {
+        @include breakpoints.max-w(xs) {
+            margin-bottom: 20px !important;
+        } 
+    }
+
     .block__columns {
         flex-direction: column;
 
@@ -87,6 +98,10 @@
 
             @include breakpoints.max-w(l) {
                 gap: 16px;
+            }
+
+            @include breakpoints.max-w(s) {
+                gap: 10px;
             }
 
             .button {
@@ -135,5 +150,13 @@
                 }
             }
         }
+    }
+}
+
+.gs-revision-tabs  {
+    margin-top: 50px;
+
+    @include breakpoints.max-w(xs) {
+        margin-top: 40px;
     }
 }

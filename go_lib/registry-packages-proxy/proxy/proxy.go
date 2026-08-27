@@ -592,7 +592,8 @@ func (h *cliHandler) serveHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // cliClientConfig resolves the default registry config and returns a private
-// copy with SignCheck stamped in. Callers must NOT mutate the value returned
+// copy pointed at the CLI artifacts repository (see cliRegistryRepository)
+// with SignCheck stamped in. Callers must NOT mutate the value returned
 // directly by the getter: the watcher rewrites those entries under a write
 // lock while readers still hold a pointer to them.
 func (h *cliHandler) cliClientConfig(w http.ResponseWriter, logger log.Logger) (*registry.ClientConfig, bool) {
@@ -607,8 +608,76 @@ func (h *cliHandler) cliClientConfig(w http.ResponseWriter, logger log.Logger) (
 		return nil, false
 	}
 	local := *cfg
+	local.Repository = cliRegistryRepository(cfg.Repository)
 	local.SignCheck = h.proxy.config.SignCheck
 	return &local, true
+}
+
+// editionSegments are the per-edition segments that end a Deckhouse registry
+// repository, e.g. the "ee" of registry.deckhouse.io/deckhouse/ee.
+//
+// The list matches Edition.IsValid in the deckhouse-cli client, which decides
+// where `d8 mirror pull` reads the CLI artifacts from and where `d8 mirror
+// push` writes them. Both sides must agree, so keep them in sync.
+//
+// "cse" is absent on purpose: the CSE registry keeps the editionless
+// artifacts (the installer) under deckhouse/cse, so deckhouse/cse is a root
+// of its own, not an edition sub-path.
+var editionSegments = map[string]struct{}{
+	"ce":      {},
+	"be":      {},
+	"se":      {},
+	"se-plus": {},
+	"ee":      {},
+	"fe":      {},
+}
+
+// cliRegistryRepository returns the repository holding the Deckhouse CLI
+// artifacts: deckhouse-cli and deckhouse-cli/plugins/<name>. They are
+// published once for all editions at the registry root, one level above the
+// cluster's edition repository:
+//
+//	registry.deckhouse.io/deckhouse/ee  ->  registry.deckhouse.io/deckhouse
+//
+// A repository that does not end with an edition segment (dev registries,
+// air-gapped mirrors pushed to a plain path) is that root already.
+func cliRegistryRepository(clusterRepository string) string {
+	repo := strings.TrimRight(clusterRepository, "/")
+
+	idx := strings.LastIndex(repo, "/")
+	if idx < 0 {
+		return repo
+	}
+
+	if _, isEdition := editionSegments[repo[idx+1:]]; !isEdition {
+		return repo
+	}
+
+	root := repo[:idx]
+
+	// The root keeps the host and at least one path segment. A repository
+	// like "registry.example.com/ee" names a project that happens to be
+	// called "ee", not an edition of a Deckhouse repository, and its CLI
+	// artifacts stay where they are.
+	if countPathSegments(root) < 2 {
+		return repo
+	}
+
+	return root
+}
+
+// countPathSegments counts the non-empty slash-separated parts of repo, the
+// host included.
+func countPathSegments(repo string) int {
+	count := 0
+
+	for _, segment := range strings.Split(repo, "/") {
+		if segment != "" {
+			count++
+		}
+	}
+
+	return count
 }
 
 func (h *cliHandler) handleListTags(w http.ResponseWriter, r *http.Request, imagePath string) {

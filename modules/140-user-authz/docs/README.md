@@ -419,7 +419,6 @@ read-write:
 write:
     - autoscaling.k8s.io/verticalpodautoscalercheckpoints
     - deckhouse.io/applications
-    - deckhouse.io/securitypolicyexceptions
     - extensions.istio.io/wasmplugins
     - rbac.authorization.k8s.io/rolebindings
     - rbac.authorization.k8s.io/roles
@@ -466,7 +465,6 @@ write:
     - deckhouse.io/instances
     - deckhouse.io/keepalivedinstances
     - deckhouse.io/nodegroups
-    - deckhouse.io/securitypolicyexceptions
     - extensions.istio.io/wasmplugins
     - extensions/daemonsets
     - gateway.networking.k8s.io/gatewayclasses
@@ -479,6 +477,9 @@ write:
 {{site.data.i18n.common.role[page.lang] | capitalize }} `ClusterAdmin` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`):
 
 ```text
+create:
+    - deckhouse.io/dexauthenticators/allow-access-to-kubernetes
+    - deckhouse.io/dexclients/allow-access-to-kubernetes
 get,list,patch,update,watch:
     - control-plane.deckhouse.io/controlplanenodes
 patch,update:
@@ -558,6 +559,7 @@ write:
     - deckhouse.io/projects
     - deckhouse.io/projecttemplates
     - deckhouse.io/securitypolicies
+    - deckhouse.io/securitypolicyexceptions
     - deckhouse.io/vcdinstanceclasses
     - deckhouse.io/vsphereinstanceclasses
     - deckhouse.io/yandexinstanceclasses

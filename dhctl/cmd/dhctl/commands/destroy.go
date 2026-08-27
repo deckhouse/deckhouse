@@ -15,6 +15,7 @@
 package commands
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -49,6 +50,10 @@ If you understand what you are doing, you can use the flag "--yes-i-am-sane-and-
 
 func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
 	app.DefineSSHFlags(cmd, &opts.SSH, config.NewConnectionConfigParser(opts))
+	// Without kube flags a cluster whose nodes run no SSH server was impossible
+	// to delete: the infrastructure state lives in the cluster, and reaching it
+	// needs a kubeconfig, not a shell on a node.
+	app.DefineKubeFlags(cmd, &opts.Kube)
 	app.DefineBecomeFlags(cmd, &opts.Become)
 	app.DefineCacheFlags(cmd, &opts.Cache)
 	app.DefineSanityFlags(cmd, &opts.Global)
@@ -64,24 +69,26 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 
 		params := app.ProviderParams(&opts.Global, logger.FromContext(ctx))
 
-		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params,
+			providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()),
+			providerinitializer.WithKubeConfig(opts.Kube.Config, opts.Kube.ConfigContext, opts.Kube.InCluster),
+		)
 		if err != nil {
-			return err
+			// No SSH hosts is not a failure any more: it is what an immutable
+			// cluster looks like. Converge already tolerates it the same way.
+			if !errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
+				return err
+			}
 		}
 
 		defer providerinitializer.CleanupSSHProvider(ctx, sshProviderInitializer)
 
-		sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
+		cacheIdentity, sshProvider, err := destroyCacheIdentity(ctx, opts, sshProviderInitializer)
 		if err != nil {
 			return err
 		}
 
-		sshClient, err := sshProvider.Client(ctx)
-		if err != nil {
-			return err
-		}
-
-		if err = cache.Init(ctx, sshClient.Check().String(), opts.Cache); err != nil {
+		if err = cache.Init(ctx, cacheIdentity, opts.Cache); err != nil {
 			return fmt.Errorf(destroyCacheErrorMessage, err)
 		}
 

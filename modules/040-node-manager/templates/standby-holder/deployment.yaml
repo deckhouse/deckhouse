@@ -3,14 +3,14 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: standby-holder-{{ $ng.name }}
+  name: "standby-holder-{{ $ng.name }}"
   namespace: d8-cloud-instance-manager
   {{- include "helm_lib_module_labels" (list $ (dict "app" "standby-holder" "extended-monitoring.deckhouse.io/enabled" "false")) | nindent 2 }}
 spec:
   selector:
     matchLabels:
       app: standby-holder
-      ng: {{ $ng.name }}
+      ng: {{ $ng.name | quote }}
   revisionHistoryLimit: 0
   replicas: {{ $ng.standby }}
   strategy:
@@ -19,7 +19,7 @@ spec:
     metadata:
       labels:
         app: standby-holder
-        ng: {{ $ng.name }}
+        ng: {{ $ng.name | quote }}
     spec:
       imagePullSecrets:
       - name: deckhouse-registry
@@ -29,10 +29,10 @@ spec:
           - labelSelector:
               matchLabels:
                 app: standby-holder
-                ng: {{ $ng.name }}
+                ng: {{ $ng.name | quote }}
             topologyKey: kubernetes.io/hostname
       nodeSelector:
-        node.deckhouse.io/group: {{ $ng.name }}
+        node.deckhouse.io/group: {{ $ng.name | quote }}
       priorityClassName: standby
       tolerations:
         {{- $ng.taints | toYaml | nindent 8 }}

@@ -40,6 +40,11 @@ const (
 	traceFileSuffix = ".jsonl"
 )
 
+// AdminKubeconfigName is the admin kubeconfig a bootstrap leaves in the tmp dir.
+// An artifact of the run like the log and trace beside it, so the cleanup below
+// keeps it; on a cluster of immutable nodes it is the only way in.
+const AdminKubeconfigName = "admin.kubeconfig"
+
 var providerBundleDirRe = regexp.MustCompile(`^[a-z0-9][a-z0-9-]*@sha256:[a-f0-9]{64}$`)
 
 // isProviderBundleDir reports whether fullPath is a digest-pinned provider
@@ -108,6 +113,7 @@ func NewTmpCleaner(params ClearTmpParams) TmpCleaner {
 	suffixesForSkip := []string{
 		".log",
 		".jsonl", // OpenTelemetry trace files written by pkg/telemetry/exporters.go
+		AdminKubeconfigName,
 	}
 
 	if !params.RemoveTombStone {
