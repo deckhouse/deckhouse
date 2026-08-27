@@ -90,6 +90,10 @@ func (d *drainer) cancel(ctx context.Context, nodeName string) (bool, error) {
 	return d.tasks.Cancel(ctx, task.TaskID(nodeName))
 }
 
+// wakeNode hands the node back to the workqueue now that its eviction is over,
+// however it ended. The context here is the manager's, not the eviction's, so
+// the only thing that abandons the send is the process going away — a send that
+// blocks is a node whose finished eviction nobody has collected yet.
 func (d *drainer) wakeNode(ctx context.Context, nodeName string) {
 	select {
 	case d.wake <- event.GenericEvent{Object: &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: nodeName}}}:

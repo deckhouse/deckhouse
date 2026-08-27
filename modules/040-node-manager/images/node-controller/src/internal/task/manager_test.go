@@ -22,7 +22,12 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 )
+
+// notifyWait only expires when a notification is genuinely lost; the tasks here
+// end at once.
+const notifyWait = 10 * time.Second
 
 // The tests synchronise on channels rather than on sleeps: a task waits to be
 // released, and a notify callback reports completion. A manager whose whole job
@@ -123,6 +128,54 @@ func TestManager_ResultReportsTheOutcomeOnce(t *testing.T) {
 	t.Cleanup(func() { close(release) })
 	if err := m.Start(t.Context(), "node-1", func(context.Context) error { <-release; return nil }, nil); err != nil {
 		t.Fatalf("start after the result was read: %v", err)
+	}
+}
+
+// TestManager_NotifiesHoweverTheTaskEnded pins the notification to the task
+// ending, not to how it ended. It runs on the parent context rather than the
+// task's own, so moving a timeout onto the task cannot silently swallow it — a
+// caller waiting for the notification would otherwise wait for ever.
+func TestManager_NotifiesHoweverTheTaskEnded(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		cancel bool
+	}{
+		{name: "the task returns on its own"},
+		{name: "the task is cancelled", cancel: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			release := make(chan struct{})
+			notified := make(chan struct{}, 1)
+			m := NewManager()
+
+			err := m.Start(context.Background(), "node-1",
+				func(ctx context.Context) error {
+					select {
+					case <-release:
+						return nil
+					case <-ctx.Done():
+						return ctx.Err()
+					}
+				},
+				func(context.Context) { notified <- struct{}{} })
+			if err != nil {
+				t.Fatalf("start: %v", err)
+			}
+
+			if tc.cancel {
+				if _, err := m.Cancel(t.Context(), "node-1"); err != nil {
+					t.Fatalf("cancel: %v", err)
+				}
+			} else {
+				close(release)
+			}
+
+			select {
+			case <-notified:
+			case <-time.After(notifyWait):
+				t.Fatal("the task ended without notifying")
+			}
+		})
 	}
 }
 
