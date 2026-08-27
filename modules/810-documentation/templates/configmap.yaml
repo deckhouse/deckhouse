@@ -22,8 +22,10 @@ data:
       default_type  application/octet-stream;
 
       # Add MIME type for ES modules (.mjs files)
+      # and for the per-page Markdown of the AI export (.md files).
       types {
         application/javascript mjs;
+        text/markdown md;
       }
 
       client_body_temp_path /tmp/client_temp;
@@ -146,6 +148,16 @@ data:
         # Search index for embedder modules
         location ~* ^/(?<lang>ru|en)/modules/search-embedded-modules-index.json$  {
             try_files /embedded-modules/$lang/search-embedded-modules-index.json =404;
+        }
+
+        # AI export of the modules from sources (see internal/aiexport of docs-builder).
+        # The per-page .md files are served by the generic module location below.
+        location ~* ^/(?<lang>ru|en)/modules/llms\.txt$  {
+            try_files /modules/$lang/llms.txt =404;
+        }
+
+        location ~* ^/(?<lang>ru|en)/modules/corpus\.json$  {
+            try_files /modules/$lang/corpus.json =404;
         }
 
         # Modules from source index page

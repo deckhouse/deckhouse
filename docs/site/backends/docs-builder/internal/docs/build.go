@@ -27,6 +27,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 
+	"github.com/flant/docs-builder/internal/aiexport"
 	"github.com/flant/docs-builder/internal/metrics"
 	"github.com/flant/docs-builder/pkg/hugo"
 )
@@ -78,6 +79,16 @@ func (svc *Service) Build(ctx context.Context) error {
 	syncer.NoTimes = true
 
 	for _, lang := range []string{"ru", "en"} {
+		// The AI export writes the per-page Markdown, llms.txt and corpus.json
+		// into `public/<lang>/modules`, so it has to run before that directory
+		// is synced to destDir below.
+		err = aiexport.Export(filepath.Join(svc.baseDir, "public"), lang)
+		if err != nil {
+			// The docs themselves are fine without the AI export; degrade
+			// instead of failing the whole build over it.
+			svc.logger.Warn("ai export", slog.String("lang", lang), log.Err(err))
+		}
+
 		// Sync modules folder
 		glob := filepath.Join(svc.destDir, "public", lang, "modules/*")
 		err = removeGlob(glob)
