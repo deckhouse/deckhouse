@@ -50,8 +50,8 @@ spec:
 {% alert level="info" %}
 When adding new master nodes using CAPS and changing the number of master nodes in the NodeGroup `master` (parameter [`spec.staticInstances.count`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)), please note the following:
 
-When bootstrapping the cluster, the configuration specifies the first master node on which the installation takes place.
-If, after bootstrapping, you need to create a multi-master cluster and add master nodes using CAPS, you must specify the number of nodes in the `spec.staticInstances.count` parameter of the NodeGroup `master` as one less than the desired number.
+During the initial cluster installation, the configuration specifies the first master node on which the installation takes place.
+If, after the initial cluster installation, you need to create a multi-master cluster and add master nodes using CAPS, you must specify the number of nodes in the `spec.staticInstances.count` parameter of the NodeGroup `master` as one less than the desired number.
 
 For example, if you need to create a multi-master with three master nodes in `spec.staticInstances.count` NodeGroup `master`, specify the value `2` and create two `staticInstances` for the nodes to be added. After adding them to the cluster, the number of master nodes will be three: the master node on which the installation took place and two master nodes added using CAPS.
 {% endalert %}
@@ -267,11 +267,11 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 
 ## How do I switch to a different OS image in a multi-master cluster?
 
-The OS replacement method depends on the cluster type: in a cloud cluster, nodes are replaced with `dhctl converge`; in a static cluster, nodes are replaced manually, one at a time.
+The OS change method depends on the cluster type: in a cloud cluster, nodes are replaced with `dhctl converge`; in a static cluster, nodes are replaced manually, one at a time.
 
 ### In a cloud cluster
 
-To change the OS image of master nodes in a cloud multi-master cluster, follow these steps.
+To change the OS image in a cloud cluster with multiple master nodes, follow these steps:
 
 {% alert level="warning" %}
 If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before changing master nodes. Create a [backup of the module's data](/products/stronghold/documentation/admin/backups/overview/) before making any changes.
@@ -367,11 +367,11 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 The following instruction describes OS replacement on master nodes that were added to the cluster **manually** using the `bootstrap.sh` script. Perform the steps for each master node, one node at a time. Do not proceed to the next node until the current node has rejoined the cluster and is healthy.
 
 {% alert level="warning" %}
-If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before adding or removing a master node. Create a [backup of the module's data](/products/stronghold/documentation/admin/backups/overview/) before making any changes.
+If master nodes are managed by Cluster API Provider Static (CAPS) through StaticInstance resources, do not use this instruction. First [delete the StaticInstance](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/bare-metal-node.html#deleting-a-staticinstance), install the required OS, and [add the node](#how-do-i-add-a-master-node-to-a-static-or-hybrid-cluster) to the `master` NodeGroup again.
 {% endalert %}
 
 {% alert level="warning" %}
-If master nodes are managed by Cluster API Provider Static (CAPS) through StaticInstance resources, do not use this instruction. First [delete the StaticInstance](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/bare-metal-node.html#deleting-a-staticinstance), install the required OS, and [add the node](#how-do-i-add-a-master-node-to-a-static-or-hybrid-cluster) to the `master` NodeGroup again.
+If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before adding or removing a master node. Create a [backup of the module's data](/products/stronghold/documentation/admin/backups/overview/) before making any changes.
 {% endalert %}
 
 To change the OS of a manually added master node, follow these steps:
@@ -430,20 +430,20 @@ To change the OS of a manually added master node, follow these steps:
    ```
 
 1. Install the required OS on the node.
-1. On a healthy master node, retrieve and decode the script for adding a master node:
+1. On one of the remaining master nodes in the cluster, retrieve and decode the script for adding a master node:
 
    ```shell
    d8 k -n d8-cloud-instance-manager get secret manual-bootstrap-for-master \
      -o jsonpath='{.data.bootstrap\.sh}' | base64 -d > bootstrap.sh
    ```
 
-1. Securely copy `bootstrap.sh` to the node being added and run it as `root` on that node:
+1. Securely copy the `bootstrap.sh` file obtained in the previous step to the node being added and run it as `root` on that node:
 
    ```shell
    bash bootstrap.sh
    ```
 
-1. **On the newly created node**, check the systemd-unit log for the `bashible.service`. Wait until the node configuration is complete (you will see a message `nothing to do` in the log):
+1. **On the node being added**, check the systemd-unit log for the `bashible.service`. Wait until the node configuration is complete (you will see a message `nothing to do` in the log):
 
    ```shell
    journalctl -fu bashible.service
@@ -491,16 +491,16 @@ The method depends on the cluster type: first add extra master nodes, replace th
 If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before changing master nodes. Create a [backup of the module's data](/products/stronghold/documentation/admin/backups/overview/) before making any changes.
 {% endalert %}
 
-For a **cloud** cluster:
+### In a cloud cluster
 
 1. Convert your single-master cluster to a multi-master one, as described in [the guide on adding master nodes to a cluster](#how-do-i-add-a-master-nodes-to-a-cloud-cluster-single-master-to-a-multi-master).
-1. Update the master nodes following the [instructions](#in-a-cloud-cluster).
+1. Change the OS on the master nodes according to the [instructions](#in-a-cloud-cluster).
 1. Convert your multi-master cluster to a single-master one according to [the guide on excluding master nodes from the cluster](#how-do-i-reduce-the-number-of-master-nodes-in-a-cloud-cluster).
 
-For a **static** cluster:
+### In a static cluster
 
 1. Add extra master nodes according to the [instructions](#how-do-i-add-a-master-node-to-a-static-or-hybrid-cluster).
-1. Update the master nodes following the [instructions](#in-a-static-cluster).
+1. Change the OS on the master nodes according to the [instructions](#in-a-static-cluster).
 1. Remove extra master nodes from the control plane role according to the [instructions](#how-do-i-dismiss-the-master-role-while-keeping-the-node). Then delete them from the cluster with `d8 k delete node <MASTER_NODE_NAME>` and power off the corresponding servers.
 
 ## How to configure HA mode with two master nodes and an arbiter node?
