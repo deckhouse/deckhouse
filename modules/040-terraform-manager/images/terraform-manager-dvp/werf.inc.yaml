@@ -10,4 +10,6 @@ image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: terraform-manager/base-terraform-manager-opentofu
 
 {{ include "image_spec_for_infrastructure_manager" . }}
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}
 {{- end }}

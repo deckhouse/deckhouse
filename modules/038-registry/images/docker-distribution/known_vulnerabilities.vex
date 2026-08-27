@@ -1,0 +1,23 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-a6a5af4f238233971392c3f5f4fe63e4e784a27fbc880c67ce92ec943fc67d18",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "GO-2026-5932 относится к пакету golang.org/x/crypto/openpgp, который помечен как unmaintained. Бинарник registry не импортирует golang.org/x/crypto/openpgp; модуль golang.org/x/crypto указан прямой зависимостью ради bcrypt в пакете registry/auth/htpasswd, и в графе импортов из него присутствуют только bcrypt и blowfish — без исполняемого пути openpgp. Проверка go list -deps ./cmd/registry по всем 394 пакетам графа импортов не находит openpgp. Исправленной версии пакета нет; уязвимый код в данном компоненте не выполняется.",
+      "timestamp": "2026-08-27T13:01:04.000000000Z"
+    }
+  ],
+  "timestamp": "2026-08-27T13:01:04.000000000Z"
+}

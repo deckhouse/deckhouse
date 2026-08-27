@@ -57,3 +57,5 @@ imageSpec:
   config:
     entrypoint: ["/bin/chrony_exporter"]
     expose: ["9123"]
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

@@ -56,3 +56,5 @@ import:
 imageSpec:
   config:
     entrypoint: ["/manager"]
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

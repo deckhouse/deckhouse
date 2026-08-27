@@ -1,0 +1,23 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-d3a40ffb00f04f782452a86638de25a20d8b3839c1668438ccfe6264cfff716d",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "GO-2026-5932 относится к пакету golang.org/x/crypto/openpgp, который помечен как unmaintained. Образ содержит единственный бинарник opentofu (opentofu v1.12.5, сборка ./cmd/tofu). Проверка подписей провайдеров в opentofu использует github.com/ProtonMail/go-crypto/openpgp (internal/getproviders/package_authentication.go), а не golang.org/x/crypto/openpgp: grep по исходникам не находит импортов golang.org/x/crypto/openpgp, в go list -deps ./cmd/tofu пакет также отсутствует. Модуль golang.org/x/crypto указан в go.mod прямой зависимостью ради golang.org/x/crypto/ssh, ssh/agent, ssh/knownhosts, bcrypt, pkcs12 и chacha20poly1305 — без исполняемого пути openpgp. Исправленной версии пакета нет; уязвимый код в данном компоненте не выполняется.",
+      "timestamp": "2026-08-27T13:02:27.000000000Z"
+    }
+  ],
+  "timestamp": "2026-08-27T13:02:27.000000000Z"
+}

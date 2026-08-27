@@ -1,0 +1,23 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-cb2f18d9565484a74396bc440e85a036a2f10058ae2282257d70ac0544b4e328",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "GO-2026-5932 относится к пакету golang.org/x/crypto/openpgp, который помечен как unmaintained. Бинарник nodeservices-manager не импортирует golang.org/x/crypto/openpgp; модуль golang.org/x/crypto подтягивается транзитивно через go_lib/registry/pki, который использует golang.org/x/crypto/bcrypt (путь: internal/staticpod -> go_lib/registry/models/node-services -> go_lib/registry/pki -> bcrypt). В графе импортов из этого модуля присутствуют только bcrypt, blowfish, cryptobyte, ed25519, ocsp и pkcs12, пакета openpgp там нет. Исправленной версии пакета нет; уязвимый код в данном компоненте не выполняется.",
+      "timestamp": "2026-08-27T13:00:39.000000000Z"
+    }
+  ],
+  "timestamp": "2026-08-27T13:00:39.000000000Z"
+}

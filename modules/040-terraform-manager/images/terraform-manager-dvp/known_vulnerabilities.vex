@@ -1,0 +1,23 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-511c6c758dd92cef3962e741b3bd5ec0c0800e38193ac1563a00fd12fc600849",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "GO-2026-5932 относится к пакету golang.org/x/crypto/openpgp, который помечен как unmaintained. В образе два Go-бинарника, содержащих golang.org/x/crypto: dhctl (v0.53.0, entrypoint /dhctl) и opentofu (v0.55.0, /bin/opentofu, opentofu v1.12.5, сборка ./cmd/tofu) — оба приходят из базового слоя terraform-manager/base-terraform-manager-opentofu. Ни один из них не импортирует golang.org/x/crypto/openpgp: grep по исходникам не находит таких импортов, в go list -deps пакет также отсутствует. Проверка подписей провайдеров в opentofu использует github.com/ProtonMail/go-crypto/openpgp (internal/getproviders/package_authentication.go) — это отдельный модуль, под данную advisory он не подпадает. В обоих проектах golang.org/x/crypto указан прямой зависимостью ради ssh, ssh/agent, ssh/knownhosts, bcrypt, pkcs12 и nacl/secretbox — без исполняемого пути openpgp. Исправленной версии пакета нет; уязвимый код в данном компоненте не выполняется.",
+      "timestamp": "2026-08-27T13:02:27.000000000Z"
+    }
+  ],
+  "timestamp": "2026-08-27T13:02:27.000000000Z"
+}

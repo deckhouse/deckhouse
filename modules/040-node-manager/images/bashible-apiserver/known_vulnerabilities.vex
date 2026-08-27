@@ -1,0 +1,23 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-78054aba70764e1dc64bb7da8adcddd075a7565e8179c86e5aea4c9b5e86f439",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "GO-2026-5932 относится к пакету golang.org/x/crypto/openpgp, который помечен как unmaintained и не имеет исправленной версии. Бинарник bashible-apiserver не импортирует golang.org/x/crypto/openpgp: модуль golang.org/x/crypto подтягивается транзитивно через github.com/Masterminds/sprig/v3, которому нужен golang.org/x/crypto/bcrypt (путь bashible-apiserver/pkg/template -> sprig/v3 -> bcrypt подтверждён через go mod why). В графе импортов присутствуют только пакеты blowfish, bcrypt, pbkdf2, scrypt, cryptobyte, hkdf, poly1305, salsa20 и nacl/secretbox; openpgp в go list -deps не появляется, в исходниках компонента упоминаний golang.org/x/crypto/openpgp нет. Уязвимый код в данном компоненте не выполняется.",
+      "timestamp": "2026-08-27T13:02:42.000000000Z"
+    }
+  ],
+  "timestamp": "2026-08-27T13:02:42.000000000Z"
+}

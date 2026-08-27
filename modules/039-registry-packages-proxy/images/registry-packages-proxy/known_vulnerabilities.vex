@@ -1,0 +1,23 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-fbc7d4b8d156d17ea631661252269956fb11696677287edfd22a9c76cb8f6122",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "GO-2026-5932 относится к пакету golang.org/x/crypto/openpgp, который помечен как unmaintained. Бинарник registry-packages-proxy не импортирует golang.org/x/crypto/openpgp; модуль golang.org/x/crypto подтягивается транзитивно через github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry и github.com/deckhouse/delivery-kit-sdk/pkg/signver, где задействованы только подпакеты ed25519, cryptobyte, nacl/secretbox, salsa20/salsa, pbkdf2 и scrypt. Ни поиск по исходникам, ни go list -deps не находят openpgp в графе импортов. Исправленной версии пакета нет; уязвимый код в данном компоненте не выполняется.",
+      "timestamp": "2026-08-27T13:00:19.000000000Z"
+    }
+  ],
+  "timestamp": "2026-08-27T13:00:19.000000000Z"
+}
