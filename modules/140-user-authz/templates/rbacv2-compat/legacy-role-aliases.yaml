@@ -36,10 +36,21 @@
   {{- end -}}
 {{- end -}}
 
-{{- /* d8:use:role:<level> and the kubernetes-suffixed variant -> namespace lineage */ -}}
+{{- /* d8:use:role:<level> and the kubernetes-suffixed variant -> namespace lineage.
+
+  These are marked delegatable, exactly like the d8:namespace:<level> roles they alias. Without the
+  marker the project grant registry does not list them, and a RoleBinding to an alias inside a
+  project namespace is refused by cluster-objects-grants-validator. Every namespace belongs to a
+  project now, so that refusal would apply everywhere and the compatibility layer would be dead on
+  arrival — which is the opposite of keeping the old names working for one release.
+
+  The d8:manage:* aliases above are deliberately NOT delegatable: they alias cluster-scoped system
+  and subsystem roles, which are bound with a ClusterRoleBinding and never go through the
+  project-scoped registry.
+*/ -}}
 {{- range $level := list "viewer" "user" "manager" "admin" -}}
-  {{- $aliases = append $aliases (dict "name" (printf "d8:use:role:%s" $level) "selector" "aggregate-to-namespace-as" "level" $level "target" (printf "d8:namespace:%s" $level)) -}}
-  {{- $aliases = append $aliases (dict "name" (printf "d8:use:role:%s:kubernetes" $level) "selector" "aggregate-to-namespace-as" "level" $level "target" (printf "d8:namespace:%s" $level)) -}}
+  {{- $aliases = append $aliases (dict "name" (printf "d8:use:role:%s" $level) "selector" "aggregate-to-namespace-as" "level" $level "target" (printf "d8:namespace:%s" $level) "delegatable" true) -}}
+  {{- $aliases = append $aliases (dict "name" (printf "d8:use:role:%s:kubernetes" $level) "selector" "aggregate-to-namespace-as" "level" $level "target" (printf "d8:namespace:%s" $level) "delegatable" true) -}}
 {{- end -}}
 
 {{- range $alias := $aliases }}
@@ -58,6 +69,9 @@ metadata:
     heritage: deckhouse
     module: user-authz
     rbac.deckhouse.io/deprecated: "true"
+    {{- if $alias.delegatable }}
+    rbac.deckhouse.io/delegatable: "true"
+    {{- end }}
 aggregationRule:
   clusterRoleSelectors:
     - matchLabels:
