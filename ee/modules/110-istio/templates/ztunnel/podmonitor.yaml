@@ -26,8 +26,8 @@ spec:
     - action: replace
       replacement: ztunnel
       targetLabel: job
-    - targetLabel: source
-      replacement: deckhouse
+    - targetLabel: d8_source
+      replacement: dkp
   selector:
     matchLabels:
       app: ztunnel

@@ -3,11 +3,11 @@
   - record: chrony_tracking_last_offset_seconds:abs
     expr: abs(chrony_tracking_last_offset_seconds)
     labels:
-      source: deckhouse
+      d8_source: dkp
   - record: chrony_rtt_seconds
     expr: chrony_tracking_last_offset_seconds - chrony_serverstats_ntp_timestamps_held
     labels:
-      source: deckhouse
+      d8_source: dkp
 
   - alert: NTPDaemonOnNodeDoesNotSynchronizeTime
     expr: (min by (node) (node_timex_sync_status{job="node-exporter"})) == 0

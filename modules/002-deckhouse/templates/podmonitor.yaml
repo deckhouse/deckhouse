@@ -22,8 +22,8 @@ spec:
       replacement: cluster
     - targetLabel: scrape_source
       replacement: self
-    - targetLabel: source
-      replacement: deckhouse
+    - targetLabel: d8_source
+      replacement: dkp
     metricRelabelings:
     # Drop all buckets
     - sourceLabels: [__name__]
@@ -39,8 +39,8 @@ spec:
       replacement: cluster
     - targetLabel: scrape_source
       replacement: hooks
-    - targetLabel: source
-      replacement: deckhouse
+    - targetLabel: d8_source
+      replacement: dkp
   selector:
     matchLabels:
       app: deckhouse

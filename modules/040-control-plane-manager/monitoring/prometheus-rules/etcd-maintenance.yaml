@@ -36,7 +36,7 @@
   rules:
     - record: etcd_latency:etcd_request_duration_seconds:p99
       labels:
-        source: deckhouse
+        d8_source: dkp
       expr: |
         histogram_quantile(0.99,
           sum by (instance, le) (

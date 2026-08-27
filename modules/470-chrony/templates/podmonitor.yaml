@@ -34,6 +34,6 @@ spec:
       targetLabel: node
     - targetLabel: tier
       replacement: cluster
-    - targetLabel: source
-      replacement: deckhouse
+    - targetLabel: d8_source
+      replacement: dkp
 {{- end }}
