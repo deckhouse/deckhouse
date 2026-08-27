@@ -118,6 +118,36 @@ jobs:
           projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop webhook_url | LOOP_SERVICE_NOTIFICATIONS ;
 
     # </template: import_secrets>
+    - name: Find an open autoupdate pull request
+      id: open_pr
+      uses: actions/github-script@v6.4.1
+      with:
+        github-token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+        script: |
+          const branch = 'chore/k8s-autoupdate';
+
+          const pulls = await github.rest.pulls.list({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            head: `${context.repo.owner}:${branch}`,
+            state: 'open',
+          });
+
+          if (pulls.data.length === 0) {
+            core.setOutput('number', '');
+            core.setOutput('commits', '0');
+            return;
+          }
+
+          // The list endpoint does not report the number of commits, the get one does.
+          const pull = await github.rest.pulls.get({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            pull_number: pulls.data[0].number,
+          });
+
+          core.setOutput('number', String(pull.data.number));
+          core.setOutput('commits', String(pull.data.commits));
     - uses: actions/setup-go@v5.4.0
       with:
         go-version: '1.26.7'
@@ -167,8 +197,58 @@ jobs:
         make generate
         echo "Updated versions: $(cat /tmp/updated-versions)"
         echo "::set-output name=k8sVersions::$(cat /tmp/updated-versions)" && rm -f /tmp/updated-versions
+    # peter-evans/create-pull-request rebuilds the pull request branch on every run
+    # (base branch plus a single generated commit) and force-pushes it, so a scheduled
+    # run can silently drop commits somebody added to an open pull request by hand.
+    # Touch the branch only when there is something new to offer and nothing manual
+    # would be lost.
+    - name: Check whether the pull request branch can be updated
+      id: guard
+      env:
+        BRANCH: chore/k8s-autoupdate
+        PR_NUMBER: ${{ steps.open_pr.outputs.number }}
+        PR_COMMITS: ${{ steps.open_pr.outputs.commits }}
+        EVENT_NAME: ${{ github.event_name }}
+      run: |
+        set -euo pipefail
+
+        # No pull request to protect, or a human asked for the update explicitly.
+        if [[ -z "${PR_NUMBER}" || "${EVENT_NAME}" != "schedule" ]]; then
+          echo "update=true" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        git fetch --no-tags --depth=1 origin "${BRANCH}"
+
+        mapfile -t changed < <(git diff --name-only)
+        untracked="$(git ls-files --others --exclude-standard)"
+
+        if [[ ${#changed[@]} -eq 0 && -z "${untracked}" ]]; then
+          echo "::notice::Nothing was regenerated, leaving pull request #${PR_NUMBER} alone."
+          echo "update=false" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        # The open pull request already offers exactly these versions.
+        if [[ -z "${untracked}" ]] && git diff --quiet FETCH_HEAD -- "${changed[@]}"; then
+          echo "::notice::Pull request #${PR_NUMBER} already carries these versions, nothing to update."
+          echo "update=false" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        # A branch built by the action holds exactly one commit. Anything on top of it
+        # was added by hand and would be lost on the next force push.
+        if [[ "${PR_COMMITS}" -gt 1 ]]; then
+          echo "::warning::New Kubernetes patch versions are available, but pull request #${PR_NUMBER} has ${PR_COMMITS} commits and would lose manual changes. The branch was left untouched."
+          echo "stalled=true" >> "$GITHUB_OUTPUT"
+          echo "update=false" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        echo "update=true" >> "$GITHUB_OUTPUT"
     - name: Create Pull Request
       id: create-pull-request
+      if: ${{ steps.guard.outputs.update == 'true' }}
       uses: peter-evans/create-pull-request@v7.0.8
       with:
         commit-message: "Automated Change: Update k8s patch version"
@@ -188,6 +268,13 @@ jobs:
       run: |
         PULL_REQUEST_URL="${{ steps.create-pull-request.outputs.pull-request-url }}"
         bash ./.github/scripts/send-report.sh --webhook "k8s_update" "✅Kubernetes has been automatically updated✅\n[URL]($PULL_REQUEST_URL)"
+    - name: Send stalled pull request report
+      if: ${{ steps.guard.outputs.stalled == 'true' && github.repository == 'deckhouse/deckhouse' }}
+      env:
+        LOOP_SERVICE_NOTIFICATIONS: ${{ steps.secrets.outputs.LOOP_SERVICE_NOTIFICATIONS }}
+      run: |
+        PULL_REQUEST_URL="${{ github.server_url }}/${{ github.repository }}/pull/${{ steps.open_pr.outputs.number }}"
+        bash ./.github/scripts/send-report.sh --webhook "k8s_update" "⚠️New Kubernetes patch versions are available, but the open pull request has manual commits and was not updated⚠️\n[URL]($PULL_REQUEST_URL)"
     - name: Send failure report
       if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
       env:
