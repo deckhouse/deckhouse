@@ -181,10 +181,13 @@ func (s *TemplateStorage) render(ctx context.Context, ng *v1.NodeGroup, bootstra
 	spec.Network = internalv1alpha1.Network{}
 	spec.Storage = internalv1alpha1.Storage{}
 
-	// A NodeConfig is named after its node and repeats that name in the spec, and
-	// one template serves every machine of the group: both names are the
-	// operator's to fill in, and the NodeGroup name in their place is not one.
-	return &templatesv1alpha1.NodeConfigTemplate{Spec: spec}, nil
+	// The template is served under the group's name, which is the name it was
+	// asked for and the one a client keys it by. The node name stays empty in
+	// the spec: one template serves every machine of the group.
+	return &templatesv1alpha1.NodeConfigTemplate{
+		ObjectMeta: metav1.ObjectMeta{Name: ng.Name},
+		Spec:       spec,
+	}, nil
 }
 
 // machineOwnedConfig reports whether this group's nodes bring their own
