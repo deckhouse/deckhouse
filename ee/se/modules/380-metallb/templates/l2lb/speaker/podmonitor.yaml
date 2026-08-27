@@ -25,8 +25,8 @@ spec:
         - sourceLabels: [__meta_kubernetes_pod_ready]
           regex: "true"
           action: keep
-        - targetLabel: source
-          replacement: deckhouse
+        - targetLabel: d8_source
+          replacement: dkp
   selector:
     matchLabels:
       app: l2lb-speaker

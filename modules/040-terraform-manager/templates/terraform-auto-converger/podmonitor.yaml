@@ -24,8 +24,8 @@ spec:
       action: keep
     - regex: endpoint
       action: labeldrop
-    - targetLabel: source
-      replacement: deckhouse
+    - targetLabel: d8_source
+      replacement: dkp
   selector:
     matchLabels:
       app: terraform-auto-converger
