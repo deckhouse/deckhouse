@@ -81,9 +81,11 @@ type queueService interface {
 	Enqueue(ctx context.Context, name string, task queue.Task, opts ...queue.EnqueueOption)
 }
 
-// nelmI renders a module and returns only its ConversionWebhook manifests.
-// Passed straight to the EnsureWebhooks subtasks.
+// nelmI reports whether a module's chart declares a ConversionWebhook and renders
+// the module to collect them. HasConversionWebhook gates the subtask; the subtasks
+// themselves call GetConversionWebhooks.
 type nelmI interface {
+	HasConversionWebhook(path string) (bool, error)
 	GetConversionWebhooks(ctx context.Context, namespace string, pkg nelm.Package) ([]manifest.Manifest, error)
 }
 
@@ -157,11 +159,13 @@ func (t *task) String() string {
 // reflect a half-ensured set: each module's Install records its applied GVKs, so
 // once the wait returns GetManagedGVKs reports the complete set.
 //
-// Last, one EnsureWebhooks subtask per module is enqueued and waited on — after
-// the publish, so each render sees the values it will be deployed with, and before
-// the barrier releases, so a module's conversions are registered before its release
-// applies the custom resources they convert. A module whose chart cannot be
-// rendered retries forever and holds the barrier, exactly as a broken CRD does.
+// Last, an EnsureWebhooks subtask is enqueued and waited on for every module whose
+// chart declares a ConversionWebhook — after the publish, so each render sees the
+// values it will be deployed with, and before the barrier releases, so a module's
+// conversions are registered before its release applies the custom resources they
+// convert. A module whose chart cannot be rendered retries forever and holds the
+// barrier, exactly as a broken CRD does; gating on the chart scan keeps modules
+// that ship no webhooks out of that path entirely.
 func (t *task) Execute(ctx context.Context) error {
 	ctx, span := otel.Tracer(taskTracer).Start(ctx, "Run")
 	defer span.End()
@@ -200,6 +204,15 @@ func (t *task) Execute(ctx context.Context) error {
 	// below keeps them ahead of every module's release: the barrier holds until
 	// each module's webhooks are applied, or the run is cancelled.
 	for _, pkg := range t.modules {
+		hasWebhook, err := t.nelm.HasConversionWebhook(pkg.GetPath())
+		if err != nil {
+			// The scan only decides whether the render is worth it, so an unreadable
+			// chart falls through to the subtask, which reports the real failure.
+			t.logger.Warn("scan chart for conversion webhooks", slog.String("name", pkg.GetName()), log.Err(err))
+		} else if !hasWebhook {
+			continue
+		}
+
 		sub := taskensurewebhooks.NewTask(pkg, t.nelm, t.patcher, t.status, t.logger)
 		t.queue.Enqueue(ctx, filepath.Join(pkg.GetName(), "webhooks"), sub, queue.WithWait(wg))
 	}

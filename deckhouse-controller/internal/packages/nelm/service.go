@@ -15,9 +15,11 @@
 package nelm
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -46,6 +48,11 @@ const (
 
 	chartFile    = "Chart.yaml" // Helm chart metadata file
 	templatesDir = "templates"  // Helm templates directory
+	chartsDir    = "charts"     // Helm subcharts directory
+
+	// conversionWebhookKind is the token a chart must mention to render a
+	// ConversionWebhook; charts that never mention it are skipped without a render.
+	conversionWebhookKind = "ConversionWebhook"
 
 	// managedByAnnotation marks a release as owned by this service.
 	managedByAnnotation      = "packages.deckhouse.io/managed-by"
@@ -83,6 +90,10 @@ const (
 )
 
 var ErrPackageNotHelm = errors.New("package not helm")
+
+// chartFileExtensions are the chart files that can render a manifest. Packaged
+// subcharts (.tgz) are not inspected.
+var chartFileExtensions = []string{".yaml", ".yml", ".tpl"}
 
 // Package provides access to package data needed for Helm operations.
 type Package interface {
@@ -406,6 +417,60 @@ func (s *Service) updateMonitor(state MaintenanceState, namespace, name, manifes
 	s.monitorManager.AddMonitor(namespace, name, manifests)
 }
 
+// HasConversionWebhook reports whether the package's chart can render a
+// ConversionWebhook, so callers skip the render for packages that ship none.
+// It scans the chart's templates and subcharts for the kind; a file that merely
+// mentions it counts, because a false positive costs one render while a false
+// negative would silently drop a conversion.
+func (s *Service) HasConversionWebhook(path string) (bool, error) {
+	for _, dir := range []string{templatesDir, chartsDir} {
+		found, err := containsToken(filepath.Join(path, dir), conversionWebhookKind)
+		if err != nil {
+			return false, fmt.Errorf("scan %s dir: %w", dir, err)
+		}
+
+		if found {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+// containsToken reports whether any chart file under root contains the token.
+// A missing root is not an error: the chart simply has no such directory.
+func containsToken(root, token string) (bool, error) {
+	needle := []byte(token)
+	found := false
+
+	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if entry.IsDir() || !slices.Contains(chartFileExtensions, filepath.Ext(path)) {
+			return nil
+		}
+
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+
+		if bytes.Contains(data, needle) {
+			found = true
+			return fs.SkipAll
+		}
+
+		return nil
+	})
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return false, err
+	}
+
+	return found, nil
+}
+
 // GetConversionWebhooks returns the conversion webhooks for the given package.
 func (s *Service) GetConversionWebhooks(ctx context.Context, namespace string, pkg Package) ([]manifest.Manifest, error) {
 	rendered, err := s.Render(ctx, namespace, pkg)
@@ -423,7 +488,7 @@ func (s *Service) GetConversionWebhooks(ctx context.Context, namespace string, p
 
 	webhooks := make([]manifest.Manifest, 0)
 	for _, m := range all {
-		if m.Kind() == "ConversionWebhook" {
+		if m.Kind() == conversionWebhookKind {
 			webhooks = append(webhooks, m)
 		}
 	}
