@@ -104,8 +104,9 @@ func (t *task) Execute(ctx context.Context) error {
 		t.queueService.Remove(filepath.Join(t.pkg.GetName(), q, "sync"))
 	}
 
+	// The global run task spawns these two per module; they are not per-hook queues.
 	t.queueService.Remove(filepath.Join(t.pkg.GetName(), "crd"))
-	t.queueService.Remove(filepath.Join(t.pkg.GetName(), "hooks"))
+	t.queueService.Remove(filepath.Join(t.pkg.GetName(), "webhooks"))
 
 	return nil
 }

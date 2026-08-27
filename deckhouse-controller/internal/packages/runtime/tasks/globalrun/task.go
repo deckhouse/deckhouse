@@ -35,7 +35,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
 	taskensurecrd "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/ensurecrd"
-	taskensurehooks "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/ensurehooks"
+	taskensurewebhooks "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/ensurewebhooks"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -45,14 +45,16 @@ const (
 	taskTracer = "globalrun"
 )
 
-// Module is the minimal module view the task needs to ensure a module's CRDs.
+// Module is the minimal module view the task needs to ensure a module's CRDs and
+// conversion webhooks: the webhooks are rendered from the module's chart, so the
+// values and maintenance mode a render needs are part of the view.
 type Module interface {
+	// GetName returns the module name, used for logging and the subtask queue.
 	GetName() string
+	// GetPath returns the module root path that contains the crds directory and the chart.
 	GetPath() string
 	GetRuntimeValues() string
 	GetValues() addonutils.Values
-	// GetMaintenance reports the package's maintenance mode; the package itself
-	// decides whether its resources must be reconciled.
 	GetMaintenance() nelm.MaintenanceState
 }
 
@@ -74,17 +76,19 @@ type globalModule interface {
 	SetCapabilities(apiVersions []string)
 }
 
-// queueService enqueues the per-module EnsureCRDs subtasks.
+// queueService enqueues the per-module EnsureCRDs and EnsureWebhooks subtasks.
 type queueService interface {
 	Enqueue(ctx context.Context, name string, task queue.Task, opts ...queue.EnqueueOption)
 }
 
-// nelmI abstracts Helm operations and release monitoring.
+// nelmI renders a module and returns only its ConversionWebhook manifests.
+// Passed straight to the EnsureWebhooks subtasks.
 type nelmI interface {
 	GetConversionWebhooks(ctx context.Context, namespace string, pkg nelm.Package) ([]manifest.Manifest, error)
 }
 
-// patcher abstracts object patching operations.
+// patcher applies the rendered webhooks to the cluster.
+// Passed straight to the EnsureWebhooks subtasks.
 type patcher interface {
 	ExecuteOperations(ops []sdkpkg.PatchCollectorOperation) error
 }
@@ -107,8 +111,8 @@ type task struct {
 	logger *log.Logger
 }
 
-// NewTask creates a task that ensures CRDs for the given enabled modules and
-// publishes the resulting capabilities.
+// NewTask creates a task that ensures CRDs for the given enabled modules,
+// publishes the resulting capabilities, and ensures their conversion webhooks.
 func NewTask(
 	global globalModule,
 	enabled []Module,
@@ -152,6 +156,12 @@ func (t *task) String() string {
 // Global values are published only on a clean, uncancelled run, so they never
 // reflect a half-ensured set: each module's Install records its applied GVKs, so
 // once the wait returns GetManagedGVKs reports the complete set.
+//
+// Last, one EnsureWebhooks subtask per module is enqueued and waited on — after
+// the publish, so each render sees the values it will be deployed with, and before
+// the barrier releases, so a module's conversions are registered before its release
+// applies the custom resources they convert. A module whose chart cannot be
+// rendered retries forever and holds the barrier, exactly as a broken CRD does.
 func (t *task) Execute(ctx context.Context) error {
 	ctx, span := otel.Tracer(taskTracer).Start(ctx, "Run")
 	defer span.End()
@@ -177,15 +187,24 @@ func (t *task) Execute(ctx context.Context) error {
 
 		sub := taskensurecrd.NewTask(pkg, t.crd.Install, t.status, t.logger)
 		t.queue.Enqueue(ctx, filepath.Join(pkg.GetName(), "crd"), sub, queue.WithWait(wg))
-
-		sub = taskensurehooks.NewTask(pkg, t.nelm, t.patcher, t.logger)
-		t.queue.Enqueue(ctx, filepath.Join(pkg.GetName(), "hooks"), sub, queue.WithWait(wg))
 	}
 
 	wg.Wait()
 
 	t.global.SetEnabledModules(names)
 	t.global.SetCapabilities(t.crd.GetManagedGVKs(names))
+
+	// Conversion webhooks are rendered from each module's chart, so they are
+	// enqueued only after the global values above are published — a render before
+	// that would see the previous cycle's enabled set and capabilities. The wait
+	// below keeps them ahead of every module's release: the barrier holds until
+	// each module's webhooks are applied, or the run is cancelled.
+	for _, pkg := range t.modules {
+		sub := taskensurewebhooks.NewTask(pkg, t.nelm, t.patcher, t.status, t.logger)
+		t.queue.Enqueue(ctx, filepath.Join(pkg.GetName(), "webhooks"), sub, queue.WithWait(wg))
+	}
+
+	wg.Wait()
 
 	return nil
 }

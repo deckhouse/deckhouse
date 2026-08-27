@@ -410,11 +410,10 @@ func (s *Service) updateMonitor(state MaintenanceState, namespace, name, manifes
 func (s *Service) GetConversionWebhooks(ctx context.Context, namespace string, pkg Package) ([]manifest.Manifest, error) {
 	rendered, err := s.Render(ctx, namespace, pkg)
 	if err != nil {
+		if errors.Is(err, ErrPackageNotHelm) {
+			return nil, nil
+		}
 		return nil, err
-	}
-
-	if errors.Is(err, ErrPackageNotHelm) {
-		return nil, nil
 	}
 
 	all, err := manifest.ListFromYamlDocs(rendered)
