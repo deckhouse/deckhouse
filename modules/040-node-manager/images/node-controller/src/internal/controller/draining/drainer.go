@@ -50,15 +50,15 @@ type drainer struct {
 	tasks      *task.Manager
 	kubeClient kubernetes.Interface
 	wake       chan event.GenericEvent
-	parent     context.Context
+	ctx        context.Context
 }
 
-func newDrainer(parent context.Context, kubeClient kubernetes.Interface) *drainer {
+func newDrainer(ctx context.Context, kubeClient kubernetes.Interface) *drainer {
 	return &drainer{
 		tasks:      task.NewManager(),
 		kubeClient: kubeClient,
 		wake:       make(chan event.GenericEvent, wakeBuffer),
-		parent:     parent,
+		ctx:        ctx,
 	}
 }
 
@@ -67,7 +67,7 @@ func (d *drainer) wakeSource() source.Source {
 }
 
 func (d *drainer) start(logger logr.Logger, nodeName string, timeout time.Duration) error {
-	err := d.tasks.Start(d.parent, task.TaskID(nodeName),
+	err := d.tasks.Start(d.ctx, task.TaskID(nodeName),
 		func(ctx context.Context) error { return d.evict(ctx, nodeName, timeout) },
 		func(ctx context.Context) { d.wakeNode(ctx, nodeName) },
 	)
@@ -103,7 +103,7 @@ func (d *drainer) wakeNode(ctx context.Context, nodeName string) {
 	// branches would be ready and select would drop the send half the time.
 	select {
 	case d.wake <- event.GenericEvent{Object: &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: nodeName}}}:
-	case <-d.parent.Done():
+	case <-d.ctx.Done():
 	}
 }
 
