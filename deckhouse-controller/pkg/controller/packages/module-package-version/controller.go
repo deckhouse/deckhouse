@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"maps"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -440,8 +441,10 @@ func legacyRequirementsToCR(req *v1alpha1.ModuleRequirements) *v1alpha1.PackageR
 			conditional []v1alpha1.PackageModuleDependency
 		)
 
-		for name, constraint := range req.ParentModules {
-			raw, optional := strings.CutSuffix(constraint, legacyOptionalSuffix)
+		// sorted names keep the projection deterministic: map order changes
+		// between runs, and the status is compared order-sensitively
+		for _, name := range slices.Sorted(maps.Keys(req.ParentModules)) {
+			raw, optional := strings.CutSuffix(req.ParentModules[name], legacyOptionalSuffix)
 			dep := v1alpha1.PackageModuleDependency{
 				Name:       name,
 				Constraint: strings.TrimSpace(raw),

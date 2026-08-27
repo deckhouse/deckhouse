@@ -111,8 +111,8 @@ func New(reader client.Reader, writer client.Client, dc dependency.Container, de
 // Sync ensures the package objects of the old module stack. The repositories
 // go first, so the version stubs find them in place. A source naming no valid
 // version (no module source, an unparsable version, an illegal object name,
-// an unreadable module dir) is skipped with a warning; an API failure stops
-// the sync.
+// an unreadable module dir, broken schema files) is skipped with a warning;
+// an API failure stops the sync.
 func (s *Syncer) Sync(ctx context.Context) error {
 	if err := s.syncPackageRepositories(ctx); err != nil {
 		return err

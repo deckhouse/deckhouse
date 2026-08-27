@@ -376,6 +376,22 @@ func TestLegacyRequirementsToCR(t *testing.T) {
 		assert.Equal(t, ">= 2.0.0", req.Modules.Conditional[0].Constraint, "the suffix is stripped")
 	})
 
+	t.Run("dependencies come out sorted by name", func(t *testing.T) {
+		req := legacyRequirementsToCR(&v1alpha1.ModuleRequirements{
+			ParentModules: map[string]string{
+				"delta": ">= 1", "alpha": ">= 1", "charlie": ">= 1", "bravo": ">= 1",
+			},
+		})
+
+		require.NotNil(t, req)
+		names := make([]string, 0, len(req.Modules.Mandatory))
+		for _, dep := range req.Modules.Mandatory {
+			names = append(names, dep.Name)
+		}
+		assert.Equal(t, []string{"alpha", "bravo", "charlie", "delta"}, names,
+			"the projection must not depend on the map iteration order")
+	})
+
 	t.Run("no requirements collapse to nil", func(t *testing.T) {
 		assert.Nil(t, legacyRequirementsToCR(&v1alpha1.ModuleRequirements{}))
 	})

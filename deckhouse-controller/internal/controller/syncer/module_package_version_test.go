@@ -130,6 +130,25 @@ func TestSyncVersionsFromImage(t *testing.T) {
 		assert.Equal(t, "fallback text", opts.Messages.En, "the deprecated message fills the missing language")
 	})
 
+	t.Run("parent module dependencies come out sorted by name", func(t *testing.T) {
+		dir := t.TempDir()
+		writeModuleYAML(t, filepath.Join(dir, "900-echo"),
+			"name: echo\nrequirements:\n  modules:\n    delta: \">= 1\"\n    alpha: \">= 1\"\n    charlie: \">= 1\"\n    bravo: \">= 1\"\n")
+
+		s, cl := newTestSyncer(t, "v1.80.0", dir)
+		require.NoError(t, s.Sync(ctx))
+
+		mpv := getVersion(t, cl, "embedded-echo-v1.80.0")
+		require.NotNil(t, mpv.Status.PackageMetadata.Requirements)
+		require.NotNil(t, mpv.Status.PackageMetadata.Requirements.Modules)
+		names := make([]string, 0, 4)
+		for _, dep := range mpv.Status.PackageMetadata.Requirements.Modules.Mandatory {
+			names = append(names, dep.Name)
+		}
+		assert.Equal(t, []string{"alpha", "bravo", "charlie", "delta"}, names,
+			"a stable order keeps the converge from seeing false drift")
+	})
+
 	t.Run("falls back to module.yaml and takes the weight from the dir prefix", func(t *testing.T) {
 		dir := t.TempDir()
 		writeModuleYAML(t, filepath.Join(dir, "910-parca"), "name: parca\nstage: Experimental\n")

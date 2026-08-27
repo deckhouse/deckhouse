@@ -90,8 +90,9 @@ type metadataReader struct {
 
 // parseVersionMetadataByImage extracts module metadata from a tar-formatted image reader.
 // It looks for: version.json, package.yaml (v2 definition), module.yaml (legacy
-// definition), and changelog.yaml. All files are optional — missing files result
-// in zero-value fields in the returned metadata.
+// definition), changelog.yaml, and the openapi schema files (settings.yaml with
+// the config-values.yaml fallback, values.yaml). All files are optional — missing
+// files result in zero-value fields in the returned metadata.
 func (r *reconciler) parseVersionMetadataByImage(_ context.Context, img io.Reader) (*moduleMetadata, error) {
 	meta := new(moduleMetadata)
 
@@ -162,9 +163,9 @@ func (r *reconciler) parseVersionMetadataByImage(_ context.Context, img io.Reade
 }
 
 // untarMetadata iterates through the tar archive and copies the content of recognized
-// metadata files (version.json, package.yaml, module.yaml, changelog.yaml/yml) into
-// their respective buffers. Unrecognized entries are skipped. Each file read is
-// bounded by maxMetadataFileSize.
+// metadata files (version.json, package.yaml, module.yaml, changelog.yaml/yml, the
+// openapi schema files) into their respective buffers. Unrecognized entries are
+// skipped. Each file read is bounded by maxMetadataFileSize.
 func (r *metadataReader) untarMetadata(rc io.Reader) error {
 	tr := tar.NewReader(rc)
 	for {

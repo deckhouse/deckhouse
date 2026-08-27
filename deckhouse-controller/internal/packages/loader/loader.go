@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -536,8 +537,10 @@ func legacyModuleRequirements(parentModules map[string]string) dto.ModulesRequir
 		conditional []dto.ModuleDependency
 	)
 
-	for name, constraint := range parentModules {
-		raw, optional := strings.CutSuffix(constraint, legacyOptionalSuffix)
+	// sorted names keep the projection deterministic: map order changes
+	// between runs, and the status is compared order-sensitively
+	for _, name := range slices.Sorted(maps.Keys(parentModules)) {
+		raw, optional := strings.CutSuffix(parentModules[name], legacyOptionalSuffix)
 		dep := dto.ModuleDependency{
 			Name:       name,
 			Constraint: strings.TrimSpace(raw),
