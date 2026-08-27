@@ -104,7 +104,7 @@ jobs:
             if [[ "$title" =~ ^v([0-9]+)\.([0-9]+)\.[0-9]+$ ]]; then
               branch="release-${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
               if gh api "repos/${{ github.repository }}/branches/${branch}" --silent 2>/dev/null; then
-                filtered="$(echo "$filtered" | jq --argjson m "$milestone" '. + [$m]')"
+                filtered="$(echo "$filtered" | jq -c --argjson m "$milestone" '. + [$m]')"
               else
                 echo "::notice::Skipping milestone ${title}: branch ${branch} does not exist yet"
               fi
