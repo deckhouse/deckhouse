@@ -177,13 +177,10 @@ func TestProjectTemplateByName(t *testing.T) {
 	assert.Nil(t, missing)
 }
 
-func managedProject(parameters map[string]any) *v1alpha3.Project {
+func projectWithParameters(parameters map[string]any) *v1alpha3.Project {
 	return &v1alpha3.Project{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   "foo",
-			Labels: map[string]string{v1alpha3.ProjectLabelManagedByNamespace: v1alpha3.ManagedByNamespace},
-		},
-		Spec: v1alpha3.ProjectSpec{Parameters: parameters},
+		ObjectMeta: metav1.ObjectMeta{Name: "foo"},
+		Spec:       v1alpha3.ProjectSpec{Parameters: parameters},
 	}
 }
 
@@ -201,43 +198,20 @@ func updateRequest(t *testing.T, user string, old, updated *v1alpha3.Project) ad
 	}}
 }
 
-func TestHandle_ManagedByNamespaceEditProtection(t *testing.T) {
+// A project is the source of truth for its namespace now, so its spec is an ordinary user-editable
+// field: the namespace no longer owns it and there is nothing to protect it from.
+func TestHandle_ProjectSpecIsUserEditable(t *testing.T) {
 	v := newValidator(t)
 	ctx := context.Background()
 
-	t.Run("user spec edit is denied", func(t *testing.T) {
-		old := managedProject(map[string]any{"namespace": map[string]any{"labels": map[string]any{"a": "1"}}})
-		updated := managedProject(map[string]any{"namespace": map[string]any{"labels": map[string]any{"a": "2"}}})
-		resp := v.Handle(ctx, updateRequest(t, "alice", old, updated))
-		assert.False(t, resp.Allowed)
-		assert.Contains(t, resp.Result.Message, "managed by its namespace")
-	})
+	old := projectWithParameters(map[string]any{"namespace": map[string]any{"labels": map[string]any{"a": "1"}}})
+	updated := projectWithParameters(map[string]any{"namespace": map[string]any{"labels": map[string]any{"a": "2"}}})
 
-	t.Run("controller spec edit is allowed", func(t *testing.T) {
-		old := managedProject(map[string]any{"namespace": map[string]any{"labels": map[string]any{"a": "1"}}})
-		updated := managedProject(map[string]any{"namespace": map[string]any{"labels": map[string]any{"a": "2"}}})
-		resp := v.Handle(ctx, updateRequest(t, rolebindingwebhook.ControllerServiceAccount, old, updated))
-		assert.True(t, resp.Allowed)
-	})
-
-	t.Run("detach by removing the label is allowed", func(t *testing.T) {
-		old := managedProject(map[string]any{"namespace": map[string]any{"labels": map[string]any{"a": "1"}}})
-		updated := managedProject(map[string]any{"namespace": map[string]any{"labels": map[string]any{"a": "2"}}})
-		updated.Labels = nil // detach
-		resp := v.Handle(ctx, updateRequest(t, "alice", old, updated))
-		assert.True(t, resp.Allowed)
-	})
-
-	t.Run("metadata-only edit keeping the label is allowed", func(t *testing.T) {
-		old := managedProject(nil)
-		updated := managedProject(nil)
-		updated.Annotations = map[string]string{"note": "hi"}
-		resp := v.Handle(ctx, updateRequest(t, "alice", old, updated))
-		assert.True(t, resp.Allowed)
-	})
+	resp := v.Handle(ctx, updateRequest(t, "alice", old, updated))
+	assert.True(t, resp.Allowed)
 }
 
-func TestHandle_ManagedByNamespaceCreateBypass(t *testing.T) {
+func TestHandle_CreateOverExistingNamespace(t *testing.T) {
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "foo"}}
 	v := newValidator(t, ns)
 	ctx := context.Background()
@@ -253,8 +227,8 @@ func TestHandle_ManagedByNamespaceCreateBypass(t *testing.T) {
 		}}
 	}
 
-	// the controller may auto-wrap an existing namespace into a managed-by-namespace project
-	resp := v.Handle(ctx, createReq(rolebindingwebhook.ControllerServiceAccount, map[string]string{v1alpha3.ProjectLabelManagedByNamespace: v1alpha3.ManagedByNamespace}))
+	// the controller adopts an existing namespace into a project of its own
+	resp := v.Handle(ctx, createReq(rolebindingwebhook.ControllerServiceAccount, nil))
 	assert.True(t, resp.Allowed)
 
 	// a regular user creating a project that collides with an existing namespace is denied

@@ -125,22 +125,7 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha3.Project) (ctrl.R
 		project.Status.Namespaces = nsStatus
 	}
 
-	if project.Spec.ProjectTemplateName == "" {
-		// Optional template: only ensure the project namespace, no helm release is created.
-		m.logger.Info("the project has no template, ensure namespace only", "project", project.Name)
-		if err := m.ensureNamespace(ctx, project); err != nil {
-			m.logger.Error(err, "failed to ensure the project namespace", "project", project.Name)
-			project.SetState(v1alpha3.ProjectStateError)
-			project.SetConditionFalse(v1alpha3.ProjectConditionProjectResourcesUpgraded, err.Error())
-			if updateErr := m.updateProjectStatus(ctx, project); updateErr != nil {
-				return ctrl.Result{}, updateErr
-			}
-			return ctrl.Result{}, err
-		}
-		project.SetConditionTrue(v1alpha3.ProjectConditionProjectTemplateFound)
-		project.SetConditionTrue(v1alpha3.ProjectConditionProjectValidated)
-		project.SetConditionTrue(v1alpha3.ProjectConditionProjectResourcesUpgraded)
-	} else if done, err := m.handleTemplate(ctx, project); done {
+	if done, err := m.handleTemplate(ctx, project); done {
 		return ctrl.Result{}, err
 	}
 
@@ -406,14 +391,6 @@ func (m *Manager) Delete(ctx context.Context, project *v1alpha3.Project) (ctrl.R
 		return ctrl.Result{}, err
 	}
 
-	// template-less projects own their namespace directly (no helm release deletes it)
-	if project.Spec.ProjectTemplateName == "" {
-		if err := m.deleteNamespace(ctx, project.Name); err != nil {
-			m.logger.Error(err, "failed to delete the project namespace", "project", project.Name)
-			return ctrl.Result{}, err
-		}
-	}
-
 	// remove finalizer
 	if err := m.removeFinalizer(ctx, project); err != nil {
 		m.logger.Error(err, "failed to remove finalizer from the project", "project", project.Name)
@@ -422,21 +399,4 @@ func (m *Manager) Delete(ctx context.Context, project *v1alpha3.Project) (ctrl.R
 
 	m.logger.Info("the project deleted", "project", project.Name)
 	return ctrl.Result{}, nil
-}
-
-func (m *Manager) deleteNamespace(ctx context.Context, name string) error {
-	ns := &corev1.Namespace{}
-	if err := m.client.Get(ctx, client.ObjectKey{Name: name}, ns); err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil
-		}
-		return fmt.Errorf("get the '%s' namespace: %w", name, err)
-	}
-	if _, managed := ns.Labels[v1alpha3.ResourceLabelProject]; !managed {
-		return nil
-	}
-	if err := m.client.Delete(ctx, ns); err != nil && !apierrors.IsNotFound(err) {
-		return fmt.Errorf("delete the '%s' namespace: %w", name, err)
-	}
-	return nil
 }
