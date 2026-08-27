@@ -457,9 +457,9 @@ func TestReconcile_DeletedNodeCancelsItsEviction(t *testing.T) {
 	}
 }
 
-// TestSetupWatches covers both halves of the subscription: only nodes in a
-// NodeGroup are admitted, and the wake channel a finished eviction writes to is
-// registered as a raw source, which WithEventFilter deliberately does not reach.
+// TestSetupWatches covers the subscription: the wake channel is registered as a
+// raw source, only nodes in a NodeGroup are admitted, and an update is admitted
+// only when something a drain depends on has changed.
 func TestSetupWatches(t *testing.T) {
 	w := &captureWatcher{}
 	(&Reconciler{drains: newDrainer(t.Context(), nil)}).SetupWatches(w)
@@ -471,21 +471,88 @@ func TestSetupWatches(t *testing.T) {
 		t.Fatal("no event filter was registered")
 	}
 
-	for _, tc := range []struct {
-		name   string
-		labels map[string]string
-		want   bool
-	}{
-		{name: "a node in a group", labels: map[string]string{nodecommon.NodeGroupLabel: nodeGroupName}, want: true},
-		{name: "a node in no group", want: false},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			obj := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: nodeName, Labels: tc.labels}}
-			if got := w.predicate.Create(event.CreateEvent{Object: obj}); got != tc.want {
-				t.Fatalf("admitted = %v, want %v", got, tc.want)
-			}
-		})
-	}
+	t.Run("create", func(t *testing.T) {
+		for _, tc := range []struct {
+			name   string
+			labels map[string]string
+			want   bool
+		}{
+			{name: "a node in a group", labels: map[string]string{nodecommon.NodeGroupLabel: nodeGroupName}, want: true},
+			{name: "a node in no group", want: false},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				obj := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: nodeName, Labels: tc.labels}}
+				if got := w.predicate.Create(event.CreateEvent{Object: obj}); got != tc.want {
+					t.Fatalf("admitted = %v, want %v", got, tc.want)
+				}
+			})
+		}
+	})
+
+	// A node is written constantly — kubelet refreshes its status every few
+	// seconds — and reconciling all of that would be one wake-up per node per
+	// heartbeat, for a controller with nothing to do about any of it.
+	t.Run("update", func(t *testing.T) {
+		for _, tc := range []struct {
+			name          string
+			before, after *corev1.Node
+			want          bool
+		}{
+			{
+				name:   "a status-only change is ignored",
+				before: node(map[string]string{nodecommon.DrainingAnnotation: bashibleSource}, false),
+				after:  withReady(node(map[string]string{nodecommon.DrainingAnnotation: bashibleSource}, false)),
+			},
+			{
+				name:   "a request appearing is admitted",
+				before: node(nil, false),
+				after:  node(map[string]string{nodecommon.DrainingAnnotation: bashibleSource}, false),
+				want:   true,
+			},
+			{
+				name:   "a request being withdrawn is admitted",
+				before: node(map[string]string{nodecommon.DrainingAnnotation: bashibleSource}, true),
+				after:  node(nil, true),
+				want:   true,
+			},
+			{
+				name:   "a recorded result is admitted",
+				before: node(map[string]string{nodecommon.DrainingAnnotation: bashibleSource}, true),
+				after:  node(map[string]string{nodecommon.DrainedAnnotation: bashibleSource}, true),
+				want:   true,
+			},
+			{
+				// This is what brings the eviction's own pass about.
+				name:   "the cordon being written is admitted",
+				before: node(map[string]string{nodecommon.DrainingAnnotation: bashibleSource}, false),
+				after:  node(map[string]string{nodecommon.DrainingAnnotation: bashibleSource}, true),
+				want:   true,
+			},
+			{
+				name:   "a node in no group is never admitted",
+				before: &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: nodeName}},
+				after: &corev1.Node{ObjectMeta: metav1.ObjectMeta{
+					Name:        nodeName,
+					Annotations: map[string]string{nodecommon.DrainingAnnotation: bashibleSource},
+				}},
+			},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				got := w.predicate.Update(event.UpdateEvent{ObjectOld: tc.before, ObjectNew: tc.after})
+				if got != tc.want {
+					t.Fatalf("admitted = %v, want %v", got, tc.want)
+				}
+			})
+		}
+	})
+}
+
+// withReady marks the node Ready, standing in for the status churn a kubelet
+// produces without touching anything a drain reads.
+func withReady(n *corev1.Node) *corev1.Node {
+	n.Status.Conditions = []corev1.NodeCondition{{Type: corev1.NodeReady, Status: corev1.ConditionTrue}}
+
+	return n
 }
 
 // metricValue reads the current d8_node_draining gauge value for a node, summing
