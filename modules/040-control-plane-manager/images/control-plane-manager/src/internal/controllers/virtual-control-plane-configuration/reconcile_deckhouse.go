@@ -105,9 +105,9 @@ func (r *reconciler) reconcileDeckhouse(
 		return reconcile.Result{}, fmt.Errorf("reconcile tenant cluster uuid: %w", err)
 	}
 
-	// 5. Tenant: d8-kube-dns Service with the fixed cluster DNS address, so
+	// 5. Tenant: d8-kube-dns Service with the tenant's cluster DNS address, so
 	//    global discovery works before any DNS module is deployed.
-	if err := reconcileTenantKubeDNSService(ctx, tc); err != nil {
+	if err := reconcileTenantKubeDNSService(ctx, tc, vcp); err != nil {
 		return reconcile.Result{}, fmt.Errorf("reconcile tenant kube-dns service: %w", err)
 	}
 
@@ -257,15 +257,18 @@ func reconcileTenantClusterConfigurationSecret(
 }
 
 func buildTargetTenantClusterConfigurationSecret(vcp *controlplanev1alpha1.VirtualControlPlane) (*corev1.Secret, error) {
+	networking := vcp.Spec.Networking
+
 	data, err := yaml.Marshal(map[string]any{
-		"apiVersion":        "deckhouse.io/v1",
-		"kind":              "ClusterConfiguration",
-		"clusterType":       "Static",
-		"kubernetesVersion": vcp.Spec.KubernetesVersion,
-		"clusterDomain":     constants.DefaultTenantClusterDomain,
-		"serviceSubnetCIDR": constants.DefaultTenantServiceSubnetCIDR,
-		"podSubnetCIDR":     constants.DefaultTenantPodSubnetCIDR,
-		"defaultCRI":        "Containerd",
+		"apiVersion":              "deckhouse.io/v1",
+		"kind":                    "ClusterConfiguration",
+		"clusterType":             "Static",
+		"kubernetesVersion":       vcp.Spec.KubernetesVersion,
+		"clusterDomain":           networking.ClusterDomain,
+		"serviceSubnetCIDR":       networking.ServiceSubnetCIDR,
+		"podSubnetCIDR":           networking.PodSubnetCIDR,
+		"podSubnetNodeCIDRPrefix": networking.PodSubnetNodeCIDRPrefix,
+		"defaultCRI":              "Containerd",
 	})
 	if err != nil {
 		return nil, err
@@ -321,10 +324,13 @@ func buildTargetTenantClusterUUIDConfigMap(vcp *controlplanev1alpha1.VirtualCont
 
 // reconcileTenantKubeDNSService is create-only: once the tenant's own DNS
 // module takes over the Service, the VCP manager must not fight it.
-func reconcileTenantKubeDNSService(ctx context.Context, tc client.Client) error {
-	target := buildTargetTenantKubeDNSService()
+func reconcileTenantKubeDNSService(ctx context.Context, tc client.Client, vcp *controlplanev1alpha1.VirtualControlPlane) error {
+	target, err := buildTargetTenantKubeDNSService(vcp)
+	if err != nil {
+		return err
+	}
 
-	_, err := getTenantService(ctx, tc, target.Namespace, target.Name)
+	_, err = getTenantService(ctx, tc, target.Namespace, target.Name)
 	if apierrors.IsNotFound(err) {
 		return createTenantService(ctx, tc, target)
 	}
@@ -332,7 +338,12 @@ func reconcileTenantKubeDNSService(ctx context.Context, tc client.Client) error 
 	return err
 }
 
-func buildTargetTenantKubeDNSService() *corev1.Service {
+func buildTargetTenantKubeDNSService(vcp *controlplanev1alpha1.VirtualControlPlane) (*corev1.Service, error) {
+	clusterDNS, err := vcp.Spec.Networking.ClusterDNSAddress()
+	if err != nil {
+		return nil, err
+	}
+
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "d8-kube-dns",
@@ -347,7 +358,7 @@ func buildTargetTenantKubeDNSService() *corev1.Service {
 			},
 		},
 		Spec: corev1.ServiceSpec{
-			ClusterIP: constants.DefaultTenantClusterDNS,
+			ClusterIP: clusterDNS,
 			Selector: map[string]string{
 				"k8s-app": "kube-dns",
 			},
@@ -366,7 +377,7 @@ func buildTargetTenantKubeDNSService() *corev1.Service {
 				},
 			},
 		},
-	}
+	}, nil
 }
 
 func (r *reconciler) reconcileParentRegistrySecret(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane) error {

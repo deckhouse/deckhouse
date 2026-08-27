@@ -61,13 +61,7 @@ const (
 	VirtualControlPlaneScopeLabelKey          = "control-plane.deckhouse.io/virtual-control-plane"
 	VirtualJoinScriptSecretName               = "d8-vcp-join-script"
 	VirtualBootstrapTokenGroup                = "system:bootstrappers:d8:vcp"
-	DefaultTenantClusterDomain                = "cluster.virtual"
-	DefaultTenantServiceSubnetCIDR            = "10.96.0.0/12"
-	// DefaultTenantPodSubnetCIDR must stay in sync with cluster-pool-ipv4-cidr in cilium-vcp.yaml.tpl.
-	DefaultTenantPodSubnetCIDR = "10.244.0.0/16"
-	// DefaultTenantClusterDNS is the 10th address of DefaultTenantServiceSubnetCIDR.
-	DefaultTenantClusterDNS   = "10.96.0.10"
-	VirtualExposeDomainSuffix = "vcp.local"
+	VirtualExposeDomainSuffix                 = "vcp.local"
 
 	RegistryPackagesProxyPort          int32 = 4219
 	RegistryPackagesProxyBootstrapPort int32 = 4282

@@ -29,6 +29,10 @@ spec:
         image: ${IMAGE_KUBE_CONTROLLER_MANAGER}
         command:
         - kube-controller-manager
+        - --allocate-node-cidrs=true
+        - --cluster-cidr=${POD_SUBNET_CIDR}
+        - --node-cidr-mask-size=${POD_SUBNET_NODE_CIDR_PREFIX}
+        - --service-cluster-ip-range=${SERVICE_SUBNET_CIDR}
         - --kubeconfig=/kubeconfig/controller-manager.conf
         - --authentication-kubeconfig=/kubeconfig/controller-manager.conf
         - --authorization-kubeconfig=/kubeconfig/controller-manager.conf
@@ -39,7 +43,6 @@ spec:
         - --service-account-private-key-file=/pki/sa.key
         - --use-service-account-credentials=true
         - --leader-elect=true
-        - --service-cluster-ip-range=${SERVICE_SUBNET_CIDR}
         - --controllers=*,bootstrapsigner,tokencleaner
         volumeMounts:
         - {name: pki, mountPath: /pki, readOnly: true}

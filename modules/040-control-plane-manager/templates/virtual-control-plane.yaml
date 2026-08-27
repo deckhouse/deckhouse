@@ -76,8 +76,6 @@ stringData:
   # Format marker for the global Virtual Control Plane config bundle.
   # The first controller uses the whole Secret as checksum input.
   config-format: control-plane.deckhouse.io/virtual-control-plane/v1alpha1
-  cluster-domain: {{ .Values.global.clusterConfiguration.clusterDomain | quote }}
-  service-subnet-cidr: {{ .Values.global.clusterConfiguration.serviceSubnetCIDR | quote }}
   default-kubernetes-version: {{ .Values.controlPlaneManager.internal.effectiveKubernetesVersion | quote }}
   cluster-uuid: {{ .Values.global.discovery.clusterUUID | default "" | quote }}
   minget: {{ .Files.Get "candi/bashible/bootstrap/minget" | b64enc | quote }}

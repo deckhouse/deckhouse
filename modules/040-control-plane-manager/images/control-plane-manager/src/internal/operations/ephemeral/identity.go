@@ -19,6 +19,8 @@ package ephemeral
 import (
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/constants"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type tenantIdentity struct {
@@ -31,6 +33,10 @@ func tenantIdentityFromOperation(operation *controlplanev1alpha1.ControlPlaneOpe
 		Namespace: operation.Namespace,
 		VCPName:   operation.Labels[constants.VirtualControlPlaneScopeLabelKey],
 	}
+}
+
+func (t tenantIdentity) vcpObjectKey() client.ObjectKey {
+	return client.ObjectKey{Namespace: t.Namespace, Name: t.VCPName}
 }
 
 func (t tenantIdentity) pkiSecretName() string {

@@ -40,6 +40,86 @@ type VirtualControlPlaneKubeconfigSecretRef struct {
 	Name string `json:"name,omitempty"`
 }
 
+// VirtualControlPlaneNetworking is the tenant cluster's network configuration. It is the single
+// source of truth for the tenant's Service/Pod address space: the apiserver's
+// --service-cluster-ip-range and --service-account-issuer, kube-controller-manager's
+// --cluster-cidr/--node-cidr-mask-size, cilium's IPAM configuration, the tenant DNS ClusterIP
+// (derived, not stored here) and the tenant ClusterConfiguration all flow from it.
+//
+// Every field is immutable after creation (enforced per-field below so the CEL message can name
+// the remedy): the tenant apiserver's serving certificate SAN, already-allocated Service
+// ClusterIPs, already-allocated node PodCIDRs and the tenant's --service-account-issuer are all
+// derived from these values once, at PKI/manifest render time, and do not react to a later change.
+// There is no in-place migration path — recreate the VirtualControlPlane instead.
+type VirtualControlPlaneNetworking struct {
+	// ServiceSubnetCIDR is the address space of the tenant cluster's Services (kube-apiserver
+	// --service-cluster-ip-range and kube-controller-manager --service-cluster-ip-range). The
+	// tenant apiserver serving certificate carries the range's 1st address as an IP SAN and the
+	// tenant DNS Service is addressed at the range's 10th address.
+	//
+	// Warning: changing this value on a running tenant is unsafe and is blocked by immutability.
+	// Existing Services keep ClusterIPs from the current range, the apiserver serving certificate
+	// would silently regenerate with a different SAN (dropping the old kubernetes.default SAN),
+	// and the tenant DNS Service stays stranded at the old address. Recreate the
+	// VirtualControlPlane and migrate workloads instead.
+	// Must be an IPv4 CIDR between /12 and /24. /12 is the largest range kube-apiserver accepts
+	// (it rejects anything above 2^20 addresses); /24 leaves room for the kubernetes Service, the
+	// DNS Service and every Deckhouse module Service.
+	// +kubebuilder:validation:Pattern=`^((25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])/(1[2-9]|2[0-4])$`
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="serviceSubnetCIDR is immutable: existing Services hold ClusterIPs from the current range and the apiserver serving certificate cannot be re-addressed in place. Create a new VirtualControlPlane and migrate workloads."
+	ServiceSubnetCIDR string `json:"serviceSubnetCIDR"`
+
+	// PodSubnetCIDR is the address space of the tenant cluster's Pods, passed to
+	// kube-controller-manager as --cluster-cidr and to cilium as the Kubernetes-IPAM Pod CIDR
+	// source.
+	//
+	// Warning: changing this value on a running tenant is unsafe and is blocked by immutability.
+	// Existing nodes and Pods already hold addresses from the current range; switching it requires
+	// re-allocating every node's PodCIDR, which in practice means recreating the nodes. Recreate
+	// the VirtualControlPlane and migrate workloads instead.
+	// Must be an IPv4 CIDR between /8 and /24, and shorter than podSubnetNodeCIDRPrefix so that at
+	// least one node subnet fits (see the rule on the networking block itself).
+	// +kubebuilder:validation:Pattern=`^((25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])/([89]|1[0-9]|2[0-4])$`
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="podSubnetCIDR is immutable: existing nodes and Pods already hold addresses from the current range. Create a new VirtualControlPlane and migrate workloads."
+	PodSubnetCIDR string `json:"podSubnetCIDR"`
+
+	// PodSubnetNodeCIDRPrefix is the prefix size of the Pod network allocated to each node out of
+	// PodSubnetCIDR, passed to kube-controller-manager as --node-cidr-mask-size.
+	//
+	// Warning: changing this value on a running tenant is unsafe and is blocked by immutability.
+	// Nodes that already received a PodCIDR sized from the previous prefix keep it; a mismatched
+	// prefix on new nodes silently fragments the Pod address space. Recreate the
+	// VirtualControlPlane and migrate workloads instead.
+	// This is a policy choice, not something derivable from podSubnetCIDR: the gap between the two
+	// trades maximum node count against Pod addresses per node. With podSubnetCIDR /16 — /23 gives
+	// 128 nodes x 510 addresses, /24 gives 256 x 254, /25 gives 512 x 126.
+	//
+	// The upper bound is /25, not /30, because kubelet's maxPods is picked from a lookup table in
+	// candi/bashible/common-steps/all/064_configure_kubelet.sh.tpl whose last branch is "prefix >=
+	// 24 -> 120". A /25 leaves 126 usable addresses and still fits those 120 Pods; a /26 leaves 62
+	// and does not, so the scheduler would place Pods the node cannot address and they would hang
+	// in ContainerCreating. A normal cluster can work around this by setting
+	// nodeGroup.kubelet.maxPods, but a tenant's NodeGroup is synthesised in Go (see
+	// bashible-apiserver.BuildExternalInputsYAML) and carries no kubelet section, so there is no
+	// escape hatch here. Widen this bound only together with a maxPods that follows the prefix.
+	// +kubebuilder:validation:Pattern=`^(1[6-9]|2[0-5])$`
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="podSubnetNodeCIDRPrefix is immutable: nodes already hold PodCIDRs sized from the previous prefix. Create a new VirtualControlPlane and migrate workloads."
+	PodSubnetNodeCIDRPrefix string `json:"podSubnetNodeCIDRPrefix"`
+
+	// ClusterDomain is the tenant cluster's DNS domain. It is used to build the apiserver's
+	// --service-account-issuer and the "kubernetes.default.svc.<ClusterDomain>" certificate SAN.
+	//
+	// Warning: changing this value on a running tenant is unsafe and is blocked by immutability.
+	// The apiserver serving certificate SAN and --service-account-issuer are derived from it once,
+	// at creation. Recreate the VirtualControlPlane and migrate workloads instead.
+	// +kubebuilder:default=cluster.virtual
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="clusterDomain is immutable: the apiserver serving certificate and --service-account-issuer are derived from it at creation. Create a new VirtualControlPlane and migrate workloads."
+	// +optional
+	ClusterDomain string `json:"clusterDomain,omitempty"`
+}
+
 type VirtualControlPlaneSpec struct {
 	// KubernetesVersion is the desired Kubernetes version for the tenant control plane.
 	KubernetesVersion string `json:"kubernetesVersion"`
@@ -48,6 +128,24 @@ type VirtualControlPlaneSpec struct {
 	// +kubebuilder:default=1
 	// +optional
 	Replicas int32 `json:"replicas,omitempty"`
+
+	// Networking is the tenant cluster's network configuration (Service/Pod CIDRs, cluster
+	// domain). Required so that the "clusterDomain" default always materialises and its
+	// immutability CEL rule always has an oldSelf to compare against.
+	//
+	// The two cross-field rules below are the relationships the per-field patterns cannot express.
+	//
+	// Each node is carved a podSubnetNodeCIDRPrefix-sized slice out of podSubnetCIDR, so the node
+	// prefix must be strictly longer than the pod CIDR's own prefix, otherwise not a single node
+	// subnet fits. The gap is log2(max nodes): /16 with /24 per node is 2^8 = 256 nodes.
+	// +kubebuilder:validation:XValidation:rule="int(self.podSubnetNodeCIDRPrefix) > cidr(self.podSubnetCIDR).prefixLength()",message="podSubnetNodeCIDRPrefix must be greater than the prefix length of podSubnetCIDR, otherwise no node subnet fits into the Pod address space"
+	//
+	// The Pod and Service ranges are allocated by different components (cilium via Kubernetes IPAM,
+	// kube-apiserver's Service allocator) that do not know about each other, so an overlap hands the
+	// same address out twice. Two CIDRs are either disjoint or nested, so testing containment in
+	// both directions is an exact overlap test.
+	// +kubebuilder:validation:XValidation:rule="!cidr(self.podSubnetCIDR).containsCIDR(self.serviceSubnetCIDR) && !cidr(self.serviceSubnetCIDR).containsCIDR(self.podSubnetCIDR)",message="podSubnetCIDR and serviceSubnetCIDR must not overlap: Pod addresses are allocated by cilium and Service addresses by kube-apiserver, and neither knows about the other's range"
+	Networking VirtualControlPlaneNetworking `json:"networking"`
 
 	// DatastoreRef points to the datastore configuration used by the tenant control plane.
 	// +optional

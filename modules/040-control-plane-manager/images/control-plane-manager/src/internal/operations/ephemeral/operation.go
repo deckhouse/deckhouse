@@ -19,7 +19,6 @@ package ephemeral
 import (
 	"context"
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
-	"control-plane-manager/internal/constants"
 	"control-plane-manager/internal/operations"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -39,11 +38,9 @@ func (e *OperationExecutor) Execute(ctx context.Context, operation *controlplane
 	steps := filterSteps(operation)
 
 	stepExecutor := StepExecutor{
-		client:            e.client,
-		operation:         operation,
-		tenantIdentity:    tenantIdentityFromOperation(operation),
-		clusterDomain:     constants.DefaultTenantClusterDomain,
-		serviceSubnetCIDR: constants.DefaultTenantServiceSubnetCIDR,
+		client:         e.client,
+		operation:      operation,
+		tenantIdentity: tenantIdentityFromOperation(operation),
 	}
 
 	var stepResults []operations.StepResult

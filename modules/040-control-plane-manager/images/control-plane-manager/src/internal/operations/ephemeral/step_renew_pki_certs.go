@@ -119,9 +119,14 @@ func (e *StepExecutor) renewPKICerts(ctx context.Context) operations.StepResult 
 }
 
 func (e *StepExecutor) loadTenantPKIConfig(ctx context.Context) (tenantPKIConfig, error) {
+	vcp := &controlplanev1alpha1.VirtualControlPlane{}
+	if err := e.client.Get(ctx, e.tenantIdentity.vcpObjectKey(), vcp); err != nil {
+		return tenantPKIConfig{}, fmt.Errorf("get virtual control plane %s: %w", e.tenantIdentity.VCPName, err)
+	}
+
 	cfg := tenantPKIConfig{
-		ClusterDomain:     e.clusterDomain,
-		ServiceSubnetCIDR: e.serviceSubnetCIDR,
+		ClusterDomain:     vcp.Spec.Networking.ClusterDomain,
+		ServiceSubnetCIDR: vcp.Spec.Networking.ServiceSubnetCIDR,
 	}
 
 	secret := &corev1.Secret{}
