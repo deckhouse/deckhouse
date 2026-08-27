@@ -33,7 +33,7 @@ import (
 func (b *ClusterBootstrapper) printHowToReachTheCluster(ctx context.Context, kubeconfigPath string, bctx *bootstrapContext) {
 	logger := dhlog.FromContext(ctx)
 
-	tunnel := bastionTunnelCommand(bastionConfig(b.SSHProviderInitializer.GetConfig()))
+	tunnel := bastionTunnelCommand(immutable.BastionConfig(b.SSHProviderInitializer.GetConfig()))
 	if tunnel != "" {
 		logger.InfoContext(ctx, fmt.Sprintf(
 			"The master answers at %s:%d, an address that exists only inside the cluster network. "+
