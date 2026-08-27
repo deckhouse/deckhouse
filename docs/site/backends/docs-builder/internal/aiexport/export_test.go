@@ -20,6 +20,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 func TestExportWithoutManifest(t *testing.T) {
