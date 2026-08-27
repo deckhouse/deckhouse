@@ -80,8 +80,32 @@ func TestNodeConfigTemplateNamesNoNode(t *testing.T) {
 	template, ok := object.(*templatesv1alpha1.NodeConfigTemplate)
 	require.True(t, ok, "storage returned %T", object)
 
-	require.Empty(t, template.Spec.NodeName)
-	require.Empty(t, template.Name, "the NodeGroup name is not a node name")
+	require.Empty(t, template.Spec.NodeName, "one template serves every machine of the group")
+	require.Equal(t, testTemplateNodeGroup, template.Name,
+		"a served object carries the name it was asked for, or no client can key it")
+}
+
+// A list of nameless items is one item as far as any client keyed by name is
+// concerned, and metadata.name is a field this storage already filters on.
+func TestNodeConfigTemplateListNamesEveryTemplate(t *testing.T) {
+	storage := NewTemplateStorage(templateCluster(t,
+		immutableStaticNodeGroup("aaa-wanted"),
+		immutableStaticNodeGroup("zzz-other"),
+		bootstrapTokenSecret("aaa-wanted"),
+		bootstrapTokenSecret("zzz-other"),
+	))
+
+	object, err := storage.List(t.Context(), &metainternalversion.ListOptions{})
+	require.NoError(t, err)
+
+	list, ok := object.(*templatesv1alpha1.NodeConfigTemplateList)
+	require.True(t, ok, "storage returned %T", object)
+
+	names := make([]string, 0, len(list.Items))
+	for _, item := range list.Items {
+		names = append(names, item.Name)
+	}
+	require.ElementsMatch(t, []string{"aaa-wanted", "zzz-other"}, names)
 }
 
 // Without the token kubelet has nothing to present on first contact and the
