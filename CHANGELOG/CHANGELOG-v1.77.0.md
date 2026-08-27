@@ -1,4 +1,4 @@
-# Changelog v1.77
+# Changelog v1.77.0
 
 ## Know before update
 
