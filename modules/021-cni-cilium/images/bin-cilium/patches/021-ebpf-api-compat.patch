@@ -1,0 +1,15 @@
+diff --git a/pkg/bpf/collection.go b/pkg/bpf/collection.go
+index d961dae..48f32e4 100644
+--- a/pkg/bpf/collection.go
++++ b/pkg/bpf/collection.go
+@@ -448,8 +448,8 @@ func applyConstants(spec *ebpf.CollectionSpec, constants map[string]uint64) erro
+ 			return fmt.Errorf("can't set non-existent Variable %s", name)
+ 		}
+ 
+-		if v.MapName() != configSection {
+-			return fmt.Errorf("can only set Cilium config variables in section %s (got %s:%s), ", configSection, v.MapName(), name)
++		if v.SectionName != configSection {
++			return fmt.Errorf("can only set Cilium config variables in section %s (got %s:%s), ", configSection, v.SectionName, name)
+ 		}
+ 
+ 		if err := setVariable(v, value); err != nil {
