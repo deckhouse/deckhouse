@@ -1,7 +1,7 @@
 - name: d8.cloud-provider-huaweicloud.capi
   rules:
   - alert: D8HuaweiCloudMachineStuckInDeleting
-    expr: caphc_machine_deleting_stuck{source="deckhouse"} > 0
+    expr: caphc_machine_deleting_stuck{d8_source="dkp"} > 0
     for: 0m
     labels:
       severity_level: "6"

@@ -1,7 +1,7 @@
 - name: d8.node-unmanaged
   rules:
     - alert: D8NodeIsUnmanaged
-      expr: max by (node) (d8_unmanaged_nodes_on_cluster{source="deckhouse"}) > 0
+      expr: max by (node) (d8_unmanaged_nodes_on_cluster{d8_source="dkp"}) > 0
       for: 10m
       labels:
         tier: cluster

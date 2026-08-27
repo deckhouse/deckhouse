@@ -46,71 +46,71 @@ Consider enabling the `control-plane-manager` module for advanced debugging.
 - name: coreos.kubernetes
   rules:
   - record: pod:container_memory_usage_bytes:sum
-    expr: sum(container_memory_usage_bytes{source="deckhouse", container!="POD",pod!=""}) BY
+    expr: sum(container_memory_usage_bytes{d8_source="dkp", container!="POD",pod!=""}) BY
       (pod)
     labels:
       d8_source: dkp
   - record: pod:container_spec_cpu_shares:sum
-    expr: sum(container_spec_cpu_shares{source="deckhouse", container!="POD",pod!=""}) BY (pod)
+    expr: sum(container_spec_cpu_shares{d8_source="dkp", container!="POD",pod!=""}) BY (pod)
     labels:
       d8_source: dkp
   - record: pod:container_cpu_usage:sum
-    expr: sum(rate(container_cpu_usage_seconds_total{source="deckhouse", container!="POD",pod!=""}[5m]))
+    expr: sum(rate(container_cpu_usage_seconds_total{d8_source="dkp", container!="POD",pod!=""}[5m]))
       BY (pod)
     labels:
       d8_source: dkp
   - record: pod:container_fs_usage_bytes:sum
-    expr: sum(container_fs_usage_bytes{source="deckhouse", container!="POD",pod!=""}) BY (pod)
+    expr: sum(container_fs_usage_bytes{d8_source="dkp", container!="POD",pod!=""}) BY (pod)
     labels:
       d8_source: dkp
   - record: namespace:container_memory_usage_bytes:sum
-    expr: sum(container_memory_usage_bytes{source="deckhouse", container!=""}) BY (namespace)
+    expr: sum(container_memory_usage_bytes{d8_source="dkp", container!=""}) BY (namespace)
     labels:
       d8_source: dkp
   - record: namespace:container_spec_cpu_shares:sum
-    expr: sum(container_spec_cpu_shares{source="deckhouse", container!=""}) BY (namespace)
+    expr: sum(container_spec_cpu_shares{d8_source="dkp", container!=""}) BY (namespace)
     labels:
       d8_source: dkp
   - record: namespace:container_cpu_usage:sum
-    expr: sum(rate(container_cpu_usage_seconds_total{source="deckhouse", container!="POD"}[5m]))
+    expr: sum(rate(container_cpu_usage_seconds_total{d8_source="dkp", container!="POD"}[5m]))
       BY (namespace)
     labels:
       d8_source: dkp
   - record: cluster:memory_usage:ratio
-    expr: sum(container_memory_usage_bytes{source="deckhouse", container!="POD",pod!=""}) BY
-      (cluster) / sum(machine_memory_bytes{source="deckhouse"}) BY (cluster)
+    expr: sum(container_memory_usage_bytes{d8_source="dkp", container!="POD",pod!=""}) BY
+      (cluster) / sum(machine_memory_bytes{d8_source="dkp"}) BY (cluster)
     labels:
       d8_source: dkp
   - record: cluster:container_spec_cpu_shares:ratio
-    expr: sum(container_spec_cpu_shares{source="deckhouse", container!="POD",pod!=""}) / 1000
-      / sum(machine_cpu_cores{source="deckhouse"})
+    expr: sum(container_spec_cpu_shares{d8_source="dkp", container!="POD",pod!=""}) / 1000
+      / sum(machine_cpu_cores{d8_source="dkp"})
     labels:
       d8_source: dkp
   - record: cluster:container_cpu_usage:ratio
-    expr: sum(rate(container_cpu_usage_seconds_total{source="deckhouse", container!="POD",pod!=""}[5m]))
-      / sum(machine_cpu_cores{source="deckhouse"})
+    expr: sum(rate(container_cpu_usage_seconds_total{d8_source="dkp", container!="POD",pod!=""}[5m]))
+      / sum(machine_cpu_cores{d8_source="dkp"})
     labels:
       d8_source: dkp
   - record: apiserver_latency_seconds:quantile
-    expr: histogram_quantile(0.99, rate(apiserver_request_latencies_bucket{source="deckhouse"}[5m])) /
+    expr: histogram_quantile(0.99, rate(apiserver_request_latencies_bucket{d8_source="dkp"}[5m])) /
       1e+06
     labels:
       quantile: "0.99"
       d8_source: dkp
   - record: apiserver_latency:quantile_seconds
-    expr: histogram_quantile(0.9, rate(apiserver_request_latencies_bucket{source="deckhouse"}[5m])) /
+    expr: histogram_quantile(0.9, rate(apiserver_request_latencies_bucket{d8_source="dkp"}[5m])) /
       1e+06
     labels:
       quantile: "0.9"
       d8_source: dkp
   - record: apiserver_latency_seconds:quantile
-    expr: histogram_quantile(0.5, rate(apiserver_request_latencies_bucket{source="deckhouse"}[5m])) /
+    expr: histogram_quantile(0.5, rate(apiserver_request_latencies_bucket{d8_source="dkp"}[5m])) /
       1e+06
     labels:
       quantile: "0.5"
       d8_source: dkp
   - alert: K8SApiserverDown
-    expr: absent(up{source="deckhouse", job="kube-apiserver"} == 1)
+    expr: absent(up{d8_source="dkp", job="kube-apiserver"} == 1)
     for: 20m
     labels:
       severity_level: "3"
@@ -119,7 +119,7 @@ Consider enabling the `control-plane-manager` module for advanced debugging.
       summary: API servers can't be reached.
       description: No API servers are reachable, or they have all disappeared from service discovery.
   - alert: K8sCertificateExpiration
-    expr: sum(label_replace(rate(apiserver_client_certificate_expiration_seconds_bucket{source="deckhouse", le="604800", job=~"kubelet|kube-apiserver"}[1m]) > 0, "component", "$1", "job", "(.*)")) by (component, node)
+    expr: sum(label_replace(rate(apiserver_client_certificate_expiration_seconds_bucket{d8_source="dkp", le="604800", job=~"kubelet|kube-apiserver"}[1m]) > 0, "component", "$1", "job", "(.*)")) by (component, node)
     labels:
       severity_level: "6"
     annotations:
@@ -130,7 +130,7 @@ Consider enabling the `control-plane-manager` module for advanced debugging.
         Some clients are connecting to {{`{{$labels.component}}`}} with certificates that will expire in less than 7 days on node `{{`{{$labels.node}}`}}`.
         {{- include "instruction" . | nindent 8 }}
   - alert: K8sCertificateExpiration
-    expr: sum(label_replace(rate(apiserver_client_certificate_expiration_seconds_bucket{source="deckhouse", le="86400", job=~"kubelet|kube-apiserver"}[1m]) > 0, "component", "$1", "job", "(.*)")) by (component, node)
+    expr: sum(label_replace(rate(apiserver_client_certificate_expiration_seconds_bucket{d8_source="dkp", le="86400", job=~"kubelet|kube-apiserver"}[1m]) > 0, "component", "$1", "job", "(.*)")) by (component, node)
     labels:
       severity_level: "5"
     annotations:

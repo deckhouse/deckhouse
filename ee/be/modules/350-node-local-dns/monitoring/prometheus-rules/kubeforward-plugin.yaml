@@ -5,7 +5,7 @@
         (
           histogram_quantile(0.95,
             sum by (le, node) (
-              rate(coredns_kubeforward_request_duration_seconds_bucket{source="deckhouse", 
+              rate(coredns_kubeforward_request_duration_seconds_bucket{d8_source="dkp", 
                 job="node-local-dns",
                 qtype="A"
               }[5m])
@@ -15,7 +15,7 @@
         and
         (
           sum by (node) (
-            rate(coredns_kubeforward_request_duration_seconds_count{source="deckhouse", 
+            rate(coredns_kubeforward_request_duration_seconds_count{d8_source="dkp", 
               job="node-local-dns",
               qtype="A"
             }[5m])

@@ -45,8 +45,8 @@
   rules:
   - alert: NodeGroupReplicasUnavailable
     expr: |
-      max by (name) (mcm_machine_deployment_status_unavailable_replicas{source="deckhouse"} > 0)
-      * on(name) group_left(node_group) machine_deployment_node_group_info{source="deckhouse"}
+      max by (name) (mcm_machine_deployment_status_unavailable_replicas{d8_source="dkp"} > 0)
+      * on(name) group_left(node_group) machine_deployment_node_group_info{d8_source="dkp"}
     for: 1h
     labels:
       severity_level: "8"
@@ -64,8 +64,8 @@
 
   - alert: NodeGroupReplicasUnavailable
     expr: |
-      max by (name) (mcm_machine_deployment_status_unavailable_replicas{source="deckhouse"} > 0 and mcm_machine_deployment_status_ready_replicas{source="deckhouse"} == 0)
-      * on(name) group_left(node_group) machine_deployment_node_group_info{source="deckhouse"}
+      max by (name) (mcm_machine_deployment_status_unavailable_replicas{d8_source="dkp"} > 0 and mcm_machine_deployment_status_ready_replicas{d8_source="dkp"} == 0)
+      * on(name) group_left(node_group) machine_deployment_node_group_info{d8_source="dkp"}
     for: 20m
     labels:
       severity_level: "7"
@@ -82,8 +82,8 @@
 
   - alert: NodeGroupReplicasUnavailable
     expr: |
-      max by (name) (mcm_machine_deployment_status_unavailable_replicas{source="deckhouse"} > mcm_machine_deployment_info_spec_rolling_update_max_surge{source="deckhouse"})
-      * on(name) group_left(node_group) machine_deployment_node_group_info{source="deckhouse"}
+      max by (name) (mcm_machine_deployment_status_unavailable_replicas{d8_source="dkp"} > mcm_machine_deployment_info_spec_rolling_update_max_surge{d8_source="dkp"})
+      * on(name) group_left(node_group) machine_deployment_node_group_info{d8_source="dkp"}
     for: 20m
     labels:
       severity_level: "6"
@@ -102,7 +102,7 @@
 
   - alert: NodeGroupMasterTaintIsAbsent
     expr: |
-      max (d8_nodegroup_taint_missing{source="deckhouse", name="master"}) > 0
+      max (d8_nodegroup_taint_missing{d8_source="dkp", name="master"}) > 0
     for: 20m
     labels:
       severity_level: "4"
@@ -128,7 +128,7 @@
 
   - alert: D8NodeCgroupV2NotSupported
     expr: |
-      max by (node, node_group) (d8_node_cgroup_v2_unsupported{source="deckhouse"} == 1)
+      max by (node, node_group) (d8_node_cgroup_v2_unsupported{d8_source="dkp"} == 1)
     for: 10m
     labels:
       tier: cluster
@@ -149,7 +149,7 @@
 
   - alert: D8NodeContainerdV2NotSupported
     expr: |
-      max by (node, node_group) (d8_nodes_cntrd_v2_unsupported{source="deckhouse"} == 1)
+      max by (node, node_group) (d8_nodes_cntrd_v2_unsupported{d8_source="dkp"} == 1)
     for: 10m
     labels:
       tier: cluster

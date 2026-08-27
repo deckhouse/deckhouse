@@ -6,7 +6,7 @@
     expr: |
       max by (namespace, replicaset, workload_kind, workload_name) (
         label_replace(label_replace(
-          kube_replicaset_owner{source="deckhouse", job="kube-state-metrics", owner_is_controller="true", owner_kind!="<none>"},
+          kube_replicaset_owner{d8_source="dkp", job="kube-state-metrics", owner_is_controller="true", owner_kind!="<none>"},
           "workload_kind", "$1", "owner_kind", "(.*)"),
           "workload_name", "$1", "owner_name", "(.*)")
       )
@@ -18,13 +18,13 @@
       max by (namespace, pod, node, workload_kind, workload_name) (
         (
             label_replace(label_replace(
-              kube_pod_owner{source="deckhouse", job="kube-state-metrics", namespace!~"d8-.*|kube-system",
+              kube_pod_owner{d8_source="dkp", job="kube-state-metrics", namespace!~"d8-.*|kube-system",
                              owner_kind!="ReplicaSet", owner_is_controller=~"true|<none>"},
               "workload_kind", "$1", "owner_kind", "(.*)"),
               "workload_name", "$1", "owner_name", "(.*)")
           or
             label_replace(
-              kube_pod_owner{source="deckhouse", job="kube-state-metrics", namespace!~"d8-.*|kube-system",
+              kube_pod_owner{d8_source="dkp", job="kube-state-metrics", namespace!~"d8-.*|kube-system",
                              owner_kind="ReplicaSet", owner_is_controller="true"},
               "replicaset", "$1", "owner_name", "(.*)")
             * on (namespace, replicaset) group_left (workload_kind, workload_name)
@@ -33,7 +33,7 @@
             label_replace(label_replace(
               (
                 label_replace(
-                  kube_pod_owner{source="deckhouse", job="kube-state-metrics", namespace!~"d8-.*|kube-system",
+                  kube_pod_owner{d8_source="dkp", job="kube-state-metrics", namespace!~"d8-.*|kube-system",
                                  owner_kind="ReplicaSet", owner_is_controller="true"},
                   "replicaset", "$1", "owner_name", "(.*)")
                 unless on (namespace, replicaset) descheduler:replicaset_workload
@@ -42,10 +42,10 @@
               "workload_name", "$1", "owner_name", "(.*)")
         )
         * on (namespace, pod) group_left (node)
-        topk by (namespace, pod) (1, kube_pod_info{source="deckhouse", job="kube-state-metrics"})
+        topk by (namespace, pod) (1, kube_pod_info{d8_source="dkp", job="kube-state-metrics"})
       )
       unless on (namespace, pod)
-        (kube_pod_status_phase{source="deckhouse", job="kube-state-metrics", phase="Succeeded"} == 1)
+        (kube_pod_status_phase{d8_source="dkp", job="kube-state-metrics", phase="Succeeded"} == 1)
 
   - record: descheduler:workload_replicas
     labels:
@@ -57,7 +57,7 @@
       d8_source: dkp
     expr: |
       round(sum by (namespace, pod) (
-        increase(kube_pod_container_status_restarts_total{source="deckhouse", job="kube-state-metrics", namespace!~"d8-.*|kube-system"}[15m])
+        increase(kube_pod_container_status_restarts_total{d8_source="dkp", job="kube-state-metrics", namespace!~"d8-.*|kube-system"}[15m])
       )) > 0
 
   # Primary source klog_pod_oomkill; fallback last_terminated_reason gated by a recent restart.
@@ -67,13 +67,13 @@
     expr: |
       max by (namespace, pod) (
         label_replace(
-          increase(klog_pod_oomkill{source="deckhouse", namespace!~"d8-.*|kube-system"}[15m]),
+          increase(klog_pod_oomkill{d8_source="dkp", namespace!~"d8-.*|kube-system"}[15m]),
           "pod", "$1", "pod_name", "(.+)") > 0
       )
       or
       (
         max by (namespace, pod) (
-          kube_pod_container_status_last_terminated_reason{source="deckhouse", job="kube-state-metrics",
+          kube_pod_container_status_last_terminated_reason{d8_source="dkp", job="kube-state-metrics",
             namespace!~"d8-.*|kube-system", reason="OOMKilled"} == 1
         )
         and on (namespace, pod) (descheduler:pod_restarts_15m > 0)
@@ -86,9 +86,9 @@
     expr: |
       sum by (namespace, workload_kind, workload_name) (
         (
-            (kube_pod_status_phase{source="deckhouse", job="kube-state-metrics", phase="Pending"} == 1) * 40
-          or (kube_pod_status_phase{source="deckhouse", job="kube-state-metrics", phase="Failed"}  == 1) * 60
-          or (kube_pod_status_phase{source="deckhouse", job="kube-state-metrics", phase="Unknown"} == 1) * 50
+            (kube_pod_status_phase{d8_source="dkp", job="kube-state-metrics", phase="Pending"} == 1) * 40
+          or (kube_pod_status_phase{d8_source="dkp", job="kube-state-metrics", phase="Failed"}  == 1) * 60
+          or (kube_pod_status_phase{d8_source="dkp", job="kube-state-metrics", phase="Unknown"} == 1) * 50
         )
         * on (namespace, pod) group_left (workload_kind, workload_name)
         max by (namespace, pod, workload_kind, workload_name) (descheduler:pod_workload)
@@ -101,7 +101,7 @@
       d8_source: dkp
     expr: |
       30 * sum by (namespace, workload_kind, workload_name) (
-        (kube_pod_status_ready{source="deckhouse", job="kube-state-metrics", condition="false"} == 1)
+        (kube_pod_status_ready{d8_source="dkp", job="kube-state-metrics", condition="false"} == 1)
         * on (namespace, pod) group_left (workload_kind, workload_name)
         max by (namespace, pod, workload_kind, workload_name) (descheduler:pod_workload)
       )
@@ -137,7 +137,7 @@
       d8_source: dkp
     expr: |
       sum by (namespace, workload_kind, workload_name) (
-        kube_pod_container_resource_requests{source="deckhouse", job="kube-state-metrics", resource="cpu", unit="core"}
+        kube_pod_container_resource_requests{d8_source="dkp", job="kube-state-metrics", resource="cpu", unit="core"}
         * on (namespace, pod) group_left (workload_kind, workload_name)
         max by (namespace, pod, workload_kind, workload_name) (descheduler:pod_workload)
       )
@@ -147,7 +147,7 @@
       d8_source: dkp
     expr: |
       sum by (namespace, workload_kind, workload_name) (
-        rate(container_cpu_usage_seconds_total{source="deckhouse", job="kubelet", container!~"|POD"}[5m])
+        rate(container_cpu_usage_seconds_total{d8_source="dkp", job="kubelet", container!~"|POD"}[5m])
         * on (namespace, pod) group_left (workload_kind, workload_name)
         max by (namespace, pod, workload_kind, workload_name) (descheduler:pod_workload)
       )
@@ -157,7 +157,7 @@
       d8_source: dkp
     expr: |
       sum by (namespace, workload_kind, workload_name) (
-        kube_pod_container_resource_requests{source="deckhouse", job="kube-state-metrics", resource="memory", unit="byte"}
+        kube_pod_container_resource_requests{d8_source="dkp", job="kube-state-metrics", resource="memory", unit="byte"}
         * on (namespace, pod) group_left (workload_kind, workload_name)
         max by (namespace, pod, workload_kind, workload_name) (descheduler:pod_workload)
       )
@@ -167,7 +167,7 @@
       d8_source: dkp
     expr: |
       sum by (namespace, workload_kind, workload_name) (
-        container_memory_working_set_bytes{source="deckhouse", job="kubelet", container!~"|POD"}
+        container_memory_working_set_bytes{d8_source="dkp", job="kubelet", container!~"|POD"}
         * on (namespace, pod) group_left (workload_kind, workload_name)
         max by (namespace, pod, workload_kind, workload_name) (descheduler:pod_workload)
       )
@@ -191,9 +191,9 @@
       max by (namespace, workload_kind, workload_name) (
         (
           sum by (namespace, pod) (
-            container_memory_working_set_bytes{source="deckhouse", job="kubelet", container!~"|POD", namespace!~"d8-.*|kube-system"})
+            container_memory_working_set_bytes{d8_source="dkp", job="kubelet", container!~"|POD", namespace!~"d8-.*|kube-system"})
           / (sum by (namespace, pod) (
-              kube_pod_container_resource_limits{source="deckhouse", job="kube-state-metrics", resource="memory", unit="byte",
+              kube_pod_container_resource_limits{d8_source="dkp", job="kube-state-metrics", resource="memory", unit="byte",
                                                  namespace!~"d8-.*|kube-system"}) > 0)
         )
         * on (namespace, pod) group_left (workload_kind, workload_name)
@@ -238,11 +238,11 @@
         descheduler:pod_workload
         * on (node) group_left ()
         max by (node) (
-            (kube_node_status_condition{source="deckhouse", job="kube-state-metrics", condition="MemoryPressure", status="true"} == 1) * 20
-          or (kube_node_status_condition{source="deckhouse", job="kube-state-metrics", condition="DiskPressure",   status="true"} == 1) * 15
-          or (kube_node_status_condition{source="deckhouse", job="kube-state-metrics", condition="PIDPressure",    status="true"} == 1) * 15
-          or (kube_node_status_condition{source="deckhouse", job="kube-state-metrics", condition="Ready",          status!="true"} == 1) * 50
-          or (kube_node_spec_unschedulable{source="deckhouse", job="kube-state-metrics"} == 1) * 10
+            (kube_node_status_condition{d8_source="dkp", job="kube-state-metrics", condition="MemoryPressure", status="true"} == 1) * 20
+          or (kube_node_status_condition{d8_source="dkp", job="kube-state-metrics", condition="DiskPressure",   status="true"} == 1) * 15
+          or (kube_node_status_condition{d8_source="dkp", job="kube-state-metrics", condition="PIDPressure",    status="true"} == 1) * 15
+          or (kube_node_status_condition{d8_source="dkp", job="kube-state-metrics", condition="Ready",          status!="true"} == 1) * 50
+          or (kube_node_spec_unschedulable{d8_source="dkp", job="kube-state-metrics"} == 1) * 10
         )
       )
       / descheduler:workload_replicas
@@ -252,9 +252,9 @@
       d8_source: dkp
     expr: |
       max by (namespace, workload_kind, workload_name) (
-          (increase(descheduler_pod_evictions_total{source="deckhouse", job="descheduler", result="success"}[15m]) > bool 0) * 10
-        or (increase(descheduler_pod_evictions_total{source="deckhouse", job="descheduler", result="error"}[15m])   > bool 0) * 25
-        or (increase(descheduler_pod_evictions_total{source="deckhouse", job="descheduler", result="blocked"}[15m]) > bool 0) * 15
+          (increase(descheduler_pod_evictions_total{d8_source="dkp", job="descheduler", result="success"}[15m]) > bool 0) * 10
+        or (increase(descheduler_pod_evictions_total{d8_source="dkp", job="descheduler", result="error"}[15m])   > bool 0) * 25
+        or (increase(descheduler_pod_evictions_total{d8_source="dkp", job="descheduler", result="blocked"}[15m]) > bool 0) * 15
       )
 
   - record: descheduler:workload_happiness_score
@@ -289,39 +289,39 @@
     labels:
       d8_source: dkp
     expr: |
-      count by (node) (kube_pod_info{source="deckhouse", job="kube-state-metrics"})
+      count by (node) (kube_pod_info{d8_source="dkp", job="kube-state-metrics"})
         / on (node) group_left ()
-        max by (node) (kube_node_status_allocatable{source="deckhouse", job="kube-state-metrics", resource="pods", unit="integer"})
+        max by (node) (kube_node_status_allocatable{d8_source="dkp", job="kube-state-metrics", resource="pods", unit="integer"})
 
   - record: descheduler:node_cpu_usage_ratio
     labels:
       d8_source: dkp
-    expr: 1 - avg by (node) (rate(node_cpu_seconds_total{source="deckhouse", job="node-exporter", mode="idle"}[5m]))
+    expr: 1 - avg by (node) (rate(node_cpu_seconds_total{d8_source="dkp", job="node-exporter", mode="idle"}[5m]))
 
   - record: descheduler:node_memory_usage_ratio
     labels:
       d8_source: dkp
     expr: |
       1 - (
-        max by (node) (node_memory_MemAvailable_bytes{source="deckhouse", job="node-exporter"})
-        / max by (node) (node_memory_MemTotal_bytes{source="deckhouse", job="node-exporter"})
+        max by (node) (node_memory_MemAvailable_bytes{d8_source="dkp", job="node-exporter"})
+        / max by (node) (node_memory_MemTotal_bytes{d8_source="dkp", job="node-exporter"})
       )
 
   - record: descheduler:node_cpu_request_ratio
     labels:
       d8_source: dkp
     expr: |
-      sum by (node) (kube_pod_container_resource_requests{source="deckhouse", job="kube-state-metrics", resource="cpu", unit="core"})
+      sum by (node) (kube_pod_container_resource_requests{d8_source="dkp", job="kube-state-metrics", resource="cpu", unit="core"})
         / on (node) group_left ()
-        max by (node) (kube_node_status_allocatable{source="deckhouse", job="kube-state-metrics", resource="cpu", unit="core"})
+        max by (node) (kube_node_status_allocatable{d8_source="dkp", job="kube-state-metrics", resource="cpu", unit="core"})
 
   - record: descheduler:node_memory_request_ratio
     labels:
       d8_source: dkp
     expr: |
-      sum by (node) (kube_pod_container_resource_requests{source="deckhouse", job="kube-state-metrics", resource="memory", unit="byte"})
+      sum by (node) (kube_pod_container_resource_requests{d8_source="dkp", job="kube-state-metrics", resource="memory", unit="byte"})
         / on (node) group_left ()
-        max by (node) (kube_node_status_allocatable{source="deckhouse", job="kube-state-metrics", resource="memory", unit="byte"})
+        max by (node) (kube_node_status_allocatable{d8_source="dkp", job="kube-state-metrics", resource="memory", unit="byte"})
 
   - record: descheduler:cluster_imbalance_score
     labels: { resource: pods, d8_source: dkp }
