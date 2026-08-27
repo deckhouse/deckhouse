@@ -191,5 +191,5 @@ func TestShippedProviderContractsParse(t *testing.T) {
 			found++
 		}
 	}
-	assert.GreaterOrEqual(t, found, 7, "every in-tree CAPI provider ships a v2 contract")
+	assert.GreaterOrEqual(t, found, 6, "every in-tree CAPI provider ships a v2 contract")
 }

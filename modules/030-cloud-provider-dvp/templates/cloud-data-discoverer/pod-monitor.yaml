@@ -1,4 +1,0 @@
-{{- $podMonitorConfig := dict -}}
-{{- $_ := set $podMonitorConfig "targetNamespace" "d8-cloud-provider-dvp" -}}
-
-{{- include "helm_lib_cloud_data_discoverer_pod_monitor" (list . $podMonitorConfig) }}

@@ -55,15 +55,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"cloudDataDiscoverer":       "imageHash-cloudProviderAzure-cloudDataDiscoverer",
 		"terraformManager":          "imageHash-cloudProviderAzure-terraformManager",
 	},
-	"cloudProviderDvp": map[string]interface{}{
-		"capdvpControllerManager": "imageHash-cloudProviderDvp-capdvpControllerManager",
-		"cloudControllerManager":  "imageHash-cloudProviderDvp-cloudControllerManager",
-		"cloudDataDiscoverer":     "imageHash-cloudProviderDvp-cloudDataDiscoverer",
-		"dvpCsiDriver":            "imageHash-cloudProviderDvp-dvpCsiDriver",
-		"terraformManager":        "imageHash-cloudProviderDvp-terraformManager",
-		"validationWebhook":       "imageHash-cloudProviderDvp-validationWebhook",
-		"validator":               "imageHash-cloudProviderDvp-validator",
-	},
 	"cloudProviderDynamix": map[string]interface{}{
 		"capdControllerManager":  "imageHash-cloudProviderDynamix-capdControllerManager",
 		"cloudControllerManager": "imageHash-cloudProviderDynamix-cloudControllerManager",
