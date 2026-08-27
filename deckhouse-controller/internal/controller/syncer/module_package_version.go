@@ -115,6 +115,12 @@ func (s *Syncer) ensureEmbeddedVersion(ctx context.Context, dirName, version str
 		return nil
 	}
 
+	// no repository offers an embedded package, so no scan ever creates its
+	// catalog entry; the sync does
+	if err := s.ensureModulePackageExists(ctx, def.Name); err != nil {
+		return err
+	}
+
 	meta := def.ConvertToStatusMetadata()
 
 	// an embedded module carries its weight in the directory name prefix, which

@@ -26,9 +26,11 @@
 //	     repository to promote the draft stubs below from
 //
 //	embedded modules dir (the running image)
-//	  └─ embedded-<module>-<deckhouse version>, complete: the metadata and
-//	     the settings/values schemas are filled from the module files on
-//	     disk, no repository ever serves it
+//	  ├─ embedded-<module>-<deckhouse version>, complete: the metadata and
+//	  │  the settings/values schemas are filled from the module files on
+//	  │  disk, no repository ever serves it
+//	  └─ ModulePackage <module>, empty: the catalog entry no scan would
+//	     create, since no repository offers an embedded package
 //
 //	deployed or pending ModuleRelease
 //	  └─ <repository>-<module>-<version>, where the "deckhouse" source maps
