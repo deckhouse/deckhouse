@@ -165,7 +165,7 @@ When the source object (a binding, the quota field, etc.) is removed, the corres
 
 ## Virtual projects
 
-Besides the user-created projects, the `d8 k get projects` list always contains two **virtual** projects (labelled `projects.deckhouse.io/virtual-project: "true"`):
+Besides the user-created projects, the `d8 k get projects` list always contains two **virtual** projects (labeled `projects.deckhouse.io/virtual-project: "true"`):
 
 - `deckhouse` — groups the system namespaces (with the `d8-` and `kube-` prefixes);
 - `default` — groups all other namespaces that do not belong to any project.
@@ -252,7 +252,7 @@ A namespace created directly (for example, `d8 k create ns my-app`) becomes a pr
 - the project parameters are filled in from the current state of the namespace, so nothing inside it changes: the network policy stays unrestricted and the Pod Security Standard keeps the value the namespace already had;
 - from then on the project is the source of truth and is edited like any other project. Deleting the namespace no longer deletes the project — the project recreates the namespace.
 
-System namespaces (`d8-*`, `kube-*`, `default`, and anything labelled `heritage: deckhouse`) are never adopted.
+System namespaces (`d8-*`, `kube-*`, `default`, and anything labeled `heritage: deckhouse`) are never adopted.
 
 For example:
 
