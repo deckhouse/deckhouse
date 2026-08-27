@@ -8,6 +8,7 @@ shipped by upstream Cilium v1.17.17 to remediate known CVEs, e.g.:
 - `github.com/go-jose/go-jose/v4` -> `v4.1.4`
 - `github.com/envoyproxy/go-control-plane/envoy` -> `v1.37.0`
 - `go.mongodb.org/mongo-driver` -> `v1.17.7`
+- `github.com/cilium/ebpf` -> `v0.22.0` (CVE-2026-10722)
 
 Regenerate by cloning `cilium v1.17.17`, applying this patch, bumping the
 required module(s), then running `go mod tidy && go mod vendor && go mod verify`
@@ -90,4 +91,52 @@ An ICMP echo reply feature has been added to reply on LoadBalancer's service IP
 
 ## 018-fix-svacer.patch
 
-Fixed svacer DEREF_OF_NULL error in pkg/policy/api/icmp.go 
+Fixed svacer DEREF_OF_NULL error in pkg/policy/api/icmp.go
+
+## 019-ipcache-no-deadlock-on-label-injection.patch
+
+Backport for Cilium 1.17.x fixing an agent-wide deadlock in ipcache label injection:
+`doInjectLabels()` holds `ipc.mutex` while `UpdatePolicyMaps()` waits for all endpoints,
+yet endpoint regeneration acquires the same mutex (`GetDNSRules` → `LookupByIdentity`),
+so under identity churn regeneration stops node-wide, CNI requests pile up, the
+`endpoint-create` limiter returns `429 putEndpointIdTooManyRequests` and liveness stays
+green. The patch moves the delete-path `UpdatePolicyMaps()` call out of the critical
+section, as the add path above it already does, and bounds the previously unbounded wait
+with `ctx` and a 3-minute timeout.
+
+**Remove this patch when upgrading to Cilium 1.18 or newer**, where upstream fixed the
+same deadlock (`cilium#39970`, commit `47ace2de6`) by removing
+`IPCache.UpdatePolicyMaps()` altogether, so the patch is both unnecessary and will fail
+to apply.
+
+## 020-policy-nil-safe-selector-policy-detach.patch
+
+Fixes an agent crash (`SIGSEGV` in `selectorPolicy.detach`) that shows up once endpoint
+regeneration runs at full speed under heavy identity churn. `policyCache.delete()`
+dereferences `cip.getPolicy()` unconditionally, but a cache entry created by
+`lookupOrCreate()` has a nil policy until `updateSelectorPolicy()` finishes resolving it,
+and that resolution does not hold the cache lock — so an endpoint whose identity changes
+mid-regeneration can have its old identity removed while its policy is still being
+resolved. The patch adds the nil check, matching `pkg/policy/distillery.go` in 1.18.
+
+**Remove this patch when upgrading to Cilium 1.18 or newer**, where the same nil check is
+already present (it was never backported to 1.17.x, up to and including v1.17.18).
+
+## 021-ebpf-api-compat.patch
+
+Adapts Cilium's eBPF loader to the `github.com/cilium/ebpf` v0.22.0 API, which
+`000-go-mod.patch` bumps to fix CVE-2026-10722 (the fix is only available in
+ebpf >= v0.22.0). ebpf v0.21.0 removed the `(*ebpf.VariableSpec).MapName()`
+method and replaced the previously private map reference with the exported
+`VariableSpec.SectionName` field (the section name a variable was allocated
+in). Cilium v1.17.17 still pins ebpf v0.17.1 and calls `v.MapName()` in
+`applyConstants()` (`pkg/bpf/collection.go`) to assert that config variables
+live in the `.rodata.config` section, so the bump alone breaks compilation.
+
+The patch replaces the two `v.MapName()` calls with `v.SectionName`, which
+returns the same value (the underlying map/section name). No datapath or other
+behavior changes: a full `go build ./...` of Cilium v1.17.17 with ebpf v0.22.0
+has this single call site as its only incompatibility.
+
+**Remove this patch when upgrading to a Cilium version that already targets
+ebpf >= v0.21.0**, where `applyConstants()` no longer uses the removed method.
