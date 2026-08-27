@@ -12,6 +12,7 @@ rolloutFields:
   - rootDiskSize
   - additionalSecurityGroups
   - additionalTags
+  - tags
 
 # failureDomain lives in the MachineDeployment, which node-controller builds itself — the provider
 # template renders the machine template only. The value is a go-template with the same context and
@@ -114,6 +115,11 @@ template: |
         {{- end }}
         {{- range $k, $v := $tags }}
          - {{ (printf "%s=%s" $k $v) | quote }}
+        {{- end }}
+        {{- if hasKey .instanceClass "tags" }}
+        {{- range .instanceClass.tags | uniq }}
+         - {{ . | quote }}
+        {{- end }}
         {{- end }}
           # These tags are mandatory as the safety controller uses them to identify VMs created by this controller.
          - "deckhouse-{{ .cluster.uuid }}=1"

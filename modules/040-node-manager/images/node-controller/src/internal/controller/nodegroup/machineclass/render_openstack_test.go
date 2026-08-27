@@ -103,3 +103,19 @@ func TestRenderMachineClass_OpenstackByteParity(t *testing.T) {
 	assert.Equal(t, "prod", tags["env"])
 	assert.Equal(t, "1", tags["kubernetes.io-cluster-deckhouse-aaaa-bbbb"])
 }
+
+// TestRenderMachineClass_OpenstackMCM_TagsRejected guards that the MCM template refuses to
+// render when OpenStackInstanceClass.spec.tags is set — MCM has no way to pass raw Nova tags,
+// so tolerating the field would silently drop it and mislead users into thinking preemptible
+// instances were requested.
+func TestRenderMachineClass_OpenstackMCM_TagsRejected(t *testing.T) {
+	tmpl, err := os.ReadFile(openstackMachineClassTemplatePath)
+	require.NoError(t, err)
+
+	ctx := openstackRenderContext()
+	ctx["nodeGroup"].(map[string]interface{})["instanceClass"].(map[string]interface{})["tags"] = []interface{}{"preemptible"}
+
+	_, err = RenderMachineClass(tmpl, ctx)
+	require.Error(t, err, "MCM must refuse OpenStackInstanceClass.spec.tags")
+	assert.Contains(t, err.Error(), "supported only with the CAPI engine")
+}
