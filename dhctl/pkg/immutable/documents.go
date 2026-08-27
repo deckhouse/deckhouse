@@ -49,8 +49,6 @@ type MasterPayloadInput struct {
 	// NodeIP is the address dhctl reaches this machine at, and empty in a cloud,
 	// where it does not exist yet.
 	NodeIP string
-	// NodeGroupName is the group this node joins. Empty means the master group.
-	NodeGroupName string
 }
 
 // BuildMasterPayload renders the documents the first master boots with: the node

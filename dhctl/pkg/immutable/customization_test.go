@@ -405,6 +405,29 @@ func TestThePushAddressBecomesTheNodeIP(t *testing.T) {
 	require.Contains(t, string(decoded), "nodeIP: 10.0.0.12")
 }
 
+// A mount replaces the rendered one whole, so one naming no disk used to delete
+// the rendered partitionSelector: the node got a mount pointing at nothing — a
+// document the NodeConfig CRD rejects (has(device) != has(partitionSelector)),
+// and a first master bringing etcd up on the root filesystem.
+func TestCustomizationMountsMustNameADisk(t *testing.T) {
+	_, err := ParseCustomizations(t.Context(), []string{nodeConfigFor("master-0", `
+  storage:
+    mounts:
+    - name: kubernetes-data
+      filesystem: xfs
+`)})
+	require.ErrorContains(t, err, "names no disk for the kubernetes-data mount")
+
+	// A mount of the operator's own has no rendered disk to fall back on either.
+	_, err = ParseCustomizations(t.Context(), []string{nodeConfigFor("master-0", `
+  storage:
+    mounts:
+    - name: workload
+      bindTo: /mnt/workload
+`)})
+	require.ErrorContains(t, err, "names no disk for the workload mount")
+}
+
 // The operator's document is the one place that knows a machine answers
 // somewhere other than where it was configured.
 func TestTheDocumentsNodeIPBeatsThePushAddress(t *testing.T) {

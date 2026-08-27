@@ -267,3 +267,26 @@ func TestNodeConfigTakesTheUpstreamOfADirectRegistry(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "dev-registry.deckhouse.io", nodeConfig.Spec.Registry.Address)
 }
+
+// The etcd mount was rendered for every group while only masters came through
+// here. A CloudPermanent worker whose instanceClass attaches a blank 10Gi disk
+// got it formatted and bound at /var/lib/etcd where no etcd runs — and
+// node-controller's day-2 render reads any mount as explicit storage and keeps
+// it for the node's whole life.
+func TestOnlyTheMasterGroupGetsTheEtcdMount(t *testing.T) {
+	worker, err := buildNodeConfig(t.Context(), nodeConfigInput{
+		NodeName:      "front-0",
+		NodeGroupName: "front",
+		MetaConfig:    testMetaConfig(t),
+	})
+	require.NoError(t, err)
+	require.Empty(t, worker.Spec.Storage.Mounts, "no etcd runs outside the master group")
+
+	master, err := buildNodeConfig(t.Context(), nodeConfigInput{
+		NodeName:   "master-0",
+		MetaConfig: testMetaConfig(t),
+	})
+	require.NoError(t, err)
+	require.Equal(t, etcdMounts(), master.Spec.Storage.Mounts,
+		"a caller naming no group is building the first master, which needs the disk")
+}

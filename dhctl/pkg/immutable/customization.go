@@ -125,7 +125,7 @@ func ParseCustomizations(ctx context.Context, documents []string) ([]Customizati
 			return nil, fmt.Errorf(
 				"node customization %d has an empty storage.diskSelector; name at least one attribute of the disk or leave the block out", i+1)
 		}
-		if err := refuseRenderedMountOverrides(mounts, i+1); err != nil {
+		if err := checkMounts(mounts, i+1); err != nil {
 			return nil, err
 		}
 		if err := checkAddresses(ctx, parsed.Spec.Network, parsed.Metadata.Name); err != nil {
@@ -143,22 +143,25 @@ func ParseCustomizations(ctx context.Context, documents []string) ([]Customizati
 	return customizations, nil
 }
 
-// refuseRenderedMountOverrides refuses bindTo and mode on a mount that
-// overrides a rendered one: any bindTo but the rendered one moves etcd off the
-// hostPath its static pod carries, so there is no value worth accepting.
-func refuseRenderedMountOverrides(mounts []mount, number int) error {
+// checkMounts refuses what a mount may not say: bindTo and mode over a rendered
+// mount, which would move etcd off the hostPath its static pod carries, and a
+// mount naming no disk, which the NodeConfig schema rejects.
+func checkMounts(mounts []mount, number int) error {
 	rendered := etcdMounts()
 
 	for _, m := range mounts {
-		if !slices.ContainsFunc(rendered, func(r mount) bool { return r.Name == m.Name }) {
-			continue
+		if slices.ContainsFunc(rendered, func(r mount) bool { return r.Name == m.Name }) {
+			if m.BindTo != "" || m.Mode != "" {
+				return fmt.Errorf(
+					"node customization %d sets bindTo or mode on the %s mount, which the installer renders itself: leave both out and name the disk with partitionSelector or device",
+					number, m.Name)
+			}
 		}
-		if m.BindTo == "" && m.Mode == "" {
-			continue
+		if m.Device == "" && m.PartitionSelector == nil {
+			return fmt.Errorf(
+				"node customization %d names no disk for the %s mount: the mount replaces the rendered one whole, so give it a partitionSelector or a device",
+				number, m.Name)
 		}
-		return fmt.Errorf(
-			"node customization %d sets bindTo or mode on the %s mount, which the installer renders itself: leave both out and name the disk with partitionSelector or device",
-			number, m.Name)
 	}
 
 	return nil

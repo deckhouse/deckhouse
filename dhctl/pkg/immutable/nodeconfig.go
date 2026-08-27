@@ -128,7 +128,7 @@ func buildNodeConfig(ctx context.Context, in nodeConfigInput) (*nodeConfig, erro
 		OSImage:  osImageRef,
 		Storage: storage{
 			DiskSelector: &diskSelector{Size: systemDiskSize},
-			Mounts:       etcdMounts(),
+			Mounts:       nodeMounts(in.NodeGroupName),
 		},
 		Extensions: extensions,
 		Kernel: kernel{
@@ -314,6 +314,16 @@ func nodeRegistry(metaConfig *config.MetaConfig) (*registrySpec, error) {
 		CA:      settings.RemoteData.CA,
 		Auth:    settings.RemoteData.AuthBase64(),
 	}, nil
+}
+
+// nodeMounts gives the etcd disk to a control-plane node and to nobody else: on
+// any other group it formats a blank disk and binds it where nothing runs, and
+// node-controller's day-2 render keeps it for the node's whole life.
+func nodeMounts(nodeGroupName string) []mount {
+	if nodeGroupOrMaster(nodeGroupName) != global.MasterNodeGroupName {
+		return nil
+	}
+	return etcdMounts()
 }
 
 // etcdMounts gives a control-plane node the disk etcd lives on. The disk is
