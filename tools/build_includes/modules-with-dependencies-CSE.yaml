@@ -39,14 +39,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /modules/030-cloud-provider-dvp/hooks
-  to: /deckhouse/modules/030-cloud-provider-dvp/hooks
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /modules/031-local-path-provisioner/hooks
   to: /deckhouse/modules/031-local-path-provisioner/hooks
   excludePaths:

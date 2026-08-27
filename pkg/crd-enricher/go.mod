@@ -1,6 +1,6 @@
 module github.com/deckhouse/deckhouse/pkg/crd-enricher
 
-go 1.25.0
+go 1.26.4
 
 require (
 	golang.org/x/tools v0.47.0
