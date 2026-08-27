@@ -18,6 +18,8 @@ import (
 	gocontext "context"
 	"fmt"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
@@ -29,25 +31,28 @@ import (
 // user and rebuilding the Kubernetes client through a master — has nothing to connect
 // to, and the node phases run against the client converge already holds.
 //
-// Fail-closed the other way than a refusal used to be: an unreadable NodeGroup list
-// leaves the classic SSH path in place, which is what every cluster but this one needs.
-func masterGroupIsImmutable(ctx gocontext.Context, kubeGetter kubernetes.KubeClientProviderWithCtx) (bool, error) {
+// The probe runs on every converge of every cluster, so it answers with the classic
+// SSH path whenever the NodeGroups cannot be read: that path is what every cluster but
+// this one needs, and an unreadable list must not abort the phase for all of them.
+func masterGroupIsImmutable(ctx gocontext.Context, kubeGetter kubernetes.KubeClientProviderWithCtx) bool {
 	kubeCl, err := kubeGetter.KubeClientCtx(ctx)
 	if err != nil {
-		return false, fmt.Errorf("get kube client to read NodeGroups: %w", err)
+		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Keeping the classic SSH path: get kube client to read NodeGroups: %v", err))
+		return false
 	}
 
 	nodeGroups, err := entity.GetNodeGroups(ctx, kubeCl)
 	if err != nil {
-		return false, fmt.Errorf("read NodeGroups to tell an immutable control plane from a classic one: %w", err)
+		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Keeping the classic SSH path: read NodeGroups to tell an immutable control plane from a classic one: %v", err))
+		return false
 	}
 
 	for _, ng := range nodeGroups {
 		if ng.GetName() != global.MasterNodeGroupName {
 			continue
 		}
-		return immutable.NodeGroupIsImmutable(&ng), nil
+		return immutable.NodeGroupIsImmutable(&ng)
 	}
 
-	return false, nil
+	return false
 }
