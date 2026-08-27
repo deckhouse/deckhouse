@@ -107,9 +107,10 @@ func doRequest(client *http.Client, req *http.Request) ([]byte, check.Error) {
 // timeout keeps abandoned keep-alive connections from accumulating when clients are created
 // per request (e.g. in polling loops).
 var insecureTransport = &http.Transport{
-	TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	IdleConnTimeout: 90 * time.Second,
-	MaxIdleConns:    10,
+	TLSClientConfig:     &tls.Config{InsecureSkipVerify: true},
+	IdleConnTimeout:     90 * time.Second,
+	MaxIdleConns:        16,
+	MaxIdleConnsPerHost: 8,
 }
 
 // newInsecureClient creates http.Client omitting TLS verificaton. Useful for accessing APIs via
