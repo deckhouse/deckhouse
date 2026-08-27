@@ -209,14 +209,14 @@ import:
   includePaths:
   - en
   - ru
-  excludePaths:
-  # This build renders the whole documentation, but only `*/modules/**` is
-  # served from it. Its copy of the AI export index (_plugins/ai_export.rb)
-  # would just duplicate the one shipped in dkp-docs, so drop it.
-  - en/llms.txt
-  - en/corpus.json
-  - ru/llms.txt
-  - ru/corpus.json
+  #excludePaths:
+  ## This build renders the whole documentation, but only `*/modules/**` is
+  ## served from it. Its copy of the AI export index (_plugins/ai_export.rb)
+  ## would just duplicate the one shipped in dkp-docs, so drop it.
+  #- en/llms.txt
+  #- en/corpus.json
+  #- ru/llms.txt
+  #- ru/corpus.json
 - image: {{ .ModuleName }}/{{ .ImageName }}/static
   add: /app/_site
   to: /app/dkp-docs
