@@ -58,3 +58,17 @@ func TestAggregatedAPIServerDeathTakesTheProcessDown(t *testing.T) {
 	require.ErrorAs(t, err, &exitErr, "the process survived its aggregated API server")
 	require.Equal(t, 1, exitErr.ExitCode())
 }
+
+// The manager's probe answers on its own port, and the aggregated API server
+// starts on another one behind a retry loop. Until readiness reads that second
+// port, the pod joins the Endpoints the APIService routes to while nothing is
+// answering there, and every full-discovery client in the cluster fails.
+func TestReadinessWaitsForTheAggregatedAPIServer(t *testing.T) {
+	serving := make(chan struct{})
+	ready := aggregatedAPIReady(serving)
+
+	require.Error(t, ready(nil), "the pod was Ready before its aggregated API server answered")
+
+	close(serving)
+	require.NoError(t, ready(nil))
+}

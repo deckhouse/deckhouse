@@ -153,6 +153,42 @@ func TestNewConfigRetriesTheStartupLookup(t *testing.T) {
 	require.Contains(t, err.Error(), "apply authentication options")
 }
 
+// The signal readiness reads must mean "answering", not "started": newConfig
+// opens the listener on its first attempt and keeps it across every retry, so a
+// port that is bound proves nothing while the startup lookup is still failing.
+func TestServingIsNotSignalledWhileTheStartupLookupRetries(t *testing.T) {
+	t.Setenv("KUBERNETES_SERVICE_HOST", "127.0.0.1")
+	t.Setenv("KUBERNETES_SERVICE_PORT", "1")
+
+	interval := configRetryInterval
+	configRetryInterval = 20 * time.Millisecond
+	t.Cleanup(func() { configRetryInterval = interval })
+
+	certFile, keyFile := writeSelfSignedCert(t)
+	port := freePort(t)
+	ctx, cancel := context.WithTimeout(t.Context(), 200*time.Millisecond)
+	defer cancel()
+
+	serving := make(chan struct{})
+	done := make(chan error, 1)
+	go func() {
+		done <- Run(ctx, Options{
+			BindPort: port,
+			CertFile: certFile,
+			KeyFile:  keyFile,
+			Storage:  stubStorage{},
+			Serving:  serving,
+		})
+	}()
+
+	require.Error(t, <-done)
+	select {
+	case <-serving:
+		t.Fatal("the aggregated API server reported itself answering while it never started serving")
+	default:
+	}
+}
+
 func writeSelfSignedCert(t *testing.T) (string, string) {
 	t.Helper()
 
