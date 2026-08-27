@@ -1703,7 +1703,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
     text-decoration: none;
 }
 
-.docs a:hover {
+.docs a:not(.alert__info):hover {
     text-decoration: underline;
 }
 
@@ -2785,7 +2785,7 @@ select#contact-select {
 
   .tippy-content {
     text-align: start;
-    padding: 24px 24px 32px;
+    padding: 24px;
     color: #00122C;
 
     @include breakpoints.max-w(m) {
