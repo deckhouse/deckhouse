@@ -243,6 +243,52 @@ func providerFixtures() []providerFixture {
 			},
 			manualRolloutIDIgnoredByV1: true,
 		},
+		{
+			// vsphere renders the machine template through the v2 contract; the fixture keeps only
+			// the provider fields v1 already read (server / vmFolderPath / instanceClassDefaults),
+			// so mutation of any of them must render identically. v2-only inputs (datacenter,
+			// zoneComputeClusterPaths, instances.mainNetwork fallback) are exercised by the
+			// module's own template_tests — mixing them into the parity fixture would make v1 and
+			// v2 disagree on the baseline and hide real regressions.
+			name:    "vsphere",
+			crdPath: "../../../../../../../ee/se-plus/modules/030-cloud-provider-vsphere/candi/openapi/instance_class.yaml",
+
+			registrationPath: "../../../../../../../ee/se-plus/modules/030-cloud-provider-vsphere/templates/registration.yaml",
+			contractPath:     "../../../../../../../ee/se-plus/modules/030-cloud-provider-vsphere/capi/template.yaml",
+			providerConfig: map[string]any{
+				"server":       "vcenter.example",
+				"vmFolderPath": "dev/test",
+				"instanceClassDefaults": map[string]any{
+					"template":         "vm-templates/redos-8",
+					"datastore":        "vsanDatastore",
+					"resourcePoolPath": "e2e-rp",
+					"disableTimesync":  true,
+				},
+			},
+			instanceClass: map[string]any{
+				"numCPUs":      float64(4),
+				"memory":       float64(8192),
+				"rootDiskSize": float64(40),
+				"mainNetwork":  "VM Network",
+			},
+			rolloutExceptions: map[string]string{
+				// v1 checksum listed resourcePool and datastore, v2 does not. Under CAPI, CAPV
+				// unconditionally overrides VSphereVM.spec.ResourcePool from
+				// VSphereDeploymentZone.spec.placementConstraint.resourcePool and
+				// VSphereVM.spec.Datastore from VSphereFailureDomain.spec.topology.datastore, so
+				// listing them in rolloutFields would recycle machines that land back on the same
+				// pool/datastore. See ensure_failure_domains.go for the topology plumbing.
+				"resourcePool/set": "CAPV overrides from VSphereDeploymentZone.spec.placementConstraint.resourcePool",
+				"datastore/set":    "CAPV overrides from VSphereFailureDomain.spec.topology.datastore",
+				// Optional string/list fields: v1 checksum wrapped them in `if $ic.<field>` (truthy
+				// guards), so an empty-string / empty-list mutation left the checksum unchanged.
+				// v2 declares them in rolloutFields and treats any mutation as a change, which is
+				// stricter and safer — but the strictness is a deliberate contract shift, not a
+				// regression, so the individual empty-mutations are pinned as exceptions here.
+				"template/empty":           "v1 checksum skipped empty template via `if $ic.template`; v2 rolls on any mutation",
+				"additionalNetworks/empty": "v1 checksum skipped empty list via `if $ic.additionalNetworks`; v2 rolls on any mutation",
+			},
+		},
 	}
 }
 

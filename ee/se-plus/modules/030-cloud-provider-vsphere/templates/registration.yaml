@@ -12,6 +12,11 @@ zones: {{ $providerClusterConfiguration.zones | toJson | b64enc | quote }}
 instanceClassAPIVersion: {{ b64enc "v1" | quote }}
 instanceClassKind: {{ b64enc "VsphereInstanceClass" | quote }}
 machineClassKind: {{ b64enc "VsphereMachineClass" | quote }}
+capiClusterKind: {{ b64enc "VSphereCluster" | quote }}
+capiClusterAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1beta1" | quote }}
+capiClusterName: {{ b64enc "vsphere" | quote }}
+capiMachineTemplateKind: {{ b64enc "VSphereMachineTemplate" | quote }}
+capiMachineTemplateAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1beta1" | quote }}
 {{- $vsphereValues := dict }}
 {{- $mainNetwork := "" }}
 {{- if and $providerDiscoveryData $providerDiscoveryData.instances }}
@@ -27,11 +32,42 @@ machineClassKind: {{ b64enc "VsphereMachineClass" | quote }}
 {{- $_ := set $vsphereValues "username" $providerClusterConfiguration.provider.username }}
 {{- $_ := set $vsphereValues "password" $providerClusterConfiguration.provider.password  }}
 {{- $_ := set $vsphereValues "insecure" $providerClusterConfiguration.provider.insecure }}
+{{- /* thumbprint (colon-separated SHA-1 of the vCenter server cert) is rendered into
+       VSphereCluster.spec.thumbprint and VSphereMachineTemplate.spec.template.spec.thumbprint,
+       so CAPV's session code (`insecure := thumbprint == ""`) can pin the certificate instead of
+       silently falling back to insecure. Optional — an empty value keeps the historical
+       insecure behaviour when the operator sets provider.insecure: true. */ -}}
+{{- if hasKey $providerClusterConfiguration.provider "thumbprint" }}
+  {{- $_ := set $vsphereValues "thumbprint" $providerClusterConfiguration.provider.thumbprint }}
+{{- end }}
 {{- $_ := set $vsphereValues "regionTagCategory" $providerClusterConfiguration.regionTagCategory }}
 {{- $_ := set $vsphereValues "zoneTagCategory" $providerClusterConfiguration.zoneTagCategory }}
 {{- $_ := set $vsphereValues "region" $providerClusterConfiguration.region }}
 {{- $_ := set $vsphereValues "sshKey" $providerClusterConfiguration.sshPublicKey }}
 {{- $_ := set $vsphereValues "vmFolderPath" $providerClusterConfiguration.vmFolderPath }}
+{{- /* datacenter comes from providerDiscoveryData (published by cloud-data-discoverer).
+       Rendered into VSphereMachineTemplate.spec.template.spec.datacenter so CAPV's
+       finder resolves folder/datastore/network relative to it — without the field CAPV
+       defaults to "*" and errors "folder ... not found" when several datacenters exist. */ -}}
+{{- if $providerDiscoveryData.datacenter }}
+  {{- $_ := set $vsphereValues "datacenter" $providerDiscoveryData.datacenter }}
+{{- end }}
+{{- /* zoneComputeClusterPaths is a zone → ClusterComputeResource inventoryPath map published
+       by cloud-data-discoverer (see images/cloud-data-discoverer/src/discoverer.go and
+       go_lib/dependency/vsphere Output.ZoneComputeClusterPaths). capi/template.yaml joins it
+       with resourcePoolPath to render an absolute resourcePool; a bare pool name is ambiguous
+       when several compute clusters live under the same datacenter. */ -}}
+{{- if hasKey $providerDiscoveryData "zoneComputeClusterPaths" }}
+  {{- $_ := set $vsphereValues "zoneComputeClusterPaths" $providerDiscoveryData.zoneComputeClusterPaths }}
+{{- end }}
+{{- /* tagURNs is a list of vCenter tag URNs (currently one: deckhouse-cluster-name/<clusterUUID>)
+       resolved by cloud-data-discoverer via EnsureClusterTagURN. capi/template.yaml renders them
+       into VSphereMachineTemplate.spec.tagIDs and CAPV attaches on VM clone. Absence means the
+       discoverer has not run yet (fresh install) or its last cycle failed — VM clones without
+       the tag until the next successful cycle; historically MCM handled this same way. */ -}}
+{{- if hasKey $providerDiscoveryData "tagURNs" }}
+  {{- $_ := set $vsphereValues "tagURNs" $providerDiscoveryData.tagURNs }}
+{{- end }}
 {{- $_ := set $vsphereValues "instanceClassDefaults" dict }}
 {{- if hasKey $providerDiscoveryData "resourcePoolPath" }}
   {{- $_ := set $vsphereValues.instanceClassDefaults "resourcePoolPath" $providerDiscoveryData.resourcePoolPath }}

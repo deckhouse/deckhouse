@@ -199,7 +199,25 @@ func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryDa
 	discoveryData.Datacenter = zonesDatastores.Datacenter
 	discoveryData.Zones = mergeZones(discoveryData.Zones, zonesDatastores.Zones)
 	discoveryData.Datastores = mergeDatastores(discoveryData.Datastores, zonesDatastores.ZonedDataStores)
+	discoveryData.ZoneComputeClusterPaths = zonesDatastores.ZoneComputeClusterPaths
 	discoveryData.VMFolderPath = d.vmFolderPath
+
+	// Ensure the "deckhouse-cluster-name" tag exists for this cluster and publish its URN,
+	// so capi/template.yaml can render VSphereMachineTemplate.spec.tagIDs and CAPV attaches
+	// the tag on clone. This is a partial parity with MCM: MCM also attached a
+	// "deckhouse-node-role/<ng>-<zone>" tag, which the CAPI path does not yet reproduce —
+	// see the module USAGE doc for the rationale.
+	//
+	// Any failure here is logged and swallowed: the rest of discovery data is independent
+	// of tagging, and losing the tag on new VMs is a UI regression, not a functional one.
+	// The previous TagURNs value in cloudProviderDiscoveryData is preserved on error via
+	// json.Unmarshal above — an operator that once had the tag will keep it until the next
+	// successful ensure.
+	if urn, err := d.vsphereClient.EnsureClusterTagURN(ctx, d.clusterUUID); err != nil {
+		d.logger.Warn("Failed to ensure cluster tag URN, VMs cloned in the meantime will not carry the tag", "error", err)
+	} else {
+		discoveryData.TagURNs = []string{urn}
+	}
 
 	for i := range storagePolicies {
 		discoveryData.StoragePolicies = append(discoveryData.StoragePolicies, v1.VsphereStoragePolicy{

@@ -43,6 +43,17 @@ type Client interface {
 	GetZonesDatastores() (*Output, error)
 	ListPolicies() ([]StoragePolicy, error)
 	RefreshClient() error
+	// EnsureClusterTagURN idempotently ensures the "deckhouse-cluster-name" tag category
+	// and a tag inside it with the given cluster UUID as name, then returns the tag URN
+	// (format urn:vmomi:InventoryServiceTag:<uuid>:GLOBAL). CAPV's VSphereVM.spec.tagIDs
+	// takes URNs only — MCM used display names, so plain "GetTag by name" is not enough.
+	//
+	// The vCenter permissions this needs (Tagging.CreateCategory / CreateTag) are already
+	// documented in candi/docs/ENVIRONMENT*.md and were required by MCM as well, so an
+	// operator upgrading from the MCM variant does not need to widen the role. On such an
+	// upgrade both the category and the tag already exist — this returns the existing URN
+	// via GetCategory / GetTagForCategory without a write.
+	EnsureClusterTagURN(ctx context.Context, clusterUUID string) (string, error)
 }
 
 type client struct {
@@ -57,6 +68,8 @@ const (
 	datastoreTypeDatastoreCluster = "DatastoreCluster"
 
 	slugSeparator = "-"
+
+	clusterNameTagCategory = "deckhouse-cluster-name"
 )
 
 type ProviderClusterConfiguration struct {
@@ -86,6 +99,19 @@ type Output struct {
 	Datacenter      string           `json:"datacenter"`
 	Zones           []string         `json:"zones"`
 	ZonedDataStores []ZonedDataStore `json:"datastores"`
+	// ZoneComputeClusterPaths maps a zone tag name to the absolute inventory path of the
+	// ClusterComputeResource it is attached to (e.g. "/DatacenterLAB/host/stage-hypers").
+	// It is what cloud-provider-vsphere's ensure_failure_domains hook consumes to render
+	// an absolute resourcePool into VSphereMachineTemplate — a bare pool name collides
+	// when several compute clusters share a datacenter and CAPV's finder errors ambiguously.
+	ZoneComputeClusterPaths map[string]string `json:"zoneComputeClusterPaths,omitempty"`
+	// TagURNs are vCenter tag URNs to attach to every VM CAPV clones for this cluster.
+	// Currently a single entry: the "deckhouse-cluster-name/<clusterUUID>" tag URN from
+	// EnsureClusterTagURN. The MCM variant additionally attached a "deckhouse-node-role"
+	// tag per (NodeGroup, zone); that is not published here — see the module USAGE doc for
+	// the rationale and follow-up plan. Keeping this as a slice (rather than a single
+	// field) lets a future per-NodeGroup URN be appended without a schema change.
+	TagURNs []string `json:"tagURNs,omitempty"`
 }
 
 type StoragePolicy struct {
@@ -127,15 +153,16 @@ func (v *client) GetZonesDatastores() (*Output, error) {
 		panic("no zonedDataStores returned")
 	}
 
-	zones, err := v.getZonesInDC(context.TODO(), dc)
+	zones, zoneComputeClusterPaths, err := v.getZonesInDC(context.TODO(), dc)
 	if err != nil {
 		return nil, err
 	}
 
 	output := Output{
-		Datacenter:      dc.Name(),
-		Zones:           zones,
-		ZonedDataStores: zonedDataStores,
+		Datacenter:              dc.Name(),
+		Zones:                   zones,
+		ZonedDataStores:         zonedDataStores,
+		ZoneComputeClusterPaths: zoneComputeClusterPaths,
 	}
 
 	return &output, nil
@@ -261,23 +288,66 @@ func (v *client) getDCByRegion(ctx context.Context) (*object.Datacenter, error) 
 	return datacenter, nil
 }
 
-func (v *client) getZonesInDC(ctx context.Context, datacenter *object.Datacenter) ([]string, error) {
+// EnsureClusterTagURN implements Client.
+func (v *client) EnsureClusterTagURN(ctx context.Context, clusterUUID string) (string, error) {
+	if clusterUUID == "" {
+		return "", errors.New("clusterUUID must not be empty")
+	}
+	tc := tags.NewManager(v.restClient)
+
+	// GetCategory / GetTagForCategory return generic 404-shaped errors on missing objects;
+	// govmomi's tags client does not expose a typed NotFound. Falling through to Create on
+	// any error means Create is what surfaces the real problem (permission denied, transport
+	// error, etc.) instead of the read-side error being swallowed.
+	if _, err := tc.GetCategory(ctx, clusterNameTagCategory); err != nil {
+		if _, cerr := tc.CreateCategory(ctx, &tags.Category{
+			Name: clusterNameTagCategory,
+			// SINGLE — one such tag per object; a duplicate on the same VM is a bug we
+			// want vCenter to reject, not to silently allow.
+			Cardinality:     "SINGLE",
+			AssociableTypes: []string{"VirtualMachine"},
+			Description:     "Deckhouse cluster identifier (UUID).",
+		}); cerr != nil {
+			return "", fmt.Errorf("create tag category %q (get failed: %v): %w", clusterNameTagCategory, err, cerr)
+		}
+	}
+
+	if tag, err := tc.GetTagForCategory(ctx, clusterUUID, clusterNameTagCategory); err == nil {
+		return tag.ID, nil
+	}
+
+	id, err := tc.CreateTag(ctx, &tags.Tag{
+		Name:        clusterUUID,
+		CategoryID:  clusterNameTagCategory,
+		Description: "Deckhouse cluster identifier (UUID).",
+	})
+	if err != nil {
+		return "", fmt.Errorf("create tag %q in category %q: %w", clusterUUID, clusterNameTagCategory, err)
+	}
+	return id, nil
+}
+
+func (v *client) getZonesInDC(ctx context.Context, datacenter *object.Datacenter) ([]string, map[string]string, error) {
 	finder := find.NewFinder(v.client.Client, true)
 
 	clusters, err := finder.ClusterComputeResourceList(ctx, path.Join(datacenter.InventoryPath, "..."))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	clusterReferences := make([]mo.Reference, len(clusters))
-	for i := range clusters {
-		clusterReferences[i] = clusters[i]
+	// clusterRefToPath lets us look up a cluster's absolute inventory path from the
+	// ManagedObjectReference that GetAttachedTagsOnObjects returns on match.
+	clusterRefToPath := make(map[types.ManagedObjectReference]string, len(clusters))
+	for i, cluster := range clusters {
+		clusterReferences[i] = cluster
+		clusterRefToPath[cluster.Reference()] = cluster.InventoryPath
 	}
 
 	tagsClient := tags.NewManager(v.restClient)
 
 	zoneTagCategory, err := tagsClient.GetCategory(ctx, v.config.ZoneTagCategory)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	tagsInCategory, _ := tagsClient.ListTagsForCategory(ctx, zoneTagCategory.ID)
@@ -286,14 +356,14 @@ func (v *client) getZonesInDC(ctx context.Context, datacenter *object.Datacenter
 	for _, tagID := range tagsInCategory {
 		tag, err := tagsClient.GetTag(ctx, tagID)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		tagsInCategoryMap[tag.Name] = struct{}{}
 	}
 
 	clustersWithTags, err := tagsClient.GetAttachedTagsOnObjects(ctx, clusterReferences)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	allowedZones := make(map[string]any, len(v.config.Zones))
@@ -302,6 +372,7 @@ func (v *client) getZonesInDC(ctx context.Context, datacenter *object.Datacenter
 	}
 
 	var matchingZonesMap = make(map[string]struct{})
+	zoneComputeClusterPaths := make(map[string]string)
 	for _, clusterTags := range clustersWithTags {
 		for _, clusterTag := range clusterTags.Tags {
 			if _, ok := tagsInCategoryMap[clusterTag.Name]; !ok {
@@ -310,6 +381,9 @@ func (v *client) getZonesInDC(ctx context.Context, datacenter *object.Datacenter
 
 			if isZoneAllowed(allowedZones, clusterTag.Name) {
 				matchingZonesMap[clusterTag.Name] = struct{}{}
+				if path, ok := clusterRefToPath[clusterTags.ObjectID.Reference()]; ok {
+					zoneComputeClusterPaths[clusterTag.Name] = path
+				}
 			}
 		}
 	}
@@ -320,10 +394,10 @@ func (v *client) getZonesInDC(ctx context.Context, datacenter *object.Datacenter
 	}
 
 	if len(matchingZones) == 0 {
-		return nil, errors.New("no matching zones found")
+		return nil, nil, errors.New("no matching zones found")
 	}
 
-	return matchingZones, nil
+	return matchingZones, zoneComputeClusterPaths, nil
 }
 
 func (v *client) getDataStoresInDC(ctx context.Context, datacenter *object.Datacenter) ([]ZonedDataStore, error) {

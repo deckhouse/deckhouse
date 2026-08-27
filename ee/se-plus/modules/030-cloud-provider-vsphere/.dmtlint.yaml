@@ -69,3 +69,14 @@ linters-settings:
       enum:
         - "properties.internal.properties.providerClusterConfiguration.properties.apiVersion"
         - "properties.internal.properties.providerDiscoveryData.properties.apiVersion"
+  rbac:
+    exclude-rules:
+      # CAPV's VSphereCluster reconciler patches capi-user-credentials Secret
+      # (finalizer + owner ref) that lives in d8-cloud-instance-manager, not in
+      # the module namespace. Placement lint would otherwise force the Role
+      # into d8-cloud-provider-vsphere, breaking the write path.
+      placement:
+        - kind: Role
+          name: capv-controller-manager:capi-user-credentials
+        - kind: RoleBinding
+          name: capv-controller-manager:capi-user-credentials

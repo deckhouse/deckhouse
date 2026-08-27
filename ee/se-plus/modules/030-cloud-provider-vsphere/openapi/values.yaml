@@ -6,6 +6,23 @@ properties:
     type: object
     default: {}
     properties:
+      capvControllerManagerWebhookCert:
+        type: object
+        default: {}
+        x-required-for-helm:
+          - crt
+          - key
+          - ca
+        properties:
+          crt:
+            type: string
+            x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+          key:
+            type: string
+            x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+          ca:
+            type: string
+            x-examples: ["YjY0ZW5jX3N0cmluZwo="]
       compatibilityFlag:
         type: string
         x-examples:
@@ -345,6 +362,9 @@ properties:
                 type: string
               insecure:
                 type: boolean
+              thumbprint:
+                type: string
+                pattern: '^([A-Fa-f0-9]{2}:){19}[A-Fa-f0-9]{2}$'
           nsxt:
             type: object
             required: [ defaultIpPoolName, size, tier1GatewayPath, user, password, host, defaultTcpAppProfileName, defaultUdpAppProfileName ]
@@ -441,6 +461,28 @@ properties:
                   type: string
                   minLength: 1
             description: List of storage policies
+          zoneComputeClusterPaths:
+            type: object
+            additionalProperties:
+              type: string
+            description: |
+              Zone tag name → ClusterComputeResource inventory path (absolute, e.g.
+              "/DatacenterLAB/host/clStage"). Populated by ensure_failure_domains hook
+              from vCenter and consumed by capi/template.yaml to render an absolute
+              resourcePool (relative names collide when several compute clusters share
+              a datacenter).
+          tagURNs:
+            type: array
+            items:
+              type: string
+            description: |
+              vCenter tag URNs to attach to every VM CAPV clones for this cluster
+              (format urn:vmomi:InventoryServiceTag:<uuid>:GLOBAL). Populated by
+              cloud-data-discoverer via EnsureClusterTagURN and consumed by
+              capi/template.yaml which renders them into VSphereMachineTemplate.spec
+              .tagIDs. Currently a single entry — the deckhouse-cluster-name/
+              <clusterUUID> tag from the MCM era, reused so an upgraded cluster keeps
+              its existing tag.
       cniSecretData:
         type: string
         x-examples:

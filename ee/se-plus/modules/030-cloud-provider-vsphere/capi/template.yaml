@@ -1,0 +1,222 @@
+version: v2
+
+
+rolloutFields:
+  - numCPUs
+  - memory
+  - rootDiskSize
+  - template
+  - mainNetwork
+  - additionalNetworks
+  - disableTimesync
+  - runtimeOptions
+
+# failureDomain sits on the generic MachineDeployment node-controller builds — the provider
+# template renders the machine template only. Replaces v1 machine-deployment-spec-patch.yaml,
+# whose sole job was ${zone} string substitution. CAPV resolves the string to a
+# VSphereDeploymentZone / VSphereFailureDomain pair (created by the ensure_failure_domains
+# hook) and overrides VSphereVM.spec.{Server,Datacenter,Folder,ResourcePool,Datastore,Networks}
+# from that topology in pkg/services/vimmachine.go:474 — this is what makes multi-zone
+# placement actually work.
+#
+# .zone arrives as the raw vSphere tag ("E2E Zone 1"), which is not a valid DNS-1123 subdomain
+# and cannot be a Kubernetes object name. hooks/ensure_failure_domains.go therefore sanitizes
+# the tag before creating VSphereDeploymentZone (rfc1123SubdomainName). CAPV's
+# generateOverrideFunc matches Machine.Spec.FailureDomain against DZ.metadata.name; if this
+# template emitted the raw tag while the DZ carried the sanitized one, the lookup would 404,
+# the override would silently no-op, and every VM in a "Zone 1"-style zone would clone with
+# the baseline topology from this template — no per-zone datastore/resourcePool. That failure
+# is invisible from kubectl: it only shows up in vCenter as VMs on the wrong datastore.
+#
+# The sprig expression below mirrors rfc1123SubdomainName step-for-step. Keeping two copies
+# of the sanitization is guarded by hooks/ensure_failure_domains_sanitize_parity_test.go,
+# which extracts this literal from template.yaml, runs it through the same sandbox
+# node-controller uses at render time, and asserts equality with the Go function on a golden
+# set of inputs. A drift in either implementation fails CI on the next run.
+machineDeployment:
+  additionalFields:
+    failureDomain: >-
+      {{- $s := lower .zone | replace " " "-" -}}
+      {{- $s = regexReplaceAll "[^a-z0-9.-]" $s "" -}}
+      {{- trimAll "-." $s -}}
+
+# Rendered under machinetemplate.Render: missingkey=error, sprig sandbox, no access to Helm
+# .Values. Optional fields MUST go through hasKey / get / dig — a direct path like
+# `.instanceClass.runtimeOptions | default dict` still evaluates the missing key first and
+# fails the render. Numbers arrive as JSON floats — use `| int` where an integer is required.
+template: |
+  {{- $ic := .instanceClass }}
+  {{- $icd := get .provider "instanceClassDefaults" | default dict }}
+  {{- $runtime := get $ic "runtimeOptions" | default dict }}
+  {{- $memoryMiB := add ($ic.memory | int) (mod ($ic.memory | int) 4) }}
+
+  {{- /* Network devices: mainNetwork first, then any additionalNetworks. mainNetwork on
+         VsphereInstanceClass is optional — the documented fallback is providerClusterConfiguration
+         .masterNodeGroup.instanceClass.mainNetwork, which templates/registration.yaml already
+         publishes as .provider.instances.mainNetwork. The fallback fires only when the
+         InstanceClass omits the key entirely (v1 semantics preserved: an explicit empty string
+         still renders an empty-name device, matching the pre-migration checksum). */ -}}
+  {{- $networks := list }}
+  {{- if hasKey $ic "mainNetwork" }}
+    {{- $networks = append $networks $ic.mainNetwork }}
+  {{- else }}
+    {{- $providerInstances := get .provider "instances" | default dict }}
+    {{- $fallbackMain := get $providerInstances "mainNetwork" }}
+    {{- if $fallbackMain }}
+      {{- $networks = append $networks $fallbackMain }}
+    {{- end }}
+  {{- end }}
+  {{- if hasKey $ic "additionalNetworks" }}
+    {{- range $n := $ic.additionalNetworks }}
+      {{- $networks = append $networks $n }}
+    {{- end }}
+  {{- end }}
+
+  {{- /* customVMXKeys: disableTimesync (default true) → tools.syncTime=FALSE;
+         runtimeOptions.nestedHardwareVirtualization (default true) → vhv.enable=TRUE. */ -}}
+  {{- $customVMXKeys := dict }}
+  {{- $disableTimesync := true }}
+  {{- if hasKey $ic "disableTimesync" }}
+    {{- $disableTimesync = $ic.disableTimesync }}
+  {{- else if hasKey $icd "disableTimesync" }}
+    {{- $disableTimesync = $icd.disableTimesync }}
+  {{- end }}
+  {{- if $disableTimesync }}
+    {{- $_ := set $customVMXKeys "tools.syncTime" "FALSE" }}
+  {{- end }}
+  {{- $nestedHV := true }}
+  {{- if hasKey $runtime "nestedHardwareVirtualization" }}
+    {{- $nestedHV = $runtime.nestedHardwareVirtualization }}
+  {{- end }}
+  {{- if $nestedHV }}
+    {{- $_ := set $customVMXKeys "vhv.enable" "TRUE" }}
+  {{- end }}
+
+  {{- /* runtimeOptions → CAPV resources.{shares,limits,requests}. Memory reservation defaults
+         to 80% of memoryMiB (matches v1). CPU shares/limits are integers, memory strings. */ -}}
+  {{- $resources := dict }}
+  {{- $shares := dict }}
+  {{- $limits := dict }}
+  {{- $requests := dict }}
+  {{- if hasKey $runtime "cpuShares" }}
+    {{- $_ := set $shares "cpu" ($runtime.cpuShares | int) }}
+  {{- end }}
+  {{- if hasKey $runtime "memoryShares" }}
+    {{- $_ := set $shares "memory" ($runtime.memoryShares | int) }}
+  {{- end }}
+  {{- if hasKey $runtime "cpuLimit" }}
+    {{- $_ := set $limits "cpu" (printf "%dM" ($runtime.cpuLimit | int)) }}
+  {{- end }}
+  {{- if hasKey $runtime "memoryLimit" }}
+    {{- $_ := set $limits "memory" (printf "%dMi" ($runtime.memoryLimit | int)) }}
+  {{- end }}
+  {{- if hasKey $runtime "cpuReservation" }}
+    {{- $_ := set $requests "cpu" (printf "%dM" ($runtime.cpuReservation | int)) }}
+  {{- end }}
+  {{- $memoryReservationPct := 80 }}
+  {{- if hasKey $runtime "memoryReservation" }}
+    {{- $memoryReservationPct = $runtime.memoryReservation | int }}
+  {{- end }}
+  {{- $memoryReservationMiB := mul (div $memoryMiB 100) $memoryReservationPct }}
+  {{- $_ := set $requests "memory" (printf "%dMi" $memoryReservationMiB) }}
+  {{- if gt (len $shares) 0 }}{{- $_ := set $resources "shares" $shares }}{{- end }}
+  {{- if gt (len $limits) 0 }}{{- $_ := set $resources "limits" $limits }}{{- end }}
+  {{- if gt (len $requests) 0 }}{{- $_ := set $resources "requests" $requests }}{{- end }}
+
+  {{- /* MCM used to attach display-name tags (deckhouse-cluster-name / deckhouse-node-role) for
+         vCenter UI grouping. CAPV rejects display names and demands URN-format tag IDs
+         (urn:vmomi:InventoryServiceTag:<uuid>:GLOBAL); resolving/creating those per (NodeGroup,
+         zone) is not wired yet — cloud-data-discoverer does not publish tag URNs. Until it does,
+         VMs are created without tags. See PR #21595 follow-up. */ -}}
+  {{- $tags := dig "tagURNs" (list) .provider }}
+
+  {{- /* Optional string fields — go through get to survive missingkey=error. Fall back to
+         instanceClassDefaults from the discovery payload when the InstanceClass omits them.
+         resourcePool and datastore intentionally do NOT read from the InstanceClass under CAPI:
+         CAPV's overrideWithFailureDomainFunc rewrites both from the resolved DeploymentZone /
+         FailureDomain topology on every reconcile (pkg/services/vimmachine.go), so a value from
+         the InstanceClass would be a dead-write that never lands on the VM. Sourcing them from
+         the discovery defaults keeps the pre-DZ/FD fresh-install window (before ensure_failure_domains
+         has published the CRs) working without misleading operators into thinking VsphereInstanceClass
+         .{resourcePool,datastore} still tunes the placement. */ -}}
+  {{- $template := get $ic "template" | default (get $icd "template") }}
+  {{- $datastore := get $icd "datastore" }}
+  {{- $rootDiskSize := get $ic "rootDiskSize" | default 20 }}
+  {{- $rp := get $icd "resourcePoolPath" }}
+
+  apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+  kind: VSphereMachineTemplate
+  spec:
+    template:
+      spec:
+        template: {{ $template | quote }}
+        server: {{ .provider.server | quote }}
+        {{- /* thumbprint pins the vCenter TLS certificate: CAPV's session code does
+               `insecure := thumbprint == ""` (pkg/session/session.go), so an unset thumbprint on
+               a non-dev vCenter silently disables TLS validation for every clone task. Falls back
+               to the empty string when the operator explicitly opted into providerClusterConfiguration
+               .provider.insecure: true. */ -}}
+        {{- $thumbprint := get .provider "thumbprint" }}
+        {{- if $thumbprint }}
+        thumbprint: {{ $thumbprint | quote }}
+        {{- end }}
+        {{- /* datacenter + absolute folder are baseline: CAPV's `generateOverrideFunc` in
+               pkg/services/vimmachine.go overrides them from the resolved VSphereDeploymentZone
+               / VSphereFailureDomain topology when both CRs exist. If DZ/FD are missing at the
+               time of the first reconcile (fresh install, hook lagging) it returns (nil, false)
+               and only logs a warning — VSphereVM.spec is immutable, so an empty datacenter or
+               a bare folder at that moment survives forever. Keep both explicit so CAPV's own
+               finder can always clone the VM even without the override. */ -}}
+        {{- $dc := get .provider "datacenter" }}
+        {{- if $dc }}
+        datacenter: {{ $dc | quote }}
+        {{- end }}
+        {{- $folder := .provider.vmFolderPath }}
+        {{- if and $dc (not (hasPrefix "/" $folder)) }}
+        folder: {{ printf "/%s/vm/%s" $dc $folder | quote }}
+        {{- else }}
+        folder: {{ $folder | quote }}
+        {{- end }}
+        datastore: {{ $datastore | quote }}
+        {{- /* Prefer an absolute resourcePool inventory path built from the zone's
+               ClusterComputeResource (published by ensure_failure_domains hook) joined with
+               providerDiscoveryData.resourcePoolPath. CAPV's finder resolves a bare name relative
+               to the datacenter and errors out ambiguously when several compute clusters carry a
+               resource pool of the same name. Fall back to the raw value only if the hook has
+               not populated the map yet (fresh install). CAPV then further overrides the RP from
+               the resolved VSphereDeploymentZone.spec.placementConstraint.resourcePool when the
+               DZ has one, so this is a safe pre-resolution. */ -}}
+        {{- if $rp }}
+        {{- $zoneCluster := dig "zoneComputeClusterPaths" .zone "" .provider }}
+        {{- if $zoneCluster }}
+        resourcePool: {{ printf "%s/Resources/%s" $zoneCluster $rp | quote }}
+        {{- else }}
+        resourcePool: {{ $rp | quote }}
+        {{- end }}
+        {{- end }}
+        numCPUs: {{ $ic.numCPUs | int }}
+        memoryMiB: {{ $memoryMiB }}
+        diskGiB: {{ $rootDiskSize | int }}
+        cloneMode: fullClone
+        network:
+          devices:
+          {{- range $networks }}
+          - networkName: {{ . | quote }}
+            dhcp4: true
+          {{- end }}
+        {{- if gt (len $customVMXKeys) 0 }}
+        customVMXKeys:
+          {{- range $k, $v := $customVMXKeys }}
+          {{ $k | quote }}: {{ $v | quote }}
+          {{- end }}
+        {{- end }}
+        {{- if gt (len $resources) 0 }}
+        resources:
+          {{- toYaml $resources | nindent 10 }}
+        {{- end }}
+        {{- if gt (len $tags) 0 }}
+        tagIDs:
+        {{- range $tags }}
+          - {{ . | quote }}
+        {{- end }}
+        {{- end }}
