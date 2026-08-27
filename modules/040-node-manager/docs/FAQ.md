@@ -290,7 +290,6 @@ d8 k auth can-i get sshcredentials/sensitive --as=<user>
 
 The `<omitted>` value means the actual value is hidden from the current user. This behavior applies to both `v1alpha1` and `v1alpha2`, so using a different API version does not reveal the hidden data.
 
-
 ## How do I change the NodeGroup of a static node?
 
 Note that if a node is under [CAPS](./#cluster-api-provider-static) control, you **cannot** change the `NodeGroup` membership of such a node. The only alternative is to [delete StaticInstance](#can-i-delete-a-staticinstance) and create a new one.

@@ -133,6 +133,8 @@ DKP supports automatic addition of physical (bare-metal) servers to the cluster 
    - CAPS automatically maintains the number of nodes in the group according to the `count` parameter.
    - When a node is removed, CAPS performs cleanup and disconnection, and the corresponding StaticInstance transitions to the `Pending` status, allowing it to be reused.
 
+After the node group is created, a script for adding servers to the group will become available. DKP will wait for the required number of StaticInstance objects that match the specified labels. As soon as such an object appears, DKP will use the provided IP address and SSH connection parameters to run the `bootstrap.sh` script and add the server to the group.
+
 ## Modifying a static cluster configuration
 
 The static cluster settings are stored in the [StaticClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#staticclusterconfiguration) structure.
