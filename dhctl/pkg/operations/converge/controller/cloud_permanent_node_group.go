@@ -23,7 +23,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
@@ -215,7 +214,5 @@ func (c *CloudPermanentNodeGroupController) payloadBuilder(ctx *context.Context)
 	if !c.immutable {
 		return nil
 	}
-	return func(_ gocontext.Context, _ *client.KubernetesClient, nodeGroupName, nodeName string) (string, error) {
-		return immutableNodePayload(ctx, nodeGroupName, nodeName)
-	}
+	return NewImmutablePayloadBuilder(ctx)
 }

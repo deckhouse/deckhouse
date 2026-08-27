@@ -267,9 +267,10 @@ func (r *runner) convergeTerraNodes(ctx *convergecontext.Context, metaConfig *co
 		nodeGroupsWithoutStateInCluster,
 		ctx.InfrastructureContext(metaConfig),
 		r.switcher.GetGlobalOptions(),
-		// Converge creates the machines the classic way; the installer configures an
-		// immutable group only while it is bootstrapping the cluster.
-		nil,
+		// A group added after bootstrap has no state and is created here, while the same
+		// group with state goes through the controller and gets this very builder. It
+		// reaches only the groups whose systemType is Immutable.
+		controller.NewImmutablePayloadBuilder(ctx),
 	); err != nil {
 		return err
 	}
@@ -459,12 +460,7 @@ func (r *runner) converge(ctx *convergecontext.Context) error {
 		// An immutable control plane answers no sshd: there is no node user to create and
 		// no master to rebuild the client through, and the node phases run against the
 		// client converge already holds.
-		immutableMasters, err := masterGroupIsImmutable(ctx.Ctx(), ctx)
-		if err != nil {
-			return err
-		}
-
-		if !immutableMasters {
+		if !masterGroupIsImmutable(ctx.Ctx(), ctx) {
 			err = r.switcher.SwitchToNodeUser(ctx.Ctx(), nodesStates[global.MasterNodeGroupName].State)
 			if err != nil {
 				return err

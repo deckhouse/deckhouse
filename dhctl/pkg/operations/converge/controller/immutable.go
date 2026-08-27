@@ -33,6 +33,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/registrydata"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook/controlplane"
 )
@@ -114,6 +115,15 @@ func immutableNodePayload(ctx *context.Context, nodeGroupName, nodeName string) 
 	}
 
 	return payload, nil
+}
+
+// NewImmutablePayloadBuilder hands immutableNodePayload to the bootstrap helpers, which
+// create the machines of a group that has no infrastructure state yet. They call it only
+// for a group whose systemType is Immutable.
+func NewImmutablePayloadBuilder(ctx *context.Context) operations.ImmutablePayloadBuilder {
+	return func(_ gocontext.Context, _ *client.KubernetesClient, nodeGroupName, nodeName string) (string, error) {
+		return immutableNodePayload(ctx, nodeGroupName, nodeName)
+	}
 }
 
 // useClusterRegistry points the payload at the registry the cluster itself pulls from.

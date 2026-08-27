@@ -15,14 +15,21 @@
 package converge
 
 import (
+	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"testing"
 
 	klient "github.com/flant/kube-client/client"
 	"github.com/stretchr/testify/require"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
+	k8stesting "k8s.io/client-go/testing"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -72,17 +79,13 @@ func TestMasterGroupIsImmutable(t *testing.T) {
 	t.Run("a classic control plane keeps the SSH path", func(t *testing.T) {
 		kubeGetter, _ := gateClient(t, nodeGroup("master", ""), nodeGroup("worker", "Immutable"))
 
-		immutableMasters, err := masterGroupIsImmutable(t.Context(), kubeGetter)
-		require.NoError(t, err)
-		require.False(t, immutableMasters)
+		require.False(t, masterGroupIsImmutable(t.Context(), kubeGetter))
 	})
 
 	t.Run("an immutable control plane drops it", func(t *testing.T) {
 		kubeGetter, _ := gateClient(t, nodeGroup("master", "Immutable"), nodeGroup("worker", ""))
 
-		immutableMasters, err := masterGroupIsImmutable(t.Context(), kubeGetter)
-		require.NoError(t, err)
-		require.True(t, immutableMasters)
+		require.True(t, masterGroupIsImmutable(t.Context(), kubeGetter))
 	})
 
 	// A cluster whose master group was never written keeps the path every other
@@ -90,8 +93,74 @@ func TestMasterGroupIsImmutable(t *testing.T) {
 	t.Run("no master group at all", func(t *testing.T) {
 		kubeGetter, _ := gateClient(t, nodeGroup("worker", "Immutable"))
 
-		immutableMasters, err := masterGroupIsImmutable(t.Context(), kubeGetter)
-		require.NoError(t, err)
-		require.False(t, immutableMasters)
+		require.False(t, masterGroupIsImmutable(t.Context(), kubeGetter))
 	})
+
+	// The probe runs on every converge of every cluster. An apiserver restart, an RBAC
+	// gap or a CRD not yet served must leave the classic clusters on the path they
+	// always took instead of aborting their node phase.
+	t.Run("an unreadable NodeGroup list keeps the SSH path", func(t *testing.T) {
+		kubeGetter, dyn := gateClient(t, nodeGroup("master", "Immutable"))
+
+		dyn.PrependReactor("list", "nodegroups", func(k8stesting.Action) (bool, runtime.Object, error) {
+			return true, nil, apierrors.NewForbidden(
+				nodeGroupGVR.GroupResource(), "", fmt.Errorf("converge may not list nodegroups"))
+		})
+
+		require.False(t, masterGroupIsImmutable(t.Context(), kubeGetter))
+	})
+}
+
+// A NodeGroup that has no infrastructure state is created straight from the runner, and
+// an immutable group needs the same per-node document there as the group the controller
+// converges: seeded with the group-wide bashible bundle its machines never register.
+func TestNodeGroupsWithoutStateGetTheImmutablePayloadBuilder(t *testing.T) {
+	t.Parallel()
+
+	const file = "runner.go"
+
+	parsed, err := parser.ParseFile(token.NewFileSet(), file, nil, 0)
+	require.NoError(t, err)
+
+	var calls int
+	ast.Inspect(parsed, func(n ast.Node) bool {
+		call, ok := n.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+
+		fn, ok := call.Fun.(*ast.Ident)
+		if !ok || fn.Name != "bootstrapNewNodeGroups" {
+			return true
+		}
+
+		calls++
+		require.Equalf(t, "controller.NewImmutablePayloadBuilder", calleeName(call.Args[len(call.Args)-1]),
+			"%s creates the NodeGroups that have no state with another payload builder than the one the controller uses: an immutable group added after bootstrap is then seeded with the bashible bundle its machines cannot run", file)
+
+		return true
+	})
+
+	require.Equal(t, 1, calls, "the call that creates the NodeGroups without state must exist in %s", file)
+}
+
+// calleeName is the package-qualified name an argument calls, and "" for an argument
+// that calls nothing.
+func calleeName(arg ast.Expr) string {
+	call, ok := arg.(*ast.CallExpr)
+	if !ok {
+		return ""
+	}
+
+	sel, ok := call.Fun.(*ast.SelectorExpr)
+	if !ok {
+		return ""
+	}
+
+	pkg, ok := sel.X.(*ast.Ident)
+	if !ok {
+		return ""
+	}
+
+	return pkg.Name + "." + sel.Sel.Name
 }
