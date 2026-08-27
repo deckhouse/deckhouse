@@ -10,9 +10,17 @@ require_relative "navigation_helper"
 module Jekyll
   # Publishes the AI-friendly exports of the documentation:
   #
-  #   <lang>/<page path>.md   per-page Markdown body
-  #   <lang>/corpus.json      RAG corpus: metadata + Markdown + chunks
-  #   <lang>/llms.txt         llms.txt index, grouped by the sidebar tree
+  #   <lang>/<page path>.md         per-page Markdown body
+  #   <lang>/<AIcorpusFileName>     RAG corpus: metadata + Markdown + chunks
+  #   <lang>/<AIllmsFileName>       llms.txt index, grouped by the sidebar tree
+  #
+  # Disabled unless `AIExport: true` is set in the site config, and the two file
+  # names are taken from the config as well: the same source tree is built
+  # several times (the documentation itself and the embedded modules, see
+  # `werf-documentation-static.inc.yaml` and `werf-modules-static.inc.yaml`),
+  # and those builds publish their indexes side by side under different names.
+  # `AIRoot: true` marks the build whose llms.txt is the entry point of the
+  # site, the one that points an agent at the corpora.
   #
   # It runs on `site, :post_write` rather than as a Liquid template (the way
   # `search.json` is built) because `page.content` inside Liquid depends on the
@@ -21,6 +29,25 @@ module Jekyll
     CORPUS_VERSION = 1
     PRODUCT_CODE = "kubernetes-platform"
     GENERATOR = "jekyll"
+
+    ENABLED_KEY = "AIExport"
+    ROOT_KEY = "AIRoot"
+    LLMS_NAME_KEY = "AIllmsFileName"
+    CORPUS_NAME_KEY = "AIcorpusFileName"
+
+    DEFAULT_LLMS_NAME = "llms.txt"
+    DEFAULT_CORPUS_NAME = "corpus.json"
+
+    # `--config a.yml,b.yml` merges plain YAML, so a flag arrives as a real
+    # boolean; a string is accepted too, since an `AIExport` that reads as
+    # "true" and silently exports nothing would be baffling.
+    def self.truthy?(value)
+      value == true || value.to_s.strip.casecmp("true").zero?
+    end
+
+    def self.enabled?(site)
+      truthy?(site.config[ENABLED_KEY])
+    end
 
     # An H2 section longer than this is split further, by H3.
     MAX_CHUNK_CHARS = 6000
@@ -43,6 +70,9 @@ module Jekyll
         @site = site
         @doc_prefix = site.config["canonical_url_prefix_documentation"].to_s.sub(%r{/+\z}, "")
         @urls = site.config["urls"] || {}
+        @llms_name = file_name(LLMS_NAME_KEY, DEFAULT_LLMS_NAME)
+        @corpus_name = file_name(CORPUS_NAME_KEY, DEFAULT_CORPUS_NAME)
+        @root = AiExport.truthy?(site.config[ROOT_KEY])
       end
 
       def run
@@ -60,6 +90,16 @@ module Jekyll
       end
 
       private
+
+      # A name is a single file name, not a path: the exports always land next
+      # to each other in `<dest>/<lang>/`, and the URLs published in llms.txt
+      # are built from it.
+      def file_name(key, fallback)
+        name = File.basename(@site.config[key].to_s.strip)
+        return fallback if name.empty? || name == "."
+
+        name
+      end
 
       # --- page selection --------------------------------------------------
 
@@ -211,8 +251,8 @@ module Jekyll
           "documents" => documents,
         }
 
-        write(lang, "corpus.json", JSON.generate(corpus))
-        Jekyll.logger.info "AI export:", "#{lang}/corpus.json — #{documents.length} documents"
+        write(lang, @corpus_name, JSON.generate(corpus))
+        Jekyll.logger.info "AI export:", "#{lang}/#{@corpus_name} — #{documents.length} documents"
       end
 
       def write_llms_txt(lang, documents)
@@ -230,17 +270,23 @@ module Jekyll
           lines << ""
         end
 
-        lines << "## Modules"
-        lines << "- [llms.txt](#{absolute(lang, "#{@doc_prefix}/llms.txt")}): LLM index of built-in (internal) modules)"
-        lines << "- [external-llms.txt](#{absolute(lang, "#{@doc_prefix}/external-llms.txt")}): LLM index of external modules"
-        lines << ""
+        if @root
+          lines << "## Optional"
+          lines << "- [#{@corpus_name}](#{absolute(lang, "#{@doc_prefix}/#{@corpus_name}")}): RAG corpus with page Markdown and chunks for documentation pages."
+          lines << ""
 
-        lines << "## Optional"
-        lines << "- [corpus.json](#{absolute(lang, "#{@doc_prefix}/corpus.json")}): RAG corpus with page Markdown and chunks for documentation pages)"
-        lines << "- [external-corpus.json](#{absolute(lang, "#{@doc_prefix}/external-corpus.json")}): RAG corpus with page Markdown and chunks for external modules)"
-        lines << ""
+          lines << "## Modules"
+          lines << "- [embedded-llms.txt](#{absolute(lang, "/modules/embedded-llms.txt")}): LLM index of embedded modules."
+          lines << "- [external-llms.txt](#{absolute(lang, "/modules/external-llms.txt")}): LLM index of external modules."
+          lines << ""
 
-        write(lang, "llms.txt", lines.join("\n"))
+          lines << "## Modules optional"
+          lines << "- [embedded-corpus.json](#{absolute(lang, "/modules/embedded-corpus.json")}): RAG corpus with page Markdown and chunks for embedded modules."
+          lines << "- [external-corpus.json](#{absolute(lang, "/modules/external-corpus.json")}): RAG corpus with page Markdown and chunks for external modules."
+          lines << ""
+        end
+
+        write(lang, @llms_name, lines.join("\n"))
       end
 
       def site_title(lang)
@@ -452,6 +498,10 @@ module Jekyll
 end
 
 Jekyll::Hooks.register :site, :post_write do |site|
-  Jekyll.logger.info "AI export:", "generating llms.txt, corpus.json and per-page Markdown..."
-  Jekyll::AiExport::Exporter.new(site).run
+  if Jekyll::AiExport.enabled?(site)
+    Jekyll.logger.info "AI export:", "generating llms.txt, corpus.json and per-page Markdown..."
+    Jekyll::AiExport::Exporter.new(site).run
+  else
+    Jekyll.logger.debug "AI export:", "disabled, set `#{Jekyll::AiExport::ENABLED_KEY}: true` to enable"
+  end
 end

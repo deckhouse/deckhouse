@@ -92,7 +92,10 @@ shell:
         EOD
 {{ end }}
         # Creating additional config...
-        echo -e "\nd8Revision: {{ .Edition }}" >> /tmp/_config_additional.yml
+        echo -e "\nd8Revision: {{ .Edition }}\n" >> /tmp/_config_additional.yml
+        {{ if ne .Edition "CSE" }}
+        echo -e "\nAIllmsFileName: embedded-llms.txt\nAIcorpusFileName: embedded-corpus.json\nAIRoot: false\n" >> /tmp/_config_additional.yml
+        {{ end }}
 
         echo '[] Generating static files of the documentation part...'
         cd ..

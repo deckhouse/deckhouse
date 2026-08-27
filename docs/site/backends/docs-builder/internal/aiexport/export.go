@@ -298,9 +298,6 @@ func renderLLMsTxt(manifest *Manifest, baseURL string, documents []Document) str
 		out.WriteString("\n")
 	}
 
-	out.WriteString("## Optional\n")
-	out.WriteString("- [" + corpusName + "](" + baseURL + "/modules/" + corpusName + "): RAG corpus with page Markdown and chunks for external modules\n")
-
 	return out.String()
 }
 

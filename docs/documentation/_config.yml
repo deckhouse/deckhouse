@@ -19,6 +19,12 @@ github_repo_path: /deckhouse/deckhouse
 d8Revision: EE
 
 # AI-friendly exports: llms.txt, corpus.json and per-page Markdown (_plugins/ai_export.rb).
+AIExport: true
+# AIRoot add the "Optional" section to llms.txt  with the links to the llms.txt and corpus.json of the embedded and external modules.
+AIRoot: true
+AIllmsFileName: llms.txt
+AIcorpusFileName: corpus.json
+
 # The llms.txt summary falls back to site_description of the corresponding language.
 ai_export:
   title: Deckhouse Kubernetes Platform
