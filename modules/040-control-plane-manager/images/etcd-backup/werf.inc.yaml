@@ -35,5 +35,6 @@ from: {{ index $.Images "builder/distroless" }}
 final: false
 shell:
   beforeInstall:
-  - pm install bash gzip tar gawk -d /out
+  - pm install bash gzip tar gawk gnu-glibc -d /out
+  - ln -sf /bin/bash /out/bin/sh
 {{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}
