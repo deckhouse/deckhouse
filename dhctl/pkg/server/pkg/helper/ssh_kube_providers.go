@@ -50,6 +50,27 @@ func WithKubeConfig(kubeConfig string) CreateProvidersOption {
 	}
 }
 
+// SSHProviderOrNil resolves the SSH provider an operation should run with. A request that carries a
+// kubeconfig drives the cluster through the API server, so it may legitimately have no master hosts
+// to connect to; there the provider is nil and every consumer has to guard on it. Without a
+// kubeconfig, missing hosts are a real misconfiguration and stay an error.
+//
+// The nil matters: GetSSHProvider hands back a hostless provider alongside the sentinel, and that
+// value looks connectable to every govalue.IsNil guard downstream while failing deep inside
+// lib-connection once something dials it.
+func SSHProviderOrNil(ctx context.Context, initializer *providerinitializer.SSHProviderInitializer, kubeConfig string) (libcon.SSHProvider, error) {
+	sshProvider, err := initializer.GetSSHProvider(ctx)
+	if err == nil {
+		return sshProvider, nil
+	}
+
+	if kubeConfig != "" && errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
+		return nil, nil
+	}
+
+	return nil, err
+}
+
 func CreateProviders(ctx context.Context, config string, isDebug bool, tmpDir string, opts ...CreateProvidersOption) (*providerinitializer.SSHProviderInitializer, libcon.KubeProvider, func() error, error) {
 	options := &CreateProvidersOptions{}
 	for _, opt := range opts {

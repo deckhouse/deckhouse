@@ -42,6 +42,9 @@ message CheckStart {
   string provider_specific_cluster_config = 3;
   string state = 4;
   CheckStartOptions options = 5;
+  // kubeconfig points the kube provider straight at the API server. connection_config is
+  // still required and must carry an SSHConfig document; its SSHHost documents may be omitted.
+  string kubeconfig = 6;
 }
 
 message CheckCancel {}
