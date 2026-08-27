@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"os"
 	"path"
 	"path/filepath"
@@ -29,6 +30,8 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -123,13 +126,24 @@ type Chunk struct {
 // `<publicDir>/<lang>/modules/{external-llms.txt,external-corpus.json}`.
 //
 // A missing manifest is not an error: the site simply has no module pages yet.
-func Export(publicDir, lang string) error {
-	manifest, err := readManifest(filepath.Join(publicDir, lang, "ai", "ai.json"))
+func Export(publicDir, lang string, logger *log.Logger) error {
+	if logger == nil {
+		// The export is a best-effort step of the build (see `internal/docs`),
+		// so a caller that forgot the logger should not take the build down.
+		logger = log.NewNop()
+	}
+
+	manifestPath := filepath.Join(publicDir, lang, "ai", "ai.json")
+
+	manifest, err := readManifest(manifestPath)
 	if err != nil {
 		return err
 	}
 
 	if manifest == nil || len(manifest.Documents) == 0 {
+		logger.Debug("ai export skipped: no pages in the manifest",
+			slog.String("lang", lang), slog.String("manifest", manifestPath))
+
 		return nil
 	}
 
@@ -137,7 +151,7 @@ func Export(publicDir, lang string) error {
 	documents := make([]Document, 0, len(manifest.Documents))
 
 	for _, entry := range manifest.Documents {
-		document, err := exportPage(publicDir, baseURL, manifest, entry)
+		document, err := exportPage(publicDir, baseURL, manifest, entry, logger)
 		if err != nil {
 			return err
 		}
@@ -147,7 +161,17 @@ func Export(publicDir, lang string) error {
 		}
 	}
 
+	// Pages the manifest lists but Hugo has not rendered, and pages that
+	// converted to nothing. A handful is normal; a jump means the manifest and
+	// the rendered site have drifted apart.
+	if skipped := len(manifest.Documents) - len(documents); skipped > 0 {
+		logger.Info("ai export skipped pages",
+			slog.String("lang", lang), slog.Int("count", skipped), slog.Int("total", len(manifest.Documents)))
+	}
+
 	if len(documents) == 0 {
+		logger.Warn("ai export produced no documents", slog.String("lang", lang))
+
 		return nil
 	}
 
@@ -181,6 +205,12 @@ func Export(publicDir, lang string) error {
 		return fmt.Errorf("write %s: %w", llmsName, err)
 	}
 
+	logger.Info("ai export written",
+		slog.String("lang", lang),
+		slog.Int("documents", len(documents)),
+		slog.Int("corpus_bytes", len(encoded)),
+		slog.String("dir", destDir))
+
 	return nil
 }
 
@@ -202,7 +232,7 @@ func readManifest(manifestPath string) (*Manifest, error) {
 	return manifest, nil
 }
 
-func exportPage(publicDir, baseURL string, manifest *Manifest, entry ManifestDocument) (*Document, error) {
+func exportPage(publicDir, baseURL string, manifest *Manifest, entry ManifestDocument, logger *log.Logger) (*Document, error) {
 	htmlPath := filepath.Join(publicDir, filepath.FromSlash(strings.TrimPrefix(entry.HTMLPath, "/")))
 
 	source, err := os.ReadFile(htmlPath)
@@ -210,6 +240,8 @@ func exportPage(publicDir, baseURL string, manifest *Manifest, entry ManifestDoc
 		// Hugo may have skipped the page (a broken module is stripped and the
 		// site rebuilt); the manifest is only a hint, not a contract.
 		if errors.Is(err, fs.ErrNotExist) {
+			logger.Debug("page is not rendered", slog.String("html_path", htmlPath))
+
 			return nil, nil
 		}
 
@@ -222,6 +254,8 @@ func exportPage(publicDir, baseURL string, manifest *Manifest, entry ManifestDoc
 	}
 
 	if strings.TrimSpace(page.Markdown) == "" {
+		logger.Debug("page converted to an empty document", slog.String("html_path", htmlPath))
+
 		return nil, nil
 	}
 
@@ -241,6 +275,9 @@ func exportPage(publicDir, baseURL string, manifest *Manifest, entry ManifestDoc
 		// that the site itself publishes, but `- []( … )` in llms.txt is no
 		// use to anyone either, so name them after their file.
 		title = titleFromURL(entry.URL)
+
+		logger.Debug("page has no title, named after its file",
+			slog.String("url", entry.URL), slog.String("title", title))
 	}
 
 	id := fmt.Sprintf("%x", sha1.Sum([]byte(entry.URL)))

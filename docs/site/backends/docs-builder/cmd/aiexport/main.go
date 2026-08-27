@@ -29,13 +29,29 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
+
 	"github.com/flant/docs-builder/internal/aiexport"
 )
 
 func main() {
 	publicDir := flag.String("public", "public", "Directory with the site rendered by Hugo")
 	langs := flag.String("langs", "en,ru", "Comma-separated list of languages to export")
+	verbose := flag.Bool("v", false, "Log every skipped and untitled page")
 	flag.Parse()
+
+	// The same lines the build writes, but on stderr, so that the paths this
+	// command prints on stdout stay usable in a pipe.
+	level := log.LevelInfo
+	if *verbose {
+		level = log.LevelDebug
+	}
+
+	logger := log.NewLogger(
+		log.WithLevel(level.Level()),
+		log.WithHandlerType(log.TextHandlerType),
+		log.WithOutput(os.Stderr),
+	)
 
 	failed := false
 
@@ -57,7 +73,7 @@ func main() {
 			continue
 		}
 
-		if err := aiexport.Export(*publicDir, lang); err != nil {
+		if err := aiexport.Export(*publicDir, lang, logger); err != nil {
 			fmt.Fprintf(os.Stderr, "%s: %v\n", lang, err)
 			failed = true
 

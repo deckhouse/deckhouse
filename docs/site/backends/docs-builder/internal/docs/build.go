@@ -82,7 +82,7 @@ func (svc *Service) Build(ctx context.Context) error {
 		// The AI export writes the per-page Markdown, the llms.txt index and the corpus
 		// into `public/<lang>/modules`, so it has to run before that directory
 		// is synced to destDir below.
-		err = aiexport.Export(filepath.Join(svc.baseDir, "public"), lang)
+		err = aiexport.Export(filepath.Join(svc.baseDir, "public"), lang, svc.logger.Named("ai_export"))
 		if err != nil {
 			// The docs themselves are fine without the AI export; degrade
 			// instead of failing the whole build over it.

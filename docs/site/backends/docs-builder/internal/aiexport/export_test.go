@@ -23,7 +23,7 @@ import (
 )
 
 func TestExportWithoutManifest(t *testing.T) {
-	if err := Export(t.TempDir(), "en"); err != nil {
+	if err := Export(t.TempDir(), "en", log.NewNop()); err != nil {
 		t.Fatalf("Export: %v", err)
 	}
 }
@@ -73,7 +73,7 @@ func TestExport(t *testing.T) {
 	}
 	writeFile(t, filepath.Join(publicDir, "en", "ai", "ai.json"), string(encoded))
 
-	if err := Export(publicDir, "en"); err != nil {
+	if err := Export(publicDir, "en", log.NewNop()); err != nil {
 		t.Fatalf("Export: %v", err)
 	}
 
