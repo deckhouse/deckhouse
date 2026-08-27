@@ -1,9 +1,9 @@
 ---
 title: "Cloud provider — Basis Dynamix"
-description: "Управление облачными ресурсами в Deckhouse Kubernetes Platform с помощью Базис.DynamiX."
+description: "Управление облачными ресурсами в Deckhouse Kubernetes Platform с помощью Basis Dynamix."
 ---
 
-Модуль `cloud-provider-dynamix` обеспечивает интеграцию Deckhouse Kubernetes Platform с платформой [Базис.DynamiX](https://basistech.ru/products/basis-dynamix/). Он предоставляет возможность модулю [`node-manager`](/modules/node-manager/) использовать ресурсы Dynamix при заказе узлов для [NodeGroup](/modules/node-manager/cr.html#nodegroup).
+Модуль `cloud-provider-dynamix` обеспечивает интеграцию Deckhouse Kubernetes Platform с платформой [Basis Dynamix](https://basistech.ru/products/basis-dynamix/). Он предоставляет возможность модулю [`node-manager`](/modules/node-manager/) использовать ресурсы Dynamix при заказе узлов для [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 
 Функции модуля `cloud-provider-dynamix`:
 
