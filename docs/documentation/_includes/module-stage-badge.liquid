@@ -11,7 +11,7 @@
 {%- endif %}
 {%- if stage and site.data.i18n.features[stage_long][page.lang] %}
   {%- capture alert_content %}
-{{ site.data.i18n.features['module_lifecycle_stage'][page.lang] }}: <span style='border-bottom: 1px dotted #000' data-tippy-content='{{ site.data.i18n.features[stage_long][page.lang] }}'>{{ stage }}</span>
+{{ site.data.i18n.features['module_lifecycle_stage'][page.lang] }}: <span  data-tippy-content='{{ site.data.i18n.features[stage_long][page.lang] }}' class='alert__info'>{{ stage }}</span>
   {%- if hasRequirements and site.data.i18n.features['requirements_for_alert'][page.lang] %}
   <br>{{ site.data.i18n.features['requirements_for_alert'][page.lang] }}
   {%- endif %}
