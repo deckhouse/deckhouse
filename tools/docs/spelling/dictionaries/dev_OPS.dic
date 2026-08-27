@@ -1,4 +1,4 @@
-2849
+2845
 1GB
 2GB
 5XX
@@ -634,7 +634,6 @@ Graylog
 grep
 gRPC
 GRPC
-GuestInfo
 gz
 Habr
 hardcoded
@@ -834,7 +833,6 @@ kube
 kubeadm
 KubeadmConfigTemplateData
 kubeall
-KubeClusterExtension
 kubeconfig
 kubeconfigGeneratorMasterCA
 kubeconfigs
@@ -897,7 +895,6 @@ logLevel
 Logstash
 loki
 longtermStorageClass
-loopback
 LowNodeUtilization
 LRS
 lsblk
@@ -1605,7 +1602,6 @@ uninstalling
 Unlabel
 UNPACKEDSIZE
 unschedulable
-Uplink
 uploadproxy
 upmeter
 UpmeterHookProbe
@@ -1948,8 +1944,8 @@ ZvirtInstanceClass
 внутренного
 внутрикластерное
 внутрикластерной
-внутрикластерный
 внутрикластерным
+внутрикластерный
 воркеров
 выгрузок
 выдаватель
@@ -2202,6 +2198,7 @@ ZvirtInstanceClass
 масштабируется
 Мб
 МБ
+МиБ
 медиафайлов
 медиафайлы
 межкластерная
@@ -2219,7 +2216,6 @@ ZvirtInstanceClass
 меш
 меша
 меше
-МиБ
 мигрирована
 микросегментация
 микросервисов
