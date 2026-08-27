@@ -761,7 +761,10 @@ func (c *converter) inlineFor(el *html.Node) string {
 
 func codeSpan(el *html.Node) string {
 	text := strings.ReplaceAll(strings.ReplaceAll(textContent(el), "\r\n", " "), "\n", " ")
-	if strings.TrimSpace(text) == "" {
+	// Whitespace hugging the edges of a `<code>` is an artifact of how the HTML
+	// was laid out, not part of the value: `<code>false </code>` means `false`.
+	text = strings.Trim(text, " \t")
+	if text == "" {
 		return ""
 	}
 

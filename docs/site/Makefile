@@ -10,6 +10,8 @@ WERF_BIN := $(ROOT_DIR)/bin/werf
 MODULE_PATH ?=
 CHANNEL ?= alpha
 MODULE_VERSION ?= v0.1.0
+HUGO_IMAGE ?= ghcr.io/gohugoio/hugo:v0.163.3
+AI_EXPORT_SRC ?= backends/docs-builder-template
 
 WERF_REPO ?= :local
 ifeq ($(USE_LOCALHOST_REPO),1)
@@ -60,6 +62,22 @@ external-module: werf-bin ## Watch external module docs and run the local portal
 		$(MAKE) free-port-80; \
 		echo -n "\nwerf: "; $(WERF_BIN) version; \
 		$(WERF_BIN) compose up --follow --docker-compose-command-options='-d --force-recreate' --dev --env development --repo $(WERF_REPO) --skip-image-spec-stage=true
+
+ai-export: ## Generate the AI export (per-page .md, llms.txt, corpus.json) for external modules
+		##~ Options: [AI_EXPORT_SRC=backends/docs-builder-template] [HUGO_IMAGE=ghcr.io/gohugoio/hugo:vX.Y.Z]
+		##~ Expects a prepared content/modules + data/modules tree in AI_EXPORT_SRC.
+		##~ In a cluster the same code runs inside docs-builder; here Hugo and the
+		##~ exporter are invoked directly, so no docs-builder container is needed.
+		@test -f "$(AI_EXPORT_SRC)/data/modules/channels.yaml" || \
+			{ echo "$(AI_EXPORT_SRC)/data/modules/channels.yaml is missing: modules without a channel are not exported." >&2; exit 1; }
+		docker run --rm \
+			--user "$(shell id -u):$(shell id -g)" \
+			--volume "$(abspath $(AI_EXPORT_SRC)):/src" \
+			--workdir /src \
+			--entrypoint hugo \
+			$(HUGO_IMAGE) \
+			--noBuildLock --source /src --destination /src/public --environment production
+		cd backends/docs-builder && go run ./cmd/aiexport --public "$(abspath $(AI_EXPORT_SRC))/public"
 
 ##@ Helpers
 
@@ -146,5 +164,5 @@ help: ## Show this help message
 	/^[a-zA-Z0-9_-]+:.*?## / { printf "  %-20s %s\n", $$1, $$2 } \
 	/^.?.?##~/              { printf "  %-20s %s\n", "", substr($$1, 6) }' $(MAKEFILE_LIST)
 
-.PHONY: help up dev regenerate-menu
+.PHONY: help up dev regenerate-menu ai-export
 .PHONY: werf-bin clean down regenerate-metadata registry registry-down free-port-80 external-module

@@ -99,11 +99,13 @@
   {{- range $.Site.Pages -}}
     {{- $url := replaceRE `^/(ru|en)/` "/" .RelPermalink -}}
     {{- if and .File (eq .Section "modules") (ne .Kind "section") (ne .Kind "home") (hasPrefix $url $moduleSection) -}}
+      {{- /* `plainify` drops the tags but leaves the entities behind, and
+             `&rsquo;` in a description helps nobody. */ -}}
       {{- $description := "" -}}
       {{- with .Description -}}
-        {{- $description = . -}}
+        {{- $description = . | plainify | htmlUnescape -}}
       {{- else -}}
-        {{- with .Summary }}{{ $description = . | plainify | truncate 200 "" }}{{ end -}}
+        {{- with .Summary }}{{ $description = . | plainify | htmlUnescape | truncate 200 "" }}{{ end -}}
       {{- end -}}
 
       {{- $keywords := slice -}}

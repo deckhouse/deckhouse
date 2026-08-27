@@ -28,6 +28,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"unicode"
 )
 
 const (
@@ -229,6 +230,14 @@ func exportPage(publicDir, baseURL string, manifest *Manifest, entry ManifestDoc
 		title = entry.Title
 	}
 
+	if title == "" {
+		// Pages with neither an `<h1>` nor a frontmatter title do exist —
+		// `docs/internal/*` of a few modules. Dropping them would hide content
+		// that the site itself publishes, but `- []( … )` in llms.txt is no
+		// use to anyone either, so name them after their file.
+		title = titleFromURL(entry.URL)
+	}
+
 	id := fmt.Sprintf("%x", sha1.Sum([]byte(entry.URL)))
 
 	return &Document{
@@ -303,6 +312,26 @@ func mdURL(pageURL string) string {
 
 func collapseLine(text string) string {
 	return strings.TrimSpace(strings.Join(strings.Fields(text), " "))
+}
+
+// titleFromURL turns `/modules/upmeter/stable/internal/development.html` into
+// "Development" — a last resort for untitled pages.
+func titleFromURL(pageURL string) string {
+	name := path.Base(strings.TrimSuffix(strings.TrimSuffix(pageURL, "/"), path.Ext(pageURL)))
+	if name == "" || name == "." || name == "/" {
+		return "Untitled"
+	}
+
+	words := strings.FieldsFunc(name, func(r rune) bool { return r == '_' || r == '-' })
+	if len(words) == 0 {
+		return "Untitled"
+	}
+
+	first := []rune(words[0])
+	first[0] = unicode.ToUpper(first[0])
+	words[0] = string(first)
+
+	return strings.Join(words, " ")
 }
 
 func cleanList(values []string) []string {
