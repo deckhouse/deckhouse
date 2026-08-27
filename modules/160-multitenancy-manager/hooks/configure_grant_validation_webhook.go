@@ -40,22 +40,13 @@ const validatingWebhookConfigurationName = "cluster-objects-grants-validator"
 // can deadlock the cluster. The in-handler IsSystem check remains as
 // defense-in-depth.
 //
-// Auto-wrapped (managed-by-namespace) projects are EXCLUDED: they are plain orphan
-// namespaces wrapped only for accounting and must behave like ordinary namespaces
-// (allowNamespacesWithoutProjects). Enforcing the grant allow-list there
-// breaks the basic-model RoleBindings (user-authz:*) that user-authz-controller emits for
-// AuthorizationRules targeting such a namespace: the controller then fails on this webhook and
-// retries forever (before #22828 the same happened to the user-authz Helm release, deadlocking the
-// module's 'main' queue). The ValidatingAdmissionPolicy exemption for the same label is narrower:
-// it skips only Namespace UPDATE/DELETE, not every resource inside the namespace.
+// Every namespace outside a project is adopted into one now, so this selector covers namespaces
+// that used to be orphans as well. The basic-model RoleBindings (user-authz:*) that
+// user-authz-controller emits for AuthorizationRules targeting such a namespace do not deadlock on
+// that: the controller's service account is excluded by systemWriterMatchConditions below at the
+// apiserver, before any call reaches this webhook.
 var projectNamespaceSelector = &v1.LabelSelector{
 	MatchLabels: map[string]string{"heritage": "multitenancy-manager"},
-	MatchExpressions: []v1.LabelSelectorRequirement{
-		{
-			Key:      "multitenancy.deckhouse.io/project-managed-by-namespace",
-			Operator: v1.LabelSelectorOpDoesNotExist,
-		},
-	},
 }
 
 // systemWriterMatchConditions make the apiserver SKIP this webhook entirely for system / module

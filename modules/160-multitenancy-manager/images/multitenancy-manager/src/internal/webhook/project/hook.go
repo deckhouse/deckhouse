@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"reflect"
 	"regexp"
 	"strings"
 
@@ -76,18 +75,15 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 			return admission.Denied("Projects cannot start with 'd8-' or 'kube-'")
 		}
 
-		// the controller auto-wraps an existing user namespace into a managed-by-namespace project,
-		// so a same-name namespace is expected in that case.
-		managedByNamespace := project.Labels[v1alpha3.ProjectLabelManagedByNamespace] == v1alpha3.ManagedByNamespace
-
 		// The project's main namespace is named after the project, so a single Get is enough; a full
 		// namespace List would scan the whole cluster on every project create.
 		namespace := new(corev1.Namespace)
 		switch err := v.client.Get(ctx, client.ObjectKey{Name: project.Name}, namespace); {
 		case err == nil:
-			_, adopt := namespace.Annotations[v1alpha3.NamespaceAnnotationAdopt]
-			allowExisting := adopt || (managedByNamespace && privileged)
-			if !allowExisting {
+			// The controller adopts every namespace that belongs to no project, so a same-name
+			// namespace is expected when the request comes from the controller itself. A user still
+			// cannot claim an existing namespace by creating a project over it.
+			if !privileged {
 				return admission.Denied(fmt.Sprintf("The '%s' project cannot be created, a namespace with its name exists", project.Name))
 			}
 		case !apierrors.IsNotFound(err):
@@ -124,24 +120,6 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 	}
 
 	if req.Operation == admissionv1.Update {
-		// A managed-by-namespace project is owned by its namespace; reject manual spec edits unless
-		// the request comes from the controller/Deckhouse or it detaches the project by removing the
-		// managed-by-namespace label.
-		old := new(v1alpha3.Project)
-		if len(req.OldObject.Raw) > 0 {
-			if err := yaml.Unmarshal(req.OldObject.Raw, old); err != nil {
-				return admission.Errored(http.StatusBadRequest, err)
-			}
-		}
-		if old.Labels[v1alpha3.ProjectLabelManagedByNamespace] == v1alpha3.ManagedByNamespace && !privileged {
-			labelRemoved := project.Labels[v1alpha3.ProjectLabelManagedByNamespace] != v1alpha3.ManagedByNamespace
-			if !labelRemoved && !reflect.DeepEqual(old.Spec, project.Spec) {
-				return admission.Denied(fmt.Sprintf(
-					"The '%s' project is managed by its namespace; remove the %s label to detach it before editing its spec",
-					project.Name, v1alpha3.ProjectLabelManagedByNamespace))
-			}
-		}
-
 		// pass triggered projects
 		if privileged {
 			if annotations := project.Annotations; annotations != nil {

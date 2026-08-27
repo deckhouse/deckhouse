@@ -40,25 +40,6 @@ func standardFieldLabels(project string) map[string]string {
 	}
 }
 
-// ensureNamespace creates (or updates the labels of) the project namespace. It is used for
-// template-less projects, where no helm release manages the namespace.
-func (m *Manager) ensureNamespace(ctx context.Context, project *v1alpha3.Project) error {
-	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: project.Name}}
-	_, err := controllerutil.CreateOrUpdate(ctx, m.client, ns, func() error {
-		if ns.Labels == nil {
-			ns.Labels = make(map[string]string)
-		}
-		ns.Labels[v1alpha3.ResourceLabelHeritage] = v1alpha3.ResourceHeritageMultitenancy
-		ns.Labels[v1alpha3.ResourceLabelProject] = project.Name
-		ns.Labels[v1alpha3.ResourceLabelTemplate] = project.Spec.ProjectTemplateName
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("ensure the '%s' namespace: %w", project.Name, err)
-	}
-	return nil
-}
-
 // reconcileStandardFields applies the Project standard fields: the quota (as a ResourceQuota) and
 // the administrators (as an auto-managed ProjectRoleBinding).
 func (m *Manager) reconcileStandardFields(ctx context.Context, project *v1alpha3.Project) error {
