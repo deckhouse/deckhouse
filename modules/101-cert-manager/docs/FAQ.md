@@ -13,8 +13,6 @@ The module installs the following ClusterIssuers:
 
 If you need support for other types of certificates, you can add them yourself.
 
-Namespaced `Issuer` ACME and acme-dns endpoints must be public HTTPS hostnames. Vault may use the in-cluster Service DNS from the tutorial below (`http://vault.<namespace>.svc.cluster.local`). Point a private ACME certificate authority at a `ClusterIssuer`.
-
 ## How to add an additional `ClusterIssuer`?
 
 ### When is an additional `ClusterIssuer` required?

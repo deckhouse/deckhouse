@@ -14,8 +14,6 @@ description: "Ответы на часто задаваемые вопросы �
 
 Если требуется поддержка других типов сертификатов, вы можете добавить их самостоятельно.
 
-В namespaced-ресурсе `Issuer` для ACME и acme-dns допускаются только публичные HTTPS-имена. Vault можно указывать как in-cluster Service из туториала ниже (`http://vault.<namespace>.svc.cluster.local`). Частный ACME CA подключайте через `ClusterIssuer`.
-
 ## Как добавить дополнительный `ClusterIssuer`?
 
 ### В каких случаях требуется дополнительный `ClusterIssuer`?
