@@ -59,17 +59,9 @@ func (w *NodeConfigValidator) Handle(_ context.Context, req admission.Request) a
 // controller renders them on every pass and freezing them here would deadlock
 // it: the hostname, which must match the Node name, and the disk selector,
 // which the cluster renders a guess for when the machine named none.
-//
-// An absent network is not the machine's either: nothing to protect, and the
-// render fills it in. The controller is exempt from this webhook anyway
-// (matchConditions in templates/node-controller/webhook.yaml).
 func validateNodeConfigUpdate(old, updated *internalv1alpha1.NodeConfig) error {
-	// A config that named no network has nothing of the machine's to protect,
-	// and the controller renders eth0/DHCP into it on its first pass.
-	namedANetwork := !sameNetworkBesidesHostname(&old.Spec.Network, &internalv1alpha1.Network{})
-	if namedANetwork && !sameNetworkBesidesHostname(&old.Spec.Network, &updated.Spec.Network) {
-		return fmt.Errorf("spec.network is written on the machine and cannot be changed here; " +
-			"delete this NodeConfig and let the node publish what it has")
+	if err := validateNetworkUpdate(&old.Spec.Network, &updated.Spec.Network); err != nil {
+		return err
 	}
 	if old.Spec.Storage.Device != updated.Spec.Storage.Device ||
 		old.Spec.Storage.Wipe != updated.Spec.Storage.Wipe ||
@@ -78,6 +70,36 @@ func validateNodeConfigUpdate(old, updated *internalv1alpha1.NodeConfig) error {
 			"changed here; delete this NodeConfig and let the node publish what it has")
 	}
 	return nil
+}
+
+// validateNetworkUpdate refuses every network an update writes but the
+// machine's own. A machine publishes its addressing when it creates the object,
+// so no update ever has one to introduce; the sole exception is the fallback
+// the controller renders for a machine that named none, which says nothing only
+// the machine could know.
+func validateNetworkUpdate(old, updated *internalv1alpha1.Network) error {
+	if sameNetworkBesidesHostname(old, updated) {
+		return nil
+	}
+	if !sameNetworkBesidesHostname(old, &internalv1alpha1.Network{}) {
+		return fmt.Errorf("spec.network is written on the machine and cannot be changed here; " +
+			"delete this NodeConfig and let the node publish what it has")
+	}
+	fallback := clusterFallbackNetwork()
+	if !sameNetworkBesidesHostname(updated, &fallback) {
+		return fmt.Errorf("spec.network is written on the machine and cannot be filled in here; " +
+			"delete this NodeConfig and let the node publish what it has")
+	}
+	return nil
+}
+
+// clusterFallbackNetwork mirrors renderNetwork in
+// internal/controller/nodeconfig/render.go: what the cluster writes into a
+// NodeConfig whose machine named no network of its own.
+func clusterFallbackNetwork() internalv1alpha1.Network {
+	return internalv1alpha1.Network{
+		Interfaces: []internalv1alpha1.NetworkInterface{{Name: "eth0", DHCP: true}},
+	}
 }
 
 // sameNetworkBesidesHostname compares what the machine owns. The hostname is
