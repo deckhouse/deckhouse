@@ -25,9 +25,13 @@ The module automatically creates StorageClasses covering all available disks in 
 | network-ssd-nonreplicated | network-ssd-nonreplicated | |
 | network-ssd-io-m3         | network-ssd-io-m3 | Disk size must be a multiple of 93 GB. |
 
-You can filter out the unnecessary StorageClasses via the [exclude](#parameters-storageclass-exclude) parameter.
+You can filter out the unnecessary StorageClasses via the [`exclude`](#parameters-storageclass-exclude) parameter.
 
-Use the [provision](#parameters-storageclass-provision) parameter to create additional StorageClasses or to override the parameters of the ones created by default. It also allows setting the [block size](https://yandex.cloud/en/docs/compute/operations/disk-create/empty-disk-blocksize) of the disks, which defines their maximum size: `8Ti` for the default `4Ki` block, and twice as much for every next block size, up to `256Ti` for the `128Ki` block.
+The [`provision`](#parameters-storageclass-provision) parameter lets you create additional StorageClasses or override the parameters of StorageClasses created by the module by default.
+
+Use the [`blockSize`](#parameters-storageclass-provision-blocksize) parameter to set the [block size](https://yandex.cloud/en/docs/compute/operations/disk-create/empty-disk-blocksize) for provisioned disks. The block size determines the maximum disk size: `8Ti` for `4Ki`, and it doubles with each next block size up to `256Ti` for `128Ki`.
+
+An example StorageClass with the `64Ki` block size:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -44,7 +48,9 @@ spec:
         blockSize: 64Ki
 ```
 
-> The block size of an existing disk cannot be changed. Changing the `blockSize` parameter recreates the StorageClass, but the volumes provisioned before the change keep their block size.
+{% alert level="warning" %}
+After a disk is created, its block size cannot be changed. Changing the `blockSize` parameter recreates the StorageClass, but does not change the block size of previously provisioned volumes.
+{% endalert %}
 
 ## LoadBalancer
 

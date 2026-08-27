@@ -31,11 +31,15 @@ properties:
               type: string
               enum: ["4Ki", "8Ki", "16Ki", "32Ki", "64Ki", "128Ki"]
               description: |
-                The block size of the disks created by this StorageClass:
-                  * If empty, disks are created with the Yandex Cloud default block size of `4Ki`.
-                  * The block size defines the maximum size of a network disk: `8Ti` for the default `4Ki` block, and twice as much for every next block size, up to `256Ti` for the `128Ki` block.
-                  * The block size of an existing disk cannot be changed. Changing this parameter recreates the StorageClass, but the volumes provisioned before the change keep their block size.
-                  * A detailed description is available in the [official documentation](https://yandex.cloud/en/docs/compute/operations/disk-create/empty-disk-blocksize).
+                The block size of disks created by this StorageClass.
+
+                If the parameter is omitted, the default Yandex Cloud block size is used — `4Ki`.
+
+                The block size determines the maximum size of a network disk: for a `4Ki` block it is `8Ti`, and it doubles with each next increase of the block size — up to `256Ti` for a `128Ki` block.
+
+                After a disk is created, its block size cannot be changed. Changing the `blockSize` parameter recreates the StorageClass, but does not change the block size of previously provisioned volumes.
+
+                For details, see the [official Yandex Cloud documentation](https://yandex.cloud/en/docs/compute/operations/disk-create/empty-disk-blocksize).
         x-examples:
         - [{"name": "network-ssd-64k", "type": "network-ssd", "blockSize": "64Ki"}]
       exclude:

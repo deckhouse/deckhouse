@@ -25,9 +25,13 @@ title: "Cloud provider — Yandex Cloud: настройки"
 | network-ssd-nonreplicated | network-ssd-nonreplicated|                           |
 | network-ssd-io-m3         | network-ssd-io-m3        |Размер дисков должен быть кратен 93 ГБ |
 
-Вы можете отфильтровать ненужные StorageClass'ы с помощью параметра [exclude](#parameters-storageclass-exclude).
+Вы можете отфильтровать ненужные StorageClass с помощью параметра [`exclude`](#parameters-storageclass-exclude).
 
-Параметр [provision](#parameters-storageclass-provision) позволяет создать дополнительные StorageClass'ы или переопределить параметры создаваемых по умолчанию. С его помощью также можно задать [размер блока](https://yandex.cloud/ru/docs/compute/operations/disk-create/empty-disk-blocksize) дисков, который определяет их максимальный размер: `8Ti` для блока `4Ki` по умолчанию и вдвое больше для каждого следующего размера блока, вплоть до `256Ti` для блока `128Ki`.
+Параметр [`provision`](#parameters-storageclass-provision) позволяет создавать дополнительные StorageClass или переопределять параметры StorageClass, создаваемых модулем по умолчанию.
+
+С помощью параметра [`blockSize`](#parameters-storageclass-provision-blocksize) можно задать [размер блока](https://cloud.yandex.ru/docs/compute/operations/disk-create/empty-disk-blocksize) для создаваемых дисков. От размера блока зависит максимальный размер диска: для значения `4Ki` максимальный размер составляет `8Ti`, а при каждом последующем увеличении размера блока удваивается — вплоть до `256Ti` при `128Ki`.
+
+Пример StorageClass с размером блока `64Ki`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -44,7 +48,9 @@ spec:
         blockSize: 64Ki
 ```
 
-> Размер блока созданного диска изменить нельзя. Изменение параметра `blockSize` пересоздает StorageClass, но у томов, созданных до изменения, размер блока сохраняется.
+{% alert level="warning" %}
+После создания диска изменить размер его блока нельзя. Изменение параметра `blockSize` приводит к пересозданию StorageClass, но не изменяет размер блока у ранее созданных томов.
+{% endalert %}
 
 ## LoadBalancer
 
