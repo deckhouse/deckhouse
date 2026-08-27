@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package syncer
+package pkgsync
 
 import (
 	"context"
@@ -31,7 +31,7 @@ import (
 // scan enriches the same object with owners and available repositories once a
 // repository offers the package; the embedded entry itself has no owner, so it
 // outlives every repository.
-func (s *Syncer) ensureModulePackageExists(ctx context.Context, name string) error {
+func (s *syncer) ensureModulePackageExists(ctx context.Context, name string) error {
 	err := s.reader.Get(ctx, client.ObjectKey{Name: name}, new(v1alpha1.ModulePackage))
 	if err == nil {
 		return nil

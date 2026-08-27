@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package syncer creates the PackageRepository and ModulePackageVersion
+// Package pkgsync creates the PackageRepository and ModulePackageVersion
 // objects for the module packages the old module stack already carries in the
 // cluster, so the package system sees the repositories the modules come from
 // and the versions the cluster runs. Each synced resource lives in its own
@@ -49,7 +49,7 @@
 // status is refreshed when the module files change and left alone when they
 // match - a no-change restart rewrites nothing. A complete release version is
 // never touched.
-package syncer
+package pkgsync
 
 import (
 	"context"
@@ -80,9 +80,9 @@ const (
 	repositoryNameEmbedded = "embedded"
 )
 
-// Syncer creates the missing package versions once at start, while the
+// syncer creates the missing package versions once at start, while the
 // controllers still wait for the sync phase.
-type Syncer struct {
+type syncer struct {
 	// reader must bypass the manager cache: the ModulePackageVersion kind is
 	// cached only when the module packages feature is on, and this sync runs
 	// everywhere.
@@ -96,9 +96,19 @@ type Syncer struct {
 	logger *log.Logger
 }
 
-// New builds a Syncer for the given Deckhouse version and embedded modules dir.
-func New(reader client.Reader, writer client.Client, dc dependency.Container, deckhouseVersion, embeddedModulesDir string, logger *log.Logger) *Syncer {
-	return &Syncer{
+// Sync ensures the package objects of the old module stack for the given
+// Deckhouse version and embedded modules dir. The repositories go first, so
+// the version stubs find them in place. A source naming no valid version (no
+// module source, an unparsable version, an illegal object name, an unreadable
+// module dir, broken schema files) is skipped with a warning; an API failure
+// stops the sync.
+func Sync(ctx context.Context, reader client.Reader, writer client.Client, dc dependency.Container, deckhouseVersion, embeddedModulesDir string, logger *log.Logger) error {
+	return newSyncer(reader, writer, dc, deckhouseVersion, embeddedModulesDir, logger).sync(ctx)
+}
+
+// newSyncer builds a syncer for the given Deckhouse version and embedded modules dir.
+func newSyncer(reader client.Reader, writer client.Client, dc dependency.Container, deckhouseVersion, embeddedModulesDir string, logger *log.Logger) *syncer {
+	return &syncer{
 		reader: reader,
 		writer: writer,
 		dc:     dc,
@@ -110,12 +120,9 @@ func New(reader client.Reader, writer client.Client, dc dependency.Container, de
 	}
 }
 
-// Sync ensures the package objects of the old module stack. The repositories
-// go first, so the version stubs find them in place. A source naming no valid
-// version (no module source, an unparsable version, an illegal object name,
-// an unreadable module dir, broken schema files) is skipped with a warning;
-// an API failure stops the sync.
-func (s *Syncer) Sync(ctx context.Context) error {
+// sync runs the passes in order: repositories first, so the version stubs
+// find them in place.
+func (s *syncer) sync(ctx context.Context) error {
 	if err := s.syncPackageRepositories(ctx); err != nil {
 		return err
 	}

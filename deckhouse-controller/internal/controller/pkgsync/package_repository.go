@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package syncer
+package pkgsync
 
 import (
 	"context"
@@ -36,7 +36,7 @@ var excludedModuleSources = []string{moduleSourceNameDeckhouse, moduleSourceName
 // syncPackageRepositories ensures a PackageRepository for every module source
 // except the excluded ones, so the repositories are in place before the
 // version sync leaves its draft stubs. A source being deleted gets none.
-func (s *Syncer) syncPackageRepositories(ctx context.Context) error {
+func (s *syncer) syncPackageRepositories(ctx context.Context) error {
 	sources := new(v1alpha1.ModuleSourceList)
 	if err := s.reader.List(ctx, sources); err != nil {
 		return fmt.Errorf("list module sources: %w", err)
@@ -62,7 +62,7 @@ func (s *Syncer) syncPackageRepositories(ctx context.Context) error {
 // credentials of a source-backed repository while the old stack lives. The
 // fields the source does not carry (scan interval, login, password) are never
 // touched, so user edits to them survive a restart.
-func (s *Syncer) ensurePackageRepository(ctx context.Context, source *v1alpha1.ModuleSource) error {
+func (s *syncer) ensurePackageRepository(ctx context.Context, source *v1alpha1.ModuleSource) error {
 	name := repositoryNameForSource(source.Name)
 	desired := registryFromSource(source)
 

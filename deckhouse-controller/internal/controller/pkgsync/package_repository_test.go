@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package syncer
+package pkgsync
 
 import (
 	"context"
@@ -34,7 +34,7 @@ func TestSyncPackageRepositories(t *testing.T) {
 			testModuleSource("external", "registry.example.io/external"),
 		)
 
-		require.NoError(t, s.Sync(ctx))
+		require.NoError(t, s.sync(ctx))
 
 		repo := getRepository(t, cl, "external")
 		assert.Equal(t, "deckhouse", repo.Labels["heritage"])
@@ -53,7 +53,7 @@ func TestSyncPackageRepositories(t *testing.T) {
 			testModuleSource("flant", "registry.flant.com/modules"),
 		)
 
-		require.NoError(t, s.Sync(ctx))
+		require.NoError(t, s.sync(ctx))
 
 		assert.Empty(t, listRepositoryNames(t, cl))
 	})
@@ -66,7 +66,7 @@ func TestSyncPackageRepositories(t *testing.T) {
 
 		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(), doomed)
 
-		require.NoError(t, s.Sync(ctx))
+		require.NoError(t, s.sync(ctx))
 
 		assert.Empty(t, listRepositoryNames(t, cl))
 	})
@@ -91,7 +91,7 @@ func TestSyncPackageRepositories(t *testing.T) {
 			testModuleSource("external", "registry.example.io/external"),
 		)
 
-		require.NoError(t, s.Sync(ctx))
+		require.NoError(t, s.sync(ctx))
 
 		after := getRepository(t, cl, existing.Name)
 		assert.Equal(t, "registry.example.io/external", after.Spec.Registry.Repo, "the registry follows the source")
@@ -123,7 +123,7 @@ func TestSyncPackageRepositories(t *testing.T) {
 		)
 		before := getRepository(t, cl, existing.Name)
 
-		require.NoError(t, s.Sync(ctx))
+		require.NoError(t, s.sync(ctx))
 
 		after := getRepository(t, cl, existing.Name)
 		assert.Equal(t, before.ResourceVersion, after.ResourceVersion, "a matching repository is not rewritten")

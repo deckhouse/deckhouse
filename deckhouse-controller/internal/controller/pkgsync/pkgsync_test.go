@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package syncer
+package pkgsync
 
 import (
 	"context"
@@ -32,7 +32,7 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-func newTestSyncer(t *testing.T, version, embeddedDir string, objects ...client.Object) (*Syncer, client.Client) {
+func newTestSyncer(t *testing.T, version, embeddedDir string, objects ...client.Object) (*syncer, client.Client) {
 	t.Helper()
 
 	sc, err := project.Scheme()
@@ -44,7 +44,7 @@ func newTestSyncer(t *testing.T, version, embeddedDir string, objects ...client.
 		WithObjects(objects...).
 		Build()
 
-	return New(cl, cl, dependency.NewMockedContainer(), version, embeddedDir, log.NewNop()), cl
+	return newSyncer(cl, cl, dependency.NewMockedContainer(), version, embeddedDir, log.NewNop()), cl
 }
 
 func writeModuleYAML(t *testing.T, dir, content string) {
@@ -170,7 +170,7 @@ func TestSyncIsIdempotent(t *testing.T) {
 		testRelease("console", "deckhouse", "1.60.1", v1alpha1.ModuleReleasePhasePending),
 	)
 
-	require.NoError(t, s.Sync(ctx))
+	require.NoError(t, s.sync(ctx))
 
 	versions := make(map[string]string)
 	for _, name := range listVersionNames(t, cl) {
@@ -179,7 +179,7 @@ func TestSyncIsIdempotent(t *testing.T) {
 	require.Len(t, versions, 3)
 	repositoryRV := getRepository(t, cl, "external").ResourceVersion
 
-	require.NoError(t, s.Sync(ctx))
+	require.NoError(t, s.sync(ctx))
 
 	assert.Len(t, listVersionNames(t, cl), 3)
 	for name, rv := range versions {

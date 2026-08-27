@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package syncer
+package pkgsync
 
 import (
 	"context"
@@ -41,7 +41,7 @@ import (
 // syncModulePackageVersions ensures a version object for every module package
 // the old stack carries: embedded modules come out complete with the disk
 // metadata and schemas, deployed and pending releases become draft stubs.
-func (s *Syncer) syncModulePackageVersions(ctx context.Context) error {
+func (s *syncer) syncModulePackageVersions(ctx context.Context) error {
 	if err := s.syncVersionsFromImage(ctx); err != nil {
 		return err
 	}
@@ -51,7 +51,7 @@ func (s *Syncer) syncModulePackageVersions(ctx context.Context) error {
 
 // syncVersionsFromImage walks the embedded modules dir and ensures a complete
 // version for every module the running image ships.
-func (s *Syncer) syncVersionsFromImage(ctx context.Context) error {
+func (s *syncer) syncVersionsFromImage(ctx context.Context) error {
 	version, ok := s.embeddedVersion()
 	if !ok {
 		return nil
@@ -80,7 +80,7 @@ func (s *Syncer) syncVersionsFromImage(ctx context.Context) error {
 // stable across builds of one release. A "dev" binary counts as v2.0.0,
 // matching the package runtime. Any other non-semver version names no
 // versions and skips the embedded sync with a warning.
-func (s *Syncer) embeddedVersion() (string, bool) {
+func (s *syncer) embeddedVersion() (string, bool) {
 	if s.deckhouseVersion == "dev" {
 		return "v2.0.0", true
 	}
@@ -99,7 +99,7 @@ func (s *Syncer) embeddedVersion() (string, bool) {
 // ensureEmbeddedVersion ensures the complete version of one module shipped in
 // the image; the metadata and the settings/values schemas come from the
 // module files on disk.
-func (s *Syncer) ensureEmbeddedVersion(ctx context.Context, dirName, version string) error {
+func (s *syncer) ensureEmbeddedVersion(ctx context.Context, dirName, version string) error {
 	moduleDir := filepath.Join(s.embeddedModulesDir, dirName)
 
 	def, err := loader.LoadEmbeddedDefinition(moduleDir)
@@ -171,7 +171,7 @@ func weightFromDirName(dirName string) int32 {
 }
 
 // syncVersionsFromReleases ensures a draft stub for every deployed or pending release.
-func (s *Syncer) syncVersionsFromReleases(ctx context.Context) error {
+func (s *syncer) syncVersionsFromReleases(ctx context.Context) error {
 	releases := new(v1alpha1.ModuleReleaseList)
 	if err := s.reader.List(ctx, releases); err != nil {
 		return fmt.Errorf("list module releases: %w", err)
@@ -200,7 +200,7 @@ func (s *Syncer) syncVersionsFromReleases(ctx context.Context) error {
 // specForRelease derives the version name and spec from a release. A release
 // without a source or with an unparsable version names no package version and
 // is skipped with a warning.
-func (s *Syncer) specForRelease(release *v1alpha1.ModuleRelease) (string, v1alpha1.ModulePackageVersionSpec, bool) {
+func (s *syncer) specForRelease(release *v1alpha1.ModuleRelease) (string, v1alpha1.ModulePackageVersionSpec, bool) {
 	moduleName := release.GetModuleName()
 
 	source := release.GetModuleSource()
@@ -236,7 +236,7 @@ func (s *Syncer) specForRelease(release *v1alpha1.ModuleRelease) (string, v1alph
 
 // validName reports whether the composed object name is legal, warning when it
 // is not: the spec fields are immutable, so a bad name must never be created.
-func (s *Syncer) validName(name, moduleName string) bool {
+func (s *syncer) validName(name, moduleName string) bool {
 	if errs := validation.IsDNS1123Subdomain(name); len(errs) > 0 {
 		s.logger.Warn("package version name is not a valid object name, skip it",
 			slog.String("name", name), slog.String("module", moduleName), slog.String("error", errs[0]))
@@ -254,7 +254,7 @@ func (s *Syncer) validName(name, moduleName string) bool {
 // matching one is left untouched. An existing draft, either a stub of an
 // older build or a leftover of an interrupted fill, is completed the same
 // way.
-func (s *Syncer) ensureFilled(ctx context.Context, name string, spec v1alpha1.ModulePackageVersionSpec, meta *v1alpha1.ModulePackageVersionStatusMetadata, schemas *v1alpha1.PackageVersionStatusSchemas) error {
+func (s *syncer) ensureFilled(ctx context.Context, name string, spec v1alpha1.ModulePackageVersionSpec, meta *v1alpha1.ModulePackageVersionStatusMetadata, schemas *v1alpha1.PackageVersionStatusSchemas) error {
 	mpv := new(v1alpha1.ModulePackageVersion)
 
 	err := s.reader.Get(ctx, client.ObjectKey{Name: name}, mpv)
@@ -292,7 +292,7 @@ func (s *Syncer) ensureFilled(ctx context.Context, name string, spec v1alpha1.Mo
 
 // ensureStub makes sure the version exists at least as a draft stub; any
 // existing object, draft or complete, is left as is.
-func (s *Syncer) ensureStub(ctx context.Context, name string, spec v1alpha1.ModulePackageVersionSpec) error {
+func (s *syncer) ensureStub(ctx context.Context, name string, spec v1alpha1.ModulePackageVersionSpec) error {
 	err := s.reader.Get(ctx, client.ObjectKey{Name: name}, new(v1alpha1.ModulePackageVersion))
 	if err == nil {
 		return nil
@@ -311,7 +311,7 @@ func (s *Syncer) ensureStub(ctx context.Context, name string, spec v1alpha1.Modu
 
 // createStub creates the version as a draft with the labels the repository
 // scan puts on the versions it creates itself.
-func (s *Syncer) createStub(ctx context.Context, name string, spec v1alpha1.ModulePackageVersionSpec) (*v1alpha1.ModulePackageVersion, error) {
+func (s *syncer) createStub(ctx context.Context, name string, spec v1alpha1.ModulePackageVersionSpec) (*v1alpha1.ModulePackageVersion, error) {
 	mpv := &v1alpha1.ModulePackageVersion{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: v1alpha1.ModulePackageVersionGVK.GroupVersion().String(),
@@ -348,7 +348,7 @@ func (s *Syncer) createStub(ctx context.Context, name string, spec v1alpha1.Modu
 }
 
 // fillMetadata writes the disk-sourced metadata and schemas into the version status.
-func (s *Syncer) fillMetadata(ctx context.Context, mpv *v1alpha1.ModulePackageVersion, meta *v1alpha1.ModulePackageVersionStatusMetadata, schemas *v1alpha1.PackageVersionStatusSchemas) error {
+func (s *syncer) fillMetadata(ctx context.Context, mpv *v1alpha1.ModulePackageVersion, meta *v1alpha1.ModulePackageVersionStatusMetadata, schemas *v1alpha1.PackageVersionStatusSchemas) error {
 	original := mpv.DeepCopy()
 
 	mpv.Status.PackageMetadata = meta
@@ -372,7 +372,7 @@ func (s *Syncer) fillMetadata(ctx context.Context, mpv *v1alpha1.ModulePackageVe
 
 // removeDraft completes the version: without the draft label every observer may
 // treat the metadata as final.
-func (s *Syncer) removeDraft(ctx context.Context, mpv *v1alpha1.ModulePackageVersion) error {
+func (s *syncer) removeDraft(ctx context.Context, mpv *v1alpha1.ModulePackageVersion) error {
 	original := mpv.DeepCopy()
 
 	delete(mpv.Labels, v1alpha1.ModulePackageVersionLabelDraft)

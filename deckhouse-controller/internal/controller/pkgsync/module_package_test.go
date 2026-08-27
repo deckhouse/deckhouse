@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package syncer
+package pkgsync
 
 import (
 	"context"
@@ -44,7 +44,7 @@ func TestSyncModulePackages(t *testing.T) {
 		writeModuleYAML(t, filepath.Join(dir, "900-echo"), "name: echo\n")
 
 		s, cl := newTestSyncer(t, "v1.80.0", dir)
-		require.NoError(t, s.Sync(ctx))
+		require.NoError(t, s.sync(ctx))
 
 		pkg := getPackage(t, cl, "echo")
 		assert.Equal(t, map[string]string{"heritage": "deckhouse"}, pkg.Labels)
@@ -67,7 +67,7 @@ func TestSyncModulePackages(t *testing.T) {
 		writeModuleYAML(t, filepath.Join(dir, "900-echo"), "name: echo\n")
 
 		s, cl := newTestSyncer(t, "v1.80.0", dir, existing)
-		require.NoError(t, s.Sync(ctx))
+		require.NoError(t, s.sync(ctx))
 
 		pkg := getPackage(t, cl, "echo")
 		assert.Equal(t, map[string]string{"user": "label"}, pkg.Labels)
@@ -79,7 +79,7 @@ func TestSyncModulePackages(t *testing.T) {
 			testRelease("parca", "deckhouse", "1.4.3", v1alpha1.ModuleReleasePhaseDeployed),
 		)
 
-		require.NoError(t, s.Sync(ctx))
+		require.NoError(t, s.sync(ctx))
 
 		packages := new(v1alpha1.ModulePackageList)
 		require.NoError(t, cl.List(ctx, packages))
