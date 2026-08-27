@@ -134,6 +134,80 @@ func TestValidateNodeConfigUpdateLeavesTheControllerRoomToWork(t *testing.T) {
 	}
 }
 
+// The window this closes: a NodeConfig reaches the cluster with no network yet
+// (the NodeConfigTemplate shape, or a machine that named none) and an operator
+// types addressing into it. The controller then carries that over for good and
+// this webhook refuses every correction, so the node boots with no address.
+func TestValidateNodeConfigUpdateRefusesANetworkTheMachineNeverMade(t *testing.T) {
+	tests := []struct {
+		name    string
+		network internalv1alpha1.Network
+	}{
+		{
+			name: "an address the machine never reported",
+			network: internalv1alpha1.Network{
+				Hostname: "worker-0",
+				Interfaces: []internalv1alpha1.NetworkInterface{{
+					Name: "enp1s0", Addresses: []string{"10.0.0.5/24"}, Gateway: "10.0.0.1",
+				}},
+			},
+		},
+		{
+			// Same catastrophe with no address in sight: the machine's NIC is
+			// eth0, so a DHCP interface under another name configures nothing.
+			name: "a NIC name only the machine knows",
+			network: internalv1alpha1.Network{
+				Hostname:   "worker-0",
+				Interfaces: []internalv1alpha1.NetworkInterface{{Name: "enp1s0", DHCP: true}},
+			},
+		},
+		{
+			name: "resolvers and routes the machine never reported",
+			network: internalv1alpha1.Network{
+				Hostname:   "worker-0",
+				Interfaces: []internalv1alpha1.NetworkInterface{{Name: "eth0", DHCP: true}},
+				DNS:        internalv1alpha1.DNS{Servers: []string{"10.0.0.53"}},
+				Routes:     []internalv1alpha1.Route{{Networks: []string{"10.1.0.0/16"}, Gateway: "10.0.0.1"}},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			old := &internalv1alpha1.NodeConfig{
+				ObjectMeta: metav1.ObjectMeta{Name: "worker-0"},
+				Spec:       internalv1alpha1.NodeSpec{NodeName: "worker-0"},
+			}
+			typedIn := old.DeepCopy()
+			typedIn.Spec.Network = tt.network
+
+			err := validateNodeConfigUpdate(old, typedIn)
+			if err == nil {
+				t.Fatal("the webhook let a network the machine never made into a NodeConfig that had none")
+			}
+			if !strings.Contains(err.Error(), "spec.network is written on the machine") {
+				t.Fatalf("expected the error to mention spec.network, got %q", err.Error())
+			}
+		})
+	}
+}
+
+// An update that touches something else entirely must still pass on a NodeConfig
+// that names no network: only the network itself is guarded here.
+func TestValidateNodeConfigUpdateLeavesANetworklessConfigWritable(t *testing.T) {
+	old := &internalv1alpha1.NodeConfig{
+		ObjectMeta: metav1.ObjectMeta{Name: "worker-0"},
+		Spec:       internalv1alpha1.NodeSpec{NodeName: "worker-0"},
+	}
+
+	updated := old.DeepCopy()
+	updated.Spec.Kubelet.MaxPods = 250
+
+	if err := validateNodeConfigUpdate(old, updated); err != nil {
+		t.Fatalf("the webhook froze a config that named no network: %v", err)
+	}
+}
+
 // A NodeConfig that named no network carries nothing the machine owns, and the
 // controller renders eth0/DHCP into it on its first pass — the shape the
 // NodeConfigTemplate hands out and the shape a DHCP machine publishes.
