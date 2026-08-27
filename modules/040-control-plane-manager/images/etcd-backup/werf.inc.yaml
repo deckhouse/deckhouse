@@ -1,6 +1,6 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: {{ index $.Images "base/distroless" }}
+from: {{ index $.Images "base/distroless-fin" }}
 git:
 - add: /{{ $.ModulePath }}/modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/entrypoint.sh
   to: /entrypoint.sh
@@ -13,18 +13,18 @@ import:
   add: /etcdctl
   to: /bin/etcdctl
   before: setup
-- from: {{ index $.Images "tools/coreutils" }}
-  add: /
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /out
+  to: /
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /coreutils
   to: /
   includePaths:
   - usr/bin/chmod
   - usr/bin/df
   - usr/bin/mv
   - usr/bin/tail
-  before: setup
-- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-  add: /out
-  to: /
   before: setup
 imageSpec:
   config:
@@ -36,6 +36,7 @@ final: false
 shell:
   beforeInstall:
   - pm install bash gzip tar gawk gnu-glibc -d /out
+  - pm install coreutils -d /coreutils
   - mkdir -p /out/bin
   - ln -sf /usr/bin/bash /out/bin/bash
   - ln -sf /usr/bin/bash /out/bin/sh
