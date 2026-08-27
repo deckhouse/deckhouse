@@ -303,6 +303,54 @@ var _ = Describe("FilterCandiDiscoverySecret", func() {
 		Expect(json.Valid(discResult.DiscoveryDataJSON)).To(BeTrue())
 	})
 
+	// candi/openapi/cloud_discovery_data.yaml is a second schema over the same payload, and
+	// it used to require routeTableID, defaultLbTargetGroupNetworkId, internalNetworkIDs,
+	// zones and zoneToSubnetIdMap to be non-empty. A cluster whose infrastructure DKP does
+	// not create has none of them, and YandexCloudDiscoveryData omits them rather than
+	// writing empty values, so both shapes have to get through this filter.
+	It("minimal discovery data is accepted", func() {
+		result, err := FilterCandiDiscoverySecret(newDiscoverySecret(CandiDiscoverySecretName, map[string][]byte{
+			"cloud-provider-discovery-data.json": []byte(`{
+  "apiVersion": "deckhouse.io/v1",
+  "kind": "YandexCloudDiscoveryData",
+  "region": "ru-central1"
+}`),
+		}))
+		Expect(err).NotTo(HaveOccurred())
+		discResult := result.(CandiDiscoveryDataFilterResult)
+		Expect(discResult.DiscoveryDataJSON).NotTo(BeNil())
+	})
+
+	It("discovery data with empty collections is accepted", func() {
+		result, err := FilterCandiDiscoverySecret(newDiscoverySecret(CandiDiscoverySecretName, map[string][]byte{
+			"cloud-provider-discovery-data.json": []byte(`{
+  "apiVersion": "deckhouse.io/v1",
+  "kind": "YandexCloudDiscoveryData",
+  "region": "ru-central1",
+  "routeTableID": "",
+  "defaultLbTargetGroupNetworkId": "",
+  "internalNetworkIDs": [],
+  "zones": [],
+  "zoneToSubnetIdMap": {}
+}`),
+		}))
+		Expect(err).NotTo(HaveOccurred())
+		discResult := result.(CandiDiscoveryDataFilterResult)
+		Expect(discResult.DiscoveryDataJSON).NotTo(BeNil())
+	})
+
+	It("discovery data without a region is rejected", func() {
+		result, err := FilterCandiDiscoverySecret(newDiscoverySecret(CandiDiscoverySecretName, map[string][]byte{
+			"cloud-provider-discovery-data.json": []byte(`{
+  "apiVersion": "deckhouse.io/v1",
+  "kind": "YandexCloudDiscoveryData"
+}`),
+		}))
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("validate candi cloud-provider-discovery-data.json"))
+		Expect(result).To(BeNil())
+	})
+
 	It("invalid discovery data returns error", func() {
 		result, err := FilterCandiDiscoverySecret(newDiscoverySecret(CandiDiscoverySecretName, map[string][]byte{
 			"cloud-provider-discovery-data.json": []byte(`{invalid`),

@@ -85,6 +85,12 @@ type NodesParameters struct {
 	//
 	// **Warning.** When using `cni-simple-bridge`, DKP creates a route table that must be manually associated with the specified subnets. Only one route table can be associated with a subnet, so multiple clusters using `cni-simple-bridge` cannot be deployed in the same subnets. Starting with DKP 1.76, new clusters in Yandex Cloud use `cni-cilium` in `VXLAN` mode by default. In this mode, pod traffic routing does not depend on Yandex Cloud route tables.
 	ExistingZoneToSubnetIDMap map[string]string `json:"existingZoneToSubnetIDMap,omitempty"`
+	// The ID of the existing route table associated with the subnets.
+	//
+	// Required in clusters where DKP does not create the infrastructure itself (for example, a
+	// cluster with static master nodes that adds ephemeral nodes in Yandex Cloud): the value is
+	// normally produced by the infrastructure run and has to be supplied explicitly otherwise.
+	ExistingRouteTableID string `json:"existingRouteTableID,omitempty"`
 	// A list of DHCP parameters to use for all subnets.
 	//
 	// Note that setting dhcpOptions may lead to [problems](https://deckhouse.io/modules/cloud-provider-yandex/faq.html#dhcpoptions-related-problems-and-ways-to-address-them).

@@ -70,6 +70,12 @@ run "standard_creates_subnets_and_gateway" {
     error_message = "expected a NAT gateway in the Standard layout"
   }
 
+  # With no existing route table the module creates one and attaches every subnet to it.
+  assert {
+    condition     = length(yandex_vpc_route_table.kube) == 1
+    error_message = "expected a route table to be created when no existing one is given"
+  }
+
   assert {
     condition     = length(yandex_compute_instance.nat_instance) == 0
     error_message = "expected no NAT instance in the Standard layout"
@@ -184,5 +190,33 @@ run "partially_existing_subnets_are_not_mixed_with_created_ones" {
   assert {
     condition     = length(data.yandex_vpc_subnet.kube_b) == 0 && length(yandex_vpc_subnet.kube_b) == 0
     error_message = "expected the zones absent from the map to be neither read nor created"
+  }
+}
+
+# Adopting an existing route table is the same pattern as the subnets: the operator already
+# owns it, and a created route table here would mean CCM writes pod routes into a table the
+# infrastructure run never produced.
+run "existing_route_table_is_adopted" {
+  command = plan
+
+  variables {
+    layout                  = "Standard"
+    existing_route_table_id = "enp-existing-route-table"
+  }
+
+  assert {
+    condition     = length(yandex_vpc_route_table.kube) == 0
+    error_message = "expected no route table to be created when an existing one is supplied"
+  }
+
+  assert {
+    condition     = output.route_table_id == "enp-existing-route-table"
+    error_message = "expected the existing route table id to be published"
+  }
+
+  # The created subnets must attach to the adopted table, not to the (absent) created one.
+  assert {
+    condition     = yandex_vpc_subnet.kube_a[0].route_table_id == "enp-existing-route-table"
+    error_message = "expected the created subnet to attach to the existing route table"
   }
 }

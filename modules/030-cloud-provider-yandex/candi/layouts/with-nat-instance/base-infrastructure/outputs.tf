@@ -15,14 +15,16 @@
 # `zones` intentionally treats an empty restriction list the same as an absent one
 # and falls back to every zone the subnets cover. Before the migration the test was
 # `lookup(providerClusterConfiguration, "zones", null) != null`, so an explicit
-# `zones: []` intersected down to an empty list — but the discovery-data schema
-# requires `zones` with `minItems: 1` (candi/openapi/cloud_discovery_data.yaml and
-# openapi/values.yaml `providerDiscoveryData`), so that output was rejected by its
-# own validation and the module could not converge. An empty list is also
-# self-contradictory for a "globally restricted set of zones", and node-manager
-# would derive an empty default zone set from it (040-node-manager
-# hooks/get_crds.go). Neither PCC nor ModuleConfig sets `minItems`, so `zones: []`
-# is accepted upstream and has to be handled here.
+# `zones: []` intersected down to an empty list. That is the wrong answer twice over:
+# an empty list is self-contradictory for a "globally restricted set of zones", and
+# node-manager derives its default zone set from this output, so it would end up with
+# no zones at all (040-node-manager hooks/get_crds.go). Neither PCC nor ModuleConfig
+# constrains the list, so `zones: []` is accepted upstream and has to be handled here.
+#
+# The discovery-data schemas no longer help: candi/openapi/cloud_discovery_data.yaml
+# and openapi/values.yaml used to reject an empty `zones` via `minItems: 1`, but that
+# constraint was removed so a cluster whose infrastructure DKP does not create can
+# render with no discovery data at all. This output is the only remaining guard.
 output "cloud_discovery_data" {
   value = {
     "apiVersion"                    = "deckhouse.io/v1"

@@ -56,6 +56,14 @@ properties:
           existingNetworkID:
             description: The ID of the existing VPC Network.
             type: string
+          existingRouteTableID:
+            description: |-
+              The ID of the existing route table associated with the subnets.
+
+              Required in clusters where DKP does not create the infrastructure itself (for example, a
+              cluster with static master nodes that adds ephemeral nodes in Yandex Cloud): the value is
+              normally produced by the infrastructure run and has to be supplied explicitly otherwise.
+            type: string
           existingZoneToSubnetIDMap:
             additionalProperties:
               type: string

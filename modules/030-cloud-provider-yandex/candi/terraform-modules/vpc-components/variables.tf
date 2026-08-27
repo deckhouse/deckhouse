@@ -40,6 +40,11 @@ variable "existing_zone_to_subnet_id_map" {
   default = {}
 }
 
+variable "existing_route_table_id" {
+  type    = string
+  default = ""
+}
+
 variable "layout" {
   type = string
 }

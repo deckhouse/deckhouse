@@ -109,8 +109,14 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, handleYandexClusterConfiguration)
 
 func handleYandexClusterConfiguration(_ context.Context, input *go_hook.HookInput) error {
-	// candi takes priority over PCC
-	discoveryData, candiPresent := resolveDiscoveryData(input)
+	// Source priority, high to low:
+	//  1. the candi Secret - the infrastructure run's recorded output;
+	//  2. the legacy PCC discovery payload - also the infrastructure run's recorded output.
+	// Both describe an infrastructure run, so a cluster whose infrastructure DKP does not create
+	// has neither. That is why openapi/values.yaml requires almost nothing here: the workloads
+	// read the network facts through templates/_helpers.tpl, which falls back to the operator's
+	// own nodes.parameters.existing* whenever this payload does not carry them.
+	discoveryData, candiPresent := resolveCandiDiscoveryData(input)
 
 	pccSnaps := input.Snapshots.Get("provider_cluster_configuration")
 	if len(pccSnaps) == 0 {
@@ -180,7 +186,11 @@ func handleYandexClusterConfiguration(_ context.Context, input *go_hook.HookInpu
 	return mergeAndSetDiscoveryData(input, discoveryData)
 }
 
-func resolveDiscoveryData(input *go_hook.HookInput) (clouddatav1.YandexCloudDiscoveryData, bool) {
+// resolveCandiDiscoveryData reads discovery data from the candi Secret written by the
+// infrastructure run. The boolean reports whether the Secret carries a usable payload; an
+// unparsable payload still reports true so that the PCC/projection fallback is deliberately
+// suppressed rather than silently masked by another source.
+func resolveCandiDiscoveryData(input *go_hook.HookInput) (clouddatav1.YandexCloudDiscoveryData, bool) {
 	candiSnaps := input.Snapshots.Get("candi_discovery_data")
 	if len(candiSnaps) == 0 {
 		return clouddatav1.YandexCloudDiscoveryData{}, false
@@ -193,7 +203,7 @@ func resolveDiscoveryData(input *go_hook.HookInput) (clouddatav1.YandexCloudDisc
 	}
 
 	if len(candiResult.DiscoveryDataJSON) == 0 {
-		return clouddatav1.YandexCloudDiscoveryData{}, true
+		return clouddatav1.YandexCloudDiscoveryData{}, false
 	}
 
 	var discoveryData clouddatav1.YandexCloudDiscoveryData
@@ -335,7 +345,7 @@ func mergeAndSetDiscoveryData(input *go_hook.HookInput, discoveryData clouddatav
 		if err := json.Unmarshal([]byte(v.String()), &existing); err != nil {
 			return fmt.Errorf("unmarshal existing discovery data: %w", err)
 		}
-		discoveryData = mergeDiscoveryData(discoveryData, existing)
+		discoveryData = internal.MergeDiscoveryData(discoveryData, existing)
 	}
 
 	if discoveryData.APIVersion == "" {
@@ -344,54 +354,12 @@ func mergeAndSetDiscoveryData(input *go_hook.HookInput, discoveryData clouddatav
 	if discoveryData.Kind == "" {
 		discoveryData.Kind = clouddatav1.YandexCloudDiscoveryDataKind
 	}
+	if discoveryData.Region == "" {
+		discoveryData.Region = clouddatav1.YandexCloudDiscoveryDataDefaultRegion
+	}
 
 	input.Values.Set("cloudProviderYandex.internal.providerDiscoveryData", discoveryData)
 	return nil
-}
-
-// mergeDiscoveryData grafts new discovery-data fields onto the existing set
-// without overwriting already-populated values.
-func mergeDiscoveryData(newValue, currentValue clouddatav1.YandexCloudDiscoveryData) clouddatav1.YandexCloudDiscoveryData {
-	result := currentValue
-
-	if newValue.APIVersion != "" && result.APIVersion == "" {
-		result.APIVersion = newValue.APIVersion
-	}
-	if newValue.Kind != "" && result.Kind == "" {
-		result.Kind = newValue.Kind
-	}
-	if newValue.Region != "" && result.Region == "" {
-		result.Region = newValue.Region
-	}
-	if newValue.RouteTableID != "" && result.RouteTableID == "" {
-		result.RouteTableID = newValue.RouteTableID
-	}
-	if newValue.DefaultLbTargetGroupNetworkID != "" && result.DefaultLbTargetGroupNetworkID == "" {
-		result.DefaultLbTargetGroupNetworkID = newValue.DefaultLbTargetGroupNetworkID
-	}
-	if len(newValue.InternalNetworkIDs) > 0 && len(result.InternalNetworkIDs) == 0 {
-		result.InternalNetworkIDs = newValue.InternalNetworkIDs
-	}
-	if len(newValue.Zones) > 0 && len(result.Zones) == 0 {
-		result.Zones = newValue.Zones
-	}
-	if len(newValue.ZoneToSubnetIDMap) > 0 && len(result.ZoneToSubnetIDMap) == 0 {
-		result.ZoneToSubnetIDMap = newValue.ZoneToSubnetIDMap
-	}
-	if newValue.ShouldAssignPublicIPAddress {
-		result.ShouldAssignPublicIPAddress = true
-	}
-	if newValue.NATInstanceName != "" && result.NATInstanceName == "" {
-		result.NATInstanceName = newValue.NATInstanceName
-	}
-	if newValue.NATInstanceZone != "" && result.NATInstanceZone == "" {
-		result.NATInstanceZone = newValue.NATInstanceZone
-	}
-	if newValue.MonitoringAPIKey != "" && result.MonitoringAPIKey == "" {
-		result.MonitoringAPIKey = newValue.MonitoringAPIKey
-	}
-
-	return result
 }
 
 func convertStructsUsingJSON(in any, out any) error {

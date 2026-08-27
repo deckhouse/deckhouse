@@ -79,6 +79,7 @@ locals {
   node_network_cidr              = try(local._node_params.nodeNetworkCIDR, "")
   existing_network_id            = try(local._node_params.existingNetworkID, "")
   existing_zone_to_subnet_id_map = try(tomap(local._node_params.existingZoneToSubnetIDMap), {})
+  existing_route_table_id        = try(local._node_params.existingRouteTableID, "")
   labels                         = try(tomap(local._node_params.labels), {})
   ssh_public_key                 = try(local._node_params.sshPublicKey, "")
 

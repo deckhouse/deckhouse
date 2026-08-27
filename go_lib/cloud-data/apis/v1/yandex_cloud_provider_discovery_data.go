@@ -14,17 +14,33 @@
 
 package v1
 
+const (
+	YandexCloudDiscoveryDataDefaultRegion = "ru-central1"
+)
+
 type YandexCloudDiscoveryData struct {
 	APIVersion                    string            `json:"apiVersion" yaml:"apiVersion"`
 	Kind                          string            `json:"kind" yaml:"kind"`
 	Region                        string            `json:"region" yaml:"region"`
-	RouteTableID                  string            `json:"routeTableID" yaml:"routeTableID"`
-	DefaultLbTargetGroupNetworkID string            `json:"defaultLbTargetGroupNetworkId" yaml:"defaultLbTargetGroupNetworkId"`
-	InternalNetworkIDs            []string          `json:"internalNetworkIDs" yaml:"internalNetworkIDs"`
-	Zones                         []string          `json:"zones" yaml:"zones,omitempty"`
-	ZoneToSubnetIDMap             map[string]string `json:"zoneToSubnetIdMap" yaml:"zoneToSubnetIdMap"`
-	ShouldAssignPublicIPAddress   bool              `json:"shouldAssignPublicIPAddress" yaml:"shouldAssignPublicIPAddress"`
+	RouteTableID                  string            `json:"routeTableID,omitempty" yaml:"routeTableID,omitempty"`
+	DefaultLbTargetGroupNetworkID string            `json:"defaultLbTargetGroupNetworkId,omitempty" yaml:"defaultLbTargetGroupNetworkId,omitempty"`
+	InternalNetworkIDs            []string          `json:"internalNetworkIDs,omitempty" yaml:"internalNetworkIDs,omitempty"`
+	Zones                         []string          `json:"zones,omitempty" yaml:"zones,omitempty"`
+	ZoneToSubnetIDMap             map[string]string `json:"zoneToSubnetIdMap,omitempty" yaml:"zoneToSubnetIdMap,omitempty"`
+	ShouldAssignPublicIPAddress   *bool             `json:"shouldAssignPublicIPAddress,omitempty" yaml:"shouldAssignPublicIPAddress,omitempty"`
 	NATInstanceName               string            `json:"natInstanceName,omitempty" yaml:"natInstanceName,omitempty"`
 	NATInstanceZone               string            `json:"natInstanceZone,omitempty" yaml:"natInstanceZone,omitempty"`
 	MonitoringAPIKey              string            `json:"monitoringAPIKey,omitempty" yaml:"monitoringAPIKey,omitempty"`
+}
+
+// SetDefaults stamps the fields that never vary: the type markers, and the region, which every
+// layout's cloud_discovery_data output hardcodes to the same value.
+//
+// The receiver has to be a pointer - with a value receiver the assignments land on a copy and the
+// call silently does nothing, which is how it behaved until 2026-08-27. Its sibling
+// VCDCloudProviderDiscoveryData.SetDefaults takes a pointer for the same reason.
+func (d *YandexCloudDiscoveryData) SetDefaults() {
+	d.APIVersion = APIVersion
+	d.Kind = YandexCloudDiscoveryDataKind
+	d.Region = YandexCloudDiscoveryDataDefaultRegion
 }
