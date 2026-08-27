@@ -18,8 +18,10 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -181,12 +183,18 @@ func main() {
 	// them, so it must not be tied to leader election.
 	// The client is the uncached one: the API server starts before the manager,
 	// so nothing here may wait on its cache.
+	serving := make(chan struct{})
 	go serveAggregatedAPI(ctx, setupLog, apiserver.Options{
 		BindPort: apiserverPort,
 		CertFile: webhookCertDir + "/tls.crt",
 		KeyFile:  webhookCertDir + "/tls.key",
 		Storage:  nodebootstrap.NewTemplateStorage(directClient),
+		Serving:  serving,
 	})
+	if err := mgr.AddReadyzCheck("aggregated-api", aggregatedAPIReady(serving)); err != nil {
+		setupLog.Error(err, "unable to set up the aggregated API ready check")
+		os.Exit(1)
+	}
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctx); err != nil {
@@ -202,6 +210,21 @@ func serveAggregatedAPI(ctx context.Context, log logr.Logger, opts apiserver.Opt
 	if err := apiserver.Run(ctx, opts); err != nil {
 		log.Error(err, "problem running aggregated API server")
 		os.Exit(1)
+	}
+}
+
+// aggregatedAPIReady keeps the replica out of the Endpoints the APIService
+// routes to until its aggregated API server answers: kube-aggregator marks the
+// APIService Unavailable on a refused connection, and full discovery then fails
+// for every client in the cluster, immutable nodes or none.
+func aggregatedAPIReady(serving <-chan struct{}) healthz.Checker {
+	return func(*http.Request) error {
+		select {
+		case <-serving:
+			return nil
+		default:
+			return errors.New("the aggregated API server is not answering yet")
+		}
 	}
 }
 
