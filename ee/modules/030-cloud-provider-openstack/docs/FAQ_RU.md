@@ -397,6 +397,50 @@ Expected HTTP response code [202] when accessing
 {"computeFault": {"message": "Version 3.42 is not supported by the API. Minimum is 3.0 and maximum is 3.27.", "code": 406}}
 ```
 
+## Как создать прерываемые узлы в Selectel?
+
+В Selectel для создания прерываемых инстансов используется тег Nova `preemptible`. Параметр [`additionalTags`](/modules/cloud-provider-openstack/latest/cr.html#openstackinstanceclass-v1-spec-additionaltags) для таких тегов не подходит, поскольку его значения преобразуются в формат ключ=значение. Чтобы передать тег в Nova без изменений, используйте параметр [`tags`](/modules/cloud-provider-openstack/latest/cr.html#openstackinstanceclass-v1-spec-tags) ресурса OpenStackInstanceClass.
+
+Пример:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: OpenStackInstanceClass
+metadata:
+  name: worker-preempt
+spec:
+  flavorName: SL1.4-8192
+  imageName: Ubuntu 24.04 LTS 64-bit
+  rootDiskSize: 30
+  tags:
+    - preemptible
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker-preempt
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    classReference:
+      kind: OpenStackInstanceClass
+      name: worker-preempt
+    minPerZone: 2
+    maxPerZone: 4
+    zones: [ru-3a]
+```
+
+При использовании параметра [`tags`](/modules/cloud-provider-openstack/latest/cr.html#openstackinstanceclass-v1-spec-tags) учитывайте следующие ограничения:
+
+* Параметр `tags` поддерживается только для NodeGroup типа CloudEphemeral, работающих на движке CAPI. Если OpenStackInstanceClass с заданным параметром `tags` используется в NodeGroup на движке MCM, в `.status.error` NodeGroup появится ошибка. Контроллер не будет обрабатывать такую NodeGroup, пока параметр `tags` не будет удалён или NodeGroup не будет переведена на движок CAPI.
+* Движок управления выбирается отдельно для каждой NodeGroup. Если один OpenStackInstanceClass с заданным параметром `tags` используется одновременно в NodeGroup на движках CAPI и MCM, NodeGroup на MCM станет невалидной. Для NodeGroup, работающих на разных движках, используйте отдельные ресурсы OpenStackInstanceClass.
+
+{% alert level="warning" %}
+Добавление, изменение или удаление параметра [`tags`](/modules/cloud-provider-openstack/latest/cr.html#openstackinstanceclass-v1-spec-tags) в существующем OpenStackInstanceClass приводит к изменению OpenStackMachineTemplate и пересозданию всех узлов соответствующей NodeGroup.
+{% endalert %}
+
+Если прерываемый инстанс завершается без `graceful shutdown`, соответствующий узел переходит в состояние `NotReady`. После обнаружения отсутствующего инстанса CAPO и MachineHealthCheck инициируют создание нового Machine и виртуальной машины. До завершения восстановления поды на потерянном узле могут отображаться в Kubernetes API в состоянии `Running`, хотя фактически они уже недоступны.
+
 ## Что делать, если переключение на заказ узлов в менее приоритетных группах занимает много времени?
 
 Если переключение на заказ узлов в менее приоритетных группах занимает много времени, воспользуйтесь [инструкцией](/products/kubernetes-platform/documentation/v1/faq.html#что-делать-если-переключение-на-заказ-узлов-в-менее-приоритетных).
