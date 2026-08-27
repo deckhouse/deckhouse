@@ -32,20 +32,20 @@ Node changed, or an eviction finished
   │
   ├─ Node is gone? → clear the metric, cancel the eviction → done
   │
-  ├─ "drained=user"? → remove it → done
-  │     Unconditional: a hand drain records no result, so the value is always a
-  │     leftover, cordoned node or not.
-  │
   ├─ No "draining" annotation →
   │    ├─ clear the metric
-  │    ├─ no eviction running? → done (the cordon belongs to updateapproval)
-  │    └─ an eviction is running → cancel it, wait for it to stop, uncordon
+  │    ├─ an eviction is running? → cancel it, wait for it to stop, uncordon
+  │    ├─ "drained=user" on a schedulable node? → remove the stale marker
+  │    └─ done (a cordon with no eviction behind it belongs to updateapproval)
+  │
+  ├─ "drained=user" while a new drain is requested? → remove it, so the new
+  │     drain's own result is what the node ends up carrying
   │
   ├─ The eviction has finished →
   │    ├─ succeeded → clear the metric
   │    ├─ hit its own deadline → event + gauge, recorded as drained anyway
   │    ├─ failed otherwise → event + gauge, return the error (retried)
-  │    └─ remove "draining", set "drained=<source>" unless the source is "user"
+  │    └─ remove "draining", set "drained=<source>"
   │
   └─ Otherwise →
        ├─ node still schedulable? → cordon it → done, the cordon's own event
@@ -82,7 +82,7 @@ own deadline.
 | Annotation | Meaning |
 |------------|---------|
 | `update.node.deckhouse.io/draining` | Drain requested (value = source, e.g. "bashible"; an empty value means "bashible"). **Removing it cancels an eviction in flight** |
-| `update.node.deckhouse.io/drained` | Drain completed (value = source). Never written for source "user", and removed from any node carrying that value |
+| `update.node.deckhouse.io/drained` | Drain completed (value = source). `drained=user` marks a hand drain and is cleaned up in two places: off a schedulable node with no request, and before a new drain starts |
 
 ## Events
 

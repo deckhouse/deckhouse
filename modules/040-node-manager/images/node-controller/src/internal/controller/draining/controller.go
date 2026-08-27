@@ -150,17 +150,24 @@ func (r *Reconciler) reconcileNode(ctx context.Context, node *corev1.Node) (_ ct
 
 	state := stateFromNode(node)
 
-	// drained=user is never written any more, so it can only be a leftover: an
-	// upgraded cluster, or somebody setting it by hand.
-	if state.recordedFor == userSource {
-		logger.Info("removing an orphan drain result")
-		delete(node.Annotations, nodecommon.DrainedAnnotation)
+	if state.requestedBy == "" {
+		if err := r.cancelDrainIfExist(ctx, logger, node); err != nil {
+			return ctrl.Result{}, err
+		}
+		if state.recordedFor == userSource && !state.unschedulable {
+			logger.Info("removing a stale drained=user annotation")
+			delete(node.Annotations, nodecommon.DrainedAnnotation)
+		}
 		return ctrl.Result{}, nil
 	}
 
-	// The request is gone: whoever asked has changed their mind.
-	if state.requestedBy == "" {
-		return ctrl.Result{}, r.cancelDrain(ctx, logger, node)
+	// A hand drain's marker is cleared before a new drain starts. Left there it
+	// would read as the new drain's own result, and a second hand drain would
+	// never overwrite it — finishDrain records nothing for the user source.
+	if state.recordedFor == userSource {
+		logger.Info("removing an existing drained=user annotation before a new drain")
+		delete(node.Annotations, nodecommon.DrainedAnnotation)
+		return ctrl.Result{}, nil
 	}
 
 	// The eviction's outcome decides what is written, so it is collected first.
@@ -193,14 +200,14 @@ func (r *Reconciler) cleanupDeletedNode(ctx context.Context, nodeName string) er
 	return err
 }
 
-// cancelDrain gives the node back when its request disappears.
+// cancelDrainIfExist gives the node back when its request disappears.
 //
 // Only a running eviction is undone. A drain that succeeds consumes its own
 // request, so every node passes through here — uncordoning them all would
 // return half-updated nodes to service, and past that point the cordon belongs
 // to updateapproval. A restart forgets the eviction, and such a node keeps its
 // cordon until someone runs kubectl uncordon.
-func (r *Reconciler) cancelDrain(ctx context.Context, logger logr.Logger, node *corev1.Node) error {
+func (r *Reconciler) cancelDrainIfExist(ctx context.Context, logger logr.Logger, node *corev1.Node) error {
 	clearDrainMetric(node.Name)
 
 	cancelled, err := r.drains.cancel(ctx, node.Name)
@@ -244,10 +251,7 @@ func (r *Reconciler) finishDrain(_ context.Context, logger logr.Logger, node *co
 	}
 
 	delete(node.Annotations, nodecommon.DrainingAnnotation)
-	if source != userSource {
-		node.Annotations[nodecommon.DrainedAnnotation] = source
-	}
-
+	node.Annotations[nodecommon.DrainedAnnotation] = source
 	logger.Info("drain finished")
 	r.Recorder.Eventf(node, corev1.EventTypeNormal, "DrainSucceeded", "node %q drained successfully", node.Name)
 	return nil

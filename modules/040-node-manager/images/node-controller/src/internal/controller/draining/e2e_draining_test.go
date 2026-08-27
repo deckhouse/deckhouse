@@ -248,10 +248,9 @@ var _ = Describe("Draining a node on the draining annotation", func() {
 		}, eventuallyTimeout, eventuallyPoll).Should(Succeed())
 	})
 
-	// A hand drain records no result any more, so drained=user is always a
-	// leftover — including on the cordoned nodes a hand drain actually produces,
-	// which the old "schedulable only" rule left it sitting on forever.
-	It("removes a drained=user annotation whether the node is cordoned or not", func() {
+	// A hand drain is closed out by an operator: the stale marker goes once the
+	// node is back in service, and stays while it is still cordoned.
+	It("removes a stale drained=user annotation only from a schedulable node", func() {
 		schedulable := testenv.UniqueName("user-schedulable")
 		createGroupNode(schedulable, schedulable, map[string]string{nodecommon.DrainedAnnotation: "user"})
 
@@ -260,17 +259,15 @@ var _ = Describe("Draining a node on the draining annotation", func() {
 			map[string]string{nodecommon.DrainedAnnotation: "user"},
 			corev1.NodeSpec{Unschedulable: true})
 
-		for _, name := range []string{schedulable, cordoned} {
-			Eventually(func(g Gomega) {
-				g.Expect(getNodeState(name).Annotations).NotTo(HaveKey(nodecommon.DrainedAnnotation))
-			}, eventuallyTimeout, eventuallyPoll).Should(Succeed())
-		}
+		Eventually(func(g Gomega) {
+			g.Expect(getNodeState(schedulable).Annotations).NotTo(HaveKey(nodecommon.DrainedAnnotation))
+		}, eventuallyTimeout, eventuallyPoll).Should(Succeed())
 
-		// Removing the annotation is not uncordoning: only an interrupted drain
-		// puts a node back into service.
-		Consistently(func() bool {
-			return getNodeState(cordoned).Spec.Unschedulable
-		}, negativeCheckDuration, eventuallyPoll).Should(BeTrue())
+		Consistently(func(g Gomega) {
+			node := getNodeState(cordoned)
+			g.Expect(node.Annotations).To(HaveKeyWithValue(nodecommon.DrainedAnnotation, "user"))
+			g.Expect(node.Spec.Unschedulable).To(BeTrue())
+		}, negativeCheckDuration, eventuallyPoll).Should(Succeed())
 	})
 
 	// User story: as a cluster operator who changed my mind, I want removing the

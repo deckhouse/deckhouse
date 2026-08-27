@@ -56,6 +56,11 @@ const (
 	nodeName      = "node-1"
 	nodeGroupName = "worker"
 	taskWait      = 10 * time.Second
+
+	// drainPasses caps how many reconciles a drain is given to get going, and
+	// wakePoll is how long each one waits for the eviction to report back.
+	drainPasses = 6
+	wakePoll    = 500 * time.Millisecond
 )
 
 // harness is a Reconciler wired to fake clients, plus the two channels the tests
@@ -130,28 +135,30 @@ func (h *harness) node(t *testing.T) *corev1.Node {
 	return fresh
 }
 
-// drain runs the reconciles a background eviction takes and returns the error of
-// the last one, because that is where a failed eviction surfaces. A node that
-// arrives schedulable needs one pass more: the pass that writes the cordon is
-// not the pass that starts the eviction.
+// drain drives a full drain and returns the error of the pass that collects the
+// result, because that is where a failed eviction surfaces.
+//
+// The flow spends a pass or two getting the node ready — a stale drained=user to
+// strip, a cordon to write — so this reconciles until the eviction reports back
+// instead of assuming a fixed number of passes.
 func (h *harness) drain(t *testing.T) error {
 	t.Helper()
 
-	cordoned := h.node(t).Spec.Unschedulable
-	h.reconcile(t)
-	if !cordoned {
+	for range drainPasses {
 		h.reconcile(t)
+
+		select {
+		case <-h.drains.wake:
+			_, err := h.Reconcile(context.Background(), request())
+
+			return err
+		case <-time.After(wakePoll):
+		}
 	}
 
-	select {
-	case <-h.drains.wake:
-	case <-time.After(taskWait):
-		t.Fatal("timed out waiting for the eviction to finish")
-	}
+	t.Fatal("the eviction never reported back")
 
-	_, err := h.Reconcile(context.Background(), request())
-
-	return err
+	return nil
 }
 
 func (h *harness) mustDrain(t *testing.T) {
@@ -221,9 +228,9 @@ func TestReconcile_Drain(t *testing.T) {
 			want:        map[string]string{nodecommon.DrainedAnnotation: "machine-controller"},
 		},
 		{
-			name:        "a hand drain records nothing, since nobody polls for it",
+			name:        "a hand drain records its own source",
 			annotations: map[string]string{nodecommon.DrainingAnnotation: userSource},
-			want:        nil,
+			want:        map[string]string{nodecommon.DrainedAnnotation: userSource},
 		},
 		{
 			name:          "an already cordoned node still drains",
@@ -236,6 +243,14 @@ func TestReconcile_Drain(t *testing.T) {
 			annotations: map[string]string{
 				nodecommon.DrainingAnnotation: bashibleSource,
 				nodecommon.DrainedAnnotation:  "",
+			},
+			want: map[string]string{nodecommon.DrainedAnnotation: bashibleSource},
+		},
+		{
+			name: "a stale drained=user is replaced by the new drain's own result",
+			annotations: map[string]string{
+				nodecommon.DrainingAnnotation: bashibleSource,
+				nodecommon.DrainedAnnotation:  userSource,
 			},
 			want: map[string]string{nodecommon.DrainedAnnotation: bashibleSource},
 		},
@@ -262,7 +277,8 @@ func TestReconcile_Drain(t *testing.T) {
 }
 
 // TestReconcile_NoLiveRequest covers what a node without a request in flight
-// gets from a single pass: nothing, except an orphan result being dropped.
+// gets from a single pass: nothing, except a stale drained=user being dropped
+// once the node is back in service.
 func TestReconcile_NoLiveRequest(t *testing.T) {
 	for _, tc := range []struct {
 		name              string
@@ -275,22 +291,17 @@ func TestReconcile_NoLiveRequest(t *testing.T) {
 			name: "a node nobody asked about is left alone",
 		},
 		{
-			name:        "an orphan result is dropped from a schedulable node",
+			name:        "a stale drained=user is dropped from a schedulable node",
 			annotations: map[string]string{nodecommon.DrainedAnnotation: userSource},
 		},
 		{
-			name:              "an orphan result is dropped from a cordoned node too",
+			// On a cordoned node it still marks a drain somebody is dealing
+			// with, so it is left where it is.
+			name:              "drained=user stays on a cordoned node",
 			annotations:       map[string]string{nodecommon.DrainedAnnotation: userSource},
 			unschedulable:     true,
+			want:              map[string]string{nodecommon.DrainedAnnotation: userSource},
 			wantUnschedulable: true,
-		},
-		{
-			name: "an orphan result is dropped before a new request is looked at",
-			annotations: map[string]string{
-				nodecommon.DrainingAnnotation: bashibleSource,
-				nodecommon.DrainedAnnotation:  userSource,
-			},
-			want: map[string]string{nodecommon.DrainingAnnotation: bashibleSource},
 		},
 		{
 			name:        "a recorded bashible result is left alone",
@@ -367,6 +378,30 @@ func TestReconcile_EvictionEndsBadly(t *testing.T) {
 				t.Fatalf("failure gauge = %v, want 1", got)
 			}
 		})
+	}
+}
+
+// The stale marker is stripped on a pass of its own, before the cordon: left
+// there it would read as the new drain's own result, and a second hand drain
+// would never overwrite it.
+func TestReconcile_StaleUserResultIsClearedBeforeTheDrain(t *testing.T) {
+	h := newHarness(t, fake.NewSimpleClientset(), nodeGroup(nil), node(map[string]string{
+		nodecommon.DrainingAnnotation: userSource,
+		nodecommon.DrainedAnnotation:  userSource,
+	}, false))
+
+	h.reconcile(t)
+
+	afterFirst := h.node(t)
+	assertAnnotations(t, afterFirst, map[string]string{nodecommon.DrainingAnnotation: userSource})
+	if afterFirst.Spec.Unschedulable {
+		t.Fatal("the pass that strips the marker should not also cordon the node")
+	}
+
+	h.reconcile(t)
+
+	if !h.node(t).Spec.Unschedulable {
+		t.Fatal("the next pass should have cordoned the node")
 	}
 }
 
