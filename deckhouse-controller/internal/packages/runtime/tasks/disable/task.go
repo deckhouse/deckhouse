@@ -104,6 +104,9 @@ func (t *task) Execute(ctx context.Context) error {
 		t.queueService.Remove(filepath.Join(t.pkg.GetName(), q, "sync"))
 	}
 
+	t.queueService.Remove(filepath.Join(t.pkg.GetName(), "crd"))
+	t.queueService.Remove(filepath.Join(t.pkg.GetName(), "hooks"))
+
 	return nil
 }
 
