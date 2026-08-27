@@ -6,10 +6,10 @@ search: managed-memcached, memcached
 description: Архитектура модуля managed-memcached в Deckhouse Platform.
 ---
 
-Модуль [`managed-memcached`](/modules/managed-memcached/) упрощает развертывание и управление Memcached инстансами в Deckhouse Platform (DP). Он предоставляет:
+Модуль [`managed-memcached`](/modules/managed-memcached/) упрощает развёртывание и управление инстансами Memcached в Deckhouse Platform (DP). Он предоставляет:
 
-* **Автоматическое развертывание** — развертывание Memcached-инстансов при помощи простой YAML-конфигурации;
-* **Высокая доступность** — поддержка как одиночных (Standalone), так и групповых (Group) развертываний;
+* **Автоматическое развёртывание** — развёртывание Memcached-инстансов при помощи простой YAML-конфигурации;
+* **Высокая доступность** — поддержка как одиночных (Standalone), так и групповых (Group) развёртываний;
 * **Управление конфигурацией** — гибкая настройка с валидацией и ограничениями через MemcachedClass;
 * **Управление ресурсами** — автоматическое распределение ресурсов и масштабирование;
 * **Мониторинг** — встроенное отслеживание состояния инстанса и мониторинг самого сервера Memcached;
@@ -29,7 +29,7 @@ description: Архитектура модуля managed-memcached в Deckhouse 
 
 Архитектура модуля [`managed-memcached`](/modules/managed-memcached/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DP изображена на следующей диаграмме:
 
-![Архитектура модуля managed-memcached](../../images/architecture/managed-services/c4-l2-managed-memcached.ru.png)
+![Архитектура модуля managed-memcached](../../images/architecture/managed-services/c4-l2-managed-memcached.ru.svg)
 
 ## Компоненты модуля
 
@@ -55,7 +55,7 @@ description: Архитектура модуля managed-memcached в Deckhouse 
 
 С модулем взаимодействуют следующие внешние компоненты:
 
-1. **Kube-apiserver** — отправляет запросы на валидацию кастомных ресурсов Memcached и MemcachedClass, мутацию кастомных ресурсов Memcached.
+1. **Kube-apiserver** — валидирует кастомные ресурсы Memcached и MemcachedClass, мутирует кастомные ресурсы Memcached.
 
 1. **Prometheus-main** — собирает метрики инстансов Memcached.
 
