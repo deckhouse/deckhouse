@@ -8,6 +8,7 @@ shipped by upstream Cilium v1.17.17 to remediate known CVEs, e.g.:
 - `github.com/go-jose/go-jose/v4` -> `v4.1.4`
 - `github.com/envoyproxy/go-control-plane/envoy` -> `v1.37.0`
 - `go.mongodb.org/mongo-driver` -> `v1.17.7`
+- `github.com/cilium/ebpf` -> `v0.22.0` (CVE-2026-10722)
 
 Regenerate by cloning `cilium v1.17.17`, applying this patch, bumping the
 required module(s), then running `go mod tidy && go mod vendor && go mod verify`
@@ -125,3 +126,22 @@ resolved. The patch adds the nil check, matching `pkg/policy/distillery.go` in 1
 
 **Remove this patch when upgrading to Cilium 1.18 or newer**, where the same nil check is
 already present (it was never backported to 1.17.x, up to and including v1.17.18).
+
+## 021-ebpf-api-compat.patch
+
+Adapts Cilium's eBPF loader to the `github.com/cilium/ebpf` v0.22.0 API, which
+`000-go-mod.patch` bumps to fix CVE-2026-10722 (the fix is only available in
+ebpf >= v0.22.0). ebpf v0.21.0 removed the `(*ebpf.VariableSpec).MapName()`
+method and replaced the previously private map reference with the exported
+`VariableSpec.SectionName` field (the section name a variable was allocated
+in). Cilium v1.17.17 still pins ebpf v0.17.1 and calls `v.MapName()` in
+`applyConstants()` (`pkg/bpf/collection.go`) to assert that config variables
+live in the `.rodata.config` section, so the bump alone breaks compilation.
+
+The patch replaces the two `v.MapName()` calls with `v.SectionName`, which
+returns the same value (the underlying map/section name). No datapath or other
+behavior changes: a full `go build ./...` of Cilium v1.17.17 with ebpf v0.22.0
+has this single call site as its only incompatibility.
+
+**Remove this patch when upgrading to a Cilium version that already targets
+ebpf >= v0.21.0**, where `applyConstants()` no longer uses the removed method.

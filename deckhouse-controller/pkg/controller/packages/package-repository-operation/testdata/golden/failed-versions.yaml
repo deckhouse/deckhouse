@@ -34,9 +34,6 @@ status:
       - message: 'ensure package version: create application package version: simulated
           create error for v1.1.0'
         version: v1.1.0
-      - message: 'ensure package version: create application package version: simulated
-          create error for v1.2.0'
-        version: v1.2.0
       name: test-package
     newVersionsOverall: 1
     processed:

@@ -255,9 +255,8 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, op *v1alpha1.Packa
 	if err != nil {
 		return r.failOperation(ctx, op, err)
 	}
-	svc.WarnUnavailablePartialScan(op)
 
-	discovered, err := svc.DiscoverPackage(ctx)
+	discovered, err := svc.Discover(ctx)
 	if err != nil {
 		return r.failOperation(ctx, op, err)
 	}
@@ -268,15 +267,15 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, op *v1alpha1.Packa
 		op.Status.Packages = new(v1alpha1.PackageRepositoryOperationStatusPackages)
 	}
 
-	packages := make([]v1alpha1.PackageRepositoryOperationStatusDiscoveredPackage, 0, len(discovered.Packages))
-	for _, pkg := range discovered.Packages {
+	packages := make([]v1alpha1.PackageRepositoryOperationStatusDiscoveredPackage, 0, len(discovered))
+	for _, pkg := range discovered {
 		packages = append(packages, v1alpha1.PackageRepositoryOperationStatusDiscoveredPackage{
-			Name: pkg.Name,
+			Name: pkg,
 		})
 	}
 
 	op.Status.Packages.Discovered = packages
-	op.Status.Packages.Total = len(discovered.Packages)
+	op.Status.Packages.Total = len(discovered)
 	op.Status.Packages.ProcessedOverall = 0
 
 	r.setCompletedConditionFalse(op, v1alpha1.PackageRepositoryOperationReasonProcessing, "")
@@ -308,15 +307,12 @@ func (r *reconciler) handleProcessingState(ctx context.Context, op *v1alpha1.Pac
 		return r.failOperation(ctx, op, err)
 	}
 
-	if op.Status.Packages == nil {
-		return ctrl.Result{}, nil
-	}
-
 	// Check if all packages have been processed
 	if len(op.Status.Packages.Discovered) == 0 {
 		r.logger.Info("all packages processed", slog.Int("total", op.Status.Packages.Total))
 
-		if err := svc.UpdateRepositoryStatus(ctx, op.Status.Packages.Processed); err != nil {
+		repo := svc.GetRepository()
+		if err := r.updateRepositoryStatus(ctx, repo, op.Status.Packages.Processed); err != nil {
 			logger.Warn("failed to update repository status", log.Err(err))
 			// Continue with operation completion even if repository update fails
 		}
@@ -324,9 +320,7 @@ func (r *reconciler) handleProcessingState(ctx context.Context, op *v1alpha1.Pac
 		original := op.DeepCopy()
 
 		// All packages processed, mark as completed
-		now := metav1.Now()
-		op.Status.CompletionTime = &now
-
+		op.Status.CompletionTime = new(metav1.Now())
 		r.setCompletedConditionTrue(op, v1alpha1.PackageRepositoryOperationReasonScanSucceeded, "")
 
 		if err := r.client.Status().Patch(ctx, op, client.MergeFrom(original)); err != nil {
@@ -363,11 +357,12 @@ func (r *reconciler) handleCleanupState(ctx context.Context, op *v1alpha1.Packag
 
 	logger.Debug("handle completed state")
 
-	operations := new(v1alpha1.PackageRepositoryOperationList)
-	err := r.client.List(ctx, operations, client.MatchingLabels{
+	selector := client.MatchingLabels{
 		v1alpha1.PackagesRepositoryOperationLabelRepository: op.Spec.PackageRepositoryName,
-	})
-	if err != nil {
+	}
+
+	operations := new(v1alpha1.PackageRepositoryOperationList)
+	if err := r.client.List(ctx, operations, selector); err != nil {
 		return ctrl.Result{}, fmt.Errorf("list operations: %w", err)
 	}
 
@@ -386,7 +381,7 @@ func (r *reconciler) handleCleanupState(ctx context.Context, op *v1alpha1.Packag
 	// Delete everything older than the retention window.
 	for _, toDelete := range operations.Items[cleanupOldOperationsCount:] {
 		logger.Debug("delete old operation", slog.String("name", toDelete.Name))
-		if err = r.client.Delete(ctx, &toDelete); err != nil {
+		if err := r.client.Delete(ctx, &toDelete); err != nil {
 			return ctrl.Result{}, fmt.Errorf("delete old operation: %w", err)
 		}
 	}
@@ -494,6 +489,56 @@ func (r *reconciler) updatePackageRepositoryCondition(ctx context.Context, op *v
 
 	if err := r.client.Status().Patch(ctx, repo, client.MergeFrom(original)); err != nil {
 		return fmt.Errorf("update package repository status: %w", err)
+	}
+
+	return nil
+}
+
+// updateRepositoryStatus updates the PackageRepository status with the processed packages.
+func (r *reconciler) updateRepositoryStatus(ctx context.Context, repo *v1alpha1.PackageRepository, packages []v1alpha1.PackageRepositoryOperationStatusPackage) error {
+	original := repo.DeepCopy()
+
+	// Type is stable per package; recover it from the previous status when an incremental scan returned empty.
+	cachedTypes := make(map[string]string, len(repo.Status.Packages))
+	for _, p := range repo.Status.Packages {
+		cachedTypes[p.Name] = p.Type
+	}
+
+	repo.Status.Packages = make([]v1alpha1.PackageRepositoryStatusPackage, 0, len(packages))
+
+	var newVersionsTotal int
+	for _, pkg := range packages {
+		newVersionsTotal += pkg.NewVersions
+
+		pkgType := pkg.Type
+		if pkgType == "" {
+			pkgType = cachedTypes[pkg.Name]
+		}
+		if pkgType == "" {
+			continue
+		}
+		repo.Status.Packages = append(repo.Status.Packages, v1alpha1.PackageRepositoryStatusPackage{
+			Name: pkg.Name,
+			Type: pkgType,
+		})
+	}
+
+	now := metav1.NewTime(time.Now())
+
+	repo.Status.PackagesCount = len(repo.Status.Packages)
+	repo.Status.Phase = v1alpha1.PackageRepositoryPhaseActive
+
+	repo.Status.LastScanTime = &now
+	repo.Status.LastNewVersions = newVersionsTotal
+
+	// LastChangeTime is preserved across scans that find nothing new, so only
+	// advance it when the current scan actually found versions.
+	if newVersionsTotal > 0 {
+		repo.Status.LastChangeTime = &now
+	}
+
+	if err := r.client.Status().Patch(ctx, repo, client.MergeFrom(original)); err != nil {
+		return fmt.Errorf("update repository status: %w", err)
 	}
 
 	return nil
