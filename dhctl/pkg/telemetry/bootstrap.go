@@ -82,7 +82,7 @@ func Bootstrap(ctx context.Context) error {
 		),
 	)
 	if err != nil {
-		dhlog.FromContext(ctx).WarnContext(ctx, strings.TrimRight(fmt.Sprintf("failed to initialize OTel resource completely: %v", err), "\n"))
+		dhlog.FromContext(ctx).DebugContext(ctx, strings.TrimRight(fmt.Sprintf("failed to initialize OTel resource completely: %v", err), "\n"))
 	}
 
 	tracesShutdown := initTraces(tracesExporter, otelResource)
