@@ -1,0 +1,405 @@
+diff --git a/fuzz_handlers_test.go b/fuzz_handlers_test.go
+new file mode 100644
+index 0000000..dfffb41
+--- /dev/null
++++ b/fuzz_handlers_test.go
+@@ -0,0 +1,274 @@
++package main
++
++import (
++	"encoding/json"
++	"io"
++	"net/http"
++	"net/http/httptest"
++	"net/url"
++	"strings"
++	"testing"
++
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/validation"
++)
++
++// Fuzz targets for oauth2-proxy HTTP handlers that accept user-controlled
++// input (path, query, headers, cookies, form, Authorization). Shipped as
++// Deckhouse patch 999-fuzz-handlers; *_test.go is not built into the image.
++
++func init() {
++	logger.SetOutput(io.Discard)
++}
++
++type fuzzSeedRequest struct {
++	Method   string              `json:"method"`
++	URL      string              `json:"url"`
++	Headers  map[string][]string `json:"headers"`
++	PostForm url.Values          `json:"postForm"`
++	Body     string              `json:"body"`
++	Cookie   string              `json:"cookie"`
++}
++
++func fuzzAbsURL(raw string) string {
++	if raw == "" {
++		return "http://127.0.0.1/"
++	}
++	if strings.HasPrefix(raw, "http://") || strings.HasPrefix(raw, "https://") {
++		return raw
++	}
++	if strings.HasPrefix(raw, "/") {
++		return "http://127.0.0.1" + raw
++	}
++	return "http://127.0.0.1/" + raw
++}
++
++func newFuzzRequest(t *testing.T, data []byte, defaultMethod, defaultURL string) *http.Request {
++	t.Helper()
++	if len(data) > 0 && data[0] == '{' {
++		var sr fuzzSeedRequest
++		if err := json.Unmarshal(data, &sr); err == nil {
++			method := sr.Method
++			if method == "" {
++				method = defaultMethod
++			}
++			rawURL := sr.URL
++			if rawURL == "" {
++				rawURL = defaultURL
++			}
++			u, err := url.Parse(fuzzAbsURL(rawURL))
++			if err != nil {
++				t.Skip(err)
++			}
++			var body io.Reader = strings.NewReader(sr.Body)
++			if sr.PostForm != nil && (method == http.MethodPost || method == http.MethodPut || method == http.MethodPatch) {
++				body = strings.NewReader(sr.PostForm.Encode())
++			}
++			req, err := http.NewRequestWithContext(t.Context(), method, u.String(), body)
++			if err != nil {
++				t.Skip(err)
++			}
++			if sr.Headers != nil {
++				req.Header = sr.Headers
++			}
++			if sr.Cookie != "" {
++				req.Header.Set("Cookie", sr.Cookie)
++			}
++			if sr.PostForm != nil && req.Header.Get("Content-Type") == "" {
++				req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
++			}
++			if req.Host == "" {
++				req.Host = "127.0.0.1"
++			}
++			req.RemoteAddr = "127.0.0.1:1"
++			return req
++		}
++	}
++	method := defaultMethod
++	if len(data) > 0 {
++		switch data[0] % 5 {
++		case 1:
++			method = http.MethodPost
++		case 2:
++			method = http.MethodPut
++		case 3:
++			method = http.MethodHead
++		case 4:
++			method = http.MethodDelete
++		}
++	}
++	body := data
++	if len(data) > 1 {
++		body = data[1:]
++	}
++	req, err := http.NewRequestWithContext(t.Context(), method, fuzzAbsURL(defaultURL), strings.NewReader(string(body)))
++	if err != nil {
++		t.Skip(err)
++	}
++	req.Host = "127.0.0.1"
++	req.RemoteAddr = "127.0.0.1:1"
++	return req
++}
++
++func mustFuzzProxy(t *testing.T) *OAuthProxy {
++	t.Helper()
++	opts := options.NewOptions()
++	opts.Cookie.Secret = rawCookieSecret
++	opts.Providers[0].ID = "providerID"
++	opts.Providers[0].ClientID = clientID
++	opts.Providers[0].ClientSecret = clientSecret
++	opts.EmailDomains = []string{"*"}
++	staticCode := 200
++	opts.UpstreamServers = options.UpstreamConfig{
++		Upstreams: []options.Upstream{{
++			ID:   "static",
++			Path: "/",
++			// Static body avoids dialing a real backend while still
++			// exercising the proxy path after authentication.
++			Static:     true,
++			StaticCode: &staticCode,
++		}},
++	}
++	if err := validation.Validate(opts); err != nil {
++		t.Skip(err)
++	}
++	p, err := NewOAuthProxy(opts, func(string) bool { return true })
++	if err != nil {
++		t.Fatalf("NewOAuthProxy: %v", err)
++	}
++	return p
++}
++
++func fuzzProxyHandler(f *testing.F, seeds []string, method, path string) {
++	for _, seed := range seeds {
++		f.Add([]byte(seed))
++	}
++	f.Add([]byte{})
++	f.Add([]byte("{not-json"))
++	f.Fuzz(func(t *testing.T, data []byte) {
++		p := mustFuzzProxy(t)
++		// Always go through ServeHTTP so preAuth/session middleware injects
++		// RequestScope. Direct handler calls panic in ErrorPage when scope is nil.
++		p.ServeHTTP(httptest.NewRecorder(), newFuzzRequest(t, data, method, path))
++	})
++}
++
++func FuzzServeHTTP(f *testing.F) {
++	fuzzProxyHandler(f, []string{
++		`{"method":"GET","url":"/robots.txt"}`,
++		`{"method":"GET","url":"/ping"}`,
++		`{"method":"GET","url":"/ready"}`,
++		`{"method":"GET","url":"/oauth2/start"}`,
++		`{"method":"GET","url":"/oauth2/sign_in"}`,
++		`{"method":"POST","url":"/oauth2/sign_in","postForm":{"username":["a"],"password":["b"]}}`,
++		`{"method":"GET","url":"/oauth2/sign_out"}`,
++		`{"method":"GET","url":"/oauth2/callback?code=x&state=y"}`,
++		`{"method":"GET","url":"/oauth2/userinfo"}`,
++		`{"method":"GET","url":"/oauth2/auth"}`,
++		`{"method":"GET","url":"/","headers":{"Authorization":["Bearer eyJhbGciOiJub25lIn0.eyJzdWIiOiJ4In0.x"]}}`,
++		`{"method":"GET","url":"/","cookie":"_oauth2_proxy=not-a-ticket"}`,
++		`{"method":"GET","url":"/","headers":{"X-Forwarded-For":["10.0.0.1"],"X-Forwarded-Host":["evil.example"],"X-Forwarded-Proto":["https"]}}`,
++	}, http.MethodGet, "/")
++}
++
++func FuzzSignIn(f *testing.F) {
++	fuzzProxyHandler(f, []string{
++		`{"method":"GET","url":"/oauth2/sign_in"}`,
++		`{"method":"POST","url":"/oauth2/sign_in","postForm":{"username":["u"],"password":["p"]}}`,
++	}, http.MethodPost, "/oauth2/sign_in")
++}
++
++func FuzzSignOut(f *testing.F) {
++	fuzzProxyHandler(f, []string{
++		`{"method":"GET","url":"/oauth2/sign_out"}`,
++		`{"method":"GET","url":"/oauth2/sign_out?rd=https://evil.example/"}`,
++	}, http.MethodGet, "/oauth2/sign_out")
++}
++
++func FuzzOAuthStart(f *testing.F) {
++	fuzzProxyHandler(f, []string{
++		`{"method":"GET","url":"/oauth2/start"}`,
++		`{"method":"GET","url":"/oauth2/start?rd=/abs"}`,
++	}, http.MethodGet, "/oauth2/start")
++}
++
++func FuzzOAuthCallback(f *testing.F) {
++	fuzzProxyHandler(f, []string{
++		`{"method":"GET","url":"/oauth2/callback?error=access_denied&error_description=nope"}`,
++		`{"method":"GET","url":"/oauth2/callback?code=abc&state=xyz"}`,
++		`{"method":"POST","url":"/oauth2/callback","postForm":{"code":["abc"],"state":["xyz"]}}`,
++	}, http.MethodGet, "/oauth2/callback")
++}
++
++func FuzzAuthOnly(f *testing.F) {
++	fuzzProxyHandler(f, []string{
++		`{"method":"GET","url":"/oauth2/auth"}`,
++		`{"method":"GET","url":"/oauth2/auth","headers":{"Authorization":["Bearer x"]}}`,
++		`{"method":"GET","url":"/oauth2/auth","cookie":"_oauth2_proxy=x"}`,
++	}, http.MethodGet, "/oauth2/auth")
++}
++
++func FuzzProxy(f *testing.F) {
++	fuzzProxyHandler(f, []string{
++		`{"method":"GET","url":"/"}`,
++		`{"method":"GET","url":"/api?q=<script>"}`,
++		`{"method":"POST","url":"/","body":"{}","headers":{"Content-Type":["application/json"]}}`,
++	}, http.MethodGet, "/")
++}
++
++func FuzzUserInfo(f *testing.F) {
++	fuzzProxyHandler(f, []string{
++		`{"method":"GET","url":"/oauth2/userinfo"}`,
++		`{"method":"GET","url":"/oauth2/userinfo","headers":{"Authorization":["Bearer x"]}}`,
++	}, http.MethodGet, "/oauth2/userinfo")
++}
++
++func FuzzManualSignIn(f *testing.F) {
++	f.Add([]byte(`{"method":"POST","url":"/oauth2/sign_in","postForm":{"username":["u"],"password":["p"]}}`))
++	f.Fuzz(func(t *testing.T, data []byte) {
++		p := mustFuzzProxy(t)
++		_, _, _ = p.ManualSignIn(newFuzzRequest(t, data, http.MethodPost, "/oauth2/sign_in"))
++	})
++}
++
++func FuzzLoadCookiedSession(f *testing.F) {
++	f.Add([]byte(`{"method":"GET","url":"/","cookie":"_oauth2_proxy=not-valid"}`))
++	f.Add([]byte(`{"method":"GET","url":"/","cookie":"_oauth2_proxy="}`))
++	f.Fuzz(func(t *testing.T, data []byte) {
++		p := mustFuzzProxy(t)
++		_, _ = p.LoadCookiedSession(newFuzzRequest(t, data, http.MethodGet, "/"))
++	})
++}
++
++func FuzzRedeemCode(f *testing.F) {
++	f.Add("code")
++	f.Add("")
++	f.Add("../../../etc/passwd")
++	f.Fuzz(func(t *testing.T, code string) {
++		p := mustFuzzProxy(t)
++		req := httptest.NewRequest(http.MethodGet, "http://127.0.0.1/oauth2/callback?code="+url.QueryEscape(code), nil)
++		_, _ = p.redeemCode(req.WithContext(t.Context()), code)
++	})
++}
++
++func FuzzAllHandlers(f *testing.F) {
++	f.Add([]byte(`{"method":"GET","url":"/oauth2/callback?code=x&state=y"}`))
++	f.Fuzz(func(t *testing.T, data []byte) {
++		p := mustFuzzProxy(t)
++		for _, path := range []string{
++			"/",
++			"/robots.txt",
++			"/oauth2/sign_in",
++			"/oauth2/sign_out",
++			"/oauth2/start",
++			"/oauth2/callback",
++			"/oauth2/auth",
++			"/oauth2/userinfo",
++		} {
++			p.ServeHTTP(httptest.NewRecorder(), newFuzzRequest(t, data, http.MethodGet, path))
++		}
++		_, _, _ = p.ManualSignIn(newFuzzRequest(t, data, http.MethodPost, "/oauth2/sign_in"))
++		_, _ = p.LoadCookiedSession(newFuzzRequest(t, data, http.MethodGet, "/"))
++	})
++}
+diff --git a/pkg/middleware/fuzz_jwt_session_test.go b/pkg/middleware/fuzz_jwt_session_test.go
+new file mode 100644
+index 0000000..1b4aa4a
+--- /dev/null
++++ b/pkg/middleware/fuzz_jwt_session_test.go
+@@ -0,0 +1,55 @@
++package middleware
++
++import (
++	"context"
++	"errors"
++	"net/http"
++	"net/http/httptest"
++	"regexp"
++	"testing"
++
++	"github.com/justinas/alice"
++	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
++	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
++)
++
++// JWT session loader parses Authorization (Bearer / Basic) as user input.
++
++func FuzzJwtSessionLoader(f *testing.F) {
++	f.Add("Bearer eyJhbGciOiJub25lIn0.eyJzdWIiOiJ4In0.x")
++	f.Add("Bearer eyJfoobar.eyJfoobar.12345asdf")
++	f.Add("Basic dXNlcjpwYXNz")
++	f.Add("Bearer ")
++	f.Add("")
++	f.Add("NotAScheme token")
++	f.Fuzz(func(t *testing.T, auth string) {
++		loader := NewJwtSessionLoader([]middlewareapi.TokenToSessionFunc{
++			func(_ context.Context, token string) (*sessionsapi.SessionState, error) {
++				if token == "" {
++					return nil, errors.New("empty")
++				}
++				return nil, errors.New("unverified")
++			},
++		})
++		handler := alice.New(NewScope(false, "X-Request-Id")).Then(loader(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})))
++		req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://127.0.0.1/", nil)
++		if err != nil {
++			t.Skip(err)
++		}
++		if auth != "" {
++			req.Header.Set("Authorization", auth)
++		}
++		handler.ServeHTTP(httptest.NewRecorder(), req)
++	})
++}
++
++func FuzzFindTokenFromHeader(f *testing.F) {
++	j := &jwtSessionLoader{jwtRegex: regexp.MustCompile(jwtRegexFormat)}
++	f.Add("Bearer eyJhbGciOiJub25lIn0.eyJzdWIiOiJ4In0.x")
++	f.Add("Basic dXNlcjpwYXNz")
++	f.Add("")
++	f.Add("Bearer")
++	f.Fuzz(func(t *testing.T, header string) {
++		_, _ = j.findTokenFromHeader(header)
++	})
++}
+diff --git a/pkg/sessions/persistence/fuzz_ticket_test.go b/pkg/sessions/persistence/fuzz_ticket_test.go
+new file mode 100644
+index 0000000..c12e14e
+--- /dev/null
++++ b/pkg/sessions/persistence/fuzz_ticket_test.go
+@@ -0,0 +1,58 @@
++package persistence
++
++import (
++	"net/http"
++	"testing"
++
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
++)
++
++// decodeTicket / decodeTicketFromRequest parse the Deckhouse cookie-refresh
++// JSON blob that lives in the session cookie. That is user-controlled input.
++
++func fuzzCookieSecret() string {
++	b := make([]byte, 32)
++	for i := range b {
++		b[i] = byte('A' + i%26)
++	}
++	return string(b)
++}
++
++func fuzzCookieOpts() *options.Cookie {
++	return &options.Cookie{
++		Name:   "_oauth2_proxy",
++		Secret: fuzzCookieSecret(),
++		Expire: 0,
++	}
++}
++
++func FuzzDecodeTicket(f *testing.F) {
++	f.Add([]byte(`{"Ticket":"dummy-0123456789abcdef.MDEyMzQ1Njc4OWFiY2RlZg","RefreshToken":"rt"}`))
++	f.Add([]byte(`{"Ticket":"a.b","RefreshToken":""}`))
++	f.Add([]byte(`{"Ticket":"only-one-part","RefreshToken":"x"}`))
++	f.Add([]byte(`not-json`))
++	f.Add([]byte(`{}`))
++	f.Add([]byte(`[]`))
++	f.Add([]byte(`{"Ticket":null,"RefreshToken":null}`))
++	f.Fuzz(func(t *testing.T, data []byte) {
++		_, _, _ = decodeTicket(string(data), fuzzCookieOpts())
++	})
++}
++
++func FuzzDecodeTicketFromRequest(f *testing.F) {
++	f.Add("_oauth2_proxy=not-signed")
++	f.Add("_oauth2_proxy=")
++	f.Add("other=1")
++	f.Add("")
++	f.Add("_oauth2_proxy=" + string([]byte{0xff, 0xfe}))
++	f.Fuzz(func(t *testing.T, cookie string) {
++		req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://127.0.0.1/", nil)
++		if err != nil {
++			t.Skip(err)
++		}
++		if cookie != "" {
++			req.Header.Set("Cookie", cookie)
++		}
++		_, _, _ = decodeTicketFromRequest(req, fuzzCookieOpts())
++	})
++}
