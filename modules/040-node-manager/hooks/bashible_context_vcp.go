@@ -298,14 +298,25 @@ func readTenantNodeGroups(input *go_hook.HookInput) []map[string]interface{} {
 		input.Logger.Warn("cannot read tenant nodeGroups for the bashible context", log.Err(err))
 		return nil
 	}
-	// TODO: node-controller resolves each NodeGroup's kubernetesVersion, but it does not run in a tenant now
+	// TODO: node-controller resolves each NodeGroup's kubernetesVersion/cri.type, but it does not run in a tenant now
 	kubernetesVersion := input.Values.Get("global.clusterConfiguration.kubernetesVersion").String()
+	defaultCRI := input.Values.Get("global.clusterConfiguration.defaultCRI").String()
+	if defaultCRI == "" {
+		defaultCRI = "Containerd"
+	}
 	for _, ng := range ngs {
-		if kubernetesVersion == "" {
-			break
+		if kubernetesVersion != "" {
+			if v, ok := ng["kubernetesVersion"].(string); !ok || v == "" {
+				ng["kubernetesVersion"] = kubernetesVersion
+			}
 		}
-		if v, ok := ng["kubernetesVersion"].(string); !ok || v == "" {
-			ng["kubernetesVersion"] = kubernetesVersion
+		cri, _ := ng["cri"].(map[string]interface{})
+		if cri == nil {
+			cri = map[string]interface{}{}
+			ng["cri"] = cri
+		}
+		if t, ok := cri["type"].(string); !ok || t == "" {
+			cri["type"] = defaultCRI
 		}
 	}
 	return ngs
