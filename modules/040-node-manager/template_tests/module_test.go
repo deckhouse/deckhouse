@@ -1569,6 +1569,44 @@ ccc: ddd
 		})
 	})
 
+	Context("Static instances :: CAPS RBAC", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerStaticInstances)
+			f.ValuesSet("nodeManager.internal.capsControllerManagerEnabled", true)
+			setBashibleAPIServerTLSValues(f)
+			f.HelmRender()
+		})
+
+		// spec.privateSSHKey and spec.sudoPasswordEncoded of SSHCredentials are marked
+		// x-kubernetes-sensitive-data, so the apiserver returns "<omitted>" to anyone
+		// without the sshcredentials/sensitive subresource. CAPS needs the unmasked
+		// values to log in over SSH — losing this rule breaks node bootstrap.
+		It("grants the CAPS controller access to sshcredentials/sensitive", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			capsClusterRole := f.KubernetesGlobalResource("ClusterRole", "d8:node-manager:caps-controller-manager")
+			Expect(capsClusterRole.Exists()).To(BeTrue())
+
+			var sensitiveRule map[string]interface{}
+			for _, rule := range capsClusterRole.Field("rules").Array() {
+				r := rule.Value().(map[string]interface{})
+				resources, ok := r["resources"].([]interface{})
+				if !ok {
+					continue
+				}
+				for _, resource := range resources {
+					if resource == "sshcredentials/sensitive" {
+						sensitiveRule = r
+					}
+				}
+			}
+
+			Expect(sensitiveRule).ToNot(BeNil(), "no rule for sshcredentials/sensitive in d8:node-manager:caps-controller-manager")
+			Expect(sensitiveRule["apiGroups"]).To(ConsistOf("deckhouse.io"))
+			Expect(sensitiveRule["verbs"]).To(ConsistOf("get", "list", "watch"))
+		})
+	})
+
 	Context("Setting tags/labels to MachineClass", func() {
 		providerValues := `{ "o":"provider", "z":"provider" }`
 		nodeGroupValues := `{ "a":"nodegroup", "o":"nodegroup" }`
