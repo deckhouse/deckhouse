@@ -59,19 +59,43 @@ data "yandex_vpc_subnet" "kube_d" {
   name  = "${local.prefix}-d"
 }
 
+locals {
+  reserved_address_name = join("-", [local.prefix, var.nodeGroupName, var.nodeIndex])
+
+  reserved_address_count = var.nodeIndex < length(local.external_ip_addresses) ? local.external_ip_addresses[var.nodeIndex] == "Auto" ? 1 : 0 : 0
+}
+
 resource "yandex_vpc_address" "addr" {
-  count = var.nodeIndex < length(local.external_ip_addresses) ? local.external_ip_addresses[var.nodeIndex] == "Auto" ? 1 : 0 : 0
-  name  = join("-", [local.prefix, var.nodeGroupName, var.nodeIndex])
+  count = local.reserved_address_count
+  name  = local.reserved_address_name
 
   external_ipv4_address {
     zone_id = local.internal_subnet.zone
   }
 }
 
+# The instance must not reference yandex_vpc_address.addr directly.
+#
+# Terraform builds its dependency graph from references in configuration, not
+# from evaluated values, so any mention of the resource -- even in a ternary
+# branch that is not taken -- makes the instance's update wait for that
+# resource's destroy node. That node cannot finish until the instance releases
+# the address, so removing externalIPAddresses deadlocks with
+# "FailedPrecondition: Address in use".
+#
+# Reading the address by name breaks the cycle: when the address is removed both
+# counts drop to zero and this data source leaves the graph entirely, letting the
+# instance drop NAT independently of the address being destroyed.
+data "yandex_vpc_address" "addr" {
+  count      = local.reserved_address_count
+  name       = local.reserved_address_name
+  depends_on = [yandex_vpc_address.addr]
+}
+
 locals {
   external_ip = var.nodeIndex < length(local.external_ip_addresses) ? (
     local.external_ip_addresses[var.nodeIndex] == "Auto" ? (
-      try(yandex_vpc_address.addr[0].external_ipv4_address[0].address, null)
+      try(data.yandex_vpc_address.addr[0].external_ipv4_address[0].address, null)
     ) : local.external_ip_addresses[var.nodeIndex]
   ) : null
 }
