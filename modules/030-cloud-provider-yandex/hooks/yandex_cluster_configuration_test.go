@@ -123,6 +123,19 @@ spec:
   enabled: true
   settings: {}
 `
+
+		// The candi Secret exists but cloud-provider-discovery-data.json is empty: indistinguishable
+		// from no Secret at all, and must not silence the PCC fallback.
+		candiEmptySecretState = `
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-candi-cloud-provider-discovery-data
+  namespace: d8-cloud-provider-yandex
+data:
+  "cloud-provider-discovery-data.json": ""
+`
+
 	)
 
 	// ---- Context a: Cluster has empty state (no PCC) ----
@@ -138,6 +151,36 @@ spec:
 
 		It("Hook should succeed", func() {
 			Expect(a).To(ExecuteSuccessfully())
+		})
+
+		// This is the shape a cluster whose infrastructure DKP does not create ends up with,
+		// and the same payload openapi/values.yaml validates on every write. Every field of
+		// YandexCloudDiscoveryData except the type markers and the region is `omitempty`, so
+		// nothing else may appear here — a nil slice or map would serialize to null and be
+		// rejected as "must be of type array/object: null". The schema side of the contract
+		// is pinned in openapi/openapi-case-tests.yaml, the encoding side in
+		// hooks/internal/cloud_discovery_data_test.go.
+		It("writes discovery data carrying only the type markers and the region", func() {
+			Expect(a).To(ExecuteSuccessfully())
+
+			discoveryData := a.ValuesGet("cloudProviderYandex.internal.providerDiscoveryData")
+			Expect(discoveryData.Exists()).To(BeTrue())
+			Expect(discoveryData.Map()).To(HaveLen(3))
+
+			Expect(discoveryData.Get("apiVersion").String()).To(Equal("deckhouse.io/v1"))
+			Expect(discoveryData.Get("kind").String()).To(Equal("YandexCloudDiscoveryData"))
+			Expect(discoveryData.Get("region").String()).To(Equal("ru-central1"))
+
+			for _, absent := range []string{
+				"routeTableID",
+				"defaultLbTargetGroupNetworkId",
+				"internalNetworkIDs",
+				"zones",
+				"zoneToSubnetIdMap",
+				"shouldAssignPublicIPAddress",
+			} {
+				Expect(discoveryData.Get(absent).Exists()).To(BeFalse(), "%s must be omitted, not written as an empty value or null", absent)
+			}
 		})
 	})
 
@@ -274,6 +317,26 @@ ru-central1-c: test
 			Expect(e.ValuesGet("cloudProviderYandex.internal.credentialSecrets.d8-credentials.authScheme").String()).To(Equal("serviceAccount"))
 		})
 	})
+
+	// ---- Context candi-empty-with-pcc: empty candi payload does not silence the PCC fallback ----
+	candiEmptyWithPCC := HookExecutionConfigInit(initValuesString, `{}`)
+	candiEmptyWithPCC.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
+	candiEmptyWithPCC.RegisterCRD("deckhouse.io", "v1", "YandexInstanceClass", false)
+	candiEmptyWithPCC.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
+	Context("Empty candi Secret payload plus PCC with discovery data yields values from PCC", func() {
+		BeforeEach(func() {
+			candiEmptyWithPCC.BindingContexts.Set(candiEmptyWithPCC.KubeStateSet(stateB + "\n---\n" + moduleConfigV1 + "\n---\n" + candiEmptySecretState))
+			candiEmptyWithPCC.RunHook()
+		})
+
+		It("Discovery data values come from PCC, not an empty object", func() {
+			Expect(candiEmptyWithPCC).To(ExecuteSuccessfully())
+
+			Expect(candiEmptyWithPCC.ValuesGet("cloudProviderYandex.internal.providerDiscoveryData.defaultLbTargetGroupNetworkId").String()).To(Equal("test"))
+			Expect(candiEmptyWithPCC.ValuesGet("cloudProviderYandex.internal.providerDiscoveryData.routeTableID").String()).To(Equal("test"))
+		})
+	})
+
 })
 
 const (

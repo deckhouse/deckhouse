@@ -24,13 +24,13 @@ checksum/config: {{ include (print $.Template.BasePath "/cloud-controller-manage
 - name: YANDEX_CLOUD_DEFAULT_LB_LISTENER_SUBNET_ID
   value: {{ .Values.cloudProviderYandex.internal.defaultLbListenerSubnetId | quote }}
 - name: YANDEX_CLOUD_DEFAULT_LB_TARGET_GROUP_NETWORK_ID
-  value: {{ .Values.cloudProviderYandex.internal.providerDiscoveryData.defaultLbTargetGroupNetworkId | quote }}
+  value: {{ include "yandex_network_id" . | quote }}
 - name: YANDEX_CLOUD_INTERNAL_NETWORK_IDS
-  value: {{ join "," .Values.cloudProviderYandex.internal.providerDiscoveryData.internalNetworkIDs | quote }}
+  value: {{ join "," (include "yandex_internal_network_ids" . | fromJsonArray) | quote }}
 - name: YANDEX_CLOUD_EXTERNAL_NETWORK_IDS
   value: {{ join "," (dig "ccm" "parameters" "additionalExternalNetworkIDs" (list) .Values.cloudProviderYandex) | quote }}
 - name: YANDEX_CLOUD_ROUTE_TABLE_ID
-  value: {{ .Values.cloudProviderYandex.internal.providerDiscoveryData.routeTableID | required ".Values.cloudProviderYandex.internal.providerDiscoveryData.routeTableID is required" | quote }}
+  value: {{ include "yandex_route_table_id" . | required "nodes.parameters.existingRouteTableID or internal.providerDiscoveryData.routeTableID is required" | quote }}
 {{- end -}}
 
 {{- if and (not (default false (dig "nodes" "disabled" false .Values.cloudProviderYandex))) (not (default false (dig "ccm" "disabled" false .Values.cloudProviderYandex))) }}

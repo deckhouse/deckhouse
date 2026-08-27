@@ -28,6 +28,7 @@ module "vpc_components" {
   network_id = local.network_id
   node_network_cidr = local.node_network_cidr
   existing_zone_to_subnet_id_map = local.existing_zone_to_subnet_id_map
+  existing_route_table_id = local.existing_route_table_id
   dhcp_domain_name = local.dhcp_domain_name
   dhcp_domain_name_servers = local.dhcp_domain_name_servers
 
