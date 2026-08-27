@@ -16,7 +16,9 @@ spec:
         resources: ["clusters"]
         scope: Namespaced
   validations:
-    - expression: 'request.namespace != "d8-cloud-instance-manager"'
+    - expression: |
+        request.namespace != "d8-cloud-instance-manager"
+        || request.userInfo.username == "dhctl"
       reason: Forbidden
       message: "Deleting a CAPI Cluster from the d8-cloud-instance-manager namespace is forbidden."
 ---
