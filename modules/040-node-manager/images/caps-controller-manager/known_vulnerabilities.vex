@@ -1,0 +1,23 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-3a75972ce9353612ace2ae04ccdadf0a06ef8fb8d12ff913aa4b992a3883edd7",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "GO-2026-5932 относится к пакету golang.org/x/crypto/openpgp, который помечен как unmaintained и не имеет исправленной версии. Бинарник caps-controller-manager использует из модуля golang.org/x/crypto только подпакет golang.org/x/crypto/ssh: разбор приватных ключей через ssh.ParseRawPrivateKey в webhook-ах SSHCredentials (api/deckhouse.io/v1alpha1, v1alpha2) и SSH-клиент в internal/ssh/gossh. Пакет openpgp в графе импортов отсутствует: его не находит ни поиск по исходникам, ни go list -deps ./.... Уязвимый код в данном компоненте не выполняется.",
+      "timestamp": "2026-08-27T13:02:31.000000000Z"
+    }
+  ],
+  "timestamp": "2026-08-27T13:02:31.000000000Z"
+}

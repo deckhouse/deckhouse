@@ -1,0 +1,23 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-96fd507fcca36077fca5bcc0c4fc420fa0ec9e7d9a184eef22300252a8e73d77",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "GO-2026-5932 относится к пакету golang.org/x/crypto/openpgp, который помечен как unmaintained и не имеет исправленной версии. Бинарник capi-controller-manager собирается из цели sigs.k8s.io/cluster-api, и пакета golang.org/x/crypto/openpgp нет ни в графе импортов этой цели (go list -deps не находит его среди 1286 пакетов сборки), ни в исходниках репозитория. Модуль golang.org/x/crypto подтягивается транзитивно через github.com/Masterminds/sprig/v3 из internal/controllers/topology/cluster/patches/inline; в бинарник попадают только bcrypt, blowfish, pbkdf2 и scrypt. Уязвимый код openpgp в образ не входит и не выполняется.",
+      "timestamp": "2026-08-27T13:03:24.000000000Z"
+    }
+  ],
+  "timestamp": "2026-08-27T13:03:24.000000000Z"
+}

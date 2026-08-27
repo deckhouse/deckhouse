@@ -71,3 +71,5 @@ imageSpec:
   config:
     entrypoint: ["/registry"]
     cmd: ["serve", "/config/config.yaml"]
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

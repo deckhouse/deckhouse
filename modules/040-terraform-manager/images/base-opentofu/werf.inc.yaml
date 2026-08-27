@@ -6,3 +6,5 @@ import:
   add: /opentofu/opentofu
   to: /opentofu
   before: setup
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

@@ -1,0 +1,23 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-b66e782eaf081e2e4cccd624e54715428fd768c9fcea1b71c27fa1f2bdf7f344",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "GO-2026-5932 относится к пакету golang.org/x/crypto/openpgp, который помечен как unmaintained. Бинарник auth_server не импортирует golang.org/x/crypto/openpgp: модуль golang.org/x/crypto указан прямой зависимостью ради bcrypt в пакете authn, в графе импортов из него присутствуют только golang.org/x/crypto/bcrypt и golang.org/x/crypto/blowfish. Второй модуль в дереве исходников, auth_server/.build/genversion, используется только на этапе сборки (Makefile вызывает go run для вычисления Version и BuildID) и в образ не попадает; там golang.org/x/crypto v0.53.0 подтягивается транзитивно через github.com/go-git/go-git/v5 и его ssh-транспорт, подпакета openpgp в графе тоже нет. Пакеты openpgp, которые видны в графе genversion, принадлежат отдельному модулю github.com/ProtonMail/go-crypto и под данную advisory не подпадают. Ни grep по исходникам, ни go list -deps не находят golang.org/x/crypto/openpgp. Исправленной версии пакета нет; уязвимый код в данном компоненте не выполняется.",
+      "timestamp": "2026-08-27T13:01:05.000000000Z"
+    }
+  ],
+  "timestamp": "2026-08-27T13:01:05.000000000Z"
+}

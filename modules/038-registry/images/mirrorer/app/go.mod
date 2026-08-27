@@ -1,6 +1,6 @@
 module mirrorer
 
-go 1.24.0
+go 1.25.0
 
 require (
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
@@ -22,5 +22,5 @@ require (
 	github.com/sirupsen/logrus v1.9.4 // indirect
 	github.com/vbatts/tar-split v0.12.2 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
-	golang.org/x/sys v0.40.0 // indirect
+	golang.org/x/sys v0.47.0 // indirect
 )
