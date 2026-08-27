@@ -1,0 +1,65 @@
+diff --git a/yandex/resource_yandex_vpc_address.go b/yandex/resource_yandex_vpc_address.go
+index 186ff8a..792eaa3 100644
+--- a/yandex/resource_yandex_vpc_address.go
++++ b/yandex/resource_yandex_vpc_address.go
+@@ -7,10 +7,12 @@ import (
+ 
+ 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+ 
++	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
+ 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+ 	"github.com/yandex-cloud/go-genproto/yandex/cloud/vpc/v1"
+ 	"github.com/yandex-cloud/terraform-provider-yandex/common"
+ 	"google.golang.org/genproto/protobuf/field_mask"
++	"google.golang.org/grpc/codes"
+ )
+ 
+ const yandexVPCAddressDefaultTimeout = 30 * time.Second
+@@ -372,22 +374,36 @@ func resourceYandexVPCAddressDelete(d *schema.ResourceData, meta interface{}) er
+ 		AddressId: d.Id(),
+ 	}
+ 
+-	ctx, cancel := context.WithTimeout(config.Context(), d.Timeout(schema.TimeoutDelete))
++	timeout := d.Timeout(schema.TimeoutDelete)
++
++	ctx, cancel := context.WithTimeout(config.Context(), timeout)
+ 	defer cancel()
+ 
+-	op, err := config.sdk.WrapOperation(config.sdk.VPC().Address().Delete(ctx, req))
+-	if err != nil {
+-		return handleAddressNotFoundError(err, d, d.Id())
+-	}
++	// The address may still be reported as in use right after the network
++	// interface that referenced it has been updated: the API releases it
++	// asynchronously. Retry on FailedPrecondition until the delete succeeds
++	// or the resource timeout expires.
++	err := retry.RetryContext(ctx, timeout, func() *retry.RetryError {
++		op, err := config.sdk.WrapOperation(config.sdk.VPC().Address().Delete(ctx, req))
++		if err != nil {
++			if isStatusWithCode(err, codes.FailedPrecondition) {
++				return retry.RetryableError(err)
++			}
++			return retry.NonRetryableError(err)
++		}
+ 
+-	err = op.Wait(ctx)
+-	if err != nil {
+-		return err
+-	}
++		if err = op.Wait(ctx); err != nil {
++			return retry.NonRetryableError(err)
++		}
+ 
+-	_, err = op.Response()
++		if _, err = op.Response(); err != nil {
++			return retry.NonRetryableError(err)
++		}
++
++		return nil
++	})
+ 	if err != nil {
+-		return err
++		return handleAddressNotFoundError(err, d, d.Id())
+ 	}
+ 
+ 	return nil
