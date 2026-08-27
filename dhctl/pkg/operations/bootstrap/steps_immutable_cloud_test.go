@@ -21,6 +21,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 )
 
 // In a cloud the provider carries the document in as the machine's cloud config. Creating the
@@ -66,4 +68,28 @@ func TestAClassicCloudMasterIsSeededWithNothing(t *testing.T) {
 	require.NoError(t, err)
 	require.Empty(t, cloudConfig)
 	require.Empty(t, nodeConfig)
+}
+
+// The channel to an immutable cloud master is opened at whatever this phase records. With no
+// --ssh-bastion-host nothing rewrites that address, so the private NodeInternalIP is unroutable
+// from outside the cloud network and the run burns its whole API-server budget before dying.
+func TestAnImmutableCloudMasterIsReachedAtTheReportedAddress(t *testing.T) {
+	t.Parallel()
+
+	address, err := immutableCloudMasterAddress("master-0", &infrastructure.PipelineOutputs{
+		MasterIPForSSH: "203.0.113.7",
+		NodeInternalIP: "10.241.32.7",
+	})
+	require.NoError(t, err)
+	require.Equal(t, "203.0.113.7", address)
+}
+
+// An empty address means talking to whatever answers on the machine dhctl runs on.
+func TestAnImmutableCloudMasterWithoutAnAddressIsRefused(t *testing.T) {
+	t.Parallel()
+
+	_, err := immutableCloudMasterAddress("master-0", &infrastructure.PipelineOutputs{
+		NodeInternalIP: "10.241.32.7",
+	})
+	require.ErrorContains(t, err, "master-0")
 }
