@@ -243,7 +243,7 @@ d8 k auth can-i get sshcredentials/sensitive --as=<user>
 
 ### Как изменить ресурс SSHCredentials, не видя его секретов?
 
-Редактирование работает как обычно. При `update` и `patch` `kube-apiserver` подставляет вместо `<omitted>` значение, уже сохранённое в etcd, поэтому `d8 k edit sshcredentials <name>` и сценарий `get -o yaml` → правка → `apply` не затирают SSH-ключ и sudo-пароль подстановочным значением.
+Редактирование работает как обычно. При `update` и `patch` `kube-apiserver` подставляет вместо `<omitted>` значение, уже сохранённое в etcd, поэтому `d8 k edit sshcredentials <name>` и сценарий `get -o yaml` → правка → `apply` не затирают SSH-ключ и sudo-пароль значением `<omitted>`.
 
 Для подстановки нужно прежнее значение, поэтому при `create` она не работает: новый ресурс с `<omitted>` в чувствительном поле отклоняется с ошибкой `422 Invalid`. Для создания `SSHCredentials` нужен настоящий ключ.
 
