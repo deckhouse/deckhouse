@@ -49,8 +49,6 @@ const (
 	ResourceHeritageMultitenancy = "multitenancy-manager"
 	ResourceHeritageDeckhouse    = "deckhouse"
 
-	NamespaceAnnotationAdopt = "projects.deckhouse.io/adopt"
-
 	ReleaseLabelHashsum = "hashsum"
 )
 

@@ -247,15 +247,13 @@ func TestIsGranted_SystemRequestBypass(t *testing.T) {
 	}
 }
 
-func TestIsGranted_ManagedByNamespaceBypass(t *testing.T) {
-	// An auto-wrapped (managed-by-namespace) project is a plain orphan namespace wrapped only for
-	// accounting; the handler bypasses the grant allow-list when the namespace carries
-	// multitenancy.deckhouse.io/project-managed-by-namespace=true — even an ungranted value from a
-	// normal user passes. The trigger is the label, not the allowNamespacesWithoutProjects flag.
+func TestIsGranted_AdoptedNamespaceIsPoliced(t *testing.T) {
+	// A namespace that used to be an orphan is a project namespace like any other now, so the grant
+	// allow-list applies to it. The marker label the retired model left behind buys no exemption.
 	ns := projectNS("proj", map[string]string{"env": "prod", "multitenancy.deckhouse.io/project-managed-by-namespace": "true"})
 	v := isGranted(t, ns, lbDef(v1alpha1.AvailabilityNone), lbRef(v1alpha1.DefaultingNone), lbGrant())
-	if resp := serve(t, v, "/is-granted", review(admissionv1.Create, svcGVR, svcGVK, "proj", "s", lbService("forbidden", "LoadBalancer"), nil)); !resp.Allowed {
-		t.Fatal("a managed-by-namespace (auto-wrapped) project must bypass the grant allow-list")
+	if resp := serve(t, v, "/is-granted", review(admissionv1.Create, svcGVR, svcGVK, "proj", "s", lbService("forbidden", "LoadBalancer"), nil)); resp.Allowed {
+		t.Fatal("an adopted namespace must be subject to the grant allow-list")
 	}
 }
 

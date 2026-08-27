@@ -60,19 +60,13 @@ const (
 	ResourceLabelManagedBy = "projects.deckhouse.io/managed-by"
 	ManagedByController    = "controller"
 
-	NamespaceAnnotationAdopt = "projects.deckhouse.io/adopt"
-
-	// ProjectLabelManagedByNamespace marks a Project that the controller auto-created to wrap a
-	// user-created namespace while allowNamespacesWithoutProjects is enabled. The namespace is the
-	// source of truth: such a project's spec is controller-managed and the project webhook rejects
-	// manual spec edits, except for removing this label, which detaches the project.
-	ProjectLabelManagedByNamespace = "multitenancy.deckhouse.io/project-managed-by-namespace"
-	ManagedByNamespace             = "true"
-
-	// NamespaceFinalizerManagedProject is set on a user namespace wrapped into a
-	// managed-by-namespace Project, so the controller observes the namespace deletion (namespaces
-	// usually carry no finalizer and would vanish before a delete event is processed) and cascades
-	// it to the managed Project before the namespace disappears.
+	// ProjectLabelManagedByNamespace and NamespaceFinalizerManagedProject belong to the retired
+	// model, where a user namespace was wrapped into a template-less Project owned by that
+	// namespace. Nothing sets them any more; they are kept for one release so the migration can
+	// recognise and strip what earlier versions left behind. Remove them together with the
+	// migration.
+	ProjectLabelManagedByNamespace   = "multitenancy.deckhouse.io/project-managed-by-namespace"
+	ManagedByNamespace               = "true"
 	NamespaceFinalizerManagedProject = "multitenancy.deckhouse.io/managed-project"
 
 	ReleaseLabelHashsum = "hashsum"

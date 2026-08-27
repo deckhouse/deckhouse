@@ -61,7 +61,7 @@ When creating a [Project](./cr.html#project) resource from a specific [ProjectTe
    * in legacy templates (`deckhouse.io/v1alpha1`) the [resources template](./cr.html#projecttemplate-v1alpha1-spec-resourcestemplate) is rendered using [Helm](https://helm.sh/docs/); values are taken from the [`parameters`](./cr.html#project-v1alpha3-spec-parameters) field of the [Project](./cr.html#project) resource;
 1. The standard fields of the project are applied independently of the template: [`.spec.quota`](./cr.html#project-v1alpha3-spec-quota) is reconciled into a `ResourceQuota`, and [`.spec.administrators`](./cr.html#project-v1alpha3-spec-administrators) into an auto-managed [ProjectRoleBinding](./cr.html#projectrolebinding).
 
-The Project API is served as `deckhouse.io/v1alpha3`. A conversion webhook keeps older `v1alpha1`/`v1alpha2` manifests working by lifting `parameters.administrators` and `parameters.resourceQuota` into the standard fields. The `projectTemplateName` field is optional: a project without a template only manages its namespace and standard fields.
+The Project API is served as `deckhouse.io/v1alpha3`. A conversion webhook keeps older `v1alpha1`/`v1alpha2` manifests working by lifting `parameters.administrators` and `parameters.resourceQuota` into the standard fields. The `projectTemplateName` field is optional: when omitted, the `simple` template is used, which only creates the project namespace.
 
 Project names are validated on creation: names longer than 61 characters and names with the system prefixes `d8-` and `kube-` are not allowed. Also, if a project `foo` exists, a project `foo-bar` cannot be created (and vice versa): names like `foo-*` are reserved for the additional namespaces of the `foo` project.
 
@@ -92,13 +92,13 @@ The bindings use the project and namespace roles of the DKP role model (`d8:proj
 
 ### Automatic project creation for namespaces
 
-By default (the [`allowNamespacesWithoutProjects: true`](configuration.html#parameters-allownamespaceswithoutprojects) parameter), users can still create namespaces directly (`d8 k create namespace`). To keep such namespaces under management, the module automatically "wraps" each of them into a project with the same name:
+Users can still create namespaces directly (`d8 k create namespace`). Every namespace that belongs to no project becomes a project of its own, with the same name and a full-fledged template:
 
-* the project is labelled `multitenancy.deckhouse.io/project-managed-by-namespace`, and the namespace remains the source of truth: its labels and annotations are synced into the project;
-* the namespace can be freely edited and deleted — deleting it also deletes the project;
-* the project itself cannot be edited manually (except for removing the `multitenancy.deckhouse.io/project-managed-by-namespace` label, which turns it into a regular project).
+* the template is picked from what the namespace already carries — `secure` if it has vulnerability scanning enabled, `default` if it has a Pod Security Standard or extended monitoring, and `simple` (namespace only) otherwise;
+* the project parameters are filled in from the current state of the namespace, so adopting it changes nothing inside;
+* from then on the project is the source of truth and is edited like any other: deleting the namespace makes the project recreate it.
 
-If the `allowNamespacesWithoutProjects` parameter is disabled, creating namespaces outside of projects is prohibited — new environments are created only via the [Project](./cr.html#project) resource.
+System namespaces (`d8-*`, `kube-*`, `default`, and anything labelled `heritage: deckhouse`) are never adopted.
 
 ### Isolating a project
 

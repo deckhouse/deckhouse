@@ -17,8 +17,6 @@ limitations under the License.
 package main
 
 import (
-	"flag"
-	"fmt"
 	"os"
 	"time"
 
@@ -53,7 +51,6 @@ import (
 	"controller/internal/jsonpath"
 	"controller/internal/rolebinding"
 	clusterprojectrolebindingwebhook "controller/internal/webhook/clusterprojectrolebinding"
-	namespacewebhook "controller/internal/webhook/namespace"
 	projectwebhook "controller/internal/webhook/project"
 	projectnamespacewebhook "controller/internal/webhook/projectnamespace"
 	projectrolebindingwebhook "controller/internal/webhook/projectrolebinding"
@@ -70,8 +67,6 @@ var (
 	helmNamespace = "d8-multitenancy-manager"
 	// controller service account (centralized in internal/rolebinding so the value cannot drift)
 	serviceAccount = rolebinding.ControllerServiceAccount
-	// list of service accounts allowed to create namespaces when allowNamespacesWithoutProjects is set to false
-	allowedServiceAccounts = []string{serviceAccount, rolebinding.DeckhouseServiceAccount, "system:serviceaccount:d8-upmeter:upmeter-agent"}
 )
 
 const (
@@ -80,15 +75,11 @@ const (
 )
 
 func main() {
-	var allowOrphanNamespaces bool
-	flag.BoolVar(&allowOrphanNamespaces, "allow-orphan-namespaces", true, "allow to create a namespace which is not a part of a Project")
-	flag.Parse()
-
 	// setup logger
 	logger := ctrl.Log.WithName(controllerName)
 	ctrllog.SetLogger(zap.New(zap.Level(zapcore.Level(-4)), zap.StacktraceLevel(zapcore.PanicLevel)))
 
-	logger.Info(fmt.Sprintf("start multitenancy-manager with %v allow orphan namespaces option", allowOrphanNamespaces))
+	logger.Info("start multitenancy-manager")
 
 	// initialize runtime manager
 	runtimeManager, err := setupRuntimeManager(logger)
@@ -122,7 +113,7 @@ func main() {
 	}
 
 	// register namespace controller
-	if err = namespacecontroller.Register(runtimeManager, logger, allowOrphanNamespaces); err != nil {
+	if err = namespacecontroller.Register(runtimeManager, logger); err != nil {
 		fatal(logger, err, "register namespace controller")
 	}
 
@@ -131,11 +122,6 @@ func main() {
 
 	// register template webhook
 	templatewebhook.Register(runtimeManager, serviceAccount)
-
-	if !allowOrphanNamespaces {
-		// register namespace webhook
-		namespacewebhook.Register(runtimeManager, allowedServiceAccounts)
-	}
 
 	// register cluster resource grants: catalog reconciler, binding-status reconcilers and webhooks.
 	jsonpathFactory := jsonpath.NewWithCache()

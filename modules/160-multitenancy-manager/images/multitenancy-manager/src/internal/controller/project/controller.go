@@ -99,9 +99,6 @@ func Register(runtimeManager manager.Manager, helmClient *helm.Client, logger lo
 			if _, ok := object.GetLabels()[v1alpha3.ResourceLabelTemplate]; ok {
 				return nil
 			}
-			if _, ok := object.GetAnnotations()[v1alpha3.NamespaceAnnotationAdopt]; ok {
-				return nil
-			}
 			if strings.HasPrefix(object.GetName(), projectmanager.KubernetesNamespacePrefix) || strings.HasPrefix(object.GetName(), projectmanager.DeckhouseNamespacePrefix) {
 				return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: projectmanager.DeckhouseProjectName}}}
 			}
@@ -190,7 +187,7 @@ func (p customPredicate[T]) Delete(_ event.TypedDeleteEvent[T]) bool {
 }
 
 func isNil(arg any) bool {
-	if v := reflect.ValueOf(arg); !v.IsValid() || ((v.Kind() == reflect.Ptr ||
+	if v := reflect.ValueOf(arg); !v.IsValid() || ((v.Kind() == reflect.Pointer ||
 		v.Kind() == reflect.Interface ||
 		v.Kind() == reflect.Slice ||
 		v.Kind() == reflect.Map ||

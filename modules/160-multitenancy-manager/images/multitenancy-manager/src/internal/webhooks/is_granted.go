@@ -147,9 +147,6 @@ func (v *IsGrantedValidator) decide(ctx context.Context, req *admissionv1.Admiss
 		}
 		return nil, fmt.Errorf("get namespace: %w", err)
 	}
-	if ns.Labels["multitenancy.deckhouse.io/project-managed-by-namespace"] == "true" {
-		return allowedResponse(req.UID), nil
-	}
 	project := resolve.ProjectName(ns)
 
 	grants, err := resolve.GrantsForLabels(ctx, v.cl, ns.Labels)
