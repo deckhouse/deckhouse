@@ -214,6 +214,13 @@ func TestMigrate_Idempotent(t *testing.T) {
 	assert.Equal(t, first.ResourceVersion, second.ResourceVersion, "a second pass must not write")
 }
 
+func TestNeedsTemplate_ExplicitEmptyString(t *testing.T) {
+	// The CRD defaults an ABSENT projectTemplateName, but an explicit "" is stored verbatim — and
+	// that spelling used to mean "a project without a template", so old manifests still carry it.
+	// It has to be recognised as needing a template, not mistaken for an already-migrated project.
+	assert.True(t, needsTemplate(project("foo", nil, "")))
+}
+
 func TestMigrate_ProjectWithoutNamespace(t *testing.T) {
 	// the namespace has not been created yet, so there is no state to preserve.
 	bare := project("foo", nil, "")
