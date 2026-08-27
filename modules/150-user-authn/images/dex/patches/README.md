@@ -161,3 +161,25 @@ Key changes:
 
 Upstream is affected as well, including `master`: an upstream PR is to be opened on top of this
 patch.
+
+### 999-fuzz-handlers.patch
+
+Go native fuzz tests for every Dex HTTP handler that accepts user-controlled
+input (query, form, headers, cookies, tokens, path parameters). Applied last
+so the tests always compile against the fully patched tree.
+
+Targets: `handleToken`, `handlePublicKeys`, `handleUserInfo`,
+`handleAuthorization`, `handleConnectorLogin`, `handleConnectorCallback`,
+`handlePasswordLogin`, `handleApproval`, `handleDeviceToken`,
+`handleDeviceTokenDeprecated`, `handleDeviceExchange`, `verifyUserCode`,
+`handleDeviceCode`, `handleDeviceCallback`, `handleIntrospect`,
+`handleTOTPVerify`, `handlePasswordChange`, plus `ServeHTTP` (discovery,
+healthz, static) and `FuzzAllHandlers`.
+
+On this branch the test does not set up the per-IP rate limiter and the lockout connector list: `015-ratelimit-lock-unlock-users.patch` is not part of release-1.76, so `NewIPRateLimiter`, the `RateLimiter`/`RealIPHeader`/`TrustedRealIPCIDRs` config fields, `WithLockoutApplyToConnectors` and `OfflineSessions.Email` do not exist here. Everything else is identical to the patch on `main`.
+
+`*_test.go` is not compiled into the Dex image. Run from a patched source tree:
+
+```
+go test -vet=off -run=^$ -fuzz=FuzzAllHandlers -fuzztime=12h ./server
+```
