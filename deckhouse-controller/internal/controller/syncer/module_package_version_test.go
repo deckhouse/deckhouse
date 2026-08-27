@@ -25,6 +25,7 @@ import (
 	metautils "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/openapi"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -111,6 +112,25 @@ func TestSyncVersionsFromImage(t *testing.T) {
 		require.NoError(t, s.Sync(ctx))
 
 		assert.Empty(t, listVersionNames(t, cl))
+	})
+
+	t.Run("multi-type schema fields parse", func(t *testing.T) {
+		dir := t.TempDir()
+		writeModuleYAML(t, filepath.Join(dir, "900-echo"), "name: echo\n")
+		// real modules spell alternatives this way, e.g. cni-cilium and node-manager
+		writeOpenAPI(t, filepath.Join(dir, "900-echo"),
+			"type: object\nproperties:\n  timeout:\n    type: [integer, string]\n",
+			"type: object\nproperties:\n  policies:\n    type: ['null', array]\n")
+
+		s, cl := newTestSyncer(t, "v1.80.0", dir)
+		require.NoError(t, s.Sync(ctx))
+
+		mpv := getVersion(t, cl, "embedded-echo-v1.80.0")
+		require.NotNil(t, mpv.Status.PackageSchemas, "a multi-type field is valid JSON Schema, the version must not be skipped")
+		timeout := mpv.Status.PackageSchemas.SettingsSchema.OpenAPIV3Schema.Properties["timeout"]
+		assert.Equal(t, openapi.StringOrArray{"integer", "string"}, timeout.Type)
+		policies := mpv.Status.PackageSchemas.ValuesSchema.OpenAPIV3Schema.Properties["policies"]
+		assert.Equal(t, openapi.StringOrArray{"null", "array"}, policies.Type)
 	})
 
 	t.Run("carries the disable options of a module.yaml module", func(t *testing.T) {

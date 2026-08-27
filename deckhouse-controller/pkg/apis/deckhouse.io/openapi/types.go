@@ -15,6 +15,8 @@
 package openapi
 
 import (
+	"slices"
+
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -26,12 +28,12 @@ type SchemaURL string
 // It is a forked subset of apiextensionsv1.JSONSchemaProps that drops all x-kubernetes-*
 // extensions and adds Deckhouse-specific x-deckhouse-* extensions as typed fields.
 type OpenAPIV3Schema struct {
-	ID          string    `json:"id,omitempty"`
-	Schema      SchemaURL `json:"$schema,omitempty"`
-	Ref         *string   `json:"$ref,omitempty"`
-	Description string    `json:"description,omitempty"`
-	Type        string    `json:"type,omitempty"`
-	Format      string    `json:"format,omitempty"`
+	ID          string        `json:"id,omitempty"`
+	Schema      SchemaURL     `json:"$schema,omitempty"`
+	Ref         *string       `json:"$ref,omitempty"`
+	Description string        `json:"description,omitempty"`
+	Type        StringOrArray `json:"type,omitempty"`
+	Format      string        `json:"format,omitempty"`
 
 	Title string `json:"title,omitempty"`
 	// default is a default value for undefined object fields.
@@ -131,6 +133,16 @@ type OpenAPIV3SchemaOrBool struct {
 type OpenAPIV3SchemaOrStringArray struct {
 	Schema   *OpenAPIV3Schema `json:"-"`
 	Property []string         `json:"-"`
+}
+
+// StringOrArray keeps the JSON Schema "type" field, which holds either one
+// type name or a list of alternatives (e.g. [integer, string]). A single name
+// marshals back to the plain string form.
+type StringOrArray []string
+
+// Contains reports whether the type list names the given type.
+func (s StringOrArray) Contains(value string) bool {
+	return slices.Contains(s, value)
 }
 
 // SchemaDependencies represent a dependencies property.
