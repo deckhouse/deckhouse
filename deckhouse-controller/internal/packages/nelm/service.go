@@ -28,6 +28,7 @@ import (
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	klient "github.com/flant/kube-client/client"
+	"github.com/flant/kube-client/manifest"
 	"github.com/google/uuid"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -403,6 +404,32 @@ func (s *Service) updateMonitor(state MaintenanceState, namespace, name, manifes
 	}
 
 	s.monitorManager.AddMonitor(namespace, name, manifests)
+}
+
+// GetConversionWebhooks returns the conversion webhooks for the given package.
+func (s *Service) GetConversionWebhooks(ctx context.Context, namespace string, pkg Package) ([]manifest.Manifest, error) {
+	rendered, err := s.Render(ctx, namespace, pkg)
+	if err != nil {
+		return nil, err
+	}
+
+	if errors.Is(err, ErrPackageNotHelm) {
+		return nil, nil
+	}
+
+	all, err := manifest.ListFromYamlDocs(rendered)
+	if err != nil {
+		return nil, fmt.Errorf("split rendered manifests: %w", err)
+	}
+
+	webhooks := make([]manifest.Manifest, 0)
+	for _, m := range all {
+		if m.Kind() == "ConversionWebhook" {
+			webhooks = append(webhooks, m)
+		}
+	}
+
+	return webhooks, nil
 }
 
 // Cleanup uninstalls releases owned by this service (carrying the managed-by

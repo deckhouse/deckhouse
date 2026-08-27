@@ -26,10 +26,16 @@ import (
 	"sync"
 
 	addontypes "github.com/flant/addon-operator/pkg/hook/types"
+	addonutils "github.com/flant/addon-operator/pkg/utils"
+	"github.com/flant/kube-client/manifest"
 	shtypes "github.com/flant/shell-operator/pkg/hook/types"
 	"go.opentelemetry.io/otel"
 
+	sdkpkg "github.com/deckhouse/module-sdk/pkg"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
 	taskensurecrd "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/ensurecrd"
+	taskensurehooks "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/ensurehooks"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -41,10 +47,13 @@ const (
 
 // Module is the minimal module view the task needs to ensure a module's CRDs.
 type Module interface {
-	// GetName returns the module name, used for logging and the subtask queue.
 	GetName() string
-	// GetPath returns the module root path that contains the crds directory.
 	GetPath() string
+	GetRuntimeValues() string
+	GetValues() addonutils.Values
+	// GetMaintenance reports the package's maintenance mode; the package itself
+	// decides whether its resources must be reconciled.
+	GetMaintenance() nelm.MaintenanceState
 }
 
 // crdService applies a module's bundled CRDs and reports the GVKs applied for a
@@ -70,6 +79,16 @@ type queueService interface {
 	Enqueue(ctx context.Context, name string, task queue.Task, opts ...queue.EnqueueOption)
 }
 
+// nelmI abstracts Helm operations and release monitoring.
+type nelmI interface {
+	GetConversionWebhooks(ctx context.Context, namespace string, pkg nelm.Package) ([]manifest.Manifest, error)
+}
+
+// patcher abstracts object patching operations.
+type patcher interface {
+	ExecuteOperations(ops []sdkpkg.PatchCollectorOperation) error
+}
+
 // task ensures the CRDs of every enabled module, then publishes the enabled set
 // and the applied GVKs (capabilities) into global values. It is the global
 // node's unit of work, enqueued whenever the scheduler schedules global; the
@@ -78,21 +97,34 @@ type queueService interface {
 type task struct {
 	modules []Module
 
-	crd    crdService
-	global globalModule
-	queue  queueService
-	status *status.Service
+	crd     crdService
+	global  globalModule
+	queue   queueService
+	patcher patcher
+	nelm    nelmI
+	status  *status.Service
 
 	logger *log.Logger
 }
 
 // NewTask creates a task that ensures CRDs for the given enabled modules and
 // publishes the resulting capabilities.
-func NewTask(global globalModule, enabled []Module, crd crdService, queueService queueService, status *status.Service, logger *log.Logger) queue.Task {
+func NewTask(
+	global globalModule,
+	enabled []Module,
+	crd crdService,
+	nelm nelmI,
+	patcher patcher,
+	queueService queueService,
+	status *status.Service,
+	logger *log.Logger,
+) queue.Task {
 	return &task{
 		modules: enabled,
 		crd:     crd,
 		global:  global,
+		nelm:    nelm,
+		patcher: patcher,
 		queue:   queueService,
 		status:  status,
 		logger:  logger.Named(taskTracer),
@@ -145,6 +177,9 @@ func (t *task) Execute(ctx context.Context) error {
 
 		sub := taskensurecrd.NewTask(pkg, t.crd.Install, t.status, t.logger)
 		t.queue.Enqueue(ctx, filepath.Join(pkg.GetName(), "crd"), sub, queue.WithWait(wg))
+
+		sub = taskensurehooks.NewTask(pkg, t.nelm, t.patcher, t.logger)
+		t.queue.Enqueue(ctx, filepath.Join(pkg.GetName(), "hooks"), sub, queue.WithWait(wg))
 	}
 
 	wg.Wait()
