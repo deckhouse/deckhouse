@@ -633,6 +633,7 @@ Graylog
 grep
 gRPC
 GRPC
+GuestInfo
 gz
 Habr
 hardcoded
@@ -832,6 +833,7 @@ kube
 kubeadm
 KubeadmConfigTemplateData
 kubeall
+KubeClusterExtension
 kubeconfig
 kubeconfigGeneratorMasterCA
 kubeconfigs
@@ -894,6 +896,7 @@ logLevel
 Logstash
 loki
 longtermStorageClass
+loopback
 LowNodeUtilization
 LRS
 lsblk
@@ -1601,6 +1604,7 @@ uninstalling
 Unlabel
 UNPACKEDSIZE
 unschedulable
+Uplink
 uploadproxy
 upmeter
 UpmeterHookProbe
@@ -1799,7 +1803,6 @@ ZvirtInstanceClass
 авторизующим
 автоскейлерам
 автоскейлинг
-автослияние
 автосогласования
 агрегатор
 агрегатора
@@ -1829,8 +1832,6 @@ ZvirtInstanceClass
 Алерты
 ам
 ами
-апрув
-апрувы
 апстрима
 архитектурах
 ассетами
@@ -1946,8 +1947,8 @@ ZvirtInstanceClass
 внутренного
 внутрикластерное
 внутрикластерной
-внутрикластерным
 внутрикластерный
+внутрикластерным
 воркеров
 выгрузок
 выдаватель
@@ -2200,7 +2201,6 @@ ZvirtInstanceClass
 масштабируется
 Мб
 МБ
-МиБ
 медиафайлов
 медиафайлы
 межкластерная
@@ -2218,6 +2218,7 @@ ZvirtInstanceClass
 меш
 меша
 меше
+МиБ
 мигрирована
 микросегментация
 микросервисов
@@ -2344,14 +2345,9 @@ ZvirtInstanceClass
 п
 пагинация
 Пайплайн
-пайплайн
 пайплайна
 пайплайнами
-пайплайнах
-пайплайне
 пайплайнов
-пайплайном
-пайплайну
 пайплайны
 паравиртуализации
 парсер
@@ -2427,7 +2423,6 @@ ZvirtInstanceClass
 переразмещение
 пересборка
 пересборке
-пересборки
 пересборку
 пересборок
 пересоберется
@@ -2435,7 +2430,6 @@ ZvirtInstanceClass
 пересобирает
 пересоздаваться
 пересоздает
-пересоздаются
 пересоздаёт
 пересоздается
 пересоздаётся
@@ -2476,7 +2470,6 @@ ZvirtInstanceClass
 подсетями
 подсетях
 покоммитное
-полулинейного
 помотрим
 Пошагово
 превью
