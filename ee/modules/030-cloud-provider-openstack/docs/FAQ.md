@@ -425,6 +425,7 @@ spec:
 
 When using the [`tags`](/modules/cloud-provider-openstack/latest/cr.html#openstackinstanceclass-v1-spec-tags) parameter, consider the following limitations:
 
+- The `tags` parameter is supported only in Selectel-hosted clusters. If you specify it in another OpenStack cloud, the NodeGroup `.status.error` will show `Machine creation failed. Check events for details.`, and virtual machines will not be created. For details, check the NodeGroup events: `Remove spec.tags, or use the field only on Selectel-hosted clusters where it is known to work.`
 - The `tags` parameter is supported only for CloudEphemeral NodeGroups running on the CAPI engine. If an OpenStackInstanceClass with the `tags` parameter specified is used by a NodeGroup running on the MCM engine, an error will appear in the NodeGroup `.status.error`. The controller will not process such a NodeGroup until the `tags` parameter is removed or the NodeGroup is switched to the CAPI engine.
 - The management engine is selected separately for each NodeGroup. If the same OpenStackInstanceClass with the `tags` parameter specified is used simultaneously by NodeGroups running on CAPI and MCM, the MCM NodeGroup becomes invalid. Use separate OpenStackInstanceClass resources for NodeGroups running on different engines.
 

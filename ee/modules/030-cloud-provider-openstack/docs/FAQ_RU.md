@@ -432,6 +432,7 @@ spec:
 
 При использовании параметра [`tags`](/modules/cloud-provider-openstack/latest/cr.html#openstackinstanceclass-v1-spec-tags) учитывайте следующие ограничения:
 
+* Параметр `tags` поддерживается только в кластерах, размещённых в Selectel. Если указать его в другом OpenStack-облаке, в `.status.error` NodeGroup появится сообщение `Machine creation failed. Check events for details.`, виртуальные машины создаваться не будут. Подробности — в событиях NodeGroup: `Remove spec.tags, or use the field only on Selectel-hosted clusters where it is known to work.`
 * Параметр `tags` поддерживается только для NodeGroup типа CloudEphemeral, работающих на движке CAPI. Если OpenStackInstanceClass с заданным параметром `tags` используется в NodeGroup на движке MCM, в `.status.error` NodeGroup появится ошибка. Контроллер не будет обрабатывать такую NodeGroup, пока параметр `tags` не будет удалён или NodeGroup не будет переведена на движок CAPI.
 * Движок управления выбирается отдельно для каждой NodeGroup. Если один OpenStackInstanceClass с заданным параметром `tags` используется одновременно в NodeGroup на движках CAPI и MCM, NodeGroup на MCM станет невалидной. Для NodeGroup, работающих на разных движках, используйте отдельные ресурсы OpenStackInstanceClass.
 
