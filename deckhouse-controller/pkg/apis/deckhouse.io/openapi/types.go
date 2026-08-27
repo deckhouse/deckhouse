@@ -88,10 +88,10 @@ type OpenAPIV3Schema struct {
 
 	// x-deckhouse-validations describes a list of validation rules written in the CEL expression language.
 	// +optional
-	// +patchMergeKey=rule
+	// +patchMergeKey=expression
 	// +patchStrategy=merge
 	// +listType=map
-	// +listMapKey=rule
+	// +listMapKey=expression
 	XValidations []ValidationRule `json:"x-deckhouse-validations,omitempty"`
 
 	// x-deckhouse-ui-advanced marks a settings field as "advanced", hiding it behind
@@ -158,10 +158,12 @@ type ExternalDocumentation struct {
 }
 
 // ValidationRule describes a validation rule written in the CEL expression language.
+// The expression key matches the shape module and application schema files use
+// and the values CEL validator reads.
 type ValidationRule struct {
-	// Rule represents the expression which will be evaluated by CEL.
-	// The `self` variable in the CEL expression is bound to the scoped value.
-	Rule string `json:"rule"`
+	// Expression is the CEL expression evaluated against the scoped value.
+	// The `self` variable in the expression is bound to that value.
+	Expression string `json:"expression"`
 
 	// Message represents the message displayed when validation fails.
 	Message string `json:"message,omitempty"`

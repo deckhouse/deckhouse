@@ -133,6 +133,24 @@ func TestSyncVersionsFromImage(t *testing.T) {
 		assert.Equal(t, openapi.StringOrArray{"null", "array"}, policies.Type)
 	})
 
+	t.Run("keeps CEL validation expressions", func(t *testing.T) {
+		dir := t.TempDir()
+		writeModuleYAML(t, filepath.Join(dir, "900-echo"), "name: echo\n")
+		writeOpenAPI(t, filepath.Join(dir, "900-echo"),
+			"type: object\nproperties:\n  replicas:\n    type: integer\nx-deckhouse-validations:\n  - expression: \"self.replicas >= 1\"\n    message: \"replicas must be >= 1\"\n",
+			"")
+
+		s, cl := newTestSyncer(t, "v1.80.0", dir)
+		require.NoError(t, s.Sync(ctx))
+
+		mpv := getVersion(t, cl, "embedded-echo-v1.80.0")
+		require.NotNil(t, mpv.Status.PackageSchemas)
+		rules := mpv.Status.PackageSchemas.SettingsSchema.OpenAPIV3Schema.XValidations
+		require.Len(t, rules, 1)
+		assert.Equal(t, "self.replicas >= 1", rules[0].Expression, "the expression key of the schema files must land in the stored schema")
+		assert.Equal(t, "replicas must be >= 1", rules[0].Message)
+	})
+
 	t.Run("carries the disable options of a module.yaml module", func(t *testing.T) {
 		dir := t.TempDir()
 		writeModuleYAML(t, filepath.Join(dir, "900-echo"),

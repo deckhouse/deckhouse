@@ -196,7 +196,7 @@ func TestMarshalRoundtrip_xDeckhouseExtensions(t *testing.T) {
 			},
 		},
 		XValidations: []ValidationRule{
-			{Rule: "self.storageClass != ''", Message: "storageClass must be set"},
+			{Expression: "self.storageClass != ''", Message: "storageClass must be set"},
 		},
 	}
 
@@ -234,7 +234,7 @@ func TestMarshalRoundtrip_xDeckhouseExtensions(t *testing.T) {
 	if rep.XUIOrder == nil || *rep.XUIOrder != 2 {
 		t.Errorf("x-deckhouse-ui-order mismatch")
 	}
-	if len(restored.XValidations) != 1 || restored.XValidations[0].Rule != "self.storageClass != ''" {
+	if len(restored.XValidations) != 1 || restored.XValidations[0].Expression != "self.storageClass != ''" {
 		t.Errorf("x-deckhouse-validations: got %+v", restored.XValidations)
 	}
 
@@ -475,7 +475,7 @@ func realModuleSchema() *OpenAPIV3Schema {
 				XUIOrder:    int64Ptr(2),
 				XValidations: []ValidationRule{
 					{
-						Rule:      "self >= 1 && self <= 10",
+						Expression:      "self >= 1 && self <= 10",
 						Message:   "replicas must be between 1 and 10",
 						Reason:    stringPtr("FieldValueInvalid"),
 						FieldPath: ".replicas",
@@ -554,7 +554,7 @@ func realModuleSchema() *OpenAPIV3Schema {
 		},
 		XValidations: []ValidationRule{
 			{
-				Rule:    "has(self.storageClass) && self.storageClass != ''",
+				Expression:    "has(self.storageClass) && self.storageClass != ''",
 				Message: "storageClass is required",
 			},
 		},
