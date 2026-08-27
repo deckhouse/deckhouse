@@ -16,7 +16,7 @@ spec:
   packageRepositoryName: deckhouse
   type: Update
   update:
-    fullScan: false
+    fullScan: true
     timeout: 5m
 status: {}
 ---
@@ -27,5 +27,3 @@ metadata:
 spec:
   registry:
     repo: registry.example.com/test
-status:
-  partialScanAvailable: false

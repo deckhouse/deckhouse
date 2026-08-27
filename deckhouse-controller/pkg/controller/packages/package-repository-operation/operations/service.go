@@ -19,15 +19,14 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"slices"
 	"strings"
-	"time"
 
 	"github.com/Masterminds/semver/v3"
 	transport "github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	registryService "github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry/service"
@@ -36,14 +35,6 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 	regClient "github.com/deckhouse/deckhouse/pkg/registry/client"
 )
-
-type OperationService struct {
-	client client.Client
-	repo   *v1alpha1.PackageRepository
-	svc    *registryService.PackagesService
-
-	logger *log.Logger
-}
 
 var (
 	// ErrPackageTypeInvalid is returned by detectPackageType when a package has manifest files
@@ -87,10 +78,36 @@ func ParsePackageType(raw string) (PackageType, error) {
 	}
 }
 
-func NewService(ctx context.Context, client client.Client, repoName string, psm registryService.ServiceManagerInterface[registryService.PackagesService], logger *log.Logger) (*OperationService, error) {
-	repo := &v1alpha1.PackageRepository{}
-	err := client.Get(ctx, types.NamespacedName{Name: repoName}, repo)
-	if err != nil {
+type Result struct {
+	PackageType PackageType
+	Failed      []failedVersion
+	// FoundVersions counts the versions the registry offered, including the ones left
+	// unprocessed after a failure stopped the walk.
+	FoundVersions int
+	// NewVersions counts package versions that were either created for the
+	// first time during this operation, or transitioned from the "not in
+	// registry" state because their image was rediscovered in the registry.
+	NewVersions int
+}
+
+type failedVersion struct {
+	Name  string
+	Error string
+}
+
+// OperationService scans a single PackageRepository and materialises the package CRs it offers.
+type OperationService struct {
+	client client.Client
+	repo   *v1alpha1.PackageRepository
+	svc    *registryService.PackagesService
+
+	logger *log.Logger
+}
+
+// NewService reads the repository and binds a registry service to its packages path.
+func NewService(ctx context.Context, cli client.Client, repoName string, psm registryService.ServiceManagerInterface[registryService.PackagesService], logger *log.Logger) (*OperationService, error) {
+	repo := new(v1alpha1.PackageRepository)
+	if err := cli.Get(ctx, client.ObjectKey{Name: repoName}, repo); err != nil {
 		return nil, fmt.Errorf("get package repository: %w", err)
 	}
 
@@ -108,25 +125,20 @@ func NewService(ctx context.Context, client client.Client, repoName string, psm 
 	}
 
 	return &OperationService{
-		client: client,
+		client: cli,
 		repo:   repo,
 		svc:    svc,
 		logger: logger,
 	}, nil
 }
 
-type DiscoverResult struct {
-	Packages        []packageInfo
-	RepositoryPhase string
-	SyncTime        time.Time
+// GetRepository returns the PackageRepository associated with this service.
+func (s *OperationService) GetRepository() *v1alpha1.PackageRepository {
+	return s.repo
 }
 
-type packageInfo struct {
-	Name string
-	Type string
-}
-
-func (s *OperationService) DiscoverPackage(ctx context.Context) (*DiscoverResult, error) {
+// Discover lists the package names published under the repository's packages path.
+func (s *OperationService) Discover(ctx context.Context) ([]string, error) {
 	// List packages (packages at the packages level)
 	packages, err := s.svc.ListTags(ctx)
 	if err != nil {
@@ -137,128 +149,312 @@ func (s *OperationService) DiscoverPackage(ctx context.Context) (*DiscoverResult
 
 	s.logger.Info("discovered packages", slog.Int("count", len(packages)))
 
-	discoveredPackages := make([]packageInfo, 0, len(packages))
-
-	for _, pkg := range packages {
-		discoveredPackages = append(discoveredPackages, packageInfo{
-			Name: pkg,
-		})
-	}
-
-	res := &DiscoverResult{
-		Packages:        discoveredPackages,
-		RepositoryPhase: v1alpha1.PackageRepositoryPhaseActive,
-		SyncTime:        time.Now(),
-	}
-
-	return res, nil
+	return packages, nil
 }
 
-// UpdateRepositoryStatus updates the PackageRepository status with the processed packages.
-func (s *OperationService) UpdateRepositoryStatus(ctx context.Context, packages []v1alpha1.PackageRepositoryOperationStatusPackage) error {
-	original := s.repo.DeepCopy()
-
-	// Type is stable per package; recover it from the previous status when an incremental scan returned empty.
-	cachedTypes := make(map[string]string, len(s.repo.Status.Packages))
-	for _, p := range s.repo.Status.Packages {
-		cachedTypes[p.Name] = p.Type
-	}
-
-	s.repo.Status.Packages = make([]v1alpha1.PackageRepositoryStatusPackage, 0, len(packages))
-
-	var newVersionsTotal int
-	for _, pkg := range packages {
-		newVersionsTotal += pkg.NewVersions
-
-		pkgType := pkg.Type
-		if pkgType == "" {
-			pkgType = cachedTypes[pkg.Name]
-		}
-		if pkgType == "" {
-			continue
-		}
-		s.repo.Status.Packages = append(s.repo.Status.Packages, v1alpha1.PackageRepositoryStatusPackage{
-			Name: pkg.Name,
-			Type: pkgType,
-		})
-	}
-
-	now := metav1.NewTime(time.Now())
-
-	s.repo.Status.PackagesCount = len(s.repo.Status.Packages)
-	s.repo.Status.Phase = v1alpha1.PackageRepositoryPhaseActive
-
-	s.repo.Status.LastScanTime = &now
-	s.repo.Status.LastNewVersions = newVersionsTotal
-
-	// LastChangeTime is preserved across scans that find nothing new, so only
-	// advance it when the current scan actually found versions.
-	if newVersionsTotal > 0 {
-		s.repo.Status.LastChangeTime = &now
-	}
-
-	if err := s.client.Status().Patch(ctx, s.repo, client.MergeFrom(original)); err != nil {
-		return fmt.Errorf("update repository status: %w", err)
-	}
-
-	return nil
-}
-
-func (s *OperationService) foundTagsToProcess(ctx context.Context, packageName string, operation *v1alpha1.PackageRepositoryOperation) ([]*semver.Version, error) {
-	// Handle fullScan vs incremental scan
-	if operation.Spec.Update != nil && operation.Spec.Update.FullScan {
-		rawTags, err := s.svc.Package(packageName).Versions().ListTags(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("failed to list package tags: %w", err)
-		}
-
-		foundTags := extractOnlySemverTags(rawTags)
-
-		return foundTags, nil
-	}
-
-	foundTags, err := s.performIncrementalScan(ctx, packageName)
+// ScanPackageVersions lists <package>/version, detects the type from the newest listed tag and
+// creates an APV or MPV per version, oldest first, stopping at the first one it fails to create.
+// The versions the cluster marks gone are re-checked separately, before the walk. A package with no
+// /version path, or none carrying semver tags on a full scan, is a legacy module, and
+// walkModuleReleases reads its versions from /release instead.
+func (s *OperationService) ScanPackageVersions(ctx context.Context, packageName string, operation *v1alpha1.PackageRepositoryOperation) (*Result, error) {
+	scan, err := s.tagsToProcess(ctx, packageName, operation)
 	if err != nil {
+		// NAME_UNKNOWN means <package>/version path doesn't exist in the registry.
+		// No /version path → legacy module (v1alpha1), its versions live under /release.
+		if isRepoNotFoundError(err) {
+			return s.walkModuleReleases(ctx, packageName)
+		}
+
+		return nil, fmt.Errorf("get tags to process: %w", err)
+	}
+
+	s.logger.Info(
+		"found package versions",
+		slog.String("package", packageName),
+		slog.Int("versions", len(scan.listed)),
+	)
+
+	// An empty listing on a full scan means /version carries no semver tags at all, so the package
+	// can still be a legacy module holding its versions under /release - and that walk re-checks the
+	// marked versions itself. On an incremental scan it only means "nothing new since the
+	// watermark", and walking /release would re-read the history on every scan.
+	if len(scan.listed) == 0 && operation.Spec.Update != nil && operation.Spec.Update.FullScan {
+		return s.walkModuleReleases(ctx, packageName)
+	}
+
+	// A version marked gone sits at or below the watermark, so a listing is not guaranteed to
+	// return it. Re-checking it here rather than in the walk below is deliberate: there it would
+	// drive type detection off a tag the registry may no longer serve, and one failed re-check would
+	// stop every newer version.
+	result := new(Result)
+	result.NewVersions, result.Failed = s.rediscoverMissingVersions(ctx, packageName, scan.missing)
+
+	if len(scan.listed) == 0 {
+		return result, nil
+	}
+
+	// Ascending: the newest tag carries the type labels older ones may lack, and the walk below
+	// must not create a version above one it failed to create.
+	slices.SortFunc(scan.listed, func(a, b *semver.Version) int { return a.Compare(b) })
+	latestTag := "v" + scan.listed[len(scan.listed)-1].String()
+
+	pkgType, err := s.detectPackageType(ctx, packageName, latestTag)
+	if err != nil {
+		// No type labels and no package.yaml on /version path - skip
+		if errors.Is(err, ErrTooOldImage) {
+			result.Failed = append(result.Failed, failedVersion{Error: err.Error()})
+
+			return result, nil
+		}
+
+		if errors.Is(err, ErrPackageTypeInvalid) {
+			result.Failed = append(result.Failed, failedVersion{Name: latestTag, Error: err.Error()})
+
+			return result, nil
+		}
+
 		return nil, err
 	}
 
-	return foundTags, nil
+	result.PackageType = pkgType
+	result.FoundVersions = len(scan.listed)
+
+	for _, versionTag := range scan.listed {
+		version := "v" + versionTag.String()
+
+		var (
+			ensureErr error
+			isNew     bool
+		)
+
+		switch pkgType {
+		case PackageTypeModule:
+			isNew, ensureErr = s.ensureModulePackageVersion(ctx, packageName, version, nil)
+		default:
+			isNew, ensureErr = s.ensureApplicationPackageVersion(ctx, packageName, version)
+		}
+
+		if ensureErr != nil {
+			s.logger.Warn("failed to create package version",
+				slog.String("package", packageName),
+				slog.String("version", version),
+				slog.String("type", string(pkgType)),
+				log.Err(ensureErr),
+			)
+
+			result.Failed = append(result.Failed, failedVersion{
+				Name:  version,
+				Error: "ensure package version: " + ensureErr.Error(),
+			})
+
+			// Creating the newer versions above this one would raise the watermark past it, and no
+			// later incremental scan would list it again. The next scan resumes from here instead.
+			break
+		}
+
+		if isNew {
+			result.NewVersions++
+		}
+	}
+
+	return result, nil
 }
 
-func (s *OperationService) performIncrementalScan(ctx context.Context, packageName string) ([]*semver.Version, error) {
-	// Incremental scan: start from the last processed version
-	s.logger.Debug("performing incremental scan", slog.String("package", packageName))
+// scanTags is what one package scan works through: the tags the registry listed, and the known
+// versions whose image is marked gone, which a listing above the watermark never returns.
+type scanTags struct {
+	listed  []*semver.Version
+	missing []missingVersion
+}
 
-	lastVersion := s.getLastProcessedVersion(ctx, packageName)
-	if lastVersion != "" {
+// tagsToProcess returns every semver tag on a full scan, only the tags newer than the last processed
+// version otherwise, and in both cases the versions the cluster marks gone.
+func (s *OperationService) tagsToProcess(ctx context.Context, packageName string, operation *v1alpha1.PackageRepositoryOperation) (scanTags, error) {
+	processed := s.collectProcessedVersions(ctx, packageName)
+
+	if operation.Spec.Update != nil && operation.Spec.Update.FullScan {
+		rawTags, err := s.svc.Package(packageName).Versions().ListTags(ctx)
+		if err != nil {
+			return scanTags{}, fmt.Errorf("failed to list package tags: %w", err)
+		}
+
+		return scanTags{listed: extractOnlySemverTags(rawTags), missing: processed.missing}, nil
+	}
+
+	s.logger.Debug("perform incremental scan", slog.String("package", packageName))
+
+	var lastVersion string
+	if processed.last != nil {
+		lastVersion = "v" + processed.last.String()
+
 		s.logger.Debug("found last processed version",
 			slog.String("package", packageName),
 			slog.String("last_version", lastVersion))
 	}
 
-	tags, err := s.listTagsFromVersion(ctx, packageName, lastVersion)
+	listed, err := s.listTagsFromVersion(ctx, packageName, lastVersion)
 	if err != nil {
-		return nil, fmt.Errorf("list tags from version: %w", err)
+		return scanTags{}, fmt.Errorf("list tags from version: %w", err)
 	}
 
-	return filterLatestTags(tags), nil
+	return scanTags{listed: listed, missing: processed.missing}, nil
 }
 
-func extractOnlySemverTags(rawTags []string) []*semver.Version {
-	allTags := make([]*semver.Version, 0, len(rawTags))
-	for _, tag := range rawTags {
-		// filter all non semver tags here
-		tagVer, err := semver.NewVersion(tag)
+// rediscoverMissingVersions clears the "not in registry" mark of every version whose image is back,
+// reporting how many marks it cleared. A version that cannot be checked is recorded and the rest are
+// still checked: a re-check is not a creation, so failing one must not hold up the others.
+func (s *OperationService) rediscoverMissingVersions(ctx context.Context, packageName string, missing []missingVersion) (int, []failedVersion) {
+	var (
+		rediscovered int
+		failed       []failedVersion
+	)
+
+	for _, item := range missing {
+		version := "v" + item.version.String()
+
+		var (
+			cleared bool
+			err     error
+		)
+
+		switch item.kind {
+		case PackageTypeModule:
+			cleared, err = s.rediscoverModuleVersion(ctx, packageName, version)
+		default:
+			cleared, err = s.rediscoverApplicationVersion(ctx, packageName, version)
+		}
+
 		if err != nil {
+			s.logger.Warn(
+				"failed to re-check a version marked as not in registry",
+				slog.String("package", packageName),
+				slog.String("version", version),
+				log.Err(err),
+			)
+
+			failed = append(failed, failedVersion{
+				Name:  version,
+				Error: "rediscover package version: " + err.Error(),
+			})
+
 			continue
 		}
 
-		allTags = append(allTags, tagVer)
+		if cleared {
+			rediscovered++
+		}
 	}
 
-	return allTags
+	return rediscovered, failed
 }
 
+// rediscoverApplicationVersion re-checks one marked ApplicationPackageVersion, skipping one that has
+// been deleted since the mark was read.
+func (s *OperationService) rediscoverApplicationVersion(ctx context.Context, packageName, version string) (bool, error) {
+	pkgVersion, err := s.getApplicationPackageVersion(ctx, packageName, version)
+	if err != nil || pkgVersion == nil {
+		return false, err
+	}
+
+	return s.rediscoverApplicationPackageVersion(ctx, pkgVersion, packageName, version)
+}
+
+// rediscoverModuleVersion re-checks one marked ModulePackageVersion, skipping one that has been
+// deleted since the mark was read.
+func (s *OperationService) rediscoverModuleVersion(ctx context.Context, packageName, version string) (bool, error) {
+	pkgVersion, err := s.getModulePackageVersion(ctx, packageName, version)
+	if err != nil || pkgVersion == nil {
+		return false, err
+	}
+
+	return s.rediscoverModulePackageVersion(ctx, pkgVersion, packageName, version)
+}
+
+// processedVersions is what the cluster already holds for a package: the watermark an incremental
+// scan resumes from, and the versions whose image is marked gone and must be re-checked below it.
+type processedVersions struct {
+	last    *semver.Version
+	missing []missingVersion
+}
+
+// missingVersion is a version whose image the cluster marks gone, with the CR kind that holds it -
+// the kind is what lets the re-check run without asking the registry for the package type.
+type missingVersion struct {
+	version *semver.Version
+	kind    PackageType
+}
+
+// collectProcessedVersions returns the newest processed version together with the ones whose image
+// is marked gone. Both CR kinds are queried because the package type is not known yet at this point.
+func (s *OperationService) collectProcessedVersions(ctx context.Context, packageName string) processedVersions {
+	matchLabels := client.MatchingLabels{
+		v1alpha1.ApplicationPackageVersionLabelRepository: s.repo.Name,
+		v1alpha1.ApplicationPackageVersionLabelPackage:    packageName,
+	}
+
+	var (
+		state    processedVersions
+		versions []*semver.Version
+	)
+
+	apvs := new(v1alpha1.ApplicationPackageVersionList)
+	if err := s.client.List(ctx, apvs, matchLabels); err != nil {
+		s.logger.Warn("failed to list application package versions", slog.String("package", packageName), log.Err(err))
+	}
+	for _, item := range apvs.Items {
+		if v := parseProcessedVersion(item.Spec.PackageVersion, item.Status.PackageMetadata != nil); v != nil {
+			versions = append(versions, v)
+		}
+		if v := parseMissingVersion(item.Spec.PackageVersion, item.Labels); v != nil {
+			state.missing = append(state.missing, missingVersion{version: v, kind: PackageTypeApplication})
+		}
+	}
+
+	mpvs := new(v1alpha1.ModulePackageVersionList)
+	if err := s.client.List(ctx, mpvs, matchLabels); err != nil {
+		s.logger.Warn("failed to list module package versions", slog.String("package", packageName), log.Err(err))
+	}
+	for _, item := range mpvs.Items {
+		if v := parseProcessedVersion(item.Spec.PackageVersion, item.Status.PackageMetadata != nil); v != nil {
+			versions = append(versions, v)
+		}
+		if v := parseMissingVersion(item.Spec.PackageVersion, item.Labels); v != nil {
+			state.missing = append(state.missing, missingVersion{version: v, kind: PackageTypeModule})
+		}
+	}
+
+	if len(versions) > 0 {
+		slices.SortFunc(versions, func(a, b *semver.Version) int { return a.Compare(b) })
+		state.last = versions[len(versions)-1]
+	}
+
+	return state
+}
+
+// parseProcessedVersion parses tag as semver, but only for a version that was actually processed.
+func parseProcessedVersion(tag string, hasMetadata bool) *semver.Version {
+	if !hasMetadata {
+		return nil
+	}
+	v, _ := semver.NewVersion(tag)
+	return v
+}
+
+// parseMissingVersion parses tag as semver, but only for a version whose image is marked gone.
+// The label carries the same key for both CR kinds.
+func parseMissingVersion(tag string, labels map[string]string) *semver.Version {
+	if labels[v1alpha1.ApplicationPackageVersionLabelExistInRegistry] != "false" {
+		return nil
+	}
+
+	v, _ := semver.NewVersion(tag)
+
+	return v
+}
+
+// listTagsFromVersion asks the registry for the tags after lastVersion and re-filters them locally,
+// since the registry is free to ignore the hint.
 func (s *OperationService) listTagsFromVersion(ctx context.Context, packageName string, lastVersion string) ([]*semver.Version, error) {
 	// List all tags from the registry and filter those that are greater than lastVersion
 	// WARNING! it works only if your registry supports tag listing with filtering by last version
@@ -287,323 +483,163 @@ func (s *OperationService) listTagsFromVersion(ctx context.Context, packageName 
 	return newTags, nil
 }
 
-// WarnUnavailablePartialScan reports an incremental scan against a registry that cannot list tags
-// partially: it answers with every tag and the filtering falls back to the controller.
-func (s *OperationService) WarnUnavailablePartialScan(operation *v1alpha1.PackageRepositoryOperation) {
-	if operation.Spec.Update != nil && operation.Spec.Update.FullScan {
-		return
-	}
-
-	if s.repo.Status.PartialScanAvailable {
-		return
-	}
-
-	s.logger.Warn("your container registry can't handle partial tag listing, filtering tags on the controller",
-		slog.String("repository", s.repo.Name))
-}
-
-// filterLatestTags filters out the latest version for every major.minor version
-func filterLatestTags(tags []*semver.Version) []*semver.Version {
-	// map of major.minor.semver
-	latestTagsMap := map[uint64]map[uint64]*semver.Version{}
-	newLength := 0
-	for _, tag := range tags {
-		if tag == nil {
+// extractOnlySemverTags keeps the tags that parse as semver and drops the rest.
+func extractOnlySemverTags(rawTags []string) []*semver.Version {
+	allTags := make([]*semver.Version, 0, len(rawTags))
+	for _, tag := range rawTags {
+		// filter all non semver tags here
+		tagVer, err := semver.NewVersion(tag)
+		if err != nil {
 			continue
 		}
 
-		major := tag.Major()
-		minor := tag.Minor()
-
-		// Initialize the map if it doesn't exist
-		if latestTagsMap[major] == nil {
-			latestTagsMap[major] = map[uint64]*semver.Version{}
-		}
-
-		// If the minor version is not in the map, add it
-		present, ok := latestTagsMap[major][minor]
-		if !ok || present == nil {
-			latestTagsMap[major][minor] = tag
-			newLength++
-			continue
-		}
-		if present.GreaterThan(tag) {
-			continue
-		}
-
-		// If the tag is greater than the present tag, update the map
-		latestTagsMap[major][minor] = tag
+		allTags = append(allTags, tagVer)
 	}
 
-	// Remap the map to a slice of semver.Version
-	result := make([]*semver.Version, 0, newLength)
-	for _, major := range latestTagsMap {
-		for _, minor := range major {
-			result = append(result, minor)
-		}
-	}
-
-	return result
+	return allTags
 }
 
-func (s *OperationService) getLastProcessedVersion(ctx context.Context, packageName string) string {
-	// Query both ApplicationPackageVersion and ModulePackageVersion lists since
-	// the package type is not known yet at this point.
-	var versions []*semver.Version
+// walkModuleReleases walks <package>/release from the newest version down, creating a
+// ModulePackageVersion for every release image that carries a module definition.
+//
+// The walk stops at the first image without a definition: that version cannot be offered, so the
+// module's history is cut off there. A version the cluster already holds
+// is not re-read from /release, only re-checked for a "not in registry" mark that has since lifted.
+func (s *OperationService) walkModuleReleases(ctx context.Context, packageName string) (*Result, error) {
+	release := s.svc.Package(packageName).Release()
 
-	matchLabels := client.MatchingLabels{
-		v1alpha1.ApplicationPackageVersionLabelRepository: s.repo.Name,
-		v1alpha1.ApplicationPackageVersionLabelPackage:    packageName,
-	}
-
-	appList := &v1alpha1.ApplicationPackageVersionList{}
-	if err := s.client.List(ctx, appList, matchLabels); err != nil {
-		s.logger.Warn("failed to list application package versions", slog.String("package", packageName), log.Err(err))
-	}
-	for _, item := range appList.Items {
-		if v := parseProcessedVersion(item.Spec.PackageVersion, item.Status.PackageMetadata != nil); v != nil {
-			versions = append(versions, v)
-		}
-	}
-
-	modList := &v1alpha1.ModulePackageVersionList{}
-	if err := s.client.List(ctx, modList, matchLabels); err != nil {
-		s.logger.Warn("failed to list module package versions", slog.String("package", packageName), log.Err(err))
-	}
-	for _, item := range modList.Items {
-		if v := parseProcessedVersion(item.Spec.PackageVersion, item.Status.PackageMetadata != nil); v != nil {
-			versions = append(versions, v)
-		}
-	}
-
-	return latestVersionString(versions)
-}
-
-func parseProcessedVersion(tag string, hasMetadata bool) *semver.Version {
-	if !hasMetadata {
-		return nil
-	}
-	v, _ := semver.NewVersion(tag)
-	return v
-}
-
-func latestVersionString(versions []*semver.Version) string {
-	if len(versions) == 0 {
-		return ""
-	}
-	slices.SortFunc(versions, func(a, b *semver.Version) int { return a.Compare(b) })
-	return "v" + versions[len(versions)-1].String()
-}
-
-// ProcessPackageVersions processes a single package: lists version tags from <package>/version,
-// detects type (Application/Module) via detectPackageType, creates APV/MPV resources.
-// Delegates to handleMissingVersionPath when /version path doesn't exist (NAME_UNKNOWN) or has no semver tags on a full scan.
-func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageName string, operation *v1alpha1.PackageRepositoryOperation) (*PackageProcessResult, error) {
-	foundTags, err := s.foundTagsToProcess(ctx, packageName, operation)
+	rawTags, err := release.ListTags(ctx)
 	if err != nil {
-		// NAME_UNKNOWN means <package>/version path doesn't exist in the registry.
-		// No /version path → legacy module (v1alpha1).
+		// Neither /version nor /release: the package offers nothing to install.
 		if isRepoNotFoundError(err) {
-			return s.handleMissingVersionPath(ctx, packageName)
-		}
-		return nil, fmt.Errorf("get found tags to process: %w", err)
-	}
-
-	s.logger.Info(
-		"found package versions",
-		slog.String("package", packageName),
-		slog.Int("versions", len(foundTags)),
-	)
-
-	// /version path exists but no new semver tags to process.
-	//
-	// On a full scan an empty foundTags means /version has no semver tags
-	// for this package. Treat this identically to "no /version path at all":
-	// fall back to /release (legacy v1alpha1 module). The downstream error
-	// surface ("neither /version nor /release" / "no semver release tags
-	// found for legacy module") is therefore the same in both cases.
-	//
-	// On an incremental scan, an empty foundTags only means "no new versions
-	// since lastVersion" - /version itself may still be populated. Do NOT
-	// fall back in that case: it would needlessly hit /release on every
-	// already-fully-processed package.
-	if len(foundTags) == 0 {
-		if operation.Spec.Update != nil && operation.Spec.Update.FullScan {
-			s.logger.Warn(
-				"no semver tags found in /version path for package, falling back to /release",
-				slog.String("package", packageName),
-			)
-			return s.handleMissingVersionPath(ctx, packageName)
+			return &Result{}, nil
 		}
 
-		return &PackageProcessResult{}, nil
-	}
-
-	// Sort tags to pick the latest version for label check (older versions may have outdated/missing labels)
-	slices.SortFunc(foundTags, func(a, b *semver.Version) int { return a.Compare(b) })
-	latestTag := "v" + foundTags[len(foundTags)-1].String()
-
-	pkgType, detectErr := s.detectPackageType(ctx, packageName, latestTag)
-	if detectErr != nil {
-		// No type labels and no package.yaml on /version path - skip
-		if errors.Is(detectErr, ErrTooOldImage) {
-			return &PackageProcessResult{
-				Failed: []failedVersion{{
-					Error: detectErr.Error(),
-				}},
-			}, nil
-		}
-		if errors.Is(detectErr, ErrPackageTypeInvalid) {
-			return &PackageProcessResult{
-				Failed: []failedVersion{{Name: latestTag, Error: detectErr.Error()}},
-			}, nil
-		}
-		return nil, detectErr
-	}
-
-	var failedVersions = make([]failedVersion, 0)
-	var newVersions int
-	for _, versionTag := range foundTags {
-		version := "v" + versionTag.String()
-
-		var ensureErr error
-		var isNew bool
-		switch pkgType {
-		case PackageTypeModule:
-			isNew, ensureErr = s.ensureModulePackageVersion(ctx, packageName, version, nil)
-		default:
-			isNew, ensureErr = s.ensureApplicationPackageVersion(ctx, packageName, version)
-		}
-
-		if ensureErr != nil {
-			s.logger.Warn("failed to create package version",
-				slog.String("package", packageName),
-				slog.String("version", version),
-				slog.String("type", string(pkgType)),
-				log.Err(ensureErr),
-			)
-
-			failedVersions = append(failedVersions, failedVersion{
-				Name:  version,
-				Error: "ensure package version: " + ensureErr.Error(),
-			})
-
-			continue
-		}
-
-		if isNew {
-			newVersions++
-		}
-	}
-
-	return &PackageProcessResult{
-		PackageType:   pkgType,
-		Done:          foundTags,
-		Failed:        failedVersions,
-		FoundVersions: len(foundTags),
-		NewVersions:   newVersions,
-	}, nil
-}
-
-// handleMissingVersionPath - fallback when <package>/version is absent (NAME_UNKNOWN) or
-// has no semver tags. Checks the <package>/release path for legacy module (v1alpha1) version tags.
-// Creates ModulePackageVersion resources with legacy=true label.
-func (s *OperationService) handleMissingVersionPath(ctx context.Context, packageName string) (*PackageProcessResult, error) {
-	s.logger.Info(
-		"no semver tags in /version path, checking /release for legacy module (v1alpha1)",
-		slog.String("package", packageName),
-	)
-
-	rawTags, err := s.svc.Package(packageName).Release().ListTags(ctx)
-	if err != nil {
-		if isRepoNotFoundError(err) {
-			s.logger.Warn(
-				"package has neither /version nor /release path",
-				slog.String("package", packageName),
-			)
-			return &PackageProcessResult{
-				Failed: []failedVersion{{
-					Error: fmt.Sprintf("package %q has neither /version nor /release path", packageName),
-				}},
-			}, nil
-		}
 		return nil, fmt.Errorf("list release tags: %w", err)
 	}
 
 	foundTags := extractOnlySemverTags(rawTags)
-
 	if len(foundTags) == 0 {
-		s.logger.Warn(
-			"no semver tags found in /release path for package",
-			slog.String("package", packageName),
-		)
-		return &PackageProcessResult{
-			Failed: []failedVersion{{
-				Error: fmt.Sprintf("no semver release tags found for legacy module %q", packageName),
-			}},
-		}, nil
+		return &Result{}, nil
 	}
 
-	s.logger.Info(
-		"found legacy module versions in /release path",
-		slog.String("package", packageName),
-		slog.Int("versions", len(foundTags)),
-	)
+	slices.SortFunc(foundTags, func(a, b *semver.Version) int { return b.Compare(a) })
 
 	legacyLabels := map[string]string{
 		v1alpha1.ModulePackageVersionLabelLegacy: "true",
 	}
 
-	var failedVersions []failedVersion
-	var newVersions int
+	result := &Result{PackageType: PackageTypeModule}
+
 	for _, versionTag := range foundTags {
 		version := "v" + versionTag.String()
 
-		isNew, ensureErr := s.ensureModulePackageVersion(ctx, packageName, version, legacyLabels)
-		if ensureErr != nil {
+		// A known version keeps its release image unread: only its "not in registry" mark is
+		// re-checked, and the walk goes on. Stopping here would strand a version that failed to be
+		// created: the newer ones above it are known from then on, so no later scan would reach it.
+		existing, err := s.getModulePackageVersion(ctx, packageName, version)
+		if err != nil {
+			return nil, err
+		}
+		if existing != nil {
+			rediscovered, err := s.rediscoverModulePackageVersion(ctx, existing, packageName, version)
+			if err != nil {
+				s.logger.Warn(
+					"failed to rediscover legacy module package version",
+					slog.String("package", packageName),
+					slog.String("version", version),
+					log.Err(err),
+				)
+
+				result.Failed = append(result.Failed, failedVersion{
+					Name:  version,
+					Error: "rediscover legacy module package version: " + err.Error(),
+				})
+
+				continue
+			}
+
+			if rediscovered {
+				result.FoundVersions++
+				result.NewVersions++
+			}
+
+			continue
+		}
+
+		hasDefinition, err := release.HasModuleDefinition(ctx, version)
+		if err != nil {
+			return nil, fmt.Errorf("check module definition: %w", err)
+		}
+		if !hasDefinition {
+			s.logger.Info(
+				"release image carries no module definition, older versions are left out",
+				slog.String("package", packageName),
+				slog.String("version", version),
+			)
+
+			break
+		}
+
+		if _, err := s.ensureModulePackageVersion(ctx, packageName, version, legacyLabels); err != nil {
 			s.logger.Warn(
 				"failed to create legacy module package version",
 				slog.String("package", packageName),
 				slog.String("version", version),
-				log.Err(ensureErr),
+				log.Err(err),
 			)
-			failedVersions = append(failedVersions, failedVersion{
+
+			result.Failed = append(result.Failed, failedVersion{
 				Name:  version,
-				Error: "ensure legacy module package version: " + ensureErr.Error(),
+				Error: "ensure legacy module package version: " + err.Error(),
 			})
+
 			continue
 		}
 
-		if isNew {
-			newVersions++
-		}
+		result.FoundVersions++
+		result.NewVersions++
 	}
 
-	return &PackageProcessResult{
-		PackageType:   PackageTypeModule,
-		Done:          foundTags,
-		Failed:        failedVersions,
-		FoundVersions: len(foundTags),
-		NewVersions:   newVersions,
-	}, nil
+	return result, nil
 }
 
-// detectPackageType determines the package type using the following strategy:
-//
-//  1. Read label from version image ConfigFile (<package>/version:<tag>)
-//     - valid value → use it
-//     - empty or invalid → errPackageTypeInvalid
-//     - no label key → continue to step 2
-//  2. Fallback: extract package.yaml from version image
-//     - Found with known type → use type from package.yaml
-//     - Found with empty/invalid type → errPackageTypeInvalid
-//     - Not found → errTooOldImage
-//
-// Returns:
-//   - (packageTypeApplication or packageTypeModule, nil) - valid type detected
-//   - ("", errPackageTypeInvalid) - type could not be determined or is unknown
-//   - ("", errTooOldImage) - no labels and no package.yaml
-//   - ("", err) - hard error (network, tar corruption, etc.)
+// getModulePackageVersion returns the version the cluster already holds, or nil when it holds none.
+// The release walk reuses the returned object, so a known version costs one read, not two.
+func (s *OperationService) getModulePackageVersion(ctx context.Context, packageName, version string) (*v1alpha1.ModulePackageVersion, error) {
+	name := v1alpha1.MakeModulePackageVersionName(s.repo.Name, packageName, version)
+
+	pkgVersion := new(v1alpha1.ModulePackageVersion)
+	if err := s.client.Get(ctx, client.ObjectKey{Name: name}, pkgVersion); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, nil
+		}
+
+		return nil, fmt.Errorf("get module package version: %w", err)
+	}
+
+	return pkgVersion, nil
+}
+
+// getApplicationPackageVersion returns the version the cluster already holds, or nil when it holds
+// none.
+func (s *OperationService) getApplicationPackageVersion(ctx context.Context, packageName, version string) (*v1alpha1.ApplicationPackageVersion, error) {
+	name := v1alpha1.MakeApplicationPackageVersionName(s.repo.Name, packageName, version)
+
+	pkgVersion := new(v1alpha1.ApplicationPackageVersion)
+	if err := s.client.Get(ctx, client.ObjectKey{Name: name}, pkgVersion); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, nil
+		}
+
+		return nil, fmt.Errorf("get application package version: %w", err)
+	}
+
+	return pkgVersion, nil
+}
+
+// detectPackageType reads the type from the version image label, falling back to the type field of
+// package.yaml. An unrecognised value yields ErrPackageTypeInvalid, neither source ErrTooOldImage.
 func (s *OperationService) detectPackageType(ctx context.Context, packageName, latestTag string) (PackageType, error) {
 	pkg := s.svc.Package(packageName)
 
@@ -655,68 +691,21 @@ func (s *OperationService) detectPackageType(ctx context.Context, packageName, l
 	return "", fmt.Errorf("%w: %s", ErrTooOldImage, packageName)
 }
 
-type PackageProcessResult struct {
-	PackageType   PackageType
-	Done          []*semver.Version
-	Failed        []failedVersion
-	FoundVersions int
-	// NewVersions counts package versions that were either created for the
-	// first time during this operation, or (for ApplicationPackageVersion)
-	// transitioned from the "not in registry" state because their image was
-	// rediscovered in the registry.
-	NewVersions int
-}
-
-type failedVersion struct {
-	Name  string
-	Error string
-}
-
-// ensureApplicationPackageVersion creates an ApplicationPackageVersion or, if one already
-// exists with the "not in registry" mark, rediscovers its image and clears that mark.
-// The bool return reports whether the version was counted as newly found during this call:
-// true for a fresh Create, true for a successful "not in registry" → "in registry" transition,
-// false otherwise (including all error paths).
+// ensureApplicationPackageVersion creates the ApplicationPackageVersion and reports whether it did.
+// A version the cluster already holds is left alone: its "not in registry" mark, if any, belongs to
+// rediscoverMissingVersions, which fails per version instead of stopping the walk.
 func (s *OperationService) ensureApplicationPackageVersion(ctx context.Context, packageName, version string) (bool, error) {
 	apvName := v1alpha1.MakeApplicationPackageVersionName(s.repo.Name, packageName, version)
 
-	logger := s.logger.With(slog.String("package_version", apvName))
-
-	pkgVersion := &v1alpha1.ApplicationPackageVersion{}
-	err := s.client.Get(ctx, types.NamespacedName{Name: apvName}, pkgVersion)
+	pkgVersion := new(v1alpha1.ApplicationPackageVersion)
+	err := s.client.Get(ctx, client.ObjectKey{Name: apvName}, pkgVersion)
 	if err != nil && !apierrors.IsNotFound(err) {
 		return false, fmt.Errorf("get application package version: %w", err)
 	}
+
 	// Version already exists
 	if err == nil {
-		isBundleExistInRegistry, ok := pkgVersion.Labels[v1alpha1.ApplicationPackageVersionLabelExistInRegistry]
-		if !ok || isBundleExistInRegistry != "false" {
-			return false, nil
-		}
-		// Version marked as not exist in registry
-		logger.Debug("version marked as not exist in registry, checking if bundle image exists")
-
-		if err := s.svc.Package(packageName).CheckImageExists(ctx, version); err != nil {
-			if errors.Is(err, regClient.ErrImageNotFound) {
-				logger.Debug("bundle image not found")
-				return false, nil
-			}
-			return false, fmt.Errorf("check bundle image exists: %w", err)
-		}
-
-		logger.Debug("bundle image exists, marking package version as draft")
-
-		original := pkgVersion.DeepCopy()
-
-		pkgVersion.Labels[v1alpha1.ApplicationPackageVersionLabelExistInRegistry] = "true"
-		pkgVersion.Labels[v1alpha1.ApplicationPackageVersionLabelDraft] = "true"
-
-		err = s.client.Patch(ctx, pkgVersion, client.MergeFrom(original))
-		if err != nil {
-			return false, fmt.Errorf("update application package version: %w", err)
-		}
-
-		return true, nil
+		return false, nil
 	}
 
 	// Create new ApplicationPackageVersion with draft label
@@ -744,81 +733,57 @@ func (s *OperationService) ensureApplicationPackageVersion(ctx context.Context, 
 	// Add owner reference to PackageRepository
 	s.setOwnerReference(pkgVersion)
 
-	err = s.client.Create(ctx, pkgVersion)
-	if err != nil {
+	if err := s.client.Create(ctx, pkgVersion); err != nil {
 		return false, fmt.Errorf("create application package version: %w", err)
 	}
 
 	return true, nil
 }
 
-func (s *OperationService) EnsureApplicationPackage(ctx context.Context, packageName string) error {
-	pkg := &v1alpha1.ApplicationPackage{}
-	err := s.client.Get(ctx, types.NamespacedName{Name: packageName}, pkg)
-	if err != nil && !apierrors.IsNotFound(err) {
-		return fmt.Errorf("get application package: %w", err)
+// rediscoverApplicationPackageVersion clears the "not in registry" mark of an existing version once
+// its bundle image is back in the registry. Reports whether the mark was cleared.
+func (s *OperationService) rediscoverApplicationPackageVersion(ctx context.Context, pkgVersion *v1alpha1.ApplicationPackageVersion, packageName, version string) (bool, error) {
+	isBundleExistInRegistry, ok := pkgVersion.Labels[v1alpha1.ApplicationPackageVersionLabelExistInRegistry]
+	if !ok || isBundleExistInRegistry != "false" {
+		return false, nil
 	}
 
-	// err - apierrors.IsNotFound
-	if err != nil {
-		// Create new ApplicationPackage with this repository as a non-controller owner.
-		pkg = &v1alpha1.ApplicationPackage{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: v1alpha1.ApplicationPackageGVK.GroupVersion().String(),
-				Kind:       v1alpha1.ApplicationPackageKind,
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name: packageName,
-				Labels: map[string]string{
-					"heritage": "deckhouse",
-				},
-			},
+	logger := s.logger.With(slog.String("package_version", pkgVersion.Name))
+
+	logger.Debug("version marked as not exist in registry, checking if bundle image exists")
+
+	if err := s.svc.Package(packageName).CheckImageExists(ctx, version); err != nil {
+		if errors.Is(err, regClient.ErrImageNotFound) {
+			logger.Debug("bundle image not found")
+
+			return false, nil
 		}
-		s.ensureSharedOwnerReference(pkg)
 
-		err = s.client.Create(ctx, pkg)
-		if err != nil {
-			return fmt.Errorf("create application package: %w", err)
-		}
-	} else {
-		// Existing — make sure we are listed as an owner so a single repo deletion
-		// does not cascade-delete a package that other repositories still contribute.
-		original := pkg.DeepCopy()
-		if s.ensureSharedOwnerReference(pkg) {
-			if err := s.client.Patch(ctx, pkg, client.MergeFrom(original)); err != nil {
-				return fmt.Errorf("sync application package owner refs: %w", err)
-			}
-		}
+		return false, fmt.Errorf("check bundle image exists: %w", err)
 	}
 
-	// Check if repository is already listed
-	if slices.Contains(pkg.Status.AvailableRepositories, s.repo.Name) {
-		return nil
+	logger.Debug("bundle image exists, marking package version as draft")
+
+	original := pkgVersion.DeepCopy()
+
+	pkgVersion.Labels[v1alpha1.ApplicationPackageVersionLabelExistInRegistry] = "true"
+	pkgVersion.Labels[v1alpha1.ApplicationPackageVersionLabelDraft] = "true"
+
+	if err := s.client.Patch(ctx, pkgVersion, client.MergeFrom(original)); err != nil {
+		return false, fmt.Errorf("update application package version: %w", err)
 	}
 
-	// Update existing package to add repository to available repositories
-	original := pkg.DeepCopy()
-
-	pkg.Status.AvailableRepositories = append(pkg.Status.AvailableRepositories, s.repo.Name)
-
-	err = s.client.Status().Patch(ctx, pkg, client.MergeFrom(original))
-	if err != nil {
-		return fmt.Errorf("update application package status: %w", err)
-	}
-
-	return nil
+	return true, nil
 }
 
-// ensureModulePackageVersion creates a ModulePackageVersion if one does not yet
-// exist for the given package and version. The bool return reports whether the
-// version was counted as newly found during this call: true on a successful Create,
-// false otherwise (including all error paths and the no-op case where the version
-// already exists).
+// ensureModulePackageVersion creates the ModulePackageVersion with extraLabels on top of the
+// defaults and reports whether it did. A version the cluster already holds is left alone: its "not
+// in registry" mark, if any, belongs to the explicit re-check, not to the ordered walk.
 func (s *OperationService) ensureModulePackageVersion(ctx context.Context, packageName, version string, extraLabels map[string]string) (bool, error) {
 	mpvName := v1alpha1.MakeModulePackageVersionName(s.repo.Name, packageName, version)
 
-	pkgVersion := &v1alpha1.ModulePackageVersion{}
-	err := s.client.Get(ctx, types.NamespacedName{Name: mpvName}, pkgVersion)
+	pkgVersion := new(v1alpha1.ModulePackageVersion)
+	err := s.client.Get(ctx, client.ObjectKey{Name: mpvName}, pkgVersion)
 	if err != nil && !apierrors.IsNotFound(err) {
 		return false, fmt.Errorf("get module package version: %w", err)
 	}
@@ -834,9 +799,7 @@ func (s *OperationService) ensureModulePackageVersion(ctx context.Context, packa
 		v1alpha1.ModulePackageVersionLabelPackage:    packageName,
 		v1alpha1.ModulePackageVersionLabelDraft:      "true",
 	}
-	for k, v := range extraLabels {
-		labels[k] = v
-	}
+	maps.Copy(labels, extraLabels)
 
 	pkgVersion = &v1alpha1.ModulePackageVersion{
 		TypeMeta: metav1.TypeMeta{
@@ -857,103 +820,51 @@ func (s *OperationService) ensureModulePackageVersion(ctx context.Context, packa
 	// Add owner reference to PackageRepository
 	s.setOwnerReference(pkgVersion)
 
-	err = s.client.Create(ctx, pkgVersion)
-	if err != nil {
+	if err := s.client.Create(ctx, pkgVersion); err != nil {
 		return false, fmt.Errorf("create module package version: %w", err)
 	}
 
 	return true, nil
 }
 
-func (s *OperationService) EnsureModulePackage(ctx context.Context, packageName string) error {
-	pkg := &v1alpha1.ModulePackage{}
-	err := s.client.Get(ctx, types.NamespacedName{Name: packageName}, pkg)
-	if err != nil && !apierrors.IsNotFound(err) {
-		return fmt.Errorf("get module package: %w", err)
+// rediscoverModulePackageVersion clears the "not in registry" mark of an existing version once its
+// image is back in the registry. Reports whether the mark was cleared.
+func (s *OperationService) rediscoverModulePackageVersion(ctx context.Context, pkgVersion *v1alpha1.ModulePackageVersion, packageName, version string) (bool, error) {
+	isBundleExistInRegistry, ok := pkgVersion.Labels[v1alpha1.ModulePackageVersionLabelExistInRegistry]
+	if !ok || isBundleExistInRegistry != "false" {
+		return false, nil
 	}
 
-	// err - apierrors.IsNotFound
-	if err != nil {
-		// Create new ModulePackage with this repository as a non-controller owner.
-		pkg = &v1alpha1.ModulePackage{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: v1alpha1.ModulePackageGVK.GroupVersion().String(),
-				Kind:       v1alpha1.ModulePackageKind,
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name: packageName,
-				Labels: map[string]string{
-					"heritage": "deckhouse",
-				},
-			},
+	logger := s.logger.With(slog.String("package_version", pkgVersion.Name))
+
+	logger.Debug("version marked as not exist in registry, checking if bundle image exists")
+
+	if err := s.svc.Package(packageName).CheckImageExists(ctx, version); err != nil {
+		if errors.Is(err, regClient.ErrImageNotFound) {
+			logger.Debug("bundle image not found")
+
+			return false, nil
 		}
-		s.ensureSharedOwnerReference(pkg)
 
-		err = s.client.Create(ctx, pkg)
-		if err != nil {
-			return fmt.Errorf("create module package: %w", err)
-		}
-	} else {
-		// Existing — make sure we are listed as an owner so a single repo deletion
-		// does not cascade-delete a package that other repositories still contribute.
-		original := pkg.DeepCopy()
-		if s.ensureSharedOwnerReference(pkg) {
-			if err := s.client.Patch(ctx, pkg, client.MergeFrom(original)); err != nil {
-				return fmt.Errorf("sync module package owner refs: %w", err)
-			}
-		}
+		return false, fmt.Errorf("check bundle image exists: %w", err)
 	}
 
-	// Check if repository is already listed
-	if slices.Contains(pkg.Status.AvailableRepositories, s.repo.Name) {
-		return nil
+	logger.Debug("bundle image exists, marking package version as draft")
+
+	original := pkgVersion.DeepCopy()
+
+	pkgVersion.Labels[v1alpha1.ModulePackageVersionLabelExistInRegistry] = "true"
+	pkgVersion.Labels[v1alpha1.ModulePackageVersionLabelDraft] = "true"
+
+	if err := s.client.Patch(ctx, pkgVersion, client.MergeFrom(original)); err != nil {
+		return false, fmt.Errorf("update module package version: %w", err)
 	}
 
-	// Update existing package to add repository to available repositories
-	original := pkg.DeepCopy()
-
-	pkg.Status.AvailableRepositories = append(pkg.Status.AvailableRepositories, s.repo.Name)
-
-	err = s.client.Status().Patch(ctx, pkg, client.MergeFrom(original))
-	if err != nil {
-		return fmt.Errorf("update module package status: %w", err)
-	}
-
-	return nil
+	return true, nil
 }
 
-// ensureSharedOwnerReference appends s.repo as a non-controller owner of obj if it is not
-// already present. ApplicationPackage / ModulePackage CRs can be contributed by several
-// repositories, so no single repository should be the sole controller-owner — otherwise
-// Kubernetes GC would cascade-delete the package when that one repo is removed, even if
-// other repos still contribute it. Returns true if obj.OwnerReferences was modified.
-func (s *OperationService) ensureSharedOwnerReference(obj client.Object) bool {
-	refs := obj.GetOwnerReferences()
-	for _, ref := range refs {
-		if ref.Kind != v1alpha1.PackageRepositoryKind {
-			continue
-		}
-		// Match by UID when both sides have one (real cluster); otherwise fall back
-		// to Name (PackageRepository names are cluster-unique, and UIDs may be empty
-		// in test fixtures).
-		if ref.UID != "" && ref.UID == s.repo.UID {
-			return false
-		}
-		if ref.Name == s.repo.Name {
-			return false
-		}
-	}
-	refs = append(refs, metav1.OwnerReference{
-		APIVersion: v1alpha1.PackageRepositoryGVK.GroupVersion().String(),
-		Kind:       v1alpha1.PackageRepositoryKind,
-		Name:       s.repo.Name,
-		UID:        s.repo.UID,
-		Controller: &[]bool{false}[0],
-	})
-	obj.SetOwnerReferences(refs)
-	return true
-}
-
+// setOwnerReference makes s.repo the sole controller-owner of obj, so removing the repository
+// garbage-collects it.
 func (s *OperationService) setOwnerReference(obj client.Object) {
 	ownerRef := metav1.OwnerReference{
 		APIVersion: v1alpha1.PackageRepositoryGVK.GroupVersion().String(),
