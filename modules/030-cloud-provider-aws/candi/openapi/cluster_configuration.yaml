@@ -407,17 +407,18 @@ apiVersions:
         type: boolean
         x-doc-default: false
         description: |
-          Enables IMDSv2 and disables IMDSv1 for all EC2 instances created for the cluster.
+          Enables mandatory use of IMDSv2 and disables IMDSv1 for EC2 instances in the cluster.
 
-          The default is `false` for backward compatibility with existing clusters and applications that only support IMDSv1.
+          Using IMDSv2 is recommended. IMDSv2 requires a session token to access instance metadata, which reduces the risk of unauthorized access, including through SSRF (Server-Side Request Forgery) attacks.
 
-          It is recommended to enable IMDSv2 because it requires session tokens for metadata requests and reduces the risk of unauthorized access to instance metadata, including through server-side request forgery (SSRF).
+          For backward compatibility, the default value of the parameter is `false`. However, if the parameter is not specified in an existing configuration, DKP does not change the current instance metadata service settings. Once the parameter is explicitly specified, the IMDS settings are managed by DKP:
 
-          **Caution.** Instances keep the default IMDS hop limit of 1, so with IMDSv2 enforced the metadata service becomes unreachable from Pods that do not use the host network — including Pods whose applications do support IMDSv2. Deckhouse components are not affected, they run in the host network. Before enabling it, make sure that all applications accessing instance metadata support IMDSv2 and either run in the host network or do not need instance metadata.
+          - `false` — allows both IMDSv1 and IMDSv2
+          - `true` — allows only IMDSv2 and requires a session token to access instance metadata
 
-          While the parameter is not set at all, the metadata options of the instances are left untouched, whatever they are. Setting it — to either value — puts them under Deckhouse management: `false` allows both IMDS versions explicitly, `true` requires session tokens.
+          > **Warning.** When IMDSv2 is enabled, the hop limit retains the default value of `1`. As a result, the instance metadata service is unavailable from pods, even if the applications running in those pods support IMDSv2. This limitation does not affect DKP components because they use the host network. Before enabling IMDSv2, make sure that applications requiring access to instance metadata support IMDSv2 and run using the host network.
 
-          To apply the change to master, static and bastion nodes, run `dhctl converge`. Ephemeral nodes are re-created automatically.
+          To apply the change to master, static, and bastion nodes, run [`dhctl converge`](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/cloud-node.html#adding-cloudpermanent-nodes-to-a-cloud-cluster). CloudEphemeral nodes are recreated automatically.
       sshAllowList:
         type: array
         items:
