@@ -33,6 +33,13 @@ func TestConvertFragment(t *testing.T) {
 			want: "Hello **world** and `kubectl get po`.",
 		},
 		{
+			// Whitespace hugging a `<code>` comes from the HTML layout, not from
+			// the value, and inside the backticks it would become part of it.
+			name: "code span is trimmed",
+			html: `<p>Default: <code>false </code></p>`,
+			want: "Default: `false`",
+		},
+		{
 			name: "headings",
 			html: `<h2 id="conf">Configuring</h2><p>Body.</p><h3 id="sub">Sub</h3>`,
 			want: "## Configuring\n\nBody.\n\n### Sub",

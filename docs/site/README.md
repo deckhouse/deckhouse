@@ -682,6 +682,62 @@ A list of `x-doc-` parameters:
 - `x-doc-map-key-name` (string). Used to specify the name of an additional parameter (object key) when describing `additionalProperties`.
 - `x-doc-pattern-name` (string). Used to specify the name of a pattern inside `patternProperties` object.
 
+## AI-friendly exports (llms.txt and corpus.json)
+
+Alongside the HTML, every build publishes the same content in a form an LLM agent can consume:
+
+- a Markdown copy of each page, next to its HTML (`…/faq.html` → `…/faq.md`);
+- an [llms.txt](https://llmstxt.org/) index — the page list grouped by the site navigation, with a description and a link to the `.md` for each entry;
+- a `corpus.json` for RAG — the same pages with their metadata, full Markdown and pre-split chunks.
+
+The exports are built from the *rendered* HTML, not from the source Markdown: includes, shortcodes and the OpenAPI schemas rendered by `render-jsonschema.rb` are already expanded there, and an agent gets the page as a reader sees it.
+
+### What is published where
+
+| Content | Generator | Files |
+| --- | --- | --- |
+| DKP documentation and built-in modules | Jekyll, `docs/documentation` | `/products/kubernetes-platform/documentation/v1/{llms.txt,corpus.json}` |
+| Embedded modules library | Jekyll, the `modules-embedded` build of the same sources | `/modules/{embedded-llms.txt,embedded-corpus.json}` |
+| External modules library | Hugo + docs-builder | `/modules/{external-llms.txt,external-corpus.json}` |
+
+The documentation `llms.txt` is the entry point: it links to the two module indexes and to all three corpora.
+
+### Jekyll (`_plugins/ai_export.rb`)
+
+The plugin runs on the `site, :post_write` hook — `page.output` is complete only there, while `page.content` inside Liquid depends on the page render order.
+
+Site parameters:
+
+| Parameter | Meaning |
+| --- | --- |
+| `AIExport` | Enables the export. Nothing is generated unless it is `true`. |
+| `AIllmsFileName` | Name of the llms.txt file. Default: `llms.txt`. |
+| `AIcorpusFileName` | Name of the corpus file. Default: `corpus.json`. |
+| `AIRoot` | Adds the `Optional` section with the links to the corpora. Set it in the build whose llms.txt is the entry point of the site. |
+| `ai_export.title`, `ai_export.summary` | The `# heading` and the `> summary` of llms.txt. Both accept a per-language hash. Fall back to `site_title` and `site_description`. |
+
+The two file names are parameters because `docs/documentation` is built more than once and the results are published side by side. The main build takes them from `_config.yml`, the embedded modules build overrides them in `/tmp/_config_additional.yml` (see `werf-modules-static.inc.yaml`).
+
+A page is exported if it is `searchable: true`, or if it is a `CONFIGURATION`/`CR`/`CLUSTER_CONFIGURATION` page generated from an OpenAPI schema — those are dropped from the search index but are the most valuable reference an agent can get. Set `ai_export: false` in the front matter (or in `defaults` of `_config.yml`, the way `pages/internal` and `pages/drafts` do) to keep a page out.
+
+### External modules (Hugo + docs-builder)
+
+Hugo does not write the export itself. The `ai` output format renders a manifest, `<lang>/ai/ai.json`, listing every module page with its metadata; the Go exporter (`backends/docs-builder/internal/aiexport`) then converts the rendered HTML and writes the `.md` files, `external-llms.txt` and `external-corpus.json`. In a cluster this is a step of the docs-builder build.
+
+The names here are fixed rather than configurable: the modules library shares its URL space with the documentation, so the artifacts have to be told apart by name.
+
+### Generating the external modules export locally
+
+```shell
+make ai-export
+```
+
+docs-builder is an HTTP service that expects a Kubernetes API, so the target does not run it: it renders the site with Hugo and calls the exporter directly over the result. It expects a prepared `content/modules` + `data/modules` tree — by default `backends/docs-builder-template`, override with `AI_EXPORT_SRC=/path/to/tree`. A module missing from `data/modules/channels.yaml` is silently skipped, as it is on the site.
+
+### Serving
+
+The artifacts are static files, but they are published under URLs that do not match their location on disk, so every nginx config has to know about them: `.werf/nginx-local.conf` (local site), `.helm/templates/10-cm-moduleslibrary.yaml` (deckhouse.io) and `modules/810-documentation/templates/configmap.yaml` (the documentation module in a cluster). The per-page `.md` files are served by the generic page locations; the configs also declare `text/markdown` for `.md`, otherwise nginx offers them for download.
+
 ## Markup (external modules documentation)
 
 [Hugo](gohugo.io) SSG is used for rendering.

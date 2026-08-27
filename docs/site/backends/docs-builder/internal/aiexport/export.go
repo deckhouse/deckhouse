@@ -273,7 +273,8 @@ func renderLLMsTxt(manifest *Manifest, baseURL string, documents []Document) str
 	var out strings.Builder
 
 	out.WriteString("# " + manifest.Title + "\n\n")
-	out.WriteString("> The content below is for external modules only.\n\n")
+	out.WriteString("> The content below is for Deckhouse Platform external modules.\n\n")
+	out.WriteString("> Note, that described modules version can differ from the version actually used in a cluster.\n\n")
 
 	var order []string
 	byModule := map[string][]Document{}

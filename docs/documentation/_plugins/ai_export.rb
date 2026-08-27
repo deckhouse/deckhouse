@@ -258,6 +258,10 @@ module Jekyll
       def write_llms_txt(lang, documents)
         lines = ["# #{site_title(lang)}", "", "> #{site_summary(lang)}", ""]
 
+        lines << ""
+        lines << "> Note, that described Deckhouse Platform version can differ from the version actually used in a cluster."
+        lines << ""
+
         groups(lang, documents).each do |group|
           next if group[:documents].empty?
 
