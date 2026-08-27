@@ -1105,7 +1105,11 @@ func (b *ClusterBootstrapper) bootstrapFirstMaster(ctx context.Context, bctx *bo
 	// An immutable master answers no sshd and its document is already aboard: there is
 	// nothing to register and nothing left to hand over.
 	if bctx.immutable != nil {
-		bctx.immutable.masterIP = masterOutputs.NodeInternalIP
+		address, err := immutableCloudMasterAddress(masterNodeName, masterOutputs)
+		if err != nil {
+			return err
+		}
+		bctx.immutable.masterIP = address
 		return nil
 	}
 
@@ -1127,6 +1131,16 @@ func (b *ClusterBootstrapper) bootstrapFirstMaster(ctx context.Context, bctx *bo
 	}
 
 	return nil
+}
+
+// immutableCloudMasterAddress is the address everything after this phase reaches the first
+// master at. NodeInternalIP is private: with no bastion the channel goes straight to it and
+// dhctl outside the cloud network cannot route there at all.
+func immutableCloudMasterAddress(nodeName string, outputs *infrastructure.PipelineOutputs) (string, error) {
+	if outputs.MasterIPForSSH == "" {
+		return "", fmt.Errorf("the infrastructure reported no address for the first master %s to be reached at", nodeName)
+	}
+	return outputs.MasterIPForSSH, nil
 }
 
 // bootstrapPostInfraPreflights runs the post-infrastructure checks and, on a static cluster,
