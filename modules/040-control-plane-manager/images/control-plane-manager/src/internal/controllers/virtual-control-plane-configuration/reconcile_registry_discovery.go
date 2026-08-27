@@ -61,6 +61,7 @@ func (t *tenantRegistry) registrySecretData() map[string][]byte {
 		"address":           []byte(t.Address),
 		"path":              []byte(t.Path),
 		"scheme":            []byte(t.Scheme),
+		"imagesRegistry":    []byte(t.Base()),
 	}
 	if t.CA != "" {
 		data["ca"] = []byte(t.CA)
