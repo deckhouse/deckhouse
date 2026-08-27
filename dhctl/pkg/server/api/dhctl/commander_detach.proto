@@ -47,6 +47,9 @@ message CommanderDetachStart {
   google.protobuf.Struct create_resources_values = 7;
   google.protobuf.Struct delete_resources_values = 8;
   CommanderDetachStartOptions options = 9;
+  // kubeconfig points the kube provider straight at the API server. connection_config is
+  // still required and must carry an SSHConfig document; its SSHHost documents may be omitted.
+  string kubeconfig = 10;
 }
 
 message CommanderDetachCancel {}

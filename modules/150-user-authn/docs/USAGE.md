@@ -31,7 +31,7 @@ spec:
 
 ### Checking provider connectivity
 
-The web UI provider details page has a **Check connection** action. It creates a [DexProviderCheck](cr.html#dexprovidercheck) resource and waits for the user-authn controller to write the result to its status.
+The web UI provider details page has a "Check connection" action. It creates a [DexProviderCheck](cr.html#dexprovidercheck) resource and waits for the `user-authn` controller to write the result to its `status`.
 
 The check verifies that:
 
@@ -482,6 +482,8 @@ spec:
 ```
 
 {% endraw %}
+
+The DexClient group and email allow-lists are enforced on login and on every refresh-token request. Changing the lists denies further refresh for sessions that no longer match; those users must sign in again.
 
 After the `DexClient` custom resource is created, Dex will register a client with a `dex-client-myname@mynamespace` ID (**clientID**).
 

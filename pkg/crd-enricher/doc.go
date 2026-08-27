@@ -25,18 +25,19 @@
 //
 // Markers are regular Go comments that start with a plus sign, exactly like
 // the markers consumed by controller-gen. Every enricher marker is namespaced
-// with the canonical "crd-enricher:" prefix and comes in two shapes:
+// with the canonical "crd-enricher:" prefix and comes in one of these shapes:
 //
-//	+crd-enricher:raw:<key>[=<value>]                        // raw schema injection
+//	+crd-enricher:raw:<key>=<value>                          // raw schema injection
+//	+crd-enricher:unset:<key>                                // raw schema removal
 //	+crd-enricher:deckhouse:documentation:<entity>[=<value>] // documentation entity
 //	+crd-enricher:crd:<key>[=<value>]                        // CRD-level setting
 //	+crd-enricher:deckhouse:sensitive-data                   // sensitive field flag
 //
-// The raw entity injects a standard schema field and lives directly under the
-// prefix; the documentation entities (examples, deprecated, default) carry the
-// extra "deckhouse:documentation" sub-namespace; the crd entity configures the
-// CRD itself and carries the shorter "deckhouse" sub-namespace. No bare or
-// legacy form is recognised:
+// The raw and unset entities inject and remove a standard schema field and live
+// directly under the prefix, as does the crd entity, which configures the CRD
+// document itself; the documentation entities (examples, deprecated, default)
+// carry the extra "deckhouse:documentation" sub-namespace, and sensitive-data
+// carries the shorter "deckhouse" one. No bare or legacy form is recognised:
 //
 //	type ModuleSourceSpec struct {
 //		// +crd-enricher:deckhouse:documentation:default=3m
@@ -67,8 +68,29 @@
 //   - default — rendered as x-doc-default set to the parsed YAML value (any
 //     valued simple entity becomes x-doc-<entity>);
 //
-//   - raw:<key> — injects an arbitrary standard schema field named <key>
-//     directly (a dotted <key> walks into nested schema nodes);
+//   - raw:<key>=<value> — injects an arbitrary standard schema field named <key>
+//     directly (a dotted <key> walks into nested schema nodes). The value is
+//     required: without one the marker would write null, and the one thing its
+//     author might have meant by that is what unset:<key> is for;
+//
+//   - unset:<key> — deletes the standard schema field named <key>, the mirror of
+//     raw:<key> and the only way to take a node out rather than overwrite it.
+//     controller-gen renders a description for every node it can reach, the
+//     vendored ones included: items.description on a []metav1.Condition field
+//     comes from the metav1.Condition godoc of whatever apimachinery the API
+//     module pins, and a manifest that is not supposed to carry it cannot be
+//     reproduced from the Go types while raw: is the only tool. The marker takes
+//     no value, since a field set to null is not the same schema as a field that
+//     is absent, and a <key> that is already missing is reported as a warning so
+//     a marker that has outlived its target does not pass for a working one. A
+//     <key> naming a field the structural schema requires (type, items) is
+//     refused outright, and so is a removal that would leave the parent node an
+//     empty mapping: obeying either would produce a manifest the apiserver
+//     rejects, with nothing in the refusal pointing back at the marker. Removing
+//     a validation key (required, enum, pattern, x-kubernetes-validations and the
+//     rest of that vocabulary) is obeyed but reported, because the result applies
+//     cleanly while the API starts admitting values it used to reject, and a
+//     re-render gate cannot see it;
 //
 //   - sensitive-data — a schema-level flag rendered as
 //     x-kubernetes-sensitive-data: true. It marks a field (or an object/array
@@ -103,6 +125,24 @@
 // Markers may be attached both to struct fields and to the struct types
 // themselves. Type-level markers are applied to the schema node of the type
 // (for the root type this is openAPIV3Schema).
+//
+// The enricher walks the root types and the fields reachable from them, so a
+// type no root reaches is never visited. A root is any type that embeds both
+// metav1.TypeMeta and metav1.ObjectMeta, which is the only thing
+// controller-gen's CRD generator looks at (FindKubeKinds, "locates all types
+// that contain TypeMeta and ObjectMeta"). The root markers --
+// +kubebuilder:object:root=true and the pre-kubebuilder
+// +k8s:deepcopy-gen:interfaces naming k8s.io/apimachinery/pkg/runtime.Object --
+// are read by controller-gen's deepcopy generator, not its CRD one, so they
+// decide whether the type gets a DeepCopyObject method and nothing else. The
+// enricher accepts them as a fallback for types that declare themselves objects
+// without embedding the metav1 structs, but neither of them, and in particular
+// not object:root=false, keeps a type that embeds both structs from getting a
+// CRD -- and therefore from having its markers applied.
+//
+// The value after "=" is YAML, which means prose containing a colon followed by
+// a space parses as a mapping rather than a string; such a value has to be
+// quoted, and the enricher warns when it sees one that was not.
 //
 // # Example generation
 //

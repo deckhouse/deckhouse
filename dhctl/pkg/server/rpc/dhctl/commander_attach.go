@@ -186,13 +186,24 @@ func (s *Service) commanderAttach(ctx context.Context, p *attachParams) *pb.Comm
 	err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Preparing SSH client", func(ctx context.Context) error {
 		var cleanup func() error
 		var sshProviderInitializer *providerinitializer.SSHProviderInitializer
-		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, s.params.IsDebug, s.params.TmpDir)
+		// The kubeconfig arrives as contents, but every consumer down the chain wants a path,
+		// so spill it into a 0600 temp file. Never log the value.
+		var kubeConfigPath string
+		if len(p.request.Kubeconfig) > 0 {
+			kubeConfigPath, cleanup, err = util.WriteDefaultTempFile([]byte(p.request.Kubeconfig))
+			cleanuper.Add(cleanup)
+			if err != nil {
+				return fmt.Errorf("failed to write kubeconfig: %w", err)
+			}
+		}
+
+		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, s.params.IsDebug, s.params.TmpDir, helper.WithKubeConfig(kubeConfigPath))
 		cleanuper.Add(cleanup)
 		if err != nil {
 			return fmt.Errorf("creating provider: %w", err)
 		}
 
-		sshProvider, err = sshProviderInitializer.GetSSHProvider(ctx)
+		sshProvider, err = helper.SSHProviderOrNil(ctx, sshProviderInitializer, kubeConfigPath)
 		if err != nil {
 			return fmt.Errorf("getting ssh provider: %w", err)
 		}

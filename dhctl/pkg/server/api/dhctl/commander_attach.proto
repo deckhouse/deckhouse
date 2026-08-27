@@ -45,6 +45,9 @@ message CommanderAttachStart {
   string resources_template = 3;
   google.protobuf.Struct resources_values = 4;
   CommanderAttachStartOptions options = 5;
+  // kubeconfig points the kube provider straight at the API server. connection_config is
+  // still required and must carry an SSHConfig document; its SSHHost documents may be omitted.
+  string kubeconfig = 6;
 }
 
 message CommanderAttachPhaseEnd {

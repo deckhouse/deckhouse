@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"maps"
 	"os"
-	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -37,7 +36,6 @@ import (
 	objectpatch "github.com/flant/shell-operator/pkg/kube/object_patch"
 	kubeeventsmanager "github.com/flant/shell-operator/pkg/kube_events_manager"
 	schedulemanager "github.com/flant/shell-operator/pkg/schedule_manager"
-	"github.com/goccy/go-yaml"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -189,18 +187,14 @@ func (m *Module) GetPath() string {
 	return m.path
 }
 
-// GetHookSnapshotsDump returns a YAML snapshot of hook controller snapshots.
-// If include is provided, only hooks matching those names are included.
-func (m *Module) GetHookSnapshotsDump(include ...string) []byte {
-	d := make(map[string]any)
-	for _, h := range m.hooks.GetHooks() {
-		if len(include) == 0 || slices.Contains(include, h.GetName()) {
-			d[h.GetName()] = h.GetHookController().SnapshotsDump()
-		}
+// GetHookSnapshotsDump returns a snapshot of hook controller snapshots.
+func (m *Module) GetHookSnapshotsDump() map[string]any {
+	snapshots := make(map[string]any)
+	for _, hook := range m.hooks.GetHooks() {
+		snapshots[hook.GetName()] = hook.GetHookController().SnapshotsDump()
 	}
 
-	marshalled, _ := yaml.Marshal(d)
-	return marshalled
+	return snapshots
 }
 
 // GetValuesChecksum returns a checksum of the current values.

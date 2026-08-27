@@ -363,7 +363,6 @@ write:
     - batch/cronjobs
     - batch/jobs
     - cert-manager.io/certificates
-    - cert-manager.io/issuers
     - configmaps
     - deckhouse.io/dexauthenticators
     - deckhouse.io/dexclients
@@ -418,6 +417,7 @@ read-write:
     - deckhouse.io/authorizationrules
 write:
     - autoscaling.k8s.io/verticalpodautoscalercheckpoints
+    - cert-manager.io/issuers
     - deckhouse.io/applications
     - extensions.istio.io/wasmplugins
     - rbac.authorization.k8s.io/rolebindings
@@ -460,6 +460,7 @@ write:
     - apps/daemonsets
     - autoscaling.k8s.io/verticalpodautoscalercheckpoints
     - cert-manager.io/clusterissuers
+    - cert-manager.io/issuers
     - deckhouse.io/applications
     - deckhouse.io/hubblemonitoringconfigs
     - deckhouse.io/instances

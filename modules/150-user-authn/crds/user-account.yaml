@@ -21,9 +21,9 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Controller-projected view of Dex `Password` and `OfflineSessions` objects for the Deckhouse console.
+            Controller-projected view of Dex Password and `OfflineSessions` objects for the DKP web UI.
 
-            Do not create or edit UserAccount resources. The user-authn controller owns them.
+            Do not create or edit UserAccount resources. The `user-authn` controller owns them.
             The source of truth for login credentials and session state remains Dex.
           properties:
             spec:
@@ -31,11 +31,13 @@ spec:
               description: |
                 Empty. UserAccount is controller-owned and has no user-editable specification.
 
-                Do not create this resource; the controller projects it from Dex.
+                Do not create this resource. The controller projects it from Dex.
             status:
               type: object
               description: |
-                Observed account state projected from Dex. This is a console view only
+                Observed account state projected from Dex.
+                
+                This is a DKP web UI view only
                 and does not store credentials or connector secrets.
               properties:
                 email:
@@ -56,18 +58,24 @@ spec:
                     - Local
                     - External
                   description: |
-                    Account kind. Possible values:
+                    Account kind.
+                    
+                    Possible values:
 
                     * `Local`: Dex Password (static user).
-                    * `External`: federated identity from a connector.
+                    * `External`: Federated identity from a connector.
                 connectorID:
                   type: string
                   description: |
-                    Dex connector identifier. `local` for local accounts; otherwise the DexProvider name.
+                    Dex connector identifier.
+                    
+                    `local` for local accounts; otherwise the DexProvider name.
                 providerType:
                   type: string
                   description: |
-                    External identity provider type. Typical values for external accounts: `LDAP`, `Crowd`.
+                    External identity provider type.
+                    
+                    Typical values for external accounts: `LDAP`, `Crowd`.
                     Empty for local accounts.
                 incorrectLoginAttempts:
                   type: integer
@@ -85,6 +93,7 @@ spec:
                   format: date-time
                   description: |
                     Time until which the account remains locked, in RFC3339 format.
+
                     After this time the lock is lifted automatically, including an
                     administrator lock set for a limited duration (for example, one hour
                     via UserOperation). A permanent administrator lock is stored as a
@@ -93,12 +102,15 @@ spec:
                   type: boolean
                   description: |
                     Whether the current lock was set by an administrator (as opposed to
-                    an automatic password-policy lockout). This does not make the lock
-                    permanent; `lockedUntil` still defines when it expires.
+                    an automatic password-policy lockout).
+                    
+                    This does not make the lock permanent. `lockedUntil` still defines when it expires.
                 userRef:
                   type: string
                   description: |
-                    Name of the related User resource. Set for local accounts.
+                    Name of the related User resource.
+                    
+                    Set for local accounts.
                 expireAt:
                   type: string
                   format: date-time

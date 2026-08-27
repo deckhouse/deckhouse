@@ -15,7 +15,6 @@
 package packagerepositoryoperation
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"net/http"
@@ -75,6 +74,7 @@ func createFakePSM(ic registry.Client) registryService.ServiceManagerInterface[r
 	return psm
 }
 
+
 // applicationVersionImage builds a version image with Application type label and package.yaml.
 func applicationVersionImage() *fakeRegistry.ImageBuilder {
 	return fakeRegistry.NewImageBuilder().
@@ -87,6 +87,12 @@ func moduleVersionImage() *fakeRegistry.ImageBuilder {
 	return fakeRegistry.NewImageBuilder().
 		WithLabel("io.deckhouse.package.type", "Module").
 		WithFile("package.yaml", "type: Module\n")
+}
+
+// legacyReleaseImage builds a release image carrying the legacy module manifest, the marker the
+// release walk looks for.
+func legacyReleaseImage() *fakeRegistry.ImageBuilder {
+	return fakeRegistry.NewImageBuilder().WithFile("module.yaml", "name: test-package\n")
 }
 
 // invalidTypeVersionImage builds a version image with an unrecognized package type.
@@ -254,33 +260,13 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
-	suite.Run("partial scan unavailable", func() {
-		// The repository reports no partial listing, so an incremental scan must say so.
-		var logs bytes.Buffer
-
-		psm := createFakePSM(newInternalClient(fakeRegistry.NewRegistry(registryHost)))
-
-		suite.setupController("partial-scan-unavailable.yaml",
-			withPackageServiceManager(psm), withLogger(log.NewLogger(log.WithOutput(&logs))))
-		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
-
-		err := repeat(func() error {
-			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
-				NamespacedName: k8stypes.NamespacedName{Name: operation.Name},
-			})
-			return err
-		})
-
-		require.NoError(suite.T(), err)
-		require.Contains(suite.T(), logs.String(), "can't handle partial tag listing")
-	})
-
 	suite.Run("registry client creation failed", func() {
-		// Use an empty PSM (no pre-configured services) - PackagesService will fail
-		// because there's no service for the registry URL and it can't create one dynamically
-		emptyPSM := registryService.NewPackageServiceManager(log.NewNop())
+		// The repository carries a malformed dockerCfg, so the real service manager
+		// fails to build the registry client (bad auth config) and NewService returns
+		// a "create package service" error before any listing happens.
+		psm := registryService.NewPackageServiceManager(log.NewNop())
 
-		suite.setupController("registry-client-failed.yaml", withPackageServiceManager(emptyPSM))
+		suite.setupController("registry-client-failed.yaml", withPackageServiceManager(psm))
 		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
 
 		err := repeat(func() error {
@@ -477,6 +463,50 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
+	suite.Run("walk stops at the first version it cannot create", func() {
+		// Creating v1.0.1 fails. v1.0.2 above it must not be created either: it would raise the
+		// watermark past v1.0.1, and no later incremental scan would ever list v1.0.1 again.
+		reg := fakeRegistry.NewRegistry(registryHost)
+		reg.MustAddImage("", "test-package", fakeRegistry.NewImageBuilder().MustBuild())
+		modImg := moduleVersionImage().MustBuild()
+		for _, v := range []string{"v1.0.0", "v1.0.1", "v1.0.2"} {
+			reg.MustAddImage("test-package/version", v, modImg)
+		}
+
+		psm := createFakePSM(newInternalClient(reg))
+
+		suite.setupController("stops-at-first-failed-version.yaml", withPackageServiceManager(psm))
+
+		suite.ctr.client = &errorInjectingClient{
+			Client: suite.Client(),
+			createErrorNames: map[string]error{
+				"deckhouse-test-package-v1.0.1": fmt.Errorf("simulated create error for v1.0.1"),
+			},
+		}
+
+		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
+
+		err := repeat(func() error {
+			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+				NamespacedName: k8stypes.NamespacedName{Name: operation.Name},
+			})
+
+			return err
+		})
+
+		require.NoError(suite.T(), err)
+
+		var versions v1alpha1.ModulePackageVersionList
+		require.NoError(suite.T(), suite.Client().List(ctx, &versions))
+
+		got := make([]string, 0, len(versions.Items))
+		for _, item := range versions.Items {
+			got = append(got, item.Spec.PackageVersion)
+		}
+
+		assert.ElementsMatch(suite.T(), []string{"v1.0.0"}, got)
+	})
+
 	suite.Run("incremental module scan", func() {
 		// Pre-existing ModulePackageVersion v1.0.0 already processed.
 		// Registry has v1.0.0 and v1.1.0 — incremental scan should only create v1.1.0.
@@ -502,11 +532,9 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
-	suite.Run("incremental scan keeps only the latest patch of every minor", func() {
-		// Registry holds several patch releases for every minor line.
-		// The incremental scan must process only the newest patch of each
-		// major.minor line: v1.0.2, v1.1.1 and v2.0.0 - the intermediate
-		// patches (v1.0.0, v1.0.1, v1.1.0) must not produce resources.
+	suite.Run("incremental scan offers every patch of every minor", func() {
+		// Registry holds several patch releases for every minor line. Every one of them is
+		// offered: the scan does not thin a minor line down to its newest patch.
 		reg := fakeRegistry.NewRegistry(registryHost)
 		reg.MustAddImage("", "test-package", fakeRegistry.NewImageBuilder().MustBuild())
 		modImg := moduleVersionImage().MustBuild()
@@ -516,7 +544,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 
 		psm := createFakePSM(newInternalClient(reg))
 
-		suite.setupController("incremental-scan-latest-minors.yaml", withPackageServiceManager(psm))
+		suite.setupController("incremental-scan-every-patch.yaml", withPackageServiceManager(psm))
 		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
 
 		err := repeat(func() error {
@@ -537,7 +565,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 			got = append(got, item.Spec.PackageVersion)
 		}
 
-		assert.ElementsMatch(suite.T(), []string{"v1.0.2", "v1.1.1", "v2.0.0"}, got)
+		assert.ElementsMatch(suite.T(), []string{"v1.0.0", "v1.0.1", "v1.0.2", "v1.1.0", "v1.1.1", "v2.0.0"}, got)
 	})
 
 	suite.Run("incremental scan with no new versions keeps package in repository status", func() {
@@ -589,11 +617,11 @@ func (suite *ControllerTestSuite) TestReconcile() {
 	})
 
 	suite.Run("legacy module from old registry", func() {
-		// /version path returns NAME_UNKNOWN → fallback to /release path.
+		// /version path returns NAME_UNKNOWN → the module history is read from /release.
 		// /release has semver tags + channel names.
 		reg := fakeRegistry.NewRegistry(registryHost)
 		reg.MustAddImage("", "test-package", fakeRegistry.NewImageBuilder().MustBuild())
-		reg.MustAddImage("test-package/release", "v1.0.0", fakeRegistry.NewImageBuilder().MustBuild())
+		reg.MustAddImage("test-package/release", "v1.0.0", legacyReleaseImage().MustBuild())
 		reg.MustAddImage("test-package/release", "stable", fakeRegistry.NewImageBuilder().MustBuild())
 		reg.MustAddImage("test-package/release", "early-access", fakeRegistry.NewImageBuilder().MustBuild())
 		// Wrap with legacyRegistryClient to return NAME_UNKNOWN on /version
@@ -621,13 +649,60 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		reg.MustAddImage("", "test-package", fakeRegistry.NewImageBuilder().MustBuild())
 		// Non-semver tags in /version: path reachable, but extractOnlySemverTags returns [].
 		reg.MustAddImage("test-package/version", "latest", fakeRegistry.NewImageBuilder().MustBuild())
-		reg.MustAddImage("test-package/release", "v1.0.0", fakeRegistry.NewImageBuilder().MustBuild())
+		reg.MustAddImage("test-package/release", "v1.0.0", legacyReleaseImage().MustBuild())
 		reg.MustAddImage("test-package/release", "stable", fakeRegistry.NewImageBuilder().MustBuild())
 		reg.MustAddImage("test-package/release", "early-access", fakeRegistry.NewImageBuilder().MustBuild())
 
 		psm := createFakePSM(newInternalClient(reg))
 
 		suite.setupController("empty-version-tags-legacy-release.yaml", withPackageServiceManager(psm))
+		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
+
+		err := repeat(func() error {
+			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+				NamespacedName: k8stypes.NamespacedName{Name: operation.Name},
+			})
+			return err
+		})
+
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("legacy module release boundary", func() {
+		// The walk goes down from the newest release and stops at v0.9.0, which carries no
+		// module definition: only v1.0.0 is offered and the module is marked legacy.
+		reg := fakeRegistry.NewRegistry(registryHost)
+		reg.MustAddImage("", "test-package", fakeRegistry.NewImageBuilder().MustBuild())
+		reg.MustAddImage("test-package/release", "v1.0.0", legacyReleaseImage().MustBuild())
+		reg.MustAddImage("test-package/release", "v0.9.0", fakeRegistry.NewImageBuilder().MustBuild())
+
+		psm := createFakePSM(&legacyRegistryClient{Client: newInternalClient(reg)})
+
+		suite.setupController("legacy-module-boundary.yaml", withPackageServiceManager(psm))
+		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
+
+		err := repeat(func() error {
+			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+				NamespacedName: k8stypes.NamespacedName{Name: operation.Name},
+			})
+			return err
+		})
+
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("legacy module fills a gap left by a failed version", func() {
+		// v1.0.2 is in the cluster, v1.0.1 below it is not - the state left behind when creating
+		// it failed. The walk must reach it instead of stopping at the version it already knows.
+		reg := fakeRegistry.NewRegistry(registryHost)
+		reg.MustAddImage("", "test-package", fakeRegistry.NewImageBuilder().MustBuild())
+		reg.MustAddImage("test-package/release", "v1.0.2", legacyReleaseImage().MustBuild())
+		reg.MustAddImage("test-package/release", "v1.0.1", legacyReleaseImage().MustBuild())
+		reg.MustAddImage("test-package/release", "v0.9.9", fakeRegistry.NewImageBuilder().MustBuild())
+
+		psm := createFakePSM(&legacyRegistryClient{Client: newInternalClient(reg)})
+
+		suite.setupController("legacy-module-gap.yaml", withPackageServiceManager(psm))
 		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
 
 		err := repeat(func() error {
