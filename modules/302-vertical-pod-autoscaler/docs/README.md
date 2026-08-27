@@ -20,7 +20,7 @@ The `Auto` mode is deprecated. It will no longer be supported in future DKP vers
 
 VPA limitations:
 
-- When using modes that allow Pod recreation, VPA may recreate a Pod if its `resource requests` cannot be updated in place. The new Pod can be scheduled to another node.
+- When using modes that allow Pod recreation, VPA recreates a Pod if its `resource requests` cannot be updated in place. The new Pod may be scheduled on a different node.
 - VPA **should not be used concurrently with CPU and memory-based [HPA](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/)**. However, you can use VPA together with HPA for custom/external metrics.
 - VPA notices almost all `out-of-memory` events, but that does not guarantee its response.
 - VPA performance has not been tested for huge clusters.
