@@ -268,21 +268,17 @@ You need to [clean up the node](#how-do-i-clean-up-a-static-node-manually), then
 
 ### Why are the SSH key and the sudo password of SSHCredentials shown as `<omitted>`?
 
-The [`privateSSHKey`](cr.html#sshcredentials-v1alpha1-spec-privatesshkey), [`sudoPassword`](cr.html#sshcredentials-v1alpha1-spec-sudopassword) (`v1alpha1`), and [`sudoPasswordEncoded`](cr.html#sshcredentials-v1alpha2-spec-sudopasswordencoded) (`v1alpha2`) fields of the [`SSHCredentials`](cr.html#sshcredentials) resource contain sensitive data. In the CRD schema they are marked as sensitive and protected from viewing.
+The [`privateSSHKey`](cr.html#sshcredentials-v1alpha1-spec-privatesshkey), [`sudoPassword`](cr.html#sshcredentials-v1alpha1-spec-sudopassword) (`v1alpha1`), and [`sudoPasswordEncoded`](cr.html#sshcredentials-v1alpha2-spec-sudopasswordencoded) (`v1alpha2`) fields of the [SSHCredentials](cr.html#sshcredentials) resource contain sensitive data and are protected from viewing.
 
 If a user has no permissions to read sensitive SSHCredentials data, the API returns `<omitted>` instead of the actual value. The other fields — [`user`](cr.html#sshcredentials-v1alpha1-spec-user), [`sshPort`](cr.html#sshcredentials-v1alpha1-spec-sshport), [`sshExtraArgs`](cr.html#sshcredentials-v1alpha1-spec-sshextraargs) — and the resource metadata remain available to users who are allowed to read SSHCredentials.
 
-Additionally, kube-apiserver protects this data:
+Additionally, kube-apiserver protects this data as follows:
 
 - removes the `kubectl.kubernetes.io/last-applied-configuration` annotation from API responses if it may contain a copy of sensitive values;
 - replaces sensitive values with `"******"` in [audit events](/products/kubernetes-platform/documentation/v1/admin/configuration/security/events/kubernetes-api-audit.html), regardless of user permissions and audit level;
-- encrypts the resource in etcd using the same mechanism as Kubernetes Secrets, if the [`apiserver.encryptionEnabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-encryptionenabled) parameter of the [`control-plane-manager`](/modules/control-plane-manager/) module is enabled.
+- encrypts the resource in etcd using the same mechanism as for Kubernetes Secrets, if the [`apiserver.encryptionEnabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-encryptionenabled) parameter of the [`control-plane-manager`](/modules/control-plane-manager/) module is enabled.
 
-Unmasked values are available to:
-
-- the [CAPS](./#cluster-api-provider-static) controller — to connect to the node over SSH
-- users with the [`SuperAdmin`](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/rbac-current.html#high-level-roles-used-in-the-current-model) access level
-- members of the [`kubeadm:cluster-admins`](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/cluster-admin-access-model.html) group
+Unmasked values are available to the [CAPS](./#cluster-api-provider-static) controller, which needs them to connect to the node over SSH, as well as to users with the [`SuperAdmin`](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/rbac-current.html#high-level-roles-used-in-the-current-model) access level and members of the [`kubeadm:cluster-admins`](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/cluster-admin-access-model.html) group.
 
 The [`d8:manage:infrastructure:viewer`](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/rbac-experimental.html#role-model-subsystems) and [`d8:manage:infrastructure:manager`](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/rbac-experimental.html#role-model-subsystems) roles allow reading the SSHCredentials resource, but do not grant access to the SSH key or the sudo password.
 
@@ -292,31 +288,8 @@ To check whether a user can read sensitive SSHCredentials data, run:
 d8 k auth can-i get sshcredentials/sensitive --as=<user>
 ```
 
-The `<omitted>` value means the actual value is hidden from the current user. This behavior is the same for `v1alpha1` and `v1alpha2` — switching the API version does not bypass masking.
+The `<omitted>` value means the actual value is hidden from the current user. This behavior applies to both `v1alpha1` and `v1alpha2`, so using a different API version does not reveal the hidden data.
 
-### How do I edit an SSHCredentials resource without seeing its secrets?
-
-Editing works as usual. On `update` and `patch`, `kube-apiserver` substitutes `<omitted>` with the value already stored in etcd. Therefore, `d8 k edit sshcredentials <name>` and the `get -o yaml` → edit → `apply` workflow do not overwrite the SSH key or the sudo password.
-
-On `create`, substitution does not work: a new resource with `<omitted>` in a sensitive field is rejected with a `422 Invalid` error. Creating an [`SSHCredentials`](cr.html#sshcredentials) resource requires the actual [`privateSSHKey`](cr.html#sshcredentials-v1alpha1-spec-privatesshkey) and, if needed, the sudo password.
-
-### How do I encrypt existing SSHCredentials resources in etcd?
-
-Masking in the API and in the audit log applies to all resources immediately, including those created during cluster bootstrap — it is derived from the schema on the read path and needs no migration.
-
-Encryption at rest is different: it only happens when an object is written. If you enable the [`apiserver.encryptionEnabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-encryptionenabled) parameter in a cluster that already has [`SSHCredentials`](cr.html#sshcredentials) resources, they stay in etcd in plaintext until they are rewritten. Reading them keeps working, so the rewrite can be done at any time:
-
-```shell
-d8 k get sshcredentials -o json | d8 k replace -f -
-```
-
-It is safe to run this command from an account without access to `sshcredentials/sensitive`: `<omitted>` is substituted with the stored value, as [described above](#why-are-the-ssh-key-and-the-sudo-password-of-sshcredentials-shown-as-omitted).
-
-To verify the result, check the value prefix in etcd from a master node — it must be `k8s:enc:aescbc:v1:secretbox:`:
-
-```shell
-etcdctl get /registry/deckhouse.io/sshcredentials/<name>
-```
 
 ## How do I change the NodeGroup of a static node?
 
