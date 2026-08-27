@@ -63,7 +63,7 @@ external-module: werf-bin ## Watch external module docs and run the local portal
 		echo -n "\nwerf: "; $(WERF_BIN) version; \
 		$(WERF_BIN) compose up --follow --docker-compose-command-options='-d --force-recreate' --dev --env development --repo $(WERF_REPO) --skip-image-spec-stage=true
 
-ai-export: ## Generate the AI export (per-page .md, llms.txt, corpus.json) for external modules
+ai-export: ## Generate the AI export (per-page .md, external-llms.txt, external-corpus.json) for external modules
 		##~ Options: [AI_EXPORT_SRC=backends/docs-builder-template] [HUGO_IMAGE=ghcr.io/gohugoio/hugo:vX.Y.Z]
 		##~ Expects a prepared content/modules + data/modules tree in AI_EXPORT_SRC.
 		##~ In a cluster the same code runs inside docs-builder; here Hugo and the

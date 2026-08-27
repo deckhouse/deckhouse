@@ -34,6 +34,11 @@ import (
 const (
 	corpusVersion = 1
 	generator     = "hugo"
+	// The names are qualified because the modules library shares its URL space
+	// with the DKP documentation, which publishes an `llms.txt` and a
+	// `corpus.json` of its own (see `_plugins/ai_export.rb` of the Jekyll site).
+	corpusName = "external-corpus.json"
+	llmsName   = "external-llms.txt"
 	// An H2 section longer than this is split further, by H3.
 	maxChunkChars = 6000
 )
@@ -115,7 +120,7 @@ type Chunk struct {
 
 // Export converts every page listed in `<publicDir>/<lang>/ai/ai.json` to
 // Markdown, writes the `.md` next to the rendered `.html` and publishes
-// `<publicDir>/<lang>/modules/{llms.txt,corpus.json}`.
+// `<publicDir>/<lang>/modules/{external-llms.txt,external-corpus.json}`.
 //
 // A missing manifest is not an error: the site simply has no module pages yet.
 func Export(publicDir, lang string) error {
@@ -167,13 +172,13 @@ func Export(publicDir, lang string) error {
 		return fmt.Errorf("encode corpus: %w", err)
 	}
 
-	if err := os.WriteFile(filepath.Join(destDir, "corpus.json"), encoded, 0o644); err != nil {
-		return fmt.Errorf("write corpus.json: %w", err)
+	if err := os.WriteFile(filepath.Join(destDir, corpusName), encoded, 0o644); err != nil {
+		return fmt.Errorf("write %s: %w", corpusName, err)
 	}
 
 	llms := renderLLMsTxt(manifest, baseURL, documents)
-	if err := os.WriteFile(filepath.Join(destDir, "llms.txt"), []byte(llms), 0o644); err != nil {
-		return fmt.Errorf("write llms.txt: %w", err)
+	if err := os.WriteFile(filepath.Join(destDir, llmsName), []byte(llms), 0o644); err != nil {
+		return fmt.Errorf("write %s: %w", llmsName, err)
 	}
 
 	return nil
@@ -262,15 +267,13 @@ func exportPage(publicDir, baseURL string, manifest *Manifest, entry ManifestDoc
 	}, nil
 }
 
-// renderLLMsTxt builds the llms.txt index: one section per module, in the order
+// renderLLMsTxt builds the llms.txt-format index: one section per module, in the order
 // the modules appear in the sorted document list.
 func renderLLMsTxt(manifest *Manifest, baseURL string, documents []Document) string {
 	var out strings.Builder
 
 	out.WriteString("# " + manifest.Title + "\n\n")
-	if description := collapseLine(manifest.Description); description != "" {
-		out.WriteString("> " + description + "\n\n")
-	}
+	out.WriteString("> The content below is for external modules only.\n\n")
 
 	var order []string
 	byModule := map[string][]Document{}
@@ -296,8 +299,7 @@ func renderLLMsTxt(manifest *Manifest, baseURL string, documents []Document) str
 	}
 
 	out.WriteString("## Optional\n")
-	out.WriteString("- [corpus.json](" + baseURL + "/modules/corpus.json): full RAG corpus with page Markdown and chunks\n")
-	out.WriteString("- [search-external-modules-index.json](" + baseURL + "/modules/search-external-modules-index.json): module search index\n")
+	out.WriteString("- [" + corpusName + "](" + baseURL + "/modules/" + corpusName + "): RAG corpus with page Markdown and chunks for external modules\n")
 
 	return out.String()
 }

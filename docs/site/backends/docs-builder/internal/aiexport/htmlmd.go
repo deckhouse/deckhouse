@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package aiexport turns the rendered module documentation into the
-// AI-friendly artifacts: per-page Markdown, corpus.json and llms.txt.
+// AI-friendly artifacts: per-page Markdown, external-corpus.json and external-llms.txt.
 //
 // The Markdown is recovered from the rendered HTML rather than from the source
 // files: the sources still carry Hugo shortcodes, and the CONFIGURATION/CR

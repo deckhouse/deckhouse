@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Command aiexport builds the AI export — the per-page Markdown, llms.txt and
-// corpus.json — from an already rendered Hugo site.
+// Command aiexport builds the AI export — the per-page Markdown, external-llms.txt and
+// external-corpus.json — from an already rendered Hugo site.
 //
 // In production this is a step of the docs-builder build, see
 // `internal/docs.Service.Build`. Locally docs-builder is not run at all (it is
@@ -64,7 +64,7 @@ func main() {
 			continue
 		}
 
-		fmt.Printf("%s: %s\n", lang, filepath.Join(*publicDir, lang, "modules", "llms.txt"))
+		fmt.Printf("%s: %s\n", lang, filepath.Join(*publicDir, lang, "modules", "external-llms.txt"))
 	}
 
 	if failed {

@@ -230,9 +230,14 @@ module Jekyll
           lines << ""
         end
 
+        lines << "## Modules"
+        lines << "- [llms.txt](#{absolute(lang, "#{@doc_prefix}/llms.txt")}): LLM index of built-in (internal) modules)"
+        lines << "- [external-llms.txt](#{absolute(lang, "#{@doc_prefix}/external-llms.txt")}): LLM index of external modules"
+        lines << ""
+
         lines << "## Optional"
-        lines << "- [corpus.json](#{absolute(lang, "#{@doc_prefix}/corpus.json")}): full RAG corpus with page Markdown and chunks"
-        lines << "- [search.json](#{absolute(lang, "#{@doc_prefix}/search.json")}): site search index"
+        lines << "- [corpus.json](#{absolute(lang, "#{@doc_prefix}/corpus.json")}): RAG corpus with page Markdown and chunks for documentation pages)"
+        lines << "- [external-corpus.json](#{absolute(lang, "#{@doc_prefix}/external-corpus.json")}): RAG corpus with page Markdown and chunks for external modules)"
         lines << ""
 
         write(lang, "llms.txt", lines.join("\n"))

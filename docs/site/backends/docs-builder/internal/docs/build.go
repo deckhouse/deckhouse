@@ -79,7 +79,7 @@ func (svc *Service) Build(ctx context.Context) error {
 	syncer.NoTimes = true
 
 	for _, lang := range []string{"ru", "en"} {
-		// The AI export writes the per-page Markdown, llms.txt and corpus.json
+		// The AI export writes the per-page Markdown, the llms.txt index and the corpus
 		// into `public/<lang>/modules`, so it has to run before that directory
 		// is synced to destDir below.
 		err = aiexport.Export(filepath.Join(svc.baseDir, "public"), lang)

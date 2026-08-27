@@ -117,12 +117,12 @@ data:
 
         # AI export of the modules from sources (see internal/aiexport of docs-builder).
         # The per-page .md files are served by the generic module locations below.
-        location ~* ^/modules/llms\.txt$  {
-            try_files /$lang/modules/llms.txt =404;
+        location ~* ^/modules/external-llms\.txt$  {
+            try_files /$lang/modules/external-llms.txt =404;
         }
 
-        location ~* ^/modules/corpus\.json$  {
-            try_files /$lang/modules/corpus.json =404;
+        location ~* ^/modules/external-corpus\.json$  {
+            try_files /$lang/modules/external-corpus.json =404;
         }
 
         # Search index for embedded modules

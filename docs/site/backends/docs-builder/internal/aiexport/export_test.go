@@ -83,8 +83,8 @@ func TestExport(t *testing.T) {
 	}
 
 	var corpus Corpus
-	if err := json.Unmarshal([]byte(readFile(t, filepath.Join(publicDir, "en", "modules", "corpus.json"))), &corpus); err != nil {
-		t.Fatalf("parse corpus.json: %v", err)
+	if err := json.Unmarshal([]byte(readFile(t, filepath.Join(publicDir, "en", "modules", "external-corpus.json"))), &corpus); err != nil {
+		t.Fatalf("parse external-corpus.json: %v", err)
 	}
 
 	if len(corpus.Documents) != 1 {
@@ -111,7 +111,7 @@ func TestExport(t *testing.T) {
 		t.Errorf("got %d chunks, want 2", len(document.Chunks))
 	}
 
-	llms := readFile(t, filepath.Join(publicDir, "en", "modules", "llms.txt"))
+	llms := readFile(t, filepath.Join(publicDir, "en", "modules", "external-llms.txt"))
 	for _, want := range []string{
 		"# Deckhouse modules",
 		"> Kubernetes is flexibly and rapidly expanded by Deckhouse modules.",
@@ -120,7 +120,7 @@ func TestExport(t *testing.T) {
 		"## Optional",
 	} {
 		if !strings.Contains(llms, want) {
-			t.Errorf("llms.txt is missing %q:\n%s", want, llms)
+			t.Errorf("external-llms.txt is missing %q:\n%s", want, llms)
 		}
 	}
 }
