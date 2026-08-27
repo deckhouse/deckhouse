@@ -256,18 +256,7 @@ func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 	var kubeProvider libcon.KubeProvider
 	err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Preparing SSH client", func(ctx context.Context) error {
 		var cleanup func() error
-		// The kubeconfig arrives as contents, but every consumer down the chain wants a path,
-		// so spill it into a 0600 temp file. Never log the value.
-		var kubeConfigPath string
-		if len(p.request.Kubeconfig) > 0 {
-			kubeConfigPath, cleanup, err = util.WriteDefaultTempFile([]byte(p.request.Kubeconfig))
-			cleanuper.Add(cleanup)
-			if err != nil {
-				return fmt.Errorf("failed to write kubeconfig: %w", err)
-			}
-		}
-
-		_, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, s.params.IsDebug, s.params.TmpDir, helper.WithKubeConfig(kubeConfigPath))
+		_, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, s.params.IsDebug, s.params.TmpDir, helper.WithKubeConfig(p.request.Kubeconfig))
 		cleanuper.Add(cleanup)
 		if err != nil {
 			return fmt.Errorf("creating provider: %w", err)

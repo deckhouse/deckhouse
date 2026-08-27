@@ -226,8 +226,9 @@ type CommanderDetachStart struct {
 	CreateResourcesValues         *structpb.Struct             `protobuf:"bytes,7,opt,name=create_resources_values,json=createResourcesValues,proto3" json:"create_resources_values,omitempty"`
 	DeleteResourcesValues         *structpb.Struct             `protobuf:"bytes,8,opt,name=delete_resources_values,json=deleteResourcesValues,proto3" json:"delete_resources_values,omitempty"`
 	Options                       *CommanderDetachStartOptions `protobuf:"bytes,9,opt,name=options,proto3" json:"options,omitempty"`
-	// kubeconfig points the kube provider straight at the API server. connection_config is
-	// still required and must carry an SSHConfig document; its SSHHost documents may be omitted.
+	// kubeconfig points the kube provider straight at the API server. A request that sets it may
+	// leave connection_config empty: the cluster is then driven over the API server only and no
+	// SSH provider is created.
 	Kubeconfig string `protobuf:"bytes,10,opt,name=kubeconfig,proto3" json:"kubeconfig,omitempty"`
 }
 

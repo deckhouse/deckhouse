@@ -33,10 +33,11 @@ import (
 )
 
 type providerOptions struct {
-	connectionConfig    string
-	kubeFlagsDefined    bool
-	requireKubeProvider bool
-	kubeConfig          *kube.Config
+	connectionConfig     string
+	connectionConfigOnly bool
+	kubeFlagsDefined     bool
+	requireKubeProvider  bool
+	kubeConfig           *kube.Config
 }
 
 type ProviderOptions func(o *providerOptions)
@@ -44,6 +45,12 @@ type ProviderOptions func(o *providerOptions)
 func WithConnectionConfig(s string) ProviderOptions {
 	return func(o *providerOptions) {
 		o.connectionConfig = s
+	}
+}
+
+func WithConnectionConfigOnly() ProviderOptions {
+	return func(o *providerOptions) {
+		o.connectionConfigOnly = true
 	}
 }
 
@@ -79,7 +86,6 @@ func GetSSHProviderInitializer(ctx context.Context, params settings.ProviderPara
 	return getProviderInitializer(ctx, baseProviderSettings, opts...)
 }
 
-// func to initialize both SSHProviderInitializer and KubeProvider
 func GetProviders(ctx context.Context, params settings.ProviderParams, opts ...ProviderOptions) (*SSHProviderInitializer, libcon.KubeProvider, error) {
 	options := newProviderOptions(opts...)
 	baseProviderSettings := settings.NewBaseProviders(params)
@@ -136,6 +142,9 @@ func resolveKubeConfig(baseProviderSettings *settings.BaseProviders, options *pr
 
 func getProviderInitializer(ctx context.Context, baseProviderSettings *settings.BaseProviders, opts ...ProviderOptions) (*SSHProviderInitializer, error) {
 	options := newProviderOptions(opts...)
+	if options.connectionConfigOnly && options.connectionConfig == "" {
+		return nil, nil
+	}
 
 	var config *libcon_config.ConnectionConfig
 	var err error

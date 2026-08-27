@@ -38,6 +38,29 @@ func (staticMetaConfigPopulator) PopulateMetaConfig(context.Context, *options.Gl
 	return &config.MetaConfig{ClusterType: config.StaticClusterType}, nil
 }
 
+type managedMetaConfigPopulator struct{}
+
+func (managedMetaConfigPopulator) PopulateMetaConfig(context.Context, *options.GlobalOptions) (*config.MetaConfig, error) {
+	return &config.MetaConfig{}, nil
+}
+
+// TestDestroy_ManagedClusterIsRefused pins the guard that stands between PopulateMetaConfig and the
+// cluster-type dispatch. The guard returns before ClusterDestroyer touches d8Destroyer or
+// infraProvider, so both may stay nil here.
+func TestDestroy_ManagedClusterIsRefused(t *testing.T) {
+	stateCache := cache.NewTestCache()
+	pec := phases.NewDefaultPhasedExecutionContext(phases.OperationDestroy, nil, nil)
+
+	destroyer := &ClusterDestroyer{
+		stateCache:       stateCache,
+		configPreparator: managedMetaConfigPopulator{},
+		pipeline:         phases.NewDefaultPipelineWithStateCache(pec, stateCache, phases.WithPipelineName("managed destroy")),
+	}
+
+	err := destroyer.DestroyCluster(t.Context(), true)
+	require.ErrorContains(t, err, "does not support managed Kubernetes clusters")
+}
+
 // TestDestroy_CommanderModeAnnouncesStaticPhases pins the order inside ClusterDestroyer.destroy:
 // the cluster type must reach the tracker before CheckCommanderUUID announces its phase, or the
 // phase list built with an empty cluster type — and shipped in every gRPC frame — loses every

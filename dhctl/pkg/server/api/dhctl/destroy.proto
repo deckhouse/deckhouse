@@ -45,8 +45,9 @@ message DestroyStart {
   string provider_specific_cluster_config = 4;
   string state = 5;
   DestroyStartOptions options = 6;
-  // kubeconfig points the kube provider straight at the API server. connection_config is
-  // still required and must carry an SSHConfig document; its SSHHost documents may be omitted.
+  // kubeconfig points the kube provider straight at the API server. A request that sets it may
+  // leave connection_config empty: the cluster is then driven over the API server only and no
+  // SSH provider is created.
   string kubeconfig = 7;
 }
 
