@@ -164,6 +164,22 @@ func TestKeepBootstrapOnlyFields(t *testing.T) {
 				Mode:              "0700",
 			}}},
 		},
+		{
+			// The webhook calls wipe machine-owned and refuses it from every
+			// other writer, so a render that drops it is the one write nobody
+			// is left able to undo.
+			name: "the wipe a machine published survives a storage it renders otherwise",
+			existing: internalv1alpha1.NodeSpec{
+				Storage: internalv1alpha1.Storage{Disk: internalv1alpha1.Disk{
+					DiskSelector: &internalv1alpha1.DiskSelector{Size: systemDiskSelectorSize},
+					Wipe:         true,
+				}},
+			},
+			expStorage: internalv1alpha1.Storage{Disk: internalv1alpha1.Disk{
+				DiskSelector: &internalv1alpha1.DiskSelector{Size: systemDiskSelectorSize},
+				Wipe:         true,
+			}},
+		},
 	}
 
 	for _, tc := range tests {

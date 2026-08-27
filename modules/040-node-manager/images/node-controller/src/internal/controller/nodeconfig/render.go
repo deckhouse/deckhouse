@@ -130,6 +130,11 @@ func storageIsExplicit(storage, rendered *internalv1alpha1.Storage) bool {
 	if storage.Device != "" || len(storage.Mounts) > 0 {
 		return true
 	}
+	// The webhook freezes wipe against every other writer, so a render that
+	// drops it destroys a field nothing but the machine can put back.
+	if storage.Wipe {
+		return true
+	}
 	return storage.DiskSelector != nil && !apiequality.Semantic.DeepEqual(storage.DiskSelector, rendered.DiskSelector)
 }
 
