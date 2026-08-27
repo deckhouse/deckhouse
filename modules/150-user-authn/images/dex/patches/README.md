@@ -7,6 +7,8 @@ We use it in Dex authenticators to make `allowedUsers` and `allowedGroups` optio
 
 This problem is not solved in upstream, and our patch will not be accepted.
 
+Login-time enforcement is extended to refresh tokens by `019-refresh-client-filters.patch`.
+
 ### 002-gitlab-refresh-context.patch
 
 Refresh can be called only one. By propagating a context of the user request, refresh can accidentally canceled.
@@ -203,6 +205,44 @@ same as the token and refresh paths.
 The lock check is connector-scoped: local users read `Password` only, everyone
 else reads `OfflineSessions` only. A local `UserOperation` Lock therefore does
 not block an LDAP login with the same email, and the reverse.
+
+### 019-refresh-client-filters.patch
+
+`001-client-filters.patch` enforced `allowedEmails` / `allowedGroups` only in
+`finalizeLogin`. A refresh token issued before an allow-list change kept
+minting new ID tokens forever. `grant_type=password` (ROPC / basic-auth-proxy)
+had the same gap.
+
+This patch applies the same filters:
+
+- on `grant_type=password`, before tokens are issued;
+- on every refresh-token request, before rotating the token, against the
+  claims stored on it (so changing `allowedGroups` / `allowedEmails` deletes
+  that refresh token and returns `access_denied`);
+- again after connector `Refresh()`, so a directory membership change is
+  enforced when Dex actually contacts the upstream (LDAP already re-queries
+  users and groups in `Refresh()`). A refresh denied at this second check
+  also deletes the stored token, including the rotated credential if
+  rotation already ran.
+
+A refresh served from `expiry.refreshTokens.reuseInterval` does not call the
+connector, so AD/LDAP group removal is visible on the next refresh that
+leaves that window — not on every request. We do not add an extra LDAP
+round-trip on the reuse path: that would multiply directory load by the
+token refresh rate.
+
+An administrator lock (`LockedUntil`) on refresh still returns
+`access_denied` without deleting the token: after the lock expires the
+existing session can continue.
+
+Denied allow-list refresh returns OAuth2 `access_denied` and removes the
+refresh token from storage. Putting the user back on the allow-list does
+not revive that session; they must sign in again.
+
+**Impact / backports.** Existing refresh tokens whose stored email or groups
+no longer match the current DexClient / DexAuthenticator allow-lists start
+failing instead of being extended. Users must sign in again. Changelog must
+say so; backports to 1.77 and 1.76 are appropriate but stricter.
 
 ### 998-fix-cve.patch
 
