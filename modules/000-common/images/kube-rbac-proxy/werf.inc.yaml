@@ -6,8 +6,8 @@ import:
   add: /kube-rbac-proxy
   to: /kube-rbac-proxy
   before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-relocate-artifact
-  add: /relocate/bin/true
+- image: {{ .ModuleName }}/{{ .ImageName }}-coreutils-artifact
+  add: /coreutils/usr/bin/true
   to: /bin/true
   before: setup
 - image: common/pause
@@ -61,11 +61,11 @@ shell:
   - chown 64535:64535 /kube-rbac-proxy
   - chmod 0755 /kube-rbac-proxy
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-relocate-artifact
-fromImage: common/relocate-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-coreutils-artifact
+from: {{ index $.Images "builder/distroless" }}
 final: false
 shell:
- setup:
-   - /binary_replace.sh -i "/bin/true" -o /relocate
+  beforeInstall:
+  - pm install coreutils -d /coreutils
 ---
 {{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}
