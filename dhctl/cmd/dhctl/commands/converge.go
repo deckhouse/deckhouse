@@ -63,6 +63,12 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingp
 
 		defer providerinitializer.CleanupSSHProvider(ctx, sshProviderInitializer)
 
+		kubeProvider, stopBastionChannel, err := kubeProviderThroughBastion(ctx, opts, sshProviderInitializer, kubeProvider)
+		if err != nil {
+			return err
+		}
+		defer stopBastionChannel()
+
 		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 			TmpDir:           opts.Global.TmpDir,
 			AdditionalParams: cloud.ProviderAdditionalParams{},
