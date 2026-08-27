@@ -77,6 +77,20 @@ func (f *FSM) State() State {
 	return f.state
 }
 
+// Fire crosses the arrow of one event the reconciler decided on itself, rather
+// than one derived from the signals in the status, and reports whether the ADR
+// describes such an arrow from the current state.
+func (f *FSM) Fire(event Event) bool {
+	next, ok := Transition(f.state, event)
+	if !ok {
+		return false
+	}
+
+	f.state = next
+
+	return true
+}
+
 // Advance crosses every arrow the decision flow of the ADR justifies for the
 // observed incident and returns the events it fired, in order. It returns
 // nothing when the observed signals justify no transition, and the machine then
@@ -106,14 +120,9 @@ func (f *FSM) Advance(incident *v1alpha1.FencingFailedNodeState, params Params, 
 // justify one.
 func (f *FSM) step(incident *v1alpha1.FencingFailedNodeState, params Params, now time.Time) (Event, bool) {
 	for _, event := range candidates(incident, params, now) {
-		next, ok := Transition(f.state, event)
-		if !ok {
-			continue
+		if f.Fire(event) {
+			return event, true
 		}
-
-		f.state = next
-
-		return event, true
 	}
 
 	return "", false
