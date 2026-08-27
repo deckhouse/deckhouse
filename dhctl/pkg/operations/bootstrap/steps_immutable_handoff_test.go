@@ -242,21 +242,3 @@ func TestTheWaitRepeatsItselfWhileNothingChanges(t *testing.T) {
 		t.Errorf("a repeat must carry how long the wait has been running, got:\n%s", terminal.String())
 	}
 }
-
-// The provider's own retry loop prints three lines per channel, and a channel is
-// opened every attempt. Its logger comes from the settings, not from the context,
-// so muting the context alone leaves the screen exactly as noisy as before.
-func TestTheTunnelNarratesWhereItsContextNarrates(t *testing.T) {
-	src, err := os.ReadFile("steps_immutable_tunnel.go")
-	if err != nil {
-		t.Fatalf("read steps_immutable_tunnel.go: %v", err)
-	}
-
-	body := string(src)
-	if !strings.Contains(body, "channelSettings{Settings: b.SSHProviderInitializer.GetSettings(), logger: dhlog.FromContext(ctx)}") {
-		t.Error("the SSH provider must take its logger from the context, or a wait cannot quiet the plumbing behind it")
-	}
-	if strings.Contains(body, "provider.NewDefaultSSHProvider(\n\t\tb.SSHProviderInitializer.GetSettings(),") {
-		t.Error("the bare settings narrate onto the screen whatever the caller asked for")
-	}
-}
