@@ -112,8 +112,11 @@ func (d *drainer) evict(ctx context.Context, nodeName string, timeout time.Durat
 	defer cancel()
 
 	helper := kubedrain.NewDrainer(kubedrain.HelperConfig{
-		Client:  d.kubeClient,
-		Timeout: &timeout,
+		Client: d.kubeClient,
+		Timeout: func() *time.Duration {
+			timeout := time.Duration(0) // 0 means infinite; actual timeout is controlled by ctx
+			return &timeout
+		}(),
 	})
 	helper.Ctx = ctx
 
