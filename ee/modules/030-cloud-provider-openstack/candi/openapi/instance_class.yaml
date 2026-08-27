@@ -129,7 +129,8 @@ spec:
                     Raw OpenStack (Nova) server tags attached to the instances.
 
                     Unlike `additionalTags`, which are rendered as key=value, these tags are passed verbatim.
-                    Supported only for CloudEphemeral NodeGroups running on the CAPI engine.
+
+                    Supported only in Selectel-hosted clusters and only for CloudEphemeral NodeGroups running on the CAPI engine. Using this parameter in other OpenStack clouds causes node creation to fail.
                   x-doc-examples:
                     - ["preemptible"]
                   type: array
