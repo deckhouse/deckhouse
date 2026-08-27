@@ -223,41 +223,49 @@ StaticInstance, находящийся в состоянии `Pending` можн�
 
 ### Почему SSH-ключ и sudo-пароль в SSHCredentials отображаются как `<omitted>`?
 
-Поля `spec.privateSSHKey`, `spec.sudoPassword` (v1alpha1) и `spec.sudoPasswordEncoded` (v1alpha2) ресурса [`SSHCredentials`](cr.html#sshcredentials) помечены в схеме CRD маркером `x-kubernetes-sensitive-data: true`. В результате `kube-apiserver`:
+Параметры [`privateSSHKey`](cr.html#sshcredentials-v1alpha1-spec-privatesshkey), [`sudoPassword`](cr.html#sshcredentials-v1alpha1-spec-sudopassword) (`v1alpha1`) и [`sudoPasswordEncoded`](cr.html#sshcredentials-v1alpha2-spec-sudopasswordencoded) (`v1alpha2`) ресурса [SSHCredentials](cr.html#sshcredentials) содержат конфиденциальные данные. В схеме CRD они помечены как чувствительные и защищены от просмотра.
 
-- заменяет их значения на `<omitted>` в ответах на запросы `get`, `list` и `watch`, если у обратившегося нет прав на субресурс `sshcredentials/sensitive`. Аннотация `kubectl.kubernetes.io/last-applied-configuration`, в которой раньше хранилась копия тех же значений в открытом виде, из таких ответов также вырезается;
-- заменяет их значения на `"******"` во всех событиях аудита, независимо от прав RBAC и уровня аудита;
-- шифрует ресурс в etcd тем же transformer'ом, что и Secret'ы Kubernetes, если включён [параметр `apiserver.encryptionEnabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-encryptionenabled) модуля `control-plane-manager`.
+Если у пользователя нет прав на чтение конфиденциальных данных SSHCredentials, API возвращает `<omitted>` вместо фактического значения. При этом остальные параметры — [`user`](cr.html#sshcredentials-v1alpha1-spec-user), [`sshPort`](cr.html#sshcredentials-v1alpha1-spec-sshport), [`sshExtraArgs`](cr.html#sshcredentials-v1alpha1-spec-sshextraargs) — и метаданные ресурса остаются доступными пользователям, которым разрешено чтение SSHCredentials.
 
-Остальные поля (`user`, `sshPort`, `sshExtraArgs`) и метаданные объекта остаются видимыми всем, кто может читать `sshcredentials`.
+Дополнительно kube-apiserver защищает эти данные:
 
-Незамаскированные значения доступны контроллеру CAPS (без них он не сможет подключиться по SSH), уровню доступа `SuperAdmin` и группе `kubeadm:cluster-admins`. В частности, роли `d8:manage:infrastructure:viewer` и `d8:manage:infrastructure:manager`, дающие доступ на чтение `sshcredentials`, доступа к SSH-ключу и sudo-паролю **не получают**.
+- удаляет аннотацию `kubectl.kubernetes.io/last-applied-configuration` из ответов API, если она может содержать копию конфиденциальных значений;
+- заменяет конфиденциальные значения на `"******"` в [событиях аудита](/products/kubernetes-platform/documentation/v1/admin/configuration/security/events/kubernetes-api-audit.html) независимо от прав пользователя и уровня аудита;
+- шифрует ресурс в etcd тем же механизмом, что и секреты Kubernetes, если включён параметр [`apiserver.encryptionEnabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-encryptionenabled) модуля [`control-plane-manager`](/modules/control-plane-manager/).
 
-Проверить, может ли учётная запись прочитать незамаскированные значения:
+Незамаскированные значения доступны:
+
+- контроллеру [CAPS](./#cluster-api-provider-static) — для подключения к узлу по SSH;
+- пользователям с уровнем доступа [`SuperAdmin`](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/rbac-current.html#высокоуровневые-роли-используемые-для-реализации-модели);
+- участникам группы [`kubeadm:cluster-admins`](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/cluster-admin-access-model.html).
+
+Роли [`d8:manage:infrastructure:viewer`](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/rbac-experimental.html#подсистемы-ролевой-модели) и [`d8:manage:infrastructure:manager`](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/rbac-experimental.html#подсистемы-ролевой-модели) позволяют читать ресурс SSHCredentials, но не предоставляют доступ к SSH-ключу и sudo-паролю.
+
+Чтобы проверить, может ли пользователь читать конфиденциальные данные SSHCredentials, выполните:
 
 ```shell
 d8 k auth can-i get sshcredentials/sensitive --as=<user>
 ```
 
-`<omitted>` означает «это значение вам не показывают», а не само значение. Замаскированы обе обслуживаемые версии ресурса, поэтому чтение через эндпоинт `v1alpha1` обходом не является.
+Значение `<omitted>` означает, что фактическое значение скрыто от текущего пользователя. Это поведение одинаково для `v1alpha1` и `v1alpha2` — смена версии API не позволяет обойти маскирование.
 
 ### Как изменить ресурс SSHCredentials, не видя его секретов?
 
-Редактирование работает как обычно. При `update` и `patch` `kube-apiserver` подставляет вместо `<omitted>` значение, уже сохранённое в etcd, поэтому `d8 k edit sshcredentials <name>` и сценарий `get -o yaml` → правка → `apply` не затирают SSH-ключ и sudo-пароль значением `<omitted>`.
+Редактирование работает как обычно. При `update` и `patch` `kube-apiserver` подставляет вместо `<omitted>` значение, уже сохранённое в etcd. Поэтому `d8 k edit sshcredentials <name>` и сценарий `get -o yaml` → правка → `apply` не затирают SSH-ключ и sudo-пароль.
 
-Для подстановки нужно прежнее значение, поэтому при `create` она не работает: новый ресурс с `<omitted>` в чувствительном поле отклоняется с ошибкой `422 Invalid`. Для создания `SSHCredentials` нужен настоящий ключ.
+При `create` подстановка не работает: новый ресурс с `<omitted>` в чувствительном поле отклоняется с ошибкой `422 Invalid`. Для создания [SSHCredentials](cr.html#sshcredentials) нужны фактические значения [`privateSSHKey`](cr.html#sshcredentials-v1alpha1-spec-privatesshkey) и, при необходимости, пароля sudo.
 
 ### Как зашифровать в etcd уже существующие ресурсы SSHCredentials?
 
 Маскирование в API и в аудите действует для всех ресурсов сразу, включая созданные при первоначальной настройке кластера, — оно выводится из схемы на пути чтения и миграции не требует.
 
-С шифрованием в etcd иначе: оно происходит только при записи объекта. Если включить [параметр `apiserver.encryptionEnabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-encryptionenabled) в кластере, где ресурсы `SSHCredentials` уже есть, они останутся в etcd в открытом виде, пока их не перезапишут. Чтение при этом продолжает работать, поэтому перезапись можно выполнить в любой момент:
+С шифрованием в etcd иначе: оно происходит только при записи объекта. Если включить параметр [`apiserver.encryptionEnabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-encryptionenabled) в кластере, где ресурсы [SSHCredentials](cr.html#sshcredentials) уже есть, они останутся в etcd в открытом виде, пока их не перезапишут. Чтение при этом продолжает работать, поэтому перезапись можно выполнить в любой момент:
 
 ```shell
 d8 k get sshcredentials -o json | d8 k replace -f -
 ```
 
-Команду безопасно выполнять и от учётной записи без доступа к `sshcredentials/sensitive`: вместо `<omitted>` подставится сохранённое значение, как описано выше.
+Команду безопасно выполнять от учётной записи без доступа к `sshcredentials/sensitive`: вместо `<omitted>` подставится сохранённое значение, как [описано выше](#почему-ssh-ключ-и-sudo-пароль-в-sshcredentials-отображаются-как-omitted).
 
 Чтобы проверить результат, посмотрите префикс значения в etcd с master-узла — он должен быть `k8s:enc:aescbc:v1:secretbox:`:
 
