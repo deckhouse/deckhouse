@@ -3,7 +3,7 @@ title: "Cloud provider — GCP"
 description: "Cloud resource management in Deckhouse Kubernetes Platform using Google Cloud Platform."
 ---
 
-The `cloud-provider-gcp` module integrates Deckhouse Kubernetes Platform with [Google Cloud Platform](https://cloud.google.com/). It allows the [`node-manager`](/modules/node-manager/) module to use GCP resources when provisioning nodes for a [NodeGroup](/modules/node-manager/cr.html#nodegroup).
+The `cloud-provider-gcp` module integrates Deckhouse Kubernetes Platform with [Google Cloud Platform](https://cloud.google.com/) (GCP). It allows the [`node-manager`](/modules/node-manager/) module to use GCP resources when provisioning nodes for a [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 
 Features of the `cloud-provider-gcp` module:
 

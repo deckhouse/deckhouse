@@ -3,7 +3,7 @@ title: "Cloud provider — GCP"
 description: "Управление облачными ресурсами в Deckhouse Kubernetes Platform с помощью Google Cloud Platform."
 ---
 
-Модуль `cloud-provider-gcp` обеспечивает интеграцию Deckhouse Kubernetes Platform с [Google Cloud Platform](https://cloud.google.com/). Он предоставляет возможность модулю [`node-manager`](/modules/node-manager/) использовать ресурсы GCP при заказе узлов для [NodeGroup](/modules/node-manager/cr.html#nodegroup).
+Модуль `cloud-provider-gcp` обеспечивает интеграцию Deckhouse Kubernetes Platform с [Google Cloud Platform](https://cloud.google.com/) (GCP). Он предоставляет возможность модулю [`node-manager`](/modules/node-manager/) использовать ресурсы GCP при заказе узлов для [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 
 Функции модуля `cloud-provider-gcp`:
 
