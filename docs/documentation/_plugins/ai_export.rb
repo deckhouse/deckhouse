@@ -274,16 +274,13 @@ module Jekyll
         end
 
         if @root
-          lines << "## Optional"
-          lines << "- [#{@corpus_name}](#{absolute(lang, "#{@doc_prefix}/#{@corpus_name}")}): RAG corpus with page Markdown and chunks for documentation pages."
-          lines << ""
-
           lines << "## Modules"
           lines << "- [embedded-llms.txt](#{absolute(lang, "/modules/embedded-llms.txt")}): LLM index of embedded modules."
           lines << "- [external-llms.txt](#{absolute(lang, "/modules/external-llms.txt")}): LLM index of external modules."
           lines << ""
 
-          lines << "## Modules optional"
+          lines << "## Optional"
+          lines << "- [#{@corpus_name}](#{absolute(lang, "#{@doc_prefix}/#{@corpus_name}")}): RAG corpus with page Markdown and chunks for documentation pages."
           lines << "- [embedded-corpus.json](#{absolute(lang, "/modules/embedded-corpus.json")}): RAG corpus with page Markdown and chunks for embedded modules."
           lines << "- [external-corpus.json](#{absolute(lang, "/modules/external-corpus.json")}): RAG corpus with page Markdown and chunks for external modules."
           lines << ""
