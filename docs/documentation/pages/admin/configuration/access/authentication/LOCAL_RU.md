@@ -147,7 +147,7 @@ spec:
 
 Парольная политика позволяет контролировать сложность пароля, ротацию и автоматическую блокировку после нескольких неуспешных попыток входа.
 
-Администратор может заблокировать или разблокировать пользователя командами [`d8 iam user lock` / `unlock`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam) (или через UserOperation) без включения `passwordPolicy.lockout`. Секция `lockout` включает только автоматическую блокировку после заданного числа неудачных попыток.
+Администратор может заблокировать или разблокировать пользователя командами [`d8 iam user lock` / `unlock`](../../../../cli/d8/reference/#d8-iam) (или через UserOperation) без включения `passwordPolicy.lockout`. Секция `lockout` включает только автоматическую блокировку после заданного числа неудачных попыток.
 
 Для настройки парольной политики используйте поле [`passwordPolicy`](/modules/user-authn/configuration.html#parameters-passwordpolicy) в конфигурации модуля `user-authn`.
 
