@@ -131,25 +131,36 @@ func TestManager_ResultReportsTheOutcomeOnce(t *testing.T) {
 	}
 }
 
-// TestManager_NotifiesHoweverTheTaskEnded pins the notification to the task
-// ending, not to how it ended. It runs on the parent context rather than the
-// task's own, so moving a timeout onto the task cannot silently swallow it — a
-// caller waiting for the notification would otherwise wait for ever.
-func TestManager_NotifiesHoweverTheTaskEnded(t *testing.T) {
+// TestManager_NotifiesWithTheTaskContext pins the contract a caller decides on:
+// every ending is reported, and the context says which one it was.
+func TestManager_NotifiesWithTheTaskContext(t *testing.T) {
 	for _, tc := range []struct {
-		name   string
-		cancel bool
+		name     string
+		deadline bool // the task ends on a deadline of its own
+		cancel   bool // the task is stopped from outside
+		wantErr  error
 	}{
-		{name: "the task returns on its own"},
-		{name: "the task is cancelled", cancel: true},
+		{name: "the task returns on its own", wantErr: nil},
+		{name: "the task runs out of its own deadline", deadline: true, wantErr: nil},
+		{name: "the task is cancelled", cancel: true, wantErr: context.Canceled},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			release := make(chan struct{})
-			notified := make(chan struct{}, 1)
+			notified := make(chan error, 1)
 			m := NewManager()
 
 			err := m.Start(context.Background(), "node-1",
 				func(ctx context.Context) error {
+					if tc.deadline {
+						// The task's own deadline, the way an eviction bounds
+						// itself: the task context stays untouched.
+						withDeadline, stop := context.WithTimeout(ctx, 0)
+						defer stop()
+						<-withDeadline.Done()
+
+						return withDeadline.Err()
+					}
+
 					select {
 					case <-release:
 						return nil
@@ -157,21 +168,25 @@ func TestManager_NotifiesHoweverTheTaskEnded(t *testing.T) {
 						return ctx.Err()
 					}
 				},
-				func(context.Context) { notified <- struct{}{} })
+				func(ctx context.Context) { notified <- ctx.Err() })
 			if err != nil {
 				t.Fatalf("start: %v", err)
 			}
 
-			if tc.cancel {
+			switch {
+			case tc.cancel:
 				if _, err := m.Cancel(t.Context(), "node-1"); err != nil {
 					t.Fatalf("cancel: %v", err)
 				}
-			} else {
+			case !tc.deadline:
 				close(release)
 			}
 
 			select {
-			case <-notified:
+			case got := <-notified:
+				if !errors.Is(got, tc.wantErr) {
+					t.Fatalf("notified with %v, want %v", got, tc.wantErr)
+				}
 			case <-time.After(notifyWait):
 				t.Fatal("the task ended without notifying")
 			}

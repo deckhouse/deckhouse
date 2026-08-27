@@ -555,6 +555,54 @@ func withReady(n *corev1.Node) *corev1.Node {
 	return n
 }
 
+// The eviction's context tells the drainer why the task ended: a cancelled one
+// is skipped, a deadline still has to bring the node back to be recorded.
+func TestWakeNode_SkipsOnlyCancelledEvictions(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		deadline bool
+		cancel   bool
+		wantWake bool
+	}{
+		{name: "a finished eviction wakes the node", wantWake: true},
+		{name: "an eviction that ran out of its deadline wakes the node", deadline: true, wantWake: true},
+		{name: "a cancelled eviction does not", cancel: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			d := newDrainer(t.Context(), nil)
+
+			ctx := t.Context()
+			switch {
+			case tc.deadline:
+				expired, stop := context.WithTimeout(context.Background(), 0)
+				defer stop()
+				<-expired.Done()
+				ctx = expired
+			case tc.cancel:
+				cancelled, stop := context.WithCancel(context.Background())
+				stop()
+				ctx = cancelled
+			}
+
+			d.wakeNode(ctx, nodeName)
+
+			select {
+			case ev := <-d.wake:
+				if !tc.wantWake {
+					t.Fatalf("woken for %q, want no wake-up", ev.Object.GetName())
+				}
+				if ev.Object.GetName() != nodeName {
+					t.Fatalf("woken for %q, want %q", ev.Object.GetName(), nodeName)
+				}
+			default:
+				if tc.wantWake {
+					t.Fatal("the eviction ended without waking the node")
+				}
+			}
+		})
+	}
+}
+
 // metricValue reads the current d8_node_draining gauge value for a node, summing
 // across whatever message label is attached. Returns 0 when no series exists.
 func metricValue(t *testing.T, name string) float64 {

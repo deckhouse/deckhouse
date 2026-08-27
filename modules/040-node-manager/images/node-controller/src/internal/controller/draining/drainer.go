@@ -90,14 +90,20 @@ func (d *drainer) cancel(ctx context.Context, nodeName string) (bool, error) {
 	return d.tasks.Cancel(ctx, task.TaskID(nodeName))
 }
 
-// wakeNode hands the node back to the workqueue now that its eviction is over,
-// however it ended. The context here is the manager's, not the eviction's, so
-// the only thing that abandons the send is the process going away — a send that
-// blocks is a node whose finished eviction nobody has collected yet.
+// wakeNode hands the node back to the workqueue now that its eviction is over.
+// A cancelled one is skipped: whoever cancelled it waited for the goroutine and
+// moved on. Canceled specifically, not "context is done" — a deadline still has
+// a result to record.
 func (d *drainer) wakeNode(ctx context.Context, nodeName string) {
+	if errors.Is(ctx.Err(), context.Canceled) {
+		return
+	}
+
+	// The manager's context, not the eviction's: on an expired deadline both
+	// branches would be ready and select would drop the send half the time.
 	select {
 	case d.wake <- event.GenericEvent{Object: &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: nodeName}}}:
-	case <-ctx.Done():
+	case <-d.parent.Done():
 	}
 }
 

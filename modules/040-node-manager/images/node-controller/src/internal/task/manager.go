@@ -56,10 +56,8 @@ func NewManager() *Manager {
 // ctx is the parent of the task's own context — pass the long-lived one, not a
 // reconcile's, or the task dies with the call that started it.
 //
-// notifyFn runs on parent, deliberately not on the task's own context: it reports
-// that the task ended, and has to fire whichever way it ended. Handing it the
-// task's context instead would make a cancelled or timed-out task skip its own
-// notification, and a caller waiting for that notification would wait for ever.
+// notifyFn fires on every ending and gets the task's own context, whose Err()
+// tells the endings apart: Canceled means stopped from outside.
 func (m *Manager) Start(ctx context.Context, id TaskID, taskFn TaskFn, notifyFn NotifyFn) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -90,7 +88,7 @@ func (m *Manager) Start(ctx context.Context, id TaskID, taskFn TaskFn, notifyFn 
 		m.mu.Unlock()
 
 		if notifyFn != nil {
-			notifyFn(ctx)
+			notifyFn(taskCtx)
 		}
 	}()
 
