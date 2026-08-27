@@ -9,7 +9,7 @@ The [`managed-postgres`](/modules/managed-postgres/) module manages PostgreSQL c
 
 Main features:
 
-* **Automatic Deployment**: Deploys a Postgres instance using a simple YAML configuration
+* **Automatic Deployment**: Deploys a Postgres instance using a simple YAML configuration.
 * **High Availability**: Supports deployment of a highly available Postgres cluster or a standalone instance of your choice.
 * **Configuration Management**: Separate PostgresClass custom resource for templating the cluster creation approach with the ability to flexibly validate user configs.
 * **User and Database Management**: Declarative model for creating users and logical databases.
@@ -47,12 +47,12 @@ The module consists of the following components:
 
 1. **D8-cnpg-operator**: A fork of [CloudNativePG](https://github.com/cloudnative-pg/cloudnative-pg), a Kubernetes operator that automates the management of PostgreSQL clusters. D8-cnpg-operator consists of a single container **manager** and performs the following operations:
 
-   * It manages following `cnpg.internal.managed.deckhouse.io` API group custom resources:
+   * It manages the following `cnpg.internal.managed.deckhouse.io` API group custom resources:
 
      * Cluster: Defines a PostgreSQL cluster.
      * Pooler: Defines connection pool settings.
-     * FailoverQuorum: It is used to display a quorum status of PostgreSQL cluster replicas in High Available configuration.
-     * Database: Defines a logical data base.
+     * FailoverQuorum: It is used to display a quorum status of PostgreSQL cluster replicas in high-availability configuration.
+     * Database: Defines a logical database.
      * Backup: Defines a PostgreSQL instance backup.
      * ScheduledBackup: Defines a PostgreSQL scheduled backup settings.
      * Subscription: Defines a logical replication destination.
@@ -92,12 +92,12 @@ The module consists of the following components:
    It consists of the following containers:
 
    * **bootstrap-controller**: Init container that installs `manager` executable file of d8-cnpg-operator component.
-   * **postgres**: Main container that runs `manager` executable file, which performs following operations:
+   * **postgres**: Main container that runs `manager` executable file, which performs the following operations:
 
      * It starts PostgreSQL processes.
-     * It manages PostreSQL instance lifecycle, including server monitoring, handling server shutdown and restart.
-     * It participates `switchover`/`failover` procedures. `Switchover` is a planned and controlled process in which an active primary instance is intentionally decommissioned and an assigned backup instance (replica) is promoted to the primary instance role. Its main goal is to ensure zero data loss: before transferring the role to the replica, we wait until all current transactions are replicated. A `failover` is an emergency situation: the primary instance has failed, become unavailable, or cannot be safely used to write data. In this case, the designated backup instance (replica) is promoted to the primary instance role, and data loss is possible.
-     * It interacts with the operator and publish instance status;
+     * It manages PostgreSQL instance lifecycle, including server monitoring, handling server shutdown and restart.
+     * It participates in `switchover`/`failover` procedures. `Switchover` is a planned and controlled process in which an active primary instance is intentionally decommissioned and an assigned backup instance (replica) is promoted to the primary instance role. Its main goal is to ensure zero data loss: before transferring the role to the replica, the system waits until all current transactions are replicated. A `failover` is an emergency situation: the primary instance has failed, become unavailable, or cannot be safely used to write data. In this case, the designated backup instance (replica) is promoted to the primary instance role, and data loss is possible.
+     * It interacts with the operator and publishes instance status;
      * It watches Cluster, Database, Publication and Subscription custom resources.
 
 1. **d8ms-pg-\<INSTANCE_NAME>\-2**: PostgreSQL first replica. It is created by the d8-cnpg-operator component.

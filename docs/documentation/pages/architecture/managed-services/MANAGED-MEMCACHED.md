@@ -39,13 +39,13 @@ The module consists of the following components:
 
    * It reconciles [Memcached](/modules/managed-memcached/stable/cr.html#memcached) custom resources in all user namespaces. The Memcached resource defines the settings of the Memcached instance, including the topology and the deployment type.
 
-   * It performs Memcached and MemcachedClass custom resources validation, as well as Memcached custom resources mutation using the [Validating/Mutating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/) mechanism.
+   * It validates Memcached and MemcachedClass custom resources, and mutates Memcached custom resources using the [Validating/Mutating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/) mechanism.
 
 1. **d8ms-mc-\<INSTANCE_NAME>** (StatefulSet): One or more Memcached instances, depending on [the deployment type](/modules/managed-memcached/stable/user_guide.html#standalone-vs-group). They are created by the managed-memcached-operator component.
 
    It consists of a single container:
 
-   * **memcached**: It is an [open-source project](https://github.com/memcached/memcached).
+   * **memcached**: It is an [Open Source project](https://github.com/memcached/memcached).
 
 ## Module interactions
 
@@ -57,6 +57,6 @@ The following external components interact with the module:
 
 1. **Kube-apiserver**: Validates Memcached and MemcachedClass custom resources, mutates Memcached custom resources.
 
-1. **Prometheus-main**: Collects Memcached instances metrics.
+1. **Prometheus-main**: Collects metrics from Memcached instances.
 
 1. **User applications**: Sends requests to the Memcached instances.
