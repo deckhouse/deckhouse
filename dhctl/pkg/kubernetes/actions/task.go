@@ -71,20 +71,19 @@ func (task *ManifestTask) CreateOrUpdate(ctx context.Context) error {
 	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Manifest for %s", task.Name))
 	manifest := task.Manifest()
 
-	createErr := task.CreateFunc(ctx, manifest)
-	if createErr == nil {
-		return nil
+	err := task.CreateFunc(ctx, manifest)
+	if err != nil {
+		if !errors.IsAlreadyExists(err) {
+			return wrapManifestErr(ctx, "create resource", err)
+		}
+		dhlog.FromContext(ctx).InfoContext(ctx, strings.TrimRight(fmt.Sprintf("%s already exists. Trying to update ... ", task.Name), "\n"))
+		err = task.UpdateFunc(ctx, manifest)
+		if err != nil {
+			dhlog.FromContext(ctx).ErrorContext(ctx, "ERROR!")
+			return wrapManifestErr(ctx, "update resource", err)
+		}
+		dhlog.FromContext(ctx).InfoContext(ctx, "OK!")
 	}
-	if !createMayMeanExists(createErr) {
-		return wrapManifestErr(ctx, "create resource", createErr)
-	}
-
-	dhlog.FromContext(ctx).InfoContext(ctx, strings.TrimRight(fmt.Sprintf("%s already exists. Trying to update ... ", task.Name), "\n"))
-	if err := task.UpdateFunc(ctx, manifest); err != nil {
-		dhlog.FromContext(ctx).ErrorContext(ctx, "ERROR!")
-		return wrapManifestErr(ctx, updateFailurePrefix(createErr), updateFailure(createErr, err))
-	}
-	dhlog.FromContext(ctx).InfoContext(ctx, "OK!")
 	return nil
 }
 
@@ -92,20 +91,19 @@ func (task *ManifestTask) CreateOrUpdateSilent(ctx context.Context) error {
 	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Manifest for %s", task.Name))
 	manifest := task.Manifest()
 
-	createErr := task.CreateFunc(ctx, manifest)
-	if createErr == nil {
-		return nil
+	err := task.CreateFunc(ctx, manifest)
+	if err != nil {
+		if !errors.IsAlreadyExists(err) {
+			return wrapManifestErr(ctx, "create resource", err)
+		}
+		dhlog.FromContext(ctx).DebugContext(ctx, strings.TrimRight(fmt.Sprintf("%s already exists. Trying to update ... ", task.Name), "\n"))
+		err = task.UpdateFunc(ctx, manifest)
+		if err != nil {
+			dhlog.FromContext(ctx).ErrorContext(ctx, "ERROR!")
+			return wrapManifestErr(ctx, "update resource", err)
+		}
+		dhlog.FromContext(ctx).DebugContext(ctx, "OK!")
 	}
-	if !createMayMeanExists(createErr) {
-		return wrapManifestErr(ctx, "create resource", createErr)
-	}
-
-	dhlog.FromContext(ctx).DebugContext(ctx, strings.TrimRight(fmt.Sprintf("%s already exists. Trying to update ... ", task.Name), "\n"))
-	if err := task.UpdateFunc(ctx, manifest); err != nil {
-		dhlog.FromContext(ctx).ErrorContext(ctx, "ERROR!")
-		return wrapManifestErr(ctx, updateFailurePrefix(createErr), updateFailure(createErr, err))
-	}
-	dhlog.FromContext(ctx).DebugContext(ctx, "OK!")
 	return nil
 }
 
@@ -158,31 +156,4 @@ type ModuleConfigTask struct {
 	Do    func(kubeCl *client.KubernetesClient) error
 	Title string
 	Name  string
-}
-
-// createMayMeanExists reports whether a failed create leaves the object's
-// existence open. AlreadyExists says it outright; Forbidden says it whenever an
-// admission policy answers before the API server can report the conflict, which
-// is what Deckhouse's own system-ns.deckhouse.io does to a CREATE of a d8-*
-// namespace on every re-run. Either way the update below settles it.
-func createMayMeanExists(err error) bool {
-	return errors.IsAlreadyExists(err) || errors.IsForbidden(err)
-}
-
-// updateFailure picks the error to report when the update after a failed create
-// also fails. A create refused as AlreadyExists proves the object is there, so
-// the update's own failure is the news; a create refused as Forbidden proves
-// nothing, and its refusal is the one the operator has to act on.
-func updateFailure(createErr, updateErr error) error {
-	if errors.IsAlreadyExists(createErr) {
-		return updateErr
-	}
-	return createErr
-}
-
-func updateFailurePrefix(createErr error) string {
-	if errors.IsAlreadyExists(createErr) {
-		return "update resource"
-	}
-	return "create resource"
 }
