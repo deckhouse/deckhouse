@@ -1,5 +1,4 @@
 {{- $binaries := list "chown" "chmod" "ls" "cp" "rm" "mkdir" "sleep" "true" }}
-{{- $netcatVersion := "1.10-50.1" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ index $.Images "base/distroless-fin" }}
@@ -8,16 +7,15 @@ import:
   add: /out/usr/bin
   to: /usr/bin
   includePaths:
-  # every consumer of this image is started as `sh -c ...`, the sh symlink ships with the bash packet
+  # every consumer of this image is started as `sh -c ...`; the sh -> bash and nc -> ncat
+  # symlinks ship with the bash and ncat packets, so both link targets come along too
   - sh
   - bash
+  - nc
+  - ncat
 {{- range $binaries }}
   - {{ . | quote }}
 {{- end }}
-  before: setup
-- image: {{ .ModuleName }}/{{ .ImageName }}-netcat-artifact
-  add: /nc
-  to: /usr/bin/nc
   before: setup
 {{- include "image mount points" . }}
 ---
@@ -26,37 +24,4 @@ from: {{ index $.Images "builder/distroless" }}
 final: false
 shell:
   beforeInstall:
-  - pm install coreutils bash -d /out
----
-# coreutils ships no nc and container-factory has no netcat packet (its busybox is built without
-# the nc applet), so nc is built from source into a static binary.
-image: {{ .ModuleName }}/{{ .ImageName }}-netcat-src-artifact
-fromImage: common/src-artifact
-final: false
-secrets:
-- id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
-shell:
-  install:
-  - git clone --depth 1 --branch applied/{{ $netcatVersion }} $(cat /run/secrets/SOURCE_REPO)/netcat /src/netcat
-  - rm -rf /src/netcat/.git
----
-# The compilation stays on builder/alpine: netcat 1.10 does not build with container-factory's
-# gcc 16, which rejects its signal() calls (-Wincompatible-pointer-types is an error since gcc 15).
-image: {{ .ModuleName }}/{{ .ImageName }}-netcat-artifact
-from: {{ index $.Images "builder/alpine" }}
-final: false
-import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-netcat-src-artifact
-  add: /src/netcat
-  to: /src/netcat
-  before: install
-shell:
-  beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache make g++
-  setup:
-  - cd /src/netcat
-  - make linux LDFLAGS='-static' DFLAGS='-DDEBIAN_VERSION=\"Flant\"'
-  - strip ./nc
-  - mv ./nc /nc
+  - pm install coreutils bash ncat -d /out
