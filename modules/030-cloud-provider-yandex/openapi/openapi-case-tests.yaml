@@ -692,6 +692,107 @@ positive:
       internal:
         cniSecretData: "Y25pOiBZMmxzYVhWdApjaWxpdW06IGV3b2dJQ0p0YjJSbElqb2dJbFpZVEVGT0lpd0tJQ0FpYldGemNYVmxjbUZrWlUxdlpHVWlPaUFpUWxCR0lncDkK" # gitleaks:allow
 
+    # ==========================================
+    # Hybrid cluster: infrastructure is not created by DKP
+    # ==========================================
+
+    # hybrid cluster: infrastructure is not created by DKP, so the discovery data
+    # inputs are supplied explicitly
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: WithoutNAT
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+          existingNetworkID: enp-network
+          existingRouteTableID: enp-route-table
+          existingZoneToSubnetIDMap:
+            ru-central1-a: subnet-a
+
+    # ==========================================
+    # Internal: providerDiscoveryData with only apiVersion/kind/region set
+    # ==========================================
+
+    # A cluster with no infrastructure run yet: providerDiscoveryData only requires
+    # apiVersion and kind (see openapi/values.yaml), so an incomplete payload like this
+    # one is valid. This case used to live under "negative" as "missing required
+    # fields", back when routeTableID, defaultLbTargetGroupNetworkId,
+    # internalNetworkIDs, zones and zoneToSubnetIdMap were all required; the schema
+    # relaxation that lets a cluster without an infrastructure run render at all
+    # means it is not a validation failure any more.
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+      internal:
+        providerDiscoveryData:
+          apiVersion: deckhouse.io/v1
+          kind: YandexCloudDiscoveryData
+          region: test
+
+    # ==========================================
+    # Internal: providerDiscoveryData with empty, but present, collections
+    # ==========================================
+
+    # The same cluster as above, written by something that emits the keys instead of
+    # omitting them. routeTableID, defaultLbTargetGroupNetworkId, internalNetworkIDs,
+    # zones and zoneToSubnetIdMap used to carry minLength/minItems constraints, so this
+    # payload was rejected with "should be at least 1 chars long" and the module could not
+    # render at all without an infrastructure run. The constraints are gone; an empty
+    # collection now means the same as an absent one, and templates/_helpers.tpl already
+    # falls back to nodes.parameters.existing* for every one of these.
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+      internal:
+        providerDiscoveryData:
+          apiVersion: deckhouse.io/v1
+          kind: YandexCloudDiscoveryData
+          region: ru-central1
+          routeTableID: ""
+          defaultLbTargetGroupNetworkId: ""
+          internalNetworkIDs: []
+          zones: []
+          zoneToSubnetIdMap: {}
+
+    # ==========================================
+    # Internal: providerDiscoveryData with a discovered shouldAssignPublicIPAddress: false
+    # ==========================================
+
+    # shouldAssignPublicIPAddress is a *bool in go_lib/cloud-data so that "discovered as
+    # false" survives serialization instead of being dropped as a zero value. Only the
+    # WithoutNAT layout reports true, so false is the common case and has to be
+    # representable next to an otherwise empty payload.
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+      internal:
+        providerDiscoveryData:
+          apiVersion: deckhouse.io/v1
+          kind: YandexCloudDiscoveryData
+          region: ru-central1
+          shouldAssignPublicIPAddress: false
+
 negative:
   configValues:
     # ==========================================
@@ -1011,9 +1112,108 @@ negative:
             folderID: test-folder-id
             serviceAccountJSON: '{"id": "id"}'
 
+
     # ==========================================
     # Internal: providerDiscoveryData
-    # missing required fields
+    # null instead of an omitted collection
+    # ==========================================
+
+    # A nil Go slice/map marshals to null, not to an absent key, and null is not an array
+    # or an object — this is what produced "in body must be of type array: null" for a
+    # cluster whose infrastructure DKP does not create. The fix is `omitempty` on the
+    # YandexCloudDiscoveryData fields, not `nullable: true` here: templates read these
+    # through `dig ... (list)` / `dig ... (dict)`, and an explicit null would defeat the
+    # default and reach `toJson` as null. These three cases keep that decision pinned.
+
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+      internal:
+        providerDiscoveryData:
+          apiVersion: deckhouse.io/v1
+          kind: YandexCloudDiscoveryData
+          region: ru-central1
+          zones: null
+
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+      internal:
+        providerDiscoveryData:
+          apiVersion: deckhouse.io/v1
+          kind: YandexCloudDiscoveryData
+          region: ru-central1
+          internalNetworkIDs: null
+
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+      internal:
+        providerDiscoveryData:
+          apiVersion: deckhouse.io/v1
+          kind: YandexCloudDiscoveryData
+          region: ru-central1
+          zoneToSubnetIdMap: null
+
+    # ==========================================
+    # Internal: providerDiscoveryData
+    # region is still required and still non-empty
+    # ==========================================
+
+    # Relaxing the other fields did not relax region: every layout's cloud_discovery_data
+    # output hardcodes it, and YandexCloudDiscoveryData.SetDefaults stamps it, so an empty
+    # or absent region means something upstream is broken rather than "not discovered yet".
+
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+      internal:
+        providerDiscoveryData:
+          apiVersion: deckhouse.io/v1
+          kind: YandexCloudDiscoveryData
+          region: ""
+
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+      internal:
+        providerDiscoveryData:
+          apiVersion: deckhouse.io/v1
+          kind: YandexCloudDiscoveryData
+
+    # ==========================================
+    # Internal: providerDiscoveryData
+    # uniqueItems survived the relaxation
     # ==========================================
 
     - provider:
@@ -1029,4 +1229,7 @@ negative:
         providerDiscoveryData:
           apiVersion: deckhouse.io/v1
           kind: YandexCloudDiscoveryData
-          region: test
+          region: ru-central1
+          zones:
+            - ru-central1-a
+            - ru-central1-a

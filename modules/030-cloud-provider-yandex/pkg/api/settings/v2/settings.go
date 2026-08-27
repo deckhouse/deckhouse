@@ -130,6 +130,16 @@ type NodesParameters struct {
 	// +deckhouse:ru:description:value="**Внимание.** При использовании `cni-simple-bridge` DKP создаст таблицу маршрутизации, которую необходимо вручную привязать к указанным подсетям. К одной подсети можно привязать только одну таблицу маршрутизации, поэтому невозможно развернуть несколько кластеров с `cni-simple-bridge` в одних и тех же подсетях. Начиная с DKP 1.76 для новых кластеров в Yandex Cloud по умолчанию используется `cni-cilium` в режиме `VXLAN`. В этом режиме маршрутизация трафика подов не зависит от таблиц маршрутизации Yandex Cloud."
 	// +optional
 	ExistingZoneToSubnetIDMap map[string]string `json:"existingZoneToSubnetIDMap,omitempty"`
+	// The ID of the existing route table associated with the subnets.
+	//
+	// Required in clusters where DKP does not create the infrastructure itself (for example, a
+	// cluster with static master nodes that adds ephemeral nodes in Yandex Cloud): the value is
+	// normally produced by the infrastructure run and has to be supplied explicitly otherwise.
+	// +deckhouse:ru:description:value="ID существующей таблицы маршрутизации, привязанной к подсетям."
+	// +deckhouse:ru:description:value=
+	// +deckhouse:ru:description:value="Обязателен в кластерах, где DKP не создаёт инфраструктуру самостоятельно (например, кластер со статичными master-узлами, в который добавляются эфемерные узлы в Yandex Cloud): значение обычно формируется запуском инфраструктуры, и его нужно указать явно, если такого запуска нет."
+	// +optional
+	ExistingRouteTableID string `json:"existingRouteTableID,omitempty"`
 	// A list of DHCP parameters to use for all subnets.
 	//
 	// Note that setting dhcpOptions may lead to [problems](https://deckhouse.io/modules/cloud-provider-yandex/faq.html#dhcpoptions-related-problems-and-ways-to-address-them).

@@ -4,7 +4,7 @@
 # obligatory
 type: {{ b64enc "yandex" | quote }}
 region: {{ $context.Values.cloudProviderYandex.internal.providerDiscoveryData.region | b64enc | quote }}
-zones: {{ $context.Values.cloudProviderYandex.internal.providerDiscoveryData.zones | toJson | b64enc | quote }}
+zones: {{ include "yandex_zones" $context | b64enc | quote }}
 # Storage version of the InstanceClass CRD (spec.versions with storage: true). Not any served
 # version: node-controller hashes what it reads into a checksum that names an immutable template.
 instanceClassAPIVersion: {{ b64enc "v1" | quote }}
@@ -24,17 +24,20 @@ sshPublicKey: {{ $sshPublicKey | b64enc | quote }}
 
 # Yandex
 {{- $yandexValues := dict }}
+
 {{- $serviceAccountJSON := include "yandex_credential_secret" (list $context "d8-credentials" "secret") }}
 {{- if $serviceAccountJSON }}
 {{- $_ := set $yandexValues "serviceAccountJSON" $serviceAccountJSON }}
 {{- end }}
+
 {{- if $sshPublicKey }}
 {{- $_ := set $yandexValues "sshKey" $sshPublicKey }}
 {{- end }}
+
 {{- $_ := set $yandexValues "region" $context.Values.cloudProviderYandex.internal.providerDiscoveryData.region }}
 {{- $_ := set $yandexValues "folderID" $context.Values.cloudProviderYandex.provider.parameters.folderID }}
-{{- $_ := set $yandexValues "shouldAssignPublicIPAddress" $context.Values.cloudProviderYandex.internal.providerDiscoveryData.shouldAssignPublicIPAddress }}
-{{- $_ := set $yandexValues "zoneToSubnetIdMap" $context.Values.cloudProviderYandex.internal.providerDiscoveryData.zoneToSubnetIdMap }}
+{{- $_ := set $yandexValues "shouldAssignPublicIPAddress" (eq (include "yandex_should_assign_public_ip_address" $context) "true") }}
+{{- $_ := set $yandexValues "zoneToSubnetIdMap" (include "yandex_zone_to_subnet_id_map" $context | fromJson) }}
 {{- $_ := set $yandexValues "labels" ($context.Values.cloudProviderYandex.nodes.parameters.labels | default dict) }}
 {{- $_ := set $yandexValues "nodeNetworkCIDR" $context.Values.cloudProviderYandex.nodes.parameters.nodeNetworkCIDR }}
 

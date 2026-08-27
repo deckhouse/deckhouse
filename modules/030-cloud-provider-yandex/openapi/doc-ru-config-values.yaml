@@ -49,6 +49,12 @@ properties:
             description: |
               ID существующей VPC Network.
             type: string
+          existingRouteTableID:
+            description: |
+              ID существующей таблицы маршрутизации, привязанной к подсетям.
+
+              Обязателен в кластерах, где DKP не создаёт инфраструктуру самостоятельно (например, кластер со статичными master-узлами, в который добавляются эфемерные узлы в Yandex Cloud): значение обычно формируется запуском инфраструктуры, и его нужно указать явно, если такого запуска нет.
+            type: string
           existingZoneToSubnetIDMap:
             additionalProperties:
               type: string

@@ -634,7 +634,7 @@ properties:
             monitoringAPIKey: "api-key"
         type: object
         additionalProperties: false
-        required: [apiVersion, kind, region, routeTableID, defaultLbTargetGroupNetworkId, internalNetworkIDs, zones, zoneToSubnetIdMap, shouldAssignPublicIPAddress]
+        required: [apiVersion, kind, region]
         properties:
           apiVersion:
             type: string
@@ -647,29 +647,22 @@ properties:
             minLength: 1
           routeTableID:
             type: string
-            minLength: 1
           defaultLbTargetGroupNetworkId:
             type: string
-            minLength: 1
           internalNetworkIDs:
             type: array
             items:
               type: string
-              minLength: 1
-            minItems: 1
             uniqueItems: true
           zones:
             type: array
             items:
               type: string
-              minLength: 1
-            minItems: 1
             uniqueItems: true
           zoneToSubnetIdMap:
             type: object
             additionalProperties:
               type: string
-              minLength: 1
           shouldAssignPublicIPAddress:
             type: boolean
           natInstanceName:

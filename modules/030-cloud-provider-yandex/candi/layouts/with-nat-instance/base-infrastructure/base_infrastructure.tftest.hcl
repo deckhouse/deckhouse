@@ -290,3 +290,85 @@ run "state_b_module_config_and_exporter_secret" {
     error_message = "expected the layout to plan the NAT instance from the ModuleConfig alone"
   }
 }
+
+# vpc_components is left un-overridden here, unlike the runs above: the point is to
+# exercise the real existing_route_table_id wiring from nodes.parameters through to
+# vpc-components, not a canned output. If the layout failed to pass the value
+# through, vpc-components would create its own yandex_vpc_route_table.kube and the
+# mock provider would generate a fresh id for it, which would not equal the literal
+# asserted below.
+run "existing_route_table_id_is_honored" {
+  command = plan
+
+  variables {
+    nodeGroups = {
+      master = {
+        apiVersion = "deckhouse.io/v1"
+        kind       = "NodeGroup"
+        metadata   = { name = "master" }
+        spec = {
+          nodeType = "CloudPermanent"
+          cloudInstances = {
+            classReference = { kind = "YandexInstanceClass", name = "master-fc613b4dfd67" }
+            minPerZone     = 1
+            maxPerZone     = 1
+          }
+        }
+      }
+    }
+
+    instanceClasses = {
+      "master-fc613b4dfd67" = {
+        apiVersion = "deckhouse.io/v1"
+        kind       = "YandexInstanceClass"
+        metadata   = { name = "master-fc613b4dfd67" }
+        spec       = { cores = 4, memory = 8192, imageID = "fd8", platformID = "standard-v2", diskType = "network-ssd" }
+      }
+    }
+
+    secrets = {
+      "d8-cloud-provider-yandex/d8-credentials" = {
+        apiVersion = "v1"
+        kind       = "Secret"
+        metadata   = { name = "d8-credentials", namespace = "d8-cloud-provider-yandex" }
+        stringData = { authScheme = "serviceAccount", secret = "{\"id\":\"sa\"}" }
+        type       = "cloud-provider.deckhouse.io/credentials"
+      }
+    }
+
+    settings = {
+      apiVersion = "deckhouse.io/v1alpha1"
+      kind       = "ModuleConfig"
+      metadata   = { name = "cloud-provider-yandex" }
+      spec = {
+        enabled = true
+        version = 2
+        settings = {
+          provider = { parameters = { cloudID = "cloud-c", folderID = "folder-c" } }
+          nodes = {
+            parameters = {
+              sshPublicKey         = "ssh-rsa STATE_C"
+              layout               = "WithNATInstance"
+              nodeNetworkCIDR      = "10.80.0.0/16"
+              existingNetworkID    = "network-existing-c"
+              existingRouteTableID = "route-table-existing-c"
+              withNATInstance = {
+                internalSubnetCIDR = "10.80.4.0/24"
+                natInstanceResources = {
+                  cores    = 2
+                  memory   = 4096
+                  platform = "standard-v2"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  assert {
+    condition     = output.cloud_discovery_data.routeTableID == "route-table-existing-c"
+    error_message = "expected nodes.parameters.existingRouteTableID to reach vpc-components and be published as-is, proving no route table was created"
+  }
+}

@@ -26,6 +26,7 @@ package template_tests
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -131,7 +132,9 @@ const moduleValues = `
         zoneb: bbb
       defaultLbTargetGroupNetworkId: deftarggroupnetid
       internalNetworkIDs: ["id1", "id2"]
-      shouldAssignPublicIPAddress: true
+      # false, because nodes.parameters.layout above is WithNATInstance: candi only sets this
+      # for the without-nat layout, and templates/_helpers.tpl derives it from the layout.
+      shouldAssignPublicIPAddress: false
       routeTableID: testest
       region: myreg
       natInstanceName: ""
@@ -181,6 +184,18 @@ func envValue(resource object_store.KubeObject, name string) (string, bool) {
 	return "", false
 }
 
+// envSecretRef pulls one secretKeyRef-backed environment variable out of the first container
+// of a workload, returning the referenced Secret name and key.
+func envSecretRef(resource object_store.KubeObject, name string) (secretName string, secretKey string, found bool) {
+	for _, env := range resource.Field("spec.template.spec.containers.0.env").Array() {
+		if env.Get("name").String() == name {
+			ref := env.Get("valueFrom.secretKeyRef")
+			return ref.Get("name").String(), ref.Get("key").String(), true
+		}
+	}
+	return "", "", false
+}
+
 // modulesImagesWithout copies the shared image digests and drops one image of this module,
 // so the "image is not built in this edition" branch can be exercised. GetModulesImages
 // hands out the package-level library.DefaultImagesDigests map, which must not be mutated:
@@ -215,6 +230,13 @@ func registrationYandexValues(resource object_store.KubeObject) string {
 	decoded, err := base64.StdEncoding.DecodeString(resource.Field("data.yandex").String())
 	Expect(err).ShouldNot(HaveOccurred())
 	return string(decoded)
+}
+
+// registrationField decodes one base64-encoded JSON field of a registration Secret.
+func registrationField(resource object_store.KubeObject, field string, out interface{}) {
+	decoded, err := base64.StdEncoding.DecodeString(resource.Field("data." + field).String())
+	Expect(err).ShouldNot(HaveOccurred())
+	Expect(json.Unmarshal(decoded, out)).To(Succeed())
 }
 
 var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
@@ -461,7 +483,7 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
             "zonea": "aaa",
             "zoneb": "bbb"
           },
-          "shouldAssignPublicIPAddress": true,
+          "shouldAssignPublicIPAddress": false,
           "labels": {"test": "test"},
 		  "nodeNetworkCIDR": "10.100.0.1/24",
 		  "instanceClassDefaults": {
@@ -1166,6 +1188,272 @@ storageclass.kubernetes.io/is-default-class: "true"
 `))
 			Expect(csiSSDSC.Field(`metadata.annotations.storageclass\.kubernetes\.io/is-default-class`).Exists()).To(BeFalse())
 			Expect(csiSSDSCNonReplicated.Field(`metadata.annotations.storageclass\.kubernetes\.io/is-default-class`).Exists()).To(BeFalse())
+		})
+	})
+
+	// The discoverer answers DisksMeta and nothing else - it no longer derives network facts, so
+	// it is not handed the ModuleConfig settings any more.
+	Context("cloud-data-discoverer", func() {
+		BeforeEach(func() {
+			f.ValuesSet("cloudProviderYandex.nodes.parameters.existingNetworkID", "enp-network")
+			f.HelmRender()
+		})
+
+		It("carries only the credentials and the cluster identity", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			deployment := f.KubernetesResource("Deployment", moduleNamespace, "cloud-data-discoverer")
+			Expect(deployment.Exists()).To(BeTrue())
+
+			folderID, found := envValue(deployment, "YC_FOLDER_ID")
+			Expect(found).To(BeTrue())
+			Expect(folderID).To(Equal("myfoldid"))
+
+			_, _, found = envSecretRef(deployment, "YC_SA_KEY_JSON")
+			Expect(found).To(BeTrue())
+
+			_, _, found = envSecretRef(deployment, "MODULE_CONFIG")
+			Expect(found).To(BeFalse())
+		})
+
+		It("does not render a settings Secret for the discoverer", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			Expect(f.KubernetesResource("Secret", moduleNamespace, "cloud-data-discoverer").Exists()).To(BeFalse())
+		})
+	})
+
+	// The helpers in templates/_helpers.tpl repeat rules that candi/ implements in HCL. These
+	// specs pin the two sides together: a stated ModuleConfig value wins, discovery data is the
+	// fallback for whatever the infrastructure run created itself, and `zones` narrows down to
+	// the zones the subnets actually cover.
+	Context("Network facts shared by the CCM and the registration Secret", func() {
+		ccmEnv := func(name string) string {
+			deployment := f.KubernetesResource("Deployment", moduleNamespace, "cloud-controller-manager")
+			value, found := envValue(deployment, name)
+			Expect(found).To(BeTrue(), "env %s must be rendered", name)
+			return value
+		}
+
+		registrationSecret := func() object_store.KubeObject {
+			secret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
+			Expect(secret.Exists()).To(BeTrue())
+			return secret
+		}
+
+		Context("with nothing stated in ModuleConfig", func() {
+			BeforeEach(func() {
+				f.HelmRender()
+			})
+
+			It("falls back to discovery data everywhere", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				Expect(ccmEnv("YANDEX_CLOUD_DEFAULT_LB_TARGET_GROUP_NETWORK_ID")).To(Equal("deftarggroupnetid"))
+				Expect(ccmEnv("YANDEX_CLOUD_INTERNAL_NETWORK_IDS")).To(Equal("id1,id2"))
+				Expect(ccmEnv("YANDEX_CLOUD_ROUTE_TABLE_ID")).To(Equal("testest"))
+
+				var zones []string
+				registrationField(registrationSecret(), "zones", &zones)
+				Expect(zones).To(Equal([]string{"zonea", "zoneb"}))
+
+				var yandexValues map[string]interface{}
+				registrationField(registrationSecret(), "yandex", &yandexValues)
+				Expect(yandexValues["zoneToSubnetIdMap"]).To(Equal(map[string]interface{}{
+					"zonea": "aaa",
+					"zoneb": "bbb",
+				}))
+			})
+		})
+
+		Context("with existing network facts stated in ModuleConfig", func() {
+			BeforeEach(func() {
+				f.ValuesSet("cloudProviderYandex.nodes.parameters.existingNetworkID", "enp-network")
+				f.ValuesSet("cloudProviderYandex.nodes.parameters.existingRouteTableID", "enp-route-table")
+				f.ValuesSetFromYaml("cloudProviderYandex.nodes.parameters.existingZoneToSubnetIDMap", `
+ru-central1-b: subnet-b
+ru-central1-a: subnet-a
+`)
+				f.HelmRender()
+			})
+
+			It("prefers the stated values over discovery data", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				Expect(ccmEnv("YANDEX_CLOUD_DEFAULT_LB_TARGET_GROUP_NETWORK_ID")).To(Equal("enp-network"))
+				Expect(ccmEnv("YANDEX_CLOUD_INTERNAL_NETWORK_IDS")).To(Equal("enp-network"))
+				Expect(ccmEnv("YANDEX_CLOUD_ROUTE_TABLE_ID")).To(Equal("enp-route-table"))
+
+				var yandexValues map[string]interface{}
+				registrationField(registrationSecret(), "yandex", &yandexValues)
+				Expect(yandexValues["zoneToSubnetIdMap"]).To(Equal(map[string]interface{}{
+					"ru-central1-a": "subnet-a",
+					"ru-central1-b": "subnet-b",
+				}))
+			})
+
+			It("derives zones from the stated subnets, sorted", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				var zones []string
+				registrationField(registrationSecret(), "zones", &zones)
+				Expect(zones).To(Equal([]string{"ru-central1-a", "ru-central1-b"}))
+			})
+		})
+
+		Context("with a globally restricted set of zones", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("cloudProviderYandex.internal.providerDiscoveryData.zoneToSubnetIdMap", `
+ru-central1-a: subnet-a
+ru-central1-b: subnet-b
+ru-central1-d: subnet-d
+`)
+				f.ValuesSetFromYaml("cloudProviderYandex.nodes.parameters.zones", `["ru-central1-d", "ru-central1-a"]`)
+				f.HelmRender()
+			})
+
+			It("intersects the restriction with the zones the subnets cover, sorted", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				var zones []string
+				registrationField(registrationSecret(), "zones", &zones)
+				Expect(zones).To(Equal([]string{"ru-central1-a", "ru-central1-d"}))
+			})
+		})
+
+		Context("with a zone restriction naming a zone that has no subnet", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("cloudProviderYandex.internal.providerDiscoveryData.zoneToSubnetIdMap", `
+ru-central1-a: subnet-a
+`)
+				f.ValuesSetFromYaml("cloudProviderYandex.nodes.parameters.zones", `["ru-central1-a", "ru-central1-e"]`)
+				f.HelmRender()
+			})
+
+			It("keeps only the covered zones", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				var zones []string
+				registrationField(registrationSecret(), "zones", &zones)
+				Expect(zones).To(Equal([]string{"ru-central1-a"}))
+			})
+		})
+
+		Context("with the WithoutNAT layout", func() {
+			BeforeEach(func() {
+				f.ValuesSet("cloudProviderYandex.nodes.parameters.layout", "WithoutNAT")
+				f.HelmRender()
+			})
+
+			It("assigns public IP addresses regardless of the recorded discovery data", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				var yandexValues map[string]interface{}
+				registrationField(registrationSecret(), "yandex", &yandexValues)
+				Expect(yandexValues["shouldAssignPublicIPAddress"]).To(BeTrue())
+			})
+		})
+
+		// A cluster whose infrastructure DKP does not create has no discovery data at all:
+		// hooks/yandex_cluster_configuration.go writes the struct with nothing but the type
+		// markers and the region, because every other field of YandexCloudDiscoveryData is
+		// `omitempty`. That payload has to render off nodes.parameters.existing* alone —
+		// before the schema was relaxed it could not even reach the templates, since
+		// routeTableID/defaultLbTargetGroupNetworkId carried minLength: 1 and the nil slices
+		// and map serialized to null.
+		Context("with no discovery data at all, as in a cluster DKP did not build", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("cloudProviderYandex.internal.providerDiscoveryData", `
+apiVersion: deckhouse.io/v1
+kind: YandexCloudDiscoveryData
+region: ru-central1
+`)
+				f.ValuesSet("cloudProviderYandex.nodes.parameters.existingNetworkID", "enp-network")
+				f.ValuesSet("cloudProviderYandex.nodes.parameters.existingRouteTableID", "enp-route-table")
+				f.ValuesSetFromYaml("cloudProviderYandex.nodes.parameters.existingZoneToSubnetIDMap", `
+ru-central1-a: subnet-a
+`)
+				f.HelmRender()
+			})
+
+			It("renders the CCM off the stated network facts", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				Expect(ccmEnv("YANDEX_CLOUD_DEFAULT_LB_TARGET_GROUP_NETWORK_ID")).To(Equal("enp-network"))
+				Expect(ccmEnv("YANDEX_CLOUD_INTERNAL_NETWORK_IDS")).To(Equal("enp-network"))
+				Expect(ccmEnv("YANDEX_CLOUD_ROUTE_TABLE_ID")).To(Equal("enp-route-table"))
+			})
+
+			It("derives the registration Secret from the stated subnets", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				var zones []string
+				registrationField(registrationSecret(), "zones", &zones)
+				Expect(zones).To(Equal([]string{"ru-central1-a"}))
+
+				var yandexValues map[string]interface{}
+				registrationField(registrationSecret(), "yandex", &yandexValues)
+				Expect(yandexValues["zoneToSubnetIdMap"]).To(Equal(map[string]interface{}{
+					"ru-central1-a": "subnet-a",
+				}))
+				// The layout decides this one, and Standard means no public addresses; the
+				// absent discovery-data key must not make the helper fail.
+				Expect(yandexValues["shouldAssignPublicIPAddress"]).To(BeFalse())
+			})
+
+			It("deploys no cloud-metrics-exporter", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				Expect(f.KubernetesResource("Deployment", moduleNamespace, "cloud-metrics-exporter").Exists()).To(BeFalse())
+			})
+		})
+
+		Context("with no route table in either source", func() {
+			BeforeEach(func() {
+				// The absent case: the key is missing from the payload entirely, which is what
+				// `omitempty` produces for a cluster with no infrastructure run.
+				f.ValuesSetFromYaml("cloudProviderYandex.internal.providerDiscoveryData", `
+apiVersion: deckhouse.io/v1
+kind: YandexCloudDiscoveryData
+region: myreg
+zones: ["zonea"]
+zoneToSubnetIdMap:
+  zonea: aaa
+defaultLbTargetGroupNetworkId: deftarggroupnetid
+internalNetworkIDs: ["id1"]
+shouldAssignPublicIPAddress: false
+`)
+				f.HelmRender()
+			})
+
+			It("fails the render instead of starting the CCM without a route table", func() {
+				Expect(f.RenderError).Should(HaveOccurred())
+			})
+		})
+
+		Context("with a blank route table in either source", func() {
+			BeforeEach(func() {
+				// routeTableID no longer carries minLength: 1, so a writer may now blank it
+				// instead of omitting it. The CCM must still refuse to start: `required` in
+				// cloud-controller-manager/deployment.yaml treats "" the same as absent.
+				f.ValuesSetFromYaml("cloudProviderYandex.internal.providerDiscoveryData", `
+apiVersion: deckhouse.io/v1
+kind: YandexCloudDiscoveryData
+region: myreg
+routeTableID: ""
+zones: ["zonea"]
+zoneToSubnetIdMap:
+  zonea: aaa
+defaultLbTargetGroupNetworkId: deftarggroupnetid
+internalNetworkIDs: ["id1"]
+shouldAssignPublicIPAddress: false
+`)
+				f.HelmRender()
+			})
+
+			It("fails the render instead of starting the CCM without a route table", func() {
+				Expect(f.RenderError).Should(HaveOccurred())
+			})
 		})
 	})
 

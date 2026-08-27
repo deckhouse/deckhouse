@@ -21,3 +21,123 @@
 {{- dig $field "" $credSecret -}}
 {{- end -}}
 {{- end -}}
+
+{{- /*
+  The five helpers below resolve the network facts the workloads need. Each one repeats a rule
+  that candi/ already implements in HCL, and the pairing is deliberate — the two sides have to
+  agree, or the module and the infrastructure disagree about which network the cluster runs in.
+
+  The rule is always the same: a value the operator stated in ModuleConfig
+  (nodes.parameters.existing*) wins, and internal.providerDiscoveryData is the fallback for
+  whatever the infrastructure run created itself. That mirrors candi, where
+  `existing_network_id`/`existing_route_table_id`/`existing_zone_to_subnet_id_map` short-circuit
+  the resources terraform would otherwise create:
+
+    layouts/<layout>/base-infrastructure/main.tf   network_id = existing_network_id != "" ? ... : created
+    terraform-modules/vpc-components/main.tf  route_table_id = existing_route_table_id == "" ? created : existing
+
+  A cluster whose infrastructure DKP does not create (a static cluster that adds ephemeral nodes
+  in Yandex Cloud) has no discovery data at all, so the ModuleConfig side is the only source
+  there; a cluster DKP does create records the same values in discovery data, so both sides
+  agree and the priority never actually fires.
+*/ -}}
+
+{{- /*
+  The VPC network the cluster runs in.
+  Usage: {{ include "yandex_network_id" . }}
+*/ -}}
+{{- define "yandex_network_id" -}}
+{{- $existing := dig "nodes" "parameters" "existingNetworkID" "" .Values.cloudProviderYandex -}}
+{{- if $existing -}}
+{{- $existing -}}
+{{- else -}}
+{{- dig "internal" "providerDiscoveryData" "defaultLbTargetGroupNetworkId" "" .Values.cloudProviderYandex -}}
+{{- end -}}
+{{- end -}}
+
+{{- /*
+  The internal networks, as a JSON array. candi emits `[network_id]`, so a stated
+  existingNetworkID yields a one-element list; discovery data keeps whatever it recorded.
+  Usage: {{ include "yandex_internal_network_ids" . | fromJsonArray }}
+*/ -}}
+{{- define "yandex_internal_network_ids" -}}
+{{- $existing := dig "nodes" "parameters" "existingNetworkID" "" .Values.cloudProviderYandex -}}
+{{- if $existing -}}
+{{- list $existing | toJson -}}
+{{- else -}}
+{{- dig "internal" "providerDiscoveryData" "internalNetworkIDs" (list) .Values.cloudProviderYandex | toJson -}}
+{{- end -}}
+{{- end -}}
+
+{{- /*
+  Zone -> subnet mapping, as a JSON object.
+  Usage: {{ include "yandex_zone_to_subnet_id_map" . | fromJson }}
+*/ -}}
+{{- define "yandex_zone_to_subnet_id_map" -}}
+{{- $existing := dig "nodes" "parameters" "existingZoneToSubnetIDMap" (dict) .Values.cloudProviderYandex -}}
+{{- if $existing -}}
+{{- $existing | toJson -}}
+{{- else -}}
+{{- dig "internal" "providerDiscoveryData" "zoneToSubnetIdMap" (dict) .Values.cloudProviderYandex | toJson -}}
+{{- end -}}
+{{- end -}}
+
+{{- /*
+  The route table the subnets are attached to. Empty is a legitimate answer only for a cluster
+  that has neither stated one nor run its infrastructure; the CCM template rejects it there.
+  Usage: {{ include "yandex_route_table_id" . }}
+*/ -}}
+{{- define "yandex_route_table_id" -}}
+{{- $existing := dig "nodes" "parameters" "existingRouteTableID" "" .Values.cloudProviderYandex -}}
+{{- if $existing -}}
+{{- $existing -}}
+{{- else -}}
+{{- dig "internal" "providerDiscoveryData" "routeTableID" "" .Values.cloudProviderYandex -}}
+{{- end -}}
+{{- end -}}
+
+{{- /*
+  The zones the cluster works with, as a sorted JSON array. This repeats the `zones` output of
+  candi/layouts/<layout>/base-infrastructure/outputs.tf verbatim:
+
+    zones = length(local.zones) > 0
+      ? tolist(setintersection(keys(zone_to_subnet_id_map), local.zones))
+      : keys(zone_to_subnet_id_map)
+
+  so a globally restricted set of zones narrows the subnets the cluster covers, and an absent
+  (or empty) restriction means every zone those subnets cover. `sortAlpha` reproduces the order
+  terraform's set-to-list conversion produces; node-manager derives its default zone set from
+  this list, so the order has to be stable across renders.
+  Usage: {{ include "yandex_zones" . | fromJsonArray }}
+*/ -}}
+{{- define "yandex_zones" -}}
+{{- $covered := keys (include "yandex_zone_to_subnet_id_map" . | fromJson) | sortAlpha -}}
+{{- $restricted := dig "nodes" "parameters" "zones" (list) .Values.cloudProviderYandex -}}
+{{- if $restricted -}}
+{{- $intersection := list -}}
+{{- range $zone := $covered -}}
+{{- if has $zone $restricted -}}
+{{- $intersection = append $intersection $zone -}}
+{{- end -}}
+{{- end -}}
+{{- $intersection | toJson -}}
+{{- else -}}
+{{- $covered | toJson -}}
+{{- end -}}
+{{- end -}}
+
+{{- /*
+  Whether nodes get a public IP, as "true"/"false". candi decides this per layout — only
+  `without-nat` sets it (layouts/<layout>/base-infrastructure/outputs.tf) — so the layout in
+  ModuleConfig is the whole answer. Discovery data stays as the fallback for the one case
+  where the layout has not reached values yet.
+  Usage: {{ eq (include "yandex_should_assign_public_ip_address" .) "true" }}
+*/ -}}
+{{- define "yandex_should_assign_public_ip_address" -}}
+{{- $layout := dig "nodes" "parameters" "layout" "" .Values.cloudProviderYandex -}}
+{{- if $layout -}}
+{{- eq $layout "WithoutNAT" -}}
+{{- else -}}
+{{- dig "internal" "providerDiscoveryData" "shouldAssignPublicIPAddress" false .Values.cloudProviderYandex -}}
+{{- end -}}
+{{- end -}}

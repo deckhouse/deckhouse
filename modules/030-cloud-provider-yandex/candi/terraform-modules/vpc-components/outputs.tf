@@ -20,7 +20,7 @@ locals {
 }
 
 output "route_table_id" {
-  value = yandex_vpc_route_table.kube.id
+  value = local.route_table_id
 }
 
 output "zone_to_subnet_id_map" {
