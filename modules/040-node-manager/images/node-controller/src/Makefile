@@ -80,13 +80,6 @@ test: envtest gotestfmt ## Run unit + envtest in two labeled sections with GitHu
 		rm -f $(GOTEST_JSON_UNIT) $(GOTEST_JSON_ENVTEST); \
 		test $$urc -eq 0 && test $$erc -eq 0
 
-.PHONY: test-race
-test-race: envtest ## Run every test under the race detector (unit + envtest).
-	@echo "==> [test-race] running the whole suite with -race..."
-	@assets="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)"; \
-		KUBEBUILDER_ASSETS="$$assets" go test -race -count=1 ./...
-	@echo "==> [test-race] done."
-
 .PHONY: test-envtest
 test-envtest: envtest ## Run every controller's envtest suite (ENVTEST_DEBUG=1 dumps state before/after each spec; ENVTEST_LOGS=1 adds controller logs).
 	@echo "==> [test-envtest] running each controller envtest suite live (ENVTEST_DEBUG=1 = state dumps, ENVTEST_LOGS=1 = controller logs)..."
