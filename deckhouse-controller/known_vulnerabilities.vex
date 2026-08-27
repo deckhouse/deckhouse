@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-5a4509a04e8128126aee080324a6b663a7748bf44b58a9a4b9c74d4801844f53",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 21,
+  "version": 22,
   "statements": [
     {
       "vulnerability": {
@@ -425,6 +425,37 @@
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость относится к копии OpenSSL, статически влинкованной в wheel-пакет cryptography 44.0.1. Python-хуки Deckhouse используют cryptography только для локального разбора сертификатов X.509; TLS-соединения через встроенный OpenSSL не устанавливаются, уязвимый код не в пути выполнения.",
+      "timestamp": "2026-08-27T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.45.0"
+        },
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.54.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Пакет golang.org/x/crypto/openpgp признан неподдерживаемым, исправленной версии не существует. В deckhouse-controller он попадает только через helm.sh/helm/v3/pkg/provenance и github.com/werf/3p-helm/pkg/provenance. Проверка провенанс-подписей Helm-чартов не выполняется, код не в пути выполнения.",
+      "timestamp": "2026-08-27T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-48978"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/oras.land/oras-go@v1.2.6"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Исправленной версии в линейке oras-go v1.x не выпущено. Модуль поступает транзитивно через helm.sh/helm/v3/pkg/registry (go_lib/dependency/helm). Атака требует подконтрольного злоумышленнику OCI-реестра, тогда как адрес реестра задаётся конфигурацией кластера, а не недоверенным вводом.",
       "timestamp": "2026-08-27T12:00:00Z"
     }
   ],

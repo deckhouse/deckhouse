@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-5a4509a04e8128126aee080324a6b663a7748bf44b58a9a4b9c74d4801844f53",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 18,
+  "version": 19,
   "statements": [
     {
       "vulnerability": {
@@ -234,6 +234,20 @@
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "pip версии 25.3 используется только на этапе сборки образа для установки заранее собранных wheel-пакетов из локального каталога без обращения к индексу. В рантайме pip не вызывается, установка пакетов из недоверенных источников не выполняется.",
+      "timestamp": "2026-08-27T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.53.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Пакет golang.org/x/crypto/openpgp признан неподдерживаемым, исправленной версии не существует. Версия v0.53.0 поступает через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus, Prometheus v2.55.1, патч 005-fix-cve-bump.patch). promtool в webhook-handler применяется только для валидации правил Prometheus, операции OpenPGP не выполняются.",
       "timestamp": "2026-08-27T12:00:00Z"
     }
   ],

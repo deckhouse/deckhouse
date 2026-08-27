@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-7c114e6cee1182ff2b165cba363ae5cfbf773e4da8518c90d80049d24c627e94",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 20,
+  "version": 21,
   "statements": [
     {
       "vulnerability": {
@@ -702,6 +702,34 @@
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Зависимость github.com/sigstore/rekor поступает транзитивно через werf → buildah → github.com/containers/image/v5/signature/internal; из модуля используются только сгенерированные модели (pkg/generated/models). Серверный код Rekor, разбирающий APK-пакеты, в d8 не собирается.",
+      "timestamp": "2026-08-27T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.49.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Пакет golang.org/x/crypto/openpgp признан неподдерживаемым, исправленной версии не существует. В бинарь d8 он попадает через github.com/containers/image/v5/signature и github.com/containers/ocicrypt/keywrap/pgp (werf, buildah), а также через pkg/provenance Helm и nelm. d8 не проверяет GPG-подписи образов и провенанс-подписи Helm-чартов, код не в пути выполнения.",
+      "timestamp": "2026-08-27T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-48978"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/oras.land/oras-go@v1.2.5"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Исправленной версии в линейке oras-go v1.x не выпущено. Модуль поступает транзитивно через werf → github.com/werf/3p-helm/pkg/registry. Атака требует подконтрольного злоумышленнику OCI-реестра, тогда как адрес реестра задаётся конфигурацией кластера, а не недоверенным вводом.",
       "timestamp": "2026-08-27T12:00:00Z"
     }
   ],
