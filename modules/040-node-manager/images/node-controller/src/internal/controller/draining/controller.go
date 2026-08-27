@@ -99,29 +99,6 @@ func (r *Reconciler) SetupWatches(w register.Watcher) {
 	w.WatchesRawSource(r.drains.wakeSource())
 }
 
-func inNodeGroup(obj client.Object) bool {
-	_, hasGroup := obj.GetLabels()[nodecommon.NodeGroupLabel]
-	return hasGroup
-}
-
-func stateFromNode(node *corev1.Node) state {
-	return state{
-		requestedBy:   drainSource(node, nodecommon.DrainingAnnotation),
-		recordedFor:   drainSource(node, nodecommon.DrainedAnnotation),
-		unschedulable: node.Spec.Unschedulable,
-	}
-}
-
-type state struct {
-	requestedBy   string
-	recordedFor   string
-	unschedulable bool
-}
-
-func (s state) equal(other state) bool {
-	return s == other
-}
-
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	node := &corev1.Node{}
 	if err := r.Client.Get(ctx, req.NamespacedName, node); err != nil {
@@ -176,21 +153,6 @@ func (r *Reconciler) reconcileNode(ctx context.Context, node *corev1.Node) (_ ct
 	}
 
 	return ctrl.Result{}, r.startDrain(ctx, logger, node, state.requestedBy)
-}
-
-// drainSource reads the drain request off a node, empty when nobody asked. A
-// bare annotation means bashible: that is how the original hook behaved, and old
-// scripts still set it.
-func drainSource(node *corev1.Node, annotation string) string {
-	source, ok := node.Annotations[annotation]
-	if !ok {
-		return ""
-	}
-	if source == "" {
-		return bashibleSource
-	}
-
-	return source
 }
 
 // cleanupDeletedNode stops an eviction running for an object nobody can see.
@@ -275,4 +237,42 @@ func (r *Reconciler) startDrain(ctx context.Context, logger logr.Logger, node *c
 	timeout := nodecommon.DrainTimeout(ctx, r.Client, node.Labels[nodecommon.NodeGroupLabel])
 
 	return r.drains.start(logger, node.Name, timeout)
+}
+
+// drainSource reads the drain request off a node, empty when nobody asked. A
+// bare annotation means bashible: that is how the original hook behaved, and old
+// scripts still set it.
+func drainSource(node *corev1.Node, annotation string) string {
+	source, ok := node.Annotations[annotation]
+	if !ok {
+		return ""
+	}
+	if source == "" {
+		return bashibleSource
+	}
+
+	return source
+}
+
+func inNodeGroup(obj client.Object) bool {
+	_, hasGroup := obj.GetLabels()[nodecommon.NodeGroupLabel]
+	return hasGroup
+}
+
+func stateFromNode(node *corev1.Node) state {
+	return state{
+		requestedBy:   drainSource(node, nodecommon.DrainingAnnotation),
+		recordedFor:   drainSource(node, nodecommon.DrainedAnnotation),
+		unschedulable: node.Spec.Unschedulable,
+	}
+}
+
+type state struct {
+	requestedBy   string
+	recordedFor   string
+	unschedulable bool
+}
+
+func (s state) equal(other state) bool {
+	return s == other
 }
