@@ -14,6 +14,10 @@ VPA has the following operating modes:
 - `"Initial"` — VPA modifies Pod resources only when Pods are started (but not during operation).
 - `"Off"` — VPA does not take any action to update the resource requests for the running containers. In this case, if VPA is running in this mode, you can see what resource values it recommends (`d8 k describe vpa <vpa-name>`).
 
+{% alert level="warning" %}
+The `Auto` mode is deprecated. It will no longer be supported in future DKP versions. Switch to one of the supported operating modes.
+{% endalert %}
+
 VPA limitations:
 
 - Updating the resources of running Pods is currently experimental. The Pod is recreated each time VPA updates its `resource requests`. The Pod can be scheduled to another node.
