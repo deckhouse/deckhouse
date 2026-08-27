@@ -56,51 +56,77 @@ func (s *Syncer) syncPackageRepositories(ctx context.Context) error {
 	return nil
 }
 
-// ensurePackageRepository makes sure the repository serving the source
-// registry exists. An existing repository is left as is, so user edits
-// survive a restart. No scan interval is set: the package-repository
-// controller persists its default into the spec itself.
+// ensurePackageRepository converges the repository serving the source registry
+// to the source: created if missing, the registry settings brought to what the
+// source holds. The module source stays the place where users manage the
+// credentials of a source-backed repository while the old stack lives. The
+// fields the source does not carry (scan interval, login, password) are never
+// touched, so user edits to them survive a restart.
 func (s *Syncer) ensurePackageRepository(ctx context.Context, source *v1alpha1.ModuleSource) error {
 	name := repositoryNameForSource(source.Name)
+	desired := registryFromSource(source)
 
-	err := s.reader.Get(ctx, client.ObjectKey{Name: name}, new(v1alpha1.PackageRepository))
-	if err == nil {
-		return nil
-	}
-
-	if !apierrors.IsNotFound(err) {
+	repo := new(v1alpha1.PackageRepository)
+	err := s.reader.Get(ctx, client.ObjectKey{Name: name}, repo)
+	if err != nil && !apierrors.IsNotFound(err) {
 		return fmt.Errorf("get package repository '%s': %w", name, err)
 	}
 
-	repo := &v1alpha1.PackageRepository{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: v1alpha1.PackageRepositoryGVK.GroupVersion().String(),
-			Kind:       v1alpha1.PackageRepositoryKind,
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   name,
-			Labels: map[string]string{"heritage": "deckhouse"},
-		},
-		Spec: v1alpha1.PackageRepositorySpec{
-			Registry: v1alpha1.PackageRepositorySpecRegistry{
-				Scheme:    source.Spec.Registry.Scheme,
-				Repo:      source.Spec.Registry.Repo,
-				DockerCFG: source.Spec.Registry.DockerCFG,
-				CA:        source.Spec.Registry.CA,
+	if apierrors.IsNotFound(err) {
+		repo = &v1alpha1.PackageRepository{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: v1alpha1.PackageRepositoryGVK.GroupVersion().String(),
+				Kind:       v1alpha1.PackageRepositoryKind,
 			},
-		},
-	}
-
-	if err := s.writer.Create(ctx, repo); err != nil {
-		if !apierrors.IsAlreadyExists(err) {
-			return fmt.Errorf("create package repository '%s': %w", name, err)
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   name,
+				Labels: map[string]string{"heritage": "deckhouse"},
+			},
+			Spec: v1alpha1.PackageRepositorySpec{Registry: desired},
 		}
 
-		// another writer created it between the read and this call; theirs wins
+		if err := s.writer.Create(ctx, repo); err != nil {
+			if !apierrors.IsAlreadyExists(err) {
+				return fmt.Errorf("create package repository '%s': %w", name, err)
+			}
+
+			// another writer created it between the read and this call; the
+			// next start converges it
+			return nil
+		}
+
+		s.logger.Debug("package repository created", slog.String("name", name))
+
 		return nil
 	}
 
-	s.logger.Debug("package repository created", slog.String("name", name))
+	current := repo.Spec.Registry
+	current.Login, current.Password = "", ""
+	if current == desired {
+		return nil
+	}
+
+	original := repo.DeepCopy()
+	desired.Login = repo.Spec.Registry.Login
+	desired.Password = repo.Spec.Registry.Password
+	repo.Spec.Registry = desired
+
+	if err := s.writer.Patch(ctx, repo, client.MergeFrom(original)); err != nil {
+		return fmt.Errorf("patch package repository '%s': %w", name, err)
+	}
+
+	s.logger.Debug("package repository registry refreshed from the module source", slog.String("name", name))
 
 	return nil
+}
+
+// registryFromSource maps the source registry block onto the repository shape.
+// Login and password have no source counterpart and stay zero.
+func registryFromSource(source *v1alpha1.ModuleSource) v1alpha1.PackageRepositorySpecRegistry {
+	return v1alpha1.PackageRepositorySpecRegistry{
+		Scheme:    source.Spec.Registry.Scheme,
+		Repo:      source.Spec.Registry.Repo,
+		DockerCFG: source.Spec.Registry.DockerCFG,
+		CA:        source.Spec.Registry.CA,
+	}
 }

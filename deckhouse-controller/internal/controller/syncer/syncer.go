@@ -21,9 +21,9 @@
 // # Data sources
 //
 //	ModuleSource except the platform-owned "deckhouse" and "flant"
-//	  └─ PackageRepository <source>: the registry spec copied as is, so the
-//	     module-package-version controller has a repository to promote the
-//	     draft stubs below from
+//	  └─ PackageRepository <source>: the registry settings follow the source
+//	     on every start, so the module-package-version controller has a live
+//	     repository to promote the draft stubs below from
 //
 //	embedded modules dir (the running image)
 //	  └─ embedded-<module>-<deckhouse version>, complete: the metadata and

@@ -17,6 +17,7 @@ package syncer
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -70,14 +71,49 @@ func TestSyncPackageRepositories(t *testing.T) {
 		assert.Empty(t, listRepositoryNames(t, cl))
 	})
 
-	t.Run("keeps an existing repository untouched", func(t *testing.T) {
+	t.Run("refreshes the registry of an existing repository from the source", func(t *testing.T) {
+		interval := metav1.Duration{Duration: 30 * time.Minute}
+		existing := &v1alpha1.PackageRepository{
+			ObjectMeta: metav1.ObjectMeta{Name: "external"},
+			Spec: v1alpha1.PackageRepositorySpec{
+				ScanInterval: &interval,
+				Registry: v1alpha1.PackageRepositorySpecRegistry{
+					Scheme:    "http",
+					Repo:      "mirror.example.io/external",
+					DockerCFG: "b2xk",
+					Login:     "admin",
+					Password:  "secret",
+				},
+			},
+		}
+
+		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(), existing,
+			testModuleSource("external", "registry.example.io/external"),
+		)
+
+		require.NoError(t, s.Sync(ctx))
+
+		after := getRepository(t, cl, existing.Name)
+		assert.Equal(t, "registry.example.io/external", after.Spec.Registry.Repo, "the registry follows the source")
+		assert.Equal(t, "HTTPS", after.Spec.Registry.Scheme)
+		assert.Equal(t, "ZG9ja2VyY2Zn", after.Spec.Registry.DockerCFG)
+		assert.Equal(t, "test-ca", after.Spec.Registry.CA)
+		assert.Equal(t, "admin", after.Spec.Registry.Login, "the fields the source does not carry survive")
+		assert.Equal(t, "secret", after.Spec.Registry.Password)
+		require.NotNil(t, after.Spec.ScanInterval)
+		assert.Equal(t, 30*time.Minute, after.Spec.ScanInterval.Duration, "the scan interval survives")
+	})
+
+	t.Run("keeps a repository matching the source untouched", func(t *testing.T) {
 		existing := &v1alpha1.PackageRepository{
 			ObjectMeta: metav1.ObjectMeta{Name: "external"},
 			Spec: v1alpha1.PackageRepositorySpec{
 				Registry: v1alpha1.PackageRepositorySpecRegistry{
-					Scheme: "http",
-					Repo:   "mirror.example.io/external",
-					Login:  "admin",
+					Scheme:    "HTTPS",
+					Repo:      "registry.example.io/external",
+					DockerCFG: "ZG9ja2VyY2Zn",
+					CA:        "test-ca",
+					Login:     "admin",
 				},
 			},
 		}
@@ -90,7 +126,6 @@ func TestSyncPackageRepositories(t *testing.T) {
 		require.NoError(t, s.Sync(ctx))
 
 		after := getRepository(t, cl, existing.Name)
-		assert.Equal(t, before.ResourceVersion, after.ResourceVersion)
-		assert.Equal(t, "mirror.example.io/external", after.Spec.Registry.Repo, "user edits must survive the sync")
+		assert.Equal(t, before.ResourceVersion, after.ResourceVersion, "a matching repository is not rewritten")
 	})
 }
