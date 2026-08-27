@@ -36,5 +36,7 @@ final: false
 shell:
   beforeInstall:
   - pm install bash gzip tar gawk gnu-glibc -d /out
-  - ln -sf /bin/bash /out/bin/sh
+  - mkdir -p /out/bin
+  - ln -sf /usr/bin/bash /out/bin/bash
+  - ln -sf /usr/bin/bash /out/bin/sh
 {{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}
