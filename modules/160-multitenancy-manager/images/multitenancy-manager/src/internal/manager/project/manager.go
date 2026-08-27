@@ -30,6 +30,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -62,6 +63,11 @@ const (
 	DefaultProjectName   = "default"
 
 	VirtualTemplate = "virtual"
+
+	// MinimalTemplate renders the project namespace and nothing else. It is what a project gets
+	// when it names no template: the CRD schema defaults the field, and the controller falls back
+	// to the same value for the explicit empty string the schema cannot default.
+	MinimalTemplate = "simple"
 )
 
 type Manager struct {
@@ -107,6 +113,16 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha3.Project) (ctrl.R
 	// add finalizer and remove labels
 	if err := m.prepareProject(ctx, project); err != nil {
 		m.logger.Error(err, "failed to update the project", "project", project.Name)
+		return ctrl.Result{}, err
+	}
+
+	// A project always has a template now. The CRD defaults the field when it is omitted, but an
+	// explicit empty string is a value the apiserver keeps as it is — and that spelling was
+	// meaningful before, so manifests and GitOps repos still carry it. Normalise it here instead of
+	// rejecting it, otherwise such a project would look for a template named "" and never get its
+	// namespace.
+	if err := m.ensureTemplateName(ctx, project); err != nil {
+		m.logger.Error(err, "failed to default the project template", "project", project.Name)
 		return ctrl.Result{}, err
 	}
 
@@ -399,4 +415,38 @@ func (m *Manager) Delete(ctx context.Context, project *v1alpha3.Project) (ctrl.R
 
 	m.logger.Info("the project deleted", "project", project.Name)
 	return ctrl.Result{}, nil
+}
+
+// ensureTemplateName replaces an explicitly empty spec.projectTemplateName with the minimal template
+// and persists it, so the stored object says what the controller actually does.
+//
+// The CRD schema defaults the field when it is absent, but an explicit "" is a value the apiserver
+// keeps verbatim, and that spelling used to mean "a project without a template" — so manifests and
+// GitOps repositories still carry it. Without this fallback such a project would look for a template
+// named "" and never get its namespace. Virtual projects are skipped: they are platform-owned and
+// carry their own template.
+func (m *Manager) ensureTemplateName(ctx context.Context, project *v1alpha3.Project) error {
+	if project.Spec.ProjectTemplateName != "" || project.Labels[v1alpha3.ProjectLabelVirtualProject] == "true" {
+		return nil
+	}
+
+	m.logger.Info("the project names no template, falling back to the minimal one",
+		"project", project.Name, "template", MinimalTemplate)
+
+	if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		current := new(v1alpha3.Project)
+		if err := m.client.Get(ctx, client.ObjectKey{Name: project.Name}, current); err != nil {
+			return fmt.Errorf("get the '%s' project: %w", project.Name, err)
+		}
+		if current.Spec.ProjectTemplateName != "" {
+			return nil
+		}
+		current.Spec.ProjectTemplateName = MinimalTemplate
+		return m.client.Update(ctx, current)
+	}); err != nil {
+		return fmt.Errorf("set the template of the '%s' project: %w", project.Name, err)
+	}
+
+	project.Spec.ProjectTemplateName = MinimalTemplate
+	return nil
 }
