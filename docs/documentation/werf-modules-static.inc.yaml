@@ -93,7 +93,9 @@ shell:
 {{ end }}
         # Creating additional config...
         echo -e "\nd8Revision: {{ .Edition }}\n" >> /tmp/_config_additional.yml
-        {{ if ne .Edition "CSE" }}
+        {{ if eq .Edition "CSE" }}
+        echo -e "\nAIExport: false\n" >> /tmp/_config_additional.yml
+        {{ else }}
         echo -e "\nAIllmsFileName: embedded-llms.txt\nAIcorpusFileName: embedded-corpus.json\nAIRoot: false\n" >> /tmp/_config_additional.yml
         {{ end }}
 

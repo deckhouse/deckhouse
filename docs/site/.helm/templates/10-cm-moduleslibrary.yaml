@@ -127,8 +127,6 @@ data:
 
         # Search index for embedded modules
         location ~* ^/modules/(search-embedded-modules-index\.json|embedded-corpus\.json|embedded-llms\.txt)$  {
-            set $module "$1";
-            set $module_doc "$2";
             # $channel_name is mapped to $channel_version (see map above)
             set $channel_name "stable";
 

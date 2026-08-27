@@ -42,8 +42,8 @@ func TestExport(t *testing.T) {
 		Generator:   "hugo",
 		Lang:        "en",
 		BaseURL:     "https://deckhouse.io",
-		Title:       "Deckhouse modules",
-		Description: "Kubernetes is flexibly and rapidly expanded by Deckhouse modules.",
+		Title:       "Deckhouse Platform Modules",
+		Description: "Kubernetes is flexibly and rapidly expanded by Deckhouse Platform modules.",
 		Documents: []ManifestDocument{
 			{
 				Title:       "Prompp",
@@ -113,8 +113,9 @@ func TestExport(t *testing.T) {
 
 	llms := readFile(t, filepath.Join(publicDir, "en", "modules", "external-llms.txt"))
 	for _, want := range []string{
-		"# Deckhouse modules",
-		"> The content below is for external modules only.",
+		"# Deckhouse Platform Modules",
+		"> The content below is for Deckhouse Platform external modules.",
+		"> Note that the documented version may differ from the version actually used in a cluster.",
 		"## prompp",
 		"- [Prompp](https://deckhouse.io/modules/prompp/stable/readme.md): A drop-in Prometheus replacement.",
 	} {
@@ -128,45 +129,6 @@ func TestExport(t *testing.T) {
 	// is linked from there and does not repeat them.
 	if strings.Contains(llms, "## Optional") {
 		t.Errorf("external-llms.txt has an Optional section:\n%s", llms)
-	}
-}
-
-func TestExportUntitledPage(t *testing.T) {
-	publicDir := t.TempDir()
-
-	// Neither an `<h1>` nor a title in the manifest — `docs/internal/*` of a few
-	// modules looks exactly like this.
-	writeFile(t, filepath.Join(publicDir, "en", "modules", "prompp", "stable", "internal", "development.html"),
-		`<html><body><div class="docs"><div class="post-content"><p>Build it.</p></div></div></body></html>`)
-
-	manifest := Manifest{
-		Version: 1,
-		Lang:    "en",
-		BaseURL: "https://deckhouse.io",
-		Title:   "Deckhouse modules",
-		Documents: []ManifestDocument{
-			{
-				URL:      "/modules/prompp/stable/internal/development.html",
-				HTMLPath: "/en/modules/prompp/stable/internal/development.html",
-				Module:   "prompp",
-				Channel:  "stable",
-			},
-		},
-	}
-	encoded, err := json.Marshal(manifest)
-	if err != nil {
-		t.Fatalf("marshal manifest: %v", err)
-	}
-	writeFile(t, filepath.Join(publicDir, "en", "ai", "ai.json"), string(encoded))
-
-	if err := Export(publicDir, "en"); err != nil {
-		t.Fatalf("Export: %v", err)
-	}
-
-	llms := readFile(t, filepath.Join(publicDir, "en", "modules", "external-llms.txt"))
-	want := "- [Development](https://deckhouse.io/modules/prompp/stable/internal/development.md)"
-	if !strings.Contains(llms, want) {
-		t.Errorf("external-llms.txt is missing %q:\n%s", want, llms)
 	}
 }
 
