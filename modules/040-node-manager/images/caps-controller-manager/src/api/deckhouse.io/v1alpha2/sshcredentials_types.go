@@ -31,8 +31,10 @@ type SSHCredentialsSpec struct {
 	// A username to connect to the host via SSH.
 	User string `json:"user"`
 	// Private SSH key in PEM format encoded as base64 string.
+	// +crd-enricher:deckhouse:sensitive-data
 	PrivateSSHKey string `json:"privateSSHKey,omitempty"`
 	// Base64 encoded sudo password for the user.
+	// +crd-enricher:deckhouse:sensitive-data
 	SudoPasswordEncoded string `json:"sudoPasswordEncoded,omitempty"`
 
 	//+kubebuilder:default:=22
