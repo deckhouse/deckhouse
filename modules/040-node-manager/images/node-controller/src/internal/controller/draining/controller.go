@@ -106,8 +106,8 @@ func inNodeGroup(obj client.Object) bool {
 
 func stateFromNode(node *corev1.Node) state {
 	return state{
-		requestedBy:   node.Annotations[nodecommon.DrainingAnnotation],
-		recordedFor:   node.Annotations[nodecommon.DrainedAnnotation],
+		requestedBy:   drainSource(node, nodecommon.DrainingAnnotation),
+		recordedFor:   drainSource(node, nodecommon.DrainedAnnotation),
 		unschedulable: node.Spec.Unschedulable,
 	}
 }
