@@ -205,7 +205,7 @@ A namespace itself does not affect preemption: the scheduler compares only pod p
 
 Stateful applications (for example, databases and message queues) store data in memory or persistent volumes (PVC). Protecting them requires a special approach: abruptly destroying a pod without a graceful shutdown can corrupt data, and mass preemption of replicas can make the service unavailable.
 
-For more on protection from eviction, see [Protection from eviction](/products/kubernetes-platform/documentation/v1/admin/configuration/app-scaling/pod-eviction/priority-classes.html#protection-from-eviction). The [Demo of stateful application protection](#demo-of-stateful-application-protection) subsection shows a practical scenario where these mechanisms work together.
+For more on protection from eviction, see [Protecting a pod from eviction](/products/kubernetes-platform/documentation/v1/admin/configuration/app-scaling/pod-eviction/priority-classes.html#protecting-a-pod-from-eviction). The [Demo of stateful application protection](#demo-of-stateful-application-protection) subsection shows a practical scenario where these mechanisms work together.
 
 This example uses a combination of three mechanisms to protect stateful applications:
 

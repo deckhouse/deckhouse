@@ -2,6 +2,9 @@
 title: "Priority classes"
 permalink: en/admin/configuration/app-scaling/pod-eviction/priority-classes.html
 description: "Configure pod priority classes in Deckhouse Kubernetes Platform. Pod eviction policies, resource allocation priorities, and cluster resource management optimization."
+relatedLinks:
+  - title: Using priority classes
+    url: ../../../../user/configuration/app-scaling/priority-classes.html
 ---
 
 Deckhouse Kubernetes Platform (DKP) creates a set of priority classes (PriorityClass) in the cluster and assigns them to its components. Applications can use these classes by setting the `priorityClassName` field. The scheduler takes pod priority into account: if resources are insufficient, pods with lower priority are preempted first.
@@ -10,7 +13,7 @@ For example, if a pod with the `production-low` class cannot be scheduled due to
 
 ## Available priority classes
 
-The table lists the priority classes that DKP creates in the cluster. Choose a class based on the environment and workload criticality.
+The table lists the priority classes that DKP creates in the cluster, in descending priority order (the higher the value, the higher the priority). Choose a class based on the environment and workload criticality.
 
 {% alert level="danger" %}
 Do not use the `system-node-critical`, `system-cluster-critical`, `cluster-medium`, or `cluster-low` priority classes, as they are reserved for critical cluster components.
@@ -32,9 +35,11 @@ Do not use the `system-node-critical`, `system-cluster-critical`, `cluster-mediu
 
 ## Creating additional priority classes
 
-In addition to the classes that DKP creates in the cluster, you can create an additional priority class by specifying a name and a numeric priority value. Assign the class to pods using the `priorityClassName` field.
+In addition to the classes that DKP creates in the cluster, you can create an additional priority class by specifying a name and a numeric priority value.
 
-Create a file `critical-applications.yaml` with the following content — a `critical-applications` priority class with priority `8000`:
+The following example creates the `critical-applications` priority class with priority `8000`. Pods that use this priority class are preempted before pods with the `production-high` priority class (and higher), but after pods with the `cluster-medium` priority class (and lower).
+
+Create a file `critical-applications.yaml` with the following content:
 
 ```yaml
 apiVersion: scheduling.k8s.io/v1
@@ -63,7 +68,7 @@ Apply the manifest to the cluster:
 d8 k apply -f critical-applications.yaml
 ```
 
-Verify that the resource was created:
+Verify that the priority class was created:
 
 ```shell
 d8 k get priorityclass critical-applications
@@ -72,7 +77,7 @@ d8 k get priorityclass critical-applications
 Example output:
 
 ```console
-NAME              VALUE   GLOBAL-DEFAULT   AGE   PREEMPTIONPOLICY
+NAME                    VALUE   GLOBAL-DEFAULT   AGE   PREEMPTIONPOLICY
 critical-applications   8000    false            7s    PreemptLowerPriority
 ```
 
@@ -90,23 +95,23 @@ Preemption does not occur when priorities are equal. If a new pod has the same p
 
 For practical scenarios and step-by-step demonstrations, see [Using priority classes](/products/kubernetes-platform/documentation/v1/user/configuration/app-scaling/priority-classes.html).
 
-### Protection from eviction
+### Protecting a pod from eviction
 
 The only way to protect a pod from preemption is to assign it a sufficiently high priority. However, even with a high priority, the pod will be preempted if another pod with an even higher priority appears in the cluster.
 
 To reduce the risks associated with preemption, combine the following three mechanisms. These mechanisms are universal and apply to any critical applications:
 
-1. A high `priorityClassName` — reduces the likelihood that the pod will be selected for preemption.
-1. PodDisruptionBudget (PDB) — limits how many replicas can be disrupted at the same time. During preemption, the scheduler treats PDB constraints as best-effort rather than strict requirements (unlike planned operations such as draining a node, where PDB is a hard constraint).
+1. Specifying a high-priority class in the `priorityClassName` field — reduces the likelihood that the pod will be selected for preemption.
+1. Using a [PodDisruptionBudget](https://kubernetes.io/docs/tasks/run-application/configure-pdb/) (PDB) — limits how many replicas can be disrupted at the same time. During preemption, the scheduler treats PDB constraints as best-effort rather than strict requirements (unlike planned operations such as draining a node, where PDB is a hard constraint).
 1. `terminationGracePeriodSeconds` — gives the application time to flush buffers and close connections before forced termination. This helps preserve data integrity when a pod must be terminated, including cases where the PDB cannot be honored.
 
 {% alert level="info" %}
 Without the `terminationGracePeriodSeconds` parameter on a pod, an immediate termination may lead to loss of data that was not written to disk and, for example, to database corruption.
 {% endalert %}
 
-### Differences from other resource management mechanisms
+### Differences between priority classes and other resource management mechanisms
 
-Priority classes serve a different purpose from other resource management mechanisms:
+Priority classes (PriorityClass) serve a different purpose from other resource management mechanisms:
 
 | Mechanism | Purpose | Difference from priority classes |
 |-----------|---------|----------------------------------|
