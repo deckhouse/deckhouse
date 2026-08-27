@@ -33,6 +33,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
@@ -351,7 +352,7 @@ func (c *converter) details(el *html.Node) string {
 		content = el
 	}
 
-	return joinNonEmpty("\n\n", "#### "+summary, strings.TrimSpace(c.blocks(content)))
+	return joinBlocks("#### "+summary, strings.TrimSpace(c.blocks(content)))
 }
 
 func (c *converter) nativeDetails(el *html.Node) string {
@@ -367,7 +368,7 @@ func (c *converter) nativeDetails(el *html.Node) string {
 		defer delete(c.skip, summaryNode)
 	}
 
-	return joinNonEmpty("\n\n", "#### "+summary, strings.TrimSpace(c.blocks(el)))
+	return joinBlocks("#### "+summary, strings.TrimSpace(c.blocks(el)))
 }
 
 // tabs renders `div.tabs-block`: a list of tab labels followed by one panel per
@@ -399,10 +400,10 @@ func (c *converter) tabs(el *html.Node) string {
 			label = fmt.Sprintf("Tab %d", i+1)
 		}
 
-		sections = append(sections, joinNonEmpty("\n\n", "#### "+label, strings.TrimSpace(c.blocks(panel))))
+		sections = append(sections, joinBlocks("#### "+label, strings.TrimSpace(c.blocks(panel))))
 	}
 
-	return joinNonEmpty("\n\n", sections...)
+	return joinBlocks(sections...)
 }
 
 // highlight unwraps the Chroma (`div.highlight > table.lntable`) and Rouge
@@ -566,7 +567,7 @@ func (c *converter) resourceItem(li *html.Node) string {
 		parts = append(parts, c.list(nested))
 	}
 
-	return joinNonEmpty("\n\n", parts...)
+	return joinBlocks(parts...)
 }
 
 func resourceName(nameNode *html.Node) string {
@@ -625,7 +626,7 @@ func (c *converter) definitionList(el *html.Node) string {
 		}
 		parts = append(parts, item.definitions...)
 
-		if body := indent(joinNonEmpty("\n\n", parts...), "- "); strings.TrimSpace(body) != "" {
+		if body := indent(joinBlocks(parts...), "- "); strings.TrimSpace(body) != "" {
 			lines = append(lines, body)
 		}
 	}
@@ -784,7 +785,10 @@ func emphasize(text, marker string) string {
 		return text
 	}
 
-	lead := text[:strings.Index(text, trimmed)]
+	// The markers have to hug the text: `** bold **` is not emphasis in
+	// Markdown. Surrounding whitespace is kept, it separates the run from its
+	// neighbours in the paragraph.
+	lead := text[:len(text)-len(strings.TrimLeftFunc(text, unicode.IsSpace))]
 	tail := text[len(lead)+len(trimmed):]
 
 	return lead + marker + trimmed + marker + tail
@@ -1028,7 +1032,9 @@ func quote(lines []string) string {
 	return strings.Join(quoted, "\n")
 }
 
-func joinNonEmpty(separator string, parts ...string) string {
+// joinBlocks joins Markdown blocks with a blank line, dropping the empty ones
+// so that a missing part does not leave a gap behind.
+func joinBlocks(parts ...string) string {
 	kept := make([]string, 0, len(parts))
 	for _, part := range parts {
 		if strings.TrimSpace(part) != "" {
@@ -1036,7 +1042,7 @@ func joinNonEmpty(separator string, parts ...string) string {
 		}
 	}
 
-	return strings.Join(kept, separator)
+	return strings.Join(kept, "\n\n")
 }
 
 // indent prefixes the first line with marker and aligns the rest under it, so

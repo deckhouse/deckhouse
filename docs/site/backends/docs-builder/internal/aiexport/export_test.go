@@ -114,7 +114,7 @@ func TestExport(t *testing.T) {
 	llms := readFile(t, filepath.Join(publicDir, "en", "modules", "external-llms.txt"))
 	for _, want := range []string{
 		"# Deckhouse modules",
-		"> Kubernetes is flexibly and rapidly expanded by Deckhouse modules.",
+		"> The content below is for external modules only.",
 		"## prompp",
 		"- [Prompp](https://deckhouse.io/modules/prompp/stable/readme.md): A drop-in Prometheus replacement.",
 		"## Optional",
