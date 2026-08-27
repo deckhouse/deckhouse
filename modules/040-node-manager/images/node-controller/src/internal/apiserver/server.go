@@ -45,6 +45,9 @@ import (
 
 const serverName = "node-controller-apiserver"
 
+// servingHookName names the post-start hook that reports the server answering.
+const servingHookName = "node-controller-serving"
+
 var (
 	// Scheme holds the types served by the aggregated API server.
 	Scheme = runtime.NewScheme()
@@ -78,6 +81,10 @@ type Options struct {
 	KeyFile  string
 	// Storage is the REST implementation the resource is served from.
 	Storage rest.Storage
+	// Serving is closed once the server answers on BindPort. The pod's readiness
+	// reads it: the APIService routes to every Endpoint, and a replica still
+	// waiting for the kube-apiserver fails discovery for the whole cluster.
+	Serving chan<- struct{}
 }
 
 // configRetryInterval is how long a failed startup lookup waits before the next
@@ -95,6 +102,18 @@ func Run(ctx context.Context, opts Options) error {
 	srv, err := newServer(cfg, opts.Storage)
 	if err != nil {
 		return fmt.Errorf("create apiserver: %w", err)
+	}
+
+	// A post-start hook, not a point in this function: the listener is bound
+	// long before it is served — newConfig opens it on its first attempt and
+	// keeps it across every retry — so only the hook means "answering".
+	if opts.Serving != nil {
+		if err := srv.AddPostStartHook(servingHookName, func(genericapiserver.PostStartHookContext) error {
+			close(opts.Serving)
+			return nil
+		}); err != nil {
+			return fmt.Errorf("register the serving hook: %w", err)
+		}
 	}
 
 	return srv.PrepareRun().RunWithContext(ctx)
