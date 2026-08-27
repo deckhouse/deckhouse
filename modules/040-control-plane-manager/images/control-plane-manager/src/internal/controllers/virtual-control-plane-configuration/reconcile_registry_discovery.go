@@ -27,7 +27,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 const (
@@ -110,14 +109,8 @@ func (r *reconciler) discoverTenantRegistry(ctx context.Context) (*tenantRegistr
 	}, nil
 }
 
-// resolveTenantRegistryData returns deckhouse-registry .data: discovered external upstream if any, else a clone of the parent secret.
-// Discovery errors (incl. Local) are logged and fall back to the parent clone rather than failing the reconcile.
-func (r *reconciler) resolveTenantRegistryData(ctx context.Context, parent *corev1.Secret) map[string][]byte {
-	tr, err := r.discoverTenantRegistry(ctx)
-	if err != nil {
-		logf.FromContext(ctx).Error(err, "discover tenant registry; falling back to parent registry secret (tenant node image pull may fail)")
-		return maps.Clone(parent.Data)
-	}
+// resolveTenantRegistryData returns deckhouse-registry .data: discovered external upstream when tr is set, else a clone of the parent secret.
+func resolveTenantRegistryData(parent *corev1.Secret, tr *tenantRegistry) map[string][]byte {
 	if tr == nil {
 		return maps.Clone(parent.Data)
 	}
