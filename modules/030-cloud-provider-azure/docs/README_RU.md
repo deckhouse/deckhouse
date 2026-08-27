@@ -12,7 +12,7 @@ description: "Управление облачными ресурсами в Deck
   - создаёт балансировщики нагрузки для Service с типом LoadBalancer;
   - актуализирует метаданные узлов кластера и удаляет из Kubernetes узлы, которых больше нет в Azure.
 - Заказ дисков через CSI-драйвер Azure Disk (`disk.csi.azure.com`) и создание StorageClass для типов дисков Azure, чтобы из кластера можно было заказывать PersistentVolume.
-- Заказ базовой инфраструктуры и CloudPermanent-узлов с помощью [Terraform/OpenTofu-провайдера](/products/kubernetes-platform/documentation/v1/architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-azure.html#взаимодействия-модуля) `hashicorp/azurerm`.
+- Заказ базовой инфраструктуры и CloudPermanent-узлов с помощью [Terraform/OpenTofu-провайдера](/products/kubernetes-platform/documentation/v1/architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-azure.html#взаимодействия-модуля) `terraform-provider-azurerm`.
 - Заказ CloudEphemeral-узлов через Machine Controller Manager (MCM). Параметры виртуальных машин задаются в ресурсе [AzureInstanceClass](/modules/cloud-provider-azure/cr.html#azureinstanceclass).
 - Регистрация в модуле [`node-manager`](/modules/node-manager/), чтобы [AzureInstanceClass](/modules/cloud-provider-azure/cr.html#azureinstanceclass) можно было указывать при описании [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 - Автоматическое включение CNI для новых кластеров. По умолчанию используется [`cni-cilium`](/modules/cni-cilium/).

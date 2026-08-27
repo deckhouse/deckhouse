@@ -12,7 +12,7 @@ Features of the `cloud-provider-gcp` module:
   - creates load balancers for Services of the LoadBalancer type;
   - updates cluster node metadata and removes from Kubernetes nodes that no longer exist in GCP.
 - Provisioning disks via the Persistent Disk CSI driver (`pd.csi.storage.gke.io`) and creating StorageClasses for GCP disk types so that PersistentVolumes can be requested from the cluster.
-- Provisioning base infrastructure and CloudPermanent nodes using the [Terraform/OpenTofu provider](/products/kubernetes-platform/documentation/v1/architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-gcp.html#module-interactions) `hashicorp/google`.
+- Provisioning base infrastructure and CloudPermanent nodes using the [Terraform/OpenTofu provider](/products/kubernetes-platform/documentation/v1/architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-gcp.html#module-interactions) `terraform-provider-google`.
 - Provisioning CloudEphemeral nodes via Machine Controller Manager (MCM). Virtual machine parameters are set in the [GCPInstanceClass](/modules/cloud-provider-gcp/cr.html#gcpinstanceclass) resource.
 - Registering with [`node-manager`](/modules/node-manager/) so that [GCPInstanceClass](/modules/cloud-provider-gcp/cr.html#gcpinstanceclass) can be used when describing a [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 - Enabling CNI for new clusters automatically. By default, [`cni-cilium`](/modules/cni-cilium/) is used.

@@ -12,7 +12,7 @@ description: "Управление облачными ресурсами в Deck
   - создаёт Network Load Balancer и целевые группы для Service с типом LoadBalancer;
   - актуализирует метаданные инстансов и узлов Kubernetes и удаляет из Kubernetes узлы, которых больше нет в Yandex Cloud.
 - Заказ дисков через CSI-драйвер Yandex (`yandex.csi.flant.com`) и создание StorageClass для типов дисков Yandex Cloud, чтобы из кластера можно было заказывать PersistentVolume.
-- Заказ базовой инфраструктуры и CloudPermanent-узлов с помощью [Terraform/OpenTofu-провайдера](/products/kubernetes-platform/documentation/v1/architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-yandex.html#взаимодействия-модуля) `yandex-cloud/yandex`.
+- Заказ базовой инфраструктуры и CloudPermanent-узлов с помощью [Terraform/OpenTofu-провайдера](/products/kubernetes-platform/documentation/v1/architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-yandex.html#взаимодействия-модуля) `terraform-provider-yandex`.
 - Заказ CloudEphemeral-узлов через Machine Controller Manager (MCM) или Cluster API (CAPI). Параметры виртуальных машин задаются в ресурсе [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass).
 - Регистрация в модуле [`node-manager`](/modules/node-manager/), чтобы [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass) можно было указывать при описании [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 - Автоматическое включение CNI для новых кластеров. Начиная с DKP 1.76 по умолчанию используется [`cni-cilium`](/modules/cni-cilium/).

@@ -11,7 +11,7 @@ Features of the `cloud-provider-dynamix` module:
   - updates virtual machine and Kubernetes node metadata and removes from Kubernetes nodes that no longer exist in Dynamix;
   - creates load balancers for Services of the LoadBalancer type. The Service must include annotations with the names of the internal and external networks.
 - Provisioning disks via the Dynamix CSI driver (`dynamix.deckhouse.io`) so that PersistentVolumes can be requested from the cluster.
-- Provisioning CloudPermanent nodes using the [Terraform/OpenTofu provider](/products/kubernetes-platform/documentation/v1/architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-dynamix.html#module-interactions) `terraform-provider-decort/decort`.
+- Provisioning CloudPermanent nodes using the [Terraform/OpenTofu provider](/products/kubernetes-platform/documentation/v1/architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-dynamix.html#module-interactions) `terraform-provider-decort`.
 - Provisioning CloudEphemeral nodes via Cluster API (CAPI). Virtual machine parameters are set in the [DynamixInstanceClass](/modules/cloud-provider-dynamix/cr.html#dynamixinstanceclass) resource.
 - Registering with [`node-manager`](/modules/node-manager/) so that [DynamixInstanceClass](/modules/cloud-provider-dynamix/cr.html#dynamixinstanceclass) can be used when describing a [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 - Enabling CNI for new clusters automatically. By default, [`cni-cilium`](/modules/cni-cilium/) is used.

@@ -9,7 +9,7 @@ description: "Управление облачными ресурсами в Deck
 
 - Управление ресурсами zVirt через `cloud-controller-manager`: актуализирует метаданные виртуальных машин и узлов Kubernetes и удаляет из Kubernetes узлы, которых больше нет в zVirt.
 - Заказ дисков через CSI-драйвер zVirt (`csi.ovirt.org`), чтобы из кластера можно было заказывать PersistentVolume.
-- Заказ CloudPermanent-узлов с помощью [Terraform/OpenTofu-провайдера](/products/kubernetes-platform/documentation/v1/architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-zvirt.html#взаимодействия-модуля) `terraform-provider-ovirt/ovirt`.
+- Заказ CloudPermanent-узлов с помощью [Terraform/OpenTofu-провайдера](/products/kubernetes-platform/documentation/v1/architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-zvirt.html#взаимодействия-модуля) `terraform-provider-ovirt`.
 - Заказ CloudEphemeral-узлов через Cluster API (CAPI). Параметры виртуальных машин задаются в ресурсе [ZvirtInstanceClass](/modules/cloud-provider-zvirt/cr.html#zvirtinstanceclass).
 - Регистрация в модуле [`node-manager`](/modules/node-manager/), чтобы [ZvirtInstanceClass](/modules/cloud-provider-zvirt/cr.html#zvirtinstanceclass) можно было указывать при описании [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 - Автоматическое включение CNI для новых кластеров. По умолчанию используется [`cni-cilium`](/modules/cni-cilium/).
