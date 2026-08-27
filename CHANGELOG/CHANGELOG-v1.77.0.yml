@@ -329,6 +329,8 @@ cilium-hubble:
     - summary: Bump the cel-go dependency in the hubble-ui backend to fix known CVEs.
       pull_request: https://github.com/deckhouse/deckhouse/pull/21872
       impact: The cilium-hubble components (hubble-ui, hubble-relay) will restart after the update.
+    - summary: Bumped github.com/cilium/ebpf to v0.22.0 in the Hubble UI backend and relay to fix CVE-2026-10722.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22588
 cloud-provider-aws:
   features:
     - summary: Added oss.yaml files for cloud provider modules.
@@ -701,6 +703,15 @@ cni-cilium:
       impact: The cni-cilium components (cilium agent, operator) will restart after the update.
     - summary: fixed private build
       pull_request: https://github.com/deckhouse/deckhouse/pull/22423
+    - summary: >-
+        Fix agent-wide deadlock in ipcache label injection and a nil-pointer crash in policy cache under
+        identity churn.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22586
+      impact: Cilium agent pods are restarted to apply the fixes.
+    - summary: >-
+        Bumped golang.org/x/mod to v0.40.0 and github.com/cilium/ebpf to v0.22.0 (with an eBPF loader
+        compat patch) to fix CVE-2026-56864, CVE-2026-56865 and CVE-2026-10722.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22588
 cni-flannel:
   features:
     - summary: Fixed securityContext and added SecurityPolicyException
@@ -713,6 +724,10 @@ cni-simple-bridge:
   fixes:
     - summary: Fix simple bridge script to add ip rule for two NICs nodes.
       pull_request: https://github.com/deckhouse/deckhouse/pull/20428
+    - summary: >-
+        Removed the unused pip from the simple-bridge image to fix CVE-2026-1703, CVE-2026-3219, CVE-2026-6357
+        and CVE-2026-8643.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22574
 common:
   features:
     - summary: Added oss.yaml files for cloud provider modules.
@@ -907,6 +922,8 @@ common:
         only reads.
       pull_request: https://github.com/deckhouse/deckhouse/pull/22273
       impact: x-kubernetes-sensitive-data fix will restarts the kube-apiserver (control-plane) component.
+    - summary: Bumped golang.org/x/mod to v0.40.0 in the CoreDNS build to fix CVE-2026-56864 and CVE-2026-56865.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22587
 control-plane-manager:
   features:
     - summary: >-
@@ -2182,6 +2199,10 @@ network-gateway:
     - summary: Fixed user and group in ConfigMap
       pull_request: https://github.com/deckhouse/deckhouse/pull/22296
       impact: network-gateway pod's will be restarted
+    - summary: >-
+        Removed the unused pip from the snat image to fix CVE-2026-1703, CVE-2026-3219, CVE-2026-6357
+        and CVE-2026-8643.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22575
 network-policy-engine:
   features:
     - summary: Fixed securityContext and added SecurityPolicyException
@@ -2190,6 +2211,10 @@ network-policy-engine:
     - summary: Reverted module stage from Deprecated back to General Availability to stop false deprecation
         alerts.
       pull_request: https://github.com/deckhouse/deckhouse/pull/20294
+    - summary: >-
+        Added VEX waivers for unreachable github.com/docker/docker CVEs (CVE-2026-33997, CVE-2026-34040,
+        CVE-2026-41567, CVE-2026-41568, CVE-2026-42306) in the kube-router image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22577
 node-local-dns:
   features:
     - summary: Implemented a new `nodeLocalDns` option to disable IPv6 DNS resolving.
@@ -2203,6 +2228,8 @@ node-local-dns:
     - summary: Bump Go dependencies in the coredns helper image to fix known CVEs.
       pull_request: https://github.com/deckhouse/deckhouse/pull/21871
       impact: The node-local-dns DaemonSet pods will restart after the update.
+    - summary: Bumped golang.org/x/sys to v0.44.0 in the iptables-loop image to fix CVE-2026-39824.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22587
 node-manager:
   features:
     - summary: Add Kyverno Chainsaw e2e tests for fencing-agent deploy and runtime verification.
@@ -2417,6 +2444,8 @@ openvpn:
       pull_request: https://github.com/deckhouse/deckhouse/pull/20671
     - summary: Gateway API certificate manifest is updated to support any cluster issuer.
       pull_request: https://github.com/deckhouse/deckhouse/pull/21407
+    - summary: Bumped golang.org/x/sys to v0.44.0 in the openvpn entrypoint to fix CVE-2026-39824.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22576
 prometheus:
   fixes:
     - summary: >-

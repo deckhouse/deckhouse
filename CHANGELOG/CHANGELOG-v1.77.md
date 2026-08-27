@@ -26,6 +26,7 @@
  - All control plane components will be restarted.
  - All the `ingress-nginx` module Pods will be restarted.
  - Applying this change restarts control-plane components.
+ - Cilium agent pods are restarted to apply the fixes.
  - Cloud provider configuration for DKP clusters deployed in DVP needs to be migrated from ProviderClusterConfiguration to ModuleConfig settings. For migration instructions, refer to "Cluster and Infrastructure" in the DKP FAQ.
  - Containers attached through the `pods/ephemeralcontainers` subresource were not seen by
     the module's webhook, so no policy was evaluated for them: SecurityPolicy, OperationPolicy,
@@ -472,6 +473,8 @@
  - **[cni-cilium]** Bumped Go dependencies in the egress-gateway-agent image to fix known CVEs. [#21558](https://github.com/deckhouse/deckhouse/pull/21558)
     The `egress-gateway-agent` component will be restarted.
  - **[cni-cilium]** Changed default cilium-agent health check port from 9876 to 9879 to avoid conflict with Istio's ControlZ port. [#20348](https://github.com/deckhouse/deckhouse/pull/20348)
+ - **[cni-cilium]** Fix agent-wide deadlock in ipcache label injection and a nil-pointer crash in policy cache under identity churn. [#22586](https://github.com/deckhouse/deckhouse/pull/22586)
+    Cilium agent pods are restarted to apply the fixes.
  - **[cni-cilium]** Fixed CVE-2026-41520 for the cilium-bugtool util. [#20067](https://github.com/deckhouse/deckhouse/pull/20067)
  - **[cni-cilium]** Fixed Cilium agent CPU overload on nodes with many CPUs. [#19903](https://github.com/deckhouse/deckhouse/pull/19903)
  - **[cni-cilium]** Fixed infinite reconciliation of EgressGateway objects and improved status reporting. [#19219](https://github.com/deckhouse/deckhouse/pull/19219)
