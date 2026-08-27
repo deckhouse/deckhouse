@@ -221,6 +221,50 @@ StaticInstance, находящийся в состоянии `Pending` можн�
 
 Необходимо выполнить [очистку узла](#как-вручную-очистить-статический-узел), затем [добавить](#как-добавить-статический-узел-в-кластер-cluster-api-provider-static) узел под управление CAPS.
 
+### Почему SSH-ключ и sudo-пароль в SSHCredentials отображаются как `<omitted>`?
+
+Поля `spec.privateSSHKey`, `spec.sudoPassword` (v1alpha1) и `spec.sudoPasswordEncoded` (v1alpha2) ресурса [`SSHCredentials`](cr.html#sshcredentials) помечены в схеме CRD маркером `x-kubernetes-sensitive-data: true`. В результате `kube-apiserver`:
+
+- заменяет их значения на `<omitted>` в ответах на запросы `get`, `list` и `watch`, если у обратившегося нет прав на субресурс `sshcredentials/sensitive`. Аннотация `kubectl.kubernetes.io/last-applied-configuration`, в которой раньше хранилась копия тех же значений в открытом виде, из таких ответов также вырезается;
+- заменяет их значения на `"******"` во всех событиях аудита, независимо от прав RBAC и уровня аудита;
+- шифрует ресурс в etcd тем же transformer'ом, что и Secret'ы Kubernetes, если включён [параметр `apiserver.encryptionEnabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-encryptionenabled) модуля `control-plane-manager`.
+
+Остальные поля (`user`, `sshPort`, `sshExtraArgs`) и метаданные объекта остаются видимыми всем, кто может читать `sshcredentials`.
+
+Незамаскированные значения доступны контроллеру CAPS (без них он не сможет подключиться по SSH), уровню доступа `SuperAdmin` и группе `kubeadm:cluster-admins`. В частности, роли `d8:manage:infrastructure:viewer` и `d8:manage:infrastructure:manager`, дающие доступ на чтение `sshcredentials`, доступа к SSH-ключу и sudo-паролю **не получают**.
+
+Проверить, может ли учётная запись прочитать незамаскированные значения:
+
+```shell
+d8 k auth can-i get sshcredentials/sensitive --as=<user>
+```
+
+`<omitted>` означает «это значение вам не показывают», а не само значение. Замаскированы обе обслуживаемые версии ресурса, поэтому чтение через эндпоинт `v1alpha1` обходом не является.
+
+### Как изменить ресурс SSHCredentials, не видя его секретов?
+
+Редактирование работает как обычно. При `update` и `patch` `kube-apiserver` подставляет вместо `<omitted>` значение, уже сохранённое в etcd, поэтому `d8 k edit sshcredentials <name>` и сценарий `get -o yaml` → правка → `apply` не затирают SSH-ключ и sudo-пароль подстановочным значением.
+
+Для подстановки нужно прежнее значение, поэтому при `create` она не работает: новый ресурс с `<omitted>` в чувствительном поле отклоняется с ошибкой `422 Invalid`. Для создания `SSHCredentials` нужен настоящий ключ.
+
+### Как зашифровать в etcd уже существующие ресурсы SSHCredentials?
+
+Маскирование в API и в аудите действует для всех ресурсов сразу, включая созданные при первоначальной настройке кластера, — оно выводится из схемы на пути чтения и миграции не требует.
+
+С шифрованием в etcd иначе: оно происходит только при записи объекта. Если включить [параметр `apiserver.encryptionEnabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-encryptionenabled) в кластере, где ресурсы `SSHCredentials` уже есть, они останутся в etcd в открытом виде, пока их не перезапишут. Чтение при этом продолжает работать, поэтому перезапись можно выполнить в любой момент:
+
+```shell
+d8 k get sshcredentials -o json | d8 k replace -f -
+```
+
+Команду безопасно выполнять и от учётной записи без доступа к `sshcredentials/sensitive`: вместо `<omitted>` подставится сохранённое значение, как описано выше.
+
+Чтобы проверить результат, посмотрите префикс значения в etcd с master-узла — он должен быть `k8s:enc:aescbc:v1:secretbox:`:
+
+```shell
+etcdctl get /registry/deckhouse.io/sshcredentials/<name>
+```
+
 ## Как изменить NodeGroup у статического узла?
 
 <span id='как-изменить-nodegroup-у-статичного-узла'><span>

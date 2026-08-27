@@ -266,6 +266,50 @@ You cannot change the IP address in the `StaticInstance` resource. If an incorre
 
 You need to [clean up the node](#how-do-i-clean-up-a-static-node-manually), then [hand over](#how-do-i-add-a-static-node-to-a-cluster-cluster-api-provider-static) the node under CAPS control.
 
+### Why are the SSH key and the sudo password of SSHCredentials shown as `<omitted>`?
+
+The `spec.privateSSHKey`, `spec.sudoPassword` (v1alpha1), and `spec.sudoPasswordEncoded` (v1alpha2) fields of the [`SSHCredentials`](cr.html#sshcredentials) resource are marked in the CRD schema with `x-kubernetes-sensitive-data: true`. As a result, `kube-apiserver`:
+
+- Replaces their values with `<omitted>` in `get`, `list`, and `watch` responses for any caller that has no permissions on the `sshcredentials/sensitive` subresource. The `kubectl.kubernetes.io/last-applied-configuration` annotation, which used to carry the same values in plaintext, is stripped from such responses too.
+- Replaces their values with `"******"` in every audit event, regardless of RBAC permissions and audit level.
+- Encrypts the resource at rest with the same transformer as Kubernetes Secrets, if the [`apiserver.encryptionEnabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-encryptionenabled) parameter of the `control-plane-manager` module is enabled.
+
+The other fields (`user`, `sshPort`, `sshExtraArgs`) and the object metadata stay visible to everyone who can read `sshcredentials`.
+
+Unmasked values are available to the CAPS controller (it needs them to log in over SSH), to the `SuperAdmin` access level, and to the `kubeadm:cluster-admins` group. In particular, the `d8:manage:infrastructure:viewer` and `d8:manage:infrastructure:manager` roles, which grant read access to `sshcredentials`, do **not** get access to the SSH key or the sudo password.
+
+To check whether an account can read the unmasked values:
+
+```shell
+d8 k auth can-i get sshcredentials/sensitive --as=<user>
+```
+
+Read `<omitted>` as "you can't see this value", not as the value itself. Both served versions of the resource are masked, so reading through the `v1alpha1` endpoint is not a way around it.
+
+### How do I edit an SSHCredentials resource without seeing its secrets?
+
+Editing works as usual. On `update` and `patch`, `kube-apiserver` substitutes `<omitted>` with the value already stored in etcd, so `d8 k edit sshcredentials <name>` and the `get -o yaml` → edit → `apply` workflow do not overwrite the SSH key or the sudo password with the placeholder.
+
+The substitution needs a previous value to take from, so it does not work on `create`: a new resource with `<omitted>` in a sensitive field is rejected with `422 Invalid`. Creating an `SSHCredentials` requires the real key.
+
+### How do I encrypt existing SSHCredentials resources in etcd?
+
+Masking in the API and in the audit log applies to all resources immediately, including those created during cluster bootstrap — it is derived from the schema on the read path and needs no migration.
+
+Encryption at rest is different: it only happens when an object is written. If you enable [`apiserver.encryptionEnabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-encryptionenabled) in a cluster that already has `SSHCredentials` resources, those stay in etcd in plaintext until they are rewritten. Reading them keeps working, so the rewrite can be done at any time:
+
+```shell
+d8 k get sshcredentials -o json | d8 k replace -f -
+```
+
+This is safe to run from an account without access to `sshcredentials/sensitive`: `<omitted>` is substituted with the stored value, as described above.
+
+To verify the result, check the value prefix in etcd from a master node — it must be `k8s:enc:aescbc:v1:secretbox:`:
+
+```shell
+etcdctl get /registry/deckhouse.io/sshcredentials/<name>
+```
+
 ## How do I change the NodeGroup of a static node?
 
 Note that if a node is under [CAPS](./#cluster-api-provider-static) control, you **cannot** change the `NodeGroup` membership of such a node. The only alternative is to [delete StaticInstance](#can-i-delete-a-staticinstance) and create a new one.
