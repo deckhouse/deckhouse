@@ -48,7 +48,7 @@ spec:
                   description: |
                     The TrustDomain of the remote cluster.
 
-                    Bound to the remote cluster's root CA in `meshConfig.caCertificates`, so that the peer CA is trusted only for this trust domain and cannot issue identities of the local mesh.
+                    Deckhouse uses this value so that certificates from the remote cluster are trusted only for that remote domain, not for services in the local mesh.
                   pattern: '^[0-9a-zA-Z._-]+$'
                   x-doc-examples: ['cluster.local']
                 metadataEndpoint:
