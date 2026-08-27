@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "urn:deckhouse:vex:3a4f910385960098934503700078170889218760057250688085605068848460",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 4,
+  "version": 5,
   "statements": [
     {
       "vulnerability": {
@@ -96,6 +96,411 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "os.Root symlink following - Уязвимость перехода по символическим ссылкам в os.Root (обход песочницы при финальном компоненте-симлинке и завершающем '/') требует использования приложением API os.Root/OpenRoot. docs-builder не использует os.Root: изоляция путей загрузки и удаления обеспечивается строгим allow-list имён модулей и каналов (регулярное выражение RFC 1123, запрещающее '/', '.' и '..') и проверкой ensureWithinBase (filepath.Rel относительно базового каталога). Уязвимый код os.Root не входит в путь исполнения, поэтому directory traversal для образа недостижим.",
       "timestamp": "2026-07-22T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GHSA-c3wq-j5vh-68rc",
+        "description": "Hugo: Symlink confinement bypass in os.ReadFile"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/gohugoio/hugo@v0.162.1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Symlink confinement bypass в os.ReadFile - Уязвимость связана с регрессией в виртуальной ФС Hugo: RootMappingFs.statRoot вызывает Stat (переход по символическим ссылкам) вместо Lstat, из-за чего прямой поиск (resources.Get / os.ReadFile) по симлинку, размещённому внутри смонтированного каталога, читает содержимое цели за пределами mount'а. Эксплуатация требует, чтобы атакующий смог подложить симлинк внутрь смонтированного каталога (например, локально вендоренной темы в themes/). В docs-builder этого пути нет: рендерится доверенная документация модулей, а не произвольный пользовательский ввод; локальные вендоренные темы с симлинками не используются, а темы, подключаемые как Go-модули, скачиваются со снятыми симлинками. Подконтрольный атакующему симлинк во входных данных отсутствует, поэтому чтение произвольных файлов для образа недостижимо.",
+      "timestamp": "2026-08-24T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GHSA-q76j-gcg9-vxc6",
+        "description": "Hugo: XSS via unescaped code-fence language in default code block renderer"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/gohugoio/hugo@v0.162.1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "XSS через неэкранированный language в code-fence - Штатный code-block renderer Hugo записывает info-string (язык) code-fence в атрибуты class/data-lang обёртки без HTML-экранирования, что позволяет вырваться из атрибута и внедрить <script>. Эксплуатация требует контроля над содержимым рендерируемого Markdown. В docs-builder весь рендерируемый контент доверенный: это документация модулей из исходников, а не произвольный пользовательский ввод. Подконтрольный атакующему info-string во входных данных отсутствует, поэтому XSS для образа недостижим.",
+      "timestamp": "2026-08-24T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-27145",
+        "description": "crypto/x509: Denial of Service via excessive processing of DNS SAN entries"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "crypto/x509 DoS через DNS SAN - Уязвимость проявляется при разборе сертификата с большим числом DNS SAN-записей. Единственное исходящее TLS-соединение docs-builder — к in-cluster Kubernetes API (rest.InClusterConfig, доверенный CA из service account); TLS-сервер не поднимается (net/http слушает по plain HTTP через ListenAndServe, без TLSConfig). Уязвимый код исполняется только при взаимодействии с доверенным пиром, которого атакующий не контролирует, поэтому вредоносный сертификат/TLS-поток во входные данные образа не попадает.",
+      "timestamp": "2026-08-25T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-32280",
+        "description": "crypto/x509, crypto/tls: Denial of Service in certificate chain building"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "crypto/x509 DoS при построении цепочки сертификатов - Уязвимость проявляется при построении цепочки доверия для предъявленного пиром сертификата. Единственное исходящее TLS-соединение docs-builder — к in-cluster Kubernetes API (rest.InClusterConfig, доверенный CA из service account); TLS-сервер не поднимается (net/http слушает по plain HTTP через ListenAndServe, без TLSConfig). Уязвимый код исполняется только при взаимодействии с доверенным пиром, которого атакующий не контролирует, поэтому вредоносный сертификат/TLS-поток во входные данные образа не попадает.",
+      "timestamp": "2026-08-25T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-32281",
+        "description": "crypto/x509: Denial of Service via inefficient certificate chain validation"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "crypto/x509 DoS при валидации цепочки - Уязвимость проявляется при валидации цепочки сертификатов, предъявленной TLS-пиром. Единственное исходящее TLS-соединение docs-builder — к in-cluster Kubernetes API (rest.InClusterConfig, доверенный CA из service account); TLS-сервер не поднимается (net/http слушает по plain HTTP через ListenAndServe, без TLSConfig). Уязвимый код исполняется только при взаимодействии с доверенным пиром, которого атакующий не контролирует, поэтому вредоносный сертификат/TLS-поток во входные данные образа не попадает.",
+      "timestamp": "2026-08-25T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-32283",
+        "description": "crypto/tls: Denial of Service via multiple TLS 1.3 key update messages"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "crypto/tls DoS через key update в TLS 1.3 - Атака требует установленной TLS 1.3-сессии, в которой пир шлёт множественные key update. Единственное исходящее TLS-соединение docs-builder — к in-cluster Kubernetes API (rest.InClusterConfig, доверенный CA из service account); TLS-сервер не поднимается (net/http слушает по plain HTTP через ListenAndServe, без TLSConfig). Уязвимый код исполняется только при взаимодействии с доверенным пиром, которого атакующий не контролирует, поэтому вредоносный сертификат/TLS-поток во входные данные образа не попадает.",
+      "timestamp": "2026-08-25T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56862",
+        "description": "crypto/tls: Denial of Service via indefinite KeyUpdate messages"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "crypto/tls DoS через бесконечные KeyUpdate - Атака требует TLS-пира, непрерывно шлющего KeyUpdate. Единственное исходящее TLS-соединение docs-builder — к in-cluster Kubernetes API (rest.InClusterConfig, доверенный CA из service account); TLS-сервер не поднимается (net/http слушает по plain HTTP через ListenAndServe, без TLSConfig). Уязвимый код исполняется только при взаимодействии с доверенным пиром, которого атакующий не контролирует, поэтому вредоносный сертификат/TLS-поток во входные данные образа не попадает.",
+      "timestamp": "2026-08-25T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33818",
+        "description": "encoding/asn1: Denial of Service via excessive recursion in Unmarshal"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "encoding/asn1 DoS через рекурсию в Unmarshal - В docs-builder encoding/asn1 задействован только транзитивно, при разборе X.509-сертификатов в ходе TLS-рукопожатия. Приложение не выполняет разбор ASN.1 из произвольных данных. Единственное исходящее TLS-соединение docs-builder — к in-cluster Kubernetes API (rest.InClusterConfig, доверенный CA из service account); TLS-сервер не поднимается (net/http слушает по plain HTTP через ListenAndServe, без TLSConfig). Уязвимый код исполняется только при взаимодействии с доверенным пиром, которого атакующий не контролирует, поэтому вредоносный сертификат/TLS-поток во входные данные образа не попадает.",
+      "timestamp": "2026-08-25T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42505",
+        "description": "crypto/tls: Information disclosure in Encrypted Client Hello"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "crypto/tls раскрытие информации в ECH - Encrypted Client Hello в docs-builder не включается (конфигурация TLS по умолчанию, поле EncryptedClientHelloConfigList не задаётся). Единственное исходящее TLS-соединение docs-builder — к in-cluster Kubernetes API (rest.InClusterConfig, доверенный CA из service account); TLS-сервер не поднимается (net/http слушает по plain HTTP через ListenAndServe, без TLSConfig). Уязвимый код исполняется только при взаимодействии с доверенным пиром, которого атакующий не контролирует, поэтому вредоносный сертификат/TLS-поток во входные данные образа не попадает.",
+      "timestamp": "2026-08-25T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56853",
+        "description": "net/http: Unencrypted HTTP/2 (h2c) connections vulnerable to Denial of Service"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "net/http DoS незашифрованного HTTP/2 (h2c) - Уязвимость затрагивает обслуживание HTTP/2 поверх нешифрованного соединения (h2c). docs-builder поднимает обычный HTTP/1.1-сервер (net/http ListenAndServe без TLS и без явного h2c-обработчика golang.org/x/net/http2/h2c), поэтому h2c никогда не согласуется. Уязвимый путь исполнения не задействован.",
+      "timestamp": "2026-08-25T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33814",
+        "description": "net/http/internal/http2: Denial of Service via malformed SETTINGS_MAX_FRAME_SIZE frame"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "HTTP/2 DoS через SETTINGS_MAX_FRAME_SIZE - Обработка HTTP/2-фреймов на стороне сервера не задействована: сервер работает по HTTP/1.1 без TLS, где HTTP/2 не согласуется. HTTP/2 используется только клиентом при обращении к доверенному in-cluster Kubernetes API, некорректный SETTINGS-фрейм от которого не контролируется атакующим.",
+      "timestamp": "2026-08-25T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39820",
+        "description": "net/mail: Denial of Service via crafted email inputs"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "component_not_present",
+      "impact_statement": "net/mail DoS через email-входные данные - Пакет net/mail не входит в собранный бинарь docs-builder (проверено go list -deps: пакет отсутствует в графе зависимостей). Приложение не разбирает email-адреса.",
+      "timestamp": "2026-08-25T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42499",
+        "description": "net/mail: Denial of Service via pathological email address parsing"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "component_not_present",
+      "impact_statement": "net/mail DoS через разбор email-адресов - Пакет net/mail не входит в собранный бинарь docs-builder (проверено go list -deps). Разбор email-адресов в приложении не выполняется.",
+      "timestamp": "2026-08-25T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39836",
+        "description": "net: Denial of Service via NUL byte in Dial and LookupPort on Windows"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "net DoS через NUL-байт (только Windows) - Уязвимый код специфичен для Windows. Образ docs-builder собирается и исполняется под Linux (CGO_ENABLED=0 GOOS=linux, база common/distroless), поэтому Windows-зависимая ветка Dial/LookupPort в путь исполнения не входит.",
+      "timestamp": "2026-08-25T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-32282",
+        "description": "internal/syscall/unix: Root.Chmod can follow symlinks out of the root"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "os.Root.Chmod переход по симлинкам - Уязвимость требует использования приложением API os.Root/OpenRoot (метод Root.Chmod). docs-builder не использует os.Root: изоляция путей загрузки и удаления обеспечивается строгим allow-list имён модулей и каналов (регулярное выражение RFC 1123, запрещающее '/', '.' и '..') и проверкой ensureWithinBase (filepath.Rel относительно базового каталога). Уязвимый код os.Root не входит в путь исполнения.",
+      "timestamp": "2026-08-25T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56858",
+        "description": "html/template: Cross-Site Scripting via pathological input"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "html/template XSS через патологический ввод - html/template задействован транзитивно движком Hugo при рендеринге статической документации. Набор шаблонов (тема) фиксирован и доверен, а контент модулей проходит как экранируемые данные, а не как исходный текст шаблона. Патологический ввод, необходимый для эксплуатации, во входных данных не контролируется атакующим (docs-builder не рендерит произвольные пользовательские шаблоны).",
+      "timestamp": "2026-08-25T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-32289",
+        "description": "html/template: XSS via improper context and brace depth tracking in JS template literals"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "html/template XSS в JS-шаблонных литералах - Уязвимость касается отслеживания контекста внутри JavaScript-шаблонных литералов в шаблонах html/template. Шаблоны (тема Hugo) в docs-builder фиксированы и доверены; атакующий не управляет исходным текстом шаблонов, а рендерится доверенная документация модулей. Уязвимый код не управляется атакующим.",
+      "timestamp": "2026-08-25T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39823",
+        "description": "html/template: XSS via improper URL escaping in meta tag content"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "html/template XSS через URL в meta-теге - Уязвимость требует, чтобы доверенный шаблон подставлял недоверенный URL в content атрибута <meta>. Шаблоны темы Hugo в docs-builder фиксированы и доверены, рендерится документация модулей из исходников. Уязвимый код не управляется атакующим.",
+      "timestamp": "2026-08-25T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39826",
+        "description": "html/template: XSS due to incorrect script tag escaping"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "html/template XSS через экранирование тега script - Уязвимость проявляется при формировании <script>-контекста в шаблонах html/template. Набор шаблонов (тема) в docs-builder фиксирован и доверен, а контент модулей рендерится как экранируемые данные. Уязвимый код не управляется атакующим.",
+      "timestamp": "2026-08-25T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56859",
+        "description": "encoding/xml: Denial of Service via XML decoding recursion depth"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "encoding/xml DoS через глубину рекурсии - encoding/xml присутствует транзитивно (парсеры Hugo). docs-builder принимает на вход tar-архивы с документацией в Markdown/YAML и не декодирует недоверенный XML в процессе сборки. Глубоко вложенный XML во входных данных отсутствует; сборка дополнительно ограничена лимитами ресурсов контейнера с автоперезапуском.",
+      "timestamp": "2026-08-25T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56860",
+        "description": "net/url: Denial of Service from quadratic complexity in path resolution"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "inline_mitigations_already_exist",
+      "impact_statement": "net/url DoS из-за квадратичной сложности - net/url используется при разборе URL входящих запросов. docs-builder — внутренний сервис (ClusterIP, порт 8081), доступный только из кластера от доверенного контроллера Deckhouse, и не публикуется наружу. Потенциальный DoS дополнительно нивелируется жёсткими лимитами ресурсов контейнера и автоматическим перезапуском, что исключает персистентный отказ.",
+      "timestamp": "2026-08-25T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42504",
+        "description": "mime: Denial of Service via maliciously-crafted MIME header"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "inline_mitigations_already_exist",
+      "impact_statement": "mime DoS через MIME-заголовок - Пакет mime задействован транзитивно (net/http). Обработчики docs-builder читают тело запроса напрямую как tar и не разбирают multipart/media-type из недоверенного источника; эндпоинт доступен только внутри кластера от доверенного контроллера. Влияние на доступность ограничено лимитами ресурсов контейнера и автоматическим перезапуском.",
+      "timestamp": "2026-08-25T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42507",
+        "description": "net/textproto: Misleading error messages via input injection"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "inline_mitigations_already_exist",
+      "impact_statement": "net/textproto вводящие в заблуждение ошибки - Последствие уязвимости ограничено формированием обманчивых сообщений об ошибках при разборе заголовков (net/textproto задействован транзитивно через net/http); граница безопасности не нарушается, DoS/RCE отсутствуют. Эндпоинт доступен только внутри кластера от доверенного контроллера Deckhouse.",
+      "timestamp": "2026-08-25T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39825",
+        "description": "net/http/httputil: ReverseProxy forwards hidden query parameters, bypassing security controls"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "httputil.ReverseProxy пересылка скрытых query-параметров - Уязвимость затрагивает httputil.ReverseProxy. docs-builder не выступает обратным прокси и не создаёт ReverseProxy; пакет net/http/httputil присутствует лишь транзитивно (кэш Hugo). Уязвимый код в путь исполнения не входит.",
+      "timestamp": "2026-08-25T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39821",
+        "description": "net/http, golang.org/x/net/idna: Privilege escalation via incorrect Punycode label processing"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "net/idna некорректная обработка Punycode - Эскалация возможна, когда приложение принимает решения доступа на основе имён хостов с Punycode/IDNA-метками. docs-builder не принимает таких решений: единственный исходящий хост — доверенный in-cluster Kubernetes API (адрес из rest.InClusterConfig), а недоверенные имена хостов из запросов для авторизации не используются. Уязвимый код не управляется атакующим.",
+      "timestamp": "2026-08-25T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-32288",
+        "description": "archive/tar: Denial of Service via maliciously-crafted archive"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "inline_mitigations_already_exist",
+      "impact_statement": "archive/tar DoS через вредоносный архив - Пакет archive/tar действительно используется: обработчик загрузки (Service.Upload) читает тело запроса через tar.NewReader. Однако эндпоинт POST /api/v1/doc/{moduleName}/{version} — внутренний (ClusterIP, порт 8081), доступный только из кластера от доверенного контроллера Deckhouse, который и формирует загружаемые tar-архивы из исходников модулей; наружу сервис не публикуется. Потенциальный DoS от патологического архива нивелируется жёсткими лимитами ресурсов контейнера и автоматическим перезапуском (health recovery), что исключает персистентный отказ в обслуживании, повреждение данных или эскалацию привилегий.",
+      "timestamp": "2026-08-25T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33811",
+        "description": "net: Denial of Service via long CNAME response in LookupCNAME (cgo resolver)"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "net DoS через длинный CNAME в LookupCNAME - Уязвимость (double-free памяти C и аварийное завершение при очень длинном CNAME-ответе) проявляется исключительно при использовании cgo-резолвера DNS. Образ docs-builder собирается статически с CGO_ENABLED=0 (GOOS=linux), поэтому используется чистый Go-резолвер, а уязвимый cgo-путь в бинарь не включается. Дополнительно приложение не вызывает net.LookupCNAME. Уязвимый код не входит в путь исполнения.",
+      "timestamp": "2026-08-25T00:00:00Z"
     }
   ],
   "timestamp": "2026-07-22T00:00:00Z"
