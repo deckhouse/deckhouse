@@ -98,7 +98,7 @@ Users can still create namespaces directly (`d8 k create namespace`). Every name
 * the project parameters are filled in from the current state of the namespace, so adopting it changes nothing inside;
 * from then on the project is the source of truth and is edited like any other: deleting the namespace makes the project recreate it.
 
-System namespaces (`d8-*`, `kube-*`, `default`, and anything labeled `heritage: deckhouse`) are never adopted.
+System namespaces (`d8-*`, `kube-*`, `upmeter-*`, `default`, and anything labeled `heritage: deckhouse` or `heritage: upmeter`) are never adopted: they are listed on the virtual `deckhouse` project (except `default`). There is no label that leaves a user namespace without a project. A namespace whose name is longer than 61 characters is also skipped: that is the Project name limit.
 
 ### Isolating a project
 

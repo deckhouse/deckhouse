@@ -41,6 +41,7 @@ import (
 	"controller/internal/helm"
 	"controller/internal/render"
 	rolebinding "controller/internal/rolebinding"
+	"controller/internal/startup"
 	"controller/internal/validate"
 )
 
@@ -84,7 +85,7 @@ func New(client client.Client, helmClient helmClient, logger logr.Logger) *Manag
 	}
 }
 
-func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.WaitGroup) error {
+func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.WaitGroup, migration *startup.Migration) error {
 	m.logger.Info("wait until webhook server start")
 	check := func(ctx context.Context) (bool, error) {
 		if err := checker(&http.Request{}); err != nil {
@@ -100,6 +101,20 @@ func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.
 	m.logger.Info("ensure virtual projects")
 	if err := m.ensureVirtualProjects(ctx); err != nil {
 		return fmt.Errorf("ensure virtual projects: %w", err)
+	}
+
+	// Wait for leftover-project migration so ensureTemplateName cannot persist "simple"
+	// on a template-less Project before Migrate infers the real template and stamps Helm.
+	if err := migration.Wait(ctx); err != nil {
+		return fmt.Errorf("wait for namespace migration: %w", err)
+	}
+
+	// Rebuild virtual-project inventory from the live namespace list. Status is
+	// otherwise only refreshed when a watch event reaches HandleVirtual, and a
+	// deleted namespace can leave a stale name behind (the Project spec does not
+	// change, so a restart alone does not reconcile).
+	if err := m.refreshVirtualProjects(ctx); err != nil {
+		return fmt.Errorf("refresh virtual projects: %w", err)
 	}
 
 	m.logger.Info("the virtual projects ensured")
@@ -123,6 +138,12 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha3.Project) (ctrl.R
 	// namespace.
 	if err := m.ensureTemplateName(ctx, project); err != nil {
 		m.logger.Error(err, "failed to default the project template", "project", project.Name)
+		return ctrl.Result{}, err
+	}
+
+	// Defense in depth: Adopt stamps Helm ownership, but a Project that already existed
+	// (or whose Adopt raced) can still reach the first upgrade without the metadata.
+	if err := helm.StampReleaseOwnership(ctx, m.client, project.Name); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -358,7 +379,8 @@ func (m *Manager) roleViolation(ctx context.Context, name string, enforceAllowLi
 	return "", nil
 }
 
-// HandleVirtual handles virtual project
+// HandleVirtual inventories unowned namespaces onto a virtual project. It does
+// not create, stamp, or recreate namespaces — delete stays delete.
 func (m *Manager) HandleVirtual(ctx context.Context, project *v1alpha3.Project) (ctrl.Result, error) {
 	namespaces := new(corev1.NamespaceList)
 	if err := m.client.List(ctx, namespaces); err != nil {
@@ -367,19 +389,9 @@ func (m *Manager) HandleVirtual(ctx context.Context, project *v1alpha3.Project) 
 	}
 
 	var involvedNamespaces []string
-	for _, namespace := range namespaces.Items {
-		if _, ok := namespace.GetLabels()[v1alpha3.ResourceLabelProject]; ok {
-			continue
-		}
-
-		isDeckhouseNamespace := strings.HasPrefix(namespace.Name, DeckhouseNamespacePrefix) || strings.HasPrefix(namespace.Name, KubernetesNamespacePrefix)
-
-		if project.Name == DeckhouseProjectName && isDeckhouseNamespace {
-			involvedNamespaces = append(involvedNamespaces, namespace.Name)
-		}
-
-		if project.Name == DefaultProjectName && !isDeckhouseNamespace {
-			involvedNamespaces = append(involvedNamespaces, namespace.Name)
+	for i := range namespaces.Items {
+		if VirtualProjectName(&namespaces.Items[i]) == project.Name {
+			involvedNamespaces = append(involvedNamespaces, namespaces.Items[i].Name)
 		}
 	}
 
@@ -390,6 +402,19 @@ func (m *Manager) HandleVirtual(ctx context.Context, project *v1alpha3.Project) 
 
 	m.logger.Info("the virtual project reconciled", "project", project.Name)
 	return ctrl.Result{}, nil
+}
+
+func (m *Manager) refreshVirtualProjects(ctx context.Context) error {
+	for _, name := range []string{DeckhouseProjectName, DefaultProjectName} {
+		project := new(v1alpha3.Project)
+		if err := m.client.Get(ctx, client.ObjectKey{Name: name}, project); err != nil {
+			return fmt.Errorf("get the '%s' virtual project: %w", name, err)
+		}
+		if _, err := m.HandleVirtual(ctx, project); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Delete deletes project`s resources
