@@ -293,9 +293,9 @@ spec:
 
 - **Разрешить доступ во все неймспейсы, кроме системных**. Чтобы разрешить пользователю доступ во все неймспейсы, кроме системных, при создании ClusterAuthorizationRule не указывайте ни `namespaceSelector`, ни `limitNamespaces`, ни `allowAccessToSystemNamespaces`. Перечень системных неймспейсов — в [описании полей CR](cr.html#clusterauthorizationrule-v1-spec-namespaceselector).
 
-> Уровень доступа `SuperAdmin` **не снимает** ограничения по нейспейсам, заданные в параметрах `namespaceSelector` и `limitNamespaces`. При необходимости предоставления доступа ко всем неймспейсам задайте область явно, в том числе через [`namespaceSelector.matchAny`](cr.html#clusterauthorizationrule-v1-spec-namespaceselector).
+> Уровень доступа `SuperAdmin` **не снимает** ограничения по неймспейсам, заданные в параметрах `namespaceSelector` и `limitNamespaces`. При необходимости предоставления доступа ко всем неймспейсам задайте область явно, в том числе через [`namespaceSelector.matchAny`](cr.html#clusterauthorizationrule-v1-spec-namespaceselector).
 
-Если одному субъекту соответствует несколько ресурсов `ClusterAuthorizationRule`, набор разрешённых нейспейсов **объединяется**; эффективный `accessLevel` — **самый сильный** среди всех подходящих правил. Подробнее — в [FAQ](faq.html#что-если-два-clusterauthorizationrules-подходят-для-одного-пользователя).
+Если одному субъекту соответствует несколько ресурсов `ClusterAuthorizationRule`, набор разрешённых неймспейсов **объединяется**; эффективный `accessLevel` — **самый сильный** среди всех подходящих правил. Подробнее — в [FAQ](faq.html#что-если-два-clusterauthorizationrules-подходят-для-одного-пользователя).
 
 {% alert level="warning" %}
 Ограничения по неймспейсам из `ClusterAuthorizationRule` реализованы в цепочке авторизации с вебхуком. Если вебхук недоступен, эти ограничения **не применяются**, пока вебхук снова не станет доступен. Подробнее — в [описании модуля](readme.html#текущая-ролевая-модель).
