@@ -5,7 +5,7 @@ properties:
     default: true
     deprecated: true
     description: |
-      Deprecated and ignored: every namespace outside a project is now adopted into a project of its own, so there is nothing left to allow or prohibit. The parameter is kept for one release so existing ModuleConfigs keep applying, and will be removed in the next one.
+      Deprecated and ignored: every non-system namespace outside a project is now adopted into a project of its own. The parameter is kept for one release so existing ModuleConfigs keep applying, and will be removed in the next one.
 
   highAvailability:
     type: boolean

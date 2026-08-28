@@ -53,6 +53,11 @@ const (
 	ResourceLabelHeritage        = "heritage"
 	ResourceHeritageMultitenancy = "multitenancy-manager"
 	ResourceHeritageDeckhouse    = "deckhouse"
+	ResourceHeritageUpmeter      = "upmeter"
+
+	// ProjectNameMaxLength is the CEL limit on Project.metadata.name. A project and its
+	// main namespace share a name; Kubernetes allows 63 characters, the project CRD caps at 61.
+	ProjectNameMaxLength = 61
 
 	// ResourceLabelManagedBy with value ManagedByController marks objects that the controller
 	// creates from the Project standard fields (administrators, quota). Such objects must not be

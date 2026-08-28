@@ -50,6 +50,7 @@ import (
 	"controller/internal/helm"
 	"controller/internal/jsonpath"
 	"controller/internal/rolebinding"
+	"controller/internal/startup"
 	clusterprojectrolebindingwebhook "controller/internal/webhook/clusterprojectrolebinding"
 	projectwebhook "controller/internal/webhook/project"
 	projectnamespacewebhook "controller/internal/webhook/projectnamespace"
@@ -93,8 +94,10 @@ func main() {
 		fatal(logger, err, "initialize helm client")
 	}
 
+	migration := startup.NewMigration()
+
 	// register project controller
-	if err = projectcontroller.Register(runtimeManager, helmClient, logger); err != nil {
+	if err = projectcontroller.Register(runtimeManager, helmClient, logger, migration); err != nil {
 		fatal(logger, err, "register project controller")
 	}
 
@@ -113,7 +116,7 @@ func main() {
 	}
 
 	// register namespace controller
-	if err = namespacecontroller.Register(runtimeManager, logger); err != nil {
+	if err = namespacecontroller.Register(runtimeManager, logger, migration); err != nil {
 		fatal(logger, err, "register namespace controller")
 	}
 
