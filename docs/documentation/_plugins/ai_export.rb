@@ -3,6 +3,7 @@
 require "digest"
 require "fileutils"
 require "json"
+require "yaml"
 
 require_relative "html_to_markdown"
 require_relative "navigation_helper"
@@ -58,12 +59,19 @@ module Jekyll
     REFERENCE_PAGE_NAMES = /(CONFIGURATION|CR|CLUSTER_CONFIGURATION)(\.ru|_RU)?\.md\z/i.freeze
 
     HEADING_LINE = /\A(\#{1,6})\s+(.*)\z/.freeze
+    # heading() appends the anchor as ` {#id}`; strip it back off before matching
+    # a heading line to the Heading collected during conversion.
+    HEADING_ANCHOR = /\s*\{#[^}]*\}\s*\z/.freeze
     FENCE_START = /\A(`{3,}|~{3,})/.freeze
 
     LANG_PREFIX = %r{\A/(en|ru)}.freeze
     # Embedded module pages are published outside the versioned documentation
     # prefix: `/en/modules/user-authn/` is served as `/modules/user-authn/`.
     MODULE_PREFIX = %r{\A/(en|ru)/modules/}.freeze
+    # The URL templates whose directory links are rewritten to `index.md` — the
+    # documentation and the modules library. A directory whose real index file
+    # is `readme.md` is redirected there by the web server.
+    INDEX_MD_PATH = %r{\A/(?:products/[^/]+/documentation|modules)/}.freeze
 
     class Exporter
       def initialize(site)
@@ -128,11 +136,16 @@ module Jekyll
         markdown = converted.markdown
         return nil if markdown.strip.empty?
 
+        doc = document(page, lang, url, converted)
+
+        # The `.md` carries a frontmatter header; the corpus keeps the bare body
+        # (and hashes it), because every frontmatter field is already a column of
+        # the corpus document — duplicating them would only desync the two.
         md_path = page.destination(@site.dest).sub(/\.html\z/, ".md")
         FileUtils.mkdir_p(File.dirname(md_path))
-        File.write(md_path, "#{markdown}\n")
+        File.write(md_path, "#{frontmatter(doc, lang, url)}#{markdown}\n")
 
-        document(page, lang, url, converted)
+        doc
       rescue StandardError => e
         Jekyll.logger.warn "AI export:", "failed to export #{page.url}: #{e.class}: #{e.message}"
         nil
@@ -149,11 +162,40 @@ module Jekyll
 
       # Root-relative links of the rendered site carry the build-time language
       # prefix (`/en/…`); the published documentation lives under the versioned
-      # documentation prefix instead.
+      # documentation prefix instead. On top of that, an internal link is pointed
+      # at the `.md` twin so an agent following it stays in Markdown.
       def rewrite_link(path)
-        return path unless path.match?(%r{\A/(en|ru)/})
+        head, tail = split_link_tail(path)
+        head = public_path(head) if head.match?(%r{\A/(en|ru)/})
 
-        public_path(path)
+        "#{md_link(head)}#{tail}"
+      end
+
+      # md_link rewrites an internal link to its Markdown twin: `/a/b.html` ->
+      # `/a/b.md`, and a directory `/a/b/` -> `/a/b/index.md`. A directory is
+      # rewritten only under the documentation and modules templates (see
+      # INDEX_MD_PATH); the web server redirects `index.md` to `readme.md` where
+      # a directory actually indexes on `readme.md`. The `.html` rewrite is
+      # unconditional (it keeps a cross-build link — a module page into the
+      # documentation — working); a non-page link (an asset, or an extensionless
+      # path) is left alone.
+      def md_link(path)
+        if path.end_with?("/")
+          path.match?(INDEX_MD_PATH) ? "#{path}index.md" : path
+        elsif path.end_with?(".html")
+          path.sub(/\.html\z/, ".md")
+        else
+          path
+        end
+      end
+
+      # Separates the path from a trailing `?query`/`#fragment` so the path can
+      # be rewritten while the tail is preserved.
+      def split_link_tail(link)
+        index = link.index(/[?#]/)
+        return [link, ""] if index.nil?
+
+        [link[0...index], link[index..]]
       end
 
       def document(page, lang, url, converted)
@@ -172,6 +214,7 @@ module Jekyll
           "breadcrumbs" => breadcrumbs_of(page, lang, module_name),
           "keywords" => keywords_of(page),
           "moduleType" => module_name ? "embedded" : nil,
+          "version" => doc_version,
           "editions" => editions_of(module_name),
           "stage" => stage_of(module_name),
           "searchBoost" => page.data["searchBoost"],
@@ -182,6 +225,37 @@ module Jekyll
         doc["module"] = module_name if module_name
 
         doc
+      end
+
+      # frontmatter is the YAML header prepended to each per-page `.md`: enough
+      # to keep a chunk's provenance once the file is split for retrieval. The
+      # field names match the corpus document, so the two artifacts share one
+      # vocabulary; empty values are dropped so a page without a module or
+      # editions gets a clean header.
+      def frontmatter(doc, lang, url)
+        data = {
+          "title" => doc["title"],
+          "description" => doc["description"],
+          "canonical" => absolute(lang, url),
+          "lang" => lang,
+          "productCode" => PRODUCT_CODE,
+          "version" => doc["version"],
+          "module" => doc["module"],
+          "moduleType" => doc["moduleType"],
+          "editions" => doc["editions"],
+          "stage" => doc["stage"],
+        }
+        data.reject! { |_, value| value.nil? || (value.respond_to?(:empty?) && value.empty?) }
+
+        "#{data.to_yaml}---\n\n"
+      end
+
+      # The documentation version segment of the canonical prefix (`v1`), shared
+      # by every page of a build. Not a module version — the same value labels a
+      # documentation page and an embedded module page of the same build.
+      def doc_version
+        segment = @doc_prefix.split("/").last.to_s
+        segment.match?(/\Av\d+\z/) ? segment : nil
       end
 
       def description_of(page)
@@ -473,7 +547,7 @@ module Jekyll
           next if match.nil?
 
           level = match[1].length
-          text = match[2].strip
+          text = match[2].sub(HEADING_ANCHOR, "").strip
           id = nil
 
           scan_index = cursor

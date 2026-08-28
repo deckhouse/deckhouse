@@ -31,6 +31,8 @@ import (
 	"strings"
 	"unicode"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -101,6 +103,7 @@ type Document struct {
 	Keywords    []string `json:"keywords"`
 	Module      string   `json:"module,omitempty"`
 	ModuleType  string   `json:"moduleType"`
+	Version     string   `json:"version,omitempty"`
 	Editions    []string `json:"editions"`
 	Stage       string   `json:"stage"`
 	Channel     string   `json:"channel,omitempty"`
@@ -248,7 +251,7 @@ func exportPage(publicDir, baseURL string, manifest *Manifest, entry ManifestDoc
 		return nil, fmt.Errorf("read %s: %w", htmlPath, err)
 	}
 
-	page, err := ConvertPage(string(source), Options{BaseURL: baseURL, PageURL: entry.URL})
+	page, err := ConvertPage(string(source), Options{BaseURL: baseURL, PageURL: entry.URL, RewriteLink: mdLink})
 	if err != nil {
 		return nil, fmt.Errorf("convert %s: %w", htmlPath, err)
 	}
@@ -257,11 +260,6 @@ func exportPage(publicDir, baseURL string, manifest *Manifest, entry ManifestDoc
 		logger.Debug("page converted to an empty document", slog.String("html_path", htmlPath))
 
 		return nil, nil
-	}
-
-	mdPath := strings.TrimSuffix(htmlPath, filepath.Ext(htmlPath)) + ".md"
-	if err := os.WriteFile(mdPath, []byte(page.Markdown+"\n"), 0o644); err != nil {
-		return nil, fmt.Errorf("write %s: %w", mdPath, err)
 	}
 
 	title := page.Title
@@ -280,12 +278,40 @@ func exportPage(publicDir, baseURL string, manifest *Manifest, entry ManifestDoc
 			slog.String("url", entry.URL), slog.String("title", title))
 	}
 
+	description := collapseLine(entry.Description)
+	editions := cleanList(entry.Editions)
+
+	// The `.md` carries a frontmatter header; the corpus keeps the bare body
+	// (and hashes it), because every frontmatter field is already a column of
+	// the corpus document — duplicating them would only desync the two.
+	front, err := renderFrontmatter(frontmatter{
+		Title:       title,
+		Description: description,
+		Canonical:   baseURL + entry.URL,
+		Lang:        manifest.Lang,
+		ProductCode: manifest.ProductCode,
+		Version:     entry.Version,
+		Module:      entry.Module,
+		ModuleType:  "external",
+		Channel:     entry.Channel,
+		Editions:    editions,
+		Stage:       entry.Stage,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("frontmatter %s: %w", htmlPath, err)
+	}
+
+	mdPath := strings.TrimSuffix(htmlPath, filepath.Ext(htmlPath)) + ".md"
+	if err := os.WriteFile(mdPath, []byte(front+page.Markdown+"\n"), 0o644); err != nil {
+		return nil, fmt.Errorf("write %s: %w", mdPath, err)
+	}
+
 	id := fmt.Sprintf("%x", sha1.Sum([]byte(entry.URL)))
 
 	return &Document{
 		ID:          id,
 		Title:       title,
-		Description: collapseLine(entry.Description),
+		Description: description,
 		URL:         entry.URL,
 		MdURL:       mdURL(entry.URL),
 		Path:        strings.Trim(strings.TrimSuffix(entry.URL, ".html"), "/"),
@@ -294,7 +320,8 @@ func exportPage(publicDir, baseURL string, manifest *Manifest, entry ManifestDoc
 		Keywords:    cleanList(append(slices.Clone(entry.Keywords), entry.Tags...)),
 		Module:      entry.Module,
 		ModuleType:  "external",
-		Editions:    cleanList(entry.Editions),
+		Version:     entry.Version,
+		Editions:    editions,
 		Stage:       entry.Stage,
 		Channel:     entry.Channel,
 		SearchBoost: entry.SearchBoost,
@@ -302,6 +329,32 @@ func exportPage(publicDir, baseURL string, manifest *Manifest, entry ManifestDoc
 		Markdown:    page.Markdown,
 		Chunks:      chunk(id, entry.URL, title, page.Markdown, page.Headings),
 	}, nil
+}
+
+// frontmatter is the YAML header prepended to each per-page `.md`: enough to
+// keep a chunk's provenance once the file is split for retrieval. The field
+// names match the corpus document, so the two artifacts share one vocabulary.
+type frontmatter struct {
+	Title       string   `yaml:"title"`
+	Description string   `yaml:"description,omitempty"`
+	Canonical   string   `yaml:"canonical"`
+	Lang        string   `yaml:"lang"`
+	ProductCode string   `yaml:"productCode"`
+	Version     string   `yaml:"version,omitempty"`
+	Module      string   `yaml:"module,omitempty"`
+	ModuleType  string   `yaml:"moduleType"`
+	Channel     string   `yaml:"channel,omitempty"`
+	Editions    []string `yaml:"editions,omitempty"`
+	Stage       string   `yaml:"stage,omitempty"`
+}
+
+func renderFrontmatter(front frontmatter) (string, error) {
+	body, err := yaml.Marshal(front)
+	if err != nil {
+		return "", err
+	}
+
+	return "---\n" + string(body) + "---\n\n", nil
 }
 
 // renderLLMsTxt builds the llms.txt-format index: one section per module, in the order
@@ -345,6 +398,54 @@ func mdURL(pageURL string) string {
 	}
 
 	return strings.TrimSuffix(pageURL, path.Ext(pageURL)) + ".md"
+}
+
+// indexMdPath matches the URL templates whose directory links are rewritten to
+// `index.md` — the documentation and the modules library. Kept in sync with
+// `INDEX_MD_PATH` of `_plugins/ai_export.rb`.
+var indexMdPath = regexp.MustCompile(`^/(?:products/[^/]+/documentation|modules)/`)
+
+// mdLink rewrites an internal documentation link to its Markdown twin:
+// `/a/b.html` -> `/a/b.md`, and a directory `/a/b/` -> `/a/b/index.md`. A
+// directory is rewritten only under the documentation and modules templates
+// (see indexMdPath); the web server redirects `index.md` to `readme.md` where a
+// directory actually indexes on `readme.md`. Query and fragment are preserved.
+//
+// The `.html` rewrite is unconditional: a link to a page that has no `.md` (a
+// genuinely HTML-only page, or a page from another build) is rewritten anyway.
+// That keeps cross-build links (an embedded module page linking into the
+// documentation) working and matches the site's redirects; the alternative — a
+// per-build index of exported pages — cannot see the other builds' pages at all.
+func mdLink(link string) string {
+	head, tail := splitLinkTail(link)
+
+	switch {
+	case strings.HasSuffix(head, "/"):
+		if !indexMdPath.MatchString(head) {
+			// A directory outside the documentation and modules space keeps its
+			// HTML URL.
+			return link
+		}
+
+		head += "index.md"
+	case strings.HasSuffix(head, ".html"):
+		head = strings.TrimSuffix(head, ".html") + ".md"
+	default:
+		// Not a page link (an asset, or an extensionless path): leave it alone.
+		return link
+	}
+
+	return head + tail
+}
+
+// splitLinkTail separates the path from a trailing `?query` and/or `#fragment`
+// so the path can be rewritten while the tail is preserved.
+func splitLinkTail(link string) (string, string) {
+	if i := strings.IndexAny(link, "?#"); i >= 0 {
+		return link[:i], link[i:]
+	}
+
+	return link, ""
 }
 
 func collapseLine(text string) string {
@@ -485,7 +586,10 @@ func newChunk(docID, pageURL, anchor string, level int, headingPath []string, ma
 	}
 }
 
-var headingLine = regexp.MustCompile(`^(#{1,6})\s+(.*)$`)
+var (
+	headingLine   = regexp.MustCompile(`^(#{1,6})\s+(.*)$`)
+	headingAnchor = regexp.MustCompile(`\s*\{#[^}]*\}\s*$`)
+)
 
 // scanHeadings locates the heading lines of the Markdown and re-attaches the
 // HTML anchors collected during conversion. Matching is sequential, so a `#`
@@ -520,7 +624,9 @@ func scanHeadings(lines []string, headings []Heading) []headingMark {
 		}
 
 		level := len(match[1])
-		text := strings.TrimSpace(match[2])
+		// heading() appends the anchor as ` {#id}`; strip it back off so the
+		// text matches the Heading collected during conversion.
+		text := strings.TrimSpace(headingAnchor.ReplaceAllString(match[2], ""))
 		id := ""
 
 		for scan := cursor; scan < len(headings); scan++ {

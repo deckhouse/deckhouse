@@ -40,9 +40,36 @@ func TestConvertFragment(t *testing.T) {
 			want: "Default: `false`",
 		},
 		{
-			name: "headings",
+			// The HTML anchor is published as a `{#id}` attribute so an in-page
+			// link resolves in the Markdown too.
+			name: "headings carry their anchor",
 			html: `<h2 id="conf">Configuring</h2><p>Body.</p><h3 id="sub">Sub</h3>`,
-			want: "## Configuring\n\nBody.\n\n### Sub",
+			want: "## Configuring {#conf}\n\nBody.\n\n### Sub {#sub}",
+		},
+		{
+			// The newline is source layout, not content: it must not split the
+			// paragraph. This is the editions badge that used to break across a
+			// line (`> **NOTE:** Available in:` / `> **EE**`).
+			name: "source newlines collapse to spaces",
+			html: "<p>Available in:\n<strong>EE</strong></p>",
+			want: "Available in: **EE**",
+		},
+		{
+			// An explicit `<br>`, unlike a layout newline, is a real line break.
+			name: "br becomes a line break",
+			html: `<p>line one<br>line two</p>`,
+			want: "line one\nline two",
+		},
+		{
+			// A heading cannot hold a line break, so a `<br>` degrades to a space.
+			name: "br in a heading degrades to a space",
+			html: `<h2 id="x">a<br>b</h2>`,
+			want: "## a b {#x}",
+		},
+		{
+			name: "alert stays on one line across source newlines",
+			html: "<div class=\"info alert__wrap\"><div><p>Available in:\n<strong>EE</strong></p></div></div>",
+			want: "> **NOTE:** Available in: **EE**",
 		},
 		{
 			name: "alert",
@@ -165,7 +192,7 @@ func TestConvertPage(t *testing.T) {
 
 	// Everything outside `div.post-content` — breadcrumbs, `.tags`, the
 	// related-links block — is left out.
-	want := "# Prompp\n\n> **NOTE:** Available in CE.\n\n## Usage\n\nEnable it.\n\n### Notes\n\nMore."
+	want := "# Prompp\n\n> **NOTE:** Available in CE.\n\n## Usage {#usage}\n\nEnable it.\n\n### Notes {#notes}\n\nMore."
 	if page.Markdown != want {
 		t.Errorf("markdown:\ngot:\n%s\n\nwant:\n%s", page.Markdown, want)
 	}

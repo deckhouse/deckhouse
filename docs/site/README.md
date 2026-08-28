@@ -692,6 +692,12 @@ Alongside the HTML, every build publishes the same content in a form an LLM agen
 
 The exports are built from the *rendered* HTML, not from the source Markdown: includes, shortcodes and the OpenAPI schemas rendered by `render-jsonschema.rb` are already expanded there, and an agent gets the page as a reader sees it.
 
+Each `.md` is made to stand on its own, so it can be read — or split into chunks — without ever going back to the HTML:
+
+- a **YAML frontmatter** header carries the page's provenance (`title`, `canonical`, `lang`, `productCode`, and, when they apply, `version`, `module`, `moduleType`, `channel`, `editions`, `stage`). The field names match the `corpus.json` document, so the two artifacts share one vocabulary. The corpus keeps the bare body (and hashes it); the frontmatter fields are already columns there, so they are not repeated inside its `markdown`.
+- **internal links point at the `.md` twin** of the target page: `…/faq.html` → `…/faq.md`, and a directory link `…/foo/` → `…/foo/index.md`. This applies to same-site links whether they are root-relative or written out in full (`https://deckhouse.io/…`); links to other hosts are left alone. The rewrite is unconditional (it does not check that the target `.md` exists), which is what keeps a link from one build into another — an embedded module page into the documentation — working. The directory → `index.md` step relies on the web server to redirect `index.md` → `readme.md` where a directory indexes on `readme.md`. Both generators apply it under the documentation and modules templates (`/products/*/documentation/` and `/modules/`), leaving any other directory link (e.g. `/downloads/…/`) on its HTML URL.
+- **headings carry their HTML anchor** as a kramdown/Pandoc attribute (`## Title {#id}`), so an in-page link (`cr.md#customresourcedefinition`) resolves. The text alone is not enough — for Cyrillic the HTML slug is not what a Markdown renderer would derive.
+
 ### What is published where
 
 | Content | Generator | Files |

@@ -80,8 +80,33 @@ func TestExport(t *testing.T) {
 	}
 
 	markdown := readFile(t, filepath.Join(publicDir, "en", "modules", "prompp", "stable", "readme.md"))
-	if want := "# Prompp\n\nFast Prometheus.\n\n## Usage\n\nEnable it.\n"; markdown != want {
-		t.Errorf("readme.md:\ngot:\n%s\nwant:\n%s", markdown, want)
+
+	front, body, ok := strings.Cut(markdown, "---\n\n")
+	if !ok {
+		t.Fatalf("readme.md has no frontmatter delimiter:\n%s", markdown)
+	}
+
+	// The heading keeps its HTML anchor as a `{#id}` attribute.
+	if want := "# Prompp\n\nFast Prometheus.\n\n## Usage {#usage}\n\nEnable it.\n"; body != want {
+		t.Errorf("readme.md body:\ngot:\n%s\nwant:\n%s", body, want)
+	}
+
+	for _, want := range []string{
+		"---\ntitle: Prompp",
+		"description: A drop-in Prometheus replacement.",
+		"canonical: https://deckhouse.io/modules/prompp/stable/readme.html",
+		"lang: en",
+		"productCode: external-modules",
+		"version: v1.2.3",
+		"module: prompp",
+		"moduleType: external",
+		"channel: stable",
+		"- ce",
+		"stage: General Availability",
+	} {
+		if !strings.Contains(front, want) {
+			t.Errorf("readme.md frontmatter is missing %q:\n%s", want, front)
+		}
 	}
 
 	var corpus Corpus
@@ -103,6 +128,9 @@ func TestExport(t *testing.T) {
 	if document.ModuleType != "external" || document.Channel != "stable" {
 		t.Errorf("moduleType = %q, channel = %q", document.ModuleType, document.Channel)
 	}
+	if document.Version != "v1.2.3" {
+		t.Errorf("version = %q", document.Version)
+	}
 	if want := []string{"prometheus", "monitoring"}; !equalStrings(document.Keywords, want) {
 		t.Errorf("keywords = %#v, want %#v", document.Keywords, want)
 	}
@@ -110,7 +138,12 @@ func TestExport(t *testing.T) {
 		t.Errorf("contentHash = %q", document.ContentHash)
 	}
 	if len(document.Chunks) != 2 {
-		t.Errorf("got %d chunks, want 2", len(document.Chunks))
+		t.Fatalf("got %d chunks, want 2", len(document.Chunks))
+	}
+	// The `{#usage}` attribute must not stop scanHeadings from re-attaching the
+	// anchor to the H2 chunk — that anchor is why headings carry the id at all.
+	if document.Chunks[1].Anchor != "usage" {
+		t.Errorf("H2 chunk anchor = %q, want %q", document.Chunks[1].Anchor, "usage")
 	}
 
 	llms := readFile(t, filepath.Join(publicDir, "en", "modules", "external-llms.txt"))
@@ -131,6 +164,64 @@ func TestExport(t *testing.T) {
 	// is linked from there and does not repeat them.
 	if strings.Contains(llms, "## Optional") {
 		t.Errorf("external-llms.txt has an Optional section:\n%s", llms)
+	}
+}
+
+func TestExportRewritesInternalLinks(t *testing.T) {
+	publicDir := t.TempDir()
+
+	writeFile(t, filepath.Join(publicDir, "en", "modules", "demo", "stable", "readme.html"),
+		`<html><body><div class="post-content"><p>`+
+			`<a href="/modules/demo/stable/cr.html">CR</a> `+
+			`<a href="/modules/other/stable/">Other</a> `+
+			`<a href="/modules/demo/stable/cr.html#config">Config</a> `+
+			`<a href="https://deckhouse.io/products/kubernetes-platform/documentation/v1/architecture/versioning/">Versioning</a> `+
+			`<a href="https://deckhouse.io/products/kubernetes-platform/documentation/v1/user/web/ui.html">UI</a> `+
+			`<a href="https://example.com/guide/">External</a> `+
+			`<a href="/downloads/deckhouse-cli/">Downloads</a> `+
+			`<a href="/images/logo.png">Logo</a>`+
+			`</p></div></body></html>`)
+
+	manifest := Manifest{
+		Version: 1, Lang: "en", BaseURL: "https://deckhouse.io", Title: "Modules",
+		Documents: []ManifestDocument{
+			{Title: "Demo", URL: "/modules/demo/stable/readme.html", HTMLPath: "/en/modules/demo/stable/readme.html", Module: "demo"},
+		},
+	}
+	encoded, err := json.Marshal(manifest)
+	if err != nil {
+		t.Fatalf("marshal manifest: %v", err)
+	}
+	writeFile(t, filepath.Join(publicDir, "en", "ai", "ai.json"), string(encoded))
+
+	if err := Export(publicDir, "en", log.NewNop()); err != nil {
+		t.Fatalf("Export: %v", err)
+	}
+
+	markdown := readFile(t, filepath.Join(publicDir, "en", "modules", "demo", "stable", "readme.md"))
+
+	for _, want := range []string{
+		// A plain root-relative `.html` target.
+		"(https://deckhouse.io/modules/demo/stable/cr.md)",
+		// A directory always resolves to index.md (the server redirects to
+		// readme.md where the real index file has that name).
+		"(https://deckhouse.io/modules/other/stable/index.md)",
+		// Fragment is preserved.
+		"(https://deckhouse.io/modules/demo/stable/cr.md#config)",
+		// A same-site link written absolute is still rewritten — directory form.
+		"(https://deckhouse.io/products/kubernetes-platform/documentation/v1/architecture/versioning/index.md)",
+		// ...and .html form.
+		"(https://deckhouse.io/products/kubernetes-platform/documentation/v1/user/web/ui.md)",
+		// A link to another host is left untouched.
+		"(https://example.com/guide/)",
+		// A directory outside the documentation and modules space keeps its HTML URL.
+		"(https://deckhouse.io/downloads/deckhouse-cli/)",
+		// A non-page asset is left untouched.
+		"(https://deckhouse.io/images/logo.png)",
+	} {
+		if !strings.Contains(markdown, want) {
+			t.Errorf("readme.md is missing link %q:\n%s", want, markdown)
+		}
 	}
 }
 
