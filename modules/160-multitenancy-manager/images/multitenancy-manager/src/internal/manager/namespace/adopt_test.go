@@ -164,6 +164,7 @@ func TestPodSecurityProfile(t *testing.T) {
 func TestFilterUserMeta(t *testing.T) {
 	got := filterUserMeta(map[string]string{
 		"team":                         "blue",
+		"heritageSomething":            "keep",
 		v1alpha3.ResourceLabelProject:  "foo",
 		v1alpha3.ResourceLabelHeritage: v1alpha3.ResourceHeritageMultitenancy,
 		"kubernetes.io/metadata.name":  "foo",
@@ -172,7 +173,7 @@ func TestFilterUserMeta(t *testing.T) {
 		labelExtendedMonitoring:        "",
 		labelSecurityScanning:          "",
 	})
-	assert.Equal(t, map[string]string{"team": "blue"}, got)
+	assert.Equal(t, map[string]string{"team": "blue", "heritageSomething": "keep"}, got)
 }
 
 func TestFilterUserMeta_NilWhenNothingLeft(t *testing.T) {

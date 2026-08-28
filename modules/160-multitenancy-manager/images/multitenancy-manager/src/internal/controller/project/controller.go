@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"strings"
 	"sync"
 	"time"
 
@@ -31,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -42,11 +42,12 @@ import (
 	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/helm"
 	projectmanager "controller/internal/manager/project"
+	"controller/internal/startup"
 )
 
 const controllerName = "d8-project-controller"
 
-func Register(runtimeManager manager.Manager, helmClient *helm.Client, logger logr.Logger) error {
+func Register(runtimeManager manager.Manager, helmClient *helm.Client, logger logr.Logger, migration *startup.Migration) error {
 	r := &reconciler{
 		init:    new(sync.WaitGroup),
 		logger:  logger.WithName(controllerName),
@@ -70,7 +71,7 @@ func Register(runtimeManager manager.Manager, helmClient *helm.Client, logger lo
 				return true
 			},
 			func() error {
-				return r.manager.Init(ctx, runtimeManager.GetWebhookServer().StartedChecker(), r.init)
+				return r.manager.Init(ctx, runtimeManager.GetWebhookServer().StartedChecker(), r.init, migration)
 			},
 		)
 	})); err != nil {
@@ -84,28 +85,14 @@ func Register(runtimeManager manager.Manager, helmClient *helm.Client, logger lo
 
 	r.logger.Info("initialize project controller")
 	return ctrl.NewControllerManagedBy(runtimeManager).
-		For(&v1alpha3.Project{}).
-		WithEventFilter(predicate.Or[client.Object](
+		For(&v1alpha3.Project{}, builder.WithPredicates(predicate.Or(
 			predicate.AnnotationChangedPredicate{},
 			predicate.GenerationChangedPredicate{},
-			customPredicate[client.Object]{logger: logger})).
-		Watches(&corev1.Namespace{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, object client.Object) []reconcile.Request {
-			// an additional namespace of a real project (owned, but not the main namespace) appeared
-			// or disappeared: re-reconcile that project so status.namespaces is refreshed, which in
-			// turn re-fans-out the PRB/CPRB RoleBindings into (or out of) the namespace.
-			if proj, ok := object.GetLabels()[v1alpha3.ResourceLabelProject]; ok && object.GetName() != proj {
-				return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: proj}}}
-			}
-			if _, ok := object.GetLabels()[v1alpha3.ResourceLabelTemplate]; ok {
-				return nil
-			}
-			if strings.HasPrefix(object.GetName(), projectmanager.KubernetesNamespacePrefix) || strings.HasPrefix(object.GetName(), projectmanager.DeckhouseNamespacePrefix) {
-				return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: projectmanager.DeckhouseProjectName}}}
-			}
-			return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: projectmanager.DefaultProjectName}}}
-		})).
+			customPredicate[client.Object]{logger: logger},
+		))).
+		Watches(&corev1.Namespace{}, handler.EnqueueRequestsFromMapFunc(enqueueProjectForNamespace),
+			builder.WithPredicates(namespaceWatchPredicate{})).
 		Watches(&corev1.ResourceQuota{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, object client.Object) []reconcile.Request {
-			// only the controller-managed project quota triggers a project re-reconcile (to refresh status.usage)
 			if object.GetName() != v1alpha3.ProjectQuotaName {
 				return nil
 			}
@@ -116,6 +103,42 @@ func Register(runtimeManager manager.Manager, helmClient *helm.Client, logger lo
 			return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: project}}}
 		})).
 		Complete(projectController)
+}
+
+// enqueueProjectForNamespace wakes the owning real project and/or the virtual
+// project that inventories unowned namespaces. A deleted ns without a project
+// label must refresh virtual status or the inventory keeps a dead name.
+func enqueueProjectForNamespace(_ context.Context, object client.Object) []reconcile.Request {
+	var reqs []reconcile.Request
+	if proj, ok := object.GetLabels()[v1alpha3.ResourceLabelProject]; ok {
+		reqs = append(reqs, reconcile.Request{NamespacedName: client.ObjectKey{Name: proj}})
+	}
+	if virtual := projectmanager.VirtualProjectName(object); virtual != "" {
+		reqs = append(reqs, reconcile.Request{NamespacedName: client.ObjectKey{Name: virtual}})
+	}
+	return reqs
+}
+
+type namespaceWatchPredicate struct {
+	predicate.Funcs
+}
+
+func (namespaceWatchPredicate) Create(event.CreateEvent) bool { return true }
+
+func (namespaceWatchPredicate) Delete(event.DeleteEvent) bool { return true }
+
+func (namespaceWatchPredicate) Update(e event.UpdateEvent) bool {
+	if e.ObjectOld == nil || e.ObjectNew == nil {
+		return false
+	}
+	if !e.ObjectNew.GetDeletionTimestamp().IsZero() {
+		return true
+	}
+	oldProject := e.ObjectOld.GetLabels()[v1alpha3.ResourceLabelProject]
+	newProject := e.ObjectNew.GetLabels()[v1alpha3.ResourceLabelProject]
+	oldHeritage := e.ObjectOld.GetLabels()[v1alpha3.ResourceLabelHeritage]
+	newHeritage := e.ObjectNew.GetLabels()[v1alpha3.ResourceLabelHeritage]
+	return oldProject != newProject || oldHeritage != newHeritage
 }
 
 var _ reconcile.Reconciler = &reconciler{}

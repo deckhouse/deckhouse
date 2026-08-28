@@ -136,21 +136,25 @@ func namespaceMeta(namespace *corev1.Namespace) map[string]any {
 	return meta
 }
 
-// managedMetaPrefixes are the label/annotation key prefixes (or exact keys) owned by the platform.
-// They are never mirrored into the project parameters: the controller applies them itself, and the
-// three template-rendered labels are already represented by their own parameters, so mirroring them
-// as well would let a stale copy fight the parameter.
-var managedMetaPrefixes = []string{
-	"projects.deckhouse.io/",
-	"multitenancy.deckhouse.io/",
+// managedMetaExact are platform-owned keys that must match in full. "heritage" is one of them:
+// a HasPrefix match would also strip user keys such as heritageSomething.
+var managedMetaExact = []string{
 	"heritage",
 	"app.kubernetes.io/managed-by",
 	"kubernetes.io/metadata.name",
-	"meta.helm.sh/",
-	"kubectl.kubernetes.io/",
 	labelPodPolicy,
 	labelExtendedMonitoring,
 	labelSecurityScanning,
+}
+
+// managedMetaPrefixes are platform-owned key prefixes that are never mirrored into project
+// parameters. The controller applies them itself, and the three template-rendered labels are
+// already represented by their own parameters.
+var managedMetaPrefixes = []string{
+	"projects.deckhouse.io/",
+	"multitenancy.deckhouse.io/",
+	"meta.helm.sh/",
+	"kubectl.kubernetes.io/",
 }
 
 func filterUserMeta(in map[string]string) map[string]string {
@@ -159,21 +163,29 @@ func filterUserMeta(in map[string]string) map[string]string {
 	}
 	out := make(map[string]string, len(in))
 	for k, v := range in {
-		managed := false
-		for _, prefix := range managedMetaPrefixes {
-			if k == prefix || strings.HasPrefix(k, prefix) {
-				managed = true
-				break
-			}
+		if isManagedMeta(k) {
+			continue
 		}
-		if !managed {
-			out[k] = v
-		}
+		out[k] = v
 	}
 	if len(out) == 0 {
 		return nil
 	}
 	return out
+}
+
+func isManagedMeta(key string) bool {
+	for _, exact := range managedMetaExact {
+		if key == exact {
+			return true
+		}
+	}
+	for _, prefix := range managedMetaPrefixes {
+		if strings.HasPrefix(key, prefix) {
+			return true
+		}
+	}
+	return false
 }
 
 func toAnyMap(in map[string]string) map[string]any {

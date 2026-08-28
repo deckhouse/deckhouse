@@ -39,6 +39,10 @@ func (m *Manager) updateVirtualProject(ctx context.Context, project *v1alpha3.Pr
 		if err := m.client.Get(ctx, client.ObjectKey{Name: project.Name}, project); err != nil {
 			return fmt.Errorf("get the '%s' project: %w", project.Name, err)
 		}
+		if sameVirtualNamespaces(project.Status.Namespaces, namespaces) &&
+			project.Status.State == v1alpha3.ProjectStateDeployed {
+			return nil
+		}
 		project.Status.Conditions = nil
 		project.Status.Namespaces = namespaceStatuses
 		project.Status.TemplateGeneration = 1
@@ -46,6 +50,22 @@ func (m *Manager) updateVirtualProject(ctx context.Context, project *v1alpha3.Pr
 		project.Status.State = v1alpha3.ProjectStateDeployed
 		return m.client.Status().Update(ctx, project)
 	})
+}
+
+func sameVirtualNamespaces(have []v1alpha3.NamespaceStatus, want []string) bool {
+	if len(have) != len(want) {
+		return false
+	}
+	seen := make(map[string]struct{}, len(have))
+	for _, ns := range have {
+		seen[ns.Name] = struct{}{}
+	}
+	for _, name := range want {
+		if _, ok := seen[name]; !ok {
+			return false
+		}
+	}
+	return true
 }
 
 func (m *Manager) ensureVirtualProjects(ctx context.Context) error {

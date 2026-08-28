@@ -299,3 +299,49 @@ func TestApplyTemplateRolesCondition(t *testing.T) {
 		assert.Less(t, strings.Index(cond.Message, `"a"`), strings.Index(cond.Message, `"b"`))
 	})
 }
+
+func TestEnsureTemplateName(t *testing.T) {
+	t.Run("empty string becomes simple", func(t *testing.T) {
+		project := &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: "proj"}}
+		m, c := newManager(t, project)
+		require.NoError(t, m.ensureTemplateName(context.Background(), project))
+		assert.Equal(t, MinimalTemplate, project.Spec.ProjectTemplateName)
+
+		got := new(v1alpha3.Project)
+		require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "proj"}, got))
+		assert.Equal(t, MinimalTemplate, got.Spec.ProjectTemplateName)
+	})
+
+	t.Run("existing template is left alone", func(t *testing.T) {
+		project := &v1alpha3.Project{
+			ObjectMeta: metav1.ObjectMeta{Name: "proj"},
+			Spec:       v1alpha3.ProjectSpec{ProjectTemplateName: "secure"},
+		}
+		m, c := newManager(t, project)
+		before := new(v1alpha3.Project)
+		require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "proj"}, before))
+
+		require.NoError(t, m.ensureTemplateName(context.Background(), project))
+		assert.Equal(t, "secure", project.Spec.ProjectTemplateName)
+
+		got := new(v1alpha3.Project)
+		require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "proj"}, got))
+		assert.Equal(t, before.ResourceVersion, got.ResourceVersion)
+	})
+
+	t.Run("virtual project is skipped", func(t *testing.T) {
+		project := &v1alpha3.Project{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "deckhouse",
+				Labels: map[string]string{v1alpha3.ProjectLabelVirtualProject: "true"},
+			},
+		}
+		m, c := newManager(t, project)
+		require.NoError(t, m.ensureTemplateName(context.Background(), project))
+		assert.Empty(t, project.Spec.ProjectTemplateName)
+
+		got := new(v1alpha3.Project)
+		require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "deckhouse"}, got))
+		assert.Empty(t, got.Spec.ProjectTemplateName)
+	})
+}
