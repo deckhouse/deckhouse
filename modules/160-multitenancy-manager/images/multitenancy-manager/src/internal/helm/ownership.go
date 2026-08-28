@@ -55,21 +55,23 @@ func ApplyReleaseOwnership(ns *corev1.Namespace, releaseName string) bool {
 
 // StampReleaseOwnership writes the labels and annotations Helm requires to take over a
 // Namespace it did not create. Without them the project release fails with an ownership
-// conflict. A missing or terminating namespace is a no-op: there is nothing to stamp.
-func StampReleaseOwnership(ctx context.Context, c client.Client, releaseName string) error {
+// conflict. projectName is the namespace name (and the Project name); the Helm
+// release-name annotation is ReleaseName(projectName), which may be shorter than 53
+// characters. A missing or terminating namespace is a no-op: there is nothing to stamp.
+func StampReleaseOwnership(ctx context.Context, c client.Client, projectName string) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		namespace := new(corev1.Namespace)
-		if err := c.Get(ctx, client.ObjectKey{Name: releaseName}, namespace); err != nil {
+		if err := c.Get(ctx, client.ObjectKey{Name: projectName}, namespace); err != nil {
 			if apierrors.IsNotFound(err) {
 				return nil
 			}
-			return fmt.Errorf("get the '%s' namespace: %w", releaseName, err)
+			return fmt.Errorf("get the '%s' namespace: %w", projectName, err)
 		}
-		if !ApplyReleaseOwnership(namespace, releaseName) {
+		if !ApplyReleaseOwnership(namespace, ReleaseName(projectName)) {
 			return nil
 		}
 		if err := c.Update(ctx, namespace); err != nil {
-			return fmt.Errorf("stamp helm ownership on the '%s' namespace: %w", releaseName, err)
+			return fmt.Errorf("stamp helm ownership on the '%s' namespace: %w", projectName, err)
 		}
 		return nil
 	})

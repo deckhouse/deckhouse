@@ -18,6 +18,7 @@ package namespace
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -120,6 +121,22 @@ func TestAdopt_StampsHelmWhenProjectExists(t *testing.T) {
 	assert.Equal(t, helm.ManagedByHelm, updated.Labels[helm.ResourceLabelManagedBy])
 	assert.Equal(t, "bar", updated.Annotations[helm.ResourceAnnotationReleaseName])
 	assert.Equal(t, "", updated.Annotations[helm.ResourceAnnotationReleaseNamespace])
+}
+
+func TestAdopt_StampsTruncatedHelmReleaseName(t *testing.T) {
+	name := "t-mtm61-" + strings.Repeat("x", 53)
+	require.Equal(t, 61, len(name))
+	ns := namespace(name, nil, nil)
+	m, c := newManager(t, ns)
+
+	_, err := m.Adopt(context.Background(), ns)
+	require.NoError(t, err)
+
+	updated := new(corev1.Namespace)
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: name}, updated))
+	rel := helm.ReleaseName(name)
+	assert.NotEqual(t, name, rel)
+	assert.Equal(t, rel, updated.Annotations[helm.ResourceAnnotationReleaseName])
 }
 
 func TestAdopt_Idempotent(t *testing.T) {

@@ -577,18 +577,18 @@ func TestReleaseName(t *testing.T) {
 	for _, tt := range passthrough {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			assert.Equal(t, tt.project, releaseName(tt.project))
+			assert.Equal(t, tt.project, ReleaseName(tt.project))
 		})
 	}
 
 	// A name above the limit is shortened to a valid, deterministic, <=53-char release name.
 	long := "t-" + strings.Repeat("z", 59) // 61 chars, above the 53 limit
-	got := releaseName(long)
+	got := ReleaseName(long)
 	assert.LessOrEqual(t, len(got), helmReleaseNameMaxLen, "release name must fit Helm's limit")
-	assert.Equal(t, got, releaseName(long), "release name must be deterministic")
+	assert.Equal(t, got, ReleaseName(long), "release name must be deterministic")
 	assert.Regexp(t, `^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`, got, "must be a valid Helm release name")
 
 	// Distinct long names map to distinct release names (the suffix hashes the full name).
 	other := "t-" + strings.Repeat("y", 59)
-	assert.NotEqual(t, releaseName(long), releaseName(other))
+	assert.NotEqual(t, ReleaseName(long), ReleaseName(other))
 }

@@ -197,9 +197,9 @@ func (c *Client) release(ctx context.Context, project *v1alpha3.Project, ch *cha
 	}
 
 	// The Helm release name is derived from the project name: it equals the project name when it fits
-	// Helm's 53-char limit and is deterministically shortened otherwise (see releaseName). The project
+	// Helm's 53-char limit and is deterministically shortened otherwise (see ReleaseName). The project
 	// namespace stays the raw project name.
-	rel := releaseName(project.Name)
+	rel := ReleaseName(project.Name)
 
 	// action.History exposes no context or timeout; the lookup is a single, bounded API read.
 	releases, err := action.NewHistory(c.conf).Run(rel)
@@ -304,11 +304,11 @@ func (c *Client) discoverAPI() (map[string]struct{}, error) {
 // capped at 63), so a project name may exceed this limit and must be mapped to a valid release name.
 const helmReleaseNameMaxLen = 53
 
-// releaseName maps a project name to its Helm release name. A name within Helm's limit is used
+// ReleaseName maps a project name to its Helm release name. A name within Helm's limit is used
 // verbatim so existing releases keep their names (no migration); a longer name is deterministically
 // shortened to a collision-resistant form (a truncated prefix plus an 8-hex md5 suffix of the full
 // name) that stays a valid, unique release name. The project namespace remains the raw project name.
-func releaseName(project string) string {
+func ReleaseName(project string) string {
 	if len(project) <= helmReleaseNameMaxLen {
 		return project
 	}
@@ -420,7 +420,7 @@ func (c *Client) rollbackLatestRelease(releases []*release.Release) error {
 // bailing out before starting a teardown that is already cancelled, and an explicit Timeout bounds
 // the uninstall wait (mirroring the install/upgrade timeout) so a slow API server cannot stall it.
 func (c *Client) Delete(ctx context.Context, projectName string) error {
-	rel := releaseName(projectName)
+	rel := ReleaseName(projectName)
 	if err := ctx.Err(); err != nil {
 		return fmt.Errorf("uninstall the '%s' release: %w", rel, err)
 	}
@@ -447,7 +447,7 @@ func (c *Client) AnalyzeRendered(project *v1alpha3.Project, template *v1alpha1.P
 	ch := buildChart(c.templates, project.Name)
 
 	values, err := chartutil.ToRenderValues(ch, buildValues(project, template), chartutil.ReleaseOptions{
-		Name:      releaseName(project.Name),
+		Name:      ReleaseName(project.Name),
 		Namespace: project.Name,
 	}, nil)
 	if err != nil {
@@ -522,7 +522,7 @@ func (c *Client) renderTemplate(project *v1alpha3.Project, template *v1alpha1.Pr
 	ch := buildChart(c.templates, project.Name)
 
 	values, err := chartutil.ToRenderValues(ch, buildValues(project, template), chartutil.ReleaseOptions{
-		Name:      releaseName(project.Name),
+		Name:      ReleaseName(project.Name),
 		Namespace: project.Name,
 	}, nil)
 	if err != nil {
