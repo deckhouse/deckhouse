@@ -71,6 +71,7 @@ func renderManifests(
 	vcp *controlplanev1alpha1.VirtualControlPlane,
 	apiAdvertiseAddress string,
 	egressDestinations []string,
+	imageBaseOverride string,
 ) (map[string][]byte, error) {
 	table, err := parseImagesTable(globalData)
 	if err != nil {
@@ -82,10 +83,16 @@ func renderManifests(
 		return nil, fmt.Errorf("no images for kubernetes version %q", vcp.Spec.KubernetesVersion)
 	}
 
+	// konnectivity-agent is the only VCP-baked tenant-node ref (control-plane images run in the parent, keep the in-cluster base). Its baked ref hits the
+	// in-cluster proxy unreachable from tenant nodes, so rebase onto the external registry (the pod carries a matching deckhouse-registry imagePullSecret).
+	// imageBaseOverride is set only in Direct/Proxy; in Unmanaged it is empty and the baked ref is already external, so this is a no-op.
+	fixed := table.Fixed
+	fixed.KonnectivityAgent = rebaseImageRef(fixed.KonnectivityAgent, imageBaseOverride)
+
 	replacer := buildManifestReplacer(
 		vcp,
 		versioned,
-		table.Fixed,
+		fixed,
 		apiAdvertiseAddress,
 		string(globalData["cluster-uuid"]),
 		egressDestinations,

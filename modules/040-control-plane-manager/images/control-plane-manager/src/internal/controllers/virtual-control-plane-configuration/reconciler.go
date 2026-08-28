@@ -88,7 +88,13 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, fmt.Errorf("resolve ALB VIP: %w", err)
 	}
 
-	configSecret, res, err := r.reconcileConfigSecret(ctx, vcp, albVIP)
+	tenantReg, err := r.discoverTenantRegistry(ctx)
+	if err != nil {
+		log.FromContext(ctx).Error(err, "discover tenant registry; using parent registry secret and in-cluster image refs")
+		tenantReg = nil
+	}
+
+	configSecret, res, err := r.reconcileConfigSecret(ctx, vcp, albVIP, tenantReg)
 	if err != nil || !res.IsZero() {
 		return res, err
 	}
@@ -163,7 +169,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return res, err
 	}
 
-	if res, err := r.reconcileDeckhouse(ctx, vcp, albVIP, pkiSecret.Data["ca.crt"]); err != nil || !res.IsZero() {
+	if res, err := r.reconcileDeckhouse(ctx, vcp, albVIP, pkiSecret.Data["ca.crt"], tenantReg); err != nil || !res.IsZero() {
 		return res, err
 	}
 
@@ -601,7 +607,7 @@ func readKubeconfigSecretData(outDir string, kubeconfigFiles []kubeconfig.File) 
 	return data, nil
 }
 
-func (r *reconciler) reconcileConfigSecret(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane, albVIP string) (*corev1.Secret, reconcile.Result, error) {
+func (r *reconciler) reconcileConfigSecret(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane, albVIP string, tr *tenantRegistry) (*corev1.Secret, reconcile.Result, error) {
 	global, err := r.getSecret(ctx, constants.KubeSystemNamespace, constants.VirtualControlPlaneConfigSecretName)
 	if apierrors.IsNotFound(err) {
 		return nil, reconcile.Result{RequeueAfter: requeueInterval}, nil
@@ -624,7 +630,13 @@ func (r *reconciler) reconcileConfigSecret(ctx context.Context, vcp *controlplan
 		return nil, reconcile.Result{}, fmt.Errorf("collect parent egress destinations: %w", err)
 	}
 
-	data, err := renderManifests(global.Data, vcp, apiAdvertiseAddress, egressDestinations)
+	// Rebase tenant-node refs onto the external upstream (Direct/Proxy hides the real registry behind the in-cluster proxy).
+	var imageBaseOverride string
+	if tr != nil {
+		imageBaseOverride = tr.Base()
+	}
+
+	data, err := renderManifests(global.Data, vcp, apiAdvertiseAddress, egressDestinations, imageBaseOverride)
 	if err != nil {
 		return nil, reconcile.Result{}, fmt.Errorf("render manifests: %w", err)
 	}

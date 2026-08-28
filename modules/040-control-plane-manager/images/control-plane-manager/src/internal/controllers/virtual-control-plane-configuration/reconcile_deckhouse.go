@@ -79,6 +79,7 @@ func (r *reconciler) reconcileDeckhouse(
 	vcp *controlplanev1alpha1.VirtualControlPlane,
 	albVIP string,
 	tenantCA []byte,
+	tr *tenantRegistry,
 ) (reconcile.Result, error) {
 	tcs, tc, err := r.tenantClients(ctx, vcp)
 	if err != nil {
@@ -91,7 +92,7 @@ func (r *reconciler) reconcileDeckhouse(
 	}
 
 	// 2. Tenant: registry secret (modules reference it for image pulls).
-	if err := r.reconcileTenantRegistrySecret(ctx, tc); err != nil {
+	if err := r.reconcileTenantRegistrySecret(ctx, tc, tr); err != nil {
 		return reconcile.Result{}, fmt.Errorf("reconcile tenant registry secret: %w", err)
 	}
 
@@ -158,7 +159,7 @@ func buildTargetTenantNamespace() *corev1.Namespace {
 	}
 }
 
-func (r *reconciler) reconcileTenantRegistrySecret(ctx context.Context, tc client.Client) error {
+func (r *reconciler) reconcileTenantRegistrySecret(ctx context.Context, tc client.Client, tr *tenantRegistry) error {
 	parent, err := r.getSecret(ctx, deckhouseSystemNamespace, deckhouseRegistrySecretName)
 	if apierrors.IsNotFound(err) {
 		// Nothing to copy (e.g. a registry-less dev install).
@@ -169,6 +170,9 @@ func (r *reconciler) reconcileTenantRegistrySecret(ctx context.Context, tc clien
 	}
 
 	target := buildTargetRegistrySecret(parent, deckhouseSystemNamespace, deckhouseRegistrySecretName)
+	// Seed the tenant from the external upstream (registry-config), not the parent in-cluster proxy address unreachable from tenant nodes.
+	// Falls back to the parent secret when there is no external upstream.
+	target.Data = resolveTenantRegistryData(parent, tr)
 	// The deckhouse module's chart renders this secret too; without helm
 	// adoption metadata the release install fails with "invalid ownership
 	// metadata" (same pattern as dhctl's DeckhouseRegistrySecret).
@@ -187,14 +191,27 @@ func (r *reconciler) reconcileTenantRegistrySecret(ctx context.Context, tc clien
 		return err
 	}
 
-	if equality.Semantic.DeepEqual(current.Data, target.Data) &&
+	// Overlay only the registry fields we own: deckhouse re-renders this secret and adds its own keys
+	// (clusterIsBootstrapped, imagesRegistry) which must survive, otherwise the two writers churn it.
+	// An external upstream may carry no CA: drop a stale ca left by a prior clone or by deckhouse.
+	dropCA := tr != nil && tr.CA == ""
+	_, hasCA := current.Data["ca"]
+
+	if isDataSubset(target.Data, current.Data) &&
+		!(dropCA && hasCA) &&
 		isMetadataSubset(target.Labels, current.Labels) &&
 		isMetadataSubset(target.Annotations, current.Annotations) {
 		return nil
 	}
 
 	base := current.DeepCopy()
-	current.Data = target.Data
+	if current.Data == nil {
+		current.Data = map[string][]byte{}
+	}
+	maps.Copy(current.Data, target.Data)
+	if dropCA {
+		delete(current.Data, "ca")
+	}
 	current.Labels = mergeMetadata(current.Labels, target.Labels)
 	current.Annotations = mergeMetadata(current.Annotations, target.Annotations)
 
@@ -206,6 +223,16 @@ func (r *reconciler) reconcileTenantRegistrySecret(ctx context.Context, tc clien
 func isMetadataSubset(target, current map[string]string) bool {
 	for key, value := range target {
 		if current[key] != value {
+			return false
+		}
+	}
+	return true
+}
+
+// isDataSubset checks whether every target key is present in current with the same value.
+func isDataSubset(target, current map[string][]byte) bool {
+	for key, value := range target {
+		if cur, ok := current[key]; !ok || !bytes.Equal(cur, value) {
 			return false
 		}
 	}

@@ -30,6 +30,8 @@ spec:
         k8s-app: konnectivity-agent
     spec:
       serviceAccountName: konnectivity-agent
+      imagePullSecrets:
+      - name: deckhouse-registry
       priorityClassName: system-cluster-critical
       hostNetwork: true
       tolerations:
