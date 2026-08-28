@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-5a4509a04e8128126aee080324a6b663a7748bf44b58a9a4b9c74d4801844f53",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 20,
+  "version": 21,
   "statements": [
     {
       "vulnerability": {
@@ -360,6 +360,104 @@
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Пакет попадает в образ с бинарём yq 4.47.1, который импортируется из base-образа tools/yq (digest зафиксирован в candi/base_images.yml). Уязвимость находится в golang.org/x/text/unicode/norm; yq использует его единственный раз — в encoder_shellvariables.go для формата вывода shell. Вебхуки webhook-handler используют вывод YAML и JSON, код не в пути выполнения.",
+      "timestamp": "2026-08-27T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-69725"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/go-chi/chi/v5@v5.2.3"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость находится в middleware.RedirectSlashes пакета github.com/go-chi/chi/v5/middleware. Модуль поступает с бинарём shell-operator v1.15.3 из базового образа common/shell-operator. Из middleware используются только Recoverer, AllowContentType, Profiler и RequestLogger; RedirectSlashes в цепочку обработчиков не добавляется.",
+      "timestamp": "2026-08-27T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-2303"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.mongodb.org/mongo-driver@v1.5.4"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость находится в go.mongodb.org/mongo-driver/mongo — обработке ошибок GSSAPI в клиенте MongoDB. Модуль поступает с бинарём shell-operator v1.15.3 из базового образа common/shell-operator. Модуль приходит транзитивно через github.com/go-openapi/strfmt, и из него используется только go.mongodb.org/mongo-driver/bson; клиент MongoDB в бинарь не попадает.",
+      "timestamp": "2026-08-27T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-25680"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.52.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость находится в парсере golang.org/x/net/html. Модуль поступает с бинарём shell-operator v1.15.3 из базового образа common/shell-operator. x/net/html подтягивается транзитивно через github.com/kennygrant/sanitize, а shell-operator вызывает оттуда только sanitize.BaseName для нормализации имени хука — эта функция состоит из регулярных замен и HTML не разбирает. Парсер x/net/html не вызывается.",
+      "timestamp": "2026-08-27T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42502"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.52.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость находится в парсере golang.org/x/net/html. Модуль поступает с бинарём shell-operator v1.15.3 из базового образа common/shell-operator. x/net/html подтягивается транзитивно через github.com/kennygrant/sanitize, а shell-operator вызывает оттуда только sanitize.BaseName для нормализации имени хука — эта функция состоит из регулярных замен и HTML не разбирает. Парсер x/net/html не вызывается.",
+      "timestamp": "2026-08-27T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42506"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.52.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость находится в парсере golang.org/x/net/html. Модуль поступает с бинарём shell-operator v1.15.3 из базового образа common/shell-operator. x/net/html подтягивается транзитивно через github.com/kennygrant/sanitize, а shell-operator вызывает оттуда только sanitize.BaseName для нормализации имени хука — эта функция состоит из регулярных замен и HTML не разбирает. Парсер x/net/html не вызывается.",
+      "timestamp": "2026-08-27T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46600"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.52.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость находится в golang.org/x/net/dns/dnsmessage. Модуль поступает с бинарём shell-operator v1.15.3 из базового образа common/shell-operator. Пакет dnsmessage не импортируется и в бинарь не попадает.",
+      "timestamp": "2026-08-27T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39824"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/sys@v0.42.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимая функция NewNTUnicodeString находится в golang.org/x/sys/windows. Модуль поступает с бинарём shell-operator v1.15.3 из базового образа common/shell-operator. Образ собирается под Linux, пакет windows не компилируется и в бинарь не попадает.",
       "timestamp": "2026-08-27T12:00:00Z"
     }
   ],
