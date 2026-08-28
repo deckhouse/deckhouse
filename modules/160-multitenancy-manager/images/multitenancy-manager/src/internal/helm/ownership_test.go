@@ -18,6 +18,7 @@ package helm
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -73,4 +74,23 @@ func TestStampReleaseOwnership_Idempotent(t *testing.T) {
 	second := new(corev1.Namespace)
 	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "foo"}, second))
 	assert.Equal(t, first.ResourceVersion, second.ResourceVersion)
+}
+
+func TestStampReleaseOwnership_LongProjectName(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+	name := "t-mtm61-" + strings.Repeat("x", 53)
+	require.Equal(t, 61, len(name))
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: name}}
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(ns).Build()
+
+	require.NoError(t, StampReleaseOwnership(context.Background(), c, name))
+
+	got := new(corev1.Namespace)
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: name}, got))
+	rel := ReleaseName(name)
+	assert.LessOrEqual(t, len(rel), helmReleaseNameMaxLen)
+	assert.NotEqual(t, name, rel)
+	assert.Equal(t, rel, got.Annotations[ResourceAnnotationReleaseName])
+	assert.Equal(t, ManagedByHelm, got.Labels[ResourceLabelManagedBy])
 }
