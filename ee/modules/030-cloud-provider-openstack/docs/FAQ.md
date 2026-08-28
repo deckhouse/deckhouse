@@ -390,6 +390,51 @@ Expected HTTP response code [202] when accessing
 {"computeFault": {"message": "Version 3.42 is not supported by the API. Minimum is 3.0 and maximum is 3.27.", "code": 406}}
 ```
 
+## How to create preemptible nodes in Selectel?
+
+In Selectel, the Nova tag `preemptible` is used to create preemptible instances. The [`additionalTags`](/modules/cloud-provider-openstack/latest/cr.html#openstackinstanceclass-v1-spec-additionaltags) parameter is not suitable for such tags because its values are converted to the `key=value` format. To pass the tag to Nova without modification, use the [`tags`](/modules/cloud-provider-openstack/latest/cr.html#openstackinstanceclass-v1-spec-tags) parameter of the OpenStackInstanceClass resource.
+
+Example:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: OpenStackInstanceClass
+metadata:
+  name: worker-preempt
+spec:
+  flavorName: SL1.4-8192
+  imageName: Ubuntu 24.04 LTS 64-bit
+  rootDiskSize: 30
+  tags:
+    - preemptible
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker-preempt
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    classReference:
+      kind: OpenStackInstanceClass
+      name: worker-preempt
+    minPerZone: 2
+    maxPerZone: 4
+    zones: [ru-3a]
+```
+
+When using the [`tags`](/modules/cloud-provider-openstack/latest/cr.html#openstackinstanceclass-v1-spec-tags) parameter, consider the following limitations:
+
+- The `tags` parameter is supported only in Selectel-hosted clusters. If you specify it in another OpenStack cloud, the NodeGroup `.status.error` will show `Machine creation failed. Check events for details.`, and virtual machines will not be created. For details, check the NodeGroup events: `Remove spec.tags, or use the field only on Selectel-hosted clusters where it is known to work.`
+- The `tags` parameter is supported only for CloudEphemeral NodeGroups running on the CAPI engine. If an OpenStackInstanceClass with the `tags` parameter specified is used by a NodeGroup running on the MCM engine, an error will appear in the NodeGroup `.status.error`. The controller will not process such a NodeGroup until the `tags` parameter is removed or the NodeGroup is switched to the CAPI engine.
+- The management engine is selected separately for each NodeGroup. If the same OpenStackInstanceClass with the `tags` parameter specified is used simultaneously by NodeGroups running on CAPI and MCM, the MCM NodeGroup becomes invalid. Use separate OpenStackInstanceClass resources for NodeGroups running on different engines.
+
+{% alert level="warning" %}
+Adding, changing, or removing the [`tags`](/modules/cloud-provider-openstack/latest/cr.html#openstackinstanceclass-v1-spec-tags) parameter in an existing OpenStackInstanceClass changes the OpenStackMachineTemplate and causes all nodes in the corresponding NodeGroup to be recreated.
+{% endalert %}
+
+If a preemptible instance is terminated without a `graceful shutdown`, the corresponding node transitions to the `NotReady` state. After the missing instance is detected, CAPO and MachineHealthCheck initiate the creation of a new Machine and virtual machine. Until recovery is complete, pods on the lost node may still appear in the Kubernetes API with the `Running` status even though they are no longer actually available.
+
 ## What to do if switching to nodes in lower-priority groups takes a long time?
 
 If switching to nodes in lower-priority groups takes a long time, follow the [instructions](/products/kubernetes-platform/documentation/v1/faq.html#what-to-do-if-it-takes-a-long-time-to-switch-to-custom-nodes-in).

@@ -208,6 +208,76 @@ func TestEmptyValueDivergence(t *testing.T) {
 		"and the object is identical, which is what makes this rollout unnecessary but harmless")
 }
 
+// TestTagsEmptyValueDivergence documents the same v1/v2 divergence for OpenStackInstanceClass.spec.tags
+// (added in PR #21866) that TestEmptyValueDivergence pins for additionalTags.
+//
+// The v1 checksum snapshot gates `tags` on truthiness ({{- if .nodeGroup.instanceClass.tags -}}),
+// so `tags: []` hashes exactly like a missing field. v2 compares by value and sees an empty slice
+// as a change from missing. The rendered OpenStackMachineTemplate is identical for both because the
+// v2 template gates emission on `hasKey` + `range`, and ranging an empty slice yields nothing —
+// so this is the same "rollout the user did not strictly need in exchange for never losing an edit"
+// tradeoff. If you fold this away, revisit the v1 snapshot's post-migration `tags` block above too.
+func TestTagsEmptyValueDivergence(t *testing.T) {
+	fixture := fixtureByName(t, "openstack")
+	contract := loadContract(t, fixture.contractPath)
+	checksumTemplate, err := os.ReadFile(fixture.legacyPath("instance-class.checksum"))
+	require.NoError(t, err)
+
+	without := deepCopySpec(t, fixture.instanceClass)
+	delete(without, "tags")
+	withEmpty := deepCopySpec(t, without)
+	withEmpty["tags"] = []any{}
+
+	assert.Equal(t,
+		renderLegacyChecksum(t, fixture, checksumTemplate, without, ""),
+		renderLegacyChecksum(t, fixture, checksumTemplate, withEmpty, ""),
+		"v1 hashed an empty slice exactly like a missing field")
+
+	changes, err := Changes(without, withEmpty, contract.RolloutFields)
+	require.NoError(t, err)
+	assert.Len(t, changes, 1, "v2 sees the empty slice as a change")
+
+	before, err := renderV2Spec(fixture, contract, without)
+	require.NoError(t, err)
+	after, err := renderV2Spec(fixture, contract, withEmpty)
+	require.NoError(t, err)
+	assert.Equal(t, before, after,
+		"and the object is identical, which is what makes this rollout unnecessary but harmless")
+}
+
+// TestOpenstackRawTagsRenderedInV2 pins that OpenStackInstanceClass.spec.tags flows into the
+// OpenStackMachineTemplate under the v2 contract as verbatim entries next to the mandatory
+// deckhouse-<uuid>=1 / role-* / use-cluster-api=1. If the ordering or the raw form regresses,
+// the safety controller either loses the ability to identify VMs or the provider-side preemptible
+// flag stops firing.
+func TestOpenstackRawTagsRenderedInV2(t *testing.T) {
+	fixture := fixtureByName(t, "openstack")
+	contract := loadContract(t, fixture.contractPath)
+
+	spec := deepCopySpec(t, fixture.instanceClass)
+	spec["tags"] = []any{"preemptible", "preemptible", "spot"}
+
+	obj, err := renderV2Spec(fixture, contract, spec)
+	require.NoError(t, err)
+
+	tags, ok := obj["spec"].(map[string]any)["template"].(map[string]any)["spec"].(map[string]any)["tags"].([]any)
+	require.True(t, ok, "spec.template.spec.tags must be a list")
+
+	assert.Contains(t, tags, "preemptible", "raw OpenStack tag must be present as-is (no key=value)")
+	assert.Contains(t, tags, "spot")
+	assert.Contains(t, tags, "deckhouse-"+parityClusterUUID+"=1", "mandatory safety-controller tag")
+	assert.Contains(t, tags, "role-deckhouse-"+parityNodeGroup+"-"+parityZone+"=1")
+	assert.Contains(t, tags, "use-cluster-api=1")
+
+	preemptibleCount := 0
+	for _, v := range tags {
+		if v == "preemptible" {
+			preemptibleCount++
+		}
+	}
+	assert.Equal(t, 1, preemptibleCount, "duplicate raw tags must be de-duplicated by `uniq`")
+}
+
 // TestProviderRenderParityOnEdgeSpecs runs both engines on the InstanceClass shapes a fixture
 // never has: only the CRD-required fields, and every optional field set to its zero value.
 //

@@ -206,3 +206,118 @@ func TestResolveNodeGroup_CloudKindMismatchErrors(t *testing.T) {
 	assert.Contains(t, errStr, "Invalid classReference.kind 'AWSInstanceClass'. Expected 'YandexInstanceClass'.")
 	assert.NotContains(t, resolved.ToMap(), "instanceClass", "failed check must drop cloud overlays")
 }
+
+// The MCM engine renders no raw Nova tags — spec.tags on a NodeGroup that lands there is a
+// silently-dropped field. Reject the pair up-front so the operator sees the mistake in
+// .status.error rather than wondering why their preemptible workers never became preemptible.
+func TestOpenstackTagsError_RejectsMCMEngineWithTags(t *testing.T) {
+	ng := openstackNGWithTagsReference()
+	snap := Snapshot{
+		Provider: CloudProviderRegistration{
+			Type:                    "openstack",
+			InstanceClassKind:       "OpenStackInstanceClass",
+			InstanceClassAPIVersion: "v1alpha1",
+			MachineClassKind:        "OpenStackMachineClass",
+		},
+		InstanceClass: map[string]any{"tags": []any{"preemptible"}},
+	}
+
+	err := openstackTagsError(ng, snap)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "OpenStackInstanceClass 'worker'")
+	assert.Contains(t, err.Error(), "does not run on the CAPI engine")
+}
+
+func TestOpenstackTagsError_AllowsCAPIOnSelectelSelcloud(t *testing.T) {
+	ng := openstackNGWithTagsReference()
+	snap := openstackCAPISnapshotWithAuthURL("https://cloud.api.selcloud.ru/identity/v3")
+
+	assert.NoError(t, openstackTagsError(ng, snap))
+}
+
+func TestOpenstackTagsError_AllowsCAPIOnSelectelDomain(t *testing.T) {
+	ng := openstackNGWithTagsReference()
+	snap := openstackCAPISnapshotWithAuthURL("https://api.selectel.ru/identity/v3")
+
+	assert.NoError(t, openstackTagsError(ng, snap))
+}
+
+// A non-Selectel authURL is the exact silent-failure case the field exists to prevent: the tag
+// attaches to the VM but Nova on other providers ignores it. Report the actual authURL so the
+// operator can tell whether this is a typo, the wrong cluster, or a genuinely non-Selectel host.
+func TestOpenstackTagsError_RejectsNonSelectelAuthURL(t *testing.T) {
+	ng := openstackNGWithTagsReference()
+	snap := openstackCAPISnapshotWithAuthURL("https://public.infra.mail.ru:5000/v3/")
+
+	err := openstackTagsError(ng, snap)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "OpenStackInstanceClass 'worker'")
+	assert.Contains(t, err.Error(), "public.infra.mail.ru")
+	assert.Contains(t, err.Error(), "Selectel")
+}
+
+// During bootstrap the connection block may not yet exist. Treating an empty authURL as "not
+// Selectel" would fail every OpenStack cluster on the first reconcile; treat it as "not yet"
+// and let the next pass, after the discovery hook publishes, decide.
+func TestOpenstackTagsError_SkipsUntilAuthURLIsPublished(t *testing.T) {
+	ng := openstackNGWithTagsReference()
+	snap := openstackCAPISnapshotWithAuthURL("")
+
+	assert.NoError(t, openstackTagsError(ng, snap))
+}
+
+func TestOpenstackTagsError_SkipsWhenTagsAbsent(t *testing.T) {
+	ng := openstackNGWithTagsReference()
+	snap := openstackCAPISnapshotWithAuthURL("https://public.infra.mail.ru:5000/v3/")
+	snap.InstanceClass = map[string]any{}
+
+	assert.NoError(t, openstackTagsError(ng, snap))
+}
+
+func TestOpenstackTagsError_SkipsForNonOpenstackKind(t *testing.T) {
+	ng := &v1.NodeGroup{
+		ObjectMeta: metav1.ObjectMeta{Name: "worker"},
+		Spec: v1.NodeGroupSpec{
+			NodeType: v1.NodeTypeCloudEphemeral,
+			CloudInstances: &v1.CloudInstancesSpec{
+				ClassReference: v1.ClassReference{Kind: "YandexInstanceClass", Name: "worker"},
+			},
+		},
+	}
+	// The check must not fire on a NodeGroup that does not reference an OpenStackInstanceClass
+	// even if the surrounding shape (Selectel-looking authURL, tags on the class) would otherwise
+	// match — the field is provider-scoped.
+	snap := openstackCAPISnapshotWithAuthURL("https://cloud.api.selcloud.ru/identity/v3")
+
+	assert.NoError(t, openstackTagsError(ng, snap))
+}
+
+func openstackNGWithTagsReference() *v1.NodeGroup {
+	return &v1.NodeGroup{
+		ObjectMeta: metav1.ObjectMeta{Name: "worker"},
+		Spec: v1.NodeGroupSpec{
+			NodeType: v1.NodeTypeCloudEphemeral,
+			CloudInstances: &v1.CloudInstancesSpec{
+				ClassReference: v1.ClassReference{Kind: "OpenStackInstanceClass", Name: "worker"},
+			},
+		},
+	}
+}
+
+func openstackCAPISnapshotWithAuthURL(authURL string) Snapshot {
+	snap := Snapshot{
+		Provider: CloudProviderRegistration{
+			Type:                    "openstack",
+			InstanceClassKind:       "OpenStackInstanceClass",
+			InstanceClassAPIVersion: "v1alpha1",
+			CAPIClusterKind:         "OpenStackCluster",
+		},
+		InstanceClass: map[string]any{"tags": []any{"preemptible"}},
+	}
+	if authURL != "" {
+		snap.Provider.CloudVariables = map[string]any{
+			"connection": map[string]any{"authURL": authURL},
+		}
+	}
+	return snap
+}
