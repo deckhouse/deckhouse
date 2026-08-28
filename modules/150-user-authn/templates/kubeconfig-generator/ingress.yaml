@@ -8,8 +8,9 @@ metadata:
   annotations:
     web.deckhouse.io/export-name: "kubeconfig"
     web.deckhouse.io/export-icon: "/public/img/kubeconfig-generator.jpeg"
-    nginx.ingress.kubernetes.io/configuration-snippet: |
-      {{ include "helm_lib_module_ingress_configuration_snippet" $ | nindent 6 }}
+  {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
+    nginx.ingress.kubernetes.io/ingress-nginx-hsts: "true"
+  {{- end }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "kubernetes-configurator")) | nindent 2 }}
 spec:
   ingressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}

@@ -200,19 +200,60 @@ tls.key: KEYKEYKEY
 		})
 		It("Should deploy basic auth access infrastructure", func() {
 			Expect(hec.RenderError).ToNot(HaveOccurred())
-			Expect(hec.KubernetesResource("Ingress", "kube-system", "kubernetes-api").Field(
-				"metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/configuration-snippet").String()).To(
-				Equal("if ($http_authorization ~ \"^(.*)Basic(.*)$\") {\n  rewrite ^(.*)$ /basic-auth$1;\n}\nlocation ~ ^/(healthz|livez|readyz) {\n  deny all;\n  return 403;\n}\n"))
+			apiIngress := hec.KubernetesResource("Ingress", "kube-system", "kubernetes-api")
+			Expect(apiIngress.Field(
+				"metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/configuration-snippet").Exists()).To(BeFalse())
+			Expect(apiIngress.Field(
+				"metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/ingress-nginx-hsts").String()).To(Equal("true"))
+			Expect(apiIngress.Field("spec.rules.0.http.paths.0.path").String()).To(Equal("/"))
 			Expect(hec.KubernetesResource("Ingress", "kube-system", "kubernetes-api").Field(
 				"metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/whitelist-source-range").String()).To(
 				Equal("1.1.1.1,192.168.0.0/24"))
+
+			healthIngress := hec.KubernetesResource("Ingress", "kube-system", "kubernetes-api-health-endpoints")
+			Expect(healthIngress.Exists()).To(BeTrue())
+			Expect(healthIngress.Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/denylist-source-range").String()).To(Equal("0.0.0.0/0,::/0"))
+			Expect(healthIngress.Field("spec.rules.0.http.paths.0.path").String()).To(Equal("/healthz"))
+			Expect(healthIngress.Field("spec.rules.0.http.paths.0.pathType").String()).To(Equal("Exact"))
+			Expect(healthIngress.Field("spec.rules.0.http.paths.1.path").String()).To(Equal("/livez"))
+			Expect(healthIngress.Field("spec.rules.0.http.paths.1.pathType").String()).To(Equal("Exact"))
+			Expect(healthIngress.Field("spec.rules.0.http.paths.2.path").String()).To(Equal("/readyz"))
+			Expect(healthIngress.Field("spec.rules.0.http.paths.2.pathType").String()).To(Equal("Exact"))
+
 			Expect(hec.KubernetesResource("Secret", "kube-system", "d8-publish-api-config").Field("data.whitelistSourceRanges").String()).To(Equal("WzEuMS4xLjEgMTkyLjE2OC4wLjAvMjRd"))
-			Expect(hec.KubernetesResource("Ingress", "kube-system", "basic-auth-proxy").Field(
-				"metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/whitelist-source-range").String()).To(
-				Equal("1.1.1.1,192.168.0.0/24"))
+			basicAuthIngress := hec.KubernetesResource("Ingress", "kube-system", "basic-auth-proxy")
+			Expect(basicAuthIngress.Field(
+				"metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/whitelist-source-range").Exists()).To(BeFalse())
+			Expect(basicAuthIngress.Field(
+				"metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/configuration-snippet").Exists()).To(BeFalse())
+			Expect(basicAuthIngress.Field(
+				"metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/backend-protocol").String()).To(Equal("HTTP"))
+			Expect(basicAuthIngress.Field(
+				"metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/canary").String()).To(Equal("true"))
+			Expect(basicAuthIngress.Field(
+				"metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/canary-by-header").String()).To(Equal("Authorization"))
+			Expect(basicAuthIngress.Field(
+				"metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/canary-by-header-pattern").String()).To(Equal("^(.*)Basic(.*)$"))
+			Expect(basicAuthIngress.Field(
+				"metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/rewrite-target").Exists()).To(BeFalse())
+			Expect(basicAuthIngress.Field("spec.rules.0.http.paths.0.path").String()).To(Equal("/"))
 			Expect(hec.KubernetesResource("Service", "kube-system", "basic-auth-proxy").Field("spec.type").String()).To(Equal("ExternalName"))
 			Expect(hec.KubernetesResource("Service", "kube-system", "basic-auth-proxy").Field("spec.externalName").String()).To(Equal("basic-auth-proxy.d8-user-authn.svc.cluster.local"))
 
+		})
+	})
+
+	Context("Without basic auth", func() {
+		BeforeEach(func() {
+			hec.ValuesSet("controlPlaneManager.internal.authn.enableBasicAuth", false)
+			hec.HelmRender()
+		})
+
+		It("Should expose health endpoints only through the denylist ingress", func() {
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+			Expect(hec.KubernetesResource("Ingress", "kube-system", "kubernetes-api").Field(
+				"metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/configuration-snippet").Exists()).To(BeFalse())
+			Expect(hec.KubernetesResource("Ingress", "kube-system", "kubernetes-api-health-endpoints").Exists()).To(BeTrue())
 		})
 	})
 

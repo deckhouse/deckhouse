@@ -8,12 +8,10 @@ metadata:
   annotations:
     nginx.ingress.kubernetes.io/use-regex: "true"
     nginx.ingress.kubernetes.io/backend-protocol: HTTPS
-    nginx.ingress.kubernetes.io/configuration-snippet: |-
-      proxy_ssl_certificate /etc/nginx/ssl/client.crt;
-      proxy_ssl_certificate_key /etc/nginx/ssl/client.key;
-      proxy_ssl_protocols TLSv1.2;
-      proxy_ssl_session_reuse on;
-      {{- include "helm_lib_module_ingress_configuration_snippet" $ | nindent 6 }}
+    nginx.ingress.kubernetes.io/proxy-ssl-use-controller-certificate: "true"
+  {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
+    nginx.ingress.kubernetes.io/ingress-nginx-hsts: "true"
+  {{- end }}
 spec:
   ingressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
   rules:
@@ -66,14 +64,10 @@ metadata:
     nginx.ingress.kubernetes.io/auth-realm: "Authentication Required"
   {{- end }}
     nginx.ingress.kubernetes.io/backend-protocol: HTTPS
-    nginx.ingress.kubernetes.io/configuration-snippet: |
-      proxy_ssl_certificate /etc/nginx/ssl/client.crt;
-      proxy_ssl_certificate_key /etc/nginx/ssl/client.key;
-      proxy_ssl_protocols TLSv1.2;
-      proxy_ssl_session_reuse on;
-      # The old naming
-      #rewrite ^/(ru|en)/(platform/)?modules/[0-9]+-([^/]+/.*)$ /$1/platform/modules/$3 redirect;
-      {{- include "helm_lib_module_ingress_configuration_snippet" $ | nindent 6 }}
+    nginx.ingress.kubernetes.io/proxy-ssl-use-controller-certificate: "true"
+  {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
+    nginx.ingress.kubernetes.io/ingress-nginx-hsts: "true"
+  {{- end }}
   {{- if .Values.documentation.auth.satisfyAny }}
     nginx.ingress.kubernetes.io/satisfy: "any"
   {{- end }}
