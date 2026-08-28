@@ -193,7 +193,12 @@ func (r *reconciler) reconcileTenantRegistrySecret(ctx context.Context, tc clien
 
 	// Overlay only the registry fields we own: deckhouse re-renders this secret and adds its own keys
 	// (clusterIsBootstrapped, imagesRegistry) which must survive, otherwise the two writers churn it.
+	// An external upstream may carry no CA: drop a stale ca left by a prior clone or by deckhouse.
+	dropCA := tr != nil && tr.CA == ""
+	_, hasCA := current.Data["ca"]
+
 	if isDataSubset(target.Data, current.Data) &&
+		!(dropCA && hasCA) &&
 		isMetadataSubset(target.Labels, current.Labels) &&
 		isMetadataSubset(target.Annotations, current.Annotations) {
 		return nil
@@ -204,6 +209,9 @@ func (r *reconciler) reconcileTenantRegistrySecret(ctx context.Context, tc clien
 		current.Data = map[string][]byte{}
 	}
 	maps.Copy(current.Data, target.Data)
+	if dropCA {
+		delete(current.Data, "ca")
+	}
 	current.Labels = mergeMetadata(current.Labels, target.Labels)
 	current.Annotations = mergeMetadata(current.Annotations, target.Annotations)
 
