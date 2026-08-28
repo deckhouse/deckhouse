@@ -253,7 +253,9 @@ type BootstrapStart struct {
 	State                         string                 `protobuf:"bytes,7,opt,name=state,proto3" json:"state,omitempty"`
 	PostBootstrapScript           string                 `protobuf:"bytes,8,opt,name=post_bootstrap_script,json=postBootstrapScript,proto3" json:"post_bootstrap_script,omitempty"`
 	Options                       *BootstrapStartOptions `protobuf:"bytes,9,opt,name=options,proto3" json:"options,omitempty"`
-	Kubeconfig                    string                 `protobuf:"bytes,10,opt,name=kubeconfig,proto3" json:"kubeconfig,omitempty"`
+	// kubeconfig points the kube provider straight at the API server. connection_config is still
+	// required: this operation reaches the nodes over ssh.
+	Kubeconfig string `protobuf:"bytes,10,opt,name=kubeconfig,proto3" json:"kubeconfig,omitempty"`
 }
 
 func (x *BootstrapStart) Reset() {

@@ -250,8 +250,9 @@ type CommanderAttachStart struct {
 	ResourcesTemplate string                       `protobuf:"bytes,3,opt,name=resources_template,json=resourcesTemplate,proto3" json:"resources_template,omitempty"`
 	ResourcesValues   *structpb.Struct             `protobuf:"bytes,4,opt,name=resources_values,json=resourcesValues,proto3" json:"resources_values,omitempty"`
 	Options           *CommanderAttachStartOptions `protobuf:"bytes,5,opt,name=options,proto3" json:"options,omitempty"`
-	// kubeconfig points the kube provider straight at the API server. connection_config is
-	// still required and must carry an SSHConfig document; its SSHHost documents may be omitted.
+	// kubeconfig points the kube provider straight at the API server. A request that sets it may
+	// leave connection_config empty: the cluster is then driven over the API server only and no
+	// SSH provider is created.
 	Kubeconfig string `protobuf:"bytes,6,opt,name=kubeconfig,proto3" json:"kubeconfig,omitempty"`
 }
 

@@ -279,9 +279,8 @@ func (i *Attacher) scan(
 		}
 		res.ProviderSpecificClusterConfiguration = string(providerConfiguration)
 
-		// No SSH provider means the request drove this attach through a kubeconfig and supplied
-		// no master hosts. There is no key to read back, so leave res.SSHPrivateKey empty - the
-		// same value this already produces for a client that carries no private keys.
+		// SSHProvider is nil when helper.SSHProviderOrNil tolerated a kubeconfig-driven request
+		// that supplied no master hosts.
 		if govalue.NotNil(i.Params.SSHProvider) {
 			sshCl, err := i.Params.SSHProvider.Client(ctx)
 			if err != nil {
@@ -294,6 +293,7 @@ func (i *Attacher) scan(
 				if err != nil {
 					return fmt.Errorf("unable to read ssh private key: %w", err)
 				}
+
 				res.SSHPrivateKey = string(sshPrivateKey)
 			}
 		}

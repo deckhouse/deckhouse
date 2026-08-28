@@ -51,9 +51,8 @@ func (p *kubeClientProvider) KubeClientCtx(ctx context.Context) (*client.Kuberne
 }
 
 func (p *kubeClientProvider) Cleanup(ctx context.Context, stopSSH bool) {
-	// Either provider can legitimately be absent - a kubeconfig-driven destroy has no SSH
-	// connection to make - and Cleanup runs right between resource deletion and the
-	// infrastructure destroy, so a nil dereference here is the worst possible panic.
+	// Either provider can legitimately be absent: a kubeconfig-driven destroy builds no SSH
+	// provider, and a request that built no providers at all reaches this with neither.
 	if govalue.NotNil(p.kubeProvider) {
 		err := p.kubeProvider.Cleanup(ctx)
 		if err != nil {

@@ -250,8 +250,8 @@ type ConvergeStart struct {
 	State                         string                `protobuf:"bytes,4,opt,name=state,proto3" json:"state,omitempty"`
 	ApproveDestructionChangeId    string                `protobuf:"bytes,5,opt,name=approve_destruction_change_id,json=approveDestructionChangeId,proto3" json:"approve_destruction_change_id,omitempty"`
 	Options                       *ConvergeStartOptions `protobuf:"bytes,6,opt,name=options,proto3" json:"options,omitempty"`
-	// kubeconfig points the kube provider straight at the API server. connection_config is
-	// still required and must carry an SSHConfig document; its SSHHost documents may be omitted.
+	// kubeconfig points the kube provider straight at the API server. connection_config is still
+	// required: this operation reaches the nodes over ssh.
 	Kubeconfig string `protobuf:"bytes,7,opt,name=kubeconfig,proto3" json:"kubeconfig,omitempty"`
 }
 
