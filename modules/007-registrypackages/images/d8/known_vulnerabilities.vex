@@ -827,7 +827,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Пакет golang.org/x/crypto/openpgp попадает в бинарь транзитивно через containers/image (сборка с тегом containers_image_openpgp) в составе подкоманды d8 delivery-kit. d8 не выполняет OpenPGP-операций: верификация simple-signing подписей не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы.",
+      "impact_statement": "Пакет golang.org/x/crypto/openpgp попадает в бинарь как зависимость werf в составе подкоманды d8 delivery-kit (импортируется кодом werf и containers/image при сборке с тегом containers_image_openpgp). Это advisory о неподдерживаемом пакете без исправленной версии, а не конкретная уязвимость; OpenPGP-операции не вызываются в сценариях работы d8.",
       "timestamp": "2026-08-28T12:00:00Z"
     },
     {
