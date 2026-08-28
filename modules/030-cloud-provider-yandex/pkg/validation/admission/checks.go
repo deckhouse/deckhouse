@@ -100,6 +100,7 @@ func ValidateModuleConfig(state *ycval.State, operation admissionv1.Operation) c
 	case admissionv1.Create, admissionv1.Update:
 		result.Merge(
 			ycval.ValidateNodeGroupExternalIPAddresses(state),
+			ycval.ValidateProvisionedStorageClasses(state),
 		)
 	}
 

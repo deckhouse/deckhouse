@@ -166,6 +166,54 @@ func TestValidatePreflightRequiresMasterEtcdDisk(t *testing.T) {
 	}
 }
 
+func TestValidatePreflightRejectsRepeatedProvisionedStorageClassNames(t *testing.T) {
+	t.Parallel()
+
+	state := validState(t)
+	state.ModuleConfig.Spec.Settings.Storage.Parameters.ProvisionedStorageClasses = []ycsettingsv2.ProvisionedStorageClass{
+		{Name: "network-ssd-64k", Type: "network-ssd", BlockSize: "64Ki"},
+		{Name: "network-ssd-64k", Type: "network-ssd", BlockSize: "128Ki"},
+	}
+
+	result := ValidatePreflight(state, proto.OperationBootstrap)
+	if !hasViolationCode(result, ycval.CodeProvisionedStorageClassNamesUnique) {
+		t.Fatalf("ValidatePreflight() = %q, want %s", result.Error(), ycval.CodeProvisionedStorageClassNamesUnique)
+	}
+}
+
+func TestValidatePreflightAllowsUniqueProvisionedStorageClassNames(t *testing.T) {
+	t.Parallel()
+
+	state := validState(t)
+	state.ModuleConfig.Spec.Settings.Storage.Parameters.ProvisionedStorageClasses = []ycsettingsv2.ProvisionedStorageClass{
+		{Name: "network-ssd-64k", Type: "network-ssd", BlockSize: "64Ki"},
+		{Name: "network-ssd", Type: "network-ssd", BlockSize: "128Ki"},
+	}
+
+	result := ValidatePreflight(state, proto.OperationBootstrap)
+	if result.HasErrors() {
+		t.Fatalf("ValidatePreflight() = %q, want no errors", result.Error())
+	}
+}
+
+// The check is part of the new-model block, so a cluster still on the legacy PCC with
+// migration pending must not be blocked by it.
+func TestValidatePreflightSkipsProvisionedStorageClassesDuringMigration(t *testing.T) {
+	t.Parallel()
+
+	state := validState(t)
+	state.MigrationStatus = cpapi.MigrationStatus{MigrationPending: true, LegacyPCCPresent: true}
+	state.ModuleConfig.Spec.Settings.Storage.Parameters.ProvisionedStorageClasses = []ycsettingsv2.ProvisionedStorageClass{
+		{Name: "network-ssd-64k", Type: "network-ssd"},
+		{Name: "network-ssd-64k", Type: "network-ssd"},
+	}
+
+	result := ValidatePreflight(state, proto.OperationBootstrap)
+	if result.HasErrors() {
+		t.Fatalf("ValidatePreflight() during migration = %q, want no errors", result.Error())
+	}
+}
+
 func TestValidatePreflightSuccess(t *testing.T) {
 	t.Parallel()
 

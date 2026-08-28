@@ -297,6 +297,10 @@ var _ = Describe("BuildModuleConfigSettingsV2", func() {
 		mc := ycsettingsv1.ModuleConfigSettings{
 			StorageClass: ycsettingsv1.StorageClassSettings{
 				Exclude: []string{"network-hdd"},
+				Provision: []ycsettingsv1.ProvisionedStorageClass{
+					{Name: "network-ssd-64k", Type: "network-ssd", BlockSize: "64Ki"},
+					{Name: "network-ssd", Type: "network-ssd"},
+				},
 			},
 			AdditionalExternalNetworkIDs: []string{"net-extra"},
 		}
@@ -312,6 +316,10 @@ var _ = Describe("BuildModuleConfigSettingsV2", func() {
 		Expect(result.Nodes.Parameters.Zones).To(Equal([]string{"ru-central1-a", "ru-central1-b"}))
 		Expect(result.Nodes.Disabled).To(BeFalse())
 		Expect(result.Storage.Parameters.ExcludedStorageClasses).To(Equal([]string{"network-hdd"}))
+		Expect(result.Storage.Parameters.ProvisionedStorageClasses).To(Equal([]ycsettingsv2.ProvisionedStorageClass{
+			{Name: "network-ssd-64k", Type: "network-ssd", BlockSize: "64Ki"},
+			{Name: "network-ssd", Type: "network-ssd"},
+		}))
 		Expect(result.Storage.Disabled).To(BeFalse())
 		Expect(result.CCM.Parameters.AdditionalExternalNetworkIDs).To(Equal([]string{"net-extra"}))
 		Expect(result.CCM.Disabled).To(BeFalse())
@@ -344,6 +352,10 @@ var _ = Describe("BuildModuleConfigSettingsV2", func() {
 		Expect(result.Nodes.Parameters.Labels).To(BeNil())
 		Expect(result.Nodes.Parameters.Zones).To(BeNil())
 		Expect(result.Storage.Parameters.ExcludedStorageClasses).To(BeNil())
+		// BeEmpty, not BeNil: the projection allocates the slice up front, unlike
+		// ExcludedStorageClasses which is copied as it is. omitempty drops both from JSON,
+		// so the ModuleConfig v2 payload is the same either way — see the assertion below.
+		Expect(result.Storage.Parameters.ProvisionedStorageClasses).To(BeEmpty())
 		Expect(result.CCM.Parameters.AdditionalExternalNetworkIDs).To(BeNil())
 		Expect(result.Nodes.Parameters.ExternalIPAddresses).To(BeEmpty())
 		Expect(result.Nodes.Parameters.ExternalSubnetIDs).To(BeEmpty())
@@ -353,6 +365,7 @@ var _ = Describe("BuildModuleConfigSettingsV2", func() {
 		Expect(string(raw)).NotTo(ContainSubstring("existingNetworkID"))
 		Expect(string(raw)).NotTo(ContainSubstring("internalSubnetCIDR"))
 		Expect(string(raw)).NotTo(ContainSubstring("domainName"))
+		Expect(string(raw)).NotTo(ContainSubstring("provisionedStorageClasses"))
 		Expect(string(raw)).To(ContainSubstring(`"withNATInstance":{"natInstanceResources":{}}`))
 		Expect(string(raw)).To(ContainSubstring(`"dhcpOptions":{}`))
 	})
@@ -837,6 +850,10 @@ spec:
       parameters:
         excludedStorageClasses:
         - network-hdd
+        provisionedStorageClasses:
+        - blockSize: 64Ki
+          name: network-ssd-64k
+          type: network-ssd
   version: 2
 status: {}
 ---
@@ -977,6 +994,9 @@ var _ = Describe("migration resources golden", func() {
 			AdditionalExternalNetworkIDs: []string{"enp-additional"},
 			StorageClass: ycsettingsv1.StorageClassSettings{
 				Exclude: []string{"network-hdd"},
+				Provision: []ycsettingsv1.ProvisionedStorageClass{
+					{Name: "network-ssd-64k", Type: "network-ssd", BlockSize: "64Ki"},
+				},
 			},
 		}
 

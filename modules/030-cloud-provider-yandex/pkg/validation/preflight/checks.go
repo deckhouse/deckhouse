@@ -68,6 +68,7 @@ func ValidatePreflight(state *ycval.State, operation string) cpvalapi.Result {
 		cpval.ValidateInstanceClassesEtcdDisk(state),
 		ycval.ValidateNodeGroupExternalIPAddresses(state),
 		ycval.ValidateWithNATInstanceLayout(state),
+		ycval.ValidateProvisionedStorageClasses(state),
 	)
 
 	return result
