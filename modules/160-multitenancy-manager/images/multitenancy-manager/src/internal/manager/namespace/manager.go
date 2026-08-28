@@ -90,7 +90,7 @@ func (m *Manager) Adopt(ctx context.Context, namespace *corev1.Namespace) (ctrl.
 	// One write: Helm ownership (needed even when a same-name Project already exists)
 	// plus leftover retired markers. Callers already hold the namespace; do not Get it again.
 	if err := m.persistNamespace(ctx, namespace, func(ns *corev1.Namespace) bool {
-		stamped := helm.ApplyReleaseOwnership(ns, ns.Name)
+		stamped := helm.ApplyReleaseOwnership(ns, helm.ReleaseName(ns.Name))
 		cleared := applyClearRetiredMarkers(ns)
 		return stamped || cleared
 	}); err != nil {
@@ -185,7 +185,7 @@ func (m *Manager) migrateProject(ctx context.Context, project *v1alpha3.Project)
 		return fmt.Errorf("get the '%s' namespace: %w", project.Name, err)
 	default:
 		if err := m.persistNamespace(ctx, namespace, func(ns *corev1.Namespace) bool {
-			stamped := helm.ApplyReleaseOwnership(ns, project.Name)
+			stamped := helm.ApplyReleaseOwnership(ns, helm.ReleaseName(project.Name))
 			cleared := applyClearRetiredMarkers(ns)
 			return stamped || cleared
 		}); err != nil {
