@@ -129,19 +129,41 @@ already present (it was never backported to 1.17.x, up to and including v1.17.18
 
 ## 021-ebpf-api-compat.patch
 
-Adapts Cilium's eBPF loader to the `github.com/cilium/ebpf` v0.22.0 API, which
-`000-go-mod.patch` bumps to fix CVE-2026-10722 (the fix is only available in
-ebpf >= v0.22.0). ebpf v0.21.0 removed the `(*ebpf.VariableSpec).MapName()`
-method and replaced the previously private map reference with the exported
-`VariableSpec.SectionName` field (the section name a variable was allocated
-in). Cilium v1.17.17 still pins ebpf v0.17.1 and calls `v.MapName()` in
-`applyConstants()` (`pkg/bpf/collection.go`) to assert that config variables
-live in the `.rodata.config` section, so the bump alone breaks compilation.
+Two fixes Cilium v1.17.17 needs to work with `github.com/cilium/ebpf` v0.22.0,
+which `000-go-mod.patch` bumps from v0.17.1 to fix CVE-2026-10722 (fixed only in
+ebpf >= v0.22.0).
 
-The patch replaces the two `v.MapName()` calls with `v.SectionName`, which
-returns the same value (the underlying map/section name). No datapath or other
-behavior changes: a full `go build ./...` of Cilium v1.17.17 with ebpf v0.22.0
-has this single call site as its only incompatibility.
+1. Compile fix (`pkg/bpf/collection.go`): ebpf v0.21.0 removed
+   `(*ebpf.VariableSpec).MapName()` in favour of the exported
+   `VariableSpec.SectionName` (same value). `applyConstants()` called it to assert
+   config variables live in `.rodata.config`; both calls are replaced.
+
+2. Runtime fix (`pkg/datapath/linux/probes/probes.go`), backported from upstream
+   `36f2b4a12`: with `net.core.bpf_jit_harden=2` the kernel blinds constants even
+   for privileged loaders and then hides xlated instructions from
+   `BPF_OBJ_GET_INFO_BY_FD`, unless the caller may read kernel pointers
+   (`kallsyms_show_value()`: `kptr_restrict=0` *and* `perf_event_paranoid<=1`, or
+   `CAP_SYSLOG` — the agent has neither). ebpf v0.20.0 turned that previously
+   silent empty response into `ebpf.ErrRestrictedKernel`, so `HaveDeadCodeElim()`
+   started failing and `CheckRequirements()` aborted agent startup with
+   `requirements failed: Require support for dead code elimination (Linux 5.1 or
+   newer)`. The probe now tolerates the error, as it effectively did before the
+   bump. Deckhouse sets `bpf_jit_harden=2` in the CSE edition
+   (`candi/bashible/common-steps/all/041_configure_sysctl_tuner.sh.tpl`) and some
+   hardened distros set it themselves, hence only part of the clusters broke
+   (seen with `kptr_restrict` both 2 and 0). Upstream's two other call sites
+   (`HaveBPFJIT`, `verifyUnusedMaps`) do not exist in v1.17.17, and nothing else
+   there reads xlated/JIT/BTF info from `ProgramInfo`.
+
+Upstream chain: ebpf adds `ErrRestrictedKernel`
+(<https://github.com/cilium/ebpf/pull/1858>, v0.20.0) -> ebpf queries xlated
+instructions separately so the rest of the info survives
+(<https://github.com/cilium/ebpf/commit/5ac1d5a9f065adef5726b3969da8ef3a1626c603>,
+v0.21.0) -> Cilium reverts its own bump over these probe failures on GKE COS
+(<https://github.com/cilium/cilium/pull/42327>) -> Cilium forward-fixes the probes
+and re-lands the bump (<https://github.com/cilium/cilium/pull/42361>,
+<https://github.com/cilium/cilium/commit/36f2b4a127f07985a79b984cd603de3cbd9c1d0f>).
 
 **Remove this patch when upgrading to a Cilium version that already targets
-ebpf >= v0.21.0**, where `applyConstants()` no longer uses the removed method.
+ebpf >= v0.21.0**, where `applyConstants()` no longer uses the removed method
+and the probes already tolerate `ErrRestrictedKernel`.
