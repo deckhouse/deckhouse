@@ -1,7 +1,7 @@
 {
   "name": "d8",
   "description": "d8 controls the Deckhouse Kubernetes Platform",
-  "version": "v0.30.4",
+  "version": "v0.30.21",
   "aliases": null,
   "flags": {
     "help": {
@@ -199,9 +199,19 @@
           "shorthand": "",
           "global": false
         },
+        "password": {
+          "description": "Registry password or token (overrides the Docker config; use with --username)",
+          "shorthand": "p",
+          "global": false
+        },
         "platform": {
           "description": "Resolve images to platform os/arch[/variant][:osversion] (image-level commands only)",
           "shorthand": "",
+          "global": false
+        },
+        "username": {
+          "description": "Registry username (overrides the Docker config; use with --password)",
+          "shorthand": "u",
           "global": false
         },
         "verbose": {
@@ -231,9 +241,19 @@
               "shorthand": "",
               "global": true
             },
+            "password": {
+              "description": "Registry password or token (overrides the Docker config; use with --username)",
+              "shorthand": "p",
+              "global": true
+            },
             "platform": {
               "description": "Resolve images to platform os/arch[/variant][:osversion] (image-level commands only)",
               "shorthand": "",
+              "global": true
+            },
+            "username": {
+              "description": "Registry username (overrides the Docker config; use with --password)",
+              "shorthand": "u",
               "global": true
             },
             "verbose": {
@@ -259,9 +279,19 @@
               "shorthand": "",
               "global": true
             },
+            "password": {
+              "description": "Registry password or token (overrides the Docker config; use with --username)",
+              "shorthand": "p",
+              "global": true
+            },
             "platform": {
               "description": "Resolve images to platform os/arch[/variant][:osversion] (image-level commands only)",
               "shorthand": "",
+              "global": true
+            },
+            "username": {
+              "description": "Registry username (overrides the Docker config; use with --password)",
+              "shorthand": "u",
               "global": true
             },
             "verbose": {
@@ -292,6 +322,11 @@
               "shorthand": "",
               "global": true
             },
+            "password": {
+              "description": "Registry password or token (overrides the Docker config; use with --username)",
+              "shorthand": "p",
+              "global": true
+            },
             "platform": {
               "description": "Resolve images to platform os/arch[/variant][:osversion] (image-level commands only)",
               "shorthand": "",
@@ -301,6 +336,11 @@
               "description": "Read the digest from a local tarball instead of the registry",
               "shorthand": "",
               "global": false
+            },
+            "username": {
+              "description": "Registry username (overrides the Docker config; use with --password)",
+              "shorthand": "u",
+              "global": true
             },
             "verbose": {
               "description": "Enable debug logs on stderr",
@@ -325,9 +365,19 @@
               "shorthand": "",
               "global": true
             },
+            "password": {
+              "description": "Registry password or token (overrides the Docker config; use with --username)",
+              "shorthand": "p",
+              "global": true
+            },
             "platform": {
               "description": "Resolve images to platform os/arch[/variant][:osversion] (image-level commands only)",
               "shorthand": "",
+              "global": true
+            },
+            "username": {
+              "description": "Registry username (overrides the Docker config; use with --password)",
+              "shorthand": "u",
               "global": true
             },
             "verbose": {
@@ -353,9 +403,19 @@
               "shorthand": "",
               "global": true
             },
+            "password": {
+              "description": "Registry password or token (overrides the Docker config; use with --username)",
+              "shorthand": "p",
+              "global": true
+            },
             "platform": {
               "description": "Resolve images to platform os/arch[/variant][:osversion] (image-level commands only)",
               "shorthand": "",
+              "global": true
+            },
+            "username": {
+              "description": "Registry username (overrides the Docker config; use with --password)",
+              "shorthand": "u",
               "global": true
             },
             "verbose": {
@@ -380,9 +440,19 @@
                   "shorthand": "",
                   "global": true
                 },
+                "password": {
+                  "description": "Registry password or token (overrides the Docker config; use with --username)",
+                  "shorthand": "p",
+                  "global": true
+                },
                 "platform": {
                   "description": "Resolve images to platform os/arch[/variant][:osversion] (image-level commands only)",
                   "shorthand": "",
+                  "global": true
+                },
+                "username": {
+                  "description": "Registry username (overrides the Docker config; use with --password)",
+                  "shorthand": "u",
                   "global": true
                 },
                 "verbose": {
@@ -413,9 +483,19 @@
                   "shorthand": "o",
                   "global": false
                 },
+                "password": {
+                  "description": "Registry password or token (overrides the Docker config; use with --username)",
+                  "shorthand": "p",
+                  "global": true
+                },
                 "platform": {
                   "description": "Resolve images to platform os/arch[/variant][:osversion] (image-level commands only)",
                   "shorthand": "",
+                  "global": true
+                },
+                "username": {
+                  "description": "Registry username (overrides the Docker config; use with --password)",
+                  "shorthand": "u",
                   "global": true
                 },
                 "verbose": {
@@ -446,9 +526,19 @@
                   "shorthand": "l",
                   "global": false
                 },
+                "password": {
+                  "description": "Registry password or token (overrides the Docker config; use with --username)",
+                  "shorthand": "p",
+                  "global": true
+                },
                 "platform": {
                   "description": "Resolve images to platform os/arch[/variant][:osversion] (image-level commands only)",
                   "shorthand": "",
+                  "global": true
+                },
+                "username": {
+                  "description": "Registry username (overrides the Docker config; use with --password)",
+                  "shorthand": "u",
                   "global": true
                 },
                 "verbose": {
@@ -484,6 +574,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "password": {
+                  "description": "Registry password or token (overrides the Docker config; use with --username)",
+                  "shorthand": "p",
+                  "global": true
+                },
                 "platform": {
                   "description": "Resolve images to platform os/arch[/variant][:osversion] (image-level commands only)",
                   "shorthand": "",
@@ -494,6 +589,11 @@
                   "shorthand": "",
                   "global": false
                 },
+                "username": {
+                  "description": "Registry username (overrides the Docker config; use with --password)",
+                  "shorthand": "u",
+                  "global": true
+                },
                 "verbose": {
                   "description": "Enable debug logs on stderr",
                   "shorthand": "v",
@@ -503,6 +603,44 @@
               "subcommands": null
             }
           ]
+        },
+        {
+          "name": "login [REGISTRY]",
+          "description": "Log in to a container registry",
+          "aliases": null,
+          "flags": {
+            "allow-nondistributable-artifacts": {
+              "description": "Include non-distributable (foreign) layers when pushing",
+              "shorthand": "",
+              "global": true
+            },
+            "insecure": {
+              "description": "Allow plain HTTP and skip TLS verification (localhost and RFC1918 hosts already auto-allow HTTP)",
+              "shorthand": "",
+              "global": true
+            },
+            "password": {
+              "description": "Registry password or token (overrides the Docker config; use with --username)",
+              "shorthand": "p",
+              "global": true
+            },
+            "platform": {
+              "description": "Resolve images to platform os/arch[/variant][:osversion] (image-level commands only)",
+              "shorthand": "",
+              "global": true
+            },
+            "username": {
+              "description": "Registry username (overrides the Docker config; use with --password)",
+              "shorthand": "u",
+              "global": true
+            },
+            "verbose": {
+              "description": "Enable debug logs on stderr",
+              "shorthand": "v",
+              "global": true
+            }
+          },
+          "subcommands": null
         },
         {
           "name": "ls REPO",
@@ -529,9 +667,19 @@
               "shorthand": "O",
               "global": false
             },
+            "password": {
+              "description": "Registry password or token (overrides the Docker config; use with --username)",
+              "shorthand": "p",
+              "global": true
+            },
             "platform": {
               "description": "Resolve images to platform os/arch[/variant][:osversion] (image-level commands only)",
               "shorthand": "",
+              "global": true
+            },
+            "username": {
+              "description": "Registry username (overrides the Docker config; use with --password)",
+              "shorthand": "u",
               "global": true
             },
             "verbose": {
@@ -557,9 +705,19 @@
               "shorthand": "",
               "global": true
             },
+            "password": {
+              "description": "Registry password or token (overrides the Docker config; use with --username)",
+              "shorthand": "p",
+              "global": true
+            },
             "platform": {
               "description": "Resolve images to platform os/arch[/variant][:osversion] (image-level commands only)",
               "shorthand": "",
+              "global": true
+            },
+            "username": {
+              "description": "Registry username (overrides the Docker config; use with --password)",
+              "shorthand": "u",
               "global": true
             },
             "verbose": {
@@ -595,9 +753,19 @@
               "shorthand": "",
               "global": true
             },
+            "password": {
+              "description": "Registry password or token (overrides the Docker config; use with --username)",
+              "shorthand": "p",
+              "global": true
+            },
             "platform": {
               "description": "Resolve images to platform os/arch[/variant][:osversion] (image-level commands only)",
               "shorthand": "",
+              "global": true
+            },
+            "username": {
+              "description": "Registry username (overrides the Docker config; use with --password)",
+              "shorthand": "u",
               "global": true
             },
             "verbose": {
@@ -633,9 +801,19 @@
               "shorthand": "",
               "global": true
             },
+            "password": {
+              "description": "Registry password or token (overrides the Docker config; use with --username)",
+              "shorthand": "p",
+              "global": true
+            },
             "platform": {
               "description": "Resolve images to platform os/arch[/variant][:osversion] (image-level commands only)",
               "shorthand": "",
+              "global": true
+            },
+            "username": {
+              "description": "Registry username (overrides the Docker config; use with --password)",
+              "shorthand": "u",
               "global": true
             },
             "verbose": {
@@ -966,7 +1144,7 @@
               "global": false
             },
             "allowed-backend-storage-volume-usage": {
-              "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE)",
+              "description": "Set allowed percentage or absolute value (e.g. 10GB) of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE)",
               "shorthand": "",
               "global": false
             },
@@ -976,7 +1154,7 @@
               "global": false
             },
             "allowed-docker-storage-volume-usage": {
-              "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
+              "description": "Set allowed percentage or absolute value (e.g. 10GB) of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
               "shorthand": "",
               "global": false
             },
@@ -986,7 +1164,7 @@
               "global": false
             },
             "allowed-local-cache-volume-usage": {
-              "description": "Set allowed percentage of local cache (~/.werf/local_cache by default) volume usage which will cause cleanup of least recently used data from the local cache (default 70% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE)",
+              "description": "Set allowed percentage or absolute value (e.g. 10GB) of local cache (~/.werf/local_cache by default) volume usage which will cause cleanup of least recently used data from the local cache (default 70% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE)",
               "shorthand": "",
               "global": false
             },
@@ -2649,7 +2827,7 @@
                   "global": false
                 },
                 "allowed-backend-storage-volume-usage": {
-                  "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE)",
+                  "description": "Set allowed percentage or absolute value (e.g. 10GB) of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE)",
                   "shorthand": "",
                   "global": false
                 },
@@ -2659,7 +2837,7 @@
                   "global": false
                 },
                 "allowed-docker-storage-volume-usage": {
-                  "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
+                  "description": "Set allowed percentage or absolute value (e.g. 10GB) of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
                   "shorthand": "",
                   "global": false
                 },
@@ -2669,7 +2847,7 @@
                   "global": false
                 },
                 "allowed-local-cache-volume-usage": {
-                  "description": "Set allowed percentage of local cache (~/.werf/local_cache by default) volume usage which will cause cleanup of least recently used data from the local cache (default 70% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE)",
+                  "description": "Set allowed percentage or absolute value (e.g. 10GB) of local cache (~/.werf/local_cache by default) volume usage which will cause cleanup of least recently used data from the local cache (default 70% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE)",
                   "shorthand": "",
                   "global": false
                 },
@@ -4157,7 +4335,7 @@
               "global": false
             },
             "allowed-backend-storage-volume-usage": {
-              "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE)",
+              "description": "Set allowed percentage or absolute value (e.g. 10GB) of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE)",
               "shorthand": "",
               "global": false
             },
@@ -4167,7 +4345,7 @@
               "global": false
             },
             "allowed-docker-storage-volume-usage": {
-              "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
+              "description": "Set allowed percentage or absolute value (e.g. 10GB) of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
               "shorthand": "",
               "global": false
             },
@@ -4177,7 +4355,7 @@
               "global": false
             },
             "allowed-local-cache-volume-usage": {
-              "description": "Set allowed percentage of local cache (~/.werf/local_cache by default) volume usage which will cause cleanup of least recently used data from the local cache (default 70% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE)",
+              "description": "Set allowed percentage or absolute value (e.g. 10GB) of local cache (~/.werf/local_cache by default) volume usage which will cause cleanup of least recently used data from the local cache (default 70% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE)",
               "shorthand": "",
               "global": false
             },
@@ -4584,7 +4762,7 @@
                   "global": false
                 },
                 "allowed-backend-storage-volume-usage": {
-                  "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE)",
+                  "description": "Set allowed percentage or absolute value (e.g. 10GB) of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE)",
                   "shorthand": "",
                   "global": false
                 },
@@ -4594,7 +4772,7 @@
                   "global": false
                 },
                 "allowed-docker-storage-volume-usage": {
-                  "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
+                  "description": "Set allowed percentage or absolute value (e.g. 10GB) of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
                   "shorthand": "",
                   "global": false
                 },
@@ -4604,7 +4782,7 @@
                   "global": false
                 },
                 "allowed-local-cache-volume-usage": {
-                  "description": "Set allowed percentage of local cache (~/.werf/local_cache by default) volume usage which will cause cleanup of least recently used data from the local cache (default 70% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE)",
+                  "description": "Set allowed percentage or absolute value (e.g. 10GB) of local cache (~/.werf/local_cache by default) volume usage which will cause cleanup of least recently used data from the local cache (default 70% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE)",
                   "shorthand": "",
                   "global": false
                 },
@@ -5047,7 +5225,7 @@
                   "global": false
                 },
                 "allowed-backend-storage-volume-usage": {
-                  "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE)",
+                  "description": "Set allowed percentage or absolute value (e.g. 10GB) of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE)",
                   "shorthand": "",
                   "global": false
                 },
@@ -5057,7 +5235,7 @@
                   "global": false
                 },
                 "allowed-docker-storage-volume-usage": {
-                  "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
+                  "description": "Set allowed percentage or absolute value (e.g. 10GB) of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
                   "shorthand": "",
                   "global": false
                 },
@@ -5067,7 +5245,7 @@
                   "global": false
                 },
                 "allowed-local-cache-volume-usage": {
-                  "description": "Set allowed percentage of local cache (~/.werf/local_cache by default) volume usage which will cause cleanup of least recently used data from the local cache (default 70% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE)",
+                  "description": "Set allowed percentage or absolute value (e.g. 10GB) of local cache (~/.werf/local_cache by default) volume usage which will cause cleanup of least recently used data from the local cache (default 70% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE)",
                   "shorthand": "",
                   "global": false
                 },
@@ -5510,7 +5688,7 @@
                   "global": false
                 },
                 "allowed-backend-storage-volume-usage": {
-                  "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE)",
+                  "description": "Set allowed percentage or absolute value (e.g. 10GB) of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE)",
                   "shorthand": "",
                   "global": false
                 },
@@ -5520,7 +5698,7 @@
                   "global": false
                 },
                 "allowed-docker-storage-volume-usage": {
-                  "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
+                  "description": "Set allowed percentage or absolute value (e.g. 10GB) of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
                   "shorthand": "",
                   "global": false
                 },
@@ -5530,7 +5708,7 @@
                   "global": false
                 },
                 "allowed-local-cache-volume-usage": {
-                  "description": "Set allowed percentage of local cache (~/.werf/local_cache by default) volume usage which will cause cleanup of least recently used data from the local cache (default 70% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE)",
+                  "description": "Set allowed percentage or absolute value (e.g. 10GB) of local cache (~/.werf/local_cache by default) volume usage which will cause cleanup of least recently used data from the local cache (default 70% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE)",
                   "shorthand": "",
                   "global": false
                 },
@@ -5973,7 +6151,7 @@
                   "global": false
                 },
                 "allowed-backend-storage-volume-usage": {
-                  "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE)",
+                  "description": "Set allowed percentage or absolute value (e.g. 10GB) of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE)",
                   "shorthand": "",
                   "global": false
                 },
@@ -5983,7 +6161,7 @@
                   "global": false
                 },
                 "allowed-docker-storage-volume-usage": {
-                  "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
+                  "description": "Set allowed percentage or absolute value (e.g. 10GB) of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
                   "shorthand": "",
                   "global": false
                 },
@@ -5993,7 +6171,7 @@
                   "global": false
                 },
                 "allowed-local-cache-volume-usage": {
-                  "description": "Set allowed percentage of local cache (~/.werf/local_cache by default) volume usage which will cause cleanup of least recently used data from the local cache (default 70% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE)",
+                  "description": "Set allowed percentage or absolute value (e.g. 10GB) of local cache (~/.werf/local_cache by default) volume usage which will cause cleanup of least recently used data from the local cache (default 70% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE)",
                   "shorthand": "",
                   "global": false
                 },
@@ -6895,7 +7073,7 @@
               "global": false
             },
             "allowed-backend-storage-volume-usage": {
-              "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE)",
+              "description": "Set allowed percentage or absolute value (e.g. 10GB) of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE)",
               "shorthand": "",
               "global": false
             },
@@ -6905,7 +7083,7 @@
               "global": false
             },
             "allowed-docker-storage-volume-usage": {
-              "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
+              "description": "Set allowed percentage or absolute value (e.g. 10GB) of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
               "shorthand": "",
               "global": false
             },
@@ -6915,7 +7093,7 @@
               "global": false
             },
             "allowed-local-cache-volume-usage": {
-              "description": "Set allowed percentage of local cache (~/.werf/local_cache by default) volume usage which will cause cleanup of least recently used data from the local cache (default 70% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE)",
+              "description": "Set allowed percentage or absolute value (e.g. 10GB) of local cache (~/.werf/local_cache by default) volume usage which will cause cleanup of least recently used data from the local cache (default 70% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE)",
               "shorthand": "",
               "global": false
             },
@@ -7907,7 +8085,7 @@
               "global": false
             },
             "allowed-backend-storage-volume-usage": {
-              "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE)",
+              "description": "Set allowed percentage or absolute value (e.g. 10GB) of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE)",
               "shorthand": "",
               "global": false
             },
@@ -7917,7 +8095,7 @@
               "global": false
             },
             "allowed-docker-storage-volume-usage": {
-              "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
+              "description": "Set allowed percentage or absolute value (e.g. 10GB) of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
               "shorthand": "",
               "global": false
             },
@@ -7927,7 +8105,7 @@
               "global": false
             },
             "allowed-local-cache-volume-usage": {
-              "description": "Set allowed percentage of local cache (~/.werf/local_cache by default) volume usage which will cause cleanup of least recently used data from the local cache (default 70% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE)",
+              "description": "Set allowed percentage or absolute value (e.g. 10GB) of local cache (~/.werf/local_cache by default) volume usage which will cause cleanup of least recently used data from the local cache (default 70% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE)",
               "shorthand": "",
               "global": false
             },
@@ -17840,7 +18018,7 @@
               "aliases": null,
               "flags": {
                 "allowed-backend-storage-volume-usage": {
-                  "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE)",
+                  "description": "Set allowed percentage or absolute value (e.g. 10GB) of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE)",
                   "shorthand": "",
                   "global": false
                 },
@@ -17850,7 +18028,7 @@
                   "global": false
                 },
                 "allowed-docker-storage-volume-usage": {
-                  "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
+                  "description": "Set allowed percentage or absolute value (e.g. 10GB) of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
                   "shorthand": "",
                   "global": false
                 },
@@ -17860,7 +18038,7 @@
                   "global": false
                 },
                 "allowed-local-cache-volume-usage": {
-                  "description": "Set allowed percentage of local cache (~/.werf/local_cache by default) volume usage which will cause cleanup of least recently used data from the local cache (default 70% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE)",
+                  "description": "Set allowed percentage or absolute value (e.g. 10GB) of local cache (~/.werf/local_cache by default) volume usage which will cause cleanup of least recently used data from the local cache (default 70% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE)",
                   "shorthand": "",
                   "global": false
                 },
@@ -20663,7 +20841,7 @@
               "global": false
             },
             "allowed-backend-storage-volume-usage": {
-              "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE)",
+              "description": "Set allowed percentage or absolute value (e.g. 10GB) of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE)",
               "shorthand": "",
               "global": false
             },
@@ -20673,7 +20851,7 @@
               "global": false
             },
             "allowed-docker-storage-volume-usage": {
-              "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
+              "description": "Set allowed percentage or absolute value (e.g. 10GB) of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
               "shorthand": "",
               "global": false
             },
@@ -20683,7 +20861,7 @@
               "global": false
             },
             "allowed-local-cache-volume-usage": {
-              "description": "Set allowed percentage of local cache (~/.werf/local_cache by default) volume usage which will cause cleanup of least recently used data from the local cache (default 70% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE)",
+              "description": "Set allowed percentage or absolute value (e.g. 10GB) of local cache (~/.werf/local_cache by default) volume usage which will cause cleanup of least recently used data from the local cache (default 70% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE)",
               "shorthand": "",
               "global": false
             },
@@ -21506,7 +21684,7 @@
               "global": false
             },
             "allowed-backend-storage-volume-usage": {
-              "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE)",
+              "description": "Set allowed percentage or absolute value (e.g. 10GB) of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE)",
               "shorthand": "",
               "global": false
             },
@@ -21516,7 +21694,7 @@
               "global": false
             },
             "allowed-docker-storage-volume-usage": {
-              "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
+              "description": "Set allowed percentage or absolute value (e.g. 10GB) of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
               "shorthand": "",
               "global": false
             },
@@ -21526,7 +21704,7 @@
               "global": false
             },
             "allowed-local-cache-volume-usage": {
-              "description": "Set allowed percentage of local cache (~/.werf/local_cache by default) volume usage which will cause cleanup of least recently used data from the local cache (default 70% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE)",
+              "description": "Set allowed percentage or absolute value (e.g. 10GB) of local cache (~/.werf/local_cache by default) volume usage which will cause cleanup of least recently used data from the local cache (default 70% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE)",
               "shorthand": "",
               "global": false
             },
@@ -23399,7 +23577,7 @@
               "aliases": null,
               "flags": {
                 "allowed-backend-storage-volume-usage": {
-                  "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE)",
+                  "description": "Set allowed percentage or absolute value (e.g. 10GB) of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE)",
                   "shorthand": "",
                   "global": false
                 },
@@ -23409,7 +23587,7 @@
                   "global": false
                 },
                 "allowed-docker-storage-volume-usage": {
-                  "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
+                  "description": "Set allowed percentage or absolute value (e.g. 10GB) of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
                   "shorthand": "",
                   "global": false
                 },
@@ -23419,7 +23597,7 @@
                   "global": false
                 },
                 "allowed-local-cache-volume-usage": {
-                  "description": "Set allowed percentage of local cache (~/.werf/local_cache by default) volume usage which will cause cleanup of least recently used data from the local cache (default 70% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE)",
+                  "description": "Set allowed percentage or absolute value (e.g. 10GB) of local cache (~/.werf/local_cache by default) volume usage which will cause cleanup of least recently used data from the local cache (default 70% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE)",
                   "shorthand": "",
                   "global": false
                 },
@@ -45591,7 +45769,7 @@
           "aliases": null,
           "flags": {
             "deckhouse-tag": {
-              "description": "Specific Deckhouse build tag to pull. Conflicts with --since-version. If registry contains release channel image for specified tag, all release channels in the bundle will be pointed to it.",
+              "description": "Specific Deckhouse build tag to pull. Conflicts with --since-version and --include-platform. If registry contains release channel image for specified tag, all release channels in the bundle will be pointed to it.",
               "shorthand": "",
               "global": false
             },
@@ -45603,6 +45781,11 @@
             "exclude-module": {
               "description": "Blacklist specific modules from downloading. Format is \"module-name[@version]\". Use one flag per each module. Overridden by use of --include-module.\"",
               "shorthand": "e",
+              "global": false
+            },
+            "exclude-package": {
+              "description": "Blacklist specific packages from downloading. Format is \"package-name[@version]\". Use one flag per each package. Overridden by use of --include-package.",
+              "shorthand": "",
               "global": false
             },
             "force": {
@@ -45626,8 +45809,18 @@
               "global": false
             },
             "include-module": {
-              "description": "Whitelist specific modules for downloading. Use one flag per each module. Disables blacklisting by --exclude-module.\"\n\nExample:\nAvailable versions for \u003cmodule-name\u003e: v1.0.0, v1.1.0, v1.2.0, v1.3.0, v1.3.3, v1.4.1\n\nmodule-name@1.3.0 → semver ^ constraint (^1.3.0): include v1.3.0, v1.3.3, v1.4.1. In addition pulls current versions from release channels\n\nmodule-name@~1.3.0 →  semver ~ constraint (\u003e=1.3.0 \u003c1.4.0): include only v1.3.0, v1.3.3. In addition pulls current versions from release channels\n\nmodule-name@=v1.3.0 → exact tag match: include only v1.3.0 and publish it to all release channels (alpha, beta, early-access, stable, rock-solid).\n\nmodule-name@=bobV1 → exact tag match: include only bobV1 and publish it to all release channels (alpha, beta, early-access, stable, rock-solid).\n\nmodule-name@=v1.3.0+stable → exact tag match: include only v1.3.0 and and publish it to stable channel\n\t\t",
+              "description": "Whitelist specific modules for downloading. Use one flag per each module. Disables blacklisting by --exclude-module.\"\n\nSemver constraints (caret, tilde, range) keep only the highest patch in each (major, minor) series, mirroring how platform releases are discovered.\nVersions explicitly named with an inclusive boundary operator (\u003e= or \u003c=) are always preserved — that boundary is part of the user's request and must round-trip even when a newer patch exists in the same minor.\nUse the exact-tag form (=) when you need a specific older patch unconditionally.\n\nExample:\nAvailable versions for \u003cmodule-name\u003e: v1.0.0, v1.1.0, v1.2.0, v1.3.0, v1.3.3, v1.4.0, v1.4.1\n\nmodule-name@1.3.0 → semver ^ constraint (^1.3.0): keep latest patch per minor — includes v1.3.3 (1.3.x) and v1.4.1 (1.4.x). Versions currently pinned by release channels are pulled in addition.\n\nmodule-name@~1.3.0 → semver ~ constraint (\u003e=1.3.0 \u003c1.4.0): keep latest patch per minor in range — includes v1.3.3. Versions currently pinned by release channels are pulled in addition.\n\nmodule-name@\u003e=1.3.0 → range constraint with explicit \u003e= anchor: keep latest patch per minor AND the named anchor v1.3.0 — includes v1.3.0 (anchor), v1.3.3 (1.3.x latest), v1.4.1 (1.4.x latest).\n\nmodule-name@\u003e=1.3.0 \u003c=1.4.0 → both anchors honoured: includes v1.3.0, v1.3.3, v1.4.0; v1.4.1 is excluded by the upper bound.\n\nmodule-name@=v1.3.0 → exact tag match: include only v1.3.0 and publish it to all release channels (alpha, beta, early-access, stable, rock-solid).\n\nmodule-name@=bobV1 → exact tag match: include only bobV1 and publish it to all release channels (alpha, beta, early-access, stable, rock-solid).\n\nmodule-name@=v1.3.0+stable → exact tag match: include only v1.3.0 and and publish it to stable channel\n\t\t",
               "shorthand": "i",
+              "global": false
+            },
+            "include-package": {
+              "description": "Whitelist specific packages for downloading. Use one flag per each package. Disables blacklisting by --exclude-package.\n\nPackages are mirrored exactly like modules (same name@version constraint dialect), but live under the packages/ registry segment with their release metadata under packages/\u003cname\u003e/version.",
+              "shorthand": "",
+              "global": false
+            },
+            "include-platform": {
+              "description": "Select platform releases to download by a semver constraint expression, using the same dialect as --include-module's version part.\nConflicts with --since-version and --deckhouse-tag.\n\nSemver constraints (caret, tilde, range) keep only the highest patch in each (major, minor) series, mirroring the release-discovery rules used for full pulls.\nVersions explicitly named with an inclusive boundary operator (\u003e= or \u003c=) are always preserved — that boundary is part of the user's request and must round-trip even when a newer patch exists in the same minor.\nUse the exact-tag form (=) when you need to pin a specific tag, optionally propagating it to a release channel via the +channel suffix.\n\nExamples (available platform versions: v1.63.x, v1.64.x, v1.65.x, v1.66.x, v1.67.x, v1.68.x, v1.69.x, v1.70.x, v1.71.x):\n\n--include-platform \"\u003e=1.64 \u003c=1.68\" → bounded range: latest patch per minor in v1.64..v1.68, anchors v1.64.0 and v1.68.0 always preserved if present in the registry.\n\n--include-platform \"~1.65.0\" → semver ~ constraint (\u003e=1.65.0 \u003c1.66.0): latest v1.65.x patch only.\n\n--include-platform \"^1.65.0\" → semver ^ constraint (\u003e=1.65.0 \u003c2.0.0): latest patch per minor starting at v1.65.x.\n\n--include-platform \"1.65.0\" → implicit caret (^1.65.0): same as above; shorthand kept for parity with --include-module.\n\n--include-platform \"=v1.65.3\" → exact-tag pin: only v1.65.3 is pulled and propagated to all default release channels, just like --deckhouse-tag.\n\n--include-platform \"=v1.65.3+stable\" → exact-tag pin with channel suffix: only v1.65.3 is pulled (channel propagation matches --deckhouse-tag).",
+              "shorthand": "",
               "global": false
             },
             "insecure": {
@@ -45660,6 +45853,11 @@
               "shorthand": "",
               "global": false
             },
+            "no-packages": {
+              "description": "Do not pull Deckhouse packages into bundle.",
+              "shorthand": "",
+              "global": false
+            },
             "no-platform": {
               "description": "Do not pull Deckhouse Kubernetes Platform into bundle.",
               "shorthand": "",
@@ -45677,6 +45875,11 @@
             },
             "only-extra-images": {
               "description": "Pull only extra images for modules (additional images like security databases, scanners, etc.) without pulling main module images.",
+              "shorthand": "",
+              "global": false
+            },
+            "proxy-registry": {
+              "description": "Pull from a proxy/caching registry that does not implement the registry catalog API.\n\nInstead of calling the registry's \"list tags\" endpoint (which proxy registries typically return empty), this mode probes individual tags by incrementing patch -\u003e minor -\u003e major from the version explicitly named via --include-platform / --include-module. The probe stops once both a new patch and a new minor of the current major fail to resolve, then attempts the next major; if that also fails the probe terminates and downloads what was discovered.\n\nRequires --include-platform when platform is not skipped via --no-platform, and at least one --include-module when modules are not skipped via --no-modules. --exclude-module and --no-platform are respected.\n\nCannot be combined with --deckhouse-tag or --since-version (use --include-platform's lower bound instead).",
               "shorthand": "",
               "global": false
             },
@@ -45712,6 +45915,11 @@
             },
             "tmp-dir": {
               "description": "Path to a temporary directory to use for image pulling and pushing. All processing is done in this directory, so make sure there is enough free disk space to accommodate the entire bundle you are downloading;",
+              "shorthand": "",
+              "global": false
+            },
+            "verbose-summary": {
+              "description": "List every module and package in the end-of-pull summary with its resolved versions (and VEX count, when present), instead of just the totals. Output only - it does not change what is pulled.",
               "shorthand": "",
               "global": false
             }
@@ -45800,6 +46008,159 @@
               "subcommands": null
             }
           ]
+        }
+      ]
+    },
+    {
+      "name": "package",
+      "description": "Package build and bootstrap tool for containerized packages",
+      "aliases": null,
+      "flags": {},
+      "subcommands": [
+        {
+          "name": "bootstrap",
+          "description": "Bootstrap a new package (module or application)",
+          "aliases": null,
+          "flags": {},
+          "subcommands": [
+            {
+              "name": "application \u003cname\u003e",
+              "description": "Bootstrap a new application package",
+              "aliases": null,
+              "flags": {
+                "extended": {
+                  "description": "Generate extended files in the package",
+                  "shorthand": "",
+                  "global": false
+                },
+                "hooks": {
+                  "description": "Generate hooks in the package",
+                  "shorthand": "",
+                  "global": false
+                },
+                "output": {
+                  "description": "Custom path for the package (default: \u003ccwd\u003e/\u003cname\u003e)",
+                  "shorthand": "o",
+                  "global": false
+                },
+                "werf": {
+                  "description": "Use werf file for images",
+                  "shorthand": "",
+                  "global": false
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "module \u003cname\u003e",
+              "description": "Bootstrap a new module package",
+              "aliases": null,
+              "flags": {
+                "extended": {
+                  "description": "Generate extended files in the package",
+                  "shorthand": "",
+                  "global": false
+                },
+                "hooks": {
+                  "description": "Generate hooks in the package",
+                  "shorthand": "",
+                  "global": false
+                },
+                "output": {
+                  "description": "Custom path for the package (default: \u003ccwd\u003e/\u003cname\u003e)",
+                  "shorthand": "o",
+                  "global": false
+                },
+                "werf": {
+                  "description": "Use werf file for images",
+                  "shorthand": "",
+                  "global": false
+                }
+              },
+              "subcommands": null
+            }
+          ]
+        },
+        {
+          "name": "build --version \u003cversion\u003e [--repository \u003crepository\u003e] [--force]",
+          "description": "Build and push a package to a container registry",
+          "aliases": null,
+          "flags": {
+            "debug": {
+              "description": "enable debug logging",
+              "shorthand": "",
+              "global": false
+            },
+            "force": {
+              "description": "force update version in registry",
+              "shorthand": "f",
+              "global": false
+            },
+            "repo": {
+              "description": "Repository (env: PACKAGE_BUILD_REPOSITORY)",
+              "shorthand": "r",
+              "global": false
+            },
+            "sign": {
+              "description": "sign package with certificate and key. --sign-cert and --sign-key are required",
+              "shorthand": "",
+              "global": false
+            },
+            "sign-cert": {
+              "description": "sign certificate path or base64 string (env: PACKAGE_BUILD_SIGN_CERT)",
+              "shorthand": "",
+              "global": false
+            },
+            "sign-key": {
+              "description": "sign key path or base64 string or vault url (env: PACKAGE_BUILD_SIGN_KEY)",
+              "shorthand": "",
+              "global": false
+            },
+            "token": {
+              "description": "Registry token (env: PACKAGE_BUILD_REPOSITORY_TOKEN)",
+              "shorthand": "t",
+              "global": false
+            },
+            "user": {
+              "description": "Registry user (env: PACKAGE_BUILD_REPOSITORY_USER)",
+              "shorthand": "u",
+              "global": false
+            },
+            "version": {
+              "description": "Package version",
+              "shorthand": "v",
+              "global": false
+            }
+          },
+          "subcommands": null
+        },
+        {
+          "name": "verify",
+          "description": "Verify a package structure and configuration",
+          "aliases": null,
+          "flags": {
+            "hide-warnings": {
+              "description": "Hide warning-level messages",
+              "shorthand": "",
+              "global": false
+            },
+            "lint-config": {
+              "description": "Path to lint config file",
+              "shorthand": "",
+              "global": false
+            },
+            "remote": {
+              "description": "Verify a package image from a registry reference",
+              "shorthand": "r",
+              "global": false
+            },
+            "show-ignored": {
+              "description": "Show ignored-level messages",
+              "shorthand": "",
+              "global": false
+            }
+          },
+          "subcommands": null
         }
       ]
     },
@@ -46660,10 +47021,15 @@
       },
       "subcommands": [
         {
-          "name": "collect-debug-info",
+          "name": "collect-debug-info [flags] \u003e deckhouse-debug-$(date +\"%Y_%m_%d\").tar.gz",
           "description": "Collect debug info.",
           "aliases": null,
           "flags": {
+            "command-timeout": {
+              "description": "Timeout for each individual debug command execution",
+              "shorthand": "",
+              "global": false
+            },
             "context": {
               "description": "The name of the kubeconfig context to use",
               "shorthand": "",
@@ -46682,6 +47048,11 @@
             "list-exclude": {
               "description": "List all files that can be excluded from the debug archive",
               "shorthand": "l",
+              "global": false
+            },
+            "request-interval": {
+              "description": "Minimum interval between debug command executions to avoid overloading the cluster (e.g. 200ms, 500ms, 1s). Zero disables rate limiting (default 0s)",
+              "shorthand": "",
               "global": false
             }
           },
@@ -47004,6 +47375,61 @@
               "subcommands": null
             },
             {
+              "name": "maintenance",
+              "description": "Enable or disable module maintenance mode.",
+              "aliases": null,
+              "flags": {
+                "context": {
+                  "description": "The name of the kubeconfig context to use",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kubeconfig": {
+                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "shorthand": "k",
+                  "global": true
+                }
+              },
+              "subcommands": [
+                {
+                  "name": "disable \u003cmodule-name\u003e",
+                  "description": "Disable maintenance mode for a module using ModuleConfig resource.",
+                  "aliases": null,
+                  "flags": {
+                    "context": {
+                      "description": "The name of the kubeconfig context to use",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "kubeconfig": {
+                      "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                      "shorthand": "k",
+                      "global": true
+                    }
+                  },
+                  "subcommands": null
+                },
+                {
+                  "name": "enable \u003cmodule-name\u003e",
+                  "description": "Enable maintenance mode for a module using ModuleConfig resource.",
+                  "aliases": null,
+                  "flags": {
+                    "context": {
+                      "description": "The name of the kubeconfig context to use",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "kubeconfig": {
+                      "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                      "shorthand": "k",
+                      "global": true
+                    }
+                  },
+                  "subcommands": null
+                }
+              ]
+            },
+            {
               "name": "snapshots",
               "description": "Dump shapshots.",
               "aliases": null,
@@ -47320,6 +47746,40 @@
           ]
         },
         {
+          "name": "pki",
+          "description": "Tools for working with control-plane PKI",
+          "aliases": null,
+          "flags": {},
+          "subcommands": [
+            {
+              "name": "certs",
+              "description": "Manage and inspect control-plane TLS certificates",
+              "aliases": null,
+              "flags": {},
+              "subcommands": [
+                {
+                  "name": "check [PATH]",
+                  "description": "Check expiration of control-plane certificates",
+                  "aliases": null,
+                  "flags": {
+                    "kubeconfig-dir": {
+                      "description": "Directory containing kubeconfig files (full-scan mode only; defaults to the parent of --path)",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "path": {
+                      "description": "Directory containing the PKI certificates (used in full-scan mode only)",
+                      "shorthand": "",
+                      "global": false
+                    }
+                  },
+                  "subcommands": null
+                }
+              ]
+            }
+          ]
+        },
+        {
           "name": "sig-migrate",
           "description": "Migrate Kubernetes resources by adding and removing migration annotations",
           "aliases": null,
@@ -47344,13 +47804,23 @@
               "shorthand": "",
               "global": false
             },
+            "measure-stages": {
+              "description": "Print execution time for major migration stages.",
+              "shorthand": "",
+              "global": false
+            },
             "object": {
-              "description": "Scan only a specific object in format \u003cnamespace\u003e/\u003cname\u003e/\u003cresource_name\u003e. Use 'clusterwide' namespace for cluster-scoped resources. To get the resource name, use the 'kubectl api-resources' command.",
+              "description": "Process objects by identifier in format \u003cnamespace\u003e/\u003cname\u003e/\u003cresource_name\u003e. Use 'clusterwide' namespace for cluster-scoped resources. Resource name must match kubectl api-resources output.",
               "shorthand": "",
               "global": false
             },
             "retry": {
               "description": "Retry annotation for previously failed objects.",
+              "shorthand": "",
+              "global": false
+            },
+            "threads": {
+              "description": "Number of worker threads for resource discovery and migration. Values \u003c=0 use default.",
               "shorthand": "",
               "global": false
             }
@@ -47360,8 +47830,8 @@
       ]
     },
     {
-      "name": "v",
-      "description": "d8 v controls virtual machine related operations on your kubernetes cluster.",
+      "name": "v [command] [args...]",
+      "description": "Commands to work with Deckhouse Virtualization Platform.",
       "aliases": [
         "virtualization"
       ],
@@ -48440,8 +48910,8 @@
           "subcommands": null
         },
         {
-          "name": "scp VirtualMachine)",
-          "description": "SCP files from/to a virtual machine.",
+          "name": "scp [flags] SOURCE TARGET",
+          "description": "Secure file CoPy from/to a virtual machine.",
           "aliases": null,
           "flags": {
             "as": {
@@ -48490,7 +48960,7 @@
               "global": true
             },
             "identity-file": {
-              "description": "--identity-file=/home/user/.ssh/id_rsa: Set the path to a private key used for authenticating to the server; If not provided, the client will try to use the local ssh-agent at $SSH_AUTH_SOCK",
+              "description": "Specify a path to a private key used for authenticating to the server; If not provided, the client will try to use the local ssh-agent at $SSH_AUTH_SOCK",
               "shorthand": "i",
               "global": false
             },
@@ -48500,7 +48970,7 @@
               "global": true
             },
             "known-hosts": {
-              "description": "--d8virtualization_known_hosts=/home/user/.ssh/known-hosts: Set the path to the known_hosts file.",
+              "description": "Set a path to the known_hosts file.",
               "shorthand": "",
               "global": false
             },
@@ -48510,12 +48980,12 @@
               "global": true
             },
             "local-ssh": {
-              "description": "--local-ssh=true: Set this to true to use the SSH/SCP client available on your system by using this command as ProxyCommand; If set to false, this will establish a SSH/SCP connection with limited capabilities provided by this client",
+              "description": "Use the SSH/SCP client available on your system by using this command as ProxyCommand; Default is false: use embedded SSH client with limited capabilities",
               "shorthand": "",
               "global": false
             },
             "local-ssh-opts": {
-              "description": "--local-ssh-opts=\"-o StrictHostKeyChecking=no\" : Additional options to be passed to the local ssh. This is applied only if local-ssh=true",
+              "description": "Additional options to be passed to the ssh client if --local-ssh=true is set",
               "shorthand": "t",
               "global": false
             },
@@ -48535,7 +49005,7 @@
               "global": true
             },
             "port": {
-              "description": "--port=22: Specify a port on the VM to send SSH traffic to",
+              "description": "Specify a port to connect to",
               "shorthand": "p",
               "global": false
             },
@@ -48580,9 +49050,9 @@
               "global": true
             },
             "username": {
-              "description": "--username=root: Set this to the user you want to open the SSH connection as; If unassigned, this will be empty and the SSH default will apply",
-              "shorthand": "l",
-              "global": false
+              "description": "Username for basic authentication to the API server",
+              "shorthand": "",
+              "global": true
             },
             "v": {
               "description": "number for the log level verbosity",
@@ -48598,7 +49068,7 @@
           "subcommands": null
         },
         {
-          "name": "ssh VirtualMachine",
+          "name": "ssh [-n|--namespace NAMESPACE] VIRTUAL-MACHINE-NAME",
           "description": "Open a SSH connection to a virtual machine.",
           "aliases": null,
           "flags": {
@@ -48638,7 +49108,7 @@
               "global": true
             },
             "command": {
-              "description": "--command='ls /': Specify a command to execute in the VM",
+              "description": "Specify a command to execute in the VM.",
               "shorthand": "c",
               "global": false
             },
@@ -48653,7 +49123,7 @@
               "global": true
             },
             "identity-file": {
-              "description": "--identity-file=/home/user/.ssh/id_rsa: Set the path to a private key used for authenticating to the server; If not provided, the client will try to use the local ssh-agent at $SSH_AUTH_SOCK",
+              "description": "Specify a path to a private key used for authenticating to the server; If not provided, the client will try to use the local ssh-agent at $SSH_AUTH_SOCK",
               "shorthand": "i",
               "global": false
             },
@@ -48663,7 +49133,7 @@
               "global": true
             },
             "known-hosts": {
-              "description": "--d8virtualization_known_hosts=/home/user/.ssh/known-hosts: Set the path to the known_hosts file.",
+              "description": "Set a path to the known_hosts file.",
               "shorthand": "",
               "global": false
             },
@@ -48673,12 +49143,12 @@
               "global": true
             },
             "local-ssh": {
-              "description": "--local-ssh=true: Set this to true to use the SSH/SCP client available on your system by using this command as ProxyCommand; If set to false, this will establish a SSH/SCP connection with limited capabilities provided by this client",
+              "description": "Use the SSH/SCP client available on your system by using this command as ProxyCommand; Default is false: use embedded SSH client with limited capabilities",
               "shorthand": "",
               "global": false
             },
             "local-ssh-opts": {
-              "description": "--local-ssh-opts=\"-o StrictHostKeyChecking=no\" : Additional options to be passed to the local ssh. This is applied only if local-ssh=true",
+              "description": "Additional options to be passed to the ssh client if --local-ssh=true is set",
               "shorthand": "t",
               "global": false
             },
@@ -48698,7 +49168,7 @@
               "global": true
             },
             "port": {
-              "description": "--port=22: Specify a port on the VM to send SSH traffic to",
+              "description": "Specify a port to connect to",
               "shorthand": "p",
               "global": false
             },
@@ -48733,7 +49203,7 @@
               "global": true
             },
             "username": {
-              "description": "--username=root: Set this to the user you want to open the SSH connection as; If unassigned, this will be empty and the SSH default will apply",
+              "description": "Specify user to log into virtual machine; If unassigned, this will be empty and the SSH default will apply",
               "shorthand": "l",
               "global": false
             },
