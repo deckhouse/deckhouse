@@ -182,6 +182,28 @@ Key changes:
 Upstream is affected as well, including `master`: an upstream PR is to be opened on top of this
 patch.
 
+### 018-admin-lock-without-lockout-policy.patch
+
+Honor an administrator lock (`LockedUntil` on Password / OfflineSessions) even
+when `passwordPolicy` is unset or `passwordPolicy.lockout` is not configured.
+
+The lock is checked on the password login form, on `grant_type=password`
+(ROPC / basic-auth-proxy), on refresh-token requests, and on token exchange.
+`passwordPolicy.lockout` still owns automatic lockout after consecutive
+failed attempts; that path now also runs on ROPC (local `Password` counters
+and, when `applyToConnectors` matches, `OfflineSessions`). UserOperation
+`Lock` / `d8 iam user lock` no longer depend on that section.
+
+For a non-local connector (LDAP, Crowd, …) the login-form path now reads
+`OfflineSessions` on every attempt so an administrator lock is visible even
+when no password policy is configured. That is one extra storage GET on the
+authentication hot path. A storage error on that read fails closed (HTTP 500),
+same as the token and refresh paths.
+
+The lock check is connector-scoped: local users read `Password` only, everyone
+else reads `OfflineSessions` only. A local `UserOperation` Lock therefore does
+not block an LDAP login with the same email, and the reverse.
+
 ### 999-fix-cve.patch
 
 #### Fix CVEs
