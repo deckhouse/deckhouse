@@ -204,7 +204,7 @@ Select the "Require merge requests to merge through a merge train" checkbox to r
 - A merge through the API is rejected unless the merge goes through the train, that is, unless auto-merge is set on the merge request.
 - The merges the train itself performs are not affected.
 
-Selecting enforcement also clears and locks the "Merge immediately without restarting the merge train" checkbox: skipping the queue would be rejected at merge time, so it is not offered. Clearing enforcement restores the previously saved value of that checkbox.
+Selecting enforcement also clears and locks the "Merge immediately without restarting the merge train" checkbox: skipping the queue would be rejected at merge time, so it is not offered. Saving the settings with enforcement selected clears that checkbox for good, so clearing enforcement later leaves it cleared. Select it again if you need it.
 
 Enforcement applies only while merge trains are enabled for the project, so merges are not blocked when trains are disabled.
 
@@ -227,7 +227,6 @@ A finished merge train pipeline cannot be retried: it validated a queue state th
 
 A merge train pipeline is discarded and replaced when:
 
-- New commits are pushed to the source branch of the merge request.
 - A merge request ahead in the queue merges, is removed from the queue, or gets a new pipeline.
 - The pipeline of the merge request directly ahead in the queue fails.
 - Someone pushes directly to the target branch. In this case, the pipelines of the whole queue are rebuilt, starting from the merge request at the head.
@@ -295,6 +294,7 @@ A merge request that can no longer be merged while its pipeline runs is removed 
 The most frequent reasons are:
 
 - Merge trains were disabled for the project.
+- New commits were pushed to the source branch of the merge request.
 - The merge request was closed.
 - The merge request was marked as a draft.
 - The target branch of the merge request was changed.
