@@ -145,3 +145,31 @@ has this single call site as its only incompatibility.
 
 **Remove this patch when upgrading to a Cilium version that already targets
 ebpf >= v0.21.0**, where `applyConstants()` no longer uses the removed method.
+
+## 022-probes-restricted-kernel.patch
+
+Fixes `cilium-agent` refusing to start with
+`requirements failed: Require support for dead code elimination (Linux 5.1 or newer)`
+on kernels that restrict readback of xlated instructions.
+
+`HaveDeadCodeElim()` (`pkg/datapath/linux/probes/probes.go`) loads a small XDP program with
+a branch the verifier is expected to prune, then reads the loaded instructions back through
+`(*ebpf.ProgramInfo).Instructions()` and fails if a jump survived. ebpf v0.22.0 — pulled in
+by `000-go-mod.patch` — added a new failure mode to that call: when the kernel returns a nil
+`XlatedProgInsns` (it does so when `kernel.kptr_restrict` and `net.core.bpf_jit_harden` are
+set, aborting the readback), the info is marked restricted and `Instructions()` returns
+`ErrRestrictedKernel` instead of instructions. Cilium v1.17.17 predates that error and maps
+any error to "no dead code elimination", so the requirement fails and the agent exits ~7
+seconds into startup, then crash-loops.
+
+The bump alone is not enough to notice this: it is a runtime behavior change, not a
+compilation one, and it only surfaces on hardened kernels. Observed on Astra Linux
+(6.1.158-1-generic) and RED OS 8 (6.12.87-2.red80); Ubuntu 24.04 (6.8.0-106), RED OS MUROM
+(6.1.52-1.el7.3) and ALT SP Server (6.1.161-un-def-alt1) run the same image fine.
+
+The patch takes the upstream fix, already present in Cilium main: treat
+`ebpf.ErrRestrictedKernel` as "cannot verify, assume supported". `errors` and `ebpf` are
+already imported, so no import changes are needed.
+
+**Remove this patch when upgrading to a Cilium version whose `HaveDeadCodeElim()` already
+handles `ebpf.ErrRestrictedKernel`.**

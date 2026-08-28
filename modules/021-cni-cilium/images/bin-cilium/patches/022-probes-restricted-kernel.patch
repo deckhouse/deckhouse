@@ -1,0 +1,14 @@
+diff --git a/pkg/datapath/linux/probes/probes.go b/pkg/datapath/linux/probes/probes.go
+--- a/pkg/datapath/linux/probes/probes.go
++++ b/pkg/datapath/linux/probes/probes.go
+@@ -671,7 +671,9 @@
+ 		return fmt.Errorf("get prog info: %w", err)
+ 	}
+ 	infoInst, err := info.Instructions()
+-	if err != nil {
++	if errors.Is(err, ebpf.ErrRestrictedKernel) {
++		return nil
++	} else if err != nil {
+ 		return fmt.Errorf("get instructions: %w", err)
+ 	}
+ 
