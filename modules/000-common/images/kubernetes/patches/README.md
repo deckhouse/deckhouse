@@ -159,3 +159,19 @@ Added a 5s timeout context wrapping the Delete call in DeleteMirrorPod, that kub
 
 See issues:
 - https://github.com/kubernetes/kubernetes/issues/139502
+
+### fix-container-memory-usage-in-resize-validation.patch (1.34+)
+
+Fixes a kubelet panic in `validateMemoryResizeAction`
+(`pkg/kubelet/kuberuntime/kuberuntime_manager.go`): the per-container check
+dereferences `podUsageStats.Memory.UsageBytes` instead of
+`cStats.Memory.UsageBytes`. That pointer is nil-checked only in the
+`podLimitDecreasing` branch, so an in-place resize decreasing **only a
+container** memory limit panics kubelet when the runtime reports no pod-level
+memory stats.
+
+Only the source change is carried, the upstream test case is dropped.
+`validateMemoryResizeAction` does not exist in 1.32/1.33, so the patch is
+carried on 1.34 (`014`), 1.35 (`014`) and 1.36 (`013`) only.
+
+> Upstream PR https://github.com/kubernetes/kubernetes/pull/141100
