@@ -2,6 +2,7 @@
 title: Документация Deckhouse Kubernetes Platform
 permalink: ru/
 description: Документация Deckhouse Kubernetes Platform.
+rootLLMStxtURL: /products/kubernetes-platform/documentation/v1/llms.txt
 lang: ru
 ---
 
