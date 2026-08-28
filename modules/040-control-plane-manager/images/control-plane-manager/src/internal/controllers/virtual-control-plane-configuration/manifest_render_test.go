@@ -105,7 +105,7 @@ func TestRenderManifestsSubstitutesNetworkingPlaceholders(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			vcp := testVCP(tc.networking)
 
-			rendered, err := renderManifests(testGlobalData(), vcp, "1.2.3.4", nil)
+			rendered, err := renderManifests(testGlobalData(), vcp, "1.2.3.4", nil, "")
 			require.NoError(t, err)
 
 			apiserverManifest := string(rendered["kube-apiserver.yaml.tpl"])
@@ -139,7 +139,7 @@ func TestRenderManifestsWhitelistNotWidened(t *testing.T) {
 		ClusterDomain:           "cluster.virtual",
 	})
 
-	rendered, err := renderManifests(testGlobalData(), vcp, "1.2.3.4", nil)
+	rendered, err := renderManifests(testGlobalData(), vcp, "1.2.3.4", nil, "")
 	require.NoError(t, err)
 
 	allowedExtra := map[string]struct{}{
@@ -172,7 +172,7 @@ func TestRenderManifestsSubstitutesVerbatim(t *testing.T) {
 		ClusterDomain:           "cluster.virtual",
 	})
 
-	rendered, err := renderManifests(testGlobalData(), vcp, "1.2.3.4", nil)
+	rendered, err := renderManifests(testGlobalData(), vcp, "1.2.3.4", nil, "")
 	require.NoError(t, err)
 	assert.Contains(t, string(rendered["kube-apiserver.yaml.tpl"]), "--service-cluster-ip-range=not-a-cidr")
 }
