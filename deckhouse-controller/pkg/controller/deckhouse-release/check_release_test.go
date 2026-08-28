@@ -592,6 +592,54 @@ disable:
 		require.NoError(suite.T(), err)
 	})
 
+	suite.Run("StepByStepUpdateToSuspendedChannelRelease", func() {
+		// The channel head (v1.33.1) is suspended on the release-channel image, but
+		// the per-version images used for the step-by-step catch-up do not carry the
+		// suspend flag. The target release must still be created suspended, while the
+		// intermediate releases must not.
+		dependency.TestDC.CRClient.ListTagsMock.Return([]string{
+			"v1.31.0",
+			"v1.31.1",
+			"v1.32.0",
+			"v1.32.1",
+			"v1.32.2",
+			"v1.32.3",
+			"v1.33.0",
+			"v1.33.1",
+		}, nil)
+		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "stable").Then(&fake.FakeImage{
+			ManifestStub: ManifestStub,
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version":"v1.33.1","suspend":true}`}}}, nil
+			},
+			DigestStub: func() (v1.Hash, error) {
+				return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f76879")
+			},
+		}, nil)
+		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "v1.31.1").Then(&fake.FakeImage{
+			ManifestStub: ManifestStub,
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version":"v1.31.1"}`}}}, nil
+			},
+		}, nil)
+		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "v1.32.3").Then(&fake.FakeImage{
+			ManifestStub: ManifestStub,
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version":"v1.32.3"}`}}}, nil
+			},
+		}, nil)
+		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "v1.33.1").Then(&fake.FakeImage{
+			ManifestStub: ManifestStub,
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version":"v1.33.1"}`}}}, nil
+			},
+		}, nil)
+
+		suite.setupController("step-by-step-update-to-suspended.yaml", initValues, embeddedMUP)
+		err := suite.ctr.checkDeckhouseRelease(ctx)
+		require.NoError(suite.T(), err)
+	})
+
 	suite.Run("Restore absent releases from a registry", func() {
 		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "stable").Then(&fake.FakeImage{
 			ManifestStub: ManifestStub,
