@@ -6,6 +6,8 @@ provider "vsphere" {
   user = var.providerClusterConfiguration.provider.username
   password = var.providerClusterConfiguration.provider.password
   allow_unverified_ssl = lookup(var.providerClusterConfiguration.provider, "insecure", false)
+  ca_bundle = lookup(var.providerClusterConfiguration.provider, "caBundle", "")
+
   persist_session = true
   vim_session_path = "/tmp/.govmomi/sessions"
   rest_session_path = "/tmp/.govmomi/rest_sessions"
