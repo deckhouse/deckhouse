@@ -144,6 +144,70 @@ func (p *Publisher) Publish(ctx context.Context, state State) error {
 	return p.Client.Status().Patch(ctx, storage, patch)
 }
 
+// Announce records that this replica has STARTED filling, before any of it is done.
+//
+// Without it the first fill of a store is invisible. A replica publishes at the END of a pass and the
+// fill runs inside that same pass, so while gigabytes are moving there is no replica report at all —
+// and the controller, seeing none, reports the storage as `Idle`. Measured on a store emptied and
+// refilled: nine minutes of `phase: Idle` beside a condition that said `FillInProgress`, more than
+// 1500 blobs written, and then a jump straight to `Ready`. The documented `Filling` phase never
+// appeared, so an operator watching the phase after enabling the cache could not tell "nothing is
+// happening" from "the cache is filling right now".
+//
+// Two rules make this safe to write from here.
+//
+// It NEVER overwrites an existing report. A replica that has already published holds real numbers,
+// and an announcement carries none — replacing one with the other would report a full store as empty
+// and, on a leader, withdraw the permission the transition is gated on. So this is create-only: it
+// speaks exactly once per replica, on the pass where the alternative is silence.
+//
+// And it is never completeness: `Full` is forced false whatever the caller passed. An announcement is
+// a statement that work has begun, and the one field the cluster's safety depends on must be earned
+// by reading the store, not asserted before the work.
+func (p *Publisher) Announce(ctx context.Context, state State) error {
+	if state.Node == "" {
+		return fmt.Errorf("a replica announcement needs the node it came from")
+	}
+
+	name := p.Name
+	if name == "" {
+		name = registryv1alpha1.SingletonName
+	}
+
+	storage := &registryv1alpha1.RegistryStorage{}
+	if err := p.Client.Get(ctx, types.NamespacedName{Name: name}, storage); err != nil {
+		return client.IgnoreNotFound(err)
+	}
+
+	for i := range storage.Status.Replicas {
+		if storage.Status.Replicas[i].Node == state.Node {
+			// Already speaking for itself. Nothing to announce and nothing to overwrite.
+			return nil
+		}
+	}
+
+	state.Full = false
+
+	patch := client.MergeFrom(storage.DeepCopy())
+
+	// The same interlock Publish carries, for the same reason: a leader saying it is not full must
+	// take back a permission derived from an earlier report, never leave it standing on a fact that
+	// has stopped being one.
+	withdrawn := false
+	if state.Role == registryv1alpha1.ReplicaRoleLeader &&
+		(storage.Status.SafeToDropUpstream || storage.Status.AllReplicasFull) {
+		storage.Status.SafeToDropUpstream = false
+		storage.Status.AllReplicasFull = false
+		withdrawn = true
+	}
+
+	if !Merge(&storage.Status.Replicas, state) && !withdrawn {
+		return nil
+	}
+
+	return p.Client.Status().Patch(ctx, storage, patch)
+}
+
 // PublishCollection records the outcome of a garbage collection.
 func (p *Publisher) PublishCollection(ctx context.Context, state State) error {
 	if state.Node == "" {

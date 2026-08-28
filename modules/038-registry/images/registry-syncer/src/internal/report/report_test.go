@@ -475,3 +475,91 @@ func TestAFollowerDoesNotWithdrawIt(t *testing.T) {
 
 	assert.True(t, getStorage(t, c).Status.SafeToDropUpstream)
 }
+
+// The announcement exists so that the FIRST fill of a store is visible while it runs: the ordinary
+// report is published at the end of a pass, and until then a controller with no reports calls the
+// storage `Idle`.
+func TestAnnounceSpeaksWhenNobodyHasReportedYet(t *testing.T) {
+	publisher, fakeClient := newPublisher(t, storageObject())
+
+	require.NoError(t, publisher.Announce(context.Background(), State{
+		Node:            "master-0",
+		Role:            registryv1alpha1.ReplicaRoleLeader,
+		Address:         "10.0.0.1:5001",
+		DeclaredDigests: 443,
+	}))
+
+	replicas := getReplicas(t, fakeClient)
+	require.Len(t, replicas, 1)
+	assert.Equal(t, "master-0", replicas[0].Node)
+	assert.Equal(t, registryv1alpha1.ReplicaRoleLeader, replicas[0].Role)
+	// The denominator is what makes the announcement worth reading: a phase with no numbers beside it
+	// says no more than the phase it replaces.
+	assert.Equal(t, int32(443), replicas[0].DeclaredDigests)
+	assert.False(t, replicas[0].Full)
+	assert.Zero(t, replicas[0].VerifiedDigests)
+}
+
+// Create-only, and this is the rule that makes it safe to call at the start of every fill: a replica
+// that has already published holds real numbers, and an announcement carries none.
+func TestAnnounceLeavesAnExistingReportAlone(t *testing.T) {
+	existing := registryv1alpha1.StorageReplicaStatus{
+		Node:            "master-0",
+		Role:            registryv1alpha1.ReplicaRoleLeader,
+		Full:            true,
+		VerifiedDigests: 410,
+		DeclaredDigests: 410,
+		TotalDigests:    455,
+	}
+	publisher, fakeClient := newPublisher(t, storageObject(existing))
+
+	require.NoError(t, publisher.Announce(context.Background(), State{
+		Node:            "master-0",
+		Role:            registryv1alpha1.ReplicaRoleLeader,
+		DeclaredDigests: 443,
+	}))
+
+	replicas := getReplicas(t, fakeClient)
+	require.Len(t, replicas, 1)
+	assert.Equal(t, existing, replicas[0])
+}
+
+// `Full` is never asserted by an announcement, whatever the caller passed: it is the field the
+// transition is gated on, and it has to be earned by reading the store.
+func TestAnnounceNeverClaimsCompleteness(t *testing.T) {
+	publisher, fakeClient := newPublisher(t, storageObject())
+
+	require.NoError(t, publisher.Announce(context.Background(), State{
+		Node: "master-0",
+		Role: registryv1alpha1.ReplicaRoleLeader,
+		Full: true,
+	}))
+
+	replicas := getReplicas(t, fakeClient)
+	require.Len(t, replicas, 1)
+	assert.False(t, replicas[0].Full)
+}
+
+// And a leader announcing a fill takes back a permission derived from an earlier report — the same
+// interlock Publish carries, because the conclusion must not outlive the fact.
+func TestAnnounceWithdrawsAStandingPermission(t *testing.T) {
+	storage := storageObject()
+	storage.Status.SafeToDropUpstream = true
+	storage.Status.AllReplicasFull = true
+	publisher, fakeClient := newPublisher(t, storage)
+
+	require.NoError(t, publisher.Announce(context.Background(), State{
+		Node: "master-0",
+		Role: registryv1alpha1.ReplicaRoleLeader,
+	}))
+
+	after := getStorage(t, fakeClient)
+	assert.False(t, after.Status.SafeToDropUpstream)
+	assert.False(t, after.Status.AllReplicasFull)
+}
+
+func TestAnnounceRequiresANode(t *testing.T) {
+	publisher, _ := newPublisher(t, storageObject())
+
+	require.Error(t, publisher.Announce(context.Background(), State{Role: registryv1alpha1.ReplicaRoleLeader}))
+}

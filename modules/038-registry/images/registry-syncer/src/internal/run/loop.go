@@ -244,6 +244,45 @@ func (l *Loop) declaredSet(ctx context.Context) (map[string]struct{}, string, er
 //
 // A failure leaves the branch's numbers alone rather than zeroing them: a count that is a pass out of
 // date beats no count, and zero in these fields reads as an emptied store.
+// announceStart says that a fill or a replication has begun, so that the storage does not read
+// `Idle` while it is under way.
+//
+// The report itself is published at the end of a pass, which is right — it reports what happened —
+// but it leaves the first fill of a store with no report at all, and a controller with no reports
+// calls the storage `Idle`. That is the state an operator sees right after enabling the cache, and it
+// is exactly when they most need to see that something started. Publisher.Announce is create-only, so
+// this cannot overwrite real numbers on any later pass.
+//
+// The denominator is taken from the cheapest source that knows it, in order: what the spec declares,
+// what the previous pass counted, and — only if neither has an answer — the set itself, which costs an
+// API read. Announcing `0/0` beside gigabytes in flight would be its own kind of silence.
+func (l *Loop) announceStart(ctx context.Context, state report.State, stated int32) {
+	if l.Publisher == nil {
+		return
+	}
+
+	state.Full = false
+	state.VerifiedDigests = 0
+	state.TotalDigests = 0
+
+	state.DeclaredDigests = stated
+	if state.DeclaredDigests == 0 {
+		state.DeclaredDigests = l.lastDeclaredDigests.Load()
+	}
+	if state.DeclaredDigests == 0 {
+		if declared, _, err := l.declaredSet(ctx); err == nil {
+			state.DeclaredDigests = int32(len(declared))
+		}
+	}
+
+	if err := l.Publisher.Announce(ctx, state); err != nil {
+		// Warned, never fatal: an unannounced fill is a fill nobody can see, not a fill that is
+		// wrong. The pass carries on and publishes its real numbers at the end.
+		l.Log.Warn("cannot announce that the fill started; the storage will read Idle until this pass ends",
+			"error", err.Error())
+	}
+}
+
 func (l *Loop) reportHeld(ctx context.Context, state *report.State) {
 	declared, deployed, err := l.declaredSet(ctx)
 	if err != nil {
@@ -460,6 +499,7 @@ func (l *Loop) once(ctx context.Context) error {
 	case ActionFill:
 		started := time.Now()
 		l.filling.Store(true)
+		l.announceStart(ctx, state, stated)
 		func() {
 			// Waits out a collection rather than racing it. The other direction is guarded too:
 			// a collection does not start while a fill is owed — see gc.Plan.FillPending.
@@ -474,6 +514,7 @@ func (l *Loop) once(ctx context.Context) error {
 	case ActionReplicate:
 		started := time.Now()
 		l.filling.Store(true)
+		l.announceStart(ctx, state, stated)
 		func() {
 			done := l.PauseWrites()
 			defer done()

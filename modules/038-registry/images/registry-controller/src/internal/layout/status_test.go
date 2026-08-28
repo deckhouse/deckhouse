@@ -73,6 +73,25 @@ func TestAggregate(t *testing.T) {
 			wantPhase: registryv1alpha1.StoragePhaseIdle,
 		},
 		{
+			// The case the syncer's announcement exists for: a leader that has said "I have
+			// started, and I hold none of it yet". Before the announcement there was no report
+			// at all here and the phase read `Idle` for the whole of a first fill — nine
+			// minutes of it, measured, with more than 1500 blobs being written underneath.
+			name: "the leader has announced a fill and holds nothing yet",
+			spec: passThroughSpec(),
+			replicas: []registryv1alpha1.StorageReplicaStatus{
+				{
+					Node:            "master-0",
+					Role:            registryv1alpha1.ReplicaRoleLeader,
+					DeclaredDigests: 443,
+				},
+			},
+
+			holder:     "master-0",
+			wantPhase:  registryv1alpha1.StoragePhaseFilling,
+			wantLeader: "master-0",
+		},
+		{
 			name:     "the leader is filling",
 			spec:     passThroughSpec(),
 			replicas: []registryv1alpha1.StorageReplicaStatus{leader("master-0", false, 312)},
