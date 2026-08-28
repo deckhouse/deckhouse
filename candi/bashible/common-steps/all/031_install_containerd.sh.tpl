@@ -50,11 +50,37 @@ post-install() {
   fi
 }
 
+cntrd_safe_output() {
+  local out rc=0
+  out="$("$@")" || rc=$?
+  if [ "$rc" -ne 0 ] || [ -z "$out" ]; then
+    bb-log-warning "'$*' produced no usable output (exit code $rc)"
+    return 1
+  fi
+  printf '%s' "$out"
+}
+
 cntrd_version_change_check() {
-  local cur target
-  cur=$(containerd --version | awk '{print $3}' | grep -oE '[12]' | head -n1)
+  local cur target version_output
   target={{ if eq .cri "ContainerdV2" }}2{{ else }}1{{ end }}
-  if [[ -n $cur && $cur != $target ]]; then
+
+  if ! version_output="$(cntrd_safe_output containerd --version)"; then
+    bb-log-error "Cannot determine the installed containerd version, refusing to continue"
+    exit 1
+  fi
+
+  local -a fields
+  read -r -a fields <<< "$version_output"
+  cur="${fields[2]:-}"
+  cur="${cur#v}"     # v1.7.34 -> 1.7.34
+  cur="${cur%%.*}"   # 1.7.34  -> 1
+
+  if [[ ! "$cur" =~ ^[0-9]+$ ]]; then
+    bb-log-error "Cannot parse the containerd version from '${version_output}', refusing to continue"
+    exit 1
+  fi
+
+  if [ "$cur" != "$target" ]; then
     bb-flag-set cntrd-major-version-changed
     bb-deckhouse-get-disruptive-update-approval
   fi
@@ -65,9 +91,20 @@ command -v containerd &>/dev/null && cntrd_version_change_check
 {{- $integrityEditions := list "CSE" }}
 {{- if and (eq .cri "ContainerdV2") (has .deckhouse.edition $integrityEditions) }}
 cntrd_integrity_migration_check() {
-  if containerd --help 2>/dev/null | grep -q -- '--integrity-check-interval'; then
+  local migrated_marker="/var/lib/containerd/.cntrd-integrity-migrated"
+  [ -f "$migrated_marker" ] && return 0
+
+  local help_output
+  if ! help_output="$(cntrd_safe_output containerd --help)"; then
+    bb-log-error "Cannot determine containerd integrity-check support, refusing to continue"
+    exit 1
+  fi
+
+  if [[ "$help_output" == *'--integrity-check-interval'* ]]; then
+    [ -d /var/lib/containerd ] && touch "$migrated_marker"
     return 0
   fi
+
   bb-log-info "Switching to containerd with integrity checks, containerd state wipe is required"
   bb-flag-set cntrd-integrity-migration-required
   bb-deckhouse-get-disruptive-update-approval
