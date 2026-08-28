@@ -20,12 +20,17 @@ import (
 // rfc1123SubdomainName in this package and the sprig sanitization block embedded in
 // capi/template.yaml under machineDeployment.additionalFields.failureDomain.
 //
-// The two must match because CAPV's generateOverrideFunc looks up
-// VSphereDeploymentZone by Machine.Spec.FailureDomain. This hook writes the DZ name
-// through rfc1123SubdomainName; the template writes Machine.Spec.FailureDomain through
-// the sprig expression. A silent divergence causes CAPV's per-zone datastore /
-// resourcePool override to no-op — VMs clone with only the baseline topology from the
-// template and end up on the wrong datastore, invisibly from kubectl.
+// The template's failureDomain has two branches:
+//
+//   - baseline: `{{ if not (hasKey .instanceClass "resourcePool") }}<sanZone>{{ end }}`
+//   - override: `{{ if hasKey .instanceClass "resourcePool" }}<sanZone>-<sanNG>{{ end }}`
+//
+// Both must produce the same string CAPV's generateOverrideFunc uses to look up
+// VSphereDeploymentZone. This hook writes the DZ name through rfc1123SubdomainName; the
+// template writes Machine.Spec.FailureDomain through the sprig block. A silent divergence
+// causes CAPV's per-zone resourcePool / folder override to no-op — VMs clone with only
+// the baseline topology from the template and end up in the wrong resource pool,
+// invisibly from kubectl.
 //
 // The sprig expression is read from template.yaml as text (not hardcoded), so a change
 // to that file is exercised on the next run without needing to also touch this test.
@@ -57,20 +62,61 @@ func TestSanitizeZoneParity(t *testing.T) {
 		"",
 	}
 
-	for _, in := range cases {
-		t.Run(in, func(t *testing.T) {
-			var buf bytes.Buffer
-			if err := tmpl.Execute(&buf, map[string]any{"zone": in}); err != nil {
-				t.Fatalf("execute sprig sanitization on %q: %v", in, err)
+	// Baseline branch: no resourcePool on InstanceClass → template renders sanitized zone
+	// alone, hook uses the same value as DZ name.
+	t.Run("baseline_no_resourcePool", func(t *testing.T) {
+		for _, in := range cases {
+			t.Run(in, func(t *testing.T) {
+				var buf bytes.Buffer
+				ctx := map[string]any{
+					"zone":          in,
+					"instanceClass": map[string]any{}, // no resourcePool key
+					"nodeGroup":     map[string]any{"name": "worker-fast"},
+				}
+				if err := tmpl.Execute(&buf, ctx); err != nil {
+					t.Fatalf("execute baseline sprig on zone=%q: %v", in, err)
+				}
+				got := buf.String()
+				want := rfc1123SubdomainName(in)
+				if got != want {
+					t.Fatalf("baseline sanitization drift on zone=%q:\n  sprig = %q\n  go    = %q", in, got, want)
+				}
+			})
+		}
+	})
+
+	// Override branch: resourcePool set on InstanceClass → template renders sanitized
+	// "<zone>-<ng>", hook constructs the same via dzNameOverride.
+	t.Run("override_with_resourcePool", func(t *testing.T) {
+		ngNames := []string{
+			"worker-fast",
+			"Worker Fast",
+			"Prod.Sys",
+			"system_a",
+		}
+		for _, zone := range cases {
+			for _, ng := range ngNames {
+				t.Run(zone+"|"+ng, func(t *testing.T) {
+					var buf bytes.Buffer
+					ctx := map[string]any{
+						"zone": zone,
+						"instanceClass": map[string]any{
+							"resourcePool": "/DC/host/cl/Resources/prod",
+						},
+						"nodeGroup": map[string]any{"name": ng},
+					}
+					if err := tmpl.Execute(&buf, ctx); err != nil {
+						t.Fatalf("execute override sprig on zone=%q ng=%q: %v", zone, ng, err)
+					}
+					got := buf.String()
+					want := dzNameOverride(zone, ng)
+					if got != want {
+						t.Fatalf("override sanitization drift on zone=%q ng=%q:\n  sprig = %q\n  go    = %q", zone, ng, got, want)
+					}
+				})
 			}
-			got := buf.String()
-			want := rfc1123SubdomainName(in)
-			if got != want {
-				t.Fatalf("sanitization drift for %q:\n  sprig (template.yaml) = %q\n  go    (hook)          = %q",
-					in, got, want)
-			}
-		})
-	}
+		}
+	})
 }
 
 // readSprigFailureDomainExpr loads template.yaml, yaml-parses it, and returns the raw
