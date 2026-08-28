@@ -75,8 +75,18 @@ func TestValidateAdmissionSkipsPendingMigration(t *testing.T) {
 				Enabled: ptr.To(true),
 				Version: 2,
 				Settings: &ycsettingsv2.ModuleConfigSettings{
-					Storage: ycsettingsv2.Storage{Disabled: true},
-					Nodes:   ycsettingsv2.Nodes{Disabled: true},
+					// Repeated names would be rejected by ValidateProvisionedStorageClasses:
+					// they are here so the skip is what makes ValidateModuleConfig pass.
+					Storage: ycsettingsv2.Storage{
+						Disabled: true,
+						Parameters: ycsettingsv2.StorageParameters{
+							ProvisionedStorageClasses: []ycsettingsv2.ProvisionedStorageClass{
+								{Name: "network-ssd-64k", Type: "network-ssd", BlockSize: "64Ki"},
+								{Name: "network-ssd-64k", Type: "network-ssd"},
+							},
+						},
+					},
+					Nodes: ycsettingsv2.Nodes{Disabled: true},
 				},
 			},
 		},
@@ -95,6 +105,9 @@ func TestValidateAdmissionSkipsPendingMigration(t *testing.T) {
 		},
 		"ValidateNodeGroup": func(state *ycval.State) cpvalapi.Result {
 			return ValidateNodeGroup(state, admissionv1.Update)
+		},
+		"ValidateModuleConfig": func(state *ycval.State) cpvalapi.Result {
+			return ValidateModuleConfig(state, admissionv1.Update)
 		},
 	} {
 		result := validate(state)
@@ -200,6 +213,52 @@ func TestValidateNodeGroupRejectsTooFewExternalIPAddresses(t *testing.T) {
 	result := ValidateNodeGroup(state, admissionv1.Create)
 	if !hasViolationCode(result, ycval.CodeNodeGroupNodesGreaterExternalIPAddresses) {
 		t.Fatalf("ValidateNodeGroup() = %q, want %s", result.Error(), ycval.CodeNodeGroupNodesGreaterExternalIPAddresses)
+	}
+}
+
+func TestValidateModuleConfigRejectsRepeatedProvisionedStorageClassNames(t *testing.T) {
+	t.Parallel()
+
+	state := validState(t)
+	state.ModuleConfig.Spec.Settings.Storage.Parameters.ProvisionedStorageClasses = []ycsettingsv2.ProvisionedStorageClass{
+		{Name: "network-ssd-64k", Type: "network-ssd", BlockSize: "64Ki"},
+		{Name: "network-ssd-64k", Type: "network-ssd", BlockSize: "128Ki"},
+	}
+
+	result := ValidateModuleConfig(state, admissionv1.Update)
+	if !hasViolationCode(result, ycval.CodeProvisionedStorageClassNamesUnique) {
+		t.Fatalf("ValidateModuleConfig() = %q, want %s", result.Error(), ycval.CodeProvisionedStorageClassNamesUnique)
+	}
+}
+
+func TestValidateModuleConfigAllowsUniqueProvisionedStorageClassNames(t *testing.T) {
+	t.Parallel()
+
+	state := validState(t)
+	state.ModuleConfig.Spec.Settings.Storage.Parameters.ProvisionedStorageClasses = []ycsettingsv2.ProvisionedStorageClass{
+		{Name: "network-ssd-64k", Type: "network-ssd", BlockSize: "64Ki"},
+		{Name: "network-ssd", Type: "network-ssd", BlockSize: "128Ki"},
+	}
+
+	result := ValidateModuleConfig(state, admissionv1.Update)
+	if result.HasErrors() {
+		t.Fatalf("ValidateModuleConfig() = %q, want no errors", result.Error())
+	}
+}
+
+// Delete is not validated: the ModuleConfig webhook only runs on Create/Update.
+func TestValidateModuleConfigSkipsDelete(t *testing.T) {
+	t.Parallel()
+
+	state := validState(t)
+	state.ModuleConfig.Spec.Settings.Storage.Parameters.ProvisionedStorageClasses = []ycsettingsv2.ProvisionedStorageClass{
+		{Name: "network-ssd-64k", Type: "network-ssd"},
+		{Name: "network-ssd-64k", Type: "network-ssd"},
+	}
+
+	result := ValidateModuleConfig(state, admissionv1.Delete)
+	if result.HasErrors() {
+		t.Fatalf("ValidateModuleConfig(%s) = %q, want no errors", admissionv1.Delete, result.Error())
 	}
 }
 

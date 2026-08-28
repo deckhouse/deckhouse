@@ -152,8 +152,27 @@ type NATInstanceResources struct {
 }
 
 type StorageParameters struct {
+	// Defines additional StorageClasses or overrides the parameters of the ones created by default.
+	ProvisionedStorageClasses []ProvisionedStorageClass `json:"provisionedStorageClasses,omitempty"`
 	// List of storage classes to exclude from use in the cluster.
 	ExcludedStorageClasses []string `json:"excludedStorageClasses,omitempty"`
+}
+
+type ProvisionedStorageClass struct {
+	// The name of the StorageClass to create.
+	Name string `json:"name" yaml:"name"`
+	// The disk type.
+	Type string `json:"type" yaml:"type"`
+	// The block size of disks created by this StorageClass.
+	//
+	// If the parameter is omitted, the default Yandex Cloud block size is used — `4Ki`.
+	//
+	// The block size determines the maximum size of a network disk: for a `4Ki` block it is `8Ti`, and it doubles with each next increase of the block size — up to `256Ti` for a `128Ki` block.
+	//
+	// After a disk is created, its block size cannot be changed. Changing the `blockSize` parameter recreates the StorageClass, but does not change the block size of previously provisioned volumes.
+	//
+	// For details, see the [official Yandex Cloud documentation](https://yandex.cloud/en/docs/compute/operations/disk-create/empty-disk-blocksize).
+	BlockSize string `json:"blockSize,omitempty" yaml:"blockSize,omitempty"`
 }
 
 type CCMParameters struct {

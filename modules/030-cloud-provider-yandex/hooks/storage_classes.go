@@ -105,7 +105,7 @@ func matchCheck(regexps []*regexp.Regexp, storageClassName string) bool {
 }
 
 func storageClasses(_ context.Context, input *go_hook.HookInput) error {
-	provisionValues := input.Values.Get("cloudProviderYandex.storageClass.provision").Array()
+	provisionValues := input.Values.Get("cloudProviderYandex.storage.parameters.provisionedStorageClasses").Array()
 
 	provision := make([]StorageClass, 0, len(provisionValues))
 	provisionNames := make(map[string]struct{}, len(provisionValues))
@@ -132,7 +132,7 @@ func storageClasses(_ context.Context, input *go_hook.HookInput) error {
 	}
 	storageClassesFilteredProvision = append(storageClassesFilteredProvision, provision...)
 
-	excludeValues := input.Values.Get("cloudProviderYandex.storageClass.exclude").Array()
+	excludeValues := input.Values.Get("cloudProviderYandex.storage.parameters.excludedStorageClasses").Array()
 
 	excludePatterns := make([]string, 0, len(excludeValues))
 	for _, excludePattern := range excludeValues {
@@ -141,7 +141,7 @@ func storageClasses(_ context.Context, input *go_hook.HookInput) error {
 
 	excludeRegexps, err := compileRegexps(excludePatterns)
 	if err != nil {
-		return fmt.Errorf("storageClass.exclude set creation error: %v", err)
+		return fmt.Errorf("storage.parameters.excludedStorageClasses set creation error: %v", err)
 	}
 
 	storageClassesFiltered := make([]StorageClass, 0, len(storageClassesFilteredProvision))

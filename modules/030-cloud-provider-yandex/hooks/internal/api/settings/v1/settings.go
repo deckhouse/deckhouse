@@ -21,6 +21,13 @@ type ModuleConfigSettings struct {
 }
 
 type StorageClassSettings struct {
-	Default string   `json:"default,omitempty" yaml:"default,omitempty"`
-	Exclude []string `json:"exclude,omitempty" yaml:"exclude,omitempty"`
+	Default   string                    `json:"default,omitempty" yaml:"default,omitempty"`
+	Provision []ProvisionedStorageClass `json:"provision,omitempty" yaml:"provision,omitempty"`
+	Exclude   []string                  `json:"exclude,omitempty" yaml:"exclude,omitempty"`
+}
+
+type ProvisionedStorageClass struct {
+	Name      string `json:"name" yaml:"name"`
+	Type      string `json:"type" yaml:"type"`
+	BlockSize string `json:"blockSize,omitempty" yaml:"blockSize,omitempty"`
 }

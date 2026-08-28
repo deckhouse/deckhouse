@@ -223,28 +223,19 @@ properties:
       parameters:
         additionalProperties: false
         properties:
-          provisionedStorageClasses:
-            description: |
-              Defines additional StorageClasses or overrides the parameters of the ones created by default.
-            type: array
+          excludedStorageClasses:
+            description: List of storage classes to exclude from use in the cluster.
             items:
-              type: object
+              type: string
+            type: array
+          provisionedStorageClasses:
+            description: Defines additional StorageClasses or overrides the parameters
+              of the ones created by default.
+            items:
               additionalProperties: false
-              required: ["name", "type"]
               properties:
-                name:
-                  type: string
-                  description: |
-                    The name of the StorageClass to create.
-                type:
-                  type: string
-                  enum: ["network-hdd", "network-ssd", "network-ssd-nonreplicated", "network-ssd-io-m3"]
-                  description: |
-                    The disk type.
                 blockSize:
-                  type: string
-                  enum: ["4Ki", "8Ki", "16Ki", "32Ki", "64Ki", "128Ki"]
-                  description: |
+                  description: |-
                     The block size of disks created by this StorageClass.
 
                     If the parameter is omitted, the default Yandex Cloud block size is used — `4Ki`.
@@ -254,10 +245,29 @@ properties:
                     After a disk is created, its block size cannot be changed. Changing the `blockSize` parameter recreates the StorageClass, but does not change the block size of previously provisioned volumes.
 
                     For details, see the [official Yandex Cloud documentation](https://yandex.cloud/en/docs/compute/operations/disk-create/empty-disk-blocksize).
-          excludedStorageClasses:
-            description: List of storage classes to exclude from use in the cluster.
-            items:
-              type: string
+                  enum:
+                  - 4Ki
+                  - 8Ki
+                  - 16Ki
+                  - 32Ki
+                  - 64Ki
+                  - 128Ki
+                  type: string
+                name:
+                  description: The name of the StorageClass to create.
+                  type: string
+                type:
+                  description: The disk type.
+                  enum:
+                  - network-hdd
+                  - network-ssd
+                  - network-ssd-nonreplicated
+                  - network-ssd-io-m3
+                  type: string
+              required:
+              - name
+              - type
+              type: object
             type: array
         type: object
     required:

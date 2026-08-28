@@ -261,10 +261,46 @@ type NATInstanceResources struct {
 
 // +deckhouse:DisableAdditionalProperties=true
 type StorageParameters struct {
+	// Defines additional StorageClasses or overrides the parameters of the ones created by default.
+	// +deckhouse:ru:description:value="Определяет дополнительные StorageClass'ы или переопределяет параметры создаваемых по умолчанию."
+	// +optional
+	ProvisionedStorageClasses []ProvisionedStorageClass `json:"provisionedStorageClasses,omitempty"`
 	// List of storage classes to exclude from use in the cluster.
 	// +deckhouse:ru:description:value="Список классов хранения, исключаемых из использования в кластере."
 	// +optional
 	ExcludedStorageClasses []string `json:"excludedStorageClasses,omitempty"`
+}
+
+// +deckhouse:DisableAdditionalProperties=true
+type ProvisionedStorageClass struct {
+	// The name of the StorageClass to create.
+	// +deckhouse:ru:description:value="Имя создаваемого StorageClass'а."
+	Name string `json:"name" yaml:"name"`
+	// The disk type.
+	// +deckhouse:ru:description:value="Тип диска."
+	// +kubebuilder:validation:Enum=network-hdd;network-ssd;network-ssd-nonreplicated;network-ssd-io-m3
+	Type string `json:"type" yaml:"type"`
+	// The block size of disks created by this StorageClass.
+	//
+	// If the parameter is omitted, the default Yandex Cloud block size is used — `4Ki`.
+	//
+	// The block size determines the maximum size of a network disk: for a `4Ki` block it is `8Ti`, and it doubles with each next increase of the block size — up to `256Ti` for a `128Ki` block.
+	//
+	// After a disk is created, its block size cannot be changed. Changing the `blockSize` parameter recreates the StorageClass, but does not change the block size of previously provisioned volumes.
+	//
+	// For details, see the [official Yandex Cloud documentation](https://yandex.cloud/en/docs/compute/operations/disk-create/empty-disk-blocksize).
+	// +deckhouse:ru:description:value="Размер блока дисков, создаваемых этим StorageClass."
+	// +deckhouse:ru:description:value=
+	// +deckhouse:ru:description:value="Если параметр не указан, используется размер блока по умолчанию для Yandex Cloud — `4Ki`."
+	// +deckhouse:ru:description:value=
+	// +deckhouse:ru:description:value="Размер блока определяет максимальный размер сетевого диска: для блока `4Ki` он составляет `8Ti`, а при каждом следующем увеличении размера блока удваивается — вплоть до `256Ti` для блока `128Ki`."
+	// +deckhouse:ru:description:value=
+	// +deckhouse:ru:description:value="После создания диска изменить размер его блока нельзя. Изменение параметра `blockSize` приводит к пересозданию StorageClass, но не изменяет размер блока у ранее созданных томов."
+	// +deckhouse:ru:description:value=
+	// +deckhouse:ru:description:value="Подробнее в [официальной документации Yandex Cloud](https://cloud.yandex.ru/docs/compute/operations/disk-create/empty-disk-blocksize)."
+	// +kubebuilder:validation:Enum="4Ki";"8Ki";"16Ki";"32Ki";"64Ki";"128Ki"
+	// +optional
+	BlockSize string `json:"blockSize,omitempty" yaml:"blockSize,omitempty"`
 }
 
 // +deckhouse:DisableAdditionalProperties=true
