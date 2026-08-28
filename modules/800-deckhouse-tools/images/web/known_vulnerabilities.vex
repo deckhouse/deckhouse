@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-7c114e6cee1182ff2b165cba363ae5cfbf773e4da8518c90d80049d24c627e94",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 23,
+  "version": 24,
   "statements": [
     {
       "vulnerability": {
@@ -803,6 +803,20 @@
       "status": "not_affected",
       "justification": "vulnerable_code_not_present",
       "impact_statement": "Уязвимость относится к пакету go.mongodb.org/mongo-driver/mongo — обработке ошибок GSSAPI в клиенте MongoDB. Модуль поступает транзитивно через werf (giterminism_manager → github.com/go-openapi/strfmt), и из него используется только go.mongodb.org/mongo-driver/bson; клиент MongoDB в бинарь не попадает.",
+      "timestamp": "2026-08-27T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33813"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/image@v0.39.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Паника возникает только на 32-битных платформах при разборе WEBP с некорректно большим размером. Бинари d8 в этом образе собираются под linux/amd64, darwin/amd64, darwin/arm64 и windows/amd64 — все 64-битные, переполнения не происходит и уязвимая ветка не исполняется.",
       "timestamp": "2026-08-27T12:00:00Z"
     }
   ],

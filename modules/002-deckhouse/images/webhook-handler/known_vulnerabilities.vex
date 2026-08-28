@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-5a4509a04e8128126aee080324a6b663a7748bf44b58a9a4b9c74d4801844f53",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 21,
+  "version": 22,
   "statements": [
     {
       "vulnerability": {
@@ -458,6 +458,20 @@
       "status": "not_affected",
       "justification": "vulnerable_code_not_present",
       "impact_statement": "Уязвимая функция NewNTUnicodeString находится в golang.org/x/sys/windows. Модуль поступает с бинарём shell-operator v1.15.3 из базового образа common/shell-operator. Образ собирается под Linux, пакет windows не компилируется и в бинарь не попадает.",
+      "timestamp": "2026-08-27T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56852"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/text@v0.35.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость находится в golang.org/x/text/unicode/norm. Модуль поступает с бинарём shell-operator v1.15.3 из базового образа common/shell-operator. Единственный путь до неё — отладочный клиент pkg/debug: его http.Client в DialContext всегда подключается к unix-сокету и игнорирует адрес из URL, а сами URL собираются с константной authority (http://unix/queue/list, http://unix/hook/..., http://unix/config/list). В нормализацию попадает неизменяемая строка unix, на которую злоумышленник повлиять не может.",
       "timestamp": "2026-08-27T12:00:00Z"
     }
   ],
