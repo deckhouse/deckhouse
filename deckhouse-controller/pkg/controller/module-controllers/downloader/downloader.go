@@ -37,6 +37,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"gopkg.in/yaml.v3"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/tools/imagefs"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -284,18 +285,18 @@ func (md *ModuleDownloader) copyLayersToFS(rootPath string, rc io.ReadCloser) (*
 
 		ds.Size += uint32(hdr.Size)
 
-		if strings.Contains(hdr.Name, "..") {
-			// CWE-22 check, prevents path traversal
-			return nil, fmt.Errorf("path traversal detected in the module archive: malicious path %v", hdr.Name)
+		target, err := imagefs.SafeJoin(rootPath, hdr.Name)
+		if err != nil {
+			return nil, err
 		}
 
 		switch hdr.Typeflag {
 		case tar.TypeDir:
-			if err := os.MkdirAll(path.Join(rootPath, hdr.Name), 0o700); err != nil {
+			if err := os.MkdirAll(target, 0o700); err != nil {
 				return nil, fmt.Errorf("mkdir all: %w", err)
 			}
 		case tar.TypeReg:
-			outFile, err := os.Create(path.Join(rootPath, hdr.Name))
+			outFile, err := os.Create(target)
 			if err != nil {
 				return nil, fmt.Errorf("create file: %w", err)
 			}
@@ -310,15 +311,16 @@ func (md *ModuleDownloader) copyLayersToFS(rootPath string, rc io.ReadCloser) (*
 				return nil, fmt.Errorf("chmod: %w", err)
 			}
 		case tar.TypeSymlink:
-			link := path.Join(rootPath, hdr.Name)
-			if isRel(hdr.Linkname, link) && isRel(hdr.Name, link) {
-				if err := os.Symlink(hdr.Linkname, link); err != nil {
-					return nil, fmt.Errorf("create symlink: %w", err)
-				}
-			}
+			// Dropped, as they always have been here: the guard this branch used rejected every
+			// input. Materializing them changes what a published image unpacks to - separate change.
 
 		case tar.TypeLink:
-			if err = os.Link(path.Join(rootPath, hdr.Linkname), path.Join(rootPath, hdr.Name)); err != nil {
+			linkTarget, err := imagefs.SafeJoin(rootPath, hdr.Linkname)
+			if err != nil {
+				return nil, fmt.Errorf("hardlink target: %w", err)
+			}
+
+			if err = os.Link(linkTarget, target); err != nil {
 				return nil, fmt.Errorf("create hardlink: %w", err)
 			}
 
@@ -563,20 +565,6 @@ func (rr *moduleReader) untarMetadata(rc io.ReadCloser) error {
 			continue
 		}
 	}
-}
-
-func isRel(candidate, target string) bool {
-	// GOOD: resolves all symbolic links before checking
-	// that `candidate` does not escape from `target`
-	if filepath.IsAbs(candidate) {
-		return false
-	}
-	realpath, err := filepath.EvalSymlinks(filepath.Join(target, candidate))
-	if err != nil {
-		return false
-	}
-	relpath, err := filepath.Rel(target, realpath)
-	return err == nil && !strings.HasPrefix(filepath.Clean(relpath), "..")
 }
 
 type ModuleReleaseMetadata struct {

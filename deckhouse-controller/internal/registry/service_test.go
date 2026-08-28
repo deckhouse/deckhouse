@@ -142,3 +142,99 @@ func TestServiceDownload_OpaqueWhiteout(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "new", string(got))
 }
+
+// linkLayer builds a tar layer from raw headers; a header with a non-empty Linkname becomes a
+// hardlink entry, everything else a regular file carrying body.
+func linkLayer(t *testing.T, entries []tar.Header, bodies []string) v1.Layer {
+	t.Helper()
+
+	var buf bytes.Buffer
+	tw := tar.NewWriter(&buf)
+
+	for i := range entries {
+		hdr := entries[i]
+		hdr.Mode = 0o644
+		if hdr.Typeflag != tar.TypeLink {
+			hdr.Size = int64(len(bodies[i]))
+		}
+
+		require.NoError(t, tw.WriteHeader(&hdr))
+
+		if hdr.Typeflag != tar.TypeLink && bodies[i] != "" {
+			_, err := io.WriteString(tw, bodies[i])
+			require.NoError(t, err)
+		}
+	}
+
+	require.NoError(t, tw.Close())
+
+	data := buf.Bytes()
+	layer, err := tarball.LayerFromOpener(func() (io.ReadCloser, error) {
+		return io.NopCloser(bytes.NewReader(data)), nil
+	})
+	require.NoError(t, err)
+
+	return layer
+}
+
+// TestServiceDownload_HardlinkEscapesRoot reproduces the escape the hardlink branch allowed.
+// A whiteout on the escaping name makes ocitools.Squash withhold the entry that carries it, so the
+// flattened tar holds a link whose Linkname escapes while no entry name ever contains "..", and the
+// hdr.Name guard alone never sees it.
+func TestServiceDownload_HardlinkEscapesRoot(t *testing.T) {
+	lower := linkLayer(t,
+		[]tar.Header{
+			{Name: "realfile"},
+			{Name: "../evil", Typeflag: tar.TypeLink, Linkname: "realfile"},
+			{Name: "alias", Typeflag: tar.TypeLink, Linkname: "../evil"},
+		},
+		[]string{"ordinary", "", ""})
+	upper := linkLayer(t, []tar.Header{{Name: "../.wh.evil"}}, []string{""})
+
+	img, err := mutate.AppendLayers(empty.Image, lower, upper)
+	require.NoError(t, err)
+
+	root := t.TempDir()
+	outside := filepath.Join(root, "evil")
+	require.NoError(t, os.WriteFile(outside, []byte("trusted"), 0o600))
+	out := filepath.Join(root, "package")
+
+	err = (&Service{}).download(context.Background(), img, out)
+	require.ErrorContains(t, err, "path traversal detected")
+
+	assert.NoFileExists(t, filepath.Join(out, "alias"))
+
+	got, err := os.ReadFile(outside)
+	require.NoError(t, err)
+	assert.Equal(t, "trusted", string(got))
+}
+
+// TestServiceDownload_HardlinkInsideRoot keeps legitimate hardlinks working.
+func TestServiceDownload_HardlinkInsideRoot(t *testing.T) {
+	layer := linkLayer(t,
+		[]tar.Header{
+			{Name: "data.txt"},
+			{Name: "alias.txt", Typeflag: tar.TypeLink, Linkname: "data.txt"},
+		},
+		[]string{"payload", ""})
+
+	img, err := mutate.AppendLayers(empty.Image, layer)
+	require.NoError(t, err)
+
+	dir := filepath.Join(t.TempDir(), "package")
+	require.NoError(t, (&Service{}).download(context.Background(), img, dir))
+
+	got, err := os.ReadFile(filepath.Join(dir, "alias.txt"))
+	require.NoError(t, err)
+	assert.Equal(t, "payload", string(got))
+}
+
+// TestServiceDownload_EntryNameEscapesRoot keeps the CWE-22 check that SafeJoin took over from the
+// old strings.Contains(hdr.Name, "..") guard.
+func TestServiceDownload_EntryNameEscapesRoot(t *testing.T) {
+	img, err := mutate.AppendLayers(empty.Image, reproLayer(t, map[string]string{"../escape.txt": "x"}, ""))
+	require.NoError(t, err)
+
+	err = (&Service{}).download(context.Background(), img, filepath.Join(t.TempDir(), "package"))
+	require.ErrorContains(t, err, "path traversal detected")
+}
