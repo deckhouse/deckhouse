@@ -282,6 +282,11 @@ func BuildName(namespace, name string) string {
 	return fmt.Sprintf("%s.%s", namespace, name)
 }
 
+// GetInstance returns the application instance name.
+func (a *Application) GetInstance() string {
+	return a.instance
+}
+
 // GetNamespace returns the application namespace.
 func (a *Application) GetNamespace() string {
 	return a.namespace
