@@ -7,233 +7,309 @@ permalink: en/code/documentation/user/merge-trains.html
 weight: 86
 ---
 
-A merge train queues merge requests for a target branch and validates each one against the changes ahead of it before letting it merge. Every queued merge request gets a pipeline that runs on the combination of the target branch, the changes of the merge requests ahead of it in the queue, and its own changes. As long as merge requests land through the train, the target branch only receives code that has been tested in the exact state it will land in.
+A merge train forms a queue of merge requests targeting the same branch. Before merging, each merge request is validated together with the merge requests ahead of it in the queue. This ensures that only changes validated in their merge order are merged into the target branch.
 
-Merge trains build on merged results pipelines. A merged results pipeline validates one merge request against the current target branch; a merge train validates a whole queue, so two merge requests that pass on their own but break when combined are caught before either lands.
+Merged results pipelines are used for validation. For the first merge request in the queue, such a pipeline validates its changes against the current state of the target branch. For each subsequent merge request, changes from the preceding merge requests in the queue are also taken into account. Therefore, if merge requests pass validation separately but their changes are incompatible, the issue is detected before the changes are merged into the target branch.
 
-Merge trains are configured for each project separately. Each project has one train per target branch.
+Merge trains are configured separately for each project. A separate merge train is used for each target branch in the project.
 
-## How a merge train works
+## How merge trains work
 
-Merge requests in the queue are ordered by the time they were added, and the oldest one is at the head of the train:
+Merge requests are arranged in the queue in the order they were added. Merge requests added earlier are placed at the front of the queue.
 
-1. A merge request that is set to auto-merge joins the queue at the back of the train.
-1. Deckhouse Code creates a temporary Git ref for the merge request that contains the target branch, the changes of every merge request ahead of it in the queue, and its own changes, then starts a pipeline on that ref.
-1. When the pipeline of the merge request at the head of the queue succeeds, that merge request merges and leaves the queue.
-1. The next merge request becomes the head of the queue. If the merged changes invalidated the state a queued merge request was validated against, its pipeline is discarded and rebuilt on the new state, and the pipelines of all the merge requests behind it are rebuilt too.
+Merge requests in the queue are processed as follows:
 
-A train is not a stored object: it is defined by the merge requests queued for the same target branch of the same project. Positions are recalculated as merge requests leave the queue, so a merge request that merged or was removed no longer affects the positions of the others.
+1. A merge request with auto-merge enabled is added to the end of the queue.
+1. Deckhouse Code creates a temporary Git ref for the merge request and runs a pipeline for it. The Git ref contains the state of the target branch, changes from the preceding merge requests in the queue, and changes from the current merge request.
+1. If the pipeline for the first merge request in the queue completes successfully, the merge request is merged into the target branch and leaves the queue.
+1. The next merge request moves to the front of the queue. If merging the previous merge request makes the state for which the pipeline was run outdated, Deckhouse Code recreates the pipeline for the new state. Pipelines for subsequent merge requests are also recreated.
+
+A merge train is not stored as a separate object. It is formed from merge requests added to the queue for the same target branch of a project. When a merge request is merged or removed from the queue, the positions of the remaining merge requests are recalculated.
 
 ## Prerequisites
 
-- CI/CD must be enabled for the project.
-- The CI/CD configuration file must create merge request pipelines. For details, see [Delivery (CI/CD)](/products/code/documentation/user/delivery.html).
-- Merged results pipelines must be enabled for the project.
-- To change the project settings, you need the **Maintainer** or **Owner** role in the project.
+Before configuring merge trains, make sure the following requirements are met:
 
-The merge train settings are available only if the feature is enabled for the Deckhouse Code instance. If you do not see them on the "Merge requests" settings page, ask your administrator.
+* CI/CD is enabled in the project.
+* The CI/CD configuration file is configured to create pipelines for merge requests.
+* Merged results pipelines are enabled in the project.
+* The user has the **Maintainer** or **Owner** role to modify project settings.
+
+Merge train settings are available only if this feature is enabled for the Deckhouse Code instance. If the settings are not available on the "Merge requests" settings page, contact your administrator.
 
 ## Enabling merge trains
 
 To enable merge trains:
 
 1. Open the project.
-1. Go to "Settings" → "Merge requests".
-1. In "Merge options", select the "Enable merged results pipelines" checkbox.
-1. Select the "Enable merge trains" checkbox.
-1. Select "Save changes".
+2. Go to "Settings" → "Merge requests".
+3. In the "Merge options" section, select "Enable merged results pipelines".
+4. Select "Enable merge trains".
+5. Click "Save changes".
 
-The following settings appear under "Enable merge trains" and take effect only while it is selected:
+After merge trains are enabled, the following additional settings become available:
 
 | Setting | Description |
-|---------|-------------|
-| **Merge immediately without restarting the merge train** | Adds the merge-now options described in [Merging immediately](#merging-immediately). The checkbox is unavailable if the project requires fast-forward or semi-linear merges, and while merge train enforcement is selected |
-| **Require merge requests to merge through a merge train** | Rejects every direct merge in the project. For details, see [Enforcing merge trains](#enforcing-merge-trains) |
-| **Maximum parallel pipelines per merge train** | Limits how many pipelines a train runs at the same time. For details, see [Parallel pipeline limit](#parallel-pipeline-limit) |
+| ------- | ----------- |
+| **Merge immediately without restarting the merge train** | Adds the immediate merge options described in ["Merging immediately"](#merging-immediately). This setting is unavailable if the project requires fast-forward or semi-linear merges, or if merging through a merge train is enforced |
+| **Require merge requests to merge through a merge train** | Rejects all direct merges in the project. For details, refer to ["Enforcing merge trains"](#enforcing-merge-trains) |
+| **Maximum parallel pipelines per merge train** | Limits the number of merge train pipelines that can run simultaneously. For details, refer to ["Limiting parallel pipelines"](#limiting-parallel-pipelines) |
 
-Clearing the "Enable merge trains" checkbox does not empty an existing queue in one step. The queue is drained as the refresh cycle reaches each merge request, so queued merge requests can remain visible for a short time after the setting is saved.
+Clearing "Enable merge trains" does not immediately clear the existing queue. Merge requests are removed gradually as the update cycle processes them, so they may remain visible in the queue for some time after the setting is saved.
 
-## Adding a merge request to a merge train
+## Working with the queue
 
-To add a merge request to a merge train, select "Set to auto-merge" on the merge request page. When merge trains are enabled for the project, auto-merge queues the merge request on the train instead of merging it directly. Depending on the state of the merge request, one of the following options is used:
+You can add merge requests to the queue, view or remove them, or merge them immediately.
+
+### Adding a merge request to a merge train
+
+You can add a merge request to a merge train using the web interface or API.
+
+{% tabs adding-mr-to-train %}
+
+{% tab "Adding via web UI" %}
+
+To add a merge request to a merge train, click "Set to auto-merge" on the merge request page. If merge trains are enabled in the project, the merge request is added to the merge train instead of being merged directly.
+
+Depending on the state of the merge request, one of the following options is available:
 
 | Option | Description |
-|--------|-------------|
-| **Add to merge train** | The merge request joins the queue immediately. This option is used when the merge request can be merged and its pipeline for the current `HEAD` SHA has finished |
-| **Add to merge train when all merge checks pass** | The merge request waits until its merge checks pass and then joins the queue |
+| ------ | ----------- |
+| **Add to merge train** | Adds the merge request to the queue immediately. This option is available if the merge request is ready to merge and the pipeline for the current `HEAD` SHA has completed |
+| **Add to merge train when all merge checks pass** | Adds the merge request to the queue after all merge checks pass |
 
-The text next to the merge button shows which option will be used. If the merge request was already validated by a merge train pipeline, the text is "Re-add to merge train".
+The option that will be used is displayed next to the merge button. If the merge request has already been validated by a merge train pipeline, "Re-add to merge train" is displayed.
 
-If the latest pipeline of the merge request failed, Deckhouse Code asks for confirmation before the merge request is queued.
+If the latest pipeline for the merge request failed, Deckhouse Code asks for confirmation before adding the merge request to the queue.
 
-You can also queue a merge request through the API:
+{% endtab %}
+
+{% tab "Adding via API" %}
+
+To add a merge request to a merge train via API, run the following request:
 
 ```shell
-curl --request POST --header "PRIVATE-TOKEN: <token>" \
-  "https://<host>/api/v4/projects/<id>/merge_trains/merge_requests/<merge_request_iid>"
+curl --request POST --header "PRIVATE-TOKEN: <TOKEN>" \
+  "https://<HOST>/api/v4/projects/<PROJECT_ID>/merge_trains/merge_requests/<MERGE_REQUEST_IID>"
 ```
+
+Where:
+
+* `<TOKEN>`: Token used to authenticate with Deckhouse Code.
+* `<HOST>`: Deckhouse Code instance address.
+* `<PROJECT_ID>`: Project ID.
+* `<MERGE_REQUEST_IID>`: Internal ID of the merge request within the project.
+
+The following parameters can be specified in the request:
 
 | Parameter | Description |
-|-----------|-------------|
-| `sha` | The SHA you expect the source branch to have. The request is rejected if the branch has moved |
-| `squash` | Squashes the commits of the source branch into one when the merge request merges. A train merge also respects the squash setting of the merge request itself |
-| `auto_merge` | Queues the merge request when its merge checks pass instead of adding it to the train right away |
+| --------- | ----------- |
+| `sha` | SHA expected in the source branch. If the current SHA does not match the specified value, the request is rejected |
+| `squash` | Squashes the source branch commits into a single commit when the merge request is merged. When merging through a merge train, the merge request's squash setting is also taken into account |
+| `auto_merge` | Adds the merge request to the queue only after all merge checks pass |
 
-The endpoint returns:
+Possible response codes:
 
-- `201` if the merge request joined the queue.
-- `202` if the merge request only waits for its merge checks to pass and has not joined the queue yet.
-- `400` if merge trains are disabled for the project or the merge request cannot be queued in its current state.
-- `401` if the request is not authenticated.
-- `403` if your role does not allow you to read the train or to merge the merge request.
-- `404` if the project or the merge request does not exist.
-- `409` if auto-merge is already set on the merge request.
+| Code | Description |
+| ---- | ----------- |
+| `201` | Merge request added to the queue |
+| `202` | Merge request is waiting for merge checks to pass and has not yet been added to the queue |
+| `400` | Merge trains are disabled in the project, or the current state of the merge request does not allow it to be added to the queue |
+| `401` | Request was made without authentication |
+| `403` | User role does not allow viewing the merge train or merging this merge request |
+| `404` | Project or merge request not found |
+| `409` | Auto-merge is already enabled for the merge request |
 
-## Viewing a merge train
+{% endtab %}
 
-To open the merge trains page of a project:
+{% endtabs %}
 
-- From a queued merge request: select "View merge train".
-- From a merge train pipeline: select "View merge train details" at the top of the pipeline page.
+### Viewing a merge train
 
-You can also open the page directly at `https://<host>/<namespace>/<project>/-/merge_trains`, or read a train without opening the page through the [API](#reading-a-merge-train-through-the-api).
+You can get information about a merge train using the web interface or API.
 
-The page shows:
+{% tabs viewing-train-info %}
 
-- A filter that selects the target branch. By default, the filter shows the project default branch.
-- The "Active" tab with the merge requests still in the queue, and the "Merged" tab with the merge requests that already merged. Each tab shows how many merge requests it contains.
-- A row for every merge request with its pipeline status, title, when it was added or merged, and who added or merged it.
+{% tab "Viewing via web UI" %}
 
-### Merge train position in a merge request
+You can open the project's merge trains page in one of the following ways:
 
-While a merge request is queued, its page shows its position in the queue:
+* On the page of a merge request added to the queue, follow the "View merge train" link.
+* On the merge train pipeline page, follow the "View merge train details" link in the page header.
+* Open the page directly at `https://<HOST>/<NAMESPACE>/<PROJECT>/-/merge_trains`.
 
-- If nothing is ahead of it: "A new merge train has started, and this merge request is first in the queue."
-- Otherwise, its position, for example: "This merge request is number 2 of 5 in the queue."
+The merge trains page displays:
 
-### Reading a merge train through the API
+* A filter for selecting the target branch. The project's default branch is selected initially.
+* The "Active" tab with merge requests currently in the queue and the "Merged" tab with merge requests that have already been merged. Each tab shows the number of merge requests.
+* Information about each merge request: pipeline status, title, time when the merge request was added to the queue or merged, and the user who added or merged it.
+
+While a merge request is in the queue, its position is displayed on the merge request page:
+
+* For the first merge request: "A new merge train has started, and this merge request is first in the queue".
+* For other merge requests, the position in the queue is displayed, for example, "This merge request is number 2 of 5 in the queue".
+
+{% endtab %}
+
+{% tab "Viewing via API" %}
+
+To get information about merge trains via API, run one of the following requests:
 
 ```shell
-# All the trains of a project
-curl --header "PRIVATE-TOKEN: <token>" "https://<host>/api/v4/projects/<id>/merge_trains"
+# All merge trains in the project.
+curl --header "PRIVATE-TOKEN: <TOKEN>" \
+  "https://<HOST>/api/v4/projects/<PROJECT_ID>/merge_trains"
 
-# The train of one target branch
-curl --header "PRIVATE-TOKEN: <token>" \
-  "https://<host>/api/v4/projects/<id>/merge_trains/<target_branch>"
+# Merge train for a specific target branch.
+curl --header "PRIVATE-TOKEN: <TOKEN>" \
+  "https://<HOST>/api/v4/projects/<PROJECT_ID>/merge_trains/<TARGET_BRANCH>"
 
-# The queue status of one merge request
-curl --header "PRIVATE-TOKEN: <token>" \
-  "https://<host>/api/v4/projects/<id>/merge_trains/merge_requests/<merge_request_iid>"
+# Status of a specific merge request in the queue.
+curl --header "PRIVATE-TOKEN: <TOKEN>" \
+  "https://<HOST>/api/v4/projects/<PROJECT_ID>/merge_trains/merge_requests/<MERGE_REQUEST_IID>"
 ```
+
+Where:
+
+* `<TOKEN>`: Token used to authenticate with Deckhouse Code.
+* `<HOST>`: Deckhouse Code instance address.
+* `<PROJECT_ID>`: Project ID.
+* `<TARGET_BRANCH>`: Target branch name.
+* `<MERGE_REQUEST_IID>`: Internal ID of the merge request within the project.
 
 The first two endpoints accept the following parameters:
 
 | Parameter | Description |
-|-----------|-------------|
-| `scope` | Limits the response to the merge requests that are still queued (`active`) or to the merge requests that left the queue (`complete`) |
-| `sort` | Orders the merge requests by their position in the queue: `asc` for the oldest first, `desc` for the newest first. The default value is `desc`, so the newest are returned first |
+| --------- | ----------- |
+| `scope` | Limits the response to merge requests that are still in the queue (`active`) or have already left it (`complete`) |
+| `sort` | Specifies the order of merge requests by their position in the queue: `asc` sorts from oldest to newest, and `desc` from newest to oldest. The default value is `desc` |
 
-Both endpoints are paginated with the `page` and `per_page` parameters. The response of the first endpoint mixes merge requests of different target branches, so if you need the queue of a single branch, read that train instead.
+Both endpoints support pagination using the `page` and `per_page` parameters. The first endpoint returns merge requests for all target branches. To get the queue for a specific branch only, use the second endpoint and specify the branch name.
 
-The GraphQL API also exposes merge trains and their queues for a project. For an overview of the Deckhouse Code interfaces, see [API](/products/code/documentation/user/api.html).
+You can also get information about project merge trains and queues using the GraphQL API.
 
-## Queue statuses
+{% endtab %}
 
-Every merge request in a train has one of the following statuses, returned by the REST API and GraphQL. The merge trains page does not show them directly: it groups merge requests into the "Active" and "Merged" tabs.
+{% endtabs %}
 
-| Status | Description |
-|--------|-------------|
-| `idle` | Queued, the pipeline has not started yet |
-| `fresh` | The pipeline matches the current merge result |
-| `stale` | Something changed ahead in the queue, so the pipeline is rebuilt |
-| `merging` | The merge is in progress |
-| `merged` | Merged through the train and left the queue |
-| `skip_merged` | Merged immediately without restarting the train and left the queue |
+### Removing a merge request from a merge train
 
-Merge requests with the `idle`, `fresh`, and `stale` statuses are shown on the "Active" tab and can be removed from the queue. Merge requests with the `merged` and `skip_merged` statuses are shown on the "Merged" tab. While a merge is in progress, the merge request has the `merging` status and appears on neither tab.
+To remove a merge request from a merge train, use one of the following methods:
 
-## Removing a merge request from a merge train
+* Cancel auto-merge on the merge request page.
+* On the merge trains page, click the remove icon in the merge request row, then click "Remove from merge train".
 
-To remove a merge request from a merge train, do one of the following:
+When a merge request is removed from the queue, pipelines for the merge requests behind it are recreated because the state of the merge train has changed.
 
-- Cancel auto-merge on the merge request page.
-- Remove the merge request from the queue on the merge trains page: in the merge request row, select the remove icon, then select "Remove from merge train".
+A merge request cannot be removed from the merge train if its merge has already started. In this case, Deckhouse Code rejects the removal and completes the merge.
 
-Removing a merge request from the queue rebuilds the pipelines of the merge requests behind it, because those pipelines were validated against a queue that no longer exists.
+Deckhouse Code also automatically removes a merge request from the merge train if it can no longer be merged. For details, refer to ["Troubleshooting"](#merge-request-removed-from-the-merge-train).
 
-A merge request whose merge is already in progress cannot be removed. Deckhouse Code rejects the removal in this case, and the train finishes the merge.
+### Merging immediately
 
-Deckhouse Code also removes a merge request from the train automatically if the merge request can no longer be merged. For details, see [Merge request dropped from the merge train](#merge-request-dropped-from-the-merge-train).
+You can merge a merge request immediately without waiting for its turn in the merge train. Immediate merging is available through the web interface and API.
 
-## Merging immediately
+{% tabs immediate-merge %}
 
-If the "Merge immediately without restarting the merge train" checkbox is selected for the project, the page of a queued merge request offers two additional options next to the merge button:
+{% tab "Merging via web UI" %}
+
+If "Merge immediately without restarting the merge train" is enabled in the project, two additional options are available next to the merge button on the page of a merge request in the queue:
 
 | Option | Description |
-|--------|-------------|
-| **Merge now and restart train** | The merge request merges immediately, and the pipelines of the merge requests behind it in the queue are rebuilt with the merged changes |
-| **Merge now and don't restart train** | The merge request merges immediately and the train continues without rebuilding. The changes already in the queue are not validated against the merged changes |
+| ------ | ----------- |
+| **Merge now and restart train** | Merges the merge request immediately and recreates the pipelines for subsequent merge requests to include the merged changes |
+| **Merge now and don't restart train** | Merges the merge request immediately while existing pipelines continue running without being restarted. As a result, merge requests already in the queue are not validated together with the merged changes |
 
-Both options require confirmation.
+{% alert level="warning" %}
+Use "Merge now and don't restart train" only if the merged changes cannot affect merge requests already in the queue.
+{% endalert %}
 
-Use "Merge now and don't restart train" only when the merged changes cannot interact with the queued ones. Both options bypass the queue. For that reason, the "Merge immediately without restarting the merge train" checkbox is unavailable when the project requires fast-forward or semi-linear merges, and merge train enforcement removes the options entirely.
+Both options require confirmation and allow the merge request to be merged outside the established queue order.
 
-A merge request merged with "Merge now and don't restart train" appears on the "Merged" tab with the `skip_merged` status. A merge request merged with "Merge now and restart train" merges directly and does not appear on that tab: the train removes it from the queue as it does with any merge request that is no longer open, and its activity records that removal.
+Immediate merge options are unavailable if merging through a merge train is enforced in the project. The "Merge now and restart train" setting is also unavailable if the project requires fast-forward or semi-linear merges.
 
-### Merging immediately through the API
+The result of an immediate merge depends on the selected option:
 
-The merge endpoint accepts the `skip_merge_train` parameter, which produces the same two behaviors as the options above:
+* When merging without restarting the train, the merge request appears on the "Merged" tab with the `skip_merged` status.
+* When merging with a train restart, the merge request is merged directly and does not appear on the "Merged" tab. After the merge, it is removed from the queue, and the removal is recorded in the merge request activity.
+
+{% endtab %}
+
+{% tab "Merging via API" %}
+
+To merge a merge request immediately via API, use the merge endpoint with the `skip_merge_train` parameter:
 
 ```shell
-curl --request PUT --header "PRIVATE-TOKEN: <token>" \
-  "https://<host>/api/v4/projects/<id>/merge_requests/<merge_request_iid>/merge?skip_merge_train=true"
+curl --request PUT --header "PRIVATE-TOKEN: <TOKEN>" \
+  "https://<HOST>/api/v4/projects/<PROJECT_ID>/merge_requests/<MERGE_REQUEST_IID>/merge?skip_merge_train=true"
 ```
 
+Where:
+
+* `<TOKEN>`: Token used to authenticate with Deckhouse Code.
+* `<HOST>`: Deckhouse Code instance address.
+* `<PROJECT_ID>`: Project ID.
+* `<MERGE_REQUEST_IID>`: Internal ID of the merge request within the project.
+
+The `skip_merge_train` parameter accepts the following values:
+
 | Value | Description |
-|-------|-------------|
-| `true` | The merge request merges immediately and the train continues without rebuilding, as with "Merge now and don't restart train" |
-| `false` | The merge request merges immediately and the pipelines of the merge requests behind it in the queue are rebuilt, as with "Merge now and restart train". This is the default value |
+| ----- | ----------- |
+| `true` | Merges the merge request immediately without restarting the train |
+| `false` | Default. Merges the merge request immediately and recreates the pipelines for subsequent merge requests |
 
-The parameter takes effect only if the "Merge immediately without restarting the merge train" checkbox is selected for the project. Otherwise it is ignored. If merge trains are enforced, the merge itself is rejected.
+The parameter takes effect only when "Merge immediately without restarting the merge train" is enabled. Otherwise, the parameter is ignored. If merging through a merge train is enforced in the project, the merge request is rejected.
 
-## Enforcing merge trains
+{% endtab %}
 
-Select the "Require merge requests to merge through a merge train" checkbox to reject every direct merge in the project. When enforcement is enabled:
+{% endtabs %}
 
-- The merge request page does not offer the merge-now options.
-- A merge through the API is rejected unless the merge goes through the train, that is, unless auto-merge is set on the merge request.
-- The merges the train itself performs are not affected.
+## Configuring merge trains
 
-Selecting enforcement also clears and locks the "Merge immediately without restarting the merge train" checkbox: skipping the queue would be rejected at merge time, so it is not offered. Saving the settings with enforcement selected clears that checkbox for good, so clearing enforcement later leaves it cleared. Select it again if you need it.
+In the project settings, you can enforce merging through a merge train and limit the number of pipelines that can run simultaneously.
 
-Enforcement applies only while merge trains are enabled for the project, so merges are not blocked when trains are disabled.
+### Enforcing merge trains
 
-Enforcement applies to all users, including project owners and administrators.
+To prevent merge requests from being merged directly in the project, select "Require merge requests to merge through a merge train".
 
-## Parallel pipeline limit
+After this setting is enabled:
 
-A train runs several pipelines at once so that the queue does not advance one pipeline at a time. The effective limit is the lower of:
+* Immediate merge options become unavailable.
+* An API merge request is rejected if auto-merge is not enabled for it and it has not been added to a merge train.
+* Merges performed by the merge train itself continue to work as usual.
 
-- The instance limit for parallel merge train pipelines, which the administrator sets (default: `20`).
-- The project's "Maximum parallel pipelines per merge train" value.
+When merge trains are enforced, "Merge immediately without restarting the merge train" is automatically disabled and becomes unavailable. After the settings are saved with merge trains enforced, this setting remains disabled even if enforcement is later turned off. To use it again, enable the setting manually.
 
-Leave the project field blank to use the instance limit. The project value must be between `1` and `500`. A project can lower the limit but not raise it above the instance limit.
+Merge train enforcement applies only when merge trains are enabled. If merge trains are disabled, merge requests can be merged directly.
+
+The restriction applies to all users, including project owners and administrators.
+
+### Limiting parallel pipelines
+
+Pipelines for multiple merge requests in a merge train can run simultaneously. The number of pipelines that can run at the same time is determined by two limits:
+
+* The Deckhouse Code instance limit configured by the administrator. The default is `20`.
+* The "Maximum parallel pipelines per merge train" project setting.
+
+The lower of the two values is used. For example, if the instance limit is `20` and the project limit is `10`, no more than 10 pipelines can run simultaneously.
+
+To use the instance limit, leave the project setting empty. You can specify a project value from `1` to `500`, but it cannot increase the limit configured for the instance.
 
 ## Merge train pipelines
 
-A merge train pipeline runs on the temporary Git ref that Deckhouse Code builds for the queued merge request, not on the source branch of the merge request. In pipeline lists, such pipelines are labeled `merge train`, which distinguishes them from merged results pipelines.
+For each merge request in the queue, Deckhouse Code runs a pipeline for a Git ref. This pipeline does not run for the merge request's source branch. In the pipeline list, it is labeled `merge train`, which distinguishes it from a regular merged results pipeline.
 
-A finished merge train pipeline cannot be retried: it validated a queue state that no longer exists. To get a new pipeline, add the merge request to the train again.
+A completed merge train pipeline cannot be restarted because the repository state for which it ran may have changed. To run a new pipeline, re-add the merge request to the merge train.
 
-A merge train pipeline is discarded and replaced when:
+A pipeline is recreated in the following cases:
 
-- A merge request ahead in the queue merges, is removed from the queue, or gets a new pipeline.
-- The pipeline of the merge request directly ahead in the queue fails.
-- Someone pushes directly to the target branch. In this case, the pipelines of the whole queue are rebuilt, starting from the merge request at the head.
+* A merge request ahead of it in the queue is merged, removed from the queue, or gets a new pipeline.
+* The pipeline for the preceding merge request in the queue fails.
+* Changes are pushed directly to the target branch. In this case, pipelines for all merge requests in the queue are recreated, starting with the first one.
 
 ### Running jobs only in merge train pipelines
 
-In a merge train pipeline, the `CI_MERGE_REQUEST_EVENT_TYPE` variable has the value `merge_train`. Use it to run a job only in merge train pipelines:
+In a merge train pipeline, the `CI_MERGE_REQUEST_EVENT_TYPE` variable is set to `merge_train`. You can use it to run a job only in merge train pipelines:
 
 ```yaml
 integration-tests:
@@ -242,7 +318,7 @@ integration-tests:
     - if: $CI_MERGE_REQUEST_EVENT_TYPE == "merge_train"
 ```
 
-Use the opposite condition to skip a job in merge train pipelines:
+To skip a job in merge train pipelines instead, use the opposite condition:
 
 ```yaml
 quick-lint:
@@ -251,99 +327,120 @@ quick-lint:
     - if: $CI_MERGE_REQUEST_EVENT_TYPE != "merge_train"
 ```
 
+## Merge request statuses in the queue
+
+Each merge request in a merge train has a status that can be retrieved through the REST API or GraphQL API. The statuses are not displayed directly in the web interface. Instead, merge requests are grouped under the "Active" and "Merged" tabs.
+
+| Status | Description |
+| ------ | ----------- |
+| `idle` | Merge request is in the queue, but its pipeline has not started yet |
+| `fresh` | Pipeline corresponds to the current merged result |
+| `stale` | The state of the merge train has changed and the pipeline is being recreated |
+| `merging` | Merge request is being merged |
+| `merged` | Merge request was merged through the merge train and removed from the queue |
+| `skip_merged` | Merge request was merged immediately without restarting the merge train and removed from the queue |
+
+Merge requests with the `idle`, `fresh`, and `stale` statuses are displayed on the "Active" tab and can be removed from the queue. Merge requests with the `merged` and `skip_merged` statuses are displayed on the "Merged" tab. A merge request with the `merging` status is not displayed on either tab until the merge is complete.
+
 ## Merge request activity
 
-Deckhouse Code records what happens to a merge request in a train as system notes in the "Activity" section of the merge request:
+Deckhouse Code records events related to a merge request in a merge train as system notes in the merge request's "Activity" section. The following events are recorded:
 
-- The merge request started a train, or was added to the train at a specific position in the queue.
-- The merge request was removed from the train by a user.
-- The merge request was removed from the train by Deckhouse Code, including the reason.
-- Automatic queuing when checks pass was enabled, canceled, or stopped, including the reason.
+* The merge request started a new merge train or was added to an existing merge train at a specific position in the queue.
+* The merge request was removed from the merge train by a user.
+* The merge request was removed from the merge train by the system, with the reason specified.
+* Automatic addition to the merge train after merge checks pass was enabled, canceled, or interrupted, with the reason specified.
 
-If a merge request is removed from the train by Deckhouse Code, its participants also get a to-do item.
+If a merge request is removed from the merge train by the system, its participants also receive a corresponding to-do item in their to-do list.
 
 ## Access to merge trains
 
-Access to merge trains depends on your project role and on the project settings:
+Available merge train actions depend on the user's role and project settings:
 
 | Action | Requirements |
-|--------|--------------|
-| View the merge trains page and read trains through the API | Merge trains are enabled for the project, and you can read merge requests and pipelines in it. In standard roles, this is available to users with the **Reporter** role or higher |
-| Read the merge train status of a single merge request | The same requirements as for reading a train |
-| Add a merge request to a train | You can merge the merge request. In standard roles, this is available to users with the **Developer** role or higher |
-| Remove a merge request from the queue on the merge trains page | You can cancel pipelines, update the merge request, and merge into the target branch. In standard roles, this is available to users with the **Developer** role or higher |
-| Change the merge train settings of a project | **Maintainer** or **Owner** |
+| ------ | ------------ |
+| Viewing the merge trains page and retrieving information via API | Merge trains are enabled in the project, and the user has read access to merge requests and pipelines. With standard roles, this is available to users with the **Reporter** role or higher |
+| Retrieving the merge train status for a specific merge request | Same requirements as for viewing a merge train |
+| Adding a merge request to a merge train | The user has permission to merge the merge request. With standard roles, this is available to users with the **Developer** role or higher |
+| Removing a merge request from the queue on the merge trains page | The user has permission to cancel pipelines, modify the merge request, and merge into the target branch. With standard roles, this is available to users with the **Developer** role or higher |
+| Modifying merge train settings in the project | **Maintainer** or **Owner** role |
 
-Both the merge trains page and the API require you to be signed in. Merge trains are not available to anonymous visitors, even in public projects.
+Authentication is required to view merge trains through the web interface or API. Merge trains are not available to anonymous users, even in public projects.
 
 ## Audit events
 
-Deckhouse Code records audit events for changes to a project's merge train settings.
+Deckhouse Code records the following audit events when merge train settings are changed in a project:
 
 | Audit event | Description |
-|-------------|-------------|
-| `project_cicd_merge_trains_enabled_updated` | The merge trains setting of a project was updated |
-| `project_cicd_merge_train_enforced_updated` | The merge train enforcement setting of a project was updated |
+| ----------- | ----------- |
+| `project_cicd_merge_trains_enabled_updated` | The setting that enables merge trains in the project was changed |
+| `project_cicd_merge_train_enforced_updated` | The setting that enforces merging through a merge train was changed |
 
 ## Troubleshooting
 
-### Merge request dropped from the merge train
+This section describes common issues with merge trains and how to resolve them.
 
-A merge request that can no longer be merged while its pipeline runs is removed from the queue rather than blocking it. The reason is recorded as a system note in the "Activity" section of the merge request.
+### Merge request removed from the merge train
 
-The most frequent reasons are:
+If a merge request can no longer be merged while its pipeline is running, Deckhouse Code removes it from the queue to prevent it from blocking other merge requests. The reason for removal is specified in a system note in the "Activity" section.
 
-- Merge trains were disabled for the project.
-- New commits were pushed to the source branch of the merge request.
-- The merge request was closed.
-- The merge request was marked as a draft.
-- The target branch of the merge request was changed.
-- The merge request can no longer be merged, for example because of a conflict.
-- Auto-merge was canceled on the merge request.
-- The merge train pipeline of the merge request did not succeed.
-- The account that queued the merge request was deleted.
+The most common reasons for removal are:
 
-While a merge request waits for its merge checks to pass, it is also dropped if it becomes a draft or if its pipeline fails before the checks pass.
+* Merge trains are disabled in the project.
+* New commits were added to the merge request's source branch.
+* The merge request was closed.
+* The merge request was marked as a draft.
+* The target branch of the merge request was changed.
+* The merge request can no longer be merged, for example, due to a conflict.
+* Auto-merge was canceled for the merge request.
+* The merge train pipeline for the merge request failed.
+* The account of the user who added the merge request to the queue was deleted.
 
-Threads and approvals are both checked when a merge request joins the queue. Once it is queued, a thread opened afterwards does not stop the merge, even if the project requires all threads to be resolved: the merge lands exactly what the pipeline validated, and otherwise a single comment would drop the merge request and force everything behind it to rebuild. A required approval that is removed does stop the merge. The merge request keeps its place in the queue until it reaches the head, and is dropped there when its merge is attempted.
+If a merge request is waiting for merge checks to pass before being added to the merge train, the process is also interrupted if the merge request becomes a draft or its pipeline fails.
 
-Fix the problem stated in the note, then add the merge request to the train again.
+Discussions and approvals are checked when a merge request is added to the queue. A new discussion opened afterward does not block the merge, even if the project requires all discussions to be resolved. This preserves the state already validated by the pipeline and avoids recreating pipelines for subsequent merge requests.
 
-### The merge button does not offer merge train options
+If a required approval is revoked, the merge is blocked. The merge request retains its position in the queue but is removed from the merge train when it reaches the front of the queue.
 
-Check the following:
+Resolve the issue specified in the system note and re-add the merge request to the merge train.
 
-- Merged results pipelines and merge trains are enabled in the project settings.
-- The CI/CD configuration file creates merge request pipelines.
-- The merge request has a pipeline for the current `HEAD` SHA of the source branch, and the pipeline has finished.
-- Your role allows you to merge the merge request.
-
-### A merge is rejected in a project that requires merge trains
-
-If the "Require merge requests to merge through a merge train" checkbox is selected, a direct merge is rejected, including a merge through the API. Add the merge request to the train instead.
-
-Enforcement applies to every user, so a project owner cannot bypass it. To allow direct merges again, clear the checkbox in the project settings.
-
-### A merge train pipeline cannot be retried
-
-Retrying a finished merge train pipeline is not possible: it validated a queue state that no longer exists. Add the merge request to the train again instead, which creates a pipeline on the current state.
-
-### A merge appears to be stuck
-
-A merge that stops halfway is recovered by a scheduled job: the merge request returns to the queue and the train continues. No manual action is required.
-
-### Merge trains were disabled but the queue is still shown
-
-The queue is drained by the refresh cycle rather than in one step. The merge requests disappear from the page as the cycle reaches them.
-
-### The merge trains page is empty
+### Merge button does not offer merge train options
 
 Check the following:
 
-- The filter shows the branch that the merge requests target.
-- Auto-merge is set on the merge requests.
-- Merge trains are enabled for the project. If they are disabled, the page is not available even if a queue is left from an earlier state.
+* Merged results pipelines and merge trains are enabled in the project settings.
+* The CI/CD configuration file creates pipelines for merge requests.
+* The merge request has a completed pipeline for the current `HEAD` SHA of the source branch.
+* The user's role allows them to merge the merge request.
 
-### The remove action is not available
+### Merge rejected in a project that requires merge trains
 
-The remove action is shown only on the "Active" tab and only if you can cancel pipelines, update the merge request, and merge into the target branch. A merge request whose merge is already in progress cannot be removed.
+If "Require merge requests to merge through a merge train" is enabled, direct merges are rejected, including merges through the API. Instead, add the merge request to the merge train.
+
+The restriction applies to all users, including the project owner. To allow direct merges again, disable this setting.
+
+### Merge train pipeline cannot be restarted
+
+A completed merge train pipeline cannot be restarted because the state for which it ran may have changed. To create a pipeline for the current state, re-add the merge request to the merge train.
+
+### Merge appears to be stuck
+
+If the merge process is interrupted, Deckhouse Code automatically returns the merge request to the queue and continues processing the merge train. No additional action is required.
+
+### Merge trains are disabled, but the queue is still displayed
+
+After merge trains are disabled, merge requests are not removed from the existing queue immediately. They may remain visible on the page for some time while Deckhouse Code gradually clears the queue.
+
+### Merge trains page is empty
+
+Check the following:
+
+* The target branch whose queue you want to view is selected in the filter.
+* Auto-merge is enabled for the merge requests.
+* Merge trains are enabled in the project. If they are disabled, the page is unavailable even if the queue remains from its previous state.
+
+### Remove action is unavailable
+
+A merge request can be removed from the merge train only on the "Active" tab and only if you have permission to cancel pipelines, modify the merge request, and merge into the target branch.
+
+A merge request cannot be removed from the merge train if its merge has already started.

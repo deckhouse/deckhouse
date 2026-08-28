@@ -158,7 +158,8 @@ curl --request POST --header "PRIVATE-TOKEN: <TOKEN>" \
 
 ```shell
 # Все цепочки проекта.
-curl --header "PRIVATE-TOKEN: <TOKEN>" "https://<HOST>/api/v4/projects/<PROJECT_ID>/merge_trains"
+curl --header "PRIVATE-TOKEN: <TOKEN>" \
+  "https://<HOST>/api/v4/projects/<PROJECT_ID>/merge_trains"
 
 # Цепочка одной целевой ветки.
 curl --header "PRIVATE-TOKEN: <TOKEN>" \
