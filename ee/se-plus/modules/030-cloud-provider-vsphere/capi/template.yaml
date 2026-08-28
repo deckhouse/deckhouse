@@ -10,35 +10,55 @@ rolloutFields:
   - additionalNetworks
   - disableTimesync
   - runtimeOptions
+  # resourcePool is a rollout-relevant field again because the hook creates a per-NG
+  # VSphereDeploymentZone for InstanceClasses that carry it, and the MachineDeployment's
+  # failureDomain string encodes the NG identity for that DZ lookup. Changing the value
+  # requires new nodes to pick up the override — datastore is intentionally omitted:
+  # CAPV can only override datastore via VSphereFailureDomain.spec.topology.datastore,
+  # which is immutable and shared across NodeGroups in the zone.
+  - resourcePool
 
 # failureDomain sits on the generic MachineDeployment node-controller builds — the provider
 # template renders the machine template only. Replaces v1 machine-deployment-spec-patch.yaml,
 # whose sole job was ${zone} string substitution. CAPV resolves the string to a
-# VSphereDeploymentZone / VSphereFailureDomain pair (created by the ensure_failure_domains
-# hook) and overrides VSphereVM.spec.{Server,Datacenter,Folder,ResourcePool,Datastore,Networks}
-# from that topology in pkg/services/vimmachine.go:474 — this is what makes multi-zone
-# placement actually work.
+# VSphereDeploymentZone (DZ) and reads its placementConstraint + linked VSphereFailureDomain
+# topology to override VSphereVM.spec on clone (pkg/services/vimmachine.go generateOverrideFunc).
 #
-# .zone arrives as the raw vSphere tag ("E2E Zone 1"), which is not a valid DNS-1123 subdomain
-# and cannot be a Kubernetes object name. hooks/ensure_failure_domains.go therefore sanitizes
-# the tag before creating VSphereDeploymentZone (rfc1123SubdomainName). CAPV's
-# generateOverrideFunc matches Machine.Spec.FailureDomain against DZ.metadata.name; if this
-# template emitted the raw tag while the DZ carried the sanitized one, the lookup would 404,
-# the override would silently no-op, and every VM in a "Zone 1"-style zone would clone with
-# the baseline topology from this template — no per-zone datastore/resourcePool. That failure
-# is invisible from kubectl: it only shows up in vCenter as VMs on the wrong datastore.
+# There are two shapes for the string:
 #
-# The sprig expression below mirrors rfc1123SubdomainName step-for-step. Keeping two copies
-# of the sanitization is guarded by hooks/ensure_failure_domains_sanitize_parity_test.go,
-# which extracts this literal from template.yaml, runs it through the same sandbox
-# node-controller uses at render time, and asserts equality with the Go function on a golden
-# set of inputs. A drift in either implementation fails CI on the next run.
+#   1. Zone-baseline "<sanZone>": for InstanceClasses that do NOT override resourcePool.
+#      hook creates a single "dz-<sanZone>" per zone with resourcePool derived from
+#      providerDiscoveryData.resourcePoolPath (module-wide default).
+#
+#   2. NG-override "<sanZone>-<sanNG>": for InstanceClasses that carry spec.resourcePool.
+#      hook creates an extra DZ named "<sanZone>-<sanNG>" for every (NG that uses that IC,
+#      zone) pair, pointing at the same FD as the baseline but with placementConstraint
+#      .resourcePool = IC.spec.resourcePool. CAPV's overrideFunc reads .PlacementConstraint
+#      .ResourcePool from DZ; datastore is deliberately not overridable this way because
+#      CAPV reads datastore from VSphereFailureDomain.spec.topology, which is one per zone
+#      and immutable via the FD webhook.
+#
+# Names go through DNS-1123 sanitization on both sides. The raw vSphere tag "E2E Zone 1"
+# and the raw NG name "Worker Fast" would both fail Kubernetes object-name validation with
+# 422 and loop the reconcile forever. The Go implementation is hooks/ensure_failure_domains
+# .go:rfc1123SubdomainName; the sprig sanitization here mirrors it step-for-step. Drift
+# between the two is guarded by hooks/ensure_failure_domains_sanitize_parity_test.go, which
+# extracts these literals from template.yaml and asserts equality with the Go function on
+# a golden set of inputs.
 machineDeployment:
   additionalFields:
     failureDomain: >-
-      {{- $s := lower .zone | replace " " "-" -}}
-      {{- $s = regexReplaceAll "[^a-z0-9.-]" $s "" -}}
-      {{- trimAll "-." $s -}}
+      {{- $sanZone := lower .zone | replace " " "-" -}}
+      {{- $sanZone = regexReplaceAll "[^a-z0-9.-]" $sanZone "" -}}
+      {{- $sanZone = trimAll "-." $sanZone -}}
+      {{- if hasKey .instanceClass "resourcePool" -}}
+        {{- $sanNG := lower .nodeGroup.name | replace " " "-" -}}
+        {{- $sanNG = regexReplaceAll "[^a-z0-9.-]" $sanNG "" -}}
+        {{- $sanNG = trimAll "-." $sanNG -}}
+        {{- printf "%s-%s" $sanZone $sanNG -}}
+      {{- else -}}
+        {{- $sanZone -}}
+      {{- end -}}
 
 # Rendered under machinetemplate.Render: missingkey=error, sprig sandbox, no access to Helm
 # .Values. Optional fields MUST go through hasKey / get / dig — a direct path like

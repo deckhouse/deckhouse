@@ -145,7 +145,7 @@ func TestBuildFailureDomain(t *testing.T) {
 
 func TestBuildDeploymentZone(t *testing.T) {
 	dz := buildDeploymentZone("z1", "vcenter.example", "vsphere-z1",
-		"/DC/vm/folder", "/DC/host/cl/Resources/rp")
+		"/DC/vm/folder", "/DC/host/cl/Resources/rp", dzTypeBase, "")
 
 	if got := dz.GetName(); got != "z1" {
 		t.Fatalf("name = %q; want z1", got)
@@ -164,10 +164,29 @@ func TestBuildDeploymentZone(t *testing.T) {
 	if pc["resourcePool"] != "/DC/host/cl/Resources/rp" {
 		t.Fatalf("resourcePool = %v", pc["resourcePool"])
 	}
+	labels := dz.GetLabels()
+	if labels[dzTypeLabel] != dzTypeBase {
+		t.Fatalf("dz-type label = %q; want %q", labels[dzTypeLabel], dzTypeBase)
+	}
+	if _, ok := labels[dzNodeGroupLabel]; ok {
+		t.Fatalf("node-group label should be omitted for base DZ, got %q", labels[dzNodeGroupLabel])
+	}
+}
+
+func TestBuildDeploymentZoneOverrideLabels(t *testing.T) {
+	dz := buildDeploymentZone("z1-worker-fast", "vcenter.example", "vsphere-z1",
+		"/DC/vm/folder", "/DC/host/cl/Resources/prod", dzTypeOverride, "worker-fast")
+	labels := dz.GetLabels()
+	if labels[dzTypeLabel] != dzTypeOverride {
+		t.Fatalf("dz-type label = %q; want %q", labels[dzTypeLabel], dzTypeOverride)
+	}
+	if labels[dzNodeGroupLabel] != "worker-fast" {
+		t.Fatalf("node-group label = %q; want worker-fast", labels[dzNodeGroupLabel])
+	}
 }
 
 func TestBuildDeploymentZoneOmitsEmptyPlacement(t *testing.T) {
-	dz := buildDeploymentZone("z1", "vcenter.example", "vsphere-z1", "", "")
+	dz := buildDeploymentZone("z1", "vcenter.example", "vsphere-z1", "", "", dzTypeBase, "")
 	spec, _ := dz.Object["spec"].(map[string]interface{})
 	pc, _ := spec["placementConstraint"].(map[string]interface{})
 	if _, ok := pc["folder"]; ok {
