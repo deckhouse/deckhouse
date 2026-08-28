@@ -139,9 +139,41 @@ in). Cilium v1.17.17 still pins ebpf v0.17.1 and calls `v.MapName()` in
 live in the `.rodata.config` section, so the bump alone breaks compilation.
 
 The patch replaces the two `v.MapName()` calls with `v.SectionName`, which
-returns the same value (the underlying map/section name). No datapath or other
-behavior changes: a full `go build ./...` of Cilium v1.17.17 with ebpf v0.22.0
-has this single call site as its only incompatibility.
+returns the same value (the underlying map/section name).
+
+The second hunk (`pkg/datapath/linux/probes/probes.go`) is a runtime
+compatibility fix for the same bump, backported from upstream commit
+`36f2b4a12` ("datapath/linux/probes: Tolerate ErrRestrictedKernel"). On nodes
+where BPF JIT hardening is on (`net.core.bpf_jit_harden=2`) together with
+restricted kernel pointers (`kernel.kptr_restrict=2`), `BPF_OBJ_GET_INFO_BY_FD`
+returns no xlated instructions. ebpf v0.20.0 started reporting this as
+`ebpf.ErrRestrictedKernel` (before, the caller silently got a zeroed buffer),
+so `HaveDeadCodeElim()` — which loads a test program and inspects its final
+instructions — began failing, and `CheckRequirements()` aborted agent startup
+with `requirements failed: Require support for dead code elimination (Linux 5.1
+or newer)`. The patch tolerates `ErrRestrictedKernel` and treats the probe as
+passed, restoring the pre-bump behavior. Deckhouse itself sets both sysctls in
+the CSE edition (`candi/bashible/common-steps/all/041_configure_sysctl_tuner.sh.tpl`),
+hence the failure only showed up on part of the clusters. Upstream's other two
+call sites (`HaveBPFJIT`, `verifyUnusedMaps`) do not exist in v1.17.17, and no
+other place in v1.17.17 reads xlated instructions, JIT size or BTF func/line
+info from `ProgramInfo`, so this single probe is the whole runtime impact.
+
+Upstream chain, in order:
+
+1. ebpf introduces `ErrRestrictedKernel` (in v0.20.0):
+   <https://github.com/cilium/ebpf/pull/1858>, commit
+   <https://github.com/cilium/ebpf/commit/1bfe0bc241d275b16f7ddaa9c4a1230106571e39>
+2. ebpf queries `xlated_prog_insns` in a separate syscall so the remaining info
+   survives on hardened kernels (in v0.21.0), commit
+   <https://github.com/cilium/ebpf/commit/5ac1d5a9f065adef5726b3969da8ef3a1626c603>
+3. Cilium hits the same probe failures on GKE COS (which also enables JIT
+   hardening) and reverts its own ebpf bump ("unbreak GKE workflows"):
+   <https://github.com/cilium/cilium/pull/42327>
+4. Cilium forward-fixes the probes and re-lands the bump (the commit backported
+   here): <https://github.com/cilium/cilium/pull/42361>, commit
+   <https://github.com/cilium/cilium/commit/36f2b4a127f07985a79b984cd603de3cbd9c1d0f>
 
 **Remove this patch when upgrading to a Cilium version that already targets
-ebpf >= v0.21.0**, where `applyConstants()` no longer uses the removed method.
+ebpf >= v0.21.0**, where `applyConstants()` no longer uses the removed method
+and the probes already tolerate `ErrRestrictedKernel`.
