@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "merged-vex-819396348420854c54b988d825529cab830b81f6a05730951c9bec690dc551f1",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 3,
+  "version": 4,
   "statements": [
     {
       "vulnerability": {
@@ -48,7 +48,10 @@
     },
     {
       "vulnerability": {
-        "name": "CVE-2026-73502"
+        "name": "CVE-2026-73502",
+        "aliases": [
+          "GHSA-jpcw-4wr7-c3vq"
+        ]
       },
       "products": [
         {
