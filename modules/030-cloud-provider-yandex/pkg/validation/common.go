@@ -25,6 +25,7 @@ import (
 const (
 	CodeNodeGroupNodesGreaterExternalIPAddresses = "node_group_nodes_greater_length_of_external_ip_addresses"
 	CodeNATInstanceSubnetRequired                = "internal_subnet_cidr_or_internal_subnet_id_empty"
+	CodeProvisionedStorageClassNamesUnique       = "provisioned_storage_class_names_not_unique"
 
 	LayoutWithNATInstance = "WithNATInstance"
 )
@@ -113,6 +114,53 @@ func ValidateWithNATInstanceLayout(state *State) cpvalapi.Result {
 		natInstance,
 		"must provide internalSubnetCIDR or internalSubnetID for withNATInstance",
 	)
+
+	return result
+}
+
+// ValidateProvisionedStorageClasses checks that settings.storage.parameters.provisionedStorageClasses
+// declares every StorageClass name at most once.
+//
+// hooks/storage_classes.go matches provisioned names against the default StorageClasses exactly and
+// appends the provisioned list as it is, so a repeated name reaches
+// internal.storageClasses twice and templates/csi/storage-classes.yaml renders two StorageClass
+// objects with the same name — which the Helm release cannot apply. Overriding a default name
+// (network-hdd, network-ssd, network-ssd-nonreplicated, network-ssd-io-m3) is not a duplicate:
+// the default is dropped in favour of the provisioned entry.
+//
+// Only the first repeated name is reported: Result keys violations by code and path, so every
+// further duplicate would collapse into the same violation anyway.
+func ValidateProvisionedStorageClasses(state *State) cpvalapi.Result {
+	if state == nil {
+		return cpvalapi.ResultForNilState()
+	}
+
+	result := cpvalapi.Result{}
+
+	if state.ModuleConfig == nil {
+		return result
+	}
+
+	storageParams := state.ModuleConfig.Spec.Settings.Storage.Parameters
+	if len(storageParams.ProvisionedStorageClasses) == 0 {
+		return result
+	}
+
+	uniqueSCNames := make(map[string]any, len(storageParams.ProvisionedStorageClasses))
+	for _, sc := range storageParams.ProvisionedStorageClasses {
+		if _, ok := uniqueSCNames[sc.Name]; ok {
+			result.AddError(
+				"ModuleConfig.spec.settings.storage.parameters.provisionedStorageClasses",
+				CodeProvisionedStorageClassNamesUnique,
+				sc.Name,
+				"names of provisioned storage classes must not be repeated",
+			)
+
+			return result
+		}
+
+		uniqueSCNames[sc.Name] = struct{}{}
+	}
 
 	return result
 }

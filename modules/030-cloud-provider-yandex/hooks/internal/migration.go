@@ -357,6 +357,15 @@ func BuildModuleConfigSettingsV2(cfg ycpccv1.YandexProviderClusterConfiguration,
 		collectExternalAddressing(ng.Name, ng.InstanceClass.YandexInstanceClass)
 	}
 
+	provisionedSCs := make([]ycsettingsv2.ProvisionedStorageClass, 0, len(mc.StorageClass.Provision))
+	for _, sc := range mc.StorageClass.Provision {
+		provisionedSCs = append(provisionedSCs, ycsettingsv2.ProvisionedStorageClass{
+			Name:      sc.Name,
+			Type:      sc.Type,
+			BlockSize: sc.BlockSize,
+		})
+	}
+
 	settings := ycsettingsv2.ModuleConfigSettings{
 		Provider: ycsettingsv2.Provider{
 			Parameters: ycsettingsv2.ProviderParameters{
@@ -387,7 +396,8 @@ func BuildModuleConfigSettingsV2(cfg ycpccv1.YandexProviderClusterConfiguration,
 		Storage: ycsettingsv2.Storage{
 			Disabled: false,
 			Parameters: ycsettingsv2.StorageParameters{
-				ExcludedStorageClasses: mc.StorageClass.Exclude,
+				ExcludedStorageClasses:    mc.StorageClass.Exclude,
+				ProvisionedStorageClasses: provisionedSCs,
 			},
 		},
 		CCM: ycsettingsv2.CCM{

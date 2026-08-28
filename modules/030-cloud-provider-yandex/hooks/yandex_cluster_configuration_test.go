@@ -135,7 +135,6 @@ metadata:
 data:
   "cloud-provider-discovery-data.json": ""
 `
-
 	)
 
 	// ---- Context a: Cluster has empty state (no PCC) ----
@@ -478,6 +477,10 @@ spec:
       exclude:
         - network-hdd
         - network-ssd-nonreplicated
+      provision:
+        - name: network-ssd-64k
+          type: network-ssd
+          blockSize: 64Ki
     additionalExternalNetworkIDs:
       - net-extra-1
       - net-extra-2
@@ -579,10 +582,21 @@ var _ = Describe("Modules :: cloud-provider-yandex :: hooks :: yandex_cluster_co
 			Expect(cred.Get("secret").String()).To(Equal(`{"id":"sa-full"}`))
 		})
 
-		It("storage and ccm sections exist (empty params from MC v1)", func() {
+		It("storage and ccm sections exist, storageClass settings projected onto storage.parameters", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("cloudProviderYandex.storage.parameters").Exists()).To(BeTrue())
 			Expect(f.ValuesGet("cloudProviderYandex.ccm.parameters").Exists()).To(BeTrue())
+			Expect(f.ValuesGet("cloudProviderYandex.storage.parameters.excludedStorageClasses").String()).
+				To(MatchJSON(`["network-hdd", "network-ssd-nonreplicated"]`))
+			Expect(f.ValuesGet("cloudProviderYandex.storage.parameters.provisionedStorageClasses").String()).
+				To(MatchJSON(`[{"name": "network-ssd-64k", "type": "network-ssd", "blockSize": "64Ki"}]`))
+		})
+
+		// The v1 path is not mirrored any more: storage_classes.go reads
+		// storage.parameters, and the ModuleConfig v2 schema has no storageClass section.
+		It("does not write the legacy storageClass values path", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("cloudProviderYandex.storageClass").Exists()).To(BeFalse())
 		})
 	})
 

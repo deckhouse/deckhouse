@@ -75,6 +75,132 @@ func externalIPState(nodeGroupName string, maxPerZone int, externalIPAddresses m
 	}
 }
 
+// provisionedStorageClassesState builds a validation state whose ModuleConfig carries the given
+// storage.parameters.provisionedStorageClasses list and nothing else.
+func provisionedStorageClassesState(storageClasses ...ycsettingsv2.ProvisionedStorageClass) *State {
+	enabled := true
+
+	return &State{
+		ModuleName:    ycmeta.ModuleName,
+		NamespaceName: ycmeta.Namespace,
+		ModuleConfig: &cpapi.ModuleConfig[*ycsettingsv2.ModuleConfigSettings]{
+			ObjectMeta: cpapi.ObjectMeta{Name: ycmeta.ModuleName},
+			Spec: cpapi.ModuleConfigSpec[*ycsettingsv2.ModuleConfigSettings]{
+				Enabled: &enabled,
+				Version: 2,
+				Settings: &ycsettingsv2.ModuleConfigSettings{
+					Storage: ycsettingsv2.Storage{
+						Parameters: ycsettingsv2.StorageParameters{
+							ProvisionedStorageClasses: storageClasses,
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func TestValidateProvisionedStorageClassesRejectsRepeatedNames(t *testing.T) {
+	t.Parallel()
+
+	state := provisionedStorageClassesState(
+		ycsettingsv2.ProvisionedStorageClass{Name: "network-ssd-64k", Type: "network-ssd", BlockSize: "64Ki"},
+		ycsettingsv2.ProvisionedStorageClass{Name: "network-ssd-64k", Type: "network-ssd-nonreplicated"},
+	)
+
+	result := ValidateProvisionedStorageClasses(state)
+	if !hasViolationCode(result, CodeProvisionedStorageClassNamesUnique) {
+		t.Fatalf("ValidateProvisionedStorageClasses() = %q, want %s", result.Error(), CodeProvisionedStorageClassNamesUnique)
+	}
+}
+
+// A repeated name is reported once, carrying the first colliding name as the rejected value:
+// Result keys violations by code and path, so a later duplicate would overwrite the message.
+func TestValidateProvisionedStorageClassesReportsFirstRepeatedNameOnce(t *testing.T) {
+	t.Parallel()
+
+	state := provisionedStorageClassesState(
+		ycsettingsv2.ProvisionedStorageClass{Name: "sc-a", Type: "network-ssd"},
+		ycsettingsv2.ProvisionedStorageClass{Name: "sc-b", Type: "network-ssd"},
+		ycsettingsv2.ProvisionedStorageClass{Name: "sc-a", Type: "network-hdd"},
+		ycsettingsv2.ProvisionedStorageClass{Name: "sc-b", Type: "network-hdd"},
+	)
+
+	violations := ValidateProvisionedStorageClasses(state).Errors()
+	if len(violations) != 1 {
+		t.Fatalf("ValidateProvisionedStorageClasses() returned %d violations, want 1", len(violations))
+	}
+	if violations[0].Value != "sc-a" {
+		t.Fatalf("violation value = %v, want sc-a", violations[0].Value)
+	}
+	if violations[0].Path != "ModuleConfig.spec.settings.storage.parameters.provisionedStorageClasses" {
+		t.Fatalf("violation path = %q, want the provisionedStorageClasses path", violations[0].Path)
+	}
+}
+
+func TestValidateProvisionedStorageClassesAllowsUniqueNames(t *testing.T) {
+	t.Parallel()
+
+	state := provisionedStorageClassesState(
+		ycsettingsv2.ProvisionedStorageClass{Name: "network-ssd-64k", Type: "network-ssd", BlockSize: "64Ki"},
+		ycsettingsv2.ProvisionedStorageClass{Name: "network-ssd-128k", Type: "network-ssd", BlockSize: "128Ki"},
+	)
+
+	if result := ValidateProvisionedStorageClasses(state); result.HasErrors() {
+		t.Fatalf("ValidateProvisionedStorageClasses() = %q, want no errors", result.Error())
+	}
+}
+
+// Overriding a StorageClass created by default is the documented purpose of the parameter,
+// not a duplicate: hooks/storage_classes.go drops the default in favour of the provisioned entry.
+func TestValidateProvisionedStorageClassesAllowsOverridingDefaultNames(t *testing.T) {
+	t.Parallel()
+
+	state := provisionedStorageClassesState(
+		ycsettingsv2.ProvisionedStorageClass{Name: "network-ssd", Type: "network-ssd", BlockSize: "64Ki"},
+		ycsettingsv2.ProvisionedStorageClass{Name: "network-hdd", Type: "network-hdd", BlockSize: "32Ki"},
+	)
+
+	if result := ValidateProvisionedStorageClasses(state); result.HasErrors() {
+		t.Fatalf("ValidateProvisionedStorageClasses() = %q, want no errors", result.Error())
+	}
+}
+
+func TestValidateProvisionedStorageClassesAllowsEmptyList(t *testing.T) {
+	t.Parallel()
+
+	for name, state := range map[string]*State{
+		"nil list":   provisionedStorageClassesState(),
+		"empty list": provisionedStorageClassesState([]ycsettingsv2.ProvisionedStorageClass{}...),
+	} {
+		if result := ValidateProvisionedStorageClasses(state); result.HasErrors() {
+			t.Fatalf("ValidateProvisionedStorageClasses() with %s = %q, want no errors", name, result.Error())
+		}
+	}
+}
+
+func TestValidateProvisionedStorageClassesWithoutModuleConfig(t *testing.T) {
+	t.Parallel()
+
+	state := provisionedStorageClassesState(
+		ycsettingsv2.ProvisionedStorageClass{Name: "sc-a", Type: "network-ssd"},
+		ycsettingsv2.ProvisionedStorageClass{Name: "sc-a", Type: "network-ssd"},
+	)
+	state.ModuleConfig = nil
+
+	if result := ValidateProvisionedStorageClasses(state); result.HasErrors() {
+		t.Fatalf("ValidateProvisionedStorageClasses() = %q, want no errors", result.Error())
+	}
+}
+
+func TestValidateProvisionedStorageClassesNilState(t *testing.T) {
+	t.Parallel()
+
+	if result := ValidateProvisionedStorageClasses(nil); !hasViolationCode(result, cpvalapi.CodeInternalStateNil) {
+		t.Fatalf("ValidateProvisionedStorageClasses(nil) = %q, want %s", result.Error(), cpvalapi.CodeInternalStateNil)
+	}
+}
+
 func TestValidateNodeGroupExternalIPAddressesRejectsTooFewAddresses(t *testing.T) {
 	t.Parallel()
 

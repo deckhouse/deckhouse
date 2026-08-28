@@ -244,6 +244,42 @@ positive:
         parameters:
           excludedStorageClasses:
             - slow-disk
+          provisionedStorageClasses:
+            - name: "network-ssd-64k"
+              type: "network-ssd"
+              blockSize: "64Ki"
+
+    # every allowed blockSize value
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+      storage:
+        parameters:
+          provisionedStorageClasses:
+            - name: "sc-4k"
+              type: "network-ssd"
+              blockSize: "4Ki"
+            - name: "sc-8k"
+              type: "network-ssd"
+              blockSize: "8Ki"
+            - name: "sc-16k"
+              type: "network-ssd"
+              blockSize: "16Ki"
+            - name: "sc-32k"
+              type: "network-ssd"
+              blockSize: "32Ki"
+            - name: "sc-64k"
+              type: "network-ssd-nonreplicated"
+              blockSize: "64Ki"
+            - name: "sc-128k"
+              type: "network-ssd-io-m3"
+              blockSize: "128Ki"
 
     # only provisionedStorageClasses
     - provider:
@@ -956,6 +992,107 @@ negative:
         parameters:
           excludedStorageClasses:
             key: not-an-array
+
+    # ==========================================
+    # provisionedStorageClasses
+    # ==========================================
+
+    # unknown disk type
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+      storage:
+        parameters:
+          provisionedStorageClasses:
+            - name: "network-ssd-64k"
+              type: "network-ssd-unknown"
+
+    # blockSize outside the values Yandex Cloud supports
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+      storage:
+        parameters:
+          provisionedStorageClasses:
+            - name: "network-ssd-256k"
+              type: "network-ssd"
+              blockSize: "256Ki"
+
+    # missing required 'type'
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+      storage:
+        parameters:
+          provisionedStorageClasses:
+            - name: "network-ssd-64k"
+              blockSize: "64Ki"
+
+    # missing required 'name'
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+      storage:
+        parameters:
+          provisionedStorageClasses:
+            - type: "network-ssd"
+
+    # unknown property in an item
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+      storage:
+        parameters:
+          provisionedStorageClasses:
+            - name: "network-ssd-64k"
+              type: "network-ssd"
+              typeID: "network-ssd"
+
+    # provisionedStorageClasses must be an array
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+      storage:
+        parameters:
+          provisionedStorageClasses:
+            name: "network-ssd-64k"
+            type: "network-ssd"
 
     # ==========================================
     # Missing nested required 'parameters'

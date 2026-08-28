@@ -74,6 +74,7 @@ linters-settings:
       - properties.internal.properties.providerClusterConfiguration.properties.masterNodeGroup.properties.zones.items
       - properties.internal.properties.providerClusterConfiguration.properties.masterNodeGroup.properties.instanceClass.properties.diskType
       - properties.nodes.properties.parameters.properties.zones.items
+      - properties.storage.properties.parameters.properties.provisionedStorageClasses.items.properties.type
       - spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.diskType
       - spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.platform
       - spec.versions[1].schema.openAPIV3Schema.properties.spec.properties.diskType

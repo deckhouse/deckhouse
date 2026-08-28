@@ -213,6 +213,83 @@ storage:
 			expectedVersion: 2,
 		},
 		{
+			name: "storageClass with provision in v1: migrate provisionedStorageClasses alongside excludedStorageClasses",
+			settings: `
+storageClass:
+  exclude:
+    - network-hdd
+  provision:
+    - name: network-ssd-64k
+      type: network-ssd
+      blockSize: 64Ki
+    - name: network-ssd
+      type: network-ssd
+`,
+			expected: `
+provider:
+  parameters:
+    cloudID: PLACEHOLDER_REPLACE_ME
+    folderID: PLACEHOLDER_REPLACE_ME
+nodes:
+  disabled: false
+  parameters:
+    layout: Standard
+    nodeNetworkCIDR: 10.0.0.0/16
+    sshPublicKey: ssh-rsa PLACEHOLDER_REPLACE_ME
+ccm:
+  disabled: false
+  parameters: {}
+storage:
+  disabled: false
+  parameters:
+    excludedStorageClasses:
+      - network-hdd
+    provisionedStorageClasses:
+      - name: network-ssd-64k
+        type: network-ssd
+        blockSize: 64Ki
+      - name: network-ssd
+        type: network-ssd
+`,
+			currentVersion:  1,
+			expectedVersion: 2,
+		},
+		{
+			name: "storageClass with only provision in v1: default is dropped, provisionedStorageClasses migrated",
+			settings: `
+storageClass:
+  default: network-hdd
+  provision:
+    - name: network-ssd-64k
+      type: network-ssd
+      blockSize: 64Ki
+`,
+			expected: `
+provider:
+  parameters:
+    cloudID: PLACEHOLDER_REPLACE_ME
+    folderID: PLACEHOLDER_REPLACE_ME
+nodes:
+  disabled: false
+  parameters:
+    layout: Standard
+    nodeNetworkCIDR: 10.0.0.0/16
+    sshPublicKey: ssh-rsa PLACEHOLDER_REPLACE_ME
+ccm:
+  disabled: false
+  parameters: {}
+storage:
+  disabled: false
+  parameters:
+    provisionedStorageClasses:
+      - name: network-ssd-64k
+        type: network-ssd
+        blockSize: 64Ki
+`,
+			currentVersion:  1,
+			expectedVersion: 2,
+		},
+		{
 			name: "empty additionalExternalNetworkIDs in v1: migrate empty list to ccm, no storageClass",
 			settings: `
 additionalExternalNetworkIDs: []

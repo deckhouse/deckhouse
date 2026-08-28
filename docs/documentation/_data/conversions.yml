@@ -73,6 +73,7 @@ cloud-provider-yandex:
         - if .storage == null then .storage = {} end
         - if .storage.parameters == null then .storage.parameters = {} end
         - if .storageClass.exclude != null then .storage.parameters.excludedStorageClasses = .storageClass.exclude end
+        - if .storageClass.provision != null then .storage.parameters.provisionedStorageClasses = .storageClass.provision end
         - del(.storageClass)
         - if .storage.disabled == null then .storage.disabled = false end
         - if .ccm == null then .ccm = {} end
