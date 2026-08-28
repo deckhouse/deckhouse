@@ -1,4 +1,4 @@
-2864
+2850
 1GB
 2GB
 5XX
@@ -59,8 +59,8 @@ APIVersion
 app
 apparmor
 AppArmor
-apps
 app’s
+apps
 Aps
 arbitr
 aren
@@ -290,8 +290,8 @@ config
 configMap
 ConfigMap
 configmaps
-ConfigMaps
 ConfigMap’s
+ConfigMaps
 configOverrides
 configs
 configurator
@@ -445,8 +445,8 @@ Dnsmasq
 dnsPolicy
 DNSs
 Dockerfile
-Dockerfiles
 Dockerfile’s
+Dockerfiles
 dockerignore
 dockersamples
 documentation
@@ -1052,7 +1052,6 @@ NGINX’s
 NIC
 NICs
 NLB
-Node.js
 nodeAffinity
 nodegroup
 nodeGroup
@@ -1061,6 +1060,7 @@ NodeGroupConfiguration
 nodegroups
 nodeGroups
 NodeGroups
+Node.js
 NodeManager
 nodeName
 nodeNetworkCIDR
@@ -1241,8 +1241,6 @@ PriorityClass
 priorityClassName
 PriorityLevelConfiguration
 programmatically
-ProjectNamespace
-ProjectRoleBinding
 ProjectTemplate
 ProjectType
 projectTypeName
@@ -2272,7 +2270,6 @@ ZvirtInstanceClass
 неавторизованный
 неаутентифицированные
 невалидным
-невиртуальных
 недеструктивные
 недеструктивных
 недоиспользованных
@@ -2280,7 +2277,6 @@ ZvirtInstanceClass
 незапрошенных
 незашифрованном
 неизменяем
-неизменяемо
 неинтерактивном
 неймспейс
 неймспейса
@@ -2303,7 +2299,6 @@ ZvirtInstanceClass
 ненагруженные
 ненагруженных
 необходимо
-необъявленный
 неограничивающая
 неограничивающего
 неподдерживаемые
@@ -2419,7 +2414,6 @@ ZvirtInstanceClass
 переиспользования
 переиспользовать
 переиспользоваться
-переиспользуемый
 перенаправление
 перенаправления
 перенаправлениям
@@ -2482,7 +2476,6 @@ ZvirtInstanceClass
 подсетям
 подсетями
 подсетях
-подсистемные
 покоммитное
 помотрим
 Пошагово
@@ -2569,7 +2562,6 @@ ZvirtInstanceClass
 рендеринга
 рендеринге
 рендерится
-рендерятся
 реплицированного
 реплицированные
 реплицированных
@@ -2780,7 +2772,6 @@ ZvirtInstanceClass
 фич
 фичах
 фичи
-фичу
 Флант
 Фланта
 флаппинга
