@@ -293,10 +293,6 @@ func (v *moduleConfigValidator) validateModuleEnabling(ctx context.Context, cfg 
 		return rejectResult(experimentalRejectMessage(cfg.Name))
 	}
 
-	// Fallback for the dependency extender: enforce the parent-module
-	// requirements declared on the Module CR when the extender has no registered
-	// constraints for the module (e.g. the module is not yet downloaded to disk,
-	// so its module.yaml requirements were never loaded into the extender).
 	if res, err := v.checkDependenciesFromModuleCR(module); res != nil || err != nil {
 		return res, err
 	}
@@ -304,21 +300,18 @@ func (v *moduleConfigValidator) validateModuleEnabling(ctx context.Context, cfg 
 	return nil, nil
 }
 
-// checkDependenciesFromModuleCR enforces the "parent module must be enabled" part
-// of the requirements declared on the Module CR. It is a fallback for the
-// dependency extender, which only knows about modules whose module.yaml has been
-// loaded from disk; a module whose requirements are synced from the registry but
-// not yet downloaded would otherwise pass the extender's CheckEnabling silently.
-// Version constraints are intentionally not validated here: they are enforced by
-// the extender once the module is downloaded and its constraints are registered.
+// checkDependenciesFromModuleCR enforces the "parent module must be enabled" part of the
+// requirements declared on the Module CR, which the dependency extender cannot check for a
+// module whose module.yaml has not been loaded from disk yet. Conditional parents and version
+// constraints are left to the extender.
 func (v *moduleConfigValidator) checkDependenciesFromModuleCR(module *v1alpha1.Module) (*kwhvalidating.ValidatorResult, error) {
 	if module.Properties.Requirements == nil || len(module.Properties.Requirements.ParentModules) == 0 {
 		return nil, nil
 	}
 
 	missing := make([]string, 0, len(module.Properties.Requirements.ParentModules))
-	for parent := range module.Properties.Requirements.ParentModules {
-		if parent == module.Name {
+	for parent, constraint := range module.Properties.Requirements.ParentModules {
+		if parent == module.Name || strings.HasSuffix(constraint, "!optional") {
 			continue
 		}
 		if !v.moduleManager.IsModuleEnabled(parent) {
