@@ -27,31 +27,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/openapi"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/pkg/log"
 )
-
-func TestEmbeddedVersion(t *testing.T) {
-	cases := []struct {
-		version string
-		want    string
-		ok      bool
-	}{
-		{version: "v1.78.0", want: "v1.78.0", ok: true},
-		{version: "v1.78.0-pr22189+8776a42", want: "v1.78.0", ok: true},
-		{version: "v1.0.0-RC1", want: "v1.0.0", ok: true},
-		{version: "dev", want: "v2.0.0", ok: true},
-		{version: "latest", want: "", ok: false},
-		{version: "", want: "", ok: false},
-	}
-
-	for _, c := range cases {
-		s := &syncer{deckhouseVersion: c.version, logger: log.NewNop()}
-
-		got, ok := s.embeddedVersion()
-		assert.Equal(t, c.ok, ok, c.version)
-		assert.Equal(t, c.want, got, c.version)
-	}
-}
 
 func TestSyncVersionsFromImage(t *testing.T) {
 	ctx := context.Background()
@@ -224,11 +200,23 @@ func TestSyncVersionsFromImage(t *testing.T) {
 		assert.Equal(t, "v2.0.0", mpv.Spec.PackageVersion)
 	})
 
-	t.Run("a broken deckhouse version skips the embedded sync", func(t *testing.T) {
+	t.Run("a non-semver deckhouse version names the version verbatim", func(t *testing.T) {
 		dir := t.TempDir()
 		writeModuleYAML(t, filepath.Join(dir, "900-echo"), "name: echo\n")
 
 		s, cl := newTestSyncer(t, "latest", dir)
+		require.NoError(t, s.sync(ctx))
+
+		// the bootstrap places the module on the same string, so both sides still agree
+		mpv := getVersion(t, cl, "embedded-echo-latest")
+		assert.Equal(t, "latest", mpv.Spec.PackageVersion)
+	})
+
+	t.Run("a deckhouse version that is no legal object name skips the version", func(t *testing.T) {
+		dir := t.TempDir()
+		writeModuleYAML(t, filepath.Join(dir, "900-echo"), "name: echo\n")
+
+		s, cl := newTestSyncer(t, "Latest_Build", dir)
 		require.NoError(t, s.sync(ctx))
 
 		assert.Empty(t, listVersionNames(t, cl))

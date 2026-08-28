@@ -137,13 +137,16 @@ func (c *Controller) embeddedPlacements(ctx context.Context) (map[string]placeme
 
 	placements := make(map[string]placement, len(names))
 
+	// an embedded module carries the running Deckhouse version reduced to major.minor.patch — the
+	// same version pkgsync names its ModulePackageVersion after, and the one the runtime reports
+	version := app.EmbeddedPackageVersion(app.Version)
+
 	for _, name := range names {
 		if name == "" {
 			continue
 		}
 
-		// an embedded module carries the running Deckhouse version — the runtime's edition version verbatim
-		placements[name] = placement{repository: embeddedRepositoryName, version: app.Version, embedded: true}
+		placements[name] = placement{repository: embeddedRepositoryName, version: version, embedded: true}
 	}
 
 	return placements, nil
