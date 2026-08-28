@@ -47,6 +47,9 @@ const (
 	ConditionPending ConditionType = "Pending"
 	// ConditionCustomResourcesApplied indicates that CRDs are ensured
 	ConditionCustomResourcesApplied ConditionType = "CustomResourcesApplied"
+	// ConditionWebhooksEnsured indicates that the package's conversion webhooks are
+	// applied ahead of its Helm release. Internal only: no external condition maps it.
+	ConditionWebhooksEnsured ConditionType = "WebhooksEnsured"
 
 	// ConditionReasonApplyingManifests indicates that nelm is applying manifests to the cluster
 	ConditionReasonApplyingManifests ConditionReason = "ApplyingManifests"
@@ -507,6 +510,7 @@ func (s *Service) NewStatus(name string) {
 			{Type: ConditionConfigured, Status: metav1.ConditionUnknown},
 			{Type: ConditionPending, Status: metav1.ConditionUnknown},
 			{Type: ConditionCustomResourcesApplied, Status: metav1.ConditionUnknown},
+			{Type: ConditionWebhooksEnsured, Status: metav1.ConditionUnknown},
 		},
 	}
 

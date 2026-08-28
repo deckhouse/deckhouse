@@ -595,7 +595,7 @@ func (r *Runtime) scheduleGlobal(enabled []string) {
 	enableTask := taskenable.NewTask(r.global, r.nelmService, r.queueService, r.status, r.logger)
 	r.queueService.Enqueue(ctx, r.global.GetName(), enableTask)
 
-	runTask := taskglobalrun.NewTask(r.global, enabledModules, r.crdService, r.queueService, r.status, r.logger)
+	runTask := taskglobalrun.NewTask(r.global, enabledModules, r.crdService, r.nelmService, r.objectPatcher, r.queueService, r.status, r.logger)
 	r.queueService.Enqueue(ctx, r.global.GetName(), runTask, onDone)
 }
 
