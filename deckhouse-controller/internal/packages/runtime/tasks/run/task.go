@@ -38,12 +38,13 @@ const (
 	taskTracer = "package-run"
 
 	packageLabel  = "packages.deckhouse.io/package"
-	instanceLabel = "packages.deckhouse.io/instance-name"
+	instanceLabel = "packages.deckhouse.io/instance"
 )
 
 // packageI abstracts package operations needed for the run cycle.
 type packageI interface {
 	GetName() string
+	GetPackage() string
 	// GetValuesChecksum returns hash of current values to detect changes by hooks.
 	GetValuesChecksum() string
 	GetPath() string
@@ -146,7 +147,7 @@ func (t *task) runPackage(ctx context.Context) error {
 
 	opts := nelm.UpgradeOptions{
 		ExtraLabels: map[string]string{
-			packageLabel: t.pkg.GetName(),
+			packageLabel: t.pkg.GetPackage(),
 		},
 		TrackingOptions: nelmcommon.TrackingOptions{
 			NoPodLogs: true,

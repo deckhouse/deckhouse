@@ -287,6 +287,11 @@ func (a *Application) GetInstance() string {
 	return a.instance
 }
 
+// GetPackage returns the application package name.
+func (a *Application) GetPackage() string {
+	return a.definition.Name
+}
+
 // GetNamespace returns the application namespace.
 func (a *Application) GetNamespace() string {
 	return a.namespace

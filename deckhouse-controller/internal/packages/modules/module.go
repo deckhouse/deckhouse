@@ -231,6 +231,11 @@ func (m *Module) GetName() string {
 	return m.name
 }
 
+// GetPackage returns the module package name.
+func (m *Module) GetPackage() string {
+	return m.definition.Name
+}
+
 // GetVersion return the package version
 func (m *Module) GetVersion() *semver.Version {
 	return m.version
