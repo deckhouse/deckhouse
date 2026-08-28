@@ -23,7 +23,6 @@ import (
 	"io"
 	"log/slog"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -257,15 +256,14 @@ func (s *Service) download(_ context.Context, img crv1.Image, output string) err
 			return fmt.Errorf("read tar: %w", err)
 		}
 
-		if strings.Contains(hdr.Name, "..") {
-			// CWE-22 check, prevents path traversal
-			return fmt.Errorf("path traversal detected in the package archive: malicious path %v", hdr.Name)
+		target, err := safeJoin(scratch, hdr.Name)
+		if err != nil {
+			return err
 		}
 
-		target := filepath.Join(scratch, hdr.Name)
 		switch hdr.Typeflag {
 		case tar.TypeDir:
-			if err = os.MkdirAll(target, os.FileMode(hdr.Mode)); err != nil {
+			if err = os.MkdirAll(target, 0o700); err != nil {
 				return fmt.Errorf("mkdir: %w", err)
 			}
 
@@ -287,14 +285,16 @@ func (s *Service) download(_ context.Context, img crv1.Image, output string) err
 			}
 
 		case tar.TypeSymlink:
-			if isRel(hdr.Linkname, target) && isRel(hdr.Name, target) {
-				if err = os.Symlink(hdr.Linkname, target); err != nil {
-					return fmt.Errorf("create symlink: %w", err)
-				}
-			}
+			// Dropped, as they always have been here: the guard this branch used rejected every
+			// input. Materializing them changes what a published image unpacks to - separate change.
 
 		case tar.TypeLink:
-			if err = os.Link(path.Join(scratch, hdr.Linkname), target); err != nil {
+			linkTarget, err := safeJoin(scratch, hdr.Linkname)
+			if err != nil {
+				return fmt.Errorf("hardlink target: %w", err)
+			}
+
+			if err = os.Link(linkTarget, target); err != nil {
 				return fmt.Errorf("create hardlink: %w", err)
 			}
 		}
@@ -312,20 +312,18 @@ func (s *Service) download(_ context.Context, img crv1.Image, output string) err
 	return nil
 }
 
-func isRel(candidate, target string) bool {
-	// GOOD: resolves all symbolic links before checking
-	// that `candidate` does not escape from `target`
-	if filepath.IsAbs(candidate) {
-		return false
+// safeJoin resolves a path taken from the image archive against root and rejects one that
+// escapes it. CWE-22 check: both the entry name and a hardlink target go through it, because
+// both end up as arguments to filesystem calls.
+func safeJoin(root, name string) (string, error) {
+	target := filepath.Join(root, name)
+
+	rel, err := filepath.Rel(root, target)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return "", fmt.Errorf("path traversal detected in the package archive: malicious path %v", name)
 	}
 
-	realpath, err := filepath.EvalSymlinks(filepath.Join(target, candidate))
-	if err != nil {
-		return false
-	}
-
-	relpath, err := filepath.Rel(target, realpath)
-	return err == nil && !strings.HasPrefix(filepath.Clean(relpath), "..")
+	return target, nil
 }
 
 type Remote struct {
