@@ -161,6 +161,40 @@ When self-signed certificates are used for Dex, one more argument is added and t
 
 1. After receiving a request with an ID token, `kube-apiserver` verifies that the token is signed by the provider configured in step 1 using keys from the JWKS endpoint. It then compares the token's `iss` and `aud` claim values with the configuration.
 
+## How to rotate the secret of the kubernetes OAuth2 client?
+
+The secret of the privileged `kubernetes` OAuth2 client is stored in the `kubernetes-dex-client-app-secret` Secret of the `d8-user-authn` namespace. The same value is used by the `kubeconfig-generator`, `kubeconfig-publish-api` and `kubeconfig-<slug>` OAuth2 clients, and is passed to basic-auth-proxy as `--ldap-client-secret`.
+
+Deleting the Secret does not rotate the value: while it is still present in the module's values, the owning hook renders the very same one back.
+
+To rotate the secret, do the following:
+
+1. If a GitOps tool controls the `d8-user-authn` namespace, exclude the `kubernetes-dex-client-app-secret` Secret from syncing. Otherwise the GitOps tool will restore the previous value.
+
+1. Empty the `secret` field:
+
+   ```shell
+   d8 k -n d8-user-authn patch secret kubernetes-dex-client-app-secret --type merge -p '{"data":{"secret":""}}'
+   ```
+
+1. Restart DKP so that the hook picks the empty field up and generates a new value:
+
+   ```shell
+   d8 k -n d8-system rollout restart deployment/deckhouse
+   ```
+
+1. Verify that the secret value changed:
+
+   ```shell
+   d8 k -n d8-user-authn get secret kubernetes-dex-client-app-secret -o jsonpath='{.data.secret}'
+   ```
+
+   If it did not, repeat the steps 2 and 3. The module may have restored the previous before DKP was restarted.
+
+One the secret has been rotated, the configuration of components that use it will be updated automatically and the corresponding pods will be restarted.
+
+Kubeconfig files downloaded from the kubeconfig generator earlier carry the old client secret and stop refreshing tokens. Download these files again. ID tokens issued before the rotation keep working until they expire, which is configured via [`settings.idTokenTTL`](configuration.html#parameters-idtokenttl) (10 minutes by default).
+
 ## How to enable Kerberos (SPNEGO) SSO for LDAP?
 
 If clients run in a corporate SSO environment (browser trusts the Dex host), Dex can accept Kerberos tickets via `Authorization: Negotiate` and log in without the password form.
