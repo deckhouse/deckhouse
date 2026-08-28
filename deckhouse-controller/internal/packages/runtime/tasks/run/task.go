@@ -68,7 +68,7 @@ type nelmI interface {
 	// ResumeMonitor restarts monitoring after run cycle completes.
 	ResumeMonitor(name string)
 	// Upgrade installs or upgrades the Helm release.
-	Upgrade(ctx context.Context, namespace string, pkg nelm.Package, extraLabels map[string]string, trackingOptions nelmcommon.TrackingOptions) error
+	Upgrade(ctx context.Context, namespace string, pkg nelm.Package, opts nelm.UpgradeOptions) error
 }
 
 // task executes the main package lifecycle: hooks and Helm release management.
@@ -144,26 +144,25 @@ func (t *task) runPackage(ctx context.Context) error {
 		return err
 	}
 
-	// labels that will be applied to the release resources
-	extraLabels := map[string]string{
-		packageLabel: t.pkg.GetName(),
-	}
-
-	// tracking options for the release
-	trackingOpts := nelmcommon.TrackingOptions{
-		NoPodLogs: true,
+	opts := nelm.UpgradeOptions{
+		ExtraLabels: map[string]string{
+			packageLabel: t.pkg.GetName(),
+		},
+		TrackingOptions: nelmcommon.TrackingOptions{
+			NoPodLogs: true,
+		},
 	}
 
 	if app, ok := t.pkg.(application); ok {
-		extraLabels[instanceLabel] = app.GetInstance()
+		opts.ExtraLabels[instanceLabel] = app.GetInstance()
 	} else {
 		// options needed for modules
-		trackingOpts.NoFinalTracking = true
-		trackingOpts.LegacyHelmCompatibleTracking = true
+		opts.TrackingOptions.NoFinalTracking = true
+		opts.TrackingOptions.LegacyHelmCompatibleTracking = true
 	}
 
 	t.logger.Debug("run nelm upgrade")
-	if err := t.nelm.Upgrade(ctx, t.namespace, t.pkg, extraLabels, trackingOpts); err != nil && !errors.Is(err, nelm.ErrPackageNotHelm) {
+	if err := t.nelm.Upgrade(ctx, t.namespace, t.pkg, opts); err != nil && !errors.Is(err, nelm.ErrPackageNotHelm) {
 		span.SetStatus(codes.Error, err.Error())
 		t.status.HandleError(t.pkg.GetName(), status.ConditionManifestsApplied, status.NewError("ManifestsApplyFailed", err))
 		return err
@@ -180,7 +179,7 @@ func (t *task) runPackage(ctx context.Context) error {
 	}
 
 	if oldChecksum != t.pkg.GetValuesChecksum() {
-		if err := t.nelm.Upgrade(ctx, t.namespace, t.pkg, extraLabels, trackingOpts); err != nil && !errors.Is(err, nelm.ErrPackageNotHelm) {
+		if err := t.nelm.Upgrade(ctx, t.namespace, t.pkg, opts); err != nil && !errors.Is(err, nelm.ErrPackageNotHelm) {
 			span.SetStatus(codes.Error, err.Error())
 			t.status.HandleError(t.pkg.GetName(), status.ConditionManifestsApplied, status.NewError("ManifestsApplyFailed", err))
 			return err
