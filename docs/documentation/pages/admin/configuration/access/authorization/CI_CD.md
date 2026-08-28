@@ -309,9 +309,11 @@ EOF
 The annotation `dexclient.deckhouse.io/allow-access-to-kubernetes` allows the client to request tokens with `aud=kubernetes`.
 
 {% alert level="warning" %}
-Because that annotation hands out cluster-level access to the Kubernetes API, only a subject allowed to update the `user-authn` ModuleConfig may put it on an object — a holder of the `d8:manage:permission:module:user-authn:edit` role, for example. A namespace-level role that permits creating a DexClient is not enough: admission rejects the request with a message naming the annotation.
+This grants cluster-wide access to the Kubernetes API. For this reason, adding the annotation or changing it to `"true"` requires access to modify the `user-authn` module configuration — such as the `d8:manage:permission:module:user-authn:edit` role. A namespace-level role that permits creating a DexClient is not enough: the admission-controller rejects the request with a message naming the annotation.
 
-Gated is the appearance of the annotation, whatever its value, and widening its value on an object that already carries it. Setting it to `"false"` is gated as well, since older releases grant access on the mere presence of the key. An object that already carries the annotation stays editable by its owner, including narrowing the value. Deleting and recreating the object counts as putting the annotation on it anew, so a GitOps controller that replaces objects instead of patching them needs `update` on the `moduleconfigs` resource named `user-authn`.
+The addition of the annotation is restricted regardless of the specified value, including `"false"`. This is required to ensure compatibility with previous DKP versions where access has been granted when the annotation was present, regardless of its value.
+
+This restriction is not applicable to an object, which already has the annotation assigned. Deletion and recreation of DexClient is treated as another addition of the annotation, so a GitOps controller that recreates the object instead of patching it requires the `update` permission on the `moduleconfigs` resource named `user-authn`.
 {% endalert %}
 
 Get client secret:
@@ -482,7 +484,7 @@ The output shows which Authorization header is sent. For reliable token usage, u
 **Dex 401** — invalid client credentials or invalid subject token.
 
 **API 401** — token validation failed. Check:
-- Annotation `dexclient.deckhouse.io/allow-access-to-kubernetes` on DexClient. If it is gone, check whether admission rejected the request that was supposed to add it, or whether a GitOps controller recreated the object without it: only a subject allowed to update the `user-authn` ModuleConfig may add the annotation.
+- Annotation `dexclient.deckhouse.io/allow-access-to-kubernetes` on DexClient. If it is gone, check whether the admission-controller rejected the request that was supposed to add it, or whether a GitOps controller recreated the object without it: only a subject allowed to update the `user-authn` ModuleConfig may add the annotation.
 - Scope contains `audience:server:client_id:kubernetes` and `profile`.
 - Time synchronization between CI runner and cluster.
 

@@ -230,45 +230,42 @@ func main() {
 
 ## Reserving the hostnames of the platform web interfaces
 
-Deckhouse publishes its own web interfaces under hostnames rendered from the [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) global parameter: the API, the web interface, Grafana, Dex, the kubeconfig generator and others.
+DKP publishes its own web interfaces under hostnames rendered from the [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) global parameter: the API, the web interface, Grafana, Dex, the kubeconfig generator and others.
 Those hostnames are reserved cluster-wide.
-An Ingress, HTTPRoute, GRPCRoute, TLSRoute, ListenerSet or Gateway created outside a namespace labeled `heritage: deckhouse` cannot claim one, and such a request is rejected with a message naming the hostname:
+An Ingress, HTTPRoute, GRPCRoute, TLSRoute, ListenerSet or Gateway resource created outside a namespace labeled `heritage: deckhouse` cannot claim such a name, and such a request is rejected with a message naming the hostname:
 
 ```console
 Hostname console.example.com is reserved for Deckhouse platform services
 and cannot be claimed outside a system namespace
 ```
 
-Only creation and modification are checked.
+Only resource creation and modification are checked.
 An object that already claims a reserved hostname keeps serving traffic until it is modified.
 
-### What is reserved
+### Reserved hostnames
 
-The reserved set is controlled by the [`settings.reservedPublicHosts.mode`](configuration.html#parameters-reservedpublichosts-mode) parameter of the ModuleConfig `deckhouse` resource:
+The reserved set is controlled by the `settings.reservedPublicHosts.mode` parameter of the ModuleConfig `deckhouse`:
 
-- `Template` (the default) — every hostname the template can render.
-  With the template `%s.example.com` that is any single-label name under `example.com`: both `console.example.com`, which the platform publishes, and `shop.example.com`, which no module serves yet.
-  A module never has to ask to be covered, and a hostname is reserved before anything starts serving it.
-- `List` — only the hostnames of the services Deckhouse knows it publishes.
-  A narrower reservation, but a public domain that Deckhouse learns to publish later stays unreserved until the list catches up.
+- `Template` (by default): Every hostname the template can render are reserved.
+- `List`: Only the hostnames of the services DKP knows it publishes.
 
-Under `Template` the wildcard form of the domain, `*.example.com`, is reserved as well: a workload holding it would shadow every platform hostname at once.
-The wildcard is only reserved where the template's `%s` is the whole first label — with `kube-%s.example.com` neither `kube-*.example.com` nor `*.example.com` is reserved.
+For details on each reservation method, refer to the [parameter description](configuration.html#parameters-reservedpublichosts-mode).
 
-A hostname one label deeper is never affected, so ecosystem applications are out of scope: the [`applications.publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-applications-publicdomaintemplate) global parameter puts the application name and its namespace in two different labels.
+### Excluding a name from reservation
 
-### Giving a hostname back to a workload
+Under `Template` mode, the reservation covers not only the hostnames used by DKP but also others matching the template. A workload that requires such a hostname can be excluded from reservation in one of the following ways:
 
-Under `Template` mode the reservation covers more than the platform serves, so a workload that legitimately needs such a hostname has to be named.
-There are three ways to do it:
+- Free a single hostname with the [`settings.reservedPublicHosts.excludedServices`](configuration.html#parameters-reservedpublichosts-excludedservices) parameter.
 
-1. Free a single hostname with the [`settings.reservedPublicHosts.excludedServices`](configuration.html#parameters-reservedpublichosts-excludedservices) parameter.
-   It takes the service name, the part the template substitutes, not the whole hostname: `grafana` frees `grafana.example.com`.
-1. Exempt a whole namespace with the `security.deckhouse.io/reserved-hosts-bypass: "true"` label.
-   The label is set on the namespace, not on the object, so a tenant confined to their own namespaces cannot set it.
-1. Return to the previous reservation with `mode: List`.
+  The parameter includes not the entire hostname, only the service name (the value included in the template). For example, for the `%s.example.com` template, the `grafana` value excludes `grafana.example.com` from reservation.
 
-An example that frees the hostname of Grafana and additionally reserves one the template cannot render:
+- Exclude a whole namespace with the `security.deckhouse.io/reserved-hosts-bypass: "true"` label.
+
+  The label is set on the namespace, not on the object, so a tenant who is allowed to manage resources only in their own namespaces can't set it.
+
+- Return to the previous reservation by setting `mode: List`.
+
+The following is an example that frees `grafana.example.com` from reservation and additionally reserves `admin.corp.example.org` that doesn't match the template:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -286,67 +283,75 @@ spec:
         - admin.corp.example.org
 ```
 
-The [`settings.reservedPublicHosts.additionalHosts`](configuration.html#parameters-reservedpublichosts-additionalhosts) parameter always reserves, whatever `excludedServices` says, so the two parameters cannot contradict each other.
+The [`settings.reservedPublicHosts.additionalHosts`](configuration.html#parameters-reservedpublichosts-additionalhosts) parameter lets you reserve additional hostnames regardless of the `excludedServices` value.
 
 {% alert level="warning" %}
-The wildcard form cannot be freed with `excludedServices`, which takes a service name.
-A workload that serves `*.example.com` needs the namespace label or `mode: List`.
+The `excludedServices` parameter accepts service names only, therefore it can't be used to exclude a wildcard name from reservation.
+
+To allow a workload to use a wildcard name (such as `*.example.com`), disable the checking for its namespace using the above-mentioned label or use the `List` mode.
 {% endalert %}
 
-### The Gateway the platform attaches to
+### Excluding the shared Gateway
 
-The Gateway that the ListenerSets of Deckhouse modules attach to is exempt from the reservation, whatever its listeners claim.
-It is the object named in the [`gatewayAPIGateway`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-gatewayapigateway) global parameter, or, if that parameter is not set, the one discovered in the `default-gateway` ConfigMap of the `d8-alb` namespace.
-The exemption is by name and namespace, and it applies to the Gateway kind only: the same hostname on an Ingress, an HTTPRoute or any other Gateway is still reserved.
+The Gateway to which DKP module ListenerSet resources are attached is automatically excluded from reservation, regardless of the hostnames specified in its listeners.
 
-This matters because such a Gateway usually carries a listener with the wildcard hostname and a wildcard certificate, and it often lives in a namespace of its own rather than in one labelled `heritage: deckhouse`.
-Without the exemption it would become impossible to modify after the reservation starts to apply, while the platform routes attached to it keep depending on it.
+The following Gateway is considered the shared Gateway:
 
-Any other Gateway with a `*.example.com` listener is denied, and the record of what was already served does not cover it.
-Such a Gateway needs the namespace label or `mode: List`, set before the upgrade.
+- The Gateway specified in the global [`gatewayAPIGateway`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-gatewayapigateway) parameter.
+- If the parameter is not set, the Gateway specified in the `default-gateway` ConfigMap in the `d8-alb` namespace.
 
-If no shared Gateway is configured or discovered, nothing is exempt.
+The exclusion applies by name and namespace and only to the Gateway resource. It does not apply to other resources using the same hostnames, such as Ingress, HTTPRoute, or another Gateway.
 
-### Enabling the reservation in a cluster that already has workloads
+This exclusion is necessary because such a Gateway typically has a listener with a wildcard hostname and wildcard certificate and is often located in a dedicated namespace without the `heritage: deckhouse` label.
+Without the exclusion, the Gateway could not be modified after hostname reservation is enabled, even though the attached DKP routes continue to depend on it.
 
-When the reservation starts to apply, the hostnames workloads already serve are recorded once and stay allowed.
-Without that, their next modification would be rejected.
+Any other Gateway with a `*.example.com` listener is rejected, even if that hostname was already in use when reservation was enabled.
+To use such a Gateway, add the `security.deckhouse.io/reserved-hosts-bypass: "true"` label to its namespace or enable `List` mode.
 
-The record is kept in the `d8-reserved-public-hosts` ConfigMap of the `d8-system` namespace, in the `grandfatheredHosts` key, separately from the hostnames freed by hand.
-It is taken once, on the first convergence where `Template` mode is in force, and never retaken: otherwise the reservation could be defeated by claiming a hostname and waiting for the next snapshot to accept it as given.
+If the shared Gateway is neither specified in the `gatewayAPIGateway` parameter nor defined through the `default-gateway` ConfigMap, no automatic exclusion is applied.
 
-To stop allowing a recorded hostname once the workload behind it is gone, remove the entry from the key.
-An entry is brought to the spelling the reservation compares — lowercase and without a trailing dot — so editing the key by hand cannot stop the module from converging.
-An entry that is not a hostname even then, a pasted URL for example, is dropped from the record, and the object claiming it is rejected on its next modification.
+### Reservation with existing applications in the cluster
 
-The wildcard form is the exception: it is not recorded, because allowing it would leave every hostname the template renders shadowed, including the ones Deckhouse publishes later.
-A workload serving the wildcard over the platform domain needs the namespace label or `mode: List`, set before the upgrade.
-The Gateway the platform attaches to needs neither, since it is exempt by name.
+When hostname reservation takes effect, hostnames already used by applications are automatically added to the list of allowed hostnames. Otherwise, the next modification of the corresponding resources would be rejected.
 
-The record is taken once and never taken again, so switching to `List` and back to `Template` keeps the record of the first `Template` period: what appeared while `List` was in force is denied on its next modification.
-Retaking it would turn the mode into a way around the reservation — switch to `List`, claim the hostnames, switch back and have them recorded as given.
+The list is stored in the `grandfatheredHosts` key of the `d8-reserved-public-hosts` ConfigMap in the `d8-system` namespace, separately from hostnames manually excluded from reservation.
 
-### Finding out what is reserved and why
+The list is created only when `Template` mode is enabled for the first time and is not updated afterward. This prevents reservation from being bypassed: an application cannot claim a reserved hostname after reservation has been enabled and then have that hostname allowed through subsequent regeneration of the list.
 
-The same ConfigMap answers what the reservation covers in this cluster:
+If an application that used a hostname allowed this way is removed and the hostname is no longer needed, remove the corresponding entry from `grandfatheredHosts`.
 
-| Key | Contents |
-| --- | --- |
-| `mode` | The reservation in force. Reads `List` if the value of `publicDomainTemplate` never went through its schema |
-| `hostPattern` | The set of hostnames the template can render, as a regular expression. Empty under `List` |
-| `hosts` | The hostnames matched exactly: `additionalHosts` and the wildcard form |
-| `allowedHosts` | What is allowed back out of the pattern: the hostnames freed by `excludedServices` and the recorded ones |
-| `excludedHosts` | The hostnames `excludedServices` freed |
-| `grandfatheredHosts` | The hostnames recorded when the reservation started to apply |
-| `sharedGateway` | The Gateway the platform attaches to, as `namespace/name`. Empty when none is configured or discovered |
-| `platformHosts` | The hostnames of the services Deckhouse publishes today. Informational under both modes |
-| `unknownExcludedServices` | The names from `excludedServices` that no module publishes. The place to look when a hostname stayed reserved: the name is probably misspelled |
+Before being stored, hostnames are converted to lowercase and any trailing dot is removed. Invalid values, such as a URL instead of a hostname, are ignored. If a resource uses the corresponding reserved hostname, its next modification will be rejected.
 
-To read it, run:
+Wildcard hostnames, such as `*.example.com`, are not added to `grandfatheredHosts`. Otherwise, an application could use any hostname matching the template, including hostnames of services that DKP may publish in the future.
+To allow an application to use a wildcard hostname in the platform domain, add the `security.deckhouse.io/reserved-hosts-bypass: "true"` label to its namespace or enable `List` mode.
+
+This restriction does not apply to the Gateway to which DKP is attached. This Gateway is automatically excluded from the check.
+
+Switching from `Template` mode to `List` mode and back does not regenerate `grandfatheredHosts`. Therefore, hostnames that applications start using while `List` mode is enabled are not added to the list of allowed hostnames after switching back to `Template` mode. When the corresponding resources are modified, these hostnames are checked according to the standard reservation rules.
+
+### Checking reservation status
+
+Information about the current reservation status is stored in the `d8-reserved-public-hosts` ConfigMap in the `d8-system` namespace.
+
+To view the ConfigMap, run the following command:
 
 ```shell
 d8 k -n d8-system get configmap d8-reserved-public-hosts -o yaml
 ```
+
+The ConfigMap contains the following keys:
+
+| Key | Description |
+| --- | --- |
+| `mode` | Current reservation mode. If `publicDomainTemplate` does not match the schema, the value is `List` |
+| `hostPattern` | Regular expression describing the hostnames that can be generated from the template. The value is empty in `List` mode |
+| `hosts` | Hostnames matched exactly. In `Template` mode, contains the values from `additionalHosts` and the wildcard domain name; in `List` mode, contains the hostnames of platform services |
+| `allowedHosts` | Hostnames excluded from matching against `hostPattern`: hostnames from `excludedServices` and `grandfatheredHosts` |
+| `excludedHosts` | Hostnames excluded from reservation using `excludedServices` |
+| `grandfatheredHosts` | Hostnames that were already used by applications when reservation was enabled and were automatically added to the list of allowed hostnames |
+| `sharedGateway` | Gateway to which DKP is attached, in the `<NAMESPACE>/<NAME>` format. The value is empty if no such Gateway is configured or detected |
+| `platformHosts` | Hostnames of services published by DKP. Used as a reference in both reservation modes |
+| `unknownExcludedServices` | Names from `excludedServices` that are not published by any module. A value in this key most likely indicates a typo in the service name |
 
 ## Collect debug info
 
