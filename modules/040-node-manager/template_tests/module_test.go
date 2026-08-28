@@ -2116,7 +2116,7 @@ internal:
 
 				assertMachineDeploymentAndItsDeps(f, mdParams{
 					name:         "myprefix-worker-8ced91ee",
-					templateName: "worker-b6ad24b0",
+					templateName: "worker-a6381073",
 				})
 			})
 		})
