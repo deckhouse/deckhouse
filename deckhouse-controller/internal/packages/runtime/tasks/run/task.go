@@ -23,7 +23,7 @@ import (
 	addontypes "github.com/flant/addon-operator/pkg/hook/types"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	shtypes "github.com/flant/shell-operator/pkg/hook/types"
-	"github.com/werf/nelm/pkg/common"
+	nelmcommon "github.com/werf/nelm/pkg/common"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -55,6 +55,7 @@ type packageI interface {
 	RunHooksByBinding(ctx context.Context, binding shtypes.BindingType) error
 }
 
+// application interface abstracts application operations needed for the run cycle.
 type application interface {
 	GetInstance() string
 }
@@ -67,7 +68,7 @@ type nelmI interface {
 	// ResumeMonitor restarts monitoring after run cycle completes.
 	ResumeMonitor(name string)
 	// Upgrade installs or upgrades the Helm release.
-	Upgrade(ctx context.Context, namespace string, pkg nelm.Package, extraLabels map[string]string, trackingOptions common.TrackingOptions) error
+	Upgrade(ctx context.Context, namespace string, pkg nelm.Package, extraLabels map[string]string, trackingOptions nelmcommon.TrackingOptions) error
 }
 
 // task executes the main package lifecycle: hooks and Helm release management.
@@ -149,13 +150,14 @@ func (t *task) runPackage(ctx context.Context) error {
 	}
 
 	// tracking options for the release
-	trackingOpts := common.TrackingOptions{
+	trackingOpts := nelmcommon.TrackingOptions{
 		NoPodLogs: true,
 	}
 
 	if app, ok := t.pkg.(application); ok {
 		extraLabels[instanceLabel] = app.GetInstance()
 	} else {
+		// options needed for modules
 		trackingOpts.NoFinalTracking = true
 		trackingOpts.LegacyHelmCompatibleTracking = true
 	}
