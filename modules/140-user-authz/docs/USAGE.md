@@ -255,6 +255,14 @@ spec:
         team: frontend
 ```
 
+A `User` or `Group` subject is matched by name against the user identity in the token. A locally managed identity is indistinguishable from one asserted by an external authentication provider. Because of that, you can't create a [User](/modules/user-authn/cr.html#user) whose `spec.email` or a [Group](/modules/user-authn/cr.html#group) whose `spec.name` matches a subject of an existing ClusterAuthorizationRule. This prevents any unnoticed attempt to grant the identity privileges.
+
+If the match is intentional, for example, if the ClusterAuthorizationRule has been written in advance, set the `user-authz.deckhouse.io/allow-authorization-rule-collision: "true"` annotation on the User or Group.
+
+Write an email for the `User` subject in lowercase. It's recorded to the token in lowercase so a subject spelled `Admin@Example.com` won't match `admin@example.com`. A `Group`-type subject names are matched exactly, since group names are not lowercased anywhere.
+
+This restriction is applied during the User and Group resource creation only and doesn't prevent adding existing users or groups to a ClusterAuthorizationRule. If a matching User or Group already exists, it receives the privileges immediately after it's added to the rule.
+
 ## Example of granting access to all namespaces
 
 {% alert level="info" %}

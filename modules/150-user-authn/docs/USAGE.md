@@ -501,6 +501,42 @@ data:
 
 {% endraw %}
 
+### Granting an application access to the Kubernetes API
+
+A [DexClient](cr.html#dexclient) or a [DexAuthenticator](cr.html#dexauthenticator) can be allowed to obtain tokens that the Kubernetes API server accepts. To do that, set one of the following annotations on the resource to `"true"`:
+
+* `dexclient.deckhouse.io/allow-access-to-kubernetes` on a DexClient.
+* `dexauthenticator.deckhouse.io/allow-access-to-kubernetes` on a DexAuthenticator.
+
+{% raw %}
+
+The following is a DexClient configuration example:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: DexClient
+metadata:
+  name: myname
+  namespace: mynamespace
+  annotations:
+    dexclient.deckhouse.io/allow-access-to-kubernetes: "true"
+spec:
+  redirectURIs:
+  - https://app.example.com/callback
+```
+
+{% endraw %}
+
+The annotation registers the client as a trusted peer of the privileged `kubernetes` OAuth2 client, allowing it to request ID tokens intended for the API server. In such a token, the username is determined by the `email` claim and groups by the `groups` claim. As a result, the application accesses the API server on behalf of the authenticated user and with the permissions granted to that user.
+
+{% alert level="warning" %}
+Access granted this way applies at the cluster level, even though DexClient and DexAuthenticator are namespaced resources. Therefore, only a subject with permissions to modify the `user-authn` module configuration can add the annotation or change its value to `"true"`. For example, this permission is granted by the `d8:manage:permission:module:user-authn:edit` role. Permissions to create DexClient or DexAuthenticator resources in an individual namespace are not sufficient.
+
+Adding the annotation is restricted regardless of its value, including `"false"`. This is required for compatibility with DKP versions earlier than 1.78, where access is granted based on the presence of the annotation regardless of its value. If access to the Kubernetes API server is not required, do not add the annotation.
+
+The restriction does not apply to resources that already have the annotation. A user with permissions to modify such a resource can continue to modify it, including removing the annotation or changing its value to disable access.
+{% endalert %}
+
 ## Local Authentication
 
 Local authentication provides user verification and access management with support for configurable password policies, two-factor authentication (2FA), and group management.  
@@ -543,6 +579,18 @@ spec:
 ```
 
 {% endraw %}
+
+[Authorization rules](/modules/user-authz/cr.html#authorizationrule) grant permissions to users based on the email address from the issued token. Therefore, a User resource cannot be created if its `spec.email` value matches a `User` subject in an existing [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule) or [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule) resource. This prevents permissions from being unintentionally granted to a new user.
+
+If the match is intentional, for example, if the authorization rule was created in advance, use a different email address or add the `user-authz.deckhouse.io/allow-authorization-rule-collision: "true"` annotation to the User resource.
+
+Email addresses are converted to lowercase when matched, as this is how they are stored in the token. For example, `Admin@Example.com` matches the `admin@example.com` subject.
+
+The restriction does not apply to existing users whose email addresses match subjects in authorization rules. Such users continue to work, and a warning is issued when a match is detected.
+
+Consider this restriction when managing users and authorization rules declaratively. If a user and the corresponding rule are created at the same time, the rule may be created first, causing creation of the User resource to be rejected. To allow such a match, add the `user-authz.deckhouse.io/allow-authorization-rule-collision: "true"` annotation to the User manifest.
+
+Deleting a user does not automatically remove the corresponding subject from the authorization rule. As long as the subject remains in the rule, permissions continue to be granted to the specified email address, and a warning is issued that no corresponding user exists. If a user with the same email address is created later, that user receives these permissions. If this behavior is not required, remove the corresponding subject from the authorization rule.
 
 ### Local user operations
 
@@ -627,6 +675,18 @@ spec:
 {% endraw %}
 
 Where `members` is a list of users belonging to the group.
+
+The group name is stored in the issued token without modification. It is indistinguishable from a group name received from an external authentication provider. Therefore, a Group resource cannot be created if its `spec.name` value matches a `Group` subject in an existing [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule) or [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule) resource. This prevents permissions from being unintentionally granted to members of a new group.
+
+If the match is intentional, use a different group name or add the `user-authz.deckhouse.io/allow-authorization-rule-collision: "true"` annotation to the Group resource.
+
+Unlike email addresses, group names are not converted to lowercase when matched. Therefore, group names that differ only in letter case are considered different.
+
+The restriction does not apply to existing groups whose names match subjects in authorization rules. Such groups continue to work, and a warning is issued when a match is detected.
+
+Consider this restriction when managing groups and authorization rules declaratively. If a group and the corresponding rule are created at the same time, the rule may be created first, causing creation of the Group resource to be rejected. To allow such a match, add the `user-authz.deckhouse.io/allow-authorization-rule-collision: "true"` annotation to the Group manifest.
+
+Deleting a group does not automatically remove the corresponding subject from the authorization rule. As long as the subject remains in the rule, permissions continue to be granted to a group with the specified name. If a group with the same name is created later, its members receive these permissions. If this behavior is not required, remove the corresponding subject from the authorization rule.
 
 ### Password policy
 
