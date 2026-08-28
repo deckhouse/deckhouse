@@ -19,10 +19,13 @@ package namespace
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"slices"
 	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
+	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,9 +37,12 @@ import (
 
 	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/helm"
+	"controller/internal/startup"
 )
 
-const managedByHelm = "Helm"
+// WorkLimit bounds concurrent namespace/project writes during startup migration and
+// leftover-marker sweeps. Helm upgrades stay serial on the project controller.
+const WorkLimit = 8
 
 type Manager struct {
 	client client.Client
@@ -54,10 +60,10 @@ func New(client client.Client, logger logr.Logger) *Manager {
 // model. Both have to finish before the namespace controller starts reconciling: the project writes
 // below go through the project validating webhook, and a reconcile racing the migration would adopt
 // a namespace whose project is half-converted.
-func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.WaitGroup) error {
+func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.WaitGroup, migration *startup.Migration) error {
 	m.logger.Info("wait until webhook server start")
 	check := func(ctx context.Context) (bool, error) {
-		if err := checker(nil); err != nil {
+		if err := checker(&http.Request{}); err != nil {
 			m.logger.Info("webhook server not startup yet")
 			return false, nil
 		}
@@ -71,6 +77,7 @@ func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.
 		return fmt.Errorf("migrate projects: %w", err)
 	}
 
+	migration.MarkDone()
 	init.Done()
 
 	return nil
@@ -80,20 +87,22 @@ func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.
 // picked from what the namespace already carries and the parameters reproduce its current state, so
 // the first render changes nothing inside the namespace.
 func (m *Manager) Adopt(ctx context.Context, namespace *corev1.Namespace) (ctrl.Result, error) {
+	// One write: Helm ownership (needed even when a same-name Project already exists)
+	// plus leftover retired markers. Callers already hold the namespace; do not Get it again.
+	if err := m.persistNamespace(ctx, namespace, func(ns *corev1.Namespace) bool {
+		stamped := helm.ApplyReleaseOwnership(ns, ns.Name)
+		cleared := applyClearRetiredMarkers(ns)
+		return stamped || cleared
+	}); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	project := new(v1alpha3.Project)
 	switch err := m.client.Get(ctx, client.ObjectKey{Name: namespace.Name}, project); {
 	case err == nil:
-		// the project already owns this namespace, the project controller reconciles it from here.
 		return ctrl.Result{}, nil
 	case !apierrors.IsNotFound(err):
 		return ctrl.Result{}, fmt.Errorf("get the '%s' project: %w", namespace.Name, err)
-	}
-
-	// Hand the namespace over to helm before the project exists: the release rendered for the
-	// project has to own an object that predates it, and helm refuses to adopt one without the
-	// ownership metadata.
-	if err := m.ensureHelmAdoption(ctx, namespace.Name); err != nil {
-		return ctrl.Result{}, err
 	}
 
 	template := TemplateFor(namespace)
@@ -127,17 +136,29 @@ func (m *Manager) Migrate(ctx context.Context) error {
 		return fmt.Errorf("list projects: %w", err)
 	}
 
+	g, gctx := errgroup.WithContext(ctx)
+	g.SetLimit(WorkLimit)
 	for i := range projects.Items {
 		project := &projects.Items[i]
 		if !needsTemplate(project) {
 			continue
 		}
-		if err := m.migrateProject(ctx, project); err != nil {
-			m.logger.Error(err, "failed to migrate the project, skipping it", "project", project.Name)
-		}
+		g.Go(func() error {
+			if err := m.migrateProject(gctx, project); err != nil {
+				m.logger.Error(err, "failed to migrate the project, skipping it", "project", project.Name)
+			}
+			return nil
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return err
 	}
 
-	return nil
+	// Retired markers live on the namespace, not the project. A previous run can have
+	// written the template (needsTemplate is then false) and still left the finalizer
+	// behind. Sweep every namespace so Terminating objects are not stuck on glue
+	// nobody removes.
+	return m.sweepRetiredMarkers(ctx)
 }
 
 // needsTemplate reports whether a project still belongs to the retired model: either it was
@@ -163,7 +184,11 @@ func (m *Manager) migrateProject(ctx context.Context, project *v1alpha3.Project)
 	case err != nil:
 		return fmt.Errorf("get the '%s' namespace: %w", project.Name, err)
 	default:
-		if err := m.ensureHelmAdoption(ctx, project.Name); err != nil {
+		if err := m.persistNamespace(ctx, namespace, func(ns *corev1.Namespace) bool {
+			stamped := helm.ApplyReleaseOwnership(ns, project.Name)
+			cleared := applyClearRetiredMarkers(ns)
+			return stamped || cleared
+		}); err != nil {
 			return err
 		}
 	}
@@ -181,7 +206,12 @@ func (m *Manager) migrateProject(ctx context.Context, project *v1alpha3.Project)
 			return nil
 		}
 		current.Spec.ProjectTemplateName = template
-		if len(parameters) > 0 {
+		// Seed parameters for leftover namespace-managed projects and for empty specs so the
+		// first Helm render stays a no-op (NotRestricted / existing PSS). Do not wipe a
+		// hand-made project that already carries parameters.
+		overwriteParams := current.Labels[v1alpha3.ProjectLabelManagedByNamespace] == v1alpha3.ManagedByNamespace ||
+			len(current.Spec.Parameters) == 0
+		if overwriteParams && len(parameters) > 0 {
 			current.Spec.Parameters = parameters
 		}
 		delete(current.Labels, v1alpha3.ProjectLabelManagedByNamespace)
@@ -190,72 +220,99 @@ func (m *Manager) migrateProject(ctx context.Context, project *v1alpha3.Project)
 		return fmt.Errorf("update the '%s' project: %w", project.Name, err)
 	}
 
-	return m.clearNamespaceManaged(ctx, project.Name)
+	return nil
 }
 
-// ensureHelmAdoption stamps the ownership metadata helm requires to take over an object it did not
-// create. Without it the project release fails with an ownership conflict on the namespace.
-func (m *Manager) ensureHelmAdoption(ctx context.Context, name string) error {
+// sweepRetiredMarkers walks every namespace and peels leftover managed-by-namespace
+// labels and finalizers, including on Terminating objects. Per-namespace errors are
+// logged and skipped so one stuck object cannot block startup.
+func (m *Manager) sweepRetiredMarkers(ctx context.Context) error {
+	list := new(corev1.NamespaceList)
+	if err := m.client.List(ctx, list); err != nil {
+		return fmt.Errorf("list namespaces: %w", err)
+	}
+
+	g, gctx := errgroup.WithContext(ctx)
+	g.SetLimit(WorkLimit)
+	for i := range list.Items {
+		ns := &list.Items[i]
+		if !HasRetiredMarkers(ns) {
+			continue
+		}
+		name := ns.Name
+		g.Go(func() error {
+			if err := m.persistNamespace(gctx, ns, applyClearRetiredMarkers); err != nil {
+				m.logger.Error(err, "failed to clear retired namespace markers", "namespace", name)
+			}
+			return nil
+		})
+	}
+	return g.Wait()
+}
+
+// HasRetiredMarkers reports leftover glue from the retired namespace-managed model.
+func HasRetiredMarkers(obj metav1.Object) bool {
+	if _, marked := obj.GetLabels()[v1alpha3.ProjectLabelManagedByNamespace]; marked {
+		return true
+	}
+	return slices.Contains(obj.GetFinalizers(), v1alpha3.NamespaceFinalizerManagedProject)
+}
+
+// ClearRetiredMarkers strips leftover retired-model glue from an already-fetched namespace.
+func (m *Manager) ClearRetiredMarkers(ctx context.Context, ns *corev1.Namespace) error {
+	return m.persistNamespace(ctx, ns, applyClearRetiredMarkers)
+}
+
+// persistNamespace applies mutate to an already-fetched namespace and writes once.
+// On conflict it re-gets and retries; a no-op mutate does not touch the API.
+func (m *Manager) persistNamespace(ctx context.Context, ns *corev1.Namespace, mutate func(*corev1.Namespace) bool) error {
+	if ns == nil {
+		return nil
+	}
+	name := ns.Name
+	if mutate(ns) {
+		if err := m.client.Update(ctx, ns); err == nil {
+			return nil
+		} else if !apierrors.IsConflict(err) {
+			return fmt.Errorf("update the '%s' namespace: %w", name, err)
+		}
+	} else {
+		return nil
+	}
+
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		namespace := new(corev1.Namespace)
-		if err := m.client.Get(ctx, client.ObjectKey{Name: name}, namespace); err != nil {
+		fresh := new(corev1.Namespace)
+		if err := m.client.Get(ctx, client.ObjectKey{Name: name}, fresh); err != nil {
 			if apierrors.IsNotFound(err) {
 				return nil
 			}
 			return fmt.Errorf("get the '%s' namespace: %w", name, err)
 		}
-		if !namespace.DeletionTimestamp.IsZero() {
+		if !mutate(fresh) {
 			return nil
 		}
-
-		if namespace.Labels == nil {
-			namespace.Labels = make(map[string]string, 1)
+		if err := m.client.Update(ctx, fresh); err != nil {
+			return fmt.Errorf("update the '%s' namespace: %w", name, err)
 		}
-		if namespace.Annotations == nil {
-			namespace.Annotations = make(map[string]string, 2)
-		}
-
-		changed := namespace.Labels[helm.ResourceLabelManagedBy] != managedByHelm ||
-			namespace.Annotations[helm.ResourceAnnotationReleaseName] != name ||
-			namespace.Annotations[helm.ResourceAnnotationReleaseNamespace] != ""
-		if !changed {
-			return nil
-		}
-
-		namespace.Labels[helm.ResourceLabelManagedBy] = managedByHelm
-		namespace.Annotations[helm.ResourceAnnotationReleaseName] = name
-		namespace.Annotations[helm.ResourceAnnotationReleaseNamespace] = ""
-
-		return m.client.Update(ctx, namespace)
+		return nil
 	})
 }
 
-// clearNamespaceManaged strips what the retired model left on a namespace: the marker label that
-// exempted it from the admission policy and the finalizer that cascaded its deletion to the project.
-func (m *Manager) clearNamespaceManaged(ctx context.Context, name string) error {
-	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		namespace := new(corev1.Namespace)
-		if err := m.client.Get(ctx, client.ObjectKey{Name: name}, namespace); err != nil {
-			if apierrors.IsNotFound(err) {
-				return nil
-			}
-			return fmt.Errorf("get the '%s' namespace: %w", name, err)
+func applyClearRetiredMarkers(ns *corev1.Namespace) bool {
+	if ns == nil {
+		return false
+	}
+	_, marked := ns.Labels[v1alpha3.ProjectLabelManagedByNamespace]
+	finalizers := make([]string, 0, len(ns.Finalizers))
+	for _, finalizer := range ns.Finalizers {
+		if finalizer != v1alpha3.NamespaceFinalizerManagedProject {
+			finalizers = append(finalizers, finalizer)
 		}
-
-		_, marked := namespace.Labels[v1alpha3.ProjectLabelManagedByNamespace]
-		finalizers := make([]string, 0, len(namespace.Finalizers))
-		for _, finalizer := range namespace.Finalizers {
-			if finalizer != v1alpha3.NamespaceFinalizerManagedProject {
-				finalizers = append(finalizers, finalizer)
-			}
-		}
-		if !marked && len(finalizers) == len(namespace.Finalizers) {
-			return nil
-		}
-
-		delete(namespace.Labels, v1alpha3.ProjectLabelManagedByNamespace)
-		namespace.Finalizers = finalizers
-
-		return m.client.Update(ctx, namespace)
-	})
+	}
+	if !marked && len(finalizers) == len(ns.Finalizers) {
+		return false
+	}
+	delete(ns.Labels, v1alpha3.ProjectLabelManagedByNamespace)
+	ns.Finalizers = finalizers
+	return true
 }

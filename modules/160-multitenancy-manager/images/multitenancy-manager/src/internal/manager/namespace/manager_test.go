@@ -79,7 +79,7 @@ func TestAdopt_CreatesFullProject(t *testing.T) {
 	// the namespace is handed over to helm so the project release can own an object it did not create.
 	updated := new(corev1.Namespace)
 	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "foo"}, updated))
-	assert.Equal(t, managedByHelm, updated.Labels[helm.ResourceLabelManagedBy])
+	assert.Equal(t, helm.ManagedByHelm, updated.Labels[helm.ResourceLabelManagedBy])
 	assert.Equal(t, "foo", updated.Annotations[helm.ResourceAnnotationReleaseName])
 	assert.Equal(t, "", updated.Annotations[helm.ResourceAnnotationReleaseNamespace])
 	assert.False(t, controllerutil.ContainsFinalizer(updated, v1alpha3.NamespaceFinalizerManagedProject))
@@ -103,7 +103,7 @@ func TestAdopt_PicksTemplateFromNamespaceState(t *testing.T) {
 	assert.Equal(t, true, got.Spec.Parameters["securityScanningEnabled"])
 }
 
-func TestAdopt_SkipsNamespaceOwnedByProject(t *testing.T) {
+func TestAdopt_StampsHelmWhenProjectExists(t *testing.T) {
 	ns := namespace("bar", nil, nil)
 	existing := project("bar", nil, TemplateDefault)
 	m, c := newManager(t, ns, existing)
@@ -117,7 +117,9 @@ func TestAdopt_SkipsNamespaceOwnedByProject(t *testing.T) {
 
 	updated := new(corev1.Namespace)
 	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "bar"}, updated))
-	assert.NotContains(t, updated.Labels, helm.ResourceLabelManagedBy)
+	assert.Equal(t, helm.ManagedByHelm, updated.Labels[helm.ResourceLabelManagedBy])
+	assert.Equal(t, "bar", updated.Annotations[helm.ResourceAnnotationReleaseName])
+	assert.Equal(t, "", updated.Annotations[helm.ResourceAnnotationReleaseNamespace])
 }
 
 func TestAdopt_Idempotent(t *testing.T) {
@@ -158,7 +160,7 @@ func TestMigrate_ConvertsNamespaceManagedProject(t *testing.T) {
 	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "foo"}, updated))
 	assert.NotContains(t, updated.Labels, v1alpha3.ProjectLabelManagedByNamespace)
 	assert.False(t, controllerutil.ContainsFinalizer(updated, v1alpha3.NamespaceFinalizerManagedProject))
-	assert.Equal(t, managedByHelm, updated.Labels[helm.ResourceLabelManagedBy])
+	assert.Equal(t, helm.ManagedByHelm, updated.Labels[helm.ResourceLabelManagedBy])
 }
 
 func TestMigrate_ConvertsTemplateLessProject(t *testing.T) {
@@ -219,6 +221,45 @@ func TestNeedsTemplate_ExplicitEmptyString(t *testing.T) {
 	// that spelling used to mean "a project without a template", so old manifests still carry it.
 	// It has to be recognised as needing a template, not mistaken for an already-migrated project.
 	assert.True(t, needsTemplate(project("foo", nil, "")))
+}
+
+func TestMigrate_ClearsLeftoverMarkersOnAlreadyMigrated(t *testing.T) {
+	// A previous run wrote the template (needsTemplate is now false) and then failed
+	// to peel the namespace finalizer. The sweep must still remove it.
+	ns := namespace("foo", map[string]string{
+		v1alpha3.ProjectLabelManagedByNamespace: v1alpha3.ManagedByNamespace,
+		v1alpha3.ResourceLabelProject:           "foo",
+	}, nil)
+	ns.Finalizers = []string{v1alpha3.NamespaceFinalizerManagedProject, "example.com/keep"}
+	done := project("foo", nil, TemplateSimple)
+	m, c := newManager(t, ns, done)
+
+	require.NoError(t, m.Migrate(context.Background()))
+
+	got := new(v1alpha3.Project)
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "foo"}, got))
+	assert.Equal(t, TemplateSimple, got.Spec.ProjectTemplateName)
+
+	updated := new(corev1.Namespace)
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "foo"}, updated))
+	assert.NotContains(t, updated.Labels, v1alpha3.ProjectLabelManagedByNamespace)
+	assert.False(t, controllerutil.ContainsFinalizer(updated, v1alpha3.NamespaceFinalizerManagedProject))
+	assert.True(t, controllerutil.ContainsFinalizer(updated, "example.com/keep"))
+}
+
+func TestMigrate_PreservesHandmadeProjectParameters(t *testing.T) {
+	ns := namespace("foo", map[string]string{labelPodPolicy: "restricted"}, nil)
+	bare := project("foo", nil, "")
+	bare.Spec.Parameters = map[string]any{"networkPolicy": "Isolated"}
+	m, c := newManager(t, ns, bare)
+
+	require.NoError(t, m.Migrate(context.Background()))
+
+	got := new(v1alpha3.Project)
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "foo"}, got))
+	assert.Equal(t, TemplateDefault, got.Spec.ProjectTemplateName)
+	assert.Equal(t, "Isolated", got.Spec.Parameters["networkPolicy"])
+	assert.NotContains(t, got.Spec.Parameters, "podSecurityProfile")
 }
 
 func TestMigrate_ProjectWithoutNamespace(t *testing.T) {
