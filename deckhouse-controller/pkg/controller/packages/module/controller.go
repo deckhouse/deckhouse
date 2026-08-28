@@ -57,6 +57,9 @@ const (
 	// devRequeueAfter is how often a dev module's tag is re-resolved. A repush moves nothing
 	// in the API server, so the digest behind the tag is only ever seen by looking again.
 	devRequeueAfter = 15 * time.Second
+	// removalRequeueAfter is how often a running teardown is re-checked. It completes in a queue
+	// callback the API server never sees, so the only way to notice is to ask the runtime again.
+	removalRequeueAfter = 5 * time.Second
 )
 
 // RegisterController registers the Module controller with the manager.
@@ -106,8 +109,10 @@ type packageManager interface {
 	UpdateModule(repo registry.Remote, module packageruntime.Module, force bool)
 	GetModuleDigest(ctx context.Context, repo registry.Remote, name, tag string) (string, error)
 	UpdateEmbeddedModule(module packageruntime.Module)
-	RemoveModule(name string)
-	RemoveEmbeddedModule(name string)
+	// RemoveModule tears the module down and reports whether the teardown has finished.
+	RemoveModule(name string) bool
+	// RemoveEmbeddedModule is RemoveModule for a module the image ships; it undeploys nothing.
+	RemoveEmbeddedModule(name string) bool
 	GetStatus(name string) packagestatus.Status
 	GetModuleStatusQueue() workqueue.TypedRateLimitingInterface[string]
 }
@@ -132,11 +137,12 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	// handle delete event
 	if !module.DeletionTimestamp.IsZero() {
-		if err := r.handleDelete(ctx, module); err != nil {
+		res, err := r.handleDelete(ctx, module)
+		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("delete: %w", err)
 		}
 
-		return ctrl.Result{}, nil
+		return res, nil
 	}
 
 	// handle create/update events
@@ -361,36 +367,53 @@ func (r *reconciler) handleDev(ctx context.Context, module, original *v1alpha2.M
 	return nil
 }
 
-// handleDelete releases the module's package version, unregisters it from the package
-// runtime and releases the finalizer.
-func (r *reconciler) handleDelete(ctx context.Context, module *v1alpha2.Module) error {
+// handleDelete unregisters the module from the package runtime and, once the runtime reports the
+// teardown finished, releases the module's package version and the finalizer. The wait is unbounded
+// on purpose: holding the finalizer is what keeps a Helm release from outliving the CR that owns
+// it, so a teardown the queue keeps retrying keeps the module in Terminating rather than orphaning
+// its resources.
+func (r *reconciler) handleDelete(ctx context.Context, module *v1alpha2.Module) (ctrl.Result, error) {
 	logger := r.logger.With(slog.String("name", module.Name))
 
 	logger.Debug("handle delete module")
 	defer logger.Debug("handle delete module complete")
 
+	// An embedded module deployed nothing, so its removal enqueues no undeploy — but its hooks and
+	// its Helm release are still taken down by Disable, which is what this waits for.
+	remove := r.manager.RemoveModule
+	if module.IsEmbedded() {
+		remove = r.manager.RemoveEmbeddedModule
+	}
+
+	// The runtime tears the module down asynchronously — the Disable task uninstalls the Helm
+	// release, Undeploy takes the files off disk, and the cleanup riding the last task drops the
+	// state — so the remover is polled until it reports the teardown finished.
+	if !remove(module.Name) {
+		logger.Info("module is still being removed by the runtime")
+
+		return ctrl.Result{RequeueAfter: removalRequeueAfter}, nil
+	}
+
+	// The removal only holds until the next start: the image still ships the module, so the
+	// bootstrap recreates the resource and loads it again.
+	if module.IsEmbedded() {
+		logger.Info("embedded module is removed, it will be placed again on the next start")
+	}
+
+	// Detach only after the teardown: releasing the version any earlier lets it be garbage
+	// collected — and its package files removed from disk — while the uninstall still needs them.
+	//
 	// Detach by owner reference, not by spec: the reference names what the module was
 	// actually attached to, which a spec edit just before deletion would have changed.
 	if name := ctrlutils.OwnerRefName(module, v1alpha1.ModulePackageVersionKind); name != "" {
 		if err := r.detachVersion(ctx, name); err != nil {
 			logger.Error("failed to detach the module package version", slog.String("mpv", name), log.Err(err))
-			return err
+			return ctrl.Result{}, err
 		}
 	}
 
-	// An embedded module deployed nothing, so its removal enqueues no undeploy. The removal only
-	// holds until the next start: the image still ships the module, so the bootstrap recreates the
-	// resource and loads it again.
-	if module.IsEmbedded() {
-		logger.Info("embedded module is removed, it will be placed again on the next start")
-
-		r.manager.RemoveEmbeddedModule(module.Name)
-	} else {
-		r.manager.RemoveModule(module.Name)
-	}
-
 	if !controllerutil.ContainsFinalizer(module, v1alpha2.ModuleFinalizerStatisticRegistered) {
-		return nil
+		return ctrl.Result{}, nil
 	}
 
 	patch := client.MergeFrom(module.DeepCopy())
@@ -398,10 +421,10 @@ func (r *reconciler) handleDelete(ctx context.Context, module *v1alpha2.Module) 
 
 	if err := r.client.Patch(ctx, module, patch); err != nil {
 		logger.Error("failed to remove the module finalizer", log.Err(err))
-		return fmt.Errorf("patch module '%s': %w", module.Name, err)
+		return ctrl.Result{}, fmt.Errorf("patch module '%s': %w", module.Name, err)
 	}
 
-	return nil
+	return ctrl.Result{}, nil
 }
 
 // relink marks mpv as used by the module, releasing the version it switched away from.
