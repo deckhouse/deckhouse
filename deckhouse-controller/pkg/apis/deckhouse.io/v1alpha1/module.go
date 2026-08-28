@@ -17,7 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -454,25 +453,6 @@ func (m *Module) IsExperimental() bool {
 
 func (m *Module) IsDeprecated() bool {
 	return m.Properties.Stage == DeprecatedModuleStage
-}
-
-// legacyOptionalSuffix marks a parent module dependency as conditional: such a parent may be
-// disabled or absent, only its version is constrained while it is enabled.
-const legacyOptionalSuffix = "!optional"
-
-// MandatoryParentModules returns the parent modules that must be enabled, skipping the
-// conditional ones.
-func (r *ModuleRequirements) MandatoryParentModules() []string {
-	mandatory := make([]string, 0, len(r.ParentModules))
-	for parent, constraint := range r.ParentModules {
-		if strings.HasSuffix(constraint, legacyOptionalSuffix) {
-			continue
-		}
-
-		mandatory = append(mandatory, parent)
-	}
-
-	return mandatory
 }
 
 // +kubebuilder:object:root=true

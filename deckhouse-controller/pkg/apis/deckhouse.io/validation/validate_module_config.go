@@ -330,11 +330,9 @@ func (v *moduleConfigValidator) checkDependenciesFromModuleCR(module *v1alpha1.M
 		return nil, nil
 	}
 
-	parents := module.Properties.Requirements.MandatoryParentModules()
-
-	missing := make([]string, 0, len(parents))
-	for _, parent := range parents {
-		if parent == module.Name {
+	missing := make([]string, 0, len(module.Properties.Requirements.ParentModules))
+	for parent, constraint := range module.Properties.Requirements.ParentModules {
+		if parent == module.Name || strings.HasSuffix(constraint, "!optional") {
 			continue
 		}
 		if !v.moduleManager.IsModuleEnabled(parent) {
