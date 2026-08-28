@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-7c114e6cee1182ff2b165cba363ae5cfbf773e4da8518c90d80049d24c627e94",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 19,
+  "version": 25,
   "statements": [
     {
       "vulnerability": {
@@ -633,8 +633,123 @@
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
       "impact_statement": "Эта неэксплуатируемая уязвимость относится к подкоманде d8 delivery-kit. Уязвимость github.com/go-git/go-git/v5 v5.16.2 проявляется при обработке вредоносных Git-данных из недоверенного источника, недостижимых в штатных операциях d8.",
       "timestamp": "2026-06-24T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-53488"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/containerd/containerd@v1.7.27"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Зависимость github.com/containerd/containerd поступает транзитивно через werf (github.com/werf/werf/v2/pkg/deploy/bundles/registry) и используется только как клиентская библиотека доступа к OCI-реестру. CRI-плагин containerd и его restart-monitor в составе d8 не собираются и не запускаются, уязвимый код не в пути выполнения.",
+      "timestamp": "2026-08-27T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-47262"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/containerd/containerd@v1.7.27"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Зависимость github.com/containerd/containerd поступает транзитивно через werf (github.com/werf/werf/v2/pkg/deploy/bundles/registry) и используется только как клиентская библиотека доступа к OCI-реестру. Разбор групп при запуске контейнера выполняет рантайм containerd, который в d8 не используется, уязвимый код не в пути выполнения.",
+      "timestamp": "2026-08-27T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-41579"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/opencontainers/runc@v1.1.14"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Зависимость github.com/opencontainers/runc поступает транзитивно через werf → github.com/containers/buildah/define и зафиксирована директивой replace ради совместимости с werf. Контейнеры через runc в d8 не запускаются, код libcontainer не в пути выполнения.",
+      "timestamp": "2026-08-27T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-49478"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/sigstore/fulcio@v1.4.5"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Зависимость github.com/sigstore/fulcio поступает транзитивно через werf → buildah → github.com/containers/image/v5/signature; из модуля используется только разбор расширений сертификатов (pkg/certificate). Клиент OIDC-discovery Fulcio в d8 не вызывается, уязвимый код не в пути выполнения.",
+      "timestamp": "2026-08-27T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-48702"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/sigstore/rekor@v1.3.6"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Зависимость github.com/sigstore/rekor поступает транзитивно через werf → buildah → github.com/containers/image/v5/signature/internal; из модуля используются только сгенерированные модели (pkg/generated/models). Серверный код Rekor, разбирающий APK-пакеты, в d8 не собирается.",
+      "timestamp": "2026-08-27T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.49.0"
+        },
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.54.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Пакет golang.org/x/crypto/openpgp признан неподдерживаемым, исправленной версии не существует. В бинарь d8 он попадает через github.com/containers/image/v5/signature и github.com/containers/ocicrypt/keywrap/pgp (werf, buildah), а также через pkg/provenance Helm и nelm. d8 не проверяет GPG-подписи образов и провенанс-подписи Helm-чартов, код не в пути выполнения.",
+      "timestamp": "2026-08-27T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-48978"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/oras.land/oras-go@v1.2.5"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Исправленной версии в линейке oras-go v1.x не выпущено. Модуль поступает транзитивно через werf → github.com/werf/3p-helm/pkg/registry. Атака требует подконтрольного злоумышленнику OCI-реестра, тогда как адрес реестра задаётся конфигурацией кластера, а не недоверенным вводом.",
+      "timestamp": "2026-08-27T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-2303"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.mongodb.org/mongo-driver@v1.14.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость относится к пакету go.mongodb.org/mongo-driver/mongo — обработке ошибок GSSAPI в клиенте MongoDB. Модуль поступает транзитивно через werf (giterminism_manager → github.com/go-openapi/strfmt), и из него используется только go.mongodb.org/mongo-driver/bson; клиент MongoDB в бинарь не попадает.",
+      "timestamp": "2026-08-27T12:00:00Z"
     }
   ],
   "timestamp": "2026-03-05T12:00:00Z",
-  "last_updated": "2026-06-24T12:00:00Z"
+  "last_updated": "2026-08-27T12:00:00Z"
 }
