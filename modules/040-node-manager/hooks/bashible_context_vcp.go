@@ -91,6 +91,7 @@ type bashibleExternalInputs struct {
 	APIServerEndpoints      []string                       `json:"apiserverEndpoints"`
 	ClusterMasterEndpoints  []bashibleInputsMasterEndpoint `json:"clusterMasterEndpoints"`
 	ALBVIP                  string                         `json:"albVIP"`
+	KonnHost                string                         `json:"konnHost"`
 	APIServerProxyCerts     bashibleInputsProxyCerts       `json:"apiserverProxyCerts"`
 	KubernetesCA            string                         `json:"kubernetesCA"`
 	AllowedBundles          []string                       `json:"allowedBundles"`
@@ -277,6 +278,10 @@ func setPhase1Values(input *go_hook.HookInput, inputs *bashibleExternalInputs) {
 		if e.RPPBootstrapServerPort != 0 {
 			endpoints = append(endpoints, map[string]any{"address": inputs.ALBVIP, "rppBootstrapServerPort": e.RPPBootstrapServerPort})
 		}
+	}
+
+	if inputs.KonnHost != "" {
+		endpoints = append(endpoints, map[string]any{"address": inputs.KonnHost})
 	}
 
 	input.Values.Set("nodeManager.internal.clusterMasterAddresses", addresses)

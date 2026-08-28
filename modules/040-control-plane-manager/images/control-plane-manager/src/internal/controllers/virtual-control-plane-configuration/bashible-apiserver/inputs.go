@@ -63,6 +63,7 @@ type externalInputs struct {
 	ClusterMasterEndpoints  []inputsMasterEndpoint `json:"clusterMasterEndpoints"`
 	// ALBVIP is the single tenant ingress VIP. The node maps the control-plane SNI hostnames to it in /etc/hosts, having no DNS for them.
 	ALBVIP              string                     `json:"albVIP"`
+	KonnHost            string                     `json:"konnHost"`
 	APIServerProxyCerts ContextAPIServerProxyCerts `json:"apiserverProxyCerts"`
 	KubernetesCA        string                     `json:"kubernetesCA"`
 	AllowedBundles      []string                   `json:"allowedBundles"`
@@ -75,6 +76,7 @@ type ExternalInputsParams struct {
 	ClusterUUID         string
 	APIHost             string
 	PackagesHost        string
+	KonnHost            string
 	ALBVIP              string
 	RPPToken            string
 	APIServerProxyCerts ContextAPIServerProxyCerts
@@ -150,6 +152,7 @@ func BuildExternalInputsYAML(p ExternalInputsParams) (string, error) {
 			},
 		},
 		ALBVIP:              p.ALBVIP,
+		KonnHost:            p.KonnHost,
 		APIServerProxyCerts: p.APIServerProxyCerts,
 		KubernetesCA:        string(p.CA),
 		AllowedBundles:      []string{"ubuntu-lts"},

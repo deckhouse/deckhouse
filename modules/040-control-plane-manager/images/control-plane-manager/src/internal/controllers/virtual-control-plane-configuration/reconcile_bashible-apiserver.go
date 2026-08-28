@@ -75,7 +75,6 @@ const (
 func (r *reconciler) reconcileBashibleApiserver(
 	ctx context.Context,
 	vcp *controlplanev1alpha1.VirtualControlPlane,
-	configSecret *corev1.Secret,
 	pkiSecret *corev1.Secret,
 	adminSecret *corev1.Secret,
 	albVIP string,
@@ -93,7 +92,7 @@ func (r *reconciler) reconcileBashibleApiserver(
 	}
 
 	// 4. Nested: external inputs the tenant node-manager renders the context Secret from.
-	if res, err := r.reconcileBashibleExternalInputs(ctx, nestedClient, vcp, pkiSecret, configSecret, albVIP); err != nil || !res.IsZero() {
+	if res, err := r.reconcileBashibleExternalInputs(ctx, nestedClient, vcp, pkiSecret, albVIP); err != nil || !res.IsZero() {
 		return res, err
 	}
 
@@ -181,7 +180,6 @@ func (r *reconciler) reconcileBashibleExternalInputs(
 	nestedClient client.Client,
 	vcp *controlplanev1alpha1.VirtualControlPlane,
 	pkiSecret *corev1.Secret,
-	configSecret *corev1.Secret,
 	albVIP string,
 ) (reconcile.Result, error) {
 	publishedInputs, err := getNestedSecret(ctx, nestedClient, bashibleapiserver.ExternalInputsSecretName)
@@ -207,9 +205,10 @@ func (r *reconciler) reconcileBashibleExternalInputs(
 	inputsYAML, err := bashibleapiserver.BuildExternalInputsYAML(bashibleapiserver.ExternalInputsParams{
 		VCP:                 vcp,
 		CA:                  pkiSecret.Data["ca.crt"],
-		ClusterUUID:         string(configSecret.Data["cluster-uuid"]),
+		ClusterUUID:         string(vcp.UID),
 		APIHost:             apiExposeHost(vcp),
 		PackagesHost:        packagesExposeHost(vcp),
+		KonnHost:            konnExposeHost(vcp),
 		ALBVIP:              albVIP,
 		RPPToken:            rppToken,
 		APIServerProxyCerts: proxyCerts,

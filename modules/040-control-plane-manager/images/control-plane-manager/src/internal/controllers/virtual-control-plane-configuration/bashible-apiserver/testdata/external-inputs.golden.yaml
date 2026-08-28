@@ -27,6 +27,7 @@ deckhouse:
   channel: unknown
   edition: unknown
   version: vcp
+konnHost: konn.golden.example.com
 kubernetesCA: |
   -----BEGIN CERTIFICATE-----
   VCP-CA

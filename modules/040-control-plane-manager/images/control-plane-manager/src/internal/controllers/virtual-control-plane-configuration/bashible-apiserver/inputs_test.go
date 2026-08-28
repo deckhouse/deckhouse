@@ -54,6 +54,7 @@ func goldenParams() ExternalInputsParams {
 		ClusterUUID:  "11111111-2222-3333-4444-555555555555",
 		APIHost:      "api.golden.example.com",
 		PackagesHost: "packages.golden.example.com",
+		KonnHost:     "konn.golden.example.com",
 		ALBVIP:       "10.20.30.40",
 		RPPToken:     "rpp-token",
 		APIServerProxyCerts: ContextAPIServerProxyCerts{
@@ -109,9 +110,11 @@ func TestExternalInputsMatchContextInput(t *testing.T) {
 	require.NoError(t, yaml.Unmarshal(readGolden(t, "context.golden.yaml"), &contextDoc))
 	require.NoError(t, yaml.Unmarshal([]byte(inputsYAML), &inputsDoc))
 
-	// Contract bookkeeping, not a context field.
+	// Contract bookkeeping, not a context field. albVIP and konnHost feed /etc/hosts on the node,
+	// not the bashible context.
 	delete(inputsDoc, "version")
 	delete(inputsDoc, "albVIP")
+	delete(inputsDoc, "konnHost")
 
 	for key, want := range inputsDoc {
 		require.Contains(t, contextDoc, key, "inputs publish %q, which the context does not have", key)
