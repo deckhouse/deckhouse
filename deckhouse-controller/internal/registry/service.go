@@ -32,7 +32,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/tools/imagefs"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
@@ -251,7 +250,7 @@ func (s *Service) download(_ context.Context, img crv1.Image, output string) err
 			return fmt.Errorf("read tar: %w", err)
 		}
 
-		target, err := imagefs.SafeJoin(scratch, hdr.Name)
+		target, err := safeJoin(scratch, hdr.Name)
 		if err != nil {
 			return err
 		}
@@ -284,7 +283,7 @@ func (s *Service) download(_ context.Context, img crv1.Image, output string) err
 			// input. Materializing them changes what a published image unpacks to - separate change.
 
 		case tar.TypeLink:
-			linkTarget, err := imagefs.SafeJoin(scratch, hdr.Linkname)
+			linkTarget, err := safeJoin(scratch, hdr.Linkname)
 			if err != nil {
 				return fmt.Errorf("hardlink target: %w", err)
 			}
@@ -305,6 +304,20 @@ func (s *Service) download(_ context.Context, img crv1.Image, output string) err
 	}
 
 	return nil
+}
+
+// safeJoin resolves a path taken from the image archive against root and rejects one that
+// escapes it. CWE-22 check: both the entry name and a hardlink target go through it, because
+// both end up as arguments to filesystem calls.
+func safeJoin(root, name string) (string, error) {
+	target := filepath.Join(root, name)
+
+	rel, err := filepath.Rel(root, target)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return "", fmt.Errorf("path traversal detected in the package archive: malicious path %v", name)
+	}
+
+	return target, nil
 }
 
 type Remote struct {
