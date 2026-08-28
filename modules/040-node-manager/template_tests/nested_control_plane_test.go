@@ -90,8 +90,8 @@ var _ = Describe("Module :: node-manager :: helm template :: nested control plan
 			Expect(secret.Field(`metadata.annotations.node-manager\.deckhouse\.io/context-owner`).String()).To(Equal("node-manager"))
 		})
 
-		// A virtual control plane authenticates bashible-apiserver as a User and issues its join
-		// token with its own bootstrap group, neither of which exists in a normal cluster.
+		// A virtual control plane authenticates bashible-apiserver as a User, which a normal cluster
+		// does not; its join token reuses the stock system:bootstrappers:d8-node-manager group.
 		It("grants the virtual control plane identities the same access", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
@@ -112,9 +112,6 @@ var _ = Describe("Module :: node-manager :: helm template :: nested control plan
   apiGroup: rbac.authorization.k8s.io
 - kind: Group
   name: system:nodes
-  apiGroup: rbac.authorization.k8s.io
-- kind: Group
-  name: system:bootstrappers:d8:vcp
   apiGroup: rbac.authorization.k8s.io
 `))
 		})

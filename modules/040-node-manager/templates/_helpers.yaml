@@ -139,8 +139,8 @@ User, so the in-tenant ServiceAccount alone grants it nothing. */ -}}
 {{- end }}
 {{- end }}
 
-{{- /* Subjects for bootstrapping nodes. A virtual control plane issues its join
-token with its own bootstrap group (constants.VirtualBootstrapTokenGroup). */ -}}
+{{- /* Subjects for bootstrapping nodes. Both a self-hosted cluster and a virtual control plane
+tenant issue their join token with the stock system:bootstrappers:d8-node-manager group. */ -}}
 {{- define "node_manager_bashible_bootstrapper_subjects" -}}
 - kind: Group
   name: system:bootstrappers:d8-node-manager
@@ -148,9 +148,4 @@ token with its own bootstrap group (constants.VirtualBootstrapTokenGroup). */ -}
 - kind: Group
   name: system:nodes
   apiGroup: rbac.authorization.k8s.io
-{{- if not .Values.global.deckhouseSelfHosted }}
-- kind: Group
-  name: system:bootstrappers:d8:vcp
-  apiGroup: rbac.authorization.k8s.io
-{{- end }}
 {{- end }}
