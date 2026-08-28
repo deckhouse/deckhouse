@@ -8,6 +8,10 @@ title: "Управление control plane: FAQ"
 
 > Важно иметь нечетное количество master-узлов для обеспечения кворума.
 
+{% alert level="warning" %}
+Если в кластере используется модуль [`stronghold`](/modules/stronghold/), перед изменением master-узлов убедитесь, что модуль находится в полностью работоспособном состоянии. Перед началом изменений настоятельно рекомендуется создать [резервную копию данных модуля](/products/stronghold/documentation/admin/backups/overview/).
+{% endalert %}
+
 В процессе установки Deckhouse Kubernetes Platform с настройками по умолчанию в NodeGroup `master` отсутствует секция [`spec.staticInstances.labelSelector`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) с настройками фильтра лейблов по ресурсам `staticInstances`. Из-за этого после изменения количества узлов `staticInstances` в NodeGroup `master` (параметр [`spec.staticInstances.count`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)) при добавлении обычного узла с помощью Cluster API Provider Static (CAPS) он может быть «перехвачен» и добавлен в NodeGroup `master`, даже если в соответствующем ему `StaticInstance` (в `metadata`) указан лейбл с `role`, отличающейся от `master`.
 Чтобы избежать этого «перехвата», после установки DKP измените NodeGroup `master` — добавьте в нее секцию [`spec.staticInstances.labelSelector`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) с настройками фильтра лейблов по ресурсам `staticInstances`. Пример NodeGroup `master` с `spec.staticInstances.labelSelector`:
 
@@ -68,7 +72,7 @@ spec:
 Если в кластере используется модуль [`stronghold`](/modules/stronghold/), перед добавлением или удалением master-узла убедитесь, что модуль находится в полностью работоспособном состоянии. Перед началом любых изменений настоятельно рекомендуется создать [резервную копию данных модуля](/products/stronghold/documentation/admin/backups/overview/).  
 {% endalert %}
 
-1. Сделайте [резервную копию `etcd`](faq.html#резервное-копирование-и-восстановление-etcd) и папки `/etc/kubernetes`.
+1. Сделайте [резервную копию `etcd`](faq.html#резервное-копирование-и-восстановление-etcd) и директории `/etc/kubernetes`.
 1. Скопируйте полученный архив за пределы кластера (например, на локальную машину).
 1. Убедитесь, что в кластере нет [алертов](/modules/prometheus/faq.html#как-получить-информацию-об-алертах-в-кластере), которые могут помешать созданию новых master-узлов.
 1. Убедитесь, что очередь Deckhouse пуста:
@@ -85,9 +89,7 @@ spec:
 
    В процессе авторизации необходимо будет ввести `Username` и `Password`.
 
-   {% alert level="info" %}
-   При авторизации в хранилище `registry.deckhouse.ru` поле `Username` должно иметь значение `license-token`, а `Password` — содержать ключ лицензии Deckhouse Kubernetes Platform.
-   {% endalert %}
+   > При авторизации в хранилище `registry.deckhouse.ru` поле `Username` должно иметь значение `license-token`, а `Password` — содержать ключ лицензии Deckhouse Kubernetes Platform.
 
 1. **На локальной машине** запустите контейнер установщика Deckhouse соответствующей редакции и версии (измените адрес хранилища образов при необходимости):
 
@@ -104,7 +106,7 @@ spec:
    dhctl terraform check --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
    ```
 
-   Ответ должен сообщить, что Terraform не нашел расхождений и изменений не требуется.
+   Ответ должен сообщить, что Terraform не нашёл расхождений и изменений не требуется.
 
 1. **В контейнере с инсталлятором** выполните следующую команду и укажите требуемое количество master-узлов в параметре `masterNodeGroup.replicas`:
 
@@ -168,9 +170,7 @@ spec:
 
    В процессе авторизации необходимо будет ввести `Username` и `Password`.
 
-   {% alert level="info" %}
-   При авторизации в хранилище `registry.deckhouse.ru` поле `Username` должно иметь значение `license-token`, а `Password` — содержать ключ лицензии Deckhouse Kubernetes Platform.
-   {% endalert %}
+   > При авторизации в хранилище `registry.deckhouse.ru` поле `Username` должно иметь значение `license-token`, а `Password` — содержать ключ лицензии Deckhouse Kubernetes Platform.
 
 1. **На локальной машине** запустите контейнер установщика DKP соответствующей редакции и версии (измените адрес хранилища образов при необходимости):
 
@@ -217,7 +217,11 @@ spec:
 
 ## Как убрать роль master-узла, сохранив узел?
 
-1. Сделайте [резервную копию etcd](faq.html#резервное-копирование-и-восстановление-etcd) и папки `/etc/kubernetes`.
+{% alert level="warning" %}
+Если в кластере используется модуль [`stronghold`](/modules/stronghold/), перед изменением master-узлов убедитесь, что модуль находится в полностью работоспособном состоянии. Перед началом изменений настоятельно рекомендуется создать [резервную копию данных модуля](/products/stronghold/documentation/admin/backups/overview/).
+{% endalert %}
+
+1. Сделайте [резервную копию etcd](faq.html#резервное-копирование-и-восстановление-etcd) и директории `/etc/kubernetes`.
 1. Скопируйте полученный архив за пределы кластера (например, на локальную машину).
 1. Убедитесь, что в кластере нет [алертов](/modules/prometheus/faq.html#как-получить-информацию-об-алертах-в-кластере), которые могут помешать обновлению master-узлов.
 1. Убедитесь, что очередь Deckhouse пуста:
@@ -237,7 +241,7 @@ spec:
    d8 k label node <MASTER-NODE-N-NAME> node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master- node.deckhouse.io/group-
    ```
 
-1. Убедитесь, что удаляемый master-узел пропал из списка узлов кластера:
+1. Убедитесь, что удаляемый master-узел пропал из списка членов кластера etcd:
 
    ```bash
    for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
@@ -266,7 +270,17 @@ spec:
 
 ## Как изменить образ ОС в кластере с несколькими master-узлами?
 
-1. Сделайте [резервную копию `etcd`](faq.html#резервное-копирование-и-восстановление-etcd) и папки `/etc/kubernetes`.
+Способ изменения ОС зависит от типа кластера: в облачном кластере узлы заменяются через `dhctl converge`, в статическом — вручную, по одному узлу.
+
+### В облачном кластере
+
+Чтобы изменить образ ОС в облачном кластере с несколькими master-узлами, выполните следующие шаги:
+
+{% alert level="warning" %}
+Если в кластере используется модуль [`stronghold`](/modules/stronghold/), перед изменением master-узлов убедитесь, что модуль находится в полностью работоспособном состоянии. Перед началом изменений настоятельно рекомендуется создать [резервную копию данных модуля](/products/stronghold/documentation/admin/backups/overview/).
+{% endalert %}
+
+1. Сделайте [резервную копию `etcd`](faq.html#резервное-копирование-и-восстановление-etcd) и директории `/etc/kubernetes`.
 1. Скопируйте полученный архив за пределы кластера (например, на локальную машину).
 1. Убедитесь, что в кластере нет [алертов](/modules/prometheus/faq.html#как-получить-информацию-об-алертах-в-кластере), которые могут помешать обновлению master-узлов.
 1. Убедитесь, что очередь Deckhouse пуста:
@@ -283,9 +297,7 @@ spec:
 
    В процессе авторизации необходимо будет ввести `Username` и `Password`.
 
-   {% alert level="info" %}
-   При авторизации в хранилище `registry.deckhouse.ru` поле `Username` должно иметь значение `license-token`, а `Password` — содержать ключ лицензии Deckhouse Kubernetes Platform.
-   {% endalert %}
+   > При авторизации в хранилище `registry.deckhouse.ru` поле `Username` должно иметь значение `license-token`, а `Password` — содержать ключ лицензии Deckhouse Kubernetes Platform.
 
 1. **На локальной машине** запустите контейнер установщика Deckhouse соответствующей редакции и версии (измените адрес хранилища образов при необходимости):
 
@@ -303,7 +315,7 @@ spec:
      --ssh-host <MASTER-NODE-0-HOST> --ssh-host <MASTER-NODE-1-HOST> --ssh-host <MASTER-NODE-2-HOST>
    ```
 
-   Ответ должен сообщить, что Terraform не нашел расхождений и изменений не требуется.
+   Ответ должен сообщить, что Terraform не нашёл расхождений и изменений не требуется.
 
 1. **В контейнере с инсталлятором** выполните следующую команду и укажите необходимый образ ОС в параметре `masterNodeGroup.instanceClass` (укажите адреса всех master-узлов в параметре `--ssh-host`):
 
@@ -316,14 +328,14 @@ spec:
 
    Внимательно изучите действия, которые планирует выполнить converge, когда запрашивает подтверждение.
 
-   При выполнении команды узлы будут замены на новые с подтверждением на каждом узле. Замена будет выполняться по очереди в обратном порядке (2,1,0).
+   При выполнении команды узлы будут заменены на новые с подтверждением на каждом узле. Замена будет выполняться по очереди в обратном порядке (2,1,0).
 
    ```bash
    dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
      --ssh-host <MASTER-NODE-0-HOST> --ssh-host <MASTER-NODE-1-HOST> --ssh-host <MASTER-NODE-2-HOST>
    ```
 
-   Следующие действия (П. 9-12) **выполняйте поочередно на каждом** master-узле, начиная с узла с наивысшим номером (с суффиксом 2) и заканчивая узлом с наименьшим номером (с суффиксом 0).
+   Следующие действия **выполняйте поочерёдно на каждом** master-узле, начиная с узла с наивысшим номером (с суффиксом 2) и заканчивая узлом с наименьшим номером (с суффиксом 0).
 
 1. **На созданном узле** откройте журнал systemd-юнита `bashible.service`. Дождитесь окончания настройки узла — в журнале должно появиться сообщение `nothing to do`:
 
@@ -344,7 +356,7 @@ spec:
    done
    ```
 
-1. Убедитесь, что `control-plane-manager` функционирует на узле.
+1. Убедитесь, что [`control-plane-manager`](/modules/control-plane-manager/) функционирует на узле.
 
    ```bash
    d8 k -n kube-system wait pod --timeout=10m --for=condition=ContainersReady \
@@ -353,13 +365,148 @@ spec:
 
 1. Перейдите к обновлению следующего узла.
 
+### В статическом кластере
+
+Инструкция ниже описывает замену ОС на master-узлах, которые добавлены в кластер **вручную** с помощью скрипта `bootstrap.sh`. Выполняйте шаги поочерёдно для каждого master-узла и переходите к следующему только после того, как текущий узел вернулся в кластер и стал работоспособен.
+
+{% alert level="warning" %}
+Если master-узлы управляются Cluster API Provider Static (CAPS) через ресурсы StaticInstance, не используйте эту инструкцию. Сначала [удалите StaticInstance](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/bare-metal-node.html#удаление-staticinstance), установите требуемую ОС и снова [добавьте узел](#как-добавить-master-узел-в-статическом-или-гибридном-кластере) в NodeGroup `master`.
+{% endalert %}
+
+{% alert level="warning" %}
+Если в кластере используется модуль [`stronghold`](/modules/stronghold/), перед добавлением или удалением master-узла убедитесь, что модуль находится в полностью работоспособном состоянии. Перед началом любых изменений настоятельно рекомендуется создать [резервную копию данных модуля](/products/stronghold/documentation/admin/backups/overview/).
+{% endalert %}
+
+Чтобы изменить ОС вручную добавленного master-узла, выполните следующие шаги:
+
+1. Сделайте [резервную копию `etcd`](faq.html#резервное-копирование-и-восстановление-etcd) и директории `/etc/kubernetes`. Если используется модуль `stronghold`, убедитесь, что создана резервная копия его данных.
+1. Проверьте состояние кластера, отсутствие алертов и незавершённых задач в очереди Deckhouse:
+
+   ```shell
+   d8 status
+   ```
+
+1. Снимите с узла лейблы master-узла:
+
+   ```shell
+   d8 k label node <MASTER_NODE_NAME> node-role.kubernetes.io/control-plane- \
+     node-role.kubernetes.io/master- node.deckhouse.io/group-
+   ```
+
+   где `<MASTER_NODE_NAME>` — имя изменяемого master-узла.
+
+1. Убедитесь, что узел удалён из списка членов кластера etcd:
+
+   ```shell
+   for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
+     d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+       --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+       --endpoints https://127.0.0.1:2379/ member list -w table
+     if [ $? -eq 0 ]; then
+       break
+     fi
+   done
+   ```
+
+1. Вытесните нагрузку с узла командой `d8 k drain`:
+
+   ```shell
+   d8 k drain <MASTER_NODE_NAME> --ignore-daemonsets --delete-emptydir-data
+   ```
+
+1. Принудительно удалите оставшиеся на узле поды:
+
+   ```shell
+   d8 k delete pods --all-namespaces --field-selector spec.nodeName=<MASTER_NODE_NAME> --force
+   ```
+
+1. Удалите объект Node:
+
+   ```shell
+   d8 k delete node <MASTER_NODE_NAME>
+   ```
+
+1. На удаляемом master-узле очистите данные DKP. Команда необратимо удаляет данные Kubernetes и DKP с узла. Перед выполнением убедитесь, что выбран правильный узел и созданы необходимые резервные копии:
+
+   ```shell
+   bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing
+   ```
+
+1. Установите на узле требуемую ОС.
+1. На одном из оставшихся в кластере master-узлов получите и раскодируйте скрипт для добавления master-узла:
+
+   ```shell
+   d8 k -n d8-cloud-instance-manager get secret manual-bootstrap-for-master \
+     -o jsonpath='{.data.bootstrap\.sh}' | base64 -d > bootstrap.sh
+   ```
+
+1. Безопасно скопируйте полученный на предыдущем шаге файл `bootstrap.sh` на добавляемый узел и выполните его на этом узле от пользователя `root`:
+
+   ```shell
+   bash bootstrap.sh
+   ```
+
+1. **На добавляемом узле** откройте журнал systemd-юнита `bashible.service`. Дождитесь окончания настройки узла — в журнале должно появиться сообщение `nothing to do`:
+
+   ```shell
+   journalctl -fu bashible.service
+   ```
+
+1. Дождитесь перехода узла в статус `Ready`:
+
+   ```shell
+   d8 k wait node <MASTER_NODE_NAME> --for=condition=Ready --timeout=10m
+   ```
+
+1. Проверьте, что узел отобразился в списке членов кластера etcd:
+
+   ```shell
+   for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
+     d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+       --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+       --endpoints https://127.0.0.1:2379/ member list -w table
+     if [ $? -eq 0 ]; then
+       break
+     fi
+   done
+   ```
+
+1. Убедитесь, что [`control-plane-manager`](/modules/control-plane-manager/) функционирует на узле:
+
+   ```shell
+   d8 k -n kube-system wait pod --timeout=10m --for=condition=ContainersReady \
+     -l app=d8-control-plane-manager --field-selector spec.nodeName=<MASTER_NODE_NAME>
+   ```
+
+1. Убедитесь, что в кластере нет алертов и незавершённых задач:
+
+   ```shell
+   d8 status
+   ```
+
+1. Повторите процедуру для следующего master-узла.
+
 <div id='как-изменить-образ-ос-в-single-master-кластере'></div>
 
 ## Как изменить образ ОС в кластере с одним master-узлом?
 
+Способ зависит от типа кластера: сначала добавьте дополнительные master-узлы, замените ОС в мультимастерном режиме, затем верните исходное число master-узлов.
+
+{% alert level="warning" %}
+Если в кластере используется модуль [`stronghold`](/modules/stronghold/), перед изменением master-узлов убедитесь, что модуль находится в полностью работоспособном состоянии. Перед началом изменений настоятельно рекомендуется создать [резервную копию данных модуля](/products/stronghold/documentation/admin/backups/overview/).
+{% endalert %}
+
+### В облачном кластере
+
 1. Преобразуйте кластер с одним master-узлом в кластер с несколькими master-узлами в соответствии с [инструкцией](#как-добавить-master-узлы-в-облачном-кластере-single-master-в-multi-master).
-1. Обновите master-узлы в соответствии с [инструкцией](#как-изменить-образ-ос-в-multi-master-кластере).
+1. Измените ОС на master-узлах в соответствии с [инструкцией](#в-облачном-кластере).
 1. Преобразуйте кластер с несколькими master-узлами в кластер с одним master-узлом в соответствии с [инструкцией](#как-уменьшить-число-master-узлов-в-облачном-кластере).
+
+### В статическом кластере
+
+1. Добавьте дополнительные master-узлы в соответствии с [инструкцией](#как-добавить-master-узел-в-статическом-или-гибридном-кластере).
+1. Измените ОС на master-узлах в соответствии с [инструкцией](#в-статическом-кластере).
+1. Выведите лишние master-узлы из роли control plane в соответствии с [инструкцией](#как-убрать-роль-master-узла-сохранив-узел). Затем удалите их из кластера командой `d8 k delete node <MASTER_NODE_NAME>` и выключите соответствующие серверы.
 
 ## Как настроить режим HA c двумя master-узлами и arbiter-узлом?
 
@@ -406,9 +553,7 @@ spec:
 
    В процессе авторизации необходимо будет ввести `Username` и `Password`.
 
-   {% alert level="info" %}
-   При авторизации в хранилище `registry.deckhouse.ru` поле `Username` должно иметь значение `license-token`, а `Password` — содержать ключ лицензии Deckhouse Kubernetes Platform.
-   {% endalert %}
+   > При авторизации в хранилище `registry.deckhouse.ru` поле `Username` должно иметь значение `license-token`, а `Password` — содержать ключ лицензии Deckhouse Kubernetes Platform.
 
 1. **На локальной машине** запустите контейнер установщика DKP соответствующей редакции и версии (измените адрес хранилища образов при необходимости):
 
