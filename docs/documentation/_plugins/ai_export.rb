@@ -329,13 +329,14 @@ module Jekyll
       def write_llms_txt(lang, documents)
         lines = ["# #{site_title(lang)}", "", "> #{site_summary(lang)}", ""]
 
-        lines << "Note that the documented Deckhouse Platform version may differ from the version actually used in a cluster."
+        lines << @site.data.dig("i18n", "common", "aiLlmsNoteRoot", lang).to_s
         lines << ""
 
         groups(lang, documents).each do |group|
           next if group[:documents].empty?
 
           lines << "## #{group[:title]}"
+          lines << ""
           group[:documents].each do |doc|
             entry = "- [#{group[:label].call(doc)}](#{absolute(lang, doc['mdUrl'])})"
             entry += ": #{doc['description']}" unless doc["description"].to_s.empty?
@@ -345,15 +346,17 @@ module Jekyll
         end
 
         if @root
-          lines << "## Modules"
-          lines << "- [embedded-llms.txt](#{absolute(lang, "/modules/embedded-llms.txt")}): LLM index of embedded modules."
-          lines << "- [external-llms.txt](#{absolute(lang, "/modules/external-llms.txt")}): LLM index of external modules."
+          lines << "## #{@site.data.dig("i18n", "common", "modules", lang).to_s.capitalize} (llms.txt)"
+          lines << ""
+          lines << "- [embedded-llms.txt](#{absolute(lang, "/modules/embedded-llms.txt")}): #{@site.data.dig("i18n", "common", "aiLlmsRefDescriptionEmbeddedModules", lang).to_s}"
+          lines << "- [external-llms.txt](#{absolute(lang, "/modules/external-llms.txt")}): #{@site.data.dig("i18n", "common", "aiLlmsRefDescriptionExternalModules", lang).to_s}"
           lines << ""
 
           lines << "## Optional"
-          lines << "- [#{@corpus_name}](#{absolute(lang, "#{@doc_prefix}/#{@corpus_name}")}): RAG corpus with page Markdown and chunks for documentation pages."
-          lines << "- [embedded-corpus.json](#{absolute(lang, "/modules/embedded-corpus.json")}): RAG corpus with page Markdown and chunks for embedded modules."
-          lines << "- [external-corpus.json](#{absolute(lang, "/modules/external-corpus.json")}): RAG corpus with page Markdown and chunks for external modules."
+          lines << ""
+          lines << "- [#{@corpus_name}](#{absolute(lang, "#{@doc_prefix}/#{@corpus_name}")}): #{@site.data.dig("i18n", "common", "aiCorpusLlmsDescriptionRoot", lang).to_s}"
+          lines << "- [embedded-corpus.json](#{absolute(lang, "/modules/embedded-corpus.json")}): #{@site.data.dig("i18n", "common", "aiCorpusLlmsDescriptionEmbeddedModules", lang).to_s}"
+          lines << "- [external-corpus.json](#{absolute(lang, "/modules/external-corpus.json")}): #{@site.data.dig("i18n", "common", "aiCorpusLlmsDescriptionExternalModules", lang).to_s}"
           lines << ""
         end
 
@@ -423,7 +426,7 @@ module Jekyll
         end
 
         rest = documents.reject { |doc| used[doc["url"]] }
-        result << { title: "Other", documents: rest, label: title_label } unless rest.empty?
+        result << { title: @site.data.dig("i18n", "common", "other_documentation", lang).to_s.capitalize, documents: rest, label: title_label } unless rest.empty?
 
         result
       end
