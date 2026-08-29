@@ -264,8 +264,7 @@ func TestExportRewritesInternalLinks(t *testing.T) {
 	for _, want := range []string{
 		// A plain root-relative `.html` target.
 		"(https://deckhouse.io/modules/demo/stable/cr.md)",
-		// A directory always resolves to index.md (the server redirects to
-		// readme.md where the real index file has that name).
+		// A directory always resolves to index.md.
 		"(https://deckhouse.io/modules/other/stable/index.md)",
 		// Fragment is preserved.
 		"(https://deckhouse.io/modules/demo/stable/cr.md#config)",

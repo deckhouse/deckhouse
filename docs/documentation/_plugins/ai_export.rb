@@ -69,8 +69,7 @@ module Jekyll
     # prefix: `/en/modules/user-authn/` is served as `/modules/user-authn/`.
     MODULE_PREFIX = %r{\A/(en|ru)/modules/}.freeze
     # The URL templates whose directory links are rewritten to `index.md` — the
-    # documentation and the modules library. A directory whose real index file
-    # is `readme.md` is redirected there by the web server.
+    # documentation and the modules library.
     INDEX_MD_PATH = %r{\A/(?:products/[^/]+/documentation|modules)/}.freeze
 
     class Exporter
@@ -174,8 +173,7 @@ module Jekyll
       # md_link rewrites an internal link to its Markdown twin: `/a/b.html` ->
       # `/a/b.md`, and a directory `/a/b/` -> `/a/b/index.md`. A directory is
       # rewritten only under the documentation and modules templates (see
-      # INDEX_MD_PATH); the web server redirects `index.md` to `readme.md` where
-      # a directory actually indexes on `readme.md`. The `.html` rewrite is
+      # INDEX_MD_PATH). The `.html` rewrite is
       # unconditional (it keeps a cross-build link — a module page into the
       # documentation — working); a non-page link (an asset, or an extensionless
       # path) is left alone.

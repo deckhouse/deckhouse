@@ -435,8 +435,7 @@ var indexMdPath = regexp.MustCompile(`^/(?:products/[^/]+/documentation|modules)
 // mdLink rewrites an internal documentation link to its Markdown twin:
 // `/a/b.html` -> `/a/b.md`, and a directory `/a/b/` -> `/a/b/index.md`. A
 // directory is rewritten only under the documentation and modules templates
-// (see indexMdPath); the web server redirects `index.md` to `readme.md` where a
-// directory actually indexes on `readme.md`. Query and fragment are preserved.
+// (see indexMdPath).
 //
 // The `.html` rewrite is unconditional: a link to a page that has no `.md` (a
 // genuinely HTML-only page, or a page from another build) is rewritten anyway.
