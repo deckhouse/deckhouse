@@ -153,6 +153,12 @@ regenerate-metadata: werf-bin ## Regenerate embedded modules metadata file
 		docker cp d8-docs-artifacts:/export/embedded_modules_metadata.json backends/docs-builder-template/data/dkp/
 		docker rm -f d8-docs-artifacts
 
+regenerate-corpus-schema: ## Regenerate the AI corpus JSON Schema embedded in corpus.json
+		##~ Source of truth is the Go structs in backends/docs-builder/internal/aiexport;
+		##~ this rewrites the checked-in copy the Jekyll site embeds (_data/corpus_schema.json).
+		##~ Run it after changing the Corpus/Document/Chunk structs.
+		cd backends/docs-builder && go test ./internal/aiexport -run TestCorpusSchema -update
+
 help: ## Show this help message
 	@echo 'Usage: make [target]'
 	@echo ''
@@ -164,5 +170,5 @@ help: ## Show this help message
 	/^[a-zA-Z0-9_-]+:.*?## / { printf "  %-20s %s\n", $$1, $$2 } \
 	/^.?.?##~/              { printf "  %-20s %s\n", "", substr($$1, 6) }' $(MAKEFILE_LIST)
 
-.PHONY: help up dev regenerate-menu ai-export
+.PHONY: help up dev regenerate-menu ai-export regenerate-corpus-schema
 .PHONY: werf-bin clean down regenerate-metadata registry registry-down free-port-80 external-module

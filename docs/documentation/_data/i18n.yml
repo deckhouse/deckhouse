@@ -483,8 +483,8 @@ common:
     en: "External modules documentation in one file — Markdown of each page plus splitting into fragments. More than 10 MB; download for local and offline work, not for uploading to context."
     ru: "Документация внешних модулей одним файлом — Markdown каждой страницы плюс разбивка на фрагменты. Более 10 МБ; выгрузка для локальной и офлайн-работы, не для загрузки в контекст."
   aiLlmsNoteRoot:
-    en: "Note that the documented Deckhouse Platform version may differ from the version actually used in a cluster."
-    ru: "Обратите внимание, что документированная версия Deckhouse Platform может отличаться от версии, фактически используемой в кластере."
+    en: "The Deckhouse Platform version described in the documentation may differ from the version used in a specific cluster."
+    ru: "Версия Deckhouse Platform, описанная в документации, может отличаться от версии, используемой в конкретном кластере."
   aiLlmsRefDescriptionEmbeddedModules:
     en: "Embedded modules documentation index. File in llms.txt format."
     ru: "Индекс документации встроенных модулей. Файл в формате llms.txt."

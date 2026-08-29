@@ -120,6 +120,10 @@ func TestExport(t *testing.T) {
 		t.Fatalf("parse external-corpus.json: %v", err)
 	}
 
+	// The corpus embeds its own schema, and that schema must actually describe
+	// the corpus the exporter just wrote.
+	assertCorpusMatchesSchema(t, readFile(t, filepath.Join(publicDir, "en", "modules", "external-corpus.json")))
+
 	if len(corpus.Documents) != 1 {
 		t.Fatalf("got %d documents, want 1", len(corpus.Documents))
 	}

@@ -209,20 +209,23 @@ module Jekyll
           "mdUrl" => md_url(url),
           "path" => url.delete_prefix(@doc_prefix).sub(%r{\A/}, "").sub(%r{/\z}, "").sub(/\.html\z/, ""),
           "lang" => lang,
-          "breadcrumbs" => breadcrumbs_of(page, lang, module_name),
+          "breadcrumbs" => Array(breadcrumbs_of(page, lang, module_name)),
           "keywords" => keywords_of(page),
+          "module" => module_name,
           "moduleType" => module_name ? "embedded" : nil,
           "version" => doc_version,
           "editions" => editions_of(module_name),
           "stage" => stage_of(module_name),
-          "searchBoost" => page.data["searchBoost"],
           "contentHash" => "sha256:#{Digest::SHA256.hexdigest(converted.markdown)}",
           "markdown" => converted.markdown,
           "chunks" => Chunker.new(doc_id, url, title).call(converted.markdown, converted.headings),
         }
-        doc["module"] = module_name if module_name
 
-        doc
+        # Drop the optional fields that do not apply to this page (a
+        # documentation page has no module/version/stage), mirroring the
+        # omitempty contract of the Go structs so the embedded schema validates
+        # the output of both generators.
+        doc.compact
       end
 
       # frontmatter is the YAML header prepended to each per-page `.md`: enough
@@ -319,8 +322,12 @@ module Jekyll
           "lang" => lang,
           "generator" => GENERATOR,
           "baseUrl" => @urls[lang].to_s,
-          "documents" => documents,
         }
+        # The JSON Schema is generated from the Go structs and checked in as a
+        # data file (see `_data/corpus_schema.json` and the docs-builder
+        # `schema_test.go`); embedding it makes the corpus describe itself.
+        corpus["schema"] = @site.data["corpus_schema"] if @site.data["corpus_schema"]
+        corpus["documents"] = documents
 
         write(lang, @corpus_name, JSON.generate(corpus))
         Jekyll.logger.info "AI export:", "#{lang}/#{@corpus_name} — #{documents.length} documents"
@@ -509,6 +516,8 @@ module Jekyll
       end
 
       def chunk(anchor, level, heading_path, markdown, ordinal)
+        # The preamble chunk has no anchor; drop the key rather than emit null,
+        # to match the omitempty `anchor` of the Go Chunk struct.
         {
           "id" => "#{@doc_id}##{anchor || ordinal}",
           "anchor" => anchor,
@@ -518,7 +527,7 @@ module Jekyll
           "markdown" => markdown,
           "charCount" => markdown.length,
           "approxTokens" => (markdown.length / 4.0).ceil,
-        }
+        }.compact
       end
 
       # Locates the heading lines of the Markdown and re-attaches the HTML

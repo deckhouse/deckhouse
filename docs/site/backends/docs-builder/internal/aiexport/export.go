@@ -82,46 +82,50 @@ type ManifestDocument struct {
 
 // Corpus is the RAG-oriented export: page metadata, the full Markdown and the
 // retrieval-sized chunks.
+//
+// The `desc` tags are the source of the JSON Schema embedded in `Schema`
+// (schema.go); keep them accurate, they are the field documentation an agent
+// reads out of the file itself.
 type Corpus struct {
-	Version     int        `json:"version"`
-	ProductCode string     `json:"productCode"`
-	Lang        string     `json:"lang"`
-	Generator   string     `json:"generator"`
-	BaseURL     string     `json:"baseUrl"`
-	Documents   []Document `json:"documents"`
+	Version     int             `json:"version" desc:"Corpus format version."`
+	ProductCode string          `json:"productCode" desc:"Product the corpus belongs to."`
+	Lang        string          `json:"lang" desc:"Language of the corpus (en or ru)."`
+	Generator   string          `json:"generator" desc:"Generator that produced the corpus (hugo or jekyll)."`
+	BaseURL     string          `json:"baseUrl" desc:"Site origin the relative URLs resolve against."`
+	Schema      json.RawMessage `json:"schema" desc:"JSON Schema (draft 2020-12) of this corpus, embedded so the file describes itself."`
+	Documents   []Document      `json:"documents" desc:"The exported pages."`
 }
 
 type Document struct {
-	ID          string   `json:"id"`
-	Title       string   `json:"title"`
-	Description string   `json:"description"`
-	URL         string   `json:"url"`
-	MdURL       string   `json:"mdUrl"`
-	Path        string   `json:"path"`
-	Lang        string   `json:"lang"`
-	Breadcrumbs []string `json:"breadcrumbs"`
-	Keywords    []string `json:"keywords"`
-	Module      string   `json:"module,omitempty"`
-	ModuleType  string   `json:"moduleType"`
-	Version     string   `json:"version,omitempty"`
-	Editions    []string `json:"editions"`
-	Stage       string   `json:"stage"`
-	Channel     string   `json:"channel,omitempty"`
-	SearchBoost float64  `json:"searchBoost"`
-	ContentHash string   `json:"contentHash"`
-	Markdown    string   `json:"markdown"`
-	Chunks      []Chunk  `json:"chunks"`
+	ID          string   `json:"id" desc:"Stable identifier of the page (SHA-1 of its URL)."`
+	Title       string   `json:"title" desc:"Page title."`
+	Description string   `json:"description" desc:"Short one-line description of the page."`
+	URL         string   `json:"url" desc:"Public URL of the HTML page."`
+	MdURL       string   `json:"mdUrl" desc:"Public URL of the Markdown twin of the page."`
+	Path        string   `json:"path" desc:"URL path without language prefix or extension; a stable key."`
+	Lang        string   `json:"lang" desc:"Language of the page (en or ru)."`
+	Breadcrumbs []string `json:"breadcrumbs" desc:"Navigation trail from the site root to the page."`
+	Keywords    []string `json:"keywords" desc:"Search keywords and tags."`
+	Module      string   `json:"module,omitempty" desc:"Module the page belongs to, if any."`
+	ModuleType  string   `json:"moduleType,omitempty" desc:"Kind of module: embedded or external."`
+	Version     string   `json:"version,omitempty" desc:"Module or documentation version, if known."`
+	Editions    []string `json:"editions" desc:"Editions the module is available in."`
+	Stage       string   `json:"stage,omitempty" desc:"Module lifecycle stage, if any."`
+	Channel     string   `json:"channel,omitempty" desc:"Release channel of the module, if any."`
+	ContentHash string   `json:"contentHash" desc:"SHA-256 of the Markdown body."`
+	Markdown    string   `json:"markdown" desc:"Full page body in Markdown."`
+	Chunks      []Chunk  `json:"chunks" desc:"Retrieval-sized pieces of the page."`
 }
 
 type Chunk struct {
-	ID           string   `json:"id"`
-	Anchor       string   `json:"anchor"`
-	URL          string   `json:"url"`
-	Level        int      `json:"level"`
-	HeadingPath  []string `json:"headingPath"`
-	Markdown     string   `json:"markdown"`
-	CharCount    int      `json:"charCount"`
-	ApproxTokens int      `json:"approxTokens"`
+	ID           string   `json:"id" desc:"Identifier of the chunk (document id plus anchor or ordinal)."`
+	Anchor       string   `json:"anchor,omitempty" desc:"HTML heading anchor the chunk starts at, if any."`
+	URL          string   `json:"url" desc:"URL of the page, with the anchor fragment when present."`
+	Level        int      `json:"level" desc:"Heading level of the chunk (1 for the preamble)."`
+	HeadingPath  []string `json:"headingPath" desc:"Titles from the page title down to the chunk heading."`
+	Markdown     string   `json:"markdown" desc:"Markdown of the chunk."`
+	CharCount    int      `json:"charCount" desc:"Length of the chunk Markdown in characters."`
+	ApproxTokens int      `json:"approxTokens" desc:"Rough token estimate (charCount / 4)."`
 }
 
 // Export converts every page listed in `<publicDir>/<lang>/ai/ai.json` to
@@ -195,12 +199,18 @@ func Export(publicDir, lang string, logger *log.Logger) error {
 		return fmt.Errorf("create %s: %w", destDir, err)
 	}
 
+	schema, err := corpusSchemaJSON()
+	if err != nil {
+		return fmt.Errorf("build corpus schema: %w", err)
+	}
+
 	corpus := Corpus{
 		Version:     corpusVersion,
 		ProductCode: manifest.ProductCode,
 		Lang:        lang,
 		Generator:   generator,
 		BaseURL:     baseURL,
+		Schema:      schema,
 		Documents:   documents,
 	}
 
@@ -338,7 +348,6 @@ func exportPage(publicDir, baseURL string, manifest *Manifest, entry ManifestDoc
 		Editions:    editions,
 		Stage:       entry.Stage,
 		Channel:     entry.Channel,
-		SearchBoost: entry.SearchBoost,
 		ContentHash: fmt.Sprintf("sha256:%x", sha256.Sum256([]byte(page.Markdown))),
 		Markdown:    page.Markdown,
 		Chunks:      chunk(id, entry.URL, title, page.Markdown, page.Headings),
