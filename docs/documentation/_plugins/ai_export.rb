@@ -354,7 +354,7 @@ module Jekyll
         end
 
         if @root
-          lines << "## #{@site.data.dig("i18n", "common", "modules", lang).to_s.capitalize} (llms.txt)"
+          lines << "## #{@site.data.dig("i18n", "common", "modules_embedded", lang).to_s.capitalize} (llms.txt)"
           lines << ""
           lines << "- [embedded-llms.txt](#{absolute(lang, "/modules/embedded-llms.txt")}): #{@site.data.dig("i18n", "common", "aiLlmsRefDescriptionEmbeddedModules", lang).to_s}"
           lines << "- [external-llms.txt](#{absolute(lang, "/modules/external-llms.txt")}): #{@site.data.dig("i18n", "common", "aiLlmsRefDescriptionExternalModules", lang).to_s}"

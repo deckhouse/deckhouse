@@ -52,14 +52,19 @@ const (
 // (`content/ai/ai.md`). Hugo knows the page metadata; this package knows how to
 // turn the rendered HTML into Markdown, so the two meet here.
 type Manifest struct {
-	Version     int                `json:"version"`
-	ProductCode string             `json:"productCode"`
-	Generator   string             `json:"generator"`
-	Lang        string             `json:"lang"`
-	BaseURL     string             `json:"baseUrl"`
-	Title       string             `json:"title"`
-	Description string             `json:"description"`
-	Documents   []ManifestDocument `json:"documents"`
+	Version     int    `json:"version"`
+	ProductCode string `json:"productCode"`
+	Generator   string `json:"generator"`
+	Lang        string `json:"lang"`
+	BaseURL     string `json:"baseUrl"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	// Localized llms.txt preamble lines, produced by Hugo from `i18n/*.yaml`;
+	// empty in an older manifest, in which case renderLLMsTxt falls back to
+	// English (see defaultLLMsIntro / defaultLLMsVersionNote).
+	LlmsIntro       string             `json:"llmsIntro"`
+	LlmsVersionNote string             `json:"llmsVersionNote"`
+	Documents       []ManifestDocument `json:"documents"`
 }
 
 type ManifestDocument struct {
@@ -379,14 +384,31 @@ func renderFrontmatter(front frontmatter) (string, error) {
 	return "---\n" + string(body) + "---\n\n", nil
 }
 
+// The English preamble lines, used when the manifest carries no localized ones
+// (an older Hugo template; see Manifest.LlmsIntro / LlmsVersionNote).
+const (
+	defaultLLMsIntro       = "The content below is for Deckhouse Platform external modules."
+	defaultLLMsVersionNote = "The Deckhouse Platform modules version described in the documentation may differ from the version used in a specific cluster."
+)
+
 // renderLLMsTxt builds the llms.txt-format index: one section per module, in the order
 // the modules appear in the sorted document list.
 func renderLLMsTxt(manifest *Manifest, baseURL string, documents []Document) string {
 	var out strings.Builder
 
+	intro := manifest.LlmsIntro
+	if intro == "" {
+		intro = defaultLLMsIntro
+	}
+
+	versionNote := manifest.LlmsVersionNote
+	if versionNote == "" {
+		versionNote = defaultLLMsVersionNote
+	}
+
 	out.WriteString("# " + manifest.Title + "\n\n")
-	out.WriteString("> The content below is for Deckhouse Platform external modules.\n\n")
-	out.WriteString("> Note that the documented version may differ from the version actually used in a cluster.\n\n")
+	out.WriteString("> " + intro + "\n\n")
+	out.WriteString(versionNote + "\n\n")
 
 	var order []string
 	byModule := map[string][]Document{}
