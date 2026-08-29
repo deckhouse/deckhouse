@@ -213,7 +213,6 @@ module Jekyll
           "keywords" => keywords_of(page),
           "module" => module_name,
           "moduleType" => module_name ? "embedded" : nil,
-          "version" => doc_version,
           "editions" => editions_of(module_name),
           "stage" => stage_of(module_name),
           "contentHash" => "sha256:#{Digest::SHA256.hexdigest(converted.markdown)}",
@@ -222,9 +221,11 @@ module Jekyll
         }
 
         # Drop the optional fields that do not apply to this page (a
-        # documentation page has no module/version/stage), mirroring the
-        # omitempty contract of the Go structs so the embedded schema validates
-        # the output of both generators.
+        # documentation page has no module or stage), mirroring the omitempty
+        # contract of the Go structs so the embedded schema validates the output
+        # of both generators. `version` is omitted on the whole Jekyll side: the
+        # real content version (a git tag/branch) is not available at build time,
+        # unlike the external modules built by Hugo.
         doc.compact
       end
 
@@ -239,7 +240,6 @@ module Jekyll
           "description" => doc["description"],
           "canonical" => absolute(lang, url),
           "lang" => lang,
-          "version" => doc["version"],
           "module" => doc["module"],
           "moduleType" => doc["moduleType"],
           "editions" => doc["editions"],
@@ -248,14 +248,6 @@ module Jekyll
         data.reject! { |_, value| value.nil? || (value.respond_to?(:empty?) && value.empty?) }
 
         "#{data.to_yaml}---\n\n"
-      end
-
-      # The documentation version segment of the canonical prefix (`v1`), shared
-      # by every page of a build. Not a module version — the same value labels a
-      # documentation page and an embedded module page of the same build.
-      def doc_version
-        segment = @doc_prefix.split("/").last.to_s
-        segment.match?(/\Av\d+\z/) ? segment : nil
       end
 
       def description_of(page)
