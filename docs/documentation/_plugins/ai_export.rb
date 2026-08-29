@@ -118,6 +118,11 @@ module Jekyll
         return false unless page.url.match?(%r{\A/(en|ru)/})
         return true if page.data["searchable"] == true
 
+        # Pages dropped from the search index but valuable to an agent: the FAQ
+        # index (its answers are assembled from an include) and the OpenAPI
+        # reference pages.
+        return true if page.data["faqIndexPage"] == true
+
         page.name.to_s.match?(REFERENCE_PAGE_NAMES)
       end
 
@@ -399,8 +404,10 @@ module Jekyll
         title_label = ->(doc) { doc["title"] }
 
         result = []
-        loose = []
 
+        # Every top-level sidebar entry becomes its own section titled by its
+        # sidebar title, in sidebar order — a folder gathers its whole subtree, a
+        # bare page (the docs index, FAQ, release notes) is a section of one.
         (@site.data.dig("sidebars", "main", "entries") || []).each do |entry|
           next if entry["draft"] == true
 
@@ -408,14 +415,8 @@ module Jekyll
           collected = collect_entry(entry, by_url, used)
           next if collected.empty?
 
-          if entry["folders"].is_a?(Array)
-            result << { title: title.to_s, documents: collected, label: title_label }
-          else
-            loose.concat(collected)
-          end
+          result << { title: title.to_s, documents: collected, label: title_label }
         end
-
-        result.unshift({ title: site_title(lang), documents: loose, label: title_label }) unless loose.empty?
 
         modules = documents.reject { |doc| used[doc["url"]] }.select { |doc| doc["module"] }
         unless modules.empty?
