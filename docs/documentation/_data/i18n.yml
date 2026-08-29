@@ -494,6 +494,12 @@ common:
   aiLlmsRefDescriptionExternalModules:
     en: "External modules documentation index. File in llms.txt format."
     ru: "Индекс документации внешних модулей. Файл в формате llms.txt."
+  aiLlmsSummary:
+    en: "Documentation for the Deckhouse Kubernetes Platform: installation, administration, configuration, and use of the platform and its built-in modules."
+    ru: "Документация Deckhouse Kubernetes Platform: установка, администрирование, настройка и использование платформы и её встроенных модулей."
+  aiLlmsSummaryEmbedded:
+    en: "Documentation for the modules built into the Deckhouse Kubernetes Platform."
+    ru: "Документация модулей, встроенных в Deckhouse Kubernetes Platform."
 
 comparison:
   except_parameters:

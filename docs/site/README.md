@@ -720,7 +720,8 @@ Site parameters:
 | `AIllmsFileName` | Name of the llms.txt file. Default: `llms.txt`. |
 | `AIcorpusFileName` | Name of the corpus file. Default: `corpus.json`. |
 | `AIRoot` | Adds the `Optional` section with the links to the corpora. Set it in the build whose llms.txt is the entry point of the site. |
-| `ai_export.title`, `ai_export.summary` | The `# heading` and the `> summary` of llms.txt. Both accept a per-language hash. Fall back to `site_title` and `site_description`. |
+| `ai_export.title` | The `# heading` of llms.txt. Accepts a per-language hash. Falls back to `site_title`. |
+| `ai_export.summaryI18nKey` | Name of an `i18n.common` entry (`_data/i18n.yml`, per-language) to use as the `> summary` of llms.txt. Lets each build point at its own text — e.g. the embedded-modules build at a module-specific summary. Falls back to `site_description` when unset or empty. |
 
 The two file names are parameters because `docs/documentation` is built more than once and the results are published side by side. The main build takes them from `_config.yml`, the embedded modules build overrides them in `/tmp/_config_additional.yml` (see `werf-modules-static.inc.yaml`).
 

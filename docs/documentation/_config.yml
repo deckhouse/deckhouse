@@ -25,9 +25,12 @@ AIRoot: true
 AIllmsFileName: llms.txt
 AIcorpusFileName: corpus.json
 
-# The llms.txt summary falls back to site_description of the corresponding language.
+# summaryI18nKey names an i18n.common entry (_data/i18n.yml) used as the llms.txt
+# summary; it falls back to site_description if unset or empty. The embedded
+# modules build overrides it with aiLlmsSummaryEmbedded (werf-modules-static.inc.yaml).
 ai_export:
   title: Deckhouse Kubernetes Platform
+  summaryI18nKey: aiLlmsSummary
 
 metrics:
   google: G-4X28CEP7W2

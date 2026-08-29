@@ -97,6 +97,8 @@ shell:
         echo -e "\nAIExport: false\n" >> /tmp/_config_additional.yml
         {{ else }}
         echo -e "\nAIllmsFileName: embedded-llms.txt\nAIcorpusFileName: embedded-corpus.json\nAIRoot: false\n" >> /tmp/_config_additional.yml
+        # A module-specific llms.txt summary; deep-merges over ai_export.title from _config.yml.
+        echo -e "\nai_export:\n  summaryI18nKey: aiLlmsSummaryEmbedded\n" >> /tmp/_config_additional.yml
         {{ end }}
 
         echo '[] Generating static files of the documentation part...'

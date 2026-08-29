@@ -377,10 +377,17 @@ module Jekyll
         title.to_s.empty? ? @site.config["site_title"].to_s : title.to_s
       end
 
+      # The llms.txt summary. `ai_export.summaryI18nKey` names an entry under
+      # `i18n.common` (per-language), so the text lives with the other AI strings
+      # and a build can point at its own — e.g. the embedded-modules build to a
+      # module-specific summary. Falls back to `site_description` when the key is
+      # unset or resolves to nothing.
       def site_summary(lang)
-        summary = @site.config.dig("ai_export", "summary")
-        summary = summary[lang] if summary.is_a?(Hash)
-        return summary.to_s unless summary.to_s.empty?
+        key = @site.config.dig("ai_export", "summaryI18nKey").to_s
+        unless key.empty?
+          summary = @site.data.dig("i18n", "common", key, lang).to_s
+          return summary unless summary.empty?
+        end
 
         @site.config.dig("site_description", lang).to_s
       end
