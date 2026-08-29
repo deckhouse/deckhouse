@@ -79,16 +79,18 @@ func TestExport(t *testing.T) {
 		t.Fatalf("Export: %v", err)
 	}
 
-	markdown := readFile(t, filepath.Join(publicDir, "en", "modules", "prompp", "stable", "readme.md"))
+	// The directory root README is normalized to index.md (no authored index in
+	// the directory), so a directory link resolves to it without a redirect.
+	markdown := readFile(t, filepath.Join(publicDir, "en", "modules", "prompp", "stable", "index.md"))
 
 	front, body, ok := strings.Cut(markdown, "---\n\n")
 	if !ok {
-		t.Fatalf("readme.md has no frontmatter delimiter:\n%s", markdown)
+		t.Fatalf("index.md has no frontmatter delimiter:\n%s", markdown)
 	}
 
 	// The heading keeps its HTML anchor as a `{#id}` attribute.
 	if want := "# Prompp\n\nFast Prometheus.\n\n## Usage {#usage}\n\nEnable it.\n"; body != want {
-		t.Errorf("readme.md body:\ngot:\n%s\nwant:\n%s", body, want)
+		t.Errorf("index.md body:\ngot:\n%s\nwant:\n%s", body, want)
 	}
 
 	for _, want := range []string{
@@ -119,7 +121,7 @@ func TestExport(t *testing.T) {
 	}
 
 	document := corpus.Documents[0]
-	if document.MdURL != "/modules/prompp/stable/readme.md" {
+	if document.MdURL != "/modules/prompp/stable/index.md" {
 		t.Errorf("mdUrl = %q", document.MdURL)
 	}
 	if document.Path != "modules/prompp/stable/readme" {
@@ -152,7 +154,7 @@ func TestExport(t *testing.T) {
 		"> The content below is for Deckhouse Platform external modules.",
 		"> Note that the documented version may differ from the version actually used in a cluster.",
 		"## prompp",
-		"- [Prompp](https://deckhouse.io/modules/prompp/stable/readme.md): A drop-in Prometheus replacement.",
+		"- [Prompp](https://deckhouse.io/modules/prompp/stable/index.md): A drop-in Prometheus replacement.",
 	} {
 		if !strings.Contains(llms, want) {
 			t.Errorf("external-llms.txt is missing %q:\n%s", want, llms)
@@ -164,6 +166,65 @@ func TestExport(t *testing.T) {
 	// is linked from there and does not repeat them.
 	if strings.Contains(llms, "## Optional") {
 		t.Errorf("external-llms.txt has an Optional section:\n%s", llms)
+	}
+}
+
+func TestExportNormalizesReadmeToIndex(t *testing.T) {
+	publicDir := t.TempDir()
+
+	// `solo` has only a README; `paired` has both a README and an authored
+	// index page in the same directory.
+	page := func(title string) string {
+		return `<html><body><div class="post-content"><p>` + title + `.</p></div></body></html>`
+	}
+	writeFile(t, filepath.Join(publicDir, "en", "modules", "solo", "stable", "readme.html"), page("Solo"))
+	writeFile(t, filepath.Join(publicDir, "en", "modules", "paired", "stable", "readme.html"), page("Paired readme"))
+	writeFile(t, filepath.Join(publicDir, "en", "modules", "paired", "stable", "index.html"), page("Paired index"))
+
+	manifest := Manifest{
+		Version: 1, Lang: "en", BaseURL: "https://deckhouse.io", Title: "Modules",
+		Documents: []ManifestDocument{
+			{Title: "Solo", URL: "/modules/solo/stable/readme.html", HTMLPath: "/en/modules/solo/stable/readme.html", Module: "solo"},
+			{Title: "Paired readme", URL: "/modules/paired/stable/readme.html", HTMLPath: "/en/modules/paired/stable/readme.html", Module: "paired"},
+			{Title: "Paired index", URL: "/modules/paired/stable/index.html", HTMLPath: "/en/modules/paired/stable/index.html", Module: "paired"},
+		},
+	}
+	encoded, err := json.Marshal(manifest)
+	if err != nil {
+		t.Fatalf("marshal manifest: %v", err)
+	}
+	writeFile(t, filepath.Join(publicDir, "en", "ai", "ai.json"), string(encoded))
+
+	if err := Export(publicDir, "en", log.NewNop()); err != nil {
+		t.Fatalf("Export: %v", err)
+	}
+
+	// A lone README normalizes to index.md; readme.md must not be written.
+	assertFileExists(t, filepath.Join(publicDir, "en", "modules", "solo", "stable", "index.md"))
+	assertFileAbsent(t, filepath.Join(publicDir, "en", "modules", "solo", "stable", "readme.md"))
+
+	// With an authored index in the directory, the README keeps its own name so
+	// it does not clobber the index.
+	assertFileExists(t, filepath.Join(publicDir, "en", "modules", "paired", "stable", "readme.md"))
+	assertFileExists(t, filepath.Join(publicDir, "en", "modules", "paired", "stable", "index.md"))
+
+	var corpus Corpus
+	if err := json.Unmarshal([]byte(readFile(t, filepath.Join(publicDir, "en", "modules", "external-corpus.json"))), &corpus); err != nil {
+		t.Fatalf("parse external-corpus.json: %v", err)
+	}
+
+	mdURLByTitle := map[string]string{}
+	for _, doc := range corpus.Documents {
+		mdURLByTitle[doc.Title] = doc.MdURL
+	}
+	for title, want := range map[string]string{
+		"Solo":          "/modules/solo/stable/index.md",
+		"Paired readme": "/modules/paired/stable/readme.md",
+		"Paired index":  "/modules/paired/stable/index.md",
+	} {
+		if got := mdURLByTitle[title]; got != want {
+			t.Errorf("mdUrl of %q = %q, want %q", title, got, want)
+		}
 	}
 }
 
@@ -198,7 +259,7 @@ func TestExportRewritesInternalLinks(t *testing.T) {
 		t.Fatalf("Export: %v", err)
 	}
 
-	markdown := readFile(t, filepath.Join(publicDir, "en", "modules", "demo", "stable", "readme.md"))
+	markdown := readFile(t, filepath.Join(publicDir, "en", "modules", "demo", "stable", "index.md"))
 
 	for _, want := range []string{
 		// A plain root-relative `.html` target.
@@ -234,6 +295,22 @@ func writeFile(t *testing.T, path, content string) {
 
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatalf("write %s: %v", path, err)
+	}
+}
+
+func assertFileExists(t *testing.T, path string) {
+	t.Helper()
+
+	if _, err := os.Stat(path); err != nil {
+		t.Errorf("expected %s to exist: %v", path, err)
+	}
+}
+
+func assertFileAbsent(t *testing.T, path string) {
+	t.Helper()
+
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Errorf("expected %s to be absent, stat err = %v", path, err)
 	}
 }
 

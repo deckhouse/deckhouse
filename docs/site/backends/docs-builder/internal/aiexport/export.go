@@ -153,8 +153,18 @@ func Export(publicDir, lang string, logger *log.Logger) error {
 	baseURL := strings.TrimRight(manifest.BaseURL, "/")
 	documents := make([]Document, 0, len(manifest.Documents))
 
+	// Directories that hold an authored index page (`index.html`); a module
+	// readme in such a directory keeps its own name instead of being normalized
+	// to `index.md` (see mdTwin).
+	indexDirs := make(map[string]bool)
 	for _, entry := range manifest.Documents {
-		document, err := exportPage(publicDir, baseURL, manifest, entry, logger)
+		if path.Base(entry.URL) == "index.html" {
+			indexDirs[path.Dir(entry.URL)] = true
+		}
+	}
+
+	for _, entry := range manifest.Documents {
+		document, err := exportPage(publicDir, baseURL, manifest, entry, indexDirs, logger)
 		if err != nil {
 			return err
 		}
@@ -235,7 +245,7 @@ func readManifest(manifestPath string) (*Manifest, error) {
 	return manifest, nil
 }
 
-func exportPage(publicDir, baseURL string, manifest *Manifest, entry ManifestDocument, logger *log.Logger) (*Document, error) {
+func exportPage(publicDir, baseURL string, manifest *Manifest, entry ManifestDocument, indexDirs map[string]bool, logger *log.Logger) (*Document, error) {
 	htmlPath := filepath.Join(publicDir, filepath.FromSlash(strings.TrimPrefix(entry.HTMLPath, "/")))
 
 	source, err := os.ReadFile(htmlPath)
@@ -301,7 +311,12 @@ func exportPage(publicDir, baseURL string, manifest *Manifest, entry ManifestDoc
 		return nil, fmt.Errorf("frontmatter %s: %w", htmlPath, err)
 	}
 
-	mdPath := strings.TrimSuffix(htmlPath, filepath.Ext(htmlPath)) + ".md"
+	// Both the file on disk and the published URL follow the same normalization:
+	// the directory root (`readme.html`) becomes `index.md` unless the directory
+	// has an authored index.
+	twin := mdTwin(entry.URL, indexDirs)
+
+	mdPath := filepath.Join(filepath.Dir(htmlPath), path.Base(twin))
 	if err := os.WriteFile(mdPath, []byte(front+page.Markdown+"\n"), 0o644); err != nil {
 		return nil, fmt.Errorf("write %s: %w", mdPath, err)
 	}
@@ -313,7 +328,7 @@ func exportPage(publicDir, baseURL string, manifest *Manifest, entry ManifestDoc
 		Title:       title,
 		Description: description,
 		URL:         entry.URL,
-		MdURL:       mdURL(entry.URL),
+		MdURL:       twin,
 		Path:        strings.Trim(strings.TrimSuffix(entry.URL, ".html"), "/"),
 		Lang:        manifest.Lang,
 		Breadcrumbs: []string{manifest.Title, entry.Module, title},
@@ -392,12 +407,24 @@ func renderLLMsTxt(manifest *Manifest, baseURL string, documents []Document) str
 	return out.String()
 }
 
-func mdURL(pageURL string) string {
+// mdTwin is the public path of a page's Markdown twin. The directory root of a
+// module (`readme.html`) is normalized to `index.md`, so a directory link
+// resolves to it directly, without a server-side redirect. The exception is a
+// directory that already holds an authored index (`index.html`): there the
+// readme keeps its own `readme.md` name, so it does not clobber that index.
+func mdTwin(pageURL string, indexDirs map[string]bool) string {
 	if strings.HasSuffix(pageURL, "/") {
 		return pageURL + "index.md"
 	}
 
-	return strings.TrimSuffix(pageURL, path.Ext(pageURL)) + ".md"
+	base := path.Base(pageURL)
+
+	name := strings.TrimSuffix(base, path.Ext(base)) + ".md"
+	if base == "readme.html" && !indexDirs[path.Dir(pageURL)] {
+		name = "index.md"
+	}
+
+	return path.Join(path.Dir(pageURL), name)
 }
 
 // indexMdPath matches the URL templates whose directory links are rewritten to
