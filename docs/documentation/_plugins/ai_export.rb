@@ -247,7 +247,11 @@ module Jekyll
         }
         data.reject! { |_, value| value.nil? || (value.respond_to?(:empty?) && value.empty?) }
 
-        "#{data.to_yaml}---\n\n"
+        # `line_width: -1` disables Psych's line folding, so a long title or
+        # description stays on one line — valid YAML either way, but friendlier
+        # to consumers that read the header line by line rather than with a YAML
+        # parser. The Go exporter's yaml.v3 does not fold, so this matches it.
+        "#{data.to_yaml(line_width: -1)}---\n\n"
       end
 
       def description_of(page)
