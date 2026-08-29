@@ -712,18 +712,18 @@ The documentation `llms.txt` is the entry point: it links to the two module inde
 
 The plugin runs on the `site, :post_write` hook — `page.output` is complete only there, while `page.content` inside Liquid depends on the page render order.
 
-Site parameters:
+All settings live under the `ai_export` mapping in the site config (not to be confused with the per-page `ai_export: false` front-matter flag, which excludes a page):
 
 | Parameter | Meaning |
 | --- | --- |
-| `AIExport` | Enables the export. Nothing is generated unless it is `true`. |
-| `AIllmsFileName` | Name of the llms.txt file. Default: `llms.txt`. |
-| `AIcorpusFileName` | Name of the corpus file. Default: `corpus.json`. |
-| `AIRoot` | Adds the `Optional` section with the links to the corpora. Set it in the build whose llms.txt is the entry point of the site. |
+| `ai_export.enabled` | Enables the export. Nothing is generated unless it is `true`. |
+| `ai_export.root` | Adds the `Optional` section with the links to the corpora. Set it in the build whose llms.txt is the entry point of the site. |
+| `ai_export.llmsFileName` | Name of the llms.txt file. Default: `llms.txt`. |
+| `ai_export.corpusFileName` | Name of the corpus file. Default: `corpus.json`. |
 | `ai_export.title` | The `# heading` of llms.txt. Accepts a per-language hash. Falls back to `site_title`. |
 | `ai_export.summaryI18nKey` | Name of an `i18n.common` entry (`_data/i18n.yml`, per-language) to use as the `> summary` of llms.txt. Lets each build point at its own text — e.g. the embedded-modules build at a module-specific summary. Falls back to `site_description` when unset or empty. |
 
-The two file names are parameters because `docs/documentation` is built more than once and the results are published side by side. The main build takes them from `_config.yml`, the embedded modules build overrides them in `/tmp/_config_additional.yml` (see `werf-modules-static.inc.yaml`).
+The file names are parameters because `docs/documentation` is built more than once and the results are published side by side. The main build takes them from `_config.yml`, the embedded modules build deep-merges its overrides into the `ai_export` block via `/tmp/_config_additional.yml` (see `werf-modules-static.inc.yaml`).
 
 A page is exported if it is `searchable: true`, or if it is a `CONFIGURATION`/`CR`/`CLUSTER_CONFIGURATION` page generated from an OpenAPI schema — those are dropped from the search index but are the most valuable reference an agent can get. Set `ai_export: false` in the front matter (or in `defaults` of `_config.yml`, the way `pages/internal` and `pages/drafts` do) to keep a page out.
 

@@ -11,17 +11,19 @@ require_relative "navigation_helper"
 module Jekyll
   # Publishes the AI-friendly exports of the documentation:
   #
-  #   <lang>/<page path>.md         per-page Markdown body
-  #   <lang>/<AIcorpusFileName>     RAG corpus: metadata + Markdown + chunks
-  #   <lang>/<AIllmsFileName>       llms.txt index, grouped by the sidebar tree
+  #   <lang>/<page path>.md              per-page Markdown body
+  #   <lang>/<ai_export.corpusFileName> RAG corpus: metadata + Markdown + chunks
+  #   <lang>/<ai_export.llmsFileName>   llms.txt index, grouped by the sidebar tree
   #
-  # Disabled unless `AIExport: true` is set in the site config, and the two file
-  # names are taken from the config as well: the same source tree is built
-  # several times (the documentation itself and the embedded modules, see
+  # All settings live under the `ai_export` mapping in the site config. Disabled
+  # unless `ai_export.enabled` is true, and the two file names come from the
+  # config as well: the same source tree is built several times (the
+  # documentation itself and the embedded modules, see
   # `werf-documentation-static.inc.yaml` and `werf-modules-static.inc.yaml`),
   # and those builds publish their indexes side by side under different names.
-  # `AIRoot: true` marks the build whose llms.txt is the entry point of the
-  # site, the one that points an agent at the corpora.
+  # `ai_export.root` marks the build whose llms.txt is the entry point of the
+  # site, the one that points an agent at the corpora. (Not to be confused with
+  # the per-page `ai_export: false` front-matter flag, which excludes a page.)
   #
   # It runs on `site, :post_write` rather than as a Liquid template (the way
   # `search.json` is built) because `page.content` inside Liquid depends on the
@@ -31,23 +33,30 @@ module Jekyll
     PRODUCT_CODE = "kubernetes-platform"
     GENERATOR = "jekyll"
 
-    ENABLED_KEY = "AIExport"
-    ROOT_KEY = "AIRoot"
-    LLMS_NAME_KEY = "AIllmsFileName"
-    CORPUS_NAME_KEY = "AIcorpusFileName"
+    # Settings mapping in the site config and its subkeys.
+    CONFIG_KEY = "ai_export"
+    ENABLED_KEY = "enabled"
+    ROOT_KEY = "root"
+    LLMS_NAME_KEY = "llmsFileName"
+    CORPUS_NAME_KEY = "corpusFileName"
 
     DEFAULT_LLMS_NAME = "llms.txt"
     DEFAULT_CORPUS_NAME = "corpus.json"
 
-    # `--config a.yml,b.yml` merges plain YAML, so a flag arrives as a real
-    # boolean; a string is accepted too, since an `AIExport` that reads as
-    # "true" and silently exports nothing would be baffling.
+    # `--config a.yml,b.yml` deep-merges plain YAML, so a flag arrives as a real
+    # boolean; a string is accepted too, since an `enabled` that reads as "true"
+    # and silently exports nothing would be baffling.
     def self.truthy?(value)
       value == true || value.to_s.strip.casecmp("true").zero?
     end
 
+    def self.config(site)
+      cfg = site.config[CONFIG_KEY]
+      cfg.is_a?(Hash) ? cfg : {}
+    end
+
     def self.enabled?(site)
-      truthy?(site.config[ENABLED_KEY])
+      truthy?(config(site)[ENABLED_KEY])
     end
 
     # An H2 section longer than this is split further, by H3.
@@ -77,9 +86,10 @@ module Jekyll
         @site = site
         @doc_prefix = site.config["canonical_url_prefix_documentation"].to_s.sub(%r{/+\z}, "")
         @urls = site.config["urls"] || {}
-        @llms_name = file_name(LLMS_NAME_KEY, DEFAULT_LLMS_NAME)
-        @corpus_name = file_name(CORPUS_NAME_KEY, DEFAULT_CORPUS_NAME)
-        @root = AiExport.truthy?(site.config[ROOT_KEY])
+        cfg = AiExport.config(site)
+        @llms_name = file_name(cfg[LLMS_NAME_KEY], DEFAULT_LLMS_NAME)
+        @corpus_name = file_name(cfg[CORPUS_NAME_KEY], DEFAULT_CORPUS_NAME)
+        @root = AiExport.truthy?(cfg[ROOT_KEY])
       end
 
       def run
@@ -101,8 +111,8 @@ module Jekyll
       # A name is a single file name, not a path: the exports always land next
       # to each other in `<dest>/<lang>/`, and the URLs published in llms.txt
       # are built from it.
-      def file_name(key, fallback)
-        name = File.basename(@site.config[key].to_s.strip)
+      def file_name(value, fallback)
+        name = File.basename(value.to_s.strip)
         return fallback if name.empty? || name == "."
 
         name
