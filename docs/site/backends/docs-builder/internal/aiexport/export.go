@@ -299,7 +299,6 @@ func exportPage(publicDir, baseURL string, manifest *Manifest, entry ManifestDoc
 		Description: description,
 		Canonical:   baseURL + entry.URL,
 		Lang:        manifest.Lang,
-		ProductCode: manifest.ProductCode,
 		Version:     entry.Version,
 		Module:      entry.Module,
 		ModuleType:  "external",
@@ -354,7 +353,6 @@ type frontmatter struct {
 	Description string   `yaml:"description,omitempty"`
 	Canonical   string   `yaml:"canonical"`
 	Lang        string   `yaml:"lang"`
-	ProductCode string   `yaml:"productCode"`
 	Version     string   `yaml:"version,omitempty"`
 	Module      string   `yaml:"module,omitempty"`
 	ModuleType  string   `yaml:"moduleType"`

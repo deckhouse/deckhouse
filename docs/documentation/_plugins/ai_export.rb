@@ -236,7 +236,6 @@ module Jekyll
           "description" => doc["description"],
           "canonical" => absolute(lang, url),
           "lang" => lang,
-          "productCode" => PRODUCT_CODE,
           "version" => doc["version"],
           "module" => doc["module"],
           "moduleType" => doc["moduleType"],

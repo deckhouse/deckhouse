@@ -98,7 +98,6 @@ func TestExport(t *testing.T) {
 		"description: A drop-in Prometheus replacement.",
 		"canonical: https://deckhouse.io/modules/prompp/stable/readme.html",
 		"lang: en",
-		"productCode: external-modules",
 		"version: v1.2.3",
 		"module: prompp",
 		"moduleType: external",
@@ -109,6 +108,11 @@ func TestExport(t *testing.T) {
 		if !strings.Contains(front, want) {
 			t.Errorf("readme.md frontmatter is missing %q:\n%s", want, front)
 		}
+	}
+
+	// productCode is a corpus-level field only; it must not leak into the header.
+	if strings.Contains(front, "productCode") {
+		t.Errorf("frontmatter should not contain productCode:\n%s", front)
 	}
 
 	var corpus Corpus
