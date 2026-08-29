@@ -236,6 +236,9 @@ func TestExportRewritesInternalLinks(t *testing.T) {
 			`<a href="/modules/demo/stable/cr.html">CR</a> `+
 			`<a href="/modules/other/stable/">Other</a> `+
 			`<a href="/modules/demo/stable/cr.html#config">Config</a> `+
+			`<a href="#section">Section</a> `+
+			`<a href="readme.html#other-section">Self</a> `+
+			`<a href="/modules/widget/stable/readme.html">Widget</a> `+
 			`<a href="https://deckhouse.io/products/kubernetes-platform/documentation/v1/architecture/versioning/">Versioning</a> `+
 			`<a href="https://deckhouse.io/products/kubernetes-platform/documentation/v1/user/web/ui.html">UI</a> `+
 			`<a href="https://example.com/guide/">External</a> `+
@@ -268,6 +271,13 @@ func TestExportRewritesInternalLinks(t *testing.T) {
 		"(https://deckhouse.io/modules/other/stable/index.md)",
 		// Fragment is preserved.
 		"(https://deckhouse.io/modules/demo/stable/cr.md#config)",
+		// A bare in-page anchor points at this page's own file — index.md, the
+		// normalized README, not readme.md.
+		"(https://deckhouse.io/modules/demo/stable/index.md#section)",
+		// An explicit link to the README follows the same normalization.
+		"(https://deckhouse.io/modules/demo/stable/index.md#other-section)",
+		// A link to another module's README lands on its index.md too.
+		"(https://deckhouse.io/modules/widget/stable/index.md)",
 		// A same-site link written absolute is still rewritten — directory form.
 		"(https://deckhouse.io/products/kubernetes-platform/documentation/v1/architecture/versioning/index.md)",
 		// ...and .html form.

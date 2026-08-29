@@ -261,7 +261,7 @@ func exportPage(publicDir, baseURL string, manifest *Manifest, entry ManifestDoc
 		return nil, fmt.Errorf("read %s: %w", htmlPath, err)
 	}
 
-	page, err := ConvertPage(string(source), Options{BaseURL: baseURL, PageURL: entry.URL, RewriteLink: mdLink})
+	page, err := ConvertPage(string(source), Options{BaseURL: baseURL, PageURL: entry.URL, RewriteLink: linkRewriter(indexDirs)})
 	if err != nil {
 		return nil, fmt.Errorf("convert %s: %w", htmlPath, err)
 	}
@@ -432,36 +432,40 @@ func mdTwin(pageURL string, indexDirs map[string]bool) string {
 // `INDEX_MD_PATH` of `_plugins/ai_export.rb`.
 var indexMdPath = regexp.MustCompile(`^/(?:products/[^/]+/documentation|modules)/`)
 
-// mdLink rewrites an internal documentation link to its Markdown twin:
+// linkRewriter rewrites an internal documentation link to its Markdown twin:
 // `/a/b.html` -> `/a/b.md`, and a directory `/a/b/` -> `/a/b/index.md`. A
 // directory is rewritten only under the documentation and modules templates
 // (see indexMdPath).
 //
-// The `.html` rewrite is unconditional: a link to a page that has no `.md` (a
-// genuinely HTML-only page, or a page from another build) is rewritten anyway.
-// That keeps cross-build links (an embedded module page linking into the
-// documentation) working and matches the site's redirects; the alternative — a
-// per-build index of exported pages — cannot see the other builds' pages at all.
-func mdLink(link string) string {
-	head, tail := splitLinkTail(link)
+// The `.html` rewrite goes through mdTwin, so a link to a module's directory
+// README — including an in-page anchor like `readme.html#section`, which is how
+// a `#section` link on the page itself arrives here — follows the same
+// `readme.html` -> `index.md` normalization as the file that is actually
+// written. It is otherwise unconditional: a link to a page that has no `.md`
+// (an HTML-only page, or a page from another build) is rewritten anyway, which
+// keeps cross-build links working and matches the site's redirects.
+func linkRewriter(indexDirs map[string]bool) func(string) string {
+	return func(link string) string {
+		head, tail := splitLinkTail(link)
 
-	switch {
-	case strings.HasSuffix(head, "/"):
-		if !indexMdPath.MatchString(head) {
-			// A directory outside the documentation and modules space keeps its
-			// HTML URL.
+		switch {
+		case strings.HasSuffix(head, "/"):
+			if !indexMdPath.MatchString(head) {
+				// A directory outside the documentation and modules space keeps
+				// its HTML URL.
+				return link
+			}
+
+			head += "index.md"
+		case strings.HasSuffix(head, ".html"):
+			head = mdTwin(head, indexDirs)
+		default:
+			// Not a page link (an asset, or an extensionless path): leave it alone.
 			return link
 		}
 
-		head += "index.md"
-	case strings.HasSuffix(head, ".html"):
-		head = strings.TrimSuffix(head, ".html") + ".md"
-	default:
-		// Not a page link (an asset, or an extensionless path): leave it alone.
-		return link
+		return head + tail
 	}
-
-	return head + tail
 }
 
 // splitLinkTail separates the path from a trailing `?query` and/or `#fragment`
