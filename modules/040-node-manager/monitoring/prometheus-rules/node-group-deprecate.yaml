@@ -34,8 +34,8 @@
       plk_grouped_by__cluster_has_node_groups_deprecation_alerts: "NodeGroupsDeprecationAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: NodeGroup {{ $labels.name }} uses the deprecated built-in GPU support.
       description: |
-        NodeGroup {{ $labels.name }} has `spec.gpu` configured while the `gpu` module is disabled,
-        so its GPU nodes are served by the built-in GPU support.
-        Built-in GPU support is deprecated and will be removed.
+        NodeGroup `{{ $labels.name }}` has [`spec.gpu`](/modules/node-manager/cr.html#nodegroup-v1-spec-gpu) configured while the `gpu` module is disabled.
+        As a result, GPU nodes in the NodeGroup use the built-in GPU support,
+        which is deprecated and will be removed in a future DKP release.
 
-        The `gpu` module must be enabled.
+        To use the supported GPU implementation, enable the [`gpu`](/modules/gpu/) module.
