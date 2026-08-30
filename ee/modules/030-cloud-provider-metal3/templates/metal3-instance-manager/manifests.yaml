@@ -1,13 +1,5 @@
-{{- $hostManager := .Values.cloudProviderMetal3.hostManager | default dict -}}
-{{- if $hostManager.enabled }}
-{{- $defaultOnline := true -}}
-{{- if hasKey $hostManager "defaultOnline" -}}
-{{- $defaultOnline = $hostManager.defaultOnline -}}
-{{- end -}}
-{{- $defaultDisableAutomatedCleaning := false -}}
-{{- if hasKey $hostManager "defaultDisableAutomatedCleaning" -}}
-{{- $defaultDisableAutomatedCleaning = $hostManager.defaultDisableAutomatedCleaning -}}
-{{- end -}}
+{{- $ironic := dig "nodes" "parameters" "ironic" dict .Values.cloudProviderMetal3 -}}
+{{- if $ironic }}
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -106,9 +98,7 @@ spec:
       - name: manager
         image: {{ include "helm_lib_module_image" (list . "metal3InstanceManager") }}
         args:
-        - --target-namespace={{ $hostManager.targetNamespace | default "d8-cloud-instance-manager" }}
-        - --default-online={{ $defaultOnline }}
-        - --default-disable-automated-cleaning={{ $defaultDisableAutomatedCleaning }}
+        - --target-namespace=d8-cloud-instance-manager
         resources:
           requests:
             cpu: 10m

@@ -294,6 +294,7 @@ rules:
   - dynamixinstanceclasses
   - huaweicloudinstanceclasses
   - metal3instanceclasses
+  - metal3images
   - openstackinstanceclasses
   - vcdinstanceclasses
   - vsphereinstanceclasses
