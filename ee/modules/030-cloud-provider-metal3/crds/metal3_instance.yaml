@@ -63,7 +63,6 @@ spec:
             type: object
           spec:
             type: object
-            additionalProperties: false
             required:
             - bootMACAddress
             - bmc
@@ -78,7 +77,6 @@ spec:
                 description: MAC address of the NIC used for PXE boot.
               bmc:
                 type: object
-                additionalProperties: false
                 required:
                 - ipAddress
                 - systemUUID
@@ -100,7 +98,6 @@ spec:
                     description: UUID of the physical ComputerSystem managed by this BMC.
                   credentialsRef:
                     type: object
-                    additionalProperties: false
                     required:
                     - kind
                     - name
