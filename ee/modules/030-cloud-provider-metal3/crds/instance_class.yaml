@@ -43,13 +43,11 @@ spec:
             type: object
           spec:
             type: object
-            additionalProperties: false
             required:
             - imageRef
             properties:
               imageRef:
                 type: object
-                additionalProperties: false
                 description: Reference to the Metal3Image deployed through Ironic.
                 required:
                 - kind
@@ -148,13 +146,11 @@ spec:
             type: object
           spec:
             type: object
-            additionalProperties: false
             required:
             - imageRef
             properties:
               imageRef:
                 type: object
-                additionalProperties: false
                 description: Reference to the Metal3Image deployed through Ironic.
                 required:
                 - kind

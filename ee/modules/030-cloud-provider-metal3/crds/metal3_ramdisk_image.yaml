@@ -43,13 +43,11 @@ spec:
             type: object
           spec:
             type: object
-            additionalProperties: false
             required:
             - direct
             properties:
               direct:
                 type: object
-                additionalProperties: false
                 required:
                 - kernelURL
                 - initramfsURL
