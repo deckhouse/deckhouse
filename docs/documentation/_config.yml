@@ -19,15 +19,20 @@ github_repo_path: /deckhouse/deckhouse
 d8Revision: EE
 
 # AI-friendly exports: llms.txt, corpus.json and per-page Markdown (_plugins/ai_export.rb).
-AIExport: true
-# AIRoot add the "Optional" section to llms.txt  with the links to the llms.txt and corpus.json of the embedded and external modules.
-AIRoot: true
-AIllmsFileName: llms.txt
-AIcorpusFileName: corpus.json
-
-# The llms.txt summary falls back to site_description of the corresponding language.
+# The embedded modules build overrides some of these in werf-modules-static.inc.yaml.
 ai_export:
+  # Nothing is generated unless `enabled` is true.
+  enabled: true
+  # `root` adds the "Optional" section to llms.txt with links to the llms.txt and
+  # corpus.json of the embedded and external modules. Set it in the build whose
+  # llms.txt is the entry point of the site.
+  root: true
+  llmsFileName: llms.txt
+  corpusFileName: corpus.json
   title: Deckhouse Kubernetes Platform
+  # summaryI18nKey names an i18n.common entry (_data/i18n.yml) used as the llms.txt
+  # summary; it falls back to site_description if unset or empty.
+  summaryI18nKey: aiLlmsSummary
 
 metrics:
   google: G-4X28CEP7W2
