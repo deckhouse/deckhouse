@@ -1,5 +1,5 @@
-{{- $ironic := .Values.cloudProviderMetal3.ironic | default dict -}}
-{{- if $ironic.enabled }}
+{{- $ironic := dig "nodes" "parameters" "ironic" dict .Values.cloudProviderMetal3 -}}
+{{- if $ironic }}
 ---
 apiVersion: v1
 kind: ServiceAccount

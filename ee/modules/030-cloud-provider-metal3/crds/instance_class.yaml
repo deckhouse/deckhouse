@@ -43,41 +43,25 @@ spec:
             type: object
           spec:
             type: object
+            additionalProperties: false
             required:
-            - image
+            - imageRef
             properties:
-              image:
+              imageRef:
                 type: object
-                description: Image to deploy to a BareMetalHost through Ironic.
+                additionalProperties: false
+                description: Reference to the Metal3Image deployed through Ironic.
                 required:
-                - url
-                - checksum
-                - checksumType
+                - kind
+                - name
                 properties:
-                  url:
+                  kind:
                     type: string
-                    description: HTTP(S) URL of the OS image.
-                    x-doc-example: http://172.22.0.10:6180/images/ubuntu-24.04.raw
-                  checksum:
-                    type: string
-                    description: Image checksum value.
-                    x-doc-example: 4571234c4f2d812d5051282b47545a2e5a7f96d02fce77e5a16f0217741e4d49
-                  checksumType:
-                    type: string
-                    description: Image checksum algorithm.
                     enum:
-                    - md5
-                    - sha256
-                    - sha512
-                  format:
+                    - Metal3Image
+                  name:
                     type: string
-                    description: Image disk format.
-                    enum:
-                    - raw
-                    - qcow2
-                    - vdi
-                    - vmdk
-                    - live-iso
+                    minLength: 1
               hostSelector:
                 type: object
                 description: BareMetalHost label selector used by CAPM3 to claim hosts.
@@ -109,9 +93,11 @@ spec:
                             type: string
               disableAutomatedCleaning:
                 type: boolean
+                default: false
                 description: Disables Ironic automated cleaning for claimed BareMetalHosts. By default metadata cleaning is enabled.
               nodeReuse:
                 type: boolean
+                default: false
                 description: Enables CAPM3 host reuse during upgrades.
               capacity:
                 type: object
@@ -162,41 +148,25 @@ spec:
             type: object
           spec:
             type: object
+            additionalProperties: false
             required:
-            - image
+            - imageRef
             properties:
-              image:
+              imageRef:
                 type: object
-                description: Image to deploy to a BareMetalHost through Ironic.
+                additionalProperties: false
+                description: Reference to the Metal3Image deployed through Ironic.
                 required:
-                - url
-                - checksum
-                - checksumType
+                - kind
+                - name
                 properties:
-                  url:
+                  kind:
                     type: string
-                    description: HTTP(S) URL of the OS image.
-                    x-doc-example: http://172.22.0.10:6180/images/ubuntu-24.04.raw
-                  checksum:
-                    type: string
-                    description: Image checksum value.
-                    x-doc-example: 4571234c4f2d812d5051282b47545a2e5a7f96d02fce77e5a16f0217741e4d49
-                  checksumType:
-                    type: string
-                    description: Image checksum algorithm.
                     enum:
-                    - md5
-                    - sha256
-                    - sha512
-                  format:
+                    - Metal3Image
+                  name:
                     type: string
-                    description: Image disk format.
-                    enum:
-                    - raw
-                    - qcow2
-                    - vdi
-                    - vmdk
-                    - live-iso
+                    minLength: 1
               hostSelector:
                 type: object
                 description: BareMetalHost label selector used by CAPM3 to claim hosts.
@@ -228,9 +198,11 @@ spec:
                             type: string
               disableAutomatedCleaning:
                 type: boolean
+                default: false
                 description: Disables Ironic automated cleaning for claimed BareMetalHosts. By default metadata cleaning is enabled.
               nodeReuse:
                 type: boolean
+                default: false
                 description: Enables CAPM3 host reuse during upgrades.
               capacity:
                 type: object

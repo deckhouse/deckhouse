@@ -1,73 +1,51 @@
-{{- $ironic := .Values.cloudProviderMetal3.ironic | default dict -}}
-{{- if $ironic.enabled }}
-{{- $provisioningNetwork := $ironic.provisioningNetwork | required "cloudProviderMetal3.ironic.provisioningNetwork is required when cloudProviderMetal3.ironic.enabled is true" -}}
+{{- $ironic := dig "nodes" "parameters" "ironic" dict .Values.cloudProviderMetal3 -}}
+{{- if and $ironic (not $ironic.externalInstance) }}
+{{- $provisioningNetwork := $ironic.provisioningNetwork -}}
 {{- $dhcp := $ironic.dhcp | default dict -}}
-{{- $external := $ironic.external | default dict -}}
-{{- $externalDHCP := $external.dhcp | default dict -}}
-{{- $api := $ironic.api | default dict -}}
-{{- $imageServer := $ironic.imageServer | default dict -}}
-{{- $imageServerPort := $imageServer.port | default 6180 -}}
-{{- $deployRamdisk := $ironic.deployRamdisk | default dict -}}
-{{- $ramdiskImage := $ironic.ramdiskImage | default dict -}}
-{{- $externalRamdiskImage := $ramdiskImage.external | default dict -}}
-{{- if and $dhcp $externalDHCP }}
-{{- fail "cloudProviderMetal3.ironic.dhcp and cloudProviderMetal3.ironic.external.dhcp are mutually exclusive" }}
+{{- $internalDHCP := $dhcp.internal | default dict -}}
+{{- $resolvedRamdisk := dig "internal" "ramdiskImage" "direct" dict .Values.cloudProviderMetal3 -}}
+{{- if and $internalDHCP.serveDNS $internalDHCP.dnsAddress -}}
+{{- fail "cloudProviderMetal3.nodes.parameters.ironic.dhcp.internal.serveDNS and dnsAddress cannot be used together" -}}
 {{- end }}
 ---
 apiVersion: ironic.metal3.io/v1alpha1
 kind: Ironic
 metadata:
-  name: "ironic"
+  name: ironic
   namespace: d8-cloud-provider-metal3
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 spec:
   images:
     ironic: {{ include "helm_lib_module_image" (list . "ironic") | quote }}
   deployRamdisk:
-    {{- if $deployRamdisk.sshKey }}
-    sshKey: {{ $deployRamdisk.sshKey | quote }}
-    {{- end }}
     disableDownloader: true
   overrides:
     agentImages:
-    {{- if $externalRamdiskImage }}
-    -
-      {{- if $externalRamdiskImage.architecture }}
-      architecture: {{ $externalRamdiskImage.architecture | quote }}
+    - architecture: {{ $resolvedRamdisk.architecture | default "x86_64" | quote }}
+      {{- if $resolvedRamdisk }}
+      kernel: {{ $resolvedRamdisk.kernelURL | quote }}
+      initramfs: {{ $resolvedRamdisk.initramfsURL | quote }}
+      {{- else }}
+      kernel: {{ printf "http://%s:6180/images/ironic-python-agent.kernel" $provisioningNetwork.ipAddress | quote }}
+      initramfs: {{ printf "http://%s:6180/images/ironic-python-agent.initramfs" $provisioningNetwork.ipAddress | quote }}
       {{- end }}
-      kernel: {{ $externalRamdiskImage.kernelURL | quote }}
-      initramfs: {{ $externalRamdiskImage.initramfsURL | quote }}
-    {{- else }}
-    -
-      architecture: "x86_64"
-      kernel: {{ printf "http://%s:%v/images/ironic-python-agent.kernel" $provisioningNetwork.ipAddress $imageServerPort | quote }}
-      initramfs: {{ printf "http://%s:%v/images/ironic-python-agent.initramfs" $provisioningNetwork.ipAddress $imageServerPort | quote }}
-    {{- end }}
   networking:
     interface: {{ $provisioningNetwork.interface | quote }}
     ipAddress: {{ $provisioningNetwork.ipAddress | quote }}
-    {{- if $provisioningNetwork.ipAddressManager }}
-    ipAddressManager: {{ $provisioningNetwork.ipAddressManager | quote }}
-    {{- end }}
-    {{- if $api.port }}
-    apiPort: {{ $api.port }}
-    {{- end }}
-    {{- if $imageServer.port }}
-    imageServerPort: {{ $imageServerPort }}
-    {{- end }}
-    {{- if $dhcp }}
+    ipAddressManager: {{ $provisioningNetwork.ipAddressManager | default "keepalived" | quote }}
+    apiPort: 6385
+    imageServerPort: 6180
+    {{- if $internalDHCP }}
     dhcp:
-      networkCIDR: {{ $dhcp.networkCIDR | quote }}
-      rangeBegin: {{ $dhcp.rangeBegin | quote }}
-      rangeEnd: {{ $dhcp.rangeEnd | quote }}
-      {{- if $dhcp.dnsAddress }}
-      dnsAddress: {{ $dhcp.dnsAddress | quote }}
+      networkCIDR: {{ $internalDHCP.networkCIDR | quote }}
+      rangeBegin: {{ $internalDHCP.rangeBegin | quote }}
+      rangeEnd: {{ $internalDHCP.rangeEnd | quote }}
+      {{- if $internalDHCP.dnsAddress }}
+      dnsAddress: {{ $internalDHCP.dnsAddress | quote }}
       {{- end }}
-      {{- if $dhcp.gatewayAddress }}
-      gatewayAddress: {{ $dhcp.gatewayAddress | quote }}
+      {{- if $internalDHCP.gatewayAddress }}
+      gatewayAddress: {{ $internalDHCP.gatewayAddress | quote }}
       {{- end }}
-      {{- if hasKey $dhcp "serveDNS" }}
-      serveDNS: {{ $dhcp.serveDNS }}
-      {{- end }}
+      serveDNS: {{ $internalDHCP.serveDNS | default false }}
     {{- end }}
 {{- end }}

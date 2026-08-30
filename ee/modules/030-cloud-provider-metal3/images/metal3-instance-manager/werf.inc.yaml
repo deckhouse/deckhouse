@@ -38,7 +38,7 @@ shell:
     - export GOPROXY={{ $.GOPROXY }}
     - cd /src
     - go mod download
-    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o /metal3-instance-manager cmd/metal3-instance-manager/main.go
+    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o /metal3-instance-manager ./cmd/metal3-instance-manager
     - chown 64535:64535 /metal3-instance-manager
     - chmod 0755 /metal3-instance-manager
 ---

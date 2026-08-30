@@ -24,6 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -36,6 +37,32 @@ func instanceClass(kind, name string) *unstructured.Unstructured {
 	u.SetKind(kind)
 	u.SetName(name)
 	return u
+}
+
+func TestMetal3ImageToNodeGroups(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, clientgoscheme.AddToScheme(scheme))
+	require.NoError(t, v1.AddToScheme(scheme))
+	classGVK := schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1", Kind: "Metal3InstanceClass"}
+	scheme.AddKnownTypeWithName(classGVK, &unstructured.Unstructured{})
+	scheme.AddKnownTypeWithName(classGVK.GroupVersion().WithKind("Metal3InstanceClassList"), &unstructured.UnstructuredList{})
+
+	class := instanceClass("Metal3InstanceClass", "workers")
+	class.SetAPIVersion("deckhouse.io/v1")
+	class.Object["spec"] = map[string]interface{}{
+		"imageRef": map[string]interface{}{"kind": "Metal3Image", "name": "ubuntu"},
+	}
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+		class,
+		cloudNodeGroup("worker", "Metal3InstanceClass", "workers"),
+		cloudNodeGroup("other", "Metal3InstanceClass", "other"),
+	).Build()
+	image := NewMetal3Image()
+	image.SetName("ubuntu")
+
+	requests := Metal3ImageToNodeGroups(t.Context(), c, image)
+	require.Len(t, requests, 1)
+	assert.Equal(t, "worker", requests[0].Name)
 }
 
 func cloudNodeGroup(name, classKind, className string) *v1.NodeGroup {
