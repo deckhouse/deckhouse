@@ -3,6 +3,7 @@
 require "digest"
 require "fileutils"
 require "json"
+require "yaml"
 
 require_relative "html_to_markdown"
 require_relative "navigation_helper"
@@ -10,17 +11,19 @@ require_relative "navigation_helper"
 module Jekyll
   # Publishes the AI-friendly exports of the documentation:
   #
-  #   <lang>/<page path>.md         per-page Markdown body
-  #   <lang>/<AIcorpusFileName>     RAG corpus: metadata + Markdown + chunks
-  #   <lang>/<AIllmsFileName>       llms.txt index, grouped by the sidebar tree
+  #   <lang>/<page path>.md              per-page Markdown body
+  #   <lang>/<ai_export.corpusFileName> RAG corpus: metadata + Markdown + chunks
+  #   <lang>/<ai_export.llmsFileName>   llms.txt index, grouped by the sidebar tree
   #
-  # Disabled unless `AIExport: true` is set in the site config, and the two file
-  # names are taken from the config as well: the same source tree is built
-  # several times (the documentation itself and the embedded modules, see
+  # All settings live under the `ai_export` mapping in the site config. Disabled
+  # unless `ai_export.enabled` is true, and the two file names come from the
+  # config as well: the same source tree is built several times (the
+  # documentation itself and the embedded modules, see
   # `werf-documentation-static.inc.yaml` and `werf-modules-static.inc.yaml`),
   # and those builds publish their indexes side by side under different names.
-  # `AIRoot: true` marks the build whose llms.txt is the entry point of the
-  # site, the one that points an agent at the corpora.
+  # `ai_export.root` marks the build whose llms.txt is the entry point of the
+  # site, the one that points an agent at the corpora. (Not to be confused with
+  # the per-page `ai_export: false` front-matter flag, which excludes a page.)
   #
   # It runs on `site, :post_write` rather than as a Liquid template (the way
   # `search.json` is built) because `page.content` inside Liquid depends on the
@@ -30,23 +33,30 @@ module Jekyll
     PRODUCT_CODE = "kubernetes-platform"
     GENERATOR = "jekyll"
 
-    ENABLED_KEY = "AIExport"
-    ROOT_KEY = "AIRoot"
-    LLMS_NAME_KEY = "AIllmsFileName"
-    CORPUS_NAME_KEY = "AIcorpusFileName"
+    # Settings mapping in the site config and its subkeys.
+    CONFIG_KEY = "ai_export"
+    ENABLED_KEY = "enabled"
+    ROOT_KEY = "root"
+    LLMS_NAME_KEY = "llmsFileName"
+    CORPUS_NAME_KEY = "corpusFileName"
 
     DEFAULT_LLMS_NAME = "llms.txt"
     DEFAULT_CORPUS_NAME = "corpus.json"
 
-    # `--config a.yml,b.yml` merges plain YAML, so a flag arrives as a real
-    # boolean; a string is accepted too, since an `AIExport` that reads as
-    # "true" and silently exports nothing would be baffling.
+    # `--config a.yml,b.yml` deep-merges plain YAML, so a flag arrives as a real
+    # boolean; a string is accepted too, since an `enabled` that reads as "true"
+    # and silently exports nothing would be baffling.
     def self.truthy?(value)
       value == true || value.to_s.strip.casecmp("true").zero?
     end
 
+    def self.config(site)
+      cfg = site.config[CONFIG_KEY]
+      cfg.is_a?(Hash) ? cfg : {}
+    end
+
     def self.enabled?(site)
-      truthy?(site.config[ENABLED_KEY])
+      truthy?(config(site)[ENABLED_KEY])
     end
 
     # An H2 section longer than this is split further, by H3.
@@ -58,21 +68,28 @@ module Jekyll
     REFERENCE_PAGE_NAMES = /(CONFIGURATION|CR|CLUSTER_CONFIGURATION)(\.ru|_RU)?\.md\z/i.freeze
 
     HEADING_LINE = /\A(\#{1,6})\s+(.*)\z/.freeze
+    # heading() appends the anchor as ` {#id}`; strip it back off before matching
+    # a heading line to the Heading collected during conversion.
+    HEADING_ANCHOR = /\s*\{#[^}]*\}\s*\z/.freeze
     FENCE_START = /\A(`{3,}|~{3,})/.freeze
 
     LANG_PREFIX = %r{\A/(en|ru)}.freeze
     # Embedded module pages are published outside the versioned documentation
     # prefix: `/en/modules/user-authn/` is served as `/modules/user-authn/`.
     MODULE_PREFIX = %r{\A/(en|ru)/modules/}.freeze
+    # The URL templates whose directory links are rewritten to `index.md` — the
+    # documentation and the modules library.
+    INDEX_MD_PATH = %r{\A/(?:products/[^/]+/documentation|modules)/}.freeze
 
     class Exporter
       def initialize(site)
         @site = site
         @doc_prefix = site.config["canonical_url_prefix_documentation"].to_s.sub(%r{/+\z}, "")
         @urls = site.config["urls"] || {}
-        @llms_name = file_name(LLMS_NAME_KEY, DEFAULT_LLMS_NAME)
-        @corpus_name = file_name(CORPUS_NAME_KEY, DEFAULT_CORPUS_NAME)
-        @root = AiExport.truthy?(site.config[ROOT_KEY])
+        cfg = AiExport.config(site)
+        @llms_name = file_name(cfg[LLMS_NAME_KEY], DEFAULT_LLMS_NAME)
+        @corpus_name = file_name(cfg[CORPUS_NAME_KEY], DEFAULT_CORPUS_NAME)
+        @root = AiExport.truthy?(cfg[ROOT_KEY])
       end
 
       def run
@@ -94,8 +111,8 @@ module Jekyll
       # A name is a single file name, not a path: the exports always land next
       # to each other in `<dest>/<lang>/`, and the URLs published in llms.txt
       # are built from it.
-      def file_name(key, fallback)
-        name = File.basename(@site.config[key].to_s.strip)
+      def file_name(value, fallback)
+        name = File.basename(value.to_s.strip)
         return fallback if name.empty? || name == "."
 
         name
@@ -110,6 +127,11 @@ module Jekyll
         return false if page.data["layout"].to_s == "none"
         return false unless page.url.match?(%r{\A/(en|ru)/})
         return true if page.data["searchable"] == true
+
+        # Pages dropped from the search index but valuable to an agent: the FAQ
+        # index (its answers are assembled from an include) and the OpenAPI
+        # reference pages.
+        return true if page.data["faqIndexPage"] == true
 
         page.name.to_s.match?(REFERENCE_PAGE_NAMES)
       end
@@ -128,11 +150,16 @@ module Jekyll
         markdown = converted.markdown
         return nil if markdown.strip.empty?
 
+        doc = document(page, lang, url, converted)
+
+        # The `.md` carries a frontmatter header; the corpus keeps the bare body
+        # (and hashes it), because every frontmatter field is already a column of
+        # the corpus document — duplicating them would only desync the two.
         md_path = page.destination(@site.dest).sub(/\.html\z/, ".md")
         FileUtils.mkdir_p(File.dirname(md_path))
-        File.write(md_path, "#{markdown}\n")
+        File.write(md_path, "#{frontmatter(doc, lang, url)}#{markdown}\n")
 
-        document(page, lang, url, converted)
+        doc
       rescue StandardError => e
         Jekyll.logger.warn "AI export:", "failed to export #{page.url}: #{e.class}: #{e.message}"
         nil
@@ -149,11 +176,39 @@ module Jekyll
 
       # Root-relative links of the rendered site carry the build-time language
       # prefix (`/en/…`); the published documentation lives under the versioned
-      # documentation prefix instead.
+      # documentation prefix instead. On top of that, an internal link is pointed
+      # at the `.md` twin so an agent following it stays in Markdown.
       def rewrite_link(path)
-        return path unless path.match?(%r{\A/(en|ru)/})
+        head, tail = split_link_tail(path)
+        head = public_path(head) if head.match?(%r{\A/(en|ru)/})
 
-        public_path(path)
+        "#{md_link(head)}#{tail}"
+      end
+
+      # md_link rewrites an internal link to its Markdown twin: `/a/b.html` ->
+      # `/a/b.md`, and a directory `/a/b/` -> `/a/b/index.md`. A directory is
+      # rewritten only under the documentation and modules templates (see
+      # INDEX_MD_PATH). The `.html` rewrite is
+      # unconditional (it keeps a cross-build link — a module page into the
+      # documentation — working); a non-page link (an asset, or an extensionless
+      # path) is left alone.
+      def md_link(path)
+        if path.end_with?("/")
+          path.match?(INDEX_MD_PATH) ? "#{path}index.md" : path
+        elsif path.end_with?(".html")
+          path.sub(/\.html\z/, ".md")
+        else
+          path
+        end
+      end
+
+      # Separates the path from a trailing `?query`/`#fragment` so the path can
+      # be rewritten while the tail is preserved.
+      def split_link_tail(link)
+        index = link.index(/[?#]/)
+        return [link, ""] if index.nil?
+
+        [link[0...index], link[index..]]
       end
 
       def document(page, lang, url, converted)
@@ -169,19 +224,49 @@ module Jekyll
           "mdUrl" => md_url(url),
           "path" => url.delete_prefix(@doc_prefix).sub(%r{\A/}, "").sub(%r{/\z}, "").sub(/\.html\z/, ""),
           "lang" => lang,
-          "breadcrumbs" => breadcrumbs_of(page, lang, module_name),
+          "breadcrumbs" => Array(breadcrumbs_of(page, lang, module_name)),
           "keywords" => keywords_of(page),
+          "module" => module_name,
           "moduleType" => module_name ? "embedded" : nil,
           "editions" => editions_of(module_name),
           "stage" => stage_of(module_name),
-          "searchBoost" => page.data["searchBoost"],
           "contentHash" => "sha256:#{Digest::SHA256.hexdigest(converted.markdown)}",
           "markdown" => converted.markdown,
           "chunks" => Chunker.new(doc_id, url, title).call(converted.markdown, converted.headings),
         }
-        doc["module"] = module_name if module_name
 
-        doc
+        # Drop the optional fields that do not apply to this page (a
+        # documentation page has no module or stage), mirroring the omitempty
+        # contract of the Go structs so the embedded schema validates the output
+        # of both generators. `version` is omitted on the whole Jekyll side: the
+        # real content version (a git tag/branch) is not available at build time,
+        # unlike the external modules built by Hugo.
+        doc.compact
+      end
+
+      # frontmatter is the YAML header prepended to each per-page `.md`: enough
+      # to keep a chunk's provenance once the file is split for retrieval. The
+      # field names match the corpus document, so the two artifacts share one
+      # vocabulary; empty values are dropped so a page without a module or
+      # editions gets a clean header.
+      def frontmatter(doc, lang, url)
+        data = {
+          "title" => doc["title"],
+          "description" => doc["description"],
+          "canonical" => absolute(lang, url),
+          "lang" => lang,
+          "module" => doc["module"],
+          "moduleType" => doc["moduleType"],
+          "editions" => doc["editions"],
+          "stage" => doc["stage"],
+        }
+        data.reject! { |_, value| value.nil? || (value.respond_to?(:empty?) && value.empty?) }
+
+        # `line_width: -1` disables Psych's line folding, so a long title or
+        # description stays on one line — valid YAML either way, but friendlier
+        # to consumers that read the header line by line rather than with a YAML
+        # parser. The Go exporter's yaml.v3 does not fold, so this matches it.
+        "#{data.to_yaml(line_width: -1)}---\n\n"
       end
 
       def description_of(page)
@@ -248,8 +333,12 @@ module Jekyll
           "lang" => lang,
           "generator" => GENERATOR,
           "baseUrl" => @urls[lang].to_s,
-          "documents" => documents,
         }
+        # The JSON Schema is generated from the Go structs and checked in as a
+        # data file (see `_data/corpus_schema.json` and the docs-builder
+        # `schema_test.go`); embedding it makes the corpus describe itself.
+        corpus["schema"] = @site.data["corpus_schema"] if @site.data["corpus_schema"]
+        corpus["documents"] = documents
 
         write(lang, @corpus_name, JSON.generate(corpus))
         Jekyll.logger.info "AI export:", "#{lang}/#{@corpus_name} — #{documents.length} documents"
@@ -258,13 +347,18 @@ module Jekyll
       def write_llms_txt(lang, documents)
         lines = ["# #{site_title(lang)}", "", "> #{site_summary(lang)}", ""]
 
-        lines << "> Note that the documented Deckhouse Platform version may differ from the version actually used in a cluster."
-        lines << ""
+        # The version note is for the platform documentation index; the embedded
+        # modules build (`mode: module`) is a sub-index and leaves it off.
+        unless module_mode?
+          lines << @site.data.dig("i18n", "common", "aiLlmsNoteRoot", lang).to_s
+          lines << ""
+        end
 
         groups(lang, documents).each do |group|
           next if group[:documents].empty?
 
           lines << "## #{group[:title]}"
+          lines << ""
           group[:documents].each do |doc|
             entry = "- [#{group[:label].call(doc)}](#{absolute(lang, doc['mdUrl'])})"
             entry += ": #{doc['description']}" unless doc["description"].to_s.empty?
@@ -274,15 +368,17 @@ module Jekyll
         end
 
         if @root
-          lines << "## Modules"
-          lines << "- [embedded-llms.txt](#{absolute(lang, "/modules/embedded-llms.txt")}): LLM index of embedded modules."
-          lines << "- [external-llms.txt](#{absolute(lang, "/modules/external-llms.txt")}): LLM index of external modules."
+          lines << "## #{@site.data.dig("i18n", "common", "modules_embedded", lang).to_s.capitalize} (llms.txt)"
+          lines << ""
+          lines << "- [embedded-llms.txt](#{absolute(lang, "/modules/embedded-llms.txt")}): #{@site.data.dig("i18n", "common", "aiLlmsRefDescriptionEmbeddedModules", lang).to_s}"
+          lines << "- [external-llms.txt](#{absolute(lang, "/modules/external-llms.txt")}): #{@site.data.dig("i18n", "common", "aiLlmsRefDescriptionExternalModules", lang).to_s}"
           lines << ""
 
           lines << "## Optional"
-          lines << "- [#{@corpus_name}](#{absolute(lang, "#{@doc_prefix}/#{@corpus_name}")}): RAG corpus with page Markdown and chunks for documentation pages."
-          lines << "- [embedded-corpus.json](#{absolute(lang, "/modules/embedded-corpus.json")}): RAG corpus with page Markdown and chunks for embedded modules."
-          lines << "- [external-corpus.json](#{absolute(lang, "/modules/external-corpus.json")}): RAG corpus with page Markdown and chunks for external modules."
+          lines << ""
+          lines << "- [#{@corpus_name}](#{absolute(lang, "#{@doc_prefix}/#{@corpus_name}")}): #{@site.data.dig("i18n", "common", "aiCorpusLlmsDescriptionRoot", lang).to_s}"
+          lines << "- [embedded-corpus.json](#{absolute(lang, "/modules/embedded-corpus.json")}): #{@site.data.dig("i18n", "common", "aiCorpusLlmsDescriptionEmbeddedModules", lang).to_s}"
+          lines << "- [external-corpus.json](#{absolute(lang, "/modules/external-corpus.json")}): #{@site.data.dig("i18n", "common", "aiCorpusLlmsDescriptionExternalModules", lang).to_s}"
           lines << ""
         end
 
@@ -295,12 +391,25 @@ module Jekyll
         title.to_s.empty? ? @site.config["site_title"].to_s : title.to_s
       end
 
+      # The llms.txt summary. `ai_export.summaryI18nKey` names an entry under
+      # `i18n.common` (per-language), so the text lives with the other AI strings
+      # and a build can point at its own — e.g. the embedded-modules build to a
+      # module-specific summary. Falls back to `site_description` when the key is
+      # unset or resolves to nothing.
       def site_summary(lang)
-        summary = @site.config.dig("ai_export", "summary")
-        summary = summary[lang] if summary.is_a?(Hash)
-        return summary.to_s unless summary.to_s.empty?
+        key = @site.config.dig("ai_export", "summaryI18nKey").to_s
+        unless key.empty?
+          summary = @site.data.dig("i18n", "common", key, lang).to_s
+          return summary unless summary.empty?
+        end
 
         @site.config.dig("site_description", lang).to_s
+      end
+
+      # True in the embedded modules build, which sets `mode: module` in the site
+      # config (the same flag the sidebar and layouts key off).
+      def module_mode?
+        @site.config["mode"].to_s.downcase == "module"
       end
 
       def write(lang, name, content)
@@ -322,8 +431,10 @@ module Jekyll
         title_label = ->(doc) { doc["title"] }
 
         result = []
-        loose = []
 
+        # Every top-level sidebar entry becomes its own section titled by its
+        # sidebar title, in sidebar order — a folder gathers its whole subtree, a
+        # bare page (the docs index, FAQ, release notes) is a section of one.
         (@site.data.dig("sidebars", "main", "entries") || []).each do |entry|
           next if entry["draft"] == true
 
@@ -331,14 +442,8 @@ module Jekyll
           collected = collect_entry(entry, by_url, used)
           next if collected.empty?
 
-          if entry["folders"].is_a?(Array)
-            result << { title: title.to_s, documents: collected, label: title_label }
-          else
-            loose.concat(collected)
-          end
+          result << { title: title.to_s, documents: collected, label: title_label }
         end
-
-        result.unshift({ title: site_title(lang), documents: loose, label: title_label }) unless loose.empty?
 
         modules = documents.reject { |doc| used[doc["url"]] }.select { |doc| doc["module"] }
         unless modules.empty?
@@ -352,7 +457,7 @@ module Jekyll
         end
 
         rest = documents.reject { |doc| used[doc["url"]] }
-        result << { title: "Other", documents: rest, label: title_label } unless rest.empty?
+        result << { title: @site.data.dig("i18n", "common", "other_documentation", lang).to_s.capitalize, documents: rest, label: title_label } unless rest.empty?
 
         result
       end
@@ -435,6 +540,8 @@ module Jekyll
       end
 
       def chunk(anchor, level, heading_path, markdown, ordinal)
+        # The preamble chunk has no anchor; drop the key rather than emit null,
+        # to match the omitempty `anchor` of the Go Chunk struct.
         {
           "id" => "#{@doc_id}##{anchor || ordinal}",
           "anchor" => anchor,
@@ -444,7 +551,7 @@ module Jekyll
           "markdown" => markdown,
           "charCount" => markdown.length,
           "approxTokens" => (markdown.length / 4.0).ceil,
-        }
+        }.compact
       end
 
       # Locates the heading lines of the Markdown and re-attaches the HTML
@@ -473,7 +580,7 @@ module Jekyll
           next if match.nil?
 
           level = match[1].length
-          text = match[2].strip
+          text = match[2].sub(HEADING_ANCHOR, "").strip
           id = nil
 
           scan_index = cursor

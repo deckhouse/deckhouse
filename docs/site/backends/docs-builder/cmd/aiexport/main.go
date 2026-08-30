@@ -63,12 +63,10 @@ func main() {
 
 		manifest := filepath.Join(*publicDir, lang, "ai", "ai.json")
 		if _, err := os.Stat(manifest); err != nil {
-			// A missing manifest makes Export a no-op: inside docs-builder a
-			// broken AI export must not fail the whole site build. Run by
-			// hand the tradeoff is the opposite — it means Hugo has not run
-			// yet, and silence would be indistinguishable from success.
-			fmt.Fprintf(os.Stderr, "%s: no manifest at %s, render the site with Hugo first\n", lang, manifest)
-			failed = true
+			// No manifest: the `ai` output was not rendered (Hugo has not run, or
+			// the manifest page is a draft). Skip this language instead of
+			// failing — the same no-op Export performs inside docs-builder.
+			fmt.Fprintf(os.Stderr, "%s: no manifest at %s, skipping (render the site with Hugo first)\n", lang, manifest)
 
 			continue
 		}
