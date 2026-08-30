@@ -22,7 +22,10 @@ spec:
     additionalPrinterColumns:
     - name: BMC
       type: string
-      jsonPath: .spec.bmc.address
+      jsonPath: .spec.bmc.ipAddress
+    - name: Protocol
+      type: string
+      jsonPath: .status.bmc.protocol
     - name: Boot MAC
       type: string
       jsonPath: .spec.bootMACAddress
@@ -40,7 +43,7 @@ spec:
       jsonPath: .status.bareMetalHost.online
     - name: Error
       type: string
-      jsonPath: .status.bareMetalHost.error
+      jsonPath: .status.message
     - name: Age
       type: date
       jsonPath: .metadata.creationTimestamp
@@ -60,43 +63,80 @@ spec:
             type: object
           spec:
             type: object
+            additionalProperties: false
             required:
+            - bootMACAddress
             - bmc
             properties:
-              pool:
-                type: string
-                description: Pool label value added to the generated BareMetalHost.
               online:
                 type: boolean
+                default: false
                 description: Desired BareMetalHost online state.
               bootMACAddress:
                 type: string
                 pattern: '^([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}$'
                 description: MAC address of the NIC used for PXE boot.
-              disableAutomatedCleaning:
-                type: boolean
-                description: Disables Ironic automated cleaning on the generated BareMetalHost. By default metadata cleaning is enabled.
               bmc:
                 type: object
+                additionalProperties: false
                 required:
-                - address
-                - credentialsName
+                - ipAddress
+                - systemUUID
+                - credentialsRef
                 properties:
-                  address:
+                  ipAddress:
                     type: string
-                    description: Full BMC address accepted by BareMetalHost, for example redfish+https://10.0.5.17/redfish/v1/Systems/system.
-                  credentialsName:
+                    format: ipv4
+                    description: BMC IPv4 address.
+                  port:
+                    type: integer
+                    format: int32
+                    minimum: 1
+                    maximum: 65535
+                    description: Optional BMC port. Standard Redfish and IPMI ports are probed when omitted.
+                  systemUUID:
                     type: string
-                    description: Name of the source Secret with type cloud-provider.deckhouse.io/credentials and username and password keys in the Metal3Instance namespace.
-                  disableCertificateVerification:
+                    format: uuid
+                    description: UUID of the physical ComputerSystem managed by this BMC.
+                  credentialsRef:
+                    type: object
+                    additionalProperties: false
+                    required:
+                    - kind
+                    - name
+                    properties:
+                      kind:
+                        type: string
+                        enum:
+                        - Secret
+                      name:
+                        type: string
+                        minLength: 1
+                  insecure:
                     type: boolean
-                    description: Disables TLS certificate verification for BMC access.
+                    default: false
+                    description: Disables TLS certificate verification while accessing Redfish.
           status:
             type: object
             properties:
               observedGeneration:
                 type: integer
                 format: int64
+              bmc:
+                type: object
+                properties:
+                  protocol:
+                    type: string
+                    enum:
+                    - Redfish
+                    - IPMI
+                  address:
+                    type: string
+                    description: Resolved BMC address passed to BareMetalHost.
+                  systemUUID:
+                    type: string
+                  credentialsVersion:
+                    type: string
               bareMetalHost:
                 type: object
                 properties:
@@ -119,5 +159,37 @@ spec:
                     type: string
                   namespace:
                     type: string
+              conditions:
+                type: array
+                x-kubernetes-list-type: map
+                x-kubernetes-list-map-keys:
+                - type
+                items:
+                  type: object
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  properties:
+                    lastTransitionTime:
+                      type: string
+                      format: date-time
+                    message:
+                      type: string
+                    observedGeneration:
+                      type: integer
+                      format: int64
+                    reason:
+                      type: string
+                    status:
+                      type: string
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                    type:
+                      type: string
               message:
                 type: string

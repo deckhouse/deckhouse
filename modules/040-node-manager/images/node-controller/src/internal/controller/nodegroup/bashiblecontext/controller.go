@@ -108,6 +108,7 @@ func (c *Controller) SetupWatches(w register.Watcher) {
 	// The source is deferred: the kind and version come from the provider registration Secret,
 	// which may appear only after this pod started.
 	w.WatchesRawSource(nodecommon.LazyInstanceClassSource(c.cache, enqueue, predicate.GenerationChangedPredicate{}))
+	w.WatchesRawSource(nodecommon.LazyMetal3ImageSource(c.cache, enqueue, predicate.GenerationChangedPredicate{}))
 }
 
 func inNamespaces(namespaces ...string) predicate.Predicate {

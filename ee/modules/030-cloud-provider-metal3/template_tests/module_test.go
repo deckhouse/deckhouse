@@ -85,36 +85,29 @@ var _ = Describe("Module :: cloud-provider-metal3 :: helm template ::", func() {
 		Expect(providerSpecificCAPISecret.Field("data.machine-template\\.yaml").String()).NotTo(BeEmpty())
 		Expect(providerSpecificCAPISecret.Field("data.instance-class\\.checksum").String()).NotTo(BeEmpty())
 
+		clusterAdminRole := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cloud-provider-metal3:cluster-admin")
+		Expect(clusterAdminRole.Field("rules").String()).To(ContainSubstring("metal3images"))
+		Expect(clusterAdminRole.Field("rules").String()).To(ContainSubstring("metal3ramdiskimages"))
+
 		ironic := f.KubernetesResource("Ironic", "d8-cloud-provider-metal3", "ironic")
 		Expect(ironic.Exists()).To(BeFalse())
 	})
 
 	Context("with managed Ironic enabled", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("cloudProviderMetal3.ironic", `
-enabled: true
-deployRamdisk:
-  sshKey: ssh-ed25519 AAAAC3Nz
+			f.ValuesSetFromYaml("cloudProviderMetal3.nodes.parameters.ironic", `
 provisioningNetwork:
   interface: eno3
   ipAddress: 172.22.0.20
   ipAddressManager: keepalived
-api:
-  port: 6385
-imageServer:
-  port: 6180
 dhcp:
-  networkCIDR: 172.22.0.0/24
-  rangeBegin: 172.22.0.200
-  rangeEnd: 172.22.0.210
-  dnsAddress: 10.222.0.10
-  gatewayAddress: 172.22.0.20
-`)
-			f.ValuesSetFromYaml("cloudProviderMetal3.hostManager", `
-enabled: true
-targetNamespace: d8-cloud-instance-manager
-defaultOnline: true
-defaultDisableAutomatedCleaning: true
+  internal:
+    networkCIDR: 172.22.0.0/24
+    rangeBegin: 172.22.0.200
+    rangeEnd: 172.22.0.210
+    dnsAddress: 10.222.0.10
+    gatewayAddress: 172.22.0.20
+    serveDNS: false
 `)
 			f.HelmRender()
 		})
@@ -125,7 +118,6 @@ defaultDisableAutomatedCleaning: true
 			ironic := f.KubernetesResource("Ironic", "d8-cloud-provider-metal3", "ironic")
 			Expect(ironic.Exists()).To(BeTrue())
 			Expect(ironic.Field("spec.images.ironic").String()).NotTo(BeEmpty())
-			Expect(ironic.Field("spec.deployRamdisk.sshKey").String()).To(Equal("ssh-ed25519 AAAAC3Nz"))
 			Expect(ironic.Field("spec.deployRamdisk.disableDownloader").Bool()).To(BeTrue())
 			Expect(ironic.Field("spec.overrides.agentImages.0.architecture").String()).To(Equal("x86_64"))
 			Expect(ironic.Field("spec.overrides.agentImages.0.kernel").String()).To(Equal("http://172.22.0.20:6180/images/ironic-python-agent.kernel"))
@@ -167,8 +159,8 @@ defaultDisableAutomatedCleaning: true
 			Expect(instanceManager.Exists()).To(BeTrue())
 			instanceManagerArgs := instanceManager.Field("spec.template.spec.containers.0.args").String()
 			Expect(instanceManagerArgs).To(ContainSubstring("--target-namespace=d8-cloud-instance-manager"))
-			Expect(instanceManagerArgs).To(ContainSubstring("--default-online=true"))
-			Expect(instanceManagerArgs).To(ContainSubstring("--default-disable-automated-cleaning=true"))
+			Expect(instanceManagerArgs).NotTo(ContainSubstring("--default-online"))
+			Expect(instanceManagerArgs).NotTo(ContainSubstring("--default-disable-automated-cleaning"))
 
 			bmoWebhook := f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "baremetal-operator-validating-webhook-configuration")
 			Expect(bmoWebhook.Exists()).To(BeTrue())
@@ -178,13 +170,12 @@ defaultDisableAutomatedCleaning: true
 
 	Context("with external DHCP configured", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("cloudProviderMetal3.ironic", `
-enabled: true
+			f.ValuesSetFromYaml("cloudProviderMetal3.nodes.parameters.ironic", `
 provisioningNetwork:
   interface: eno3
   ipAddress: 172.22.0.20
-external:
-  dhcp:
+dhcp:
+  external:
     pxeBootServer: 172.22.0.20
     pxeBootFile:
       bios: undionly.kpxe
@@ -207,24 +198,23 @@ external:
 		})
 	})
 
-	Context("with external deploy ramdisk configured", func() {
+	Context("with a resolved custom ramdisk image", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("cloudProviderMetal3.ironic", `
-enabled: true
+			f.ValuesSetFromYaml("cloudProviderMetal3.nodes.parameters.ironic", `
 provisioningNetwork:
   interface: eno3
   ipAddress: 172.22.0.20
 dhcp:
-  networkCIDR: 172.22.0.0/24
-  rangeBegin: 172.22.0.200
-  rangeEnd: 172.22.0.210
-deployRamdisk:
-  sshKey: ssh-ed25519 AAAAC3Nz
-ramdiskImage:
-  external:
-    architecture: x86_64
-    kernelURL: http://172.22.0.30/ipa/ironic-python-agent.kernel
-    initramfsURL: http://172.22.0.30/ipa/ironic-python-agent.initramfs
+  internal:
+    networkCIDR: 172.22.0.0/24
+    rangeBegin: 172.22.0.200
+    rangeEnd: 172.22.0.210
+`)
+			f.ValuesSetFromYaml("cloudProviderMetal3.internal.ramdiskImage", `
+direct:
+  architecture: aarch64
+  kernelURL: http://172.22.0.30/ipa/ironic-python-agent.kernel
+  initramfsURL: http://172.22.0.30/ipa/ironic-python-agent.initramfs
 `)
 			f.HelmRender()
 		})
@@ -235,10 +225,56 @@ ramdiskImage:
 			ironic := f.KubernetesResource("Ironic", "d8-cloud-provider-metal3", "ironic")
 			Expect(ironic.Exists()).To(BeTrue())
 			Expect(ironic.Field("spec.deployRamdisk.disableDownloader").Bool()).To(BeTrue())
-			Expect(ironic.Field("spec.deployRamdisk.sshKey").String()).To(Equal("ssh-ed25519 AAAAC3Nz"))
-			Expect(ironic.Field("spec.overrides.agentImages.0.architecture").String()).To(Equal("x86_64"))
+			Expect(ironic.Field("spec.overrides.agentImages.0.architecture").String()).To(Equal("aarch64"))
 			Expect(ironic.Field("spec.overrides.agentImages.0.kernel").String()).To(Equal("http://172.22.0.30/ipa/ironic-python-agent.kernel"))
 			Expect(ironic.Field("spec.overrides.agentImages.0.initramfs").String()).To(Equal("http://172.22.0.30/ipa/ironic-python-agent.initramfs"))
+		})
+	})
+
+	Context("with an external Ironic instance", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("cloudProviderMetal3.nodes.parameters.ironic", `
+externalInstance:
+  endpoint: https://external-ironic.example.com:6385/v1/
+  credentialsRef:
+    kind: Secret
+    name: ironic-api-credentials
+    namespace: d8-cloud-provider-metal3
+  tls:
+    caCertRef:
+      kind: Secret
+      name: external-ironic-ca
+      namespace: d8-cloud-provider-metal3
+      key: ca.crt
+    clientCertRef:
+      kind: Secret
+      name: external-ironic-client
+      namespace: d8-cloud-provider-metal3
+      certKey: tls.crt
+      privateKey: tls.key
+    insecure: false
+`)
+			f.HelmRender()
+		})
+
+		It("renders BMO and CAPM3 without the managed Ironic stack", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(f.KubernetesResource("Ironic", "d8-cloud-provider-metal3", "ironic").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Deployment", "d8-cloud-provider-metal3", "ironic-standalone-operator-controller-manager").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Deployment", "d8-cloud-provider-metal3", "baremetal-operator-controller-manager").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Deployment", "d8-cloud-provider-metal3", "capm3-controller-manager").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Deployment", "d8-cloud-provider-metal3", "metal3-instance-manager").Exists()).To(BeTrue())
+
+			config := f.KubernetesResource("ConfigMap", "d8-cloud-provider-metal3", "ironic")
+			Expect(config.Field("data.IRONIC_ENDPOINT").String()).To(Equal("https://external-ironic.example.com:6385/v1/"))
+			Expect(config.Field("data.IRONIC_CACERT_FILE").String()).To(Equal("/opt/metal3/external-ironic/ca/ca.crt"))
+			Expect(config.Field("data.IRONIC_CLIENT_CERT_FILE").String()).To(Equal("/opt/metal3/external-ironic/client/tls.crt"))
+			Expect(config.Field("data.IRONIC_CLIENT_PRIVATE_KEY_FILE").String()).To(Equal("/opt/metal3/external-ironic/client/tls.key"))
+
+			bmo := f.KubernetesResource("Deployment", "d8-cloud-provider-metal3", "baremetal-operator-controller-manager")
+			Expect(bmo.Field("spec.template.spec.volumes.1.secret.secretName").String()).To(Equal("ironic-api-credentials"))
+			Expect(bmo.Field("spec.template.spec.volumes.2.secret.secretName").String()).To(Equal("external-ironic-ca"))
+			Expect(bmo.Field("spec.template.spec.volumes.3.secret.secretName").String()).To(Equal("external-ironic-client"))
 		})
 	})
 })

@@ -1,5 +1,6 @@
-{{- $ironic := .Values.cloudProviderMetal3.ironic | default dict -}}
-{{- if $ironic.enabled }}
+{{- $ironic := dig "nodes" "parameters" "ironic" dict .Values.cloudProviderMetal3 -}}
+{{- $externalIronic := $ironic.externalInstance | default dict -}}
+{{- if $ironic }}
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -221,7 +222,21 @@ subjects:
 ---
 apiVersion: v1
 data:
+  {{- if $externalIronic }}
+  IRONIC_ENDPOINT: {{ $externalIronic.endpoint | quote }}
+  {{- with $externalIronic.tls }}
+  IRONIC_INSECURE: {{ .insecure | default false | quote }}
+  {{- if .caCertRef }}
+  IRONIC_CACERT_FILE: /opt/metal3/external-ironic/ca/ca.crt
+  {{- end }}
+  {{- if .clientCertRef }}
+  IRONIC_CLIENT_CERT_FILE: /opt/metal3/external-ironic/client/tls.crt
+  IRONIC_CLIENT_PRIVATE_KEY_FILE: /opt/metal3/external-ironic/client/tls.key
+  {{- end }}
+  {{- end }}
+  {{- else }}
   IRONIC_NAME: ironic
+  {{- end }}
 kind: ConfigMap
 metadata:
   name: ironic
@@ -334,6 +349,21 @@ spec:
         - mountPath: /tmp/k8s-webhook-server/serving-certs
           name: cert
           readOnly: true
+        {{- if $externalIronic.credentialsRef }}
+        - name: external-ironic-credentials
+          mountPath: /opt/metal3/auth/ironic
+          readOnly: true
+        {{- end }}
+        {{- if and $externalIronic.tls $externalIronic.tls.caCertRef }}
+        - name: external-ironic-ca
+          mountPath: /opt/metal3/external-ironic/ca
+          readOnly: true
+        {{- end }}
+        {{- if and $externalIronic.tls $externalIronic.tls.clientCertRef }}
+        - name: external-ironic-client
+          mountPath: /opt/metal3/external-ironic/client
+          readOnly: true
+        {{- end }}
       securityContext:
         runAsNonRoot: true
         seccompProfile:
@@ -345,6 +375,34 @@ spec:
         secret:
           defaultMode: 420
           secretName: bmo-webhook-server-cert
+      {{- if $externalIronic.credentialsRef }}
+      - name: external-ironic-credentials
+        secret:
+          secretName: {{ $externalIronic.credentialsRef.name | quote }}
+          items:
+          - key: identity
+            path: username
+          - key: secret
+            path: password
+      {{- end }}
+      {{- if and $externalIronic.tls $externalIronic.tls.caCertRef }}
+      - name: external-ironic-ca
+        secret:
+          secretName: {{ $externalIronic.tls.caCertRef.name | quote }}
+          items:
+          - key: {{ $externalIronic.tls.caCertRef.key | quote }}
+            path: ca.crt
+      {{- end }}
+      {{- if and $externalIronic.tls $externalIronic.tls.clientCertRef }}
+      - name: external-ironic-client
+        secret:
+          secretName: {{ $externalIronic.tls.clientCertRef.name | quote }}
+          items:
+          - key: {{ $externalIronic.tls.clientCertRef.certKey | quote }}
+            path: tls.crt
+          - key: {{ $externalIronic.tls.clientCertRef.privateKey | quote }}
+            path: tls.key
+      {{- end }}
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate

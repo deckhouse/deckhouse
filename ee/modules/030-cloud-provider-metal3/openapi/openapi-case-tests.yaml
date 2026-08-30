@@ -1,0 +1,82 @@
+positive:
+  configValues:
+  - {}
+  - nodes:
+      parameters:
+        ironic:
+          provisioningNetwork:
+            interface: eno2
+            ipAddress: 172.22.0.20
+          dhcp:
+            internal:
+              networkCIDR: 172.22.0.0/24
+              rangeBegin: 172.22.0.100
+              rangeEnd: 172.22.0.200
+              dnsAddress: 10.222.0.10
+  - nodes:
+      parameters:
+        ironic:
+          externalInstance:
+            endpoint: https://ironic.example.com:6385/v1/
+            credentialsRef:
+              kind: Secret
+              name: ironic-credentials
+              namespace: d8-cloud-provider-metal3
+            tls:
+              insecure: false
+              caCertRef:
+                kind: Secret
+                name: ironic-ca
+                namespace: d8-cloud-provider-metal3
+                key: ca.crt
+negative:
+  configValues:
+  - nodes:
+      parameters:
+        ironic:
+          externalInstance:
+            endpoint: https://ironic.example.com:6385/v1/
+          ramdiskImageRef:
+            kind: Metal3RamdiskImage
+            name: default
+  - nodes:
+      parameters:
+        ironic:
+          provisioningNetwork:
+            interface: eno2
+            ipAddress: 172.22.0.20
+  - nodes:
+      parameters:
+        ironic:
+          provisioningNetwork:
+            interface: eno2
+            ipAddress: 172.22.0.20
+          dhcp:
+            internal:
+              networkCIDR: 172.22.0.0/24
+              rangeBegin: 172.22.0.100
+              rangeEnd: 172.22.0.200
+            external:
+              pxeBootServer: 172.22.0.20
+  - nodes:
+      parameters:
+        ironic:
+          provisioningNetwork:
+            interface: eno2
+            ipAddress: 172.22.0.20
+          dhcp:
+            internal:
+              networkCIDR: 172.22.0.0/24
+              rangeBegin: 172.22.0.100
+              rangeEnd: 172.22.0.200
+              dnsAddress: 10.222.0.10
+              serveDNS: true
+  - nodes:
+      parameters:
+        ironic:
+          externalInstance:
+            endpoint: https://ironic.example.com:6385/v1/
+            credentialsRef:
+              kind: Secret
+              name: ironic-credentials
+              namespace: default
