@@ -159,8 +159,10 @@ func TestExport(t *testing.T) {
 	llms := readFile(t, filepath.Join(publicDir, "en", "modules", "external-llms.txt"))
 	for _, want := range []string{
 		"# Deckhouse Platform Modules",
-		"> The content below is for Deckhouse Platform external modules.",
-		"> Note that the documented version may differ from the version actually used in a cluster.",
+		// The manifest carries no localized preamble, so the English defaults are
+		// used: the intro is a blockquote, the version note a plain line.
+		"> " + defaultLLMsIntro,
+		defaultLLMsVersionNote,
 		"## prompp",
 		"- [Prompp](https://deckhouse.io/modules/prompp/stable/index.md): A drop-in Prometheus replacement.",
 	} {

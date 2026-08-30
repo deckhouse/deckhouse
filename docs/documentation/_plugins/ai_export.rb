@@ -347,8 +347,12 @@ module Jekyll
       def write_llms_txt(lang, documents)
         lines = ["# #{site_title(lang)}", "", "> #{site_summary(lang)}", ""]
 
-        lines << @site.data.dig("i18n", "common", "aiLlmsNoteRoot", lang).to_s
-        lines << ""
+        # The version note is for the platform documentation index; the embedded
+        # modules build (`mode: module`) is a sub-index and leaves it off.
+        unless module_mode?
+          lines << @site.data.dig("i18n", "common", "aiLlmsNoteRoot", lang).to_s
+          lines << ""
+        end
 
         groups(lang, documents).each do |group|
           next if group[:documents].empty?
@@ -400,6 +404,12 @@ module Jekyll
         end
 
         @site.config.dig("site_description", lang).to_s
+      end
+
+      # True in the embedded modules build, which sets `mode: module` in the site
+      # config (the same flag the sidebar and layouts key off).
+      def module_mode?
+        @site.config["mode"].to_s.downcase == "module"
       end
 
       def write(lang, name, content)

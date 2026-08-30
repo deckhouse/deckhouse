@@ -137,7 +137,8 @@ type Chunk struct {
 // Markdown, writes the `.md` next to the rendered `.html` and publishes
 // `<publicDir>/<lang>/modules/{external-llms.txt,external-corpus.json}`.
 //
-// A missing manifest is not an error: the site simply has no module pages yet.
+// A missing manifest is not an error: the `ai` output was not rendered, so the
+// export is skipped (with a warning) rather than failing the build.
 func Export(publicDir, lang string, logger *log.Logger) error {
 	if logger == nil {
 		// The export is a best-effort step of the build (see `internal/docs`),
@@ -152,7 +153,16 @@ func Export(publicDir, lang string, logger *log.Logger) error {
 		return err
 	}
 
-	if manifest == nil || len(manifest.Documents) == 0 {
+	if manifest == nil {
+		// The `ai` output format produced no `ai.json`. Skip llms.txt and
+		// corpus.json instead of failing — the rest of the site is fine.
+		logger.Warn("ai export skipped: manifest not found",
+			slog.String("lang", lang), slog.String("manifest", manifestPath))
+
+		return nil
+	}
+
+	if len(manifest.Documents) == 0 {
 		logger.Debug("ai export skipped: no pages in the manifest",
 			slog.String("lang", lang), slog.String("manifest", manifestPath))
 
