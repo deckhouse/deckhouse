@@ -1301,6 +1301,25 @@ ru-central1-a: subnet-a
 			})
 		})
 
+		Context("with additional internal networks in ccm.parameters", func() {
+			It("appends them to the discovery-data networks, deduplicating", func() {
+				f.ValuesSetFromYaml("cloudProviderYandex.ccm.parameters.additionalInternalNetworkIDs", `["id2", "id3"]`)
+				f.HelmRender()
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				Expect(ccmEnv("YANDEX_CLOUD_INTERNAL_NETWORK_IDS")).To(Equal("id1,id2,id3"))
+			})
+
+			It("appends them to a stated existingNetworkID, deduplicating", func() {
+				f.ValuesSet("cloudProviderYandex.nodes.parameters.existingNetworkID", "enp-network")
+				f.ValuesSetFromYaml("cloudProviderYandex.ccm.parameters.additionalInternalNetworkIDs", `["enp-network", "enp-extra"]`)
+				f.HelmRender()
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				Expect(ccmEnv("YANDEX_CLOUD_INTERNAL_NETWORK_IDS")).To(Equal("enp-network,enp-extra"))
+			})
+		})
+
 		Context("with a globally restricted set of zones", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("cloudProviderYandex.internal.providerDiscoveryData.zoneToSubnetIdMap", `
