@@ -143,6 +143,103 @@ func TestBuildSnapshot_ClassDeletedMidPassIsRecorded(t *testing.T) {
 	require.NotEmpty(t, check.Error)
 }
 
+// The autoscaler needs a template NodeInfo for every node group it discovers. A group with
+// minPerZone above zero never scales from zero, but it still spends time with no registered Node —
+// while its only Node boots, or mid-churn — and with no template the clusterapi provider fails
+// ResourcesLeft with "No node info for: <group>", which aborts scale-up for every other group in
+// the cluster. So TemplateCapacity is resolved regardless of minPerZone.
+//
+// What must not follow is publishing it: nodeCapacity is a top-level key of the NodeGroup element,
+// and bashible-apiserver's AddToChecksum excludes only the replica counters under cloudInstances —
+// so a newly published key changes configurationChecksum and re-runs node configuration fleet-wide.
+func TestBuildSnapshot_TemplateCapacityIsResolvedAboveZeroMinButNotPublished(t *testing.T) {
+	for _, tc := range []struct {
+		name          string
+		minPerZone    int32
+		wantPublished bool
+	}{
+		{name: "scale from zero publishes", minPerZone: 0, wantPublished: true},
+		{name: "fixed size does not publish", minPerZone: 1, wantPublished: false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			s := newDVPTestService(t, "worker", 4, "8Gi")
+
+			ng := &v1.NodeGroup{}
+			ng.Name = "worker"
+			ng.Spec.NodeType = v1.NodeTypeCloudEphemeral
+			ng.Spec.CloudInstances = &v1.CloudInstancesSpec{
+				ClassReference: v1.ClassReference{Kind: "DVPInstanceClass", Name: "worker"},
+				MinPerZone:     tc.minPerZone,
+				MaxPerZone:     3,
+			}
+
+			snap, err := s.BuildSnapshot(t.Context(), ng)
+			require.NoError(t, err)
+			require.NoError(t, snap.CapacityErr)
+
+			require.NotNil(t, snap.TemplateCapacity, "the MachineDeployment annotations have no other source")
+			require.Equal(t, "4", snap.TemplateCapacity.CPU.String())
+			require.Equal(t, "8Gi", snap.TemplateCapacity.Memory.String())
+
+			result, err := Derive(t.Context(), ng, snap)
+			require.NoError(t, err)
+			require.NotNil(t, result.TemplateCapacity)
+
+			element := ResolveNodeGroup(ResolveInput{
+				Name:           ng.Name,
+				NodeType:       ng.Spec.NodeType,
+				Spec:           ng.Spec,
+				CloudProcessed: true,
+			}, result).ToMap()
+
+			if tc.wantPublished {
+				require.NotNil(t, snap.Capacity)
+				require.Contains(t, element, "nodeCapacity", "scale-from-zero has always published it")
+			} else {
+				require.Nil(t, snap.Capacity, "only scale-from-zero publishes the value")
+				require.Nil(t, result.NodeCapacity)
+				require.NotContains(t, element, "nodeCapacity",
+					"publishing it here changes configurationChecksum and re-runs bashible on every node")
+			}
+		})
+	}
+}
+
+// newDVPTestService serves one DVPInstanceClass whose spec carries its own capacity, so the test
+// does not depend on the InstanceTypesCatalog being present.
+func newDVPTestService(t *testing.T, className string, cores int64, memory string) *Service {
+	t.Helper()
+
+	const kind = "DVPInstanceClass"
+
+	scheme := newTestScheme(t)
+	gvk := schema.GroupVersionKind{Group: instanceClassGroup, Version: "v1", Kind: kind}
+	scheme.AddKnownTypeWithName(gvk, &unstructured.Unstructured{})
+	scheme.AddKnownTypeWithName(gvk.GroupVersion().WithKind(kind+"List"), &unstructured.UnstructuredList{})
+
+	ic := &unstructured.Unstructured{Object: map[string]interface{}{
+		"spec": map[string]interface{}{
+			"virtualMachine": map[string]interface{}{
+				"cpu":    map[string]interface{}{"cores": cores},
+				"memory": map[string]interface{}{"size": memory},
+			},
+		},
+	}}
+	ic.SetGroupVersionKind(gvk)
+	ic.SetName(className)
+
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(ic, testSecret(cloudProviderSecretNamespace, cloudProviderSecretName, map[string][]byte{
+			"type":                    []byte(`dvp`),
+			"instanceClassKind":       []byte(kind),
+			"instanceClassAPIVersion": []byte(`v1`),
+		})).
+		Build()
+
+	return &Service{Client: c}
+}
+
 // An unreadable source must abort the pass: an empty provider reads as "no cloud", which drops
 // instanceClass from the published element and re-runs bashible on every node.
 func TestBuildSnapshot_UnreadableProviderAborts(t *testing.T) {
