@@ -28,7 +28,6 @@ import (
 	deckhousev1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks/internal"
 	ycpccv1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks/internal/api/pcc/v1"
-	ycsettingsv1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks/internal/api/settings/v1"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -64,26 +63,44 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ExecuteHookOnSynchronization: ptr.To(false),
 			FilterFunc:                   internal.FilterModuleConfig,
 		},
+		// Binding 2: the existing master NodeGroup - used to detect a hybrid cluster (Static master).
+		{
+			Name:       "master_node_group",
+			ApiVersion: "deckhouse.io/v1",
+			Kind:       "NodeGroup",
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"master"},
+			},
+			FilterFunc: internal.FilterNodeGroup,
+		},
+		// Binding 3: the candi discovery-data Secret - the infrastructure run's recorded output,
+		// read when the legacy PCC does not carry discovery data.
+		{
+			Name:       "candi_discovery_data",
+			ApiVersion: "v1",
+			Kind:       "Secret",
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{internal.Namespace},
+				},
+			},
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{internal.CandiDiscoverySecretName},
+			},
+			FilterFunc: internal.FilterCandiDiscoverySecret,
+		},
 	},
 }, handleMigrationResources)
 
 func handleMigrationResources(_ context.Context, input *go_hook.HookInput) error {
-	pccSnaps := input.Snapshots.Get("provider_cluster_configuration")
-	if len(pccSnaps) == 0 {
+	pccResult, pccFound, err := decodePCCSnapshot(input)
+	if err != nil {
+		return err
+	}
+
+	if !pccFound {
 		// State A: no PCC - nothing to create; deletion is handled by yandex_cluster_configuration.go.
 		return nil
-	}
-
-	var pccResult internal.PCCSecretFilterResult
-	if err := pccSnaps[0].UnmarshalTo(&pccResult); err != nil {
-		return fmt.Errorf("unmarshal PCC snapshot: %w", err)
-	}
-
-	var pcc ycpccv1.YandexProviderClusterConfiguration
-	if len(pccResult.ProviderClusterConfig) > 0 {
-		if err := convertStructsUsingJSON(pccResult.ProviderClusterConfig, &pcc); err != nil {
-			return fmt.Errorf("parse PCC: %w", err)
-		}
 	}
 
 	// State B: PCC present, migration in progress - create artifacts in namespace (which now exists after Helm).
@@ -91,29 +108,28 @@ func handleMigrationResources(_ context.Context, input *go_hook.HookInput) error
 	// which fires on NodeGroup/YandexInstanceClass/ModuleConfig/Secret events and calls deleteMigrationArtifacts.
 	// Running createProviderClusterConfigurationResources in State C is safe: CreateOrUpdate is idempotent
 	// and yandex_cluster_configuration.go will delete the secret on the next (or concurrent) cycle.
+	var pcc ycpccv1.YandexProviderClusterConfiguration
+	if err := convertStructsUsingJSON(pccResult.ProviderClusterConfig, &pcc); err != nil {
+		return fmt.Errorf("unmarshal PCC: %w", err)
+	}
+
 	if err := validateProviderClusterConfig(pcc); err != nil {
 		return fmt.Errorf("validate provider cluster config: %w", err)
 	}
 
-	var mc ycsettingsv1.ModuleConfigSettings
-	mcSnaps := input.Snapshots.Get("module_config")
-
-	if len(mcSnaps) != 0 {
-		var mcResult internal.ModuleConfigFilterResult
-		if err := mcSnaps[0].UnmarshalTo(&mcResult); err != nil {
-			return fmt.Errorf("unmarshal ModuleConfig snapshot: %w", err)
-		}
-
-		// The v1 settings payload is what matters here: an operator may keep version 1 settings
-		// while the module is disabled, and they still have to be projected.
-		if len(mcResult.SettingsV1) > 0 {
-			if err := convertStructsUsingJSON(mcResult.SettingsV1, &mc); err != nil {
-				return fmt.Errorf("parse ModuleConfig v1: %w", err)
-			}
-		}
+	mcSettings, err := decodeModuleConfigSettingsV1(input)
+	if err != nil {
+		return err
 	}
 
-	if err := internal.CreateMigrationResourcesSecret(input, pcc, mc); err != nil {
+	// Discovery data comes from the candi Secret first, then the legacy PCC discovery payload.
+	discoveryData, candiPresent := resolveCandiDiscoveryData(input)
+	if err := applyPCCDiscoveryFallback(&discoveryData, pccResult, candiPresent); err != nil {
+		return err
+	}
+
+	isHybrid := isHybridCluster(input, "master_node_group")
+	if err := internal.CreateMigrationResourcesSecret(input, pcc, mcSettings, discoveryData, isHybrid); err != nil {
 		return fmt.Errorf("create migration resources: %w", err)
 	}
 
