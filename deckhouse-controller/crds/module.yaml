@@ -235,23 +235,23 @@ spec:
       name: Repository
       priority: 1
       type: string
-    - description: Module phase.
-      jsonPath: .status.phase
-      name: Phase
+    - jsonPath: .status.summary.state
+      name: State
       type: string
-    - description: Module`s enabled status.
-      jsonPath: .status.conditions[?(@.type=='EnabledByModuleManager')].status
-      name: Enabled
-      type: string
-    - description: Module`s enabled information.
-      jsonPath: .status.conditions[?(@.type=='EnabledByModuleManager')].message
-      name: Disabled Message
+    - jsonPath: .status.conditions[?(@.type=='Installed')].status
+      name: Installed
       priority: 1
       type: string
-    - description: Module`s ready status.
-      jsonPath: .status.conditions[?(@.type=='IsReady')].status
+    - jsonPath: .status.conditions[?(@.type=='Ready')].status
       name: Ready
+      priority: 1
       type: string
+    - jsonPath: .status.summary.message
+      name: Message
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1alpha2
     schema:
       openAPIV3Schema:

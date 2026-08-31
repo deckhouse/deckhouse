@@ -65,11 +65,11 @@ var _ runtime.Object = (*Module)(nil)
 // +kubebuilder:storageversion
 // +kubebuilder:printcolumn:name=Version,type=string,JSONPath=.spec.packageVersion
 // +kubebuilder:printcolumn:name=Repository,type=string,JSONPath=.spec.packageRepositoryName,priority=1
-// +kubebuilder:printcolumn:name="Phase",type="string",JSONPath=".status.phase",description="Module phase."
-// +kubebuilder:printcolumn:name="Enabled",type="string",JSONPath=".status.conditions[?(@.type=='EnabledByModuleManager')].status",description="Module`s enabled status."
-// +kubebuilder:printcolumn:name="Disabled Message",type="string",JSONPath=".status.conditions[?(@.type=='EnabledByModuleManager')].message",priority=1,description="Module`s enabled information."
-// +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type=='IsReady')].status",description="Module`s ready status."
-// +kubebuilder:metadata:labels="heritage=deckhouse"
+// +kubebuilder:printcolumn:name=State,type=string,JSONPath=.status.summary.state
+// +kubebuilder:printcolumn:name=Installed,type=string,JSONPath=.status.conditions[?(@.type=='Installed')].status,priority=1
+// +kubebuilder:printcolumn:name=Ready,type=string,JSONPath=.status.conditions[?(@.type=='Ready')].status,priority=1
+// +kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.summary.message"
+// +kubebuilder:printcolumn:name=Age,type=date,JSONPath=.metadata.creationTimestamp
 // +kubebuilder:metadata:labels="app.kubernetes.io/name=deckhouse"
 // +kubebuilder:metadata:labels="app.kubernetes.io/part-of=deckhouse"
 // +crd-enricher:crd:preserveUnknownFields=false
