@@ -354,6 +354,13 @@ func (c *Controller) Start(ctx context.Context) error {
 		return fmt.Errorf("sync modules: %w", err)
 	}
 
+	// loadModules below enqueues downloads straight away, so this is the last point at which
+	// dropping stale package state cannot race a deploy — as long as this manager registers no
+	// reconciler that deploys on its own. A leak must not stop the tree loading.
+	if err := c.cleanupPackages(ctx, modules); err != nil {
+		c.logger.Warn("failed to cleanup packages", log.Err(err))
+	}
+
 	if err := c.loadModules(ctx, modules); err != nil {
 		return fmt.Errorf("load modules: %w", err)
 	}

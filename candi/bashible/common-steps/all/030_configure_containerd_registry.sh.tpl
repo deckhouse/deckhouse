@@ -123,12 +123,12 @@ EOF
       {{- $exist_registry_host_list = append $exist_registry_host_list $host_name }}
 
 # Sync module sources host.toml and ca.crt
-mkdir -p "/etc/containerd/registry.d/{{ $host_name }}"
-bb-sync-file "/etc/containerd/registry.d/{{ $host_name }}/ca.crt" - << "EOF"
+mkdir -p '/etc/containerd/registry.d/{{ $host_name }}'
+bb-sync-file '/etc/containerd/registry.d/{{ $host_name }}/ca.crt' - << "EOF"
 {{ $CA }}
 EOF
 
-bb-sync-file "/etc/containerd/registry.d/{{ $host_name }}/hosts.toml" - << EOF
+bb-sync-file '/etc/containerd/registry.d/{{ $host_name }}/hosts.toml' - << "EOF"
 server = {{ $host_name | quote }}
 ca = ["/etc/containerd/registry.d/{{ $host_name }}/ca.crt"]
 capabilities = ["pull", "resolve"]

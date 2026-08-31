@@ -263,6 +263,80 @@ spec:
 
 Ограничение действует только при создании ресурсов User и Group и не запрещает добавлять существующих пользователей и группы в ClusterAuthorizationRule. Если соответствующий User или Group уже существует, после добавления его в правило права будут предоставлены сразу.
 
+## Управление правами через CLI
+
+Команда [`d8 iam access`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-access) позволяет управлять правилами авторизации без написания YAML-манифестов. Она создаёт и удаляет ресурсы [ClusterAuthorizationRule](cr.html#clusterauthorizationrule) и [AuthorizationRule](cr.html#authorizationrule).
+
+Доступные уровни доступа: `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`, `ClusterAdmin`, `SuperAdmin`.
+
+Примеры назначения прав с помощью команды `d8 iam access`:
+
+Назначить роль Admin пользователю в неймспейсе `dev`:
+
+```shell
+d8 iam access grant user anton --access-level Admin -n dev
+```
+
+Назначить пользователю роль Admin в нескольких неймспейсах:
+
+```shell
+d8 iam access grant user anton --access-level Admin -n dev -n stage
+```
+
+Назначить пользователю кластерную роль (без системных неймспейсов):
+
+```shell
+d8 iam access grant user anton --access-level ClusterAdmin --scope cluster
+```
+
+Назначить пользователю кластерную роль во всех неймспейсах (включая системные)
+
+```shell
+d8 iam access grant user anton --access-level ClusterAdmin --scope all-namespaces
+```
+
+Назначить членам группы роль по label-селектору неймспейсов:
+
+```shell
+d8 iam access grant group admins --access-level Editor --scope labels=team=platform,tier=prod
+```
+
+Назначить членам группы роль с дополнительными возможностями:
+
+```shell
+d8 iam access grant group admins --access-level Editor -n dev --port-forwarding --allow-scale
+```
+
+Предпросмотр манифеста без применения:
+
+```shell
+d8 iam access grant user anton --access-level Admin -n dev --dry-run -o yaml
+```
+
+Отозвать права пользователя в неймспейсе:
+
+```shell
+d8 iam access revoke user anton -n dev
+```
+
+Отозвать права пользователя на уровне кластера:
+
+```shell
+d8 iam access revoke user anton --scope cluster
+```
+
+Посмотреть все правила доступа в кластере:
+
+```shell
+d8 iam list rules
+```
+
+Посмотреть детальную информацию о конкретном правиле:
+
+```shell
+d8 iam get rule <имя>
+```
+
 ## Пример выдачи прав на все неймспейсы
 
 {% alert level="info" %}
