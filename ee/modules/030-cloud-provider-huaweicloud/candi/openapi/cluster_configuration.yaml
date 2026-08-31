@@ -239,15 +239,15 @@ apiVersions:
 
             volumeTypeMap:
               description: |
-                A dictionary mapping availability zones to disk types for the group’s worker nodes.
+                A dictionary mapping availability zones to disk types for the group's worker nodes.
 
                 Format of dictionary elements: `<AVAILABILITY ZONE>: <DISK TYPE>` (see the example).
 
-                If the `rootDiskSize` parameter is specified, the same disk type is used for the VM’s boot disk.
+                If the `rootDiskSize` parameter is specified, the same disk type is used for the VM's boot disk.
 
                 We recommend using the fastest disk type offered by the provider whenever possible.
 
-                If `volumeTypeMap` is not specified for a node group, the `masterNodeGroup`’s `volumeTypeMap` is used as a fallback for that group.
+                If `volumeTypeMap` is not specified for a node group, the `masterNodeGroup`'s `volumeTypeMap` is used as a fallback for that group.
 
                 If the replicas value exceeds the number of entries in the dictionary, assignment wraps around from the beginning. For example, if `replicas: 5` for the `front` group and the dictionary lists `fast-eu-1a` first and `fast-eu-1b` second, then front-0, front-2, front-4 will use `fast-eu-1a`, while front-1, front-3 will use `fast-eu-1b`.
               x-examples:
@@ -292,7 +292,7 @@ apiVersions:
               When enabled, DKP creates a security group named after the cluster `prefix` with the following default inbound rules:
               - TCP/22 (SSH) from `0.0.0.0/0` by default
               - ICMP from `0.0.0.0/0`
-              - TCP NodePorts `30000–32767` from `0.0.0.0/0`
+              - TCP NodePorts `30000-32767` from `0.0.0.0/0`
 
               For details, see [Huawei Cloud: Layouts](layouts.html#standard).
             type: boolean
