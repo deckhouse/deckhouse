@@ -770,6 +770,14 @@ func (r *Runtime) ResumeScheduler() {
 	r.scheduler.Resume()
 }
 
+// IsPackageEnabled returns true if the package is enabled.
+func (r *Runtime) IsPackageEnabled(name string) bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	return r.scheduler.IsEnabled(name)
+}
+
 // CheckConstraints validates the proposed package constraints against the
 // current cluster state and dependency graph. The `name` is the scheduler-side
 // identifier (apps.BuildName for applications, module name for modules) and is
