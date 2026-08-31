@@ -294,7 +294,7 @@ apiVersions:
               - ICMP from `0.0.0.0/0`;
               - TCP NodePorts `30000–32767` from `0.0.0.0/0`.
 
-              For details, see [Layouts](layouts.html#standard).
+              For details, see [Huawei Cloud: Layouts](layouts.html#standard).
             type: boolean
             default: true
           enableEIP:

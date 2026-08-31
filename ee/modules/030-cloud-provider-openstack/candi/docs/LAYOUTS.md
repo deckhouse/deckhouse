@@ -129,7 +129,20 @@ An internal cluster network is created that does not have access to the public n
 ![resources](images/openstack-standardwithnorouter.png)
 <!--- Source: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11560&t=IvETjbByf1MSQzcm-0 --->
 
-Additionally, you can enable the creation of a security group using the [`internalNetworkSecurity`](cluster_configuration.html#openstackclusterconfiguration-standardwithnorouter-internalnetworksecurity) property (default `true`). Default rules match the [Standard](#standard) layout. Attach custom security groups via [`additionalSecurityGroups`](cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups).
+Additionally, you can enable the creation of a security group using the [`internalNetworkSecurity`](cluster_configuration.html#openstackclusterconfiguration-standardwithnorouter-internalnetworksecurity) property (default `true`). The group is named after the cluster prefix (`prefix`) and is assigned to the nodes.
+
+The following inbound rules will be created:
+
+- allow incoming traffic over the `TCP` protocol on port 22 from CIDRs listed in [`sshAllowList`](cluster_configuration.html#openstackclusterconfiguration-sshallowlist) (default `0.0.0.0/0`);
+- allow incoming traffic over the `ICMP` protocol from `0.0.0.0/0`;
+- allow incoming traffic over the `TCP` protocol on ports 30000–32767 for NodePort usage (UDP NodePorts are not opened by default);
+- allow any incoming traffic from nodes in the same security group.
+
+Attach custom security groups (created in the cloud in advance) via [`additionalSecurityGroups`](cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups):
+
+- for master nodes — in the [`masterNodeGroup.instanceClass.additionalSecurityGroups`](cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) parameter of the [OpenStackClusterConfiguration](cluster_configuration.html#openstackclusterconfiguration) resource;
+- for static nodes — in the [`nodeGroups[].instanceClass.additionalSecurityGroups`](cluster_configuration.html#openstackclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) parameter of the [OpenStackClusterConfiguration](cluster_configuration.html#openstackclusterconfiguration) resource;
+- for ephemeral nodes — in the [`spec.additionalSecurityGroups`](cr.html#openstackinstanceclass-v1-spec-additionalsecuritygroups) parameter of the [OpenStackInstanceClass](cr.html#openstackinstanceclass) resource.
 
 Example of the layout configuration:
 

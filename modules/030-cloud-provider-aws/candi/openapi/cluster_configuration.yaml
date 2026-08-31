@@ -404,7 +404,7 @@ apiVersions:
 
           To configure the security groups used by load balancers, specify them using the `service.beta.kubernetes.io/aws-load-balancer-security-groups` annotation.
 
-          For the list of default security groups and rules that DKP creates when this parameter is `false`, see [Security groups](layouts.html#security-groups).
+          For details, see [AWS: Layouts](layouts.html#withoutnat).
       sshAllowList:
         type: array
         items:

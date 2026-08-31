@@ -60,7 +60,17 @@ masterNodeGroup:
 ![VpcPeering layout](images/huawei-vpc-peering.png)
 <!--- Source: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11646&t=IvETjbByf1MSQzcm-0 --->
 
-Additionally, you can enable the creation of a security group using the [`internalNetworkSecurity`](cluster_configuration.html#huaweicloudclusterconfiguration-vpcpeering-internalnetworksecurity) property (default `true`). Default rules match the [Standard](#standard) layout. For CloudEphemeral nodes, additional security groups are set in the [`spec.securityGroups`](cr.html#huaweicloudinstanceclass-v1-spec-securitygroups) parameter of the [HuaweiCloudInstanceClass](cr.html#huaweicloudinstanceclass) resource.
+Additionally, you can enable the creation of a security group using the [`internalNetworkSecurity`](cluster_configuration.html#huaweicloudclusterconfiguration-vpcpeering-internalnetworksecurity) property (default `true`). The group is named after the cluster prefix and is assigned to the nodes.
+
+The following inbound rules will be created:
+
+- allow incoming traffic over the `TCP` protocol on port 22 from `0.0.0.0/0`;
+- allow incoming traffic over the `ICMP` protocol from `0.0.0.0/0`;
+- allow incoming traffic over the `TCP` protocol on ports 30000–32767 for NodePort usage (UDP NodePorts are not opened by default).
+
+The “all inbound traffic from nodes in the same security group” rule is not created by default in Huawei Cloud.
+
+Attach custom security groups for CloudEphemeral nodes in the [HuaweiCloudInstanceClass](cr.html#huaweicloudinstanceclass) resource via [`spec.securityGroups`](cr.html#huaweicloudinstanceclass-v1-spec-securitygroups). They are applied together with the group created by the module.
 
 Example of the layout configuration:
 

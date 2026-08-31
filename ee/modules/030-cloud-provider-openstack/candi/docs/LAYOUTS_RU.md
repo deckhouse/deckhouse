@@ -136,7 +136,20 @@ Virtual IP создается в публичной сети, он все рав
 ![resources](images/openstack-standardwithnorouter.png)
 <!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11560&t=IvETjbByf1MSQzcm-0 --->
 
-Дополнительно возможно создание группы безопасности отдельным свойством [`internalNetworkSecurity`](cluster_configuration.html#openstackclusterconfiguration-standardwithnorouter-internalnetworksecurity) (по умолчанию `true`). Правила по умолчанию совпадают со схемой [Standard](#standard). Собственные группы безопасности подключаются через [`additionalSecurityGroups`](cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups).
+Дополнительно возможно создание группы безопасности отдельным свойством [`internalNetworkSecurity`](cluster_configuration.html#openstackclusterconfiguration-standardwithnorouter-internalnetworksecurity) (по умолчанию `true`). Группа создаётся с именем префикса кластера (`prefix`) и назначается узлам.
+
+Будут созданы следующие правила входящего трафика:
+
+- разрешение входящего трафика по протоколу `TCP` и порту 22 из CIDR, указанных в [`sshAllowList`](cluster_configuration.html#openstackclusterconfiguration-sshallowlist) (по умолчанию `0.0.0.0/0`);
+- разрешение входящего трафика по протоколу `ICMP` из `0.0.0.0/0`;
+- разрешение входящего трафика по протоколу `TCP` и портам 30000–32767 для использования `NodePort` (UDP NodePort по умолчанию не открываются);
+- разрешение любого входящего трафика от узлов, входящих в ту же группу безопасности.
+
+Собственные группы безопасности (созданные в облаке заранее) подключаются через [`additionalSecurityGroups`](cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups):
+
+- для master-узлов — в параметре [`masterNodeGroup.instanceClass.additionalSecurityGroups`](cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) ресурса [OpenStackClusterConfiguration](cluster_configuration.html#openstackclusterconfiguration);
+- для статических узлов — в параметре [`nodeGroups[].instanceClass.additionalSecurityGroups`](cluster_configuration.html#openstackclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) ресурса [OpenStackClusterConfiguration](cluster_configuration.html#openstackclusterconfiguration);
+- для эфемерных узлов — в параметре [`spec.additionalSecurityGroups`](cr.html#openstackinstanceclass-v1-spec-additionalsecuritygroups) ресурса [OpenStackInstanceClass](cr.html#openstackinstanceclass).
 
 Пример конфигурации схемы размещения:
 

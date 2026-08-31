@@ -271,7 +271,7 @@ apiVersions:
               - TCP NodePort `30000–32767` из `0.0.0.0/0`;
               - весь входящий трафик от узлов той же группы безопасности.
 
-              Подробнее — в разделе [схем размещения](layouts.html#standard).
+              Подробнее — в разделе [«OpenStack: схемы размещения»](layouts.html#standard).
           externalNetworkName: &externalNetworkName_ru
             description: |
               Имя сети для внешнего взаимодействия.

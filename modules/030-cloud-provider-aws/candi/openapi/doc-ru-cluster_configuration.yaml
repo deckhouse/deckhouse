@@ -228,7 +228,7 @@ apiVersions:
 
           Для настройки security group, используемых балансировщиками нагрузки, укажите их через аннотацию `service.beta.kubernetes.io/aws-load-balancer-security-groups`.
 
-          Список групп безопасности и правил, которые DKP создаёт при значении `false`, описан в разделе [«Группы безопасности»](layouts.html#группы-безопасности).
+          Подробнее — в разделе [«AWS: схемы размещения»](layouts.html#withoutnat).
       sshAllowList:
         description: |
           Список CIDR, разрешенных для подключения к узлам по SSH.

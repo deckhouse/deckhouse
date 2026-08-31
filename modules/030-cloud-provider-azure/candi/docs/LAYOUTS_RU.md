@@ -14,6 +14,15 @@ description: "Описание схем размещения и взаимоде
 * Если master-узел не имеет публичного IP-адреса, для установки и доступа в кластер необходим дополнительный инстанс с публичным IP-адресом (например, bastion-хост). В этом случае также потребуется настроить пиринговое соединение между VNet кластера и VNet bastion-хоста.
 * Между VNet кластера и другими VNet можно настроить пиринговое соединение.
 
+Модуль создаёт Network Security Group (NSG) с именем префикса кластера и привязывает её к подсети узлов.
+
+Будут созданы следующие правила:
+
+- `AllowIcmp` — разрешение входящего трафика по протоколу `ICMP` из любого источника;
+- `AllowSsh` — разрешение входящего трафика по протоколу `TCP` и порту 22 из CIDR, указанных в [`sshAllowList`](cluster_configuration.html#azureclusterconfiguration-sshallowlist) (если список не задан — из любого источника).
+
+Подключить заранее созданную собственную NSG к узлам через параметры модуля нельзя. Для ограничения SSH используйте [`sshAllowList`](cluster_configuration.html#azureclusterconfiguration-sshallowlist).
+
 Пример конфигурации схемы размещения:
 
 ```yaml
@@ -45,14 +54,3 @@ peeredVNets:
   - resourceGroupName: kube-bastion # Обязательный параметр.
     vnetName: kube-bastion-vnet # Обязательный параметр.
 ```
-
-## Network Security Group
-
-Модуль создаёт Network Security Group (NSG) с именем префикса кластера и привязывает её к подсети узлов.
-
-Будут созданы следующие правила:
-
-- `AllowIcmp` — разрешение входящего трафика по протоколу `ICMP` из любого источника;
-- `AllowSsh` — разрешение входящего трафика по протоколу `TCP` и порту 22 из CIDR, указанных в [`sshAllowList`](cluster_configuration.html#azureclusterconfiguration-sshallowlist) (если список не задан — из любого источника).
-
-Подключить заранее созданную собственную NSG к узлам через параметры модуля нельзя. Для ограничения SSH используйте [`sshAllowList`](cluster_configuration.html#azureclusterconfiguration-sshallowlist).

@@ -488,7 +488,7 @@ apiVersions:
               - TCP NodePorts `30000–32767` from `0.0.0.0/0`;
               - all inbound traffic from members of the same security group.
 
-              For details, see [Layouts](layouts.html#standard).
+              For details, see [OpenStack: Layouts](layouts.html#standard).
             type: boolean
             default: true
           externalNetworkName: &externalNetworkName
