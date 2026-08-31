@@ -24,7 +24,7 @@ checksum/config: {{ include (print $.Template.BasePath "/cloud-controller-manage
 - name: YANDEX_CLOUD_DEFAULT_LB_LISTENER_SUBNET_ID
   value: {{ .Values.cloudProviderYandex.internal.defaultLbListenerSubnetId | quote }}
 - name: YANDEX_CLOUD_DEFAULT_LB_TARGET_GROUP_NETWORK_ID
-  value: {{ include "yandex_network_id" . | quote }}
+  value: {{ include "yandex_default_lb_target_group_network_id" . | quote }}
 - name: YANDEX_CLOUD_INTERNAL_NETWORK_IDS
   value: {{ join "," (include "yandex_internal_network_ids" . | fromJsonArray) | quote }}
 - name: YANDEX_CLOUD_EXTERNAL_NETWORK_IDS

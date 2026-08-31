@@ -24,6 +24,12 @@ properties:
             items:
               type: string
             type: array
+          additionalInternalNetworkIDs:
+            description: Additional internal network IDs to be recognized as internal
+              networks by the CCM.
+            items:
+              type: string
+            type: array
         type: object
     required:
     - parameters

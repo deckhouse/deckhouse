@@ -20,6 +20,12 @@ properties:
             items:
               type: string
             type: array
+          additionalInternalNetworkIDs:
+            description: |
+              Дополнительные ID внутренних сетей, которые будут распознаваться CCM как внутренние сети.
+            items:
+              type: string
+            type: array
         type: object
     type: object
   nodes:

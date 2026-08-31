@@ -347,6 +347,22 @@ positive:
             - enp-ext-net-1
             - enp-ext-net-2
 
+    # enabled with additional internal networks
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+      ccm:
+        parameters:
+          additionalInternalNetworkIDs:
+            - enp-int-net-1
+            - enp-int-net-2
+
     # disabled
     - provider:
         parameters:
@@ -1156,6 +1172,25 @@ negative:
       ccm:
         parameters:
           additionalExternalNetworkIDs:
+            - 123
+            - 456
+
+    # ==========================================
+    # additionalInternalNetworkIDs items type
+    # ==========================================
+
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+      ccm:
+        parameters:
+          additionalInternalNetworkIDs:
             - 123
             - 456
 

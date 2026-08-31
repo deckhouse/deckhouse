@@ -43,10 +43,12 @@
 */ -}}
 
 {{- /*
-  The VPC network the cluster runs in.
-  Usage: {{ include "yandex_network_id" . }}
+  The VPC network the load balancer target group is registered in. candi reports this as the
+  cluster's own network, so the operator's stated nodes.parameters.existingNetworkID wins and
+  internal.providerDiscoveryData.defaultLbTargetGroupNetworkId is the fallback.
+  Usage: {{ include "yandex_default_lb_target_group_network_id" . }}
 */ -}}
-{{- define "yandex_network_id" -}}
+{{- define "yandex_default_lb_target_group_network_id" -}}
 {{- $existing := dig "nodes" "parameters" "existingNetworkID" "" .Values.cloudProviderYandex -}}
 {{- if $existing -}}
 {{- $existing -}}
@@ -58,15 +60,21 @@
 {{- /*
   The internal networks, as a JSON array. candi emits `[network_id]`, so a stated
   existingNetworkID yields a one-element list; discovery data keeps whatever it recorded.
+  ccm.parameters.additionalInternalNetworkIDs is appended on top and the result is
+  deduplicated, so a cluster DKP did not build (e.g. hybrid) can list more than the single
+  existing network.
   Usage: {{ include "yandex_internal_network_ids" . | fromJsonArray }}
 */ -}}
 {{- define "yandex_internal_network_ids" -}}
 {{- $existing := dig "nodes" "parameters" "existingNetworkID" "" .Values.cloudProviderYandex -}}
+{{- $base := list -}}
 {{- if $existing -}}
-{{- list $existing | toJson -}}
+{{- $base = list $existing -}}
 {{- else -}}
-{{- dig "internal" "providerDiscoveryData" "internalNetworkIDs" (list) .Values.cloudProviderYandex | toJson -}}
+{{- $base = dig "internal" "providerDiscoveryData" "internalNetworkIDs" (list) .Values.cloudProviderYandex -}}
 {{- end -}}
+{{- $additional := dig "ccm" "parameters" "additionalInternalNetworkIDs" (list) .Values.cloudProviderYandex -}}
+{{- concat $base $additional | uniq | toJson -}}
 {{- end -}}
 
 {{- /*

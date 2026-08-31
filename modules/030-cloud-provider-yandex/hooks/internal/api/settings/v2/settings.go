@@ -178,6 +178,8 @@ type ProvisionedStorageClass struct {
 type CCMParameters struct {
 	// Additional external network IDs to be recognized as external networks by the CCM.
 	AdditionalExternalNetworkIDs []string `json:"additionalExternalNetworkIDs,omitempty"`
+	// Additional internal network IDs to be recognized as internal networks by the CCM.
+	AdditionalInternalNetworkIDs []string `json:"additionalInternalNetworkIDs,omitempty"`
 }
 
 // HasProviderSection reports whether the provider settings section is set.
