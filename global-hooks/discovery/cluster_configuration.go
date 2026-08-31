@@ -90,6 +90,19 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector:      &types.NameSelector{MatchNames: []string{"d8-cluster-configuration"}},
 			FilterFunc:        applyClusterConfigurationYamlFilter,
 		},
+		{
+			// The network parameters are being migrated into this ModuleConfig, so an operator
+			// patching it must re-run the hook immediately: do not set ExecuteHookOnEvents: false.
+			// Own snapshot rather than the one target_kubernetes_version.go uses — the two hooks read
+			// different settings and must not inherit each other's failure modes.
+			Name:       networkModuleConfigSnapshot,
+			ApiVersion: "deckhouse.io/v1alpha1",
+			Kind:       "ModuleConfig",
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"control-plane-manager"},
+			},
+			FilterFunc: applyControlPlaneManagerNetworkFilter,
+		},
 	},
 }, clusterConfiguration)
 
@@ -134,19 +147,39 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 			}
 		}
 
+		// The three network parameters are resolved "ModuleConfig, otherwise ClusterConfiguration" and
+		// published into both key families. The ModuleConfig read is fail-open (see
+		// readNetworkModuleConfig); the Secret above stays fail-closed.
+		ccNetwork := networkSettings{
+			PodSubnetCIDR:           clusterConfigString(metaConfig.ClusterConfig, "podSubnetCIDR"),
+			ServiceSubnetCIDR:       clusterConfigString(metaConfig.ClusterConfig, "serviceSubnetCIDR"),
+			PodSubnetNodeCIDRPrefix: clusterConfigString(metaConfig.ClusterConfig, "podSubnetNodeCIDRPrefix"),
+		}
+		network := resolveNetwork(readNetworkModuleConfig(input), ccNetwork)
+		logNetworkFallback(input, network)
+
+		// Neither CIDR has a default, so a value missing from both documents is a real error: an empty
+		// string here would reach --cluster-cidr and --service-cluster-ip-range. The prefix cannot be
+		// empty at this point — resolveNetwork falls back to 24.
+		if network.PodSubnetCIDR == "" {
+			return fmt.Errorf("podSubnetCIDR is set neither in ModuleConfig control-plane-manager (settings.network) nor in ClusterConfiguration")
+		}
+		if network.ServiceSubnetCIDR == "" {
+			return fmt.Errorf("serviceSubnetCIDR is set neither in ModuleConfig control-plane-manager (settings.network) nor in ClusterConfiguration")
+		}
+
+		// Substituted back so every template reading global.clusterConfiguration.* — the CPM
+		// $tpl_context, _envs_for_proxy.tpl, 61_proxy.sh.tpl — sees the resolved value without being
+		// touched. Written before global.clusterConfiguration is published, so the two agree.
+		setClusterConfigString(metaConfig.ClusterConfig, "podSubnetCIDR", network.PodSubnetCIDR)
+		setClusterConfigString(metaConfig.ClusterConfig, "serviceSubnetCIDR", network.ServiceSubnetCIDR)
+		setClusterConfigString(metaConfig.ClusterConfig, "podSubnetNodeCIDRPrefix", network.PodSubnetNodeCIDRPrefix)
+
 		input.Values.Set("global.clusterConfiguration", metaConfig.ClusterConfig)
 
-		if podSubnetCIDR, ok := metaConfig.ClusterConfig["podSubnetCIDR"]; ok {
-			input.Values.Set("global.discovery.podSubnet", podSubnetCIDR)
-		} else {
-			return fmt.Errorf("no podSubnetCIDR field in clusterConfiguration")
-		}
-
-		if serviceSubnetCIDR, ok := metaConfig.ClusterConfig["serviceSubnetCIDR"]; ok {
-			input.Values.Set("global.discovery.serviceSubnet", serviceSubnetCIDR)
-		} else {
-			return fmt.Errorf("no serviceSubnetCIDR field in clusterConfiguration")
-		}
+		input.Values.Set("global.discovery.podSubnet", network.PodSubnetCIDR)
+		input.Values.Set("global.discovery.serviceSubnet", network.ServiceSubnetCIDR)
+		input.Values.Set("global.discovery.podSubnetNodeCIDRPrefix", network.PodSubnetNodeCIDRPrefix)
 
 		if clusterDomain, ok := metaConfig.ClusterConfig["clusterDomain"]; ok {
 			input.Values.Set("global.discovery.clusterDomain", clusterDomain)
@@ -154,7 +187,7 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 			return fmt.Errorf("no clusterDomain field in clusterConfiguration")
 		}
 
-		err = maxNodesAmountMetric(input, metaConfig.ClusterConfig["podSubnetCIDR"], metaConfig.ClusterConfig["podSubnetNodeCIDRPrefix"])
+		err = maxNodesAmountMetric(input, network.PodSubnetCIDR, network.PodSubnetNodeCIDRPrefix)
 		if err != nil {
 			return err
 		}
@@ -163,28 +196,43 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 	return nil
 }
 
-func maxNodesAmountMetric(input *go_hook.HookInput, podSubnetCIDR json.RawMessage, podSubnetNodeCIDRPrefix json.RawMessage) error {
-	var res string
-	err := json.Unmarshal(podSubnetCIDR, &res)
-	if err != nil {
-		return fmt.Errorf("cannot unmarshal %v", podSubnetCIDR)
+// clusterConfigString reads a string field out of the parsed ClusterConfiguration. A missing field
+// and a field of another type both come back empty, which is what the resolver treats as "not set
+// here". The schema keeps all three of these strings.
+func clusterConfigString(cfg map[string]json.RawMessage, key string) string {
+	raw, ok := cfg[key]
+	if !ok || len(raw) == 0 || string(raw) == "null" {
+		return ""
 	}
 
-	_, ipnet, err := net.ParseCIDR(res)
+	var v string
+	if err := json.Unmarshal(raw, &v); err != nil {
+		return ""
+	}
+	return v
+}
+
+func setClusterConfigString(cfg map[string]json.RawMessage, key, value string) {
+	encoded, err := json.Marshal(value)
 	if err != nil {
-		return fmt.Errorf("cannot parse CIDR from podSubnetCIDR %s: %v", res, err)
+		return
+	}
+	cfg[key] = encoded
+}
+
+// Both arguments are resolved values (ModuleConfig or ClusterConfiguration), so the metric describes
+// the network the cluster actually runs with rather than whatever the deprecated document still says.
+func maxNodesAmountMetric(input *go_hook.HookInput, podSubnetCIDR string, podSubnetNodeCIDRPrefix string) error {
+	_, ipnet, err := net.ParseCIDR(podSubnetCIDR)
+	if err != nil {
+		return fmt.Errorf("cannot parse CIDR from podSubnetCIDR %s: %v", podSubnetCIDR, err)
 	}
 
 	podSubnetMaskSize, _ := ipnet.Mask.Size()
 
-	err = json.Unmarshal(podSubnetNodeCIDRPrefix, &res)
+	nodeMaskSize, err := strconv.Atoi(podSubnetNodeCIDRPrefix)
 	if err != nil {
-		return fmt.Errorf("cannot unmarshal %v", podSubnetNodeCIDRPrefix)
-	}
-
-	nodeMaskSize, err := strconv.Atoi(res)
-	if err != nil {
-		return fmt.Errorf("cannot convert to integer podSubnetNodeCIDRPrefix %s: %v", res, err)
+		return fmt.Errorf("cannot convert to integer podSubnetNodeCIDRPrefix %s: %v", podSubnetNodeCIDRPrefix, err)
 	}
 
 	diff := nodeMaskSize - podSubnetMaskSize

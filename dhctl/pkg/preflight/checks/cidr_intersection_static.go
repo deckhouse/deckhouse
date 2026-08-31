@@ -72,19 +72,20 @@ func (c CidrIntersectionStaticCheck) Run(ctx context.Context) error {
 	return nil
 }
 
+// Resolved rather than read straight from ClusterConfiguration: on a cluster whose subnets live in
+// ModuleConfig the deprecated fields are absent, and a preflight that silently checked "" against the
+// host networks would pass while the real subnets overlap.
 func getCIDRs(meta *config.MetaConfig) (string, string, error) {
-	var podCIDR string
-	var serviceCIDR string
+	network := meta.Network()
 
-	if err := json.Unmarshal(meta.ClusterConfig["podSubnetCIDR"], &podCIDR); err != nil {
-		return "", "", fmt.Errorf("missing podSubnetCIDR field in ClusterConfiguration")
+	if network.PodSubnetCIDR == "" {
+		return "", "", fmt.Errorf("podSubnetCIDR is set neither in ModuleConfig control-plane-manager (spec.settings.network) nor in ClusterConfiguration")
+	}
+	if network.ServiceSubnetCIDR == "" {
+		return "", "", fmt.Errorf("serviceSubnetCIDR is set neither in ModuleConfig control-plane-manager (spec.settings.network) nor in ClusterConfiguration")
 	}
 
-	if err := json.Unmarshal(meta.ClusterConfig["serviceSubnetCIDR"], &serviceCIDR); err != nil {
-		return "", "", fmt.Errorf("missing serviceSubnetCIDR field in ClusterConfiguration")
-	}
-
-	return podCIDR, serviceCIDR, nil
+	return network.PodSubnetCIDR, network.ServiceSubnetCIDR, nil
 }
 
 func internalNetworkCIDRs(meta *config.MetaConfig) ([]string, error) {

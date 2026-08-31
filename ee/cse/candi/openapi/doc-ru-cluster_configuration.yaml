@@ -45,11 +45,27 @@ apiVersions:
               Имена облачных объектов (например, дисков вида `<prefix>-kubernetes-data-0`) ограничены 63 символами, поэтому длина префикса ограничена 45 символами. Фактический предел может быть меньше в зависимости от провайдера и количества master-узлов; это дополнительно проверяется preflight-проверкой при развёртывании.
       podSubnetCIDR:
         description: |
+          **Устарело.** Используйте [`podSubnetCIDR`](/modules/control-plane-manager/configuration.html#parameters-network-podsubnetcidr) в секции `network` ModuleConfig `control-plane-manager` (`d8 k edit mc control-plane-manager`).
+
+          Значение определяется в следующем порядке: `network.podSubnetCIDR` в ModuleConfig `control-plane-manager`, затем это поле. Значение из ModuleConfig имеет приоритет всегда, когда оно задано.
+
+          Поле необязательное. Пока параметр в ModuleConfig не задан, значение определяет именно это поле. Алерт `D8ObsoleteNetworkFieldsInClusterConfiguration` появляется в кластере при самом факте присутствия поля — в том числе когда значение уже определяет параметр в ModuleConfig, — и пропадает после удаления всех трёх сетевых полей.
+
+          Не изменяйте это поле в работающем кластере.
+
           Адресное пространство подов кластера.
 
           > **Внимание.** Изменение этого параметра в работающем кластере может привести к полному отказу кластера. Изменение заблокировано по умолчанию. Чтобы обойти эту защиту, используйте команду `dhctl config edit cluster-configuration --yes-i-am-sane-and-i-understand-what-i-am-doing`. Однако **настоятельно рекомендуется пересоздать кластер** вместо изменения этого параметра. Подробнее см. в [документации](/products/kubernetes-platform/documentation/v1/admin/configuration/#изменение-защищённых-параметров).
       podSubnetNodeCIDRPrefix:
         description: |
+          **Устарело.** Используйте [`podSubnetNodeCIDRPrefix`](/modules/control-plane-manager/configuration.html#parameters-network-podsubnetnodecidrprefix) в секции `network` ModuleConfig `control-plane-manager` (`d8 k edit mc control-plane-manager`).
+
+          Значение определяется в следующем порядке: `network.podSubnetNodeCIDRPrefix` в ModuleConfig `control-plane-manager`, затем это поле. Значение из ModuleConfig имеет приоритет всегда, когда оно задано.
+
+          Поле необязательное. Пока параметр в ModuleConfig не задан, значение определяет именно это поле. Алерт `D8ObsoleteNetworkFieldsInClusterConfiguration` появляется в кластере при самом факте присутствия поля — в том числе когда значение уже определяет параметр в ModuleConfig, — и пропадает после удаления всех трёх сетевых полей.
+
+          Не изменяйте это поле в работающем кластере.
+
           Размер префикса подсети подов, выделяемой каждому узлу.
 
           Этот параметр определяет, сколько IP-адресов доступно для подов на каждом отдельном узле. Например, если `podSubnetCIDR: 10.111.0.0/16` и `podSubnetNodeCIDRPrefix: "24"`, каждый узел получит подсеть `/24` (например, `10.111.0.0/24`, `10.111.1.0/24` и т.д.), предоставляя до 254 IP-адресов на узел (253 используются для Pod'ов с учётом сетевого и широковещательного адресов).
@@ -60,8 +76,18 @@ apiVersions:
           - Каждый IP-адрес сети подов может поддерживать до 2 подов (один запущенный + один завершающийся).
 
           > **Внимание.** Изменение этого параметра в работающем кластере может привести к полному отказу кластера. Изменение заблокировано по умолчанию. Чтобы обойти эту защиту, используйте команду `dhctl config edit cluster-configuration --yes-i-am-sane-and-i-understand-what-i-am-doing`. Однако **настоятельно рекомендуется пересоздать кластер** вместо изменения этого параметра. Подробнее см. в [документации](/products/kubernetes-platform/documentation/v1/admin/configuration/#изменение-защищённых-параметров).
+
+          Если параметр не задан ни там, ни здесь, используется `24`.
       serviceSubnetCIDR:
         description: |
+          **Устарело.** Используйте [`serviceSubnetCIDR`](/modules/control-plane-manager/configuration.html#parameters-network-servicesubnetcidr) в секции `network` ModuleConfig `control-plane-manager` (`d8 k edit mc control-plane-manager`).
+
+          Значение определяется в следующем порядке: `network.serviceSubnetCIDR` в ModuleConfig `control-plane-manager`, затем это поле. Значение из ModuleConfig имеет приоритет всегда, когда оно задано.
+
+          Поле необязательное. Пока параметр в ModuleConfig не задан, значение определяет именно это поле. Алерт `D8ObsoleteNetworkFieldsInClusterConfiguration` появляется в кластере при самом факте присутствия поля — в том числе когда значение уже определяет параметр в ModuleConfig, — и пропадает после удаления всех трёх сетевых полей.
+
+          Не изменяйте это поле в работающем кластере.
+
           Адресное пространство для сервисов кластера.
 
           > **Внимание.** Изменение этого параметра в работающем кластере может привести к полному отказу кластера. Изменение заблокировано по умолчанию. Чтобы обойти эту защиту, используйте команду `dhctl config edit cluster-configuration --yes-i-am-sane-and-i-understand-what-i-am-doing`. Однако **настоятельно рекомендуется пересоздать кластер** вместо изменения этого параметра. Подробнее см. в [документации](/products/kubernetes-platform/documentation/v1/admin/configuration/#изменение-защищённых-параметров).

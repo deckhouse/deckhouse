@@ -113,7 +113,22 @@ spec:
     args:
     - qqq
 `
+		// kube-system is where this Secret lives. The fixture said d8-system for as long as the
+		// subscription did, so this test passed while asserting the opposite of what it claims: the
+		// Secret was simply never matched and the guard below never fired.
 		stateClusterConfiguration = `
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-cluster-configuration
+  namespace: kube-system
+data:
+  cluster-configuration.yaml: test
+`
+		// A Secret of the same name in the wrong namespace must not disable the hook: it is not the
+		// cluster configuration, and treating it as one would blank both subnets.
+		stateClusterConfigurationWrongNamespace = `
 ---
 apiVersion: v1
 kind: Secret
@@ -164,6 +179,19 @@ data:
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("global.discovery.podSubnet").String()).To(BeEmpty())
 			Expect(f.ValuesGet("global.discovery.serviceSubnet").String()).To(BeEmpty())
+		})
+	})
+
+	Context("With a d8-cluster-configuration secret in another namespace", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateControllerManagerK8SApp + stateApiserverK8SApp + stateClusterConfigurationWrongNamespace))
+			f.RunHook()
+		})
+
+		It("keeps discovering the subnets from the live control plane", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.discovery.podSubnet").String()).To(Equal("192.168.10.0/24"))
+			Expect(f.ValuesGet("global.discovery.serviceSubnet").String()).To(Equal("192.168.30.0/24"))
 		})
 	})
 

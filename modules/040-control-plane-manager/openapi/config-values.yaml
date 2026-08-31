@@ -393,6 +393,66 @@ properties:
     x-examples:
       - "1.35"
       - "Default"
+  # No defaults anywhere in this group: presence of a parameter is what marks it as set by the
+  # operator, and every runtime (DKP hooks, dhctl, node-controller) relies on that to decide whether
+  # to fall through to the deprecated ClusterConfiguration field. A default would make a parameter
+  # permanently present and the fallback unreachable — the rake that had to be removed from
+  # ClusterConfiguration.podSubnetNodeCIDRPrefix and, earlier, from encryptionAlgorithm.
+  network:
+    type: object
+    description: |
+      Cluster network parameters.
+
+      This is the preferred place to manage them. Edit with:
+
+      ```shell
+      d8 k edit mc control-plane-manager
+      ```
+
+      Each parameter is resolved in the following order: this section, then the deprecated same-named field in `ClusterConfiguration`. A parameter set here wins; while it is unset, the deprecated field still decides.
+
+      > **Warning.** These parameters describe the network of a running cluster. Changing any of them after the cluster is bootstrapped is **extremely dangerous** and can lead to complete cluster failure, so it is blocked by admission. It is **strongly recommended to recreate the cluster** instead. See [documentation](/products/kubernetes-platform/documentation/v1/admin/configuration/#modifying-protected-parameters) for details.
+    additionalProperties: false
+    properties:
+      podSubnetCIDR:
+        type: string
+        pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$'
+        x-unsafe: true
+        description: |
+          Address space of the cluster's Pods.
+
+          When migrating from the deprecated `ClusterConfiguration.podSubnetCIDR`, the value must match the one the cluster currently runs with; admission rejects a mismatch.
+        x-examples:
+          - "10.111.0.0/16"
+      serviceSubnetCIDR:
+        type: string
+        pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$'
+        x-unsafe: true
+        description: |
+          Address space of the cluster's services.
+
+          When migrating from the deprecated `ClusterConfiguration.serviceSubnetCIDR`, the value must match the one the cluster currently runs with; admission rejects a mismatch.
+        x-examples:
+          - "10.222.0.0/16"
+      podSubnetNodeCIDRPrefix:
+        type: string
+        pattern: '^[0-9]{1,2}$'
+        x-unsafe: true
+        description: |
+          The prefix size of the Pod network allocated to each node.
+
+          This parameter determines how many IP addresses are available for Pods on each individual node. For example, if `podSubnetCIDR: 10.111.0.0/16` and `podSubnetNodeCIDRPrefix: "24"`, each node will receive a `/24` subnet (e.g., `10.111.0.0/24`, `10.111.1.0/24`, etc.), providing up to 254 IP addresses per node (253 usable for Pods, accounting for network and broadcast addresses).
+
+          **Calculation examples:**
+          - With `/16` network and `/24` prefix: maximum **256 nodes** (2^(24-16) = 256)
+          - With `/16` network and `/25` prefix: maximum **512 nodes**, but only **126 IPs per node**
+          - Each Pod network IP can support up to 2 Pods (one running + one terminating)
+
+          If the parameter is set in neither this section nor the deprecated `ClusterConfiguration.podSubnetNodeCIDRPrefix`, `24` is used.
+
+          When migrating from the deprecated field, the value must match the one the cluster currently runs with; admission rejects a mismatch.
+        x-examples:
+          - "24"
   rootKubeconfigSymlink:
     type: boolean
     default: true
