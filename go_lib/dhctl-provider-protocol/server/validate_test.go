@@ -254,7 +254,7 @@ func connect(t *testing.T, address string) client.Client {
 
 	t.Cleanup(func() { _ = conn.Close() })
 
-	return client.NewClient(conn, client.NewConfig())
+	return client.NewValidateClient(conn, client.NewConfig())
 }
 
 func requireStatus(t *testing.T, err error, want codes.Code, message string) {

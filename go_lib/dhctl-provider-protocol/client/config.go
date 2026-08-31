@@ -15,11 +15,7 @@
 package client
 
 import (
-	"context"
-
 	"google.golang.org/grpc"
-
-	validatev1 "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/validate/v1"
 )
 
 const (
@@ -51,25 +47,4 @@ func (c Config) Merge(other Config) Config {
 		c.GRPCOptions = other.GRPCOptions
 	}
 	return c
-}
-
-type Client struct {
-	service validatev1.ValidateServiceClient
-	config  Config
-}
-
-// NewClient creates a new client with the given configuration.
-func NewClient(conn grpc.ClientConnInterface, config Config) Client {
-	return Client{
-		service: validatev1.NewValidateServiceClient(conn),
-		config:  NewConfig().Merge(config),
-	}
-}
-
-func (c Client) Validate(ctx context.Context, input validatev1.Input) (*validatev1.ValidateResponse, error) {
-	req, err := input.ToRequest()
-	if err != nil {
-		return nil, err
-	}
-	return c.service.Validate(ctx, req, c.config.GRPCOptions...)
 }
