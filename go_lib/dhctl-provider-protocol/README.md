@@ -7,8 +7,8 @@ in another language implements the same gRPC service.
 ## Overview
 
 The validator is a standalone executable shipped in the provider's OCI bundle. dhctl
-starts it as a subprocess, calls it over gRPC on a unix socket, and stops it when the
-call is done. There is one action today — `Validate`, run before dhctl touches any
+starts it as a subprocess, calls it over gRPC on the address it passes in, and stops
+it when the call is done. There is one action today — `Validate`, run before dhctl touches any
 infrastructure — and the protocol is shaped so more can be added without breaking
 existing binaries.
 
@@ -30,24 +30,21 @@ and requires the execute bit.
 
 ## Invocation
 
-dhctl invokes the binary with the socket it has created:
+dhctl invokes the binary with the address it has chosen:
 
 ```
 validator serve --address=<address> [--network=<network>]
 ```
 
-`--network` defaults to `unix`, which is what dhctl uses; the `server` package also
-accepts `tcp`, where `--address` is `host:port`. There is no default address — the
-caller allocates one per run and passes it in.
+`--address` is `host:port`; dhctl binds a loopback address per run, so there is no
+default. `--network` defaults to `unix`, which the `server` package also accepts, and
+then `--address` is a socket path instead.
 
-The validator listens on that socket and serves until it is stopped. Notes that
+The validator listens on that address and serves until it is stopped. Notes that
 matter in practice:
 
-- **Socket path length.** A unix socket path is capped at 104 bytes on darwin and
-  108 on Linux; over the limit, `bind` fails with `invalid argument`. dhctl allocates
-  a short path.
 - **Readiness.** The validator does not announce readiness and serves no health
-  service. The caller waits for the socket file to appear, or calls with
+  service. The caller waits for the address to accept a connection, or calls with
   `grpc.WaitForReady(true)` and a context deadline — `WaitForReady` waits
   indefinitely on its own. Either way the caller must also watch the process: one
   that exits early (an old binary that does not know `serve`) has to fail the
@@ -60,7 +57,8 @@ matter in practice:
 
 ## Transport
 
-gRPC over the unix socket, no TLS (the socket's file permissions are the boundary).
+gRPC over the address dhctl passes in, no TLS: the validator is a subprocess of the
+caller and the transport never leaves the host.
 
 Message limit: **8 MiB** in each direction, the default on both sides. gRPC's own
 4 MiB is too small — the payload carries every NodeGroup, InstanceClass and credential
@@ -74,8 +72,8 @@ options; otherwise the limits go back to gRPC's.
 
 `dhctl.provider.validate.v1.ValidateService`, defined in
 [`api/pb/validate/v1/validate.proto`](api/pb/validate/v1/validate.proto). The Go side —
-generated types, the payload, the result and the conversions — is
-[`api/validate/v1`](api/validate/v1).
+the generated request, response and violation types, the hand-written payload and the
+conversions between them — is [`api/validate/v1`](api/validate/v1).
 
 ```proto
 service ValidateService {
@@ -117,7 +115,7 @@ on both sides. The Go definition is `Input` in [`api/validate/v1`](api/validate/
 | `providerName` | string | Provider identifier, e.g. `"dvp"` |
 | `clusterPrefix` | string | Prefix applied to cloud resource names |
 | `layout` | string | Provider layout name |
-| `operation` | string | One of `"bootstrap"`, `"converge"`, `"destroy"` |
+| `operation` | string | One of `"bootstrap"`, `"converge"`, `"destroy"`; in Go it is the named type `Operation` with a constant per value |
 | `providerClusterConfiguration` | object | Parsed `providerClusterConfiguration` section |
 | `vars` | object | Structured provider data dhctl collected: module `settings` (the full ModuleConfig object), `nodeGroups`, `instanceClasses`, credential `secrets`. Absent when there was nothing to collect — a validator must tolerate its absence |
 
@@ -164,6 +162,10 @@ A failure of the validator itself is never a violation — it is a gRPC status:
 | `Unimplemented` | The validator does not serve this action |
 | `Internal` | The validator failed or panicked. A panic carries its stack in the message |
 
+A validator asks for one of these by returning an error built on the sentinels in
+[`errs`](errs): `ErrInvalidRequest` becomes `InvalidArgument`, `ErrMethodUnimplemented`
+becomes `Unimplemented`, anything else becomes `Internal`.
+
 The caller must fail closed: any status other than `OK`, and any response it cannot read,
 blocks the operation instead of counting as "validated".
 
@@ -201,8 +203,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	ctx, unhook := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer unhook()
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer cancel()
 
 	validator, err := server.Start(
 		server.Config{Network: *network, Address: *address},
@@ -213,8 +215,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	<-ctx.Done() // SIGTERM from dhctl
-
+	<-ctx.Done()
 	if err := validator.Stop(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -231,10 +232,10 @@ looking like a process that died mid-call.
 ## Calling a validator in Go
 
 Import [`api/validate/v1`](api/validate/v1) and [`client`](client). The caller owns
-the process, the socket and the deadlines:
+the process, the address and the deadlines:
 
 ```go
-conn, err := grpc.NewClient("unix://"+socket, grpc.WithTransportCredentials(insecure.NewCredentials()))
+conn, err := grpc.NewClient(address, grpc.WithTransportCredentials(insecure.NewCredentials()))
 // …
 defer conn.Close()
 

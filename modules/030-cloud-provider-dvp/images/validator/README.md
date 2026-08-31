@@ -1,13 +1,24 @@
 # DVP validator
 
-External provider binary for dhctl. Implements the `validate` subcommand
-of the [dhctl external provider protocol](../../../../../go_lib/dhctl-provider-protocol).
+External provider binary for dhctl. Implements the `validate` action of the
+[dhctl provider validator protocol](../../../../../go_lib/dhctl-provider-protocol).
 
 ## How it works
 
-dhctl invokes this binary as a subprocess with one argument — `validate`.
-The request JSON is read from stdin; the response JSON is written to stdout.
-Diagnostics go to stderr.
+dhctl starts this binary as a subprocess and calls it over gRPC:
+
+```
+validator serve --address=<address> [--network=<network>]
+```
+
+The command tree is cobra: `validator` alone prints help, `validator serve --help`
+lists the flags.
+
+`--address` is `host:port`: dhctl binds a loopback address per run and passes it in,
+so there is no default. `--network` defaults to `unix`, which the protocol's `server`
+package also accepts, and then `--address` is a socket path instead. The binary serves
+until `SIGTERM`, then stops gracefully. Diagnostics go to stderr; no part of the protocol travels through
+stdout.
 
 ### validate
 
@@ -45,9 +56,11 @@ the incoming state and then return successfully.
 | dhctl other operations   | no           | no                 | no                  | no       | no        | no             |
 | admission webhook        | yes          | yes (if present)   | no                  | yes      | no        | ConfigMap      |
 
-On success writes `{}` to stdout and exits 0.
-On validation error writes `{"error":"..."}` to stdout and exits 0.
-On protocol/decode error writes to stderr and exits 1.
+A valid configuration is an empty response. Violations travel as `errors` (blocking)
+and `warnings` (not blocking); dhctl renders the blocking ones as the text of its
+error. A failure of the validator itself is never a violation — it is a gRPC status:
+`InvalidArgument` for a request the action rejects (an unknown `operation`, for
+instance), `Internal` for a check that could not be made or a panic.
 
 
 ## Build
@@ -59,36 +72,50 @@ go build -o /tmp/dvp-validator .
 
 ## Manual testing
 
-### validate — preflight requirements for converge
+Start the validator:
 
 ```bash
-cat > /tmp/req.json << 'EOF'
+/tmp/dvp-validator serve --network=tcp --address=127.0.0.1:18443 &
+```
+
+Call it with `grpcurl` from `src` (that is where the relative `-import-path` points).
+The payload is a JSON-encoded `Input` wrapped in `input_json`, so it needs base64 —
+reflection is not served, hence `-proto`:
+
+```bash
+INPUT=$(cat << 'EOF' | base64
 {
-  "version": "1",
-  "input": {
-    "providerName": "dvp",
-    "clusterPrefix": "test",
-    "layout": "standard",
-    "operation": "converge",
-    "providerClusterConfiguration": {},
-    "vars": {
-      "settings": {
-        "provider": {"parameters": {"namespace": "default"}},
-        "storage": {"disabled": false, "parameters": {}},
-        "nodes": {"disabled": true}
-      },
-      "secrets": {
-        "d8-credentials": {
-          "metadata": {"name": "d8-credentials", "namespace": "d8-cloud-provider-dvp"},
-          "type": "cloud-provider.deckhouse.io/credentials",
-          "stringData": {"authScheme": "kubeconfig", "secret": "YXBpVmV="}
-        }
+  "providerName": "dvp",
+  "clusterPrefix": "test",
+  "layout": "standard",
+  "operation": "converge",
+  "providerClusterConfiguration": {},
+  "vars": {
+    "settings": {
+      "provider": {"parameters": {"namespace": "default"}},
+      "storage": {"disabled": false, "parameters": {}},
+      "nodes": {"disabled": true}
+    },
+    "secrets": {
+      "d8-credentials": {
+        "metadata": {"name": "d8-credentials", "namespace": "d8-cloud-provider-dvp"},
+        "type": "cloud-provider.deckhouse.io/credentials",
+        "stringData": {"authScheme": "kubeconfig", "secret": "YXBpVmV="}
       }
     }
   }
 }
 EOF
-/tmp/dvp-validator validate < /tmp/req.json
-# {"error":"NodeGroup/master: NodeGroup \"master\" is required"}
+)
+
+grpcurl -plaintext \
+  -import-path ../../../../../go_lib/dhctl-provider-protocol/api/pb \
+  -proto validate/v1/validate.proto \
+  -d "{\"input_json\": \"$INPUT\"}" \
+  127.0.0.1:18443 dhctl.provider.validate.v1.ValidateService/Validate
+# {"errors":[{"path":"Secret/d8-credentials","code":"credential_secret_required", …},
+#             {"path":"NodeGroup/master","code":"master_node_group_required", …}]}
+
+kill %1
 ```
 

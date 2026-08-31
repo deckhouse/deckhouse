@@ -13,8 +13,8 @@
 // limitations under the License.
 
 // Package protocol declares nothing; it documents the module. dhctl starts a cloud
-// provider's validator binary as a subprocess and calls it over gRPC on a unix
-// socket. See README.md for the wire specification.
+// provider's validator binary as a subprocess and calls it over gRPC on the address
+// it passes in. See README.md for the wire specification.
 //
 // # Packages
 //

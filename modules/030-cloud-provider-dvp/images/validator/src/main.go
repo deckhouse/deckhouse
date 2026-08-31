@@ -18,16 +18,51 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 
-	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
+	"github.com/spf13/cobra"
 )
 
 func main() {
-	h := proto.Handler{
-		Validate: validate,
-	}
-	if err := h.Run(context.Background()); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+	cmd := newRootCmd()
+	if err := cmd.Execute(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error executing command: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+func newRootCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:           "validator",
+		Short:         "DVP cloud provider validator for dhctl",
+		SilenceUsage:  true,
+		SilenceErrors: true,
+		Run: func(cmd *cobra.Command, _ []string) {
+			_ = cmd.Help()
+		},
+	}
+
+	cmd.SetContext(setupSignalHandler(context.Background()))
+	cmd.AddCommand(
+		newServeCmd(),
+	)
+
+	return cmd
+}
+
+func setupSignalHandler(ctx context.Context) context.Context {
+	ctx, cancel := context.WithCancel(ctx)
+
+	c := make(chan os.Signal, 2)
+	signal.Notify(c, []os.Signal{os.Interrupt, syscall.SIGTERM}...)
+
+	go func() {
+		<-c
+		cancel()
+		<-c
+		os.Exit(1)
+	}()
+
+	return ctx
 }
