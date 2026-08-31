@@ -432,6 +432,11 @@ groups:
     description:
       en: "`sds-replicated-volume` DRBD metrics of the agent, the address the proxy forwards to"
       ru: "Метрики DRBD агента модуля `sds-replicated-volume`, адрес, на который проксируется запрос"
+  - ports: "4275"
+    protocol: TCP
+    description:
+      en: "`sdn` agent healthcheck"
+      ru: "Healthcheck компонента agent модуля `sdn`"
   - ports: "4135-4199"
     protocol: TCP
     description:
