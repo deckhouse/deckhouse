@@ -26,7 +26,7 @@ import (
 func TestInputValidate(t *testing.T) {
 	tests := []struct {
 		name      string
-		operation string
+		operation Operation
 		wantErr   error
 		wantText  string
 	}{

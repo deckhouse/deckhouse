@@ -21,44 +21,38 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/errs"
 )
 
-const (
-	// CredentialsSecretType marks a provider credential Secret, both in the
-	// cluster and in the Secrets map below.
-	CredentialsSecretType = "cloud-provider.deckhouse.io/credentials"
+// CredentialsSecretType marks a provider credential Secret, both in the
+// cluster and in the Secrets map below.
+const CredentialsSecretType = "cloud-provider.deckhouse.io/credentials"
 
-	// The phase of the caller's work a call belongs to. Strings, not an enum: the
-	// caller is the only producer and carries the value as a string end to end.
-	OperationBootstrap = "bootstrap"
-	OperationConverge  = "converge"
-	OperationDestroy   = "destroy"
+type Operation string
+
+const (
+	OperationBootstrap Operation = "bootstrap"
+	OperationConverge  Operation = "converge"
+	OperationDestroy   Operation = "destroy"
 )
 
 // Input is everything a validator needs to check a cluster's configuration before
 // the caller touches infrastructure.
 type Input struct {
-	ProviderName          string         `json:"providerName"`
-	ClusterPrefix         string         `json:"clusterPrefix,omitempty"`
-	Layout                string         `json:"layout,omitempty"`
-	Operation             string         `json:"operation,omitempty"`
-	ProviderClusterConfig map[string]any `json:"providerClusterConfiguration,omitempty"`
-	// Nil when the caller had nothing to collect, so a validator must check before use.
-	CloudProviderVars *CloudProviderVars `json:"vars,omitempty"`
+	ProviderName          string             `json:"providerName"`
+	ClusterPrefix         string             `json:"clusterPrefix,omitempty"`
+	Layout                string             `json:"layout,omitempty"`
+	Operation             Operation          `json:"operation,omitempty"`
+	ProviderClusterConfig map[string]any     `json:"providerClusterConfiguration,omitempty"`
+	CloudProviderVars     *CloudProviderVars `json:"vars,omitempty"`
 }
 
 // CloudProviderVars is the provider data the caller collected from the cluster and
 // from the user's resources. Every map is name to the full resource object.
 type CloudProviderVars struct {
-	// Settings is the provider ModuleConfig.
 	Settings        map[string]any            `json:"settings,omitempty"`
 	NodeGroups      map[string]map[string]any `json:"nodeGroups,omitempty"`
 	InstanceClasses map[string]map[string]any `json:"instanceClasses,omitempty"`
 	Secrets         map[string]map[string]any `json:"secrets,omitempty"`
 }
 
-// Validate is called by the server before a validator sees the input. An unknown
-// operation is refused rather than passed through: a validator decides what to
-// check from this field, and one it does not recognise would silently get the
-// checks of some other phase.
 func (i Input) Validate() error {
 	switch i.Operation {
 	case OperationBootstrap, OperationConverge, OperationDestroy:
