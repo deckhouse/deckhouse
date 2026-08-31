@@ -169,7 +169,7 @@
   logo: /images/logos/linux.svg
   license: MIT License
   id: yq
-  version: "4.47.1"
+  version: "4.53.6"
 - name: Amazon ECR credential provider
   link: https://github.com/kubernetes/cloud-provider-aws
   description: Kubelet image credential provider for Amazon ECR; binary ecr-credential-provider from kubernetes/cloud-provider-aws (not the AWS CCM).
