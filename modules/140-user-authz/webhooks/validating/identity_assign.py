@@ -42,6 +42,10 @@ CAR_SNAP = "d8-user-authz-assign-cluster-authorization-rules"
 AR_SNAP = "d8-user-authz-assign-authorization-rules"
 CRB_SNAP = "d8-user-authz-assign-cluster-role-bindings"
 CROLE_SNAP = "d8-user-authz-assign-cluster-roles"
+USER_SNAP = "d8-user-authz-assign-users"
+GROUP_SNAP = "d8-user-authz-assign-groups"
+
+USER_API_SA = "system:serviceaccount:d8-user-authn:user-api"
 
 SA_PREFIX = "system:serviceaccount:"
 
@@ -317,6 +321,160 @@ def actor_roles(user_info: Any, snapshots: Any) -> List[str]:
     for group in groups:
         add_all(collect_roles_for_identity(
             snapshots, "group", group, lowercase_user=False, include_namespaced=False))
+    return found
+
+
+def is_human_identity(name: str) -> bool:
+    if not isinstance(name, str) or not name:
+        return False
+    return not name.startswith("system:")
+
+
+def user_record(snapshots: Any, *, name: str = "", email: str = "") -> Optional[dict]:
+    name = name if isinstance(name, str) else ""
+    email = email.lower() if isinstance(email, str) and email else ""
+    for fr in iter_filter_results(snapshots, USER_SNAP):
+        fr_name = fr.get("name") or ""
+        fr_email = (fr.get("email") or "")
+        fr_email_l = fr_email.lower() if isinstance(fr_email, str) else ""
+        if name and fr_name == name:
+            return fr
+        if email and fr_email_l == email:
+            return fr
+    return None
+
+
+def groups_containing_user(snapshots: Any, user_name: str) -> List[str]:
+    if not isinstance(user_name, str) or not user_name:
+        return []
+    found = []
+    seen: Set[str] = set()
+    for fr in iter_filter_results(snapshots, GROUP_SNAP):
+        members = [m for m in _list(fr.get("members")) if isinstance(m, str)]
+        if user_name not in members:
+            continue
+        group_name = fr.get("name")
+        if isinstance(group_name, str) and group_name and group_name not in seen:
+            seen.add(group_name)
+            found.append(group_name)
+    return found
+
+
+def membership_groups(snapshots: Any, *, user_name: str = "", email: str = "",
+                      spec_groups: Optional[Iterable[str]] = None) -> List[str]:
+    found: List[str] = []
+    seen: Set[str] = set()
+
+    def add(names: Iterable[str]) -> None:
+        for name in names:
+            if isinstance(name, str) and name and name not in seen:
+                seen.add(name)
+                found.append(name)
+
+    add(_list(spec_groups))
+    if user_name:
+        add(groups_containing_user(snapshots, user_name))
+    rec = user_record(snapshots, name=user_name, email=email)
+    if rec:
+        add(groups_containing_user(snapshots, rec.get("name") or ""))
+        add(_list(rec.get("groups")))
+    return found
+
+
+def occupied_grant_roles(snapshots: Any) -> List[str]:
+    """Roles already hanging on a human User or Group subject."""
+    found: List[str] = []
+    seen: Set[str] = set()
+
+    def add(roles: Iterable[str]) -> None:
+        for role in roles:
+            if role and role not in seen:
+                seen.add(role)
+                found.append(role)
+
+    def human_subjects(fr: dict) -> bool:
+        users = [s for s in _subjects(fr, "userSubjects") if is_human_identity(s)]
+        groups = [s for s in _subjects(fr, "groupSubjects") if is_human_identity(s)]
+        return bool(users or groups)
+
+    for snap_name, namespaced in ((CAR_SNAP, False), (AR_SNAP, True)):
+        for fr in iter_filter_results(snapshots, snap_name):
+            if human_subjects(fr):
+                add(_fr_role_names(fr, namespaced=namespaced))
+    for fr in iter_filter_results(snapshots, CRB_SNAP):
+        if human_subjects(fr):
+            role = fr.get("role")
+            if isinstance(role, str):
+                add([role])
+    return found
+
+
+def dex_explicit_identities(spec: Any) -> Tuple[List[str], List[str]]:
+    spec = _dict(spec)
+    emails: List[str] = []
+    groups: List[str] = []
+    seen_e: Set[str] = set()
+    seen_g: Set[str] = set()
+
+    def add_email(value: str) -> None:
+        if isinstance(value, str) and value and value not in seen_e:
+            seen_e.add(value)
+            emails.append(value)
+
+    def add_group(value: str) -> None:
+        if isinstance(value, str) and value and value not in seen_g:
+            seen_g.add(value)
+            groups.append(value)
+
+    for key in ("oidc", "saml", "ldap", "crowd", "gitlab", "github", "bitbucketCloud"):
+        block = _dict(spec.get(key))
+        for item in _list(block.get("allowedEmails")):
+            add_email(item)
+        for item in _list(block.get("allowedGroups")):
+            add_group(item)
+    github = _dict(spec.get("github"))
+    for org in _list(github.get("orgs")):
+        org = _dict(org)
+        org_name = org.get("name")
+        teams = [t for t in _list(org.get("teams")) if isinstance(t, str) and t]
+        if isinstance(org_name, str) and org_name and teams:
+            for team in teams:
+                add_group(f"{org_name}:{team}")
+    return emails, groups
+
+
+def dex_claims_closed(spec: Any) -> bool:
+    spec = _dict(spec)
+    kind = spec.get("type")
+    if kind == "SAML":
+        saml = _dict(spec.get("saml"))
+        return bool(saml.get("filterGroups") and _list(saml.get("allowedGroups")))
+    if kind == "Github":
+        orgs = [_dict(o) for o in _list(_dict(spec.get("github")).get("orgs"))]
+        if not orgs:
+            return False
+        return all(bool(_list(o.get("teams"))) for o in orgs)
+    return False
+
+
+def dex_target_roles(spec: Any, snapshots: Any) -> List[str]:
+    emails, groups = dex_explicit_identities(spec)
+    if not dex_claims_closed(spec):
+        return occupied_grant_roles(snapshots)
+    found: List[str] = []
+    seen: Set[str] = set()
+
+    def add(roles: Iterable[str]) -> None:
+        for role in roles:
+            if role and role not in seen:
+                seen.add(role)
+                found.append(role)
+
+    for email in emails:
+        extra = membership_groups(snapshots, email=email)
+        add(target_user_roles(snapshots, email, extra))
+    for group in groups:
+        add(target_group_roles(snapshots, group))
     return found
 
 
@@ -667,6 +825,23 @@ def deny_label_message(name: str) -> str:
     )
 
 
+def deny_uo_message(target: str, leftover: Sequence[str], rng: AssignRange) -> str:
+    roles = ", ".join(leftover)
+    return (
+        f'useroperations.deckhouse.io target "{target}" already carries roles [{roles}]; '
+        f"the requester's can-assign range is {range_summary(rng)} and does not cover them"
+    )
+
+
+def deny_dex_message(name: str, leftover: Sequence[str], rng: AssignRange) -> str:
+    roles = ", ".join(leftover)
+    return (
+        f'dexproviders.deckhouse.io "{name}" can assert identities that already carry '
+        f"roles [{roles}]; the requester's can-assign range is {range_summary(rng)} "
+        f"and does not cover them"
+    )
+
+
 def can_assign_labels_changed(old_obj: Any, new_obj: Any) -> bool:
     old_labels = _dict(_dict(old_obj).get("metadata")).get("labels")
     new_labels = _dict(_dict(new_obj).get("metadata")).get("labels")
@@ -732,6 +907,21 @@ CROLE_JQ_FILTER = """
 }
 """
 
+USER_JQ_FILTER = """
+{
+  "name": .metadata.name,
+  "email": (.spec.email // ""),
+  "groups": [.spec.groups[]? | select(type == "string")]
+}
+"""
+
+GROUP_JQ_FILTER = """
+{
+  "name": (.spec.name // .metadata.name),
+  "members": [.spec.members[]? | select(.kind == "User") | .name]
+}
+"""
+
 
 def kubernetes_snapshots() -> str:
     return f"""
@@ -767,4 +957,20 @@ def kubernetes_snapshots() -> str:
   keepFullObjectsInMemory: false
   jqFilter: |-
 { _indent(CROLE_JQ_FILTER.strip(), 4) }
+- name: {USER_SNAP}
+  apiVersion: deckhouse.io/v1
+  kind: User
+  executeHookOnEvent: []
+  executeHookOnSynchronization: false
+  keepFullObjectsInMemory: false
+  jqFilter: |-
+{ _indent(USER_JQ_FILTER.strip(), 4) }
+- name: {GROUP_SNAP}
+  apiVersion: deckhouse.io/v1alpha1
+  kind: Group
+  executeHookOnEvent: []
+  executeHookOnSynchronization: false
+  keepFullObjectsInMemory: false
+  jqFilter: |-
+{ _indent(GROUP_JQ_FILTER.strip(), 4) }
 """
