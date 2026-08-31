@@ -4,6 +4,12 @@ permalink: en/admin/configuration/network/ingress/alb/nginx.html
 description: "Configure Application Load Balancer with Ingress NGINX Controller in Deckhouse Kubernetes Platform. High availability setup, SSL termination, and traffic routing configuration."
 extractedLinksMax: 4
 relatedLinks:
+  - title: "Migrating from ingress-nginx to alb"
+    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/migration.html
+  - title: "ALB with Kubernetes Gateway API"
+    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html
+  - title: "Utilizing Application Load Balancer (ALB)"
+    url: /products/kubernetes-platform/documentation/v1/user/network/ingress/alb.html
   - title: "ingress-nginx module documentation"
     url: /modules/ingress-nginx/
   - title: "ingress-nginx module Custom Resources"
@@ -12,8 +18,6 @@ relatedLinks:
     url: /modules/ingress-nginx/examples.html
   - title: "metallb module documentation"
     url: /modules/metallb/
-  - title: "Utilizing Application Load Balancer (ALB)"
-    url: /products/kubernetes-platform/documentation/v1/user/network/ingress/alb.html
 ---
 
 The [`ingress-nginx`](/modules/ingress-nginx/) module is used to implement ALB using the [Ingress NGINX Controller](https://github.com/kubernetes/ingress-nginx).
@@ -22,6 +26,8 @@ The [`ingress-nginx`](/modules/ingress-nginx/) module is used to implement ALB u
 In 2025, Ingress NGINX was [placed](https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/) in maintenance mode, with no plans for active development of new features. Further evolution of inbound traffic load balancing in Kubernetes is focused on the [Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/).
 
 This does not apply to the module as part of Deckhouse Kubernetes Platform (DKP): the module is maintained by the DKP team, including security updates. Details are in ["Module support and security"](#module-support-and-security).
+
+Step-by-step migration to Gateway API is in [Migrating from ingress-nginx to alb](migration.html).
 {% endalert %}
 
 The `ingress-nginx` module installs the Ingress NGINX Controller and manages it with custom resources.
@@ -30,7 +36,7 @@ it is deployed in the HA mode, taking into account the infrastructure specifics 
 as well as various Kubernetes cluster types.
 
 The module supports running and configuring several Ingress NGINX controllers simultaneously
-(one of the controllers is the primary one; you can create as many additional controllers as you want).
+(one of the controllers is the primary one. You can create as many additional controllers as you want).
 This approach allows you to separate extranet and intranet Ingress resources of applications.
 
 ## Traffic termination options
@@ -38,7 +44,7 @@ This approach allows you to separate extranet and intranet Ingress resources of 
 Traffic to `ingress-nginx` can be routed in several ways:
 
 - Directly without the use of an external load balancer.
-- Using an external LoadBalancer; the following variants are supported:
+- Using an external LoadBalancer. The following variants are supported:
   - Qrator
   - Cloudflare
   - AWS LB
@@ -123,7 +129,7 @@ All collected metrics include service labels identifying the controller instance
   - `*_responses_total`: Number of responses (additional label: `status_class`, not just `status`).
   - `*_upstream_bytes_received_sum`: Total size of data received from backends.
 
-## Load balancing configuration examples
+## Load balancing configuration examples {#load-balancing-configuration-examples}
 
 Use the [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller) custom resource to configure load balancing.
 
@@ -359,8 +365,12 @@ Available in DKP Enterprise Edition only.
    ```
 
    {% alert level="info" %}
-   When creating an ingress controller, you can also specify certain IP addresses from the pool that will be assigned to it. To specify the addresses that should be assigned to the service, use the annotation `network.deckhouse.io/load-balancer-ips`. If there is more than one desired address, there must also be an annotation `network.deckhouse.io/l2-load-balancer-external-ips-count`, which must specify the number of addresses allocated from the pool (it must not be less than the number of addresses listed in `network.deckhouse.io/load-balancer-ips`). ["Example of using annotations"](/modules/metallb/examples.html#creating-a-service-and-assigning-it-specific-ip-addresses-from-the-pool) to assign specific addresses from the pool to the service.
-   {% endalert %}
+When creating an ingress controller, you can also specify certain IP addresses from the pool that will be assigned to its Service. Use the annotation `network.deckhouse.io/load-balancer-ips`.
+
+If you need more than one address, also set `network.deckhouse.io/l2-load-balancer-external-ips-count` to the number of addresses allocated from the pool. That value must not be less than the number of addresses listed in `network.deckhouse.io/load-balancer-ips`.
+
+See ["Example of using annotations"](/modules/metallb/examples.html#creating-a-service-and-assigning-it-specific-ip-addresses-from-the-pool) to assign specific addresses from the pool to the Service.
+{% endalert %}
 
 DKP will create a LoadBalancer Service with the specified number of IPs:
 
@@ -433,11 +443,11 @@ spec:
                   number: 80
 ```
 
-With [processing and forwarding of X-Forwarded-* headers enabled](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-hostport-behindl7proxy), the backend can rely on the `x-forwarded-host` header when making authorization decisions. In the example above, it is possible to reach the administrative zone through the Ingress resource that serves public traffic by using `x-forwarded-host`. Therefore, when using this option you must be sure that requests to the Ingress controller come only from trusted sources.
+With [processing and forwarding of X-Forwarded-* headers enabled](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-hostport-behindl7proxy), the backend can rely on the `x-forwarded-host` header when making authorization decisions. In the example above, public Ingress traffic can reach the administrative zone via `x-forwarded-host`. Therefore, requests to the Ingress controller must come only from trusted sources.
 
 #### Using separate Ingress controllers
 
-To avoid the situation described above (when, with [processing and forwarding of X-Forwarded-* headers enabled](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-hostport-behindl7proxy) it is possible, for example, to reach the administrative zone via the Ingress resource that serves public traffic by using `x-forwarded-host`), we recommend that you:
+To avoid that situation, we recommend that you:
 
 - Configure access rules at the Ingress resource level;
 - Use separate Ingress controllers;
@@ -529,4 +539,6 @@ spec:
 
 ## Module support and security
 
-The `ingress-nginx` module is covered by DKP maintenance for the entire platform support lifecycle, regardless of the upstream project's development status. The DKP team tracks CVEs in the controller and its dependencies — NGINX, Lua modules, and base images — and delivers fixes in platform releases. For compliance with PCI DSS expectations regarding vendor support and vulnerability remediation timelines, Flant is the responsible vendor of the module. DKP certification with FSTEC of Russia also covers vulnerability management processes and the release of security updates.
+The `ingress-nginx` module is covered by DKP maintenance for the entire platform support lifecycle, regardless of the upstream project's development status. The DKP team tracks CVEs in the controller and its dependencies — NGINX, Lua modules, and base images — and delivers fixes in platform releases.
+
+For compliance with PCI DSS expectations regarding vendor support and vulnerability remediation timelines, Flant is the responsible vendor of the module. DKP certification with FSTEC of Russia also covers vulnerability management processes and the release of security updates.

@@ -5,23 +5,25 @@ description: "Настройка Application Load Balancer с Istio в Deckhouse
 lang: ru
 extractedLinksMax: 4
 relatedLinks:
+  - title: "Публикация приложений средствами Istio"
+    url: /products/kubernetes-platform/documentation/v1/user/network/ingress/alb/istio.html
+  - title: "Балансировка входящего трафика"
+    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/
   - title: "Документация модуля istio"
     url: /modules/istio/
   - title: "Custom Resources модуля istio"
     url: /modules/istio/cr.html
-  - title: "Использование Application Load Balancer (ALB)"
-    url: /products/kubernetes-platform/documentation/v1/user/network/ingress/alb.html
 ---
 
 ALB средствами Istio реализуется через [Istio Ingress Gateway](#istio-ingress-gateway) или [Ingress NGINX](#ingress-nginx). Для этого используется модуль [`istio`](/modules/istio/).
 
 Используйте этот вариант, если требуется управление трафиком в service mesh, например, canary-маршрутизация или mTLS. Настройка и возможности описаны в [«Документация модуля istio»](/modules/istio/).
 
-Создание IngressIstioController и подготовка инфраструктуры — задача администратора кластера. Публикация приложения ресурсами Gateway и VirtualService описана в разделе [«Публикация приложений средствами Istio»](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb.html#публикация-приложений-средствами-istio).
+Создание IngressIstioController и подготовка инфраструктуры — задача администратора кластера. Публикация приложения ресурсами Gateway и VirtualService описана в разделе [«Публикация приложений средствами Istio»](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/istio.html#публикация-приложений-с-использованием-ресурса-istio-ingress-gateway).
 
 ## Ingress для публикации приложений
 
-### Istio Ingress Gateway
+### Istio Ingress Gateway {#istio-ingress-gateway}
 
 Для публикации приложения средствами Istio Ingress Gateway выполните следующие действия:
 
@@ -122,7 +124,7 @@ ALB средствами Istio реализуется через [Istio Ingress 
                host: app-svc # Имя сервиса.
    ```
 
-### Ingress NGINX
+### Ingress NGINX {#ingress-nginx}
 
 Для работы с Ingress NGINX требуется подготовить:
 

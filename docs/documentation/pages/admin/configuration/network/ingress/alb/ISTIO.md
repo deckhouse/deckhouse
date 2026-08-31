@@ -4,12 +4,14 @@ permalink: en/admin/configuration/network/ingress/alb/istio.html
 description: "Configure Application Load Balancer with Istio in Deckhouse Kubernetes Platform. Istio Ingress Gateway setup, traffic management, and service mesh integration."
 extractedLinksMax: 4
 relatedLinks:
+  - title: "Publishing applications using Istio"
+    url: /products/kubernetes-platform/documentation/v1/user/network/ingress/alb/istio.html
+  - title: "Incoming traffic balancing"
+    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/
   - title: "istio module documentation"
     url: /modules/istio/
   - title: "istio module Custom Resources"
     url: /modules/istio/cr.html
-  - title: "Utilizing Application Load Balancer (ALB)"
-    url: /products/kubernetes-platform/documentation/v1/user/network/ingress/alb.html
 ---
 
 ALB with Istio is implemented via [Istio Ingress Gateway](#istio-ingress-gateway) or [Ingress NGINX](#ingress-nginx).
@@ -17,11 +19,11 @@ The [`istio`](/modules/istio/) module is used for this purpose.
 
 Use this option when you need traffic management in a service mesh (for example, canary routing or mTLS). Configuration details are in the ["istio module documentation"](/modules/istio/).
 
-Creating an IngressIstioController and preparing infrastructure is a cluster administrator task. Application publishing with Gateway and VirtualService resources is described in ["Publishing applications using Istio"](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb.html#publishing-applications-using-istio).
+Creating an IngressIstioController and preparing infrastructure is a cluster administrator task. Application publishing with Gateway and VirtualService resources is described in ["Publishing applications using Istio Ingress Gateway resource"](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/istio.html#publishing-applications-using-istio-ingress-gateway-resource).
 
 ## Ingress to publish applications
 
-### Istio Ingress Gateway
+### Istio Ingress Gateway {#istio-ingress-gateway}
 
 To publish the application using the Istio Ingress Gateway, follow these steps:
 
@@ -122,7 +124,7 @@ To publish the application using the Istio Ingress Gateway, follow these steps:
                host: app-svc # Service name
    ```
 
-### Ingress NGINX
+### Ingress NGINX {#ingress-nginx}
 
 To use Ingress NGINX, you need to:
 
