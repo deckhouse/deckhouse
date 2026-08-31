@@ -105,11 +105,6 @@ type ModuleSpec struct {
 	// +optional
 	ReleaseChannel string `json:"releaseChannel,omitempty"`
 
-	// Update policy for the module package.
-	// +crd-enricher:deckhouse:documentation:examples=test-alpha.
-	// +optional
-	UpdatePolicy string `json:"updatePolicy,omitempty"`
-
 	// Enables or disables the module. Unset leaves the decision to the platform.
 	// +optional
 	Enabled *bool `json:"enabled,omitempty"`
@@ -140,15 +135,6 @@ type ModuleSpec struct {
 }
 
 type ModuleStatus struct {
-	// Module phase.
-	// +kubebuilder:validation:Enum=Unavailable;Available;Downloading;DownloadingError;Reconciling;Installing;HooksDisabled;WaitSyncTasks;Downloaded;Conflict;Ready;Error
-	// +crd-enricher:deckhouse:documentation:examples=[Unavailable, Available, Downloading, DownloadingError, Reconciling, Installing, HooksDisabled, WaitSyncTasks, Downloaded, Conflict, Ready, Error]
-	Phase string `json:"phase,omitempty"`
-
-	// Hooks status report.
-	// +optional
-	HooksState string `json:"hooksState,omitempty"`
-
 	// Summary aggregates the high-level user-facing state, message and
 	// resolution hint for the module. The controller always populates it
 	// on reconcile — every module maps to exactly one lifecycle state — so
