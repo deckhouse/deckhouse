@@ -268,7 +268,7 @@ jobs:
 
       # <template: add_ssh_keys>
       - name: Start ssh-agent
-        uses: webfactory/ssh-agent@v0.9.0
+        uses: webfactory/ssh-agent@v0.11.0
         with:
           ssh-private-key: |
             ${{ steps.secrets.outputs.SOURCE_REPO_SSH_KEY }}
