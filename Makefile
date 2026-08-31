@@ -271,7 +271,7 @@ lint-src-artifact: set-build-envs ## Run src-artifact stapel linter
 
 ## Run all generate-* jobs in bulk.
 .PHONY: generate render-workflow
-generate: generate-kubernetes generate-tools generate-docs dmt-gen generate-werf
+generate: generate-kubernetes generate-tools generate-docs dmt-gen generate-werf generate-lib-helm
 
 .PHONY: generate-tools
 generate-tools: yq
@@ -433,7 +433,19 @@ update-k8s-patch-versions: ## Run update-patchversion script to generate new ver
 .PHONY: update-lib-helm
 update-lib-helm: yq ## Update lib-helm.
 	##~ Options: version=MAJOR.MINOR.PATCH
-	cd helm_lib/ && yq -i '.dependencies[0].version = "$(version)"' Chart.yaml && helm dependency update && tar -xf charts/deckhouse_lib_helm-*.tgz -C charts/ && rm charts/deckhouse_lib_helm-*.tgz && git add Chart.yaml Chart.lock charts/*
+	sed -i.bak -E 's/^LIB_HELM_VERSION \?= .*/LIB_HELM_VERSION ?= $(version)/' Makefile && rm -f Makefile.bak
+	cd helm_lib/ && yq -i '.dependencies[0].version = "$(version)"' Chart.yaml && helm dependency update && tar -xf charts/deckhouse_lib_helm-*.tgz -C charts/ && rm charts/deckhouse_lib_helm-*.tgz && git add Chart.yaml Chart.lock charts/* ../Makefile
+
+.PHONY: generate-lib-helm
+generate-lib-helm: ## Re-sync the vendored lib-helm chart from upstream (drift fails "make generate").
+  ##~ Reverts any manual edit under helm_lib/charts to the pinned LIB_HELM_VERSION,
+  ##~ so the go_generate CI job's "git diff --exit-code" catches lib-helm tampering.
+	@echo ">>> Syncing vendored deckhouse_lib_helm chart to upstream version $(LIB_HELM_VERSION)"
+	@cd $(LIB_HELM_DIR) && \
+	rm -rf charts/deckhouse_lib_helm && \
+	curl -sSfL "$(GITHUB_URL)/deckhouse/lib-helm/releases/download/deckhouse_lib_helm-$(LIB_HELM_VERSION)/deckhouse_lib_helm-$(LIB_HELM_VERSION).tgz" -o charts/deckhouse_lib_helm.tgz && \
+	tar -xf charts/deckhouse_lib_helm.tgz -C charts/ && \
+	rm -f charts/deckhouse_lib_helm.tgz
 
 .PHONY: update-base-images-versions
 update-base-images-versions:
@@ -622,6 +634,8 @@ INFORMER_GEN ?= $(LOCALBIN)/informer-gen
 LISTER_GEN ?= $(LOCALBIN)/lister-gen
 YQ = $(LOCALBIN)/yq
 GOTESTSUM = $(LOCALBIN)/gotestsum
+## Vendored lib-helm chart directory, re-synced from upstream by generate-lib-helm.
+LIB_HELM_DIR ?= $(CURDIR)/helm_lib
 
 ## TODO: remap in yaml file (version.yaml or smthng)
 ## Tool Versions
@@ -633,6 +647,8 @@ CONTROLLER_TOOLS_VERSION ?= v0.19.0
 CODE_GENERATOR_VERSION ?= v0.34.8
 YQ_VERSION ?= v4.47.2
 GOTESTSUM_VERSION ?= v1.13.0
+## Pinned lib-helm version, mirrored from helm_lib/Chart.yaml by "make update-lib-helm".
+LIB_HELM_VERSION ?= 1.72.14
 
 ## Generate werf
 .PHONY: generate-werf
