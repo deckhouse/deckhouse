@@ -5,8 +5,8 @@ metadata:
   annotations:
     en.meta.deckhouse.io/title: "Namespace Manager"
     ru.meta.deckhouse.io/title: "Менеджер пространства имён"
-    en.meta.deckhouse.io/description: "Namespace User plus management of quotas and basic policies (NetworkPolicy, PodLoggingConfig, OperationPolicy). No RBAC management."
-    ru.meta.deckhouse.io/description: "Права пользователя плюс управление квотами и базовыми политиками (NetworkPolicy, PodLoggingConfig, OperationPolicy). Без управления RBAC."
+    en.meta.deckhouse.io/description: "Namespace User plus create/modify of namespaced Kubernetes resources and some module resources (Certificate, PodLoggingConfig, DexAuthenticator). No ResourceQuota, no RBAC, no cluster-scoped OperationPolicy."
+    ru.meta.deckhouse.io/description: "Права пользователя плюс создание/изменение namespaced-ресурсов Kubernetes и некоторых ресурсов модулей (Certificate, PodLoggingConfig, DexAuthenticator). Без ResourceQuota, RBAC и кластерного OperationPolicy."
   labels:
     heritage: deckhouse
     module: user-authz

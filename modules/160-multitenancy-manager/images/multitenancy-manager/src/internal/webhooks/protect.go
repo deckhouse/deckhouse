@@ -58,10 +58,10 @@ func (p *ProtectValidator) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // systemBypassUsernames / systemBypassGroups mirror the exemptions Deckhouse uses to protect its own
 // heritage objects (see modules/002-deckhouse validation): cluster components and system/module
-// controllers must never be blocked by these webhooks. They MUST stay in sync with the apiserver-level
-// matchConditions on the webhook configurations (see hooks/configure_grant_*_webhook.go and
-// templates/admission/validation.yaml) so the handler-level backstop and the CEL pre-filter agree —
-// the CEL conditions match by username AND by group, so this check does too.
+// controllers must never be blocked by these webhooks. /defaults and /protect use this set and it
+// MUST stay in sync with the apiserver-level matchConditions (see hooks/configure_grant_*_webhook.go
+// and templates/admission/validation.yaml). /is-granted is intentionally narrower
+// (isAutomatedSystemWriter: three groups, no system:masters, no usernames).
 var systemBypassUsernames = []string{
 	"system:apiserver",
 	"system:serviceaccount:d8-system:deckhouse",

@@ -17,8 +17,9 @@
 
 # Anti-escalation guard for namespaced Role and ClusterRole objects (RBAC v2).
 #
-# A namespace administrator holds the d8:namespace-capability:kubernetes:manage_security capability,
-# which grants full CRUD on namespaced `roles`/`rolebindings` but NOT `escalate`/`bind`/`*`. Native
+# A namespace administrator holds the d8:namespace:admin role, which aggregates the
+# d8:namespace-capability:kubernetes:manage_security capability (CRUD on namespaced
+# `roles`/`rolebindings` but NOT `escalate`/`bind`/`*`). Native
 # Kubernetes RBAC already prevents creating a (Cluster)Role with permissions the requester does not
 # already hold (no `escalate` verb is granted anywhere in the RBAC v2 templates), so the primary
 # escalation path is closed by the API server itself.
@@ -26,7 +27,7 @@
 # This webhook is a precise defense-in-depth layer: it forbids non-privileged users from authoring a
 # Role/ClusterRole whose rules grant mutating access to the Deckhouse project-management API
 # resources (group deckhouse.io: projects, projecttemplates, projectrolebindings,
-# clusterprojectrolebindings, and the future projectnamespaces). Those rights must be conferred only
+# clusterprojectrolebindings, and projectnamespaces). Those rights must be conferred only
 # by the built-in d8:project:* roles and their capabilities (created by Deckhouse / the aggregation
 # controller, which are excluded via matchConditions). Ordinary namespaced RBAC (configmaps,
 # secrets, the user's own workloads) is untouched.
@@ -37,8 +38,8 @@ from deckhouse import hook
 from dotmap import DotMap
 
 PROTECTED_GROUP = "deckhouse.io"
-# Project-management resources whose mutation confers project-level powers. projectnamespaces does
-# not have a CRD yet and is listed here defensively for forward compatibility.
+# Project-management resources whose mutation confers project-level powers. projectnamespaces
+# is a shipped CRD (modules/160-multitenancy-manager/crds/projectnamespaces.yaml).
 PROTECTED_RESOURCES = {
     "projects",
     "projecttemplates",

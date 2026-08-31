@@ -86,7 +86,7 @@ The namespace role defines permissions for accessing namespaced resources of mod
 
 The module creates the following namespace roles:
 - `d8:namespace:viewer` — allows viewing standard Kubernetes resources (except for Secrets and RBAC resources), pod logs and metrics in a specific namespace, as well as authenticating in the cluster;
-- `d8:namespace:user` — in addition to the role `d8:namespace:viewer` it allows viewing secrets and RBAC resources in a specific namespace, connecting to pods (`kubectl exec`, `kubectl attach`), deleting pods (but not creating or modifying them), executing `kubectl port-forward` and `kubectl proxy`, as well as changing the number of replicas of controllers;
+- `d8:namespace:user` — in addition to the role `d8:namespace:viewer` it allows viewing secrets in a specific namespace, connecting to pods (`kubectl exec`, `kubectl attach`), deleting pods (but not creating or modifying them), executing `kubectl port-forward` and `kubectl proxy`, as well as changing the number of replicas of controllers;
 - `d8:namespace:manager` — in addition to the role `d8:namespace:user` it allows managing module resources (for example, Certificate, PodLoggingConfig, etc.) and standard namespaced Kubernetes resources (Pod, Deployment, ConfigMap, Secret, Service, Ingress, NetworkPolicy, CronJob, etc.) in a specific namespace;
 - `d8:namespace:admin` — in addition to the role `d8:namespace:manager` it allows managing the resources ResourceQuota, LimitRange, ServiceAccount, Role, RoleBinding in a specific namespace;
 - `d8:namespace:superadmin` — in addition to the role `d8:namespace:admin` it allows security-sensitive operations: minting ServiceAccount tokens, making requests on behalf of ServiceAccounts, and managing [system resources placed in the namespace](#admin-level-restrictions-and-superadmin-rights) (for example, Dex pods or pods/PVCs of virtual machines).
@@ -267,7 +267,7 @@ This is the only allowed modification of built-in roles: changing their rules, a
 
 ### Deprecated role names
 
-The previous role names of the granular model (`d8:manage:<subsystem>:<level>`, `d8:manage:all:<level>`, and `d8:use:role:<level>`) are deprecated and will be removed in the next release. For backward compatibility they are temporarily kept as alias roles: existing bindings keep working and grant the same permissions as the new roles.
+The previous role names of the granular model (`d8:manage:<subsystem>:<level>`, `d8:manage:all:<level>`, and `d8:use:role:<level>`) are deprecated and will be removed in the next release. For backward compatibility they are temporarily kept as alias roles: a binding to an alias aggregates the **new** role's capabilities. That is not identical to pre-upgrade rights: `d8:use:role:admin` no longer grants ServiceAccount token minting or impersonation (those moved to `superadmin`); aliases are not `delegatable`, so new project RoleBindings to the old names are rejected; `d8:manage:*` ClusterRoleBindings no longer drive the automated namespace RoleBindings.
 
 Name mapping:
 
@@ -276,9 +276,10 @@ Name mapping:
 | `d8:manage:all:<level>` | `d8:system:<level>` |
 | `d8:manage:<subsystem>:<level>` | `d8:subsystem:<subsystem>:<level>` |
 | `d8:use:role:<level>` | `d8:namespace:<level>` |
+| `d8:use:role:<level>:kubernetes` | `d8:namespace:<level>` (full namespace role, not kubernetes-only) |
 
 {% alert level="warning" %}
-The deprecated `d8:use:role:admin` role maps to `d8:namespace:admin` and, just like it, [no longer grants](#admin-level-restrictions-and-superadmin-rights) the right to mint ServiceAccount tokens — that now requires the `superadmin` level.
+The deprecated `d8:use:role:admin` role maps to `d8:namespace:admin` and, just like it, [no longer grants](#admin-level-restrictions-and-superadmin-rights) the right to mint ServiceAccount tokens or impersonate ServiceAccounts — that now requires the `superadmin` level.
 {% endalert %}
 
 As long as bindings to the deprecated names remain in the cluster, the `D8UserAuthzDeprecatedRBACv2RoleInUse` (a binding to an alias role) and `D8UserAuthzDeprecatedRBACv2CapabilityInUse` (a binding to a deprecated capability that no longer grants access) alerts fire.

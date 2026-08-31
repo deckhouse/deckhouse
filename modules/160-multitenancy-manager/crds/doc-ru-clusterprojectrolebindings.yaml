@@ -15,7 +15,7 @@ spec:
                   description: |
                     Ссылка на выдаваемую ClusterRole.
                     
-                    Допускаются только роли уровня проекта (`d8:project:*`).
+                    Допустимые префиксы: `d8:project:*`, `d8:namespace:*`, `d8:project-capability:*`, `d8:namespace-capability:*`, `d8:custom:*`.
             status:
               properties:
                 boundProjects:

@@ -53,10 +53,9 @@ type validator struct {
 	reader client.Reader
 }
 
-// Handle validates a ProjectTemplate. The webhook rule matches both v1alpha1 and v1alpha2; with
-// matchPolicy: Equivalent the object is delivered in its own version, so unmarshalling into the
-// v1alpha2 type (a superset of v1alpha1) covers both — structured fields are simply absent for
-// v1alpha1 requests.
+// Handle validates a ProjectTemplate. The admission rule lists v1alpha2 only; matchPolicy:
+// Equivalent up-converts a served older version to v1alpha2 before delivery. v1alpha1 is
+// unserved. The handler path is registered as /validate/v1alpha1/templates for historical reasons.
 func (v *validator) Handle(ctx context.Context, req admission.Request) admission.Response {
 	template := new(v1alpha2.ProjectTemplate)
 	if req.Operation == admissionv1.Create || req.Operation == admissionv1.Update {

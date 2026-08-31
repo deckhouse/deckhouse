@@ -39,8 +39,9 @@ import (
 // automatedSystemWriterGroups are the AUTOMATED system writers whose requests must never be denied by
 // the grant guardrail, otherwise a module's Helm release (applied by the deckhouse-controller from
 // system:serviceaccounts:d8-system) deadlocks the module's queue. Unlike protect.go's broader
-// systemBypassGroups, system:masters is intentionally absent so a human cluster-admin remains subject
-// to the guardrail.
+// systemBypassGroups, system:masters is absent here: the handler itself still polices a
+// cluster-admin (unit tests call the handler directly). In-cluster, matchConditions skip
+// system:masters before this code runs.
 var automatedSystemWriterGroups = map[string]struct{}{
 	"system:nodes":                       {},
 	"system:serviceaccounts:kube-system": {},
@@ -116,9 +117,9 @@ func (v *IsGrantedValidator) decide(ctx context.Context, req *admissionv1.Admiss
 	// (this is exactly how an AuthorizationRule/CAR-derived RoleBinding locked the user-authz module).
 	// kube-system controllers / the kubelet must not be blocked during teardown either. The grant
 	// allow-list exists to police USERS, who instead get a fast, terminal admission denial.
-	// NOTE: system:masters is deliberately NOT exempt — a human cluster-admin stays subject to the
-	// guardrail (grant the resource via a ClusterResourceGrantPolicy, or detach the namespace), so the
-	// protection cannot be silently bypassed from a kubeconfig.
+	// NOTE: system:masters is not in automatedSystemWriterGroups, so a direct handler call still
+	// polices a cluster-admin. In-cluster, matchConditions already skip system:masters — those
+	// requests never reach this handler.
 	if isAutomatedSystemWriter(req) {
 		return allowedResponse(req.UID), nil
 	}

@@ -41,8 +41,10 @@ const deprecatedRBACv2Metric = "d8_rbacv2_deprecated_role_in_use"
 // Legacy RBACv2 name families replaced by the new model. Two tiers matter for the operator:
 //
 //   - ALIASED (roles): d8:manage:<all|subsystem>:<level> and d8:use:role:<level>[:kubernetes] are kept
-//     alive for one release by the compat aliases (templates/rbacv2-compat/). A binding to these still
-//     works — the alert only nudges the operator to migrate before the aliases are removed.
+//     alive for one release by the compat aliases (templates/rbacv2-compat/). A binding to these
+//     still authorizes the *new* role's capabilities (admin lost token/impersonate; manage CRBs no
+//     longer drive automated namespace RoleBindings). The alert nudges the operator to migrate
+//     before the aliases are removed.
 //
 //   - NOT ALIASED (capabilities): d8:manage:permission:* and d8:use:capability:* are aggregation
 //     building blocks that were never meant to be bound directly and have NO compat alias. A binding

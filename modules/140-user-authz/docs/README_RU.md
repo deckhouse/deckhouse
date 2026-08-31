@@ -87,7 +87,7 @@ Namespace-роль определяет права на доступ к namespac
 Модуль создаёт следующие namespace-роли:
 
 - `d8:namespace:viewer` — позволяет в конкретном неймспейсе просматривать стандартные ресурсы Kubernetes (кроме секретов и ресурсов RBAC), журналы подов и метрики, а также выполнять аутентификацию в кластере;
-- `d8:namespace:user` — дополнительно к роли `d8:namespace:viewer` позволяет в конкретном неймспейсе просматривать секреты и ресурсы RBAC, подключаться к подам (`kubectl exec`, `kubectl attach`), удалять поды (но не создавать или изменять их), выполнять `kubectl port-forward` и `kubectl proxy`, изменять количество реплик контроллеров;
+- `d8:namespace:user` — дополнительно к роли `d8:namespace:viewer` позволяет в конкретном неймспейсе просматривать секреты, подключаться к подам (`kubectl exec`, `kubectl attach`), удалять поды (но не создавать или изменять их), выполнять `kubectl port-forward` и `kubectl proxy`, изменять количество реплик контроллеров;
 - `d8:namespace:manager` — дополнительно к роли `d8:namespace:user` позволяет в конкретном неймспейсе управлять ресурсами модулей (например, Certificate, PodLoggingConfig и т. п.) и стандартными namespaced-ресурсами Kubernetes (Pod, Deployment, ConfigMap, Secret, Service, Ingress, NetworkPolicy, CronJob и т. п.);
 - `d8:namespace:admin` — дополнительно к роли `d8:namespace:manager` позволяет в конкретном неймспейсе управлять ресурсами ResourceQuota, LimitRange, ServiceAccount, Role, RoleBinding;
 - `d8:namespace:superadmin` — дополнительно к роли `d8:namespace:admin` позволяет выполнять опасные с точки зрения безопасности операции: выпускать токены ServiceAccount'ов и выполнять запросы от их имени, а также управлять [системными ресурсами, размещёнными в неймспейсе](#ограничения-уровня-admin-и-права-superadmin) (например, подами Dex или подами/PVC виртуальных машин).
@@ -272,7 +272,7 @@ d8 k annotate clusterrole d8:namespace:admin \
 
 ### Устаревшие имена ролей
 
-Прежние имена ролей гранулярной модели (`d8:manage:<подсистема>:<уровень>`, `d8:manage:all:<уровень>` и `d8:use:role:<уровень>`) устарели и будут удалены в следующем релизе. Для обратной совместимости они временно сохранены как роли-псевдонимы: существующие привязки продолжают работать и дают те же права, что и новые роли.
+Прежние имена ролей гранулярной модели (`d8:manage:<подсистема>:<уровень>`, `d8:manage:all:<уровень>` и `d8:use:role:<уровень>`) устарели и будут удалены в следующем релизе. Для обратной совместимости они временно сохранены как роли-псевдонимы: привязка к псевдониму агрегирует capabilities **новой** роли. Это не те же права, что до апгрейда: `d8:use:role:admin` больше не даёт выпуск токена ServiceAccount и impersonate (это ушло на `superadmin`); псевдонимы не `delegatable`, поэтому новые project RoleBinding на старые имена отклоняются; ClusterRoleBinding на `d8:manage:*` больше не создают автоматические namespace RoleBinding.
 
 Соответствие имён:
 
@@ -281,9 +281,10 @@ d8 k annotate clusterrole d8:namespace:admin \
 | `d8:manage:all:<уровень>` | `d8:system:<уровень>` |
 | `d8:manage:<подсистема>:<уровень>` | `d8:subsystem:<подсистема>:<уровень>` |
 | `d8:use:role:<уровень>` | `d8:namespace:<уровень>` |
+| `d8:use:role:<уровень>:kubernetes` | `d8:namespace:<уровень>` (полная namespace-роль, не kubernetes-only) |
 
 {% alert level="warning" %}
-Устаревшая роль `d8:use:role:admin` соответствует роли `d8:namespace:admin` и, как и она, [больше не даёт](#ограничения-уровня-admin-и-права-superadmin) права выпускать токены ServiceAccount'ов — теперь для этого нужен уровень `superadmin`.
+Устаревшая роль `d8:use:role:admin` соответствует роли `d8:namespace:admin` и, как и она, [больше не даёт](#ограничения-уровня-admin-и-права-superadmin) права выпускать токены ServiceAccount'ов и impersonate — теперь для этого нужен уровень `superadmin`.
 {% endalert %}
 
 Пока в кластере остаются привязки к устаревшим именам, срабатывают алерты `D8UserAuthzDeprecatedRBACv2RoleInUse` (привязка к роли-псевдониму) и `D8UserAuthzDeprecatedRBACv2CapabilityInUse` (привязка к устаревшей capability, которая больше не даёт прав).

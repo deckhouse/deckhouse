@@ -20,13 +20,14 @@
 # Deckhouse places system components (Dex authenticator pods, virtualization VM pods/PVCs/kvvm/kvvmi,
 # managed-service endpoints, etc.) INTO user/project namespaces. Those objects are marked with the
 # label `deckhouse.io/system-resource: "true"` (adding it to each module's resources is a separate
-# cross-module effort). A label
-# (not an annotation) is used so the system-pods snapshot can select marked pods server-side instead
-# of watching every pod. This hook ENFORCES the marking at admission time:
+# cross-module effort). The marker is a label, not an annotation: matchConditions filter on it, and
+# the exec path reads the target pod live with kubectl (there is no system-pods snapshot / informer).
+# This hook ENFORCES the marking at admission time:
 #
 #   1. system-resource edit protection (binding rbacv2-system-resource-edit.deckhouse.io):
 #      UPDATE/PATCH/DELETE of an object labeled `deckhouse.io/system-resource: "true"` is denied for
-#      everyone below superadmin. PATCH arrives as an UPDATE admission operation, so it is covered.
+#      everyone below both the superadmin and cluster-administrator tiers. PATCH arrives as an UPDATE
+#      admission operation, so it is covered.
 #
 #   2. ProjectTemplate-owned (heritage) protection: objects labeled `heritage: multitenancy-manager`
 #      are rendered and reconciled by the multitenancy-manager controller. They must not be mutated by
@@ -35,8 +36,8 @@
 #      160/.../webhook/rolebinding/validator.go and the /protect webhook in 160/.../webhooks/protect.go.
 #
 #   3. exec/attach/port-forward protection (binding rbacv2-system-resource-exec.deckhouse.io):
-#      `create` on the pods/exec, pods/attach, pods/portforward subresources targeting a
-#      system-labeled pod is denied for users below superadmin. The admission object for a CONNECT
+#      CONNECT on the pods/exec, pods/attach, pods/portforward subresources targeting a
+#      system-labeled pod is denied for users below both tiers. The admission object for a CONNECT
 #      request is a PodExecOptions/PodPortForwardOptions, not the Pod, so the target pod's marker is
 #      resolved by reading that one pod live (see the note on live reads below).
 #
@@ -61,7 +62,7 @@
 # Out of scope (documented as follow-ups): the GET/LIST "visibility" split (admin+ sees vendor-API
 # system resources, everyone sees shared-API ones) is a READ/authorization concern that admission
 # webhooks cannot enforce — it is an RBAC-layer / EE-authorizer / permission-browser concern. Adding
-# the `deckhouse.io/system-resource` annotation to each module's resources is a cross-module effort.
+# the `deckhouse.io/system-resource` label to each module's resources is a cross-module effort.
 
 import json
 import subprocess
@@ -70,10 +71,10 @@ from typing import Optional
 from deckhouse import hook
 from dotmap import DotMap
 
-# Marker LABEL (a label, not an annotation): a label lets the system-pods snapshot below use a
-# server-side labelSelector — the webhook-handler then watches ONLY marked pods instead of every pod
-# in the cluster (it runs on a tiny 50m/100Mi budget). The edit webhook likewise filters on the label
-# via matchConditions. Modules mark their in-namespace system objects with this label.
+# Marker LABEL (a label, not an annotation). The edit webhook filters on it via matchConditions.
+# The exec path cannot use matchConditions (the admission object is PodExecOptions, not the Pod),
+# so it reads that one pod live with kubectl. Modules mark their in-namespace system objects with
+# this label.
 SYSTEM_RESOURCE_LABEL = "deckhouse.io/system-resource"
 SYSTEM_RESOURCE_VALUE = "true"
 

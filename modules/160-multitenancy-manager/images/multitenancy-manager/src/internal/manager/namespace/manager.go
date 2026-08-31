@@ -78,7 +78,7 @@ func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.
 // distinct from the auto-wrap flow (Wrap) and intentionally does not mark the project as
 // managed-by-namespace.
 func (m *Manager) Adopt(ctx context.Context, namespace *corev1.Namespace) (ctrl.Result, error) {
-	// set adopt label
+	// Helm ownership so a later Helm install of a same-name release does not fight this namespace.
 	labels := namespace.GetLabels()
 	if len(labels) == 0 {
 		labels = make(map[string]string)

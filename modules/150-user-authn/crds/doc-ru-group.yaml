@@ -10,7 +10,7 @@ spec:
             spec:
               properties:
                 name:
-                  description: Уникальное имя группы.
+                  description: Уникальное имя группы, которое попадает в claim `groups` токена и в RBAC-субъекты. Это не `metadata.name`.
                 members:
                   type: array
                   description: Список членов группы.
@@ -19,4 +19,4 @@ spec:
                       kind:
                         description: Тип члена группы.
                       name:
-                        description: Имя пользователя (члена группы) или название группы (члена группы).
+                        description: Для kind User — metadata.name пользователя. Для kind Group — spec.name вложенной группы (имя в токене), не metadata.name.

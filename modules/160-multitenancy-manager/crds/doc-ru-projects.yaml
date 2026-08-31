@@ -93,13 +93,13 @@ spec:
                   description: |
                     Пользователи и группы, получающие административный доступ к проекту.
 
-                    Для каждого элемента контроллер создаёт управляемый `ProjectRoleBinding`, выдающий роль `d8:project:admin`.
+                    Контроллер создаёт один управляемый `ProjectRoleBinding/d8-administrators` с ролью `d8:project:admin` на все записи. Для User имя — kube username (`User.spec.email`); для Group — `Group.spec.name`.
                   items:
                     properties:
                       kind:
                         description: Тип субъекта.
                       name:
-                        description: Имя субъекта.
+                        description: Имя субъекта. Для User — kube username (`User.spec.email`). Для Group — `Group.spec.name` (имя в токене), не `metadata.name`.
                 quota:
                   description: |
                     Квота ресурсов проекта, применяемая как `ResourceQuota` с именем `d8-project-quota` в пространстве имён проекта.

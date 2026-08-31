@@ -76,7 +76,7 @@ spec:
                         type: string
                 roleRef:
                   description: |
-                    Reference to the granted ClusterRole. Only project-scoped roles (`d8:project:*`) are allowed.
+                    Reference to the granted ClusterRole. Allowed prefixes: `d8:project:*`, `d8:namespace:*`, `d8:project-capability:*`, `d8:namespace-capability:*`, `d8:custom:*`.
                   type: object
                   required:
                     - kind

@@ -1,9 +1,10 @@
 {{- /*
   Example, module-shipped grant registrations so the feature works out of the box. A
   GrantableClusterResourceDefinition declares governance + baseline availability; each
-  GrantableClusterResourceReference declares one validation/defaulting path. All use
-  defaultAvailability: All, so nothing is restricted until a cluster admin creates a
-  ClusterResourceGrantPolicy to narrow availability.
+  GrantableClusterResourceReference declares one validation/defaulting path. Shipped
+  definitions use defaultAvailability: All. A ClusterResourceGrantPolicy still narrows
+  availability; clusterroles also exclude non-delegatable roles via `excluded`, so those
+  stay unavailable even without a policy.
 */}}
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1

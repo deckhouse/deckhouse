@@ -173,7 +173,7 @@ recommended.
 
 Per-project allow-list and default; selects projects by namespace labels via `projectSelector`, and
 per resource (`resourceName`) sets `allowed` / `allowedSelector` / `denied` / `deniedSelector` /
-`default` / `availabilityDefault`. An allow-list infers a `None` baseline.
+`default` / `availabilityDefault`. A non-empty allow-list or an `allowedSelector` infers a `None` baseline; empty `allowed: []` does not.
 
 ### AvailableClusterResource (unchanged)
 
@@ -360,7 +360,8 @@ spec:
   excluded:
     - matchExpressions:
         - key: rbac.deckhouse.io/delegatable
-          operator: DoesNotExist
+          operator: NotIn
+          values: ["true"]
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: GrantableClusterResourceReference

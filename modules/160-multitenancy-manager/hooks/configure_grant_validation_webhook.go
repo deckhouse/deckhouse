@@ -47,8 +47,8 @@ const validatingWebhookConfigurationName = "cluster-objects-grants-validator"
 // breaks the legacy access-level RoleBindings (d8:user-authz:*) that the user-authz
 // Helm release emits for CARs/AuthorizationRules targeting such a namespace: the
 // release then fails on this webhook and retries forever, deadlocking the user-authz
-// module ('main' queue). This mirrors the exclusion the d8-multitenancy-manager
-// ValidatingAdmissionPolicy already applies to managed-by-namespace namespaces.
+// module ('main' queue). The ValidatingAdmissionPolicy exemption for the same label is narrower:
+// it skips only Namespace UPDATE/DELETE, not every resource inside the namespace.
 var projectNamespaceSelector = &v1.LabelSelector{
 	MatchLabels: map[string]string{"heritage": "multitenancy-manager"},
 	MatchExpressions: []v1.LabelSelectorRequirement{
@@ -69,8 +69,11 @@ var projectNamespaceSelector = &v1.LabelSelector{
 // "RoleBinding/...:d8:user-authz:*:user" into every project namespace -> "webhook retry timed out
 // after 2m0s"). Excluding system writers at the apiserver level removes the lock unconditionally —
 // it holds even when the webhook backend is completely down, because the apiserver never calls it for
-// these requests. Project users are still policed (and get a fast, terminal denial). The in-handler
-// isSystemRequest bypass mirrors this as defense-in-depth.
+// these requests. Project users are still policed (and get a fast, terminal denial).
+// Handler-level backstops differ: /defaults and /protect use isSystemRequest (usernames + groups,
+// including system:masters); /is-granted uses the narrower isAutomatedSystemWriter (three groups,
+// no usernames, no system:masters). In-cluster, matchConditions already skip system:masters
+// before any handler runs.
 var systemWriterMatchConditions = []admissionregistrationv1.MatchCondition{
 	{
 		Name:       "exclude-apiserver",

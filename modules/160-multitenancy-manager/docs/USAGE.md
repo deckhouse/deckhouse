@@ -280,7 +280,7 @@ An existing namespace can also be explicitly adopted into a project by adding th
    NAME        STATE      PROJECT TEMPLATE   DESCRIPTION                                            AGE
    deckhouse   Deployed   virtual            This is a virtual project                              181d
    default     Deployed   virtual            This is a virtual project                              181d
-   test        Deployed   empty                                                                     1m
+   test        Deployed                                                                             1m
    ```
 
 You can change the template of the created project to the existing one.
@@ -661,16 +661,21 @@ The `multitenancy-manager` lets cluster administrators control which cluster-sco
 To do this, custom resources are used:
 
 - `GrantableClusterResourceDefinition` (cluster-scoped) — registers a cluster resource that can be
-  granted to projects: which resource it is (`grantedResource`), where references to it are validated (`usageReferences`),
-  the baseline availability (`defaultAvailability`), and how the per-project default is discovered
-  (`defaultFrom`). Each reference opts into defaulting individually with `default: true` — set it only
-  for a field whose value the resource always needs (such as a `PersistentVolumeClaim`'s
-  `storageClassName`). Leave it off for a reference whose absence is meaningful, such as an annotation
-  that merely toggles a feature; that reference is still validated and counted, just never filled in.
+  granted to projects: which resource it is (`grantedResource`), the baseline availability
+  (`defaultAvailability`), objects that are never available (`excluded`), and how the cluster-wide
+  default is discovered (`defaultFrom`).
+- `GrantableClusterResourceReference` (cluster-scoped) — declares one path where a namespaced object
+  references the granted resource (`rule` + `fieldPaths`). Each path has `defaulting`: `None`
+  (validate only — use when absence is meaningful, such as the Ingress
+  `cert-manager.io/cluster-issuer` annotation), `FillEmpty` (fill an empty field on CREATE), or
+  `Coerce` (also rewrite a disallowed value — for fields a built-in admission pre-fills, such as a
+  PVC `storageClassName`).
 - `ClusterResourceGrantPolicy` (cluster-scoped) — selects projects (by namespace labels via
   `projectSelector`) and, per resource (`resourceName`), the granted names (`allowed`,
-  `allowedSelector`) and the per-project `default`. An allow-list restricts the resource to it.
-- `AvailableClusterResource` (namespaced, read-only, short name `available`) — the controller-rendered catalog of what a project may use; tenants read it to discover the available names. The catalog objects cannot be modified or deleted manually.
+  `allowedSelector`) and the per-project `default`. A **non-empty** allow-list or an
+  `allowedSelector` restricts the resource to those names. An empty `allowed: []` with no selector
+  does not restrict anything.
+- `AvailableClusterResource` (namespaced, read-only, short name `available`) — the controller-rendered catalog of what a project may use; tenants read it to discover the available names. The catalog objects cannot be modified or deleted manually. When nothing is available, the controller deletes the catalog object.
 
 {% raw %}
 
@@ -688,16 +693,23 @@ spec:
   defaultAvailability: All
   defaultFrom:
     annotationKey: storageclass.kubernetes.io/is-default-class
-  usageReferences:
-    - rule:
-        apiGroups:
-          - ""
-        apiVersions:
-          - v1
-        resources:
-          - persistentvolumeclaims
-      fieldPath: $.spec.storageClassName
-      default: true
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceReference
+metadata:
+  name: storageclasses-pvc
+spec:
+  grantableClusterResourceName: storageclasses
+  rule:
+    apiGroups:
+      - ""
+    apiVersions:
+      - v1
+    resources:
+      - persistentvolumeclaims
+  fieldPaths:
+    - path: $.spec.storageClassName
+      defaulting: Coerce
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: ClusterResourceGrantPolicy
@@ -724,12 +736,17 @@ Enforcement notes:
 
 - The validating webhook denies creating/updating objects in matched projects whose
   referenced value is not granted. On update, values already present in the object are
-  grandfathered in, so pre-existing objects are not broken.
-- The defaulting webhook fills in the granted default on creation only, and only into references
-  marked `default: true`. References left without it (such as feature-toggling annotations) are never
-  filled in.
-- A grant that matches no project, or a project with no matching grant, imposes no
-  restriction.
+  grandfathered in, so pre-existing objects are not broken. An empty field is not validated.
+- The defaulting webhook fills in the granted default on creation only, according to
+  `fieldPaths[].defaulting` (`None` / `FillEmpty` / `Coerce`).
+- When no grant matches the project, the decision falls back to the registration
+  `defaultAvailability`. Module-shipped resources use `All`, but `excluded` still applies
+  (for example non-delegatable ClusterRoles stay unavailable). A custom registration with
+  `None` denies every name when no policy matches. When the catalog has no available names
+  the controller deletes the `AvailableClusterResource` object; that is not the same as
+  “deny all” for a value-backed `All` resource (any value is still allowed).
+- Multiple matching policies are merged: allow/deny lists are unioned; if any policy sets
+  `availabilityDefault: All`, that wins over `None`.
 
 ### Cases when a project may have no default
 

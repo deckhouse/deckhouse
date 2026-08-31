@@ -148,7 +148,7 @@ fallback. Минимум одна запись; fallback рекомендует�
 
 Per-проект allow-list и дефолт; выбирает проекты по меткам неймспейсов через `projectSelector`, на
 ресурс (`resourceName`) задаёт `allowed`/`allowedSelector`/`denied`/`deniedSelector`/`default`/
-`availabilityDefault`. Allow-лист подразумевает базу `None`.
+`availabilityDefault`. Непустой allow-лист или `allowedSelector` подразумевает базу `None`; пустой `allowed: []` — нет.
 
 ### AvailableClusterResource (без изменений)
 
@@ -334,7 +334,8 @@ spec:
   excluded:
     - matchExpressions:
         - key: rbac.deckhouse.io/delegatable
-          operator: DoesNotExist
+          operator: NotIn
+          values: ["true"]
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: GrantableClusterResourceReference

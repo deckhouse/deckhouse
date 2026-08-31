@@ -331,8 +331,8 @@ spec:
                   description: |
                     Legacy Helm template string.
 
-                    Deprecated: kept for backward compatibility with `v1alpha1`. When the structured fields above
-                    are set, the controller uses them and ignores `resourcesTemplate`.
+                    Deprecated: kept for backward compatibility with `v1alpha1`. The structured path is used only
+                    when `resourcesTemplate` is empty; a non-empty Helm string still wins.
                   type: string
             status:
               type: object

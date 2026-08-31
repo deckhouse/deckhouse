@@ -201,7 +201,7 @@ spec:
                   description: |
                     Users and groups that get administrative access to the project.
 
-                    For each entry the controller creates a managed `ProjectRoleBinding` granting the `d8:project:admin` role.
+                    The controller creates one managed `ProjectRoleBinding/d8-administrators` granting `d8:project:admin` to all entries. User name is the kube username (`User.spec.email`); Group name is `Group.spec.name`.
                   type: array
                   items:
                     type: object
@@ -216,7 +216,7 @@ spec:
                           - User
                           - Group
                       name:
-                        description: Name of the subject.
+                        description: Subject name. For User — kube username (`User.spec.email`). For Group — `Group.spec.name` (token name), not `metadata.name`.
                         type: string
                         minLength: 1
                         # The name ends up in a RoleBinding subject and, for a project rendered from

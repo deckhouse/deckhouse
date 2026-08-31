@@ -121,11 +121,11 @@ class IdentityKind(NamedTuple):
 
 
 # Group.spec.name reaches the "groups" claim byte for byte: nothing between the Group object and
-# the Password object Dex serves normalises it (modules/150-user-authn/hooks/get_dex_user_crds.go,
-# makeUserGroupsMap and newPasswordObject), so the comparison is exact in both directions.
+# the Password object Dex serves normalises it (user-authn-controller internal/controller/user
+# groups.go / password.go), so the comparison is exact in both directions.
 #
 # User.spec.email does not: Deckhouse lowercases it before it reaches the Password object
-# (modules/150-user-authn/hooks/get_dex_user_crds.go:276), so the username in the token is
+# (user-authn-controller internal/controller/user/controller.go), so the username in the token is
 # unconditionally spec.email.lower().
 IDENTITY_KINDS = {
     "group": IdentityKind(resource="groups.deckhouse.io", spec_field="name",
@@ -243,7 +243,7 @@ def granting_rule_for(ctx: DotMap, identity: IdentityKind, name: str) -> Optiona
       bypassable by case alone.
     - A mixed-case *rule subject* is not a collision. Subjects reach the RoleBinding verbatim
       (modules/140-user-authz/templates/cluster-role-bindings.yaml:38,
-      modules/140-user-authz/hooks/handle_manage_bindings.go:256) and RBAC matches them exactly, so
+      modules/140-user-authz/hooks/handle_manage_bindings.go copies Subjects as-is) and RBAC matches them exactly, so
       a subject that is not already lowercase can never match an issued token, and reporting it
       would be a false positive.
 

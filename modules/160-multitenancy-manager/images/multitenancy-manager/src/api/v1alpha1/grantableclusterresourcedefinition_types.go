@@ -92,15 +92,15 @@ type GrantableClusterResourceDefinitionSpec struct {
 	// +kubebuilder:default=Managed
 	Enforcement EnforcementMode `json:"enforcement,omitempty"`
 
-	// DefaultAvailability is the baseline when no grant allows an object: All or None.
+	// DefaultAvailability is the baseline when no matching grant policy decides: All or None.
 	// +optional
 	// +kubebuilder:default=All
 	DefaultAvailability AvailabilityDefault `json:"defaultAvailability,omitempty"`
 
 	// Excluded lists filters of objects never available to tenants, regardless of any grant (hard
-	// deny). An object is excluded if it matches ANY of the filters (the filters are unioned), which
-	// lets a registration express "available by default to set A OR set B" by excluding everything
-	// outside both sets.
+	// deny). An object is excluded if it matches ANY of the filters. The available set is the
+	// intersection of the complements: two filters "exclude not-A" and "exclude not-B" yield A∩B,
+	// not A∪B. To express "available to A or B", use one filter that matches everything outside A∪B.
 	// +optional
 	Excluded []ResourceFilter `json:"excluded,omitempty"`
 

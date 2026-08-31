@@ -656,7 +656,7 @@ Labels on ClusterRole objects:
 | `rbac.deckhouse.io/use-role` | A use-role level | A namespace-role level | Defines which namespace role is automatically granted to the holder of a system/subsystem role in the system namespaces of its modules (via automatically created RoleBinding objects) |
 | `rbac.deckhouse.io/aggregate-to-all-as` | `<level>` | Renamed to `rbac.deckhouse.io/aggregate-to-system-as` | Aggregates the object into the system-wide role (`d8:system:<level>`) |
 | `rbac.deckhouse.io/aggregate-to-<subsystem>-as` | Used in selectors together with `rbac.deckhouse.io/kind: manage` | Used in selectors on its own | Aggregates the object into the subsystem role of the given level |
-| `rbac.deckhouse.io/aggregate-to-kubernetes-as` | `<level>` (for use permissions) | Renamed to `rbac.deckhouse.io/aggregate-to-namespace-as` | Aggregates the object into the namespace role (`d8:namespace:<level>`) |
+| `rbac.deckhouse.io/aggregate-to-kubernetes-as` | `<level>` (for use permissions) | Still used for the kubernetes **subsystem** (`d8:subsystem:kubernetes:*`). The old *use*-role meaning moved to `aggregate-to-namespace-as` | Aggregates into `d8:subsystem:kubernetes:<level>` |
 | `rbac.deckhouse.io/namespace` | Namespace | Unchanged | An additional namespace where a RoleBinding is automatically created for the role holders |
 | `rbac.deckhouse.io/capability` | — | A unique capability name (for example, `system-capability.deckhouse.view`) | A machine-readable identifier of a built-in capability |
 | `rbac.deckhouse.io/deprecated` | — | `"true"` on alias roles | The role is deprecated and will be removed; migrate the bindings to the new role |
@@ -669,7 +669,7 @@ Annotations on ClusterRole objects (the old scheme did not use annotations):
 |------------|---------|
 | `ru.meta.deckhouse.io/title`, `ru.meta.deckhouse.io/description` | The displayed name and description of a role/capability in Russian (the platform sets them on built-in objects; you can set your own on custom ones) |
 | `en.meta.deckhouse.io/title`, `en.meta.deckhouse.io/description` | Same in English |
-| `rbac.deckhouse.io/deprecated-replaced-by` | Introduced in DKP 1.78 together with the new scheme. The aggregation rules of the previous roles will change so that these roles keep granting the same permissions as their new counterparts — existing bindings will not break. However, the previous roles are kept for one release only: during that time, the bindings must be migrated to the new roles. The annotation is set on every previous role and contains the name of the new role that is equivalent to it in terms of permissions — that is the role to migrate to |
+| `rbac.deckhouse.io/deprecated-replaced-by` | Introduced in DKP 1.78 together with the new scheme. Alias roles aggregate the **new** role's capabilities for one release so existing bindings keep authorizing — then they are removed. This is not identical to pre-upgrade rights: `d8:use:role:admin` no longer grants ServiceAccount token minting or impersonation. The annotation on each previous role names the new role to migrate to |
 
 ### Adding a custom capability (in the new scheme)
 
@@ -749,7 +749,7 @@ Report specifics:
 - Permissions granted by a ClusterRoleBinding are reported once, in the cluster-wide scope (`status.scopes[].cluster: true`), since they apply in every namespace.
 - The report can be limited to specific namespaces with `spec.namespaces`.
 
-The report is built from RBAC data and does not account for admission webhook restrictions: for example, editing and deleting system resources is denied to everyone below the `superadmin` level. Such cases are flagged in `status.scopes[].caveat`. If the subject's permissions are limited by a ClusterAuthorizationRule, this is reported in `status.notes`.
+The report is built from RBAC data. Admission webhook restrictions are not folded into the RBAC rows; they are flagged in `status.scopes[].caveat`. For example, editing and deleting system resources is denied below the `superadmin` level — except for cluster administrators (`cluster-admin`, `user-authz:super-admin`, and the bypass groups). If the subject's permissions are limited by a ClusterAuthorizationRule, this is reported in `status.notes`.
 
 The right to build a report about **another** subject is granted by the `d8:user-authz:subject-access-checker` cluster role. Like `who-can-checker`, it is intentionally not bound to anyone by default: the report discloses the full permission map of the subject, including other namespaces. A report about oneself is available to every authenticated user and requires no extra permissions.
 

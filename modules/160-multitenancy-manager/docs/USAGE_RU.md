@@ -280,7 +280,7 @@ d8 k get ns -l 'projects.deckhouse.io/project=my-project,!projects.deckhouse.io/
    NAME        STATE      PROJECT TEMPLATE   DESCRIPTION                                            AGE
    deckhouse   Deployed   virtual            This is a virtual project                              181d
    default     Deployed   virtual            This is a virtual project                              181d
-   test        Deployed   empty                                                                     1m
+   test        Deployed                                                                             1m
    ```
 
 Шаблон созданного проекта можно изменить на существующий.
@@ -663,17 +663,20 @@ data:
 Для этого используются кастомные ресурсы:
 
 - `GrantableClusterResourceDefinition` (cluster-scoped) — регистрирует кластерный ресурс, который
-  можно выдавать проектам: какой это ресурс (`grantedResource`), где проверяются ссылки на него
-  (`usageReferences`), базовая доступность (`defaultAvailability`) и как определяется дефолт проекта
-  (`defaultFrom`). Каждая ссылка отдельно включает подстановку дефолта через `default: true` —
-  ставьте его только для поля, значение которого ресурсу всегда нужно (например, `storageClassName`
-  у `PersistentVolumeClaim`). Для ссылки, отсутствие которой осмысленно (например, аннотация-
-  переключатель функции), не ставьте: такая ссылка по-прежнему проверяется и учитывается в квоте,
-  но никогда не заполняется.
+  можно выдавать проектам: какой это ресурс (`grantedResource`), базовая доступность
+  (`defaultAvailability`), объекты, которые никогда не доступны (`excluded`), и как находится
+  кластерный дефолт (`defaultFrom`).
+- `GrantableClusterResourceReference` (cluster-scoped) — объявляет один путь, где namespaced-объект
+  ссылается на выданный ресурс (`rule` + `fieldPaths`). У каждого пути есть `defaulting`: `None`
+  (только проверка — когда отсутствие осмысленно, например аннотация Ingress
+  `cert-manager.io/cluster-issuer`), `FillEmpty` (заполнить пустое поле при CREATE) или `Coerce`
+  (ещё и переписать запрещённое значение — для полей, которые заранее заполняет встроенный
+  admission, например `storageClassName` у PVC).
 - `ClusterResourceGrantPolicy` (cluster-scoped) — выбирает проекты (по меткам неймспейса через
   `projectSelector`) и для каждого ресурса (`resourceName`) задаёт разрешённые имена (`allowed`,
-  `allowedSelector`) и `default`. Allow-лист ограничивает ресурс этим списком.
-- `AvailableClusterResource` (namespaced, read-only, короткое имя `available`) — формируемый контроллером каталог доступных для проекта кластерных ресурсов. Пользователи проекта читают его, чтобы узнать доступные имена. Изменять и удалять объекты каталога вручную нельзя.
+  `allowedSelector`) и `default`. **Непустой** allow-лист или `allowedSelector` ограничивает ресурс
+  этими именами. Пустой `allowed: []` без селектора ничего не ограничивает.
+- `AvailableClusterResource` (namespaced, read-only, короткое имя `available`) — формируемый контроллером каталог доступных для проекта кластерных ресурсов. Пользователи проекта читают его, чтобы узнать доступные имена. Изменять и удалять объекты каталога вручную нельзя. Если доступных имён нет, контроллер удаляет объект каталога.
 
 {% raw %}
 
@@ -691,16 +694,23 @@ spec:
   defaultAvailability: All
   defaultFrom:
     annotationKey: storageclass.kubernetes.io/is-default-class
-  usageReferences:
-    - rule:
-        apiGroups:
-          - ""
-        apiVersions:
-          - v1
-        resources:
-          - persistentvolumeclaims
-      fieldPath: $.spec.storageClassName
-      default: true
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceReference
+metadata:
+  name: storageclasses-pvc
+spec:
+  grantableClusterResourceName: storageclasses
+  rule:
+    apiGroups:
+      - ""
+    apiVersions:
+      - v1
+    resources:
+      - persistentvolumeclaims
+  fieldPaths:
+    - path: $.spec.storageClassName
+      defaulting: Coerce
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: ClusterResourceGrantPolicy
@@ -726,11 +736,17 @@ spec:
 Особенности применения:
 
 - Проверяющий (validating) вебхук запрещает создание/обновление объектов в подходящих проектах, если
-  используемое значение не разрешено. Уже присутствующие в объекте значения при обновлении не блокируются — существующие объекты продолжают работать.
-- Мутирующий (mutating) вебхук подставляет значение по умолчанию только при создании и только в
-  ссылки, помеченные `default: true`. Ссылки без неё (например, аннотации-переключатели) никогда
-  не заполняются.
-- Grant без совпавших проектов (или проект без совпавших grant’ов) ничего не ограничивает.
+  используемое значение не разрешено. Уже присутствующие в объекте значения при обновлении не блокируются — существующие объекты продолжают работать. Пустое поле не проверяется.
+- Мутирующий (mutating) вебхук подставляет значение по умолчанию только при создании, согласно
+  `fieldPaths[].defaulting` (`None` / `FillEmpty` / `Coerce`).
+- Если ни один grant не совпал с проектом, решение берётся из `defaultAvailability` регистрации.
+  Поставляемые модулем ресурсы используют `All`, но `excluded` всё равно действует
+  (например, не-delegatable ClusterRole остаются недоступны). Кастомная регистрация с `None`
+  без политики запрещает любое имя. Если в каталоге нет доступных имён, контроллер удаляет
+  объект `AvailableClusterResource`; для value-backed ресурса с `All` это не «запретить всё»
+  (любое значение по-прежнему разрешено).
+- Несколько совпавших политик сливаются: списки allow/deny объединяются; если хотя бы одна политика
+  ставит `availabilityDefault: All`, это побеждает `None`.
 
 ### Случаи, когда у проекта может не быть дефолта
 

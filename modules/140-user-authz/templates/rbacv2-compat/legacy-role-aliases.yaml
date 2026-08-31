@@ -8,10 +8,11 @@
   access.
 
   These aliases keep the OLD names alive for exactly one release. Each alias is an empty ClusterRole
-  whose aggregationRule reuses the NEW role's selector, so it aggregates the very same capabilities as
-  its new-model counterpart — the client's existing bindings keep working unchanged (roleRef is
-  immutable, so we cannot rewrite their bindings for them). Aliases carry rbac.deckhouse.io/deprecated
-  so the deprecation hook/alert and the console can flag them.
+  whose aggregationRule reuses the NEW role's selector, so it aggregates the same capabilities as
+  its new-model counterpart (roleRef is immutable, so we cannot rewrite their bindings for them).
+  That is not identical to pre-upgrade rights — see the NOTE below. Aliases are also not
+  `delegatable`, so new project RoleBindings to the old names are rejected. Aliases carry
+  rbac.deckhouse.io/deprecated so the deprecation hook/alert and the console can flag them.
 
   NOTE (intentional, not a bug): the role model moved serviceaccounts/token:create and impersonate from admin
   to superadmin. The d8:use:role:admin -> d8:namespace:admin alias therefore no longer grants those two

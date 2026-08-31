@@ -62,7 +62,7 @@ spec:
                       message: password is immutable; use the UserOperation resource or d8 iam user reset-password to reset the password
                 userID:
                   type: string
-                  description: 'Unique issuer user ID. It equals to .metadata.name by default.'
+                  description: 'Deprecated. Ignored if set. Dex Password.userID is User.metadata.name.'
                   x-doc-examples: ['08a8684b-db88-4b73-90a9-3cd1661f5466']
                 groups:
                   type: array
@@ -96,7 +96,7 @@ spec:
                 groups:
                   type: array
                   description: |
-                    Static user groups.
+                    Groups the user belongs to, computed from Group membership. Values are Group.spec.name.
                   items:
                     type: string
                 lock:
@@ -197,9 +197,7 @@ spec:
                   type: string
                   x-doc-deprecated: true
                   description: |
-                    Unique issuer user ID. It equals to .metadata.name.
-
-                    Deprecated and shouldn't be set manually.
+                    Deprecated. Ignored if set. Dex Password.userID is User.metadata.name.
                 groups:
                   type: array
                   x-doc-deprecated: true
@@ -232,7 +230,7 @@ spec:
                 groups:
                   type: array
                   description: |
-                    Static user groups.
+                    Groups the user belongs to, computed from Group membership. Values are Group.spec.name.
                   items:
                     type: string
                 lock:

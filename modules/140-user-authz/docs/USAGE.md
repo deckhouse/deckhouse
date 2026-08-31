@@ -160,7 +160,7 @@ The user will be able to:
 The example uses the [granular role-based](./#granular-role-based-model).
 {% endalert %}
 
-To assign rights to a user manage application resources within a namespace, but without the ability to configure DKP modules, use the role `d8:namespace:admin` in RoleBinding in the corresponding namespace.
+To assign rights to a user to manage application resources within a namespace (including some namespaced DKP module resources such as DexAuthenticator), use the role `d8:namespace:admin` in a RoleBinding in the corresponding namespace. Cluster-wide module configuration is not included.
 
 Example of assigning rights to an application developer (User `app-developer`) in namespace `myapp`:
 

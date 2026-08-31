@@ -656,7 +656,7 @@ d8 k get clusterroles -o json | jq -r '.items[] | select((.metadata.name | start
 | `rbac.deckhouse.io/use-role` | Уровень use-роли | Уровень namespace-роли | Какая namespace-роль автоматически выдаётся обладателю системной/подсистемной роли в системных неймспейсах её модулей (через автоматически создаваемые объекты RoleBinding) |
 | `rbac.deckhouse.io/aggregate-to-all-as` | `<уровень>` | Переименован в `rbac.deckhouse.io/aggregate-to-system-as` | Агрегация объекта в общесистемную роль (`d8:system:<уровень>`) |
 | `rbac.deckhouse.io/aggregate-to-<подсистема>-as` | Использовался в селекторах вместе с `rbac.deckhouse.io/kind: manage` | Используется в селекторах сам по себе | Агрегация объекта в подсистемную роль указанного уровня |
-| `rbac.deckhouse.io/aggregate-to-kubernetes-as` | `<уровень>` (для use-прав) | Переименован в `rbac.deckhouse.io/aggregate-to-namespace-as` | Агрегация объекта в namespace-роль (`d8:namespace:<уровень>`) |
+| `rbac.deckhouse.io/aggregate-to-kubernetes-as` | `<уровень>` (для use-прав) | По-прежнему для **подсистемы** kubernetes (`d8:subsystem:kubernetes:*`). Старый use-смысл переехал на `aggregate-to-namespace-as` | Агрегация в `d8:subsystem:kubernetes:<уровень>` |
 | `rbac.deckhouse.io/namespace` | Неймспейс | Без изменений | Дополнительный неймспейс, в котором обладателям роли автоматически создаётся RoleBinding |
 | `rbac.deckhouse.io/capability` | — | Уникальное имя capability (например, `system-capability.deckhouse.view`) | Машиночитаемый идентификатор встроенной capability |
 | `rbac.deckhouse.io/deprecated` | — | `"true"` на ролях-псевдонимах | Роль устарела и будет удалена; переведите привязки на новую роль |
@@ -669,7 +669,7 @@ d8 k get clusterroles -o json | jq -r '.items[] | select((.metadata.name | start
 |-----------|------------|
 | `ru.meta.deckhouse.io/title`, `ru.meta.deckhouse.io/description` | Отображаемые название и описание роли или capability на русском языке (платформа ставит их на встроенные объекты; на кастомных можно указать свои) |
 | `en.meta.deckhouse.io/title`, `en.meta.deckhouse.io/description` | То же на английском языке |
-| `rbac.deckhouse.io/deprecated-replaced-by` | Появится в DKP 1.78 вместе с новой схемой. Правила агрегации прежних ролей изменятся так, что роли продолжат давать те же права, что и соответствующие им новые — существующие привязки не сломаются. Однако сохраняются прежние роли только на один релиз DKP: за это время привязки нужно перевести на новые роли. Аннотация проставляется на каждой прежней роли и содержит имя новой роли, эквивалентной ей по правам, на которую следует мигрировать |
+| `rbac.deckhouse.io/deprecated-replaced-by` | Введена в DKP 1.78 вместе с новой схемой. Роли-псевдонимы один релиз агрегируют capabilities **новой** роли — существующие привязки продолжают авторизовывать, затем псевдонимы удаляются. Это не те же права, что до апгрейда: `d8:use:role:admin` больше не даёт выпуск токена ServiceAccount и impersonate. Аннотация на каждой прежней роли указывает имя новой роли, на которую нужно мигрировать |
 
 ### Добавление кастомной capability (в новой схеме)
 
@@ -749,7 +749,7 @@ EOF
 - Права, выданные ClusterRoleBinding, показываются один раз в кластерной области (`status.scopes[].cluster: true`) — они действуют во всех неймспейсах.
 - Ограничить отчёт конкретными неймспейсами можно через `spec.namespaces`.
 
-Отчёт строится по данным RBAC и не учитывает ограничения admission-вебхуков: например, изменение и удаление системных ресурсов запрещено всем, кроме уровня `superadmin`. Такие места помечены в `status.scopes[].caveat`. Если права субъекта ограничены ресурсом ClusterAuthorizationRule, об этом сообщается в `status.notes`.
+Отчёт строится по данным RBAC. Ограничения admission-вебхуков не сворачиваются в строки RBAC — они помечаются в `status.scopes[].caveat`. Например, изменение и удаление системных ресурсов запрещено ниже уровня `superadmin` — кроме администраторов кластера (`cluster-admin`, `user-authz:super-admin` и bypass-групп). Если права субъекта ограничены ресурсом ClusterAuthorizationRule, об этом сообщается в `status.notes`.
 
 Право строить отчёт о **другом** субъекте даёт кластерная роль `d8:user-authz:subject-access-checker`. Как и `who-can-checker`, она намеренно никому не выдана по умолчанию: отчёт раскрывает полную карту прав субъекта, включая чужие неймспейсы. Отчёт о самом себе доступен любому аутентифицированному пользователю и не требует дополнительных прав.
 
