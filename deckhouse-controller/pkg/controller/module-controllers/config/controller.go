@@ -168,13 +168,6 @@ type reconciler struct {
 	logger           *log.Logger
 }
 
-// embeddedByAnnotation reports whether the module v2 sync marked the module as
-// shipped in the image. The annotation lives on the shared object metadata, so
-// the v1 view carries it too.
-func embeddedByAnnotation(module *v1alpha1.Module) bool {
-	return module.Annotations[v1alpha2.ModuleAnnotationEmbedded] == "true"
-}
-
 // packageVersionOf resolves the package version the module runs, by the spec
 // triple of its v2 resource. A module without a resource or a full triple and
 // a dev module name no version; the callers then read the empty metadata
@@ -437,7 +430,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 	}
 
 	// skip embedded modules
-	if embeddedByAnnotation(module) {
+	if v1alpha2.EmbeddedByAnnotation(module) {
 		r.logger.Debug("skip embedded module", slog.String("name", module.Name))
 		return ctrl.Result{}, nil
 	}
@@ -544,7 +537,7 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 	}
 
 	// clear downloaded module
-	if !embeddedByAnnotation(module) && !r.edition.IsEnabled(utils.EditionLicensing(r.packageVersionOf(ctx, module.Name))) {
+	if !v1alpha2.EmbeddedByAnnotation(module) && !r.edition.IsEnabled(utils.EditionLicensing(r.packageVersionOf(ctx, module.Name))) {
 		err := utils.Update[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
 			module.Properties.UpdatePolicy = ""
 			module.Properties.Source = ""

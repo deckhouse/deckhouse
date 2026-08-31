@@ -30,84 +30,66 @@ import (
 )
 
 func TestResolveEmbeddedTargetSource(t *testing.T) {
-	const embedded = v1alpha1.ModuleSourceEmbedded
+	const deckhouse = v1alpha1.PackageRepositoryNameDeckhouseModules
 
 	tests := []struct {
-		name             string
-		chosenSource     string
-		availableSources []string
-		wantTarget       string
-		wantConflict     bool
+		name                  string
+		chosenRepository      string
+		availableRepositories []string
+		wantTarget            string
+		wantConflict          bool
 	}{
 		{
-			name:             "explicitly chosen source that is offered wins",
-			chosenSource:     "deckhouse-upstream-ee",
-			availableSources: []string{"deckhouse", "deckhouse-upstream-ee"},
-			wantTarget:       "deckhouse-upstream-ee",
-			wantConflict:     false,
+			name:                  "explicitly chosen repository that is offered wins",
+			chosenRepository:      "deckhouse-upstream-ee",
+			availableRepositories: []string{deckhouse, "deckhouse-upstream-ee"},
+			wantTarget:            "deckhouse-upstream-ee",
+			wantConflict:          false,
 		},
 		{
-			name:             "chosen source that is no longer offered is a conflict",
-			chosenSource:     "gone",
-			availableSources: []string{"deckhouse", "deckhouse-upstream-ee"},
-			wantTarget:       "",
-			wantConflict:     true,
+			name:                  "chosen repository that is no longer offered is a conflict",
+			chosenRepository:      "gone",
+			availableRepositories: []string{deckhouse, "deckhouse-upstream-ee"},
+			wantTarget:            "",
+			wantConflict:          true,
 		},
 		{
-			name:             "single real source is used",
-			availableSources: []string{"deckhouse-upstream-ee"},
-			wantTarget:       "deckhouse-upstream-ee",
-			wantConflict:     false,
+			name:                  "single repository is used",
+			availableRepositories: []string{"deckhouse-upstream-ee"},
+			wantTarget:            "deckhouse-upstream-ee",
+			wantConflict:          false,
 		},
 		{
 			// the case that produced the false-positive ModuleAtConflict alert
-			name:             "deckhouse plus a mirror resolves to deckhouse, not a conflict",
-			availableSources: []string{"deckhouse", "deckhouse-upstream-ee"},
-			wantTarget:       "deckhouse",
-			wantConflict:     false,
+			name:                  "deckhouse plus a mirror resolves to deckhouse, not a conflict",
+			availableRepositories: []string{deckhouse, "deckhouse-upstream-ee"},
+			wantTarget:            deckhouse,
+			wantConflict:          false,
 		},
 		{
-			name:             "source order does not matter, deckhouse still wins",
-			availableSources: []string{"deckhouse-upstream-ee", "deckhouse"},
-			wantTarget:       "deckhouse",
-			wantConflict:     false,
+			name:                  "repository order does not matter, deckhouse still wins",
+			availableRepositories: []string{"deckhouse-upstream-ee", deckhouse},
+			wantTarget:            deckhouse,
+			wantConflict:          false,
 		},
 		{
-			name:             "Embedded sentinel plus one real source is not a conflict",
-			availableSources: []string{embedded, "deckhouse-upstream-ee"},
-			wantTarget:       "deckhouse-upstream-ee",
-			wantConflict:     false,
+			name:                  "several non-default repositories with no selection is a genuine conflict",
+			availableRepositories: []string{"vendor-a", "vendor-b"},
+			wantTarget:            "",
+			wantConflict:          true,
 		},
 		{
-			name:             "Embedded plus deckhouse plus a mirror resolves to deckhouse",
-			availableSources: []string{embedded, "deckhouse", "deckhouse-upstream-ee"},
-			wantTarget:       "deckhouse",
-			wantConflict:     false,
-		},
-		{
-			name:             "only the Embedded sentinel is available - nothing to pre-stage, not a conflict",
-			availableSources: []string{embedded},
-			wantTarget:       "",
-			wantConflict:     false,
-		},
-		{
-			name:             "several non-default real sources with no selection is a genuine conflict",
-			availableSources: []string{"vendor-a", "vendor-b"},
-			wantTarget:       "",
-			wantConflict:     true,
-		},
-		{
-			name:             "no sources at all is not a conflict",
-			availableSources: nil,
-			wantTarget:       "",
-			wantConflict:     false,
+			name:                  "no repositories at all is not a conflict",
+			availableRepositories: nil,
+			wantTarget:            "",
+			wantConflict:          false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			target, conflict := resolveEmbeddedTargetSource(tt.chosenSource, tt.availableSources)
-			assert.Equal(t, tt.wantTarget, target, "target source")
+			target, conflict := resolveEmbeddedTargetSource(tt.chosenRepository, tt.availableRepositories)
+			assert.Equal(t, tt.wantTarget, target, "target repository")
 			assert.Equal(t, tt.wantConflict, conflict, "conflict")
 		})
 	}

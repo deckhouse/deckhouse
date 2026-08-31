@@ -401,7 +401,7 @@ func (l *Loader) cleanupDeletedModules(ctx context.Context) error {
 	statusUpdatedCount := 0
 
 	for _, module := range modulesList.Items {
-		if embeddedByAnnotation(&module) && l.modules[module.Name] == nil {
+		if v1alpha2.EmbeddedByAnnotation(&module) && l.modules[module.Name] == nil {
 			ctx, deleteSpan := otel.Tracer("module-loader").Start(ctx, "deleteEmbeddedModule")
 			deleteSpan.SetAttributes(attribute.String("module.name", module.Name))
 
@@ -488,13 +488,6 @@ func (l *Loader) syncModuleVersions(ctx context.Context) {
 		}
 		mod.GetBasicModule().SetVersion(m.Spec.PackageVersion)
 	}
-}
-
-// embeddedByAnnotation reports whether the module v2 sync marked the module as
-// shipped in the image. The annotation lives on the shared object metadata, so
-// the v1 view carries it too.
-func embeddedByAnnotation(module *v1alpha1.Module) bool {
-	return module.Annotations[v1alpha2.ModuleAnnotationEmbedded] == "true"
 }
 
 // ensureModule makes the cluster Module object match the module definition

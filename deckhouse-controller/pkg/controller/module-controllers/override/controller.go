@@ -178,8 +178,30 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 		return ctrl.Result{RequeueAfter: defaultRequeueAfter}, nil
 	}
 
+	// the v2 resource carries the module facts: the embedded and dev marks and
+	// the package triple; the v1 object above stays for the status conditions
+	moduleV2 := new(v1alpha2.Module)
+	if err := r.client.Get(ctx, client.ObjectKey{Name: mpo.Name}, moduleV2); err != nil {
+		if !apierrors.IsNotFound(err) {
+			r.log.Error("failed to get the module v2 resource", slog.String("name", mpo.Name), log.Err(err))
+
+			return ctrl.Result{}, fmt.Errorf("get: %w", err)
+		}
+
+		r.log.Warn("module v2 resource not found", slog.String("name", mpo.Name))
+		if mpo.Status.Message != v1alpha1.ModulePullOverrideMessageModuleNotFound {
+			mpo.Status.Message = v1alpha1.ModulePullOverrideMessageModuleNotFound
+			if uerr := r.updateModulePullOverrideStatus(ctx, mpo); uerr != nil {
+				r.log.Error("failed to update module pull override", slog.String("name", mpo.Name), log.Err(uerr))
+				return ctrl.Result{}, uerr
+			}
+		}
+
+		return ctrl.Result{RequeueAfter: defaultRequeueAfter}, nil
+	}
+
 	// skip embedded modules
-	if module.IsEmbedded() {
+	if moduleV2.IsEmbedded() {
 		r.log.Debug("module is embedded, skip it", slog.String("name", mpo.Name))
 		if mpo.Status.Message != v1alpha1.ModulePullOverrideMessageModuleEmbedded {
 			mpo.Status.Message = v1alpha1.ModulePullOverrideMessageModuleEmbedded
@@ -194,10 +216,13 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 
 	// the module must be enabled — explicitly by a ModuleConfig or by the bundle default
 	enabled := module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue)
-	// no ModuleConfig yet (the condition is absent or unknown) — fall back to the bundle default
+	// no ModuleConfig yet (the condition is absent or unknown) — fall back to the bundle
+	// default from the package version licensing; empty metadata answers false, the answer
+	// an unknown module gets. A dev module is the applied override itself: no catalog
+	// version describes its mutable tag, so it counts as enabled.
 	if !module.HasCondition(v1alpha1.ModuleConditionEnabledByModuleConfig) ||
 		module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionUnknown) {
-		enabled = module.IsEnabledByBundle(r.edition.Name, r.edition.Bundle)
+		enabled = moduleV2.IsDev() || r.edition.IsEnabled(utils.EditionLicensing(r.packageVersionOf(ctx, moduleV2)))
 	}
 
 	if !enabled {
@@ -215,8 +240,9 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 		return ctrl.Result{RequeueAfter: defaultRequeueAfter}, nil
 	}
 
-	// source must be
-	if module.Properties.Source == "" {
+	// the module must have a known origin; the startup sync derives the
+	// repository from the deployed release, the config or the catalog
+	if moduleV2.Spec.PackageRepositoryName == "" {
 		r.log.Debug("module does not have an active source, skip it", slog.String("name", mpo.Name))
 		if mpo.Status.Message != v1alpha1.ModulePullOverrideMessageNoSource {
 			mpo.Status.Message = v1alpha1.ModulePullOverrideMessageNoSource
@@ -255,10 +281,14 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 		return ctrl.Result{RequeueAfter: 500 * time.Millisecond}, nil
 	}
 
+	// the installer speaks module sources; map the repository back to the
+	// source it was named after
+	sourceName := v1alpha1.ModuleSourceNameForPackageRepository(moduleV2.Spec.PackageRepositoryName)
+
 	source := new(v1alpha1.ModuleSource)
-	if err = r.client.Get(ctx, client.ObjectKey{Name: module.Properties.Source}, source); err != nil {
+	if err = r.client.Get(ctx, client.ObjectKey{Name: sourceName}, source); err != nil {
 		if !apierrors.IsNotFound(err) {
-			r.log.Error("failed to get the module source for the module pull override", slog.String("module_source", module.Properties.Source), slog.String("target", mpo.Name), log.Err(err))
+			r.log.Error("failed to get the module source for the module pull override", slog.String("module_source", sourceName), slog.String("target", mpo.Name), log.Err(err))
 			return ctrl.Result{}, fmt.Errorf("get: %w", err)
 		}
 
@@ -348,12 +378,35 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 		Controller: ptr.To(true),
 	}
 
-	if err = utils.EnsureModuleDocumentation(ctx, r.client, mpo.Name, module.Properties.Source, mpo.Status.ImageDigest, mpo.Spec.ImageTag, modulePath, ownerRef); err != nil {
+	if err = utils.EnsureModuleDocumentation(ctx, r.client, mpo.Name, sourceName, mpo.Status.ImageDigest, mpo.Spec.ImageTag, modulePath, ownerRef); err != nil {
 		r.log.Error("failed to ensure module documentation for the module pull override", slog.String("name", mpo.Name), log.Err(err))
 		return ctrl.Result{}, fmt.Errorf("ensure module documentation: %w", err)
 	}
 
 	return ctrl.Result{RequeueAfter: mpo.Spec.ScanInterval.Duration}, nil
+}
+
+// packageVersionOf resolves the package version the module runs, by the spec
+// triple of its v2 resource. A dev module, an incomplete triple or a version
+// the catalog does not carry answer nil; the enablement gate then reads the
+// empty metadata state, the answer an unknown module gets.
+func (r *reconciler) packageVersionOf(ctx context.Context, moduleV2 *v1alpha2.Module) *v1alpha1.ModulePackageVersion {
+	if moduleV2.IsDev() || moduleV2.Spec.PackageRepositoryName == "" || moduleV2.Spec.PackageVersion == "" {
+		return nil
+	}
+
+	name := v1alpha1.MakeModulePackageVersionName(moduleV2.Spec.PackageRepositoryName, moduleV2.Name, moduleV2.Spec.PackageVersion)
+
+	mpv := new(v1alpha1.ModulePackageVersion)
+	if err := r.client.Get(ctx, client.ObjectKey{Name: name}, mpv); err != nil {
+		if !apierrors.IsNotFound(err) {
+			r.log.Warn("failed to get the module package version", slog.String("name", name), log.Err(err))
+		}
+
+		return nil
+	}
+
+	return mpv
 }
 
 // deployModule downloads module on tmp, validates and installs

@@ -47,6 +47,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
@@ -408,7 +409,8 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 
 		meta, err := md.DownloadMetadataFromReleaseChannel(ctx, moduleName, policy.Spec.ReleaseChannel)
 		if err != nil {
-			if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue) && module.Properties.Source == source.Name {
+			if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue) &&
+				r.activePackageRepositoryOf(ctx, moduleName) == v1alpha1.PackageRepositoryNameForModuleSource(source.Name) {
 				r.logger.Warn("failed to download module", slog.String("name", moduleName), log.Err(err))
 				availableModule.Error = err.Error()
 				errorsExist = true
@@ -452,16 +454,20 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			continue
 		}
 
-		// Resolve which source an embedded module should be pre-staged from while its
-		// embedded copy is still shipped. The module keeps Source == "Embedded", so the
-		// choice is driven by the operator's ModuleConfig .spec.source, the only real
-		// source, or the canonical "deckhouse" source - see resolveEmbeddedTargetSource.
-		// Being offered by several sources is not automatically a conflict: "deckhouse"
-		// + a mirror like "deckhouse-upstream-ee", or "Embedded" + one real source, both
-		// resolve cleanly. A real conflict only arises from a stale .spec.source or from
-		// several non-default sources with no selection.
-		var embeddedTargetSource string
-		if module.IsEmbedded() {
+		// the catalog's view of who offers the module; feeds the embedded
+		// pre-staging resolution and the multi-source auto-ensure gate
+		availableRepositories := r.availableRepositoriesOf(ctx, moduleName)
+
+		// Resolve which source an embedded module should be pre-staged from while
+		// its embedded copy is still shipped: the choice is driven by the
+		// operator's ModuleConfig .spec.source, the only offering repository, or
+		// the canonical deckhouse repository - see resolveEmbeddedTargetSource.
+		// Being offered by several repositories is not automatically a conflict:
+		// "deckhouse-modules" + a mirror like "deckhouse-upstream-ee" resolves
+		// cleanly. A real conflict only arises from a stale .spec.source or from
+		// several non-default repositories with no selection.
+		var embeddedTargetRepository string
+		if v1alpha2.EmbeddedByAnnotation(module) {
 			chosenSource, err := r.getConfiguredModuleSource(ctx, moduleName)
 			if err != nil {
 				logger.Error("failed to get module config, skipping", slog.String("name", moduleName), log.Err(err))
@@ -472,8 +478,13 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 				continue
 			}
 
+			var chosenRepository string
+			if chosenSource != "" {
+				chosenRepository = v1alpha1.PackageRepositoryNameForModuleSource(chosenSource)
+			}
+
 			var conflict bool
-			embeddedTargetSource, conflict = resolveEmbeddedTargetSource(chosenSource, module.Properties.AvailableSources)
+			embeddedTargetRepository, conflict = resolveEmbeddedTargetSource(chosenRepository, availableRepositories)
 			if conflict {
 				// Skip pre-staging with a diagnostic warning; do NOT raise a user-facing
 				// ModuleAtConflict alert. This branch is embedded-only (see the
@@ -489,11 +500,11 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 					logger.Warn("embedded module's configured source does not offer the module, cannot pre-stage a release until the ModuleConfig .spec.source is fixed",
 						slog.String("name", moduleName),
 						slog.String("configured_source", chosenSource),
-						slog.Any("available_sources", module.Properties.AvailableSources))
+						slog.Any("available_repositories", availableRepositories))
 				} else {
 					logger.Warn("embedded module is offered by several non-default sources and none is selected via ModuleConfig, cannot pre-stage a release until the conflict is resolved",
 						slog.String("name", moduleName),
-						slog.Any("available_sources", module.Properties.AvailableSources))
+						slog.Any("available_repositories", availableRepositories))
 				}
 
 				availableModule.Checksum = meta.Checksum
@@ -503,7 +514,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			}
 		}
 
-		if !r.releaseEnsureAllowed(source, module, meta, embeddedTargetSource) {
+		if !r.releaseEnsureAllowed(source, module, meta, embeddedTargetRepository, availableRepositories) {
 			availableModule.Checksum = meta.Checksum
 			availableModule.Version = meta.ModuleVersion
 			availableModules = append(availableModules, availableModule)
@@ -559,7 +570,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 				// still shipped: the release is only pre-staged on the filesystem,
 				// not activated. The active source is switched to the external one
 				// only after the embedded copy is dropped on Deckhouse upgrade.
-				if !module.IsEmbedded() {
+				if !v1alpha2.EmbeddedByAnnotation(module) {
 					module.Properties.Source = source.Name
 				}
 

@@ -244,5 +244,12 @@ func (m *Module) IsDev() bool {
 
 // IsEmbedded returns true if the module is embedded in the Deckhouse image.
 func (m *Module) IsEmbedded() bool {
-	return m.Annotations[ModuleAnnotationEmbedded] == "true"
+	return EmbeddedByAnnotation(m)
+}
+
+// EmbeddedByAnnotation reports whether the module v2 sync marked the object as
+// a module shipped in the deckhouse image. The annotation lives on the shared
+// object metadata, so any served version of the module carries it.
+func EmbeddedByAnnotation(obj metav1.Object) bool {
+	return obj.GetAnnotations()[ModuleAnnotationEmbedded] == "true"
 }

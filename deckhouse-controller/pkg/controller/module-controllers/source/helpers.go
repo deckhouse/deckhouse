@@ -33,9 +33,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 var (
@@ -53,39 +55,56 @@ func (r *reconciler) cleanSourceInModule(ctx context.Context, sourceName, module
 				return fmt.Errorf("get the '%s' module: %w", moduleName, err)
 			}
 
-			// delete modules without sources, it seems impossible, but just in case
-			if len(module.Properties.AvailableSources) == 0 {
+			// the module becomes an orphan when no other source still offers it
+			offered, err := r.moduleOfferedElsewhere(ctx, sourceName, moduleName)
+			if err != nil {
+				return err
+			}
+
+			if !offered {
 				// don`t delete enabled module
 				if !module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleManager, corev1.ConditionTrue) {
 					return r.client.Delete(ctx, module)
 				}
-				return nil
 			}
 
-			// delete modules with this source as the last source
-			if len(module.Properties.AvailableSources) == 1 && module.Properties.AvailableSources[0] == sourceName {
-				// don`t delete enabled module
-				if !module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleManager, corev1.ConditionTrue) {
-					return r.client.Delete(ctx, module)
-				}
-				module.Properties.AvailableSources = []string{}
-			}
-
-			if len(module.Properties.AvailableSources) > 1 {
-				for idx, source := range module.Properties.AvailableSources {
-					if source == sourceName {
-						module.Properties.AvailableSources = append(module.Properties.AvailableSources[:idx], module.Properties.AvailableSources[idx+1:]...)
-						break
-					}
+			// drop this source from the module's list
+			for idx, source := range module.Properties.AvailableSources {
+				if source == sourceName {
+					module.Properties.AvailableSources = slices.Delete(module.Properties.AvailableSources, idx, idx+1)
+					return r.client.Update(ctx, module)
 				}
 			}
 
-			return r.client.Update(ctx, module)
+			return nil
 		})
 	}); err != nil {
 		return fmt.Errorf("on error: %w", err)
 	}
 	return nil
+}
+
+// moduleOfferedElsewhere reports whether any other module source still offers
+// the module in its scan results.
+func (r *reconciler) moduleOfferedElsewhere(ctx context.Context, sourceName, moduleName string) (bool, error) {
+	sources := new(v1alpha1.ModuleSourceList)
+	if err := r.client.List(ctx, sources); err != nil {
+		return false, fmt.Errorf("list module sources: %w", err)
+	}
+
+	for _, source := range sources.Items {
+		if source.Name == sourceName {
+			continue
+		}
+
+		for _, available := range source.Status.AvailableModules {
+			if available.Name == moduleName {
+				return true, nil
+			}
+		}
+	}
+
+	return false, nil
 }
 
 // syncRegistrySettings checks if modules source registry settings were updated
@@ -180,9 +199,12 @@ func (r *reconciler) releaseEnsureAllowed(
 	source *v1alpha1.ModuleSource,
 	module *v1alpha1.Module,
 	meta *downloader.ModuleDownloadResult,
-	embeddedTargetSource string) bool {
-	// skip experimental modules when deckhouse does not allow them
-	if module.IsExperimental() && !r.deckhouseSettings.ExperimentalModuleAllowed(module.Name) {
+	embeddedTargetRepository string,
+	availableRepositories []string) bool {
+	// skip experimental modules when deckhouse does not allow them; the stage
+	// comes from the just-fetched channel definition, absent means not experimental
+	if meta.ModuleDefinition != nil && meta.ModuleDefinition.IsExperimental() &&
+		!r.deckhouseSettings.ExperimentalModuleAllowed(module.Name) {
 		r.logger.Debug("experimental module not allowed, skip release ensure",
 			slog.String("source_name", source.Name),
 			slog.String("name", module.Name))
@@ -190,15 +212,16 @@ func (r *reconciler) releaseEnsureAllowed(
 		return false
 	}
 
-	// An embedded module keeps Source == "Embedded" while its embedded copy is
-	// shipped, so the active-source check below would always skip it. Instead
-	// pre-stage the release from the source resolved for migration so the module is
-	// already on the filesystem when the embedded copy is dropped on upgrade.
-	// embeddedTargetSource is the resolved source (operator's ModuleConfig
-	// .spec.source, or the only available source); it is empty when the source is
-	// undecided (several sources, none chosen) - a conflict handled in processModules.
-	if module.IsEmbedded() {
-		if embeddedTargetSource == "" || embeddedTargetSource != source.Name {
+	// An embedded module is served by its embedded copy, so the active-source
+	// check below would always skip it. Instead pre-stage the release from the
+	// repository resolved for migration so the module is already on the
+	// filesystem when the embedded copy is dropped on upgrade.
+	// embeddedTargetRepository is the resolved repository (operator's ModuleConfig
+	// .spec.source, or the only offering repository); it is empty when the choice
+	// is undecided (several repositories, none chosen) - a conflict handled in
+	// processModules.
+	if v1alpha2.EmbeddedByAnnotation(module) {
+		if embeddedTargetRepository == "" || embeddedTargetRepository != v1alpha1.PackageRepositoryNameForModuleSource(source.Name) {
 			return false
 		}
 	} else if module.Properties.Source != "" && module.Properties.Source != source.Name {
@@ -221,7 +244,9 @@ func (r *reconciler) releaseEnsureAllowed(
 			return false
 		}
 
-		if len(module.Properties.AvailableSources) > 1 && source.Name != "deckhouse" {
+		// a module offered by several repositories is auto-ensured only from the
+		// canonical deckhouse one; the others wait for an explicit choice
+		if len(availableRepositories) > 1 && v1alpha1.PackageRepositoryNameForModuleSource(source.Name) != v1alpha1.PackageRepositoryNameDeckhouseModules {
 			return false
 		}
 	} else if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionFalse) {
@@ -230,6 +255,37 @@ func (r *reconciler) releaseEnsureAllowed(
 	}
 
 	return true
+}
+
+// availableRepositoriesOf answers the catalog's list of repositories offering
+// the module. A module the catalog does not know or a failed lookup answer an
+// empty list, the state a never-scanned module is in.
+func (r *reconciler) availableRepositoriesOf(ctx context.Context, moduleName string) []string {
+	pkg := new(v1alpha1.ModulePackage)
+	if err := r.client.Get(ctx, client.ObjectKey{Name: moduleName}, pkg); err != nil {
+		if !apierrors.IsNotFound(err) {
+			r.logger.Warn("failed to get the module package", slog.String("name", moduleName), log.Err(err))
+		}
+
+		return nil
+	}
+
+	return pkg.Status.AvailableRepositories
+}
+
+// activePackageRepositoryOf answers the repository the module v2 resource names
+// as its origin; a missing resource or an unclaimed module answer an empty name.
+func (r *reconciler) activePackageRepositoryOf(ctx context.Context, moduleName string) string {
+	moduleV2 := new(v1alpha2.Module)
+	if err := r.client.Get(ctx, client.ObjectKey{Name: moduleName}, moduleV2); err != nil {
+		if !apierrors.IsNotFound(err) {
+			r.logger.Warn("failed to get the module v2 resource", slog.String("name", moduleName), log.Err(err))
+		}
+
+		return ""
+	}
+
+	return moduleV2.Spec.PackageRepositoryName
 }
 
 // releaseChainToTargetComplete reports whether the ModuleReleases already present in
@@ -393,49 +449,34 @@ func (r *reconciler) getConfiguredModuleSource(ctx context.Context, moduleName s
 	return moduleConfig.Spec.Source, nil
 }
 
-// defaultModuleSourceName is the name of the built-in OSS ModuleSource that ships
-// with Deckhouse. When a module is offered by it alongside mirrors (e.g. the EE
-// source), it is the canonical choice rather than an ambiguous conflict.
-const defaultModuleSourceName = "deckhouse"
-
-// resolveEmbeddedTargetSource decides which source an embedded module should be
-// pre-staged from while its embedded copy is still shipped, and whether the choice
-// is a genuine conflict.
+// resolveEmbeddedTargetSource decides which repository an embedded module should
+// be pre-staged from while its embedded copy is still shipped, and whether the
+// choice is a genuine conflict.
 //
-// Being offered by several sources is not automatically a conflict:
-//   - an explicitly chosen source wins (if it still offers the module);
-//   - the "Embedded" sentinel is not a real source, so "Embedded" + one real source
-//     is not a conflict - the real source is used;
-//   - the built-in "deckhouse" source is the canonical default and wins over mirrors
-//     such as "deckhouse-upstream-ee".
+// Being offered by several repositories is not automatically a conflict:
+//   - an explicitly chosen repository wins (if it still offers the module);
+//   - the built-in deckhouse repository is the canonical default and wins over
+//     mirrors such as "deckhouse-upstream-ee".
 //
-// It is a conflict only when the chosen source no longer offers the module, or when
-// several real, non-default sources offer it and none is selected.
-func resolveEmbeddedTargetSource(chosenSource string, availableSources []string) (string, bool) {
-	if chosenSource != "" {
-		if slices.Contains(availableSources, chosenSource) {
-			return chosenSource, false
+// It is a conflict only when the chosen repository no longer offers the module,
+// or when several non-default repositories offer it and none is selected.
+func resolveEmbeddedTargetSource(chosenRepository string, availableRepositories []string) (string, bool) {
+	if chosenRepository != "" {
+		if slices.Contains(availableRepositories, chosenRepository) {
+			return chosenRepository, false
 		}
 		// the configured .spec.source does not (or no longer does) offer the module
 		return "", true
 	}
 
-	// "Embedded" is a sentinel for the built-in copy, not a selectable source.
-	candidates := make([]string, 0, len(availableSources))
-	for _, source := range availableSources {
-		if source != v1alpha1.ModuleSourceEmbedded {
-			candidates = append(candidates, source)
-		}
-	}
-
 	switch {
-	case len(candidates) == 0:
+	case len(availableRepositories) == 0:
 		// nothing but the embedded copy is available - nothing to pre-stage, not a conflict
 		return "", false
-	case len(candidates) == 1:
-		return candidates[0], false
-	case slices.Contains(candidates, defaultModuleSourceName):
-		return defaultModuleSourceName, false
+	case len(availableRepositories) == 1:
+		return availableRepositories[0], false
+	case slices.Contains(availableRepositories, v1alpha1.PackageRepositoryNameDeckhouseModules):
+		return v1alpha1.PackageRepositoryNameDeckhouseModules, false
 	default:
 		return "", true
 	}

@@ -35,6 +35,8 @@ apiVersion: deckhouse.io/v1alpha1
 kind: Module
 metadata:
   name: ingressnginx
+  annotations:
+    modules.deckhouse.io/embedded: "true"
 properties:
   source: Embedded
   availableSources:
@@ -53,3 +55,12 @@ metadata:
 spec:
   enabled: true
   source: test-source-1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackage
+metadata:
+  name: ingressnginx
+status:
+  availableRepositories:
+    - test-source-1
+    - test-source-2

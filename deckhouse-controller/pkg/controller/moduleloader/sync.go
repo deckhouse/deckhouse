@@ -61,7 +61,7 @@ func (l *Loader) deleteStaleModuleReleases(ctx context.Context) error {
 
 	for _, module := range modules.Items {
 		// handle too long disabled modules
-		if module.DisabledByModuleConfigMoreThan(deleteReleasesAfter) && !embeddedByAnnotation(&module) {
+		if module.DisabledByModuleConfigMoreThan(deleteReleasesAfter) && !v1alpha2.EmbeddedByAnnotation(&module) {
 			// delete module releases of a stale module
 			l.logger.Debug("the module disabled too long, delete module releases", slog.String("name", module.Name))
 			moduleReleases := new(v1alpha1.ModuleReleaseList)
@@ -129,7 +129,7 @@ func (l *Loader) restoreModulesByOverrides(ctx context.Context) error {
 		}
 
 		// skip embedded module
-		if embeddedByAnnotation(module) {
+		if v1alpha2.EmbeddedByAnnotation(module) {
 			l.logger.Info("module is embedded, skip restoring module pull override", slog.String("name", mpo.Name))
 			continue
 		}
