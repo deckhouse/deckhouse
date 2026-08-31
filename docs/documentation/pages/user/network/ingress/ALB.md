@@ -36,7 +36,7 @@ Application deployment and application-level traffic balancing in Deckhouse Kube
 
 ## Comparison of ALB options
 
-### Ingress-nginx
+### Ingress NGINX
 
 ALB based on the Ingress NGINX Controller uses the nginx web server and is implemented by the [`ingress-nginx`](/modules/ingress-nginx/) module.
 This option is suitable for:
@@ -55,8 +55,9 @@ Use this option for:
 - Publishing applications using the Gateway API model instead of the classic Ingress.
 - A cluster-wide entry point or a separate gateway for an application or team within your namespace.
 - HTTP/HTTPS, gRPC, TCP, UDP, and TLS termination or passthrough.
-- Per-route WAF, adding GeoIP fields to HTTP request headers, OpenTelemetry tracing, or an Istio sidecar on the gateway proxy.
-- Route parameters not included in the specification, via [`HTTPRoute` annotations](alb/gateway-api.html#supported-httproute-annotations).
+- Per-route WAF or an Istio sidecar on the gateway proxy.
+- GeoIP and OpenTelemetry on the gateway (configured by an administrator — ["Using GeoIP and GeoLite2"](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#geoip) and ["Configuring OpenTelemetry tracing"](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#tracing)).
+- Route parameters not included in the specification, via [HTTPRoute annotations](alb/gateway-api.html#supported-httproute-annotations).
 
 For a comparison with `ingress-nginx` and terminology notes, read ["Comparison of the ingress-nginx and alb modules"](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/#comparison-of-the-ingress-nginx-and-alb-modules).
 

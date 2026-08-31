@@ -133,6 +133,9 @@ All collected metrics include service labels identifying the controller instance
 
 Use the [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller) custom resource to configure load balancing.
 
+{% tabs Environment examples %}
+{% tab "AWS (NLB)" %}
+
 ### Example for AWS (Network Load Balancer)
 
 When setting up the balancer, all available zones in the cluster are used.
@@ -159,6 +162,9 @@ spec:
       service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
 ```
 
+{% endtab %}
+{% tab "GCP, Yandex Cloud, and Azure" %}
+
 ### Example for GCP, Yandex Cloud, and Azure
 
 IngressNginxController with the [`LoadBalancer`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-loadbalancer) inlet:
@@ -176,6 +182,9 @@ spec:
 {% alert level="info" %}
 In GCP, nodes must have an annotation allowing external connections for NodePort services.
 {% endalert %}
+
+{% endtab %}
+{% tab "OpenStack" %}
 
 ### Example for OpenStack
 
@@ -195,6 +204,9 @@ spec:
       loadbalancer.openstack.org/timeout-member-connect: "2000"
 ```
 
+{% endtab %}
+{% tab "VK Cloud" %}
+
 ### Example for VK Cloud
 
 Use this configuration for an internal cloud balancer (without a public address).
@@ -213,6 +225,9 @@ spec:
   nodeSelector:
     node.deckhouse.io/group: worker
 ```
+
+{% endtab %}
+{% tab "Bare metal (HostWithFailover)" %}
 
 ### Example for bare metal
 
@@ -234,6 +249,9 @@ spec:
       value: frontend
 ```
 
+{% endtab %}
+{% tab "Bare metal with external LB" %}
+
 ### Example for bare metal with external load balancer
 
 Use this configuration with Cloudflare, Qrator, Nginx+, Citrix ADC, Kemp, or other external load balancers.
@@ -251,6 +269,9 @@ spec:
     httpsPort: 443
     behindL7Proxy: true
 ```
+
+{% endtab %}
+{% tab "MetalLB BGP" %}
 
 ### Example for bare metal (MetalLB in BGP LoadBalancer mode)
 
@@ -302,6 +323,9 @@ spec:
           value: frontend
 ```
 
+{% endtab %}
+{% tab "MetalLB L2" %}
+
 ### Example for bare metal (MetalLB in L2 LoadBalancer mode)
 
 {% alert level="info" %}
@@ -340,7 +364,7 @@ Available in DKP Enterprise Edition only.
      type: L2
    ```
 
-1. Create a [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller) resource:
+1. Create an [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller) resource:
 
    ```yaml
    apiVersion: deckhouse.io/v1
@@ -388,6 +412,9 @@ main-load-balancer     LoadBalancer   10.222.130.11   192.168.2.100,192.168.2.10
 {: .nowrap-default }
 <!-- markdownlint-enable MD031 -->
 
+{% endtab %}
+{% endtabs %}
+
 ### Example of segregating access between public and administrative zones
 
 In many applications, the same backend serves both the public part and the administrative interface. For example:
@@ -396,6 +423,9 @@ In many applications, the same backend serves both the public part and the admin
 - `https://admin.example.com` is the administrative zone, access to which must be restricted (`ACL`, `mTLS`, `IP whitelist`, and so on).
 
 For this scenario, we recommend offloading administrative traffic to a separate Ingress controller (with a dedicated Ingress class if necessary) and restricting access to it by using the [`spec.acceptRequestsFrom`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom) parameter.
+
+{% tabs Zone segregation options %}
+{% tab "Single Ingress controller" %}
 
 #### Specifics of using a single Ingress controller
 
@@ -445,12 +475,15 @@ spec:
 
 With [processing and forwarding of X-Forwarded-* headers enabled](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-hostport-behindl7proxy), the backend can rely on the `x-forwarded-host` header when making authorization decisions. In the example above, public Ingress traffic can reach the administrative zone via `x-forwarded-host`. Therefore, requests to the Ingress controller must come only from trusted sources.
 
+{% endtab %}
+{% tab "Separate Ingress controllers" %}
+
 #### Using separate Ingress controllers
 
 To avoid that situation, we recommend that you:
 
-- Configure access rules at the Ingress resource level;
-- Use separate Ingress controllers;
+- Configure access rules at the Ingress resource level.
+- Use separate Ingress controllers.
 - Restrict which source addresses are allowed to connect to the Ingress controllers.
 
 Example of Ingress resource configuration for this case:
@@ -536,6 +569,9 @@ spec:
     httpsPort: 8443
     behindL7Proxy: true
 ```
+
+{% endtab %}
+{% endtabs %}
 
 ## Module support and security
 

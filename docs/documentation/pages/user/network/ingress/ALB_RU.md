@@ -37,9 +37,9 @@ relatedLinks:
 
 ## Сравнение вариантов ALB
 
-### Ingress-nginx
+### Ingress NGINX
 
-ALB средствами Ingress NGINX Controller основана на базе веб-сервера nginx и реализуется модулем [`ingress-nginx`](/modules/ingress-nginx/).
+ALB средствами Ingress NGINX Controller построена на базе веб-сервера nginx и реализуется модулем [`ingress-nginx`](/modules/ingress-nginx/).
 Этот вариант подходит для:
 
 - базовой маршрутизации трафика на основе доменов или URL;
@@ -56,8 +56,9 @@ ALB средствами [Kubernetes Gateway API](https://kubernetes.io/docs/con
 - публикации приложений в модели Gateway API вместо классического Ingress;
 - общекластерной точки входа или отдельного шлюза для приложения или команды в своём неймспейсе;
 - маршрутизации HTTP/HTTPS, gRPC, TCP, UDP, а также терминации или сквозной передачи TLS;
-- WAF на уровне маршрута, добавления полей GeoIP в заголовки HTTP-запросов, трассировки OpenTelemetry или Istio-сайдкара на прокси шлюза;
-- параметров маршрута, которых нет в спецификации, через [аннотации `HTTPRoute`](alb/gateway-api.html#поддерживаемые-аннотации-httproute).
+- WAF на уровне маршрута или Istio-сайдкара на прокси шлюза;
+- GeoIP и OpenTelemetry на шлюзе (настраивает администратор — [«Использование GeoIP и GeoLite2»](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#geoip) и [«Настройка трассировки OpenTelemetry»](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#tracing));
+- параметров маршрута, которых нет в спецификации, через [аннотации HTTPRoute](alb/gateway-api.html#поддерживаемые-аннотации-httproute).
 
 Сравнение с `ingress-nginx` и пояснения по терминологии — в разделе [«Сравнение возможностей модулей ingress-nginx и alb»](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/#сравнение-возможностей-модулей-ingress-nginx-и-alb).
 

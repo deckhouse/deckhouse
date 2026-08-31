@@ -34,7 +34,7 @@ relatedLinks:
 
 - Активное сопровождение upstream-проекта Ingress NGINX, используемого в DKP, прекращено. Новые функции, исправления и интеграции в нём не ожидаются. Для новых сценариев публикации приложений используйте Gateway API.
 - В отличие от Ingress API, Gateway API описывает маршруты отдельными ресурсами по протоколам, явно настраивает точки приёма трафика, контролирует подключение маршрутов и доступ между неймспейсами. Сложные конфигурации можно задавать ресурсами API, а не только аннотациями конкретного контроллера.
-- Gateway API разделяет ответственность между ролями. Администраторы кластера и сети управляют инфраструктурой обработки трафика и объектами Gateway через [ClusterALBInstance](/modules/alb/cr.html#clusteralbinstance_v1) или [ALBInstance](/modules/alb/cr.html#albinstance-v1alpha1-spec). Команды разработки задают слушателей и правила маршрутизации с помощью ListenerSet и ресурсов маршрутов. Такое разделение позволяет делегировать настройки, проверять конфигурацию и выполнять поэтапную миграцию.
+- Gateway API разделяет ответственность между ролями. Администраторы кластера и сети управляют инфраструктурой обработки трафика и объектами Gateway через [ClusterALBInstance](/modules/alb/cr.html#clusteralbinstance_v1) или [ALBInstance](/modules/alb/cr.html#albinstance-v1alpha1-spec). Администраторы неймспейса настраивают приём трафика через ListenerSet (hostname, TLS, порты). Разработчики приложения задают маршрутизацию с помощью HTTPRoute и других ресурсов маршрутов. Такое разделение позволяет делегировать настройки, проверять конфигурацию и выполнять поэтапную миграцию.
 
 ## Сравнение моделей {#model-comparison}
 
@@ -77,7 +77,7 @@ relatedLinks:
 | Параметр | Ingress API и ingress-nginx | Gateway API и alb |
 | --- | --- | --- |
 | Связи между ресурсами | Инфраструктура и правила маршрутизации косвенно связаны через IngressClass | Ресурсы образуют явный граф с помощью `parentRefs` и других типизированных ссылок. Корневым объектом является Gateway |
-| Разделение ответственности | IngressNginxController определяет инфраструктуру, а Ingress объединяет маршрутизацию приложения с настройками, зависящими от контроллера | Администраторы кластера и сети управляют экземплярами и объектами Gateway, а команды разработки определяют слушателей и правила маршрутизации с помощью ListenerSet и ресурсов маршрутов |
+| Разделение ответственности | IngressNginxController определяет инфраструктуру, а Ingress объединяет маршрутизацию приложения с настройками, зависящими от контроллера | Администраторы кластера и сети управляют экземплярами и объектами Gateway, администраторы неймспейса — ListenerSet, разработчики приложения — HTTPRoute и другие ресурсы маршрутов |
 | Модель конфигурации | Ingress объединяет основную конфигурацию маршрутизации HTTP- и HTTPS-трафика в одном объекте и использует аннотации, зависящие от контроллера | Слушатели, маршруты, бэкенды и политики представлены отдельными ресурсами, формирующими общую конфигурацию |
 | Общая конфигурация и точки входа | Несколько объектов IngressNginxController, использующих один IngressClass, применяют общий набор правил Ingress, но предоставляют отдельные точки входа | Несколько объектов ClusterALBInstance с одинаковым значением `gatewayName` предоставляют отдельные точки входа на основе общей конфигурации Gateway |
 | Ссылки между неймспейсами | Ingress, объект Service, указанный в качестве бэкенда, и объект Secret с TLS-сертификатом, как правило, находятся в одном неймспейсе | Доступ к ресурсам в других неймспейсах явно разрешается с помощью ReferenceGrant |
@@ -124,6 +124,7 @@ relatedLinks:
 | `HostPort` | ClusterALBInstance с `spec.inlet.type: HostPort` | Инлет `HostPort` не поддерживается для ALBInstance |
 | `HostPortWithProxyProtocol` | ClusterALBInstance с инлетом `HostPort` и `spec.useProxyProtocol: true` | Proxy Protocol и HTTP/3 нельзя включить одновременно |
 | `HostPortWithSSLPassthrough` | ClusterALBInstance с инлетом `HostPort`, TLS-слушателем и объектом TLSRoute | Сквозная передача TLS-трафика настраивается независимо от инлета |
+| `HostNetwork` | Прямой аналог отсутствует | Используйте ClusterALBInstance с инлетом `HostPort` на отдельной группе узлов или с другим набором портов хоста. Совместное использование одинаковых портов хоста на одних узлах с `ingress-nginx` недопустимо |
 | `HostWithFailover` | Прямой аналог отсутствует | Используйте ClusterALBInstance с инлетом `LoadBalancer` и балансировщиком MetalLB. Выполните настройку по [«Пример для bare metal с балансировщиком MetalLB»](/modules/alb/examples.html#bare-metal-metallb) и проверьте отказоустойчивость балансировщика до переключения пользовательского трафика |
 
 {% alert level="warning" %}
@@ -172,7 +173,7 @@ relatedLinks:
 
 ## Шаг 2. Миграция интерфейсов DKP {#step-2-migrating-dkp-interfaces}
 
-Если системные интерфейсы DKP публикуются через Ingress и их нужно перевести на Gateway API, выполните инструкции из раздела [«Публикация служебных доменов»](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#публикация-служебных-доменов). Не все модули DKP уже доступны через Gateway API — список доступных модулей приведён в том же разделе.
+Если системные интерфейсы DKP публикуются через Ingress и их нужно перевести на Gateway API, выполните инструкции из раздела [«Публикация служебных доменов»](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#публикация-служебных-доменов). Не все модули DKP уже публикуют служебные HTTPRoute через Gateway API. После настройки шлюза по умолчанию команда `jq` в том же разделе показывает фактический инвентарь уже опубликованных маршрутов в кластере, а не полный перечень возможностей платформы.
 
 Если миграция интерфейсов DKP не требуется, перейдите к шагу 3.
 
@@ -223,12 +224,17 @@ relatedLinks:
 1. В другом терминале экспортируйте все распознаваемые типы ресурсов и передайте полученный Kubernetes List непосредственно конвертеру:
 
    ```shell
-   d8 k get ingress,service,dexauthenticator --all-namespaces --output yaml | \
+   converter_url='http://127.0.0.1:8082/ingress2gateway'
+   converter_url="${converter_url}?gateway=<GATEWAY_NAMESPACE>/<GATEWAY_NAME>"
+   converter_url="${converter_url}&scope=<SCOPE>&ingress-class=<INGRESS_CLASS>"
+
+   d8 k get ingress,service,dexauthenticator \
+     --all-namespaces --output yaml | \
      curl --fail-with-body --silent --show-error --request POST \
        --header 'Content-Type: application/yaml' \
        --data-binary @- \
        --output gateway-api.yaml \
-       'http://127.0.0.1:8082/ingress2gateway?gateway=<GATEWAY_NAMESPACE>/<GATEWAY_NAME>&scope=<SCOPE>&ingress-class=<INGRESS_CLASS>'
+       "$converter_url"
    ```
 
    В URL имена параметров запроса пишутся строчными буквами: `gateway`, `scope`, `ingress-class`. В примере их значения заданы плейсхолдерами:
@@ -261,6 +267,25 @@ relatedLinks:
 
 При миграции по возможности используйте стандартные поля Gateway API, а аннотации `ingress-nginx` заменяйте только поддерживаемыми аннотациями `alb` — в том числе после применения `gateway-api.yaml`. Актуальный список приведён в разделе [«Поддерживаемые аннотации HTTPRoute»](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/gateway-api.html#поддерживаемые-аннотации-httproute).
 
+Утилита `ingress2gateway` формирует черновик ресурсов Gateway API и не переносит все аннотации `ingress-nginx` автоматически. После преобразования сверьте Ingress с таблицей ниже и перенесите нужные параметры вручную.
+
+| Аннотация Ingress (`ingress-nginx`) | Эквивалент в модуле `alb` |
+| --- | --- |
+| `nginx.ingress.kubernetes.io/whitelist-source-range` | Аннотация HTTPRoute `alb.network.deckhouse.io/whitelist-source-range` |
+| `nginx.ingress.kubernetes.io/service-upstream` | Аннотация HTTPRoute `alb.network.deckhouse.io/service-upstream` |
+| `nginx.ingress.kubernetes.io/upstream-vhost` | Фильтр `URLRewrite` с `hostname` в HTTPRoute ([публикация с Istio-сайдкаром](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/gateway-api.html#publishing-with-istio-sidecar)) |
+| `nginx.ingress.kubernetes.io/auth-url` / `auth-signin` | Аннотации HTTPRoute `alb.network.deckhouse.io/auth-url` и `alb.network.deckhouse.io/auth-signin` |
+| `nginx.ingress.kubernetes.io/auth-type: basic` и секрет | Аннотация HTTPRoute `alb.network.deckhouse.io/basic-auth-secret` |
+| `nginx.ingress.kubernetes.io/limit-rps` | Аннотация HTTPRoute `alb.network.deckhouse.io/limit-rps` |
+| `nginx.ingress.kubernetes.io/proxy-body-size` | Аннотация HTTPRoute `alb.network.deckhouse.io/buffer-max-request-bytes` (значение в байтах) |
+| `nginx.ingress.kubernetes.io/proxy-buffer-size` | Аннотация HTTPRoute `alb.network.deckhouse.io/proxy-buffer-size` |
+| `nginx.ingress.kubernetes.io/proxy-read-timeout` / `proxy-send-timeout` | Аннотация HTTPRoute `alb.network.deckhouse.io/idle-timeout` (таймаут неактивности, не полная длительность запроса) |
+| `nginx.ingress.kubernetes.io/affinity` / cookie | Аннотация HTTPRoute `alb.network.deckhouse.io/session-affinity` |
+| `nginx.ingress.kubernetes.io/rewrite-target` | Аннотация HTTPRoute `alb.network.deckhouse.io/rewrite-target` или стандартные фильтры Gateway API |
+| `nginx.ingress.kubernetes.io/configuration-snippet` и прочие сниппеты nginx | Прямого аналога нет; пересмотрите конфигурацию под возможности Gateway API и аннотации `alb` |
+
+Если аннотации Ingress нет в таблице и нет поля Gateway API, поведение после миграции может отличаться или пропасть. Проверьте приложение на пути модуля `alb` до переключения пользовательского трафика.
+
 ## Шаг 4. Переключение трафика на модуль alb {#step-4-switching-traffic-to-alb}
 
 Используйте `ingress-nginx` и `alb` одновременно, пока обработка трафика через модуль `alb` не будет проверена и не завершится период, предусмотренный для отката.
@@ -291,7 +316,8 @@ relatedLinks:
 Найдите конфигурационный объект Service модуля `alb`:
 
 ```shell
-d8 k get service --all-namespaces --selector alb.deckhouse.io/configuration-service
+d8 k get service --all-namespaces \
+  --selector alb.deckhouse.io/configuration-service
 ```
 
 Настройте исходный IngressNginxController. Сначала укажите в `sourceCIDRs` небольшое количество адресов тестовых клиентов:
@@ -375,6 +401,9 @@ d8 k patch ingressnginxcontroller <CONTROLLER_NAME> --type json \
 
 Выберите способ переключения в зависимости от того, как сейчас принимается внешний трафик: через автоматически создаваемый балансировщик, через балансировщик под ручным управлением или напрямую через HostNetwork/HostPort.
 
+{% tabs Способ переключения %}
+{% tab "DNS / автоматически создаваемый LB" %}
+
 #### Автоматически создаваемый балансировщик нагрузки
 
 Чтобы переключить трафик через DNS, выполните следующие действия:
@@ -390,6 +419,9 @@ d8 k patch ingressnginxcontroller <CONTROLLER_NAME> --type json \
 Балансировщик под управлением облачного провайдера обычно не позволяет постепенно переключать отдельные узлы между двумя независимо управляемыми объектами Service.
 
 Если MetalLB или другая реализация использует фиксированный адрес, этот адрес нельзя одновременно назначить двум объектам Service. Переносите его только в рамках согласованного переключения.
+
+{% endtab %}
+{% tab "Балансировщик под ручным управлением" %}
 
 #### Балансировщик нагрузки под ручным управлением
 
@@ -408,6 +440,9 @@ d8 k patch ingressnginxcontroller <CONTROLLER_NAME> --type json \
 - Сохраните исходный протокол и способ определения IP-адреса клиента: согласуйте настройки Proxy Protocol для пользовательского трафика и проверок состояния либо настройте доверие к заголовкам с адресом клиента, которые передаёт L7-балансировщик.
 - Если оба контроллера работают на одних узлах, используйте разные порты хоста либо выберите непересекающиеся группы узлов.
 
+{% endtab %}
+{% tab "HostNetwork или HostPort" %}
+
 #### Прямой доступ через HostNetwork или HostPort
 
 Чтобы переключить трафик при прямом доступе через HostNetwork или HostPort, выполните следующие действия:
@@ -419,6 +454,9 @@ d8 k patch ingressnginxcontroller <CONTROLLER_NAME> --type json \
 DNS не позволяет выбрать контроллеры, использующие разные порты на одном адресе узла. Если клиенты должны продолжать использовать порты `80` и `443`, используйте разные узлы либо добавьте балансировщик или правило NAT.
 
 Инлет `HostWithFailover` не имеет прямого аналога в модуле `alb`. Если требуется эквивалентная отказоустойчивость, используйте инлет `LoadBalancer` с MetalLB.
+
+{% endtab %}
+{% endtabs %}
 
 ### Проверка переключения {#validating-the-cutover}
 

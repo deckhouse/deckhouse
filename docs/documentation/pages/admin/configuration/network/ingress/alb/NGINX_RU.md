@@ -121,6 +121,9 @@ relatedLinks:
 
 Для настройки балансировки используйте кастомный ресурс [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller).
 
+{% tabs Примеры для окружений %}
+{% tab "AWS (NLB)" %}
+
 ### Пример для AWS (Network Load Balancer)
 
 При создании балансировщика используются все доступные в кластере зоны.
@@ -146,6 +149,9 @@ spec:
       service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
 ```
 
+{% endtab %}
+{% tab "GCP, Yandex Cloud и Azure" %}
+
 ### Пример для GCP, Yandex Cloud и Azure
 
 IngressNginxController с инлетом [`LoadBalancer`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-loadbalancer):
@@ -163,6 +169,9 @@ spec:
 {% alert level="info" %}
 В GCP на узлах необходимо указать аннотацию, которая разрешает принимать подключения на внешние адреса для сервисов с типом NodePort.
 {% endalert %}
+
+{% endtab %}
+{% tab "OpenStack" %}
 
 ### Пример для OpenStack
 
@@ -182,6 +191,9 @@ spec:
       loadbalancer.openstack.org/timeout-member-connect: "2000"
 ```
 
+{% endtab %}
+{% tab "VK Cloud" %}
+
 ### Пример создания внутреннего балансировщика для VK Cloud
 
 Подходит, когда нужно создать балансировщик только внутри сети облака (без внешнего адреса).
@@ -200,6 +212,9 @@ spec:
   nodeSelector:
     node.deckhouse.io/group: worker
 ```
+
+{% endtab %}
+{% tab "Bare metal (HostWithFailover)" %}
 
 ### Пример для bare metal
 
@@ -221,6 +236,9 @@ spec:
       value: frontend
 ```
 
+{% endtab %}
+{% tab "Bare metal с внешним LB" %}
+
 ### Пример для bare metal при использовании внешнего балансировщика
 
 Подходит при использовании Cloudflare, Qrator, Nginx+, Citrix ADC, Kemp и других внешних балансировщиков.
@@ -238,6 +256,9 @@ spec:
     httpsPort: 443
     behindL7Proxy: true
 ```
+
+{% endtab %}
+{% tab "MetalLB BGP" %}
 
 ### Пример для bare metal (MetalLB в режиме BGP LoadBalancer)
 
@@ -286,6 +307,9 @@ spec:
           key: dedicated.deckhouse.io
           value: frontend
 ```
+
+{% endtab %}
+{% tab "MetalLB L2" %}
 
 ### Пример для bare metal (балансировщик MetalLB в режиме L2 LoadBalancer)
 
@@ -373,6 +397,9 @@ main-load-balancer     LoadBalancer   10.222.130.11   192.168.2.100,192.168.2.10
 {: .nowrap-default }
 <!-- markdownlint-enable MD031 -->
 
+{% endtab %}
+{% endtabs %}
+
 ### Пример разделения доступа между публичной и административной зонами
 
 Во многих приложениях один и тот же бэкенд обслуживает как публичную часть, так и административный интерфейс. Например:
@@ -381,6 +408,9 @@ main-load-balancer     LoadBalancer   10.222.130.11   192.168.2.100,192.168.2.10
 - `https://admin.example.com` — административная зона, к которой доступ должен быть ограничен (`ACL`, `mTLS`, `IP whitelist` и так далее).
 
 При таком сценарии рекомендуем выносить административный трафик в отдельный Ingress-контроллер (при необходимости с отдельным Ingress-классом) и ограничивать доступ к нему с помощью [параметра `spec.acceptRequestsFrom`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom).
+
+{% tabs Варианты разделения зон %}
+{% tab "Один Ingress-контроллер" %}
 
 #### Особенности использования одного Ingress-контроллера
 
@@ -429,6 +459,9 @@ spec:
 ```
 
 При [включенной обработке и передаче заголовков `X-Forwarded-*`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-hostport-behindl7proxy) бэкенд может опираться на заголовок `x-forwarded-host` при принятии решений об авторизации. В примере выше через публичный Ingress можно подключиться к административной зоне с помощью `x-forwarded-host`. Поэтому запросы к Ingress-контроллеру должны приходить только от доверенных источников.
+
+{% endtab %}
+{% tab "Раздельные Ingress-контроллеры" %}
 
 #### Использование раздельных Ingress-контроллеров
 
@@ -501,10 +534,10 @@ spec:
 
 В этом примере:
 
-- Ingress-контроллер доступен на портах узлов через инлет `HostPort`;
-- [параметр `acceptRequestsFrom`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom) разрешает подключение к контроллеру только из перечисленных подсетей;
-- даже если внешний балансировщик или клиент может передавать свои значения заголовков `X-Forwarded-*`, решение о допуске соединения до контроллера принимается по реальному адресу подключения, а не по заголовкам.
-- административные Ingress-ресурсы (в данном примере `admin-ingress`) обслуживаются этим контроллером согласно настроенному Ingress-классу.
+- Ingress-контроллер доступен на портах узлов через инлет `HostPort`.
+- Параметр [`acceptRequestsFrom`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom) разрешает подключение к контроллеру только из перечисленных подсетей.
+- Даже если внешний балансировщик или клиент может передавать свои значения заголовков `X-Forwarded-*`, решение о допуске соединения до контроллера принимается по реальному адресу подключения, а не по заголовкам.
+- Административные Ingress-ресурсы (в данном примере `admin-ingress`) обслуживаются этим контроллером согласно настроенному Ingress-классу.
 
 Пример Ingress-контроллера, который обслуживает Ingress-ресурсы для публичного трафика:
 
@@ -521,6 +554,9 @@ spec:
     httpsPort: 8443
     behindL7Proxy: true
 ```
+
+{% endtab %}
+{% endtabs %}
 
 ## Поддержка и безопасность модуля
 

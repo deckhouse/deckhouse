@@ -1,6 +1,6 @@
 ---
 title: "Publishing applications using the Kubernetes Gateway API"
-description: "Publish applications with Kubernetes Gateway API in Deckhouse Kubernetes Platform. ListenerSet, HTTPRoute, GRPCRoute, TLSRoute, TCPRoute, BackendTLSPolicy, HTTPRoute annotations, WAF, and GeoIP."
+description: "Publish applications with Kubernetes Gateway API in Deckhouse Kubernetes Platform. ListenerSet, HTTPRoute, GRPCRoute, TLSRoute, TCPRoute, BackendTLSPolicy, HTTPRoute annotations, and WAF."
 permalink: en/user/network/ingress/alb/gateway-api.html
 extractedLinksMax: 4
 relatedLinks:
@@ -24,11 +24,20 @@ relatedLinks:
 
 ## Publishing applications using the Kubernetes Gateway API
 
-Applications can be published through a cluster-wide gateway (a `ClusterALBInstance` created by the cluster administrator) or through a dedicated gateway in the application namespace (an `ALBInstance`).
+Applications can be published through a cluster-wide gateway (a ClusterALBInstance created by the cluster administrator) or through a dedicated gateway in the application namespace (an ALBInstance).
 
-Creating the managed Gateway (`ClusterALBInstance` or `ALBInstance`, inlets, enabling the module) is an administrator task. Infrastructure setup is described in ["Enabling the module and creating a Gateway"](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#creating-a-gateway-object).
+Creating the managed Gateway (ClusterALBInstance or ALBInstance, inlets, enabling the module) is an administrator task. Infrastructure setup is described in ["Enabling the module and creating a Gateway"](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#creating-a-gateway-object).
 
-This scenario assumes that the ClusterALBInstance or ALBInstance object has already been created and has reached the `Ready` state. Ask the administrator for the name and namespace of the managed Gateway from the instance [`status`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-status).
+This scenario assumes that the ClusterALBInstance or ALBInstance object has already been created and has reached the `Ready` state. Ask the administrator for the name and namespace of the managed Gateway, or read the Gateway name from the instance `status.gateway` field:
+
+```shell
+d8 k get clusteralbinstance <CLUSTER_ALB_INSTANCE_NAME> \
+  -o jsonpath='{.status.gateway}{"\n"}'
+d8 k -n <NAMESPACE> get albinstance <ALB_INSTANCE_NAME> \
+  -o jsonpath='{.status.gateway}{"\n"}'
+```
+
+For ClusterALBInstance, the managed Gateway usually lives in the `d8-alb` namespace. For ALBInstance, it lives in the same namespace as the ALBInstance object. Status field descriptions are in [`status`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-status).
 
 The namespace administrator creates a ListenerSet attached to that Gateway (`spec.parentRef`). Application developers create HTTPRoute objects that attach to the ListenerSet.
 
@@ -106,6 +115,34 @@ spec:
           port: 8080
 ```
 
+
+### Checking publication {#checking-publication}
+
+After you apply the ListenerSet and HTTPRoute, check the object status:
+
+```shell
+d8 k -n <NAMESPACE> get listenerset
+d8 k -n <NAMESPACE> describe listenerset <LISTENERSET_NAME>
+d8 k -n <NAMESPACE> get httproute
+d8 k -n <NAMESPACE> describe httproute <HTTPROUTE_NAME>
+```
+
+Confirm the following:
+
+- ListenerSet listeners are `Programmed` or `Accepted`.
+- The HTTPRoute `parentRefs` point to the intended ListenerSet and the `Accepted` conditions are true.
+- The entry-point address and DNS for the hostname match what the administrator provided (for the `LoadBalancer` inlet, the address usually comes from a Service in the `d8-alb` namespace).
+
+Check application reachability from a client. Substitute the entry-point address and hostname:
+
+```shell
+curl -vk \
+  --resolve app.example.com:443:<ENTRY_POINT_ADDRESS> \
+  https://app.example.com/
+```
+
+If the route is not accepted, check the Gateway name from the instance `status`, the ListenerSet namespace, the port and `sectionName` in `parentRefs`, and hostname/port conflicts with other ListenerSet objects.
+
 ### Working with GRPCRoute, TLSRoute, TCPRoute, and UDPRoute objects {#grpcroute-tlsroute-tcproute-and-udproute-objects}
 
 The GRPCRoute object is intended for gRPC traffic. For it, create the ListenerSet object with an HTTPS listener, then add the GRPCRoute object:
@@ -154,10 +191,17 @@ spec:
 
 For TLS passthrough, when traffic must be decrypted on the application side, either a TLS listener or an HTTPS listener can be used.
 
+Additional ports are set in `spec.inlet.additionalPorts` on the object that owns the gateway:
+
+- For a cluster-wide Gateway — on ClusterALBInstance (configured by the cluster administrator).
+- For a namespaced gateway — on ALBInstance (configured by the namespace administrator, or by you if you can edit the object).
+
+For a ClusterALBInstance example, see ["Opening an additional TCP/UDP port on the cluster-wide gateway"](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#tcp-port). The example below uses ALBInstance.
+
 {% tabs TLS passthrough %}
 {% tab "TLS listener" %}
 
-Because the TLS listener in this example uses an additional port, first configure the `additionalPorts` parameter in the ALBInstance object:
+Because the TLS listener in this example uses an additional port, ask an administrator to add `additionalPorts` to the object that owns the gateway (ClusterALBInstance or ALBInstance), or add it yourself if you have the required permissions:
 
 ```yaml
 apiVersion: network.deckhouse.io/v1alpha1
@@ -262,7 +306,7 @@ spec:
 {% endtab %}
 {% endtabs %}
 
-If TLS must be terminated on the gateway and then forwarded to the backend as a TCP stream, create a ListenerSet object with a TLS listener in `Terminate` mode, then attach a TCPRoute object:
+If TLS must be terminated on the gateway and then forwarded to the backend as a TCP stream (for example, when the application accepts decrypted TCP rather than HTTPS), create a ListenerSet object with a TLS listener in `Terminate` mode, then attach a TCPRoute object:
 
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1
@@ -306,10 +350,12 @@ spec:
 
 For TCP and UDP ports from [`additionalPorts`](/modules/alb/cr.html#albinstance-v1alpha1-spec-inlet-additionalports), attach the route directly to the managed Gateway listener instead of creating a separate ListenerSet. Otherwise the controller rejects the configuration because of overlapping handlers.
 
+Set the additional ports on the object that owns the gateway: ClusterALBInstance for a cluster-wide Gateway, or ALBInstance for a namespaced gateway. For ClusterALBInstance, use the example in ["Opening an additional TCP/UDP port on the cluster-wide gateway"](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#tcp-port).
+
 {% tabs TCP and UDP %}
 {% tab "TCP" %}
 
-To publish a TCP service, first expose an additional TCP port in the ALBInstance:
+To publish a TCP service, ask an administrator to expose an additional TCP port on the object that owns the gateway (ClusterALBInstance or ALBInstance), or expose it yourself if you have the required permissions:
 
 ```yaml
 apiVersion: network.deckhouse.io/v1alpha1
@@ -351,7 +397,7 @@ spec:
 {% endtab %}
 {% tab "UDP" %}
 
-To publish a UDP service, first expose an additional UDP port in the ALBInstance:
+To publish a UDP service, ask an administrator to expose an additional UDP port on the object that owns the gateway (ClusterALBInstance or ALBInstance), or expose it yourself if you have the required permissions:
 
 ```yaml
 apiVersion: network.deckhouse.io/v1alpha1
@@ -403,7 +449,7 @@ If an application needs to move to another managed Gateway object, change the ro
 1. Verify traffic through the new gateway path.
 1. After verification, remove the reference to the obsolete ListenerSet object from `parentRefs` of the HTTPRoute object.
 
-### Linking routes in one namespace to ListenerSet object in another
+### Linking routes in one namespace to a ListenerSet in another
 
 If an HTTPRoute object is created in one namespace and must be attached to a ListenerSet in another namespace, add a ReferenceGrant in the namespace of the target ListenerSet.
 
@@ -534,45 +580,12 @@ spec:
         name: app-backend-ca
 ```
 
-### Configuring OpenTelemetry tracing TLS
+### GeoIP and OpenTelemetry
 
-If OpenTelemetry tracing must send data over TLS, create a Kubernetes Secret with the CA certificate and reference it from `spec.openTelemetry.tracing.tls.caSecretName`.
+GeoIP and OpenTelemetry are configured on ClusterALBInstance or ALBInstance and are administrator tasks. See:
 
-For ClusterALBInstance and the default DKP gateway, place the Secret in the `d8-alb` namespace.
-For ALBInstance, place the Secret in the same namespace as the ALBInstance object.
-The Secret must contain the `cacert` key.
-
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: otel-tracing-ca
-  namespace: d8-alb
-type: Opaque
-stringData:
-  cacert: |
-    -----BEGIN CERTIFICATE-----
-    ...
-    -----END CERTIFICATE-----
----
-apiVersion: network.deckhouse.io/v1alpha1
-kind: ClusterALBInstance
-metadata:
-  name: proxy-gw
-spec:
-  gatewayName: proxy-gw
-  openTelemetry:
-    tracing:
-      service:
-        name: otel-collector
-        namespace: monitoring
-      port: 4318
-      protocol: HTTP
-      path: /v1/traces
-      tls:
-        sni: otel-collector.monitoring.svc.cluster.local
-        caSecretName: otel-tracing-ca
-```
+- ["Using GeoIP and GeoLite2"](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#geoip);
+- ["Configuring OpenTelemetry tracing"](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#tracing).
 
 ### Supported HTTPRoute annotations {#supported-httproute-annotations}
 
@@ -624,6 +637,8 @@ spec:
       namespace: myns
       kind: ListenerSet
       group: gateway.networking.k8s.io
+      sectionName: app-https
+      port: 443
   hostnames:
     - myservice.example.com
   rules:
@@ -764,135 +779,9 @@ Rule syntax reference:
 
 Current WAF notes and limitations:
 
-- Only the `owasp-crs` ruleset is supported;
-- `paranoiaLevel` is ignored when `preset` is omitted or differs from `owasp-crs`;
-- Valid `paranoiaLevel` values are `1`–`4`; in practice it is recommended to start with `1`;
-- The WAF currently inspects only incoming requests to the application and can block such requests when rules match; responses sent back to the client are not inspected;
+- Only the `owasp-crs` ruleset is supported.
+- `paranoiaLevel` is ignored when `preset` is omitted or differs from `owasp-crs`.
+- Valid `paranoiaLevel` values are `1`–`4`. In practice it is recommended to start with `1`.
+- The WAF currently inspects only incoming requests to the application and can block such requests when rules match. Responses sent back to the client are not inspected.
 - Rules from ConfigMap values may be multiline: lines ending with `\` are joined automatically.
 
-### Using GeoIP and GeoLite2 {#geoip}
-
-The `alb` module supports adding GeoIP fields to HTTP request headers based on [MaxMind GeoIP/GeoLite2](https://dev.maxmind.com/geoip/) databases.
-
-Currently, the following database editions can be used:
-
-- GeoIP2-Anonymous-IP;
-- GeoIP2-City;
-- GeoIP2-ISP;
-- GeoIP2-ASN;
-- GeoLite2-ASN;
-- GeoLite2-City.
-
-{% alert level="info" %}
-The current GeoIP integration supports using up to 4 databases simultaneously.
-{% endalert %}
-
-#### Downloading GeoIP Databases from MaxMind {#maxmind}
-
-To use GeoIP and download databases directly from MaxMind servers, first create a secret containing the license key, for example:
-
-```bash
-d8 k -n prod create secret generic geoip-license --from-literal=licenseKey='<MAXMIND_LICENSE_KEY>'
-```
-
-{% alert level="info" %}
-When configuring GeoIP for ClusterALBInstance, the secret can be placed in any namespace, but it is recommended to use `d8-alb`.
-
-For ALBInstance objects, the secret must reside in the same namespace as the ALBInstance object.
-{% endalert %}
-
-After creating the secret, reference it in a ClusterALBInstance or ALBInstance object, for example:
-
-```yaml
-apiVersion: network.deckhouse.io/v1alpha1
-kind: ALBInstance
-metadata:
-  name: main
-  namespace: prod
-spec:
-  envoyLogLevel: Warning
-  gatewayName: custom-gateway
-  geoIP:
-    licenseKeySecretRef:
-      name: geoip-license
-```
-
-#### Downloading GeoIP Databases from a Local Mirror {#local}
-
-To use GeoIP and download databases from a local mirror, specify the mirror URL, for example:
-
-```yaml
-apiVersion: network.deckhouse.io/v1alpha1
-kind: ALBInstance
-metadata:
-  name: main
-  namespace: prod
-spec:
-  envoyLogLevel: Warning
-  gatewayName: custom-gateway
-  geoIP:
-    maxmindMirror:
-      url: "https://local.geoip:8443"
-```
-
-You can also use a URL pointing to a local caching GeoIP server in another namespace, for example:
-
-```yaml
-apiVersion: network.deckhouse.io/v1alpha1
-kind: ALBInstance
-metadata:
-  name: main
-  namespace: prod
-spec:
-  envoyLogLevel: Warning
-  gatewayName: custom-gateway
-  geoIP:
-    maxmindMirror:
-      url: "http://geoproxy-cluster.d8-alb.svc:8080/download"
-```
-
-#### Using GeoIP Headers {#headers}
-
-Once GeoIP is configured in the namespace where ClusterALBInstance or ALBInstance proxies reside, a caching and update server for GeoIP databases is started. Envoy Proxy pods are then restarted sequentially so they can fetch GeoIP databases from the local GeoIP server.
-
-To add GeoIP fields to HTTP request headers, specify the names of the HTTP headers that will contain the corresponding information, for example:
-
-```yaml
-apiVersion: network.deckhouse.io/v1alpha1
-kind: ALBInstance
-metadata:
-  name: main
-  namespace: prod
-spec:
-  envoyLogLevel: Warning
-  gatewayName: custom-gateway
-  geoIP:
-    headers:
-      city: geoip_city
-      country: geoip_country
-    licenseKeySecretRef:
-      name: geoip-license
-    maxmindEditionIDs:
-      - GeoLite2-City
-```
-
-GeoIP databases are updated once per day, both on the caching server and in each individual Envoy Proxy pod using the caching server.
-
-PVC settings for GeoIP components are controlled by the [`storageClass`](/modules/alb/configuration.html#parameters-storageclass) module parameter.
-
-### OpenTelemetry Tracing Configuration {#tracing}
-
-The `alb` module supports exporting OpenTelemetry traces from Envoy proxies.
-
-To enable export, set the OpenTelemetry Collector endpoint in `spec.openTelemetry.tracing`:
-
-- `service.name` and `service.namespace` — Name and namespace of the collector Service.
-- `port` — Port.
-- `protocol` — Protocol (`HTTP` or `gRPC`).
-- `path` — Path for OTLP/HTTP.
-
-Alternatively, you can specify a single [`url`](/modules/alb/cr.html#albinstance-v1alpha1-spec-opentelemetry-tracing-url).
-
-When using TLS, explicitly set the [`sni`](/modules/alb/cr.html#albinstance-v1alpha1-spec-opentelemetry-tracing-tls-sni) parameter if the OpenTelemetry Collector is behind a proxy or load balancer that selects upstreams based on Server Name Indication.
-
-Configure TLS in [`spec.openTelemetry.tracing.tls`](/modules/alb/cr.html#albinstance-v1alpha1-spec-opentelemetry-tracing-tls).
