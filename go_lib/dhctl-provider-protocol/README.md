@@ -42,12 +42,15 @@ in practice:
 - **Socket path length.** A unix socket path is capped at 104 bytes on darwin and
   108 on Linux; over the limit, `bind` fails with `invalid argument`. The host
   allocates a short path.
-- **Readiness.** The plugin does not announce readiness. A host that wants the first
-  call to wait for the socket uses `grpc.WaitForReady(true)` together with a context
-  deadline — `WaitForReady` waits indefinitely on its own.
+- **Readiness.** The plugin does not announce readiness and serves no health
+  service. A host waits for the socket file to appear, or calls with
+  `grpc.WaitForReady(true)` and a context deadline — `WaitForReady` waits
+  indefinitely on its own. Either way the host must also watch the process: one that
+  exits early (an old binary that does not know `serve`) has to fail the operation
+  rather than wait out the deadline.
 - **Shutdown.** The host sends `SIGTERM` and the plugin stops gracefully. A plugin
   built with this module's `server` package installs no signal handler of its own;
-  the binary wires signals to the context it passes to `Serve`.
+  the binary wires signals to the context it passes to `Start`.
 - **stdout/stderr** are the plugin's own. They carry diagnostics only — no part of
   the protocol travels through them.
 
@@ -62,7 +65,8 @@ credential Secret of a cluster.
 ## Service: validate
 
 `dhctl.provider.validate.v1.ValidateService`, defined in
-[`api/pb/validate/v1/validate.proto`](api/pb/validate/v1/validate.proto).
+[`api/pb/validate.proto`](api/pb/validate.proto), served by
+[`api/pb/service.proto`](api/pb/service.proto).
 
 ```proto
 service ValidateService {
@@ -133,8 +137,8 @@ message Violation {
 ```
 
 An empty response means the configuration is valid. `errors` block the host's
-operation; `warnings` do not. Violations are ordered by `code` then `path` and
-deduplicated by that pair, so the text a host prints is stable across runs.
+operation; `warnings` do not. Violations are ordered by `code` then `path`, so the
+text a host prints is stable across runs.
 
 `value` is display-only and already rendered as a string. A plugin reporting a
 sensitive field sends a placeholder such as `"masked"` instead of the value.
@@ -174,11 +178,20 @@ func main() {
 	address := flag.String("address", "", "unix socket to serve on")
 	flag.Parse()
 
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
+	ctx, unhook := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer unhook()
 
-	handlers := server.Handlers{Validator: myValidator{}}
-	if err := server.Serve(ctx, "unix", *address, handlers); err != nil {
+	service := server.NewValidateService(myValidator{})
+
+	stop, err := server.Start(ctx, server.Config{Address: *address}, service)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	<-ctx.Done() // SIGTERM from the host
+
+	if err := stop(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
@@ -206,11 +219,15 @@ result, err := client.NewClient(conn, client.WithCallOptions(grpc.WaitForReady(t
 if err != nil {
 	return err // the plugin failed
 }
-return result.ErrorOrNil() // the configuration is wrong
+if result.HasErrors() {
+	return errors.New(result.Errors().String()) // the configuration is wrong
+}
+return nil
 ```
 
 ## Adding an action
 
-Each action is its own service in its own `api/pb/<action>/v1` package, so a plugin that
-does not implement one simply does not register it and a caller sees `Unimplemented`.
-The full recipe is in the module documentation ([`doc.go`](doc.go)).
+Each action is its own service in [`api/pb`](api/pb) and its own `server.Service`
+constructor, so a plugin that does not implement one simply does not pass it to
+`server.Start` and a caller sees `Unimplemented`. The full recipe is in the module
+documentation ([`doc.go`](doc.go)).

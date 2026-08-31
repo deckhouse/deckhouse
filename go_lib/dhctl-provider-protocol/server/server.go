@@ -1,4 +1,3 @@
-// server/server.go
 // Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,46 +12,152 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package server provides gRPC server bindings for the validate action.
 package server
 
 import (
 	"context"
+	"fmt"
+	"net"
+	"runtime/debug"
+	"sync"
 
 	"google.golang.org/grpc"
-
-	protogen "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/gen"
-	"github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/errs"
-	"github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/validate"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
-type Server struct {
-	protogen.UnimplementedValidateServiceServer
-	validator validate.Validator
+const (
+	// MaxMessageSize is the limit the protocol mandates in each direction.
+	// gRPC's own 4 MiB default is too small for a payload carrying every
+	// NodeGroup, InstanceClass and credential Secret of a cluster.
+	MaxMessageSize = 8 * 1024 * 1024
+	DefaultNetwork = "unix"
+)
+
+type Config struct {
+	Network  string
+	Address  string
+	GrpcOpts []grpc.ServerOption
 }
 
-func NewServer(validator validate.Validator) *Server {
-	return &Server{
-		validator: validator,
+func NewConfig() Config {
+	return Config{
+		Network: DefaultNetwork,
+		GrpcOpts: []grpc.ServerOption{
+			grpc.MaxRecvMsgSize(MaxMessageSize),
+			grpc.MaxSendMsgSize(MaxMessageSize),
+		},
 	}
 }
 
-// Register registers the validate service on the given gRPC server.
-func (s *Server) Register(grpcServer *grpc.Server) {
-	protogen.RegisterValidateServiceServer(grpcServer, s)
+// Validate requires an address: the host allocates a fresh short path per call and
+// passes it in. A default would put the socket at a world-writable well-known path,
+// where a stale file breaks bind and anyone could have created the socket first.
+func (c Config) Validate() error {
+	if c.Network == "" {
+		return fmt.Errorf("network is required")
+	}
+
+	if c.Address == "" {
+		return fmt.Errorf("address is required")
+	}
+
+	return nil
 }
 
-// Validate implements the gRPC Validate method.
-func (s *Server) Validate(ctx context.Context, req *protogen.ValidateRequest) (*protogen.ValidateResponse, error) {
-	input, err := validate.FromPBRequest(req)
+func (c Config) Merge(other Config) Config {
+	if other.Network != "" {
+		c.Network = other.Network
+	}
+
+	if other.Address != "" {
+		c.Address = other.Address
+	}
+
+	if len(other.GrpcOpts) > 0 {
+		c.GrpcOpts = append(c.GrpcOpts, other.GrpcOpts...)
+	}
+
+	return c
+}
+
+// Service registers itself on a gRPC server. The generated RegisterXxxServer
+// functions in api/gen take a grpc.ServiceRegistrar, so an action's service is a
+// thin wrapper over one of them — see NewValidateService.
+//
+// A plugin may also pass a service of its own (health, reflection, its own
+// protobuf API): Start registers whatever it is given and knows nothing about the
+// actions themselves.
+type Service interface {
+	Register(registrar grpc.ServiceRegistrar)
+}
+
+// Start listens, serves in the background and returns the function that stops it.
+// The socket exists by the time Start returns, so a caller may connect right away.
+//
+// Both the returned function and cancelling ctx stop the server gracefully —
+// in-flight calls finish. stop is idempotent and reports what Serve returned.
+//
+// An action whose service is not passed answers Unimplemented, which is how a
+// caller learns it is missing.
+func Start(ctx context.Context, cfg Config, services ...Service) (func() error, error) {
+	cfg = NewConfig().Merge(cfg)
+	if err := cfg.Validate(); err != nil {
+		return nil, fmt.Errorf("config validation: %w", err)
+	}
+
+	// Interceptor first, cfg's options after: a caller's option of the same kind
+	// wins, since gRPC keeps the last one.
+	opts := append([]grpc.ServerOption{grpc.ChainUnaryInterceptor(panicRecovery)}, cfg.GrpcOpts...)
+	grpcServer := grpc.NewServer(opts...)
+
+	for _, service := range services {
+		service.Register(grpcServer)
+	}
+
+	listener, err := net.Listen(cfg.Network, cfg.Address)
 	if err != nil {
-		return nil, errs.StatusInvalidRequest(err)
+		return nil, fmt.Errorf("listen on %s %s: %w", cfg.Network, cfg.Address, err)
 	}
 
-	result, err := s.validator.Validate(ctx, input)
-	if err != nil {
-		return nil, errs.MapToStatus(err)
+	served := make(chan error, 1)
+	go func() {
+		served <- grpcServer.Serve(listener)
+	}()
+
+	stopped := make(chan struct{})
+	go func() {
+		select {
+		case <-ctx.Done():
+			grpcServer.GracefulStop()
+		case <-stopped:
+		}
+	}()
+
+	var (
+		once     sync.Once
+		serveErr error
+	)
+
+	stop := func() error {
+		once.Do(func() {
+			close(stopped)
+			grpcServer.GracefulStop()
+			serveErr = <-served
+		})
+
+		return serveErr
 	}
 
-	return validate.ToPBResponse(result), nil
+	return stop, nil
+}
+
+func panicRecovery(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) { //nolint:nonamedreturns // the deferred recover has to replace the returned error
+	defer func() {
+		if r := recover(); r != nil {
+			err = status.Errorf(codes.Internal, "panic in %s: %v\n%s", info.FullMethod, r, debug.Stack())
+		}
+	}()
+
+	return handler(ctx, req)
 }

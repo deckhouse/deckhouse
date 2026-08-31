@@ -16,8 +16,8 @@ syntax = "proto3";
 
 package dhctl.provider.validate.v1;
 
-// Path relative to --proto_path, which is api/pb: the same spelling protoc uses to
-// name the generated file, so both sides of the import agree.
+// Relative to --proto_path (api/pb), the spelling protoc uses for the generated
+// file, so both sides of the import agree.
 import "validate.proto";
 
 option go_package = "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/gen";
@@ -25,10 +25,8 @@ option go_package = "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protoc
 // ValidateService is the validate action: a plugin checks a cloud provider's
 // configuration before the host touches any infrastructure.
 //
-// One service per action, each in its own api/pb/<action>/v1 package. A plugin
-// registers the actions it implements, and a caller learns that an action is missing
-// from gRPC's Unimplemented status rather than from a capability negotiation of its
-// own.
+// One service per action. A plugin registers what it implements, and a caller learns
+// a missing action from gRPC's Unimplemented rather than from a negotiation.
 service ValidateService {
   rpc Validate(ValidateRequest) returns (ValidateResponse);
 }

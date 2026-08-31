@@ -43,10 +43,8 @@ const (
 // ValidateService is the validate action: a plugin checks a cloud provider's
 // configuration before the host touches any infrastructure.
 //
-// One service per action, each in its own api/pb/<action>/v1 package. A plugin
-// registers the actions it implements, and a caller learns that an action is missing
-// from gRPC's Unimplemented status rather than from a capability negotiation of its
-// own.
+// One service per action. A plugin registers what it implements, and a caller learns
+// a missing action from gRPC's Unimplemented rather than from a negotiation.
 type ValidateServiceClient interface {
 	Validate(ctx context.Context, in *ValidateRequest, opts ...grpc.CallOption) (*ValidateResponse, error)
 }
@@ -76,10 +74,8 @@ func (c *validateServiceClient) Validate(ctx context.Context, in *ValidateReques
 // ValidateService is the validate action: a plugin checks a cloud provider's
 // configuration before the host touches any infrastructure.
 //
-// One service per action, each in its own api/pb/<action>/v1 package. A plugin
-// registers the actions it implements, and a caller learns that an action is missing
-// from gRPC's Unimplemented status rather than from a capability negotiation of its
-// own.
+// One service per action. A plugin registers what it implements, and a caller learns
+// a missing action from gRPC's Unimplemented rather than from a negotiation.
 type ValidateServiceServer interface {
 	Validate(context.Context, *ValidateRequest) (*ValidateResponse, error)
 	mustEmbedUnimplementedValidateServiceServer()

@@ -37,15 +37,11 @@ const (
 
 type ValidateRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// JSON-encoded validate input: providerName, clusterPrefix, layout, operation,
-	// providerClusterConfiguration and vars (nodeGroups, instanceClasses,
-	// credential secrets, module settings).
+	// JSON-encoded validate input; validate.Input in Go, wire shape in README.md.
 	//
-	// The payload stays JSON rather than becoming protobuf messages because every
-	// field that carries substance is an arbitrary Kubernetes object — a
-	// google.protobuf.Struct would be exactly as untyped while costing a conversion
-	// layer on both sides. The Go definition is validate.Input in the validate package;
-	// README.md documents the wire shape.
+	// JSON rather than protobuf messages because every field that carries substance
+	// is an arbitrary Kubernetes object: google.protobuf.Struct would be exactly as
+	// untyped while costing a conversion layer on both sides.
 	InputJson     []byte `protobuf:"bytes,1,opt,name=input_json,json=inputJson,proto3" json:"input_json,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -88,14 +84,11 @@ func (x *ValidateRequest) GetInputJson() []byte {
 	return nil
 }
 
-// ValidateResponse carries the outcome. Blocking problems go to errors,
-// non-blocking ones to warnings; an empty response means the configuration is
-// valid.
+// Blocking problems go to errors, non-blocking ones to warnings; an empty response
+// means the configuration is valid.
 //
-// A failure of the plugin itself (bad request, internal error, panic) is NOT
-// reported here — it is a gRPC status: InvalidArgument for a request the action
-// rejects, Unimplemented for an action the plugin does not serve, Internal for
-// everything else.
+// A failure of the plugin itself is NOT reported here — it is a gRPC status:
+// InvalidArgument, Unimplemented or Internal.
 type ValidateResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Errors        []*Violation           `protobuf:"bytes,1,rep,name=errors,proto3" json:"errors,omitempty"`
@@ -148,7 +141,6 @@ func (x *ValidateResponse) GetWarnings() []*Violation {
 	return nil
 }
 
-// Violation is a single problem found by a plugin.
 type Violation struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Resource field path, e.g. "Secret/d8-credentials.data.secret".
@@ -156,8 +148,8 @@ type Violation struct {
 	// Stable machine-readable identifier, e.g. "credential_secret_required".
 	Code    string `protobuf:"bytes,2,opt,name=code,proto3" json:"code,omitempty"`
 	Message string `protobuf:"bytes,3,opt,name=message,proto3" json:"message,omitempty"`
-	// Rendered rejected value. A plugin handling a sensitive field sends a
-	// placeholder such as "masked" instead of the value itself.
+	// Display-only. A plugin handling a sensitive field sends a placeholder such as
+	// "masked" instead of the value.
 	Value         string `protobuf:"bytes,4,opt,name=value,proto3" json:"value,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

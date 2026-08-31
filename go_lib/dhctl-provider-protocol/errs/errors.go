@@ -38,18 +38,18 @@ func MapToStatus(err error) error {
 		return StatusMethodUnimplemented(err)
 
 	default:
-		return StatusUnknown(err)
+		return StatusInternal(err)
 	}
 }
 
 func StatusInvalidRequest(err error) error {
-	return status.Errorf(codes.InvalidArgument, "invalid request: %v", err)
+	return status.Error(codes.InvalidArgument, err.Error())
 }
 
 func StatusMethodUnimplemented(err error) error {
 	return status.Error(codes.Unimplemented, err.Error())
 }
 
-func StatusUnknown(err error) error {
-	return status.Errorf(codes.Unknown, err.Error())
+func StatusInternal(err error) error {
+	return status.Error(codes.Internal, err.Error())
 }

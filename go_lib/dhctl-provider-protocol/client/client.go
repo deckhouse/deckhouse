@@ -1,4 +1,3 @@
-// client/client.go
 // Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +16,6 @@ package client
 
 import (
 	"context"
-	"fmt"
 
 	"google.golang.org/grpc"
 
@@ -25,42 +23,39 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/validate"
 )
 
+// MaxMessageSize is the limit the protocol mandates in each direction. gRPC's own
+// 4 MiB default is too small: the payload carries every NodeGroup, InstanceClass
+// and credential Secret of a cluster.
 const MaxMessageSize = 8 * 1024 * 1024
 
-// Client is the gRPC client for the validate service.
 type Client struct {
 	validate protogen.ValidateServiceClient
 	cfg      Config
 }
 
-// Config holds client configuration.
 type Config struct {
 	callOptions []grpc.CallOption
 }
 
-// Option configures the client.
 type Option func(*Config)
 
-// WithCallOptions adds gRPC call options to each Validate call.
+// WithCallOptions appends call options after the protocol's own.
 func WithCallOptions(opts ...grpc.CallOption) Option {
 	return func(cfg *Config) {
 		cfg.callOptions = append(cfg.callOptions, opts...)
 	}
 }
 
-func DefaultCallOptions() []Option {
-	return []Option{
-		WithCallOptions(
+// NewClient does not dial: the caller keeps control of the connection's lifetime
+// and of how readiness is awaited. The message-size limits are part of the
+// protocol, so they are applied here rather than left for a caller to remember.
+func NewClient(conn grpc.ClientConnInterface, opts ...Option) Client {
+	cfg := Config{
+		callOptions: []grpc.CallOption{
 			grpc.MaxCallRecvMsgSize(MaxMessageSize),
 			grpc.MaxCallSendMsgSize(MaxMessageSize),
-		),
+		},
 	}
-}
-
-// NewClient creates a new client from a gRPC connection. It does not dial, so the
-// caller keeps control of the connection's lifetime and of how readiness is awaited.
-func NewClient(conn grpc.ClientConnInterface, opts ...Option) Client {
-	cfg := Config{}
 
 	for _, opt := range opts {
 		opt(&cfg)
@@ -72,17 +67,16 @@ func NewClient(conn grpc.ClientConnInterface, opts ...Option) Client {
 	}
 }
 
-// Validate asks the plugin to check the configuration.
-func (c *Client) Validate(ctx context.Context, input validate.Input) (validate.Result, error) {
+func (c Client) Validate(ctx context.Context, input validate.Input) (validate.Output, error) {
 	req, err := validate.ToPBRequest(input)
 	if err != nil {
-		return validate.Result{}, err
+		return validate.Output{}, err
 	}
 
-	resp, err := c.validate.Validate(ctx, req, c.cfg.callOptions...)
+	out, err := c.validate.Validate(ctx, req, c.cfg.callOptions...)
 	if err != nil {
-		return validate.Result{}, fmt.Errorf("call plugin validate: %w", err)
+		return validate.Output{}, err
 	}
 
-	return validate.FromPBResponse(resp), nil
+	return validate.FromPBResponse(out), nil
 }

@@ -15,20 +15,20 @@
 package validate
 
 import (
+	"encoding/json"
 	"fmt"
 
+	protogen "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/gen"
 	"github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/errs"
 )
 
 const (
-	// CredentialsSecretType is the Kubernetes Secret type that marks provider
-	// credentials. It identifies a credential Secret everywhere: in the resources a
-	// user supplies, in the cluster, and in the Secrets map below.
+	// CredentialsSecretType marks a provider credential Secret, both in the
+	// cluster and in the Secrets map below.
 	CredentialsSecretType = "cloud-provider.deckhouse.io/credentials"
 
-	// The phase of the host's work a call belongs to. Plain strings rather than an
-	// enum: the host is the only producer of the value and carries it as a string
-	// end to end.
+	// The phase of the host's work a call belongs to. Strings, not an enum: the
+	// host is the only producer and carries the value as a string end to end.
 	OperationBootstrap = "bootstrap"
 	OperationConverge  = "converge"
 	OperationDestroy   = "destroy"
@@ -37,48 +37,54 @@ const (
 // Input is everything a plugin needs to check a cluster's configuration before the
 // host touches infrastructure.
 type Input struct {
-	// ProviderName is the cloud provider identifier (e.g. "dvp", "aws").
-	ProviderName string `json:"providerName"`
-	// ClusterPrefix is an optional prefix applied to cloud resource names.
-	ClusterPrefix string `json:"clusterPrefix,omitempty"`
-	// Layout is the provider layout name (e.g. "Standard").
-	Layout string `json:"layout,omitempty"`
-	// Operation is one of OperationBootstrap, OperationConverge, OperationDestroy.
-	Operation string `json:"operation,omitempty"`
-	// ProviderClusterConfig holds the parsed providerClusterConfiguration section.
+	ProviderName          string         `json:"providerName"`
+	ClusterPrefix         string         `json:"clusterPrefix,omitempty"`
+	Layout                string         `json:"layout,omitempty"`
+	Operation             string         `json:"operation,omitempty"`
 	ProviderClusterConfig map[string]any `json:"providerClusterConfiguration,omitempty"`
-	// CloudProviderVars is the structured provider data (node groups, instance
-	// classes, credential secrets, module settings) the host collected. Nil when
-	// there was nothing to collect, so a plugin must check before use.
+	// Nil when the host had nothing to collect, so a plugin must check before use.
 	CloudProviderVars *CloudProviderVars `json:"vars,omitempty"`
 }
 
-// CloudProviderVars holds the structured data extracted from provider resources
-// and passed to the Terraform/OpenTofu configuration.
+// CloudProviderVars is the provider data the host collected from the cluster and
+// from the user's resources. Every map is name to the full resource object.
 type CloudProviderVars struct {
-	// Settings holds module-level provider settings (from ModuleConfig).
-	Settings map[string]any `json:"settings,omitempty"`
-	// NodeGroups maps node group name to its full resource object.
-	NodeGroups map[string]map[string]any `json:"nodeGroups,omitempty"`
-	// InstanceClasses maps instance class name to its full resource object.
+	// Settings is the provider ModuleConfig.
+	Settings        map[string]any            `json:"settings,omitempty"`
+	NodeGroups      map[string]map[string]any `json:"nodeGroups,omitempty"`
 	InstanceClasses map[string]map[string]any `json:"instanceClasses,omitempty"`
-	// Secrets maps secret name to its full resource object.
-	Secrets map[string]map[string]any `json:"secrets,omitempty"`
+	Secrets         map[string]map[string]any `json:"secrets,omitempty"`
 }
 
-// Validate reports whether the input is well-formed. Run calls it before a plugin
-// sees the input, so every transport rejects the same requests.
-//
-// An unknown operation is refused rather than passed through: a plugin decides what
-// to check from this field, and one it does not recognise would silently get the
-// checks of some other phase.
+// Validate is called by the server before a plugin sees the input. An unknown
+// operation is refused rather than passed through: a plugin decides what to check
+// from this field, and one it does not recognise would silently get the checks of
+// some other phase.
 func (i Input) Validate() error {
 	switch i.Operation {
 	case OperationBootstrap, OperationConverge, OperationDestroy:
 		return nil
 	case "":
-		return fmt.Errorf("%w: operation requared", errs.ErrInvalidRequest)
+		return fmt.Errorf("%w: operation required", errs.ErrInvalidRequest)
 	default:
 		return fmt.Errorf("%w: operation unknown: %q", errs.ErrInvalidRequest, i.Operation)
 	}
+}
+
+func ToPBRequest(input Input) (*protogen.ValidateRequest, error) {
+	inputJSON, err := json.Marshal(input)
+	if err != nil {
+		return nil, fmt.Errorf("encode validate input: %w", err)
+	}
+	return &protogen.ValidateRequest{
+		InputJson: inputJSON,
+	}, nil
+}
+
+func FromPBRequest(req *protogen.ValidateRequest) (Input, error) {
+	var input Input
+	if err := json.Unmarshal(req.GetInputJson(), &input); err != nil {
+		return input, fmt.Errorf("decode validate input: %w", err)
+	}
+	return input, nil
 }

@@ -16,45 +16,35 @@ syntax = "proto3";
 
 package dhctl.provider.validate.v1;
 
-// Full import path plus the package name: protoc-gen-go needs the import path to
-// generate references between files, and a relative value like "api/gen" makes the
-// generated code unimportable.
+// Full import path: a relative value makes the generated code unimportable.
 option go_package = "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/gen";
 
 message ValidateRequest {
-  // JSON-encoded validate input: providerName, clusterPrefix, layout, operation,
-  // providerClusterConfiguration and vars (nodeGroups, instanceClasses,
-  // credential secrets, module settings).
+  // JSON-encoded validate input; validate.Input in Go, wire shape in README.md.
   //
-  // The payload stays JSON rather than becoming protobuf messages because every
-  // field that carries substance is an arbitrary Kubernetes object — a
-  // google.protobuf.Struct would be exactly as untyped while costing a conversion
-  // layer on both sides. The Go definition is validate.Input in the validate package;
-  // README.md documents the wire shape.
+  // JSON rather than protobuf messages because every field that carries substance
+  // is an arbitrary Kubernetes object: google.protobuf.Struct would be exactly as
+  // untyped while costing a conversion layer on both sides.
   bytes input_json = 1;
 }
 
-// ValidateResponse carries the outcome. Blocking problems go to errors,
-// non-blocking ones to warnings; an empty response means the configuration is
-// valid.
+// Blocking problems go to errors, non-blocking ones to warnings; an empty response
+// means the configuration is valid.
 //
-// A failure of the plugin itself (bad request, internal error, panic) is NOT
-// reported here — it is a gRPC status: InvalidArgument for a request the action
-// rejects, Unimplemented for an action the plugin does not serve, Internal for
-// everything else.
+// A failure of the plugin itself is NOT reported here — it is a gRPC status:
+// InvalidArgument, Unimplemented or Internal.
 message ValidateResponse {
   repeated Violation errors   = 1;
   repeated Violation warnings = 2;
 }
 
-// Violation is a single problem found by a plugin.
 message Violation {
   // Resource field path, e.g. "Secret/d8-credentials.data.secret".
   string path = 1;
   // Stable machine-readable identifier, e.g. "credential_secret_required".
   string code    = 2;
   string message = 3;
-  // Rendered rejected value. A plugin handling a sensitive field sends a
-  // placeholder such as "masked" instead of the value itself.
+  // Display-only. A plugin handling a sensitive field sends a placeholder such as
+  // "masked" instead of the value.
   string value = 4;
 }
