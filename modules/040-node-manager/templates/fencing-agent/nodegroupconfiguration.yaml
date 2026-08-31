@@ -7,12 +7,12 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
 metadata:
-  name: enable-watchdog-for-nodegroup-{{ $ng.name }}.sh
+  name: "enable-watchdog-for-nodegroup-{{ $ng.name }}.sh"
   labels:
     app: fencing-agent
 spec:
   weight: 99
-  nodeGroups: ["{{ $ng.name }}"]
+  nodeGroups: [{{ $ng.name | quote }}]
   bundles: ["*"]
   content: |
     bb-sync-file /etc/udev/rules.d/60-watchdog.rules - <<"EOF"

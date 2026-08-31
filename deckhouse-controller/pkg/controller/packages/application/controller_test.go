@@ -498,11 +498,39 @@ func TestDeleteFailureKeepsTheFinalizer(t *testing.T) {
 	_, err := ctr.Reconcile(context.Background(), request(appName, appNamespace))
 	require.ErrorIs(t, err, patchErr)
 
-	// Releasing the finalizer here would drop the application while the package still
-	// counts it as an installation, and nothing would ever come back to fix that.
+	// Runtime teardown has completed, but releasing the finalizer here would drop the
+	// application while the package still counts it as an installation.
 	require.NoError(t, cl.Get(context.Background(), objectKey(appName, appNamespace), app))
 	assert.Contains(t, app.Finalizers, v1alpha1.ApplicationFinalizerStatisticRegistered)
-	assert.Empty(t, manager.removed, "the runtime must keep the application until it is detached")
+	assert.Equal(t, []types.NamespacedName{{Namespace: appNamespace, Name: appName}}, manager.removed)
+}
+
+func TestDeleteWaitsForRuntimeTeardown(t *testing.T) {
+	cl := seedFakeClient(t, "delete-after-version-edit.yaml", interceptor.Funcs{})
+
+	app := new(v1alpha1.Application)
+	require.NoError(t, cl.Get(context.Background(), objectKey(appName, appNamespace), app))
+	require.NoError(t, cl.Delete(context.Background(), app))
+
+	manager := newPackageManagerStub(t)
+	manager.removalDone = false
+	ctr := reconcilerFor(t, cl, manager)
+
+	result, err := ctr.Reconcile(context.Background(), request(appName, appNamespace))
+	require.NoError(t, err)
+	assert.Equal(t, 5*time.Second, result.RequeueAfter)
+	assert.Equal(t, []types.NamespacedName{{Namespace: appNamespace, Name: appName}}, manager.removed)
+
+	require.NoError(t, cl.Get(context.Background(), objectKey(appName, appNamespace), app))
+	assert.Contains(t, app.Finalizers, v1alpha1.ApplicationFinalizerStatisticRegistered)
+
+	pkg := new(v1alpha1.ApplicationPackage)
+	require.NoError(t, cl.Get(context.Background(), client.ObjectKey{Name: packageName}, pkg))
+	assert.True(t, pkg.IsAppInstalled(appNamespace, appName))
+
+	apv := new(v1alpha1.ApplicationPackageVersion)
+	require.NoError(t, cl.Get(context.Background(), client.ObjectKey{Name: versionName}, apv))
+	assert.True(t, apv.IsAppInstalled(appNamespace, appName))
 }
 
 func TestDeleteDistinguishesAMissingVersionFromAnUnreadableOne(t *testing.T) {
@@ -528,7 +556,7 @@ func TestDeleteDistinguishesAMissingVersionFromAnUnreadableOne(t *testing.T) {
 	// gone: treating the two alike would leak the installation entry.
 	_, err := ctr.Reconcile(context.Background(), request(appName, appNamespace))
 	require.Error(t, err)
-	assert.Empty(t, manager.removed)
+	assert.Equal(t, []types.NamespacedName{{Namespace: appNamespace, Name: appName}}, manager.removed)
 }
 
 func TestPreflightPreservesEveryApplication(t *testing.T) {
@@ -653,9 +681,10 @@ func (m modulesInited) AreModulesInited() bool { return bool(m) }
 // RegisterController requires it to satisfy the package's manager interface, which is the
 // compile-time check that this stub still matches the real runtime.
 type packageManagerStub struct {
-	updated  []updatedApp
-	removed  []types.NamespacedName
-	cleanups [][]packageruntime.PreservePackage
+	updated     []updatedApp
+	removed     []types.NamespacedName
+	cleanups    [][]packageruntime.PreservePackage
+	removalDone bool
 
 	queue workqueue.TypedRateLimitingInterface[string]
 }
@@ -668,7 +697,10 @@ func newPackageManagerStub(t *testing.T) *packageManagerStub {
 	queue := workqueue.NewTypedRateLimitingQueue(workqueue.DefaultTypedControllerRateLimiter[string]())
 	t.Cleanup(queue.ShutDown)
 
-	return &packageManagerStub{queue: queue}
+	return &packageManagerStub{
+		queue:       queue,
+		removalDone: true,
+	}
 }
 
 type updatedApp struct {
@@ -680,8 +712,10 @@ func (s *packageManagerStub) UpdateApp(repo registry.Remote, app packageruntime.
 	s.updated = append(s.updated, updatedApp{repo: repo, app: app})
 }
 
-func (s *packageManagerStub) RemoveApp(namespace, name string) {
+func (s *packageManagerStub) RemoveApp(namespace, name string) bool {
 	s.removed = append(s.removed, types.NamespacedName{Namespace: namespace, Name: name})
+
+	return s.removalDone
 }
 
 func (s *packageManagerStub) GetStatus(string) packagestatus.Status {

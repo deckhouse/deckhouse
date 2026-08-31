@@ -38,7 +38,7 @@ import (
 
 // maxApplicationNameLength limits the instance name: it prefixes the name of every object
 // the application creates, and those must fit the 63-character Kubernetes name limit.
-const maxApplicationNameLength = 32
+const maxApplicationNameLength = 24
 
 // applicationValidationHandler validates Application create and update requests.
 func applicationValidationHandler(cli client.Client, manager packageManager) http.Handler {

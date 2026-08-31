@@ -202,7 +202,7 @@ func TestValidateApplicationSettings(t *testing.T) {
 	objectSchema := func(props map[string]openapi.OpenAPIV3Schema, required []string) *v1alpha1.PackageSchema {
 		return &v1alpha1.PackageSchema{
 			OpenAPIV3Schema: &openapi.OpenAPIV3Schema{
-				Type:       "object",
+				Type:       openapi.StringOrArray{"object"},
 				Properties: props,
 				Required:   required,
 			},
@@ -226,7 +226,7 @@ func TestValidateApplicationSettings(t *testing.T) {
 		apv := &v1alpha1.ApplicationPackageVersion{}
 		apv.Status.PackageSchemas = &v1alpha1.PackageVersionStatusSchemas{
 			SettingsSchema: objectSchema(map[string]openapi.OpenAPIV3Schema{
-				"foo": {Type: "string"},
+				"foo": {Type: openapi.StringOrArray{"string"}},
 			}, []string{"foo"}),
 		}
 		app := newApplication("repo", "pkg", "1.0.0")
@@ -239,7 +239,7 @@ func TestValidateApplicationSettings(t *testing.T) {
 		apv := &v1alpha1.ApplicationPackageVersion{}
 		apv.Status.PackageSchemas = &v1alpha1.PackageVersionStatusSchemas{
 			SettingsSchema: objectSchema(map[string]openapi.OpenAPIV3Schema{
-				"foo": {Type: "string"},
+				"foo": {Type: openapi.StringOrArray{"string"}},
 			}, []string{"foo"}),
 		}
 		app := newApplication("repo", "pkg", "1.0.0")

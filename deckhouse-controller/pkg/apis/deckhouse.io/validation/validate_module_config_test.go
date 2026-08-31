@@ -1330,6 +1330,23 @@ func TestModuleConfigValidationHandler_DependencyFallbackFromModuleCR(t *testing
 			wantMessage:    "depends on disabled module(s): log-shipper",
 		},
 		{
+			name:           "create: disabled conditional parent is skipped",
+			operation:      "CREATE",
+			newConfig:      newModuleConfig(moduleName, boolPtr(true), nil),
+			moduleCR:       newModuleCRWithRequirements(moduleName, []string{"deckhouse"}, "", map[string]string{"loki": ">= 0.0.0 !optional"}),
+			enabledParents: map[string]bool{},
+			wantAllowed:    true,
+		},
+		{
+			name:           "create: disabled mandatory parent is rejected next to a conditional one",
+			operation:      "CREATE",
+			newConfig:      newModuleConfig(moduleName, boolPtr(true), nil),
+			moduleCR:       newModuleCRWithRequirements(moduleName, []string{"deckhouse"}, "", map[string]string{"loki": ">= 0.0.0 !optional", "log-shipper": ">= 0.0.0"}),
+			enabledParents: map[string]bool{},
+			wantAllowed:    false,
+			wantMessage:    "depends on disabled module(s): log-shipper",
+		},
+		{
 			name:           "create: all required parents enabled is allowed",
 			operation:      "CREATE",
 			newConfig:      newModuleConfig(moduleName, boolPtr(true), nil),

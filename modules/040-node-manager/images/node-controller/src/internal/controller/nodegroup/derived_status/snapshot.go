@@ -39,11 +39,18 @@ type Snapshot struct {
 	APIServerMin  *semver.Version
 
 	// DefaultZones is read for every CloudEphemeral NodeGroup; InstanceClass, KnownClassNames and
-	// Capacity only once the provider named an InstanceClass kind and the NodeGroup references it.
+	// the two capacities only once the provider named an InstanceClass kind and the NodeGroup
+	// references it.
 	DefaultZones    []string
 	InstanceClass   map[string]any
 	KnownClassNames []string
 	Capacity        *capacity.InstanceType
+
+	// TemplateCapacity is the same calculation as Capacity, kept for every NodeGroup that can hold
+	// a machine instead of for scale-from-zero only. It feeds the MachineDeployment's
+	// capacity.cluster-autoscaler.kubernetes.io/{cpu,memory} annotations and is deliberately never
+	// published into the NodeGroup element — see the comment at its assignment below.
+	TemplateCapacity *capacity.InstanceType
 
 	// CapacityErr is the outcome of the single capacity calculation: check #3 needs the error and
 	// Derive needs the value, and computing it twice is what the old two-pass shape did.
@@ -159,14 +166,31 @@ func (s *Service) BuildSnapshot(ctx context.Context, ng *v1.NodeGroup) (Snapshot
 	}
 	snap.InstanceClass = spec
 
-	// nodeCapacity is only needed for scale-from-zero (min==0 && max>0), which is also the only
-	// case check #3 asks about — so the calculation happens once and both halves read the result.
-	if classRef.MinPerZone == 0 && classRef.MaxPerZone > 0 {
+	// The autoscaler needs a template NodeInfo for every node group it discovers, not only for the
+	// ones that scale from zero: while a group has no registered Node — a single-replica group whose
+	// Node is still booting, or any group mid-churn — the clusterapi provider has nothing to build a
+	// NodeInfo from, and ResourcesLeft then fails with "No node info for: <group>", which aborts
+	// scale-up for every other group in the cluster too. So the capacity is calculated for every
+	// NodeGroup that can hold a machine, and still calculated only once.
+	if classRef.MaxPerZone > 0 {
 		catalog, err := s.readInstanceTypesCatalog(ctx)
 		if err != nil {
 			return Snapshot{}, err
 		}
-		snap.Capacity, snap.CapacityErr = capacity.CalculateNodeTemplateCapacity(kind, spec, catalog)
+		templateCapacity, capacityErr := capacity.CalculateNodeTemplateCapacity(kind, spec, catalog)
+		snap.TemplateCapacity = templateCapacity
+
+		// Scale-from-zero alone publishes the value into the NodeGroup element and treats a failure
+		// as a NodeGroup error (check #3). Publishing it for the rest would add a key to the element
+		// bashible-apiserver hashes into every node's configurationChecksum — AddToChecksum excludes
+		// only the replica counters under cloudInstances — re-running node configuration across the
+		// fleet for a value no node reads.
+		if classRef.MinPerZone == 0 {
+			snap.Capacity, snap.CapacityErr = templateCapacity, capacityErr
+		} else if capacityErr != nil {
+			logger.V(1).Info("node capacity unresolved, MachineDeployment will carry no capacity annotations",
+				"nodeGroup", ng.Name, "kind", kind, "name", name, "err", capacityErr.Error())
+		}
 	}
 
 	return snap, nil

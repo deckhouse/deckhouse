@@ -101,6 +101,8 @@ That is, Kubernetes will first evict all Pods with `priorityClassName: develop` 
 
 When setting the priority class, it is crucial to understand the type of application and the environment it operates in. Assigning any priority class does not lower a Pod's priority because Pods without a specified priority class are considered to have the lowest priority.
 
+Practical examples of creating and using PriorityClass, preemption demos, and troubleshooting are described [in the Examples section](examples.html).
+
 {% alert level="warning" %}
 You cannot use the following priority classes: `system-node-critical`, `system-cluster-critical`, `cluster-medium`, `cluster-low`.
 {% endalert %}

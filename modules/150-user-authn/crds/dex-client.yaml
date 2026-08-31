@@ -40,6 +40,9 @@ spec:
                   description: |-
                     A list of emails of users are allowed to connect to the client.
 
+                    Checked on login and on every refresh-token request. Updating the list
+                    denies further refresh for sessions whose email is no longer listed.
+
                     **By default**, all users can connect.
 
                     Values must not contain line breaks.
@@ -51,7 +54,11 @@ spec:
                 allowedGroups:
                   type: array
                   description: |
-                    A list of groups whose members are allowed to connect to the client;
+                    A list of groups whose members are allowed to connect to the client.
+
+                    Checked on login and on every refresh-token request. Updating the list
+                    denies further refresh for sessions whose stored groups no longer intersect it.
+
                     **By default**, all groups can connect.
 
                     Values must not contain line breaks.

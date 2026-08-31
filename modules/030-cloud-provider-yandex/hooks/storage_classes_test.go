@@ -42,6 +42,57 @@ cloudProviderYandex:
     - .*-hdd
     - bar
 `
+
+		initValuesStringProvision = `
+global:
+  discovery: {}
+cloudProviderYandex:
+  internal: {}
+  storageClass:
+    provision:
+    - name: network-ssd-64k
+      type: network-ssd
+      blockSize: 64Ki
+    - name: network-ssd-io-m3
+      type: network-ssd-io-m3
+      blockSize: 128Ki
+    exclude:
+    - .*-hdd
+`
+
+		initValuesStringProvisionOverride = `
+global:
+  discovery: {}
+cloudProviderYandex:
+  internal: {}
+  storageClass:
+    provision:
+    - name: network-ssd
+      type: network-ssd
+      blockSize: 64Ki
+`
+
+		modifiedStorageClass = `
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: network-ssd-64k
+  labels:
+    heritage: deckhouse
+parameters:
+  typeID: network-ssd
+  blockSize: 32Ki
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: network-ssd
+  labels:
+    heritage: deckhouse
+parameters:
+  typeID: network-ssd
+`
 	)
 
 	f := HookExecutionConfigInit(initValuesString, `{}`)
@@ -65,12 +116,12 @@ cloudProviderYandex:
 	"type": "network-ssd"
   },
   {
-	"name": "network-ssd-nonreplicated",
-	"type": "network-ssd-nonreplicated"
-  },
-  {
 	"name": "network-ssd-io-m3",
 	"type": "network-ssd-io-m3"
+  },
+  {
+	"name": "network-ssd-nonreplicated",
+	"type": "network-ssd-nonreplicated"
   }
 ]
 `))
@@ -94,12 +145,87 @@ cloudProviderYandex:
 	"type": "network-ssd"
   },
   {
+	"name": "network-ssd-io-m3",
+	"type": "network-ssd-io-m3"
+  },
+  {
 	"name": "network-ssd-nonreplicated",
 	"type": "network-ssd-nonreplicated"
+  }
+]
+`))
+		})
+	})
+
+	p := HookExecutionConfigInit(initValuesStringProvision, `{}`)
+
+	Context("Cluster with provisioned storageClasses", func() {
+		BeforeEach(func() {
+			p.BindingContexts.Set(p.GenerateBeforeHelmContext(), p.KubeStateSet(modifiedStorageClass))
+			p.RunHook()
+		})
+
+		It("Should add the provisioned storageClasses and override the default ones with the same name", func() {
+			Expect(p).To(ExecuteSuccessfully())
+			Expect(p.ValuesGet("cloudProviderYandex.internal.storageClasses").String()).To(MatchJSON(`
+[
+  {
+	"name": "network-ssd",
+	"type": "network-ssd"
+  },
+  {
+	"name": "network-ssd-64k",
+	"type": "network-ssd",
+	"blockSize": "64Ki"
+  },
+  {
+	"name": "network-ssd-io-m3",
+	"type": "network-ssd-io-m3",
+	"blockSize": "128Ki"
+  },
+  {
+	"name": "network-ssd-nonreplicated",
+	"type": "network-ssd-nonreplicated"
+  }
+]
+`))
+		})
+
+		It("Should delete the storageClass with changed parameters", func() {
+			Expect(p).To(ExecuteSuccessfully())
+			Expect(p.KubernetesGlobalResource("StorageClass", "network-ssd-64k").Exists()).To(BeFalse())
+			Expect(p.KubernetesGlobalResource("StorageClass", "network-ssd").Exists()).To(BeTrue())
+		})
+	})
+
+	o := HookExecutionConfigInit(initValuesStringProvisionOverride, `{}`)
+
+	Context("Cluster with a default storageClass overridden by provision", func() {
+		BeforeEach(func() {
+			o.BindingContexts.Set(o.GenerateBeforeHelmContext())
+			o.RunHook()
+		})
+
+		It("Should override only the storageClass with exactly the same name", func() {
+			Expect(o).To(ExecuteSuccessfully())
+			Expect(o.ValuesGet("cloudProviderYandex.internal.storageClasses").String()).To(MatchJSON(`
+[
+  {
+	"name": "network-hdd",
+	"type": "network-hdd"
+  },
+  {
+	"name": "network-ssd",
+	"type": "network-ssd",
+	"blockSize": "64Ki"
   },
   {
 	"name": "network-ssd-io-m3",
 	"type": "network-ssd-io-m3"
+  },
+  {
+	"name": "network-ssd-nonreplicated",
+	"type": "network-ssd-nonreplicated"
   }
 ]
 `))

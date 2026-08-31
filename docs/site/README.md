@@ -682,6 +682,79 @@ A list of `x-doc-` parameters:
 - `x-doc-map-key-name` (string). Used to specify the name of an additional parameter (object key) when describing `additionalProperties`.
 - `x-doc-pattern-name` (string). Used to specify the name of a pattern inside `patternProperties` object.
 
+## AI-friendly exports (llms.txt and corpus.json)
+
+Alongside the HTML, every build publishes the same content in a form an LLM agent can consume:
+
+- a Markdown copy of each page, next to its HTML (`…/faq.html` → `…/faq.md`);
+- an [llms.txt](https://llmstxt.org/) index — the page list grouped by the site navigation, with a description and a link to the `.md` for each entry;
+- a `corpus.json` for RAG — the same pages with their metadata, full Markdown and pre-split chunks. It carries its own JSON Schema (draft 2020-12) under the top-level `schema` key, so the file describes itself.
+
+The exports are built from the *rendered* HTML, not from the source Markdown: includes, shortcodes and the OpenAPI schemas rendered by `render-jsonschema.rb` are already expanded there, and an agent gets the page as a reader sees it.
+
+Each `.md` is made to stand on its own, so it can be read — or split into chunks — without ever going back to the HTML:
+
+- a **YAML frontmatter** header carries the page's provenance (`title`, `canonical`, `lang`, and, when they apply, `version`, `module`, `moduleType`, `channel`, `editions`, `stage`). The field names match the `corpus.json` document, so the two artifacts share one vocabulary. The corpus keeps the bare body (and hashes it); the frontmatter fields are already columns there, so they are not repeated inside its `markdown`.
+- **internal links point at the `.md` twin** of the target page: `…/faq.html` → `…/faq.md`, and a directory link `…/foo/` → `…/foo/index.md`. This applies to same-site links whether they are root-relative or written out in full (`https://deckhouse.io/…`); links to other hosts are left alone. The rewrite is unconditional (it does not check that the target `.md` exists), which is what keeps a link from one build into another — an embedded module page into the documentation — working. Both generators apply the directory → `index.md` step under the documentation and modules templates (`/products/*/documentation/` and `/modules/`), leaving any other directory link (e.g. `/downloads/…/`) on its HTML URL. For the target file to actually be `index.md`, the external-modules export (Hugo) normalizes a module's directory README: `README.md` renders to `readme.html`, but its Markdown twin is written as `index.md` — unless the directory already has an authored `index.html`, in which case the README keeps `readme.md` so it does not clobber that index. The Jekyll embedded modules keep `readme.md` and rely on the web server to redirect `index.md` → `readme.md`.
+- **headings carry their HTML anchor** as a kramdown/Pandoc attribute (`## Title {#id}`), so an in-page link (`cr.md#customresourcedefinition`) resolves. The text alone is not enough — for Cyrillic the HTML slug is not what a Markdown renderer would derive.
+
+### What is published where
+
+| Content | Generator | Files |
+| --- | --- | --- |
+| DKP documentation and built-in modules | Jekyll, `docs/documentation` | `/products/kubernetes-platform/documentation/v1/{llms.txt,corpus.json}` |
+| Embedded modules library | Jekyll, the `modules-embedded` build of the same sources | `/modules/{embedded-llms.txt,embedded-corpus.json}` |
+| External modules library | Hugo + docs-builder | `/modules/{external-llms.txt,external-corpus.json}` |
+
+The documentation `llms.txt` is the entry point: it links to the two module indexes and to all three corpora.
+
+### Jekyll (`_plugins/ai_export.rb`)
+
+The plugin runs on the `site, :post_write` hook — `page.output` is complete only there, while `page.content` inside Liquid depends on the page render order.
+
+All settings live under the `ai_export` mapping in the site config (not to be confused with the per-page `ai_export: false` front-matter flag, which excludes a page):
+
+| Parameter | Meaning |
+| --- | --- |
+| `ai_export.enabled` | Enables the export. Nothing is generated unless it is `true`. |
+| `ai_export.root` | Adds the `Optional` section with the links to the corpora. Set it in the build whose llms.txt is the entry point of the site. |
+| `ai_export.llmsFileName` | Name of the llms.txt file. Default: `llms.txt`. |
+| `ai_export.corpusFileName` | Name of the corpus file. Default: `corpus.json`. |
+| `ai_export.title` | The `# heading` of llms.txt. Accepts a per-language hash. Falls back to `site_title`. |
+| `ai_export.summaryI18nKey` | Name of an `i18n.common` entry (`_data/i18n.yml`, per-language) to use as the `> summary` of llms.txt. Lets each build point at its own text — e.g. the embedded-modules build at a module-specific summary. Falls back to `site_description` when unset or empty. |
+
+The file names are parameters because `docs/documentation` is built more than once and the results are published side by side. The main build takes them from `_config.yml`, the embedded modules build deep-merges its overrides into the `ai_export` block via `/tmp/_config_additional.yml` (see `werf-modules-static.inc.yaml`).
+
+A page is exported if it is `searchable: true`, or if it is a `CONFIGURATION`/`CR`/`CLUSTER_CONFIGURATION` page generated from an OpenAPI schema — those are dropped from the search index but are the most valuable reference an agent can get. Set `ai_export: false` in the front matter (or in `defaults` of `_config.yml`, the way `pages/internal` and `pages/drafts` do) to keep a page out.
+
+### External modules (Hugo + docs-builder)
+
+Hugo does not write the export itself. The `ai` output format renders a manifest, `<lang>/ai/ai.json`, listing every module page with its metadata; the Go exporter (`backends/docs-builder/internal/aiexport`) then converts the rendered HTML and writes the `.md` files, `external-llms.txt` and `external-corpus.json`. In a cluster this is a step of the docs-builder build.
+
+The names here are fixed rather than configurable: the modules library shares its URL space with the documentation, so the artifacts have to be told apart by name.
+
+### The embedded schema
+
+Every `corpus.json` embeds its own JSON Schema under the top-level `schema` key. The schema is generated by reflection from the Go structs that produce the data (`Corpus`/`Document`/`Chunk` in `internal/aiexport`, with per-field `desc` tags), so it cannot drift from what the exporter writes. The Go exporter builds it at run time; the Jekyll exporter embeds a checked-in copy at `docs/documentation/_data/corpus_schema.json`, which `internal/aiexport/schema_test.go` keeps equal to the structs — regenerate it after any struct change with:
+
+```shell
+go test ./internal/aiexport -run TestCorpusSchema -update
+```
+
+Both generators emit the same document shape (optional fields — `module`, `moduleType`, `version`, `stage`, `channel`, chunk `anchor` — are omitted, never `null`), so the one schema validates the output of both. `TestExport` checks that the corpus the Go side writes validates against the schema it embeds.
+
+### Generating the external modules export locally
+
+```shell
+make ai-export
+```
+
+docs-builder is an HTTP service that expects a Kubernetes API, so the target does not run it: it renders the site with Hugo and calls the exporter directly over the result. It expects a prepared `content/modules` + `data/modules` tree — by default `backends/docs-builder-template`, override with `AI_EXPORT_SRC=/path/to/tree`. A module missing from `data/modules/channels.yaml` is silently skipped, as it is on the site.
+
+### Serving
+
+The artifacts are static files, but they are published under URLs that do not match their location on disk, so every nginx config has to know about them: `.werf/nginx-local.conf` (local site), `.helm/templates/10-cm-moduleslibrary.yaml` (deckhouse.io) and `modules/810-documentation/templates/configmap.yaml` (the documentation module in a cluster). The per-page `.md` files are served by the generic page locations; the configs also declare `text/markdown` for `.md`, otherwise nginx offers them for download.
+
 ## Markup (external modules documentation)
 
 [Hugo](gohugo.io) SSG is used for rendering.

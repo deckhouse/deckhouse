@@ -13,7 +13,6 @@ rules:
   - cert-manager.io
   resources:
   - certificates
-  - issuers  
   verbs:
   - create
   - update

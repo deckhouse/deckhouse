@@ -32,8 +32,9 @@ DVP provides several predefined roles for accessing resources:
 | Role           | Permissions |
 |----------------|---------------|
 | `User`         | View Certificate and Issuer resources in available namespaces, as well as global ClusterIssuer resources. |
-| `Editor`       | Manage Certificate and Issuer resources in available namespaces. |
-| `ClusterEditor`| Manage Certificate and Issuer resources in all namespaces. |
+| `Editor`       | Manage Certificate resources in available namespaces. |
+| `Admin`        | Manage Issuer resources in available namespaces. |
+| `ClusterEditor`| Manage Certificate and Issuer resources in all namespaces, as well as ClusterIssuer resources. |
 | `SuperAdmin`   | Manage internal system objects. |
 
 ## Working with certificate issuers

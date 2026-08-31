@@ -386,6 +386,11 @@ func (e *Extender) CheckEnabling(moduleName string) error {
 	if req, found := e.modules[moduleName]; found {
 		for _, parentModule := range req.matcher.GetConstraintsNames() {
 			parentVersion, err := e.modulesVersionHelper(parentModule)
+			_, isOptional := req.optional[parentModule]
+			// if the parent module is optional and not found, skip it
+			if err != nil && apierrors.IsNotFound(err) && isOptional {
+				continue
+			}
 			if err != nil {
 				validateErr = multierror.Append(validateErr, fmt.Errorf("could not get the '%s' module version: %s", parentModule, err.Error()))
 				if apierrors.IsNotFound(err) {
@@ -396,7 +401,7 @@ func (e *Extender) CheckEnabling(moduleName string) error {
 			// check if the parent module is disabled/absent
 			if parentVersion == "" || !slices.Contains(enabledModules, parentModule) {
 				// if parent req is optional and disabled just skip it
-				if _, ok := req.optional[parentModule]; ok {
+				if isOptional {
 					e.logger.Debug("module`s requirement not met, but its optional",
 						slog.String("module", moduleName), slog.String("required", parentModule))
 					continue

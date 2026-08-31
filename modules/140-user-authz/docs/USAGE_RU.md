@@ -255,6 +255,88 @@ spec:
         team: frontend
 ```
 
+Субъект типа `User` или `Group` сопоставляется по имени с идентичностью пользователя из токена. При этом локально управляемая идентичность не отличается от полученной от внешнего провайдера аутентификации. По этой причине нельзя создать ресурс [User](/modules/user-authn/cr.html#user) со значением `spec.email` или [Group](/modules/user-authn/cr.html#group) со значением `spec.name`, совпадающим с субъектом существующего правила ClusterAuthorizationRule. Это предотвращает незаметное предоставление прав идентичности.
+
+Если совпадение сделано намеренно, например, если правило ClusterAuthorizationRule написано заранее, установите на User или Group аннотацию `user-authz.deckhouse.io/allow-authorization-rule-collision: "true"`.
+
+Для субъектов типа `User` указывайте email в нижнем регистре. Он записывается в токен в нижнем регистре, поэтому, например, субъект `Admin@Example.com` не совпадёт с `admin@example.com`. Имена субъектов типа `Group` сравнивается точно, поскольку имена групп не приводятся к нижнему регистру.
+
+Ограничение действует только при создании ресурсов User и Group и не запрещает добавлять существующих пользователей и группы в ClusterAuthorizationRule. Если соответствующий User или Group уже существует, после добавления его в правило права будут предоставлены сразу.
+
+## Управление правами через CLI
+
+Команда [`d8 iam access`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-access) позволяет управлять правилами авторизации без написания YAML-манифестов. Она создаёт и удаляет ресурсы [ClusterAuthorizationRule](cr.html#clusterauthorizationrule) и [AuthorizationRule](cr.html#authorizationrule).
+
+Доступные уровни доступа: `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`, `ClusterAdmin`, `SuperAdmin`.
+
+Примеры назначения прав с помощью команды `d8 iam access`:
+
+Назначить роль Admin пользователю в неймспейсе `dev`:
+
+```shell
+d8 iam access grant user anton --access-level Admin -n dev
+```
+
+Назначить пользователю роль Admin в нескольких неймспейсах:
+
+```shell
+d8 iam access grant user anton --access-level Admin -n dev -n stage
+```
+
+Назначить пользователю кластерную роль (без системных неймспейсов):
+
+```shell
+d8 iam access grant user anton --access-level ClusterAdmin --scope cluster
+```
+
+Назначить пользователю кластерную роль во всех неймспейсах (включая системные)
+
+```shell
+d8 iam access grant user anton --access-level ClusterAdmin --scope all-namespaces
+```
+
+Назначить членам группы роль по label-селектору неймспейсов:
+
+```shell
+d8 iam access grant group admins --access-level Editor --scope labels=team=platform,tier=prod
+```
+
+Назначить членам группы роль с дополнительными возможностями:
+
+```shell
+d8 iam access grant group admins --access-level Editor -n dev --port-forwarding --allow-scale
+```
+
+Предпросмотр манифеста без применения:
+
+```shell
+d8 iam access grant user anton --access-level Admin -n dev --dry-run -o yaml
+```
+
+Отозвать права пользователя в неймспейсе:
+
+```shell
+d8 iam access revoke user anton -n dev
+```
+
+Отозвать права пользователя на уровне кластера:
+
+```shell
+d8 iam access revoke user anton --scope cluster
+```
+
+Посмотреть все правила доступа в кластере:
+
+```shell
+d8 iam list rules
+```
+
+Посмотреть детальную информацию о конкретном правиле:
+
+```shell
+d8 iam get rule <имя>
+```
+
 ## Пример выдачи прав на все неймспейсы
 
 {% alert level="info" %}
@@ -285,9 +367,9 @@ spec:
 
 - **Разрешить доступ во все неймспейсы, кроме системных**. Чтобы разрешить пользователю доступ во все неймспейсы, кроме системных, при создании ClusterAuthorizationRule не указывайте ни `namespaceSelector`, ни `limitNamespaces`, ни `allowAccessToSystemNamespaces`. Перечень системных неймспейсов — в [описании полей CR](cr.html#clusterauthorizationrule-v1-spec-namespaceselector).
 
-> Уровень доступа `SuperAdmin` **не снимает** ограничения по нейспейсам, заданные в параметрах `namespaceSelector` и `limitNamespaces`. При необходимости предоставления доступа ко всем неймспейсам задайте область явно, в том числе через [`namespaceSelector.matchAny`](cr.html#clusterauthorizationrule-v1-spec-namespaceselector).
+> Уровень доступа `SuperAdmin` **не снимает** ограничения по неймспейсам, заданные в параметрах `namespaceSelector` и `limitNamespaces`. При необходимости предоставления доступа ко всем неймспейсам задайте область явно, в том числе через [`namespaceSelector.matchAny`](cr.html#clusterauthorizationrule-v1-spec-namespaceselector).
 
-Если одному субъекту соответствует несколько ресурсов `ClusterAuthorizationRule`, набор разрешённых нейспейсов **объединяется**; эффективный `accessLevel` — **самый сильный** среди всех подходящих правил. Подробнее — в [FAQ](faq.html#что-если-два-clusterauthorizationrules-подходят-для-одного-пользователя).
+Если одному субъекту соответствует несколько ресурсов `ClusterAuthorizationRule`, набор разрешённых неймспейсов **объединяется**; эффективный `accessLevel` — **самый сильный** среди всех подходящих правил. Подробнее — в [FAQ](faq.html#что-если-два-clusterauthorizationrules-подходят-для-одного-пользователя).
 
 {% alert level="warning" %}
 Ограничения по неймспейсам из `ClusterAuthorizationRule` реализованы в цепочке авторизации с вебхуком. Если вебхук недоступен, эти ограничения **не применяются**, пока вебхук снова не станет доступен. Подробнее — в [описании модуля](./#текущая-ролевая-модель).

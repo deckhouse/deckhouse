@@ -258,11 +258,15 @@ func (s *Service) bootstrap(ctx context.Context, p *bootstrapParams) *pb.Bootstr
 	var sshProviderInitializer *providerinitializer.SSHProviderInitializer
 	var kubeProvider libcon.KubeProvider
 	err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Preparing SSH client", func(ctx context.Context) error {
-		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, s.params.IsDebug, s.params.TmpDir, helper.AllowMissingHostsFromCache())
+		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, s.params.IsDebug, s.params.TmpDir, helper.AllowMissingHostsFromCache(), helper.WithKubeConfig(p.request.Kubeconfig))
 		if err != nil {
 			return fmt.Errorf("preparing providers: %w", err)
 		}
 		cleanuper.Add(cleanup)
+
+		if sshProviderInitializer == nil {
+			return errors.New("connection config is required, bootstrap installs the cluster over ssh")
+		}
 
 		return nil
 	})

@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/name212/govalue"
+
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
@@ -49,14 +51,16 @@ func (p *kubeClientProvider) KubeClientCtx(ctx context.Context) (*client.Kuberne
 }
 
 func (p *kubeClientProvider) Cleanup(ctx context.Context, stopSSH bool) {
-	err := p.kubeProvider.Cleanup(ctx)
-	if err != nil {
-		dhlog.FromContext(ctx).WarnContext(ctx, strings.TrimRight(fmt.Sprintf("failed to clean up kube provider: %v", err), "\n"))
+	// Either provider can legitimately be absent: a kubeconfig-driven destroy builds no SSH
+	// provider, and a request that built no providers at all reaches this with neither.
+	if govalue.NotNil(p.kubeProvider) {
+		err := p.kubeProvider.Cleanup(ctx)
+		if err != nil {
+			dhlog.FromContext(ctx).WarnContext(ctx, strings.TrimRight(fmt.Sprintf("failed to clean up kube provider: %v", err), "\n"))
+		}
 	}
 
-	// nil on a cluster whose nodes run no SSH server, which is now a cluster
-	// destroy has to be able to handle rather than panic on.
-	if stopSSH && p.sshProvider != nil {
+	if stopSSH && govalue.NotNil(p.sshProvider) {
 		err := p.sshProvider.Cleanup(ctx)
 		if err != nil {
 			dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("failed to clean up ssh provider: %v", err))

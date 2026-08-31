@@ -14,10 +14,23 @@ positive:
     - storageClass:
         default: "ssd"
 
+    # only provision
+    - storageClass:
+        provision:
+        - name: "network-ssd-64k"
+          type: "network-ssd"
+          blockSize: "64Ki"
+        - name: "network-hdd"
+          type: "network-hdd"
+
     # all in
     - storageClass:
         default: "ssd"
         exclude: ["disk-type", "ssd-.*"]
+        provision:
+        - name: "network-ssd-64k"
+          type: "network-ssd"
+          blockSize: "64Ki"
 negative:
   configValues:
     - storageClass:
@@ -28,3 +41,20 @@ negative:
         default: ["must be string"]
     - storageClass:
         default: {"key": "must be string"}
+    - storageClass:
+        provision:
+        - name: "no-type-provided"
+    - storageClass:
+        provision:
+        - name: "unknown-disk-type"
+          type: "network-ssd-unknown"
+    - storageClass:
+        provision:
+        - name: "unsupported-block-size"
+          type: "network-ssd"
+          blockSize: "256Ki"
+    - storageClass:
+        provision:
+        - name: "unknown-field"
+          type: "network-ssd"
+          iops: "6000"
