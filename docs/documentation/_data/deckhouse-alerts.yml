@@ -1943,6 +1943,24 @@ alerts:
         Multicluster metadata endpoint failed.
       severity: "6"
       markupFormat: markdown
+    - name: D8IstioMulticlusterRemoteAPIHostDoesntWork
+      sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/multicluster.yaml
+      moduleUrl: 110-istio
+      module: istio
+      edition: ee
+      description: |
+        The remote API host `{{$labels.api_host}}` for IstioMulticluster `{{$labels.multicluster_name}}` has failed the health check performed by the Deckhouse monitoring hook.
+
+        To reproduce the request (run from the `d8-system/deckhouse` pod), run the following:
+
+        ```bash
+        TOKEN="$(deckhouse-controller module values istio -o json | jq -r --arg ah {{$labels.api_host}} '.internal.multiclusters[]| select(.apiHost == $ah)| .apiJWT ')"
+        curl -H "Authorization: Bearer $TOKEN" https://{{$labels.api_host}}/version
+        ```
+      summary: |
+        Multicluster remote API host health check failed.
+      severity: "6"
+      markupFormat: markdown
     - name: D8IstioMulticlusterRemoteClusterUUIDMismatch
       sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/multicluster.yaml
       moduleUrl: 110-istio
@@ -1966,24 +1984,6 @@ alerts:
       summary: |
         IstioMulticluster peer cluster UUID changed.
       severity: "4"
-      markupFormat: markdown
-    - name: D8IstioMulticlusterRemoteAPIHostDoesntWork
-      sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/multicluster.yaml
-      moduleUrl: 110-istio
-      module: istio
-      edition: ee
-      description: |
-        The remote API host `{{$labels.api_host}}` for IstioMulticluster `{{$labels.multicluster_name}}` has failed the health check performed by the Deckhouse monitoring hook.
-
-        To reproduce the request (run from the `d8-system/deckhouse` pod), run the following:
-
-        ```bash
-        TOKEN="$(deckhouse-controller module values istio -o json | jq -r --arg ah {{$labels.api_host}} '.internal.multiclusters[]| select(.apiHost == $ah)| .apiJWT ')"
-        curl -H "Authorization: Bearer $TOKEN" https://{{$labels.api_host}}/version
-        ```
-      summary: |
-        Multicluster remote API host health check failed.
-      severity: "6"
       markupFormat: markdown
     - name: D8IstioOperatorReconcileError
       sourceFile: modules/110-istio/monitoring/prometheus-rules/operator.yaml
