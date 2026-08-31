@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"log/slog"
 	"sort"
-	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -48,7 +47,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func revisionsDiscovery(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	var globalVersion string
 	var versionsToInstall = make([]string, 0)
-	var unsupportedVersions = make([]string, 0)
 	var supportedVersions = make([]string, 0) //nolint:prealloc
 
 	var supportedVersionsResult = input.Values.Get("istio.internal.versionMap").Map()
@@ -88,26 +86,11 @@ func revisionsDiscovery(_ context.Context, input *go_hook.HookInput, dc dependen
 
 	var additionalVersionsResult = input.ConfigValues.Get("istio.additionalVersions").Array()
 	for _, versionResult := range additionalVersionsResult {
-		if !lib.Contains(supportedVersions, versionResult.String()) {
-			unsupportedVersions = append(unsupportedVersions, versionResult.String())
-			continue
-		}
 		versionsToInstall = append(versionsToInstall, versionResult.String())
 	}
 
-	if !lib.Contains(supportedVersions, globalVersion) {
-		if !lib.Contains(unsupportedVersions, globalVersion) {
-			unsupportedVersions = append(unsupportedVersions, globalVersion)
-		}
-	} else {
-		if !lib.Contains(versionsToInstall, globalVersion) {
-			versionsToInstall = append(versionsToInstall, globalVersion)
-		}
-	}
-
-	if len(unsupportedVersions) > 0 {
-		sort.Strings(unsupportedVersions)
-		return fmt.Errorf("unsupported versions: [%s]", strings.Join(unsupportedVersions, ","))
+	if !lib.Contains(versionsToInstall, globalVersion) {
+		versionsToInstall = append(versionsToInstall, globalVersion)
 	}
 
 	sort.Strings(versionsToInstall) // to guarantee same order
