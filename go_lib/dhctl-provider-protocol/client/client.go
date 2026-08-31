@@ -23,6 +23,9 @@ import (
 )
 
 const (
+	// MaxMessageSize is the limit the protocol mandates in each direction.
+	// gRPC's own 4 MiB default is too small for a payload carrying every
+	// NodeGroup, InstanceClass and credential Secret of a cluster.
 	MaxMessageSize = 8 * 1024 * 1024
 )
 
