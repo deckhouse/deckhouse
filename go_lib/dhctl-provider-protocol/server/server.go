@@ -40,9 +40,7 @@ type Config struct {
 	GRPCOptions []grpc.ServerOption
 }
 
-// DefaultConfig is what Start starts from; a caller's Config overrides it field by
-// field.
-func DefaultConfig() Config {
+func NewConfig() Config {
 	return Config{
 		Network: DefaultNetwork,
 		GRPCOptions: []grpc.ServerOption{
@@ -52,9 +50,6 @@ func DefaultConfig() Config {
 	}
 }
 
-// Validate requires an address: the caller allocates a fresh short path per run and
-// passes it in. A default would put the socket at a world-writable well-known path,
-// where a stale file breaks bind and anyone could have created the socket first.
 func (c Config) Validate() error {
 	if c.Network == "" {
 		return fmt.Errorf("network is required")
@@ -77,9 +72,8 @@ func (c Config) Merge(other Config) Config {
 	}
 
 	if len(other.GRPCOptions) > 0 {
-		c.GRPCOptions = append(c.GRPCOptions, other.GRPCOptions...)
+		c.GRPCOptions = other.GRPCOptions
 	}
-
 	return c
 }
 
@@ -102,24 +96,25 @@ type Service interface {
 //
 // An action whose service is not passed answers Unimplemented, which is how a
 // caller learns it is missing.
-func Start(ctx context.Context, cfg Config, services ...Service) (func() error, error) {
-	cfg = DefaultConfig().Merge(cfg)
-	if err := cfg.Validate(); err != nil {
+func Start(ctx context.Context, config Config, services ...Service) (func() error, error) {
+	config = NewConfig().Merge(config)
+	if err := config.Validate(); err != nil {
 		return nil, fmt.Errorf("config validation: %w", err)
 	}
 
-	// Interceptor first, cfg's options after: a caller's option of the same kind
-	// wins, since gRPC keeps the last one.
-	options := append([]grpc.ServerOption{grpc.ChainUnaryInterceptor(recoverPanic)}, cfg.GRPCOptions...)
+	options := append(
+		[]grpc.ServerOption{grpc.ChainUnaryInterceptor(recoverPanic)},
+		config.GRPCOptions...,
+	)
 	grpcServer := grpc.NewServer(options...)
 
 	for _, service := range services {
 		service.Register(grpcServer)
 	}
 
-	listener, err := net.Listen(cfg.Network, cfg.Address)
+	listener, err := net.Listen(config.Network, config.Address)
 	if err != nil {
-		return nil, fmt.Errorf("listen on %s %s: %w", cfg.Network, cfg.Address, err)
+		return nil, fmt.Errorf("listen on %s %s: %w", config.Network, config.Address, err)
 	}
 
 	served := make(chan error, 1)

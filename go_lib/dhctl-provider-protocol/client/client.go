@@ -23,47 +23,44 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/validate"
 )
 
-// MaxMessageSize is the limit the protocol mandates in each direction. gRPC's own
-// 4 MiB default is too small: the payload carries every NodeGroup, InstanceClass
-// and credential Secret of a cluster.
-const MaxMessageSize = 8 * 1024 * 1024
+const (
+	MaxMessageSize = 8 * 1024 * 1024
+)
 
-type Client struct {
-	service     protogen.ValidateServiceClient
-	callOptions []grpc.CallOption
+type Config struct {
+	GRPCOptions []grpc.CallOption
 }
 
-type options struct {
-	callOptions []grpc.CallOption
-}
-
-type Option func(*options)
-
-// WithCallOptions appends call options after the protocol's own.
-func WithCallOptions(callOptions ...grpc.CallOption) Option {
-	return func(o *options) {
-		o.callOptions = append(o.callOptions, callOptions...)
-	}
-}
-
-// NewClient does not dial: the caller keeps control of the connection's lifetime
-// and of how readiness is awaited. The message-size limits are part of the
-// protocol, so they are applied here rather than left for a caller to remember.
-func NewClient(conn grpc.ClientConnInterface, opts ...Option) Client {
-	applied := options{
-		callOptions: []grpc.CallOption{
+func NewConfig() Config {
+	return Config{
+		GRPCOptions: []grpc.CallOption{
 			grpc.MaxCallRecvMsgSize(MaxMessageSize),
 			grpc.MaxCallSendMsgSize(MaxMessageSize),
 		},
 	}
+}
 
-	for _, opt := range opts {
-		opt(&applied)
+func (c Config) Validate() error {
+	return nil
+}
+
+func (c Config) Merge(other Config) Config {
+	if len(other.GRPCOptions) > 0 {
+		c.GRPCOptions = other.GRPCOptions
 	}
+	return c
+}
 
+type Client struct {
+	service protogen.ValidateServiceClient
+	config  Config
+}
+
+// NewClient creates a new client with the given configuration.
+func NewClient(conn grpc.ClientConnInterface, config Config) Client {
 	return Client{
-		service:     protogen.NewValidateServiceClient(conn),
-		callOptions: applied.callOptions,
+		service: protogen.NewValidateServiceClient(conn),
+		config:  NewConfig().Merge(config),
 	}
 }
 
@@ -73,7 +70,7 @@ func (c Client) Validate(ctx context.Context, input validate.Input) (validate.Ou
 		return validate.Output{}, err
 	}
 
-	resp, err := c.service.Validate(ctx, req, c.callOptions...)
+	resp, err := c.service.Validate(ctx, req, c.config.GRPCOptions...)
 	if err != nil {
 		return validate.Output{}, err
 	}

@@ -17,14 +17,10 @@ package server_test
 import (
 	"context"
 	"errors"
-	"flag"
-	"fmt"
 	"os"
-	"os/signal"
 	"path/filepath"
 	"reflect"
 	"strings"
-	"syscall"
 	"testing"
 	"time"
 
@@ -37,53 +33,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/server"
 	"github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/validate"
 )
-
-// exampleValidator is what a validator author writes. An Output says what is wrong
-// with the configuration; an error means the check could not be made and reaches the
-// caller as Internal.
-type exampleValidator struct{}
-
-func (exampleValidator) Validate(_ context.Context, input validate.Input) (validate.Output, error) {
-	var output validate.Output
-
-	if input.CloudProviderVars == nil || len(input.CloudProviderVars.Secrets) == 0 {
-		output.AddError("Secret/d8-credentials", "credential_secret_required", nil,
-			`credential Secret "d8-credentials" is required`)
-	}
-
-	return output, nil
-}
-
-// Example is a whole validator binary: dhctl invokes it as
-// `validator serve --address=<unix socket>` and stops it with SIGTERM.
-func Example() {
-	if len(os.Args) < 2 || os.Args[1] != "serve" {
-		fmt.Fprintf(os.Stderr, "usage: %s serve --address=<unix socket>\n", os.Args[0])
-		os.Exit(2)
-	}
-
-	flags := flag.NewFlagSet("serve", flag.ExitOnError)
-	address := flags.String("address", "", "unix socket to serve on")
-	_ = flags.Parse(os.Args[2:])
-
-	// Start installs no signal handler: the binary decides what SIGTERM means.
-	ctx, unhook := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer unhook()
-
-	stop, err := server.Start(ctx, server.Config{Address: *address},
-		server.NewValidateService(exampleValidator{}))
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
-
-	<-ctx.Done()
-
-	if err := stop(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
-}
 
 func TestConfigValidate(t *testing.T) {
 	tests := []struct {
@@ -376,7 +325,7 @@ func connect(t *testing.T, address string) client.Client {
 
 	t.Cleanup(func() { _ = conn.Close() })
 
-	return client.NewClient(conn)
+	return client.NewClient(conn, client.NewConfig())
 }
 
 func requireStatus(t *testing.T, err error, want codes.Code, message string) {
