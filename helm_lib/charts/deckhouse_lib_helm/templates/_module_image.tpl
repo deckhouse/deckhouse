@@ -4,11 +4,24 @@
   {{- $context := index . 0 }} {{- /* Template context with .Values, .Chart, etc */ -}}
   {{- $containerName := index . 1 | trimAll "\"" }} {{- /* Container name */ -}}
 
-  {{- /* New approach: use module package values */}} 
-  {{- if and $context.Module $context.Module.Package }}
+  {{- $rawModuleName := "" }} {{- /* Optional module name, set when the image belongs to another module */ -}}
+  {{- if ge (len .) 3 }}
+    {{- $rawModuleName = (index . 2) }}
+  {{- end }}
+
+  {{- /* Package digests hold the module's own images only, so an image owned by another module resolves through global values */}}
+  {{- $foreignModule := false }}
+  {{- if and $rawModuleName $context.Module $context.Module.Package }}
+    {{- if ne (include "helm_lib_module_camelcase_name" $rawModuleName) (include "helm_lib_module_camelcase_name" $context.Module.Package.Name) }}
+      {{- $foreignModule = true }}
+    {{- end }}
+  {{- end }}
+
+  {{- /* New approach: use module package values */}}
+  {{- if and $context.Module $context.Module.Package (not $foreignModule) }}
     {{- $imageDigest := index $context.Module.Package.Digests $containerName }}
     {{- if not $imageDigest }}
-      {{- fail (printf "Image %s has no digest" $containerName) }}
+      {{- fail (printf "Image %s has no digest in package %s" $containerName $context.Module.Package.Name) }}
     {{- end }}
 
     {{- if $context.Module.Package.Embedded }}
@@ -34,9 +47,8 @@
 
   {{- /* Legacy fallback: use global modulesImages values */}}
   {{- else }}
-    {{- $rawModuleName := $context.Chart.Name }}
-    {{- if ge (len .) 3 }}
-      {{- $rawModuleName = (index . 2) }} {{- /* Optional module name */ -}}
+    {{- if not $rawModuleName }}
+      {{- $rawModuleName = $context.Chart.Name }}
     {{- end }}
     {{- $moduleName := (include "helm_lib_module_camelcase_name" $rawModuleName) }}
 
