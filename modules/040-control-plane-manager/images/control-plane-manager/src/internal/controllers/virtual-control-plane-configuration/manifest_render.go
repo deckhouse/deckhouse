@@ -50,6 +50,42 @@ type fixedImages struct {
 	BashibleApiserver  string `json:"bashibleApiserver"`
 }
 
+// resolvedImages is the final set of image refs
+type resolvedImages struct {
+	Apiserver          string
+	ControllerManager  string
+	Scheduler          string
+	Kine               string
+	KonnectivityServer string
+	// konnectivity-agent runs in two pods with different registry reach.
+	// - host-side apiserver (IMAGE_KONNECTIVITY_AGENT_CP) uses the in-cluster registry
+	// - tenant-node addon (IMAGE_KONNECTIVITY_AGENT) rebased onto the external registry
+	KonnectivityAgent   string
+	KonnectivityAgentCP string
+	Cilium              string
+	CiliumOperator      string
+}
+
+func resolveImages(table imagesTable, k8sVersion, imageBaseOverride string) (resolvedImages, error) {
+	versioned, ok := table.Versioned[k8sVersion]
+	if !ok {
+		return resolvedImages{}, fmt.Errorf("no images for kubernetes version %q", k8sVersion)
+	}
+
+	f := table.Fixed
+	return resolvedImages{
+		Apiserver:           versioned.Apiserver,
+		ControllerManager:   versioned.ControllerManager,
+		Scheduler:           versioned.Scheduler,
+		Kine:                f.Kine,
+		KonnectivityServer:  f.KonnectivityServer,
+		KonnectivityAgent:   rebaseImageRef(f.KonnectivityAgent, imageBaseOverride),
+		KonnectivityAgentCP: f.KonnectivityAgent,
+		Cilium:              f.Cilium,
+		CiliumOperator:      f.CiliumOperator,
+	}, nil
+}
+
 type registryPackagesTable struct {
 	Versioned map[string]registryPackagesVersioned `json:"versioned"`
 	Fixed     registryPackagesFixed                `json:"fixed"`
@@ -78,23 +114,14 @@ func renderManifests(
 		return nil, err
 	}
 
-	versioned, ok := table.Versioned[vcp.Spec.KubernetesVersion]
-	if !ok {
-		return nil, fmt.Errorf("no images for kubernetes version %q", vcp.Spec.KubernetesVersion)
+	images, err := resolveImages(table, vcp.Spec.KubernetesVersion, imageBaseOverride)
+	if err != nil {
+		return nil, err
 	}
-
-	// konnectivity-agent runs in two pods with different registry reach.
-	// - host-side apiserver (IMAGE_KONNECTIVITY_AGENT_CP) uses the in-cluster registry
-	// - tenant-node addon (IMAGE_KONNECTIVITY_AGENT) rebased onto the external registry
-	fixed := table.Fixed
-	konnAgentCPImage := fixed.KonnectivityAgent
-	fixed.KonnectivityAgent = rebaseImageRef(fixed.KonnectivityAgent, imageBaseOverride)
 
 	replacer := buildManifestReplacer(
 		vcp,
-		versioned,
-		fixed,
-		konnAgentCPImage,
+		images,
 		apiAdvertiseAddress,
 		string(globalData["cluster-uuid"]),
 		egressDestinations,
@@ -141,9 +168,7 @@ func parseImagesTable(globalData map[string][]byte) (imagesTable, error) {
 
 func buildManifestReplacer(
 	vcp *controlplanev1alpha1.VirtualControlPlane,
-	versioned versionedImages,
-	fixed fixedImages,
-	konnAgentCPImage string,
+	images resolvedImages,
 	apiAdvertiseAddress string,
 	clusterUUID string,
 	egressDestinations []string,
@@ -153,15 +178,15 @@ func buildManifestReplacer(
 		"${VCP_API_VIP}", apiAdvertiseAddress,
 		"${VCP_CLUSTER_UUID}", clusterUUID,
 		"${VCP_TENANT_UUID}", string(vcp.UID),
-		"${IMAGE_KUBE_APISERVER}", versioned.Apiserver,
-		"${IMAGE_KUBE_CONTROLLER_MANAGER}", versioned.ControllerManager,
-		"${IMAGE_KUBE_SCHEDULER}", versioned.Scheduler,
-		"${IMAGE_KINE}", fixed.Kine,
-		"${IMAGE_KONNECTIVITY_SERVER}", fixed.KonnectivityServer,
-		"${IMAGE_KONNECTIVITY_AGENT}", fixed.KonnectivityAgent,
-		"${IMAGE_KONNECTIVITY_AGENT_CP}", konnAgentCPImage,
-		"${IMAGE_CILIUM}", fixed.Cilium,
-		"${IMAGE_CILIUM_OPERATOR}", fixed.CiliumOperator,
+		"${IMAGE_KUBE_APISERVER}", images.Apiserver,
+		"${IMAGE_KUBE_CONTROLLER_MANAGER}", images.ControllerManager,
+		"${IMAGE_KUBE_SCHEDULER}", images.Scheduler,
+		"${IMAGE_KINE}", images.Kine,
+		"${IMAGE_KONNECTIVITY_SERVER}", images.KonnectivityServer,
+		"${IMAGE_KONNECTIVITY_AGENT}", images.KonnectivityAgent,
+		"${IMAGE_KONNECTIVITY_AGENT_CP}", images.KonnectivityAgentCP,
+		"${IMAGE_CILIUM}", images.Cilium,
+		"${IMAGE_CILIUM_OPERATOR}", images.CiliumOperator,
 		"${VCP_NAME}", vcp.Name,
 		"${NAMESPACE}", vcp.Namespace,
 		"${VCP_KONNECTIVITY_SERVER_COUNT}", fmt.Sprintf("%d", vcp.Spec.Replicas),
