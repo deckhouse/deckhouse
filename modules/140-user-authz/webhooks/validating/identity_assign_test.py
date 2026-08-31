@@ -303,6 +303,86 @@ class TestIdentityCollection(unittest.TestCase):
              "groups": ["system:serviceaccounts:kube-system"]}))
         self.assertFalse(assign.is_exempt({"username": "eve@corp", "groups": []}))
 
+    def test_membership_from_group_snapshot(self):
+        snaps = {
+            assign.USER_SNAP: [{"filterResult": {
+                "name": "admin", "email": "admin@deckhouse.io", "groups": [],
+            }}],
+            assign.GROUP_SNAP: [{"filterResult": {
+                "name": "superadmins", "members": ["admin"],
+            }}],
+            assign.CAR_SNAP: [],
+            assign.AR_SNAP: [],
+            assign.CRB_SNAP: [],
+        }
+        self.assertEqual(assign.membership_groups(snaps, email="admin@deckhouse.io"),
+                         ["superadmins"])
+
+    def test_occupied_roles_ignore_system_subjects(self):
+        snaps = {
+            assign.CAR_SNAP: [{"filterResult": {
+                "name": "human",
+                "accessLevel": "SuperAdmin",
+                "additionalRoles": [],
+                "userSubjects": [],
+                "groupSubjects": ["superadmins"],
+                "saSubjects": [],
+            }}],
+            assign.AR_SNAP: [],
+            assign.CRB_SNAP: [{"filterResult": {
+                "name": "k8s",
+                "role": "cluster-admin",
+                "userSubjects": [],
+                "groupSubjects": ["system:masters"],
+                "saSubjects": [],
+            }}],
+        }
+        self.assertEqual(assign.occupied_grant_roles(snaps), ["user-authz:super-admin"])
+
+    def test_oidc_is_not_claims_closed(self):
+        self.assertFalse(assign.dex_claims_closed({"type": "OIDC", "oidc": {"allowedGroups": ["devs"]}}))
+
+    def test_saml_filter_groups_is_closed(self):
+        self.assertTrue(assign.dex_claims_closed({
+            "type": "SAML", "saml": {"filterGroups": True, "allowedGroups": ["devs"]},
+        }))
+        self.assertFalse(assign.dex_claims_closed({
+            "type": "SAML", "saml": {"allowedGroups": ["devs"]},
+        }))
+
+    def test_open_oidc_targets_occupied_roles(self):
+        snaps = {
+            assign.CAR_SNAP: [{"filterResult": {
+                "name": "g",
+                "accessLevel": "SuperAdmin",
+                "additionalRoles": [],
+                "userSubjects": [],
+                "groupSubjects": ["superadmins"],
+                "saSubjects": [],
+            }}],
+            assign.AR_SNAP: [],
+            assign.CRB_SNAP: [],
+        }
+        self.assertEqual(
+            assign.dex_target_roles({"type": "OIDC"}, snaps),
+            ["user-authz:super-admin"])
+
+    def test_closed_saml_targets_only_listed_groups(self):
+        snaps = {
+            assign.CAR_SNAP: [{"filterResult": {
+                "name": "g",
+                "accessLevel": "SuperAdmin",
+                "additionalRoles": [],
+                "userSubjects": [],
+                "groupSubjects": ["superadmins"],
+                "saSubjects": [],
+            }}],
+            assign.AR_SNAP: [],
+            assign.CRB_SNAP: [],
+        }
+        spec = {"type": "SAML", "saml": {"filterGroups": True, "allowedGroups": ["devs"]}}
+        self.assertEqual(assign.dex_target_roles(spec, snaps), [])
+
 
 if __name__ == "__main__":
     unittest.main()

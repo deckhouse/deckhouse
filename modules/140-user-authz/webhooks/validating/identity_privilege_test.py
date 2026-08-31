@@ -106,6 +106,8 @@ def snapshots(privileged_email=PRIVILEGED_EMAIL, privileged_group=PRIVILEGED_GRO
         assign.AR_SNAP: [],
         assign.CRB_SNAP: [],
         assign.CROLE_SNAP: default_croles(),
+        assign.USER_SNAP: [],
+        assign.GROUP_SNAP: [],
     }
 
 
@@ -271,10 +273,24 @@ class TestIdentityAssignHook(unittest.TestCase):
             }}]}))
         self.assertFalse(out.validations.data[0]["allowed"])
 
-    def test_group_car_does_not_protect_user_without_spec_groups(self):
+    def test_group_car_does_not_protect_user_without_membership(self):
         out = self.run_hook(isolated_helpdesk_ctx(
             "User", "DELETE", None, old_spec={"email": "admin@deckhouse.io"}))
         tests.assert_validation_allowed(self, out, None)
+
+    def test_group_membership_protects_user_without_spec_groups(self):
+        extra = {
+            assign.USER_SNAP: [{"filterResult": {
+                "name": "admin", "email": "admin@deckhouse.io", "groups": [],
+            }}],
+            assign.GROUP_SNAP: [{"filterResult": {
+                "name": PRIVILEGED_GROUP, "members": ["admin"],
+            }}],
+        }
+        out = self.run_hook(isolated_helpdesk_ctx(
+            "User", "DELETE", None, old_spec={"email": "admin@deckhouse.io"},
+            extra_snaps=extra))
+        self.assertFalse(out.validations.data[0]["allowed"])
 
     def test_user_spec_groups_superadmin_is_denied(self):
         out = self.run_hook(isolated_helpdesk_ctx(
@@ -472,6 +488,133 @@ class TestIdentityAssignHook(unittest.TestCase):
             api_group="rbac.authorization.k8s.io"))
         tests.assert_validation_allowed(self, out, None)
 
+    def test_helpdesk_cannot_reset_superadmin_via_useroperation(self):
+        extra = {
+            assign.USER_SNAP: [{"filterResult": {
+                "name": "root", "email": PRIVILEGED_EMAIL, "groups": [],
+            }}],
+        }
+        out = self.run_hook(isolated_helpdesk_ctx(
+            "UserOperation", "CREATE",
+            {"user": "root", "type": "ResetPassword", "initiatorType": "admin"},
+            extra_snaps=extra))
+        self.assertFalse(out.validations.data[0]["allowed"])
+        self.assertIn("user-authz:super-admin", out.validations.data[0]["message"])
+
+    def test_helpdesk_initiator_self_does_not_bypass_useroperation(self):
+        extra = {
+            assign.USER_SNAP: [{"filterResult": {
+                "name": "root", "email": PRIVILEGED_EMAIL, "groups": [],
+            }}],
+        }
+        out = self.run_hook(isolated_helpdesk_ctx(
+            "UserOperation", "CREATE",
+            {"user": "root", "type": "ResetPassword", "initiatorType": "self"},
+            extra_snaps=extra))
+        self.assertFalse(out.validations.data[0]["allowed"])
+
+    def test_helpdesk_can_reset_ordinary_user(self):
+        extra = {
+            assign.USER_SNAP: [{"filterResult": {
+                "name": "dev", "email": "dev@corp", "groups": [],
+            }}],
+        }
+        out = self.run_hook(isolated_helpdesk_ctx(
+            "UserOperation", "CREATE",
+            {"user": "dev", "type": "ResetPassword"},
+            extra_snaps=extra))
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_useroperation_target_email_superadmin_denied(self):
+        out = self.run_hook(isolated_helpdesk_ctx(
+            "UserOperation", "CREATE",
+            {"type": "Lock", "target": {"connectorID": "ldap", "email": PRIVILEGED_EMAIL}}))
+        self.assertFalse(out.validations.data[0]["allowed"])
+
+    def test_useroperation_membership_superadmin_denied(self):
+        extra = {
+            assign.USER_SNAP: [{"filterResult": {
+                "name": "admin", "email": "admin@deckhouse.io", "groups": [],
+            }}],
+            assign.GROUP_SNAP: [{"filterResult": {
+                "name": PRIVILEGED_GROUP, "members": ["admin"],
+            }}],
+        }
+        out = self.run_hook(isolated_helpdesk_ctx(
+            "UserOperation", "CREATE",
+            {"user": "admin", "type": "ResetPassword"},
+            extra_snaps=extra))
+        self.assertFalse(out.validations.data[0]["allowed"])
+
+    def test_user_api_sa_can_reset_superadmin(self):
+        extra = {
+            assign.USER_SNAP: [{"filterResult": {
+                "name": "root", "email": PRIVILEGED_EMAIL, "groups": [],
+            }}],
+        }
+        out = self.run_hook(ctx(
+            "UserOperation", "CREATE",
+            {"user": "root", "type": "ResetPassword", "initiatorType": "self"},
+            username=assign.USER_API_SA, extra_snaps=extra))
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_superadmin_can_reset_superadmin_via_useroperation(self):
+        extra = {
+            assign.USER_SNAP: [{"filterResult": {
+                "name": "root", "email": PRIVILEGED_EMAIL, "groups": [],
+            }}],
+        }
+        out = self.run_hook(ctx(
+            "UserOperation", "CREATE",
+            {"user": "root", "type": "ResetPassword"},
+            username=SUPERADMIN, extra_snaps=extra))
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_clusteradmin_cannot_create_open_oidc_dexprovider(self):
+        out = self.run_hook(ctx(
+            "DexProvider", "CREATE",
+            {"type": "OIDC", "displayName": "corp", "oidc": {"issuer": "https://idp"}},
+            username=CLUSTER_ADMIN))
+        self.assertFalse(out.validations.data[0]["allowed"])
+        self.assertIn("user-authz:super-admin", out.validations.data[0]["message"])
+
+    def test_helpdesk_cannot_create_open_oidc_dexprovider(self):
+        out = self.run_hook(isolated_helpdesk_ctx(
+            "DexProvider", "CREATE",
+            {"type": "OIDC", "displayName": "corp", "oidc": {"allowedGroups": ["devs"]}}))
+        self.assertFalse(out.validations.data[0]["allowed"])
+
+    def test_saml_filtered_ordinary_group_allowed(self):
+        out = self.run_hook(ctx(
+            "DexProvider", "CREATE",
+            {"type": "SAML", "displayName": "corp",
+             "saml": {"filterGroups": True, "allowedGroups": ["devs"]}},
+            username=CLUSTER_ADMIN))
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_saml_filtered_superadmin_group_denied(self):
+        out = self.run_hook(ctx(
+            "DexProvider", "CREATE",
+            {"type": "SAML", "displayName": "corp",
+             "saml": {"filterGroups": True, "allowedGroups": [PRIVILEGED_GROUP]}},
+            username=CLUSTER_ADMIN))
+        self.assertFalse(out.validations.data[0]["allowed"])
+
+    def test_superadmin_can_create_open_oidc_dexprovider(self):
+        out = self.run_hook(ctx(
+            "DexProvider", "CREATE",
+            {"type": "OIDC", "displayName": "corp"},
+            username=SUPERADMIN))
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_github_closed_teams_ordinary_allowed(self):
+        out = self.run_hook(ctx(
+            "DexProvider", "CREATE",
+            {"type": "Github", "displayName": "gh",
+             "github": {"orgs": [{"name": "acme", "teams": ["devs"]}]}},
+            username=CLUSTER_ADMIN))
+        tests.assert_validation_allowed(self, out, None)
+
     def test_clusterrole_unrelated_label_change_allowed(self):
         out = self.run_hook(ctx(
             "ClusterRole", "UPDATE",
@@ -490,19 +633,21 @@ class TestIdentityAssignConfigContract(unittest.TestCase):
         cls.config = yaml.safe_load(identity_privilege.CONFIG)
         cls.validating = cls.config["kubernetesValidating"][0]
 
-    def test_wave1_resources(self):
+    def test_wave2_resources(self):
         resources = []
         for rule in self.validating["rules"]:
             resources.extend(rule["resources"])
-        self.assertEqual(sorted(set(resources)),
-                         ["clusterauthorizationrules", "clusterroles", "groups", "users"])
+        self.assertEqual(sorted(set(resources)), [
+            "clusterauthorizationrules", "clusterroles", "dexproviders",
+            "groups", "useroperations", "users",
+        ])
 
-    def test_does_not_admit_dexproviders_or_useroperations(self):
-        resources = []
+    def test_useroperations_are_create_only(self):
+        ops = []
         for rule in self.validating["rules"]:
-            resources.extend(rule["resources"])
-        for extra in ("dexproviders", "useroperations"):
-            self.assertNotIn(extra, resources)
+            if "useroperations" in rule["resources"]:
+                ops.extend(rule["operations"])
+        self.assertEqual(sorted(set(ops)), ["CREATE"])
 
     def test_car_operations_are_create_and_update_only(self):
         car_ops = []
@@ -515,7 +660,7 @@ class TestIdentityAssignConfigContract(unittest.TestCase):
         kinds = [b["kind"] for b in self.config["kubernetes"]]
         self.assertEqual(kinds, [
             "ClusterAuthorizationRule", "AuthorizationRule",
-            "ClusterRoleBinding", "ClusterRole",
+            "ClusterRoleBinding", "ClusterRole", "User", "Group",
         ])
 
 
@@ -572,6 +717,25 @@ class TestAssignSnapshotJQFilters(unittest.TestCase):
         })
         self.assertEqual(out["labels"]["can-assign-basic-max"], "ClusterAdmin")
         self.assertEqual(out["rules"], CAR_EDIT)
+
+    def test_user_filter(self):
+        out = self.run_filter(assign.USER_SNAP, {
+            "metadata": {"name": "admin"},
+            "spec": {"email": "admin@deckhouse.io", "groups": ["legacy"]},
+        })
+        self.assertEqual(out["email"], "admin@deckhouse.io")
+        self.assertEqual(out["groups"], ["legacy"])
+
+    def test_group_filter(self):
+        out = self.run_filter(assign.GROUP_SNAP, {
+            "metadata": {"name": "g1"},
+            "spec": {"name": "superadmins", "members": [
+                {"kind": "User", "name": "admin"},
+                {"kind": "Group", "name": "other"},
+            ]},
+        })
+        self.assertEqual(out["name"], "superadmins")
+        self.assertEqual(out["members"], ["admin"])
 
 
 if __name__ == "__main__":
