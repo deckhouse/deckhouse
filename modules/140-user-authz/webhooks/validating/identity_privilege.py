@@ -41,7 +41,7 @@ CONFIG = f"""
 configVersion: v1
 kubernetesValidating:
 - name: d8-user-authz-identity-privilege.deckhouse.io
-  includeSnapshotsFrom: ["{rank.CAR_SNAP}", "{rank.AR_SNAP}", "{rank.CRB_SNAP}"]
+  includeSnapshotsFrom: ["{rank.CAR_SNAP}", "{rank.AR_SNAP}"]
 {MATCH_CONDITIONS}
   rules:
   - apiGroups:   ["deckhouse.io"]
