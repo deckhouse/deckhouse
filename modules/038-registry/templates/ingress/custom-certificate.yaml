@@ -10,11 +10,13 @@
 {{- if (($orchestrator).state).ingress_enabled -}}
 {{- if .Values.global.enabledModules | has "cert-manager" -}}
 
+{{- if eq (include "helm_lib_module_ingress_enabled" .) "true" }}
 {{- include "helm_lib_module_https_copy_custom_certificate" (list . "d8-system" "registry-ingress-tls") -}}
+{{- end }}
 
 {{- $moduleGateway := dict }}
 {{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
-{{- if $moduleGateway }}
+{{- if and (eq (include "helm_lib_module_gateway_enabled" .) "true") $moduleGateway }}
 {{- include "helm_lib_module_https_copy_custom_certificate" (list . "d8-system" "registry-httproute-tls") -}}
 {{- end }}
 

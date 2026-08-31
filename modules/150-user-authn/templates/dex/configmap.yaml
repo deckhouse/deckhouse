@@ -12,7 +12,7 @@ data:
 {{- end }}
 {{- $moduleGateway := dict }}
 {{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
-{{- if and $moduleGateway (include "helm_lib_kind_exists" (list . "BackendTLSPolicy")) .Values.userAuthn.internal.dexTLS }}
+{{- if and (eq (include "helm_lib_module_gateway_enabled" .) "true") $moduleGateway (include "helm_lib_kind_exists" (list . "BackendTLSPolicy")) .Values.userAuthn.internal.dexTLS }}
 ---
 apiVersion: v1
 kind: ConfigMap

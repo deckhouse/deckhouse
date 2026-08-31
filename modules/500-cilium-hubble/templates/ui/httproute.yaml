@@ -1,6 +1,6 @@
 {{- $moduleGateway := dict }}
 {{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
-{{- if and $moduleGateway .Values.global.modules.publicDomainTemplate .Values.global.clusterIsBootstrapped }}
+{{- if and (eq (include "helm_lib_module_gateway_enabled" .) "true") $moduleGateway .Values.global.modules.publicDomainTemplate .Values.global.clusterIsBootstrapped }}
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: ListenerSet

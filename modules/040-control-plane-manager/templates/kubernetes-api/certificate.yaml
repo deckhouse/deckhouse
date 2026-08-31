@@ -1,7 +1,9 @@
 {{- $moduleGateway := dict }}
 {{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
+{{- $ingressEnabled := eq (include "helm_lib_module_ingress_enabled" .) "true" }}
+{{- $gatewayEnabled := and (eq (include "helm_lib_module_gateway_enabled" .) "true") $moduleGateway }}
 {{- if .Values.global.enabledModules | has "cert-manager" }}
-{{- if include "publish_api_deploy_certificate" . }}
+{{- if and (include "publish_api_deploy_certificate" .) (or $ingressEnabled (and $gatewayEnabled (eq .Values.controlPlaneManager.apiserver.publishAPI.ingress.https.mode "SelfSigned"))) }}
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
@@ -29,7 +31,7 @@ spec:
   {{- end }}
 {{- end }}
 {{- end }}
-{{- if and $moduleGateway .Values.controlPlaneManager.apiserver.publishAPI.ingress.enabled (eq .Values.controlPlaneManager.apiserver.publishAPI.ingress.https.mode "Global") (eq (include "helm_lib_module_https_mode" .) "CertManager") }}
+{{- if and $gatewayEnabled .Values.controlPlaneManager.apiserver.publishAPI.ingress.enabled (eq .Values.controlPlaneManager.apiserver.publishAPI.ingress.https.mode "Global") (eq (include "helm_lib_module_https_mode" .) "CertManager") }}
 {{- $issuerName := include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
 {{- if or (eq $issuerName "letsencrypt") (eq $issuerName "letsencrypt-staging") }}
   {{- $issuerName = printf "%s-gateway-%s" $issuerName $moduleGateway.name }}

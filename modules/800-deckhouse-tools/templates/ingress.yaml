@@ -1,5 +1,6 @@
 {{- if and .Values.global.modules.publicDomainTemplate .Values.global.clusterIsBootstrapped }}
 {{- $satisfyAny := dig "auth" "satisfyAny" false .Values.deckhouseTools }}
+{{- if eq (include "helm_lib_module_ingress_enabled" .) "true" }}
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -47,7 +48,8 @@ spec:
         - {{ include "helm_lib_module_public_domain" (list . "tools") }}
       secretName: {{ include "helm_lib_module_https_secret_name" (list . "tools-ingress-tls") }}
   {{- end }}
-{{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
+{{- end }}
+{{- if and (eq (include "helm_lib_module_ingress_enabled" .) "true") (eq (include "helm_lib_module_https_mode" .) "CertManager") }}
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
@@ -67,7 +69,7 @@ spec:
 {{- end }}
 {{- $moduleGateway := dict }}
 {{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
-{{- if and $moduleGateway (eq (include "helm_lib_module_https_mode" .) "CertManager") }}
+{{- if and (eq (include "helm_lib_module_gateway_enabled" .) "true") $moduleGateway (eq (include "helm_lib_module_https_mode" .) "CertManager") }}
 {{- $issuerName := include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
 {{- if or (eq $issuerName "letsencrypt") (eq $issuerName "letsencrypt-staging") }}
   {{- $issuerName = printf "%s-gateway-%s" $issuerName $moduleGateway.name }}

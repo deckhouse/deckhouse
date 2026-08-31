@@ -72,4 +72,53 @@ var _ = Describe("Module :: ciliumHubble :: helm template ::", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 		})
 	})
+
+	Context("Ingress and Gateway API enable overrides", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSetFromYaml("ciliumHubble", `{internal: {deployDexAuthenticator: true, ui: {ca: CACA, key: ZXC, cert: CERT}, relay: {serverCerts: {ca: CACA, key: ZXC, cert: CERT}, clientCerts: {ca: CACA, key: ZXC, cert: CERT}}}, auth: {}}`)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSet("global.clusterIsBootstrapped", true)
+			f.ValuesSet("global.modules.gatewayAPI.gateway.name", "shared-gateway")
+			f.ValuesSet("global.modules.gatewayAPI.gateway.namespace", "d8-alb")
+		})
+
+		It("disables Ingress and its certificate globally", func() {
+			f.ValuesSet("global.modules.ingress.enabled", false)
+			f.HelmRender()
+
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(f.KubernetesResource("Ingress", "d8-cni-cilium", "hubble-ui").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Certificate", "d8-cni-cilium", "hubble").Exists()).To(BeFalse())
+		})
+
+		It("allows the module to enable Ingress when globally disabled", func() {
+			f.ValuesSet("global.modules.ingress.enabled", false)
+			f.ValuesSet("ciliumHubble.ingress.enabled", true)
+			f.HelmRender()
+
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(f.KubernetesResource("Ingress", "d8-cni-cilium", "hubble-ui").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Certificate", "d8-cni-cilium", "hubble").Exists()).To(BeTrue())
+		})
+
+		It("disables HTTPRoute and its certificate globally", func() {
+			f.ValuesSet("global.modules.gatewayAPI.enabled", false)
+			f.HelmRender()
+
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(f.KubernetesResource("HTTPRoute", "d8-cni-cilium", "hubble-ui").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Certificate", "d8-cni-cilium", "hubble-httproute").Exists()).To(BeFalse())
+		})
+
+		It("allows the module to enable HTTPRoute when globally disabled", func() {
+			f.ValuesSet("global.modules.gatewayAPI.enabled", false)
+			f.ValuesSet("ciliumHubble.gatewayAPI.enabled", true)
+			f.HelmRender()
+
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(f.KubernetesResource("HTTPRoute", "d8-cni-cilium", "hubble-ui").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Certificate", "d8-cni-cilium", "hubble-httproute").Exists()).To(BeTrue())
+		})
+	})
 })
