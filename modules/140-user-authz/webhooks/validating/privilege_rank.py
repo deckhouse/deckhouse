@@ -17,13 +17,13 @@
 
 # Shared rank for User admission and ClusterAuthorizationRule escalate admission.
 #
-# A Kubernetes username is the Dex email claim. Grants live on that string (CAR/AR/CRB), not on
+# A Kubernetes username is the Dex email claim. Grants live on that string (CAR/AR), not on
 # the User object. Rank is "do you already hold P": rank(actor) >= rank(target).
 #
 # Actor: only mapped accessLevel / well-known ClusterRoles count. An additionalRole such as
 # user-authn:edit must not inflate the actor to SuperAdmin.
 #
-# Target: an unmapped additionalRole or CRB roleRef counts as SuperAdmin so a custom cluster-admin
+# Target: an unmapped additionalRole counts as SuperAdmin so a custom cluster-admin
 # equivalent cannot be minted by a weaker requester.
 
 from typing import Any, Iterable, Optional
@@ -63,7 +63,6 @@ PRIVILEGED_USERS = {
 
 CAR_SNAP = "d8-user-authz-privilege-cluster-authorization-rules"
 AR_SNAP = "d8-user-authz-privilege-authorization-rules"
-CRB_SNAP = "d8-user-authz-privilege-cluster-role-bindings"
 
 SA_PREFIX = "system:serviceaccount:"
 
@@ -89,16 +88,6 @@ AR_JQ_FILTER = """
 }
 """
 
-CRB_JQ_FILTER = """
-{
-  "name": .metadata.name,
-  "role": .roleRef.name,
-  "groupSubjects": [.subjects[]? | select(.kind == "Group") | .name],
-  "userSubjects": [.subjects[]? | select(.kind == "User") | .name],
-  "saSubjects": [.subjects[]? | select(.kind == "ServiceAccount") | "\\(.namespace):\\(.name)"]
-}
-"""
-
 def kubernetes_snapshots() -> str:
     """Informer stanzas for the privilege validating hook."""
     return f"""
@@ -118,14 +107,6 @@ def kubernetes_snapshots() -> str:
   keepFullObjectsInMemory: false
   jqFilter: |-
 { _indent(AR_JQ_FILTER.strip(), 4) }
-- name: {CRB_SNAP}
-  apiVersion: rbac.authorization.k8s.io/v1
-  kind: ClusterRoleBinding
-  executeHookOnEvent: []
-  executeHookOnSynchronization: false
-  keepFullObjectsInMemory: false
-  jqFilter: |-
-{ _indent(CRB_JQ_FILTER.strip(), 4) }
 """
 
 
@@ -202,9 +183,7 @@ def _subjects(fr: dict, key: str) -> list:
     return [s for s in _list(fr.get(key)) if isinstance(s, str)]
 
 
-def _fr_rank(fr: dict, *, namespaced: bool, crb: bool, for_target: bool) -> int:
-    if crb:
-        return role_rank(fr.get("role"), for_target=for_target)
+def _fr_rank(fr: dict, *, namespaced: bool, for_target: bool) -> int:
     cap = ADMIN_RANK if namespaced else None
     return max(
         access_level_rank(fr.get("accessLevel"), cap=cap),
@@ -236,10 +215,9 @@ def identity_rank(snapshots: Any, kind: str, name: str, *, for_target: bool) -> 
         return 0
 
     best = 0
-    for snap_name, namespaced, crb in (
-        (CAR_SNAP, False, False),
-        (AR_SNAP, True, False),
-        (CRB_SNAP, False, True),
+    for snap_name, namespaced in (
+        (CAR_SNAP, False),
+        (AR_SNAP, True),
     ):
         for fr in iter_filter_results(snapshots, snap_name):
             subjects = _subjects(fr, key)
@@ -249,7 +227,7 @@ def identity_rank(snapshots: Any, kind: str, name: str, *, for_target: bool) -> 
             else:
                 match = needle in subjects
             if match:
-                best = max(best, _fr_rank(fr, namespaced=namespaced, crb=crb, for_target=for_target))
+                best = max(best, _fr_rank(fr, namespaced=namespaced, for_target=for_target))
     return best
 
 

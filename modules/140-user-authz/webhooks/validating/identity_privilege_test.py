@@ -55,7 +55,6 @@ def snapshots(privileged_email=PRIVILEGED_EMAIL, privileged_group=PRIVILEGED_GRO
             }},
         ],
         rank.AR_SNAP: [],
-        rank.CRB_SNAP: [],
     }
 
 

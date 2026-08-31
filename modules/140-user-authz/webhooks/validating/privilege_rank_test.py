@@ -33,15 +33,6 @@ def car(user=None, group=None, level="SuperAdmin", roles=None, sa=None):
                 saSubjects=[sa] if sa else [])
 
 
-def crb(role, user=None, group=None, sa=None):
-    return snap(rank.CRB_SNAP,
-                name="bind",
-                role=role,
-                userSubjects=[user] if user else [],
-                groupSubjects=[group] if group else [],
-                saSubjects=[sa] if sa else [])
-
-
 def merge(*snaps):
     out = {}
     for s in snaps:
@@ -77,8 +68,7 @@ class TestPrivilegeRank(unittest.TestCase):
             rank.SUPER_RANK)
 
     def test_actor_from_car_access_level(self):
-        snapshots = merge(car(user="alice@corp", level="ClusterAdmin"), snap(rank.AR_SNAP),
-                          snap(rank.CRB_SNAP))
+        snapshots = merge(car(user="alice@corp", level="ClusterAdmin"), snap(rank.AR_SNAP))
         self.assertEqual(
             rank.actor_rank({"username": "alice@corp", "groups": []}, snapshots),
             rank.CLUSTER_ADMIN_RANK)
@@ -87,40 +77,25 @@ class TestPrivilegeRank(unittest.TestCase):
         snapshots = merge(
             car(user="eve@corp", level="User",
                 roles=["d8:manage:permission:module:user-authn:edit"]),
-            snap(rank.AR_SNAP), snap(rank.CRB_SNAP))
+            snap(rank.AR_SNAP))
         self.assertEqual(
             rank.actor_rank({"username": "eve@corp", "groups": []}, snapshots),
             rank.ACCESS_LEVEL_RANK["User"])
 
     def test_target_email_lowercased_against_lowercase_subject(self):
         snapshots = merge(car(user="admin@corp", level="SuperAdmin"),
-                          snap(rank.AR_SNAP), snap(rank.CRB_SNAP))
+                          snap(rank.AR_SNAP))
         self.assertEqual(rank.target_user_rank(snapshots, "Admin@Corp"), rank.SUPER_RANK)
 
     def test_target_ignores_mixed_case_subject(self):
         snapshots = merge(car(user="Admin@Corp", level="SuperAdmin"),
-                          snap(rank.AR_SNAP), snap(rank.CRB_SNAP))
+                          snap(rank.AR_SNAP))
         self.assertEqual(rank.target_user_rank(snapshots, "admin@corp"), 0)
 
     def test_target_unknown_additional_role_is_super(self):
         snapshots = merge(car(user="joe@corp", level="User", roles=["cluster-write-all"]),
-                          snap(rank.AR_SNAP), snap(rank.CRB_SNAP))
+                          snap(rank.AR_SNAP))
         self.assertEqual(rank.target_user_rank(snapshots, "joe@corp"), rank.SUPER_RANK)
-
-    def test_actor_from_security_manager_crb(self):
-        snapshots = merge(snap(rank.CAR_SNAP), snap(rank.AR_SNAP),
-                          crb("d8:manage:security:manager", group="sec-admins"))
-        self.assertEqual(
-            rank.actor_rank({"username": "eve@corp", "groups": ["sec-admins"]}, snapshots),
-            rank.CLUSTER_ADMIN_RANK)
-
-    def test_actor_from_serviceaccount_crb(self):
-        snapshots = merge(snap(rank.CAR_SNAP), snap(rank.AR_SNAP),
-                          crb("cluster-admin", sa="d8-cd:argocd"))
-        self.assertEqual(
-            rank.actor_rank(
-                {"username": "system:serviceaccount:d8-cd:argocd", "groups": []}, snapshots),
-            rank.SUPER_RANK)
 
     def test_car_granted_rank_additional_roles(self):
         self.assertEqual(
