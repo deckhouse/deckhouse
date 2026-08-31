@@ -346,6 +346,126 @@ data:
 			}
 		})
 	})
+
+	// ---- State B: hybrid cluster — Static master NG, discovery-data network facts projected ----
+	clusterConfigHybrid := fmt.Sprintf(`
+apiVersion: deckhouse.io/v1
+kind: YandexClusterConfiguration
+layout: Standard
+masterNodeGroup:
+  instanceClass:
+    cores: 4
+    imageID: test
+    memory: 8192
+  replicas: 1
+provider:
+  cloudID: test-cloud
+  folderID: test-folder
+  serviceAccountJSON: |-
+    {
+      "id": "sa-test"
+    }
+nodeNetworkCIDR: 10.0.0.0/24
+sshPublicKey: ssh-rsa AAAA
+existingNetworkID: enp-existing
+`)
+
+	hybridDiscoveryData := `
+{
+  "apiVersion": "deckhouse.io/v1",
+  "kind": "YandexCloudDiscoveryData",
+  "defaultLbTargetGroupNetworkId": "test",
+  "internalNetworkIDs": ["enp-existing", "enp-additional-internal"],
+  "region": "ru-central1",
+  "routeTableID": "enp-route-table",
+  "shouldAssignPublicIPAddress": false,
+  "zoneToSubnetIdMap": {"ru-central1-a": "test"},
+  "zones": ["ru-central1-a"]
+}
+`
+
+	pccSecretHybrid := fmt.Sprintf(`
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-provider-cluster-configuration
+  namespace: kube-system
+data:
+  "cloud-provider-cluster-configuration.yaml": %s
+  "cloud-provider-discovery-data.json": %s
+`, base64.StdEncoding.EncodeToString([]byte(clusterConfigHybrid)), base64.StdEncoding.EncodeToString([]byte(hybridDiscoveryData)))
+
+	staticMasterNodeGroup := `
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: master
+spec:
+  nodeType: Static
+`
+
+	Context("State B: hybrid cluster — Static master skips the CloudPermanent master and projects discovery data", func() {
+		f := HookExecutionConfigInit(migrationValues, `{}`)
+		f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
+		f.RegisterCRD("deckhouse.io", "v1", "YandexInstanceClass", false)
+		f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
+
+		BeforeEach(func() {
+			f.KubeStateSet(pccSecretHybrid + "\n---\n" + mcV1 + "\n---\n" + ns + "\n---\n" + staticMasterNodeGroup)
+			f.BindingContexts.Set(f.GenerateAfterHelmContext())
+			f.RunHook()
+		})
+
+		It("does not create a master NodeGroup and carries route table and internal networks into v2", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			migrationSecret := f.KubernetesResource("Secret", "d8-cloud-provider-yandex", "d8-migration-resources")
+			Expect(migrationSecret.Exists()).To(BeTrue())
+
+			resourcesYAML := migrationSecret.Field("data.resources\\.yaml").String()
+			rawBytes, err := base64.StdEncoding.DecodeString(resourcesYAML)
+			Expect(err).NotTo(HaveOccurred())
+
+			var moduleConfigDoc map[string]any
+			var nodeGroupNames []string
+
+			for _, doc := range splitYAMLDocuments(string(rawBytes)) {
+				var obj map[string]any
+				if err := yaml.Unmarshal([]byte(doc), &obj); err != nil {
+					continue
+				}
+				switch obj["kind"] {
+				case "NodeGroup":
+					metadata, _ := obj["metadata"].(map[string]any)
+					name, _ := metadata["name"].(string)
+					nodeGroupNames = append(nodeGroupNames, name)
+				case "ModuleConfig":
+					moduleConfigDoc = obj
+				}
+			}
+
+			Expect(nodeGroupNames).NotTo(ContainElement("master"), "hybrid cluster must not get a CloudPermanent master NodeGroup")
+
+			Expect(moduleConfigDoc).NotTo(BeNil(), "ModuleConfig document must be present")
+
+			mcSpec, ok := moduleConfigDoc["spec"].(map[string]any)
+			Expect(ok).To(BeTrue())
+			mcSettings, ok := mcSpec["settings"].(map[string]any)
+			Expect(ok).To(BeTrue())
+
+			nodes, ok := mcSettings["nodes"].(map[string]any)
+			Expect(ok).To(BeTrue())
+			nodesParams, ok := nodes["parameters"].(map[string]any)
+			Expect(ok).To(BeTrue())
+			Expect(nodesParams["existingRouteTableID"]).To(Equal("enp-route-table"))
+
+			ccm, ok := mcSettings["ccm"].(map[string]any)
+			Expect(ok).To(BeTrue())
+			ccmParams, ok := ccm["parameters"].(map[string]any)
+			Expect(ok).To(BeTrue())
+			Expect(ccmParams["additionalInternalNetworkIDs"]).To(Equal([]any{"enp-additional-internal"}))
+		})
+	})
 })
 
 // splitYAMLDocuments splits a multi-document YAML string into individual documents.

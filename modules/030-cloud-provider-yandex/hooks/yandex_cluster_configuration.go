@@ -26,6 +26,8 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	deckhousev1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	clouddatav1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
@@ -35,6 +37,8 @@ import (
 	ycsettingsv1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks/internal/api/settings/v1"
 	ycsettingsv2 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks/internal/api/settings/v2"
 )
+
+const discoveryDataValuesPath = "cloudProviderYandex.internal.providerDiscoveryData"
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 20},
@@ -83,7 +87,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:       "node_groups",
 			ApiVersion: "deckhouse.io/v1",
 			Kind:       "NodeGroup",
-			FilterFunc: internal.FilterNamedResource,
+			FilterFunc: internal.FilterNodeGroup,
 		},
 		{
 			Name:       "yandex_instance_classes",
@@ -118,8 +122,17 @@ func handleYandexClusterConfiguration(_ context.Context, input *go_hook.HookInpu
 	// own nodes.parameters.existing* whenever this payload does not carry them.
 	discoveryData, candiPresent := resolveCandiDiscoveryData(input)
 
-	pccSnaps := input.Snapshots.Get("provider_cluster_configuration")
-	if len(pccSnaps) == 0 {
+	// Yandex has no discover.go hook: this hook is the only writer of providerDiscoveryData, so the
+	// merge has no second source to preserve. It stays because it also stamps the type markers and
+	// the region default onto every payload written below.
+	discoveryData = internal.MergeDiscoveryData(discoveryData, clouddatav1.YandexCloudDiscoveryData{})
+
+	pccResult, pccFound, err := decodePCCSnapshot(input)
+	if err != nil {
+		return err
+	}
+
+	if !pccFound {
 		// The legacy PCC is gone. Once credentials live in the cluster, the new model is the only
 		// source of truth and the migration artifacts have to go: while d8-module-is-migrating
 		// exists, ShouldSkipNewModelValidation keeps new-model validation switched off.
@@ -128,54 +141,40 @@ func handleYandexClusterConfiguration(_ context.Context, input *go_hook.HookInpu
 			internal.DeleteMigrationArtifacts(input)
 		}
 
-		return mergeAndSetDiscoveryData(input, discoveryData)
+		input.Values.Set(discoveryDataValuesPath, discoveryData)
+		return nil
 	}
 
-	var pccResult internal.PCCSecretFilterResult
-	if err := pccSnaps[0].UnmarshalTo(&pccResult); err != nil {
-		return fmt.Errorf("unmarshal PCC snapshot: %w", err)
+	if err := applyPCCDiscoveryFallback(&discoveryData, pccResult, candiPresent); err != nil {
+		return err
 	}
 
 	var pcc ycpccv1.YandexProviderClusterConfiguration
-	if len(pccResult.ProviderClusterConfig) > 0 {
-		if err := convertStructsUsingJSON(pccResult.ProviderClusterConfig, &pcc); err != nil {
-			return fmt.Errorf("parse PCC: %w", err)
-		}
-	}
-
-	// fall back to PCC discovery when no candi secret
-	if !candiPresent && len(pccResult.ProviderDiscoveryDataJSON) > 0 {
-		if err := json.Unmarshal(pccResult.ProviderDiscoveryDataJSON, &discoveryData); err != nil {
-			return fmt.Errorf("unmarshal discovery data from PCC: %w", err)
-		}
+	if err := convertStructsUsingJSON(pccResult.ProviderClusterConfig, &pcc); err != nil {
+		return fmt.Errorf("unmarshal PCC: %w", err)
 	}
 
 	if internal.IsMigrationResourcesApplied(input, pcc) {
 		// migration done: use MC v2 values
 		internal.DeleteMigrationArtifacts(input)
-		return mergeAndSetDiscoveryData(input, discoveryData)
+		input.Values.Set(discoveryDataValuesPath, discoveryData)
+		return nil
 	}
 
-	// State B: migration in progress — populate values from PCC so templates render
-	var mc ycsettingsv1.ModuleConfigSettings
-	mcSnaps := input.Snapshots.Get("module_config")
-
-	if len(mcSnaps) != 0 {
-		var mcResult internal.ModuleConfigFilterResult
-		if err := mcSnaps[0].UnmarshalTo(&mcResult); err != nil {
-			return fmt.Errorf("unmarshal ModuleConfig snapshot: %w", err)
-		}
-
-		// The v1 settings payload is what matters here: an operator may keep version 1 settings
-		// while the module is disabled, and they still have to be projected.
-		if len(mcResult.SettingsV1) > 0 {
-			if err := convertStructsUsingJSON(mcResult.SettingsV1, &mc); err != nil {
-				return fmt.Errorf("parse ModuleConfig v1: %w", err)
-			}
-		}
+	// State B: migration in progress - populate values from PCC so templates render
+	mcSettings, err := decodeModuleConfigSettingsV1(input)
+	if err != nil {
+		return err
 	}
 
-	if err := setPCCAndMCtoRootValues(input, pcc, mc); err != nil {
+	mcSettingsV2 := internal.BuildModuleConfigSettingsV2(
+		pcc,
+		mcSettings,
+		isHybridCluster(input, "node_groups"),
+		discoveryData,
+	)
+
+	if err := setPCCAndMCtoRootValues(input, pcc, mcSettingsV2); err != nil {
 		return fmt.Errorf("map PCC and MC v1 to root values: %w", err)
 	}
 
@@ -183,7 +182,50 @@ func handleYandexClusterConfiguration(_ context.Context, input *go_hook.HookInpu
 		return fmt.Errorf("validate provider cluster config: %w", err)
 	}
 
-	return mergeAndSetDiscoveryData(input, discoveryData)
+	input.Values.Set(discoveryDataValuesPath, discoveryData)
+	return nil
+}
+
+func decodePCCSnapshot(input *go_hook.HookInput) (internal.PCCSecretFilterResult, bool, error) {
+	snaps := input.Snapshots.Get("provider_cluster_configuration")
+	if len(snaps) == 0 {
+		return internal.PCCSecretFilterResult{}, false, nil
+	}
+
+	var result internal.PCCSecretFilterResult
+	if err := snaps[0].UnmarshalTo(&result); err != nil {
+		return internal.PCCSecretFilterResult{}, false, fmt.Errorf("unmarshal PCC snapshot: %w", err)
+	}
+
+	return result, true, nil
+}
+
+// decodeModuleConfigSettingsV1 reads the v1 settings of the module's ModuleConfig.
+//
+// The v1 settings payload is what matters here: an operator may keep version 1 settings
+// while the module is disabled, and they still have to be projected.
+func decodeModuleConfigSettingsV1(input *go_hook.HookInput) (ycsettingsv1.ModuleConfigSettings, error) {
+	var settings ycsettingsv1.ModuleConfigSettings
+
+	snaps := input.Snapshots.Get("module_config")
+	if len(snaps) == 0 {
+		return settings, nil
+	}
+
+	var result internal.ModuleConfigFilterResult
+	if err := snaps[0].UnmarshalTo(&result); err != nil {
+		return settings, fmt.Errorf("unmarshal ModuleConfig snapshot: %w", err)
+	}
+
+	if len(result.SettingsV1) == 0 {
+		return settings, nil
+	}
+
+	if err := json.Unmarshal(result.SettingsV1, &settings); err != nil {
+		return settings, fmt.Errorf("parse ModuleConfig v1: %w", err)
+	}
+
+	return settings, nil
 }
 
 // resolveCandiDiscoveryData reads discovery data from the candi Secret written by the
@@ -215,67 +257,62 @@ func resolveCandiDiscoveryData(input *go_hook.HookInput) (clouddatav1.YandexClou
 	return discoveryData, true
 }
 
+// applyPCCDiscoveryFallback overlays the legacy PCC discovery payload when the candi Secret carries
+// nothing. Both record the same infrastructure run, so the candi one wins and the PCC one only
+// stands in for it.
+func applyPCCDiscoveryFallback(
+	discoveryData *clouddatav1.YandexCloudDiscoveryData,
+	pccResult internal.PCCSecretFilterResult,
+	candiPresent bool,
+) error {
+	if candiPresent || len(pccResult.ProviderDiscoveryDataJSON) == 0 {
+		return nil
+	}
+
+	if err := json.Unmarshal(pccResult.ProviderDiscoveryDataJSON, discoveryData); err != nil {
+		return fmt.Errorf("unmarshal discovery data from PCC: %w", err)
+	}
+
+	return nil
+}
+
+// isHybridCluster reports whether the NodeGroups in snapshotName describe a hybrid cluster, i.e.
+// one whose master is Static. A snapshot that fails to decode counts as non-hybrid, which keeps
+// the projection the one a cloud cluster gets.
+func isHybridCluster(input *go_hook.HookInput, snapshotName string) bool {
+	nodeGroups, err := sdkobjectpatch.UnmarshalToStruct[internal.NodeGroupFilterResult](input.Snapshots, snapshotName)
+	if err != nil {
+		return false
+	}
+
+	return internal.IsHybridCluster(nodeGroups)
+}
+
 // setPCCAndMCtoRootValues writes PCC fields into cloudProviderYandex settings paths
 // in State B, following Yandex's leaf-only pattern:
-func setPCCAndMCtoRootValues(input *go_hook.HookInput, pcc ycpccv1.YandexProviderClusterConfiguration, mcSettings ycsettingsv1.ModuleConfigSettings) error {
-	mcSettingsV2 := internal.BuildModuleConfigSettingsV2(pcc, mcSettings)
+func setPCCAndMCtoRootValues(
+	input *go_hook.HookInput,
+	pcc ycpccv1.YandexProviderClusterConfiguration,
+	mcSettings ycsettingsv2.ModuleConfigSettings,
+) error {
+	input.Values.Set("cloudProviderYandex.provider", mcSettings.Provider)
+	setSectionParameters(input, "cloudProviderYandex.nodes", mcSettings.Nodes.Parameters)
+	setSectionParameters(input, "cloudProviderYandex.storage", mcSettings.Storage.Parameters)
+	setSectionParameters(input, "cloudProviderYandex.ccm", mcSettings.CCM.Parameters)
 
-	input.Values.Set("cloudProviderYandex.provider", mcSettingsV2.Provider)
-
-	if err := setNodesParametersValuesIfAbsent(input, mcSettingsV2); err != nil {
-		return err
-	}
-	if err := setStorageParametersValuesIfAbsent(input, mcSettingsV2); err != nil {
-		return err
-	}
-	if err := setCCMParametersValuesIfAbsent(input, mcSettingsV2); err != nil {
-		return err
-	}
-	if err := setCredentialSecretsValuesIfAbsent(input, pcc); err != nil {
-		return err
-	}
-
-	return nil
+	return setCredentialSecretsValuesIfAbsent(input, pcc)
 }
 
-func setNodesParametersValuesIfAbsent(input *go_hook.HookInput, mcSettings ycsettingsv2.ModuleConfigSettings) error {
-	var nodesSection ycsettingsv2.Nodes
-	if v, ok := input.Values.GetOk("cloudProviderYandex.nodes"); ok {
-		if err := json.Unmarshal([]byte(v.Raw), &nodesSection); err != nil {
-			return fmt.Errorf("unmarshal nodes section: %w", err)
-		}
+// setSectionParameters replaces the parameters of a settings section, keeping the `disabled` flag
+// the section already carries - that one belongs to the operator, through config values, and must
+// survive the projection. The nodes, storage and ccm sections hold nothing else.
+func setSectionParameters(input *go_hook.HookInput, path string, parameters any) {
+	section := map[string]any{"parameters": parameters}
+	if input.Values.Get(path + ".disabled").Bool() {
+		section["disabled"] = true
 	}
 
-	nodesSection.Parameters = mcSettings.Nodes.Parameters
-	input.Values.Set("cloudProviderYandex.nodes", nodesSection)
-	return nil
-}
-
-func setStorageParametersValuesIfAbsent(input *go_hook.HookInput, mcSettings ycsettingsv2.ModuleConfigSettings) error {
-	var storageSection ycsettingsv2.Storage
-	if v, ok := input.Values.GetOk("cloudProviderYandex.storage"); ok {
-		if err := json.Unmarshal([]byte(v.Raw), &storageSection); err != nil {
-			return fmt.Errorf("unmarshal storage section: %w", err)
-		}
-	}
-
-	storageSection.Parameters = mcSettings.Storage.Parameters
-	input.Values.Set("cloudProviderYandex.storage", storageSection)
-
-	return nil
-}
-
-func setCCMParametersValuesIfAbsent(input *go_hook.HookInput, mcSettings ycsettingsv2.ModuleConfigSettings) error {
-	var ccmSection ycsettingsv2.CCM
-	if v, ok := input.Values.GetOk("cloudProviderYandex.ccm"); ok {
-		if err := json.Unmarshal([]byte(v.Raw), &ccmSection); err != nil {
-			return fmt.Errorf("unmarshal ccm section: %w", err)
-		}
-	}
-
-	ccmSection.Parameters = mcSettings.CCM.Parameters
-	input.Values.Set("cloudProviderYandex.ccm", ccmSection)
-	return nil
+	input.Values.Set(path, section)
 }
 
 func setCredentialSecretsValuesIfAbsent(input *go_hook.HookInput, pcc ycpccv1.YandexProviderClusterConfiguration) error {
@@ -315,8 +352,7 @@ func hasCredentialSecrets(input *go_hook.HookInput) bool {
 		return true
 	}
 
-	credSnaps := input.Snapshots.Get("credential_secrets")
-	return len(credSnaps) > 0
+	return len(input.Snapshots.Get("credential_secrets")) > 0
 }
 
 // validateProviderClusterConfig ensures the PCC has the required Yandex provider fields.
@@ -330,31 +366,7 @@ func validateProviderClusterConfig(p ycpccv1.YandexProviderClusterConfiguration)
 	if p.Provider.ServiceAccountJSON == "" {
 		return errors.New("provider.serviceAccountJSON cannot be empty")
 	}
-	return nil
-}
 
-// mergeAndSetDiscoveryData merges the resolved discovery data with any existing
-// values and writes the result to cloudProviderYandex.internal.providerDiscoveryData.
-func mergeAndSetDiscoveryData(input *go_hook.HookInput, discoveryData clouddatav1.YandexCloudDiscoveryData) error {
-	if v, ok := input.Values.GetOk("cloudProviderYandex.internal.providerDiscoveryData"); ok && len(v.String()) != 0 {
-		var existing clouddatav1.YandexCloudDiscoveryData
-		if err := json.Unmarshal([]byte(v.String()), &existing); err != nil {
-			return fmt.Errorf("unmarshal existing discovery data: %w", err)
-		}
-		discoveryData = internal.MergeDiscoveryData(discoveryData, existing)
-	}
-
-	if discoveryData.APIVersion == "" {
-		discoveryData.APIVersion = clouddatav1.APIVersion
-	}
-	if discoveryData.Kind == "" {
-		discoveryData.Kind = clouddatav1.YandexCloudDiscoveryDataKind
-	}
-	if discoveryData.Region == "" {
-		discoveryData.Region = clouddatav1.YandexCloudDiscoveryDataDefaultRegion
-	}
-
-	input.Values.Set("cloudProviderYandex.internal.providerDiscoveryData", discoveryData)
 	return nil
 }
 
@@ -363,5 +375,6 @@ func convertStructsUsingJSON(in any, out any) error {
 	if err != nil {
 		return err
 	}
+
 	return json.Unmarshal(b, out)
 }

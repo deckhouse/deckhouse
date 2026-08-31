@@ -25,6 +25,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
+	clouddatav1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	yciccv1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks/internal/api/instanceclass/v1"
 	ycpccv1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks/internal/api/pcc/v1"
@@ -305,7 +306,7 @@ var _ = Describe("BuildModuleConfigSettingsV2", func() {
 			AdditionalExternalNetworkIDs: []string{"net-extra"},
 		}
 
-		result := BuildModuleConfigSettingsV2(pcc, mc)
+		result := BuildModuleConfigSettingsV2(pcc, mc, false, clouddatav1.YandexCloudDiscoveryData{})
 
 		Expect(result.Provider.Parameters.CloudID).To(Equal("cloud-123"))
 		Expect(result.Provider.Parameters.FolderID).To(Equal("folder-456"))
@@ -337,7 +338,7 @@ var _ = Describe("BuildModuleConfigSettingsV2", func() {
 		}
 		mc := ycsettingsv1.ModuleConfigSettings{}
 
-		result := BuildModuleConfigSettingsV2(pcc, mc)
+		result := BuildModuleConfigSettingsV2(pcc, mc, false, clouddatav1.YandexCloudDiscoveryData{})
 
 		// Optional sections are value types: an absent PCC section stays a zero value.
 		// It still serializes as an empty object, which matches the terraform projection —
@@ -421,7 +422,7 @@ var _ = Describe("BuildModuleConfigSettingsV2", func() {
 			},
 		}
 
-		result := BuildModuleConfigSettingsV2(pcc, ycsettingsv1.ModuleConfigSettings{})
+		result := BuildModuleConfigSettingsV2(pcc, ycsettingsv1.ModuleConfigSettings{}, false, clouddatav1.YandexCloudDiscoveryData{})
 
 		Expect(result.Nodes.Parameters.ExternalIPAddresses).To(Equal(map[string][]string{
 			"master": {"203.0.113.1", "203.0.113.2", "Auto"},
@@ -451,9 +452,53 @@ var _ = Describe("BuildModuleConfigSettingsV2", func() {
 			},
 		}
 
-		result := BuildModuleConfigSettingsV2(pcc, ycsettingsv1.ModuleConfigSettings{})
+		result := BuildModuleConfigSettingsV2(pcc, ycsettingsv1.ModuleConfigSettings{}, false, clouddatav1.YandexCloudDiscoveryData{})
 
 		Expect(result.Nodes.Parameters.ExternalIPAddresses).To(BeEmpty())
+	})
+
+	It("carries discovery-data network facts into v2 settings for hybrid clusters", func() {
+		pcc := ycpccv1.YandexProviderClusterConfiguration{
+			Layout:            "Standard",
+			SSHPublicKey:      "ssh-rsa KEY",
+			NodeNetworkCIDR:   "10.0.0.0/16",
+			ExistingNetworkID: ptr.To("enp-existing"),
+			Provider: ycpccv1.YandexProvider{
+				CloudID:  "cloud-1",
+				FolderID: "folder-1",
+			},
+		}
+		discoveryData := clouddatav1.YandexCloudDiscoveryData{
+			RouteTableID:       "enp-route-table",
+			InternalNetworkIDs: []string{"enp-existing", "enp-additional-internal"},
+		}
+
+		result := BuildModuleConfigSettingsV2(pcc, ycsettingsv1.ModuleConfigSettings{}, true, discoveryData)
+
+		Expect(result.Nodes.Parameters.ExistingRouteTableID).To(Equal("enp-route-table"))
+		Expect(result.CCM.Parameters.AdditionalInternalNetworkIDs).To(Equal([]string{"enp-additional-internal"}))
+	})
+
+	It("does not carry discovery-data network facts for non-hybrid clusters", func() {
+		pcc := ycpccv1.YandexProviderClusterConfiguration{
+			Layout:            "Standard",
+			SSHPublicKey:      "ssh-rsa KEY",
+			NodeNetworkCIDR:   "10.0.0.0/16",
+			ExistingNetworkID: ptr.To("enp-existing"),
+			Provider: ycpccv1.YandexProvider{
+				CloudID:  "cloud-1",
+				FolderID: "folder-1",
+			},
+		}
+		discoveryData := clouddatav1.YandexCloudDiscoveryData{
+			RouteTableID:       "enp-route-table",
+			InternalNetworkIDs: []string{"enp-existing", "enp-additional-internal"},
+		}
+
+		result := BuildModuleConfigSettingsV2(pcc, ycsettingsv1.ModuleConfigSettings{}, false, discoveryData)
+
+		Expect(result.Nodes.Parameters.ExistingRouteTableID).To(BeEmpty())
+		Expect(result.CCM.Parameters.AdditionalInternalNetworkIDs).To(BeNil())
 	})
 })
 
@@ -465,7 +510,7 @@ var _ = Describe("etcd disk size migration", func() {
 		var pcc ycpccv1.YandexProviderClusterConfiguration
 		Expect(yaml.Unmarshal([]byte(pccYAML), &pcc)).To(Succeed())
 
-		resources, err := buildMigrationResources(pcc, ycsettingsv1.ModuleConfigSettings{})
+		resources, err := buildMigrationResources(pcc, ycsettingsv1.ModuleConfigSettings{}, false, clouddatav1.YandexCloudDiscoveryData{})
 		Expect(err).ToNot(HaveOccurred())
 
 		for _, resource := range resources {
@@ -1000,7 +1045,7 @@ var _ = Describe("migration resources golden", func() {
 			},
 		}
 
-		resources, err := buildMigrationResources(pcc, mc)
+		resources, err := buildMigrationResources(pcc, mc, false, clouddatav1.YandexCloudDiscoveryData{})
 		Expect(err).NotTo(HaveOccurred())
 
 		var payload bytes.Buffer
