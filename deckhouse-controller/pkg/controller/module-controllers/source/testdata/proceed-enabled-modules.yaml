@@ -96,3 +96,12 @@ status:
   conditions:
     - type: EnabledByModuleConfig
       status: "True"
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Module
+metadata:
+  name: withpolicymodule
+spec:
+  packageRepositoryName: test-source-1
+  packageVersion: v1.0.0
+  updatePolicy: test-alpha

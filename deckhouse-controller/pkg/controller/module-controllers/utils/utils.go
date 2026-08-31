@@ -201,21 +201,38 @@ func UpdateStatus[Object client.Object](ctx context.Context, cli client.Client, 
 
 // GetUpdatePolicyByModule returns policy for the module, if no policy, embeddedPolicy is returned
 func GetUpdatePolicyByModule(ctx context.Context, cli client.Client, embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer, moduleName string) (*v1alpha2.ModuleUpdatePolicy, error) {
-	module := new(v1alpha1.Module)
-	if err := cli.Get(ctx, client.ObjectKey{Name: moduleName}, module); err != nil {
+	policyName := ""
+
+	moduleV2 := new(v1alpha2.Module)
+	if err := cli.Get(ctx, client.ObjectKey{Name: moduleName}, moduleV2); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return nil, fmt.Errorf("get the '%s' module: %w", moduleName, err)
 		}
 	} else {
-		if module.Properties.UpdatePolicy != "" {
-			policy := new(v1alpha2.ModuleUpdatePolicy)
-			if err = cli.Get(ctx, client.ObjectKey{Name: module.Properties.UpdatePolicy}, policy); err != nil {
-				if !apierrors.IsNotFound(err) {
-					return nil, fmt.Errorf("get the '%s' update policy: %w", moduleName, err)
-				}
-			} else {
-				return policy, nil
+		policyName = moduleV2.Spec.UpdatePolicy
+	}
+
+	// the sync fills the module spec only once the module carries a version;
+	// until the first deploy the config alone holds the user's choice
+	if policyName == "" {
+		conf := new(v1alpha1.ModuleConfig)
+		if err := cli.Get(ctx, client.ObjectKey{Name: moduleName}, conf); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return nil, fmt.Errorf("get the '%s' module config: %w", moduleName, err)
 			}
+		} else if conf.DeletionTimestamp.IsZero() {
+			policyName = conf.Spec.UpdatePolicy
+		}
+	}
+
+	if policyName != "" {
+		policy := new(v1alpha2.ModuleUpdatePolicy)
+		if err := cli.Get(ctx, client.ObjectKey{Name: policyName}, policy); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return nil, fmt.Errorf("get the '%s' update policy: %w", moduleName, err)
+			}
+		} else {
+			return policy, nil
 		}
 	}
 

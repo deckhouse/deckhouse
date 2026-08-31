@@ -30,6 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -110,7 +111,7 @@ func setModuleConfigEnabled(ctx context.Context, kubeClient k8s.Client, name str
 	}
 
 	if enabled {
-		unstructuredObjModule, err := kubeClient.Dynamic().Resource(v1alpha1.ModuleGVR).Get(ctx, name, metav1.GetOptions{})
+		unstructuredObjModule, err := kubeClient.Dynamic().Resource(v1alpha2.ModuleGVR).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				return errors.New("module not found")
@@ -118,10 +119,18 @@ func setModuleConfigEnabled(ctx context.Context, kubeClient k8s.Client, name str
 			return fmt.Errorf("get the '%s' module: %w", name, err)
 		}
 
-		sources, ok, _ := unstructured.NestedStringSlice(unstructuredObjModule.Object, "properties", "availableSources")
-		source, _, _ := unstructured.NestedString(unstructuredObjModule.Object, "properties", "source")
-		if ok && len(sources) > 1 && source == "" {
-			fmt.Printf("Warning: module '%s' is enabled but didn’t run because multiple sources were found (%s), please specify a source in ModuleConfig resource\n", name, strings.Join(sources, ", "))
+		repository, _, _ := unstructured.NestedString(unstructuredObjModule.Object, "spec", "packageRepositoryName")
+
+		unstructuredObjPackage, err := kubeClient.Dynamic().Resource(v1alpha1.ModulePackageGVR).Get(ctx, name, metav1.GetOptions{})
+		if err != nil && !apierrors.IsNotFound(err) {
+			return fmt.Errorf("get the '%s' module package: %w", name, err)
+		}
+
+		if err == nil {
+			repositories, ok, _ := unstructured.NestedStringSlice(unstructuredObjPackage.Object, "status", "availableRepositories")
+			if ok && len(repositories) > 1 && repository == "" {
+				fmt.Printf("Warning: module '%s' is enabled but didn’t run because multiple repositories were found (%s), please specify a source in ModuleConfig resource\n", name, strings.Join(repositories, ", "))
+			}
 		}
 	}
 
