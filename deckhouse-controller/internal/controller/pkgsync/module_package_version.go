@@ -18,13 +18,10 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"os"
 	"path/filepath"
-	"slices"
 	"strconv"
 	"strings"
 
-	"github.com/Masterminds/semver/v3"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metautils "k8s.io/apimachinery/pkg/api/meta"
@@ -41,30 +38,21 @@ import (
 // syncModulePackageVersions ensures a version object for every module package
 // the old stack carries: embedded modules come out complete with the disk
 // metadata and schemas, deployed and pending releases become draft stubs.
-func (s *syncer) syncModulePackageVersions(ctx context.Context) error {
-	if err := s.syncVersionsFromImage(ctx); err != nil {
+func (s *syncer) syncModulePackageVersions(ctx context.Context, embedded []embeddedModule, stubs []releaseStub) error {
+	if err := s.syncVersionsFromImage(ctx, embedded); err != nil {
 		return err
 	}
 
-	return s.syncVersionsFromReleases(ctx)
+	return s.syncVersionsFromReleases(ctx, stubs)
 }
 
-// syncVersionsFromImage walks the embedded modules dir and ensures a complete
-// version for every module the running image ships.
-func (s *syncer) syncVersionsFromImage(ctx context.Context) error {
+// syncVersionsFromImage ensures a complete version for every module the
+// running image ships.
+func (s *syncer) syncVersionsFromImage(ctx context.Context, embedded []embeddedModule) error {
 	version := app.EmbeddedPackageVersion(s.deckhouseVersion)
 
-	entries, err := os.ReadDir(s.embeddedModulesDir)
-	if err != nil {
-		return fmt.Errorf("read embedded modules dir: %w", err)
-	}
-
-	for _, entry := range entries {
-		if !entry.IsDir() || slices.Contains(app.DummyModules, entry.Name()) {
-			continue
-		}
-
-		if err := s.ensureEmbeddedVersion(ctx, entry.Name(), version); err != nil {
+	for _, module := range embedded {
+		if err := s.ensureEmbeddedVersion(ctx, module, version); err != nil {
 			return err
 		}
 	}
@@ -75,16 +63,9 @@ func (s *syncer) syncVersionsFromImage(ctx context.Context) error {
 // ensureEmbeddedVersion ensures the complete version of one module shipped in
 // the image; the metadata and the settings/values schemas come from the
 // module files on disk.
-func (s *syncer) ensureEmbeddedVersion(ctx context.Context, dirName, version string) error {
-	moduleDir := filepath.Join(s.embeddedModulesDir, dirName)
-
-	def, err := loader.LoadEmbeddedDefinition(moduleDir)
-	if err != nil {
-		s.logger.Warn("module dir holds no readable definition, skip its package version",
-			slog.String("dir", moduleDir), log.Err(err))
-
-		return nil
-	}
+func (s *syncer) ensureEmbeddedVersion(ctx context.Context, module embeddedModule, version string) error {
+	moduleDir := filepath.Join(s.embeddedModulesDir, module.dirName)
+	def := module.def
 
 	name := v1alpha1.MakeModulePackageVersionName(repositoryNameEmbedded, def.Name, version)
 	if !s.validName(name, def.Name) {
@@ -102,7 +83,7 @@ func (s *syncer) ensureEmbeddedVersion(ctx context.Context, dirName, version str
 	// an embedded module carries its weight in the directory name prefix, which
 	// the definition file usually omits
 	if meta.Weight == 0 {
-		meta.Weight = weightFromDirName(dirName)
+		meta.Weight = weightFromDirName(module.dirName)
 	}
 
 	settingsRaw, valuesRaw, err := loader.LoadEmbeddedSchemas(moduleDir)
@@ -146,68 +127,16 @@ func weightFromDirName(dirName string) int32 {
 	return int32(weight)
 }
 
-// syncVersionsFromReleases ensures a draft stub for every deployed or pending release.
-func (s *syncer) syncVersionsFromReleases(ctx context.Context) error {
-	releases := new(v1alpha1.ModuleReleaseList)
-	if err := s.reader.List(ctx, releases); err != nil {
-		return fmt.Errorf("list module releases: %w", err)
-	}
-
-	for idx := range releases.Items {
-		release := &releases.Items[idx]
-		if release.Status.Phase != v1alpha1.ModuleReleasePhaseDeployed &&
-			release.Status.Phase != v1alpha1.ModuleReleasePhasePending {
-			continue
-		}
-
-		name, spec, ok := s.specForRelease(release)
-		if !ok {
-			continue
-		}
-
-		if err := s.ensureStub(ctx, name, spec); err != nil {
+// syncVersionsFromReleases ensures a draft stub for every package version the
+// releases name.
+func (s *syncer) syncVersionsFromReleases(ctx context.Context, stubs []releaseStub) error {
+	for _, stub := range stubs {
+		if err := s.ensureStub(ctx, stub.name, stub.spec); err != nil {
 			return err
 		}
 	}
 
 	return nil
-}
-
-// specForRelease derives the version name and spec from a release. A release
-// without a source or with an unparsable version names no package version and
-// is skipped with a warning.
-func (s *syncer) specForRelease(release *v1alpha1.ModuleRelease) (string, v1alpha1.ModulePackageVersionSpec, bool) {
-	moduleName := release.GetModuleName()
-
-	source := release.GetModuleSource()
-	if source == "" {
-		s.logger.Warn("release has no module source, skip its package version",
-			slog.String("release", release.Name))
-
-		return "", v1alpha1.ModulePackageVersionSpec{}, false
-	}
-
-	parsed, err := semver.NewVersion(release.Spec.Version)
-	if err != nil {
-		s.logger.Warn("release version is not a semver, skip its package version",
-			slog.String("release", release.Name), slog.String("version", release.Spec.Version), log.Err(err))
-
-		return "", v1alpha1.ModulePackageVersionSpec{}, false
-	}
-
-	version := "v" + parsed.String()
-	repository := repositoryNameForSource(source)
-
-	name := v1alpha1.MakeModulePackageVersionName(repository, moduleName, version)
-	if !s.validName(name, moduleName) {
-		return "", v1alpha1.ModulePackageVersionSpec{}, false
-	}
-
-	return name, v1alpha1.ModulePackageVersionSpec{
-		PackageName:           moduleName,
-		PackageRepositoryName: repository,
-		PackageVersion:        version,
-	}, true
 }
 
 // validName reports whether the composed object name is legal, warning when it

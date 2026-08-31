@@ -15,7 +15,6 @@
 package pkgsync
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -30,7 +29,6 @@ import (
 )
 
 func TestSyncVersionsFromImage(t *testing.T) {
-	ctx := context.Background()
 
 	t.Run("creates a complete version from package.yaml", func(t *testing.T) {
 		dir := t.TempDir()
@@ -38,7 +36,7 @@ func TestSyncVersionsFromImage(t *testing.T) {
 			"name: echo\nstage: General Availability\nweight: 900\ndescriptions:\n  en: en description\n")
 
 		s, cl := newTestSyncer(t, "v1.80.0", dir)
-		require.NoError(t, s.sync(ctx))
+		syncOK(t, s)
 
 		mpv := getVersion(t, cl, "embedded-echo-v1.80.0")
 		assert.Equal(t, "echo", mpv.Spec.PackageName)
@@ -69,7 +67,7 @@ func TestSyncVersionsFromImage(t *testing.T) {
 			"type: object\nproperties:\n  internal:\n    type: object\n")
 
 		s, cl := newTestSyncer(t, "v1.80.0", dir)
-		require.NoError(t, s.sync(ctx))
+		syncOK(t, s)
 
 		mpv := getVersion(t, cl, "embedded-echo-v1.80.0")
 		require.NotNil(t, mpv.Status.PackageSchemas)
@@ -85,7 +83,7 @@ func TestSyncVersionsFromImage(t *testing.T) {
 		writeOpenAPI(t, filepath.Join(dir, "900-echo"), "{not a schema", "")
 
 		s, cl := newTestSyncer(t, "v1.80.0", dir)
-		require.NoError(t, s.sync(ctx))
+		syncOK(t, s)
 
 		assert.Empty(t, listVersionNames(t, cl))
 	})
@@ -99,7 +97,7 @@ func TestSyncVersionsFromImage(t *testing.T) {
 			"type: object\nproperties:\n  policies:\n    type: ['null', array]\n")
 
 		s, cl := newTestSyncer(t, "v1.80.0", dir)
-		require.NoError(t, s.sync(ctx))
+		syncOK(t, s)
 
 		mpv := getVersion(t, cl, "embedded-echo-v1.80.0")
 		require.NotNil(t, mpv.Status.PackageSchemas, "a multi-type field is valid JSON Schema, the version must not be skipped")
@@ -117,7 +115,7 @@ func TestSyncVersionsFromImage(t *testing.T) {
 			"")
 
 		s, cl := newTestSyncer(t, "v1.80.0", dir)
-		require.NoError(t, s.sync(ctx))
+		syncOK(t, s)
 
 		mpv := getVersion(t, cl, "embedded-echo-v1.80.0")
 		require.NotNil(t, mpv.Status.PackageSchemas)
@@ -133,7 +131,7 @@ func TestSyncVersionsFromImage(t *testing.T) {
 			"name: echo\ndisable:\n  confirmation: true\n  message: \"fallback text\"\n  messages:\n    ru: \"ru text\"\n")
 
 		s, cl := newTestSyncer(t, "v1.80.0", dir)
-		require.NoError(t, s.sync(ctx))
+		syncOK(t, s)
 
 		mpv := getVersion(t, cl, "embedded-echo-v1.80.0")
 		opts := mpv.Status.PackageMetadata.DisableOptions
@@ -150,7 +148,7 @@ func TestSyncVersionsFromImage(t *testing.T) {
 			"name: echo\nrequirements:\n  modules:\n    delta: \">= 1\"\n    alpha: \">= 1\"\n    charlie: \">= 1\"\n    bravo: \">= 1\"\n")
 
 		s, cl := newTestSyncer(t, "v1.80.0", dir)
-		require.NoError(t, s.sync(ctx))
+		syncOK(t, s)
 
 		mpv := getVersion(t, cl, "embedded-echo-v1.80.0")
 		require.NotNil(t, mpv.Status.PackageMetadata.Requirements)
@@ -168,7 +166,7 @@ func TestSyncVersionsFromImage(t *testing.T) {
 		writeModuleYAML(t, filepath.Join(dir, "910-parca"), "name: parca\nstage: Experimental\n")
 
 		s, cl := newTestSyncer(t, "v1.80.0", dir)
-		require.NoError(t, s.sync(ctx))
+		syncOK(t, s)
 
 		mpv := getVersion(t, cl, "embedded-parca-v1.80.0")
 		assert.False(t, mpv.IsDraft())
@@ -183,7 +181,7 @@ func TestSyncVersionsFromImage(t *testing.T) {
 		writeModuleYAML(t, filepath.Join(dir, "900-echo"), "name: echo\n")
 
 		s, cl := newTestSyncer(t, "v1.78.0-pr22453+1b47ed2", dir)
-		require.NoError(t, s.sync(ctx))
+		syncOK(t, s)
 
 		mpv := getVersion(t, cl, "embedded-echo-v1.78.0")
 		assert.Equal(t, "v1.78.0", mpv.Spec.PackageVersion, "prerelease and metadata are dropped")
@@ -194,7 +192,7 @@ func TestSyncVersionsFromImage(t *testing.T) {
 		writeModuleYAML(t, filepath.Join(dir, "900-echo"), "name: echo\n")
 
 		s, cl := newTestSyncer(t, "dev", dir)
-		require.NoError(t, s.sync(ctx))
+		syncOK(t, s)
 
 		mpv := getVersion(t, cl, "embedded-echo-v2.0.0")
 		assert.Equal(t, "v2.0.0", mpv.Spec.PackageVersion)
@@ -205,7 +203,7 @@ func TestSyncVersionsFromImage(t *testing.T) {
 		writeModuleYAML(t, filepath.Join(dir, "900-echo"), "name: echo\n")
 
 		s, cl := newTestSyncer(t, "latest", dir)
-		require.NoError(t, s.sync(ctx))
+		syncOK(t, s)
 
 		// the bootstrap places the module on the same string, so both sides still agree
 		mpv := getVersion(t, cl, "embedded-echo-latest")
@@ -217,7 +215,7 @@ func TestSyncVersionsFromImage(t *testing.T) {
 		writeModuleYAML(t, filepath.Join(dir, "900-echo"), "name: echo\n")
 
 		s, cl := newTestSyncer(t, "Latest_Build", dir)
-		require.NoError(t, s.sync(ctx))
+		syncOK(t, s)
 
 		assert.Empty(t, listVersionNames(t, cl))
 	})
@@ -228,7 +226,7 @@ func TestSyncVersionsFromImage(t *testing.T) {
 		require.NoError(t, os.MkdirAll(filepath.Join(dir, "900-broken"), 0o755))
 
 		s, cl := newTestSyncer(t, "v1.80.0", dir)
-		require.NoError(t, s.sync(ctx))
+		syncOK(t, s)
 
 		assert.Empty(t, listVersionNames(t, cl))
 	})
@@ -253,7 +251,7 @@ func TestSyncVersionsFromImage(t *testing.T) {
 		}
 
 		s, cl := newTestSyncer(t, "v1.80.0", dir, stub)
-		require.NoError(t, s.sync(ctx))
+		syncOK(t, s)
 
 		mpv := getVersion(t, cl, stub.Name)
 		assert.False(t, mpv.IsDraft(), "the leftover draft must be completed")
@@ -280,7 +278,7 @@ func TestSyncVersionsFromImage(t *testing.T) {
 
 		s, cl := newTestSyncer(t, "v1.80.0", dir, existing)
 
-		require.NoError(t, s.sync(ctx))
+		syncOK(t, s)
 
 		after := getVersion(t, cl, existing.Name)
 		assert.False(t, after.IsDraft(), "a refresh must not bring the draft label back")
@@ -296,10 +294,10 @@ func TestSyncVersionsFromImage(t *testing.T) {
 		writeOpenAPI(t, filepath.Join(dir, "900-echo"), "type: object\n", "")
 
 		s, cl := newTestSyncer(t, "v1.80.0", dir)
-		require.NoError(t, s.sync(ctx))
+		syncOK(t, s)
 		before := getVersion(t, cl, "embedded-echo-v1.80.0")
 
-		require.NoError(t, s.sync(ctx))
+		syncOK(t, s)
 
 		after := getVersion(t, cl, before.Name)
 		assert.Equal(t, before.ResourceVersion, after.ResourceVersion, "a no-change pass rewrites nothing")
@@ -307,7 +305,6 @@ func TestSyncVersionsFromImage(t *testing.T) {
 }
 
 func TestSyncVersionsFromReleases(t *testing.T) {
-	ctx := context.Background()
 
 	t.Run("creates a draft stub for deployed and pending releases", func(t *testing.T) {
 		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(),
@@ -316,7 +313,7 @@ func TestSyncVersionsFromReleases(t *testing.T) {
 			testRelease("foo", "external", "2.0.0", v1alpha1.ModuleReleasePhaseDeployed),
 		)
 
-		require.NoError(t, s.sync(ctx))
+		syncOK(t, s)
 
 		assert.ElementsMatch(t, []string{
 			"deckhouse-modules-parca-v1.4.3",
@@ -345,7 +342,7 @@ func TestSyncVersionsFromReleases(t *testing.T) {
 			testRelease("bad", "deckhouse", "latest", v1alpha1.ModuleReleasePhaseDeployed),
 		)
 
-		require.NoError(t, s.sync(ctx))
+		syncOK(t, s)
 
 		assert.Empty(t, listVersionNames(t, cl))
 	})
@@ -371,7 +368,7 @@ func TestSyncVersionsFromReleases(t *testing.T) {
 		)
 		before := getVersion(t, cl, existing.Name)
 
-		require.NoError(t, s.sync(ctx))
+		syncOK(t, s)
 
 		after := getVersion(t, cl, existing.Name)
 		assert.Equal(t, before.ResourceVersion, after.ResourceVersion)

@@ -15,7 +15,6 @@
 package pkgsync
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -27,14 +26,13 @@ import (
 )
 
 func TestSyncPackageRepositories(t *testing.T) {
-	ctx := context.Background()
 
 	t.Run("creates a repository from a module source", func(t *testing.T) {
 		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(),
 			testModuleSource("external", "registry.example.io/external"),
 		)
 
-		require.NoError(t, s.sync(ctx))
+		syncOK(t, s)
 
 		repo := getRepository(t, cl, "external")
 		assert.Equal(t, "deckhouse", repo.Labels["heritage"])
@@ -53,7 +51,7 @@ func TestSyncPackageRepositories(t *testing.T) {
 			testModuleSource("flant", "registry.flant.com/modules"),
 		)
 
-		require.NoError(t, s.sync(ctx))
+		syncOK(t, s)
 
 		assert.Empty(t, listRepositoryNames(t, cl))
 	})
@@ -66,7 +64,7 @@ func TestSyncPackageRepositories(t *testing.T) {
 
 		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(), doomed)
 
-		require.NoError(t, s.sync(ctx))
+		syncOK(t, s)
 
 		assert.Empty(t, listRepositoryNames(t, cl))
 	})
@@ -91,7 +89,7 @@ func TestSyncPackageRepositories(t *testing.T) {
 			testModuleSource("external", "registry.example.io/external"),
 		)
 
-		require.NoError(t, s.sync(ctx))
+		syncOK(t, s)
 
 		after := getRepository(t, cl, existing.Name)
 		assert.Equal(t, "registry.example.io/external", after.Spec.Registry.Repo, "the registry follows the source")
@@ -123,7 +121,7 @@ func TestSyncPackageRepositories(t *testing.T) {
 		)
 		before := getRepository(t, cl, existing.Name)
 
-		require.NoError(t, s.sync(ctx))
+		syncOK(t, s)
 
 		after := getRepository(t, cl, existing.Name)
 		assert.Equal(t, before.ResourceVersion, after.ResourceVersion, "a matching repository is not rewritten")

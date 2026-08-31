@@ -40,11 +40,19 @@ func newTestSyncer(t *testing.T, version, embeddedDir string, objects ...client.
 
 	cl := fake.NewClientBuilder().
 		WithScheme(sc).
-		WithStatusSubresource(&v1alpha1.ModulePackageVersion{}, &v1alpha1.ModulePackage{}).
+		WithStatusSubresource(&v1alpha1.ModulePackageVersion{}, &v1alpha1.ModulePackage{}, &v1alpha1.ModuleRelease{}).
 		WithObjects(objects...).
 		Build()
 
 	return newSyncer(cl, cl, dependency.NewMockedContainer(), version, embeddedDir, log.NewNop()), cl
+}
+
+// syncOK runs the whole sync and fails the test on error.
+func syncOK(t *testing.T, s *syncer) {
+	t.Helper()
+
+	_, err := s.sync(context.Background())
+	require.NoError(t, err)
 }
 
 func writeModuleYAML(t *testing.T, dir, content string) {
@@ -159,8 +167,6 @@ func TestRepositoryNameForSource(t *testing.T) {
 }
 
 func TestSyncIsIdempotent(t *testing.T) {
-	ctx := context.Background()
-
 	dir := t.TempDir()
 	writeModuleYAML(t, filepath.Join(dir, "900-echo"), "name: echo\nstage: General Availability\n")
 
@@ -170,7 +176,7 @@ func TestSyncIsIdempotent(t *testing.T) {
 		testRelease("console", "deckhouse", "1.60.1", v1alpha1.ModuleReleasePhasePending),
 	)
 
-	require.NoError(t, s.sync(ctx))
+	syncOK(t, s)
 
 	versions := make(map[string]string)
 	for _, name := range listVersionNames(t, cl) {
@@ -179,7 +185,7 @@ func TestSyncIsIdempotent(t *testing.T) {
 	require.Len(t, versions, 3)
 	repositoryRV := getRepository(t, cl, "external").ResourceVersion
 
-	require.NoError(t, s.sync(ctx))
+	syncOK(t, s)
 
 	assert.Len(t, listVersionNames(t, cl), 3)
 	for name, rv := range versions {
