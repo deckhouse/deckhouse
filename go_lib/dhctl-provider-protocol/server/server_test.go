@@ -29,9 +29,9 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
 
+	validatev1 "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/v1/validate"
 	"github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/client"
 	"github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/server"
-	"github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/validate"
 )
 
 func TestConfigValidate(t *testing.T) {
@@ -106,13 +106,13 @@ func TestStart(t *testing.T) {
 		name           string
 		validator      validatorFunc // nil registers no service
 		omitAddress    bool
-		input          validate.Input
+		input          validatev1.Input
 		stopBeforeCall bool
 		wantStartErr   bool
 		wantCode       codes.Code
 		wantMessage    string
 		wantErrors     string
-		wantWarnings   validate.Violations
+		wantWarnings   validatev1.Violations
 		wantCalled     bool
 	}{
 		{
@@ -126,7 +126,7 @@ func TestStart(t *testing.T) {
 			validator:  violations,
 			input:      bootstrapInput(),
 			wantErrors: "Secret/d8-credentials: credential Secret is required",
-			wantWarnings: validate.Violations{
+			wantWarnings: validatev1.Violations{
 				{Path: "NodeGroup/worker", Code: "replicas_zero", Message: "replicas is 0"},
 			},
 			wantCalled: true,
@@ -142,14 +142,14 @@ func TestStart(t *testing.T) {
 			// the input.
 			name:        "rejects an unknown operation",
 			validator:   validOutput,
-			input:       validate.Input{ProviderName: "dvp", Operation: "nonsense"},
+			input:       validatev1.Input{ProviderName: "dvp", Operation: "nonsense"},
 			wantCode:    codes.InvalidArgument,
 			wantMessage: `operation unknown: "nonsense"`,
 		},
 		{
 			name:        "rejects a missing operation",
 			validator:   validOutput,
-			input:       validate.Input{ProviderName: "dvp"},
+			input:       validatev1.Input{ProviderName: "dvp"},
 			wantCode:    codes.InvalidArgument,
 			wantMessage: "operation required",
 		},
@@ -192,7 +192,7 @@ func TestStart(t *testing.T) {
 			var services []server.Service
 			if test.validator != nil {
 				services = append(services, server.NewValidateService(validatorFunc(
-					func(ctx context.Context, input validate.Input) (validate.Output, error) {
+					func(ctx context.Context, input validatev1.Input) (validatev1.Output, error) {
 						called = true
 
 						return test.validator(ctx, input)
@@ -255,11 +255,11 @@ func TestStart(t *testing.T) {
 				t.Fatalf("Validate() = %v", err)
 			}
 
-			if got := output.Errors().String(); got != test.wantErrors {
+			if got := output.Errors.String(); got != test.wantErrors {
 				t.Errorf("Errors().String() = %q, want %q", got, test.wantErrors)
 			}
 
-			if got := output.Warnings(); !reflect.DeepEqual(got, test.wantWarnings.Sorted()) {
+			if got := output.Warnings; !reflect.DeepEqual(got, test.wantWarnings) {
 				t.Errorf("Warnings() = %+v, want %+v", got, test.wantWarnings)
 			}
 		})
@@ -268,36 +268,36 @@ func TestStart(t *testing.T) {
 
 // validatorFunc adapts a function to server.Validator, which a validator binary
 // implements with a type of its own.
-type validatorFunc func(ctx context.Context, input validate.Input) (validate.Output, error)
+type validatorFunc func(ctx context.Context, input validatev1.Input) (validatev1.Output, error)
 
-func (fn validatorFunc) Validate(ctx context.Context, input validate.Input) (validate.Output, error) {
+func (fn validatorFunc) Validate(ctx context.Context, input validatev1.Input) (validatev1.Output, error) {
 	return fn(ctx, input)
 }
 
 var errCheckFailed = errors.New("dependency would not answer")
 
-func validOutput(context.Context, validate.Input) (validate.Output, error) {
-	return validate.Output{}, nil
+func validOutput(context.Context, validatev1.Input) (validatev1.Output, error) {
+	return validatev1.Output{}, nil
 }
 
-func violations(context.Context, validate.Input) (validate.Output, error) {
-	var output validate.Output
+func violations(context.Context, validatev1.Input) (validatev1.Output, error) {
+	var output validatev1.Output
 	output.AddError("Secret/d8-credentials", "credential_secret_required", "masked", "credential Secret is required")
 	output.AddWarning("NodeGroup/worker", "replicas_zero", nil, "replicas is 0")
 
 	return output, nil
 }
 
-func panics(context.Context, validate.Input) (validate.Output, error) {
+func panics(context.Context, validatev1.Input) (validatev1.Output, error) {
 	panic("validator bug")
 }
 
-func fails(context.Context, validate.Input) (validate.Output, error) {
-	return validate.Output{}, errCheckFailed
+func fails(context.Context, validatev1.Input) (validatev1.Output, error) {
+	return validatev1.Output{}, errCheckFailed
 }
 
-func bootstrapInput() validate.Input {
-	return validate.Input{ProviderName: "dvp", Operation: validate.OperationBootstrap}
+func bootstrapInput() validatev1.Input {
+	return validatev1.Input{ProviderName: "dvp", Operation: validatev1.OperationBootstrap}
 }
 
 // socketPath builds a path outside t.TempDir, which spells the test's name into it
@@ -352,7 +352,7 @@ func requireStatus(t *testing.T, err error, want codes.Code, message string) {
 }
 
 // requireUnavailable waits for the socket to stop accepting after a Stop.
-func requireUnavailable(t *testing.T, validator client.Client, input validate.Input) {
+func requireUnavailable(t *testing.T, validator client.Client, input validatev1.Input) {
 	t.Helper()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

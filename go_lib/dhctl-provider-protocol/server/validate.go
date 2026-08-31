@@ -19,16 +19,15 @@ import (
 
 	"google.golang.org/grpc"
 
-	protogen "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/gen"
+	validatev1 "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/v1/validate"
 	"github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/errs"
-	"github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/validate"
 )
 
 // Validator is what the validator implements: the check itself, in plain Go. An
 // Output says what is wrong with the configuration; an error means the check could
 // not be made and reaches the caller as Internal.
 type Validator interface {
-	Validate(ctx context.Context, input validate.Input) (validate.Output, error)
+	Validate(ctx context.Context, input validatev1.Input) (validatev1.Output, error)
 }
 
 func NewValidateService(validator Validator) Service {
@@ -36,16 +35,16 @@ func NewValidateService(validator Validator) Service {
 }
 
 type validateService struct {
-	protogen.UnimplementedValidateServiceServer
+	validatev1.UnimplementedValidateServiceServer
 	validator Validator
 }
 
 func (s *validateService) Register(registrar grpc.ServiceRegistrar) {
-	protogen.RegisterValidateServiceServer(registrar, s)
+	validatev1.RegisterValidateServiceServer(registrar, s)
 }
 
-func (s *validateService) Validate(ctx context.Context, req *protogen.ValidateRequest) (*protogen.ValidateResponse, error) {
-	input, err := validate.InputFromRequest(req)
+func (s *validateService) Validate(ctx context.Context, req *validatev1.ValidateRequest) (*validatev1.ValidateResponse, error) {
+	input, err := validatev1.InputFromRequest(req)
 	if err != nil {
 		return nil, errs.StatusInvalidRequest(err)
 	}

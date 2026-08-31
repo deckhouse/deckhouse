@@ -35,9 +35,10 @@ const (
 	DefaultNetwork = "unix"
 )
 
-// Service registers itself on a gRPC server. The generated RegisterXxxServer
-// functions in api/gen take a grpc.ServiceRegistrar, so an action's service is a
-// thin wrapper over one of them — see NewValidateService.
+// Service registers itself on a gRPC server. Each wire version of an action
+// provides one — see validate/v1.NewService — and a caller may pass a service of
+// its own (health, reflection, its own protobuf API): the transport registers
+// whatever it is given and knows nothing about the actions themselves.
 type Service interface {
 	Register(registrar grpc.ServiceRegistrar)
 }

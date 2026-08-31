@@ -18,25 +18,36 @@
 //
 // # Packages
 //
-//   - <action> — one package per action: its payload, its result, its vocabulary,
-//     the rules that hold regardless of transport, and the conversions to that
-//     action's wire types. A validator imports this and nothing else of the
-//     protocol. Today: validate.
-//   - api/pb — .proto sources: one service per action, plus its messages.
-//   - api/gen — generated from api/pb by `make proto`. Never edited by hand.
+//   - api/pb/<action>/v<N> — .proto sources: one service per action and version.
+//
+//   - api/<action>/v<N> — one package per action and wire version. It holds the
+//     generated zz_generated.*.go AND the hand-written half of the contract: the
+//     payload, the result, the action's own rules and the conversions to and from the
+//     wire types. A validator imports this and nothing else of the protocol.
+//
+//     Both halves share the package, so the zz_generated. prefix is what tells them
+//     apart: `make proto` deletes and rewrites exactly those files, everything else
+//     is written by hand, and the directory must never be deleted wholesale. A
+//     generated message named after a hand-written type gets a distinct name in the
+//     .proto — see ResponseViolation.
+//
 //   - server — what a validator binary runs.
-//   - client — what a host uses: one method per action, no wire types exposed.
+//
+//   - client — what a caller uses: one method per action, no wire types exposed.
+//
+//   - errs — the sentinels a validator returns to ask for a specific gRPC status.
 //
 // # Adding an action
 //
 // Validation is the first action, not the only conceivable one — a binary could serve
 // its own schemas, config migrations or plan rules. A new one is:
 //
-//  1. api/pb: its own service and messages, so a binary that does not implement it
-//     simply does not pass it to server.Start and a caller sees Unimplemented;
+//  1. api/pb/<action>/v1: its own service and messages, so a binary that does not
+//     implement it simply does not pass it to server.Start and a caller sees
+//     Unimplemented;
 //  2. make proto;
-//  3. <action>: the payload, the result, the action's own rules, and its
-//     conversions;
+//  3. <action>: the payload, the result and the action's own rules;
+//     api/v1/<action>: its conversions;
 //  4. server and client: the two transport halves — a server.Service constructor
 //     and a method on client.Client.
 //
@@ -44,11 +55,10 @@
 //
 // # Adding a wire version
 //
-// Because each action package owns its own mapping, a second wire version is
-// additive: api/pb gains a <action>/v2 subdirectory with its own go_package (the
-// flat api/pb holds v1 alone — two versions in one Go package would collide on
-// message names), api/gen the generated code, and the action package the second
-// pair of conversions. The server registers both versions on one listener, and
-// validators keep implementing the same plain Go interfaces, unaware of which
-// version a caller used.
+// Because the conversions live apart from the domain types, a second wire version is
+// additive: api/pb gains <action>/v2 with its own go_package (two versions in one Go
+// package would collide on message names), and api/<action>/v2 the generated code
+// plus its own payload, result and conversions. The server registers both versions on
+// one listener, and a validator keeps implementing the same plain Go interface,
+// unaware of which version a caller used.
 package protocol

@@ -65,8 +65,9 @@ credential Secret of a cluster.
 ## Service: validate
 
 `dhctl.provider.validate.v1.ValidateService`, defined in
-[`api/pb/validate.proto`](api/pb/validate.proto), served by
-[`api/pb/service.proto`](api/pb/service.proto).
+[`api/pb/validate/v1/validate.proto`](api/pb/validate/v1/validate.proto). The Go side —
+generated types, the payload, the result and the conversions — is
+[`api/validate/v1`](api/validate/v1).
 
 ```proto
 service ValidateService {
@@ -85,7 +86,7 @@ message ValidateRequest {
 `input_json` is a JSON object. It stays JSON rather than becoming protobuf messages
 because every field that carries substance is an arbitrary Kubernetes object — a
 `google.protobuf.Struct` would be exactly as untyped while costing a conversion layer
-on both sides. The Go definition is `validate.Input` in [`validate`](validate).
+on both sides. The Go definition is `validatev1.Input` in [`validate`](validate).
 
 ```json
 {
@@ -137,8 +138,8 @@ message Violation {
 ```
 
 An empty response means the configuration is valid. `errors` block the caller's
-operation; `warnings` do not. Violations are ordered by `code` then `path`, so the
-text a caller prints is stable across runs.
+operation; `warnings` do not. Violations arrive in the order the validator recorded
+them, and that order is what a caller prints.
 
 `value` is display-only and already rendered as a string. A validator reporting a
 sensitive field sends a placeholder such as `"masked"` instead of the value.
@@ -159,14 +160,14 @@ blocks the operation instead of counting as "validated".
 
 ## Implementing a validator in Go
 
-Import [`validate`](validate) and [`server`](server); see the runnable example in the
-`server` package documentation.
+Import [`api/validate/v1`](api/validate/v1) and [`server`](server); see the
+runnable example in the `server` package documentation.
 
 ```go
 type myValidator struct{}
 
-func (myValidator) Validate(_ context.Context, input validate.Input) (validate.Output, error) {
-	var output validate.Output
+func (myValidator) Validate(_ context.Context, input validatev1.Input) (validatev1.Output, error) {
+	var output validatev1.Output
 	if input.CloudProviderVars == nil || len(input.CloudProviderVars.Secrets) == 0 {
 		output.AddError("Secret/d8-credentials", "credential_secret_required", nil,
 			`credential Secret "d8-credentials" is required`)
@@ -206,28 +207,30 @@ looking like a process that died mid-call.
 
 ## Calling a validator in Go
 
-Import [`validate`](validate) and [`client`](client). The caller owns the process, the
-socket and the deadlines:
+Import [`api/validate/v1`](api/validate/v1) and [`client`](client). The caller
+owns the process, the socket and the deadlines:
 
 ```go
 conn, err := grpc.NewClient("unix://"+socket, grpc.WithTransportCredentials(insecure.NewCredentials()))
 // …
 defer conn.Close()
 
-output, err := client.NewClient(conn, client.WithCallOptions(grpc.WaitForReady(true))).
-	Validate(ctx, input)
+output, err := client.NewClient(conn, client.Config{
+	GRPCOptions: []grpc.CallOption{grpc.WaitForReady(true)},
+}).Validate(ctx, input)
 if err != nil {
 	return err // the validator failed
 }
-if output.HasErrors() {
-	return errors.New(output.Errors().String()) // the configuration is wrong
+if len(output.Errors) > 0 {
+	return errors.New(output.Errors.String()) // the configuration is wrong
 }
 return nil
 ```
 
 ## Adding an action
 
-Each action is its own service in [`api/pb`](api/pb) and its own `server.Service`
+Each action is its own service in [`api/pb`](api/pb), its own package in
+[`api`](api) and its own `server.Service`
 constructor, so a binary that does not implement one simply does not pass it to
 `server.Start` and a caller sees `Unimplemented`. The full recipe is in the module
 documentation ([`doc.go`](doc.go)).

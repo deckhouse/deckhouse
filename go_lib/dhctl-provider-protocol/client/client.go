@@ -19,8 +19,7 @@ import (
 
 	"google.golang.org/grpc"
 
-	protogen "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/gen"
-	"github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/validate"
+	validatev1 "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/v1/validate"
 )
 
 const (
@@ -52,28 +51,28 @@ func (c Config) Merge(other Config) Config {
 }
 
 type Client struct {
-	service protogen.ValidateServiceClient
+	service validatev1.ValidateServiceClient
 	config  Config
 }
 
 // NewClient creates a new client with the given configuration.
 func NewClient(conn grpc.ClientConnInterface, config Config) Client {
 	return Client{
-		service: protogen.NewValidateServiceClient(conn),
+		service: validatev1.NewValidateServiceClient(conn),
 		config:  NewConfig().Merge(config),
 	}
 }
 
-func (c Client) Validate(ctx context.Context, input validate.Input) (validate.Output, error) {
+func (c Client) Validate(ctx context.Context, input validatev1.Input) (validatev1.Output, error) {
 	req, err := input.ToRequest()
 	if err != nil {
-		return validate.Output{}, err
+		return validatev1.Output{}, err
 	}
 
 	resp, err := c.service.Validate(ctx, req, c.config.GRPCOptions...)
 	if err != nil {
-		return validate.Output{}, err
+		return validatev1.Output{}, err
 	}
 
-	return validate.OutputFromResponse(resp), nil
+	return validatev1.OutputFromResponse(resp), nil
 }

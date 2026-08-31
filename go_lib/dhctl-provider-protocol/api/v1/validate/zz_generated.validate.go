@@ -16,9 +16,9 @@
 // versions:
 // 	protoc-gen-go v1.36.12
 // 	protoc        v5.29.3
-// source: validate.proto
+// source: v1/validate/validate.proto
 
-package gen
+package v1
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -37,7 +37,8 @@ const (
 
 type ValidateRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// JSON-encoded validate input; validate.Input in Go, wire shape in README.md.
+	// JSON-encoded validate input; Input in this package's Go code, wire shape in
+	// README.md.
 	//
 	// JSON rather than protobuf messages because every field that carries substance
 	// is an arbitrary Kubernetes object: google.protobuf.Struct would be exactly as
@@ -49,7 +50,7 @@ type ValidateRequest struct {
 
 func (x *ValidateRequest) Reset() {
 	*x = ValidateRequest{}
-	mi := &file_validate_proto_msgTypes[0]
+	mi := &file_v1_validate_validate_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -61,7 +62,7 @@ func (x *ValidateRequest) String() string {
 func (*ValidateRequest) ProtoMessage() {}
 
 func (x *ValidateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_validate_proto_msgTypes[0]
+	mi := &file_v1_validate_validate_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -74,7 +75,7 @@ func (x *ValidateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidateRequest.ProtoReflect.Descriptor instead.
 func (*ValidateRequest) Descriptor() ([]byte, []int) {
-	return file_validate_proto_rawDescGZIP(), []int{0}
+	return file_v1_validate_validate_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *ValidateRequest) GetInputJson() []byte {
@@ -91,15 +92,15 @@ func (x *ValidateRequest) GetInputJson() []byte {
 // InvalidArgument, Unimplemented or Internal.
 type ValidateResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Errors        []*Violation           `protobuf:"bytes,1,rep,name=errors,proto3" json:"errors,omitempty"`
-	Warnings      []*Violation           `protobuf:"bytes,2,rep,name=warnings,proto3" json:"warnings,omitempty"`
+	Errors        []*ViolationResponse   `protobuf:"bytes,1,rep,name=errors,proto3" json:"errors,omitempty"`
+	Warnings      []*ViolationResponse   `protobuf:"bytes,2,rep,name=warnings,proto3" json:"warnings,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ValidateResponse) Reset() {
 	*x = ValidateResponse{}
-	mi := &file_validate_proto_msgTypes[1]
+	mi := &file_v1_validate_validate_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -111,7 +112,7 @@ func (x *ValidateResponse) String() string {
 func (*ValidateResponse) ProtoMessage() {}
 
 func (x *ValidateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_validate_proto_msgTypes[1]
+	mi := &file_v1_validate_validate_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -124,24 +125,26 @@ func (x *ValidateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidateResponse.ProtoReflect.Descriptor instead.
 func (*ValidateResponse) Descriptor() ([]byte, []int) {
-	return file_validate_proto_rawDescGZIP(), []int{1}
+	return file_v1_validate_validate_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *ValidateResponse) GetErrors() []*Violation {
+func (x *ValidateResponse) GetErrors() []*ViolationResponse {
 	if x != nil {
 		return x.Errors
 	}
 	return nil
 }
 
-func (x *ValidateResponse) GetWarnings() []*Violation {
+func (x *ValidateResponse) GetWarnings() []*ViolationResponse {
 	if x != nil {
 		return x.Warnings
 	}
 	return nil
 }
 
-type Violation struct {
+// Named apart from the hand-written Violation, which is the type a validator uses:
+// generated and hand-written code share this Go package.
+type ViolationResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Resource field path, e.g. "Secret/d8-credentials.data.secret".
 	Path string `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
@@ -155,21 +158,21 @@ type Violation struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Violation) Reset() {
-	*x = Violation{}
-	mi := &file_validate_proto_msgTypes[2]
+func (x *ViolationResponse) Reset() {
+	*x = ViolationResponse{}
+	mi := &file_v1_validate_validate_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Violation) String() string {
+func (x *ViolationResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Violation) ProtoMessage() {}
+func (*ViolationResponse) ProtoMessage() {}
 
-func (x *Violation) ProtoReflect() protoreflect.Message {
-	mi := &file_validate_proto_msgTypes[2]
+func (x *ViolationResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_validate_validate_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -180,104 +183,108 @@ func (x *Violation) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Violation.ProtoReflect.Descriptor instead.
-func (*Violation) Descriptor() ([]byte, []int) {
-	return file_validate_proto_rawDescGZIP(), []int{2}
+// Deprecated: Use ViolationResponse.ProtoReflect.Descriptor instead.
+func (*ViolationResponse) Descriptor() ([]byte, []int) {
+	return file_v1_validate_validate_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *Violation) GetPath() string {
+func (x *ViolationResponse) GetPath() string {
 	if x != nil {
 		return x.Path
 	}
 	return ""
 }
 
-func (x *Violation) GetCode() string {
+func (x *ViolationResponse) GetCode() string {
 	if x != nil {
 		return x.Code
 	}
 	return ""
 }
 
-func (x *Violation) GetMessage() string {
+func (x *ViolationResponse) GetMessage() string {
 	if x != nil {
 		return x.Message
 	}
 	return ""
 }
 
-func (x *Violation) GetValue() string {
+func (x *ViolationResponse) GetValue() string {
 	if x != nil {
 		return x.Value
 	}
 	return ""
 }
 
-var File_validate_proto protoreflect.FileDescriptor
+var File_v1_validate_validate_proto protoreflect.FileDescriptor
 
-const file_validate_proto_rawDesc = "" +
+const file_v1_validate_validate_proto_rawDesc = "" +
 	"\n" +
-	"\x0evalidate.proto\x12\x1adhctl.provider.validate.v1\"0\n" +
+	"\x1av1/validate/validate.proto\x12\x1adhctl.provider.validate.v1\"0\n" +
 	"\x0fValidateRequest\x12\x1d\n" +
 	"\n" +
-	"input_json\x18\x01 \x01(\fR\tinputJson\"\x94\x01\n" +
-	"\x10ValidateResponse\x12=\n" +
-	"\x06errors\x18\x01 \x03(\v2%.dhctl.provider.validate.v1.ViolationR\x06errors\x12A\n" +
-	"\bwarnings\x18\x02 \x03(\v2%.dhctl.provider.validate.v1.ViolationR\bwarnings\"c\n" +
-	"\tViolation\x12\x12\n" +
+	"input_json\x18\x01 \x01(\fR\tinputJson\"\xa4\x01\n" +
+	"\x10ValidateResponse\x12E\n" +
+	"\x06errors\x18\x01 \x03(\v2-.dhctl.provider.validate.v1.ViolationResponseR\x06errors\x12I\n" +
+	"\bwarnings\x18\x02 \x03(\v2-.dhctl.provider.validate.v1.ViolationResponseR\bwarnings\"k\n" +
+	"\x11ViolationResponse\x12\x12\n" +
 	"\x04path\x18\x01 \x01(\tR\x04path\x12\x12\n" +
 	"\x04code\x18\x02 \x01(\tR\x04code\x12\x18\n" +
 	"\amessage\x18\x03 \x01(\tR\amessage\x12\x14\n" +
-	"\x05value\x18\x04 \x01(\tR\x05valueBGZEgithub.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/genb\x06proto3"
+	"\x05value\x18\x04 \x01(\tR\x05value2x\n" +
+	"\x0fValidateService\x12e\n" +
+	"\bValidate\x12+.dhctl.provider.validate.v1.ValidateRequest\x1a,.dhctl.provider.validate.v1.ValidateResponseBOZMgithub.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/validate/v1b\x06proto3"
 
 var (
-	file_validate_proto_rawDescOnce sync.Once
-	file_validate_proto_rawDescData []byte
+	file_v1_validate_validate_proto_rawDescOnce sync.Once
+	file_v1_validate_validate_proto_rawDescData []byte
 )
 
-func file_validate_proto_rawDescGZIP() []byte {
-	file_validate_proto_rawDescOnce.Do(func() {
-		file_validate_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_validate_proto_rawDesc), len(file_validate_proto_rawDesc)))
+func file_v1_validate_validate_proto_rawDescGZIP() []byte {
+	file_v1_validate_validate_proto_rawDescOnce.Do(func() {
+		file_v1_validate_validate_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_v1_validate_validate_proto_rawDesc), len(file_v1_validate_validate_proto_rawDesc)))
 	})
-	return file_validate_proto_rawDescData
+	return file_v1_validate_validate_proto_rawDescData
 }
 
-var file_validate_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
-var file_validate_proto_goTypes = []any{
-	(*ValidateRequest)(nil),  // 0: dhctl.provider.validate.v1.ValidateRequest
-	(*ValidateResponse)(nil), // 1: dhctl.provider.validate.v1.ValidateResponse
-	(*Violation)(nil),        // 2: dhctl.provider.validate.v1.Violation
+var file_v1_validate_validate_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_v1_validate_validate_proto_goTypes = []any{
+	(*ValidateRequest)(nil),   // 0: dhctl.provider.validate.v1.ValidateRequest
+	(*ValidateResponse)(nil),  // 1: dhctl.provider.validate.v1.ValidateResponse
+	(*ViolationResponse)(nil), // 2: dhctl.provider.validate.v1.ViolationResponse
 }
-var file_validate_proto_depIdxs = []int32{
-	2, // 0: dhctl.provider.validate.v1.ValidateResponse.errors:type_name -> dhctl.provider.validate.v1.Violation
-	2, // 1: dhctl.provider.validate.v1.ValidateResponse.warnings:type_name -> dhctl.provider.validate.v1.Violation
-	2, // [2:2] is the sub-list for method output_type
-	2, // [2:2] is the sub-list for method input_type
+var file_v1_validate_validate_proto_depIdxs = []int32{
+	2, // 0: dhctl.provider.validate.v1.ValidateResponse.errors:type_name -> dhctl.provider.validate.v1.ViolationResponse
+	2, // 1: dhctl.provider.validate.v1.ValidateResponse.warnings:type_name -> dhctl.provider.validate.v1.ViolationResponse
+	0, // 2: dhctl.provider.validate.v1.ValidateService.Validate:input_type -> dhctl.provider.validate.v1.ValidateRequest
+	1, // 3: dhctl.provider.validate.v1.ValidateService.Validate:output_type -> dhctl.provider.validate.v1.ValidateResponse
+	3, // [3:4] is the sub-list for method output_type
+	2, // [2:3] is the sub-list for method input_type
 	2, // [2:2] is the sub-list for extension type_name
 	2, // [2:2] is the sub-list for extension extendee
 	0, // [0:2] is the sub-list for field type_name
 }
 
-func init() { file_validate_proto_init() }
-func file_validate_proto_init() {
-	if File_validate_proto != nil {
+func init() { file_v1_validate_validate_proto_init() }
+func file_v1_validate_validate_proto_init() {
+	if File_v1_validate_validate_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_validate_proto_rawDesc), len(file_validate_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_validate_validate_proto_rawDesc), len(file_v1_validate_validate_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   3,
 			NumExtensions: 0,
-			NumServices:   0,
+			NumServices:   1,
 		},
-		GoTypes:           file_validate_proto_goTypes,
-		DependencyIndexes: file_validate_proto_depIdxs,
-		MessageInfos:      file_validate_proto_msgTypes,
+		GoTypes:           file_v1_validate_validate_proto_goTypes,
+		DependencyIndexes: file_v1_validate_validate_proto_depIdxs,
+		MessageInfos:      file_v1_validate_validate_proto_msgTypes,
 	}.Build()
-	File_validate_proto = out.File
-	file_validate_proto_goTypes = nil
-	file_validate_proto_depIdxs = nil
+	File_v1_validate_validate_proto = out.File
+	file_v1_validate_validate_proto_goTypes = nil
+	file_v1_validate_validate_proto_depIdxs = nil
 }

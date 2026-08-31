@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package validate
+package v1
 
 import (
 	"errors"
@@ -20,7 +20,6 @@ import (
 	"strings"
 	"testing"
 
-	protogen "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/gen"
 	"github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/errs"
 )
 
@@ -156,7 +155,7 @@ func TestInputFromRequest(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			req := &protogen.ValidateRequest{}
+			req := &ValidateRequest{}
 			if !test.nilJSON {
 				req.InputJson = []byte(test.inputJSON)
 			}

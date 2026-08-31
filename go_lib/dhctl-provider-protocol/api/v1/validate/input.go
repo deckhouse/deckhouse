@@ -12,13 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package validate
+package v1
 
 import (
 	"encoding/json"
 	"fmt"
 
-	protogen "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/gen"
 	"github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/errs"
 )
 
@@ -71,22 +70,22 @@ func (i Input) Validate() error {
 	}
 }
 
-func (i Input) ToRequest() (*protogen.ValidateRequest, error) {
-	inputJSON, err := json.Marshal(i)
+func (i Input) ToRequest() (*ValidateRequest, error) {
+	ret, err := json.Marshal(i)
 	if err != nil {
 		return nil, fmt.Errorf("encode validate input: %w", err)
 	}
 
-	return &protogen.ValidateRequest{
-		InputJson: inputJSON,
+	return &ValidateRequest{
+		InputJson: ret,
 	}, nil
 }
 
-func InputFromRequest(req *protogen.ValidateRequest) (Input, error) {
-	var input Input
-	if err := json.Unmarshal(req.GetInputJson(), &input); err != nil {
-		return input, fmt.Errorf("decode validate input: %w", err)
+func InputFromRequest(req *ValidateRequest) (Input, error) {
+	var ret Input
+	if err := json.Unmarshal(req.GetInputJson(), &ret); err != nil {
+		return ret, fmt.Errorf("decode validate input: %w", err)
 	}
 
-	return input, nil
+	return ret, nil
 }

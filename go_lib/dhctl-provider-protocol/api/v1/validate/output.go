@@ -12,25 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package validate
+package v1
 
 import (
-	"cmp"
 	"fmt"
-	"slices"
 	"strings"
-
-	protogen "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/gen"
 )
 
 // Output aggregates violations. The zero value is ready to use.
 type Output struct {
-	errors   Violations
-	warnings Violations
+	Errors   Violations
+	Warnings Violations
 }
 
 func (o *Output) AddError(path, code string, value any, message string) {
-	o.errors.Add(Violation{
+	o.Errors.Add(Violation{
 		Path:    path,
 		Code:    code,
 		Message: message,
@@ -39,7 +35,7 @@ func (o *Output) AddError(path, code string, value any, message string) {
 }
 
 func (o *Output) AddWarning(path, code string, value any, message string) {
-	o.warnings.Add(Violation{
+	o.Warnings.Add(Violation{
 		Path:    path,
 		Code:    code,
 		Message: message,
@@ -47,20 +43,11 @@ func (o *Output) AddWarning(path, code string, value any, message string) {
 	})
 }
 
-func (o Output) Errors() Violations {
-	return o.errors.Sorted()
-}
-
-func (o Output) Warnings() Violations {
-	return o.warnings.Sorted()
-}
-
-func (o Output) HasErrors() bool {
-	return len(o.errors) > 0
-}
-
-func (o Output) HasWarnings() bool {
-	return len(o.warnings) > 0
+func (o Output) ToResponse() *ValidateResponse {
+	return &ValidateResponse{
+		Errors:   o.Errors.ToResponse(),
+		Warnings: o.Warnings.ToResponse(),
+	}
 }
 
 type Violation struct {
@@ -76,22 +63,6 @@ func (v *Violations) Add(violation Violation) {
 	*v = append(*v, violation)
 }
 
-// Sorted orders by code, then path, so the text a caller prints is stable across
-// runs.
-func (v Violations) Sorted() Violations {
-	sorted := slices.Clone(v)
-
-	slices.SortStableFunc(sorted, func(a, b Violation) int {
-		if byCode := cmp.Compare(a.Code, b.Code); byCode != 0 {
-			return byCode
-		}
-
-		return cmp.Compare(a.Path, b.Path)
-	})
-
-	return sorted
-}
-
 func (v Violations) String() string {
 	if len(v) == 0 {
 		return ""
@@ -99,7 +70,7 @@ func (v Violations) String() string {
 
 	var builder strings.Builder
 
-	for i, violation := range v.Sorted() {
+	for i, violation := range v {
 		if i > 0 {
 			builder.WriteByte('\n')
 		}
@@ -114,50 +85,17 @@ func (v Violations) String() string {
 	return builder.String()
 }
 
-func (o Output) ToResponse() *protogen.ValidateResponse {
-	return &protogen.ValidateResponse{
-		Errors:   o.Errors().toProto(),
-		Warnings: o.Warnings().toProto(),
-	}
-}
-
-// OutputFromResponse rebuilds an Output, so a caller renders its text with the same
-// code the validator would have used.
-func OutputFromResponse(resp *protogen.ValidateResponse) Output {
-	var output Output
-
-	for _, violation := range resp.GetErrors() {
-		output.AddError(
-			violation.GetPath(),
-			violation.GetCode(),
-			valueOrNil(violation.GetValue()),
-			violation.GetMessage(),
-		)
-	}
-
-	for _, violation := range resp.GetWarnings() {
-		output.AddWarning(
-			violation.GetPath(),
-			violation.GetCode(),
-			valueOrNil(violation.GetValue()),
-			violation.GetMessage(),
-		)
-	}
-
-	return output
-}
-
-// toProto renders Value with fmt.Sprint: it is display-only, and a validator that
+// ToResponse renders Value with fmt.Sprint: it is display-only, and a validator that
 // must not disclose a value sends a placeholder instead of the value.
-func (v Violations) toProto() []*protogen.Violation {
+func (v Violations) ToResponse() []*ViolationResponse {
 	if len(v) == 0 {
 		return nil
 	}
 
-	wire := make([]*protogen.Violation, 0, len(v))
+	wire := make([]*ViolationResponse, 0, len(v))
 
 	for _, violation := range v {
-		encoded := &protogen.Violation{
+		encoded := &ViolationResponse{
 			Path:    violation.Path,
 			Code:    violation.Code,
 			Message: violation.Message,
@@ -168,8 +106,33 @@ func (v Violations) toProto() []*protogen.Violation {
 
 		wire = append(wire, encoded)
 	}
-
 	return wire
+}
+
+// OutputFromResponse rebuilds an Output, so a caller renders its text with the same
+// code the validator would have used.
+func OutputFromResponse(resp *ValidateResponse) Output {
+	var ret Output
+
+	for _, violation := range resp.GetErrors() {
+		ret.AddError(
+			violation.GetPath(),
+			violation.GetCode(),
+			valueOrNil(violation.GetValue()),
+			violation.GetMessage(),
+		)
+	}
+
+	for _, violation := range resp.GetWarnings() {
+		ret.AddWarning(
+			violation.GetPath(),
+			violation.GetCode(),
+			valueOrNil(violation.GetValue()),
+			violation.GetMessage(),
+		)
+	}
+
+	return ret
 }
 
 func valueOrNil(value string) any {

@@ -17,10 +17,21 @@ syntax = "proto3";
 package dhctl.provider.validate.v1;
 
 // Full import path: a relative value makes the generated code unimportable.
-option go_package = "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/gen";
+option go_package = "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/validate/v1";
+
+// ValidateService is the validate action: a validator checks a cloud provider's
+// configuration before the caller touches any infrastructure.
+//
+// One service per action. A validator registers what it implements, and a caller
+// learns a missing action from gRPC's Unimplemented rather than from a negotiation.
+service ValidateService {
+  rpc Validate(ValidateRequest) returns (ValidateResponse);
+}
+
 
 message ValidateRequest {
-  // JSON-encoded validate input; validate.Input in Go, wire shape in README.md.
+  // JSON-encoded validate input; Input in this package's Go code, wire shape in
+  // README.md.
   //
   // JSON rather than protobuf messages because every field that carries substance
   // is an arbitrary Kubernetes object: google.protobuf.Struct would be exactly as
@@ -34,11 +45,13 @@ message ValidateRequest {
 // A failure of the validator itself is NOT reported here — it is a gRPC status:
 // InvalidArgument, Unimplemented or Internal.
 message ValidateResponse {
-  repeated Violation errors   = 1;
-  repeated Violation warnings = 2;
+  repeated ViolationResponse errors   = 1;
+  repeated ViolationResponse warnings = 2;
 }
 
-message Violation {
+// Named apart from the hand-written Violation, which is the type a validator uses:
+// generated and hand-written code share this Go package.
+message ViolationResponse {
   // Resource field path, e.g. "Secret/d8-credentials.data.secret".
   string path = 1;
   // Stable machine-readable identifier, e.g. "credential_secret_required".
