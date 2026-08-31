@@ -15,33 +15,47 @@
 # limitations under the License.
 
 
-# Privilege-equivalence admission for User objects and ClusterAuthorizationRule writes.
-#
-# Lives in user-authz: the grants are this module's objects. Validating rules name Users; if
-# user-authn is disabled those rules never match.
+# Identity can-assign admission: User, Group, ClusterAuthorizationRule, and
+# can-assign-* labels on ClusterRole. Kernel is identity_assign.py.
 
-from typing import Optional
+from typing import Any, List, Optional
 
 from deckhouse import hook
 from dotmap import DotMap
 
-import privilege_rank as rank
+import identity_assign as assign
 
 MATCH_CONDITIONS = """
   matchConditions:
   - expression: ("system:apiserver" != request.userInfo.username)
     name: exclude-kube-apiserver
+  - expression: ("system:sudouser" != request.userInfo.username)
+    name: exclude-sudouser
+  - expression: ("system:kube-controller-manager" != request.userInfo.username)
+    name: exclude-kube-controller-manager
+  - expression: ("system:kube-scheduler" != request.userInfo.username)
+    name: exclude-kube-scheduler
+  - expression: ("system:volume-scheduler" != request.userInfo.username)
+    name: exclude-volume-scheduler
+  - expression: ("dhctl" != request.userInfo.username)
+    name: exclude-dhctl
+  - expression: ("observability" != request.userInfo.username)
+    name: exclude-observability
   - expression: ("system:serviceaccount:d8-system:deckhouse" != request.userInfo.username)
     name: exclude-deckhouse
   - expression: ("system:serviceaccount:kube-system:clusterrole-aggregation-controller" != request.userInfo.username)
     name: exclude-aggregation-controller
+  - expression: '!("system:masters" in request.userInfo.groups)'
+    name: exclude-system-masters
+  - expression: '!("system:serviceaccounts:kube-system" in request.userInfo.groups)'
+    name: exclude-kube-system-sas
 """
 
 CONFIG = f"""
 configVersion: v1
 kubernetesValidating:
-- name: d8-user-authz-identity-privilege.deckhouse.io
-  includeSnapshotsFrom: ["{rank.CAR_SNAP}", "{rank.AR_SNAP}"]
+- name: d8-user-authz-identity-assign.deckhouse.io
+  includeSnapshotsFrom: ["{assign.CAR_SNAP}", "{assign.AR_SNAP}", "{assign.CRB_SNAP}", "{assign.CROLE_SNAP}"]
 {MATCH_CONDITIONS}
   rules:
   - apiGroups:   ["deckhouse.io"]
@@ -51,11 +65,21 @@ kubernetesValidating:
     scope:       "Cluster"
   - apiGroups:   ["deckhouse.io"]
     apiVersions: ["*"]
+    operations:  ["CREATE", "UPDATE", "DELETE"]
+    resources:   ["groups"]
+    scope:       "Cluster"
+  - apiGroups:   ["deckhouse.io"]
+    apiVersions: ["*"]
     operations:  ["CREATE", "UPDATE"]
     resources:   ["clusterauthorizationrules"]
     scope:       "Cluster"
+  - apiGroups:   ["rbac.authorization.k8s.io"]
+    apiVersions: ["*"]
+    operations:  ["CREATE", "UPDATE"]
+    resources:   ["clusterroles"]
+    scope:       "Cluster"
 kubernetes:
-{rank.kubernetes_snapshots()}
+{assign.kubernetes_snapshots()}
 """
 
 
@@ -71,73 +95,131 @@ def main(ctx: hook.Context):
         ctx.output.validations.error(str(e))
 
 
+def _spec(obj: Any) -> dict:
+    if not obj:
+        return {}
+    return assign._dict(assign.as_plain(obj).get("spec") if isinstance(assign.as_plain(obj), dict)
+                        else getattr(obj, "spec", None))
+
+
+def _meta_name(obj: Any) -> str:
+    if not obj:
+        return ""
+    plain = assign.as_plain(obj)
+    if isinstance(plain, dict):
+        return ((plain.get("metadata") or {}).get("name")) or ""
+    meta = getattr(obj, "metadata", None)
+    return (getattr(meta, "name", None) or "") if meta else ""
+
+
+def _spec_groups(spec: dict) -> List[str]:
+    return [g for g in assign._list(spec.get("groups")) if isinstance(g, str) and g]
+
+
 def validate(ctx: DotMap) -> Optional[str]:
     req = ctx.review.request
-    username = req.userInfo.username
-    if username in rank.PRIVILEGED_USERS:
+    if assign.is_exempt(req.userInfo):
         return None
 
-    actor = rank.actor_rank(req.userInfo, ctx.snapshots)
     kind = (req.kind.kind or "").lower()
+    if kind == "clusterrole":
+        return validate_clusterrole(req)
+
+    catalog = assign.load_catalog(ctx.snapshots)
+    actor = assign.actor_roles(req.userInfo, ctx.snapshots)
 
     if kind == "user":
-        return validate_user(req, ctx.snapshots, actor)
+        return validate_user(req, ctx.snapshots, actor, catalog)
+    if kind == "group":
+        return validate_group(req, ctx.snapshots, actor, catalog)
     if kind == "clusterauthorizationrule":
-        return validate_car(req, actor)
+        return validate_car(req, actor, catalog)
     return None
 
 
-def _spec_field(obj, field):
-    if not obj:
-        return None
-    spec = obj.spec
-    if not spec:
-        return None
-    return spec[field]
+def validate_user(req, snapshots, actor: List[str], catalog: dict) -> Optional[str]:
+    new_spec = _spec(req.object)
+    old_spec = _spec(req.oldObject)
 
-
-def validate_user(req, snapshots, actor: int) -> Optional[str]:
+    emails = []
+    groups = []
     if req.operation == "DELETE":
-        email = _spec_field(req.oldObject, "email")
+        emails.append(old_spec.get("email"))
+        groups.extend(_spec_groups(old_spec))
     else:
-        email = _spec_field(req.object, "email")
-        old_email = _spec_field(req.oldObject, "email")
-        if isinstance(old_email, str) and isinstance(email, str):
-            # Changing onto a more privileged email is the same as creating that identity.
-            old_rank = rank.target_user_rank(snapshots, old_email)
-            new_rank = rank.target_user_rank(snapshots, email)
-            if rank.escalate_denied(actor, max(old_rank, new_rank)):
-                return _identity_deny("users.deckhouse.io", ".spec.email", email, actor,
-                                      max(old_rank, new_rank))
-            return None
+        emails.append(new_spec.get("email"))
+        groups.extend(_spec_groups(new_spec))
+        if req.operation == "UPDATE":
+            emails.append(old_spec.get("email"))
+            groups.extend(_spec_groups(old_spec))
 
-    if not isinstance(email, str) or not email:
+    targets: List[str] = []
+    seen = set()
+    display_email = ""
+    for email in emails:
+        if not isinstance(email, str) or not email:
+            continue
+        if not display_email:
+            display_email = email
+        for role in assign.target_user_roles(snapshots, email, groups):
+            if role not in seen:
+                seen.add(role)
+                targets.append(role)
+
+    if not targets:
         return None
-    target = rank.target_user_rank(snapshots, email)
-    if rank.escalate_denied(actor, target):
-        return _identity_deny("users.deckhouse.io", ".spec.email", email, actor, target)
-    return None
-
-
-def validate_car(req, actor: int) -> Optional[str]:
-    spec = req.object.spec if req.object else None
-    granted = rank.car_granted_rank(spec)
-    if not rank.escalate_denied(actor, granted):
+    rng = assign.actor_range(actor, catalog)
+    leftover = assign.can_assign(actor, targets, catalog)
+    if leftover is None:
         return None
-    name = ""
-    if req.object and req.object.metadata:
-        name = req.object.metadata.name or ""
-    return (
-        f'clusterauthorizationrules.deckhouse.io "{name}" grants {rank.rank_label(granted)}, '
-        f"which is higher than the requester's {rank.rank_label(actor)}"
-    )
+    return assign.deny_message("users.deckhouse.io", ".spec.email", display_email, leftover, rng)
 
 
-def _identity_deny(resource: str, field: str, value: str, actor: int, target: int) -> str:
-    return (
-        f'{resource} "{field}" "{value}" already carries {rank.rank_label(target)} privileges; '
-        f"the requester holds {rank.rank_label(actor)} and cannot create, update, or delete that User"
-    )
+def validate_group(req, snapshots, actor: List[str], catalog: dict) -> Optional[str]:
+    names = []
+    new_spec = _spec(req.object)
+    old_spec = _spec(req.oldObject)
+    if req.operation != "DELETE":
+        names.append(new_spec.get("name"))
+    if req.operation in ("UPDATE", "DELETE"):
+        names.append(old_spec.get("name"))
+
+    targets: List[str] = []
+    seen = set()
+    display = ""
+    for name in names:
+        if not isinstance(name, str) or not name:
+            continue
+        if not display:
+            display = name
+        for role in assign.target_group_roles(snapshots, name):
+            if role not in seen:
+                seen.add(role)
+                targets.append(role)
+
+    if not targets:
+        return None
+    rng = assign.actor_range(actor, catalog)
+    leftover = assign.can_assign(actor, targets, catalog)
+    if leftover is None:
+        return None
+    return assign.deny_message("groups.deckhouse.io", ".spec.name", display, leftover, rng)
+
+
+def validate_car(req, actor: List[str], catalog: dict) -> Optional[str]:
+    spec = _spec(req.object)
+    targets = assign.car_target_roles(spec)
+    leftover = assign.can_assign(actor, targets, catalog)
+    if leftover is None:
+        return None
+    rng = assign.actor_range(actor, catalog)
+    return assign.deny_car_message(_meta_name(req.object) or "obj", leftover, rng)
+
+
+def validate_clusterrole(req) -> Optional[str]:
+    if not assign.can_assign_labels_changed(req.oldObject, req.object):
+        return None
+    return assign.deny_label_message(_meta_name(req.object) or "obj")
 
 
 if __name__ == "__main__":
