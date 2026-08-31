@@ -143,11 +143,11 @@ provider:
 
 The module creates the following firewall rules in the cluster VPC:
 
-- `<prefix>-ssh-and-ping` — allow incoming traffic over the `ICMP` and `TCP` (port 22) protocols to nodes with the `<prefix>` network tag from CIDRs listed in `sshAllowList` (default `0.0.0.0/0`);
-- `<prefix>-intercommunication` — allow any traffic between nodes with the `<prefix>` network tag, and from the pod subnet (`podSubnetCIDR`).
+- `<prefix>-ssh-and-ping` — allow incoming traffic over the `ICMP` and `TCP` (port 22) protocols to nodes with the `<prefix>` network tag from CIDRs listed in [`sshAllowList`](cluster_configuration.html#gcpclusterconfiguration-sshallowlist) (default `0.0.0.0/0`);
+- `<prefix>-intercommunication` — allow any traffic between nodes with the `<prefix>` network tag, and from the pod subnet ([`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr)).
 
-Apply custom firewall rules to nodes via additional network tags (`additionalNetworkTags`):
+Apply custom firewall rules to nodes via additional network tags ([`additionalNetworkTags`](cluster_configuration.html#gcpclusterconfiguration-masternodegroup-instanceclass-additionalnetworktags)):
 
-- for master nodes — in the `masterNodeGroup` section of `GCPClusterConfiguration`;
-- for static nodes — in the `nodeGroups` section of `GCPClusterConfiguration`;
-- for ephemeral nodes — in the `GCPInstanceClass` resource.
+- for master nodes — in the [`masterNodeGroup.instanceClass.additionalNetworkTags`](cluster_configuration.html#gcpclusterconfiguration-masternodegroup-instanceclass-additionalnetworktags) parameter of the [GCPClusterConfiguration](cluster_configuration.html#gcpclusterconfiguration) resource;
+- for static nodes — in the [`nodeGroups[].instanceClass.additionalNetworkTags`](cluster_configuration.html#gcpclusterconfiguration-nodegroups-instanceclass-additionalnetworktags) parameter of the [GCPClusterConfiguration](cluster_configuration.html#gcpclusterconfiguration) resource;
+- for ephemeral nodes — in the [`spec.additionalNetworkTags`](cr.html#gcpinstanceclass-v1-spec-additionalnetworktags) parameter of the [GCPInstanceClass](cr.html#gcpinstanceclass) resource.

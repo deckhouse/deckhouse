@@ -12,7 +12,7 @@ description: "Схемы размещения Huawei Cloud для работы �
 ![Схема размещения Standard](images/huawei-standard.png)
 <!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10811&t=IvETjbByf1MSQzcm-0 --->
 
-Дополнительно возможно создание группы безопасности отдельным свойством `internalNetworkSecurity` (по умолчанию `true`). Группа создаётся с именем префикса кластера и назначается узлам.
+Дополнительно возможно создание группы безопасности отдельным свойством [`internalNetworkSecurity`](cluster_configuration.html#huaweicloudclusterconfiguration-standard-internalnetworksecurity) (по умолчанию `true`). Группа создаётся с именем префикса кластера и назначается узлам.
 
 Будут созданы следующие правила входящего трафика:
 
@@ -22,7 +22,7 @@ description: "Схемы размещения Huawei Cloud для работы �
 
 Правило «весь входящий трафик от узлов той же группы безопасности» в Huawei Cloud по умолчанию не создаётся.
 
-Собственные группы безопасности для CloudEphemeral-узлов задаются в ресурсе `HuaweiCloudInstanceClass` параметром `spec.securityGroups` и применяются вместе с группой, созданной модулем.
+Собственные группы безопасности для CloudEphemeral-узлов задаются в ресурсе [HuaweiCloudInstanceClass](cr.html#huaweicloudinstanceclass) параметром [`spec.securityGroups`](cr.html#huaweicloudinstanceclass-v1-spec-securitygroups) и применяются вместе с группой, созданной модулем.
 
 Пример конфигурации схемы размещения:
 
@@ -60,7 +60,7 @@ masterNodeGroup:
 ![Схема размещения VpcPeering](images/huawei-vpc-peering-ru.png)
 <!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11715&t=IvETjbByf1MSQzcm-0 --->
 
-Дополнительно возможно создание группы безопасности отдельным свойством `internalNetworkSecurity` (по умолчанию `true`). Правила по умолчанию совпадают со схемой [Standard](#standard). Для CloudEphemeral-узлов дополнительные группы безопасности задаются в `HuaweiCloudInstanceClass.spec.securityGroups`.
+Дополнительно возможно создание группы безопасности отдельным свойством [`internalNetworkSecurity`](cluster_configuration.html#huaweicloudclusterconfiguration-vpcpeering-internalnetworksecurity) (по умолчанию `true`). Правила по умолчанию совпадают со схемой [Standard](#standard). Для CloudEphemeral-узлов дополнительные группы безопасности задаются в параметре [`spec.securityGroups`](cr.html#huaweicloudinstanceclass-v1-spec-securitygroups) ресурса [HuaweiCloudInstanceClass](cr.html#huaweicloudinstanceclass).
 
 Пример конфигурации схемы размещения:
 

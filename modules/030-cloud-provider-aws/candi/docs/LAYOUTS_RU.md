@@ -118,7 +118,7 @@ tags:
 
 ## Группы безопасности
 
-Дополнительно возможно создание групп безопасности по умолчанию (если не задано `disableDefaultSecurityGroup: true`).
+Дополнительно возможно создание групп безопасности по умолчанию (если не задано [`disableDefaultSecurityGroup: true`](cluster_configuration.html#awsclusterconfiguration-disabledefaultsecuritygroup)).
 
 Будут созданы следующие группы и правила:
 
@@ -126,18 +126,18 @@ tags:
   - разрешение любого исходящего трафика в `0.0.0.0/0`;
   - разрешение любого входящего трафика от группы `<prefix>-loadbalancer`;
   - разрешение любого входящего трафика от узлов той же группы `<prefix>-node`;
-  - разрешение входящего трафика по протоколу `ICMP` из CIDR, указанных в `publicNetworkAllowList` (по умолчанию `0.0.0.0/0`).
+  - разрешение входящего трафика по протоколу `ICMP` из CIDR, указанных в [`publicNetworkAllowList`](cluster_configuration.html#awsclusterconfiguration-publicnetworkallowlist) (по умолчанию `0.0.0.0/0`).
 - `<prefix>-loadbalancer` — используется балансировщиками нагрузки:
-  - разрешение любого входящего трафика из CIDR в `publicNetworkAllowList`;
+  - разрешение любого входящего трафика из CIDR в [`publicNetworkAllowList`](cluster_configuration.html#awsclusterconfiguration-publicnetworkallowlist);
   - разрешение любого исходящего трафика к группе `<prefix>-node`.
-- `<prefix>-ssh-accessible` — создаётся, если задан `sshAllowList`; разрешает входящий трафик по протоколу `TCP` и порту 22 из указанных CIDR (по умолчанию `0.0.0.0/0`). Назначается master-узлам или bastion-хосту в схеме `WithNAT`.
+- `<prefix>-ssh-accessible` — создаётся, если задан [`sshAllowList`](cluster_configuration.html#awsclusterconfiguration-sshallowlist); разрешает входящий трафик по протоколу `TCP` и порту 22 из указанных CIDR (по умолчанию `0.0.0.0/0`). Назначается master-узлам или bastion-хосту в схеме `WithNAT`.
 
 {% alert level="warning" %}
-При `disableDefaultSecurityGroup: true` необходимо самостоятельно создать все необходимые группы безопасности и указать их в `additionalSecurityGroups`. Для балансировщиков нагрузки группы задаются аннотацией `service.beta.kubernetes.io/aws-load-balancer-security-groups`.
+При [`disableDefaultSecurityGroup: true`](cluster_configuration.html#awsclusterconfiguration-disabledefaultsecuritygroup) необходимо самостоятельно создать все необходимые группы безопасности и указать их в [`additionalSecurityGroups`](cluster_configuration.html#awsclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups). Для балансировщиков нагрузки группы задаются аннотацией `service.beta.kubernetes.io/aws-load-balancer-security-groups`.
 {% endalert %}
 
-Собственные группы безопасности (созданные в облаке заранее) подключаются через `additionalSecurityGroups`:
+Собственные группы безопасности (созданные в облаке заранее) подключаются через [`additionalSecurityGroups`](cluster_configuration.html#awsclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups):
 
-- для master-узлов — в секции `masterNodeGroup` ресурса `AWSClusterConfiguration`;
-- для статических узлов — в секции `nodeGroups` ресурса `AWSClusterConfiguration`;
-- для эфемерных узлов — в ресурсе `AWSInstanceClass`.
+- для master-узлов — в параметре [`masterNodeGroup.instanceClass.additionalSecurityGroups`](cluster_configuration.html#awsclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) ресурса [AWSClusterConfiguration](cluster_configuration.html#awsclusterconfiguration);
+- для статических узлов — в параметре [`nodeGroups[].instanceClass.additionalSecurityGroups`](cluster_configuration.html#awsclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) ресурса [AWSClusterConfiguration](cluster_configuration.html#awsclusterconfiguration);
+- для эфемерных узлов — в параметре [`spec.additionalSecurityGroups`](cr.html#awsinstanceclass-v1-spec-additionalsecuritygroups) ресурса [AWSInstanceClass](cr.html#awsinstanceclass).

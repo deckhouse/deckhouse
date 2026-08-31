@@ -146,11 +146,11 @@ provider:
 
 Модуль создаёт следующие правила файрвола в VPC кластера:
 
-- `<prefix>-ssh-and-ping` — разрешение входящего трафика по протоколам `ICMP` и `TCP` (порт 22) к узлам с network tag `<prefix>` из CIDR, указанных в `sshAllowList` (по умолчанию `0.0.0.0/0`);
-- `<prefix>-intercommunication` — разрешение любого трафика между узлами с network tag `<prefix>`, а также из подсети подов (`podSubnetCIDR`).
+- `<prefix>-ssh-and-ping` — разрешение входящего трафика по протоколам `ICMP` и `TCP` (порт 22) к узлам с network tag `<prefix>` из CIDR, указанных в [`sshAllowList`](cluster_configuration.html#gcpclusterconfiguration-sshallowlist) (по умолчанию `0.0.0.0/0`);
+- `<prefix>-intercommunication` — разрешение любого трафика между узлами с network tag `<prefix>`, а также из подсети подов ([`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr)).
 
-Собственные правила файрвола применяются к узлам через дополнительные network tags (`additionalNetworkTags`):
+Собственные правила файрвола применяются к узлам через дополнительные network tags ([`additionalNetworkTags`](cluster_configuration.html#gcpclusterconfiguration-masternodegroup-instanceclass-additionalnetworktags)):
 
-- для master-узлов — в секции `masterNodeGroup` ресурса `GCPClusterConfiguration`;
-- для статических узлов — в секции `nodeGroups` ресурса `GCPClusterConfiguration`;
-- для эфемерных узлов — в ресурсе `GCPInstanceClass`.
+- для master-узлов — в параметре [`masterNodeGroup.instanceClass.additionalNetworkTags`](cluster_configuration.html#gcpclusterconfiguration-masternodegroup-instanceclass-additionalnetworktags) ресурса [GCPClusterConfiguration](cluster_configuration.html#gcpclusterconfiguration);
+- для статических узлов — в параметре [`nodeGroups[].instanceClass.additionalNetworkTags`](cluster_configuration.html#gcpclusterconfiguration-nodegroups-instanceclass-additionalnetworktags) ресурса [GCPClusterConfiguration](cluster_configuration.html#gcpclusterconfiguration);
+- для эфемерных узлов — в параметре [`spec.additionalNetworkTags`](cr.html#gcpinstanceclass-v1-spec-additionalnetworktags) ресурса [GCPInstanceClass](cr.html#gcpinstanceclass).
