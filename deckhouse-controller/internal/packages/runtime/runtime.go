@@ -33,7 +33,6 @@ import (
 	schedulemanager "github.com/flant/shell-operator/pkg/schedule_manager"
 	"go.opentelemetry.io/otel"
 	"golang.org/x/sync/errgroup"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/util/retry"
 	"k8s.io/client-go/util/workqueue"
@@ -68,7 +67,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/tools/verity"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -485,7 +484,7 @@ func (r *Runtime) buildScheduler(cli kclient.Client) {
 			return nil
 		}
 
-		module := new(v1alpha1.Module)
+		module := new(v1alpha2.Module)
 		err := retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
 			return cli.Get(context.Background(), kclient.ObjectKey{Name: name}, module)
 		})
@@ -493,12 +492,13 @@ func (r *Runtime) buildScheduler(cli kclient.Client) {
 			return nil
 		}
 
-		// set a default version for modules overridden by ModulePullOverride (MPOS)
-		if module.IsCondition(v1alpha1.ModuleConditionIsOverridden, corev1.ConditionTrue) {
+		// an overridden module runs a mutable dev tag no semver names; count it
+		// as the default version, the way deckhouseVersionGetter does
+		if module.IsDev() {
 			return semver.MustParse("v2.0.0")
 		}
 
-		version, err := semver.NewVersion(module.GetVersion())
+		version, err := semver.NewVersion(module.Spec.PackageVersion)
 		if err != nil {
 			return nil
 		}

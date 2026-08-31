@@ -268,19 +268,20 @@ func NewDeckhouseController(
 
 	// instantiate ModuleDependency extender
 	moduledependency.Instance().SetModulesVersionHelper(func(moduleName string) (string, error) {
-		module := new(v1alpha1.Module)
+		moduleV2 := new(v1alpha2.Module)
 		if err := retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
-			return runtimeManager.GetClient().Get(ctx, client.ObjectKey{Name: moduleName}, module)
+			return runtimeManager.GetClient().Get(ctx, client.ObjectKey{Name: moduleName}, moduleV2)
 		}); err != nil {
 			return "", fmt.Errorf("on error: %w", err)
 		}
 
-		// set some version for the modules overridden by mpos
-		if module.IsCondition(v1alpha1.ModuleConditionIsOverridden, corev1.ConditionTrue) {
+		// an overridden module runs a mutable dev tag no semver names; count it
+		// as the default version, the way the package runtime does
+		if moduleV2.IsDev() {
 			return defaultModuleVersion, nil
 		}
 
-		return module.GetVersion(), nil
+		return moduleV2.Spec.PackageVersion, nil
 	})
 
 	bootstrappedHelper := func() (bool, error) {
