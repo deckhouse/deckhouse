@@ -8,6 +8,7 @@ include:
     inputs:
       runner_tag: k8s-intteam-cloud-d8-ssdlc-runner
       vault_role: deckhouse
+      branch: $BRANCH
 
 variables:
   E2E_PROVIDER:
@@ -49,24 +50,23 @@ variables:
       - "1.36"
     description: "Kubernetes version (candi/version_map.yml)."
 
-  E2E_UPDATE_DECKHOUSE:
-    value: "false"
-    options:
-      - "false"
-      - "true"
-    description: "Run deckhouse update after cluster create (requires UPDATE_IMAGE_TAG)."
-
   UPDATE_IMAGE_TAG:
     value: ""
-    description: "Target image tag for deckhouse update (used when E2E_UPDATE_DECKHOUSE=true)."
+    description: "Target image tag for deckhouse update. Leave empty to skip the update step; set a value to run deckhouse update after cluster create."
+
+  BRANCH:
+    value: ""
+    description: "Custom branch/image tag for e2e-framework (optional). Leave empty to auto-resolve from the current pipeline via e2e-ensure-build. If set and not prefixed with 'pr' (e.g. release/main build), e2e-ensure-build is skipped and this value is used as-is."
 
 # ---------------------------------------------------------------------------
 # Find edition build on existing branch/tag pipeline and play/wait if needed
 # ---------------------------------------------------------------------------
 
 e2e-ensure-build:
-  extends:
-    - .rules:on_e2e
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $BRANCH != "" && $BRANCH !~ /^pr/i
+      when: never
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/
   stage: e2e-ensure-build
   timeout: 4h
   interruptible: false
@@ -102,6 +102,7 @@ e2e-ensure-build:
   needs:
     - job: e2e-ensure-build
       artifacts: true
+      optional: true
 
 e2e-prestart:
   extends:
@@ -118,6 +119,7 @@ e2e-prestart:
   needs:
     - job: e2e-ensure-build
       artifacts: true
+      optional: true
     - job: e2e-prestart
       artifacts: true
 
@@ -143,7 +145,7 @@ e2e-yandex-update:
       artifacts: true
     - job: e2e-yandex-create
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Yandex" && $E2E_UPDATE_DECKHOUSE == "true"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Yandex" && $UPDATE_IMAGE_TAG != ""
 
 e2e-yandex-delete:
   extends:
@@ -186,7 +188,7 @@ e2e-aws-update:
       artifacts: true
     - job: e2e-aws-create
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "AWS" && $E2E_UPDATE_DECKHOUSE == "true"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "AWS" && $UPDATE_IMAGE_TAG != ""
 
 e2e-aws-delete:
   extends:
@@ -229,7 +231,7 @@ e2e-azure-update:
       artifacts: true
     - job: e2e-azure-create
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Azure" && $E2E_UPDATE_DECKHOUSE == "true"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Azure" && $UPDATE_IMAGE_TAG != ""
 
 e2e-azure-delete:
   extends:
@@ -272,7 +274,7 @@ e2e-gcp-update:
       artifacts: true
     - job: e2e-gcp-create
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "GCP" && $E2E_UPDATE_DECKHOUSE == "true"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "GCP" && $UPDATE_IMAGE_TAG != ""
 
 e2e-gcp-delete:
   extends:
@@ -315,7 +317,7 @@ e2e-openstack-update:
       artifacts: true
     - job: e2e-openstack-create
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "OpenStack" && $E2E_UPDATE_DECKHOUSE == "true"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "OpenStack" && $UPDATE_IMAGE_TAG != ""
 
 e2e-openstack-delete:
   extends:
@@ -358,7 +360,7 @@ e2e-vsphere-update:
       artifacts: true
     - job: e2e-vsphere-create
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Vsphere" && $E2E_UPDATE_DECKHOUSE == "true"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Vsphere" && $UPDATE_IMAGE_TAG != ""
 
 e2e-vsphere-delete:
   extends:
@@ -401,7 +403,7 @@ e2e-dvp-update:
       artifacts: true
     - job: e2e-dvp-create
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "DVP" && $E2E_UPDATE_DECKHOUSE == "true"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "DVP" && $UPDATE_IMAGE_TAG != ""
 
 e2e-dvp-delete:
   extends:
@@ -444,7 +446,7 @@ e2e-zvirt-update:
       artifacts: true
     - job: e2e-zvirt-create
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Zvirt" && $E2E_UPDATE_DECKHOUSE == "true"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Zvirt" && $UPDATE_IMAGE_TAG != ""
 
 e2e-zvirt-delete:
   extends:
@@ -487,7 +489,7 @@ e2e-vcd-update:
       artifacts: true
     - job: e2e-vcd-create
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "VCD" && $E2E_UPDATE_DECKHOUSE == "true"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "VCD" && $UPDATE_IMAGE_TAG != ""
 
 e2e-vcd-delete:
   extends:
@@ -530,7 +532,7 @@ e2e-huawei-update:
       artifacts: true
     - job: e2e-huawei-create
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Huawei" && $E2E_UPDATE_DECKHOUSE == "true"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Huawei" && $UPDATE_IMAGE_TAG != ""
 
 e2e-huawei-delete:
   extends:
@@ -573,7 +575,7 @@ e2e-static-private-update:
       artifacts: true
     - job: e2e-static-private-create
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "StaticPrivate" && $E2E_UPDATE_DECKHOUSE == "true"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "StaticPrivate" && $UPDATE_IMAGE_TAG != ""
 
 e2e-static-private-delete:
   extends:
