@@ -604,6 +604,8 @@ Password reset, 2FA reset, and lock/unlock operations are performed via the [Use
 
 Use the `d8 iam user` commands for administrative actions on local users. They create a UserOperation resource with `initiatorType: admin`, wait for the operation to complete, and print the result.
 
+You can delete or recreate a local user only if you already hold privileges at least as high as that user's current grant.
+
 The `ResetPassword`, `Reset2FA`, and `Lock` operations delete the user's Dex OfflineSessions and RefreshToken objects. This terminates the user's active offline sessions and requires re-authentication.
 
 Interactive password reset example:
