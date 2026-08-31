@@ -33,6 +33,7 @@ import (
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	deckhousev1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	clouddatav1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	yciccv1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks/internal/api/instanceclass/v1"
 	ycpccv1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks/internal/api/pcc/v1"
@@ -71,7 +72,7 @@ func IsMigrationResourcesApplied(input *go_hook.HookInput, pcc ycpccv1.YandexPro
 	}
 
 	// Check NodeGroups and InstanceClasses
-	existingNodeGroups, err := sdkobjectpatch.UnmarshalToStruct[NamedResourceFilterResult](input.Snapshots, "node_groups")
+	existingNodeGroups, err := sdkobjectpatch.UnmarshalToStruct[NodeGroupFilterResult](input.Snapshots, "node_groups")
 	if err != nil {
 		return false
 	}
@@ -90,7 +91,8 @@ func IsMigrationResourcesApplied(input *go_hook.HookInput, pcc ycpccv1.YandexPro
 	}
 
 	// hybrid clusters have no masterNodeGroup
-	if pcc.MasterNodeGroup.Replicas > 0 && (!nodeGroupSet["master"] || !icSet[cpapi.BuildInstanceClassName("master")]) {
+	isHybrid := IsHybridCluster(existingNodeGroups)
+	if pcc.MasterNodeGroup.Replicas > 0 && !isHybrid && (!nodeGroupSet["master"] || !icSet[cpapi.BuildInstanceClassName("master")]) {
 		return false
 	}
 
@@ -111,8 +113,10 @@ func CreateMigrationResourcesSecret(
 	input *go_hook.HookInput,
 	pcc ycpccv1.YandexProviderClusterConfiguration,
 	mc ycsettingsv1.ModuleConfigSettings,
+	discoveryData clouddatav1.YandexCloudDiscoveryData,
+	isHybrid bool,
 ) error {
-	resources, err := buildMigrationResources(pcc, mc)
+	resources, err := buildMigrationResources(pcc, mc, isHybrid, discoveryData)
 	if err != nil {
 		return fmt.Errorf("build migration resources: %w", err)
 	}
@@ -171,7 +175,7 @@ func DeleteMigrationArtifacts(input *go_hook.HookInput) {
 	input.PatchCollector.Delete("v1", "ConfigMap", Namespace, YandexMigrationConfigMapName)
 }
 
-func buildMigrationResources(pcc ycpccv1.YandexProviderClusterConfiguration, mc ycsettingsv1.ModuleConfigSettings) ([]any, error) {
+func buildMigrationResources(pcc ycpccv1.YandexProviderClusterConfiguration, mc ycsettingsv1.ModuleConfigSettings, isHybrid bool, discoveryData clouddatav1.YandexCloudDiscoveryData) ([]any, error) {
 	resources := make([]any, 0)
 
 	// build credential secrets
@@ -180,7 +184,7 @@ func buildMigrationResources(pcc ycpccv1.YandexProviderClusterConfiguration, mc 
 	}
 
 	// build ModuleConfig v2
-	mcSettingsV2 := BuildModuleConfigSettingsV2(pcc, mc)
+	mcSettingsV2 := BuildModuleConfigSettingsV2(pcc, mc, isHybrid, discoveryData)
 	mcSettingsV2JSON, err := json.Marshal(mcSettingsV2)
 	if err != nil {
 		return []any{}, fmt.Errorf("marshal settings: %w", err)
@@ -207,7 +211,7 @@ func buildMigrationResources(pcc ycpccv1.YandexProviderClusterConfiguration, mc 
 	})
 
 	// build NodeGroups and YandexInstanceClasses
-	if pcc.MasterNodeGroup.Replicas > 0 {
+	if pcc.MasterNodeGroup.Replicas > 0 && !isHybrid {
 		nodeTemplate := map[string]any{
 			"labels": map[string]any{
 				"node-role.kubernetes.io/control-plane": "",
@@ -302,7 +306,7 @@ func BuildCredentialsSecrets(pcc ycpccv1.YandexProviderClusterConfiguration) []c
 	return secrets
 }
 
-func BuildModuleConfigSettingsV2(cfg ycpccv1.YandexProviderClusterConfiguration, mc ycsettingsv1.ModuleConfigSettings) ycsettingsv2.ModuleConfigSettings {
+func BuildModuleConfigSettingsV2(cfg ycpccv1.YandexProviderClusterConfiguration, mc ycsettingsv1.ModuleConfigSettings, isHybrid bool, discoveryData clouddatav1.YandexCloudDiscoveryData) ycsettingsv2.ModuleConfigSettings {
 	var withNATParams ycsettingsv2.NATInstanceParameters
 	if cfg.WithNATInstance != nil {
 		var withNATResources ycsettingsv2.NATInstanceResources
@@ -366,6 +370,17 @@ func BuildModuleConfigSettingsV2(cfg ycpccv1.YandexProviderClusterConfiguration,
 		})
 	}
 
+	// A hybrid cluster (Static master + cloud workers) never runs the DKP infrastructure, so the
+	// route table and the additional internal networks it uses are recorded in the discovery data
+	// rather than produced by terraform. They have to be carried into the v2 settings explicitly,
+	// otherwise the CCM and the vpc-components lose them once the legacy PCC is gone.
+	var existingRouteTableID string
+	var additionalInternalNetworkIDs []string
+	if isHybrid {
+		existingRouteTableID = discoveryData.RouteTableID
+		additionalInternalNetworkIDs = excludeNetworkID(discoveryData.InternalNetworkIDs, ptr.Deref(cfg.ExistingNetworkID, ""))
+	}
+
 	settings := ycsettingsv2.ModuleConfigSettings{
 		Provider: ycsettingsv2.Provider{
 			Parameters: ycsettingsv2.ProviderParameters{
@@ -381,6 +396,7 @@ func BuildModuleConfigSettingsV2(cfg ycpccv1.YandexProviderClusterConfiguration,
 				NodeNetworkCIDR:           cfg.NodeNetworkCIDR,
 				WithNATInstance:           withNATParams,
 				ExistingNetworkID:         ptr.Deref(cfg.ExistingNetworkID, ""),
+				ExistingRouteTableID:      existingRouteTableID,
 				ExistingZoneToSubnetIDMap: cfg.ExistingZoneToSubnetIDMap,
 				DHCPOptions:               dhcpOptions,
 				ExternalIPAddresses:       externalIPAddresses,
@@ -404,11 +420,44 @@ func BuildModuleConfigSettingsV2(cfg ycpccv1.YandexProviderClusterConfiguration,
 			Disabled: false,
 			Parameters: ycsettingsv2.CCMParameters{
 				AdditionalExternalNetworkIDs: mc.AdditionalExternalNetworkIDs,
+				AdditionalInternalNetworkIDs: additionalInternalNetworkIDs,
 			},
 		},
 	}
 
 	return settings
+}
+
+// IsHybridCluster reports whether the cluster is hybrid: its master NodeGroup is Static, i.e.
+// provisioned outside of DKP. Such a cluster never runs the DKP infrastructure, so the migration
+// must not project a CloudPermanent master NodeGroup and must carry the discovery-data network
+// facts into the v2 ModuleConfig.
+func IsHybridCluster(nodeGroups []NodeGroupFilterResult) bool {
+	for _, ng := range nodeGroups {
+		if ng.Name == "master" && ng.NodeType == string(cpapi.NodeTypeStatic) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// excludeNetworkID returns ids without excluded. It is used to drop the PCC's
+// existingNetworkID from the discovery-data internal network list, because that network is already
+// carried separately in nodes.parameters.existingNetworkID.
+func excludeNetworkID(networkIDs []string, excludedNetworkID string) []string {
+	if excludedNetworkID == "" {
+		return networkIDs
+	}
+
+	result := make([]string, 0, len(networkIDs))
+	for _, networkID := range networkIDs {
+		if networkID != excludedNetworkID {
+			result = append(result, networkID)
+		}
+	}
+
+	return result
 }
 
 // BuildNodeGroupAndInstanceClassResources creates a YandexInstanceClass and NodeGroup

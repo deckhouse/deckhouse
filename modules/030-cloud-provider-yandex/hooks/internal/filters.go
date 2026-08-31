@@ -29,6 +29,7 @@ import (
 	deckhousev1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
+	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 )
 
 type PCCSecretFilterResult struct {
@@ -49,6 +50,11 @@ type ModuleConfigFilterResult struct {
 
 type NamedResourceFilterResult struct {
 	Name string `json:"name"`
+}
+
+type NodeGroupFilterResult struct {
+	Name     string `json:"name"`
+	NodeType string `json:"nodeType"`
 }
 
 func FilterPCCSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -126,6 +132,18 @@ func FilterCredentialSecret(obj *unstructured.Unstructured) (go_hook.FilterResul
 
 func FilterNamedResource(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	return NamedResourceFilterResult{Name: obj.GetName()}, nil
+}
+
+func FilterNodeGroup(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	ng := &cpapi.NodeGroup{}
+	if err := sdk.FromUnstructured(obj, ng); err != nil {
+		return nil, fmt.Errorf("convert NodeGroup from unstructured: %w", err)
+	}
+
+	return NodeGroupFilterResult{
+		Name:     ng.Name,
+		NodeType: string(ng.Spec.NodeType),
+	}, nil
 }
 
 func FilterCandiDiscoverySecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
