@@ -25,6 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 // excludedModuleSources lists the platform-owned sources. The platform ships
@@ -32,6 +33,19 @@ import (
 // "deckhouse" repository from the deckhouse module templates; a snapshot of
 // the source credentials would go stale.
 var excludedModuleSources = []string{v1alpha1.ModuleSourceNameDeckhouse, moduleSourceNameFlant}
+
+// EnsurePackageRepository mirrors a module source into its package repository
+// at runtime, so a source created or edited after startup gets a repository
+// without a restart. Platform-owned and deleted sources are skipped.
+func EnsurePackageRepository(ctx context.Context, reader client.Reader, writer client.Client, source *v1alpha1.ModuleSource, logger *log.Logger) error {
+	if slices.Contains(excludedModuleSources, source.Name) || !source.DeletionTimestamp.IsZero() {
+		return nil
+	}
+
+	s := &syncer{reader: reader, writer: writer, logger: logger}
+
+	return s.ensurePackageRepository(ctx, source)
+}
 
 // syncPackageRepositories ensures a PackageRepository for every module source
 // except the excluded ones, so the repositories are in place before the

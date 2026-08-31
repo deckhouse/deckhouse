@@ -431,6 +431,26 @@ func (suite *ControllerTestSuite) TestFetchMissingIntermediateReleases() {
 	})
 }
 
+// TestEnsurePackageRepository verifies the runtime mirror: reconciling a source
+// creates its package repository right away, so a source added after startup
+// does not wait for a restart.
+func (suite *ControllerTestSuite) TestEnsurePackageRepository() {
+	suite.Run("package repository follows the module source", func() {
+		dc := newMockedContainerWithData(suite.T(),
+			"v1.2.3",
+			[]string{"ingressnginx"},
+			[]string{})
+		suite.setupTestController("embedded-module-single-source.yaml", withDependencyContainer(dc))
+
+		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource("test-source-1"))
+		require.NoError(suite.T(), err)
+
+		repo := new(v1alpha1.PackageRepository)
+		require.NoError(suite.T(), suite.Client().Get(context.TODO(), types.NamespacedName{Name: "test-source-1"}, repo))
+		assert.Equal(suite.T(), "dev-registry.deckhouse.io/deckhouse/modules", repo.Spec.Registry.Repo)
+	})
+}
+
 func (suite *ControllerTestSuite) TestDeleteReconcile() {
 	suite.Run("source with finalizer and empty releases", func() {
 		m := `

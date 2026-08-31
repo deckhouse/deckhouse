@@ -45,6 +45,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/pkgsync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
@@ -220,6 +221,13 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 	defer span.End()
 
 	span.SetAttributes(attribute.String("source", source.Name))
+
+	// a source created or edited at runtime gets its package repository right
+	// away; the startup sync only covers the sources present at boot
+	if err := pkgsync.EnsurePackageRepository(ctx, r.client, r.client, source, r.logger); err != nil {
+		r.logger.Error("failed to ensure the package repository for the module source", slog.String("source_name", source.Name), log.Err(err))
+		return ctrl.Result{}, err
+	}
 
 	scanInterval := defaultScanInterval
 	if interval := source.Spec.ScanInterval; interval != nil && interval.Duration > defaultScanInterval {
