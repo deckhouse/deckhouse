@@ -6,22 +6,31 @@
 
   {{- /* New approach: use module package values */}} 
   {{- if and $context.Module $context.Module.Package }}
-    {{- $registryBase := $context.Module.Package.Registry.repository }}
-    {{- if not $registryBase }}
-      {{- fail "Registry base is not set" }}
-    {{- end }}
-
-    {{- $packageName := $context.Module.Package.Name }}
-    {{- if not $packageName }}
-      {{- fail "Package name is not set" }}
-    {{- end }}
-
     {{- $imageDigest := index $context.Module.Package.Digests $containerName }}
     {{- if not $imageDigest }}
       {{- fail (printf "Image %s has no digest" $containerName) }}
     {{- end }}
 
-    {{- printf "%s/%s@%s" $registryBase $packageName $imageDigest }}
+    {{- if $context.Module.Package.Embedded }}
+      {{- $registryBase := $context.Values.global.modulesImages.registry.base }}
+      {{- if not $registryBase }}
+        {{- fail "Registry base is not set" }}
+      {{- end }}
+
+      {{- printf "%s@%s" $registryBase $imageDigest }}
+    {{- else }}
+      {{- $registryBase := $context.Module.Package.Registry.repository }}
+      {{- if not $registryBase }}
+        {{- fail "Registry base is not set" }}
+      {{- end }}
+
+      {{- $packageName := $context.Module.Package.Name }}
+      {{- if not $packageName }}
+        {{- fail "Package name is not set" }}
+      {{- end }}
+
+      {{- printf "%s/%s@%s" $registryBase $packageName $imageDigest }}
+    {{- end }}
 
   {{- /* Legacy fallback: use global modulesImages values */}}
   {{- else }}
