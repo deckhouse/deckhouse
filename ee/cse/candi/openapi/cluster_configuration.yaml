@@ -19,7 +19,7 @@ apiVersions:
       d8 system edit cluster-configuration
       ```
     additionalProperties: false
-    required: [apiVersion, kind, clusterType, podSubnetCIDR, serviceSubnetCIDR, clusterDomain]
+    required: [apiVersion, kind, clusterType, clusterDomain]
     x-examples:
     - apiVersion: deckhouse.io/v1
       kind: ClusterConfiguration
@@ -84,13 +84,31 @@ apiVersions:
       podSubnetCIDR:
         type: string
         x-unsafe: true
+        x-doc-deprecated: true
         description: |
+          **Deprecated.** Use [`podSubnetCIDR`](/modules/control-plane-manager/configuration.html#parameters-network-podsubnetcidr) in the `network` section of the `control-plane-manager` ModuleConfig instead (`d8 k edit mc control-plane-manager`).
+
+          This parameter is resolved in the following order: `network.podSubnetCIDR` in the `control-plane-manager` ModuleConfig, then this field. The ModuleConfig setting wins whenever it is set.
+
+          This field is optional. While the ModuleConfig setting is unset, this field is what decides the value. The `D8ObsoleteNetworkFieldsInClusterConfiguration` alert appears in the cluster simply because the field is present — including when the ModuleConfig setting already decides the value — and clears once all three network fields are removed.
+
+          Do not change this field in a running cluster.
+
           Address space of the cluster's Pods.
 
           > **Warning!** Changing this parameter in a running cluster is **extremely dangerous** and can lead to complete cluster failure. The change is blocked by default. To bypass this protection, use `dhctl config edit cluster-configuration --yes-i-am-sane-and-i-understand-what-i-am-doing` command. However, it is **strongly recommended to recreate the cluster** instead of changing this parameter. See [documentation](/products/kubernetes-platform/documentation/v1/admin/configuration/#modifying-protected-parameters) for details.
       podSubnetNodeCIDRPrefix:
         type: string
+        x-doc-deprecated: true
         description: |
+          **Deprecated.** Use [`podSubnetNodeCIDRPrefix`](/modules/control-plane-manager/configuration.html#parameters-network-podsubnetnodecidrprefix) in the `network` section of the `control-plane-manager` ModuleConfig instead (`d8 k edit mc control-plane-manager`).
+
+          This parameter is resolved in the following order: `network.podSubnetNodeCIDRPrefix` in the `control-plane-manager` ModuleConfig, then this field. The ModuleConfig setting wins whenever it is set.
+
+          This field is optional. While the ModuleConfig setting is unset, this field is what decides the value. The `D8ObsoleteNetworkFieldsInClusterConfiguration` alert appears in the cluster simply because the field is present — including when the ModuleConfig setting already decides the value — and clears once all three network fields are removed.
+
+          Do not change this field in a running cluster.
+
           The prefix size of the Pod network allocated to each node.
 
           This parameter determines how many IP addresses are available for Pods on each individual node. For example, if `podSubnetCIDR: 10.111.0.0/16` and `podSubnetNodeCIDRPrefix: "24"`, each node will receive a `/24` subnet (e.g., `10.111.0.0/24`, `10.111.1.0/24`, etc.), providing up to 254 IP addresses per node (253 usable for Pods, accounting for network and broadcast addresses).
@@ -101,11 +119,21 @@ apiVersions:
           - Each Pod network IP can support up to 2 Pods (one running + one terminating)
 
           > **Warning!** Changing this parameter in a running cluster is **extremely dangerous** and can lead to complete cluster failure. The change is blocked by default. To bypass this protection, use `dhctl config edit cluster-configuration --yes-i-am-sane-and-i-understand-what-i-am-doing` command. However, it is **strongly recommended to recreate the cluster** instead of changing this parameter. See [documentation](/products/kubernetes-platform/documentation/v1/admin/configuration/#modifying-protected-parameters) for details.
-        default: "24"
+
+          If the parameter is set in neither place, `24` is used.
       serviceSubnetCIDR:
         type: string
         x-unsafe: true
+        x-doc-deprecated: true
         description: |
+          **Deprecated.** Use [`serviceSubnetCIDR`](/modules/control-plane-manager/configuration.html#parameters-network-servicesubnetcidr) in the `network` section of the `control-plane-manager` ModuleConfig instead (`d8 k edit mc control-plane-manager`).
+
+          This parameter is resolved in the following order: `network.serviceSubnetCIDR` in the `control-plane-manager` ModuleConfig, then this field. The ModuleConfig setting wins whenever it is set.
+
+          This field is optional. While the ModuleConfig setting is unset, this field is what decides the value. The `D8ObsoleteNetworkFieldsInClusterConfiguration` alert appears in the cluster simply because the field is present — including when the ModuleConfig setting already decides the value — and clears once all three network fields are removed.
+
+          Do not change this field in a running cluster.
+
           Address space of the cluster's services.
 
           > **Warning!** Changing this parameter in a running cluster is **extremely dangerous** and can lead to complete cluster failure. The change is blocked by default. To bypass this protection, use `dhctl config edit cluster-configuration --yes-i-am-sane-and-i-understand-what-i-am-doing` command. However, it is **strongly recommended to recreate the cluster** instead of changing this parameter. See [documentation](/products/kubernetes-platform/documentation/v1/admin/configuration/#modifying-protected-parameters) for details.

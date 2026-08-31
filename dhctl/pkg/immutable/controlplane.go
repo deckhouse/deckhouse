@@ -127,7 +127,10 @@ func buildControlPlaneConfig(ctx context.Context, in MasterPayloadInput) (*contr
 func clusterParams(metaConfig *config.MetaConfig) (controlPlaneRenderParams, error) {
 	// ClusterConfigMap resolves an "Automatic" kubernetesVersion to the version
 	// this installer defaults to. Rendering "Automatic" into the feature gates
-	// of every component is what the raw value would do.
+	// of every component is what the raw value would do. It also substitutes the
+	// three network parameters (ModuleConfig spec.settings.network first, then
+	// the deprecated ClusterConfiguration fields), so the required-key loop below
+	// covers both sources and converge renders the same values bootstrap did.
 	clusterConfig, err := metaConfig.ClusterConfigMap()
 	if err != nil {
 		return controlPlaneRenderParams{}, fmt.Errorf("read the cluster configuration: %w", err)

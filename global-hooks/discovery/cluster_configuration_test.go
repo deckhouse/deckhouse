@@ -23,6 +23,17 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
+// maxNodesAmount returns the d8_max_nodes_amount_by_pod_cidr value, or nil when the hook did not
+// emit it. Returning the pointer keeps "not collected" distinguishable from a collected zero.
+func maxNodesAmount(f *HookExecutionConfig) *float64 {
+	for _, m := range f.MetricsCollector.CollectedMetrics() {
+		if m.Name == "d8_max_nodes_amount_by_pod_cidr" {
+			return m.Value
+		}
+	}
+	return nil
+}
+
 var _ = Describe("Global hooks :: discovery/clusterConfiguration ::", func() {
 	const (
 		initValuesString       = `{"global": {"discovery": {}}}`
@@ -61,15 +72,7 @@ var _ = Describe("Global hooks :: discovery/clusterConfiguration ::", func() {
 			Expect(f.ValuesGet("global.discovery.serviceSubnet").String()).To(Equal("10.222.0.0/16"))
 			Expect(f.ValuesGet("global.discovery.clusterDomain").String()).To(Equal("test.local"))
 
-			var maxNodes *float64
-			for _, m := range f.MetricsCollector.CollectedMetrics() {
-				if m.Name == "d8_max_nodes_amount_by_pod_cidr" {
-					maxNodes = m.Value
-					break
-				}
-			}
-			Expect(maxNodes).NotTo(BeNil())
-			Expect(*maxNodes).To(Equal(float64(256)))
+			Expect(maxNodesAmount(f)).To(HaveValue(Equal(float64(256))))
 		})
 
 		Context("d8-cluster-configuration Secret has changed", func() {
@@ -92,15 +95,7 @@ var _ = Describe("Global hooks :: discovery/clusterConfiguration ::", func() {
 				Expect(f.ValuesGet("global.discovery.serviceSubnet").String()).To(Equal("10.213.0.0/16"))
 				Expect(f.ValuesGet("global.discovery.clusterDomain").String()).To(Equal("test.local"))
 
-				var maxNodes *float64
-				for _, m := range f.MetricsCollector.CollectedMetrics() {
-					if m.Name == "d8_max_nodes_amount_by_pod_cidr" {
-						maxNodes = m.Value
-						break
-					}
-				}
-				Expect(maxNodes).NotTo(BeNil())
-				Expect(*maxNodes).To(Equal(float64(1024)))
+				Expect(maxNodesAmount(f)).To(HaveValue(Equal(float64(1024))))
 			})
 		})
 
@@ -134,6 +129,96 @@ var _ = Describe("Global hooks :: discovery/clusterConfiguration ::", func() {
 		})
 	})
 
+	Context("Network parameters in ModuleConfig control-plane-manager", func() {
+		// Both key families must carry the resolved value: global.discovery.* feeds CNI, kube-proxy and
+		// the provider CCMs, while global.clusterConfiguration.* is what every template reads.
+		assertNetwork := func(pod, service, prefix string) {
+			Expect(f.ValuesGet("global.discovery.podSubnet").String()).To(Equal(pod))
+			Expect(f.ValuesGet("global.discovery.serviceSubnet").String()).To(Equal(service))
+			Expect(f.ValuesGet("global.discovery.podSubnetNodeCIDRPrefix").String()).To(Equal(prefix))
+
+			Expect(f.ValuesGet("global.clusterConfiguration.podSubnetCIDR").String()).To(Equal(pod))
+			Expect(f.ValuesGet("global.clusterConfiguration.serviceSubnetCIDR").String()).To(Equal(service))
+			Expect(f.ValuesGet("global.clusterConfiguration.podSubnetNodeCIDRPrefix").String()).To(Equal(prefix))
+		}
+
+		Context("Fully migrated: ModuleConfig overrides all three deprecated fields", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(
+					stateA+networkModuleConfigYAML("10.1.0.0/16", "10.2.0.0/16", "25"), 2))
+				f.RunHook()
+			})
+
+			It("publishes the ModuleConfig values into both key families", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				assertNetwork("10.1.0.0/16", "10.2.0.0/16", "25")
+			})
+
+			It("counts the maximum node amount from the resolved values", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				// /16 pod subnet with a /25 node prefix: 2^(25-16) = 512.
+				Expect(maxNodesAmount(f)).To(HaveValue(Equal(float64(512))))
+			})
+		})
+
+		Context("Half migrated: only the pod CIDR moved to ModuleConfig", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(
+					stateA+networkModuleConfigYAML("10.1.0.0/16", "", ""), 2))
+				f.RunHook()
+			})
+
+			It("resolves each parameter independently", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				assertNetwork("10.1.0.0/16", "10.222.0.0/16", "24")
+			})
+		})
+
+		Context("ModuleConfig exists with no network group", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(
+					stateA+networkModuleConfigYAML("", "", ""), 2))
+				f.RunHook()
+			})
+
+			It("keeps using the deprecated ClusterConfiguration fields", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				assertNetwork("10.111.0.0/16", "10.222.0.0/16", "24")
+			})
+		})
+
+		Context("ClusterConfiguration without the deprecated network fields", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(
+					clusterConfigurationSecret(ccStateNoNetworkClusterConfiguration)+
+						networkModuleConfigYAML("10.1.0.0/16", "10.2.0.0/16", ""), 2))
+				f.RunHook()
+			})
+
+			// A cluster bootstrapped after this release may carry the values only in ModuleConfig, the
+			// deprecated fields having never been written. The prefix then comes from the code constant.
+			It("resolves entirely from ModuleConfig and defaults the prefix", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				assertNetwork("10.1.0.0/16", "10.2.0.0/16", "24")
+			})
+		})
+
+		Context("A CIDR is set in neither document", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(
+					clusterConfigurationSecret(ccStateNoNetworkClusterConfiguration), 1))
+				f.RunHook()
+			})
+
+			// Fail rather than publish "": an empty string here reaches --cluster-cidr and
+			// --service-cluster-ip-range on every master.
+			It("fails instead of publishing an empty subnet", func() {
+				Expect(f).ToNot(ExecuteSuccessfully())
+				Expect(f.GoHookError.Error()).To(ContainSubstring("podSubnetCIDR is set neither in ModuleConfig"))
+			})
+		})
+	})
+
 	Context("Cluster has a d8-cluster-configuration Secret with kubernetesVersion = `Automatic`", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateC, 1))
@@ -155,15 +240,7 @@ var _ = Describe("Global hooks :: discovery/clusterConfiguration ::", func() {
 			Expect(f.ValuesGet("global.discovery.serviceSubnet").String()).To(Equal("10.213.0.0/16"))
 			Expect(f.ValuesGet("global.discovery.clusterDomain").String()).To(Equal("test.local"))
 
-			var maxNodes *float64
-			for _, m := range f.MetricsCollector.CollectedMetrics() {
-				if m.Name == "d8_max_nodes_amount_by_pod_cidr" {
-					maxNodes = m.Value
-					break
-				}
-			}
-			Expect(maxNodes).NotTo(BeNil())
-			Expect(*maxNodes).To(Equal(float64(1024)))
+			Expect(maxNodesAmount(f)).To(HaveValue(Equal(float64(1024))))
 		})
 	})
 
