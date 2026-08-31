@@ -309,6 +309,10 @@ type CCMParameters struct {
 	// +deckhouse:ru:description:value="Дополнительные ID внешних сетей, которые будут распознаваться CCM как внешние сети."
 	// +optional
 	AdditionalExternalNetworkIDs []string `json:"additionalExternalNetworkIDs,omitempty"`
+	// Additional internal network IDs to be recognized as internal networks by the CCM.
+	// +deckhouse:ru:description:value="Дополнительные ID внутренних сетей, которые будут распознаваться CCM как внутренние сети."
+	// +optional
+	AdditionalInternalNetworkIDs []string `json:"additionalInternalNetworkIDs,omitempty"`
 }
 
 // HasProviderSection reports whether the provider settings section is set.
