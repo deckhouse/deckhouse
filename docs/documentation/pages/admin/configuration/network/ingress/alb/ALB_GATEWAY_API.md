@@ -41,8 +41,8 @@ The module is built on the Kubernetes Gateway API — an API for inbound traffic
 
 The module supports:
 
-- A single declarative API for HTTP/HTTPS, gRPC, TCP, UDP, and TLS passthrough;
-- A separation of responsibilities between the cluster administrator (ClusterALBInstance), the namespace administrator (ALBInstance and ListenerSet — hostname, TLS, ports), and application developers (routes);
+- A single declarative API for HTTP/HTTPS, gRPC, TCP, UDP, and TLS passthrough.
+- A separation of responsibilities between the cluster administrator (ClusterALBInstance), the namespace administrator (ALBInstance and ListenerSet — hostname, TLS, ports), and application developers (routes).
 - Request-handling features: per-route WAF, external authentication, IP allowlists, rate limiting, session affinity, GeoIP, BackendTLSPolicy, Proxy Protocol, and HTTP/3.
 
 Kubernetes Gateway API and an API gateway serve different purposes. The Kubernetes Gateway API is a set of Kubernetes resources that describe how inbound traffic is routed to services. An API gateway is an architectural component that aggregates application APIs behind a single entry point. The `alb` module is an implementation of the Kubernetes Gateway API.
@@ -53,8 +53,8 @@ For a capability comparison with `ingress-nginx`, open the ["Comparison of the i
 
 Gateway API separates responsibilities between cluster and namespace administrators and application developers:
 
-- Cluster administrator — manages traffic infrastructure through ClusterALBInstance (cluster-wide Gateway);
-- Namespace administrator — manages ALBInstance and ListenerSet (hostname, TLS, ports) within a namespace;
+- Cluster administrator — manages traffic infrastructure through ClusterALBInstance (cluster-wide Gateway).
+- Namespace administrator — manages ALBInstance and ListenerSet (hostname, TLS, ports) within a namespace.
 - Application developers — define routes (HTTPRoute, GRPCRoute, TLSRoute, TCPRoute, UDPRoute).
 
 ### Why ListenerSet
@@ -104,7 +104,7 @@ Publishing an application includes enabling the module, creating a managed Gatew
 
 ### Steps before enabling {#steps-to-take-before-enabling-and-configuring-alb-in-a-cluster}
 
-The `alb` module is in Preview and is available starting with Deckhouse Kubernetes Platform (DKP) 1.76. Module parameters are in [`configuration.html`](/modules/alb/configuration.html).
+The `alb` module is in Preview and is available starting with Deckhouse Kubernetes Platform (DKP) 1.76. Module parameters are in the [`alb` module configuration](/modules/alb/configuration.html).
 
 Before enabling and configuring ALB in a DKP cluster, do the following:
 
@@ -176,8 +176,8 @@ The ListenerSet object describes system and user traffic handlers: hostname, TLS
 
 Placement of ListenerSet objects depends on the type of Gateway object in use:
 
-- For ClusterALBInstance, ListenerSet objects may be placed in any namespace;
-- for ALBInstance, ListenerSet objects must be placed in the same namespace as the parent ALBInstance.
+- For ClusterALBInstance, ListenerSet objects may be placed in any namespace.
+- For ALBInstance, ListenerSet objects must be placed in the same namespace as the parent ALBInstance.
 
 In both cases, place the ListenerSet object in the same namespace as the HTTPRoute, GRPCRoute, and TLSRoute objects attached to it when possible. Then you do not need additional setup such as ReferenceGrant objects.
 
@@ -311,6 +311,25 @@ d8 k get clusteralbinstances
 ```
 
 The ClusterALBInstance must reach the `Ready` state and create the managed Gateway. After that, ListenerSet and HTTPRoute objects appear in the corresponding system namespaces.
+
+{% alert level="info" %}
+Currently, not all DKP modules are available through the Gateway API.
+{% endalert %}
+
+After you configure the default gateway, run the following command to see which modules have **already** published service HTTPRoute objects through the Gateway API in this cluster. The command shows the actual route inventory, not a full platform capability matrix:
+
+```shell
+d8 k get httproutes -A -l heritage=deckhouse -o json \
+  | jq -r '
+["MODULE","GATEWAY API SUPPORT"],
+(.items
+  | map(.metadata.labels.module // "UNKNOWN")
+  | unique[]
+  | ["d8-" + ., "yes"])
+| @tsv
+' \
+  | column -t -s $'\t'
+```
 
 ### Algorithm for selecting the default DKP gateway when using multiple ClusterALBInstances
 
@@ -651,6 +670,220 @@ done | sort
 
 Otherwise, the module only configures and manages Gateway objects associated with its designated GatewayClass, which minimizes the risk of conflicts when third-party Gateway API implementations are present.
 
+
+## Enabling HTTP/3 {#http3}
+
+By default the gateway accepts HTTP/1.1 and HTTP/2. To enable HTTP/3, set [`spec.enableHTTP3: true`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-enablehttp3) on the ClusterALBInstance or ALBInstance:
+
+```yaml
+apiVersion: network.deckhouse.io/v1alpha1
+kind: ClusterALBInstance
+metadata:
+  name: public-gw
+spec:
+  gatewayName: public-gw
+  enableHTTP3: true
+  inlet:
+    type: LoadBalancer
+```
+
+{% alert level="warning" %}
+You cannot enable `enableHTTP3` and `useProxyProtocol` at the same time.
+{% endalert %}
+
+Keep the following in mind:
+
+- HTTP/3 uses QUIC over UDP. Make sure the load balancer and network rules allow UDP on the HTTPS port (usually `443`), not only TCP.
+- For the `LoadBalancer` inlet, confirm that the cloud or MetalLB load balancer accepts UDP on the required port.
+- Clients must support HTTP/3. From a workstation, verify with:
+
+```shell
+curl -vk --http3 https://app.example.com/
+```
+
+If `curl` was built without HTTP/3, use a QUIC-capable client or check UDP port reachability and Envoy Proxy logs.
+
+
+## Using GeoIP and GeoLite2 {#geoip}
+
+The `alb` module supports adding GeoIP fields to HTTP request headers based on [MaxMind GeoIP/GeoLite2](https://dev.maxmind.com/geoip/) databases.
+
+Currently, the following database editions can be used:
+
+- GeoIP2-Anonymous-IP;
+- GeoIP2-City;
+- GeoIP2-ISP;
+- GeoIP2-ASN;
+- GeoLite2-ASN;
+- GeoLite2-City.
+
+{% alert level="info" %}
+The current GeoIP integration supports using up to 4 databases simultaneously.
+{% endalert %}
+
+Choose how GeoIP databases are obtained:
+
+{% tabs GeoIP database source %}
+{% tab "MaxMind" %}
+
+### Downloading GeoIP Databases from MaxMind {#maxmind}
+
+To use GeoIP and download databases directly from MaxMind servers, first create a secret containing the license key, for example:
+
+```bash
+d8 k -n prod create secret generic geoip-license \
+  --from-literal=licenseKey='<MAXMIND_LICENSE_KEY>'
+```
+
+{% alert level="info" %}
+When configuring GeoIP for ClusterALBInstance, the secret can be placed in any namespace, but it is recommended to use `d8-alb`.
+
+For ALBInstance objects, the secret must reside in the same namespace as the ALBInstance object.
+{% endalert %}
+
+After creating the secret, reference it in a ClusterALBInstance or ALBInstance object, for example:
+
+```yaml
+apiVersion: network.deckhouse.io/v1alpha1
+kind: ALBInstance
+metadata:
+  name: main
+  namespace: prod
+spec:
+  envoyLogLevel: Warning
+  gatewayName: custom-gateway
+  geoIP:
+    licenseKeySecretRef:
+      name: geoip-license
+```
+
+{% endtab %}
+{% tab "Local mirror" %}
+
+### Downloading GeoIP Databases from a Local Mirror {#local}
+
+To use GeoIP and download databases from a local mirror, specify the mirror URL, for example:
+
+```yaml
+apiVersion: network.deckhouse.io/v1alpha1
+kind: ALBInstance
+metadata:
+  name: main
+  namespace: prod
+spec:
+  envoyLogLevel: Warning
+  gatewayName: custom-gateway
+  geoIP:
+    maxmindMirror:
+      url: "https://local.geoip:8443"
+```
+
+You can also use a URL pointing to a local caching GeoIP server in another namespace, for example:
+
+```yaml
+apiVersion: network.deckhouse.io/v1alpha1
+kind: ALBInstance
+metadata:
+  name: main
+  namespace: prod
+spec:
+  envoyLogLevel: Warning
+  gatewayName: custom-gateway
+  geoIP:
+    maxmindMirror:
+      url: "http://geoproxy-cluster.d8-alb.svc:8080/download"
+```
+
+{% endtab %}
+{% endtabs %}
+
+### Using GeoIP Headers {#headers}
+
+Once GeoIP is configured in the namespace where ClusterALBInstance or ALBInstance proxies reside, a caching and update server for GeoIP databases is started. Envoy Proxy pods are then restarted sequentially so they can fetch GeoIP databases from the local GeoIP server.
+
+To add GeoIP fields to HTTP request headers, specify the names of the HTTP headers that will contain the corresponding information, for example:
+
+```yaml
+apiVersion: network.deckhouse.io/v1alpha1
+kind: ALBInstance
+metadata:
+  name: main
+  namespace: prod
+spec:
+  envoyLogLevel: Warning
+  gatewayName: custom-gateway
+  geoIP:
+    headers:
+      city: geoip_city
+      country: geoip_country
+    licenseKeySecretRef:
+      name: geoip-license
+    maxmindEditionIDs:
+      - GeoLite2-City
+```
+
+GeoIP databases are updated once per day, both on the caching server and in each individual Envoy Proxy pod using the caching server.
+
+PVC settings for GeoIP components are controlled by the [`storageClass`](/modules/alb/configuration.html#parameters-storageclass) module parameter.
+
+## Configuring OpenTelemetry tracing {#tracing}
+
+The `alb` module supports exporting OpenTelemetry traces from Envoy proxies.
+
+To enable export, set the OpenTelemetry Collector endpoint in `spec.openTelemetry.tracing`:
+
+- `service.name` and `service.namespace` — Name and namespace of the collector Service.
+- `port` — Port.
+- `protocol` — Protocol (`HTTP` or `gRPC`).
+- `path` — Path for OTLP/HTTP.
+
+Alternatively, you can specify a single [`url`](/modules/alb/cr.html#albinstance-v1alpha1-spec-opentelemetry-tracing-url).
+
+When using TLS, explicitly set the [`sni`](/modules/alb/cr.html#albinstance-v1alpha1-spec-opentelemetry-tracing-tls-sni) parameter if the OpenTelemetry Collector is behind a proxy or load balancer that selects upstreams based on Server Name Indication.
+
+Configure TLS in [`spec.openTelemetry.tracing.tls`](/modules/alb/cr.html#albinstance-v1alpha1-spec-opentelemetry-tracing-tls).
+
+### Configuring OpenTelemetry tracing TLS
+
+If OpenTelemetry tracing must send data over TLS, create a Kubernetes Secret with the CA certificate and reference it from `spec.openTelemetry.tracing.tls.caSecretName`.
+
+For ClusterALBInstance and the default DKP gateway, place the Secret in the `d8-alb` namespace.
+For ALBInstance, place the Secret in the same namespace as the ALBInstance object.
+The Secret must contain the `cacert` key.
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: otel-tracing-ca
+  namespace: d8-alb
+type: Opaque
+stringData:
+  cacert: |
+    -----BEGIN CERTIFICATE-----
+    ...
+    -----END CERTIFICATE-----
+---
+apiVersion: network.deckhouse.io/v1alpha1
+kind: ClusterALBInstance
+metadata:
+  name: proxy-gw
+spec:
+  gatewayName: proxy-gw
+  openTelemetry:
+    tracing:
+      service:
+        name: otel-collector
+        namespace: monitoring
+      port: 4318
+      protocol: HTTP
+      path: /v1/traces
+      tls:
+        sni: otel-collector.monitoring.svc.cluster.local
+        caSecretName: otel-tracing-ca
+```
+
+
 ## Diagnostics and verification {#verification-and-common-questions}
 
 Use this section to check that the gateway is ready and to answer common first-setup questions. More scenarios are in the ["alb module FAQ"](/modules/alb/faq.html).
@@ -686,15 +919,19 @@ For troubleshooting, inspect the configuration that the controller and the proxy
 1. Get the configuration through the following command (replace `<ENVOY_PROXY_POD_NAME>` with the Envoy Proxy pod name from the previous step):
 
    ```bash
-   d8 k -n d8-alb exec -it <ENVOY_PROXY_POD_NAME> pilot-agent request GET /config_dump
+   d8 k -n d8-alb exec -it <ENVOY_PROXY_POD_NAME> -- \
+     pilot-agent request GET /config_dump
    ```
 
    If only one section of the configuration is needed, the required section may be requested explicitly:
 
    ```bash
-   d8 k -n d8-alb exec -it <ENVOY_PROXY_POD_NAME> pilot-agent request GET /config_dump?resource=dynamic_listeners
-   d8 k -n d8-alb exec -it <ENVOY_PROXY_POD_NAME> pilot-agent request GET /config_dump?resource=dynamic_route_configs
-   d8 k -n d8-alb exec -it <ENVOY_PROXY_POD_NAME> pilot-agent request GET /config_dump?resource=dynamic_active_clusters
+   d8 k -n d8-alb exec -it <ENVOY_PROXY_POD_NAME> -- \
+     pilot-agent request GET /config_dump?resource=dynamic_listeners
+   d8 k -n d8-alb exec -it <ENVOY_PROXY_POD_NAME> -- \
+     pilot-agent request GET /config_dump?resource=dynamic_route_configs
+   d8 k -n d8-alb exec -it <ENVOY_PROXY_POD_NAME> -- \
+     pilot-agent request GET /config_dump?resource=dynamic_active_clusters
    ```
 
 This makes it easy to check whether the expected traffic handlers, virtual hosts, and upstream clusters appeared after changes to the ListenerSet object or Route object.

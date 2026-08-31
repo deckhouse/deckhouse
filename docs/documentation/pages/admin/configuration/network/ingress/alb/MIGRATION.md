@@ -33,7 +33,7 @@ Main reasons to move from the Ingress API to the Gateway API:
 
 - Active maintenance of the upstream Ingress NGINX project used by DKP has ended. Further upstream development of features, fixes, and integrations is no longer expected. For new application publishing scenarios, use the Gateway API.
 - Unlike the Ingress API, the Gateway API describes routes with protocol-specific resources, configures traffic entry points explicitly, controls route attachment, and manages cross-namespace access through dedicated resources. Complex traffic configurations can be defined with API resources instead of relying mainly on controller-specific annotations.
-- The Gateway API separates responsibilities by role. Cluster and network administrators manage traffic infrastructure and Gateway objects through [ClusterALBInstance](/modules/alb/cr.html#clusteralbinstance_v1) or [ALBInstance](/modules/alb/cr.html#albinstance-v1alpha1-spec). Application development teams define listeners and routing rules through ListenerSet and route resources. This separation supports delegated configuration, validation, and gradual migration.
+- The Gateway API separates responsibilities by role. Cluster and network administrators manage traffic infrastructure and Gateway objects through [ClusterALBInstance](/modules/alb/cr.html#clusteralbinstance_v1) or [ALBInstance](/modules/alb/cr.html#albinstance-v1alpha1-spec). Namespace administrators configure traffic reception through ListenerSet objects (hostname, TLS, ports). Application developers define routing with HTTPRoute and other route resources. This separation supports delegated configuration, validation, and gradual migration.
 
 ## Model comparison {#model-comparison}
 
@@ -76,7 +76,7 @@ The table highlights the following architectural differences:
 | Parameter | Ingress API and ingress-nginx | Gateway API and alb |
 | --- | --- | --- |
 | Resource relationships | Infrastructure and routing rules are associated indirectly through an IngressClass | Resources form an explicit graph using `parentRefs` and other typed references, with the Gateway as the root |
-| Separation of responsibilities | IngressNginxController defines infrastructure, while Ingress combines application routing with controller-specific configuration | Cluster and network administrators manage instances and gateways, while application development teams define listeners and routes through ListenerSet and route resources |
+| Separation of responsibilities | IngressNginxController defines infrastructure, while Ingress combines application routing with controller-specific configuration | Cluster and network administrators manage instances and gateways, namespace administrators manage ListenerSet objects, and application developers manage HTTPRoute and other route resources |
 | Configuration model | An Ingress combines most HTTP/HTTPS routing configuration in one object and controller-specific annotations | Listeners, routes, backends, and policies are represented by separate, composable objects |
 | Shared configuration and entry points | Multiple IngressNginxController objects that use the same IngressClass consume the same set of Ingress rules while providing separate entry points | Multiple ClusterALBInstance objects with the same `gatewayName` provide separate entry points backed by the same Gateway configuration |
 | Cross-namespace references | An Ingress, its backend Service, and its TLS Secret generally reside in the same namespace | Controlled cross-namespace references are supported through ReferenceGrant |
@@ -123,6 +123,7 @@ Use the following mapping when selecting an inlet for the `alb` module:
 | `HostPort` | ClusterALBInstance with `spec.inlet.type: HostPort` | `HostPort` is not supported by ALBInstance |
 | `HostPortWithProxyProtocol` | ClusterALBInstance with the `HostPort` inlet and `spec.useProxyProtocol: true` | Proxy Protocol and HTTP/3 cannot be enabled simultaneously |
 | `HostPortWithSSLPassthrough` | ClusterALBInstance with the `HostPort` inlet, a TLS listener, and TLSRoute | TLS passthrough is configured independently of the inlet |
+| `HostNetwork` | No direct equivalent | Use a ClusterALBInstance with the `HostPort` inlet on a separate node set or with a different set of host ports. Sharing the same host ports on the same nodes with `ingress-nginx` is not allowed |
 | `HostWithFailover` | No direct equivalent | Use a ClusterALBInstance with the `LoadBalancer` inlet backed by MetalLB. Follow ["Example for bare metal with the MetalLB load balancer"](/modules/alb/examples.html#bare-metal-metallb) and validate load-balancer failover before switching traffic |
 
 {% alert level="warning" %}
@@ -171,7 +172,7 @@ To finish preparing the infrastructure, do the following:
 
 ## Step 2. Migrating DKP interfaces {#step-2-migrating-dkp-interfaces}
 
-If DKP system interfaces are published through Ingress and must move to the Gateway API, follow [Publishing service domains](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#publishing-service-domains). Not every DKP module is available through the Gateway API yet — the same section lists the modules that are.
+If DKP system interfaces are published through Ingress and must move to the Gateway API, follow [Publishing service domains](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#publishing-service-domains). Not every DKP module publishes service HTTPRoute objects through the Gateway API yet. After you configure the default gateway, the `jq` command in that section shows the actual inventory of routes already published in the cluster, not a full platform capability matrix.
 
 If you do not need to migrate DKP interfaces, continue with step 3.
 
@@ -221,12 +222,17 @@ Pass all related resources as input so the converter can preserve the supported 
 1. In another terminal, export all recognized resource types and send the resulting Kubernetes List directly to the converter:
 
    ```shell
-   d8 k get ingress,service,dexauthenticator --all-namespaces --output yaml | \
+   converter_url='http://127.0.0.1:8082/ingress2gateway'
+   converter_url="${converter_url}?gateway=<GATEWAY_NAMESPACE>/<GATEWAY_NAME>"
+   converter_url="${converter_url}&scope=<SCOPE>&ingress-class=<INGRESS_CLASS>"
+
+   d8 k get ingress,service,dexauthenticator \
+     --all-namespaces --output yaml | \
      curl --fail-with-body --silent --show-error --request POST \
        --header 'Content-Type: application/yaml' \
        --data-binary @- \
        --output gateway-api.yaml \
-       'http://127.0.0.1:8082/ingress2gateway?gateway=<GATEWAY_NAMESPACE>/<GATEWAY_NAME>&scope=<SCOPE>&ingress-class=<INGRESS_CLASS>'
+       "$converter_url"
    ```
 
    In the URL, query parameter names are lowercase: `gateway`, `scope`, and `ingress-class`. In the example, their values are placeholders in angle brackets and uppercase:
@@ -259,6 +265,25 @@ As the corresponding features become available in the Gateway API, the `alb` mod
 
 During migration, use standard Gateway API fields where possible and replace `ingress-nginx` annotations only with supported `alb` annotations — including after you apply `gateway-api.yaml`. The current list is in ["Supported HTTPRoute annotations"](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/gateway-api.html#supported-httproute-annotations).
 
+The `ingress2gateway` utility produces a draft of Gateway API resources and **does not** migrate every `ingress-nginx` annotation automatically. After conversion, compare the Ingress with the table below and apply the required settings manually.
+
+| Ingress annotation (`ingress-nginx`) | Equivalent in the `alb` module |
+| --- | --- |
+| `nginx.ingress.kubernetes.io/whitelist-source-range` | HTTPRoute annotation `alb.network.deckhouse.io/whitelist-source-range` |
+| `nginx.ingress.kubernetes.io/service-upstream` | HTTPRoute annotation `alb.network.deckhouse.io/service-upstream` |
+| `nginx.ingress.kubernetes.io/upstream-vhost` | HTTPRoute `URLRewrite` filter with `hostname` (see [publishing with an Istio sidecar](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/gateway-api.html#publishing-with-istio-sidecar)) |
+| `nginx.ingress.kubernetes.io/auth-url` / `auth-signin` | HTTPRoute annotations `alb.network.deckhouse.io/auth-url` and `alb.network.deckhouse.io/auth-signin` |
+| `nginx.ingress.kubernetes.io/auth-type: basic` and a Secret | HTTPRoute annotation `alb.network.deckhouse.io/basic-auth-secret` |
+| `nginx.ingress.kubernetes.io/limit-rps` | HTTPRoute annotation `alb.network.deckhouse.io/limit-rps` |
+| `nginx.ingress.kubernetes.io/proxy-body-size` | HTTPRoute annotation `alb.network.deckhouse.io/buffer-max-request-bytes` (value in bytes) |
+| `nginx.ingress.kubernetes.io/proxy-buffer-size` | HTTPRoute annotation `alb.network.deckhouse.io/proxy-buffer-size` |
+| `nginx.ingress.kubernetes.io/proxy-read-timeout` / `proxy-send-timeout` | HTTPRoute annotation `alb.network.deckhouse.io/idle-timeout` (idle timeout, not total request duration) |
+| `nginx.ingress.kubernetes.io/affinity` / cookie | HTTPRoute annotation `alb.network.deckhouse.io/session-affinity` |
+| `nginx.ingress.kubernetes.io/rewrite-target` | HTTPRoute annotation `alb.network.deckhouse.io/rewrite-target` or standard Gateway API filters |
+| `nginx.ingress.kubernetes.io/configuration-snippet` and other nginx snippets | No direct equivalent; redesign the configuration for Gateway API and `alb` annotations |
+
+If an Ingress annotation is missing from the table and has no Gateway API field, behavior after migration may differ or disappear. Validate the application on the `alb` module path before switching production traffic.
+
 ## Step 4. Switching traffic to the alb module {#step-4-switching-traffic-to-alb}
 
 Run `ingress-nginx` and `alb` simultaneously until the `alb` module path has been validated and the rollback window has closed.
@@ -267,10 +292,10 @@ Migrate individual domains or namespaces when they can use separate DNS records.
 
 On this step:
 
-- test the `alb` module without changing DNS with `migrationGateway` when you need validation without a DNS change (`ingress-nginx` version `1.1.0` and later);
-- enable `http01CertificateSolverBridging` when Gateway API path certificates use HTTP-01 while public DNS still points to Ingress;
-- choose the switching method for your current entry point in the subsections below: automatically provisioned load balancer, manually managed load balancer, or HostNetwork/HostPort;
-- before the final production cutover, complete ["Validating the cutover"](#validating-the-cutover).
+- Test the `alb` module without changing DNS with `migrationGateway` when you need validation without a DNS change (`ingress-nginx` version `1.1.0` and later).
+- Enable `http01CertificateSolverBridging` when Gateway API path certificates use HTTP-01 while public DNS still points to Ingress.
+- Choose the switching method for your current entry point in the subsections below: automatically provisioned load balancer, manually managed load balancer, or HostNetwork/HostPort.
+- Before the final production cutover, complete ["Validating the cutover"](#validating-the-cutover).
 
 ### Testing the alb module via the Ingress NGINX Controller
 
@@ -289,7 +314,8 @@ Its `serviceRef` can point to the entry-point Service of any Gateway API impleme
 Locate the `alb` module configuration Service:
 
 ```shell
-d8 k get service --all-namespaces --selector alb.deckhouse.io/configuration-service
+d8 k get service --all-namespaces \
+  --selector alb.deckhouse.io/configuration-service
 ```
 
 Configure the source IngressNginxController, using narrow tester CIDRs initially:
@@ -373,6 +399,9 @@ When Issuer or ClusterIssuer resources with HTTP-01 solvers are used, do the fol
 
 Choose the switching method based on how external traffic is accepted today: through an automatically provisioned load balancer, a manually managed load balancer, or direct HostNetwork/HostPort access.
 
+{% tabs Switching method %}
+{% tab "DNS / provisioned LB" %}
+
 #### Automatically provisioned load balancer
 
 To switch traffic through DNS, do the following:
@@ -388,6 +417,9 @@ Use weighted DNS records for a gradual switch only if the DNS provider supports 
 A provider-managed load balancer does not normally allow node-by-node migration between two independently managed Service objects.
 
 If MetalLB or another implementation uses a fixed address, the same address cannot be assigned to both Service objects simultaneously. Transfer it only during a coordinated cutover.
+
+{% endtab %}
+{% tab "Manually managed LB" %}
 
 #### Manually managed load balancer
 
@@ -406,6 +438,9 @@ When configuring backends, keep the following in mind:
 - Preserve the original protocol and client-address handling: align Proxy Protocol settings for traffic and health checks, or configure trusted forwarded headers for an L7 load balancer.
 - If both controllers run on the same nodes, use different host ports. Alternatively, select disjoint node sets.
 
+{% endtab %}
+{% tab "HostNetwork or HostPort" %}
+
 #### Direct HostNetwork or HostPort access
 
 To switch traffic with direct HostNetwork or HostPort access, do the following:
@@ -417,6 +452,9 @@ To switch traffic with direct HostNetwork or HostPort access, do the following:
 DNS cannot distinguish controllers that use different ports on the same node address. If clients must continue using ports `80` and `443`, use separate nodes or introduce a load balancer or NAT rule.
 
 `HostWithFailover` has no direct equivalent in the `alb` module. When equivalent failover behavior is required, use the `LoadBalancer` inlet with MetalLB.
+
+{% endtab %}
+{% endtabs %}
 
 ### Validating the cutover {#validating-the-cutover}
 

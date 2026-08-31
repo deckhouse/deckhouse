@@ -1,6 +1,6 @@
 ---
 title: "Публикация приложений средствами Kubernetes Gateway API"
-description: "Публикация приложений с Kubernetes Gateway API в Deckhouse Kubernetes Platform. ListenerSet, HTTPRoute, GRPCRoute, TLSRoute, TCPRoute, BackendTLSPolicy, аннотации HTTPRoute, WAF и GeoIP."
+description: "Публикация приложений с Kubernetes Gateway API в Deckhouse Kubernetes Platform. ListenerSet, HTTPRoute, GRPCRoute, TLSRoute, TCPRoute, BackendTLSPolicy, аннотации HTTPRoute и WAF."
 permalink: ru/user/network/ingress/alb/gateway-api.html
 lang: ru
 extractedLinksMax: 4
@@ -27,9 +27,18 @@ relatedLinks:
 
 Публикация приложения возможна через общекластерный шлюз (ClusterALBInstance, создаёт администратор кластера) или через отдельный шлюз в неймспейсе приложения (ALBInstance).
 
-Создание управляемого Gateway (`ClusterALBInstance` или `ALBInstance`, инлеты, включение модуля) — задача администратора. Настройка инфраструктуры описана в разделе [«Включение модуля и создание Gateway»](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#создание-управляемого-объекта-gateway).
+Создание управляемого Gateway (ClusterALBInstance или ALBInstance, инлеты, включение модуля) — задача администратора. Настройка инфраструктуры описана в разделе [«Включение модуля и создание Gateway»](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#создание-управляемого-объекта-gateway).
 
-Этот сценарий предполагает, что объект ClusterALBInstance или ALBInstance уже создан и перешёл в состояние `Ready`. Запросите у администратора имя и неймспейс управляемого Gateway из [`status`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-status) инстанса.
+Этот сценарий предполагает, что объект ClusterALBInstance или ALBInstance уже создан и перешёл в состояние `Ready`. Запросите у администратора имя и неймспейс управляемого Gateway или получите имя Gateway из `status.gateway` инстанса:
+
+```shell
+d8 k get clusteralbinstance <CLUSTER_ALB_INSTANCE_NAME> \
+  -o jsonpath='{.status.gateway}{"\n"}'
+d8 k -n <NAMESPACE> get albinstance <ALB_INSTANCE_NAME> \
+  -o jsonpath='{.status.gateway}{"\n"}'
+```
+
+Для ClusterALBInstance управляемый Gateway обычно находится в неймспейсе `d8-alb`. Для ALBInstance — в том же неймспейсе, что и объект ALBInstance. Описание полей статуса — в [`status`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-status).
 
 Администратор неймспейса создаёт ListenerSet, привязанный к этому Gateway (`spec.parentRef`). Разработчики приложения создают объекты HTTPRoute, привязанные к ListenerSet.
 
@@ -107,6 +116,34 @@ spec:
           port: 8080
 ```
 
+
+### Проверка публикации {#checking-publication}
+
+После применения ListenerSet и HTTPRoute проверьте статус объектов:
+
+```shell
+d8 k -n <NAMESPACE> get listenerset
+d8 k -n <NAMESPACE> describe listenerset <LISTENERSET_NAME>
+d8 k -n <NAMESPACE> get httproute
+d8 k -n <NAMESPACE> describe httproute <HTTPROUTE_NAME>
+```
+
+Проверьте следующее:
+
+- В статусе ListenerSet слушатели в состоянии `Programmed` или `Accepted`.
+- У HTTPRoute в `parentRefs` указан нужный ListenerSet и условия `Accepted` выполнены.
+- Адрес точки входа и DNS для hostname согласованы с администратором (для инлета `LoadBalancer` адрес обычно берётся из Service в неймспейсе `d8-alb`).
+
+Проверьте доступность приложения с клиента, подставив адрес точки входа и hostname:
+
+```shell
+curl -vk \
+  --resolve app.example.com:443:<ENTRY_POINT_ADDRESS> \
+  https://app.example.com/
+```
+
+Если маршрут не принимается, проверьте имя Gateway из `status` инстанса, неймспейс ListenerSet, порт и `sectionName` в `parentRefs`, а также конфликты hostname/порта с другими ListenerSet.
+
 ### Работа с объектами GRPCRoute, TLSRoute, TCPRoute и UDPRoute {#grpcroute-tlsroute-tcproute-and-udproute-objects}
 
 Объект GRPCRoute предназначен для маршрутизации gRPC-трафика. Для него создаётся объект ListenerSet со слушателем HTTPS, а затем добавляется объект GRPCRoute:
@@ -155,10 +192,17 @@ spec:
 
 Для TLS passthrough, когда расшифровка трафика должна выполняться на стороне приложения, можно использовать либо слушателя TLS, либо слушателя HTTPS.
 
+Дополнительные порты задаются в `spec.inlet.additionalPorts` объекта, который владеет шлюзом:
+
+- для общекластерного Gateway — в ClusterALBInstance (это делает администратор кластера);
+- для шлюза в неймспейсе — в ALBInstance (администратор неймспейса или вы, если есть права на объект).
+
+Пример для ClusterALBInstance — в разделе [«Открытие дополнительного TCP/UDP-порта на общекластерном Gateway»](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#tcp-port). Ниже показан пример для ALBInstance.
+
 {% tabs TLS passthrough %}
 {% tab "Слушатель TLS" %}
 
-Поскольку в этом примере слушатель TLS использует дополнительный порт, сначала настройте в ALBInstance параметр `additionalPorts`:
+Поскольку в этом примере слушатель TLS использует дополнительный порт, попросите администратора добавить `additionalPorts` в объект, владеющий шлюзом (ClusterALBInstance или ALBInstance), или добавьте параметр сами, если у вас есть права:
 
 ```yaml
 apiVersion: network.deckhouse.io/v1alpha1
@@ -263,7 +307,7 @@ spec:
 {% endtab %}
 {% endtabs %}
 
-Если TLS нужно терминировать на шлюзе, а затем передать трафик дальше как TCP-поток к бэкенду, создайте объект ListenerSet со слушателем TLS и режимом `Terminate`, после чего подключите объект TCPRoute:
+Если TLS нужно терминировать на шлюзе, а затем передать трафик дальше как TCP-поток к бэкенду (например, когда приложение принимает уже расшифрованный TCP, а не HTTPS), создайте объект ListenerSet со слушателем TLS и режимом `Terminate`, после чего подключите объект TCPRoute:
 
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1
@@ -307,10 +351,12 @@ spec:
 
 Для портов TCP и UDP из [`additionalPorts`](/modules/alb/cr.html#albinstance-v1alpha1-spec-inlet-additionalports) маршрут привязывается напрямую к слушателю управляемого Gateway, без отдельного ListenerSet. Иначе контроллер отклонит конфигурацию из-за пересечения обработчиков.
 
+Дополнительные порты задаются в объекте, который владеет шлюзом: в ClusterALBInstance для общекластерного Gateway или в ALBInstance для шлюза в неймспейсе. Для ClusterALBInstance используйте пример в разделе [«Открытие дополнительного TCP/UDP-порта на общекластерном Gateway»](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#tcp-port).
+
 {% tabs TCP и UDP %}
 {% tab "TCP" %}
 
-Для публикации TCP-сервиса сначала откройте дополнительный TCP-порт в ALBInstance:
+Для публикации TCP-сервиса попросите администратора открыть дополнительный TCP-порт в объекте, владеющем шлюзом (ClusterALBInstance или ALBInstance), или откройте его сами, если у вас есть права:
 
 ```yaml
 apiVersion: network.deckhouse.io/v1alpha1
@@ -352,7 +398,7 @@ spec:
 {% endtab %}
 {% tab "UDP" %}
 
-Для публикации UDP-сервиса сначала откройте дополнительный UDP-порт в ALBInstance:
+Для публикации UDP-сервиса попросите администратора открыть дополнительный UDP-порт в объекте, владеющем шлюзом (ClusterALBInstance или ALBInstance), или откройте его сами, если у вас есть права:
 
 ```yaml
 apiVersion: network.deckhouse.io/v1alpha1
@@ -404,7 +450,7 @@ spec:
 1. Проверьте доступность приложения через новый шлюз.
 1. После проверки удалите из `parentRefs` объекта HTTPRoute ссылку на неактуальные ListenerSet.
 
-### Привязка маршрута в одном неймспейсе к ListenerSet объекту в другом неймспейсе
+### Привязка маршрута в одном неймспейсе к объекту ListenerSet в другом неймспейсе
 
 Если объект HTTPRoute должен подключаться к ListenerSet из другого неймспейса, в неймспейсе целевого ListenerSet добавьте ReferenceGrant.
 
@@ -535,46 +581,12 @@ spec:
         name: app-backend-ca
 ```
 
-### Настройка TLS для OpenTelemetry tracing
+### GeoIP и OpenTelemetry
 
-Чтобы передавать данные трассировки OpenTelemetry по TLS, создайте секрет с CA-сертификатом и укажите его в параметре `spec.openTelemetry.tracing.tls.caSecretName`.
+Настройка GeoIP и OpenTelemetry выполняется на ClusterALBInstance или ALBInstance и относится к задачам администратора. Инструкции:
 
-- Для ClusterALBInstance или шлюза DKP по умолчанию разместите секрет в неймспейсе `d8-alb`.
-- Для ALBInstance разместите секрет в том же неймспейсе, что и объект ALBInstance.
-
-CA-сертификат должен быть сохранён в ключе `cacert`.
-
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: otel-tracing-ca
-  namespace: d8-alb
-type: Opaque
-stringData:
-  cacert: |
-    -----BEGIN CERTIFICATE-----
-    ...
-    -----END CERTIFICATE-----
----
-apiVersion: network.deckhouse.io/v1alpha1
-kind: ClusterALBInstance
-metadata:
-  name: proxy-gw
-spec:
-  gatewayName: proxy-gw
-  openTelemetry:
-    tracing:
-      service:
-        name: otel-collector
-        namespace: monitoring
-      port: 4318
-      protocol: HTTP
-      path: /v1/traces
-      tls:
-        sni: otel-collector.monitoring.svc.cluster.local
-        caSecretName: otel-tracing-ca
-```
+- [«Использование GeoIP и GeoLite2»](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#geoip);
+- [«Настройка трассировки OpenTelemetry»](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#tracing).
 
 ### Поддерживаемые аннотации HTTPRoute {#поддерживаемые-аннотации-httproute}
 
@@ -607,8 +619,8 @@ spec:
 
 Настройте HTTPRoute следующим образом:
 
-- добавьте аннотацию `alb.network.deckhouse.io/service-upstream: "true"`, чтобы трафик шёл через объект Service, а не напрямую к подам. Это эквивалент аннотации `nginx.ingress.kubernetes.io/service-upstream: "true"` из `ingress-nginx`;
-- добавьте фильтр `URLRewrite`, который задаёт в поле `hostname` FQDN объекта бэкенд-сервиса. Он заменяет аннотацию `nginx.ingress.kubernetes.io/upstream-vhost` из `ingress-nginx`.
+- Добавьте аннотацию `alb.network.deckhouse.io/service-upstream: "true"`, чтобы трафик шёл через объект Service, а не напрямую к подам. Это эквивалент аннотации `nginx.ingress.kubernetes.io/service-upstream: "true"` из `ingress-nginx`.
+- Добавьте фильтр `URLRewrite`, который задаёт в поле `hostname` FQDN объекта бэкенд-сервиса. Он заменяет аннотацию `nginx.ingress.kubernetes.io/upstream-vhost` из `ingress-nginx`.
 
 Пример HTTPRoute для шлюза с Istio-сайдкаром:
 
@@ -626,6 +638,8 @@ spec:
       namespace: myns
       kind: ListenerSet
       group: gateway.networking.k8s.io
+      sectionName: app-https
+      port: 443
   hostnames:
     - myservice.example.com
   rules:
@@ -766,135 +780,9 @@ metadata:
 
 Текущие особенности и ограничения WAF:
 
-- поддерживается только набор правил `owasp-crs`;
-- параметр `paranoiaLevel` применяется только при использовании `preset: owasp-crs`. Если параметр `preset` не указан или имеет другое значение, параметр `paranoiaLevel` игнорируется;
-- допустимые значения `paranoiaLevel`: от `1` до `4`. На практике рекомендуется начинать со значения `1`;
-- WAF проверяет только входящие запросы к приложению и при необходимости блокирует их. Ответы приложения клиенту не анализируются;
-- правила, заданные через ConfigMap, могут быть многострочными: строки, завершающиеся символом `\`, автоматически объединяются.
+- Поддерживается только набор правил `owasp-crs`.
+- Параметр `paranoiaLevel` применяется только при использовании `preset: owasp-crs`. Если параметр `preset` не указан или имеет другое значение, параметр `paranoiaLevel` игнорируется.
+- Допустимые значения `paranoiaLevel`: от `1` до `4`. На практике рекомендуется начинать со значения `1`.
+- WAF проверяет только входящие запросы к приложению и при необходимости блокирует их. Ответы приложения клиенту не анализируются.
+- Правила, заданные через ConfigMap, могут быть многострочными: строки, завершающиеся символом `\`, автоматически объединяются.
 
-### Использование GeoIP и GeoLite2 {#geoip}
-
-Модуль `alb` поддерживает добавление полей GeoIP в заголовки HTTP-запросов на основе данных баз [MaxMind GeoIP/GeoLite2](https://dev.maxmind.com/geoip/).
-
-На данный момент возможно подключение следующих редакций баз:
-
-- GeoIP2-Anonymous-IP;
-- GeoIP2-City;
-- GeoIP2-ISP;
-- GeoIP2-ASN;
-- GeoLite2-ASN;
-- GeoLite2-City.
-
-{% alert level="info" %}
-Текущая интеграция GeoIP поддерживает одновременное использование до 4 баз.
-{% endalert %}
-
-#### Скачивание баз GeoIP с MaxMind {#maxmind}
-
-Для подключения GeoIP и скачивания баз непосредственно с серверов MaxMind необходимо предварительно создать секрет, содержащий лицензионный ключ, например:
-
-```bash
-d8 k -n prod create secret generic geoip-license --from-literal=licenseKey='<MAXMIND_LICENSE_KEY>'
-```
-
-{% alert level="info" %}
-При настройке GeoIP для ClusterALBInstance секрет может быть размещён в любом неймспейсе, но рекомендуется разместить его в `d8-alb`.
-
-Для объектов ALBInstance секрет должен располагаться строго в том же неймспейсе, что и объект ALBInstance.
-{% endalert %}
-
-После создания секрета необходимо указать его в объекте ClusterALBInstance или ALBInstance, например:
-
-```yaml
-apiVersion: network.deckhouse.io/v1alpha1
-kind: ALBInstance
-metadata:
-  name: main
-  namespace: prod
-spec:
-  envoyLogLevel: Warning
-  gatewayName: custom-gateway
-  geoIP:
-    licenseKeySecretRef:
-      name: geoip-license
-```
-
-#### Скачивание баз GeoIP с локального зеркала {#local}
-
-Для подключения GeoIP и скачивания баз с локального зеркала необходимо указать адрес зеркала в формате URL, например:
-
-```yaml
-apiVersion: network.deckhouse.io/v1alpha1
-kind: ALBInstance
-metadata:
-  name: main
-  namespace: prod
-spec:
-  envoyLogLevel: Warning
-  gatewayName: custom-gateway
-  geoIP:
-    maxmindMirror:
-      url: "https://local.geoip:8443"
-```
-
-В качестве URL допускается указание адреса локального кеширующего сервера GeoIP в другом неймспейсе, например:
-
-```yaml
-apiVersion: network.deckhouse.io/v1alpha1
-kind: ALBInstance
-metadata:
-  name: main
-  namespace: prod
-spec:
-  envoyLogLevel: Warning
-  gatewayName: custom-gateway
-  geoIP:
-    maxmindMirror:
-      url: "http://geoproxy-cluster.d8-alb.svc:8080/download"
-```
-
-#### Использование заголовков GeoIP {#headers}
-
-В результате настройки GeoIP в неймспейсе, где работают прокси ClusterALBInstance или ALBInstance, будет запущен сервер кеширования и обновления баз GeoIP. Поды Envoy Proxy затем поочерёдно перезапускаются, чтобы скачивать базы с локального сервера GeoIP.
-
-Для добавления полей GeoIP в заголовки HTTP-запросов необходимо указать имена HTTP-заголовков, которые будут содержать соответствующую информацию, например:
-
-```yaml
-apiVersion: network.deckhouse.io/v1alpha1
-kind: ALBInstance
-metadata:
-  name: main
-  namespace: prod
-spec:
-  envoyLogLevel: Warning
-  gatewayName: custom-gateway
-  geoIP:
-    headers:
-      city: geoip_city
-      country: geoip_country
-    licenseKeySecretRef:
-      name: geoip-license
-    maxmindEditionIDs:
-      - GeoLite2-City
-```
-
-Обновление баз GeoIP осуществляется раз в сутки как на кеширующем сервере, так и в каждом отдельном поде Envoy Proxy с использованием кеширующего сервера.
-
-Параметр модуля [`storageClass`](/modules/alb/configuration.html#parameters-storageclass) задаёт PVC для компонентов GeoIP.
-
-### Настройка трассировки OpenTelemetry {#tracing}
-
-Модуль `alb` поддерживает экспорт трассировок OpenTelemetry из Envoy-прокси.
-
-Для включения экспорта задайте в `spec.openTelemetry.tracing` адрес OpenTelemetry Collector:
-
-- `service.name` и `service.namespace` — имя и неймспейс сервиса коллектора;
-- `port` — порт;
-- `protocol` — протокол (`HTTP` или `gRPC`);
-- `path` — путь для OTLP/HTTP.
-
-Альтернативно можно указать единый параметр [`url`](/modules/alb/cr.html#albinstance-v1alpha1-spec-opentelemetry-tracing-url).
-
-При необходимости настройте подключение с использованием [TLS](/modules/alb/cr.html#albinstance-v1alpha1-spec-opentelemetry-tracing-tls).
-
-При использовании TLS рекомендуется явно задать параметр [`sni`](/modules/alb/cr.html#albinstance-v1alpha1-spec-opentelemetry-tracing-tls-sni), если OpenTelemetry Collector находится за прокси или балансировщиком, который выбирает upstream на основе Server Name Indication.

@@ -19,7 +19,7 @@ ALB средствами Istio реализуется через [Istio Ingress 
 
 Используйте этот вариант, если требуется управление трафиком в service mesh, например, canary-маршрутизация или mTLS. Настройка и возможности описаны в [«Документация модуля istio»](/modules/istio/).
 
-Создание IngressIstioController и подготовка инфраструктуры — задача администратора кластера. Публикация приложения ресурсами Gateway и VirtualService описана в разделе [«Публикация приложений средствами Istio»](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/istio.html#публикация-приложений-с-использованием-ресурса-istio-ingress-gateway).
+Создание IngressIstioController и подготовка инфраструктуры — задача администратора кластера. Публикация приложения ресурсами Gateway и VirtualService, в том числе [canary-развёртывание](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/istio.html#canary-развёртывание-через-virtualservice), описана в разделе [«Публикация приложений средствами Istio»](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/istio.html#публикация-приложений-с-использованием-ресурса-istio-ingress-gateway).
 
 ## Ingress для публикации приложений
 
@@ -27,7 +27,7 @@ ALB средствами Istio реализуется через [Istio Ingress 
 
 Для публикации приложения средствами Istio Ingress Gateway выполните следующие действия:
 
-1. Создайте ресурс IngressIstioController:
+1. Создайте ресурс IngressIstioController.
 
    В примере ниже создаётся контроллер с инлетом `HostPort` на frontend-узлах:
 
@@ -54,125 +54,28 @@ ALB средствами Istio реализуется через [Istio Ingress 
        mode: VPA
    ```
 
-1. Создайте секрет, определяющий TLS-сертификат и ключ для защиты HTTPS-трафика:
+1. Создайте секрет с TLS-сертификатом и ключом для HTTPS. Разместите его в неймспейсе `d8-ingress-istio` и сообщите разработчикам имя секрета и значение `ingressGatewayClass`:
 
    ```yaml
    apiVersion: v1
    kind: Secret
    metadata:
      name: app-tls-secret
-     namespace: d8-ingress-istio # Обратите внимание, что namespace не является app-ns.
+     namespace: d8-ingress-istio # Неймспейс секрета — d8-ingress-istio, не неймспейс приложения.
    type: kubernetes.io/tls
    data:
      tls.crt: |
-       <tls.crt data>
+       <TLS_CRT_DATA>
      tls.key: |
-       <tls.key data>
+       <TLS_KEY_DATA>
    ```
 
-1. Создайте ресурс Gateway. В нём, в поле `spec.selector` укажите лейбл, ссылающийся на ingressGatewayClass, и секрет, созданные на предыдущих шагах:
+Поддерживаемые форматы секретов — в [документации Istio](https://istio.io/latest/docs/tasks/traffic-management/ingress/secure-ingress/#key-formats).
 
-   ```yaml
-   apiVersion: networking.istio.io/v1beta1
-   kind: Gateway
-   metadata:
-     name: gateway-app
-     namespace: app-ns
-   spec:
-     selector:
-       # Селектор лейблов для использования Istio Ingress Gateway main-hp.
-       istio.deckhouse.io/ingress-gateway-class: istio-hp
-     servers:
-       - port:
-           # Стандартный шаблон для использования протокола HTTP.
-           number: 80
-           name: http
-           protocol: HTTP
-         hosts:
-           - app.example.com
-       - port:
-           # Стандартный шаблон для использования протокола HTTPS.
-           number: 443
-           name: https
-           protocol: HTTPS
-         tls:
-           mode: SIMPLE
-           # Ресурс Secret с сертификатом и ключом, который должен быть создан в пространстве имен d8-ingress-istio.
-           credentialName: app-tls-secret
-         hosts:
-           - app.example.com
-   ```
-
-   Поддерживаемые форматы секретов можно посмотреть [на официальном сайте проекта Istio](https://istio.io/latest/docs/tasks/traffic-management/ingress/secure-ingress/#key-formats).
-
-1. Определите правила маршрутизации с помощью VirtualService, который связывает шлюз и обслуживаемый им сервис:
-
-   ```yaml
-   apiVersion: networking.istio.io/v1beta1
-   kind: VirtualService
-   metadata:
-     name: vs-app
-     namespace: app-ns
-   spec:
-     gateways:
-       - gateway-app # Имя шлюза.
-     hosts:
-       - app.example.com
-     http:
-       - route:
-           - destination:
-               host: app-svc # Имя сервиса.
-   ```
+Далее разработчики создают ресурсы Gateway и VirtualService. Примеры, в том числе [canary-развёртывание](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/istio.html#canary-развёртывание-через-virtualservice), — в разделе [«Публикация приложений с использованием ресурса Istio Ingress Gateway»](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/istio.html#публикация-приложений-с-использованием-ресурса-istio-ingress-gateway).
 
 ### Ingress NGINX {#ingress-nginx}
 
-Для работы с Ingress NGINX требуется подготовить:
+Для публикации через Ingress NGINX с Istio-сайдкаром включите параметр `enableIstioSidecar` в [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller) модуля [`ingress-nginx`](/modules/ingress-nginx/) и сообщите разработчикам имя `ingressClass`.
 
-* Ingress-контроллер, добавив к нему sidecar от Istio. Для этого установите параметр `enableIstioSidecar` кастомного ресурса [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller) модуля [`ingress-nginx`](/modules/ingress-nginx/).
-* Ingress-ресурс, который ссылается на сервис. Обязательные аннотации для Ingress-ресурса:
-  * `nginx.ingress.kubernetes.io/service-upstream: "true"` — эта аннотация указывает Ingress-контроллеру направлять запросы на ClusterIP сервиса (из диапазона Service CIDR), а не напрямую в поды приложения. Это необходимо, поскольку sidecar-контейнер `istio-proxy` перехватывает только трафик, направленный на диапазон Service CIDR. Запросы вне этого диапазона не проходят через Istio;
-  * `nginx.ingress.kubernetes.io/upstream-vhost: productpage.bookinfo.svc` — с данной аннотацией sidecar сможет идентифицировать прикладной сервис, для которого предназначен запрос.
-
-Примеры:
-
-```yaml
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: productpage
-  namespace: bookinfo
-  annotations:
-    # Nginx будет проксировать трафик на ClusterIP вместо собственных IP подов.
-    nginx.ingress.kubernetes.io/service-upstream: "true"
-    # В Istio маршрутизация основана на заголовке запросов `Host:`.
-    # Чтобы не указывать наличие внешнего домена `productpage.example.com`,
-    # используется внутренний домен, известный Istio.
-    nginx.ingress.kubernetes.io/upstream-vhost: productpage.bookinfo.svc
-spec:
-  rules:
-    - host: productpage.example.com
-      http:
-        paths:
-        - path: /
-          pathType: Prefix
-          backend:
-            service:
-              name: productpage
-              port:
-                number: 9080
-```
-
-```yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: productpage
-  namespace: bookinfo
-spec:
-  ports:
-  - name: http
-    port: 9080
-  selector:
-    app: productpage
-  type: ClusterIP
-```
+Манифесты Ingress и Service с обязательными аннотациями — в разделе [«Публикация приложений с использованием Ingress NGINX»](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/istio.html#публикация-приложений-с-использованием-ingress-nginx).

@@ -92,7 +92,7 @@ Service domains (web interfaces of DKP components and modules via `publicDomainT
 | DKP editions | All editions | All editions |
 | Role separation model | cluster administrator, namespace administrator | cluster administrator, namespace administrator, application developer |
 | Multiple independent entry points | Multiple Ingress controllers selected via `ingressClass` | Multiple Gateway objects selected via `gatewayName`; cluster-scoped and namespaced gateways |
-| HTTP/HTTPS (HTTP/1.1, HTTP/2, HTTP/3) | Yes | Yes |
+| HTTP/HTTPS (HTTP/1.1, HTTP/2, HTTP/3) | Yes | Yes ([enabling HTTP/3](alb/alb-gateway-api.html#http3)) |
 | WebSocket | Yes | Yes |
 | gRPC | Yes | Yes |
 | FastCGI | Yes | No |
@@ -109,9 +109,9 @@ Service domains (web interfaces of DKP components and modules via `publicDomainT
 | Basic authentication | Yes | Yes |
 | Request rate limiting | Yes | Yes |
 | Session affinity | Yes | Yes |
-| GeoIP | Geo-based request statistics in metrics | Adding GeoIP fields to HTTP request headers based on MaxMind databases |
+| GeoIP | Geo-based request statistics in metrics | [Adding GeoIP fields to headers](alb/alb-gateway-api.html#geoip) based on MaxMind databases |
 | Prometheus metrics and Grafana dashboards | Yes, detailed by namespace, vhost, Ingress resource, and location | Yes: Envoy Proxy metrics and dashboards for requests, routes, and upstreams |
-| OpenTelemetry tracing | Yes | Yes |
+| OpenTelemetry tracing | Yes | Yes ([configuration](alb/alb-gateway-api.html#tracing)) |
 
 ## Next steps
 
