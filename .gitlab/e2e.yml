@@ -116,18 +116,20 @@ e2e-prestart:
       artifacts: true
   before_script:
     - |
-      # e2e-ensure-build resolves the real image tag into e2e-build.env (dotenv artifact).
       # A job-level BRANCH is already statically set via the e2e-framework include
       # (inputs.branch, baked in at pipeline-compile time), which GitLab always
-      # prioritizes over a same-named dotenv variable from `needs`. That silently
-      # drops the resolved BRANCH whenever the pipeline BRANCH input is left empty
-      # (the default/auto-detect case), so re-source it from the artifact file here.
-      if [ -f e2e-build.env ]; then
-        echo "Sourcing e2e-build.env (resolved BRANCH from e2e-ensure-build)"
-        source e2e-build.env
-        echo "BRANCH=${BRANCH}"
+      # prioritizes over a same-named dotenv variable from `needs` artifacts --
+      # dotenv report artifacts aren't even downloaded as files, only injected
+      # as CI/CD variables, and a same-named job-level variable wins that
+      # injection outright. That silently drops the real BRANCH resolved by
+      # e2e-ensure-build whenever the pipeline BRANCH input is left empty (the
+      # default/auto-detect case). RESOLVED_BRANCH carries the same value under
+      # an unclaimed name, so re-export it here to win back the collision.
+      if [ -n "${RESOLVED_BRANCH:-}" ]; then
+        export BRANCH="${RESOLVED_BRANCH}"
+        echo "BRANCH=${BRANCH} (from RESOLVED_BRANCH via e2e-ensure-build)"
       else
-        echo "e2e-build.env not found; BRANCH stays as statically configured" >&2
+        echo "RESOLVED_BRANCH not set; BRANCH stays as statically configured" >&2
       fi
     - !reference [.import_secrets, before_script]
 

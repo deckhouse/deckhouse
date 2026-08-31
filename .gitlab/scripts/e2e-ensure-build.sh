@@ -231,8 +231,15 @@ wait_for_job_success() {
 write_dotenv() {
   local branch="$1"
   local job_name="$2"
+  # RESOLVED_BRANCH duplicates BRANCH under a name no job statically defines.
+  # BRANCH itself is already set as a job-level variable via the e2e-framework
+  # include (inputs.branch, baked in at pipeline-compile time), and GitLab
+  # always prioritizes a job-level variable over a same-named dotenv variable
+  # from `needs` — so plain BRANCH from this dotenv is silently dropped
+  # downstream. Consumers must `export BRANCH="$RESOLVED_BRANCH"` themselves.
   cat > "${DOTENV_FILE}" <<EOF
 BRANCH=${branch}
+RESOLVED_BRANCH=${branch}
 E2E_BUILD_JOB_NAME=${job_name}
 EOF
   echo "Wrote ${DOTENV_FILE}:"
