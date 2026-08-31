@@ -53,15 +53,49 @@ func TestEnsureModule(t *testing.T) {
 	t.Run("seeds the config fields when the version arrives on an empty module", func(t *testing.T) {
 		existing := &v1alpha2.Module{ObjectMeta: metav1.ObjectMeta{Name: "echo"}}
 
-		cl := newEnsureClient(t, existing, testModuleConfig("echo"))
+		conf := testModuleConfig("echo")
+		conf.Spec.Source = "example"
 
-		err := EnsureModule(context.Background(), cl, cl, "echo", OriginFromPullOverride("example", "dev-tag"), log.NewNop())
+		cl := newEnsureClient(t, existing, conf)
+
+		err := EnsureModule(context.Background(), cl, cl, "echo", OriginFromPullOverride("dev-tag"), log.NewNop())
 		require.NoError(t, err)
 
 		module := getV2Module(t, cl, "echo")
 		assert.Equal(t, "dev-tag", module.Spec.PackageVersion)
+		assert.Equal(t, "example", module.Spec.PackageRepositoryName,
+			"the repository comes from the config source")
 		assert.True(t, module.IsDev())
 		assert.Equal(t, "test-alpha", module.Spec.UpdatePolicy, "seeding must carry the config fields")
+	})
+
+	t.Run("a pull override on a module with a repository keeps it", func(t *testing.T) {
+		existing := &v1alpha2.Module{
+			ObjectMeta: metav1.ObjectMeta{Name: "echo"},
+			Spec:       v1alpha2.ModuleSpec{PackageRepositoryName: "example", PackageVersion: "v1.0.0"},
+		}
+
+		cl := newEnsureClient(t, existing)
+
+		err := EnsureModule(context.Background(), cl, cl, "echo", OriginFromPullOverride("dev-tag"), log.NewNop())
+		require.NoError(t, err)
+
+		module := getV2Module(t, cl, "echo")
+		assert.Equal(t, "dev-tag", module.Spec.PackageVersion)
+		assert.Equal(t, "example", module.Spec.PackageRepositoryName)
+		assert.True(t, module.IsDev())
+	})
+
+	t.Run("a pull override with no repository trace changes nothing", func(t *testing.T) {
+		existing := &v1alpha2.Module{ObjectMeta: metav1.ObjectMeta{Name: "echo"}}
+
+		cl := newEnsureClient(t, existing)
+
+		err := EnsureModule(context.Background(), cl, cl, "echo", OriginFromPullOverride("dev-tag"), log.NewNop())
+		require.NoError(t, err)
+
+		module := getV2Module(t, cl, "echo")
+		assert.Empty(t, module.Spec.PackageVersion, "an underivable repository must leave the module alone")
 	})
 
 	t.Run("updates only the origin fields on a module that already has a version", func(t *testing.T) {
@@ -83,8 +117,8 @@ func TestEnsureModule(t *testing.T) {
 
 func TestOriginConstructorsMapSourceNames(t *testing.T) {
 	assert.Equal(t, "deckhouse-modules", OriginFromDeployedRelease("deckhouse", "v1.4.3").RepositoryName)
-	assert.Equal(t, "deckhouse-modules", OriginFromPullOverride("deckhouse", "pr1234").RepositoryName)
 	assert.Equal(t, "example", OriginFromDeployedRelease("example", "v1.0.0").RepositoryName)
+	assert.Empty(t, OriginFromPullOverride("pr1234").RepositoryName, "an override names no repository of its own")
 }
 
 func TestEnsureModuleConfig(t *testing.T) {

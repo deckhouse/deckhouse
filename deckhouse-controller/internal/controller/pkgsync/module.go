@@ -17,9 +17,7 @@ package pkgsync
 // This file is the module pass of the sync: it converges the v1alpha2 Module
 // resources to where every module's package comes from (the image, a ready
 // pull override, the newest deployed release) and how it is configured (the
-// live ModuleConfig). Identifiers carry the resource version: moduleV2 is the
-// v1alpha2 Module this pass fills, moduleV1 is the legacy one - it shows up
-// in a single read, the source of an overridden module.
+// live ModuleConfig). The moduleV2 identifier carries the resource version.
 
 import (
 	"context"
@@ -41,19 +39,20 @@ import (
 func (s *syncer) syncModules(ctx context.Context, embedded []embeddedModule, fromReleases map[string]Origin) ([]v1alpha2.Module, error) {
 	fromImage := s.originsFromImage(embedded)
 
-	fromPullOverrides, err := s.originsFromModulePullOverrides(ctx)
+	// how are the modules configured? read first: the configs also feed the
+	// repository derivation of the overridden modules
+	configs, err := s.liveModuleConfigs(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("resolve module configs: %w", err)
+	}
+
+	fromPullOverrides, err := s.originsFromModulePullOverrides(ctx, fromReleases, configs)
 	if err != nil {
 		return nil, fmt.Errorf("resolve origins from module pull overrides: %w", err)
 	}
 
 	// one origin per module; an earlier source beats a later one
 	origins := mergeOrigins(fromImage, fromPullOverrides, fromReleases)
-
-	// how are the modules configured?
-	configs, err := s.liveModuleConfigs(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("resolve module configs: %w", err)
-	}
 
 	// write it all into the Module resources
 	modulesV2, err := s.writeModulesV2(ctx, origins, configs)
@@ -86,50 +85,6 @@ func (s *syncer) originsFromImage(embedded []embeddedModule) map[string]Origin {
 	}
 
 	return origins
-}
-
-// originsFromModulePullOverrides pins every module a ready pull override
-// names to the tag it carries. The resolver dies together with the
-// ModulePullOverride deprecation.
-func (s *syncer) originsFromModulePullOverrides(ctx context.Context) (map[string]Origin, error) {
-	overrides := new(v1alpha2.ModulePullOverrideList)
-	if err := s.reader.List(ctx, overrides); err != nil {
-		return nil, fmt.Errorf("list module overrides: %w", err)
-	}
-
-	origins := make(map[string]Origin, len(overrides.Items))
-
-	for _, mpo := range overrides.Items {
-		if !mpo.DeletionTimestamp.IsZero() || mpo.Status.Message != v1alpha1.ModulePullOverrideMessageReady {
-			continue
-		}
-
-		// the v1alpha1 Module is read only for its source, which the override does not carry
-		moduleV1 := new(v1alpha1.Module)
-		if err := s.reader.Get(ctx, client.ObjectKey{Name: mpo.Name}, moduleV1); err != nil {
-			if !apierrors.IsNotFound(err) {
-				return nil, fmt.Errorf("get module '%s': %w", mpo.Name, err)
-			}
-
-			s.logger.Info("module not exist, skip restoring module pull override", slog.String("name", mpo.Name))
-
-			continue
-		}
-
-		origin := Origin{RepositoryName: repositoryNameForSource(moduleV1.Properties.Source), PackageVersion: mpo.Spec.ImageTag, Dev: true}
-
-		// a module without a source gives no repository to pull from; claiming
-		// it here would only hide the release that does know one
-		if !origin.Known() {
-			s.logger.Info("module has no source, skip its pull override", slog.String("name", mpo.Name))
-
-			continue
-		}
-
-		origins[mpo.Name] = origin
-	}
-
-	return origins, nil
 }
 
 // liveModuleConfigs maps every module config that is not being deleted onto

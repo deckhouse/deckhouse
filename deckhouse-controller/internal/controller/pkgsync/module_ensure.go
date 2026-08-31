@@ -34,10 +34,10 @@ import (
 )
 
 // OriginFromPullOverride is the origin of a module a ready ModulePullOverride
-// pins. A module source name maps to the name of the PackageRepository serving
-// the same registry path.
-func OriginFromPullOverride(sourceName, imageTag string) Origin {
-	return Origin{RepositoryName: repositoryNameForSource(sourceName), PackageVersion: imageTag, Dev: true}
+// pins. The override carries no repository; EnsureModule derives it from the
+// synced resources around the module.
+func OriginFromPullOverride(imageTag string) Origin {
+	return Origin{PackageVersion: imageTag, Dev: true}
 }
 
 // OriginFromDeployedRelease is the origin of a module a deployed ModuleRelease
@@ -60,6 +60,32 @@ func EnsureModule(ctx context.Context, reader client.Reader, writer client.Clien
 			return fmt.Errorf("get module '%s': %w", moduleName, err)
 		}
 
+		moduleV2 = nil
+	}
+
+	// a pull override names no repository of its own
+	if origin.Dev && origin.RepositoryName == "" {
+		conf, err := s.moduleConfig(ctx, moduleName)
+		if err != nil {
+			return err
+		}
+
+		repository, err := s.devModuleRepository(ctx, moduleName, Origin{}, conf, moduleV2)
+		if err != nil {
+			return err
+		}
+
+		if repository == "" {
+			s.logger.Info("no synced resource names the module's repository, skip its pull override",
+				slog.String("name", moduleName))
+
+			return nil
+		}
+
+		origin.RepositoryName = repository
+	}
+
+	if moduleV2 == nil {
 		conf, err := s.moduleConfig(ctx, moduleName)
 		if err != nil {
 			return err

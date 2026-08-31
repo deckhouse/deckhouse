@@ -50,13 +50,6 @@ func testReadyPullOverride(name, imageTag string) *v1alpha2.ModulePullOverride {
 	}
 }
 
-func testV1Module(name, source string) *v1alpha1.Module {
-	return &v1alpha1.Module{
-		ObjectMeta: metav1.ObjectMeta{Name: name},
-		Properties: v1alpha1.ModuleProperties{Source: source},
-	}
-}
-
 func testDeployedRelease(module, sourceName, version string) *v1alpha1.ModuleRelease {
 	return &v1alpha1.ModuleRelease{
 		ObjectMeta: metav1.ObjectMeta{
@@ -97,7 +90,6 @@ func getV2Module(t *testing.T, cl client.Client, name string) *v1alpha2.Module {
 func TestSyncOriginPrecedence(t *testing.T) {
 	t.Run("ready pull override beats deployed release", func(t *testing.T) {
 		s, cl := newTestSyncer(t, testVersion, t.TempDir(),
-			testV1Module("echo", "example"),
 			testReadyPullOverride("echo", "dev-tag"),
 			testDeployedRelease("echo", "example", "1.0.0"),
 		)
@@ -106,7 +98,8 @@ func TestSyncOriginPrecedence(t *testing.T) {
 
 		module := getV2Module(t, cl, "echo")
 		assert.Equal(t, "dev-tag", module.Spec.PackageVersion)
-		assert.Equal(t, "example", module.Spec.PackageRepositoryName)
+		assert.Equal(t, "example", module.Spec.PackageRepositoryName,
+			"the repository comes from the module's deployed release")
 		assert.True(t, module.IsDev(), "override-owned module must carry the dev annotation")
 		assert.False(t, module.IsEmbedded())
 	})

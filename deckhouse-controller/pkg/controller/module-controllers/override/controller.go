@@ -298,7 +298,7 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 
 		// mirror the override into the module v2 resource; running every scan
 		// interval also heals drift
-		if err = pkgsync.EnsureModule(ctx, r.apiReader, r.client, mpo.Name, pkgsync.OriginFromPullOverride(module.Properties.Source, mpo.Spec.ImageTag), r.log); err != nil {
+		if err = pkgsync.EnsureModule(ctx, r.apiReader, r.client, mpo.Name, pkgsync.OriginFromPullOverride(mpo.Spec.ImageTag), r.log); err != nil {
 			r.log.Error("failed to mirror the module pull override into the module v2", slog.String("name", mpo.Name), log.Err(err))
 			return ctrl.Result{}, err
 		}
@@ -327,7 +327,7 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 	}
 
 	// mirror the override into the module v2 resource before the restart
-	if err = pkgsync.EnsureModule(ctx, r.apiReader, r.client, mpo.Name, pkgsync.OriginFromPullOverride(module.Properties.Source, mpo.Spec.ImageTag), r.log); err != nil {
+	if err = pkgsync.EnsureModule(ctx, r.apiReader, r.client, mpo.Name, pkgsync.OriginFromPullOverride(mpo.Spec.ImageTag), r.log); err != nil {
 		r.log.Error("failed to mirror the module pull override into the module v2", slog.String("name", mpo.Name), log.Err(err))
 		return ctrl.Result{}, err
 	}
