@@ -5,6 +5,12 @@ description: "Настройка балансировщика нагрузки �
 lang: ru
 extractedLinksMax: 4
 relatedLinks:
+  - title: "Миграция с ingress-nginx на alb"
+    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/migration.html
+  - title: "ALB средствами Kubernetes Gateway API"
+    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html
+  - title: "Использование Application Load Balancer (ALB)"
+    url: /products/kubernetes-platform/documentation/v1/user/network/ingress/alb.html
   - title: "Документация модуля ingress-nginx"
     url: /modules/ingress-nginx/
   - title: "Custom Resources модуля ingress-nginx"
@@ -13,8 +19,6 @@ relatedLinks:
     url: /modules/ingress-nginx/examples.html
   - title: "Документация модуля metallb"
     url: /modules/metallb/
-  - title: "Использование Application Load Balancer (ALB)"
-    url: /products/kubernetes-platform/documentation/v1/user/network/ingress/alb.html
 ---
 
 Для реализации ALB средствами [Ingress NGINX Controller](https://github.com/kubernetes/ingress-nginx) используется модуль [`ingress-nginx`](/modules/ingress-nginx/).
@@ -23,6 +27,8 @@ relatedLinks:
 В 2025 году Ingress NGINX был [переведён](https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/) в режим сопровождения без планов активного развития новых возможностей. Дальнейшее развитие средств балансировки входящего трафика в Kubernetes ориентировано на [Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/).
 
 На поддержку модуля в составе Deckhouse Kubernetes Platform (DKP) это не распространяется: модуль сопровождается командой DKP, включая обновления безопасности. Подробности — в разделе [«Поддержка и безопасность модуля»](#поддержка-и-безопасность-модуля).
+
+Пошаговый переход на Gateway API — в разделе [«Миграция с ingress-nginx на alb»](migration.html).
 {% endalert %}
 
 Модуль `ingress-nginx` устанавливает Ingress NGINX Controller и управляет им с помощью кастомных ресурсов.
@@ -111,7 +117,7 @@ relatedLinks:
   * `*_responses_total` — количество ответов (дополнительный лейбл — `status_class`, а не просто `status`);
   * `*_upstream_bytes_received_sum` — суммарный объём данных, полученных от бэкендов.
 
-## Примеры настройки балансировки
+## Примеры настройки балансировки {#load-balancing-configuration-examples}
 
 Для настройки балансировки используйте кастомный ресурс [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller).
 
@@ -259,7 +265,7 @@ spec:
 
 В случае использования MetalLB его speaker-поды (компонент MetalLB, анонсирующий IP-адреса) должны быть запущены на тех же узлах, что и поды Ingress-контроллера.
 
-Чтобы Ingress-контроллер получал реальные IP-адреса клиентов, его сервис должен быть создан с параметром `externalTrafficPolicy: Local`, исключающим межузловой SNAT. Для соблюдения этого условия MetalLB speaker анонсирует этот Service только с тех узлов, где запущены целевые поды.
+Чтобы Ingress-контроллер получал реальные IP-адреса клиентов, его сервис должен быть создан с параметром `externalTrafficPolicy: Local`, исключающим межузловой SNAT. MetalLB speaker анонсирует этот Service только с узлов, где запущены целевые поды.
 
 Таким образом, для данного примера конфигурация модуля [`metallb`](/modules/metallb/configuration.html) через ModuleConfig должна быть такой:
 
@@ -422,11 +428,11 @@ spec:
                   number: 80
 ```
 
-При [включенной обработке и передаче заголовков `X-Forwarded-*`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-hostport-behindl7proxy) бэкенд может опираться на заголовок `x-forwarded-host` при принятии решений об авторизации. И для приведенного выше примера возможна ситуация, когда через Ingress-ресурс для обслуживания публичного трафика можно подключиться к административной зоне, используя `x-forwarded-host`. Поэтому при использовании этой опции вы должны быть уверены, что запросы к Ingress-контроллеру направляются только от доверенных источников.
+При [включенной обработке и передаче заголовков `X-Forwarded-*`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-hostport-behindl7proxy) бэкенд может опираться на заголовок `x-forwarded-host` при принятии решений об авторизации. В примере выше через публичный Ingress можно подключиться к административной зоне с помощью `x-forwarded-host`. Поэтому запросы к Ingress-контроллеру должны приходить только от доверенных источников.
 
 #### Использование раздельных Ingress-контроллеров
 
-Чтобы избежать ситуации, описанной выше (когда при [включенной обработке и передаче заголовков `X-Forwarded-*`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-hostport-behindl7proxy) можно, например, через Ingress-ресурс для обслуживания публичного трафика подключиться к административной зоне, используя `x-forwarded-host`), рекомендуем:
+Чтобы избежать этой ситуации, рекомендуем:
 
 - настроить правила доступа на уровне Ingress-ресурсов,
 - использовать разные Ingress-контроллеры,
@@ -518,4 +524,6 @@ spec:
 
 ## Поддержка и безопасность модуля
 
-Модуль `ingress-nginx` входит в сопровождение DKP на весь срок поддержки платформы, вне зависимости от режима развития upstream-проекта. Команда DKP отслеживает CVE в контроллере и зависимостях — NGINX, Lua-модули, базовые образы — и поставляет исправления в релизах платформы. Для соответствия ожиданиям PCI DSS по вендорской поддержке и срокам устранения уязвимостей ответственным вендором модуля является компания «Флант». Сертификация DKP в ФСТЭК России фиксирует, в том числе, процессы управления уязвимостями и выпуск обновлений безопасности.
+Модуль `ingress-nginx` входит в сопровождение DKP на весь срок поддержки платформы, вне зависимости от режима развития upstream-проекта. Команда DKP отслеживает CVE в контроллере и зависимостях — NGINX, Lua-модули, базовые образы — и поставляет исправления в релизах платформы.
+
+Для соответствия ожиданиям PCI DSS по вендорской поддержке и срокам устранения уязвимостей ответственным вендором модуля является компания «Флант». Сертификация DKP в ФСТЭК России фиксирует, в том числе, процессы управления уязвимостями и выпуск обновлений безопасности.

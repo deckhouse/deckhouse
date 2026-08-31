@@ -8,6 +8,8 @@ relatedLinks:
     url: alb/nginx.html
   - title: "ALB with Kubernetes Gateway API"
     url: alb/alb-gateway-api.html
+  - title: "Migrating from ingress-nginx to alb"
+    url: alb/migration.html
   - title: "ALB with Istio"
     url: alb/istio.html
   - title: "Utilizing Application Load Balancer (ALB)"
@@ -63,9 +65,22 @@ When using the `alb` module, responsibilities are typically split as follows:
 
 In a typical cluster-wide gateway scenario, the namespace administrator creates the ListenerSet, and application developers create the HTTPRoute. The same person may perform both roles if they have the required permissions.
 
+### Choosing an ALB implementation
+
+| Criterion | Ingress NGINX (`ingress-nginx`) | Gateway API (`alb`) | Istio (`istio`) |
+| --- | --- | --- | --- |
+| Status in DKP | General Availability | Preview (DKP ≥ 1.76) | Depends on edition and configuration |
+| Publishing API | Ingress + annotations | Gateway, ListenerSet, routes | Gateway, VirtualService, DestinationRule |
+| Protocols | HTTP/HTTPS, gRPC (Ingress) | HTTP/HTTPS, gRPC, TLS, TCP, UDP | HTTP/HTTPS, gRPC, TCP (Istio Gateway) |
+| Role separation | IngressClass + Ingress | ClusterALBInstance/ALBInstance → ListenerSet → routes | IngressIstioController + Istio Gateway |
+| Service mesh | No | Optional (sidecar on the gateway proxy) | Yes |
+| Typical use case | Classic Ingress, minimal change | New apps, multitenancy, gradual migration from Ingress | Canary, mTLS, tracing, advanced routing |
+
 ### Comparison of the ingress-nginx and alb modules {#comparison-of-the-ingress-nginx-and-alb-modules}
 
 Both modules solve the same task — receiving and routing external traffic to applications — but rely on different standards: `ingress-nginx` uses the Ingress API with annotations, while `alb` uses the Kubernetes Gateway API. The modules can be used in a cluster simultaneously. The table below compares their capabilities in the current versions.
+
+Service domains (web interfaces of DKP components and modules via `publicDomainTemplate`) and application domains (routes owned by application teams) are configured differently. Details are in [Publishing service domains](alb/alb-gateway-api.html#publishing-service-domains).
 
 | Capability | `ingress-nginx` | `alb` |
 | :--- | :--- | :--- |
@@ -98,11 +113,15 @@ Both modules solve the same task — receiving and routing external traffic to a
 | Prometheus metrics and Grafana dashboards | Yes, detailed by namespace, vhost, Ingress resource, and location | Yes: Envoy Proxy metrics and dashboards for requests, routes, and upstreams |
 | OpenTelemetry tracing | Yes | Yes |
 
-## What to do next
+## Next steps
 
-1. Choose an ALB implementation: [`ingress-nginx`](alb/nginx.html), [`alb` (Gateway API)](alb/alb-gateway-api.html), or [`istio`](alb/istio.html). Use Istio when you need service-mesh traffic management (canary routing, mTLS between Pods). Use `alb` when you need Gateway API with role separation and protocols beyond classic Ingress. Use `ingress-nginx` when you need a mature Ingress-based ALB.
+1. Choose an ALB implementation: [`ingress-nginx`](alb/nginx.html), [`alb` (Gateway API)](alb/alb-gateway-api.html), or [`istio`](alb/istio.html).
+   - Istio — when you need service-mesh traffic management (canary routing, mTLS between Pods).
+   - The `alb` module — when you need Gateway API with role separation and protocols beyond classic Ingress.
+   - The `ingress-nginx` module — when you need a mature Ingress-based ALB.
 2. Enable and configure the corresponding module. For the `alb` module, complete the ["Steps to take before enabling and configuring ALB in a cluster"](alb/alb-gateway-api.html#steps-to-take-before-enabling-and-configuring-alb-in-a-cluster).
-3. Publish applications using ["Utilizing Application Load Balancer (ALB)"](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb.html).
+3. Publish applications using the [ALB user guides](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb.html) (Gateway API, Ingress NGINX, or Istio).
+4. To move from `ingress-nginx` to Gateway API, follow [Migrating from ingress-nginx to alb](alb/migration.html).
 
 {% alert level="info" %}
 The `alb` module is in Preview and requires DKP 1.76 or later.
