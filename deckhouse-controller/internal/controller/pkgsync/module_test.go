@@ -261,6 +261,27 @@ func TestSyncModules(t *testing.T) {
 			"a raw source name left by an older write must heal")
 	})
 
+	t.Run("clears the dev annotation once the override is gone", func(t *testing.T) {
+		existing := &v1alpha2.Module{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        "echo",
+				Annotations: map[string]string{v1alpha2.ModuleAnnotationDev: "true"},
+			},
+			Spec: v1alpha2.ModuleSpec{PackageRepositoryName: "example", PackageVersion: "dev-tag"},
+		}
+
+		s, cl := newTestSyncer(t, testVersion, t.TempDir(),
+			existing,
+			testDeployedRelease("echo", "example", "1.0.0"),
+		)
+
+		syncOK(t, s)
+
+		module := getV2Module(t, cl, "echo")
+		assert.False(t, module.IsDev(), "the release origin must clear the leftover dev annotation")
+		assert.Equal(t, "v1.0.0", module.Spec.PackageVersion)
+	})
+
 	t.Run("keeps a module no source claims but a repository backs", func(t *testing.T) {
 		existing := &v1alpha2.Module{
 			ObjectMeta: metav1.ObjectMeta{Name: "echo"},
@@ -308,14 +329,24 @@ func TestFillModuleV2(t *testing.T) {
 		assert.True(t, module.IsEmbedded(), "a config mirror must not strip the embedded annotation")
 	})
 
-	t.Run("dev annotation is only ever set", func(t *testing.T) {
+	t.Run("dev annotation is reconciled both ways", func(t *testing.T) {
 		module := &v1alpha2.Module{}
 
 		fillModuleV2(module, Origin{RepositoryName: "example", PackageVersion: "dev-tag", Dev: true}, nil)
 		assert.True(t, module.IsDev())
 
 		fillModuleV2(module, Origin{RepositoryName: "example", PackageVersion: "v1.0.0"}, nil)
-		assert.True(t, module.IsDev(), "the dev annotation is never cleared by the sync")
+		assert.False(t, module.IsDev(), "a module no longer overridden loses the dev annotation")
+	})
+
+	t.Run("unknown origin keeps the dev annotation", func(t *testing.T) {
+		module := &v1alpha2.Module{}
+
+		fillModuleV2(module, Origin{RepositoryName: "example", PackageVersion: "dev-tag", Dev: true}, nil)
+		require.True(t, module.IsDev())
+
+		fillModuleV2(module, Origin{}, testModuleConfig("echo"))
+		assert.True(t, module.IsDev(), "a config mirror must not strip the dev annotation")
 	})
 
 	t.Run("a half-filled origin is not known and leaves the spec alone", func(t *testing.T) {
