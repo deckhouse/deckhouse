@@ -19,7 +19,7 @@ import (
 
 	"google.golang.org/grpc"
 
-	validatev1 "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/v1/validate"
+	validatev1 "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/validate/v1"
 )
 
 const (

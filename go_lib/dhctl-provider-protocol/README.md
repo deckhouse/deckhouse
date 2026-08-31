@@ -207,8 +207,8 @@ looking like a process that died mid-call.
 
 ## Calling a validator in Go
 
-Import [`api/validate/v1`](api/validate/v1) and [`client`](client). The caller
-owns the process, the socket and the deadlines:
+Import [`api/validate/v1`](api/validate/v1) and [`client`](client). The caller owns
+the process, the socket and the deadlines:
 
 ```go
 conn, err := grpc.NewClient("unix://"+socket, grpc.WithTransportCredentials(insecure.NewCredentials()))

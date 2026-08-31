@@ -16,7 +16,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.6.2
 // - protoc             v5.29.3
-// source: v1/validate/validate.proto
+// source: validate/v1/validate.proto
 
 package v1
 
@@ -143,5 +143,5 @@ var ValidateService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "v1/validate/validate.proto",
+	Metadata: "validate/v1/validate.proto",
 }

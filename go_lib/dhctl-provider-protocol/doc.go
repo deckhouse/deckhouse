@@ -22,16 +22,16 @@
 //
 //   - api/<action>/v<N> — one package per action and wire version. It holds the
 //     generated zz_generated.*.go AND the hand-written half of the contract: the
-//     payload, the result, the action's own rules and the conversions to and from the
-//     wire types. A validator imports this and nothing else of the protocol.
+//     payload, the result and the conversions to and from the wire types.
 //
 //     Both halves share the package, so the zz_generated. prefix is what tells them
-//     apart: `make proto` deletes and rewrites exactly those files, everything else
-//     is written by hand, and the directory must never be deleted wholesale. A
+//     apart: `make generate` deletes and rewrites exactly those files, everything
+//     else is written by hand, and the directory must never be deleted wholesale. A
 //     generated message named after a hand-written type gets a distinct name in the
-//     .proto — see ResponseViolation.
+//     .proto — see ViolationResponse.
 //
-//   - server — what a validator binary runs.
+//   - server — what a validator binary runs: the listener, the panic interceptor and
+//     the service bound to the validator's own implementation.
 //
 //   - client — what a caller uses: one method per action, no wire types exposed.
 //
@@ -40,18 +40,17 @@
 // # Adding an action
 //
 // Validation is the first action, not the only conceivable one — a binary could serve
-// its own schemas, config migrations or plan rules. A new one is:
+// its own schemas, config migrations or plan rules. A new one is one new directory:
 //
-//  1. api/pb/<action>/v1: its own service and messages, so a binary that does not
-//     implement it simply does not pass it to server.Start and a caller sees
-//     Unimplemented;
-//  2. make proto;
-//  3. <action>: the payload, the result and the action's own rules;
-//     api/v1/<action>: its conversions;
-//  4. server and client: the two transport halves — a server.Service constructor
-//     and a method on client.Client.
+//  1. api/pb/<action>/v1/<action>.proto: its own service, its own messages and its
+//     own proto package;
+//  2. make generate;
+//  3. api/<action>/v1: the payload, the result and the conversions;
+//  4. server and client: the two transport halves — a Service constructor and a
+//     method on the client.
 //
-// Vocabulary shared by two actions moves up only when the second one appears.
+// A binary registers the services it implements, and a caller learns a missing action
+// from gRPC's Unimplemented rather than from a negotiation of its own.
 //
 // # Adding a wire version
 //

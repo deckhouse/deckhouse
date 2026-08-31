@@ -19,13 +19,15 @@ import (
 
 	"google.golang.org/grpc"
 
-	validatev1 "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/v1/validate"
+	validatev1 "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/validate/v1"
 	"github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/errs"
 )
 
-// Validator is what the validator implements: the check itself, in plain Go. An
-// Output says what is wrong with the configuration; an error means the check could
-// not be made and reaches the caller as Internal.
+// Validator is the check itself, in plain Go: an Output says what is wrong with the
+// configuration, an error means the check could not be made and reaches the caller
+// as Internal.
+//
+// A validator implements this and nothing else of the protocol.
 type Validator interface {
 	Validate(ctx context.Context, input validatev1.Input) (validatev1.Output, error)
 }

@@ -17,10 +17,12 @@ package server_test
 import (
 	"context"
 	"errors"
+	"net"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -29,7 +31,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
 
-	validatev1 "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/v1/validate"
+	validatev1 "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/validate/v1"
 	"github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/client"
 	"github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/server"
 )
@@ -102,6 +104,125 @@ func TestConfigMerge(t *testing.T) {
 }
 
 func TestStart(t *testing.T) {
+	tests := []struct {
+		name         string
+		services     int
+		omitAddress  bool
+		wantStartErr bool
+	}{
+		{
+			// The caller allocates the socket path; there is no default to fall
+			// back on.
+			name:         "refuses to start without an address",
+			omitAddress:  true,
+			wantStartErr: true,
+		},
+		{
+			// A server with no action serves nothing but still listens: a caller
+			// learns about a missing action from Unimplemented.
+			name: "starts without services",
+		},
+		{
+			name:     "registers every service it is given",
+			services: 2,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			address := ""
+			if !test.omitAddress {
+				address = socketPath(t)
+			}
+
+			registrars := make([]*countingService, test.services)
+			services := make([]server.Service, 0, test.services)
+
+			for i := range registrars {
+				registrars[i] = &countingService{}
+				services = append(services, registrars[i])
+			}
+
+			running, err := server.Start(server.Config{Address: address}, services...)
+
+			if test.wantStartErr {
+				if err == nil {
+					_ = running.Stop()
+					t.Fatal("Start() = nil, want an error")
+				}
+
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("Start() = %v", err)
+			}
+
+			for i, registrar := range registrars {
+				if got := registrar.calls(); got != 1 {
+					t.Errorf("service %d registered %d times, want 1", i, got)
+				}
+			}
+
+			// The socket exists by the time Start returns, so a caller may connect
+			// right away.
+			conn, err := net.Dial("unix", address)
+			if err != nil {
+				t.Fatalf("Dial() = %v", err)
+			}
+
+			_ = conn.Close()
+
+			if err := running.Stop(); err != nil {
+				t.Fatalf("Stop() = %v", err)
+			}
+
+			// Stop is idempotent: a second call repeats the first one's result
+			// instead of blocking on a drained channel.
+			if err := running.Stop(); err != nil {
+				t.Errorf("second Stop() = %v, want nil", err)
+			}
+		})
+	}
+}
+
+// countingService stands in for an action: the transport only has to register what
+// it is given.
+type countingService struct {
+	mu         sync.Mutex
+	registered int
+}
+
+func (s *countingService) Register(grpc.ServiceRegistrar) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.registered++
+}
+
+func (s *countingService) calls() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.registered
+}
+
+// socketPath builds a path outside t.TempDir, which spells the test's name into it
+// and on its own can exceed sun_path (104 bytes on darwin, 108 on Linux).
+func socketPath(t *testing.T) string {
+	t.Helper()
+
+	dir, err := os.MkdirTemp("", "d8v")
+	if err != nil {
+		t.Fatalf("MkdirTemp() = %v", err)
+	}
+
+	t.Cleanup(func() { _ = os.RemoveAll(dir) })
+
+	return filepath.Join(dir, "v.sock")
+}
+
+func TestValidateService(t *testing.T) {
 	tests := []struct {
 		name           string
 		validator      validatorFunc // nil registers no service
@@ -260,7 +381,7 @@ func TestStart(t *testing.T) {
 			}
 
 			if got := output.Warnings; !reflect.DeepEqual(got, test.wantWarnings) {
-				t.Errorf("Warnings() = %+v, want %+v", got, test.wantWarnings)
+				t.Errorf("Warnings = %+v, want %+v", got, test.wantWarnings)
 			}
 		})
 	}
@@ -300,23 +421,8 @@ func bootstrapInput() validatev1.Input {
 	return validatev1.Input{ProviderName: "dvp", Operation: validatev1.OperationBootstrap}
 }
 
-// socketPath builds a path outside t.TempDir, which spells the test's name into it
-// and on its own can exceed sun_path (104 bytes on darwin, 108 on Linux).
-func socketPath(t *testing.T) string {
-	t.Helper()
-
-	dir, err := os.MkdirTemp("", "d8v")
-	if err != nil {
-		t.Fatalf("MkdirTemp() = %v", err)
-	}
-
-	t.Cleanup(func() { _ = os.RemoveAll(dir) })
-
-	return filepath.Join(dir, "v.sock")
-}
-
-// connect talks to the server the way dhctl would: over the wire, so the
-// conversions and the statuses are exercised too.
+// connect talks to the server the way dhctl would: over the wire, so the conversions
+// and the statuses are exercised too.
 func connect(t *testing.T, address string) client.Client {
 	t.Helper()
 
