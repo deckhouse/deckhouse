@@ -114,6 +114,22 @@ e2e-prestart:
       artifacts: true
     - job: e2e-prestart
       artifacts: true
+  before_script:
+    - |
+      # e2e-ensure-build resolves the real image tag into e2e-build.env (dotenv artifact).
+      # A job-level BRANCH is already statically set via the e2e-framework include
+      # (inputs.branch, baked in at pipeline-compile time), which GitLab always
+      # prioritizes over a same-named dotenv variable from `needs`. That silently
+      # drops the resolved BRANCH whenever the pipeline BRANCH input is left empty
+      # (the default/auto-detect case), so re-source it from the artifact file here.
+      if [ -f e2e-build.env ]; then
+        echo "Sourcing e2e-build.env (resolved BRANCH from e2e-ensure-build)"
+        source e2e-build.env
+        echo "BRANCH=${BRANCH}"
+      else
+        echo "e2e-build.env not found; BRANCH stays as statically configured" >&2
+      fi
+    - !reference [.import_secrets, before_script]
 
 # ---------------------------------------------------------------------------
 # Per-provider jobs (PROVIDER values from e2e-framework CloudProviderFactory,
