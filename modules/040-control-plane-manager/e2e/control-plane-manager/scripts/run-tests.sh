@@ -3,6 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SUITE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+REPO_ROOT="$(cd "${SUITE_DIR}/../../../.." && pwd)"
 # shellcheck source=ssh-opts.sh
 . "${SCRIPT_DIR}/ssh-opts.sh"
 
@@ -26,6 +27,48 @@ for name in "${TEST_DIRS[@]}"; do
     exit 1
   fi
 done
+
+# stage_remote_fixtures copies repo files listed in tests/<name>/remote-fixtures
+# into the staged test directory. Each line: <repo-relative-src> [test-relative-dest]
+# Default dest is fixtures/<basename>. Blank lines and # comments are ignored.
+stage_remote_fixtures() {
+  local name="$1"
+  local list_file="${SUITE_DIR}/tests/${name}/remote-fixtures"
+  local src dest src_path dest_path
+
+  if [ ! -f "${list_file}" ]; then
+    return 0
+  fi
+
+  while IFS= read -r line || [ -n "${line}" ]; do
+    # Trim leading/trailing whitespace.
+    line="${line#"${line%%[![:space:]]*}"}"
+    line="${line%"${line##*[![:space:]]}"}"
+    case "${line}" in
+      ''|'#'*) continue ;;
+    esac
+
+    src="${line%%[[:space:]]*}"
+    dest="${line#"${src}"}"
+    dest="${dest#"${dest%%[![:space:]]*}"}"
+    if [ -z "${dest}" ]; then
+      dest="fixtures/$(basename "${src}")"
+    fi
+
+    src_path="${REPO_ROOT}/${src}"
+    dest_path="${STAGING_DIR}/tests/${name}/${dest}"
+
+    if [ ! -f "${src_path}" ]; then
+      echo "Error: remote-fixtures source not found for tests/${name}: ${src_path}"
+      echo "Listed in ${list_file}"
+      exit 1
+    fi
+
+    mkdir -p "$(dirname "${dest_path}")"
+    cp "${src_path}" "${dest_path}"
+    echo "Staged ${src} -> tests/${name}/${dest}"
+  done < "${list_file}"
+}
 
 SSH_TARGET="${CLUSTER_SSH_USER}@${CLUSTER_SSH_HOST}"
 # Keep ControlPath short: macOS Unix socket paths are limited (~104 bytes).
@@ -68,8 +111,10 @@ for name in "${TEST_DIRS[@]}"; do
     --exclude 'reports/' \
     --exclude 'Taskfile.yml' \
     --exclude '*.md' \
+    --exclude 'remote-fixtures' \
     "${SUITE_DIR}/tests/${name}/" \
     "${STAGING_DIR}/tests/${name}/"
+  stage_remote_fixtures "${name}"
 done
 
 echo "Copying suite to ${SSH_TARGET}:${REMOTE_TEST_DIR}..."

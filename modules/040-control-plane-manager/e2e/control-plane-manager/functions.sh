@@ -64,8 +64,30 @@ wait_for_api() {
   return 1
 }
 
+# pipe_jq runs jq on stdin; on failure logs the source description and the input body.
+# Usage: kubectl_run version -o json | pipe_jq "kubectl version -o json" -r '...'
+pipe_jq() {
+  source_desc="$1"
+  shift
+  input=$(cat)
+  jq_err=$(mktemp)
+  if printf '%s' "$input" | jq "$@" 2>"$jq_err"; then
+    rm -f "$jq_err"
+    return 0
+  fi
+  e2e_log "jq failed parsing output of: $source_desc"
+  if [ -s "$jq_err" ]; then
+    cat "$jq_err" >&2
+  fi
+  rm -f "$jq_err"
+  e2e_log "jq input ($(printf '%s' "$input" | wc -c | tr -d ' ') bytes) follows:"
+  printf '%s\n' "$input" >&2
+  return 1
+}
+
 # kubectl_run waits for the API and retries kubectl on transient or conflict errors.
 # NotFound and other permanent errors fail immediately.
+# Stdout is only kubectl stdout (safe to pipe to jq); stderr warnings are forwarded to stderr.
 # Usage: kubectl_run get pod -n ns
 #        output=$(kubectl_run get pod -n ns -o json)
 kubectl_run() {
@@ -73,6 +95,7 @@ kubectl_run() {
   attempts="$CPM_E2E_KUBECTL_ATTEMPTS"
   delay="$CPM_E2E_KUBECTL_DELAY"
   i=1
+  err_file=$(mktemp)
   while [ "$i" -le "$attempts" ]; do
     if ! wait_for_api 30; then
       e2e_log "API not ready (attempt $i/$attempts), retrying in ${delay}s"
@@ -81,33 +104,56 @@ kubectl_run() {
       continue
     fi
     # Avoid bash arrays: Chainsaw runs scripts with /usr/bin/sh (dash on Ubuntu).
+    # Keep stderr out of stdout so JSON/yaml piped to jq stays valid.
+    rc=0
     if _kubectl_has_request_timeout "$@"; then
-      if output=$(kubectl "$@" 2>&1); then
-        printf '%s' "$output"
-        return 0
-      fi
+      output=$(kubectl "$@" 2>"$err_file") || rc=$?
     else
-      if output=$(kubectl --request-timeout="$CPM_E2E_KUBECTL_REQUEST_TIMEOUT" "$@" 2>&1); then
-        printf '%s' "$output"
-        return 0
-      fi
+      output=$(kubectl --request-timeout="$CPM_E2E_KUBECTL_REQUEST_TIMEOUT" "$@" 2>"$err_file") || rc=$?
     fi
-    if _kubectl_not_found_error "$output"; then
+    if [ "$rc" -eq 0 ]; then
+      if [ -s "$err_file" ]; then
+        cat "$err_file" >&2
+      fi
+      rm -f "$err_file"
+      printf '%s' "$output"
+      return 0
+    fi
+    err=$(cat "$err_file")
+    if [ -n "$output" ] && [ -n "$err" ]; then
+      combined="${output}
+${err}"
+    elif [ -n "$err" ]; then
+      combined="$err"
+    else
+      combined="$output"
+    fi
+    if _kubectl_not_found_error "$combined"; then
       e2e_log "kubectl NotFound (no retry): $*"
-      echo "$output" >&2
+      echo "$combined" >&2
+      rm -f "$err_file"
       return 1
     fi
-    if _kubectl_retryable_error "$output"; then
+    if _kubectl_retryable_error "$combined"; then
       e2e_log "kubectl retryable error (attempt $i/$attempts), retrying in ${delay}s"
+      echo "$combined" >&2
       sleep "$delay"
       i=$((i + 1))
       continue
     fi
     e2e_log "kubectl permanent error: $*"
-    echo "$output" >&2
+    echo "$combined" >&2
+    rm -f "$err_file"
     return 1
   done
   e2e_log "kubectl failed after $attempts attempts: $*"
+  # Print the last kubectl error if we exhausted retries (may be empty if wait_for_api failed).
+  if [ -n "${combined:-}" ]; then
+    echo "$combined" >&2
+  elif [ -s "$err_file" ]; then
+    cat "$err_file" >&2
+  fi
+  rm -f "$err_file"
   return 1
 }
 
@@ -159,7 +205,9 @@ backup_moduleconfig_spec() {
   fi
   e2e_log "backing up ModuleConfig spec to $backup_file"
   if kubectl_run get moduleconfig control-plane-manager >/dev/null 2>&1; then
-    kubectl_run get moduleconfig control-plane-manager -o json | jq '{spec: .spec}' > "$backup_file"
+    kubectl_run get moduleconfig control-plane-manager -o json \
+      | pipe_jq "kubectl get moduleconfig control-plane-manager -o json" '{spec: .spec}' \
+      > "$backup_file"
     backed_up=$(jq -r '.spec.settings.apiserver.basicAuditPolicyEnabled // "<unset>"' "$backup_file")
     e2e_log "ModuleConfig spec backed up (basicAuditPolicyEnabled=$backed_up)"
     return 0
@@ -199,7 +247,8 @@ restore_moduleconfig() {
 
 # kubernetes_version returns the cluster Kubernetes minor version (for example 1.34).
 kubernetes_version() {
-  kubectl_run version -o json | jq -r '[.serverVersion.major, .serverVersion.minor] | join(".")'
+  kubectl_run version -o json \
+    | pipe_jq "kubectl version -o json" -r '[.serverVersion.major, .serverVersion.minor] | join(".")'
 }
 
 # snapshot_component_cpos saves existing ControlPlaneOperation names for a component label.
@@ -368,7 +417,8 @@ apply_or_patch_moduleconfig() {
   fi
   if kubectl_run get moduleconfig control-plane-manager >/dev/null 2>&1; then
     e2e_log "ModuleConfig exists, patching spec from $target_file"
-    patch_payload=$(kubectl create --dry-run=client -o json -f "$target_file" | jq -c '{spec: .spec}')
+    patch_payload=$(kubectl create --dry-run=client -o json -f "$target_file" \
+      | pipe_jq "kubectl create --dry-run=client -o json -f $target_file" -c '{spec: .spec}')
     kubectl_run patch moduleconfig control-plane-manager \
       --type=merge -p "$patch_payload" --request-timeout=60s
   else
