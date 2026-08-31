@@ -1,0 +1,29 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-registrypackages-d8-bcheck-go-2026-5932",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "@id": "https://pkg.go.dev/vuln/GO-2026-5932",
+        "description": "The golang.org/x/crypto/openpgp package is unmaintained, unsafe by design, and has known security issues that will not be fixed.",
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        },
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "GO-2026-5932 affects unmaintained golang.org/x/crypto/openpgp with no fixed version. The d8-bcheck binary resolves only chacha20, chacha20poly1305, cryptobyte, ed25519, nacl/secretbox, pbkdf2, salsa20 and scrypt from x/crypto; openpgp is not in its build graph and is neither imported nor executed.",
+      "timestamp": "2026-08-31T08:43:21Z"
+    }
+  ],
+  "timestamp": "2026-08-31T08:43:21Z",
+  "last_updated": "2026-08-31T08:43:21Z"
+}
