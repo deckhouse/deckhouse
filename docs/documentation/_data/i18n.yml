@@ -322,9 +322,6 @@ common:
   modules:
     en: modules
     ru: модули
-  modules_embedded:
-    en: embedded modules
-    ru: встроенные модули
   modules_of_a_scope:
     en: The modules within the scope
     ru: Модули, входящие в область
