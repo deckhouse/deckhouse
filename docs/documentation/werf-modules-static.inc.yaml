@@ -92,7 +92,13 @@ shell:
         EOD
 {{ end }}
         # Creating additional config...
-        echo -e "\nd8Revision: {{ .Edition }}" >> /tmp/_config_additional.yml
+        echo -e "\nd8Revision: {{ .Edition }}\n" >> /tmp/_config_additional.yml
+        # These deep-merge over the ai_export block from _config.yml.
+        {{ if eq .Edition "CSE" }}
+        echo -e "\nai_export:\n  enabled: false\n" >> /tmp/_config_additional.yml
+        {{ else }}
+        echo -e "\nai_export:\n  llmsFileName: embedded-llms.txt\n  corpusFileName: embedded-corpus.json\n  root: false\n  summaryI18nKey: aiLlmsSummaryEmbedded\n" >> /tmp/_config_additional.yml
+        {{ end }}
 
         echo '[] Generating static files of the documentation part...'
         cd ..
