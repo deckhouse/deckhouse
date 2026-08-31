@@ -24,6 +24,8 @@ Depending on the scenarios for importing or uploading VM images and disks, virtu
 
 1. **D8v-pvc-pvc-source-importer** and **d8v-pvc-pvc-target-importer**: Pod consisting of a single **d8v-pvc-source-importer** container and pod consisting of a single **d8v-pvc-target-importer** container, respectively, that are launched to import a VM image from one PVC volume to another PVC volume (cloning over the network). The PVC source is mounted as a network block device using the [Network Block Device (NBD)](https://github.com/NetworkBlockDevice/nbd) protocol in the d8v-pvc-pvc-source-importer pod, which is accessed by an application running in the d8v-pvc-pvc-target-importer pod container. The data during the import process is saved in a temporary primary (prime) PVC. After successfully copying the data to the primary PVC, the virtualization-controller binds the target PVC (PVC receiver) to the PV of the primary PVC, and then the prime PVC as well as original PV of target PVC are deleted.
 
+During the import of a VM image or disk, the Virtualization Controller collects import statistics directly from the running temporary pod and, based on these statistics, calculates the download progress in percentage terms, as well as the average and current download speeds, to be displayed in the status of the corresponding custom resource (VirtualImage, ClusterVirtualImage, or VirtualDisk).
+
 Virtualization-controller also supports the following scenarios for importing VM images and disks that do not require launching temporary pods:
 
 * Importing a VM image from container registry into PVC volume.
