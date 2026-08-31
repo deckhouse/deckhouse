@@ -88,6 +88,15 @@ properties:
         description: |
           Network subnet for k8s services
         x-examples: [ "10.222.0.0/24" ]
+      podSubnetNodeCIDRPrefix:
+        type: string
+        pattern: '^[0-9]{1,2}$'
+        description: |
+          Prefix size of the pod subnet allocated to each node.
+
+          Resolved by the cluster_configuration global hook: the network group of ModuleConfig
+          control-plane-manager if set, else the deprecated ClusterConfiguration field, else "24".
+        x-examples: [ "24" ]
       defaultStorageClass:
         type: string
         # it is name of resource in kubernetes
