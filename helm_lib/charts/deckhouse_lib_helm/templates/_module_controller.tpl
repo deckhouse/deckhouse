@@ -26,9 +26,9 @@ memory: 50Mi
   - podSecurityContext: "deckhouse" or "nobody" (default: "nobody")
   - additionalLabels: additional labels for VPA
   - controllerMaxCpu: max CPU for controller VPA (default: "200m")
-  - controllerMaxMemory: max memory for controller VPA (default: "256Mi")
-  - webhooksMaxCpu: max CPU for webhooks VPA (default: "25m")
-  - webhooksMaxMemory: max memory for webhooks VPA (default: "128Mi")
+  - controllerMaxMemory: max memory for controller VPA (default: "100Mi")
+  - webhooksMaxCpu: max CPU for webhooks VPA (default: "20m")
+  - webhooksMaxMemory: max memory for webhooks VPA (default: "100Mi")
   - additionalContainers: additional containers to add to the pod
   - additionalVolumes: additional volumes to add to the pod
   - additionalControllerVolumeMounts: additional volume mounts for controller
@@ -39,21 +39,8 @@ memory: 50Mi
   - webhooksPort: port for webhooks container (default: 8443)
   - webhooksCertMountPath: mount path for webhook certs (default: "/etc/webhook/certs")
   - webhooksCommand: command for webhooks container
-  - additionalWebhooksEnvs: additional environment variables for webhooks
   - controllerPort: port for controller probes (default: 8081)
   - controllerMetricsPort: port for controller metrics (optional, no port exposed if not set)
-  - controllerMetricsProxyPort: port for a kube-rbac-proxy in front of the metrics
-    (optional). When set, the only port on the pod is the proxy's, named
-    "https-metrics", and METRICS_BIND_ADDRESS is emitted as 127.0.0.1:<controllerMetricsPort>
-    so the controller's own endpoint answers nobody but the proxy. Scraping it requires
-    "get" on <resource>/prometheus-metrics, which the module grants to the Prometheus
-    scraper with a Role of its own.
-
-    Do NOT pass METRICS_BIND_ADDRESS through additionalControllerEnvs: it is emitted
-    here, and a second entry of the same name is what the env-variables-duplicates
-    lint rule reports. Omitting a containerPort does not keep a process off the pod IP
-    -- containerPort is metadata -- so the env is the only thing that actually holds
-    the loopback contract.
 */ -}}
 {{- define "helm_lib_module_controller_manifests" }}
   {{- $context := index . 0 }}
@@ -68,9 +55,9 @@ memory: 50Mi
   {{- $podSecurityContext := $config.podSecurityContext | default "nobody" }}
   {{- $additionalLabels := $config.additionalLabels | default dict }}
   {{- $controllerMaxCpu := $config.controllerMaxCpu | default "200m" }}
-  {{- $controllerMaxMemory := $config.controllerMaxMemory | default "256Mi" }}
-  {{- $webhooksMaxCpu := $config.webhooksMaxCpu | default "25m" }}
-  {{- $webhooksMaxMemory := $config.webhooksMaxMemory | default "128Mi" }}
+  {{- $controllerMaxMemory := $config.controllerMaxMemory | default "100Mi" }}
+  {{- $webhooksMaxCpu := $config.webhooksMaxCpu | default "20m" }}
+  {{- $webhooksMaxMemory := $config.webhooksMaxMemory | default "100Mi" }}
   {{- $additionalContainers := $config.additionalContainers }}
   {{- $additionalVolumes := $config.additionalVolumes }}
   {{- $additionalControllerVolumeMounts := $config.additionalControllerVolumeMounts }}
@@ -81,10 +68,8 @@ memory: 50Mi
   {{- $webhooksPort := $config.webhooksPort | default 8443 }}
   {{- $webhooksCertMountPath := $config.webhooksCertMountPath | default "/etc/webhook/certs" }}
   {{- $webhooksCommand := $config.webhooksCommand }}
-  {{- $additionalWebhooksEnvs := $config.additionalWebhooksEnvs }}
   {{- $controllerPort := $config.controllerPort | default 8081 }}
   {{- $controllerMetricsPort := $config.controllerMetricsPort }}
-  {{- $controllerMetricsProxyPort := $config.controllerMetricsProxyPort }}
 
   {{- /* Get module values */ -}}
   {{- $moduleValues := index $context.Values $valuesKey }}
@@ -110,7 +95,7 @@ spec:
     kind: Deployment
     name: {{ $fullname }}
   updatePolicy:
-    updateMode: "InPlaceOrRecreate"
+    updateMode: "Initial"
   resourcePolicy:
     containerPolicies:
     - containerName: "controller"
@@ -126,9 +111,6 @@ spec:
       maxAllowed:
         cpu: {{ $webhooksMaxCpu }}
         memory: {{ $webhooksMaxMemory }}
-    {{- end }}
-    {{- if $controllerMetricsProxyPort }}
-    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" $context | nindent 4 }}
     {{- end }}
   {{- end }}
 ---
@@ -215,7 +197,7 @@ spec:
               scheme: HTTP
             periodSeconds: 1
             failureThreshold: 3
-          {{- if and $controllerMetricsPort (not $controllerMetricsProxyPort) }}
+          {{- if $controllerMetricsPort }}
           ports:
             - name: metrics
               containerPort: {{ $controllerMetricsPort }}
@@ -234,20 +216,6 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
-            {{- if $controllerMetricsPort }}
-            {{- /* Loopback when a proxy fronts the endpoint, the pod IP otherwise. This is
-                   what the contract rests on: dropping the containerPort below does not stop
-                   a process from binding the wildcard, and every module repeating this env
-                   by hand is one edit away from an unauthenticated /metrics on the pod IP --
-                   or, since the two ports carry the same number by default, from the two
-                   containers racing for it. */}}
-            - name: METRICS_BIND_ADDRESS
-              {{- if $controllerMetricsProxyPort }}
-              value: "127.0.0.1:{{ $controllerMetricsPort }}"
-              {{- else }}
-              value: ":{{ $controllerMetricsPort }}"
-              {{- end }}
-            {{- end }}
             {{- if $additionalControllerEnvs }}
             {{- $additionalControllerEnvs | toYaml | nindent 12 }}
             {{- end }}
@@ -269,12 +237,6 @@ spec:
           {{- end }}
           image: {{ include "helm_lib_module_image" (list $context $webhooksImageName) }}
           imagePullPolicy: IfNotPresent
-          env:
-            - name: LOG_LEVEL
-              value: {{ include "helm_lib_module_controller_log_level" (list $context $valuesKey) | quote }}
-            {{- if $additionalWebhooksEnvs }}
-            {{- $additionalWebhooksEnvs | toYaml | nindent 12 }}
-            {{- end }}
           volumeMounts:
             - name: webhook-certs
               mountPath: {{ $webhooksCertMountPath }}
@@ -303,69 +265,6 @@ spec:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 14 }}
 {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
               {{- include "helm_lib_module_webhooks_resources" $context | nindent 14 }}
-{{- end }}
-        {{- end }}
-        {{- if $controllerMetricsProxyPort }}
-        {{- /* The metrics endpoint of a controller is unauthenticated, and a
-               containerPort is reachable from every pod in the cluster. This proxy
-               is what turns "reachable by anyone on the pod network" into "reachable
-               by whoever holds get on <resource>/prometheus-metrics", which is how
-               the DaemonSets of this fleet have always published theirs. */}}
-        - name: kube-rbac-proxy
-          {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 10 }}
-          image: {{ include "helm_lib_module_common_image" (list $context "kubeRbacProxy") }}
-          imagePullPolicy: IfNotPresent
-          args:
-            - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):{{ $controllerMetricsProxyPort }}"
-            - "--v=2"
-            - "--logtostderr=true"
-            - "--stale-cache-interval=1h30m"
-            - "--livez-path=/livez"
-          env:
-            - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
-              valueFrom:
-                fieldRef:
-                  fieldPath: status.podIP
-            - name: KUBE_RBAC_PROXY_CONFIG
-              value: |
-                excludePaths:
-                - /livez
-                upstreams:
-                - upstream: http://127.0.0.1:{{ $controllerMetricsPort | required "controllerMetricsProxyPort needs controllerMetricsPort: the proxy has to know what to forward to" }}/metrics
-                  path: /metrics
-                  authorization:
-                    resourceAttributes:
-                      namespace: d8-{{ $context.Chart.Name }}
-                      apiGroup: apps
-                      apiVersion: v1
-                      resource: deployments
-                      subresource: prometheus-metrics
-                      name: {{ $fullname }}
-          ports:
-            - name: https-metrics
-              containerPort: {{ $controllerMetricsProxyPort }}
-              protocol: TCP
-          livenessProbe:
-            httpGet:
-              path: /livez
-              port: {{ $controllerMetricsProxyPort }}
-              scheme: HTTPS
-          {{- /* No readinessProbe on purpose. Readiness of this pod gates the endpoints of
-                 the Services that select it -- the webhook Service this template renders next
-                 to the Deployment, and in some modules an APIService -- and admission
-                 configurations default to failurePolicy: Fail. A sidecar that only serves
-                 metrics must not be able to take cluster-wide admission, or an aggregated API
-                 group, out of rotation; a wedged proxy is still restarted by the liveness
-                 probe.
-
-                 The cost is that the pod is Ready before this container listens, so a scrape
-                 or two can fail during a rollout. That is the trade being made on purpose:
-                 a few gaps in a metric against an admission or discovery outage. */}}
-          resources:
-            requests:
-              {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 14 }}
-{{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
-              {{- include "helm_lib_container_kube_rbac_proxy_resources" $context | nindent 14 }}
 {{- end }}
         {{- end }}
         {{- if $additionalContainers }}
