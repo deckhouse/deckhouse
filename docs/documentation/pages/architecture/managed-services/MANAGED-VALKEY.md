@@ -47,7 +47,7 @@ The module consists of the following components:
 
    It consists of two containers:
 
-   * valkey: It is an [open-source project](https://github.com/valkey-io/valkey).
+   * valkey: Main container. It is an [open-source project](https://github.com/valkey-io/valkey).
    * agent: Sidecar container that configures the main container according to the parameters in the Valkey resource.
 
 ## Module interactions

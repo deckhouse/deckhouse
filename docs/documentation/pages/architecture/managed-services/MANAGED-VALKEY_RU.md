@@ -47,7 +47,7 @@ description: Архитектура модуля managed-valkey в Deckhouse Kub
 
    Состоит из двух контейнеров:
 
-   - valkey — является [Open Source-проектом](https://github.com/valkey-io/valkey);
+   - valkey — основной контейнер, являющийся [Open Source-проектом](https://github.com/valkey-io/valkey);
    - agent — сайдкар-контейнер, выполняющий настройку основного контейнера в соответствии с параметрами в ресурсе Valkey.
 
 ## Взаимодействия модуля
