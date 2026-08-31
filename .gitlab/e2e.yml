@@ -2,7 +2,9 @@
 # Start: GitLab UI "New pipeline" (web) or Pipelines API (api).
 
 include:
-  - remote: deckhouse/ssdlc-tools/e2e-framework
+  - project: 'deckhouse/ssdlc-tools/e2e-framework'
+    file: '/ci-templates/e2e-framework.gitlab-ci.yml'
+    ref: 'main'
     inputs:
       runner_tag: k8s-intteam-cloud-d8-ssdlc-runner
       vault_role: deckhouse
