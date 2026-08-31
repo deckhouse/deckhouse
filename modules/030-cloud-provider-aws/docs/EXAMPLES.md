@@ -35,21 +35,7 @@ The following parameters are supported in addition to the existing [upstream](ht
 
 ## Configuring security policies on nodes
 
-### Default security groups
-
-Unless [`disableDefaultSecurityGroup`](cluster_configuration.html#awsclusterconfiguration-disabledefaultsecuritygroup) is enabled (default is disabled), the module creates the following security groups:
-
-* `<prefix>-node` — assigned to cluster nodes. By default it allows:
-  * all outbound traffic to `0.0.0.0/0`;
-  * all inbound traffic from the `<prefix>-loadbalancer` group;
-  * all inbound traffic from nodes in the same `<prefix>-node` group;
-  * ICMP from CIDRs listed in [`publicNetworkAllowList`](cluster_configuration.html#awsclusterconfiguration-publicnetworkallowlist) (default `0.0.0.0/0`).
-* `<prefix>-loadbalancer` — used by load balancers. By default it allows:
-  * all inbound traffic from CIDRs in `publicNetworkAllowList`;
-  * all outbound traffic to the `<prefix>-node` group.
-* `<prefix>-ssh-accessible` — created when [`sshAllowList`](cluster_configuration.html#awsclusterconfiguration-sshallowlist) is set; allows TCP/22 from the listed CIDRs (default `0.0.0.0/0`).
-
-Additional ports (for example, HTTP/HTTPS) are not added to these groups through the module configuration. Create a separate security group in AWS and attach it with `additionalSecurityGroups`. You can restrict ICMP and load balancer access with `publicNetworkAllowList`, and SSH access with `sshAllowList`.
+Default security group rules are described in the [layouts](layouts.html#security-groups) section.
 
 ### Attaching custom security groups
 

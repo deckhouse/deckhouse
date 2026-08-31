@@ -488,7 +488,7 @@ apiVersions:
               - TCP NodePorts `30000–32767` from `0.0.0.0/0`;
               - all inbound traffic from members of the same security group.
 
-              For details and attaching custom security groups, see [How do I set up security policies on cluster nodes?](faq.html#how-do-i-set-up-security-policies-on-cluster-nodes).
+              For details and attaching custom security groups, see [Layouts](layouts.html#standard).
             type: boolean
             default: true
           externalNetworkName: &externalNetworkName

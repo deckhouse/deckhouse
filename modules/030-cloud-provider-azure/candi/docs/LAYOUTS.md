@@ -44,3 +44,14 @@ peeredVNets:
   - resourceGroupName: kube-bastion # Required.
     vnetName: kube-bastion-vnet # Required.
 ```
+
+## Network Security Group
+
+The module creates a Network Security Group (NSG) named after the cluster prefix and associates it with the node subnet.
+
+The following rules will be created:
+
+- `AllowIcmp` — inbound ICMP from any source;
+- `AllowSsh` — inbound TCP/22 from CIDRs in `sshAllowList` (from any source if the list is not set).
+
+The module does not add extra ports (for example, HTTP/HTTPS) to this NSG. Configure them manually in Azure. You cannot attach a pre-created custom NSG to nodes through module parameters — only `sshAllowList` is available to restrict SSH.

@@ -54,14 +54,7 @@ spec:
 
 ## Configuring security policies on nodes
 
-### Default firewall rules
-
-The module creates the following firewall rules in the cluster VPC:
-
-* `<prefix>-ssh-and-ping` — ICMP and TCP/22 to nodes with the `<prefix>` network tag from CIDRs in [`sshAllowList`](cluster_configuration.html#gcpclusterconfiguration-sshallowlist) (default `0.0.0.0/0`);
-* `<prefix>-intercommunication` — all traffic between nodes with the `<prefix>` network tag, and from the pod subnet (`podSubnetCIDR`).
-
-Additional ports (for example, HTTP/HTTPS from the internet) are not opened by these rules. Create your own firewall rules in GCP and apply them to nodes via additional network tags.
+Default firewall rules are described in the [layouts](layouts.html#firewall-rules) section.
 
 ### Attaching custom rules via network tags
 

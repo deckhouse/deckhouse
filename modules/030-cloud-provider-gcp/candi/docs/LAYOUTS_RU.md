@@ -141,3 +141,12 @@ provider:
       "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/k8s-test%40sandbox.iam.gserviceaccount.com"
     }
 ```
+
+## Правила файрвола
+
+Модуль создаёт следующие правила файрвола в VPC кластера:
+
+- `<prefix>-ssh-and-ping` — ICMP и TCP/22 к узлам с network tag `<prefix>` из CIDR в `sshAllowList` (по умолчанию `0.0.0.0/0`);
+- `<prefix>-intercommunication` — весь трафик между узлами с network tag `<prefix>`, а также из подсети подов (`podSubnetCIDR`).
+
+Дополнительные порты (например, HTTP/HTTPS из интернета) этими правилами не открываются. Создайте собственные правила файрвола в GCP и примените их к узлам через дополнительные network tags (`additionalNetworkTags` в `masterNodeGroup` / `nodeGroups` и в `GCPInstanceClass`).

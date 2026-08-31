@@ -16,6 +16,17 @@ description: "Описание схем размещения и взаимоде
 ![resources](images/openstack-standard.png)
 <!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11038&t=IvETjbByf1MSQzcm-0 --->
 
+Дополнительно возможно создание группы безопасности отдельным свойством `internalNetworkSecurity` (по умолчанию `true`). Группа создаётся с именем префикса кластера (`prefix`) и назначается узлам.
+
+Будут созданы следующие правила входящего трафика:
+
+- TCP/22 (SSH) из CIDR, указанных в `sshAllowList` (по умолчанию `0.0.0.0/0`);
+- ICMP из `0.0.0.0/0`;
+- TCP-порты NodePort `30000–32767` из `0.0.0.0/0` (UDP NodePort по умолчанию не открываются);
+- весь входящий трафик от узлов, входящих в ту же группу безопасности.
+
+Модуль не добавляет в управляемую группу правила для HTTP/HTTPS и других прикладных портов. Такие разрешения нужно создавать вручную в отдельной группе безопасности и подключать её через `additionalSecurityGroups` в `masterNodeGroup` / `nodeGroups` и в `OpenStackInstanceClass`.
+
 Пример конфигурации схемы размещения:
 
 ```yaml
@@ -121,6 +132,8 @@ Virtual IP создается в публичной сети, он все рав
 ![resources](images/openstack-standardwithnorouter.png)
 <!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11560&t=IvETjbByf1MSQzcm-0 --->
 
+Дополнительно возможно создание группы безопасности отдельным свойством `internalNetworkSecurity` (по умолчанию `true`). Правила по умолчанию совпадают со схемой [Standard](#standard). Собственные группы безопасности подключаются через `additionalSecurityGroups`.
+
 Пример конфигурации схемы размещения:
 
 ```yaml
@@ -204,6 +217,8 @@ virtual IP создается в публичной сети, он все рав
 
 ![resources](images/openstack-simple.png)
 <!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11502&t=IvETjbByf1MSQzcm-0 --->
+
+В данной схеме размещения модуль не создаёт группы безопасности. Их нужно подготовить в облаке заранее и указать через `additionalSecurityGroups`.
 
 Пример конфигурации схемы размещения:
 

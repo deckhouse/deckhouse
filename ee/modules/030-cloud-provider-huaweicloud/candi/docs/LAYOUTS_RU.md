@@ -12,6 +12,18 @@ description: "Схемы размещения Huawei Cloud для работы �
 ![Схема размещения Standard](images/huawei-standard.png)
 <!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10811&t=IvETjbByf1MSQzcm-0 --->
 
+Дополнительно возможно создание группы безопасности отдельным свойством `internalNetworkSecurity` (по умолчанию `true`). Группа создаётся с именем префикса кластера и назначается узлам.
+
+Будут созданы следующие правила входящего трафика:
+
+- TCP/22 (SSH) из `0.0.0.0/0`;
+- ICMP из `0.0.0.0/0`;
+- TCP-порты NodePort `30000–32767` из `0.0.0.0/0` (UDP NodePort по умолчанию не открываются).
+
+В отличие от OpenStack, правило «весь входящий трафик от узлов той же группы безопасности» в Huawei Cloud по умолчанию не создаётся.
+
+Модуль не добавляет в управляемую группу правила для HTTP/HTTPS и других прикладных портов. Такие разрешения нужно создавать вручную в отдельной группе безопасности и подключать её к узлам. Для CloudEphemeral-узлов дополнительные группы безопасности задаются в ресурсе `HuaweiCloudInstanceClass` параметром `spec.securityGroups` и применяются вместе с группой, созданной модулем.
+
 Пример конфигурации схемы размещения:
 
 ```yaml
@@ -47,6 +59,8 @@ masterNodeGroup:
 
 ![Схема размещения VpcPeering](images/huawei-vpc-peering-ru.png)
 <!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11715&t=IvETjbByf1MSQzcm-0 --->
+
+Дополнительно возможно создание группы безопасности отдельным свойством `internalNetworkSecurity` (по умолчанию `true`). Правила по умолчанию совпадают со схемой [Standard](#standard). Для CloudEphemeral-узлов дополнительные группы безопасности задаются в `HuaweiCloudInstanceClass.spec.securityGroups`.
 
 Пример конфигурации схемы размещения:
 

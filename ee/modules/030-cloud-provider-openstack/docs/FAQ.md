@@ -96,20 +96,7 @@ spec:
 
 ## How do I set up security policies on cluster nodes?
 
-### Default security groups
-
-In the [`Standard`](layouts.html#standard) and [`StandardWithNoRouter`](layouts.html#standardwithnorouter) layouts, when [`internalNetworkSecurity: true`](cluster_configuration.html#openstackclusterconfiguration-standard-internalnetworksecurity) (the default), the module creates a security group named after the cluster prefix (`prefix`) and assigns it to the nodes.
-
-The created group allows the following inbound connections by default:
-
-* TCP/22 (SSH) from CIDRs listed in [`sshAllowList`](cluster_configuration.html#openstackclusterconfiguration-sshallowlist) (default `0.0.0.0/0`);
-* ICMP from `0.0.0.0/0`;
-* TCP NodePort range `30000–32767` from `0.0.0.0/0` (UDP NodePorts are not opened by default);
-* all inbound traffic from nodes that belong to the same security group.
-
-In the [`Simple`](layouts.html#simple) and [`SimpleWithInternalNetwork`](layouts.html#simplewithinternalnetwork) layouts, the module does not create security groups — prepare them in the cloud in advance and attach them via [`additionalSecurityGroups`](cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups).
-
-The module does not add HTTP/HTTPS or other application ports to the managed security group. Create such rules manually in a separate security group and attach it with `additionalSecurityGroups`.
+Default security group rules for the [`Standard`](layouts.html#standard) and [`StandardWithNoRouter`](layouts.html#standardwithnorouter) layouts are described in the [layouts](layouts.html) section. In the [`Simple`](layouts.html#simple) and [`SimpleWithInternalNetwork`](layouts.html#simplewithinternalnetwork) layouts, the module does not create security groups.
 
 ### Attaching custom security groups
 

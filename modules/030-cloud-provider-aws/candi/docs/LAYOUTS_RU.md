@@ -115,3 +115,23 @@ sshPublicKey: "<SSH_PUBLIC_KEY>"
 tags:
   team: torpedo
 ```
+
+## Группы безопасности
+
+Дополнительно возможно создание групп безопасности по умолчанию (если не задано `disableDefaultSecurityGroup: true`).
+
+Будут созданы следующие группы и правила:
+
+- `<prefix>-node` — назначается узлам кластера:
+  - весь исходящий трафик в `0.0.0.0/0`;
+  - весь входящий трафик от группы `<prefix>-loadbalancer`;
+  - весь входящий трафик от узлов той же группы `<prefix>-node`;
+  - ICMP из CIDR, указанных в `publicNetworkAllowList` (по умолчанию `0.0.0.0/0`).
+- `<prefix>-loadbalancer` — используется балансировщиками нагрузки:
+  - весь входящий трафик из CIDR в `publicNetworkAllowList`;
+  - весь исходящий трафик к группе `<prefix>-node`.
+- `<prefix>-ssh-accessible` — создаётся, если задан `sshAllowList`; разрешает TCP/22 из указанных CIDR (по умолчанию `0.0.0.0/0`). Назначается master-узлам (или bastion в схеме WithNAT).
+
+Модуль не добавляет в эти группы правила для HTTP/HTTPS и других прикладных портов. Такие разрешения нужно создавать вручную в отдельной группе безопасности и подключать её через `additionalSecurityGroups` в `masterNodeGroup` / `nodeGroups` и в `AWSInstanceClass`.
+
+При `disableDefaultSecurityGroup: true` необходимо самостоятельно создать все необходимые группы и явно указать их в `additionalSecurityGroups`. Для балансировщиков нагрузки укажите группы через аннотацию `service.beta.kubernetes.io/aws-load-balancer-security-groups`.

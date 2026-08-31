@@ -138,3 +138,12 @@ provider:
       "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/k8s-test%40sandbox.iam.gserviceaccount.com"
     }
 ```
+
+## Firewall rules
+
+The module creates the following firewall rules in the cluster VPC:
+
+- `<prefix>-ssh-and-ping` — ICMP and TCP/22 to nodes with the `<prefix>` network tag from CIDRs in `sshAllowList` (default `0.0.0.0/0`);
+- `<prefix>-intercommunication` — all traffic between nodes with the `<prefix>` network tag, and from the pod subnet (`podSubnetCIDR`).
+
+Additional ports (for example, HTTP/HTTPS from the internet) are not opened by these rules. Create custom firewall rules in GCP and apply them to nodes via additional network tags (`additionalNetworkTags` in `masterNodeGroup` / `nodeGroups` and in `GCPInstanceClass`).

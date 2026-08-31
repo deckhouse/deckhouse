@@ -113,3 +113,23 @@ sshPublicKey: <SSH_PUBLIC_KEY>
 tags:
   team: rangers
 ```
+
+## Security groups
+
+Additionally, you can enable the creation of default security groups (unless `disableDefaultSecurityGroup: true` is set).
+
+The following groups and rules will be created:
+
+- `<prefix>-node` — assigned to cluster nodes:
+  - all egress traffic to `0.0.0.0/0`;
+  - all ingress traffic from the `<prefix>-loadbalancer` group;
+  - all ingress traffic from nodes in the same `<prefix>-node` group;
+  - ICMP from CIDRs listed in `publicNetworkAllowList` (default `0.0.0.0/0`).
+- `<prefix>-loadbalancer` — used by load balancers:
+  - all ingress traffic from CIDRs in `publicNetworkAllowList`;
+  - all egress traffic to the `<prefix>-node` group.
+- `<prefix>-ssh-accessible` — created when `sshAllowList` is set; allows TCP/22 from the listed CIDRs (default `0.0.0.0/0`). Assigned to master nodes (or the bastion in the WithNAT layout).
+
+The module does not add HTTP/HTTPS or other application ports to these groups. Create such rules manually in a separate security group and attach it via `additionalSecurityGroups` in `masterNodeGroup` / `nodeGroups` and in `AWSInstanceClass`.
+
+When `disableDefaultSecurityGroup: true` is set, you must manually create all required security groups and explicitly specify them in `additionalSecurityGroups`. For load balancers, specify groups using the `service.beta.kubernetes.io/aws-load-balancer-security-groups` annotation.

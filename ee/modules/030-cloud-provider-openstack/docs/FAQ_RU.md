@@ -96,20 +96,7 @@ spec:
 
 ## Как настроить политики безопасности на узлах кластера?
 
-### Группы безопасности по умолчанию
-
-В схемах размещения [`Standard`](layouts.html#standard) и [`StandardWithNoRouter`](layouts.html#standardwithnorouter) при [`internalNetworkSecurity: true`](cluster_configuration.html#openstackclusterconfiguration-standard-internalnetworksecurity) (значение по умолчанию) модуль создаёт группу безопасности с именем префикса кластера (`prefix`) и назначает её узлам.
-
-В созданной группе по умолчанию разрешены следующие входящие соединения:
-
-* TCP/22 (SSH) из CIDR, указанных в [`sshAllowList`](cluster_configuration.html#openstackclusterconfiguration-sshallowlist) (по умолчанию `0.0.0.0/0`);
-* ICMP из `0.0.0.0/0`;
-* TCP-порты NodePort `30000–32767` из `0.0.0.0/0` (UDP NodePort по умолчанию не открываются);
-* весь входящий трафик от узлов, входящих в ту же группу безопасности.
-
-В схемах [`Simple`](layouts.html#simple) и [`SimpleWithInternalNetwork`](layouts.html#simplewithinternalnetwork) модуль не создаёт группы безопасности — их нужно подготовить в облаке заранее и указать через [`additionalSecurityGroups`](cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups).
-
-Модуль не добавляет в управляемую группу правила для HTTP/HTTPS и других прикладных портов. Такие разрешения нужно создавать вручную в отдельной группе безопасности и подключать её через `additionalSecurityGroups`.
+Правила групп безопасности по умолчанию для схем [`Standard`](layouts.html#standard) и [`StandardWithNoRouter`](layouts.html#standardwithnorouter) описаны в разделе [схем размещения](layouts.html). В схемах [`Simple`](layouts.html#simple) и [`SimpleWithInternalNetwork`](layouts.html#simplewithinternalnetwork) модуль группы безопасности не создаёт.
 
 ### Подключение собственных групп безопасности
 

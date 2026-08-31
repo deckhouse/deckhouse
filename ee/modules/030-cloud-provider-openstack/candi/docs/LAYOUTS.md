@@ -15,6 +15,17 @@ In this scheme, an internal cluster network is created with a gateway to the pub
 ![resources](images/openstack-standard.png)
 <!--- Source: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11038&t=IvETjbByf1MSQzcm-0 --->
 
+Additionally, you can enable the creation of a security group using the `internalNetworkSecurity` property (default `true`). The group is named after the cluster prefix (`prefix`) and is assigned to the nodes.
+
+The following inbound rules will be created:
+
+- TCP/22 (SSH) from CIDRs listed in `sshAllowList` (default `0.0.0.0/0`);
+- ICMP from `0.0.0.0/0`;
+- TCP NodePorts `30000–32767` from `0.0.0.0/0` (UDP NodePorts are not opened by default);
+- all inbound traffic from nodes in the same security group.
+
+The module does not add HTTP/HTTPS or other application ports to the managed security group. Create such rules manually in a separate security group and attach it via `additionalSecurityGroups` in `masterNodeGroup` / `nodeGroups` and in `OpenStackInstanceClass`.
+
 Example of the layout configuration:
 
 ```yaml
@@ -114,6 +125,8 @@ An internal cluster network is created that does not have access to the public n
 ![resources](images/openstack-standardwithnorouter.png)
 <!--- Source: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11560&t=IvETjbByf1MSQzcm-0 --->
 
+Additionally, you can enable the creation of a security group using the `internalNetworkSecurity` property (default `true`). Default rules match the [Standard](#standard) layout. Attach custom security groups via `additionalSecurityGroups`.
+
 Example of the layout configuration:
 
 ```yaml
@@ -192,6 +205,8 @@ The master node and cluster nodes are connected to the existing network. This pl
 
 ![resources](images/openstack-simple.png)
 <!--- Source: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11502&t=IvETjbByf1MSQzcm-0 --->
+
+In this layout, the module does not create security groups. Prepare them in the cloud in advance and specify them via `additionalSecurityGroups`.
 
 Example of the layout configuration:
 
