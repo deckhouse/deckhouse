@@ -16,6 +16,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"runtime/debug"
@@ -33,6 +34,13 @@ const (
 	MaxMessageSize = 8 * 1024 * 1024
 	DefaultNetwork = "unix"
 )
+
+// Service registers itself on a gRPC server. The generated RegisterXxxServer
+// functions in api/gen take a grpc.ServiceRegistrar, so an action's service is a
+// thin wrapper over one of them — see NewValidateService.
+type Service interface {
+	Register(registrar grpc.ServiceRegistrar)
+}
 
 type Config struct {
 	Network     string
@@ -77,26 +85,8 @@ func (c Config) Merge(other Config) Config {
 	return c
 }
 
-// Service registers itself on a gRPC server. The generated RegisterXxxServer
-// functions in api/gen take a grpc.ServiceRegistrar, so an action's service is a
-// thin wrapper over one of them — see NewValidateService.
-//
-// A caller may also pass a service of its own (health, reflection, its own protobuf
-// API): Start registers whatever it is given and knows nothing about the actions
-// themselves.
-type Service interface {
-	Register(registrar grpc.ServiceRegistrar)
-}
-
-// Start listens, serves in the background and returns the function that stops it.
-// The socket exists by the time Start returns, so a caller may connect right away.
-//
-// Both the returned function and cancelling ctx stop the server gracefully —
-// in-flight calls finish. stop is idempotent and reports what Serve returned.
-//
-// An action whose service is not passed answers Unimplemented, which is how a
-// caller learns it is missing.
-func Start(ctx context.Context, config Config, services ...Service) (func() error, error) {
+// Start starts a gRPC server and returns a Server instance.
+func Start(config Config, services ...Service) (*Server, error) {
 	config = NewConfig().Merge(config)
 	if err := config.Validate(); err != nil {
 		return nil, fmt.Errorf("config validation: %w", err)
@@ -117,36 +107,37 @@ func Start(ctx context.Context, config Config, services ...Service) (func() erro
 		return nil, fmt.Errorf("listen on %s %s: %w", config.Network, config.Address, err)
 	}
 
-	served := make(chan error, 1)
-	go func() {
-		served <- grpcServer.Serve(listener)
-	}()
-
-	stopped := make(chan struct{})
-	go func() {
-		select {
-		case <-ctx.Done():
-			grpcServer.GracefulStop()
-		case <-stopped:
-		}
-	}()
-
-	var (
-		once     sync.Once
-		serveErr error
-	)
-
-	stop := func() error {
-		once.Do(func() {
-			close(stopped)
-			grpcServer.GracefulStop()
-			serveErr = <-served
-		})
-
-		return serveErr
+	s := &Server{
+		srv:       grpcServer,
+		serveDone: make(chan error, 1),
 	}
 
-	return stop, nil
+	go func() {
+		s.serveDone <- grpcServer.Serve(listener)
+	}()
+	return s, nil
+}
+
+type Server struct {
+	srv       *grpc.Server
+	serveDone chan error
+	stopOnce  sync.Once
+	stopErr   error
+}
+
+func (s *Server) Stop() error {
+	if s == nil || s.srv == nil {
+		return nil
+	}
+
+	s.stopOnce.Do(func() {
+		s.srv.GracefulStop()
+		err := <-s.serveDone
+		if err != nil && !errors.Is(err, grpc.ErrServerStopped) {
+			s.stopErr = err
+		}
+	})
+	return s.stopErr
 }
 
 //nolint:nonamedreturns // the deferred recover has to replace the returned error

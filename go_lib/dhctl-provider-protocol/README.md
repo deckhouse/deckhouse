@@ -49,8 +49,8 @@ matter in practice:
   that exits early (an old binary that does not know `serve`) has to fail the
   operation rather than wait out the deadline.
 - **Shutdown.** dhctl sends `SIGTERM` and the validator stops gracefully. A binary
-  built with this module's `server` package installs no signal handler of its own;
-  it wires signals to the context it passes to `Start`.
+  built with this module's `server` package installs no signal handler of its own; it
+  waits for the signal itself and calls `Stop`.
 - **stdout/stderr** belong to the validator. They carry diagnostics only — no part of
   the protocol travels through them.
 
@@ -183,7 +183,7 @@ func main() {
 
 	service := server.NewValidateService(myValidator{})
 
-	stop, err := server.Start(ctx, server.Config{Address: *address}, service)
+	validator, err := server.Start(server.Config{Address: *address}, service)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -191,7 +191,7 @@ func main() {
 
 	<-ctx.Done() // SIGTERM from dhctl
 
-	if err := stop(); err != nil {
+	if err := validator.Stop(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

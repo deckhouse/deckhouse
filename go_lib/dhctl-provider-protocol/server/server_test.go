@@ -103,17 +103,17 @@ func TestConfigMerge(t *testing.T) {
 
 func TestStart(t *testing.T) {
 	tests := []struct {
-		name             string
-		validator        validatorFunc // nil registers no service
-		omitAddress      bool
-		input            validate.Input
-		cancelBeforeCall bool
-		wantStartErr     bool
-		wantCode         codes.Code
-		wantMessage      string
-		wantErrors       string
-		wantWarnings     validate.Violations
-		wantCalled       bool
+		name           string
+		validator      validatorFunc // nil registers no service
+		omitAddress    bool
+		input          validate.Input
+		stopBeforeCall bool
+		wantStartErr   bool
+		wantCode       codes.Code
+		wantMessage    string
+		wantErrors     string
+		wantWarnings   validate.Violations
+		wantCalled     bool
 	}{
 		{
 			name:         "refuses to start without an address",
@@ -177,11 +177,11 @@ func TestStart(t *testing.T) {
 			wantCode: codes.Unimplemented,
 		},
 		{
-			name:             "stops when its context is cancelled",
-			validator:        validOutput,
-			input:            bootstrapInput(),
-			cancelBeforeCall: true,
-			wantCode:         codes.Unavailable,
+			name:           "serves nothing after it is stopped",
+			validator:      validOutput,
+			input:          bootstrapInput(),
+			stopBeforeCall: true,
+			wantCode:       codes.Unavailable,
 		},
 	}
 
@@ -204,14 +204,11 @@ func TestStart(t *testing.T) {
 				address = socketPath(t)
 			}
 
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
-
-			stop, err := server.Start(ctx, server.Config{Address: address}, services...)
+			running, err := server.Start(server.Config{Address: address}, services...)
 
 			if test.wantStartErr {
 				if err == nil {
-					_ = stop()
+					_ = running.Stop()
 					t.Fatal("Start() = nil, want an error")
 				}
 
@@ -222,16 +219,21 @@ func TestStart(t *testing.T) {
 				t.Fatalf("Start() = %v", err)
 			}
 
+			// Stop is idempotent, so this also covers the case that stops the
+			// server itself.
 			t.Cleanup(func() {
-				if err := stop(); err != nil {
-					t.Errorf("stop() = %v, want nil", err)
+				if err := running.Stop(); err != nil {
+					t.Errorf("Stop() = %v, want nil", err)
 				}
 			})
 
 			validator := connect(t, address)
 
-			if test.cancelBeforeCall {
-				cancel()
+			if test.stopBeforeCall {
+				if err := running.Stop(); err != nil {
+					t.Fatalf("Stop() = %v", err)
+				}
+
 				requireUnavailable(t, validator, test.input)
 
 				return
@@ -349,7 +351,7 @@ func requireStatus(t *testing.T, err error, want codes.Code, message string) {
 	}
 }
 
-// requireUnavailable waits for the shutdown the cancelled context started.
+// requireUnavailable waits for the socket to stop accepting after a Stop.
 func requireUnavailable(t *testing.T, validator client.Client, input validate.Input) {
 	t.Helper()
 
@@ -366,7 +368,7 @@ func requireUnavailable(t *testing.T, validator client.Client, input validate.In
 
 		select {
 		case <-ctx.Done():
-			t.Fatal("server kept serving after its context was cancelled")
+			t.Fatal("server kept serving after Stop")
 		case <-time.After(5 * time.Millisecond):
 		}
 	}
