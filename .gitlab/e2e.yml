@@ -52,21 +52,19 @@ variables:
 
   BRANCH:
     value: ""
-    description: "Custom branch/image tag for e2e-framework (optional). Leave empty to auto-resolve from the current pipeline via e2e-ensure-build. If set and not prefixed with 'pr' (e.g. release/main build), e2e-ensure-build is skipped and this value is used as-is."
+    description: "Custom image tag for e2e-framework. Empty = auto-detect from this pipeline's build."
 
   UPDATE_IMAGE_TAG:
     value: ""
-    description: "Target image tag for deckhouse update. Leave empty to skip the update step; set a value to run deckhouse update after cluster create."
+    description: "Target image tag for deckhouse update. Empty = skip update."
 
 # ---------------------------------------------------------------------------
 # Find edition build on existing branch/tag pipeline and play/wait if needed
 # ---------------------------------------------------------------------------
 
 e2e-ensure-build:
-  rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $BRANCH != "" && $BRANCH !~ /^pr/i
-      when: never
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/
+  extends:
+    - .rules:on_e2e
   stage: e2e-ensure-build
   timeout: 4h
   interruptible: false
@@ -102,7 +100,6 @@ e2e-ensure-build:
   needs:
     - job: e2e-ensure-build
       artifacts: true
-      optional: true
 
 e2e-prestart:
   extends:
@@ -119,7 +116,6 @@ e2e-prestart:
   needs:
     - job: e2e-ensure-build
       artifacts: true
-      optional: true
     - job: e2e-prestart
       artifacts: true
 
@@ -141,6 +137,8 @@ e2e-yandex-update:
     - .e2e-yandex-update-deckhouse
   stage: e2e-update-deckhouse
   needs:
+    - job: e2e-ensure-build
+      artifacts: true
     - job: e2e-prestart
       artifacts: true
     - job: e2e-yandex-create
@@ -152,6 +150,8 @@ e2e-yandex-delete:
     - .e2e-yandex-delete-cluster
   stage: e2e-delete
   needs:
+    - job: e2e-ensure-build
+      artifacts: true
     - job: e2e-prestart
       artifacts: true
   rules:
@@ -163,6 +163,8 @@ e2e-yandex-delete-auto:
   stage: e2e-delete
   when: on_success
   needs:
+    - job: e2e-ensure-build
+      artifacts: true
     - job: e2e-prestart
       artifacts: true
     - job: e2e-yandex-create
@@ -184,6 +186,8 @@ e2e-aws-update:
     - .e2e-aws-update-deckhouse
   stage: e2e-update-deckhouse
   needs:
+    - job: e2e-ensure-build
+      artifacts: true
     - job: e2e-prestart
       artifacts: true
     - job: e2e-aws-create
@@ -195,6 +199,8 @@ e2e-aws-delete:
     - .e2e-aws-delete-cluster
   stage: e2e-delete
   needs:
+    - job: e2e-ensure-build
+      artifacts: true
     - job: e2e-prestart
       artifacts: true
   rules:
@@ -206,6 +212,8 @@ e2e-aws-delete-auto:
   stage: e2e-delete
   when: on_success
   needs:
+    - job: e2e-ensure-build
+      artifacts: true
     - job: e2e-prestart
       artifacts: true
     - job: e2e-aws-create
@@ -227,6 +235,8 @@ e2e-azure-update:
     - .e2e-azure-update-deckhouse
   stage: e2e-update-deckhouse
   needs:
+    - job: e2e-ensure-build
+      artifacts: true
     - job: e2e-prestart
       artifacts: true
     - job: e2e-azure-create
@@ -238,6 +248,8 @@ e2e-azure-delete:
     - .e2e-azure-delete-cluster
   stage: e2e-delete
   needs:
+    - job: e2e-ensure-build
+      artifacts: true
     - job: e2e-prestart
       artifacts: true
   rules:
@@ -249,6 +261,8 @@ e2e-azure-delete-auto:
   stage: e2e-delete
   when: on_success
   needs:
+    - job: e2e-ensure-build
+      artifacts: true
     - job: e2e-prestart
       artifacts: true
     - job: e2e-azure-create
@@ -270,6 +284,8 @@ e2e-gcp-update:
     - .e2e-gcp-update-deckhouse
   stage: e2e-update-deckhouse
   needs:
+    - job: e2e-ensure-build
+      artifacts: true
     - job: e2e-prestart
       artifacts: true
     - job: e2e-gcp-create
@@ -281,6 +297,8 @@ e2e-gcp-delete:
     - .e2e-gcp-delete-cluster
   stage: e2e-delete
   needs:
+    - job: e2e-ensure-build
+      artifacts: true
     - job: e2e-prestart
       artifacts: true
   rules:
@@ -292,6 +310,8 @@ e2e-gcp-delete-auto:
   stage: e2e-delete
   when: on_success
   needs:
+    - job: e2e-ensure-build
+      artifacts: true
     - job: e2e-prestart
       artifacts: true
     - job: e2e-gcp-create
@@ -313,6 +333,8 @@ e2e-openstack-update:
     - .e2e-openstack-update-deckhouse
   stage: e2e-update-deckhouse
   needs:
+    - job: e2e-ensure-build
+      artifacts: true
     - job: e2e-prestart
       artifacts: true
     - job: e2e-openstack-create
@@ -324,6 +346,8 @@ e2e-openstack-delete:
     - .e2e-openstack-delete-cluster
   stage: e2e-delete
   needs:
+    - job: e2e-ensure-build
+      artifacts: true
     - job: e2e-prestart
       artifacts: true
   rules:
@@ -335,6 +359,8 @@ e2e-openstack-delete-auto:
   stage: e2e-delete
   when: on_success
   needs:
+    - job: e2e-ensure-build
+      artifacts: true
     - job: e2e-prestart
       artifacts: true
     - job: e2e-openstack-create
@@ -356,6 +382,8 @@ e2e-vsphere-update:
     - .e2e-vsphere-update-deckhouse
   stage: e2e-update-deckhouse
   needs:
+    - job: e2e-ensure-build
+      artifacts: true
     - job: e2e-prestart
       artifacts: true
     - job: e2e-vsphere-create
@@ -367,6 +395,8 @@ e2e-vsphere-delete:
     - .e2e-vsphere-delete-cluster
   stage: e2e-delete
   needs:
+    - job: e2e-ensure-build
+      artifacts: true
     - job: e2e-prestart
       artifacts: true
   rules:
@@ -378,6 +408,8 @@ e2e-vsphere-delete-auto:
   stage: e2e-delete
   when: on_success
   needs:
+    - job: e2e-ensure-build
+      artifacts: true
     - job: e2e-prestart
       artifacts: true
     - job: e2e-vsphere-create
@@ -399,6 +431,8 @@ e2e-dvp-update:
     - .e2e-dvp-update-deckhouse
   stage: e2e-update-deckhouse
   needs:
+    - job: e2e-ensure-build
+      artifacts: true
     - job: e2e-prestart
       artifacts: true
     - job: e2e-dvp-create
@@ -410,6 +444,8 @@ e2e-dvp-delete:
     - .e2e-dvp-delete-cluster
   stage: e2e-delete
   needs:
+    - job: e2e-ensure-build
+      artifacts: true
     - job: e2e-prestart
       artifacts: true
   rules:
@@ -421,6 +457,8 @@ e2e-dvp-delete-auto:
   stage: e2e-delete
   when: on_success
   needs:
+    - job: e2e-ensure-build
+      artifacts: true
     - job: e2e-prestart
       artifacts: true
     - job: e2e-dvp-create
@@ -442,6 +480,8 @@ e2e-zvirt-update:
     - .e2e-zvirt-update-deckhouse
   stage: e2e-update-deckhouse
   needs:
+    - job: e2e-ensure-build
+      artifacts: true
     - job: e2e-prestart
       artifacts: true
     - job: e2e-zvirt-create
@@ -453,6 +493,8 @@ e2e-zvirt-delete:
     - .e2e-zvirt-delete-cluster
   stage: e2e-delete
   needs:
+    - job: e2e-ensure-build
+      artifacts: true
     - job: e2e-prestart
       artifacts: true
   rules:
@@ -464,6 +506,8 @@ e2e-zvirt-delete-auto:
   stage: e2e-delete
   when: on_success
   needs:
+    - job: e2e-ensure-build
+      artifacts: true
     - job: e2e-prestart
       artifacts: true
     - job: e2e-zvirt-create
@@ -485,6 +529,8 @@ e2e-vcd-update:
     - .e2e-vcd-update-deckhouse
   stage: e2e-update-deckhouse
   needs:
+    - job: e2e-ensure-build
+      artifacts: true
     - job: e2e-prestart
       artifacts: true
     - job: e2e-vcd-create
@@ -496,6 +542,8 @@ e2e-vcd-delete:
     - .e2e-vcd-delete-cluster
   stage: e2e-delete
   needs:
+    - job: e2e-ensure-build
+      artifacts: true
     - job: e2e-prestart
       artifacts: true
   rules:
@@ -507,6 +555,8 @@ e2e-vcd-delete-auto:
   stage: e2e-delete
   when: on_success
   needs:
+    - job: e2e-ensure-build
+      artifacts: true
     - job: e2e-prestart
       artifacts: true
     - job: e2e-vcd-create
@@ -528,6 +578,8 @@ e2e-huawei-update:
     - .e2e-huawei-update-deckhouse
   stage: e2e-update-deckhouse
   needs:
+    - job: e2e-ensure-build
+      artifacts: true
     - job: e2e-prestart
       artifacts: true
     - job: e2e-huawei-create
@@ -539,6 +591,8 @@ e2e-huawei-delete:
     - .e2e-huawei-delete-cluster
   stage: e2e-delete
   needs:
+    - job: e2e-ensure-build
+      artifacts: true
     - job: e2e-prestart
       artifacts: true
   rules:
@@ -550,6 +604,8 @@ e2e-huawei-delete-auto:
   stage: e2e-delete
   when: on_success
   needs:
+    - job: e2e-ensure-build
+      artifacts: true
     - job: e2e-prestart
       artifacts: true
     - job: e2e-huawei-create
@@ -571,6 +627,8 @@ e2e-static-private-update:
     - .e2e-static-private-update-deckhouse
   stage: e2e-update-deckhouse
   needs:
+    - job: e2e-ensure-build
+      artifacts: true
     - job: e2e-prestart
       artifacts: true
     - job: e2e-static-private-create
@@ -582,6 +640,8 @@ e2e-static-private-delete:
     - .e2e-static-private-delete-cluster
   stage: e2e-delete
   needs:
+    - job: e2e-ensure-build
+      artifacts: true
     - job: e2e-prestart
       artifacts: true
   rules:
@@ -593,6 +653,8 @@ e2e-static-private-delete-auto:
   stage: e2e-delete
   when: on_success
   needs:
+    - job: e2e-ensure-build
+      artifacts: true
     - job: e2e-prestart
       artifacts: true
     - job: e2e-static-private-create

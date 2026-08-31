@@ -18,6 +18,12 @@
 # play it if not successful, wait until success.
 # Writes e2e-build.env with BRANCH (image tag for e2e-framework).
 #
+# If BRANCH is provided and not "pr"-prefixed (e.g. a release/main run where
+# the image is already known to be published), the lookup/play/wait is
+# skipped and the given BRANCH is passed through as-is. This is the single
+# place that decides the final BRANCH value — downstream jobs only ever read
+# it from this job's dotenv artifact.
+#
 # Tag naming: .gitlab/build.yml
 # Play job:   https://docs.gitlab.com/api/jobs/#run-a-job
 # Pipelines:  https://docs.gitlab.com/api/pipelines/ (filter by sha)
@@ -29,6 +35,7 @@ MAX_ATTEMPTS="${E2E_BUILD_POLL_ATTEMPTS:-480}"
 PIPELINE_WAIT_ATTEMPTS="${E2E_PIPELINE_WAIT_ATTEMPTS:-10}"
 PIPELINE_WAIT_SLEEP="${E2E_PIPELINE_WAIT_SLEEP:-10}"
 
+CUSTOM_BRANCH="${BRANCH:-}"
 E2E_EDITION="${E2E_EDITION:?E2E_EDITION is required}"
 EDITION_LOWER="$(echo "${E2E_EDITION}" | tr '[:upper:]' '[:lower:]')"
 CI_COMMIT_SHA="${CI_COMMIT_SHA:?CI_COMMIT_SHA is required}"
@@ -233,6 +240,12 @@ EOF
 }
 
 main() {
+  if [[ -n "${CUSTOM_BRANCH}" && ! "${CUSTOM_BRANCH}" =~ ^[Pp][Rr] ]]; then
+    echo "BRANCH='${CUSTOM_BRANCH}' provided and not pr-prefixed; using as-is (skipping build lookup)"
+    write_dotenv "${CUSTOM_BRANCH}" ""
+    return
+  fi
+
   local ref suffix tag_base image_tag job_name job job_id status
 
   ref="$(resolve_ref)"
