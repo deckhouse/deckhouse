@@ -18,6 +18,17 @@ site_description:
 github_repo_path: /deckhouse/deckhouse
 d8Revision: EE
 
+# AI-friendly exports: llms.txt, corpus.json and per-page Markdown (_plugins/ai_export.rb).
+AIExport: true
+# AIRoot add the "Optional" section to llms.txt  with the links to the llms.txt and corpus.json of the embedded and external modules.
+AIRoot: true
+AIllmsFileName: llms.txt
+AIcorpusFileName: corpus.json
+
+# The llms.txt summary falls back to site_description of the corresponding language.
+ai_export:
+  title: Deckhouse Kubernetes Platform
+
 metrics:
   google: G-4X28CEP7W2
   yandex:
@@ -108,6 +119,14 @@ defaults:
       # Maximum number of automatically extracted links in the "Related Links" section to display
       # if the page has defined relative_links
       extractedLinksMax: 2
+  - scope:
+      path: "pages/internal"
+    values:
+      ai_export: false
+  - scope:
+      path: "pages/drafts"
+    values:
+      ai_export: false
   - scope:
       path: "pages/admin"
     values:
