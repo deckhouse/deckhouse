@@ -69,7 +69,12 @@ func buildCAPIMachineDeployment(in capiMDInput) *unstructured.Unstructured {
 	if s := serializeNodeGroupTaints(in.ng); s != "" {
 		annotations["capacity.cluster-autoscaler.kubernetes.io/taints"] = s
 	}
-	if nodeCapacity := in.resolved.NodeCapacity; nodeCapacity != nil {
+	// TemplateCapacity, not NodeCapacity: the autoscaler's clusterapi provider builds its template
+	// NodeInfo from these two annotations and needs one for every group it discovers, including the
+	// groups that never scale from zero. A discovered group with neither a registered Node nor a
+	// template makes ResourcesLeft fail with "No node info for: <group>", which aborts scale-up for
+	// every other group in the cluster as well.
+	if nodeCapacity := in.resolved.TemplateCapacity; nodeCapacity != nil {
 		annotations["capacity.cluster-autoscaler.kubernetes.io/cpu"] = nodeCapacity.CPU.String()
 		annotations["capacity.cluster-autoscaler.kubernetes.io/memory"] = nodeCapacity.Memory.String()
 	}
