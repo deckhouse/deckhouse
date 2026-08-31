@@ -1,13 +1,8 @@
 # E2E pipelines via e2e-framework (Commander).
 # Start: GitLab UI "New pipeline" (web) or Pipelines API (api).
-#
-# Instruction: 1.md
-# Framework template: .gitlab/ci-templates/e2e-framework.yml
-# Providers without CSE: e2e-framework/src/providers.py + CI templates
-#   (Static has no CI template — excluded; StaticCSE/DVPCSE/Custom excluded)
 
 include:
-  - local: .gitlab/ci-templates/e2e-framework.yml
+  - remote: deckhouse/ssdlc-tools/e2e-framework
     inputs:
       runner_tag: k8s-intteam-cloud-d8-ssdlc-runner
       vault_role: deckhouse
