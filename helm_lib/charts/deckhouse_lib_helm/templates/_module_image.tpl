@@ -4,22 +4,33 @@
   {{- $context := index . 0 }} {{- /* Template context with .Values, .Chart, etc */ -}}
   {{- $containerName := index . 1 | trimAll "\"" }} {{- /* Container name */ -}}
 
-  {{- /* New approach: the module ships its own images in a package */}}
-  {{- if include "helm_lib_internal_module_own_package" . }}
-    {{- $registryBase := include "helm_lib_internal_module_package_registry_base" $context }}
-    {{- if not $registryBase }}
-      {{- if not $context.Module.Package.Registry.repository }}
-        {{- fail "Registry base is not set" }}
-      {{- end }}
-      {{- fail "Package name is not set" }}
-    {{- end }}
-
-    {{- $imageDigest := index ($context.Module.Package.Digests | default dict) $containerName }}
+  {{- /* New approach: use module package values */}} 
+  {{- if and $context.Module $context.Module.Package }}
+    {{- $imageDigest := index $context.Module.Package.Digests $containerName }}
     {{- if not $imageDigest }}
       {{- fail (printf "Image %s has no digest" $containerName) }}
     {{- end }}
 
-    {{- printf "%s@%s" $registryBase $imageDigest }}
+    {{- if $context.Module.Package.Embedded }}
+      {{- $registryBase := $context.Values.global.modulesImages.registry.base }}
+      {{- if not $registryBase }}
+        {{- fail "Registry base is not set" }}
+      {{- end }}
+
+      {{- printf "%s@%s" $registryBase $imageDigest }}
+    {{- else }}
+      {{- $registryBase := $context.Module.Package.Registry.repository }}
+      {{- if not $registryBase }}
+        {{- fail "Registry base is not set" }}
+      {{- end }}
+
+      {{- $packageName := $context.Module.Package.Name }}
+      {{- if not $packageName }}
+        {{- fail "Package name is not set" }}
+      {{- end }}
+
+      {{- printf "%s/%s@%s" $registryBase $packageName $imageDigest }}
+    {{- end }}
 
   {{- /* Legacy fallback: use global modulesImages values */}}
   {{- else }}
